@@ -2,6 +2,7 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { contrastRatio } from '../src/shared/tokens';
 import { describe, expect, it } from 'vitest';
+import { INK } from '../src/shared/pageInk';
 
 /**
  * DSNR is drawn in VS Code's own design language (ELECTRON_MIGRATION_PLAN, §1.4, decision 6): none of the app's shadcn
@@ -90,12 +91,10 @@ describe('the extension’s sources', () => {
 	it('draw the pins on a prototype’s page in the brand’s purple: the page cannot read the theme, so its palette says it again, and agrees', () => {
 		const css = files().find((f) => f.path.endsWith('styles.css'))!.text;
 		const brand = /--dsnr-brand:\s*(#[0-9a-f]{6})/i.exec(css)![1]!.toLowerCase();
-		// Read as text: the page's code needs a browser window to load.
-		const palette = readFileSync(join(__dirname, '../src/page/helpers.ts'), 'utf8');
-		expect(/pin:\s*'(#[0-9a-f]{6})'/i.exec(palette)?.[1]?.toLowerCase()).toBe(brand);
+		expect(INK.pin.toLowerCase()).toBe(brand);
 		// Its wash is the same colour at 8%.
 		const [r, g, b] = [1, 3, 5].map((i) => parseInt(brand.slice(i, i + 2), 16));
-		expect(/pinWash:\s*'([^']+)'/.exec(palette)?.[1]).toBe(`rgba(${r},${g},${b},.08)`);
+		expect(INK.pinWash).toBe(`rgba(${r},${g},${b},.08)`);
 	});
 
 	it('pad the text under a card’s picture on all four sides, from one name, for every card (projects and components alike)', () => {

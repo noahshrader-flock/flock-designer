@@ -1,31 +1,12 @@
 import { type Theme, isTheme, withoutTheme } from '../shared/prototypeTheme';
 import type { CommentAnchor } from '../shared/contract';
 import { STATES_META } from '../shared/prototypeStates';
+import { INK } from '../shared/pageInk';
 
 /**
  * How an element of the page is found and described, shared by placing a pin (`pick.ts`) and drawing them (`pins.ts`).
  * Read afresh each run: every script is the whole bundle, run once.
  */
-
-/**
- * The colors of the things this app draws *inside someone else's page*.
- *
- * Written as literals on purpose, and the only place in the app where that is right: these live in the previewed
- * product's document, which has its own stylesheet and cannot see this app's theme. They are Tailwind's own values
- * rather than anything chosen by hand (violet-600, DSNR's brand, for a pin and the outline that shows what it will attach
- * to, amber-500 for one not yet saved) so they match the app around them. White and a plain shadow keep a pin legible on
- * whatever it lands on. The brand is also in the extension's stylesheet (`--dsnr-brand`), which a guard test says agrees.
- */
-export const INK = {
-	/** tailwind violet-600: DSNR's brand */
-	pin: '#7c3aed',
-	/** tailwind violet-600 at 8% */
-	pinWash: 'rgba(124,58,237,.08)',
-	/** tailwind amber-500: a pin being placed, not yet saved */
-	draft: '#f59e0b',
-	on: '#fff',
-	shadow: 'rgba(0,0,0,.45)',
-} as const;
 
 export const collapse = (t: unknown): string =>
 	String(t || '')
@@ -185,7 +166,8 @@ export const describe = (el: Element, x: number, y: number): CommentAnchor => {
 };
 
 /**
- * The outline and its label, in the pin's colour, which show what a pin will attach to.
+ * The outline and its label, in the pin's colour, which show what a pin will attach to (shown while Shift is held:
+ * `shiftOutline`).
  *
  * Shared by placing a pin and dragging one: a pin that is dropped re-attaches to whatever is under it, so the person
  * moving it needs to see the same thing as the person placing it, looking the same way. Returns what the caller drives
@@ -224,6 +206,46 @@ export const hoverOutline = () => {
 		remove: () => {
 			outline.remove();
 			chip.remove();
+		},
+	};
+};
+
+/**
+ * The outline, shown only while Shift is held: placing a pin and dragging one show what it will attach to only when the
+ * person asks, so the page is not lit up under every move. `show` says what would be outlined (and, from a pointer event,
+ * whether Shift is down); pressing or letting go of Shift shows or hides it where it is, without the pointer moving.
+ */
+export const shiftOutline = () => {
+	const hover = hoverOutline();
+	let held = false;
+	let last: [Element | null, string] = [null, ''];
+	const paint = () => (held ? hover.show(...last) : hover.hide());
+	const key = (e: KeyboardEvent) => {
+		if (e.key !== 'Shift') return;
+		held = e.type === 'keydown';
+		paint();
+	};
+	// A Shift let go in another window is never heard: leaving this one lets it go.
+	const blur = () => {
+		held = false;
+		paint();
+	};
+	document.addEventListener('keydown', key, true);
+	document.addEventListener('keyup', key, true);
+	window.addEventListener('blur', blur);
+	return {
+		show: (el: Element | null, hint: string, shift?: boolean) => {
+			last = [el, hint];
+			if (shift !== undefined) held = shift;
+			paint();
+		},
+		/** Whether Shift is held: the arrow keys climb to a container only then, as only then is there an outline to climb. */
+		held: () => held,
+		remove: () => {
+			hover.remove();
+			document.removeEventListener('keydown', key, true);
+			document.removeEventListener('keyup', key, true);
+			window.removeEventListener('blur', blur);
 		},
 	};
 };

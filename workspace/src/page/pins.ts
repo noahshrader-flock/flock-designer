@@ -1,5 +1,6 @@
 import type { MarkerRequest, MarkerResult } from '../shared/contract';
-import { INK, asState, collapse, describe, hoverOutline, pageState, place, route, underlying } from './helpers';
+import { INK } from '../shared/pageInk';
+import { asState, collapse, describe, pageState, place, route, shiftOutline, underlying } from './helpers';
 import { MESSAGE_PREFIX } from '../shared/pinMessage';
 
 interface Placed {
@@ -146,7 +147,7 @@ export const drawPins = (items: MarkerRequest[], nonce: string): MarkerResult[] 
 			const sx = e.clientX;
 			const sy = e.clientY;
 			let dragging = false;
-			let hover: ReturnType<typeof hoverOutline> | null = null;
+			let hover: ReturnType<typeof shiftOutline> | null = null;
 			if (pin.setPointerCapture && e.pointerId !== undefined) {
 				try {
 					pin.setPointerCapture(e.pointerId);
@@ -162,10 +163,10 @@ export const drawPins = (items: MarkerRequest[], nonce: string): MarkerResult[] 
 				p.pos = { x: ev.clientX, y: ev.clientY };
 				pin.style.cursor = 'grabbing';
 				positionPins();
-				// Dropping re-attaches the pin to whatever is under it, so show what that is while it is being dragged: the
+				// Dropping re-attaches the pin to whatever is under it; holding Shift shows what that is while it is dragged: the
 				// same outline, from the same code, as when a pin is first placed. It exists only for the length of the drag.
-				hover ??= hoverOutline();
-				hover.show(underlying(ev.clientX, ev.clientY), '');
+				hover ??= shiftOutline();
+				hover.show(underlying(ev.clientX, ev.clientY), '', ev.shiftKey);
 			};
 			const up = (ev: PointerEvent) => {
 				ev.stopPropagation();

@@ -2,6 +2,7 @@ import { type BrowserWindow, type WebContentsView, nativeImage } from 'electron'
 import { createServer } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { assertPreviewUrl } from '../shared/anchor';
+import { INK } from '../shared/pageInk';
 import type { PinEvent } from '../shared/contract';
 import { PageView } from './services/pageView';
 
@@ -68,9 +69,13 @@ export const runPageSmoke = async (window: BrowserWindow): Promise<void> => {
 	await js('window.__pressed = 0; document.addEventListener("click", () => window.__pressed++)');
 	const picking = page.pick();
 	await new Promise((r) => setTimeout(r, 200));
-	// 2a. Before the click, the element under the pointer is outlined where it is, and named.
+	// 2a. Before the click, nothing is outlined; holding Shift outlines the element under the pointer where it is, and names it.
 	console.log('smoke-page: step 2a');
 	wc.sendInputEvent({ type: 'mouseMove', x: 100, y: 70 });
+	await new Promise((r) => setTimeout(r, 250));
+	if (await js<boolean>(`(document.querySelector('[data-fd-layer="hover"]') || {style:{}}).style.display === 'block'`))
+		fail('the element was outlined without Shift held');
+	wc.sendInputEvent({ type: 'mouseMove', x: 101, y: 70, modifiers: ['shift'] });
 	await new Promise((r) => setTimeout(r, 250));
 	const outlined = await js<{
 		box: { left: number; top: number; width: number; height: number };
@@ -103,15 +108,16 @@ export const runPageSmoke = async (window: BrowserWindow): Promise<void> => {
 	console.log('smoke-page: step 2c');
 	const climbing = page.pick();
 	await new Promise((r) => setTimeout(r, 200));
-	wc.sendInputEvent({ type: 'mouseMove', x: 100, y: 70 });
+	wc.sendInputEvent({ type: 'mouseMove', x: 100, y: 70, modifiers: ['shift'] });
 	await new Promise((r) => setTimeout(r, 200));
-	wc.sendInputEvent({ type: 'keyDown', keyCode: 'Up' });
-	wc.sendInputEvent({ type: 'keyUp', keyCode: 'Up' });
+	wc.sendInputEvent({ type: 'keyDown', keyCode: 'Up', modifiers: ['shift'] });
+	wc.sendInputEvent({ type: 'keyUp', keyCode: 'Up', modifiers: ['shift'] });
 	await new Promise((r) => setTimeout(r, 200));
 	const label = await js<string>('(document.querySelectorAll("[data-fd-layer=hover]")[1] || {}).textContent || ""');
 	if (!label.includes('<section>')) fail(`the up arrow did not climb to the container: ${label}`);
-	wc.sendInputEvent({ type: 'mouseDown', x: 100, y: 70, button: 'left', clickCount: 1 });
-	wc.sendInputEvent({ type: 'mouseUp', x: 100, y: 70, button: 'left', clickCount: 1 });
+	// A Shift-click takes what is outlined.
+	wc.sendInputEvent({ type: 'mouseDown', x: 100, y: 70, button: 'left', clickCount: 1, modifiers: ['shift'] });
+	wc.sendInputEvent({ type: 'mouseUp', x: 100, y: 70, button: 'left', clickCount: 1, modifiers: ['shift'] });
 	const climbed = await climbing;
 	if (!climbed || climbed.anchor.tag !== 'section') fail(`the container was not what was recorded: ${JSON.stringify(climbed?.anchor)}`);
 	if (!climbed?.box || climbed.box.width < 300) fail(`the container's box was not reported: ${JSON.stringify(climbed?.box)}`);
@@ -142,22 +148,24 @@ export const runPageSmoke = async (window: BrowserWindow): Promise<void> => {
 
 	// 3a. With a pin already on the page, a picture of that spot does not show the pin.
 	console.log('smoke-page: step 3a');
-	const blue = (img: Electron.NativeImage) => {
+	// The pin's own colour, as the page draws it, so a change of colour cannot leave this counting the wrong one.
+	const [pr, pg, pb] = [1, 3, 5].map((i) => parseInt(INK.pin.slice(i, i + 2), 16)) as [number, number, number];
+	const pinPixels = (img: Electron.NativeImage) => {
 		const bmp = img.toBitmap();
 		let n = 0;
 		for (let i = 0; i + 3 < bmp.length; i += 4) {
 			const b = bmp[i] as number,
 				g = bmp[i + 1] as number,
 				r = bmp[i + 2] as number;
-			if (Math.abs(r - 37) < 30 && Math.abs(g - 99) < 30 && Math.abs(b - 235) < 30) n++;
+			if (Math.abs(r - pr) < 30 && Math.abs(g - pg) < 30 && Math.abs(b - pb) < 30) n++;
 		}
 		return n;
 	};
 	// Control: the pin really is in an ordinary capture, so finding none below means something.
 	// (The pin was only just drawn: let the page paint it first, as the app's own snapshot does.)
 	await js('new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))');
-	const control = blue(await wc.capturePage({ x: 20, y: 20, width: 160, height: 100 }));
-	if (control < 20) fail(`the control capture does not show the pin (${control} blue pixels), so the check below proves nothing`);
+	const control = pinPixels(await wc.capturePage({ x: 20, y: 20, width: 160, height: 100 }));
+	if (control < 20) fail(`the control capture does not show the pin (${control} pin-coloured pixels), so the check below proves nothing`);
 	const again = page.pick();
 	await new Promise((res) => setTimeout(res, 200));
 	// Elsewhere on the same button, not on the pin itself (which would also select the pin), but
@@ -166,8 +174,8 @@ export const runPageSmoke = async (window: BrowserWindow): Promise<void> => {
 	wc.sendInputEvent({ type: 'mouseUp', x: 200, y: 85, button: 'left', clickCount: 1 });
 	const second = await again;
 	if (!second?.picture) return fail('no picture with the second click');
-	const inPicture = blue(nativeImage.createFromDataURL(second.picture));
-	if (inPicture > 3) fail(`the picture shows the pin (${inPicture} blue pixels), but it should show the thing and not the pin`);
+	const inPicture = pinPixels(nativeImage.createFromDataURL(second.picture));
+	if (inPicture > 3) fail(`the picture shows the pin (${inPicture} pin-coloured pixels), but it should show the thing and not the pin`);
 	if ((await js<string>("document.querySelector('[data-fd-layer=pins]').style.visibility")) !== 'visible')
 		fail('the pins were left hidden after the picture');
 
@@ -187,7 +195,11 @@ export const runPageSmoke = async (window: BrowserWindow): Promise<void> => {
 		wc.sendInputEvent({ type: 'mouseMove', x, y, modifiers: ['leftbuttondown'] });
 		await wait(50);
 	}
-	// Mid-drag, what the pin would re-attach to is outlined, as it is when a pin is first placed.
+	if (await js<boolean>(`(document.querySelector('[data-fd-layer="hover"]') || {style:{}}).style.display === 'block'`))
+		fail('a pin being dragged outlined what is under it without Shift held');
+	wc.sendInputEvent({ type: 'mouseMove', x: 301, y: 300, modifiers: ['leftbuttondown', 'shift'] });
+	await wait(50);
+	// Mid-drag, with Shift held, what the pin would re-attach to is outlined, as it is when a pin is first placed.
 	const dragOutline = await js<{ shown: boolean; label: string } | null>(
 		`(function(){var l=document.querySelectorAll('[data-fd-layer="hover"]');if(l.length<2)return null;return {shown:l[0].style.display==='block',label:l[1].textContent}})()`,
 	);

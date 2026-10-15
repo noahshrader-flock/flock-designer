@@ -19,7 +19,8 @@ const page = (html: string, url = 'http://localhost:3000/users#/list', head = ''
 	return w;
 };
 
-const click = (w: DOMWindow, el: Element) => el.dispatchEvent(new w.MouseEvent('click', { bubbles: true, cancelable: true, clientX: 5, clientY: 5 }));
+const click = (w: DOMWindow, el: Element, shiftKey = false) =>
+	el.dispatchEvent(new w.MouseEvent('click', { bubbles: true, cancelable: true, clientX: 5, clientY: 5, shiftKey }));
 
 const CARD = `
   <main>
@@ -315,8 +316,8 @@ describe('pins that can be clicked and dragged', () => {
 		w.document.elementsFromPoint = () => [target];
 		w.eval(resolveScript([{ ...req(5, { selector: 'main' }), movable }], 'secret'));
 		const pin = w.document.querySelector('[data-fd-layer] > div > div') as HTMLElement;
-		const fire = (type: string, x = 0, y = 0) =>
-			pin.dispatchEvent(new w.MouseEvent(type, { bubbles: true, cancelable: true, clientX: x, clientY: y }));
+		const fire = (type: string, x = 0, y = 0, shiftKey = false) =>
+			pin.dispatchEvent(new w.MouseEvent(type, { bubbles: true, cancelable: true, clientX: x, clientY: y, shiftKey }));
 		return { w, said, pin, fire };
 	};
 
@@ -340,13 +341,15 @@ describe('pins that can be clicked and dragged', () => {
 		expect(read).toMatchObject({ kind: 'move', id: 5, anchor: { selector: '[data-e2e-ref="users-invite"]', route: '/users#/list' } });
 	});
 
-	it('outlines what the pin would attach to while it is being dragged, and only then', () => {
+	it('outlines what the pin would attach to while it is being dragged with Shift held, and only then', () => {
 		const { w, fire } = setup(true);
 		const seen = () => Array.from(w.document.querySelectorAll('[data-fd-layer="hover"]')) as HTMLElement[];
 		expect(seen()).toHaveLength(0); // nothing before the drag
 
 		fire('pointerdown', 10, 10);
 		fire('pointermove', 200, 120);
+		expect(seen()[0]?.style.display).toBe('none'); // dragged without Shift: nothing outlined
+		fire('pointermove', 201, 120, true);
 		const [outline, chip] = seen();
 		expect(outline?.style.display).toBe('block');
 		// The same element the drop would re-attach to, named the same way as when a pin is placed.
@@ -466,9 +469,11 @@ describe('choosing what a pin attaches to', () => {
 		for (let e: Element | null = el; e; e = e.parentElement) chain.push(e);
 		(w.document as unknown as { elementsFromPoint: () => Element[] }).elementsFromPoint = () => chain;
 	};
-	const move = (w: DOMWindow, x = 12, y = 22) => w.document.dispatchEvent(new w.MouseEvent('mousemove', { bubbles: true, clientX: x, clientY: y }));
-	const press = (w: DOMWindow, key: string) => {
-		const ev = new w.KeyboardEvent('keydown', { key, bubbles: true, cancelable: true });
+	// With Shift held unless said otherwise: only then is anything outlined, and only then do the arrows climb.
+	const move = (w: DOMWindow, shiftKey = true) =>
+		w.document.dispatchEvent(new w.MouseEvent('mousemove', { bubbles: true, clientX: 12, clientY: 22, shiftKey }));
+	const press = (w: DOMWindow, key: string, shiftKey = true) => {
+		const ev = new w.KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, shiftKey });
 		w.document.dispatchEvent(ev);
 		return ev;
 	};
@@ -476,7 +481,7 @@ describe('choosing what a pin attaches to', () => {
 	const outlineOf = (w: DOMWindow & { document: Document }) => layers(w)[0] as HTMLElement;
 	const chipOf = (w: DOMWindow & { document: Document }) => layers(w)[1] as HTMLElement;
 
-	it('outlines the element under the pointer, where it is, and names it, before anything is clicked', () => {
+	it('outlines the element under the pointer, where it is, and names it, before anything is clicked, while Shift is held', () => {
 		const w = page(FORM);
 		const sub = w.document.getElementById('sub') as HTMLElement;
 		void w.eval(PICK_SCRIPT);
@@ -493,13 +498,36 @@ describe('choosing what a pin attaches to', () => {
 		expect(chipOf(w).textContent).toContain('container');
 	});
 
+	it('outlines nothing as the pointer moves without Shift, and shows or hides it as Shift is pressed or let go', () => {
+		const w = page(FORM);
+		void w.eval(PICK_SCRIPT);
+		under(w, w.document.getElementById('sub') as HTMLElement);
+		move(w, false);
+		expect(outlineOf(w).style.display).toBe('none');
+		w.document.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Shift', bubbles: true }));
+		expect(outlineOf(w).style.display).toBe('block');
+		w.document.dispatchEvent(new w.KeyboardEvent('keyup', { key: 'Shift', bubbles: true }));
+		expect(outlineOf(w).style.display).toBe('none');
+	});
+
+	it('places a plain click on the element under it, never on a container the arrows did not climb to without Shift', async () => {
+		const w = page(FORM);
+		const sub = w.document.getElementById('sub') as HTMLElement;
+		const picked = w.eval(PICK_SCRIPT) as Promise<CommentAnchor>;
+		under(w, sub);
+		move(w, false);
+		press(w, 'ArrowUp', false);
+		click(w, sub);
+		expect((await picked).selector).toBe('#sub');
+	});
+
 	it('records the element that is outlined, with its kind and the containers it sits inside', async () => {
 		const w = page(FORM);
 		const sub = w.document.getElementById('sub') as HTMLElement;
 		const picked = w.eval(PICK_SCRIPT) as Promise<CommentAnchor & { box: unknown }>;
 		under(w, sub);
 		move(w);
-		click(w, sub);
+		click(w, sub, true);
 		const a = await picked;
 		expect(a.tag).toBe('p');
 		expect(a.selector).toBe('#sub');
@@ -520,8 +548,8 @@ describe('choosing what a pin attaches to', () => {
 		expect(chipOf(w).textContent).toContain('<section>');
 		press(w, 'ArrowDown');
 		expect(chipOf(w).textContent).toContain('<div>');
-		// The click lands on the paragraph, but what was chosen was the container, and that is what is recorded.
-		click(w, sub);
+		// The Shift-click lands on the paragraph, but what was chosen was the container, and that is what is recorded.
+		click(w, sub, true);
 		const a = await picked;
 		expect(a.tag).toBe('div');
 		expect(w.document.querySelector(a.selector)?.getAttribute('aria-label')).toBe('Hotlist Hits');

@@ -25,7 +25,7 @@ export const CommentControl = ({
 			variant={comments.commentMode ? 'default' : 'outline'}
 			aria-pressed={comments.commentMode}
 			disabled={disabled}
-			title={disabled ? undefined : 'Comment: click anywhere on the page to leave one (C)'}
+			title={disabled ? undefined : 'Comment: click anywhere on the page to leave one; hold Shift to see what it attaches to (C)'}
 			onClick={comments.toggleCommentMode}
 		>
 			<MapPinIcon />
