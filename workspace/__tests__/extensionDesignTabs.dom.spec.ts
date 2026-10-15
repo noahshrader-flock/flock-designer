@@ -171,6 +171,7 @@ describe('a component’s tab', () => {
 		values: {
 			state: 'read',
 			instances: 12,
+			unmarked: 0,
 			rows: [
 				{
 					property: 'height',
@@ -241,10 +242,33 @@ describe('a component’s tab', () => {
 			'Radius · also FSIconButton, FSSplitButton',
 		);
 		// Values of different kinds in one row each say what they are; a colour that draws nothing is said as none.
-		const background = [...values.querySelectorAll('[data-value-row="background"] [data-value-cell]')].map((c) => c.textContent);
-		// A value that draws nothing is said as none, with no swatch and nothing said of what it is.
-		expect(background).toEqual(['primaryrgb(16, 128, 98)Light primary main · also FSIconButton', 'ghostnone']);
+		// A value that draws nothing is said as none, with no swatch and nothing said of what it is: the rest of its row is one
+		// kind, said once on the row.
+		const background = values.querySelector('[data-value-row="background"]') as HTMLElement;
+		expect([...background.querySelectorAll('[data-value-cell]')].map((c) => c.textContent)).toEqual(['primaryrgb(16, 128, 98)', 'ghostnone']);
+		expect(background.querySelector('h3 [data-value-kind="token"]')?.textContent).toBe('Light primary main · also FSIconButton');
 		expect(values.querySelector('[data-value-row="fontSize"] [data-value-kind="unchecked"]')?.textContent).toBe('Not checked');
+	});
+
+	it('says when a length it calls its own may be a token no tag could be given', async () => {
+		await analysed();
+		expect(section('Values')?.querySelector('[data-values-unmarked]')).toBeNull();
+		document.body.innerHTML = '';
+		await analysed({ values: { ...(analysis().values as object), unmarked: 2 } });
+		expect(section('Values')?.querySelector('[data-values-unmarked]')?.textContent).toBe(
+			'2 lengths in the design system are written in em or %, which cannot be marked, so a length said to be its own may be one of them.',
+		);
+	});
+
+	it('says why it has no values when it only wraps what it is given, when its stories did not draw, and when reading them failed', async () => {
+		const says = async (values: object) => {
+			document.body.innerHTML = '';
+			await analysed({ values });
+			return section('Values')?.textContent;
+		};
+		expect(await says({ state: 'wraps' })).toContain('Its stories draw it around other content');
+		expect(await says({ state: 'not-drawn' })).toContain('Its stories did not finish drawing');
+		expect(await says({ state: 'failed', error: 'No component here' })).toContain('Its values could not be read: No component here');
 	});
 
 	it('says why it has no values when its stories name no component', async () => {
@@ -254,7 +278,7 @@ describe('a component’s tab', () => {
 
 	it('says why it has no values when its stories draw none of it', async () => {
 		await analysed({ values: { state: 'none-drawn' } });
-		expect(section('Values')?.textContent).toContain('Its stories draw no FSButton, so its values cannot be read.');
+		expect(section('Values')?.textContent).toContain('Its stories draw no FSButton on the page, so its values cannot be read.');
 	});
 
 	it('breaks what it is made from down by kind, compactly, apart from its colours, with each token’s uses and who shares it', async () => {

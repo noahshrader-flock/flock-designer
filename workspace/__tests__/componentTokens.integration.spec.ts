@@ -2,7 +2,8 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ComponentTokens, type Drawn, type Measure, decode, tagsFor } from '../src/main/services/componentTokens';
+import { ComponentTokens, type Drawn, type Measure, decode } from '../src/main/services/componentTokens';
+import { tagsFor } from '../src/main/services/tokenTags';
 import type { DesignToken, TokenEdit } from '../src/shared/contract';
 import { g } from './fixtures';
 
@@ -73,6 +74,8 @@ describe('the tags', () => {
 			{ path: 'radius', value: '1.0625rem' },
 		]);
 		expect(tags.edits.some((e) => e.path === 'font')).toBe(false);
+		// Left out, and counted: what it draws reads as no token, which the values list says.
+		expect(tags.unmarked).toBe(1);
 	});
 
 	it('give every length a tag however many a library has, each a prime, none a multiple of another', () => {
@@ -253,6 +256,7 @@ describe('the index', () => {
 						cells: [{ variant: null, value: 'rgb(16, 128, 98)', kind: 'token', tokens: ['tone.brand.50'], instances: 1 }],
 					},
 				],
+				unmarked: 0,
 			},
 		});
 		const a = await i.of('src/components/A/A.stories.tsx');

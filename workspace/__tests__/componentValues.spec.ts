@@ -1,20 +1,21 @@
 import { describe, expect, it } from 'vitest';
-import type { Drawn, Instance, Tags } from '../src/main/services/componentTokens';
+import type { Drawn, Instance } from '../src/main/services/componentTokens';
 import { readValues } from '../src/main/services/componentValues';
+import type { Tags } from '../src/main/services/tokenTags';
 import type { ValueRow } from '../src/shared/contract';
 
 /**
  * A component's drawn values (Phase 1 of adjusting a component): each instance its stories draw, as the library has it and
  * with every token tagged, read into rows by property, each told apart by the prop that explains it, and each value said to
  * be a token's, the component's own, or worked out from one. Against fixtures; the page that reads them is drawn in real
- * Chrome in `componentValues.integration.spec.ts`.
+ * Chrome in `componentValues.integration.spec.ts`. Values come as the page reads them: each side and corner as it is.
  */
 
 const BASE = {
 	height: '36px',
-	padding: '0px 10px',
-	radius: '8px',
-	gap: 'normal',
+	padding: '0px 10px 0px 10px',
+	radius: '8px 8px 8px 8px',
+	gap: 'normal normal',
 	fontSize: '16px',
 	background: 'rgba(0, 0, 0, 0)',
 	text: 'rgb(16, 128, 98)',
@@ -24,23 +25,27 @@ const instance = (props: Record<string, string>, values: Partial<Instance['value
 	props,
 	values: { ...BASE, ...values },
 });
-const drawn = (instances: Instance[], component = true, controls?: string[]): Drawn => ({
+const drawn = (instances: Instance[], more: Partial<Drawn> = {}): Drawn => ({
 	colors: {},
 	radii: {},
 	spacing: {},
-	component,
+	component: true,
 	instances,
-	...(controls ? { controls } : {}),
+	...more,
 });
-/** Spacing tagged 13px, the radius 17px; one color tag. */
+/** Spacing tagged 13px, the radius 17px, a height-sized length 23px; one color tag. */
 const TAGS: Tags = {
-	edits: [],
+	edits: [{ path: 'spacing', value: '13px' }],
 	colors: new Map([['#00015A', 'palette.primary.main']]),
 	sizes: [
 		{ px: 13, path: 'spacing' },
 		{ px: 17, path: 'shape.borderRadius' },
+		{ px: 23, path: 'size.control' },
 	],
+	unmarked: 0,
 };
+/** A library with no token that could be tagged. */
+const NO_TAGS: Tags = { edits: [], colors: new Map(), sizes: [], unmarked: 0 };
 const SIZES = ['sm', 'md', 'lg', 'xl'];
 const HEIGHTS = ['28px', '36px', '48px', '56px'];
 /** Each size drawn in two stories, each instance with an id of its own: a prop with a value for every instance. */
@@ -49,16 +54,21 @@ const sized = (more: (i: number) => Partial<Instance['values']> = () => ({})) =>
 		SIZES.map((size, i) => instance({ size, testId: `b${s}${i}` }, { height: HEIGHTS[i], ...more(i) }, story)),
 	);
 const rowOf = (rows: ValueRow[], property: ValueRow['property']) => rows.find((r) => r.property === property);
-const read = (plain: Instance[], tagged: Instance[] | null, tags: Tags | null = TAGS, controls?: string[]) => {
-	const r = readValues(drawn(plain, true, controls), tagged === null ? null : drawn(tagged), tags);
+const read = (plain: Instance[], tagged: Instance[] | null, tags: Tags = TAGS, controls?: string[]) => {
+	const r = readValues(drawn(plain, controls ? { controls } : {}), tagged === null ? null : drawn(tagged), tags);
 	if (r.state !== 'read') throw new Error(`not read: ${r.state}`);
 	return r;
 };
+const cells = (rows: ValueRow[], property: ValueRow['property']) => rowOf(rows, property)?.cells.map((c) => [c.variant, c.value, c.kind]);
 
 describe('a component’s drawn values', () => {
-	it('say so when its stories do not name their component, or draw none of it', () => {
-		expect(readValues(drawn([], false), null, TAGS)).toEqual({ state: 'no-component' });
+	it('say why there are none: reading failed, no component named, none drawn, each only wraps what it is given, or its stories threw', () => {
+		expect(readValues(drawn([], { instancesFailed: 'boom' }), null, TAGS)).toEqual({ state: 'failed', error: 'boom' });
+		expect(readValues(drawn([], { component: false }), null, TAGS)).toEqual({ state: 'no-component' });
 		expect(readValues(drawn([]), null, TAGS)).toEqual({ state: 'none-drawn' });
+		expect(readValues(drawn([], { wrapping: 2 }), null, TAGS)).toEqual({ state: 'wraps' });
+		// None drawn because its stories threw is not none drawn: they say why, where they are.
+		expect(readValues(drawn([], { storiesFailed: 3 }), null, TAGS)).toEqual({ state: 'not-drawn' });
 	});
 
 	it('tell a value apart by the prop that explains it, in the order drawn, and not by a prop with a value for each instance', () => {
@@ -75,17 +85,17 @@ describe('a component’s drawn values', () => {
 		const plain = ['primary', 'secondary', 'ghost'].map((variant, i) =>
 			instance({ testId: `v${i}`, variant }, { background: ['rgb(16, 128, 98)', 'rgb(218, 240, 242)', 'rgba(0, 0, 0, 0)'][i] }),
 		);
-		const named = readValues(drawn(plain, true, ['variant', 'size']), drawn(plain), null);
-		expect(named.state === 'read' && rowOf(named.rows, 'background')?.by).toBe('variant');
-		// With no controls named, a prop with a value for every instance in the file is taken for an id, not a variant.
-		const unnamed = readValues(drawn(plain), drawn(plain), null);
-		expect(unnamed.state === 'read' && rowOf(unnamed.rows, 'background')?.by).toBe(null);
+		expect(rowOf(read(plain, plain, NO_TAGS, ['variant', 'size']).rows, 'background')?.by).toBe('variant');
+		// With no controls named, a prop with a different value on every instance in the file is taken for an id, not a variant.
+		expect(rowOf(read(plain, plain, NO_TAGS).rows, 'background')?.by).toBe(null);
+		// Controls named that the instances were not drawn with (a story file whose args name only its children) are as none.
+		expect(rowOf(read(sized(), sized(), NO_TAGS, ['children']).rows, 'height')?.by).toBe('size');
 	});
 
-	it('give a value every instance draws once, for all, and name the token it is when its tag shows through', () => {
+	it('give a value every instance draws once, for all, said short, and name the token it is when its tag shows through', () => {
 		const r = read(
 			sized(),
-			sized(() => ({ radius: '17px' })),
+			sized(() => ({ radius: '17px 17px 17px 17px' })),
 		);
 		expect(rowOf(r.rows, 'radius')).toEqual({
 			property: 'radius',
@@ -94,7 +104,7 @@ describe('a component’s drawn values', () => {
 		});
 	});
 
-	it('read a color token by its tag, at any opacity, and a color that changes with the tags but is none as worked out from one', () => {
+	it('read a color token by its tag, at any opacity; one the tags change into no tag as worked out from one; a clear one as none', () => {
 		const plain = [
 			instance({ variant: 'primary' }, { background: 'rgb(16, 128, 98)' }),
 			instance({ variant: 'hover' }, { background: 'rgb(10, 100, 80)' }),
@@ -112,42 +122,55 @@ describe('a component’s drawn values', () => {
 		]);
 	});
 
-	it('read a value of several parts part by part: all a token’s is the token, some is mixed, and a zero says nothing', () => {
-		const plain = [instance({ size: 'sm' }, { padding: '0px 10px' }), instance({ size: 'lg' }, { padding: '8px 10px' })];
-		const tagged = [instance({ size: 'sm' }, { padding: '0px 26px' }), instance({ size: 'lg' }, { padding: '8px 26px' })];
+	it('read a length of several parts part by part: all a token’s is the token, some is mixed, and a zero says nothing', () => {
+		const plain = [instance({ size: 'sm' }, { padding: '0px 10px 0px 10px' }), instance({ size: 'lg' }, { padding: '8px 10px 8px 10px' })];
+		const tagged = [instance({ size: 'sm' }, { padding: '0px 26px 0px 26px' }), instance({ size: 'lg' }, { padding: '8px 26px 8px 26px' })];
 		expect(rowOf(read(plain, tagged, TAGS, ['size']).rows, 'padding')?.cells).toEqual([
 			{ variant: 'sm', value: '0px 10px', kind: 'token', tokens: ['spacing'], instances: 1 },
 			{ variant: 'lg', value: '8px 10px', kind: 'mixed', tokens: ['spacing'], instances: 1 },
 		]);
 	});
 
-	it('check no font size, and nothing at all when the two drawings do not pair up', () => {
-		expect(rowOf(read(sized(), sized()).rows, 'fontSize')?.cells[0]?.kind).toBe('unchecked');
-		const r = read(sized(), sized().slice(1));
-		expect(r.rows.flatMap((row) => row.cells.map((c) => c.kind))).toEqual(r.rows.flatMap((row) => row.cells.map(() => 'unchecked')));
+	it('never call a height a token, even when the tags move it onto a multiple of one: it is a sum, worked out from what is inside it', () => {
+		const plain = [instance({ size: 'sm' }, { height: '28px' }), instance({ size: 'lg' }, { height: '48px' })];
+		// Its padding tagged, sm's height comes to 46px, twice the 23px tag; lg's is a literal the tags leave alone.
+		const tagged = [instance({ size: 'sm' }, { height: '46px' }), instance({ size: 'lg' }, { height: '48px' })];
+		expect(cells(read(plain, tagged, TAGS, ['size']).rows, 'height')).toEqual([
+			['sm', '28px', 'derived'],
+			['lg', '48px', 'own'],
+		]);
 	});
 
-	it('call every value the component’s own when the library has no token to tag, except a font size', () => {
-		const r = read(sized(), null, null);
+	it('check no font size, and nothing at all when the two drawings do not pair up, by count, story or props', () => {
+		expect(rowOf(read(sized(), sized()).rows, 'fontSize')?.cells[0]?.kind).toBe('unchecked');
+		const kinds = (r: ReturnType<typeof read>) => [...new Set(r.rows.flatMap((row) => row.cells.map((c) => c.kind)))];
+		expect(kinds(read(sized(), sized().slice(1)))).toEqual(['unchecked']);
+		// As many instances in the same stories, but drawn with other props: not each other's twins.
+		const other = sized().map((i) => ({ ...i, props: { ...i.props, size: 'xl' } }));
+		expect(kinds(read(sized(), other))).toEqual(['unchecked']);
+	});
+
+	it('call every value the component’s own when no token could be tagged, except a font size, and carry how many lengths could not be', () => {
+		const r = read(sized(), null, { ...NO_TAGS, unmarked: 3 });
 		expect(rowOf(r.rows, 'height')?.cells.every((c) => c.kind === 'own')).toBe(true);
 		expect(rowOf(r.rows, 'fontSize')?.cells[0]?.kind).toBe('unchecked');
+		expect(r.unmarked).toBe(3);
 	});
 
 	it('leave out a property no instance draws anything of: no gap, no background, no border', () => {
-		const properties = read(sized(), sized()).rows.map((r) => r.property);
-		expect(properties).toEqual(['height', 'padding', 'radius', 'fontSize', 'text']);
+		expect(read(sized(), sized()).rows.map((r) => r.property)).toEqual(['height', 'padding', 'radius', 'fontSize', 'text']);
 	});
 
-	it('tell values apart by two props together when no one prop does, named in the order drawn', () => {
+	it('tell values apart by two props together when no one prop does, read as a person would, the false one left out', () => {
 		const plain = [
+			instance({ variant: 'primary', disabled: 'false' }, { background: 'rgb(16, 128, 98)' }),
 			instance({ variant: 'primary', disabled: 'false' }, { background: 'rgb(16, 128, 98)' }),
 			instance({ variant: 'primary', disabled: 'true' }, { background: 'rgb(200, 200, 200)' }),
 			instance({ variant: 'danger', disabled: 'false' }, { background: 'rgb(186, 26, 26)' }),
 			instance({ variant: 'danger', disabled: 'true' }, { background: 'rgb(200, 200, 200)' }),
 		];
-		const row = rowOf(read(plain, plain).rows, 'background');
+		const row = rowOf(read(plain, plain, NO_TAGS, ['variant', 'disabled']).rows, 'background');
 		expect(row?.by).toBe('variant, disabled');
-		// Read as a person would: a prop that is true by its name, and one that is false left out.
 		expect(row?.cells.map((c) => [c.variant, c.value])).toEqual([
 			['primary', 'rgb(16, 128, 98)'],
 			['primary · disabled', 'rgb(200, 200, 200)'],
@@ -156,47 +179,54 @@ describe('a component’s drawn values', () => {
 		]);
 	});
 
-	it('say a prop an instance was drawn without as not set, since it draws the default', () => {
-		const plain = [instance({ size: 'sm' }, { height: '28px' }), instance({ size: 'lg' }, { height: '48px' }), instance({}, { height: '48px' })];
-		expect(rowOf(read(plain, plain, TAGS, ['size']).rows, 'height')?.cells.map((c) => [c.variant, c.value])).toEqual([
-			['sm', '28px'],
-			['lg', '48px'],
-			['not set', '48px'],
-		]);
+	it('name no two props when each of their combinations is drawn once: then they would explain anything', () => {
+		const plain = [
+			instance({ variant: 'primary', dense: 'false' }, { height: '40px' }),
+			instance({ variant: 'primary', dense: 'true' }, { height: '36px' }),
+			instance({ variant: 'ghost', dense: 'false' }, { height: '36px' }),
+			instance({ variant: 'ghost', dense: 'true' }, { height: '28px' }),
+		];
+		expect(rowOf(read(plain, plain, NO_TAGS, ['variant', 'dense']).rows, 'height')?.by).toBe(null);
 	});
 
-	it('say a true or false prop alone by its name, and leave a variant as it is when shortening it would make two read the same', () => {
-		const alone = [
-			instance({ disabled: 'true' }, { background: 'rgb(200, 200, 200)' }),
-			instance({ disabled: 'false' }),
-			instance({ disabled: 'true' }, { background: 'rgb(200, 200, 200)' }),
+	it('say a prop an instance was drawn without as not set, since it draws the default; and a true or false prop alone by its name', () => {
+		const plain = [instance({ size: 'sm' }, { height: '28px' }), instance({ size: 'lg' }, { height: '48px' }), instance({}, { height: '48px' })];
+		expect(cells(read(plain, plain, NO_TAGS, ['size']).rows, 'height')).toEqual([
+			['sm', '28px', 'own'],
+			['lg', '48px', 'own'],
+			['not set', '48px', 'own'],
+		]);
+		const alone = [instance({ disabled: 'true' }, { background: 'rgb(200, 200, 200)' }), instance({ disabled: 'false' })];
+		expect(rowOf(read(alone, alone, NO_TAGS, ['disabled']).rows, 'background')?.cells.map((c) => c.variant)).toEqual(['disabled', 'not disabled']);
+	});
+
+	it('make one of two variants that read the same once shortened and draw the same, and say both in full when they draw differently', () => {
+		const same = [
+			instance({ variant: 'primary' }, { background: 'rgb(16, 128, 98)' }),
+			instance({ variant: 'primary', disabled: 'false' }, { background: 'rgb(16, 128, 98)' }),
+			instance({ variant: 'primary', disabled: 'true' }, { background: 'rgb(200, 200, 200)' }),
+			instance({ variant: 'ghost', disabled: 'true' }, { background: 'rgb(200, 200, 200)' }),
+			instance({ variant: 'ghost', disabled: 'true' }, { background: 'rgb(200, 200, 200)' }),
+			instance({ variant: 'ghost' }),
 		];
-		expect(rowOf(read(alone, alone, null, ['disabled']).rows, 'background')?.cells.map((c) => c.variant)).toEqual(['disabled', 'not disabled']);
-		// Two props are needed here, and shortening would make "primary" twice: they are left as they are.
-		const both = [
+		expect(rowOf(read(same, same, NO_TAGS, ['variant', 'disabled']).rows, 'background')?.cells.map((c) => [c.variant, c.instances])).toEqual([
+			['primary', 2],
+			['primary · disabled', 1],
+			['ghost · disabled', 2],
+			['ghost', 1],
+		]);
+		const differ = [
+			instance({ variant: 'primary' }, { height: '40px' }),
 			instance({ variant: 'primary' }, { height: '40px' }),
 			instance({ variant: 'primary', dense: 'false' }, { height: '36px' }),
 			instance({ variant: 'secondary' }, { height: '36px' }),
 			instance({ variant: 'secondary', dense: 'true' }, { height: '28px' }),
 		];
-		const row = rowOf(read(both, both, null, ['variant', 'dense']).rows, 'height');
-		expect(row?.by).toBe('variant, dense');
-		expect(row?.cells.map((c) => c.variant)).toEqual(['primary · not set', 'primary · false', 'secondary · not set', 'secondary · true']);
-	});
-
-	it('make one of two variants that read the same once shortened and draw the same: not set and false draw the default alike', () => {
-		const plain = [
-			instance({ variant: 'primary' }, { background: 'rgb(16, 128, 98)' }),
-			instance({ variant: 'primary', disabled: 'false' }, { background: 'rgb(16, 128, 98)' }),
-			instance({ variant: 'primary', disabled: 'true' }, { background: 'rgb(200, 200, 200)' }),
-			instance({ variant: 'ghost', disabled: 'true' }, { background: 'rgb(200, 200, 200)' }),
-			instance({ variant: 'ghost' }),
-		];
-		expect(rowOf(read(plain, plain, null, ['variant', 'disabled']).rows, 'background')?.cells.map((c) => [c.variant, c.instances])).toEqual([
-			['primary', 2],
-			['primary · disabled', 1],
-			['ghost · disabled', 1],
-			['ghost', 1],
+		expect(rowOf(read(differ, differ, NO_TAGS, ['variant', 'dense']).rows, 'height')?.cells.map((c) => c.variant)).toEqual([
+			'primary · not set',
+			'primary · false',
+			'secondary · not set',
+			'secondary · true',
 		]);
 	});
 
@@ -207,7 +237,7 @@ describe('a component’s drawn values', () => {
 			instance({}, { height: '44px' }, 'C'),
 			instance({}, { height: '40px' }, 'D'),
 		];
-		expect(rowOf(read(plain, plain).rows, 'height')).toEqual({
+		expect(rowOf(read(plain, plain, NO_TAGS).rows, 'height')).toEqual({
 			property: 'height',
 			by: null,
 			cells: [

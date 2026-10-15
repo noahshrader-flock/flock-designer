@@ -1552,7 +1552,7 @@ describe('trying a change to the tokens, saving it to a branch, and proposing it
 		expect([...dialog().querySelectorAll('button')].map((b) => b.textContent)).not.toContain('Done');
 		await press(dialog().querySelector('[aria-label="Close"]') as HTMLElement);
 		expect(document.querySelector('[role="dialog"]')).toBeNull();
-		await press(document.querySelector('[aria-label="Change Spacing spacing"]') as HTMLElement);
+		await press(document.querySelector('[aria-label="Change Spacing"]') as HTMLElement);
 		const slider = dialog().querySelector('input[type="range"]') as HTMLInputElement;
 		await type(slider, '12');
 		await act(async () => void slider.dispatchEvent(new Event('pointerup', { bubbles: true })));

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { DesignToken } from '../src/shared/contract';
-import { nameOf, paletteFamilies, semanticTable, tokenTitle } from '../src/shared/tokens';
+import { labelOf, nameOf, paletteFamilies, semanticTable, tokenTitle } from '../src/shared/tokens';
 
 /**
  * Which colors are the design system's palette and which are semantic, and the semantic ones lined up by theme: worked out
@@ -121,6 +121,14 @@ describe('a token’s name', () => {
 
 	it('is not said twice when the set is the name', () => {
 		expect(named('css.light.background', 'background', 'background')).toBe('background');
+	});
+});
+
+describe('a token’s label', () => {
+	it('says its group, then its name, without a word twice', () => {
+		expect(labelOf(color('palette.light.primary.main', 'Light', 'primary', 'main', '#000000'))).toBe('Light primary main');
+		expect(labelOf(color('shape.base', 'Radius', 'radius', 'base', '8px'))).toBe('Radius base');
+		expect(labelOf(color('radius', 'Radius', 'radius', 'radius', '8px'))).toBe('Radius');
 	});
 });
 

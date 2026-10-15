@@ -184,14 +184,20 @@ new ResizeObserver(tell).observe(document.body);
 // One story file drawn in place of the last, resolved once it is on the page. What reads every story (T6) draws them one
 // after another in one page this way, rather than loading the page again for each.
 const show = (file) => {
+	// The component the stories are of, as their default export names it, and the props its stories name as controls: what
+	// reads its values finds its instances by it, and tells them apart by those. Never the last file's.
+	window[${JSON.stringify(PREVIEW_COMPONENT)}] = null;
 	const load = files[file];
 	if (!load) return Promise.resolve(fail('There is no such story file in this build.'));
 	return load().then((m) => {
-		// The component the stories are of, as their default export names it, and the props it names as controls: what reads its
-		// values finds its instances by it, and tells them apart by those.
-		const meta = m.default ?? {};
-		window[${JSON.stringify(PREVIEW_COMPONENT)}] = meta.component ? { component: meta.component, controls: Object.keys({ ...meta.args, ...meta.argTypes }) } : null;
 		const stories = Object.entries(composeStories(m));
+		try {
+			const component = m.default?.component;
+			const controls = [...new Set(stories.flatMap(([, Story]) => Object.keys({ ...Story.args, ...Story.argTypes })))];
+			window[${JSON.stringify(PREVIEW_COMPONENT)}] = component ? { component, controls } : null;
+		} catch {
+			// A file whose stories cannot be asked is drawn all the same; only its values are not read.
+		}
 		const drawsItself = (name) => typeof m[name] === 'function' || typeof m[name]?.render === 'function' || typeof m.default?.render === 'function';
 		// Drawn at once, not at the next frame: a page drawn where nobody sees it gets no frames.
 		flushSync(() => root.render(h(Fragment, { key: file }, ...stories.map(([name, Story]) =>

@@ -49,9 +49,14 @@ export const nameOf = (t: DesignToken): string => {
 	return (joiner === '-' || joiner === '_') && before.slice(0, -1).endsWith(t.set) ? `${t.set}${joiner}${t.name}` : `${t.set} ${t.name}`;
 };
 
-/** A token named with where it is shown: `Light primary main`, `Tones pineGreen 50`, `Radius base` (not `Radius radius base`). */
-export const labelOf = (t: DesignToken): string =>
-	t.set.toLowerCase() === t.group.toLowerCase() ? `${t.group} ${t.name}` : `${t.group} ${nameOf(t)}`;
+/**
+ * A token named with where it is shown: `Light primary main`, `Tones pineGreen 50`, `Radius base` (not `Radius radius
+ * base`), and `Radius` for a group's one token named as the group is (not `Radius radius`).
+ */
+export const labelOf = (t: DesignToken): string => {
+	if (t.set.toLowerCase() !== t.group.toLowerCase()) return `${t.group} ${nameOf(t)}`;
+	return t.name.toLowerCase() === t.group.toLowerCase() ? t.group : `${t.group} ${t.name}`;
+};
 
 /** A token's role and variant, without saying a word twice: `primary.main`, `background` (a role whose name is its set). */
 export const roleOf = (t: DesignToken): string => (t.set === t.name ? t.name : `${t.set}.${t.name}`);

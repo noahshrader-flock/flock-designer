@@ -100,6 +100,8 @@ export type ComponentTokens =
 /** What is read of each instance a component's stories draw, in this order. */
 export const VALUE_PROPERTIES = ['height', 'padding', 'radius', 'gap', 'fontSize', 'background', 'text', 'border'] as const;
 export type ValueProperty = (typeof VALUE_PROPERTIES)[number];
+/** The properties that are colours: read against the color tags, and shown with a swatch. */
+export const COLOR_VALUES: ReadonlySet<ValueProperty> = new Set(['background', 'text', 'border']);
 
 /**
  * What a drawn value is: a token's (`tokens` names it, or them for a value of several parts), the component's own,
@@ -133,10 +135,19 @@ export interface ValueRow {
 
 /**
  * A component's drawn values (Phase 1 of adjusting a component), measured on the top element of each instance of the
- * component its stories draw, in light: found by the stories' own `component` (their default export's), so a story file
- * that does not name one says so, as does one whose stories draw none.
+ * component its stories draw, in light: found by the stories' own `component` (their default export's). Or why there are
+ * none: the file names no component; its stories draw none of it on the page (one that opens elsewhere, as a dialog does,
+ * is not on it); each instance only wraps what it is given (a tooltip around a button), so what draws is not its own; the
+ * file, or the stories that would have drawn it, did not draw; or reading it failed, said with why. `unmarked` is how many of the design system's lengths no tag
+ * can be given (in `em` or `%`), so a length said to be its own may be one of them.
  */
-export type ComponentValues = { state: 'no-component' } | { state: 'none-drawn' } | { state: 'read'; instances: number; rows: ValueRow[] };
+export type ComponentValues =
+	| { state: 'no-component' }
+	| { state: 'none-drawn' }
+	| { state: 'wraps' }
+	| { state: 'not-drawn' }
+	| { state: 'failed'; error: string }
+	| { state: 'read'; instances: number; rows: ValueRow[]; unmarked: number };
 
 /**
  * The pictures of the shown design system's components, for the grid view (P5): each component's picture by its story
