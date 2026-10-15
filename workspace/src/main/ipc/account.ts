@@ -8,13 +8,6 @@ import type { IpcDeps } from '../ipc';
 export const registerAccount = (d: IpcDeps): void => {
 	const { appearanceMemory, applyAppearance, github } = d;
 
-	// Sign-in. No handler returns a token: the renderer only ever learns whether
-	// someone is signed in, and who.
-	handle('signInStart', [], () => github.startSignIn());
-	handle('signInCancel', [], () => {
-		github.cancelSignIn();
-		return null;
-	});
 	handle('signInState', [], () => github.state());
 	handle('signOut', [], () => {
 		github.signOut();

@@ -1,24 +1,14 @@
 import type { Appearance } from '../appearance';
 import type { AccessibilityResult } from '../domain/accessibility';
-import type { DeviceCodeStart, SignInState } from '../domain/account';
+import type { SignInState } from '../domain/account';
 import type { AgentReadiness, AgentRecent, AgentStatus, ContinuedIn, EditorState } from '../domain/agent';
-import type {
-	Checkout,
-	CheckoutSuggestion,
-	ClonePlan,
-	CloneProgress,
-	ContextReceipt,
-	PreviewStatus,
-	RepositoryList,
-	RunLogLine,
-} from '../domain/checkout';
+import type { Checkout, PreviewStatus, RunLogLine } from '../domain/checkout';
 import type { CommentAnchor, CommentRef, ReviewComment } from '../domain/comments';
 import type {
 	Catalog,
 	ComponentPictures,
 	ComponentTokens,
 	ConnectedDesignSystems,
-	DesignSystemConnection,
 	StoryPreview,
 	TokenBranch,
 	TokenEdit,
@@ -56,21 +46,9 @@ import type { VoiceAndTone, VoiceSave } from '../domain/voice';
 export type Result<T> = { ok: true; value: T } | { ok: false; error: string };
 
 export interface WorkspaceApi {
-	/** Native directory picker. Resolves to null if the designer cancels. */
-	chooseCheckout(): Promise<Result<Checkout | null>>;
 	/** Re-read a checkout already opened (its branch, whether it is clean). It never trusts a folder the window names. */
 	readCheckout(root: string): Promise<Result<Checkout>>;
-	/** Read the repository's descriptor and resolve what it points at. */
-	readContextReceipt(root: string): Promise<Result<ContextReceipt>>;
 
-	listIterations(root: string, projectId: string): Promise<Result<Iteration[]>>;
-	/**
-	 * Every repository the signed-in person can see on GitHub, most recently pushed first, each with its clone on
-	 * this machine where there is one; then clones here GitHub did not list. Listing one trusts nothing.
-	 */
-	listRepositories(): Promise<Result<RepositoryList>>;
-	/** The branches of an opened repository, here or only on GitHub, most recently worked on first: what new work can start from. */
-	listBaseBranches(root: string): Promise<Result<string[]>>;
 	/** Of those, the ones with the DSNR setup, which codebase work can start from. */
 	branchesWithSetup(root: string): Promise<Result<string[]>>;
 	/** Checks out an existing iteration's branch. */
@@ -79,19 +57,6 @@ export interface WorkspaceApi {
 	/** `projectId` fills `<project-id>` in a command that serves one project. */
 	startCommand(root: string, commandId: string, projectId?: string): Promise<Result<PreviewStatus>>;
 	/**
-	 * The product checkout in use, if one has already been trusted: a repository this
-	 * person opened before. Discovery alone never lands here -- see `suggestCheckout`.
-	 */
-	lastCheckout(): Promise<Result<Checkout | null>>;
-	/**
-	 * A repository found on this machine by its `.dsnr/workspace.json`, offered for the
-	 * person to confirm. Finding it grants nothing: nothing may run in it until
-	 * `useCheckout` is called, which is what a click does.
-	 */
-	suggestCheckout(): Promise<Result<CheckoutSuggestion | null>>;
-	/** Accepts a suggested repository. This is the step that trusts it. */
-	useCheckout(root: string): Promise<Result<Checkout>>;
-	/**
 	 * The component library's catalog, from its clone's copy of its branch on GitHub. Without `refresh` it answers at once
 	 * with what the clone already has and starts bringing the branch up to date; with it, it waits for that and answers with the
 	 * outcome. Nothing in the clone's branches or files is changed.
@@ -99,18 +64,6 @@ export interface WorkspaceApi {
 	designSystemCatalog(refresh: boolean): Promise<Result<Catalog>>;
 	/** The design systems connected, and which is shown (P4). */
 	designSystems(): Promise<Result<ConnectedDesignSystems>>;
-	/**
-	 * Connects a design system from one of the person's repositories: cloned into the clone folder (with progress on
-	 * `onCloneProgress`, `cancelClone` stopping it) or used where it already is, its default branch read, and the design
-	 * system found in it. Refused, in words, when there is none; several to choose from when there are.
-	 */
-	connectDesignSystem(repository: string): Promise<Result<DesignSystemConnection>>;
-	/** Connects one of the design systems `connectDesignSystem` found in a repository, by its folder. */
-	chooseDesignSystem(repository: string, folder: string): Promise<Result<DesignSystemConnection>>;
-	/** Shows another of those connected. */
-	selectDesignSystem(id: string): Promise<Result<null>>;
-	/** Removes one connected: nothing on disk is deleted, only the connection. */
-	removeDesignSystem(id: string): Promise<Result<null>>;
 	/**
 	 * The previews of the library's stories, built from its branch once per commit; waits for the build. With `edits`, the
 	 * same stories built with those tokens changed (T3), written nowhere; with none, as the branch has them.
@@ -139,30 +92,12 @@ export interface WorkspaceApi {
 	proposeVoiceAndTone(): Promise<Result<VoiceAndTone>>;
 	/** Forgets the branch, to start again from the default branch's file: the branch and any pull request stay. */
 	forgetVoiceBranch(): Promise<Result<null>>;
-	/** Where this person's clones go: the folder they chose, or the default. */
-	cloneFolder(): Promise<Result<string>>;
-	/** Asks for the clone folder with the system's folder picker, and keeps it. Null if the person cancels. */
-	chooseCloneFolder(): Promise<Result<string | null>>;
-	/**
-	 * What cloning a repository from the person's GitHub list would do: where it goes, and whether the design repository
-	 * comes too. `forDesignSystem`: a design system is read, not worked in, so it is cloned with no design repository.
-	 */
-	clonePlan(repository: string, forDesignSystem?: boolean): Promise<Result<ClonePlan>>;
-	/**
-	 * Clones it into the clone folder (and the design repository beside it, when missing), then opens it as `useCheckout`
-	 * does. Only a repository the person's GitHub list returned; never to a path the window names.
-	 */
-	cloneRepository(repository: string): Promise<Result<Checkout>>;
-	/** Stops a clone that is running. What it made is removed. */
-	cancelClone(): Promise<Result<null>>;
 	/** Runs the install command the repository declares (`install`), and nothing else. Its output arrives through `onInstallLine`. */
 	installPackages(root: string): Promise<Result<null>>;
 	/** Stops an install that is running. */
 	cancelInstall(): Promise<Result<null>>;
 	onInstallLine(listener: (line: string) => void): () => void;
-	onCloneProgress(listener: (progress: CloneProgress) => void): () => void;
 	stopCommand(root: string, commandId: string): Promise<Result<PreviewStatus>>;
-	commandStatus(root: string, commandId: string): Promise<Result<PreviewStatus>>;
 	onRunLog(listener: (line: RunLogLine) => void): () => void;
 	onPreviewStatus(listener: (status: PreviewStatus) => void): () => void;
 
@@ -178,10 +113,7 @@ export interface WorkspaceApi {
 	 * progress arrives through `onShareStatus`, because the build takes minutes.
 	 */
 	shareIteration(root: string, projectId: string, name: string): Promise<Result<ShareStatus>>;
-	shareStatus(): Promise<Result<ShareStatus>>;
 	onShareStatus(listener: (status: ShareStatus) => void): () => void;
-	/** Whether a shared preview's address answers yet, for the "still building" screen. */
-	previewReachable(url: string): Promise<Result<boolean>>;
 
 	/**
 	 * Asks the agent to act on one comment, named by its id: the iteration's comments are read from GitHub now and written
@@ -275,15 +207,10 @@ export interface WorkspaceApi {
 	handoffResult(root: string): Promise<Result<boolean | null>>;
 	/** Whether this work can be handed to the person here: VS Code with Claude Code, and a conversation to continue. */
 	editorState(root: string, branch: string): Promise<Result<EditorState>>;
-	/** Opens the checkout in VS Code (or the folder, without it). */
-	openInEditor(root: string): Promise<Result<null>>;
 	/** Continues this branch's latest agent conversation in VS Code (or copies the command), taking over the app's run of it. */
 	continueInClaude(root: string, branch: string): Promise<Result<ContinuedIn>>;
 	onAgentLog(listener: (line: RunLogLine) => void): () => void;
 
-	/** Begins device-flow sign-in. Resolves as soon as there is a code to show. */
-	signInStart(): Promise<Result<DeviceCodeStart>>;
-	signInCancel(): Promise<Result<null>>;
 	signInState(): Promise<Result<SignInState>>;
 	signOut(): Promise<Result<null>>;
 	onSignInChanged(listener: (state: SignInState) => void): () => void;
@@ -315,11 +242,6 @@ export interface WorkspaceApi {
 	deleteComment(comment: CommentRef): Promise<Result<null>>;
 	/** Marks a comment resolved, or open again. GitHub decides who is allowed. */
 	resolveComment(comment: CommentRef, resolved: boolean): Promise<Result<ReviewComment>>;
-	/**
-	 * Records that the agent acted on a comment, with the commit it made, or clears that with null.
-	 * Never resolves it: that is the person's to say, after looking at the change.
-	 */
-	markAddressed(comment: CommentRef, commit: string | null): Promise<Result<ReviewComment>>;
 	/** The commit an iteration's branch is at on this machine, to say what a comment was made against. Null if unknown. */
 	iterationCommit(root: string, projectId: string, name: string): Promise<Result<string | null>>;
 }
@@ -331,21 +253,11 @@ export interface WorkspaceApi {
  * a method of `WorkspaceApi` is in neither, so the three cannot drift.
  */
 export const INVOKE = [
-	'chooseCheckout',
 	'readCheckout',
-	'readContextReceipt',
-	'listIterations',
 	'continueIteration',
 	'startCommand',
-	'lastCheckout',
-	'suggestCheckout',
-	'useCheckout',
 	'designSystemCatalog',
 	'designSystems',
-	'connectDesignSystem',
-	'chooseDesignSystem',
-	'selectDesignSystem',
-	'removeDesignSystem',
 	'storyPreview',
 	'componentTokens',
 	'componentPictures',
@@ -357,18 +269,10 @@ export const INVOKE = [
 	'saveVoiceAndTone',
 	'proposeVoiceAndTone',
 	'forgetVoiceBranch',
-	'cloneFolder',
-	'chooseCloneFolder',
-	'clonePlan',
-	'cloneRepository',
-	'cancelClone',
 	'installPackages',
 	'cancelInstall',
-	'listRepositories',
-	'listBaseBranches',
 	'branchesWithSetup',
 	'stopCommand',
-	'commandStatus',
 	'startAgent',
 	'agentStatus',
 	'agentRecent',
@@ -377,7 +281,6 @@ export const INVOKE = [
 	'editorState',
 	'startHandoff',
 	'handoffResult',
-	'openInEditor',
 	'continueInClaude',
 	'createPrototype',
 	'assignFolder',
@@ -400,12 +303,8 @@ export const INVOKE = [
 	'buildInCodebasePlan',
 	'addressComments',
 	'shareIteration',
-	'shareStatus',
 	'publishStatus',
 	'publishNow',
-	'previewReachable',
-	'signInStart',
-	'signInCancel',
 	'signInState',
 	'signOut',
 	'listProjects',
@@ -416,14 +315,12 @@ export const INVOKE = [
 	'postComment',
 	'moveComment',
 	'resolveComment',
-	'markAddressed',
 	'deleteComment',
 	'iterationCommit',
 ] as const satisfies readonly (keyof WorkspaceApi)[];
 
 export const EVENTS = {
 	onInstallLine: 'installLine',
-	onCloneProgress: 'cloneProgress',
 	onPublishStatus: 'publishStatus',
 	onShareStatus: 'shareStatus',
 	onRunLog: 'runLog',

@@ -1,4 +1,3 @@
-import type { DesignSystemConnection } from '../../shared/contract';
 import { isObjectId } from '../../shared/sha';
 import { arg, handle } from '../handle';
 import { tokenEditsOf } from '../services/tokenEdits';
@@ -9,7 +8,7 @@ import type { IpcDeps } from '../ipc';
  * voice and tone, and its branch.
  */
 export const registerDesignSystem = (d: IpcDeps): void => {
-	const { cloneAsPlanned, componentPictures, componentTokens, designSystems, library, previews, tokenBranches, voiceFile, warm } = d;
+	const { componentTokens, designSystems, library, previews, tokenBranches, voiceFile, warm } = d;
 
 	// The longest a save takes: far beyond any real voice and tone, short of anything that could hurt.
 	const MAX_VOICE = 200_000;
@@ -42,18 +41,4 @@ export const registerDesignSystem = (d: IpcDeps): void => {
 	handle('proposeVoiceAndTone', [], () => voiceFile().propose());
 	handle('forgetVoiceBranch', [], () => (voiceFile().forget(), null));
 	handle('designSystems', [], () => designSystems.read());
-	handle('selectDesignSystem', [arg.name], (id) => (designSystems.select(id), null));
-	// Removed with everything the app keeps of it: its pictures too (P5).
-	handle('removeDesignSystem', [arg.name], (id) => {
-		designSystems.remove(id);
-		componentPictures.forget(id);
-		return null;
-	});
-	// Connecting a design system (P4): only a design system, refused by name before anything is downloaded, then cloned or
-	// used where it is and looked in like a folder that was located (`DesignLibrary.connect`).
-	handle('connectDesignSystem', [arg.name], async (repository): Promise<DesignSystemConnection> => {
-		const cloned = await cloneAsPlanned(repository, true);
-		return library.connect(cloned.repository, cloned.path);
-	});
-	handle('chooseDesignSystem', [arg.name, arg.name], (repository, folder): DesignSystemConnection => library.choose(repository, folder));
 };

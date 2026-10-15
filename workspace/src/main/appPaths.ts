@@ -7,14 +7,10 @@ import { join } from 'node:path';
 export const appPaths = (userData: string) => ({
 	/** The product checkout the person chose. */
 	checkout: join(userData, 'checkout.json'),
-	/** Where their clones go. */
-	cloneFolder: join(userData, 'clone-folder.json'),
 	/** The design systems connected, and which is shown. */
 	designSystems: join(userData, 'design-system.json'),
 	/** Auto, light or dark. */
 	appearance: join(userData, 'appearance.json'),
-	/** The window's size and place. */
-	window: join(userData, 'window.json'),
 	/** The latest agent conversation for each branch, to continue in the editor. */
 	agentSessions: join(userData, 'agent-sessions.json'),
 	/** The branch each design system's token change is kept on. */

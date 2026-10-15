@@ -1,7 +1,6 @@
 import { assertPreviewUrl } from '../../shared/anchor';
 import type { PageStatus } from '../../shared/contract';
 import { arg, handle } from '../handle';
-import { previewIsUp } from '../services/share';
 import type { IpcDeps } from '../ipc';
 import { HOST } from '../../shared/vocabulary';
 
@@ -16,14 +15,6 @@ export const registerPublishing = (d: IpcDeps): void => {
 	handle('publishNow', [], async () => {
 		await publisher.publish(true);
 		return publisher.status();
-	});
-	handle('previewReachable', [arg.url], async (url): Promise<boolean> => {
-		const checked = assertPreviewUrl(url);
-		try {
-			return previewIsUp(await ports.httpStatus(checked));
-		} catch {
-			return false;
-		}
 	});
 	handle('publishedPage', [arg.projectId, arg.prototypeName], (projectId, name) => publishedPage(projectId, name));
 	handle('openPublishedPage', [arg.projectId, arg.prototypeName], async (projectId, name): Promise<null> => {

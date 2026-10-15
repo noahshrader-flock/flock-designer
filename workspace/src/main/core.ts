@@ -8,8 +8,6 @@ import type { Ports } from './ports';
 import { AgentRunner } from './services/agent';
 import { AppearanceMemory } from './services/appearance';
 import { CheckoutMemory } from './services/checkoutMemory';
-import { Cloner } from './services/clone';
-import { CloneFolderMemory } from './services/cloneFolder';
 import { DesignSystemsMemory } from './services/designSystems';
 import { SessionMemory } from './services/editor';
 import type { GitHubAccount } from './services/githubSession';
@@ -54,10 +52,8 @@ export const createCore = ({ paths, emit, ports, github, applyAppearance, pictur
 	prototypesRoot: paths.prototypes,
 	prototypeServer: new PrototypeServer(),
 	sessions: new SessionMemory(paths.agentSessions),
-	cloneFolders: new CloneFolderMemory(paths.cloneFolder),
 	appearanceMemory: new AppearanceMemory(paths.appearance),
 	applyAppearance,
-	cloner: new Cloner(),
 	installer: new Installer(),
 	designSystems: new DesignSystemsMemory(paths.designSystems),
 	storyPreviewsRoot: paths.storyPreviews,

@@ -3,7 +3,6 @@ import { join } from 'node:path';
 import { sanitizeAnchor, sanitizePicture } from '../../shared/anchor';
 import { shownRecord } from '../../shared/brief';
 import type { Project, ReviewComment } from '../../shared/contract';
-import { isCommit } from '../../shared/sha';
 import { isRecordName } from '../../shared/validate';
 import { arg, handle } from '../handle';
 import { classify } from '../services/branchProjects';
@@ -94,9 +93,4 @@ export const registerReview = (d: IpcDeps): void => {
 		return null;
 	});
 	handle('resolveComment', [arg.comment, arg.flag], (comment, resolved): Promise<ReviewComment> => designRepo.threads.setResolved(comment, resolved));
-	handle('markAddressed', [arg.comment, arg.unknown], (comment, commit): Promise<ReviewComment> => {
-		// A commit, or nothing. Anything else is not written into a comment body.
-		const sha = isCommit(commit) ? commit : null;
-		return designRepo.threads.setAddressed(comment, sha);
-	});
 };

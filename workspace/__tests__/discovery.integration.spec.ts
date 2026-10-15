@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { ProjectIteration } from '../src/shared/contract';
 import type { WorkspaceDescriptor } from '../src/main/services/descriptor';
 import { classify, patternToRegex, readBranchProjects } from '../src/main/services/branchProjects';
-import { findProductCheckouts, recordsRootFor, type DiscoveryDeps } from '../src/main/services/discovery';
+import { recordsRootFor } from '../src/main/services/discovery';
 import { continueIteration, readIterations } from '../src/main/services/iterations';
 import { unionLocal } from '../src/shared/projectList';
 import { projectIteration } from './fixtures';
@@ -21,49 +21,8 @@ const descriptor: WorkspaceDescriptor = {
 	designSystem: { package: 'x' },
 };
 
-describe('finding the product repository', () => {
-	const fake = (tree: Record<string, string[]>, activity: Record<string, number> = {}): DiscoveryDeps => ({
-		home: '/h',
-		exists: (p) => Object.values(tree).some((files) => files.includes(p)),
-		list: (dir) =>
-			Object.keys(tree)
-				.filter((d) => d.startsWith(`${dir}/`) && !d.slice(dir.length + 1).includes('/'))
-				.map((d) => d.slice(dir.length + 1)),
-		activity: (r) => activity[r] ?? 0,
-	});
-	const product = (dir: string) => [`${dir}/.git`, `${dir}/.dsnr/workspace.json`];
-
-	it('finds a repository once when two of the usual places are one folder, as GitHub and github are on macOS', () => {
-		const tree = { '/h/GitHub/flock-coke': product('/h/GitHub/flock-coke'), '/h/github/flock-coke': product('/h/github/flock-coke') };
-		const deps = { ...fake(tree), real: (p: string) => p.toLowerCase() };
-		expect(findProductCheckouts(deps)).toEqual(['/h/GitHub/flock-coke']);
-	});
-
-	it('looks first in the folder this person’s clones go in, wherever that is', () => {
-		const deps = { ...fake({ '/Volumes/work/flock-coke': product('/Volumes/work/flock-coke') }), folders: ['/Volumes/work'] };
-		expect(findProductCheckouts(deps)).toEqual(['/Volumes/work/flock-coke']);
-		expect(findProductCheckouts({ ...deps, folders: [] })).toEqual([]);
-	});
-
-	it('finds a repository by the file that says it can be worked in, wherever the usual places put it', () => {
-		const deps = fake({ '/h/Documents/GitHub/flock-coke': product('/h/Documents/GitHub/flock-coke') });
-		expect(findProductCheckouts(deps)).toEqual(['/h/Documents/GitHub/flock-coke']);
-	});
-
-	it('ignores repositories without the marker, and folders that are not repositories', () => {
-		const deps = fake({
-			'/h/Documents/GitHub/other': ['/h/Documents/GitHub/other/.git'],
-			'/h/Documents/GitHub/loose': ['/h/Documents/GitHub/loose/.dsnr/workspace.json'],
-		});
-		expect(findProductCheckouts(deps)).toEqual([]);
-	});
-
-	it('puts the most recently used first when there are several', () => {
-		const deps = fake({ '/h/code/old': product('/h/code/old'), '/h/code/new': product('/h/code/new') }, { '/h/code/old': 1, '/h/code/new': 9 });
-		expect(findProductCheckouts(deps)).toEqual(['/h/code/new', '/h/code/old']);
-	});
-
-	it('finds the design repository beside it, and says null rather than inventing a folder', () => {
+describe('finding the design repository', () => {
+	it('finds the design repository beside the product, and says null rather than inventing a folder', () => {
 		expect(recordsRootFor('/h/GitHub/flock-coke', (p) => p === '/h/GitHub/flock-designer/.git')).toBe('/h/GitHub/flock-designer/projects');
 		expect(recordsRootFor('/h/GitHub/flock-coke', () => false)).toBeNull();
 	});

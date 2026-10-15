@@ -38,7 +38,6 @@ export const fakeApp = (overrides: Impl = {}) => {
 		readComments: async () => ok([]),
 		// No design system connected, unless a test says otherwise.
 		designSystems: async () => ok({ systems: [], current: null }),
-		listRepositories: async () => ok({ repositories: [], reach: 'account' }),
 		// No change to the tokens saved, unless a test says otherwise.
 		tokenBranch: async () => ok(null),
 		// No voice and tone file in the design repository, unless a test says otherwise.
@@ -58,7 +57,6 @@ export const fakeApp = (overrides: Impl = {}) => {
 		// No picture of any prototype, and none made, unless a test says otherwise.
 		projectCover: async () => ok(null),
 		ensureCovers: async () => ok([]),
-		shareStatus: async () => ok({ state: 'idle' }),
 		publishedPage: async () => ok({ state: 'none' }),
 		...overrides,
 	};

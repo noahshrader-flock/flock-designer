@@ -185,17 +185,4 @@ export class DesignSystemsMemory {
 		const { systems } = this.read();
 		this.write([...systems.filter((s) => s.id !== system.id), system], system.id);
 	}
-
-	/** Shows another of those connected; nothing happens for one that is not. */
-	select(id: string): void {
-		const { systems } = this.read();
-		if (systems.some((s) => s.id === id)) this.write(systems, id);
-	}
-
-	/** Removes one: the next is shown, or none. Nothing on disk is deleted, only the connection. */
-	remove(id: string): void {
-		const { systems, current } = this.read();
-		const left = systems.filter((s) => s.id !== id);
-		this.write(left, current === id ? (left[0]?.id ?? null) : current);
-	}
 }

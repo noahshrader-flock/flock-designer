@@ -163,20 +163,6 @@ describe('the ones connected', () => {
 		expect(new DesignSystemsMemory(file).current()?.id).toBe('acme/acme:packages/ui');
 	});
 
-	it('switch, and a removed one leaves the list, the next shown, and none when it was the last', () => {
-		const memory = new DesignSystemsMemory(file);
-		memory.add(system('acme/ui'));
-		memory.add(system('acme/brand'));
-		memory.select('acme/ui');
-		expect(memory.current()?.id).toBe('acme/ui');
-		memory.select('not/connected');
-		expect(memory.current()?.id).toBe('acme/ui');
-		memory.remove('acme/ui');
-		expect(memory.read()).toMatchObject({ systems: [{ id: 'acme/brand' }], current: 'acme/brand' });
-		memory.remove('acme/brand');
-		expect(memory.read()).toEqual({ systems: [], current: null });
-	});
-
 	it('reads what an earlier version kept, one connected folder, as that design system: FUI, which it took alone, on develop', () => {
 		const clone = join(dir, 'fui');
 		mkdirSync(clone);

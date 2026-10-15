@@ -154,13 +154,6 @@ export const registerCodebase = (d: IpcDeps): void => {
 		editor: ports.editor.find() !== null,
 		session: sessions.read(workIn.canonical, branch) !== null,
 	}));
-	handle('openInEditor', [checkout], async (workIn) => {
-		const { canonical } = workIn;
-		const editor = ports.editor.find();
-		if (editor) await ports.editor.openFolder(editor, canonical);
-		else await ports.openPath(canonical);
-		return null;
-	});
 	handle('continueInClaude', [checkout, arg.branch], async (workIn, branch): Promise<'editor' | 'terminal'> => {
 		const { canonical } = workIn;
 		const found = sessions.read(canonical, branch);
@@ -247,7 +240,6 @@ export const registerCodebase = (d: IpcDeps): void => {
 			},
 		});
 	});
-	handle('shareStatus', [], () => share.status());
 	handle('buildInCodebasePlan', [checkout, arg.projectId, arg.prototypeName], async (workIn, projectId, name): Promise<BuildInCodebasePlan> => {
 		const { canonical } = workIn;
 		const { branch, exists, recorded, started, setup, records } = await codebase.of(workIn, projectId);

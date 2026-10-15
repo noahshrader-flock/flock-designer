@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import type { RepositoryList, Result } from '../shared/contract';
+import type { Result } from '../shared/contract';
 
 /**
  * One way for a screen to read something from the app: what it read (`value`), why it could not (`error`, never thrown
@@ -26,42 +26,4 @@ export const useWorkspace = <T>(read: () => Promise<Result<T>>, deps: unknown[],
 		// What is read is said by `deps`, as with an effect's own: `read` is a new function on every render.
 	}, [enabled, asked, ...deps]); // eslint-disable-line react-hooks/exhaustive-deps
 	return { ...state, reload: () => setAsked((n) => n + 1) };
-};
-
-/**
- * The repositories the signed-in person can see, as New and Connect choose from: read once a session and shared by both,
- * so neither waits for GitHub again, and read again after a clone (`refresh`, which puts one here) and whenever the sign-in
- * changes. Kept per app connection, so each test's fake app starts with none.
- */
-const listed = new WeakMap<object, Promise<Result<RepositoryList>>>();
-const listRepositories = (): Promise<Result<RepositoryList>> => {
-	const api = window.workspace;
-	const known = listed.get(api);
-	if (known) return known;
-	const asking = api.listRepositories().then((r) => {
-		// A failure is not kept: the next screen to ask asks again.
-		if (!r.ok) listed.delete(api);
-		return r;
-	});
-	listed.set(api, asking);
-	return asking;
-};
-export const useRepositories = ({ enabled = true }: { enabled?: boolean } = {}) => {
-	const list = useWorkspace(listRepositories, [], { enabled });
-	const { reload } = list;
-	useEffect(
-		() =>
-			window.workspace.onSignInChanged(() => {
-				listed.delete(window.workspace);
-				reload();
-			}),
-		[], // eslint-disable-line react-hooks/exhaustive-deps
-	);
-	return {
-		...list,
-		refresh: () => {
-			listed.delete(window.workspace);
-			reload();
-		},
-	};
 };

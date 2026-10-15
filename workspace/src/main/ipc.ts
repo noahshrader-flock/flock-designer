@@ -1,9 +1,8 @@
 import { withPageTheme } from './services/pageTheme';
 import { existsSync, readFileSync } from 'node:fs';
-import { homedir } from 'node:os';
-import { basename, dirname, join, sep } from 'node:path';
+import { basename, dirname, join } from 'node:path';
 import type { Appearance } from '../shared/appearance';
-import type { AccessibilityResult, Checkout, ClonePlan, Person, PublishStatus } from '../shared/contract';
+import type { AccessibilityResult, Checkout, Person, PublishStatus } from '../shared/contract';
 import { statesOf } from '../shared/prototypeStates';
 import { type Check, type EventSink, arg, clearRoutes } from './handle';
 import type { Ports } from './ports';
@@ -13,8 +12,6 @@ import { AppearanceMemory } from './services/appearance';
 import { classify } from './services/branchProjects';
 import { syncBranches } from './services/branchSync';
 import type { CheckoutMemory } from './services/checkoutMemory';
-import { type Cloned, Cloner, type GitProgress, notClonedOver } from './services/clone';
-import { CloneFolderMemory, clonePlace, cloneFolderOf, defaultCloneFolderDeps } from './services/cloneFolder';
 import { codebaseWork } from './services/codebaseWork';
 import { ComponentPictures } from './services/componentPictures';
 import { ComponentTokens } from './services/componentTokens';
@@ -25,7 +22,7 @@ import { DesignRepo } from '../host/designRepo';
 import { designStore } from './services/designStore';
 import { syncRecords } from './services/designSync';
 import { DesignSystemsMemory } from './services/designSystems';
-import { defaultDiscoveryDeps, findProductCheckouts, recordsRootFor } from './services/discovery';
+import { recordsRootFor } from './services/discovery';
 import { SessionMemory } from './services/editor';
 import { isRepository, readCheckout } from './services/git';
 import type { GitHubAccount } from './services/githubSession';
@@ -38,7 +35,6 @@ import { sharedFilesOf } from '../shared/designPaths';
 import { PrototypeServer } from './services/prototypeServer';
 import { localPrototypeFile, prototypeWork } from './services/prototypeWork';
 import { PublishManager, publishInOrder } from './services/publisher';
-import { listedAs, reachableRepositories } from './services/repositories';
 import { RuntimeManager } from './services/runtime';
 import { OpenedCheckouts } from './services/session';
 import { type ShareRunner } from './services/share';
@@ -48,15 +44,12 @@ import { TokenBranches } from './services/tokenBranches';
 import { VOICE_NEEDS_CLI, VoiceAndToneFile } from './services/voiceAndTone';
 import { registerAccount } from './ipc/account';
 import { registerCheckout } from './ipc/checkout';
-import { registerClone } from './ipc/clone';
 import { registerCodebase } from './ipc/codebase';
 import { registerDesignSystem } from './ipc/designSystem';
 import { registerPrototypes } from './ipc/prototypes';
 import { registerPublishing } from './ipc/publishing';
 import { registerReview } from './ipc/review';
-import { formatRepo, repoRefOf } from '../shared/repoRef';
-import { HOST } from '../shared/vocabulary';
-import { DESIGN_REPO } from '../shared/config';
+import { repoRefOf } from '../shared/repoRef';
 
 export interface IpcContext {
 	/** How the core tells the window that something happened: the shell's. */
@@ -77,13 +70,9 @@ export interface IpcContext {
 	prototypeServer: PrototypeServer;
 	/** The latest agent conversation for each branch, so it can be continued in the person's editor. */
 	sessions: SessionMemory;
-	/** Where this person's clones go, once they choose. */
-	cloneFolders: CloneFolderMemory;
 	/** The appearance they chose (Settings), and how it is applied to the app: the system's theme setting, in the app. */
 	appearanceMemory: AppearanceMemory;
 	applyAppearance: (appearance: Appearance) => void;
-	/** Clones what the New modal asks for. Given for tests, to clone from this machine instead of GitHub. */
-	cloner: Cloner;
 	installer: Installer;
 	/** The component library for the Design System tab: a test's own, else built from the connected design systems. */
 	designLibrary?: DesignLibrary;
@@ -122,10 +111,8 @@ export const ipcDeps = ({
 	prototypesRoot,
 	prototypeServer,
 	sessions,
-	cloneFolders,
 	appearanceMemory,
 	applyAppearance,
-	cloner,
 	installer,
 	designLibrary,
 	designSystems,
@@ -167,14 +154,6 @@ export const ipcDeps = ({
 			},
 		};
 	};
-
-	/** The product repositories on this machine: discovery's usual places, and first the folder this person's clones go in. */
-	const productCheckouts = (): string[] => {
-		const chosen = cloneFolders.read();
-		return findProductCheckouts({ ...defaultDiscoveryDeps, ...(chosen ? { folders: [chosen] } : {}) });
-	};
-	/** Where clones go: the folder chosen, else beside the repository last worked in, else a usual code folder. */
-	const cloneFolder = (): string => cloneFolderOf(cloneFolders, defaultCloneFolderDeps(productCheckouts()));
 
 	/**
 	 * The product checkout this person has already accepted, or null.
@@ -284,50 +263,7 @@ export const ipcDeps = ({
 	 * What the handlers change and share: the repositories the person can see (read once, then kept), and the clone and
 	 * the install in progress, which Cancel stops.
 	 */
-	const state: { visible: string[]; cloning: AbortController | null; installing: AbortController | null } = {
-		visible: [],
-		cloning: null,
-		installing: null,
-	};
-	const DESIGN = formatRepo(DESIGN_REPO);
-	/**
-	 * What cloning `repository` into `folder` would do. Cloning, from the New modal, is only of a repository the person's
-	 * own GitHub list returned (the last list shown, or asked again), only into the clone folder, and with the design
-	 * repository beside it when it is missing.
-	 */
-	const planClone = async (repository: string, folder: string, forDesignSystem = false): Promise<ClonePlan> => {
-		if (state.visible.length === 0 && github.state().state === 'signedIn')
-			state.visible = (await reachableRepositories(github, personGitHub, signedInLogin())).names;
-		const listed = listedAs(state.visible, repository);
-		if (listed === undefined)
-			throw new Error(`${repository} is not one of the repositories your ${HOST} account can see. Sign in to ${HOST} in DSNR, then try again.`);
-		const design = clonePlace(folder, DESIGN);
-		const place = clonePlace(folder, listed);
-		const home = homedir();
-		const where = place.path.startsWith(home + sep) ? `~${place.path.slice(home.length)}` : place.path;
-		// The design system is read, not worked in, so it needs no design repository beside it.
-		return { repository: listed, place, where, design: design.state === 'cloned' || forDesignSystem ? null : design };
-	};
-	/**
-	 * Clones what `planClone` says, with its progress sent to the window and `cancelClone` able to stop it: the repository,
-	 * and the design repository beside it when the plan has one. Where it went, and whether it was cloned or already there.
-	 */
-	const cloneAsPlanned = async (repository: string, forDesignSystem = false): Promise<Cloned & { repository: string }> => {
-		const folder = cloneFolder();
-		const plan = await planClone(repository, folder, forDesignSystem);
-		// Both asked first, so the product is not cloned only for the design repository to be in the way.
-		for (const p of [plan.place, plan.design]) if (p?.state === 'taken') throw new Error(notClonedOver(p.why));
-		const stop = (state.cloning = new AbortController());
-		const progress = (of: string) => (p: GitProgress) => emit('onCloneProgress', { repository: of, ...p });
-		try {
-			const cloned = await cloner.clone({ repository: plan.repository, visible: state.visible, folder }, progress(plan.repository), stop.signal);
-			// The design repository is the app's own, named here, never by the window: it is the whole list it may clone.
-			if (plan.design) await cloner.clone({ repository: DESIGN, visible: [DESIGN], folder }, progress(DESIGN), stop.signal);
-			return { ...cloned, repository: plan.repository };
-		} finally {
-			state.cloning = null;
-		}
-	};
+	const state: { installing: AbortController | null } = { installing: null };
 	// Starting and picking up a project's codebase work, never under a running agent (`codebaseWork`).
 	const codebase = codebaseWork({
 		agentIn: (canonical) => agent.runningIn(canonical),
@@ -440,7 +376,6 @@ export const ipcDeps = ({
 		prototypesRoot,
 		prototypeServer,
 		sessions,
-		cloneFolders,
 		appearanceMemory,
 		applyAppearance,
 		installer,
@@ -449,8 +384,6 @@ export const ipcDeps = ({
 		personGitHub,
 		openRepository,
 		checkout,
-		productCheckouts,
-		cloneFolder,
 		trustedRoot,
 		trustedRecords,
 		publisher,
@@ -464,8 +397,6 @@ export const ipcDeps = ({
 		tokenBranches,
 		voiceFile,
 		state,
-		planClone,
-		cloneAsPlanned,
 		codebase,
 		assertAgentNotHere,
 		agentBusy,
@@ -504,7 +435,6 @@ export const registerIpc = (
 	clearRoutes();
 	const d = ipcDeps(context);
 	registerCheckout(d);
-	registerClone(d);
 	registerDesignSystem(d);
 	registerCodebase(d);
 	registerPrototypes(d);
