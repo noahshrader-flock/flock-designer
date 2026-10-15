@@ -71,7 +71,7 @@ export const handOff = async (deps: CodebaseDeps, projectId: string): Promise<vo
 
 const STOP = 'Stop';
 
-/** What View locally needs of the product and this machine: how the product runs, and what is already here. */
+/** What Run locally needs of the product and this machine: how the product runs, and what is already here. */
 export interface LocalRun {
 	/** The port the product says its command serves on (its `.dsnr/workspace.json`), or null when it declares none. */
 	port: (commandId: string) => number | null;
@@ -113,17 +113,17 @@ const packagesHint = (reason: string, install: string | null): string =>
 		: '';
 
 /**
- * View locally (VIEW_LOCALLY_PLAN): codebase work run on this machine, the way the product says it runs (its design mode, on
+ * Run locally (VIEW_LOCALLY_PLAN): codebase work run on this machine, the way the product says it runs (its design mode, on
  * mock data), and opened in the person's own browser at its route. Its own earlier run is stopped first, so there is only
  * one; a port something else already answers on is refused. The checkout is moved to the branch as a build moves it (a
  * checkout with uncommitted changes is not moved). "Up" is checked, not assumed: a build error in the server's output, or a
  * page that errors or draws nothing in the browser out of sight, is a failure, the server stopped and nothing opened.
  */
-export const viewLocally = async (deps: CodebaseDeps, local: LocalRun, projectId: string): Promise<void> => {
+export const runLocally = async (deps: CodebaseDeps, local: LocalRun, projectId: string): Promise<void> => {
 	const { api, root } = deps;
 	const { project, iteration } = await codebaseOf(api, projectId);
 	const command = previewCommandFor(iteration);
-	const couldNot = (why: string) => new Error(`${project.title} couldn’t load locally: ${why}`);
+	const couldNot = (why: string) => new Error(`${project.title} couldn’t run locally: ${why}`);
 	await api.stopCommand(root, command);
 	const port = local.port(command);
 	if (port === null) throw couldNot(`the product’s .dsnr/workspace.json declares no ${command} command with a port.`);
@@ -181,7 +181,15 @@ export const viewLocally = async (deps: CodebaseDeps, local: LocalRun, projectId
 		throw couldNot(hint && !/[.!?]$/.test(why) ? `${why}.${hint}` : `${why}${hint}`);
 	}
 	const at: string = url;
-	await deps.openExternal(at);
+	// Started, so stopped again if it cannot be shown: never left running with no Stop to press.
+	try {
+		await deps.openExternal(at);
+	} catch (err) {
+		await api.stopCommand(root, command);
+		throw new Error(
+			`${project.title} is running locally at ${at}, but it could not be opened in the browser: ${err instanceof Error ? err.message : String(err)}`,
+		);
+	}
 	// A record with no route opens at the front door: said, so nobody takes it for the page that changed.
 	const where = iteration.route ? '' : ' Its record names no page for this work, so it opened at the app’s front door.';
 	if ((await deps.offer(`${project.title} is running locally at ${at}.${where}`, [STOP])) === STOP) valueOf(await api.stopCommand(root, command));

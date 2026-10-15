@@ -2,6 +2,7 @@ import type { CommentAnchor, CommentRef, Result, ReviewComment, SignInState } fr
 import { ASK_PATH, KEY_FRAGMENT, KEY_HEADER, type RelayAsk, type RelayCall, isKey, readRelayTell } from '../shared/reviewRelay';
 import type { CommentStore } from '../renderer/comments/surfaces';
 import { parsePrototypeName } from '../shared/prototypeNames';
+import { isThisMachine } from '../shared/thisMachine';
 
 /** DSNR's review tab in VS Code, as the page asks it: a call by name, answered with its Result. */
 export interface Relay {
@@ -15,8 +16,7 @@ type PageWindow = Pick<Window, 'addEventListener' | 'removeEventListener' | 'loc
 /** A VS Code webview's origin: where DSNR's review tab is. */
 const WEBVIEW = 'vscode-webview://';
 /** Served from this machine: only such a page is a review DSNR frames or opens; a published page never is. */
-const LOCAL = new Set(['127.0.0.1', 'localhost']);
-export const isServedHere = (location: Pick<Location, 'hostname'>): boolean => LOCAL.has(location.hostname);
+export const isServedHere = (location: Pick<Location, 'hostname'>): boolean => isThisMachine(location.hostname);
 
 /**
  * Listens for DSNR's review tab, when this page is served from this machine and in a frame, and gives `onRelay` the way
@@ -25,7 +25,7 @@ export const isServedHere = (location: Pick<Location, 'hostname'>): boolean => L
  * to stop listening.
  */
 export const listenForDsnr = (win: PageWindow, onRelay: (relay: Relay) => void, onScheme?: (dark: boolean) => void): (() => void) => {
-	if ((win.parent as unknown) === win || !LOCAL.has(win.location.hostname)) return () => undefined;
+	if ((win.parent as unknown) === win || !isThisMachine(win.location.hostname)) return () => undefined;
 	let tab: string | null = null;
 	let next = 0;
 	const waiting = new Map<number, (result: Result<unknown>) => void>();

@@ -108,7 +108,7 @@ covers code and boundary only; **product parity stays at Handoff.**
 ## When you have finished
 
 **Leave nothing running.** If you started the product's dev server, or anything else that keeps running, to look at your
-work, stop it before you report: one left behind holds the product's port, and DSNR's View locally will not start over it.
+work, stop it before you report: one left behind holds the product's port, and DSNR's Run locally will not start over it.
 
 **Record where the work is,** as `record-the-route.md`, in your task, says. The work is not finished without it: a record
 with no route opens at the app's front door, not on the page that changed.

@@ -8,7 +8,7 @@ import { type Context, findContext } from '../../src/main/services/findContext';
 import type { PublishStatus, SignInState } from '../../src/shared/contract';
 import { addressComment } from './address';
 import { Panels, hostApi } from './bridge';
-import { type LocalRun, handOff, openCode, shareCodebase, viewLocally } from './codebase';
+import { type LocalRun, handOff, openCode, shareCodebase, runLocally } from './codebase';
 import { startCore } from './core';
 import { showFound, shownFrom } from './designSystem';
 import { designSystemHost } from './designSystemHost';
@@ -231,7 +231,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 		});
 	const startPrototype = (given: Given) =>
 		newPrototype({ ...here, given, product: productNow(), onChanged: projectsChanged, watchBuild: watchPrototype });
-	/** How the product open here runs on this machine (its own `.dsnr/workspace.json`), for View locally. */
+	/** How the product open here runs on this machine (its own `.dsnr/workspace.json`), for Run locally. */
 	const localRun = (root: string): LocalRun => {
 		const declared = () => readDescriptor(root).commands;
 		return {
@@ -256,7 +256,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 			'hand-off': handOff,
 			share: shareCodebase,
 			'open-code': openCode,
-			'view-locally': (deps: Parameters<typeof viewLocally>[0], id: string) => viewLocally(deps, localRun(root), id),
+			'run-locally': (deps: Parameters<typeof runLocally>[0], id: string) => runLocally(deps, localRun(root), id),
 		}[action];
 		try {
 			await run({ ...here, root }, projectId);

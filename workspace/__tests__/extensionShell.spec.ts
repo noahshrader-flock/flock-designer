@@ -115,8 +115,18 @@ describe('VS Code’s ports', () => {
 	it('open only web pages and this machine’s own in the browser: no other scheme a page might hand them', async () => {
 		const v = fake();
 		const ports = vscodePorts(v as never, { draw: vi.fn(), scan: vi.fn(), measure: vi.fn() });
-		for (const url of ['https://github.com/x/y/pull/1', 'http://127.0.0.1:4321/review/a/']) expect(openableLink(url), url).toBe(true);
-		for (const url of ['http://example.com/', 'file:///etc/passwd', 'command:workbench.action.reloadWindow', 'vscode://x/y', 'not a link'])
+		// This machine by either of its names: DSNR's own server, and a product's dev server, which says localhost (Run locally).
+		for (const url of ['https://github.com/x/y/pull/1', 'http://127.0.0.1:4321/review/a/', 'http://localhost:3000/organization/o?tab=usage'])
+			expect(openableLink(url), url).toBe(true);
+		for (const url of [
+			'http://example.com/',
+			'http://localhost.example.com/',
+			'http://127.0.0.1.example.com/',
+			'file:///etc/passwd',
+			'command:workbench.action.reloadWindow',
+			'vscode://x/y',
+			'not a link',
+		])
 			expect(openableLink(url), url).toBe(false);
 		await ports.openExternal('https://github.com/x/y');
 		expect(v.env.openExternal).toHaveBeenCalledTimes(1);

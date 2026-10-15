@@ -2,6 +2,7 @@ import type * as VsCode from 'vscode';
 import type { Headless, Ports } from '../../src/main/ports';
 import { claudeLink } from '../../src/main/services/editor';
 import { toolPorts } from '../../src/main/toolPorts';
+import { isThisMachine } from '../../src/shared/thisMachine';
 
 /** What of VS Code the ports use, so they are tested without one. */
 export interface VsCodeApi {
@@ -14,14 +15,14 @@ export interface VsCodeApi {
 }
 
 /**
- * Whether DSNR opens a link in the person's browser: only a page on the web (`https:`) or one this machine's own server
- * serves (`http://127.0.0.1`). Every link DSNR opens is one of those; anything else (`file:`, `command:`, another scheme a
- * page might hand it) is refused.
+ * Whether DSNR opens a link in the person's browser: only a page on the web (`https:`) or one served on this machine
+ * (`http:` at `isThisMachine`: DSNR's own server, and a product's dev server for Run locally). Every link DSNR opens is one
+ * of those; anything else (`file:`, `command:`, another scheme a page might hand it) is refused.
  */
 export const openableLink = (url: string): boolean => {
 	try {
 		const u = new URL(url);
-		return u.protocol === 'https:' || (u.protocol === 'http:' && u.hostname === '127.0.0.1');
+		return u.protocol === 'https:' || (u.protocol === 'http:' && isThisMachine(u.hostname));
 	} catch {
 		return false;
 	}

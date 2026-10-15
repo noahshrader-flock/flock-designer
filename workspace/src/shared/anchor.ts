@@ -2,6 +2,7 @@ import type { CommentAnchor } from './contract';
 import { isPrototypeName } from './prototypeNames';
 import { isTheme } from './prototypeTheme';
 import { COMMIT_PATTERN, isCommit } from './sha';
+import { isThisMachine } from './thisMachine';
 
 /**
  * Where a comment points, carried inside the comment itself.
@@ -150,7 +151,7 @@ export const assertPreviewUrl = (raw: string): string => {
 	} catch {
 		throw new Error(`"${raw}" is not a web address.`);
 	}
-	const local = ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname);
+	const local = isThisMachine(url.hostname);
 	if (url.username || url.password) throw new Error('A preview address cannot contain a username or password.');
 	if (url.protocol === 'https:' || (url.protocol === 'http:' && local)) return url.href;
 	throw new Error(

@@ -44,10 +44,10 @@ export type DesignTab = { kind: 'component'; id: string; name: string } | { kind
 /**
  * What can be done with a project's codebase work from the panel: Handoff, its draft pull request (from the
  * Hand off dialog once a handoff found the work ready: never a menu item), the work on GitHub, and the work run on this
- * machine in the browser (View locally). The page names the
+ * machine in the browser (Run locally). The page names the
  * project only; the extension finds the work, and where it is, itself.
  */
-export const CODEBASE_ACTIONS = ['hand-off', 'share', 'open-code', 'view-locally'] as const;
+export const CODEBASE_ACTIONS = ['hand-off', 'share', 'open-code', 'run-locally'] as const;
 export type CodebaseAction = (typeof CODEBASE_ACTIONS)[number];
 
 /** A prototype to open for review: its project, its name, and the title its tab is given. */

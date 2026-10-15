@@ -305,7 +305,7 @@ describe('drawing stories, headless (6.1, the Design System tab’s pictures and
 	});
 });
 
-describe('whether a page loads (View locally checks before it opens anything)', () => {
+describe('whether a page loads (Run locally checks before it opens anything)', () => {
 	const loadsWith = (page: Parameters<typeof fakeBrowser>[0]) => {
 		const { browser, done } = fakeBrowser(page);
 		return { headless: chromeHeadless({ find: () => '/chrome', launch: (async () => browser) as never, loadSettleMs: 0 }), done };

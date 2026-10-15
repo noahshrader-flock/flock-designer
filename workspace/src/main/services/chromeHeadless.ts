@@ -226,7 +226,7 @@ export const chromeHeadless = ({
 	const measure: Measure = measureWith(drawShare);
 
 	/**
-	 * Whether a page really loads (View locally): a server can answer while the app on it fails, so the page is opened here,
+	 * Whether a page really loads (Run locally): a server can answer while the app on it fails, so the page is opened here,
 	 * given a moment, and judged. Null when it drew something; else its own error, or that it drew nothing.
 	 */
 	const loads = (url: string): Promise<string | null> =>

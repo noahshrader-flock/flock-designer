@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { type CodebaseDeps, type LocalRun, handOff, openCode, shareCodebase, viewLocally } from '../extension/src/codebase';
+import { type CodebaseDeps, type LocalRun, handOff, openCode, shareCodebase, runLocally } from '../extension/src/codebase';
 import type { AgentStatus, Project, RunLogLine, ShareStatus } from '../src/shared/contract';
 import { ok } from '../src/shared/result';
 
@@ -207,7 +207,7 @@ describe('codebase work on GitHub', () => {
 	});
 });
 
-describe('View locally: codebase work run on this machine, in the browser', () => {
+describe('Run locally: codebase work run on this machine, in the browser', () => {
 	/** The product's own way of running, and this machine, as `extension.ts` gives them; each test changes what it is about. */
 	const local = (over: Partial<LocalRun> = {}): LocalRun => ({
 		port: () => 3000,
@@ -231,7 +231,7 @@ describe('View locally: codebase work run on this machine, in the browser', () =
 
 	it('runs the product’s own design mode on the work’s branch, checks the page loads, and opens it at its route, with Stop', async () => {
 		const { deps, api, said, offered, local: l } = run();
-		await viewLocally(deps, l, 'zone-coverage');
+		await runLocally(deps, l, 'zone-coverage');
 		// Its own earlier run first, so there is only ever one; then the port is checked as free; then it starts.
 		expect(api.stopCommand).toHaveBeenCalledWith('/p', 'design-mode');
 		expect(l.answers).toHaveBeenCalledWith(3000);
@@ -245,7 +245,7 @@ describe('View locally: codebase work run on this machine, in the browser', () =
 	it('says when the work has no page recorded, so it opened at the app’s front door', async () => {
 		const noRoute = { ...zone, iterations: [zone.iterations[0], { ...codebase, route: null }] } as unknown as Project;
 		const { deps, offered, local: l } = run({ listProjects: vi.fn(async () => ok([noRoute])) });
-		await viewLocally(deps, l, 'zone-coverage');
+		await runLocally(deps, l, 'zone-coverage');
 		expect(deps.openExternal).toHaveBeenCalledWith('http://localhost:5173/');
 		expect(offered.at(-1)).toEqual([
 			'Zone coverage is running locally at http://localhost:5173/. Its record names no page for this work, so it opened at the app’s front door.',
@@ -253,25 +253,38 @@ describe('View locally: codebase work run on this machine, in the browser', () =
 		]);
 	});
 
+	it('stops the server it started when the browser cannot be opened, and says why, rather than leaving it running', async () => {
+		const { deps, api, offered, local: l } = run();
+		deps.openExternal = vi.fn(async () => {
+			throw new Error('VS Code would not open it.');
+		});
+		await expect(runLocally(deps, l, 'zone-coverage')).rejects.toThrow(
+			'Zone coverage is running locally at http://localhost:5173/zones, but it could not be opened in the browser: VS Code would not open it.',
+		);
+		// Its own earlier run, then this one, stopped.
+		expect(api.stopCommand).toHaveBeenCalledTimes(2);
+		expect(offered.some(([m]) => m.includes('is running locally'))).toBe(false);
+	});
+
 	it('stops it when Stop is pressed', async () => {
 		const { deps, api, local: l } = run();
 		deps.offer = vi.fn(async () => 'Stop');
-		await viewLocally(deps, l, 'zone-coverage');
+		await runLocally(deps, l, 'zone-coverage');
 		expect(api.stopCommand).toHaveBeenCalledTimes(2);
 	});
 
 	it('does not start when something else already answers on the product’s port, and says so', async () => {
 		const { deps, api, local: l } = run({}, { answers: vi.fn(async () => true) });
-		await expect(viewLocally(deps, l, 'zone-coverage')).rejects.toThrow(
-			'Zone coverage couldn’t load locally: something else is already answering on port 3000. Stop it, then try again.',
+		await expect(runLocally(deps, l, 'zone-coverage')).rejects.toThrow(
+			'Zone coverage couldn’t run locally: something else is already answering on port 3000. Stop it, then try again.',
 		);
 		expect(api.startCommand).not.toHaveBeenCalled();
 	});
 
 	it('says the product does not say how to run it, when it declares no port for design mode', async () => {
 		const { deps, api, local: l } = run({}, { port: () => null });
-		await expect(viewLocally(deps, l, 'zone-coverage')).rejects.toThrow(
-			'Zone coverage couldn’t load locally: the product’s .dsnr/workspace.json declares no design-mode command with a port.',
+		await expect(runLocally(deps, l, 'zone-coverage')).rejects.toThrow(
+			'Zone coverage couldn’t run locally: the product’s .dsnr/workspace.json declares no design-mode command with a port.',
 		);
 		expect(api.startCommand).not.toHaveBeenCalled();
 	});
@@ -286,8 +299,8 @@ describe('View locally: codebase work run on this machine, in the browser', () =
 			say('error   build failed in 1.07 s\n');
 			return ok({ state: 'running', url: 'http://localhost:5173/' });
 		}) as never);
-		await expect(viewLocally(deps, l, 'zone-coverage')).rejects.toThrow(
-			"Zone coverage couldn’t load locally: ESModulesLinkingError: export 'TransparencyPortalV2' (imported as 'TransparencyPortalV2') was not found in '@flocksafety/flock-transparency-portal'. Its packages may be out of date: npm ci",
+		await expect(runLocally(deps, l, 'zone-coverage')).rejects.toThrow(
+			"Zone coverage couldn’t run locally: ESModulesLinkingError: export 'TransparencyPortalV2' (imported as 'TransparencyPortalV2') was not found in '@flocksafety/flock-transparency-portal'. Its packages may be out of date: npm ci",
 		);
 		expect(api.stopCommand).toHaveBeenCalledTimes(2);
 		expect(deps.openExternal).not.toHaveBeenCalled();
@@ -295,8 +308,8 @@ describe('View locally: codebase work run on this machine, in the browser', () =
 
 	it('takes a page that errors or draws nothing as a failure, not as running', async () => {
 		const { deps, api, local: l } = run({}, { loads: vi.fn(async () => "Cannot read properties of undefined (reading 'None')") });
-		await expect(viewLocally(deps, l, 'zone-coverage')).rejects.toThrow(
-			"Zone coverage couldn’t load locally: Cannot read properties of undefined (reading 'None')",
+		await expect(runLocally(deps, l, 'zone-coverage')).rejects.toThrow(
+			"Zone coverage couldn’t run locally: Cannot read properties of undefined (reading 'None')",
 		);
 		expect(api.stopCommand).toHaveBeenCalledTimes(2);
 		expect(deps.openExternal).not.toHaveBeenCalled();
@@ -307,12 +320,12 @@ describe('View locally: codebase work run on this machine, in the browser', () =
 			readCheckout: vi.fn(async () => ok({ root: '/p', name: 'p', branch: 'develop', clean: false })),
 			continueIteration: vi.fn(async () => ({ ok: false, error: 'There are uncommitted changes in p. Commit or stash them first.' })),
 		});
-		await expect(viewLocally(notClean.deps, notClean.local, 'zone-coverage')).rejects.toThrow(
-			'Zone coverage couldn’t load locally: There are uncommitted changes in p. Commit or stash them first.',
+		await expect(runLocally(notClean.deps, notClean.local, 'zone-coverage')).rejects.toThrow(
+			'Zone coverage couldn’t run locally: There are uncommitted changes in p. Commit or stash them first.',
 		);
 		expect(notClean.api.startCommand).not.toHaveBeenCalled();
 		const failed = run({ startCommand: vi.fn(async () => ok({ state: 'failed', detail: 'exited with code 1' })) });
-		await expect(viewLocally(failed.deps, failed.local, 'zone-coverage')).rejects.toThrow('Zone coverage couldn’t load locally: exited with code 1');
+		await expect(runLocally(failed.deps, failed.local, 'zone-coverage')).rejects.toThrow('Zone coverage couldn’t run locally: exited with code 1');
 	});
 
 	it('shows what the server prints in the log as it starts', async () => {
@@ -321,7 +334,7 @@ describe('View locally: codebase work run on this machine, in the browser', () =
 			say('ready   built in 4.2 s\n');
 			return ok({ state: 'running', url: 'http://localhost:5173/' });
 		}) as never);
-		await viewLocally(deps, l, 'zone-coverage');
+		await runLocally(deps, l, 'zone-coverage');
 		expect(deps.log.start).toHaveBeenCalledWith('Zone coverage, locally');
 		expect(deps.log.line).toHaveBeenCalledWith('ready   built in 4.2 s');
 	});

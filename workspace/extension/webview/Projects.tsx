@@ -92,7 +92,7 @@ const ProjectItem = ({
 		...(inCode
 			? [
 					{ label: 'Open on GitHub', icon: 'github', onSelect: () => onCodebase('open-code', id) },
-					{ label: 'View locally', icon: 'browser', onSelect: () => onCodebase('view-locally', id) },
+					{ label: 'Run locally', icon: 'browser', onSelect: () => onCodebase('run-locally', id) },
 				]
 			: []),
 	];
