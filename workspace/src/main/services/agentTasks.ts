@@ -78,11 +78,14 @@ export const handoffTask = (
 		projectId,
 		branch,
 		gate,
+		missingRoute,
 	}: {
 		skill: string;
 		projectId: string;
 		branch: string;
 		gate: string | null;
+		/** Given when the work's record has no route: the route skill's text, and the record to write it on. */
+		missingRoute?: { skill: string; recordFile: string } | null;
 	},
 	parts: CheckoutParts,
 ): string =>
@@ -92,9 +95,15 @@ export const handoffTask = (
 		'',
 		skill.trim(),
 		'',
+		...(missingRoute ? [missingRoute.skill.trim(), ''] : []),
 		'## This run',
 		'',
 		`The work is on \`${branch}\`, and the checkout is on it. Stay on it.`,
+		...(missingRoute
+			? [
+					`The work's record has no route, so it opens at the app's front door. First, record it on the \`codebase\` entry of \`${missingRoute.recordFile}\`, as the section above says, or say why you could not in your summary.`,
+				]
+			: []),
 		gate
 			? `This product's gate is \`${gate}\`. Run it first, and last, once HANDOFF.md is committed.`
 			: "This product's workspace file names no handoff gate. Say so first in your summary, then follow its guidance for what a handoff checks.",
@@ -103,21 +112,29 @@ export const handoffTask = (
 		...checkoutEnding(parts),
 	].join('\n');
 
-/** What the agent is told when a prototype moves into the codebase: audit first, then build. */
+/**
+ * What the agent is told when a prototype moves into the codebase: audit first, then build, then record where the work is
+ * (`routeSkill`, on the record in `recordFile`): a record with no route opens at the app's front door.
+ */
 export const buildInCodebaseTask = (
 	{
 		skill,
+		routeSkill,
 		pageFile,
 		auditFile,
+		recordFile,
 		name,
 		basedOn,
 		sourceFile,
 	}: {
 		skill: string;
+		routeSkill: string;
 		pageFile: string;
 		/** The React source, when the prototype was written in React. */
 		sourceFile?: string | null;
 		auditFile: string;
+		/** The project's `iterations.json`, where the route goes. */
+		recordFile: string;
 		name: string;
 		basedOn?: Iteration['basedOn'];
 	},
@@ -129,6 +146,8 @@ export const buildInCodebaseTask = (
 		'',
 		skill.trim(),
 		'',
+		routeSkill.trim(),
+		'',
 		'## This run',
 		'',
 		`The prototype's page is \`${pageFile}\`. Read it; do not change it.`,
@@ -139,6 +158,7 @@ export const buildInCodebaseTask = (
 			? `It was modeled on \`${basedOn.branch}\` of ${basedOn.repository}${basedOn.commit ? ` at ${basedOn.commit.slice(0, 7)}` : ''}; the code may have moved on since.`
 			: 'It was made without the product code to look at, so expect more of it to differ from how the product really works.',
 		`Write the audit to \`${auditFile}\` before you change any code.`,
+		`Record its route on the \`codebase\` entry of \`${recordFile}\` once the view loads, as the section above says. The work is not finished without it: if you cannot tell which route is right, leave it out and say why in your report.`,
 		'',
 		...checkoutEnding(parts),
 	].join('\n');

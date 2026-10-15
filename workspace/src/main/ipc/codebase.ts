@@ -17,7 +17,7 @@ import { handToClaude, resumeCommand } from '../services/editor';
 import { CODEBASE_SKILL, HANDOFF_FILE, HANDOFF_SKILL, commandLine } from '../services/engineeringHandoff';
 import { branchCommit, changedSince, headCommit, readCheckout } from '../services/git';
 import { codebaseBranchFor, recordHandoff, recordPreview, recordedIteration } from '../services/iterations';
-import { GUIDE, MOVE_SKILL, buildInCodebasePrompt } from '../services/prototype';
+import { GUIDE, MOVE_SKILL, ROUTE_SKILL, buildInCodebasePrompt } from '../services/prototype';
 import { pullRequestText } from '../services/share';
 import type { IpcDeps } from '../ipc';
 
@@ -273,7 +273,13 @@ export const registerCodebase = (d: IpcDeps): void => {
 		refuseWhileBusy();
 		const skill = await readSkillText(HANDOFF_SKILL);
 		const { parts, readOnly } = await checkoutParts(canonical, projectId);
-		const task = handoffTask({ skill, projectId, branch: iteration.branch, gate: commandLine(descriptor.commands, 'handoff', projectId) }, parts);
+		const missingRoute = iteration.route
+			? null
+			: { skill: await readSkillText(ROUTE_SKILL), recordFile: join(recordsRoot, projectId, 'iterations.json') };
+		const task = handoffTask(
+			{ skill, projectId, branch: iteration.branch, gate: commandLine(descriptor.commands, 'handoff', projectId), missingRoute },
+			parts,
+		);
 		handoffStarts.set(canonical, { projectId, branch: iteration.branch, head: await headCommit(canonical) });
 		return startTracked(canonical, projectId, task, { branch: iteration.branch, addDirs: [recordsRoot], readOnly, purpose: 'handoff' });
 	});
@@ -327,9 +333,11 @@ export const registerCodebase = (d: IpcDeps): void => {
 				buildInCodebaseTask(
 					{
 						skill,
+						routeSkill: await readSkillText(ROUTE_SKILL),
 						pageFile,
 						sourceFile: source !== null ? sourceFile : null,
 						auditFile: join(recordsRoot, projectId, `audit-${name}.md`),
+						recordFile: join(recordsRoot, projectId, 'iterations.json'),
 						name,
 						basedOn: (await work.record(projectId, name))?.basedOn,
 					},

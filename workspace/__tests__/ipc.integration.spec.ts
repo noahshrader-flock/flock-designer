@@ -126,6 +126,7 @@ const savedPrototype = async (root = product) => {
 	await call(CHANNELS.useCheckout, root);
 	mkdirSync(join(design, 'skills'), { recursive: true });
 	writeFileSync(join(design, 'skills', 'move-to-code.md'), '# Move a prototype into the code\n\nAudit first.');
+	writeFileSync(join(design, 'skills', 'record-the-route.md'), '# Record where the work is\n\nThe plainest form.');
 	await call(CHANNELS.createPrototype, 'demo', 'Demo', 'A list', { root, branch: 'develop' });
 	mkdirSync(join(home, 'prototype', 'demo'), { recursive: true });
 	writeFileSync(join(home, 'prototype', 'demo', 'v1-i1.html'), '<h1>Demo</h1>');
@@ -1689,6 +1690,9 @@ describe('prototypes', () => {
 			expect(task).toContain('Audit first.');
 			expect(task).toContain(join(home, 'prototype', 'demo', 'v1-i1.html'));
 			expect(task).toContain(join(design, 'projects', 'demo', 'audit-v1-i1.md'));
+			// Where the work is, on its record: a Build that leaves none opens at the app's front door.
+			expect(task).toContain('# Record where the work is');
+			expect(task).toMatch(/Record its route on the `codebase` entry of `[^`]*projects\/demo\/iterations\.json`/);
 			// Built toward the product's accessibility target from the start (T7).
 			expect(task).toContain('## Accessibility');
 			expect(task).toContain('Build toward the target as you go, not at the end');
@@ -2185,6 +2189,7 @@ describe('Handoff', () => {
 		await call(CHANNELS.useCheckout, product);
 		mkdirSync(join(design, 'skills'), { recursive: true });
 		writeFileSync(join(design, 'skills', 'handoff.md'), '# Hand work to engineering\nThe shared steps.\n');
+		writeFileSync(join(design, 'skills', 'record-the-route.md'), '# Record where the work is\n');
 		await codebaseWork();
 		agentStart.mockReturnValue(agentRunning('feature/demo', 'handoff'));
 	};
@@ -2203,6 +2208,8 @@ describe('Handoff', () => {
 		expect(task).toContain('`feature/demo`');
 		expect(task).toMatch(/names no handoff gate/);
 		expect(task).toMatch(/Ready for engineering/);
+		// Its record has no route, so recording it comes first.
+		expect(task).toContain('# Record where the work is');
 		expect(extras).toMatchObject({ work: 'feature/demo', purpose: 'handoff' });
 		// Its conversation is kept, so it can be continued in VS Code like any other run.
 		expect((await call(CHANNELS.editorState, product, 'feature/demo')).value).toMatchObject({ session: true });

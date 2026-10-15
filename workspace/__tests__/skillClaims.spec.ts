@@ -21,7 +21,18 @@ const sources = {
 	nodeModules: null,
 };
 const TASKS: Record<string, (text: string) => string> = {
-	'move-to-code.md': (text) => buildInCodebaseTask({ skill: text, pageFile: '/p/i1.html', auditFile: '/d/audit-i1.md', name: 'i1' }, parts),
+	'move-to-code.md': (text) =>
+		buildInCodebaseTask(
+			{
+				skill: text,
+				routeSkill: skill('record-the-route.md'),
+				pageFile: '/p/i1.html',
+				auditFile: '/d/audit-i1.md',
+				recordFile: '/d/iterations.json',
+				name: 'i1',
+			},
+			parts,
+		),
 	'codebase-work.md': (text) => codebaseTask({ unattended: text, task: 'The task.' }, parts),
 	'handoff.md': (text) => handoffTask({ skill: text, projectId: 'p', branch: 'feature/p', gate: null }, parts),
 	'build-prototype.md': (text) =>
@@ -64,5 +75,11 @@ describe('what a skill says is in its task', () => {
 		expect(claimed('read `x.md`, beside this file')).toEqual([]);
 		// "It" here is the skill itself, in the next sentence.
 		expect(claimed('from Claude Code (`start-prototype.md`), so nobody has to find it. It is also in the task')).toEqual([]);
+	});
+});
+
+describe('the route, on a move into the code', () => {
+	it('is asked for by the skill, from the route skill in the same task', () => {
+		expect(claimed(skill('move-to-code.md'))).toContain('record-the-route.md');
 	});
 });

@@ -242,6 +242,17 @@ describe('View locally: codebase work run on this machine, in the browser', () =
 		expect(offered.at(-1)).toEqual(['Zone coverage is running locally at http://localhost:5173/zones.', ['Stop']]);
 	});
 
+	it('says when the work has no page recorded, so it opened at the app’s front door', async () => {
+		const noRoute = { ...zone, iterations: [zone.iterations[0], { ...codebase, route: null }] } as unknown as Project;
+		const { deps, offered, local: l } = run({ listProjects: vi.fn(async () => ok([noRoute])) });
+		await viewLocally(deps, l, 'zone-coverage');
+		expect(deps.openExternal).toHaveBeenCalledWith('http://localhost:5173/');
+		expect(offered.at(-1)).toEqual([
+			'Zone coverage is running locally at http://localhost:5173/. Its record names no page for this work, so it opened at the app’s front door.',
+			['Stop'],
+		]);
+	});
+
 	it('stops it when Stop is pressed', async () => {
 		const { deps, api, local: l } = run();
 		deps.offer = vi.fn(async () => 'Stop');

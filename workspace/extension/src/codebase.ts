@@ -180,7 +180,9 @@ export const viewLocally = async (deps: CodebaseDeps, local: LocalRun, projectId
 	}
 	const at: string = url;
 	await deps.openExternal(at);
-	if ((await deps.offer(`${project.title} is running locally at ${at}.`, [STOP])) === STOP) valueOf(await api.stopCommand(root, command));
+	// A record with no route opens at the front door: said, so nobody takes it for the page that changed.
+	const where = iteration.route ? '' : ' Its record names no page for this work, so it opened at the app’s front door.';
+	if ((await deps.offer(`${project.title} is running locally at ${at}.${where}`, [STOP])) === STOP) valueOf(await api.stopCommand(root, command));
 };
 
 /** What sharing says at each step: it is a push, a pull request and a build. */

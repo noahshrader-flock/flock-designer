@@ -29,7 +29,10 @@ describe('every run in a product checkout', () => {
 		'codebase work': codebaseTask({ unattended: '# Codebase work, unattended', task: 'Build it.' }, parts),
 		'an Address on a branch': codebaseTask({ unattended: null, task: 'Address comment 1.' }, parts),
 		Handoff: handoffTask({ skill: '# Hand off', projectId: 'p', branch: 'feature/p', gate: null }, parts),
-		'building a prototype in the codebase': buildInCodebaseTask({ skill: '# Move', pageFile: '/p.html', auditFile: '/a.md', name: 'v1-i1' }, parts),
+		'building a prototype in the codebase': buildInCodebaseTask(
+			{ skill: '# Move', routeSkill: '# Route', pageFile: '/p.html', auditFile: '/a.md', recordFile: '/i.json', name: 'v1-i1' },
+			parts,
+		),
 	};
 
 	it.each(Object.entries(tasks))('ends with the same parts, in the same order: %s', (_kind, task) => {
@@ -91,10 +94,46 @@ describe('addressTask', () => {
 describe('building a prototype in the codebase', () => {
 	it('asks for the audit before any code changes', () => {
 		const task = buildInCodebaseTask(
-			{ skill: 's', pageFile: '/q/i1.html', auditFile: '/d/projects/users/audit-i1.md', name: 'i1' },
+			{
+				skill: 's',
+				routeSkill: '# Route',
+				pageFile: '/q/i1.html',
+				auditFile: '/d/projects/users/audit-i1.md',
+				recordFile: '/d/projects/users/iterations.json',
+				name: 'i1',
+			},
 			{ guide: '', lightCheck: null, shared: '', accessibility: '', voice: '' },
 		);
 		expect(task).toContain('Write the audit to `/d/projects/users/audit-i1.md` before you change any code.');
+	});
+
+	it('requires the route, on the work’s record, with how to choose it (test-dsnr was built without one)', () => {
+		const task = buildInCodebaseTask(
+			{
+				skill: 's',
+				routeSkill: '# Record where the work is\n\nThe plainest form.',
+				pageFile: '/q/i1.html',
+				auditFile: '/d/projects/users/audit-i1.md',
+				recordFile: '/d/projects/users/iterations.json',
+				name: 'i1',
+			},
+			{ guide: '', lightCheck: null, shared: '', accessibility: '', voice: '' },
+		);
+		expect(task).toContain('# Record where the work is');
+		expect(task).toMatch(/Record its route on the `codebase` entry of `\/d\/projects\/users\/iterations.json`/);
+		expect(task).toMatch(/say why in your report/);
+	});
+});
+
+describe('Handoff, on work with no route recorded', () => {
+	const bare = { guide: '', lightCheck: null, shared: '', accessibility: '', voice: '' };
+	const base = { skill: '# Hand off', projectId: 'p', branch: 'feature/p', gate: null };
+
+	it('asks for the route first, with how to choose it, and says nothing of it when there is one', () => {
+		const task = handoffTask({ ...base, missingRoute: { skill: '# Record where the work is', recordFile: '/d/projects/p/iterations.json' } }, bare);
+		expect(task).toContain('# Record where the work is');
+		expect(task).toMatch(/no route.*`\/d\/projects\/p\/iterations.json`/);
+		expect(handoffTask(base, bare)).not.toContain('route');
 	});
 });
 
@@ -123,7 +162,10 @@ describe('the builder’s guide, in every task (so no run depends on an agent ch
 			name: 'v1-i1',
 			where: 'here',
 		}),
-		'building a prototype in the codebase': buildInCodebaseTask({ skill: '# Move', pageFile: '/p.html', auditFile: '/a.md', name: 'v1-i1' }, parts),
+		'building a prototype in the codebase': buildInCodebaseTask(
+			{ skill: '# Move', routeSkill: '# Route', pageFile: '/p.html', auditFile: '/a.md', recordFile: '/i.json', name: 'v1-i1' },
+			parts,
+		),
 		'codebase work': codebaseTask({ unattended: '# Codebase work, unattended', task: 'Build it.' }, parts),
 		Handoff: handoffTask({ skill: '# Hand off', projectId: 'p', branch: 'feature/p', gate: null }, parts),
 	};

@@ -50,6 +50,7 @@ export const cloneStore = (designRoot: string, published: () => void): RecordSto
 export const GUIDE = 'agents/ui-guide.md';
 export const BUILD_SKILL = 'skills/build-prototype.md';
 export const MOVE_SKILL = 'skills/move-to-code.md';
+export const ROUTE_SKILL = 'skills/record-the-route.md';
 
 /**
  * The most a page may be: GitHub's own limit for a file (100 MB), with room to spare. Nothing of ours sits
