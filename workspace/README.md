@@ -9,32 +9,20 @@ design-system facts live in the repositories. Every artifact stays usable by som
 installs this app — that is the constraint the design is built around, not a nice-to-have.
 
 ```bash
-npm install
-npm run dev       # the app, with the renderer hot-reloading
-npm run build     # typecheck both projects, then bundle
-npm test          # 88 tests
-npm run smoke     # boot the real app and prove the window opens
+npm ci
+npm run check            # format, lint, typecheck, then every test
+npm run extension:dev    # build the extension and open it in a development window
+npm run extension:test   # the extension's tests, in a real VS Code
+npm run extension:install  # package it and install it into your VS Code
 ```
 
-**Without the app:** `node bin/dsnr.mjs` makes and changes a prototype from Claude Code in VS Code (`new-prototype`,
-`change-prototype`, `save-prototype`), with the same code the app runs. `skills/start-prototype.md` tells an agent how to
+**From the command line:** `node bin/dsnr.mjs` makes and changes a prototype from Claude Code in VS Code (`new-prototype`,
+`change-prototype`, `save-prototype`), with the same code the extension runs. `skills/start-prototype.md` tells an agent how to
 use it. `node bin/dsnr.mjs build-site --serve` builds the site prototypes are published as, and shows it on this machine;
 `publish` puts an iteration on it and says who can open it, and `unpublish` takes one off. Run it with no command for
 the full usage.
 
-## What the window shows
-
-A fixed top bar (there is no native title bar; on macOS the window buttons sit inside it): **Flock
-Designer** on the left, the **Projects** tab beside it, and the account on the right, showing your GitHub
-picture and name, with **Sign out** in its menu. Projects is the only section. Its toolbar carries
-**Sync**, with where syncing stands beside it, and **New**. The window opens at the size and place it was
-left in.
-
-It reads projects, iterations and comments through GitHub's API, so it needs only a GitHub account with
-read access to the design repository: no checkout, no git, no toolchain. **Comments are issue comments**
-in the design repository, one issue per iteration, so GitHub does the storing and the notifying and
-there is no server of ours anywhere.
-
+## Building a prototype
 **Building on this machine** is part of Projects, not a separate mode. **New** opens one dialog with two
 kinds, switched at the top, both starting from a repository and a branch in it:
 
@@ -52,30 +40,7 @@ is remembered. Older prototype branches (`fd/<project>/iN`) appear from the repo
 a `feature/<project>` branch appears only when a project already has a record for it, because that is also
 how the whole product team names ticket branches. The design repository is expected beside the product one.
 The agent runs unattended: it may edit and run the repository's own scripts and local git, and nothing
-that pushes, switches branch or deletes. `npm run smoke:local` runs a real prototype from a real Coke
-checkout through the app's own services (see the script for its two variables).
-
-## Signing in
-
-`Sign in with GitHub` uses the **device flow**: the app shows a code, you enter it on
-github.com/login/device, and the app receives a token. A desktop app needs no client secret for this,
-which is why nothing here runs a backend. The token is encrypted with the OS keychain
-(`safeStorage`) and never reaches the renderer.
-
-Tokens last 8 hours and are refreshed silently. A refresh that fails signs you out rather than
-failing a call mysteriously.
-
-The app is configured for a GitHub App that must have device flow enabled, be installed on the design
-repository, and carry two repository permissions:
-
-| Permission | Level | Why |
-|---|---|---|
-| **Contents** | Read and write | Reads project folders and iteration records. Writes only into `projects/`: an iteration's record, and, for a prototype made on a machine without the design repository cloned, its brief, page, source and the shared files it points at. With a clone, those go through git instead, one writer per machine. The app never writes product code through the API — authoring writes go through git in a real checkout |
-| **Issues** | Read and write | Comments are issue comments |
-
-Changing a permission later also requires approving the update on the installation; GitHub does not
-apply it until then. Point a development build elsewhere with
-`DSNR_CLIENT_ID`, `DSNR_REPO_OWNER` and `DSNR_REPO_NAME`.
+that pushes, switches branch or deletes.
 
 ## What it can and cannot do
 
@@ -166,50 +131,10 @@ source and page are in its project folder.
   injection rather than argv injection.
 - Every path is resolved through `resolveInside`, which follows symlinks — the check string
   comparison alone gets wrong.
-- Links open in the real browser; the app window itself cannot be navigated.
-- **The preview is untrusted web content.** It runs in its own view with no preload script, no Node, a
-  sandbox, and an in-memory session that is granted no permissions. The app reads it by running a
-  script in the page and taking the return value; the page has no function to call in the other
-  direction. Everything the page returns is validated before use. A page cannot navigate the view
-  elsewhere (other origins open in the real browser), and only `https` or a local `http` address can
-  be opened. `npm run smoke:page` checks all of this in real Electron, against a real click.
-- In the app's preview, a pin reports a click or a drop back through the page's console, tagged with a
-  secret that is new for every preview. The app accepts a message only if it carries that secret and has
-  exactly the shape of a click or a move; `smoke:page` checks that a forged message is ignored. The worst a
-  page that learned the secret could do is select a pin, or move one of the viewer's own pins. On the
-  published site and in VS Code the bar and the page talk by message instead (Review isolation, below).
+- Links open in the real browser.
 - **In VS Code, a prototype's page cannot reach its review bar** (Review isolation, below): it is served
   from another address than the bar and sandboxed; the bar's address serves nothing a repository wrote
   that could open as a page; and the review tab, the panel and the Design System tabs hear only VS Code.
-- The window may load images from `avatars.githubusercontent.com`, and nothing else from the network.
-
-## The app's interface is not the product's design system
-
-This app is built with **shadcn/ui, Radix and Tailwind**, on the stock Neutral theme. It is
-deliberately not Flock's design system: the app is the tool, not the product, and the shell around a
-prototype should not claim to be any company's. It also means the app can be built for another
-product with nothing to re-skin.
-
-What a *prototype* uses is a separate question with a different answer: whichever design system its
-own product repository depends on. A context receipt shows the version the **opened repository**
-resolves, read from that repository's lockfile. The two are unrelated facts, and showing one where
-the other belongs would make the receipt confidently wrong.
-
-The components under `src/renderer/ui/` are vendored source, not a dependency: shadcn/ui is copied in
-and owned here, so it is edited directly rather than themed around. They are the official files,
-pulled with the shadcn CLI in the **Nova** style (`"style": "radix-nova"` in `components.json`), which
-is what ui.shadcn.com shows; the older `new-york` style looks different (shadowed cards, no card sizes).
-Nova needs `tw-animate-css` and `shadcn/tailwind.css` imported in `index.css` for its open and close
-animations. React 19, which is what shadcn targets. Additions are marked in place: `warning` and `success` variants on Alert, and
-`success` on Badge, which the stock theme has no color for. One change to stock behavior: dialogs sit 10% from the
-top instead of vertically centered, so one that changes height grows downward and does not jump. `DialogBody` is also ours: the part that scrolls, so the header and footer stay fixed. The dialog and sheet backdrops start below the top bar, so the bar is never dimmed or covered.
-
-**When adding a component with `npx shadcn@latest add <name>`**, the CLI currently leaves the
-registry's placeholder `import { cn } from "cn"` unrewritten and installs an unrelated npm package
-called `cn`. After running it: `npm uninstall cn`, and change that import to `"@/lib/utils"`.
-
-Styling is classes, not inline styles. The only two inline `style` props are runtime values Tailwind
-cannot express: the sidebar width a person has dragged to, and the position of the comment box.
 
 ## DSNR, the VS Code extension
 
@@ -431,18 +356,6 @@ uncommitted changes:
 5. **Comments…** lists the comments on the codebase work, read only.
 6. When you are done: close the draft pull request, delete the branch, and remove the project from the design
    repository, as above.
-
-## If the window shows "Invalid hook call" while developing
-
-Only under `npm run dev`, and never in a built app. Vite pre-bundles each package the first
-time something imports it. If a change brings in a package the running window has not seen
-before (a new icon is the usual one), Vite rebuilds its cache mid-session and the window ends
-up holding modules from two generations of it, which React reports as two copies of itself:
-`Invalid hook call`, then `Cannot read properties of null (reading 'useContext')`. There is only
-one React installed (`npm ls react` shows it deduplicated), so nothing is actually duplicated.
-
-**Reload the window (Cmd+R).** If it persists, stop and restart `npm run dev`. The packaged and
-`npm start` builds bundle everything up front and are not affected.
 
 ## A note on npm
 
