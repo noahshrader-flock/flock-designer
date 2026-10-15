@@ -1,0 +1,79 @@
+import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { join, relative } from 'node:path';
+import { describe, expect, it } from 'vitest';
+
+/**
+ * Where GitHub is (the GitLab plan, 2.6): which files hold GitHub's own addresses, REST paths, sign-in or command line, so
+ * that adding GitLab is adding a provider and not a search. GitHub's home is the host's folder and the two shared files that
+ * hold its words and addresses; until the plan's Phase 2 moves them there, a few more files are named below, each with
+ * what it holds. A new file that reaches GitHub directly fails here, and so does a name below once its file no longer
+ * does, so this list is always exactly what is left to move. Wording that only says "GitHub" is not counted: it comes
+ * from `HOST`, and becomes per provider with the vocabulary (1.3).
+ */
+
+const workspace = join(__dirname, '..');
+const ROOTS = ['src', 'extension/src', 'extension/webview', 'bin'];
+
+const files = (dir: string): string[] =>
+	readdirSync(dir).flatMap((name) => {
+		const path = join(dir, name);
+		return statSync(path).isDirectory() ? files(path) : /\.(tsx?|mjs)$/.test(name) && !name.endsWith('.d.ts') ? [path] : [];
+	});
+
+/** What reaches GitHub itself, by kind. */
+const GITHUB: Record<string, RegExp> = {
+	address: /api\.github\.com|\bgithub\.com\b|githubusercontent|github\.io|\.github\//,
+	'REST path': /repoApiPath\(|\.api\(\s*[`'"]\//,
+	'sign-in': /getSession\(\s*['"]github['"]/,
+	'command line': /['"]gh['"]|\bgh (?:api|pr|auth|repo)\b/,
+};
+
+/** A file's code, without its comments: a comment may name GitHub, as this one does. */
+const code = (text: string): string =>
+	text
+		.replace(/\/\*[\s\S]*?\*\//g, '')
+		.replace(/^\s*\/\/.*$/gm, '')
+		.replace(/\s\/\/[^'"`\n]*$/gm, '');
+
+const reaching = (text: string): string[] =>
+	Object.entries(GITHUB)
+		.filter(([, pattern]) => pattern.test(code(text)))
+		.map(([kind]) => kind);
+
+/** GitHub's home: the host's folder, and the one place each for its addresses and its words. */
+const isHome = (path: string): boolean => path.startsWith('src/host/') || path === 'src/shared/hostUrls.ts' || path === 'src/shared/vocabulary.ts';
+
+/** Still to move behind the host (the plan's Phase 2), or to have a GitLab twin (Phases 3 to 6), with what each holds. */
+const TO_MOVE: Record<string, string> = {
+	'src/main/services/pages.ts': 'GitHub Pages: visibility, deployments, workflow runs and dispatch, compare (Phase 5)',
+	'src/main/services/profileNames.ts': 'a person’s profile, `/users/<login>` (2.3)',
+	'src/cli/wcagEdition.ts': 'the weekly WCAG check opens an issue by its REST path (2.3)',
+	'src/main/services/ghCli.ts': 'the person’s own `gh`; GitLab’s is `glab` (Phase 4)',
+	'src/main/services/install.ts': 'says how to sign npm in to GitHub Packages when a private package is refused (Phase 6)',
+	'extension/src/github.ts': 'VS Code’s built-in GitHub sign-in; GitLab needs its own account (3.1)',
+};
+
+const scanned = ROOTS.flatMap((root) => files(join(workspace, root))).map((path) => ({
+	path: relative(workspace, path),
+	kinds: reaching(readFileSync(path, 'utf8')),
+}));
+
+describe('where GitHub is', () => {
+	it('finds what it looks for: GitHub’s address, a REST path, its sign-in and its command line, but not a comment', () => {
+		expect(reaching("fetch('https://api.github.com/user')")).toEqual(['address']);
+		expect(reaching('await github.api(`/users/${login}`)')).toEqual(['REST path']);
+		expect(reaching("auth.getSession('github', scopes)")).toEqual(['sign-in']);
+		expect(reaching("findOnPath('gh', env)")).toEqual(['command line']);
+		expect(reaching('// see https://github.com/cli/cli\nconst x = 1;')).toEqual([]);
+	});
+
+	it('reaches GitHub only from its home and the files still to move', () => {
+		const stray = scanned.filter((f) => f.kinds.length > 0 && !isHome(f.path) && !(f.path in TO_MOVE));
+		expect(stray.map((f) => `${f.path}: ${f.kinds.join(', ')}`)).toEqual([]);
+	});
+
+	it('names only files that still reach GitHub: one that no longer does comes off the list', () => {
+		const done = Object.keys(TO_MOVE).filter((path) => !(scanned.find((f) => f.path === path)?.kinds.length ?? 0));
+		expect(done).toEqual([]);
+	});
+});
