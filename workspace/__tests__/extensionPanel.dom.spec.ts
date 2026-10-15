@@ -371,7 +371,7 @@ describe('dialogs and menus, in the panel', () => {
 		it('is on each project, a popover of what it offers, closed by Escape or a press elsewhere', async () => {
 			await showOpen();
 			await press(menuFor(0));
-			expect(items().map((i) => i.textContent)).toEqual(['Open in browser', 'Copy link', 'Build', 'Assign folder…']);
+			expect(items().map((i) => i.textContent)).toEqual(['Copy link', 'Open published page', 'Open locally', 'Build', 'Assign folder…']);
 			expect(menuFor(0).getAttribute('aria-expanded')).toBe('true');
 			await act(async () => void document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
 			expect(items()).toHaveLength(0);
@@ -388,10 +388,30 @@ describe('dialogs and menus, in the panel', () => {
 			expect(items()).toHaveLength(0);
 		});
 
+		it('opens the published page from it: asked of the extension, which says if there is none yet and offers to publish it', async () => {
+			await showOpen();
+			await press(menuFor(0));
+			await press(item('Open published page'));
+			expect(panelSaid().at(-1)).toEqual({
+				type: 'open-review-published',
+				projectId: 'alert-history',
+				name: 'v2-i1',
+				title: 'Alert history · V2 · I1',
+			});
+			expect(items()).toHaveLength(0);
+		});
+
+		it('groups what it offers: the links, where it opens with the next stage, the code on GitHub, the folder', async () => {
+			await showOpen();
+			await press(menuFor(0));
+			const groups = [...document.querySelectorAll('[role="menu"] > *')].map((el) => (el.matches('[role="separator"], hr') ? '|' : el.textContent));
+			expect(groups.join(',')).toBe('Copy link,Open published page,|,Open locally,Build,|,Assign folder…');
+		});
+
 		it('opens a project’s review in the browser from it: the same review, asked of the extension to open outside VS Code', async () => {
 			await showOpen();
 			await press(menuFor(0));
-			await press(item('Open in browser'));
+			await press(item('Open locally'));
 			expect(panelSaid().at(-1)).toEqual({
 				type: 'open-review-in-browser',
 				projectId: 'alert-history',
@@ -423,7 +443,7 @@ describe('dialogs and menus, in the panel', () => {
 			await showOpen();
 			await viewChoice('List');
 			await press(menuFor(0));
-			expect(items().map((i) => i.textContent)).toEqual(['Open in browser', 'Copy link', 'Build', 'Assign folder…']);
+			expect(items().map((i) => i.textContent)).toEqual(['Copy link', 'Open published page', 'Open locally', 'Build', 'Assign folder…']);
 		});
 	});
 
@@ -521,22 +541,22 @@ describe('codebase work, in the panel', () => {
 	const inDialog = (name: string) => [...dialog()!.querySelectorAll('button')].find((b) => b.textContent === name) as HTMLButtonElement;
 	const closeX = () => dialog()!.querySelector('[aria-label="Close"]') as HTMLButtonElement;
 
-	it('offers what a project has, in groups: what opens it, its link, the next stage (build, or handoff, never both), and its folder', async () => {
+	it('offers what a project has, in groups: its links, what opens it with the next stage (build, or handoff, never both), the code on GitHub, and its folder', async () => {
 		await showOpen(OPEN, WITH_CODE);
 		const dividers = () => document.querySelectorAll('[role="separator"]').length;
 		await press(menuOf('Zone coverage'));
 		// A prototype that is in code too: it is built, so Handoff, not Build.
-		expect(items()).toEqual(['Open in browser', 'Open on GitHub', 'Run locally', 'Copy link', 'Hand off', 'Assign folder…']);
+		expect(items()).toEqual(['Copy link', 'Open published page', 'Open locally', 'Run locally', 'Hand off', 'View on GitHub', 'Assign folder…']);
 		expect(dividers()).toBe(3);
 		await elsewhere();
 		await press(menuOf('Alert history'));
 		// A prototype only: not built yet, so Build, and no GitHub to open.
-		expect(items()).toEqual(['Open in browser', 'Copy link', 'Build', 'Assign folder…']);
-		expect(dividers()).toBe(3);
+		expect(items()).toEqual(['Copy link', 'Open published page', 'Open locally', 'Build', 'Assign folder…']);
+		expect(dividers()).toBe(2);
 		await elsewhere();
 		await press(menuOf('Roles in code'));
 		// Code only: nothing of a prototype to open or link, and Handoff.
-		expect(items()).toEqual(['Open on GitHub', 'Run locally', 'Hand off', 'Assign folder…']);
+		expect(items()).toEqual(['Run locally', 'Hand off', 'View on GitHub', 'Assign folder…']);
 		expect(dividers()).toBe(2);
 		// No item opens it in VS Code: pressing it does, and nothing is said twice.
 		expect(items().some((label) => /open for review|preview|comments|share/i.test(label))).toBe(false);
@@ -554,7 +574,7 @@ describe('codebase work, in the panel', () => {
 	it('asks the extension for the work on GitHub, naming the project only', async () => {
 		await showOpen(OPEN, WITH_CODE);
 		await press(menuOf('Zone coverage'));
-		await press(item('Open on GitHub'));
+		await press(item('View on GitHub'));
 		expect(panelSaid().at(-1)).toEqual({ type: 'codebase', action: 'open-code', projectId: 'zone-coverage' });
 	});
 
@@ -619,7 +639,7 @@ describe('codebase work, in the panel', () => {
 		await press(item('Hand off'));
 		await answer('agentStatus', { state: 'idle' });
 		expect([...dialog()!.querySelectorAll('button')].map((b) => b.textContent)).not.toContain('Open a draft pull request');
-		await press(inDialog('Open on GitHub'));
+		await press(inDialog('View on GitHub'));
 		expect(panelSaid().at(-1)).toEqual({ type: 'codebase', action: 'open-code', projectId: 'zone-coverage' });
 	});
 
@@ -1332,13 +1352,13 @@ describe('Design System', () => {
 		await press(card.querySelector('.card') as HTMLElement);
 		expect(panelSaid().at(-1)).toEqual({ type: 'open-component', id: 'src/components/FSButton/FSButton.stories.tsx' });
 		await press(card.querySelector('.menu-button') as HTMLElement);
-		expect([...card.querySelectorAll('[role="menuitem"]')].map((i) => i.textContent)).toEqual(['Open in Storybook', 'Source on GitHub']);
+		expect([...card.querySelectorAll('[role="menuitem"]')].map((i) => i.textContent)).toEqual(['Open in Storybook', 'View on GitHub']);
 		await press([...card.querySelectorAll<HTMLElement>('[role="menuitem"]')].find((i) => i.textContent === 'Open in Storybook')!);
 		expect(panelSaid().at(-1)).toEqual({ type: 'component-link', id: 'src/components/FSButton/FSButton.stories.tsx', link: 'storybook' });
 		// One with no hosted Storybook offers none.
 		const other = [...body().querySelectorAll<HTMLElement>('.card-item')].find((c) => c.textContent?.includes('FSSelect')) as HTMLElement;
 		await press(other.querySelector('.menu-button') as HTMLElement);
-		expect([...other.querySelectorAll('[role="menuitem"]')].map((i) => i.textContent)).toEqual(['Source on GitHub']);
+		expect([...other.querySelectorAll('[role="menuitem"]')].map((i) => i.textContent)).toEqual(['View on GitHub']);
 	});
 
 	it('keeps the Components and Tokens toggle and the search bar together, as siblings, which the stylesheet stacks at the top', async () => {

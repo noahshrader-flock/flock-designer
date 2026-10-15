@@ -50,7 +50,7 @@ export const ComponentsView = ({
 	const item = (c: CatalogComponent) => {
 		const items: MenuItem[] = [
 			...(c.storybook !== null ? [{ label: 'Open in Storybook', icon: 'book', onSelect: () => onLink(c.id, 'storybook') }] : []),
-			{ label: 'Source on GitHub', icon: 'github', onSelect: () => onLink(c.id, 'source') },
+			{ label: 'View on GitHub', icon: 'github', onSelect: () => onLink(c.id, 'source') },
 		];
 		const shared = {
 			name: c.name,

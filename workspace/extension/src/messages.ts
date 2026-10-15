@@ -24,6 +24,7 @@ export type PanelMessage =
 	| ({ type: 'open-review' } & Review)
 	| ({ type: 'open-review-in-browser' } & Review)
 	| ({ type: 'copy-review-link' } & Review)
+	| ({ type: 'open-review-published' } & Review)
 	// The Design System tab's: a component's tab, by its story file, and its links, which the extension finds itself; the
 	// Primitives tab; the voice and tone; a token's own file, at its line; and the change to the tokens being tried, which
 	// the extension keeps for every DSNR page (each edit read again where it is used, `tokenEditsOf`).
@@ -99,6 +100,11 @@ const isPath = (v: unknown): v is string => typeof v === 'string' && v.length > 
 /** The most a name, what a prototype explores, and a folder's name may be: more is not what a person wrote in a box. */
 export const LIMITS = { title: 300, task: 4000, folder: 100 };
 
+/** The messages that name one review, each in exactly the same shape. */
+const REVIEW_MESSAGES = ['open-review', 'open-review-in-browser', 'copy-review-link', 'open-review-published'] as const;
+type ReviewMessage = (typeof REVIEW_MESSAGES)[number];
+const isReviewMessage = (type: unknown): type is ReviewMessage => (REVIEW_MESSAGES as readonly unknown[]).includes(type);
+
 /** The message, or null for anything that is not one exactly. */
 export const readMessage = (raw: unknown): PanelMessage | null => {
 	if (typeof raw !== 'object' || raw === null) return null;
@@ -113,7 +119,7 @@ export const readMessage = (raw: unknown): PanelMessage | null => {
 			Array.isArray(m.args)
 			? { type: 'call', id: m.id, name: m.name as InvokeName, args: m.args }
 			: null;
-	if (m.type === 'open-review' || m.type === 'open-review-in-browser' || m.type === 'copy-review-link')
+	if (isReviewMessage(m.type))
 		return hasExactly(m, ['type', 'projectId', 'name', 'title']) &&
 			typeof m.projectId === 'string' &&
 			PROJECT_ID.test(m.projectId) &&

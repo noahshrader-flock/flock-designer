@@ -157,9 +157,11 @@ which offers to open what it cloned; New prototype then offers the install.
 
 **Dialogs and menus are in the panel**, in VS Code's own look, rather than boxes at the top of the window: a webview
 cannot draw outside its side bar, so a dialog covers the panel, as Claude Code's popovers are in its own. Each project has
-an ellipsis menu (on hover or focus) with Open for review, Open in browser (the same review page, served from this
-machine, in your browser outside VS Code, where commenting is still VS Code's), Build in the codebase…, its codebase
-work's items when it has some (below) and Assign folder…; the right-click items open the same dialogs. The account (the
+an ellipsis menu (on hover or focus), in groups: **Copy link** and **Open published page** (the page as reviewers see it,
+which asks GitHub when pressed and offers to publish it if it is not there); **Open locally** (the same review page,
+served from this machine, in your browser outside VS Code, where commenting is still VS Code's) with the next stage,
+Build in the codebase… (or **Run locally** and Hand off when there is codebase work); **View on GitHub**; and Assign
+folder…; the right-click items open the same dialogs. The account (the
 title bar's account action: Sign out of DSNR) and the sync (the status bar's item) are dialogs in the panel too. The
 quick pick at the top is kept for the command palette's lists of many: **Open a component…** and **Open a prototype for
 review**.
@@ -259,7 +261,7 @@ once. The app's one setting, its theme, is VS Code's here; DSNR's one setting is
 for the prototype in front): a dialog says what it would do in the product open here (the branch, where it starts
 from, a clean checkout), then hands the task to Claude Code in this window, which writes the audit and builds it.
 Codebase work's menu has **Open the preview** (the branch's own dev server, at its recorded route, in your browser, with
-Stop), **Open on GitHub** (its pull request, else its branch), **Comments…** (read only: comments on codebase work go on
+Stop), **View on GitHub** (its pull request, else its branch), **Comments…** (read only: comments on codebase work go on
 its pull request, and there are no pins on it), **Hand off to engineering…** (the product's gate, both reviews, the
 fixes and HANDOFF.md, as a notification with Stop and its log, then the verdict; nothing is pushed) and **Share for
 review** (a draft pull request, with a preview, said step by step). A project only in the code opens on GitHub when
@@ -361,7 +363,7 @@ uncommitted changes:
    **Build in Claude Code**. Claude Code's panel in this window should open with the task typed in, on that branch:
    press Enter there, and let it write the audit, then the code, and commit.
 2. When it has committed, the project's menu has codebase work: **Open the preview** opens the branch's own dev server
-   in your browser (then **Stop it**), and **Open on GitHub** opens the branch.
+   in your browser (then **Stop it**), and **View on GitHub** opens the branch.
 3. **Hand off to engineering…** › **Start handoff**. Watch the notification and View › Output › DSNR: Agent while it
    runs the product's gate, both reviews and the fixes, and writes HANDOFF.md. It ends with the verdict.
 4. When it is **Ready for engineering**, **Open a draft pull request** (or the menu's **Share for review**): it pushes the

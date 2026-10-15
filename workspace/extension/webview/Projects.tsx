@@ -65,6 +65,7 @@ const ProjectItem = ({
 	onOpen,
 	onOpenInBrowser,
 	onCopyLink,
+	onOpenPublished,
 	onDialog,
 	onCodebase,
 }: {
@@ -75,6 +76,7 @@ const ProjectItem = ({
 	onOpen: (review: Review) => void;
 	onOpenInBrowser: (review: Review) => void;
 	onCopyLink: (review: Review) => void;
+	onOpenPublished: (review: Review) => void;
 	onDialog: (dialog: PanelDialog) => void;
 	onCodebase: (action: CodebaseAction, projectId: string) => void;
 }) => {
@@ -83,29 +85,34 @@ const ProjectItem = ({
 	const inCode = workOf(project.iterations, 'codebase').length > 0;
 	const badge = open > 0 ? <Badge tone="brand" count={open} label={plural(open, 'open comment')} /> : undefined;
 	const id = project.id;
-	// What it offers, in groups: what opens it (pressing it opens it here, so no item says so), its link, its next stage, its
-	// folder. The next stage is one item, named for what it opens: Build (Build in the codebase) for a prototype not yet
+	// What it offers, in groups: its links (the link to copy, and the published page as reviewers see it); where it opens (in
+	// a browser, run in the product; pressing it opens it here, so no item says so) and its next stage; the code on GitHub;
+	// its folder. The next stage is one item, named for what it opens: Build (Build in the codebase) for a prototype not yet
 	// there, Hand off once there is work there (a record of work is made when a build starts; the Hand off dialog says when
 	// its agent is still busy). Sharing code is not an item: once a handoff finds the work ready, the Hand off dialog offers
 	// its pull request.
-	const opens: MenuItem[] = [
-		...(newest ? [{ label: 'Open in browser', icon: 'globe', onSelect: () => onOpenInBrowser(newest) }] : []),
-		...(inCode
-			? [
-					{ label: 'Open on GitHub', icon: 'github', onSelect: () => onCodebase('open-code', id) },
-					{ label: 'Run locally', icon: 'browser', onSelect: () => onCodebase('run-locally', id) },
-				]
-			: []),
-	];
-	const link: MenuItem[] = newest ? [{ label: 'Copy link', icon: 'link', onSelect: () => onCopyLink(newest) }] : [];
+	const links: MenuItem[] = newest
+		? [
+				{ label: 'Copy link', icon: 'link', onSelect: () => onCopyLink(newest) },
+				// Not known to be there without asking GitHub, which a menu does not do for every project: pressed, it opens the
+				// page, or says why there is none and offers to publish it, as Copy link does.
+				{ label: 'Open published page', icon: 'globe', onSelect: () => onOpenPublished(newest) },
+			]
+		: [];
 	const stage: { label: string; dialog: PanelDialog } | null = inCode
 		? { label: 'Hand off', dialog: { kind: 'hand-off', projectId: id } }
 		: newest
 			? { label: 'Build', dialog: { kind: 'build', projectId: id } }
 			: null;
 	const next: MenuItem[] = stage ? [{ label: stage.label, icon: 'package', onSelect: () => onDialog(stage.dialog) }] : [];
+	const opens: MenuItem[] = [
+		...(newest ? [{ label: 'Open locally', icon: 'browser', onSelect: () => onOpenInBrowser(newest) }] : []),
+		...(inCode ? [{ label: 'Run locally', icon: 'gear', onSelect: () => onCodebase('run-locally', id) }] : []),
+		...next,
+	];
+	const code: MenuItem[] = inCode ? [{ label: 'View on GitHub', icon: 'github', onSelect: () => onCodebase('open-code', id) }] : [];
 	const folder: MenuItem[] = [{ label: 'Assign folder…', icon: 'folder', onSelect: () => onDialog({ kind: 'assign', projectId: id }) }];
-	const sections = [opens, link, next, folder].filter((group) => group.length > 0).map((group) => ({ items: group }));
+	const sections = [links, opens, code, folder].filter((group) => group.length > 0).map((group) => ({ items: group }));
 	// Pressed, it opens its newest prototype for review; a project only in the code opens its work on GitHub, as the app's does.
 	const press = newest ? () => onOpen(newest) : inCode ? () => onCodebase('open-code', id) : undefined;
 	const shared = {
@@ -203,6 +210,7 @@ export const Projects = ({
 	onOpen,
 	onOpenInBrowser,
 	onCopyLink,
+	onOpenPublished,
 	onNew,
 	onGetStarted,
 	onDialog,
@@ -223,6 +231,7 @@ export const Projects = ({
 	onOpenInBrowser: (review: Review) => void;
 	/** Copies the link of the review's published page, or says it is not published yet. */
 	onCopyLink: (review: Review) => void;
+	onOpenPublished: (review: Review) => void;
 	onNew: () => void;
 	/** Gets a product onto this machine: VS Code's own clone. */
 	onGetStarted: () => void;
@@ -294,6 +303,7 @@ export const Projects = ({
 			onOpen={onOpen}
 			onOpenInBrowser={onOpenInBrowser}
 			onCopyLink={onCopyLink}
+			onOpenPublished={onOpenPublished}
 			onDialog={onDialog}
 			onCodebase={onCodebase}
 		/>

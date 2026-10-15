@@ -85,9 +85,9 @@ describe('the voice and tone, as a document', () => {
 			proposeVoiceAndTone: vi.fn(async () => ({ ok: false, error: 'gh is not signed in.' })),
 		});
 		await refused.doc.read();
-		refused.presses.push('Open on GitHub');
+		refused.presses.push('View on GitHub');
 		await refused.doc.propose();
-		expect(refused.offered.at(-1)).toEqual(['warning: The voice and tone was not proposed: gh is not signed in.', ['Open on GitHub']]);
+		expect(refused.offered.at(-1)).toEqual(['warning: The voice and tone was not proposed: gh is not signed in.', ['View on GitHub']]);
 		expect(refused.deps.openExternal).toHaveBeenCalledWith(kept().compare);
 	});
 

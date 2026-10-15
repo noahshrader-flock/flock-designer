@@ -55,6 +55,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 		openReview: (review) => openReview(review),
 		openReviewInBrowser: (review) => openReviewInBrowser(review),
 		copyReviewLink: (review) => copyPublishedLink(review),
+		openReviewPublished: (review) => openPublishedPage(review),
 		startPrototype: (answers) => startPrototype(answers).catch(failed),
 		codebase: (action, projectId) => codebaseWork(action, projectId).catch(failed),
 		development,
@@ -194,11 +195,15 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 	const openReviewInBrowser = async (review: Review) => {
 		await vscodeOpen(await reviews.inBrowser({ records: await recordsFor(review.projectId), ...review }));
 	};
-	/** The link of the review's published page onto the clipboard; when there is none, what says so (`publishedLink`). */
-	const copyPublishedLink = async (review: Review) => {
+	/** Does `act` with the link of the review's published page; when there is none, what says so (`publishedLink`). */
+	const withPublishedLink = (act: (url: string) => Promise<void>) => async (review: Review) => {
 		const url = await publishedLink(here, review);
-		if (url !== null) await vscodeCopy(url);
+		if (url !== null) await act(url);
 	};
+	/** The link of the review's published page onto the clipboard. */
+	const copyPublishedLink = withPublishedLink(vscodeCopy);
+	/** The review's published page in the person's browser, as reviewers see it. */
+	const openPublishedPage = withPublishedLink(vscodeOpen);
 	core.prototypeServer.answerAsks((key, ask) => reviews.answerBrowser(key, ask));
 	/** Locate design system: a folder that holds one is remembered and shown; one that does not is refused, and not kept. */
 	const locate = async () => {

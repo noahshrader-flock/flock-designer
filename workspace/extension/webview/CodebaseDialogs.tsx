@@ -85,7 +85,7 @@ export const HandoffDialog = ({
 								Run again
 							</Button>
 							{pullRequest ? (
-								<Button onClick={then(onOpenCode)}>Open on GitHub</Button>
+								<Button onClick={then(onOpenCode)}>View on GitHub</Button>
 							) : (
 								<Button onClick={then(onShare)}>Open a draft pull request</Button>
 							)}

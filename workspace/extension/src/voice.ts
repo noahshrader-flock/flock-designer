@@ -95,7 +95,7 @@ export class VoiceDocument {
 		const r = await this.deps.api.proposeVoiceAndTone();
 		if (!r.ok) {
 			const compare = this.voice?.branch?.compare;
-			const next = await this.deps.choose(`The voice and tone was not proposed: ${r.error}`, compare ? [`Open on ${HOST}`] : []);
+			const next = await this.deps.choose(`The voice and tone was not proposed: ${r.error}`, compare ? [`View on ${HOST}`] : []);
 			if (next && compare) await this.deps.openExternal(compare);
 			return;
 		}
