@@ -13,7 +13,7 @@ import { TokensView } from './Tokens';
 import type { CatalogRead } from './useCatalog';
 import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
-import { Dialog, DialogButtons } from './ui/Dialog';
+import { Dialog } from './ui/Dialog';
 import { EmptyState } from './ui/EmptyState';
 import { Icon } from './ui/Icon';
 import { Menu } from './ui/Menu';
@@ -56,7 +56,6 @@ const Problems = ({ problems, onClose }: { problems: Extract<Catalog, { state: '
 				</li>
 			))}
 		</ul>
-		<DialogButtons onClose={onClose} />
 	</Dialog>
 );
 

@@ -49,7 +49,7 @@ export const NewPrototypeDialog = ({
 					)}
 				</Field>
 				<FolderField folders={folders} pick={pick} onPick={setPick} />
-				<DialogButtons onClose={onClose} close="Cancel">
+				<DialogButtons>
 					<Button type="submit" disabled={!ready}>
 						Create prototype
 					</Button>
@@ -99,7 +99,7 @@ export const AssignFolderDialog = ({
 				</p>
 				<FolderField folders={folders} pick={pick} onPick={setPick} />
 				<ErrorLine error={error} />
-				<DialogButtons onClose={onClose} close="Cancel">
+				<DialogButtons>
 					<Button type="submit" disabled={same || !isChosen(pick) || busy}>
 						Assign
 					</Button>

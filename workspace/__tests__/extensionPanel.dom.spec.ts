@@ -190,6 +190,8 @@ describe('the account and the sync, in the panel, not as a box at the top (their
 	const signedIn = { state: 'signedIn', user: { login: 'noah', name: 'Noah', avatarUrl: 'https://avatars.githubusercontent.com/u/1' } };
 	const dialog = () => document.querySelector('[role="dialog"]') as HTMLElement | null;
 	const inDialog = (name: string) => [...dialog()!.querySelectorAll('button')].find((b) => b.textContent === name) as HTMLButtonElement;
+	/** The X in a dialog's title row: how every dialog is closed that has nothing to cancel. */
+	const closeX = () => dialog()!.querySelector('[aria-label="Close"]') as HTMLButtonElement;
 	const heard = (name: string) => sent.filter((m) => m.type === 'call' && m.name === name);
 
 	it('says who is signed in, and signs out when asked, then closes', async () => {
@@ -205,11 +207,12 @@ describe('the account and the sync, in the panel, not as a box at the top (their
 		expect(dialog()).toBeNull();
 	});
 
-	it('is closed without signing out by Close, and goes by itself when the person has signed out meanwhile', async () => {
+	it('is closed without signing out by its X, and goes by itself when the person has signed out meanwhile', async () => {
 		await showOpen();
 		await say({ type: 'event', name: 'onSignInChanged', payload: signedIn });
 		await say({ type: 'open-dialog', dialog: { kind: 'account' } });
-		await press(inDialog('Close'));
+		expect(inDialog('Close')).toBeUndefined();
+		await press(closeX());
 		expect(dialog()).toBeNull();
 		expect(heard('signOut')).toHaveLength(0);
 		await say({ type: 'open-dialog', dialog: { kind: 'account' } });
@@ -277,7 +280,7 @@ describe('dialogs and menus, in the panel', () => {
 	};
 	const selected = (select: HTMLElement) => (select as HTMLSelectElement).selectedOptions[0]?.textContent;
 	const submit = () => dialog()!.querySelector('button[type="submit"]') as HTMLButtonElement;
-	const cancel = () => [...dialog()!.querySelectorAll('button')].find((b) => b.textContent === 'Cancel') as HTMLButtonElement;
+	const closeX = () => dialog()!.querySelector('[aria-label="Close"]') as HTMLButtonElement;
 	const menuFor = (n: number) => [...body().querySelectorAll<HTMLElement>('[aria-label="Project actions"]')][n] as HTMLElement;
 	const items = () => [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')];
 	/** A menu item by what it says, as a person finds it. */
@@ -288,7 +291,9 @@ describe('dialogs and menus, in the panel', () => {
 			await showOpen(OPEN, []);
 			await say({ type: 'open-dialog', dialog: { kind: 'new' } });
 			expect(dialog()?.getAttribute('aria-label')).toBe('New prototype');
-			await press(cancel());
+			// Its one button is what it does; the way out is the X, not a Cancel beside it.
+			expect([...dialog()!.querySelectorAll('.dialog-buttons button')].map((b) => b.textContent)).toEqual(['Create prototype']);
+			await press(closeX());
 			expect(dialog()).toBeNull();
 		});
 
@@ -492,7 +497,7 @@ describe('dialogs and menus, in the panel', () => {
 			await showOpen();
 			await say({ type: 'open-dialog', dialog: { kind: 'assign', projectId: 'admin-usage' } });
 			expect(dialog()!.textContent).toContain('Admin usage');
-			await press(cancel());
+			await press(closeX());
 			await say({ type: 'open-dialog', dialog: { kind: 'assign', projectId: 'not-here' } });
 			expect(dialog()).toBeNull();
 		});
@@ -516,6 +521,7 @@ describe('codebase work, in the panel', () => {
 	/** A press elsewhere, as a person's click on another button is first: it closes a menu that is open. */
 	const elsewhere = async () => act(async () => void document.body.dispatchEvent(new MouseEvent('mousedown', { bubbles: true })));
 	const inDialog = (name: string) => [...dialog()!.querySelectorAll('button')].find((b) => b.textContent === name) as HTMLButtonElement;
+	const closeX = () => dialog()!.querySelector('[aria-label="Close"]') as HTMLButtonElement;
 
 	it('offers what a project has, in groups: what opens it, its link, the next stage (build, or handoff, never both), and its folder', async () => {
 		await showOpen(OPEN, WITH_CODE);
@@ -700,7 +706,7 @@ describe('codebase work, in the panel', () => {
 			expect(dialog()!.textContent).toContain('It is in Claude Code in this window now, on feature/alert-history');
 			// The project's codebase work is recorded: the list is read again.
 			expect(sent.filter((m) => m.name === 'listProjects').length).toBe(reads + 1);
-			await press(inDialog('Close'));
+			await press(closeX());
 			expect(dialog()).toBeNull();
 		});
 
@@ -1520,7 +1526,9 @@ describe('trying a change to the tokens, saving it to a branch, and proposing it
 		await type(hex, '#00aa00');
 		await act(async () => void hex.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })));
 		expect(edited()).toEqual([{ path: 'tone.pineGreen.60', value: '#00AA00' }]);
-		await press(button('Done'));
+		// Closed by its X: there is no Done to press, so a change is a change when it is made.
+		expect([...dialog().querySelectorAll('button')].map((b) => b.textContent)).not.toContain('Done');
+		await press(dialog().querySelector('[aria-label="Close"]') as HTMLElement);
 		expect(document.querySelector('[role="dialog"]')).toBeNull();
 		await press(document.querySelector('[aria-label="Change Spacing spacing"]') as HTMLElement);
 		const slider = dialog().querySelector('input[type="range"]') as HTMLInputElement;

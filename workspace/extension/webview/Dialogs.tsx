@@ -5,7 +5,7 @@ import { productsOf, workOf } from '../../src/shared/work';
 import { needsProduct } from '../../src/shared/projectScope';
 import { type CodebaseAction, type PanelDialog, reviewsOf } from '../src/messages';
 import { AccountDialog, SyncDialog } from './AccountDialogs';
-import { Dialog, DialogButtons } from './ui/Dialog';
+import { Dialog } from './ui/Dialog';
 import { BuildInCodebaseDialog, HandoffDialog } from './CodebaseDialogs';
 import { AssignFolderDialog, NewPrototypeDialog, type NewPrototypeAnswers } from './ProjectDialogs';
 
@@ -55,7 +55,6 @@ export const PanelDialogs = ({
 			) : (
 				<Dialog title="Build in the codebase" onClose={onClose}>
 					<p className="dialog-about">{needsProduct(productsOf(project), null)} It is built in that product’s own code.</p>
-					<DialogButtons onClose={onClose} />
 				</Dialog>
 			);
 		case 'hand-off':

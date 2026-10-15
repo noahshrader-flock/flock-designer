@@ -10,16 +10,19 @@ export const IconButton = ({
 	onClick,
 	disabled = false,
 	size = 'default',
+	className,
 }: {
 	icon: string;
 	label: string;
 	onClick: () => void;
 	disabled?: boolean;
 	size?: 'default' | 'small';
+	/** What it is called by where it is, for the stylesheet to place it. */
+	className?: string;
 }) => (
 	<button
 		type="button"
-		className={size === 'small' ? 'icon-button icon-button-small' : 'icon-button'}
+		className={['icon-button', ...(size === 'small' ? ['icon-button-small'] : []), ...(className ? [className] : [])].join(' ')}
 		aria-label={label}
 		title={label}
 		disabled={disabled}

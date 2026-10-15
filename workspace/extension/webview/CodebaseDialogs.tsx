@@ -78,7 +78,7 @@ export const HandoffDialog = ({
 					</>
 				)}
 				<ErrorLine error={busy ? BUSY : null} />
-				<DialogButtons onClose={onClose} close="Cancel">
+				<DialogButtons>
 					{readyAt !== null ? (
 						<>
 							<Button type="submit" variant="secondary" disabled={busy || !known}>
@@ -158,7 +158,6 @@ export const BuildInCodebaseDialog = ({
 						<pre className="dialog-command">{handed.command}</pre>
 					</>
 				)}
-				<DialogButtons onClose={onClose} />
 			</Dialog>
 		);
 	return (
@@ -205,7 +204,7 @@ export const BuildInCodebaseDialog = ({
 					</>
 				)}
 				{[error, planned.error, setup.error].map((e) => e && <ErrorLine key={e} error={e} />)}
-				<DialogButtons onClose={onClose} close="Cancel">
+				<DialogButtons>
 					<Button type="submit" disabled={!canStart}>
 						{busy ? 'Opening…' : continuing ? 'Continue in Claude Code' : 'Build in Claude Code'}
 					</Button>

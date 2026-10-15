@@ -4,7 +4,7 @@ import { lengthRange, nameOf, pairContrast, pointsAt, reachOf, roleOf, scaleFami
 import { useTokenChanges } from '../../src/renderer/tokenChanges';
 import { useColorField } from '../../src/renderer/useColorField';
 import { Button } from './ui/Button';
-import { Dialog } from './ui/Dialog';
+import { Dialog, DialogButtons } from './ui/Dialog';
 import { Field, Select } from './ui/Field';
 import { Swatch } from './ui/Swatch';
 
@@ -185,14 +185,13 @@ export const TokenEditor = ({ token, onClose }: { token: DesignToken; onClose: (
 						</button>
 					))}
 			</div>
-			<div className="dialog-buttons">
+			<DialogButtons>
 				{isChanged(now) && (
 					<Button variant="secondary" onClick={() => change(now, null)}>
 						Reset
 					</Button>
 				)}
-				<Button onClick={onClose}>Done</Button>
-			</div>
+			</DialogButtons>
 		</Dialog>
 	);
 };

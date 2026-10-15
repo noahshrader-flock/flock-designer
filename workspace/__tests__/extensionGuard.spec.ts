@@ -155,6 +155,28 @@ describe('the extension’s sources', () => {
 		expect(css.match(/\.badge[^{]*\{[^}]*(?:min-width|\sheight):/g)).toHaveLength(1);
 	});
 
+	it('stretch a dialog’s buttons across its width, one or several alike', () => {
+		const css = files()
+			.find((f) => f.path.endsWith('styles.css'))!
+			.text.replace(/\/\*[\s\S]*?\*\//g, '');
+		const rule = (selector: string) => css.split('}').find((b) => b.trim().startsWith(selector)) ?? '';
+		expect(rule('.dialog-buttons {')).toMatch(/display:\s*flex/);
+		expect(rule('.dialog-buttons {')).not.toMatch(/justify-content/);
+		expect(rule('.dialog-buttons .button')).toMatch(/flex:\s*1/);
+		// A button is otherwise capped at a welcome view's 300px, short of a dialog's width.
+		expect(rule('.dialog-buttons .button')).toMatch(/max-width:\s*none/);
+	});
+
+	it('lay a dialog’s title and its close X in one row, the X at the far right', () => {
+		const css = files()
+			.find((f) => f.path.endsWith('styles.css'))!
+			.text.replace(/\/\*[\s\S]*?\*\//g, '');
+		const head = css.split('}').find((b) => b.trim().startsWith('.dialog-head')) ?? '';
+		expect(head).toMatch(/display:\s*flex/);
+		expect(head).toMatch(/justify-content:\s*space-between/);
+		expect(head).toMatch(/align-items:\s*center/);
+	});
+
 	it('draw a row’s thumbnail 56px wide, in the shape of a card’s picture', () => {
 		const css = files()
 			.find((f) => f.path.endsWith('styles.css'))!

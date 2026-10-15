@@ -616,8 +616,17 @@ body {
 	box-shadow: 0 4px 16px var(--vscode-widget-shadow);
 }
 
-.dialog-title {
+/* The title and its close X, in one row: the X at the far right. */
+.dialog-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
 	margin: 0 0 8px;
+}
+
+.dialog-title {
+	margin: 0;
 	font-size: 1.1em;
 	font-weight: 600;
 }
@@ -632,16 +641,17 @@ body {
 	color: var(--vscode-errorForeground);
 }
 
+/* What a dialog does, across its width: one button fills it, several share it. */
 .dialog-buttons {
 	display: flex;
-	justify-content: flex-end;
 	gap: 8px;
 	margin-top: 12px;
 }
 
 .dialog-buttons .button {
-	width: auto;
-	min-width: 72px;
+	flex: 1;
+	/* A button is capped at a welcome view's width; in a dialog it fills the row. */
+	max-width: none;
 }
 
 /* A labelled field, as VS Code's settings draw one: the label above its control. */

@@ -5,7 +5,7 @@ import { Icon } from '../extension/webview/ui/Icon';
 import { Button } from '../extension/webview/ui/Button';
 import { IconButton } from '../extension/webview/ui/IconButton';
 import { Menu } from '../extension/webview/ui/Menu';
-import { DialogButtons } from '../extension/webview/ui/Dialog';
+import { Dialog, DialogButtons } from '../extension/webview/ui/Dialog';
 import { button, mount, press } from './webviewHarness';
 
 /** DSNR's three buttons in VS Code: the primary in its brand, the secondary outlined, and the ghost for a way out. */
@@ -23,16 +23,52 @@ describe('the panel’s buttons', () => {
 		expect(button('Start over').className).toBe('button button-ghost');
 	});
 
-	it('give a dialog’s way out the ghost, beside what it does; a dialog that only says something closes with the secondary', async () => {
+	it('hold only what a dialog does, in a row, and nothing when it does nothing: the way out is the X in its title, not a Cancel or a Close', async () => {
 		await mount(
 			createElement('div', null, [
-				createElement(DialogButtons, { key: 'a', onClose: () => undefined, close: 'Cancel' }, createElement(Button, { children: 'Assign' })),
-				createElement(DialogButtons, { key: 'b', onClose: () => undefined }),
+				createElement(DialogButtons, { key: 'a' }, createElement(Button, { children: 'Assign' })),
+				createElement(DialogButtons, { key: 'b' }),
 			]),
 		);
-		expect(button('Cancel').className).toBe('button button-ghost');
 		expect(button('Assign').className).toBe('button button-primary');
-		expect(button('Close').className).toBe('button button-secondary');
+		expect(document.querySelectorAll('.dialog-buttons')).toHaveLength(1);
+		expect([...document.querySelectorAll('.dialog-buttons button')].map((b) => b.textContent)).toEqual(['Assign']);
+	});
+});
+
+describe('a dialog', () => {
+	const open = async (children: unknown, onClose = () => undefined) => {
+		await mount(createElement(Dialog as never, { title: 'GitHub account', onClose }, children as never));
+		return document.querySelector('[role="dialog"]') as HTMLElement;
+	};
+	const close = () => document.querySelector<HTMLButtonElement>('[role="dialog"] [aria-label="Close"]') as HTMLButtonElement;
+
+	it('has its close X in the row of its title, at the far right, and closes with it', async () => {
+		const onClose = vi.fn();
+		const box = await open(createElement('p', null, 'Signed in.'), onClose);
+		const head = box.querySelector('.dialog-head') as HTMLElement;
+		expect([...head.children].map((c) => c.tagName + (c.className ? `.${c.className.split(' ')[0]}` : ''))).toEqual([
+			'H2.dialog-title',
+			'BUTTON.icon-button',
+		]);
+		expect(close().title).toBe('Close');
+		await press(close());
+		expect(onClose).toHaveBeenCalledTimes(1);
+	});
+
+	it('puts the focus on its first field, never on the X it opens with', async () => {
+		await open(createElement('input', { 'aria-label': 'Name' }));
+		expect(document.activeElement?.getAttribute('aria-label')).toBe('Name');
+	});
+
+	it('puts the focus on what it does when it has no field', async () => {
+		await open(createElement('button', { type: 'button' }, 'Sign out'));
+		expect(document.activeElement?.textContent).toBe('Sign out');
+	});
+
+	it('has only the X to reach when it has nothing else in it', async () => {
+		await open(createElement('p', null, 'Only words.'));
+		expect(document.activeElement).toBe(close());
 	});
 });
 
