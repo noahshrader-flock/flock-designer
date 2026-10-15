@@ -230,7 +230,7 @@ describe('signing in to comment', () => {
 		build({ viewer: { dir: viewer, ref: { owner: 'Acme', repo: 'design' } }, ...(signIn ? { signIn } : {}) });
 	};
 	const said = (html: string) => JSON.parse(/<script type="application\/json" id="dsnr-sign-in">([^<]*)<\/script>/.exec(html)?.[1] ?? 'null');
-	const SIGN_IN = { clientId: 'Iv23li0GrlmvH5bs6nZy', exchange: 'https://dsnr-auth.vercel.app/api/exchange' };
+	const SIGN_IN = { clientId: 'Iv-test', exchange: 'https://dsnr-auth.vercel.app/api/exchange' };
 
 	it('tells every iteration’s page the App, the function, GitHub’s sign-in page and the site’s own address', () => {
 		withViewer(SIGN_IN);

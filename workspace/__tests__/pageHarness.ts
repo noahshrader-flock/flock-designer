@@ -10,7 +10,7 @@ import { button, press, settle, typeInto } from './reviewHarness';
 /** Which iteration the page is, as the site writes it into the page. */
 /** Signing in, as the published site tells every page (`#dsnr-sign-in`). */
 export const PAGE_SIGN_IN = {
-	clientId: 'Iv23li0GrlmvH5bs6nZy',
+	clientId: 'Iv-test',
 	exchange: 'https://dsnr-auth.vercel.app/api/exchange',
 	redirect: 'https://acme.github.io/design/',
 	authorize: 'https://github.com/login/oauth/authorize',

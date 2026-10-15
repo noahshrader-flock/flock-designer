@@ -6,7 +6,7 @@ import { type SignInWindow, challengeOf, finishSignIn, signedInJustNow, startSig
 
 const SITE = 'https://noahshrader-flock.github.io/flock-designer/';
 const CONFIG = {
-	clientId: 'Iv23li0GrlmvH5bs6nZy',
+	clientId: 'Iv-test',
 	exchange: 'https://dsnr-auth.vercel.app/api/exchange',
 	redirect: SITE,
 	authorize: 'https://github.com/login/oauth/authorize',
@@ -42,7 +42,7 @@ describe('signing in on the published page', () => {
 	it('sends the person to GitHub with the client, the site’s address, a state, and the hash of a verifier kept in the tab', async () => {
 		const { sentTo, pending } = await started();
 		expect(sentTo.origin + sentTo.pathname).toBe('https://github.com/login/oauth/authorize');
-		expect(sentTo.searchParams.get('client_id')).toBe('Iv23li0GrlmvH5bs6nZy');
+		expect(sentTo.searchParams.get('client_id')).toBe('Iv-test');
 		expect(sentTo.searchParams.get('redirect_uri')).toBe(SITE);
 		expect(sentTo.searchParams.get('code_challenge_method')).toBe('S256');
 		expect(sentTo.searchParams.get('state')).toBe(pending.state);
