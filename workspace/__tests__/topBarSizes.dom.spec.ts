@@ -2,7 +2,7 @@ import { createElement } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { CommentControl } from '../src/renderer/comments/CommentControl';
 import { Viewer } from '../src/viewer/Viewer';
-import { PAGE_CONFIG, sitePage } from './pageHarness';
+import { PAGE_CONFIG, PAGE_SIGN_IN, sitePage } from './pageHarness';
 import { render, settle, stateMenu, unmountAll } from './reviewHarness';
 
 /**
@@ -28,13 +28,9 @@ describe('the top bar', () => {
 	it('has controls of one small size on a published page: it is a quiet bar over a prototype, so it takes little room', async () => {
 		const page = sitePage();
 		// As the published site builds it: with signing in, so the bar has Sign in to comment.
-		const signIn = {
-			clientId: 'Iv-test',
-			exchange: 'https://fn.example/api/exchange',
-			redirect: 'https://acme.github.io/design/',
-			authorize: 'https://github.com/login/oauth/authorize',
-		};
-		current = await render(createElement(Viewer, { config: { ...PAGE_CONFIG, states: ['default', 'panel'] }, slots: page.slots, signIn }));
+		current = await render(
+			createElement(Viewer, { config: { ...PAGE_CONFIG, states: ['default', 'panel'] }, slots: page.slots, signIn: PAGE_SIGN_IN }),
+		);
 		await settle();
 		// The way back, the version, the states, the history, light and dark, and Sign in to comment.
 		expect(controls().length).toBeGreaterThanOrEqual(7);

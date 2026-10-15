@@ -7,7 +7,7 @@ import { saveToken, savedToken, tokenApi } from '../src/viewer/browserAdapter';
 import type { Relay } from '../src/viewer/relay';
 import type { Result } from '../src/shared/contract';
 import { ReviewThreads } from '../src/host/reviewThreads';
-import { PAGE_CONFIG as CONFIG, commentOnPage, fakeGitHub, sitePage } from './pageHarness';
+import { PAGE_CONFIG as CONFIG, PAGE_SIGN_IN as SIGN_IN, commentOnPage, fakeGitHub, sitePage } from './pageHarness';
 import {
 	button,
 	cards,
@@ -34,13 +34,6 @@ import { anAnchor } from './fixtures';
 
 let gh: ReturnType<typeof fakeGitHub>;
 let current: Awaited<ReturnType<typeof render>> | null = null;
-/** Signing in, as the published site tells every page. */
-const SIGN_IN = {
-	clientId: 'Iv23li0GrlmvH5bs6nZy',
-	exchange: 'https://dsnr-auth.vercel.app/api/exchange',
-	redirect: 'https://acme.github.io/design/',
-	authorize: 'https://github.com/login/oauth/authorize',
-};
 const open = async (relay: Relay | null = null, signIn: typeof SIGN_IN | null = SIGN_IN) => {
 	const page = sitePage();
 	current = await render(createElement(Viewer, { config: CONFIG, slots: page.slots, relay, signIn }));

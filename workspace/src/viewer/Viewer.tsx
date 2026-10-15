@@ -218,8 +218,19 @@ export const Viewer = ({
 					)}
 				</PageBar>
 			)}
-			<OpenFromDsnr open={askedHere} onClose={() => setAskedHere(false)} />
-			<SignInSaid note={tokenStore ? null : said} onClose={() => setSaid(null)} />
+			{/* A page from this machine comments once it is opened from DSNR, which gives it the way to ask: said so. */}
+			<Said
+				title="Open this page from DSNR to comment"
+				words={
+					askedHere ? 'In VS Code, use Open in browser on the prototype: the page it opens comments through DSNR, signed in as you are there.' : null
+				}
+				onClose={() => setAskedHere(false)}
+			/>
+			<Said
+				title={said === 'ended' ? 'Signed out' : 'Not signed in'}
+				words={!tokenStore && said ? NOTE_WORDS[said] : null}
+				onClose={() => setSaid(null)}
+			/>
 		</>
 	);
 };
@@ -382,33 +393,13 @@ const Commenting = ({
 	);
 };
 
-/**
- * A page from this machine with no way to ask DSNR (`openedHere`): it comments once it is opened from DSNR, which gives it
- * the way to ask, and says so. Signing in with GitHub is the published site's, not this machine's.
- */
-const OpenFromDsnr = ({ open, onClose }: { open: boolean; onClose: () => void }) => (
-	<Dialog open={open} onOpenChange={closeUnlessBusy(onClose)}>
+/** A short word in a dialog, with OK: how a sign-in went, or how to comment from a page that cannot. */
+const Said = ({ title, words, onClose }: { title: string; words: string | null; onClose: () => void }) => (
+	<Dialog open={words !== null} onOpenChange={closeUnlessBusy(onClose)}>
 		<DialogContent className="sm:max-w-md">
 			<DialogHeader>
-				<DialogTitle>Open this page from DSNR to comment</DialogTitle>
-				<DialogDescription>
-					In VS Code, use Open in browser on the prototype: the page it opens comments through DSNR, signed in as you are there.
-				</DialogDescription>
-			</DialogHeader>
-			<DialogFooter>
-				<Button onClick={onClose}>OK</Button>
-			</DialogFooter>
-		</DialogContent>
-	</Dialog>
-);
-
-/** How the last sign-in went, when it did not: said once, in words, on the page the person came back to. */
-const SignInSaid = ({ note, onClose }: { note: SignInNote | null; onClose: () => void }) => (
-	<Dialog open={note !== null} onOpenChange={closeUnlessBusy(onClose)}>
-		<DialogContent className="sm:max-w-md">
-			<DialogHeader>
-				<DialogTitle>{note === 'ended' ? 'Signed out' : 'Not signed in'}</DialogTitle>
-				<DialogDescription>{note ? NOTE_WORDS[note] : ''}</DialogDescription>
+				<DialogTitle>{title}</DialogTitle>
+				<DialogDescription>{words}</DialogDescription>
 			</DialogHeader>
 			<DialogFooter>
 				<Button onClick={onClose}>OK</Button>

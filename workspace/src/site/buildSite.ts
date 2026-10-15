@@ -186,9 +186,13 @@ const shell = (title: string, body: string, head = ''): string =>
 const redirect = (title: string, to: string): string =>
 	shell(title, `<main><p><a href="${to}">${escapeHtml(title)}</a></p></main>`, `<meta http-equiv="refresh" content="0; url=${to}">\n`);
 
+/** What a page is told, as JSON in a script element of its own, safe there: no `<` in it can close the element. */
+const jsonScript = (id: string, value: unknown): string =>
+	`<script type="application/json" id="${id}">${JSON.stringify(value).replace(/</g, '\\u003c')}</script>\n`;
+
 /**
- * What a page is told about signing in, safe inside a script element: the App, the function, GitHub's sign-in page, and the
- * site's own address, which GitHub sends the person back to. Nothing when there is no viewer or no sign-in.
+ * What a page is told about signing in: the App, the function, GitHub's sign-in page, and the site's own address, which
+ * GitHub sends the person back to. Nothing when there is no viewer or no sign-in.
  */
 const signInScript = (viewer: SiteInput['viewer'], signIn: SiteInput['signIn']): string => {
 	if (!viewer || !signIn?.clientId) return '';
@@ -198,7 +202,7 @@ const signInScript = (viewer: SiteInput['viewer'], signIn: SiteInput['signIn']):
 		redirect: pagesSiteUrl(viewer.ref),
 		authorize: SIGN_IN_AUTHORIZE_URL,
 	};
-	return `<script type="application/json" id="dsnr-sign-in">${JSON.stringify(config).replace(/</g, '\\u003c')}</script>\n`;
+	return jsonScript('dsnr-sign-in', config);
 };
 
 const indexPage = (projects: SiteProject[], head = ''): string =>
@@ -238,12 +242,9 @@ const projectPage = (p: SiteProject, comments: Map<string, number> | undefined):
 			.join('\n')}\n</div>\n</main>`,
 	);
 
-/**
- * What the page's bar and comments are told, safe inside a script element: which iteration this is, where the others
- * are, and the states the page has.
- */
+/** What the page's bar and comments are told: which iteration this is, where the others are, and the states the page has. */
 const viewerConfig = (ref: RepoRef, p: SiteProject, current: Page, states: string[]): string =>
-	JSON.stringify({
+	jsonScript('dsnr-config', {
 		owner: ref.owner,
 		repo: ref.repo,
 		projectId: p.id,
@@ -252,7 +253,7 @@ const viewerConfig = (ref: RepoRef, p: SiteProject, current: Page, states: strin
 		projectHref: '../../',
 		iterations: p.versions.flatMap((v) => v.pages.map((pg) => ({ name: pg.record.name, href: `../../${pg.path}` }))),
 		states,
-	}).replace(/</g, '\\u003c');
+	});
 
 /** Where the bar's frame loads its page, sandboxed either way: from the pages' address with its own origin, or beside it with none. */
 const frameAt = (p: SiteProject, page: Page, pagesAt: string | undefined): string =>
@@ -274,7 +275,7 @@ const viewerPage = (
 	signIn: string,
 ): string => {
 	const head = viewer
-		? `${signIn}<link rel="stylesheet" href="../../../_viewer/viewer.css">\n<script type="application/json" id="dsnr-config">${viewerConfig(viewer.ref, p, current, states)}</script>\n<script type="module" src="../../../_viewer/viewer.js"></script>\n`
+		? `${signIn}<link rel="stylesheet" href="../../../_viewer/viewer.css">\n${viewerConfig(viewer.ref, p, current, states)}<script type="module" src="../../../_viewer/viewer.js"></script>\n`
 		: '';
 	return shell(
 		`${p.title} · ${labelOf(current)}`,
