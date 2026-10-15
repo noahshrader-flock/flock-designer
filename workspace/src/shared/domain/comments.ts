@@ -93,16 +93,3 @@ export interface PickedPoint {
 	/** The spot cropped from the page before any pin was drawn, if it could be taken. */
 	picture: string | null;
 }
-
-/** Why the preview is hidden. A closed set, so the window cannot invent reasons. */
-export const PAGE_HOLD_REASONS = ['popover', 'resize'] as const;
-
-export type PageHoldReason = (typeof PAGE_HOLD_REASONS)[number];
-
-/** Where the preview sits, in the window's own coordinates. */
-export interface PageBounds {
-	x: number;
-	y: number;
-	width: number;
-	height: number;
-}

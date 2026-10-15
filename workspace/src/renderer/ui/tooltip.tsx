@@ -1,6 +1,5 @@
 import * as React from "react"
 import { cn } from "@/lib/utils"
-import { useOverlayRef } from "@/overlays"
 import { Tooltip as TooltipPrimitive } from "radix-ui"
 
 // Changed from stock, which opens a tooltip the instant a pointer touches its trigger, so a quick sweep across a toolbar
@@ -43,7 +42,6 @@ function TooltipContent({
   children,
   ...props
 }: React.ComponentProps<typeof TooltipPrimitive.Content>) {
-  const ref = useOverlayRef(props.ref)
   return (
     <TooltipPrimitive.Portal>
       <TooltipPrimitive.Content
@@ -54,7 +52,6 @@ function TooltipContent({
           className
         )}
         {...props}
-        ref={ref}
       >
         {children}
         <TooltipPrimitive.Arrow className="z-50 size-2.5 translate-y-[calc(-50%_-_2px)] rotate-45 rounded-[2px] bg-foreground fill-foreground" />

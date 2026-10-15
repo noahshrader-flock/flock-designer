@@ -1,15 +1,9 @@
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { CODE_FOLDERS, DEFAULT_CLONE_FOLDER } from '../src/shared/config';
 import { AVATAR_ORIGIN, avatarUrl } from '../src/shared/hostUrls';
 
 describe("the app's settings", () => {
-	it("lets the window load the avatars it is shown: its own page's CSP names the host's avatar origin", () => {
-		// The CSP is a static page's: it cannot import the setting, so this is what keeps the two the same.
-		const html = readFileSync(join(__dirname, '../src/renderer/index.html'), 'utf8');
-		const imgSrc = /img-src([^;]*);/.exec(html)?.[1] ?? '';
-		expect(imgSrc.split(/\s+/)).toContain(AVATAR_ORIGIN);
+	it("names an avatar on the host's own avatar origin, which a page that shows one must allow", () => {
 		expect(avatarUrl('noah')?.startsWith(`${AVATAR_ORIGIN}/`)).toBe(true);
 	});
 

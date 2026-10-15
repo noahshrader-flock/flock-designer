@@ -53,7 +53,7 @@ describe('closing a dialog', () => {
 	});
 
 	it('is one way on every dialog or sheet a screen opens: none writes its own', () => {
-		expect(windowSources().length).toBeGreaterThan(50);
+		expect(windowSources().length).toBeGreaterThan(10);
 		// A dialog the screen opens closes through closeUnlessBusy; one that keeps its own open state hands it setOpen.
 		expect(badTags(/^(Dialog|Sheet)$/, (tag) => /onOpenChange=/.test(tag) && !/onOpenChange=\{(closeUnlessBusy\(|setOpen\})/.test(tag))).toEqual([]);
 	});

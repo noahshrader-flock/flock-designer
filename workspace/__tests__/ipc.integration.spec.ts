@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { IpcContext } from '../src/main/ipc';
-import { CHANNELS } from '../src/shared/contract';
+import { CHANNELS, invokeChannel } from '../src/shared/contract';
 import type { Ports } from '../src/main/ports';
 import { type Answer, fakeGitHub } from './fakes/github';
 import {
@@ -37,11 +37,6 @@ import {
 
 const handlers = new Map<string, (...args: unknown[]) => unknown>();
 
-vi.mock('electron', () => ({
-	ipcMain: {
-		handle: (channel: string, fn: (...args: unknown[]) => unknown) => handlers.set(channel, fn),
-	},
-}));
 let copied = '';
 /**
  * Everything outside the app, faked: no dialog, no other application, no real gh, no push. Checked against `Ports`, so a
@@ -143,7 +138,7 @@ const codebaseWork = async () => {
 };
 
 let registerIpc: (typeof import('../src/main/ipc'))['registerIpc'];
-let serveOverIpc: (typeof import('../src/main/electronIpc'))['serveOverIpc'];
+let coreRoutes: (typeof import('../src/main/handle'))['served'];
 let OpenedCheckouts: (typeof import('../src/main/services/session'))['OpenedCheckouts'];
 let opened: InstanceType<typeof OpenedCheckouts>;
 let agentStart: Fn;
@@ -154,7 +149,6 @@ let runningSession: string | null;
 let recent: { work: string | null; lines: string[] };
 let runtimeStart: Fn;
 let memoryValue: string | null;
-let previewUrl: string | null;
 let deleteComment: Fn;
 let readComments: Fn;
 let setAddressed: Fn;
@@ -200,8 +194,7 @@ beforeEach(async () => {
 	ports = fakePorts();
 
 	({ registerIpc } = await import('../src/main/ipc'));
-	// The app's own transport, over the Electron mocked above: what the window calls is answered as in the app.
-	({ serveOverIpc } = await import('../src/main/electronIpc'));
+	({ served: coreRoutes } = await import('../src/main/handle'));
 	({ OpenedCheckouts } = await import('../src/main/services/session'));
 	opened = new OpenedCheckouts();
 	agentStart = vi.fn(() => ({ state: 'idle' }));
@@ -212,7 +205,6 @@ beforeEach(async () => {
 	recent = { work: null, lines: [] };
 	runtimeStart = vi.fn(async () => ({ state: 'stopped' }));
 	memoryValue = null;
-	previewUrl = null;
 	deleteComment = vi.fn(async () => undefined);
 	readComments = vi.fn(async () => []);
 	setAddressed = vi.fn(async (id: number, commit: string | null, iteration: string | null) => ({ id, addressedAt: commit, addressedIn: iteration }));
@@ -269,7 +261,6 @@ beforeEach(async () => {
 				threads: { deleteComment, readComments, setAddressed },
 				files: { readFile: vi.fn(async () => null), readBytes: (...a: unknown[]) => readBytes(...a) },
 			} as never,
-			page: { hold: vi.fn(), snapshot: vi.fn(), close: vi.fn(), currentUrl: () => previewUrl } as never,
 			// No test here shares a preview; sharing is runShare's, tested on its own.
 			share: { start: vi.fn(), status: vi.fn(() => ({ state: 'idle' })) } as never,
 			memory: {
@@ -299,7 +290,8 @@ beforeEach(async () => {
 			componentPictureRecipe: 'for tests',
 			...more,
 		});
-		serveOverIpc();
+		// The core's table answered as a shell's transport answers it: each route on its channel.
+		for (const [name, route] of coreRoutes()) handlers.set(invokeChannel(name), (_event, ...sent) => route(...sent));
 		return publishing;
 	};
 	register();
@@ -2044,7 +2036,7 @@ describe('the table of calls', () => {
 	});
 
 	it('has a handler for every call the window can make, and none it cannot', async () => {
-		const { INVOKE, invokeChannel } = await import('../src/shared/contract');
+		const { INVOKE } = await import('../src/shared/contract');
 		expect([...handlers.keys()].sort()).toEqual(INVOKE.map(invokeChannel).sort());
 	});
 });
@@ -2287,46 +2279,6 @@ describe('moveComment validates its arguments', () => {
 		const r = await call(CHANNELS.moveComment, id, anchor);
 		expect(r.ok).toBe(false);
 	});
-});
-
-describe('opening the preview in the real browser', () => {
-	const openedLink = async () => ports.openExternal;
-
-	it('opens the page the preview is on, query and all, in the default browser', async () => {
-		previewUrl = 'http://localhost:3000/organization/org_1/roles/compare?a=r1&b=r2';
-		const open = await openedLink();
-		open.mockClear();
-		expect((await call(CHANNELS.openPreviewInBrowser)).ok).toBe(true);
-		expect(open).toHaveBeenCalledWith('http://localhost:3000/organization/org_1/roles/compare?a=r1&b=r2');
-	});
-
-	it('opens a shared preview too', async () => {
-		previewUrl = 'https://dev-coke-pr-12.flocksafety.com/';
-		const open = await openedLink();
-		open.mockClear();
-		expect((await call(CHANNELS.openPreviewInBrowser)).ok).toBe(true);
-		expect(open).toHaveBeenCalledTimes(1);
-	});
-
-	it('says so, and opens nothing, when there is no preview', async () => {
-		const open = await openedLink();
-		open.mockClear();
-		const r = await call(CHANNELS.openPreviewInBrowser);
-		expect(r.ok).toBe(false);
-		expect(r.error).toMatch(/no preview open/);
-		expect(open).not.toHaveBeenCalled();
-	});
-
-	it.each(['file:///etc/passwd', 'javascript:alert(1)', 'http://example.com/', 'https://user:pw@example.com/'])(
-		'refuses an address a preview could not have, even if the preview somehow reports it: %s',
-		async (bad) => {
-			previewUrl = bad;
-			const open = await openedLink();
-			open.mockClear();
-			expect((await call(CHANNELS.openPreviewInBrowser)).ok).toBe(false);
-			expect(open).not.toHaveBeenCalled();
-		},
-	);
 });
 
 describe('deleteComment', () => {

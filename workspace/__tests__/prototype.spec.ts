@@ -3,16 +3,13 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, existsSync, writeFileSync
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { Project, ProjectIteration } from '../src/shared/contract';
 import { isPrototypeKey, prototypeKey, prototypePagePath } from '../src/shared/designPaths';
 import { nextPrototypeName } from '../src/shared/prototypeNames';
 import { cloneStore, buildInCodebasePrompt, prototypeReadable, recordPrototype, setCover } from '../src/main/services/prototype';
 import { PrototypeServer } from '../src/main/services/prototypeServer';
-import { agentFinished, agentRunning, memoryStore, projectIteration } from './fixtures';
+import { memoryStore } from './fixtures';
 import { prototypeBuildTask } from '../src/main/services/agentTasks';
 import { claudeCodeAdapter } from '../src/main/services/agent';
-import { FIX_ROUNDS, type PrototypeApi, runPrototypeBuild } from '../src/renderer/runPrototypeBuild';
-import type { BuildPhase } from '../src/renderer/localBuild';
 
 describe('what a prototype is called', () => {
 	it('is keyed apart from every branch, and numbered one past the highest', () => {
@@ -403,131 +400,6 @@ describe('PrototypeServer', () => {
 		} finally {
 			server.close();
 		}
-	});
-});
-
-describe('runPrototypeBuild', () => {
-	const project: Project = { id: 'users', title: 'Users', folder: null, records: [], iterations: [], people: [] };
-	const iteration: ProjectIteration = projectIteration({ name: 'i1', branch: 'prototype/users/i1' });
-	const api = (over: Partial<Record<keyof PrototypeApi, unknown>> = {}) => {
-		const calls: string[] = [];
-		const ok = (name: string, value: unknown) => vi.fn(async () => (calls.push(name), { ok: true as const, value }));
-		const a = {
-			buildPrototype: ok('buildPrototype', agentRunning()),
-			agentStatus: ok('agentStatus', agentFinished()),
-			savePrototype: ok('savePrototype', null),
-			openPrototype: ok('openPrototype', { url: 'http://127.0.0.1:5000/users/i1/', states: ['default', 'empty'] }),
-			checkAccessibility: ok('checkAccessibility', { violations: [], incomplete: [] }),
-			fixAccessibility: ok('fixAccessibility', agentRunning()),
-			...over,
-		} as unknown as PrototypeApi;
-		return { a, calls };
-	};
-	const run = async (a: PrototypeApi, task?: string) => {
-		const phases: BuildPhase[] = [];
-		const url = await runPrototypeBuild({ api: a, project, iteration, task, isLive: () => true, onPhase: (p) => phases.push(p), pollMs: 1 });
-		return { url, phases: phases.map((p) => p.kind) };
-	};
-
-	it('builds, saves, then shows new work', async () => {
-		const { a, calls } = api();
-		const { url, phases } = await run(a, 'A users list');
-		expect(url).toBe('http://127.0.0.1:5000/users/i1/');
-		expect(phases).toEqual(['agent', 'preview', 'running']);
-		expect(calls).toEqual(['agentStatus', 'buildPrototype', 'agentStatus', 'savePrototype', 'checkAccessibility', 'openPrototype']);
-	});
-
-	it('shows the page with the states it has', async () => {
-		const phases: BuildPhase[] = [];
-		await runPrototypeBuild({ api: api().a, project, iteration, isLive: () => true, onPhase: (p) => phases.push(p), pollMs: 1 });
-		expect(phases.at(-1)).toEqual({ kind: 'running', url: 'http://127.0.0.1:5000/users/i1/', states: ['default', 'empty'] });
-	});
-
-	it('only opens work that already exists', async () => {
-		const { a, calls } = api();
-		expect((await run(a)).phases).toEqual(['preview', 'running']);
-		expect(calls).toEqual(['agentStatus', 'openPrototype']);
-	});
-
-	it('picks up a build still running when the screen is opened again, then saves and shows it', async () => {
-		let asked = 0;
-		const agentStatus = vi.fn(async () => ({
-			ok: true as const,
-			value:
-				asked++ < 2
-					? { state: 'running', startedAt: 'now', work: 'prototype/users/i1' }
-					: { state: 'finished', exitCode: 0, work: 'prototype/users/i1' },
-		}));
-		const { a, calls } = api({ agentStatus });
-		const { url, phases } = await run(a);
-		expect(phases).toEqual(['agent', 'preview', 'running']);
-		expect(url).toBe('http://127.0.0.1:5000/users/i1/');
-		// It waits on the run that is there; it never starts a second one.
-		expect(calls).not.toContain('buildPrototype');
-		expect(calls).toContain('savePrototype');
-	});
-
-	it("does not wait on another piece of work's run", async () => {
-		const { a, calls } = api({
-			agentStatus: vi.fn(async () => ({ ok: true as const, value: { state: 'running', startedAt: 'now', work: 'prototype/other/i1' } })),
-		});
-		expect((await run(a)).phases).toEqual(['preview', 'running']);
-		expect(calls).toEqual(['openPrototype']);
-	});
-
-	describe('its accessibility check (T7)', () => {
-		const found = { ok: true as const, value: { violations: [{ rule: 'image-alt' }], incomplete: [] } };
-		const clear = { ok: true as const, value: { violations: [], incomplete: [] } };
-
-		it('gives the agent what the check found, saves again, and stops once nothing is found', async () => {
-			const checks = [found, clear];
-			const { a, calls } = api({ checkAccessibility: vi.fn(async () => (calls.push('checkAccessibility'), checks.shift())) });
-			const phases: BuildPhase[] = [];
-			await runPrototypeBuild({ api: a, project, iteration, task: 't', isLive: () => true, onPhase: (p) => phases.push(p), pollMs: 1 });
-			expect(calls).toEqual([
-				'agentStatus',
-				'buildPrototype',
-				'agentStatus',
-				'savePrototype',
-				'checkAccessibility',
-				'fixAccessibility',
-				'agentStatus',
-				'savePrototype',
-				'checkAccessibility',
-				'openPrototype',
-			]);
-			expect(phases).toContainEqual({ kind: 'agent', accessibility: true });
-			expect(phases.at(-1)?.kind).toBe('running');
-		});
-
-		it('gives it two rounds at most, then shows the page as it is, issues and all', async () => {
-			const { a, calls } = api({ checkAccessibility: vi.fn(async () => (calls.push('checkAccessibility'), found)) });
-			const { phases } = await run(a, 't');
-			expect(calls.filter((c) => c === 'fixAccessibility')).toHaveLength(FIX_ROUNDS);
-			expect(FIX_ROUNDS).toBe(2);
-			expect(phases.at(-1)).toBe('running');
-		});
-
-		it('never keeps a page from being shown when the check cannot run, or the agent cannot start on it', async () => {
-			const cannot = api({ checkAccessibility: vi.fn(async () => ({ ok: false, error: 'Pages can be checked only in the app.' })) });
-			expect((await run(cannot.a, 't')).phases.at(-1)).toBe('running');
-			expect(cannot.calls).not.toContain('fixAccessibility');
-			const busy = api({ checkAccessibility: vi.fn(async () => found), fixAccessibility: vi.fn(async () => ({ ok: false, error: 'busy' })) });
-			expect((await run(busy.a, 't')).phases.at(-1)).toBe('running');
-		});
-
-		it('is not run on a page only opened, which was checked when it was built', async () => {
-			const { a, calls } = api();
-			await run(a);
-			expect(calls).not.toContain('checkAccessibility');
-		});
-	});
-
-	it('does not show a page that could not be saved, and says why', async () => {
-		const { a } = api({ savePrototype: vi.fn(async () => ({ ok: false, error: 'Saving needs write access.' })) });
-		const phases: BuildPhase[] = [];
-		await runPrototypeBuild({ api: a, project, iteration, task: 't', isLive: () => true, onPhase: (p) => phases.push(p), pollMs: 1 });
-		expect(phases.at(-1)).toEqual({ kind: 'failed', message: 'Saving needs write access.' });
 	});
 });
 

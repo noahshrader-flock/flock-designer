@@ -12,17 +12,7 @@ import type {
 	RepositoryList,
 	RunLogLine,
 } from '../domain/checkout';
-import type {
-	CommentAnchor,
-	CommentRef,
-	MarkerRequest,
-	MarkerResult,
-	PageBounds,
-	PageHoldReason,
-	PickedPoint,
-	PinEvent,
-	ReviewComment,
-} from '../domain/comments';
+import type { CommentAnchor, CommentRef, ReviewComment } from '../domain/comments';
 import type {
 	Catalog,
 	ComponentPictures,
@@ -319,35 +309,6 @@ export interface WorkspaceApi {
 	assignFolder(projectId: string, folder: string | null): Promise<Result<null>>;
 	postComment(projectId: string, branch: string, body: string, anchor: CommentAnchor | null, picture?: string | null): Promise<Result<ReviewComment>>;
 
-	/** The preview, shown inside the window at the given place. It cannot call back into the app. */
-	pageOpen(url: string): Promise<Result<null>>;
-	pageClose(): Promise<Result<null>>;
-	/** Opens the page the preview is showing in the person's own browser. It never happens by itself. */
-	openPreviewInBrowser(): Promise<Result<null>>;
-	pageSetBounds(bounds: PageBounds): Promise<Result<null>>;
-	/**
-	 * Hides the preview while something drawn by the window needs the space it
-	 * occupies. Several things can want that at once, so each says *why*: the
-	 * preview comes back only when every reason has let go.
-	 */
-	pageHold(reason: PageHoldReason, held: boolean): Promise<Result<null>>;
-	/**
-	 * The preview as an image, so the window can draw over where it is. The preview is a native
-	 * layer, always drawn above the window's own content, so a popover cannot be laid over it:
-	 * the preview is swapped for a picture of itself while the popover is open. Null if there is
-	 * no preview.
-	 */
-	pageSnapshot(): Promise<Result<string | null>>;
-
-	/** Comment mode: resolves with the next element clicked, or null if canceled. */
-	pagePick(): Promise<Result<PickedPoint | null>>;
-	pageCancelPick(): Promise<Result<null>>;
-	pageShowMarkers(items: MarkerRequest[]): Promise<Result<MarkerResult[]>>;
-	pageFocusMarker(id: number): Promise<Result<null>>;
-	/** The preview moved to another page. */
-	onPageRoute(listener: (route: string) => void): () => void;
-	/** A pin on the page was clicked or moved. */
-	onPinEvent(listener: (event: PinEvent) => void): () => void;
 	/** Saves where a comment's pin now is. Only the comment's author can. */
 	moveComment(comment: CommentRef, anchor: CommentAnchor): Promise<Result<ReviewComment>>;
 	/** Deletes a comment for good. GitHub decides who is allowed, and keeps no copy. */
@@ -453,16 +414,6 @@ export const INVOKE = [
 	'readComments',
 	'readRecord',
 	'postComment',
-	'pageOpen',
-	'pageClose',
-	'openPreviewInBrowser',
-	'pageSetBounds',
-	'pageHold',
-	'pageSnapshot',
-	'pagePick',
-	'pageCancelPick',
-	'pageShowMarkers',
-	'pageFocusMarker',
 	'moveComment',
 	'resolveComment',
 	'markAddressed',
@@ -479,8 +430,6 @@ export const EVENTS = {
 	onPreviewStatus: 'previewStatus',
 	onAgentLog: 'agentLog',
 	onSignInChanged: 'signInChanged',
-	onPageRoute: 'pageRoute',
-	onPinEvent: 'pinEvent',
 } as const satisfies Partial<Record<keyof WorkspaceApi, string>>;
 
 export type InvokeName = (typeof INVOKE)[number];

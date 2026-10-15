@@ -27,7 +27,6 @@ jobs:
           node-version-file: workspace/.nvmrc
           cache: npm
           cache-dependency-path: workspace/package-lock.json
-      # With its scripts: two unit tests load the electron package, which needs its own download to load.
       - name: Install
         run: npm ci
       - name: Format, lint and typecheck

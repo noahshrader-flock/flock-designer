@@ -3,29 +3,24 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 /**
- * What the app is called, and what is kept under the old name on purpose. The app is DSNR; its package and window say
- * so. The folder where it keeps its settings, its sign-in and its working copies is still named `flock-designer`, and is
- * named by one field, because renaming the app must not start every person's copy from nothing: it moves only by a
- * migration, never by the name changing.
+ * What DSNR is called, and what is kept under the old name on purpose. DSNR is the VS Code extension and the `dsnr` command;
+ * its package says so. The folder where the command keeps its working copies of prototypes is still named `flock-designer`
+ * (from the Electron app's, which is gone), named by one field, because renaming must not start every person's copy from
+ * nothing: it moves only by a migration, never by the name changing.
  */
 
 const root = join(__dirname, '..');
 const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')) as Record<string, string>;
 
-describe('the app’s name', () => {
-	it('is DSNR, in its package and for the window and menu', () => {
+describe('the name', () => {
+	it('is DSNR, in its package', () => {
 		expect(pkg.name).toBe('dsnr');
-		expect(pkg.productName).toBe('DSNR');
+		expect(pkg.productName).toBeUndefined();
 	});
 
-	it('keeps its saved data where it always was, named by one field that the app and the command both read', () => {
+	it('keeps the command’s saved data where it always was, named by one field the command reads', () => {
 		expect(pkg.settingsFolder).toBe('flock-designer');
 		expect(readFileSync(join(root, 'bin', 'dsnr.mjs'), 'utf8')).toContain('pkg.settingsFolder');
-		expect(readFileSync(join(root, 'src', 'main', 'index.ts'), 'utf8')).toContain('pkg.settingsFolder');
-	});
-
-	it('is DSNR in the window’s own page, which the title bar shows', () => {
-		expect(readFileSync(join(root, 'src', 'renderer', 'index.html'), 'utf8')).toContain('<title>DSNR</title>');
 	});
 
 	it('has no other name in its package', () => {

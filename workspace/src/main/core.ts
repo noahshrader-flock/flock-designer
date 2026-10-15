@@ -3,7 +3,7 @@ import { DESIGN_REPO } from '../shared/config';
 import { DesignRepo } from '../host/designRepo';
 import type { AppPaths } from './appPaths';
 import type { EventSink } from './handle';
-import type { IpcContext, PreviewPage } from './ipc';
+import type { IpcContext } from './ipc';
 import type { Ports } from './ports';
 import { AgentRunner } from './services/agent';
 import { AppearanceMemory } from './services/appearance';
@@ -26,7 +26,6 @@ export interface Shell {
 	emit: EventSink;
 	ports: Ports;
 	github: GitHubAccount;
-	page: PreviewPage;
 	/** How the person's chosen appearance is applied: the system's theme setting in the app; nothing where the editor owns it. */
 	applyAppearance: (appearance: Appearance) => void;
 	/** A fingerprint of how the shell draws pictures, so only pictures drawn the same way are shown. */
@@ -38,7 +37,7 @@ export interface Shell {
  * Everything a handler reaches is made here, so `registerIpc` takes every one of them and defaults to nothing real; a
  * test builds its own from a temporary folder and fakes.
  */
-export const createCore = ({ paths, emit, ports, github, page, applyAppearance, pictureRecipe }: Shell): IpcContext => ({
+export const createCore = ({ paths, emit, ports, github, applyAppearance, pictureRecipe }: Shell): IpcContext => ({
 	emit,
 	ports,
 	opened: new OpenedCheckouts(),
@@ -50,7 +49,6 @@ export const createCore = ({ paths, emit, ports, github, page, applyAppearance, 
 	share: new ShareRunner((status) => emit('onShareStatus', status)),
 	github,
 	designRepo: new DesignRepo(github, DESIGN_REPO),
-	page,
 	memory: new CheckoutMemory(paths.checkout),
 	onPublishStatus: (status) => emit('onPublishStatus', status),
 	prototypesRoot: paths.prototypes,

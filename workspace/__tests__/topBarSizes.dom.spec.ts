@@ -1,17 +1,13 @@
 import { createElement } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
-import { Projects } from '../src/renderer/Projects';
-import { Review } from '../src/renderer/Review';
 import { CommentControl } from '../src/renderer/comments/CommentControl';
 import { Viewer } from '../src/viewer/Viewer';
-import { aProject } from './fixtures';
 import { PAGE_CONFIG, sitePage } from './pageHarness';
-import { fakeApp, ok, render, reviewProps, settle, stateMenu, unmountAll } from './reviewHarness';
+import { render, settle, stateMenu, unmountAll } from './reviewHarness';
 
 /**
- * The top bar's controls are all one size: the search field is the normal height, so the buttons and dropdowns beside it
- * are too, on the Projects screen, on a prototype's review screen, and on its published page. A control made small is
- * what makes a row look uneven.
+ * The controls in a prototype's page bar are all one size, the small one: it is a quiet bar over a prototype, so it takes
+ * little room, and a control of another size is what makes a row look uneven.
  */
 
 let current: Awaited<ReturnType<typeof render>> | null = null;
@@ -29,47 +25,6 @@ const controls = (): HTMLElement[] => [
 const size = (el: HTMLElement) => (el.getAttribute('data-slot') === 'input-group' ? 'normal' : el.getAttribute('data-size'));
 
 describe('the top bar', () => {
-	it('has controls of one size on the Projects screen', async () => {
-		const project = aProject({ id: 'alpha', title: 'Alpha' });
-		const app = fakeApp({
-			listProjects: async () => ok([project]),
-			lastCheckout: async () => ok(null),
-			suggestCheckout: async () => ok(null),
-			publishStatus: async () => ok({ state: 'unavailable' }),
-		});
-		(window as unknown as { workspace: unknown }).workspace = app.api;
-		current = await render(createElement(Projects, { hidden: false }));
-		await settle();
-		// The search, the sort, Sync and New.
-		expect(controls().length).toBeGreaterThanOrEqual(4);
-		expect(controls().map(size)).toEqual(controls().map(() => expect.stringMatching(/^(normal|default)$/)));
-	});
-
-	it('has controls of one size on a prototype’s review screen', async () => {
-		const app = fakeApp({ publishedPage: async () => ok({ state: 'published', url: 'https://x.test/' }) });
-		(window as unknown as { workspace: unknown }).workspace = app.api;
-		current = await render(createElement(Review, reviewProps() as never));
-		// Open page, the iteration switcher, Comment and its count, and More.
-		expect(controls().length).toBeGreaterThanOrEqual(5);
-		expect(controls().map(size)).toEqual(controls().map(() => expect.stringMatching(/^(default|icon)$/)));
-	});
-
-	it('counts a prototype’s states among them, the normal size', async () => {
-		const app = fakeApp({ openPrototype: async () => ok({ url: 'http://127.0.0.1:9/demo/v1-i1/', states: ['default', 'filtered', 'panel'] }) });
-		(window as unknown as { workspace: unknown }).workspace = app.api;
-		current = await render(createElement(Review, reviewProps() as never));
-		await settle();
-		const state = stateMenu() as HTMLElement;
-		// Counted by the check above, and the same height as the dropdowns beside it.
-		expect(controls().includes(state)).toBe(true);
-		expect(size(state)).toBe('default');
-		// Light and Dark after the history, the same size.
-		const themes = [...document.querySelectorAll<HTMLElement>('[aria-label="Theme"] [data-slot="toggle-group-item"]')];
-		expect(themes.map((b) => b.getAttribute('aria-label'))).toEqual(['Light', 'Dark']);
-		expect(themes.every((b) => controls().includes(b))).toBe(true);
-		expect(themes.map(size)).toEqual(['default', 'default']);
-	});
-
 	it('has controls of one small size on a published page: it is a quiet bar over a prototype, so it takes little room', async () => {
 		const page = sitePage();
 		current = await render(createElement(Viewer, { config: { ...PAGE_CONFIG, states: ['default', 'panel'] }, slots: page.slots }));

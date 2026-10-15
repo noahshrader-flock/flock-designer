@@ -3,31 +3,15 @@ import { dirname, join, relative, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 /**
- * Which shell the code is in (ELECTRON_MIGRATION_PLAN, Phase 1.3). The core (the services, the handlers, the host, the
- * shared domain, the window's screens) runs in whichever shell starts it, so nothing in it may reach `electron` or
- * `vscode`, directly or through what it imports. Only the shells' own files may: Electron's, listed here, and the VS Code
- * extension's, in `extension/`. Followed through every import that loads code; an `import type` loads nothing, so it is
+ * Which shell the code is in. The core (the services, the handlers, the host, the shared domain, the viewer's parts) runs in
+ * whichever shell starts it, so nothing in it may reach `vscode`, directly or through what it imports; only the VS Code
+ * extension's own files, in `extension/`, may. DSNR was an Electron app too, until 2026-10-15; nothing loads `electron`
+ * any more, and this keeps it so. Followed through every import that loads code; an `import type` loads nothing, so it is
  * not followed.
  */
 
 const workspace = join(__dirname, '..');
 const src = join(workspace, 'src');
-
-/** Electron's own files: where the app meets Electron, and nothing else. Each is either the shell or one of its ports. */
-const ELECTRON_SHELL = [
-	'main/index.ts',
-	'main/composition.ts',
-	'main/electronPorts.ts',
-	'main/electronIpc.ts',
-	'main/smokeLocal.ts',
-	'main/smokePage.ts',
-	'preload/index.ts',
-	'main/services/sandboxedPage.ts',
-	'main/services/pageView.ts',
-	'main/services/storyMeasure.ts',
-	'main/services/coverWindow.ts',
-	'main/services/accessibilityWindow.ts',
-].map((p) => join(src, p));
 
 const files = (dir: string): string[] =>
 	readdirSync(dir).flatMap((name) => {
@@ -75,34 +59,32 @@ const reachesShell = (start: string, stopAt: Set<string>): string[] | null => {
 };
 
 describe('the shell boundary', () => {
-	const shell = new Set(ELECTRON_SHELL);
-
-	it('names only files that are there', () => {
-		expect(ELECTRON_SHELL.filter((p) => !existsSync(p)).map((p) => relative(src, p))).toEqual([]);
-	});
-
-	it('keeps the core out of every shell: nothing outside the shells reaches electron or vscode', () => {
+	it('keeps the core out of every shell: nothing in src reaches electron or vscode', () => {
 		const reaching = files(src)
-			.filter((f) => !shell.has(f))
-			.map((f) => reachesShell(f, shell))
+			.map((f) => reachesShell(f, new Set()))
 			.filter((chain): chain is string[] => chain !== null)
 			.map((chain) => chain.join(' → '));
 		expect(reaching).toEqual([]);
 	});
 
-	it('lets only the shells’ own files import electron', () => {
-		const importing = files(src)
+	it('has no file that imports electron, in the core or in the extension: the app is gone', () => {
+		const importing = [...files(src), ...['src', 'webview'].flatMap((d) => files(join(workspace, 'extension', d)))]
 			.filter((f) => loads(readFileSync(f, 'utf8')).some((s) => /^electron(\/|$)/.test(s)))
-			.map((f) => relative(src, f))
+			.map((f) => relative(workspace, f))
 			.sort();
-		expect(importing.filter((f) => !shell.has(join(src, f)))).toEqual([]);
+		expect(importing).toEqual([]);
 	});
 
-	it('keeps Electron out of the VS Code extension', () => {
-		const extension = join(workspace, 'extension');
-		const sources = ['src', 'webview'].flatMap((d) => files(join(extension, d)));
-		expect(sources.filter((f) => loads(readFileSync(f, 'utf8')).some((s) => /^electron(\/|$)/.test(s))).map((f) => relative(extension, f))).toEqual(
-			[],
-		);
+	it('declares no electron package: not as a dependency, and no script that runs it', () => {
+		const pkg = JSON.parse(readFileSync(join(workspace, 'package.json'), 'utf8')) as {
+			main?: string;
+			scripts: Record<string, string>;
+			dependencies?: Record<string, string>;
+			devDependencies?: Record<string, string>;
+		};
+		const all = { ...pkg.dependencies, ...pkg.devDependencies };
+		expect(Object.keys(all).filter((n) => /^electron(-|$)/.test(n))).toEqual([]);
+		expect(Object.values(pkg.scripts).filter((c) => /electron/.test(c))).toEqual([]);
+		expect(pkg.main).toBeUndefined();
 	});
 });

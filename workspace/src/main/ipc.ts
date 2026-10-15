@@ -32,7 +32,6 @@ import type { GitHubAccount } from './services/githubSession';
 import { Installer } from './services/install';
 import { recordedIteration } from './services/iterations';
 import { readFolderProjects } from './services/localProjects';
-import type { PageView } from './services/pageView';
 import type { CoverDeps } from './services/projectCovers';
 import { esbuildEntry } from './services/prototypeBundle';
 import { sharedFilesOf } from '../shared/designPaths';
@@ -52,22 +51,12 @@ import { registerCheckout } from './ipc/checkout';
 import { registerClone } from './ipc/clone';
 import { registerCodebase } from './ipc/codebase';
 import { registerDesignSystem } from './ipc/designSystem';
-import { registerPage } from './ipc/page';
 import { registerPrototypes } from './ipc/prototypes';
 import { registerPublishing } from './ipc/publishing';
 import { registerReview } from './ipc/review';
 import { formatRepo, repoRefOf } from '../shared/repoRef';
 import { HOST } from '../shared/vocabulary';
 import { DESIGN_REPO } from '../shared/config';
-
-/**
- * The live preview, as the core uses it: in the app, a native view over the window (`PageView`); in a shell without one,
- * something that says so.
- */
-export type PreviewPage = Pick<
-	PageView,
-	'open' | 'close' | 'currentUrl' | 'hold' | 'snapshot' | 'pick' | 'cancelPick' | 'showMarkers' | 'focusMarker' | 'setBounds'
->;
 
 export interface IpcContext {
 	/** How the core tells the window that something happened: the shell's. */
@@ -80,7 +69,6 @@ export interface IpcContext {
 	share: ShareRunner;
 	github: GitHubAccount;
 	designRepo: DesignRepo;
-	page: PreviewPage;
 	memory: CheckoutMemory;
 	/** Told whenever publishing moves, so the window can show it. */
 	onPublishStatus: (status: PublishStatus) => void;
@@ -129,7 +117,6 @@ export const ipcDeps = ({
 	share,
 	github,
 	designRepo,
-	page,
 	memory,
 	onPublishStatus,
 	prototypesRoot,
@@ -450,7 +437,6 @@ export const ipcDeps = ({
 		share,
 		github,
 		designRepo,
-		page,
 		prototypesRoot,
 		prototypeServer,
 		sessions,
@@ -524,7 +510,6 @@ export const registerIpc = (
 	registerPrototypes(d);
 	registerReview(d);
 	registerPublishing(d);
-	registerPage(d);
 	registerAccount(d);
 	return { publish: (force = false) => d.publisher.publish(force), open: (root) => d.openRepository(root) };
 };

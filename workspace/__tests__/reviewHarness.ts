@@ -1,6 +1,6 @@
 import { act, createElement, type ReactElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
-import type { CommentAnchor, PickedPoint, PinEvent, Project, ProjectIteration, Result, ReviewComment, WorkspaceApi } from '../src/shared/contract';
+import type { Project, ProjectIteration, ReviewComment, WorkspaceApi } from '../src/shared/contract';
 import { TooltipProvider } from '../src/renderer/ui/tooltip';
 import { agentRunning, anAnchor, aProject, eventually, projectIteration, reviewComment } from './fixtures';
 
@@ -21,8 +21,6 @@ type Impl = { [K in keyof WorkspaceApi]?: (...args: Parameters<WorkspaceApi[K]>)
 
 export const fakeApp = (overrides: Impl = {}) => {
 	const calls: Record<string, unknown[][]> = {};
-	let pinListener: ((e: PinEvent) => void) | null = null;
-	let picked: ((v: Result<PickedPoint | null>) => void) | null = null;
 	const impl: Impl = {
 		agentStatus: async () => ok({ state: 'idle' }),
 		agentRecent: async () => ok({ work: null, lines: [] }),
@@ -62,19 +60,6 @@ export const fakeApp = (overrides: Impl = {}) => {
 		ensureCovers: async () => ok([]),
 		shareStatus: async () => ok({ state: 'idle' }),
 		publishedPage: async () => ok({ state: 'none' }),
-		pageShowMarkers: async (items: { id: number }[]) => ok(items.map((i) => ({ id: i.id, state: 'found' }))),
-		pageSnapshot: async () => ok(null),
-		// A pick waits for a click on the page, which `click` below gives it.
-		pagePick: () => new Promise((resolve) => (picked = resolve)),
-		// As the page does: a pick waiting for a click ends with nothing picked.
-		pageCancelPick: async () => {
-			picked?.(ok(null));
-			return ok(null);
-		},
-		onPinEvent: (l: (e: PinEvent) => void) => {
-			pinListener = l;
-			return () => void (pinListener = null);
-		},
 		...overrides,
 	};
 	const api = new Proxy(
@@ -95,20 +80,6 @@ export const fakeApp = (overrides: Impl = {}) => {
 		api,
 		calls,
 		impl,
-		/** A pin on the page was clicked or dragged. */
-		pin: (e: PinEvent) => act(async () => pinListener?.(e)),
-		/** A click on the page while commenting, at an element with this anchor. */
-		click: (anchor: Partial<CommentAnchor> = {}) =>
-			act(async () =>
-				picked?.(
-					ok({
-						anchor: anAnchor({ nearbyText: 'Main', ...anchor }),
-						at: { x: 10, y: 10 },
-						box: null,
-						picture: null,
-					}),
-				),
-			),
 	};
 };
 

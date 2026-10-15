@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { pairContrast, pointsAt, reachOf, rowContrast } from '../src/shared/tokens';
 import { undeclared } from '../src/shared/wcag';
-import { color } from './tokensHarness';
+import { color } from './tokenFixtures';
 
 /** What every place a token is shown says of it, in the app and in VS Code, from the one source (`shared/tokens.ts`). */
 
