@@ -1,5 +1,6 @@
 import type { CommentAnchor } from './contract';
 import { isPrototypeName } from './prototypeNames';
+import { isTheme } from './prototypeTheme';
 import { COMMIT_PATTERN, isCommit } from './sha';
 
 /**
@@ -59,6 +60,7 @@ export const sanitizeAnchor = (v: unknown): CommentAnchor | null => {
 		commit: isCommit(r.commit) ? r.commit : '',
 		...(off ? { offset: { x: unit(off.x), y: unit(off.y) } } : {}),
 		...(state !== undefined ? { state } : {}),
+		...(isTheme(r.theme) ? { theme: r.theme } : {}),
 		...(tag !== undefined ? { tag } : {}),
 		...(inside.length > 0 ? { inside } : {}),
 	};

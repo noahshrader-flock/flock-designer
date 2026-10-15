@@ -27,6 +27,8 @@ import {
 	stateGroup,
 	typeInto,
 	unmountAll,
+	shownTheme,
+	themeButton,
 } from './reviewHarness';
 
 /**
@@ -748,6 +750,34 @@ describe('the prototype’s states', () => {
 			expect([...cardFor('On the panel').querySelectorAll('button')].map((b) => b.textContent)).not.toContain('Show in Gone');
 			expect(cardFor('On the panel').textContent).toContain('Made in a different state of this page, so it is not pinned here.');
 		});
+	});
+
+	it('can be seen in light or dark, whatever the machine is set to, and keep their theme between states', async () => {
+		const app = withStates(['default', 'panel']);
+		await open(app);
+		await settle();
+		expect(shownTheme()).toBe('Light');
+		await press(themeButton('Dark'));
+		await settle();
+		expect(app.calls.pageOpen?.at(-1)).toEqual(['http://127.0.0.1:9/demo/v1-i1/?theme=dark']);
+		await press(state('Panel'));
+		await settle();
+		expect(app.calls.pageOpen?.at(-1)).toEqual(['http://127.0.0.1:9/demo/v1-i1/?state=panel&theme=dark']);
+		expect(shownTheme()).toBe('Dark');
+	});
+
+	it('open a comment made in dark in dark, by the button on its card', async () => {
+		const app = fakeApp({
+			openPrototype: async () => ok({ url: 'http://127.0.0.1:9/demo/v1-i1/', states: ['default'] }),
+			readComments: async () => ok([comment(1, 'Too dark to read', { anchor: { ...anAnchor(), theme: 'dark' } })]),
+		});
+		await open(app);
+		await settle();
+		await sidebar();
+		await press(button('Show in Dark', cardFor('Too dark to read')));
+		await settle();
+		expect(app.calls.pageOpen?.at(-1)).toEqual(['http://127.0.0.1:9/demo/v1-i1/?theme=dark']);
+		expect([...cardFor('Too dark to read').querySelectorAll('button')].map((b) => b.textContent)).not.toContain('Show in Dark');
 	});
 
 	it('are not offered for a prototype with one, or none', async () => {

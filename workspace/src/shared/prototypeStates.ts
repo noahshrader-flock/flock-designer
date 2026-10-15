@@ -1,4 +1,5 @@
 import { capitalize } from './titleCase';
+import { themeOfQuery, withTheme } from './prototypeTheme';
 /**
  * A prototype's states: the ways one page can be seen (`default`, `filtered`, `panel`…), each opened by asking for the
  * page with `?state=<name>`. The prototype says which it has, as `export const states = ['default', …]` in its source,
@@ -35,8 +36,8 @@ export const stateOfQuery = (query: string, states: string[]): string | null => 
 	return name === states[0] ? null : name;
 };
 
-/** The page's address in a state; `null` is the one it opens in, which is the page's own address. */
+/** The page's address in a state; `null` is the one it opens in, which is the page's own address. Its theme is kept. */
 export const withState = (url: string, state: string | null): string => {
-	const [base] = url.split('?') as [string];
-	return state === null ? base : `${base}?state=${state}`;
+	const [base, query = ''] = url.split('?') as [string, string?];
+	return withTheme(state === null ? base : `${base}?state=${state}`, themeOfQuery(`?${query}`));
 };

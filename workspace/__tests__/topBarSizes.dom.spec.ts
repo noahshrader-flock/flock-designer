@@ -58,11 +58,16 @@ describe('the top bar', () => {
 		(window as unknown as { workspace: unknown }).workspace = app.api;
 		current = await render(createElement(Review, reviewProps() as never));
 		await settle();
-		const states = [...document.querySelectorAll<HTMLElement>('[data-slot="toggle-group-item"]')];
+		const states = [...document.querySelectorAll<HTMLElement>('[aria-label="State"] [data-slot="toggle-group-item"]')];
 		expect(states).toHaveLength(3);
 		// Counted by the check above, and the same height as the dropdowns beside them.
 		expect(states.every((b) => controls().includes(b))).toBe(true);
 		expect(states.map(size)).toEqual(['default', 'default', 'default']);
+		// Light and Dark beside them (PROTOTYPE_THEME_PLAN), the same size.
+		const themes = [...document.querySelectorAll<HTMLElement>('[aria-label="Theme"] [data-slot="toggle-group-item"]')];
+		expect(themes.map((b) => b.getAttribute('aria-label'))).toEqual(['Light', 'Dark']);
+		expect(themes.every((b) => controls().includes(b))).toBe(true);
+		expect(themes.map(size)).toEqual(['default', 'default']);
 	});
 
 	it('has controls of one size on a published page, beside the switcher', async () => {

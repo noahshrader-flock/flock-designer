@@ -1108,7 +1108,9 @@ describe('prototypes', () => {
 
 		const shown = await call(CHANNELS.openPrototype, 'demo', 'v1-i1');
 		expect(shown).toMatchObject({ ok: true, value: { states: [] } });
-		expect(await (await fetch((shown.value as { url: string }).url)).text()).toBe('<h1>Demo</h1>');
+		// Served as saved, with the theme its address may ask for put first (PROTOTYPE_THEME_PLAN): the app's preview runs no page agent.
+		const served = await (await fetch((shown.value as { url: string }).url)).text();
+		expect(served).toMatch(/^<script>[\s\S]*prefers-color-scheme[\s\S]*<\/script><h1>Demo<\/h1>$/);
 
 		// With the states the page says it has, for the bar to offer; the page is the same in each, asked for in it.
 		writeFileSync(join(home, 'prototype', 'demo', 'v1-i1.html'), '<meta name="dsnr-states" content="default,empty"><h1>Demo</h1>');

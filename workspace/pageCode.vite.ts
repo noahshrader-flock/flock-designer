@@ -1,24 +1,6 @@
-import { build } from 'esbuild';
-import { dirname, resolve } from 'node:path';
+import { resolve } from 'node:path';
 import type { Plugin } from 'vite';
-
-/** A module of the page code (`src/page`), bundled into one script, as text: what is run in, or added to, a page. */
-const bundlePage = async (entry: string) => {
-	const result = await build({
-		entryPoints: [entry],
-		bundle: true,
-		write: false,
-		format: 'iife',
-		// What the scripts call it by: `__fdPage.pick()`, and so on (`shared/pageScripts.ts`).
-		globalName: '__fdPage',
-		platform: 'browser',
-		// The browsers a reviewer opens the published site in, and the app's own.
-		target: 'es2020',
-		metafile: true,
-		logLevel: 'silent',
-	});
-	return { text: result.outputFiles[0]?.text ?? '', inputs: Object.keys(result.metafile.inputs) };
-};
+import { bundlePage, pageModuleOf } from './pageBundle.mjs';
 
 /**
  * The page code (`src/page`) as one string, for the scripts the app and the published page run inside a previewed page.
@@ -30,8 +12,7 @@ const bundlePage = async (entry: string) => {
 export const pageCode = (): Plugin => ({
 	name: 'dsnr-page-code',
 	enforce: 'pre',
-	resolveId: (source, importer) =>
-		source.endsWith('?page') && importer ? `\0page:${resolve(dirname(importer), source.slice(0, -'?page'.length))}.ts` : null,
+	resolveId: (source, importer) => (source.endsWith('?page') && importer ? `\0page:${pageModuleOf(source, importer)}` : null),
 	async load(id) {
 		if (!id.startsWith('\0page:')) return null;
 		const { text, inputs } = await bundlePage(id.slice('\0page:'.length));

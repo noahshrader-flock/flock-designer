@@ -6,11 +6,13 @@ import type { CommentRef, ReviewComment } from '../shared/contract';
 import type { CommentStore } from '../renderer/comments/surfaces';
 import { prototypeKey } from '../shared/designPaths';
 import { withState } from '../shared/prototypeStates';
+import { withTheme } from '../shared/prototypeTheme';
+import { type ShownTheme, useShownTheme } from '../renderer/useShownTheme';
 import { prototypeAddressed } from '../renderer/comments/addressed';
 import { CommentBox } from '../renderer/comments/CommentBox';
 import { CommentControl } from '../renderer/comments/CommentControl';
 import { useComments } from '../renderer/comments/useComments';
-import { IterationSwitcher, StateSwitcher } from '../renderer/IterationSwitcher';
+import { IterationSwitcher, StateSwitcher, ThemeSwitcher } from '../renderer/IterationSwitcher';
 import { Toolbar } from '../renderer/Toolbar';
 import { Button } from '../renderer/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../renderer/ui/dialog';
@@ -59,7 +61,7 @@ export interface ViewerSlots {
  * The page's states, the one the frame shows, and choosing another; kept above the bar, which is drawn again on signing
  * in or out.
  */
-type Showing = { states: string[]; state: string | null; onState: (state: string | null) => void };
+type Showing = { states: string[]; state: string | null; onState: (state: string | null) => void; theme: ShownTheme };
 
 /** How long a loaded page is given to say it is up before the bar says it has no pins. */
 const NO_AGENT_MS = 8000;
@@ -93,6 +95,7 @@ const PageBar = ({ config, slots, showing, children }: { config: ViewerConfig; s
 					onSelect={(next) => void (location.href = next.href)}
 				>
 					<StateSwitcher states={showing.states} current={showing.state} onSelect={showing.onState} />
+					<ThemeSwitcher shown={showing.theme} />
 				</IterationSwitcher>
 				{children}
 			</div>
@@ -121,7 +124,12 @@ export const Viewer = ({
 	const [paused, setPaused] = useState(false);
 	// The frame opens in the page's first state; another is the same page, asked for in it.
 	const [shownState, setShownState] = useState<string | null>(null);
+	// The theme it is shown in: the system's, until one is chosen, which the page is then asked for.
+	const shownTheme = useShownTheme((theme) => {
+		slots.frame.src = withTheme(slots.frame.getAttribute('src') ?? 'page.html', theme);
+	});
 	const showing: Showing = {
+		theme: shownTheme,
 		states: config.states ?? [],
 		state: shownState,
 		onState: (next) => {
@@ -308,6 +316,7 @@ const Commenting = ({
 							{...(actions ? { actions } : {})}
 							states={showing.states}
 							onShowState={showing.onState}
+							shownTheme={showing.theme}
 							addressed={(c) => prototypeAddressed(c, config.projectId, config.name)}
 						/>
 					</div>,

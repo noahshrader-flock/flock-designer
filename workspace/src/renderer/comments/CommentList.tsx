@@ -2,6 +2,7 @@ import { CircleCheckIcon, RotateCcwIcon, Trash2Icon } from 'lucide-react';
 import { type ReactNode, useState } from 'react';
 import type { MarkerState, ReviewComment } from '../../shared/contract';
 import { stateLabel, stateOfQuery } from '../../shared/prototypeStates';
+import type { ShownTheme } from '../useShownTheme';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { DropdownMenuItem, DropdownMenuSeparator } from '../ui/dropdown-menu';
@@ -24,6 +25,7 @@ const NOTE: Record<MarkerState, string | null> = {
  * or delete it. `actions` puts more at the top of a card's menu (the app's Address), and `addressed` says on a card
  * what the agent did with it, both left to the screen this sits in. `states` are the prototype's, so a card can name
  * the state it was made in; `onShowState` opens the page in it (`null` is the first), from a comment made in another.
+ * `shownTheme` is the theme the page is shown in: a comment seen in the other one has a button to show the page in that.
  */
 export const CommentList = ({
 	comments,
@@ -31,12 +33,14 @@ export const CommentList = ({
 	addressed,
 	states = [],
 	onShowState,
+	shownTheme,
 }: {
 	comments: Comments;
 	actions?: (comment: ReviewComment) => ReactNode;
 	addressed?: (comment: ReviewComment) => ReactNode;
 	states?: string[];
 	onShowState?: (state: string | null) => void;
+	shownTheme?: ShownTheme;
 }) => {
 	// Deleting cannot be undone, so it asks first, on the card itself (a dialog would have to take the preview's place).
 	const [confirmingDelete, setConfirmingDelete] = useState<number | null>(null);
@@ -55,6 +59,9 @@ export const CommentList = ({
 				// Made in another of the prototype's states, which it still has: the page can be shown in it.
 				const target = madeIn ?? states[0];
 				const showIn = state === 'otherState' && onShowState && target !== undefined && states.includes(target) ? target : null;
+				// Seen in the other theme: the page can be shown in it, so a problem seen only in dark is seen again.
+				const seenIn = comment.anchor?.theme;
+				const showTheme = shownTheme && seenIn && seenIn !== shownTheme.theme ? seenIn : null;
 				return (
 					<Item
 						key={comment.id}
@@ -113,6 +120,11 @@ export const CommentList = ({
 							{showIn && (
 								<Button size="sm" variant="outline" className="self-start" onClick={() => onShowState?.(madeIn)}>
 									Show in {stateLabel(showIn)}
+								</Button>
+							)}
+							{showTheme && (
+								<Button size="sm" variant="outline" className="self-start" onClick={() => shownTheme?.onTheme(showTheme)}>
+									Show in {showTheme === 'dark' ? 'Dark' : 'Light'}
 								</Button>
 							)}
 						</div>

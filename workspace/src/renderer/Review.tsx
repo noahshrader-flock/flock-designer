@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Checkout, Project, ProjectIteration } from '../shared/contract';
 import { isPrototypeKey } from '../shared/designPaths';
 import { withState } from '../shared/prototypeStates';
+import { withTheme } from '../shared/prototypeTheme';
+import { useShownTheme } from './useShownTheme';
 import { workKind, workOf } from '../shared/work';
 import { AssignFolder } from './AssignFolder';
 import { BuildInCodebaseDialog } from './BuildInCodebaseDialog';
@@ -139,9 +141,12 @@ export const Review = ({
 	// When the preview is up, show it, in the state chosen: the first, which is the page's own address, until another is.
 	const states = local.phase.kind === 'running' ? (local.phase.states ?? []) : [];
 	const [shownState, setShownState] = useState<string | null>(null);
+	// And in the theme chosen: the system's, which is the page's own address, until one is (PROTOTYPE_THEME_PLAN).
+	const shownTheme = useShownTheme();
+	const chosenTheme = shownTheme.chosen;
 	useEffect(() => {
-		if (local.phase.kind === 'running') void open(withState(local.phase.url, shownState));
-	}, [local.phase, shownState, open]);
+		if (local.phase.kind === 'running') void open(withTheme(withState(local.phase.url, shownState), chosenTheme));
+	}, [local.phase, shownState, chosenTheme, open]);
 	// While the agent works on an open page (Handoff), and when it reports, the screen is its, not the page's.
 	useEffect(() => {
 		if (local.phase.kind !== 'agent' && local.phase.kind !== 'reported') return;
@@ -177,6 +182,7 @@ export const Review = ({
 				states={states}
 				shownState={shownState}
 				onShowState={setShownState}
+				shownTheme={shownTheme}
 				comments={comments}
 				listOpen={sidebarOpen}
 				onToggleList={() => setSidebarOpen((o) => !o)}
@@ -254,6 +260,7 @@ export const Review = ({
 						prototype={prototype}
 						states={states}
 						onShowState={setShownState}
+						shownTheme={shownTheme}
 						checkout={checkout}
 						project={project}
 						iteration={iteration}

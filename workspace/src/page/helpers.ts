@@ -1,3 +1,4 @@
+import { type Theme, themeOfQuery, withoutTheme } from '../shared/prototypeTheme';
 import type { CommentAnchor } from '../shared/contract';
 import { STATES_META } from '../shared/prototypeStates';
 
@@ -58,7 +59,10 @@ export const route = (): string => place(location.pathname + location.hash);
 const statesTag = document.querySelector(`meta[name="${STATES_META}"]`);
 const firstState = statesTag ? String(statesTag.getAttribute('content') || '').split(',')[0] : null;
 export const asState = (q: string): string => (firstState && q === '?state=' + firstState ? '' : q);
-export const pageState = (): string => asState(location.search.slice(0, 200));
+export const pageState = (): string => asState(withoutTheme(location.search).slice(0, 200));
+/** The theme the page is shown in: the one its address asks for, else the system's (PROTOTYPE_THEME_PLAN). */
+export const pageTheme = (): Theme =>
+	themeOfQuery(location.search) ?? (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
 
 const segment = (el: Element): string => {
 	const ref = el.getAttribute('data-e2e-ref');
@@ -168,6 +172,8 @@ export const describe = (el: Element, x: number, y: number): CommentAnchor => {
 		// Which state of the page: a prototype's switch lives in the query string, so a comment made on Error is not
 		// mistaken for one made on Loaded.
 		state: pageState(),
+		// Which theme it was seen in, so a problem seen only in dark is opened in dark again.
+		theme: pageTheme(),
 		offset: rect.width > 0 && rect.height > 0 ? { x: (x - rect.left) / rect.width, y: (y - rect.top) / rect.height } : { x: 0, y: 0 },
 	};
 };

@@ -1,8 +1,10 @@
-import { HistoryIcon } from 'lucide-react';
+import { HistoryIcon, MoonIcon, SunIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { byVersion, latestIterationName, parsePrototypeName } from '../shared/prototypeNames';
 import { iterationLabel } from '../shared/work';
 import { stateLabel } from '../shared/prototypeStates';
+import { isTheme } from '../shared/prototypeTheme';
+import type { ShownTheme } from './useShownTheme';
 import { ToggleGroup, ToggleGroupItem } from './ui/toggle-group';
 import { capitalize } from '../shared/titleCase';
 import { ChoiceMenu } from './ChoiceMenu';
@@ -153,3 +155,25 @@ export const StateSwitcher = ({
 		</ToggleGroup>
 	);
 };
+
+/**
+ * Light and Dark, beside the states (PROTOTYPE_THEME_PLAN): the prototype in either theme, whatever the machine is set to.
+ * The one shown is pressed: the system's until one is chosen.
+ */
+export const ThemeSwitcher = ({ shown }: { shown: ShownTheme }) => (
+	<ToggleGroup
+		type="single"
+		variant="outline"
+		spacing={0}
+		aria-label="Theme"
+		value={shown.theme}
+		onValueChange={(next) => isTheme(next) && next !== shown.theme && shown.onTheme(next)}
+	>
+		<ToggleGroupItem value="light" aria-label="Light" title="Light">
+			<SunIcon />
+		</ToggleGroupItem>
+		<ToggleGroupItem value="dark" aria-label="Dark" title="Dark">
+			<MoonIcon />
+		</ToggleGroupItem>
+	</ToggleGroup>
+);

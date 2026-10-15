@@ -57,6 +57,11 @@ export interface CommentAnchor {
 	 * which are shown wherever their element is.
 	 */
 	state?: string;
+	/**
+	 * The theme the page was seen in when the comment was made (PROTOTYPE_THEME_PLAN), so it can be opened in it again.
+	 * Absent on comments made before this was recorded.
+	 */
+	theme?: 'light' | 'dark';
 }
 
 /** A comment to place on the page, numbered as it is listed beside it. */

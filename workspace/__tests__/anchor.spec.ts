@@ -269,3 +269,12 @@ describe('what kind of element, and where it sits', () => {
 		expect(sanitizeAnchor({ ...base, inside: ['x'.repeat(500)] })?.inside?.[0]?.length).toBe(60);
 	});
 });
+
+describe('the theme a comment was made in', () => {
+	it('is kept when it is light or dark, and dropped when it is anything else', () => {
+		const base = { route: '/demo/v1-i1/', selector: 'main', nearbyText: '', viewport: { width: 1, height: 1 }, commit: '' };
+		expect(sanitizeAnchor({ ...base, theme: 'dark' })?.theme).toBe('dark');
+		expect(sanitizeAnchor({ ...base, theme: 'light' })?.theme).toBe('light');
+		for (const bad of ['system', '<script>', 3, null]) expect(sanitizeAnchor({ ...base, theme: bad })).not.toHaveProperty('theme');
+	});
+});

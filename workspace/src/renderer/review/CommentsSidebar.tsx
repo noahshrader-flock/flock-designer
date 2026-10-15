@@ -1,3 +1,4 @@
+import type { ShownTheme } from '../useShownTheme';
 import { WandSparklesIcon } from 'lucide-react';
 import { commentRef } from '../../shared/comments';
 import type { Checkout, Project, ProjectIteration } from '../../shared/contract';
@@ -25,6 +26,7 @@ export const CommentsSidebar = ({
 	prototype,
 	states,
 	onShowState,
+	shownTheme,
 	checkout,
 	project,
 	iteration,
@@ -36,6 +38,7 @@ export const CommentsSidebar = ({
 	prototype: boolean;
 	states: string[];
 	onShowState: (state: string | null) => void;
+	shownTheme?: ShownTheme;
 	checkout: Checkout | null;
 	project: Project;
 	iteration: ProjectIteration;
@@ -51,6 +54,7 @@ export const CommentsSidebar = ({
 			onResizing={(r) => void window.workspace.pageHold('resize', r)}
 			states={states}
 			onShowState={onShowState}
+			{...(shownTheme ? { shownTheme } : {})}
 			actions={(comment) =>
 				// The agent runs on this machine, against the product repository: without it there is nothing to build with.
 				!comment.resolved && checkout ? (

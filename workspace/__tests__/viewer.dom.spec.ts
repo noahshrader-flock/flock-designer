@@ -22,6 +22,8 @@ import {
 	stateGroup,
 	typeInto,
 	unmountAll,
+	shownTheme,
+	themeButton,
 } from './reviewHarness';
 import { anAnchor } from './fixtures';
 
@@ -165,6 +167,50 @@ describe('the states of the page', () => {
 		await settle();
 		expect(frame.getAttribute('src')).toBe('page.html?state=panel');
 		expect(shownState()).toBe('Panel');
+	});
+
+	it('can be seen in light or dark, whatever the machine is set to, and keep their theme between states', async () => {
+		const { frame } = await withStates(['default', 'panel']);
+		// With nothing chosen, the system's (light, here), and the page as it is.
+		expect(shownTheme()).toBe('Light');
+		await press(themeButton('Dark'));
+		await settle();
+		expect(frame.getAttribute('src')).toBe('page.html?theme=dark');
+		expect(shownTheme()).toBe('Dark');
+		await press(state('Panel'));
+		await settle();
+		expect(frame.getAttribute('src')).toBe('page.html?state=panel&theme=dark');
+		await press(themeButton('Light'));
+		await settle();
+		expect(frame.getAttribute('src')).toBe('page.html?state=panel&theme=light');
+	});
+
+	it('open a comment made in dark in dark, by the button on its card', async () => {
+		saveToken('good-token');
+		gh.issues.push({
+			number: 1,
+			body: 'Review thread for **demo**, branch: `prototype/demo/v1-i1`.',
+			labels: ['flock-designer:review'],
+			comments: [
+				{
+					id: 7,
+					body: composeBody('Too dark to read', anAnchor({ route: '/demo/v1-i1/', theme: 'dark' })),
+					user: { login: 'noah' },
+					created_at: '2026-10-08T09:00:00Z',
+				},
+			],
+		});
+		const { frame } = await withStates(['default', 'panel']);
+		await settle();
+		await press(button(/^Show all comments/));
+		await settle();
+		const card = cards().find((c) => c.textContent?.includes('Too dark to read')) as HTMLElement;
+		await press(button('Show in Dark', card));
+		await settle();
+		expect(frame.getAttribute('src')).toBe('page.html?theme=dark');
+		expect(shownTheme()).toBe('Dark');
+		// Shown in it now: no button to show it there again.
+		expect([...card.querySelectorAll('button')].map((b) => b.textContent)).not.toContain('Show in Dark');
 	});
 
 	it('are not offered for a page with one, or a page built before pages said', async () => {

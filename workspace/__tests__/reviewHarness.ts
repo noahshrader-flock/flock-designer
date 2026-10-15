@@ -290,3 +290,16 @@ export const typeInto = (el: HTMLTextAreaElement | HTMLInputElement, text: strin
 	});
 export const key = (k: string, more: KeyboardEventInit = {}) =>
 	act(async () => void window.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true, ...more })));
+
+/** The page's Light / Dark switch, its two buttons, and the one shown (PROTOTYPE_THEME_PLAN). */
+export const themeGroup = (): HTMLElement | null =>
+	document.querySelector<HTMLElement>('[role="group"][aria-label="Theme"], [data-slot="toggle-group"][aria-label="Theme"]');
+export const themeButton = (name: 'Light' | 'Dark'): HTMLElement => {
+	const b = themeGroup()?.querySelector<HTMLElement>(`[aria-label="${name}"]`);
+	if (!b) throw new Error(`no ${name} in the theme switch`);
+	return b;
+};
+export const shownTheme = (): string | undefined =>
+	[...(themeGroup()?.querySelectorAll<HTMLElement>('[data-slot="toggle-group-item"]') ?? [])]
+		.find((b) => b.getAttribute('aria-checked') === 'true')
+		?.getAttribute('aria-label') ?? undefined;

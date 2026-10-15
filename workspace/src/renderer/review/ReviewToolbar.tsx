@@ -5,7 +5,8 @@ import { AccessibilityStatus } from '../AccessibilityStatus';
 import { BackButton } from '../BackButton';
 import { CommentControl } from '../comments/CommentControl';
 import type { useComments } from '../comments/useComments';
-import { IterationSwitcher, StateSwitcher } from '../IterationSwitcher';
+import { IterationSwitcher, StateSwitcher, ThemeSwitcher } from '../IterationSwitcher';
+import type { ShownTheme } from '../useShownTheme';
 import type { BuildPhase } from '../localBuild';
 import { ShareControl } from '../ShareControl';
 import { Toolbar, ToolbarEnd } from '../Toolbar';
@@ -31,6 +32,7 @@ export const ReviewToolbar = ({
 	states,
 	shownState,
 	onShowState,
+	shownTheme,
 	comments,
 	listOpen,
 	onToggleList,
@@ -57,6 +59,8 @@ export const ReviewToolbar = ({
 	states: string[];
 	shownState: string | null;
 	onShowState: (state: string | null) => void;
+	/** The theme a prototype is shown in, and choosing the other (PROTOTYPE_THEME_PLAN). */
+	shownTheme: ShownTheme;
 	comments: ReturnType<typeof useComments>;
 	listOpen: boolean;
 	onToggleList: () => void;
@@ -116,6 +120,7 @@ export const ReviewToolbar = ({
 					note={(i) => (i.localOnly && !project.localOnly ? ' · only on this machine' : '')}
 				>
 					<StateSwitcher states={states} current={shownState} onSelect={onShowState} />
+					{prototype && <ThemeSwitcher shown={shownTheme} />}
 				</IterationSwitcher>
 				<CommentControl comments={comments} listOpen={listOpen} onToggleList={onToggleList} disabled={!opened} />
 				{onHandOff && (

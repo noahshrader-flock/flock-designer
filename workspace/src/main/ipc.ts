@@ -1,3 +1,4 @@
+import { withPageTheme } from './services/pageTheme';
 import { existsSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { basename, dirname, join, sep } from 'node:path';
@@ -396,7 +397,7 @@ export const ipcDeps = ({
 	/** A prototype's page on the local server, with the shared files it points at beside it: where it is opened and checked. */
 	const servePrototype = async (projectId: string, name: string, html: string): Promise<string> => {
 		await serveShared(html);
-		return prototypeServer.serve(`${projectId}/${name}`, html);
+		return prototypeServer.serve(`${projectId}/${name}`, withPageTheme(html));
 	};
 	/** The page: this machine's newest build first (built again when its source changed), then the saved one. */
 	const prototypePage = (projectId: string, name: string): Promise<string | null> => work.page(projectId, name, agentBusy());

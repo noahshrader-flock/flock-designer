@@ -11,6 +11,7 @@ import { copyFileSync, cpSync, mkdirSync, readdirSync, rmSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { context } from 'esbuild';
+import { pageCodeEsbuild } from '../pageBundle.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const dist = join(here, 'dist');
@@ -38,7 +39,8 @@ const builds = [
 		target: 'node20',
 		// VS Code gives `vscode`; esbuild finds its own native binary when it runs, so it cannot be bundled: it is copied in.
 		external: ['vscode', 'esbuild'],
-		plugins: [report('extension')],
+		// Page code carried as text (`import X from '…?page'`), as the app's build carries it.
+		plugins: [pageCodeEsbuild(), report('extension')],
 	},
 	{
 		entryPoints: [join(here, 'webview/main.tsx')],
