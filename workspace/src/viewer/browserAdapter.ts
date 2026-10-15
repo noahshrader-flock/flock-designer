@@ -10,7 +10,7 @@ import { ReviewThreads } from '../host/reviewThreads';
 /**
  * The comments experience on a prototype's published page: the browser's side of what the app does through its main
  * process. GitHub is reached with the app's own code (`ReviewThreads`, `callApi`), given a token instead of the app's
- * sign-in, so a thread is found, made and written exactly as the app does it. The page is the frame the prototype is
+ * sign-in, so a thread is found, made and written exactly it. The page is the frame the prototype is
  * in, whose agent runs the same pick and pin code there when it is asked.
  */
 

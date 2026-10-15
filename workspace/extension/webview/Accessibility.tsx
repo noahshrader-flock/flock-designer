@@ -25,7 +25,7 @@ const Issues = ({ title, issues }: { title: string; issues: AccessibilityIssue[]
 	);
 
 /**
- * What a check found, as the app lists it, in the order a person needs it: a line of what it found, what it was checked with
+ * What a check found, in the order a person needs it: a line of what it found, what it was checked with
  * and what no automated check covers (never a pass: what is left is a person's), then the findings themselves, kept closed
  * until they are opened, when there are any. axe's pages are links, which VS Code opens in the browser.
  */

@@ -23,7 +23,7 @@ try {
 	process.exit(1);
 }
 
-/** The app's own prototype folder: where Electron keeps the app's data, named by the package's `settingsFolder` (the app sets it the same way). */
+/** The command's prototype folder: DSNR's data folder in the person's application-data directory, named by the package's `settingsFolder`. */
 const pkg = JSON.parse(readFileSync(join(workspace, 'package.json'), 'utf8'));
 const appData =
 	process.platform === 'darwin'

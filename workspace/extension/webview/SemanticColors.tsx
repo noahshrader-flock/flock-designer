@@ -5,7 +5,7 @@ import { Icon } from './ui/Icon';
 import { Swatch } from './ui/Swatch';
 
 /**
- * One theme's value of a role, as the app's (`SemanticColors`): its color as a swatch, centered under its theme, what it
+ * One theme's value of a role, as `SemanticColors` draws it: its color as a swatch, centered under its theme, what it
  * points at in its tooltip and said to assistive technology, its hex left to its control. Pressing it opens its control,
  * so a change is always to one theme's token. Marked when changed, and when its contrast is below the target.
  */
@@ -72,7 +72,7 @@ const Rows = ({ title, rows, themes, onEdit }: { title?: string; rows: SemanticR
 );
 
 /**
- * The semantic colors as the app has them (the Color tokens plan): a row for each role's variant, a column for each theme
+ * The semantic colors (the Color tokens plan): a row for each role's variant, a column for each theme
  * the design system has (Light, Dark, or more), each value a swatch that opens its own control. Roles are under their set;
  * a role whose name is its set is a plain row, with no heading to say it twice.
  */

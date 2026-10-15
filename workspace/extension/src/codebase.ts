@@ -28,7 +28,7 @@ const codebaseOf = async (api: CodebaseDeps['api'], projectId: string): Promise<
 const OPEN_PR = 'Open a draft pull request';
 
 /**
- * Handoff, from VS Code (ELECTRON_MIGRATION_PLAN 5.2): the app's own run (`runLocalBuild` with `handoff`) on the project's
+ * Handoff, from VS Code (ELECTRON_MIGRATION_PLAN 5.2): the core's run (`runLocalBuild` with `handoff`) on the project's
  * codebase work, on its branch: the product's gate, both reviews, the fixes, HANDOFF.md committed, nothing pushed. Said
  * and stoppable as a build is, its log beside the editor; then the verdict, and when it is ready, a draft pull request.
  */
@@ -207,7 +207,7 @@ const OPEN_IT = 'Open the pull request';
 const COPY_IT = 'Copy the preview link';
 
 /**
- * Codebase work shared for review (ELECTRON_MIGRATION_PLAN 5.2): the app's own share, a draft pull request whose preview
+ * Codebase work shared for review (ELECTRON_MIGRATION_PLAN 5.2): the core's share, a draft pull request whose preview
  * is built from it (`shareIteration`), said step by step as the core moves it; then the pull request and the preview's
  * link, or why it was not shared. It cannot be stopped: a push and a pull request are not taken back halfway.
  */

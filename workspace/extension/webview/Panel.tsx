@@ -175,7 +175,7 @@ export const Panel = () => {
 	useEffect(() => {
 		if (changes > 0) reload();
 	}, [changes]); // eslint-disable-line react-hooks/exhaustive-deps
-	// With the list read: pictures for the prototypes built here that have none current, taken in once made, as the app does;
+	// With the list read: pictures for the prototypes built here that have none current, taken in once made;
 	// the newest first, so a picture drawn again is the one shown.
 	const [made, setMade] = useState<MadeCover[]>([]);
 	useEffect(() => {
@@ -200,7 +200,7 @@ export const Panel = () => {
 	// The design system, read once its tab is first shown, and read afresh when another is found; its pictures while it is.
 	const found = context?.designSystem ?? null;
 	const showsDesign = tab === 'design-system' && found !== null && unreadable === null;
-	// A sync keeps only what was tried on tokens the library still has, as the app does.
+	// A sync keeps only what was tried on tokens the library still has.
 	const design = useCatalog(showsDesign, found?.root ?? null, (catalog) => {
 		const still = editsKept(edits, catalog);
 		if (still !== edits) setEdits(still);

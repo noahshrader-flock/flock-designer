@@ -331,7 +331,7 @@ const Commenting = ({
 					comments={comments}
 					origin={{ top: frameBox.top, left: frameBox.left }}
 					error={error}
-					note="A comment made on this page has no picture of the spot yet: only the app can take one."
+					note="A comment made on this page has no picture of the spot yet: only DSNR in VS Code can take one."
 				/>
 			)}
 		</>

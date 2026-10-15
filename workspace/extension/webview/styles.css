@@ -905,7 +905,7 @@ textarea.input {
 
 /*
  * The Design System tab (6.1, 6.2): the design system's own row, its parts, and its tokens as rows, a swatch at the start
- * and the value at the end, as the app's tokens panel draws them.
+ * and the value at the end.
  */
 .ds-header {
 	display: grid;
@@ -1718,7 +1718,7 @@ textarea.input {
 }
 
 /*
- * The semantic colors as the app lays them out: a row for each role's variant, its name taking the room there is, and a
+ * The semantic colors as laid out here: a row for each role's variant, its name taking the room there is, and a
  * column for each theme, as wide as its swatch needs, the same on every row and its heading so they line up.
  */
 .theme-set {

@@ -8,8 +8,8 @@ type Webview = Pick<VsCode.Webview, 'postMessage'>;
 type Call = Extract<PanelMessage, { type: 'call' }>;
 
 /**
- * Answers a call the panel made (already read, `readMessage`) from the core's table, as Electron's IPC answers the app's
- * window: the core's own Result, back by the call's id.
+ * Answers a call the panel made (already read, `readMessage`) from the core's table: the core's own Result, back by
+ * the call's id.
  */
 export const answerCall = async (webview: Webview, routes: ReadonlyMap<InvokeName, Route>, call: Call): Promise<void> => {
 	await webview.postMessage({ type: 'answer', id: call.id, result: await callRoute(routes, call.name, call.args) } satisfies HostMessage);

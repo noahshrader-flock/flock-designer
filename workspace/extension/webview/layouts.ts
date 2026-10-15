@@ -1,7 +1,7 @@
 import type { MenuSection } from './ui/Menu';
 import type { View } from './vscode';
 
-/** The two ways to see a list of things with pictures, as the app has them: a grid of cards, which it starts in, or rows. */
+/** The two ways to see a list of things with pictures them: a grid of cards, which it starts in, or rows. */
 const LAYOUTS = [
 	{ value: 'grid', label: 'Grid', icon: 'layout' },
 	{ value: 'list', label: 'List', icon: 'list-unordered' },

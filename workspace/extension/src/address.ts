@@ -16,7 +16,7 @@ export interface AddressDeps extends AgentWorkDeps {
 const labelOf = (projectId: string, name: string): string => iterationLabel({ name, branch: prototypeKey(projectId, name) });
 
 /**
- * Address on one of a prototype's comments, from its review in VS Code (ELECTRON_MIGRATION_PLAN 4.2): the app's own
+ * Address on one of a prototype's comments, from its review in VS Code (ELECTRON_MIGRATION_PLAN 4.2): the core's
  * Address (`runPrototypeAddress`), said and stoppable as a build is, its log beside the editor. The change goes where
  * the core puts it: this iteration, or the next when others had commented on this one; that page is then shown (`show`),
  * and which it is said, and returned, so a page in the browser can go to it. An agent that changed nothing says why in its

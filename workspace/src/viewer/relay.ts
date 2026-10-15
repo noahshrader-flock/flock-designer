@@ -145,7 +145,7 @@ export const loginIn = (answer: Result<unknown>): string | null => {
 
 /**
  * One iteration's comments through DSNR (`CommentStore`): the core's own comment calls, made with the extension's
- * sign-in, so a comment is found, made and written exactly as the app does it. `branch` is the iteration's key.
+ * sign-in, so a comment is found, made and written exactly it. `branch` is the iteration's key.
  */
 export const relayComments = (relay: Relay, { projectId, branch }: { projectId: string; branch: string }): CommentStore => ({
 	read: () => relay.ask('readComments', [projectId, branch]) as Promise<Result<ReviewComment[]>>,

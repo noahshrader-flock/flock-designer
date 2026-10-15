@@ -318,7 +318,7 @@ export const main = async (argv: string[], deps: CliDeps): Promise<number> => {
 				}
 			}
 			deps.out(
-				`Saved ${prototypeSourcePath(projectId, name)} and ${prototypePagePath(projectId, name)} in ${designRoot}. It is in DSNR (press Sync if the app is already open), which publishes it the next time it is open.`,
+				`Saved ${prototypeSourcePath(projectId, name)} and ${prototypePagePath(projectId, name)} in ${designRoot}. It is in DSNR (press Sync if it is already open in VS Code), which publishes it the next time it is open.`,
 			);
 			return 0;
 		}

@@ -19,7 +19,7 @@ export interface TokenActions {
 }
 
 /**
- * A token, as the app's tokens panel lists one (`TokenRow`): its swatch, its name, what it points at, the contrast of its
+ * A token (`TokenRow`): its swatch, its name, what it points at, the contrast of its
  * pair when it is the one read under the other (flagged when it is below what the design system's target asks), and its
  * value, all as changed, with a mark when it is. Pressed, a token that can be changed opens its control; one that cannot
  * (a font, a shadow) is the same row with nothing to press. Its file and line are its tooltip, and its action opens them.
@@ -113,7 +113,7 @@ const COLOR_VIEWS = [
 ] as const satisfies { value: ColorView; label: string; icon: string }[];
 
 /**
- * The design system's tokens in the panel, as the app's tokens panel has them (T2, T3), by the same rule (`tokensShown`):
+ * The design system's tokens in the panel (T2, T3), by the same rule (`tokensShown`):
  * a search, then a section for each primitive in the vocabulary's order, as changed. **Colors have two views,** switched
  * at the left of the search: the roles by theme (`SemanticColors`, the default), a row for each and a column for Light
  * and Dark; and the palette behind them, each tone's steps with their values. With no tokens, what was looked for.

@@ -122,7 +122,7 @@ const Specimens = ({ tokens, byPath, preview }: Drawing) => (
 	</div>
 );
 
-/** Each of the vocabulary's drawings, by the word it uses for it, as the app's Primitives has them. */
+/** Each of the vocabulary's drawings, by the word it uses for it. */
 const DRAWINGS: Record<Primitive['drawn'], (props: Drawing) => ReactNode> = {
 	swatches: Swatches,
 	bars: Bars,
