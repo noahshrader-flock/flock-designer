@@ -32,6 +32,7 @@
 	--dsnr-card-text-pad: 8px;
 	/* Every count bubble's height, and its width for one digit: a circle, the same in a row, a card and a header. */
 	--dsnr-badge: 17px;
+	--dsnr-badge-xs: 9px;
 	/* The space between a grid's cards, across and down. */
 	--dsnr-grid-gap: 8px;
 	/* What is kept at the top while a list scrolls: the toggle's bar, then the bar of the tab under it (search and options). */
@@ -304,6 +305,14 @@ body {
 .badge-warning {
 	color: var(--vscode-editor-background);
 	background: var(--vscode-editorWarning-foreground);
+}
+
+/* No count: extra small and blank, a circle. */
+.badge-xs {
+	height: var(--dsnr-badge-xs);
+	min-width: var(--dsnr-badge-xs);
+	padding: 0;
+	border-radius: 50%;
 }
 
 /* A count that opens what it counts. */
@@ -1741,6 +1750,7 @@ textarea.input {
 
 .theme-name {
 	flex: 1;
+	color: var(--dsnr-muted);
 	min-width: 0;
 	overflow: hidden;
 	text-overflow: ellipsis;
@@ -1756,8 +1766,6 @@ textarea.input {
 	flex-shrink: 0;
 	justify-content: center;
 	width: 48px;
-	overflow: hidden;
-	text-overflow: ellipsis;
 	white-space: nowrap;
 }
 
@@ -1795,10 +1803,9 @@ textarea.input {
 
 .theme-flag {
 	position: absolute;
-	top: -3px;
-	right: -3px;
-	color: var(--vscode-editorWarning-foreground);
-	font-size: 11px !important;
+	/* The swatch's top right corner (4px in from the button's) lands two thirds down the badge, on its middle. */
+	top: -2px;
+	right: -0.5px;
 }
 
 .theme-changed {

@@ -117,6 +117,16 @@ describe('the badge', () => {
 	});
 });
 
+describe('the blank badge', () => {
+	it('is the badge extra small with no number, named by its label, and sits where its parent puts it', async () => {
+		await mount(createElement(Badge, { tone: 'warning', label: 'Contrast is too low', className: 'theme-flag' }));
+		const dot = document.querySelector('[aria-label="Contrast is too low"]') as HTMLElement;
+		expect(dot.className).toBe('badge badge-warning badge-xs theme-flag');
+		expect(dot.getAttribute('role')).toBe('img');
+		expect(dot.textContent).toBe('');
+	});
+});
+
 describe('the icon', () => {
 	it('is the codicon at its size, or extra small beside a line of text', async () => {
 		await mount(

@@ -219,8 +219,13 @@ describe('the extension’s sources', () => {
 		expect(badge).toMatch(/box-sizing:\s*border-box/);
 		// Little enough padding that one digit never makes it wider than it is tall.
 		expect(badge).toMatch(/padding:\s*0 3px;/);
-		// No other rule sizes a bubble.
-		expect(css.match(/\.badge[^{]*\{[^}]*(?:min-width|\sheight):/g)).toHaveLength(1);
+		// No other rule sizes a bubble, but the blank one: extra small, a circle, from its own name.
+		expect(css).toMatch(/--dsnr-badge-xs:\s*9px/);
+		const xs = css.split('}').find((b) => b.trim().startsWith('.badge-xs {')) ?? '';
+		expect(xs).toMatch(/\sheight:\s*var\(--dsnr-badge-xs\);/);
+		expect(xs).toMatch(/min-width:\s*var\(--dsnr-badge-xs\);/);
+		expect(xs).toMatch(/border-radius:\s*50%;/);
+		expect(css.match(/\.badge[^{]*\{[^}]*(?:min-width|\sheight):/g)).toHaveLength(2);
 	});
 
 	it('stretch a dialog’s buttons across its width, one or several alike', () => {

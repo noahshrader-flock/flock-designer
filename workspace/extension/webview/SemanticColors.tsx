@@ -1,7 +1,7 @@
 import type { DesignToken } from '../../src/shared/contract';
 import { labelOf, pointsAt, rowContrast, semanticTable, type SemanticRow } from '../../src/shared/tokens';
 import { useTokenChanges } from '../../src/renderer/tokenChanges';
-import { Icon } from './ui/Icon';
+import { Badge } from './ui/Badge';
 import { Swatch } from './ui/Swatch';
 
 /**
@@ -27,7 +27,7 @@ const ThemeValue = ({ token, onEdit }: { token: DesignToken; onEdit: (token: Des
 				onClick={() => onEdit(token)}
 			>
 				<Swatch value={token.value} />
-				{flagged && <Icon name="warning" className="theme-flag" />}
+				{flagged && <Badge tone="warning" label="Contrast is too low" className="theme-flag" />}
 				{edited && <span data-changed-mark className="theme-changed" aria-label="Changed" />}
 			</button>
 		</span>
