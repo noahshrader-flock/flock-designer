@@ -315,12 +315,15 @@ describe('comments on the page', () => {
 		expect(frame).not.toContain('allow-top-navigation');
 	});
 
-	it('frames each page from beside it, as the published site does, when told none', () => {
+	it('frames each page from beside it, as the published site does, sandboxed with no origin of its own, when told none', () => {
 		build();
 		const frame = /<iframe id="dsnr-frame"[^>]*>/.exec(read('alpha/v1/i2/index.html'))?.[0] ?? '';
 		expect(frame).toContain('src="page.html"');
-		// On one address a sandbox protects nothing: the page could take it off through the bar.
-		expect(frame).not.toContain('sandbox');
+		// Its own scripts, forms, pop-ups and alerts. Not its own origin: on the bar's address that would let it take the
+		// sandbox off through the bar, and read the bar's storage, where the sign-in's token is (PUBLISHED_COMMENTS_PLAN, 2.2).
+		expect(frame).toContain('sandbox="allow-scripts allow-forms allow-popups allow-modals"');
+		expect(frame).not.toContain('allow-same-origin');
+		expect(frame).not.toContain('allow-top-navigation');
 	});
 
 	it('leaves the pages as they were without it', () => {

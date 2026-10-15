@@ -5,6 +5,7 @@ import { build } from 'esbuild';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import PAGE_AGENT from '../src/page/agentMain?page';
 import { NO_CHROME, inChrome } from './realChrome';
+import { SANDBOX_APART, SANDBOX_BESIDE } from '../src/site/buildSite';
 
 /**
  * The review bar and a prototype's page, talking by message in the real browser (the README's Review isolation): the bar's
@@ -13,11 +14,18 @@ import { NO_CHROME, inChrome } from './realChrome';
  */
 
 const PAGE = `<!doctype html><html lang="en"><head><script src="/agent.js"></script><meta charset="utf-8"><title>Alert history</title></head>
-<body style="margin:0;font:16px sans-serif"><main><h1>Alert history</h1>
+<body style="margin:0;font:16px sans-serif"><script>
+// As a design system may, as it loads: its storage and a cookie. With no origin of its own these are the agent's stand-ins.
+localStorage.setItem('seen', '1'); sessionStorage.setItem('tab', '2'); document.cookie = 'c=3';
+document.body.dataset.kept = localStorage.getItem('seen') + sessionStorage.getItem('tab') + document.cookie;
+</script><main><h1>Alert history</h1>
 <button data-e2e-ref="clear-filter-button" style="margin:40px;padding:12px">Clear Filter</button></main></body></html>`;
-/** The bar's page, framing the prototype from beside it, or (`pagesAt`) from the pages' own address, sandboxed as the site does. */
+/**
+ * The bar's page, framing the prototype from beside it with no origin of its own (the published site), or (`pagesAt`) from
+ * the pages' own address with its own (VS Code), each sandboxed as the site builds it.
+ */
 const BAR = (pagesAt = '') => `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Bar</title></head>
-<body style="margin:0"><iframe id="dsnr-frame" src="${pagesAt}/review/alpha/v1/i1/page.html" ${pagesAt ? 'sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"' : ''} style="width:800px;height:600px;border:0"></iframe>
+<body style="margin:0"><iframe id="dsnr-frame" src="${pagesAt}/review/alpha/v1/i1/page.html" sandbox="${pagesAt ? SANDBOX_APART : SANDBOX_BESIDE}" style="width:800px;height:600px;border:0"></iframe>
 <script src="/bar.js"></script></body></html>`;
 
 let server: Server;
@@ -75,7 +83,7 @@ afterAll(async () => {
 
 describe.skipIf(NO_CHROME)('the bar and the page, by message, in the real browser', () => {
 	it.each([
-		['beside its bar (the published site)', '/bar.html'],
+		['beside its bar with no origin of its own (the published site)', '/bar.html'],
 		['on the pages’ own address, sandboxed (VS Code)', '/bar-apart.html'],
 	])(
 		'picks a spot, draws its pin, hears the pin clicked and the route move, the page %s',
@@ -96,6 +104,9 @@ describe.skipIf(NO_CHROME)('the bar and the page, by message, in the real browse
 						}),
 				);
 				expect(route).toBe('/review/alpha/v1/i1/page.html');
+				// Its storage and cookie kept what it set, real or stand-in.
+				const page = tab.frames().find((f) => f.url().endsWith('page.html'));
+				expect(await page?.evaluate(() => document.body.dataset.kept)).toBe('12c=3');
 
 				// A pick, made by a click on the page.
 				await tab.evaluate(() => void ((window as any).picking = (window as any).page.pick()));

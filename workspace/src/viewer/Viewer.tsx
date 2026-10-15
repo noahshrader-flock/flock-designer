@@ -123,7 +123,7 @@ export const Viewer = ({
 	/** Told the iteration Address showed its change in: a page in the browser goes to it (BROWSER_COMMENTS_PLAN D1). */
 	onAddressed?: (name: string) => void;
 }) => {
-	// Only tests leave a token in this browser; the sign-in will keep it where a page cannot reach (M9's rule).
+	// The token kept in this browser, on the bar's own origin, which a prototype framed with no origin of its own cannot reach.
 	const [token, setToken] = useState<string | null>(savedToken);
 	const [paused, setPaused] = useState(false);
 	// The frame opens in the page's first state; another is the same page, asked for in it.

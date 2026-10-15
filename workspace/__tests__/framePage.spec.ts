@@ -6,11 +6,11 @@ import { framePage } from '../src/viewer/browserAdapter';
  * address, and only with the secret it said hello with; it asks nothing of a page that has not said it is up.
  */
 
-const world = (src = 'http://127.0.0.1:4100/review/a/v1/i1/page.html') => {
+const world = (src = 'http://127.0.0.1:4100/review/a/v1/i1/page.html', sandbox: string | null = null) => {
 	const listeners: ((e: unknown) => void)[] = [];
 	const pageWindow = { postMessage: vi.fn() };
 	const frame = {
-		getAttribute: () => src,
+		getAttribute: (name: string) => (name === 'src' ? src : name === 'sandbox' ? sandbox : null),
 		contentWindow: pageWindow,
 		addEventListener: vi.fn(),
 		removeEventListener: vi.fn(),
@@ -27,6 +27,34 @@ const world = (src = 'http://127.0.0.1:4100/review/a/v1/i1/page.html') => {
 		listeners.forEach((l) => l({ data, source, origin }));
 	return { page, pageWindow, nonce, hear, hello: pageWindow.postMessage.mock.calls[0] };
 };
+
+describe('the bar, with its page framed with no origin of its own (the published site)', () => {
+	const published = () => world('page.html', 'allow-scripts allow-forms allow-popups allow-modals');
+
+	it('says hello to `*`, the only address a page with no origin has', () => {
+		const { hello } = published();
+		expect(hello?.[0]).toMatchObject({ dsnr: 'page-ask', id: 0, call: 'hello' });
+		expect(hello?.[1]).toBe('*');
+	});
+
+	it('hears it from the origin `null`, and only from its frame’s window, with the secret', () => {
+		const { page, nonce, hear } = published();
+		const ready = vi.fn();
+		page.onReady(ready);
+		// From the bar's own address (a page that had one), from another window, or without the secret: not the page.
+		hear({ dsnr: 'page-ready', n: nonce, route: '/x' }, { origin: 'http://127.0.0.1:4000' });
+		hear({ dsnr: 'page-ready', n: nonce, route: '/x' }, { origin: 'null', source: {} });
+		hear({ dsnr: 'page-ready', n: 'guessed', route: '/x' }, { origin: 'null' });
+		expect(ready).not.toHaveBeenCalled();
+		hear({ dsnr: 'page-ready', n: nonce, route: '/x' }, { origin: 'null' });
+		expect(ready).toHaveBeenCalledWith('/x');
+	});
+
+	it('keeps to the page’s own address when the sandbox gives it its own origin (VS Code)', () => {
+		const { hello } = world(undefined, 'allow-scripts allow-same-origin allow-forms allow-popups allow-modals');
+		expect(hello?.[1]).toBe('http://127.0.0.1:4100');
+	});
+});
 
 describe('the bar, as it hears its page', () => {
 	it('says hello with a secret, to the page’s own address', () => {

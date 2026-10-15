@@ -58,8 +58,17 @@ export type FramePage = PageSurface & {
  */
 export const framePage = (frame: HTMLIFrameElement, win: Window = window): FramePage => {
 	const nonce = crypto.randomUUID();
+	/**
+	 * Whether the frame gives its page no origin of its own (the published site: sandboxed without `allow-same-origin`). Read
+	 * off the frame itself, so there is no setting: such a page's messages come from the origin `null`, and the only address
+	 * a message to it can name is `*`. Its frame's own window and the secret still say it is the page.
+	 */
+	const opaque = (): boolean => {
+		const sandbox = frame.getAttribute('sandbox');
+		return sandbox !== null && !sandbox.split(/\s+/).includes('allow-same-origin');
+	};
 	/** The page's address: where its frame's `src` points, or this page's own for a frame with none. */
-	const origin = (): string => {
+	const address = (): string => {
 		const src = frame.getAttribute('src');
 		try {
 			return src ? new URL(src, win.location.href).origin : win.location.origin;
@@ -67,6 +76,10 @@ export const framePage = (frame: HTMLIFrameElement, win: Window = window): Frame
 			return win.location.origin;
 		}
 	};
+	/** Where the page's messages come from. */
+	const origin = (): string => (opaque() ? 'null' : address());
+	/** Where a message to the page is sent. */
+	const target = (): string => (opaque() ? '*' : address());
 	const pins = new Set<(e: PinEvent) => void>();
 	const readies = new Set<(route: string) => void>();
 	const routes = new Set<(route: string) => void>();
@@ -91,7 +104,7 @@ export const framePage = (frame: HTMLIFrameElement, win: Window = window): Frame
 			if (event) for (const l of pins) l(event);
 		}
 	};
-	const hello = () => frame.contentWindow?.postMessage({ dsnr: 'page-ask', id: 0, call: 'hello', args: [nonce] }, origin());
+	const hello = () => frame.contentWindow?.postMessage({ dsnr: 'page-ask', id: 0, call: 'hello', args: [nonce] }, target());
 	const loaded = () => {
 		// A new document: its agent knows nothing until it is said hello to, and nothing waits on the last one.
 		ready = false;
@@ -106,14 +119,14 @@ export const framePage = (frame: HTMLIFrameElement, win: Window = window): Frame
 
 	const ask = <T>(call: PageCall, args: unknown[] = [], wait: number | null = ANSWER_MS): Promise<T | undefined> =>
 		new Promise((resolve) => {
-			const target = frame.contentWindow;
-			if (!target || !ready) return resolve(undefined);
+			const to = frame.contentWindow;
+			if (!to || !ready) return resolve(undefined);
 			const id = next++;
 			waiting.set(id, (value) => {
 				waiting.delete(id);
 				resolve(value as T);
 			});
-			target.postMessage({ dsnr: 'page-ask', id, call, args }, origin());
+			to.postMessage({ dsnr: 'page-ask', id, call, args }, target());
 			if (wait !== null) setTimeout(() => waiting.get(id)?.(undefined), wait);
 		});
 	const on =
@@ -146,8 +159,8 @@ export const framePage = (frame: HTMLIFrameElement, win: Window = window): Frame
 };
 
 /**
- * Where the token is kept: this browser only, for this site. Only tests keep one yet. A prototype's page shares the
- * published site's address, so it could read this: replaced before sign-in ships (PAGES_PLAN.md, M9's rule).
+ * Where the token is kept: this browser only, in the bar's own storage. A prototype's page cannot read it: on the published
+ * site it is framed with no origin of its own (`SANDBOX_BESIDE`), and in VS Code it is on another address.
  */
 const TOKEN_KEY = 'dsnr.github-token';
 export const savedToken = (): string | null => {

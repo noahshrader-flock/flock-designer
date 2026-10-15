@@ -132,9 +132,10 @@ source and page are in its project folder.
 - Every path is resolved through `resolveInside`, which follows symlinks — the check string
   comparison alone gets wrong.
 - Links open in the real browser.
-- **In VS Code, a prototype's page cannot reach its review bar** (Review isolation, below): it is served
+- **A prototype's page cannot reach its review bar** (Review isolation, below). In VS Code it is served
   from another address than the bar and sandboxed; the bar's address serves nothing a repository wrote
-  that could open as a page; and the review tab, the panel and the Design System tabs hear only VS Code.
+  that could open as a page; and the review tab, the panel and the Design System tabs hear only VS Code. On the
+  published site it is sandboxed with no origin of its own, so it cannot reach the bar or the token the bar keeps.
 
 ## DSNR, the VS Code extension
 
@@ -204,9 +205,13 @@ prototype's own page in the bar's frame (`page.html`), which is a repository's c
   `extension/src/review.ts`): nothing the page or any frame it makes posts goes to the extension or reaches the bar as
   if VS Code had said it. The relay acts only on that review's project, and on comments the tab was shown or made. The
   panel and the Design System tabs likewise hear only VS Code (`extension/webview/host.ts`), not the stories they frame.
-- **The published site frames the page beside its bar**, on GitHub Pages' one address, as before: it holds no token and
-  has no relay, so there is nothing for a page to take. When sign-in comes, the token must not be where the page can
-  reach it, which on one address is anywhere; the page then needs an address of its own there too.
+- **The published site frames the page beside its bar, with no origin of its own** (`SANDBOX_BESIDE`: sandboxed without
+  `allow-same-origin`), since GitHub Pages has one address. The page cannot read or rewrite the bar, take the sandbox off,
+  or read the bar's storage, where a signed-in person's token is kept; its messages come from the origin `null`, which the
+  bar accepts only from its frame's own window and with its secret, and answers at `*`. The browser refuses such a page
+  its storage and cookies, so the page agent installs stand-ins for `localStorage`, `sessionStorage` and `document.cookie`,
+  in memory, before the prototype's own code runs (`src/page/standIns.ts`). Every real prototype rendered the same with them
+  (2026-10-15), and a hostile page proves the rest in the real browser (`reviewIsolation.integration.spec.ts`).
 
 `__tests__/reviewIsolation.integration.spec.ts` proves this in real Chrome, nested as VS Code nests it, with a hostile
 page; `pageAgent.integration.spec.ts` proves the pins on both kinds of address.

@@ -48,8 +48,14 @@ export interface SiteInput {
 	pagesAt?: string;
 }
 
-/** A page on another origin than its bar: its own scripts, origin (cookies, storage), forms, pop-ups and alerts; never the window above. */
-const PAGE_SANDBOX = 'allow-scripts allow-same-origin allow-forms allow-popups allow-modals';
+/** A page on another origin than its bar (VS Code): its own scripts, origin (cookies, storage), forms, pop-ups and alerts; never the window above. */
+export const SANDBOX_APART = 'allow-scripts allow-same-origin allow-forms allow-popups allow-modals';
+/**
+ * A page beside its bar (the published site): the same, but **no origin of its own**. On the bar's address its own origin
+ * would be the bar's, and it could take the sandbox off through the bar and read the bar's storage, where the person's token
+ * is (PUBLISHED_COMMENTS_PLAN, 2.2). The browser then refuses its storage and cookies; the page agent gives it stand-ins.
+ */
+export const SANDBOX_BESIDE = 'allow-scripts allow-forms allow-popups allow-modals';
 
 export interface SiteSummary {
 	projects: { id: string; title: string; pages: number }[];
@@ -224,12 +230,11 @@ const viewerConfig = (ref: RepoRef, p: SiteProject, current: Page, states: strin
 		states,
 	}).replace(/</g, '\\u003c');
 
-/**
- * Where the bar's frame loads its page: beside it, or from the pages' address, sandboxed (only on another origin does a
- * sandbox hold: on one, the page could take it off through the bar).
- */
+/** Where the bar's frame loads its page, sandboxed either way: from the pages' address with its own origin, or beside it with none. */
 const frameAt = (p: SiteProject, page: Page, pagesAt: string | undefined): string =>
-	pagesAt ? `src="${escapeHtml(`${pagesAt}${p.id}/${page.path}page.html`)}" sandbox="${PAGE_SANDBOX}"` : 'src="page.html"';
+	pagesAt
+		? `src="${escapeHtml(`${pagesAt}${p.id}/${page.path}page.html`)}" sandbox="${SANDBOX_APART}"`
+		: `src="page.html" sandbox="${SANDBOX_BESIDE}"`;
 
 /**
  * One iteration: its page in a frame, so the page's own styles never reach the bar, under the bar. The bar is the

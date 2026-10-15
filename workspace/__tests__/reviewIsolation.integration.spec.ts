@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { type Server, createServer } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
@@ -17,8 +17,8 @@ import { serveSite } from '../src/site/serveSite';
  * by this machine's server, and the prototype's page in it. The prototype tries to read and rewrite the bar, read its
  * storage, ask the extension to Address a comment, answer the bar as if it were VS Code (from ten frames down too), open its
  * own copy on the bar's address, and take the whole window away.
- * On the pages' own address, none of it works and the prototype still works as itself; on one address (as the
- * published site still is) it does, which is what shows the test can fail.
+ * On the pages' own address, none of it works and the prototype still works as itself. The published site, where the page is
+ * beside its bar with no origin of its own, is proved below.
  */
 
 const HOSTILE = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Hostile</title></head><body><main><h1>Alerts</h1></main><script>
@@ -90,7 +90,7 @@ const site = async (separate: boolean): Promise<string> => {
 		...(separate ? { pagesAt: `${await server.pagesOrigin()}/review/` } : {}),
 	});
 	if (separate) return server.serveFolder('review', out);
-	// As before Phase 2, and as the published site still is: the page beside its bar, on one address.
+	// As the published site is: the page beside its bar, on one address.
 	const together = await serveSite(out);
 	open.push(together.server);
 	return together.url.endsWith('/') ? together.url : `${together.url}/`;
@@ -204,12 +204,62 @@ describe.skipIf(NO_CHROME)('a hostile prototype in a review, in the real browser
 		const beta = await review(`${base}beta/v1/i1/`, [...STEPS, 'hijack']);
 		expect(beta.hijacked).toBe(false);
 	}, 90_000);
+});
 
-	it('on one address, as before, reaches into the bar: the test can fail', async () => {
+/**
+ * The published site (PUBLISHED_COMMENTS_PLAN, Phase 2): the bar's page opened in the browser as a reviewer opens a link, the
+ * prototype beside it on the same address, framed with no origin of its own. The bar keeps the person's token in its own
+ * storage; the hostile page must reach none of it, and still have its own storage and cookie (the agent's stand-ins).
+ */
+const published = (bar: string, steps: string[]) =>
+	inChrome(async (browser) => {
+		const tab = await browser.newPage();
+		let tried: Record<string, string> = {};
+		const made = new Set<string>();
+		tab.on('console', (m) => {
+			if (m.text().startsWith('HOSTILE ')) tried = JSON.parse(m.text().slice('HOSTILE '.length));
+			if (m.text().startsWith('DONE ')) made.add(m.text().slice('DONE '.length));
+		});
+		// The token, kept where the bar keeps it, before the page is opened.
+		await tab.evaluateOnNewDocument(() => {
+			if (window === top) localStorage.setItem('dsnr.github-token', 'the-token');
+		});
+		await tab.goto(bar, { waitUntil: 'load' });
+		const until = Date.now() + 20_000;
+		while (!steps.every((s) => made.has(s))) {
+			if (Date.now() > until) throw new Error(`the hostile page made only ${[...made].join(', ') || 'nothing'} of ${steps.join(', ')}`);
+			await new Promise((r) => setTimeout(r, 50));
+		}
+		await tab.evaluate(() => new Promise((r) => setTimeout(r, 100)));
+		const at = tab.url();
+		const [owned, copied] = at.includes('hijacked')
+			? [null, null]
+			: await tab.evaluate(() => [document.body.dataset.owned ?? null, document.body.dataset.copied ?? null]);
+		return { tried, owned, copied, made, hijacked: at.includes('hijacked') };
+	});
+
+describe.skipIf(NO_CHROME)('a hostile prototype on the published site, in the real browser', () => {
+	it('beside its bar with no origin of its own, reaches nothing of the bar or its token, and keeps its own storage and cookie', async () => {
 		const base = await site(false);
-		const r = await review(`${base}alpha/v1/i1/`, STEPS);
+		const r = await published(`${base}alpha/v1/i1/`, STEPS);
+		expect(r.tried).toMatchObject({ 'read the bar': 'blocked', 'rewrite the bar': 'blocked', 'read the bar storage': 'blocked' });
+		// What it set is kept for it, in memory: the agent's stand-ins, since the browser refuses its own.
+		expect(r.tried['its own cookie']).toBe('allowed: mine=1');
+		expect(r.tried['its own storage']).toBe('allowed: v');
+		expect(r.owned).toBeNull();
+		// Its copy on the bar's address is framed by it, so it has no origin of its own either.
+		expect(r.copied).toBeNull();
+		const beta = await published(`${base}beta/v1/i1/`, [...STEPS, 'hijack']);
+		expect(beta.hijacked).toBe(false);
+	}, 90_000);
+
+	it('with the sandbox taken off, reaches into the bar: the test can fail', async () => {
+		const base = await site(false);
+		const index = join(root, 'together', 'site', 'alpha', 'v1', 'i1', 'index.html');
+		writeFileSync(index, readFileSync(index, 'utf8').replace(/ sandbox="[^"]*"/, ''));
+		const r = await published(`${base}alpha/v1/i1/`, STEPS);
 		expect(r.tried['read the bar']).toMatch(/^allowed/);
+		expect(r.tried['read the bar storage']).toMatch(/^allowed/);
 		expect(r.owned).toBe('yes');
-		expect(r.copied).toBe('yes');
 	}, 90_000);
 });

@@ -29,7 +29,11 @@ export const serveSite = (siteDir: string, port = 0): Promise<{ server: Server; 
 				res.writeHead(404, { 'content-type': 'text/plain' }).end('Not found');
 				return;
 			}
-			res.writeHead(200, { 'content-type': MIME_TYPES[extname(file)] ?? 'application/octet-stream' }).end(readFileSync(file));
+			// Anyone may read it, as GitHub Pages says of every file it serves: a prototype framed with no origin of its own asks
+			// for its fonts and shared files from the origin `null`.
+			res
+				.writeHead(200, { 'content-type': MIME_TYPES[extname(file)] ?? 'application/octet-stream', 'access-control-allow-origin': '*' })
+				.end(readFileSync(file));
 		});
 		server.on('error', fail);
 		server.listen(port, '127.0.0.1', () => {
