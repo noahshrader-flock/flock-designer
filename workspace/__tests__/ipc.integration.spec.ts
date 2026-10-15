@@ -460,6 +460,15 @@ describe('listProjects', () => {
 		expect(r.ok).toBe(true);
 		expect(r.value).toEqual([]);
 	});
+
+	it('lists the design repository’s projects when the product remembered from another window is not open in this one', async () => {
+		// Remembered by an earlier window, never opened in this one: nothing is read in it, and that is no failure.
+		memoryValue = product;
+		designRepoProjects = [{ id: 'alpha', title: 'Alpha', records: [], iterations: [], people: [] }];
+		const r = await call(CHANNELS.listProjects);
+		expect(r.error).toBeUndefined();
+		expect((r.value as { id: string }[]).map((p) => p.id)).toEqual(['alpha']);
+	});
 });
 
 describe('where new work starts', () => {

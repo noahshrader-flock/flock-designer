@@ -54,9 +54,10 @@ export const registerReview = (d: IpcDeps): void => {
 	// must appear here, shared or not, so the two are merged; if GitHub cannot be
 	// reached, what is local still shows.
 	handle('listProjects', [], async (): Promise<Project[]> => {
-		// The gate, not the discovery list: nothing is read or run in a repository this person has not accepted.
-		const root = trustedRoot();
-		if (root !== null) opened.require(root);
+		// The gate, not the discovery list: nothing is read or run in a repository this window has not opened. One remembered
+		// from an earlier window is not one: with no product open here, the list is the design repository's alone.
+		const remembered = trustedRoot();
+		const root = remembered !== null && opened.has(remembered) ? remembered : null;
 		const projects = await listProjects({ root, login: signedInLogin(), remote: () => designRepo.listProjects() });
 		// Reading the list is a good moment to make sure what it shows is published.
 		void publisher.publish();
