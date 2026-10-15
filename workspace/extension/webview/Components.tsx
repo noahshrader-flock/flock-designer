@@ -28,7 +28,7 @@ const Picture = ({ src, drawing, className }: { src: string | undefined; drawing
 /**
  * The design system's components (6.1): a search and Grid or List, as the projects have, then a section for each group in
  * the order the library lists them (a group with nothing found is left out), each component a card or a row with its
- * picture. Pressed, a component opens in its own tab; its menu has its links too.
+ * picture. Pressed, a component opens in its own tab; its menu has its links (Storybook, when it has one, and its source).
  */
 export const ComponentsView = ({
 	components,
@@ -49,7 +49,6 @@ export const ComponentsView = ({
 	const groups = groupsFound(components, search);
 	const item = (c: CatalogComponent) => {
 		const items: MenuItem[] = [
-			{ label: 'Open', icon: 'preview', onSelect: () => onOpen(c.id) },
 			...(c.storybook !== null ? [{ label: 'Open in Storybook', icon: 'book', onSelect: () => onLink(c.id, 'storybook') }] : []),
 			{ label: 'Source on GitHub', icon: 'github', onSelect: () => onLink(c.id, 'source') },
 		];

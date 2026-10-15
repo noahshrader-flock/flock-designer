@@ -1292,19 +1292,19 @@ describe('Design System', () => {
 		expect(body().querySelector('.badge')).toBeNull();
 	});
 
-	it('opens a component in its own tab when pressed, and its links from its menu, naming it only', async () => {
+	it('opens a component in its own tab when pressed, and its links, and no Open, from its menu, naming it only', async () => {
 		await read();
 		const card = [...body().querySelectorAll<HTMLElement>('.card-item')].find((c) => c.textContent?.includes('FSButton')) as HTMLElement;
 		await press(card.querySelector('.card') as HTMLElement);
 		expect(panelSaid().at(-1)).toEqual({ type: 'open-component', id: 'src/components/FSButton/FSButton.stories.tsx' });
 		await press(card.querySelector('.menu-button') as HTMLElement);
-		expect([...card.querySelectorAll('[role="menuitem"]')].map((i) => i.textContent)).toEqual(['Open', 'Open in Storybook', 'Source on GitHub']);
+		expect([...card.querySelectorAll('[role="menuitem"]')].map((i) => i.textContent)).toEqual(['Open in Storybook', 'Source on GitHub']);
 		await press([...card.querySelectorAll<HTMLElement>('[role="menuitem"]')].find((i) => i.textContent === 'Open in Storybook')!);
 		expect(panelSaid().at(-1)).toEqual({ type: 'component-link', id: 'src/components/FSButton/FSButton.stories.tsx', link: 'storybook' });
 		// One with no hosted Storybook offers none.
 		const other = [...body().querySelectorAll<HTMLElement>('.card-item')].find((c) => c.textContent?.includes('FSSelect')) as HTMLElement;
 		await press(other.querySelector('.menu-button') as HTMLElement);
-		expect([...other.querySelectorAll('[role="menuitem"]')].map((i) => i.textContent)).toEqual(['Open', 'Source on GitHub']);
+		expect([...other.querySelectorAll('[role="menuitem"]')].map((i) => i.textContent)).toEqual(['Source on GitHub']);
 	});
 
 	it('keeps the Components and Tokens toggle and the search bar together, as siblings, which the stylesheet stacks at the top', async () => {
