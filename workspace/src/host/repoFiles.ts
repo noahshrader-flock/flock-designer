@@ -26,12 +26,15 @@ export class RepoFiles {
 		return repoApiPath(this.ref);
 	}
 
-	/** What a folder holds: each entry's name and whether it is a file or a folder (`dir`). */
-	async list(dir: string): Promise<{ name: string; type: string }[]> {
+	/**
+	 * What a folder holds: each entry's name, whether it is a file or a folder (`dir`), and its sha, which changes whenever
+	 * anything in it does (null when the host gives none).
+	 */
+	async list(dir: string): Promise<{ name: string; type: string; sha: string | null }[]> {
 		return asArray(await this.session.api(`${this.apiPath}/contents/${dir}`))
 			.map(asRecord)
 			.filter((e) => typeof e.name === 'string')
-			.map((e) => ({ name: String(e.name), type: String(e.type) }));
+			.map((e) => ({ name: String(e.name), type: String(e.type), sha: typeof e.sha === 'string' ? e.sha : null }));
 	}
 
 	/** The commits that changed `path`, newest first, as the host lists them: up to `limit`, on `at` (a branch or commit) when given. */

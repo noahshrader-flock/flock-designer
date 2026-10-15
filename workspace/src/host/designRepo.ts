@@ -1,4 +1,4 @@
-import type { Person, Project, ProjectIteration } from '../shared/contract';
+import type { Iteration, Person, Project } from '../shared/contract';
 import { fromBrief } from '../shared/brief';
 import { projectDir, projectPath } from '../shared/designPaths';
 import { isBot, mergePeople } from '../shared/people';
@@ -8,7 +8,7 @@ import { parseIterations, toProjectIteration } from '../shared/iterationRecords'
 import type { RepoRef } from '../shared/repoRef';
 import type { GitHubApi } from './github';
 import { RepoFiles } from './repoFiles';
-import { type ReviewThread, ReviewThreads } from './reviewThreads';
+import { ReviewThreads } from './reviewThreads';
 
 /**
  * The design repository, read through the API: its files (`RepoFiles`) and its review threads (`ReviewThreads`), and
@@ -18,9 +18,23 @@ import { type ReviewThread, ReviewThreads } from './reviewThreads';
  * having git installed. Authors still use a real checkout -- that is the only difference between the two modes.
  */
 
+/** What a project folder said when it was last read: everything in its listing but the review threads, read every time. */
+interface FolderReading {
+	sha: string;
+	records: string[];
+	iterations: Iteration[];
+	brief: { title: string; folder: string | null };
+	activity: { people: Person[]; updatedAt: string | null };
+}
+
 export class DesignRepo {
 	readonly files: RepoFiles;
 	readonly threads: ReviewThreads;
+	/**
+	 * Each project folder as last read, by its sha: a folder whose sha has not moved has not changed, so it is not read
+	 * again. A refresh with nothing changed asks for the folder list and the threads only, not four reads a project.
+	 */
+	private readonly folders = new Map<string, FolderReading>();
 
 	constructor(session: GitHubApi, ref: RepoRef) {
 		this.files = new RepoFiles(session, ref);
@@ -33,14 +47,9 @@ export class DesignRepo {
 		const issues = await this.threads.byBranch();
 
 		return Promise.all(
-			dirs.map(async ({ name: id }) => {
-				const records = (await this.files.list(projectDir(id)))
-					.filter((f) => f.type === 'file')
-					.map((f) => f.name)
-					.sort();
-
-				const iterations = await this.readIterations(id, records, issues);
-				const folder = await this.folderActivity(id);
+			dirs.map(async ({ name: id, sha }) => {
+				const { records, brief, activity: folder, ...read } = await this.readFolder(id, sha);
+				const iterations = read.iterations.map((it) => toProjectIteration(it, issues.get(it.branch))).sort(iterationOrder);
 				// Alphabetical, so the line does not reshuffle as iterations are added.
 				const people = mergePeople(
 					iterations.flatMap((it) => it.contributors),
@@ -48,7 +57,7 @@ export class DesignRepo {
 				);
 				return {
 					id,
-					...(await this.readBrief(id, records)),
+					...brief,
 					records,
 					iterations,
 					people,
@@ -59,11 +68,32 @@ export class DesignRepo {
 		);
 	}
 
+	/** A project folder's own files, as `listProjects` shows them: read again only when its sha has moved, or there is none. */
+	private async readFolder(id: string, sha: string | null): Promise<Omit<FolderReading, 'sha'>> {
+		const kept = sha === null ? undefined : this.folders.get(id);
+		if (kept && kept.sha === sha) return kept;
+		const records = (await this.files.list(projectDir(id)))
+			.filter((f) => f.type === 'file')
+			.map((f) => f.name)
+			.sort();
+		const activity = await this.folderActivity(id);
+		const reading = {
+			records,
+			iterations: await this.readIterations(id, records),
+			brief: await this.readBrief(id, records),
+			activity: activity ?? { people: [], updatedAt: null },
+		};
+		// Kept only when all of it was read: activity that could not be (a limit reached) is asked for again next time.
+		if (sha === null || activity === null) this.folders.delete(id);
+		else this.folders.set(id, { sha, ...reading });
+		return reading;
+	}
+
 	/**
 	 * Who has committed to the project's own folder (brief, review, decisions), and when it last changed. Best effort:
-	 * a failure here must not hide the project list.
+	 * a failure here must not hide the project list, and is null.
 	 */
-	private async folderActivity(id: string): Promise<{ people: Person[]; updatedAt: string | null }> {
+	private async folderActivity(id: string): Promise<{ people: Person[]; updatedAt: string | null } | null> {
 		try {
 			// Newest first, as GitHub lists them.
 			const commits = await this.files.commits(projectDir(id));
@@ -75,7 +105,7 @@ export class DesignRepo {
 			});
 			return { people, updatedAt: latestDate(commits.map((c) => asRecord(asRecord(c.commit).committer).date)) };
 		} catch {
-			return { people: [], updatedAt: null };
+			return null;
 		}
 	}
 
@@ -104,10 +134,10 @@ export class DesignRepo {
 	 * A missing or unreadable record means "no iterations recorded", never an
 	 * error: a project folder exists before its first iteration does.
 	 */
-	private async readIterations(id: string, records: string[], issues: Map<string, ReviewThread>): Promise<ProjectIteration[]> {
+	private async readIterations(id: string, records: string[]): Promise<Iteration[]> {
 		if (!records.includes('iterations.json')) return [];
 		const text = await this.files.readFile(projectPath(id, 'iterations.json'));
 		// One that cannot be read is no iterations recorded, as a missing one is: the project is still listed.
-		return (parseIterations(text ?? '') ?? []).map((it) => toProjectIteration(it, issues.get(it.branch))).sort(iterationOrder);
+		return parseIterations(text ?? '') ?? [];
 	}
 }

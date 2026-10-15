@@ -185,6 +185,74 @@ describe('listProjects', () => {
 		// Reviewer mode's whole promise: no clone, no git, nothing outside the repo.
 		expect(api.mock.calls.every(([path]) => path.startsWith('/repos/acme/design/'))).toBe(true);
 	});
+
+	describe('read again', () => {
+		/** The design repository with alpha's folder at `tree` (its fingerprint), and its threads as `threads` says. */
+		const repo = (state: { tree: string; brief: string; comments: number }) =>
+			fakeGitHub({
+				...routes,
+				'/repos/acme/design/contents/projects*': () => [{ type: 'dir', name: 'alpha', sha: state.tree }],
+				'/repos/acme/design/contents/projects/alpha/brief.md*': () => ({ sha: 'b', content: b64(state.brief) }),
+				'/repos/acme/design/commits?path=projects%2Falpha*': [],
+				'/repos/acme/design/issues?state=all*': () => [
+					{ number: 7, comments: state.comments, body: 'Review thread for alpha, branch: `fd/alpha/i2`.' },
+				],
+			});
+		const perProject = (paths: string[]) => paths.filter((p) => p.includes('projects/alpha') || p.includes('projects%2Falpha'));
+
+		it('asks only for the folder list and the threads when no project folder changed', async () => {
+			const state = { tree: 't1', brief: '# Inactive users\n', comments: 3 };
+			const { github: session, api } = repo(state);
+			const design = new DesignRepo(session, REF);
+			const first = await design.listProjects();
+			const asked = api.mock.calls.length;
+			const again = await design.listProjects();
+			const paths = api.mock.calls.slice(asked).map(([path]) => path as string);
+			expect(perProject(paths)).toEqual([]);
+			expect(paths).toHaveLength(2);
+			expect(again).toEqual(first);
+		});
+
+		it('reads a project again once its folder changed, and a new comment shows either way', async () => {
+			const state = { tree: 't1', brief: '# Inactive users\n', comments: 3 };
+			const { github: session } = repo(state);
+			const design = new DesignRepo(session, REF);
+			await design.listProjects();
+			state.comments = 4;
+			expect((await design.listProjects())[0]?.iterations.find((i) => i.name === 'i2')?.openComments).toBe(4);
+			state.tree = 't2';
+			state.brief = '# Dormant users\n';
+			expect((await design.listProjects())[0]?.title).toBe('Dormant users');
+		});
+
+		it('asks again for who worked on a project when that could not be read, and keeps the rest', async () => {
+			let refuse = true;
+			const { github: session, api } = fakeGitHub({
+				...routes,
+				'/repos/acme/design/contents/projects*': () => [{ type: 'dir', name: 'alpha', sha: 't1' }],
+				'/repos/acme/design/commits?path=projects%2Falpha*': () => {
+					if (refuse) throw new Error('rate limited');
+					return [{ commit: { author: { name: 'Ana' }, committer: { date: '2026-10-06T12:00:00Z' } }, author: { login: 'ana' } }];
+				},
+			});
+			const design = new DesignRepo(session, REF);
+			expect((await design.listProjects())[0]?.updatedAt).toBeNull();
+			refuse = false;
+			expect((await design.listProjects())[0]?.updatedAt).toBe('2026-10-06T12:00:00Z');
+			const asked = api.mock.calls.length;
+			await design.listProjects();
+			expect(api.mock.calls).toHaveLength(asked + 2);
+		});
+
+		it('reads every time a folder GitHub gives no fingerprint for', async () => {
+			const { github: session, api } = fakeGitHub(routes);
+			const design = new DesignRepo(session, REF);
+			await design.listProjects();
+			const asked = api.mock.calls.length;
+			await design.listProjects();
+			expect(perProject(api.mock.calls.slice(asked).map(([path]) => path as string)).length).toBeGreaterThan(0);
+		});
+	});
 });
 
 describe('contributors', () => {

@@ -2,10 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { CommentAnchor, MarkerResult, MarkerState, PinEvent, ReviewComment } from '../../shared/contract';
 import { forgetPosted, markersFor, mergeComments, numberComments, openComments, sameComments } from '../../shared/comments';
 import { latest } from '../../shared/latest';
+import { REFRESH_MS, dueForCheck } from './refresh';
 import type { CommentStore, PageSurface } from './surfaces';
-
-/** How often an open iteration looks for new comments. */
-const REFRESH_MS = 60_000;
 
 type Mode = 'browse' | 'picking' | 'composing';
 
@@ -111,16 +109,33 @@ export const useComments = ({
 	useEffect(() => void load(), [load]);
 
 	// A reviewer's comment made after this was opened should appear without anyone reopening it: when the window comes
-	// back into focus, and about once a minute while it is in front.
+	// back into focus, and about once a minute while it is in front and in use (every few minutes once nobody is: `dueForCheck`).
 	useEffect(() => {
-		const check = () => {
-			if (document.visibilityState === 'visible') void load(true);
+		let lastActive = Date.now();
+		let lastChecked = Date.now();
+		const active = () => {
+			lastActive = Date.now();
 		};
-		const timer = setInterval(check, REFRESH_MS);
-		window.addEventListener('focus', check);
+		const check = () => {
+			if (document.visibilityState !== 'visible') return;
+			lastChecked = Date.now();
+			void load(true);
+		};
+		const tick = () => {
+			if (dueForCheck({ now: Date.now(), lastActive, lastChecked })) check();
+		};
+		const onFocus = () => {
+			active();
+			check();
+		};
+		const USE = ['pointerdown', 'pointermove', 'keydown', 'wheel'] as const;
+		const timer = setInterval(tick, REFRESH_MS);
+		window.addEventListener('focus', onFocus);
+		for (const e of USE) window.addEventListener(e, active, { passive: true });
 		return () => {
 			clearInterval(timer);
-			window.removeEventListener('focus', check);
+			window.removeEventListener('focus', onFocus);
+			for (const e of USE) window.removeEventListener(e, active);
 		};
 	}, [load]);
 
