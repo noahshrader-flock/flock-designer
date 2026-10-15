@@ -78,25 +78,92 @@ describe('the extension’s sources', () => {
 		expect(radius('.card-picture')).toBe('var(--dsnr-radius-large)');
 	});
 
-	it('mark a pressed thumbnail with a brand wash and its icon, not the list’s grey: shown on hover and focus, and over the picture only', () => {
+	it('wash a pressed thumbnail with the brand, lightly, not the list’s grey: shown on hover and focus, and over the picture only', () => {
 		const css = files()
 			.find((f) => f.path.endsWith('styles.css'))!
 			.text.replace(/\/\*[\s\S]*?\*\//g, '');
 		const rule = (selector: string) => css.split('}').find((block) => block.trim().startsWith(selector)) ?? '';
-		const mark = rule('.thumb-mark');
-		// The brand at 90%, with the icon in the colour that goes on the brand (white), centred, and out of the way until asked for.
-		expect(mark).toMatch(/background:\s*color-mix\(in srgb,\s*var\(--dsnr-brand\)\s*90%,\s*transparent\)/);
-		expect(mark).toMatch(/color:\s*var\(--dsnr-on-brand\)/);
-		expect(mark).toMatch(/align-items:\s*center/);
-		expect(mark).toMatch(/justify-content:\s*center/);
-		expect(mark).toMatch(/opacity:\s*0/);
-		expect(rule('.row-button:hover .thumb-mark')).toMatch(/opacity:\s*1/);
-		expect(css).toMatch(/\.row-button:focus-visible \.thumb-mark/);
+		const wash = rule('.thumb-wash');
+		// The brand at 15%, out of the way until asked for, and nothing else: no icon, no text.
+		expect(wash).toMatch(/background:\s*color-mix\(in srgb,\s*var\(--dsnr-brand\)\s*15%,\s*transparent\)/);
+		expect(wash).toMatch(/opacity:\s*0/);
+		expect(rule('.row-button:hover .thumb-wash')).toMatch(/opacity:\s*1/);
+		expect(css).toMatch(/\.row-button:focus-visible \.thumb-wash/);
 		// What has a picture to wash does not also turn the whole row or card grey.
-		expect(rule('.row-button:has(.thumb-mark):hover')).toMatch(/background:\s*transparent/);
+		expect(rule('.row-button:has(.thumb-wash):hover')).toMatch(/background:\s*transparent/);
 		// Its corners are its picture's.
-		expect(rule('.card-media .thumb-mark')).toMatch(/border-radius:\s*var\(--dsnr-radius-large\)/);
-		expect(rule('.thumb .thumb-mark')).toMatch(/border-radius:\s*var\(--dsnr-radius\)/);
+		expect(rule('.card-media .thumb-wash')).toMatch(/border-radius:\s*var\(--dsnr-radius-large\)/);
+		expect(rule('.thumb .thumb-wash')).toMatch(/border-radius:\s*var\(--dsnr-radius\)/);
+	});
+
+	it('stretch a dialog’s buttons across its width, one or several alike', () => {
+		const css = files()
+			.find((f) => f.path.endsWith('styles.css'))!
+			.text.replace(/\/\*[\s\S]*?\*\//g, '');
+		const rule = (selector: string) => css.split('}').find((b) => b.trim().startsWith(selector)) ?? '';
+		expect(rule('.dialog-buttons {')).toMatch(/display:\s*flex/);
+		expect(rule('.dialog-buttons {')).not.toMatch(/justify-content/);
+		expect(rule('.dialog-buttons .button')).toMatch(/flex:\s*1/);
+		// A button is otherwise capped at a welcome view's 300px, short of a dialog's width.
+		expect(rule('.dialog-buttons .button')).toMatch(/max-width:\s*none/);
+	});
+
+	it('draw every outline and line in the panel in one border colour, the search box’s, from one name', () => {
+		const css = files()
+			.find((f) => f.path.endsWith('styles.css'))!
+			.text.replace(/\/\*[\s\S]*?\*\//g, '');
+		// The theme's input border, then its widget border, then the contrast border: written once.
+		expect(css).toMatch(/--dsnr-border:\s*var\(--vscode-input-border,\s*var\(--vscode-widget-border,\s*var\(--dsnr-contrast-border\)\)\);/);
+		const rule = (selector: string) => css.split('}').find((b) => b.trim().startsWith(selector)) ?? '';
+		expect(rule('.input {')).toMatch(/border:\s*1px solid var\(--dsnr-border\)/);
+		for (const selector of [
+			'.picture {',
+			'.card-picture {',
+			'.swatch {',
+			'.stories {',
+			'.issue {',
+			'.chip {',
+			'.primitive {',
+			'.color-picker {',
+			'.changed {',
+		])
+			expect(rule(selector), selector).toMatch(/border[a-z-]*:\s*1px solid var\(--dsnr-border\)/);
+		// Nothing else names the theme's input or widget border: a line that did would be a second colour for the same thing.
+		// (A floating widget has its own: a dialog's, a menu's, a dropdown's. A drawn corner is an illustration, with its own fallback.)
+		const named = css
+			.split('\n')
+			.filter((l) => /--vscode-(input|widget)-border/.test(l) && !l.includes('--dsnr-border:') && !l.includes('var(--vscode-foreground)'));
+		expect(named).toEqual([]);
+	});
+
+	it('inset the design system’s tokens from the panel’s right edge as from its left, as the cards are', () => {
+		const css = files()
+			.find((f) => f.path.endsWith('styles.css'))!
+			.text.replace(/\/\*[\s\S]*?\*\//g, '');
+		const body = css.split('}').find((b) => b.trim().startsWith('.token-body')) ?? '';
+		expect(body).toMatch(/padding:\s*0 12px 4px 28px;/);
+		// 12px is the grid's own inset on the right.
+		expect(css.split('}').find((b) => b.trim().startsWith('.grid {'))).toMatch(/padding:\s*4px 12px 8px;/);
+	});
+
+	it('lay a dialog’s title and its close X in one row, the X at the far right', () => {
+		const css = files()
+			.find((f) => f.path.endsWith('styles.css'))!
+			.text.replace(/\/\*[\s\S]*?\*\//g, '');
+		const head = css.split('}').find((b) => b.trim().startsWith('.dialog-head')) ?? '';
+		expect(head).toMatch(/display:\s*flex/);
+		expect(head).toMatch(/justify-content:\s*space-between/);
+		expect(head).toMatch(/align-items:\s*center/);
+	});
+
+	it('size a picture to the box it is in, border and all, so what is laid over it covers it exactly', () => {
+		const css = files()
+			.find((f) => f.path.endsWith('styles.css'))!
+			.text.replace(/\/\*[\s\S]*?\*\//g, '');
+		const rule = (selector: string) => css.split('}').find((block) => block.trim().startsWith(selector)) ?? '';
+		// `width: 100%` with a border is two pixels wider than its box otherwise: a sliver the wash does not reach.
+		expect(rule('.card-picture')).toMatch(/box-sizing:\s*border-box/);
+		expect(rule('.picture {')).toMatch(/box-sizing:\s*border-box/);
 	});
 
 	it('show a view’s own menu button always, after the rule that hides a row’s until it is hovered, so it wins', () => {
@@ -132,8 +199,8 @@ describe('the extension’s sources', () => {
 		const rule = css.split('}').find((b) => /\.theme-set \+ \.theme-set/.test(b)) ?? '';
 		// One rule for both, so a set is never divided in one view and not in the other.
 		expect(rule).toMatch(/\.token-set \+ \.token-set/);
-		// The text's own faint colour, as a menu's divider: a theme's border colour can be transparent.
-		expect(rule).toMatch(/border-top:\s*1px solid var\(--dsnr-outline\)/);
+		// The panel's one border colour, the search box's (`--dsnr-border`).
+		expect(rule).toMatch(/border-top:\s*1px solid var\(--dsnr-border\)/);
 	});
 
 	it('draw every count bubble one size, from one name: a circle for a digit, wherever it sits (a row, a card, a header)', () => {

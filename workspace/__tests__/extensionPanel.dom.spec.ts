@@ -850,8 +850,10 @@ describe('the projects as a list or a grid', () => {
 		expect(cards()[0]!.querySelector('.badge')?.classList.contains('badge-brand')).toBe(true);
 		expect(cards()[1]!.querySelector('.badge')).toBeNull();
 		expect(cards()[0]!.querySelector('[data-part="picture"]')).not.toBeNull();
-		// What opens says so on its picture: a brand wash with an eye, shown on hover (the stylesheet's part).
-		expect(cards()[0]!.querySelector('.card-media > .thumb-mark .codicon-eye')).not.toBeNull();
+		// What opens says so on its picture: a brand wash, shown on hover (the stylesheet's part), with nothing in it.
+		const wash = cards()[0]!.querySelector('.card-media > .thumb-wash');
+		expect(wash).not.toBeNull();
+		expect(wash!.children).toHaveLength(0);
 	});
 
 	it('shows each as a row in a list, once List is chosen', async () => {
@@ -867,8 +869,8 @@ describe('the projects as a list or a grid', () => {
 		]);
 		expect(body().querySelector('.row [data-part="picture"]')?.className).toBe('picture');
 		expect(body().querySelector('.card-picture')).toBeNull();
-		// The row's picture and its mark are one box, so the wash is the picture's size and not the row's.
-		expect(body().querySelector('.row .thumb > [data-part="picture"] + .thumb-mark .codicon-eye')).not.toBeNull();
+		// The row's picture and its wash are one box, so the wash is the picture's size and not the row's.
+		expect(body().querySelector('.row .thumb > [data-part="picture"] + .thumb-wash')).not.toBeNull();
 	});
 
 	it('keeps the sections, and the cards do what the rows do: open the newest prototype, and take the right-click menu', async () => {

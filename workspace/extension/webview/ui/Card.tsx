@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { ThumbMark } from './ThumbMark';
+import { ThumbWash } from './ThumbWash';
 
 /**
  * One thing in a grid, as a card: its picture across the top, its name and a quieter line under it, and whatever belongs
@@ -28,8 +28,8 @@ export const Card = ({
 		<>
 			<span className="card-media">
 				{picture}
-				{/* Before the badge, so the badge stays above the mark. */}
-				{onOpen && <ThumbMark />}
+				{/* Before the badge, so the badge stays above the wash. */}
+				{onOpen && <ThumbWash />}
 				{badge && <span className="card-badge">{badge}</span>}
 			</span>
 			<span className="card-text">

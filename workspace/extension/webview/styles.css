@@ -13,6 +13,8 @@
 	--dsnr-muted: var(--vscode-descriptionForeground);
 	/* Drawn only in high contrast, where VS Code sets it: a border nothing else needs. */
 	--dsnr-contrast-border: var(--vscode-contrastBorder, transparent);
+	/* Every outline and line in the panel, the search box's: the theme's input border, then its widget border, then the contrast border. */
+	--dsnr-border: var(--vscode-input-border, var(--vscode-widget-border, var(--dsnr-contrast-border)));
 	--dsnr-focus: 1px solid var(--vscode-focusBorder);
 	--dsnr-radius: 6px;
 	--dsnr-radius-inner: 4px;
@@ -264,7 +266,8 @@ body {
 	flex-shrink: 0;
 	width: 56px;
 	aspect-ratio: 16 / 9;
-	border: 1px solid var(--vscode-widget-border, var(--dsnr-contrast-border));
+	box-sizing: border-box;
+	border: 1px solid var(--dsnr-border);
 	border-radius: var(--dsnr-radius);
 	background: var(--vscode-editorWidget-background);
 }
@@ -460,8 +463,8 @@ body {
 	background: var(--vscode-list-hoverBackground);
 }
 
-/* What has a picture says it opens on the picture (`.thumb-mark`), so the row or card is not also turned grey. */
-.row-button:has(.thumb-mark):hover {
+/* What has a picture says it opens on the picture (`.thumb-wash`), so the row or card is not also turned grey. */
+.row-button:has(.thumb-wash):hover {
 	background: transparent;
 }
 
@@ -514,7 +517,8 @@ body {
 	display: block;
 	width: 100%;
 	aspect-ratio: 2 / 1;
-	border: 1px solid var(--vscode-widget-border, var(--dsnr-contrast-border));
+	box-sizing: border-box;
+	border: 1px solid var(--dsnr-border);
 	border-radius: var(--dsnr-radius-large);
 	background: var(--vscode-editorWidget-background);
 	object-fit: cover;
@@ -526,7 +530,7 @@ body {
 	right: 4px;
 }
 
-/* A row's picture and its mark, in one box the picture's size. */
+/* A row's picture and its wash, in one box the picture's size. */
 .thumb {
 	position: relative;
 	display: flex;
@@ -534,37 +538,33 @@ body {
 }
 
 /*
- * What a picture that opens something wears while the row or card is hovered or focused: the brand at 90% over the picture,
- * with its icon in white (what goes on the brand) at the centre. Nothing else changes colour.
+ * What a picture that opens something wears while the row or card is hovered or focused: the brand, lightly, over the
+ * picture. Nothing else changes colour.
  */
-.thumb-mark {
+.thumb-wash {
 	position: absolute;
 	inset: 0;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	background: color-mix(in srgb, var(--dsnr-brand) 90%, transparent);
-	color: var(--dsnr-on-brand);
+	background: color-mix(in srgb, var(--dsnr-brand) 15%, transparent);
 	opacity: 0;
 	transition: opacity 120ms;
 	pointer-events: none;
 }
 
-.card-media .thumb-mark {
+.card-media .thumb-wash {
 	border-radius: var(--dsnr-radius-large);
 }
 
-.thumb .thumb-mark {
+.thumb .thumb-wash {
 	border-radius: var(--dsnr-radius);
 }
 
-.row-button:hover .thumb-mark,
-.row-button:focus-visible .thumb-mark {
+.row-button:hover .thumb-wash,
+.row-button:focus-visible .thumb-wash {
 	opacity: 1;
 }
 
 @media (prefers-reduced-motion: reduce) {
-	.thumb-mark {
+	.thumb-wash {
 		transition: none;
 	}
 }
@@ -676,7 +676,7 @@ body {
 	box-sizing: border-box;
 	width: 100%;
 	padding: 4px 6px;
-	border: 1px solid var(--vscode-input-border, var(--dsnr-contrast-border));
+	border: 1px solid var(--dsnr-border);
 	border-radius: var(--dsnr-radius-small);
 	color: var(--vscode-input-foreground);
 	background: var(--vscode-input-background);
@@ -974,7 +974,7 @@ textarea.input {
 	flex-shrink: 0;
 	width: 14px;
 	height: 14px;
-	border: 1px solid var(--vscode-widget-border, var(--dsnr-contrast-border));
+	border: 1px solid var(--dsnr-border);
 	border-radius: var(--dsnr-radius-small);
 	box-sizing: border-box;
 }
@@ -986,7 +986,8 @@ textarea.input {
 }
 
 .token-body {
-	padding: 0 0 4px 28px;
+	/* In from the right as the cards and the section headers are, not out to the panel's edge. */
+	padding: 0 12px 4px 28px;
 }
 
 .token-group-name {
@@ -1004,13 +1005,13 @@ textarea.input {
 
 /*
  * A line between one set and the next (a role's variants, a tone family's steps), the same in the semantic colors and the
- * palette. The text's own faint colour, as a menu's divider: a theme's border colour can be transparent.
+ * palette. The panel's one border colour, the search box's.
  */
 .theme-set + .theme-set,
 .token-set + .token-set {
 	margin-top: 6px;
 	padding-top: 6px;
-	border-top: 1px solid var(--dsnr-outline);
+	border-top: 1px solid var(--dsnr-border);
 }
 
 .tokens {
@@ -1222,7 +1223,7 @@ textarea.input {
 .stories {
 	position: relative;
 	overflow: hidden;
-	border: 1px solid var(--vscode-widget-border, var(--dsnr-contrast-border));
+	border: 1px solid var(--dsnr-border);
 	border-radius: var(--dsnr-radius-large);
 }
 
@@ -1279,7 +1280,7 @@ textarea.input {
 	flex-direction: column;
 	gap: 2px;
 	padding: 6px 0;
-	border-bottom: 1px solid var(--vscode-widget-border, var(--dsnr-contrast-border));
+	border-bottom: 1px solid var(--dsnr-border);
 }
 
 .issue-meta {
@@ -1300,7 +1301,7 @@ textarea.input {
 
 .chip {
 	padding: 2px 10px;
-	border: 1px solid var(--vscode-widget-border, var(--dsnr-contrast-border));
+	border: 1px solid var(--dsnr-border);
 	border-radius: 12px;
 	color: var(--vscode-badge-foreground);
 	background: var(--vscode-badge-background);
@@ -1323,7 +1324,7 @@ textarea.input {
 	flex-direction: column;
 	gap: 12px;
 	padding-top: 20px;
-	border-top: 1px solid var(--vscode-widget-border, var(--dsnr-contrast-border));
+	border-top: 1px solid var(--dsnr-border);
 	scroll-margin-top: 16px;
 }
 
@@ -1436,7 +1437,7 @@ textarea.input {
 .drawn-table td,
 .drawn-table th {
 	padding: 4px 0;
-	border-bottom: 1px solid var(--vscode-widget-border, var(--dsnr-contrast-border));
+	border-bottom: 1px solid var(--dsnr-border);
 }
 
 .drawn-table td:last-child,
@@ -1480,7 +1481,7 @@ textarea.input {
 	width: 28px;
 	height: 26px;
 	padding: 0;
-	border: 1px solid var(--vscode-input-border, var(--dsnr-contrast-border));
+	border: 1px solid var(--dsnr-border);
 	border-radius: var(--dsnr-radius-small);
 	background: transparent;
 	cursor: pointer;
@@ -1542,7 +1543,7 @@ textarea.input {
 	gap: 6px;
 	margin: 0 12px 8px;
 	padding: 8px;
-	border: 1px solid var(--vscode-widget-border, var(--dsnr-contrast-border));
+	border: 1px solid var(--dsnr-border);
 	border-radius: var(--dsnr-radius);
 	background: var(--vscode-editorWidget-background);
 }
