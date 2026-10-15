@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { DEFAULT_THEME, type Theme } from '../shared/prototypeTheme';
 
-/** The theme a prototype is shown in, in a review bar (PROTOTYPE_THEME_PLAN): light until the other is chosen. */
+/** The theme a prototype is shown in, in a review bar: light until the other is chosen. */
 export interface ShownTheme {
 	theme: Theme;
 	onTheme: (theme: Theme) => void;

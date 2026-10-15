@@ -1,7 +1,7 @@
 import { DEFAULT_THEME, themeOfQuery, type Theme } from '../shared/prototypeTheme';
 
 /**
- * A prototype's page in its theme (PROTOTYPE_THEME_PLAN), run before the prototype's own code: the one its address asks for
+ * A prototype's page in its theme, run before the prototype's own code: the one its address asks for
  * (`?theme=dark`), else light, the default. Built as the product is, a prototype would follow the machine's light or dark
  * setting: through `matchMedia` (MUI's `useMediaQuery`, in `FSApp`) and through `prefers-color-scheme` rules in its
  * stylesheets (the design system's). Both are answered here with the theme, so every reviewer sees the same page whatever

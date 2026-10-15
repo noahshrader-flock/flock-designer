@@ -141,7 +141,7 @@ export const Review = ({
 	// When the preview is up, show it, in the state chosen: the first, which is the page's own address, until another is.
 	const states = local.phase.kind === 'running' ? (local.phase.states ?? []) : [];
 	const [shownState, setShownState] = useState<string | null>(null);
-	// And in the theme chosen: light, the page's own address, until dark is (PROTOTYPE_THEME_PLAN).
+	// And in the theme chosen: light, the page's own address, until dark is.
 	const shownTheme = useShownTheme();
 	const theme = shownTheme.theme;
 	useEffect(() => {

@@ -59,7 +59,7 @@ export const ReviewToolbar = ({
 	states: string[];
 	shownState: string | null;
 	onShowState: (state: string | null) => void;
-	/** The theme a prototype is shown in, and choosing the other (PROTOTYPE_THEME_PLAN). */
+	/** The theme a prototype is shown in, and choosing the other. */
 	shownTheme: ShownTheme;
 	comments: ReturnType<typeof useComments>;
 	listOpen: boolean;

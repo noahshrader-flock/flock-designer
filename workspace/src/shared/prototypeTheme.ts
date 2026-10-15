@@ -1,5 +1,5 @@
 /**
- * A prototype seen in light or dark, whatever the machine it is seen on is set to (PROTOTYPE_THEME_PLAN). **A prototype opens
+ * A prototype seen in light or dark, whatever the machine it is seen on is set to. **A prototype opens
  * in light** (`DEFAULT_THEME`, Noah's call, 2026-10-14), so every reviewer first sees the same page; dark is asked for in its
  * address as `?theme=dark`, beside its state, and the page answers its own light-or-dark question from it (`page/theme.ts`).
  * Codebase work is the real app, and follows what its codebase does. The theme is never part of what tells one state from
