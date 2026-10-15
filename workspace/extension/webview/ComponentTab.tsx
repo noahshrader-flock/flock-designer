@@ -1,24 +1,19 @@
 import { useState } from 'react';
-import { countsOf, summaryOf } from '../../src/shared/accessibility';
 import { previewAddress, previewProblem } from '../../src/shared/catalog';
 import type { CatalogComponent, DesignToken, TokenEdit } from '../../src/shared/contract';
-import { plural } from '../../src/shared/plural';
 import { undeclared } from '../../src/shared/wcag';
-import { inOrder } from '../../src/shared/primitives';
-import { TokenChangesProvider, useTokenChanges, useTokenChangesFor } from '../../src/renderer/tokenChanges';
-import { MOST_LISTED, sharedWith, useComponentTokens } from '../../src/renderer/useComponentTokens';
+import { TokenChangesProvider, useTokenChangesFor } from '../../src/renderer/tokenChanges';
 import { useStoryPreview } from '../../src/renderer/useStoryPreview';
 import type { ComponentLink } from '../src/messages';
-import { AccessibilityFindings } from './Accessibility';
+import { ComponentSections } from './ComponentSections';
 import { StoryFrame } from './StoryFrame';
 import { TokenEditor } from './TokenEditor';
-import { Sets, type TokenActions } from './Tokens';
+import type { TokenActions } from './Tokens';
 import { useTabCatalog } from './useCatalog';
 import { useTrial } from './useTrial';
 import { Button } from './ui/Button';
 import { Notice, TabNote } from './ui/Notice';
 import { TryingNote } from './Changed';
-import { Swatch } from './ui/Swatch';
 import { vscode } from './vscode';
 
 /** The target while the design system is not read yet: nothing is judged at it then. */
@@ -49,93 +44,8 @@ const Stories = ({ component, commit, edits }: { component: CatalogComponent; co
 };
 
 /**
- * Made from (T6, decision 29): the design system's tokens it draws with, as the panel's rows, so a change shows here as
- * there; under each, how often and which other components share it. Then Not tokens, what it sets itself, and what axe
- * found in its stories (T7). Found by drawing every story with the tokens tagged, the first time for each commit.
- */
-const MadeFrom = ({ component, components, actions }: { component: CatalogComponent; components: CatalogComponent[]; actions: TokenActions }) => {
-	const { byPath } = useTokenChanges();
-	const { answer, retry } = useComponentTokens(component.id);
-
-	if (answer === null || answer.state === 'building')
-		return (
-			<p className="quiet">
-				Finding the tokens {component.name} draws with. The first time for each version of the design system, every story is drawn with each token
-				marked, which takes a few seconds.
-			</p>
-		);
-	if (answer.state === 'failed') return <Notice onRetry={retry}>{answer.error}</Notice>;
-	const names = new Map(components.map((c) => [c.id, c.name]));
-	const used = new Map(answer.uses.map((u) => [u.path, u.uses]));
-	const tokens = answer.uses.flatMap((u) => (byPath.has(u.path) ? [byPath.get(u.path) as DesignToken] : []));
-	const note = (t: DesignToken) => {
-		const also = (answer.sharedWith[t.path] ?? []).map((f) => names.get(f) ?? f);
-		return (
-			<span data-token-use title={also.join('\n')}>
-				{plural(used.get(t.path) ?? 0, 'use')} · {sharedWith(also)}
-			</span>
-		);
-	};
-	return (
-		<>
-			<section aria-label="Made from" className="aside-section">
-				<h2 className="aside-title">Made from</h2>
-				{tokens.length === 0 ? (
-					<p className="quiet">{component.name} draws with none of the design system’s tokens.</p>
-				) : (
-					inOrder(tokens, (t) => t.category).map(([category, inCategory]) => (
-						<div key={category} data-made-from={category} className="token-group">
-							<h3 className="token-group-name">{category}</h3>
-							<Sets tokens={inCategory} noteFor={note} {...actions} />
-						</div>
-					))
-				)}
-			</section>
-			{(answer.notTokens.length > 0 || answer.derived > 0) && (
-				<section aria-label="Not tokens" className="aside-section">
-					<h2 className="aside-title">Not tokens</h2>
-					<p className="quiet">Set in the component itself, so they are changed in the design system, not here.</p>
-					<ul className="tokens">
-						{answer.notTokens.slice(0, MOST_LISTED).map((n) => (
-							<li key={`${n.kind} ${n.value}`} data-not-token className="token">
-								<span className="token-line">
-									{n.kind === 'color' && <Swatch value={n.value} />}
-									<span className="token-name">{n.kind}</span>
-									<span className="token-value">{n.value}</span>
-									<span className="token-uses">{plural(n.uses, 'use')}</span>
-								</span>
-							</li>
-						))}
-					</ul>
-					{answer.notTokens.length > MOST_LISTED && <p className="quiet">And {answer.notTokens.length - MOST_LISTED} more.</p>}
-					{answer.derived > 0 && (
-						<p className="quiet">
-							{plural(answer.derived, 'use')} {answer.derived === 1 ? 'is a shade' : 'are shades'} worked out from a token, such as a hover’s darker
-							color.
-						</p>
-					)}
-				</section>
-			)}
-			<section aria-label="Accessibility" className="aside-section">
-				<h2 className="aside-title">Accessibility</h2>
-				{answer.accessibility === null ? (
-					<p className="quiet">Not checked: its stories did not finish drawing for the check.</p>
-				) : (
-					<>
-						<p data-accessibility-summary className={answer.accessibility.violations.length ? 'warning-text' : undefined}>
-							{summaryOf(countsOf(answer.accessibility))}
-						</p>
-						<AccessibilityFindings result={answer.accessibility} />
-					</>
-				)}
-			</section>
-		</>
-	);
-};
-
-/**
  * A component's tab (ELECTRON_MIGRATION_PLAN 6.1): its name and line, its links (Storybook when a hosted one is known, and
- * its source), its stories live, and beside them what it is made from. Read from the design system shown, as its catalog
+ * its source), its stories live, and beside them what its analysis says, in parts (`ComponentSections`). Read from the design system shown, as its catalog
  * lists it now; the change to the tokens being tried is the extension's, so a change made in the panel is seen here.
  */
 export const ComponentTab = ({ id }: { id: string }) => {
@@ -151,7 +61,7 @@ export const ComponentTab = ({ id }: { id: string }) => {
 	const link = (to: ComponentLink) => vscode().postMessage({ type: 'component-link', id, link: to });
 	return (
 		<TokenChangesProvider value={changes}>
-			<main className="tab">
+			<main className="tab tab-split">
 				<header className="tab-header">
 					<div className="tab-heading">
 						<h1 className="tab-title">{component.name}</h1>
@@ -174,7 +84,7 @@ export const ComponentTab = ({ id }: { id: string }) => {
 						<Stories component={component} commit={ready.commit} edits={edits} />
 					</div>
 					<aside className="component-aside">
-						<MadeFrom component={component} components={ready.components} actions={actions} />
+						<ComponentSections component={component} components={ready.components} actions={actions} />
 					</aside>
 				</div>
 			</main>

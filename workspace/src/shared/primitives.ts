@@ -68,13 +68,13 @@ export const PRIMITIVES: readonly Primitive[] = [
 export const primitiveOf = (kind: TokenKind, name: string): string | null =>
 	PRIMITIVES.find((p) => p.kinds.includes(kind) && (p.named === undefined || p.named.test(name)))?.category ?? null;
 
-/** Tokens in the order they came, by `key`, keeping the first-seen order of the keys. */
-export const inOrder = <K extends string>(tokens: DesignToken[], key: (t: DesignToken) => K): [K, DesignToken[]][] => {
-	const by = new Map<K, DesignToken[]>();
-	for (const t of tokens) {
-		const list = by.get(key(t));
-		if (list) list.push(t);
-		else by.set(key(t), [t]);
+/** Things (tokens, mostly) in the order they came, by `key`, keeping the first-seen order of the keys. */
+export const inOrder = <K extends string, T = DesignToken>(items: T[], key: (item: T) => K): [K, T[]][] => {
+	const by = new Map<K, T[]>();
+	for (const item of items) {
+		const list = by.get(key(item));
+		if (list) list.push(item);
+		else by.set(key(item), [item]);
 	}
 	return [...by];
 };

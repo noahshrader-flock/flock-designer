@@ -24,7 +24,7 @@ export interface TokenActions {
  * value, all as changed, with a mark when it is. Pressed, a token that can be changed opens its control; one that cannot
  * (a font, a shadow) is the same row with nothing to press. Its file and line are its tooltip, and its action opens them.
  */
-const TokenRow = ({ token, note, onEdit, onSource }: { token: DesignToken; note?: ReactNode } & TokenActions) => {
+export const TokenRow = ({ token, note, onEdit, onSource }: { token: DesignToken; note?: ReactNode } & TokenActions) => {
 	const changes = useTokenChanges();
 	const target = changes.target(token);
 	const contrast = rowContrast(token, changes);

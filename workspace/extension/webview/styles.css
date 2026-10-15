@@ -1213,6 +1213,52 @@ textarea.input {
 	}
 }
 
+/*
+ * A component's page keeps its name, description and links where they are and lets what is under them scroll. With room for
+ * two columns, the page is the window's height and the stories and the analysis each scroll inside it, apart; without,
+ * the page scrolls as a whole and the header stays at the top of it.
+ */
+.tab-split .tab-header {
+	position: sticky;
+	top: 0;
+	z-index: var(--dsnr-layer-top);
+	padding-bottom: 12px;
+	background: var(--vscode-editor-background);
+}
+
+@media (min-width: 900px) {
+	.tab-split {
+		box-sizing: border-box;
+		height: 100vh;
+		/* Under both panes, so they end on one line. */
+		padding-bottom: 16px;
+		overflow: hidden;
+	}
+
+	.tab-split .component-layout {
+		flex: 1;
+		min-height: 0;
+		/* One row as tall as there is room, so each column is as tall as the window under the header. */
+		grid-template-rows: minmax(0, 1fr);
+	}
+
+	.tab-split .component-stories,
+	.tab-split .component-aside {
+		min-height: 0;
+		overflow-y: auto;
+	}
+
+	/* The stories' box fills its pane and its page scrolls inside it, so it ends where the analysis does. */
+	.tab-split .stories {
+		flex: 1;
+		min-height: 0;
+	}
+
+	.tab-split .story-frame {
+		height: 100%;
+	}
+}
+
 .component-stories {
 	display: flex;
 	flex-direction: column;
@@ -1230,6 +1276,8 @@ textarea.input {
 .story-frame {
 	display: block;
 	width: 100%;
+	/* As tall as its page says (`StoryFrame`), unless its pane says otherwise. */
+	height: var(--frame-height);
 	border: 0;
 }
 
@@ -1256,12 +1304,78 @@ textarea.input {
 	display: flex;
 	flex-direction: column;
 	gap: 4px;
+	padding: 12px;
+	border: 1px solid var(--dsnr-border);
+	border-radius: var(--dsnr-radius-large);
 }
 
 .aside-title {
 	margin: 0;
 	font-size: 1.1em;
 	font-weight: 600;
+}
+
+/* How far a component's tokens reach, in two numbers side by side. */
+.usage {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 8px;
+	margin: 0;
+}
+
+.usage > div {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	padding: 8px;
+	border-radius: var(--dsnr-radius);
+	background: var(--dsnr-track);
+}
+
+.usage dt {
+	color: var(--dsnr-muted);
+}
+
+.usage dd {
+	margin: 0;
+}
+
+.usage strong {
+	font-size: 1.4em;
+}
+
+/* More of something, closed until it is asked for: a browser's own disclosure, with its own marker replaced by a chevron. */
+.disclosure-summary {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	padding: 4px 0;
+	color: var(--dsnr-muted);
+	cursor: pointer;
+	list-style: none;
+}
+
+.disclosure-summary::-webkit-details-marker {
+	display: none;
+}
+
+.disclosure-summary:focus-visible {
+	outline: var(--dsnr-focus);
+	outline-offset: 1px;
+}
+
+.disclosure-chevron {
+	transition: transform 120ms;
+}
+
+.disclosure[open] > .disclosure-summary .disclosure-chevron {
+	transform: rotate(90deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.disclosure-chevron {
+		transition: none;
+	}
 }
 
 .issues-title {

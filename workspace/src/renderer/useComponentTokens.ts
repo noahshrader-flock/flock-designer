@@ -3,7 +3,7 @@ import type { ComponentTokens } from '../shared/contract';
 
 /** How often a component's tokens are asked for again while every story is being drawn. */
 const ASK_EVERY_MS = 3000;
-/** How many of the values a component sets itself are listed before the rest are counted. */
+/** How many of the values a component sets itself are listed before the rest: counted in the app, kept to open in VS Code. */
 export const MOST_LISTED = 8;
 /** How many of the other components that share a token are named on its row. */
 const MOST_NAMED = 3;

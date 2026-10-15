@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { ComponentTab } from '../extension/webview/ComponentTab';
 import { PrimitivesTab } from '../extension/webview/PrimitivesTab';
 import { readTab } from '../extension/webview/tab';
-import { previewAddress } from '../src/shared/catalog';
+import { PREVIEW_HEIGHT, previewAddress } from '../src/shared/catalog';
 import { SAMPLE_CATALOG } from './extensionSamples';
 import { answer, button, calls, mount, press, say, sent } from './webviewHarness';
 
@@ -43,6 +43,18 @@ describe('a component’s tab', () => {
 		expect(sent.at(-1)).toEqual({ type: 'component-link', id: BUTTON, link: 'source' });
 	});
 
+	it('keeps its name, description and links apart from what scrolls: the stories and the analysis are panes of their own under it', async () => {
+		await open();
+		const page = document.querySelector('main.tab') as HTMLElement;
+		expect(page.classList.contains('tab-split')).toBe(true);
+		const [header, layout] = [page.querySelector('.tab-header'), page.querySelector('.component-layout')];
+		expect(header?.parentElement).toBe(page);
+		expect(layout?.parentElement).toBe(page);
+		// Two panes, each its own scroll in the stylesheet, and the header outside both.
+		expect([...layout!.children].map((c) => c.className)).toEqual(['component-stories', 'component-aside']);
+		expect(layout!.contains(header!)).toBe(false);
+	});
+
 	it('draws its stories live, from this machine’s server', async () => {
 		await open();
 		expect(calls('storyPreview')[0]?.args).toEqual([[]]);
@@ -50,6 +62,16 @@ describe('a component’s tab', () => {
 		const frame = document.querySelector('iframe') as HTMLIFrameElement;
 		expect(frame.getAttribute('src')).toBe(previewAddress(BASE, BUTTON));
 		expect(frame.getAttribute('sandbox')).toBe('allow-scripts allow-same-origin');
+	});
+
+	it('says the height its stories’ page reports as a variable, which the stylesheet uses, or overrides where the frame fills its pane', async () => {
+		await open();
+		await answer('storyPreview', { state: 'ready', base: BASE });
+		const frame = document.querySelector('iframe') as HTMLIFrameElement;
+		await say({ [PREVIEW_HEIGHT]: 640 }, { source: frame.contentWindow, origin: 'http://127.0.0.1:4321' });
+		expect(frame.style.getPropertyValue('--frame-height')).toBe('640px');
+		// Not a height of its own: that would win over the stylesheet's, and the frame could not fill its pane.
+		expect(frame.style.height).toBe('');
 	});
 
 	it('builds them again with the change the extension says is being tried, keeping the last until it is built', async () => {
@@ -100,22 +122,167 @@ describe('a component’s tab', () => {
 		expect(calls('storyPreview')).toHaveLength(2);
 	});
 
-	it('lists what it is made from, how often, and which other components share each token; then what axe found', async () => {
+	/** What the analysis of FSButton found: the tokens it draws with and how often, the values it sets itself, and what axe found. */
+	const STORY = (name: string) => `src/components/${name}/${name}.stories.tsx`;
+	const analysis = (over: Record<string, unknown> = {}) => ({
+		state: 'ready',
+		uses: [
+			{ path: 'palette.light.primary.main', uses: 3 },
+			{ path: 'palette.dark.primary.main', uses: 2 },
+			{ path: 'palette.light.primary.contrastText', uses: 1 },
+			{ path: 'radius', uses: 5 },
+			{ path: 'spacing', uses: 4 },
+		],
+		sharedWith: {
+			'palette.light.primary.main': [STORY('FSIconButton')],
+			radius: [STORY('FSIconButton'), STORY('FSSplitButton')],
+		},
+		notTokens: [
+			{ kind: 'color', value: 'rgb(1, 2, 3)', uses: 2 },
+			{ kind: 'spacing', value: '13px', uses: 1 },
+		],
+		derived: 1,
+		accessibility: {
+			violations: [
+				{
+					rule: 'color-contrast',
+					help: 'Text needs more contrast',
+					url: 'https://axe.example/cc',
+					criteria: ['1.4.3'],
+					impact: 'serious',
+					nodes: 2,
+					states: ['default'],
+				},
+			],
+			incomplete: [
+				{
+					rule: 'aria-allowed-attr',
+					help: 'Check this attribute',
+					url: 'https://axe.example/aa',
+					criteria: ['4.1.2'],
+					impact: 'minor',
+					nodes: 1,
+					states: ['default'],
+				},
+			],
+			notAutomated: ['2.4.7'],
+			ran: { axe: '4.10', target: 'WCAG 2.2 AA', states: ['default'] },
+		},
+		...over,
+	});
+	const analysed = async (over: Record<string, unknown> = {}) => {
 		await open();
-		expect(calls('componentTokens')[0]?.args).toEqual([BUTTON]);
-		await answer('componentTokens', {
-			state: 'ready',
-			uses: [{ path: 'palette.light.primary.main', uses: 3 }],
-			sharedWith: { 'palette.light.primary.main': ['src/components/FSIconButton/FSIconButton.stories.tsx'] },
-			notTokens: [{ kind: 'color', value: 'rgb(1, 2, 3)', uses: 2 }],
-			derived: 1,
+		await answer('componentTokens', analysis(over));
+	};
+	const section = (label: string) => document.querySelector(`[aria-label="${label}"]`) as HTMLElement | null;
+
+	it('reads in six parts, in an order that goes from what it is made of to what is wrong with it', async () => {
+		await analysed();
+		expect([...document.querySelectorAll('.component-aside > [aria-label]')].map((e) => e.getAttribute('aria-label'))).toEqual([
+			'Made from',
+			'Color tokens',
+			'Usage',
+			'Non-token values',
+			'Accessibility',
+		]);
+		// The sixth, its name and links, is the header above.
+		expect(document.querySelector('.tab-title')?.textContent).toBe('FSButton');
+	});
+
+	it('breaks what it is made from down by kind, compactly, apart from its colours, with each token’s uses and who shares it', async () => {
+		await analysed();
+		const made = section('Made from')!;
+		expect([...made.querySelectorAll('[data-made-from]')].map((c) => c.getAttribute('data-made-from'))).toEqual(['Shape', 'Spacing']);
+		const radius = made.querySelector('[data-token="radius"]') as HTMLElement;
+		expect(radius.querySelector('[data-part="name"]')?.textContent).toBe('radius');
+		expect(radius.querySelector('[data-part="value"]')?.textContent).toBe('4px');
+		expect(radius.querySelector('[data-token-use]')?.textContent).toBe('5 uses · also FSIconButton, FSSplitButton');
+		expect(made.querySelector('[data-token="spacing"] [data-token-use]')?.textContent).toBe('4 uses · no other component');
+		// A colour is in Color tokens, not here.
+		expect(made.querySelector('[data-token^="palette"]')).toBeNull();
+	});
+
+	it('opens a token’s own control from Made from, as the panel’s row does, and closes it with its X', async () => {
+		await analysed();
+		await press(section('Made from')!.querySelector('[data-token="radius"] button.token-button') as HTMLElement);
+		expect(document.querySelector('[role="dialog"]')).not.toBeNull();
+		await press(document.querySelector('[role="dialog"] [aria-label="Close"]') as HTMLElement);
+		expect(document.querySelector('[role="dialog"]')).toBeNull();
+	});
+
+	it('shows the colours it draws with as the semantic tokens do: each role’s variants, Light and Dark side by side, a swatch that opens its control', async () => {
+		await analysed();
+		const colors = section('Color tokens')!;
+		expect([...colors.querySelectorAll('[data-theme-heading]')].map((h) => h.textContent)).toEqual(['Light', 'Dark']);
+		const primary = colors.querySelector('[data-token-set="primary"]') as HTMLElement;
+		expect([...primary.querySelectorAll('[data-token-row]')].map((r) => r.getAttribute('data-token-row'))).toEqual(['main', 'contrastText']);
+		// Both themes of a variant on one row; a variant it draws in one theme only has a dash for the other.
+		expect(primary.querySelectorAll('[data-token-row="main"] [data-token]')).toHaveLength(2);
+		expect(primary.querySelectorAll('[data-token-row="contrastText"] [data-token]')).toHaveLength(1);
+		await press(colors.querySelector('[data-token="palette.light.primary.main"] button') as HTMLElement);
+		expect(document.querySelector('[role="dialog"]')).not.toBeNull();
+	});
+
+	it('says in two numbers how far its tokens reach: the components that share them, and how often it uses them', async () => {
+		await analysed();
+		const usage = section('Usage')!;
+		expect(usage.querySelector('[data-usage="sharing"]')?.textContent).toBe('Shares its tokens with2 components');
+		expect(usage.querySelector('[data-usage="uses"]')?.textContent).toBe('Token uses15 uses');
+	});
+
+	it('groups the values it sets itself by kind with their uses, lists the first few, and keeps the rest to open', async () => {
+		const colors = Array.from({ length: 10 }, (_, i) => ({ kind: 'color', value: `rgb(${i}, 0, 0)`, uses: 10 - i }));
+		await analysed({ notTokens: [...colors, { kind: 'spacing', value: '13px', uses: 1 }] });
+		const values = section('Non-token values')!;
+		expect([...values.querySelectorAll('[data-not-token-kind]')].map((g) => g.getAttribute('data-not-token-kind'))).toEqual(['color', 'spacing']);
+		const shown = (kind: string) =>
+			[...values.querySelectorAll(`[data-not-token-kind="${kind}"] > ul > [data-not-token]`)].map((li) => li.textContent);
+		expect(shown('color')).toHaveLength(8);
+		expect(shown('color')[0]).toContain('rgb(0, 0, 0)');
+		expect(shown('spacing')).toEqual(['13px1 use']);
+		// The other two are inside one that is closed until it is opened, said by how many.
+		const more = values.querySelector('[data-not-token-kind="color"] details') as HTMLDetailsElement;
+		expect(more.open).toBe(false);
+		expect(more.querySelector('summary')?.textContent).toBe('Show 2 more');
+		expect([...more.querySelectorAll('[data-not-token]')]).toHaveLength(2);
+		await press(more.querySelector('summary') as HTMLElement);
+		expect(more.open).toBe(true);
+		// What is worked out from a token is said once, below.
+		expect(values.textContent).toContain('1 use is a shade worked out from a token');
+	});
+
+	it('has no part for values it sets itself when it sets none', async () => {
+		await analysed({ notTokens: [], derived: 0 });
+		expect(section('Non-token values')).toBeNull();
+	});
+
+	it('says what axe found in a line, what it was checked with and what is a person’s, and keeps the findings to open', async () => {
+		await analysed();
+		const a11y = section('Accessibility')!;
+		expect(a11y.querySelector('[data-accessibility-summary]')?.textContent).toBe('1 automated issue, 1 needs a person');
+		expect(a11y.textContent).toContain('Checked with axe-core 4.10 at WCAG 2.2 AA');
+		expect(a11y.textContent).toContain('No automated check covers 2.4.7');
+		const details = a11y.querySelector('details') as HTMLDetailsElement;
+		expect(details.open).toBe(false);
+		expect(details.querySelector('summary')?.textContent).toBe('Show the findings');
+		expect(details.textContent).toContain('Text needs more contrast');
+		expect(details.textContent).toContain('Check this attribute');
+		expect(details.textContent).toContain('WCAG 1.4.3');
+	});
+
+	it('has no findings to open when axe found nothing', async () => {
+		await analysed({
 			accessibility: { violations: [], incomplete: [], notAutomated: [], ran: { axe: '4.10', target: 'WCAG 2.2 AA', states: ['default'] } },
 		});
-		const made = document.querySelector('[aria-label="Made from"]') as HTMLElement;
-		expect(made.querySelector('[data-token="palette.light.primary.main"] [data-part="name"]')?.textContent).toBe('main');
-		expect(made.querySelector('[data-token-use]')?.textContent).toBe('3 uses · also FSIconButton');
-		expect(document.querySelector('[aria-label="Not tokens"]')?.textContent).toContain('rgb(1, 2, 3)');
-		expect(document.querySelector('[data-accessibility-summary]')?.textContent).toBe('No issues found by automated checks');
+		expect(section('Accessibility')!.querySelector('details')).toBeNull();
+		expect(section('Accessibility')!.querySelector('[data-accessibility-summary]')?.textContent).toBe('No issues found by automated checks');
+	});
+
+	it('says it is finding them while the first reading is drawn, with none of the parts yet', async () => {
+		await open();
+		await answer('componentTokens', { state: 'building' });
+		expect(document.querySelector('.component-aside')?.textContent).toContain('Finding the tokens FSButton draws with');
+		expect(section('Made from')).toBeNull();
 	});
 
 	it('says, when the design system cannot be read here, that the panel says why, and reads it again on Try again', async () => {

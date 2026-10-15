@@ -121,6 +121,7 @@ describe('the extension’s sources', () => {
 			'.card-picture {',
 			'.swatch {',
 			'.stories {',
+			'.aside-section {',
 			'.issue {',
 			'.chip {',
 			'.primitive {',
@@ -242,6 +243,35 @@ describe('the extension’s sources', () => {
 		expect(head).toMatch(/display:\s*flex/);
 		expect(head).toMatch(/justify-content:\s*space-between/);
 		expect(head).toMatch(/align-items:\s*center/);
+	});
+
+	it('hold a component page’s header fixed with its stories and its analysis scrolling apart when there is room for both, and the header sticky when there is not', () => {
+		const css = files()
+			.find((f) => f.path.endsWith('styles.css'))!
+			.text.replace(/\/\*[\s\S]*?\*\//g, '');
+		const wide = /@media \(min-width: 900px\) \{([\s\S]*?)\n\}/.exec(css.slice(css.indexOf('.tab-split')))?.[1] ?? '';
+		const within = (selector: string) => new RegExp(`${selector.replace('.', '\\.')} \\{([^}]*)\\}`).exec(wide)?.[1] ?? '';
+		// Room for two columns: the page is the window's height, and each pane scrolls inside it.
+		expect(within('.tab-split')).toMatch(/height:\s*100vh/);
+		expect(within('.tab-split')).toMatch(/overflow:\s*hidden/);
+		expect(within('.component-layout')).toMatch(/flex:\s*1/);
+		expect(within('.component-layout')).toMatch(/min-height:\s*0/);
+		const panes = /\.component-stories,\s*\.tab-split \.component-aside \{([^}]*)\}/.exec(wide)?.[1] ?? '';
+		expect(panes).toMatch(/overflow-y:\s*auto/);
+		expect(panes).toMatch(/min-height:\s*0/);
+		// Both end on one line: no room left under either inside its scroll, the page's own below both.
+		expect(panes).not.toMatch(/padding-bottom/);
+		expect(within('.tab-split')).toMatch(/padding-bottom:\s*16px/);
+		// The stories' box fills its pane, and its page scrolls inside it, so its bottom is the analysis's bottom.
+		expect(within('.stories')).toMatch(/flex:\s*1/);
+		expect(within('.stories')).toMatch(/min-height:\s*0/);
+		expect(within('.story-frame')).toMatch(/height:\s*100%/);
+		// Anywhere else a frame is as tall as its page says.
+		expect(css.split('}').find((b) => b.trim().startsWith('.story-frame {'))).toMatch(/height:\s*var\(--frame-height\)/);
+		// Without it, the page scrolls as a whole and the header stays at the top of it.
+		const header = css.split('}').find((b) => b.trim().startsWith('.tab-split .tab-header')) ?? '';
+		expect(header).toMatch(/position:\s*sticky/);
+		expect(header).toMatch(/top:\s*0/);
 	});
 
 	it('draw a row’s thumbnail 56px wide, in the shape of a card’s picture', () => {
