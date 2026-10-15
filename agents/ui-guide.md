@@ -78,6 +78,15 @@ nothing fits, and **say so explicitly**.
 Real design system components, real tokens, real product patterns. Mock data typed with the product's real types where
 they exist: real types, fake values, believable for the product.
 
+### When a reference disagrees with the product
+
+A reference (a Figma frame, a screenshot, a sketch) is what the person means, drawn somewhere else. **Sizes, spacing, colours,
+type, corners and shadows: the product wins.** Use the real component at its real size and never copy a number from the
+reference: a frame drawn with a 64px nav does not make the product's 48px one wrong. **Wording and structure: follow the
+reference** (its labels, which tabs, how things group), and say so: a person may have renamed something on purpose, and
+quietly using the product's old word undoes it. Theme is not a difference: a prototype's review bar switches light and dark.
+`../skills/recreate-from-reference.md` is the full method.
+
 ### Build what was asked for, and no more
 
 **There is no rigor setting, and grounding is not one.** Real components and patterns are always on. **What varies is
@@ -101,6 +110,7 @@ the whole suite.
 - Which existing patterns you reused
 - **Anything you invented, and why nothing existing fit**
 - Product questions you had to guess at
+- **Where the reference and the product differ,** if you built from one: a line each (the reference says X, the product says Y, what you did)
 - What would need to change for production
 
 ## When something goes wrong

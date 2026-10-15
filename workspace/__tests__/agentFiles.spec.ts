@@ -40,6 +40,16 @@ describe('the guide for building UI', () => {
 		expect(guide).not.toMatch(/\bCoke\b|\bCrown\b|\bMonaco\b/);
 	});
 
+	it('says what wins when a reference (a Figma frame, a screenshot) and the product disagree, and to report each difference', () => {
+		const flat = guide.replace(/\s+/g, ' ');
+		const section = flat.split(/ ### /).find((s) => s.startsWith('When a reference disagrees with the product')) ?? '';
+		expect(section).toMatch(/sizes, spacing, colours/i);
+		expect(section).toMatch(/the product wins/i);
+		expect(section).toMatch(/wording and structure/i);
+		expect(section).toMatch(/follow the reference/i);
+		expect(flat.split(/ ## /).find((s) => s.startsWith('When you finish, say')) ?? '').toMatch(/where the reference and the product differ/i);
+	});
+
 	it('shares no section with the workflow: each rule is said in one of the two', () => {
 		const both = headings(guide).filter((h) => headings(workflow).includes(h));
 		expect(both).toEqual([]);
