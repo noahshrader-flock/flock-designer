@@ -67,7 +67,9 @@ export interface CommentAnchor {
 /** A comment to place on the page, numbered as it is listed beside it. */
 export interface MarkerRequest {
 	id: number;
-	number: number;
+	/** Whose pin it is, by name, and their picture (the host's) or none: the pin shows the picture, or their first letter. */
+	author: string;
+	avatarUrl: string | null;
 	anchor: CommentAnchor;
 	/** True for the viewer's own pins, which can be dragged. */
 	movable?: boolean;

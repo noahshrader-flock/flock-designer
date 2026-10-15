@@ -54,33 +54,59 @@ describe('sameComments', () => {
 	});
 });
 
+describe('numberComments', () => {
+	it('names a comment for the agent, nobody seeing it: the pinned ones first in the order they were made, then the page-level ones, a resolved one keeping its number', () => {
+		const list = [
+			c(1, { createdAt: '2026-10-01T10:00:00Z' }),
+			c(2, { createdAt: '2026-10-02T10:00:00Z', anchor: anAnchor({ route: '/r' }) }),
+			c(3, { createdAt: '2026-10-03T10:00:00Z', anchor: anAnchor({ route: '/r' }), resolved: true }),
+		];
+		expect([...numberComments(list)]).toEqual([
+			[2, 1],
+			[3, 2],
+			[1, 3],
+		]);
+	});
+});
+
 describe('markersFor', () => {
 	const at = (route = '/users'): CommentAnchor => anAnchor({ route });
 	const pinned = (id: number, over: Partial<ReviewComment> = {}) => c(id, { anchor: at(), ...over });
-	const numbers = (list: ReviewComment[]) => numberComments(list);
 
 	it('draws a pin for each open comment that points at the page', () => {
 		const list = [pinned(1), pinned(2)];
-		expect(markersFor(list, numbers(list), 'a', null).map((m) => m.id)).toEqual([1, 2]);
+		expect(markersFor(list, 'a', null).map((m) => m.id)).toEqual([1, 2]);
 	});
 
 	it('leaves out a resolved comment and one that points at nothing', () => {
 		const list = [pinned(1, { resolved: true }), pinned(2), c(3)];
-		expect(markersFor(list, numbers(list), 'a', null).map((m) => m.id)).toEqual([2]);
+		expect(markersFor(list, 'a', null).map((m) => m.id)).toEqual([2]);
+	});
+
+	it('carries who made each pin, by name and picture, for the page to draw', () => {
+		const list = [
+			pinned(1, { author: 'noah', authorAvatarUrl: 'https://avatars.githubusercontent.com/u/1?v=4' }),
+			pinned(2, { author: 'pat', authorAvatarUrl: null }),
+		];
+		expect(markersFor(list, 'a', null).map(({ id, author, avatarUrl }) => ({ id, author, avatarUrl }))).toEqual([
+			{ id: 1, author: 'noah', avatarUrl: 'https://avatars.githubusercontent.com/u/1?v=4' },
+			{ id: 2, author: 'pat', avatarUrl: null },
+		]);
 	});
 
 	it("only the viewer's own pins can be dragged", () => {
 		const list = [pinned(1, { author: 'me' }), pinned(2, { author: 'someone else' })];
-		const [mine, theirs] = markersFor(list, numbers(list), 'me', null);
+		const [mine, theirs] = markersFor(list, 'me', null);
 		expect(mine?.movable).toBe(true);
 		expect(theirs?.movable).toBe(false);
 	});
 
 	it('draws the pin being placed while its comment is being written', () => {
 		const list = [pinned(1)];
-		const items = markersFor(list, numbers(list), 'a', { anchor: at(), composing: true });
+		const items = markersFor(list, 'a', { anchor: at(), composing: true });
 		expect(items.map((m) => m.id)).toEqual([1, -1]);
-		expect(items.at(-1)).toMatchObject({ number: 2, movable: true });
+		// Nobody's yet: no name, no picture, until it is written.
+		expect(items.at(-1)).toMatchObject({ author: '', avatarUrl: null, movable: true });
 	});
 
 	it('never leaves a pin behind when there is no box to type in', () => {
@@ -88,7 +114,7 @@ describe('markersFor', () => {
 		// amber pin on the page that could be neither finished nor dismissed, looking like a comment
 		// that was not one. The pin and the box now hang off the same value.
 		const list = [pinned(1)];
-		expect(markersFor(list, numbers(list), 'a', { anchor: at(), composing: false }).map((m) => m.id)).toEqual([1]);
+		expect(markersFor(list, 'a', { anchor: at(), composing: false }).map((m) => m.id)).toEqual([1]);
 	});
 });
 
@@ -128,6 +154,6 @@ describe('openComments / resolvedComments', () => {
 	it('is the same question the pins ask, so a pin and the count cannot disagree', () => {
 		const withPin = (id: number, over = {}) => c(id, { anchor: anAnchor({ route: '/r' }), ...over });
 		const list = [withPin(1), withPin(2, { resolved: true })];
-		expect(markersFor(list, numberComments(list), 'a', null).map((m) => m.id)).toEqual(openComments(list).map((x) => x.id));
+		expect(markersFor(list, 'a', null).map((m) => m.id)).toEqual(openComments(list).map((x) => x.id));
 	});
 });

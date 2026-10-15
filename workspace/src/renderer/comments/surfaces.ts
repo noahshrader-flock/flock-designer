@@ -11,7 +11,8 @@ import type { CommentAnchor, CommentRef, MarkerRequest, MarkerResult, PickedPoin
 /** The comments on one iteration, and who is reading them. The app's are GitHub's, through its main process. */
 export interface CommentStore {
 	read(): Promise<Result<ReviewComment[]>>;
-	post(body: string, anchor: CommentAnchor, picture: string | null): Promise<Result<ReviewComment>>;
+	/** A comment, on a spot of the page (`anchor`) or on the page as a whole (`null`). */
+	post(body: string, anchor: CommentAnchor | null, picture: string | null): Promise<Result<ReviewComment>>;
 	resolve(comment: CommentRef, resolved: boolean): Promise<Result<ReviewComment>>;
 	remove(comment: CommentRef): Promise<Result<null>>;
 	/** A pin dragged somewhere new: the comment now points there. */

@@ -131,6 +131,14 @@ describe.skipIf(NO_CHROME)('a review opened in the browser from DSNR, in the rea
 
 			// Address, from the browser: asked of this page's own iteration, then the page goes to the one that has the change.
 			await pressNamed(tab, 'Show all comments');
+			// The box for a comment on the whole page, at the panel's foot, and its Send button: one height, as measured.
+			const sizes = await tab.evaluate(() => {
+				const high = (el: Element | null) => Math.round(el?.getBoundingClientRect().height ?? -1);
+				return { box: high(document.querySelector('#general-comment')), send: high(document.querySelector('button[aria-label="Send"]')) };
+			});
+			expect(sizes.box).toBeGreaterThan(0);
+			expect(sizes.send).toBe(sizes.box);
+			expect(await tab.evaluate(() => (document.querySelector('#general-comment') as HTMLTextAreaElement).placeholder)).toBe('Post a comment…');
 			await pressNamed(tab, 'Comment actions');
 			await pressNamed(tab, 'Address');
 			await tab.waitForFunction(() => location.pathname.endsWith('/v1/i2/'));
@@ -144,7 +152,7 @@ describe.skipIf(NO_CHROME)('a review opened in the browser from DSNR, in the rea
 			// Loaded again, with no key in its address (as moving to another iteration is): still DSNR's, the comment there.
 			await tab.goto(`${base}demo/v1/i1/`, { waitUntil: 'load' });
 			const again = tab.frames().find((f) => f.url().endsWith('page.html')) as Frame;
-			await again.waitForFunction(() => document.querySelector('[data-fd-layer="pins"]')?.textContent === '1');
+			await again.waitForFunction(() => document.querySelector('[data-fd-layer="pins"]')?.textContent === 'P');
 		});
 	}, 120_000);
 });

@@ -1,8 +1,9 @@
-import { createElement, useState } from 'react';
+import { act, createElement, useState } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { CommentBox } from '../src/renderer/comments/CommentBox';
 import { CommentControl } from '../src/renderer/comments/CommentControl';
 import { CommentList } from '../src/renderer/comments/CommentList';
+import { GeneralComment } from '../src/renderer/comments/GeneralComment';
 import type { CommentStore, PageSurface } from '../src/renderer/comments/surfaces';
 import { useComments } from '../src/renderer/comments/useComments';
 import type { CommentAnchor, MarkerRequest, PinEvent, ReviewComment } from '../src/shared/contract';
@@ -14,15 +15,24 @@ import { anAnchor } from './fixtures';
  * will give it. Nothing here goes near `window.workspace`, which is not there.
  */
 
+/** A key pressed in `el`, as a person presses it. */
+const key = (el: Element, init: KeyboardEventInit) =>
+	act(async () => void el.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, cancelable: true, ...init })));
+
+/** The card that says `text`. */
+const card = (text: string) => cards().find((c) => c.textContent?.includes(text)) as HTMLElement;
+
 const fakes = (initial: ReviewComment[]) => {
 	let saved = [...initial];
 	const drawn: MarkerRequest[][] = [];
+	const focused: number[] = [];
 	let pinListener: ((e: PinEvent) => void) | null = null;
 	let clicked: ((v: Awaited<ReturnType<PageSurface['pick']>>) => void) | null = null;
 	const store: CommentStore = {
 		read: async () => ok(saved),
 		post: async (body, anchor) => {
-			const made = { ...comment(50 + saved.length, body, { author: 'reviewer' }), anchor };
+			// Made now: after anything the store already had.
+			const made = { ...comment(50 + saved.length, body, { author: 'reviewer', createdAt: '2026-10-09T00:00:00Z' }), anchor };
 			saved = [...saved, made];
 			return ok(made);
 		},
@@ -45,7 +55,7 @@ const fakes = (initial: ReviewComment[]) => {
 			drawn.push(items);
 			return ok(items.map((i) => ({ id: i.id, state: 'found' as const })));
 		},
-		focusMarker: async () => undefined,
+		focusMarker: async (id) => void focused.push(id),
 		onPinEvent: (l) => {
 			pinListener = l;
 			return () => void (pinListener = null);
@@ -55,6 +65,7 @@ const fakes = (initial: ReviewComment[]) => {
 		store,
 		page,
 		drawn,
+		focused,
 		pin: (e: PinEvent) => pinListener?.(e),
 		click: (anchor: Partial<CommentAnchor> = {}) =>
 			clicked?.(
@@ -79,6 +90,7 @@ const Host = ({ store, page }: { store: CommentStore; page: PageSurface }) => {
 		createElement(CommentControl, { comments, listOpen, onToggleList: () => setListOpen((o) => !o), disabled: false }),
 		error && createElement('p', { role: 'alert' }, error),
 		listOpen && createElement(CommentList, { comments }),
+		listOpen && createElement(GeneralComment, { comments }),
 		comments.composing && createElement(CommentBox, { comments, origin: { top: 0, left: 0 }, error }),
 	);
 };
@@ -131,7 +143,77 @@ describe('the comments experience, through another store and page', () => {
 		await mount(f);
 		f.pin({ kind: 'click', id: 2 });
 		await settle();
-		expect(cards()[1]?.className).toContain('border-primary');
+		// The same one-pixel border, in the text's own colour: not a thicker one.
+		expect(card('Second').className).toContain('border-foreground');
+		expect(card('Second').className).not.toMatch(/\bborder-2\b/);
+		expect(card('First').className).not.toContain('border-foreground');
+	});
+
+	it('is chosen by pressing anywhere on its card, which shows its pin; but not by its menu', async () => {
+		const f = fakes([comment(1, 'First', { author: 'noah' }), comment(2, 'Second', { author: 'pat' })]);
+		await mount(f);
+		// Its author's name, at the top of the card, which was not pressable before.
+		await press(card('Second').querySelector('span.truncate') as HTMLElement);
+		expect(card('Second').className).toContain('border-foreground');
+		expect(f.focused).toEqual([2]);
+		// Its menu opens without choosing the card it is on.
+		await press(button('Comment actions', card('First')));
+		expect(f.focused).toEqual([2]);
+		expect(card('First').className).not.toContain('border-foreground');
+		// It answers the pointer: a hover tint, lighter than the chosen one's.
+		expect(card('First').className).toContain('hover:bg-accent/50');
+		expect(card('First').className).toContain('cursor-pointer');
+	});
+
+	it('cannot be chosen once it is resolved, has no pin on the page, or the page has no place for it', async () => {
+		const f = fakes([comment(1, 'Done', { resolved: true }), comment(2, 'Page-wide', { anchor: null })]);
+		await mount(f);
+		for (const each of cards()) {
+			expect(each.className).not.toContain('cursor-pointer');
+			expect(each.className).not.toContain('hover:bg-accent');
+			expect(each.querySelector('button.text-left')).toBeNull();
+			await press(each.querySelector('span.truncate') as HTMLElement);
+		}
+		expect(f.focused).toEqual([]);
+		expect(cards().every((c) => !c.className.includes('border-foreground'))).toBe(true);
+	});
+
+	it('lists the newest at the top, each keeping the number it was made with', async () => {
+		const f = fakes([comment(1, 'Oldest'), comment(3, 'Newest'), comment(2, 'Middle')]);
+		await mount(f);
+		expect(cards().map((c) => c.textContent?.match(/Oldest|Middle|Newest/)?.[0])).toEqual(['Newest', 'Middle', 'Oldest']);
+	});
+
+	it('takes a comment on the whole page from the box at its foot: no pin, sent with Enter, at the top once it is in', async () => {
+		const f = fakes([comment(1, 'On the button')]);
+		await mount(f);
+		const box = document.querySelector('#general-comment') as HTMLTextAreaElement;
+		// Nothing to send yet.
+		expect(button('Send').hasAttribute('disabled')).toBe(true);
+		await typeInto(box, 'The spacing feels tight overall');
+		// Shift+Enter is a new line, not a send.
+		await key(box, { key: 'Enter', shiftKey: true });
+		expect(((await f.store.read()) as { value: ReviewComment[] }).value).toHaveLength(1);
+		await key(box, { key: 'Enter' });
+		await settle();
+		const saved = ((await f.store.read()) as { value: ReviewComment[] }).value;
+		expect(saved.at(-1)).toMatchObject({ body: 'The spacing feels tight overall', anchor: null });
+		expect(cards()[0]?.textContent).toContain('The spacing feels tight overall');
+		expect(box.value).toBe('');
+		// No pin for it: only the comment on the button is drawn.
+		expect(f.drawn.at(-1)?.map((p) => p.id)).toEqual([1]);
+	});
+
+	it('keeps what was written when it could not be sent, and says why', async () => {
+		const f = fakes([]);
+		f.store.post = async () => ({ ok: false, error: 'GitHub could not be reached.' });
+		await mount(f);
+		const box = document.querySelector('#general-comment') as HTMLTextAreaElement;
+		await typeInto(box, 'Still here');
+		await press(button('Send'));
+		await settle();
+		expect(box.value).toBe('Still here');
+		expect(document.querySelector('[role="alert"]')?.textContent).toBe('GitHub could not be reached.');
 	});
 
 	it("offers no Address: that is the app's, and only when it adds it", async () => {

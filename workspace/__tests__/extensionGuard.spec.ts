@@ -205,7 +205,7 @@ describe('the extension’s sources', () => {
 			.text.replace(/\/\*[\s\S]*?\*\//g, '');
 		expect(css).toMatch(/--dsnr-card-text-pad:\s*8px/);
 		const rule = (selector: string) => css.split('}').find((b) => b.trim().startsWith(selector)) ?? '';
-		expect(rule('.card-text')).toMatch(/padding:\s*var\(--dsnr-card-text-pad\);/);
+		expect(rule('.card-text {')).toMatch(/padding:\s*var\(--dsnr-card-text-pad\);/);
 	});
 
 	it('divide the design system’s sets from one another, in the semantic colors and in the palette alike, with one line that reads in any theme', () => {

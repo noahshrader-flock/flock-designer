@@ -121,13 +121,13 @@ describe.skipIf(NO_CHROME)('the bar and the page, by message, in the real browse
 
 				// Its pin drawn on the page, where the click was, and heard when it is clicked.
 				const drawn = await tab.evaluate(
-					(anchor) => (window as any).page.showMarkers([{ id: 7, number: 1, anchor, draft: false, movable: false, resolved: false }]),
+					(anchor) => (window as any).page.showMarkers([{ id: 7, author: 'noah', avatarUrl: null, anchor, movable: false }]),
 					picked.value.anchor,
 				);
 				expect(drawn).toEqual({ ok: true, value: [{ id: 7, state: 'found' }] });
-				// The pin: a teardrop on its own layer, over the page (`pins.ts`), numbered as asked.
+				// The pin: a teardrop on its own layer, over the page (`pins.ts`), carrying who made it.
 				const pin = '[data-fd-layer="pins"] > div > div';
-				expect(await frame.$eval(pin, (el) => el.textContent)).toBe('1');
+				expect(await frame.$eval(pin, (el) => el.textContent)).toBe('N');
 				await frame.click(pin);
 				// The page's route moving within it.
 				await frame.evaluate(() => void (location.hash = '#/other'));

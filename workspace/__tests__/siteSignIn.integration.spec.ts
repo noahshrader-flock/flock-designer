@@ -151,7 +151,10 @@ const press = async (at: Page | Frame, text: string) => {
 };
 const pressNamed = async (at: Page, label: string) => {
 	const found = await at.waitForFunction(
-		(l) => [...document.querySelectorAll<HTMLElement>('[aria-label]')].find((e) => (e.getAttribute('aria-label') ?? '').startsWith(l)),
+		(l) =>
+			[...document.querySelectorAll<HTMLElement>('[aria-label], [role="menuitem"]')].find((e) =>
+				(e.getAttribute('aria-label') ?? e.textContent ?? '').trim().startsWith(l),
+			),
 		{},
 		label,
 	);
@@ -188,10 +191,10 @@ describe.skipIf(NO_CHROME)('signing in to comment on the published site, in the 
 			expect(gh.issues[0]?.comments[0]).toMatchObject({ user: { login: 'pat' } });
 			expect(gh.issues[0]?.comments[0]?.body).toContain('Bigger, please');
 
-			// Who, and Sign out, which forgets the token.
-			await pressNamed(tab, 'Show all comments');
-			await tab.waitForFunction(() => document.querySelector('[data-signed-in-as]')?.textContent === 'pat');
-			await press(tab, 'Sign out');
+			// Who, as their picture at the end of the bar; and Sign out in its menu, which forgets the token.
+			await pressNamed(tab, 'Signed in as pat');
+			await tab.waitForFunction(() => document.querySelector('[data-signed-in-as]')?.textContent === 'Pat Brennanpat');
+			await pressNamed(tab, 'Sign out');
 			await tab.waitForFunction(() => [...document.querySelectorAll('button')].some((b) => b.textContent?.trim() === 'Sign in to comment'));
 			expect(await tab.evaluate(() => localStorage.getItem('dsnr.github-token'))).toBeNull();
 		}, chrome());

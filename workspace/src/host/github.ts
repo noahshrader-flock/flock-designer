@@ -26,11 +26,18 @@ export interface GitHubAccount extends GitHubApi {
 	signOut(): void;
 }
 
+/** A person as the host's `/user` says it. */
+const userFrom = (me: Record<string, unknown>): GitHubUser => ({
+	login: String(me.login ?? ''),
+	name: typeof me.name === 'string' ? me.name : null,
+	avatarUrl: typeof me.avatar_url === 'string' ? me.avatar_url : null,
+});
+
+/** Who `api` is signed in as. Throws when it cannot be asked. */
+export const userOf = async (api: GitHubApi): Promise<GitHubUser> => userFrom(asRecord(await api.api('/user')));
+
 /** Who `api` is signed in as, by their login, or null when it does not say. Throws when it cannot be asked. */
-export const loginOf = async (api: GitHubApi): Promise<string | null> => {
-	const login = asRecord(await api.api('/user')).login;
-	return typeof login === 'string' ? login : null;
-};
+export const loginOf = async (api: GitHubApi): Promise<string | null> => (await userOf(api)).login || null;
 
 /** Raised when the person must sign in again -- the refresh token is spent or revoked. */
 export class ReauthRequired extends HostError {
@@ -180,10 +187,5 @@ export const callApi = async (token: string, call: ApiCall, fetcher: Fetcher, ca
 };
 
 export const readUser = async (token: string, fetcher: Fetcher): Promise<GitHubUser> => {
-	const me = asRecord(await callApi(token, { path: '/user' }, fetcher));
-	return {
-		login: String(me.login ?? ''),
-		name: typeof me.name === 'string' ? me.name : null,
-		avatarUrl: typeof me.avatar_url === 'string' ? me.avatar_url : null,
-	};
+	return userFrom(asRecord(await callApi(token, { path: '/user' }, fetcher)));
 };

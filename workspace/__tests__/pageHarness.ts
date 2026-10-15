@@ -34,12 +34,16 @@ export const PAGE_CONFIG = {
  * is someone: the page's tester, and the app's own sign-in, so a round trip has two people in it.
  */
 export const TOKENS: Record<string, string> = { 'good-token': 'pat', 'app-token': 'noah' };
+/** What `/user` says of those who have a name and a picture. */
+const PEOPLE: Record<string, { name: string; avatar_url: string }> = {
+	pat: { name: 'Pat Brennan', avatar_url: 'https://avatars.githubusercontent.com/u/1?v=4' },
+};
 export const fakeGitHub = () => {
 	const issues: {
 		number: number;
 		body: string;
 		labels: string[];
-		comments: { id: number; body: string; user: { login: string }; created_at: string }[];
+		comments: { id: number; body: string; user: { login: string; avatar_url?: string }; created_at: string }[];
 	}[] = [];
 	let nextId = 100;
 	const calls: string[] = [];
@@ -55,7 +59,7 @@ export const fakeGitHub = () => {
 		calls.push(`${method} ${path}`);
 		const login = TOKENS[(init.headers?.Authorization ?? '').replace(/^Bearer /, '')];
 		if (!login) return json(401, { message: 'Bad credentials' });
-		if (path === '/user') return json(200, { login });
+		if (path === '/user') return json(200, { login, ...PEOPLE[login] });
 		if (path === '/repos/acme/design/issues' && method === 'GET') {
 			return json(
 				200,

@@ -2,10 +2,12 @@ import type { MarkerRequest, MarkerResult } from '../shared/contract';
 import { INK } from '../shared/pageInk';
 import { asState, collapse, describe, pageState, place, route, shiftOutline, underlying } from './helpers';
 import { MESSAGE_PREFIX } from '../shared/pinMessage';
+import { AVATAR_XS_PX, initialOf, isAvatarUrl } from '../shared/avatar';
 
 interface Placed {
 	id: number;
-	number: number;
+	author: string;
+	avatarUrl: string | null;
 	draft: boolean;
 	movable: boolean;
 	el: Element;
@@ -16,7 +18,33 @@ interface Placed {
 }
 
 /**
- * Finds each comment's element and draws a numbered pin on it. Returns, per comment, how it was placed:
+ * What a pin carries, upright inside its turned shape, as a card carries them (the extra small avatar): the person's picture over their first letter, which shows until the
+ * picture loads, and stays when there is none or it does not. A pin being placed is nobody's yet, and carries nothing. The
+ * picture is drawn only from where the host serves them (`isAvatarUrl`), whoever asked, and never sends where the page is.
+ */
+const faceOf = (p: Placed): HTMLElement | null => {
+	if (p.draft) return null;
+	const size = AVATAR_XS_PX;
+	const face = document.createElement('span');
+	face.style.cssText = `position:relative;transform:rotate(45deg);width:${size}px;height:${size}px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;background:${INK.on};color:${INK.pin};font:700 11px/1 sans-serif;pointer-events:none`;
+	const letter = document.createElement('span');
+	letter.textContent = initialOf(p.author);
+	face.appendChild(letter);
+	if (isAvatarUrl(p.avatarUrl)) {
+		const picture = document.createElement('img');
+		picture.alt = '';
+		picture.referrerPolicy = 'no-referrer';
+		picture.draggable = false;
+		picture.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover';
+		picture.addEventListener('error', () => picture.remove());
+		picture.src = p.avatarUrl;
+		face.appendChild(picture);
+	}
+	return face;
+};
+
+/**
+ * Finds each comment's element and draws a pin on it, carrying the person who made it. Returns, per comment, how it was placed:
  *
  * - `found`: the selector still matches exactly one element;
  * - `moved`: it does not, but one element still starts with the text that was beside the comment, so the pin follows the
@@ -93,7 +121,16 @@ export const drawPins = (items: MarkerRequest[], nonce: string): MarkerResult[] 
 			results.push({ id: item.id, state: 'missing' });
 			continue;
 		}
-		placed.push({ id: item.id, number: item.number, draft: item.id < 0, movable: !!item.movable, el, offset: a.offset || { x: 0, y: 0 }, pos: null });
+		placed.push({
+			id: item.id,
+			author: item.author,
+			avatarUrl: item.avatarUrl,
+			draft: item.id < 0,
+			movable: !!item.movable,
+			el,
+			offset: a.offset || { x: 0, y: 0 },
+			pos: null,
+		});
 		results.push({ id: item.id, state });
 	}
 	if (placed.length === 0) {
@@ -131,10 +168,9 @@ export const drawPins = (items: MarkerRequest[], nonce: string): MarkerResult[] 
 		m.style.cssText = 'position:fixed;width:0;height:0;pointer-events:none';
 		const pin = document.createElement('div');
 		pin.style.cssText = `position:absolute;left:-14px;top:-33px;width:28px;height:28px;border-radius:50% 50% 50% 0;background:${p.draft ? INK.draft : INK.pin};border:2px solid ${INK.on};box-shadow:0 2px 6px ${INK.shadow};transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;pointer-events:auto;cursor:${p.movable ? 'grab' : 'pointer'}`;
-		const label = document.createElement('span');
-		label.textContent = String(p.number);
-		label.style.cssText = `transform:rotate(45deg);color:${INK.on};font:700 12px/1 sans-serif;pointer-events:none`;
-		pin.appendChild(label);
+		const face = faceOf(p);
+		if (face) pin.appendChild(face);
+		if (!p.draft) pin.title = p.author;
 		m.appendChild(pin);
 		p.marker = m;
 		layer.appendChild(m);

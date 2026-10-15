@@ -41,11 +41,12 @@ export const commentRef = ({ thread, id }: CommentRef): CommentRef => ({ thread,
  * What number each comment carries: the digit drawn in its pin, and the heading it is filed under
  * in the file an agent reads.
  *
- * One definition, used by both ends. A reviewer says "comment 3" having read it off a pin, and the
- * agent reads "Comment 3" out of a file written somewhere else entirely; if the two ever counted
- * differently, that sentence would quietly point at the wrong thing. Comments that point at the
- * page are numbered first, in the order they were made, so a pin's number is its place among the
- * pins; page-level ones follow. A comment keeps its number when others are resolved.
+ * One definition, used by both ends. Address names one comment to the agent as "comment 3", and the agent
+ * reads "Comment 3" out of a file written somewhere else entirely; if the two ever counted differently,
+ * that sentence would quietly point at the wrong thing. Nobody sees a number on screen (a pin and a card
+ * show the person), so this is the agent's way of naming a comment alone. Comments that point at the
+ * page are numbered first, in the order they were made; page-level ones follow. A comment keeps its
+ * number when others are resolved.
  */
 export const numberComments = (comments: ReviewComment[]): Map<number, number> => {
 	const ordered = [...comments].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
@@ -77,18 +78,18 @@ export const sameComments = (a: ReviewComment[] | null, b: ReviewComment[]): boo
  */
 export const markersFor = (
 	comments: ReviewComment[],
-	numbers: Map<number, number>,
 	me: string | null,
 	draft: { anchor: CommentAnchor; composing: boolean } | null,
 ): MarkerRequest[] => {
 	const anchored = comments.filter((c) => c.anchor);
-	// Resolved comments have no pin, but keep their number, so "comment 3" never changes meaning.
 	const items = openComments(anchored).map((c): MarkerRequest => ({
 		id: c.id,
-		number: numbers.get(c.id) ?? 0,
+		author: c.author,
+		avatarUrl: c.authorAvatarUrl,
 		anchor: c.anchor as CommentAnchor,
 		movable: c.author === me,
 	}));
-	if (draft?.composing) items.push({ id: -1, number: anchored.length + 1, anchor: draft.anchor, movable: true });
+	// Nobody's yet: a plain pin, until the comment is written.
+	if (draft?.composing) items.push({ id: -1, author: '', avatarUrl: null, anchor: draft.anchor, movable: true });
 	return items;
 };

@@ -33,11 +33,9 @@ describe('the changes to shadcn’s primitives', () => {
 		expect(ui(file)).toContain(what);
 	});
 
-	it('has none of the primitives the app’s screens needed and nothing now does', () => {
+	it('has none of the primitives the app’s screens needed and nothing now does (the avatar is the comments’, so it is here)', () => {
 		const present = readdirSync(join(__dirname, '..', 'src/renderer/ui')).sort();
-		expect(
-			present.filter((f) => ['popover.tsx', 'sheet.tsx', 'avatar.tsx', 'slider.tsx', 'accordion.tsx', 'tabs.tsx', 'card.tsx'].includes(f)),
-		).toEqual([]);
+		expect(present.filter((f) => ['popover.tsx', 'sheet.tsx', 'slider.tsx', 'accordion.tsx', 'tabs.tsx', 'card.tsx'].includes(f))).toEqual([]);
 	});
 
 	it('has no overlay registry: the native preview it served is gone', () => {

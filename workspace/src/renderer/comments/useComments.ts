@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { CommentAnchor, MarkerResult, MarkerState, PinEvent, ReviewComment } from '../../shared/contract';
-import { forgetPosted, markersFor, mergeComments, numberComments, openComments, sameComments } from '../../shared/comments';
+import { forgetPosted, markersFor, mergeComments, openComments, sameComments } from '../../shared/comments';
 import { latest } from '../../shared/latest';
 import { REFRESH_MS, USE_EVENTS, dueForCheck } from './refresh';
 import type { CommentStore, PageSurface } from './surfaces';
@@ -48,6 +48,8 @@ export const useComments = ({
 	const [pendingPicture, setPendingPicture] = useState<string | null>(null);
 	const [draft, setDraft] = useState('');
 	const [posting, setPosting] = useState(false);
+	// A comment on the whole page is being sent: the box at the panel's foot waits.
+	const [saying, setSaying] = useState(false);
 	const pickActive = useRef(false);
 	/** Set when the person backs out while a pick is still being read, so its result is dropped. */
 	const pickCanceled = useRef(false);
@@ -138,9 +140,6 @@ export const useComments = ({
 		};
 	}, [load]);
 
-	// The number on a pin and the number in the file the agent reads are the same number, counted once.
-	const numbers = useMemo(() => numberComments(comments ?? []), [comments]);
-	const numberOf = useCallback((id: number) => numbers.get(id) ?? 0, [numbers]);
 	// What is still to be dealt with. Resolved comments stay listed, but are not the count.
 	const total = openComments(comments ?? []).length;
 
@@ -163,7 +162,7 @@ export const useComments = ({
 	const drawMarkers = useCallback(async () => {
 		// Only your own pins can be dragged; GitHub would refuse anyone else's edit anyway.
 		// The pin being placed shows at once, before it is saved (id -1, amber).
-		const items = markersFor(comments ?? [], numbers, me, pending ? { anchor: pending, composing } : null);
+		const items = markersFor(comments ?? [], me, pending ? { anchor: pending, composing } : null);
 		// Several of the things this depends on can change inside one round trip to the page, so an older draw must not
 		// report its results over a newer one's: what is on the page would then be described by a list that is no longer
 		// what was drawn.
@@ -178,7 +177,7 @@ export const useComments = ({
 			return;
 		}
 		setPlaced(new Map(r.value.map((m: MarkerResult) => [m.id, m.state])));
-	}, [comments, numbers, pending, composing, me, page, setError]);
+	}, [comments, pending, composing, me, page, setError]);
 
 	// ...and again whenever the comments, the page, or the route change.
 	useEffect(() => {
@@ -300,22 +299,37 @@ export const useComments = ({
 		return () => window.removeEventListener('keydown', onKey);
 	}, [opened, mode, commentMode, cancelCompose, exitCommentMode, toggleCommentMode]);
 
+	/** Puts a comment on the thread and shows it. Says whether it went; when it did not, why is the panel's error. */
+	const send = async (body: string, anchor: CommentAnchor | null, picture: string | null): Promise<boolean> => {
+		const r = await store.post(body, anchor, picture);
+		if (!r.ok) setError(r.error);
+		else showChanged(r.value);
+		return r.ok;
+	};
+
 	/** Saves the comment being written. */
 	const post = async () => {
 		if (!draft.trim() || !pending) return;
 		setPosting(true);
-		const r = await store.post(draft.trim(), pending, pendingPicture);
+		const went = await send(draft.trim(), pending, pendingPicture);
 		setPosting(false);
-		if (r.ok) {
-			showChanged(r.value);
-			setDraft('');
-			setPending(null);
-			setPendingPicture(null);
-			setMode('browse'); // comment mode is still on, so the next click is waited for
-			await load();
-		} else {
-			setError(r.error);
-		}
+		if (!went) return;
+		setDraft('');
+		setPending(null);
+		setPendingPicture(null);
+		setMode('browse'); // comment mode is still on, so the next click is waited for
+		await load();
+	};
+
+	/** A comment on the page as a whole, from the box at the foot of the panel: no pin, but the same thread, so it has its number. */
+	const postGeneral = async (body: string): Promise<boolean> => {
+		if (!body.trim() || saying) return false;
+		setSaying(true);
+		setError(null);
+		const went = await send(body.trim(), null, null);
+		setSaying(false);
+		if (went) await load();
+		return went;
 	};
 
 	/** Deletes a comment for good. Says whether it went. */
@@ -358,7 +372,6 @@ export const useComments = ({
 
 	return {
 		comments,
-		numberOf,
 		total,
 		placed,
 		selected,
@@ -378,6 +391,8 @@ export const useComments = ({
 		setDraft,
 		posting,
 		post,
+		postGeneral,
+		saying,
 		cancelCompose,
 	};
 };

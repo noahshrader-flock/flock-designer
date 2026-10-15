@@ -99,13 +99,20 @@ describe('signing in on the published site (PUBLISHED_COMMENTS_PLAN, Phase 3)', 
 		expect(pending.verifier).toMatch(/^[A-Za-z0-9_-]{43,128}$/);
 	});
 
-	it('says who is signed in beside Sign out', async () => {
+	it('shows who is signed in as their picture at the end of the bar, small as the buttons beside it; pressed, it says who and offers Sign out', async () => {
 		saveToken('good-token');
 		await openSigning();
+		await settle();
+		const account = document.querySelector('[aria-label="Signed in as pat"]') as HTMLElement;
+		expect(account.querySelector('[data-slot="avatar"]')?.getAttribute('data-size')).toBe('sm');
+		const items = await openMenu(account);
+		expect(document.querySelector('[data-signed-in-as]')?.textContent).toBe('Pat Brennanpat');
+		expect(items.map((i) => i.textContent)).toEqual(['Sign out']);
+		// Not in the comments' drawer, where it was: that is the comments'.
 		await press(button(/^Show all comments/));
 		await settle();
-		expect(document.querySelector('[data-signed-in-as]')?.textContent).toBe('pat');
-		expect(button('Sign out')).toBeTruthy();
+		expect(cards()).toHaveLength(0);
+		expect([...document.querySelectorAll('button')].some((b) => b.textContent === 'Sign out')).toBe(false);
 	});
 
 	it('tells a person GitHub will not show the design repository who they are signed in as, and to sign out', async () => {
@@ -126,7 +133,8 @@ describe('signing in on the published site (PUBLISHED_COMMENTS_PLAN, Phase 3)', 
 		// The panel opens on its own to say it (`useOpenOnError`).
 		await settle();
 		expect(document.body.textContent).toContain('Signed in as outsider, who has no access to acme/design');
-		expect(button('Sign out')).toBeTruthy();
+		const items = await openMenu(document.querySelector('[aria-label="Signed in as outsider"]') as HTMLElement);
+		expect(items.map((i) => i.textContent)).toEqual(['Sign out']);
 	});
 
 	it('sends an ended sign-in through GitHub again, and forgets the token', async () => {
@@ -317,9 +325,8 @@ describe('signing in', () => {
 	it('forgets the token on signing out', async () => {
 		saveToken('good-token');
 		await open();
-		await press(button(/^Show all comments/));
 		await settle();
-		await press(button('Sign out'));
+		await press(menuItem(await openMenu(document.querySelector('[aria-label="Signed in as pat"]') as HTMLElement), 'Sign out'));
 		await settle();
 		expect(savedToken()).toBeNull();
 		expect(button('Sign in to comment')).toBeTruthy();
@@ -349,7 +356,8 @@ describe('commenting on the page', () => {
 		expect(gh.issues[0]?.comments[0]?.body).toContain('clear-filter-button');
 
 		// The numbered pin in the prototype, and the card in the side panel.
-		expect(doc.querySelector('[data-fd-layer="pins"]')?.textContent).toContain('1');
+		// The pin carries who made it (here with no picture, so their first letter), and the card too, as the person, not a number.
+		expect(doc.querySelector('[data-fd-layer="pins"]')?.textContent).toContain('P');
 		expect(button(/^Show all comments/).textContent).toBe('1');
 		await press(button(/^Show all comments/));
 		await settle();
@@ -382,7 +390,7 @@ describe('commenting on the page', () => {
 						'From the app',
 						anAnchor({ route: '/demo/v1-i1/', selector: '[data-e2e-ref="clear-filter-button"]', nearbyText: 'Clear Filter' }),
 					),
-					user: { login: 'noah' },
+					user: { login: 'noah', avatar_url: 'https://avatars.githubusercontent.com/u/9?v=4' },
 					created_at: '2026-10-08T09:00:00Z',
 				},
 			],
@@ -390,7 +398,17 @@ describe('commenting on the page', () => {
 		void made;
 		const { doc } = await open();
 		await settle();
-		expect(doc.querySelector('[data-fd-layer="pins"]')?.textContent).toContain('1');
+		// Pinned where it was made, carrying the person: their picture from the host, over their first letter.
+		const pin = doc.querySelector('[data-fd-layer="pins"]');
+		expect(pin?.querySelector('img')?.getAttribute('src')).toBe('https://avatars.githubusercontent.com/u/9?v=4');
+		expect(pin?.textContent).toContain('N');
+		// And its card in the panel starts with them, not a number.
+		await press(button(/^Show all comments/));
+		await settle();
+		expect(cards()[0]?.querySelector('[data-slot="avatar"]')?.getAttribute('title')).toBe('noah');
+		// The extra small, the size of the picture on its pin.
+		expect(cards()[0]?.querySelector('[data-slot="avatar"]')?.getAttribute('data-size')).toBe('xs');
+		expect(cards()[0]?.querySelector('[data-slot="avatar-fallback"]')?.textContent).toBe('N');
 	});
 });
 

@@ -1,4 +1,4 @@
-import { ChevronLeftIcon, LogOutIcon, WandSparklesIcon } from 'lucide-react';
+import { ChevronLeftIcon, WandSparklesIcon } from 'lucide-react';
 import { type ReactNode, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { commentRef } from '../shared/comments';
@@ -20,7 +20,9 @@ import { DropdownMenuItem } from '../renderer/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../renderer/ui/tooltip';
 import { browserComments, framePage, saveToken, savedToken, tokenApi } from './browserAdapter';
 import { NOTE_WORDS, type SignInConfig, type SignInNote, signedInJustNow, startSignIn } from './signIn';
-import { loginOf } from '../host/github';
+import { userOf } from '../host/github';
+import type { GitHubUser } from '../shared/domain/account';
+import { AccountMenu } from './AccountMenu';
 import { type Relay, loginIn, relayComments } from './relay';
 import { closeUnlessBusy } from '../renderer/dialogClose';
 import { CommentsPanel } from '../renderer/comments/CommentsPanel';
@@ -135,7 +137,7 @@ export const Viewer = ({
 	const [token, setToken] = useState<string | null>(savedToken);
 	const [askedHere, setAskedHere] = useState(false);
 	const [said, setSaid] = useState<SignInNote | null>(note);
-	const [login, setLogin] = useState<string | null>(null);
+	const [user, setUser] = useState<GitHubUser | null>(null);
 	// The frame opens in the page's first state; another is the same page, asked for in it.
 	const [shownState, setShownState] = useState<string | null>(null);
 	// The theme it is shown in: light, the page's own address, until dark is chosen, which the page is then asked for.
@@ -171,8 +173,8 @@ export const Viewer = ({
 		[github, config, branch],
 	);
 	useEffect(() => {
-		setLogin(null);
-		if (github) void loginOf(github).then(setLogin, () => setLogin(null));
+		setUser(null);
+		if (github) void userOf(github).then(setUser, () => setUser(null));
 	}, [github]);
 	if (relay) return <InDsnr config={config} slots={slots} showing={showing} relay={relay} {...(onAddressed ? { onAddressed } : {})} />;
 	const signOut = () => {
@@ -188,19 +190,7 @@ export const Viewer = ({
 					slots={slots}
 					showing={showing}
 					store={tokenStore}
-					heading={
-						<span className="flex items-center gap-1">
-							{login && (
-								<span data-signed-in-as className="text-muted-foreground truncate text-xs" title={`Signed in to GitHub as ${login}`}>
-									{login}
-								</span>
-							)}
-							<Button size={BAR} variant="ghost" title="Sign out of this site, forgetting the sign-in kept in this browser" onClick={signOut}>
-								<LogOutIcon />
-								Sign out
-							</Button>
-						</span>
-					}
+					account={user && <AccountMenu user={user} onSignOut={signOut} />}
 				/>
 			) : (
 				<PageBar config={config} slots={slots} showing={showing}>
@@ -308,15 +298,15 @@ const Commenting = ({
 	slots,
 	showing,
 	store,
-	heading,
+	account,
 	actions,
 }: {
 	config: ViewerConfig;
 	slots: ViewerSlots;
 	showing: Showing;
 	store: CommentStore;
-	/** What the panel's heading has at its end: Sign out, for a token kept in the browser. */
-	heading?: ReactNode;
+	/** Who is signed in, at the end of the bar, for a token kept in the browser. */
+	account?: ReactNode;
 	/** More at the top of an open comment's menu: Address, in DSNR. */
 	actions?: (comment: ReviewComment) => ReactNode;
 }) => {
@@ -363,6 +353,7 @@ const Commenting = ({
 		<>
 			<PageBar config={config} slots={slots} showing={showing}>
 				<CommentControl comments={comments} listOpen={listOpen} onToggleList={() => setListOpen((o) => !o)} disabled={!opened} size={BAR} />
+				{account}
 			</PageBar>
 			{listOpen &&
 				createPortal(
@@ -371,7 +362,6 @@ const Commenting = ({
 						<CommentsPanel
 							comments={comments}
 							error={error}
-							heading={heading}
 							{...(actions ? { actions } : {})}
 							states={showing.states}
 							onShowState={showing.onState}

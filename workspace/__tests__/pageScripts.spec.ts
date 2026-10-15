@@ -128,7 +128,8 @@ describe('picking an element', () => {
 
 const req = (id: number, anchor: Partial<CommentAnchor>): MarkerRequest => ({
 	id,
-	number: id,
+	author: 'noah',
+	avatarUrl: null,
 	anchor: anAnchor({ route: '/users#/list', selector: 'x', ...anchor }),
 });
 
@@ -176,13 +177,43 @@ describe('a prototype, which is one page wherever it is served', () => {
 });
 
 describe('placing comments on reopening', () => {
-	it('finds an element by its selector and draws a numbered marker', () => {
+	it('finds an element by its selector and draws a pin carrying who made it: their first letter, with no picture', () => {
 		const w = page(CARD);
 		const out = w.eval(resolveScript([req(1, { selector: '[data-e2e-ref="users-invite"]', offset: { x: 0.5, y: 0.5 } })], 'nonce')) as Array<{
 			state: string;
 		}>;
 		expect(out[0]?.state).toBe('found');
-		expect(w.document.querySelector('[data-fd-layer]')?.textContent).toBe('1');
+		const layer = w.document.querySelector('[data-fd-layer]');
+		expect(layer?.textContent).toBe('N');
+		expect(layer?.querySelector('img')).toBeNull();
+		expect(layer?.querySelector('[title]')?.getAttribute('title')).toBe('noah');
+	});
+
+	it('draws their picture over the letter when the host serves one, and never one from anywhere else', () => {
+		const w = page(CARD);
+		const at = { selector: '[data-e2e-ref="users-invite"]' };
+		const mine = (id: number, avatarUrl: string | null): MarkerRequest => ({ ...req(id, at), avatarUrl });
+		w.eval(
+			resolveScript(
+				[
+					mine(1, 'https://avatars.githubusercontent.com/u/1?v=4'),
+					mine(2, 'https://evil.example/u.png'),
+					mine(3, 'javascript:alert(1)'),
+					mine(4, 'https://avatars.githubusercontent.com.evil.example/u.png'),
+				],
+				'nonce',
+			),
+		);
+		const pictures = [...w.document.querySelectorAll('[data-fd-layer] img')].map((i) => i.getAttribute('src'));
+		expect(pictures).toEqual(['https://avatars.githubusercontent.com/u/1?v=4']);
+		// The ones refused still carry their person, as a letter.
+		expect(w.document.querySelector('[data-fd-layer]')?.textContent).toBe('NNNN');
+	});
+
+	it('draws the pin being placed plain: it is nobody’s yet', () => {
+		const w = page(CARD);
+		w.eval(resolveScript([{ ...req(-1, { selector: '[data-e2e-ref="users-invite"]' }), author: '' }], 'nonce'));
+		expect(w.document.querySelector('[data-fd-layer]')?.textContent).toBe('');
 	});
 
 	it('follows the text when the markup changed', () => {
@@ -639,7 +670,7 @@ describe('the scripts on the page', () => {
 		const picked = w.eval(SINGLE_PAGE + PICK_SCRIPT) as Promise<unknown>;
 		click(w, w.document.querySelector('button')!);
 		await picked;
-		w.eval(resolveScript([{ id: 1, number: 1, anchor: anAnchor({ selector: 'button', nearbyText: 'Save' }) }], 'n'));
+		w.eval(resolveScript([{ id: 1, author: 'noah', avatarUrl: null, anchor: anAnchor({ selector: 'button', nearbyText: 'Save' }) }], 'n'));
 		await w.eval(layerVisibleScript(false));
 		expect(
 			Object.keys(w)
