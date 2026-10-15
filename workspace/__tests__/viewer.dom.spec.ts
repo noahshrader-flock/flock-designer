@@ -17,13 +17,13 @@ import {
 	render,
 	settle,
 	shownState,
-	state,
-	stateButtons,
-	stateGroup,
+	chooseState,
+	stateMenu,
 	typeInto,
 	unmountAll,
 	shownTheme,
 	themeButton,
+	themeGroup,
 } from './reviewHarness';
 import { anAnchor } from './fixtures';
 
@@ -125,20 +125,20 @@ describe('the states of the page', () => {
 		return page;
 	};
 
-	it('are a group of buttons between the version and the history, and pressing one opens the page in it', async () => {
+	it('are a dropdown between the version and the history, and choosing one opens the page in it', async () => {
 		const { frame } = await withStates(['default', 'filtered', 'panel']);
-		expect(stateButtons().map((i) => i.textContent)).toEqual(['Default', 'Filtered', 'Panel']);
 		expect(shownState()).toBe('Default');
-		// In the bar's order: the version, the states, then the history.
+		// In the bar's order: the version, the states, the history, then the theme.
 		const before = (a: Element, b: Element) => !!(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
-		expect(before(button('Version V1: switch version'), stateGroup() as Element)).toBe(true);
-		expect(before(stateGroup() as Element, button('Iteration I1: switch iteration'))).toBe(true);
-		await press(state('Panel'));
+		expect(before(button('Version V1: switch version'), stateMenu() as Element)).toBe(true);
+		expect(before(stateMenu() as Element, button('Iteration I1: switch iteration'))).toBe(true);
+		expect(before(button('Iteration I1: switch iteration'), themeGroup() as Element)).toBe(true);
+		await chooseState('Panel');
 		await settle();
 		expect(frame.getAttribute('src')).toBe('page.html?state=panel');
 		expect(shownState()).toBe('Panel');
 		// Back to the first is the page as it opens.
-		await press(state('Default'));
+		await chooseState('Default');
 		await settle();
 		expect(frame.getAttribute('src')).toBe('page.html');
 	});
@@ -177,7 +177,7 @@ describe('the states of the page', () => {
 		await settle();
 		expect(frame.getAttribute('src')).toBe('page.html?theme=dark');
 		expect(shownTheme()).toBe('Dark');
-		await press(state('Panel'));
+		await chooseState('Panel');
 		await settle();
 		expect(frame.getAttribute('src')).toBe('page.html?state=panel&theme=dark');
 		// Back to light, the default: the address says nothing.

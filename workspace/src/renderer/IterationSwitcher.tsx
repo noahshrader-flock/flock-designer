@@ -60,7 +60,7 @@ export const IterationSwitcher = <T extends Switchable>({
 	onSelect: (next: T) => void;
 	/** Said after an iteration's name in the menu, when there is something to say about it. */
 	note?: (iteration: T) => string;
-	/** A prototype's own controls (its states), between the version and the history, where they read left to right. */
+	/** A prototype's states, between the version and the history, where they read left to right. */
 	children?: ReactNode;
 }) => {
 	const go = (branch: string) => {
@@ -121,9 +121,9 @@ export const IterationSwitcher = <T extends Switchable>({
 };
 
 /**
- * A prototype's states (see `shared/prototypeStates`), as a group of buttons with the one shown pressed: they are few,
- * and each is a way of seeing the page, so each is one press away. Not there with fewer than two, as there is nothing
- * to switch to. `null` is the first, the state the page opens in, so choosing it goes back to the page's own address.
+ * A prototype's states (see `shared/prototypeStates`), as a dropdown that says the one shown, like the version beside it:
+ * each is a way of seeing the page, and the list names them all. Not there with fewer than two, as there is nothing to
+ * switch to. `null` is the first, the state the page opens in, so choosing it goes back to the page's own address.
  */
 export const StateSwitcher = ({
 	states,
@@ -138,26 +138,18 @@ export const StateSwitcher = ({
 	// One it no longer has (it was built again without it) shows as the page does: in the first.
 	const here = current !== null && states.includes(current) ? current : (states[0] as string);
 	return (
-		<ToggleGroup
-			type="single"
-			variant="outline"
-			spacing={0}
-			aria-label="State"
+		<SwitchMenu
+			what="state"
+			label={stateLabel(here)}
 			value={here}
-			// Pressing the one shown would unpress it, leaving none shown: it stays.
-			onValueChange={(next) => next !== '' && next !== here && onSelect(next === states[0] ? null : next)}
-		>
-			{states.map((s) => (
-				<ToggleGroupItem key={s} value={s}>
-					{stateLabel(s)}
-				</ToggleGroupItem>
-			))}
-		</ToggleGroup>
+			choices={states.map((s) => ({ value: s, label: stateLabel(s) }))}
+			onChange={(next) => onSelect(next === states[0] ? null : next)}
+		/>
 	);
 };
 
 /**
- * Light and Dark, beside the states: the prototype in either theme, whatever the machine is set to.
+ * Light and Dark, after the history: the prototype in either theme, whatever the machine is set to.
  * The one shown is pressed: light, the default, until the other is chosen.
  */
 export const ThemeSwitcher = ({ shown }: { shown: ShownTheme }) => (

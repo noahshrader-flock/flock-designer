@@ -5,7 +5,7 @@ import { Review } from '../src/renderer/Review';
 import { Viewer } from '../src/viewer/Viewer';
 import { aProject } from './fixtures';
 import { PAGE_CONFIG, sitePage } from './pageHarness';
-import { fakeApp, ok, render, reviewProps, settle, unmountAll } from './reviewHarness';
+import { fakeApp, ok, render, reviewProps, settle, stateMenu, unmountAll } from './reviewHarness';
 
 /**
  * The top bar's controls are all one size: the search field is the normal height, so the buttons and dropdowns beside it
@@ -53,17 +53,16 @@ describe('the top bar', () => {
 		expect(controls().map(size)).toEqual(controls().map(() => expect.stringMatching(/^(default|icon)$/)));
 	});
 
-	it('counts a prototype’s states among them, each the normal size', async () => {
+	it('counts a prototype’s states among them, the normal size', async () => {
 		const app = fakeApp({ openPrototype: async () => ok({ url: 'http://127.0.0.1:9/demo/v1-i1/', states: ['default', 'filtered', 'panel'] }) });
 		(window as unknown as { workspace: unknown }).workspace = app.api;
 		current = await render(createElement(Review, reviewProps() as never));
 		await settle();
-		const states = [...document.querySelectorAll<HTMLElement>('[aria-label="State"] [data-slot="toggle-group-item"]')];
-		expect(states).toHaveLength(3);
-		// Counted by the check above, and the same height as the dropdowns beside them.
-		expect(states.every((b) => controls().includes(b))).toBe(true);
-		expect(states.map(size)).toEqual(['default', 'default', 'default']);
-		// Light and Dark beside them (PROTOTYPE_THEME_PLAN), the same size.
+		const state = stateMenu() as HTMLElement;
+		// Counted by the check above, and the same height as the dropdowns beside it.
+		expect(controls().includes(state)).toBe(true);
+		expect(size(state)).toBe('default');
+		// Light and Dark after the history, the same size.
 		const themes = [...document.querySelectorAll<HTMLElement>('[aria-label="Theme"] [data-slot="toggle-group-item"]')];
 		expect(themes.map((b) => b.getAttribute('aria-label'))).toEqual(['Light', 'Dark']);
 		expect(themes.every((b) => controls().includes(b))).toBe(true);

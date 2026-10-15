@@ -10,6 +10,7 @@ import {
 	button,
 	cardFor,
 	cards,
+	chooseState,
 	comment,
 	fail,
 	fakeApp,
@@ -22,13 +23,12 @@ import {
 	reviewProps,
 	settle,
 	shownState,
-	state,
-	stateButtons,
-	stateGroup,
+	stateMenu,
 	typeInto,
 	unmountAll,
 	shownTheme,
 	themeButton,
+	themeGroup,
 } from './reviewHarness';
 
 /**
@@ -673,19 +673,23 @@ describe('there is no selected version', () => {
 describe('the prototype’s states', () => {
 	const withStates = (states: string[]) => fakeApp({ openPrototype: async () => ok({ url: 'http://127.0.0.1:9/demo/v1-i1/', states }) });
 
-	it('are a group of buttons in the bar, and pressing one opens the preview in it', async () => {
+	it('are a dropdown in the bar, and choosing one opens the preview in it', async () => {
 		const app = withStates(['default', 'filtered', 'panel']);
 		await open(app);
 		await settle();
 		expect(app.calls.pageOpen?.at(-1)).toEqual(['http://127.0.0.1:9/demo/v1-i1/']);
-		expect(stateButtons().map((s) => s.textContent)).toEqual(['Default', 'Filtered', 'Panel']);
 		expect(shownState()).toBe('Default');
-		await press(state('Filtered'));
+		// In the bar's order: the version, the states, the history, then the theme.
+		const before = (x: Element, y: Element) => !!(x.compareDocumentPosition(y) & Node.DOCUMENT_POSITION_FOLLOWING);
+		expect(before(button('Version V1: switch version'), stateMenu() as Element)).toBe(true);
+		expect(before(stateMenu() as Element, button('Iteration I1: switch iteration'))).toBe(true);
+		expect(before(button('Iteration I1: switch iteration'), themeGroup() as Element)).toBe(true);
+		await chooseState('Filtered');
 		await settle();
 		expect(app.calls.pageOpen?.at(-1)).toEqual(['http://127.0.0.1:9/demo/v1-i1/?state=filtered']);
 		expect(shownState()).toBe('Filtered');
 		// The first is the page as it opens.
-		await press(state('Default'));
+		await chooseState('Default');
 		await settle();
 		expect(app.calls.pageOpen?.at(-1)).toEqual(['http://127.0.0.1:9/demo/v1-i1/']);
 	});
@@ -760,7 +764,7 @@ describe('the prototype’s states', () => {
 		await press(themeButton('Dark'));
 		await settle();
 		expect(app.calls.pageOpen?.at(-1)).toEqual(['http://127.0.0.1:9/demo/v1-i1/?theme=dark']);
-		await press(state('Panel'));
+		await chooseState('Panel');
 		await settle();
 		expect(app.calls.pageOpen?.at(-1)).toEqual(['http://127.0.0.1:9/demo/v1-i1/?state=panel&theme=dark']);
 		expect(shownTheme()).toBe('Dark');
@@ -783,7 +787,7 @@ describe('the prototype’s states', () => {
 	it('are not offered for a prototype with one, or none', async () => {
 		await open(withStates(['default']));
 		await settle();
-		expect(stateGroup()).toBeNull();
+		expect(stateMenu()).toBeNull();
 		expect(button('Iteration I1: switch iteration')).toBeTruthy();
 	});
 });

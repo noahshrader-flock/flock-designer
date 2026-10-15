@@ -1,7 +1,7 @@
 import { createElement } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { IterationSwitcher, StateSwitcher } from '../src/renderer/IterationSwitcher';
-import { button, press, render, settle, shownState, state, stateButtons, stateGroup, unmountAll } from './reviewHarness';
+import { button, chooseState, openMenu, press, render, shownState, stateMenu, unmountAll } from './reviewHarness';
 
 /**
  * Switching between a project's work: for prototypes, a dropdown of its versions and, beside it, a dropdown of the
@@ -23,13 +23,6 @@ afterEach(async () => {
 	current = null;
 });
 
-/** Opens a dropdown as a pointer does, and returns its radio items. */
-const choices = async (trigger: Element): Promise<HTMLElement[]> => {
-	await press(trigger);
-	trigger.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, button: 0, pointerType: 'mouse' }));
-	await settle(2);
-	return [...document.querySelectorAll<HTMLElement>('[role="menuitemradio"]')];
-};
 const names = (items: HTMLElement[]) => items.map((i) => i.textContent?.trim());
 
 describe('for prototypes', () => {
@@ -45,52 +38,52 @@ describe('for prototypes', () => {
 
 	it('scrolls its history when there are many iterations', async () => {
 		await show('v1-i2');
-		await choices(button('Iteration I2: switch iteration'));
+		await openMenu(button('Iteration I2: switch iteration'));
 		expect(document.querySelector('[data-slot="dropdown-menu-content"]')?.className.split(' ')).toContain('max-h-72');
 	});
 
 	it('lists every version in the version dropdown, with this one chosen, and nothing of iterations', async () => {
 		await show('v1-i2');
-		const items = await choices(button('Version V1: switch version'));
+		const items = await openMenu(button('Version V1: switch version'));
 		expect(names(items)).toEqual(['V2', 'V1']);
 		expect(items.map((i) => i.getAttribute('aria-checked'))).toEqual(['false', 'true']);
 	});
 
 	it('lists only this version’s iterations in the iteration dropdown, newest first', async () => {
 		await show('v1-i2');
-		const items = await choices(button('Iteration I2: switch iteration'));
+		const items = await openMenu(button('Iteration I2: switch iteration'));
 		expect(names(items)).toEqual(['I3', 'I2', 'I1']);
 		expect(items.map((i) => i.getAttribute('aria-checked'))).toEqual(['false', 'true', 'false']);
 	});
 
 	it('lists them newest first, whatever order it was given them in', async () => {
 		await show('v1-i2', { siblings: ['v1-i1', 'v1-i3', 'v2-i1', 'v1-i2'].map(at) });
-		expect(names(await choices(button('Version V1: switch version')))).toEqual(['V2', 'V1']);
+		expect(names(await openMenu(button('Version V1: switch version')))).toEqual(['V2', 'V1']);
 		await unmountAll(current!.root);
 		await show('v1-i2', { siblings: ['v1-i1', 'v1-i3', 'v2-i1', 'v1-i2'].map(at) });
-		expect(names(await choices(button('Iteration I2: switch iteration')))).toEqual(['I3', 'I2', 'I1']);
+		expect(names(await openMenu(button('Iteration I2: switch iteration')))).toEqual(['I3', 'I2', 'I1']);
 	});
 
 	it('goes to the newest iteration of a version chosen, and to the iteration chosen', async () => {
 		const onSelect = await show('v1-i2');
-		await press((await choices(button('Version V1: switch version')))[0]!);
+		await press((await openMenu(button('Version V1: switch version')))[0]!);
 		expect(onSelect).toHaveBeenLastCalledWith(at('v2-i1'));
 		await unmountAll(current!.root);
 		const second = await show('v1-i2');
-		await press((await choices(button('Iteration I2: switch iteration')))[2]!);
+		await press((await openMenu(button('Iteration I2: switch iteration')))[2]!);
 		expect(second).toHaveBeenLastCalledWith(at('v1-i1'));
 	});
 
 	it('does nothing when the one you are on is chosen again', async () => {
 		const onSelect = await show('v1-i2');
-		await press((await choices(button('Version V1: switch version')))[1]!);
+		await press((await openMenu(button('Version V1: switch version')))[1]!);
 		expect(onSelect).not.toHaveBeenCalled();
 	});
 
 	it('follows the version you are on: its iterations are the ones listed', async () => {
 		await show('v2-i1');
 		expect(button('Version V2: switch version')).toBeTruthy();
-		expect(names(await choices(button('Iteration I1: switch iteration')))).toEqual(['I1']);
+		expect(names(await openMenu(button('Iteration I1: switch iteration')))).toEqual(['I1']);
 	});
 
 	it('is there with one version and one iteration, so where you are is always visible', async () => {
@@ -101,7 +94,7 @@ describe('for prototypes', () => {
 
 	it('says something after an iteration’s name in the iteration dropdown, when asked to', async () => {
 		await show('v1-i2', { note: (i: { name: string }) => (i.name === 'v1-i3' ? ' · only on this machine' : '') });
-		expect(names(await choices(button('Iteration I2: switch iteration')))).toEqual(['I3 · only on this machine', 'I2', 'I1']);
+		expect(names(await openMenu(button('Iteration I2: switch iteration')))).toEqual(['I3 · only on this machine', 'I2', 'I1']);
 	});
 
 	it('treats an older prototype named i1 as version 1', async () => {
@@ -128,32 +121,34 @@ describe('a prototype’s states', () => {
 		return onSelect;
 	};
 
-	it('are a group of buttons, one each, in the prototype’s own order', async () => {
+	it('are a dropdown that says the one shown, and lists them all in the prototype’s own order', async () => {
 		await showStates();
-		expect(stateGroup()).not.toBeNull();
-		expect(stateButtons().map((b) => b.textContent)).toEqual(['Default', 'Filtered', 'Panel']);
+		expect(stateMenu()?.getAttribute('aria-label')).toBe('State Default: switch state');
+		expect(shownState()).toBe('Default');
+		const items = await openMenu(stateMenu() as Element);
+		expect(names(items)).toEqual(['Default', 'Filtered', 'Panel']);
+		expect(items.map((i) => i.getAttribute('aria-checked'))).toEqual(['true', 'false', 'false']);
 	});
 
-	it('press the one you are on, the first until another is chosen', async () => {
-		await showStates();
-		expect(shownState()).toBe('Default');
-		expect(stateButtons().map((b) => b.getAttribute('aria-checked'))).toEqual(['true', 'false', 'false']);
-		await unmountAll(current!.root);
+	it('say the one you are on, the first until another is chosen', async () => {
 		await showStates({ current: 'panel' });
 		expect(shownState()).toBe('Panel');
+		expect((await openMenu(stateMenu() as Element)).map((i) => i.getAttribute('aria-checked'))).toEqual(['false', 'false', 'true']);
 	});
 
 	it('go to the state chosen, and back to the first as the one the page opens in', async () => {
 		const onSelect = await showStates({ current: 'panel' });
-		await press(state('Filtered'));
+		await chooseState('Filtered');
 		expect(onSelect).toHaveBeenLastCalledWith('filtered');
-		await press(state('Default'));
-		expect(onSelect).toHaveBeenLastCalledWith(null);
+		await unmountAll(current!.root);
+		const again = await showStates({ current: 'filtered' });
+		await chooseState('Default');
+		expect(again).toHaveBeenLastCalledWith(null);
 	});
 
-	it('do nothing when the one you are on is pressed again, rather than leaving none shown', async () => {
+	it('do nothing when the one you are on is chosen again', async () => {
 		const onSelect = await showStates({ current: 'panel' });
-		await press(state('Panel'));
+		await chooseState('Panel');
 		expect(onSelect).not.toHaveBeenCalled();
 		expect(shownState()).toBe('Panel');
 	});
@@ -163,18 +158,16 @@ describe('a prototype’s states', () => {
 		expect(shownState()).toBe('Default');
 	});
 
-	it('are the normal size of the bar, joined into one control, and are not words in a menu', async () => {
+	it('are the normal size of the bar, as the version beside them is', async () => {
 		await showStates();
-		expect(stateButtons().map((b) => b.getAttribute('data-size'))).toEqual(['default', 'default', 'default']);
-		expect(stateGroup()?.getAttribute('data-spacing')).toBe('0');
-		expect(document.querySelector('[role="menu"]')).toBeNull();
+		expect(stateMenu()?.getAttribute('data-size')).toBe('default');
 	});
 
 	it('are not there for a prototype with one state, or none: there is nothing to switch to', async () => {
 		await showStates({ states: ['default'] });
-		expect(stateGroup()).toBeNull();
+		expect(stateMenu()).toBeNull();
 		await unmountAll(current!.root);
 		await showStates({ states: [] });
-		expect(stateGroup()).toBeNull();
+		expect(stateMenu()).toBeNull();
 	});
 });

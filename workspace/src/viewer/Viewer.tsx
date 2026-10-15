@@ -95,8 +95,8 @@ const PageBar = ({ config, slots, showing, children }: { config: ViewerConfig; s
 					onSelect={(next) => void (location.href = next.href)}
 				>
 					<StateSwitcher states={showing.states} current={showing.state} onSelect={showing.onState} />
-					<ThemeSwitcher shown={showing.theme} />
 				</IterationSwitcher>
+				<ThemeSwitcher shown={showing.theme} />
 				{children}
 			</div>
 		</Toolbar>,

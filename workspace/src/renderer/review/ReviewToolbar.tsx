@@ -120,8 +120,8 @@ export const ReviewToolbar = ({
 					note={(i) => (i.localOnly && !project.localOnly ? ' · only on this machine' : '')}
 				>
 					<StateSwitcher states={states} current={shownState} onSelect={onShowState} />
-					{prototype && <ThemeSwitcher shown={shownTheme} />}
 				</IterationSwitcher>
+				{prototype && <ThemeSwitcher shown={shownTheme} />}
 				<CommentControl comments={comments} listOpen={listOpen} onToggleList={onToggleList} disabled={!opened} />
 				{onHandOff && (
 					<Button onClick={onHandOff}>
