@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { byVersion, latestIterationName, parsePrototypeName } from '../shared/prototypeNames';
 import { iterationLabel } from '../shared/work';
 import { stateLabel } from '../shared/prototypeStates';
-import { isTheme } from '../shared/prototypeTheme';
+import { THEMES, isTheme, themeLabel } from '../shared/prototypeTheme';
 import type { ShownTheme } from './useShownTheme';
 import { ToggleGroup, ToggleGroupItem } from './ui/toggle-group';
 import { capitalize } from '../shared/titleCase';
@@ -169,11 +169,10 @@ export const ThemeSwitcher = ({ shown }: { shown: ShownTheme }) => (
 		value={shown.theme}
 		onValueChange={(next) => isTheme(next) && next !== shown.theme && shown.onTheme(next)}
 	>
-		<ToggleGroupItem value="light" aria-label="Light" title="Light">
-			<SunIcon />
-		</ToggleGroupItem>
-		<ToggleGroupItem value="dark" aria-label="Dark" title="Dark">
-			<MoonIcon />
-		</ToggleGroupItem>
+		{THEMES.map((theme) => (
+			<ToggleGroupItem key={theme} value={theme} aria-label={themeLabel(theme)} title={themeLabel(theme)}>
+				{theme === 'dark' ? <MoonIcon /> : <SunIcon />}
+			</ToggleGroupItem>
+		))}
 	</ToggleGroup>
 );

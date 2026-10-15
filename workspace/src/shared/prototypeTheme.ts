@@ -10,6 +10,9 @@ export type Theme = (typeof THEMES)[number];
 
 export const isTheme = (v: unknown): v is Theme => v === 'light' || v === 'dark';
 
+/** How a theme is named, in the bar and on a comment's card. */
+export const themeLabel = (theme: Theme): string => (theme === 'dark' ? 'Dark' : 'Light');
+
 const KEY = 'theme';
 const parts = (query: string): string[] => query.replace(/^\?/, '').split('&').filter(Boolean);
 const ofKey = (part: string): boolean => part === KEY || part.startsWith(`${KEY}=`);

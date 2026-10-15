@@ -3,6 +3,7 @@ import { type ReactNode, useState } from 'react';
 import type { MarkerState, ReviewComment } from '../../shared/contract';
 import { stateLabel, stateOfQuery } from '../../shared/prototypeStates';
 import type { ShownTheme } from '../useShownTheme';
+import { themeLabel } from '../../shared/prototypeTheme';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { DropdownMenuItem, DropdownMenuSeparator } from '../ui/dropdown-menu';
@@ -124,7 +125,7 @@ export const CommentList = ({
 							)}
 							{showTheme && (
 								<Button size="sm" variant="outline" className="self-start" onClick={() => shownTheme?.onTheme(showTheme)}>
-									Show in {showTheme === 'dark' ? 'Dark' : 'Light'}
+									Show in {themeLabel(showTheme)}
 								</Button>
 							)}
 						</div>

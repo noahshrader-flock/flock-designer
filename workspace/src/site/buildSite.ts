@@ -1,7 +1,7 @@
 import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Iteration } from '../shared/contract';
-import { escapeHtml } from '../shared/html';
+import { escapeHtml, firstInHead } from '../shared/html';
 import { fromBrief } from '../shared/brief';
 import { SHARED_DIR, SHARED_REF, isPrototypeKey, sitePath } from '../shared/designPaths';
 import { parsePrototypeName } from '../shared/prototypeNames';
@@ -282,9 +282,7 @@ export const buildSite = ({ designRoot, outDir, comments, viewer, pagesAt }: Sit
 	 */
 	const withAgent = (html: string): string => {
 		if (!viewer) return html;
-		const tag = `<script src="../../../_viewer/${PAGE_AGENT}"></script>`;
-		const head = /<head\b[^>]*>/i.exec(html);
-		return head ? html.slice(0, head.index + head[0].length) + tag + html.slice(head.index + head[0].length) : tag + html;
+		return firstInHead(html, `<script src="../../../_viewer/${PAGE_AGENT}"></script>`);
 	};
 
 	writeFileSync(join(outDir, 'index.html'), indexPage(projects));
