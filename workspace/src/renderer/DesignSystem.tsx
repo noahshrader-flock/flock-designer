@@ -103,7 +103,7 @@ type PanelView = 'tokens' | 'component';
 const VIEW_KEY = 'dsnr.componentsView';
 
 /**
- * Which the side panel shows, as a button group like a prototype's states, across the panel's width: the component that is
+ * Which the side panel shows, as a button group across the panel's width: the component that is
  * open, or the tokens. Component is first, and off while none is open, as there is nothing to show; the tokens are what the
  * panel shows until then.
  */

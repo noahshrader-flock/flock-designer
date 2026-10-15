@@ -3,7 +3,7 @@ import { DEFAULT_THEME, isTheme, themeOfQuery, withTheme, withoutTheme } from '.
 import { withState } from '../src/shared/prototypeStates';
 
 /**
- * A prototype seen in light or dark, whatever the machine is set to (PROTOTYPE_THEME_PLAN): the theme rides in the page's
+ * A prototype seen in light or dark, whatever the machine is set to: the theme rides in the page's
  * address as `?theme=`, beside its state, and is never part of what tells one state from another.
  */
 

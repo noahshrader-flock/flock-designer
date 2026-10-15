@@ -1109,7 +1109,7 @@ describe('prototypes', () => {
 
 		const shown = await call(CHANNELS.openPrototype, 'demo', 'v1-i1');
 		expect(shown).toMatchObject({ ok: true, value: { states: [] } });
-		// Served as saved, with the theme its address may ask for put first (PROTOTYPE_THEME_PLAN): the app's preview runs no page agent.
+		// Served as saved, with the theme its address may ask for put first: the app's preview runs no page agent.
 		const served = await (await fetch((shown.value as { url: string }).url)).text();
 		expect(served).toMatch(/^<script>[\s\S]*prefers-color-scheme[\s\S]*<\/script><h1>Demo<\/h1>$/);
 
