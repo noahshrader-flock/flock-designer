@@ -160,8 +160,6 @@ let checkPage: Fn;
 let drawCover: Fn;
 /** A file read from GitHub as bytes: none, unless a test says otherwise. */
 let readBytes: Fn;
-/** What the window is told its appearance is, as the app tells the system's theme setting: the calls, in order. */
-let applied: string[] = [];
 let register: (more?: Partial<IpcContext>) => ReturnType<typeof registerIpc>;
 let prototypeServer: InstanceType<(typeof import('../src/main/services/prototypeServer'))['PrototypeServer']>;
 
@@ -178,7 +176,6 @@ const world = madeOnce((d) => {
 
 beforeEach(async () => {
 	handlers.clear();
-	applied = [];
 	vi.resetModules();
 	home = world.dir;
 	product = join(home, 'GitHub', 'flock-coke');
@@ -231,7 +228,6 @@ beforeEach(async () => {
 	);
 	drawCover = vi.fn(async () => JPEG);
 	readBytes = vi.fn(async () => null);
-	const { AppearanceMemory } = await import('../src/main/services/appearance');
 	const { Installer } = await import('../src/main/services/install');
 	const { DesignSystemsMemory } = await import('../src/main/services/designSystems');
 	const { SessionMemory } = await import('../src/main/services/editor');
@@ -267,8 +263,6 @@ beforeEach(async () => {
 			onPublishStatus: vi.fn(),
 			prototypesRoot: join(home, 'prototype'),
 			prototypeServer,
-			appearanceMemory: new AppearanceMemory(join(home, 'appearance.json')),
-			applyAppearance: (a: string) => void applied.push(a),
 			designSystems: new DesignSystemsMemory(join(home, 'design-system.json')),
 			// Every file the app keeps is in this test's own folder: none is shared with another run or worker.
 			sessions: new SessionMemory(join(home, 'agent-sessions.json')),
@@ -502,6 +496,8 @@ describe('where new work starts', () => {
 });
 
 describe('prototypes', () => {
+	/** The task the hand-over wrote for demo's v1-i1, beside the prototype: what Claude Code is given. */
+	const taskFileText = () => readFileSync(join(home, 'prototype', 'demo', 'v1-i1-build.md'), 'utf8');
 	const writeSkill = () => {
 		mkdirSync(join(design, 'skills'), { recursive: true });
 		writeFileSync(join(design, 'skills', 'build-prototype.md'), '# Build');
@@ -513,14 +509,14 @@ describe('prototypes', () => {
 		await trustFolder(product);
 		await call(CHANNELS.createPrototype, 'demo', 'Demo', 'A list', { root: product, branch: 'develop' });
 		// No manifest: the default, and said so.
-		await call(CHANNELS.buildPrototype, 'demo', 'v1-i1', 'A list');
-		let task = agentStart.mock.calls.at(-1)?.[2] as string;
+		await call(CHANNELS.handPrototypeBuild, product, 'demo', 'v1-i1', 'A list');
+		let task = taskFileText();
 		expect(task).toContain('## Accessibility');
 		expect(task).toContain('Test Product has no .dsnr/manifest.md, so it declares no target. Build to **WCAG 2.2 Level AA**');
 		// The product's own target, once its manifest declares one; and the rules, ahead of what the person asked for.
 		writeFileSync(join(product, '.dsnr', 'manifest.md'), readFileSync(join(__dirname, 'fixtures/coke-manifest.md'), 'utf8'));
-		await call(CHANNELS.buildPrototype, 'demo', 'v1-i1', 'A list');
-		task = agentStart.mock.calls.at(-1)?.[2] as string;
+		await call(CHANNELS.handPrototypeBuild, product, 'demo', 'v1-i1', 'A list');
+		task = taskFileText();
 		expect(task).toContain("This product's target, from Test Product's .dsnr/manifest.md: **WCAG 2.0 Level A**, checked with the axe tags `wcag2a`.");
 		expect(task).toContain('#### Names');
 		expect(task.indexOf('## Accessibility')).toBeLessThan(task.indexOf('## What the person asked for'));
@@ -594,7 +590,7 @@ describe('prototypes', () => {
 		writeFileSync(records, JSON.stringify(list));
 		// The build is refused as a branch that does not exist, and git is never handed the option, whichever check
 		// reaches it first.
-		const built = await call(CHANNELS.buildPrototype, 'demo', 'v1-i1', 'A list');
+		const built = await call(CHANNELS.handPrototypeBuild, product, 'demo', 'v1-i1', 'A list');
 		expect(built.error).toMatch(/There is no branch called --output=/);
 		expect(existsSync(written)).toBe(false);
 	});
@@ -605,29 +601,29 @@ describe('prototypes', () => {
 		await call(CHANNELS.createPrototype, 'demo', 'Demo', 'A list', { root: product, branch: 'develop' });
 		const voiceFile = join(dirname(product), 'x', '.dsnr', 'voice-and-tone.md');
 		// No file: nothing said of it.
-		await call(CHANNELS.buildPrototype, 'demo', 'v1-i1', 'A list');
-		expect(agentStart.mock.calls.at(-1)?.[2]).not.toContain('## Voice and tone');
+		await call(CHANNELS.handPrototypeBuild, product, 'demo', 'v1-i1', 'A list');
+		expect(taskFileText()).not.toContain('## Voice and tone');
 		// An empty file, as the repository has it until it is written: still nothing, and the task goes ahead.
 		mkdirSync(dirname(voiceFile), { recursive: true });
 		writeFileSync(voiceFile, '');
-		expect((await call(CHANNELS.buildPrototype, 'demo', 'v1-i1', 'A list')).ok).toBe(true);
-		expect(agentStart.mock.calls.at(-1)?.[2]).not.toContain('## Voice and tone');
+		expect((await call(CHANNELS.handPrototypeBuild, product, 'demo', 'v1-i1', 'A list')).ok).toBe(true);
+		expect(taskFileText()).not.toContain('## Voice and tone');
 		// A file with nothing written under its headings: still nothing.
 		writeFileSync(voiceFile, '# Voice and tone\n\n## Voice\n\n<!-- how Flock sounds -->\n');
-		await call(CHANNELS.buildPrototype, 'demo', 'v1-i1', 'A list');
-		expect(agentStart.mock.calls.at(-1)?.[2]).not.toContain('## Voice and tone');
+		await call(CHANNELS.handPrototypeBuild, product, 'demo', 'v1-i1', 'A list');
+		expect(taskFileText()).not.toContain('## Voice and tone');
 		// Written: its words, after the accessibility rules and before what the person asked for.
 		writeFileSync(voiceFile, '# Voice and tone\n\n## Voice\n\nCalm and exact.\n');
-		await call(CHANNELS.buildPrototype, 'demo', 'v1-i1', 'A list');
-		let task = agentStart.mock.calls.at(-1)?.[2] as string;
+		await call(CHANNELS.handPrototypeBuild, product, 'demo', 'v1-i1', 'A list');
+		let task = taskFileText();
 		expect(task).toContain('## Voice and tone');
 		expect(task).toContain('### Voice\n\nCalm and exact.');
 		expect(task.indexOf('## Accessibility')).toBeLessThan(task.indexOf('## Voice and tone'));
 		expect(task.indexOf('## Voice and tone')).toBeLessThan(task.indexOf('## What the person asked for'));
 		// Changed: the next task has the change, as nothing keeps a copy.
 		writeFileSync(voiceFile, '# Voice and tone\n\n## Voice\n\nWarm and exact.\n');
-		await call(CHANNELS.buildPrototype, 'demo', 'v1-i1', 'A list');
-		task = agentStart.mock.calls.at(-1)?.[2] as string;
+		await call(CHANNELS.handPrototypeBuild, product, 'demo', 'v1-i1', 'A list');
+		task = taskFileText();
 		expect(task).toContain('Warm and exact.');
 		expect(task).not.toContain('Calm and exact.');
 	});
@@ -697,44 +693,6 @@ describe('prototypes', () => {
 		const again = (await call(CHANNELS.openPrototype, 'demo', 'v1-i1')).value as { url: string; states: string[] };
 		expect(again.states).toEqual(['default', 'empty']);
 		expect(await (await fetch(`${again.url}?state=empty`)).text()).toContain('<h1>Demo</h1>');
-	});
-
-	it('record what they are modeled on, and give the agent that branch to read, never to change', async () => {
-		await trustFolder(product);
-		writeSkill();
-		g(product, 'checkout', '-q', '-b', 'noah/baseline');
-		writeFileSync(join(product, 'baseline.txt'), 'only on the baseline');
-		g(product, 'add', '.');
-		g(product, 'commit', '-q', '-m', 'baseline');
-		g(product, 'checkout', '-q', 'develop');
-
-		const made = await call(CHANNELS.createPrototype, 'demo', 'Demo', 'A list', { root: product, branch: 'noah/baseline' });
-		expect(made).toMatchObject({ ok: true, value: { basedOn: { repository: 'flock-coke', branch: 'noah/baseline' } } });
-
-		await call(CHANNELS.buildPrototype, 'demo', 'v1-i1', 'A list');
-		const extras = agentStart.mock.calls.at(-1)?.[3] as { readOnly: string[]; bare: boolean };
-		expect(extras.bare).toBe(true);
-		// Another branch than the one checked out: the app's own copy of it, and the person's checkout untouched.
-		const copy = extras.readOnly[0] as string;
-		// The guidance goes with the code when that branch has it.
-		expect(extras.readOnly).toContain(join(copy, '.dsnr'));
-		expect(copy.startsWith(join(home, 'prototype'))).toBe(true);
-		expect(readFileSync(join(copy, 'baseline.txt'), 'utf8')).toBe('only on the baseline');
-		expect(g(product, 'branch', '--show-current').trim()).toBe('develop');
-		expect(existsSync(join(product, 'baseline.txt'))).toBe(false);
-
-		// On the branch already: the clone itself.
-		await call(CHANNELS.createPrototype, 'demo', 'Demo', 'Another', { root: product, branch: 'develop' });
-		await call(CHANNELS.buildPrototype, 'demo', 'v2-i1', 'Another');
-		const p = realpathSync(product);
-		const standards = join(realpathSync(design), 'standards');
-		expect((agentStart.mock.calls.at(-1)?.[3] as { readOnly: string[] }).readOnly).toEqual([
-			p,
-			join(p, '.dsnr'),
-			join(p, 'node_modules', 'x'),
-			standards,
-			join(p, 'node_modules'),
-		]);
 	});
 
 	describe('publishing what the app made', () => {
@@ -1062,39 +1020,6 @@ describe('prototypes', () => {
 		});
 	});
 
-	it('build once when asked twice at the same moment, as a screen opened twice does', async () => {
-		await trustFolder(product);
-		writeSkill();
-		g(product, 'checkout', '-q', '-b', 'noah/baseline');
-		g(product, 'checkout', '-q', 'develop');
-		await call(CHANNELS.createPrototype, 'demo', 'Demo', 'A list', { root: product, branch: 'noah/baseline' });
-		const [a, b] = await Promise.all([
-			call(CHANNELS.buildPrototype, 'demo', 'v1-i1', 'A list'),
-			call(CHANNELS.buildPrototype, 'demo', 'v1-i1', 'A list'),
-		]);
-		expect(a.ok).toBe(true);
-		expect(b.ok).toBe(true);
-	});
-
-	it('refuse to build while another prototype’s agent is running, rather than wait on that run and save this one unbuilt', async () => {
-		const { runner, sessionsSpawned } = await realRunner();
-		register({ agent: runner });
-		await trustFolder(product);
-		writeSkill();
-		await call(CHANNELS.createPrototype, 'demo', 'Demo', 'A list', { root: product, branch: 'develop' });
-		await call(CHANNELS.createPrototype, 'other', 'Other', 'A table', { root: product, branch: 'develop' });
-		expect((await call(CHANNELS.buildPrototype, 'demo', 'v1-i1', 'A list')).ok).toBe(true);
-		// The same prototype asked again joins its run.
-		expect(await call(CHANNELS.buildPrototype, 'demo', 'v1-i1', 'A list')).toMatchObject({
-			ok: true,
-			value: { state: 'running', work: 'prototype/demo/v1-i1' },
-		});
-		const other = await call(CHANNELS.buildPrototype, 'other', 'v1-i1', 'A table');
-		expect(other.ok).toBe(false);
-		expect(other.error).toMatch(/already working on something else/);
-		expect(sessionsSpawned).toHaveLength(1);
-	});
-
 	it('save a page that was built here but never saved, when it is opened', async () => {
 		await trustFolder(product);
 		await call(CHANNELS.createPrototype, 'demo', 'Demo', 'A list', { root: product, branch: 'develop' });
@@ -1102,41 +1027,6 @@ describe('prototypes', () => {
 		writeFileSync(join(home, 'prototype', 'demo', 'v1-i1.html'), '<h1>Built, left behind</h1>');
 		expect((await call(CHANNELS.openPrototype, 'demo', 'v1-i1')).ok).toBe(true);
 		expect(readFileSync(join(design, 'projects', 'demo', 'prototypes', 'v1-i1.html'), 'utf8')).toBe('<h1>Built, left behind</h1>');
-	});
-
-	it("take the product's guidance from the accepted checkout when the branch has none, as develop does not", async () => {
-		await trustFolder(product);
-		writeSkill();
-		g(product, 'checkout', '-q', '-b', 'bare-develop');
-		g(product, 'rm', '-rq', '.dsnr');
-		g(product, 'commit', '-q', '-m', 'no setup on this branch');
-		g(product, 'checkout', '-q', 'develop');
-		await call(CHANNELS.createPrototype, 'demo', 'Demo', 'A list', { root: product, branch: 'bare-develop' });
-		await call(CHANNELS.buildPrototype, 'demo', 'v1-i1', 'A list');
-		const readOnly = (agentStart.mock.calls.at(-1)?.[3] as { readOnly: string[] }).readOnly;
-		expect(readOnly).toContain(join(realpathSync(product), '.dsnr'));
-	});
-
-	it('write React when the product is installed here, then build it on save and keep the source beside the page', async () => {
-		await trustFolder(product);
-		writeSkill();
-
-		await call(CHANNELS.createPrototype, 'demo', 'Demo', 'A list', { root: product, branch: 'develop' });
-		await call(CHANNELS.buildPrototype, 'demo', 'v1-i1', 'A list');
-		const task = agentStart.mock.calls.at(-1)?.[2] as string;
-		expect(task).toContain(`Write \`${join(home, 'prototype', 'demo', 'v1-i1.tsx')}\``);
-
-		// What the agent writes, then Save.
-		writeFileSync(
-			join(home, 'prototype', 'demo', 'v1-i1.tsx'),
-			"/* A page made of the real thing. */\nimport { Hello } from 'x';\nexport default () => <Hello />;\n",
-		);
-		const saved = await call(CHANNELS.savePrototype, 'demo', 'v1-i1');
-		expect(saved).toEqual({ ok: true, value: null });
-		const page = readFileSync(join(design, 'projects', 'demo', 'prototypes', 'v1-i1.html'), 'utf8');
-		expect(page).toContain('A page made of the real thing.');
-		expect(page).toContain('<div id="root"></div>');
-		expect(readFileSync(join(design, 'projects', 'demo', 'prototypes', 'v1-i1.tsx'), 'utf8')).toContain("from 'x'");
 	});
 
 	it('keep a large embedded file once beside the projects, and serve it beside the page', async () => {
@@ -1169,32 +1059,6 @@ describe('prototypes', () => {
 
 	describe('Build in the codebase, handed to Claude Code', () => {
 		const saved = () => savedPrototype();
-
-		it('checks a prototype’s page at its product’s target, keeps the result, and gives its agent what it found to fix (T7)', async () => {
-			await saved();
-			writeFileSync(join(design, 'skills', 'build-prototype.md'), '# Build');
-			const checked = await call(CHANNELS.checkAccessibility, 'demo', 'v1-i1');
-			expect(checked.value).toMatchObject({
-				ran: { declared: false, target: 'WCAG 2.2 Level AA, informational: no target declared' },
-				violations: [{ rule: 'image-alt' }],
-			});
-			expect(checkPage).toHaveBeenCalledWith(
-				expect.stringMatching(/^http:\/\/127\.0\.0\.1:\d+\/demo\/v1-i1/),
-				[],
-				['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'],
-			);
-			// Kept: the same page is not checked twice.
-			await call(CHANNELS.checkAccessibility, 'demo', 'v1-i1');
-			expect(checkPage).toHaveBeenCalledTimes(1);
-			// One round of its own check: the agent is given what was found, and only that, as its request.
-			installDesignSystem(product);
-			const fixing = await call(CHANNELS.fixAccessibility, 'demo', 'v1-i1');
-			expect(fixing.ok).toBe(true);
-			const task = agentStart.mock.calls.at(-1)?.[2] as string;
-			expect(task).toContain('## What the person asked for');
-			expect(task.slice(task.indexOf('## What the person asked for'))).toContain('- **image-alt** (WCAG 1.1.1)');
-			expect(task).toContain('Change nothing else');
-		});
 
 		it('carries what the prototype’s accessibility check left open into the task, to fix in the code (T7)', async () => {
 			await saved();
@@ -1615,12 +1479,6 @@ describe('the table of calls', () => {
 		expect(readComments).not.toHaveBeenCalled();
 	});
 
-	it('bounds a request to the agent, which goes into its command line', async () => {
-		const r = await call(CHANNELS.buildPrototype, 'demo', 'v1-i1', 'x'.repeat(20_001));
-		expect(r).toMatchObject({ ok: false, error: expect.stringMatching(/up to 20,000 characters/) });
-		expect(agentStart).not.toHaveBeenCalled();
-	});
-
 	it('has a handler for every call the window can make, and none it cannot', async () => {
 		const { INVOKE } = await import('../src/shared/contract');
 		expect([...handlers.keys()].sort()).toEqual(INVOKE.map(invokeChannel).sort());
@@ -1647,36 +1505,10 @@ describe('one agent, one piece of work', () => {
 		expect(sessionsSpawned).toHaveLength(1);
 	});
 
-	it("hands the agent's conversation over, and stops the app's run of it first so it has one writer", async () => {
-		await trustFolder(product);
-		agentStart.mockReturnValue(agentRunning());
-		expect((await call(CHANNELS.editorState, product, branchHere())).value).toEqual({ editor: false, session: false });
-		await call(CHANNELS.startAgent, product, 'demo', 'do it');
-		const session = (agentStart.mock.calls.at(-1)?.[3] as { session: string }).session;
-		expect(session).toMatch(/^[0-9a-f-]{36}$/);
-		expect((await call(CHANNELS.editorState, product, branchHere())).value).toEqual({ editor: false, session: true });
-
-		runningSession = session;
-		const r = await call(CHANNELS.continueInClaude, product, branchHere());
-		expect(r).toMatchObject({ ok: true, value: 'terminal' });
-		expect(agentStop).toHaveBeenCalled();
-		// Without VS Code, the same conversation from a terminal.
-		expect(copied).toContain(`--resume ${session}`);
-	});
-
 	it('stops the run when asked: Stop on a build, in a shell that shows one', async () => {
 		const r = await call(CHANNELS.stopAgent);
 		expect(r).toEqual({ ok: true, value: null });
 		expect(agentStop).toHaveBeenCalledTimes(1);
-	});
-
-	it("leaves another work's run alone, and says when there is nothing to continue", async () => {
-		await trustFolder(product);
-		runningSession = 'aaaaaaaa-46ac-4823-9acb-716bcb37aa64';
-		const r = await call(CHANNELS.continueInClaude, product, 'feature/nothing-here');
-		expect(r.ok).toBe(false);
-		expect(r.error).toMatch(/no agent conversation/);
-		expect(agentStop).not.toHaveBeenCalled();
 	});
 
 	it('gives a codebase run the shared agents, skills, standards and logging to read, and says where they are', async () => {
@@ -1789,8 +1621,6 @@ describe('Handoff', () => {
 		// Its record has no route, so recording it comes first.
 		expect(task).toContain('# Record where the work is');
 		expect(extras).toMatchObject({ work: 'feature/demo', purpose: 'handoff' });
-		// Its conversation is kept, so it can be continued in VS Code like any other run.
-		expect((await call(CHANNELS.editorState, product, 'feature/demo')).value).toMatchObject({ session: true });
 	});
 
 	it('refuses when the checkout is somewhere else, or the agent is busy', async () => {
@@ -1896,27 +1726,5 @@ describe('publishing', () => {
 
 	it('has no way for the window to ask for permission or to switch publishing off, because there is none', () => {
 		expect(handlers.has('workspace:setPublishConsent')).toBe(false);
-	});
-});
-
-describe('the appearance', () => {
-	it('is Auto until one is chosen', async () => {
-		expect(await call(CHANNELS.appearance)).toEqual({ ok: true, value: 'system' });
-	});
-
-	it('is chosen, applied to the app at once, and kept for the next time it opens', async () => {
-		expect(await call(CHANNELS.setAppearance, 'dark')).toEqual({ ok: true, value: 'dark' });
-		expect(applied).toEqual(['dark']);
-		expect((await call(CHANNELS.appearance)).value).toBe('dark');
-		expect(JSON.parse(readFileSync(join(home, 'appearance.json'), 'utf8'))).toEqual({ appearance: 'dark' });
-		await call(CHANNELS.setAppearance, 'system');
-		expect(applied).toEqual(['dark', 'system']);
-	});
-
-	it('is refused when it is not one of the three, and nothing is applied or kept', async () => {
-		expect((await call(CHANNELS.setAppearance, 'sepia')).ok).toBe(false);
-		expect((await call(CHANNELS.setAppearance, undefined)).ok).toBe(false);
-		expect(applied).toEqual([]);
-		expect((await call(CHANNELS.appearance)).value).toBe('system');
 	});
 });

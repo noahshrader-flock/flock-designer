@@ -14,9 +14,8 @@ interface PageCode {
 }
 
 /**
- * A prototype's page agent (the README's Review isolation), added to every page the site builds: what the review bar used to
- * do from outside the page (`shared/pageScripts.ts`), done inside it when the bar asks (`shared/pageChannel.ts`), with
- * the same page code. It hears only its parent, and once a parent's address has said hello, only that address; until then
+ * A prototype's page agent (the README's Review isolation), added to every page the site builds: what the review bar once
+ * did from outside the page, done inside it when the bar asks (`shared/pageChannel.ts`). It hears only its parent, and once a parent's address has said hello, only that address; until then
  * it says nothing, and after, it says what happens on the page (ready, a route moved, a pin clicked or moved) to that
  * address alone, with the bar's secret. A pin's report goes through it (`__fdReport`), not the console the app listens to.
  */

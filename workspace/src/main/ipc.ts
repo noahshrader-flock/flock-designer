@@ -1,14 +1,12 @@
 import { withPageTheme } from './services/pageTheme';
 import { existsSync, readFileSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
-import type { Appearance } from '../shared/appearance';
 import type { AccessibilityResult, Checkout, Person, PublishStatus } from '../shared/contract';
 import { statesOf } from '../shared/prototypeStates';
 import { type Check, type EventSink, arg, clearRoutes } from './handle';
 import type { Ports } from './ports';
 import { accessibilityOf } from './services/accessibilityCheck';
 import { AGENT_BUSY, AgentRunner } from './services/agent';
-import { AppearanceMemory } from './services/appearance';
 import { classify } from './services/branchProjects';
 import { syncBranches } from './services/branchSync';
 import type { CheckoutMemory } from './services/checkoutMemory';
@@ -70,9 +68,6 @@ export interface IpcContext {
 	prototypeServer: PrototypeServer;
 	/** The latest agent conversation for each branch, so it can be continued in the person's editor. */
 	sessions: SessionMemory;
-	/** The appearance they chose (Settings), and how it is applied to the app: the system's theme setting, in the app. */
-	appearanceMemory: AppearanceMemory;
-	applyAppearance: (appearance: Appearance) => void;
 	installer: Installer;
 	/** The component library for the Design System tab: a test's own, else built from the connected design systems. */
 	designLibrary?: DesignLibrary;
@@ -111,8 +106,6 @@ export const ipcDeps = ({
 	prototypesRoot,
 	prototypeServer,
 	sessions,
-	appearanceMemory,
-	applyAppearance,
 	installer,
 	designLibrary,
 	designSystems,
@@ -376,8 +369,6 @@ export const ipcDeps = ({
 		prototypesRoot,
 		prototypeServer,
 		sessions,
-		appearanceMemory,
-		applyAppearance,
 		installer,
 		designSystems,
 		componentTokens,

@@ -13,7 +13,7 @@ import { type CheckoutParts, codebaseTask, guidePart, handoffTask, buildInCodeba
 import { projectTitle } from '../services/commentsExport';
 import { designSystemCheckout, readDescriptor } from '../services/descriptor';
 import { recordsRootFor } from '../services/discovery';
-import { handToClaude, resumeCommand } from '../services/editor';
+import { handToClaude } from '../services/editor';
 import { CODEBASE_SKILL, HANDOFF_FILE, HANDOFF_SKILL, commandLine } from '../services/engineeringHandoff';
 import { branchCommit, changedSince, headCommit, readCheckout } from '../services/git';
 import { codebaseBranchFor, recordHandoff, recordPath, recordPreview, recordedIteration } from '../services/iterations';
@@ -149,35 +149,7 @@ export const registerCodebase = (d: IpcDeps): void => {
 			readOnly,
 		});
 	});
-	// Handing the work to the person, in VS Code. Only ever on a click: it opens another application.
-	handle('editorState', [checkout, arg.branch], (workIn, branch) => ({
-		editor: ports.editor.find() !== null,
-		session: sessions.read(workIn.canonical, branch) !== null,
-	}));
-	handle('continueInClaude', [checkout, arg.branch], async (workIn, branch): Promise<'editor' | 'terminal'> => {
-		const { canonical } = workIn;
-		const found = sessions.read(canonical, branch);
-		if (!found) throw new Error('There is no agent conversation for this work on this machine.');
-		// Taking over a run still going: one conversation has one writer, so the app's run stops, but only once
-		// the way to continue it is there: a folder that would not open must not cost the run.
-		const takeOver = () => {
-			if (agent.runningSession() === found.session) agent.stop();
-		};
-		const editor = ports.editor.find();
-		if (editor) {
-			await ports.editor.openSession(editor, found, takeOver);
-			return 'editor';
-		}
-		await ports.copy(resumeCommand(ports.claude(), found));
-		takeOver();
-		await ports.tell({
-			message: 'The command to continue is copied',
-			detail: 'VS Code with the Claude Code extension is not installed here. Paste the command into a terminal to continue the same conversation.',
-		});
-		return 'terminal';
-	});
 	handle('agentStatus', [], () => agent.status());
-	handle('agentRecent', [], () => agent.recentLines());
 	handle('stopAgent', [], () => {
 		agent.stop();
 		return null;

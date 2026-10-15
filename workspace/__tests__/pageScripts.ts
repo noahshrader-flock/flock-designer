@@ -1,5 +1,5 @@
-import PAGE from '../page/index?page';
-import type { MarkerRequest } from './contract';
+import PAGE from '../src/page/index?page';
+import type { MarkerRequest } from '../src/shared/contract';
 
 /**
  * What the app runs *inside* a preview page, as the text of a script: the page code (`src/page`), bundled once, then the

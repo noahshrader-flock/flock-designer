@@ -9,8 +9,6 @@ export const appPaths = (userData: string) => ({
 	checkout: join(userData, 'checkout.json'),
 	/** The design systems connected, and which is shown. */
 	designSystems: join(userData, 'design-system.json'),
-	/** Auto, light or dark. */
-	appearance: join(userData, 'appearance.json'),
 	/** The latest agent conversation for each branch, to continue in the editor. */
 	agentSessions: join(userData, 'agent-sessions.json'),
 	/** The branch each design system's token change is kept on. */

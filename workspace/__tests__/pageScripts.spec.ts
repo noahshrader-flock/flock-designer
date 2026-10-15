@@ -1,7 +1,7 @@
 import { type DOMWindow, JSDOM } from 'jsdom';
 import { describe, expect, it } from 'vitest';
 import { sanitizeAnchor } from '../src/shared/anchor';
-import { CANCEL_PICK_SCRIPT, PICK_SCRIPT, SINGLE_PAGE, layerVisibleScript, resolveScript } from '../src/shared/pageScripts';
+import { CANCEL_PICK_SCRIPT, PICK_SCRIPT, SINGLE_PAGE, layerVisibleScript, resolveScript } from './pageScripts';
 import { readPinMessage } from '../src/shared/pageReaders';
 import type { CommentAnchor, MarkerRequest } from '../src/shared/contract';
 import { anAnchor } from './fixtures';

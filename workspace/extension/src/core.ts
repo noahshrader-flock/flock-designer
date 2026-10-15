@@ -31,7 +31,6 @@ export const startCore = (context: vscode.ExtensionContext, panels: Panels, onSi
 		emit: panels.sink,
 		ports: vscodePorts(vscode, headless),
 		github,
-		applyAppearance: () => undefined,
 		// Components' pictures are drawn by the browser here, so they are told apart from the app's.
 		pictureRecipe: HEADLESS_PICTURE_RECIPE,
 	});

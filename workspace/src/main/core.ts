@@ -1,4 +1,3 @@
-import type { Appearance } from '../shared/appearance';
 import { DESIGN_REPO } from '../shared/config';
 import { DesignRepo } from '../host/designRepo';
 import type { AppPaths } from './appPaths';
@@ -6,7 +5,6 @@ import type { EventSink } from './handle';
 import type { IpcContext } from './ipc';
 import type { Ports } from './ports';
 import { AgentRunner } from './services/agent';
-import { AppearanceMemory } from './services/appearance';
 import { CheckoutMemory } from './services/checkoutMemory';
 import { DesignSystemsMemory } from './services/designSystems';
 import { SessionMemory } from './services/editor';
@@ -24,8 +22,6 @@ export interface Shell {
 	emit: EventSink;
 	ports: Ports;
 	github: GitHubAccount;
-	/** How the person's chosen appearance is applied: the system's theme setting in the app; nothing where the editor owns it. */
-	applyAppearance: (appearance: Appearance) => void;
 	/** A fingerprint of how the shell draws pictures, so only pictures drawn the same way are shown. */
 	pictureRecipe: string;
 }
@@ -35,7 +31,7 @@ export interface Shell {
  * Everything a handler reaches is made here, so `registerIpc` takes every one of them and defaults to nothing real; a
  * test builds its own from a temporary folder and fakes.
  */
-export const createCore = ({ paths, emit, ports, github, applyAppearance, pictureRecipe }: Shell): IpcContext => ({
+export const createCore = ({ paths, emit, ports, github, pictureRecipe }: Shell): IpcContext => ({
 	emit,
 	ports,
 	opened: new OpenedCheckouts(),
@@ -52,8 +48,6 @@ export const createCore = ({ paths, emit, ports, github, applyAppearance, pictur
 	prototypesRoot: paths.prototypes,
 	prototypeServer: new PrototypeServer(),
 	sessions: new SessionMemory(paths.agentSessions),
-	appearanceMemory: new AppearanceMemory(paths.appearance),
-	applyAppearance,
 	installer: new Installer(),
 	designSystems: new DesignSystemsMemory(paths.designSystems),
 	storyPreviewsRoot: paths.storyPreviews,

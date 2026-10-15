@@ -4,7 +4,6 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { AgentRunner } from '../src/main/services/agent';
-import { buildContextReceipt } from '../src/main/services/contextReceipt';
 import { readDescriptor } from '../src/main/services/descriptor';
 import { readCheckout } from '../src/main/services/git';
 import { continueIteration, createIteration, readIterations } from '../src/main/services/iterations';
@@ -76,13 +75,9 @@ describe('from a request to a running preview', () => {
 		expect(checkout.branch).toBe('develop');
 		expect(checkout.clean).toBe(true);
 
-		// 2. See what was grounded, BEFORE anything is generated.
+		// 2. Read what the repository says about itself, before anything is generated.
 		const descriptor = readDescriptor(root);
-		const receipt = await buildContextReceipt(root, descriptor);
-		expect(receipt.product).toBe('Test Product');
-		expect(receipt.designSystem.resolved).toBe('5.5.4');
-		expect(receipt.contextFiles).toContain('.dsnr/non-negotiables.md');
-		expect(receipt.problems).toEqual([]);
+		expect(descriptor.product).toBe('Test Product');
 
 		// 3. Start the codebase work. The branch is made for them.
 		const work = await createIteration(root, records, descriptor, 'inactive-users', 'first try', 'develop');
@@ -140,11 +135,6 @@ describe('from a request to a running preview', () => {
 
 		expect(readIterations(records, 'inactive-users')).toEqual([]);
 		expect((await readCheckout(root)).branch).toBe('develop');
-
-		// And the receipt says so in the designer's words, rather than the app
-		// discovering it only when the branch move fails.
-		const receipt = await buildContextReceipt(root, descriptor);
-		expect(receipt.problems.join(' ')).toMatch(/uncommitted changes/);
 	});
 
 	it('refuses a repository the designer never opened', () => {

@@ -6,7 +6,6 @@ import { coverPath, prototypeKey, prototypePagePath } from '../../shared/designP
 import { statesOf } from '../../shared/prototypeStates';
 import { iterationLabel } from '../../shared/work';
 import { arg, handle } from '../handle';
-import { fixRequest } from '../services/accessibilityBrief';
 import { ADDRESS_SKILL, chooseComment } from '../services/address';
 import { guidePart, prototypeAddressTask, prototypeBuildTask } from '../services/agentTasks';
 import { writeCommentsExport } from '../services/commentsExport';
@@ -33,7 +32,6 @@ export const registerPrototypes = (d: IpcDeps): void => {
 		once,
 		opened,
 		ports,
-		prototypeAccessibility,
 		prototypePage,
 		prototypesRoot,
 		publishInBackground,
@@ -61,12 +59,6 @@ export const registerPrototypes = (d: IpcDeps): void => {
 		const accessibility = await work.accessibility(projectId, name);
 		const voice = await work.voice();
 		return { task: prototypeBuildTask({ guide: await guideFor(sources), skill, build, sources, accessibility, voice, request }), sources };
-	};
-	/** What a prototype's own accessibility check found (T7), as the request to fix it: refused when it found nothing. */
-	const fixRequestFor = async (projectId: string, name: string): Promise<string> => {
-		const result = await prototypeAccessibility(projectId, name);
-		if (result.violations.length === 0) throw new Error('The accessibility check found nothing to fix.');
-		return fixRequest(result);
 	};
 	/** Its agent, in the folder it was built in, reading the product read-only, and nothing committed. */
 	const startPrototypeAgent = (projectId: string, name: string, sources: PrototypeSources, task: string) =>
@@ -126,12 +118,6 @@ export const registerPrototypes = (d: IpcDeps): void => {
 	handle('assignFolder', [arg.projectId, arg.unknown], async (projectId, folder) => {
 		await assignFolder(recordStore(), projectId, folderName(folder));
 		return null;
-	});
-	handle('buildPrototype', [arg.projectId, arg.prototypeName, arg.words], async (projectId, name, request) => {
-		// The screen can ask twice (it is opened twice in development, and Try again asks again): the runner joins
-		// this prototype's run, and refuses while it is working on anything else.
-		const { task, sources } = await buildTask(projectId, name, request);
-		return startPrototypeAgent(projectId, name, sources, task);
 	});
 	/**
 	 * A prototype's build handed to Claude Code in the repository `root` instead of run here (`handToClaude`): its whole task
@@ -215,9 +201,6 @@ export const registerPrototypes = (d: IpcDeps): void => {
 		if (existsSync(local) && agent.status().state !== 'running' && (await recordStore().read(path)) !== html) await work.keep(projectId, name, html);
 		return { url: await servePrototype(projectId, name, html), states: statesOf(html) };
 	});
-	handle('checkAccessibility', [arg.projectId, arg.iterationName], (projectId, name) =>
-		once(`accessibility:${projectId}/${name}`, () => prototypeAccessibility(projectId, name)),
-	);
 	handle('ensureCovers', [], () => once('covers', async () => (agentBusy() ? [] : ensureCovers(coverDeps, builtHere(prototypesRoot)))));
 	handle('projectCover', [arg.projectId, arg.prototypeName, arg.name], async (projectId, name, cover): Promise<string | null> => {
 		const path = coverPath(projectId, name, cover);
@@ -228,11 +211,5 @@ export const registerPrototypes = (d: IpcDeps): void => {
 		const url = jpegDataUrl(bytes);
 		coversRead.set(path, url);
 		return url;
-	});
-	// One round of the prototype's own check: its agent given what the check found, as a build error is given (T7).
-	handle('fixAccessibility', [arg.projectId, arg.iterationName], async (projectId, name) => {
-		refuseWhileBusy();
-		const { task, sources } = await buildTask(projectId, name, await fixRequestFor(projectId, name));
-		return startPrototypeAgent(projectId, name, sources, task);
 	});
 };

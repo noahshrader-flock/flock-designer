@@ -1,7 +1,5 @@
-import type { Appearance } from '../appearance';
-import type { AccessibilityResult } from '../domain/accessibility';
 import type { SignInState } from '../domain/account';
-import type { AgentReadiness, AgentRecent, AgentStatus, ContinuedIn, EditorState } from '../domain/agent';
+import type { AgentReadiness, AgentStatus } from '../domain/agent';
 import type { Checkout, PreviewStatus, RunLogLine } from '../domain/checkout';
 import type { CommentAnchor, CommentRef, ReviewComment } from '../domain/comments';
 import type {
@@ -126,8 +124,6 @@ export interface WorkspaceApi {
 	/** Hands the task to the locally installed agent. Never bundles credentials. */
 	startAgent(root: string, projectId: string, task: string): Promise<Result<AgentStatus>>;
 	agentStatus(): Promise<Result<AgentStatus>>;
-	/** The current or last run's recent lines, so a screen opened again can show where the agent has got to. */
-	agentRecent(): Promise<Result<AgentRecent>>;
 	/** Stops the agent's run, whatever it is doing: Stop on a build, where a shell shows one (the VS Code extension). */
 	stopAgent(): Promise<Result<null>>;
 	// Prototypes: one page, no product repository needed. Recording one makes the project too when it is new; building
@@ -144,7 +140,6 @@ export interface WorkspaceApi {
 		from?: { root: string; branch: string },
 		folder?: string | null,
 	): Promise<Result<Iteration>>;
-	buildPrototype(projectId: string, name: string, request: string): Promise<Result<AgentStatus>>;
 	/**
 	 * The same build, handed to Claude Code in the repository `root` instead of run here, as Build in the codebase is: its
 	 * whole task is written beside the prototype, and a conversation starts with a line pointing at it: in VS Code's panel
@@ -179,13 +174,6 @@ export interface WorkspaceApi {
 	 */
 	prototypeProgress(projectId: string, name: string): Promise<Result<{ sourceAt: number | null; pageAt: number | null }>>;
 	openPrototype(projectId: string, name: string): Promise<Result<OpenedPrototype>>;
-	/**
-	 * A prototype's saved page checked for accessibility at its product's target (T7): kept, and made again only when the
-	 * page, axe-core, the tags or the target change. Takes a few seconds the first time.
-	 */
-	checkAccessibility(projectId: string, name: string): Promise<Result<AccessibilityResult>>;
-	/** Starts the prototype's agent on what its last check found, and nothing else: one round of its own check (T7). */
-	fixAccessibility(projectId: string, name: string): Promise<Result<AgentStatus>>;
 	/** What building a prototype in the codebase would do in this checkout, asked before it is offered. */
 	buildInCodebasePlan(root: string, projectId: string, name: string): Promise<Result<BuildInCodebasePlan>>;
 	/** Whether a prototype can be built from this repository on this machine, and with which design system version. */
@@ -205,10 +193,6 @@ export interface WorkspaceApi {
 	startHandoff(root: string, projectId: string): Promise<Result<AgentStatus>>;
 	/** Whether the last Handoff here found the work ready (its verdict, and HANDOFF.md committed since); null if unknown. */
 	handoffResult(root: string): Promise<Result<boolean | null>>;
-	/** Whether this work can be handed to the person here: VS Code with Claude Code, and a conversation to continue. */
-	editorState(root: string, branch: string): Promise<Result<EditorState>>;
-	/** Continues this branch's latest agent conversation in VS Code (or copies the command), taking over the app's run of it. */
-	continueInClaude(root: string, branch: string): Promise<Result<ContinuedIn>>;
 	onAgentLog(listener: (line: RunLogLine) => void): () => void;
 
 	signInState(): Promise<Result<SignInState>>;
@@ -228,10 +212,6 @@ export interface WorkspaceApi {
 	readComments(projectId: string, branch: string): Promise<Result<ReviewComment[]>>;
 	/** The text of one file in a project's folder (its brief, its review notes, …): this machine's copy if it has one, else GitHub's. */
 	readRecord(projectId: string, name: string): Promise<Result<string>>;
-	/** The app's appearance (Settings): Auto, Light or Dark. */
-	appearance(): Promise<Result<Appearance>>;
-	/** Sets it: applied to the whole app at once (its pages and previews too), and kept for the next time it opens. */
-	setAppearance(appearance: Appearance): Promise<Result<Appearance>>;
 	/** Puts a project in a folder, or in none for null, in its brief in the design repository (the folders plan). */
 	assignFolder(projectId: string, folder: string | null): Promise<Result<null>>;
 	postComment(projectId: string, branch: string, body: string, anchor: CommentAnchor | null, picture?: string | null): Promise<Result<ReviewComment>>;
@@ -275,18 +255,12 @@ export const INVOKE = [
 	'stopCommand',
 	'startAgent',
 	'agentStatus',
-	'agentRecent',
 	'stopAgent',
 	'agentReadiness',
-	'editorState',
 	'startHandoff',
 	'handoffResult',
-	'continueInClaude',
 	'createPrototype',
 	'assignFolder',
-	'appearance',
-	'setAppearance',
-	'buildPrototype',
 	'handPrototypeBuild',
 	'addressPrototype',
 	'finishPrototypeAddress',
@@ -296,8 +270,6 @@ export const INVOKE = [
 	'savePrototype',
 	'prototypeProgress',
 	'openPrototype',
-	'checkAccessibility',
-	'fixAccessibility',
 	'buildInCodebase',
 	'prototypeReadiness',
 	'buildInCodebasePlan',
