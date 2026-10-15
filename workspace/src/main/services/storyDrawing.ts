@@ -122,10 +122,10 @@ const instancesIn = `try {
  * margins and gaps, counted by computed value. With `tags`, axe (in the page already) checks the stories' accessibility
  * at them (T7), before anything is hidden for a picture, since axe passes over what is hidden.
  *
- * **And, when `instances` asks, each instance of the component the stories are of** (`instancesIn`), with its values and
- * the props it was drawn with: only the light drawings are read for them.
+ * **And each instance of the component the stories are of** (`instancesIn`), with its values and the props it was drawn
+ * with, in light and in dark: a value is a token's in a mode when the tags show through in it.
  */
-export const readDrawn = (file: string, picture: boolean, tags: string[] | null = null, instances = true): string => `(async (file, picture) => {
+export const readDrawn = (file: string, picture: boolean, tags: string[] | null = null): string => `(async (file, picture) => {
 	const until = Date.now() + ${STORY_MS - 3000};
 	while (typeof window[${JSON.stringify(PREVIEW_SHOW)}] !== 'function' && Date.now() < until) await new Promise((r) => setTimeout(r, 50));
 	await window[${JSON.stringify(PREVIEW_SHOW)}](file);
@@ -144,7 +144,7 @@ export const readDrawn = (file: string, picture: boolean, tags: string[] | null 
 		add(drawn.radii, s.borderTopLeftRadius);
 		for (const k of ['paddingTop', 'paddingLeft', 'marginTop', 'marginLeft', 'rowGap', 'columnGap']) add(drawn.spacing, s[k]);
 	}
-	${instances ? instancesIn : ''}${
+	${instancesIn}${
 		tags
 			? `
 	// The stories only: not the page they are drawn on, nor the names it gives them.
@@ -201,7 +201,7 @@ export const measureWith =
  * and the rest go on; what the page says it found is kept only when it is axe's results.
  */
 export const drawEach = async (
-	{ files, pictures, tags, mode }: Share,
+	{ files, pictures, tags }: Share,
 	run: (code: string) => Promise<unknown>,
 	picture: () => Promise<Buffer | undefined>,
 ): Promise<(Drawn | null)[]> => {
@@ -209,7 +209,7 @@ export const drawEach = async (
 	for (const file of files) {
 		const read = (await within(
 			STORY_MS,
-			run(readDrawn(file, pictures, tags, mode === 'light')).catch(() => null),
+			run(readDrawn(file, pictures, tags)).catch(() => null),
 		)) as (Drawn & { accessibility?: unknown }) | null;
 		if (read === null) {
 			drawn.push(null);

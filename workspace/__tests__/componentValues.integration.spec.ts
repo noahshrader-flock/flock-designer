@@ -137,10 +137,13 @@ describe.skipIf(findChrome() === null)('a component’s instances, in the browse
 		expect([throws.instances, throws.storiesFailed]).toEqual([[], 1]);
 	}, 60_000);
 
-	it('reads instances in the light drawings only: the dark one is for the tokens', async () => {
-		const [[dark]] = (await headless.measure([{ base, mode: 'dark', files: FILES.slice(0, 1) }])) as [[Read]];
-		expect(dark.instances).toBeUndefined();
-		expect(Object.keys(dark.colors).length).toBeGreaterThan(0);
+	it('reads the instances in dark too, as the page draws them there: the same ones, in the same order', async () => {
+		const [[light], [dark]] = (await headless.measure([
+			{ base, mode: 'light', files: FILES.slice(0, 1) },
+			{ base, mode: 'dark', files: FILES.slice(0, 1) },
+		])) as [[Read], [Read]];
+		expect(dark.instances?.map((i) => [i.story, i.props])).toEqual(light.instances?.map((i) => [i.story, i.props]));
+		expect(dark.instances?.[0]?.values.height).toBe('28px');
 	}, 60_000);
 });
 
@@ -166,12 +169,15 @@ describeWith(realMissing, 'against the real library on origin/develop', () => {
 					pictures: { keep: () => {}, of: async () => ({}) },
 				});
 				await tokens.warm();
-				const valuesOf = async (name: string) => {
+				const valuesIn = async (name: string, mode: 'light' | 'dark') => {
 					const answer = await tokens.of(`src/components/${name}/${name}.stories.tsx`);
 					if (answer.state !== 'ready' || answer.values.state !== 'read')
 						throw new Error(`${name}: ${answer.state === 'ready' ? JSON.stringify(answer.values) : JSON.stringify(answer)}`);
-					return answer.values.rows;
+					const rows = answer.values.rows[mode];
+					if (rows === null) throw new Error(`${name}: nothing drawn in ${mode}`);
+					return rows;
 				};
+				const valuesOf = (name: string) => valuesIn(name, 'light');
 				const row = (rows: ValueRow[], property: ValueRow['property']) => rows.find((r) => r.property === property);
 				const button = await valuesOf('FSButton');
 				const height = row(button, 'height');
@@ -186,6 +192,12 @@ describeWith(realMissing, 'against the real library on origin/develop', () => {
 				const background = Object.fromEntries((row(button, 'background')?.cells ?? []).map((c) => [c.variant, [c.kind, c.tokens]]));
 				expect(background.primary).toEqual(['token', ['palette.light.primary.main']]);
 				expect(background.secondary).toEqual(['own', []]);
+				// In dark, the same variant is the Dark token written where the light one is, and a value that does not change
+				// with the theme (a height) reads as it does in light.
+				const dark = await valuesIn('FSButton', 'dark');
+				const darkBackground = Object.fromEntries((row(dark, 'background')?.cells ?? []).map((c) => [c.variant, [c.kind, c.tokens]]));
+				expect(darkBackground.primary).toEqual(['token', ['palette.dark.primary.main']]);
+				expect(row(dark, 'height')?.cells.map((c) => c.value)).toEqual(height?.cells.map((c) => c.value));
 				// FSIconButton draws the same 8px, but its own: changing the shared radius would not move it.
 				expect(row(await valuesOf('FSIconButton'), 'radius')?.cells.map((c) => [c.value, c.kind])).toEqual([['8px', 'own']]);
 			} finally {

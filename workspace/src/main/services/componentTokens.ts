@@ -27,13 +27,12 @@ import { HOST } from '../../shared/vocabulary';
 import type { ComponentPictures } from './componentPictures';
 import { type AxeFound, countsOf } from '../../shared/accessibility';
 import { designSystemOf } from '../../shared/catalog';
-import { writtenWith } from '../../shared/tokens';
 import { readCatalog } from './componentCatalog';
 import { libraryCommit, libraryTarget, listedComponents, systemReads } from './designLibrary';
 import { resultOf } from './accessibilityCheck';
 import { readTokens } from './designTokens';
 import { readValues } from './componentValues';
-import { type Tags, asTag, isNothing, sizeToken, tagsFor } from './tokenTags';
+import { type Tags, asTag, inMode, isNothing, sizeToken, tagsFor } from './tokenTags';
 
 /**
  * What a story draws, as counts of each computed value: its colors (background, text, border), radii and spacing; and,
@@ -94,12 +93,6 @@ export interface FileUse {
  * is the Dark token written in that place.
  */
 export const decode = (tagged: Partial<Record<Mode, Drawn>>, plain: Drawn | undefined, tags: Tags, tokens: DesignToken[]): FileUse => {
-	const byPath = new Map(tokens.map((t) => [t.path, t]));
-	const inMode = (path: string, mode: Mode): string => {
-		const t = byPath.get(path);
-		const dark = mode === 'dark' && t && t.group !== 'Dark' ? writtenWith(tokens, t).find((w) => w.group === 'Dark') : undefined;
-		return dark?.path ?? path;
-	};
 	const uses = new Map<string, number>();
 	const notTokens = new Map<string, number>();
 	let derived = 0;
@@ -110,7 +103,7 @@ export const decode = (tagged: Partial<Record<Mode, Drawn>>, plain: Drawn | unde
 			if (isNothing(color)) continue;
 			const tag = asTag(color);
 			const path = tag ? tags.colors.get(tag) : undefined;
-			if (path) add(uses, inMode(path, mode), n);
+			if (path) add(uses, inMode(tokens, path, mode), n);
 			// What the component sets itself and what is worked out from a token, told apart in light, beside the plain drawing.
 			else if (mode === 'light' && plain?.colors[color]) add(notTokens, `color ${color}`, n);
 			else if (mode === 'light') derived += n;
@@ -122,7 +115,7 @@ export const decode = (tagged: Partial<Record<Mode, Drawn>>, plain: Drawn | unde
 			for (const [value, n] of Object.entries(values)) {
 				if (isNothing(value)) continue;
 				const path = sizeToken(value, tags.sizes);
-				if (path) add(uses, inMode(path, mode), n);
+				if (path) add(uses, inMode(tokens, path, mode), n);
 				else if (mode === 'light') add(notTokens, `${kind} ${value}`, n);
 			}
 		}
@@ -264,10 +257,15 @@ export class ComponentTokens {
 		// The library as it is, in light, is always drawn: it is what the grid's pictures are of (P5), whatever the tags do,
 		// and what each component's accessibility is checked on, at the design system's target (T7).
 		const asIsRun = { base: plain.base, mode: 'light' as const, files, pictures: true, accessibility: target.tags };
+		// And in dark, for the values (what the tags change in dark says which are tokens there); with no tags, dark is as the
+		// library has it alone.
+		const asIsDark = { base: plain.base, mode: 'dark' as const, files };
 		const drawn = await this.deps.measure(
-			taggedBase === null ? [asIsRun] : [{ base: taggedBase, mode: 'light', files }, { base: taggedBase, mode: 'dark', files }, asIsRun],
+			taggedBase === null
+				? [asIsRun, asIsDark]
+				: [{ base: taggedBase, mode: 'light', files }, { base: taggedBase, mode: 'dark', files }, asIsRun, asIsDark],
 		);
-		const [light, dark, asIs] = taggedBase === null ? [undefined, undefined, drawn[0]] : drawn;
+		const [light, dark, asIs, asIsDarkDrawn] = taggedBase === null ? [undefined, undefined, drawn[0], drawn[1]] : drawn;
 		// The pictures, each replacing its component's last; a component that did not draw keeps its last.
 		const taken = new Map<string, Buffer>();
 		files.forEach((f, i) => {
@@ -292,11 +290,21 @@ export class ComponentTokens {
 				return [f, asDrawn ? decode({ light: asDrawn, dark: dark?.[i] ?? undefined }, asIs?.[i] ?? undefined, tags, tokens) : null];
 			}),
 		);
-		// Its values, from the same two drawings: as the library has it, and with the tags in light.
+		// Its values, from the same drawings: as the library has it, and with the tags, in light and in dark.
 		const values = new Map<string, ComponentValues>();
 		files.forEach((f, i) => {
-			const asDrawn = asIs?.[i];
-			if (asDrawn) values.set(f, readValues(asDrawn, light?.[i] ?? null, tags));
+			const lightDrawn = asIs?.[i];
+			if (!lightDrawn) return;
+			const darkDrawn = asIsDarkDrawn?.[i];
+			values.set(
+				f,
+				readValues(
+					{ plain: lightDrawn, tagged: light?.[i] ?? null },
+					darkDrawn ? { plain: darkDrawn, tagged: dark?.[i] ?? null } : undefined,
+					tags,
+					tokens,
+				),
+			);
 		});
 		return { files: uses, values, accessibility };
 	}

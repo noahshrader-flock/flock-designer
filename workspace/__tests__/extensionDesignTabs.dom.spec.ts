@@ -172,29 +172,53 @@ describe('a component’s tab', () => {
 			state: 'read',
 			instances: 12,
 			unmarked: 0,
-			rows: [
-				{
-					property: 'height',
-					by: 'size',
-					cells: ['sm', 'md', 'lg', 'xl'].map((variant, i) => ({
-						variant,
-						value: ['28px', '36px', '48px', '56px'][i],
-						kind: 'own',
-						tokens: [],
-						instances: 3,
-					})),
-				},
-				{ property: 'radius', by: null, cells: [{ variant: null, value: '8px', kind: 'token', tokens: ['radius'], instances: 12 }] },
-				{
-					property: 'background',
-					by: 'variant',
-					cells: [
-						{ variant: 'primary', value: 'rgb(16, 128, 98)', kind: 'token', tokens: ['palette.light.primary.main'], instances: 6 },
-						{ variant: 'ghost', value: 'none', kind: 'own', tokens: [], instances: 6 },
-					],
-				},
-				{ property: 'fontSize', by: null, cells: [{ variant: null, value: '16px', kind: 'unchecked', tokens: [], instances: 12 }] },
-			],
+			rows: {
+				light: [
+					{
+						property: 'height',
+						by: 'size',
+						cells: ['sm', 'md', 'lg', 'xl'].map((variant, i) => ({
+							variant,
+							value: ['28px', '36px', '48px', '56px'][i],
+							kind: 'own',
+							tokens: [],
+							instances: 3,
+						})),
+					},
+					{ property: 'radius', by: null, cells: [{ variant: null, value: '8px', kind: 'token', tokens: ['radius'], instances: 12 }] },
+					{
+						property: 'background',
+						by: 'variant',
+						cells: [
+							{ variant: 'primary', value: 'rgb(16, 128, 98)', kind: 'token', tokens: ['palette.light.primary.main'], instances: 6 },
+							{ variant: 'ghost', value: 'none', kind: 'own', tokens: [], instances: 6 },
+						],
+					},
+					{ property: 'fontSize', by: null, cells: [{ variant: null, value: '16px', kind: 'unchecked', tokens: [], instances: 12 }] },
+				],
+				// Dark: the same stories, a background that is the Dark token, and a height that does not change with the theme.
+				dark: [
+					{
+						property: 'height',
+						by: 'size',
+						cells: ['sm', 'md', 'lg', 'xl'].map((variant, i) => ({
+							variant,
+							value: ['28px', '36px', '48px', '56px'][i],
+							kind: 'own',
+							tokens: [],
+							instances: 3,
+						})),
+					},
+					{
+						property: 'background',
+						by: 'variant',
+						cells: [
+							{ variant: 'primary', value: 'rgb(43, 180, 138)', kind: 'token', tokens: ['palette.dark.primary.main'], instances: 6 },
+							{ variant: 'ghost', value: 'none', kind: 'own', tokens: [], instances: 6 },
+						],
+					},
+				],
+			},
 		},
 		...over,
 	});
@@ -222,6 +246,8 @@ describe('a component’s tab', () => {
 		await analysed();
 		const values = section('Values')!;
 		expect(values.querySelector('[data-values-from]')?.textContent).toBe('As its stories draw it, in light: 12 instances, on develop at abc123.');
+		// Light until dark is chosen, as a prototype opens.
+		expect(values.querySelector('[role="radio"][aria-checked="true"]')?.textContent).toBe('Light');
 		expect([...values.querySelectorAll('[data-value-row]')].map((r) => r.getAttribute('data-value-row'))).toEqual([
 			'height',
 			'radius',
@@ -248,6 +274,36 @@ describe('a component’s tab', () => {
 		expect([...background.querySelectorAll('[data-value-cell]')].map((c) => c.textContent)).toEqual(['primaryrgb(16, 128, 98)', 'ghostnone']);
 		expect(background.querySelector('h3 [data-value-kind="token"]')?.textContent).toBe('Light primary main · also FSIconButton');
 		expect(values.querySelector('[data-value-row="fontSize"] [data-value-kind="unchecked"]')?.textContent).toBe('Not checked');
+	});
+
+	it('shows dark’s values when dark is chosen, as the stories draw it there, and light’s again when light is', async () => {
+		await analysed();
+		const values = section('Values')!;
+		const radio = (label: string) => [...values.querySelectorAll('[role="radio"]')].find((b) => b.textContent === label) as HTMLElement;
+		await press(radio('Dark'));
+		expect(values.querySelector('[data-values-from]')?.textContent).toContain('in dark:');
+		expect([...values.querySelectorAll('[data-value-row]')].map((r) => r.getAttribute('data-value-row'))).toEqual(['height', 'background']);
+		const background = values.querySelector('[data-value-row="background"]') as HTMLElement;
+		expect([...background.querySelectorAll('[data-value-cell]')].map((c) => c.textContent)).toEqual(['primaryrgb(43, 180, 138)', 'ghostnone']);
+		expect(background.querySelector('h3 [data-value-kind="token"]')?.textContent).toContain('Dark primary main');
+		await press(radio('Light'));
+		expect(values.querySelector('[data-values-from]')?.textContent).toContain('in light:');
+		expect(values.querySelector('[data-value-row="radius"]')).not.toBeNull();
+	});
+
+	it('says a mode its stories did not draw is not read, and still shows the other', async () => {
+		await analysed({
+			values: {
+				...(analysis().values as { rows: object }),
+				rows: { light: (analysis().values as { rows: { light: object[] } }).rows.light, dark: null },
+			},
+		});
+		const values = section('Values')!;
+		await press([...values.querySelectorAll('[role="radio"]')].find((b) => b.textContent === 'Dark') as HTMLElement);
+		expect(values.querySelector('[data-values-none="dark"]')?.textContent).toBe(
+			'Its stories did not draw it in dark, so its values there cannot be read.',
+		);
+		expect(values.querySelector('[data-value-row]')).toBeNull();
 	});
 
 	it('says when a length it calls its own may be a token no tag could be given', async () => {

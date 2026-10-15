@@ -18,8 +18,10 @@ import {
 	type ValueProperty,
 	type ValueRow,
 } from '../../shared/contract';
+import type { DesignToken } from '../../shared/contract';
+import type { Theme } from '../../shared/prototypeTheme';
 import type { Drawn, Instance } from './componentTokens';
-import { type Tags, asTag, isNothing, sizeToken } from './tokenTags';
+import { type Tags, asTag, inMode, isNothing, sizeToken } from './tokenTags';
 
 /** What no token is tagged for, so is never said to be a token or not. */
 const UNTAGGED: ReadonlySet<ValueProperty> = new Set(['fontSize']);
@@ -39,15 +41,18 @@ const shown = (property: ValueProperty, value: string): string => {
 	return a === b && b === c && c === d ? a : a === c && b === d ? `${a} ${b}` : b === d ? `${a} ${b} ${c}` : `${a} ${b} ${c} ${d}`;
 };
 
-const colorRead = (plain: string, tagged: string, tags: Tags): Pick<Read, 'kind' | 'tokens'> => {
+/** What reads values in one mode: the tags, and the tokens, whose twins in dark a tag given to a shared role names. */
+type Reading = { tags: Tags; tokens: DesignToken[]; mode: Theme };
+
+const colorRead = (plain: string, tagged: string, { tags, tokens, mode }: Reading): Pick<Read, 'kind' | 'tokens'> => {
 	const tag = asTag(tagged);
 	const path = tag ? tags.colors.get(tag) : undefined;
-	if (path) return { kind: 'token', tokens: [path] };
+	if (path) return { kind: 'token', tokens: [inMode(tokens, path, mode)] };
 	return { kind: tagged === plain ? 'own' : 'derived', tokens: [] };
 };
 
 /** A length, part by part: a part the tags left alone is the component's own (a zero says nothing), one that became a tag's multiple is that token. */
-const lengthRead = (plain: string, tagged: string, tags: Tags): Pick<Read, 'kind' | 'tokens'> => {
+const lengthRead = (plain: string, tagged: string, { tags, tokens: all, mode }: Reading): Pick<Read, 'kind' | 'tokens'> => {
 	const was = plain.split(' ');
 	const now = tagged.split(' ');
 	if (was.length !== now.length) return { kind: 'unchecked', tokens: [] };
@@ -60,7 +65,7 @@ const lengthRead = (plain: string, tagged: string, tags: Tags): Pick<Read, 'kind
 			return;
 		}
 		const path = sizeToken(now[i] as string, tags.sizes);
-		if (path) tokens.add(path);
+		if (path) tokens.add(inMode(all, path, mode));
 		else derived++;
 	});
 	if (derived > 0) return { kind: 'derived', tokens: [] };
@@ -71,16 +76,16 @@ const lengthRead = (plain: string, tagged: string, tags: Tags): Pick<Read, 'kind
  * What one value is, given its tagged twin: null when the two drawings do not pair up; and whether there were any tags to
  * draw with (`marked`), without which every value the component draws is its own.
  */
-const readOne = (property: ValueProperty, plain: string, tagged: string | null, tags: Tags, marked: boolean): Read => {
+const readOne = (property: ValueProperty, plain: string, tagged: string | null, reading: Reading, marked: boolean): Read => {
 	const said = shown(property, plain);
 	const as = (r: Pick<Read, 'kind' | 'tokens'>): Read => ({ shown: said, ...r });
 	if (COLOR_VALUES.has(property) && said === 'none') return as({ kind: 'own', tokens: [] });
 	if (UNTAGGED.has(property)) return as({ kind: 'unchecked', tokens: [] });
 	if (!marked) return as({ kind: 'own', tokens: [] });
 	if (tagged === null) return as({ kind: 'unchecked', tokens: [] });
-	if (COLOR_VALUES.has(property)) return as(colorRead(plain, tagged, tags));
+	if (COLOR_VALUES.has(property)) return as(colorRead(plain, tagged, reading));
 	if (property === 'height') return as({ kind: tagged === plain ? 'own' : 'derived', tokens: [] });
-	return as(lengthRead(plain, tagged, tags));
+	return as(lengthRead(plain, tagged, reading));
 };
 
 const keyOf = (r: Read): string => `${r.shown}|${r.kind}|${r.tokens.join(',')}`;
@@ -184,12 +189,41 @@ const pairs = (plain: Instance[], tagged: Instance[] | undefined): tagged is Ins
 	tagged.length === plain.length &&
 	tagged.every((t, i) => t.story === plain[i]?.story && JSON.stringify(t.props) === JSON.stringify(plain[i]?.props));
 
+/** One mode's drawings of a story file: as the library has it, and with the tags (null when that did not draw, or there were none). */
+export interface ModeDrawings {
+	plain: Drawn;
+	tagged: Drawn | null;
+}
+
+/** One mode's rows, from its drawings; null when its stories drew no instance of the component. */
+const rowsIn = (drawings: ModeDrawings | undefined, reading: Reading): ValueRow[] | null => {
+	const instances = drawings?.plain.instances ?? [];
+	if (drawings === undefined || instances.length === 0) return null;
+	const marked = reading.tags.edits.length > 0;
+	const twins = drawings.tagged?.instances;
+	const paired = marked && pairs(instances, twins);
+	const candidates = candidatesOf(instances, drawings.plain.controls ?? []);
+	const rows: ValueRow[] = [];
+	for (const property of VALUE_PROPERTIES) {
+		const entries = instances.map((instance, i) => ({
+			instance,
+			read: readOne(property, instance.values[property] ?? '', paired ? (twins?.[i]?.values[property] ?? '') : null, reading, marked),
+		}));
+		// A property no instance draws anything of (no gap, no border, no background) is no row.
+		if (entries.every((e) => isNothing(e.read.shown) || e.read.shown === 'none')) continue;
+		rows.push(rowOf(property, entries, candidates));
+	}
+	return rows;
+};
+
 /**
- * The values a story file's instances draw, from its light drawing as the library has it (`plain`) and with the tags
- * (`tagged`, null when it did not draw, or there were no tags to draw with). With no tag to draw with, every value is the
- * component's own; when the drawings do not pair up, no value is said to be a token or not.
+ * The values a story file's instances draw, in light and in dark, each from its drawing as the library has it and with the
+ * tags. What is said of the file (it names no component, its stories draw none, they only wrap, they threw) is said from
+ * its light drawing: dark is the same stories. With no tag to draw with, every value is the component's own; when two
+ * drawings do not pair up, no value is said to be a token or not.
  */
-export const readValues = (plain: Drawn, tagged: Drawn | null, tags: Tags): ComponentValues => {
+export const readValues = (light: ModeDrawings, dark: ModeDrawings | undefined, tags: Tags, tokens: DesignToken[]): ComponentValues => {
+	const plain = light.plain;
 	if (plain.instancesFailed !== undefined) return { state: 'failed', error: plain.instancesFailed };
 	if (!plain.component) return { state: 'no-component' };
 	const instances = plain.instances ?? [];
@@ -197,19 +231,10 @@ export const readValues = (plain: Drawn, tagged: Drawn | null, tags: Tags): Comp
 		if ((plain.wrapping ?? 0) > 0) return { state: 'wraps' };
 		return { state: (plain.storiesFailed ?? 0) > 0 ? 'not-drawn' : 'none-drawn' };
 	}
-	const marked = tags.edits.length > 0;
-	const twins = tagged?.instances;
-	const paired = marked && pairs(instances, twins);
-	const candidates = candidatesOf(instances, plain.controls ?? []);
-	const rows: ValueRow[] = [];
-	for (const property of VALUE_PROPERTIES) {
-		const entries = instances.map((instance, i) => ({
-			instance,
-			read: readOne(property, instance.values[property] ?? '', paired ? (twins?.[i]?.values[property] ?? '') : null, tags, marked),
-		}));
-		// A property no instance draws anything of (no gap, no border, no background) is no row.
-		if (entries.every((e) => isNothing(e.read.shown) || e.read.shown === 'none')) continue;
-		rows.push(rowOf(property, entries, candidates));
-	}
-	return { state: 'read', instances: instances.length, rows, unmarked: tags.unmarked };
+	return {
+		state: 'read',
+		instances: instances.length,
+		rows: { light: rowsIn(light, { tags, tokens, mode: 'light' }), dark: rowsIn(dark, { tags, tokens, mode: 'dark' }) },
+		unmarked: tags.unmarked,
+	};
 };

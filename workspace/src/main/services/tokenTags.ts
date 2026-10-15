@@ -4,8 +4,9 @@
  * which tokens a component draws with (`componentTokens.ts`) and by its drawn values (`componentValues.ts`).
  */
 import type { DesignToken, TokenEdit } from '../../shared/contract';
+import type { Theme } from '../../shared/prototypeTheme';
 import { isEditable } from '../../shared/primitives';
-import { PX_PER_REM, lengthParts, placeOf } from '../../shared/tokens';
+import { PX_PER_REM, lengthParts, placeOf, writtenWith } from '../../shared/tokens';
 
 /** A tag's blue, the same for every color tag: its red and green are the token's number. */
 const TAG_BLUE = 0x5a;
@@ -65,6 +66,16 @@ export const tagsFor = (tokens: DesignToken[]): Tags => {
 		edits.push({ path: t.path, value: unit === 'px' ? `${px}px` : `${px / PX_PER_REM}rem` });
 	}
 	return { edits, colors, sizes, unmarked };
+};
+
+/**
+ * The token a tag names, as it is in `mode`: a tag given to a role both modes share is tagged once, as Light, and in dark is
+ * the Dark token written in that place.
+ */
+export const inMode = (tokens: DesignToken[], path: string, mode: Theme): string => {
+	const t = tokens.find((x) => x.path === path);
+	const dark = mode === 'dark' && t && t.group !== 'Dark' ? writtenWith(tokens, t).find((w) => w.group === 'Dark') : undefined;
+	return dark?.path ?? path;
 };
 
 /** A computed color (`rgb(0, 1, 90)`, `rgba(0, 1, 90, 0.4)`) as the tag it would be, whatever its opacity. */

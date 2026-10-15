@@ -1,3 +1,4 @@
+import type { Theme } from '../prototypeTheme';
 import type { DeclaredTarget } from '../wcag';
 import type { AccessibilityCounts, AccessibilityResult } from './accessibility';
 
@@ -138,7 +139,8 @@ export interface ValueRow {
  * component its stories draw, in light: found by the stories' own `component` (their default export's). Or why there are
  * none: the file names no component; its stories draw none of it on the page (one that opens elsewhere, as a dialog does,
  * is not on it); each instance only wraps what it is given (a tooltip around a button), so what draws is not its own; the
- * file, or the stories that would have drawn it, did not draw; or reading it failed, said with why. `unmarked` is how many of the design system's lengths no tag
+ * file, or the stories that would have drawn it, did not draw; or reading it failed, said with why. `rows` are its values in
+ * light and in dark, null for a mode its stories did not draw. `unmarked` is how many of the design system's lengths no tag
  * can be given (in `em` or `%`), so a length said to be its own may be one of them.
  */
 export type ComponentValues =
@@ -147,7 +149,7 @@ export type ComponentValues =
 	| { state: 'wraps' }
 	| { state: 'not-drawn' }
 	| { state: 'failed'; error: string }
-	| { state: 'read'; instances: number; rows: ValueRow[]; unmarked: number };
+	| { state: 'read'; instances: number; rows: Record<Theme, ValueRow[] | null>; unmarked: number };
 
 /**
  * The pictures of the shown design system's components, for the grid view (P5): each component's picture by its story

@@ -211,7 +211,7 @@ describe('the index', () => {
 	});
 	afterEach(() => rmSync(home, { recursive: true, force: true }));
 
-	it('is building on the first ask, and draws every story three times: tagged in light and dark, and plain in light', async () => {
+	it('is building on the first ask, and draws every story four times: tagged and plain, each in light and dark', async () => {
 		const i = index();
 		expect(await i.of('src/components/A/A.stories.tsx')).toEqual({ state: 'building' });
 		await ready(i, 'src/components/A/A.stories.tsx');
@@ -229,6 +229,8 @@ describe('the index', () => {
 					pictures: true,
 					accessibility: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'],
 				},
+				// And in dark, for the values: what the tags change there says which are tokens in dark.
+				{ base: 'http://127.0.0.1:1/plain/', mode: 'dark', files },
 			],
 		]);
 	});
@@ -245,17 +247,27 @@ describe('the index', () => {
 			notTokens: [{ kind: 'color', value: 'rgb(107, 114, 128)', uses: 1 }],
 			derived: 0,
 			accessibility: null,
-			// Its values, from the same two drawings paired: the green its instance draws is the tone, as its tag says.
+			// Its values, from the same drawings paired: the green its instance draws is the tone, as its tag says, in light and in
+			// dark (which has no twin of this tone, so names it too).
 			values: {
 				state: 'read',
 				instances: 1,
-				rows: [
-					{
-						property: 'background',
-						by: null,
-						cells: [{ variant: null, value: 'rgb(16, 128, 98)', kind: 'token', tokens: ['tone.brand.50'], instances: 1 }],
-					},
-				],
+				rows: {
+					light: [
+						{
+							property: 'background',
+							by: null,
+							cells: [{ variant: null, value: 'rgb(16, 128, 98)', kind: 'token', tokens: ['tone.brand.50'], instances: 1 }],
+						},
+					],
+					dark: [
+						{
+							property: 'background',
+							by: null,
+							cells: [{ variant: null, value: 'rgb(16, 128, 98)', kind: 'token', tokens: ['tone.brand.50'], instances: 1 }],
+						},
+					],
+				},
 				unmarked: 0,
 			},
 		});
@@ -380,6 +392,7 @@ describe('the index', () => {
 					pictures: true,
 					accessibility: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'],
 				},
+				{ base: 'http://127.0.0.1:1/plain/', mode: 'dark', files },
 			],
 		]);
 		expect(kept[0]?.taken.size).toBe(3);
@@ -429,7 +442,7 @@ describe('the index', () => {
 			),
 		});
 		await i.warm();
-		expect(asked[0]?.at(-1)?.accessibility).toEqual(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']);
+		expect(asked[0]?.find((run) => run.accessibility)?.accessibility).toEqual(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']);
 		const a = await i.of('src/components/A/A.stories.tsx');
 		expect(a.state === 'ready' && a.accessibility).toMatchObject({
 			ran: { target: 'WCAG 2.1 Level AA', declared: true, states: ['default'] },
@@ -451,7 +464,8 @@ describe('the index', () => {
 			),
 		});
 		await i.warm();
-		expect(asked[0]).toHaveLength(1);
+		// As it is, in light and in dark: the tagged build did not come, so there are no tagged drawings.
+		expect(asked[0]).toHaveLength(2);
 		expect(kept[0]?.taken.size).toBe(2);
 		expect(await i.of('src/components/A/A.stories.tsx')).toEqual({ state: 'failed', error: 'tags did not build' });
 	});

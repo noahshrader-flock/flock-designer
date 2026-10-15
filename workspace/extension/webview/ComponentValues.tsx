@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
 	COLOR_VALUES,
 	type ComponentTokens,
@@ -8,10 +9,12 @@ import {
 	type ValueRow,
 } from '../../src/shared/contract';
 import { plural } from '../../src/shared/plural';
+import { DEFAULT_THEME, THEMES, type Theme, themeLabel } from '../../src/shared/prototypeTheme';
 import { labelOf } from '../../src/shared/tokens';
 import { MOST_LISTED, sharedWith } from '../../src/renderer/useComponentTokens';
 import { Disclosure } from './ui/Disclosure';
 import { Swatch } from './ui/Swatch';
+import { Toggle } from './ui/Toggle';
 
 type Ready = Extract<ComponentTokens, { state: 'ready' }>;
 
@@ -26,6 +29,9 @@ const NAMES: Record<ValueProperty, string> = {
 	text: 'Text',
 	border: 'Border',
 };
+/** Light and dark, as the review bar names them, as an empty and a filled circle: how a theme's light and dark read in a side bar. */
+const MODES = THEMES.map((value) => ({ value, label: themeLabel(value), icon: value === 'dark' ? 'circle-large-filled' : 'circle-large-outline' }));
+
 /** A colour that draws nothing (clear, or no border), as the analysis says it: shown with no swatch, and nothing said of what it is. */
 const NONE = 'none';
 
@@ -116,6 +122,8 @@ export const ComponentValues = ({
 	names: ReadonlyMap<string, string>;
 }) => {
 	const { values } = answer;
+	// Light until the other is chosen, as a prototype opens: the same first sight for everyone.
+	const [mode, setMode] = useState<Theme>(DEFAULT_THEME);
 	const tokenName = (path: string) => {
 		const t = byPath.get(path);
 		return t ? labelOf(t) : path;
@@ -123,7 +131,10 @@ export const ComponentValues = ({
 	const others = (path: string) => (answer.sharedWith[path] ?? []).map((f) => names.get(f) ?? f);
 	return (
 		<section aria-label="Values" className="aside-section">
-			<h2 className="aside-title">Values</h2>
+			<div className="aside-heading">
+				<h2 className="aside-title">Values</h2>
+				{values.state === 'read' && <Toggle label="Values in" options={MODES} value={mode} onChange={setMode} />}
+			</div>
 			{values.state === 'failed' ? (
 				<p className="quiet">Its values could not be read: {values.error}</p>
 			) : values.state !== 'read' ? (
@@ -131,7 +142,7 @@ export const ComponentValues = ({
 			) : (
 				<>
 					<p className="quiet" data-values-from>
-						As its stories draw it, in light: {plural(values.instances, 'instance')}, on {version.branch} at {version.commit.slice(0, 7)}.
+						As its stories draw it, in {mode}: {plural(values.instances, 'instance')}, on {version.branch} at {version.commit.slice(0, 7)}.
 					</p>
 					{values.unmarked > 0 && (
 						<p className="quiet" data-values-unmarked>
@@ -139,9 +150,13 @@ export const ComponentValues = ({
 							marked, so a length said to be its own may be one of them.
 						</p>
 					)}
-					{values.rows.map((row) => (
-						<Row key={row.property} row={row} name={tokenName} others={others} />
-					))}
+					{values.rows[mode] === null ? (
+						<p className="quiet" data-values-none={mode}>
+							Its stories did not draw it in {mode}, so its values there cannot be read.
+						</p>
+					) : (
+						values.rows[mode]?.map((row) => <Row key={row.property} row={row} name={tokenName} others={others} />)
+					)}
 				</>
 			)}
 		</section>

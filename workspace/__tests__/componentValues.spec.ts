@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Drawn, Instance } from '../src/main/services/componentTokens';
 import { readValues } from '../src/main/services/componentValues';
 import type { Tags } from '../src/main/services/tokenTags';
-import type { ValueRow } from '../src/shared/contract';
+import type { DesignToken, ValueRow } from '../src/shared/contract';
 
 /**
  * A component's drawn values (Phase 1 of adjusting a component): each instance its stories draw, as the library has it and
@@ -36,7 +36,7 @@ const drawn = (instances: Instance[], more: Partial<Drawn> = {}): Drawn => ({
 /** Spacing tagged 13px, the radius 17px, a height-sized length 23px; one color tag. */
 const TAGS: Tags = {
 	edits: [{ path: 'spacing', value: '13px' }],
-	colors: new Map([['#00015A', 'palette.primary.main']]),
+	colors: new Map([['#00015A', 'palette.light.primary.main']]),
 	sizes: [
 		{ px: 13, path: 'spacing' },
 		{ px: 17, path: 'shape.borderRadius' },
@@ -54,21 +54,59 @@ const sized = (more: (i: number) => Partial<Instance['values']> = () => ({})) =>
 		SIZES.map((size, i) => instance({ size, testId: `b${s}${i}` }, { height: HEIGHTS[i], ...more(i) }, story)),
 	);
 const rowOf = (rows: ValueRow[], property: ValueRow['property']) => rows.find((r) => r.property === property);
+/** The tokens: primary in light and dark, written in two places, with the colour tag given to the light one. */
+const TOKENS = [
+	{
+		path: 'palette.light.primary.main',
+		group: 'Light',
+		set: 'primary',
+		name: 'main',
+		kind: 'color',
+		category: 'Color',
+		value: '#108062',
+		source: { file: 'light.ts', line: 1 },
+	},
+	{
+		path: 'palette.dark.primary.main',
+		group: 'Dark',
+		set: 'primary',
+		name: 'main',
+		kind: 'color',
+		category: 'Color',
+		value: '#2bb48a',
+		source: { file: 'light.ts', line: 1 },
+	},
+] as unknown as DesignToken[];
+/** Read in light, from a drawing as the library has it and one with the tags; dark too, when its drawings are given. */
+const readIn = (
+	light: [Instance[], Instance[] | null],
+	dark?: [Instance[], Instance[] | null],
+	tags: Tags = TAGS,
+	controls?: string[],
+	tokens = TOKENS,
+) => {
+	const side = ([plain, tagged]: [Instance[], Instance[] | null]) => ({
+		plain: drawn(plain, controls ? { controls } : {}),
+		tagged: tagged === null ? null : drawn(tagged),
+	});
+	return readValues(side(light), dark && side(dark), tags, tokens);
+};
 const read = (plain: Instance[], tagged: Instance[] | null, tags: Tags = TAGS, controls?: string[]) => {
-	const r = readValues(drawn(plain, controls ? { controls } : {}), tagged === null ? null : drawn(tagged), tags);
+	const r = readIn([plain, tagged], undefined, tags, controls);
 	if (r.state !== 'read') throw new Error(`not read: ${r.state}`);
-	return r;
+	return { ...r, rows: r.rows.light as ValueRow[] };
 };
 const cells = (rows: ValueRow[], property: ValueRow['property']) => rowOf(rows, property)?.cells.map((c) => [c.variant, c.value, c.kind]);
 
 describe('a component’s drawn values', () => {
 	it('say why there are none: reading failed, no component named, none drawn, each only wraps what it is given, or its stories threw', () => {
-		expect(readValues(drawn([], { instancesFailed: 'boom' }), null, TAGS)).toEqual({ state: 'failed', error: 'boom' });
-		expect(readValues(drawn([], { component: false }), null, TAGS)).toEqual({ state: 'no-component' });
-		expect(readValues(drawn([]), null, TAGS)).toEqual({ state: 'none-drawn' });
-		expect(readValues(drawn([], { wrapping: 2 }), null, TAGS)).toEqual({ state: 'wraps' });
+		const said = (more: Partial<Drawn>) => readValues({ plain: drawn([], more), tagged: null }, undefined, TAGS, TOKENS);
+		expect(said({ instancesFailed: 'boom' })).toEqual({ state: 'failed', error: 'boom' });
+		expect(said({ component: false })).toEqual({ state: 'no-component' });
+		expect(said({})).toEqual({ state: 'none-drawn' });
+		expect(said({ wrapping: 2 })).toEqual({ state: 'wraps' });
 		// None drawn because its stories threw is not none drawn: they say why, where they are.
-		expect(readValues(drawn([], { storiesFailed: 3 }), null, TAGS)).toEqual({ state: 'not-drawn' });
+		expect(said({ storiesFailed: 3 })).toEqual({ state: 'not-drawn' });
 	});
 
 	it('tell a value apart by the prop that explains it, in the order drawn, and not by a prop with a value for each instance', () => {
@@ -116,7 +154,7 @@ describe('a component’s drawn values', () => {
 			instance({ variant: 'ghost' }),
 		];
 		expect(rowOf(read(plain, tagged, TAGS, ['variant']).rows, 'background')?.cells).toEqual([
-			{ variant: 'primary', value: 'rgb(16, 128, 98)', kind: 'token', tokens: ['palette.primary.main'], instances: 1 },
+			{ variant: 'primary', value: 'rgb(16, 128, 98)', kind: 'token', tokens: ['palette.light.primary.main'], instances: 1 },
 			{ variant: 'hover', value: 'rgb(10, 100, 80)', kind: 'derived', tokens: [], instances: 1 },
 			{ variant: 'ghost', value: 'none', kind: 'own', tokens: [], instances: 1 },
 		]);
@@ -155,6 +193,44 @@ describe('a component’s drawn values', () => {
 		expect(rowOf(r.rows, 'height')?.cells.every((c) => c.kind === 'own')).toBe(true);
 		expect(rowOf(r.rows, 'fontSize')?.cells[0]?.kind).toBe('unchecked');
 		expect(r.unmarked).toBe(3);
+	});
+
+	it('read dark as light is read, with its own drawings: a colour is the Dark token written where the light one is', () => {
+		const lightPlain = [instance({ variant: 'primary' }, { background: 'rgb(16, 128, 98)' })];
+		const lightTagged = [instance({ variant: 'primary' }, { background: 'rgb(0, 1, 90)' })];
+		const darkPlain = [instance({ variant: 'primary' }, { background: 'rgb(43, 180, 138)' })];
+		const darkTagged = [instance({ variant: 'primary' }, { background: 'rgb(0, 1, 90)' })];
+		const r = readIn([lightPlain, lightTagged], [darkPlain, darkTagged], TAGS, ['variant']);
+		if (r.state !== 'read') throw new Error(r.state);
+		expect(r.rows.light?.find((x) => x.property === 'background')?.cells[0]).toMatchObject({
+			value: 'rgb(16, 128, 98)',
+			tokens: ['palette.light.primary.main'],
+		});
+		// The tag is given once, as Light; in dark it names the Dark token, and the value is dark's own.
+		expect(r.rows.dark?.find((x) => x.property === 'background')?.cells[0]).toMatchObject({
+			value: 'rgb(43, 180, 138)',
+			kind: 'token',
+			tokens: ['palette.dark.primary.main'],
+		});
+	});
+
+	it('say a value is its own in dark that is a token in light, and one that only differs in dark: each mode on its own drawings', () => {
+		const light = [instance({ variant: 'primary' }, { background: 'rgb(16, 128, 98)', height: '36px' })];
+		const lightTagged = [instance({ variant: 'primary' }, { background: 'rgb(0, 1, 90)', height: '36px' })];
+		// Dark draws a literal where light draws a token: the tags change nothing there.
+		const dark = [instance({ variant: 'primary' }, { background: 'rgb(30, 30, 30)', height: '40px' })];
+		const r = readIn([light, lightTagged], [dark, dark], TAGS, ['variant']);
+		if (r.state !== 'read') throw new Error(r.state);
+		expect(r.rows.light?.find((x) => x.property === 'background')?.cells[0]?.kind).toBe('token');
+		expect(r.rows.dark?.find((x) => x.property === 'background')?.cells[0]?.kind).toBe('own');
+		expect(r.rows.dark?.find((x) => x.property === 'height')?.cells[0]?.value).toBe('40px');
+	});
+
+	it('have no dark values for a file whose stories drew nothing in dark, and say light all the same', () => {
+		const r = readIn([sized(), sized()], undefined, TAGS, ['size']);
+		if (r.state !== 'read') throw new Error(r.state);
+		expect(r.rows.dark).toBeNull();
+		expect(r.rows.light?.length).toBeGreaterThan(0);
 	});
 
 	it('leave out a property no instance draws anything of: no gap, no background, no border', () => {

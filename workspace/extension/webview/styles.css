@@ -1353,6 +1353,14 @@ textarea.input {
 	border-radius: var(--dsnr-radius-large);
 }
 
+/* A part's title, with a choice beside it. */
+.aside-heading {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+}
+
 .aside-title {
 	margin: 0;
 	font-size: 1.1em;
