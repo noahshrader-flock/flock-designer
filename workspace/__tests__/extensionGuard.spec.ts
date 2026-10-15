@@ -84,8 +84,8 @@ describe('the extension’s sources', () => {
 			.text.replace(/\/\*[\s\S]*?\*\//g, '');
 		const rule = (selector: string) => css.split('}').find((block) => block.trim().startsWith(selector)) ?? '';
 		const wash = rule('.thumb-wash');
-		// The brand at 15%, out of the way until asked for, and nothing else: no icon, no text.
-		expect(wash).toMatch(/background:\s*color-mix\(in srgb,\s*var\(--dsnr-brand\)\s*15%,\s*transparent\)/);
+		// The brand at 25%, out of the way until asked for, and nothing else: no icon, no text.
+		expect(wash).toMatch(/background:\s*color-mix\(in srgb,\s*var\(--dsnr-brand\)\s*25%,\s*transparent\)/);
 		expect(wash).toMatch(/opacity:\s*0/);
 		expect(rule('.row-button:hover .thumb-wash')).toMatch(/opacity:\s*1/);
 		expect(css).toMatch(/\.row-button:focus-visible \.thumb-wash/);

@@ -544,7 +544,7 @@ body {
 .thumb-wash {
 	position: absolute;
 	inset: 0;
-	background: color-mix(in srgb, var(--dsnr-brand) 15%, transparent);
+	background: color-mix(in srgb, var(--dsnr-brand) 25%, transparent);
 	opacity: 0;
 	transition: opacity 120ms;
 	pointer-events: none;
