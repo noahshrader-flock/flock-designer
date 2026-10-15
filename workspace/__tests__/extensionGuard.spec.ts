@@ -108,6 +108,21 @@ describe('the extension’s sources', () => {
 		expect(rule('.dialog-buttons .button')).toMatch(/max-width:\s*none/);
 	});
 
+	it('draw a color as a circle, wherever it is drawn: one rule, and the large one only sets its size', () => {
+		const css = files()
+			.find((f) => f.path.endsWith('styles.css'))!
+			.text.replace(/\/\*[\s\S]*?\*\//g, '');
+		const rule = (selector: string) => css.split('}').find((b) => b.trim().startsWith(selector)) ?? '';
+		expect(rule('.swatch {')).toMatch(/border-radius:\s*50%/);
+		expect(rule('.swatch-large {')).not.toMatch(/border-radius/);
+		// No other rule rounds a swatch to anything but a circle.
+		const rounded = css
+			.split('}')
+			.filter((block) => /\.swatch[^{]*\{/.test(block))
+			.flatMap((block) => [...block.matchAll(/border-radius:\s*([^;]+);/g)].map((m) => m[1]));
+		expect(rounded.filter((value) => value !== '50%')).toEqual([]);
+	});
+
 	it('draw every outline and line in the panel in one border colour, the search box’s, from one name', () => {
 		const css = files()
 			.find((f) => f.path.endsWith('styles.css'))!

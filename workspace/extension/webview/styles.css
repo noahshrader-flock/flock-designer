@@ -1013,20 +1013,20 @@ textarea.input {
 	cursor: default;
 }
 
+/* A color is a circle, wherever it is drawn: the token's row, a step, a palette. */
 .swatch {
 	display: block;
 	flex-shrink: 0;
 	width: 14px;
 	height: 14px;
 	border: 1px solid var(--dsnr-border);
-	border-radius: var(--dsnr-radius-small);
+	border-radius: 50%;
 	box-sizing: border-box;
 }
 
-.swatch-wide {
-	width: 100%;
+.swatch-large {
+	width: 40px;
 	height: 40px;
-	border-radius: var(--dsnr-radius-inner);
 }
 
 .token-body {
@@ -1838,9 +1838,9 @@ textarea.input {
 
 .theme-flag {
 	position: absolute;
-	/* The swatch's top right corner (4px in from the button's) lands two thirds down the badge, on its middle. */
-	top: -2px;
-	right: -0.5px;
+	/* On the circle's edge at its top right, 45 degrees round (the circle is 18px, 4px in from the button's 26), the badge's middle a little below it. */
+	top: 1px;
+	right: 2px;
 }
 
 .theme-changed {

@@ -30,7 +30,7 @@ const Swatches = ({ tokens, byPath }: Drawing) => (
 				<div className="drawn-swatches">
 					{inSet.map((t) => (
 						<div key={t.path} data-primitive-token className="drawn-swatch">
-							<Swatch value={t.value} wide />
+							<Swatch value={t.value} large />
 							<span className="drawn-name">{t.name}</span>
 							<span className="drawn-value">{readsAs(t, byPath)}</span>
 						</div>
