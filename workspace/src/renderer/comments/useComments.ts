@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { CommentAnchor, MarkerResult, MarkerState, PinEvent, ReviewComment } from '../../shared/contract';
 import { forgetPosted, markersFor, mergeComments, numberComments, openComments, sameComments } from '../../shared/comments';
 import { latest } from '../../shared/latest';
-import { REFRESH_MS, dueForCheck } from './refresh';
+import { REFRESH_MS, USE_EVENTS, dueForCheck } from './refresh';
 import type { CommentStore, PageSurface } from './surfaces';
 
 type Mode = 'browse' | 'picking' | 'composing';
@@ -128,14 +128,13 @@ export const useComments = ({
 			active();
 			check();
 		};
-		const USE = ['pointerdown', 'pointermove', 'keydown', 'wheel'] as const;
 		const timer = setInterval(tick, REFRESH_MS);
 		window.addEventListener('focus', onFocus);
-		for (const e of USE) window.addEventListener(e, active, { passive: true });
+		for (const e of USE_EVENTS) window.addEventListener(e, active, { passive: true });
 		return () => {
 			clearInterval(timer);
 			window.removeEventListener('focus', onFocus);
-			for (const e of USE) window.removeEventListener(e, active);
+			for (const e of USE_EVENTS) window.removeEventListener(e, active);
 		};
 	}, [load]);
 

@@ -1,9 +1,10 @@
 /** How often an open iteration looks for new comments while someone is using it. */
 export const REFRESH_MS = 60_000;
-/** After this long with nobody touching it, it looks less often. */
+/** Nobody has touched it for this long: it looks this often instead. */
 export const IDLE_MS = 5 * 60_000;
-/** How often it looks while nobody is there. */
-export const IDLE_REFRESH_MS = 5 * 60_000;
+
+/** What counts as someone using the window. */
+export const USE_EVENTS = ['pointerdown', 'pointermove', 'keydown', 'wheel'] as const;
 
 /**
  * Whether it is time to look for new comments: each look is a call to GitHub, so a window left open with nobody at it
@@ -11,4 +12,4 @@ export const IDLE_REFRESH_MS = 5 * 60_000;
  */
 export const dueForCheck = ({ now, lastActive, lastChecked }: { now: number; lastActive: number; lastChecked: number }): boolean =>
 	// A second's slack: a timer can fire a moment early, and missing by that would skip a whole interval.
-	now - lastChecked + 1_000 >= (now - lastActive > IDLE_MS ? IDLE_REFRESH_MS : REFRESH_MS);
+	now - lastChecked + 1_000 >= (now - lastActive > IDLE_MS ? IDLE_MS : REFRESH_MS);

@@ -18,23 +18,25 @@ import { ReviewThreads } from './reviewThreads';
  * having git installed. Authors still use a real checkout -- that is the only difference between the two modes.
  */
 
-/** What a project folder said when it was last read: everything in its listing but the review threads, read every time. */
+/** Who has committed to a project's folder, and when it last changed. */
+type Activity = { people: Person[]; updatedAt: string | null };
+
+/** A project folder's own files, as last read: everything `listProjects` shows of it but the review threads, read every time. */
 interface FolderReading {
-	sha: string;
 	records: string[];
 	iterations: Iteration[];
-	brief: { title: string; folder: string | null };
-	activity: { people: Person[]; updatedAt: string | null };
+	brief: ReturnType<typeof fromBrief>;
+	activity: Activity;
 }
 
 export class DesignRepo {
 	readonly files: RepoFiles;
 	readonly threads: ReviewThreads;
 	/**
-	 * Each project folder as last read, by its sha: a folder whose sha has not moved has not changed, so it is not read
+	 * Each project folder as last read, with its sha: a folder whose sha has not moved has not changed, so it is not read
 	 * again. A refresh with nothing changed asks for the folder list and the threads only, not four reads a project.
 	 */
-	private readonly folders = new Map<string, FolderReading>();
+	private readonly folders = new Map<string, FolderReading & { sha: string }>();
 
 	constructor(session: GitHubApi, ref: RepoRef) {
 		this.files = new RepoFiles(session, ref);
@@ -68,8 +70,8 @@ export class DesignRepo {
 		);
 	}
 
-	/** A project folder's own files, as `listProjects` shows them: read again only when its sha has moved, or there is none. */
-	private async readFolder(id: string, sha: string | null): Promise<Omit<FolderReading, 'sha'>> {
+	/** A project folder, read again only when its sha has moved (`folders`), or the host gave none. */
+	private async readFolder(id: string, sha: string | null): Promise<FolderReading> {
 		const kept = sha === null ? undefined : this.folders.get(id);
 		if (kept && kept.sha === sha) return kept;
 		const records = (await this.files.list(projectDir(id)))
@@ -77,7 +79,7 @@ export class DesignRepo {
 			.map((f) => f.name)
 			.sort();
 		const activity = await this.folderActivity(id);
-		const reading = {
+		const reading: FolderReading = {
 			records,
 			iterations: await this.readIterations(id, records),
 			brief: await this.readBrief(id, records),
@@ -93,7 +95,7 @@ export class DesignRepo {
 	 * Who has committed to the project's own folder (brief, review, decisions), and when it last changed. Best effort:
 	 * a failure here must not hide the project list, and is null.
 	 */
-	private async folderActivity(id: string): Promise<{ people: Person[]; updatedAt: string | null } | null> {
+	private async folderActivity(id: string): Promise<Activity | null> {
 		try {
 			// Newest first, as GitHub lists them.
 			const commits = await this.files.commits(projectDir(id));

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { IDLE_MS, IDLE_REFRESH_MS, REFRESH_MS, dueForCheck } from '../src/renderer/comments/refresh';
+import { IDLE_MS, REFRESH_MS, dueForCheck } from '../src/renderer/comments/refresh';
 
 /**
  * How often an open iteration looks for new comments: about once a minute while someone is there, and only every few
@@ -18,6 +18,6 @@ describe('looking for new comments', () => {
 	it('checks only every few minutes once nobody has touched it for a while', () => {
 		const away = at - IDLE_MS - 1;
 		expect(dueForCheck({ now: at, lastActive: away, lastChecked: at - REFRESH_MS })).toBe(false);
-		expect(dueForCheck({ now: at, lastActive: away, lastChecked: at - IDLE_REFRESH_MS })).toBe(true);
+		expect(dueForCheck({ now: at, lastActive: away, lastChecked: at - IDLE_MS })).toBe(true);
 	});
 });
