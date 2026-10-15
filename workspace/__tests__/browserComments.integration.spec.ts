@@ -17,9 +17,32 @@ import { NO_CHROME, inChrome } from './realChrome';
  * extension carries it, on this machine's server as VS Code serves it (the page on its own address), opened with a key.
  * It asks DSNR, standing in here as the extension answers (the core's comment calls over a GitHub that answers as its
  * API does), through the server, shows the comments, and posts one; and keeps its key when the page loads again.
+ * A hostile prototype in such a review can neither learn the key nor ask without it (BROWSER_COMMENTS_PLAN 4.1). The server
+ * will not serve a prototype on the bar's address, so the failing case is a mutation: with that refusal taken out and the
+ * page framed from there, the same page reads the key (checked 2026-10-15).
  */
 
 const KEY = 'AbC-_x9yZAbC-_x9yZAbCd';
+const OTHER_KEY = 'ZzY-_k3wXZzY-_k3wXZzYw';
+const GUESSED = 'GuE-_s5sSGuE-_s5sSGuEs';
+/**
+ * A prototype that tries to learn the bar's key (its storage, its address, the referrer) and to ask DSNR without it: with
+ * no key, with a guessed one (which makes the browser ask the server first), and with a request it cannot read the answer of.
+ */
+const HOSTILE = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Hostile</title></head><body><main><h1>Alerts</h1></main><script>
+const tried = {};
+const attempt = async (name, f) => { try { tried[name] = 'allowed: ' + String(await f()); } catch { tried[name] = 'blocked'; } };
+const ask = (headers, more) => fetch(location.ancestorOrigins[0] + '/_dsnr/ask', { method: 'POST', headers, body: JSON.stringify({ dsnr: 'ask', id: 7, name: 'address', args: [{ thread: 1, id: 1 }, 'prototype/hostile/v1-i1'] }), ...more });
+(async () => {
+	await attempt('read the key', () => parent.sessionStorage.getItem('dsnr.review-key'));
+	await attempt('read the bar address', () => parent.location.href);
+	tried.referrer = document.referrer;
+	await attempt('ask with no key', async () => (await ask({ 'content-type': 'application/json' })).status);
+	await attempt('ask with a guessed key', async () => (await ask({ 'content-type': 'application/json', 'x-dsnr-key': '${GUESSED}' })).status);
+	await attempt('ask unread', async () => (await ask({ 'content-type': 'text/plain' }, { mode: 'no-cors' })).type);
+	console.log('HOSTILE ' + JSON.stringify(tried));
+})();
+</script></body></html>`;
 const PAGE = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Alert history</title></head>
 <body><main><h1>Alert history</h1><button data-e2e-ref="clear-filter-button">Clear Filter</button></main></body></html>`;
 
@@ -28,6 +51,8 @@ let server: PrototypeServer;
 let base: string;
 let gh: ReturnType<typeof fakeGitHub>;
 const asked: string[] = [];
+/** Every key an ask reached DSNR with. */
+const keys: string[] = [];
 const addressed: unknown[][] = [];
 
 beforeAll(async () => {
@@ -53,6 +78,15 @@ beforeAll(async () => {
 	);
 	writeFileSync(join(design, 'projects', 'demo', 'prototypes', 'v1-i1.html'), PAGE);
 	writeFileSync(join(design, 'projects', 'demo', 'prototypes', 'v1-i2.html'), PAGE.replace('Alert history</h1>', 'Alert history, addressed</h1>'));
+	mkdirSync(join(design, 'projects', 'hostile', 'prototypes'), { recursive: true });
+	writeFileSync(join(design, 'projects', 'hostile', 'brief.md'), '# Hostile\n');
+	writeFileSync(
+		join(design, 'projects', 'hostile', 'iterations.json'),
+		JSON.stringify([
+			{ projectId: 'hostile', name: 'v1-i1', branch: 'prototype/hostile/v1-i1', commit: null, note: '', createdAt: '2026-10-01T10:00:00Z' },
+		]),
+	);
+	writeFileSync(join(design, 'projects', 'hostile', 'prototypes', 'v1-i1.html'), HOSTILE);
 	server = new PrototypeServer();
 	const out = join(root, 'site');
 	buildSite({
@@ -66,8 +100,9 @@ beforeAll(async () => {
 	gh = fakeGitHub();
 	const threads = new ReviewThreads(tokenApi('good-token', gh.fetch), { owner: 'acme', repo: 'design' });
 	server.answerAsks(async (key, raw) => {
+		keys.push(key);
 		const ask = readRelayAsk(raw);
-		if (key !== KEY || ask === null) return null;
+		if (![KEY, OTHER_KEY].includes(key) || ask === null) return null;
 		asked.push(ask.name);
 		const [a, b, c, d] = ask.args as [never, never, never, never];
 		const answers: Record<string, () => Promise<unknown> | unknown> = {
@@ -154,5 +189,47 @@ describe.skipIf(NO_CHROME)('a review opened in the browser from DSNR, in the rea
 			const again = tab.frames().find((f) => f.url().endsWith('page.html')) as Frame;
 			await again.waitForFunction(() => document.querySelector('[data-fd-layer="pins"]')?.textContent === 'P');
 		});
+	}, 120_000);
+
+	/** The hostile prototype's review, opened with its key: what the page managed, once it has tried it all. */
+	const hostile = () =>
+		inChrome(async (browser) => {
+			const tab = await browser.newPage();
+			let tried: Record<string, string> | null = null;
+			tab.on('console', (m) => {
+				if (m.text().startsWith('HOSTILE ')) tried = JSON.parse(m.text().slice('HOSTILE '.length));
+			});
+			// A second tab, opened with its own key, beside it.
+			const other = await browser.newPage();
+			await other.goto(`${base}demo/v1/i1/#dsnr-key-${OTHER_KEY}`, { waitUntil: 'load' });
+			await tab.goto(`${base}hostile/v1/i1/#dsnr-key-${KEY}`, { waitUntil: 'load' });
+			const until = Date.now() + 20_000;
+			while (tried === null && Date.now() < until) await new Promise((r) => setTimeout(r, 50));
+			// The bar beside it still asks DSNR with its key, and is answered.
+			for (const t of [tab, other])
+				await t.waitForFunction(() => [...document.querySelectorAll('button')].some((b) => b.textContent?.trim() === 'Comment'));
+			const kept = await Promise.all([tab, other].map((t) => t.evaluate(() => sessionStorage.getItem('dsnr.review-key'))));
+			return { tried: tried as Record<string, string> | null, kept };
+		});
+
+	it('a hostile prototype in it cannot learn the key or ask without it, and the bar and a second tab still ask with their own', async () => {
+		const before = { keys: keys.length, addressed: addressed.length };
+		const r = await hostile();
+		expect(r.tried).toMatchObject({
+			'read the key': 'blocked',
+			'read the bar address': 'blocked',
+			'ask with no key': 'blocked',
+			'ask with a guessed key': 'blocked',
+			// Sent, but nothing of the answer can be read, and DSNR is not asked (below).
+			'ask unread': 'allowed: opaque',
+		});
+		expect(r.tried?.referrer).not.toContain(KEY);
+		// Each tab keeps its own key, and only those two keys reached DSNR: none the page made, and no Address.
+		expect(r.kept).toEqual([KEY, OTHER_KEY]);
+		const reached = keys.slice(before.keys);
+		expect(reached).toContain(KEY);
+		expect(reached).toContain(OTHER_KEY);
+		expect(reached.filter((k) => k !== KEY && k !== OTHER_KEY)).toEqual([]);
+		expect(addressed.length).toBe(before.addressed);
 	}, 120_000);
 });
