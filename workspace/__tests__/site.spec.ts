@@ -222,6 +222,41 @@ describe('building', () => {
 	});
 });
 
+describe('signing in to comment', () => {
+	const withViewer = (signIn?: { clientId: string; exchange: string }) => {
+		const viewer = join(root, 'viewer');
+		mkdirSync(viewer, { recursive: true });
+		for (const f of ['viewer.js', 'viewer.css', 'page-agent.js']) writeFileSync(join(viewer, f), '');
+		build({ viewer: { dir: viewer, ref: { owner: 'Acme', repo: 'design' } }, ...(signIn ? { signIn } : {}) });
+	};
+	const said = (html: string) => JSON.parse(/<script type="application\/json" id="dsnr-sign-in">([^<]*)<\/script>/.exec(html)?.[1] ?? 'null');
+	const SIGN_IN = { clientId: 'Iv23li0GrlmvH5bs6nZy', exchange: 'https://dsnr-auth.vercel.app/api/exchange' };
+
+	it('tells every iteration’s page the App, the function, GitHub’s sign-in page and the site’s own address', () => {
+		withViewer(SIGN_IN);
+		expect(said(read('alpha/v1/i2/index.html'))).toEqual({
+			...SIGN_IN,
+			redirect: 'https://acme.github.io/design/',
+			authorize: 'https://github.com/login/oauth/authorize',
+		});
+	});
+
+	it('gives the front page, where GitHub sends a person back, the viewer to finish signing in', () => {
+		withViewer(SIGN_IN);
+		const index = read('index.html');
+		expect(said(index)).toMatchObject({ clientId: SIGN_IN.clientId });
+		expect(index).toContain('<script type="module" src="_viewer/viewer.js"></script>');
+	});
+
+	it('says nothing of signing in without a client ID, or without a viewer', () => {
+		withViewer({ clientId: '', exchange: SIGN_IN.exchange });
+		expect(read('alpha/v1/i2/index.html')).not.toContain('dsnr-sign-in');
+		expect(read('index.html')).not.toContain('viewer.js');
+		build({ signIn: SIGN_IN });
+		expect(read('index.html')).not.toContain('dsnr-sign-in');
+	});
+});
+
 describe('comments on the page', () => {
 	it('carries the viewer on every iteration, told which iteration it is, with room for it in the bar and beside the frame', () => {
 		const viewer = join(root, 'viewer');

@@ -19,6 +19,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { DropdownMenuItem } from '../renderer/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../renderer/ui/tooltip';
 import { browserComments, framePage, saveToken, savedToken, tokenApi } from './browserAdapter';
+import { NOTE_WORDS, type SignInConfig, type SignInNote, signedInJustNow, startSignIn } from './signIn';
+import { loginOf } from '../host/github';
 import { type Relay, loginIn, relayComments } from './relay';
 import { closeUnlessBusy } from '../renderer/dialogClose';
 import { CommentsPanel } from '../renderer/comments/CommentsPanel';
@@ -31,8 +33,8 @@ import { useOpenOnError } from '../renderer/comments/useOpenOnError';
  * holds only a link back to the project until this takes over, so the page still works without it.
  *
  * In DSNR's review tab in VS Code (`relay`, ELECTRON_MIGRATION_PLAN 4.2) it comments through the extension: signing in
- * is VS Code's, the comments are the core's, and an open comment can be addressed. Anywhere else it uses a token kept
- * in the browser, which only tests leave until signing in from a page is built.
+ * is VS Code's, the comments are the core's, and an open comment can be addressed. On the published site it signs the
+ * person in with GitHub (`signIn`, PUBLISHED_COMMENTS_PLAN Phase 3) and comments with their token, kept in the browser.
  */
 
 /** What the site writes into each iteration's page for this. */
@@ -114,10 +116,16 @@ export const Viewer = ({
 	relay = null,
 	openedHere = false,
 	onAddressed,
+	signIn = null,
+	note = null,
 }: {
 	config: ViewerConfig;
 	slots: ViewerSlots;
 	relay?: Relay | null;
+	/** Signing in with GitHub, on the published site; none where the site was built without it. */
+	signIn?: SignInConfig | null;
+	/** What the last sign-in left to say, when it did not go. */
+	note?: SignInNote | null;
 	/** Served from this machine with no way to ask DSNR: opened some other way than DSNR's Open in browser. */
 	openedHere?: boolean;
 	/** Told the iteration Address showed its change in: a page in the browser goes to it (BROWSER_COMMENTS_PLAN D1). */
@@ -125,7 +133,9 @@ export const Viewer = ({
 }) => {
 	// The token kept in this browser, on the bar's own origin, which a prototype framed with no origin of its own cannot reach.
 	const [token, setToken] = useState<string | null>(savedToken);
-	const [paused, setPaused] = useState(false);
+	const [askedHere, setAskedHere] = useState(false);
+	const [said, setSaid] = useState<SignInNote | null>(note);
+	const [login, setLogin] = useState<string | null>(null);
 	// The frame opens in the page's first state; another is the same page, asked for in it.
 	const [shownState, setShownState] = useState<string | null>(null);
 	// The theme it is shown in: light, the page's own address, until dark is chosen, which the page is then asked for.
@@ -142,10 +152,28 @@ export const Viewer = ({
 		},
 	};
 	const branch = prototypeKey(config.projectId, config.name);
-	const tokenStore = useMemo(
-		() => (token ? browserComments(tokenApi(token), { owner: config.owner, repo: config.repo }, { projectId: config.projectId, branch }) : null),
-		[token, config, branch],
+	const github = useMemo(
+		() =>
+			token
+				? tokenApi(token, undefined, () => {
+						// Ended (D3): through GitHub again, which comes straight back for an App already approved; unless it was
+						// just now, so a token GitHub keeps refusing is said, not sent round again and again.
+						saveToken(null);
+						setToken(null);
+						if (signIn && !signedInJustNow(window)) void startSignIn(signIn, window);
+						else setSaid('ended');
+					})
+				: null,
+		[token, signIn],
 	);
+	const tokenStore = useMemo(
+		() => (github ? browserComments(github, { owner: config.owner, repo: config.repo }, { projectId: config.projectId, branch }) : null),
+		[github, config, branch],
+	);
+	useEffect(() => {
+		setLogin(null);
+		if (github) void loginOf(github).then(setLogin, () => setLogin(null));
+	}, [github]);
 	if (relay) return <InDsnr config={config} slots={slots} showing={showing} relay={relay} {...(onAddressed ? { onAddressed } : {})} />;
 	const signOut = () => {
 		saveToken(null);
@@ -161,21 +189,37 @@ export const Viewer = ({
 					showing={showing}
 					store={tokenStore}
 					heading={
-						<Button size={BAR} variant="ghost" title="Forget the token kept in this browser" onClick={signOut}>
-							<LogOutIcon />
-							Sign out
-						</Button>
+						<span className="flex items-center gap-1">
+							{login && (
+								<span data-signed-in-as className="text-muted-foreground truncate text-xs" title={`Signed in to GitHub as ${login}`}>
+									{login}
+								</span>
+							)}
+							<Button size={BAR} variant="ghost" title="Sign out of this site, forgetting the sign-in kept in this browser" onClick={signOut}>
+								<LogOutIcon />
+								Sign out
+							</Button>
+						</span>
 					}
 				/>
 			) : (
 				<PageBar config={config} slots={slots} showing={showing}>
-					{/* Not on a phone: commenting needs a computer, and the bar's room goes to the title and the switcher. */}
-					<Button size={BAR} variant="outline" className="max-sm:hidden" onClick={() => setPaused(true)}>
-						Sign in to comment
-					</Button>
+					{/* Not on a phone: commenting needs a computer, and the bar's room goes to the title and the switcher. A site
+					    built without signing in has no way to: no button. */}
+					{(signIn || openedHere) && (
+						<Button
+							size={BAR}
+							variant="outline"
+							className="max-sm:hidden"
+							onClick={() => (openedHere ? setAskedHere(true) : signIn && void startSignIn(signIn, window))}
+						>
+							Sign in to comment
+						</Button>
+					)}
 				</PageBar>
 			)}
-			<CommentingPaused open={paused} openedHere={openedHere} onClose={() => setPaused(false)} />
+			<OpenFromDsnr open={askedHere} onClose={() => setAskedHere(false)} />
+			<SignInSaid note={tokenStore ? null : said} onClose={() => setSaid(null)} />
 		</>
 	);
 };
@@ -339,20 +383,32 @@ const Commenting = ({
 };
 
 /**
- * Commenting from a published page is paused until signing in with GitHub works from one (M9 of the Pages plan): the
- * button is kept where it will be, and says where to comment meanwhile. A page from this machine (`openedHere`) comments
- * once it is opened from DSNR, which gives it the way to ask: said so.
+ * A page from this machine with no way to ask DSNR (`openedHere`): it comments once it is opened from DSNR, which gives it
+ * the way to ask, and says so. Signing in with GitHub is the published site's, not this machine's.
  */
-const CommentingPaused = ({ open, openedHere, onClose }: { open: boolean; openedHere: boolean; onClose: () => void }) => (
+const OpenFromDsnr = ({ open, onClose }: { open: boolean; onClose: () => void }) => (
 	<Dialog open={open} onOpenChange={closeUnlessBusy(onClose)}>
 		<DialogContent className="sm:max-w-md">
 			<DialogHeader>
-				<DialogTitle>{openedHere ? 'Open this page from DSNR to comment' : 'Commenting here is coming'}</DialogTitle>
+				<DialogTitle>Open this page from DSNR to comment</DialogTitle>
 				<DialogDescription>
-					{openedHere
-						? 'In VS Code, use Open in browser on the prototype: the page it opens comments through DSNR, signed in as you are there.'
-						: 'For now, comment on this prototype in DSNR.'}
+					In VS Code, use Open in browser on the prototype: the page it opens comments through DSNR, signed in as you are there.
 				</DialogDescription>
+			</DialogHeader>
+			<DialogFooter>
+				<Button onClick={onClose}>OK</Button>
+			</DialogFooter>
+		</DialogContent>
+	</Dialog>
+);
+
+/** How the last sign-in went, when it did not: said once, in words, on the page the person came back to. */
+const SignInSaid = ({ note, onClose }: { note: SignInNote | null; onClose: () => void }) => (
+	<Dialog open={note !== null} onOpenChange={closeUnlessBusy(onClose)}>
+		<DialogContent className="sm:max-w-md">
+			<DialogHeader>
+				<DialogTitle>{note === 'ended' ? 'Signed out' : 'Not signed in'}</DialogTitle>
+				<DialogDescription>{note ? NOTE_WORDS[note] : ''}</DialogDescription>
 			</DialogHeader>
 			<DialogFooter>
 				<Button onClick={onClose}>OK</Button>

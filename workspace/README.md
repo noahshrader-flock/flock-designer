@@ -179,7 +179,7 @@ page asks DSNR's review tab, and the tab asks the extension (`shared/reviewRelay
 that review's project's prototypes and only on comments the tab has been shown or made; signing in, which is VS Code's; and **Address**, on an open comment's menu, which runs the agent
 as a build does (a notification with Stop, its log beside the editor) and then shows the changed page in the same tab.
 The bar listens for DSNR only when it is served from this machine and framed, and takes only a VS Code webview that
-says hello; on the published site it comments with GitHub itself (once sign-in is there). Each project's reviews share
+says hello; on the published site it comments with GitHub itself, as the person who signs in there (below). Each project's reviews share
 one tab.
 
 **Review isolation: how a review's page and its bar talk.** A review is three windows, one inside the other: DSNR's
@@ -212,6 +212,14 @@ prototype's own page in the bar's frame (`page.html`), which is a repository's c
   its storage and cookies, so the page agent installs stand-ins for `localStorage`, `sessionStorage` and `document.cookie`,
   in memory, before the prototype's own code runs (`src/page/standIns.ts`). Every real prototype rendered the same with them
   (2026-10-15), and a hostile page proves the rest in the real browser (`reviewIsolation.integration.spec.ts`).
+- **Signing in on the published site** (`src/viewer/signIn.ts`): **Sign in to comment** sends the person to GitHub's own
+  sign-in page with a one-time `state` and the hash of a PKCE verifier, both kept in the tab (the bar's origin). GitHub
+  sends them back to the site's front page with a one-time code, which the front page checks against the `state`, takes
+  out of the address, and trades with the verifier for a token at the sign-in function (`functions/sign-in`, deployed
+  apart; its address and the App's client ID are `PAGES_SIGN_IN` in `shared/config.ts`); then back to the page they came
+  from. The token is kept in the bar's storage, which the sandboxed page cannot reach. An ended token goes through GitHub
+  again (unless it was just now, so it never loops); a person GitHub will not show the repository is told who they are
+  signed in as. Proved in the real browser with stand-ins (`siteSignIn.integration.spec.ts`).
 
 `__tests__/reviewIsolation.integration.spec.ts` proves this in real Chrome, nested as VS Code nests it, with a hostile
 page; `pageAgent.integration.spec.ts` proves the pins on both kinds of address.

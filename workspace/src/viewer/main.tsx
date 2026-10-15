@@ -5,6 +5,8 @@ import { TooltipProvider } from '../renderer/ui/tooltip';
 import { type Relay, isServedHere, iterationAddress, keyFromAddress, listenForDsnr, serverRelay } from './relay';
 import { applyScheme, systemIsDark, watchSystemScheme } from './scheme';
 import { Viewer, type ViewerConfig, type ViewerSlots } from './Viewer';
+import { saveToken } from './browserAdapter';
+import { type SignInConfig, finishSignIn, takeNote } from './signIn';
 
 /**
  * Started by a prototype's page on the published site, which says what it is in `#dsnr-config` and holds a plain link
@@ -12,6 +14,15 @@ import { Viewer, type ViewerConfig, type ViewerSlots } from './Viewer';
  * left as it is. In DSNR's review tab in VS Code, the tab says hello, and from then on the viewer comments through it. Opened
  * in the browser from DSNR, the page has a key, and comments through this machine's server with it (BROWSER_COMMENTS_PLAN).
  */
+
+/**
+ * Signing in, when the site offers it (`#dsnr-sign-in`): on the site's front page, where GitHub sends a person back, the
+ * sign-in is finished, and they go back to the page they started on; that page then says how it went, if it did not go.
+ */
+const signInAt = document.getElementById('dsnr-sign-in');
+const signIn = signInAt ? (JSON.parse(signInAt.textContent ?? 'null') as SignInConfig | null) : null;
+if (signIn) void finishSignIn(signIn, window, saveToken);
+const note = signIn ? takeNote(window) : null;
 
 /** The key, if this page was opened from DSNR: read once, as the page starts, so it is out of the address at once. */
 const key = keyFromAddress(window);
@@ -38,6 +49,8 @@ const InPage = ({ config, slots }: { config: ViewerConfig; slots: ViewerSlots })
 			slots={slots}
 			relay={relay}
 			openedHere={key === null && !framed && isServedHere(location)}
+			signIn={signIn}
+			note={note}
 			{...(key === null ? {} : { onAddressed })}
 		/>
 	);

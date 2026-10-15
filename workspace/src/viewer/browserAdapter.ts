@@ -6,6 +6,7 @@ import type { CommentStore, PageSurface } from '../renderer/comments/surfaces';
 import { toResult } from '../shared/result';
 import type { RepoRef } from '../shared/repoRef';
 import { ReviewThreads } from '../host/reviewThreads';
+import { hostErrorKind } from '../host/hostError';
 
 /**
  * The comments experience on a prototype's published page: the browser's side of what the app does through its main
@@ -14,16 +15,29 @@ import { ReviewThreads } from '../host/reviewThreads';
  * in, whose agent runs the same pick and pin code there when it is asked.
  */
 
-/** GitHub's API, as the person whose token this is. */
-export const tokenApi = (token: string, fetcher: Fetcher = fetch as unknown as Fetcher): GitHubApi => ({
-	api: (path, init = {}) => callApi(token, { path, ...init }, fetcher),
+/** GitHub's API, as the person whose token this is; `onEnded` is told when GitHub says the token has ended. */
+export const tokenApi = (token: string, fetcher: Fetcher = fetch as unknown as Fetcher, onEnded?: () => void): GitHubApi => ({
+	api: (path, init = {}) =>
+		callApi(token, { path, ...init }, fetcher).catch((err: unknown) => {
+			if (onEnded && hostErrorKind(err) === 'reauth') onEnded();
+			throw err;
+		}),
 });
 
 /** One iteration's comments, on GitHub. `branch` is its key, `prototype/<project>/<name>`, which names its thread. */
 export const browserComments = (github: GitHubApi, ref: RepoRef, { projectId, branch }: { projectId: string; branch: string }): CommentStore => {
 	const threads = new ReviewThreads(github, ref);
+	/** A person GitHub will not show the design repository: who they are signed in as, and that it is theirs to change (3.3). */
+	const notAllowed = async (err: unknown): Promise<never> => {
+		const kind = hostErrorKind(err);
+		if (kind !== 'notFound' && kind !== 'forbidden') throw err;
+		const who = await loginOf(github).catch(() => null);
+		throw new Error(
+			`${who ? `Signed in as ${who}, who` : 'This account'} has no access to ${ref.owner}/${ref.repo}, so cannot see or leave comments here. Sign out, and sign in as someone who has.`,
+		);
+	};
 	return {
-		read: () => toResult(threads.readComments(branch)),
+		read: () => toResult(threads.readComments(branch).catch(notAllowed)),
 		// No picture of the spot: a page cannot take one of itself.
 		post: (body, anchor) => toResult(threads.postComment(projectId, branch, body, anchor, null)),
 		resolve: (comment, resolved) => toResult(threads.setResolved(comment, resolved)),

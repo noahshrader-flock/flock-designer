@@ -34,9 +34,16 @@ import { anAnchor } from './fixtures';
 
 let gh: ReturnType<typeof fakeGitHub>;
 let current: Awaited<ReturnType<typeof render>> | null = null;
-const open = async (relay: Relay | null = null) => {
+/** Signing in, as the published site tells every page. */
+const SIGN_IN = {
+	clientId: 'Iv23li0GrlmvH5bs6nZy',
+	exchange: 'https://dsnr-auth.vercel.app/api/exchange',
+	redirect: 'https://acme.github.io/design/',
+	authorize: 'https://github.com/login/oauth/authorize',
+};
+const open = async (relay: Relay | null = null, signIn: typeof SIGN_IN | null = SIGN_IN) => {
 	const page = sitePage();
-	current = await render(createElement(Viewer, { config: CONFIG, slots: page.slots, relay }));
+	current = await render(createElement(Viewer, { config: CONFIG, slots: page.slots, relay, signIn }));
 	return page;
 };
 
@@ -78,6 +85,82 @@ describe('a page built without the page agent', () => {
 		} finally {
 			vi.useRealTimers();
 		}
+	});
+});
+
+describe('signing in on the published site (PUBLISHED_COMMENTS_PLAN, Phase 3)', () => {
+	const openSigning = async (more: Record<string, unknown> = {}) => {
+		const page = sitePage();
+		current = await render(createElement(Viewer, { config: CONFIG, slots: page.slots, relay: null, signIn: SIGN_IN, ...more }));
+		return page;
+	};
+	beforeEach(() => sessionStorage.clear());
+
+	it('sends the person to GitHub from Sign in to comment, with no paused dialog, keeping where to come back to', async () => {
+		await openSigning();
+		await press(button('Sign in to comment'));
+		await settle();
+		expect(document.body.textContent).not.toContain('Commenting here is coming');
+		const pending = JSON.parse(sessionStorage.getItem('dsnr.sign-in') ?? 'null');
+		expect(pending).toMatchObject({ back: location.href });
+		expect(pending.verifier).toMatch(/^[A-Za-z0-9_-]{43,128}$/);
+	});
+
+	it('says who is signed in beside Sign out', async () => {
+		saveToken('good-token');
+		await openSigning();
+		await press(button(/^Show all comments/));
+		await settle();
+		expect(document.querySelector('[data-signed-in-as]')?.textContent).toBe('pat');
+		expect(button('Sign out')).toBeTruthy();
+	});
+
+	it('tells a person GitHub will not show the design repository who they are signed in as, and to sign out', async () => {
+		saveToken('outsider-token');
+		vi.stubGlobal(
+			'fetch',
+			vi.fn(async (url: string) => {
+				const json = (status: number, body: unknown) => ({
+					status,
+					headers: { get: () => null },
+					json: async () => body,
+					text: async () => JSON.stringify(body),
+				});
+				return url.endsWith('/user') ? json(200, { login: 'outsider' }) : json(404, { message: 'Not Found' });
+			}),
+		);
+		await openSigning();
+		// The panel opens on its own to say it (`useOpenOnError`).
+		await settle();
+		expect(document.body.textContent).toContain('Signed in as outsider, who has no access to acme/design');
+		expect(button('Sign out')).toBeTruthy();
+	});
+
+	it('sends an ended sign-in through GitHub again, and forgets the token', async () => {
+		saveToken('ended-token');
+		await openSigning();
+		await settle();
+		expect(savedToken()).toBeNull();
+		expect(JSON.parse(sessionStorage.getItem('dsnr.sign-in') ?? 'null')).toMatchObject({ back: location.href });
+	});
+
+	it('says an ended sign-in instead when it was just now, so a refused token never loops', async () => {
+		saveToken('ended-token');
+		sessionStorage.setItem('dsnr.signed-in-at', String(Date.now()));
+		await openSigning();
+		await settle();
+		expect(savedToken()).toBeNull();
+		expect(sessionStorage.getItem('dsnr.sign-in')).toBeNull();
+		expect(document.querySelector('[role="dialog"]')?.textContent).toContain('Your sign-in has ended');
+	});
+
+	it('says how the last sign-in went, when it did not go', async () => {
+		await openSigning({ note: 'cancelled' });
+		await settle();
+		expect(document.querySelector('[role="dialog"]')?.textContent).toContain('Signing in was cancelled.');
+		await press(button('OK'));
+		await settle();
+		expect(document.querySelector('[role="dialog"]')).toBeNull();
 	});
 });
 
@@ -233,16 +316,9 @@ describe('the states of the page', () => {
 });
 
 describe('signing in', () => {
-	it('is paused: the button says to comment in the app for now, and keeps nothing', async () => {
-		await open();
-		await press(button('Sign in to comment'));
-		await settle();
-		expect(document.body.textContent).toContain('comment on this prototype in DSNR');
-		expect(document.querySelector('input')).toBeNull();
-		await press(button('OK'));
-		await settle();
-		expect(savedToken()).toBeNull();
-		expect(button('Sign in to comment')).toBeTruthy();
+	it('has no Sign in to comment on a site built without signing in: there is nothing for it to do', async () => {
+		await open(null, null);
+		expect([...document.querySelectorAll('button')].some((b) => b.textContent === 'Sign in to comment')).toBe(false);
 	});
 
 	it('forgets the token on signing out', async () => {

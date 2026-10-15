@@ -9,6 +9,12 @@ const WEB = 'https://github.com';
 export const AVATAR_ORIGIN = 'https://avatars.githubusercontent.com';
 /** Where the host's command line is installed from. */
 export const CLI_INSTALL_URL = 'https://cli.github.com';
+/** Where a person is sent to sign in to a GitHub App from a web page (the authorization-code flow, with PKCE). */
+export const SIGN_IN_AUTHORIZE_URL = `${WEB}/login/oauth/authorize`;
+
+/** Where a repository's Pages site is: `<owner>.github.io/<repo>/`, its owner as a host name is, in lower case. */
+export const pagesSiteUrl = ({ owner, repo }: { owner: string; repo: string }): string =>
+	`https://${owner.toLowerCase()}.github.io/${encodeURIComponent(repo)}/`;
 
 /** A path or a branch, each of its segments encoded. */
 const segments = (path: string): string => path.split('/').map(encodeURIComponent).join('/');

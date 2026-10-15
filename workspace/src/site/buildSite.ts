@@ -11,6 +11,8 @@ import { parseIterations } from '../shared/iterationRecords';
 import { plural } from '../shared/plural';
 import { extensionOf } from '../shared/mime';
 import type { RepoRef } from '../shared/repoRef';
+import { SIGN_IN_AUTHORIZE_URL, pagesSiteUrl } from '../shared/hostUrls';
+import type { SignInConfig } from '../shared/signInConfig';
 
 /**
  * The site prototypes are published as, built from the design repository: every project with a saved page, every
@@ -46,6 +48,12 @@ export interface SiteInput {
 	 * is another origin than the bar. Without it, as on the published site, each page is beside its bar.
 	 */
 	pagesAt?: string;
+	/**
+	 * Signing in to comment (PUBLISHED_COMMENTS_PLAN, Phase 3): the GitHub App's client ID and the sign-in function's address.
+	 * With it and a viewer, every page carries what the viewer needs to sign a person in, and the site's front page, which
+	 * GitHub sends a person back to, finishes it. An empty client ID is none.
+	 */
+	signIn?: { clientId: string; exchange: string };
 }
 
 /** A page on another origin than its bar (VS Code): its own scripts, origin (cookies, storage), forms, pop-ups and alerts; never the window above. */
@@ -178,7 +186,22 @@ const shell = (title: string, body: string, head = ''): string =>
 const redirect = (title: string, to: string): string =>
 	shell(title, `<main><p><a href="${to}">${escapeHtml(title)}</a></p></main>`, `<meta http-equiv="refresh" content="0; url=${to}">\n`);
 
-const indexPage = (projects: SiteProject[]): string =>
+/**
+ * What a page is told about signing in, safe inside a script element: the App, the function, GitHub's sign-in page, and the
+ * site's own address, which GitHub sends the person back to. Nothing when there is no viewer or no sign-in.
+ */
+const signInScript = (viewer: SiteInput['viewer'], signIn: SiteInput['signIn']): string => {
+	if (!viewer || !signIn?.clientId) return '';
+	const config: SignInConfig = {
+		clientId: signIn.clientId,
+		exchange: signIn.exchange,
+		redirect: pagesSiteUrl(viewer.ref),
+		authorize: SIGN_IN_AUTHORIZE_URL,
+	};
+	return `<script type="application/json" id="dsnr-sign-in">${JSON.stringify(config).replace(/</g, '\\u003c')}</script>\n`;
+};
+
+const indexPage = (projects: SiteProject[], head = ''): string =>
 	shell(
 		'Prototypes',
 		`<main>\n<h1>Prototypes</h1>\n<ul class="list">\n${projects
@@ -193,6 +216,7 @@ const indexPage = (projects: SiteProject[]): string =>
 				return `<li><a href="${p.id}/"><strong>${escapeHtml(p.title)}</strong><br><span class="muted">${plural(n, 'version')}${newest ? ` · ${newest}` : ''}</span></a></li>`;
 			})
 			.join('\n')}\n</ul>\n</main>`,
+		head,
 	);
 
 const projectPage = (p: SiteProject, comments: Map<string, number> | undefined): string =>
@@ -241,9 +265,16 @@ const frameAt = (p: SiteProject, page: Page, pagesAt: string | undefined): strin
  * app's own, drawn by the viewer (the switcher, comments); until it takes over, and where it never does, the bar is a
  * link back to the project, and nothing about it is styled here.
  */
-const viewerPage = (p: SiteProject, current: Page, viewer: SiteInput['viewer'], states: string[], pagesAt: string | undefined): string => {
+const viewerPage = (
+	p: SiteProject,
+	current: Page,
+	viewer: SiteInput['viewer'],
+	states: string[],
+	pagesAt: string | undefined,
+	signIn: string,
+): string => {
 	const head = viewer
-		? `<link rel="stylesheet" href="../../../_viewer/viewer.css">\n<script type="application/json" id="dsnr-config">${viewerConfig(viewer.ref, p, current, states)}</script>\n<script type="module" src="../../../_viewer/viewer.js"></script>\n`
+		? `${signIn}<link rel="stylesheet" href="../../../_viewer/viewer.css">\n<script type="application/json" id="dsnr-config">${viewerConfig(viewer.ref, p, current, states)}</script>\n<script type="module" src="../../../_viewer/viewer.js"></script>\n`
 		: '';
 	return shell(
 		`${p.title} · ${labelOf(current)}`,
@@ -265,7 +296,7 @@ const clearOut = (outDir: string): void => {
 	writeFileSync(join(outDir, MARK), 'Built by DSNR. This folder is cleared and rebuilt each time.\n');
 };
 
-export const buildSite = ({ designRoot, outDir, comments, viewer, pagesAt }: SiteInput): SiteSummary => {
+export const buildSite = ({ designRoot, outDir, comments, viewer, pagesAt, signIn: signingIn }: SiteInput): SiteSummary => {
 	const projects = readProjects(designRoot);
 	clearOut(outDir);
 	const shared = writeShared(designRoot, outDir);
@@ -290,7 +321,9 @@ export const buildSite = ({ designRoot, outDir, comments, viewer, pagesAt }: Sit
 		return firstInHead(html, `<script src="../../../_viewer/${PAGE_AGENT}"></script>`);
 	};
 
-	writeFileSync(join(outDir, 'index.html'), indexPage(projects));
+	const signIn = signInScript(viewer, signingIn);
+	// The front page is where GitHub sends a person back after signing in: it carries the viewer to finish it.
+	writeFileSync(join(outDir, 'index.html'), indexPage(projects, signIn ? `${signIn}<script type="module" src="_viewer/viewer.js"></script>\n` : ''));
 	for (const p of projects) {
 		const dir = join(outDir, p.id);
 		mkdirSync(dir, { recursive: true });
@@ -300,7 +333,7 @@ export const buildSite = ({ designRoot, outDir, comments, viewer, pagesAt }: Sit
 				const at = join(dir, pg.path);
 				mkdirSync(at, { recursive: true });
 				const html = readFileSync(join(designRoot, 'projects', p.id, 'prototypes', `${pg.record.name}.html`), 'utf8');
-				writeFileSync(join(at, 'index.html'), viewerPage(p, pg, viewer, statesOf(html), pagesAt));
+				writeFileSync(join(at, 'index.html'), viewerPage(p, pg, viewer, statesOf(html), pagesAt, signIn));
 				writeFileSync(join(at, 'page.html'), relink(html));
 			}
 			const newest = v.pages[0] as Page;

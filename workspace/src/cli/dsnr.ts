@@ -28,7 +28,7 @@ import { plural } from '../shared/plural';
 import { loginFromNoreply } from '../shared/hostUrls';
 import { ReviewThreads } from '../host/reviewThreads';
 import { CLI, HOST, needsCli } from '../shared/vocabulary';
-import { DESIGN_REPO } from '../shared/config';
+import { DESIGN_REPO, PAGES_SIGN_IN } from '../shared/config';
 
 /**
  * `dsnr`: making a prototype from Claude Code in VS Code, with no app running.
@@ -160,7 +160,13 @@ const site = async (deps: CliDeps, values: { out?: string; serve?: boolean }): P
 			noViewer = ` Its pages have no comments: the viewer did not build (${errorText(err, { firstLine: true })}).`;
 		}
 	}
-	const built = buildSite({ designRoot, outDir, comments, viewer: viewerDir ? { dir: viewerDir, ref: DESIGN_REPO } : undefined });
+	const built = buildSite({
+		designRoot,
+		outDir,
+		comments,
+		viewer: viewerDir ? { dir: viewerDir, ref: DESIGN_REPO } : undefined,
+		signIn: PAGES_SIGN_IN,
+	});
 	const pages = built.projects.reduce((n, p) => n + p.pages, 0);
 	deps.out(
 		`Built ${plural(pages, 'page')} in ${plural(built.projects.length, 'project')} at ${outDir}.${noViewer}${comments ? '' : ` Comment counts are left out: ${HOST} could not be asked (is ${CLI} signed in?).`}`,

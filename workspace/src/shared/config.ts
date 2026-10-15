@@ -27,6 +27,17 @@ export const DESIGN_REPO: RepoRef = {
 export const CLIENT_ID = env.DSNR_CLIENT_ID ?? 'Iv23li2z9ayhXhGdFXCm';
 
 /**
+ * Signing in to comment on the published site (PUBLISHED_COMMENTS_PLAN, Phase 3): the GitHub App the page signs people in
+ * through, and the function that trades the one-time code it gets for a token (`functions/sign-in`). Neither is a secret: the
+ * client ID is in every sign-in address, and the function answers only the site's own origin. An empty client ID turns
+ * signing in on the site off. The App's redirect address is the site's own (`pagesSiteUrl`).
+ */
+export const PAGES_SIGN_IN = {
+	clientId: env.DSNR_PAGES_CLIENT_ID ?? 'Iv23li0GrlmvH5bs6nZy',
+	exchange: env.DSNR_PAGES_EXCHANGE ?? 'https://dsnr-auth.vercel.app/api/exchange',
+};
+
+/**
  * Where a repository's Storybook is hosted, for the ones the app knows: a hint, since a library does not say it in its
  * files. Any other design system has no Storybook links, and is read the same in every other way.
  */
