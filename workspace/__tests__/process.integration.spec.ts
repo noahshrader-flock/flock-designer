@@ -4,6 +4,14 @@ import { NotInstalled, ProcessFailed, runFile } from '../src/main/services/proce
 const node = process.execPath;
 
 describe('running a program', () => {
+	it('answers for a program that exits without reading its input, rather than crashing on the closed pipe (EPIPE)', async () => {
+		// Far more than a pipe holds, to a program that never reads it: the write fails after the program is gone.
+		const r = await runFile(node, ['-e', 'process.exit(0)'], { input: 'x'.repeat(4 * 1024 * 1024) });
+		expect(r.stdout).toBe('');
+		const failed = await runFile(node, ['-e', 'process.exit(2)'], { input: 'x'.repeat(4 * 1024 * 1024) }).catch((e: unknown) => e);
+		expect(failed).toBeInstanceOf(ProcessFailed);
+	});
+
 	it('answers with what it printed, and its input given all at once', async () => {
 		const r = await runFile(node, ['-e', 'process.stdin.on("data", (d) => process.stdout.write(d.toString().toUpperCase()))'], { input: 'hi' });
 		expect(r).toEqual({ stdout: 'HI', stderr: '' });

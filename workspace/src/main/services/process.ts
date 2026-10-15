@@ -65,5 +65,10 @@ export const runFile = (
 				reject(new ProcessFailed(message, stdout, stderr, typeof err.code === 'number' ? err.code : null, timedOut));
 			},
 		);
-		if (input !== undefined) child.stdin?.end(input);
+		if (input !== undefined) {
+			// A program may exit without reading all of it (`gh` not installed, or one that fails at once): the write then
+			// finds the pipe closed. How the program ended is what answers, above; the closed pipe is not a second failure.
+			child.stdin?.on('error', () => undefined);
+			child.stdin?.end(input);
+		}
 	});
