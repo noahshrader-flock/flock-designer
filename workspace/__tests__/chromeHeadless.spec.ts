@@ -110,7 +110,11 @@ describe('finding the browser', () => {
 });
 
 /** A browser that answers as puppeteer's does, its page doing what it is told. */
-const fakeBrowser = (page: { evaluate?: (code: string) => unknown; screenshot?: (o: { type: string; quality?: number }) => Buffer }) => {
+const fakeBrowser = (page: {
+	evaluate?: (code: string) => unknown;
+	screenshot?: (o: { type: string; quality?: number }) => Buffer;
+	errors?: string[];
+}) => {
 	const done = { closed: 0, pages: 0, visited: [] as string[], scheme: [] as unknown[] };
 	const browser = {
 		newPage: async () => {
@@ -121,6 +125,9 @@ const fakeBrowser = (page: { evaluate?: (code: string) => unknown; screenshot?: 
 				goto: async (url: string) => void done.visited.push(url),
 				evaluate: async (code: string) => page.evaluate?.(code),
 				screenshot: async (o: { type: string; quality?: number }) => page.screenshot?.(o) ?? Buffer.alloc(0),
+				on: (event: string, listener: (err: Error) => void) => {
+					if (event === 'pageerror') for (const e of page.errors ?? []) listener(new Error(e));
+				},
 				close: async () => undefined,
 			};
 		},
@@ -295,5 +302,28 @@ describe('drawing stories, headless (6.1, the Design System tab’s pictures and
 
 	it('has a fingerprint of how it pictures, so a picture drawn another way (the app’s) is drawn again rather than shown', () => {
 		expect(HEADLESS_PICTURE_RECIPE).toMatch(/^[0-9a-f]{12}$/);
+	});
+});
+
+describe('whether a page loads (View locally checks before it opens anything)', () => {
+	const loadsWith = (page: Parameters<typeof fakeBrowser>[0]) => {
+		const { browser, done } = fakeBrowser(page);
+		return { headless: chromeHeadless({ find: () => '/chrome', launch: (async () => browser) as never, loadSettleMs: 0 }), done };
+	};
+
+	it('is null for a page that draws something', async () => {
+		const { headless, done } = loadsWith({ evaluate: () => 120 });
+		expect(await headless.loads('http://localhost:3000/zones')).toBeNull();
+		expect(done.visited).toEqual(['http://localhost:3000/zones']);
+	});
+
+	it('is the page’s own error when it throws as it loads', async () => {
+		const { headless } = loadsWith({ evaluate: () => 0, errors: ["Cannot read properties of undefined (reading 'None')"] });
+		expect(await headless.loads('http://localhost:3000/')).toBe("Cannot read properties of undefined (reading 'None')");
+	});
+
+	it('says so when the page draws nothing at all', async () => {
+		const { headless } = loadsWith({ evaluate: () => 0 });
+		expect(await headless.loads('http://localhost:3000/')).toBe('the page loaded, but the app drew nothing on it.');
 	});
 });

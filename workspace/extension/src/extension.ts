@@ -1,3 +1,6 @@
+import { readDescriptor } from '../../src/main/services/descriptor';
+import { INSTALL_COMMAND } from '../../src/main/services/install';
+import { httpProbe } from '../../src/main/services/runtime';
 import { join } from 'node:path';
 import * as vscode from 'vscode';
 import { served } from '../../src/main/handle';
@@ -5,7 +8,7 @@ import { type Context, findContext } from '../../src/main/services/findContext';
 import type { PublishStatus, SignInState } from '../../src/shared/contract';
 import { addressComment } from './address';
 import { Panels, hostApi } from './bridge';
-import { handOff, openCode, shareCodebase } from './codebase';
+import { type LocalRun, handOff, openCode, shareCodebase, viewLocally } from './codebase';
 import { startCore } from './core';
 import { showFound, shownFrom } from './designSystem';
 import { designSystemHost } from './designSystemHost';
@@ -62,7 +65,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 		void vscode.commands.executeCommand('setContext', 'dsnr.signedIn', state.state === 'signedIn');
 		provider.showAccount(state.state === 'signedIn' ? state.user.login : undefined);
 	};
-	const { core, github, shell, storage } = startCore(context, panels, showAccount);
+	const { core, github, shell, storage, headless } = startCore(context, panels, showAccount);
 	/** This machine's server's addresses, as DSNR's pages name them: pictures from its own, a library's code from the pages'. */
 	const localAddresses = async () => ({ images: await core.prototypeServer.origin(), frames: await core.prototypeServer.pagesOrigin() });
 	const folders = () => (vscode.workspace.workspaceFolders ?? []).map((f) => f.uri.fsPath);
@@ -233,10 +236,28 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 	 * VS Code's notifications, the agent's log and the browser. Handoff and its draft pull request change its records: the
 	 * list is read again.
 	 */
+	/** How the product open here runs on this machine (its own `.dsnr/workspace.json`), for View locally. */
+	const localRun = (root: string): LocalRun => {
+		const declared = () => readDescriptor(root).commands;
+		return {
+			port: (id) => declared().find((c) => c.id === id)?.servesPreviewOn ?? null,
+			installCommand: () =>
+				declared()
+					.find((c) => c.id === INSTALL_COMMAND)
+					?.argv.join(' ') ?? null,
+			answers: httpProbe,
+			loads: (url) => headless.loads(url),
+		};
+	};
 	const codebaseWork = async (action: CodebaseAction, projectId: string) => {
 		const root = found.product;
 		if (root === null) throw new Error(productNow().why);
-		const run = { 'hand-off': handOff, share: shareCodebase, 'open-code': openCode }[action];
+		const run = {
+			'hand-off': handOff,
+			share: shareCodebase,
+			'open-code': openCode,
+			'view-locally': (deps: Parameters<typeof viewLocally>[0], id: string) => viewLocally(deps, localRun(root), id),
+		}[action];
 		try {
 			await run({ ...here, root }, projectId);
 		} finally {

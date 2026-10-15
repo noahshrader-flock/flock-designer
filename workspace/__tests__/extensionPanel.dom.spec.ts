@@ -522,7 +522,7 @@ describe('codebase work, in the panel', () => {
 		const dividers = () => document.querySelectorAll('[role="separator"]').length;
 		await press(menuOf('Zone coverage'));
 		// A prototype that is in code too: it is built, so Handoff, not Build.
-		expect(items()).toEqual(['Open in browser', 'Open on GitHub', 'Copy link', 'Hand off', 'Assign folder…']);
+		expect(items()).toEqual(['Open in browser', 'Open on GitHub', 'View locally', 'Copy link', 'Hand off', 'Assign folder…']);
 		expect(dividers()).toBe(3);
 		await elsewhere();
 		await press(menuOf('Alert history'));
@@ -532,10 +532,19 @@ describe('codebase work, in the panel', () => {
 		await elsewhere();
 		await press(menuOf('Roles in code'));
 		// Code only: nothing of a prototype to open or link, and Handoff.
-		expect(items()).toEqual(['Open on GitHub', 'Hand off', 'Assign folder…']);
+		expect(items()).toEqual(['Open on GitHub', 'View locally', 'Hand off', 'Assign folder…']);
 		expect(dividers()).toBe(2);
 		// No item opens it in VS Code: pressing it does, and nothing is said twice.
 		expect(items().some((label) => /open for review|preview|comments|share/i.test(label))).toBe(false);
+	});
+
+	it('asks the extension to view the work locally, naming the project only, and offers it only for codebase work', async () => {
+		await showOpen(OPEN, WITH_CODE);
+		await press(menuOf('Zone coverage'));
+		await press(item('View locally'));
+		expect(panelSaid().at(-1)).toEqual({ type: 'codebase', action: 'view-locally', projectId: 'zone-coverage' });
+		await press(menuOf('Alert history'));
+		expect(items()).not.toContain('View locally');
 	});
 
 	it('asks the extension for the work on GitHub, naming the project only', async () => {

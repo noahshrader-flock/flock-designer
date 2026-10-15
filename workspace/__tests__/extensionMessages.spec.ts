@@ -19,6 +19,7 @@ describe('a message from the panel', () => {
 		// The draft pull request, from the Hand off dialog once a handoff found the work ready.
 		[{ type: 'codebase', action: 'share', projectId: 'zone-coverage' }],
 		[{ type: 'codebase', action: 'open-code', projectId: 'zone-coverage' }],
+		[{ type: 'codebase', action: 'view-locally', projectId: 'zone-coverage' }],
 		[{ type: 'new-prototype', title: 'Alert history', task: 'A history of alerts.', folder: null }],
 		[{ type: 'new-prototype', title: 'Alert history', task: 'A history of alerts.', folder: 'Maps' }],
 		[{ type: 'open-review', projectId: 'alert-history', name: 'v2-i1', title: 'Alert history · V2 · I1' }],

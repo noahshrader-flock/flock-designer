@@ -84,7 +84,12 @@ const ProjectItem = ({
 	// its pull request.
 	const opens: MenuItem[] = [
 		...(newest ? [{ label: 'Open in browser', icon: 'globe', onSelect: () => onOpenInBrowser(newest) }] : []),
-		...(inCode ? [{ label: 'Open on GitHub', icon: 'github', onSelect: () => onCodebase('open-code', id) }] : []),
+		...(inCode
+			? [
+					{ label: 'Open on GitHub', icon: 'github', onSelect: () => onCodebase('open-code', id) },
+					{ label: 'View locally', icon: 'browser', onSelect: () => onCodebase('view-locally', id) },
+				]
+			: []),
 	];
 	const link: MenuItem[] = newest ? [{ label: 'Copy link', icon: 'link', onSelect: () => onCopyLink(newest) }] : [];
 	const stage: { label: string; dialog: PanelDialog } | null = inCode

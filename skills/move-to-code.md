@@ -107,6 +107,9 @@ covers code and boundary only; **product parity stays at Handoff.**
 
 ## When you have finished
 
+**Leave nothing running.** If you started the product's dev server, or anything else that keeps running, to look at your
+work, stop it before you report: one left behind holds the product's port, and DSNR's View locally will not start over it.
+
 Say what you built, where, the light check's result, **how the implementation check ran** (a subagent, or
 yourself) **and what it found: what you fixed, and what is still open**, and what else is waiting: what is
 in **Needs a decision**, and where the audit is. Say that product parity and the full gate run at Handoff.

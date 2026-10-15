@@ -65,6 +65,8 @@ interface PageLike {
 		quality?: number;
 		clip: { x: number; y: number; width: number; height: number; scale?: number };
 	}): Promise<Uint8Array>;
+	/** Told of an error the page's own code throws (puppeteer's `pageerror`). */
+	on?(event: 'pageerror', listener: (err: unknown) => void): void;
 	close(): Promise<void>;
 }
 interface BrowserLike {
@@ -132,7 +134,13 @@ const STATE_MS = 20_000;
 export const chromeHeadless = ({
 	find = () => findChrome(),
 	launch = launchChrome,
-}: { find?: () => string | null; launch?: (path: string) => Promise<BrowserLike> } = {}): Headless & { close(): Promise<void> } => {
+	loadSettleMs = 4000,
+}: {
+	find?: () => string | null;
+	launch?: (path: string) => Promise<BrowserLike>;
+	/** How long a loaded page is given to draw, or to fail, before it is judged (`loads`). */
+	loadSettleMs?: number;
+} = {}): Headless & { loads(url: string): Promise<string | null>; close(): Promise<void> } => {
 	let browser: Promise<BrowserLike> | null = null;
 	const started = (): Promise<BrowserLike> => {
 		if (browser === null) {
@@ -217,10 +225,27 @@ export const chromeHeadless = ({
 	/** One run after another, each in a few pages at once, as the app's hidden windows draw them. */
 	const measure: Measure = measureWith(drawShare);
 
+	/**
+	 * Whether a page really loads (View locally): a server can answer while the app on it fails, so the page is opened here,
+	 * given a moment, and judged. Null when it drew something; else its own error, or that it drew nothing.
+	 */
+	const loads = (url: string): Promise<string | null> =>
+		onPage(async (page) => {
+			const errors: string[] = [];
+			page.on?.('pageerror', (err) => errors.push(err instanceof Error ? err.message : String(err)));
+			await page.setViewport({ width: 1280, height: 800, deviceScaleFactor: 1 });
+			if ((await within(LOAD_MS, page.goto(url, { waitUntil: 'load', timeout: LOAD_MS }))) === null) return 'the page did not load in time.';
+			await new Promise((resolve) => setTimeout(resolve, loadSettleMs));
+			if (errors.length > 0) return errors[0] as string;
+			const drawn = Number(await page.evaluate('document.body ? document.body.innerText.trim().length : 0'));
+			return drawn > 0 ? null : 'the page loaded, but the app drew nothing on it.';
+		});
+
 	return {
 		draw,
 		scan,
 		measure,
+		loads,
 		close: async () => {
 			const open = browser;
 			browser = null;

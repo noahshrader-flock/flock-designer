@@ -1,11 +1,13 @@
-import { type BuildApi, type BuildPhase, runLocalBuild } from '../../src/renderer/localBuild';
+import { type BuildApi, type BuildPhase, previewCommandFor, runLocalBuild } from '../../src/renderer/localBuild';
 import type { Project, ProjectIteration, ShareStatus, ShareStep, WorkspaceApi } from '../../src/shared/contract';
 import { valueOf } from '../../src/shared/result';
 import { codeLink, workOf } from '../../src/shared/work';
 import { type AgentWorkDeps, type Offer, type Tell, agentReady, agentWork, pollOf } from './agentWork';
 
 export interface CodebaseDeps extends AgentWorkDeps {
-	api: AgentWorkDeps['api'] & BuildApi & Pick<WorkspaceApi, 'listProjects' | 'handoffResult' | 'shareIteration' | 'onShareStatus'>;
+	api: AgentWorkDeps['api'] &
+		BuildApi &
+		Pick<WorkspaceApi, 'listProjects' | 'handoffResult' | 'shareIteration' | 'onShareStatus' | 'stopCommand' | 'onRunLog'>;
 	/** The product folder that is open: where the codebase work is. */
 	root: string;
 	tell: Tell;
@@ -65,6 +67,120 @@ export const handOff = async (deps: CodebaseDeps, projectId: string): Promise<vo
 				? `${project.title} is not ready for engineering yet: its log says why.`
 				: `The handoff of ${project.title} finished: its log says how it went.`,
 		);
+};
+
+const STOP = 'Stop';
+
+/** What View locally needs of the product and this machine: how the product runs, and what is already here. */
+export interface LocalRun {
+	/** The port the product says its command serves on (its `.dsnr/workspace.json`), or null when it declares none. */
+	port: (commandId: string) => number | null;
+	/** The product's own install command, as words, for a message that its packages may be out of date; null when none. */
+	installCommand: () => string | null;
+	/** Whether something already answers on a port. */
+	answers: (port: number) => Promise<boolean>;
+	/** The page loaded out of sight for a moment: null when it drew, else what went wrong (its error, or that it drew nothing). */
+	loads: (url: string) => Promise<string | null>;
+}
+
+const ANSI = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, 'g');
+/** The line of a server's output that says why its build failed, if one does. */
+const buildError = (lines: string[]): string | null => {
+	// The bundler's list of what a package does export is long and says nothing the person needs: it is cut.
+	const bare = lines
+		.map((l) =>
+			l
+				.replace(ANSI, '')
+				.replace(/^\s*[×✖]\s*/, '')
+				.replace(/\s*\(possible exports:.*$/, '')
+				.trim(),
+		)
+		.filter(Boolean);
+	const failed = bare.some((l) => /build failed|failed to compile|build error/i.test(l));
+	if (!failed) return null;
+	return (
+		bare.find(
+			(l) =>
+				/(Error|error TS\d+|Module not found|was not found in|Cannot find module)/.test(l) &&
+				!/^error\s+build (failed|error)/i.test(l) &&
+				!/^error\s+Build error:?$/i.test(l),
+		) ?? 'its build failed.'
+	);
+};
+/** Said when an error names a package export or module that is not there: the product's packages are older than its code. */
+const packagesHint = (reason: string, install: string | null): string =>
+	/was not found in '[^']+'|has no exported member|Cannot find module '[^']+'/.test(reason)
+		? ` Its packages may be out of date${install ? `: ${install}` : '.'}`
+		: '';
+
+/**
+ * View locally (VIEW_LOCALLY_PLAN): codebase work run on this machine, the way the product says it runs (its design mode, on
+ * mock data), and opened in the person's own browser at its route. Its own earlier run is stopped first, so there is only
+ * one; a port something else already answers on is refused. The checkout is moved to the branch as a build moves it (a
+ * checkout with uncommitted changes is not moved). "Up" is checked, not assumed: a build error in the server's output, or a
+ * page that errors or draws nothing in the browser out of sight, is a failure, the server stopped and nothing opened.
+ */
+export const viewLocally = async (deps: CodebaseDeps, local: LocalRun, projectId: string): Promise<void> => {
+	const { api, root } = deps;
+	const { project, iteration } = await codebaseOf(api, projectId);
+	const command = previewCommandFor(iteration);
+	const couldNot = (why: string) => new Error(`${project.title} couldn’t load locally: ${why}`);
+	await api.stopCommand(root, command);
+	const port = local.port(command);
+	if (port === null) throw couldNot(`the product’s .dsnr/workspace.json declares no ${command} command with a port.`);
+	if (await local.answers(port)) throw couldNot(`something else is already answering on port ${port}. Stop it, then try again.`);
+	const lines: string[] = [];
+	deps.log.start(`${project.title}, locally`);
+	const listening = api.onRunLog((l) => {
+		if (l.commandId !== command) return;
+		for (const line of l.text.split('\n').filter((x) => x.trim() !== '')) {
+			lines.push(line);
+			deps.log.line(line.replace(ANSI, ''));
+		}
+	});
+	let url: string | null = null;
+	let failed: string | null = null;
+	let stopped = false;
+	try {
+		await deps.progress(
+			`Starting ${project.title} locally`,
+			async (say) => {
+				url = await runLocalBuild({
+					api,
+					root,
+					project,
+					iteration,
+					isLive: () => !stopped,
+					onPhase: (phase: BuildPhase) => {
+						if (phase.kind === 'preview') say('Starting its dev server…');
+						if (phase.kind === 'failed') failed = phase.message;
+					},
+					...pollOf(deps),
+				});
+				if (url !== null && failed === null) {
+					say('Checking that it loads…');
+					// The output is read before and after the page is: a server can answer before it prints its build error.
+					failed = buildError(lines) ?? (await local.loads(url)) ?? buildError(lines);
+				}
+			},
+			() => {
+				stopped = true;
+				void api.stopCommand(root, command);
+			},
+		);
+	} finally {
+		listening();
+	}
+	if (stopped) return;
+	if (failed !== null || url === null) {
+		await api.stopCommand(root, command);
+		const why: string = failed ?? 'it gave no address.';
+		const hint = packagesHint(why, local.installCommand());
+		throw couldNot(hint && !/[.!?]$/.test(why) ? `${why}.${hint}` : `${why}${hint}`);
+	}
+	const at: string = url;
+	await deps.openExternal(at);
+	if ((await deps.offer(`${project.title} is running locally at ${at}.`, [STOP])) === STOP) valueOf(await api.stopCommand(root, command));
 };
 
 /** What sharing says at each step: it is a push, a pull request and a build. */

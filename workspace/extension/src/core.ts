@@ -46,5 +46,5 @@ export const startCore = (context: vscode.ExtensionContext, panels: Panels, onSi
 		{ dispose: () => core.runtime.stopAll() },
 		{ dispose: () => core.agent.stop() },
 	);
-	return { core, github, shell, storage };
+	return { core, github, shell, storage, headless };
 };
