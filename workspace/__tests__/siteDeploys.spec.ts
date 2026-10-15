@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { GitHubSession } from '../src/main/services/githubSession';
+import type { GitHubAccount } from '../src/host/github';
 
 const pages = vi.hoisted(() => ({
 	siteBehind: vi.fn(),
@@ -15,7 +15,7 @@ let signedIn = true;
 const github = {
 	state: () => (signedIn ? { state: 'signedIn', user: { login: 'noah', name: 'Noah' } } : { state: 'signedOut' }),
 	api: vi.fn(),
-} as unknown as Pick<GitHubSession, 'state' | 'api'>;
+} as unknown as Pick<GitHubAccount, 'state' | 'api'>;
 const deploys = () => siteDeploys({ github, designClone: () => null });
 /** Lets a deploy started in the background settle. */
 const settle = () => new Promise((r) => setImmediate(r));

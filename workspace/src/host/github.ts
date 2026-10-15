@@ -1,32 +1,29 @@
-import type { DeviceCodeStart, GitHubUser } from '../shared/contract';
+import type { GitHubUser, SignInState } from '../shared/contract';
 import { asRecord } from '../shared/json';
 import { errorText } from '../shared/result';
 import { HostError } from './hostError';
 import { HOST } from '../shared/vocabulary';
 
 /**
- * GitHub's device flow, and the slice of the REST API the app uses.
- *
- * Device flow because this is a desktop app: it needs no client secret, so there
- * is no server of ours anywhere in the design. Verified against the real app on
- * 2026-10-05 -- sign-in, issue creation, commenting, and that the token cannot
- * see a repository the app is not installed on.
- *
- * Tokens last 8 hours and arrive with a refresh token. That is the reason
- * `withToken` exists rather than callers holding a token: a reviewer part way
- * through a session must not be thrown back to a sign-in screen.
+ * The slice of GitHub's REST API DSNR uses, and a read cache for it. The person signs in through their shell (VS Code's
+ * own GitHub sign-in); nothing here holds a token or asks for one.
  */
 
-const DEVICE_CODE_URL = 'https://github.com/login/device/code';
-const TOKEN_URL = 'https://github.com/login/oauth/access_token';
 const API = 'https://api.github.com';
 
 /**
- * All the app needs of the host's API: a signed-in call to its API. The app's session is one; so is `gh` on the command line, and a
- * token in a browser on the published site.
+ * All DSNR needs of the host's API: a signed-in call to its API. The extension's account is one; so is `gh` on the command
+ * line, and a token in a browser on the published site.
  */
 export interface GitHubApi {
 	api(path: string, init?: { method?: string; body?: unknown }): Promise<unknown>;
+}
+
+/** The person's GitHub account as the core uses it, whichever shell signs them in (the extension: VS Code's own sign-in). */
+export interface GitHubAccount extends GitHubApi {
+	restore(): Promise<SignInState>;
+	state(): SignInState;
+	signOut(): void;
 }
 
 /** Who `api` is signed in as, by their login, or null when it does not say. Throws when it cannot be asked. */
@@ -41,14 +38,6 @@ export class ReauthRequired extends HostError {
 		super(message, undefined, 'reauth');
 		this.name = 'ReauthRequired';
 	}
-}
-
-export interface StoredToken {
-	accessToken: string;
-	/** Epoch ms. */
-	expiresAt: number;
-	refreshToken?: string;
-	refreshExpiresAt?: number;
 }
 
 export interface Fetcher {
@@ -66,122 +55,6 @@ export interface Fetcher {
 
 /** The real fetch, as the session uses it: every call to GitHub given up on after 30 seconds rather than left to hang. */
 export const networkFetch: Fetcher = (url, init) => fetch(url, { ...init, signal: AbortSignal.timeout(30_000) }) as ReturnType<Fetcher>;
-
-/** Step one: ask GitHub for a code the person types into github.com/login/device. */
-export const startDeviceFlow = async (clientId: string, fetcher: Fetcher): Promise<DeviceCodeStart> => {
-	const res = await fetcher(DEVICE_CODE_URL, {
-		method: 'POST',
-		headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
-		body: JSON.stringify({ client_id: clientId }),
-	});
-	const body = asRecord(await res.json());
-	if (typeof body.device_code !== 'string' || typeof body.user_code !== 'string') {
-		throw new HostError(
-			typeof body.error_description === 'string'
-				? body.error_description
-				: `${HOST} did not return a device code. Check the client ID, and that device flow is enabled on the app.`,
-			res.status,
-		);
-	}
-	return {
-		deviceCode: body.device_code,
-		userCode: body.user_code,
-		verificationUri: typeof body.verification_uri === 'string' ? body.verification_uri : 'https://github.com/login/device',
-		expiresInSeconds: typeof body.expires_in === 'number' ? body.expires_in : 900,
-		intervalSeconds: typeof body.interval === 'number' ? body.interval : 5,
-	};
-};
-
-const tokenFromResponse = (body: Record<string, unknown>, now: number): StoredToken => ({
-	accessToken: String(body.access_token),
-	// GitHub returns 8 hours today. Trust the response rather than the number.
-	expiresAt: now + (typeof body.expires_in === 'number' ? body.expires_in : 8 * 3600) * 1000,
-	...(typeof body.refresh_token === 'string' ? { refreshToken: body.refresh_token } : {}),
-	...(typeof body.refresh_token_expires_in === 'number' ? { refreshExpiresAt: now + body.refresh_token_expires_in * 1000 } : {}),
-});
-
-/**
- * Step two: poll until the person authorizes, or the attempt ends.
- *
- * `authorization_pending` is the normal case and means keep waiting;
- * `slow_down` means GitHub wants a longer interval and is not an error.
- */
-export const pollForToken = async (
-	clientId: string,
-	start: DeviceCodeStart,
-	fetcher: Fetcher,
-	deps: { now?: () => number; sleep?: (ms: number) => Promise<void> } = {},
-): Promise<StoredToken> => {
-	const now = deps.now ?? (() => Date.now());
-	const sleep = deps.sleep ?? ((ms: number) => new Promise((r) => setTimeout(r, ms)));
-	const deadline = now() + start.expiresInSeconds * 1000;
-	let interval = start.intervalSeconds;
-
-	while (now() < deadline) {
-		await sleep(interval * 1000);
-		const res = await fetcher(TOKEN_URL, {
-			method: 'POST',
-			headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
-			body: JSON.stringify({
-				client_id: clientId,
-				device_code: start.deviceCode,
-				grant_type: 'urn:ietf:params:oauth:grant-type:device_code',
-			}),
-		});
-		const body = asRecord(await res.json());
-
-		if (typeof body.access_token === 'string') {
-			return tokenFromResponse(body, now());
-		}
-		switch (body.error) {
-			case 'authorization_pending':
-				continue;
-			case 'slow_down':
-				interval = typeof body.interval === 'number' ? body.interval : interval + 5;
-				continue;
-			case 'expired_token':
-				throw new HostError('The sign-in code expired. Start again.');
-			case 'access_denied':
-				throw new HostError(`Sign-in was canceled on ${HOST}.`);
-			default:
-				throw new HostError(typeof body.error_description === 'string' ? body.error_description : `${HOST} refused the sign-in.`, res.status);
-		}
-	}
-	throw new HostError('The sign-in code expired. Start again.');
-};
-
-export const refreshToken = async (
-	clientId: string,
-	token: StoredToken,
-	fetcher: Fetcher,
-	now: () => number = () => Date.now(),
-): Promise<StoredToken> => {
-	if (!token.refreshToken) {
-		throw new ReauthRequired();
-	}
-	const res = await fetcher(TOKEN_URL, {
-		method: 'POST',
-		headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
-		body: JSON.stringify({
-			client_id: clientId,
-			grant_type: 'refresh_token',
-			refresh_token: token.refreshToken,
-		}),
-	});
-	const body = asRecord(await res.json());
-	if (typeof body.access_token !== 'string') {
-		// An OAuth error (`bad_refresh_token`, and the like) means the refresh token is no good: sign in again. Anything
-		// else, a server error or a proxy's page, may pass, so it must not end the session.
-		if (typeof body.error === 'string') {
-			throw new ReauthRequired();
-		}
-		throw new HostError(`${HOST} could not renew the sign-in just now. Try again in a moment.`, res.status);
-	}
-	return tokenFromResponse(body, now());
-};
-
-/** Refreshed a minute early, so a call cannot start on a token that expires mid-flight. */
-export const isExpired = (token: StoredToken, now: number): boolean => token.expiresAt - 60_000 <= now;
 
 export interface ApiCall {
 	path: string;

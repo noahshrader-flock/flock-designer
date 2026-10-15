@@ -1,4 +1,4 @@
-/** Signing in to GitHub. */
+/** Who is signed in to GitHub, if anyone. */
 
 /** Who is signed in. */
 export interface GitHubUser {
@@ -7,16 +7,4 @@ export interface GitHubUser {
 	avatarUrl: string | null;
 }
 
-/** What the person types in, and where. */
-export interface DeviceCodeStart {
-	deviceCode: string;
-	userCode: string;
-	verificationUri: string;
-	expiresInSeconds: number;
-	intervalSeconds: number;
-}
-
-export type SignInState =
-	| { state: 'signedOut' }
-	| { state: 'awaitingDevice'; userCode: string; verificationUri: string; expiresAt: string }
-	| { state: 'signedIn'; user: GitHubUser };
+export type SignInState = { state: 'signedOut' } | { state: 'signedIn'; user: GitHubUser };

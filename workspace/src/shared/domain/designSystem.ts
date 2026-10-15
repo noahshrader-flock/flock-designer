@@ -34,9 +34,6 @@ export interface FoundDesignSystem {
 	name: string;
 }
 
-/** Connecting a repository: connected, or several design systems found in it to choose from. */
-export type DesignSystemConnection = { state: 'connected'; id: string } | { state: 'choose'; repository: string; found: FoundDesignSystem[] };
-
 /**
  * What a token's value is, which says how it is drawn: a color, a length, a font, a shadow, a duration, an easing curve, or a
  * plain number. Only the colors and lengths of Color, Spacing and Shape can be changed in the app (`isEditable`); the rest

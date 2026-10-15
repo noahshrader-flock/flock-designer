@@ -23,7 +23,7 @@ import { DesignSystemsMemory } from './services/designSystems';
 import { recordsRootFor } from './services/discovery';
 import { SessionMemory } from './services/editor';
 import { isRepository, readCheckout } from './services/git';
-import type { GitHubAccount } from './services/githubSession';
+import type { GitHubAccount } from '../host/github';
 import { Installer } from './services/install';
 import { recordedIteration } from './services/iterations';
 import { readFolderProjects } from './services/localProjects';

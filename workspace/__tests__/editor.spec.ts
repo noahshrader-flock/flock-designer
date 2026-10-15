@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { SessionMemory, claudeLink, findEditor, resumeCommand, startCommand } from '../src/main/services/editor';
+import { SessionMemory, claudeLink, findEditor, startCommand } from '../src/main/services/editor';
 
 const dirs: string[] = [];
 const temp = () => {
@@ -44,12 +44,6 @@ describe('finding the editor', () => {
 	});
 });
 
-describe('the terminal command', () => {
-	it('runs from the folder the conversation belongs to, quoted', () => {
-		expect(resumeCommand('/bin/claude', { session: id, root: "/Users/a b/it's" })).toBe(`cd '/Users/a b/it'\\''s' && /bin/claude --resume ${id}`);
-	});
-});
-
 describe('a conversation opened in VS Code', () => {
 	it('is Claude Code’s own link: a session to continue, or a new one with its first prompt', () => {
 		expect(claudeLink({ session: id })).toBe(`vscode://anthropic.claude-code/open?session=${id}`);
@@ -77,6 +71,5 @@ describe('the terminal commands on Windows', () => {
 		expect(startCommand('C:\\Users\\pat\\.local\\bin\\claude.exe', 'D:\\code\\flock coke', 'Read "C:\\a b.md" now', 'win32')).toBe(
 			'cd /d "D:\\code\\flock coke" && "C:\\Users\\pat\\.local\\bin\\claude.exe" "Read \\"C:\\a b.md\\" now"',
 		);
-		expect(resumeCommand('claude', { session: id, root: 'D:\\code\\coke' }, 'win32')).toBe(`cd /d "D:\\code\\coke" && "claude" --resume ${id}`);
 	});
 });

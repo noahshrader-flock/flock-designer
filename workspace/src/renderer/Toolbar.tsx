@@ -29,14 +29,3 @@ export const Toolbar = ({ children, className, quiet = false }: { children: Reac
 		{children}
 	</div>
 );
-
-/**
- * What a toolbar's right-hand side holds, pushed there: what can be done here, evenly spaced and tighter than the toolbar's
- * own gap, so it reads as one group.
- */
-export const ToolbarEnd = ({ children }: { children: ReactNode }) => (
-	<>
-		<div className="grow" />
-		<div className="flex items-center gap-2">{children}</div>
-	</>
-);

@@ -8,7 +8,7 @@ import { AgentRunner } from './services/agent';
 import { CheckoutMemory } from './services/checkoutMemory';
 import { DesignSystemsMemory } from './services/designSystems';
 import { SessionMemory } from './services/editor';
-import type { GitHubAccount } from './services/githubSession';
+import type { GitHubAccount } from '../host/github';
 import { Installer } from './services/install';
 import { PrototypeServer } from './services/prototypeServer';
 import { RuntimeManager } from './services/runtime';

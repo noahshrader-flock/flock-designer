@@ -6,7 +6,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { whereFound } from '../../shared/accessibility';
-import type { AccessibilityFindings, AccessibilityIssue, AccessibilityResult } from '../../shared/contract';
+import type { AccessibilityFindings, AccessibilityIssue } from '../../shared/contract';
 import { axeTagsFor, describeTarget, notAutomated, parseTarget, type DeclaredTarget, undeclared } from '../../shared/wcag';
 
 /** The standard, in the design repository, as the skills are. */
@@ -119,16 +119,3 @@ export const taskAccessibility = async (
 	findings?: AccessibilityFindings | null,
 	check: string | null = null,
 ): Promise<string> => accessibilityBrief({ standard: await readStandard(ACCESSIBILITY_STANDARD), target, findings, check });
-
-/**
- * What a prototype's agent is asked when its page's check found issues (T7, part B): to fix those, and nothing else, as
- * one round of its own check, the way a build error is fixed. Built from the result kept, never from the window's words.
- */
-export const fixRequest = (result: AccessibilityResult): string =>
-	[
-		`The page was checked for accessibility with axe-core ${result.ran.axe}, at ${result.ran.target}, and it found the issues below.`,
-		'Fix each one in the source, then build it again. Change nothing else: how the page looks and what it does stay as they are.',
-		'Where a fix would change the design, leave it, and say in your summary which one and why.',
-		'',
-		...result.violations.map(issueLine),
-	].join('\n');

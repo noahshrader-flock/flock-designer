@@ -1,7 +1,7 @@
 import type * as VsCode from 'vscode';
 import { type Fetcher, ReauthRequired, ReadCache, callApi, readUser } from '../../src/host/github';
-import type { GitHubAccount } from '../../src/main/services/githubSession';
-import type { DeviceCodeStart, SignInState } from '../../src/shared/contract';
+import type { GitHubAccount } from '../../src/host/github';
+import type { SignInState } from '../../src/shared/contract';
 
 /** What DSNR asks of GitHub: the person's private repositories, and the organizations they are in. */
 const SCOPES = ['repo', 'read:org'];
@@ -57,13 +57,6 @@ export class VsCodeGitHub implements GitHubAccount {
 	state(): SignInState {
 		return this.current;
 	}
-
-	/** The app's own device flow has no place here: VS Code signs the person in. */
-	async startSignIn(): Promise<DeviceCodeStart> {
-		throw new Error('In VS Code, sign in from the DSNR title bar, or with DSNR: Sign in to GitHub.');
-	}
-
-	cancelSignIn(): void {}
 
 	signOut(): void {
 		void this.memento.update(SIGNED_OUT, true);

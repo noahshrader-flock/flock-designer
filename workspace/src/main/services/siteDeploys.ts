@@ -4,7 +4,7 @@ import { errorText } from '../../shared/result';
 import { coalescingByKey } from './concurrency';
 import { DESIGN_REPO } from '../../shared/config';
 
-import type { GitHubSession } from './githubSession';
+import type { GitHubAccount } from '../../host/github';
 import { pageStatus, publish, recordsFrom, redeploySite, siteBehind } from './pages';
 import { HOST } from '../../shared/vocabulary';
 
@@ -13,7 +13,7 @@ import { HOST } from '../../shared/vocabulary';
  * as the agent publishes from Claude Code with the same code; and the site itself when what it is built from changed.
  * What stopped a page is kept, so its screen can say why it is not published.
  */
-export const siteDeploys = ({ github, designClone }: { github: Pick<GitHubSession, 'state' | 'api'>; designClone: () => string | null }) => {
+export const siteDeploys = ({ github, designClone }: { github: Pick<GitHubAccount, 'state' | 'api'>; designClone: () => string | null }) => {
 	// One deploy of a page at a time, and once more if asked again meanwhile: what changed since may have missed its push.
 	const running = coalescingByKey<string>();
 	const stopped = new Map<string, string>();

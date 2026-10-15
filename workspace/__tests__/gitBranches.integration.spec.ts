@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { branchesWithFile, ensureLocalBranch, recentBranches } from '../src/main/services/git';
+import { branchesWithFile, ensureLocalBranch } from '../src/main/services/git';
 import { g, makeProduct } from './fixtures';
 
 /**
@@ -37,11 +37,6 @@ beforeEach(() => {
 afterEach(() => rmSync(root, { recursive: true, force: true }));
 
 describe('the branches work can start from', () => {
-	it('are the local ones and the ones only on GitHub, each once, without origin/HEAD', async () => {
-		const names = await recentBranches(clone);
-		expect(names.sort()).toEqual(['develop', 'noah/work', 'plain']);
-	});
-
 	it('are told apart by whether they carry the setup file, asked of git once', async () => {
 		expect((await branchesWithFile(clone, '.dsnr/workspace.json')).sort()).toEqual(['develop', 'noah/work']);
 	});

@@ -1,19 +1,11 @@
 import { existsSync } from 'node:fs';
 import { designSystemOf, isTokenGroup } from '../../shared/catalog';
 import type { DeclaredTarget } from '../../shared/wcag';
-import type {
-	Catalog,
-	CatalogComponent,
-	CatalogUpdate,
-	ConnectedDesignSystem,
-	DesignSystemConnection,
-	DesignTokens,
-	FoundDesignSystem,
-} from '../../shared/contract';
+import type { Catalog, CatalogComponent, CatalogUpdate, ConnectedDesignSystem, DesignTokens } from '../../shared/contract';
 import { LIBRARY_MANIFEST, declaredTarget } from './accessibilityBrief';
 import { isStoryFile, readCatalog, type CatalogReads } from './componentCatalog';
 import { readTokens } from './designTokens';
-import { type DesignSystemsMemory, defaultBranch, designSystemId, filesOf, findDesignSystems, within } from './designSystems';
+import { type DesignSystemsMemory, filesOf, within } from './designSystems';
 import { git } from './git';
 import { singleFlight } from './concurrency';
 import { errorText } from '../../shared/result';
@@ -184,8 +176,6 @@ export class DesignLibrary {
 	private fetching = singleFlight<string, Exclude<CatalogUpdate, 'updating'>>();
 	/** The last fetch's outcome for each clone and branch, so a later ask without `refresh` says how current the list is. */
 	private outcome = new Map<string, Exclude<CatalogUpdate, 'updating'>>();
-	/** What a repository with several design systems had found, until one is chosen: only a folder offered can be. */
-	private offered = new Map<string, { root: string; branch: string; found: FoundDesignSystem[] }>();
 
 	constructor(private readonly deps: DesignLibraryDeps) {}
 
@@ -210,44 +200,6 @@ export class DesignLibrary {
 		const now = await read(system, last ?? 'updating');
 		if (last === undefined) void this.fetch(system.root, system.branch);
 		return now;
-	}
-
-	/**
-	 * Connects the design system in a repository's clone (decisions 23 to 25): its default branch brought up to date and
-	 * looked in. Refused, in words, when it has none; connected and shown when it has one; offered when it has several.
-	 */
-	async connect(repository: string, root: string): Promise<DesignSystemConnection> {
-		const branch = await defaultBranch(root);
-		if (branch === null) throw new Error(`${HOST} did not say which branch of ${repository} is its default, so it cannot be read.`);
-		const update = await this.fetch(root, branch);
-		const commit = await libraryCommit(root, branch);
-		if (commit === null) throw new Error(typeof update === 'object' ? update.failed : `${repository} has no ${branch} branch from ${HOST} to read.`);
-		const found = await findDesignSystems(libraryReads(root, commit), repository);
-		if (found.length === 0) {
-			throw new Error(
-				`No design system was found in ${repository}: it has no Storybook stories, and no tokens in theme files, CSS variables or token files.`,
-			);
-		}
-		if (found.length > 1) {
-			this.offered.set(repository, { root, branch, found });
-			return { state: 'choose', repository, found };
-		}
-		return this.keep(repository, root, branch, found[0] as FoundDesignSystem);
-	}
-
-	/** Connects one of the design systems `connect` offered for a repository, by its folder; refused for any other. */
-	choose(repository: string, folder: string): DesignSystemConnection {
-		const at = this.offered.get(repository);
-		const found = at?.found.find((f) => f.folder === folder);
-		if (!at || !found) throw new Error('That is not one of the design systems found in the repository. Connect it again.');
-		return this.keep(repository, at.root, at.branch, found);
-	}
-
-	private keep(repository: string, root: string, branch: string, found: FoundDesignSystem): DesignSystemConnection {
-		const id = designSystemId(repository, found.folder);
-		this.deps.systems.add({ id, name: found.name, repository, root, folder: found.folder, branch });
-		this.offered.delete(repository);
-		return { state: 'connected', id };
 	}
 
 	private fetch(root: string, branch: string): Promise<Exclude<CatalogUpdate, 'updating'>> {

@@ -97,12 +97,6 @@ const quote = (s: string, platform: NodeJS.Platform): string =>
 const terminalLine = (root: string, claude: string, args: string, platform: NodeJS.Platform): string =>
 	`cd ${platform === 'win32' ? '/d ' : ''}${quote(root, platform)} && ${quote(claude, platform)} ${args}`;
 
-/** Without VS Code: the same conversation, from a terminal. */
-export const resumeCommand = (claude: string, { session, root }: AgentSession, platform: NodeJS.Platform = process.platform): string => {
-	if (!UUID.test(session)) throw new Error('That is not a session.');
-	return terminalLine(root, claude, `--resume ${session}`, platform);
-};
-
 /** Without VS Code: a new conversation, from a terminal, in `root`, with its first prompt. */
 export const startCommand = (claude: string, root: string, prompt: string, platform: NodeJS.Platform = process.platform): string =>
 	terminalLine(root, claude, quote(prompt, platform), platform);

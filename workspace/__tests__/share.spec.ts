@@ -5,7 +5,6 @@ import {
 	type ShareRequest,
 	ShareRunner,
 	type ShareTools,
-	previewIsUp,
 	previewUrlFor,
 	pullRequestText,
 	runShare,
@@ -147,18 +146,6 @@ describe('the pull request text', () => {
 describe('addresses', () => {
 	it('fills the pull request number into the descriptor’s pattern', () => {
 		expect(previewUrlFor(share, 1486)).toBe('https://dev-coke-pr-1486.example.test');
-	});
-
-	it.each([
-		[200, true],
-		[302, true],
-		[401, true],
-		[403, true],
-		[404, false],
-		[502, false],
-		[503, false],
-	])('treats HTTP %i as up: %s', (status, up) => {
-		expect(previewIsUp(status)).toBe(up);
 	});
 });
 

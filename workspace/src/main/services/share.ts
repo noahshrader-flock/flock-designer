@@ -54,12 +54,6 @@ export interface ShareTimings {
 
 export const DEFAULT_TIMINGS: ShareTimings = { pollMs: 10_000, startupMs: 180_000, timeoutMs: 25 * 60_000, skewMs: 120_000 };
 
-/**
- * Whether a shared preview's address answers yet. A person behind company sign-in gets a redirect or a
- * refusal and the page is there; only no answer, "not found" and a server error mean it is not up.
- */
-export const previewIsUp = (status: number): boolean => status !== 404 && status < 500;
-
 export const previewUrlFor = (share: ShareDescriptor, pr: number): string => share.url.replace('<pr>', String(pr));
 
 /** What the pull request says about itself, so nobody mistakes it for work headed to the trunk. */

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { COMMENTS_PANEL, PANEL_MIN, TOKENS_PANEL, clampPanelWidth, loadPanelWidth, panelMax, savePanelWidth } from '../src/renderer/panelWidth';
+import { COMMENTS_PANEL, PANEL_MIN, clampPanelWidth, loadPanelWidth, panelMax, savePanelWidth } from '../src/renderer/panelWidth';
 
 describe('clampPanelWidth', () => {
 	it('never goes below the minimum', () => {
@@ -28,22 +28,15 @@ describe('clampPanelWidth', () => {
 
 	it('falls back to the panel’s own starting width for nonsense', () => {
 		expect(clampPanelWidth(Number.NaN, 1260, COMMENTS_PANEL)).toBe(COMMENTS_PANEL.initial);
-		expect(clampPanelWidth(Number.NaN, 1260, TOKENS_PANEL)).toBe(TOKENS_PANEL.initial);
 	});
 });
 
-describe('each panel’s width', () => {
+describe('the comments panel’s width', () => {
 	afterEach(() => localStorage.clear());
 
-	it('is its own: the tokens panel may be wider than the comments one, for its rows of swatches', () => {
-		expect(TOKENS_PANEL.ceiling).toBeGreaterThan(COMMENTS_PANEL.ceiling);
-		expect(panelMax(3000, TOKENS_PANEL)).toBe(TOKENS_PANEL.ceiling);
-		expect(TOKENS_PANEL.key).not.toBe(COMMENTS_PANEL.key);
-	});
-
-	it('is remembered apart, so widening one leaves the other as it was', () => {
-		savePanelWidth(700, TOKENS_PANEL);
-		expect(loadPanelWidth(1600, TOKENS_PANEL)).toBe(700);
+	it('starts at its own, and is remembered once widened', () => {
 		expect(loadPanelWidth(1600, COMMENTS_PANEL)).toBe(COMMENTS_PANEL.initial);
+		savePanelWidth(500, COMMENTS_PANEL);
+		expect(loadPanelWidth(1600, COMMENTS_PANEL)).toBe(500);
 	});
 });

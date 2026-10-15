@@ -22,45 +22,6 @@ export type AddressPhase =
 
 export type AddressApi = Pick<WorkspaceApi, 'addressComments' | 'agentStatus' | 'iterationCommit'>;
 
-export const runAddress = async ({
-	api,
-	root,
-	projectId,
-	name,
-	comment,
-	isLive,
-	onPhase,
-	pollMs,
-}: {
-	api: AddressApi;
-	root: string;
-	projectId: string;
-	name: string;
-	/** The one comment to act on. There is no batch. */
-	comment: CommentRef;
-	isLive: () => boolean;
-	onPhase: (phase: AddressPhase) => void;
-	pollMs?: number;
-}): Promise<void> => {
-	onPhase({ kind: 'running' });
-	// Where the branch stood before the agent touched it. A failure to read it is not a reason to
-	// refuse to run: it only means this cannot tell afterwards whether anything was committed.
-	const before = await api.iterationCommit(root, projectId, name);
-	const started = await api.addressComments(root, projectId, name, comment);
-	if (!started.ok) return onPhase({ kind: 'failed', message: started.error });
-	if (started.value.state === 'unavailable') return onPhase({ kind: 'failed', message: started.value.detail });
-
-	const outcome = await waitForAgent(api, isLive, pollMs);
-	if (outcome.kind === 'stopped') return;
-	if (outcome.kind === 'failed') return onPhase({ kind: 'failed', message: outcome.message });
-	const after = await api.iterationCommit(root, projectId, name);
-	// Unknown either side means it cannot be said the branch stood still, so it is not claimed.
-	const moved = !before.ok || !after.ok || before.value === null || after.value === null || before.value !== after.value;
-	// The commit to show beside the comment, when there is one and it is this run's.
-	const commit = moved && after.ok ? after.value : null;
-	onPhase({ kind: 'done', changed: moved, commit });
-};
-
 export type PrototypeAddressApi = Pick<WorkspaceApi, 'addressPrototype' | 'agentStatus' | 'finishPrototypeAddress'>;
 
 /**

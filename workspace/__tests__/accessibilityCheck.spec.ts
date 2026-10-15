@@ -5,7 +5,7 @@ import axe from 'axe-core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { type CheckPage, accessibilityOf } from '../src/main/services/accessibilityCheck';
 import { type AxeRule, countsOf, criterionOf, mergeRuns, summaryOf } from '../src/shared/accessibility';
-import { declaredTarget, fixRequest } from '../src/main/services/accessibilityBrief';
+import { declaredTarget } from '../src/main/services/accessibilityBrief';
 import { undeclared } from '../src/shared/wcag';
 
 /**
@@ -126,13 +126,5 @@ describe('a page’s check', () => {
 		writeFileSync(join(dir, 'v1-i1.accessibility.json'), '{not json');
 		await of('<h1>A</h1>', c);
 		expect(c).toHaveBeenCalledTimes(2);
-	});
-
-	it('is what the agent is asked to fix, and only that, in a round of its own check', async () => {
-		const r = await of('<h1>A</h1>', check());
-		const request = fixRequest(r);
-		expect(request).toContain(`checked for accessibility with axe-core ${axe.version}, at WCAG 2.0 Level A`);
-		expect(request).toContain('Change nothing else');
-		expect(request).toContain('- **image-alt** (WCAG 1.1.1): image-alt help. 1 element.');
 	});
 });

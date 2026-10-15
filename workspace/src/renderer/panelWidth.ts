@@ -16,9 +16,6 @@ export interface PanelWidths {
 
 /** The comments panel on a prototype's review screen. */
 export const COMMENTS_PANEL: PanelWidths = { key: 'dsnr.panelWidth', initial: 380, ceiling: 760 };
-/** The tokens panel on a component's page: wider, since its rows of swatches need the room (decision 21). */
-export const TOKENS_PANEL: PanelWidths = { key: 'dsnr.tokensPanelWidth', initial: 420, ceiling: 960 };
-
 export const panelMax = (windowWidth: number, panel: PanelWidths): number =>
 	Math.max(PANEL_MIN, Math.min(panel.ceiling, Math.round(windowWidth * PANEL_MAX_SHARE)));
 

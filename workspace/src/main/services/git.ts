@@ -168,9 +168,6 @@ const baseRefs = async (root: string): Promise<{ name: string; ref: string }[]> 
 	return bases;
 };
 
-/** Every branch work can start from, local or only on GitHub, the one most recently committed to first. */
-export const recentBranches = async (root: string): Promise<string[]> => (await baseRefs(root)).map((b) => b.name);
-
 /**
  * Which of the branches work can start from have `file`, asked of git once however many there are, in the same
  * order. How the ones that can be worked in (they carry the setup file) are told from the ones that cannot.

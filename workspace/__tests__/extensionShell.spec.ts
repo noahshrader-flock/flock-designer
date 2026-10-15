@@ -70,7 +70,6 @@ describe('the person’s GitHub account, through VS Code', () => {
 	it('calls GitHub as the person, and asks for sign-in when there is no session', async () => {
 		const github = new VsCodeGitHub(auth(undefined) as never, fetcher as never, memento(), vi.fn());
 		await expect(github.api('/user')).rejects.toThrow(/Sign in/);
-		await expect(github.startSignIn()).rejects.toThrow(/DSNR: Sign in to GitHub/);
 	});
 });
 

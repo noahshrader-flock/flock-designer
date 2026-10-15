@@ -61,31 +61,6 @@ export const previewAddress = (previewUrl: string, route: string | null | undefi
 	}
 };
 
-/**
- * Whether the preview actually stayed where the record sent it, given where it ended up.
- *
- * A recorded route can stop working in ways this app cannot see coming and must not try to predict:
- * the view moves, a permission guard redirects, a parameter is left unfilled, a dev server does not
- * serve deep paths. Every one of those lands somewhere other than what was asked for, and until now
- * did so **silently** -- the designer sees a page, assumes it is the work, and comments on it.
- *
- * So nothing here knows anything about any product's routing. It compares what was asked for with
- * where the app settled, and only says they differ. `null` means there is nothing to say: no route
- * was recorded, or the page has not reported where it is yet.
- */
-export const routeWentWrong = (asked: string | null | undefined, landedOn: string | null): { asked: string; landedOn: string } | null => {
-	if (!asked || !landedOn) return null;
-	// Compare the path alone. The query is the prototype's state switch, and the app's own router may
-	// add or drop a trailing slash; neither means the landing failed.
-	const path = (s: string): string => {
-		const bare = s.split(/[?#]/)[0] ?? s;
-		return bare.length > 1 ? bare.replace(/\/+$/, '') : bare;
-	};
-	const want = path(asked.startsWith('/') ? asked : `/${asked}`);
-	const got = path(landedOn.startsWith('/') ? landedOn : `/${landedOn}`);
-	return want === got ? null : { asked: want, landedOn: got };
-};
-
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /** How an agent run ended: it finished cleanly, it failed (with what to tell the person), or nobody is looking any more. */
