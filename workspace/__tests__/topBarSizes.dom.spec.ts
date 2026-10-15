@@ -2,6 +2,7 @@ import { createElement } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { Projects } from '../src/renderer/Projects';
 import { Review } from '../src/renderer/Review';
+import { CommentControl } from '../src/renderer/comments/CommentControl';
 import { Viewer } from '../src/viewer/Viewer';
 import { aProject } from './fixtures';
 import { PAGE_CONFIG, sitePage } from './pageHarness';
@@ -69,11 +70,24 @@ describe('the top bar', () => {
 		expect(themes.map(size)).toEqual(['default', 'default']);
 	});
 
-	it('has controls of one size on a published page, beside the switcher', async () => {
+	it('has controls of one small size on a published page: it is a quiet bar over a prototype, so it takes little room', async () => {
 		const page = sitePage();
-		current = await render(createElement(Viewer, { config: PAGE_CONFIG, slots: page.slots }));
-		// The way back, the switcher, and Sign in to comment.
-		expect(controls().length).toBeGreaterThanOrEqual(3);
-		expect(controls().map(size)).toEqual(controls().map(() => expect.stringMatching(/^(default|icon)$/)));
+		current = await render(createElement(Viewer, { config: { ...PAGE_CONFIG, states: ['default', 'panel'] }, slots: page.slots }));
+		await settle();
+		// The way back, the version, the states, the history, light and dark, and Sign in to comment.
+		expect(controls().length).toBeGreaterThanOrEqual(7);
+		expect(controls().map(size)).toEqual(controls().map(() => expect.stringMatching(/^(sm|icon-sm)$/)));
+		expect(controls().includes(stateMenu() as HTMLElement)).toBe(true);
+		expect([...document.querySelectorAll<HTMLElement>('[aria-label="Theme"] [data-slot="toggle-group-item"]')].map(size)).toEqual(['sm', 'sm']);
+	});
+
+	it('has a Comment control that takes the bar’s size, both halves, and the normal one without it', async () => {
+		const comments = { commentMode: false, toggleCommentMode: () => undefined, total: 3 } as never;
+		const onToggleList = () => undefined;
+		current = await render(createElement(CommentControl, { comments, listOpen: false, onToggleList, disabled: false, size: 'sm' }));
+		expect([...document.querySelectorAll('button')].map(size)).toEqual(['sm', 'sm']);
+		await unmountAll(current.root);
+		current = await render(createElement(CommentControl, { comments, listOpen: false, onToggleList, disabled: false }));
+		expect([...document.querySelectorAll('button')].map(size)).toEqual(['default', 'default']);
 	});
 });

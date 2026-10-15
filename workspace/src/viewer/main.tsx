@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { TooltipProvider } from '../renderer/ui/tooltip';
 import { type Relay, isServedHere, iterationAddress, keyFromAddress, listenForDsnr, serverRelay } from './relay';
+import { applyScheme, systemIsDark, watchSystemScheme } from './scheme';
 import { Viewer, type ViewerConfig, type ViewerSlots } from './Viewer';
 
 /**
@@ -18,7 +19,12 @@ const framed = window.parent !== window;
 
 const InPage = ({ config, slots }: { config: ViewerConfig; slots: ViewerSlots }) => {
 	const [relay, setRelay] = useState<Relay | null>(() => (key === null ? null : serverRelay(key)));
-	useEffect(() => (key === null ? listenForDsnr(window, setRelay) : undefined), []);
+	// Light or dark: VS Code's when its review tab frames this page and says, else the computer's, as it changes.
+	const [system, setSystem] = useState(() => systemIsDark(window));
+	const [editor, setEditor] = useState<boolean | null>(null);
+	useEffect(() => (key === null ? listenForDsnr(window, setRelay, setEditor) : undefined), []);
+	useEffect(() => watchSystemScheme(window, setSystem), []);
+	useEffect(() => applyScheme(document, editor ?? system, editor !== null), [editor, system]);
 	// Opened from DSNR in the browser: after Address, to the iteration it showed its change in (the tab shows it in VS Code).
 	const onAddressed = (name: string) => {
 		const to = iterationAddress(config.projectHref, name, location.href.split('#')[0] as string);

@@ -13,7 +13,7 @@ import { CommentBox } from '../renderer/comments/CommentBox';
 import { CommentControl } from '../renderer/comments/CommentControl';
 import { useComments } from '../renderer/comments/useComments';
 import { IterationSwitcher, StateSwitcher, ThemeSwitcher } from '../renderer/IterationSwitcher';
-import { Toolbar } from '../renderer/Toolbar';
+import { type BarSize, Toolbar, barButtonSize } from '../renderer/Toolbar';
 import { Button } from '../renderer/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../renderer/ui/dialog';
 import { DropdownMenuItem } from '../renderer/ui/dropdown-menu';
@@ -67,6 +67,9 @@ type Showing = { states: string[]; state: string | null; onState: (state: string
 const NO_AGENT_MS = 8000;
 const NO_AGENT = 'This page cannot show its comments’ pins: it was built without DSNR’s page agent. Build the site again.';
 
+/** The page's bar is small: it is over a prototype, and takes little room. */
+const BAR: BarSize = 'sm';
+
 /** The page's bar. `children` is what comes last: the Comment control, or signing in. */
 const PageBar = ({ config, slots, showing, children }: { config: ViewerConfig; slots: ViewerSlots; showing: Showing; children: ReactNode }) => {
 	const iterations = useMemo(
@@ -74,10 +77,10 @@ const PageBar = ({ config, slots, showing, children }: { config: ViewerConfig; s
 		[config.iterations, config.projectId],
 	);
 	return createPortal(
-		<Toolbar>
+		<Toolbar quiet>
 			<Tooltip>
 				<TooltipTrigger asChild>
-					<Button size="icon" variant="ghost" aria-label="Back to the project" className="-mr-2 -ml-2" asChild>
+					<Button size={barButtonSize(BAR, true)} variant="ghost" aria-label="Back to the project" className="-mr-2 -ml-2" asChild>
 						<a href={config.projectHref}>
 							<ChevronLeftIcon />
 						</a>
@@ -92,11 +95,12 @@ const PageBar = ({ config, slots, showing, children }: { config: ViewerConfig; s
 					current={{ name: config.name, branch: prototypeKey(config.projectId, config.name) }}
 					siblings={iterations}
 					grouped
+					size={BAR}
 					onSelect={(next) => void (location.href = next.href)}
 				>
-					<StateSwitcher states={showing.states} current={showing.state} onSelect={showing.onState} />
+					<StateSwitcher states={showing.states} current={showing.state} onSelect={showing.onState} size={BAR} />
 				</IterationSwitcher>
-				<ThemeSwitcher shown={showing.theme} />
+				<ThemeSwitcher shown={showing.theme} size={BAR} />
 				{children}
 			</div>
 		</Toolbar>,
@@ -157,7 +161,7 @@ export const Viewer = ({
 					showing={showing}
 					store={tokenStore}
 					heading={
-						<Button size="sm" variant="ghost" title="Forget the token kept in this browser" onClick={signOut}>
+						<Button size={BAR} variant="ghost" title="Forget the token kept in this browser" onClick={signOut}>
 							<LogOutIcon />
 							Sign out
 						</Button>
@@ -166,7 +170,7 @@ export const Viewer = ({
 			) : (
 				<PageBar config={config} slots={slots} showing={showing}>
 					{/* Not on a phone: commenting needs a computer, and the bar's room goes to the title and the switcher. */}
-					<Button variant="outline" className="max-sm:hidden" onClick={() => setPaused(true)}>
+					<Button size={BAR} variant="outline" className="max-sm:hidden" onClick={() => setPaused(true)}>
 						Sign in to comment
 					</Button>
 				</PageBar>
@@ -221,7 +225,7 @@ const InDsnr = ({
 	if (login === null)
 		return (
 			<PageBar config={config} slots={slots} showing={showing}>
-				<Button variant="outline" disabled={signingIn} onClick={() => void signIn()}>
+				<Button size={BAR} variant="outline" disabled={signingIn} onClick={() => void signIn()}>
 					{signingIn ? 'Continue in VS Code…' : 'Sign in to comment'}
 				</Button>
 			</PageBar>
@@ -303,7 +307,7 @@ const Commenting = ({
 	return (
 		<>
 			<PageBar config={config} slots={slots} showing={showing}>
-				<CommentControl comments={comments} listOpen={listOpen} onToggleList={() => setListOpen((o) => !o)} disabled={!opened} />
+				<CommentControl comments={comments} listOpen={listOpen} onToggleList={() => setListOpen((o) => !o)} disabled={!opened} size={BAR} />
 			</PageBar>
 			{listOpen &&
 				createPortal(

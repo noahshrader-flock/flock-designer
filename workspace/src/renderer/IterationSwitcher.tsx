@@ -8,6 +8,7 @@ import type { ShownTheme } from './useShownTheme';
 import { ToggleGroup, ToggleGroupItem } from './ui/toggle-group';
 import { capitalize } from '../shared/titleCase';
 import { ChoiceMenu } from './ChoiceMenu';
+import type { BarSize } from './Toolbar';
 
 /** What the switcher needs to know of an iteration: how it is named, and which it is. */
 export interface Switchable {
@@ -24,6 +25,8 @@ const SwitchMenu = ({
 	label,
 	...choice
 }: {
+	/** The bar's size, when it is a bar's. */
+	size?: BarSize;
 	/** What it picks, for its name for assistive technology: "version", "iteration", "state". */
 	what: 'version' | 'iteration' | 'state';
 	/** The button's own words: `V2`, `I1`, `default`. */
@@ -52,6 +55,7 @@ export const IterationSwitcher = <T extends Switchable>({
 	onSelect,
 	note,
 	children,
+	size = 'default',
 }: {
 	current: Switchable;
 	siblings: T[];
@@ -62,6 +66,8 @@ export const IterationSwitcher = <T extends Switchable>({
 	note?: (iteration: T) => string;
 	/** A prototype's states, between the version and the history, where they read left to right. */
 	children?: ReactNode;
+	/** The bar's size, for the dropdowns and the history button. */
+	size?: BarSize;
 }) => {
 	const go = (branch: string) => {
 		const next = siblings.find((i) => i.branch === branch);
@@ -71,6 +77,7 @@ export const IterationSwitcher = <T extends Switchable>({
 	if (!grouped || here === null) {
 		return (
 			<SwitchMenu
+				size={size}
 				what="iteration"
 				{...HISTORY}
 				label={iterationLabel(current)}
@@ -90,6 +97,7 @@ export const IterationSwitcher = <T extends Switchable>({
 	return (
 		<>
 			<SwitchMenu
+				size={size}
 				what="version"
 				label={`V${here.version}`}
 				value={String(here.version)}
@@ -106,6 +114,7 @@ export const IterationSwitcher = <T extends Switchable>({
 			/>
 			{children}
 			<SwitchMenu
+				size={size}
 				what="iteration"
 				{...HISTORY}
 				label={`I${here.iteration}`}
@@ -129,16 +138,19 @@ export const StateSwitcher = ({
 	states,
 	current,
 	onSelect,
+	size = 'default',
 }: {
 	states: string[];
 	current: string | null;
 	onSelect: (state: string | null) => void;
+	size?: BarSize;
 }) => {
 	if (states.length < 2) return null;
 	// One it no longer has (it was built again without it) shows as the page does: in the first.
 	const here = current !== null && states.includes(current) ? current : (states[0] as string);
 	return (
 		<SwitchMenu
+			size={size}
 			what="state"
 			label={stateLabel(here)}
 			value={here}
@@ -152,10 +164,11 @@ export const StateSwitcher = ({
  * Light and Dark, after the history: the prototype in either theme, whatever the machine is set to.
  * The one shown is pressed: light, the default, until the other is chosen.
  */
-export const ThemeSwitcher = ({ shown }: { shown: ShownTheme }) => (
+export const ThemeSwitcher = ({ shown, size = 'default' }: { shown: ShownTheme; size?: BarSize }) => (
 	<ToggleGroup
 		type="single"
 		variant="outline"
+		size={size}
 		spacing={0}
 		aria-label="Theme"
 		value={shown.theme}

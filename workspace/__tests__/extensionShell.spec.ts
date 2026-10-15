@@ -241,6 +241,13 @@ describe('a prototype’s review', () => {
 		// It says hello to the page, and passes what the page asks up, and the answers down, to that page's address alone.
 		expect(page).toContain(`const page = "http://127.0.0.1:5000";`);
 		expect(page).toContain("postMessage({ dsnr: 'hello' }, page)");
+		// It tells the page whether VS Code is dark, once it has said hello and whenever the theme changes, from the classes
+		// VS Code puts on the tab's body (high contrast included), to the page's address alone.
+		expect(page).toContain("postMessage({ dsnr: 'scheme', dark: isDark() }, page)");
+		expect(page).toContain("classList.contains('vscode-dark')");
+		expect(page).toContain("classList.contains('vscode-high-contrast')");
+		expect(page).toContain("classList.contains('vscode-high-contrast-light')");
+		expect(page).toContain('new MutationObserver(');
 		expect(page).toContain('<title>Fish &amp; &lt;chips&gt; &quot;now&quot;</title>');
 		expect(page).toContain('<iframe src="http://127.0.0.1:5000/a/v1/i1/" title="Fish &amp; &lt;chips&gt; &quot;now&quot;">');
 	});

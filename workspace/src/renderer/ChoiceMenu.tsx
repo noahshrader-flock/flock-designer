@@ -1,5 +1,6 @@
 import { ChevronDownIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
+import { type BarSize, barButtonSize } from './Toolbar';
 import { Button } from './ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from './ui/dropdown-menu';
 
@@ -17,6 +18,7 @@ export const ChoiceMenu = <T extends string>({
 	icon,
 	align = 'start',
 	ariaLabel,
+	size = 'default',
 }: {
 	name: string;
 	value: T;
@@ -28,12 +30,14 @@ export const ChoiceMenu = <T extends string>({
 	icon?: ReactNode;
 	align?: 'start' | 'end';
 	ariaLabel?: string;
+	/** The bar's size, when it is a bar's: small over a page. */
+	size?: BarSize;
 }) => {
 	const words = label ?? choices.find((c) => c.value === value)?.label ?? '';
 	return (
 		<DropdownMenu>
 			<DropdownMenuTrigger asChild>
-				<Button variant="outline" size={icon ? 'icon' : 'default'} aria-label={ariaLabel ?? `${name}: ${words}`}>
+				<Button variant="outline" size={barButtonSize(size, Boolean(icon))} aria-label={ariaLabel ?? `${name}: ${words}`}>
 					{icon ?? (
 						<>
 							{words}

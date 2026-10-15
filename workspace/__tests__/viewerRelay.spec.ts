@@ -62,6 +62,24 @@ describe('listening for DSNR', () => {
 	});
 });
 
+describe('the tab’s light or dark', () => {
+	it('is taken from the tab that said hello, as it changes, and from no other', () => {
+		const page = pageAt('127.0.0.1');
+		const scheme = vi.fn();
+		listenForDsnr(page.win, () => undefined, scheme);
+		// Before hello, or from anywhere else, it is not taken: the tab is whoever said hello.
+		page.say({ dsnr: 'scheme', dark: true });
+		page.say({ dsnr: 'hello' });
+		page.say({ dsnr: 'scheme', dark: true }, { origin: 'vscode-webview://other' });
+		page.say({ dsnr: 'scheme', dark: true }, { source: {} });
+		page.say({ dsnr: 'scheme', dark: 'yes' });
+		expect(scheme).not.toHaveBeenCalled();
+		page.say({ dsnr: 'scheme', dark: true });
+		page.say({ dsnr: 'scheme', dark: false });
+		expect(scheme.mock.calls).toEqual([[true], [false]]);
+	});
+});
+
 describe('the comments, through DSNR', () => {
 	it('are the core’s comment calls for this iteration, and the viewer is who is signed in', async () => {
 		const ask = vi.fn(async (name: string) =>

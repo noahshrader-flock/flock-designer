@@ -125,6 +125,14 @@ describe('the states of the page', () => {
 		return page;
 	};
 
+	it('has a quiet bar: no background and no line under it, so it does not look like part of the page it is over', async () => {
+		await withStates(['default', 'panel']);
+		const bar = document.querySelector('[data-toolbar]') as HTMLElement;
+		expect(bar.className.split(' ')).toContain('bg-transparent');
+		expect(bar.className.split(' ')).not.toContain('bg-card');
+		expect(bar.className.split(' ')).not.toContain('border-b');
+	});
+
 	it('are a dropdown between the version and the history, and choosing one opens the page in it', async () => {
 		const { frame } = await withStates(['default', 'filtered', 'panel']);
 		expect(shownState()).toBe('Default');

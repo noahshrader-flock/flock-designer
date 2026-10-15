@@ -1,4 +1,5 @@
 import { MapPinIcon, MessageSquareIcon } from 'lucide-react';
+import type { BarSize } from '../Toolbar';
 import { Button } from '../ui/button';
 import type { Comments } from './useComments';
 import { ButtonGroup } from '../ui/button-group';
@@ -12,16 +13,20 @@ export const CommentControl = ({
 	listOpen,
 	onToggleList,
 	disabled,
+	size = 'default',
 }: {
 	comments: Comments;
 	listOpen: boolean;
 	onToggleList: () => void;
 	/** Nothing to comment on yet: the page is not up. */
 	disabled: boolean;
+	/** The bar's size, when it is a bar's: small over a page. */
+	size?: BarSize;
 }) => (
 	// Each title is a hint for when the button can be pressed: a disabled button never shows one.
 	<ButtonGroup>
 		<Button
+			size={size}
 			variant={comments.commentMode ? 'default' : 'outline'}
 			aria-pressed={comments.commentMode}
 			disabled={disabled}
@@ -32,6 +37,7 @@ export const CommentControl = ({
 			Comment
 		</Button>
 		<Button
+			size={size}
 			variant={listOpen ? 'default' : 'outline'}
 			aria-pressed={listOpen}
 			aria-label={comments.total > 0 ? `Show all comments (${comments.total})` : 'Show all comments'}

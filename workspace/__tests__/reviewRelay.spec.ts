@@ -45,6 +45,8 @@ describe('what the page may ask', () => {
 describe('what the tab may tell the page', () => {
 	it.each([
 		[{ dsnr: 'hello' }],
+		[{ dsnr: 'scheme', dark: true }],
+		[{ dsnr: 'scheme', dark: false }],
 		[{ dsnr: 'answer', id: 3, result: { ok: true, value: [] } }],
 		[{ dsnr: 'answer', id: 3, result: { ok: false, error: 'No.' } }],
 	])('%o is read', (m) => {
@@ -53,6 +55,9 @@ describe('what the tab may tell the page', () => {
 
 	it.each([
 		[{ dsnr: 'hello', more: 1 }],
+		[{ dsnr: 'scheme' }],
+		[{ dsnr: 'scheme', dark: 'yes' }],
+		[{ dsnr: 'scheme', dark: true, more: 1 }],
 		[{ dsnr: 'answer', id: 3 }],
 		[{ dsnr: 'answer', id: 3, result: { ok: false } }],
 		[{ dsnr: 'answer', id: -1, result: { ok: true, value: 1 } }],

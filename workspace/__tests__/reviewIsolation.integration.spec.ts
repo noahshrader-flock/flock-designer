@@ -191,7 +191,12 @@ describe.skipIf(NO_CHROME)('a hostile prototype in a review, in the real browser
 		expect(r.owned).toBeNull();
 		// Nothing it sent the tab went up to the extension, or down to the bar as if VS Code had said it, however deep.
 		expect(r.toExtension).toEqual([]);
-		expect(r.heard).toEqual([{ dsnr: 'hello' }, { dsnr: 'answer', id: 1, result: { ok: true, value: 'from VS Code' } }]);
+		// What the bar heard from the tab is its own, and only its: hello, whether VS Code is dark, and the one answer.
+		expect(r.heard).toEqual([
+			{ dsnr: 'hello' },
+			{ dsnr: 'scheme', dark: false },
+			{ dsnr: 'answer', id: 1, result: { ok: true, value: 'from VS Code' } },
+		]);
 		// Its copy on the bar's address is not served there, so never runs.
 		expect(r.made.has('copy ran')).toBe(false);
 		expect(r.copied).toBeNull();

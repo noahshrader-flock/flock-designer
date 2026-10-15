@@ -21,9 +21,10 @@ export const isServedHere = (location: Pick<Location, 'hostname'>): boolean => L
 /**
  * Listens for DSNR's review tab, when this page is served from this machine and in a frame, and gives `onRelay` the way
  * to ask it once it says hello. The tab is the parent, from VS Code, that said hello first: from then on only it is
- * asked, and only its answers, in their shape, are taken. Returns how to stop listening.
+ * asked, and only its answers, in their shape, are taken; so is its word of whether VS Code is dark, to `onScheme`. Returns how
+ * to stop listening.
  */
-export const listenForDsnr = (win: PageWindow, onRelay: (relay: Relay) => void): (() => void) => {
+export const listenForDsnr = (win: PageWindow, onRelay: (relay: Relay) => void, onScheme?: (dark: boolean) => void): (() => void) => {
 	if ((win.parent as unknown) === win || !LOCAL.has(win.location.hostname)) return () => undefined;
 	let tab: string | null = null;
 	let next = 0;
@@ -42,6 +43,11 @@ export const listenForDsnr = (win: PageWindow, onRelay: (relay: Relay) => void):
 			if (tab !== null) return;
 			tab = e.origin;
 			onRelay({ ask });
+			return;
+		}
+		// Whether VS Code is dark: only from the tab that said hello.
+		if (tell.dsnr === 'scheme') {
+			if (tab !== null) onScheme?.(tell.dark);
 			return;
 		}
 		waiting.get(tell.id)?.(tell.result);

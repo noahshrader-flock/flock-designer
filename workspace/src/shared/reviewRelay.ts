@@ -28,8 +28,11 @@ export interface RelayAsk {
 	args: unknown[];
 }
 
-/** What the tab tells the page: that it is there (`hello`, so the page knows it is framed by DSNR), or an answer. */
-export type RelayTell = { dsnr: 'hello' } | { dsnr: 'answer'; id: number; result: Result<unknown> };
+/**
+ * What the tab tells the page: that it is there (`hello`, so the page knows it is framed by DSNR), whether VS Code is dark
+ * (`scheme`, once it is there and whenever the theme changes, so the page's bar follows it), or an answer.
+ */
+export type RelayTell = { dsnr: 'hello' } | { dsnr: 'scheme'; dark: boolean } | { dsnr: 'answer'; id: number; result: Result<unknown> };
 
 const CALLS = new Set<string>(RELAY_CALLS);
 const isId = (v: unknown): v is number => typeof v === 'number' && Number.isSafeInteger(v) && v > 0;
@@ -52,11 +55,12 @@ export const readRelayAsk = (raw: unknown): RelayAsk | null => {
 		: null;
 };
 
-/** What the tab told the page, or null for anything that is not exactly a hello or an answer. */
+/** What the tab told the page, or null for anything that is not exactly a hello, a scheme or an answer. */
 export const readRelayTell = (raw: unknown): RelayTell | null => {
 	if (typeof raw !== 'object' || raw === null) return null;
 	const m = raw as Record<string, unknown>;
 	if (m.dsnr === 'hello') return hasExactly(m, ['dsnr']) ? { dsnr: 'hello' } : null;
+	if (m.dsnr === 'scheme') return hasExactly(m, ['dsnr', 'dark']) && typeof m.dark === 'boolean' ? { dsnr: 'scheme', dark: m.dark } : null;
 	return m.dsnr === 'answer' && hasExactly(m, ['dsnr', 'id', 'result']) && isId(m.id) && isResult(m.result)
 		? { dsnr: 'answer', id: m.id, result: m.result }
 		: null;
