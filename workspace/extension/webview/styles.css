@@ -28,6 +28,8 @@
 	--dsnr-icon-xs: 12px;
 	/* The room around the text under a card's picture, on all four sides, for every card. */
 	--dsnr-card-text-pad: 8px;
+	/* Every count bubble's height, and its width for one digit: a circle, the same in a row, a card and a header. */
+	--dsnr-badge: 17px;
 	/* The space between a grid's cards, across and down. */
 	--dsnr-grid-gap: 8px;
 	/* What is kept at the top while a list scrolls: the toggle's bar, then the bar of the tab under it (search and options). */
@@ -267,19 +269,25 @@ body {
 	background: var(--vscode-editorWidget-background);
 }
 
-/* VS Code's badge: the count on a view or a tab. */
+/*
+ * VS Code's badge: the count on a view or a tab. A box of its own wherever it is (a plain inline span ignores a height and
+ * a minimum width, which made a card's smaller than a row's), the one size, a circle for a digit and a pill for more.
+ */
 .badge {
+	display: inline-flex;
 	flex-shrink: 0;
-	min-width: 18px;
-	padding: 0 5px;
+	align-items: center;
+	justify-content: center;
+	height: var(--dsnr-badge);
+	min-width: var(--dsnr-badge);
+	padding: 0 3px;
 	border: 1px solid var(--dsnr-contrast-border);
-	border-radius: 9px;
+	border-radius: calc(var(--dsnr-badge) / 2);
 	color: var(--vscode-badge-foreground);
 	background: var(--vscode-badge-background);
 	font-size: 11px;
 	font-weight: 600;
-	line-height: 16px;
-	text-align: center;
+	line-height: 1;
 	box-sizing: border-box;
 }
 

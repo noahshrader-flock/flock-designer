@@ -136,6 +136,25 @@ describe('the extension’s sources', () => {
 		expect(rule).toMatch(/border-top:\s*1px solid var\(--dsnr-outline\)/);
 	});
 
+	it('draw every count bubble one size, from one name: a circle for a digit, wherever it sits (a row, a card, a header)', () => {
+		const css = files()
+			.find((f) => f.path.endsWith('styles.css'))!
+			.text.replace(/\/\*[\s\S]*?\*\//g, '');
+		expect(css).toMatch(/--dsnr-badge:\s*17px/);
+		const badge = css.split('}').find((b) => b.trim().startsWith('.badge {')) ?? '';
+		// A box of its own wherever it is: a plain inline span ignores a height and a minimum width, which is how a card's
+		// came out smaller than a row's.
+		expect(badge).toMatch(/display:\s*inline-flex/);
+		expect(badge).toMatch(/\sheight:\s*var\(--dsnr-badge\);/);
+		expect(badge).toMatch(/min-width:\s*var\(--dsnr-badge\);/);
+		expect(badge).toMatch(/border-radius:\s*calc\(var\(--dsnr-badge\) \/ 2\);/);
+		expect(badge).toMatch(/box-sizing:\s*border-box/);
+		// Little enough padding that one digit never makes it wider than it is tall.
+		expect(badge).toMatch(/padding:\s*0 3px;/);
+		// No other rule sizes a bubble.
+		expect(css.match(/\.badge[^{]*\{[^}]*(?:min-width|\sheight):/g)).toHaveLength(1);
+	});
+
 	it('draw a row’s thumbnail 56px wide, in the shape of a card’s picture', () => {
 		const css = files()
 			.find((f) => f.path.endsWith('styles.css'))!
