@@ -110,7 +110,7 @@ export const startCommand = (claude: string, root: string, prompt: string, platf
 /**
  * Work handed to Claude Code in the repository `root`, its conversation starting with `prompt`: a new conversation in VS
  * Code when VS Code with Claude Code is here (`editor`), else the command that starts it in a terminal, put on the clipboard
- * (`command`). Every hand-over is this one: a prototype's build, the fix of what its check found, Build in the codebase.
+ * (`command`). Every hand-over is this one: a prototype's build, and Build in the codebase.
  */
 export const handToClaude = async (
 	ports: {

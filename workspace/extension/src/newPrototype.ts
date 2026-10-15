@@ -19,11 +19,8 @@ export interface NewPrototypeDeps extends Pick<AgentWorkDeps, 'progress'> {
 	onChanged: () => void;
 	/** Gets ready for what was asked, before its build is handed over (a Figma link: offering to let Claude Code read it without asking). */
 	beforeHandOver: (request: string) => Promise<void>;
-	/**
-	 * Starts watching for its build to be done: to save it, have the list read again, and run its accessibility check
-	 * (`watchBuild`, `checkBuilt`); not waited for.
-	 */
-	watchBuild: (projectId: string, name: string, title: string) => void;
+	/** Starts watching for its build to be done, to save it and have the list read again (`watchBuild`); not waited for. */
+	watchBuild: (projectId: string, name: string) => void;
 	/** What to make: its name, what it explores and its folder, from the panel's dialog or from code (`readGiven`). */
 	given: Given;
 }
@@ -132,6 +129,6 @@ export const newPrototype = async (deps: NewPrototypeDeps): Promise<void> => {
 	deps.onChanged();
 	await deps.beforeHandOver(task);
 	const handed = valueOf(await api.handPrototypeBuild(root, made.projectId, made.name, task));
-	deps.watchBuild(made.projectId, made.name, title);
-	deps.tell(`${handedTo(handed, title)} DSNR saves it when it is built, checks it, and its picture appears in the list.`);
+	deps.watchBuild(made.projectId, made.name);
+	deps.tell(`${handedTo(handed, title)} DSNR saves it when it is built, and its picture appears in the list.`);
 };

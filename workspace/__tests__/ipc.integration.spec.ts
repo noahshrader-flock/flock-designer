@@ -767,7 +767,6 @@ describe('a repository must be opened before anything acts on it', () => {
 		[CHANNELS.startAgent, () => [product, 'demo', 'do it']],
 		[CHANNELS.buildInCodebase, () => [product, 'demo', 'v1-i1']],
 		[CHANNELS.handPrototypeBuild, () => [product, 'demo', 'v1-i1', 'A list']],
-		[CHANNELS.handPrototypeFix, () => [product, 'demo', 'v1-i1']],
 	])('%s refuses a root this window never opened', async (channel, args) => {
 		const r = await call(channel, ...args());
 		expect(r.ok).toBe(false);
@@ -1614,25 +1613,6 @@ describe('prototypes', () => {
 			expect(task).toContain('## What the person asked for');
 			expect(task.slice(task.indexOf('## What the person asked for'))).toContain('- **image-alt** (WCAG 1.1.1)');
 			expect(task).toContain('Change nothing else');
-		});
-
-		it('hands what the check found to Claude Code to fix, as the build was handed: the guide first, the findings as the request, no agent here', async () => {
-			await saved();
-			writeFileSync(join(design, 'skills', 'build-prototype.md'), '# Build');
-			installDesignSystem(product);
-			await call(CHANNELS.useCheckout, product);
-			const r = await call(CHANNELS.handPrototypeFix, product, 'demo', 'v1-i1');
-			expect(r.ok).toBe(true);
-			const taskFile = join(home, 'prototype', 'demo', 'v1-i1-fix.md');
-			const task = readFileSync(taskFile, 'utf8');
-			expect(task.startsWith('## How to build UI here: always, before anything else')).toBe(true);
-			expect(task.slice(task.indexOf('## What the person asked for'))).toContain('- **image-alt** (WCAG 1.1.1)');
-			expect(task).toContain('Change nothing else');
-			const { value } = r as { value: { editor: boolean; command: string } };
-			expect(value.editor).toBe(false);
-			expect(copied).toBe(value.command);
-			expect(value.command).toContain(taskFile);
-			expect(agentStart).not.toHaveBeenCalled();
 		});
 
 		it('carries what the prototype’s accessibility check left open into the task, to fix in the code (T7)', async () => {

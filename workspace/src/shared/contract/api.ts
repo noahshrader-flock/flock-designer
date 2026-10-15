@@ -230,8 +230,6 @@ export interface WorkspaceApi {
 	 * saved or checked from here: the prototype is saved when it is opened.
 	 */
 	handPrototypeBuild(root: string, projectId: string, name: string, request: string): Promise<Result<BuildInCodebase>>;
-	/** What a prototype's accessibility check found, handed to Claude Code to fix, the same way as its build (`handPrototypeBuild`). */
-	handPrototypeFix(root: string, projectId: string, name: string): Promise<Result<BuildInCodebase>>;
 	/**
 	 * Starts the agent on one comment on a prototype. There is no batch. The change goes in the newest iteration of the
 	 * prototype's version, or, when others have commented on that, in the next one.
@@ -426,7 +424,6 @@ export const INVOKE = [
 	'setAppearance',
 	'buildPrototype',
 	'handPrototypeBuild',
-	'handPrototypeFix',
 	'addressPrototype',
 	'finishPrototypeAddress',
 	'publishedPage',

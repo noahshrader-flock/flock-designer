@@ -134,27 +134,22 @@ export const registerPrototypes = (d: IpcDeps): void => {
 		return startPrototypeAgent(projectId, name, sources, task);
 	});
 	/**
-	 * A prototype's run handed to Claude Code in the repository `root` instead of run here (`handToClaude`): its whole task
-	 * written beside the prototype, and the conversation's first line pointing at it. Its build, and the fix of what its check
-	 * found (`fix`), are both this.
+	 * A prototype's build handed to Claude Code in the repository `root` instead of run here (`handToClaude`): its whole task
+	 * written beside the prototype, and the conversation's first line pointing at it.
 	 */
-	const handOver = async (root: string, projectId: string, name: string, request: string, fix: boolean): Promise<BuildInCodebase> => {
-		// In the repository this person opened: where the conversation starts, as Build in the codebase's does.
-		const canonical = opened.require(root);
-		const { task } = await buildTask(projectId, name, request);
-		const taskFile = join(dirname(work.file(projectId, name)), `${name}-${fix ? 'fix' : 'build'}.md`);
-		writeFileSync(taskFile, task);
-		const label = iterationLabel({ name, branch: prototypeKey(projectId, name) });
-		return handToClaude(ports, canonical, prototypeBuildPrompt({ label, projectId, taskFile, fix }));
-	};
-	handle('handPrototypeBuild', [arg.root, arg.projectId, arg.prototypeName, arg.words], (root, projectId, name, request) =>
-		handOver(root, projectId, name, request, false),
+	handle(
+		'handPrototypeBuild',
+		[arg.root, arg.projectId, arg.prototypeName, arg.words],
+		async (root, projectId, name, request): Promise<BuildInCodebase> => {
+			// In the repository this person opened: where the conversation starts, as Build in the codebase's does.
+			const canonical = opened.require(root);
+			const { task } = await buildTask(projectId, name, request);
+			const taskFile = join(dirname(work.file(projectId, name)), `${name}-build.md`);
+			writeFileSync(taskFile, task);
+			const label = iterationLabel({ name, branch: prototypeKey(projectId, name) });
+			return handToClaude(ports, canonical, prototypeBuildPrompt({ label, projectId, taskFile }));
+		},
 	);
-	handle('handPrototypeFix', [arg.root, arg.projectId, arg.prototypeName], async (root, projectId, name) => {
-		// Refused before the page is checked, for a repository this window never opened.
-		opened.require(root);
-		return handOver(root, projectId, name, await fixRequestFor(projectId, name), true);
-	});
 	handle('addressPrototype', [arg.projectId, arg.prototypeName, arg.comment], async (projectId, name, comment) => {
 		refuseWhileBusy();
 		// One left from a run whose screen was closed is finished first, or this run would start from the same copy.

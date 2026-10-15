@@ -70,7 +70,9 @@ describe('starting a prototype from VS Code', () => {
 		expect(toldDone).toHaveLength(1);
 		expect(toldDone[0]).toContain('Alert history is in Claude Code in this window');
 		expect(toldDone[0]).toContain('Press Enter there to start it');
-		expect(toldDone[0]).toContain('saves it when it is built, checks it');
+		expect(toldDone[0]).toContain('saves it when it is built, and its picture appears in the list');
+		// No accessibility notification for a prototype: it is checked when the work moves into the code, and at Handoff.
+		expect(toldDone[0]).not.toMatch(/accessib|checks it/i);
 	});
 
 	it('says, when Claude Code is not in this VS Code, that the command is on the clipboard', async () => {
@@ -95,7 +97,7 @@ describe('starting a prototype from VS Code', () => {
 	it('starts watching for the build once it is handed over, by the prototype’s name, and not before', async () => {
 		const { deps, api } = world();
 		await newPrototype(deps);
-		expect(deps.watchBuild).toHaveBeenCalledWith('alert-history', 'v1-i1', 'Alert history');
+		expect(deps.watchBuild).toHaveBeenCalledWith('alert-history', 'v1-i1');
 		const failed = world({ api: { handPrototypeBuild: vi.fn(async () => ({ ok: false, error: 'No.' })) } });
 		await expect(newPrototype(failed.deps)).rejects.toThrow('No.');
 		expect(failed.deps.watchBuild).not.toHaveBeenCalled();

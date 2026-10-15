@@ -14,7 +14,6 @@ import { registerVoice } from './voice';
 import { valueOf } from '../../src/shared/result';
 import { type CodebaseAction, type HostMessage, type Review, readProjectArg, readReview, reviewsOf } from './messages';
 import { type Given, newPrototype, readAsked, readyToStart } from './newPrototype';
-import { checkBuilt } from './afterBuild';
 import { diskSettingsFile, offerFigmaAccess, settingsPath } from './figmaAccess';
 import { watchBuild } from './watchBuild';
 import { PanelProvider } from './panel';
@@ -215,18 +214,13 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 	/** Watching builds Claude Code does ends with the window: nothing is saved after it is gone. */
 	let watching = true;
 	context.subscriptions.push({ dispose: () => void (watching = false) });
-	const watchPrototype = (projectId: string, name: string, title: string) => {
-		// Where it was handed over: where a fix of what its check finds goes too.
-		const root = found.product;
-		if (root === null) return;
+	const watchPrototype = (projectId: string, name: string) =>
 		void watchBuild({
 			read: async () => valueOf(await api.prototypeProgress(projectId, name)),
 			save: async () => (await api.savePrototype(projectId, name)).ok,
-			// Saved: the list read again for its picture, and its own check run here, whatever the agent did.
-			onSaved: () => {
-				projectsChanged();
-				void checkBuilt({ api, root, projectId, name, title, tell: vscodeTell, offer: vscodeOffer }).catch(failed);
-			},
+			// Saved: the list read again for its picture. Accessibility is checked where it matters, when the work moves into
+			// the code (Build in the codebase) and at Handoff, not with a notification for each save of a prototype.
+			onSaved: projectsChanged,
 			since: Date.now(),
 			now: Date.now,
 			sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
@@ -235,8 +229,6 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 			giveUpMs: 2 * 60 * 60 * 1000,
 			isLive: () => watching,
 		});
-	};
-	/** Makes a prototype from its answers (the panel's dialog, or code), its build handed to Claude Code and watched for. */
 	/**
 	 * A Figma link in a request: offered, once, to let Claude Code read Figma without asking before each call (`figmaAccess`).
 	 * The build waits for the answer: Claude Code reads its permissions only when a conversation starts, so one opened before

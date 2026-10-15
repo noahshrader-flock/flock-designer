@@ -255,22 +255,8 @@ export const buildInCodebasePrompt = ({
 		`Your task, with the skill to follow and the prototype's files, is in ${taskFile}: read it and do what it says.`,
 	].join(' ');
 
-/**
- * The first line of the conversation that builds a new prototype, or fixes what its check found (`fix`), in Claude Code: short,
- * pointing at the task written beside it, which is complete.
- */
-export const prototypeBuildPrompt = ({
-	label,
-	projectId,
-	taskFile,
-	fix = false,
-}: {
-	label: string;
-	projectId: string;
-	taskFile: string;
-	fix?: boolean;
-}): string =>
-	[
-		fix ? `Fix what the accessibility check found in prototype ${label} of ${projectId}.` : `Build prototype ${label} of ${projectId}.`,
-		`Your task is in ${taskFile}. It is complete: read all of it, then do what it says, in order.`,
-	].join(' ');
+/** The first line of the conversation that builds a new prototype, in Claude Code: short, pointing at the task written beside it, which is complete. */
+export const prototypeBuildPrompt = ({ label, projectId, taskFile }: { label: string; projectId: string; taskFile: string }): string =>
+	[`Build prototype ${label} of ${projectId}.`, `Your task is in ${taskFile}. It is complete: read all of it, then do what it says, in order.`].join(
+		' ',
+	);

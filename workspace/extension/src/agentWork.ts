@@ -69,8 +69,8 @@ export const agentWork = async (
 export const pollOf = ({ pollMs }: { pollMs?: number }): { pollMs?: number } => (pollMs !== undefined ? { pollMs } : {});
 
 /**
- * Where work handed to Claude Code went, said the same way for each hand-over (a new prototype's build, the fix of what its
- * check found): `what` is what was handed, as a sentence starts it ("Alert history", "The fix for Alert history").
+ * Where work handed to Claude Code went, said the same way for any hand-over: `what` is what was handed, as a sentence
+ * starts it ("Alert history").
  */
 export const handedTo = ({ editor }: { editor: boolean }, what: string): string =>
 	editor
