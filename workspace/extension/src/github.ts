@@ -1,5 +1,5 @@
 import type * as VsCode from 'vscode';
-import { type Fetcher, ReauthRequired, callApi, readUser } from '../../src/host/github';
+import { type Fetcher, ReauthRequired, ReadCache, callApi, readUser } from '../../src/host/github';
 import type { GitHubAccount } from '../../src/main/services/githubSession';
 import type { DeviceCodeStart, SignInState } from '../../src/shared/contract';
 
@@ -70,10 +70,14 @@ export class VsCodeGitHub implements GitHubAccount {
 		this.forget();
 	}
 
+	/** Reads asked again are asked with their tag, and an unchanged one is free (`ReadCache`). */
+
+	private readonly reads = new ReadCache();
+
 	async api(path: string, init: { method?: string; body?: unknown } = {}): Promise<unknown> {
 		if (this.token === null) throw new ReauthRequired();
 		try {
-			return await callApi(this.token, { path, ...init }, this.fetcher);
+			return await callApi(this.token, { path, ...init }, this.fetcher, this.reads);
 		} catch (err) {
 			// A session GitHub no longer takes: signed out, so the person is asked again rather than failing call by call.
 			if (err instanceof ReauthRequired) this.forget();

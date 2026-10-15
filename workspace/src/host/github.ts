@@ -189,7 +189,52 @@ export interface ApiCall {
 	body?: unknown;
 }
 
-export const callApi = async (token: string, call: ApiCall, fetcher: Fetcher): Promise<unknown> => {
+/**
+ * Reads kept with the tag GitHub gave them (`ETag`), so the same read asked again sends the tag and, when nothing changed,
+ * gets "not modified" back, which GitHub does not count against the hourly limit. Kept per token, so one person's reads
+ * never answer another's; bounded, the oldest dropped first. Writes are never kept.
+ */
+export class ReadCache {
+	private readonly reads = new Map<string, { etag: string; body: unknown }>();
+	constructor(private readonly most = 2000) {}
+	private key = (token: string, path: string) => `${token}\u0000${path}`;
+	get(token: string, path: string): { etag: string; body: unknown } | undefined {
+		return this.reads.get(this.key(token, path));
+	}
+	put(token: string, path: string, etag: string, body: unknown): void {
+		const key = this.key(token, path);
+		this.reads.delete(key);
+		this.reads.set(key, { etag, body });
+		if (this.reads.size > this.most) this.reads.delete(this.reads.keys().next().value as string);
+	}
+}
+
+/** When GitHub says to come back, in words: a time of day for the hourly limit, a short while for a slowdown. */
+const rateLimited = (status: number, message: string, headers?: { get(name: string): string | null }): HostError | null => {
+	const remaining = headers?.get('x-ratelimit-remaining');
+	const retryAfter = Number(headers?.get('retry-after'));
+	const limited = status === 429 || (status === 403 && (remaining === '0' || /rate limit/i.test(message)));
+	if (!limited) return null;
+	if (Number.isFinite(retryAfter) && retryAfter > 0) {
+		const minutes = Math.max(1, Math.round(retryAfter / 60));
+		return new HostError(
+			`${HOST} is slowing requests down for a moment. Try again in about ${minutes === 1 ? 'a minute' : `${minutes} minutes`}.`,
+			status,
+			'rateLimited',
+		);
+	}
+	const reset = Number(headers?.get('x-ratelimit-reset'));
+	const at = Number.isFinite(reset) && reset > 0 ? new Date(reset * 1000).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : null;
+	return new HostError(
+		`${HOST}'s hourly limit for your account is used up. ${at ? `It comes back at ${at}.` : 'It comes back within the hour.'}`,
+		status,
+		'rateLimited',
+	);
+};
+
+export const callApi = async (token: string, call: ApiCall, fetcher: Fetcher, cache?: ReadCache): Promise<unknown> => {
+	const reading = (call.method ?? 'GET') === 'GET';
+	const kept = reading ? cache?.get(token, call.path) : undefined;
 	// A call that never reached GitHub (offline, a proxy that hung up) is said as one, in its own words.
 	const res = await fetcher(`${API}${call.path}`, {
 		method: call.method ?? 'GET',
@@ -197,6 +242,7 @@ export const callApi = async (token: string, call: ApiCall, fetcher: Fetcher): P
 			Authorization: `Bearer ${token}`,
 			Accept: 'application/vnd.github+json',
 			'X-GitHub-Api-Version': '2022-11-28',
+			...(kept ? { 'If-None-Match': kept.etag } : {}),
 			...(call.body === undefined ? {} : { 'Content-Type': 'application/json' }),
 		},
 		...(call.body === undefined ? {} : { body: JSON.stringify(call.body) }),
@@ -206,6 +252,8 @@ export const callApi = async (token: string, call: ApiCall, fetcher: Fetcher): P
 	if (res.status === 401) {
 		throw new ReauthRequired();
 	}
+	// Not modified: what was read before, unchanged, and free.
+	if (res.status === 304 && kept) return kept.body;
 	if (res.status >= 400) {
 		// Read once as text: a body is read a single time, and when it is not JSON (a bare 500, a proxy's page) what
 		// it says is all there is to go on.
@@ -217,6 +265,8 @@ export const callApi = async (token: string, call: ApiCall, fetcher: Fetcher): P
 			// Not JSON: `raw` is kept for the message below.
 		}
 		const message = typeof detail.message === 'string' ? detail.message : '';
+		const limit = rateLimited(res.status, message, res.headers);
+		if (limit) throw limit;
 
 		// GitHub's own wording for a missing permission is "Resource not accessible
 		// by integration", which tells you nothing about which permission or where
@@ -250,7 +300,10 @@ export const callApi = async (token: string, call: ApiCall, fetcher: Fetcher): P
 	}
 	// "No Content": a delete worked and there is nothing to read. Parsing it would fail a call that succeeded.
 	if (res.status === 204) return null;
-	return res.json();
+	const body = await res.json();
+	const etag = reading ? res.headers?.get('etag') : null;
+	if (cache && etag) cache.put(token, call.path, etag, body);
+	return body;
 };
 
 export const readUser = async (token: string, fetcher: Fetcher): Promise<GitHubUser> => {

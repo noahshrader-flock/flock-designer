@@ -17,6 +17,8 @@ export type HostErrorKind =
 	| 'unreachable'
 	/** The person's command line for the host is not on this machine. */
 	| 'missingCli'
+	/** The host's limit on how often it may be asked is reached: it says when to ask again. */
+	| 'rateLimited'
 	/** Anything else: the message says what. */
 	| 'failed';
 

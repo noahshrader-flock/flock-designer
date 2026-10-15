@@ -3,6 +3,7 @@ import {
 	type Fetcher,
 	type StoredToken,
 	ReauthRequired,
+	ReadCache,
 	callApi,
 	isExpired,
 	pollForToken,
@@ -172,8 +173,12 @@ export class GitHubSession {
 		);
 	}
 
+	/** Reads asked again are asked with their tag, and an unchanged one is free (`ReadCache`). */
+
+	private readonly reads = new ReadCache();
+
 	api(path: string, init: { method?: string; body?: unknown } = {}): Promise<unknown> {
-		return this.withToken((token) => callApi(token, { path, ...init }, this.fetcher));
+		return this.withToken((token) => callApi(token, { path, ...init }, this.fetcher, this.reads));
 	}
 }
 

@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { type Fetcher, type StoredToken, ReauthRequired, callApi, isExpired, pollForToken, refreshToken, startDeviceFlow } from '../src/host/github';
+import {
+	type Fetcher,
+	type StoredToken,
+	ReadCache,
+	ReauthRequired,
+	callApi,
+	isExpired,
+	pollForToken,
+	refreshToken,
+	startDeviceFlow,
+} from '../src/host/github';
 import { HostError } from '../src/host/hostError';
 
 /** A fetch stub that replays queued responses and records what was sent. */
@@ -156,5 +166,108 @@ describe('callApi', () => {
 	it("passes GitHub's own message through for other failures", async () => {
 		const { fetcher } = stub([{ status: 422, body: { message: 'Validation failed' } }]);
 		await expect(callApi('tok', { path: '/x' }, fetcher)).rejects.toThrow(HostError);
+	});
+});
+
+/** A fetch stub whose responses carry headers, as GitHub's do. */
+const withHeaders = (responses: Array<{ status?: number; body?: unknown; headers?: Record<string, string> }>) => {
+	const calls: Array<{ url: string; init?: { method?: string; headers?: Record<string, string>; body?: string } }> = [];
+	const fetcher: Fetcher = async (url, init) => {
+		calls.push({ url, ...(init ? { init } : {}) });
+		const next = responses.shift() ?? { body: {} };
+		const headers = Object.fromEntries(Object.entries(next.headers ?? {}).map(([k, v]) => [k.toLowerCase(), v]));
+		return {
+			status: next.status ?? 200,
+			headers: { get: (name: string) => headers[name.toLowerCase()] ?? null },
+			json: async () => next.body,
+			text: async () => (next.body === undefined ? '' : JSON.stringify(next.body)),
+		};
+	};
+	return { fetcher, calls };
+};
+
+describe('a read asked again (conditional requests)', () => {
+	it('sends what GitHub tagged it with, and takes "not modified" as what it read before, which costs nothing of the hourly limit', async () => {
+		const cache = new ReadCache();
+		const { fetcher, calls } = withHeaders([
+			{ body: { name: 'first' }, headers: { ETag: '"abc"' } },
+			{ status: 304, headers: { ETag: '"abc"' } },
+		]);
+		expect(await callApi('tok', { path: '/repos/a/b/contents/projects' }, fetcher, cache)).toEqual({ name: 'first' });
+		expect(calls[0]?.init?.headers?.['If-None-Match']).toBeUndefined();
+		expect(await callApi('tok', { path: '/repos/a/b/contents/projects' }, fetcher, cache)).toEqual({ name: 'first' });
+		expect(calls[1]?.init?.headers?.['If-None-Match']).toBe('"abc"');
+	});
+
+	it('takes a changed answer as the new one, and keeps its tag', async () => {
+		const cache = new ReadCache();
+		const { fetcher, calls } = withHeaders([
+			{ body: { v: 1 }, headers: { ETag: '"one"' } },
+			{ body: { v: 2 }, headers: { ETag: '"two"' } },
+			{ status: 304 },
+		]);
+		await callApi('tok', { path: '/x' }, fetcher, cache);
+		expect(await callApi('tok', { path: '/x' }, fetcher, cache)).toEqual({ v: 2 });
+		expect(await callApi('tok', { path: '/x' }, fetcher, cache)).toEqual({ v: 2 });
+		expect(calls[2]?.init?.headers?.['If-None-Match']).toBe('"two"');
+	});
+
+	it('never tags a write, keeps nothing without a tag, and keeps reads apart by who asked', async () => {
+		const cache = new ReadCache();
+		const { fetcher, calls } = withHeaders([
+			{ body: { id: 1 }, headers: { ETag: '"w"' } },
+			{ body: { a: 1 } },
+			{ body: { a: 1 }, headers: { ETag: '"t"' } },
+			{ body: { a: 2 } },
+		]);
+		await callApi('tok', { path: '/x', method: 'POST', body: {} }, fetcher, cache);
+		await callApi('tok', { path: '/y' }, fetcher, cache);
+		await callApi('tok', { path: '/z' }, fetcher, cache);
+		await callApi('other', { path: '/z' }, fetcher, cache);
+		expect(calls[1]?.init?.headers?.['If-None-Match']).toBeUndefined();
+		expect(calls[3]?.init?.headers?.['If-None-Match']).toBeUndefined();
+	});
+
+	it('keeps a bounded number of reads, the oldest dropped first', () => {
+		const cache = new ReadCache(2);
+		cache.put('t', '/a', '"1"', 1);
+		cache.put('t', '/b', '"2"', 2);
+		cache.put('t', '/c', '"3"', 3);
+		expect(cache.get('t', '/a')).toBeUndefined();
+		expect(cache.get('t', '/c')).toEqual({ etag: '"3"', body: 3 });
+	});
+});
+
+describe('the hourly limit', () => {
+	it('says plainly that it is used up and when it comes back, not GitHub’s own wording', async () => {
+		const reset = Math.floor(Date.UTC(2026, 9, 15, 4, 44, 44) / 1000);
+		const { fetcher } = withHeaders([
+			{
+				status: 403,
+				body: { message: 'API rate limit exceeded for user ID 314084935. If you reach out to GitHub Support...' },
+				headers: { 'x-ratelimit-remaining': '0', 'x-ratelimit-reset': String(reset) },
+			},
+		]);
+		const err = (await callApi('tok', { path: '/repos/a/b/issues' }, fetcher).catch((e: unknown) => e)) as HostError;
+		expect(err).toBeInstanceOf(HostError);
+		expect(err.kind).toBe('rateLimited');
+		expect(err.message).toMatch(/^GitHub's hourly limit for your account is used up\. It comes back at /);
+		expect(err.message).not.toMatch(/user ID|Support|scraping/);
+	});
+
+	it('says to wait a moment when GitHub slows requests down for a short while', async () => {
+		const { fetcher } = withHeaders([
+			{ status: 429, body: { message: 'You have exceeded a secondary rate limit.' }, headers: { 'retry-after': '60' } },
+		]);
+		const err = (await callApi('tok', { path: '/x' }, fetcher).catch((e: unknown) => e)) as HostError;
+		expect(err.kind).toBe('rateLimited');
+		expect(err.message).toBe('GitHub is slowing requests down for a moment. Try again in about a minute.');
+	});
+
+	it('is not mistaken for a missing permission or anything else that is a 403', async () => {
+		const { fetcher } = withHeaders([
+			{ status: 403, body: { message: 'Resource not accessible by integration' }, headers: { 'x-ratelimit-remaining': '4000' } },
+		]);
+		await expect(callApi('tok', { path: '/repos/a/b/issues' }, fetcher)).rejects.toThrow(/Issues \(read and write\)/);
 	});
 });
