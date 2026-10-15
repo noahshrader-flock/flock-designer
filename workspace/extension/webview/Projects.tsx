@@ -78,16 +78,21 @@ const ProjectItem = ({
 	const badge = open > 0 ? <Badge tone="brand" count={open} label={plural(open, 'open comment')} /> : undefined;
 	const id = project.id;
 	// What it offers, in groups: what opens it (pressing it opens it here, so no item says so), its link, its next stage, its
-	// folder. The next stage is one item, Build: Build in the codebase for a prototype not yet there, Hand off once there is
-	// work there (a record of work is made when a build starts; the Hand off dialog says when its agent is still busy). Sharing
-	// code is not an item: once a handoff finds the work ready, the Hand off dialog offers its pull request.
+	// folder. The next stage is one item, named for what it opens: Build (Build in the codebase) for a prototype not yet
+	// there, Hand off once there is work there (a record of work is made when a build starts; the Hand off dialog says when
+	// its agent is still busy). Sharing code is not an item: once a handoff finds the work ready, the Hand off dialog offers
+	// its pull request.
 	const opens: MenuItem[] = [
 		...(newest ? [{ label: 'Open in browser', icon: 'globe', onSelect: () => onOpenInBrowser(newest) }] : []),
 		...(inCode ? [{ label: 'Open on GitHub', icon: 'github', onSelect: () => onCodebase('open-code', id) }] : []),
 	];
 	const link: MenuItem[] = newest ? [{ label: 'Copy link', icon: 'link', onSelect: () => onCopyLink(newest) }] : [];
-	const stage: PanelDialog | null = inCode ? { kind: 'hand-off', projectId: id } : newest ? { kind: 'build', projectId: id } : null;
-	const next: MenuItem[] = stage ? [{ label: 'Build', icon: 'package', onSelect: () => onDialog(stage) }] : [];
+	const stage: { label: string; dialog: PanelDialog } | null = inCode
+		? { label: 'Hand off', dialog: { kind: 'hand-off', projectId: id } }
+		: newest
+			? { label: 'Build', dialog: { kind: 'build', projectId: id } }
+			: null;
+	const next: MenuItem[] = stage ? [{ label: stage.label, icon: 'package', onSelect: () => onDialog(stage.dialog) }] : [];
 	const folder: MenuItem[] = [{ label: 'Assign folder…', icon: 'folder', onSelect: () => onDialog({ kind: 'assign', projectId: id }) }];
 	const sections = [opens, link, next, folder].filter((group) => group.length > 0).map((group) => ({ items: group }));
 	// Pressed, it opens its newest prototype for review; a project only in the code opens its work on GitHub, as the app's does.

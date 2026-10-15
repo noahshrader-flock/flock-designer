@@ -522,7 +522,7 @@ describe('codebase work, in the panel', () => {
 		const dividers = () => document.querySelectorAll('[role="separator"]').length;
 		await press(menuOf('Zone coverage'));
 		// A prototype that is in code too: it is built, so Handoff, not Build.
-		expect(items()).toEqual(['Open in browser', 'Open on GitHub', 'Copy link', 'Build', 'Assign folder…']);
+		expect(items()).toEqual(['Open in browser', 'Open on GitHub', 'Copy link', 'Hand off', 'Assign folder…']);
 		expect(dividers()).toBe(3);
 		await elsewhere();
 		await press(menuOf('Alert history'));
@@ -532,7 +532,7 @@ describe('codebase work, in the panel', () => {
 		await elsewhere();
 		await press(menuOf('Roles in code'));
 		// Code only: nothing of a prototype to open or link, and Handoff.
-		expect(items()).toEqual(['Open on GitHub', 'Build', 'Assign folder…']);
+		expect(items()).toEqual(['Open on GitHub', 'Hand off', 'Assign folder…']);
 		expect(dividers()).toBe(2);
 		// No item opens it in VS Code: pressing it does, and nothing is said twice.
 		expect(items().some((label) => /open for review|preview|comments|share/i.test(label))).toBe(false);
@@ -554,7 +554,7 @@ describe('codebase work, in the panel', () => {
 	it('hands off after saying what happens, and only once Start handoff is pressed', async () => {
 		await showOpen(OPEN, WITH_CODE);
 		await press(menuOf('Zone coverage'));
-		await press(item('Build'));
+		await press(item('Hand off'));
 		expect(dialog()?.getAttribute('aria-label')).toBe('Hand off to engineering');
 		expect(dialog()!.textContent).toContain('HANDOFF.md');
 		expect(dialog()!.textContent).toContain('feature/zone-coverage');
@@ -580,7 +580,7 @@ describe('codebase work, in the panel', () => {
 			);
 		await showOpen(OPEN, ready({}) as typeof SAMPLE_PROJECTS);
 		await press(menuOf('Zone coverage'));
-		await press(item('Build'));
+		await press(item('Hand off'));
 		await answer('agentStatus', { state: 'idle' });
 		expect(dialog()!.textContent).toContain('ready for engineering');
 		expect(inDialog('Open a draft pull request').className).toContain('button-primary');
@@ -603,7 +603,7 @@ describe('codebase work, in the panel', () => {
 		);
 		await showOpen(OPEN, ready as typeof SAMPLE_PROJECTS);
 		await press(menuOf('Zone coverage'));
-		await press(item('Build'));
+		await press(item('Hand off'));
 		await answer('agentStatus', { state: 'idle' });
 		expect([...dialog()!.querySelectorAll('button')].map((b) => b.textContent)).not.toContain('Open a draft pull request');
 		await press(inDialog('Open on GitHub'));
@@ -620,7 +620,7 @@ describe('codebase work, in the panel', () => {
 			) as typeof SAMPLE_PROJECTS,
 		);
 		await press(menuOf('Zone coverage'));
-		await press(item('Build'));
+		await press(item('Hand off'));
 		await answer('agentStatus', { state: 'idle' });
 		await press(inDialog('Run again'));
 		await answer('agentStatus', { state: 'idle' });
@@ -630,7 +630,7 @@ describe('codebase work, in the panel', () => {
 	it('does not start a handoff when the agent was given other work since the dialog opened', async () => {
 		await showOpen(OPEN, WITH_CODE);
 		await press(menuOf('Zone coverage'));
-		await press(item('Build'));
+		await press(item('Hand off'));
 		await answer('agentStatus', { state: 'idle' });
 		await press(inDialog('Start handoff'));
 		await answer('agentStatus', { state: 'running', startedAt: '', work: 'prototype/alert-history/v2-i1', purpose: null });
@@ -641,7 +641,7 @@ describe('codebase work, in the panel', () => {
 	it('says when the agent is busy with other work, and does not start a handoff then', async () => {
 		await showOpen(OPEN, WITH_CODE);
 		await press(menuOf('Zone coverage'));
-		await press(item('Build'));
+		await press(item('Hand off'));
 		await answer('agentStatus', { state: 'running', startedAt: '', work: 'prototype/alert-history/v2-i1', purpose: null });
 		expect(dialog()!.textContent).toContain('The agent is busy with other work');
 		expect(inDialog('Start handoff').disabled).toBe(true);
