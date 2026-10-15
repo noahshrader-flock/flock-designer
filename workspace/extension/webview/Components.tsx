@@ -54,7 +54,6 @@ export const ComponentsView = ({
 		];
 		const shared = {
 			name: c.name,
-			meta: c.subtitle ?? c.group,
 			onOpen: () => onOpen(c.id),
 			actions: <Menu label={`${c.name} actions`} size="small" sections={[{ items }]} />,
 		};
@@ -62,7 +61,7 @@ export const ComponentsView = ({
 		return view === 'grid' ? (
 			<Card key={c.id} {...shared} picture={<Picture src={picture} drawing={pictures.drawing} className="card-picture" />} />
 		) : (
-			<Row key={c.id} {...shared} start={<Picture src={picture} drawing={pictures.drawing} className="picture" />} />
+			<Row key={c.id} {...shared} meta={c.subtitle ?? c.group} start={<Picture src={picture} drawing={pictures.drawing} className="picture" />} />
 		);
 	};
 	return (

@@ -1342,6 +1342,8 @@ describe('Design System', () => {
 		expect(namesUnder(section('Buttons'))).toEqual(['FSButton', 'FSIconButton', 'FSSplitButton']);
 		expect(under(section('Buttons')).firstElementChild?.className).toBe('grid');
 		expect(under(section('Buttons')).querySelector('img')?.getAttribute('src')).toBe(picture);
+		// A card is its picture and its name, and no description under it; a row in the list keeps its line.
+		expect(under(section('Buttons')).querySelector('[data-part="meta"]')).toBeNull();
 		// What axe found is read, but not drawn on the card: nothing counts on a component for now.
 		expect(body().querySelector('.badge')).toBeNull();
 	});
