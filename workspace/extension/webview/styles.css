@@ -797,8 +797,13 @@ textarea.input {
 	flex-direction: column;
 }
 
-.menu-item:hover,
-.menu-item:focus-visible {
+.menu-item:disabled {
+	opacity: 0.5;
+	cursor: default;
+}
+
+.menu-item:hover:not(:disabled),
+.menu-item:focus-visible:not(:disabled) {
 	color: var(--vscode-menu-selectionForeground);
 	background: var(--vscode-menu-selectionBackground);
 	outline: none;

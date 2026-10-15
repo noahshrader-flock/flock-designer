@@ -1258,16 +1258,20 @@ describe('Design System', () => {
 			['Components', 'true'],
 			['Tokens', 'false'],
 		]);
-		await press(body().querySelector('[aria-label="Sync with GitHub"]') as HTMLElement);
-		expect(calls('designSystemCatalog').at(-1)?.args).toEqual([true]);
-		// Its menu opens what needs the editor's room: Primitives, and the voice and tone, a document of its own.
-		// Always there, small, not only on hover as a row's is.
+		// Its menu: Sync first, then a divider, then what needs the editor's room: Primitives, and the voice and tone, a
+		// document of its own. Always there, small, not only on hover as a row's is; and no button of Sync's own beside it.
+		expect(body().querySelector('.ds-actions [aria-label="Sync with GitHub"]')).toBeNull();
 		expect(body().querySelector('[aria-label="Design system actions"]')?.className).toBe('menu-button menu-button-small menu-button-shown');
 		await press(body().querySelector('[aria-label="Design system actions"]') as HTMLElement);
 		const items = [...body().querySelectorAll<HTMLElement>('.ds-actions [role="menuitem"]')];
-		expect(items.map((i) => i.textContent)).toEqual(['Open Primitives', 'Open Voice and Tone']);
-		await press(items[1]!);
+		expect(items.map((i) => i.textContent)).toEqual(['Sync with GitHub', 'Primitives', 'Voice and Tone']);
+		expect(body().querySelectorAll('.ds-actions [role="separator"]')).toHaveLength(1);
+		expect(items[0]!.nextElementSibling?.getAttribute('role')).toBe('separator');
+		await press(items[2]!);
 		expect(panelSaid().at(-1)).toEqual({ type: 'open-voice-and-tone' });
+		await press(body().querySelector('[aria-label="Design system actions"]') as HTMLElement);
+		await press(body().querySelector<HTMLElement>('.ds-actions [role="menuitem"]')!);
+		expect(calls('designSystemCatalog').at(-1)?.args).toEqual([true]);
 	});
 
 	it('lists its components under their groups, as cards with their pictures, the first view, and no count of what axe found on them', async () => {
@@ -1457,7 +1461,8 @@ describe('trying a change to the tokens, saving it to a branch, and proposing it
 		await tokensOpen();
 		const gone = { path: 'tone.pineGreen.50', value: '#000000' };
 		await say({ type: 'token-edits', edits: [gone, { path: 'spacing', value: '12px' }] });
-		await press(document.querySelector('[aria-label="Sync with GitHub"]') as HTMLElement);
+		await press(document.querySelector('[aria-label="Design system actions"]') as HTMLElement);
+		await press(document.querySelector('.ds-actions [role="menuitem"]') as HTMLElement);
 		const ready = SAMPLE_CATALOG as Extract<Catalog, { state: 'ready' }>;
 		const without = { ...ready, tokens: { ...ready.tokens, tokens: ready.tokens.tokens.filter((t) => t.path !== gone.path) } };
 		await answer('designSystemCatalog', without);

@@ -10,6 +10,8 @@ export interface MenuItem {
 	icon: string;
 	onSelect: () => void;
 	checked?: boolean;
+	/** Shown, and not pressable: what cannot be done just now (Sync, while it is syncing). */
+	disabled?: boolean;
 }
 
 /** A group of what a menu offers, under a heading of its own when it has one (a choice's name: Layout). */
@@ -77,6 +79,7 @@ export const Menu = ({
 			role={item.checked === undefined ? 'menuitem' : 'menuitemradio'}
 			{...(item.checked === undefined ? {} : { 'aria-checked': item.checked })}
 			className="menu-item"
+			disabled={item.disabled === true}
 			onClick={() => {
 				setOpen(false);
 				// What it opens (a dialog) gives the focus back to what had it: the button, not a menu that is gone.

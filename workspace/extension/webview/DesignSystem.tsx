@@ -16,7 +16,6 @@ import { Button } from './ui/Button';
 import { Dialog, DialogButtons } from './ui/Dialog';
 import { EmptyState } from './ui/EmptyState';
 import { Icon } from './ui/Icon';
-import { IconButton } from './ui/IconButton';
 import { Menu } from './ui/Menu';
 import { Toggle } from './ui/Toggle';
 import type { Part, View } from './vscode';
@@ -62,7 +61,7 @@ const Problems = ({ problems, onClose }: { problems: Extract<Catalog, { state: '
 );
 
 /**
- * The design system, read (6.1): its name, its branch under it, Sync and its menu (Primitives, the voice and tone) beside the
+ * The design system, read (6.1): its name, its branch under it, and its menu (Sync, then Primitives and the voice and tone) beside the
  * name, with a count of the values not read as a button that opens them; what else is wrong with it if anything (an
  * update that failed), what has been changed and its branch, then Components or Tokens. The change to
  * the tokens being tried is the extension's (`edits`), so its tabs see it too; every token row here shows the tokens as
@@ -121,13 +120,6 @@ const Ready = ({
 							onPress={() => setProblems(true)}
 						/>
 					)}
-					<IconButton
-						size="small"
-						icon={syncing ? 'sync' : 'refresh'}
-						label={syncing ? 'Syncing…' : `Sync with ${HOST}`}
-						disabled={syncing}
-						onClick={does.sync}
-					/>
 					<Menu
 						label="Design system actions"
 						size="small"
@@ -135,8 +127,13 @@ const Ready = ({
 						sections={[
 							{
 								items: [
-									{ label: 'Open Primitives', icon: 'symbol-ruler', onSelect: does.openPrimitives },
-									{ label: 'Open Voice and Tone', icon: 'quote', onSelect: does.openVoiceAndTone },
+									{ label: syncing ? 'Syncing…' : `Sync with ${HOST}`, icon: syncing ? 'sync' : 'refresh', disabled: syncing, onSelect: does.sync },
+								],
+							},
+							{
+								items: [
+									{ label: 'Primitives', icon: 'symbol-ruler', onSelect: does.openPrimitives },
+									{ label: 'Voice and Tone', icon: 'quote', onSelect: does.openVoiceAndTone },
 								],
 							},
 						]}
