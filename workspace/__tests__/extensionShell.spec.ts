@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { VsCodeGitHub } from '../extension/src/github';
 import { openableLink, vscodePorts } from '../extension/src/vscodePorts';
@@ -591,7 +593,64 @@ describe('what the extension asks the panel to show', () => {
 		expect(a.posted).toEqual([{ type: 'open-dialog', dialog: { kind: 'new' } }]);
 	});
 
-	it('is held again when the page goes (its view was hidden, and reloads when it is shown)', () => {
+	/** A panel view as VS Code gives one: its page, and what it says when it is hidden, shown or thrown away. */
+	const view = (page: ReturnType<typeof webview>) => {
+		const visibility: (() => void)[] = [];
+		const disposed: (() => void)[] = [];
+		const v = {
+			webview: page.webview,
+			visible: true,
+			onDidChangeVisibility: (l: () => void) => void visibility.push(l),
+			onDidDispose: (l: () => void) => void disposed.push(l),
+		};
+		const set = (visible: boolean) => {
+			v.visible = visible;
+			for (const l of visibility) l();
+		};
+		return { view: v, hide: () => set(false), showAgain: () => set(true), dispose: () => disposed.forEach((l) => l()) };
+	};
+
+	it('reaches a page VS Code keeps while hidden: hiding it is not losing it, so a dialog asked for after still opens', () => {
+		// The regression: the panel is kept while hidden (PANEL_VIEW_OPTIONS), so its page never loads again and never says
+		// it listens again. Taking it for gone when hidden held every dialog from then on, until the window was reloaded.
+		const panels = new Panels();
+		const a = webview();
+		const v = view(a);
+		panels.attach(v.view);
+		panels.ready(a.webview);
+		v.hide();
+		v.showAgain();
+		panels.show({ type: 'open-dialog', dialog: { kind: 'new' } });
+		expect(a.posted).toEqual([{ type: 'open-dialog', dialog: { kind: 'new' } }]);
+		// Asked for while it is hidden, it is sent all the same, and is there when the panel is shown.
+		v.hide();
+		panels.show({ type: 'open-dialog', dialog: { kind: 'sync' } });
+		expect(a.posted).toHaveLength(2);
+	});
+
+	it('is how the side panel connects its page, and nothing there takes the page for gone when it is hidden', () => {
+		// Read as text: the panel's view needs VS Code to load.
+		const source = readFileSync(join(__dirname, '../extension/src/panel.ts'), 'utf8');
+		expect(source).toMatch(/panels\.attach\(view\)/);
+		expect(source).not.toMatch(/onDidChangeVisibility/);
+	});
+
+	it('holds it once VS Code has thrown the page away, for the page it makes next', () => {
+		const panels = new Panels();
+		const a = webview();
+		const v = view(a);
+		panels.attach(v.view);
+		panels.ready(a.webview);
+		v.dispose();
+		panels.show({ type: 'open-dialog', dialog: { kind: 'new' } });
+		expect(a.posted).toEqual([]);
+		const b = webview();
+		panels.attach(view(b).view);
+		panels.ready(b.webview);
+		expect(b.posted).toEqual([{ type: 'open-dialog', dialog: { kind: 'new' } }]);
+	});
+
+	it('is held again when the page goes (it is reloading), until it says it listens again', () => {
 		const panels = new Panels();
 		const a = webview();
 		panels.add(a.webview);

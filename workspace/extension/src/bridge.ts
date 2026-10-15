@@ -43,6 +43,17 @@ export class Panels {
 	}
 
 	/**
+	 * A panel view's page, from when VS Code makes it until it throws it away. It is kept while hidden
+	 * (`PANEL_VIEW_OPTIONS`), so being hidden is not being gone: it still listens, and what is asked for meanwhile is sent to
+	 * it, to show when it is shown again. Taking it for gone when hidden held every dialog from then on, as a kept page never
+	 * loads again to say it listens.
+	 */
+	attach(view: { webview: Webview; onDidDispose(listener: () => void): unknown }): void {
+		const listening = this.add(view.webview);
+		view.onDidDispose(() => listening.dispose());
+	}
+
+	/**
 	 * Something for the panel to show (a dialog): sent to a page that is listening, else held for the first that does, as
 	 * a message posted before then is lost. A later request replaces one held that no page saw: only the latest is wanted.
 	 * The view is shown first by whoever asks.
@@ -60,7 +71,7 @@ export class Panels {
 		if (held) void webview.postMessage(held);
 	}
 
-	/** A page is gone (its view was hidden, and loads again when shown): nothing is sent until it says it listens. */
+	/** A page is reloading (a rebuild while developing): nothing is sent until it says it listens again. */
 	unready(webview: Webview): void {
 		this.listening.delete(webview);
 	}

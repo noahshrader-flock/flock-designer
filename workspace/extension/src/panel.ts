@@ -76,14 +76,12 @@ export class PanelProvider implements vscode.WebviewViewProvider {
 		void this.load(view.webview).catch(failed);
 		this.view = view;
 		view.description = this.login;
-		const listening = this.deps.panels.add(view.webview);
+		// Kept while hidden, so it listens until VS Code throws it away: never taken for gone because it is out of sight.
+		this.deps.panels.attach(view);
 		view.onDidDispose(() => {
-			listening.dispose();
 			this.view = undefined;
 		});
 		view.webview.onDidReceiveMessage((raw: unknown) => void this.receive(view.webview, raw));
-		// Hidden, the page is gone, and loads again when shown: nothing is sent to it until it says it listens.
-		view.onDidChangeVisibility(() => !view.visible && this.deps.panels.unready(view.webview));
 		if (this.deps.development) this.follow(view);
 	}
 
