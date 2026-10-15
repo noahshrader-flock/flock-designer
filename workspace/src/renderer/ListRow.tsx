@@ -4,7 +4,7 @@ import { PICTURE_SHAPE, PictureArea } from './PictureArea';
 import { cn } from '@/lib/utils';
 
 /** What a row's picture is, reduced: the card's picture in the same shape, 40 pixels high. Rows still loading take the same. */
-export const THUMBNAIL = `h-10 shrink-0 ${PICTURE_SHAPE}`;
+export const THUMBNAIL = `h-10 shrink-0 rounded-lg ${PICTURE_SHAPE}`;
 /** How a row is laid out, the picture then the words: the row, and the row still loading (`RowsSkeleton`). */
 export const ROW_LAYOUT = 'flex items-center gap-4 px-4 py-3';
 
@@ -54,7 +54,7 @@ export const ListRow = ({
 				className={cn(ROW_LAYOUT, 'w-full text-left', onOpen !== null && 'hover:bg-muted/50')}
 				onClick={onOpen ?? undefined}
 			>
-				<span data-thumbnail className={cn('relative overflow-hidden rounded-md border', THUMBNAIL)}>
+				<span data-thumbnail className={cn('relative overflow-hidden border', THUMBNAIL)}>
 					<PictureArea picture={picture} drawing={drawing} />
 				</span>
 				<span className="flex min-w-0 grow flex-col gap-0.5">

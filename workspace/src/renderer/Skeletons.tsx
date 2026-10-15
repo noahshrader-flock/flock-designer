@@ -67,7 +67,7 @@ export const RowsSkeleton = ({ count = 6, thumbnails = false }: { count?: number
 	<RowList>
 		{Array.from({ length: count }, (_, i) => (
 			<li key={i} className={ROW_LAYOUT}>
-				{thumbnails && <Skeleton data-thumbnail-skeleton className={cn('rounded-md', THUMBNAIL)} />}
+				{thumbnails && <Skeleton data-thumbnail-skeleton className={THUMBNAIL} />}
 				<div className="flex grow flex-col gap-1.5">
 					<Skeleton className="h-4 w-1/4" />
 					<Skeleton className="h-4 w-2/5" />

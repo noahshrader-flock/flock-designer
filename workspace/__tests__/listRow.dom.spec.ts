@@ -63,7 +63,7 @@ describe('ListRow', () => {
 		const thumb = button().firstElementChild!;
 		expect(thumb.hasAttribute('data-thumbnail')).toBe(true);
 		expect(thumb.className.split(' ')).toEqual(
-			expect.arrayContaining(['h-10', 'shrink-0', 'overflow-hidden', 'rounded-md', 'border', 'aspect-[1920/960]']),
+			expect.arrayContaining(['h-10', 'shrink-0', 'overflow-hidden', 'rounded-lg', 'border', 'aspect-[1920/960]']),
 		);
 		expect(thumb.querySelector('img')!.getAttribute('src')).toBe('http://127.0.0.1:1/p.jpg');
 		await unmountAll(current.root);
