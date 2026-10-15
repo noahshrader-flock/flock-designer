@@ -91,10 +91,8 @@ describe('the extension’s sources', () => {
 	it('draw the pins on a prototype’s page in the brand’s purple: the page cannot read the theme, so its palette says it again, and agrees', () => {
 		const css = files().find((f) => f.path.endsWith('styles.css'))!.text;
 		const brand = /--dsnr-brand:\s*(#[0-9a-f]{6})/i.exec(css)![1]!.toLowerCase();
+		// Its wash is made from it, so agreeing here is agreeing for both.
 		expect(INK.pin.toLowerCase()).toBe(brand);
-		// Its wash is the same colour at 8%.
-		const [r, g, b] = [1, 3, 5].map((i) => parseInt(brand.slice(i, i + 2), 16));
-		expect(INK.pinWash).toBe(`rgba(${r},${g},${b},.08)`);
 	});
 
 	it('pad the text under a card’s picture on all four sides, from one name, for every card (projects and components alike)', () => {

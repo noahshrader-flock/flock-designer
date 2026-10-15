@@ -531,7 +531,8 @@ body {
 	line-height: 1.4;
 }
 
-.button:disabled {
+.button:disabled,
+.menu-item:disabled {
 	opacity: 0.5;
 	cursor: default;
 }
@@ -795,11 +796,6 @@ textarea.input {
 .menu-group {
 	display: flex;
 	flex-direction: column;
-}
-
-.menu-item:disabled {
-	opacity: 0.5;
-	cursor: default;
 }
 
 .menu-item:hover:not(:disabled),

@@ -166,14 +166,10 @@ export const describe = (el: Element, x: number, y: number): CommentAnchor => {
 };
 
 /**
- * The outline and its label, in the pin's colour, which show what a pin will attach to (shown while Shift is held:
- * `shiftOutline`).
- *
- * Shared by placing a pin and dragging one: a pin that is dropped re-attaches to whatever is under it, so the person
- * moving it needs to see the same thing as the person placing it, looking the same way. Returns what the caller drives
- * it with; remove() takes it off the page again.
+ * The outline and its label, in the pin's colour, which show what a pin will attach to: drawn only through `shiftOutline`.
+ * Returns what the caller drives it with; remove() takes it off the page again.
  */
-export const hoverOutline = () => {
+const hoverOutline = () => {
 	const outline = document.createElement('div');
 	outline.setAttribute('data-fd-layer', 'hover');
 	outline.style.cssText = `position:fixed;pointer-events:none;z-index:2147483646;display:none;border:2px solid ${INK.pin};background:${INK.pinWash};border-radius:2px;box-sizing:border-box`;
@@ -212,7 +208,8 @@ export const hoverOutline = () => {
 
 /**
  * The outline, shown only while Shift is held: placing a pin and dragging one show what it will attach to only when the
- * person asks, so the page is not lit up under every move. `show` says what would be outlined (and, from a pointer event,
+ * person asks, so the page is not lit up under every move. Shared by both: a pin that is dropped re-attaches to whatever is
+ * under it, so the person moving it sees the same thing as the person placing it, looking the same way. `show` says what would be outlined (and, from a pointer event,
  * whether Shift is down); pressing or letting go of Shift shows or hides it where it is, without the pointer moving.
  */
 export const shiftOutline = () => {

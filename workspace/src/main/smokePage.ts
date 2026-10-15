@@ -2,7 +2,7 @@ import { type BrowserWindow, type WebContentsView, nativeImage } from 'electron'
 import { createServer } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { assertPreviewUrl } from '../shared/anchor';
-import { INK } from '../shared/pageInk';
+import { PIN_RGB } from '../shared/pageInk';
 import type { PinEvent } from '../shared/contract';
 import { PageView } from './services/pageView';
 
@@ -69,12 +69,13 @@ export const runPageSmoke = async (window: BrowserWindow): Promise<void> => {
 	await js('window.__pressed = 0; document.addEventListener("click", () => window.__pressed++)');
 	const picking = page.pick();
 	await new Promise((r) => setTimeout(r, 200));
+	/** Whether the outline of what a pin will attach to is showing. */
+	const outlineShown = () => js<boolean>(`(document.querySelector('[data-fd-layer="hover"]') || {style:{}}).style.display === 'block'`);
 	// 2a. Before the click, nothing is outlined; holding Shift outlines the element under the pointer where it is, and names it.
 	console.log('smoke-page: step 2a');
 	wc.sendInputEvent({ type: 'mouseMove', x: 100, y: 70 });
 	await new Promise((r) => setTimeout(r, 250));
-	if (await js<boolean>(`(document.querySelector('[data-fd-layer="hover"]') || {style:{}}).style.display === 'block'`))
-		fail('the element was outlined without Shift held');
+	if (await outlineShown()) fail('the element was outlined without Shift held');
 	wc.sendInputEvent({ type: 'mouseMove', x: 101, y: 70, modifiers: ['shift'] });
 	await new Promise((r) => setTimeout(r, 250));
 	const outlined = await js<{
@@ -149,7 +150,7 @@ export const runPageSmoke = async (window: BrowserWindow): Promise<void> => {
 	// 3a. With a pin already on the page, a picture of that spot does not show the pin.
 	console.log('smoke-page: step 3a');
 	// The pin's own colour, as the page draws it, so a change of colour cannot leave this counting the wrong one.
-	const [pr, pg, pb] = [1, 3, 5].map((i) => parseInt(INK.pin.slice(i, i + 2), 16)) as [number, number, number];
+	const [pr, pg, pb] = PIN_RGB;
 	const pinPixels = (img: Electron.NativeImage) => {
 		const bmp = img.toBitmap();
 		let n = 0;
@@ -195,8 +196,7 @@ export const runPageSmoke = async (window: BrowserWindow): Promise<void> => {
 		wc.sendInputEvent({ type: 'mouseMove', x, y, modifiers: ['leftbuttondown'] });
 		await wait(50);
 	}
-	if (await js<boolean>(`(document.querySelector('[data-fd-layer="hover"]') || {style:{}}).style.display === 'block'`))
-		fail('a pin being dragged outlined what is under it without Shift held');
+	if (await outlineShown()) fail('a pin being dragged outlined what is under it without Shift held');
 	wc.sendInputEvent({ type: 'mouseMove', x: 301, y: 300, modifiers: ['leftbuttondown', 'shift'] });
 	await wait(50);
 	// Mid-drag, with Shift held, what the pin would re-attach to is outlined, as it is when a pin is first placed.
