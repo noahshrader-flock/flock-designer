@@ -78,6 +78,27 @@ describe('the extension’s sources', () => {
 		expect(radius('.card-picture')).toBe('var(--dsnr-radius-large)');
 	});
 
+	it('mark a pressed thumbnail with a brand wash and its icon, not the list’s grey: shown on hover and focus, and over the picture only', () => {
+		const css = files()
+			.find((f) => f.path.endsWith('styles.css'))!
+			.text.replace(/\/\*[\s\S]*?\*\//g, '');
+		const rule = (selector: string) => css.split('}').find((block) => block.trim().startsWith(selector)) ?? '';
+		const mark = rule('.thumb-mark');
+		// The brand at 90%, with the icon in the colour that goes on the brand (white), centred, and out of the way until asked for.
+		expect(mark).toMatch(/background:\s*color-mix\(in srgb,\s*var\(--dsnr-brand\)\s*90%,\s*transparent\)/);
+		expect(mark).toMatch(/color:\s*var\(--dsnr-on-brand\)/);
+		expect(mark).toMatch(/align-items:\s*center/);
+		expect(mark).toMatch(/justify-content:\s*center/);
+		expect(mark).toMatch(/opacity:\s*0/);
+		expect(rule('.row-button:hover .thumb-mark')).toMatch(/opacity:\s*1/);
+		expect(css).toMatch(/\.row-button:focus-visible \.thumb-mark/);
+		// What has a picture to wash does not also turn the whole row or card grey.
+		expect(rule('.row-button:has(.thumb-mark):hover')).toMatch(/background:\s*transparent/);
+		// Its corners are its picture's.
+		expect(rule('.card-media .thumb-mark')).toMatch(/border-radius:\s*var\(--dsnr-radius-large\)/);
+		expect(rule('.thumb .thumb-mark')).toMatch(/border-radius:\s*var\(--dsnr-radius\)/);
+	});
+
 	it('show a view’s own menu button always, after the rule that hides a row’s until it is hovered, so it wins', () => {
 		const css = files()
 			.find((f) => f.path.endsWith('styles.css'))!
@@ -104,11 +125,31 @@ describe('the extension’s sources', () => {
 		expect(rule('.card-text')).toMatch(/padding:\s*var\(--dsnr-card-text-pad\);/);
 	});
 
+	it('divide the design system’s sets from one another, in the semantic colors and in the palette alike, with one line that reads in any theme', () => {
+		const css = files()
+			.find((f) => f.path.endsWith('styles.css'))!
+			.text.replace(/\/\*[\s\S]*?\*\//g, '');
+		const rule = css.split('}').find((b) => /\.theme-set \+ \.theme-set/.test(b)) ?? '';
+		// One rule for both, so a set is never divided in one view and not in the other.
+		expect(rule).toMatch(/\.token-set \+ \.token-set/);
+		// The text's own faint colour, as a menu's divider: a theme's border colour can be transparent.
+		expect(rule).toMatch(/border-top:\s*1px solid var\(--dsnr-outline\)/);
+	});
+
+	it('draw a row’s thumbnail 56px wide, in the shape of a card’s picture', () => {
+		const css = files()
+			.find((f) => f.path.endsWith('styles.css'))!
+			.text.replace(/\/\*[\s\S]*?\*\//g, '');
+		const picture = css.split('}').find((b) => b.trim().startsWith('.picture {')) ?? '';
+		expect(picture).toMatch(/width:\s*56px;/);
+		expect(picture).toMatch(/aspect-ratio:\s*16 \/ 9;/);
+	});
+
 	it('space a grid’s cards by one named gap, across and down alike', () => {
 		const css = files()
 			.find((f) => f.path.endsWith('styles.css'))!
 			.text.replace(/\/\*[\s\S]*?\*\//g, '');
-		expect(css).toMatch(/--dsnr-grid-gap:\s*16px/);
+		expect(css).toMatch(/--dsnr-grid-gap:\s*8px/);
 		const grid = css.split('}').find((b) => b.trim().startsWith('.grid {')) ?? '';
 		// One value for both directions: `gap` alone, never a row and a column of their own.
 		expect(grid).toMatch(/\sgap:\s*var\(--dsnr-grid-gap\);/);

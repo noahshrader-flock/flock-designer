@@ -2,6 +2,7 @@ import type { Project } from '../../src/shared/domain/projects';
 import { type ReactNode, useEffect, useState } from 'react';
 import { foldersOf, inFolder } from '../../src/shared/brief';
 import { plural } from '../../src/shared/plural';
+import { byVersion } from '../../src/shared/prototypeNames';
 import { useCover } from '../../src/renderer/useCover';
 import { matchesProject, openCommentsOf } from '../../src/shared/projectList';
 import { type CodebaseAction, type PanelDialog, type Review, reviewsOf } from '../src/messages';
@@ -33,10 +34,14 @@ import { layoutSection } from './layouts';
 import type { View } from './vscode';
 
 /**
- * What a project has, in a line: its iterations, then what its section does not say of it (its folder, across products;
- * that it has no product, or where else it is).
+ * What a project has, in a line: its versions (the ideas tried: an iteration is a small change within one, so they are not
+ * counted; work in the code is not a version), then what its section does not say of it (its folder, across products; that it
+ * has no product, or where else it is).
  */
-const meta = (p: Project, labels: string[]) => [plural(p.iterations.length, 'iteration'), ...labels].join(' · ');
+const meta = (p: Project, labels: string[]) => {
+	const versions = byVersion(p.iterations).length;
+	return [...(versions > 0 ? [plural(versions, 'version')] : []), ...labels].join(' · ');
+};
 
 /** A project's picture, its newest prototype's (`useCover`); its place kept for one until there is one. */
 const Picture = ({ project, className }: { project: Project; className: string }) => {

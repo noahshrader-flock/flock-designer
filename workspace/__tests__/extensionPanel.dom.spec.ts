@@ -839,11 +839,13 @@ describe('the projects as a list or a grid', () => {
 			'Admin usage',
 			'Role comparison',
 		]);
-		expect(cards()[0]!.querySelector('[data-part="meta"]')?.textContent).toBe('3 iterations');
+		expect(cards()[0]!.querySelector('[data-part="meta"]')?.textContent).toBe('2 versions');
 		expect(cards()[0]!.querySelector('.badge')?.getAttribute('aria-label')).toBe('2 open comments');
 		expect(cards()[0]!.querySelector('.badge')?.classList.contains('badge-brand')).toBe(true);
 		expect(cards()[1]!.querySelector('.badge')).toBeNull();
 		expect(cards()[0]!.querySelector('[data-part="picture"]')).not.toBeNull();
+		// What opens says so on its picture: a brand wash with an eye, shown on hover (the stylesheet's part).
+		expect(cards()[0]!.querySelector('.card-media > .thumb-mark .codicon-eye')).not.toBeNull();
 	});
 
 	it('shows each as a row in a list, once List is chosen', async () => {
@@ -859,6 +861,8 @@ describe('the projects as a list or a grid', () => {
 		]);
 		expect(body().querySelector('.row [data-part="picture"]')?.className).toBe('picture');
 		expect(body().querySelector('.card-picture')).toBeNull();
+		// The row's picture and its mark are one box, so the wash is the picture's size and not the row's.
+		expect(body().querySelector('.row .thumb > [data-part="picture"] + .thumb-mark .codicon-eye')).not.toBeNull();
 	});
 
 	it('keeps the sections, and the cards do what the rows do: open the newest prototype, and take the right-click menu', async () => {
@@ -943,8 +947,31 @@ describe('Projects, focused on the product open', () => {
 		]);
 		expect(sections()).toEqual(['Admin', 'No folder']);
 		expect(names()).toEqual(['Alerts', 'Both', 'Old']);
-		expect(meta('Old')).toBe('1 iteration · No product');
-		expect(meta('Alerts')).toBe('1 iteration');
+		expect(meta('Old')).toBe('1 version · No product');
+		expect(meta('Alerts')).toBe('1 version');
+	});
+
+	it('counts a project’s versions, each however many iterations it has, and no version for work in the code', async () => {
+		const at = (name: string, createdAt: string) => ({
+			...made('x', 'X', null, [COKE, createdAt]).iterations[0]!,
+			name,
+			branch: name === 'codebase' ? 'feature/x' : `prototype/x/${name}`,
+		});
+		const project = {
+			...made('x', 'Many', null, [COKE, '2026-10-01T10:00:00Z']),
+			iterations: [
+				at('v1-i1', '2026-10-01T10:00:00Z'),
+				at('v1-i2', '2026-10-02T10:00:00Z'),
+				at('v2-i1', '2026-10-03T10:00:00Z'),
+				at('codebase', '2026-10-04T10:00:00Z'),
+			],
+		};
+		const inCode = { ...project, id: 'y', title: 'Only code', iterations: [at('codebase', '2026-10-04T10:00:00Z')] };
+		await showOpen(OPEN, [project, inCode]);
+		await choose('Everyone’s');
+		expect(meta('Many')).toBe('2 versions');
+		// Nothing to count, so nothing is said of it: the line is its folder and where else it is, when it has them.
+		expect(meta('Only code')).toBeUndefined();
 	});
 
 	it('shows everyone’s by product, the open one first and No product last, each project once with its folder and where else it is', async () => {
@@ -954,8 +981,9 @@ describe('Projects, focused on the product open', () => {
 		expect(names()).toEqual(['Alerts', 'Maps', 'Both', 'Old']);
 		// Both's newest work is Pepsi's, so it is under Pepsi, once, and says it is in Coke too.
 		expect(rows()[2]!.closest('[role="list"]')?.getAttribute('aria-label')).toBe('flock-pepsi');
-		expect(meta('Both')).toBe('2 iterations · Admin · Also in flock-coke');
-		expect(meta('Alerts')).toBe('1 iteration · Admin');
+		// Two iterations of the same version are one version: iterations are the small changes within an idea.
+		expect(meta('Both')).toBe('1 version · Admin · Also in flock-coke');
+		expect(meta('Alerts')).toBe('1 version · Admin');
 	});
 
 	it('changes nothing of what can be done: a project of another product opens for review as any does', async () => {
@@ -989,7 +1017,7 @@ describe('Projects, focused on the product open', () => {
 		await choose('Everyone’s');
 		// Two products called flock-coke: each by its owner too, in titles and labels alike.
 		expect(sections()).toEqual(['flocksafety/flock-coke', 'flock-pepsi', 'No product']);
-		expect(meta('Acme')).toBe('2 iterations · Also in acme/flock-coke');
+		expect(meta('Acme')).toBe('1 version · Also in acme/flock-coke');
 	});
 
 	it('goes back to the product’s own when another product is opened', async () => {
@@ -1104,8 +1132,8 @@ describe('Projects', () => {
 		expect([...body().querySelectorAll('[role="list"]')].map((l) => l.getAttribute('aria-label'))).toEqual(['Admin', 'Maps', 'No folder']);
 		expect(rows().map((r) => part(r, 'name'))).toEqual(['Alert history', 'Zone coverage', 'Admin usage', 'Role comparison']);
 		expect(rows()[0]!.querySelector('[data-part="picture"]')).not.toBeNull();
-		expect(part(rows()[0]!, 'meta')).toBe('3 iterations');
-		expect(part(rows()[3]!, 'meta')).toBe('1 iteration');
+		expect(part(rows()[0]!, 'meta')).toBe('2 versions');
+		expect(part(rows()[3]!, 'meta')).toBe('1 version');
 	});
 
 	it('shows the open comments only when there are some, and says what the number is', async () => {

@@ -1,9 +1,10 @@
 import type { ReactNode } from 'react';
+import { ThumbMark } from './ThumbMark';
 
 /**
- * One thing in a list, as a row of VS Code's own lists: a picture or an icon at its start, a name, a quieter line under
- * it, and whatever belongs at its end (a badge). The name and the line are cut with an ellipsis when the side bar is
- * narrow, never wrapped. With `onOpen`, the whole row is a button. `context` is what VS Code's right-click menu for the
+ * One thing in a list, as a row of VS Code's own lists: a picture at its start (which wears a mark while the row that opens
+ * is hovered: `ThumbMark`), a name, a quieter line under it, and whatever belongs at its end (a badge). The name and the line
+ * are cut with an ellipsis when the side bar is narrow, never wrapped. With `onOpen`, the whole row is a button. `context` is what VS Code's right-click menu for the
  * row is given (its `data-vscode-context`), which its `webview/context` items are chosen by.
  */
 export const Row = ({
@@ -26,7 +27,13 @@ export const Row = ({
 }) => {
 	const parts = (
 		<>
-			{start}
+			{/* The picture and its mark are one box, so the mark is the picture's size and not the row's. */}
+			{start && (
+				<span className="thumb">
+					{start}
+					{onOpen && <ThumbMark />}
+				</span>
+			)}
 			<span className="row-text">
 				<span data-part="name" className="row-name">
 					{name}

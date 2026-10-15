@@ -29,7 +29,7 @@
 	/* The room around the text under a card's picture, on all four sides, for every card. */
 	--dsnr-card-text-pad: 8px;
 	/* The space between a grid's cards, across and down. */
-	--dsnr-grid-gap: 16px;
+	--dsnr-grid-gap: 8px;
 	/* What is kept at the top while a list scrolls: the toggle's bar, then the bar of the tab under it (search and options). */
 	--dsnr-top-pad: 8px;
 	--dsnr-top-height: calc(var(--dsnr-control) + 2 * var(--dsnr-top-pad));
@@ -260,7 +260,7 @@ body {
 /* Where a project's picture goes: its shape, 16 by 9, until there is one. */
 .picture {
 	flex-shrink: 0;
-	width: 48px;
+	width: 56px;
 	aspect-ratio: 16 / 9;
 	border: 1px solid var(--vscode-widget-border, var(--dsnr-contrast-border));
 	border-radius: var(--dsnr-radius);
@@ -452,6 +452,11 @@ body {
 	background: var(--vscode-list-hoverBackground);
 }
 
+/* What has a picture says it opens on the picture (`.thumb-mark`), so the row or card is not also turned grey. */
+.row-button:has(.thumb-mark):hover {
+	background: transparent;
+}
+
 /*
  * A grid of cards, each a project as its picture and its name: one column in the side bar's usual widths, and a second
  * only once there is room for two cards of at least 190px (about a 430px side bar), then a third, and so on.
@@ -486,10 +491,6 @@ body {
 	text-align: start;
 }
 
-.card.row-button:hover .card-picture {
-	border-color: var(--vscode-focusBorder);
-}
-
 .card.row-button:focus-visible {
 	outline: var(--dsnr-focus);
 	outline-offset: 2px;
@@ -515,6 +516,49 @@ body {
 	position: absolute;
 	top: 4px;
 	right: 4px;
+}
+
+/* A row's picture and its mark, in one box the picture's size. */
+.thumb {
+	position: relative;
+	display: flex;
+	flex-shrink: 0;
+}
+
+/*
+ * What a picture that opens something wears while the row or card is hovered or focused: the brand at 90% over the picture,
+ * with its icon in white (what goes on the brand) at the centre. Nothing else changes colour.
+ */
+.thumb-mark {
+	position: absolute;
+	inset: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: color-mix(in srgb, var(--dsnr-brand) 90%, transparent);
+	color: var(--dsnr-on-brand);
+	opacity: 0;
+	transition: opacity 120ms;
+	pointer-events: none;
+}
+
+.card-media .thumb-mark {
+	border-radius: var(--dsnr-radius-large);
+}
+
+.thumb .thumb-mark {
+	border-radius: var(--dsnr-radius);
+}
+
+.row-button:hover .thumb-mark,
+.row-button:focus-visible .thumb-mark {
+	opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.thumb-mark {
+		transition: none;
+	}
 }
 
 .card-text {
@@ -938,6 +982,17 @@ textarea.input {
 	margin: 6px 0 0;
 	font-size: 1em;
 	font-weight: 600;
+}
+
+/*
+ * A line between one set and the next (a role's variants, a tone family's steps), the same in the semantic colors and the
+ * palette. The text's own faint colour, as a menu's divider: a theme's border colour can be transparent.
+ */
+.theme-set + .theme-set,
+.token-set + .token-set {
+	margin-top: 6px;
+	padding-top: 6px;
+	border-top: 1px solid var(--dsnr-outline);
 }
 
 .tokens {
