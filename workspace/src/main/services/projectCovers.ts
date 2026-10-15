@@ -1,5 +1,5 @@
 /**
- * The picture of each prototype on its project's card (PROJECT_PICTURES_PLAN.md): a file in the design repository, named
+ * The picture of each prototype on its project's card: a file in the design repository, named
  * on the prototype's record, made by one reconcile step. Nothing of Electron is in here: how a page is drawn is passed in
  * (`DrawCover`, a hidden window in the app: `coverWindow.ts`), so all of this is tested without one.
  *

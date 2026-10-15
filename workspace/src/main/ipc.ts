@@ -342,7 +342,7 @@ export const ipcDeps = ({
 		return accessibilityOf({ file, html, url, states: statesOf(html), target: await work.target(projectId, name), check: ports.headless.scan });
 	};
 	/**
-	 * The picture of each prototype on its project's card (PROJECT_PICTURES_PLAN.md). Asked for by the list once it is on
+	 * The picture of each prototype on its project's card. Asked for by the list once it is on
 	 * screen: every page built on this machine whose record does not name its picture is drawn, one at a time, and kept.
 	 * Never while an agent works, as its page may be half written: the next time the list is opened does it.
 	 */
