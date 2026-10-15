@@ -24,6 +24,7 @@ import { Card } from './ui/Card';
 import { EmptyState } from './ui/EmptyState';
 import { Grid } from './ui/Grid';
 import { List } from './ui/List';
+import { Loading } from './ui/Loading';
 import { type MenuItem, type MenuSection, Menu } from './ui/Menu';
 import { ViewOptions } from './ui/ViewOptions';
 import { Row } from './ui/Row';
@@ -247,15 +248,13 @@ export const Projects = ({
 				<p>{read.error}</p>
 			</EmptyState>
 		);
-	if (read.value === null) return <p className="note">Reading the projects…</p>;
+	if (read.value === null) return <Loading>Reading the projects…</Loading>;
 	const projects = read.value;
-	// With nothing open but VS Code and no projects either: what to open.
+	// With nothing open but VS Code and no projects anywhere: there are none, whoever's they would be.
 	if (!product.open && projects.length === 0)
 		return (
-			<EmptyState icon="folder-library" title="No product is open">
-				<p>{product.why}</p>
-				<p>Not on this machine yet? Get started clones it with VS Code, then open it here.</p>
-				<Button onClick={onGetStarted}>Get started</Button>
+			<EmptyState icon="folder-library" title="No projects yet">
+				<p>Projects anyone on the team makes appear here.</p>
 			</EmptyState>
 		);
 	// Each project's products, worked out once; and each product's name, the same wherever it is said.

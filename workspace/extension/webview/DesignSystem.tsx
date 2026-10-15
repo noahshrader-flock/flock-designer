@@ -16,6 +16,7 @@ import { Button } from './ui/Button';
 import { Dialog } from './ui/Dialog';
 import { EmptyState } from './ui/EmptyState';
 import { Icon } from './ui/Icon';
+import { Loading } from './ui/Loading';
 import { Menu } from './ui/Menu';
 import { Toggle } from './ui/Toggle';
 import type { Part, View } from './vscode';
@@ -223,7 +224,7 @@ export const DesignSystem = ({
 				<Button onClick={does.sync}>Try again</Button>
 			</EmptyState>
 		);
-	if (catalog === null || catalog.state === 'none') return <p className="note">Reading the design system…</p>;
+	if (catalog === null || catalog.state === 'none') return <Loading>Reading the design system…</Loading>;
 	if (catalog.state === 'lost')
 		return (
 			<EmptyState icon="warning" title={`${catalog.name} is no longer on this computer`}>

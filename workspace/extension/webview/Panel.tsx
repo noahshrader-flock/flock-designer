@@ -9,6 +9,7 @@ import { PanelDialogs } from './Dialogs';
 import { onHost, workspace } from './host';
 import { Projects, type ProjectsRead } from './Projects';
 import type { CodebaseAction, PanelDialog, Review } from '../src/messages';
+import { Loading } from './ui/Loading';
 import { Toggle } from './ui/Toggle';
 import { type CatalogRead, useCatalog } from './useCatalog';
 import { useTrial } from './useTrial';
@@ -85,7 +86,7 @@ export const PanelView = ({
 		</div>
 		<section data-tab-body={tab} className="tab-body">
 			{context === null ? (
-				<p className="note">Looking at what is open…</p>
+				<Loading>Looking at what is open…</Loading>
 			) : tab === 'projects' ? (
 				<Projects
 					read={projects}

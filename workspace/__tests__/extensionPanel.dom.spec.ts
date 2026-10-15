@@ -127,12 +127,10 @@ describe('what is open', () => {
 		expect(body().textContent).toContain('No product is open, so these are everyone’s projects');
 	});
 
-	it('says what to open when no product is and there are no projects, and offers Get started', async () => {
+	it('says there are no projects when no product is open and nobody has made one: no product is needed to see everyone’s', async () => {
 		await showOpen(NONE, []);
-		expect(body().querySelector('.empty [data-part="title"]')?.textContent).toBe('No product is open');
-		expect(body().textContent).toContain('No product is open: open its folder.');
-		await press(button('Get started'));
-		expect(panelSaid().at(-1)).toEqual({ type: 'get-started' });
+		expect(body().querySelector('.empty [data-part="title"]')?.textContent).toBe('No projects yet');
+		expect(body().textContent).not.toContain('No product is open');
 	});
 
 	it('says why Build in the codebase cannot be done with no product open, rather than opening nothing', async () => {

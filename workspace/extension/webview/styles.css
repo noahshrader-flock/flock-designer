@@ -84,6 +84,8 @@ body {
 .panel {
 	display: flex;
 	flex-direction: column;
+	/* Fills the window, so a tab with nothing to show can center it (`.empty`, below). */
+	min-height: 100vh;
 }
 
 /* The bar the toggle sits in: kept at the top while the list under it scrolls. */
@@ -368,18 +370,51 @@ body {
 	font-weight: 400;
 }
 
-/* A view with nothing to show: VS Code's welcome text, left-aligned. */
+/*
+ * A view with nothing to show (`ui/EmptyState.tsx`): centered across and down the room the tab has, which fills the
+ * window's height.
+ */
+.tab-body {
+	display: flex;
+	flex: 1;
+	flex-direction: column;
+}
+
 .empty {
-	padding: 4px 12px;
+	display: flex;
+	flex: 1;
+	align-items: center;
+	justify-content: center;
+	padding: 24px 12px;
 	color: var(--dsnr-muted);
+	text-align: center;
+}
+
+.empty-content {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	width: 100%;
+	max-width: 320px;
+}
+
+/* Large, and quieter than the words. */
+.empty-icon .codicon {
+	font-size: 40px;
+	opacity: 0.5;
 }
 
 .empty-title {
-	display: flex;
-	align-items: center;
-	gap: 6px;
-	margin: 8px 0 4px;
+	margin: 12px 0 4px;
 	color: var(--vscode-foreground);
+	font-weight: 600;
+}
+
+.empty-body {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	width: 100%;
 }
 
 .empty-body p {

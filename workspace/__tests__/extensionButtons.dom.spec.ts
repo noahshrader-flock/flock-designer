@@ -5,6 +5,7 @@ import { Icon } from '../extension/webview/ui/Icon';
 import { Button } from '../extension/webview/ui/Button';
 import { IconButton } from '../extension/webview/ui/IconButton';
 import { Menu } from '../extension/webview/ui/Menu';
+import { EmptyState } from '../extension/webview/ui/EmptyState';
 import { Dialog, DialogButtons } from '../extension/webview/ui/Dialog';
 import { button, mount, press } from './webviewHarness';
 
@@ -114,6 +115,23 @@ describe('the badge', () => {
 		expect(badge.className).toBe('badge badge-warning badge-button');
 		await press(badge);
 		expect(pressed).toHaveBeenCalledTimes(1);
+	});
+});
+
+describe('an empty state', () => {
+	it('is one thing everywhere: the icon, the heading, the words, then the button, in a column to be centered', async () => {
+		await mount(
+			createElement(EmptyState, {
+				icon: 'symbol-color',
+				title: 'No design system found',
+				children: [createElement('p', { key: 'p' }, 'Look here.'), createElement(Button, { key: 'b', children: 'Locate' })],
+			}),
+		);
+		const content = document.querySelector('.empty > .empty-content') as HTMLElement;
+		expect([...content.children].map((c) => c.className)).toEqual(['empty-icon', 'empty-title', 'empty-body']);
+		expect(content.querySelector('.empty-icon .codicon-symbol-color')).not.toBeNull();
+		expect(content.querySelector('[data-part="title"]')?.textContent).toBe('No design system found');
+		expect([...content.querySelectorAll('.empty-body > *')].map((c) => c.tagName)).toEqual(['P', 'BUTTON']);
 	});
 });
 
