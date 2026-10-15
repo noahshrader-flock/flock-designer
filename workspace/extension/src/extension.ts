@@ -1,4 +1,3 @@
-import { homedir } from 'node:os';
 import { join } from 'node:path';
 import * as vscode from 'vscode';
 import { served } from '../../src/main/handle';
@@ -14,7 +13,6 @@ import { registerVoice } from './voice';
 import { valueOf } from '../../src/shared/result';
 import { type CodebaseAction, type HostMessage, type Review, readProjectArg, readReview, reviewsOf } from './messages';
 import { type Given, newPrototype, readAsked, readyToStart } from './newPrototype';
-import { diskSettingsFile, offerFigmaAccess, settingsPath } from './figmaAccess';
 import { watchBuild } from './watchBuild';
 import { PanelProvider } from './panel';
 import { PANEL_VIEW_OPTIONS } from './panelOptions';
@@ -30,8 +28,6 @@ const REREAD_MS = 60_000;
 
 /** Kept by the extension: the design system the person located, when nothing open holds one. */
 const LOCATED = 'dsnr.located';
-/** Kept once the person has said no to letting Claude Code read Figma without asking: it is not asked again. */
-const FIGMA_DECLINED = 'dsnr.figmaAccessDeclined';
 
 /**
  * DSNR, started when its panel is first shown or a command of its is run. The core starts in VS Code's shell, finds what
@@ -229,25 +225,8 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 			giveUpMs: 2 * 60 * 60 * 1000,
 			isLive: () => watching,
 		});
-	/**
-	 * A Figma link in a request: offered, once, to let Claude Code read Figma without asking before each call (`figmaAccess`).
-	 * The build waits for the answer: Claude Code reads its permissions only when a conversation starts, so one opened before
-	 * the rules are written would ask on every Figma call until it ends.
-	 */
-	const figmaFirst = async (request: string): Promise<void> => {
-		await offerFigmaAccess(request, {
-			...diskSettingsFile,
-			path: settingsPath(homedir(), process.env),
-			declined: {
-				get: () => context.globalState.get<boolean>(FIGMA_DECLINED) === true,
-				set: async () => context.globalState.update(FIGMA_DECLINED, true),
-			},
-			offer: vscodeOffer,
-			tell: vscodeTell,
-		}).catch(failed);
-	};
 	const startPrototype = (given: Given) =>
-		newPrototype({ ...here, given, product: productNow(), onChanged: projectsChanged, watchBuild: watchPrototype, beforeHandOver: figmaFirst });
+		newPrototype({ ...here, given, product: productNow(), onChanged: projectsChanged, watchBuild: watchPrototype });
 	/**
 	 * What the panel asked of a project's codebase work (ELECTRON_MIGRATION_PLAN 5.2, 5.3), in the product open here, with
 	 * VS Code's notifications, the agent's log and the browser. Handoff and its draft pull request change its records: the
