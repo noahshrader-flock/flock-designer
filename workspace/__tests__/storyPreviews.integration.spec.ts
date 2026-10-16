@@ -204,6 +204,32 @@ describe('building the previews', () => {
 		).toBe(false);
 	});
 
+	it('builds a design system kept in a package of a monorepo with that package’s own Storybook set-up, and the globals it defines', async () => {
+		makeLibrary({
+			// The repository's own set-up, which is not the design system's.
+			'.storybook/preview.tsx': "document.body.dataset.preview = 'repository';\nexport default {};\n",
+			'packages/ui/package.json': '{"name":"@acme/ui"}',
+			'packages/ui/.storybook/preview.tsx': "document.body.dataset.preview = 'package';\nexport default {};\n",
+			// As Primer's does: its build defines a global its code reads, which is not there without it.
+			'packages/ui/.storybook/main.ts': `const config = {
+  async viteFinal(config) {
+    config.define = { ...config.define, __DEV__: JSON.stringify(true), __LABEL__: JSON.stringify('dev'), "process.env.KIND": '"ui"' }
+    return config
+  },
+}
+export default config
+`,
+			'packages/ui/src/Badge/Badge.stories.tsx': story(
+				'Data/Badge',
+				'export const Default = () => <b>{`${__DEV__} ${__LABEL__} ${process.env.KIND}`}</b>;',
+			),
+		});
+		const p = previews({ system: () => ({ ...connected(clone)(), folder: 'packages/ui' }) });
+		const root = await render(await ready(p), 'packages/ui/src/Badge/Badge.stories.tsx');
+		expect(document.body.dataset.preview).toBe('package');
+		expect(root.textContent).toContain('true dev ui');
+	});
+
 	it('redraws a story that updates its own args, as Storybook does, and leaves one that only pins a value alone', async () => {
 		makeLibrary({
 			...LIBRARY,

@@ -27,9 +27,6 @@ const STORY_FILE = new RegExp(`\\.stories\\.(${SCRIPT_EXTENSIONS.join('|')})$`);
 /** A Storybook story file, by Storybook's own convention: `*.stories.` and a script extension. Docs pages (`.mdx`) are not components. */
 export const isStoryFile = (path: string): boolean => STORY_FILE.test(path);
 
-/** The library's Storybook preview set-up: `.storybook/preview` with a script extension. */
-export const PREVIEW_CANDIDATES = SCRIPT_EXTENSIONS.map((e) => `.storybook/preview.${e}`);
-
 /** Storybook's own id rule (`sanitize` in `storybook/internal/csf`): lowercased, punctuation and spaces as one `-`. */
 export const storybookId = (part: string): string =>
 	part

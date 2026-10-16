@@ -6,7 +6,8 @@ import { PREVIEW_COMPONENT, PREVIEW_FILE, PREVIEW_HEIGHT, PREVIEW_SHOW, PREVIEW_
 import { TRY_VALUES } from './pageInstances';
 import { designSystemOf } from '../../shared/catalog';
 import type { ConnectedDesignSystem, StoryPreview, TokenEdit } from '../../shared/contract';
-import { type CatalogReads, PREVIEW_CANDIDATES, readCatalog } from './componentCatalog';
+import { type CatalogReads, readCatalog } from './componentCatalog';
+import { definesIn, previewSetup, storybookDefines } from './storybookSetup';
 import { libraryCommit, systemReads } from './designLibrary';
 import { readTokens } from './designTokens';
 import { git } from './git';
@@ -303,9 +304,12 @@ type BuildErrors = { errors: { text: string; location?: { file: string } | null 
 /** A build's failure as its errors, as a build that worked has none. */
 const asErrors = (err: Partial<BuildErrors>): BuildErrors => ({ errors: err.errors ?? [{ text: String(err) }] });
 
-/** What the preview page is built with, from a copy of the library at `library` into `site`. */
+/**
+ * What the preview page is built with, from a copy of the library at `library` into `site`, with the globals the library's
+ * own Storybook build defines (`storybookDefines`) and the production build of React's.
+ */
 const ENTRY = 'preview-entry.tsx';
-const optionsFor = (library: string, site: string, plugin: Plugin): BuildOptions => ({
+const optionsFor = (library: string, site: string, plugin: Plugin, defines: Record<string, string>): BuildOptions => ({
 	entryPoints: { entry: join(library, ENTRY) },
 	// Errors name files as the library does (`src/components/…`), not by where the copy is.
 	absWorkingDir: library,
@@ -318,7 +322,7 @@ const optionsFor = (library: string, site: string, plugin: Plugin): BuildOptions
 	outdir: site,
 	// Fonts and pictures are written as files beside the page: exactly the kinds the server will send.
 	loader: Object.fromEntries(Object.keys(ASSET_TYPES).map((e) => [e, 'file' as const])),
-	define: { 'process.env.NODE_ENV': '"production"' },
+	define: { ...defines, 'process.env.NODE_ENV': '"production"' },
 	logLevel: 'silent',
 	plugins: [plugin],
 });
@@ -344,17 +348,21 @@ const settled = async (attempt: (missing: ReadonlySet<string>) => Promise<BuildE
 export const unresolved = (errors: { text: string }[]): Set<string> =>
 	new Set(errors.map((e) => /Could not resolve "(.+?)"/.exec(e.text)?.[1]).filter((m): m is string => m !== undefined));
 
-/** Builds every story file into `site`, from the copy of the library at `library`. Throws with the build's own words. */
-export const buildPreviews = async (library: string, storyFiles: string[], site: string): Promise<void> => {
+/**
+ * Builds every story file into `site`, from the copy of the library at `library`, with the Storybook set-up of the design
+ * system's package (`folder`, in a monorepo) or else the repository's. Throws with the build's own words.
+ */
+export const buildPreviews = async (library: string, storyFiles: string[], site: string, folder = ''): Promise<void> => {
 	const [{ build }, sass] = await Promise.all([import('esbuild'), import('sass')]);
 	const nodeModules = join(library, 'node_modules');
-	const preview = PREVIEW_CANDIDATES.map((p) => join(library, p)).find((f) => existsSync(f)) ?? null;
+	const preview = previewSetup(library, folder);
 	// Storybook 9 and later are one package, \`storybook\`, which carries the channel \`useArgs\` speaks on; older ones are not.
 	const argsChannel = existsSync(join(nodeModules, 'storybook', 'package.json'));
 	writeFileSync(join(library, ENTRY), previewEntry(library, storyFiles, { preview, argsChannel }));
 	mkdirSync(site, { recursive: true });
 	const compileSass = sassFor(sass, nodeModules);
-	await settled((missing) => build(optionsFor(library, site, libraryBuild(nodeModules, compileSass, missing))).catch(asErrors));
+	const defines = storybookDefines(library, folder);
+	await settled((missing) => build(optionsFor(library, site, libraryBuild(nodeModules, compileSass, missing), defines)).catch(asErrors));
 	writeFileSync(join(site, 'index.html'), PAGE);
 };
 
@@ -370,7 +378,7 @@ export interface TrialBuild {
  * is written and nothing is left to undo. **Kept open between changes,** so each is esbuild's incremental rebuild, about a
  * second for the real library, and the Sass, which a change to a theme file does not touch, compiled once.
  */
-export const trialBuild = async (library: string, tokenFiles: string[], site: string): Promise<TrialBuild> => {
+export const trialBuild = async (library: string, tokenFiles: string[], site: string, folder = ''): Promise<TrialBuild> => {
 	const [{ context }, sass] = await Promise.all([import('esbuild'), import('sass')]);
 	const nodeModules = join(library, 'node_modules');
 	// esbuild names a file by its real path, and a temporary folder can be reached through a link (macOS's /var).
@@ -384,6 +392,7 @@ export const trialBuild = async (library: string, tokenFiles: string[], site: st
 		if (!compiled.has(path)) compiled.set(path, plain(path));
 		return compiled.get(path) as string;
 	};
+	const defines = storybookDefines(library, folder);
 	mkdirSync(site, { recursive: true });
 	writeFileSync(join(site, 'index.html'), PAGE);
 	let open: BuildContext | null = null;
@@ -393,7 +402,7 @@ export const trialBuild = async (library: string, tokenFiles: string[], site: st
 			if (open !== null) return settled(async () => (open as BuildContext).rebuild().catch(asErrors));
 			await settled(async (missing) => {
 				await open?.dispose();
-				open = await context(optionsFor(library, site, libraryBuild(nodeModules, compileSass, missing, edited)));
+				open = await context(optionsFor(library, site, libraryBuild(nodeModules, compileSass, missing, edited), defines));
 				return open.rebuild().catch(asErrors);
 			});
 		},
@@ -427,7 +436,10 @@ const serveKey = (build: string): string => `previews-${build.slice(0, 26)}`;
  * How this app builds a preview, as one short fingerprint: the page, its script and the build's set-up. A build is kept
  * for a commit **and** this, so a newer app never shows a build an older one made from the same commit.
  */
-const RECIPE = createHash('sha256').update(`${PAGE}${previewEntry.toString()}${libraryBuild.toString()}`).digest('hex').slice(0, 8);
+const RECIPE = createHash('sha256')
+	.update([PAGE, previewEntry, libraryBuild, optionsFor, buildPreviews, definesIn].map(String).join(''))
+	.digest('hex')
+	.slice(0, 8);
 
 /** The address a build of a commit's copy is served at: what it is for, and how many times, so each is at one of its own. */
 const servedAt = (what: string, times: number, dir: string): string => `${what}-${times}-${basename(dir).slice(0, 12)}`;
@@ -450,6 +462,8 @@ interface Built {
 	key: string;
 	build: Promise<StoryPreview>;
 	dir: string;
+	/** The design system's package in the repository, in a monorepo; '' for the repository itself. */
+	folder: string;
 	/** The design system's files at the commit, each read once: a commit's files never change, and a change reads them all. */
 	reads: () => Promise<CatalogReads>;
 }
@@ -515,7 +529,7 @@ export class StoryPreviews {
 			let reading: Promise<CatalogReads> | null = null;
 			const reads = () => (reading ??= systemReads(system, commit).then(keptReads));
 			const build = this.build(system, commit, dir, reads);
-			this.current = { key, build, dir, reads };
+			this.current = { key, build, dir, folder, reads };
 			// A build that did not work is tried again on the next ask.
 			void build.then((b) => b.state !== 'ready' && this.current?.build === build && (this.current = null));
 		}
@@ -530,7 +544,7 @@ export class StoryPreviews {
 				const copy = join(dir, 'library');
 				await copyAt(system.root, commit, copy, system.folder);
 				const stories = (await readCatalog(await reads(), designSystemOf(system))).map((c) => c.id);
-				await (this.deps.build ?? buildPreviews)(copy, stories, site);
+				await (this.deps.build ?? buildPreviews)(copy, stories, site, system.folder);
 			}
 			// Only the build for this commit is kept, and served; a change tried on another is closed with it.
 			if (this.trial !== null && this.trial.dir !== dir) await this.endTrial();
@@ -615,7 +629,7 @@ export class StoryPreviews {
 	/** A build of the commit's copy with token files given in place of theirs, into `site` beside the commit's own build. */
 	private async builderFor(at: Built, site: string): Promise<TrialBuild> {
 		const tokenFiles = [...new Set((await readTokens(await at.reads())).tokens.map((t) => t.source.file))];
-		return trialBuild(join(at.dir, 'library'), tokenFiles, join(at.dir, site));
+		return trialBuild(join(at.dir, 'library'), tokenFiles, join(at.dir, site), at.folder);
 	}
 
 	private async endTrial(): Promise<void> {
