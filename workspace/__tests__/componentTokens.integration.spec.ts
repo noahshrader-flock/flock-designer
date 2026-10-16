@@ -5,6 +5,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ComponentTokens, type Drawn, type Measure, decode } from '../src/main/services/componentTokens';
 import type { BuiltFor } from '../src/main/services/storyPreviews';
 import { tagsFor } from '../src/main/services/tokenTags';
+import type { CatalogReads } from '../src/main/services/componentCatalog';
+import { libraryCommit, systemReads } from '../src/main/services/designLibrary';
 import type { DesignToken, TokenEdit } from '../src/shared/contract';
 import { g } from './fixtures';
 
@@ -144,9 +146,9 @@ describe('the index', () => {
 	let home: string;
 	let clone: string;
 	let asked: Parameters<Measure>[0][];
-	let builds: TokenEdit[][];
-	/** The builds made to see what a change reaches, by their change. */
-	let reaches: TokenEdit[][];
+	let builds: Map<string, string>[];
+	/** The builds made to see what a change reaches, by the brand tone each was given. */
+	let reaches: (string | undefined)[];
 	const LIB = {
 		'src/colors/tones/brand.ts': "export const brand = {\n  50: '#108062',\n};\n",
 		'src/colors/theme/light.ts':
@@ -173,12 +175,19 @@ describe('the index', () => {
 			}),
 		);
 	};
+	/** What a build is given: the files a change writes, made from the library's develop. */
+	type Files = (reads: CatalogReads) => Promise<Map<string, string>>;
+	const written = async (files: Files) => files(await systemReads(system(), (await libraryCommit(clone, 'develop')) as string));
+	/** The brand tone's 50, as the files a build was given have it. */
+	const tone = (files: Map<string, string>) => /50: '(#\w+)'/.exec(files.get('src/colors/tones/brand.ts') ?? '')?.[1];
 	const previews = {
 		preview: async () => ({ state: 'ready' as const, base: 'http://127.0.0.1:1/plain/' }),
-		builtWith: async (edits: TokenEdit[], purpose: BuiltFor) =>
-			purpose === 'tagged'
-				? (builds.push(edits), { state: 'ready' as const, base: 'http://127.0.0.1:1/tagged/' })
-				: (reaches.push(edits), { state: 'ready' as const, base: `http://127.0.0.1:1/reach-${reaches.length}/` }),
+		builtWith: async (purpose: BuiltFor, files: Files) => {
+			const given = await written(files);
+			if (purpose === 'tagged') return (builds.push(given), { state: 'ready' as const, base: 'http://127.0.0.1:1/tagged/' });
+			reaches.push(tone(given));
+			return { state: 'ready' as const, base: `http://127.0.0.1:1/reach-${reaches.length}/` };
+		},
 	};
 	const system = () => ({ id: 'acme/ui', name: 'Acme', repository: 'acme/ui', root: clone, folder: '', branch: 'develop' });
 	/** The pictures kept, as the pass gave them: a stand-in for the store, which has tests of its own. */
@@ -242,7 +251,7 @@ describe('the index', () => {
 			const i = index();
 			await i.warm();
 			const r = await reached(i, RED);
-			expect(reaches).toEqual([RED]);
+			expect(reaches).toEqual(['#C80000']);
 			// Asked of the build with the change, in both modes, for every listed component.
 			const files = ['src/components/A/A.stories.tsx', 'src/components/B/B.stories.tsx'];
 			expect(asked.at(-1)).toEqual([
@@ -277,9 +286,9 @@ describe('the index', () => {
 			const i = index({
 				previews: {
 					...previews,
-					builtWith: async (edits: TokenEdit[], purpose: BuiltFor) => {
+					builtWith: async (purpose: BuiltFor, files: Files) => {
 						if (purpose === 'reach' && reaches.length === 0) await held;
-						return previews.builtWith(edits, purpose);
+						return previews.builtWith(purpose, files);
 					},
 				},
 			});
@@ -289,7 +298,7 @@ describe('the index', () => {
 			release();
 			await reached(i, changes[2] as TokenEdit[]);
 			// The first, already started, and then the newest: never the one in between.
-			expect(reaches).toEqual([changes[0], changes[2]]);
+			expect(reaches).toEqual(['#110000', '#330000']);
 		});
 
 		it('says a change that would not build, and builds it again on the next ask', async () => {
@@ -297,8 +306,8 @@ describe('the index', () => {
 			const i = index({
 				previews: {
 					...previews,
-					builtWith: async (edits: TokenEdit[], purpose: BuiltFor) =>
-						fail && purpose === 'reach' ? { state: 'failed' as const, error: 'the change did not build' } : previews.builtWith(edits, purpose),
+					builtWith: async (purpose: BuiltFor, files: Files) =>
+						fail && purpose === 'reach' ? { state: 'failed' as const, error: 'the change did not build' } : previews.builtWith(purpose, files),
 				},
 			});
 			await i.warm();
@@ -392,8 +401,8 @@ describe('the index', () => {
 		const i = index({
 			previews: {
 				...previews,
-				builtWith: async (edits: TokenEdit[], purpose: BuiltFor) =>
-					fail && purpose === 'tagged' ? { state: 'failed' as const, error: 'tags did not build' } : previews.builtWith(edits, purpose),
+				builtWith: async (purpose: BuiltFor, files: Files) =>
+					fail && purpose === 'tagged' ? { state: 'failed' as const, error: 'tags did not build' } : previews.builtWith(purpose, files),
 			},
 		});
 		expect(await ready(i, 'src/components/A/A.stories.tsx')).toEqual({ state: 'failed', error: 'tags did not build' });
@@ -567,8 +576,8 @@ describe('the index', () => {
 		const i = index({
 			previews: {
 				...previews,
-				builtWith: async (edits: TokenEdit[], purpose: BuiltFor) =>
-					purpose === 'tagged' ? { state: 'failed' as const, error: 'tags did not build' } : previews.builtWith(edits, purpose),
+				builtWith: async (purpose: BuiltFor, files: Files) =>
+					purpose === 'tagged' ? { state: 'failed' as const, error: 'tags did not build' } : previews.builtWith(purpose, files),
 			},
 			measure: async (runs) => (
 				asked.push(runs),

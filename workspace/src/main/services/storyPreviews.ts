@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readdirSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
 import { basename, dirname, extname, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { PREVIEW_COMPONENT, PREVIEW_FILE, PREVIEW_HEIGHT, PREVIEW_SHOW, PREVIEW_SPECIMEN } from '../../shared/catalog';
@@ -9,7 +10,6 @@ import type { ConnectedDesignSystem, StoryPreview, TokenEdit } from '../../share
 import { type CatalogReads, readCatalog } from './componentCatalog';
 import { definesIn, previewSetup, storybookDefines } from './storybookSetup';
 import { libraryCommit, systemReads } from './designLibrary';
-import { readTokens } from './designTokens';
 import { git } from './git';
 import type { BuildContext, BuildOptions, Loader, Plugin } from 'esbuild';
 import { ASSET_TYPES, type PrototypeServer } from './prototypeServer';
@@ -244,17 +244,20 @@ export const notInstalled = (what: string): string => `Not installed here: ${wha
  * library generates at install time (`symbols.generated`). Each becomes a stand-in that says so when a story reaches for
  * it, so the stories that do not need it still build and render.
  *
- * `edited` are the library's token files as a change has them (T3): each is built from that text in place of its file,
- * so a change is tried without a file of the copy written, and leaving it is building with none.
+ * `edited` are the library's files as a change has them (a token's, T3; one a value of a component's own is written in,
+ * Phase 4): each is built from that text in place of its file, so a change is tried without a file of the copy written,
+ * and leaving it is building with none.
  */
 const libraryBuild = (nodeModules: string, compileSass: CompileSass, missing: ReadonlySet<string>, edited?: Edited): Plugin => ({
 	name: 'library',
 	setup(b) {
-		if (edited && edited.files.length > 0) {
-			b.onLoad({ filter: new RegExp(`^(?:${edited.files.map(escapedForRegExp).join('|')})$`) }, (a) => {
+		if (edited) {
+			b.onLoad({ filter: new RegExp(`^(?:${edited.roots.map(escapedForRegExp).join('|')})/`) }, (a) => {
 				const text = edited.text(a.path);
 				if (text === undefined) return undefined;
-				return /\.scss$/.test(a.path) ? { contents: compileSass(a.path, text), loader: 'css' } : { contents: text, loader: loaderOf(a.path) };
+				return /\.scss$/.test(a.path)
+					? { contents: compileSass(a.path, text), loader: cssLoaderOf(a.path) }
+					: { contents: text, loader: loaderOf(a.path) };
 			});
 		}
 		b.onResolve({ filter: /^[^./].*\.s?css$/ }, (a) => ({ path: join(nodeModules, a.path) }));
@@ -272,24 +275,32 @@ module.exports = new Proxy({}, { getPrototypeOf: () => say, get: (_, k) => say[k
 			}));
 		}
 		b.onLoad({ filter: /\.mdx$/ }, () => ({ contents: 'export default () => null;', loader: 'js' }));
-		b.onLoad({ filter: /\.scss$/ }, (a) => ({ contents: compileSass(a.path), loader: 'css' }));
+		b.onLoad({ filter: /\.scss$/ }, (a) => ({ contents: compileSass(a.path), loader: cssLoaderOf(a.path) }));
 	},
 });
 
 /** Sass for a file, from the file or, when a change has it, from `text`. */
 type CompileSass = (path: string, text?: string) => string;
 
-/** The token files a change was written into, by absolute path, and the text a change gives each, if any. */
+/** Where the copy's files are (its path, and its real path), and the text a change gives a file, by absolute path, if any. */
 interface Edited {
-	files: string[];
+	roots: string[];
 	text: (path: string) => string | undefined;
 }
 
 const escapedForRegExp = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
+/**
+ * How esbuild reads a stylesheet, as it does one it loads itself: a CSS module (`.module.css`, `.module.scss`) with its class
+ * names its own (`local-css`), which the component's code names them by; any other as is.
+ */
+const cssLoaderOf = (path: string): Loader => (/\.module\.s?css$/.test(path) ? 'local-css' : 'css');
+
 /** How esbuild reads a file a change gives the text of, by its extension. */
 const loaderOf = (path: string): Loader =>
-	(({ '.ts': 'ts', '.tsx': 'tsx', '.jsx': 'jsx', '.css': 'css', '.json': 'json' }) as Record<string, Loader>)[extname(path)] ?? 'js';
+	extname(path) === '.css'
+		? cssLoaderOf(path)
+		: (({ '.ts': 'ts', '.tsx': 'tsx', '.jsx': 'jsx', '.json': 'json' } as Record<string, Loader>)[extname(path)] ?? 'js');
 
 /** The library's Sass, compiled as its own Storybook set-up compiles it, with its packages to import from. */
 const sassFor =
@@ -373,18 +384,18 @@ export interface TrialBuild {
 }
 
 /**
- * The previews built again with a change to the tokens (T3, decision 26), from the copy the first build was made from:
- * the token files the change writes are built from its text in place of theirs (`libraryBuild`), so nothing in the copy
- * is written and nothing is left to undo. **Kept open between changes,** so each is esbuild's incremental rebuild, about a
- * second for the real library, and the Sass, which a change to a theme file does not touch, compiled once.
+ * The previews built again with a change (to the tokens, T3, decision 26; to where a value is written, Phase 4), from the
+ * copy the first build was made from: any file the change writes is built from its text in place of its own
+ * (`libraryBuild`), so nothing in the copy is written and nothing is left to undo. **Kept open between changes,** so each
+ * is esbuild's incremental rebuild, about a second for the real library, and the Sass a change does not touch compiled once.
  */
-export const trialBuild = async (library: string, tokenFiles: string[], site: string, folder = ''): Promise<TrialBuild> => {
+export const trialBuild = async (library: string, site: string, folder = ''): Promise<TrialBuild> => {
 	const [{ context }, sass] = await Promise.all([import('esbuild'), import('sass')]);
 	const nodeModules = join(library, 'node_modules');
 	// esbuild names a file by its real path, and a temporary folder can be reached through a link (macOS's /var).
 	const roots = [...new Set([library, realpathSync(library)])];
 	let texts = new Map<string, string>();
-	const edited: Edited = { files: tokenFiles.flatMap((f) => roots.map((r) => join(r, f))), text: (path) => texts.get(path) };
+	const edited: Edited = { roots, text: (path) => texts.get(path) };
 	const plain = sassFor(sass, nodeModules);
 	const compiled = new Map<string, string>();
 	const compileSass: CompileSass = (path, text) => {
@@ -444,8 +455,20 @@ const RECIPE = createHash('sha256')
 /** The address a build of a commit's copy is served at: what it is for, and how many times, so each is at one of its own. */
 const servedAt = (what: string, times: number, dir: string): string => `${what}-${times}-${basename(dir).slice(0, 12)}`;
 
-/** What a build of the commit's previews with a change is for: T6's tags, or what a change being tried reaches. */
-export type BuiltFor = 'tagged' | 'reach';
+/**
+ * What a build of the commit's previews with a change is for: T6's tags, what a change being tried reaches, finding where
+ * a value of a component's own is written, and what writing it there reaches (Phase 4).
+ */
+export type BuiltFor = 'tagged' | 'reach' | 'locate' | 'written';
+
+/** A build kept open for one purpose (`StoryPreviews.opened`). */
+export interface OpenedBuild {
+	state: 'open';
+	reads: CatalogReads;
+	/** Built with `files` (path to text) in place of the library's own; the address it is served at. */
+	build(files: Map<string, string>): Promise<string>;
+	close(): Promise<void>;
+}
 
 export interface StoryPreviewsDeps {
 	/** The design system shown, or null when none is connected or its clone is gone. */
@@ -599,37 +622,55 @@ export class StoryPreviews {
 	}
 
 	/**
-	 * The commit's previews built once with `edits`, for `purpose` (T6's tags; what a change being tried reaches), at an
-	 * address of their own: beside the change being tried in the frame, which is the person's, never in its place, so a frame
-	 * showing it is never pulled from under it. Only the last of each is served.
+	 * A build of the commit's previews kept open for `purpose`, built again with each set of files given in place of the
+	 * library's own (`build`, which answers with the address that build is served at), until it is closed: beside the change
+	 * being tried in the frame, which is the person's, never in its place, so a frame showing it is never pulled from under
+	 * it. With the commit's files as read (`reads`), which a change is made from. Only the last build of each is served.
 	 */
-	async builtWith(edits: TokenEdit[], purpose: BuiltFor): Promise<StoryPreview> {
+	async opened(purpose: BuiltFor): Promise<OpenedBuild | Exclude<StoryPreview, { state: 'ready' }>> {
 		const base = await this.base();
 		const at = this.current;
-		if (base.state !== 'ready' || at === null) return base;
-		try {
-			const files = await editedFiles(await at.reads(), edits);
-			const builder = await this.builderFor(at, purpose);
-			try {
+		if (base.state !== 'ready') return base;
+		if (at === null) return { state: 'no-library' };
+		const [listed, builder] = await Promise.all([at.reads(), this.builderFor(at, purpose)]);
+		// The design system's files as git lists them; their text from the copy the build is made from, which is the commit's.
+		const copy = join(at.dir, 'library');
+		const reads: CatalogReads = { listFiles: (dir) => listed.listFiles(dir), readFile: (path) => readFile(join(copy, path), 'utf8') };
+		return {
+			state: 'open',
+			reads,
+			build: async (files) => {
 				await builder.build(files);
-			} finally {
-				await builder.dispose();
-			}
-			const last = this.builtServed.get(purpose);
-			const builds = (last?.builds ?? 0) + 1;
-			const key = servedAt(purpose, builds, at.dir);
-			if (last) this.deps.server.stopServing(last.key);
-			this.builtServed.set(purpose, { dir: at.dir, key, builds });
-			return { state: 'ready', base: await this.deps.server.serveFolder(key, join(at.dir, purpose), CODE) };
+				const last = this.builtServed.get(purpose);
+				const builds = (last?.builds ?? 0) + 1;
+				const key = servedAt(purpose, builds, at.dir);
+				if (last) this.deps.server.stopServing(last.key);
+				this.builtServed.set(purpose, { dir: at.dir, key, builds });
+				return this.deps.server.serveFolder(key, join(at.dir, purpose), CODE);
+			},
+			close: () => builder.dispose(),
+		};
+	}
+
+	/**
+	 * The commit's previews built once, for `purpose`, with the files a change writes, made from the commit's (`files`: a
+	 * token change's, `editedFiles`; where a value is written): `opened`, built and closed.
+	 */
+	async builtWith(purpose: BuiltFor, files: (reads: CatalogReads) => Promise<Map<string, string>>): Promise<StoryPreview> {
+		const opened = await this.opened(purpose);
+		if (opened.state !== 'open') return opened;
+		try {
+			return { state: 'ready', base: await opened.build(await files(opened.reads)) };
 		} catch (err) {
 			return { state: 'failed', error: errorText(err) };
+		} finally {
+			await opened.close();
 		}
 	}
 
-	/** A build of the commit's copy with token files given in place of theirs, into `site` beside the commit's own build. */
-	private async builderFor(at: Built, site: string): Promise<TrialBuild> {
-		const tokenFiles = [...new Set((await readTokens(await at.reads())).tokens.map((t) => t.source.file))];
-		return trialBuild(join(at.dir, 'library'), tokenFiles, join(at.dir, site), at.folder);
+	/** A build of the commit's copy with files given in place of its own, into `site` beside the commit's own build. */
+	private builderFor(at: Built, site: string): Promise<TrialBuild> {
+		return trialBuild(join(at.dir, 'library'), join(at.dir, site), at.folder);
 	}
 
 	private async endTrial(): Promise<void> {

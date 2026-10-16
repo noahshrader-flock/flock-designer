@@ -7,6 +7,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PREVIEW_HEIGHT, previewAddress } from '../src/shared/catalog';
 import { PrototypeServer } from '../src/main/services/prototypeServer';
 import { buildPreviews, hasPackages, notInstalled, previewEntry, StoryPreviews, unresolved } from '../src/main/services/storyPreviews';
+import type { CatalogReads } from '../src/main/services/componentCatalog';
+import { editedFiles } from '../src/main/services/tokenEdits';
+import type { TokenEdit } from '../src/shared/contract';
 import { eventually, g } from './fixtures';
 import { REAL_LIBRARY as REAL, describeWith, libraryMissing } from './realCheckouts';
 
@@ -401,6 +404,8 @@ describe('keeping them', () => {
 });
 
 describe('trying a change to the tokens (T3)', () => {
+	/** The files a token change writes, as a build with it is given them. */
+	const withTokens = (edits: TokenEdit[]) => (reads: CatalogReads) => editedFiles(reads, edits);
 	/** A library whose story draws with its theme: a tone, a palette role pointing at it, and the story using the role. */
 	const THEMED = {
 		...LIBRARY,
@@ -415,7 +420,9 @@ describe('trying a change to the tokens (T3)', () => {
 	/** Every script a build at `base` wrote, as one text: where a color the stories use ends up. */
 	const scripts = (base: string) => {
 		const key = new URL(base).pathname.split('/')[1] as string;
-		const dir = join(folder, readdirSync(folder)[0]!, key.startsWith('trial-') ? 'trial' : 'site');
+		// Served as `<what it is for>-<n>-<commit>`, from the folder of that name; the commit's own build from its site.
+		const what = key.split('-')[0] as string;
+		const dir = join(folder, readdirSync(folder)[0]!, what === 'previews' ? 'site' : what);
 		return readdirSync(dir, { recursive: true })
 			.map(String)
 			.filter((f) => f.endsWith('.js'))
@@ -478,7 +485,7 @@ describe('trying a change to the tokens (T3)', () => {
 		const p = previews();
 		await ready(p);
 		const trying = await p.preview([{ path: 'tone.brand.50', value: '#0A6B52' }]);
-		const tagged = await p.builtWith([{ path: 'tone.brand.50', value: '#00015A' }], 'tagged');
+		const tagged = await p.builtWith('tagged', withTokens([{ path: 'tone.brand.50', value: '#00015A' }]));
 		if (trying.state !== 'ready' || tagged.state !== 'ready') throw new Error('not ready');
 		expect(new URL(tagged.base).pathname).toMatch(/^\/tagged-/);
 		const dir = join(folder, readdirSync(folder)[0]!);
@@ -494,8 +501,8 @@ describe('trying a change to the tokens (T3)', () => {
 		expect(read('trial')).toContain('#0A6B52');
 		expect(read('trial')).not.toContain('#00015A');
 		// What a change reaches is built apart from both, at an address of its own each time: the tags stay served.
-		const reach = await p.builtWith([{ path: 'tone.brand.50', value: '#C80000' }], 'reach');
-		const again = await p.builtWith([{ path: 'tone.brand.50', value: '#C90000' }], 'reach');
+		const reach = await p.builtWith('reach', withTokens([{ path: 'tone.brand.50', value: '#C80000' }]));
+		const again = await p.builtWith('reach', withTokens([{ path: 'tone.brand.50', value: '#C90000' }]));
 		if (reach.state !== 'ready' || again.state !== 'ready') throw new Error('not ready');
 		expect(new URL(again.base).pathname).toMatch(/^\/reach-/);
 		expect(again.base).not.toBe(reach.base);
@@ -505,12 +512,68 @@ describe('trying a change to the tokens (T3)', () => {
 		expect((await fetch(trying.base)).status).toBe(200);
 	}, 30_000);
 
+	it('keeps a build open in which any file of the library is given in place of its own, each build at an address of its own, the copy unwritten', async () => {
+		makeLibrary(THEMED);
+		const p = previews();
+		await ready(p);
+		const opened = await p.opened('locate');
+		if (opened.state !== 'open') throw new Error(JSON.stringify(opened));
+		const stories = 'src/components/FSOne/FSOne.stories.tsx';
+		const sass = 'src/components/FSOne/one.scss';
+		try {
+			// A component's own file and its stylesheet, neither of them a token's.
+			const first = await opened.build(new Map([[stories, (await opened.reads.readFile(stories)).replace('One</button>', 'Uno</button>')]]));
+			expect(scripts(first)).toContain('Uno');
+			// The next is built with only what it gives: the story is the library's own again.
+			const second = await opened.build(new Map([[sass, '$c: blue;\n.one { color: $c; }\n']]));
+			expect(second).not.toBe(first);
+			expect((await fetch(first)).status).toBe(404);
+			expect(scripts(second)).not.toContain('Uno');
+			expect(await (await fetch(`${second}entry.css`)).text()).toMatch(/\.one\{color:(blue|#00f)\}/);
+		} finally {
+			await opened.close();
+		}
+		const dir = join(folder, readdirSync(folder)[0]!);
+		expect(readFileSync(join(dir, 'library', stories), 'utf8')).toContain('>One<');
+		expect(readFileSync(join(dir, 'library', sass), 'utf8')).toContain('red');
+	}, 60_000);
+
+	it('keeps a CSS module’s class names its own, as the library’s build does, in the commit’s build and with a change', async () => {
+		makeLibrary({
+			...THEMED,
+			'src/components/FSThree/FSThree.stories.tsx': story(
+				'Data/FSThree',
+				"import css from './three.module.css';\nimport sass from './four.module.scss';\nexport const Default = () => <i className={`${css.three} ${sass.four}`}>Three</i>;",
+			),
+			'src/components/FSThree/three.module.css': '.three { border-radius: 20px; }\n',
+			'src/components/FSThree/four.module.scss': '$r: 4px;\n.four { padding: $r; }\n',
+		});
+		const p = previews();
+		const base = await ready(p);
+		/** What the drawn element is styled with: each class it is given, by the rule its build's stylesheet has for it. */
+		const styled = async (at: string) => {
+			const css = await (await fetch(`${at}entry.css`)).text();
+			const root = await render(at, 'src/components/FSThree/FSThree.stories.tsx');
+			const classes = (root.querySelector('i')?.className ?? '').split(' ');
+			return classes.map((c) => new RegExp(`\\.${c}\\s*\\{([^}]*)\\}`).exec(css)?.[1]?.replace(/\s/g, '') ?? `no rule for "${c}"`);
+		};
+		expect(await styled(base)).toEqual(['border-radius:20px', 'padding:4px']);
+		const opened = await p.opened('locate');
+		if (opened.state !== 'open') throw new Error(JSON.stringify(opened));
+		try {
+			const at = await opened.build(new Map([['src/components/FSThree/three.module.css', '.three { border-radius: 4px; }\n']]));
+			expect(await styled(at)).toEqual(['border-radius:4px', 'padding:4px']);
+		} finally {
+			await opened.close();
+		}
+	}, 60_000);
+
 	it('stops serving the builds with a change made on the commit develop has left: the tags, and what a change reaches', async () => {
 		makeLibrary(THEMED);
 		const p = previews();
 		await ready(p);
 		const change = [{ path: 'tone.brand.50', value: '#00015A' }];
-		const [tagged, reach] = [await p.builtWith(change, 'tagged'), await p.builtWith(change, 'reach')];
+		const [tagged, reach] = [await p.builtWith('tagged', withTokens(change)), await p.builtWith('reach', withTokens(change))];
 		if (tagged.state !== 'ready' || reach.state !== 'ready') throw new Error('not ready');
 		g(upstream, 'commit', '-q', '--allow-empty', '-m', 'moved');
 		g(upstream, 'push', '-q', 'origin', 'develop');
