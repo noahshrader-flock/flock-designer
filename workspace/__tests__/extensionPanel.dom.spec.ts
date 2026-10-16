@@ -1392,6 +1392,7 @@ describe('Design System', () => {
 		expect(titles()).toEqual([['Inputs', '1']]);
 		await viewChoice('List');
 		expect(under(section('Inputs')).firstElementChild?.className).toBe('list');
+		expect(under(section('Inputs')).querySelector('[data-part="meta"]')).toBeNull();
 		await type(search, 'nothing like it');
 		expect(body().querySelector('.note')?.textContent).toContain('No component matches “nothing like it”.');
 	});

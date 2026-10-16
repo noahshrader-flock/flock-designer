@@ -47,7 +47,7 @@ export const Row = ({
 			{end}
 		</>
 	);
-	const shape = meta ? 'row row-two-lines' : 'row';
+	const shape = meta || start ? 'row row-two-lines' : 'row';
 	return (
 		<li role="listitem" className={onOpen ? 'row-item' : shape} {...(context ? { 'data-vscode-context': JSON.stringify(context) } : {})}>
 			{onOpen ? (

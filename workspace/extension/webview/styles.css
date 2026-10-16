@@ -232,9 +232,9 @@ body {
 	padding: 0 12px;
 }
 
-/* A row with a line under its name, as a project's is: taller, and its picture given room. */
+/* A row with a line under its name or a picture at its start, as a project's and a component's are: taller, and its picture given room. */
 .row-two-lines {
-	gap: 8px;
+	gap: 12px;
 	min-height: 40px;
 	padding-block: 4px;
 }
@@ -262,6 +262,11 @@ body {
 .row-meta {
 	color: var(--dsnr-muted);
 	font-size: 0.92em;
+}
+
+/* The name of a project or a component, in a card or a row alike: semi-bold. */
+.row-name {
+	font-weight: 600;
 }
 
 /* Where a project's picture goes: its shape, 16 by 9, until there is one. */
@@ -537,7 +542,7 @@ body {
 .card {
 	display: flex;
 	flex-direction: column;
-	gap: 4px;
+	gap: 8px;
 	width: 100%;
 	padding: 0;
 	border: none;
@@ -617,7 +622,8 @@ body {
 	display: flex;
 	flex-direction: column;
 	min-width: 0;
-	padding: var(--dsnr-card-text-pad);
+	/* The name sits close under its picture (the card's own gap), not a padding's further. */
+	padding: 0 var(--dsnr-card-text-pad) var(--dsnr-card-text-pad);
 }
 
 /* A line that says what the list is, or what is happening: quiet, and in line with the rows. */
