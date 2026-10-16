@@ -35,6 +35,8 @@ describe('a message from the panel', () => {
 		[{ type: 'open-library-source', file: 'src/colors/theme/light.ts', line: 12 }],
 		[{ type: 'token-edits', edits: [] }],
 		[{ type: 'token-edits', edits: [{ path: 'palette.light.primary.main', value: '#112233' }] }],
+		[{ type: 'set-mode', mode: 'dark' }],
+		[{ type: 'set-mode', mode: 'light' }],
 	])('%o is read', (m) => {
 		expect(readMessage(m)).toEqual(m);
 	});
@@ -89,6 +91,9 @@ describe('a message from the panel', () => {
 		[{ type: 'token-edits', edits: 'all' }],
 		[{ type: 'token-edits', edits: new Array(501).fill({ path: 'a', value: '#000000' }) }],
 		[{ type: 'open-primitives', which: 'all' }],
+		[{ type: 'set-mode', mode: 'sepia' }],
+		[{ type: 'set-mode' }],
+		[{ type: 'set-mode', mode: 'dark', also: 1 }],
 	])('%o is dropped', (m) => {
 		expect(readMessage(m)).toBeNull();
 	});

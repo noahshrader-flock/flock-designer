@@ -213,6 +213,23 @@ export const cellFor = (rows: ValueRow[] | null | undefined, t: Pick<TriedValue,
 	return rows?.find((r) => r.property === t.property)?.cells.find((c) => c.targets.length === targets.size && c.targets.every((k) => targets.has(k)));
 };
 
+/** Each value a component's rows draw, by what names it (`triedId`): how one mode's values are told from another's. */
+const drawnValues = (rows: ValueRow[]): Map<string, string> =>
+	new Map(rows.flatMap((r) => r.cells.map((c) => [triedId({ property: r.property, targets: c.targets }), c.value] as const)));
+
+/**
+ * The mode a component's values are shown in (MODES_PLAN Phase 1): the one chosen, but dark only when its stories drew it and
+ * it is not the same as light. A library DSNR cannot turn dark draws its light twice, so it is shown in light, and nothing
+ * offers a dark that changes nothing.
+ */
+export const shownMode = (rows: Record<Theme, ValueRow[] | null>, chosen: Theme): Theme => {
+	if (chosen !== 'dark' || rows.dark === null) return 'light';
+	if (rows.light === null) return 'dark';
+	const light = drawnValues(rows.light);
+	const dark = drawnValues(rows.dark);
+	return dark.size !== light.size || [...dark].some(([id, value]) => light.get(id) !== value) ? 'dark' : 'light';
+};
+
 /** Whether two sets of values tried are the same change, whatever their order: each value, on the same instances. */
 export const sameTried = (a: TriedValue[], b: TriedValue[]): boolean => {
 	const by = (tried: TriedValue[]) => JSON.stringify(tried.map((t) => [triedId(t), t.value, t.follows ?? '']).sort());

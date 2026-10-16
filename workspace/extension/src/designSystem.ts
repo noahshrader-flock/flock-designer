@@ -1,8 +1,10 @@
 import { resolve, sep } from 'node:path';
+import type * as VsCode from 'vscode';
 import type { Context } from '../../src/main/services/findContext';
 import { type DesignSystemsMemory, systemAt } from '../../src/main/services/designSystems';
 import type { CatalogComponent, ConnectedDesignSystem, TokenEdit, WorkspaceApi } from '../../src/shared/contract';
 import { errorText, valueOf } from '../../src/shared/result';
+import { DEFAULT_THEME, type Theme, isTheme } from '../../src/shared/prototypeTheme';
 import { sameChange } from '../../src/shared/tokens';
 import type { ComponentLink, HostMessage } from './messages';
 
@@ -50,6 +52,31 @@ export class TokenTrial {
 		if (sameChange(edits, this.edits)) return;
 		this.edits = edits;
 		this.post({ type: 'token-edits', edits });
+	}
+}
+
+/** Where the mode chosen is kept, in VS Code's state for the extension: the same in every window, and after a restart. */
+const MODE = 'dsnr.mode';
+
+/**
+ * The mode components are shown in (MODES_PLAN Phase 1): one choice, made in the panel, kept (`kept`) so every page and
+ * every session opens in it, and told to every DSNR page when it changes (`post`). Light until dark is chosen.
+ */
+export class ModeChoice {
+	constructor(
+		private readonly kept: Pick<VsCode.Memento, 'get' | 'update'>,
+		private readonly post: (message: Extract<HostMessage, { type: 'mode' }>) => void,
+	) {}
+
+	current(): Theme {
+		const kept = this.kept.get<unknown>(MODE);
+		return isTheme(kept) ? kept : DEFAULT_THEME;
+	}
+
+	set(mode: Theme): void {
+		if (mode === this.current()) return;
+		void this.kept.update(MODE, mode);
+		this.post({ type: 'mode', mode });
 	}
 }
 

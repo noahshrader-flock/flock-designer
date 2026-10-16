@@ -5,10 +5,10 @@ import type { WorkspaceApi } from '../../src/shared/contract';
 import { valueOf } from '../../src/shared/result';
 import type { Tell } from './agentWork';
 import type { Panels } from './bridge';
-import { TokenTrial, componentLink, componentOf, libraryFileIn } from './designSystem';
+import { ModeChoice, TokenTrial, componentLink, componentOf, libraryFileIn } from './designSystem';
 import { DesignTabs } from './designTabs';
-import { type HostMessage, readComponentArg, readMessage } from './messages';
-import { type DesignSystemAsks, answerPage } from './bridge';
+import { readComponentArg, readMessage } from './messages';
+import { type DesignSystemAsks, answerPage, toldOnReady } from './bridge';
 import { dsnrPage } from './panel';
 import type { LocalAddresses } from './html';
 
@@ -31,6 +31,7 @@ export const designSystemHost = ({
 	failed,
 	failedFor,
 	onShown,
+	kept,
 }: {
 	vscode: typeof VsCode;
 	/** The extension's build, which its pages load from. */
@@ -47,8 +48,11 @@ export const designSystemHost = ({
 	failedFor: (fromCode: boolean) => (err: unknown) => void;
 	/** Told when a component's tab opens, closes, or is brought in front or covered. */
 	onShown: () => void;
+	/** VS Code's state for the extension, where the mode chosen is kept (`ModeChoice`). */
+	kept: Pick<VsCode.Memento, 'get' | 'update'>;
 }) => {
 	const trial = new TokenTrial((m) => panels.post(m));
+	const mode = new ModeChoice(kept, (m) => panels.post(m));
 	const tabs = new DesignTabs({
 		create: (title) =>
 			vscode.window.createWebviewPanel('dsnr.designSystem', title, vscode.ViewColumn.Active, {
@@ -64,7 +68,7 @@ export const designSystemHost = ({
 			const message = readMessage(raw);
 			if (!message) return;
 			try {
-				if (message.type === 'ready') await webview.postMessage({ type: 'token-edits', edits: trial.current() } satisfies HostMessage);
+				if (message.type === 'ready') for (const told of toldOnReady(asks)) await webview.postMessage(told);
 				else await answerPage(webview as VsCode.Webview, message, asks);
 			} catch (err) {
 				failed(err);
@@ -89,6 +93,8 @@ export const designSystemHost = ({
 		},
 		edits: () => trial.current(),
 		setEdits: (edits) => trial.set(tokenEditsOf(edits)),
+		mode: () => mode.current(),
+		setMode: (next) => mode.set(next),
 	};
 	/** A component of the design system shown, chosen from its catalog in VS Code's quick pick, by its story file. */
 	const pickComponent = async (): Promise<string | undefined> => {

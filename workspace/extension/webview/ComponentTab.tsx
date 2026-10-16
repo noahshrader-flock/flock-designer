@@ -14,6 +14,8 @@ import { TokenEditor } from './TokenEditor';
 import type { TokenActions } from './Tokens';
 import { useTabCatalog } from './useCatalog';
 import { useTrial } from './useTrial';
+import { ModeProvider } from './mode';
+import { useModeChoice } from './useModeChoice';
 import { Button } from './ui/Button';
 import { Notice, TabNote } from './ui/Notice';
 import { TryingNote } from './Changed';
@@ -55,15 +57,18 @@ const Stories = ({ component, commit, edits, tried }: { component: CatalogCompon
 export const ComponentTab = ({ id }: { id: string }) => {
 	const { ready, note } = useTabCatalog();
 	const [edits, setEdits] = useTrial();
+	// The mode its values are shown in: the one chosen in the panel, the same on every page.
+	const mode = useModeChoice();
+	const [chosen] = mode;
 	// The token whose control is open: Made from's rows change a token as the panel's do, and every page sees it.
 	const [editing, setEditing] = useState<DesignToken | null>(null);
 	// Asking in words (Phase 6): open while its dialog is.
 	const [asking, setAsking] = useState(false);
 	const changes = useTokenChangesFor(ready?.tokens.tokens ?? [], edits, setEdits, ready?.accessibility ?? NOT_READ);
 	// The values tried on its instances (Phase 2): this tab's alone, kept nowhere, and forgotten when the design system moves
-	// to another version, whose instances are drawn anew.
+	// to another version, whose instances are drawn anew, or another mode is chosen, so a value tried in one is never left on the other.
 	const [tried, setTried] = useState<ReadonlyMap<string, TriedValue>>(new Map());
-	useEffect(() => setTried(new Map()), [ready?.commit]);
+	useEffect(() => setTried(new Map()), [ready?.commit, chosen]);
 	const onAll = (all: TriedValue[]) => setTried(new Map(all.map((t) => [triedId(t), t])));
 	// Having the agent write a value (Phase 4.5, 4.6): asked of the core, which says what it wrote where its values are.
 	const [writes, setWrites] = useState(0);
@@ -95,59 +100,61 @@ export const ComponentTab = ({ id }: { id: string }) => {
 	const link = (to: ComponentLink) => vscode().postMessage({ type: 'component-link', id, link: to });
 	const open = (other: string) => vscode().postMessage({ type: 'open-component', id: other });
 	return (
-		<TokenChangesProvider value={changes}>
-			<main className="tab tab-split">
-				<header className="tab-header">
-					<div className="tab-heading">
-						<h1 className="tab-title">{component.name}</h1>
-						<p className="quiet">{component.subtitle ?? component.group}</p>
-					</div>
-					<div className="tab-actions">
-						<Button variant="secondary" onClick={() => setAsking(true)}>
-							Ask…
-						</Button>
-						{component.storybook !== null && (
-							<Button variant="secondary" external onClick={() => link('storybook')}>
-								Storybook
+		<ModeProvider value={mode}>
+			<TokenChangesProvider value={changes}>
+				<main className="tab tab-split">
+					<header className="tab-header">
+						<div className="tab-heading">
+							<h1 className="tab-title">{component.name}</h1>
+							<p className="quiet">{component.subtitle ?? component.group}</p>
+						</div>
+						<div className="tab-actions">
+							<Button variant="secondary" onClick={() => setAsking(true)}>
+								Ask…
 							</Button>
-						)}
-						<Button variant="secondary" external onClick={() => link('source')}>
-							GitHub
-						</Button>
+							{component.storybook !== null && (
+								<Button variant="secondary" external onClick={() => link('storybook')}>
+									Storybook
+								</Button>
+							)}
+							<Button variant="secondary" external onClick={() => link('source')}>
+								GitHub
+							</Button>
+						</div>
+					</header>
+					<TryingNote count={edits.length} />
+					<div className="component-layout">
+						<div className="component-stories">
+							<Stories component={component} commit={ready.commit} edits={edits} tried={[...tried.values()]} />
+						</div>
+						<aside className="component-aside">
+							<ChangeReach edits={edits} component={component} components={ready.components} onOpen={open} />
+							<ComponentSections
+								component={component}
+								components={ready.components}
+								actions={actions}
+								version={{ branch: ready.branch, commit: ready.commit }}
+								trying={{ tried, onTry, onAll, onWrite, writes, writeError }}
+								onOpen={open}
+							/>
+						</aside>
 					</div>
-				</header>
-				<TryingNote count={edits.length} />
-				<div className="component-layout">
-					<div className="component-stories">
-						<Stories component={component} commit={ready.commit} edits={edits} tried={[...tried.values()]} />
-					</div>
-					<aside className="component-aside">
-						<ChangeReach edits={edits} component={component} components={ready.components} onOpen={open} />
-						<ComponentSections
-							component={component}
-							components={ready.components}
-							actions={actions}
-							version={{ branch: ready.branch, commit: ready.commit }}
-							trying={{ tried, onTry, onAll, onWrite, writes, writeError }}
-							onOpen={open}
-						/>
-					</aside>
-				</div>
-			</main>
-			{editing && <TokenEditor key={editing.path} token={editing} onClose={() => setEditing(null)} />}
-			{asking && (
-				<AskInWords
-					file={id}
-					about={`Its tokens and ${component.name}'s own values: what its controls change.`}
-					edits={edits}
-					tried={[...tried.values()]}
-					onAsked={(asked) => {
-						changes.changeAll(asked.edits);
-						for (const t of asked.values) onTry(triedId(t), t);
-					}}
-					onClose={() => setAsking(false)}
-				/>
-			)}
-		</TokenChangesProvider>
+				</main>
+				{editing && <TokenEditor key={editing.path} token={editing} onClose={() => setEditing(null)} />}
+				{asking && (
+					<AskInWords
+						file={id}
+						about={`Its tokens and ${component.name}'s own values: what its controls change.`}
+						edits={edits}
+						tried={[...tried.values()]}
+						onAsked={(asked) => {
+							changes.changeAll(asked.edits);
+							for (const t of asked.values) onTry(triedId(t), t);
+						}}
+						onClose={() => setAsking(false)}
+					/>
+				)}
+			</TokenChangesProvider>
+		</ModeProvider>
 	);
 };

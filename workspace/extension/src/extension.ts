@@ -128,6 +128,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 		failed,
 		failedFor,
 		onShown: () => tabsShown(),
+		kept: context.globalState,
 	});
 	const site = siteIn(storage);
 	const buildReview = buildReviewSite(site, join(context.extensionUri.fsPath, 'dist', 'viewer'));

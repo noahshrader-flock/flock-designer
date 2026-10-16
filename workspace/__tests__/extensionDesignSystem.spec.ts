@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { TokenTrial, componentLink, componentOf, showFound, shownFrom, libraryFileIn } from '../extension/src/designSystem';
+import { ModeChoice, TokenTrial, componentLink, componentOf, showFound, shownFrom, libraryFileIn } from '../extension/src/designSystem';
 import type { Catalog, CatalogComponent, ConnectedDesignSystem } from '../src/shared/contract';
 import { ok } from '../src/shared/result';
 
@@ -52,6 +52,24 @@ describe('the design system found, shown', () => {
 		expect(await showFound(m, null, read)).toBeNull();
 		expect(read).not.toHaveBeenCalled();
 		expect(m.add).not.toHaveBeenCalled();
+	});
+});
+
+describe('the mode components are shown in', () => {
+	it('is light until dark is chosen, kept for the next session, and told to every page only when it changes', () => {
+		const state = new Map<string, unknown>();
+		const kept = { get: (key: string) => state.get(key), update: async (key: string, value: unknown) => void state.set(key, value) };
+		const post = vi.fn();
+		const mode = new ModeChoice(kept as never, post);
+		expect(mode.current()).toBe('light');
+		mode.set('dark');
+		expect(post).toHaveBeenCalledWith({ type: 'mode', mode: 'dark' });
+		mode.set('dark');
+		expect(post).toHaveBeenCalledTimes(1);
+		// A new session reads what was kept; what was kept that is no mode is light.
+		expect(new ModeChoice(kept as never, vi.fn()).current()).toBe('dark');
+		state.set('dsnr.mode', 'sepia');
+		expect(new ModeChoice(kept as never, vi.fn()).current()).toBe('light');
 	});
 });
 

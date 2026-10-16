@@ -8,15 +8,15 @@ import {
 	type ValueCell,
 	type ValueProperty,
 	type ValueRow,
+	shownMode,
 	triedId,
 } from '../../src/shared/contract';
+import { useMode } from './mode';
 import { plural } from '../../src/shared/plural';
-import { DEFAULT_THEME, THEMES, type Theme, themeLabel } from '../../src/shared/prototypeTheme';
 import { labelOf } from '../../src/shared/tokens';
 import { sharedWith } from '../../src/renderer/useComponentTokens';
 import { NO_COLOR, allParts, isFull } from '../../src/shared/valueParts';
 import { Swatch } from './ui/Swatch';
-import { Toggle } from './ui/Toggle';
 import { useDismiss } from './ui/useDismiss';
 import { ValueEditor } from './ValueEditor';
 import { VALUE_NAMES, followsOf, saidValue, valueTitle } from '../../src/shared/valueNames';
@@ -36,7 +36,6 @@ export interface Trying {
 	writeError: string | null;
 }
 /** Light and dark, as the review bar names them, as an empty and a filled circle: how a theme's light and dark read in a side bar. */
-const MODES = THEMES.map((value) => ({ value, label: themeLabel(value), icon: value === 'dark' ? 'circle-large-filled' : 'circle-large-outline' }));
 
 /** Why a component has no values to show, by what its drawing found. */
 const WHY_NONE: Record<Exclude<Values['state'], 'read' | 'failed'>, (name: string) => string> = {
@@ -268,8 +267,9 @@ export const ComponentValues = ({
 	onEditToken: (token: DesignToken) => void;
 }) => {
 	const { values } = answer;
-	// Light until the other is chosen, as a prototype opens: the same first sight for everyone.
-	const [mode, setMode] = useState<Theme>(DEFAULT_THEME);
+	// The mode chosen in the panel, shown here only when its stories drew it in that mode and it differs (`shownMode`).
+	const [chosen] = useMode();
+	const mode = values.state === 'read' ? shownMode(values.rows, chosen) : chosen;
 	const [editing, setEditing] = useState<{ property: ValueProperty; cell: ValueCell } | null>(null);
 	const tried = (property: ValueProperty) => (cell: ValueCell) => trying.tried.get(triedId({ property, targets: cell.targets }))?.value ?? null;
 	const open = (property: ValueProperty) => (cell: ValueCell) => {
@@ -301,7 +301,6 @@ export const ComponentValues = ({
 		<section aria-label="Values" className="aside-section">
 			<div className="aside-heading">
 				<h2 className="aside-title">Values</h2>
-				{values.state === 'read' && <Toggle label="Values in" options={MODES} value={mode} onChange={setMode} />}
 			</div>
 			{values.state === 'failed' ? (
 				<p className="quiet">Its values could not be read: {values.error}</p>

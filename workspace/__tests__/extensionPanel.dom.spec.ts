@@ -1405,6 +1405,22 @@ describe('Design System', () => {
 		expect(current()).toEqual([]);
 	});
 
+	it('offers the mode components are shown in beside Components and Tokens, said as what pressing it does, and only when the library has a dark', async () => {
+		await read();
+		const switchTo = (mode: string) => document.querySelector(`.ds-part [aria-label="Switch to ${mode}"]`) as HTMLButtonElement | null;
+		expect(switchTo('dark')).not.toBeNull();
+		await press(switchTo('dark')!);
+		expect(panelSaid().at(-1)).toEqual({ type: 'set-mode', mode: 'dark' });
+		expect(switchTo('light')?.title).toBe('Switch to light');
+		// The extension's choice, told to every page, is what it shows.
+		await say({ type: 'mode', mode: 'light' });
+		expect(switchTo('dark')).not.toBeNull();
+		await unmount();
+		// A library with no dark: no switch.
+		await read({ ...SAMPLE_CATALOG, tokens: { ...SAMPLE_CATALOG.tokens, tokens: SAMPLE_CATALOG.tokens.tokens.filter((t) => t.group !== 'Dark') } });
+		expect(document.querySelector('.ds-part [aria-label^="Switch to"]')).toBeNull();
+	});
+
 	it('finds components by the search, says when none matches, and is a list when chosen', async () => {
 		await read();
 		const search = body().querySelector('input[aria-label="Search components"]') as HTMLInputElement;

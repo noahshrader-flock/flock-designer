@@ -307,8 +307,8 @@ describe('a component’s tab', () => {
 		await analysed();
 		const values = section('Values')!;
 		expect(values.querySelector('[data-values-from]')?.textContent).toBe('As its stories draw it, in light: 12 instances, on develop at abc123.');
-		// Light until dark is chosen, as a prototype opens.
-		expect(values.querySelector('[role="radio"][aria-checked="true"]')?.textContent).toBe('Light');
+		// Light until dark is chosen, and chosen in the panel: the tab has no switch of its own.
+		expect(values.querySelector('[role="radio"]')).toBeNull();
 		expect([...values.querySelectorAll('[data-value-row]')].map((r) => r.getAttribute('data-value-row'))).toEqual([
 			'height',
 			'radius',
@@ -393,34 +393,31 @@ describe('a component’s tab', () => {
 		expect(group.querySelector('details, summary')).toBeNull();
 	});
 
-	it('shows dark’s values when dark is chosen, as the stories draw it there, and light’s again when light is', async () => {
+	it('shows dark’s values when dark is chosen in the panel, as the stories draw it there, and light’s again when light is', async () => {
 		await analysed();
 		const values = section('Values')!;
-		const radio = (label: string) => [...values.querySelectorAll('[role="radio"]')].find((b) => b.textContent === label) as HTMLElement;
-		await press(radio('Dark'));
+		await say({ type: 'mode', mode: 'dark' });
 		expect(values.querySelector('[data-values-from]')?.textContent).toContain('in dark:');
 		expect([...values.querySelectorAll('[data-value-row]')].map((r) => r.getAttribute('data-value-row'))).toEqual(['height', 'background']);
 		const background = values.querySelector('[data-value-row="background"]') as HTMLElement;
 		expect([...background.querySelectorAll('[data-value-cell]')].map((c) => c.textContent)).toEqual(['primary#2BB48A', 'ghostnone']);
 		expect(background.querySelector('h3 [data-value-kind="token"]')?.textContent).toBe('Dark primary main');
-		await press(radio('Light'));
+		await say({ type: 'mode', mode: 'light' });
 		expect(values.querySelector('[data-values-from]')?.textContent).toContain('in light:');
 		expect(values.querySelector('[data-value-row="radius"]')).not.toBeNull();
 	});
 
-	it('says a mode its stories did not draw is not read, and still shows the other', async () => {
-		await analysed({
-			values: {
-				...(analysis().values as { rows: object }),
-				rows: { light: (analysis().values as { rows: { light: object[] } }).rows.light, dark: null },
-			},
-		});
-		const values = section('Values')!;
-		await press([...values.querySelectorAll('[role="radio"]')].find((b) => b.textContent === 'Dark') as HTMLElement);
-		expect(values.querySelector('[data-values-none="dark"]')?.textContent).toBe(
-			'Its stories did not draw it in dark, so its values there cannot be read.',
-		);
-		expect(values.querySelector('[data-value-row]')).toBeNull();
+	it('shows light when dark is chosen but its stories did not draw it, or drew it the same: never a dark that changes nothing', async () => {
+		const light = (analysis().values as { rows: { light: object[] } }).rows.light;
+		await analysed({ values: { ...(analysis().values as { rows: object }), rows: { light, dark: null } } });
+		await say({ type: 'mode', mode: 'dark' });
+		expect(section('Values')?.querySelector('[data-values-from]')?.textContent).toContain('in light:');
+		expect(section('Values')?.querySelector('[data-value-row]')).not.toBeNull();
+		document.body.innerHTML = '';
+		// A library DSNR cannot turn dark draws its light twice.
+		await analysed({ values: { ...(analysis().values as { rows: object }), rows: { light, dark: light } } });
+		await say({ type: 'mode', mode: 'dark' });
+		expect(section('Values')?.querySelector('[data-values-from]')?.textContent).toContain('in light:');
 	});
 
 	it('says when a length it calls its own may be a token no tag could be given', async () => {
@@ -1002,6 +999,17 @@ describe('a component’s tab', () => {
 			await press(change('Height · sm'));
 			expect(slider('Height').value).toBe('30');
 			expect(popover()?.textContent).toContain('Reset');
+		});
+
+		it('forgets the values tried when another mode is chosen, so one tried in light is never left on dark', async () => {
+			const { tried } = await tryingOpen();
+			await press(change('Height · sm'));
+			await type(slider('Height'), '30');
+			expect(tried()).toHaveLength(1);
+			await escape();
+			await say({ type: 'mode', mode: 'dark' });
+			expect(tried()).toEqual([]);
+			expect(values().querySelector('[data-tried]')).toBeNull();
 		});
 
 		it('puts a value back with Reset, and every value with Reset all', async () => {

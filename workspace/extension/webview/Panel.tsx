@@ -9,6 +9,8 @@ import { PanelDialogs } from './Dialogs';
 import { onHost, workspace } from './host';
 import { Projects, type ProjectsRead } from './Projects';
 import { type CodebaseAction, NO_TABS_SHOWN, type PanelDialog, type Review, type TabsShown } from '../src/messages';
+import { ModeProvider } from './mode';
+import { useModeChoice } from './useModeChoice';
 import { OpenTabsProvider } from './openTabs';
 import { Loading } from './ui/Loading';
 import { Toggle } from './ui/Toggle';
@@ -154,6 +156,8 @@ export const Panel = () => {
 	const [dialog, setDialog] = useState<PanelDialog | null>(null);
 	// The tabs in front in the editor, which the projects and components that stand for them are marked by.
 	const [tabs, setTabs] = useState<TabsShown>(NO_TABS_SHOWN);
+	// The mode components are shown in: the extension's, heard before the page says it is ready.
+	const mode = useModeChoice();
 	useEffect(() => {
 		const stop = onHost((m) => {
 			if (m.type === 'context') {
@@ -227,55 +231,57 @@ export const Panel = () => {
 	};
 	return (
 		<OpenTabsProvider value={tabs}>
-			<PanelView
-				tab={tab}
-				onTab={(next) => {
-					setTab(next);
-					keep({ tab: next });
-				}}
-				view={view}
-				onView={(next) => {
-					setView(next);
-					keep({ view: next });
-				}}
-				account={account}
-				context={context}
-				projects={{ value: projects, error: read.error }}
-				onOpen={(review) => vscode().postMessage({ type: 'open-review', ...review })}
-				onOpenInBrowser={(review) => vscode().postMessage({ type: 'open-review-in-browser', ...review })}
-				onCopyLink={(review) => vscode().postMessage({ type: 'copy-review-link', ...review })}
-				onOpenPublished={(review) => vscode().postMessage({ type: 'open-review-published', ...review })}
-				// Asked of the extension, which knows whether it can be started, and opens the dialog (`open-dialog`) if so.
-				onNew={() => vscode().postMessage({ type: 'ask-new-prototype' })}
-				onDialog={setDialog}
-				onCodebase={codebase}
-				onGetStarted={() => vscode().postMessage({ type: 'get-started' })}
-				unreadable={unreadable}
-				design={design}
-				pictures={pictures}
-				part={part}
-				onPart={(next) => {
-					setPart(next);
-					keep({ part: next });
-				}}
-				componentsView={componentsView}
-				onComponentsView={(next) => {
-					setComponentsView(next);
-					keep({ componentsView: next });
-				}}
-				edits={edits}
-				does={does}
-			/>
-			<PanelDialogs
-				dialog={dialog}
-				projects={projects}
-				root={context?.product ?? null}
-				account={account}
-				onStart={(answers) => vscode().postMessage({ type: 'new-prototype', ...answers })}
-				onCodebase={codebase}
-				onChanged={() => setChanges((n) => n + 1)}
-				onClose={() => setDialog(null)}
-			/>
+			<ModeProvider value={mode}>
+				<PanelView
+					tab={tab}
+					onTab={(next) => {
+						setTab(next);
+						keep({ tab: next });
+					}}
+					view={view}
+					onView={(next) => {
+						setView(next);
+						keep({ view: next });
+					}}
+					account={account}
+					context={context}
+					projects={{ value: projects, error: read.error }}
+					onOpen={(review) => vscode().postMessage({ type: 'open-review', ...review })}
+					onOpenInBrowser={(review) => vscode().postMessage({ type: 'open-review-in-browser', ...review })}
+					onCopyLink={(review) => vscode().postMessage({ type: 'copy-review-link', ...review })}
+					onOpenPublished={(review) => vscode().postMessage({ type: 'open-review-published', ...review })}
+					// Asked of the extension, which knows whether it can be started, and opens the dialog (`open-dialog`) if so.
+					onNew={() => vscode().postMessage({ type: 'ask-new-prototype' })}
+					onDialog={setDialog}
+					onCodebase={codebase}
+					onGetStarted={() => vscode().postMessage({ type: 'get-started' })}
+					unreadable={unreadable}
+					design={design}
+					pictures={pictures}
+					part={part}
+					onPart={(next) => {
+						setPart(next);
+						keep({ part: next });
+					}}
+					componentsView={componentsView}
+					onComponentsView={(next) => {
+						setComponentsView(next);
+						keep({ componentsView: next });
+					}}
+					edits={edits}
+					does={does}
+				/>
+				<PanelDialogs
+					dialog={dialog}
+					projects={projects}
+					root={context?.product ?? null}
+					account={account}
+					onStart={(answers) => vscode().postMessage({ type: 'new-prototype', ...answers })}
+					onCodebase={codebase}
+					onChanged={() => setChanges((n) => n + 1)}
+					onClose={() => setDialog(null)}
+				/>
+			</ModeProvider>
 		</OpenTabsProvider>
 	);
 };

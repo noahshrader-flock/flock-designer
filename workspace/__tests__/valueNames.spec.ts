@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { type DesignToken, cellFor } from '../src/shared/contract';
+import { type DesignToken, type ValueRow, cellFor, shownMode } from '../src/shared/contract';
 import { followsOf, tokensItCouldFollow } from '../src/shared/valueNames';
 
 const token = (path: string, kind: DesignToken['kind'], category: string, group: string, value: string) =>
@@ -69,5 +69,21 @@ describe('a token in rem, on a page whose rem is not 16 pixels', () => {
 		const rem = [{ ...TOKENS.find((t) => t.path === 'radius')!, path: 'radius.half', value: '0.5rem' }];
 		expect(tokensItCouldFollow('radius', '5px 5px 5px 5px', rem, 10).map((t) => t.path)).toEqual(['radius.half']);
 		expect(tokensItCouldFollow('radius', '8px 8px 8px 8px', rem, 10)).toEqual([]);
+	});
+});
+
+describe('the mode a component’s values are shown in', () => {
+	const rows = (value: string, target = 'a'): ValueRow[] => [
+		{ property: 'background', by: null, cells: [{ variant: null, value, kind: 'token', tokens: [], instances: 1, targets: [target] }] },
+	];
+	it('is the one chosen, but dark only when its stories drew it there and it is not the same as light', () => {
+		expect(shownMode({ light: rows('#fff'), dark: rows('#000') }, 'dark')).toBe('dark');
+		expect(shownMode({ light: rows('#fff'), dark: rows('#000') }, 'light')).toBe('light');
+		// Not drawn in dark, or drawn the same (a library DSNR cannot turn dark): light.
+		expect(shownMode({ light: rows('#fff'), dark: null }, 'dark')).toBe('light');
+		expect(shownMode({ light: rows('#fff'), dark: rows('#fff') }, 'dark')).toBe('light');
+		// One value of many that differs is enough; drawn only in dark is dark.
+		expect(shownMode({ light: [...rows('#fff'), ...rows('#111', 'b')], dark: [...rows('#fff'), ...rows('#222', 'b')] }, 'dark')).toBe('dark');
+		expect(shownMode({ light: null, dark: rows('#000') }, 'dark')).toBe('dark');
 	});
 });

@@ -1,6 +1,7 @@
 import type * as VsCode from 'vscode';
 import { type EventSink, type Route, served } from '../../src/main/handle';
 import type { EventName, InvokeName, Result, TokenEdit, WorkspaceApi } from '../../src/shared/contract';
+import type { Theme } from '../../src/shared/prototypeTheme';
 import { createApi } from '../../src/shared/workspaceApi';
 import { type ComponentLink, type HostMessage, NO_TABS_SHOWN, type PanelMessage, type TabsShown } from './messages';
 
@@ -127,7 +128,16 @@ export interface DesignSystemAsks {
 	openLibrarySource: (file: string, line: number) => Promise<void>;
 	edits: () => TokenEdit[];
 	setEdits: (edits: unknown[]) => void;
+	/** The mode components are shown in (`ModeChoice`), and choosing another. */
+	mode: () => Theme;
+	setMode: (mode: Theme) => void;
 }
+
+/** What the design system's pages are told once they listen, as they are told whenever it changes: the change to the tokens being tried, and the mode. */
+export const toldOnReady = (asks: Pick<DesignSystemAsks, 'edits' | 'mode'>): HostMessage[] => [
+	{ type: 'token-edits', edits: asks.edits() },
+	{ type: 'mode', mode: asks.mode() },
+];
 
 /**
  * What any DSNR page may ask, the panel or a design system's tab: a call to the core, answered from its table, and the
@@ -155,6 +165,9 @@ export const answerPage = async (webview: Webview, message: PanelMessage, asks: 
 			return true;
 		case 'token-edits':
 			asks.setEdits(message.edits);
+			return true;
+		case 'set-mode':
+			asks.setMode(message.mode);
 			return true;
 		default:
 			return false;

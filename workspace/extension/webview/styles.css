@@ -1070,7 +1070,15 @@ textarea.input {
 
 .ds-part {
 	top: var(--dsnr-top-height);
+	/* The toggle as wide as the search box under it, and the mode's button beside it as the view options are beside that. */
+	display: flex;
+	align-items: center;
+	gap: 8px;
 	padding: var(--dsnr-part-pad-top) 12px var(--dsnr-part-pad-bottom);
+}
+
+.ds-part .toggle {
+	flex: 1;
 }
 
 /* With the toggle above it, the search bar is kept under that too, not under the top bar alone. */

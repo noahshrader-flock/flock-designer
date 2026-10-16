@@ -1,6 +1,6 @@
 import { watch } from 'node:fs';
 import * as vscode from 'vscode';
-import { type DesignSystemAsks, type Panels, answerPage } from './bridge';
+import { type DesignSystemAsks, type Panels, answerPage, toldOnReady } from './bridge';
 import { afterQuiet, whatChanged } from './devReload';
 import { type LocalAddresses, newNonce, panelHtml } from './html';
 import { type CodebaseAction, type DesignTab, type HostMessage, type Review, readMessage } from './messages';
@@ -94,9 +94,9 @@ export class PanelProvider implements vscode.WebviewViewProvider {
 			if (await answerPage(webview, message, this.deps.design())) return;
 			switch (message.type) {
 				case 'ready':
-					// Told once the page listens: a message posted before then is lost. And the change to the tokens being tried.
+					// Told once the page listens: a message posted before then is lost. And the change to the tokens being tried, and the mode.
 					await webview.postMessage(this.deps.context());
-					await webview.postMessage({ type: 'token-edits', edits: this.deps.design().edits() } satisfies HostMessage);
+					for (const told of toldOnReady(this.deps.design())) await webview.postMessage(told);
 					// And what was held for the page until it listened (a dialog asked for while the panel was hidden).
 					return this.deps.panels.ready(webview);
 				case 'locate-design-system':

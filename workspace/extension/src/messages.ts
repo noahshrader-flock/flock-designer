@@ -4,6 +4,7 @@ import type { TokenEdit } from '../../src/shared/domain/designSystem';
 import { MOST_EDITS } from '../../src/shared/tokens';
 import type { Project } from '../../src/shared/domain/projects';
 import { isPrototypeName } from '../../src/shared/prototypeNames';
+import { type Theme, isTheme } from '../../src/shared/prototypeTheme';
 import { PROJECT_ID, hasExactly } from '../../src/shared/validate';
 import { iterationLabel, workOf } from '../../src/shared/work';
 
@@ -33,7 +34,9 @@ export type PanelMessage =
 	| { type: 'open-primitives' }
 	| { type: 'open-voice-and-tone' }
 	| { type: 'open-library-source'; file: string; line: number }
-	| { type: 'token-edits'; edits: unknown[] };
+	| { type: 'token-edits'; edits: unknown[] }
+	// The mode components are shown in, chosen in the panel (MODES_PLAN Phase 1), which the extension keeps for every page.
+	| { type: 'set-mode'; mode: Theme };
 
 /** A component's links, which the extension finds for it from the catalog: its docs on Storybook, and its source on GitHub. */
 const COMPONENT_LINKS = ['storybook', 'source'] as const;
@@ -89,6 +92,8 @@ export type HostMessage =
 	| { type: 'open-dialog'; dialog: PanelDialog }
 	/** The change to the tokens being tried, as the extension keeps it: told to every DSNR page whenever it changes. */
 	| { type: 'token-edits'; edits: TokenEdit[] }
+	/** The mode components are shown in, as the extension keeps it (`ModeChoice`): told to every DSNR page whenever it changes. */
+	| { type: 'mode'; mode: Theme }
 	/** Which tabs of the editor are in front, as the panel marks them (`TabsShown`): told whenever one opens, closes or is covered. */
 	| ({ type: 'tabs-shown' } & TabsShown);
 
@@ -170,6 +175,7 @@ export const readMessage = (raw: unknown): PanelMessage | null => {
 		return hasExactly(m, ['type', 'edits']) && Array.isArray(m.edits) && m.edits.length <= MOST_EDITS
 			? { type: 'token-edits', edits: m.edits }
 			: null;
+	if (m.type === 'set-mode') return hasExactly(m, ['type', 'mode']) && isTheme(m.mode) ? { type: 'set-mode', mode: m.mode } : null;
 	return typeof m.type === 'string' && BARE.has(m.type) && hasExactly(m, ['type']) ? ({ type: m.type } as PanelMessage) : null;
 };
 
