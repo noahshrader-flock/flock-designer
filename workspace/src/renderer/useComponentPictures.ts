@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { ComponentPictures } from '../shared/contract';
-
-/** How often the list and the grid ask again while a pass that may replace their pictures is drawing. */
-const ASK_EVERY_MS = 3000;
+import { askWhile } from './askWhile';
 
 /**
  * The pictures of the shown design system's components (P5), by story file, while `shown` (the list or the grid is on screen):
@@ -14,19 +12,14 @@ export const useComponentPictures = (shown: boolean, commit: string | null): Com
 	const [pictures, setPictures] = useState<ComponentPictures>({ drawing: true, pictures: {}, issues: {} });
 	useEffect(() => {
 		if (!shown) return;
-		let live = true;
-		let timer: ReturnType<typeof setTimeout> | undefined;
-		const ask = async () => {
-			const r = await window.workspace.componentPictures();
-			if (!live || !r.ok) return;
-			setPictures(r.value);
-			if (r.value.drawing) timer = setTimeout(() => void ask(), ASK_EVERY_MS);
-		};
-		void ask();
-		return () => {
-			live = false;
-			clearTimeout(timer);
-		};
+		// One that failed keeps the pictures there, and is not asked again.
+		return askWhile(
+			() => window.workspace.componentPictures(),
+			(r) => r.ok && r.value.drawing,
+			(r) => {
+				if (r.ok) setPictures(r.value);
+			},
+		);
 	}, [shown, commit]);
 	return pictures;
 };
