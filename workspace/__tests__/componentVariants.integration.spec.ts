@@ -7,7 +7,7 @@ import { typeLibs } from '../src/main/services/componentProps';
 import { ComponentVariants } from '../src/main/services/componentVariants';
 import type { ComponentVariants as Answer, ConnectedDesignSystem } from '../src/shared/contract';
 import { findChrome } from '../src/main/services/chromeHeadless';
-import { REAL_LIBRARY, REAL_PRIMER, describeWith, libraryMissing, primerMissing } from './realCheckouts';
+import { REAL_PRIMER, describeWith, libraryUnbuilt, primerMissing, REAL_FUI } from './realCheckouts';
 import { settledAnswer } from './fixtures';
 import { onRealLibrary } from './realLibrary';
 
@@ -167,12 +167,11 @@ const rowOf = (a: Answer, property: string) => {
 	return Object.fromEntries((rows.find((r) => r.property === property)?.cells ?? []).map((c) => [c.variant, c.value]));
 };
 
-describeWith(libraryMissing, 'on Flock’s FUI', () => {
+describeWith(libraryUnbuilt, 'on Flock’s FUI', () => {
 	it.skipIf(findChrome() === null)(
 		'draws FSChip’s sizes, FSBadge’s dot and FSTextField’s sizes, which MUI declares, from their props',
 		async () => {
-			const repository = 'flocksafety/flock-react-component-lib';
-			await onReal({ id: repository, name: 'FUI', repository, root: REAL_LIBRARY, folder: '', branch: 'develop' }, async (of) => {
+			await onReal(REAL_FUI, async (of) => {
 				const file = (name: string) => `src/components/${name}/${name}.stories.tsx`;
 				expect(rowOf(await of(file('FSChip')), 'height')).toEqual({ medium: '32px', small: '24px', tiny: '16px' });
 				const badge = await of(file('FSBadge'));

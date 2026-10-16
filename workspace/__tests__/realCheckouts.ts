@@ -34,6 +34,19 @@ export const realDevelop = ((): string | null => {
 
 /** Why the library's tests cannot run here, or null when they can. */
 export const libraryMissing = realDevelop === null ? `no clone of the design system with develop at ${REAL_LIBRARY} (set FUI_ROOT)` : null;
+/** Why the library cannot be built and drawn here, or null: its clone, with its packages installed, as the previews need. */
+export const libraryUnbuilt =
+	libraryMissing ??
+	(existsSync(join(REAL_LIBRARY, 'node_modules', '@storybook', 'react', 'package.json')) ? null : `${REAL_LIBRARY} has no packages installed`);
+/** Flock's FUI, connected as the app connects it: the whole repository, on develop. */
+export const REAL_FUI = {
+	id: 'flocksafety/flock-react-component-lib',
+	name: 'FUI',
+	repository: 'flocksafety/flock-react-component-lib',
+	root: REAL_LIBRARY,
+	folder: '',
+	branch: 'develop',
+};
 /** Why Primer's cannot, or null: its clone, with its packages installed. */
 export const primerMissing = existsSync(join(REAL_PRIMER, 'node_modules', '@storybook', 'react', 'package.json'))
 	? null

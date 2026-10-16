@@ -17,6 +17,7 @@ import { useTrial } from './useTrial';
 import { Button } from './ui/Button';
 import { Notice, TabNote } from './ui/Notice';
 import { TryingNote } from './Changed';
+import { workspace } from './host';
 import { vscode } from './vscode';
 
 /** The target while the design system is not read yet: nothing is judged at it then. */
@@ -68,10 +69,12 @@ export const ComponentTab = ({ id }: { id: string }) => {
 	const [writes, setWrites] = useState(0);
 	const [writeError, setWriteError] = useState<string | null>(null);
 	const onWrite = (value: TriedValue) =>
-		void window.workspace.writeValue(id, value).then((r) => {
-			setWriteError(r.ok ? null : r.error);
-			setWrites((n) => n + 1);
-		});
+		void workspace()
+			.writeValue(id, value)
+			.then((r) => {
+				setWriteError(r.ok ? null : r.error);
+				setWrites((n) => n + 1);
+			});
 	// A value that follows a token is written by the agent as it is tried (4.6): only the agent can write one, however it is asked.
 	const onTry = (key: string, value: TriedValue | null) => {
 		setTried((was) => {

@@ -173,7 +173,7 @@ export const ComponentSections = ({
 	const { byPath, isPalette } = useTokenChanges();
 	const { answer, retry } = useComponentTokens(component.id);
 
-	if (answer === null || answer.state === 'building')
+	if (answer.state === 'none' || answer.state === 'building')
 		return (
 			<p className="quiet">
 				Finding the tokens {component.name} draws with. The first time for each version of the design system, every story is drawn with each token

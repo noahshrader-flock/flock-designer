@@ -1,23 +1,13 @@
 import { describe, expect, it } from 'vitest';
+import { token } from './tokenFixtures';
 import { AskInWords, type AskInWordsDeps } from '../src/main/services/askInWords';
 import type { Built } from '../src/main/services/componentTokens';
-import type { ComponentTokens as Answer, DesignToken, ValueRow } from '../src/shared/contract';
+import type { ComponentTokens as Answer, ValueRow } from '../src/shared/contract';
 
 /**
  * Asking in words (Phase 6): words made the changes the controls make, by an agent stood in for here, which answers as this
  * test says. What is checked is what the app does with what it is told: the facts it gives, and the rules every answer passes.
  */
-const token = (path: string, kind: DesignToken['kind'], value: string, more: Partial<DesignToken> = {}): DesignToken => ({
-	path,
-	kind,
-	category: kind === 'color' ? 'Color' : path === 'radius' ? 'Shape' : 'Spacing',
-	group: kind === 'color' ? 'Light' : 'Radius',
-	set: path.split('.').slice(-2, -1)[0] ?? path,
-	name: path.split('.').pop() as string,
-	value,
-	source: { file: 'src/theme.ts', line: path.length },
-	...more,
-});
 const TOKENS = [
 	token('tone.green.50', 'color', '#108062'),
 	token('tone.green.60', 'color', '#0C6B52'),

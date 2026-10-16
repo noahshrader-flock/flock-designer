@@ -1,4 +1,5 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { token } from './tokenFixtures';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -7,8 +8,8 @@ import type { BuiltFor } from '../src/main/services/storyPreviews';
 import { tagsFor } from '../src/main/services/tokenTags';
 import type { CatalogReads } from '../src/main/services/componentCatalog';
 import { libraryCommit, systemReads } from '../src/main/services/designLibrary';
-import type { DesignToken, TokenEdit } from '../src/shared/contract';
-import { g } from './fixtures';
+import type { TokenEdit } from '../src/shared/contract';
+import { g, settledAnswer } from './fixtures';
 
 /**
  * Which tokens each component draws with (T6 of the design system plan, decision 29): every token tagged with a value
@@ -16,17 +17,6 @@ import { g } from './fixtures';
  * stand-ins, and the real drawing is the app's (`storyMeasure.ts`).
  */
 
-const token = (path: string, kind: DesignToken['kind'], value: string, more: Partial<DesignToken> = {}): DesignToken => ({
-	path,
-	kind,
-	category: kind === 'color' ? 'Color' : path === 'radius' ? 'Shape' : 'Spacing',
-	group: kind === 'color' ? 'Light' : path === 'radius' ? 'Radius' : 'Spacing',
-	set: path.split('.').slice(-2, -1)[0] ?? path,
-	name: path.split('.').pop() as string,
-	value,
-	source: { file: 'src/theme.ts', line: path.length },
-	...more,
-});
 const TOKENS = [
 	token('palette.light.primary.main', 'color', '#108062'),
 	token('palette.light.primary.contrastText', 'color', '#FFFFFF'),
@@ -201,14 +191,12 @@ describe('the index', () => {
 	};
 	const index = (more: Partial<ConstructorParameters<typeof ComponentTokens>[0]> = {}) =>
 		new ComponentTokens({ system, previews, measure, pictures, ...more });
-	const ready = async (i: ComponentTokens, file: string) => {
-		for (let n = 0; n < 50; n++) {
-			const a = await i.of(file);
-			if (a.state !== 'building') return a;
-			await new Promise((r) => setTimeout(r, 10));
-		}
-		throw new Error('never built');
-	};
+	const ready = (i: ComponentTokens, file: string) =>
+		settledAnswer(
+			() => i.of(file),
+			(a) => a.state === 'building',
+			{ within: 5_000 },
+		);
 
 	beforeEach(() => {
 		flaky = 0;
@@ -235,14 +223,12 @@ describe('the index', () => {
 
 	describe('what a change reaches (Phase 3)', () => {
 		const RED = [{ path: 'tone.brand.50', value: '#C80000' }];
-		const reached = async (i: ComponentTokens, edits: TokenEdit[]) => {
-			for (let n = 0; n < 100; n++) {
-				const r = await i.reach(edits);
-				if (r.state !== 'building') return r;
-				await new Promise((go) => setTimeout(go, 10));
-			}
-			throw new Error('never reached');
-		};
+		const reached = (i: ComponentTokens, edits: TokenEdit[]) =>
+			settledAnswer(
+				() => i.reach(edits),
+				(r) => r.state === 'building',
+				{ within: 5_000 },
+			);
 
 		it('is none with no change, and building until every story is drawn as the library has it', async () => {
 			const i = index();

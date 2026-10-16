@@ -1,19 +1,16 @@
-import { mkdtempSync } from 'node:fs';
 import { type Server, createServer } from 'node:http';
 import type { AddressInfo } from 'node:net';
-import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { build } from 'esbuild';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { PREVIEW_COMPONENT, PREVIEW_SHOW, PREVIEW_TRY } from '../src/shared/catalog';
 import { FIND_INSTANCES, TRY_VALUES } from '../src/main/services/pageInstances';
 import { chromeHeadless, findChrome } from '../src/main/services/chromeHeadless';
-import { ComponentTokens } from '../src/main/services/componentTokens';
-import { PrototypeServer } from '../src/main/services/prototypeServer';
-import { StoryPreviews, hasPackages } from '../src/main/services/storyPreviews';
 import type { ValueRow } from '../src/shared/contract';
 import { previewAddress } from '../src/shared/catalog';
-import { REAL_LIBRARY, describeWith, libraryMissing } from './realCheckouts';
+import { REAL_FUI, describeWith, libraryUnbuilt } from './realCheckouts';
+import { onRealLibrary } from './realLibrary';
+import { settledAnswer } from './fixtures';
 
 /**
  * Each instance of a component its stories draw (Phase 1 of adjusting a component), read in the real browser by the
@@ -305,24 +302,11 @@ describe.skipIf(findChrome() === null)('values tried on a component’s instance
  * The real library on this machine, through the whole pass the tab's analysis makes (T6): every story drawn as the library
  * has it and with every token tagged. What the spike measured by hand (DESIGN_SYSTEM_PLAN, Phase 0) is what the tab says.
  */
-const realMissing = libraryMissing ?? (hasPackages(REAL_LIBRARY) ? null : `${REAL_LIBRARY} has no packages installed`);
-describeWith(realMissing, 'against the real library on origin/develop', () => {
+describeWith(libraryUnbuilt, 'against the real library on origin/develop', () => {
 	it.skipIf(findChrome() === null)(
 		'reads FSButton’s heights by size, its radius and colors as tokens, and FSIconButton’s radius as its own',
 		async () => {
-			const repository = 'flocksafety/flock-react-component-lib';
-			const system = { id: repository, name: 'FUI', repository, root: REAL_LIBRARY, folder: '', branch: 'develop' };
-			const pages = new PrototypeServer();
-			const real = chromeHeadless();
-			try {
-				const previews = new StoryPreviews({ system: () => system, folder: mkdtempSync(join(tmpdir(), 'dsnr-values-')), server: pages });
-				const tokens = new ComponentTokens({
-					system: () => system,
-					previews,
-					measure: real.measure,
-					pictures: { keep: () => {}, of: async () => ({}) },
-				});
-				await tokens.warm();
+			await onRealLibrary(REAL_FUI, async ({ tokens, previews }) => {
 				const valuesIn = async (name: string, mode: 'light' | 'dark') => {
 					const answer = await tokens.of(`src/components/${name}/${name}.stories.tsx`);
 					if (answer.state !== 'ready' || answer.values.state !== 'read')
@@ -386,10 +370,7 @@ describeWith(realMissing, 'against the real library on origin/develop', () => {
 					const after = await heights();
 					for (const [key, h] of Object.entries(after)) expect(h, key).toBe(small.targets.includes(key) ? 40 : before[key]);
 				});
-			} finally {
-				await real.close();
-				pages.close();
-			}
+			});
 		},
 		600_000,
 	);
@@ -397,19 +378,7 @@ describeWith(realMissing, 'against the real library on origin/develop', () => {
 	it.skipIf(findChrome() === null)(
 		'says what the shared radius moves: FSButton by its radius, FSTextField inside, and not FSIconButton, whose 8px is its own',
 		async () => {
-			const repository = 'flocksafety/flock-react-component-lib';
-			const system = { id: repository, name: 'FUI', repository, root: REAL_LIBRARY, folder: '', branch: 'develop' };
-			const pages = new PrototypeServer();
-			const real = chromeHeadless();
-			try {
-				const previews = new StoryPreviews({ system: () => system, folder: mkdtempSync(join(tmpdir(), 'dsnr-reach-')), server: pages });
-				const tokens = new ComponentTokens({
-					system: () => system,
-					previews,
-					measure: real.measure,
-					pictures: { keep: () => {}, of: async () => ({}) },
-				});
-				await tokens.warm();
+			await onRealLibrary(REAL_FUI, async ({ tokens }) => {
 				const file = (name: string) => `src/components/${name}/${name}.stories.tsx`;
 				const button = await tokens.of(file('FSButton'));
 				if (button.state !== 'ready' || button.values.state !== 'read') throw new Error(JSON.stringify(button));
@@ -417,11 +386,11 @@ describeWith(realMissing, 'against the real library on origin/develop', () => {
 				const path = button.values.rows.light?.find((r) => r.property === 'radius')?.cells[0]?.tokens[0];
 				if (path === undefined) throw new Error('FSButton draws no radius token');
 				const edits = [{ path, value: '12px' }];
-				let reach = await tokens.reach(edits);
-				for (let i = 0; reach.state === 'building' && i < 900; i++) {
-					await new Promise((r) => setTimeout(r, 1000));
-					reach = await tokens.reach(edits);
-				}
+				const reach = await settledAnswer(
+					() => tokens.reach(edits),
+					(r) => r.state === 'building',
+					{ within: 900_000, every: 1000 },
+				);
 				if (reach.state !== 'ready') throw new Error(JSON.stringify(reach));
 				const moved = new Map(reach.moved.map((m) => [m.file, m]));
 				expect(moved.get(file('FSButton'))?.changes).toContainEqual(
@@ -431,10 +400,7 @@ describeWith(realMissing, 'against the real library on origin/develop', () => {
 				expect(moved.get(file('FSTextField'))?.inside).toBe(true);
 				expect(moved.has(file('FSIconButton'))).toBe(false);
 				expect(reach.unchanged).toBeGreaterThan(0);
-			} finally {
-				await real.close();
-				pages.close();
-			}
+			});
 		},
 		1_200_000,
 	);

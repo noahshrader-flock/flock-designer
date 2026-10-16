@@ -7,7 +7,7 @@ import { runToEnd } from '../src/main/services/agent';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type { ConnectedDesignSystem, ValueProperty, ValueSources as Answer } from '../src/shared/contract';
-import { REAL_LIBRARY, REAL_PRIMER, describeWith, libraryMissing, primerMissing } from './realCheckouts';
+import { REAL_PRIMER, describeWith, libraryUnbuilt, primerMissing, REAL_FUI } from './realCheckouts';
 import { settledAnswer } from './fixtures';
 import { onRealLibrary } from './realLibrary';
 
@@ -42,12 +42,11 @@ const sourcesOf = async (
 };
 const moved = (found: Answer) => (found.state === 'ready' && found.reach.state === 'ready' ? found.reach.moved.map((m) => m.file) : []);
 
-describeWith(libraryMissing, 'on Flock’s FUI, on origin/develop', () => {
+describeWith(libraryUnbuilt, 'on Flock’s FUI, on origin/develop', () => {
 	it.skipIf(findChrome() === null)(
 		'finds FSButton’s Small height in the one place of the seven it is written, and FSIconButton’s radius in its own seven; a change that writes nothing moves nothing',
 		async () => {
-			const repository = 'flocksafety/flock-react-component-lib';
-			await withLibrary({ id: repository, name: 'FUI', repository, root: REAL_LIBRARY, folder: '', branch: 'develop' }, async (tokens, sources) => {
+			await withLibrary(REAL_FUI, async (tokens, sources) => {
 				// The library as it is, drawn as a change is: held still, nothing differs (it was sixteen components, drawn otherwise).
 				const index = await tokens.drawn();
 				if (index.state !== 'ready') throw new Error(JSON.stringify(index));
@@ -109,13 +108,12 @@ describeWith(primerMissing, 'on Primer React, the second library', () => {
  * The agent writing what the locator cannot, on FUI (Phase 4.5, 4.6), as the spike did it: run only where it is asked for
  * (`DSNR_REAL_AGENT=1`), since it runs Claude Code on the person's account and costs a little.
  */
-const agentMissing = process.env.DSNR_REAL_AGENT === '1' ? libraryMissing : 'the agent is run only with DSNR_REAL_AGENT=1 (it costs a little)';
+const agentMissing = process.env.DSNR_REAL_AGENT === '1' ? libraryUnbuilt : 'the agent is run only with DSNR_REAL_AGENT=1 (it costs a little)';
 describeWith(agentMissing, 'the agent on Flock’s FUI', () => {
 	it.skipIf(findChrome() === null)(
 		'writes FSBadge’s radius, which MUI sets, as the theme’s override, and makes FSIconButton’s own radius follow the shared one',
 		async () => {
-			const repository = 'flocksafety/flock-react-component-lib';
-			const system = { id: repository, name: 'FUI', repository, root: REAL_LIBRARY, folder: '', branch: 'develop' };
+			const system = REAL_FUI;
 			await onRealLibrary(system, async ({ tokens, previews, measure }) => {
 				const agent = new ValueAgent({
 					system: () => system,

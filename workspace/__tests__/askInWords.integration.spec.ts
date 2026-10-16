@@ -2,7 +2,7 @@ import { expect, it } from 'vitest';
 import { runToEnd } from '../src/main/services/agent';
 import { AskInWords } from '../src/main/services/askInWords';
 import { findChrome } from '../src/main/services/chromeHeadless';
-import { REAL_LIBRARY, describeWith, libraryMissing } from './realCheckouts';
+import { describeWith, libraryUnbuilt, REAL_FUI } from './realCheckouts';
 import { onRealLibrary } from './realLibrary';
 import { settledAnswer } from './fixtures';
 
@@ -11,13 +11,12 @@ import { settledAnswer } from './fixtures';
  * it runs Claude Code on the person's account and costs a little. What comes back has passed every rule a control's change
  * does; this says it is the change the words mean.
  */
-const agentMissing = process.env.DSNR_REAL_AGENT === '1' ? libraryMissing : 'the agent is run only with DSNR_REAL_AGENT=1 (it costs a little)';
+const agentMissing = process.env.DSNR_REAL_AGENT === '1' ? libraryUnbuilt : 'the agent is run only with DSNR_REAL_AGENT=1 (it costs a little)';
 describeWith(agentMissing, 'asking in words on Flock’s FUI', () => {
 	it.skipIf(findChrome() === null)(
 		'makes “a little warmer” an edit of the primary’s colour, and “30px high” FSButton’s small height',
 		async () => {
-			const repository = 'flocksafety/flock-react-component-lib';
-			const system = { id: repository, name: 'FUI', repository, root: REAL_LIBRARY, folder: '', branch: 'develop' };
+			const system = REAL_FUI;
 			await onRealLibrary(system, async ({ tokens }) => {
 				const ask = new AskInWords({ tokens, run: (cwd, task) => runToEnd(cwd, task) });
 				const button = 'src/components/FSButton/FSButton.stories.tsx';

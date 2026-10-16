@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import type { ComponentTokens } from '../shared/contract';
-import { askWhile } from './askWhile';
+import { useTriedAnswer } from './useTriedAnswer';
 
 /** How many of the values a component sets itself are listed before the rest: counted in the app, kept to open in VS Code. */
 export const MOST_LISTED = 8;
@@ -8,25 +8,13 @@ export const MOST_LISTED = 8;
 const MOST_NAMED = 3;
 
 /**
- * Which tokens a component draws with (T6, decision 29), by its story file: asked, then again every few seconds while
- * every story is drawn the first time for a commit; a failure is said as its answer. `retry` asks again. The same in the
- * app and in VS Code.
+ * Which tokens a component draws with (T6, decision 29), by its story file: asked as every answer worked out in the
+ * background is (`useTriedAnswer`), again every few seconds while every story is drawn the first time for a commit; none
+ * until it is first asked, a failure said as its answer. `retry` asks again.
  */
-export const useComponentTokens = (file: string): { answer: ComponentTokens | null; retry: () => void } => {
-	const [answer, setAnswer] = useState<ComponentTokens | null>(null);
+export const useComponentTokens = (file: string): { answer: ComponentTokens | { state: 'none' }; retry: () => void } => {
 	const [asks, setAsks] = useState(0);
-	useEffect(
-		() =>
-			askWhile(
-				async (): Promise<ComponentTokens> => {
-					const r = await window.workspace.componentTokens(file);
-					return r.ok ? r.value : { state: 'failed', error: r.error };
-				},
-				(next) => next.state === 'building',
-				setAnswer,
-			),
-		[file, asks],
-	);
+	const answer = useTriedAnswer<ComponentTokens | { state: 'none' }>(`${file}\u0000${asks}`, false, () => window.workspace.componentTokens(file));
 	return { answer, retry: () => setAsks((n) => n + 1) };
 };
 

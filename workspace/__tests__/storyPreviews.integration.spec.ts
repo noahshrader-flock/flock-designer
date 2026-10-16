@@ -12,7 +12,7 @@ import { editedFiles } from '../src/main/services/tokenEdits';
 import type { TokenEdit } from '../src/shared/contract';
 import { eventually, g } from './fixtures';
 import { NO_CHROME, inChrome } from './realChrome';
-import { REAL_LIBRARY as REAL, describeWith, libraryMissing } from './realCheckouts';
+import { REAL_LIBRARY as REAL, describeWith, libraryUnbuilt } from './realCheckouts';
 
 /**
  * What the builds do, counted on the real esbuild and Sass, so a test can say how a change is built (one build kept
@@ -1000,7 +1000,7 @@ describe('serving a built folder', () => {
  * The real library on this machine, not a fixture: every one of develop's story files builds into the page, built with
  * the clone's own packages and nothing fetched.
  */
-const missing = libraryMissing ?? (hasPackages(REAL) ? null : `${REAL} has no packages installed`);
+const missing = libraryUnbuilt;
 
 describeWith(missing, 'against the real library on origin/develop', () => {
 	it('builds every story file with the clone’s own packages, and serves it', async () => {

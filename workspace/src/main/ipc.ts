@@ -254,7 +254,6 @@ export const ipcDeps = ({
 	const warm = () => void componentTokens.warm();
 	if (warmAfterMs !== undefined) setTimeout(warm, warmAfterMs).unref();
 	const tokenBranches = new TokenBranches({ system: shownSystem, file: tokenBranchesFile, tools: ports.shareTools });
-	// Where the values tried on a component are written, found as they are tried, and the branch each component's are saved on (Phase 4).
 	// What the agent writes for a value where there is no literal, or to follow a token (4.5, 4.6): in a copy of the library,
 	// under the standard every run is given, as the app's tasks are given theirs.
 	const valueAgent = new ValueAgent({
@@ -271,10 +270,11 @@ export const ipcDeps = ({
 		typeLibs: typeLibs(),
 		folder: () => shownSystem()?.folder ?? '',
 	});
+	// Where the values tried on a component are written, found as they are tried, and the branch each component's are saved on (Phase 4).
 	const valueSources = new ValueSources({ tokens: componentTokens, previews, measure: ports.headless.measure, agent: valueAgent });
+	const valueBranches = new ValueBranches({ system: shownSystem, file: valueBranchesFile, tools: ports.shareTools, sources: valueSources });
 	// Words made the changes the controls make (Phase 6), by the agent run as the value agent is, reading and writing nothing.
 	const askInWords = new AskInWords({ tokens: componentTokens, run: (cwd, task) => runToEnd(cwd, task) });
-	const valueBranches = new ValueBranches({ system: shownSystem, file: valueBranchesFile, tools: ports.shareTools, sources: valueSources });
 	// The voice and tone (T9): the connected design system's, read, saved and proposed with the person's own command line.
 	const voiceFile = (): VoiceAndToneFile => {
 		const system = shownSystem();
