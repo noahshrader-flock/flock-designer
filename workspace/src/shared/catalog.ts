@@ -44,6 +44,8 @@ export const PREVIEW_SHOW = '__dsnrShow';
  * props it names as controls (its `args` and `argTypes`), or null when it names none.
  */
 export const PREVIEW_COMPONENT = '__dsnrComponent';
+/** What a tab says to the preview page it frames to try values on the component's instances (Phase 2 of adjusting a component). */
+export const PREVIEW_TRY = 'dsnrTryValues';
 /** A story file's preview page, in the build served at `base`. */
 export const previewAddress = (base: string, file: string): string => `${base}?${PREVIEW_FILE}=${encodeURIComponent(file)}`;
 

@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, readdirSync, realpathSync, rmSync, symlinkSync, 
 import { basename, dirname, extname, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { PREVIEW_COMPONENT, PREVIEW_FILE, PREVIEW_HEIGHT, PREVIEW_SHOW, PREVIEW_SPECIMEN } from '../../shared/catalog';
+import { TRY_VALUES } from './pageInstances';
 import { designSystemOf } from '../../shared/catalog';
 import type { ConnectedDesignSystem, StoryPreview, TokenEdit } from '../../shared/contract';
 import { type CatalogReads, PREVIEW_CANDIDATES, readCatalog } from './componentCatalog';
@@ -115,7 +116,8 @@ export const specimenScript = `var drawSpecimens = (() => {
 
 /**
  * The page's script: the story file named in its address, every story in it by name, each in its own error boundary so
- * one that throws does not take the others down. It tells the frame's owner its height, and nothing else.
+ * one that throws does not take the others down. It tells the frame's owner its height, and nothing else; and hears from it
+ * only the values to try on the component's instances (`TRY_VALUES`).
  *
  * **A story behaves as it does in Storybook, no more.** Portable stories leave out the one part of Storybook's preview
  * that redraws a story when it updates its own args (`useArgs`), so a story wired that way (tabs, selects, drawers in
@@ -207,6 +209,9 @@ const show = (file) => {
 	}, fail);
 };
 window[${JSON.stringify(PREVIEW_SHOW)}] = show;
+
+// Values a tab tries on the component's instances, set over the library's own and taken off again (Phase 2).
+${TRY_VALUES}
 
 ${specimenScript}
 // A type specimen when the address asks for one (R3), in place of a story file.

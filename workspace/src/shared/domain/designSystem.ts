@@ -121,6 +121,18 @@ export interface ValueCell {
 	kind: ValueKind;
 	tokens: string[];
 	instances: number;
+	/** The instances that draw it, by their keys: what a value tried in the preview is set on (Phase 2). */
+	targets: string[];
+}
+
+/**
+ * A value tried on a component's instances in its stories (Phase 2 of adjusting a component): a property, the value as CSS
+ * writes it, and the instances it is set on (a cell's `targets`). Tried in the preview alone: nothing is written or kept.
+ */
+export interface TriedValue {
+	property: ValueProperty;
+	value: string;
+	targets: string[];
 }
 
 /**

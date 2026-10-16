@@ -5,6 +5,7 @@
  */
 import { PREVIEW_COMPONENT, PREVIEW_SHOW } from '../../shared/catalog';
 import { axeFound, axeRun } from './accessibilityCheck';
+import { FIND_INSTANCES } from './pageInstances';
 import type { Drawn, Measure, Mode } from './componentTokens';
 import { within } from './within';
 
@@ -27,24 +28,15 @@ export const PICTURE_MOST_ACROSS = 1440;
 export const PICTURE_QUALITY = 85;
 
 /**
- * Each instance of the component a story file is of (Phase 1 of adjusting a component), read in the page: the stories'
- * own `component` (`PREVIEW_COMPONENT`), found in what React drew by identity, since a build's names are minified. Each
- * instance's top element is the first element on the page inside it, found going up from each element in the page's
- * order, never down, since an element may be held by either of the two copies React keeps of what it drew, and a copy's
- * children can be stale; the same order in both drawings of a file is what pairs them up.
+ * Each instance of the component a story file is of (Phase 1 of adjusting a component), read in the page: found as every
+ * reader finds them (`FIND_INSTANCES`), and of each one's top element, its height, each side's padding, each corner's
+ * radius, its row and column gaps, its font size, and its background, text and border colors, as the browser computes them,
+ * each as it is (they are put together where they are read), with the props it was drawn with and its key.
  *
- * Of that element: its height, each side's padding, each corner's radius, its row and column gaps, its font size, and its
- * background, text and border colors, as the browser computes them, each as it is (they are put together where they are
- * read); and the props it was drawn with that say which variant it is (a string, a number or a true or false, not its
- * content, its handlers, its styling or what it is for assistive technology).
- *
- * An instance whose top element is part of what it was given (a tooltip around a button) draws nothing of its own there,
- * so is counted apart (`wrapping`), never read as the content's values. An instance's top is the first element inside it
- * that takes up room, so one that draws nothing on the page is passed over. The stories that threw are counted
- * (`storiesFailed`), so none drawn because of them is not taken for none drawn at all. The tree is read through React's own
- * record of what it drew (its `__reactFiber` key on each element); were that kept another way, finding nothing is said as
- * that, never as stories that draw none. **Nothing here can stop the rest of the drawing being read:** a failure is kept
- * as what it said (`instancesFailed`).
+ * Those that only wrap what they were given are counted (`wrapping`); the stories that threw are counted (`storiesFailed`),
+ * so none drawn because of them is not taken for none drawn at all; and a React whose record of what it drew cannot be read
+ * is said as that, never as stories that draw none. **Nothing here can stop the rest of the drawing being read:** a failure
+ * is kept as what it said (`instancesFailed`).
  */
 const instancesIn = `try {
 		const of = window[${JSON.stringify(PREVIEW_COMPONENT)}];
@@ -55,68 +47,22 @@ const instancesIn = `try {
 		// Stories that threw, said in their place by the page: they draw no instance, for a reason they say themselves.
 		drawn.storiesFailed = document.querySelectorAll('[data-story] .fd-error').length;
 		if (of) {
-			const component = of.component;
-			const fiberOf = (el) => { const k = Object.keys(el).find((x) => x.startsWith('__reactFiber$')); return k ? el[k] : null; };
-			const isIt = (f) => f.type === component || f.elementType === component;
-			const notVariant = /^(children|className|style|sx|css|id|key|ref|role|tabIndex|href|src|alt|title|name|value|defaultValue|placeholder|label|as|component|slot|form|htmlFor|type)$|^(on[A-Z]|aria-|data-)/;
-			// What an instance was given to draw, as React elements: its children, however nested.
-			const given = (f) => {
-				const out = [];
-				const walk = (c) => (Array.isArray(c) ? c.forEach(walk) : c && typeof c === 'object' && c.$$typeof ? out.push(c) : null);
-				walk(f.memoizedProps?.children);
-				return out;
-			};
-			// Whether an element is part of what the instance was given: on the way up to it, one of the given elements (by its
-			// props, or by its component when it was copied with more props, as a tooltip does with what it wraps).
-			const isGiven = (el, f) => {
-				const elements = given(f);
-				if (elements.length === 0) return false;
-				const props = new Set(elements.map((e) => e.props));
-				const types = new Set(elements.filter((e) => typeof e.type !== 'string').map((e) => e.type));
-				for (let g = fiberOf(el); g && g !== f && g !== f.alternate; g = g.return) {
-					if (props.has(g.memoizedProps) || (typeof g.type !== 'string' && types.has(g.type))) return true;
-				}
-				return false;
-			};
-			const seen = new Set();
-			let reached = false;
-			for (const story of document.querySelectorAll('[data-story]')) {
-				for (const el of story.querySelectorAll('*')) {
-					const own = fiberOf(el);
-					if (own) reached = true;
-					for (let f = own; f; f = f.return) {
-						// Above an instance already met, every other instance is one met before it, in the page's order.
-						if (seen.has(f)) break;
-						if (!isIt(f)) continue;
-						// An element with no room (a hidden input, a wrapper drawn as its contents) is not where the instance draws: the
-						// instance is met again at its next element, and its first that takes up room is its top.
-						const box = el.getBoundingClientRect();
-						if (box.width === 0 || box.height === 0) continue;
-						seen.add(f);
-						if (f.alternate) seen.add(f.alternate);
-						if (isGiven(el, f)) {
-							drawn.wrapping++;
-							continue;
-						}
-						const s = getComputedStyle(el);
-						const props = {};
-						for (const [k, v] of Object.entries(f.memoizedProps ?? {})) {
-							if (notVariant.test(k) || !['string', 'number', 'boolean'].includes(typeof v) || String(v).length > 32) continue;
-							props[k] = String(v);
-						}
-						const values = {
-							height: +box.height.toFixed(2) + 'px',
-							padding: [s.paddingTop, s.paddingRight, s.paddingBottom, s.paddingLeft].join(' '),
-							radius: [s.borderTopLeftRadius, s.borderTopRightRadius, s.borderBottomRightRadius, s.borderBottomLeftRadius].join(' '),
-							gap: s.rowGap + ' ' + s.columnGap,
-							fontSize: s.fontSize,
-							background: s.backgroundColor,
-							text: s.color,
-						};
-						if (parseFloat(s.borderTopWidth) > 0) values.border = s.borderTopColor;
-						drawn.instances.push({ story: story.getAttribute('data-story') ?? '', props, values });
-					}
-				}
+			const { instances, wrapping, reached } = (${FIND_INSTANCES})(of.component);
+			drawn.wrapping = wrapping;
+			for (const { story, key, props, el } of instances) {
+				const box = el.getBoundingClientRect();
+				const s = getComputedStyle(el);
+				const values = {
+					height: +box.height.toFixed(2) + 'px',
+					padding: [s.paddingTop, s.paddingRight, s.paddingBottom, s.paddingLeft].join(' '),
+					radius: [s.borderTopLeftRadius, s.borderTopRightRadius, s.borderBottomRightRadius, s.borderBottomLeftRadius].join(' '),
+					gap: s.rowGap + ' ' + s.columnGap,
+					fontSize: s.fontSize,
+					background: s.backgroundColor,
+					text: s.color,
+				};
+				if (parseFloat(s.borderTopWidth) > 0) values.border = s.borderTopColor;
+				drawn.instances.push({ story, key, props, values });
 			}
 			// Elements drawn and not one known to React's record of what it drew: a React that keeps it another way, whose
 			// instances cannot be found. Said as that, not as stories that draw none.

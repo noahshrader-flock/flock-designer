@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { previewAddress, previewProblem } from '../../src/shared/catalog';
-import type { CatalogComponent, DesignToken, TokenEdit } from '../../src/shared/contract';
+import type { CatalogComponent, DesignToken, TokenEdit, TriedValue } from '../../src/shared/contract';
+import { plural } from '../../src/shared/plural';
 import { undeclared } from '../../src/shared/wcag';
 import { TokenChangesProvider, useTokenChangesFor } from '../../src/renderer/tokenChanges';
 import { useStoryPreview } from '../../src/renderer/useStoryPreview';
@@ -23,7 +24,7 @@ const NOT_READ = undeclared('the design system is not read yet');
  * Its stories, live, built as the app's component page builds them (`useStoryPreview`): with the change to the tokens
  * being tried, the stories shown stay while it builds, said over them, and a change that cannot be tried says why.
  */
-const Stories = ({ component, commit, edits }: { component: CatalogComponent; commit: string; edits: TokenEdit[] }) => {
+const Stories = ({ component, commit, edits, tried }: { component: CatalogComponent; commit: string; edits: TokenEdit[]; tried: TriedValue[] }) => {
 	const { preview, trying, refused, retry } = useStoryPreview(commit, edits);
 	if (preview.state === 'building') return <p className="quiet">Building its previews…</p>;
 	if (preview.state !== 'ready')
@@ -36,7 +37,7 @@ const Stories = ({ component, commit, edits }: { component: CatalogComponent; co
 		<>
 			{refused && <Notice title="This change could not be tried">{refused}</Notice>}
 			<div className="stories" aria-busy={trying}>
-				<StoryFrame src={previewAddress(preview.base, component.id)} title={component.name} />
+				<StoryFrame src={previewAddress(preview.base, component.id)} title={component.name} tried={tried} />
 				{trying && <p className="stories-building">Building…</p>}
 			</div>
 		</>
@@ -54,6 +55,17 @@ export const ComponentTab = ({ id }: { id: string }) => {
 	// The token whose control is open: Made from's rows change a token as the panel's do, and every page sees it.
 	const [editing, setEditing] = useState<DesignToken | null>(null);
 	const changes = useTokenChangesFor(ready?.tokens.tokens ?? [], edits, setEdits, ready?.accessibility ?? NOT_READ);
+	// The values tried on its instances (Phase 2): this tab's alone, kept nowhere, and forgotten when the design system moves
+	// to another version, whose instances are drawn anew.
+	const [tried, setTried] = useState<ReadonlyMap<string, TriedValue>>(new Map());
+	useEffect(() => setTried(new Map()), [ready?.commit]);
+	const onTry = (key: string, value: TriedValue | null) =>
+		setTried((was) => {
+			const next = new Map(was);
+			if (value === null) next.delete(key);
+			else next.set(key, value);
+			return next;
+		});
 	const component = ready?.components.find((c) => c.id === id);
 	if (note) return <TabNote note={note.says} onRetry={note.onRetry} />;
 	if (!ready || !component) return <TabNote note="The design system shown no longer has this component. Close this tab." />;
@@ -79,9 +91,17 @@ export const ComponentTab = ({ id }: { id: string }) => {
 					</div>
 				</header>
 				<TryingNote count={edits.length} />
+				{tried.size > 0 && (
+					<p className="quiet" data-trying-values>
+						Trying {plural(tried.size, 'value')} of its own in its stories: nothing is saved.{' '}
+						<button type="button" className="link" onClick={() => setTried(new Map())}>
+							Reset all
+						</button>
+					</p>
+				)}
 				<div className="component-layout">
 					<div className="component-stories">
-						<Stories component={component} commit={ready.commit} edits={edits} />
+						<Stories component={component} commit={ready.commit} edits={edits} tried={[...tried.values()]} />
 					</div>
 					<aside className="component-aside">
 						<ComponentSections
@@ -89,6 +109,7 @@ export const ComponentTab = ({ id }: { id: string }) => {
 							components={ready.components}
 							actions={actions}
 							version={{ branch: ready.branch, commit: ready.commit }}
+							trying={{ tried, onTry }}
 						/>
 					</aside>
 				</div>

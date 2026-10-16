@@ -5,12 +5,14 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { build } from 'esbuild';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { PREVIEW_COMPONENT, PREVIEW_SHOW } from '../src/shared/catalog';
+import { PREVIEW_COMPONENT, PREVIEW_SHOW, PREVIEW_TRY } from '../src/shared/catalog';
+import { FIND_INSTANCES, TRY_VALUES } from '../src/main/services/pageInstances';
 import { chromeHeadless, findChrome } from '../src/main/services/chromeHeadless';
 import { ComponentTokens } from '../src/main/services/componentTokens';
 import { PrototypeServer } from '../src/main/services/prototypeServer';
 import { StoryPreviews, hasPackages } from '../src/main/services/storyPreviews';
 import type { ValueRow } from '../src/shared/contract';
+import { previewAddress } from '../src/shared/catalog';
 import { REAL_LIBRARY, describeWith, libraryMissing } from './realCheckouts';
 
 /**
@@ -67,6 +69,9 @@ window[${JSON.stringify(PREVIEW_SHOW)}] = async (file) => {
 	flushSync(() => root.render(Object.entries(stories).map(([name, Story]) => h('section', { key: name, 'data-story': name }, h(Story)))));
 	if (unrecorded) for (const el of document.querySelectorAll('[data-story] *')) for (const k of Object.keys(el)) if (k.startsWith('__react')) delete el[k];
 };
+
+// The values a tab tries, as the preview page hears them.
+${TRY_VALUES}
 `;
 
 let server: Server;
@@ -160,6 +165,89 @@ describe.skipIf(findChrome() === null)('a component’s instances, in the browse
 	}, 60_000);
 });
 
+describe.skipIf(findChrome() === null)('values tried on a component’s instances, in the browser on this machine', () => {
+	it('sets each on the instances it is for alone, over the library’s own, again when the stories draw anew, and takes them off', async () => {
+		const { inChrome } = await import('./realChrome');
+		await inChrome(async (browser) => {
+			const tab = await browser.newPage();
+			// The tab, framing the preview page as the component's tab does.
+			await tab.setContent(`<iframe src="${base}" style="width:800px;height:600px"></iframe>`);
+			const frame = await tab.waitForFrame((f) => f.url() === base);
+			const show = (file: string) =>
+				frame.evaluate((name, f) => (window as unknown as Record<string, (x: string) => Promise<void>>)[name]?.(f), PREVIEW_SHOW, file);
+			await frame.waitForFunction((name) => typeof (window as unknown as Record<string, unknown>)[name] === 'function', {}, PREVIEW_SHOW);
+			await show('button.stories.tsx');
+			// What each instance draws, by its key, found as every reader finds them.
+			const drawn = () =>
+				frame.evaluate(
+					(find, component) => {
+						const of = (window as unknown as Record<string, { component: unknown } | null>)[component];
+						const found = (0, eval)(find)(of?.component) as { instances: { key: string; props: Record<string, string>; el: Element }[] };
+						return found.instances.map(({ key, props, el }) => {
+							const s = getComputedStyle(el);
+							return {
+								key,
+								size: props.size ?? '',
+								variant: props.variant ?? '',
+								height: Math.round(el.getBoundingClientRect().height),
+								radius: s.borderTopLeftRadius,
+								background: s.backgroundColor,
+							};
+						});
+					},
+					FIND_INSTANCES,
+					PREVIEW_COMPONENT,
+				);
+			const before = await drawn();
+			const small = before.find((i) => i.size === 'sm')?.key as string;
+			const medium = before.find((i) => i.size === 'md')?.key as string;
+			const tryValues = (values: unknown) =>
+				tab.evaluate((key, v) => document.querySelector('iframe')?.contentWindow?.postMessage({ [key]: v }, '*'), PREVIEW_TRY, values as never);
+			const settled = () => frame.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
+			await tryValues([
+				{ property: 'height', value: '40px', targets: [small] },
+				{ property: 'radius', value: '14px', targets: [medium] },
+				{ property: 'background', value: 'rgb(200, 30, 30)', targets: [medium] },
+			]);
+			await settled();
+			const tried = await drawn();
+			const of = (key: string) => tried.find((i) => i.key === key);
+			// The small one is 40px high, whatever its own style says; the medium one has the radius and the background; the ghost nothing.
+			expect([of(small)?.height, of(small)?.radius]).toEqual([40, '8px']);
+			expect([of(medium)?.height, of(medium)?.radius, of(medium)?.background]).toEqual([36, '14px', 'rgb(200, 30, 30)']);
+			expect(tried.find((i) => i.variant === 'ghost')).toMatchObject({ radius: '8px', background: 'rgba(0, 0, 0, 0)' });
+			// Drawn anew (another file, then this one again: new elements): what is tried is set on them too.
+			await show('box.stories.tsx');
+			await show('button.stories.tsx');
+			await settled();
+			expect((await drawn()).find((i) => i.key === small)?.height).toBe(40);
+			// Said by the page itself, not its parent: not heard.
+			await frame.evaluate((key) => window.postMessage({ [key]: [] }, '*'), PREVIEW_TRY);
+			await settled();
+			expect((await drawn()).find((i) => i.key === small)?.height).toBe(40);
+			// Nothing tried, on the same elements: each is as the library has it again, nothing left over.
+			await tryValues([]);
+			await settled();
+			expect((await drawn()).find((i) => i.key === small)?.height).toBe(28);
+			// A height on an element sized by its content and padding (the box, 16px each side), not by its border: it takes up the
+			// height tried, all the same.
+			await tryValues([]);
+			await show('box.stories.tsx');
+			const outer = (await drawn())[0]?.key as string;
+			await tryValues([{ property: 'height', value: '100px', targets: [outer] }]);
+			await settled();
+			expect((await drawn())[0]?.height).toBe(100);
+			await show('button.stories.tsx');
+			// Nothing tried: the library's own again.
+			await tryValues([]);
+			await settled();
+			expect((await drawn()).map(({ key, height, radius, background }) => ({ key, height, radius, background }))).toEqual(
+				before.map(({ key, height, radius, background }) => ({ key, height, radius, background })),
+			);
+		});
+	}, 60_000);
+});
+
 /**
  * The real library on this machine, through the whole pass the tab's analysis makes (T6): every story drawn as the library
  * has it and with every token tagged. What the spike measured by hand (DESIGN_SYSTEM_PLAN, Phase 0) is what the tab says.
@@ -213,6 +301,38 @@ describeWith(realMissing, 'against the real library on origin/develop', () => {
 				expect(row(dark, 'height')?.cells.map((c) => c.value)).toEqual(height?.cells.map((c) => c.value));
 				// FSIconButton draws the same 8px, but its own: changing the shared radius would not move it.
 				expect(row(await valuesOf('FSIconButton'), 'radius')?.cells.map((c) => [c.value, c.kind])).toEqual([['8px', 'own']]);
+
+				// Tried in the live page, as the tab frames it, narrower than the page it was measured on: the Small cell's instances,
+				// found by their keys, are 40px high, every one of them; no other instance moves.
+				const small = height?.cells.find((c) => c.variant === 'sm');
+				const preview = await previews.preview();
+				if (!small || preview.state !== 'ready') throw new Error('no Small cell, or no previews');
+				const { inChrome } = await import('./realChrome');
+				await inChrome(async (browser) => {
+					const tab = await browser.newPage();
+					const file = 'src/components/FSButton/FSButton.stories.tsx';
+					await tab.setContent(`<iframe src="${previewAddress(preview.base, file)}" style="width:700px;height:900px"></iframe>`);
+					const frame = await tab.waitForFrame((f) => f.url().includes('FSButton'));
+					await frame.waitForSelector('[data-story] button');
+					const heights = () =>
+						frame.evaluate(
+							(find, component) => {
+								const of = (window as unknown as Record<string, { component: unknown } | null>)[component];
+								const found = (0, eval)(find)(of?.component) as { instances: { key: string; el: Element }[] };
+								return Object.fromEntries(found.instances.map(({ key, el }) => [key, Math.round(el.getBoundingClientRect().height)]));
+							},
+							FIND_INSTANCES,
+							PREVIEW_COMPONENT,
+						);
+					const before = await heights();
+					expect(small.targets.every((key) => key in before)).toBe(true);
+					await tab.evaluate((key, v) => document.querySelector('iframe')?.contentWindow?.postMessage({ [key]: v }, '*'), PREVIEW_TRY, [
+						{ property: 'height', value: '40px', targets: small.targets },
+					] as never);
+					await frame.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
+					const after = await heights();
+					for (const [key, h] of Object.entries(after)) expect(h, key).toBe(small.targets.includes(key) ? 40 : before[key]);
+				});
 			} finally {
 				await real.close();
 				pages.close();

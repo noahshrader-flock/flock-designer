@@ -4,6 +4,7 @@ import {
 	type ComponentTokens,
 	type ComponentValues as Values,
 	type DesignToken,
+	type TriedValue,
 	type ValueCell,
 	type ValueProperty,
 	type ValueRow,
@@ -15,20 +16,18 @@ import { MOST_LISTED, sharedWith } from '../../src/renderer/useComponentTokens';
 import { Disclosure } from './ui/Disclosure';
 import { Swatch } from './ui/Swatch';
 import { Toggle } from './ui/Toggle';
+import { VALUE_NAMES, ValueEditor } from './ValueEditor';
 
 type Ready = Extract<ComponentTokens, { state: 'ready' }>;
 
-/** How each property is named on its row. */
-const NAMES: Record<ValueProperty, string> = {
-	height: 'Height',
-	padding: 'Padding',
-	radius: 'Radius',
-	gap: 'Gap',
-	fontSize: 'Font size',
-	background: 'Background',
-	text: 'Text',
-	border: 'Border',
-};
+/** What names a value tried: its property and the instances it is for, the same in light and in dark. */
+export const triedId = (property: ValueProperty, cell: ValueCell): string => `${property}\u0000${cell.targets.join('\u0001')}`;
+
+/** The values being tried on the component's instances, by `triedId`, and how one is tried or put back (null). */
+export interface Trying {
+	tried: ReadonlyMap<string, TriedValue>;
+	onTry: (id: string, value: TriedValue | null) => void;
+}
 /** Light and dark, as the review bar names them, as an empty and a filled circle: how a theme's light and dark read in a side bar. */
 const MODES = THEMES.map((value) => ({ value, label: themeLabel(value), icon: value === 'dark' ? 'circle-large-filled' : 'circle-large-outline' }));
 
@@ -54,36 +53,85 @@ const kindOf = (cell: ValueCell, name: (path: string) => string, others: (path: 
 	return { says: 'Not checked', why: 'No token of this kind is marked when the stories are drawn, so whether it is one is not known.' };
 };
 
-/** One value: its variant, its value (a colour with its swatch), and, when the row's values are not all one kind, what it is. */
-const Cell = ({ cell, color, note }: { cell: ValueCell; color: boolean; note: { says: string; why?: string } | null }) => (
-	<li data-value-cell className="token" title={`${cell.instances} drawn`}>
-		<span className="token-line">
-			{cell.variant !== null && <span className="value-variant">{cell.variant}</span>}
-			{color && cell.value !== NONE && <Swatch value={cell.value} />}
-			<span className="value-drawn">{cell.value}</span>
-			{note && cell.value !== NONE && (
-				<span className="token-uses" data-value-kind={cell.kind} title={note.why}>
-					{note.says}
-				</span>
-			)}
-		</span>
-	</li>
-);
+/**
+ * One value: its variant, its value (a colour with its swatch), and, when the row's values are not all one kind, what it
+ * is; a button that opens its control. A value being tried shows what is tried, marked, with what is drawn under it.
+ */
+const Cell = ({
+	cell,
+	label,
+	color,
+	note,
+	tried,
+	onOpen,
+}: {
+	cell: ValueCell;
+	label: string;
+	color: boolean;
+	note: { says: string; why?: string } | null;
+	tried: string | null;
+	onOpen: () => void;
+}) => {
+	const value = tried ?? cell.value;
+	return (
+		<li data-value-cell className="token" {...(tried !== null ? { 'data-tried': '' } : {})}>
+			<button
+				type="button"
+				className="token-line token-button"
+				aria-label={`Change ${label}`}
+				title={tried !== null ? `Tried; drawn ${cell.value}` : `${cell.instances} drawn`}
+				onClick={onOpen}
+			>
+				{cell.variant !== null && <span className="value-variant">{cell.variant}</span>}
+				{color && value !== NONE && <Swatch value={value} />}
+				<span className="value-drawn">{value}</span>
+				{tried !== null && <span data-changed-mark className="token-changed" aria-label="Tried" />}
+				{note && cell.value !== NONE && (
+					<span className="token-uses" data-value-kind={cell.kind} title={note.why}>
+						{note.says}
+					</span>
+				)}
+			</button>
+		</li>
+	);
+};
 
 /** A property's row: its name and what tells its values apart, its values, and what they are, once when they are all one kind. */
-const Row = ({ row, name, others }: { row: ValueRow; name: (path: string) => string; others: (path: string) => string[] }) => {
+const Row = ({
+	row,
+	name,
+	others,
+	tried,
+	onOpen,
+}: {
+	row: ValueRow;
+	name: (path: string) => string;
+	others: (path: string) => string[];
+	tried: (cell: ValueCell) => string | null;
+	onOpen: (cell: ValueCell) => void;
+}) => {
 	// What the values are is said once when every value that draws something is the same kind; a none says nothing of it.
 	const drawing = row.cells.filter((c) => c.value !== NONE);
 	const first = drawing[0];
 	const same = first !== undefined && drawing.every((c) => c.kind === first.kind && c.tokens.join() === first.tokens.join());
 	const shared = same ? kindOf(first, name, others) : null;
 	const color = COLOR_VALUES.has(row.property);
-	const cell = (c: ValueCell, i: number) => <Cell key={i} cell={c} color={color} note={same ? null : kindOf(c, name, others)} />;
+	const cell = (c: ValueCell, i: number) => (
+		<Cell
+			key={i}
+			cell={c}
+			label={c.variant === null ? VALUE_NAMES[row.property] : `${VALUE_NAMES[row.property]} ${c.variant}`}
+			color={color}
+			note={same ? null : kindOf(c, name, others)}
+			tried={tried(c)}
+			onOpen={() => onOpen(c)}
+		/>
+	);
 	return (
 		<div data-value-row={row.property} className="token-group">
 			<h3 className="token-group-name value-row-name">
 				<span>
-					{NAMES[row.property]}
+					{VALUE_NAMES[row.property]}
 					{row.by !== null && <span className="quiet"> · by {row.by}</span>}
 				</span>
 				{shared && (
@@ -107,6 +155,10 @@ const Row = ({ row, name, others }: { row: ValueRow; name: (path: string) => str
  * and by variant, and whether each is a token's, shared with which other components, or its own. Said to be as its
  * stories draw it, in light, on the version of the design system shown, so it is never taken for every use in a product;
  * and, when the design system has lengths no tag can be given, that a length said to be its own may be one of them.
+ *
+ * Each value opens its control (Phase 2): a token's opens the token's own (`onEditToken`), as Made from's rows do, since it
+ * is the design system's and moves every component that draws with it; any other is tried on the instances that draw it,
+ * in the stories beside this, as it moves (`ValueEditor`), and nothing is saved.
  */
 export const ComponentValues = ({
 	answer,
@@ -114,16 +166,27 @@ export const ComponentValues = ({
 	version,
 	byPath,
 	names,
+	trying,
+	onEditToken,
 }: {
 	answer: Ready;
 	name: string;
 	version: { branch: string; commit: string };
 	byPath: ReadonlyMap<string, DesignToken>;
 	names: ReadonlyMap<string, string>;
+	trying: Trying;
+	onEditToken: (token: DesignToken) => void;
 }) => {
 	const { values } = answer;
 	// Light until the other is chosen, as a prototype opens: the same first sight for everyone.
 	const [mode, setMode] = useState<Theme>(DEFAULT_THEME);
+	const [editing, setEditing] = useState<{ property: ValueProperty; cell: ValueCell } | null>(null);
+	const tried = (property: ValueProperty) => (cell: ValueCell) => trying.tried.get(triedId(property, cell))?.value ?? null;
+	const open = (property: ValueProperty) => (cell: ValueCell) => {
+		const token = cell.kind === 'token' && cell.tokens.length === 1 ? byPath.get(cell.tokens[0] as string) : undefined;
+		if (token) onEditToken(token);
+		else setEditing({ property, cell });
+	};
 	const tokenName = (path: string) => {
 		const t = byPath.get(path);
 		return t ? labelOf(t) : path;
@@ -155,9 +218,25 @@ export const ComponentValues = ({
 							Its stories did not draw it in {mode}, so its values there cannot be read.
 						</p>
 					) : (
-						values.rows[mode]?.map((row) => <Row key={row.property} row={row} name={tokenName} others={others} />)
+						values.rows[mode]?.map((row) => (
+							<Row key={row.property} row={row} name={tokenName} others={others} tried={tried(row.property)} onOpen={open(row.property)} />
+						))
 					)}
 				</>
+			)}
+			{editing && (
+				<ValueEditor
+					property={editing.property}
+					cell={editing.cell}
+					tried={tried(editing.property)(editing.cell)}
+					onTry={(value) =>
+						trying.onTry(
+							triedId(editing.property, editing.cell),
+							value === null ? null : { property: editing.property, value, targets: editing.cell.targets },
+						)
+					}
+					onClose={() => setEditing(null)}
+				/>
 			)}
 		</section>
 	);

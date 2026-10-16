@@ -102,8 +102,8 @@ const candidatesOf = (instances: Instance[], controls: string[]): string[] => {
 };
 
 type Entry = { instance: Instance; read: Read };
-/** A cell before its variant is said: the value of each prop it is told apart by, a prop it was drawn without as null. */
-type Found = { parts: (string | null)[]; read: Read; instances: number };
+/** A cell before its variant is said: the value of each prop it is told apart by, a prop it was drawn without as null, and the instances that draw it. */
+type Found = { parts: (string | null)[]; read: Read; targets: string[] };
 
 /** The cells for `keys`, when every instance with one set of their values draws the same; null when they do not. In the order first drawn. */
 const explainedBy = (entries: Entry[], keys: string[]): Found[] | null => {
@@ -112,19 +112,20 @@ const explainedBy = (entries: Entry[], keys: string[]): Found[] | null => {
 		const parts = keys.map((k) => instance.props[k] ?? null);
 		const label = JSON.stringify(parts);
 		const cell = cells.get(label);
-		if (cell === undefined) cells.set(label, { parts, read, instances: 1 });
+		if (cell === undefined) cells.set(label, { parts, read, targets: [instance.key] });
 		else if (keyOf(cell.read) !== keyOf(read)) return null;
-		else cell.instances++;
+		else cell.targets.push(instance.key);
 	}
 	return cells.size < 2 ? null : [...cells.values()];
 };
 
-const cellOf = (variant: string | null, read: Read, instances: number): ValueCell => ({
+const cellOf = (variant: string | null, read: Read, targets: string[]): ValueCell => ({
 	variant,
 	value: read.shown,
 	kind: read.kind,
 	tokens: read.tokens,
-	instances,
+	instances: targets.length,
+	targets,
 });
 
 /**
@@ -145,26 +146,26 @@ const said = (found: Found[], keys: string[]): ValueCell[] => {
 		});
 		return kept.length === 0 ? 'default' : kept.join(' · ');
 	};
-	const merged = new Map<string, { read: Read; instances: number }>();
+	const merged = new Map<string, { read: Read; targets: string[] }>();
 	for (const f of found) {
 		const variant = short(f);
 		const same = merged.get(variant);
-		if (same === undefined) merged.set(variant, { read: f.read, instances: f.instances });
-		else if (keyOf(same.read) !== keyOf(f.read)) return found.map((x) => cellOf(full(x), x.read, x.instances));
-		else same.instances += f.instances;
+		if (same === undefined) merged.set(variant, { read: f.read, targets: [...f.targets] });
+		else if (keyOf(same.read) !== keyOf(f.read)) return found.map((x) => cellOf(full(x), x.read, x.targets));
+		else same.targets.push(...f.targets);
 	}
-	return [...merged].map(([variant, { read, instances }]) => cellOf(variant, read, instances));
+	return [...merged].map(([variant, { read, targets }]) => cellOf(variant, read, targets));
 };
 
 const rowOf = (property: ValueProperty, entries: Entry[], candidates: string[]): ValueRow => {
-	const distinct = new Map<string, { read: Read; instances: number }>();
-	for (const { read } of entries) {
+	const distinct = new Map<string, { read: Read; targets: string[] }>();
+	for (const { instance, read } of entries) {
 		const kept = distinct.get(keyOf(read));
-		if (kept) kept.instances++;
-		else distinct.set(keyOf(read), { read, instances: 1 });
+		if (kept) kept.targets.push(instance.key);
+		else distinct.set(keyOf(read), { read, targets: [instance.key] });
 	}
 	const values = [...distinct.values()];
-	if (values.length === 1) return { property, by: null, cells: values.map((v) => cellOf(null, v.read, v.instances)) };
+	if (values.length === 1) return { property, by: null, cells: values.map((v) => cellOf(null, v.read, v.targets)) };
 	// One prop that explains it, with the fewest values; then two together, with the fewest combinations, and only where at
 	// least one combination is drawn more than once: two props with each combination drawn once explain anything.
 	let best: { keys: string[]; found: Found[] } | null = null;
@@ -175,12 +176,12 @@ const rowOf = (property: ValueProperty, entries: Entry[], candidates: string[]):
 	if (best === null) {
 		for (const keys of candidates.flatMap((a, i) => candidates.slice(i + 1).map((b) => [a, b]))) {
 			const found = explainedBy(entries, keys);
-			if (found === null || !found.some((f) => f.instances > 1)) continue;
+			if (found === null || !found.some((f) => f.targets.length > 1)) continue;
 			if (best === null || found.length < best.found.length) best = { keys, found };
 		}
 	}
 	if (best !== null) return { property, by: best.keys.join(', '), cells: said(best.found, best.keys) };
-	return { property, by: null, cells: values.sort((a, b) => b.instances - a.instances).map((v) => cellOf(null, v.read, v.instances)) };
+	return { property, by: null, cells: values.sort((a, b) => b.targets.length - a.targets.length).map((v) => cellOf(null, v.read, v.targets)) };
 };
 
 /** Whether two drawings of a file drew the same instances, story by story and prop by prop: only then is one the other's twin. */

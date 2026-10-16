@@ -297,13 +297,30 @@ export const typedHex = (typed: string, alpha: string): string | null => (HEX6.t
 export const isHex = (typed: string): boolean => HEX6.test(typed);
 
 /**
- * A length's slider (T3): its number and unit now, and its range, from nothing to twice what the design system has (`asRead`),
- * at least a useful span; whole pixels, or eighths of a rem.
+ * A length's slider: its number and unit now, and its range, from nothing to twice what it was (`was`), at least a useful
+ * span, and never short of what it is now; whole pixels, or eighths of a rem. For a token (T3, from what the design system has) and a component's own value
+ * (Phase 2, from what it draws) alike.
  */
-export const lengthRange = (asRead: DesignToken, value: string): { number: number; unit: 'px' | 'rem' | 'em'; max: number; step: number } => {
+export const lengthSpan = (value: string, was: string): { number: number; unit: 'px' | 'rem' | 'em'; max: number; step: number } => {
 	const { number, unit } = lengthParts(value) ?? { number: 0, unit: 'px' };
 	const px = unit === 'px';
-	return { number, unit, max: Math.max(px ? 32 : 2, (lengthParts(asRead.value)?.number ?? number) * 2), step: px ? 1 : 0.125 };
+	return { number, unit, max: Math.max(px ? 32 : 2, (lengthParts(was)?.number ?? number) * 2, number), step: px ? 1 : 0.125 };
+};
+
+/** Where a colour that draws nothing (clear, or no border) starts when one of its own is tried: white, as the page behind it. */
+export const NONE_STARTS_AS = '#FFFFFF';
+
+/**
+ * A color as the browser computes it (`rgb(16, 128, 98)`, `rgba(0, 0, 0, 0.5)`) as its control edits it: six hex digits, and
+ * two more for an opacity less than whole; null for one that is not that (a hex is given back as it is).
+ */
+export const hexOf = (color: string): string | null => {
+	if (/^#[0-9a-f]{6}([0-9a-f]{2})?$/i.test(color)) return color.toUpperCase();
+	const m = /^rgba?\((\d+), (\d+), (\d+)(?:, ([\d.]+))?\)$/.exec(color);
+	if (!m) return null;
+	const byte = (n: number) => Math.round(n).toString(16).padStart(2, '0');
+	const alpha = m[4] === undefined || Number(m[4]) >= 1 ? '' : byte(Number(m[4]) * 255);
+	return `#${byte(Number(m[1]))}${byte(Number(m[2]))}${byte(Number(m[3]))}${alpha}`.toUpperCase();
 };
 
 /**

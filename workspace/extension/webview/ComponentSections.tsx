@@ -5,7 +5,7 @@ import { inOrder } from '../../src/shared/primitives';
 import { useTokenChanges } from '../../src/renderer/tokenChanges';
 import { MOST_LISTED, sharedWith, useComponentTokens } from '../../src/renderer/useComponentTokens';
 import { AccessibilityFindings } from './Accessibility';
-import { ComponentValues } from './ComponentValues';
+import { ComponentValues, type Trying } from './ComponentValues';
 import { SemanticColors } from './SemanticColors';
 import { Sets, TokenRow, type TokenActions } from './Tokens';
 import { Disclosure } from './ui/Disclosure';
@@ -154,12 +154,15 @@ export const ComponentSections = ({
 	components,
 	actions,
 	version,
+	trying,
 }: {
 	component: CatalogComponent;
 	components: CatalogComponent[];
 	actions: TokenActions;
 	/** The version of the design system shown, which its values are read on. */
 	version: { branch: string; commit: string };
+	/** The values being tried on its instances, in the stories beside this. */
+	trying: Trying;
 }) => {
 	const { byPath, isPalette } = useTokenChanges();
 	const { answer, retry } = useComponentTokens(component.id);
@@ -186,7 +189,15 @@ export const ComponentSections = ({
 	const colors = tokens.filter((t) => t.kind === 'color');
 	return (
 		<>
-			<ComponentValues answer={answer} name={component.name} version={version} byPath={byPath} names={names} />
+			<ComponentValues
+				answer={answer}
+				name={component.name}
+				version={version}
+				byPath={byPath}
+				names={names}
+				trying={trying}
+				onEditToken={actions.onEdit}
+			/>
 			<MadeFrom tokens={tokens.filter((t) => t.kind !== 'color')} note={note} actions={actions} />
 			{colors.length > 0 && (
 				<ColorTokens semantic={colors.filter((t) => !isPalette(t))} palette={colors.filter(isPalette)} note={note} actions={actions} />

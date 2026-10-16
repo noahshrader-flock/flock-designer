@@ -157,7 +157,7 @@ describe('the index', () => {
 	 * A drawn A with primary's tag, B with the tone's and a hardcoded gray: what each page is, by its address. B's stories
 	 * draw one instance of the component they name, its background the brand green, the tone's tag when tagged.
 	 */
-	const instanceOfB = (background: string) => ({ component: true, instances: [{ story: 'Default', props: {}, values: { background } }] });
+	const instanceOfB = (background: string) => ({ component: true, instances: [{ story: 'Default', key: 'B#1', props: {}, values: { background } }] });
 	const measure: Measure = async (runs) => {
 		asked.push(runs);
 		return runs.map((run) =>
@@ -259,14 +259,14 @@ describe('the index', () => {
 						{
 							property: 'background',
 							by: null,
-							cells: [{ variant: null, value: 'rgb(16, 128, 98)', kind: 'token', tokens: ['tone.brand.50'], instances: 1 }],
+							cells: [{ variant: null, value: 'rgb(16, 128, 98)', kind: 'token', tokens: ['tone.brand.50'], instances: 1, targets: ['B#1'] }],
 						},
 					],
 					dark: [
 						{
 							property: 'background',
 							by: null,
-							cells: [{ variant: null, value: 'rgb(16, 128, 98)', kind: 'token', tokens: ['tone.brand.50'], instances: 1 }],
+							cells: [{ variant: null, value: 'rgb(16, 128, 98)', kind: 'token', tokens: ['tone.brand.50'], instances: 1, targets: ['B#1'] }],
 						},
 					],
 				},

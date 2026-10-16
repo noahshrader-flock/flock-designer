@@ -20,8 +20,10 @@ const BASE = {
 	background: 'rgba(0, 0, 0, 0)',
 	text: 'rgb(16, 128, 98)',
 };
+let made = 0;
 const instance = (props: Record<string, string>, values: Partial<Instance['values']> = {}, story = 'Default'): Instance => ({
 	story,
+	key: `${story}#${++made}`,
 	props,
 	values: { ...BASE, ...values },
 });
@@ -53,7 +55,12 @@ const sized = (more: (i: number) => Partial<Instance['values']> = () => ({})) =>
 	['AllSizes', 'Combinations'].flatMap((story, s) =>
 		SIZES.map((size, i) => instance({ size, testId: `b${s}${i}` }, { height: HEIGHTS[i], ...more(i) }, story)),
 	);
-const rowOf = (rows: ValueRow[], property: ValueRow['property']) => rows.find((r) => r.property === property);
+/** A property's row, its cells without the instances each is for (pinned on their own, below). */
+const rowOf = (rows: ValueRow[], property: ValueRow['property']) => {
+	const row = rows.find((r) => r.property === property);
+	return row && { ...row, cells: row.cells.map(({ targets: _, ...c }) => c) };
+};
+const targetsOf = (rows: ValueRow[], property: ValueRow['property']) => rows.find((r) => r.property === property)?.cells.map((c) => c.targets);
 /** The tokens: primary in light and dark, written in two places, with the colour tag given to the light one. */
 const TOKENS = [
 	{
@@ -231,6 +238,34 @@ describe('a component’s drawn values', () => {
 		if (r.state !== 'read') throw new Error(r.state);
 		expect(r.rows.dark).toBeNull();
 		expect(r.rows.light?.length).toBeGreaterThan(0);
+	});
+
+	it('say which instances each value is for, by their keys, so a value tried is set on those alone: merged, and listed', () => {
+		const plain = [
+			instance({ variant: 'primary' }, { background: 'rgb(16, 128, 98)' }, 'A'),
+			instance({ variant: 'primary', disabled: 'false' }, { background: 'rgb(16, 128, 98)' }, 'B'),
+			instance({ variant: 'primary', disabled: 'true' }, { background: 'rgb(200, 200, 200)' }, 'C'),
+			instance({ variant: 'ghost', disabled: 'true' }, { background: 'rgb(200, 200, 200)' }, 'D'),
+			instance({ variant: 'ghost' }, {}, 'E'),
+		];
+		const keys = plain.map((i) => i.key);
+		// Each combination drawn once names no two props, so the cells are its distinct values, each with every instance drawing it.
+		expect(targetsOf(read(plain, plain, NO_TAGS, ['variant', 'disabled']).rows, 'background')).toEqual([
+			[keys[0], keys[1]],
+			[keys[2], keys[3]],
+			[keys[4]],
+		]);
+		// Told apart by two props, with a combination drawn twice: "primary" is not set and false, drawing the default alike.
+		const twice = [...plain, instance({ variant: 'ghost', disabled: 'true' }, { background: 'rgb(200, 200, 200)' }, 'F')];
+		expect(targetsOf(read(twice, twice, NO_TAGS, ['variant', 'disabled']).rows, 'background')).toEqual([
+			[keys[0], keys[1]],
+			[keys[2]],
+			[keys[3], twice[5]?.key],
+			[keys[4]],
+		]);
+		// Told apart by nothing: each distinct value's instances, most first.
+		const loose = [instance({}, { height: '40px' }, 'A'), instance({}, { height: '44px' }, 'B'), instance({}, { height: '40px' }, 'C')];
+		expect(targetsOf(read(loose, loose, NO_TAGS).rows, 'height')).toEqual([[loose[0]?.key, loose[2]?.key], [loose[1]?.key]]);
 	});
 
 	it('leave out a property no instance draws anything of: no gap, no background, no border', () => {

@@ -1,11 +1,11 @@
-import { createElement } from 'react';
-import { describe, expect, it } from 'vitest';
+import { act, createElement } from 'react';
+import { describe, expect, it, vi } from 'vitest';
 import { ComponentTab } from '../extension/webview/ComponentTab';
 import { PrimitivesTab } from '../extension/webview/PrimitivesTab';
 import { readTab } from '../extension/webview/tab';
-import { PREVIEW_HEIGHT, previewAddress } from '../src/shared/catalog';
+import { PREVIEW_HEIGHT, PREVIEW_TRY, previewAddress } from '../src/shared/catalog';
 import { SAMPLE_CATALOG } from './extensionSamples';
-import { answer, button, calls, mount, press, say, sent } from './webviewHarness';
+import { answer, button, calls, mount, press, say, sent, type } from './webviewHarness';
 
 /**
  * The design system's tabs in the editor (ELECTRON_MIGRATION_PLAN 6.1): a component's, its stories live and what it is
@@ -124,103 +124,127 @@ describe('a component’s tab', () => {
 
 	/** What the analysis of FSButton found: the tokens it draws with and how often, the values it sets itself, and what axe found. */
 	const STORY = (name: string) => `src/components/${name}/${name}.stories.tsx`;
-	const analysis = (over: Record<string, unknown> = {}) => ({
-		state: 'ready',
-		uses: [
-			{ path: 'palette.light.primary.main', uses: 3 },
-			{ path: 'palette.dark.primary.main', uses: 2 },
-			{ path: 'palette.light.primary.contrastText', uses: 1 },
-			{ path: 'radius', uses: 5 },
-			{ path: 'spacing', uses: 4 },
-		],
-		sharedWith: {
-			'palette.light.primary.main': [STORY('FSIconButton')],
-			radius: [STORY('FSIconButton'), STORY('FSSplitButton')],
-		},
-		notTokens: [
-			{ kind: 'color', value: 'rgb(1, 2, 3)', uses: 2 },
-			{ kind: 'spacing', value: '13px', uses: 1 },
-		],
-		derived: 1,
-		accessibility: {
-			violations: [
-				{
-					rule: 'color-contrast',
-					help: 'Text needs more contrast',
-					url: 'https://axe.example/cc',
-					criteria: ['1.4.3'],
-					impact: 'serious',
-					nodes: 2,
-					states: ['default'],
-				},
+	/** Each value's instances, by key, as the analysis gives them: one key per instance, named by its row and variant. */
+	const targeted = (values: {
+		state: string;
+		rows?: Record<string, { property: string; cells: { variant: string | null; instances: number }[] }[] | null>;
+	}) =>
+		values.rows === undefined
+			? values
+			: {
+					...values,
+					rows: Object.fromEntries(
+						Object.entries(values.rows).map(([mode, rows]) => [
+							mode,
+							rows?.map((row) => ({
+								...row,
+								cells: row.cells.map((c) => ({ ...c, targets: Array.from({ length: c.instances }, (_, i) => `${row.property}:${c.variant}:${i}`) })),
+							})) ?? null,
+						]),
+					),
+				};
+	const analysis = (over: Record<string, unknown> = {}) =>
+		withTargets({
+			state: 'ready',
+			uses: [
+				{ path: 'palette.light.primary.main', uses: 3 },
+				{ path: 'palette.dark.primary.main', uses: 2 },
+				{ path: 'palette.light.primary.contrastText', uses: 1 },
+				{ path: 'radius', uses: 5 },
+				{ path: 'spacing', uses: 4 },
 			],
-			incomplete: [
-				{
-					rule: 'aria-allowed-attr',
-					help: 'Check this attribute',
-					url: 'https://axe.example/aa',
-					criteria: ['4.1.2'],
-					impact: 'minor',
-					nodes: 1,
-					states: ['default'],
-				},
-			],
-			notAutomated: ['2.4.7'],
-			ran: { axe: '4.10', target: 'WCAG 2.2 AA', states: ['default'] },
-		},
-		values: {
-			state: 'read',
-			instances: 12,
-			unmarked: 0,
-			rows: {
-				light: [
-					{
-						property: 'height',
-						by: 'size',
-						cells: ['sm', 'md', 'lg', 'xl'].map((variant, i) => ({
-							variant,
-							value: ['28px', '36px', '48px', '56px'][i],
-							kind: 'own',
-							tokens: [],
-							instances: 3,
-						})),
-					},
-					{ property: 'radius', by: null, cells: [{ variant: null, value: '8px', kind: 'token', tokens: ['radius'], instances: 12 }] },
-					{
-						property: 'background',
-						by: 'variant',
-						cells: [
-							{ variant: 'primary', value: 'rgb(16, 128, 98)', kind: 'token', tokens: ['palette.light.primary.main'], instances: 6 },
-							{ variant: 'ghost', value: 'none', kind: 'own', tokens: [], instances: 6 },
-						],
-					},
-					{ property: 'fontSize', by: null, cells: [{ variant: null, value: '16px', kind: 'unchecked', tokens: [], instances: 12 }] },
-				],
-				// Dark: the same stories, a background that is the Dark token, and a height that does not change with the theme.
-				dark: [
-					{
-						property: 'height',
-						by: 'size',
-						cells: ['sm', 'md', 'lg', 'xl'].map((variant, i) => ({
-							variant,
-							value: ['28px', '36px', '48px', '56px'][i],
-							kind: 'own',
-							tokens: [],
-							instances: 3,
-						})),
-					},
-					{
-						property: 'background',
-						by: 'variant',
-						cells: [
-							{ variant: 'primary', value: 'rgb(43, 180, 138)', kind: 'token', tokens: ['palette.dark.primary.main'], instances: 6 },
-							{ variant: 'ghost', value: 'none', kind: 'own', tokens: [], instances: 6 },
-						],
-					},
-				],
+			sharedWith: {
+				'palette.light.primary.main': [STORY('FSIconButton')],
+				radius: [STORY('FSIconButton'), STORY('FSSplitButton')],
 			},
-		},
-		...over,
+			notTokens: [
+				{ kind: 'color', value: 'rgb(1, 2, 3)', uses: 2 },
+				{ kind: 'spacing', value: '13px', uses: 1 },
+			],
+			derived: 1,
+			accessibility: {
+				violations: [
+					{
+						rule: 'color-contrast',
+						help: 'Text needs more contrast',
+						url: 'https://axe.example/cc',
+						criteria: ['1.4.3'],
+						impact: 'serious',
+						nodes: 2,
+						states: ['default'],
+					},
+				],
+				incomplete: [
+					{
+						rule: 'aria-allowed-attr',
+						help: 'Check this attribute',
+						url: 'https://axe.example/aa',
+						criteria: ['4.1.2'],
+						impact: 'minor',
+						nodes: 1,
+						states: ['default'],
+					},
+				],
+				notAutomated: ['2.4.7'],
+				ran: { axe: '4.10', target: 'WCAG 2.2 AA', states: ['default'] },
+			},
+			values: {
+				state: 'read',
+				instances: 12,
+				unmarked: 0,
+				rows: {
+					light: [
+						{
+							property: 'height',
+							by: 'size',
+							cells: ['sm', 'md', 'lg', 'xl'].map((variant, i) => ({
+								variant,
+								value: ['28px', '36px', '48px', '56px'][i],
+								kind: 'own',
+								tokens: [],
+								instances: 3,
+							})),
+						},
+						{ property: 'radius', by: null, cells: [{ variant: null, value: '8px', kind: 'token', tokens: ['radius'], instances: 12 }] },
+						{
+							property: 'background',
+							by: 'variant',
+							cells: [
+								{ variant: 'primary', value: 'rgb(16, 128, 98)', kind: 'token', tokens: ['palette.light.primary.main'], instances: 6 },
+								{ variant: 'ghost', value: 'none', kind: 'own', tokens: [], instances: 6 },
+							],
+						},
+						{ property: 'fontSize', by: null, cells: [{ variant: null, value: '16px', kind: 'unchecked', tokens: [], instances: 12 }] },
+					],
+					// Dark: the same stories, a background that is the Dark token, and a height that does not change with the theme.
+					dark: [
+						{
+							property: 'height',
+							by: 'size',
+							cells: ['sm', 'md', 'lg', 'xl'].map((variant, i) => ({
+								variant,
+								value: ['28px', '36px', '48px', '56px'][i],
+								kind: 'own',
+								tokens: [],
+								instances: 3,
+							})),
+						},
+						{
+							property: 'background',
+							by: 'variant',
+							cells: [
+								{ variant: 'primary', value: 'rgb(43, 180, 138)', kind: 'token', tokens: ['palette.dark.primary.main'], instances: 6 },
+								{ variant: 'ghost', value: 'none', kind: 'own', tokens: [], instances: 6 },
+							],
+						},
+					],
+				},
+			},
+			...over,
+		});
+	const withTargets = (a: Record<string, unknown>): Record<string, unknown> => ({
+		...a,
+		values: targeted(a.values as Parameters<typeof targeted>[0]) as unknown,
 	});
 	const analysed = async (over: Record<string, unknown> = {}) => {
 		await open();
@@ -416,6 +440,91 @@ describe('a component’s tab', () => {
 		expect(details.textContent).toContain('Text needs more contrast');
 		expect(details.textContent).toContain('Check this attribute');
 		expect(details.textContent).toContain('WCAG 1.4.3');
+	});
+
+	describe('trying its values in its stories (Phase 2)', () => {
+		/** The tab with its stories drawn and its values read, and what its stories' frame is told. */
+		const tryingOpen = async (over: Record<string, unknown> = {}) => {
+			await analysed(over);
+			await answer('storyPreview', { state: 'ready', base: BASE });
+			const frame = document.querySelector('iframe.story-frame') as HTMLIFrameElement;
+			const told = vi.spyOn(frame.contentWindow as Window, 'postMessage');
+			const tried = () => told.mock.calls.map(([m]) => (m as Record<string, unknown>)[PREVIEW_TRY]).at(-1);
+			return { frame, told, tried };
+		};
+		const values = () => section('Values') as HTMLElement;
+		const change = (label: string) => values().querySelector(`[aria-label="Change ${label}"]`) as HTMLElement;
+		const editor = () => document.querySelector('[role="dialog"] [data-value-editor]') as HTMLElement | null;
+		const slider = (label: string) => document.querySelector(`[role="dialog"] input[type="range"][aria-label="${label}"]`) as HTMLInputElement;
+
+		it('opens a value of its own as a slider, tries it on the instances that draw it as it moves, and marks it tried', async () => {
+			const { tried } = await tryingOpen();
+			await press(change('Height sm'));
+			expect(document.querySelector('[role="dialog"] h2, [role="dialog"] [id]')?.textContent).toContain('Height · sm');
+			expect(editor()?.textContent).toContain('nothing is saved');
+			await type(slider('Height'), '30');
+			// Told at once, without letting go: nothing is built for a value of its own.
+			expect(tried()).toEqual([{ property: 'height', value: '30px', targets: ['height:sm:0', 'height:sm:1', 'height:sm:2'] }]);
+			const cell = values().querySelector('[data-value-row="height"] [data-tried]') as HTMLElement;
+			expect(cell.textContent).toBe('sm30px');
+			expect(cell.querySelector('[data-changed-mark]')).not.toBeNull();
+			expect(document.querySelector('[data-trying-values]')?.textContent).toContain('Trying 1 value of its own in its stories: nothing is saved.');
+		});
+
+		it('puts a value back with Reset, and every value with Reset all', async () => {
+			const { tried } = await tryingOpen();
+			await press(change('Height sm'));
+			await type(slider('Height'), '30');
+			await press(button('Reset'));
+			expect(tried()).toEqual([]);
+			expect(values().querySelector('[data-tried]')).toBeNull();
+			await type(slider('Height'), '31');
+			await press(document.querySelector('[role="dialog"] [aria-label="Close"]') as HTMLElement);
+			await press(change('Height md'));
+			await type(slider('Height'), '40');
+			expect(tried()).toHaveLength(2);
+			await press(document.querySelector('[role="dialog"] [aria-label="Close"]') as HTMLElement);
+			await press(button('Reset all'));
+			expect(tried()).toEqual([]);
+			expect(document.querySelector('[data-trying-values]')).toBeNull();
+		});
+
+		it('tells the frame again when it loads, so a new build of the stories has what is tried', async () => {
+			const { frame, told, tried } = await tryingOpen();
+			await press(change('Height sm'));
+			await type(slider('Height'), '30');
+			told.mockClear();
+			frame.dispatchEvent(new Event('load'));
+			expect(tried()).toEqual([{ property: 'height', value: '30px', targets: ['height:sm:0', 'height:sm:1', 'height:sm:2'] }]);
+		});
+
+		it('opens a value that is a token as the token’s own control, since it moves every component that draws with it', async () => {
+			const { tried } = await tryingOpen();
+			await press(change('Radius'));
+			expect(document.querySelector('[role="dialog"] [data-token-editor="radius"]')).not.toBeNull();
+			expect(editor()).toBeNull();
+			expect(tried() ?? []).toEqual([]);
+		});
+
+		it('gives each part of a value written with several its own slider, and a colour its picker and hex', async () => {
+			const rows = (analysis().values as { rows: { light: unknown[] } }).rows.light;
+			const padding = { property: 'padding', by: null, cells: [{ variant: null, value: '0px 10px', kind: 'own', tokens: [], instances: 12 }] };
+			const { tried } = await tryingOpen({ values: { state: 'read', instances: 12, unmarked: 0, rows: { light: [...rows, padding], dark: null } } });
+			await press(change('Padding'));
+			expect([...document.querySelectorAll('[role="dialog"] input[type="range"]')].map((r) => r.getAttribute('aria-label'))).toEqual([
+				'Top and bottom',
+				'Left and right',
+			]);
+			await type(slider('Left and right'), '12');
+			expect(tried()).toEqual([{ property: 'padding', value: '0px 12px', targets: Array.from({ length: 12 }, (_, i) => `padding:null:${i}`) }]);
+			await press(document.querySelector('[role="dialog"] [aria-label="Close"]') as HTMLElement);
+			await press(change('Background ghost'));
+			const hex = document.querySelector('[role="dialog"] input[aria-label="Hex"]') as HTMLInputElement;
+			expect(hex).not.toBeNull();
+			await type(hex, '#123456');
+			await act(async () => void hex.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })));
+			expect((tried() as { property: string; value: string }[]).find((t) => t.property === 'background')?.value).toBe('#123456');
+		});
 	});
 
 	it('has no findings to open when axe found nothing', async () => {

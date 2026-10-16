@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { DesignToken } from '../src/shared/contract';
-import { labelOf, nameOf, paletteFamilies, semanticTable, tokenTitle } from '../src/shared/tokens';
+import { hexOf, labelOf, lengthSpan, nameOf, paletteFamilies, semanticTable, tokenTitle } from '../src/shared/tokens';
 
 /**
  * Which colors are the design system's palette and which are semantic, and the semantic ones lined up by theme: worked out
@@ -129,6 +129,24 @@ describe('a token’s label', () => {
 		expect(labelOf(color('palette.light.primary.main', 'Light', 'primary', 'main', '#000000'))).toBe('Light primary main');
 		expect(labelOf(color('shape.base', 'Radius', 'radius', 'base', '8px'))).toBe('Radius base');
 		expect(labelOf(color('radius', 'Radius', 'radius', 'radius', '8px'))).toBe('Radius');
+	});
+});
+
+describe('a value as its control edits it', () => {
+	it('reads a color as the browser computes it as its hex, with an opacity less than whole as two more digits', () => {
+		expect(hexOf('rgb(16, 128, 98)')).toBe('#108062');
+		expect(hexOf('rgba(0, 0, 0, 0.5)')).toBe('#00000080');
+		expect(hexOf('rgba(16, 128, 98, 1)')).toBe('#108062');
+		expect(hexOf('#abcdef')).toBe('#ABCDEF');
+		expect(hexOf('none')).toBeNull();
+		expect(hexOf('oklch(0.5 0.1 120)')).toBeNull();
+	});
+
+	it('gives a length a slider from nothing to twice what it was, a useful span at least and never short of what it is now, in whole pixels or eighths of a rem', () => {
+		expect(lengthSpan('28px', '28px')).toEqual({ number: 28, unit: 'px', max: 56, step: 1 });
+		expect(lengthSpan('4px', '8px')).toEqual({ number: 4, unit: 'px', max: 32, step: 1 });
+		expect(lengthSpan('40px', '8px')).toEqual({ number: 40, unit: 'px', max: 40, step: 1 });
+		expect(lengthSpan('0.5rem', '0.5rem')).toEqual({ number: 0.5, unit: 'rem', max: 2, step: 0.125 });
 	});
 });
 

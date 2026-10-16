@@ -1,12 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import type { DesignToken } from '../../src/shared/contract';
-import { lengthRange, nameOf, pairContrast, pointsAt, reachOf, roleOf, scaleFamilies, tokenTitle } from '../../src/shared/tokens';
+import { nameOf, pairContrast, pointsAt, reachOf, roleOf, scaleFamilies, tokenTitle } from '../../src/shared/tokens';
 import { useTokenChanges } from '../../src/renderer/tokenChanges';
-import { useColorField } from '../../src/renderer/useColorField';
 import { Button } from './ui/Button';
 import { Dialog, DialogButtons } from './ui/Dialog';
 import { Field, Select } from './ui/Field';
 import { Swatch } from './ui/Swatch';
+import { ColorField, LengthField } from './ValueFields';
 
 /**
  * Changing a token (6.2, the app's T3, rebuilt in VS Code's language): what opens from a token's row, in a dialog over the
@@ -15,52 +15,6 @@ import { Swatch } from './ui/Swatch';
  * contrast it leaves and what else it moves. Each is applied when it is let go of (the picker closed, the slider
  * released, the hex entered): building again takes about a second.
  */
-
-/** A color picker and its hex: the picker applies when it is closed, the hex when Enter is pressed or it is left. An opacity is kept. */
-const ColorField = ({ value, onCommit }: { value: string; onCommit: (hex: string) => void }) => {
-	const { picker, hex, setHex, commit } = useColorField(value, onCommit);
-	return (
-		<div className="color-field">
-			<input {...picker} type="color" aria-label="Pick a color" className="color-picker" />
-			<input
-				className="input token-hex"
-				aria-label="Hex"
-				spellCheck={false}
-				value={hex}
-				onChange={(e) => setHex(e.target.value)}
-				onBlur={commit}
-				onKeyDown={(e) => e.key === 'Enter' && commit()}
-			/>
-		</div>
-	);
-};
-
-/** A length as a slider and its number, applied when the slider is let go of: from nothing to twice what the design system has. */
-const DimensionField = ({ token, value, onCommit }: { token: DesignToken; value: string; onCommit: (length: string) => void }) => {
-	const { number, unit, max, step } = lengthRange(token, value);
-	const [n, setN] = useState(number);
-	useEffect(() => setN(number), [number]);
-	const commit = () => n !== number && onCommit(`${n}${unit}`);
-	return (
-		<div className="dimension-field">
-			<input
-				type="range"
-				aria-label={nameOf(token)}
-				min={0}
-				max={max}
-				step={step}
-				value={n}
-				onChange={(e) => setN(Number(e.target.value))}
-				onPointerUp={commit}
-				onKeyUp={commit}
-			/>
-			<span className="token-value">
-				{n}
-				{unit}
-			</span>
-		</div>
-	);
-};
 
 /**
  * The scale a role is pointed within: the families its group's palette has (a choice when there are several), and the
@@ -150,7 +104,7 @@ export const TokenEditor = ({ token, onClose }: { token: DesignToken; onClose: (
 					</code>
 				</p>
 				{now.kind === 'dimension' ? (
-					<DimensionField token={asRead} value={now.value} onCommit={(value) => change(now, { value })} />
+					<LengthField label={nameOf(asRead)} value={now.value} was={asRead.value} onCommit={(value) => change(now, { value })} />
 				) : target ? (
 					<>
 						<p data-reference>
