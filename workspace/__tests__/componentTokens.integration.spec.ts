@@ -144,6 +144,8 @@ describe('the index', () => {
 	let clone: string;
 	let asked: Parameters<Measure>[0][];
 	let builds: TokenEdit[][];
+	/** The builds made to see what a change reaches, by their change. */
+	let reaches: TokenEdit[][];
 	const LIB = {
 		'src/colors/tones/brand.ts': "export const brand = {\n  50: '#108062',\n};\n",
 		'src/colors/theme/light.ts':
@@ -164,6 +166,8 @@ describe('the index', () => {
 			run.files.map((f) => {
 				const b = f.includes('B.stories');
 				if (run.base.includes('plain')) return { ...drawn({ 'rgb(107, 114, 128)': 1 }), ...(b ? instanceOfB('rgb(16, 128, 98)') : {}) };
+				// With a change to see what it reaches: B's background is the change's red; A draws as it is.
+				if (run.base.includes('reach')) return { ...drawn({ 'rgb(107, 114, 128)': 1 }), ...(b ? instanceOfB('rgb(200, 0, 0)') : {}) };
 				return b ? { ...drawn({ 'rgb(0, 2, 90)': 1, 'rgb(107, 114, 128)': 1 }), ...instanceOfB('rgb(0, 2, 90)') } : drawn({ 'rgb(0, 1, 90)': 3 });
 			}),
 		);
@@ -171,6 +175,7 @@ describe('the index', () => {
 	const previews = {
 		preview: async () => ({ state: 'ready' as const, base: 'http://127.0.0.1:1/plain/' }),
 		tagged: async (edits: TokenEdit[]) => (builds.push(edits), { state: 'ready' as const, base: 'http://127.0.0.1:1/tagged/' }),
+		builtWith: async (edits: TokenEdit[]) => (reaches.push(edits), { state: 'ready' as const, base: `http://127.0.0.1:1/reach-${reaches.length}/` }),
 	};
 	const system = () => ({ id: 'acme/ui', name: 'Acme', repository: 'acme/ui', root: clone, folder: '', branch: 'develop' });
 	/** The pictures kept, as the pass gave them: a stand-in for the store, which has tests of its own. */
@@ -207,9 +212,98 @@ describe('the index', () => {
 		g(home, 'clone', '-q', join(home, 'remote.git'), clone);
 		asked = [];
 		builds = [];
+		reaches = [];
 		kept = [];
 	});
 	afterEach(() => rmSync(home, { recursive: true, force: true }));
+
+	describe('what a change reaches (Phase 3)', () => {
+		const RED = [{ path: 'tone.brand.50', value: '#C80000' }];
+		const reached = async (i: ComponentTokens, edits: TokenEdit[]) => {
+			for (let n = 0; n < 100; n++) {
+				const r = await i.reach(edits);
+				if (r.state !== 'building') return r;
+				await new Promise((go) => setTimeout(go, 10));
+			}
+			throw new Error('never reached');
+		};
+
+		it('is none with no change, and building until every story is drawn as the library has it', async () => {
+			const i = index();
+			expect(await i.reach([])).toEqual({ state: 'none' });
+			expect(await i.reach(RED)).toEqual({ state: 'building' });
+			expect(reaches).toEqual([]);
+		});
+
+		it('draws every story with the change, light and dark, apart from the frame’s, and says what moved and what did not', async () => {
+			const i = index();
+			await i.warm();
+			const r = await reached(i, RED);
+			expect(reaches).toEqual([RED]);
+			// Asked of the build with the change, in both modes, for every listed component.
+			const files = ['src/components/A/A.stories.tsx', 'src/components/B/B.stories.tsx'];
+			expect(asked.at(-1)).toEqual([
+				{ base: 'http://127.0.0.1:1/reach-1/', mode: 'light', files },
+				{ base: 'http://127.0.0.1:1/reach-1/', mode: 'dark', files },
+			]);
+			expect(r).toEqual({
+				state: 'ready',
+				moved: [
+					{
+						file: 'src/components/B/B.stories.tsx',
+						changes: [
+							{ mode: 'light', property: 'background', variant: null, from: 'rgb(16, 128, 98)', to: 'rgb(200, 0, 0)', instances: 1 },
+							{ mode: 'dark', property: 'background', variant: null, from: 'rgb(16, 128, 98)', to: 'rgb(200, 0, 0)', instances: 1 },
+						],
+						inside: false,
+					},
+				],
+				unchanged: 1,
+				notDrawn: [],
+			});
+			// Kept for that change: asked again, nothing is built or drawn again.
+			const drawnSoFar = asked.length;
+			expect(await i.reach(RED)).toEqual(r);
+			expect([reaches.length, asked.length]).toEqual([1, drawnSoFar]);
+		});
+
+		it('draws the newest change alone when several are asked for while one is drawn', async () => {
+			// The first change's build is held until the others have been asked for, as a slow build would be.
+			let release: () => void = () => undefined;
+			const held = new Promise<void>((go) => (release = go));
+			const i = index({
+				previews: {
+					...previews,
+					builtWith: async (edits: TokenEdit[]) => {
+						if (reaches.length === 0) await held;
+						return previews.builtWith(edits);
+					},
+				},
+			});
+			await i.warm();
+			const changes = ['#110000', '#220000', '#330000'].map((value) => [{ path: 'tone.brand.50', value }]);
+			for (const c of changes) await i.reach(c);
+			release();
+			await reached(i, changes[2] as TokenEdit[]);
+			// The first, already started, and then the newest: never the one in between.
+			expect(reaches).toEqual([changes[0], changes[2]]);
+		});
+
+		it('says a change that would not build, and builds it again on the next ask', async () => {
+			let fail = true;
+			const i = index({
+				previews: {
+					...previews,
+					builtWith: async (edits: TokenEdit[]) =>
+						fail ? { state: 'failed' as const, error: 'the change did not build' } : previews.builtWith(edits),
+				},
+			});
+			await i.warm();
+			expect(await reached(i, RED)).toEqual({ state: 'failed', error: 'the change did not build' });
+			fail = false;
+			expect((await reached(i, RED)).state).toBe('ready');
+		});
+	});
 
 	it('is building on the first ask, and draws every story four times: tagged and plain, each in light and dark', async () => {
 		const i = index();

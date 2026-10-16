@@ -14,6 +14,7 @@
  */
 import type {
 	AccessibilityResult,
+	ChangeReach,
 	ComponentTokens as Answer,
 	ComponentValues,
 	ComponentPictures as Pictures,
@@ -32,6 +33,8 @@ import { libraryCommit, libraryTarget, listedComponents, systemReads } from './d
 import { resultOf } from './accessibilityCheck';
 import { readTokens } from './designTokens';
 import { readValues } from './componentValues';
+import { type Drawings, reachOf } from './changeReach';
+import { errorText } from '../../shared/result';
 import { type Tags, asTag, inMode, isNothing, sizeToken, tagsFor } from './tokenTags';
 
 /**
@@ -139,6 +142,8 @@ export const decode = (tagged: Partial<Record<Mode, Drawn>>, plain: Drawn | unde
 export interface TaggedPreviews {
 	preview(): Promise<StoryPreview>;
 	tagged(edits: TokenEdit[]): Promise<StoryPreview>;
+	/** The commit's previews built with a change to see what it reaches, apart from the one the person's frame shows (Phase 3). */
+	builtWith(edits: TokenEdit[], purpose: 'reach'): Promise<StoryPreview>;
 }
 
 export interface ComponentTokensDeps {
@@ -153,7 +158,14 @@ export interface ComponentTokensDeps {
  * Each story file's tokens, or null for one that did not draw, of which nothing can be said; its drawn values, from the
  * same drawings (Phase 1 of adjusting a component); and what axe found in each that drew, at the design system's target (T7).
  */
-type Built = { files: Map<string, FileUse | null>; values: Map<string, ComponentValues>; accessibility: Map<string, AccessibilityResult> };
+type Built = {
+	files: Map<string, FileUse | null>;
+	values: Map<string, ComponentValues>;
+	accessibility: Map<string, AccessibilityResult>;
+	/** The components, in the list's order, and what each drew as the library has it, light and dark: what a change is held against. */
+	order: string[];
+	drawn: Map<string, Drawings>;
+};
 type Index = Built | { error: string };
 
 /** The index for one commit: `done` once it is built or has failed, and `finished` for whoever waits for that. */
@@ -166,6 +178,10 @@ interface Building {
 /** The index of what every component draws with, for the commit the library's branch is at. */
 export class ComponentTokens {
 	private index: Building | null = null;
+	/** What the newest change asked for reaches, once drawn; the one waiting to be drawn; and whether one is being drawn. */
+	private reached: { key: string; answer: ChangeReach } | null = null;
+	private reachWanted: { key: string; edits: TokenEdit[]; index: Built } | null = null;
+	private reaching = false;
 
 	constructor(private readonly deps: ComponentTokensDeps) {}
 
@@ -194,6 +210,57 @@ export class ComponentTokens {
 			// A file whose stories did not finish drawing as the library has them has no values to say.
 			values: done.values.get(file) ?? { state: 'not-drawn' },
 		};
+	}
+
+	/**
+	 * What a token change being tried reaches (Phase 3 of adjusting a component): every component drawn on a build with it,
+	 * light and dark, against itself as the library has it (`reachOf`). Drawn in the background for the newest change asked
+	 * for alone, and kept for that change on this commit: `building` until then, as the index is. None for no change. One that
+	 * did not work is said once, and drawn again on the next ask.
+	 */
+	async reach(edits: TokenEdit[]): Promise<ChangeReach> {
+		if (edits.length === 0) return { state: 'none' };
+		const started = await this.started();
+		if ('error' in started) return { state: 'failed', error: started.error };
+		const done = started.index.done;
+		if (done === null) return { state: 'building' };
+		if ('error' in done) return { state: 'failed', error: done.error };
+		const key = `${started.index.key}\u0000${JSON.stringify(edits)}`;
+		if (this.reached?.key === key) {
+			const { answer } = this.reached;
+			if (answer.state === 'failed') this.reached = null;
+			return answer;
+		}
+		this.reachWanted = { key, edits, index: done };
+		if (!this.reaching) void this.reachNewest();
+		return { state: 'building' };
+	}
+
+	/** The newest change asked for, drawn until none newer is waiting. */
+	private async reachNewest(): Promise<void> {
+		this.reaching = true;
+		try {
+			while (this.reachWanted !== null && this.reachWanted.key !== this.reached?.key) {
+				const { key, edits, index } = this.reachWanted;
+				const answer = await this.reachFor(index, edits).catch((err: unknown): ChangeReach => ({ state: 'failed', error: errorText(err) }));
+				this.reached = { key, answer };
+			}
+		} finally {
+			this.reaching = false;
+		}
+	}
+
+	private async reachFor(index: Built, edits: TokenEdit[]): Promise<ChangeReach> {
+		const built = await this.deps.previews.builtWith(edits, 'reach');
+		if (built.state !== 'ready')
+			return { state: 'failed', error: built.state === 'failed' ? built.error : 'The previews could not be built with the change.' };
+		const files = index.order;
+		const [light, dark] = await this.deps.measure([
+			{ base: built.base, mode: 'light', files },
+			{ base: built.base, mode: 'dark', files },
+		]);
+		const after = new Map(files.map((f, i) => [f, { light: light?.[i] ?? null, dark: dark?.[i] ?? null }]));
+		return reachOf(files, index.drawn, after, index.values);
 	}
 
 	/**
@@ -313,6 +380,9 @@ export class ComponentTokens {
 				),
 			);
 		});
-		return { files: uses, values, accessibility };
+		// What each drew as the library has it, without its picture or its check, for what a change reaches (Phase 3).
+		const kept = (d: Drawn | null | undefined): Drawn | null => (d ? { ...d, picture: undefined, accessibility: undefined } : null);
+		const drawn = new Map(files.map((f, i) => [f, { light: kept(asIs?.[i]), dark: kept(asIsDarkDrawn?.[i]) }]));
+		return { files: uses, values, accessibility, order: files, drawn };
 	}
 }

@@ -342,4 +342,49 @@ describeWith(realMissing, 'against the real library on origin/develop', () => {
 		},
 		600_000,
 	);
+
+	it.skipIf(findChrome() === null)(
+		'says what the shared radius moves: FSButton by its radius, FSTextField inside, and not FSIconButton, whose 8px is its own',
+		async () => {
+			const repository = 'flocksafety/flock-react-component-lib';
+			const system = { id: repository, name: 'FUI', repository, root: REAL_LIBRARY, folder: '', branch: 'develop' };
+			const pages = new PrototypeServer();
+			const real = chromeHeadless();
+			try {
+				const previews = new StoryPreviews({ system: () => system, folder: mkdtempSync(join(tmpdir(), 'dsnr-reach-')), server: pages });
+				const tokens = new ComponentTokens({
+					system: () => system,
+					previews,
+					measure: real.measure,
+					pictures: { keep: () => {}, of: async () => ({}) },
+				});
+				await tokens.warm();
+				const file = (name: string) => `src/components/${name}/${name}.stories.tsx`;
+				const button = await tokens.of(file('FSButton'));
+				if (button.state !== 'ready' || button.values.state !== 'read') throw new Error(JSON.stringify(button));
+				// The radius FSButton draws with, as its Values name it.
+				const path = button.values.rows.light?.find((r) => r.property === 'radius')?.cells[0]?.tokens[0];
+				if (path === undefined) throw new Error('FSButton draws no radius token');
+				const edits = [{ path, value: '12px' }];
+				let reach = await tokens.reach(edits);
+				for (let i = 0; reach.state === 'building' && i < 900; i++) {
+					await new Promise((r) => setTimeout(r, 1000));
+					reach = await tokens.reach(edits);
+				}
+				if (reach.state !== 'ready') throw new Error(JSON.stringify(reach));
+				const moved = new Map(reach.moved.map((m) => [m.file, m]));
+				expect(moved.get(file('FSButton'))?.changes).toContainEqual(
+					expect.objectContaining({ mode: 'light', property: 'radius', from: '8px', to: '12px' }),
+				);
+				// Its field's outline is drawn by a part inside it, which its values do not read: moved, inside.
+				expect(moved.get(file('FSTextField'))?.inside).toBe(true);
+				expect(moved.has(file('FSIconButton'))).toBe(false);
+				expect(reach.unchanged).toBeGreaterThan(0);
+			} finally {
+				await real.close();
+				pages.close();
+			}
+		},
+		1_200_000,
+	);
 });

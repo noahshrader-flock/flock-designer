@@ -126,6 +126,36 @@ export interface ValueCell {
 }
 
 /**
+ * What a token change being tried does to one component (Phase 3 of adjusting a component): each value of its instances it
+ * changes, in a mode, said as the Values are ("Radius · sm 8px → 12px", with how many instances), and whether its stories
+ * draw differently where its values do not reach (`inside`: an inner part, such as an input's outline).
+ */
+export interface ValueChange {
+	mode: Theme;
+	property: ValueProperty;
+	variant: string | null;
+	from: string;
+	to: string;
+	instances: number;
+}
+export interface ComponentReach {
+	file: string;
+	changes: ValueChange[];
+	inside: boolean;
+}
+
+/**
+ * What a token change being tried reaches (Phase 3), drawn on a build with the change, every story, light and dark, each
+ * component against itself as the library has it: those that move, how many do not (in the stories drawn, never as a claim
+ * about every use), and those that did not draw, of which nothing can be said. None while no token change is tried.
+ */
+export type ChangeReach =
+	| { state: 'none' }
+	| { state: 'building' }
+	| { state: 'failed'; error: string }
+	| { state: 'ready'; moved: ComponentReach[]; unchanged: number; notDrawn: string[] };
+
+/**
  * A value tried on a component's instances in its stories (Phase 2 of adjusting a component): a property, the value as CSS
  * writes it, and the instances it is set on (a cell's `targets`). Tried in the preview alone: nothing is written or kept.
  */

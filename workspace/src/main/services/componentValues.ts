@@ -31,7 +31,7 @@ const UNTAGGED: ReadonlySet<ValueProperty> = new Set(['fontSize']);
 type Read = { shown: string; kind: ValueKind; tokens: string[] };
 
 /** A value as it is said: written short (`shortValue`), and a colour that draws nothing as none. */
-const shown = (property: ValueProperty, value: string): string =>
+export const shown = (property: ValueProperty, value: string): string =>
 	COLOR_VALUES.has(property) ? (isNothing(value) ? NO_COLOR : value) : shortValue(property, value);
 
 /** What reads values in one mode: the tags, and the tokens, whose twins in dark a tag given to a shared role names. */

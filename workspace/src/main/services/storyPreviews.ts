@@ -429,6 +429,9 @@ const serveKey = (build: string): string => `previews-${build.slice(0, 26)}`;
  */
 const RECIPE = createHash('sha256').update(`${PAGE}${previewEntry.toString()}${libraryBuild.toString()}`).digest('hex').slice(0, 8);
 
+/** What a build of the commit's previews with a change is for: T6's tags, or what a change being tried reaches. */
+export type BuiltFor = 'tagged' | 'reach';
+
 export interface StoryPreviewsDeps {
 	/** The design system shown, or null when none is connected or its clone is gone. */
 	system: () => ConnectedDesignSystem | null;
@@ -477,8 +480,12 @@ export class StoryPreviews {
 	/** The newest change asked for, and the building of it, while one is building. */
 	private wanted: TokenEdit[] = [];
 	private trying = singleFlight<'newest', StoryPreview>();
-	/** The address the commit's tagged build (T6) was last served at. */
-	private taggedServed: string | null = null;
+	/**
+	 * The address each of the commit's builds with a change was last served at, by what it is for: the tags T6 draws with,
+	 * and what a change being tried reaches (Phase 3 of adjusting a component). How many each has been built, so each build
+	 * is at an address of its own and a page never reads an older one from its cache.
+	 */
+	private builtServed = new Map<BuiltFor, { key: string; builds: number }>();
 
 	constructor(private readonly deps: StoryPreviewsDeps) {}
 
@@ -524,9 +531,10 @@ export class StoryPreviews {
 			}
 			// Only the build for this commit is kept, and served; a change tried on another is closed with it.
 			if (this.trial !== null && this.trial.dir !== dir) await this.endTrial();
-			if (this.taggedServed !== null && this.taggedServed !== `tagged-${basename(dir).slice(0, 12)}`) {
-				this.deps.server.stopServing(this.taggedServed);
-				this.taggedServed = null;
+			for (const [purpose, served] of this.builtServed) {
+				if (served.key.endsWith(basename(dir).slice(0, 12))) continue;
+				this.deps.server.stopServing(served.key);
+				this.builtServed.delete(purpose);
 			}
 			for (const old of readdirSync(this.deps.folder)) {
 				if (old === basename(dir)) continue;
@@ -573,26 +581,34 @@ export class StoryPreviews {
 		}
 	}
 
+	/** The commit's previews built once with T6's tags (`builtWith`). */
+	tagged(edits: TokenEdit[]): Promise<StoryPreview> {
+		return this.builtWith(edits, 'tagged');
+	}
+
 	/**
-	 * The commit's previews built once with `edits` (T6's tags), at an address of their own: beside the change being tried,
-	 * which is the person's, never in its place. Only the last is served.
+	 * The commit's previews built once with `edits`, for `purpose` (T6's tags; what a change being tried reaches), at an
+	 * address of their own: beside the change being tried in the frame, which is the person's, never in its place, so a frame
+	 * showing it is never pulled from under it. Only the last of each is served.
 	 */
-	async tagged(edits: TokenEdit[]): Promise<StoryPreview> {
+	async builtWith(edits: TokenEdit[], purpose: BuiltFor): Promise<StoryPreview> {
 		const base = await this.base();
 		const at = this.current;
 		if (base.state !== 'ready' || at === null) return base;
 		try {
 			const files = await editedFiles(await at.reads(), edits);
-			const builder = await this.builderFor(at, 'tagged');
+			const builder = await this.builderFor(at, purpose);
 			try {
 				await builder.build(files);
 			} finally {
 				await builder.dispose();
 			}
-			const key = `tagged-${basename(at.dir).slice(0, 12)}`;
-			if (this.taggedServed !== null && this.taggedServed !== key) this.deps.server.stopServing(this.taggedServed);
-			this.taggedServed = key;
-			return { state: 'ready', base: await this.deps.server.serveFolder(key, join(at.dir, 'tagged'), CODE) };
+			const last = this.builtServed.get(purpose);
+			const builds = (last?.builds ?? 0) + 1;
+			const key = `${purpose}-${builds}-${basename(at.dir).slice(0, 12)}`;
+			if (last) this.deps.server.stopServing(last.key);
+			this.builtServed.set(purpose, { key, builds });
+			return { state: 'ready', base: await this.deps.server.serveFolder(key, join(at.dir, purpose), CODE) };
 		} catch (err) {
 			return { state: 'failed', error: errorText(err) };
 		}
