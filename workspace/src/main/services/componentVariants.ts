@@ -1,8 +1,8 @@
 /**
  * A component drawn in every case its props declare (Phase 5 of adjusting a component, DESIGN_SYSTEM_PLAN.md): its stories show
  * the cases someone wrote; its props are its own list. Its declared props are read by the TypeScript compiler from the
- * commit's copy (`componentProps.ts`), its first story drawn with each value of each, light and dark, as it is and with the
- * tags, and read as its values are (`readValues`), so a size its stories never show is listed, drawn, and said to be a
+ * commit's copy (`componentProps.ts`), one of its stories drawn with each value of each, in light (as the tab shows them), as
+ * it is and with the tags, and read as its values are (`readValues`), so a size its stories never show is listed, drawn, and said to be a
  * token's or its own. Worked out in the background when its tab asks, the newest asked alone, and kept for the commit.
  */
 import type { ComponentVariants as Answer, DeclaredProp } from '../../shared/contract';
@@ -55,7 +55,7 @@ export class ComponentVariants {
 	}
 
 	/** Its declared props, from the program for the commit; null when its story file names no component they can be read for. */
-	async declared(index: DrawnIndex, file: string): Promise<ComponentProps | null> {
+	private async declared(index: DrawnIndex, file: string): Promise<ComponentProps | null> {
 		const libs = this.deps.typeLibs;
 		if (libs === null) throw new Error("The compiler's type libraries are not with the app, so its props cannot be read.");
 		const copy = await this.deps.previews.copy();
@@ -104,23 +104,14 @@ export class ComponentVariants {
 		if (props.length === 0) return { state: 'ready', props, fixed: [], unvaried, values: { state: 'none-drawn' } };
 		const plain = await this.deps.previews.preview();
 		if (plain.state !== 'ready') throw new Error('The previews could not be built, so its variants could not be drawn.');
-		// As it is and with the tags, light and dark, as its stories are read (T6, Phase 1).
+		// As it is and with the tags, as its stories are read (T6, Phase 1); in light, which is what the tab shows of them.
 		const { tags, tokens, tagged } = index.built.reading;
 		const vary = { stories: await this.storyTaking(plain.base, file, props, await this.storiesFor(index, file)), props };
-		const run = (base: string, mode: 'light' | 'dark') => ({ base, mode, files: [file], vary });
-		const [plainLight, plainDark, taggedLight, taggedDark] = await this.deps.measure([
-			run(plain.base, 'light'),
-			run(plain.base, 'dark'),
-			...(tagged === null ? [] : [run(tagged, 'light'), run(tagged, 'dark')]),
-		]);
-		const [light, dark] = [plainLight?.[0], plainDark?.[0]];
+		const run = (base: string) => ({ base, mode: 'light' as const, files: [file], vary });
+		const [asIs, withTags] = await this.deps.measure([run(plain.base), ...(tagged === null ? [] : [run(tagged)])]);
+		const light = asIs?.[0];
 		if (!light) throw new Error('Its story did not draw with its props changed, so its variants could not be read.');
-		const values = readValues(
-			{ plain: light, tagged: taggedLight?.[0] ?? null },
-			dark ? { plain: dark, tagged: taggedDark?.[0] ?? null } : undefined,
-			tags,
-			tokens,
-		);
+		const values = readValues({ plain: light, tagged: withTags?.[0] ?? null }, undefined, tags, tokens);
 		return { state: 'ready', props, fixed: fixedIn(light, props), unvaried, values };
 	}
 }

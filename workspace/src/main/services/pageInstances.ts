@@ -7,6 +7,13 @@ import { PREVIEW_COMPONENT, PREVIEW_TRY } from '../../shared/catalog';
 import { CSS_OF } from '../../shared/valueParts';
 
 /**
+ * The props an instance is never told apart by, so never read off it: its content, handlers, styling, identity, and what it
+ * is for assistive technology. Shared with what reads them back (Phase 5), so a prop not read is never taken as not given.
+ */
+export const NOT_VARIANT =
+	/^(children|className|style|sx|css|id|key|ref|role|tabIndex|href|src|alt|title|name|value|defaultValue|placeholder|label|as|component|slot|form|htmlFor|type)$|^(on[A-Z]|aria-|data-)/;
+
+/**
  * The instances of `component` the page's stories draw, in the page's order: found in what React drew by identity, since a
  * build's names are minified. Each instance's top element is the first element on the page inside it that takes up room,
  * found going up from each element, never down, since an element may be held by either of the two copies React keeps of
@@ -19,13 +26,6 @@ import { CSS_OF } from '../../shared/valueParts';
  * so is counted apart (`wrapping`), never taken for the content. `reached` is whether any element was known to React's
  * record of what it drew (its `__reactFiber` key on each element): a React that keeps it another way finds nothing.
  */
-/**
- * The props an instance is never told apart by, so never read off it: its content, handlers, styling, identity, and what it
- * is for assistive technology. Shared with what reads them back (Phase 5), so a prop not read is never taken as not given.
- */
-export const NOT_VARIANT =
-	/^(children|className|style|sx|css|id|key|ref|role|tabIndex|href|src|alt|title|name|value|defaultValue|placeholder|label|as|component|slot|form|htmlFor|type)$|^(on[A-Z]|aria-|data-)/;
-
 export const FIND_INSTANCES = `(component) => {
 	const fiberOf = (el) => { const k = Object.keys(el).find((x) => x.startsWith('__reactFiber$')); return k ? el[k] : null; };
 	const isIt = (f) => f.type === component || f.elementType === component;

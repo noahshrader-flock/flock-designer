@@ -83,16 +83,16 @@ export interface Instance {
 
 export type Mode = 'light' | 'dark';
 
-/**
- * Draws story files from a build of the previews (its `base`), in a mode, and says what each drew, in the order given;
- * null for one that would not draw. Several runs at once.
- */
 /** A story drawn once with each value of each of `props` (Phase 5): the first of `stories`, else the file's first drawn from its args. */
 export interface Vary {
 	stories: string[];
 	props: DeclaredProp[];
 }
 
+/**
+ * Draws story files from a build of the previews (its `base`), in a mode, and says what each drew, in the order given;
+ * null for one that would not draw. Several runs at once.
+ */
 export type Measure = (
 	runs: {
 		base: string;
