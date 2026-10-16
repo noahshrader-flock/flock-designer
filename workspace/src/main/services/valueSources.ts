@@ -17,6 +17,8 @@
  * out: `${n}px`); written in more places than are tried one by one; written in places that each draw it; written once for
  * parts tried apart; or one that does not read back as asked.
  */
+import { errorText } from '../../shared/result';
+import { PX_PER_REM } from '../../shared/tokens';
 import type { ChangeReach, StoryPreview, TriedValue, ValuePlace, ValueProperty, ValueSource, ValueSources as Answer } from '../../shared/contract';
 import { COLOR_VALUES, VALUE_PROPERTIES, triedId } from '../../shared/contract';
 import { asRecord } from '../../shared/json';
@@ -81,7 +83,7 @@ type Located =
 	{ state: 'found'; places: { place: Place; moves: Set<string> }[] } | { state: 'refused'; why: string } | { state: 'failed'; error: string };
 
 /** How a value is written: in the places it is found written in, or as the agent wrote it (Phase 4.5, 4.6). */
-type Write =
+export type Write =
 	{ by: 'place'; writes: { place: Place; literal: string }[] } | { by: 'agent'; files: Map<string, string>; places: ValuePlace[]; said: string };
 
 /** An answer, with the files it writes kept here for Save: never sent. */
@@ -90,6 +92,24 @@ type Worked = Answer & { files?: Map<string, string> };
 /** One instance's part, by the instance's key and the part's place in the value: what a place is found to move. */
 const moved = (key: string, part: number): string => `${key}\u0000${part}`;
 const partOf = (pair: string): number => Number(pair.slice(pair.lastIndexOf('\u0000') + 1));
+
+/**
+ * The values found written in places that write a place another writes otherwise, each with the first such place, in the
+ * order tried: the second is refused, the whole of it, so a value is written in all its places or in none, and what a
+ * refused one would have written holds nothing up.
+ */
+export const placeClashes = (writes: ReadonlyMap<string, Write>): Map<string, Place> => {
+	const byPlace = new Map<string, string>();
+	const at = (place: Place) => `${place.file}:${place.at}`;
+	const clashes = new Map<string, Place>();
+	for (const [id, w] of writes) {
+		if (w.by !== 'place') continue;
+		const clash = w.writes.find(({ place, literal }) => byPlace.has(at(place)) && byPlace.get(at(place)) !== literal);
+		if (clash) clashes.set(id, clash.place);
+		else for (const { place, literal } of w.writes) byPlace.set(at(place), literal);
+	}
+	return clashes;
+};
 
 export class ValueSources {
 	/** Each value's places, once found, by the story file, the property, its instances and the part drawn, for the commit drawn (`locatedFor`). */
@@ -110,7 +130,8 @@ export class ValueSources {
 		const worked = await this.worked(file, tried);
 		if (worked.state === 'building') throw new Error('Where the values are written is still being found; save once it is.');
 		if (worked.state === 'failed') throw new Error(worked.error);
-		if (worked.state === 'none' || worked.values.length === 0) throw new Error('There is no value to save.');
+		// Nothing tried writes none of the library's files: its branch, saved so, is the library's own again.
+		if (worked.state === 'none') return new Map();
 		const refused = worked.values.find((v): v is Extract<ValueSource, { state: 'refused' }> => v.state === 'refused');
 		if (refused) throw new Error(refused.why);
 		if (worked.values.some((v) => v.state === 'writing')) throw new Error('The agent is still writing a value; save once it has.');
@@ -132,7 +153,7 @@ export class ValueSources {
 		const drawing = (await this.deps.tokens.asIs(index)).get(file)?.light;
 		const before = drawing?.instances;
 		// A rem written in the library is of the page's root size, as it was drawn.
-		const perRem = drawing?.rootPx ?? 16;
+		const perRem = drawing?.rootPx ?? PX_PER_REM;
 		if (!before) return { state: 'failed', error: 'Its stories did not draw, so where its values are written cannot be found.' };
 		// Each value: the places it is found written in, what the agent wrote for it, being written, or why it cannot be saved.
 		const writes = new Map<string, Write>();
@@ -151,42 +172,43 @@ export class ValueSources {
 				sources.set(id, { id, state: 'refused', why, agent: offer });
 			}
 		}
-		// One place written two ways is refused for the second.
-		const byPlace = new Map<string, string>();
-		for (const [id, w] of writes) {
-			if (w.by !== 'place') continue;
-			for (const { place, literal } of w.writes) {
-				const at = `${place.file}:${place.at}`;
-				if (byPlace.has(at) && byPlace.get(at) !== literal) {
-					writes.delete(id);
-					sources.set(id, {
-						id,
-						state: 'refused',
-						why: `It is written in the same place as another value tried (${place.file}, line ${place.line}), so they cannot be saved apart.`,
-					});
-				} else byPlace.set(at, literal);
-			}
-		}
-		let { files, reach, after, clashed } = await this.written(index, writes);
-		// Read back: each value written must draw as asked on its instances, or it is refused and the rest written again.
-		const misread = tried.flatMap((t) => {
-			const drew = writes.has(triedId(t)) && !clashed.has(triedId(t)) ? drawsOtherwise(t, after.get(file)) : null;
-			return drew === null ? [] : [{ t, drew }];
-		});
-		for (const id of clashed) {
+		for (const [id, place] of placeClashes(writes)) {
 			writes.delete(id);
 			sources.set(id, {
 				id,
 				state: 'refused',
-				why: 'The agent wrote it in the same lines as another value tried, so they cannot be saved together.',
+				why: `It is written in the same place as another value tried (${place.file}, line ${place.line}), so they cannot be saved apart.`,
 			});
 		}
-		for (const { t, drew } of misread) {
-			const by = writes.get(triedId(t))?.by === 'agent' ? 'by the agent' : 'where it was found';
-			writes.delete(triedId(t));
-			sources.set(triedId(t), { id: triedId(t), state: 'refused', why: `Written ${by}, it draws ${drew}, not ${t.value}, so it is not saved.` });
+		// Read back: each value written must draw as asked on its instances. One that does not, or that the agent wrote in the
+		// same lines as another, is refused, and the rest are written and read back again, until every one written draws as asked:
+		// what is saved is what was read back.
+		let done: { files: Map<string, string>; reach: ChangeReach };
+		for (;;) {
+			const { files, reach, after, clashed } = await this.written(index, writes);
+			const misread = tried.flatMap((t) => {
+				const drew = writes.has(triedId(t)) && !clashed.has(triedId(t)) ? drawsOtherwise(t, after.get(file)) : null;
+				return drew === null ? [] : [{ t, drew }];
+			});
+			if (misread.length === 0 && clashed.size === 0) {
+				done = { files, reach };
+				break;
+			}
+			for (const id of clashed) {
+				writes.delete(id);
+				sources.set(id, {
+					id,
+					state: 'refused',
+					why: 'The agent wrote it in the same lines as another value tried, so they cannot be saved together.',
+				});
+			}
+			for (const { t, drew } of misread) {
+				const by = writes.get(triedId(t))?.by === 'agent' ? 'by the agent' : 'where it was found';
+				writes.delete(triedId(t));
+				sources.set(triedId(t), { id: triedId(t), state: 'refused', why: `Written ${by}, it draws ${drew}, not ${t.value}, so it is not saved.` });
+			}
 		}
-		if (misread.length > 0 || clashed.size > 0) ({ files, reach } = await this.written(index, writes));
+		const { files, reach } = done;
 		const values: ValueSource[] = tried.map((t) => {
 			const id = triedId(t);
 			const w = writes.get(id);
@@ -343,7 +365,11 @@ export class ValueSources {
 					why: `${part} is written in ${places.length} places in the design system's files, more than are tried (${MOST_PLACES}).`,
 				};
 			const probe = probeFor(t.property, part);
-			/** Which instances tried, and which of their parts, read the probe with `group` written with it; null when it does not build. */
+			/**
+			 * Which instances tried, and which of their parts, read the probe with `group` written with it; null when an instance tried
+			 * no longer draws. A probe is written in the place's own form, so a build that fails fails for another reason, which no
+			 * halving finds a place in: it ends the search, said in the build's words.
+			 */
 			const tried = async (group: Place[]): Promise<Set<string> | null> => {
 				const files = new Map<string, string>();
 				for (const path of new Set(group.map((p) => p.file))) {
@@ -355,11 +381,10 @@ export class ValueSources {
 						});
 					files.set(path, withWrites(texts.get(path) as string, writes));
 				}
-				const base = await opened.build(files).catch(() => null);
-				if (base === null) return null;
+				const base = await opened.build(files);
 				const [[drawn]] = (await this.deps.measure([{ base, mode: 'light', files: [file] }])) as [[{ instances?: Instance[] } | null]];
 				const now = partsBy(drawn?.instances, t.property);
-				// One that no longer draws an instance tried is halved again, as one that does not build is: what draws them is not lost.
+				// One that no longer draws an instance tried is halved again: what draws them is not lost.
 				if (!t.targets.every((key) => now.has(key))) return null;
 				const moves = new Set<string>();
 				for (const key of t.targets) (now.get(key) ?? []).forEach((p, i) => same(t.property, p, probe) && moves.add(moved(key, i)));
@@ -372,7 +397,15 @@ export class ValueSources {
 				const half = Math.ceil(group.length / 2);
 				return [...(await search(group.slice(0, half))), ...(await search(group.slice(half)))];
 			};
-			return { state: 'found', places: places.length === 0 ? [] : await search(places) };
+			if (places.length === 0) return { state: 'found', places: [] };
+			try {
+				return { state: 'found', places: await search(places) };
+			} catch (err) {
+				return {
+					state: 'failed',
+					error: `The design system did not build with a value tried in it, so where it is written was not found: ${errorText(err)}`,
+				};
+			}
 		} finally {
 			await opened.close();
 		}

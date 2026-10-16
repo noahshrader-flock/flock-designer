@@ -12,7 +12,7 @@
  */
 import type { ValueProperty } from '../../shared/contract';
 import { COLOR_VALUES } from '../../shared/contract';
-import { hexOf } from '../../shared/tokens';
+import { PX_PER_REM, hexOf } from '../../shared/tokens';
 
 /** The files a value may be written in: scripts and stylesheets. */
 const SEARCHED = /\.(?:[cm]?[jt]sx?|css|scss|sass|less)$/;
@@ -91,7 +91,7 @@ const formsOf = (property: ValueProperty, part: string, script: boolean, perRem:
 export const searchable = (property: ValueProperty, part: string): boolean => formsOf(property, part, true, 16).length > 0;
 
 /** Every place a drawn part is written in a file, in any of its ways, in the order they come; a rem of `perRem` px. */
-export const placesIn = (file: string, text: string, property: ValueProperty, part: string, perRem = 16): Place[] => {
+export const placesIn = (file: string, text: string, property: ValueProperty, part: string, perRem = PX_PER_REM): Place[] => {
 	const script = /\.[cm]?[jt]sx?$/.test(file);
 	const found: Place[] = [];
 	for (const { form, pattern } of formsOf(property, part, script, perRem)) {
@@ -131,7 +131,7 @@ export const writtenAs = (place: Place, value: string): string | null => {
  * A value written the way `written` is (a token's own value: `0.5rem`, `8px`, `#108062`), as a change to it is given:
  * a length in its unit, a colour in its form. Null when it cannot be written so.
  */
-export const writtenLike = (written: string, value: string, perRem = 16): string | null => {
+export const writtenLike = (written: string, value: string, perRem = PX_PER_REM): string | null => {
 	const form: Form = /^#/.test(written)
 		? 'hex'
 		: /^rgba?\(/.test(written)

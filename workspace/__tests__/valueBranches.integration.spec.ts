@@ -52,7 +52,9 @@ const tools = (): ShareTools => ({
 const system = () => ({ id: 'acme/ui', name: 'Acme UI', repository: 'acme/ui', root: clone, folder: '', branch: 'develop' });
 const sources = {
 	of: async (scope: string) => found.get(scope)?.answer ?? ({ state: 'building' } as const),
-	files: async (scope: string) => {
+	// As ValueSources does: nothing tried writes none of the library's files.
+	files: async (scope: string, tried: TriedValue[]) => {
+		if (tried.length === 0) return new Map<string, string>();
 		const files = found.get(scope)?.files;
 		if (files === undefined) throw new Error('Where the values are written is still being found; save once it is.');
 		if (files instanceof Error) throw files;
@@ -141,6 +143,16 @@ describe('saving the values tried on a component (Phase 4.4)', () => {
 		expect(second).toMatchObject({ branch: first.branch, saves: 2 });
 		expect(g(clone, 'show', `${second.branch}:src/utils/theme.ts`)).toContain("sm: { height: '40px' }");
 		expect(g(clone, 'rev-list', '--count', `origin/develop..${second.branch}`).trim()).toBe('2');
+	});
+
+	it('saves the values back as the library draws them, on the branch kept, once every one is put back', async () => {
+		const first = await branches().save([SMALL], BUTTON);
+		const back = await branches().save([], BUTTON);
+		expect(back).toMatchObject({ branch: first.branch, saved: [], saves: 2 });
+		expect(g(clone, 'diff', '--name-only', 'origin/develop', back.branch).trim()).toBe('');
+		expect(g(clone, 'log', '-1', '--format=%B', back.branch).trim()).toBe('Component values: back as the library draws them\n\n\nSaved from DSNR.');
+		// With none kept, nothing tried is no change to save.
+		await expect(branches().save([], BADGE)).rejects.toThrow('There is no change to save.');
 	});
 
 	it('saves nothing, and makes no branch, for a value that cannot be saved, saying why', async () => {

@@ -3,7 +3,7 @@ import { reachOf } from '../src/main/services/changeReach';
 import { settledAnswer } from './fixtures';
 import type { Built, Drawn, Instance, Measure } from '../src/main/services/componentTokens';
 import type { CatalogReads } from '../src/main/services/componentCatalog';
-import { MOST_PLACES, ValueSources } from '../src/main/services/valueSources';
+import { MOST_PLACES, ValueSources, type Write, placeClashes } from '../src/main/services/valueSources';
 import type { Written } from '../src/main/services/valueAgent';
 import { triedId } from '../src/shared/contract';
 import type { ComponentValues, TriedValue, ValueSources as Answer } from '../src/shared/contract';
@@ -87,8 +87,10 @@ const reads = (files: Record<string, string>): CatalogReads => ({
 	},
 });
 /** Each build is the library with the files it was given in place of its own, at an address that says which it is. */
+let breaks: string | null;
 const buildWith = (given: Map<string, string>): string => {
 	builds.push({ ...library, ...Object.fromEntries(given) });
+	if (breaks !== null) throw new Error(breaks);
 	return `build-${builds.length - 1}`;
 };
 const measure: Measure = async (runs) => {
@@ -126,13 +128,13 @@ const built: Built = {
 };
 /** The commit the index is of: what a place found is kept for. */
 let commit = 'commit';
-const index = { key: 'commit', built };
+const index = { key: 'commit', commit: 'commit', built };
 const drawings = (files: Record<string, string>) => new Map([BUTTON, BADGE].map((f) => [f, { light: draw(files, f), dark: null }]));
 
 const sources = () =>
 	new ValueSources({
 		tokens: {
-			drawn: async () => ({ state: 'ready', ...index, key: commit }),
+			drawn: async () => ({ state: 'ready', ...index, key: commit, commit }),
 			asIs: async () => drawings(library),
 			reachWith: async (_index, files) => {
 				const given = await files(reads(library));
@@ -162,6 +164,7 @@ let agent: Map<string, Written>;
 
 beforeEach(() => {
 	agent = new Map();
+	breaks = null;
 	commit = 'commit';
 	library = { ...LIBRARY };
 	builds = [];
@@ -260,6 +263,16 @@ describe('where a value tried on a component is written, found by its effect (Ph
 			reach: { state: 'none' },
 		});
 		await expect(s.files(BUTTON, [{ ...SM, value: '24px' }])).rejects.toThrow('draws 26px, not 24px');
+	});
+
+	it('stops at a build that fails, which no halving finds a place in, and says it in the build’s words', async () => {
+		for (let n = 0; n < 60; n++) library[`src/decoys/d${n}.ts`] = "export const d = '28px';";
+		breaks = 'Could not resolve "left-pad"';
+		const a = await settled(sources(), BUTTON, [SM]);
+		expect(JSON.stringify(a)).toContain('did not build with a value tried in it');
+		expect(JSON.stringify(a)).toContain('left-pad');
+		// One build, not one for every half of sixty places.
+		expect(builds.length).toBe(1);
 	});
 
 	it('halves again a group whose probe stops the component drawing, so the place among them is still found', async () => {
@@ -380,5 +393,38 @@ describe('where a value tried on a component is written, found by its effect (Ph
 			const s = sources();
 			expect(await settled(s, BADGE, [FOLLOW])).toMatchObject({ values: [{ state: 'found', by: 'agent' }] });
 		});
+	});
+});
+
+describe('what saving writes', () => {
+	it('writes none of the library’s files with nothing tried, so a branch kept is saved back as the library has it', async () => {
+		const none = new ValueSources({
+			tokens: { drawn: async () => ({ state: 'building' }), reachWith: async () => ({}) as never, asIs: async () => new Map() },
+			agent: { of: () => null },
+			previews: { opened: async () => ({ state: 'no-library' }) },
+			measure: async () => [],
+		});
+		expect(await none.files(BUTTON, [])).toEqual(new Map());
+	});
+});
+
+describe('values written in the same places', () => {
+	const place = (file: string, at: number) => ({ file, at, line: at, written: '8px', form: 'px' as const, perRem: 16 });
+	const by = (...writes: [ReturnType<typeof place>, string][]): Write => ({
+		by: 'place',
+		writes: writes.map(([p, literal]) => ({ place: p, literal })),
+	});
+
+	it('refuses the second to write a place otherwise, the whole of it, so what it would have written holds no third up', () => {
+		const writes = new Map<string, Write>([
+			['a', by([place('t.ts', 1), '9px'])],
+			// Clashes with a at 1: refused, so its place 2 is never taken as written.
+			['b', by([place('t.ts', 1), '10px'], [place('t.ts', 2), '11px'])],
+			// Writes place 2 its own way: it stands, b being refused.
+			['c', by([place('t.ts', 2), '12px'])],
+			// The same place written the same way is no clash.
+			['d', by([place('t.ts', 1), '9px'])],
+		]);
+		expect([...placeClashes(writes)].map(([id, p]) => [id, p.at])).toEqual([['b', 1]]);
 	});
 });

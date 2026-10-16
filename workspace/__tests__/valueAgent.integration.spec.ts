@@ -75,7 +75,7 @@ const built: Built = {
 	order: [BADGE],
 	reading: { tags: { edits: [], colors: new Map(), sizes: [], unmarked: 0 }, tokens: [], tagged: null },
 };
-const index = { key: 'commit:', built };
+const index = { key: 'commit:', commit: 'commit', built };
 const system = () => ({ id: 'acme/ui', name: 'Acme', repository: 'acme/ui', root: clone, folder: '', branch: 'develop' });
 const drawings = (files: Record<string, string>) => new Map([[BADGE, { light: draw(files), dark: null }]]);
 
@@ -83,7 +83,10 @@ const agent = () =>
 	new ValueAgent({
 		system,
 		tokens: {
-			drawn: async () => ({ state: 'ready', ...index, key: `${await libraryCommit(clone, 'develop')}:` }),
+			drawn: async () => {
+				const commit = (await libraryCommit(clone, 'develop')) as string;
+				return { state: 'ready', ...index, key: `${commit}:`, commit };
+			},
 			asIs: async () => drawings(LIBRARY),
 			reachWith: async (_index, files) => {
 				const given = Object.fromEntries(await files(await systemReads(system(), (await libraryCommit(clone, 'develop')) as string)));

@@ -12,13 +12,7 @@ import { type ValueSources, triedValuesOf } from './valueSources';
 
 const VALUES = (sources: Pick<ValueSources, 'of' | 'files'>): ChangeKind<TriedValue[]> => ({
 	kind: 'values',
-	parse: (saved) => {
-		try {
-			return triedValuesOf(saved);
-		} catch {
-			return null;
-		}
-	},
+	check: triedValuesOf,
 	empty: (tried) => tried.length === 0,
 	files: async (system, base, tried, file) => {
 		if ((await libraryCommit(system.root, system.branch)) !== base)
@@ -29,6 +23,8 @@ const VALUES = (sources: Pick<ValueSources, 'of' | 'files'>): ChangeKind<TriedVa
 	},
 	// Each place written, as the tab says it: the component, the value, what it was and is, and where.
 	lines: async (_system, _base, tried, file) => {
+		// Nothing tried says nothing: the save is the library's own again.
+		if (tried.length === 0) return [];
 		const found = await sources.of(file, tried);
 		if (found.state !== 'ready') throw new Error('Where the values are written is still being found; save once it is.');
 		return tried.flatMap((t, i) => {
@@ -42,19 +38,10 @@ const VALUES = (sources: Pick<ValueSources, 'of' | 'files'>): ChangeKind<TriedVa
 			return source.places.map((p) => `${storyComponent(file)} · ${VALUE_NAMES[t.property]}: ${what(p)} (${p.file}, line ${p.line})`);
 		});
 	},
-	commit: (lines) => [`Component values: ${lines.length} changed`, '', ...lines, '', 'Saved from DSNR.'].join('\n'),
-	proposal: (lines) => ({
-		title: `Component values: ${lines[0]?.split(':')[0] ?? 'a change'}${lines.length > 1 ? ` and ${lines.length - 1} more` : ''}`,
-		body: [
-			'Values of a component’s own, changed and tried on its instances in DSNR, each written where it was found to draw.',
-			'',
-			...lines.map((l) => `- ${l}`),
-			'',
-			'Each was read back before it was saved: the stories drawn with it draw what was asked. Each commit is one save.',
-			'',
-			'_Opened by DSNR as a draft._',
-		].join('\n'),
-	}),
+	subject: 'Component values',
+	asItWas: 'back as the library draws them',
+	about: 'Values of a component’s own, changed and tried on its instances in DSNR, each written where it was found to draw.',
+	checked: 'Each was read back before it was saved: the stories drawn with it draw what was asked. Each commit is one save.',
 	saving: 'save component values',
 });
 

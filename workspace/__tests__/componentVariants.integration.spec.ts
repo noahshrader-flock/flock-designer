@@ -59,7 +59,7 @@ const built: Built = {
 const variants = (libs: string | null = typeLibs()) =>
 	new ComponentVariants({
 		tokens: {
-			drawn: async () => ({ state: 'ready', key: 'commit:', built }),
+			drawn: async () => ({ state: 'ready', key: 'commit:', commit: 'commit', built }),
 			asIs: async () =>
 				new Map([
 					[

@@ -703,6 +703,12 @@ describe('a component’s tab', () => {
 			await answer('valueBranch', { branch: 'dsnr/values-20261016-ab12', saved: [SMALL], saves: 1, pullRequest: null });
 			expect(changed().querySelector('[data-value-change] .value-cell')?.textContent).toBe('Height · sm28px → 32px');
 			expect(calls('valueSources').at(-1)?.args).toEqual([BUTTON, [SMALL]]);
+			// Every value put back: the branch can be saved so, back as the library draws them.
+			await press(button('Reset all'));
+			expect(changed().textContent).toContain('Every value is as the library draws it.');
+			expect(button('Save').disabled).toBe(false);
+			await press(button('Save'));
+			expect(calls('saveValues').at(-1)?.args).toEqual([BUTTON, []]);
 		});
 	});
 

@@ -189,15 +189,17 @@ export type Built = {
 };
 type Index = Built | { error: string };
 
-/** The index once every story is drawn, with its key, which names the commit and the package. */
+/** The index once every story is drawn: its key, which names the commit and the package, and the commit itself. */
 export interface DrawnIndex {
 	key: string;
+	commit: string;
 	built: Built;
 }
 
 /** The index for one commit: `done` once it is built or has failed, and `finished` for whoever waits for that. */
 interface Building {
 	key: string;
+	commit: string;
 	done: Index | null;
 	finished: Promise<void>;
 }
@@ -288,7 +290,7 @@ export class ComponentTokens {
 		const [was, now] = await Promise.all([this.drawnAt(plain.base, differing), this.drawnAt(built.base, differing)]);
 		const again = reachOf(differing, was, now, values);
 		if (again.state !== 'ready') return { reach: first, after };
-		const moved = again.moved.filter((m) => differing.includes(m.file));
+		const { moved } = again;
 		for (const [file, drawings] of now) after.set(file, drawings);
 		return {
 			reach: {
@@ -343,7 +345,7 @@ export class ComponentTokens {
 			this.index = null;
 			return { state: 'failed', error: done.error };
 		}
-		return { state: 'ready', key: started.index.key, built: done };
+		return { state: 'ready', key: started.index.key, commit: started.index.commit, built: done };
 	}
 
 	/**
@@ -379,7 +381,7 @@ export class ComponentTokens {
 		if (commit === null) return { error: `The library has no ${system.branch} branch from ${HOST} to read.` };
 		const key = `${commit}:${system.folder}`;
 		if (this.index?.key !== key) {
-			const index: Building = { key, done: null, finished: Promise.resolve() };
+			const index: Building = { key, commit, done: null, finished: Promise.resolve() };
 			index.finished = this.build(system, commit).then(
 				(built) => void (index.done = built),
 				(err: Error) => void (index.done = { error: err.message }),

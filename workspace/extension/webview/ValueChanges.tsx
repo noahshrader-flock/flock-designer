@@ -127,7 +127,8 @@ export const ChangedValues = ({
 	const sourceOf = (t: TriedValue): ValueSource | null =>
 		sources.state === 'ready' ? (sources.values.find((v) => v.id === triedId(t)) ?? null) : null;
 
-	const savable = sources.state === 'ready' && sources.values.every((v) => v.state === 'found');
+	// Every value found where it is written; or none tried on a branch kept, which a save puts back as the library draws it.
+	const savable = tried.length === 0 ? controls.branch !== null : sources.state === 'ready' && sources.values.every((v) => v.state === 'found');
 	return (
 		<>
 			<section aria-label="Changed values" data-value-changes className="changed">

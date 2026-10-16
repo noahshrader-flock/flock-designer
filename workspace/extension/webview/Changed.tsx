@@ -1,4 +1,3 @@
-import type { DesignToken } from '../../src/shared/contract';
 import { plural } from '../../src/shared/plural';
 import { labelOf, readsAs } from '../../src/shared/tokens';
 import { CHANGE_REQUEST } from '../../src/shared/vocabulary';
@@ -89,8 +88,16 @@ export const Changed = ({ controls }: { controls: TokenBranchControls }) => {
 				<>
 					<ul className="tokens">
 						{edits.map((e) => {
-							const was = read.get(e.path) as DesignToken;
-							const now = byPath.get(e.path) as DesignToken;
+							const was = read.get(e.path);
+							const now = byPath.get(e.path);
+							// A token the library no longer has (it moved since the change was made): named, and nothing else said of it.
+							if (!was || !now)
+								return (
+									<li key={e.path} data-change={e.path} className="token">
+										<span className="token-name">{e.path}</span>
+										<span className="change-values">No longer in the design system, so it is not tried.</span>
+									</li>
+								);
 							return (
 								<li key={e.path} data-change={e.path} className="token">
 									<span className="token-line">

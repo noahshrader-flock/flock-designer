@@ -31,19 +31,34 @@ import { HOST } from '../../shared/vocabulary';
 export interface ChangeKind<C> {
 	/** Its branches are `dsnr/<kind>-<day>-<hex>`. */
 	kind: string;
-	/** A change as the file of kept branches has it, or null for anything else. */
-	parse: (saved: unknown) => C | null;
+	/** A change as the file of kept branches has it, checked as the window's is; throws for anything else. */
+	check: (saved: unknown) => C;
 	empty: (change: C) => boolean;
 	/** The files the change writes, path to text, made from the library at `base`. Throws, in words, for one that cannot be. */
 	files: (system: ConnectedDesignSystem, base: string, change: C, scope: string) => Promise<Map<string, string>>;
 	/** The change in words, a line for each part, against the library at `base`: what a save's commit says, and its pull request. */
 	lines: (system: ConnectedDesignSystem, base: string, change: C, scope: string) => Promise<string[]>;
-	/** What a save's commit says, and what its pull request is titled and says. */
-	commit: (lines: string[]) => string;
-	proposal: (lines: string[]) => { title: string; body: string };
+	/** What its commits and pull requests are titled with (`Design tokens`), and what a save of none of it is. */
+	subject: string;
+	asItWas: string;
+	/** What its pull request says before its lines, and after them. */
+	about: string;
+	checked: string;
 	/** What a save is, as git's reflog says it. */
 	saving: string;
 }
+
+type Said = Pick<ChangeKind<unknown>, 'subject' | 'asItWas' | 'about' | 'checked'>;
+
+/** What a save's commit says: what it is, a line for each part of it, and that it was saved from DSNR. One way for every kind. */
+export const commitText = (of: Said, lines: string[]): string =>
+	[`${of.subject}: ${lines.length === 0 ? of.asItWas : `${lines.length} changed`}`, '', ...lines, '', 'Saved from DSNR.'].join('\n');
+
+/** What a change's pull request is titled (by its first part, and how many more) and says, opened by DSNR as a draft. */
+export const proposalText = (of: Said, lines: string[]): { title: string; body: string } => ({
+	title: `${of.subject}: ${lines[0]?.split(':')[0] ?? of.asItWas}${lines.length > 1 ? ` and ${lines.length - 1} more` : ''}`,
+	body: [of.about, '', ...lines.map((l) => `- ${l}`), '', of.checked, '', '_Opened by DSNR as a draft._'].join('\n'),
+});
 
 export interface ChangeBranchesDeps {
 	/** The design system shown, or null when none is connected or its clone is gone. */
@@ -114,7 +129,7 @@ export class ChangeBranches<C> {
 
 		const files = await this.of.files(system, base, change, scope);
 		const said = await this.of.lines(system, base, change, scope);
-		const message = this.of.commit(said);
+		const message = commitText(this.of, said);
 
 		const branch = kept?.branch ?? newDsnrBranch(this.of.kind, this.deps.now?.() ?? new Date());
 		const parent = kept?.tip ?? base;
@@ -151,7 +166,7 @@ export class ChangeBranches<C> {
 		await tools.push(kept.branch);
 		const open = await tools.findPr(kept.branch);
 		// As the last save says it; a branch kept before saves said it is said again from its change.
-		const { title, body } = this.of.proposal(kept.said ?? (await this.of.lines(system, kept.base, kept.saved, scope)));
+		const { title, body } = proposalText(this.of, kept.said ?? (await this.of.lines(system, kept.base, kept.saved, scope)));
 		const pr = open ?? (await tools.createDraftPr(kept.branch, title, body));
 		const next: Kept<C> = { ...kept, pullRequest: { number: pr.number, url: pr.url, chromatic: kept.pullRequest?.chromatic ?? null } };
 		this.keep(key, next);
@@ -201,7 +216,13 @@ export class ChangeBranches<C> {
 		return Object.fromEntries(
 			Object.entries(asRecord(raw)).flatMap(([key, value]) => {
 				const k = asRecord(value);
-				const saved = this.of.parse(k.saved);
+				const saved = (() => {
+					try {
+						return this.of.check(k.saved);
+					} catch {
+						return null;
+					}
+				})();
 				const whole =
 					typeof k.branch === 'string' && this.pattern.test(k.branch) && typeof k.tip === 'string' && typeof k.base === 'string' && saved !== null;
 				const said = Array.isArray(k.said) && k.said.every((l) => typeof l === 'string') ? (k.said as string[]) : undefined;

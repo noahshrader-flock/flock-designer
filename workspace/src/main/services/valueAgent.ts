@@ -10,6 +10,8 @@
  * what was asked; to follow a token, they draw as they did, and with the token changed they draw the token. When it does
  * not read back, the agent is told what it drew, once, and the result is checked again; else it is refused, in words.
  */
+import { PX_PER_REM } from '../../shared/tokens';
+import { errorText } from '../../shared/result';
 import { existsSync } from 'node:fs';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -43,9 +45,6 @@ export interface ValueAgentDeps {
 	run: (cwd: string, task: string, readOnly: string[]) => Promise<RunEnded>;
 	readStandard: (path: string) => Promise<string>;
 }
-
-/** The commit an index was drawn for, from its key (`<commit>:<package>`). */
-const commitOf = (index: DrawnIndex): string => index.key.slice(0, index.key.indexOf(':'));
 
 /** git in a copy of the library, as nobody's: none of the person's hooks (pointed at a folder that is not there), no signing. */
 const scratch = (dir: string, args: string[]): Promise<string> =>
@@ -135,7 +134,7 @@ export class ValueAgent {
 		this.runs.set(key, { state: 'writing' });
 		void this.written(index, file, t).then(
 			(done) => this.runs.set(key, done),
-			(err: unknown) => this.runs.set(key, { state: 'refused', why: `The agent could not write it: ${(err as Error).message}` }),
+			(err: unknown) => this.runs.set(key, { state: 'refused', why: `The agent could not write it: ${errorText(err)}` }),
 		);
 	}
 
@@ -145,7 +144,7 @@ export class ValueAgent {
 		const facts = await this.factsOf(index, file, t);
 		if ('why' in facts) return { state: 'refused', why: facts.why };
 		const standard = await this.deps.readStandard(DESIGN_SYSTEM_CODE);
-		const dir = await copyAt(system.root, commitOf(index));
+		const dir = await copyAt(system.root, index.commit);
 		try {
 			// The packages it installs, to read how they draw what is not the library's own (MUI's defaults), never to change.
 			const packages = [...new Set(['', system.folder].map((at) => join(system.root, at, 'node_modules')))].filter((p) => existsSync(p));
@@ -215,14 +214,14 @@ export class ValueAgent {
 			token = (await readTokens(await this.readsAt(index))).tokens.find((x) => x.path === t.follows);
 			if (!token) return { why: `The design system has no token ${t.follows} to follow.` };
 		}
-		return { variant: cell.variant, from: cell.value, stories, token, perRem: drawing?.rootPx ?? 16 };
+		return { variant: cell.variant, from: cell.value, stories, token, perRem: drawing?.rootPx ?? PX_PER_REM };
 	}
 
 	/** The design system's files at the commit drawn, read from its clone. */
 	private readsAt(index: DrawnIndex): Promise<CatalogReads> {
 		const system = this.deps.system();
 		if (system === null) throw new Error('There is no design system connected.');
-		return systemReads(system, commitOf(index));
+		return systemReads(system, index.commit);
 	}
 
 	/**

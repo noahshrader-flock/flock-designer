@@ -23,7 +23,7 @@ export const Moved = ({ reach, name, here, onOpen }: { reach: ComponentReach; na
 		</h3>
 		<ul className="tokens">
 			{reach.changes.map((c) => (
-				<li key={`${c.mode}|${c.property}|${c.variant}|${c.from}`} className="token">
+				<li key={`${c.mode}|${c.property}|${c.variant}|${c.from}|${c.to}`} className="token">
 					<span className="value-cell value-change">
 						<span className="value-label">{changeName(c)}</span>
 						<span className="value-drawn">

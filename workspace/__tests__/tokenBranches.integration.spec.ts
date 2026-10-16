@@ -4,7 +4,8 @@ import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { Check, PullRequest } from '../src/host/changeRequests';
 import type { ShareTools } from '../src/main/services/share';
-import { TOKEN_BRANCH, TokenBranches, proposalText } from '../src/main/services/tokenBranches';
+import { TOKENS, TOKEN_BRANCH, TokenBranches } from '../src/main/services/tokenBranches';
+import { proposalText } from '../src/main/services/changeBranches';
 import { g } from './fixtures';
 import { REAL_LIBRARY as REAL, describeWith, libraryMissing, realDevelop } from './realCheckouts';
 
@@ -227,7 +228,7 @@ describe('proposing it (T5)', () => {
 	});
 
 	it('titles one change by its token', () => {
-		expect(proposalText(['Light primary main: brand 50 → brand 20']).title).toBe('Design tokens: Light primary main');
+		expect(proposalText(TOKENS, ['Light primary main: brand 50 → brand 20']).title).toBe('Design tokens: Light primary main');
 	});
 });
 

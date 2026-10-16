@@ -61,7 +61,7 @@ const NONE = { edits: [], tried: [] };
 const asking = (...answers: string[]) => {
 	const tasks: string[] = [];
 	const deps: AskInWordsDeps = {
-		tokens: { drawn: async () => ({ state: 'ready', key: 'c:', built }), of: async () => read },
+		tokens: { drawn: async () => ({ state: 'ready', key: 'c:', commit: 'c', built }), of: async () => read },
 		run: async (_cwd, task) => {
 			tasks.push(task);
 			return { ok: true, said: answers[tasks.length - 1] ?? '' };
