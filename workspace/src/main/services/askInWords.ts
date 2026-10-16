@@ -15,9 +15,9 @@ import { join } from 'node:path';
 import type { AskedChange, DesignToken, TokenEdit, TriedValue, ValueRow } from '../../shared/contract';
 import { COLOR_VALUES, triedId } from '../../shared/contract';
 import { isEditable } from '../../shared/primitives';
-import { HEX_COLOR, labelOf, lengthParts, placeOf } from '../../shared/tokens';
-import { allParts, partsIn } from '../../shared/valueParts';
-import { VALUE_NAMES, saidValue } from '../../shared/valueNames';
+import { labelOf, placeOf } from '../../shared/tokens';
+import { asTried } from '../../shared/valueParts';
+import { VALUE_NAMES, followsOf, saidValue } from '../../shared/valueNames';
 import { asRecord } from '../../shared/json';
 import type { RunEnded } from './agent';
 import type { ComponentTokens } from './componentTokens';
@@ -50,23 +50,27 @@ interface Cell {
 const tokenLine = (t: DesignToken): string =>
 	`- ${t.path} (${labelOf(t)}): ${t.kind} ${t.value}${t.ref ? `, points at ${t.ref.path}${t.ref.alpha ? ` with opacity ${t.ref.alpha}` : ''}` : ''}`;
 
-/** A component's value as the agent is told of it: its name, its property, its variant, what it draws, and what it is made of. */
-const cellLine = ({ id, row, cell }: Cell, name: (path: string) => string): string => {
+/**
+ * A component's value as the agent is told of it: its name, its property, its variant, what it draws, what it is made of, and
+ * the tokens it could follow, as its control offers them (`followsOf`).
+ */
+const cellLine = ({ id, row, cell }: Cell, tokens: DesignToken[], name: (path: string) => string): string => {
 	const made =
 		cell.kind === 'token' ? `the token ${cell.tokens.map(name).join(', ')}` : cell.kind === 'derived' ? 'worked out from a token' : 'its own';
 	const variant = cell.variant === null ? '' : `${row.by ?? 'variant'} ${cell.variant}, `;
-	return `- ${id}: ${VALUE_NAMES[row.property]} (${row.property}), ${variant}${saidValue(row.property, cell.value)}, ${made}`;
+	const could = followsOf(row.property, cell, tokens).map((t) => t.path);
+	return `- ${id}: ${VALUE_NAMES[row.property]} (${row.property}), ${variant}${saidValue(row.property, cell.value)}, ${made}${could.length > 0 ? `; could follow ${could.join(', ')}` : ''}`;
 };
 
 /** The task: the words, the facts, what the answer is, and nothing else to do. */
-export const askTask = (words: string, tokens: DesignToken[], cells: Cell[], trying: Trying, component: string | null): string => {
+export const askTask = (words: string, tokens: DesignToken[], cells: Cell[] | null, trying: Trying): string => {
 	const byPath = new Map(tokens.map((t) => [t.path, t]));
 	const name = (path: string) => {
 		const t = byPath.get(path);
 		return t ? `${path} (${labelOf(t)})` : path;
 	};
 	const triedNow = trying.tried.map((t) => {
-		const at = cells.find((c) => triedId({ property: c.row.property, targets: c.cell.targets }) === triedId(t));
+		const at = cells?.find((c) => triedId({ property: c.row.property, targets: c.cell.targets }) === triedId(t));
 		return `- ${at?.id ?? t.property}: ${t.value}${t.follows ? `, following ${t.follows}` : ''}`;
 	});
 	return [
@@ -76,20 +80,20 @@ export const askTask = (words: string, tokens: DesignToken[], cells: Cell[], try
 		'',
 		'The changes there are:',
 		'- A token given a new value (`{ "path": "<token>", "value": "<hex, or a length>" }`) or pointed at another token of its kind (`{ "path": "<token>", "ref": "<token>" }`). A colour is a hex (#RRGGBB, or #RRGGBBAA); a length has its unit.',
-		...(component === null
+		...(cells === null
 			? []
 			: [
-					`- A value of ${component}'s own tried on it (\`{ "cell": "<v…>", "value": "<value>" }\`): a colour as a hex; a length with its unit, and a padding, radius or gap with each of its parts (top right bottom left; a radius's corners; a gap's row and column). Or made to follow a token of its kind (\`{ "cell": "<v…>", "value": "<its value now>", "follows": "<token>" }\`).`,
+					'- A value of the component\'s own tried on it (`{ "cell": "<v…>", "value": "<value>" }`): a colour as a hex; a length in pixels, and a padding, radius or gap with each of its parts (top right bottom left; a radius\'s corners; a gap\'s row and column). Or made to follow one of the tokens its line says it could follow (`{ "cell": "<v…>", "follows": "<token>" }`).',
 				]),
 		'',
-		component === null
+		cells === null
 			? 'Change the tokens the words are about.'
-			: `Change a token when the words are about the design system or name a token, since it moves every component that uses it; change ${component}'s values when they are about ${component}. A value that is a token's is changed as the token, unless the words say this component alone.`,
+			: "Change a token when the words are about the design system or name a token, since it moves every component that uses it; change the component's values when they are about the component. A value that is a token's is changed as the token, unless the words say this component alone.",
 		'A word like "a little" is a small step from where it is now, in the scale the value is in.',
 		'',
 		'The tokens that can be changed:',
 		...tokens.map(tokenLine),
-		...(component === null ? [] : ['', `${component}'s values, as its stories draw them, in light:`, ...cells.map((c) => cellLine(c, name))]),
+		...(cells === null ? [] : ['', "The component's values, as its stories draw them, in light:", ...cells.map((c) => cellLine(c, tokens, name))]),
 		...(trying.edits.length + trying.tried.length === 0
 			? []
 			: [
@@ -99,7 +103,7 @@ export const askTask = (words: string, tokens: DesignToken[], cells: Cell[], try
 					...triedNow,
 				]),
 		'',
-		`Answer with one JSON object and nothing else: \`{ "tokens": [...],${component === null ? '' : ' "values": [...],'} "said": "<one sentence a person reads: what you changed>" }\`. Only what the words change; what is being tried and not changed again stays as it is. When the words cannot be made one of these changes, answer \`{ "refused": "<why, in one sentence>" }\`.`,
+		`Answer with one JSON object and nothing else: \`{ "tokens": [...],${cells === null ? '' : ' "values": [...],'} "said": "<one sentence a person reads: what you changed>" }\`. Only what the words change; what is being tried and not changed again stays as it is. When the words cannot be made one of these changes, answer \`{ "refused": "<why, in one sentence>" }\`.`,
 	].join('\n');
 };
 
@@ -114,16 +118,11 @@ const answerIn = (said: string): Record<string, unknown> | null => {
 	}
 };
 
-/** A value in its property's form, as a control writes it (every part of a length, a colour's hex), or why it is not one. */
-const valueIn = (row: ValueRow, value: unknown): string | { why: string } => {
-	if (typeof value !== 'string') return { why: 'a value is text' };
-	const property = row.property;
-	if (COLOR_VALUES.has(property))
-		return HEX_COLOR.test(value) ? value.toUpperCase() : { why: `${property} is a colour, written as a hex, not ${value}` };
-	const parts = allParts(value.trim().replace(/\s+/g, ' '), partsIn(property));
-	if (!parts.every((p) => lengthParts(p) !== null)) return { why: `${property} is a length with its unit, not ${value}` };
-	return parts.join(' ');
-};
+/** A value as a control writes it (`asTried`), or why it is not one. */
+const valueIn = ({ property }: ValueRow, value: unknown): string | { why: string } =>
+	(typeof value === 'string' ? asTried(property, value) : null) ?? {
+		why: `${property} is ${COLOR_VALUES.has(property) ? 'a colour, as a hex' : 'a length in pixels, every part'}, not ${String(value)}`,
+	};
 
 /** The answer as changes, each checked as a control's is, or the first reason it is not one. */
 export const changesIn = (answer: Record<string, unknown>, tokens: DesignToken[], cells: Cell[] | null): AskedChange | { why: string } => {
@@ -149,11 +148,16 @@ export const changesIn = (answer: Record<string, unknown>, tokens: DesignToken[]
 		const o = asRecord(v);
 		const at = cells?.find((c) => c.id === o.cell);
 		if (!at) return { why: typeof o.cell === 'string' ? `${o.cell} is not one of the component's values` : 'a value names its cell (v1, v2…)' };
+		const { property } = at.row;
+		// Made to follow a token as its control makes one: one the control offers, and drawn as it is until it is written.
+		if (typeof o.follows === 'string') {
+			if (!followsOf(property, at.cell, tokens).some((t) => t.path === o.follows)) return { why: `${at.id} cannot follow ${o.follows}` };
+			tried.push({ property, value: at.cell.value, targets: at.cell.targets, follows: o.follows });
+			continue;
+		}
 		const value = valueIn(at.row, o.value);
 		if (typeof value !== 'string') return value;
-		const follows = typeof o.follows === 'string' ? o.follows : undefined;
-		if (follows !== undefined && !byPath.has(follows)) return { why: `${follows} is not one of the design system's tokens` };
-		tried.push({ property: at.row.property, value, targets: at.cell.targets, ...(follows === undefined ? {} : { follows }) });
+		tried.push({ property, value, targets: at.cell.targets });
 	}
 	try {
 		values = triedValuesOf(tried);
@@ -176,28 +180,21 @@ export class AskInWords {
 		const index = await this.deps.tokens.drawn();
 		if (index.state !== 'ready') throw new Error('The design system is still being read: ask again once its components are drawn.');
 		const tokens = index.built.reading.tokens.filter(isEditable);
-		let cells: Cell[] = [];
-		let component: string | null = null;
+		let cells: Cell[] | null = null;
 		if (file !== null) {
 			const of = await this.deps.tokens.of(file);
 			if (of.state !== 'ready') throw new Error('Its values are not read yet: ask again once they are shown.');
-			component =
-				file
-					.split('/')
-					.pop()
-					?.replace(/\.stories\.\w+$/, '') ?? file;
 			const rows = of.values.state === 'read' ? (of.values.rows.light ?? []) : [];
 			cells = rows.flatMap((row) => row.cells.map((cell) => ({ row, cell }))).map((c, i) => ({ ...c, id: `v${i + 1}` }));
 		}
 		const dir = mkdtempSync(join(tmpdir(), 'dsnr-ask-'));
 		try {
-			let task = askTask(words, tokens, cells, trying, component);
+			let task = askTask(words, tokens, cells, trying);
 			for (let round = 1; ; round++) {
 				const ran = await this.deps.run(dir, task);
 				if (!ran.ok) throw new Error(`The agent did not finish: ${ran.said.slice(-300)}`);
 				const answer = answerIn(ran.said);
-				const changes =
-					answer === null ? { why: 'it did not answer with the JSON asked for' } : changesIn(answer, tokens, component === null ? null : cells);
+				const changes = answer === null ? { why: 'it did not answer with the JSON asked for' } : changesIn(answer, tokens, cells);
 				if (!('why' in changes)) return changes;
 				// Its own refusal is the person's to read; a broken answer goes back once.
 				if (answer !== null && typeof answer.refused === 'string') throw new Error(changes.why);

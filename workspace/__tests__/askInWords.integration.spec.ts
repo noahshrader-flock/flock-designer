@@ -4,6 +4,7 @@ import { AskInWords } from '../src/main/services/askInWords';
 import { findChrome } from '../src/main/services/chromeHeadless';
 import { REAL_LIBRARY, describeWith, libraryMissing } from './realCheckouts';
 import { onRealLibrary } from './realLibrary';
+import { settledAnswer } from './fixtures';
 
 /**
  * Asking in words on Flock's FUI with the real agent (Phase 6): run only where it is asked for (`DSNR_REAL_AGENT=1`), since
@@ -21,7 +22,11 @@ describeWith(agentMissing, 'asking in words on Flock’s FUI', () => {
 				const ask = new AskInWords({ tokens, run: (cwd, task) => runToEnd(cwd, task) });
 				const button = 'src/components/FSButton/FSButton.stories.tsx';
 				// Its values read first, as its tab shows them before anyone asks.
-				for (let a = await tokens.of(button); a.state === 'building'; a = await tokens.of(button)) await new Promise((r) => setTimeout(r, 500));
+				await settledAnswer(
+					() => tokens.of(button),
+					(x) => x.state === 'building',
+					{ within: 600_000, every: 500 },
+				);
 				const warmer = await ask.ask(null, 'make the primary a little warmer', { edits: [], tried: [] });
 				const index = await tokens.drawn();
 				if (index.state !== 'ready') throw new Error(JSON.stringify(index));

@@ -41,6 +41,8 @@ const ROWS: ValueRow[] = [
 		by: null,
 		cells: [{ variant: null, value: 'rgb(16, 128, 98)', kind: 'token', tokens: ['palette.light.primary.main'], instances: 4, targets: ['b'] }],
 	},
+	// Its own, and the radius token's value: one it could follow.
+	{ property: 'radius', by: null, cells: [{ variant: null, value: '8px 8px 8px 8px', kind: 'own', tokens: [], instances: 4, targets: ['r'] }] },
 ];
 const built = { reading: { tags: { edits: [], colors: new Map(), sizes: [], unmarked: 0 }, tokens: TOKENS, tagged: null } } as unknown as Built;
 const read: Answer = {
@@ -83,6 +85,11 @@ describe('asking in words (Phase 6)', () => {
 		expect(task).toContain('- v1: Height (height), size sm, 28px, its own');
 		expect(task).toContain('- v4: ');
 		expect(task).toMatch(/- v4: .*the token palette\.light\.primary\.main/);
+		// What it could follow, as its control offers it: only a value of its own, the same as the token's.
+		expect(task).toMatch(/- v5: Radius .*its own; could follow radius$/m);
+		expect(task).not.toMatch(/- v4: .*could follow/);
+		// Named as the component, never by a guess at its name from its file.
+		expect(task).not.toContain('FSButton');
 		// What is being tried, named as its values are, so "a little more" is from there.
 		expect(task).toContain('- tone.green.50: #118063');
 		expect(task).toContain('- v1: 30px');
@@ -111,6 +118,13 @@ describe('asking in words (Phase 6)', () => {
 		});
 	});
 
+	it('makes a value follow a token as its control does: one it offers, drawn as it is until the agent writes it', async () => {
+		const { ask } = asking('{ "values": [{ "cell": "v5", "follows": "radius", "value": "99px" }], "said": "Follows the radius." }');
+		expect((await ask.ask(BUTTON, 'use the shared radius', NONE)).values).toEqual([
+			{ property: 'radius', value: '8px 8px 8px 8px', targets: ['r'], follows: 'radius' },
+		]);
+	});
+
 	it('gives an answer that breaks a rule back once, with why, and takes the one that does not', async () => {
 		const { ask, tasks } = asking(
 			'{ "tokens": [{ "path": "radius", "value": "#ff0000" }] }',
@@ -123,7 +137,7 @@ describe('asking in words (Phase 6)', () => {
 	it('says why when the answer still breaks the rules, and passes on the agent’s own refusal as it said it', async () => {
 		const wrong = '{ "values": [{ "cell": "v1", "value": "tall" }] }';
 		await expect(asking(wrong, wrong).ask.ask(BUTTON, 'taller', NONE)).rejects.toThrow(
-			'The words could not be made a change: height is a length with its unit, not tall.',
+			'The words could not be made a change: height is a length in pixels, every part, not tall.',
 		);
 		const refused = asking('{ "refused": "A loading state is new code, not a value." }');
 		await expect(refused.ask.ask(BUTTON, 'add a loading state', NONE)).rejects.toThrow('A loading state is new code, not a value.');
@@ -137,7 +151,9 @@ describe('asking in words (Phase 6)', () => {
 			[BUTTON, { values: [{ property: 'height', value: '30px' }] }, 'a value names its cell'],
 			[BUTTON, { values: [{ cell: 'v9', value: '30px' }] }, "v9 is not one of the component's values"],
 			[BUTTON, { tokens: [{ path: 'font.body', value: '12px' }] }, 'The library has no token font.body.'],
-			[BUTTON, { values: [{ cell: 'v1', value: '30px', follows: 'nope' }] }, "nope is not one of the design system's tokens"],
+			[BUTTON, { values: [{ cell: 'v5', follows: 'tone.green.50' }] }, 'v5 cannot follow tone.green.50'],
+			[BUTTON, { values: [{ cell: 'v4', follows: 'palette.light.primary.main' }] }, 'v4 cannot follow palette.light.primary.main'],
+			[BUTTON, { values: [{ cell: 'v1', value: '1.5rem' }] }, 'height is a length in pixels, every part, not 1.5rem'],
 			[BUTTON, { tokens: [], values: [] }, 'The words changed nothing the controls change.'],
 		];
 		for (const [file, said, why] of cases) await expect(asking(answer(said), answer(said)).ask.ask(file, 'x', NONE)).rejects.toThrow(why);
