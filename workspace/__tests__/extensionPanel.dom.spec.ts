@@ -1434,7 +1434,7 @@ describe('Design System', () => {
 		expect(step.querySelector('[data-part="value"]')?.textContent).toBe('#1F6F5C');
 		expect(step.title).toBe('src/colors/tones.ts:3');
 		await press(step.querySelector('[aria-label="Open src/colors/tones.ts:3"]') as HTMLElement);
-		expect(panelSaid().at(-1)).toEqual({ type: 'open-token-source', file: 'src/colors/tones.ts', line: 3 });
+		expect(panelSaid().at(-1)).toEqual({ type: 'open-library-source', file: 'src/colors/tones.ts', line: 3 });
 	});
 
 	it('keeps a role’s themes together when the search finds it in one', async () => {

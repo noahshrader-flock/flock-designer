@@ -19,14 +19,15 @@ import { Swatch } from './ui/Swatch';
 import { Toggle } from './ui/Toggle';
 import { useDismiss } from './ui/useDismiss';
 import { ValueEditor } from './ValueEditor';
-import { VALUE_NAMES, saidValue, valueTitle } from './valueNames';
+import { VALUE_NAMES, saidValue, valueTitle } from '../../src/shared/valueNames';
 
 type Ready = Extract<ComponentTokens, { state: 'ready' }>;
 
-/** The values being tried on the component's instances, by `triedId`, and how one is tried or put back (null). */
+/** The values being tried on the component's instances, by `triedId`; how one is tried or put back (null); and every one at once. */
 export interface Trying {
 	tried: ReadonlyMap<string, TriedValue>;
 	onTry: (id: string, value: TriedValue | null) => void;
+	onAll: (tried: TriedValue[]) => void;
 }
 /** Light and dark, as the review bar names them, as an empty and a filled circle: how a theme's light and dark read in a side bar. */
 const MODES = THEMES.map((value) => ({ value, label: themeLabel(value), icon: value === 'dark' ? 'circle-large-filled' : 'circle-large-outline' }));

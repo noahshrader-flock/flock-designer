@@ -490,6 +490,105 @@ describe('a component’s tab', () => {
 		expect(details.textContent).toContain('WCAG 1.4.3');
 	});
 
+	describe('saving the values tried where they are written (Phase 4)', () => {
+		const SMALL = { property: 'height', value: '32px', targets: ['height:sm:0', 'height:sm:1', 'height:sm:2'] };
+		const ID = 'height\u0000height:sm:0\u0001height:sm:1\u0001height:sm:2';
+		/** The tab with Small's height tried at 32px. */
+		const tryingSmall = async () => {
+			await analysed();
+			await answer('storyPreview', { state: 'ready', base: BASE });
+			await press(section('Values')?.querySelector('[aria-label="Change Height · sm"]') as HTMLElement);
+			await type(document.querySelector('input[type="range"][aria-label="Height"]') as HTMLInputElement, '32');
+			await act(async () => void document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
+		};
+		const changed = () => section('Changed values') as HTMLElement;
+		const found = (over: Record<string, unknown> = {}) => ({
+			state: 'ready',
+			values: [{ id: ID, state: 'found', places: [{ file: 'src/utils/theme.ts', line: 158, written: '28px', writes: '32px' }] }],
+			reach: {
+				state: 'ready',
+				moved: [
+					{ file: BUTTON, changes: [{ mode: 'light', property: 'height', variant: 'sm', from: '28px', to: '32px', instances: 3 }], inside: false },
+				],
+				unchanged: 12,
+				notDrawn: [],
+			},
+			...over,
+		});
+
+		it('changes a token’s value through the token’s own control, which every page shares, so it is saved as the panel’s changes are', async () => {
+			await analysed();
+			// The radius is the shared token's: its control is the token's, not a value of the component's own.
+			await press(section('Values')?.querySelector('[aria-label="Change Radius"]') as HTMLElement);
+			const dialog = document.querySelector('[role="dialog"]') as HTMLElement;
+			expect(dialog).not.toBeNull();
+			expect(document.querySelector('[data-value-cell] [role="dialog"]')).toBeNull();
+			const slider = dialog.querySelector('input[type="range"]') as HTMLInputElement;
+			await type(slider, '12');
+			// Let go: a token's change is built, so it is made then, not as it moves.
+			await act(async () => void slider.dispatchEvent(new Event('pointerup', { bubbles: true })));
+			// Told to the extension, which keeps the change for every page: the panel's Changed, and its Save, have it.
+			const told = sent.filter((m) => m.type === 'token-edits').at(-1) as { edits: unknown[] } | undefined;
+			expect(told?.edits).toEqual([{ path: 'radius', value: '12px' }]);
+			expect(changed()).toBeNull();
+		});
+
+		it('is not there with nothing tried and no branch, and asks for none', async () => {
+			await analysed();
+			expect(changed()).toBeNull();
+			expect(calls('valueSources')).toHaveLength(0);
+			expect(calls('valueBranch').at(-1)?.args).toEqual([BUTTON]);
+		});
+
+		it('offers Save only once every value is found where it is written, each place opening the library at its line', async () => {
+			await tryingSmall();
+			expect(button('Save to a branch').disabled).toBe(true);
+			await answer('valueSources', found());
+			expect(changed().querySelector('[data-value-places]')?.textContent).toBe('Written in src/utils/theme.ts, line 158');
+			await press(changed().querySelector('[data-value-places] button') as HTMLElement);
+			expect(sent.at(-1)).toEqual({ type: 'open-library-source', file: 'src/utils/theme.ts', line: 158 });
+			expect(changed().textContent).toContain('Saving writes 1 value where it is written, and nothing else.');
+			expect(button('Save to a branch').disabled).toBe(false);
+			// And what writing it moves, as a token change's is said.
+			expect(section('Moved by these values')?.querySelector('[data-reach-summary]')?.textContent).toBe(
+				'It moves 1 component; 12 unchanged, in their stories drawn.',
+			);
+		});
+
+		it('says why a value cannot be saved, in words, where it is, and offers no Save', async () => {
+			await tryingSmall();
+			await answer('valueSources', {
+				state: 'ready',
+				values: [{ id: ID, state: 'refused', why: '28px is written in 2 places that each draw it here, so which to change cannot be said.' }],
+				reach: { state: 'none' },
+			});
+			expect(changed().querySelector('[data-value-refused]')?.textContent).toBe(
+				'28px is written in 2 places that each draw it here, so which to change cannot be said.',
+			);
+			expect(button('Save to a branch').disabled).toBe(true);
+			expect(section('Moved by these values')).toBeNull();
+		});
+
+		it('saves to the component’s own branch, then proposes it, with what was tried', async () => {
+			await tryingSmall();
+			await answer('valueSources', found());
+			await press(button('Save to a branch'));
+			expect(calls('saveValues').at(-1)?.args).toEqual([BUTTON, [SMALL]]);
+			await answer('saveValues', { branch: 'dsnr/values-20261016-ab12', saved: [SMALL], saves: 1, pullRequest: null });
+			expect(changed().querySelector('.branch-line')?.textContent).toBe('dsnr/values-20261016-ab12 · 1 save');
+			await press(button('Propose'));
+			expect(calls('proposeValues').at(-1)?.args).toEqual([BUTTON]);
+		});
+
+		it('puts back the values a branch saved when the tab opens with none tried', async () => {
+			await analysed();
+			await answer('storyPreview', { state: 'ready', base: BASE });
+			await answer('valueBranch', { branch: 'dsnr/values-20261016-ab12', saved: [SMALL], saves: 1, pullRequest: null });
+			expect(changed().querySelector('[data-value-change] .value-cell')?.textContent).toBe('Height · sm28px → 32px');
+			expect(calls('valueSources').at(-1)?.args).toEqual([BUTTON, [SMALL]]);
+		});
+	});
+
 	describe('what a token change moves (Phase 3)', () => {
 		const RED = [{ path: 'tone.pineGreen.50', value: '#C80000' }];
 		const moved = (over: Record<string, unknown> = {}) => ({
@@ -590,9 +689,11 @@ describe('a component’s tab', () => {
 			const cell = values().querySelector('[data-value-row="height"] [data-tried]') as HTMLElement;
 			expect(cell.querySelector('.value-cell')?.textContent).toBe('sm30px');
 			expect(cell.querySelector('[data-changed-mark]')).not.toBeNull();
-			expect(document.querySelector('[data-trying-values]')?.textContent).toContain(
-				'Trying 1 value of its own in its stories, on its own instances only: nothing is saved.',
-			);
+			// Said once, on the tab: changed, and where it is written is being found.
+			const changed = section('Changed values') as HTMLElement;
+			expect(changed.querySelector('[data-value-change] .value-cell')?.textContent).toBe('Height · sm28px → 30px');
+			expect(changed.textContent).toContain('Finding where it is written…');
+			expect(calls('valueSources').at(-1)?.args).toEqual([BUTTON, tried()]);
 		});
 
 		it('is a small popover under its value, not a dialog over the panel: no scrim, the button says it is open', async () => {
@@ -654,7 +755,7 @@ describe('a component’s tab', () => {
 			await escape();
 			await press(button('Reset all'));
 			expect(tried()).toEqual([]);
-			expect(document.querySelector('[data-trying-values]')).toBeNull();
+			expect(section('Changed values')).toBeNull();
 		});
 
 		it('tells the frame again when it loads, so a new build of the stories has what is tried', async () => {

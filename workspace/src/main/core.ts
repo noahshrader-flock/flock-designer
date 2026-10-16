@@ -52,6 +52,7 @@ export const createCore = ({ paths, emit, ports, github, pictureRecipe }: Shell)
 	designSystems: new DesignSystemsMemory(paths.designSystems),
 	storyPreviewsRoot: paths.storyPreviews,
 	tokenBranchesFile: paths.tokenBranches,
+	valueBranchesFile: paths.valueBranches,
 	voiceBranchFile: paths.voiceBranch,
 	componentPicturesRoot: paths.componentPictures,
 	componentPictureRecipe: pictureRecipe,

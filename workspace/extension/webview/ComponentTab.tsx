@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { previewAddress, previewProblem } from '../../src/shared/catalog';
 import type { CatalogComponent, DesignToken, TokenEdit, TriedValue } from '../../src/shared/contract';
-import { plural } from '../../src/shared/plural';
+import { triedId } from '../../src/shared/contract';
 import { undeclared } from '../../src/shared/wcag';
 import { TokenChangesProvider, useTokenChangesFor } from '../../src/renderer/tokenChanges';
 import { useStoryPreview } from '../../src/renderer/useStoryPreview';
@@ -60,6 +60,7 @@ export const ComponentTab = ({ id }: { id: string }) => {
 	// to another version, whose instances are drawn anew.
 	const [tried, setTried] = useState<ReadonlyMap<string, TriedValue>>(new Map());
 	useEffect(() => setTried(new Map()), [ready?.commit]);
+	const onAll = (all: TriedValue[]) => setTried(new Map(all.map((t) => [triedId(t), t])));
 	const onTry = (key: string, value: TriedValue | null) =>
 		setTried((was) => {
 			const next = new Map(was);
@@ -70,8 +71,12 @@ export const ComponentTab = ({ id }: { id: string }) => {
 	const component = ready?.components.find((c) => c.id === id);
 	if (note) return <TabNote note={note.says} onRetry={note.onRetry} />;
 	if (!ready || !component) return <TabNote note="The design system shown no longer has this component. Close this tab." />;
-	const actions: TokenActions = { onEdit: setEditing, onSource: ({ file, line }) => vscode().postMessage({ type: 'open-token-source', file, line }) };
+	const actions: TokenActions = {
+		onEdit: setEditing,
+		onSource: ({ file, line }) => vscode().postMessage({ type: 'open-library-source', file, line }),
+	};
 	const link = (to: ComponentLink) => vscode().postMessage({ type: 'component-link', id, link: to });
+	const open = (other: string) => vscode().postMessage({ type: 'open-component', id: other });
 	return (
 		<TokenChangesProvider value={changes}>
 			<main className="tab tab-split">
@@ -92,31 +97,19 @@ export const ComponentTab = ({ id }: { id: string }) => {
 					</div>
 				</header>
 				<TryingNote count={edits.length} />
-				{tried.size > 0 && (
-					<p className="quiet" data-trying-values>
-						Trying {plural(tried.size, 'value')} of its own in its stories, on its own instances only: nothing is saved.{' '}
-						<button type="button" className="link" onClick={() => setTried(new Map())}>
-							Reset all
-						</button>
-					</p>
-				)}
 				<div className="component-layout">
 					<div className="component-stories">
 						<Stories component={component} commit={ready.commit} edits={edits} tried={[...tried.values()]} />
 					</div>
 					<aside className="component-aside">
-						<ChangeReach
-							edits={edits}
-							component={component}
-							components={ready.components}
-							onOpen={(other) => vscode().postMessage({ type: 'open-component', id: other })}
-						/>
+						<ChangeReach edits={edits} component={component} components={ready.components} onOpen={open} />
 						<ComponentSections
 							component={component}
 							components={ready.components}
 							actions={actions}
 							version={{ branch: ready.branch, commit: ready.commit }}
-							trying={{ tried, onTry }}
+							trying={{ tried, onTry, onAll }}
+							onOpen={open}
 						/>
 					</aside>
 				</div>

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { TokenTrial, componentLink, componentOf, showFound, shownFrom, tokenFileIn } from '../extension/src/designSystem';
+import { TokenTrial, componentLink, componentOf, showFound, shownFrom, libraryFileIn } from '../extension/src/designSystem';
 import type { Catalog, CatalogComponent, ConnectedDesignSystem } from '../src/shared/contract';
 import { ok } from '../src/shared/result';
 
@@ -104,10 +104,10 @@ describe('a component the page names', () => {
 describe('a token’s own file', () => {
 	it('is in the design system’s clone, and nothing outside it is', () => {
 		const system = { root: '/w/lib' };
-		expect(tokenFileIn(system, 'src/colors/theme/light.ts')).toBe('/w/lib/src/colors/theme/light.ts');
-		expect(tokenFileIn(system, '../secrets.ts')).toBeNull();
-		expect(tokenFileIn(system, '/etc/passwd')).toBeNull();
-		expect(tokenFileIn(system, '')).toBeNull();
+		expect(libraryFileIn(system, 'src/colors/theme/light.ts')).toBe('/w/lib/src/colors/theme/light.ts');
+		expect(libraryFileIn(system, '../secrets.ts')).toBeNull();
+		expect(libraryFileIn(system, '/etc/passwd')).toBeNull();
+		expect(libraryFileIn(system, '')).toBeNull();
 	});
 });
 

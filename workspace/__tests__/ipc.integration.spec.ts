@@ -267,6 +267,7 @@ beforeEach(async () => {
 			// Every file the app keeps is in this test's own folder: none is shared with another run or worker.
 			sessions: new SessionMemory(join(home, 'agent-sessions.json')),
 			tokenBranchesFile: join(home, 'token-branches.json'),
+			valueBranchesFile: join(home, 'value-branches.json'),
 			voiceBranchFile: join(home, 'voice-branch.json'),
 			storyPreviewsRoot: join(home, 'story-previews'),
 			componentPicturesRoot: join(home, 'component-pictures'),
@@ -333,6 +334,38 @@ describe('the Design System tab', () => {
 		expect(await call(CHANNELS.componentTokens, { path: '/etc' })).toMatchObject({ ok: false, error: expect.stringContaining('by its story file') });
 		expect(await call(CHANNELS.componentTokens, '')).toMatchObject({ ok: false });
 		expect(ask).toHaveBeenCalledOnce();
+	});
+
+	it('takes values tried on a component only as values tried, by its story file, and has no branch for them with no design system', async () => {
+		const tried = [{ property: 'height', value: '32px', targets: ['Sm#1'] }];
+		// The previews are not there here, so where it is written cannot be found; but what was sent was taken.
+		expect(await call(CHANNELS.valueSources, 'src/components/A/A.stories.tsx', [])).toEqual({ ok: true, value: { state: 'none' } });
+		for (const bad of [
+			[{ ...tried[0], property: 'zIndex' }],
+			[{ ...tried[0], value: '' }],
+			[{ ...tried[0], targets: [] }],
+			[{ property: 'height' }],
+			'height: 32px',
+		])
+			expect(await call(CHANNELS.valueSources, 'src/components/A/A.stories.tsx', bad)).toMatchObject({
+				ok: false,
+				error: expect.stringMatching(/^(Values tried are a list of values|A value tried names its property)/),
+			});
+		expect(await call(CHANNELS.valueSources, { path: '/etc' }, tried)).toMatchObject({
+			ok: false,
+			error: expect.stringContaining('by its story file'),
+		});
+		expect(await call(CHANNELS.valueBranch, 'src/components/A/A.stories.tsx')).toEqual({ ok: true, value: null });
+		expect(await call(CHANNELS.saveValues, 'src/components/A/A.stories.tsx', tried)).toMatchObject({
+			ok: false,
+			error: 'There is no design system connected.',
+		});
+		expect(await call(CHANNELS.saveValues, 'src/components/A/A.stories.tsx', [{ property: 'height' }])).toMatchObject({
+			ok: false,
+			error: expect.stringContaining('A value tried names'),
+		});
+		expect(await call(CHANNELS.proposeValues, 'src/components/A/A.stories.tsx')).toMatchObject({ ok: false });
+		expect(await call(CHANNELS.forgetValueBranch, 'src/components/A/A.stories.tsx')).toEqual({ ok: true, value: null });
 	});
 
 	it('has no branch for a change to the tokens when there is no design system, saves and proposes nothing, and takes only edits', async () => {

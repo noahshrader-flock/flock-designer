@@ -3,7 +3,7 @@ import { NONE_STARTS_AS, hexOf } from '../../src/shared/tokens';
 import { allParts, partsIn, shortParts } from '../../src/shared/valueParts';
 import { Popover } from './ui/Popover';
 import { ColorField, LengthField } from './ValueFields';
-import { VALUE_NAMES, valueTitle } from './valueNames';
+import { VALUE_NAMES, valueTitle } from '../../src/shared/valueNames';
 
 /** What each part of a value is called, by how many parts it is written with short, as CSS reads one to four. */
 const PARTS: Partial<Record<ValueProperty, Record<number, string[]>>> = {

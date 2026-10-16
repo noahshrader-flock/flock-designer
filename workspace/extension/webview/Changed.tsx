@@ -4,6 +4,7 @@ import { labelOf, readsAs } from '../../src/shared/tokens';
 import { CHANGE_REQUEST } from '../../src/shared/vocabulary';
 import { branchButtons } from '../../src/shared/branchButtons';
 import { useTokenChanges } from '../../src/renderer/tokenChanges';
+import type { BranchControls } from '../../src/renderer/useChangeBranch';
 import type { TokenBranchControls } from '../../src/renderer/useTokenBranch';
 import { Button } from './ui/Button';
 import { ErrorLine } from './ui/Dialog';
@@ -12,15 +13,16 @@ import { IconButton } from './ui/IconButton';
 import { Swatch } from './ui/Swatch';
 
 /**
- * What can be done with the change once it is tried (6.2, the app's T4 and T5): its branch and how many saves, its draft
- * pull request once proposed, with Chromatic's build when the design system's CI has linked one, what went wrong, then Save
- * (to a branch, the first time), Propose and Start over, as the app offers them (`branchButtons`); Start over forgets the
- * branch, which stays on GitHub with any pull request.
+ * What can be done with a change once it is tried (6.2, the app's T4 and T5; a component's values, Phase 4): its branch and
+ * how many saves, its draft pull request once proposed, with Chromatic's build when the design system's CI has linked one,
+ * what went wrong, then Save (to a branch, the first time), Propose and Start over, as the app offers them
+ * (`branchButtons`); Save also waits on what must be settled first (`canSave`). Start over forgets the branch, which stays
+ * on GitHub with any pull request.
  */
-const BranchActions = ({ controls }: { controls: TokenBranchControls }) => {
+export const BranchActions = <C,>({ controls, canSave = true }: { controls: BranchControls<C>; canSave?: boolean }) => {
 	const { branch, unsaved, busy, error, save, propose, startOver } = controls;
 	const chromatic = branch?.pullRequest?.chromatic;
-	const offered = branchButtons({ branch, unsaved, busy });
+	const offered = branchButtons({ branch, unsaved, busy, canSave });
 	return (
 		<div data-branch-actions className="branch-actions">
 			{branch && (

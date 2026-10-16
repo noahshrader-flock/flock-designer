@@ -17,7 +17,7 @@ const asks = (): DesignSystemAsks & Record<string, ReturnType<typeof vi.fn>> =>
 		componentLink: vi.fn(async () => undefined),
 		openPrimitives: vi.fn(async () => undefined),
 		openVoiceAndTone: vi.fn(async () => undefined),
-		openTokenSource: vi.fn(async () => undefined),
+		openLibrarySource: vi.fn(async () => undefined),
 		edits: vi.fn(() => []),
 		setEdits: vi.fn(),
 	}) as never;
@@ -31,7 +31,7 @@ describe('what any DSNR page may ask', () => {
 			[{ type: 'component-link', id: 'a.stories.tsx', link: 'source' }, 'componentLink', ['a.stories.tsx', 'source']],
 			[{ type: 'open-primitives' }, 'openPrimitives', []],
 			[{ type: 'open-voice-and-tone' }, 'openVoiceAndTone', []],
-			[{ type: 'open-token-source', file: 'a.ts', line: 3 }, 'openTokenSource', ['a.ts', 3]],
+			[{ type: 'open-library-source', file: 'a.ts', line: 3 }, 'openLibrarySource', ['a.ts', 3]],
 			[{ type: 'token-edits', edits: [] }, 'setEdits', [[]]],
 		];
 		for (const [message, ask, args] of cases) {

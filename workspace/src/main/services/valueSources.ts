@@ -18,7 +18,8 @@
  * parts tried apart; or one that does not read back as asked.
  */
 import type { ChangeReach, StoryPreview, TriedValue, ValuePlace, ValueProperty, ValueSource, ValueSources as Answer } from '../../shared/contract';
-import { COLOR_VALUES, triedId } from '../../shared/contract';
+import { COLOR_VALUES, VALUE_PROPERTIES, triedId } from '../../shared/contract';
+import { asRecord } from '../../shared/json';
 import { hexOf } from '../../shared/tokens';
 import { allParts, partsIn } from '../../shared/valueParts';
 import type { ComponentTokens, DrawnIndex, Instance, Measure } from './componentTokens';
@@ -26,6 +27,33 @@ import { isNothing } from './tokenTags';
 import { newestAnswer } from './newestAnswer';
 import type { OpenedBuild } from './storyPreviews';
 import { type Place, placesIn, probeFor, searchedFiles, withWrites, writtenAs } from './valueLocator';
+
+/** How many values a component's instances can be tried with at once: far beyond any tab's, short of anything that could hurt. */
+const MOST_TRIED = 50;
+
+/**
+ * The values the window sent as tried, or an error: only what the contract says one is (a property, its value as CSS
+ * writes it, the instances it is on). What is written into the library is never this text: it is the number or the colour
+ * it reads as, in the way its place writes it (`writtenAs`), so nothing else can be written.
+ */
+export const triedValuesOf = (sent: unknown): TriedValue[] => {
+	if (!Array.isArray(sent) || sent.length > MOST_TRIED) throw new Error('Values tried are a list of values.');
+	const text = (x: unknown, most: number): x is string => typeof x === 'string' && x.length > 0 && x.length <= most;
+	return sent.map((v: unknown) => {
+		const o = asRecord(v);
+		const { property, value, targets } = o;
+		if (
+			(VALUE_PROPERTIES as readonly unknown[]).includes(property) &&
+			text(value, 100) &&
+			Array.isArray(targets) &&
+			targets.length > 0 &&
+			targets.length <= 500 &&
+			targets.every((k) => text(k, 400))
+		)
+			return { property: property as ValueProperty, value, targets: targets as string[] };
+		throw new Error('A value tried names its property, its value as CSS writes it, and the instances it is tried on.');
+	});
+};
 
 /**
  * How many places one value may be written in to be tried: in halves, the one place in four hundred takes about eighteen

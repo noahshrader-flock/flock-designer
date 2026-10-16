@@ -1,10 +1,10 @@
-import { COLOR_VALUES, type ValueProperty } from '../../src/shared/contract';
-import { colorAsRead } from '../../src/shared/tokens';
-import { shortValue } from '../../src/shared/valueParts';
+import { COLOR_VALUES, type ValueProperty } from './contract';
+import { colorAsRead } from './tokens';
+import { shortValue } from './valueParts';
 
 /**
- * How a component's value is named and said on screen (adjusting a component), one way wherever one is: its Values, its
- * control, and what a token change moves.
+ * How a component's value is named and said (adjusting a component), one way wherever one is: its Values, its control,
+ * what a change moves, and what a save of it says in its commit and its pull request.
  */
 
 /** How each property is named. */

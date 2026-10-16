@@ -32,7 +32,7 @@ export type PanelMessage =
 	| { type: 'component-link'; id: string; link: ComponentLink }
 	| { type: 'open-primitives' }
 	| { type: 'open-voice-and-tone' }
-	| { type: 'open-token-source'; file: string; line: number }
+	| { type: 'open-library-source'; file: string; line: number }
 	| { type: 'token-edits'; edits: unknown[] };
 
 /** A component's links, which the extension finds for it from the catalog: its docs on Storybook, and its source on GitHub. */
@@ -151,9 +151,9 @@ export const readMessage = (raw: unknown): PanelMessage | null => {
 		return hasExactly(m, ['type', 'id', 'link']) && isPath(m.id) && (COMPONENT_LINKS as readonly unknown[]).includes(m.link)
 			? { type: 'component-link', id: m.id, link: m.link as ComponentLink }
 			: null;
-	if (m.type === 'open-token-source')
+	if (m.type === 'open-library-source')
 		return hasExactly(m, ['type', 'file', 'line']) && isPath(m.file) && Number.isSafeInteger(m.line) && (m.line as number) > 0
-			? { type: 'open-token-source', file: m.file, line: m.line as number }
+			? { type: 'open-library-source', file: m.file, line: m.line as number }
 			: null;
 	if (m.type === 'token-edits')
 		return hasExactly(m, ['type', 'edits']) && Array.isArray(m.edits) && m.edits.length <= MOST_EDITS

@@ -169,6 +169,12 @@ export interface TriedValue {
 export const triedId = ({ property, targets }: { property: ValueProperty; targets: string[] }): string =>
 	`${property}\u0000${targets.join('\u0001')}`;
 
+/** Whether two sets of values tried are the same change, whatever their order: each value, on the same instances. */
+export const sameTried = (a: TriedValue[], b: TriedValue[]): boolean => {
+	const by = (tried: TriedValue[]) => JSON.stringify(tried.map((t) => [triedId(t), t.value]).sort());
+	return by(a) === by(b);
+};
+
 /**
  * A place in the library's source where a tried value is written (Phase 4 of adjusting a component), found by its effect:
  * the file and line, what is written there, and what saving it writes in its place.
@@ -234,15 +240,19 @@ export interface ComponentPictures {
  * Where a change to the tokens is kept (T4 and T5): a branch of the library DSNR made for it, each save one commit on it,
  * and the draft pull request it is proposed in once it is.
  */
-export interface TokenBranch {
-	/** The branch, always `dsnr/tokens-…`: DSNR writes to no other. */
+/** A change kept on a branch of DSNR's: the branch, the change as last saved and how many saves, its draft pull request and Chromatic's build of it once the library's CI has linked one. */
+export interface ChangeBranch<C> {
 	branch: string;
-	/** The change as last saved, and how many saves the branch has. */
-	saved: TokenEdit[];
+	saved: C;
 	saves: number;
-	/** The draft pull request, and Chromatic's build of it once the library's CI has linked one. */
 	pullRequest: { number: number; url: string; chromatic: string | null } | null;
 }
+
+/** A change to the tokens on its branch, always `dsnr/tokens-…`: DSNR writes to no other. */
+export type TokenBranch = ChangeBranch<TokenEdit[]>;
+
+/** The values tried on a component's instances, written where they are found, on their branch, always `dsnr/values-…` (Phase 4). */
+export type ValueBranch = ChangeBranch<TriedValue[]>;
 
 /** Something in the library's token files that is not read, with where it is. */
 export interface TokenProblem {

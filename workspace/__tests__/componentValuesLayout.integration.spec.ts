@@ -4,6 +4,7 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { Moved } from '../extension/webview/ChangeReach';
+import { ChangedValues } from '../extension/webview/ValueChanges';
 import { ComponentValues } from '../extension/webview/ComponentValues';
 import { ValueEditor } from '../extension/webview/ValueEditor';
 import type { ComponentReach, DesignToken, ValueCell, ValueRow } from '../src/shared/contract';
@@ -84,7 +85,7 @@ const markupFor = (rows: ValueRow[]) =>
 			version: { branch: 'develop', commit: 'abc1234def' },
 			byPath: new Map(TOKENS.map((t) => [t.path, t])),
 			names: new Map(['FSButtonGroup', 'FSIconButton', 'FSSplitButton', 'FSLoadingButton', 'FSToggleButton'].map((n) => [n, n])),
-			trying: { tried: new Map(), onTry: () => undefined },
+			trying: { tried: new Map(), onTry: () => undefined, onAll: () => undefined },
 			onEditToken: () => undefined,
 		}),
 	);
@@ -215,6 +216,108 @@ describe.skipIf(NO_CHROME)('a component’s Values, in the side pane, in the bro
 				}, width === PANE);
 			});
 			expect(found.lines).toBe(4);
+			expect(found.problems).toEqual([]);
+		},
+		60_000,
+	);
+
+	// The values tried and where each is written, as long as they are said: a deep CSS module, seven places, a long refusal.
+	const TRIED = [
+		{ property: 'height' as const, value: '32px', targets: ['h:sm:0'] },
+		{ property: 'radius' as const, value: '12px 12px 12px 12px', targets: ['r:0'] },
+		{ property: 'padding' as const, value: '2px 6px 2px 8px', targets: ['p:0'] },
+	];
+	const changedValues = renderToStaticMarkup(
+		createElement(ChangedValues, {
+			component: { id: 'FSButton', name: 'FSButton' } as never,
+			components: [],
+			rows: [
+				{ property: 'height', by: 'size', cells: [cell('sm', '28px', 'own', [], 1)].map((c) => ({ ...c, targets: ['h:sm:0'] })) },
+				{ property: 'radius', by: null, cells: [cell(null, '8px 8px 8px 8px', 'own', [], 1)].map((c) => ({ ...c, targets: ['r:0'] })) },
+				{ property: 'padding', by: null, cells: [cell(null, '2px 6px 2px 6px', 'own', [], 1)].map((c) => ({ ...c, targets: ['p:0'] })) },
+			],
+			trying: {
+				tried: new Map(TRIED.map((t) => [`${t.property}\u0000${t.targets.join('\u0001')}`, t])),
+				onTry: () => undefined,
+				onAll: () => undefined,
+			},
+			onSource: () => undefined,
+			onOpen: () => undefined,
+			sources: {
+				state: 'ready',
+				values: [
+					{
+						id: 'height\u0000h:sm:0',
+						state: 'found',
+						places: [{ file: 'packages/react/src/CounterLabel/CounterLabel.module.css', line: 10, written: '28px', writes: '32px' }],
+					},
+					{
+						id: 'radius\u0000r:0',
+						state: 'found',
+						places: [58, 70, 96, 109, 122, 130, 142].map((line) => ({ file: 'src/utils/theme.ts', line, written: '8px', writes: '12px' })),
+					},
+					{
+						id: 'padding\u0000p:0',
+						state: 'refused',
+						why: 'packages/react/src/Badge/Badge.module.css, line 3, writes 6px once for parts tried apart: try them together, or it cannot be saved.',
+					},
+				],
+				reach: { state: 'none' },
+			},
+			controls: {
+				branch: { branch: 'dsnr/values-20261016-ab12', saved: [], saves: 1, pullRequest: null },
+				unsaved: true,
+				busy: null,
+				error: null,
+				save: () => undefined,
+				propose: () => undefined,
+				startOver: () => undefined,
+			},
+		}),
+	);
+
+	it.each([PANE, 220])(
+		'lays out the values changed, where each is written, and their branch, without anything over anything or past the pane, in a %ipx pane',
+		async (width) => {
+			const found = await inChrome(async (browser) => {
+				const page = await browser.newPage();
+				await page.setViewport({ width, height: 900 });
+				await page.setContent(
+					`<!doctype html><html><head><meta charset="utf-8"><style>${css}</style></head><body><main class="tab"><aside class="component-aside">${changedValues}</aside></main></body></html>`,
+				);
+				return page.evaluate(() => {
+					const box = (e: Element) => e.getBoundingClientRect();
+					const apart = (a: DOMRect, b: DOMRect) =>
+						a.right <= b.left + 0.5 || b.right <= a.left + 0.5 || a.bottom <= b.top + 0.5 || b.bottom <= a.top + 0.5;
+					const problems: string[] = [];
+					const root = document.documentElement;
+					if (root.scrollWidth > root.clientWidth) problems.push(`the page is ${root.scrollWidth}px in a ${root.clientWidth}px pane`);
+					const pane = box(document.querySelector('.component-aside') as Element);
+					for (const el of document.querySelectorAll('[data-value-changes] *')) {
+						const b = box(el);
+						if (b.width === 0) continue;
+						const name = `${el.className || el.tagName}: ${el.textContent?.slice(0, 30)}`;
+						if (b.right > pane.right + 0.5 || b.left < pane.left - 0.5) problems.push(`${name} is past the pane`);
+						if (el.scrollWidth > el.clientWidth + 1 && getComputedStyle(el).overflow !== 'visible') problems.push(`${name} runs past its box`);
+					}
+					// Each value's reset is beside what it says, never over it; and where it is written starts under its name.
+					for (const li of document.querySelectorAll('[data-value-change]')) {
+						const [label, place] = [li.querySelector('.value-label'), li.querySelector('.value-place')];
+						// Where its text's lines start, not its box.
+						const range = document.createRange();
+						if (place) range.selectNodeContents(place);
+						const starts = place ? [...range.getClientRects()].map((r) => r.left) : [];
+						const lines = [Math.min(...starts)].filter(Number.isFinite).map((left) => ({ left }));
+						if (label && lines.some((r) => Math.abs(r.left - box(label).left) > 0.5))
+							problems.push(`"${place?.textContent?.slice(0, 30)}" does not start under its name`);
+						const reset = li.querySelector('.item-actions button');
+						for (const part of li.querySelectorAll('.value-label, .value-drawn, .value-place'))
+							if (reset && !apart(box(reset), box(part))) problems.push(`the reset is over "${part.textContent?.slice(0, 30)}"`);
+					}
+					return { problems, values: document.querySelectorAll('[data-value-change]').length };
+				});
+			});
+			expect(found.values).toBe(3);
 			expect(found.problems).toEqual([]);
 		},
 		60_000,

@@ -1,8 +1,8 @@
-import type { CatalogComponent, ComponentReach, TokenEdit, ValueChange } from '../../src/shared/contract';
+import type { CatalogComponent, ChangeReach as ChangeReachAnswer, ComponentReach, TokenEdit, ValueChange } from '../../src/shared/contract';
 import { plural } from '../../src/shared/plural';
 import { useChangeReach } from '../../src/renderer/useChangeReach';
 import { Notice } from './ui/Notice';
-import { saidValue, valueTitle } from './valueNames';
+import { saidValue, valueTitle } from '../../src/shared/valueNames';
 
 /** What changed of a value, named as the Values name it, and dark when it is in dark. */
 const changeName = (c: ValueChange): string =>
@@ -38,27 +38,28 @@ export const Moved = ({ reach, name, here, onOpen }: { reach: ComponentReach; na
 );
 
 /**
- * Moved by the change (Phase 3 of adjusting a component): while a token change is tried, every component drawn with it, and
- * those it moves, each with what changed, and how many it does not move, in their stories drawn (never a claim about every
- * use), and those that did not draw. A name opens that component's tab. Nothing while no token change is tried.
+ * What a change moves (Phase 3 of adjusting a component): every component drawn with it, and those it moves, each with what
+ * changed, and how many it does not move, in their stories drawn (never a claim about every use), and those that did not
+ * draw. A name opens that component's tab. For a token change being tried (`ChangeReach`), and for the values tried on a
+ * component, written where they are found (Phase 4): `title` names which.
  */
-export const ChangeReach = ({
-	edits,
+export const ReachView = ({
+	reach,
+	title,
 	component,
 	components,
 	onOpen,
 }: {
-	edits: TokenEdit[];
+	reach: Exclude<ChangeReachAnswer, { state: 'none' }>;
+	title: string;
 	component: CatalogComponent;
 	components: CatalogComponent[];
 	onOpen: (id: string) => void;
 }) => {
-	const reach = useChangeReach(edits);
-	if (reach.state === 'none') return null;
 	const names = new Map(components.map((c) => [c.id, c.name]));
 	return (
-		<section aria-label="Moved by the change" className="aside-section">
-			<h2 className="aside-title">Moved by the change</h2>
+		<section aria-label={title} className="aside-section">
+			<h2 className="aside-title">{title}</h2>
 			{reach.state === 'building' ? (
 				<p className="quiet">Drawing every component with the change, to see which follow it.</p>
 			) : reach.state === 'failed' ? (
@@ -78,4 +79,18 @@ export const ChangeReach = ({
 			)}
 		</section>
 	);
+};
+
+/** Moved by the change: what the token change being tried moves (`ReachView`); nothing while no token change is tried. */
+export const ChangeReach = ({
+	edits,
+	...shown
+}: {
+	edits: TokenEdit[];
+	component: CatalogComponent;
+	components: CatalogComponent[];
+	onOpen: (id: string) => void;
+}) => {
+	const reach = useChangeReach(edits);
+	return reach.state === 'none' ? null : <ReachView reach={reach} title="Moved by the change" {...shown} />;
 };

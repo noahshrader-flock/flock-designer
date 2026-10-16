@@ -13,6 +13,8 @@ export const appPaths = (userData: string) => ({
 	agentSessions: join(userData, 'agent-sessions.json'),
 	/** The branch each design system's token change is kept on. */
 	tokenBranches: join(userData, 'token-branches.json'),
+	/** The branch each component's values, tried and saved where they are written, are kept on. */
+	valueBranches: join(userData, 'value-branches.json'),
 	/** The branch the voice and tone change is kept on. */
 	voiceBranch: join(userData, 'voice-branch.json'),
 	/** The GitHub sign-in, encrypted by the system's keychain. */

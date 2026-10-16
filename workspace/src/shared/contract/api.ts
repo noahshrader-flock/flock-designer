@@ -11,6 +11,9 @@ import type {
 	StoryPreview,
 	TokenBranch,
 	TokenEdit,
+	TriedValue,
+	ValueBranch,
+	ValueSources,
 } from '../domain/designSystem';
 import type {
 	BuildInCodebase,
@@ -72,6 +75,16 @@ export interface WorkspaceApi {
 	componentTokens(file: string): Promise<Result<ComponentTokens>>;
 	/** What a token change being tried reaches: each component it moves, and how (Phase 3); `building` while it is drawn. */
 	changeReach(edits: TokenEdit[]): Promise<Result<ChangeReach>>;
+	/** Where the values tried on a component's instances are written, by its story file, and what writing them reaches (Phase 4). */
+	valueSources(file: string, tried: TriedValue[]): Promise<Result<ValueSources>>;
+	/** The branch a component's values are kept on, or null when none has been saved (Phase 4). */
+	valueBranch(file: string): Promise<Result<ValueBranch | null>>;
+	/** Saves the values tried on a component where they were found, as one commit on its branch, made the first time. */
+	saveValues(file: string, tried: TriedValue[]): Promise<Result<ValueBranch>>;
+	/** Pushes a component's values branch and opens a draft pull request for it. */
+	proposeValues(file: string): Promise<Result<ValueBranch>>;
+	/** Forgets a component's values branch, to start a new one; the branch and any pull request stay. */
+	forgetValueBranch(file: string): Promise<Result<null>>;
 	/** The pictures of the shown design system's components, for the grid view (P5). */
 	componentPictures(): Promise<Result<ComponentPictures>>;
 	/** The branch a change to the shown design system's tokens is kept on, or null when none has been saved (T4). */
@@ -244,6 +257,11 @@ export const INVOKE = [
 	'storyPreview',
 	'componentTokens',
 	'changeReach',
+	'valueSources',
+	'valueBranch',
+	'saveValues',
+	'proposeValues',
+	'forgetValueBranch',
 	'componentPictures',
 	'tokenBranch',
 	'saveTokens',

@@ -39,6 +39,8 @@ import { type ShareRunner } from './services/share';
 import { siteDeploys } from './services/siteDeploys';
 import { StoryPreviews } from './services/storyPreviews';
 import { TokenBranches } from './services/tokenBranches';
+import { ValueBranches } from './services/valueBranches';
+import { ValueSources } from './services/valueSources';
 import { VOICE_NEEDS_CLI, VoiceAndToneFile } from './services/voiceAndTone';
 import { registerAccount } from './ipc/account';
 import { registerCheckout } from './ipc/checkout';
@@ -77,13 +79,15 @@ export interface IpcContext {
 	storyPreviewsRoot: string;
 	/** Which branch each design system's change to its tokens is kept on (T4). */
 	tokenBranchesFile: string;
+	/** Which branch each component's values are kept on (Phase 4). */
+	valueBranchesFile: string;
 	/** Which branch a change to the voice and tone is kept on (T9). */
 	voiceBranchFile: string;
 	/**
-	 * Which tokens each component draws with (T6), what a change reaches (Phase 3), and so what is got ready in the
-	 * background: given for tests.
+	 * Which tokens each component draws with (T6), what a change reaches (Phase 3) and what writing a value does (Phase 4),
+	 * and so what is got ready in the background: given for tests.
 	 */
-	componentTokens?: Pick<ComponentTokens, 'of' | 'warm' | 'pictures' | 'reach'>;
+	componentTokens?: Pick<ComponentTokens, 'of' | 'warm' | 'pictures' | 'reach' | 'drawn' | 'asIs' | 'reachWith'>;
 	/** Where the pictures of the components are kept (P5): the app's own folder. */
 	componentPicturesRoot: string;
 	/** How the pictures are taken: a fingerprint, so only pictures taken that way are shown. */
@@ -112,6 +116,7 @@ export const ipcDeps = ({
 	designSystems,
 	storyPreviewsRoot,
 	tokenBranchesFile,
+	valueBranchesFile,
 	voiceBranchFile,
 	componentTokens: injectedComponentTokens,
 	componentPicturesRoot,
@@ -245,6 +250,9 @@ export const ipcDeps = ({
 	const warm = () => void componentTokens.warm();
 	if (warmAfterMs !== undefined) setTimeout(warm, warmAfterMs).unref();
 	const tokenBranches = new TokenBranches({ system: shownSystem, file: tokenBranchesFile, tools: ports.shareTools });
+	// Where the values tried on a component are written, found as they are tried, and the branch each component's are saved on (Phase 4).
+	const valueSources = new ValueSources({ tokens: componentTokens, previews, measure: ports.headless.measure });
+	const valueBranches = new ValueBranches({ system: shownSystem, file: valueBranchesFile, tools: ports.shareTools, sources: valueSources });
 	// The voice and tone (T9): the connected design system's, read, saved and proposed with the person's own command line.
 	const voiceFile = (): VoiceAndToneFile => {
 		const system = shownSystem();
@@ -387,6 +395,8 @@ export const ipcDeps = ({
 		componentPictures,
 		warm,
 		tokenBranches,
+		valueSources,
+		valueBranches,
 		voiceFile,
 		state,
 		codebase,

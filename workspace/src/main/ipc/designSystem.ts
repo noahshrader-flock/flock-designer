@@ -1,6 +1,13 @@
 import { isObjectId } from '../../shared/sha';
 import { arg, handle } from '../handle';
 import { tokenEditsOf } from '../services/tokenEdits';
+import { triedValuesOf } from '../services/valueSources';
+
+/** A story file the window names a component by, or an error: a path, never anything else. */
+const storyFileOf = (file: unknown): string => {
+	if (typeof file !== 'string' || file.length === 0 || file.length > 500) throw new Error('A component is asked for by its story file.');
+	return file;
+};
 import type { IpcDeps } from '../ipc';
 
 /**
@@ -8,7 +15,7 @@ import type { IpcDeps } from '../ipc';
  * voice and tone, and its branch.
  */
 export const registerDesignSystem = (d: IpcDeps): void => {
-	const { componentTokens, designSystems, library, previews, tokenBranches, voiceFile, warm } = d;
+	const { componentTokens, designSystems, library, previews, tokenBranches, valueBranches, valueSources, voiceFile, warm } = d;
 
 	// The longest a save takes: far beyond any real voice and tone, short of anything that could hurt.
 	const MAX_VOICE = 200_000;
@@ -23,12 +30,16 @@ export const registerDesignSystem = (d: IpcDeps): void => {
 	// A change is only ever a list of token edits, checked here and again before anything is written (T3, T4).
 	handle('storyPreview', [arg.unknown], (edits) => previews.preview(tokenEditsOf(edits)));
 	// The window names a story file, and only a story file of the library is answered.
-	handle('componentTokens', [arg.unknown], (file) => {
-		if (typeof file !== 'string' || file.length === 0 || file.length > 500) throw new Error('A component is asked for by its story file.');
-		return componentTokens.of(file);
-	});
+	handle('componentTokens', [arg.unknown], (file) => componentTokens.of(storyFileOf(file)));
 	// What a change reaches is asked for by the change, checked as a change always is.
 	handle('changeReach', [arg.unknown], (edits) => componentTokens.reach(tokenEditsOf(edits)));
+	// Values tried on a component's instances, by its story file: checked as the contract says one is, and written only as
+	// the number or colour each reads as, where it was found (Phase 4).
+	handle('valueSources', [arg.unknown, arg.unknown], (file, tried) => valueSources.of(storyFileOf(file), triedValuesOf(tried)));
+	handle('valueBranch', [arg.unknown], (file) => valueBranches.current(storyFileOf(file)));
+	handle('saveValues', [arg.unknown, arg.unknown], (file, tried) => valueBranches.save(triedValuesOf(tried), storyFileOf(file)));
+	handle('proposeValues', [arg.unknown], (file) => valueBranches.propose(storyFileOf(file)));
+	handle('forgetValueBranch', [arg.unknown], (file) => (valueBranches.forget(storyFileOf(file)), null));
 	handle('tokenBranch', [], () => tokenBranches.current());
 	handle('saveTokens', [arg.unknown], (edits) => tokenBranches.save(tokenEditsOf(edits)));
 	handle('proposeTokens', [], () => tokenBranches.propose());

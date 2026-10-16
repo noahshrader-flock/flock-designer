@@ -218,7 +218,7 @@ export const Panel = () => {
 		componentLink: (id, link) => vscode().postMessage({ type: 'component-link', id, link }),
 		openPrimitives: () => vscode().postMessage({ type: 'open-primitives' }),
 		openVoiceAndTone: () => vscode().postMessage({ type: 'open-voice-and-tone' }),
-		openTokenSource: ({ file, line }) => vscode().postMessage({ type: 'open-token-source', file, line }),
+		openTokenSource: ({ file, line }) => vscode().postMessage({ type: 'open-library-source', file, line }),
 		setEdits,
 	};
 	return (

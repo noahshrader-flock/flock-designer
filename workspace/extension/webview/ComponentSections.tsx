@@ -6,6 +6,7 @@ import { useTokenChanges } from '../../src/renderer/tokenChanges';
 import { MOST_LISTED, sharedWith, useComponentTokens } from '../../src/renderer/useComponentTokens';
 import { AccessibilityFindings } from './Accessibility';
 import { ComponentValues, type Trying } from './ComponentValues';
+import { ValueChanges } from './ValueChanges';
 import { SemanticColors } from './SemanticColors';
 import { Sets, TokenRow, type TokenActions } from './Tokens';
 import { Disclosure } from './ui/Disclosure';
@@ -155,6 +156,7 @@ export const ComponentSections = ({
 	actions,
 	version,
 	trying,
+	onOpen,
 }: {
 	component: CatalogComponent;
 	components: CatalogComponent[];
@@ -163,6 +165,8 @@ export const ComponentSections = ({
 	version: { branch: string; commit: string };
 	/** The values being tried on its instances, in the stories beside this. */
 	trying: Trying;
+	/** Opens another component's tab. */
+	onOpen: (id: string) => void;
 }) => {
 	const { byPath, isPalette } = useTokenChanges();
 	const { answer, retry } = useComponentTokens(component.id);
@@ -189,6 +193,14 @@ export const ComponentSections = ({
 	const colors = tokens.filter((t) => t.kind === 'color');
 	return (
 		<>
+			<ValueChanges
+				component={component}
+				components={components}
+				rows={answer.values.state === 'read' ? answer.values.rows.light : null}
+				trying={trying}
+				onSource={actions.onSource}
+				onOpen={onOpen}
+			/>
 			<ComponentValues
 				answer={answer}
 				name={component.name}

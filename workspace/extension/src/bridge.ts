@@ -113,7 +113,7 @@ export interface DesignSystemAsks {
 	componentLink: (id: string, link: ComponentLink) => Promise<void>;
 	openPrimitives: () => Promise<void>;
 	openVoiceAndTone: () => Promise<void>;
-	openTokenSource: (file: string, line: number) => Promise<void>;
+	openLibrarySource: (file: string, line: number) => Promise<void>;
 	edits: () => TokenEdit[];
 	setEdits: (edits: unknown[]) => void;
 }
@@ -139,8 +139,8 @@ export const answerPage = async (webview: Webview, message: PanelMessage, asks: 
 		case 'open-voice-and-tone':
 			await asks.openVoiceAndTone();
 			return true;
-		case 'open-token-source':
-			await asks.openTokenSource(message.file, message.line);
+		case 'open-library-source':
+			await asks.openLibrarySource(message.file, message.line);
 			return true;
 		case 'token-edits':
 			asks.setEdits(message.edits);

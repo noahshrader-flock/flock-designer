@@ -5,7 +5,7 @@ import type { WorkspaceApi } from '../../src/shared/contract';
 import { valueOf } from '../../src/shared/result';
 import type { Tell } from './agentWork';
 import type { Panels } from './bridge';
-import { TokenTrial, componentLink, componentOf, tokenFileIn } from './designSystem';
+import { TokenTrial, componentLink, componentOf, libraryFileIn } from './designSystem';
 import { DesignTabs } from './designTabs';
 import { type HostMessage, readComponentArg, readMessage } from './messages';
 import { type DesignSystemAsks, answerPage } from './bridge';
@@ -75,10 +75,10 @@ export const designSystemHost = ({
 		componentLink: async (id, link) => openExternal(componentLink(await componentOf(api, id), link)),
 		openPrimitives: () => tabs.open({ kind: 'primitives' }),
 		openVoiceAndTone,
-		// The token's own file, as the person's clone has it, at its line.
-		openTokenSource: async (file, line) => {
+		// A file of the design system, as the person's clone has it, at its line: a token's, or where a value is written.
+		openLibrarySource: async (file, line) => {
 			const system = systems.current();
-			const path = system === null ? null : tokenFileIn(system, file);
+			const path = system === null ? null : libraryFileIn(system, file);
 			if (path === null) throw new Error(`${file} is not a file of the design system shown.`);
 			const at = new vscode.Position(line - 1, 0);
 			await vscode.window.showTextDocument(vscode.Uri.file(path), { selection: new vscode.Range(at, at), preview: true });

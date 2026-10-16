@@ -70,10 +70,10 @@ export const componentLink = (component: CatalogComponent, link: ComponentLink):
 };
 
 /**
- * A token's own file in the design system's clone, as the person has it, or null when the path is not one of its files: a
- * path from its repository's root (as tokens are read), and nothing outside it.
+ * A file of the design system's clone, as the person has it (a token's own, or one a value is written in), or null when
+ * the path is not one of its files: a path from its repository's root (as tokens and values are read), and nothing outside it.
  */
-export const tokenFileIn = (system: Pick<ConnectedDesignSystem, 'root'>, file: string): string | null => {
+export const libraryFileIn = (system: Pick<ConnectedDesignSystem, 'root'>, file: string): string | null => {
 	const path = resolve(system.root, file);
 	return path.startsWith(system.root + sep) ? path : null;
 };
