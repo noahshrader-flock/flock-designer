@@ -1,8 +1,7 @@
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, readdirSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { constants, copyFileSync, cpSync, existsSync, mkdirSync, readdirSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
-import { basename, dirname, extname, join } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { basename, dirname, join, relative, sep } from 'node:path';
 import { PREVIEW_COMPONENT, PREVIEW_FILE, PREVIEW_HEIGHT, PREVIEW_SHOW, PREVIEW_SPECIMEN } from '../../shared/catalog';
 import { TRY_VALUES } from './pageInstances';
 import { designSystemOf } from '../../shared/catalog';
@@ -11,11 +10,13 @@ import { type CatalogReads, readCatalog } from './componentCatalog';
 import { definesIn, previewSetup, storybookDefines } from './storybookSetup';
 import { libraryCommit, systemReads } from './designLibrary';
 import { exportCommit } from './git';
-import type { BuildContext, BuildOptions, Loader, Plugin } from 'esbuild';
+import type { BuildContext, BuildOptions, Plugin } from 'esbuild';
 import { ASSET_TYPES, type PrototypeServer } from './prototypeServer';
 import { editedFiles } from './tokenEdits';
 import { errorText } from '../../shared/result';
-import { singleFlight } from './concurrency';
+import { inTurns, singleFlight } from './concurrency';
+import { type Stylesheets, stylesheetsFor } from './stylesheets';
+import { RUNNER, postcssRun } from './postcssProcess';
 import { HOST } from '../../shared/vocabulary';
 
 /**
@@ -124,24 +125,22 @@ export const specimenScript = `var drawSpecimens = (() => {
  * FUI) would not respond; the page supplies just that. A story that pins a value without it does not respond in
  * Storybook either, and does not here: making it respond is the story's to do, in the library.
  */
-export const previewEntry = (
-	library: string,
-	storyFiles: string[],
-	{ preview, argsChannel }: { preview: string | null; argsChannel: boolean },
-): string => `
+export const previewEntry = (library: string, storyFiles: string[], { preview, channel }: { preview: string | null; channel: boolean }): string => {
+	// Every file by its path from the entry, which is at the copy's root: a build of any copy of the commit builds its own files.
+	const fromEntry = (path: string) => `./${relative(library, path).split(sep).join('/')}`;
+	return `
 import { Component, Fragment, createElement as h, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { flushSync } from 'react-dom';
 import { composeStories, setProjectAnnotations } from '@storybook/react';
-${
-	preview === null
-		? ''
-		: `import * as preview from ${JSON.stringify(preview)};
-setProjectAnnotations(preview);`
-}
+${preview === null ? '' : `import * as preview from ${JSON.stringify(fromEntry(preview))};`}
+// Dark as the library's Storybook draws it (Phase 5.5): its themes addon's \`theme\` global, beside the page's color scheme.
+const annotations = [${preview === null ? '' : 'preview'}];
+if (matchMedia('(prefers-color-scheme: dark)').matches) annotations.push({ initialGlobals: { theme: 'dark' }, globals: { theme: 'dark' } });
+if (annotations.length > 0) setProjectAnnotations(annotations);
 
 const files = {
-${storyFiles.map((f) => `\t${JSON.stringify(f)}: () => import(${JSON.stringify(join(library, f))}),`).join('\n')}
+${storyFiles.map((f) => `\t${JSON.stringify(f)}: () => import(${JSON.stringify(fromEntry(join(library, f)))}),`).join('\n')}
 };
 
 class Boundary extends Component {
@@ -151,17 +150,20 @@ class Boundary extends Component {
 }
 
 const argsOf = new Map();
-${
-	argsChannel
-		? `// What Storybook's preview does when a story calls useArgs' updateArgs or resetArgs, which portable stories leave out:
-// the story is drawn again with its args as updated. Nothing else, so a story behaves here as it does in Storybook.
-import('storybook/preview-api').then(async ({ addons }) => {
-	const { RESET_STORY_ARGS, UPDATE_STORY_ARGS } = await import('storybook/internal/core-events');
-	addons.getChannel().on(UPDATE_STORY_ARGS, ({ storyId, updatedArgs }) => argsOf.get(storyId)?.((args) => ({ ...args, ...updatedArgs })));
-	addons.getChannel().on(RESET_STORY_ARGS, ({ storyId }) => argsOf.get(storyId)?.({}));
-});`
-		: ''
-}
+// Storybook's channel, as its preview speaks on it (Storybook 8 and later), for the two parts of its preview portable stories
+// leave out. When a story calls useArgs' updateArgs or resetArgs, it is drawn again with its args as updated; and once a
+// story is drawn, it is said to be, which is when its decorators' effects run (the themes addon setting the theme). Nothing
+// else, so a story behaves here as it does in Storybook.
+const storybook = ${
+		channel
+			? `Promise.all([import('storybook/internal/preview-api'), import('storybook/internal/core-events')]).then(([{ addons }, events]) => {
+	const channel = addons.getChannel();
+	channel.on(events.UPDATE_STORY_ARGS, ({ storyId, updatedArgs }) => argsOf.get(storyId)?.((args) => ({ ...args, ...updatedArgs })));
+	channel.on(events.RESET_STORY_ARGS, ({ storyId }) => argsOf.get(storyId)?.({}));
+	return { rendered: (id) => channel.emit(events.STORY_RENDERED, id) };
+})`
+			: 'Promise.resolve(null)'
+	};
 // A story that only sets args, with no render of its own, and sets \`checked\` (a switch, a checkbox) has it held by React
 // for good, so a click does nothing. It is given as where the control starts instead, by React's own rule for a checkable
 // control: \`defaultChecked\`. Only \`checked\`, which means one thing: \`value\` is also what a label shows (FUI's
@@ -219,6 +221,9 @@ const show = (file, vary) => {
 			h('section', { key: name, className: 'fd-story', 'data-story': name },
 				h('h4', { className: 'fd-name' }, spaced(name)),
 				h(Boundary, null, args ? h(Story, args) : h(Live, { Story, drawsItself: drawsItself(name) })))))));
+		return storybook.then((said) => {
+			for (const id of new Set(drawn.map(([, Story]) => Story.id).filter(Boolean))) said?.rendered(id);
+		});
 	}, fail);
 };
 window[${JSON.stringify(PREVIEW_SHOW)}] = show;
@@ -239,6 +244,7 @@ else {
 	}
 }
 `;
+};
 
 /** Whether the clone has the packages a preview is built from: React, and Storybook's portable stories. */
 export const hasPackages = (root: string, exists: (p: string) => boolean = existsSync): boolean =>
@@ -248,30 +254,17 @@ export const hasPackages = (root: string, exists: (p: string) => boolean = exist
 export const notInstalled = (what: string): string => `Not installed here: ${what}. Run npm install in the library, then sync.`;
 
 /**
- * What the library's own Storybook set-up gives its build, given here: Sass for the components' `.scss`, a package's
- * stylesheet reached by its path even when its package does not list it (`react-image-gallery`), and nothing for `.mdx`
- * (the docs template `preview.tsx` imports, which a preview does not show).
+ * What the library's own Storybook set-up gives its build, given here: its stylesheets as it makes them (`stylesheets.ts`:
+ * Sass, then its own PostCSS), a package's stylesheet reached by its path even when its package does not list it
+ * (`react-image-gallery`), and nothing for `.mdx` (the docs template `preview.tsx` imports, which a preview does not show).
  *
  * `missing` are imports that could not be resolved in a first build: a package the clone has not installed, or a file the
  * library generates at install time (`symbols.generated`). Each becomes a stand-in that says so when a story reaches for
  * it, so the stories that do not need it still build and render.
- *
- * `edited` are the library's files as a change has them (a token's, T3; one a value of a component's own is written in,
- * Phase 4): each is built from that text in place of its file, so a change is tried without a file of the copy written,
- * and leaving it is building with none.
  */
-const libraryBuild = (nodeModules: string, compileSass: CompileSass, missing: ReadonlySet<string>, edited?: Edited): Plugin => ({
+const libraryBuild = (nodeModules: string, stylesheets: Stylesheets, missing: ReadonlySet<string>): Plugin => ({
 	name: 'library',
 	setup(b) {
-		if (edited) {
-			b.onLoad({ filter: underRoots(edited.roots) }, (a) => {
-				const text = edited.text(a.path);
-				if (text === undefined) return undefined;
-				return /\.scss$/.test(a.path)
-					? { contents: compileSass(a.path, text), loader: cssLoaderOf(a.path) }
-					: { contents: text, loader: loaderOf(a.path) };
-			});
-		}
 		b.onResolve({ filter: /^[^./].*\.s?css$/ }, (a) => ({ path: join(nodeModules, a.path) }));
 		if (missing.size > 0) {
 			b.onResolve({ filter: /.*/ }, async (a) => {
@@ -287,43 +280,9 @@ module.exports = new Proxy({}, { getPrototypeOf: () => say, get: (_, k) => say[k
 			}));
 		}
 		b.onLoad({ filter: /\.mdx$/ }, () => ({ contents: 'export default () => null;', loader: 'js' }));
-		b.onLoad({ filter: /\.scss$/ }, (a) => ({ contents: compileSass(a.path), loader: cssLoaderOf(a.path) }));
+		stylesheets.setup(b);
 	},
 });
-
-/** Sass for a file, from the file or, when a change has it, from `text`. */
-type CompileSass = (path: string, text?: string) => string;
-
-/** Where the copy's files are (its path, and its real path), and the text a change gives a file, by absolute path, if any. */
-interface Edited {
-	roots: string[];
-	text: (path: string) => string | undefined;
-}
-
-const escapedForRegExp = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
-/** Any file under one of `roots`, by either separator: esbuild names a file as the system does, with a backslash on Windows. */
-export const underRoots = (roots: string[]): RegExp => new RegExp(`^(?:${roots.map(escapedForRegExp).join('|')})[\\\\/]`);
-
-/**
- * How esbuild reads a stylesheet, as it does one it loads itself: a CSS module (`.module.css`, `.module.scss`) with its class
- * names its own (`local-css`), which the component's code names them by; any other as is.
- */
-const cssLoaderOf = (path: string): Loader => (/\.module\.s?css$/.test(path) ? 'local-css' : 'css');
-
-/** How esbuild reads a file a change gives the text of, by its extension. */
-const loaderOf = (path: string): Loader =>
-	extname(path) === '.css'
-		? cssLoaderOf(path)
-		: (({ '.ts': 'ts', '.tsx': 'tsx', '.jsx': 'jsx', '.json': 'json' } as Record<string, Loader>)[extname(path)] ?? 'js');
-
-/** The library's Sass, compiled as its own Storybook set-up compiles it, with its packages to import from. */
-const sassFor =
-	(sass: typeof import('sass'), nodeModules: string): CompileSass =>
-	(path, text) =>
-		text === undefined
-			? sass.compile(path, { loadPaths: [nodeModules] }).css
-			: sass.compileString(text, { loadPaths: [dirname(path), nodeModules], url: pathToFileURL(path) }).css;
 
 type BuildErrors = { errors: { text: string; location?: { file: string } | null }[] };
 
@@ -382,13 +341,17 @@ export const buildPreviews = async (library: string, storyFiles: string[], site:
 	const [{ build }, sass] = await Promise.all([import('esbuild'), import('sass')]);
 	const nodeModules = join(library, 'node_modules');
 	const preview = previewSetup(library, folder);
-	// Storybook 9 and later are one package, \`storybook\`, which carries the channel \`useArgs\` speaks on; older ones are not.
-	const argsChannel = existsSync(join(nodeModules, 'storybook', 'package.json'));
-	writeFileSync(join(library, ENTRY), previewEntry(library, storyFiles, { preview, argsChannel }));
+	// Storybook 8 and later have the \`storybook\` package, which carries its preview's channel; older ones do not.
+	const channel = existsSync(join(nodeModules, 'storybook', 'package.json'));
+	writeFileSync(join(library, ENTRY), previewEntry(library, storyFiles, { preview, channel }));
 	mkdirSync(site, { recursive: true });
-	const compileSass = sassFor(sass, nodeModules);
+	const stylesheets = stylesheetsFor(library, folder, sass);
 	const defines = storybookDefines(library, folder);
-	await settled((missing) => build(optionsFor(library, site, libraryBuild(nodeModules, compileSass, missing), defines)).catch(asErrors));
+	try {
+		await settled((missing) => build(optionsFor(library, site, libraryBuild(nodeModules, stylesheets, missing), defines)).catch(asErrors));
+	} finally {
+		stylesheets.close();
+	}
 	writeFileSync(join(site, 'index.html'), PAGE);
 };
 
@@ -399,40 +362,57 @@ export interface TrialBuild {
 }
 
 /**
- * The previews built again with a change (to the tokens, T3, decision 26; to where a value is written, Phase 4), from the
- * copy the first build was made from: any file the change writes is built from its text in place of its own
- * (`libraryBuild`), so nothing in the copy is written and nothing is left to undo. **Kept open between changes,** so each
- * is esbuild's incremental rebuild, about a second for the real library, and the Sass a change does not touch compiled once.
+ * The previews built again with a change (to the tokens, T3, decision 26; to where a value is written, Phase 4) in `work`,
+ * a copy of its own of the commit's copy (`copy`), so a change's files are on disk where every tool reads the library from
+ * (Tailwind's scan of its classes, Sass's imports of a partial, Phase 5.5) and no other build sees them. Each build writes the
+ * files it is given and puts back the ones the last wrote, as the commit has them; closing puts back the last. **Kept open
+ * between changes,** so each is esbuild's incremental rebuild, about a second for the real library, and a stylesheet no change
+ * touches is made once (`stylesheets.ts`).
  */
-export const trialBuild = async (library: string, site: string, folder = ''): Promise<TrialBuild> => {
+export const trialBuild = async (copy: string, work: string, site: string, folder = ''): Promise<TrialBuild> => {
 	const [{ context }, sass] = await Promise.all([import('esbuild'), import('sass')]);
-	const nodeModules = join(library, 'node_modules');
-	// esbuild names a file by its real path, and a temporary folder can be reached through a link (macOS's /var).
-	const roots = [...new Set([library, realpathSync(library)])];
-	let texts = new Map<string, string>();
-	const edited: Edited = { roots, text: (path) => texts.get(path) };
-	const plain = sassFor(sass, nodeModules);
-	const compiled = new Map<string, string>();
-	const compileSass: CompileSass = (path, text) => {
-		if (text !== undefined) return plain(path, text);
-		if (!compiled.has(path)) compiled.set(path, plain(path));
-		return compiled.get(path) as string;
+	// A clone of each file where the disk can (copy-on-write, so all but free), a copy where not; its packages stay a link.
+	if (!existsSync(work)) cpSync(copy, work, { recursive: true, verbatimSymlinks: true, mode: constants.COPYFILE_FICLONE });
+	const nodeModules = join(work, 'node_modules');
+	const stylesheets = stylesheetsFor(work, folder, sass);
+	// esbuild and the stylesheets' tools name a file by its real path, and a temporary folder can be reached through a link
+	// (macOS's /var); a change names its files by their path in the library.
+	const roots = [...new Set([work, realpathSync(work)])];
+	const putBack = (file: string) => {
+		if (existsSync(join(copy, file))) copyFileSync(join(copy, file), join(work, file), constants.COPYFILE_FICLONE);
+		else rmSync(join(work, file), { force: true });
 	};
-	const defines = storybookDefines(library, folder);
+	let written = new Map<string, string>();
+	const defines = storybookDefines(work, folder);
 	mkdirSync(site, { recursive: true });
 	writeFileSync(join(site, 'index.html'), PAGE);
 	let open: BuildContext | null = null;
 	return {
 		async build(files) {
-			texts = new Map([...files].flatMap(([f, text]) => roots.map((r) => [join(r, f), text] as const)));
+			const changed = [...new Set([...written.keys(), ...files.keys()])].filter((f) => written.get(f) !== files.get(f));
+			for (const file of changed) {
+				const text = files.get(file);
+				if (text === undefined) putBack(file);
+				else {
+					mkdirSync(dirname(join(work, file)), { recursive: true });
+					writeFileSync(join(work, file), text);
+				}
+			}
+			written = new Map(files);
+			stylesheets.changed(changed.flatMap((f) => roots.map((r) => join(r, f))));
 			if (open !== null) return settled(async () => (open as BuildContext).rebuild().catch(asErrors));
 			await settled(async (missing) => {
 				await open?.dispose();
-				open = await context(optionsFor(library, site, libraryBuild(nodeModules, compileSass, missing, edited), defines));
+				open = await context(optionsFor(work, site, libraryBuild(nodeModules, stylesheets, missing), defines));
 				return open.rebuild().catch(asErrors);
 			});
 		},
-		dispose: async () => open?.dispose(),
+		async dispose() {
+			for (const file of written.keys()) putBack(file);
+			written = new Map();
+			stylesheets.close();
+			await open?.dispose();
+		},
 	};
 };
 
@@ -442,9 +422,11 @@ export const trialBuild = async (library: string, site: string, folder = ''): Pr
  */
 const copyAt = async (root: string, commit: string, library: string, folder: string): Promise<void> => {
 	await exportCommit(root, commit, library);
-	// A junction on Windows, a symbolic link elsewhere: the packages are read where the clone has them.
+	// A junction on Windows, a symbolic link elsewhere: the packages are read where the clone has them, by their real path, so
+	// a tool held to the clone (the library's PostCSS) never passes through a link on the way to them (macOS's /var).
 	for (const at of folder === '' ? [''] : ['', folder]) {
-		if (existsSync(join(root, at, 'node_modules'))) symlinkSync(join(root, at, 'node_modules'), join(library, at, 'node_modules'), 'junction');
+		const packages = join(root, at, 'node_modules');
+		if (existsSync(packages)) symlinkSync(realpathSync(packages), join(library, at, 'node_modules'), 'junction');
 	}
 };
 
@@ -459,7 +441,7 @@ const serveKey = (build: string): string => `previews-${build.slice(0, 26)}`;
  * for a commit **and** this, so a newer app never shows a build an older one made from the same commit.
  */
 const RECIPE = createHash('sha256')
-	.update([PAGE, previewEntry, libraryBuild, optionsFor, buildPreviews, definesIn].map(String).join(''))
+	.update([PAGE, previewEntry, libraryBuild, optionsFor, buildPreviews, definesIn, stylesheetsFor, postcssRun, RUNNER].map(String).join(''))
 	.digest('hex')
 	.slice(0, 8);
 
@@ -537,6 +519,10 @@ export class StoryPreviews {
 	 * is at an address of its own and a page never reads an older one from its cache.
 	 */
 	private builtServed = new Map<BuiltFor, { dir: string; key: string; builds: number }>();
+	/** One build open for each purpose at a time, since each builds in a copy of its own (`builderFor`). */
+	private readonly ownCopy = inTurns<BuiltFor>();
+	/** The copies made in this run of the app: one an earlier run left may have a change still written in it. */
+	private readonly fresh = new Set<string>();
 
 	constructor(private readonly deps: StoryPreviewsDeps) {}
 
@@ -639,28 +625,39 @@ export class StoryPreviews {
 	 * it. With the commit's files as read (`reads`), which a change is made from. Only the last build of each is served.
 	 */
 	async opened(purpose: BuiltFor): Promise<OpenedBuild | Exclude<StoryPreview, { state: 'ready' }>> {
-		const base = await this.base();
-		const at = this.current;
-		if (base.state !== 'ready') return base;
-		if (at === null) return { state: 'no-library' };
-		const [listed, builder] = await Promise.all([at.reads(), this.builderFor(at, purpose)]);
-		// The design system's files as git lists them; their text from the copy the build is made from, which is the commit's.
-		const copy = join(at.dir, 'library');
-		const reads: CatalogReads = { listFiles: (dir) => listed.listFiles(dir), readFile: (path) => readFile(join(copy, path), 'utf8') };
-		return {
-			state: 'open',
-			reads,
-			build: async (files) => {
-				await builder.build(files);
-				const last = this.builtServed.get(purpose);
-				const builds = (last?.builds ?? 0) + 1;
-				const key = servedAt(purpose, builds, at.dir);
-				if (last) this.deps.server.stopServing(last.key);
-				this.builtServed.set(purpose, { dir: at.dir, key, builds });
-				return this.deps.server.serveFolder(key, join(at.dir, purpose), CODE);
-			},
-			close: () => builder.dispose(),
-		};
+		// Its turn, held until it is closed: a second asked for meanwhile waits for it.
+		let closed = () => {};
+		const held = new Promise<void>((r) => (closed = r));
+		await new Promise<void>((entered) => void this.ownCopy(purpose, () => (entered(), held)));
+		try {
+			const base = await this.base();
+			const at = this.current;
+			if (base.state !== 'ready' || at === null) {
+				closed();
+				return base.state !== 'ready' ? base : { state: 'no-library' };
+			}
+			const [listed, builder] = await Promise.all([at.reads(), this.builderFor(at, purpose)]);
+			// The design system's files as git lists them; their text from the copy the builds are made from, which is the commit's.
+			const copy = join(at.dir, 'library');
+			const reads: CatalogReads = { listFiles: (dir) => listed.listFiles(dir), readFile: (path) => readFile(join(copy, path), 'utf8') };
+			return {
+				state: 'open',
+				reads,
+				build: async (files) => {
+					await builder.build(files);
+					const last = this.builtServed.get(purpose);
+					const builds = (last?.builds ?? 0) + 1;
+					const key = servedAt(purpose, builds, at.dir);
+					if (last) this.deps.server.stopServing(last.key);
+					this.builtServed.set(purpose, { dir: at.dir, key, builds });
+					return this.deps.server.serveFolder(key, join(at.dir, purpose), CODE);
+				},
+				close: () => builder.dispose().finally(closed),
+			};
+		} catch (err) {
+			closed();
+			throw err;
+		}
 	}
 
 	/**
@@ -686,9 +683,17 @@ export class StoryPreviews {
 		return this.current === null ? { state: 'no-library' } : join(this.current.dir, 'library');
 	}
 
-	/** A build of the commit's copy with files given in place of its own, into `site` beside the commit's own build. */
+	/**
+	 * A build of the commit's copy with files given in place of its own, into `site` beside the commit's own build, in a copy
+	 * of its own for `site` (`trialBuild`), kept for the commit and made again on its first use in this run of the app.
+	 */
 	private builderFor(at: Built, site: string): Promise<TrialBuild> {
-		return trialBuild(join(at.dir, 'library'), join(at.dir, site), at.folder);
+		const work = join(at.dir, `${site}-library`);
+		if (!this.fresh.has(work)) {
+			rmSync(work, { recursive: true, force: true });
+			this.fresh.add(work);
+		}
+		return trialBuild(join(at.dir, 'library'), work, join(at.dir, site), at.folder);
 	}
 
 	private async endTrial(): Promise<void> {

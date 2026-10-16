@@ -14,25 +14,15 @@ import { resolve } from 'node:path';
 import type { ConnectedDesignSystem, ValueProperty, ValueSources as Answer } from '../src/shared/contract';
 import { REAL_LIBRARY, REAL_PRIMER, describeWith, libraryMissing, primerMissing } from './realCheckouts';
 import { settledAnswer } from './fixtures';
+import { onRealLibrary } from './realLibrary';
 
 /**
  * Where a value of a component's own is written (Phase 4), found by its effect on the real libraries on this machine: Flock's
  * FUI, a TypeScript theme, as the spike found it by hand (DESIGN_SYSTEM_PLAN, Phase 0); and Primer React, a monorepo of CSS
  * modules whose tokens come from a package, so the locator is not proved on Flock's alone.
  */
-const withLibrary = async (system: ConnectedDesignSystem, check: (tokens: ComponentTokens, sources: ValueSources) => Promise<void>) => {
-	const pages = new PrototypeServer();
-	const real = chromeHeadless();
-	try {
-		const previews = new StoryPreviews({ system: () => system, folder: mkdtempSync(join(tmpdir(), 'dsnr-sources-')), server: pages });
-		const tokens = new ComponentTokens({ system: () => system, previews, measure: real.measure, pictures: { keep: () => {}, of: async () => ({}) } });
-		await tokens.warm();
-		await check(tokens, new ValueSources({ tokens, previews, measure: real.measure, agent: { of: () => null } }));
-	} finally {
-		await real.close();
-		pages.close();
-	}
-};
+const withLibrary = (system: ConnectedDesignSystem, check: (tokens: ComponentTokens, sources: ValueSources) => Promise<void>) =>
+	onRealLibrary(system, ({ previews, tokens, measure }) => check(tokens, new ValueSources({ tokens, previews, measure, agent: { of: () => null } })));
 
 /** Where `value` tried on the instances of a component's cell (its property, its variant) is written, once it is found. */
 const sourcesOf = async (

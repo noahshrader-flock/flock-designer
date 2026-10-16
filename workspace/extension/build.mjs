@@ -7,7 +7,7 @@
  *   node extension/build.mjs          once
  *   node extension/build.mjs --watch  on every change
  */
-import { copyFileSync, cpSync, mkdirSync, readdirSync, rmSync } from 'node:fs';
+import { copyFileSync, cpSync, mkdirSync, readFileSync, readdirSync, rmSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { context } from 'esbuild';
@@ -67,6 +67,10 @@ for (const lib of readdirSync(join(typescript, 'lib')).filter((f) => /^lib\..*\.
 	copyFileSync(join(typescript, 'lib', lib), join(dist, 'node_modules/typescript/lib', lib));
 // esbuild, and its binary for this machine, where the extension looks for it (`esbuildEntry`, beside `extension.js`).
 const modules = join(here, '../node_modules');
+// PostCSS, which a library's own PostCSS configuration runs on in a process of its own (`postcssProcess.ts`), with the
+// packages it depends on, where that process is given it.
+const postcss = JSON.parse(readFileSync(join(modules, 'postcss/package.json'), 'utf8'));
+for (const p of ['postcss', ...Object.keys(postcss.dependencies ?? {})]) cpSync(join(modules, p), join(dist, 'node_modules', p), { recursive: true });
 cpSync(join(modules, 'esbuild'), join(dist, 'node_modules/esbuild'), { recursive: true });
 for (const binary of readdirSync(join(modules, '@esbuild')))
 	cpSync(join(modules, '@esbuild', binary), join(dist, 'node_modules/@esbuild', binary), { recursive: true });

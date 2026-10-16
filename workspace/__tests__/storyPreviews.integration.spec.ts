@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { TextEncoder as NodeTextEncoder } from 'node:util';
@@ -98,7 +98,8 @@ const LIBRARY = {
 const FAKE_STORYBOOK = {
 	'node_modules/@storybook/react/package.json': '{"name":"@storybook/react","version":"0.0.0","main":"index.js"}',
 	// A component as is, or a story object drawn from its render and args, with the id and args Storybook gives a story.
-	'node_modules/@storybook/react/index.js': `exports.setProjectAnnotations = () => {};
+	// What the page gives the library's set-up is kept where a test can see it.
+	'node_modules/@storybook/react/index.js': `exports.setProjectAnnotations = (a) => { globalThis.projectAnnotations = a; };
 const { createElement } = require('react');
 exports.composeStories = (m) => Object.fromEntries(Object.entries(m).filter(([k]) => k !== 'default').map(([k, v]) => {
 	if (typeof v === 'function') return [k, v];
@@ -110,16 +111,21 @@ exports.composeStories = (m) => Object.fromEntries(Object.entries(m).filter(([k]
 `,
 };
 
-/** Storybook's channel as its preview has it: what a story's `useArgs` sends `updateStoryArgs` on. */
+/**
+ * Storybook's channel as its preview has it, at its public path (Storybook 9 on) and its internal one (8 on): what a story's
+ * `useArgs` sends `updateStoryArgs` on, and what Storybook says a story was drawn on. What is sent on it is kept.
+ */
 const FAKE_STORYBOOK_CHANNEL = {
 	'node_modules/storybook/package.json':
-		'{"name":"storybook","version":"0.0.0","type":"module","exports":{"./preview-api":"./preview-api.js","./internal/core-events":"./core-events.js"}}',
+		'{"name":"storybook","version":"0.0.0","type":"module","exports":{"./preview-api":"./preview-api.js","./internal/preview-api":"./preview-api.js","./internal/core-events":"./core-events.js"}}',
 	// ES modules, as the real package ships them.
 	'node_modules/storybook/preview-api.js': `const listeners = {};
-const channel = { on: (e, f) => (listeners[e] ??= []).push(f), emit: (e, ...a) => (listeners[e] ?? []).forEach((f) => f(...a)) };
+globalThis.sent = [];
+const channel = { on: (e, f) => (listeners[e] ??= []).push(f), emit: (e, ...a) => (globalThis.sent.push([e, ...a]), (listeners[e] ?? []).forEach((f) => f(...a))) };
 export const addons = { getChannel: () => channel };
 `,
-	'node_modules/storybook/core-events.js': "export const UPDATE_STORY_ARGS = 'updateStoryArgs';\nexport const RESET_STORY_ARGS = 'resetStoryArgs';\n",
+	'node_modules/storybook/core-events.js':
+		"export const UPDATE_STORY_ARGS = 'updateStoryArgs';\nexport const RESET_STORY_ARGS = 'resetStoryArgs';\nexport const STORY_RENDERED = 'storyRendered';\n",
 };
 
 /** A clone of a library whose `develop` has `files`, with packages installed (React from the app, Storybook faked). */
@@ -144,9 +150,13 @@ const ready = async (p: StoryPreviews) => {
 	if (r.state !== 'ready') throw new Error(`not ready: ${JSON.stringify(r)}`);
 	return r.base;
 };
-/** Renders the page served at `base` for one story file in this DOM window, as the preview frame does: what it drew. */
-const render = async (base: string, file: string): Promise<HTMLElement> => {
+/**
+ * Renders the page served at `base` for one story file in this DOM window, as the preview frame does: what it drew. In
+ * light, or in dark (`dark`), as the browser's color scheme says, which a DOM window does not have on its own.
+ */
+const render = async (base: string, file: string, { dark = false } = {}): Promise<HTMLElement> => {
 	expect((await fetch(previewAddress(base, file))).status).toBe(200);
+	window.matchMedia = ((query: string) => ({ matches: dark && /prefers-color-scheme:\s*dark/.test(query) })) as unknown as typeof window.matchMedia;
 	document.body.innerHTML = '<div id="root"></div>';
 	window.history.pushState({}, '', previewAddress('/', file));
 	const entry = join(folder, readdirSync(folder)[0]!, 'site', 'entry.js');
@@ -169,6 +179,7 @@ beforeEach(() => {
 	server = new PrototypeServer();
 });
 afterEach(() => {
+	vi.unstubAllEnvs();
 	server.close();
 	rmSync(home, { recursive: true, force: true });
 });
@@ -192,6 +203,18 @@ describe('building the previews', () => {
 		expect([...root.querySelectorAll('[data-story]')].map((s) => s.getAttribute('data-story'))).toEqual(['Default', 'Other']);
 		expect(root.textContent).toContain('One');
 		expect(root.textContent).not.toContain('Two');
+	});
+
+	it('tells the library’s set-up its theme is dark in dark, as Storybook’s themes addon is told, and nothing of it in light', async () => {
+		makeLibrary(LIBRARY);
+		const base = await ready(previews());
+		const given = () => (globalThis as { projectAnnotations?: unknown[] }).projectAnnotations ?? [];
+		await render(base, 'src/components/FSOne/FSOne.stories.tsx');
+		expect(given()).toHaveLength(1);
+		expect(JSON.stringify(given())).not.toContain('theme');
+		await render(base, 'src/components/FSOne/FSOne.stories.tsx', { dark: true });
+		expect(given()).toHaveLength(2);
+		expect(given()[1]).toEqual({ initialGlobals: { theme: 'dark' }, globals: { theme: 'dark' } });
 	});
 
 	it('builds a library with no Storybook preview set-up, rendering its stories plainly', async () => {
@@ -307,6 +330,26 @@ export const Pinned = { args: { checked: true }, render: (args) => <input type="
 		const pinned = root.querySelector('[data-story="Pinned"] input') as HTMLInputElement;
 		pinned.click();
 		expect(pinned.checked).toBe(true);
+	});
+
+	it('says on Storybook’s channel that each story is drawn once it is, as Storybook does, so its decorators’ effects run', async () => {
+		makeLibrary({
+			...LIBRARY,
+			'src/components/FSTwo/FSTwo.stories.tsx': story(
+				'Inputs/FSTwo',
+				'export const Plain = { args: {}, render: () => <p>Plain</p> };\nexport const Other = { args: {}, render: () => <p>Other</p> };',
+			),
+		});
+		write(clone, FAKE_STORYBOOK_CHANNEL);
+		await render(await ready(previews()), 'src/components/FSTwo/FSTwo.stories.tsx');
+		await eventually(() =>
+			expect(
+				(globalThis as { sent?: unknown[][] }).sent
+					?.filter(([e]) => e === 'storyRendered')
+					.map(([, id]) => id)
+					.sort(),
+			).toEqual(['story-other', 'story-plain']),
+		);
 	});
 
 	it('lets a control respond whose story only sets checked, and leaves alone a story that draws itself and a value', async () => {
@@ -695,17 +738,155 @@ describe('leaving the library alone', () => {
 	});
 });
 
+/**
+ * A PostCSS plugin as a utility framework is one, written here so nothing of any framework's is tested: it scans the
+ * library's sources for the classes they use (`x-…`) and draws each, saying the folder it read as Tailwind does; and it
+ * says what the process it runs in let it reach, and how many times it has been asked.
+ */
+const UTILITIES = `const { readFileSync, readdirSync, writeFileSync } = require('node:fs');
+const { homedir } = require('node:os');
+const { join } = require('node:path');
+let runs = 0;
+const attempt = (f) => { try { f(); return 'yes'; } catch { return 'no'; } };
+module.exports = (options = {}) => ({
+	postcssPlugin: 'utilities',
+	Once(root, { result, postcss }) {
+		runs++;
+		const src = join(process.cwd(), 'src');
+		result.messages.push({ type: 'dir-dependency', plugin: 'utilities', dir: src, parent: result.opts.from });
+		const used = new Set();
+		const walk = (dir) => {
+			for (const e of readdirSync(dir, { withFileTypes: true }))
+				if (e.isDirectory()) walk(join(dir, e.name));
+				else if (/\\.tsx$/.test(e.name)) for (const c of readFileSync(join(dir, e.name), 'utf8').match(/\\bx-\\w+/g) ?? []) used.add(c);
+		};
+		root.walkAtRules('utilities', (rule) => {
+			walk(src);
+			rule.replaceWith([...used].sort().map((c) => postcss.rule({ selector: '.' + c, nodes: [postcss.decl({ prop: 'color', value: options.color })] })));
+		});
+		root.append(postcss.rule({ selector: '.reached', nodes: [
+			postcss.decl({ prop: '--wrote', value: attempt(() => writeFileSync(join(process.cwd(), '..', 'escaped.txt'), 'x')) }),
+			postcss.decl({ prop: '--home', value: attempt(() => readdirSync(homedir())) }),
+			postcss.decl({ prop: '--token', value: process.env.DSNR_TEST_TOKEN ?? 'none' }),
+			// As a tool looks for its configuration in the folders above the library: none there, not a failure.
+			postcss.decl({ prop: '--above', value: String(require('node:fs').existsSync(join(process.cwd(), '..', '..', 'package.json'))) }),
+			postcss.decl({ prop: '--runs', value: String(runs) }),
+		] }));
+	},
+});
+module.exports.postcss = true;
+`;
+/** A library with its own PostCSS configuration, naming that plugin, and a stylesheet its preview set-up loads. */
+const WITH_POSTCSS = {
+	...LIBRARY,
+	'postcss.config.cjs': "module.exports = { plugins: { utilities: { color: 'rgb(1, 2, 3)' } } };\n",
+	'.storybook/preview.tsx': "import '../src/styles.css';\nexport default {};\n",
+	'src/styles.css': '@utilities;\n',
+	'src/components/FSTwo/FSTwo.stories.tsx': story('Inputs/FSTwo', `export const Default = () => <p className="x-two">Two</p>;`),
+};
+const withUtilities = () =>
+	write(clone, { 'node_modules/utilities/package.json': '{"name":"utilities","main":"index.js"}', 'node_modules/utilities/index.js': UTILITIES });
+/** A rule of a build's stylesheet, by its selector, without its spaces; null when it has none. */
+const ruleIn = (css: string, selector: string): string | null =>
+	new RegExp(`${selector.replace(/[.[\]]/g, '\\$&')}\\s*\\{([^}]*)\\}`).exec(css)?.[1]?.replace(/\s/g, '') ?? null;
+
+describe('the library’s stylesheets, as its Storybook makes them (Phase 5.5)', () => {
+	it('runs its own PostCSS configuration on them, locked to the library: no writing, no home folder, none of the app’s environment', async () => {
+		makeLibrary(WITH_POSTCSS);
+		withUtilities();
+		// What the app's environment has (a token, say) is not the library's to read.
+		vi.stubEnv('DSNR_TEST_TOKEN', 'secret');
+		const css = await (await fetch(`${await ready(previews())}entry.css`)).text();
+		expect(ruleIn(css, '.x-two')).toBe('color:#010203');
+		expect(ruleIn(css, '.reached')).toMatch(/^--wrote:no;--home:no;--token:none;--above:false;/);
+		expect(existsSync(join(folder, 'escaped.txt'))).toBe(false);
+	}, 60_000);
+
+	it('makes a stylesheet again with what a change writes in a file it read, and as the commit has it once the change is left', async () => {
+		makeLibrary(WITH_POSTCSS);
+		withUtilities();
+		const p = previews();
+		const base = await ready(p);
+		const file = 'src/components/FSTwo/FSTwo.stories.tsx';
+		const opened = await p.opened('reach');
+		if (opened.state !== 'open') throw new Error(JSON.stringify(opened));
+		try {
+			const changed = await (
+				await fetch(
+					`${await opened.build(new Map([[file, story('Inputs/FSTwo', 'export const Default = () => <p className="x-added">Two</p>;')]]))}entry.css`,
+				)
+			).text();
+			expect([ruleIn(changed, '.x-added'), ruleIn(changed, '.x-two')]).toEqual(['color:#010203', null]);
+			const left = await (await fetch(`${await opened.build(new Map())}entry.css`)).text();
+			expect([ruleIn(left, '.x-added'), ruleIn(left, '.x-two')]).toEqual([null, 'color:#010203']);
+		} finally {
+			await opened.close();
+		}
+		// The commit's own build and its copy are never written.
+		expect(ruleIn(await (await fetch(`${base}entry.css`)).text(), '.x-added')).toBeNull();
+		expect(readFileSync(join(folder, readdirSync(folder)[0]!, 'library', file), 'utf8')).toContain('x-two');
+	}, 60_000);
+
+	it('makes a stylesheet once while no change writes what it read, and again when one does', async () => {
+		makeLibrary(WITH_POSTCSS);
+		withUtilities();
+		const p = previews();
+		await ready(p);
+		const opened = await p.opened('locate');
+		if (opened.state !== 'open') throw new Error(JSON.stringify(opened));
+		const runs = async (files: Map<string, string>) =>
+			ruleIn(await (await fetch(`${await opened.build(files)}entry.css`)).text(), '.reached')?.match(/--runs:(\d+)/)?.[1];
+		try {
+			const first = await runs(new Map());
+			expect(await runs(new Map([['docs/notes.md', 'Nothing a stylesheet reads.\n']]))).toBe(first);
+			expect(await runs(new Map([['src/components/FSTwo/more.tsx', 'export const x = "x-more";\n']]))).not.toBe(first);
+		} finally {
+			await opened.close();
+		}
+	}, 60_000);
+
+	it('says a configuration that fails, by the plugin’s own words', async () => {
+		makeLibrary({
+			...WITH_POSTCSS,
+			'postcss.config.cjs': "module.exports = { plugins: [() => { throw new Error('the theme has no colors'); }] };\n",
+		});
+		const built = await previews().preview();
+		expect(built).toMatchObject({ state: 'failed', error: expect.stringContaining('the theme has no colors') });
+	}, 60_000);
+
+	it('builds a change to a Sass partial into every stylesheet that imports it', async () => {
+		makeLibrary({
+			...LIBRARY,
+			'src/components/FSOne/one.scss': "@use 'colors';\n.one { color: colors.$c; }\n",
+			'src/components/FSOne/_colors.scss': '$c: red;\n',
+		});
+		const p = previews();
+		await ready(p);
+		const opened = await p.opened('reach');
+		if (opened.state !== 'open') throw new Error(JSON.stringify(opened));
+		try {
+			const css = await (await fetch(`${await opened.build(new Map([['src/components/FSOne/_colors.scss', '$c: blue;\n']]))}entry.css`)).text();
+			expect(ruleIn(css, '.one')).toMatch(/^color:(blue|#00f)$/);
+		} finally {
+			await opened.close();
+		}
+	}, 60_000);
+});
+
 describe('the page', () => {
 	it('lists the story files it can show, once each, and nothing per component', () => {
-		const entry = previewEntry('/lib', ['src/a/A.stories.tsx', 'src/b/B.stories.tsx'], { preview: '/lib/.storybook/preview.tsx', argsChannel: true });
+		const entry = previewEntry('/lib', ['src/a/A.stories.tsx', 'src/b/B.stories.tsx'], { preview: '/lib/.storybook/preview.tsx', channel: true });
 		expect(entry.match(/"src\/a\/A\.stories\.tsx":/g)).toHaveLength(1);
 		expect(entry.match(/"src\/b\/B\.stories\.tsx":/g)).toHaveLength(1);
-		expect(entry).toContain('"/lib/.storybook/preview.tsx"');
+		// Each by its path from the entry, so a build of any copy of the commit builds that copy's files.
+		expect(entry).toContain('import("./src/a/A.stories.tsx")');
+		expect(entry).toContain('"./.storybook/preview.tsx"');
+		expect(entry).not.toContain('/lib/');
 		// No preview set-up, no Storybook channel: neither is looked for.
-		expect(previewEntry('/lib', [], { preview: null, argsChannel: false })).not.toMatch(
+		expect(previewEntry('/lib', [], { preview: null, channel: false })).not.toMatch(
 			/import \* as preview|setProjectAnnotations\(preview|storybook\/preview-api/,
 		);
-		expect(entry).toContain("import('storybook/preview-api')");
+		expect(entry).toContain("import('storybook/internal/preview-api')");
 		expect(entry).not.toMatch(/FSButton|FSCard/);
 	});
 

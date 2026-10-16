@@ -6,12 +6,10 @@ import type { Built, Drawn, Instance, Measure } from '../src/main/services/compo
 import { typeLibs } from '../src/main/services/componentProps';
 import { ComponentVariants } from '../src/main/services/componentVariants';
 import type { ComponentVariants as Answer, ConnectedDesignSystem } from '../src/shared/contract';
-import { chromeHeadless, findChrome } from '../src/main/services/chromeHeadless';
-import { ComponentTokens } from '../src/main/services/componentTokens';
-import { PrototypeServer } from '../src/main/services/prototypeServer';
-import { StoryPreviews } from '../src/main/services/storyPreviews';
+import { findChrome } from '../src/main/services/chromeHeadless';
 import { REAL_LIBRARY, REAL_PRIMER, describeWith, libraryMissing, primerMissing } from './realCheckouts';
 import { settledAnswer } from './fixtures';
+import { onRealLibrary } from './realLibrary';
 
 /**
  * A component drawn in every case its props declare (Phase 5), against a small library written here, its props read by the
@@ -157,20 +155,11 @@ describe('a component drawn in every case its props declare (Phase 5)', () => {
  * On the real libraries on this machine: what their stories do not show, drawn from their props, as Values read it. FSBadge's
  * page also draws its stories as it opens, and what it is asked to draw after must be what is drawn.
  */
-const onRealLibrary = async (system: ConnectedDesignSystem, check: (of: (file: string) => Promise<Answer>) => Promise<void>) => {
-	const pages = new PrototypeServer();
-	const real = chromeHeadless();
-	try {
-		const previews = new StoryPreviews({ system: () => system, folder: mkdtempSync(join(tmpdir(), 'dsnr-variants-real-')), server: pages });
-		const tokens = new ComponentTokens({ system: () => system, previews, measure: real.measure, pictures: { keep: () => {}, of: async () => ({}) } });
-		await tokens.warm();
-		const v = new ComponentVariants({ tokens, previews, measure: real.measure, typeLibs: typeLibs(), folder: () => system.folder });
-		await check((file) => settled(v, file));
-	} finally {
-		await real.close();
-		pages.close();
-	}
-};
+const onReal = (system: ConnectedDesignSystem, check: (of: (file: string) => Promise<Answer>) => Promise<void>) =>
+	onRealLibrary(system, (real) => {
+		const v = new ComponentVariants({ ...real, typeLibs: typeLibs(), folder: () => system.folder });
+		return check((file) => settled(v, file));
+	});
 /** A row of a component's variants, by property: each cell's variant and value. */
 const rowOf = (a: Answer, property: string) => {
 	const rows = a.state === 'ready' && a.values.state === 'read' ? (a.values.rows.light ?? []) : [];
@@ -182,7 +171,7 @@ describeWith(libraryMissing, 'on Flock’s FUI', () => {
 		'draws FSChip’s sizes, FSBadge’s dot and FSTextField’s sizes, which MUI declares, from their props',
 		async () => {
 			const repository = 'flocksafety/flock-react-component-lib';
-			await onRealLibrary({ id: repository, name: 'FUI', repository, root: REAL_LIBRARY, folder: '', branch: 'develop' }, async (of) => {
+			await onReal({ id: repository, name: 'FUI', repository, root: REAL_LIBRARY, folder: '', branch: 'develop' }, async (of) => {
 				const file = (name: string) => `src/components/${name}/${name}.stories.tsx`;
 				expect(rowOf(await of(file('FSChip')), 'height')).toEqual({ medium: '32px', small: '24px', tiny: '16px' });
 				const badge = await of(file('FSBadge'));
@@ -200,7 +189,7 @@ describeWith(primerMissing, 'on Primer React', () => {
 		'draws Label’s sizes on the story that takes its props, not the one that sets them itself',
 		async () => {
 			const system = { id: 'primer/react', name: 'Primer', repository: 'primer/react', root: REAL_PRIMER, folder: 'packages/react', branch: 'main' };
-			await onRealLibrary(system, async (of) => {
+			await onReal(system, async (of) => {
 				const label = await of('packages/react/src/Label/Label.stories.tsx');
 				expect(label).toMatchObject({ state: 'ready', fixed: [] });
 				expect(rowOf(label, 'height')).toEqual({ small: '20px', large: '24px' });

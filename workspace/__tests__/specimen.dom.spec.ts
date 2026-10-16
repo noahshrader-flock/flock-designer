@@ -59,7 +59,7 @@ describe('a type specimen', () => {
 
 describe('the preview page', () => {
 	it('draws the specimen it is given in its address instead of a story file', () => {
-		const entry = previewEntry('/lib', ['src/a/A.stories.tsx'], { preview: null, argsChannel: false });
+		const entry = previewEntry('/lib', ['src/a/A.stories.tsx'], { preview: null, channel: false });
 		expect(entry).toContain('drawSpecimens');
 		expect(entry).toMatch(/get\("specimen"\)/);
 	});
