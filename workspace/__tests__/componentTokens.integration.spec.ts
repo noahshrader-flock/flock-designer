@@ -321,10 +321,10 @@ describe('the index', () => {
 				},
 			});
 			await i.warm();
-			const drawn = await i.drawn();
-			if (drawn.state !== 'ready') throw new Error('not drawn');
-			const first = i.reachWith(drawn, async () => new Map(), 'written');
-			const second = i.reachWith(drawn, async () => new Map(), 'written');
+			const indexed = await i.drawn();
+			if (indexed.state !== 'ready') throw new Error('not drawn');
+			const first = i.reachWith(indexed, async () => new Map(), 'written');
+			const second = i.reachWith(indexed, async () => new Map(), 'written');
 			await new Promise((r) => setTimeout(r, 20));
 			// The second waits for the first to be built and drawn.
 			expect(built).toEqual(['written']);

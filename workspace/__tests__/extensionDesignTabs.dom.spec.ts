@@ -264,10 +264,11 @@ describe('a component’s tab', () => {
 	};
 	const section = (label: string) => document.querySelector(`[aria-label="${label}"]`) as HTMLElement | null;
 
-	it('reads in six parts, in an order that goes from what it is made of to what is wrong with it', async () => {
+	it('reads in seven parts, in an order that goes from what it is made of to what is wrong with it', async () => {
 		await analysed();
 		expect([...document.querySelectorAll('.component-aside > [aria-label]')].map((e) => e.getAttribute('aria-label'))).toEqual([
 			'Values',
+			'Every variant',
 			'Made from',
 			'Color tokens',
 			'Usage',
@@ -672,6 +673,85 @@ describe('a component’s tab', () => {
 			await answer('valueBranch', { branch: 'dsnr/values-20261016-ab12', saved: [SMALL], saves: 1, pullRequest: null });
 			expect(changed().querySelector('[data-value-change] .value-cell')?.textContent).toBe('Height · sm28px → 32px');
 			expect(calls('valueSources').at(-1)?.args).toEqual([BUTTON, [SMALL]]);
+		});
+	});
+
+	describe('every variant its props declare (Phase 5)', () => {
+		const variants = () => section('Every variant') as HTMLElement;
+		const READY = {
+			state: 'ready',
+			props: [
+				{ name: 'size', values: ['sm', 'md', 'lg', 'xl'] },
+				{ name: 'variant', values: ['primary', 'ghost'] },
+			],
+			fixed: ['variant'],
+			unvaried: [
+				{ name: 'children', why: 'content' },
+				{ name: 'sx', why: 'object' },
+				{ name: 'onClick', why: 'callback' },
+			],
+			values: {
+				state: 'read',
+				instances: 6,
+				unmarked: 0,
+				rows: {
+					light: [
+						{
+							property: 'height',
+							by: 'size',
+							cells: ['sm', 'md', 'lg', 'xl'].map((variant, i) => ({
+								variant,
+								value: ['28px', '36px', '48px', '56px'][i],
+								kind: 'own',
+								tokens: [],
+								instances: 1,
+								targets: [variant],
+							})),
+						},
+					],
+					dark: null,
+				},
+			},
+		};
+
+		it('is asked for by the story file, and says it is being drawn until it is', async () => {
+			await analysed();
+			expect(calls('componentVariants').at(-1)?.args).toEqual([BUTTON]);
+			expect(variants().textContent).toContain('Reading its props, and drawing it with each of their values.');
+		});
+
+		it('lists every case its props declare, drawn and shown as Values are, never tried; what its story sets, and what cannot be varied', async () => {
+			await analysed();
+			await answer('componentVariants', READY);
+			expect(variants().querySelector('[data-variants-from]')?.textContent).toBe(
+				'From its props: size (4), variant (2), each drawn on one of its stories, in light.',
+			);
+			expect([...variants().querySelectorAll('[data-value-cell] .value-cell')].map((c) => c.textContent)).toEqual([
+				'sm28px',
+				'md36px',
+				'lg48px',
+				'xl56px',
+			]);
+			// Shown, not a control: what is tried is tried in its stories.
+			expect(variants().querySelector('[data-value-cell] button')).toBeNull();
+			expect(variants().querySelector('[data-variants-fixed]')?.textContent).toBe(
+				'Its story sets variant itself: drawn with another value, it draws as the story has it.',
+			);
+			expect(variants().querySelector('[data-variants-unvaried]')?.textContent).toBe(
+				'Not varied: children (content), sx (an object), onClick (a callback).',
+			);
+		});
+
+		it('is not there when its stories name no component whose props can be read', async () => {
+			await analysed();
+			await answer('componentVariants', { state: 'none' });
+			expect(variants()).toBeNull();
+		});
+
+		it('says why it could not be drawn', async () => {
+			await analysed();
+			await answer('componentVariants', { state: 'failed', error: 'Its story did not draw with its props changed.' });
+			expect(variants().textContent).toContain('Its story did not draw with its props changed.');
 		});
 	});
 

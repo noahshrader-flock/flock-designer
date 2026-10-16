@@ -42,6 +42,8 @@ import { TokenBranches } from './services/tokenBranches';
 import { ValueBranches } from './services/valueBranches';
 import { ValueSources } from './services/valueSources';
 import { ValueAgent } from './services/valueAgent';
+import { ComponentVariants } from './services/componentVariants';
+import { typeLibs } from './services/componentProps';
 import { VOICE_NEEDS_CLI, VoiceAndToneFile } from './services/voiceAndTone';
 import { registerAccount } from './ipc/account';
 import { registerCheckout } from './ipc/checkout';
@@ -260,6 +262,14 @@ export const ipcDeps = ({
 		run: (cwd, task, readOnly) => runToEnd(cwd, task, { readOnly }),
 		readStandard: (path) => readSkillText(path),
 	});
+	// Every case a component's props declare, drawn (Phase 5), its props read by the compiler the app carries.
+	const componentVariants = new ComponentVariants({
+		tokens: componentTokens,
+		previews,
+		measure: ports.headless.measure,
+		typeLibs: typeLibs(),
+		folder: () => shownSystem()?.folder ?? '',
+	});
 	const valueSources = new ValueSources({ tokens: componentTokens, previews, measure: ports.headless.measure, agent: valueAgent });
 	const valueBranches = new ValueBranches({ system: shownSystem, file: valueBranchesFile, tools: ports.shareTools, sources: valueSources });
 	// The voice and tone (T9): the connected design system's, read, saved and proposed with the person's own command line.
@@ -407,6 +417,7 @@ export const ipcDeps = ({
 		valueSources,
 		valueBranches,
 		valueAgent,
+		componentVariants,
 		voiceFile,
 		state,
 		codebase,

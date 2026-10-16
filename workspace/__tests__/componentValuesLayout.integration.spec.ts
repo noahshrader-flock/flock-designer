@@ -8,6 +8,7 @@ import { ChangedValues } from '../extension/webview/ValueChanges';
 import { ComponentValues } from '../extension/webview/ComponentValues';
 import { ValueEditor } from '../extension/webview/ValueEditor';
 import type { ComponentReach, DesignToken, ValueCell, ValueRow } from '../src/shared/contract';
+import { labelOf } from '../src/shared/tokens';
 import { NO_CHROME, inChrome } from './realChrome';
 
 /**
@@ -63,6 +64,13 @@ const ROWS: ValueRow[] = [
 	{ property: 'padding', by: 'size', cells: [cell('sm', '0px 10px', 'own'), cell('lg', '0px 16px', 'own')] },
 ];
 
+/** The other components that draw with each token, by name. */
+const SHARED: Record<string, string[]> = {
+	'palette.light.primary.main': ['FSButtonGroup', 'FSIconButton', 'FSSplitButton', 'FSLoadingButton', 'FSToggleButton'],
+	'palette.light.secondaryContainer.main': ['FSButtonGroup', 'FSIconButton'],
+	'palette.light.error.contrastText': ['FSButtonGroup'],
+};
+
 const PANE = 300;
 const css = readFileSync(join(__dirname, '..', 'extension', 'webview', 'styles.css'), 'utf8');
 const markupFor = (rows: ValueRow[]) =>
@@ -71,11 +79,7 @@ const markupFor = (rows: ValueRow[]) =>
 			answer: {
 				state: 'ready',
 				uses: [],
-				sharedWith: {
-					'palette.light.primary.main': ['FSButtonGroup', 'FSIconButton', 'FSSplitButton', 'FSLoadingButton', 'FSToggleButton'],
-					'palette.light.secondaryContainer.main': ['FSButtonGroup', 'FSIconButton'],
-					'palette.light.error.contrastText': ['FSButtonGroup'],
-				},
+				sharedWith: SHARED,
 				notTokens: [],
 				derived: 0,
 				accessibility: null,
@@ -84,7 +88,11 @@ const markupFor = (rows: ValueRow[]) =>
 			name: 'FSButton',
 			version: { branch: 'develop', commit: 'abc1234def' },
 			byPath: new Map(TOKENS.map((t) => [t.path, t])),
-			names: new Map(['FSButtonGroup', 'FSIconButton', 'FSSplitButton', 'FSLoadingButton', 'FSToggleButton'].map((n) => [n, n])),
+			tokenName: (path: string) => {
+				const t = TOKENS.find((x) => x.path === path);
+				return t ? labelOf(t) : path;
+			},
+			others: (path: string) => SHARED[path] ?? [],
 			trying: { tried: new Map(), onTry: () => undefined, onAll: () => undefined, onWrite: () => undefined, writes: 0, writeError: null },
 			onEditToken: () => undefined,
 		}),

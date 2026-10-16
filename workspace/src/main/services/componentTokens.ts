@@ -19,6 +19,7 @@ import type {
 	ComponentValues,
 	ComponentPictures as Pictures,
 	ConnectedDesignSystem,
+	DeclaredProp,
 	DesignToken,
 	StoryPreview,
 	TokenEdit,
@@ -86,8 +87,22 @@ export type Mode = 'light' | 'dark';
  * Draws story files from a build of the previews (its `base`), in a mode, and says what each drew, in the order given;
  * null for one that would not draw. Several runs at once.
  */
+/** A story drawn once with each value of each of `props` (Phase 5): the first of `stories`, else the file's first drawn from its args. */
+export interface Vary {
+	stories: string[];
+	props: DeclaredProp[];
+}
+
 export type Measure = (
-	runs: { base: string; mode: Mode; files: string[]; pictures?: boolean; accessibility?: string[] }[],
+	runs: {
+		base: string;
+		mode: Mode;
+		files: string[];
+		pictures?: boolean;
+		accessibility?: string[];
+		/** Instead of its stories, one of them drawn once with each value of each prop (Phase 5). */
+		vary?: Vary;
+	}[],
 ) => Promise<(Drawn | null)[][]>;
 
 const add = (m: Map<string, number>, k: string, n: number) => m.set(k, (m.get(k) ?? 0) + n);
@@ -169,6 +184,8 @@ export type Built = {
 	accessibility: Map<string, AccessibilityResult>;
 	/** The components, in the list's order: what a change is drawn for. */
 	order: string[];
+	/** What its values are read with (`readValues`): the tags, the tokens, and the build with the tags, if one was made. */
+	reading: { tags: Tags; tokens: DesignToken[]; tagged: string | null };
 };
 type Index = Built | { error: string };
 
@@ -446,6 +463,6 @@ export class ComponentTokens {
 				),
 			);
 		});
-		return { files: uses, values, accessibility, order: files };
+		return { files: uses, values, accessibility, order: files, reading: { tags, tokens, tagged: taggedBase } };
 	}
 }

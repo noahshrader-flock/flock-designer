@@ -85,6 +85,7 @@ const Cell = ({
 	editor,
 	onOpen,
 	onClose,
+	still = false,
 }: {
 	property: ValueProperty;
 	cell: ValueCell;
@@ -96,6 +97,8 @@ const Cell = ({
 	editor: ReactNode;
 	onOpen: () => void;
 	onClose: () => void;
+	/** Shown and never tried: a value drawn where nothing can be tried on it (a variant, Phase 5). */
+	still?: boolean;
 }) => {
 	const value = saidValue(property, tried ?? cell.value);
 	const wrap = useRef<HTMLLIElement>(null);
@@ -104,6 +107,29 @@ const Cell = ({
 	// With no variant, what it is stands for one; with one, under it.
 	const label = cell.variant ?? made.says ?? 'Its own';
 	const under = line && cell.variant !== null && cell.value !== NO_COLOR ? made.says : null;
+	const says = (
+		<>
+			<span className="value-label">{label}</span>
+			<span className="value-drawn">
+				{COLOR_VALUES.has(property) && value !== NO_COLOR && <Swatch value={tried ?? cell.value} />}
+				<span>{value}</span>
+				{tried !== null && <span data-changed-mark className="token-changed" aria-label="Tried" />}
+			</span>
+			{under !== null && (
+				<span className="value-note" data-value-kind={cell.kind}>
+					{under}
+				</span>
+			)}
+		</>
+	);
+	if (still)
+		return (
+			<li data-value-cell className="token">
+				<span className="value-cell" title={made.why}>
+					{says}
+				</span>
+			</li>
+		);
 	return (
 		<li ref={wrap} data-value-cell className="token" {...(tried !== null ? { 'data-tried': '' } : {})}>
 			<button
@@ -116,17 +142,7 @@ const Cell = ({
 				title={`${made.why}${tried !== null ? `\nTried; drawn ${cell.value}` : ''}`}
 				onClick={open ? onClose : onOpen}
 			>
-				<span className="value-label">{label}</span>
-				<span className="value-drawn">
-					{COLOR_VALUES.has(property) && value !== NO_COLOR && <Swatch value={tried ?? cell.value} />}
-					<span>{value}</span>
-					{tried !== null && <span data-changed-mark className="token-changed" aria-label="Tried" />}
-				</span>
-				{under !== null && (
-					<span className="value-note" data-value-kind={cell.kind}>
-						{under}
-					</span>
-				)}
+				{says}
 			</button>
 			{open && editor}
 		</li>
@@ -147,6 +163,7 @@ const Row = ({
 	editor,
 	onOpen,
 	onClose,
+	still = false,
 }: {
 	row: ValueRow;
 	name: (path: string) => string;
@@ -157,6 +174,8 @@ const Row = ({
 	editor: (cell: ValueCell) => ReactNode;
 	onOpen: (cell: ValueCell) => void;
 	onClose: () => void;
+	/** Its values shown and never tried (`Cell`). */
+	still?: boolean;
 }) => {
 	// What the values are is said once when every value that draws something is the same kind; a none says nothing of it.
 	const drawing = row.cells.filter((c) => c.value !== NO_COLOR);
@@ -189,12 +208,33 @@ const Row = ({
 						editor={editor(c)}
 						onOpen={() => onOpen(c)}
 						onClose={onClose}
+						still={still}
 					/>
 				))}
 			</ul>
 		</div>
 	);
 };
+
+/** Values shown and never tried, as the Values rows are laid out: a component's variants (Phase 5), drawn where nothing is tried. */
+export const StillRows = ({ rows, name, others }: { rows: ValueRow[]; name: (path: string) => string; others: (path: string) => string[] }) => (
+	<>
+		{rows.map((row) => (
+			<Row
+				key={row.property}
+				row={row}
+				name={name}
+				others={others}
+				tried={() => null}
+				editing={null}
+				editor={() => null}
+				onOpen={() => undefined}
+				onClose={() => undefined}
+				still
+			/>
+		))}
+	</>
+);
 
 /**
  * Values (Phase 1 of adjusting a component): what each instance of the component its stories draw measures, by property
@@ -211,7 +251,8 @@ export const ComponentValues = ({
 	name,
 	version,
 	byPath,
-	names,
+	tokenName,
+	others,
 	trying,
 	onEditToken,
 }: {
@@ -219,7 +260,9 @@ export const ComponentValues = ({
 	name: string;
 	version: { branch: string; commit: string };
 	byPath: ReadonlyMap<string, DesignToken>;
-	names: ReadonlyMap<string, string>;
+	/** A token's name, by its path; and the other components that draw with it, by name. */
+	tokenName: (path: string) => string;
+	others: (path: string) => string[];
 	trying: Trying;
 	onEditToken: (token: DesignToken) => void;
 }) => {
@@ -234,10 +277,6 @@ export const ComponentValues = ({
 		else setEditing({ property, cell });
 	};
 	// A value of its own's control, to be drawn under its cell.
-	const tokenName = (path: string) => {
-		const t = byPath.get(path);
-		return t ? labelOf(t) : path;
-	};
 	const editor = (property: ValueProperty) => (cell: ValueCell) => {
 		const id = triedId({ property, targets: cell.targets });
 		const following = trying.tried.get(id)?.follows ?? null;
@@ -260,7 +299,6 @@ export const ComponentValues = ({
 			/>
 		);
 	};
-	const others = (path: string) => (answer.sharedWith[path] ?? []).map((f) => names.get(f) ?? f);
 	return (
 		<section aria-label="Values" className="aside-section">
 			<div className="aside-heading">

@@ -12,6 +12,7 @@ import type {
 	TokenBranch,
 	TokenEdit,
 	TriedValue,
+	ComponentVariants,
 	ValueBranch,
 	ValueSources,
 } from '../domain/designSystem';
@@ -75,6 +76,8 @@ export interface WorkspaceApi {
 	componentTokens(file: string): Promise<Result<ComponentTokens>>;
 	/** What a token change being tried reaches: each component it moves, and how (Phase 3); `building` while it is drawn. */
 	changeReach(edits: TokenEdit[]): Promise<Result<ChangeReach>>;
+	/** A component drawn in every case its declared props give, by its story file (Phase 5); `building` while it is drawn. */
+	componentVariants(file: string): Promise<Result<ComponentVariants>>;
 	/** Where the values tried on a component's instances are written, by its story file, and what writing them reaches (Phase 4). */
 	valueSources(file: string, tried: TriedValue[]): Promise<Result<ValueSources>>;
 	/** The branch a component's values are kept on, or null when none has been saved (Phase 4). */
@@ -259,6 +262,7 @@ export const INVOKE = [
 	'storyPreview',
 	'componentTokens',
 	'changeReach',
+	'componentVariants',
 	'valueSources',
 	'valueBranch',
 	'writeValue',

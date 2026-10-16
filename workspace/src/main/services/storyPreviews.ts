@@ -185,27 +185,40 @@ new ResizeObserver(tell).observe(document.body);
 
 // One story file drawn in place of the last, resolved once it is on the page. What reads every story (T6) draws them one
 // after another in one page this way, rather than loading the page again for each.
-const show = (file) => {
+// The last asked for is what is drawn: one asked before it (the page's own, as it opens) that loads after it draws nothing.
+let shown = 0;
+const show = (file, vary) => {
+	const turn = ++shown;
 	// The component the stories are of, as their default export names it, and the props its stories name as controls: what
 	// reads its values finds its instances by it, and tells them apart by those. Never the last file's.
 	window[${JSON.stringify(PREVIEW_COMPONENT)}] = null;
 	const load = files[file];
 	if (!load) return Promise.resolve(fail('There is no such story file in this build.'));
 	return load().then((m) => {
+		if (turn !== shown) return;
 		const stories = Object.entries(composeStories(m));
 		try {
 			const component = m.default?.component;
-			const controls = [...new Set(stories.flatMap(([, Story]) => Object.keys({ ...Story.args, ...Story.argTypes })))];
+			// Varied, the props varied are what tells its instances apart.
+			const controls = vary ? vary.props.map((p) => p.name) : [...new Set(stories.flatMap(([, Story]) => Object.keys({ ...Story.args, ...Story.argTypes })))];
 			window[${JSON.stringify(PREVIEW_COMPONENT)}] = component ? { component, controls } : null;
 		} catch {
 			// A file whose stories cannot be asked is drawn all the same; only its values are not read.
 		}
 		const drawsItself = (name) => typeof m[name] === 'function' || typeof m[name]?.render === 'function' || typeof m.default?.render === 'function';
+		// Each value of each prop asked for (Phase 5), on the story asked for, else the file's first drawn from its args, else its
+		// first: a section for each, named for the story and the value, in place of the stories.
+		const base = (vary && stories.find(([name]) => vary.stories.includes(name))) || stories.find(([name]) => !drawsItself(name)) || stories[0];
+		const drawn = !vary
+			? stories.map(([name, Story]) => [name, Story, null])
+			: !base
+				? []
+				: vary.props.flatMap(({ name: prop, values }) => values.map((value) => [base[0] + ' · ' + prop + '=' + value, base[1], { [prop]: value }]));
 		// Drawn at once, not at the next frame: a page drawn where nobody sees it gets no frames.
-		flushSync(() => root.render(h(Fragment, { key: file }, ...stories.map(([name, Story]) =>
+		flushSync(() => root.render(h(Fragment, { key: file }, ...drawn.map(([name, Story, args]) =>
 			h('section', { key: name, className: 'fd-story', 'data-story': name },
 				h('h4', { className: 'fd-name' }, spaced(name)),
-				h(Boundary, null, h(Live, { Story, drawsItself: drawsItself(name) })))))));
+				h(Boundary, null, args ? h(Story, args) : h(Live, { Story, drawsItself: drawsItself(name) })))))));
 	}, fail);
 };
 window[${JSON.stringify(PREVIEW_SHOW)}] = show;
@@ -664,6 +677,13 @@ export class StoryPreviews {
 		} finally {
 			await opened.close();
 		}
+	}
+
+	/** The copy of the commit the previews are built from, on disk, with its packages: what its types are read from (Phase 5). */
+	async copy(): Promise<string | Exclude<StoryPreview, { state: 'ready' }>> {
+		const base = await this.base();
+		if (base.state !== 'ready') return base;
+		return this.current === null ? { state: 'no-library' } : join(this.current.dir, 'library');
 	}
 
 	/** A build of the commit's copy with files given in place of its own, into `site` beside the commit's own build. */

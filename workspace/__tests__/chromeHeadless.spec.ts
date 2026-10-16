@@ -233,6 +233,8 @@ describe('drawing stories, headless (6.1, the Design System tab’s pictures and
 			axeLoaded: 0,
 			encoded: 0,
 			jpegs: 0,
+			/** What each drawing was asked to vary, as the page's script was given it. */
+			varied: [] as unknown[],
 		};
 		const browser = {
 			newPage: async () => {
@@ -247,9 +249,10 @@ describe('drawing stories, headless (6.1, the Design System tab’s pictures and
 					},
 					evaluate: async (code: string) => {
 						if (code.includes('OffscreenCanvas')) return (done.encoded++, Buffer.from('jpeg').toString('base64'));
-						const file = /^\(async \(file, picture\)[\s\S]*\}\)\(("[^"]*")/.exec(code)?.[1];
-						if (file === undefined) return (done.axeLoaded++, true);
-						const name = JSON.parse(file) as string;
+						const asked = /^\(async \(file, picture, vary\)[\s\S]*\}\)\(("[^"]*"), (?:true|false), (.*)\)$/.exec(code);
+						if (!asked) return (done.axeLoaded++, true);
+						const name = JSON.parse(asked[1] as string) as string;
+						done.varied.push(JSON.parse(asked[2] as string));
 						if (fails.includes(name)) throw new Error('did not draw');
 						return { colors: { [name]: 1 }, radii: {}, spacing: {}, ...(axe ? { accessibility: { violations: [], incomplete: [] } } : {}) };
 					},
@@ -282,6 +285,14 @@ describe('drawing stories, headless (6.1, the Design System tab’s pictures and
 		]);
 		expect(done.scheme.slice(-1)).toEqual([[{ name: 'prefers-color-scheme', value: 'dark' }]]);
 		expect(done.scale).toEqual([1, 1, 1, 1]);
+	});
+
+	it('gives the page each file’s drawing with the props to vary, when a run varies them, and none when it does not', async () => {
+		const { headless, done } = storyBrowser({ loadMs: 0 });
+		const vary = { stories: ['Default'], props: [{ name: 'size', values: ['sm', 'lg'] }] };
+		await headless.measure([{ base: 'http://x/', mode: 'light', files: ['a.stories.tsx'], vary }]);
+		await headless.measure([{ base: 'http://x/', mode: 'light', files: ['b.stories.tsx'] }]);
+		expect(done.varied).toEqual([vary, null]);
 	});
 
 	it('draws two runs at once, in the order given, and gives every run back in its place', async () => {

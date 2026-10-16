@@ -6,7 +6,7 @@
 import { PREVIEW_COMPONENT, PREVIEW_SHOW } from '../../shared/catalog';
 import { axeFound, axeRun } from './accessibilityCheck';
 import { FIND_INSTANCES, READ_VALUES } from './pageInstances';
-import type { Drawn, Measure, Mode } from './componentTokens';
+import type { Drawn, Measure, Mode, Vary } from './componentTokens';
 import { within } from './within';
 
 /**
@@ -69,10 +69,15 @@ const instancesIn = `try {
  * **And each instance of the component the stories are of** (`instancesIn`), with its values and the props it was drawn
  * with, in light and in dark: a value is a token's in a mode when the tags show through in it.
  */
-export const readDrawn = (file: string, picture: boolean, tags: string[] | null = null): string => `(async (file, picture) => {
+export const readDrawn = (
+	file: string,
+	picture: boolean,
+	tags: string[] | null = null,
+	vary: Vary | null = null,
+): string => `(async (file, picture, vary) => {
 	const until = Date.now() + ${STORY_MS - 3000};
 	while (typeof window[${JSON.stringify(PREVIEW_SHOW)}] !== 'function' && Date.now() < until) await new Promise((r) => setTimeout(r, 50));
-	await window[${JSON.stringify(PREVIEW_SHOW)}](file);
+	await window[${JSON.stringify(PREVIEW_SHOW)}](file, vary);
 	await document.fonts.ready;
 	// Held still, so a story draws the same each time it is drawn: what animates in or moves to a place is put at its end,
 	// and what turns for ever (a spinner) is stopped, at rest. Else what a drawing reads depends on the moment it is read in.
@@ -114,7 +119,7 @@ export const readDrawn = (file: string, picture: boolean, tags: string[] | null 
 	const name = first?.querySelector('.fd-name');
 	if (name) name.style.visibility = 'hidden';
 	return drawn;
-})(${JSON.stringify(file)}, ${picture})`;
+})(${JSON.stringify(file)}, ${picture}, ${JSON.stringify(vary)})`;
 
 /** A run's files shared between `pages` pages: each takes every so many, so the slow ones are spread out. */
 const sharesOf = <T>(files: T[]): T[][] =>
@@ -131,6 +136,8 @@ export interface Share {
 	files: string[];
 	pictures: boolean;
 	tags: string[] | null;
+	/** A story drawn with each value of each prop, in place of its stories (Phase 5); null for its stories. */
+	vary: Vary | null;
 }
 
 /**
@@ -152,12 +159,12 @@ export const measureWith = (drawShare: (share: Share) => Promise<(Drawn | null)[
 	};
 	return (runs) =>
 		Promise.all(
-			runs.map(async ({ base, mode, files, pictures = false, accessibility = null }) => {
+			runs.map(async ({ base, mode, files, pictures = false, accessibility = null, vary = null }) => {
 				await turn();
 				try {
 					return backInOrder(
 						files,
-						await Promise.all(sharesOf(files).map((share) => drawShare({ base, mode, files: share, pictures, tags: accessibility }))),
+						await Promise.all(sharesOf(files).map((share) => drawShare({ base, mode, files: share, pictures, tags: accessibility, vary }))),
 					);
 				} finally {
 					done();
@@ -172,7 +179,7 @@ export const measureWith = (drawShare: (share: Share) => Promise<(Drawn | null)[
  * and the rest go on; what the page says it found is kept only when it is axe's results.
  */
 export const drawEach = async (
-	{ files, pictures, tags }: Share,
+	{ files, pictures, tags, vary }: Share,
 	run: (code: string) => Promise<unknown>,
 	picture: () => Promise<Buffer | undefined>,
 ): Promise<(Drawn | null)[]> => {
@@ -180,7 +187,7 @@ export const drawEach = async (
 	for (const file of files) {
 		const read = (await within(
 			STORY_MS,
-			run(readDrawn(file, pictures, tags)).catch(() => null),
+			run(readDrawn(file, pictures, tags, vary)).catch(() => null),
 		)) as (Drawn & { accessibility?: unknown }) | null;
 		if (read === null) {
 			drawn.push(null);

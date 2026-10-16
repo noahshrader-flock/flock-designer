@@ -4,13 +4,14 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { TextEncoder as NodeTextEncoder } from 'node:util';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { PREVIEW_HEIGHT, previewAddress } from '../src/shared/catalog';
+import { PREVIEW_HEIGHT, PREVIEW_SHOW, previewAddress } from '../src/shared/catalog';
 import { PrototypeServer } from '../src/main/services/prototypeServer';
 import { buildPreviews, hasPackages, notInstalled, previewEntry, StoryPreviews, unresolved } from '../src/main/services/storyPreviews';
 import type { CatalogReads } from '../src/main/services/componentCatalog';
 import { editedFiles } from '../src/main/services/tokenEdits';
 import type { TokenEdit } from '../src/shared/contract';
 import { eventually, g } from './fixtures';
+import { NO_CHROME, inChrome } from './realChrome';
 import { REAL_LIBRARY as REAL, describeWith, libraryMissing } from './realCheckouts';
 
 /**
@@ -232,6 +233,58 @@ export default config
 		expect(document.body.dataset.preview).toBe('package');
 		expect(root.textContent).toContain('true dev ui');
 	});
+
+	it('draws a story once with each value of each prop asked for, in place of its stories (Phase 5)', async () => {
+		const chip = `const Chip = ({ size = 'md', tone = 'plain' }) => <i data-size={size}>{size} {tone}</i>;
+const meta = { title: 'Data/Chip', component: Chip };
+export default meta;
+export const AllSizes = { render: () => <><Chip size="sm" /><Chip size="lg" /></> };
+export const Default = { args: { size: 'md' } };`;
+		makeLibrary({ ...LIBRARY, 'src/components/Chip/Chip.stories.tsx': chip });
+		const root = await render(await ready(previews()), 'src/components/Chip/Chip.stories.tsx');
+		const show = (window as unknown as Record<string, (file: string, vary?: unknown) => Promise<void>>)[PREVIEW_SHOW] as (
+			file: string,
+			vary?: unknown,
+		) => Promise<void>;
+		const sections = () => [...root.querySelectorAll('[data-story]')].map((e) => [e.getAttribute('data-story'), e.querySelector('i')?.textContent]);
+		const props = [
+			{ name: 'size', values: ['sm', 'lg'] },
+			{ name: 'tone', values: ['loud'] },
+		];
+		// On the story asked for, each value given to it; the stories' own sections are not drawn.
+		await show('src/components/Chip/Chip.stories.tsx', { stories: ['Default'], props });
+		expect(sections()).toEqual([
+			['Default · size=sm', 'sm plain'],
+			['Default · size=lg', 'lg plain'],
+			['Default · tone=loud', 'md loud'],
+		]);
+		// None asked for: the first drawn from its args, not one that draws its own cases.
+		await show('src/components/Chip/Chip.stories.tsx', { stories: [], props: props.slice(0, 1) });
+		expect(sections().map(([name]) => name)).toEqual(['Default · size=sm', 'Default · size=lg']);
+	});
+
+	it.skipIf(NO_CHROME)(
+		'draws the file last asked for, when one asked for before it is drawn after, in the browser on this machine',
+		async () => {
+			// A story file that takes a while to load, as a large one does, asked for first: it must not be drawn over the next.
+			const slow = story('Data/Slow', 'await new Promise((r) => setTimeout(r, 400));\nexport const Default = () => <i>slow</i>;');
+			makeLibrary({ ...LIBRARY, 'src/components/Slow/Slow.stories.tsx': slow });
+			const base = await ready(previews());
+			const drawn = await inChrome(async (browser) => {
+				const page = await browser.newPage();
+				await page.goto(previewAddress(base, 'src/components/FSTwo/FSTwo.stories.tsx'));
+				await page.waitForSelector('[data-story]');
+				return page.evaluate(async (show) => {
+					const draw = (window as unknown as Record<string, (file: string) => Promise<void>>)[show] as (file: string) => Promise<void>;
+					await Promise.all([draw('src/components/Slow/Slow.stories.tsx'), draw('src/components/FSOne/FSOne.stories.tsx')]);
+					return document.querySelector('#root')?.textContent ?? '';
+				}, PREVIEW_SHOW);
+			});
+			expect(drawn).toContain('One');
+			expect(drawn).not.toContain('slow');
+		},
+		60_000,
+	);
 
 	it('redraws a story that updates its own args, as Storybook does, and leaves one that only pins a value alone', async () => {
 		makeLibrary({

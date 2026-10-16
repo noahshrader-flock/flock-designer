@@ -19,10 +19,17 @@ import { CSS_OF } from '../../shared/valueParts';
  * so is counted apart (`wrapping`), never taken for the content. `reached` is whether any element was known to React's
  * record of what it drew (its `__reactFiber` key on each element): a React that keeps it another way finds nothing.
  */
+/**
+ * The props an instance is never told apart by, so never read off it: its content, handlers, styling, identity, and what it
+ * is for assistive technology. Shared with what reads them back (Phase 5), so a prop not read is never taken as not given.
+ */
+export const NOT_VARIANT =
+	/^(children|className|style|sx|css|id|key|ref|role|tabIndex|href|src|alt|title|name|value|defaultValue|placeholder|label|as|component|slot|form|htmlFor|type)$|^(on[A-Z]|aria-|data-)/;
+
 export const FIND_INSTANCES = `(component) => {
 	const fiberOf = (el) => { const k = Object.keys(el).find((x) => x.startsWith('__reactFiber$')); return k ? el[k] : null; };
 	const isIt = (f) => f.type === component || f.elementType === component;
-	const notVariant = /^(children|className|style|sx|css|id|key|ref|role|tabIndex|href|src|alt|title|name|value|defaultValue|placeholder|label|as|component|slot|form|htmlFor|type)$|^(on[A-Z]|aria-|data-)/;
+	const notVariant = ${NOT_VARIANT};
 	// What an instance was given to draw, as React elements: its children, however nested.
 	const given = (f) => {
 		const out = [];

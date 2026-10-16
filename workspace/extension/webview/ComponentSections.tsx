@@ -8,6 +8,7 @@ import { MOST_LISTED, sharedWith, useComponentTokens } from '../../src/renderer/
 import { AccessibilityFindings } from './Accessibility';
 import { ComponentValues, type Trying } from './ComponentValues';
 import { ValueChanges } from './ValueChanges';
+import { Variants } from './Variants';
 import { SemanticColors } from './SemanticColors';
 import { Sets, TokenRow, type TokenActions } from './Tokens';
 import { Disclosure } from './ui/Disclosure';
@@ -181,10 +182,16 @@ export const ComponentSections = ({
 		);
 	if (answer.state === 'failed') return <Notice onRetry={retry}>{answer.error}</Notice>;
 	const names = new Map(components.map((c) => [c.id, c.name]));
+	// A token as it is named, and the other components that draw with it: one way for every part.
+	const tokenName = (path: string) => {
+		const t = byPath.get(path);
+		return t ? labelOf(t) : path;
+	};
+	const others = (path: string) => (answer.sharedWith[path] ?? []).map((f) => names.get(f) ?? f);
 	const used = new Map(answer.uses.map((u) => [u.path, u.uses]));
 	const tokens = answer.uses.flatMap((u) => (byPath.has(u.path) ? [byPath.get(u.path) as DesignToken] : []));
 	const note = (t: DesignToken) => {
-		const also = (answer.sharedWith[t.path] ?? []).map((f) => names.get(f) ?? f);
+		const also = others(t.path);
 		return (
 			<span data-token-use title={also.join('\n')}>
 				{plural(used.get(t.path) ?? 0, 'use')} · {sharedWith(also)}
@@ -199,10 +206,7 @@ export const ComponentSections = ({
 				components={components}
 				rows={answer.values.state === 'read' ? answer.values.rows.light : null}
 				trying={trying}
-				tokenName={(path) => {
-					const t = byPath.get(path);
-					return t ? labelOf(t) : path;
-				}}
+				tokenName={tokenName}
 				onSource={actions.onSource}
 				onOpen={onOpen}
 			/>
@@ -211,10 +215,12 @@ export const ComponentSections = ({
 				name={component.name}
 				version={version}
 				byPath={byPath}
-				names={names}
+				tokenName={tokenName}
+				others={others}
 				trying={trying}
 				onEditToken={actions.onEdit}
 			/>
+			<Variants file={component.id} name={tokenName} others={others} />
 			<MadeFrom tokens={tokens.filter((t) => t.kind !== 'color')} note={note} actions={actions} />
 			{colors.length > 0 && (
 				<ColorTokens semantic={colors.filter((t) => !isPalette(t))} palette={colors.filter(isPalette)} note={note} actions={actions} />

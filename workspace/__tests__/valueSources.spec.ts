@@ -117,7 +117,13 @@ const values = (): Map<string, ComponentValues> =>
 			},
 		],
 	]);
-const built: Built = { files: new Map(), values: values(), accessibility: new Map(), order: [BUTTON, BADGE] };
+const built: Built = {
+	files: new Map(),
+	values: values(),
+	accessibility: new Map(),
+	order: [BUTTON, BADGE],
+	reading: { tags: { edits: [], colors: new Map(), sizes: [], unmarked: 0 }, tokens: [], tagged: null },
+};
 /** The commit the index is of: what a place found is kept for. */
 let commit = 'commit';
 const index = { key: 'commit', built };

@@ -176,6 +176,18 @@ export interface DeclaredProp {
 /** Why a declared prop cannot be varied: it takes an object, a callback, content, or free text or a number. */
 export type Unvaried = 'object' | 'callback' | 'content' | 'text' | 'number';
 
+/**
+ * A component drawn in every case its props declare (Phase 5): its design props and their values, its first story drawn
+ * once with each, read as its values are (`values`, its rows told apart by those props); the props its story sets itself,
+ * so drawing it with another value changes nothing (`fixed`); and the props that cannot be varied, with why. None when its
+ * stories name no component whose props can be read; building while it is drawn.
+ */
+export type ComponentVariants =
+	| { state: 'building' }
+	| { state: 'failed'; error: string }
+	| { state: 'none' }
+	| { state: 'ready'; props: DeclaredProp[]; fixed: string[]; unvaried: { name: string; why: Unvaried }[]; values: ComponentValues };
+
 /** What names a value tried: its property and the instances it is for, the same in light and in dark, in the tab and the app. */
 export const triedId = ({ property, targets }: { property: ValueProperty; targets: string[] }): string =>
 	`${property}\u0000${targets.join('\u0001')}`;

@@ -16,7 +16,19 @@ const storyFileOf = (file: unknown): string => {
  * voice and tone, and its branch.
  */
 export const registerDesignSystem = (d: IpcDeps): void => {
-	const { componentTokens, designSystems, library, previews, tokenBranches, valueAgent, valueBranches, valueSources, voiceFile, warm } = d;
+	const {
+		componentTokens,
+		componentVariants,
+		designSystems,
+		library,
+		previews,
+		tokenBranches,
+		valueAgent,
+		valueBranches,
+		valueSources,
+		voiceFile,
+		warm,
+	} = d;
 
 	// The longest a save takes: far beyond any real voice and tone, short of anything that could hurt.
 	const MAX_VOICE = 200_000;
@@ -32,6 +44,7 @@ export const registerDesignSystem = (d: IpcDeps): void => {
 	handle('storyPreview', [arg.unknown], (edits) => previews.preview(tokenEditsOf(edits)));
 	// The window names a story file, and only a story file of the library is answered.
 	handle('componentTokens', [arg.unknown], (file) => componentTokens.of(storyFileOf(file)));
+	handle('componentVariants', [arg.unknown], (file) => componentVariants.of(storyFileOf(file)));
 	// What a change reaches is asked for by the change, checked as a change always is.
 	handle('changeReach', [arg.unknown], (edits) => componentTokens.reach(tokenEditsOf(edits)));
 	// Values tried on a component's instances, by its story file: checked as the contract says one is, and written only as

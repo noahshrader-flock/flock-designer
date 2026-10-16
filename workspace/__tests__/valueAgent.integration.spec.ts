@@ -68,7 +68,13 @@ const values: Map<string, ComponentValues> = new Map([
 		},
 	],
 ]);
-const built: Built = { files: new Map(), values, accessibility: new Map(), order: [BADGE] };
+const built: Built = {
+	files: new Map(),
+	values,
+	accessibility: new Map(),
+	order: [BADGE],
+	reading: { tags: { edits: [], colors: new Map(), sizes: [], unmarked: 0 }, tokens: [], tagged: null },
+};
 const index = { key: 'commit:', built };
 const system = () => ({ id: 'acme/ui', name: 'Acme', repository: 'acme/ui', root: clone, folder: '', branch: 'develop' });
 const drawings = (files: Record<string, string>) => new Map([[BADGE, { light: draw(files), dark: null }]]);
