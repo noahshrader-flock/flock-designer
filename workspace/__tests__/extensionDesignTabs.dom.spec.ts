@@ -40,13 +40,13 @@ describe('a component’s tab', () => {
 		expect(document.querySelector('.tab-title')?.textContent).toBe('FSButton');
 		await press(button('Storybook'));
 		expect(sent.at(-1)).toEqual({ type: 'component-link', id: BUTTON, link: 'storybook' });
-		await press(button('Source'));
+		await press(button('GitHub'));
 		expect(sent.at(-1)).toEqual({ type: 'component-link', id: BUTTON, link: 'source' });
 	});
 
 	it('marks its links as going out of VS Code: the external link icon after each one’s words, not read aloud', async () => {
 		await open();
-		for (const name of ['Storybook', 'Source']) {
+		for (const name of ['Storybook', 'GitHub']) {
 			const link = button(name);
 			const icon = link.lastElementChild as HTMLElement;
 			expect(icon.classList.contains('codicon-link-external')).toBe(true);
@@ -184,6 +184,14 @@ describe('a component’s tab', () => {
 						impact: 'serious',
 						nodes: 2,
 						states: ['default'],
+						elements: [
+							{
+								target: 'button.ghost > span',
+								html: '<span>Ghost</span>',
+								fix: 'Fix any of the following:\n  Element has insufficient color contrast of 3.1',
+								state: 'default',
+							},
+						],
 					},
 				],
 				incomplete: [
@@ -195,8 +203,24 @@ describe('a component’s tab', () => {
 						impact: 'minor',
 						nodes: 1,
 						states: ['default'],
+						elements: [],
 					},
 				],
+				bestPractice: {
+					violations: [
+						{
+							rule: 'heading-order',
+							help: 'Heading levels should only increase by one',
+							url: 'https://axe.example/ho',
+							criteria: [],
+							impact: 'moderate',
+							nodes: 1,
+							states: ['default'],
+							elements: [{ target: 'h4', html: '<h4>', fix: 'Fix any of the following:\n  Heading order invalid', state: 'default' }],
+						},
+					],
+					incomplete: [],
+				},
 				notAutomated: ['2.4.7'],
 				ran: { axe: '4.10', target: 'WCAG 2.2 AA', states: ['default'] },
 			},
@@ -509,6 +533,16 @@ describe('a component’s tab', () => {
 		expect(details.textContent).toContain('Text needs more contrast');
 		expect(details.textContent).toContain('Check this attribute');
 		expect(details.textContent).toContain('WCAG 1.4.3');
+		// Which element, and what to change on it; the rest counted.
+		const elements = details.querySelector('[data-issue-elements="color-contrast"]') as HTMLElement;
+		expect([...elements.querySelectorAll('li')].map((l) => l.textContent)).toEqual([
+			'button.ghost > span: Fix any of the following: Element has insufficient color contrast of 3.1',
+			'and 1 more element',
+		]);
+		// Best practice, apart and never counted: the summary above says only what WCAG's rules found.
+		const best = details.querySelector('[aria-label="Best practice, beside WCAG (not counted as it)"]') as HTMLElement;
+		expect(best.textContent).toContain('Heading levels should only increase by one');
+		expect(best.querySelector('[data-issue-elements="heading-order"] code')?.textContent).toBe('h4');
 	});
 
 	describe('saving the values tried where they are written (Phase 4)', () => {
@@ -1052,7 +1086,13 @@ describe('a component’s tab', () => {
 
 	it('has no findings to open when axe found nothing', async () => {
 		await analysed({
-			accessibility: { violations: [], incomplete: [], notAutomated: [], ran: { axe: '4.10', target: 'WCAG 2.2 AA', states: ['default'] } },
+			accessibility: {
+				violations: [],
+				incomplete: [],
+				bestPractice: { violations: [], incomplete: [] },
+				notAutomated: [],
+				ran: { axe: '4.10', target: 'WCAG 2.2 AA', states: ['default'] },
+			},
 		});
 		expect(section('Accessibility')!.querySelector('details')).toBeNull();
 		expect(section('Accessibility')!.querySelector('[data-accessibility-summary]')?.textContent).toBe('No issues found by automated checks');

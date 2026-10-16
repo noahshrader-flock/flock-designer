@@ -61,12 +61,17 @@ describe('a target', () => {
 
 	it('becomes every axe tag at or below it, levels and versions both, since they are cumulative', () => {
 		expect(axeTagsFor({ version: '2.0', level: 'A' })).toEqual(['wcag2a']);
-		expect(axeTagsFor(DEFAULT_TARGET)).toEqual(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']);
+		expect(axeTagsFor({ version: '2.2', level: 'AA' })).toEqual(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']);
+		// The default, where a product declares none: WCAG 2.1 AA, the usual industry target.
+		expect(DEFAULT_TARGET).toEqual({ version: '2.1', level: 'AA' });
+		expect(axeTagsFor(DEFAULT_TARGET)).toEqual(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']);
 	});
 
 	it('says which of its parts no automated check covers, so they are left to a person and not skipped', () => {
 		expect(notAutomated({ version: '2.0', level: 'AA' })).toEqual([]);
-		expect(notAutomated(DEFAULT_TARGET)).toEqual(['WCAG 2.2 Level A']);
+		expect(notAutomated({ version: '2.2', level: 'AA' })).toEqual(['WCAG 2.2 Level A']);
+		// At the default, every criterion has an automated check.
+		expect(notAutomated(DEFAULT_TARGET)).toEqual([]);
 	});
 });
 

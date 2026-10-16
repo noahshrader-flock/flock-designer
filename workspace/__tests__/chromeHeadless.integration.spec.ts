@@ -4,6 +4,9 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { chromeHeadless, composedPicture, findChrome, pictureOf } from '../src/main/services/chromeHeadless';
 import { COVER_BUDGET } from '../src/main/services/projectCovers';
 import { readDrawn } from '../src/main/services/storyDrawing';
+import { resultOf } from '../src/main/services/accessibilityCheck';
+import { countsOf } from '../src/shared/accessibility';
+import { undeclared } from '../src/shared/wcag';
 import { inChrome } from './realChrome';
 
 /**
@@ -47,6 +50,9 @@ const PAGES: Record<string, string> = {
 <body style="margin:0;font:16px sans-serif"><main><h1 style="background:#123;color:#fff;padding:40px">Alert history</h1>
 <p style="padding:40px">Every alert from the last day, by camera.</p><img src="data:image/gif;base64,R0lGODlhAQABAAAAACw="></main></body></html>`,
 	'/blank.html': '<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Blank</title></head><body></body></html>',
+	// Planted: a heading that skips three levels, and one with nothing in it, which only axe's best-practice rules find.
+	'/headings.html': `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Headings</title></head>
+<body><main><h1>Alerts</h1><h4 id="skipped">Today</h4><h2 id="empty"></h2><p>Every alert from the last day.</p></main></body></html>`,
 	// A story that moves: one padding animating for ever (a spinner's way), one animating in over two seconds.
 	'/moving/': `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Previews</title>
 <style>@keyframes pulse { from { padding-top: 4px } to { padding-top: 40px } } @keyframes enter { from { padding-left: 0 } to { padding-left: 24px } }</style></head>
@@ -174,9 +180,24 @@ describe.skipIf(findChrome() === null)('with the browser on this machine', () =>
 		});
 	}, 60_000);
 
-	it('checks a page with axe, finding what is wrong with it', async () => {
+	it('checks a page with axe, finding what is wrong with it, and on which element, with what to change', async () => {
 		const [run] = await headless.scan(`${base}/page.html`, [], ['wcag2a']);
 		expect(run?.state).toBe('default');
-		expect(run?.violations.map((v) => v.id)).toContain('image-alt');
+		const alt = run?.violations.find((v) => v.id === 'image-alt');
+		expect(alt?.elements).toEqual([
+			{ target: 'img', html: expect.stringMatching(/^<img src="data:image\/gif/), fix: expect.stringMatching(/^Fix any of the following:/) },
+		]);
+	}, 60_000);
+
+	it('runs axe’s best-practice rules beside the target’s, and says what they find apart, never as WCAG', async () => {
+		const target = undeclared('none here');
+		const runs = await headless.scan(`${base}/headings.html`, [], target.tags);
+		const result = resultOf(runs, target, new Date());
+		expect(result.violations).toEqual([]);
+		const found = Object.fromEntries(result.bestPractice.violations.map((v) => [v.rule, v.elements.map((e) => e.target)]));
+		expect(found['heading-order']).toEqual(['#skipped']);
+		expect(found['empty-heading']).toEqual(['#empty']);
+		expect(result.bestPractice.violations.every((v) => v.criteria.length === 0)).toBe(true);
+		expect(countsOf(result)).toEqual({ violations: 0, incomplete: 0 });
 	}, 60_000);
 });

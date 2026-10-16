@@ -221,6 +221,7 @@ beforeEach(async () => {
 					tags: ['wcag2a', 'wcag111'],
 					helpUrl: 'https://x/image-alt',
 					nodes: 1,
+					elements: [{ target: 'img.hero', html: '<img class="hero">', fix: 'Fix any of the following:\n  Element does not have an alt attribute' }],
 				},
 			],
 			incomplete: [],
@@ -564,7 +565,7 @@ describe('prototypes', () => {
 		await call(CHANNELS.handPrototypeBuild, product, 'demo', 'v1-i1', 'A list');
 		let task = taskFileText();
 		expect(task).toContain('## Accessibility');
-		expect(task).toContain('Test Product has no .dsnr/manifest.md, so it declares no target. Build to **WCAG 2.2 Level AA**');
+		expect(task).toContain('Test Product has no .dsnr/manifest.md, so it declares no target. Build to **WCAG 2.1 Level AA**');
 		// The product's own target, once its manifest declares one; and the rules, ahead of what the person asked for.
 		writeFileSync(join(product, '.dsnr', 'manifest.md'), readFileSync(join(__dirname, 'fixtures/coke-manifest.md'), 'utf8'));
 		await call(CHANNELS.handPrototypeBuild, product, 'demo', 'v1-i1', 'A list');
@@ -1117,7 +1118,10 @@ describe('prototypes', () => {
 			await call(CHANNELS.buildInCodebase, product, 'demo', 'v1-i1', 'develop');
 			const task = readFileSync(join(home, 'prototype', 'demo', 'v1-i1-into-code.md'), 'utf8');
 			expect(task).toContain("### What the prototype's check left open");
-			expect(task).toContain('- **image-alt** (WCAG 1.1.1): Images must have alternate text. 1 element.');
+			// Which element, and what to change on it, so the agent finds it in the code.
+			expect(task).toContain(
+				'- **image-alt** (WCAG 1.1.1): Images must have alternate text. 1 element.\n  - `img.hero`: Fix any of the following: Element does not have an alt attribute',
+			);
 			// A check that cannot run leaves the findings out, never the move.
 			checkPage.mockRejectedValue(new Error('no window'));
 			rmSync(join(home, 'prototype', 'demo', 'v1-i1.accessibility.json'), { force: true });

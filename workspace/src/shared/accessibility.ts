@@ -3,8 +3,20 @@
  * results for each state of a page, merged by rule, with the WCAG success criteria each rule checks, and said in the same
  * words wherever they are shown. Never as a pass: at most, no issues found by automated checks.
  */
-import type { AccessibilityCounts, AccessibilityFindings, AccessibilityIssue, AccessibilityResult } from './contract';
+import type { AccessibilityCounts, AccessibilityElement, AccessibilityFindings, AccessibilityIssue, AccessibilityResult } from './contract';
 import { plural } from './plural';
+
+/** How many of an issue's elements are kept, with what to change on each: enough to find and fix it; the rest are counted. */
+export const MOST_ELEMENTS = 10;
+/** How much of an element's HTML is kept: its opening, which is what finds it. */
+export const MOST_HTML = 300;
+
+/** One element a rule found, as the page gives it back: axe's selector, its HTML cut short, and what axe says to change. */
+export interface AxeElement {
+	target: string;
+	html: string;
+	fix: string;
+}
 
 /** One rule's results in one axe run, as the page gives them back: trimmed to what is kept. */
 export interface AxeRule {
@@ -14,6 +26,7 @@ export interface AxeRule {
 	tags: string[];
 	helpUrl: string;
 	nodes: number;
+	elements: AxeElement[];
 }
 
 /** What one axe run found, as the page gives it back. */
@@ -43,7 +56,14 @@ export const isAxeRules = (v: unknown): v is AxeRule[] =>
 			typeof (r as AxeRule).id === 'string' &&
 			typeof (r as AxeRule).help === 'string' &&
 			Array.isArray((r as AxeRule).tags) &&
-			typeof (r as AxeRule).nodes === 'number',
+			typeof (r as AxeRule).nodes === 'number' &&
+			Array.isArray((r as AxeRule).elements) &&
+			(r as AxeRule).elements.every(
+				(e) =>
+					typeof e === 'object' &&
+					e !== null &&
+					['target', 'html', 'fix'].every((k) => typeof (e as unknown as Record<string, unknown>)[k] === 'string'),
+			),
 	);
 
 /** A page's runs, one per state, as one list of each kind: a rule found in several states once, its elements counted in all. */
@@ -53,9 +73,11 @@ export const mergeRuns = (runs: AxeRun[]): AccessibilityFindings => {
 		for (const run of runs) {
 			for (const rule of run[kind]) {
 				const seen = byRule.get(rule.id);
+				const elements = rule.elements.map((e) => ({ ...e, state: run.state }));
 				if (seen) {
 					seen.nodes += rule.nodes;
 					if (!seen.states.includes(run.state)) seen.states.push(run.state);
+					seen.elements = [...seen.elements, ...elements].slice(0, MOST_ELEMENTS);
 					continue;
 				}
 				byRule.set(rule.id, {
@@ -66,6 +88,7 @@ export const mergeRuns = (runs: AxeRun[]): AccessibilityFindings => {
 					nodes: rule.nodes,
 					url: rule.helpUrl,
 					states: [run.state],
+					elements: elements.slice(0, MOST_ELEMENTS),
 				});
 			}
 		}
@@ -75,6 +98,21 @@ export const mergeRuns = (runs: AxeRun[]): AccessibilityFindings => {
 		return [...byRule.values()].sort((a, b) => order(a) - order(b) || a.rule.localeCompare(b.rule));
 	};
 	return { violations: merge('violations'), incomplete: merge('incomplete') };
+};
+
+/** axe's own tag for the rules it keeps beside WCAG's: run with every check, said apart, never counted as WCAG. */
+export const BEST_PRACTICE = 'best-practice';
+
+/**
+ * A page's runs as what counts at its target, and the rest said apart: a rule is the target's when one of its tags is one of
+ * the target's (`wcag2aa`); any other rule axe ran (its best-practice ones: a heading out of order, an empty heading) is
+ * `bestPractice`, never counted as WCAG.
+ */
+export const findingsAt = (runs: AxeRun[], tags: string[]): AccessibilityFindings & { bestPractice: AccessibilityFindings } => {
+	const ofTarget = (r: AxeRule) => r.tags.some((t) => tags.includes(t));
+	const kept = (keep: (r: AxeRule) => boolean) =>
+		runs.map((run) => ({ ...run, violations: run.violations.filter(keep), incomplete: run.incomplete.filter(keep) }));
+	return { ...mergeRuns(kept(ofTarget)), bestPractice: mergeRuns(kept((r) => !ofTarget(r))) };
 };
 
 /** How many of each a check found. */
@@ -106,6 +144,19 @@ export const issueLine = (i: AccessibilityIssue): string =>
 	]
 		.filter(Boolean)
 		.join(' · ');
+
+/** What axe says to change on an element, in one line: its own summary, its lines run together. */
+export const fixLine = (e: AccessibilityElement): string => e.fix.replace(/\s+/g, ' ').trim();
+
+/** An element an issue was found on, as a line: axe's selector, the state when that says something, and what to change. */
+export const elementLine = (e: AccessibilityElement): string =>
+	`\`${e.target}\`${e.state === 'default' ? '' : ` (in ${e.state})`}${fixLine(e) ? `: ${fixLine(e)}` : ''}`;
+
+/** How many of an issue's elements are not listed: counted, never dropped silently. */
+export const unlisted = (i: AccessibilityIssue): number => i.nodes - i.elements.length;
+
+/** How the best-practice rules' findings are titled, wherever they are said: beside WCAG, never counted as it. */
+export const BEST_PRACTICE_TITLE = 'Best practice, beside WCAG (not counted as it)';
 
 /** What a check was made with, and that it is never a pass: said above what it found, wherever that is listed. */
 export const checkedWith = (r: AccessibilityResult): string =>

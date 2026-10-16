@@ -1,14 +1,39 @@
-import { checkedWith, countsOf, issueLine, notAutomatedLine, summaryOf } from '../../src/shared/accessibility';
+import {
+	BEST_PRACTICE_TITLE,
+	checkedWith,
+	countsOf,
+	fixLine,
+	issueLine,
+	notAutomatedLine,
+	summaryOf,
+	unlisted,
+} from '../../src/shared/accessibility';
+import { plural } from '../../src/shared/plural';
 import type { AccessibilityIssue, AccessibilityResult } from '../../src/shared/contract';
 import { Disclosure } from './ui/Disclosure';
 
-/** One kind of issue: what it asks, where in WCAG, on how many elements and in which states, and axe's page on it. */
+/**
+ * One kind of issue: what it asks, where in WCAG, on how many elements and in which states, and axe's page on it; then the
+ * elements it was found on, each by its selector with what axe says to change, and how many more there are.
+ */
 const Issue = ({ issue }: { issue: AccessibilityIssue }) => (
 	<li className="issue">
 		<span className="issue-help">{issue.help}</span>
 		<span className="issue-meta">
 			{issueLine(issue)} <a href={issue.url}>{issue.rule}</a>
 		</span>
+		{issue.elements.length > 0 && (
+			<ul className="issue-elements" data-issue-elements={issue.rule}>
+				{issue.elements.map((e, i) => (
+					<li key={`${e.state}:${e.target}:${i}`} className="issue-meta">
+						<code>{e.target}</code>
+						{e.state !== 'default' && ` in ${e.state}`}
+						{fixLine(e) && `: ${fixLine(e)}`}
+					</li>
+				))}
+				{unlisted(issue) > 0 && <li className="issue-meta">and {plural(unlisted(issue), 'more element')}</li>}
+			</ul>
+		)}
 	</li>
 );
 
@@ -38,10 +63,11 @@ export const AccessibilityFindings = ({ result }: { result: AccessibilityResult 
 			</p>
 			<p className="quiet">{checkedWith(result)}</p>
 			{notAutomatedLine(result) && <p className="quiet">{notAutomatedLine(result)}</p>}
-			{(counts.violations > 0 || counts.incomplete > 0) && (
+			{(counts.violations > 0 || counts.incomplete > 0 || result.bestPractice.violations.length > 0) && (
 				<Disclosure label="Show the findings">
 					<Issues title="Found by axe" issues={result.violations} />
 					<Issues title="For a person to judge (axe could not decide)" issues={result.incomplete} />
+					<Issues title={BEST_PRACTICE_TITLE} issues={result.bestPractice.violations} />
 				</Disclosure>
 			)}
 		</>

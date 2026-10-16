@@ -35,8 +35,12 @@ export interface WcagTarget {
 	level: WcagLevel;
 }
 
-/** Where a product declares none: checked at this, and said to be informational, never a claim (decision 30). */
-export const DEFAULT_TARGET: WcagTarget = { version: '2.2', level: 'AA' };
+/**
+ * Where a product declares none: WCAG 2.1 AA, the usual industry target, checked at this and said to be informational,
+ * never a claim (the accessibility plan's decision 1, in place of decision 30's 2.2 AA). Every criterion it includes has an
+ * axe tag, so none is left as "no automated check covers" at the default.
+ */
+export const DEFAULT_TARGET: WcagTarget = { version: '2.1', level: 'AA' };
 
 /**
  * axe-core's tag for each version and level, or null where axe has no rules for it: a level whose new criteria only a

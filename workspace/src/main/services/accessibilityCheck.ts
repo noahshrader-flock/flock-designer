@@ -7,7 +7,7 @@
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import axe from 'axe-core';
-import { type AxeFound, type AxeRun, isAxeRules, mergeRuns } from '../../shared/accessibility';
+import { type AxeFound, type AxeRun, BEST_PRACTICE, MOST_ELEMENTS, MOST_HTML, findingsAt, isAxeRules } from '../../shared/accessibility';
 import type { AccessibilityResult } from '../../shared/contract';
 import { type DeclaredTarget, notAutomated, targetLine } from '../../shared/wcag';
 import { writeAtomic } from './jsonFile';
@@ -20,12 +20,15 @@ export type CheckPage = (url: string, states: string[], tags: string[]) => Promi
 
 /**
  * A run of axe already in the page (`axe.source`), as an expression: on `context` (axe's own, as source: `document`, or
- * what to include and exclude), with the `tags` only, kept to violations and what it could not decide, each trimmed to
- * what is kept. The one way the app runs axe: on a prototype's page, and on a design system's stories (D).
+ * what to include and exclude), with the `tags` and axe's best-practice rules beside them (`findingsAt` says them apart),
+ * kept to violations and what it could not decide, each trimmed to what is kept: its first elements (`MOST_ELEMENTS`),
+ * each by axe's selector (into a frame or a shadow root, its parts joined as axe writes them), its HTML cut short, and what
+ * axe says to change. The one way the app runs axe: on a prototype's page, and on a design system's stories (D).
  */
 export const axeRun = (context: string, tags: string[]): string => `(async () => {
-	const r = await window.axe.run(${context}, { runOnly: { type: 'tag', values: ${JSON.stringify(tags)} }, resultTypes: ['violations', 'incomplete'] });
-	const trim = (x) => ({ id: x.id, help: x.help, impact: x.impact ?? null, tags: x.tags, helpUrl: x.helpUrl, nodes: x.nodes.length });
+	const r = await window.axe.run(${context}, { runOnly: { type: 'tag', values: ${JSON.stringify([...tags, BEST_PRACTICE])} }, resultTypes: ['violations', 'incomplete'] });
+	const element = (n) => ({ target: n.target.flat().join(' >>> '), html: String(n.html ?? '').slice(0, ${MOST_HTML}), fix: String(n.failureSummary ?? '') });
+	const trim = (x) => ({ id: x.id, help: x.help, impact: x.impact ?? null, tags: x.tags, helpUrl: x.helpUrl, nodes: x.nodes.length, elements: x.nodes.slice(0, ${MOST_ELEMENTS}).map(element) });
 	return { violations: r.violations.map(trim), incomplete: r.incomplete.map(trim) };
 })()`;
 
@@ -61,14 +64,20 @@ export const resultOf = (runs: AxeRun[], target: DeclaredTarget, at: Date): Acce
 		at: at.toISOString(),
 		states: runs.map((r) => r.state),
 	},
-	...mergeRuns(runs),
+	...findingsAt(runs, target.tags),
 	notAutomated: notAutomated(target.target),
 });
 
-/** What a result is made with: the page, axe-core's version, the tags and the target. Any change makes a new result. */
+/**
+ * How a result is written: what it holds, as this app keeps it. Raised whenever that changes (2: each issue's elements, and
+ * the best-practice rules apart, A1), so one an older app kept is made again.
+ */
+const FORMAT = 2;
+
+/** What a result is made with: the page, axe-core's version, the tags and the target, and how it is written. Any change makes a new result. */
 const keyOf = (html: string, target: DeclaredTarget): string =>
 	createHash('sha256')
-		.update(`${html}\0${axe.version}\0${target.tags.join(',')}\0${targetLine(target)}`)
+		.update(`${FORMAT}\0${html}\0${axe.version}\0${target.tags.join(',')}\0${targetLine(target)}`)
 		.digest('hex');
 
 /**

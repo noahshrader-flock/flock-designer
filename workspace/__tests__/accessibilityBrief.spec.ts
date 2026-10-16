@@ -30,8 +30,8 @@ describe('a product’s target', () => {
 	it('is the default, informational, and says why, with no manifest or no target in it', () => {
 		expect(declaredTarget(null, 'FUI')).toEqual({
 			declared: false,
-			target: { version: '2.2', level: 'AA' },
-			tags: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'],
+			target: { version: '2.1', level: 'AA' },
+			tags: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'],
 			why: 'FUI has no .dsnr/manifest.md',
 		});
 		expect(declaredTarget('# Manifest\n\n## Stack\n', 'Coke')).toMatchObject({
@@ -67,10 +67,14 @@ describe('the accessibility section of a task', () => {
 
 	it('says when there is no target, builds to the default, and has it reported as informational', () => {
 		const brief = accessibilityBrief({ standard: STANDARD, target: declaredTarget(null, 'Acme') });
-		expect(brief).toContain('Acme has no .dsnr/manifest.md, so it declares no target. Build to **WCAG 2.2 Level AA**');
+		expect(brief).toContain('Acme has no .dsnr/manifest.md, so it declares no target. Build to **WCAG 2.1 Level AA**');
 		expect(brief).toContain('say in your summary that there was no declared target');
-		// 2.2's Level A criteria have no axe rules: said, to be checked by hand or reported as not run.
-		expect(brief).toContain('No automated check covers WCAG 2.2 Level A: check those criteria by hand, or report them as not run.');
+		// At the default every criterion has an axe rule; a product that declares 2.2 AA has Level A criteria none covers.
+		expect(brief).not.toContain('No automated check covers');
+		const at22 = declaredTarget(COKE.replace('WCAG 2.0 Level A', 'WCAG 2.2 Level AA').replace(/^\| \*\*axe tags\*\*.*\n/m, ''), 'Coke');
+		expect(accessibilityBrief({ standard: STANDARD, target: at22 })).toContain(
+			'No automated check covers WCAG 2.2 Level A: check those criteria by hand, or report them as not run.',
+		);
 	});
 
 	it('carries what a prototype’s check left open into the code, each to be fixed or said why not', () => {
@@ -82,6 +86,14 @@ describe('the accessibility section of a task', () => {
 			nodes: 2,
 			url: 'https://dequeuniversity.com/rules/axe/4.14/image-alt',
 			states: ['default'],
+			elements: [
+				{
+					target: 'img.hero',
+					html: '<img class="hero" src="a.png">',
+					fix: 'Fix any of the following:\n  Element does not have an alt attribute',
+					state: 'default',
+				},
+			],
 			...more,
 		});
 		const brief = accessibilityBrief({
@@ -90,13 +102,30 @@ describe('the accessibility section of a task', () => {
 			findings: {
 				violations: [issue('image-alt')],
 				incomplete: [
-					issue('color-contrast', { help: 'Elements must meet minimum color contrast', criteria: ['1.4.3'], nodes: 1, states: ['default', 'empty'] }),
+					issue('color-contrast', {
+						help: 'Elements must meet minimum color contrast',
+						criteria: ['1.4.3'],
+						nodes: 1,
+						states: ['default', 'empty'],
+						elements: [],
+					}),
 				],
+				bestPractice: {
+					violations: [issue('heading-order', { help: 'Heading levels should only increase by one', criteria: [], nodes: 1, elements: [] })],
+					incomplete: [],
+				},
 			},
 		});
 		expect(brief).toContain("### What the prototype's check left open");
 		expect(brief).toContain('Fix each in the code, or say in the audit why not. None is dropped by the move.');
-		expect(brief).toContain('- **image-alt** (WCAG 1.1.1): Images must have alternate text. 2 elements.');
+		// Each element it lists, by its selector and what to change, so the agent finds it; the rest counted.
+		expect(brief).toContain(
+			'- **image-alt** (WCAG 1.1.1): Images must have alternate text. 2 elements.\n  - `img.hero`: Fix any of the following: Element does not have an alt attribute\n  - and 1 more element',
+		);
+		// Best practice, said apart: never counted as WCAG.
+		expect(brief).toContain(
+			'Best practice, beside WCAG (not counted as it):\n- **heading-order**: Heading levels should only increase by one. 1 element.',
+		);
 		expect(brief).toContain(
 			'For a person to judge (axe could not decide):\n- **color-contrast** (WCAG 1.4.3): Elements must meet minimum color contrast. 1 element, in default, empty.',
 		);
