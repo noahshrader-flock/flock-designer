@@ -1,11 +1,12 @@
 import { act, createElement } from 'react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ComponentTab } from '../extension/webview/ComponentTab';
 import { PrimitivesTab } from '../extension/webview/PrimitivesTab';
 import { readTab } from '../extension/webview/tab';
 import { PREVIEW_HEIGHT, PREVIEW_TRY, previewAddress } from '../src/shared/catalog';
 import { SAMPLE_CATALOG } from './extensionSamples';
 import { answer, button, calls, mount, press, say, sent, type } from './webviewHarness';
+import { ASK_EVERY_MS } from '../src/renderer/askWhile';
 
 /**
  * The design system's tabs in the editor (ELECTRON_MIGRATION_PLAN 6.1): a component's, its stories live and what it is
@@ -491,6 +492,7 @@ describe('a component’s tab', () => {
 	});
 
 	describe('saving the values tried where they are written (Phase 4)', () => {
+		afterEach(() => void vi.useRealTimers());
 		const SMALL = { property: 'height', value: '32px', targets: ['height:sm:0', 'height:sm:1', 'height:sm:2'] };
 		const ID = 'height\u0000height:sm:0\u0001height:sm:1\u0001height:sm:2';
 		/** The tab with Small's height tried at 32px. */
@@ -578,6 +580,90 @@ describe('a component’s tab', () => {
 			expect(changed().querySelector('.branch-line')?.textContent).toBe('dsnr/values-20261016-ab12 · 1 save');
 			await press(button('Propose'));
 			expect(calls('proposeValues').at(-1)?.args).toEqual([BUTTON]);
+		});
+
+		it('offers the agent where a value cannot be found, asks it once pressed, and says what it wrote and why', async () => {
+			vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'], shouldAdvanceTime: true });
+			await tryingSmall();
+			await answer('valueSources', {
+				state: 'ready',
+				values: [{ id: ID, state: 'refused', why: '28px is not written in the design system’s own files for it.', agent: 'write' }],
+				reach: { state: 'none' },
+			});
+			await press(changed().querySelector('[data-value-agent]') as HTMLElement);
+			expect(changed().querySelector('[data-value-agent]')?.textContent).toBe('Have the agent write it');
+			expect(calls('writeValue').at(-1)?.args).toEqual([BUTTON, SMALL]);
+			await answer('writeValue', null);
+			// Asked again once it is: being written, and asked again until it is.
+			await answer('valueSources', { state: 'ready', values: [{ id: ID, state: 'writing' }], reach: { state: 'none' } });
+			expect(changed().textContent).toContain('The agent is writing it…');
+			expect(button('Save to a branch').disabled).toBe(true);
+			// Asked again while it writes.
+			const asks = calls('valueSources').length;
+			await act(async () => void (await vi.advanceTimersByTimeAsync(ASK_EVERY_MS)));
+			expect(calls('valueSources').length).toBe(asks + 1);
+			await answer(
+				'valueSources',
+				found({
+					values: [
+						{
+							id: ID,
+							state: 'found',
+							by: 'agent',
+							said: 'MUI’s default sets it, so the theme’s override does.',
+							places: [{ file: 'src/utils/theme.ts', line: 59, written: '', writes: "height: '32px'," }],
+						},
+					],
+				}),
+			);
+			expect(changed().querySelector('[data-value-places]')?.textContent).toBe('Written by the agent in src/utils/theme.ts, line 59');
+			expect(changed().textContent).toContain('MUI’s default sets it, so the theme’s override does.');
+			expect(button('Save to a branch').disabled).toBe(false);
+		});
+
+		it('offers to follow a token whose value its own value is, from the value’s popover, and has the agent write it', async () => {
+			const own = {
+				state: 'read',
+				instances: 12,
+				unmarked: 0,
+				rows: {
+					light: [{ property: 'radius', by: null, cells: [{ variant: null, value: '4px', kind: 'own', tokens: [], instances: 12 }] }],
+					dark: null,
+				},
+			};
+			await analysed({ values: own });
+			await answer('storyPreview', { state: 'ready', base: BASE });
+			await press(section('Values')?.querySelector('[aria-label="Change Radius"]') as HTMLElement);
+			const follow = document.querySelector('[data-value-cell] [role="dialog"] [data-value-follow="radius"]') as HTMLElement;
+			expect(follow.textContent).toBe('Follow Radius');
+			await press(follow);
+			const asked = calls('writeValue').at(-1)?.args as [string, { follows: string; value: string }];
+			expect(asked[0]).toBe(BUTTON);
+			expect(asked[1]).toMatchObject({ property: 'radius', value: '4px', follows: 'radius' });
+			expect(changed().querySelector('[data-value-change] .value-cell')?.textContent).toBe('Radius4px → follows Radius');
+			expect(document.querySelector('[data-value-following]')?.textContent).toContain('Follows Radius');
+		});
+
+		it('offers no token to follow for a value no token has', async () => {
+			await analysed();
+			await press(section('Values')?.querySelector('[aria-label="Change Height · sm"]') as HTMLElement);
+			expect(document.querySelector('[data-value-follow]')).toBeNull();
+		});
+
+		it('offers no token to follow for a value worked out from a token already, though it is that token’s value', async () => {
+			const derived = {
+				state: 'read',
+				instances: 12,
+				unmarked: 0,
+				rows: {
+					light: [{ property: 'radius', by: null, cells: [{ variant: null, value: '4px', kind: 'derived', tokens: [], instances: 12 }] }],
+					dark: null,
+				},
+			};
+			await analysed({ values: derived });
+			await press(section('Values')?.querySelector('[aria-label="Change Radius"]') as HTMLElement);
+			expect(document.querySelector('[data-value-cell] [role="dialog"]')).not.toBeNull();
+			expect(document.querySelector('[data-value-follow]')).toBeNull();
 		});
 
 		it('puts back the values a branch saved when the tab opens with none tried', async () => {

@@ -366,6 +366,16 @@ describe('the Design System tab', () => {
 		});
 		expect(await call(CHANNELS.proposeValues, 'src/components/A/A.stories.tsx')).toMatchObject({ ok: false });
 		expect(await call(CHANNELS.forgetValueBranch, 'src/components/A/A.stories.tsx')).toEqual({ ok: true, value: null });
+		// The agent is asked only for a value tried, checked as the contract says one is; with no design system, nothing runs.
+		expect(await call(CHANNELS.writeValue, 'src/components/A/A.stories.tsx', { property: 'height' })).toMatchObject({
+			ok: false,
+			error: expect.stringContaining('A value tried names'),
+		});
+		expect(await call(CHANNELS.writeValue, 'src/components/A/A.stories.tsx', { ...tried[0], follows: 42 })).toMatchObject({ ok: false });
+		expect(await call(CHANNELS.writeValue, { path: '/etc' }, tried[0])).toMatchObject({
+			ok: false,
+			error: expect.stringContaining('by its story file'),
+		});
 	});
 
 	it('has no branch for a change to the tokens when there is no design system, saves and proposes nothing, and takes only edits', async () => {

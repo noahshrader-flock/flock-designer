@@ -19,15 +19,21 @@ import { Swatch } from './ui/Swatch';
 import { Toggle } from './ui/Toggle';
 import { useDismiss } from './ui/useDismiss';
 import { ValueEditor } from './ValueEditor';
-import { VALUE_NAMES, saidValue, valueTitle } from '../../src/shared/valueNames';
+import { VALUE_NAMES, saidValue, tokensItCouldFollow, valueTitle } from '../../src/shared/valueNames';
 
 type Ready = Extract<ComponentTokens, { state: 'ready' }>;
 
-/** The values being tried on the component's instances, by `triedId`; how one is tried or put back (null); and every one at once. */
+/**
+ * The values being tried on the component's instances, by `triedId`; how one is tried or put back (null); every one at once;
+ * and having the agent write one (Phase 4.5, 4.6), how many times it has been asked, and what went wrong asking.
+ */
 export interface Trying {
 	tried: ReadonlyMap<string, TriedValue>;
 	onTry: (id: string, value: TriedValue | null) => void;
 	onAll: (tried: TriedValue[]) => void;
+	onWrite: (value: TriedValue) => void;
+	writes: number;
+	writeError: string | null;
 }
 /** Light and dark, as the review bar names them, as an empty and a filled circle: how a theme's light and dark read in a side bar. */
 const MODES = THEMES.map((value) => ({ value, label: themeLabel(value), icon: value === 'dark' ? 'circle-large-filled' : 'circle-large-outline' }));
@@ -228,19 +234,31 @@ export const ComponentValues = ({
 		else setEditing({ property, cell });
 	};
 	// A value of its own's control, to be drawn under its cell.
-	const editor = (property: ValueProperty) => (cell: ValueCell) => (
-		<ValueEditor
-			property={property}
-			cell={cell}
-			tried={tried(property)(cell)}
-			onTry={(value) =>
-				trying.onTry(triedId({ property, targets: cell.targets }), value === null ? null : { property, value, targets: cell.targets })
-			}
-		/>
-	);
 	const tokenName = (path: string) => {
 		const t = byPath.get(path);
 		return t ? labelOf(t) : path;
+	};
+	const editor = (property: ValueProperty) => (cell: ValueCell) => {
+		const id = triedId({ property, targets: cell.targets });
+		const following = trying.tried.get(id)?.follows ?? null;
+		return (
+			<ValueEditor
+				property={property}
+				cell={cell}
+				tried={following === null ? tried(property)(cell) : null}
+				onTry={(value) => trying.onTry(id, value === null ? null : { property, value, targets: cell.targets })}
+				// A value of its own the same as a token's can follow it (4.6): drawn as it is, written by the agent.
+				follows={
+					cell.kind === 'own' ? tokensItCouldFollow(property, cell.value, [...byPath.values()]).map((t) => ({ path: t.path, name: labelOf(t) })) : []
+				}
+				following={following === null ? null : tokenName(following)}
+				onFollow={(path) => {
+					const value: TriedValue = { property, value: cell.value, targets: cell.targets, follows: path };
+					trying.onTry(id, value);
+					trying.onWrite(value);
+				}}
+			/>
+		);
 	};
 	const others = (path: string) => (answer.sharedWith[path] ?? []).map((f) => names.get(f) ?? f);
 	return (

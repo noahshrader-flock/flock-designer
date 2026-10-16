@@ -2,6 +2,7 @@ import { isObjectId } from '../../shared/sha';
 import { arg, handle } from '../handle';
 import { tokenEditsOf } from '../services/tokenEdits';
 import { triedValuesOf } from '../services/valueSources';
+import type { TriedValue } from '../../shared/contract';
 
 /** A story file the window names a component by, or an error: a path, never anything else. */
 const storyFileOf = (file: unknown): string => {
@@ -15,7 +16,7 @@ import type { IpcDeps } from '../ipc';
  * voice and tone, and its branch.
  */
 export const registerDesignSystem = (d: IpcDeps): void => {
-	const { componentTokens, designSystems, library, previews, tokenBranches, valueBranches, valueSources, voiceFile, warm } = d;
+	const { componentTokens, designSystems, library, previews, tokenBranches, valueAgent, valueBranches, valueSources, voiceFile, warm } = d;
 
 	// The longest a save takes: far beyond any real voice and tone, short of anything that could hurt.
 	const MAX_VOICE = 200_000;
@@ -37,6 +38,12 @@ export const registerDesignSystem = (d: IpcDeps): void => {
 	// the number or colour each reads as, where it was found (Phase 4).
 	handle('valueSources', [arg.unknown, arg.unknown], (file, tried) => valueSources.of(storyFileOf(file), triedValuesOf(tried)));
 	handle('valueBranch', [arg.unknown], (file) => valueBranches.current(storyFileOf(file)));
+	// Only on the person's press: it runs the agent, in a copy of the library.
+	handle('writeValue', [arg.unknown, arg.unknown], async (file, value) => {
+		// Checked as one of a list is: only what the contract says a value tried is.
+		await valueAgent.write(storyFileOf(file), triedValuesOf([value])[0] as TriedValue);
+		return null;
+	});
 	handle('saveValues', [arg.unknown, arg.unknown], (file, tried) => valueBranches.save(triedValuesOf(tried), storyFileOf(file)));
 	handle('proposeValues', [arg.unknown], (file) => valueBranches.propose(storyFileOf(file)));
 	handle('forgetValueBranch', [arg.unknown], (file) => (valueBranches.forget(storyFileOf(file)), null));

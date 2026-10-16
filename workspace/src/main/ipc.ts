@@ -6,7 +6,7 @@ import { statesOf } from '../shared/prototypeStates';
 import { type Check, type EventSink, arg, clearRoutes } from './handle';
 import type { Ports } from './ports';
 import { accessibilityOf } from './services/accessibilityCheck';
-import { AGENT_BUSY, AgentRunner } from './services/agent';
+import { AGENT_BUSY, AgentRunner, runToEnd } from './services/agent';
 import { classify } from './services/branchProjects';
 import { syncBranches } from './services/branchSync';
 import type { CheckoutMemory } from './services/checkoutMemory';
@@ -41,6 +41,7 @@ import { StoryPreviews } from './services/storyPreviews';
 import { TokenBranches } from './services/tokenBranches';
 import { ValueBranches } from './services/valueBranches';
 import { ValueSources } from './services/valueSources';
+import { ValueAgent } from './services/valueAgent';
 import { VOICE_NEEDS_CLI, VoiceAndToneFile } from './services/voiceAndTone';
 import { registerAccount } from './ipc/account';
 import { registerCheckout } from './ipc/checkout';
@@ -251,7 +252,15 @@ export const ipcDeps = ({
 	if (warmAfterMs !== undefined) setTimeout(warm, warmAfterMs).unref();
 	const tokenBranches = new TokenBranches({ system: shownSystem, file: tokenBranchesFile, tools: ports.shareTools });
 	// Where the values tried on a component are written, found as they are tried, and the branch each component's are saved on (Phase 4).
-	const valueSources = new ValueSources({ tokens: componentTokens, previews, measure: ports.headless.measure });
+	// What the agent writes for a value where there is no literal, or to follow a token (4.5, 4.6): in a copy of the library,
+	// under the standard every run is given, as the app's tasks are given theirs.
+	const valueAgent = new ValueAgent({
+		system: shownSystem,
+		tokens: componentTokens,
+		run: (cwd, task) => runToEnd(cwd, task),
+		readStandard: (path) => readSkillText(path),
+	});
+	const valueSources = new ValueSources({ tokens: componentTokens, previews, measure: ports.headless.measure, agent: valueAgent });
 	const valueBranches = new ValueBranches({ system: shownSystem, file: valueBranchesFile, tools: ports.shareTools, sources: valueSources });
 	// The voice and tone (T9): the connected design system's, read, saved and proposed with the person's own command line.
 	const voiceFile = (): VoiceAndToneFile => {
@@ -397,6 +406,7 @@ export const ipcDeps = ({
 		tokenBranches,
 		valueSources,
 		valueBranches,
+		valueAgent,
 		voiceFile,
 		state,
 		codebase,

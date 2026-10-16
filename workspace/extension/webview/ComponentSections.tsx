@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import type { CatalogComponent, ComponentTokens, DesignToken } from '../../src/shared/contract';
 import { counted, plural } from '../../src/shared/plural';
 import { inOrder } from '../../src/shared/primitives';
+import { labelOf } from '../../src/shared/tokens';
 import { useTokenChanges } from '../../src/renderer/tokenChanges';
 import { MOST_LISTED, sharedWith, useComponentTokens } from '../../src/renderer/useComponentTokens';
 import { AccessibilityFindings } from './Accessibility';
@@ -198,6 +199,10 @@ export const ComponentSections = ({
 				components={components}
 				rows={answer.values.state === 'read' ? answer.values.rows.light : null}
 				trying={trying}
+				tokenName={(path) => {
+					const t = byPath.get(path);
+					return t ? labelOf(t) : path;
+				}}
 				onSource={actions.onSource}
 				onOpen={onOpen}
 			/>

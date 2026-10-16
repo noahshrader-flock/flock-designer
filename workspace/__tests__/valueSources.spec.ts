@@ -3,6 +3,8 @@ import { reachOf } from '../src/main/services/changeReach';
 import type { Built, Drawn, Instance, Measure } from '../src/main/services/componentTokens';
 import type { CatalogReads } from '../src/main/services/componentCatalog';
 import { MOST_PLACES, ValueSources } from '../src/main/services/valueSources';
+import type { Written } from '../src/main/services/valueAgent';
+import { triedId } from '../src/shared/contract';
 import type { ComponentValues, TriedValue, ValueSources as Answer } from '../src/shared/contract';
 
 /**
@@ -59,7 +61,11 @@ const draw = (files: Record<string, string>, file: string): Drawn => {
 							story: 'Default',
 							key: 'Badge#1',
 							props: {},
-							values: { radius: `${radius} ${radius} ${radius} ${radius}`, padding: `${v} ${h} ${v} ${h}`, text: 'rgb(9, 105, 218)' },
+							values: {
+								radius: `${radius} ${radius} ${radius} ${radius}`,
+								padding: `${v} ${h} ${v} ${h}`,
+								text: of(files['src/Badge/Badge.tsx'], /textColor = '([^']+)'/) ?? 'rgb(9, 105, 218)',
+							},
 						},
 					];
 				})();
@@ -127,6 +133,7 @@ const sources = () =>
 			opened: async () => ({ state: 'open', reads: reads(library), build: async (given) => buildWith(given), close: async () => undefined }),
 		},
 		measure,
+		agent: { of: (_index, _file, t) => agent.get(triedId(t)) ?? null },
 	});
 
 /** Asked until it is no longer being found. */
@@ -141,7 +148,11 @@ const settled = async (s: ValueSources, file: string, tried: TriedValue[]): Prom
 const SM: TriedValue = { property: 'height', value: '32px', targets: ['Sm#1', 'Sm#2'] };
 const BADGE_ALL = ['Badge#1'];
 
+/** What the agent has written, by the value: a stand-in for `ValueAgent`, which has tests of its own. */
+let agent: Map<string, Written>;
+
 beforeEach(() => {
+	agent = new Map();
 	library = { ...LIBRARY };
 	builds = [];
 	asks = [];
@@ -247,5 +258,85 @@ describe('where a value tried on a component is written, found by its effect (Ph
 		await expect(s.files(BUTTON, [SM])).rejects.toThrow('still being found');
 		await settled(s, BUTTON, [SM]);
 		expect(await s.files(BUTTON, [SM])).toBeInstanceOf(Map);
+	});
+
+	describe('what the agent wrote, where there is nothing to swap (4.5, 4.6)', () => {
+		const TEXT: TriedValue = { property: 'text', value: '#C80000', targets: BADGE_ALL };
+		const badge = (text: string) => ({ 'src/Badge/Badge.tsx': `${LIBRARY['src/Badge/Badge.tsx']}export const textColor = '${text}';\n` });
+		const written = (files: Record<string, string>, said = 'The colour is the component’s own.'): Written => ({
+			state: 'written',
+			files: new Map(Object.entries(files)),
+			places: Object.keys(files).map((file) => ({ file, line: 2, written: '', writes: 'the change' })),
+			said,
+		});
+
+		it('offers the agent for a value written nowhere it can be found, says while it writes, and waits to be saved', async () => {
+			const s = sources();
+			expect(await settled(s, BADGE, [TEXT])).toMatchObject({
+				values: [{ state: 'refused', agent: 'write', why: expect.stringMatching(/not written/) }],
+			});
+			// Asked again once the agent is writing it: worked out again, not the answer kept from before.
+			agent.set(triedId(TEXT), { state: 'writing' });
+			expect(await settled(s, BADGE, [TEXT])).toMatchObject({ state: 'ready', values: [{ state: 'writing' }], reach: { state: 'none' } });
+			await expect(s.files(BADGE, [TEXT])).rejects.toThrow('The agent is still writing a value');
+		});
+
+		it('takes what the agent wrote once it reads back, saying it was the agent’s and why, with what it moves', async () => {
+			agent.set(triedId(TEXT), written(badge('#c80000'), 'Its text colour had no value of its own to change.'));
+			const s = sources();
+			expect(await settled(s, BADGE, [TEXT])).toMatchObject({
+				state: 'ready',
+				values: [
+					{
+						state: 'found',
+						by: 'agent',
+						said: 'Its text colour had no value of its own to change.',
+						places: [{ file: 'src/Badge/Badge.tsx', line: 2 }],
+					},
+				],
+				reach: { state: 'ready', moved: [{ file: BADGE }] },
+			});
+			expect([...(await s.files(BADGE, [TEXT])).keys()]).toEqual(['src/Badge/Badge.tsx']);
+		});
+
+		it('puts what the agent wrote together with places found in the same file, and refuses one that writes the same lines', async () => {
+			const RADIUS: TriedValue = { property: 'radius', value: '4px 4px 4px 4px', targets: BADGE_ALL };
+			const css = LIBRARY['src/Badge/Badge.module.css'] as string;
+			// The radius found in the module; the agent's line added at its end: both kept.
+			agent.set(triedId(TEXT), written({ ...badge('#c80000'), 'src/Badge/Badge.module.css': `${css}.note {}\n` }));
+			const s = sources();
+			expect(await settled(s, BADGE, [RADIUS, TEXT])).toMatchObject({ values: [{ state: 'found' }, { state: 'found', by: 'agent' }] });
+			expect((await s.files(BADGE, [RADIUS, TEXT])).get('src/Badge/Badge.module.css')).toBe(`${css.replace('20px', '4px')}.note {}\n`);
+			// The agent's in the radius's own line: not written, and said.
+			agent.set(triedId(TEXT), written({ ...badge('#c80000'), 'src/Badge/Badge.module.css': css.replace('20px', '21px') }));
+			expect(await settled(sources(), BADGE, [RADIUS, TEXT])).toMatchObject({
+				values: [
+					{ state: 'found' },
+					{ state: 'refused', why: 'The agent wrote it in the same lines as another value tried, so they cannot be saved together.' },
+				],
+			});
+		});
+
+		it('refuses what the agent wrote when it does not read back as asked', async () => {
+			agent.set(triedId(TEXT), written(badge('#00ff00')));
+			expect(await settled(sources(), BADGE, [TEXT])).toMatchObject({
+				values: [{ state: 'refused', why: 'Written by the agent, it draws #00ff00, not #C80000, so it is not saved.' }],
+			});
+		});
+
+		it('leaves a value to follow a token to the agent alone, and takes it once written', async () => {
+			const FOLLOW: TriedValue = { property: 'radius', value: '20px 20px 20px 20px', targets: BADGE_ALL, follows: 'radius' };
+			expect(await settled(sources(), BADGE, [FOLLOW])).toMatchObject({
+				values: [{ state: 'refused', agent: 'follow', why: 'To follow radius, the agent writes it.' }],
+			});
+			// Never found by the locator, though 20px is written where it can be.
+			expect(builds).toEqual([]);
+			agent.set(
+				triedId(FOLLOW),
+				written({ 'src/Badge/Badge.module.css': LIBRARY['src/Badge/Badge.module.css']!.replace('20px;', '20px; /* the shared radius */') }),
+			);
+			const s = sources();
+			expect(await settled(s, BADGE, [FOLLOW])).toMatchObject({ values: [{ state: 'found', by: 'agent' }] });
+		});
 	});
 });

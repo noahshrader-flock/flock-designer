@@ -35,12 +35,20 @@ export const ValueEditor = ({
 	cell,
 	tried,
 	onTry,
+	follows = [],
+	following = null,
+	onFollow = () => undefined,
 }: {
 	property: ValueProperty;
 	cell: ValueCell;
 	/** The value being tried, in full, or null when it is as drawn. */
 	tried: string | null;
 	onTry: (value: string | null) => void;
+	/** The tokens whose value it is, which it could follow (Phase 4.6), by path and name. */
+	follows?: { path: string; name: string }[];
+	/** The token it is to follow, by name, or null. */
+	following?: string | null;
+	onFollow?: (path: string) => void;
 }) => {
 	const n = partsIn(property);
 	const drawn = allParts(cell.value, n);
@@ -75,6 +83,20 @@ export const ValueEditor = ({
 								onCommit={(next) => onTry(allParts(parts.map((p, j) => (j === i ? next : p)).join(' '), n).join(' '))}
 							/>
 						</div>
+					))
+				)}
+				{following !== null ? (
+					<p className="popover-note" data-value-following>
+						Follows {following}: the agent writes it so the token moves it.{' '}
+						<button type="button" className="link" onClick={() => onTry(null)}>
+							Keep its own
+						</button>
+					</p>
+				) : (
+					follows.map((t) => (
+						<button key={t.path} type="button" className="link" data-value-follow={t.path} onClick={() => onFollow(t.path)}>
+							Follow {t.name}
+						</button>
 					))
 				)}
 				{cell.kind === 'derived' && (

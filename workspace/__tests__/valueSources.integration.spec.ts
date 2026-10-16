@@ -7,6 +7,10 @@ import { ComponentTokens } from '../src/main/services/componentTokens';
 import { PrototypeServer } from '../src/main/services/prototypeServer';
 import { StoryPreviews } from '../src/main/services/storyPreviews';
 import { ValueSources } from '../src/main/services/valueSources';
+import { ValueAgent } from '../src/main/services/valueAgent';
+import { runToEnd } from '../src/main/services/agent';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import type { ConnectedDesignSystem, ValueProperty, ValueSources as Answer } from '../src/shared/contract';
 import { REAL_LIBRARY, REAL_PRIMER, describeWith, libraryMissing, primerMissing } from './realCheckouts';
 
@@ -22,7 +26,7 @@ const withLibrary = async (system: ConnectedDesignSystem, check: (tokens: Compon
 		const previews = new StoryPreviews({ system: () => system, folder: mkdtempSync(join(tmpdir(), 'dsnr-sources-')), server: pages });
 		const tokens = new ComponentTokens({ system: () => system, previews, measure: real.measure, pictures: { keep: () => {}, of: async () => ({}) } });
 		await tokens.warm();
-		await check(tokens, new ValueSources({ tokens, previews, measure: real.measure }));
+		await check(tokens, new ValueSources({ tokens, previews, measure: real.measure, agent: { of: () => null } }));
 	} finally {
 		await real.close();
 		pages.close();
@@ -110,6 +114,66 @@ describeWith(primerMissing, 'on Primer React, the second library', () => {
 					values: [{ state: 'refused', why: expect.stringMatching(/^9999px is not written in the design system's own files/) }],
 				});
 			});
+		},
+		1_800_000,
+	);
+});
+
+/**
+ * The agent writing what the locator cannot, on FUI (Phase 4.5, 4.6), as the spike did it: run only where it is asked for
+ * (`DSNR_REAL_AGENT=1`), since it runs Claude Code on the person's account and costs a little.
+ */
+const agentMissing = process.env.DSNR_REAL_AGENT === '1' ? libraryMissing : 'the agent is run only with DSNR_REAL_AGENT=1 (it costs a little)';
+describeWith(agentMissing, 'the agent on Flock’s FUI', () => {
+	it.skipIf(findChrome() === null)(
+		'writes FSBadge’s radius, which MUI sets, as the theme’s override, and makes FSIconButton’s own radius follow the shared one',
+		async () => {
+			const repository = 'flocksafety/flock-react-component-lib';
+			const system = { id: repository, name: 'FUI', repository, root: REAL_LIBRARY, folder: '', branch: 'develop' };
+			const pages = new PrototypeServer();
+			const real = chromeHeadless();
+			try {
+				const previews = new StoryPreviews({ system: () => system, folder: mkdtempSync(join(tmpdir(), 'dsnr-agent-')), server: pages });
+				const tokens = new ComponentTokens({
+					system: () => system,
+					previews,
+					measure: real.measure,
+					pictures: { keep: () => {}, of: async () => ({}) },
+				});
+				await tokens.warm();
+				const agent = new ValueAgent({
+					system: () => system,
+					tokens,
+					run: (cwd, task) => runToEnd(cwd, task),
+					readStandard: async (path) => readFileSync(resolve(__dirname, '..', '..', path), 'utf8'),
+				});
+				const sources = new ValueSources({ tokens, previews, measure: real.measure, agent });
+				const answerOf = async (file: string, t: { property: ValueProperty; value: string; targets: string[]; follows?: string }) => {
+					for (let n = 0; n < 900; n++) {
+						const a: Answer = await sources.of(file, [t]);
+						if (a.state !== 'building' && !(a.state === 'ready' && a.values[0]?.state === 'writing')) return a;
+						await new Promise((r) => setTimeout(r, 1000));
+					}
+					throw new Error('never answered');
+				};
+				const badge = 'src/components/FSBadge/FSBadge.stories.tsx';
+				const cell = await sourcesOf(tokens, sources, badge, 'radius', null, '6px 6px 6px 6px');
+				expect(cell.found).toMatchObject({ state: 'ready', values: [{ state: 'refused', agent: 'write' }] });
+				const six = { property: 'radius' as const, value: '6px 6px 6px 6px', targets: cell.cell.targets };
+				await agent.write(badge, six);
+				const written = await answerOf(badge, six);
+				expect(written).toMatchObject({ state: 'ready', values: [{ state: 'found', by: 'agent' }] });
+				expect([...(await sources.files(badge, [six])).keys()]).toEqual(['src/utils/theme.ts']);
+
+				const icon = 'src/components/FSIconButton/FSIconButton.stories.tsx';
+				const radius = await sourcesOf(tokens, sources, icon, 'radius', null, '8px 8px 8px 8px');
+				const follow = { property: 'radius' as const, value: radius.cell.value, targets: radius.cell.targets, follows: 'radius' };
+				await agent.write(icon, follow);
+				expect(await answerOf(icon, follow)).toMatchObject({ state: 'ready', values: [{ state: 'found', by: 'agent' }] });
+			} finally {
+				await real.close();
+				pages.close();
+			}
 		},
 		1_800_000,
 	);

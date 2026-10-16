@@ -20,11 +20,13 @@
 import type { ChangeReach, StoryPreview, TriedValue, ValuePlace, ValueProperty, ValueSource, ValueSources as Answer } from '../../shared/contract';
 import { COLOR_VALUES, VALUE_PROPERTIES, triedId } from '../../shared/contract';
 import { asRecord } from '../../shared/json';
-import { hexOf } from '../../shared/tokens';
 import { allParts, partsIn } from '../../shared/valueParts';
 import type { ComponentTokens, DrawnIndex, Instance, Measure } from './componentTokens';
 import { isNothing } from './tokenTags';
+import { mergeTexts } from './git';
 import { newestAnswer } from './newestAnswer';
+import type { ValueAgent } from './valueAgent';
+import { drawsOtherwise, partsBy, same } from './valueReadBack';
 import type { OpenedBuild } from './storyPreviews';
 import { type Place, placesIn, probeFor, searchedFiles, withWrites, writtenAs } from './valueLocator';
 
@@ -41,16 +43,17 @@ export const triedValuesOf = (sent: unknown): TriedValue[] => {
 	const text = (x: unknown, most: number): x is string => typeof x === 'string' && x.length > 0 && x.length <= most;
 	return sent.map((v: unknown) => {
 		const o = asRecord(v);
-		const { property, value, targets } = o;
+		const { property, value, targets, follows } = o;
 		if (
 			(VALUE_PROPERTIES as readonly unknown[]).includes(property) &&
 			text(value, 100) &&
 			Array.isArray(targets) &&
 			targets.length > 0 &&
 			targets.length <= 500 &&
-			targets.every((k) => text(k, 400))
+			targets.every((k) => text(k, 400)) &&
+			(follows === undefined || text(follows, 200))
 		)
-			return { property: property as ValueProperty, value, targets: targets as string[] };
+			return { property: property as ValueProperty, value, targets: targets as string[], ...(follows === undefined ? {} : { follows }) };
 		throw new Error('A value tried names its property, its value as CSS writes it, and the instances it is tried on.');
 	});
 };
@@ -63,6 +66,8 @@ export const MOST_PLACES = 400;
 
 export interface ValueSourcesDeps {
 	tokens: Pick<ComponentTokens, 'drawn' | 'reachWith' | 'asIs'>;
+	/** What the agent has written for a value, when the person had it write one (`ValueAgent`). */
+	agent: Pick<ValueAgent, 'of'>;
 	previews: { opened(purpose: 'locate'): Promise<OpenedBuild | Exclude<StoryPreview, { state: 'ready' }>> };
 	measure: Measure;
 }
@@ -75,20 +80,16 @@ export interface ValueSourcesDeps {
 type Located =
 	{ state: 'found'; places: { place: Place; moves: Set<string> }[] } | { state: 'refused'; why: string } | { state: 'failed'; error: string };
 
+/** How a value is written: in the places it is found written in, or as the agent wrote it (Phase 4.5, 4.6). */
+type Write =
+	{ by: 'place'; writes: { place: Place; literal: string }[] } | { by: 'agent'; files: Map<string, string>; places: ValuePlace[]; said: string };
+
 /** An answer, with the files it writes kept here for Save: never sent. */
 type Worked = Answer & { files?: Map<string, string> };
-
-/** Two drawn parts are the same: colours as hex, whatever way the browser wrote them; lengths as written. */
-const same = (property: ValueProperty, a: string | undefined, b: string | undefined): boolean =>
-	COLOR_VALUES.has(property) ? (a !== undefined && b !== undefined && hexOf(a) === hexOf(b)) || a === b : a === b;
 
 /** One instance's part, by the instance's key and the part's place in the value: what a place is found to move. */
 const moved = (key: string, part: number): string => `${key}\u0000${part}`;
 const partOf = (pair: string): number => Number(pair.slice(pair.lastIndexOf('\u0000') + 1));
-
-/** Each instance's parts of a property, by its key. */
-const partsBy = (instances: Instance[] | undefined, property: ValueProperty): Map<string, string[]> =>
-	new Map((instances ?? []).map((i) => [i.key, allParts(i.values[property] ?? '', partsIn(property))]));
 
 export class ValueSources {
 	/** Each value's places, once found, by the commit, the story file, the property, its instances and the part drawn. */
@@ -111,6 +112,7 @@ export class ValueSources {
 		if (worked.state === 'none' || worked.values.length === 0) throw new Error('There is no value to save.');
 		const refused = worked.values.find((v): v is Extract<ValueSource, { state: 'refused' }> => v.state === 'refused');
 		if (refused) throw new Error(refused.why);
+		if (worked.values.some((v) => v.state === 'writing')) throw new Error('The agent is still writing a value; save once it has.');
 		return worked.files ?? new Map();
 	}
 
@@ -118,7 +120,9 @@ export class ValueSources {
 		if (tried.length === 0) return { state: 'none' };
 		const index = await this.deps.tokens.drawn();
 		if (index.state !== 'ready') return index;
-		const key = `${index.key}\u0000${file}\u0000${JSON.stringify(tried)}`;
+		// What the agent has written for each, as part of what the answer is for: it is worked out again when that changes.
+		const agent = tried.map((t) => this.deps.agent.of(index, file, t)?.state ?? '');
+		const key = `${index.key}\u0000${file}\u0000${JSON.stringify(tried)}\u0000${agent.join()}`;
 		return this.newest(key, () => this.work(index, file, tried)) ?? { state: 'building' };
 	}
 
@@ -126,88 +130,112 @@ export class ValueSources {
 		// Held against the library as it is, drawn as a change is (`asIs`), so only the change differs.
 		const before = (await this.deps.tokens.asIs(index)).get(file)?.light?.instances;
 		if (!before) return { state: 'failed', error: 'Its stories did not draw, so where its values are written cannot be found.' };
-		// Each value: its writes, found, or why it cannot be saved.
-		const writes = new Map<string, { place: Place; literal: string }[]>();
-		const refused = new Map<string, string>();
+		// Each value: the places it is found written in, what the agent wrote for it, being written, or why it cannot be saved.
+		const writes = new Map<string, Write>();
+		const sources = new Map<string, ValueSource>();
 		for (const t of tried) {
-			const r = await this.writesOf(index.key, file, t, before);
-			if ('why' in r) refused.set(triedId(t), r.why);
-			else writes.set(triedId(t), r.writes);
+			const id = triedId(t);
+			const agent = this.deps.agent.of(index, file, t);
+			// A value to follow a token is the agent's to write; one found where it is written, the locator's.
+			const found = t.follows === undefined ? await this.writesOf(index.key, file, t, before) : null;
+			if (found && !('why' in found)) writes.set(id, { by: 'place', writes: found.writes });
+			else if (agent?.state === 'written') writes.set(id, { by: 'agent', files: agent.files, places: agent.places, said: agent.said });
+			else if (agent?.state === 'writing') sources.set(id, { id, state: 'writing' });
+			else {
+				const offer = t.follows === undefined ? 'write' : 'follow';
+				const why = agent?.state === 'refused' ? agent.why : found && 'why' in found ? found.why : `To follow ${t.follows}, the agent writes it.`;
+				sources.set(id, { id, state: 'refused', why, agent: offer });
+			}
 		}
 		// One place written two ways is refused for the second.
 		const byPlace = new Map<string, string>();
-		for (const [id, ws] of writes)
-			for (const w of ws) {
-				const at = `${w.place.file}:${w.place.at}`;
-				if (byPlace.has(at) && byPlace.get(at) !== w.literal) {
+		for (const [id, w] of writes) {
+			if (w.by !== 'place') continue;
+			for (const { place, literal } of w.writes) {
+				const at = `${place.file}:${place.at}`;
+				if (byPlace.has(at) && byPlace.get(at) !== literal) {
 					writes.delete(id);
-					refused.set(
+					sources.set(id, {
 						id,
-						`It is written in the same place as another value tried (${w.place.file}, line ${w.place.line}), so they cannot be saved apart.`,
-					);
-				} else byPlace.set(at, w.literal);
+						state: 'refused',
+						why: `It is written in the same place as another value tried (${place.file}, line ${place.line}), so they cannot be saved apart.`,
+					});
+				} else byPlace.set(at, literal);
 			}
-		let { files, reach, after } = await this.written(index, writes);
+		}
+		let { files, reach, after, clashed } = await this.written(index, writes);
 		// Read back: each value written must draw as asked on its instances, or it is refused and the rest written again.
 		const misread = tried.flatMap((t) => {
-			const drew = writes.has(triedId(t)) ? this.drawsOtherwise(t, after.get(file)) : null;
+			const drew = writes.has(triedId(t)) && !clashed.has(triedId(t)) ? drawsOtherwise(t, after.get(file)) : null;
 			return drew === null ? [] : [{ t, drew }];
 		});
-		if (misread.length > 0) {
-			for (const { t, drew } of misread) {
-				writes.delete(triedId(t));
-				refused.set(triedId(t), `Written where it was found, it draws ${drew}, not ${t.value}, so it is not saved.`);
-			}
-			({ files, reach } = await this.written(index, writes));
+		for (const id of clashed) {
+			writes.delete(id);
+			sources.set(id, {
+				id,
+				state: 'refused',
+				why: 'The agent wrote it in the same lines as another value tried, so they cannot be saved together.',
+			});
 		}
+		for (const { t, drew } of misread) {
+			const by = writes.get(triedId(t))?.by === 'agent' ? 'by the agent' : 'where it was found';
+			writes.delete(triedId(t));
+			sources.set(triedId(t), { id: triedId(t), state: 'refused', why: `Written ${by}, it draws ${drew}, not ${t.value}, so it is not saved.` });
+		}
+		if (misread.length > 0 || clashed.size > 0) ({ files, reach } = await this.written(index, writes));
 		const values: ValueSource[] = tried.map((t) => {
 			const id = triedId(t);
-			const why = refused.get(id);
-			if (why !== undefined) return { id, state: 'refused', why };
-			const places: ValuePlace[] = (writes.get(id) ?? []).map(({ place, literal }) => ({
-				file: place.file,
-				line: place.line,
-				written: place.written,
-				writes: literal,
-			}));
-			return { id, state: 'found', places };
+			const w = writes.get(id);
+			if (w?.by === 'agent') return { id, state: 'found', places: w.places, by: 'agent', said: w.said };
+			if (w?.by === 'place')
+				return {
+					id,
+					state: 'found',
+					places: w.writes.map(({ place, literal }) => ({ file: place.file, line: place.line, written: place.written, writes: literal })),
+				};
+			return sources.get(id) as ValueSource;
 		});
 		return { state: 'ready', values, reach, files };
 	}
 
-	/** The library drawn with `writes`: the files they change, what they reach, and what each component drew with them. */
-	private async written(index: DrawnIndex, writes: Map<string, { place: Place; literal: string }[]>) {
-		const all = [...writes.values()].flat();
-		if (all.length === 0) return { files: new Map<string, string>(), reach: { state: 'none' } as ChangeReach, after: new Map() };
+	/**
+	 * The library drawn with `writes`: the files they change, what they reach, and what each component drew with them. The
+	 * places found are written in the commit's text; what the agent wrote is put together with them as git puts two changes
+	 * together, and one that changes the same lines as another is not written (`clashed`).
+	 */
+	private async written(index: DrawnIndex, writes: Map<string, Write>) {
+		const clashed = new Set<string>();
+		if (writes.size === 0) return { files: new Map<string, string>(), reach: { state: 'none' } as ChangeReach, after: new Map(), clashed };
 		const files = new Map<string, string>();
 		const { reach, after } = await this.deps.tokens.reachWith(
 			index,
 			async (reads) => {
-				for (const path of new Set(all.map((w) => w.place.file)))
+				const placed = [...writes.values()].flatMap((w) => (w.by === 'place' ? w.writes : []));
+				for (const path of new Set(placed.map((w) => w.place.file)))
 					files.set(
 						path,
 						withWrites(
 							await reads.readFile(path),
-							all.filter((w) => w.place.file === path),
+							placed.filter((w) => w.place.file === path),
 						),
 					);
+				for (const [id, w] of writes) {
+					if (w.by !== 'agent') continue;
+					const merged = new Map<string, string>();
+					for (const [path, text] of w.files) {
+						const base = await reads.readFile(path).catch(() => '');
+						const together = await mergeTexts(base, files.get(path) ?? base, text);
+						if (together === null) break;
+						merged.set(path, together);
+					}
+					if (merged.size === w.files.size) for (const [path, text] of merged) files.set(path, text);
+					else clashed.add(id);
+				}
 				return files;
 			},
 			'written',
 		);
-		return { files, reach, after };
-	}
-
-	/** What a value tried draws instead of what was asked, on an instance it was tried on, light; null when every one draws it. */
-	private drawsOtherwise(t: TriedValue, drawn: { light: { instances?: Instance[] } | null } | undefined): string | null {
-		const asked = allParts(t.value, partsIn(t.property));
-		const now = partsBy(drawn?.light?.instances, t.property);
-		for (const key of t.targets) {
-			const parts = now.get(key);
-			if (parts === undefined) return 'nothing it can be read on';
-			if (!asked.every((p, i) => same(t.property, parts[i], p))) return parts.join(' ');
-		}
-		return null;
+		return { files, reach, after, clashed };
 	}
 
 	/** What writing one tried value takes: the places to write and what, or why it cannot be saved. */

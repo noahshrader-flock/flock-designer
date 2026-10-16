@@ -85,7 +85,7 @@ const markupFor = (rows: ValueRow[]) =>
 			version: { branch: 'develop', commit: 'abc1234def' },
 			byPath: new Map(TOKENS.map((t) => [t.path, t])),
 			names: new Map(['FSButtonGroup', 'FSIconButton', 'FSSplitButton', 'FSLoadingButton', 'FSToggleButton'].map((n) => [n, n])),
-			trying: { tried: new Map(), onTry: () => undefined, onAll: () => undefined },
+			trying: { tried: new Map(), onTry: () => undefined, onAll: () => undefined, onWrite: () => undefined, writes: 0, writeError: null },
 			onEditToken: () => undefined,
 		}),
 	);
@@ -240,7 +240,11 @@ describe.skipIf(NO_CHROME)('a component’s Values, in the side pane, in the bro
 				tried: new Map(TRIED.map((t) => [`${t.property}\u0000${t.targets.join('\u0001')}`, t])),
 				onTry: () => undefined,
 				onAll: () => undefined,
+				onWrite: () => undefined,
+				writes: 0,
+				writeError: null,
 			},
+			tokenName: (path: string) => path,
 			onSource: () => undefined,
 			onOpen: () => undefined,
 			sources: {
@@ -249,6 +253,8 @@ describe.skipIf(NO_CHROME)('a component’s Values, in the side pane, in the bro
 					{
 						id: 'height\u0000h:sm:0',
 						state: 'found',
+						by: 'agent',
+						said: 'MUI’s outlined input sets its height, so the theme’s MuiTextField override sets 48px, with the spacing helper.',
 						places: [{ file: 'packages/react/src/CounterLabel/CounterLabel.module.css', line: 10, written: '28px', writes: '32px' }],
 					},
 					{
@@ -260,6 +266,7 @@ describe.skipIf(NO_CHROME)('a component’s Values, in the side pane, in the bro
 						id: 'padding\u0000p:0',
 						state: 'refused',
 						why: 'packages/react/src/Badge/Badge.module.css, line 3, writes 6px once for parts tried apart: try them together, or it cannot be saved.',
+						agent: 'write',
 					},
 				],
 				reach: { state: 'none' },

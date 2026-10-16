@@ -253,6 +253,52 @@ export const claudeCodeAdapter: AgentAdapter = {
 	formatter: claudeStreamFormatter,
 };
 
+/** How long a run to its end may take before it is stopped: a value's change takes under a minute. */
+const RUN_TO_END_MS = 5 * 60_000;
+
+/** What a run to its end said last (what it changed, or why not), and whether it ended as it should. */
+export interface RunEnded {
+	ok: boolean;
+	said: string;
+}
+
+/**
+ * A task run to its end in `cwd`, unattended, with the adapter's own permissions (no attribution, nothing that needs
+ * someone there), and what it said last: for work in a scratch copy that nobody watches (writing a component's value,
+ * Phase 4), so it is not the person's one run at a time (`AgentRunner`) and does not wait on it, nor it on this.
+ */
+export const runToEnd = (cwd: string, task: string, deps: AgentDeps = defaultAgentDeps): Promise<RunEnded> =>
+	new Promise((done) => {
+		const [file, ...args] = deps.adapter.argvFor(task);
+		if (file === undefined) return done({ ok: false, said: 'The agent adapter produced no command.' });
+		let out = '';
+		let child: ChildProcess;
+		try {
+			child = deps.spawnProcess(file, args, { cwd, shell: false, stdio: ['ignore', 'pipe', 'pipe'], env: process.env });
+		} catch (err) {
+			return done({ ok: false, said: (err as Error).message });
+		}
+		const timer = setTimeout(() => child.kill('SIGTERM'), RUN_TO_END_MS);
+		child.stdout?.on('data', (d: Buffer) => (out += d.toString()));
+		child.on('error', (err) => done({ ok: false, said: `Could not run ${deps.adapter.name}: ${err.message}.` }));
+		child.on('exit', (code) => {
+			clearTimeout(timer);
+			// The stream's closing event says how it ended, and repeats what the agent said last.
+			const result = out
+				.split('\n')
+				.map((line) => {
+					try {
+						return JSON.parse(line) as { type?: string; is_error?: boolean; result?: string };
+					} catch {
+						return null;
+					}
+				})
+				.find((e) => e?.type === 'result');
+			const said = typeof result?.result === 'string' ? result.result.trim() : '';
+			done({ ok: code === 0 && result?.is_error === false, said: said || `${deps.adapter.name} ended without saying what it did.` });
+		});
+	});
+
 export interface AgentDeps {
 	spawnProcess: typeof spawn;
 	adapter: AgentAdapter;

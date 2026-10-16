@@ -9,14 +9,18 @@ import { BranchActions } from './Changed';
 import { ReachView } from './ChangeReach';
 import type { Trying } from './ComponentValues';
 import { IconButton } from './ui/IconButton';
+import { ErrorLine } from './ui/Dialog';
 import { Notice } from './ui/Notice';
 
-/** Where a value is written, each place a link to its line: by file, its lines after it (`src/utils/theme.ts, lines 58, 70`). */
-const Places = ({ places, onSource }: { places: ValuePlace[]; onSource: (place: ValuePlace) => void }) => {
+/**
+ * Where a value is written, each place a link to its line: by file, its lines after it (`src/utils/theme.ts, lines 58,
+ * 70`); by whom, when the agent wrote it.
+ */
+const Places = ({ places, by, onSource }: { places: ValuePlace[]; by?: 'agent'; onSource: (place: ValuePlace) => void }) => {
 	const files = [...new Set(places.map((p) => p.file))];
 	return (
 		<span className="value-place quiet" data-value-places>
-			Written in{' '}
+			{by === 'agent' ? 'Written by the agent in' : 'Written in'}{' '}
 			{files.map((file, i) => {
 				const here = places.filter((p) => p.file === file);
 				return (
@@ -38,18 +42,45 @@ const Places = ({ places, onSource }: { places: ValuePlace[]; onSource: (place: 
 	);
 };
 
-/** What is said under a value: where it is written, that it is being found, or why it cannot be saved; nothing when finding failed. */
-const Said = ({ source, onSource }: { source: ValueSource | null | undefined; onSource: (place: ValuePlace) => void }) => {
+/**
+ * What is said under a value: where it is written (and, when the agent wrote it, why it wrote it so), that it is being found
+ * or written, or why it cannot be saved, with the agent offered where it can write it (Phase 4.5, 4.6); nothing when
+ * finding failed.
+ */
+const Said = ({
+	source,
+	onSource,
+	onWrite,
+}: {
+	source: ValueSource | null | undefined;
+	onSource: (place: ValuePlace) => void;
+	onWrite: () => void;
+}) => {
 	if (source === undefined) return null;
 	if (source === null) return <span className="value-place quiet">Finding where it is written…</span>;
+	if (source.state === 'writing') return <span className="value-place quiet">The agent is writing it…</span>;
 	if (source.state === 'refused')
 		return (
-			<span className="value-place warning-text" data-value-refused>
-				{source.why}
-			</span>
+			<>
+				<span className="value-place warning-text" data-value-refused>
+					{source.why}
+				</span>
+				{source.agent && (
+					<span className="value-place">
+						<button type="button" className="link" data-value-agent onClick={onWrite}>
+							{source.agent === 'follow' ? 'Have the agent make it follow the token' : 'Have the agent write it'}
+						</button>
+					</span>
+				)}
+			</>
 		);
 	if (source.places.length === 0) return <span className="value-place quiet">As the library draws it: nothing to write.</span>;
-	return <Places places={source.places} onSource={onSource} />;
+	return (
+		<>
+			<Places places={source.places} by={source.by} onSource={onSource} />
+			{source.said && <span className="value-place quiet">{source.said}</span>}
+		</>
+	);
 };
 
 /**
@@ -62,7 +93,7 @@ const Said = ({ source, onSource }: { source: ValueSource | null | undefined; on
  */
 export const ValueChanges = (shown: Shown) => {
 	const tried = [...shown.trying.tried.values()];
-	const sources = useValueSources(shown.component.id, tried);
+	const sources = useValueSources(shown.component.id, tried, shown.trying.writes);
 	const controls = useValueBranch(shown.component.id, tried, shown.trying.onAll);
 	return <ChangedValues {...shown} sources={sources} controls={controls} />;
 };
@@ -73,6 +104,8 @@ interface Shown {
 	/** Its values in light, as read: what names each value tried and says what it was. */
 	rows: ValueRow[] | null;
 	trying: Trying;
+	/** A token's name, by its path: what a value made to follow one says it follows. */
+	tokenName: (path: string) => string;
 	onSource: (place: ValuePlace) => void;
 	onOpen: (id: string) => void;
 }
@@ -83,6 +116,7 @@ export const ChangedValues = ({
 	components,
 	rows,
 	trying,
+	tokenName,
 	onSource,
 	onOpen,
 	sources,
@@ -119,10 +153,11 @@ export const ChangedValues = ({
 									<span className="value-cell value-change">
 										<span className="value-label">{name}</span>
 										<span className="value-drawn">
-											<span>{cell ? saidValue(t.property, cell.value) : ''}</span> <span>→ {saidValue(t.property, t.value)}</span>
+											<span>{cell ? saidValue(t.property, cell.value) : ''}</span>{' '}
+											<span>→ {t.follows === undefined ? saidValue(t.property, t.value) : `follows ${tokenName(t.follows)}`}</span>
 										</span>
 									</span>
-									<Said source={sources.state === 'failed' ? undefined : sourceOf(t)} onSource={onSource} />
+									<Said source={sources.state === 'failed' ? undefined : sourceOf(t)} onSource={onSource} onWrite={() => trying.onWrite(t)} />
 									<span className="item-actions">
 										<IconButton size="small" icon="discard" label={`Reset ${name}`} onClick={() => trying.onTry(triedId(t), null)} />
 									</span>
@@ -135,9 +170,10 @@ export const ChangedValues = ({
 					<p className="quiet">
 						{savable
 							? `Saving writes ${plural(tried.length, 'value')} where ${tried.length === 1 ? 'it is' : 'they are'} written, and nothing else.`
-							: 'Tried in its stories, on its own instances. A value is saved once where it is written is found.'}
+							: 'Tried in its stories, on its own instances. A value is saved once where it is written is found, or the agent has written it.'}
 					</p>
 				)}
+				<ErrorLine error={trying.writeError} />
 				<BranchActions controls={controls} canSave={savable} />
 			</section>
 			{sources.state === 'failed' && <Notice title="Where its values are written could not be found">{sources.error}</Notice>}

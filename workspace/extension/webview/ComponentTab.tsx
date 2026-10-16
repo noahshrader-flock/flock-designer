@@ -61,6 +61,14 @@ export const ComponentTab = ({ id }: { id: string }) => {
 	const [tried, setTried] = useState<ReadonlyMap<string, TriedValue>>(new Map());
 	useEffect(() => setTried(new Map()), [ready?.commit]);
 	const onAll = (all: TriedValue[]) => setTried(new Map(all.map((t) => [triedId(t), t])));
+	// Having the agent write a value (Phase 4.5, 4.6): asked of the core, which says what it wrote where its values are.
+	const [writes, setWrites] = useState(0);
+	const [writeError, setWriteError] = useState<string | null>(null);
+	const onWrite = (value: TriedValue) =>
+		void window.workspace.writeValue(id, value).then((r) => {
+			setWriteError(r.ok ? null : r.error);
+			setWrites((n) => n + 1);
+		});
 	const onTry = (key: string, value: TriedValue | null) =>
 		setTried((was) => {
 			const next = new Map(was);
@@ -108,7 +116,7 @@ export const ComponentTab = ({ id }: { id: string }) => {
 							components={ready.components}
 							actions={actions}
 							version={{ branch: ready.branch, commit: ready.commit }}
-							trying={{ tried, onTry, onAll }}
+							trying={{ tried, onTry, onAll, onWrite, writes, writeError }}
 							onOpen={open}
 						/>
 					</aside>

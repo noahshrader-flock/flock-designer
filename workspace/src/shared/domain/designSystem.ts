@@ -163,6 +163,8 @@ export interface TriedValue {
 	property: ValueProperty;
 	value: string;
 	targets: string[];
+	/** A token this value is to follow, by its path, drawn as it is now (Phase 4.6): written by the agent, never tried as another. */
+	follows?: string;
 }
 
 /** What names a value tried: its property and the instances it is for, the same in light and in dark, in the tab and the app. */
@@ -171,7 +173,7 @@ export const triedId = ({ property, targets }: { property: ValueProperty; target
 
 /** Whether two sets of values tried are the same change, whatever their order: each value, on the same instances. */
 export const sameTried = (a: TriedValue[], b: TriedValue[]): boolean => {
-	const by = (tried: TriedValue[]) => JSON.stringify(tried.map((t) => [triedId(t), t.value]).sort());
+	const by = (tried: TriedValue[]) => JSON.stringify(tried.map((t) => [triedId(t), t.value, t.follows ?? '']).sort());
 	return by(a) === by(b);
 };
 
@@ -186,8 +188,15 @@ export interface ValuePlace {
 	writes: string;
 }
 
-/** Where one tried value (`id`, `triedId`) is written, or why it cannot be saved, in words. */
-export type ValueSource = { id: string; state: 'found'; places: ValuePlace[] } | { id: string; state: 'refused'; why: string };
+/**
+ * Where one tried value (`id`, `triedId`) is written: found where it is (`places`), or written by the agent (`by`, with what
+ * it said of why); being written by the agent; or why it cannot be saved, in words, and, when the agent can write it, that
+ * it can (`agent`: write it; follow the token).
+ */
+export type ValueSource =
+	| { id: string; state: 'found'; places: ValuePlace[]; by?: 'agent'; said?: string }
+	| { id: string; state: 'writing' }
+	| { id: string; state: 'refused'; why: string; agent?: 'write' | 'follow' };
 
 /**
  * Where the values tried on a component's instances are written, found in the background as they are tried, newest only:

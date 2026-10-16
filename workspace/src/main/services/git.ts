@@ -1,6 +1,6 @@
 import { parseRemote } from '../../shared/repoRef';
 import { randomBytes } from 'node:crypto';
-import { existsSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, join, resolve } from 'node:path';
 import type { Checkout } from '../../shared/contract';
@@ -393,4 +393,25 @@ export const branchStartedAt = async (root: string, branch: string): Promise<str
 	if (oldest) return oldest;
 	if (!isSafeBranchName(branch)) return null;
 	return (await git(root, ['log', '-1', '--format=%aI', branch]).catch(() => '')) || null;
+};
+
+/**
+ * Two changes to one text put together, as git puts two branches' changes together (`git merge-file`): what `ours` and
+ * `theirs` each changed of `base`, both kept. Null when they change the same lines, which is not guessed at.
+ */
+export const mergeTexts = async (base: string, ours: string, theirs: string): Promise<string | null> => {
+	const dir = join(tmpdir(), `dsnr-merge-${randomBytes(6).toString('hex')}`);
+	const [o, b, t] = ['ours', 'base', 'theirs'].map((n) => join(dir, n)) as [string, string, string];
+	mkdirSync(dir, { recursive: true });
+	try {
+		writeFileSync(o, ours);
+		writeFileSync(b, base);
+		writeFileSync(t, theirs);
+		// It exits with how many conflicts it found: none is 0.
+		return (await runFile('git', ['merge-file', '-p', '--quiet', o, b, t], { timeoutMs: 10_000 })).stdout;
+	} catch {
+		return null;
+	} finally {
+		rmSync(dir, { recursive: true, force: true });
+	}
 };
