@@ -1150,14 +1150,17 @@ textarea.input {
 	margin-left: auto;
 }
 
-/* A changed token's mark, on its row or its theme's swatch: a dot in the theme's own modified colour, as VS Code marks a changed file. */
+/*
+ * A changed or tried value's mark, on its row, its cell or its theme's swatch: a dot in the brand. A change is what a person
+ * is doing, not something wrong; amber is for what needs a look (a warning), and is never used to say a change.
+ */
 .token-changed,
 .theme-changed {
 	flex-shrink: 0;
 	width: 6px;
 	height: 6px;
 	border-radius: 50%;
-	background: var(--vscode-gitDecoration-modifiedResourceForeground, var(--vscode-focusBorder));
+	background: var(--dsnr-brand);
 }
 
 .token .item-actions {

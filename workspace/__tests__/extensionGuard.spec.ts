@@ -34,6 +34,20 @@ describe('the extension’s sources', () => {
 		).toEqual([]);
 	});
 
+	it('use amber only to say something needs a look: a change, a tried value, a mark is the brand, and a warning’s selectors are the only ones that take the warning colour', () => {
+		const css = files()
+			.find((f) => f.path.endsWith('styles.css'))!
+			.text.replace(/\/\*[\s\S]*?\*\//g, '');
+		// The theme's "modified" colour is amber in most themes: it is how VS Code says a file changed, never how this does.
+		expect(css).not.toMatch(/gitDecoration/);
+		const rules = css.split('}').map((b) => b.split('{').map((x) => x.trim()));
+		const amber = rules.filter(([, body]) => /editorWarning-foreground/.test(body ?? '')).map(([selector]) => selector);
+		expect(amber).toEqual(['.badge-warning', '.note-warning .codicon', '.token-contrast-low,\n.warning-text']);
+		// A change's mark is the brand.
+		const mark = rules.find(([selector]) => selector?.startsWith('.token-changed'));
+		expect(mark?.[1]).toMatch(/background:\s*var\(--dsnr-brand\)/);
+	});
+
 	it('write one colour of their own, DSNR’s brand: every other is one of VS Code’s theme variables, and high contrast gives way to the theme’s button', () => {
 		const colour = /#[0-9a-fA-F]{3,8}\b|\brgba?\(|\bhsla?\(|\boklch\(/;
 		const said = files()
