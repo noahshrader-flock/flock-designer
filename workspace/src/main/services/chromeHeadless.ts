@@ -123,10 +123,11 @@ export const composedPicture = async (page: PageLike): Promise<Buffer | undefine
  */
 const readyToPicture = (cut: boolean, dx: number, dy: number) => `(() => {
 	const root = document.getElementById('root');
-	const story = document.querySelector('[data-story]');
 	const drawsOutside = (e) => e !== root && e.tagName !== 'SCRIPT' && getComputedStyle(e).visibility !== 'hidden' && e.getBoundingClientRect().width > 0;
 	if ([...document.body.children].some(drawsOutside)) return false;
-	if ((${dx} > 0 || ${dy} > 0) && [...story.querySelectorAll('*')].some((e) => getComputedStyle(e).position === 'fixed')) return false;
+	// Everything that moves is the stories' root's: a file whose stories could not be drawn at all has no story in it, only
+	// what it says instead, and is pictured all the same.
+	if ((${dx} > 0 || ${dy} > 0) && [...root.querySelectorAll('*')].some((e) => getComputedStyle(e).position === 'fixed')) return false;
 	if (${cut}) {
 		const r = root.getBoundingClientRect();
 		const [l, t, w, h] = [-r.left, -r.top, ${WINDOW.width}, ${PICTURE_TOP}];

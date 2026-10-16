@@ -15,13 +15,16 @@ import { inChrome } from './realChrome';
  * A preview page as the builds' is (white, padded, the stories in `#root`, each with its name), drawing one story file of
  * each kind a picture has to get right: small at the top left (its picture's region starts off the page, so it is moved),
  * taller than what is captured (cut), wider than the window, with a dialog open outside the stories, and with something
- * fixed to the window that moving would move.
+ * fixed to the window that moving would move; and a file that could not be drawn at all, which has no story in it, only the
+ * page's word of why.
  */
 const STORIES: Record<string, string> = {
 	small: '<button style="width:100px;height:40px;background:#108062;color:#fff;border:0;border-radius:8px">Save</button>',
 	tall: '<div style="width:300px;height:800px;background:linear-gradient(#123,#c84)"></div>',
 	wide: '<div style="width:1190px;height:60px;background:#246;border-radius:12px"></div>',
 	dialog: '<span style="color:#333">Open</span>',
+	// A file that could not be drawn at all: no story, only the page's word of why in its place.
+	unread: '',
 	fixed:
 		'<div><span style="display:inline-block;width:60px;height:30px;background:#a33"></span><b style="position:fixed;left:140px;top:60px;background:#3a3;width:40px;height:40px"></b></div>',
 };
@@ -31,7 +34,9 @@ const PICTURE_PAGE = `<!doctype html><html lang="en"><head><meta charset="utf-8"
 const stories = ${JSON.stringify(STORIES)};
 window.__dsnrShow = async (file) => {
 	document.querySelectorAll('.layer').forEach((e) => e.remove());
-	document.getElementById('root').innerHTML = '<section data-story="Default"><h4 class="fd-name">Default</h4>' + stories[file] + '</section><section data-story="Other"><h4 class="fd-name">Other</h4><p>Another story</p></section>';
+	document.getElementById('root').innerHTML = file === 'unread'
+		? '<pre class="fd-error" style="color:#b91c1c">There is no such story file in this build.</pre>'
+		: '<section data-story="Default"><h4 class="fd-name">Default</h4>' + stories[file] + '</section><section data-story="Other"><h4 class="fd-name">Other</h4><p>Another story</p></section>';
 	if (file === 'dialog') document.body.insertAdjacentHTML('beforeend', '<div class="layer" style="position:fixed;left:200px;top:120px;width:300px;height:160px;background:#ddd;border:2px solid #333"></div>');
 };
 </script></body></html>`;
