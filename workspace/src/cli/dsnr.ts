@@ -72,7 +72,7 @@ const USAGE = `Usage:
   dsnr build-site [--out <dir>] [--serve]
   dsnr publish --project <id> --name <v1-i1> [--no-open]
   dsnr unpublish --project <id> --name <v1-i1>
-  dsnr accessibility --project <id> [--name <v1-i1>] [--product <dir>]
+  dsnr accessibility --project <id> [--name <v1-i1>] [--light] [--product <dir>]
 
 new-prototype records the next version (v1-i1 for a new project, then v2-i1, v3-i1) and prints the task: where to
 write the prototype and how to check it builds. change-prototype does the same for a change to one: in its version's
@@ -84,7 +84,8 @@ goes up the link is also opened in the browser, unless --no-open. unpublish take
 iteration off the site: its saved page and source are removed, here and in the design repository, and the site is
 deployed without it. Its record and comments are kept. accessibility measures the work in a real browser: with --name,
 that prototype's page in each of its states; without, the product's own app, started by its design-mode command, at the
-pages its manifest names. It writes what it found into the project's folder in the design repository, and prints it.`;
+pages its manifest names. Each view is checked by axe and probed (--light: the accessibility tree and the Tab walk
+alone). It writes what it found, and the evidence, into the project's folder in the design repository, and prints it.`;
 
 class UsageError extends Error {}
 
@@ -123,6 +124,7 @@ const OPTIONS = {
 	out: { type: 'string' },
 	serve: { type: 'boolean' },
 	'no-open': { type: 'boolean' },
+	light: { type: 'boolean' },
 } as const;
 
 /** The options, or a usage error that says which one was wrong. */
@@ -302,7 +304,16 @@ export const main = async (argv: string[], deps: CliDeps): Promise<number> => {
 			esbuild: () => deps.esbuild,
 		});
 		if (command === 'accessibility') {
-			return await measureAccessibility({ projectId, name: values.name ?? null, root, designRoot, work, out: deps.out, err: deps.err });
+			return await measureAccessibility({
+				projectId,
+				name: values.name ?? null,
+				depth: values.light ? 'light' : 'full',
+				root,
+				designRoot,
+				work,
+				out: deps.out,
+				err: deps.err,
+			});
 		}
 		const saveCommand = (name: string) => shellLine([...deps.self, 'save-prototype', '--project', projectId, '--name', name, '--product', root]);
 		const publishCommand = (name: string) => shellLine([...deps.self, 'publish', '--project', projectId, '--name', name]);

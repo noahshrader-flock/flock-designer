@@ -585,6 +585,20 @@ describe.skipIf(findChrome() === null)('accessibility', () => {
 		expect(kept.notOpened.map((p) => p.name)).toEqual(['Broken', 'Gone']);
 		expect(kept.result.ran.states).toEqual(['Home', 'Devices']);
 		expect(kept.result.violations.map((v) => v.rule)).toEqual(expect.arrayContaining(['image-alt', 'color-contrast']));
+		// Each page that opened, probed at full depth, its evidence in a folder of its own; the source not read, and why.
+		expect(said).toMatch(/Probed at full depth \(30 of the 30 cells\), in Home \(\d+\.\d s\), Devices \(\d+\.\d s\)\./);
+		expect(said).toMatch(
+			/Not run:\n- \*\*key-shortcuts\*\* \(WCAG 2\.1\.4 Character Key Shortcuts\): this checkout's remote names no default branch/,
+		);
+		const evidence = join(design, 'projects', 'shop', 'accessibility', 'app');
+		for (const file of ['home/tree.json', 'home/tab.json', 'devices/reflow-320.jpg', 'devices/cells.json', 'source.json'])
+			expect(existsSync(join(evidence, file)), file).toBe(true);
+		const probe = (kept as unknown as { probe: { depth: string; views: { state: string; evidence: string }[] } }).probe;
+		expect(probe.depth).toBe('full');
+		expect(probe.views.map((v) => [v.state, v.evidence])).toEqual([
+			['Home', 'projects/shop/accessibility/app/home'],
+			['Devices', 'projects/shop/accessibility/app/devices'],
+		]);
 		// Stopped after: nothing answers on its port.
 		await expect(fetch(`http://localhost:${port}/`)).rejects.toThrow();
 	}, 120_000);
@@ -617,6 +631,16 @@ describe.skipIf(findChrome() === null)('accessibility', () => {
 		expect((JSON.parse(readFileSync(join(prototypes, 'demo', 'v1-i1.accessibility.json'), 'utf8')) as { result: unknown }).result).toEqual(
 			kept.result,
 		);
+		// Probed in its one state, its source read for what the page cannot show.
+		expect(existsSync(join(design, 'projects', 'demo', 'accessibility', 'v1-i1', 'default', 'tab.json'))).toBe(true);
+		expect(JSON.parse(readFileSync(join(design, 'projects', 'demo', 'accessibility', 'v1-i1', 'source.json'), 'utf8'))).toEqual(
+			expect.arrayContaining([{ cell: 'dragging', sc: '2.5.7', status: 'none', findings: [] }]),
+		);
+		// The light subset, as a build runs it: the tree and the Tab walk alone, and a run leaves none of the last one's evidence.
+		out = [];
+		expect(await run('accessibility', '--project', 'demo', '--name', 'v1-i1', '--light')).toBe(0);
+		expect(out.join('\n')).toMatch(/Probed at light depth \(8 of the 30 cells\)/);
+		expect(existsSync(join(design, 'projects', 'demo', 'accessibility', 'v1-i1', 'default', 'reflow-320.jpg'))).toBe(false);
 		// And as the agent runs it, through its launcher's bundle, which starts the browser too.
 		const env = { ...process.env, HOME: home, XDG_CONFIG_HOME: join(home, '.config'), APPDATA: join(home, 'AppData') };
 		const launcher = join(__dirname, '..', 'bin', 'dsnr.mjs');

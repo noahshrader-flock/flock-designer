@@ -31,7 +31,10 @@ export const prototypeSourcePath = (projectId: string, name: string): string => 
  * Where a project's accessibility measure is kept in the design repository, as evidence: of a prototype's page, by its
  * name, or, with none, of the product's own app (`dsnr accessibility`, decision 2 of the accessibility plan).
  */
-export const accessibilityPath = (projectId: string, name: string | null): string => projectPath(projectId, `accessibility/${name ?? 'app'}.json`);
+export const accessibilityPath = (projectId: string, name: string | null): string => `${accessibilityEvidenceDir(projectId, name)}.json`;
+
+/** The probe's evidence beside it (A3): a folder of the same name, a folder in it per view. */
+export const accessibilityEvidenceDir = (projectId: string, name: string | null): string => projectPath(projectId, `accessibility/${name ?? 'app'}`);
 
 /**
  * Where a prototype's picture is kept in the design repository: in its project's `covers/` folder (a folder, so a picture

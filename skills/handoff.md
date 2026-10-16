@@ -25,9 +25,11 @@ it pass.
 node ../flock-designer/workspace/bin/dsnr.mjs accessibility --project <id>
 ```
 
-It starts the product's app as the product says (its design mode, on mock data), checks the pages its manifest names,
-writes what it found into the project's folder in the design repository, and prints it. Fix what it found that is in the
-work, and run it again. What it says it could not open, or could not measure, goes into the review record as it said it.
+It starts the product's app as the product says (its design mode, on mock data), checks the pages its manifest names
+with axe, probes each (the Tab walk, focus, hover, reflow, zoom, text spacing, forced colors, forms and messages), reads
+the work's own files, writes what it found and the evidence into the project's folder in the design repository, and
+prints it. Fix what it found that is in the work, and run it again. What it says it could not open, or did not run, goes
+into the review record as it said it; a finding above the product's target is readiness, not a fault of this work.
 
 ## 2. Review it, both ways, independently
 

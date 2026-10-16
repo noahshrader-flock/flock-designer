@@ -24,6 +24,7 @@ import {
 	measureWith,
 	readDrawn,
 } from './storyDrawing';
+import { type ProbeOptions, type ProbePage, type ViewProbed, probeView } from './probe/probe';
 import { within } from './within';
 
 /** Said when there is no browser to draw or check with: what to install, or where to point. */
@@ -216,7 +217,11 @@ export const chromeHeadless = ({
 	launch?: (path: string) => Promise<BrowserLike>;
 	/** How long a loaded page is given to draw, or to fail, before it is judged (`loads`). */
 	loadSettleMs?: number;
-} = {}): Headless & { loads(url: string): Promise<string | null>; close(): Promise<void> } => {
+} = {}): Headless & {
+	loads(url: string): Promise<string | null>;
+	probe(url: string, options: ProbeOptions): Promise<ViewProbed>;
+	close(): Promise<void>;
+} => {
 	let browser: Promise<BrowserLike> | null = null;
 	const started = (): Promise<BrowserLike> => {
 		if (browser === null) {
@@ -300,6 +305,13 @@ export const chromeHeadless = ({
 			return share.files.map(() => null);
 		});
 
+	/**
+	 * The probe (A3 of the accessibility plan) on one view of a page, in a page of its own. It drives more of the page than
+	 * the rest (keys, the pointer, the accessibility tree), which puppeteer's page has: the narrow `PageLike` is what the
+	 * rest is tested against without a browser.
+	 */
+	const probe = (url: string, options: ProbeOptions): Promise<ViewProbed> => onPage((page) => probeView(page as unknown as ProbePage, url, options));
+
 	/** A few runs at once, each in a few pages at once (`measureWith`). */
 	const measure: Measure = measureWith(drawShare);
 
@@ -322,6 +334,7 @@ export const chromeHeadless = ({
 	return {
 		draw,
 		scan,
+		probe,
 		measure,
 		loads,
 		close: async () => {

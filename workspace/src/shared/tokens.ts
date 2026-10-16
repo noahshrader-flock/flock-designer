@@ -9,6 +9,7 @@ import { plural } from './plural';
 import { inOrder } from './primitives';
 import { type DeclaredTarget, textContrast } from './wcag';
 import { themeLabel } from './prototypeTheme';
+import { type Rgb, contrastOf } from './contrast';
 
 /** A token of the dark theme: every reader groups a theme's colours by the theme they are for (`Light`, `Dark`). */
 export const isDark = (t: Pick<DesignToken, 'group'>): boolean => t.group === themeLabel('dark');
@@ -231,14 +232,8 @@ export const contrastPartner = (token: DesignToken, tokens: DesignToken[]): Desi
 /** Whether a token is the one read on top in its pair (`contrastText`, `--x-foreground`): its pair's row says the ratio. */
 export const isForeground = (token: DesignToken): boolean => token.name === 'contrastText' || token.name.endsWith('-foreground');
 
-/** A hex color's relative luminance, as WCAG defines it. */
-const luminance = (hex: string): number => {
-	const [r, g, b] = [1, 3, 5].map((i) => {
-		const c = parseInt(hex.slice(i, i + 2), 16) / 255;
-		return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
-	}) as [number, number, number];
-	return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-};
+/** A hex color's red, green and blue. */
+const rgbOf = (hex: string): Rgb => [parseInt(hex.slice(1, 3), 16), parseInt(hex.slice(3, 5), 16), parseInt(hex.slice(5, 7), 16)];
 
 /** A color with nothing seen through it: six hex digits, or eight ending in full opacity. */
 const opaque = (value: string): boolean => HEX_COLOR.test(value) && (value.length === 7 || /ff$/i.test(value));
@@ -249,8 +244,7 @@ const opaque = (value: string): boolean => HEX_COLOR.test(value) && (value.lengt
  */
 export const contrastRatio = (a: string, b: string): number | null => {
 	if (!opaque(a) || !opaque(b)) return null;
-	const [light, dark] = [luminance(a), luminance(b)].sort((x, y) => y - x) as [number, number];
-	return Math.floor(((light + 0.05) / (dark + 0.05)) * 10) / 10;
+	return Math.floor(contrastOf(rgbOf(a), rgbOf(b)) * 10) / 10;
 };
 
 /** The two views of a category drawn as swatches: the roles by theme, and the palette they are made from. */
