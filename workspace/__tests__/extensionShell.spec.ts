@@ -362,14 +362,14 @@ describe('a review tab’s answers to its page', () => {
 
 describe('the review tabs', () => {
 	const fakeVsCode = () => {
-		const panels: { title: string; html: string; revealed: number; active: boolean; disposed: () => void }[] = [];
+		const panels: { title: string; html: string; revealed: number; active: boolean; visible: boolean; disposed: () => void; changed: () => void }[] = [];
 		return {
 			panels,
 			api: {
 				ViewColumn: { Active: -1 },
 				window: {
 					createWebviewPanel: (_type: string, title: string) => {
-						const panel = { title, html: '', revealed: 0, active: true, disposed: (): void => undefined };
+						const panel = { title, html: '', revealed: 0, active: true, visible: true, disposed: (): void => undefined, changed: (): void => undefined };
 						panels.push(panel);
 						return {
 							get title() {
@@ -387,6 +387,13 @@ describe('the review tabs', () => {
 							},
 							get active() {
 								return panel.active;
+							},
+							get visible() {
+								return panel.visible;
+							},
+							onDidChangeViewState: (l: () => void) => {
+								panel.changed = l;
+								return { dispose: () => undefined };
 							},
 							reveal: () => void panel.revealed++,
 							onDidDispose: (l: () => void) => {
@@ -581,11 +588,69 @@ describe('the review tabs', () => {
 	});
 });
 
+describe('the review tabs in front', () => {
+	// The tabs the panel marks: told when one opens, is covered or brought forward again, or is closed.
+	it('are the projects whose tab is visible, and are said again each time one opens, changes or closes', async () => {
+		const panels = new Map<string, { visible: boolean; changed: () => void; disposed: () => void }>();
+		const told: string[][] = [];
+		const reviews: Reviews = new Reviews({
+			vscode: {
+				ViewColumn: { Active: -1 },
+				window: {
+					createWebviewPanel: (_t: string, title: string) => {
+						const p = { visible: true, changed: (): void => undefined, disposed: (): void => undefined };
+						panels.set(title, p);
+						return {
+							title,
+							active: true,
+							get visible() {
+								return p.visible;
+							},
+							onDidChangeViewState: (l: () => void) => ((p.changed = l), { dispose: () => undefined }),
+							onDidDispose: (l: () => void) => ((p.disposed = l), { dispose: () => undefined }),
+							reveal: () => undefined,
+							webview: { set html(_h: string) {}, onDidReceiveMessage: () => ({ dispose: () => undefined }), postMessage: async () => true },
+						};
+					},
+				},
+			} as never,
+			build: () => undefined,
+			serve: async () => 'http://127.0.0.1:5000/review/',
+			answer: async () => ({ ok: true, value: null }),
+			onShown: () => told.push(reviews.shown()),
+		});
+		await reviews.open({ records: '/d', projectId: 'demo', name: 'v1-i1', title: 'demo' });
+		await reviews.open({ records: '/d', projectId: 'other', name: 'v1-i1', title: 'other' });
+		expect(told.at(-1)).toEqual(['demo', 'other']);
+		// One covered by another tab in its group is not in front.
+		panels.get('demo')!.visible = false;
+		panels.get('demo')!.changed();
+		expect(told.at(-1)).toEqual(['other']);
+		panels.get('other')!.disposed();
+		expect(told.at(-1)).toEqual([]);
+	});
+});
+
 describe('what the extension asks the panel to show', () => {
 	const webview = () => {
 		const posted: unknown[] = [];
 		return { posted, webview: { postMessage: async (m: unknown) => void posted.push(m) } as never };
 	};
+
+	it('tells a page that listens which tabs are in front, once one is, and every page when they change', () => {
+		const panels = new Panels();
+		const a = webview();
+		panels.add(a.webview);
+		panels.ready(a.webview);
+		expect(a.posted).toEqual([]);
+		panels.showTabs({ projects: ['demo'], components: ['src/FSButton.stories.tsx'] });
+		expect(a.posted).toEqual([{ type: 'tabs-shown', projects: ['demo'], components: ['src/FSButton.stories.tsx'] }]);
+		// A page that starts later is told what is in front now.
+		const b = webview();
+		panels.add(b.webview);
+		panels.ready(b.webview);
+		expect(b.posted).toEqual([{ type: 'tabs-shown', projects: ['demo'], components: ['src/FSButton.stories.tsx'] }]);
+	});
 
 	it('is held until the page is listening, then sent once: a later request replaces an earlier one it never saw', () => {
 		const panels = new Panels();

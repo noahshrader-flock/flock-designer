@@ -13,6 +13,7 @@ export const Row = ({
 	meta,
 	end,
 	onOpen,
+	current = false,
 	context,
 	actions,
 }: {
@@ -21,6 +22,8 @@ export const Row = ({
 	meta?: string;
 	end?: ReactNode;
 	onOpen?: () => void;
+	/** Its tab is the one in front in the editor: marked on its picture (`aria-current`). */
+	current?: boolean;
 	context?: Record<string, unknown>;
 	/** What more can be done with it (`Menu`), beside the row and not in the button that opens it. */
 	actions?: ReactNode;
@@ -49,9 +52,9 @@ export const Row = ({
 	);
 	const shape = meta || start ? 'row row-two-lines' : 'row';
 	return (
-		<li role="listitem" className={onOpen ? 'row-item' : shape} {...(context ? { 'data-vscode-context': JSON.stringify(context) } : {})}>
+		<li role="listitem" className={onOpen ? 'row-item' : shape} {...(current ? { 'data-current': '' } : {})} {...(context ? { 'data-vscode-context': JSON.stringify(context) } : {})}>
 			{onOpen ? (
-				<button type="button" className={`${shape} row-button`} onClick={onOpen}>
+				<button type="button" className={`${shape} row-button`} onClick={onOpen} {...(current ? { 'aria-current': true } : {})}>
 					{parts}
 				</button>
 			) : (

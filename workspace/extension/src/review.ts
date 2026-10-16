@@ -142,7 +142,7 @@ const answered = async (
 	return callRoute(answers.routes(), name, args);
 };
 
-type Panel = Pick<VsCode.WebviewPanel, 'title' | 'active' | 'reveal' | 'onDidDispose'> & {
+type Panel = Pick<VsCode.WebviewPanel, 'title' | 'active' | 'visible' | 'reveal' | 'onDidChangeViewState' | 'onDidDispose'> & {
 	webview: Pick<VsCode.Webview, 'html' | 'onDidReceiveMessage' | 'postMessage'>;
 };
 
@@ -183,6 +183,8 @@ export class Reviews {
 			answer: (review: Review, name: RelayCall, args: unknown[], seen: Set<number>, from: AskedFrom) => Promise<Result<unknown>>;
 			/** Where a run from source says what each page asked: View › Output › DSNR. */
 			log?: Pick<VsCode.LogOutputChannel, 'info'>;
+			/** Told when a tab opens, closes, or is brought in front or covered (`shown`). */
+			onShown?: () => void;
 		},
 	) {}
 
@@ -254,6 +256,11 @@ export class Reviews {
 		return [...this.tabs.values()].find((t) => t.panel.active)?.review;
 	}
 
+	/** The projects whose review tab is in front, as the panel marks them. */
+	shown(): string[] {
+		return [...this.tabs].filter(([, t]) => t.panel.visible).map(([id]) => id);
+	}
+
 	private make(review: Review): { panel: Panel; review: Review } {
 		const panel = this.deps.vscode.window.createWebviewPanel('dsnr.review', review.title, this.deps.vscode.ViewColumn.Active, {
 			enableScripts: true,
@@ -269,7 +276,12 @@ export class Reviews {
 			const result = await this.deps.answer(shown.review, ask.name, ask.args, seen, 'tab');
 			await panel.webview.postMessage({ dsnr: 'answer', id: ask.id, result } satisfies RelayTell);
 		});
-		panel.onDidDispose(() => this.tabs.delete(review.projectId));
+		panel.onDidChangeViewState(() => this.deps.onShown?.());
+		panel.onDidDispose(() => {
+			this.tabs.delete(review.projectId);
+			this.deps.onShown?.();
+		});
+		this.deps.onShown?.();
 		return shown;
 	}
 }

@@ -9,15 +9,19 @@ import type { DesignTab } from '../extension/src/messages';
  */
 
 const world = () => {
-	const made: { title: string; revealed: number; html: string; dispose: () => void; said: ((raw: unknown) => void)[] }[] = [];
+	const made: { title: string; revealed: number; html: string; visible: boolean; changed: () => void; dispose: () => void; said: ((raw: unknown) => void)[] }[] = [];
 	const create = vi.fn((title: string) => {
-		const tab = { title, revealed: 0, html: '', dispose: (): void => undefined, said: [] as ((raw: unknown) => void)[] };
+		const tab = { title, revealed: 0, html: '', visible: true, changed: (): void => undefined, dispose: (): void => undefined, said: [] as ((raw: unknown) => void)[] };
 		made.push(tab);
 		return {
 			get title() {
 				return tab.title;
 			},
+			get visible() {
+				return tab.visible;
+			},
 			reveal: () => void tab.revealed++,
+			onDidChangeViewState: (l: () => void) => ((tab.changed = l), { dispose: () => undefined }),
 			onDidDispose: (l: () => void) => ((tab.dispose = l), { dispose: () => undefined }),
 			webview: {
 				set html(h: string) {
@@ -76,12 +80,31 @@ describe('a design system’s tab', () => {
 		expect(deps.create).toHaveBeenCalledTimes(2);
 	});
 
+	it('says which components are in front, each time one opens, is covered or is closed: Primitives is not one', async () => {
+		const { tabs, deps, made } = world();
+		const told: string[][] = [];
+		(deps as { onShown?: () => void }).onShown = () => told.push(tabs.shownComponents());
+		await tabs.open(button);
+		await tabs.open({ kind: 'primitives' });
+		expect(told.at(-1)).toEqual([button.id]);
+		made[0]!.visible = false;
+		made[0]!.changed();
+		expect(told.at(-1)).toEqual([]);
+		made[0]!.visible = true;
+		made[0]!.changed();
+		expect(told.at(-1)).toEqual([button.id]);
+		made[0]!.dispose();
+		expect(told.at(-1)).toEqual([]);
+	});
+
 	it('of components are all closed when another design system is shown, since they are of the last one’s', async () => {
 		const { tabs, deps } = world();
 		const closed: string[] = [];
 		deps.create.mockImplementation(((title: string) => ({
 			title,
+			visible: true,
 			reveal: () => undefined,
+			onDidChangeViewState: () => ({ dispose: () => undefined }),
 			dispose: () => void closed.push(title),
 			onDidDispose: () => ({ dispose: () => undefined }),
 			webview: { set html(_h: string) {}, onDidReceiveMessage: () => ({ dispose: () => undefined }), postMessage: async () => true },

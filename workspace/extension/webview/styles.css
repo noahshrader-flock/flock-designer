@@ -286,6 +286,13 @@ body {
 	background: var(--vscode-editorWidget-background);
 }
 
+/* The thumbnail of what is in front in the editor, in a grid and in a list alike: ringed in the brand. */
+.card-item[data-current] .card-picture,
+.row-item[data-current] .picture {
+	border-color: var(--dsnr-brand);
+	box-shadow: 0 0 0 1px var(--dsnr-brand);
+}
+
 /* A thumbnail's place while its picture is read or drawn: a soft light sweeping across it, still when less motion is asked for. */
 [data-part='picture'][data-loading] {
 	background: linear-gradient(
@@ -1116,14 +1123,21 @@ textarea.input {
 }
 
 /*
- * A line between one set and the next (a role's variants, a tone family's steps), the same in the semantic colors and the
- * palette. The panel's one border colour, the search box's.
+ * A line between one set and the next (a role's variants, a tone family's steps, a component's values of one property and of
+ * the next), the same in the semantic colors, the palette and a component's values. The panel's one border colour, the search
+ * box's.
  */
 .theme-set + .theme-set,
-.token-set + .token-set {
+.token-set + .token-set,
+.value-group + .value-group {
 	margin-top: 6px;
 	padding-top: 6px;
 	border-top: 1px solid var(--dsnr-border);
+}
+
+/* A group's heading has room of its own above it, so the line is all a group adds. */
+.value-group + .value-group {
+	padding-top: 0;
 }
 
 .tokens {

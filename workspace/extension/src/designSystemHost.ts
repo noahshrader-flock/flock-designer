@@ -30,6 +30,7 @@ export const designSystemHost = ({
 	tell,
 	failed,
 	failedFor,
+	onShown,
 }: {
 	vscode: typeof VsCode;
 	/** The extension's build, which its pages load from. */
@@ -44,6 +45,8 @@ export const designSystemHost = ({
 	tell: Tell;
 	failed: (err: unknown) => void;
 	failedFor: (fromCode: boolean) => (err: unknown) => void;
+	/** Told when a component's tab opens, closes, or is brought in front or covered. */
+	onShown: () => void;
 }) => {
 	const trial = new TokenTrial((m) => panels.post(m));
 	const tabs = new DesignTabs({
@@ -56,6 +59,7 @@ export const designSystemHost = ({
 			}),
 		page: async (webview, tab) => dsnrPage(webview as VsCode.Webview, dist, await local(), tab),
 		panels,
+		onShown,
 		receive: async (webview, raw) => {
 			const message = readMessage(raw);
 			if (!message) return;
@@ -95,6 +99,8 @@ export const designSystemHost = ({
 	};
 	return {
 		asks,
+		/** The components whose tab is in front. */
+		shownComponents: () => tabs.shownComponents(),
 		/** Another design system is shown: no change is being tried on it, and the last one's components' tabs are closed. */
 		anotherShown: () => {
 			trial.set([]);

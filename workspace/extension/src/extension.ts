@@ -127,11 +127,13 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 		tell: vscodeTell,
 		failed,
 		failedFor,
+		onShown: () => tabsShown(),
 	});
 	const site = siteIn(storage);
 	const buildReview = buildReviewSite(site, join(context.extensionUri.fsPath, 'dist', 'viewer'));
 	const reviews = new Reviews({
 		vscode,
+		onShown: () => tabsShown(),
 		// The bar on this machine's server's own address, and each prototype's page on the pages' address, another origin.
 		build: async (records) => buildReview(records, `${await core.prototypeServer.pagesOrigin()}/${REVIEW_KEY}/`),
 		serve: () => core.prototypeServer.serveFolder(REVIEW_KEY, site),
@@ -282,6 +284,8 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 		lastRead = Date.now();
 		panels.post({ type: 'projects-changed' });
 	}, 1500);
+	/** The panel marks what is open in the editor: the projects whose review is in front, and the components whose tab is. */
+	const tabsShown = () => panels.showTabs({ projects: reviews.shown(), components: design.shownComponents() });
 	/** What a review tab's title bar does, on the review in front; said when there is none. */
 	const inFront = (act: (review: Review) => Promise<void>) => {
 		const review = reviews.active();

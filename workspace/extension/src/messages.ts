@@ -67,6 +67,12 @@ export const reviewsOf = (project: Pick<Project, 'id' | 'title' | 'iterations'>)
 		.filter((i) => isPrototypeName(i.name))
 		.map((i) => ({ projectId: project.id, name: i.name, title: `${project.title} · ${iterationLabel(i)}` }));
 
+/** The tabs in front in the editor: the projects whose review is, and the design system's components whose tab is. */
+export interface TabsShown {
+	projects: string[];
+	components: string[];
+}
+
 /**
  * What the extension sends the page: an answer to a call, by its id, an event of the core's, what is open (`Context`), or
  * that the projects changed (one was made), so the list is read again, or to open one of its dialogs (`Panels.show`).
@@ -79,7 +85,9 @@ export type HostMessage =
 	| { type: 'projects-changed' }
 	| { type: 'open-dialog'; dialog: PanelDialog }
 	/** The change to the tokens being tried, as the extension keeps it: told to every DSNR page whenever it changes. */
-	| { type: 'token-edits'; edits: TokenEdit[] };
+	| { type: 'token-edits'; edits: TokenEdit[] }
+	/** Which tabs of the editor are in front, as the panel marks them (`TabsShown`): told whenever one opens, closes or is covered. */
+	| ({ type: 'tabs-shown' } & TabsShown);
 
 /** The dialogs the panel has: each is opened for what it is about, by the panel or by the extension (`open-dialog`). */
 export type PanelDialog =

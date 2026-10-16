@@ -8,7 +8,8 @@ import { DesignSystem, type DesignSystemDoes } from './DesignSystem';
 import { PanelDialogs } from './Dialogs';
 import { onHost, workspace } from './host';
 import { Projects, type ProjectsRead } from './Projects';
-import type { CodebaseAction, PanelDialog, Review } from '../src/messages';
+import type { CodebaseAction, PanelDialog, Review, TabsShown } from '../src/messages';
+import { OpenTabsProvider } from './openTabs';
 import { Loading } from './ui/Loading';
 import { Toggle } from './ui/Toggle';
 import { type CatalogRead, useCatalog } from './useCatalog';
@@ -151,6 +152,8 @@ export const Panel = () => {
 	const [changes, setChanges] = useState(0);
 	// The dialog over the panel, if one is open: opened by what is pressed here or by the extension (its title bar's +).
 	const [dialog, setDialog] = useState<PanelDialog | null>(null);
+	// The tabs in front in the editor, which the projects and components that stand for them are marked by.
+	const [tabs, setTabs] = useState<TabsShown>({ projects: [], components: [] });
 	useEffect(() => {
 		const stop = onHost((m) => {
 			if (m.type === 'context') {
@@ -159,6 +162,7 @@ export const Panel = () => {
 			}
 			if (m.type === 'projects-changed') setChanges((n) => n + 1);
 			if (m.type === 'open-dialog') setDialog(m.dialog);
+			if (m.type === 'tabs-shown') setTabs({ projects: m.projects, components: m.components });
 		});
 		// Said once the page listens, so what is open is never sent before it can be heard.
 		vscode().postMessage({ type: 'ready' });
@@ -222,7 +226,7 @@ export const Panel = () => {
 		setEdits,
 	};
 	return (
-		<>
+		<OpenTabsProvider value={tabs}>
 			<PanelView
 				tab={tab}
 				onTab={(next) => {
@@ -272,6 +276,6 @@ export const Panel = () => {
 				onChanged={() => setChanges((n) => n + 1)}
 				onClose={() => setDialog(null)}
 			/>
-		</>
+		</OpenTabsProvider>
 	);
 };

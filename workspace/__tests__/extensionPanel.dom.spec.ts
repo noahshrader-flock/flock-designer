@@ -1158,6 +1158,20 @@ describe('Projects', () => {
 		expect(part(rows()[3]!, 'meta')).toBe('1 version');
 	});
 
+	it('marks the project whose review is in front in the editor, in a grid and in a list, and no other', async () => {
+		await showOpen();
+		const current = () => [...body().querySelectorAll<HTMLElement>('[data-current]')].map((i) => i.querySelector('[data-part="name"]')?.textContent);
+		expect(current()).toEqual([]);
+		await say({ type: 'tabs-shown', projects: ['zone-coverage'], components: [] });
+		expect(current()).toEqual(['Zone coverage']);
+		expect(body().querySelector('[aria-current="true"] [data-part="name"]')?.textContent).toBe('Zone coverage');
+		await viewChoice('List');
+		expect(current()).toEqual(['Zone coverage']);
+		// Covered or closed, it is marked no more.
+		await say({ type: 'tabs-shown', projects: [], components: [] });
+		expect(current()).toEqual([]);
+	});
+
 	it('shows the open comments only when there are some, and says what the number is', async () => {
 		await showOpen();
 		const badges = rows().map((r) => r.querySelector('.badge'));
@@ -1338,7 +1352,7 @@ describe('Design System', () => {
 		expect(namesUnder(section('Buttons'))).toEqual(['FSButton', 'FSIconButton', 'FSSplitButton']);
 		expect(under(section('Buttons')).firstElementChild?.className).toBe('grid');
 		expect(under(section('Buttons')).querySelector('img')?.getAttribute('src')).toBe(picture);
-		// A card is its picture and its name, and no description under it; a row in the list keeps its line.
+		// A card is its picture and its name, and no description under it, nor has a row.
 		expect(under(section('Buttons')).querySelector('[data-part="meta"]')).toBeNull();
 		// What axe found is read, but not drawn on the card: nothing counts on a component for now.
 		expect(body().querySelector('.badge')).toBeNull();
@@ -1379,6 +1393,16 @@ describe('Design System', () => {
 		expect([...menu.querySelectorAll('.menu-heading')].map((h) => h.textContent)).toEqual(['Layout']);
 		expect(menu.querySelectorAll('[role="separator"]')).toHaveLength(0);
 		expect(body().querySelector('[aria-label="Layout"][role="radiogroup"]')).toBeNull();
+	});
+
+	it('marks the component whose tab is in front in the editor, and no other', async () => {
+		await read();
+		const current = () => [...body().querySelectorAll<HTMLElement>('[data-current]')].map((i) => i.querySelector('[data-part="name"]')?.textContent);
+		expect(current()).toEqual([]);
+		await say({ type: 'tabs-shown', projects: [], components: ['src/components/FSButton/FSButton.stories.tsx'] });
+		expect(current()).toEqual(['FSButton']);
+		await say({ type: 'tabs-shown', projects: [], components: [] });
+		expect(current()).toEqual([]);
 	});
 
 	it('finds components by the search, says when none matches, and is a list when chosen', async () => {

@@ -33,6 +33,7 @@ import { Section } from './ui/Section';
 import { Thumbnail } from './ui/Thumbnail';
 import { NoMatches } from './ui/NoMatches';
 import { layoutSection } from './layouts';
+import { useOpenTabs } from './openTabs';
 import type { View } from './vscode';
 
 /**
@@ -77,6 +78,7 @@ const ProjectItem = ({
 	onDialog: (dialog: PanelDialog) => void;
 	onCodebase: (action: CodebaseAction, projectId: string) => void;
 }) => {
+	const shown = useOpenTabs();
 	const open = openCommentsOf(project.iterations);
 	const newest = reviewsOf(project)[0];
 	const inCode = workOf(project.iterations, 'codebase').length > 0;
@@ -118,6 +120,7 @@ const ProjectItem = ({
 		// What its right-click menu acts on: this project, with none of a webview's own items (Cut, Copy, Paste).
 		context: { webviewSection: 'project', projectId: id, preventDefaultContextMenuItems: true },
 		...(press ? { onOpen: press } : {}),
+		current: shown.projects.includes(id),
 		actions: <Menu label="Project actions" size="small" sections={sections} />,
 	};
 	return view === 'grid' ? (

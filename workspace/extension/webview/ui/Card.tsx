@@ -12,6 +12,7 @@ export const Card = ({
 	meta,
 	badge,
 	onOpen,
+	current = false,
 	context,
 	actions,
 }: {
@@ -20,6 +21,8 @@ export const Card = ({
 	meta?: string;
 	badge?: ReactNode;
 	onOpen?: () => void;
+	/** Its tab is the one in front in the editor: marked on its picture (`aria-current`). */
+	current?: boolean;
 	context?: Record<string, unknown>;
 	/** What more can be done with it (`Menu`), at the card's corner and not in the button that opens it. */
 	actions?: ReactNode;
@@ -45,9 +48,9 @@ export const Card = ({
 		</>
 	);
 	return (
-		<li role="listitem" className="card-item" {...(context ? { 'data-vscode-context': JSON.stringify(context) } : {})}>
+		<li role="listitem" className="card-item" {...(current ? { 'data-current': '' } : {})} {...(context ? { 'data-vscode-context': JSON.stringify(context) } : {})}>
 			{onOpen ? (
-				<button type="button" className="card row-button" onClick={onOpen}>
+				<button type="button" className="card row-button" onClick={onOpen} {...(current ? { 'aria-current': true } : {})}>
 					{parts}
 				</button>
 			) : (

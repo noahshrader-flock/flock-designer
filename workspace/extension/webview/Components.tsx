@@ -13,6 +13,7 @@ import { Thumbnail } from './ui/Thumbnail';
 import { ViewOptions } from './ui/ViewOptions';
 import { NoMatches } from './ui/NoMatches';
 import { layoutSection } from './layouts';
+import { useOpenTabs } from './openTabs';
 import type { View } from './vscode';
 
 /**
@@ -37,6 +38,7 @@ export const ComponentsView = ({
 }) => {
 	const [search, setSearch] = useState('');
 	const groups = groupsFound(components, search);
+	const { components: open } = useOpenTabs();
 	const item = (c: CatalogComponent) => {
 		const items: MenuItem[] = [
 			...(c.storybook !== null ? [{ label: 'Open in Storybook', icon: 'book', onSelect: () => onLink(c.id, 'storybook') }] : []),
@@ -45,6 +47,7 @@ export const ComponentsView = ({
 		const shared = {
 			name: c.name,
 			onOpen: () => onOpen(c.id),
+			current: open.includes(c.id),
 			actions: <Menu label={`${c.name} actions`} size="small" sections={[{ items }]} />,
 		};
 		const picture = pictures.pictures[c.id];
