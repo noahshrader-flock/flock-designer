@@ -84,7 +84,8 @@ export const readDrawn = (file: string, picture: boolean, tags: string[] | null 
 			a.cancel();
 		}
 	}
-	const drawn = { colors: {}, radii: {}, spacing: {} };
+	// And the page's root font size, which a rem is of (16px, unless the library sets another).
+	const drawn = { colors: {}, radii: {}, spacing: {}, rootPx: parseFloat(getComputedStyle(document.documentElement).fontSize) || 16 };
 	const add = (m, k) => { if (k) m[k] = (m[k] || 0) + 1; };
 	for (const el of document.querySelectorAll('#root *')) {
 		const box = el.getBoundingClientRect();

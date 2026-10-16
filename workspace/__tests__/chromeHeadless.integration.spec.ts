@@ -112,6 +112,8 @@ describe.skipIf(findChrome() === null)('with the browser on this machine', () =>
 		expect(light).toHaveLength(2);
 		expect(Object.keys(light?.[0]?.colors ?? {})).toContain('rgb(18, 52, 86)');
 		expect(light?.[0]?.radii).toHaveProperty(['6px']);
+		// The page's root font size, which a rem in the library is of.
+		expect(light?.[0]?.rootPx).toBe(16);
 		expect(Object.keys(dark?.[0]?.colors ?? {})).toContain('rgb(101, 67, 33)');
 		expect(dark?.[0]?.picture).toBeUndefined();
 		// The picture: a JPEG of the first story alone, on white, twice as wide as it is tall.

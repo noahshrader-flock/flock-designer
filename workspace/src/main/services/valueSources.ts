@@ -28,7 +28,7 @@ import { newestAnswer } from './newestAnswer';
 import type { ValueAgent } from './valueAgent';
 import { drawsOtherwise, partsBy, same } from './valueReadBack';
 import type { OpenedBuild } from './storyPreviews';
-import { type Place, placesIn, probeFor, searchedFiles, withWrites, writtenAs } from './valueLocator';
+import { type Place, placesIn, probeFor, searchable, searchedFiles, withWrites, writtenAs } from './valueLocator';
 
 /** How many values a component's instances can be tried with at once: far beyond any tab's, short of anything that could hurt. */
 const MOST_TRIED = 50;
@@ -92,8 +92,9 @@ const moved = (key: string, part: number): string => `${key}\u0000${part}`;
 const partOf = (pair: string): number => Number(pair.slice(pair.lastIndexOf('\u0000') + 1));
 
 export class ValueSources {
-	/** Each value's places, once found, by the commit, the story file, the property, its instances and the part drawn. */
+	/** Each value's places, once found, by the story file, the property, its instances and the part drawn, for the commit drawn (`locatedFor`). */
 	private readonly located = new Map<string, Promise<Located>>();
+	private locatedFor: string | null = null;
 	private readonly newest = newestAnswer<Worked>((error) => ({ state: 'failed', error }));
 
 	constructor(private readonly deps: ValueSourcesDeps) {}
@@ -128,7 +129,10 @@ export class ValueSources {
 
 	private async work(index: DrawnIndex, file: string, tried: TriedValue[]): Promise<Worked> {
 		// Held against the library as it is, drawn as a change is (`asIs`), so only the change differs.
-		const before = (await this.deps.tokens.asIs(index)).get(file)?.light?.instances;
+		const drawing = (await this.deps.tokens.asIs(index)).get(file)?.light;
+		const before = drawing?.instances;
+		// A rem written in the library is of the page's root size, as it was drawn.
+		const perRem = drawing?.rootPx ?? 16;
 		if (!before) return { state: 'failed', error: 'Its stories did not draw, so where its values are written cannot be found.' };
 		// Each value: the places it is found written in, what the agent wrote for it, being written, or why it cannot be saved.
 		const writes = new Map<string, Write>();
@@ -137,7 +141,7 @@ export class ValueSources {
 			const id = triedId(t);
 			const agent = this.deps.agent.of(index, file, t);
 			// A value to follow a token is the agent's to write; one found where it is written, the locator's.
-			const found = t.follows === undefined ? await this.writesOf(index.key, file, t, before) : null;
+			const found = t.follows === undefined ? await this.writesOf(index.key, file, t, before, perRem) : null;
 			if (found && !('why' in found)) writes.set(id, { by: 'place', writes: found.writes });
 			else if (agent?.state === 'written') writes.set(id, { by: 'agent', files: agent.files, places: agent.places, said: agent.said });
 			else if (agent?.state === 'writing') sources.set(id, { id, state: 'writing' });
@@ -244,6 +248,7 @@ export class ValueSources {
 		file: string,
 		t: TriedValue,
 		before: Instance[],
+		perRem: number,
 	): Promise<{ writes: { place: Place; literal: string }[] } | { why: string }> {
 		const drawnBy = partsBy(before, t.property);
 		const drawn = drawnBy.get(t.targets[0] as string);
@@ -256,7 +261,9 @@ export class ValueSources {
 		const writes: { place: Place; literal: string }[] = [];
 		for (const part of new Set(changed.map((i) => drawn[i] as string))) {
 			if (COLOR_VALUES.has(t.property) && isNothing(part)) return { why: 'It draws no colour here, so there is no colour written to change.' };
-			const located = await this.locate(indexKey, file, t, part);
+			if (!searchable(t.property, part))
+				return { why: `${part} is drawn in a form DSNR cannot look for in the source yet, so where it is written cannot be found.` };
+			const located = await this.locate(indexKey, file, t, part, perRem);
 			if (located.state === 'refused') return { why: located.why };
 			if (located.state === 'failed') throw new Error(located.error);
 			// Each instance's part tried is to be written in exactly one place: several each drawing one is a guess.
@@ -265,7 +272,7 @@ export class ValueSources {
 			const reaching = located.places.filter((p) => [...p.moves].some((m) => needed.has(m)));
 			if (reaching.length === 0)
 				return {
-					why: `${part} is not written in the design system's own files for it: it comes from a package, or is worked out. It cannot be saved yet.`,
+					why: `${part} is not written as a value in the design system's own files for it: it comes from a package, a utility class or a variable, or is worked out.`,
 				};
 			const counted = reaching.flatMap((p) => [...p.moves]);
 			if (new Set(counted).size !== counted.length)
@@ -290,11 +297,16 @@ export class ValueSources {
 	}
 
 	/** The places drawn part `part` of `t`'s instances is written, found once per commit and kept. */
-	private locate(indexKey: string, file: string, t: TriedValue, part: string): Promise<Located> {
-		const key = [indexKey, file, t.property, t.targets.join('\u0001'), part].join('\u0000');
+	private locate(indexKey: string, file: string, t: TriedValue, part: string, perRem: number): Promise<Located> {
+		// Kept for the commit drawn: once the library moves, what was found on the one before is let go.
+		if (this.locatedFor !== indexKey) {
+			this.located.clear();
+			this.locatedFor = indexKey;
+		}
+		const key = [file, t.property, t.targets.join('\u0001'), part].join('\u0000');
 		let found = this.located.get(key);
 		if (!found) {
-			found = this.find(file, t, part);
+			found = this.find(file, t, part, perRem);
 			this.located.set(key, found);
 			// One that could not be tried is tried again next time.
 			void found.then((l) => l.state === 'failed' && this.located.delete(key));
@@ -309,7 +321,7 @@ export class ValueSources {
 	 * when they only change: a change that breaks what draws them (a stylesheet that no longer applies) is not where the
 	 * value is. A half that does not build is halved again; a place alone that does not build is not where it is.
 	 */
-	private async find(file: string, t: TriedValue, part: string): Promise<Located> {
+	private async find(file: string, t: TriedValue, part: string, perRem: number): Promise<Located> {
 		const opened = await this.deps.previews.opened('locate');
 		if (opened.state !== 'open')
 			return {
@@ -321,7 +333,7 @@ export class ValueSources {
 			const places: Place[] = [];
 			for (const path of searchedFiles(await opened.reads.listFiles(''))) {
 				const text = await opened.reads.readFile(path);
-				const here = placesIn(path, text, t.property, part);
+				const here = placesIn(path, text, t.property, part, perRem);
 				if (here.length > 0) texts.set(path, text);
 				places.push(...here);
 			}
@@ -347,6 +359,8 @@ export class ValueSources {
 				if (base === null) return null;
 				const [[drawn]] = (await this.deps.measure([{ base, mode: 'light', files: [file] }])) as [[{ instances?: Instance[] } | null]];
 				const now = partsBy(drawn?.instances, t.property);
+				// One that no longer draws an instance tried is halved again, as one that does not build is: what draws them is not lost.
+				if (!t.targets.every((key) => now.has(key))) return null;
 				const moves = new Set<string>();
 				for (const key of t.targets) (now.get(key) ?? []).forEach((p, i) => same(t.property, p, probe) && moves.add(moved(key, i)));
 				return moves;

@@ -111,7 +111,7 @@ describeWith(primerMissing, 'on Primer React, the second library', () => {
 				const label = await sourcesOf(tokens, sources, 'packages/react/src/Label/Label.stories.tsx', 'radius', null, '4px 4px 4px 4px');
 				expect(label.found).toMatchObject({
 					state: 'ready',
-					values: [{ state: 'refused', why: expect.stringMatching(/^9999px is not written in the design system's own files/) }],
+					values: [{ state: 'refused', why: expect.stringMatching(/^9999px is not written as a value in the design system's own files/) }],
 				});
 			});
 		},

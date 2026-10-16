@@ -37,6 +37,9 @@ const draw = (files: Record<string, string>, file: string): Drawn => {
 	const largest = (text: string | undefined, pattern: RegExp) =>
 		`${Math.max(...[...(text ?? '').matchAll(pattern)].map((m) => parseFloat(m[1] as string)))}px`;
 	const at = (n: string | undefined) => `${Math.max(26, parseFloat(n ?? '0'))}px`;
+	// The stories throw when the limits are not as written: nothing of the Button draws.
+	if (file === BUTTON && files['src/limits.ts'] !== undefined && !files['src/limits.ts'].includes("'28px'"))
+		return { colors: {}, radii: {}, spacing: {}, component: true, instances: [] };
 	const instances: Instance[] =
 		file === BUTTON
 			? [
@@ -114,13 +117,15 @@ const values = (): Map<string, ComponentValues> =>
 		],
 	]);
 const built: Built = { files: new Map(), values: values(), accessibility: new Map(), order: [BUTTON, BADGE] };
+/** The commit the index is of: what a place found is kept for. */
+let commit = 'commit';
 const index = { key: 'commit', built };
 const drawings = (files: Record<string, string>) => new Map([BUTTON, BADGE].map((f) => [f, { light: draw(files, f), dark: null }]));
 
 const sources = () =>
 	new ValueSources({
 		tokens: {
-			drawn: async () => ({ state: 'ready', ...index }),
+			drawn: async () => ({ state: 'ready', ...index, key: commit }),
 			asIs: async () => drawings(library),
 			reachWith: async (_index, files) => {
 				const given = await files(reads(library));
@@ -153,6 +158,7 @@ let agent: Map<string, Written>;
 
 beforeEach(() => {
 	agent = new Map();
+	commit = 'commit';
 	library = { ...LIBRARY };
 	builds = [];
 	asks = [];
@@ -188,6 +194,15 @@ describe('where a value tried on a component is written, found by its effect (Ph
 		expect(builds.length - found).toBe(1);
 	});
 
+	it('finds it again on another commit, not from what was found on the one before', async () => {
+		const s = sources();
+		await settled(s, BUTTON, [SM]);
+		const found = builds.length;
+		commit = 'moved';
+		await settled(s, BUTTON, [{ ...SM, value: '40px' }]);
+		expect(builds.length - found).toBeGreaterThan(1);
+	});
+
 	it('tries many places in halves, far fewer builds than places, and finds the same one', async () => {
 		for (let n = 0; n < 60; n++) library[`src/decoys/d${n}.ts`] = "export const d = '28px';";
 		const s = sources();
@@ -215,7 +230,9 @@ describe('where a value tried on a component is written, found by its effect (Ph
 	it('refuses, in words, a value written nowhere it can be found, and one written in places that each draw it', async () => {
 		const s = sources();
 		const text = await settled(s, BADGE, [{ property: 'text', value: '#C80000', targets: BADGE_ALL }]);
-		expect(text).toMatchObject({ values: [{ state: 'refused', why: expect.stringMatching(/not written in the design system's own files for it/) }] });
+		expect(text).toMatchObject({
+			values: [{ state: 'refused', why: expect.stringMatching(/not written as a value in the design system's own files for it/) }],
+		});
 		await expect(s.files(BADGE, [{ property: 'text', value: '#C80000', targets: BADGE_ALL }])).rejects.toThrow(/not written/);
 		// Written twice, either of which draws it: which to change cannot be said.
 		library['src/theme.ts'] = `${LIBRARY['src/theme.ts']}\nexport const again = { sm: { height: '28px' } };`;
@@ -239,6 +256,27 @@ describe('where a value tried on a component is written, found by its effect (Ph
 			reach: { state: 'none' },
 		});
 		await expect(s.files(BUTTON, [{ ...SM, value: '24px' }])).rejects.toThrow('draws 26px, not 24px');
+	});
+
+	it('halves again a group whose probe stops the component drawing, so the place among them is still found', async () => {
+		// A number the stories cannot draw without: changed, the Button does not draw at all.
+		library['src/limits.ts'] = "export const limits = { most: '28px' };";
+		const a = await settled(sources(), BUTTON, [SM]);
+		expect(a).toMatchObject({ values: [{ state: 'found', places: [{ file: 'src/theme.ts', line: 2 }] }] });
+	});
+
+	it('says so of a value drawn in a form it cannot look for, and offers the agent', async () => {
+		library['src/Badge/Badge.tsx'] = "export const textColor = 'oklch(0.6 0.1 250)';\n";
+		const a = await settled(sources(), BADGE, [{ property: 'text', value: '#C80000', targets: BADGE_ALL }]);
+		expect(a).toMatchObject({
+			values: [
+				{
+					state: 'refused',
+					agent: 'write',
+					why: 'oklch(0.6 0.1 250) is drawn in a form DSNR cannot look for in the source yet, so where it is written cannot be found.',
+				},
+			],
+		});
 	});
 
 	it('says how many places are too many to try, and nothing is built', async () => {

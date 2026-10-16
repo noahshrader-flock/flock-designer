@@ -34,6 +34,8 @@ export interface Place {
 	line: number;
 	written: string;
 	form: Form;
+	/** What a rem is in px where it is drawn: the page's root font size. */
+	perRem: number;
 }
 
 const escaped = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -49,7 +51,7 @@ const channels = (color: string): { r: number; g: number; b: number; a: number }
 };
 
 /** The ways a drawn part (`28px`, `50%`, `rgb(16, 128, 98)`) may be written in a script or a stylesheet. */
-const formsOf = (property: ValueProperty, part: string, script: boolean): { form: Form; pattern: RegExp }[] => {
+const formsOf = (property: ValueProperty, part: string, script: boolean, perRem: number): { form: Form; pattern: RegExp }[] => {
 	if (COLOR_VALUES.has(property)) {
 		const c = channels(part);
 		if (c === null) return [];
@@ -76,23 +78,26 @@ const formsOf = (property: ValueProperty, part: string, script: boolean): { form
 	const whole = escaped(numeral(n));
 	const forms: { form: Form; pattern: RegExp }[] = [{ form: 'px', pattern: new RegExp(`(?<![\\w.$-])${whole}px(?![\\w-])`, 'g') }];
 	if (n !== 0) {
-		const rem = numeral(n / 16);
-		if (Number(rem) * 16 === n)
+		const rem = numeral(n / perRem);
+		if (Number(rem) * perRem === n)
 			forms.push({ form: 'rem', pattern: new RegExp(`(?<![\\w.$-])0?${escaped(rem.replace(/^0(?=\.)/, ''))}rem(?![\\w-])`, 'g') });
 	}
-	// A style object's number is px (`height: 28`): in a script, as a property's value.
-	if (script) forms.push({ form: 'number', pattern: new RegExp(`(?<=:\\s*)${whole}(?=\\s*[,}\\n\\r])`, 'g') });
+	// A style object's number is px (`height: 28`), and so is a prop's (`height={28}`): in a script.
+	if (script) forms.push({ form: 'number', pattern: new RegExp(`(?<=(?::|=\\{)\\s*)${whole}(?=\\s*[,}\\n\\r])`, 'g') });
 	return forms;
 };
 
-/** Every place a drawn part is written in a file, in any of its ways, in the order they come. */
-export const placesIn = (file: string, text: string, property: ValueProperty, part: string): Place[] => {
+/** Whether a drawn part is in a form a place can be looked for in (a px, a percent, a colour the browser writes as rgb). */
+export const searchable = (property: ValueProperty, part: string): boolean => formsOf(property, part, true, 16).length > 0;
+
+/** Every place a drawn part is written in a file, in any of its ways, in the order they come; a rem of `perRem` px. */
+export const placesIn = (file: string, text: string, property: ValueProperty, part: string, perRem = 16): Place[] => {
 	const script = /\.[cm]?[jt]sx?$/.test(file);
 	const found: Place[] = [];
-	for (const { form, pattern } of formsOf(property, part, script)) {
+	for (const { form, pattern } of formsOf(property, part, script, perRem)) {
 		for (const m of text.matchAll(pattern)) {
 			const at = m.index ?? 0;
-			found.push({ file, at, line: text.slice(0, at).split('\n').length, written: m[0], form });
+			found.push({ file, at, line: text.slice(0, at).split('\n').length, written: m[0], form, perRem });
 		}
 	}
 	return found.sort((a, b) => a.at - b.at);
@@ -119,7 +124,26 @@ export const writtenAs = (place: Place, value: string): string | null => {
 	if (place.form === 'percent') return `${numeral(n)}%`;
 	if (place.form === 'px') return `${numeral(n)}px`;
 	if (place.form === 'number') return numeral(n);
-	return `${numeral(n / 16)}rem`;
+	return `${numeral(n / place.perRem)}rem`;
+};
+
+/**
+ * A value written the way `written` is (a token's own value: `0.5rem`, `8px`, `#108062`), as a change to it is given:
+ * a length in its unit, a colour in its form. Null when it cannot be written so.
+ */
+export const writtenLike = (written: string, value: string, perRem = 16): string | null => {
+	const form: Form = /^#/.test(written)
+		? 'hex'
+		: /^rgba?\(/.test(written)
+			? 'rgb'
+			: /rem$/.test(written)
+				? 'rem'
+				: /%$/.test(written)
+					? 'percent'
+					: /^-?[\d.]+$/.test(written)
+						? 'number'
+						: 'px';
+	return writtenAs({ file: '', at: 0, line: 0, written, form, perRem }, value);
 };
 
 /** A file's text with `places` given new text (`literal` for each), each in its place: from the end, so none moves another. */

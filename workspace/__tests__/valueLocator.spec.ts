@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { type Place, placesIn, probeFor, searchedFiles, withWrites, writtenAs } from '../src/main/services/valueLocator';
+import { type Place, placesIn, probeFor, searchedFiles, withWrites, writtenAs, writtenLike } from '../src/main/services/valueLocator';
 
 const found = (file: string, text: string, property: Parameters<typeof placesIn>[2], part: string) =>
 	placesIn(file, text, property, part).map(({ line, written, form }) => [line, written, form]);
@@ -42,6 +42,10 @@ describe('where a value of a component’s own may be written (Phase 4)', () => 
 			[3, '28', 'number'],
 			[3, '1.75rem', 'rem'],
 		]);
+		// A prop's number is px too, in a script.
+		expect(found('src/Button.tsx', '<Box height={28} minHeight={128} />', 'height', '28px')).toEqual([[1, '28', 'number']]);
+		// A rem is of the page's root size: at 62.5%, 2.8rem is 28px, and 1.75rem is not.
+		expect(placesIn('src/x.css', '.a { height: 2.8rem; } .b { height: 1.75rem; }', 'height', '28px', 10).map((p) => p.written)).toEqual(['2.8rem']);
 		// A stylesheet has no style object's numbers.
 		expect(found('src/x.module.css', '.a { border-radius: 20px; width: 120px; z-index: 20; }', 'radius', '20px')).toEqual([[1, '20px', 'px']]);
 		expect(found('src/x.css', '.a { border-radius: 50%; } .b { width: 150%; }', 'radius', '50%')).toEqual([[1, '50%', 'percent']]);
@@ -70,7 +74,7 @@ describe('where a value of a component’s own may be written (Phase 4)', () => 
 	});
 
 	it('writes a new value the way its place writes it, and each of several in its place', () => {
-		const place = (written: string, form: Place['form']): Place => ({ file: 'f', at: 0, line: 1, written, form });
+		const place = (written: string, form: Place['form']): Place => ({ file: 'f', at: 0, line: 1, written, form, perRem: 16 });
 		expect(writtenAs(place('28px', 'px'), '32px')).toBe('32px');
 		expect(writtenAs(place('28', 'number'), '32px')).toBe('32');
 		expect(writtenAs(place('1.75rem', 'rem'), '30px')).toBe('1.875rem');
@@ -91,6 +95,15 @@ describe('where a value of a component’s own may be written (Phase 4)', () => 
 				{ place: second, literal: '4px' },
 			]),
 		).toBe("a: '32px', b: '4px', c: '1px'");
+	});
+
+	it('writes a value the way a token’s own value is written, its unit or its colour’s form', () => {
+		expect(writtenLike('0.5rem', '12px')).toBe('0.75rem');
+		expect(writtenLike('0.5rem', '12px', 10)).toBe('1.2rem');
+		expect(writtenLike('8', '12px')).toBe('12');
+		expect(writtenLike('8px', '12px')).toBe('12px');
+		expect(writtenLike('#abcdef', '#123457')).toBe('#123457');
+		expect(writtenLike('rgb(1, 2, 3)', '#123457')).toBe('rgb(18, 52, 87)');
 	});
 
 	it('probes a place with a value of its own, never the one drawn', () => {

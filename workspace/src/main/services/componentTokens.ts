@@ -64,6 +64,8 @@ export interface Drawn {
 	instancesFailed?: string;
 	/** The props the story file's stories name as their controls (their `args` and `argTypes`). */
 	controls?: string[];
+	/** The page's root font size, in px: what a `rem` written in the library is of. */
+	rootPx?: number;
 }
 
 /**
