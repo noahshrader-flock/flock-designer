@@ -309,6 +309,18 @@ describe('breakpoints and motion (R5)', () => {
 		expect(list.tokens.filter((t) => t.category === 'Breakpoints').map((t) => t.name)).toEqual(['xs', 'md', 'desktopNav']);
 	});
 
+	it('reads the radius where the theme sets it, not from a style before it that reads it (FSIconButton’s, made to follow it)', async () => {
+		const theme = `export const iconStyles = {
+  primary: {
+    borderRadius: (theme: Theme) => \`\${theme.shape.borderRadius}px\`,
+    '&:hover': { backgroundColor: 'red' },
+  },
+};
+${LIBRARY['src/utils/theme.ts']}`;
+		const list = await readTokens(memoryReads({ ...LIBRARY, 'src/utils/theme.ts': theme }));
+		expect(find(list, 'radius')).toMatchObject({ value: '8px', source: { file: 'src/utils/theme.ts', line: 11 } });
+	});
+
 	it('is nothing for a theme that sets neither', async () => {
 		const list = await readTokens(memoryReads(LIBRARY));
 		expect(list.tokens.filter((t) => t.category === 'Breakpoints' || t.category === 'Motion')).toEqual([]);

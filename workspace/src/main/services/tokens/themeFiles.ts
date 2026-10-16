@@ -47,12 +47,6 @@ const modeOf = (entries: Entry[]): string | null => {
 	return mode?.kind === 'value' ? (/^(['"])(\w+)\1/.exec(mode.text)?.[2] ?? null) : null;
 };
 
-/** The theme's numbers the panel shows, by token path: the key a theme sets each with, and the object it is set in. */
-const THEME_NUMBERS: { path: string; key: string; inside: RegExp }[] = [
-	{ path: 'spacing', key: 'spacing', inside: /createTheme\(\s*\{/ },
-	{ path: 'radius', key: 'borderRadius', inside: /\bshape\b[^={]*[=:]\s*\{/ },
-];
-
 /**
  * Where a theme sets one of its parts: `name: {` (or `[`) in `createTheme`, or a `const name = {` of its own, either also
  * as a function that gives it (`typography: (palette) => ({`). Only those: `[theme.breakpoints.up('md')]: {` in a style is
@@ -61,6 +55,15 @@ const THEME_NUMBERS: { path: string; key: string; inside: RegExp }[] = [
 const themePart = (name: string, open: '{' | '['): RegExp =>
 	new RegExp(`(?:\\b(?:const|let|var)\\s+${name}\\b[^=;\\n]*=|(?<![.\\w])${name}\\s*:)\\s*(?:\\([^()]*\\)\\s*=>\\s*\\(?\\s*)?\\${open}`);
 const PALETTE = themePart('palette', '{');
+
+/**
+ * The theme's numbers the panel shows, by token path: the key a theme sets each with, and the object it is set in. The
+ * shape is where the theme sets it, as every part is (`themePart`), never a style that reads it (`theme.shape.borderRadius`).
+ */
+const THEME_NUMBERS: { path: string; key: string; inside: RegExp }[] = [
+	{ path: 'spacing', key: 'spacing', inside: /createTheme\(\s*\{/ },
+	{ path: 'radius', key: 'borderRadius', inside: themePart('shape', '{') },
+];
 
 /** The palette `createTheme` is given in place (`palette: { primary: { main: '#1976D2' } }`), when there is one. */
 const paletteIn = (text: string): Entry[] | null => {
