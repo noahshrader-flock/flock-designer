@@ -10,10 +10,9 @@ import type { ConnectedDesignSystem, StoryPreview, TokenEdit } from '../../share
 import { type CatalogReads, readCatalog } from './componentCatalog';
 import { definesIn, previewSetup, storybookDefines } from './storybookSetup';
 import { libraryCommit, systemReads } from './designLibrary';
-import { git } from './git';
+import { exportCommit } from './git';
 import type { BuildContext, BuildOptions, Loader, Plugin } from 'esbuild';
 import { ASSET_TYPES, type PrototypeServer } from './prototypeServer';
-import { runFile } from './process';
 import { editedFiles } from './tokenEdits';
 import { errorText } from '../../shared/result';
 import { singleFlight } from './concurrency';
@@ -252,7 +251,7 @@ const libraryBuild = (nodeModules: string, compileSass: CompileSass, missing: Re
 	name: 'library',
 	setup(b) {
 		if (edited) {
-			b.onLoad({ filter: new RegExp(`^(?:${edited.roots.map(escapedForRegExp).join('|')})/`) }, (a) => {
+			b.onLoad({ filter: underRoots(edited.roots) }, (a) => {
 				const text = edited.text(a.path);
 				if (text === undefined) return undefined;
 				return /\.scss$/.test(a.path)
@@ -289,6 +288,9 @@ interface Edited {
 }
 
 const escapedForRegExp = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+/** Any file under one of `roots`, by either separator: esbuild names a file as the system does, with a backslash on Windows. */
+export const underRoots = (roots: string[]): RegExp => new RegExp(`^(?:${roots.map(escapedForRegExp).join('|')})[\\\\/]`);
 
 /**
  * How esbuild reads a stylesheet, as it does one it loads itself: a CSS module (`.module.css`, `.module.scss`) with its class
@@ -426,11 +428,7 @@ export const trialBuild = async (library: string, site: string, folder = ''): Pr
  * clone's packages linked in: the repository's, and in a monorepo the design system package's own when it has them.
  */
 const copyAt = async (root: string, commit: string, library: string, folder: string): Promise<void> => {
-	mkdirSync(library, { recursive: true });
-	const tar = `${library}.tar`;
-	await git(root, ['archive', '--format=tar', '-o', tar, commit]);
-	await runFile('tar', ['-xf', tar, '-C', library], { timeoutMs: 120_000 });
-	rmSync(tar, { force: true });
+	await exportCommit(root, commit, library);
 	// A junction on Windows, a symbolic link elsewhere: the packages are read where the clone has them.
 	for (const at of folder === '' ? [''] : ['', folder]) {
 		if (existsSync(join(root, at, 'node_modules'))) symlinkSync(join(root, at, 'node_modules'), join(library, at, 'node_modules'), 'junction');

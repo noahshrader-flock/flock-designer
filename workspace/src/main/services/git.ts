@@ -415,3 +415,15 @@ export const mergeTexts = async (base: string, ours: string, theirs: string): Pr
 		rmSync(dir, { recursive: true, force: true });
 	}
 };
+
+/** A commit's files, as committed, written out into `dir` (no history, no packages): `git archive`, then `tar`, on any system. */
+export const exportCommit = async (root: string, commit: string, dir: string): Promise<void> => {
+	mkdirSync(dir, { recursive: true });
+	const tar = `${dir}.tar`;
+	try {
+		await git(root, ['archive', '--format=tar', '-o', tar, commit]);
+		await runFile('tar', ['-xf', tar, '-C', dir], { timeoutMs: 120_000 });
+	} finally {
+		rmSync(tar, { force: true });
+	}
+};
