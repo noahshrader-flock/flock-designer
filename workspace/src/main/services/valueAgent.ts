@@ -10,6 +10,7 @@
  * what was asked; to follow a token, they draw as they did, and with the token changed they draw the token. When it does
  * not read back, the agent is told what it drew, once, and the result is checked again; else it is refused, in words.
  */
+import { packageFirst } from './storybookSetup';
 import { PX_PER_REM } from '../../shared/tokens';
 import { errorText } from '../../shared/result';
 import { existsSync } from 'node:fs';
@@ -147,7 +148,9 @@ export class ValueAgent {
 		const dir = await copyAt(system.root, index.commit);
 		try {
 			// The packages it installs, to read how they draw what is not the library's own (MUI's defaults), never to change.
-			const packages = [...new Set(['', system.folder].map((at) => join(system.root, at, 'node_modules')))].filter((p) => existsSync(p));
+			const packages = packageFirst(system.folder)
+				.map((at) => join(system.root, at, 'node_modules'))
+				.filter((p) => existsSync(p));
 			const task = taskFor(file, t, facts, standard, packages);
 			const own = await this.ownFiles(index);
 			let ran = await this.deps.run(dir, task, packages);

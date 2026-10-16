@@ -115,7 +115,8 @@ describe('a component drawn in every case its props declare (Phase 5)', () => {
 		const a = await settled(variants(), BUTTON);
 		// Of the stories that draw it once, Fixed did not take its size; Default did, and is what it is drawn on.
 		expect(asked.slice(0, 2).map((r) => r.story)).toEqual([['Fixed'], ['Default']]);
-		expect(asked.slice(2).every((r) => r.story[0] === 'Default')).toBe(true);
+		// Drawn once each to find it, and not again: the drawing that found it is the one read (this library has no tags drawn).
+		expect(asked).toHaveLength(2);
 		expect(a).toMatchObject({
 			state: 'ready',
 			props: [

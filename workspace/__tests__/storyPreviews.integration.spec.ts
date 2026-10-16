@@ -257,6 +257,41 @@ export default config
 		expect(root.textContent).toContain('true dev ui');
 	});
 
+	it('builds a package of a monorepo whose packages are its own alone, not hoisted to the repository, as a pnpm workspace has them', async () => {
+		makeLibrary(
+			{
+				'packages/ui/package.json': '{"name":"@acme/ui"}',
+				'packages/ui/src/Badge/Badge.stories.tsx': story('Data/Badge', 'export const Default = () => <b>Own</b>;'),
+			},
+			false,
+		);
+		const own = join(clone, 'packages', 'ui');
+		mkdirSync(join(own, 'node_modules', '@storybook'), { recursive: true });
+		for (const p of ['react', 'react-dom', 'scheduler']) symlinkSync(join(APP_MODULES, p), join(own, 'node_modules', p), 'junction');
+		write(own, FAKE_STORYBOOK);
+		const p = previews({ system: () => ({ ...connected(clone)(), folder: 'packages/ui' }) });
+		const root = await render(await ready(p), 'packages/ui/src/Badge/Badge.stories.tsx');
+		expect(root.textContent).toContain('Own');
+	});
+
+	it('finds a package’s stylesheet named bare as its package exports it, and one it does not list by its path', async () => {
+		makeLibrary({
+			...LIBRARY,
+			'src/components/FSTwo/FSTwo.stories.tsx': story(
+				'Inputs/FSTwo',
+				"import 'kit/theme.css';\nimport 'kit/dist/raw.css';\nexport const Default = () => <p className=\"kit\">Two</p>;",
+			),
+		});
+		write(clone, {
+			'node_modules/kit/package.json': JSON.stringify({ name: 'kit', exports: { './theme.css': './dist/theme.css' } }),
+			'node_modules/kit/dist/theme.css': '.kit { color: rgb(4, 5, 6); }\n',
+			'node_modules/kit/dist/raw.css': '.raw { color: rgb(7, 8, 9); }\n',
+		});
+		const css = await (await fetch(`${await ready(previews())}entry.css`)).text();
+		expect(css).toMatch(/\.kit\{color:(rgb\(4, ?5, ?6\)|#040506)\}/);
+		expect(css).toMatch(/\.raw\{color:(rgb\(7, ?8, ?9\)|#070809)\}/);
+	});
+
 	it('draws a story once with each value of each prop asked for, in place of its stories (Phase 5)', async () => {
 		const chip = `const Chip = ({ size = 'md', tone = 'plain' }) => <i data-size={size}>{size} {tone}</i>;
 const meta = { title: 'Data/Chip', component: Chip };
@@ -751,6 +786,8 @@ const attempt = (f) => { try { f(); return 'yes'; } catch { return 'no'; } };
 module.exports = (options = {}) => ({
 	postcssPlugin: 'utilities',
 	Once(root, { result, postcss }) {
+		// A stylesheet that asks for it ends the process, as a plugin that crashes does.
+		if (root.toString().includes('@crash')) process.exit(3);
 		runs++;
 		// As plugins do: what it says it did, on the process's output.
 		console.log('utilities: run', runs);
@@ -842,6 +879,22 @@ describe('the library’s stylesheets, as its Storybook makes them (Phase 5.5)',
 			const first = await runs(new Map());
 			expect(await runs(new Map([['docs/notes.md', 'Nothing a stylesheet reads.\n']]))).toBe(first);
 			expect(await runs(new Map([['src/components/FSTwo/more.tsx', 'export const x = "x-more";\n']]))).not.toBe(first);
+		} finally {
+			await opened.close();
+		}
+	}, 60_000);
+
+	it('says a process that ends, and starts it again for the next stylesheet asked, so one crash does not end the build’s life', async () => {
+		makeLibrary(WITH_POSTCSS);
+		withUtilities();
+		const p = previews();
+		await ready(p);
+		const opened = await p.opened('reach');
+		if (opened.state !== 'open') throw new Error(JSON.stringify(opened));
+		try {
+			await expect(opened.build(new Map([['src/styles.css', '@utilities;\n@crash;\n']]))).rejects.toThrow(/The library's PostCSS stopped: exit 3/);
+			const css = await (await fetch(`${await opened.build(new Map())}entry.css`)).text();
+			expect(ruleIn(css, '.x-two')).toBe('color:#010203');
 		} finally {
 			await opened.close();
 		}

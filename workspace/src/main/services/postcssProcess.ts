@@ -11,6 +11,7 @@
 import { type ChildProcess, spawn } from 'node:child_process';
 import { existsSync, readFileSync, realpathSync } from 'node:fs';
 import { createRequire } from 'node:module';
+import { packageFirst } from './storybookSetup';
 import { dirname, join } from 'node:path';
 
 /** The names a PostCSS configuration is found by, in the order PostCSS's own loader (`postcss-load-config`) looks. */
@@ -61,7 +62,7 @@ export const postcssConfigIn = (library: string, folder: string): string | null 
  * each stylesheet asked for, one line of JSON in, one out: its CSS, and the files and folders it read (PostCSS's
  * `dependency` and `dir-dependency` messages), so what read a file a change writes is made again.
  */
-export const RUNNER = String.raw`
+const RUNNER = String.raw`
 // Outside what it may read is as if nothing were there: a tool that looks up the folders above for its configuration
 // (autoprefixer's browserslist) finds none, as on a machine with nothing there, where the permission model would fail it.
 const fs = require('node:fs');
@@ -157,8 +158,11 @@ export interface PostcssRun {
 	close(): void;
 }
 
-/** This app's own PostCSS, which the process is given: the library's plugins run on it, as on any PostCSS 8. */
-const ownPostcss = (): string => createRequire(__filename).resolve('postcss');
+/** This app's own PostCSS, which the process is given (the library's plugins run on it, as on any PostCSS 8), and its package's folder. */
+const ownPostcss = (): { entry: string; folder: string } => {
+	const require = createRequire(__filename);
+	return { entry: require.resolve('postcss'), folder: dirname(require.resolve('postcss/package.json')) };
+};
 
 /**
  * The library's PostCSS (`config`), in a process locked to `library` (the build's copy, its design system's package at
@@ -167,11 +171,11 @@ const ownPostcss = (): string => createRequire(__filename).resolve('postcss');
  */
 export const postcssRun = (library: string, folder: string, config: string): PostcssRun => {
 	let child: ChildProcess | null = null;
-	let ended: string | null = null;
 	let next = 0;
 	const waiting = new Map<number, { resolve: (p: Processed) => void; reject: (e: Error) => void }>();
-	const fail = (why: string) => {
-		ended = why;
+	/** Every stylesheet still asked is told why; the next one asked starts the process again. */
+	const fail = (started: ChildProcess, why: string) => {
+		if (child === started) child = null;
 		for (const w of waiting.values()) w.reject(new Error(why));
 		waiting.clear();
 	};
@@ -181,24 +185,33 @@ export const postcssRun = (library: string, folder: string, config: string): Pos
 		const copy = realpathSync(library);
 		// The clone's folders its packages are linked from (the repository's, and in a monorepo the package's), whose own
 		// links (a workspace's packages) stay inside the clone.
-		const packages = ['', folder]
+		const packages = packageFirst(folder)
 			.map((at) => join(library, at, 'node_modules'))
 			.filter(existsSync)
 			.map((m) => dirname(realpathSync(m)));
-		// The package folder of this app's PostCSS, which holds the few packages it needs beside it.
-		const own = dirname(dirname(dirname(postcss)));
+		// The folder this app's PostCSS is installed in, which holds the few packages it needs beside it.
+		const own = dirname(postcss.folder);
 		const reads = [...new Set([copy, ...packages, own])];
 		const started = spawn(
 			process.execPath,
 			// Workers (a plugin's module hooks, Tailwind 4's) are held as it is; native plugins are not (DESIGN_SYSTEM_PLAN.md's Risks).
-			['--permission', '--allow-addons', '--allow-worker', ...reads.map((r) => `--allow-fs-read=${r}`), '-e', RUNNER, realpathSync(config), postcss],
+			[
+				'--permission',
+				'--allow-addons',
+				'--allow-worker',
+				...reads.map((r) => `--allow-fs-read=${r}`),
+				'-e',
+				RUNNER,
+				realpathSync(config),
+				postcss.entry,
+			],
 			// The runtime as plain Node when it is an app's (VS Code's, Electron's), and nothing else of this app's environment.
 			{ cwd: copy, env: process.versions.electron ? { ELECTRON_RUN_AS_NODE: '1' } : {}, stdio: ['pipe', 'pipe', 'pipe'] },
 		);
 		let stderr = '';
 		started.stderr?.on('data', (d: Buffer) => (stderr = (stderr + d.toString()).slice(-8000)));
-		/** What it said as it stopped: its error's own line, not the runtime's trace around it. */
-		const stopped = (code: number) => /^\w*Error\b.*$/m.exec(stderr)?.[0] ?? (stderr.trim().split('\n').pop() || `exit ${code}`);
+		/** Why it stopped: its error's own line (never the runtime's trace around it, nor what its plugins logged), else how it ended. */
+		const stopped = (code: number) => /^\w*Error\b.*$/m.exec(stderr)?.[0] ?? `exit ${code}`;
 		let buffered = '';
 		started.stdout?.on('data', (d: Buffer) => {
 			buffered += d.toString();
@@ -218,16 +231,16 @@ export const postcssRun = (library: string, folder: string, config: string): Pos
 				else w?.resolve({ css: out.css ?? '', files: out.files ?? [], dirs: out.dirs ?? [] });
 			}
 		});
-		started.on('error', (err) => fail(`The library's PostCSS could not be started: ${err.message}`));
-		started.on('exit', (code) => {
-			if (child === started) child = null;
-			if (code !== null && code !== 0) fail(`The library's PostCSS stopped: ${stopped(code)}`);
-		});
+		started.on('error', (err) => fail(started, `The library's PostCSS could not be started: ${err.message}`));
+		// A write after it has ended is said as its end is, never thrown where nothing hears it.
+		started.stdin?.on('error', () => undefined);
+		started.on('exit', (code, signal) =>
+			fail(started, `The library's PostCSS stopped: ${code === 0 ? 'it ended' : signal !== null ? `stopped by ${signal}` : stopped(code ?? 1)}`),
+		);
 		return started;
 	};
 	return {
 		process(path, css) {
-			if (ended !== null) return Promise.reject(new Error(ended));
 			child ??= start();
 			const id = next++;
 			return new Promise<Processed>((resolve, reject) => {
@@ -243,8 +256,9 @@ export const postcssRun = (library: string, folder: string, config: string): Pos
 			});
 		},
 		close() {
-			child?.kill();
+			const closing = child;
 			child = null;
+			closing?.kill();
 		},
 	};
 };

@@ -34,5 +34,10 @@ describe('the globals a library’s Storybook build defines, read from its main 
 	it('reads webpack’s DefinePlugin too, and nothing from a file that defines nothing', () => {
 		expect(definesIn(`config.plugins.push(new webpack.DefinePlugin({ __DEV__: JSON.stringify(false) }))`)).toEqual({ __DEV__: 'false' });
 		expect(definesIn(`export default { stories: ['../src/**/*.stories.tsx'], addons: [] }`)).toEqual({});
+		// A comment in it, with a quote and a brace of its own, is a comment.
+		expect(definesIn(`define: {\n  // don't { read this\n  __DEV__: JSON.stringify(true), /* nor } this */ __MODE__: '"dev"',\n}`)).toEqual({
+			__DEV__: 'true',
+			__MODE__: '"dev"',
+		});
 	});
 });

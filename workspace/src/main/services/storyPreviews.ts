@@ -1,5 +1,17 @@
 import { createHash } from 'node:crypto';
-import { constants, copyFileSync, cpSync, existsSync, mkdirSync, readdirSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import {
+	constants,
+	copyFileSync,
+	cpSync,
+	existsSync,
+	mkdirSync,
+	readFileSync,
+	readdirSync,
+	realpathSync,
+	rmSync,
+	symlinkSync,
+	writeFileSync,
+} from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { basename, dirname, join, relative, sep } from 'node:path';
 import { PREVIEW_COMPONENT, PREVIEW_FILE, PREVIEW_HEIGHT, PREVIEW_SHOW, PREVIEW_SPECIMEN } from '../../shared/catalog';
@@ -7,8 +19,8 @@ import { TRY_VALUES } from './pageInstances';
 import { designSystemOf } from '../../shared/catalog';
 import type { ConnectedDesignSystem, StoryPreview, TokenEdit } from '../../shared/contract';
 import { type CatalogReads, readCatalog } from './componentCatalog';
-import { definesIn, previewSetup, storybookDefines } from './storybookSetup';
-import { libraryCommit, systemReads } from './designLibrary';
+import { packageFirst, previewSetup, storybookDefines } from './storybookSetup';
+import { inLibrary, libraryCommit, systemReads } from './designLibrary';
 import { exportCommit } from './git';
 import type { BuildContext, BuildOptions, Plugin } from 'esbuild';
 import { ASSET_TYPES, type PrototypeServer } from './prototypeServer';
@@ -16,7 +28,6 @@ import { editedFiles } from './tokenEdits';
 import { errorText } from '../../shared/result';
 import { heldTurns, singleFlight } from './concurrency';
 import { type Stylesheets, stylesheetsFor } from './stylesheets';
-import { RUNNER, postcssRun } from './postcssProcess';
 import { HOST } from '../../shared/vocabulary';
 
 /**
@@ -125,9 +136,17 @@ export const specimenScript = `var drawSpecimens = (() => {
  * FUI) would not respond; the page supplies just that. A story that pins a value without it does not respond in
  * Storybook either, and does not here: making it respond is the story's to do, in the library.
  */
-export const previewEntry = (library: string, storyFiles: string[], { preview, channel }: { preview: string | null; channel: boolean }): string => {
-	// Every file by its path from the entry, which is at the copy's root: a build of any copy of the commit builds its own files.
-	const fromEntry = (path: string) => `./${relative(library, path).split(sep).join('/')}`;
+export const previewEntry = (
+	library: string,
+	storyFiles: string[],
+	{ preview, channel, folder = '' }: { preview: string | null; channel: boolean; folder?: string },
+): string => {
+	// Every file by its path from the entry, which is in the design system's package of the copy: a build of any copy of the
+	// commit builds its own files.
+	const fromEntry = (path: string) => {
+		const from = relative(join(library, folder), path).split(sep).join('/');
+		return from.startsWith('../') ? from : `./${from}`;
+	};
 	return `
 import { Component, Fragment, createElement as h, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
@@ -263,10 +282,18 @@ export const notInstalled = (what: string): string => `Not installed here: ${wha
  * library generates at install time (`symbols.generated`). Each becomes a stand-in that says so when a story reaches for
  * it, so the stories that do not need it still build and render.
  */
-const libraryBuild = (nodeModules: string, stylesheets: Stylesheets, missing: ReadonlySet<string>): Plugin => ({
+const libraryBuild = (packages: string[], stylesheets: Stylesheets, missing: ReadonlySet<string>): Plugin => ({
 	name: 'library',
 	setup(b) {
-		b.onResolve({ filter: /^[^./].*\.s?css$/ }, (a) => ({ path: join(nodeModules, a.path) }));
+		// A stylesheet named bare is resolved as any import is (a package's exports, a path beside it); one its package does
+		// not list is found by its path in the packages installed.
+		b.onResolve({ filter: /^[^./].*\.s?css$/ }, async (a) => {
+			if (a.pluginData === 'stylesheet') return undefined;
+			const found = await b.resolve(a.path, { kind: a.kind, resolveDir: a.resolveDir, importer: a.importer, pluginData: 'stylesheet' });
+			if (found.errors.length === 0) return found;
+			const installed = packages.map((p) => join(p, a.path)).find((p) => existsSync(p));
+			return installed === undefined ? undefined : { path: installed };
+		});
 		if (missing.size > 0) {
 			b.onResolve({ filter: /.*/ }, async (a) => {
 				if (a.pluginData === 'inner' || !missing.has(a.path)) return undefined;
@@ -295,8 +322,14 @@ const asErrors = (err: Partial<BuildErrors>): BuildErrors => ({ errors: err.erro
  * own Storybook build defines (`storybookDefines`) and the production build of React's.
  */
 const ENTRY = 'preview-entry.tsx';
-const optionsFor = (library: string, site: string, plugin: Plugin, defines: Record<string, string>): BuildOptions => ({
-	entryPoints: { entry: join(library, ENTRY) },
+/** The packages a copy's design system builds with, its package's first (`packageFirst`): what a stylesheet is found in. */
+const packagesOf = (library: string, folder: string): string[] =>
+	packageFirst(folder)
+		.map((at) => join(library, at, 'node_modules'))
+		.filter((p) => existsSync(p));
+const optionsFor = (library: string, folder: string, site: string, plugin: Plugin, defines: Record<string, string>): BuildOptions => ({
+	// In the design system's package, so its imports resolve from its own packages first, hoisted to the root or not.
+	entryPoints: { entry: join(library, folder, ENTRY) },
 	// Errors name files as the library does (`src/components/…`), not by where the copy is.
 	absWorkingDir: library,
 	bundle: true,
@@ -340,16 +373,16 @@ export const unresolved = (errors: { text: string }[]): Set<string> =>
  */
 export const buildPreviews = async (library: string, storyFiles: string[], site: string, folder = ''): Promise<void> => {
 	const [{ build }, sass] = await Promise.all([import('esbuild'), import('sass')]);
-	const nodeModules = join(library, 'node_modules');
+	const packages = packagesOf(library, folder);
 	const preview = previewSetup(library, folder);
 	// Storybook 8 and later have the \`storybook\` package, which carries its preview's channel; older ones do not.
-	const channel = existsSync(join(nodeModules, 'storybook', 'package.json'));
-	writeFileSync(join(library, ENTRY), previewEntry(library, storyFiles, { preview, channel }));
+	const channel = packages.some((p) => existsSync(join(p, 'storybook', 'package.json')));
+	writeFileSync(join(library, folder, ENTRY), previewEntry(library, storyFiles, { preview, channel, folder }));
 	mkdirSync(site, { recursive: true });
 	const stylesheets = stylesheetsFor(library, folder, sass);
 	const defines = storybookDefines(library, folder);
 	try {
-		await settled((missing) => build(optionsFor(library, site, libraryBuild(nodeModules, stylesheets, missing), defines)).catch(asErrors));
+		await settled((missing) => build(optionsFor(library, folder, site, libraryBuild(packages, stylesheets, missing), defines)).catch(asErrors));
 	} finally {
 		stylesheets.close();
 	}
@@ -374,7 +407,7 @@ export const trialBuild = async (copy: string, work: string, site: string, folde
 	const [{ context }, sass] = await Promise.all([import('esbuild'), import('sass')]);
 	// A clone of each file where the disk can (copy-on-write, so all but free), a copy where not; its packages stay a link.
 	if (!existsSync(work)) cpSync(copy, work, { recursive: true, verbatimSymlinks: true, mode: constants.COPYFILE_FICLONE });
-	const nodeModules = join(work, 'node_modules');
+	const packages = packagesOf(work, folder);
 	const stylesheets = stylesheetsFor(work, folder, sass);
 	// esbuild and the stylesheets' tools name a file by its real path, and a temporary folder can be reached through a link
 	// (macOS's /var); a change names its files by their path in the library.
@@ -404,7 +437,7 @@ export const trialBuild = async (copy: string, work: string, site: string, folde
 			if (open !== null) return settled(async () => (open as BuildContext).rebuild().catch(asErrors));
 			await settled(async (missing) => {
 				await open?.dispose();
-				open = await context(optionsFor(work, site, libraryBuild(nodeModules, stylesheets, missing), defines));
+				open = await context(optionsFor(work, folder, site, libraryBuild(packages, stylesheets, missing), defines));
 				return open.rebuild().catch(asErrors);
 			});
 		},
@@ -425,7 +458,7 @@ const copyAt = async (root: string, commit: string, library: string, folder: str
 	await exportCommit(root, commit, library);
 	// A junction on Windows, a symbolic link elsewhere: the packages are read where the clone has them, by their real path, so
 	// a tool held to the clone (the library's PostCSS) never passes through a link on the way to them (macOS's /var).
-	for (const at of folder === '' ? [''] : ['', folder]) {
+	for (const at of packageFirst(folder)) {
 		const packages = join(root, at, 'node_modules');
 		if (existsSync(packages)) symlinkSync(realpathSync(packages), join(library, at, 'node_modules'), 'junction');
 	}
@@ -438,13 +471,11 @@ const CODE = { code: true };
 const serveKey = (build: string): string => `previews-${build.slice(0, 26)}`;
 
 /**
- * How this app builds a preview, as one short fingerprint: the page, its script and the build's set-up. A build is kept
- * for a commit **and** this, so a newer app never shows a build an older one made from the same commit.
+ * How this app builds a preview, as one short fingerprint: the app's own code as it was built (the extension is one file),
+ * so whatever in it changes how a preview is made (the page, its script, the stylesheets' step, the set-up read), a newer
+ * app never shows a build an older one made from the same commit. A build is kept for a commit **and** this.
  */
-const RECIPE = createHash('sha256')
-	.update([PAGE, previewEntry, libraryBuild, optionsFor, buildPreviews, definesIn, stylesheetsFor, postcssRun, RUNNER].map(String).join(''))
-	.digest('hex')
-	.slice(0, 8);
+const RECIPE = createHash('sha256').update(readFileSync(__filename)).digest('hex').slice(0, 8);
 
 /** The address a build of a commit's copy is served at: what it is for, and how many times, so each is at one of its own. */
 const servedAt = (what: string, times: number, dir: string): string => `${what}-${times}-${basename(dir).slice(0, 12)}`;
@@ -567,7 +598,9 @@ export class StoryPreviews {
 				const stories = (await readCatalog(await reads(), designSystemOf(system))).map((c) => c.id);
 				await (this.deps.build ?? buildPreviews)(copy, stories, site, system.folder);
 			}
-			// Only the build for this commit is kept, and served; a change tried on another is closed with it.
+			// Only the build for this commit is kept, and served; a change tried on another is closed with it. Only by the build
+			// still asked for: one another design system's build has passed while it built leaves that one's alone.
+			if (this.current?.dir !== dir) return { state: 'ready', base: await this.deps.server.serveFolder(serveKey(basename(dir)), site, CODE) };
 			if (this.trial !== null && this.trial.dir !== dir) await this.endTrial();
 			for (const [purpose, served] of this.builtServed) {
 				if (served.dir === dir) continue;
@@ -638,7 +671,10 @@ export class StoryPreviews {
 			const [listed, builder] = await Promise.all([at.reads(), this.builderFor(at, purpose)]);
 			// The design system's files as git lists them; their text from the copy the builds are made from, which is the commit's.
 			const copy = join(at.dir, 'library');
-			const reads: CatalogReads = { listFiles: (dir) => listed.listFiles(dir), readFile: (path) => readFile(join(copy, path), 'utf8') };
+			const reads: CatalogReads = {
+				listFiles: (dir) => listed.listFiles(dir),
+				readFile: async (path) => readFile(join(copy, inLibrary(path)), 'utf8'),
+			};
 			return {
 				state: 'open',
 				reads,

@@ -4,7 +4,7 @@ import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { Catalog, CatalogUpdate, ConnectedDesignSystem } from '../src/shared/contract';
 import { undeclared } from '../src/shared/wcag';
-import { DesignLibrary, fetchProblem, libraryReads, readLibrary, updateLibrary } from '../src/main/services/designLibrary';
+import { DesignLibrary, fetchProblem, inLibrary, libraryReads, readLibrary, updateLibrary } from '../src/main/services/designLibrary';
 import { DesignSystemsMemory } from '../src/main/services/designSystems';
 import { g } from './fixtures';
 
@@ -331,5 +331,14 @@ describe('reading the library’s files exactly', () => {
 		} finally {
 			rmSync(dir, { recursive: true, force: true });
 		}
+	});
+});
+
+describe('a path read in the library', () => {
+	it('is any in the repository, and none that leaves it, however it is written', () => {
+		expect(inLibrary('node_modules/kit/./dist/../theme.css')).toBe('node_modules/kit/theme.css');
+		expect(inLibrary('src\\theme.css')).toBe('src/theme.css');
+		for (const away of ['node_modules/kit/../../../etc/passwd', '../outside.css', '/etc/passwd', '..'])
+			expect(() => inLibrary(away)).toThrow("is not in the design system's repository");
 	});
 });

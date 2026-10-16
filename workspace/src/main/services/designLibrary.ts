@@ -1,6 +1,6 @@
 import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { join, posix } from 'node:path';
 import { designSystemOf, isTokenGroup } from '../../shared/catalog';
 import type { DeclaredTarget } from '../../shared/wcag';
 import type { Catalog, CatalogComponent, CatalogUpdate, ConnectedDesignSystem, DesignTokens } from '../../shared/contract';
@@ -86,6 +86,16 @@ export const updateLibrary = async (root: string, branch: string): Promise<Exclu
  * file, which is never in git, is read where the clone has it installed, as the previews are built with it (a theme a
  * stylesheet imports, Phase 5.5).
  */
+/**
+ * A path in the library as its reads take one, from its root, `/` between its parts; throws for one that leaves it (`..`, or
+ * from the disk's root), as a stylesheet's import or a package's `style` could say: what is read stays in the clone.
+ */
+export const inLibrary = (path: string): string => {
+	const normal = posix.normalize(path.replace(/\\/g, '/'));
+	if (normal.startsWith('../') || normal === '..' || posix.isAbsolute(normal)) throw new Error(`${path} is not in the design system's repository.`);
+	return normal;
+};
+
 export const libraryReads = (root: string, ref: string): CatalogReads => {
 	const read = new Map<string, Promise<Map<string, string>>>();
 	const readStories = async (paths: string[]): Promise<Map<string, string>> => {
@@ -120,7 +130,7 @@ export const libraryReads = (root: string, ref: string): CatalogReads => {
 	return {
 		listFiles: (dir) => listed.get(dir) ?? listed.set(dir, list(dir)).get(dir)!,
 		readFile: async (path) => {
-			if (/(^|\/)node_modules\//.test(path)) return readFile(join(root, path), 'utf8');
+			if (/(^|\/)node_modules\//.test(path)) return readFile(join(root, inLibrary(path)), 'utf8');
 			for (const batch of read.values()) {
 				const text = (await batch).get(path);
 				if (text !== undefined) return text;

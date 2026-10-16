@@ -8,7 +8,8 @@
 import { dirname, isAbsolute, relative, resolve, sep } from 'node:path';
 import type { ConnectedDesignSystem, ConnectedDesignSystems, FoundDesignSystem } from '../../shared/contract';
 import { asArray, asRecord } from '../../shared/json';
-import { isStoryFile, type CatalogReads } from './componentCatalog';
+import { SCRIPT_EXTENSIONS, isStoryFile, type CatalogReads } from './componentCatalog';
+import { packageFirst } from './storybookSetup';
 import { readTokens } from './designTokens';
 import { folderReads } from './folderReads';
 import { git } from './git';
@@ -60,9 +61,8 @@ const packageName = async (reads: CatalogReads, folder: string): Promise<string 
 
 /** What a design system is called: its Storybook's brand title (its own, then the repository's), its package's name, or the repository's. */
 export const nameOf = async (reads: CatalogReads, files: string[], repository: string, folder: string): Promise<string> => {
-	const storybooks = [folder === '' ? '.storybook/' : `${folder}/.storybook/`, '.storybook/'];
-	for (const dir of storybooks) {
-		for (const file of files.filter((f) => f.startsWith(dir) && /\.(ts|tsx|js|jsx|mjs)$/.test(f))) {
+	for (const dir of packageFirst(folder).map((at) => (at === '' ? '.storybook/' : `${at}/.storybook/`))) {
+		for (const file of files.filter((f) => f.startsWith(dir) && SCRIPT_EXTENSIONS.some((e) => f.endsWith(`.${e}`)))) {
 			const text = await reads.readFile(file).catch(() => '');
 			const title = /\bbrandTitle\s*:\s*(['"])([^'"]+)\1/.exec(text)?.[2];
 			if (title) return title;

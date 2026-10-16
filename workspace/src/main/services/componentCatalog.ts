@@ -21,7 +21,7 @@ export interface CatalogReads {
 export const UNGROUPED = 'Ungrouped';
 
 /** The script extensions Storybook reads stories and its set-up from. */
-export const SCRIPT_EXTENSIONS = ['tsx', 'ts', 'jsx', 'js', 'mjs'];
+export const SCRIPT_EXTENSIONS = ['tsx', 'ts', 'jsx', 'js', 'mjs', 'cjs', 'mts', 'cts'];
 const STORY_FILE = new RegExp(`\\.stories\\.(${SCRIPT_EXTENSIONS.join('|')})$`);
 
 /** A Storybook story file, by Storybook's own convention: `*.stories.` and a script extension. Docs pages (`.mdx`) are not components. */

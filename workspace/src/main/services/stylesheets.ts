@@ -42,7 +42,8 @@ export const stylesheetsFor = (library: string, folder: string, sass: typeof imp
 	const nodeModules = join(library, 'node_modules');
 	const config = postcssConfigIn(library, folder);
 	let postcss = config === null ? null : postcssRun(library, folder, config);
-	// The configuration as a change names it and as the build does (by its real path).
+	// The copy and its configuration as a change names them and as the build does (by their real paths, macOS's /var a link).
+	const real = realpathSync(library);
 	const configPaths = config === null ? [] : [config, realpathSync(config)];
 	const made = new Map<string, Promise<Made>>();
 	/** What each stylesheet made read, once it is made: one still being made is made again on any change. */
@@ -77,7 +78,7 @@ export const stylesheetsFor = (library: string, folder: string, sass: typeof imp
 				// Said as the stylesheet's, by its path in the library, in the tool's own words.
 				return making.then(
 					(m) => m.result,
-					(err: unknown) => ({ errors: [{ text: errorText(err), location: { file: relative(realpathSync(library), a.path) } }] }),
+					(err: unknown) => ({ errors: [{ text: errorText(err), location: { file: relative(real, a.path) } }] }),
 				);
 			});
 		},

@@ -138,6 +138,21 @@ const readStylesheet = (text: string): Read => {
 	return read;
 };
 
+/** A selector a design system's light tokens are declared in: the page's own root (`:root`, `html`, `:host`, `body`), or that alone in its light mode (`.light`, `[data-theme="light"]`). */
+const LIGHT = /^(?::root|html|:host|body|\*)$|^(?::root|html)?(?:\.light|\[[\w-]+=(["']?)light\1\])$/i;
+
+/**
+ * The mode a variable is a token of, by the rules it is declared in: dark in a rule that names dark (`.dark`,
+ * `[data-theme="dark"]`, a `prefers-color-scheme: dark` query); light in the page's own rules, at-rules alone (`@theme`,
+ * `@layer`), or a rule that is only its light mode (`LIGHT`). Null for one scoped to anything else (`.card`, a high-contrast theme): a variable of
+ * a component or another theme, not the design system's, which would otherwise be read over its light tokens.
+ */
+const modeDeclaredIn = (rules: string[]): 'light' | 'dark' | null => {
+	if (rules.some((r) => /\bdark\b/i.test(r))) return 'dark';
+	const selectors = rules.filter((r) => !r.startsWith('@')).flatMap((r) => r.split(',').map((one) => one.trim()));
+	return selectors.every((one) => LIGHT.test(one)) ? 'light' : null;
+};
+
 /** The rule a variable is declared again in: the innermost of its rules that is a selector, not an at-rule; `:root` with none. */
 const ruleOf = (rules: string[]): string => [...rules].reverse().find((r) => !r.startsWith('@')) ?? ':root';
 
@@ -219,7 +234,8 @@ export const cssVariables: TokenSource = {
 				await take(path, inPackage ? (imported ?? { file, line: lineAt(text, i.at) }) : imported);
 			}
 			for (const v of vars) {
-				const mode = v.rules.some((r) => /dark/i.test(r)) ? 'dark' : 'light';
+				const mode = modeDeclaredIn(v.rules);
+				if (mode === null) continue;
 				const own = modes.get(mode) ?? modes.set(mode, new Map()).get(mode)!;
 				const line = lineAt(text, v.at);
 				own.set(

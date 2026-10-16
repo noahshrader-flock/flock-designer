@@ -189,6 +189,24 @@ describe('CSS variables', () => {
 	});
 });
 
+describe('which mode a variable is a token of', () => {
+	it('is the page’s own rules and light’s for light, dark’s for dark; one scoped to a component or another theme is no token', async () => {
+		const css = `:root { --brand: #108062; }
+[data-theme="light"] { --surface: #ffffff; }
+@media (prefers-color-scheme: dark) { :root { --surface: #111111; } }
+.card { --brand: #ff0000; --card-gap: 4px; }
+[data-color-mode="light"][data-light-theme="high_contrast"] .x { --brand: #000000; }
+.darken { --surface: #222222; }
+`;
+		const list = await readTokens(memoryReads({ 'src/theme.css': css }));
+		expect(list.tokens.map((t) => [t.path, t.value])).toEqual([
+			['css.light.brand', '#108062'],
+			['css.light.surface', '#ffffff'],
+			['css.dark.surface', '#111111'],
+		]);
+	});
+});
+
 describe('CSS variables a stylesheet imports (Phase 5.5)', () => {
 	/** A package of variables, as Tailwind 4's theme is one: its stylesheet named by its exports, its theme nested in layers. */
 	const PACKAGE = {

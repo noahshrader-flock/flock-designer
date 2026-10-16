@@ -84,17 +84,22 @@ export class ComponentVariants {
 	/**
 	 * Of the stories that draw it once, the one drawn with the props it is given, by drawing them: a story written as a
 	 * function may pass its args on or not, and only drawing it says which. The first that takes every prop, else the one
-	 * that takes most, of the first few; none when there are none, for the page's own pick.
+	 * that takes most, of the first few, with its drawing; none when there are none, for the page's own pick.
 	 */
-	private async storyTaking(base: string, file: string, props: DeclaredProp[], stories: string[]): Promise<string[]> {
-		let best: { story: string; fixed: number } | null = null;
+	private async storyTaking(
+		base: string,
+		file: string,
+		props: DeclaredProp[],
+		stories: string[],
+	): Promise<{ story: string; drawn: Drawn | null } | null> {
+		let best: { story: string; drawn: Drawn | null; fixed: number } | null = null;
 		for (const story of stories.slice(0, MOST_STORIES_TRIED)) {
 			const [[drawn]] = (await this.deps.measure([{ base, mode: 'light', files: [file], vary: { stories: [story], props } }])) as [[Drawn | null]];
 			const fixed = drawn ? fixedIn(drawn, props).length : props.length;
-			if (best === null || fixed < best.fixed) best = { story, fixed };
+			if (best === null || fixed < best.fixed) best = { story, drawn, fixed };
 			if (fixed === 0) break;
 		}
-		return best === null ? [] : [best.story];
+		return best;
 	}
 
 	private async work(index: DrawnIndex, file: string): Promise<Answer> {
@@ -106,9 +111,14 @@ export class ComponentVariants {
 		if (plain.state !== 'ready') throw new Error('The previews could not be built, so its variants could not be drawn.');
 		// As it is and with the tags, as its stories are read (T6, Phase 1); in light, which is what the tab shows of them.
 		const { tags, tokens, tagged } = index.built.reading;
-		const vary = { stories: await this.storyTaking(plain.base, file, props, await this.storiesFor(index, file)), props };
+		const taking = await this.storyTaking(plain.base, file, props, await this.storiesFor(index, file));
+		const vary = { stories: taking === null ? [] : [taking.story], props };
 		const run = (base: string) => ({ base, mode: 'light' as const, files: [file], vary });
-		const [asIs, withTags] = await this.deps.measure([run(plain.base), ...(tagged === null ? [] : [run(tagged)])]);
+		// The story taken is drawn already, as it is, in finding it: drawn again only with the tags, or for the page's own pick.
+		const [asIs, withTags] =
+			taking?.drawn != null
+				? [[taking.drawn], ...(tagged === null ? [] : await this.deps.measure([run(tagged)]))]
+				: await this.deps.measure([run(plain.base), ...(tagged === null ? [] : [run(tagged)])]);
 		const light = asIs?.[0];
 		if (!light) throw new Error('Its story did not draw with its props changed, so its variants could not be read.');
 		const values = readValues({ plain: light, tagged: withTags?.[0] ?? null }, undefined, tags, tokens);
