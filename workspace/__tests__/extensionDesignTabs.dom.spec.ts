@@ -454,21 +454,68 @@ describe('a component’s tab', () => {
 		};
 		const values = () => section('Values') as HTMLElement;
 		const change = (label: string) => values().querySelector(`[aria-label="Change ${label}"]`) as HTMLElement;
-		const editor = () => document.querySelector('[role="dialog"] [data-value-editor]') as HTMLElement | null;
-		const slider = (label: string) => document.querySelector(`[role="dialog"] input[type="range"][aria-label="${label}"]`) as HTMLInputElement;
+		/** A value of its own's control: a popover inside its cell, not a dialog over the panel. */
+		const popover = () => values().querySelector('[data-value-cell] [role="dialog"]') as HTMLElement | null;
+		const editor = () => (popover()?.querySelector('[data-value-editor]') as HTMLElement | null | undefined) ?? null;
+		const slider = (label: string) => popover()?.querySelector(`input[type="range"][aria-label="${label}"]`) as HTMLInputElement;
+		const escape = () => act(async () => void document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
+		const pressElsewhere = () => act(async () => void document.body.dispatchEvent(new MouseEvent('mousedown', { bubbles: true })));
 
 		it('opens a value of its own as a slider, tries it on the instances that draw it as it moves, and marks it tried', async () => {
 			const { tried } = await tryingOpen();
 			await press(change('Height · sm'));
-			expect(document.querySelector('[role="dialog"] h2, [role="dialog"] [id]')?.textContent).toContain('Height · sm');
+			expect(popover()?.getAttribute('aria-label')).toBe('Height · sm');
 			expect(editor()?.textContent).toContain('nothing is saved');
 			await type(slider('Height'), '30');
 			// Told at once, without letting go: nothing is built for a value of its own.
 			expect(tried()).toEqual([{ property: 'height', value: '30px', targets: ['height:sm:0', 'height:sm:1', 'height:sm:2'] }]);
 			const cell = values().querySelector('[data-value-row="height"] [data-tried]') as HTMLElement;
-			expect(cell.textContent).toBe('sm30px');
+			expect(cell.querySelector('.value-cell')?.textContent).toBe('sm30px');
 			expect(cell.querySelector('[data-changed-mark]')).not.toBeNull();
 			expect(document.querySelector('[data-trying-values]')?.textContent).toContain('Trying 1 value of its own in its stories: nothing is saved.');
+		});
+
+		it('is a small popover under its value, not a dialog over the panel: no scrim, the button says it is open', async () => {
+			await tryingOpen();
+			const opener = change('Height · sm');
+			expect(opener.getAttribute('aria-expanded')).toBe('false');
+			expect(popover()).toBeNull();
+			await press(opener);
+			expect(opener.getAttribute('aria-expanded')).toBe('true');
+			// Inside the cell it is opened from, and not modal: nothing is dimmed, and the panel behind stays reachable.
+			expect(opener.closest('[data-value-cell]')?.contains(popover())).toBe(true);
+			expect(popover()?.getAttribute('aria-modal')).toBeNull();
+			expect(document.querySelector('.scrim')).toBeNull();
+			// Its first field has the focus.
+			expect(document.activeElement).toBe(slider('Height'));
+		});
+
+		it('closes with Escape, the focus going back to its button; with a press elsewhere; and with its button again; not with a press inside it', async () => {
+			await tryingOpen();
+			const opener = change('Height · sm');
+			await press(opener);
+			await escape();
+			expect(popover()).toBeNull();
+			expect(document.activeElement).toBe(opener);
+			await press(opener);
+			await act(async () => void slider('Height').dispatchEvent(new MouseEvent('mousedown', { bubbles: true })));
+			expect(popover()).not.toBeNull();
+			await pressElsewhere();
+			expect(popover()).toBeNull();
+			await press(opener);
+			await press(opener);
+			expect(popover()).toBeNull();
+		});
+
+		it('keeps a value tried when its popover is closed, and shows it again when it is opened', async () => {
+			const { tried } = await tryingOpen();
+			await press(change('Height · sm'));
+			await type(slider('Height'), '30');
+			await escape();
+			expect(tried()).toHaveLength(1);
+			await press(change('Height · sm'));
+			expect(slider('Height').value).toBe('30');
+			expect(popover()?.textContent).toContain('Reset');
 		});
 
 		it('puts a value back with Reset, and every value with Reset all', async () => {
@@ -479,11 +526,12 @@ describe('a component’s tab', () => {
 			expect(tried()).toEqual([]);
 			expect(values().querySelector('[data-tried]')).toBeNull();
 			await type(slider('Height'), '31');
-			await press(document.querySelector('[role="dialog"] [aria-label="Close"]') as HTMLElement);
+			// Another value opened: this one's popover is shut, and what was tried stays tried.
 			await press(change('Height · md'));
+			expect(values().querySelectorAll('[data-value-cell] [role="dialog"]')).toHaveLength(1);
 			await type(slider('Height'), '40');
 			expect(tried()).toHaveLength(2);
-			await press(document.querySelector('[role="dialog"] [aria-label="Close"]') as HTMLElement);
+			await escape();
 			await press(button('Reset all'));
 			expect(tried()).toEqual([]);
 			expect(document.querySelector('[data-trying-values]')).toBeNull();
@@ -507,7 +555,7 @@ describe('a component’s tab', () => {
 			};
 			const { tried } = await tryingOpen({ values: { state: 'read', instances: 12, unmarked: 0, rows: { light: [...rows, veil], dark: null } } });
 			await press(change('Border'));
-			await type(document.querySelector('[role="dialog"] input[type="color"]') as HTMLInputElement, '#123456');
+			await type(popover()?.querySelector('input[type="color"]') as HTMLInputElement, '#123456');
 			expect(tried()).toEqual([{ property: 'border', value: '#12345680', targets: ['border:null:0'] }]);
 		});
 
@@ -524,7 +572,7 @@ describe('a component’s tab', () => {
 			const padding = { property: 'padding', by: null, cells: [{ variant: null, value: '0px 10px', kind: 'own', tokens: [], instances: 12 }] };
 			const { tried } = await tryingOpen({ values: { state: 'read', instances: 12, unmarked: 0, rows: { light: [...rows, padding], dark: null } } });
 			await press(change('Padding'));
-			expect([...document.querySelectorAll('[role="dialog"] input[type="range"]')].map((r) => r.getAttribute('aria-label'))).toEqual([
+			expect([...(popover()?.querySelectorAll('input[type="range"]') ?? [])].map((r) => r.getAttribute('aria-label'))).toEqual([
 				'Top and bottom',
 				'Left and right',
 			]);
@@ -534,9 +582,8 @@ describe('a component’s tab', () => {
 				{ property: 'padding', value: '0px 12px 0px 12px', targets: Array.from({ length: 12 }, (_, i) => `padding:null:${i}`) },
 			]);
 			expect(values().querySelector('[data-value-row="padding"] [data-tried] .value-drawn')?.textContent).toBe('0px 12px');
-			await press(document.querySelector('[role="dialog"] [aria-label="Close"]') as HTMLElement);
 			await press(change('Background · ghost'));
-			const hex = document.querySelector('[role="dialog"] input[aria-label="Hex"]') as HTMLInputElement;
+			const hex = popover()?.querySelector('input[aria-label="Hex"]') as HTMLInputElement;
 			expect(hex).not.toBeNull();
 			await type(hex, '#123456');
 			await act(async () => void hex.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })));

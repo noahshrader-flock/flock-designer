@@ -4,6 +4,7 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { ComponentValues } from '../extension/webview/ComponentValues';
+import { ValueEditor } from '../extension/webview/ValueEditor';
 import type { DesignToken, ValueCell, ValueRow } from '../src/shared/contract';
 import { NO_CHROME, inChrome } from './realChrome';
 
@@ -123,5 +124,61 @@ describe.skipIf(NO_CHROME)('a component’s Values, in the side pane, in the bro
 		});
 		expect(found.cells).toBe(13);
 		expect(found.problems).toEqual([]);
+	}, 60_000);
+
+	it('opens a value’s control as a popover under it, inside the pane, over what is below, with nothing past its edges', async () => {
+		// The real control, drawn into the cell it opens from, as `Cell` draws it: after its button, inside its list item.
+		const popover = (property: 'padding' | 'background', value: string) =>
+			renderToStaticMarkup(createElement(ValueEditor, { property, cell: cell('sm', value, 'own', [], 6), tried: null, onTry: () => undefined }));
+		const found = await inChrome(async (browser) => {
+			const page = await browser.newPage();
+			await page.setViewport({ width: PANE, height: 900 });
+			await page.setContent(
+				`<!doctype html><html><head><meta charset="utf-8"><style>${css}</style></head><body><main class="tab"><aside class="component-aside">${markup}</aside></main></body></html>`,
+			);
+			const out: Record<string, unknown> = {};
+			for (const [property, value, row] of [
+				['padding', '0px 10px', 'padding'],
+				['background', 'rgb(16, 128, 98)', 'background'],
+			] as const) {
+				out[property] = await page.evaluate(
+					(html, rowName) => {
+						document.querySelectorAll('.popover').forEach((e) => e.remove());
+						const li = document.querySelector(`[data-value-row="${rowName}"] [data-value-cell]`) as HTMLElement;
+						li.insertAdjacentHTML('beforeend', html);
+						const pop = li.querySelector('.popover') as HTMLElement;
+						const box = (e: Element) => e.getBoundingClientRect();
+						const [p, c, b] = [box(pop), box(li), box(li.querySelector('button') as Element)];
+						const problems: string[] = [];
+						const root = document.documentElement;
+						if (root.scrollWidth > root.clientWidth) problems.push(`the page is ${root.scrollWidth}px in a ${root.clientWidth}px pane`);
+						if (p.left < 0 || p.right > root.clientWidth) problems.push(`the popover is ${p.left}..${p.right} in a ${root.clientWidth}px pane`);
+						if (p.top < b.bottom - 0.5) problems.push('the popover is over its own button');
+						// Over what is below it: the point at its middle is its own.
+						const mid = document.elementFromPoint((p.left + p.right) / 2, p.top + 4);
+						if (!mid || !pop.contains(mid)) problems.push(`something is over the popover at its top (${mid?.className})`);
+						for (const e of pop.querySelectorAll('*'))
+							if (box(e).right > p.right + 0.5) problems.push(`${e.className || e.tagName} leaves the popover`);
+						const sliders = [...pop.querySelectorAll<HTMLElement>('input[type="range"]')].map((e) => Math.round(box(e).width));
+						return {
+							problems,
+							sliders,
+							width: Math.round(p.width),
+							cellWidth: Math.round(c.width),
+							below: li.nextElementSibling ? box(li.nextElementSibling).top < p.bottom : false,
+						};
+					},
+					popover(property, value),
+					row,
+				);
+			}
+			return out as Record<string, { problems: string[]; sliders: number[]; width: number; cellWidth: number; below: boolean }>;
+		});
+		for (const f of Object.values(found)) expect(f.problems).toEqual([]);
+		// Two parts, two sliders, each wide enough to use; across the cell it opens from; over the next value, not pushing it down.
+		expect(found.padding?.sliders).toHaveLength(2);
+		for (const w of found.padding?.sliders ?? []) expect(w).toBeGreaterThan(100);
+		expect(found.padding?.width).toBe(found.padding?.cellWidth);
+		expect(found.padding?.below).toBe(true);
 	}, 60_000);
 });

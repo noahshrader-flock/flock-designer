@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { type ReactNode, useRef, useState } from 'react';
 import {
 	COLOR_VALUES,
 	type ComponentTokens,
@@ -13,10 +13,11 @@ import { plural } from '../../src/shared/plural';
 import { DEFAULT_THEME, THEMES, type Theme, themeLabel } from '../../src/shared/prototypeTheme';
 import { colorAsRead, labelOf } from '../../src/shared/tokens';
 import { MOST_LISTED, sharedWith } from '../../src/renderer/useComponentTokens';
+import { NO_COLOR, shortValue } from '../../src/shared/valueParts';
 import { Disclosure } from './ui/Disclosure';
 import { Swatch } from './ui/Swatch';
 import { Toggle } from './ui/Toggle';
-import { NO_COLOR, shortValue } from '../../src/shared/valueParts';
+import { useDismiss } from './ui/useDismiss';
 import { VALUE_NAMES, ValueEditor, valueTitle } from './ValueEditor';
 
 type Ready = Extract<ComponentTokens, { state: 'ready' }>;
@@ -33,7 +34,7 @@ export interface Trying {
 const MODES = THEMES.map((value) => ({ value, label: themeLabel(value), icon: value === 'dark' ? 'circle-large-filled' : 'circle-large-outline' }));
 
 /** Why a component has no values to show, by what its drawing found. */
-const WHY_NO_COLOR: Record<Exclude<Values['state'], 'read' | 'failed'>, (name: string) => string> = {
+const WHY_NONE: Record<Exclude<Values['state'], 'read' | 'failed'>, (name: string) => string> = {
 	'no-component': () => 'Its stories do not say which component they are of (`component` in their default export), so its values cannot be read.',
 	'none-drawn': (name) =>
 		`Its stories draw no ${name} on the page, so its values cannot be read. One that opens over the page, as a dialog does, is not read.`,
@@ -57,29 +58,43 @@ const saidValue = (property: ValueProperty, value: string): string => (COLOR_VAL
 /**
  * One value, as a button that opens its control: its variant beside its value (a colour with its swatch, marked when it is
  * being tried), and, when the row's values are not all one kind, what it is, on a line under them where it can be read whole.
+ * The control of a value of its own is a popover under it (`editor`, shown while `open`), closed by Escape, a press elsewhere
+ * or the button again; a token's opens elsewhere, so it has none.
  */
 const Cell = ({
 	property,
 	cell,
 	note,
 	tried,
+	open,
+	editor,
 	onOpen,
+	onClose,
 }: {
 	property: ValueProperty;
 	cell: ValueCell;
 	note: { says: string; why?: string } | null;
 	tried: string | null;
+	open: boolean;
+	editor: ReactNode;
 	onOpen: () => void;
+	onClose: () => void;
 }) => {
 	const value = saidValue(property, tried ?? cell.value);
+	const wrap = useRef<HTMLLIElement>(null);
+	const button = useRef<HTMLButtonElement>(null);
+	useDismiss(open, wrap, onClose, button);
 	return (
-		<li data-value-cell className="token" {...(tried !== null ? { 'data-tried': '' } : {})}>
+		<li ref={wrap} data-value-cell className="token" {...(tried !== null ? { 'data-tried': '' } : {})}>
 			<button
+				ref={button}
 				type="button"
 				className="value-cell token-button"
 				aria-label={`Change ${valueTitle(property, cell.variant)}`}
+				aria-haspopup="dialog"
+				aria-expanded={open}
 				title={tried !== null ? `Tried; drawn ${cell.value}` : `${cell.instances} drawn`}
-				onClick={onOpen}
+				onClick={open ? onClose : onOpen}
 			>
 				{cell.variant !== null && <span className="value-variant">{cell.variant}</span>}
 				<span className="value-drawn">
@@ -93,6 +108,7 @@ const Cell = ({
 					</span>
 				)}
 			</button>
+			{open && editor}
 		</li>
 	);
 };
@@ -103,13 +119,20 @@ const Row = ({
 	name,
 	others,
 	tried,
+	editing,
+	editor,
 	onOpen,
+	onClose,
 }: {
 	row: ValueRow;
 	name: (path: string) => string;
 	others: (path: string) => string[];
 	tried: (cell: ValueCell) => string | null;
+	/** The cell whose control is open, if it is this row's. */
+	editing: ValueCell | null;
+	editor: (cell: ValueCell) => ReactNode;
 	onOpen: (cell: ValueCell) => void;
+	onClose: () => void;
 }) => {
 	// What the values are is said once when every value that draws something is the same kind; a none says nothing of it.
 	const drawing = row.cells.filter((c) => c.value !== NO_COLOR);
@@ -117,7 +140,17 @@ const Row = ({
 	const same = first !== undefined && drawing.every((c) => c.kind === first.kind && c.tokens.join() === first.tokens.join());
 	const shared = same ? kindOf(first, name, others) : null;
 	const cell = (c: ValueCell, i: number) => (
-		<Cell key={i} property={row.property} cell={c} note={same ? null : kindOf(c, name, others)} tried={tried(c)} onOpen={() => onOpen(c)} />
+		<Cell
+			key={i}
+			property={row.property}
+			cell={c}
+			note={same ? null : kindOf(c, name, others)}
+			tried={tried(c)}
+			open={editing === c}
+			editor={editor(c)}
+			onOpen={() => onOpen(c)}
+			onClose={onClose}
+		/>
 	);
 	return (
 		<div data-value-row={row.property} className="token-group">
@@ -179,6 +212,15 @@ export const ComponentValues = ({
 		if (token) onEditToken(token);
 		else setEditing({ property, cell });
 	};
+	// A value of its own's control, to be drawn under its cell.
+	const editor = (property: ValueProperty) => (cell: ValueCell) => (
+		<ValueEditor
+			property={property}
+			cell={cell}
+			tried={tried(property)(cell)}
+			onTry={(value) => trying.onTry(triedId(property, cell), value === null ? null : { property, value, targets: cell.targets })}
+		/>
+	);
 	const tokenName = (path: string) => {
 		const t = byPath.get(path);
 		return t ? labelOf(t) : path;
@@ -193,7 +235,7 @@ export const ComponentValues = ({
 			{values.state === 'failed' ? (
 				<p className="quiet">Its values could not be read: {values.error}</p>
 			) : values.state !== 'read' ? (
-				<p className="quiet">{WHY_NO_COLOR[values.state](name)}</p>
+				<p className="quiet">{WHY_NONE[values.state](name)}</p>
 			) : (
 				<>
 					<p className="quiet" data-values-from>
@@ -211,24 +253,20 @@ export const ComponentValues = ({
 						</p>
 					) : (
 						values.rows[mode]?.map((row) => (
-							<Row key={row.property} row={row} name={tokenName} others={others} tried={tried(row.property)} onOpen={open(row.property)} />
+							<Row
+								key={row.property}
+								row={row}
+								name={tokenName}
+								others={others}
+								tried={tried(row.property)}
+								editing={editing?.property === row.property ? editing.cell : null}
+								editor={editor(row.property)}
+								onOpen={open(row.property)}
+								onClose={() => setEditing(null)}
+							/>
 						))
 					)}
 				</>
-			)}
-			{editing && (
-				<ValueEditor
-					property={editing.property}
-					cell={editing.cell}
-					tried={tried(editing.property)(editing.cell)}
-					onTry={(value) =>
-						trying.onTry(
-							triedId(editing.property, editing.cell),
-							value === null ? null : { property: editing.property, value, targets: editing.cell.targets },
-						)
-					}
-					onClose={() => setEditing(null)}
-				/>
 			)}
 		</section>
 	);
