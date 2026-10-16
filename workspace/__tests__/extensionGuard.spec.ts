@@ -199,13 +199,15 @@ describe('the extension’s sources', () => {
 		expect(INK.pin.toLowerCase()).toBe(brand);
 	});
 
-	it('pad the text under a card’s picture on all four sides, from one name, for every card (projects and components alike)', () => {
+	it('pad the text under a card’s picture at its sides and bottom from one name, and sit it under the picture by the card’s own gap, for every card (projects and components alike)', () => {
 		const css = files()
 			.find((f) => f.path.endsWith('styles.css'))!
 			.text.replace(/\/\*[\s\S]*?\*\//g, '');
 		expect(css).toMatch(/--dsnr-card-text-pad:\s*8px/);
 		const rule = (selector: string) => css.split('}').find((b) => b.trim().startsWith(selector)) ?? '';
-		expect(rule('.card-text {')).toMatch(/padding:\s*var\(--dsnr-card-text-pad\);/);
+		// No padding above: the name sits close under its picture, by the card's gap alone.
+		expect(rule('.card-text {')).toMatch(/padding:\s*0 var\(--dsnr-card-text-pad\) var\(--dsnr-card-text-pad\);/);
+		expect(rule('.card {')).toMatch(/gap:\s*8px;/);
 	});
 
 	it('divide the design system’s sets from one another, in the semantic colors and in the palette alike, with one line that reads in any theme', () => {
