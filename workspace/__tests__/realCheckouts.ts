@@ -13,6 +13,12 @@ const beside = (name: string) => resolve(__dirname, '..', '..', '..', name);
 export const REAL_LIBRARY = process.env.FUI_ROOT ?? beside('flock-react-component-lib');
 /** The second design system (Phase 4), Primer React, a monorepo: `PRIMER_ROOT`, or `primer-react` beside this repository. */
 export const REAL_PRIMER = process.env.PRIMER_ROOT ?? beside('primer-react');
+/**
+ * Two libraries styled by Tailwind (Phase 5.5), Tremor's, which put their values in classes: Tailwind 3's
+ * (`TREMOR3_ROOT`, or `tremor-npm` beside this repository) and Tailwind 4's (`TREMOR4_ROOT`, or `tremor-raw`).
+ */
+export const REAL_TREMOR3 = process.env.TREMOR3_ROOT ?? beside('tremor-npm');
+export const REAL_TREMOR4 = process.env.TREMOR4_ROOT ?? beside('tremor-raw');
 /** A product's checkout: `COKE_ROOT`, or `flock-coke` beside this repository. */
 export const REAL_COKE = process.env.COKE_ROOT ?? beside('flock-coke');
 
@@ -32,6 +38,11 @@ export const libraryMissing = realDevelop === null ? `no clone of the design sys
 export const primerMissing = existsSync(join(REAL_PRIMER, 'node_modules', '@storybook', 'react', 'package.json'))
 	? null
 	: `no clone of primer/react with its packages installed at ${REAL_PRIMER} (set PRIMER_ROOT)`;
+/** Why a Tremor's cannot, or null: its clone, with its packages installed. */
+const tremorMissing = (root: string, name: string): string | null =>
+	existsSync(join(root, 'node_modules', '@storybook', 'react', 'package.json')) ? null : `no clone of ${name} with its packages installed at ${root}`;
+export const tremor3Missing = tremorMissing(REAL_TREMOR3, 'tremorlabs/tremor-npm (set TREMOR3_ROOT)');
+export const tremor4Missing = tremorMissing(REAL_TREMOR4, 'tremorlabs/tremor (set TREMOR4_ROOT)');
 /** Why Coke's cannot, or null. */
 export const cokeMissing = existsSync(join(REAL_COKE, '.dsnr', 'workspace.json'))
 	? null

@@ -19,7 +19,9 @@ already changes that package's styles (a theme's override of it), not in the pac
 
 Use what the code already uses: its theme and the overrides it keeps there, its helpers (a spacing function, a size table), its
 units. **A token is reached the way the code reaches theme values** (the theme object, the library's own way of saying "the
-shared radius"), never by copying its value. A raw value only where nothing in the code gives it, and say so.
+shared radius"), never by copying its value. A raw value only where nothing in the code gives it, and say so. **A value the
+code writes as a class** (a utility class that draws a size or a colour, `px-3`) is changed as a class: the one on its own
+scale that draws the value, else the framework's way of writing an exact value as a class; never a style rule added beside it.
 
 ## 3. The smallest change that does it
 
