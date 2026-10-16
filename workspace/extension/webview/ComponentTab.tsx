@@ -6,6 +6,7 @@ import { undeclared } from '../../src/shared/wcag';
 import { TokenChangesProvider, useTokenChangesFor } from '../../src/renderer/tokenChanges';
 import { useStoryPreview } from '../../src/renderer/useStoryPreview';
 import type { ComponentLink } from '../src/messages';
+import { ChangeReach } from './ChangeReach';
 import { ComponentSections } from './ComponentSections';
 import { StoryFrame } from './StoryFrame';
 import { TokenEditor } from './TokenEditor';
@@ -93,7 +94,7 @@ export const ComponentTab = ({ id }: { id: string }) => {
 				<TryingNote count={edits.length} />
 				{tried.size > 0 && (
 					<p className="quiet" data-trying-values>
-						Trying {plural(tried.size, 'value')} of its own in its stories: nothing is saved.{' '}
+						Trying {plural(tried.size, 'value')} of its own in its stories, on its own instances only: nothing is saved.{' '}
 						<button type="button" className="link" onClick={() => setTried(new Map())}>
 							Reset all
 						</button>
@@ -104,6 +105,12 @@ export const ComponentTab = ({ id }: { id: string }) => {
 						<Stories component={component} commit={ready.commit} edits={edits} tried={[...tried.values()]} />
 					</div>
 					<aside className="component-aside">
+						<ChangeReach
+							edits={edits}
+							component={component}
+							components={ready.components}
+							onOpen={(other) => vscode().postMessage({ type: 'open-component', id: other })}
+						/>
 						<ComponentSections
 							component={component}
 							components={ready.components}

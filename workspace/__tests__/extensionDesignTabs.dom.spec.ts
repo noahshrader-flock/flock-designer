@@ -490,6 +490,75 @@ describe('a component’s tab', () => {
 		expect(details.textContent).toContain('WCAG 1.4.3');
 	});
 
+	describe('what a token change moves (Phase 3)', () => {
+		const RED = [{ path: 'tone.pineGreen.50', value: '#C80000' }];
+		const moved = (over: Record<string, unknown> = {}) => ({
+			state: 'ready',
+			moved: [
+				{
+					file: BUTTON,
+					changes: [{ mode: 'light', property: 'background', variant: 'primary', from: 'rgb(16, 128, 98)', to: 'rgb(200, 0, 0)', instances: 6 }],
+					inside: false,
+				},
+				{
+					file: STORY('FSIconButton'),
+					changes: [{ mode: 'dark', property: 'radius', variant: 'sm', from: '8px', to: '12px', instances: 2 }],
+					inside: false,
+				},
+				{ file: STORY('FSTextField'), changes: [], inside: true },
+			],
+			unchanged: 40,
+			notDrawn: [STORY('FSSelect')],
+			...over,
+		});
+		const part = () => section('Moved by the change');
+
+		it('is not there, and not asked for, while no token change is tried', async () => {
+			await analysed();
+			expect(part()).toBeNull();
+			expect(calls('changeReach')).toHaveLength(0);
+		});
+
+		it('is asked for with the change being tried, and says it is drawing every component until it is answered', async () => {
+			await analysed();
+			await say({ type: 'token-edits', edits: RED });
+			expect(calls('changeReach').at(-1)?.args).toEqual([RED]);
+			expect(part()?.textContent).toContain('Drawing every component with the change');
+		});
+
+		it('names each component the change moves, with what changed as the Values say it, and how many it does not move', async () => {
+			await analysed();
+			await say({ type: 'token-edits', edits: RED });
+			await answer('changeReach', moved());
+			const reach = part() as HTMLElement;
+			expect(reach.querySelector('[data-reach-summary]')?.textContent).toBe(
+				'It moves 3 components; 40 unchanged, in their stories drawn. 1 component did not draw, so cannot be said.',
+			);
+			// This component first, as itself; the others by name, each opening its own tab.
+			const here = reach.querySelector(`[data-moved="${BUTTON}"]`) as HTMLElement;
+			expect(here.querySelector('h3')?.textContent).toBe('FSButtonThis one');
+			expect(here.querySelector('.value-cell')?.textContent).toBe('Background · primary#108062 → #C80000');
+			const icon = reach.querySelector(`[data-moved="${STORY('FSIconButton')}"]`) as HTMLElement;
+			expect(icon.querySelector('.value-cell')?.textContent).toBe('Radius · sm · dark8px → 12px');
+			await press(icon.querySelector('h3 button') as HTMLElement);
+			expect(sent.at(-1)).toEqual({ type: 'open-component', id: STORY('FSIconButton') });
+			// Moved in a part its values do not read: said as that.
+			expect(reach.querySelector(`[data-moved="${STORY('FSTextField')}"]`)?.textContent).toContain('in a part its values do not read');
+		});
+
+		it('says when the change moves nothing, and when it could not be drawn', async () => {
+			await analysed();
+			await say({ type: 'token-edits', edits: RED });
+			await answer('changeReach', moved({ moved: [], unchanged: 44, notDrawn: [] }));
+			expect(part()?.querySelector('[data-reach-summary]')?.textContent).toBe(
+				'It moves no component, in their stories drawn: 44 components unchanged.',
+			);
+			await say({ type: 'token-edits', edits: [{ path: 'tone.pineGreen.50', value: '#000000' }] });
+			await answer('changeReach', { state: 'failed', error: 'the change did not build' });
+			expect(part()?.textContent).toContain('the change did not build');
+		});
+	});
+
 	describe('trying its values in its stories (Phase 2)', () => {
 		/** The tab with its stories drawn and its values read, and what its stories' frame is told. */
 		const tryingOpen = async (over: Record<string, unknown> = {}) => {
@@ -521,7 +590,9 @@ describe('a component’s tab', () => {
 			const cell = values().querySelector('[data-value-row="height"] [data-tried]') as HTMLElement;
 			expect(cell.querySelector('.value-cell')?.textContent).toBe('sm30px');
 			expect(cell.querySelector('[data-changed-mark]')).not.toBeNull();
-			expect(document.querySelector('[data-trying-values]')?.textContent).toContain('Trying 1 value of its own in its stories: nothing is saved.');
+			expect(document.querySelector('[data-trying-values]')?.textContent).toContain(
+				'Trying 1 value of its own in its stories, on its own instances only: nothing is saved.',
+			);
 		});
 
 		it('is a small popover under its value, not a dialog over the panel: no scrim, the button says it is open', async () => {

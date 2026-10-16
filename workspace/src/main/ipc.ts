@@ -80,9 +80,10 @@ export interface IpcContext {
 	/** Which branch a change to the voice and tone is kept on (T9). */
 	voiceBranchFile: string;
 	/**
-	 * Which tokens each component draws with (T6), and so what is got ready in the background: given for tests.
+	 * Which tokens each component draws with (T6), what a change reaches (Phase 3), and so what is got ready in the
+	 * background: given for tests.
 	 */
-	componentTokens?: Pick<ComponentTokens, 'of' | 'warm' | 'pictures'>;
+	componentTokens?: Pick<ComponentTokens, 'of' | 'warm' | 'pictures' | 'reach'>;
 	/** Where the pictures of the components are kept (P5): the app's own folder. */
 	componentPicturesRoot: string;
 	/** How the pictures are taken: a fingerprint, so only pictures taken that way are shown. */

@@ -27,6 +27,8 @@ export const registerDesignSystem = (d: IpcDeps): void => {
 		if (typeof file !== 'string' || file.length === 0 || file.length > 500) throw new Error('A component is asked for by its story file.');
 		return componentTokens.of(file);
 	});
+	// What a change reaches is asked for by the change, checked as a change always is.
+	handle('changeReach', [arg.unknown], (edits) => componentTokens.reach(tokenEditsOf(edits)));
 	handle('tokenBranch', [], () => tokenBranches.current());
 	handle('saveTokens', [arg.unknown], (edits) => tokenBranches.save(tokenEditsOf(edits)));
 	handle('proposeTokens', [], () => tokenBranches.propose());

@@ -5,6 +5,7 @@ import type { CommentAnchor, CommentRef, ReviewComment } from '../domain/comment
 import type {
 	Catalog,
 	ComponentPictures,
+	ChangeReach,
 	ComponentTokens,
 	ConnectedDesignSystems,
 	StoryPreview,
@@ -69,6 +70,8 @@ export interface WorkspaceApi {
 	storyPreview(edits: TokenEdit[]): Promise<Result<StoryPreview>>;
 	/** Which tokens a component draws with, by its story file (T6); `building` while every story is drawn, the first time. */
 	componentTokens(file: string): Promise<Result<ComponentTokens>>;
+	/** What a token change being tried reaches: each component it moves, and how (Phase 3); `building` while it is drawn. */
+	changeReach(edits: TokenEdit[]): Promise<Result<ChangeReach>>;
 	/** The pictures of the shown design system's components, for the grid view (P5). */
 	componentPictures(): Promise<Result<ComponentPictures>>;
 	/** The branch a change to the shown design system's tokens is kept on, or null when none has been saved (T4). */
@@ -240,6 +243,7 @@ export const INVOKE = [
 	'designSystems',
 	'storyPreview',
 	'componentTokens',
+	'changeReach',
 	'componentPictures',
 	'tokenBranch',
 	'saveTokens',

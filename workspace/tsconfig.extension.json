@@ -35,6 +35,7 @@
 		"src/renderer/useTokenBranch.ts",
 		"src/renderer/useFrameHeight.ts",
 		"src/renderer/useStoryPreview.ts",
+		"src/renderer/useChangeReach.ts",
 		"src/renderer/useComponentTokens.ts",
 		"src/renderer/useCatalogRead.ts",
 		"src/renderer/useColorField.ts",
