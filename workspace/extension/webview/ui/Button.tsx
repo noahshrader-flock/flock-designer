@@ -35,7 +35,7 @@ export const Button = ({
 		{external ? (
 			<>
 				<span>{children}</span>
-				<Icon name="link-external" />
+				<Icon name="link-external" size="small" />
 			</>
 		) : (
 			children

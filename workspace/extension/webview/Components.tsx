@@ -9,21 +9,11 @@ import { type MenuItem, Menu } from './ui/Menu';
 import { Row } from './ui/Row';
 import { SearchBox } from './ui/SearchBox';
 import { Section } from './ui/Section';
+import { Thumbnail } from './ui/Thumbnail';
 import { ViewOptions } from './ui/ViewOptions';
 import { NoMatches } from './ui/NoMatches';
 import { layoutSection } from './layouts';
 import type { View } from './vscode';
-
-/**
- * A component's picture (P5 of the design system plan): its first story, drawn by the browser on this machine; its place
- * kept until there is one, said to be drawing while a pass is.
- */
-const Picture = ({ src, drawing, className }: { src: string | undefined; drawing: boolean; className: string }) =>
-	src ? (
-		<img data-part="picture" alt="" className={className} src={src} />
-	) : (
-		<span data-part="picture" data-drawing={drawing || undefined} aria-hidden="true" className={className} />
-	);
 
 /**
  * The design system's components (6.1): a search and Grid or List, as the projects have, then a section for each group in
@@ -59,9 +49,9 @@ export const ComponentsView = ({
 		};
 		const picture = pictures.pictures[c.id];
 		return view === 'grid' ? (
-			<Card key={c.id} {...shared} picture={<Picture src={picture} drawing={pictures.drawing} className="card-picture" />} />
+			<Card key={c.id} {...shared} picture={<Thumbnail src={picture} loading={pictures.drawing} className="card-picture" />} />
 		) : (
-			<Row key={c.id} {...shared} start={<Picture src={picture} drawing={pictures.drawing} className="picture" />} />
+			<Row key={c.id} {...shared} start={<Thumbnail src={picture} loading={pictures.drawing} className="picture" />} />
 		);
 	};
 	return (

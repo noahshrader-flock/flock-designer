@@ -1,4 +1,5 @@
 import { type ChangeEvent, type ReactNode, useId } from 'react';
+import { Icon } from './Icon';
 
 /** What a control is given to be named and described by its field: its id, and the hint that describes it, if it has one. */
 interface FieldControl {
@@ -75,7 +76,7 @@ export const TextArea = ({
 	/>
 );
 
-/** VS Code's dropdown. */
+/** VS Code's dropdown, with its chevron drawn inset from the border (the browser's own sits against it). */
 export const Select = ({
 	value,
 	onChange,
@@ -87,11 +88,14 @@ export const Select = ({
 	options: { value: string; label: string }[];
 	control: FieldControl;
 }) => (
-	<select {...control} className="input" value={value} onChange={(e: ChangeEvent<HTMLSelectElement>) => onChange(e.target.value)}>
-		{options.map((o) => (
-			<option key={o.value} value={o.value}>
-				{o.label}
-			</option>
-		))}
-	</select>
+	<span className="select">
+		<select {...control} className="input" value={value} onChange={(e: ChangeEvent<HTMLSelectElement>) => onChange(e.target.value)}>
+			{options.map((o) => (
+				<option key={o.value} value={o.value}>
+					{o.label}
+				</option>
+			))}
+		</select>
+		<Icon name="chevron-down" size="small" />
+	</span>
 );

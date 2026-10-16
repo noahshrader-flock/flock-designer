@@ -20,13 +20,17 @@
 	--dsnr-radius-inner: 4px;
 	--dsnr-radius-small: 2px;
 	--dsnr-radius-large: 8px;
+	/* A thumbnail's corner, in a grid (a card's picture) and in a list (a row's), with the wash over it. */
+	--dsnr-radius-thumb-card: 10px;
+	--dsnr-radius-thumb: 8px;
 	/*
 	 * Control sizes, two: the default (the search box, the toggle, a button, an icon button) and the small, for what sits in
 	 * a row, a card or a header. A new control takes one of them, never a number of its own.
 	 */
 	--dsnr-control: 32px;
 	--dsnr-control-small: 22px;
-	/* An icon beside a line of small text: the icon font's own size is 16px. */
+	/* An icon beside a button's words (small) or a line of small text (xs): the icon font's own size is 16px. */
+	--dsnr-icon-small: 14px;
 	--dsnr-icon-xs: 12px;
 	/* The room around the text under a card's picture, on all four sides, for every card. */
 	--dsnr-card-text-pad: 8px;
@@ -67,7 +71,11 @@ body.vscode-high-contrast-light {
 	--dsnr-outline: var(--vscode-contrastBorder);
 }
 
-/* An icon's extra small size, over the icon font's own (its rule is first, with the same weight). */
+/* An icon's small and extra small sizes, over the icon font's own (its rule is first, with the same weight). */
+.codicon.icon-small {
+	font-size: var(--dsnr-icon-small);
+}
+
 .codicon.icon-xs {
 	font-size: var(--dsnr-icon-xs);
 }
@@ -190,9 +198,7 @@ body {
 }
 
 .search .search-input {
-	height: var(--dsnr-control);
-	padding: 0 8px 0 28px;
-	border-radius: var(--dsnr-radius);
+	padding-left: 28px;
 }
 
 /* An action in a line of text, as VS Code's links are. */
@@ -276,8 +282,36 @@ body {
 	aspect-ratio: 16 / 9;
 	box-sizing: border-box;
 	border: 1px solid var(--dsnr-border);
-	border-radius: var(--dsnr-radius);
+	border-radius: var(--dsnr-radius-thumb);
 	background: var(--vscode-editorWidget-background);
+}
+
+/* A thumbnail's place while its picture is read or drawn: a soft light sweeping across it, still when less motion is asked for. */
+[data-part='picture'][data-loading] {
+	background: linear-gradient(
+		100deg,
+		var(--vscode-editorWidget-background) 30%,
+		color-mix(in srgb, var(--vscode-foreground) 10%, var(--vscode-editorWidget-background)) 50%,
+		var(--vscode-editorWidget-background) 70%
+	);
+	background-size: 300% 100%;
+	animation: dsnr-shimmer 1.6s ease-in-out infinite;
+}
+
+@keyframes dsnr-shimmer {
+	from {
+		background-position: 100% 0;
+	}
+	to {
+		background-position: 0 0;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	[data-part='picture'][data-loading] {
+		background: var(--vscode-editorWidget-background);
+		animation: none;
+	}
 }
 
 /*
@@ -576,7 +610,7 @@ body {
 	aspect-ratio: 2 / 1;
 	box-sizing: border-box;
 	border: 1px solid var(--dsnr-border);
-	border-radius: var(--dsnr-radius-large);
+	border-radius: var(--dsnr-radius-thumb-card);
 	background: var(--vscode-editorWidget-background);
 	object-fit: cover;
 }
@@ -608,11 +642,11 @@ body {
 }
 
 .card-media .thumb-wash {
-	border-radius: var(--dsnr-radius-large);
+	border-radius: var(--dsnr-radius-thumb-card);
 }
 
 .thumb .thumb-wash {
-	border-radius: var(--dsnr-radius);
+	border-radius: var(--dsnr-radius-thumb);
 }
 
 .row-button:hover .thumb-wash,
@@ -729,25 +763,45 @@ body {
 	font-size: 0.92em;
 }
 
-/* VS Code's input box and dropdown. */
+/* VS Code's input box and dropdown, drawn as the search box is: one height, one corner, one inset, wherever it is. */
 .input {
 	box-sizing: border-box;
 	width: 100%;
-	padding: 4px 6px;
+	height: var(--dsnr-control);
+	padding: 0 8px;
 	border: 1px solid var(--dsnr-border);
-	border-radius: var(--dsnr-radius-small);
+	border-radius: var(--dsnr-radius);
 	color: var(--vscode-input-foreground);
 	background: var(--vscode-input-background);
 	font: inherit;
 }
 
+/* A dropdown's own chevron is hidden for one drawn 8px in from the border, as the search box's icon is. */
+.select {
+	position: relative;
+	display: flex;
+	align-items: center;
+}
+
+.select .codicon {
+	position: absolute;
+	right: 8px;
+	color: var(--vscode-dropdown-foreground);
+	pointer-events: none;
+}
+
 select.input {
+	appearance: none;
+	padding-right: 28px;
 	color: var(--vscode-dropdown-foreground);
 	border-color: var(--vscode-dropdown-border, var(--dsnr-contrast-border));
 	background: var(--vscode-dropdown-background);
 }
 
 textarea.input {
+	height: auto;
+	min-height: 96px;
+	padding: 6px 8px;
 	resize: vertical;
 }
 
