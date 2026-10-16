@@ -401,7 +401,7 @@ describe('dialogs and menus, in the panel', () => {
 			await showOpen();
 			await press(menuFor(0));
 			const groups = [...document.querySelectorAll('[role="menu"] > *')].map((el) => (el.matches('[role="separator"], hr') ? '|' : el.textContent));
-			expect(groups.join(',')).toBe('Copy link,Open published page,|,Open locally,Build,|,Assign folder…');
+			expect(groups.join(',')).toBe('Copy link,|,Open published page,Open locally,|,Build,|,Assign folder…');
 		});
 
 		it('opens a project’s review in the browser from it: the same review, asked of the extension to open outside VS Code', async () => {
@@ -537,18 +537,18 @@ describe('codebase work, in the panel', () => {
 	const inDialog = (name: string) => [...dialog()!.querySelectorAll('button')].find((b) => b.textContent === name) as HTMLButtonElement;
 	const closeX = () => dialog()!.querySelector('[aria-label="Close"]') as HTMLButtonElement;
 
-	it('offers what a project has, in groups: its links, what opens it with the next stage (build, or handoff, never both), the code on GitHub, and its folder', async () => {
+	it('offers what a project has, in groups: its link to copy, where it opens, what runs it, with the next stage (build, or handoff, never both), the code on GitHub, and its folder', async () => {
 		await showOpen(OPEN, WITH_CODE);
 		const dividers = () => document.querySelectorAll('[role="separator"]').length;
 		await press(menuOf('Zone coverage'));
 		// A prototype that is in code too: it is built, so Handoff, not Build.
 		expect(items()).toEqual(['Copy link', 'Open published page', 'Open locally', 'Run locally', 'Hand off', 'View on GitHub', 'Assign folder…']);
-		expect(dividers()).toBe(3);
+		expect(dividers()).toBe(4);
 		await elsewhere();
 		await press(menuOf('Alert history'));
 		// A prototype only: not built yet, so Build, and no GitHub to open.
 		expect(items()).toEqual(['Copy link', 'Open published page', 'Open locally', 'Build', 'Assign folder…']);
-		expect(dividers()).toBe(2);
+		expect(dividers()).toBe(3);
 		await elsewhere();
 		await press(menuOf('Roles in code'));
 		// Code only: nothing of a prototype to open or link, and Handoff.
