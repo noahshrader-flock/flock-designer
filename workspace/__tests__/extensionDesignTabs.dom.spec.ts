@@ -343,8 +343,9 @@ describe('a component’s tab', () => {
 			property: 'radius',
 			by: 'shape',
 			cells: [
-				{ variant: 'pill', value: '3.35544e+07px 3.35544e+07px 3.35544e+07px 3.35544e+07px', kind: 'own', tokens: [], instances: 1 },
-				{ variant: 'square', value: '6px 6px 6px 6px', kind: 'own', tokens: [], instances: 1 },
+				// As Values reads them: written short, a corner that makes its end round said as full.
+				{ variant: 'pill', value: 'full', kind: 'own', tokens: [], instances: 1 },
+				{ variant: 'square', value: '6px', kind: 'own', tokens: [], instances: 1 },
 			],
 		};
 		await analysed({ values: { state: 'read', instances: 2, unmarked: 0, rows: { light: [...rows, radius], dark: null } } });
@@ -1027,6 +1028,13 @@ describe('a component’s tab', () => {
 				{ property: 'padding', value: '0px 12px 0px 12px', targets: Array.from({ length: 12 }, (_, i) => `padding:null:${i}`) },
 			]);
 			expect(values().querySelector('[data-value-row="padding"] [data-tried] .value-drawn')?.textContent).toBe('0px 12px');
+			// Made one value by the drag, its two parts stay two sliders, so it can be split again.
+			await type(slider('Left and right'), '0');
+			expect([...(popover()?.querySelectorAll('input[type="range"]') ?? [])].map((r) => r.getAttribute('aria-label'))).toEqual([
+				'Top and bottom',
+				'Left and right',
+			]);
+			await type(slider('Left and right'), '12');
 			await press(change('Background · ghost'));
 			const hex = popover()?.querySelector('input[aria-label="Hex"]') as HTMLInputElement;
 			expect(hex).not.toBeNull();

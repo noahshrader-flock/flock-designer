@@ -184,7 +184,7 @@ const pairs = (plain: Instance[], tagged: Instance[] | undefined): tagged is Ins
 	tagged.every((t, i) => t.story === plain[i]?.story && JSON.stringify(t.props) === JSON.stringify(plain[i]?.props));
 
 /** One mode's drawings of a story file: as the library has it, and with the tags (null when that did not draw, or there were none). */
-export interface ModeDrawings {
+interface ModeDrawings {
 	plain: Drawn;
 	tagged: Drawn | null;
 }
@@ -228,6 +228,7 @@ export const readValues = (light: ModeDrawings, dark: ModeDrawings | undefined, 
 	return {
 		state: 'read',
 		instances: instances.length,
+		...(plain.rootPx === undefined ? {} : { rootPx: plain.rootPx }),
 		rows: { light: rowsIn(light, { tags, tokens, mode: 'light' }), dark: rowsIn(dark, { tags, tokens, mode: 'dark' }) },
 		unmarked: tags.unmarked,
 	};

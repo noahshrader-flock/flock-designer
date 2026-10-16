@@ -29,6 +29,14 @@ export const NOT_VARIANT =
 export const FIND_INSTANCES = `(component) => {
 	const fiberOf = (el) => { const k = Object.keys(el).find((x) => x.startsWith('__reactFiber$')); return k ? el[k] : null; };
 	const isIt = (f) => f.type === component || f.elementType === component;
+	// Of the two copies React keeps of what it drew, the one its root holds now: an element can be reached through the other,
+	// whose props are what it drew before (a tab no longer selected). A copy is the root's when its way up ends at the root
+	// fiber its root says is current.
+	const current = (f) => {
+		let top = f;
+		while (top.return) top = top.return;
+		return top.stateNode?.current === top || !f.alternate ? f : f.alternate;
+	};
 	const notVariant = ${NOT_VARIANT};
 	// What an instance was given to draw, as React elements: its children, however nested.
 	const given = (f) => {
@@ -74,7 +82,7 @@ export const FIND_INSTANCES = `(component) => {
 					continue;
 				}
 				const props = {};
-				for (const [k, v] of Object.entries(f.memoizedProps ?? {})) {
+				for (const [k, v] of Object.entries(current(f).memoizedProps ?? {})) {
 					if (notVariant.test(k) || !['string', 'number', 'boolean'].includes(typeof v) || String(v).length > 32) continue;
 					props[k] = String(v);
 				}
@@ -89,6 +97,15 @@ export const FIND_INSTANCES = `(component) => {
 }`;
 
 /**
+ * An element's border colour, from its computed style, as the page reads it: the first side that has a border (an
+ * underline is a border at the bottom only); null for one with none. One rule for every script that reads a border.
+ */
+export const BORDER_COLOR = `(s) => {
+	const side = ['top', 'right', 'bottom', 'left'].find((side) => parseFloat(s.getPropertyValue('border-' + side + '-width')) > 0);
+	return side ? s.getPropertyValue('border-' + side + '-color') : null;
+}`;
+
+/**
  * An instance's values, from its top element, as the browser computes them (Phase 1): its height, the box it takes up, and
  * each other property from its longhands (`CSS_OF`), its parts in full, a border's colour only where it has a border.
  */
@@ -96,7 +113,11 @@ export const READ_VALUES = `(el) => {
 	const s = getComputedStyle(el);
 	const values = { height: +el.getBoundingClientRect().height.toFixed(2) + 'px' };
 	for (const [property, { names, parts }] of Object.entries(${JSON.stringify(CSS_OF)})) {
-		if (property === 'border' && !(parseFloat(s.borderTopWidth) > 0)) continue;
+		if (property === 'border') {
+			const color = (${BORDER_COLOR})(s);
+			if (color !== null) values.border = color;
+			continue;
+		}
 		values[property] = (parts === 1 ? names.slice(0, 1) : names).map((name) => s.getPropertyValue(name)).join(' ');
 	}
 	return values;
@@ -135,7 +156,9 @@ export const TRY_VALUES = `(() => {
 		if (parts && parts.length !== of.names.length) return;
 		of.names.forEach((name, i) => set(el, name, parts ? parts[i] : value));
 	};
-	// Once a frame however many changes come at once: what the stories draw, never the styles set here.
+	// Once a frame however many changes come at once: what the stories draw (an element added, or its class changed, as a tab
+	// selected changes which variant an instance is), never the styles set here, which are inline.
+	const WATCHED = { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] };
 	let pending = false;
 	const observer = new MutationObserver(() => {
 		if (pending) return;
@@ -151,7 +174,7 @@ export const TRY_VALUES = `(() => {
 			const byKey = new Map(find(of.component).instances.map((i) => [i.key, i.el]));
 			for (const { property, value, targets } of tried) for (const key of targets) { const el = byKey.get(key); if (el) write(el, property, value); }
 		}
-		if (root()) observer.observe(root(), { childList: true, subtree: true });
+		if (root()) observer.observe(root(), WATCHED);
 	}
 	addEventListener('message', (e) => {
 		if (e.source !== parent) return;
@@ -160,5 +183,5 @@ export const TRY_VALUES = `(() => {
 		tried = asked;
 		apply();
 	});
-	if (root()) observer.observe(root(), { childList: true, subtree: true });
+	if (root()) observer.observe(root(), WATCHED);
 })();`;

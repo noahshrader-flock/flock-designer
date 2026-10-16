@@ -1,11 +1,10 @@
 /**
- * How a story file is drawn to read what it draws (T6 of the design system plan), whichever shell draws it: the app's
- * hidden windows (`storyMeasure.ts`) or a headless browser (`chromeHeadless.ts`). The script the page runs, the size it is
- * drawn at, and how long a story may take; and how a run's files are shared between a few pages and put back in order.
+ * How a story file is drawn to read what it draws (T6 of the design system plan), in a headless browser
+ * (`chromeHeadless.ts`). The script the page runs, the size it is drawn at, and how long a story may take; and how a run's files are shared between a few pages and put back in order.
  */
 import { PREVIEW_COMPONENT, PREVIEW_SHOW } from '../../shared/catalog';
 import { axeFound, axeRun } from './accessibilityCheck';
-import { FIND_INSTANCES, READ_VALUES } from './pageInstances';
+import { BORDER_COLOR, FIND_INSTANCES, READ_VALUES } from './pageInstances';
 import type { Drawn, Measure, Mode, Vary } from './componentTokens';
 import { within } from './within';
 
@@ -98,7 +97,7 @@ export const readDrawn = (
 		const s = getComputedStyle(el);
 		add(drawn.colors, s.backgroundColor);
 		add(drawn.colors, s.color);
-		if (parseFloat(s.borderTopWidth) > 0) add(drawn.colors, s.borderTopColor);
+		add(drawn.colors, (${BORDER_COLOR})(s));
 		add(drawn.radii, s.borderTopLeftRadius);
 		for (const k of ['paddingTop', 'paddingLeft', 'marginTop', 'marginLeft', 'rowGap', 'columnGap']) add(drawn.spacing, s[k]);
 	}

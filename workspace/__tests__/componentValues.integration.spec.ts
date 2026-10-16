@@ -22,7 +22,7 @@ import { REAL_LIBRARY, describeWith, libraryMissing } from './realCheckouts';
  */
 
 const PAGE_SCRIPT = `
-import { cloneElement, createElement as h, forwardRef } from 'react';
+import { cloneElement, createElement as h, forwardRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { flushSync } from 'react-dom';
 
@@ -39,7 +39,18 @@ const Tip = ({ children }) => cloneElement(children, { title: 'More' });
 // One that is drawn inside another of itself: each is an instance, the outer first.
 const Box = ({ tone, children }) => h('div', { style: { padding: tone === 'outer' ? 16 : 4 } }, children ?? 'Box');
 
+// A field drawn with a border at the bottom only, as an underlined input is.
+const Field = () => h('input', { style: { border: 0, borderBottom: '2px solid rgb(1, 2, 3)', height: 32 } });
+// Tabs whose selected one changes its props and its class alone, on the same element, as a tab selected does.
+const Tab = ({ selected, onClick, children }) => h('button', { className: selected ? 'tab on' : 'tab', onClick, style: { height: 30 } }, children);
+const Tabs = () => {
+	const [on, setOn] = useState(0);
+	return h('div', null, ['One', 'Two'].map((name, i) => h(Tab, { key: name, selected: on === i, onClick: () => setOn(i) }, name)));
+};
+
 const files = {
+	'field.stories.tsx': { meta: { component: Field }, stories: { Default: () => h(Field) } },
+	'tabs.stories.tsx': { meta: { component: Tab }, stories: { Default: () => h(Tabs) } },
 	'button.stories.tsx': {
 		meta: { component: Button, args: { size: 'md' }, argTypes: { variant: {} } },
 		stories: {
@@ -166,6 +177,46 @@ describe.skipIf(findChrome() === null)('a component’s instances, in the browse
 });
 
 describe.skipIf(findChrome() === null)('values tried on a component’s instances, in the browser on this machine', () => {
+	it('reads a border from its first side that has one, as an underline is drawn', async () => {
+		const [[field]] = (await headless.measure([{ base, mode: 'light', files: ['field.stories.tsx'] }])) as [
+			[NonNullable<Awaited<ReturnType<typeof headless.measure>>[number][number]>],
+		];
+		expect(field.instances?.[0]?.values.border).toBe('rgb(1, 2, 3)');
+		expect(field.colors['rgb(1, 2, 3)']).toBeGreaterThan(0);
+	});
+
+	it('sets a value tried on the instance that is now its variant, when a story changes which one is by its props and class alone', async () => {
+		const { inChrome } = await import('./realChrome');
+		await inChrome(async (browser) => {
+			const tab = await browser.newPage();
+			await tab.setContent(`<iframe src="${base}" style="width:800px;height:600px"></iframe>`);
+			const frame = await tab.waitForFrame((f) => f.url() === base);
+			await frame.waitForFunction((name) => typeof (window as unknown as Record<string, unknown>)[name] === 'function', {}, PREVIEW_SHOW);
+			await frame.evaluate((name) => (window as unknown as Record<string, (x: string) => Promise<void>>)[name]?.('tabs.stories.tsx'), PREVIEW_SHOW);
+			const heights = () =>
+				frame.evaluate(() => [...document.querySelectorAll('button.tab')].map((b) => Math.round(b.getBoundingClientRect().height)));
+			const settled = () => frame.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
+			const selected = await frame.evaluate(
+				(find, component) => {
+					const of = (window as unknown as Record<string, { component: unknown } | null>)[component];
+					const found = (0, eval)(find)(of?.component) as { instances: { key: string; props: Record<string, string> }[] };
+					return found.instances.find((i) => i.props.selected === 'true')?.key;
+				},
+				FIND_INSTANCES,
+				PREVIEW_COMPONENT,
+			);
+			await tab.evaluate((key, v) => document.querySelector('iframe')?.contentWindow?.postMessage({ [key]: v }, '*'), PREVIEW_TRY, [
+				{ property: 'height', value: '44px', targets: [selected as string] },
+			] as never);
+			await settled();
+			expect(await heights()).toEqual([44, 30]);
+			// The second selected: the same two elements, their class changed; the value tried moves with the variant.
+			await frame.evaluate(() => (document.querySelectorAll('button.tab')[1] as HTMLButtonElement).click());
+			await settled();
+			expect(await heights()).toEqual([30, 44]);
+		});
+	}, 60_000);
+
 	it('sets each on the instances it is for alone, over the library’s own, again when the stories draw anew, and takes them off', async () => {
 		const { inChrome } = await import('./realChrome');
 		await inChrome(async (browser) => {

@@ -1,5 +1,5 @@
 import { COLOR_VALUES, type DesignToken, type ValueCell, type ValueProperty } from './contract';
-import { colorAsRead, hexOf, isDark, pixelsOf } from './tokens';
+import { PX_PER_REM, colorAsRead, hexOf, isDark, pixelsOf } from './tokens';
 import { allParts, shortValue } from './valueParts';
 
 /**
@@ -37,17 +37,24 @@ const MOST_FOLLOWED = 3;
  * The tokens a component's own value is the value of, which it could follow (Phase 4.6): a radius drawn the same on every
  * corner, as a radius token is; a colour, as a colour token is, in light (what the Values are read in), never a Dark one.
  */
-export const tokensItCouldFollow = (property: ValueProperty, value: string, tokens: DesignToken[]): DesignToken[] => {
+export const tokensItCouldFollow = (property: ValueProperty, value: string, tokens: DesignToken[], perRem = PX_PER_REM): DesignToken[] => {
 	const equal = (t: DesignToken): boolean => {
 		if (COLOR_VALUES.has(property)) return t.kind === 'color' && !isDark(t) && hexOf(value) !== null && hexOf(t.value) === hexOf(value);
 		if (property !== 'radius') return false;
 		// The same length however it is written: a 4px corner is a 0.25rem token's.
-		const corners = new Set(allParts(value, 4).map(pixelsOf));
-		return t.category === 'Shape' && corners.size === 1 && pixelsOf(t.value) !== null && corners.has(pixelsOf(t.value));
+		const corners = new Set(allParts(value, 4).map((c) => pixelsOf(c, perRem)));
+		return t.category === 'Shape' && corners.size === 1 && pixelsOf(t.value, perRem) !== null && corners.has(pixelsOf(t.value, perRem));
 	};
 	return tokens.filter(equal).slice(0, MOST_FOLLOWED);
 };
 
-/** The tokens a component's value could be made to follow: only a value of its own (one that is a token's already follows it). */
-export const followsOf = (property: ValueProperty, cell: Pick<ValueCell, 'kind' | 'value'>, tokens: DesignToken[]): DesignToken[] =>
-	cell.kind === 'own' ? tokensItCouldFollow(property, cell.value, tokens) : [];
+/**
+ * The tokens a component's value could be made to follow: only a value of its own (one that is a token's already follows it),
+ * a rem being `perRem` pixels on the page it is drawn on.
+ */
+export const followsOf = (
+	property: ValueProperty,
+	cell: Pick<ValueCell, 'kind' | 'value'>,
+	tokens: DesignToken[],
+	perRem = PX_PER_REM,
+): DesignToken[] => (cell.kind === 'own' ? tokensItCouldFollow(property, cell.value, tokens, perRem) : []);

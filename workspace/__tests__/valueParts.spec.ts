@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CSS_OF, allParts, asTried, isFull, partsIn, shortParts, shortValue } from '../src/shared/valueParts';
+import { CSS_OF, allParts, asTried, isFull, partsIn, pxOf, shortParts, shortValue } from '../src/shared/valueParts';
 
 /** How a component's drawn value is written, one way for the page, the analysis and the control (adjusting a component). */
 describe('a value’s parts', () => {
@@ -37,7 +37,8 @@ describe('a radius that makes its ends round (Phase 5.5)', () => {
 		expect(shortValue('radius', '3.35544e+07px 3.35544e+07px 3.35544e+07px 3.35544e+07px')).toBe('full');
 		expect(shortValue('radius', '9999px 9999px 0px 0px')).toBe('full full 0px 0px');
 		expect(shortValue('radius', '8px 8px 8px 8px')).toBe('8px');
-		expect(['9999px', '3.35544e+07px', '9998px', '0.5rem', 'full'].map(isFull)).toEqual([true, true, false, false, false]);
+		// As drawn, and as said: a value read is said short, a full corner as the word.
+		expect(['9999px', '3.35544e+07px', 'full', '9998px', '0.5rem'].map(isFull)).toEqual([true, true, true, false, false]);
 		// Only a radius: a padding as large is a size.
 		expect(shortValue('padding', '9999px')).toBe('9999px');
 	});
@@ -56,5 +57,12 @@ describe('a value as a control writes it when it is tried', () => {
 			null,
 			null,
 		]);
+	});
+});
+
+describe('a length in pixels, as the browser computes one', () => {
+	it('is read with its sign and an exponent, and nothing else is one', () => {
+		expect(['8px', '-2.5px', '3.35544e+07px', '.5px'].map(pxOf)).toEqual([8, -2.5, 33554400, 0.5]);
+		expect(['8', '1rem', 'full', 'px', ''].map(pxOf)).toEqual([null, null, null, null, null]);
 	});
 });

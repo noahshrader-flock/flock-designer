@@ -13,7 +13,7 @@ export const NO_COLOR = 'none';
 /**
  * The CSS longhands each property is read from and tried on, and how many parts its value is written with: a padding's four
  * sides, a radius's four corners and a gap's row and column each a part, in this order; a font size and a colour one, which a
- * border's colour is set on every side with (and read from its top). A height is the element's box, read and set apart.
+ * border's colour is set on every side with (and read from its first side that has a border, `BORDER_COLOR`). A height is the element's box, read and set apart.
  */
 export const CSS_OF: Record<Exclude<ValueProperty, 'height'>, { names: string[]; parts: 1 | 2 | 4 }> = {
 	padding: { names: ['padding-top', 'padding-right', 'padding-bottom', 'padding-left'], parts: 4 },
@@ -42,24 +42,32 @@ export const allParts = (value: string, n: 1 | 2 | 4): string[] => {
 export const asTried = (property: ValueProperty, value: string): string | null => {
 	if (COLOR_VALUES.has(property)) return hexOf(value.trim());
 	const parts = allParts(value.trim().replace(/\s+/g, ' '), partsIn(property));
-	return parts.every((p) => /^-?\d*\.?\d+px$/.test(p)) ? parts.join(' ') : null;
+	return parts.every((p) => pxOf(p) !== null) ? parts.join(' ') : null;
+};
+
+/** A length's pixels as the browser computes one (`8px`, `-2.5px`, `3.35544e+07px`); null for any other. */
+export const pxOf = (part: string): number | null => {
+	const m = /^(-?\d*\.?\d+(?:e[+-]?\d+)?)px$/.exec(part);
+	return m ? Number(m[1]) : null;
 };
 
 /** A value as it is said: written short, the parts of one written in full (`0px 10px 0px 10px` is `0px 10px`). */
 export const shortValue = (property: ValueProperty, value: string): string => {
 	const n = partsIn(property);
-	const parts = allParts(value, n).map((p) => (property === 'radius' && isFull(p) ? 'full' : p));
+	const parts = allParts(value, n).map((p) => (property === 'radius' && isFull(p) ? FULL : p));
 	return n === 1 ? (parts[0] as string) : shortParts(parts).join(' ');
 };
 
 /** A length beyond any element's size: a pill's `9999px`, and `calc(infinity * 1px)` (Tailwind's `rounded-full`) as drawn. */
 const FULL_PX = 9999;
+/** How such a corner is said. */
+const FULL = 'full';
 
 /**
- * Whether a radius's corner is one that makes its end round, whatever the element's size: said as "full", and given no
- * control, since no length of it is one a person picks (Phase 5.5).
+ * Whether a radius's corner is one that makes its end round, whatever the element's size, as drawn or as said ("full"): given
+ * no control, since no length of it is one a person picks (Phase 5.5).
  */
-export const isFull = (part: string): boolean => Number(/^([\d.]+(?:e[+-]?\d+)?)px$/.exec(part)?.[1] ?? 0) >= FULL_PX;
+export const isFull = (part: string): boolean => part === FULL || (pxOf(part) ?? 0) >= FULL_PX;
 
 /** A value's parts written as short as CSS writes them: four sides that are one, one; top and bottom and the sides, two. */
 export const shortParts = (parts: string[]): string[] => {

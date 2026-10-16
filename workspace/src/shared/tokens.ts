@@ -31,11 +31,14 @@ export const lengthParts = (value: string): { number: number; unit: 'px' | 'rem'
 /** How many pixels a rem is, as the browser's default font size makes it. */
 export const PX_PER_REM = 16;
 
-/** A length in pixels, as it is drawn; null for one that is not a length, or whose size depends on where it is used (`em`). */
-export const pixelsOf = (value: string): number | null => {
+/**
+ * A length in pixels, as it is drawn on a page whose rem is `perRem` pixels; null for one that is not a length, or whose size
+ * depends on where it is used (`em`).
+ */
+export const pixelsOf = (value: string, perRem = PX_PER_REM): number | null => {
 	const length = lengthParts(value);
 	if (length === null || length.unit === 'em') return null;
-	return length.unit === 'rem' ? length.number * PX_PER_REM : length.number;
+	return length.unit === 'rem' ? length.number * perRem : length.number;
 };
 
 /**

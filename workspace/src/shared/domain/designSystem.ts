@@ -274,7 +274,14 @@ export type ComponentValues =
 	| { state: 'wraps' }
 	| { state: 'not-drawn' }
 	| { state: 'failed'; error: string }
-	| { state: 'read'; instances: number; rows: Record<Theme, ValueRow[] | null>; unmarked: number };
+	| {
+			state: 'read';
+			instances: number;
+			rows: Record<Theme, ValueRow[] | null>;
+			unmarked: number;
+			/** How many pixels a rem is on the page drawn (16 unless the library sets another): what a token in rem is compared in. */
+			rootPx?: number;
+	  };
 
 /**
  * The pictures of the shown design system's components, for the grid view (P5): each component's picture by its story

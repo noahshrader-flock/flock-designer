@@ -63,3 +63,11 @@ describe('what a value could follow, as its control offers it', () => {
 		expect(followsOf('radius', { ...own, kind: 'derived' }, TOKENS)).toEqual([]);
 	});
 });
+
+describe('a token in rem, on a page whose rem is not 16 pixels', () => {
+	it('is compared in the rem the page draws, so a 62.5% root follows its own tokens', () => {
+		const rem = [{ ...TOKENS.find((t) => t.path === 'radius')!, path: 'radius.half', value: '0.5rem' }];
+		expect(tokensItCouldFollow('radius', '5px 5px 5px 5px', rem, 10).map((t) => t.path)).toEqual(['radius.half']);
+		expect(tokensItCouldFollow('radius', '8px 8px 8px 8px', rem, 10)).toEqual([]);
+	});
+});

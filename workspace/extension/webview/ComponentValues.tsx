@@ -288,7 +288,10 @@ export const ComponentValues = ({
 				tried={following === null ? tried(property)(cell) : null}
 				onTry={(value) => trying.onTry(id, value === null ? null : { property, value, targets: cell.targets })}
 				// A value of its own the same as a token's can follow it (4.6): drawn as it is, written by the agent.
-				follows={followsOf(property, cell, [...byPath.values()]).map((t) => ({ path: t.path, name: labelOf(t) }))}
+				follows={followsOf(property, cell, [...byPath.values()], values.state === 'read' ? values.rootPx : undefined).map((t) => ({
+					path: t.path,
+					name: labelOf(t),
+				}))}
 				following={following === null ? null : tokenName(following)}
 				onFollow={(path) => trying.onTry(id, { property, value: cell.value, targets: cell.targets, follows: path })}
 			/>

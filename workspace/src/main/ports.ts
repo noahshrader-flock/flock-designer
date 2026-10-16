@@ -6,8 +6,8 @@ import type { DrawCover } from './services/projectCovers';
 import type { ShareTools } from './services/share';
 
 /**
- * What only a shell can do for the core without being seen: draw a page out of sight. In the app, hidden windows
- * (`storyMeasure.ts`, `accessibilityWindow.ts`, `coverWindow.ts`); in another shell, its own headless browser.
+ * What only a shell can do for the core without being seen: draw a page out of sight, in a headless browser
+ * (`chromeHeadless.ts`).
  */
 export interface Headless {
 	/** How stories are drawn to read what they draw (T6). */

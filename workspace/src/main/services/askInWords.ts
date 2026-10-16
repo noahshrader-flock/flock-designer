@@ -39,11 +39,12 @@ export interface Trying {
 /** How many times an answer that breaks the rules goes back to the agent, with why, before the person is told. */
 const MOST_ROUNDS = 2;
 
-/** A component's value, named for the agent (`v1`), with the instances a value tried on it is set on. */
+/** A component's value, named for the agent (`v1`), with the instances a value tried on it is set on, and a rem's pixels where it is drawn. */
 interface Cell {
 	id: string;
 	row: ValueRow;
 	cell: ValueRow['cells'][number];
+	perRem: number | undefined;
 }
 
 /** A token as the agent is told of it: its path, its name, its kind, its value, and what it points at. */
@@ -54,11 +55,11 @@ const tokenLine = (t: DesignToken): string =>
  * A component's value as the agent is told of it: its name, its property, its variant, what it draws, what it is made of, and
  * the tokens it could follow, as its control offers them (`followsOf`).
  */
-const cellLine = ({ id, row, cell }: Cell, tokens: DesignToken[], name: (path: string) => string): string => {
+const cellLine = ({ id, row, cell, perRem }: Cell, tokens: DesignToken[], name: (path: string) => string): string => {
 	const made =
 		cell.kind === 'token' ? `the token ${cell.tokens.map(name).join(', ')}` : cell.kind === 'derived' ? 'worked out from a token' : 'its own';
 	const variant = cell.variant === null ? '' : `${row.by ?? 'variant'} ${cell.variant}, `;
-	const could = followsOf(row.property, cell, tokens).map((t) => t.path);
+	const could = followsOf(row.property, cell, tokens, perRem).map((t) => t.path);
 	return `- ${id}: ${VALUE_NAMES[row.property]} (${row.property}), ${variant}${saidValue(row.property, cell.value)}, ${made}${could.length > 0 ? `; could follow ${could.join(', ')}` : ''}`;
 };
 
@@ -151,7 +152,7 @@ export const changesIn = (answer: Record<string, unknown>, tokens: DesignToken[]
 		const { property } = at.row;
 		// Made to follow a token as its control makes one: one the control offers, and drawn as it is until it is written.
 		if (typeof o.follows === 'string') {
-			if (!followsOf(property, at.cell, tokens).some((t) => t.path === o.follows)) return { why: `${at.id} cannot follow ${o.follows}` };
+			if (!followsOf(property, at.cell, tokens, at.perRem).some((t) => t.path === o.follows)) return { why: `${at.id} cannot follow ${o.follows}` };
 			tried.push({ property, value: at.cell.value, targets: at.cell.targets, follows: o.follows });
 			continue;
 		}
@@ -184,8 +185,10 @@ export class AskInWords {
 		if (file !== null) {
 			const of = await this.deps.tokens.of(file);
 			if (of.state !== 'ready') throw new Error('Its values are not read yet: ask again once they are shown.');
-			const rows = of.values.state === 'read' ? (of.values.rows.light ?? []) : [];
-			cells = rows.flatMap((row) => row.cells.map((cell) => ({ row, cell }))).map((c, i) => ({ ...c, id: `v${i + 1}` }));
+			const read = of.values.state === 'read' ? of.values : null;
+			cells = (read?.rows.light ?? [])
+				.flatMap((row) => row.cells.map((cell) => ({ row, cell })))
+				.map((c, n) => ({ ...c, id: `v${n + 1}`, perRem: read?.rootPx }));
 		}
 		const dir = mkdtempSync(join(tmpdir(), 'dsnr-ask-'));
 		try {

@@ -205,7 +205,7 @@ const STATE_MS = 20_000;
  * with no hidden windows: a prototype's picture and its accessibility check, done as the app's hidden windows do them
  * (`coverWindow.ts`, `accessibilityWindow.ts`), one page at a time. The browser is started when first needed and kept,
  * as starting it takes a second; `close` ends it. With no browser here, each says what to install. And the Design System
- * tab's stories (`measure`), drawn as the app's `storyMeasure.ts` draws them, from the same script (`storyDrawing.ts`).
+ * tab's stories (`measure`), drawn from the script every drawing runs (`storyDrawing.ts`).
  */
 export const chromeHeadless = ({
 	find = () => findChrome(),
@@ -275,7 +275,7 @@ export const chromeHeadless = ({
 		});
 
 	/**
-	 * One page's share of a run (as the app's `storyMeasure.ts` draws one window's): loaded once, in the run's mode, at twice
+	 * One page's share of a run: loaded once, in the run's mode, at twice
 	 * the size for pictures, with axe in it when the run checks accessibility, then each file drawn in turn. A story that
 	 * does not draw in time is null, and the rest go on; a page that does not load is null for all of its share.
 	 */

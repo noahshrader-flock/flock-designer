@@ -53,10 +53,12 @@ export const ValueEditor = ({
 	const n = partsIn(property);
 	const drawn = allParts(cell.value, n);
 	const full = allParts(tried ?? cell.value, n);
-	// Changed as it is written short, one slider for each part a person sees; the rest follow it, as CSS reads it.
-	const parts = shortParts(full);
-	const names = PARTS[property]?.[parts.length] ?? [VALUE_NAMES[property]];
-	const was = shortParts(drawn).length === parts.length ? shortParts(drawn) : parts;
+	// Changed as it is written short, one slider for each part a person sees, as many as the drawn value or the tried one has
+	// (never fewer while one is dragged, so two parts made equal stay two); the rest follow them, as CSS reads it.
+	const count = Math.max(shortParts(drawn).length, shortParts(full).length);
+	const parts = full.slice(0, count);
+	const names = PARTS[property]?.[count] ?? [VALUE_NAMES[property]];
+	const was = drawn.slice(0, count);
 	const title = valueTitle(property, cell.variant);
 	return (
 		<Popover label={title}>

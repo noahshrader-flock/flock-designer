@@ -7,6 +7,7 @@ import type { DesignToken, TokenEdit } from '../../shared/contract';
 import type { Theme } from '../../shared/prototypeTheme';
 import { isEditable } from '../../shared/primitives';
 import { PX_PER_REM, isDark, lengthParts, placeOf, writtenWith } from '../../shared/tokens';
+import { pxOf } from '../../shared/valueParts';
 
 /** A tag's blue, the same for every color tag: its red and green are the token's number. */
 const TAG_BLUE = 0x5a;
@@ -87,7 +88,7 @@ export const asTag = (color: string): string | null => {
 
 /** The size tag a computed size (`26px`) is a whole multiple of, if any. */
 export const sizeToken = (value: string, sizes: Tags['sizes']): string | null => {
-	const px = Math.abs(Number(/^(-?[\d.]+)px$/.exec(value)?.[1] ?? NaN));
+	const px = Math.abs(pxOf(value) ?? NaN);
 	if (!Number.isFinite(px) || px === 0) return null;
 	return sizes.find((s) => px % s.px === 0 && px / s.px <= MOST_MULTIPLE)?.path ?? null;
 };
