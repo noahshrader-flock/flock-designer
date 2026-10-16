@@ -73,6 +73,9 @@ export interface TabsShown {
 	components: string[];
 }
 
+/** None in front: how every page starts, until the extension says otherwise. */
+export const NO_TABS_SHOWN: TabsShown = { projects: [], components: [] };
+
 /**
  * What the extension sends the page: an answer to a call, by its id, an event of the core's, what is open (`Context`), or
  * that the projects changed (one was made), so the list is read again, or to open one of its dialogs (`Panels.show`).

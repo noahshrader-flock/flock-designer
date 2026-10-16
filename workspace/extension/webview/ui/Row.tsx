@@ -52,7 +52,12 @@ export const Row = ({
 	);
 	const shape = meta || start ? 'row row-two-lines' : 'row';
 	return (
-		<li role="listitem" className={onOpen ? 'row-item' : shape} {...(current ? { 'data-current': '' } : {})} {...(context ? { 'data-vscode-context': JSON.stringify(context) } : {})}>
+		<li
+			role="listitem"
+			className={onOpen ? 'row-item' : shape}
+			{...(current ? { 'data-current': '' } : {})}
+			{...(context ? { 'data-vscode-context': JSON.stringify(context) } : {})}
+		>
 			{onOpen ? (
 				<button type="button" className={`${shape} row-button`} onClick={onOpen} {...(current ? { 'aria-current': true } : {})}>
 					{parts}

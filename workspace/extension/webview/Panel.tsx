@@ -8,7 +8,7 @@ import { DesignSystem, type DesignSystemDoes } from './DesignSystem';
 import { PanelDialogs } from './Dialogs';
 import { onHost, workspace } from './host';
 import { Projects, type ProjectsRead } from './Projects';
-import type { CodebaseAction, PanelDialog, Review, TabsShown } from '../src/messages';
+import { type CodebaseAction, NO_TABS_SHOWN, type PanelDialog, type Review, type TabsShown } from '../src/messages';
 import { OpenTabsProvider } from './openTabs';
 import { Loading } from './ui/Loading';
 import { Toggle } from './ui/Toggle';
@@ -153,7 +153,7 @@ export const Panel = () => {
 	// The dialog over the panel, if one is open: opened by what is pressed here or by the extension (its title bar's +).
 	const [dialog, setDialog] = useState<PanelDialog | null>(null);
 	// The tabs in front in the editor, which the projects and components that stand for them are marked by.
-	const [tabs, setTabs] = useState<TabsShown>({ projects: [], components: [] });
+	const [tabs, setTabs] = useState<TabsShown>(NO_TABS_SHOWN);
 	useEffect(() => {
 		const stop = onHost((m) => {
 			if (m.type === 'context') {

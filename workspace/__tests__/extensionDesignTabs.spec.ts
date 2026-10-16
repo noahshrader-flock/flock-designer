@@ -9,9 +9,25 @@ import type { DesignTab } from '../extension/src/messages';
  */
 
 const world = () => {
-	const made: { title: string; revealed: number; html: string; visible: boolean; changed: () => void; dispose: () => void; said: ((raw: unknown) => void)[] }[] = [];
+	const made: {
+		title: string;
+		revealed: number;
+		html: string;
+		visible: boolean;
+		changed: () => void;
+		dispose: () => void;
+		said: ((raw: unknown) => void)[];
+	}[] = [];
 	const create = vi.fn((title: string) => {
-		const tab = { title, revealed: 0, html: '', visible: true, changed: (): void => undefined, dispose: (): void => undefined, said: [] as ((raw: unknown) => void)[] };
+		const tab = {
+			title,
+			revealed: 0,
+			html: '',
+			visible: true,
+			changed: (): void => undefined,
+			dispose: (): void => undefined,
+			said: [] as ((raw: unknown) => void)[],
+		};
 		made.push(tab);
 		return {
 			get title() {

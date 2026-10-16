@@ -2,7 +2,7 @@ import type * as VsCode from 'vscode';
 import { type EventSink, type Route, served } from '../../src/main/handle';
 import type { EventName, InvokeName, Result, TokenEdit, WorkspaceApi } from '../../src/shared/contract';
 import { createApi } from '../../src/shared/workspaceApi';
-import type { ComponentLink, HostMessage, PanelMessage, TabsShown } from './messages';
+import { type ComponentLink, type HostMessage, NO_TABS_SHOWN, type PanelMessage, type TabsShown } from './messages';
 
 type Webview = Pick<VsCode.Webview, 'postMessage'>;
 type Call = Extract<PanelMessage, { type: 'call' }>;
@@ -31,7 +31,7 @@ export class Panels {
 	private readonly listening = new Set<Webview>();
 	private held: HostMessage | null = null;
 	/** The tabs in front, as the last said: a page that listens later is told it (`ready`). */
-	private tabs: TabsShown = { projects: [], components: [] };
+	private tabs: TabsShown = NO_TABS_SHOWN;
 	private readonly listeners = new Map<string, Set<(payload: unknown) => void>>();
 
 	add(webview: Webview): VsCode.Disposable {
@@ -72,7 +72,8 @@ export class Panels {
 		this.held = null;
 		if (held) void webview.postMessage(held);
 		// A page starts with none in front, so there is nothing to say until one is.
-		if (this.tabs.projects.length + this.tabs.components.length > 0) void webview.postMessage({ type: 'tabs-shown', ...this.tabs } satisfies HostMessage);
+		if (this.tabs.projects.length + this.tabs.components.length > 0)
+			void webview.postMessage({ type: 'tabs-shown', ...this.tabs } satisfies HostMessage);
 	}
 
 	/** The tabs in front changed: every page is told, so the panel marks what is open in the editor. */

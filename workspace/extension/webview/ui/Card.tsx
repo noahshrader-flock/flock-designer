@@ -48,7 +48,12 @@ export const Card = ({
 		</>
 	);
 	return (
-		<li role="listitem" className="card-item" {...(current ? { 'data-current': '' } : {})} {...(context ? { 'data-vscode-context': JSON.stringify(context) } : {})}>
+		<li
+			role="listitem"
+			className="card-item"
+			{...(current ? { 'data-current': '' } : {})}
+			{...(context ? { 'data-vscode-context': JSON.stringify(context) } : {})}
+		>
 			{onOpen ? (
 				<button type="button" className="card row-button" onClick={onOpen} {...(current ? { 'aria-current': true } : {})}>
 					{parts}

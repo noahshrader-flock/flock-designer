@@ -362,14 +362,23 @@ describe('a review tab’s answers to its page', () => {
 
 describe('the review tabs', () => {
 	const fakeVsCode = () => {
-		const panels: { title: string; html: string; revealed: number; active: boolean; visible: boolean; disposed: () => void; changed: () => void }[] = [];
+		const panels: { title: string; html: string; revealed: number; active: boolean; visible: boolean; disposed: () => void; changed: () => void }[] =
+			[];
 		return {
 			panels,
 			api: {
 				ViewColumn: { Active: -1 },
 				window: {
 					createWebviewPanel: (_type: string, title: string) => {
-						const panel = { title, html: '', revealed: 0, active: true, visible: true, disposed: (): void => undefined, changed: (): void => undefined };
+						const panel = {
+							title,
+							html: '',
+							revealed: 0,
+							active: true,
+							visible: true,
+							disposed: (): void => undefined,
+							changed: (): void => undefined,
+						};
 						panels.push(panel);
 						return {
 							get title() {
