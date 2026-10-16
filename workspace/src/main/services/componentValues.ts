@@ -1,5 +1,5 @@
 /**
- * A component's drawn values (Phase 1 of adjusting a component, DESIGN_SYSTEM_PLAN.md): each instance its stories draw,
+ * A component's drawn values (Phase 1 of adjusting a component, DESIGN_SYSTEM.md): each instance its stories draw,
  * read in the page (`storyDrawing.ts`) as the library has it and with every token tagged (T6's two light drawings), put
  * together into one row for each property. **Nothing is read from the component's source:** a value is a token's when the
  * token's tag shows through in the tagged drawing, the component's own when the tags leave it as it is, and worked out from

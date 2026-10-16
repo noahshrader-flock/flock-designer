@@ -345,7 +345,7 @@ export interface CatalogComponent {
 	source: string;
 }
 
-/** The previews of the library's stories, built from its branch (DESIGN_SYSTEM_PLAN.md, P1). */
+/** The previews of the library's stories, built from its branch (DESIGN_SYSTEM.md, P1). */
 export type StoryPreview =
 	/** Built: a story file's page is `base` with `?file=<its path>`. */
 	| { state: 'ready'; base: string }

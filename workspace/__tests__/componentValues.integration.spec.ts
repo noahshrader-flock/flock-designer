@@ -300,7 +300,7 @@ describe.skipIf(findChrome() === null)('values tried on a component’s instance
 
 /**
  * The real library on this machine, through the whole pass the tab's analysis makes (T6): every story drawn as the library
- * has it and with every token tagged. What the spike measured by hand (DESIGN_SYSTEM_PLAN, Phase 0) is what the tab says.
+ * has it and with every token tagged. What the spike measured by hand (dsnr.md's Change log) is what the tab says.
  */
 describeWith(libraryUnbuilt, 'against the real library on origin/develop', () => {
 	it.skipIf(findChrome() === null)(

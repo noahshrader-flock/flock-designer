@@ -2,7 +2,7 @@ import { COLOR_VALUES, type ValueProperty } from './domain/designSystem';
 import { hexOf } from './tokens';
 
 /**
- * How a component's drawn value is written (adjusting a component, DESIGN_SYSTEM_PLAN.md), one way for every reader: the
+ * How a component's drawn value is written (adjusting a component, DESIGN_SYSTEM.md), one way for every reader: the
  * page that reads it and tries it (`pageInstances.ts`), the analysis that says it (`componentValues.ts`), and the control
  * that changes it (`ValueEditor.tsx`).
  */

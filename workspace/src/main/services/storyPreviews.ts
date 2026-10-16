@@ -31,7 +31,7 @@ import { type Stylesheets, stylesheetsFor } from './stylesheets';
 import { HOST } from '../../shared/vocabulary';
 
 /**
- * Previews of the component library's stories, for the Design System tab (DESIGN_SYSTEM_PLAN.md, P1).
+ * Previews of the component library's stories, for the Design System tab (DESIGN_SYSTEM.md, P1).
  *
  * **The library's own stories, run as its Storybook runs them,** and nothing written here per component: the stories
  * are the catalog's, each rendered with Storybook's portable stories (`composeStories`) and the library's own

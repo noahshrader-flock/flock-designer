@@ -1,5 +1,5 @@
 /**
- * Asking in words (Phase 6 of adjusting a component, DESIGN_SYSTEM_PLAN.md; T8): "make the primary a little warmer", "make
+ * Asking in words (Phase 6 of adjusting a component, DESIGN_SYSTEM.md; T8): "make the primary a little warmer", "make
  * the small size 28px high", made into **the same changes the controls make** (token edits, values tried on a component's
  * instances), which then go where those go: tried in the frame, what else moved, Save, Propose. Nothing here is a change of
  * its own kind.

@@ -1,5 +1,5 @@
 /**
- * A component's declared props (Phase 5 of adjusting a component, DESIGN_SYSTEM_PLAN.md): its own list of the cases it
+ * A component's declared props (Phase 5 of adjusting a component, DESIGN_SYSTEM.md): its own list of the cases it
  * draws, where its stories show only the ones someone wrote. Read by the TypeScript compiler from the library's files at the
  * commit drawn (the previews' copy, with its packages' declarations), **as data**: the program is made here, with the
  * library's own `tsconfig.json` for how its imports resolve, and nothing of the library's (its own TypeScript, its compiler

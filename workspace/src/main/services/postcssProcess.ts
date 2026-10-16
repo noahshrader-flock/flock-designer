@@ -1,9 +1,9 @@
 /**
  * The library's own PostCSS configuration, run as its Storybook runs it (Phase 5.5 of adjusting a component,
- * DESIGN_SYSTEM_PLAN.md): Tailwind's, Panda's, autoprefixer, whichever it names, with nothing here naming any of them. **Its configuration is code, so it is run locked down:** in a process of its own, on the runtime this app
+ * DESIGN_SYSTEM.md): Tailwind's, Panda's, autoprefixer, whichever it names, with nothing here naming any of them. **Its configuration is code, so it is run locked down:** in a process of its own, on the runtime this app
  * runs on, under Node's permission model, reading only the library's copy, the clone its packages are in, and this app's
  * own PostCSS; with no environment. It may load native plugins (Tailwind 4's scanner, Lightning CSS), as the library's own
- * Storybook does: those, and the network, are not held by the permission model (DESIGN_SYSTEM_PLAN.md's Risks).
+ * Storybook does: those, and the network, are not held by the permission model (DESIGN_SYSTEM.md's Risks).
  *
  * One process per build, asked for each stylesheet in turn, so a plugin's own cache (Tailwind's of the classes it has
  * found) lasts the build's life, as it does in the library's Storybook.
@@ -194,7 +194,7 @@ export const postcssRun = (library: string, folder: string, config: string): Pos
 		const reads = [...new Set([copy, ...packages, own])];
 		const started = spawn(
 			process.execPath,
-			// Workers (a plugin's module hooks, Tailwind 4's) are held as it is; native plugins are not (DESIGN_SYSTEM_PLAN.md's Risks).
+			// Workers (a plugin's module hooks, Tailwind 4's) are held as it is; native plugins are not (DESIGN_SYSTEM.md's Risks).
 			[
 				'--permission',
 				'--allow-addons',

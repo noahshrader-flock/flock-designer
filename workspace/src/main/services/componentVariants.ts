@@ -1,5 +1,5 @@
 /**
- * A component drawn in every case its props declare (Phase 5 of adjusting a component, DESIGN_SYSTEM_PLAN.md): its stories show
+ * A component drawn in every case its props declare (Phase 5 of adjusting a component, DESIGN_SYSTEM.md): its stories show
  * the cases someone wrote; its props are its own list. Its declared props are read by the TypeScript compiler from the
  * commit's copy (`componentProps.ts`), one of its stories drawn with each value of each, in light (as the tab shows them), as
  * it is and with the tags, and read as its values are (`readValues`), so a size its stories never show is listed, drawn, and said to be a

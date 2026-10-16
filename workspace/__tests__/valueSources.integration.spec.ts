@@ -13,7 +13,7 @@ import { onRealLibrary } from './realLibrary';
 
 /**
  * Where a value of a component's own is written (Phase 4), found by its effect on the real libraries on this machine: Flock's
- * FUI, a TypeScript theme, as the spike found it by hand (DESIGN_SYSTEM_PLAN, Phase 0); and Primer React, a monorepo of CSS
+ * FUI, a TypeScript theme, as the spike found it by hand (dsnr.md's Change log); and Primer React, a monorepo of CSS
  * modules whose tokens come from a package, so the locator is not proved on Flock's alone.
  */
 const withLibrary = (system: ConnectedDesignSystem, check: (tokens: ComponentTokens, sources: ValueSources) => Promise<void>) =>

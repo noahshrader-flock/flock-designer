@@ -1,5 +1,5 @@
 /**
- * A component's instances in a preview page, found one way for every reader (adjusting a component, DESIGN_SYSTEM_PLAN.md):
+ * A component's instances in a preview page, found one way for every reader (adjusting a component, DESIGN_SYSTEM.md):
  * the drawing that measures them (`storyDrawing.ts`, Phase 1) and the preview page that tries a value on them (Phase 2), so
  * an instance measured is the instance a value is tried on. Each is page code, as source, run in the page.
  */

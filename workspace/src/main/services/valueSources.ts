@@ -1,6 +1,6 @@
 /**
  * Where the values tried on a component's instances are written, and what writing them reaches (Phase 4 of adjusting a
- * component, DESIGN_SYSTEM_PLAN.md), found in the background while they are tried, the newest only, so the tab says each
+ * component, DESIGN_SYSTEM.md), found in the background while they are tried, the newest only, so the tab says each
  * value's place, or why it cannot be saved, before Save.
  *
  * **Found by its effect** (`valueLocator.ts`): each place the drawn value is written is changed alone, on a build kept

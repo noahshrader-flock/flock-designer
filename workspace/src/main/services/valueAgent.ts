@@ -1,5 +1,5 @@
 /**
- * A value of a component's own written by the agent (Phase 4.5 of adjusting a component, DESIGN_SYSTEM_PLAN.md), where
+ * A value of a component's own written by the agent (Phase 4.5 of adjusting a component, DESIGN_SYSTEM.md), where
  * there is no literal to swap (MUI's own default, a size worked out from a padding and an icon), and a component's own
  * value made to follow a token (4.6). Spiked on FUI: small, idiomatic changes, in about thirty seconds each.
  *

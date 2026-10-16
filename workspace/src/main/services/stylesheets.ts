@@ -1,5 +1,5 @@
 /**
- * The library's stylesheets as its own Storybook makes them (Phase 5.5 of adjusting a component, DESIGN_SYSTEM_PLAN.md):
+ * The library's stylesheets as its own Storybook makes them (Phase 5.5 of adjusting a component, DESIGN_SYSTEM.md):
  * Sass for a `.scss`, then the library's own PostCSS configuration when it has one (`postcssProcess.ts`), for every
  * stylesheet the build loads; with neither, a stylesheet is esbuild's to read as it is. Nothing here knows what the
  * library styles with (Tailwind, Panda, a preset): that is its configuration's to say.

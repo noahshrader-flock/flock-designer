@@ -1,6 +1,6 @@
 /**
  * Where a value of a component's own is written in the library's source (Phase 4 of adjusting a component,
- * DESIGN_SYSTEM_PLAN.md), **found by its effect**, since the browser cannot say: what is drawn is hashed classes and
+ * DESIGN_SYSTEM.md), **found by its effect**, since the browser cannot say: what is drawn is hashed classes and
  * literals, with no address and no source maps. Every place the drawn value is written, in the design system's own files,
  * in any of the ways it may be (`28px`, `1.75rem`, `28` in a style object; a colour as hex, `rgb()` or its name), is a
  * candidate; each is changed alone, on a build kept open for it, to a value of DSNR's own (`probeFor`), and the component's
