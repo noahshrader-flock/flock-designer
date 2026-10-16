@@ -257,7 +257,7 @@ export const ipcDeps = ({
 	const valueAgent = new ValueAgent({
 		system: shownSystem,
 		tokens: componentTokens,
-		run: (cwd, task) => runToEnd(cwd, task),
+		run: (cwd, task, readOnly) => runToEnd(cwd, task, { readOnly }),
 		readStandard: (path) => readSkillText(path),
 	});
 	const valueSources = new ValueSources({ tokens: componentTokens, previews, measure: ports.headless.measure, agent: valueAgent });

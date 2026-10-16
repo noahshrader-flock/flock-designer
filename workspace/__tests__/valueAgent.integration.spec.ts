@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -27,8 +27,11 @@ const LIBRARY = {
 let home: string;
 let clone: string;
 let tasks: string[];
+/** What each run was given to read and never change. */
+let readable: string[][];
+let copies: { hasPackages: boolean }[];
 /** What each run of the stand-in agent writes into the copy it is run in, in turn, and what it says. */
-let runs: { files: Record<string, string>; said: string; held?: Promise<void> }[];
+let runs: { files: Record<string, string>; said: string; held?: Promise<void>; remove?: string[] }[];
 
 const write = (root: string, files: Record<string, string>) => {
 	for (const [path, text] of Object.entries(files)) {
@@ -82,12 +85,15 @@ const agent = () =>
 				return { reach: reachOf(built.order, drawings(LIBRARY), after, values), after };
 			},
 		},
-		run: async (cwd, task) => {
+		run: async (cwd, task, readOnly) => {
 			tasks.push(task);
+			readable.push(readOnly);
+			copies.push({ hasPackages: existsSync(join(cwd, 'node_modules')) });
 			const next = runs.shift();
 			if (!next) return { ok: false, said: 'no run' };
 			await next.held;
 			write(cwd, next.files);
+			for (const gone of next.remove ?? []) rmSync(join(cwd, gone));
 			return { ok: true, said: next.said };
 		},
 		readStandard: async (path) => (path === DESIGN_SYSTEM_CODE ? '# Changing a design system’s code\n\nIts own source only.' : ''),
@@ -124,6 +130,9 @@ beforeEach(() => {
 	g(upstream, 'push', '-q', 'origin', 'develop');
 	g(home, 'clone', '-q', join(home, 'remote.git'), clone);
 	tasks = [];
+	readable = [];
+	copies = [];
+	mkdirSync(join(clone, 'node_modules', '@mui', 'material'), { recursive: true });
 	runs = [];
 });
 afterEach(() => rmSync(home, { recursive: true, force: true }));
@@ -138,13 +147,17 @@ describe('the agent writing a value where there is nothing to swap (4.5)', () =>
 		expect(w).toEqual({
 			state: 'written',
 			files: new Map([[CSS, '.badge {\n  border-radius: 6px;\n}\n']]),
-			places: [{ file: CSS, line: 2, written: 'border-radius: 8px;', writes: 'border-radius: 6px;' }],
+			places: [{ file: CSS, line: 2, written: '', writes: '' }],
 			said: 'Its radius is its own.',
 		});
 		expect(tasks).toHaveLength(1);
 		expect(tasks[0]).toContain("Make Badge's radius draw 6px 6px 6px 6px instead of 8px.");
 		expect(tasks[0]).toContain(`drawn by its stories in ${BADGE}: Default (size=sm)`);
 		expect(tasks[0]).toContain('Its own source only.');
+		// Given the packages the library installs, to read and never to change: not copied in, where it could write them.
+		expect(readable).toEqual([[join(clone, 'node_modules')]]);
+		expect(copies[0]?.hasPackages).toBe(false);
+		expect(tasks[0]).toContain(`The packages it installs are in ${join(clone, 'node_modules')}, to read and never to change.`);
 		// The person's clone is as it was.
 		expect(g(clone, 'status', '--porcelain').trim()).toBe('');
 	});
@@ -170,8 +183,11 @@ describe('the agent writing a value where there is nothing to swap (4.5)', () =>
 		runs = [{ files: { [CSS]: '.badge {\n  border-radius: 6px;\n}\n', [BADGE]: '// changed\n' }, said: '' }];
 		expect(await written(agent(), SIX)).toMatchObject({
 			state: 'refused',
-			why: expect.stringMatching(/not the design system's own code \(src\/Badge\/Badge\.stories\.tsx\)/),
+			why: expect.stringMatching(/not the design system's own code to change \(src\/Badge\/Badge\.stories\.tsx\)/),
 		});
+		// Deleting a file of its own is not a value's change.
+		runs = [{ files: { [CSS]: '.badge {\n  border-radius: 6px;\n}\n' }, said: '', remove: [THEME] }];
+		expect(await written(agent(), SIX)).toMatchObject({ state: 'refused', why: expect.stringMatching(/\(src\/utils\/theme\.ts\)/) });
 		runs = [{ files: {}, said: 'Why: it is MUI’s.' }];
 		expect(await written(agent(), SIX)).toEqual({ state: 'refused', why: 'The agent changed nothing: it is MUI’s.' });
 	});
@@ -203,7 +219,7 @@ describe('the agent making a value follow a token (4.6)', () => {
 		runs = [same, same];
 		expect(await written(agent(), FOLLOW)).toEqual({
 			state: 'refused',
-			why: 'Written by the agent, it does not follow radius: with it at 13px, it draws 8px 8px 8px 8px, so it is not saved.',
+			why: 'Written by the agent, it does not follow radius: with it at 15px, it draws 8px 8px 8px 8px, so it is not saved.',
 		});
 	});
 });

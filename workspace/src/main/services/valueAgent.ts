@@ -10,22 +10,23 @@
  * what was asked; to follow a token, they draw as they did, and with the token changed they draw the token. When it does
  * not read back, the agent is told what it drew, once, and the result is checked again; else it is refused, in words.
  */
-import { execFileSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync } from 'node:fs';
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { ConnectedDesignSystem, DesignToken, TriedValue, ValuePlace } from '../../shared/contract';
-import { COLOR_VALUES, triedId } from '../../shared/contract';
+import { cellFor, triedId } from '../../shared/contract';
 import { allParts, partsIn } from '../../shared/valueParts';
-import { VALUE_NAMES } from '../../shared/valueNames';
+import { VALUE_NAMES, storyComponent } from '../../shared/valueNames';
 import type { RunEnded } from './agent';
 import type { CatalogReads } from './componentCatalog';
 import type { ComponentTokens, DrawnIndex } from './componentTokens';
 import { systemReads } from './designLibrary';
 import { readTokens } from './designTokens';
 import { editedFiles } from './tokenEdits';
+import { exportCommit, git } from './git';
 import { drawsOtherwise } from './valueReadBack';
-import { searchedFiles } from './valueLocator';
+import { probeFor, searchedFiles, writtenLike } from './valueLocator';
 
 /** The standard every run is given, as the app's tasks are given theirs (`readSkillText`). */
 export const DESIGN_SYSTEM_CODE = 'standards/design-system-code.md';
@@ -38,51 +39,62 @@ export interface ValueAgentDeps {
 	/** The design system shown, or null when none is connected or its clone is gone. */
 	system: () => ConnectedDesignSystem | null;
 	tokens: Pick<ComponentTokens, 'drawn' | 'asIs' | 'reachWith'>;
-	/** The agent, run to its end in a folder (`runToEnd`). */
-	run: (cwd: string, task: string) => Promise<RunEnded>;
+	/** The agent, run to its end in a folder (`runToEnd`), with folders it may read and never change. */
+	run: (cwd: string, task: string, readOnly: string[]) => Promise<RunEnded>;
 	readStandard: (path: string) => Promise<string>;
 }
 
 /** The commit an index was drawn for, from its key (`<commit>:<package>`). */
 const commitOf = (index: DrawnIndex): string => index.key.slice(0, index.key.indexOf(':'));
 
-/** A copy of the library at `commit`, with git, so what the agent writes is its diff against that commit. */
-const copyAt = (root: string, commit: string): string => {
-	const dir = mkdtempSync(join(tmpdir(), 'dsnr-value-'));
-	execFileSync('sh', ['-c', 'git -C "$0" archive --format=tar "$1" | tar -x -C "$2"', root, commit, dir]);
-	for (const args of [
-		['init', '-q'],
-		['add', '-A'],
-		['-c', 'user.name=DSNR', '-c', 'user.email=dsnr@localhost', 'commit', '-q', '-m', commit],
-	])
-		execFileSync('git', ['-C', dir, ...args]);
-	return dir;
+/** git in a copy of the library, as nobody's: none of the person's hooks (pointed at a folder that is not there), no signing. */
+const scratch = (dir: string, args: string[]): Promise<string> =>
+	git(dir, [
+		'-c',
+		`core.hooksPath=${join(dir, '.no-hooks')}`,
+		'-c',
+		'commit.gpgsign=false',
+		'-c',
+		'user.name=DSNR',
+		'-c',
+		'user.email=dsnr@localhost',
+		...args,
+	]);
+
+/** A copy of the library at `commit`, with git of its own, so what the agent writes is its diff against that commit. */
+const copyAt = async (root: string, commit: string): Promise<string> => {
+	const dir = await mkdtemp(join(tmpdir(), 'dsnr-value-'));
+	try {
+		await exportCommit(root, commit, dir);
+		await scratch(dir, ['init', '-q', '--template=']);
+		await scratch(dir, ['add', '-A']);
+		await scratch(dir, ['commit', '-q', '--no-verify', '-m', commit]);
+		return dir;
+	} catch (err) {
+		await rm(dir, { recursive: true, force: true });
+		throw err;
+	}
 };
 
-/** The files the agent changed in the copy, from the commit, and the line each change starts at in the new text. */
-const changedIn = (dir: string): { files: Map<string, string>; places: ValuePlace[] } => {
-	execFileSync('git', ['-C', dir, 'add', '-A']);
-	const names = execFileSync('git', ['-C', dir, 'diff', '--cached', '--name-only', 'HEAD'], { encoding: 'utf8' }).split('\n').filter(Boolean);
-	const files = new Map(names.map((f) => [f, readFileSync(join(dir, f), 'utf8')]));
+/**
+ * What the agent changed in the copy, from the commit: each file it changed or added, with its text, and the line each
+ * change starts at; and any it deleted, which is never a value's change.
+ */
+const changedIn = async (dir: string): Promise<{ files: Map<string, string>; places: ValuePlace[]; deleted: string[] }> => {
+	await scratch(dir, ['add', '-A']);
+	const changed = (await scratch(dir, ['diff', '--cached', '--name-status', '--no-renames', 'HEAD'])).split('\n').filter(Boolean);
+	const [deleted, kept] = [changed.filter((l) => l.startsWith('D')), changed.filter((l) => !l.startsWith('D'))].map((ls) =>
+		ls.map((l) => l.slice(l.indexOf('\t') + 1)),
+	) as [string[], string[]];
+	const files = new Map<string, string>();
 	const places: ValuePlace[] = [];
-	for (const file of names) {
-		const diff = execFileSync('git', ['-C', dir, 'diff', '--cached', '-U0', 'HEAD', '--', file], { encoding: 'utf8' });
-		for (const hunk of diff.matchAll(/^@@ -\d+(?:,\d+)? \+(\d+)(?:,\d+)? @@[^\n]*\n((?:[-+][^\n]*\n?)*)/gm)) {
-			const lines = (hunk[2] as string).split('\n');
-			const was =
-				lines
-					.find((l) => l.startsWith('-'))
-					?.slice(1)
-					.trim() ?? '';
-			const now =
-				lines
-					.find((l) => l.startsWith('+'))
-					?.slice(1)
-					.trim() ?? '';
-			places.push({ file, line: Number(hunk[1]), written: was, writes: now });
-		}
+	for (const file of kept) {
+		files.set(file, await readFile(join(dir, file), 'utf8'));
+		const diff = await scratch(dir, ['diff', '--cached', '-U0', 'HEAD', '--', file]);
+		for (const hunk of diff.matchAll(/^@@ -\d+(?:,\d+)? \+(\d+)(?:,\d+)? @@/gm))
+			places.push({ file, line: Number(hunk[1]), written: '', writes: '' });
 	}
-	return { files, places };
+	return { files, places, deleted };
 };
 
 /** What the agent said of why, from its last lines (`Why: …`), else all it said, short. */
@@ -91,6 +103,7 @@ const whyOf = (said: string): string => /^Why:\s*(.+)$/m.exec(said)?.[1]?.trim()
 export class ValueAgent {
 	/** Each value's writing, by the index, the story file, the value and what it is to follow. */
 	private readonly runs = new Map<string, Written>();
+	private runsFor: string | null = null;
 
 	constructor(private readonly deps: ValueAgentDeps) {}
 
@@ -111,6 +124,11 @@ export class ValueAgent {
 	async write(file: string, t: TriedValue): Promise<void> {
 		const index = await this.deps.tokens.drawn();
 		if (index.state !== 'ready') throw new Error('Its stories are still being drawn; try again once they are.');
+		// Kept for the commit drawn: once the library moves, what was written on the one before is let go.
+		if (this.runsFor !== index.key) {
+			this.runs.clear();
+			this.runsFor = index.key;
+		}
 		const key = this.keyOf(index, file, t);
 		const was = this.runs.get(key);
 		if (was && was.state !== 'refused') return;
@@ -127,39 +145,55 @@ export class ValueAgent {
 		const facts = await this.factsOf(index, file, t);
 		if ('why' in facts) return { state: 'refused', why: facts.why };
 		const standard = await this.deps.readStandard(DESIGN_SYSTEM_CODE);
-		const dir = copyAt(system.root, commitOf(index));
+		const dir = await copyAt(system.root, commitOf(index));
 		try {
-			const task = taskFor(file, t, facts, standard);
-			let ran = await this.deps.run(dir, task);
+			// The packages it installs, to read how they draw what is not the library's own (MUI's defaults), never to change.
+			const packages = [...new Set(['', system.folder].map((at) => join(system.root, at, 'node_modules')))].filter((p) => existsSync(p));
+			const task = taskFor(file, t, facts, standard, packages);
+			const own = await this.ownFiles(index);
+			let ran = await this.deps.run(dir, task, packages);
 			for (let round = 1; ; round++) {
 				if (!ran.ok) return { state: 'refused', why: `The agent did not finish: ${ran.said.slice(-300)}` };
-				const { files, places } = changedIn(dir);
-				const outside = [...files.keys()].filter((f) => searchedFiles([f]).length === 0);
-				if (files.size === 0) return { state: 'refused', why: `The agent changed nothing: ${whyOf(ran.said)}` };
+				const { files, places, deleted } = await changedIn(dir);
+				const outside = [...[...files.keys()].filter((f) => !own(f)), ...deleted];
+				if (files.size === 0 && deleted.length === 0) return { state: 'refused', why: `The agent changed nothing: ${whyOf(ran.said)}` };
 				if (outside.length > 0)
-					return { state: 'refused', why: `The agent changed what is not the design system's own code (${outside.join(', ')}), so it is not saved.` };
-				const drew = await this.readBack(index, file, t, files, facts.from);
+					return {
+						state: 'refused',
+						why: `The agent changed or deleted what is not the design system's own code to change (${outside.join(', ')}), so it is not saved.`,
+					};
+				const drew = await this.readBack(index, file, t, files, facts);
 				if (drew === null) return { state: 'written', files, places, said: whyOf(ran.said) };
 				if (round === 2) return { state: 'refused', why: `Written by the agent, it ${drew}, so it is not saved.` };
 				ran = await this.deps.run(
 					dir,
 					`${task}\n\nYou changed this already (see git diff). DSNR drew its stories with your change: it ${drew}. Find why, and fix it, under the same rules.`,
+					packages,
 				);
 			}
 		} finally {
-			rmSync(dir, { recursive: true, force: true });
+			await rm(dir, { recursive: true, force: true });
 		}
+	}
+
+	/**
+	 * What the agent may change: the design system's own code (its package's scripts and stylesheets, not its stories, tests
+	 * or set-up), and the files its tokens are read from (a theme, a token JSON). One rule, whatever the library.
+	 */
+	private async ownFiles(index: DrawnIndex): Promise<(path: string) => boolean> {
+		const reads = await this.readsAt(index);
+		const [listed, tokens] = await Promise.all([reads.listFiles(''), readTokens(reads)]);
+		const own = new Set([...searchedFiles(listed), ...tokens.tokens.map((t) => t.source.file)]);
+		return (path) => own.has(path);
 	}
 
 	/** What a run is told, as the stories draw it: the cell's variant and value, and the stories and props that draw it. */
 	private async factsOf(index: DrawnIndex, file: string, t: TriedValue): Promise<Facts | { why: string }> {
 		const values = index.built.values.get(file);
-		const cell =
-			values?.state === 'read'
-				? values.rows.light?.find((r) => r.property === t.property)?.cells.find((c) => c.targets.join() === t.targets.join())
-				: undefined;
+		const cell = values?.state === 'read' ? cellFor(values.rows.light, t) : undefined;
 		if (!cell) return { why: 'Its instances were not found in its stories as drawn, so the agent cannot be told which to change.' };
-		const drawn = (await this.deps.tokens.asIs(index)).get(file)?.light?.instances ?? [];
+		const drawing = (await this.deps.tokens.asIs(index)).get(file)?.light;
+		const drawn = drawing?.instances ?? [];
 		const stories = [
 			...new Set(
 				drawn
@@ -181,7 +215,7 @@ export class ValueAgent {
 			token = (await readTokens(await this.readsAt(index))).tokens.find((x) => x.path === t.follows);
 			if (!token) return { why: `The design system has no token ${t.follows} to follow.` };
 		}
-		return { variant: cell.variant, from: cell.value, stories, token };
+		return { variant: cell.variant, from: cell.value, stories, token, perRem: drawing?.rootPx ?? 16 };
 	}
 
 	/** The design system's files at the commit drawn, read from its clone. */
@@ -195,7 +229,8 @@ export class ValueAgent {
 	 * Null when what the agent wrote draws as asked; else what it drew, in words. To follow a token: it draws as it did, and
 	 * with the token changed (to a value of DSNR's own) it draws the token.
 	 */
-	private async readBack(index: DrawnIndex, file: string, t: TriedValue, files: Map<string, string>, from: string): Promise<string | null> {
+	private async readBack(index: DrawnIndex, file: string, t: TriedValue, files: Map<string, string>, facts: Facts): Promise<string | null> {
+		const { from } = facts;
 		const asked = t.follows === undefined ? t.value : from;
 		const { after } = await this.deps.tokens.reachWith(index, async () => files, 'written');
 		const drew = drawsOtherwise({ ...t, value: asked }, after.get(file));
@@ -203,13 +238,15 @@ export class ValueAgent {
 		if (t.follows === undefined) return null;
 		const base = await this.readsAt(index);
 		const reads: CatalogReads = { listFiles: base.listFiles, readFile: async (p) => files.get(p) ?? base.readFile(p) };
-		const probe = COLOR_VALUES.has(t.property) ? '#123457' : `${parseFloat(from) + 5}px`;
-		const moved = await editedFiles(reads, [{ path: t.follows, value: probe }]).catch((err: Error) => err);
+		// The token changed to a value of DSNR's own, as a place is probed (`probeFor`), written in the token's own unit.
+		const probe = probeFor(t.property, allParts(from, partsIn(t.property))[0] as string);
+		const asToken = facts.token ? (writtenLike(facts.token.value, probe, facts.perRem) ?? probe) : probe;
+		const moved = await editedFiles(reads, [{ path: t.follows, value: asToken }]).catch((err: Error) => err);
 		if (moved instanceof Error) return `leaves ${t.follows} unreadable as a token (${moved.message})`;
 		const both = new Map([...files, ...moved]);
 		const followed = await this.deps.tokens.reachWith(index, async () => both, 'written');
 		const now = drawsOtherwise({ ...t, value: allParts(probe, partsIn(t.property)).join(' ') }, followed.after.get(file));
-		return now === null ? null : `does not follow ${t.follows}: with it at ${probe}, it draws ${now}`;
+		return now === null ? null : `does not follow ${t.follows}: with it at ${asToken}, it draws ${now}`;
 	}
 }
 
@@ -218,11 +255,13 @@ interface Facts {
 	from: string;
 	stories: string[];
 	token: DesignToken | undefined;
+	/** The page's root font size: what a rem is, where it is drawn. */
+	perRem: number;
 }
 
 /** What the agent is asked: the facts, as the tab has them, and the standard it works under. */
-export const taskFor = (file: string, t: TriedValue, facts: Facts, standard: string): string => {
-	const name = (file.split('/').pop() ?? file).replace(/\.stories\.[^.]+$/, '');
+export const taskFor = (file: string, t: TriedValue, facts: Facts, standard: string, packages: string[] = []): string => {
+	const name = storyComponent(file);
 	const what = `${name}'s ${VALUE_NAMES[t.property].toLowerCase()}${facts.variant !== null ? ` for its "${facts.variant}" instances` : ''}`;
 	const ask =
 		facts.token === undefined
@@ -233,6 +272,7 @@ export const taskFor = (file: string, t: TriedValue, facts: Facts, standard: str
 		'',
 		ask,
 		`These instances are drawn by its stories in ${file}: ${facts.stories.join(', ')}. The value is measured on the component's top element as the browser computes it.`,
+		...(packages.length > 0 ? [`The packages it installs are in ${packages.join(' and ')}, to read and never to change.`] : []),
 		'',
 		'Work under this standard:',
 		'',

@@ -267,9 +267,9 @@ export interface RunEnded {
  * someone there), and what it said last: for work in a scratch copy that nobody watches (writing a component's value,
  * Phase 4), so it is not the person's one run at a time (`AgentRunner`) and does not wait on it, nor it on this.
  */
-export const runToEnd = (cwd: string, task: string, deps: AgentDeps = defaultAgentDeps): Promise<RunEnded> =>
+export const runToEnd = (cwd: string, task: string, extras: AgentExtras = {}, deps: AgentDeps = defaultAgentDeps): Promise<RunEnded> =>
 	new Promise((done) => {
-		const [file, ...args] = deps.adapter.argvFor(task);
+		const [file, ...args] = deps.adapter.argvFor(task, extras);
 		if (file === undefined) return done({ ok: false, said: 'The agent adapter produced no command.' });
 		let out = '';
 		let child: ChildProcess;
@@ -280,6 +280,9 @@ export const runToEnd = (cwd: string, task: string, deps: AgentDeps = defaultAge
 		}
 		const timer = setTimeout(() => child.kill('SIGTERM'), RUN_TO_END_MS);
 		child.stdout?.on('data', (d: Buffer) => (out += d.toString()));
+		// Read as it comes, or a run that says much there would wait on it; its last words are kept, for a run that fails.
+		let complained = '';
+		child.stderr?.on('data', (d: Buffer) => (complained = `${complained}${d.toString()}`.slice(-2000)));
 		child.on('error', (err) => done({ ok: false, said: `Could not run ${deps.adapter.name}: ${err.message}.` }));
 		child.on('exit', (code) => {
 			clearTimeout(timer);
@@ -295,7 +298,10 @@ export const runToEnd = (cwd: string, task: string, deps: AgentDeps = defaultAge
 				})
 				.find((e) => e?.type === 'result');
 			const said = typeof result?.result === 'string' ? result.result.trim() : '';
-			done({ ok: code === 0 && result?.is_error === false, said: said || `${deps.adapter.name} ended without saying what it did.` });
+			done({
+				ok: code === 0 && result?.is_error === false,
+				said: said || complained.trim() || `${deps.adapter.name} ended without saying what it did.`,
+			});
 		});
 	});
 

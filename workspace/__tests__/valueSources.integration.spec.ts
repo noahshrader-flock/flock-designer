@@ -144,7 +144,7 @@ describeWith(agentMissing, 'the agent on Flock’s FUI', () => {
 				const agent = new ValueAgent({
 					system: () => system,
 					tokens,
-					run: (cwd, task) => runToEnd(cwd, task),
+					run: (cwd, task, readOnly) => runToEnd(cwd, task, { readOnly }),
 					readStandard: async (path) => readFileSync(resolve(__dirname, '..', '..', path), 'utf8'),
 				});
 				const sources = new ValueSources({ tokens, previews, measure: real.measure, agent });
