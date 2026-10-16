@@ -20,6 +20,7 @@ import { Dialog } from './ui/Dialog';
 import { EmptyState } from './ui/EmptyState';
 import { Icon } from './ui/Icon';
 import { IconButton } from './ui/IconButton';
+import { ModeIcon } from './ui/ModeIcon';
 import { useMode } from './mode';
 import { Loading } from './ui/Loading';
 import { Menu } from './ui/Menu';
@@ -160,11 +161,7 @@ const Ready = ({
 			<div className="ds-part">
 				<Toggle label="Part" options={PARTS} value={part} onChange={onPart} />
 				{hasDark && (
-					<IconButton
-						icon={mode === 'dark' ? 'circle-large-filled' : 'circle-large-outline'}
-						label={`Switch to ${themeLabel(other).toLowerCase()}`}
-						onClick={() => setMode(other)}
-					/>
+					<IconButton icon={<ModeIcon mode={mode} />} label={`Switch to ${themeLabel(other).toLowerCase()}`} onClick={() => setMode(other)} />
 				)}
 			</div>
 			{part === 'components' ? (

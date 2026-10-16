@@ -1408,10 +1408,13 @@ describe('Design System', () => {
 	it('offers the mode components are shown in beside Components and Tokens, said as what pressing it does, and only when the library has a dark', async () => {
 		await read();
 		const switchTo = (mode: string) => document.querySelector(`.ds-part [aria-label="Switch to ${mode}"]`) as HTMLButtonElement | null;
-		expect(switchTo('dark')).not.toBeNull();
+		// A sun in light (a circle and its rays), a moon in dark (one crescent).
+		expect(switchTo('dark')!.querySelector('svg circle')).not.toBeNull();
 		await press(switchTo('dark')!);
 		expect(panelSaid().at(-1)).toEqual({ type: 'set-mode', mode: 'dark' });
 		expect(switchTo('light')?.title).toBe('Switch to light');
+		expect(switchTo('light')!.querySelector('svg circle')).toBeNull();
+		expect(switchTo('light')!.querySelector('svg path')).not.toBeNull();
 		// The extension's choice, told to every page, is what it shows.
 		await say({ type: 'mode', mode: 'light' });
 		expect(switchTo('dark')).not.toBeNull();
