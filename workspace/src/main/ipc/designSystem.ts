@@ -11,12 +11,19 @@ const storyFileOf = (file: unknown): string => {
 	return file;
 };
 
+/** What a person asks in words: some text, not too much to be one request. */
+const wordsOf = (words: unknown): string => {
+	if (typeof words !== 'string' || words.trim() === '' || words.length > 2000) throw new Error('Ask in words: a sentence or two.');
+	return words.trim();
+};
+
 /**
  * The Design System tab: the design systems connected, their components and tokens, a change to the tokens or to the
  * voice and tone, and its branch.
  */
 export const registerDesignSystem = (d: IpcDeps): void => {
 	const {
+		askInWords,
 		componentTokens,
 		componentVariants,
 		designSystems,
@@ -45,6 +52,10 @@ export const registerDesignSystem = (d: IpcDeps): void => {
 	// The window names a story file, and only a story file of the library is answered.
 	handle('componentTokens', [arg.unknown], (file) => componentTokens.of(storyFileOf(file)));
 	handle('componentVariants', [arg.unknown], (file) => componentVariants.of(storyFileOf(file)));
+	// Words made the changes the controls make (Phase 6), on what is being tried, each part checked as a change always is.
+	handle('askInWords', [arg.unknown, arg.unknown, arg.unknown, arg.unknown], (file, words, edits, tried) =>
+		askInWords.ask(file === null ? null : storyFileOf(file), wordsOf(words), { edits: tokenEditsOf(edits), tried: triedValuesOf(tried) }),
+	);
 	// What a change reaches is asked for by the change, checked as a change always is.
 	handle('changeReach', [arg.unknown], (edits) => componentTokens.reach(tokenEditsOf(edits)));
 	// Values tried on a component's instances, by its story file: checked as the contract says one is, and written only as

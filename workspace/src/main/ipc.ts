@@ -43,6 +43,7 @@ import { ValueBranches } from './services/valueBranches';
 import { ValueSources } from './services/valueSources';
 import { ValueAgent } from './services/valueAgent';
 import { ComponentVariants } from './services/componentVariants';
+import { AskInWords } from './services/askInWords';
 import { typeLibs } from './services/componentProps';
 import { VOICE_NEEDS_CLI, VoiceAndToneFile } from './services/voiceAndTone';
 import { registerAccount } from './ipc/account';
@@ -271,6 +272,8 @@ export const ipcDeps = ({
 		folder: () => shownSystem()?.folder ?? '',
 	});
 	const valueSources = new ValueSources({ tokens: componentTokens, previews, measure: ports.headless.measure, agent: valueAgent });
+	// Words made the changes the controls make (Phase 6), by the agent run as the value agent is, reading and writing nothing.
+	const askInWords = new AskInWords({ tokens: componentTokens, run: (cwd, task) => runToEnd(cwd, task) });
 	const valueBranches = new ValueBranches({ system: shownSystem, file: valueBranchesFile, tools: ports.shareTools, sources: valueSources });
 	// The voice and tone (T9): the connected design system's, read, saved and proposed with the person's own command line.
 	const voiceFile = (): VoiceAndToneFile => {
@@ -418,6 +421,7 @@ export const ipcDeps = ({
 		valueBranches,
 		valueAgent,
 		componentVariants,
+		askInWords,
 		voiceFile,
 		state,
 		codebase,
