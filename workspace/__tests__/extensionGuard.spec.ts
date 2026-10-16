@@ -83,13 +83,16 @@ describe('the extension’s sources', () => {
 		);
 	});
 
-	it('round a project’s thumbnails: a row’s by the panel’s radius, a card’s by a larger one, never the smallest', () => {
+	it('round a thumbnail by its own radius: a row’s, a card’s by a larger one, neither the smallest', () => {
 		const css = files()
 			.find((f) => f.path.endsWith('styles.css'))!
 			.text.replace(/\/\*[\s\S]*?\*\//g, '');
 		const radius = (selector: string) => /border-radius:\s*([^;]+);/.exec(css.split('}').find((b) => b.trim().startsWith(selector)) ?? '')?.[1];
-		expect(radius('.picture')).toBe('var(--dsnr-radius)');
-		expect(radius('.card-picture')).toBe('var(--dsnr-radius-large)');
+		expect(radius('.picture')).toBe('var(--dsnr-radius-thumb)');
+		expect(radius('.card-picture')).toBe('var(--dsnr-radius-thumb-card)');
+		const size = (name: string) => Number(new RegExp(`--dsnr-radius-${name}:\\s*(\\d+)px`).exec(css)?.[1]);
+		expect(size('thumb')).toBeGreaterThan(size('small'));
+		expect(size('thumb-card')).toBeGreaterThan(size('thumb'));
 	});
 
 	it('wash a pressed thumbnail with the brand, lightly, not the list’s grey: shown on hover and focus, and over the picture only', () => {
@@ -106,8 +109,8 @@ describe('the extension’s sources', () => {
 		// What has a picture to wash does not also turn the whole row or card grey.
 		expect(rule('.row-button:has(.thumb-wash):hover')).toMatch(/background:\s*transparent/);
 		// Its corners are its picture's.
-		expect(rule('.card-media .thumb-wash')).toMatch(/border-radius:\s*var\(--dsnr-radius-large\)/);
-		expect(rule('.thumb .thumb-wash')).toMatch(/border-radius:\s*var\(--dsnr-radius\)/);
+		expect(rule('.card-media .thumb-wash')).toMatch(/border-radius:\s*var\(--dsnr-radius-thumb-card\)/);
+		expect(rule('.thumb .thumb-wash')).toMatch(/border-radius:\s*var\(--dsnr-radius-thumb\)/);
 	});
 
 	it('stretch a dialog’s buttons across its width, one or several alike', () => {
@@ -386,7 +389,7 @@ describe('the extension’s sources', () => {
 		expect(token('control-small')).toBe('22');
 		const rule = (selector: string) => css.split('}').find((b) => b.trim().startsWith(selector)) ?? '';
 		// Each takes its size from the token, never a number of its own.
-		expect(rule('.search .search-input')).toMatch(/height:\s*var\(--dsnr-control\)/);
+		expect(rule('.input {')).toMatch(/height:\s*var\(--dsnr-control\)/);
 		expect(rule('.button {')).toMatch(/min-height:\s*var\(--dsnr-control\)/);
 		expect(rule('.icon-button,')).toMatch(/width:\s*var\(--dsnr-control\)[\s\S]*height:\s*var\(--dsnr-control\)/);
 		expect(rule('.toggle-option')).toMatch(/height:\s*calc\(var\(--dsnr-control\)/);
