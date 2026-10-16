@@ -295,7 +295,7 @@ describe('a component’s tab', () => {
 		// A value that draws nothing is said as none, with no swatch and nothing said of what it is: the rest of its row is one
 		// kind, said once on the row.
 		const background = values.querySelector('[data-value-row="background"]') as HTMLElement;
-		expect([...background.querySelectorAll('[data-value-cell]')].map((c) => c.textContent)).toEqual(['primaryrgb(16, 128, 98)', 'ghostnone']);
+		expect([...background.querySelectorAll('[data-value-cell]')].map((c) => c.textContent)).toEqual(['primary#108062', 'ghostnone']);
 		expect(background.querySelector('h3 [data-value-kind="token"]')?.textContent).toBe('Light primary main · also FSIconButton');
 		expect(values.querySelector('[data-value-row="fontSize"] [data-value-kind="unchecked"]')?.textContent).toBe('Not checked');
 	});
@@ -308,7 +308,7 @@ describe('a component’s tab', () => {
 		expect(values.querySelector('[data-values-from]')?.textContent).toContain('in dark:');
 		expect([...values.querySelectorAll('[data-value-row]')].map((r) => r.getAttribute('data-value-row'))).toEqual(['height', 'background']);
 		const background = values.querySelector('[data-value-row="background"]') as HTMLElement;
-		expect([...background.querySelectorAll('[data-value-cell]')].map((c) => c.textContent)).toEqual(['primaryrgb(43, 180, 138)', 'ghostnone']);
+		expect([...background.querySelectorAll('[data-value-cell]')].map((c) => c.textContent)).toEqual(['primary#2BB48A', 'ghostnone']);
 		expect(background.querySelector('h3 [data-value-kind="token"]')?.textContent).toContain('Dark primary main');
 		await press(radio('Light'));
 		expect(values.querySelector('[data-values-from]')?.textContent).toContain('in light:');

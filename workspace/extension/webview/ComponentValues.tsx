@@ -11,7 +11,7 @@ import {
 } from '../../src/shared/contract';
 import { plural } from '../../src/shared/plural';
 import { DEFAULT_THEME, THEMES, type Theme, themeLabel } from '../../src/shared/prototypeTheme';
-import { labelOf } from '../../src/shared/tokens';
+import { colorAsRead, labelOf } from '../../src/shared/tokens';
 import { MOST_LISTED, sharedWith } from '../../src/renderer/useComponentTokens';
 import { Disclosure } from './ui/Disclosure';
 import { Swatch } from './ui/Swatch';
@@ -51,9 +51,12 @@ const kindOf = (cell: ValueCell, name: (path: string) => string, others: (path: 
 	return { says: 'Not checked', why: 'No token of this kind is marked when the stories are drawn, so whether it is one is not known.' };
 };
 
+/** A value as it is read: a colour as a token's is (its hex, and its opacity), any other as it is written, short. */
+const saidValue = (property: ValueProperty, value: string): string => (COLOR_VALUES.has(property) ? colorAsRead(value) : shortValue(property, value));
+
 /**
- * One value: its variant, its value (a colour with its swatch), and, when the row's values are not all one kind, what it
- * is; a button that opens its control. A value being tried shows what is tried, marked, with what is drawn under it.
+ * One value, as a button that opens its control: its variant beside its value (a colour with its swatch, marked when it is
+ * being tried), and, when the row's values are not all one kind, what it is, on a line under them where it can be read whole.
  */
 const Cell = ({
 	property,
@@ -68,23 +71,24 @@ const Cell = ({
 	tried: string | null;
 	onOpen: () => void;
 }) => {
-	// What is tried is every part in full: said as the drawn value is, short.
-	const value = tried === null ? cell.value : shortValue(property, tried);
+	const value = saidValue(property, tried ?? cell.value);
 	return (
 		<li data-value-cell className="token" {...(tried !== null ? { 'data-tried': '' } : {})}>
 			<button
 				type="button"
-				className="token-line token-button"
+				className="value-cell token-button"
 				aria-label={`Change ${valueTitle(property, cell.variant)}`}
 				title={tried !== null ? `Tried; drawn ${cell.value}` : `${cell.instances} drawn`}
 				onClick={onOpen}
 			>
 				{cell.variant !== null && <span className="value-variant">{cell.variant}</span>}
-				{COLOR_VALUES.has(property) && value !== NO_COLOR && <Swatch value={value} />}
-				<span className="value-drawn">{value}</span>
-				{tried !== null && <span data-changed-mark className="token-changed" aria-label="Tried" />}
+				<span className="value-drawn">
+					{COLOR_VALUES.has(property) && value !== NO_COLOR && <Swatch value={tried ?? cell.value} />}
+					<span>{value}</span>
+					{tried !== null && <span data-changed-mark className="token-changed" aria-label="Tried" />}
+				</span>
 				{note && cell.value !== NO_COLOR && (
-					<span className="token-uses" data-value-kind={cell.kind} title={note.why}>
+					<span className="value-note" data-value-kind={cell.kind} title={note.why}>
 						{note.says}
 					</span>
 				)}

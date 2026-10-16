@@ -347,6 +347,17 @@ export const hexAndAlpha = (value: string): { hex: string; alpha: string } => ({
 /** An opacity written after a tone (`66`), as a person reads it (`40%`). */
 const opacity = (alpha: string): string => `${Math.round((parseInt(alpha, 16) / 255) * 100)}%`;
 
+/**
+ * A color as a person reads it, as a token's is: its hex, and an opacity less than whole after it (`#000000 · 12%`); one that
+ * is not a color the browser computes (`none`) as it is.
+ */
+export const colorAsRead = (color: string): string => {
+	const hex = hexOf(color);
+	if (hex === null) return color;
+	const { hex: own, alpha } = hexAndAlpha(hex);
+	return alpha === '' ? own : `${own} · ${opacity(alpha)}`;
+};
+
 /** What a token points at, as a person reads it: `pineGreen 50`, and the opacity written after it (`at 40%`). */
 export const pointsAt = (token: DesignToken, target: DesignToken): string =>
 	`${nameOf(target)}${token.ref?.alpha ? ` at ${opacity(token.ref.alpha)}` : ''}`;

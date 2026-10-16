@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { DesignToken } from '../src/shared/contract';
-import { hexOf, labelOf, lengthSpan, nameOf, paletteFamilies, semanticTable, tokenTitle } from '../src/shared/tokens';
+import { colorAsRead, hexOf, labelOf, lengthSpan, nameOf, paletteFamilies, semanticTable, tokenTitle } from '../src/shared/tokens';
 
 /**
  * Which colors are the design system's palette and which are semantic, and the semantic ones lined up by theme: worked out
@@ -140,6 +140,13 @@ describe('a value as its control edits it', () => {
 		expect(hexOf('#abcdef')).toBe('#ABCDEF');
 		expect(hexOf('none')).toBeNull();
 		expect(hexOf('oklch(0.5 0.1 120)')).toBeNull();
+	});
+
+	it('says a color as a token’s is: its hex, and an opacity less than whole after it', () => {
+		expect(colorAsRead('rgb(16, 128, 98)')).toBe('#108062');
+		expect(colorAsRead('rgba(0, 0, 0, 0.12)')).toBe('#000000 · 12%');
+		expect(colorAsRead('#12345680')).toBe('#123456 · 50%');
+		expect(colorAsRead('none')).toBe('none');
 	});
 
 	it('gives a length a slider from nothing to twice what it was, a useful span at least and never short of what it is now, in whole pixels or eighths of a rem', () => {

@@ -1376,20 +1376,71 @@ textarea.input {
 /* A component's drawn values: a row's name with what tells its values apart, and what they are when all are one kind. */
 .value-row-name {
 	display: flex;
+	flex-wrap: wrap;
 	align-items: baseline;
 	justify-content: space-between;
-	gap: 8px;
+	gap: 0 8px;
 }
 
-/* A value's variant, then the value as drawn. */
+/* What a whole row is, beside its name when it fits, under it when it does not, wrapped rather than cut off. */
+.value-row-name .token-uses {
+	flex-shrink: 1;
+	min-width: 0;
+	margin-left: 0;
+	font-weight: 400;
+	overflow-wrap: anywhere;
+}
+
+/*
+ * A component's value, in the narrow side pane: its variant beside its value, and what the value is made of on a line under
+ * them, wrapped where it is long, never cut off or laid over the rest. The variant takes a fixed share, so the values line up
+ * down a row; a long one breaks across lines rather than being hidden.
+ */
+.value-cell {
+	display: grid;
+	grid-template-columns: minmax(5ch, 38%) minmax(0, 1fr);
+	align-items: center;
+	column-gap: 8px;
+	row-gap: 1px;
+	width: 100%;
+	padding: 3px 8px 3px 4px;
+	box-sizing: border-box;
+	color: inherit;
+	font: inherit;
+	text-align: start;
+}
+
 .value-variant {
-	min-width: 4ch;
 	color: var(--dsnr-muted);
+	overflow-wrap: anywhere;
 }
 
+/* The value, in the second column; with no variant, across both. A swatch and a mark sit at its two ends. */
 .value-drawn {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	grid-column: 2;
+	min-width: 0;
 	font-family: var(--vscode-editor-font-family);
 	font-size: 0.92em;
+	overflow-wrap: anywhere;
+}
+
+.value-drawn:first-child {
+	grid-column: 1 / -1;
+}
+
+.value-drawn .token-changed {
+	margin-left: auto;
+}
+
+/* What the value is made of, under it, across the cell. */
+.value-note {
+	grid-column: 1 / -1;
+	color: var(--dsnr-muted);
+	font-size: 0.92em;
+	overflow-wrap: anywhere;
 }
 
 /* How far a component's tokens reach, in two numbers side by side. */
