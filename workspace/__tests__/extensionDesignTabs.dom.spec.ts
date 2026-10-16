@@ -459,7 +459,7 @@ describe('a component’s tab', () => {
 
 		it('opens a value of its own as a slider, tries it on the instances that draw it as it moves, and marks it tried', async () => {
 			const { tried } = await tryingOpen();
-			await press(change('Height sm'));
+			await press(change('Height · sm'));
 			expect(document.querySelector('[role="dialog"] h2, [role="dialog"] [id]')?.textContent).toContain('Height · sm');
 			expect(editor()?.textContent).toContain('nothing is saved');
 			await type(slider('Height'), '30');
@@ -473,14 +473,14 @@ describe('a component’s tab', () => {
 
 		it('puts a value back with Reset, and every value with Reset all', async () => {
 			const { tried } = await tryingOpen();
-			await press(change('Height sm'));
+			await press(change('Height · sm'));
 			await type(slider('Height'), '30');
 			await press(button('Reset'));
 			expect(tried()).toEqual([]);
 			expect(values().querySelector('[data-tried]')).toBeNull();
 			await type(slider('Height'), '31');
 			await press(document.querySelector('[role="dialog"] [aria-label="Close"]') as HTMLElement);
-			await press(change('Height md'));
+			await press(change('Height · md'));
 			await type(slider('Height'), '40');
 			expect(tried()).toHaveLength(2);
 			await press(document.querySelector('[role="dialog"] [aria-label="Close"]') as HTMLElement);
@@ -491,11 +491,24 @@ describe('a component’s tab', () => {
 
 		it('tells the frame again when it loads, so a new build of the stories has what is tried', async () => {
 			const { frame, told, tried } = await tryingOpen();
-			await press(change('Height sm'));
+			await press(change('Height · sm'));
 			await type(slider('Height'), '30');
 			told.mockClear();
 			frame.dispatchEvent(new Event('load'));
 			expect(tried()).toEqual([{ property: 'height', value: '30px', targets: ['height:sm:0', 'height:sm:1', 'height:sm:2'] }]);
+		});
+
+		it('tries a colour as its picker moves, keeping the opacity it is drawn with', async () => {
+			const rows = (analysis().values as { rows: { light: unknown[] } }).rows.light;
+			const veil = {
+				property: 'border',
+				by: null,
+				cells: [{ variant: null, value: 'rgba(16, 128, 98, 0.5)', kind: 'own', tokens: [], instances: 1 }],
+			};
+			const { tried } = await tryingOpen({ values: { state: 'read', instances: 12, unmarked: 0, rows: { light: [...rows, veil], dark: null } } });
+			await press(change('Border'));
+			await type(document.querySelector('[role="dialog"] input[type="color"]') as HTMLInputElement, '#123456');
+			expect(tried()).toEqual([{ property: 'border', value: '#12345680', targets: ['border:null:0'] }]);
 		});
 
 		it('opens a value that is a token as the token’s own control, since it moves every component that draws with it', async () => {
@@ -516,9 +529,13 @@ describe('a component’s tab', () => {
 				'Left and right',
 			]);
 			await type(slider('Left and right'), '12');
-			expect(tried()).toEqual([{ property: 'padding', value: '0px 12px', targets: Array.from({ length: 12 }, (_, i) => `padding:null:${i}`) }]);
+			// Every part in full, as the page sets it; said short on its cell.
+			expect(tried()).toEqual([
+				{ property: 'padding', value: '0px 12px 0px 12px', targets: Array.from({ length: 12 }, (_, i) => `padding:null:${i}`) },
+			]);
+			expect(values().querySelector('[data-value-row="padding"] [data-tried] .value-drawn')?.textContent).toBe('0px 12px');
 			await press(document.querySelector('[role="dialog"] [aria-label="Close"]') as HTMLElement);
-			await press(change('Background ghost'));
+			await press(change('Background · ghost'));
 			const hex = document.querySelector('[role="dialog"] input[aria-label="Hex"]') as HTMLInputElement;
 			expect(hex).not.toBeNull();
 			await type(hex, '#123456');

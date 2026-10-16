@@ -16,7 +16,8 @@ import { MOST_LISTED, sharedWith } from '../../src/renderer/useComponentTokens';
 import { Disclosure } from './ui/Disclosure';
 import { Swatch } from './ui/Swatch';
 import { Toggle } from './ui/Toggle';
-import { VALUE_NAMES, ValueEditor } from './ValueEditor';
+import { NO_COLOR, shortValue } from '../../src/shared/valueParts';
+import { VALUE_NAMES, ValueEditor, valueTitle } from './ValueEditor';
 
 type Ready = Extract<ComponentTokens, { state: 'ready' }>;
 
@@ -31,11 +32,8 @@ export interface Trying {
 /** Light and dark, as the review bar names them, as an empty and a filled circle: how a theme's light and dark read in a side bar. */
 const MODES = THEMES.map((value) => ({ value, label: themeLabel(value), icon: value === 'dark' ? 'circle-large-filled' : 'circle-large-outline' }));
 
-/** A colour that draws nothing (clear, or no border), as the analysis says it: shown with no swatch, and nothing said of what it is. */
-const NONE = 'none';
-
 /** Why a component has no values to show, by what its drawing found. */
-const WHY_NONE: Record<Exclude<Values['state'], 'read' | 'failed'>, (name: string) => string> = {
+const WHY_NO_COLOR: Record<Exclude<Values['state'], 'read' | 'failed'>, (name: string) => string> = {
 	'no-component': () => 'Its stories do not say which component they are of (`component` in their default export), so its values cannot be read.',
 	'none-drawn': (name) =>
 		`Its stories draw no ${name} on the page, so its values cannot be read. One that opens over the page, as a dialog does, is not read.`,
@@ -58,35 +56,34 @@ const kindOf = (cell: ValueCell, name: (path: string) => string, others: (path: 
  * is; a button that opens its control. A value being tried shows what is tried, marked, with what is drawn under it.
  */
 const Cell = ({
+	property,
 	cell,
-	label,
-	color,
 	note,
 	tried,
 	onOpen,
 }: {
+	property: ValueProperty;
 	cell: ValueCell;
-	label: string;
-	color: boolean;
 	note: { says: string; why?: string } | null;
 	tried: string | null;
 	onOpen: () => void;
 }) => {
-	const value = tried ?? cell.value;
+	// What is tried is every part in full: said as the drawn value is, short.
+	const value = tried === null ? cell.value : shortValue(property, tried);
 	return (
 		<li data-value-cell className="token" {...(tried !== null ? { 'data-tried': '' } : {})}>
 			<button
 				type="button"
 				className="token-line token-button"
-				aria-label={`Change ${label}`}
+				aria-label={`Change ${valueTitle(property, cell.variant)}`}
 				title={tried !== null ? `Tried; drawn ${cell.value}` : `${cell.instances} drawn`}
 				onClick={onOpen}
 			>
 				{cell.variant !== null && <span className="value-variant">{cell.variant}</span>}
-				{color && value !== NONE && <Swatch value={value} />}
+				{COLOR_VALUES.has(property) && value !== NO_COLOR && <Swatch value={value} />}
 				<span className="value-drawn">{value}</span>
 				{tried !== null && <span data-changed-mark className="token-changed" aria-label="Tried" />}
-				{note && cell.value !== NONE && (
+				{note && cell.value !== NO_COLOR && (
 					<span className="token-uses" data-value-kind={cell.kind} title={note.why}>
 						{note.says}
 					</span>
@@ -111,21 +108,12 @@ const Row = ({
 	onOpen: (cell: ValueCell) => void;
 }) => {
 	// What the values are is said once when every value that draws something is the same kind; a none says nothing of it.
-	const drawing = row.cells.filter((c) => c.value !== NONE);
+	const drawing = row.cells.filter((c) => c.value !== NO_COLOR);
 	const first = drawing[0];
 	const same = first !== undefined && drawing.every((c) => c.kind === first.kind && c.tokens.join() === first.tokens.join());
 	const shared = same ? kindOf(first, name, others) : null;
-	const color = COLOR_VALUES.has(row.property);
 	const cell = (c: ValueCell, i: number) => (
-		<Cell
-			key={i}
-			cell={c}
-			label={c.variant === null ? VALUE_NAMES[row.property] : `${VALUE_NAMES[row.property]} ${c.variant}`}
-			color={color}
-			note={same ? null : kindOf(c, name, others)}
-			tried={tried(c)}
-			onOpen={() => onOpen(c)}
-		/>
+		<Cell key={i} property={row.property} cell={c} note={same ? null : kindOf(c, name, others)} tried={tried(c)} onOpen={() => onOpen(c)} />
 	);
 	return (
 		<div data-value-row={row.property} className="token-group">
@@ -201,7 +189,7 @@ export const ComponentValues = ({
 			{values.state === 'failed' ? (
 				<p className="quiet">Its values could not be read: {values.error}</p>
 			) : values.state !== 'read' ? (
-				<p className="quiet">{WHY_NONE[values.state](name)}</p>
+				<p className="quiet">{WHY_NO_COLOR[values.state](name)}</p>
 			) : (
 				<>
 					<p className="quiet" data-values-from>

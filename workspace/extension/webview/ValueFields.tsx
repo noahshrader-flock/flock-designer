@@ -12,19 +12,10 @@ import { useColorField } from '../../src/renderer/useColorField';
  * kept. With `live`, the picker applies as it moves too, for a value tried without a build.
  */
 export const ColorField = ({ value, onCommit, live = false }: { value: string; onCommit: (hex: string) => void; live?: boolean }) => {
-	const { picker, hex, setHex, commit } = useColorField(value, onCommit);
+	const { picker, hex, setHex, commit } = useColorField(value, onCommit, { live });
 	return (
 		<div className="color-field">
-			<input
-				{...picker}
-				onChange={(e) => {
-					picker.onChange(e);
-					if (live) onCommit(e.target.value.toUpperCase());
-				}}
-				type="color"
-				aria-label="Pick a color"
-				className="color-picker"
-			/>
+			<input {...picker} type="color" aria-label="Pick a color" className="color-picker" />
 			<input
 				className="input token-hex"
 				aria-label="Hex"

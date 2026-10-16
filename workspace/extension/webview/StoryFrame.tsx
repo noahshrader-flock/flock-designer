@@ -1,4 +1,4 @@
-import { type CSSProperties, useEffect, useRef } from 'react';
+import { type CSSProperties, useCallback, useEffect, useRef } from 'react';
 import { PREVIEW_TRY } from '../../src/shared/catalog';
 import type { TriedValue } from '../../src/shared/contract';
 import { useFrameHeight } from '../../src/renderer/useFrameHeight';
@@ -17,12 +17,12 @@ export const StoryFrame = ({ src, title, tried = [] }: { src: string; title: str
 	const frame = useRef<HTMLIFrameElement>(null);
 	const height = useFrameHeight(frame);
 	const origin = new URL(src, location.href).origin;
-	const said = useRef(tried);
-	said.current = tried;
-	const tell = () => frame.current?.contentWindow?.postMessage({ [PREVIEW_TRY]: said.current }, origin);
+	const now = useRef(tried);
+	now.current = tried;
+	const tell = useCallback(() => frame.current?.contentWindow?.postMessage({ [PREVIEW_TRY]: now.current }, origin), [origin]);
 	// Said again whenever what is tried changes (by what it is, not which array holds it), and when the page loads.
 	const told = JSON.stringify(tried);
-	useEffect(() => frame.current?.contentWindow?.postMessage({ [PREVIEW_TRY]: JSON.parse(told) }, origin), [told, origin]);
+	useEffect(tell, [told, tell]);
 	return (
 		<iframe
 			ref={frame}
