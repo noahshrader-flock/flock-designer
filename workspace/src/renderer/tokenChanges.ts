@@ -25,6 +25,8 @@ export interface TokenChanges {
 	isPalette: (token: DesignToken) => boolean;
 	/** Changes a token, by its path (`null`: back as it was). A change back to what the library has is no change. */
 	change: (token: DesignToken, to: TokenChange | null) => void;
+	/** Several tokens changed at once (asked in words, Phase 6), each as `change` changes one. */
+	changeAll: (asked: TokenEdit[]) => void;
 	/** Every token back as the library has it. */
 	clear: () => void;
 	/** The accessibility target a pair's contrast is judged at (T7): the design system's, or the default. */
@@ -87,6 +89,13 @@ export const useTokenChangesFor = (
 			// Always against the token as the library has it, whichever way it is shown.
 			change: (t, to) => {
 				const next = changed(edits, read, read.get(t.path) ?? t, to);
+				if (next !== edits) onEdits(next);
+			},
+			changeAll: (asked) => {
+				const next = asked.reduce((all, { path, ...to }) => {
+					const t = read.get(path);
+					return t ? changed(all, read, t, to as TokenChange) : all;
+				}, edits);
 				if (next !== edits) onEdits(next);
 			},
 			clear: () => onEdits([]),

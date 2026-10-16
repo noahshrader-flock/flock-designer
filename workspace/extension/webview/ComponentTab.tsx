@@ -6,6 +6,7 @@ import { undeclared } from '../../src/shared/wcag';
 import { TokenChangesProvider, useTokenChangesFor } from '../../src/renderer/tokenChanges';
 import { useStoryPreview } from '../../src/renderer/useStoryPreview';
 import type { ComponentLink } from '../src/messages';
+import { AskInWords } from './AskInWords';
 import { ChangeReach } from './ChangeReach';
 import { ComponentSections } from './ComponentSections';
 import { StoryFrame } from './StoryFrame';
@@ -55,6 +56,8 @@ export const ComponentTab = ({ id }: { id: string }) => {
 	const [edits, setEdits] = useTrial();
 	// The token whose control is open: Made from's rows change a token as the panel's do, and every page sees it.
 	const [editing, setEditing] = useState<DesignToken | null>(null);
+	// Asking in words (Phase 6): open while its dialog is.
+	const [asking, setAsking] = useState(false);
 	const changes = useTokenChangesFor(ready?.tokens.tokens ?? [], edits, setEdits, ready?.accessibility ?? NOT_READ);
 	// The values tried on its instances (Phase 2): this tab's alone, kept nowhere, and forgotten when the design system moves
 	// to another version, whose instances are drawn anew.
@@ -94,6 +97,9 @@ export const ComponentTab = ({ id }: { id: string }) => {
 						<p className="quiet">{component.subtitle ?? component.group}</p>
 					</div>
 					<div className="tab-actions">
+						<Button variant="secondary" onClick={() => setAsking(true)}>
+							Ask…
+						</Button>
 						{component.storybook !== null && (
 							<Button variant="secondary" external onClick={() => link('storybook')}>
 								Storybook
@@ -123,6 +129,19 @@ export const ComponentTab = ({ id }: { id: string }) => {
 				</div>
 			</main>
 			{editing && <TokenEditor key={editing.path} token={editing} onClose={() => setEditing(null)} />}
+			{asking && (
+				<AskInWords
+					file={id}
+					about={`Its tokens and ${component.name}'s own values: what its controls change.`}
+					edits={edits}
+					tried={[...tried.values()]}
+					onAsked={(asked) => {
+						changes.changeAll(asked.edits);
+						setTried((was) => new Map([...was, ...asked.values.map((t) => [triedId(t), t] as const)]));
+					}}
+					onClose={() => setAsking(false)}
+				/>
+			)}
 		</TokenChangesProvider>
 	);
 };

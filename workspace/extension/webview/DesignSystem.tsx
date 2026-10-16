@@ -5,6 +5,7 @@ import { plural } from '../../src/shared/plural';
 import { HOST } from '../../src/shared/vocabulary';
 import { TokenChangesProvider, useTokenChangesFor } from '../../src/renderer/tokenChanges';
 import { useTokenBranch } from '../../src/renderer/useTokenBranch';
+import { AskInWords } from './AskInWords';
 import { Changed } from './Changed';
 import { TokenEditor } from './TokenEditor';
 import type { ComponentLink } from '../src/messages';
@@ -98,6 +99,8 @@ const Ready = ({
 	const [problems, setProblems] = useState(false);
 	// The token whose control is open: the one whose row or swatch was pressed.
 	const [editing, setEditing] = useState<DesignToken | null>(null);
+	// Asking in words for its tokens (Phase 6): open while its dialog is.
+	const [asking, setAsking] = useState(false);
 	const notRead = catalog.tokens.problems.length;
 	return (
 		<TokenChangesProvider value={changes}>
@@ -163,10 +166,20 @@ const Ready = ({
 					/>
 				)
 			) : (
-				<TokensView tokens={catalog.tokens} onEdit={setEditing} onSource={does.openTokenSource} />
+				<TokensView tokens={catalog.tokens} onEdit={setEditing} onSource={does.openTokenSource} onAsk={() => setAsking(true)} />
 			)}
 			{editing && <TokenEditor key={editing.path} token={editing} onClose={() => setEditing(null)} />}
 			{problems && <Problems problems={catalog.tokens.problems} onClose={() => setProblems(false)} />}
+			{asking && (
+				<AskInWords
+					file={null}
+					about="Its tokens: what their controls change. To change one component's own values, ask on its tab."
+					edits={edits}
+					tried={[]}
+					onAsked={(asked) => changes.changeAll(asked.edits)}
+					onClose={() => setAsking(false)}
+				/>
+			)}
 		</TokenChangesProvider>
 	);
 };

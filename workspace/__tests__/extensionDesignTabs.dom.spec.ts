@@ -861,6 +861,35 @@ describe('a component’s tab', () => {
 		const escape = () => act(async () => void document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
 		const pressElsewhere = () => act(async () => void document.body.dispatchEvent(new MouseEvent('mousedown', { bubbles: true })));
 
+		it('asks in words, and tries what comes back as the controls would: the token edit for every page, the value on its instances (Phase 6)', async () => {
+			const { tried } = await tryingOpen();
+			await press(button('Ask…'));
+			const dialog = document.querySelector('[role="dialog"][aria-label="Ask in words"]') as HTMLElement;
+			const words = dialog.querySelector('textarea') as HTMLTextAreaElement;
+			expect(button('Ask').disabled).toBe(true);
+			await type(words, 'warmer, and the small one taller');
+			await press(button('Ask'));
+			expect(button('Working…').disabled).toBe(true);
+			expect(calls('askInWords').at(-1)?.args).toEqual([BUTTON, 'warmer, and the small one taller', [], []]);
+			const edit = { path: 'tone.pineGreen.50', value: '#118063' };
+			const taller = { property: 'height', value: '30px', targets: ['height:sm:0', 'height:sm:1', 'height:sm:2'] };
+			await answer('askInWords', { edits: [edit], values: [taller], said: 'A warmer green, and a taller small size.' });
+			// As a control's change: the token edit is every page's, the value is tried on its instances and marked.
+			expect(sent.filter((m) => m.type === 'token-edits').at(-1)).toEqual({ type: 'token-edits', edits: [edit] });
+			expect(tried()).toEqual([taller]);
+			expect(values().querySelector('[data-value-row="height"] [data-tried] .value-cell')?.textContent).toBe('sm30px');
+			// Said, and open for the next words, which are asked on top of what is now tried.
+			expect(dialog.querySelector('[data-asked]')?.textContent).toContain('A warmer green, and a taller small size.');
+			expect(words.value).toBe('');
+			await type(words, 'a little more');
+			await press(button('Ask'));
+			expect(calls('askInWords').at(-1)?.args).toEqual([BUTTON, 'a little more', [edit], [taller]]);
+			const call = calls('askInWords').at(-1);
+			await say({ type: 'answer', id: call?.id, result: { ok: false, error: 'A loading state is new code, not a value.' } });
+			expect(dialog.querySelector('[role="alert"]')?.textContent).toBe('A loading state is new code, not a value.');
+			expect(tried()).toEqual([taller]);
+		});
+
 		it('opens a value of its own as a slider, tries it on the instances that draw it as it moves, and marks it tried', async () => {
 			const { tried } = await tryingOpen();
 			await press(change('Height · sm'));
