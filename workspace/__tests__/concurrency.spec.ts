@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { coalescing, coalescingByKey, singleFlight } from '../src/main/services/concurrency';
+import { coalescing, coalescingByKey, inTurns, singleFlight } from '../src/main/services/concurrency';
 
 const later = () => {
 	let done!: (v: string) => void;
@@ -85,5 +85,28 @@ describe('one run at a time for each key', () => {
 		await Promise.all(asked);
 		expect(runs).toBe(2);
 		expect(byKey.size).toBe(0);
+	});
+});
+
+describe('in turns', () => {
+	it('runs one at a time for a key, each in the order asked, every one answered, a failure keeping no one waiting', async () => {
+		const turn = inTurns<string>();
+		const happened: string[] = [];
+		let release: () => void = () => undefined;
+		const held = new Promise<void>((go) => (release = go));
+		const first = turn('written', async () => {
+			happened.push('first starts');
+			await held;
+			happened.push('first ends');
+			throw new Error('first failed');
+		});
+		const second = turn('written', async () => (happened.push('second'), 2));
+		const other = turn('reach', async () => (happened.push('other'), 3));
+		await other;
+		expect(happened).toEqual(['first starts', 'other']);
+		release();
+		await expect(first).rejects.toThrow('first failed');
+		expect(await second).toBe(2);
+		expect(happened).toEqual(['first starts', 'other', 'first ends', 'second']);
 	});
 });

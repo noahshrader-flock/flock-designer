@@ -1,11 +1,14 @@
 /**
- * Two ways the app shares work between callers, written once.
+ * The ways the app shares work between callers, written once.
  *
  * `singleFlight`: one run per key at a time, its answer given to everyone who asks meanwhile, and forgotten once it has
  * settled, failure included, so the next caller tries again rather than being handed an old failure for good.
  *
  * `coalescing`: one run at a time, and exactly one more for however many ask while it runs, so nothing asked for during
  * a run is missed and nothing runs twice at once (publishing, a site deploy).
+ *
+ * `inTurns`: one run per key at a time, every one run, each in the order asked: work that must not overlap another of its
+ * kind, where each caller needs its own answer (a build of the previews and the drawing of it, which the next would replace).
  */
 
 export const singleFlight = <K, T>() => {
@@ -72,5 +75,20 @@ export const coalescingByKey = <K>() => {
 		get size(): number {
 			return [...runs.values()].filter((go) => go.running).length;
 		},
+	};
+};
+
+export const inTurns = <K>() => {
+	const last = new Map<K, Promise<unknown>>();
+	return <T>(key: K, work: () => Promise<T>): Promise<T> => {
+		const turn = (last.get(key) ?? Promise.resolve()).then(work, work);
+		// The next waits on this one whatever it ends in; only the last is kept, so nothing is held once all have run.
+		const settled = turn.then(
+			() => undefined,
+			() => undefined,
+		);
+		last.set(key, settled);
+		void settled.then(() => last.get(key) === settled && last.delete(key));
+		return turn;
 	};
 };

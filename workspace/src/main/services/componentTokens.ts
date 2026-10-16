@@ -35,6 +35,7 @@ import { readTokens } from './designTokens';
 import { readValues } from './componentValues';
 import { type Drawings, reachOf } from './changeReach';
 import type { BuiltFor } from './storyPreviews';
+import { inTurns } from './concurrency';
 import { newestAnswer } from './newestAnswer';
 import { editedFiles } from './tokenEdits';
 import type { CatalogReads } from './componentCatalog';
@@ -187,6 +188,8 @@ export class ComponentTokens {
 	private index: Building | null = null;
 	/** What the newest token change asked for reaches, worked out in the background and kept for it. */
 	private readonly reached = newestAnswer<ChangeReach>((error) => ({ state: 'failed', error }));
+	/** What a change is drawn with, one build of each purpose at a time (`reachWith`). */
+	private readonly inTurn = inTurns<'reach' | 'written'>();
 	/** The library as it is, drawn as a change is, for the commit of `key` (`asIs`). */
 	private asIsDrawn: { key: string; drawn: Promise<Map<string, Drawings>> } | null = null;
 
@@ -238,6 +241,15 @@ export class ComponentTokens {
 		index: DrawnIndex,
 		files: (reads: CatalogReads) => Promise<Map<string, string>>,
 		purpose: 'reach' | 'written' = 'reach',
+	): Promise<{ reach: ChangeReach; after: Map<string, Drawings> }> {
+		// A build of a purpose is served until the next replaces it: one at a time, built and drawn, so none is drawn gone.
+		return this.inTurn(purpose, () => this.reachIn(index, files, purpose));
+	}
+
+	private async reachIn(
+		index: DrawnIndex,
+		files: (reads: CatalogReads) => Promise<Map<string, string>>,
+		purpose: 'reach' | 'written',
 	): Promise<{ reach: ChangeReach; after: Map<string, Drawings> }> {
 		const [before, built] = await Promise.all([this.asIs(index), this.deps.previews.builtWith(purpose, files)]);
 		if (built.state !== 'ready')

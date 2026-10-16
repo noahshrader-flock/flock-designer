@@ -305,6 +305,34 @@ describe('the index', () => {
 			expect(r).toMatchObject({ state: 'ready', moved: [{ file: 'src/components/B/B.stories.tsx' }], unchanged: 1 });
 		});
 
+		it('builds and draws one write at a time, so the next build never replaces one still being drawn', async () => {
+			let release: () => void = () => undefined;
+			const held = new Promise<void>((go) => (release = go));
+			const built: string[] = [];
+			const i = index({
+				previews: {
+					...previews,
+					builtWith: async (purpose: BuiltFor, files: Files) => {
+						if (purpose !== 'written') return previews.builtWith(purpose, files);
+						built.push(purpose);
+						if (built.length === 1) await held;
+						return previews.builtWith(purpose, files);
+					},
+				},
+			});
+			await i.warm();
+			const drawn = await i.drawn();
+			if (drawn.state !== 'ready') throw new Error('not drawn');
+			const first = i.reachWith(drawn, async () => new Map(), 'written');
+			const second = i.reachWith(drawn, async () => new Map(), 'written');
+			await new Promise((r) => setTimeout(r, 20));
+			// The second waits for the first to be built and drawn.
+			expect(built).toEqual(['written']);
+			release();
+			await Promise.all([first, second]);
+			expect(built).toEqual(['written', 'written']);
+		});
+
 		it('draws the newest change alone when several are asked for while one is drawn', async () => {
 			// The first change's build is held until the others have been asked for, as a slow build would be.
 			let release: () => void = () => undefined;
