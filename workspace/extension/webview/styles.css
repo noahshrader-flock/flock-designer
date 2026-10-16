@@ -455,6 +455,14 @@ body {
 	cursor: pointer;
 }
 
+/* A button that goes out of VS Code: its words, then the external link icon, centred together. */
+.button-external {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 6px;
+}
+
 .button-primary {
 	border-color: var(--vscode-contrastBorder, transparent);
 	color: var(--dsnr-on-brand);

@@ -81,11 +81,11 @@ export const ComponentTab = ({ id }: { id: string }) => {
 					</div>
 					<div className="tab-actions">
 						{component.storybook !== null && (
-							<Button variant="secondary" onClick={() => link('storybook')}>
+							<Button variant="secondary" external onClick={() => link('storybook')}>
 								Storybook
 							</Button>
 						)}
-						<Button variant="secondary" onClick={() => link('source')}>
+						<Button variant="secondary" external onClick={() => link('source')}>
 							Source
 						</Button>
 					</div>

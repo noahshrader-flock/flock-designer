@@ -43,6 +43,17 @@ describe('a component’s tab', () => {
 		expect(sent.at(-1)).toEqual({ type: 'component-link', id: BUTTON, link: 'source' });
 	});
 
+	it('marks its links as going out of VS Code: the external link icon after each one’s words, not read aloud', async () => {
+		await open();
+		for (const name of ['Storybook', 'Source']) {
+			const link = button(name);
+			const icon = link.lastElementChild as HTMLElement;
+			expect(icon.classList.contains('codicon-link-external')).toBe(true);
+			expect(icon.getAttribute('aria-hidden')).toBe('true');
+			expect(link.firstElementChild?.textContent).toBe(name);
+		}
+	});
+
 	it('keeps its name, description and links apart from what scrolls: the stories and the analysis are panes of their own under it', async () => {
 		await open();
 		const page = document.querySelector('main.tab') as HTMLElement;
