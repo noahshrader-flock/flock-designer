@@ -24,7 +24,7 @@ const isPaint = (p: number): boolean => {
 };
 
 /** The smallest box around the pixels that are paint, or null when there are none. */
-const painted = ({ data, width, height }: Bitmap): { x: number; y: number; width: number; height: number } | null => {
+export const painted = ({ data, width, height }: Bitmap): { x: number; y: number; width: number; height: number } | null => {
 	const pixels = new Uint32Array(data.buffer, data.byteOffset, Math.floor(data.length / 4));
 	let [left, top, right, bottom] = [width, height, -1, -1];
 	for (let y = 0; y < height; y++) {
@@ -44,11 +44,16 @@ const painted = ({ data, width, height }: Bitmap): { x: number; y: number; width
  * Where the picture puts what `capture` painted (its `box`): its size, twice as wide as it is tall, and the box's place in
  * it, centered; null when it painted nothing. For a shell that draws the picture itself (a browser's canvas).
  */
-export const placeOnWhite = (
-	capture: Bitmap,
-): { box: NonNullable<ReturnType<typeof painted>>; width: number; height: number; left: number; top: number } | null => {
+export const placeOnWhite = (capture: Bitmap): Placed | null => {
 	const box = painted(capture);
-	if (box === null) return null;
+	return box === null ? null : placeAround(box);
+};
+
+/** What the story painted (`box`), the picture's size, and the box's place in it. */
+export type Placed = { box: NonNullable<ReturnType<typeof painted>>; width: number; height: number; left: number; top: number };
+
+/** Where the picture puts a painted `box`: wide enough for it and its room, twice as wide as it is tall, the box centered. */
+export const placeAround = (box: Placed['box']): Placed => {
 	// Wide enough for it and its room, and tall enough that the half of that width holds it too.
 	const width = Math.ceil(Math.max(LEAST, box.width + 2 * MARGIN, 2 * (box.height + 2 * MARGIN)) / 2) * 2;
 	const height = width / 2;
@@ -69,4 +74,4 @@ export const composeOnWhite = (capture: Bitmap): Bitmap | null => {
 };
 
 /** All of how a picture is composed, for the fingerprint of how pictures are taken (`PICTURE_RECIPE`). */
-export const COMPOSITION = `${isPaint}${painted}${placeOnWhite}${composeOnWhite}${[MARGIN, LEAST]}`;
+export const COMPOSITION = `${isPaint}${painted}${placeOnWhite}${placeAround}${composeOnWhite}${[MARGIN, LEAST]}`;

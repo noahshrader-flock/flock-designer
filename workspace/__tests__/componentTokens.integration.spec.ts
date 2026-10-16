@@ -217,11 +217,10 @@ describe('the index', () => {
 		await ready(i, 'src/components/A/A.stories.tsx');
 		// Not the token page: it is not a component, and would be said to share every token.
 		const files = ['src/components/A/A.stories.tsx', 'src/components/B/B.stories.tsx'];
+		// Asked twice: as it is, at once, while the tags are built (pictured and checked for accessibility at the library's
+		// target, none declared, so the default, T7; the longest, so first), and in dark; then with the tags, in each mode.
 		expect(asked).toEqual([
 			[
-				{ base: 'http://127.0.0.1:1/tagged/', mode: 'light', files },
-				{ base: 'http://127.0.0.1:1/tagged/', mode: 'dark', files },
-				// As it is, checked for accessibility at the library's target: none declared, so the default (T7).
 				{
 					base: 'http://127.0.0.1:1/plain/',
 					mode: 'light',
@@ -229,8 +228,11 @@ describe('the index', () => {
 					pictures: true,
 					accessibility: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'],
 				},
-				// And in dark, for the values: what the tags change there says which are tokens in dark.
 				{ base: 'http://127.0.0.1:1/plain/', mode: 'dark', files },
+			],
+			[
+				{ base: 'http://127.0.0.1:1/tagged/', mode: 'light', files },
+				{ base: 'http://127.0.0.1:1/tagged/', mode: 'dark', files },
 			],
 		]);
 	});
@@ -279,8 +281,9 @@ describe('the index', () => {
 		const i = index();
 		await ready(i, 'src/components/A/A.stories.tsx');
 		await i.of('src/components/B/B.stories.tsx');
+		// One pass: its drawings as it is, and with the tags.
 		expect(builds).toHaveLength(1);
-		expect(asked).toHaveLength(1);
+		expect(asked).toHaveLength(2);
 		expect(await i.of('src/colors/theme/light.ts')).toEqual({
 			state: 'failed',
 			error: 'src/colors/theme/light.ts is not one of the library’s story files.'.replace('’', "'"),
@@ -309,12 +312,12 @@ describe('the index', () => {
 	it('is got ready in the background without a component being asked for, so the first ask is answered at once', async () => {
 		const i = index();
 		await i.warm();
-		expect(asked).toHaveLength(1);
+		expect(asked).toHaveLength(2);
 		expect(await i.of('src/components/A/A.stories.tsx')).toMatchObject({ state: 'ready' });
 		// Warmed again, or asked for, for the same commit: nothing is drawn twice.
 		await i.warm();
 		await i.of('src/components/B/B.stories.tsx');
-		expect(asked).toHaveLength(1);
+		expect(asked).toHaveLength(2);
 		expect(builds).toHaveLength(1);
 	});
 
@@ -348,20 +351,24 @@ describe('the index', () => {
 	});
 
 	it('gives the pictures there are, and says while a pass that may replace them is drawing', async () => {
-		let finish: () => void = () => undefined;
+		// Every drawing asked for waits until the test lets them all finish.
+		const waiting: (() => void)[] = [];
+		const finish = () => waiting.splice(0).forEach((go) => go());
 		let drawingStarted = false;
 		const i = index({
 			measure: async (runs) => {
 				drawingStarted = true;
-				await new Promise<void>((r) => (finish = r));
+				await new Promise<void>((r) => waiting.push(r));
 				return runs.map((run) => run.files.map(() => drawn()));
 			},
 		});
 		void i.warm();
 		await vi.waitFor(() => expect(drawingStarted).toBe(true));
 		expect(await i.pictures()).toEqual({ drawing: true, pictures: {}, issues: {} });
-		finish();
+		// The tagged drawings are asked for once the tags are built, after the first are: let each go as it comes.
+		const letting = setInterval(finish, 5);
 		await i.warm();
+		clearInterval(letting);
 		expect((await i.pictures()).drawing).toBe(false);
 		expect(await index({ system: () => null }).pictures()).toEqual({ drawing: false, pictures: {}, issues: {} });
 	});

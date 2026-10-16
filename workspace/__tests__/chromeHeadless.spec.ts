@@ -222,15 +222,29 @@ describe('a machine with no browser', () => {
 
 describe('drawing stories, headless (6.1, the Design System tab’s pictures and its index of tokens)', () => {
 	/** A page that draws what it is told: each story file read as `drawn`, axe when it is in the page. */
-	const storyBrowser = ({ fails = [] as string[], axe = false, painted = lit } = {}) => {
-		const done = { pages: 0, visited: [] as string[], scheme: [] as unknown[], scale: [] as number[], axeLoaded: 0, encoded: 0 };
+	const storyBrowser = ({ fails = [] as string[], axe = false, painted = lit, loadMs = 0 } = {}) => {
+		const done = {
+			pages: 0,
+			open: 0,
+			most: 0,
+			visited: [] as string[],
+			scheme: [] as unknown[],
+			scale: [] as number[],
+			axeLoaded: 0,
+			encoded: 0,
+			jpegs: 0,
+		};
 		const browser = {
 			newPage: async () => {
 				done.pages++;
+				done.most = Math.max(done.most, ++done.open);
 				return {
 					setViewport: async (v: { deviceScaleFactor: number }) => void done.scale.push(v.deviceScaleFactor),
 					emulateMediaFeatures: async (f: unknown) => void done.scheme.push(f),
-					goto: async (url: string) => void done.visited.push(url),
+					goto: async (url: string) => {
+						done.visited.push(url);
+						await new Promise((r) => setTimeout(r, loadMs));
+					},
 					evaluate: async (code: string) => {
 						if (code.includes('OffscreenCanvas')) return (done.encoded++, Buffer.from('jpeg').toString('base64'));
 						const file = /^\(async \(file, picture\)[\s\S]*\}\)\(("[^"]*")/.exec(code)?.[1];
@@ -239,8 +253,9 @@ describe('drawing stories, headless (6.1, the Design System tab’s pictures and
 						if (fails.includes(name)) throw new Error('did not draw');
 						return { colors: { [name]: 1 }, radii: {}, spacing: {}, ...(axe ? { accessibility: { violations: [], incomplete: [] } } : {}) };
 					},
-					screenshot: async () => painted,
-					close: async () => undefined,
+					// A capture to find what is painted is a PNG; the picture itself the browser takes as the JPEG.
+					screenshot: async ({ type }: { type: string }) => (type === 'jpeg' ? (done.jpegs++, Buffer.from('jpeg')) : painted),
+					close: async () => void done.open--,
 				};
 			},
 			close: async () => undefined,
@@ -269,11 +284,41 @@ describe('drawing stories, headless (6.1, the Design System tab’s pictures and
 		expect(done.scale).toEqual([1, 1, 1, 1]);
 	});
 
-	it('takes a picture of each, at twice the size, as a JPEG, only when asked; none of one that painted nothing', async () => {
+	it('draws two runs at once, in the order given, and gives every run back in its place', async () => {
+		const { headless, done } = storyBrowser({ loadMs: 20 });
+		const runs = ['a', 'b', 'c', 'd'].map((f) => ({ base: 'http://x/', mode: 'light' as const, files: [`${f}.stories.tsx`] }));
+		const drawn = await headless.measure(runs);
+		expect(drawn.map((run) => Object.keys(run[0]?.colors ?? {})[0])).toEqual(['a.stories.tsx', 'b.stories.tsx', 'c.stories.tsx', 'd.stories.tsx']);
+		// One page a run, as each has one file: never more than two open, and they are started in the order given.
+		expect(done.most).toBe(2);
+		expect(done.visited).toEqual([
+			'http://x/?file=a.stories.tsx',
+			'http://x/?file=b.stories.tsx',
+			'http://x/?file=c.stories.tsx',
+			'http://x/?file=d.stories.tsx',
+		]);
+	});
+
+	it('keeps to two runs at once across asks made at the same time, as the pass makes them while its tags are built', async () => {
+		const { headless, done } = storyBrowser({ loadMs: 20 });
+		const run = (f: string) => ({ base: 'http://x/', mode: 'light' as const, files: [`${f}.stories.tsx`] });
+		const [first, second] = await Promise.all([headless.measure([run('a'), run('b')]), headless.measure([run('c'), run('d')])]);
+		expect([...first, ...second].map((r) => Object.keys(r[0]?.colors ?? {})[0])).toEqual([
+			'a.stories.tsx',
+			'b.stories.tsx',
+			'c.stories.tsx',
+			'd.stories.tsx',
+		]);
+		expect(done.most).toBe(2);
+	});
+
+	it('takes a picture of each, at twice the size, as a JPEG the browser takes, only when asked; none of one that painted nothing', async () => {
 		const { headless, done } = storyBrowser();
 		const [drawn] = await headless.measure([{ base: 'http://x/', mode: 'light', files: files.slice(0, 2), pictures: true }]);
 		expect(drawn?.map((d) => d?.picture?.toString())).toEqual(['jpeg', 'jpeg']);
 		expect(done.scale).toEqual([2, 2]);
+		// Taken by the browser as the JPEG, not drawn again in the page.
+		expect([done.jpegs, done.encoded]).toEqual([2, 0]);
 		const none = storyBrowser({ painted: blank });
 		const [unpainted] = await none.headless.measure([{ base: 'http://x/', mode: 'light', files: files.slice(0, 1), pictures: true }]);
 		expect(unpainted?.[0]?.picture).toBeUndefined();

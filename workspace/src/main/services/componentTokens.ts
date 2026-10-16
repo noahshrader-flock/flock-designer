@@ -251,21 +251,26 @@ export class ComponentTokens {
 		const plain = await this.deps.previews.preview();
 		if (plain.state !== 'ready')
 			throw new Error(plain.state === 'failed' ? plain.error : 'The previews could not be built, so the components could not be drawn.');
+		// The library as it is, in light, is always drawn: it is what the grid's pictures are of (P5), whatever the tags do,
+		// and what each component's accessibility is checked on, at the design system's target (T7). And in dark, for the
+		// values (what the tags change in dark says which are tokens there). Started at once, while the tags are built: the
+		// one with the pictures and the check first, as it is the longest.
+		const asIsRun = { base: plain.base, mode: 'light' as const, files, pictures: true, accessibility: target.tags };
+		const asIsDrawn = this.deps.measure([asIsRun, { base: plain.base, mode: 'dark', files }]);
+		// A failure to draw is said once the tags are built, not lost while they are.
+		asIsDrawn.catch(() => undefined);
 		// With no token the library can be tagged by, there is nothing to tag: its stories are still drawn, as they are.
 		const tagged = tags.edits.length === 0 ? null : await this.deps.previews.tagged(tags.edits);
 		const taggedBase = tagged?.state === 'ready' ? tagged.base : null;
-		// The library as it is, in light, is always drawn: it is what the grid's pictures are of (P5), whatever the tags do,
-		// and what each component's accessibility is checked on, at the design system's target (T7).
-		const asIsRun = { base: plain.base, mode: 'light' as const, files, pictures: true, accessibility: target.tags };
-		// And in dark, for the values (what the tags change in dark says which are tokens there); with no tags, dark is as the
-		// library has it alone.
-		const asIsDark = { base: plain.base, mode: 'dark' as const, files };
-		const drawn = await this.deps.measure(
+		const [[asIs, asIsDarkDrawn], [light, dark]] = await Promise.all([
+			asIsDrawn,
 			taggedBase === null
-				? [asIsRun, asIsDark]
-				: [{ base: taggedBase, mode: 'light', files }, { base: taggedBase, mode: 'dark', files }, asIsRun, asIsDark],
-		);
-		const [light, dark, asIs, asIsDarkDrawn] = taggedBase === null ? [undefined, undefined, drawn[0], drawn[1]] : drawn;
+				? [undefined, undefined]
+				: this.deps.measure([
+						{ base: taggedBase, mode: 'light', files },
+						{ base: taggedBase, mode: 'dark', files },
+					]),
+		]);
 		// The pictures, each replacing its component's last; a component that did not draw keeps its last.
 		const taken = new Map<string, Buffer>();
 		files.forEach((f, i) => {

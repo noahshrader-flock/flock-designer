@@ -8,20 +8,23 @@ import { axeFound, axeRun } from './accessibilityCheck';
 import type { Drawn, Measure, Mode } from './componentTokens';
 import { within } from './within';
 
-/** How many windows draw a run's files at once, how long one story may take, and each window's size. */
+/**
+ * How many runs are drawn at once, how many pages draw each run's files at once, how long one story may take, and each
+ * page's size. Two runs at once, each in three pages, drew Flock's library as fast as all four at once (about 21 s for the
+ * whole pass, against 31 s one run after another) with a fifth less of the browser's memory, so six pages is the most open.
+ */
+const RUNS_AT_ONCE = 2;
 const WINDOWS_PER_RUN = 3;
 export const STORY_MS = 15_000;
 export const WINDOW = { width: 1200, height: 900 };
 /**
  * A picture (P5): the top of the page this many pixels down, drawn at twice the size (`PICTURE_SCALE`) so it is sharp,
- * is what `composeOnWhite` finds the story in; it is kept at most this many pixels across, as JPEG. How long the page is
- * given to repaint before one is taken.
+ * is what `composeOnWhite` finds the story in; it is kept at most this many pixels across, as JPEG.
  */
 export const PICTURE_TOP = 640;
 export const PICTURE_SCALE = 2;
 export const PICTURE_MOST_ACROSS = 1440;
 export const PICTURE_QUALITY = 85;
-const REPAINT_MS = 150;
 
 /**
  * Each instance of the component a story file is of (Phase 1 of adjusting a component), read in the page: the stories'
@@ -153,13 +156,13 @@ export const readDrawn = (file: string, picture: boolean, tags: string[] | null 
 	}
 	if (!picture) return drawn;
 	// A picture (P5): the first story alone, at the top of the page, which is white. Everything else is hidden first (hidden,
-	// so nothing moves), or a short story would have the next one, and its own name, in its picture. A hidden window paints
-	// a moment after a change, and the picture is of what it has painted.
+	// so nothing moves), or a short story would have the next one, and its own name, in its picture. No wait after: a
+	// screenshot is of the next frame the browser paints, which has this in it (every one of Flock's pictures was the same
+	// taken at once as after a wait, but for what animates).
 	const first = document.querySelector('[data-story]');
 	for (const el of document.querySelectorAll('[data-story]')) if (el !== first) el.style.visibility = 'hidden';
 	const name = first?.querySelector('.fd-name');
 	if (name) name.style.visibility = 'hidden';
-	await new Promise((r) => setTimeout(r, ${REPAINT_MS}));
 	return drawn;
 })(${JSON.stringify(file)}, ${picture})`;
 
@@ -181,19 +184,37 @@ export interface Share {
 }
 
 /**
- * One run after another, each shared between a few pages at once, drawn by the shell's own page (`drawShare`), and put
- * back in the order of the run's files: how both shells measure (`Measure`).
+ * The runs, `RUNS_AT_ONCE` at a time in the order given (so the longest, given first, is drawn beside the others), each
+ * shared between a few pages at once, drawn by the shell's own page (`drawShare`), and put back in the order of the runs
+ * and of each run's files: how the shell measures (`Measure`).
  */
-export const measureWith =
-	(drawShare: (share: Share) => Promise<(Drawn | null)[]>): Measure =>
-	async (runs) => {
-		const results: (Drawn | null)[][] = [];
-		for (const { base, mode, files, pictures = false, accessibility = null } of runs) {
-			const drawn = await Promise.all(sharesOf(files).map((share) => drawShare({ base, mode, files: share, pictures, tags: accessibility })));
-			results.push(backInOrder(files, drawn));
-		}
-		return results;
+export const measureWith = (drawShare: (share: Share) => Promise<(Drawn | null)[]>): Measure => {
+	// Shared by every ask, so runs asked for at once by two callers still draw `RUNS_AT_ONCE` at a time, in the order asked.
+	let drawing = 0;
+	const waiting: (() => void)[] = [];
+	const turn = async (): Promise<void> => {
+		if (drawing >= RUNS_AT_ONCE) await new Promise<void>((go) => waiting.push(go));
+		drawing++;
 	};
+	const done = () => {
+		drawing--;
+		waiting.shift()?.();
+	};
+	return (runs) =>
+		Promise.all(
+			runs.map(async ({ base, mode, files, pictures = false, accessibility = null }) => {
+				await turn();
+				try {
+					return backInOrder(
+						files,
+						await Promise.all(sharesOf(files).map((share) => drawShare({ base, mode, files: share, pictures, tags: accessibility }))),
+					);
+				} finally {
+					done();
+				}
+			}),
+		);
+};
 
 /**
  * Each file of a page's share drawn in turn, once the page is loaded (with axe in it when the run checks accessibility):

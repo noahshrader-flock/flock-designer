@@ -9,7 +9,7 @@ import type { Headless } from '../ports';
 import { CHECK_WINDOW, type CheckPage, axeFound, axeInPage } from './accessibilityCheck';
 import type { Drawn, Measure } from './componentTokens';
 import { fitJpegBy } from './picture';
-import { COMPOSITION, placeOnWhite } from './pictureComposition';
+import { COMPOSITION, painted, placeAround, placeOnWhite } from './pictureComposition';
 import { decodePng } from './png';
 import { COVER_BUDGET, COVER_STEPS, COVER_WINDOW, type DrawCover, isBlank, settleScript } from './projectCovers';
 import {
@@ -63,6 +63,8 @@ interface PageLike {
 	screenshot(o: {
 		type: 'png' | 'jpeg';
 		quality?: number;
+		optimizeForSpeed?: boolean;
+		captureBeyondViewport?: boolean;
 		clip: { x: number; y: number; width: number; height: number; scale?: number };
 	}): Promise<Uint8Array>;
 	/** Told of an error the page's own code throws (puppeteer's `pageerror`). */
@@ -102,7 +104,8 @@ const encodeInPage = (png: Buffer, place: NonNullable<ReturnType<typeof placeOnW
 	return btoa(text);
 })(${JSON.stringify(png.toString('base64'))}, ${JSON.stringify(place)}, ${PICTURE_MOST_ACROSS}, ${PICTURE_QUALITY / 100})`;
 
-const pictureOf = async (page: PageLike): Promise<Buffer | undefined> => {
+/** A story's picture as the composition makes it, from a full capture: exact for any story, and the slower way. Exported for its test. */
+export const composedPicture = async (page: PageLike): Promise<Buffer | undefined> => {
 	const png = Buffer.from(await page.screenshot({ type: 'png', clip: { x: 0, y: 0, width: WINDOW.width, height: PICTURE_TOP } }));
 	const { width, height, rgba } = decodePng(png);
 	const place = placeOnWhite({ data: Buffer.from(rgba.buffer, rgba.byteOffset, rgba.byteLength), width, height });
@@ -111,10 +114,82 @@ const pictureOf = async (page: PageLike): Promise<Buffer | undefined> => {
 	return typeof jpeg === 'string' && jpeg !== '' ? Buffer.from(jpeg, 'base64') : undefined;
 };
 
+/**
+ * Readies the page for the picture's one region: the stories clipped to what was captured, when the story runs past it (so
+ * what is past it is white, as in the composition, which never saw it), and moved by `dx`, `dy` so the region starts on the
+ * page; false, and nothing changed, when the page draws something outside the stories (a dialog, a menu or a tooltip opened
+ * in a layer of its own, which neither moves nor is clipped with them), or when moving them would move what is fixed to the
+ * window inside them. Undone by `pictured`.
+ */
+const readyToPicture = (cut: boolean, dx: number, dy: number) => `(() => {
+	const root = document.getElementById('root');
+	const story = document.querySelector('[data-story]');
+	const drawsOutside = (e) => e !== root && e.tagName !== 'SCRIPT' && getComputedStyle(e).visibility !== 'hidden' && e.getBoundingClientRect().width > 0;
+	if ([...document.body.children].some(drawsOutside)) return false;
+	if ((${dx} > 0 || ${dy} > 0) && [...story.querySelectorAll('*')].some((e) => getComputedStyle(e).position === 'fixed')) return false;
+	if (${cut}) {
+		const r = root.getBoundingClientRect();
+		const [l, t, w, h] = [-r.left, -r.top, ${WINDOW.width}, ${PICTURE_TOP}];
+		root.style.clipPath = 'polygon(' + [[l, t], [l + w, t], [l + w, t + h], [l, t + h]].map(([x, y]) => x + 'px ' + y + 'px').join(', ') + ')';
+	}
+	root.style.translate = '${dx}px ${dy}px';
+	return true;
+})()`;
+const pictured = `(() => { const root = document.getElementById('root'); root.style.clipPath = ''; root.style.translate = ''; })()`;
+
+/**
+ * A story's picture, the same as the composition's (`composedPicture`) and about twice as fast (about 220 ms against 470): what it painted is found
+ * from a capture at half the size (a quarter of the pixels to read, one per pixel of the page, with one more each side for
+ * what halving blurs), placed as the composition places it (`placeAround`), and then the browser takes that one region as
+ * the JPEG itself, so no capture is read back into the page or drawn again. The page behind the stories is white, as the
+ * composition's canvas is; a story that runs past what is captured is clipped to it, as the composition sees it; one whose
+ * region would start above or left of the page is moved into view, and one wider or taller than the window is taken past
+ * it. Where that cannot hold (something drawn outside the stories, such as an open dialog, or something fixed to the window
+ * in a story that would have to move), the composition makes it. Exported for its test.
+ */
+export const pictureOf = async (page: PageLike): Promise<Buffer | undefined> => {
+	const small = Buffer.from(
+		await page.screenshot({
+			type: 'png',
+			optimizeForSpeed: true,
+			clip: { x: 0, y: 0, width: WINDOW.width, height: PICTURE_TOP, scale: 1 / PICTURE_SCALE },
+		}),
+	);
+	const { width, height, rgba } = decodePng(small);
+	const found = painted({ data: Buffer.from(rgba.buffer, rgba.byteOffset, rgba.byteLength), width, height });
+	if (found === null) return undefined;
+	const [left, top] = [Math.max(0, found.x - 1), Math.max(0, found.y - 1)];
+	const [right, bottom] = [Math.min(width, found.x + found.width + 1), Math.min(height, found.y + found.height + 1)];
+	const place = placeAround({
+		x: left * PICTURE_SCALE,
+		y: top * PICTURE_SCALE,
+		width: (right - left) * PICTURE_SCALE,
+		height: (bottom - top) * PICTURE_SCALE,
+	});
+	// The region, in the page's own pixels, and how far the story moves so the region starts on the page.
+	// On whole pixels of the page, so the picture is exactly its size, not a pixel more where a half pixel is rounded up.
+	const region = {
+		x: Math.round(left - place.left / PICTURE_SCALE),
+		y: Math.round(top - place.top / PICTURE_SCALE),
+		width: place.width / PICTURE_SCALE,
+		height: place.height / PICTURE_SCALE,
+	};
+	const [dx, dy] = [Math.max(0, -region.x), Math.max(0, -region.y)];
+	if ((await page.evaluate(readyToPicture(right >= width || bottom >= height, dx, dy))) !== true) return composedPicture(page);
+	try {
+		const scale = Math.min(1, PICTURE_MOST_ACROSS / place.width);
+		const clip = { x: region.x + dx, y: region.y + dy, width: region.width, height: region.height, scale };
+		// A region wider or taller than the window is taken past it, where the page is white too.
+		return Buffer.from(await page.screenshot({ type: 'jpeg', quality: PICTURE_QUALITY, optimizeForSpeed: true, captureBeyondViewport: true, clip }));
+	} finally {
+		await page.evaluate(pictured);
+	}
+};
+
 /** How pictures are taken here, as a fingerprint of the code that takes them: never the same as the app's (`PICTURE_RECIPE`). */
 export const HEADLESS_PICTURE_RECIPE = createHash('sha256')
 	.update(
-		`headless${readDrawn('', true)}${encodeInPage.toString()}${pictureOf}${COMPOSITION}${[WINDOW.width, PICTURE_TOP, PICTURE_SCALE, PICTURE_MOST_ACROSS, PICTURE_QUALITY]}`,
+		`headless${readDrawn('', true)}${encodeInPage.toString()}${composedPicture}${readyToPicture(false, 0, 0)}${pictured}${pictureOf}${COMPOSITION}${[WINDOW.width, PICTURE_TOP, PICTURE_SCALE, PICTURE_MOST_ACROSS, PICTURE_QUALITY]}`,
 	)
 	.digest('hex')
 	.slice(0, 12);
@@ -222,7 +297,7 @@ export const chromeHeadless = ({
 			return share.files.map(() => null);
 		});
 
-	/** One run after another, each in a few pages at once, as the app's hidden windows draw them. */
+	/** A few runs at once, each in a few pages at once (`measureWith`). */
 	const measure: Measure = measureWith(drawShare);
 
 	/**
