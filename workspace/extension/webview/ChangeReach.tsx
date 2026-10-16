@@ -1,19 +1,15 @@
-import { COLOR_VALUES, type CatalogComponent, type ComponentReach, type TokenEdit, type ValueChange } from '../../src/shared/contract';
+import type { CatalogComponent, ComponentReach, TokenEdit, ValueChange } from '../../src/shared/contract';
 import { plural } from '../../src/shared/plural';
-import { colorAsRead } from '../../src/shared/tokens';
 import { useChangeReach } from '../../src/renderer/useChangeReach';
 import { Notice } from './ui/Notice';
-import { VALUE_NAMES } from './ValueEditor';
+import { saidValue, valueTitle } from './valueNames';
 
-/** What changed of a value, named as the Values name it (its property, its variant, dark when only there). */
+/** What changed of a value, named as the Values name it, and dark when it is in dark. */
 const changeName = (c: ValueChange): string =>
-	[VALUE_NAMES[c.property], ...(c.variant === null ? [] : [c.variant]), ...(c.mode === 'dark' ? ['dark'] : [])].join(' · ');
-
-/** A value as it is read: a colour as a token's is. */
-const said = (c: ValueChange, value: string): string => (COLOR_VALUES.has(c.property) ? colorAsRead(value) : value);
+	c.mode === 'dark' ? `${valueTitle(c.property, c.variant)} · dark` : valueTitle(c.property, c.variant);
 
 /** One component the change moves: its name, which opens its tab, then what changed of its values, or that it moved inside. */
-const Moved = ({ reach, name, here, onOpen }: { reach: ComponentReach; name: string; here: boolean; onOpen: () => void }) => (
+export const Moved = ({ reach, name, here, onOpen }: { reach: ComponentReach; name: string; here: boolean; onOpen: () => void }) => (
 	<div data-moved={reach.file} className="value-group">
 		<h3 className="value-group-name">
 			{here ? (
@@ -28,10 +24,10 @@ const Moved = ({ reach, name, here, onOpen }: { reach: ComponentReach; name: str
 		<ul className="tokens">
 			{reach.changes.map((c) => (
 				<li key={`${c.mode}|${c.property}|${c.variant}|${c.from}`} className="token">
-					<span className="value-cell">
+					<span className="value-cell value-change">
 						<span className="value-label">{changeName(c)}</span>
 						<span className="value-drawn">
-							{said(c, c.from)} → {said(c, c.to)}
+							<span>{saidValue(c.property, c.from)}</span> <span>→ {saidValue(c.property, c.to)}</span>
 						</span>
 					</span>
 				</li>

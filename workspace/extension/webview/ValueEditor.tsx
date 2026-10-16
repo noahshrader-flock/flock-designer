@@ -3,22 +3,7 @@ import { NONE_STARTS_AS, hexOf } from '../../src/shared/tokens';
 import { allParts, partsIn, shortParts } from '../../src/shared/valueParts';
 import { Popover } from './ui/Popover';
 import { ColorField, LengthField } from './ValueFields';
-
-/** How each property is named, in a value's row and its control. */
-export const VALUE_NAMES: Record<ValueProperty, string> = {
-	height: 'Height',
-	padding: 'Padding',
-	radius: 'Radius',
-	gap: 'Gap',
-	fontSize: 'Font size',
-	background: 'Background',
-	text: 'Text',
-	border: 'Border',
-};
-
-/** A value as it is named, in its control's title and its cell's label: its property, and its variant when it has one. */
-export const valueTitle = (property: ValueProperty, variant: string | null): string =>
-	variant === null ? VALUE_NAMES[property] : `${VALUE_NAMES[property]} · ${variant}`;
+import { VALUE_NAMES, valueTitle } from './valueNames';
 
 /** What each part of a value is called, by how many parts it is written with short, as CSS reads one to four. */
 const PARTS: Partial<Record<ValueProperty, Record<number, string[]>>> = {

@@ -3,9 +3,10 @@ import { join } from 'node:path';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
+import { Moved } from '../extension/webview/ChangeReach';
 import { ComponentValues } from '../extension/webview/ComponentValues';
 import { ValueEditor } from '../extension/webview/ValueEditor';
-import type { DesignToken, ValueCell, ValueRow } from '../src/shared/contract';
+import type { ComponentReach, DesignToken, ValueCell, ValueRow } from '../src/shared/contract';
 import { NO_CHROME, inChrome } from './realChrome';
 
 /**
@@ -137,6 +138,83 @@ describe.skipIf(NO_CHROME)('a component’s Values, in the side pane, in the bro
 				});
 			});
 			expect(found.cells).toBe(13);
+			expect(found.problems).toEqual([]);
+		},
+		60_000,
+	);
+
+	// What a token change moves, as long as it is said: a long variant, in dark, a colour with its opacity, a padding by side.
+	const MOVED: ComponentReach[] = [
+		{
+			file: 'FSButton',
+			changes: [
+				{
+					mode: 'dark',
+					property: 'background',
+					variant: 'destructiveSecondary · disabled',
+					from: 'rgba(16, 128, 98, 0.5)',
+					to: 'rgba(200, 0, 0, 0.5)',
+					instances: 2,
+				},
+				{ mode: 'light', property: 'padding', variant: 'sm', from: '8px 16px 4px 12px', to: '10px 20px 6px 14px', instances: 4 },
+				{ mode: 'light', property: 'radius', variant: null, from: '8px', to: '12px', instances: 6 },
+				{ mode: 'dark', property: 'padding', variant: 'lg', from: '10px 20px 6px 14px', to: '12px 24px 8px 16px', instances: 1 },
+			],
+			inside: false,
+		},
+		{ file: 'FSTextField', changes: [], inside: true },
+	];
+	const moved = MOVED.map((reach) =>
+		renderToStaticMarkup(createElement(Moved, { reach, name: reach.file, here: reach.file === 'FSButton', onOpen: () => undefined })),
+	).join('');
+
+	it.each([PANE, 220])(
+		'lays out what a token change moves without anything over anything, past the pane, or cut off, in a %ipx pane',
+		async (width) => {
+			const found = await inChrome(async (browser) => {
+				const page = await browser.newPage();
+				await page.setViewport({ width, height: 900 });
+				await page.setContent(
+					`<!doctype html><html><head><meta charset="utf-8"><style>${css}</style></head><body><main class="tab"><aside class="component-aside"><section class="aside-section">${moved}</section></aside></main></body></html>`,
+				);
+				return page.evaluate((atPane) => {
+					const box = (e: Element) => e.getBoundingClientRect();
+					const problems: string[] = [];
+					const root = document.documentElement;
+					if (root.scrollWidth > root.clientWidth) problems.push(`the page is ${root.scrollWidth}px in a ${root.clientWidth}px pane`);
+					const pane = box(document.querySelector('.component-aside') as Element);
+					const lines = [...document.querySelectorAll('[data-moved] .value-cell')];
+					for (const line of lines) {
+						const name = line.textContent?.slice(0, 30) ?? '';
+						const [label, drawn] = [line.querySelector('.value-label') as Element, line.querySelector('.value-drawn') as Element];
+						for (const part of [label, drawn]) {
+							if (box(part).right > pane.right + 0.5 || box(part).left < pane.left - 0.5)
+								problems.push(`${name}: ${part.className} is past the pane`);
+							if (part.scrollWidth > part.clientWidth + 1) problems.push(`${name}: ${part.className} runs past its box`);
+						}
+						const [l, d] = [box(label), box(drawn)];
+						const apart = l.right <= d.left + 0.5 || d.right <= l.left + 0.5 || l.bottom <= d.top + 0.5 || d.bottom <= l.top + 0.5;
+						if (!apart) problems.push(`${name}: the name is over its value`);
+						// The name gives way only when it is too long alone: when it breaks, its value is on the line under it.
+						if (l.height > 24 && d.top < l.bottom - 0.5) problems.push(`${name}: the name is squeezed beside its value`);
+						// Broken first at its arrow, between what it was and what it is; each line of it flush to the right.
+						const parts = [...drawn.children].map(box);
+						for (const p of parts) {
+							// At the pane's width, each side on one line; much narrower, one wider than the line alone breaks, inside it.
+							if (atPane && p.height > 24) problems.push(`${name}: a side of its change is broken over lines (${p.height}px)`);
+							const ends = !parts.some((q) => q.left > p.left && q.top < p.bottom && p.top < q.bottom);
+							if (ends && Math.abs(box(line).right - 8 - p.right) > 1.5) problems.push(`${name}: a line of its value is not at the right`);
+						}
+					}
+					// A short one reads as a value does: its name and its value on one line.
+					const short = lines.find((l) => l.textContent?.startsWith('Radius'));
+					if (!short || box(short).height > 24) problems.push(`the radius's change is not on one line (${short && box(short).height}px)`);
+					for (const h of document.querySelectorAll('[data-moved] h3, .value-inside'))
+						if (box(h).right > pane.right + 0.5 || h.scrollWidth > h.clientWidth + 1) problems.push(`${h.textContent}: past the pane`);
+					return { problems, lines: lines.length };
+				}, width === PANE);
+			});
+			expect(found.lines).toBe(4);
 			expect(found.problems).toEqual([]);
 		},
 		60_000,

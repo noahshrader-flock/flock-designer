@@ -11,13 +11,14 @@ import {
 } from '../../src/shared/contract';
 import { plural } from '../../src/shared/plural';
 import { DEFAULT_THEME, THEMES, type Theme, themeLabel } from '../../src/shared/prototypeTheme';
-import { colorAsRead, labelOf } from '../../src/shared/tokens';
+import { labelOf } from '../../src/shared/tokens';
 import { sharedWith } from '../../src/renderer/useComponentTokens';
-import { NO_COLOR, shortValue } from '../../src/shared/valueParts';
+import { NO_COLOR } from '../../src/shared/valueParts';
 import { Swatch } from './ui/Swatch';
 import { Toggle } from './ui/Toggle';
 import { useDismiss } from './ui/useDismiss';
-import { VALUE_NAMES, ValueEditor, valueTitle } from './ValueEditor';
+import { ValueEditor } from './ValueEditor';
+import { VALUE_NAMES, saidValue, valueTitle } from './valueNames';
 
 type Ready = Extract<ComponentTokens, { state: 'ready' }>;
 
@@ -61,9 +62,6 @@ const madeOf = (cell: ValueCell, name: (path: string) => string, others: (path: 
 	if (cell.kind === 'own') return { says: null, why: 'The component’s own: set in the component itself, no token the analysis can mark gives it.' };
 	return { says: 'Not checked', why: 'No token of this kind is marked when the stories are drawn, so whether it is one is not known.' };
 };
-
-/** A value as it is read: a colour as a token's is (its hex, and its opacity), any other as it is written, short. */
-const saidValue = (property: ValueProperty, value: string): string => (COLOR_VALUES.has(property) ? colorAsRead(value) : shortValue(property, value));
 
 /**
  * One value, as a button that opens its control, as a token's row reads: what it is called on the left (its variant, or, with
