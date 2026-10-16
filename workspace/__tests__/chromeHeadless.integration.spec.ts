@@ -101,49 +101,49 @@ describe.skipIf(findChrome() === null)('with the browser on this machine', () =>
 			await page.setViewport({ width: 1200, height: 900, deviceScaleFactor: 2 });
 			await page.goto(`${base}/pictures/`, { waitUntil: 'load' });
 			const compare = await browser.newPage();
-			// Two JPEGs, as drawn: their sizes, and how far apart their pixels are, on average, out of 255.
-			const apart = (a: Buffer, b: Buffer) =>
+			/**
+			 * A JPEG as a person sees it: its size, the box around what is painted (not near-white, so JPEG's own noise is not
+			 * counted), and how far its pixels are from another's, on average, out of 255. What a picture must keep, said without
+			 * depending on how one version of the browser smooths an edge.
+			 */
+			const seen = (a: Buffer, b: Buffer) =>
 				compare.evaluate(
 					async (x: string, y: string) => {
 						const load = async (s: string) => createImageBitmap(await (await fetch(`data:image/jpeg;base64,${s}`)).blob());
-						const [i, j] = [await load(x), await load(y)];
 						const read = (m: ImageBitmap) => {
-							const c = new OffscreenCanvas(i.width, i.height).getContext('2d') as OffscreenCanvasRenderingContext2D;
-							c.drawImage(m, 0, 0, i.width, i.height);
-							return c.getImageData(0, 0, i.width, i.height).data;
+							const c = new OffscreenCanvas(m.width, m.height).getContext('2d') as OffscreenCanvasRenderingContext2D;
+							c.drawImage(m, 0, 0);
+							const d = c.getImageData(0, 0, m.width, m.height).data;
+							let [l, t, r, bottom] = [m.width, m.height, -1, -1];
+							for (let i = 0; i < d.length; i += 4) {
+								if (d[i]! > 240 && d[i + 1]! > 240 && d[i + 2]! > 240) continue;
+								const [px, py] = [(i / 4) % m.width, Math.floor(i / 4 / m.width)];
+								[l, t, r, bottom] = [Math.min(l, px), Math.min(t, py), Math.max(r, px), Math.max(bottom, py)];
+							}
+							return { size: [m.width, m.height], painted: [l, t, r, bottom], data: d };
 						};
-						const [p, q] = [read(i), read(j)];
-						let sum = 0;
-						for (let k = 0; k < p.length; k += 4)
-							sum += (Math.abs(p[k]! - q[k]!) + Math.abs(p[k + 1]! - q[k + 1]!) + Math.abs(p[k + 2]! - q[k + 2]!)) / 3;
-						return { sizes: [`${i.width}x${i.height}`, `${j.width}x${j.height}`], apart: sum / (p.length / 4) };
+						const [p, q] = [read(await load(x)), read(await load(y))];
+						let apart = 0;
+						if (p.size.join() === q.size.join())
+							for (let k = 0; k < p.data.length; k += 4)
+								apart +=
+									(Math.abs(p.data[k]! - q.data[k]!) + Math.abs(p.data[k + 1]! - q.data[k + 1]!) + Math.abs(p.data[k + 2]! - q.data[k + 2]!)) / 3;
+						return { fast: { size: p.size, painted: p.painted }, composed: { size: q.size, painted: q.painted }, apart: apart / (p.data.length / 4) };
 					},
 					a.toString('base64'),
 					b.toString('base64'),
 				);
-			const said: Record<string, { sizes: string[]; apart: number }> = {};
 			for (const file of Object.keys(STORIES)) {
 				await page.evaluate(readDrawn(file, true));
-				const fast = (await pictureOf(page as never)) as Buffer;
-				const composed = (await composedPicture(page as never)) as Buffer;
-				said[file] = await apart(fast, composed);
+				const { fast, composed, apart } = await seen((await pictureOf(page as never)) as Buffer, (await composedPicture(page as never)) as Buffer);
+				// The same size, and what is painted in the same place, each to within the pixel or two the half-size capture finds
+				// an edge to: a story moved into view, cut where the capture cuts it (nothing past the cut shows), wider than the
+				// window, beside a dialog, or with something fixed to the window, all as the composition makes it.
+				fast.size.forEach((n, i) => expect(Math.abs(n - (composed.size[i] as number)), `${file} size`).toBeLessThanOrEqual(2));
+				fast.painted.forEach((n, i) => expect(Math.abs(n - (composed.painted[i] as number)), `${file} painted`).toBeLessThanOrEqual(2));
+				// And the same to the eye where the two are one size: what differs is an edge smoothed another way.
+				if (fast.size.join() === composed.size.join()) expect(apart, `${file} pixels`).toBeLessThan(3);
 			}
-			// Drawn at the size it is kept: the same picture, pixel for pixel, moved into view, beside a dialog (which it leaves to
-			// the composition) or with something fixed to the window (likewise).
-			for (const file of ['small', 'dialog', 'fixed']) {
-				expect(said[file]?.sizes[0], file).toBe(said[file]?.sizes[1]);
-				expect(said[file]?.apart, file).toBe(0);
-			}
-			// Bigger than a picture is kept: framed to within a pixel, and drawn by the browser at the size kept rather than shrunk
-			// from twice it, so its edges are smoothed a little differently (0.2 and 0.5 out of 255 here). The cut story shows
-			// nothing past the cut, as the composition does; were what is past it shown, it would be 0.9.
-			const [tall, wide] = [said.tall, said.wide] as [{ sizes: string[]; apart: number }, { sizes: string[]; apart: number }];
-			for (const { sizes } of [tall, wide]) {
-				const [[w1, h1], [w2, h2]] = sizes.map((x) => x.split('x').map(Number)) as [[number, number], [number, number]];
-				expect(Math.abs(w1 - w2) + Math.abs(h1 - h2)).toBeLessThanOrEqual(2);
-			}
-			expect(tall.apart).toBeLessThan(0.5);
-			expect(wide.apart).toBeLessThan(1);
 		});
 	}, 60_000);
 

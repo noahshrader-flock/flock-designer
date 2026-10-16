@@ -49,6 +49,8 @@ const files = {
 	},
 	'tip.stories.tsx': { meta: { component: Tip }, stories: { Default: () => h(Tip, null, h(Button, { size: 'sm' }, 'Save')) } },
 	'box.stories.tsx': { meta: { component: Box }, stories: { Nested: () => h(Box, { tone: 'outer' }, h(Box, { tone: 'inner' })) } },
+	// A file drawn by a React that keeps its record of what it drew another way: its elements carry none of it.
+	'unrecorded.stories.tsx': { unrecorded: true, meta: { component: Button }, stories: { Default: () => h(Button, null, 'Save') } },
 	// A file whose stories threw, as the page says it in their place.
 	'throws.stories.tsx': { meta: { component: Button }, stories: { Default: () => h('pre', { className: 'fd-error' }, 'Not installed here') } },
 	// A file whose component cannot be asked for: reading its instances fails, and nothing else of its drawing does.
@@ -58,11 +60,12 @@ const files = {
 
 const root = createRoot(document.getElementById('root'));
 window[${JSON.stringify(PREVIEW_SHOW)}] = async (file) => {
-	const { meta, stories, broken } = files[file];
+	const { meta, stories, broken, unrecorded } = files[file];
 	window[${JSON.stringify(PREVIEW_COMPONENT)}] = broken
 		? { get component() { throw new Error('No component here'); }, controls: [] }
 		: meta.component ? { component: meta.component, controls: Object.keys({ ...meta.args, ...meta.argTypes }) } : null;
 	flushSync(() => root.render(Object.entries(stories).map(([name, Story]) => h('section', { key: name, 'data-story': name }, h(Story)))));
+	if (unrecorded) for (const el of document.querySelectorAll('[data-story] *')) for (const k of Object.keys(el)) if (k.startsWith('__react')) delete el[k];
 };
 `;
 
@@ -91,7 +94,15 @@ afterAll(async () => {
 
 describe.skipIf(findChrome() === null)('a component’s instances, in the browser on this machine', () => {
 	type Read = NonNullable<Awaited<ReturnType<typeof headless.measure>>[number][number]>;
-	const FILES = ['button.stories.tsx', 'loose.stories.tsx', 'tip.stories.tsx', 'box.stories.tsx', 'broken.stories.tsx', 'throws.stories.tsx'];
+	const FILES = [
+		'button.stories.tsx',
+		'loose.stories.tsx',
+		'tip.stories.tsx',
+		'box.stories.tsx',
+		'broken.stories.tsx',
+		'throws.stories.tsx',
+		'unrecorded.stories.tsx',
+	];
 
 	it('finds each by the component the stories name, with its top element’s values, each side as it is, and the props that say its variant', async () => {
 		const [[drawn, loose]] = (await headless.measure([{ base, mode: 'light', files: FILES.slice(0, 2) }])) as [[Read, Read]];
@@ -121,8 +132,8 @@ describe.skipIf(findChrome() === null)('a component’s instances, in the browse
 	}, 60_000);
 
 	it('counts one that only wraps what it is given apart, and stories that threw; finds one inside another of itself, outer first; keeps a failure to itself', async () => {
-		const [[, , tip, box, broken, throws]] = (await headless.measure([{ base, mode: 'light', files: FILES }])) as [
-			[Read, Read, Read, Read, Read, Read],
+		const [[, , tip, box, broken, throws, unrecorded]] = (await headless.measure([{ base, mode: 'light', files: FILES }])) as [
+			[Read, Read, Read, Read, Read, Read, Read],
 		];
 		// The tooltip's only element is the button it was given: not its own, so it is never read as the tooltip's.
 		expect([tip.instances, tip.wrapping]).toEqual([[], 1]);
@@ -135,6 +146,8 @@ describe.skipIf(findChrome() === null)('a component’s instances, in the browse
 		expect(Object.keys(broken.colors)).toContain('rgb(16, 128, 98)');
 		// Stories that threw are counted, so what they did not draw is said for that reason.
 		expect([throws.instances, throws.storiesFailed]).toEqual([[], 1]);
+		// A React whose record of what it drew cannot be read: said as that, never as stories that draw none.
+		expect(unrecorded.instancesFailed).toBe("React's record of what it drew could not be read, so its instances cannot be found.");
 	}, 60_000);
 
 	it('reads the instances in dark too, as the page draws them there: the same ones, in the same order', async () => {

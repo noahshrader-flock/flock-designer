@@ -41,7 +41,10 @@ export const PICTURE_QUALITY = 85;
  * An instance whose top element is part of what it was given (a tooltip around a button) draws nothing of its own there,
  * so is counted apart (`wrapping`), never read as the content's values. An instance's top is the first element inside it
  * that takes up room, so one that draws nothing on the page is passed over. The stories that threw are counted
- * (`storiesFailed`), so none drawn because of them is not taken for none drawn at all. **Nothing here can stop the rest of the drawing being read:** a failure is kept as what it said (`instancesFailed`).
+ * (`storiesFailed`), so none drawn because of them is not taken for none drawn at all. The tree is read through React's own
+ * record of what it drew (its `__reactFiber` key on each element); were that kept another way, finding nothing is said as
+ * that, never as stories that draw none. **Nothing here can stop the rest of the drawing being read:** a failure is kept
+ * as what it said (`instancesFailed`).
  */
 const instancesIn = `try {
 		const of = window[${JSON.stringify(PREVIEW_COMPONENT)}];
@@ -76,9 +79,12 @@ const instancesIn = `try {
 				return false;
 			};
 			const seen = new Set();
+			let reached = false;
 			for (const story of document.querySelectorAll('[data-story]')) {
 				for (const el of story.querySelectorAll('*')) {
-					for (let f = fiberOf(el); f; f = f.return) {
+					const own = fiberOf(el);
+					if (own) reached = true;
+					for (let f = own; f; f = f.return) {
 						// Above an instance already met, every other instance is one met before it, in the page's order.
 						if (seen.has(f)) break;
 						if (!isIt(f)) continue;
@@ -112,6 +118,9 @@ const instancesIn = `try {
 					}
 				}
 			}
+			// Elements drawn and not one known to React's record of what it drew: a React that keeps it another way, whose
+			// instances cannot be found. Said as that, not as stories that draw none.
+			if (!reached && document.querySelector('[data-story] *')) throw new Error("React's record of what it drew could not be read, so its instances cannot be found.");
 		}
 	} catch (error) {
 		drawn.instances = [];
