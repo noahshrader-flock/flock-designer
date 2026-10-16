@@ -163,11 +163,14 @@ describe('the index', () => {
 	 * draw one instance of the component they name, its background the brand green, the tone's tag when tagged.
 	 */
 	const instanceOfB = (background: string) => ({ component: true, instances: [{ story: 'Default', key: 'B#1', props: {}, values: { background } }] });
+	/** How many more times A draws otherwise with a change: as a story still settling once in a while does. */
+	let flaky = 0;
 	const measure: Measure = async (runs) => {
 		asked.push(runs);
 		return runs.map((run) =>
 			run.files.map((f) => {
 				const b = f.includes('B.stories');
+				if (run.base.includes('reach') && !b && flaky > 0) return (flaky--, drawn({ 'rgb(1, 1, 1)': 1 }));
 				if (run.base.includes('plain')) return { ...drawn({ 'rgb(107, 114, 128)': 1 }), ...(b ? instanceOfB('rgb(16, 128, 98)') : {}) };
 				// With a change to see what it reaches: B's background is the change's red; A draws as it is.
 				if (run.base.includes('reach')) return { ...drawn({ 'rgb(107, 114, 128)': 1 }), ...(b ? instanceOfB('rgb(200, 0, 0)') : {}) };
@@ -208,6 +211,7 @@ describe('the index', () => {
 	};
 
 	beforeEach(() => {
+		flaky = 0;
 		home = mkdtempSync(join(tmpdir(), 'dsnr-component-tokens-'));
 		const upstream = join(home, 'upstream');
 		clone = join(home, 'ui');
@@ -252,12 +256,25 @@ describe('the index', () => {
 			await i.warm();
 			const r = await reached(i, RED);
 			expect(reaches).toEqual(['#C80000']);
-			// Asked of the build with the change, in both modes, for every listed component.
+			// Asked of the build with the change, in both modes, for every listed component; then the one that differs drawn again,
+			// as it is and with the change, before it is said to move.
 			const files = ['src/components/A/A.stories.tsx', 'src/components/B/B.stories.tsx'];
-			expect(asked.at(-1)).toEqual([
+			expect(asked.at(-3)).toEqual([
 				{ base: 'http://127.0.0.1:1/reach-1/', mode: 'light', files },
 				{ base: 'http://127.0.0.1:1/reach-1/', mode: 'dark', files },
 			]);
+			expect(asked.slice(-2)).toEqual(
+				expect.arrayContaining([
+					[
+						{ base: 'http://127.0.0.1:1/plain/', mode: 'light', files: ['src/components/B/B.stories.tsx'] },
+						{ base: 'http://127.0.0.1:1/plain/', mode: 'dark', files: ['src/components/B/B.stories.tsx'] },
+					],
+					[
+						{ base: 'http://127.0.0.1:1/reach-1/', mode: 'light', files: ['src/components/B/B.stories.tsx'] },
+						{ base: 'http://127.0.0.1:1/reach-1/', mode: 'dark', files: ['src/components/B/B.stories.tsx'] },
+					],
+				]),
+			);
 			expect(r).toEqual({
 				state: 'ready',
 				moved: [
@@ -277,6 +294,15 @@ describe('the index', () => {
 			const drawnSoFar = asked.length;
 			expect(await i.reach(RED)).toEqual(r);
 			expect([reaches.length, asked.length]).toEqual([1, drawnSoFar]);
+		});
+
+		it('does not say a component moves that draws otherwise once, drawing each that differs again before it is said', async () => {
+			const i = index();
+			await i.warm();
+			flaky = 1;
+			const r = await reached(i, RED);
+			// A drew otherwise the first time; drawn again, both ways, it is as it is: unchanged. B moves both times.
+			expect(r).toMatchObject({ state: 'ready', moved: [{ file: 'src/components/B/B.stories.tsx' }], unchanged: 1 });
 		});
 
 		it('draws the newest change alone when several are asked for while one is drawn', async () => {

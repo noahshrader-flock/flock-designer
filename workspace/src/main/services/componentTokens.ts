@@ -231,7 +231,8 @@ export class ComponentTokens {
 	/**
 	 * Every component drawn on a build with `files` written into the library (a token change's; where a value of a
 	 * component's own is written, Phase 4, built apart as `written`, so neither is built over the other), light and dark,
-	 * against itself as the library has it (`asIs`): what the files reach (`reachOf`), and what each drew with them.
+	 * against itself as the library has it (`asIs`): what the files reach (`reachOf`), and what each drew with them. A component
+	 * that differs is drawn again, both ways, and said to move only when it differs again.
 	 */
 	async reachWith(
 		index: DrawnIndex,
@@ -244,8 +245,29 @@ export class ComponentTokens {
 				reach: { state: 'failed', error: built.state === 'failed' ? built.error : 'The previews could not be built with the change.' },
 				after: new Map(),
 			};
-		const after = await this.drawnAt(built.base, index.built.order);
-		return { reach: reachOf(index.built.order, before, after, index.built.values), after };
+		const { order, values } = index.built;
+		const after = await this.drawnAt(built.base, order);
+		const first = reachOf(order, before, after, values);
+		if (first.state !== 'ready' || first.moved.length === 0) return { reach: first, after };
+		// Each that differs is drawn again, as it is and with the change, before it is said to move: a story drawn otherwise
+		// once in a while (FSFab's, one time in three) is not moved by a change. Said as the second drawings say it.
+		const plain = await this.deps.previews.preview();
+		if (plain.state !== 'ready') return { reach: first, after };
+		const differing = first.moved.map((m) => m.file);
+		const [was, now] = await Promise.all([this.drawnAt(plain.base, differing), this.drawnAt(built.base, differing)]);
+		const again = reachOf(differing, was, now, values);
+		if (again.state !== 'ready') return { reach: first, after };
+		const moved = again.moved.filter((m) => differing.includes(m.file));
+		for (const [file, drawings] of now) after.set(file, drawings);
+		return {
+			reach: {
+				state: 'ready',
+				moved,
+				unchanged: first.unchanged + again.unchanged,
+				notDrawn: [...first.notDrawn, ...again.notDrawn],
+			},
+			after,
+		};
 	}
 
 	/**
