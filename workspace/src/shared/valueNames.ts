@@ -1,5 +1,5 @@
 import { COLOR_VALUES, type DesignToken, type ValueProperty } from './contract';
-import { colorAsRead, hexOf } from './tokens';
+import { colorAsRead, hexOf, isDark, pixelsOf } from './tokens';
 import { allParts, shortValue } from './valueParts';
 
 /**
@@ -19,6 +19,9 @@ export const VALUE_NAMES: Record<ValueProperty, string> = {
 	border: 'Border',
 };
 
+/** The component a story file is of, as a save names it: its file's name (`FSButton.stories.tsx` is FSButton). */
+export const storyComponent = (file: string): string => (file.split('/').pop() ?? file).replace(/\.stories\.[^.]+$/, '');
+
 /** A value as it is named: its property, and its variant when it has one. */
 export const valueTitle = (property: ValueProperty, variant: string | null): string =>
 	variant === null ? VALUE_NAMES[property] : `${VALUE_NAMES[property]} · ${variant}`;
@@ -36,10 +39,11 @@ const MOST_FOLLOWED = 3;
  */
 export const tokensItCouldFollow = (property: ValueProperty, value: string, tokens: DesignToken[]): DesignToken[] => {
 	const equal = (t: DesignToken): boolean => {
-		if (COLOR_VALUES.has(property)) return t.kind === 'color' && t.group !== 'Dark' && hexOf(value) !== null && hexOf(t.value) === hexOf(value);
+		if (COLOR_VALUES.has(property)) return t.kind === 'color' && !isDark(t) && hexOf(value) !== null && hexOf(t.value) === hexOf(value);
 		if (property !== 'radius') return false;
-		const corners = new Set(allParts(value, 4));
-		return t.category === 'Shape' && corners.size === 1 && corners.has(t.value);
+		// The same length however it is written: a 4px corner is a 0.25rem token's.
+		const corners = new Set(allParts(value, 4).map(pixelsOf));
+		return t.category === 'Shape' && corners.size === 1 && pixelsOf(t.value) !== null && corners.has(pixelsOf(t.value));
 	};
 	return tokens.filter(equal).slice(0, MOST_FOLLOWED);
 };

@@ -112,6 +112,28 @@ describe('saving the values tried on a component (Phase 4.4)', () => {
 		expect(await branches().current(BADGE)).toBeNull();
 	});
 
+	it('says a value the agent wrote as written by it, and one made to follow a token as following it', async () => {
+		const agentWrote = (t: TriedValue): { answer: Answer; files: Map<string, string> } => ({
+			answer: {
+				state: 'ready',
+				values: [
+					{ id: 'x', state: 'found', by: 'agent', said: 'MUI sets it.', places: [{ file: 'src/utils/theme.ts', line: 4, written: '', writes: '' }] },
+				],
+				reach: { state: 'none' },
+			},
+			files: new Map([['src/utils/theme.ts', `${THEME}// ${t.follows ?? t.value}\n`]]),
+		});
+		found.set(BADGE, agentWrote(SMALL));
+		const saved = await branches().save([SMALL], BADGE);
+		expect(g(clone, 'log', '-1', '--format=%B', saved.branch).trim()).toContain(
+			'FSBadge · Height: 32px, written by the agent (src/utils/theme.ts, line 4)',
+		);
+		const follow = { ...SMALL, follows: 'radius' };
+		found.set(BADGE, agentWrote(follow));
+		await branches().save([follow], BADGE);
+		expect(g(clone, 'log', '-1', '--format=%B', saved.branch).trim()).toContain('FSBadge · Height: follows radius, written by the agent');
+	});
+
 	it('saves again on the same branch, the whole change each time', async () => {
 		const first = await branches().save([SMALL], BUTTON);
 		found.set(BUTTON, smallFound('40px'));

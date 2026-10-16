@@ -4,14 +4,11 @@
  * What is written is what was found and read back while the values were tried (`ValueSources`), on the commit the library
  * is at: a change first saved on an older one is not saved on top of it.
  */
-import type { TriedValue } from '../../shared/contract';
-import { VALUE_NAMES } from '../../shared/valueNames';
+import type { TriedValue, ValuePlace } from '../../shared/contract';
+import { VALUE_NAMES, storyComponent } from '../../shared/valueNames';
 import { type ChangeBranchesDeps, ChangeBranches, type ChangeKind } from './changeBranches';
 import { libraryCommit } from './designLibrary';
 import { type ValueSources, triedValuesOf } from './valueSources';
-
-/** A component, as a save names it: its story file's name (`FSButton.stories.tsx` is FSButton). */
-const componentOf = (file: string): string => (file.split('/').pop() ?? file).replace(/\.stories\.[^.]+$/, '');
 
 const VALUES = (sources: Pick<ValueSources, 'of' | 'files'>): ChangeKind<TriedValue[]> => ({
 	kind: 'values',
@@ -36,9 +33,13 @@ const VALUES = (sources: Pick<ValueSources, 'of' | 'files'>): ChangeKind<TriedVa
 		if (found.state !== 'ready') throw new Error('Where the values are written is still being found; save once it is.');
 		return tried.flatMap((t, i) => {
 			const source = found.values[i];
-			return source?.state === 'found'
-				? source.places.map((p) => `${componentOf(file)} · ${VALUE_NAMES[t.property]}: ${p.written} → ${p.writes} (${p.file}, line ${p.line})`)
-				: [];
+			if (source?.state !== 'found') return [];
+			// What the agent wrote is said as written by it (its lines are code, not a value), and what it is for.
+			const what =
+				source.by !== 'agent'
+					? (p: ValuePlace) => `${p.written} → ${p.writes}`
+					: () => (t.follows === undefined ? `${t.value}, written by the agent` : `follows ${t.follows}, written by the agent`);
+			return source.places.map((p) => `${storyComponent(file)} · ${VALUE_NAMES[t.property]}: ${what(p)} (${p.file}, line ${p.line})`);
 		});
 	},
 	commit: (lines) => [`Component values: ${lines.length} changed`, '', ...lines, '', 'Saved from DSNR.'].join('\n'),

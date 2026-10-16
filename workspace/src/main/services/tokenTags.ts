@@ -6,7 +6,7 @@
 import type { DesignToken, TokenEdit } from '../../shared/contract';
 import type { Theme } from '../../shared/prototypeTheme';
 import { isEditable } from '../../shared/primitives';
-import { PX_PER_REM, lengthParts, placeOf, writtenWith } from '../../shared/tokens';
+import { PX_PER_REM, isDark, lengthParts, placeOf, writtenWith } from '../../shared/tokens';
 
 /** A tag's blue, the same for every color tag: its red and green are the token's number. */
 const TAG_BLUE = 0x5a;
@@ -74,7 +74,7 @@ export const tagsFor = (tokens: DesignToken[]): Tags => {
  */
 export const inMode = (tokens: DesignToken[], path: string, mode: Theme): string => {
 	const t = tokens.find((x) => x.path === path);
-	const dark = mode === 'dark' && t && t.group !== 'Dark' ? writtenWith(tokens, t).find((w) => w.group === 'Dark') : undefined;
+	const dark = mode === 'dark' && t && !isDark(t) ? writtenWith(tokens, t).find(isDark) : undefined;
 	return dark?.path ?? path;
 };
 

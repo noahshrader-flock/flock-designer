@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ChangeBranch, Result } from '../shared/contract';
 
 /** How often a proposed change looks for Chromatic's build, and for how long, after which it is left to the pull request. */
@@ -48,6 +48,9 @@ export const useChangeBranch = <C>({
 	calls: BranchCalls<C>;
 }): BranchControls<C> => {
 	const [branch, setBranch] = useState<ChangeBranch<C> | null>(null);
+	// The calls for what is shown now, and which that is: an answer for one shown before (another component) is not this one's.
+	const now = useRef({ calls, shown });
+	now.current = { calls, shown };
 	const [busy, setBusy] = useState<BranchControls<C>['busy']>(null);
 	const [error, setError] = useState<string | null>(null);
 	const nothing = same(change, empty);
@@ -57,7 +60,7 @@ export const useChangeBranch = <C>({
 		setError(null);
 		if (shown === null) return;
 		let live = true;
-		void calls.current().then((r) => {
+		void now.current.calls.current().then((r) => {
 			if (!live || !r.ok || r.value === null) return;
 			setBranch(r.value);
 			if (nothing) setChange(r.value.saved);
@@ -74,16 +77,19 @@ export const useChangeBranch = <C>({
 		const started = Date.now();
 		const timer = setInterval(() => {
 			if (Date.now() - started > CHROMATIC_FOR_MS) return clearInterval(timer);
-			void calls.current().then((r) => r.ok && r.value && setBranch(r.value));
+			const asked = now.current.shown;
+			void now.current.calls.current().then((r) => r.ok && r.value && now.current.shown === asked && setBranch(r.value));
 		}, CHROMATIC_EVERY_MS);
 		return () => clearInterval(timer);
-	}, [waiting]); // eslint-disable-line react-hooks/exhaustive-deps
+	}, [waiting]);
 
 	const run = useCallback(async (what: 'saving' | 'proposing', act: () => Promise<Result<ChangeBranch<C>>>) => {
+		const asked = now.current.shown;
 		setBusy(what);
 		setError(null);
 		const r = await act();
 		setBusy(null);
+		if (now.current.shown !== asked) return;
 		if (r.ok) setBranch(r.value);
 		else setError(r.error);
 	}, []);

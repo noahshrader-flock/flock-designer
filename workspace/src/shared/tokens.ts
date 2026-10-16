@@ -8,6 +8,10 @@ import type { Catalog, DesignToken, TokenEdit } from './contract';
 import { plural } from './plural';
 import { inOrder } from './primitives';
 import { type DeclaredTarget, textContrast } from './wcag';
+import { themeLabel } from './prototypeTheme';
+
+/** A token of the dark theme: every reader groups a theme's colours by the theme they are for (`Light`, `Dark`). */
+export const isDark = (t: Pick<DesignToken, 'group'>): boolean => t.group === themeLabel('dark');
 
 /** A color a change can give: a hex, with an opacity when it has eight digits. */
 export const HEX_COLOR = /^#(?:[0-9a-f]{6}|[0-9a-f]{8})$/i;

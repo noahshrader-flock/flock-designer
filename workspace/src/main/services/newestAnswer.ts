@@ -16,7 +16,13 @@ export const newestAnswer = <A extends { state: string }>(failed: (error: string
 		try {
 			while (wanted !== null && wanted.key !== kept?.key) {
 				const { key, work } = wanted;
-				kept = { key, answer: await work().catch((err: unknown) => failed(errorText(err))) };
+				// Started inside a promise, so one that throws before it has one is said as failed too.
+				kept = {
+					key,
+					answer: await Promise.resolve()
+						.then(work)
+						.catch((err: unknown) => failed(errorText(err))),
+				};
 			}
 		} finally {
 			working = false;

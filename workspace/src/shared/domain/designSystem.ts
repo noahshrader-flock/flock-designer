@@ -171,6 +171,12 @@ export interface TriedValue {
 export const triedId = ({ property, targets }: { property: ValueProperty; targets: string[] }): string =>
 	`${property}\u0000${targets.join('\u0001')}`;
 
+/** The cell of a component's values a value tried is of: its property's, on the same instances, in whatever order. */
+export const cellFor = (rows: ValueRow[] | null | undefined, t: Pick<TriedValue, 'property' | 'targets'>): ValueCell | undefined => {
+	const targets = new Set(t.targets);
+	return rows?.find((r) => r.property === t.property)?.cells.find((c) => c.targets.length === targets.size && c.targets.every((k) => targets.has(k)));
+};
+
 /** Whether two sets of values tried are the same change, whatever their order: each value, on the same instances. */
 export const sameTried = (a: TriedValue[], b: TriedValue[]): boolean => {
 	const by = (tried: TriedValue[]) => JSON.stringify(tried.map((t) => [triedId(t), t.value, t.follows ?? '']).sort());

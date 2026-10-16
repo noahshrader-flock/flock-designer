@@ -3,13 +3,13 @@ import { arg, handle } from '../handle';
 import { tokenEditsOf } from '../services/tokenEdits';
 import { triedValuesOf } from '../services/valueSources';
 import type { TriedValue } from '../../shared/contract';
+import type { IpcDeps } from '../ipc';
 
 /** A story file the window names a component by, or an error: a path, never anything else. */
 const storyFileOf = (file: unknown): string => {
 	if (typeof file !== 'string' || file.length === 0 || file.length > 500) throw new Error('A component is asked for by its story file.');
 	return file;
 };
-import type { IpcDeps } from '../ipc';
 
 /**
  * The Design System tab: the design systems connected, their components and tokens, a change to the tokens or to the

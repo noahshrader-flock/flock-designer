@@ -1,6 +1,6 @@
 import type { CatalogComponent, TriedValue, ValuePlace, ValueRow, ValueSource, ValueSources as ValueSourcesAnswer } from '../../src/shared/contract';
 import type { BranchControls } from '../../src/renderer/useChangeBranch';
-import { triedId } from '../../src/shared/contract';
+import { cellFor, triedId } from '../../src/shared/contract';
 import { plural } from '../../src/shared/plural';
 import { saidValue, valueTitle } from '../../src/shared/valueNames';
 import { useValueBranch } from '../../src/renderer/useValueBranch';
@@ -126,7 +126,7 @@ export const ChangedValues = ({
 	if (tried.length === 0 && controls.branch === null) return null;
 	const sourceOf = (t: TriedValue): ValueSource | null =>
 		sources.state === 'ready' ? (sources.values.find((v) => v.id === triedId(t)) ?? null) : null;
-	const cellOf = (t: TriedValue) => rows?.find((r) => r.property === t.property)?.cells.find((c) => c.targets.join() === t.targets.join());
+
 	const savable = sources.state === 'ready' && sources.values.every((v) => v.state === 'found');
 	return (
 		<>
@@ -146,7 +146,7 @@ export const ChangedValues = ({
 				) : (
 					<ul className="tokens">
 						{tried.map((t) => {
-							const cell = cellOf(t);
+							const cell = cellFor(rows, t);
 							const name = valueTitle(t.property, cell?.variant ?? null);
 							return (
 								<li key={triedId(t)} data-value-change={triedId(t)} className="token">
