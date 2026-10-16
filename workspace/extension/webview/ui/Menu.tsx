@@ -1,5 +1,6 @@
 import { type KeyboardEvent as KeyEvent, Fragment, useEffect, useId, useRef, useState } from 'react';
 import { Icon } from './Icon';
+import { useDismiss } from './useDismiss';
 
 /**
  * One thing a menu offers: what it says, its codicon (at its start), and what it does. In a choice (`checked` given, true or
@@ -47,22 +48,10 @@ export const Menu = ({
 	const wrap = useRef<HTMLSpanElement>(null);
 	const button = useRef<HTMLButtonElement>(null);
 	const list = useId();
+	// Escape closes it, and the keyboard goes on from the button it opened from; so does a press elsewhere.
+	useDismiss(open, wrap, () => setOpen(false), button);
 	useEffect(() => {
-		if (!open) return;
-		// Escape closes it, and the keyboard goes on from the button it opened from.
-		const escape = (e: KeyboardEvent) => {
-			if (e.key !== 'Escape') return;
-			setOpen(false);
-			button.current?.focus();
-		};
-		const close = (e: MouseEvent) => !wrap.current?.contains(e.target as Node) && setOpen(false);
-		document.addEventListener('keydown', escape);
-		document.addEventListener('mousedown', close);
-		wrap.current?.querySelector<HTMLElement>(ENTRIES)?.focus();
-		return () => {
-			document.removeEventListener('keydown', escape);
-			document.removeEventListener('mousedown', close);
-		};
+		if (open) wrap.current?.querySelector<HTMLElement>(ENTRIES)?.focus();
 	}, [open]);
 	const onKeyDown = (e: KeyEvent<HTMLElement>) => {
 		const all = [...(wrap.current?.querySelectorAll<HTMLElement>(ENTRIES) ?? [])];
