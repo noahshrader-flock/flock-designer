@@ -7,6 +7,7 @@ product's stack, patterns, or codebase.
 standards/
 ├── non-negotiables.md        hard rules, the same in every product
 ├── production-readiness.md   what has to be true before work is handed to engineering
+├── design-system-code.md     how an agent changes a design system's own code (adjusting a component)
 └── universal/                portable; would hold at any company
     ├── accessibility.md          a floor nothing overrides
     ├── interaction-states.md     the seven view states
