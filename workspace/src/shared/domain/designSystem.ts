@@ -167,6 +167,15 @@ export interface TriedValue {
 	follows?: string;
 }
 
+/** A design prop a component declares (Phase 5): its name, and every value it can take, in the order its type lists them. */
+export interface DeclaredProp {
+	name: string;
+	values: (string | number | boolean)[];
+}
+
+/** Why a declared prop cannot be varied: it takes an object, a callback, content, or free text or a number. */
+export type Unvaried = 'object' | 'callback' | 'content' | 'text' | 'number';
+
 /** What names a value tried: its property and the instances it is for, the same in light and in dark, in the tab and the app. */
 export const triedId = ({ property, targets }: { property: ValueProperty; targets: string[] }): string =>
 	`${property}\u0000${targets.join('\u0001')}`;

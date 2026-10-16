@@ -59,6 +59,12 @@ mkdirSync(dist, { recursive: true });
 // The codicons, from the package, beside the page that loads them.
 const codicons = join(here, '../node_modules/@vscode/codicons/dist');
 for (const file of ['codicon.css', 'codicon.ttf']) copyFileSync(join(codicons, file), join(dist, file));
+// The compiler's type libraries, where the extension looks for them (`typeLibs`): the compiler itself is in `extension.js`.
+const typescript = join(here, '../node_modules/typescript');
+mkdirSync(join(dist, 'node_modules/typescript/lib'), { recursive: true });
+copyFileSync(join(typescript, 'package.json'), join(dist, 'node_modules/typescript/package.json'));
+for (const lib of readdirSync(join(typescript, 'lib')).filter((f) => /^lib\..*\.d\.ts$/.test(f)))
+	copyFileSync(join(typescript, 'lib', lib), join(dist, 'node_modules/typescript/lib', lib));
 // esbuild, and its binary for this machine, where the extension looks for it (`esbuildEntry`, beside `extension.js`).
 const modules = join(here, '../node_modules');
 cpSync(join(modules, 'esbuild'), join(dist, 'node_modules/esbuild'), { recursive: true });
