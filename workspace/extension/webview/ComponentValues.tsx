@@ -12,9 +12,8 @@ import {
 import { plural } from '../../src/shared/plural';
 import { DEFAULT_THEME, THEMES, type Theme, themeLabel } from '../../src/shared/prototypeTheme';
 import { colorAsRead, labelOf } from '../../src/shared/tokens';
-import { MOST_LISTED, sharedWith } from '../../src/renderer/useComponentTokens';
+import { sharedWith } from '../../src/renderer/useComponentTokens';
 import { NO_COLOR, shortValue } from '../../src/shared/valueParts';
-import { Disclosure } from './ui/Disclosure';
 import { Swatch } from './ui/Swatch';
 import { Toggle } from './ui/Toggle';
 import { useDismiss } from './ui/useDismiss';
@@ -42,13 +41,24 @@ const WHY_NONE: Record<Exclude<Values['state'], 'read' | 'failed'>, (name: strin
 	'not-drawn': () => 'Its stories did not finish drawing, so its values cannot be read. Its stories, beside this, say why.',
 };
 
-/** What a value is, said: the token it is with the other components that share it, or the component's own, or why neither. */
-const kindOf = (cell: ValueCell, name: (path: string) => string, others: (path: string) => string[]): { says: string; why?: string } => {
-	if (cell.kind === 'token') return { says: cell.tokens.map((p) => `${name(p)} · ${sharedWith(others(p))}`).join('; ') };
-	if (cell.kind === 'mixed') return { says: `Partly ${cell.tokens.map(name).join(', ')}, partly its own` };
-	if (cell.kind === 'own') return { says: 'Its own', why: 'Set in the component itself: no token the analysis can mark gives it.' };
+/**
+ * What a value is made of, said short: the token it is (its name; where else it is used is the tooltip, and the Made from and
+ * Usage parts say it fully), a part of one, or worked out from one. A value of the component's own has nothing to say; one
+ * not checked says so only for the row (`Not checked`).
+ */
+interface Made {
+	/** What it says in a line, or null when it is the component's own and there is nothing to add. */
+	says: string | null;
+	/** More, on hover: where else a token is used, or why a value is not a token. */
+	why: string;
+}
+const madeOf = (cell: ValueCell, name: (path: string) => string, others: (path: string) => string[]): Made => {
+	if (cell.kind === 'token')
+		return { says: cell.tokens.map(name).join(', '), why: cell.tokens.map((p) => `${name(p)} · ${sharedWith(others(p))}`).join('\n') };
+	if (cell.kind === 'mixed') return { says: `Partly ${cell.tokens.map(name).join(', ')}`, why: 'Partly a token, partly the component’s own.' };
 	if (cell.kind === 'derived')
 		return { says: 'Worked out from a token', why: 'It changes with the tokens, but is none of them: a shade, or a size that grows with one.' };
+	if (cell.kind === 'own') return { says: null, why: 'The component’s own: set in the component itself, no token the analysis can mark gives it.' };
 	return { says: 'Not checked', why: 'No token of this kind is marked when the stories are drawn, so whether it is one is not known.' };
 };
 
@@ -56,15 +66,17 @@ const kindOf = (cell: ValueCell, name: (path: string) => string, others: (path: 
 const saidValue = (property: ValueProperty, value: string): string => (COLOR_VALUES.has(property) ? colorAsRead(value) : shortValue(property, value));
 
 /**
- * One value, as a button that opens its control: its variant beside its value (a colour with its swatch, marked when it is
- * being tried), and, when the row's values are not all one kind, what it is, on a line under them where it can be read whole.
+ * One value, as a button that opens its control, as a token's row reads: what it is called on the left (its variant, or, with
+ * none, what it is), its value on the right (a colour with its swatch, marked when it is being tried), and, when it is a
+ * token or worked out from one and its row's values are not all the same, what it is made of on a line under its name.
  * The control of a value of its own is a popover under it (`editor`, shown while `open`), closed by Escape, a press elsewhere
  * or the button again; a token's opens elsewhere, so it has none.
  */
 const Cell = ({
 	property,
 	cell,
-	note,
+	made,
+	line,
 	tried,
 	open,
 	editor,
@@ -73,7 +85,9 @@ const Cell = ({
 }: {
 	property: ValueProperty;
 	cell: ValueCell;
-	note: { says: string; why?: string } | null;
+	made: Made;
+	/** Whether to say what it is made of under its name: when its row's values are not all one kind. */
+	line: boolean;
 	tried: string | null;
 	open: boolean;
 	editor: ReactNode;
@@ -84,6 +98,9 @@ const Cell = ({
 	const wrap = useRef<HTMLLIElement>(null);
 	const button = useRef<HTMLButtonElement>(null);
 	useDismiss(open, wrap, onClose, button);
+	// With no variant, what it is stands for one; with one, under it.
+	const label = cell.variant ?? made.says ?? 'Its own';
+	const under = line && cell.variant !== null && cell.value !== NO_COLOR ? made.says : null;
 	return (
 		<li ref={wrap} data-value-cell className="token" {...(tried !== null ? { 'data-tried': '' } : {})}>
 			<button
@@ -93,18 +110,18 @@ const Cell = ({
 				aria-label={`Change ${valueTitle(property, cell.variant)}`}
 				aria-haspopup="dialog"
 				aria-expanded={open}
-				title={tried !== null ? `Tried; drawn ${cell.value}` : `${cell.instances} drawn`}
+				title={`${made.why}${tried !== null ? `\nTried; drawn ${cell.value}` : ''}`}
 				onClick={open ? onClose : onOpen}
 			>
-				{cell.variant !== null && <span className="value-variant">{cell.variant}</span>}
+				<span className="value-label">{label}</span>
 				<span className="value-drawn">
 					{COLOR_VALUES.has(property) && value !== NO_COLOR && <Swatch value={tried ?? cell.value} />}
 					<span>{value}</span>
 					{tried !== null && <span data-changed-mark className="token-changed" aria-label="Tried" />}
 				</span>
-				{note && cell.value !== NO_COLOR && (
-					<span className="value-note" data-value-kind={cell.kind} title={note.why}>
-						{note.says}
+				{under !== null && (
+					<span className="value-note" data-value-kind={cell.kind}>
+						{under}
 					</span>
 				)}
 			</button>
@@ -113,7 +130,11 @@ const Cell = ({
 	);
 };
 
-/** A property's row: its name and what tells its values apart, its values, and what they are, once when they are all one kind. */
+/**
+ * A property's group: its name, in the weight and colour of a token's set (Primary), with what tells its values apart after
+ * it, and, when every value is the same thing and more than one, what that is, once, on the right; then each value. Its
+ * heading stays at the top of the pane while the group is in view (the next replaces it).
+ */
 const Row = ({
 	row,
 	name,
@@ -138,46 +159,43 @@ const Row = ({
 	const drawing = row.cells.filter((c) => c.value !== NO_COLOR);
 	const first = drawing[0];
 	const same = first !== undefined && drawing.every((c) => c.kind === first.kind && c.tokens.join() === first.tokens.join());
-	const shared = same ? kindOf(first, name, others) : null;
-	const cell = (c: ValueCell, i: number) => (
-		<Cell
-			key={i}
-			property={row.property}
-			cell={c}
-			note={same ? null : kindOf(c, name, others)}
-			tried={tried(c)}
-			open={editing === c}
-			editor={editor(c)}
-			onOpen={() => onOpen(c)}
-			onClose={onClose}
-		/>
-	);
+	const once = same && row.cells.length > 1 ? madeOf(first, name, others) : null;
 	return (
-		<div data-value-row={row.property} className="token-group">
-			<h3 className="token-group-name value-row-name">
+		<div data-value-row={row.property} className="value-group">
+			<h3 className="value-group-name">
 				<span>
 					{VALUE_NAMES[row.property]}
-					{row.by !== null && <span className="quiet"> · by {row.by}</span>}
+					{row.by !== null && <span className="value-group-by">by {row.by}</span>}
 				</span>
-				{shared && (
-					<span className="token-uses" data-value-kind={first?.kind} title={shared.why}>
-						{shared.says}
+				{once?.says && (
+					<span className="value-group-note" data-value-kind={first?.kind} title={once.why}>
+						{once.says}
 					</span>
 				)}
 			</h3>
-			<ul className="tokens">{row.cells.slice(0, MOST_LISTED).map(cell)}</ul>
-			{row.cells.length > MOST_LISTED && (
-				<Disclosure label={`Show ${row.cells.length - MOST_LISTED} more`}>
-					<ul className="tokens">{row.cells.slice(MOST_LISTED).map((c, i) => cell(c, MOST_LISTED + i))}</ul>
-				</Disclosure>
-			)}
+			<ul className="tokens">
+				{row.cells.map((c, i) => (
+					<Cell
+						key={i}
+						property={row.property}
+						cell={c}
+						made={madeOf(c, name, others)}
+						line={!same}
+						tried={tried(c)}
+						open={editing === c}
+						editor={editor(c)}
+						onOpen={() => onOpen(c)}
+						onClose={onClose}
+					/>
+				))}
+			</ul>
 		</div>
 	);
 };
 
 /**
  * Values (Phase 1 of adjusting a component): what each instance of the component its stories draw measures, by property
- * and by variant, and whether each is a token's, shared with which other components, or its own. Said to be as its
+ * and by variant, and whether each is a token's (named), worked out from one, or its own. Said to be as its
  * stories draw it, in light, on the version of the design system shown, so it is never taken for every use in a product;
  * and, when the design system has lengths no tag can be given, that a length said to be its own may be one of them.
  *

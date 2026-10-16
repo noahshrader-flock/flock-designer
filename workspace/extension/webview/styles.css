@@ -1259,7 +1259,7 @@ textarea.input {
 
 @media (min-width: 900px) {
 	.component-layout {
-		grid-template-columns: minmax(0, 1fr) 340px;
+		grid-template-columns: minmax(0, 1fr) 300px;
 	}
 }
 
@@ -1373,35 +1373,50 @@ textarea.input {
 	font-weight: 600;
 }
 
-/* A component's drawn values: a row's name with what tells its values apart, and what they are when all are one kind. */
-.value-row-name {
+/*
+ * A component's values, in the narrow side pane, as its tokens read: each property a group, its name in the weight and colour
+ * of a token's set, each value a line with what it is called on the left and its value on the right, both at the token
+ * rows' size. A group's heading stays at the top of the pane while the group is in view (where the pane scrolls on its own,
+ * below), the next replacing it.
+ */
+.value-group-name {
 	display: flex;
 	flex-wrap: wrap;
 	align-items: baseline;
 	justify-content: space-between;
 	gap: 0 8px;
+	margin: 0;
+	padding: 8px 4px 4px;
+	background: var(--vscode-editor-background);
+	font-size: 1em;
+	font-weight: 600;
 }
 
-/* What a whole row is, beside its name when it fits, under it when it does not, wrapped rather than cut off. */
-.value-row-name .token-uses {
-	flex-shrink: 1;
-	min-width: 0;
-	margin-left: 0;
+/* What tells a group's values apart, after its name, and what they all are, to its right: quiet, and not bold. */
+.value-group-by {
+	margin-left: 6px;
+	color: var(--dsnr-muted);
 	font-weight: 400;
+}
+
+.value-group-note {
+	margin-left: auto;
+	color: var(--dsnr-muted);
+	font-size: 0.92em;
+	font-weight: 400;
+	text-align: end;
 	overflow-wrap: anywhere;
 }
 
 /*
- * A component's value, in the narrow side pane: its variant beside its value, and what the value is made of on a line under
- * them, wrapped where it is long, never cut off or laid over the rest. The variant takes a fixed share, so the values line up
- * down a row; a long one breaks across lines rather than being hidden.
+ * A value: its name on the left, its value on the right, and under its name what it is made of. The value's column is as wide
+ * as the value, so it is flush right and never breaks; it is the name's that gives way, wrapping.
  */
 .value-cell {
 	display: grid;
-	grid-template-columns: minmax(5ch, 38%) minmax(0, 1fr);
+	grid-template-columns: minmax(0, 1fr) auto;
 	align-items: center;
-	column-gap: 8px;
-	row-gap: 1px;
+	column-gap: 12px;
 	width: 100%;
 	padding: 3px 8px 3px 4px;
 	box-sizing: border-box;
@@ -1410,37 +1425,32 @@ textarea.input {
 	text-align: start;
 }
 
-.value-variant {
-	color: var(--dsnr-muted);
+.value-label {
 	overflow-wrap: anywhere;
 }
 
-/* The value, in the second column; with no variant, across both. A swatch and a mark sit at its two ends. */
 .value-drawn {
 	display: flex;
 	align-items: center;
 	gap: 6px;
-	grid-column: 2;
-	min-width: 0;
+	color: var(--dsnr-muted);
 	font-family: var(--vscode-editor-font-family);
 	font-size: 0.92em;
-	overflow-wrap: anywhere;
 }
 
-.value-drawn:first-child {
-	grid-column: 1 / -1;
-}
-
-.value-drawn .token-changed {
-	margin-left: auto;
-}
-
-/* What the value is made of, under it, across the cell. */
 .value-note {
 	grid-column: 1 / -1;
 	color: var(--dsnr-muted);
 	font-size: 0.92em;
 	overflow-wrap: anywhere;
+}
+
+@media (min-width: 900px) {
+	.value-group-name {
+		position: sticky;
+		top: 0;
+		z-index: var(--dsnr-layer-actions);
+	}
 }
 
 /*
@@ -1476,8 +1486,6 @@ textarea.input {
 }
 
 .popover-title {
-	color: var(--dsnr-muted);
-	font-size: 0.92em;
 	font-weight: 600;
 	overflow-wrap: anywhere;
 }
@@ -1488,11 +1496,15 @@ textarea.input {
 	gap: 2px;
 }
 
+/* At the panel's own text size: a few fields, read at a glance. */
 .popover-label,
 .popover-note {
 	margin: 0;
 	color: var(--dsnr-muted);
-	font-size: 0.88em;
+}
+
+.popover .token-value {
+	font-size: inherit;
 }
 
 /* How far a component's tokens reach, in two numbers side by side. */

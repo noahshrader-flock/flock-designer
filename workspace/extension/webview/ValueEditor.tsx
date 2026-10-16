@@ -41,8 +41,9 @@ const PARTS: Partial<Record<ValueProperty, Record<number, string[]>>> = {
  * A component's own value, tried in its stories (Phase 2 of adjusting a component): a small popover under the value, since it
  * is a few fields for one thing, where a token's is a dialog. A length is a slider for each part it is written with short (a
  * side, a corner, a row or a column), a colour a picker and its hex, each tried as it moves, since nothing is built; what is
- * tried is every part in full, as the page sets it. **Nothing is saved:** it says so, and Reset puts the value back as the
- * library draws it. A token's value opens the token's own control instead, since it moves every component that draws with it.
+ * tried is every part in full, as the page sets it. **Nothing is saved**, which the tab says once, where what is tried is
+ * counted; Reset puts the value back as the library draws it. A token's value opens the token's own control instead, since it
+ * moves every component that draws with it.
  */
 export const ValueEditor = ({
 	property,
@@ -91,11 +92,9 @@ export const ValueEditor = ({
 						</div>
 					))
 				)}
-				<p className="quiet popover-note">
-					Tried on {cell.instances === 1 ? 'the instance' : `${cell.instances} instances`} that draw it, as drawn <code>{cell.value}</code>: nothing
-					is saved.
-					{cell.kind === 'derived' && ' It is worked out from a token as drawn; this is a value of its own, in place of that, in these stories only.'}
-				</p>
+				{cell.kind === 'derived' && (
+					<p className="popover-note">Worked out from a token as drawn: this is a value of its own in its place, in these stories only.</p>
+				)}
 			</div>
 		</Popover>
 	);

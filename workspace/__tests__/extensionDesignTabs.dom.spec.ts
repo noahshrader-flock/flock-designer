@@ -279,25 +279,62 @@ describe('a component’s tab', () => {
 			'fontSize',
 		]);
 		const height = values.querySelector('[data-value-row="height"]') as HTMLElement;
-		expect(height.querySelector('h3')?.textContent).toBe('Height · by sizeIts own');
+		// Its name, and what tells its values apart; each value its name on the left and its value on the right.
+		expect(height.querySelector('h3')?.textContent).toBe('Heightby size');
 		expect([...height.querySelectorAll('[data-value-cell]')].map((c) => c.textContent)).toEqual(['sm28px', 'md36px', 'lg48px', 'xl56px']);
-		// What a row's values are is said once when they are all one kind, not on each.
-		expect(height.querySelectorAll('[data-value-cell] [data-value-kind]')).toHaveLength(0);
+		// The component's own is the default: nothing is said of it, on the row or on a value.
+		expect(height.querySelector('[data-value-kind]')).toBeNull();
 	});
 
-	it('says which token a value is and which other components share it, or that it is its own, or that it was not checked', async () => {
+	it('says which token a value is, short, with where else it is used on hover; or that it was not checked', async () => {
 		await analysed();
 		const values = section('Values')!;
-		expect(values.querySelector('[data-value-row="radius"] h3 [data-value-kind="token"]')?.textContent).toBe(
-			'Radius · also FSIconButton, FSSplitButton',
-		);
-		// Values of different kinds in one row each say what they are; a colour that draws nothing is said as none.
-		// A value that draws nothing is said as none, with no swatch and nothing said of what it is: the rest of its row is one
-		// kind, said once on the row.
+		// A value with no variant is named by what it is: the token. Where else it is used is its tooltip, not its text.
+		const radius = values.querySelector('[data-value-row="radius"] [data-value-cell] button') as HTMLElement;
+		expect(radius.textContent).toBe('Radius8px');
+		expect(radius.title).toContain('Radius · also FSIconButton, FSSplitButton');
+		// A colour that draws nothing is said as none, with no swatch; the rest of its row is one token, said once on the row.
 		const background = values.querySelector('[data-value-row="background"]') as HTMLElement;
 		expect([...background.querySelectorAll('[data-value-cell]')].map((c) => c.textContent)).toEqual(['primary#108062', 'ghostnone']);
-		expect(background.querySelector('h3 [data-value-kind="token"]')?.textContent).toBe('Light primary main · also FSIconButton');
-		expect(values.querySelector('[data-value-row="fontSize"] [data-value-kind="unchecked"]')?.textContent).toBe('Not checked');
+		expect(background.querySelector('h3 [data-value-kind="token"]')?.textContent).toBe('Light primary main');
+		expect(background.querySelector('h3 [data-value-kind="token"]')?.getAttribute('title')).toContain('also FSIconButton');
+		expect(background.textContent).not.toContain('also');
+		expect(values.querySelector('[data-value-row="fontSize"] [data-value-cell]')?.textContent).toBe('Not checked16px');
+	});
+
+	it('names each value’s token under its name when the values of a row are not all the same, and says nothing of one that is its own', async () => {
+		const rows = (analysis().values as { rows: { light: unknown[] } }).rows.light;
+		const mixed = {
+			property: 'text',
+			by: 'variant',
+			cells: [
+				{ variant: 'primary', value: 'rgb(255, 255, 255)', kind: 'token', tokens: ['palette.light.primary.main'], instances: 2 },
+				{ variant: 'hover', value: 'rgb(10, 100, 80)', kind: 'derived', tokens: [], instances: 2 },
+				{ variant: 'plain', value: 'rgb(1, 2, 3)', kind: 'own', tokens: [], instances: 2 },
+			],
+		};
+		await analysed({ values: { state: 'read', instances: 12, unmarked: 0, rows: { light: [...rows, mixed], dark: null } } });
+		const text = section('Values')!.querySelector('[data-value-row="text"]') as HTMLElement;
+		expect([...text.querySelectorAll('[data-value-cell]')].map((c) => c.textContent)).toEqual([
+			'primary#FFFFFFLight primary main',
+			'hover#0A6450Worked out from a token',
+			'plain#010203',
+		]);
+		// Said once per value, so not once more on the row.
+		expect(text.querySelector('h3 [data-value-kind]')).toBeNull();
+	});
+
+	it('shows every value of a row, never behind a “show more”', async () => {
+		const rows = (analysis().values as { rows: { light: unknown[] } }).rows.light;
+		const many = {
+			property: 'border',
+			by: 'variant',
+			cells: Array.from({ length: 14 }, (_, i) => ({ variant: `v${i}`, value: `rgb(${i}, 0, 0)`, kind: 'own', tokens: [], instances: 1 })),
+		};
+		await analysed({ values: { state: 'read', instances: 14, unmarked: 0, rows: { light: [...rows, many], dark: null } } });
+		const group = section('Values')!.querySelector('[data-value-row="border"]') as HTMLElement;
+		expect(group.querySelectorAll('[data-value-cell]')).toHaveLength(14);
+		expect(group.querySelector('details, summary')).toBeNull();
 	});
 
 	it('shows dark’s values when dark is chosen, as the stories draw it there, and light’s again when light is', async () => {
@@ -309,7 +346,7 @@ describe('a component’s tab', () => {
 		expect([...values.querySelectorAll('[data-value-row]')].map((r) => r.getAttribute('data-value-row'))).toEqual(['height', 'background']);
 		const background = values.querySelector('[data-value-row="background"]') as HTMLElement;
 		expect([...background.querySelectorAll('[data-value-cell]')].map((c) => c.textContent)).toEqual(['primary#2BB48A', 'ghostnone']);
-		expect(background.querySelector('h3 [data-value-kind="token"]')?.textContent).toContain('Dark primary main');
+		expect(background.querySelector('h3 [data-value-kind="token"]')?.textContent).toBe('Dark primary main');
 		await press(radio('Light'));
 		expect(values.querySelector('[data-values-from]')?.textContent).toContain('in light:');
 		expect(values.querySelector('[data-value-row="radius"]')).not.toBeNull();
@@ -465,7 +502,8 @@ describe('a component’s tab', () => {
 			const { tried } = await tryingOpen();
 			await press(change('Height · sm'));
 			expect(popover()?.getAttribute('aria-label')).toBe('Height · sm');
-			expect(editor()?.textContent).toContain('nothing is saved');
+			// Small: its title and its slider with its value, nothing else to read; what is tried and not saved is said once, on the tab.
+			expect(editor()?.textContent).toBe('Height · sm28px');
 			await type(slider('Height'), '30');
 			// Told at once, without letting go: nothing is built for a value of its own.
 			expect(tried()).toEqual([{ property: 'height', value: '30px', targets: ['height:sm:0', 'height:sm:1', 'height:sm:2'] }]);
