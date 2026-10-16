@@ -12,14 +12,15 @@
 import {
 	COLOR_VALUES,
 	type ComponentValues,
+	type DesignToken,
 	VALUE_PROPERTIES,
 	type ValueCell,
 	type ValueKind,
 	type ValueProperty,
 	type ValueRow,
 } from '../../shared/contract';
-import type { DesignToken } from '../../shared/contract';
 import type { Theme } from '../../shared/prototypeTheme';
+import { NO_COLOR, shortValue } from '../../shared/valueParts';
 import type { Drawn, Instance } from './componentTokens';
 import { type Tags, asTag, inMode, isNothing, sizeToken } from './tokenTags';
 
@@ -29,17 +30,9 @@ const UNTAGGED: ReadonlySet<ValueProperty> = new Set(['fontSize']);
 /** One instance's value of one property, read: the value as it is said (`shown`), and what it is. */
 type Read = { shown: string; kind: ValueKind; tokens: string[] };
 
-/**
- * A value as it is said: padding's four sides and a radius's four corners as CSS writes them short (`0px 10px`), a gap's
- * row and column as one when they are the same, and a colour that draws nothing (clear, or no border) as none.
- */
-const shown = (property: ValueProperty, value: string): string => {
-	if (COLOR_VALUES.has(property)) return isNothing(value) ? 'none' : value;
-	const [a, b = a, c = a, d = b] = value.split(' ') as [string, string?, string?, string?];
-	if (property === 'gap') return a === b ? a : `${a} ${b}`;
-	if (property !== 'padding' && property !== 'radius') return value;
-	return a === b && b === c && c === d ? a : a === c && b === d ? `${a} ${b}` : b === d ? `${a} ${b} ${c}` : `${a} ${b} ${c} ${d}`;
-};
+/** A value as it is said: written short (`shortValue`), and a colour that draws nothing as none. */
+const shown = (property: ValueProperty, value: string): string =>
+	COLOR_VALUES.has(property) ? (isNothing(value) ? NO_COLOR : value) : shortValue(property, value);
 
 /** What reads values in one mode: the tags, and the tokens, whose twins in dark a tag given to a shared role names. */
 type Reading = { tags: Tags; tokens: DesignToken[]; mode: Theme };
@@ -79,7 +72,7 @@ const lengthRead = (plain: string, tagged: string, { tags, tokens: all, mode }: 
 const readOne = (property: ValueProperty, plain: string, tagged: string | null, reading: Reading, marked: boolean): Read => {
 	const said = shown(property, plain);
 	const as = (r: Pick<Read, 'kind' | 'tokens'>): Read => ({ shown: said, ...r });
-	if (COLOR_VALUES.has(property) && said === 'none') return as({ kind: 'own', tokens: [] });
+	if (COLOR_VALUES.has(property) && said === NO_COLOR) return as({ kind: 'own', tokens: [] });
 	if (UNTAGGED.has(property)) return as({ kind: 'unchecked', tokens: [] });
 	if (!marked) return as({ kind: 'own', tokens: [] });
 	if (tagged === null) return as({ kind: 'unchecked', tokens: [] });
@@ -211,7 +204,7 @@ const rowsIn = (drawings: ModeDrawings | undefined, reading: Reading): ValueRow[
 			read: readOne(property, instance.values[property] ?? '', paired ? (twins?.[i]?.values[property] ?? '') : null, reading, marked),
 		}));
 		// A property no instance draws anything of (no gap, no border, no background) is no row.
-		if (entries.every((e) => isNothing(e.read.shown) || e.read.shown === 'none')) continue;
+		if (entries.every((e) => isNothing(e.read.shown) || e.read.shown === NO_COLOR)) continue;
 		rows.push(rowOf(property, entries, candidates));
 	}
 	return rows;

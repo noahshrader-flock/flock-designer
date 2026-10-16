@@ -4,6 +4,7 @@
  * an instance measured is the instance a value is tried on. Each is page code, as source, run in the page.
  */
 import { PREVIEW_COMPONENT, PREVIEW_TRY } from '../../shared/catalog';
+import { CSS_OF } from '../../shared/valueParts';
 
 /**
  * The instances of `component` the page's stories draw, in the page's order: found in what React drew by identity, since a
@@ -81,14 +82,28 @@ export const FIND_INSTANCES = `(component) => {
 }`;
 
 /**
+ * An instance's values, from its top element, as the browser computes them (Phase 1): its height, the box it takes up, and
+ * each other property from its longhands (`CSS_OF`), its parts in full, a border's colour only where it has a border.
+ */
+export const READ_VALUES = `(el) => {
+	const s = getComputedStyle(el);
+	const values = { height: +el.getBoundingClientRect().height.toFixed(2) + 'px' };
+	for (const [property, { names, parts }] of Object.entries(${JSON.stringify(CSS_OF)})) {
+		if (property === 'border' && !(parseFloat(s.borderTopWidth) > 0)) continue;
+		values[property] = (parts === 1 ? names.slice(0, 1) : names).map((name) => s.getPropertyValue(name)).join(' ');
+	}
+	return values;
+}`;
+
+/**
  * Values tried on a component's instances in the preview page (Phase 2), said to it by the tab that frames it: each a
  * property, a value, and the instances it is for, by their keys (`FIND_INSTANCES`). Set on each instance's top element over
  * whatever its styles say, and taken off before the next are set, so the page is always the library's own plus what is being
  * tried, and never the last try's leftovers. Set again whenever the stories draw anew (a story that redraws itself, or the
  * file drawn in place of another), since the elements may then be new ones. Heard from the frame's parent alone.
  *
- * A height is set as the height the element must be given, in its own way of sizing, to take up the height tried; a padding,
- * a radius or a gap as its sides, corners or row and column, as CSS reads one to four parts.
+ * A height is set as the height the element must be given, in its own way of sizing, to take up the height tried; any other
+ * on its longhands (`CSS_OF`), from its parts in full, one on each, or a value of one part on every one.
  */
 export const TRY_VALUES = `(() => {
 	const find = ${FIND_INSTANCES};
@@ -99,23 +114,19 @@ export const TRY_VALUES = `(() => {
 		undo.push([el, property, el.style.getPropertyValue(property), el.style.getPropertyPriority(property)]);
 		el.style.setProperty(property, value, 'important');
 	};
-	const sides = (value, names) => {
-		const [a, b = a, c = a, d = b] = value.split(' ');
-		const parts = names.length === 2 ? [a, b] : [a, b, c, d];
-		return names.map((name, i) => [name, parts[i]]);
-	};
+	const css = ${JSON.stringify(CSS_OF)};
 	const write = (el, property, value) => {
 		if (property === 'height') {
 			const h = parseFloat(getComputedStyle(el).height) + (parseFloat(value) - el.getBoundingClientRect().height);
 			for (const p of ['height', 'min-height', 'max-height']) set(el, p, h + 'px');
-		} else if (property === 'padding') for (const [p, v] of sides(value, ['padding-top', 'padding-right', 'padding-bottom', 'padding-left'])) set(el, p, v);
-		else if (property === 'radius')
-			for (const [p, v] of sides(value, ['border-top-left-radius', 'border-top-right-radius', 'border-bottom-right-radius', 'border-bottom-left-radius'])) set(el, p, v);
-		else if (property === 'gap') for (const [p, v] of sides(value, ['row-gap', 'column-gap'])) set(el, p, v);
-		else if (property === 'fontSize') set(el, 'font-size', value);
-		else if (property === 'background') set(el, 'background-color', value);
-		else if (property === 'text') set(el, 'color', value);
-		else if (property === 'border') set(el, 'border-color', value);
+			return;
+		}
+		const of = css[property];
+		if (!of) return;
+		const parts = of.parts === 1 ? null : value.split(' ');
+		// A value of several parts comes with every part, one for each longhand; one that does not is not set at all.
+		if (parts && parts.length !== of.names.length) return;
+		of.names.forEach((name, i) => set(el, name, parts ? parts[i] : value));
 	};
 	// Once a frame however many changes come at once: what the stories draw, never the styles set here.
 	let pending = false;

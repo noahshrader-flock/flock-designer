@@ -5,7 +5,7 @@
  */
 import { PREVIEW_COMPONENT, PREVIEW_SHOW } from '../../shared/catalog';
 import { axeFound, axeRun } from './accessibilityCheck';
-import { FIND_INSTANCES } from './pageInstances';
+import { FIND_INSTANCES, READ_VALUES } from './pageInstances';
 import type { Drawn, Measure, Mode } from './componentTokens';
 import { within } from './within';
 
@@ -29,9 +29,8 @@ export const PICTURE_QUALITY = 85;
 
 /**
  * Each instance of the component a story file is of (Phase 1 of adjusting a component), read in the page: found as every
- * reader finds them (`FIND_INSTANCES`), and of each one's top element, its height, each side's padding, each corner's
- * radius, its row and column gaps, its font size, and its background, text and border colors, as the browser computes them,
- * each as it is (they are put together where they are read), with the props it was drawn with and its key.
+ * reader finds them (`FIND_INSTANCES`), and its top element's values as the browser computes them (`READ_VALUES`), with the
+ * props it was drawn with and its key.
  *
  * Those that only wrap what they were given are counted (`wrapping`); the stories that threw are counted (`storiesFailed`),
  * so none drawn because of them is not taken for none drawn at all; and a React whose record of what it drew cannot be read
@@ -49,21 +48,8 @@ const instancesIn = `try {
 		if (of) {
 			const { instances, wrapping, reached } = (${FIND_INSTANCES})(of.component);
 			drawn.wrapping = wrapping;
-			for (const { story, key, props, el } of instances) {
-				const box = el.getBoundingClientRect();
-				const s = getComputedStyle(el);
-				const values = {
-					height: +box.height.toFixed(2) + 'px',
-					padding: [s.paddingTop, s.paddingRight, s.paddingBottom, s.paddingLeft].join(' '),
-					radius: [s.borderTopLeftRadius, s.borderTopRightRadius, s.borderBottomRightRadius, s.borderBottomLeftRadius].join(' '),
-					gap: s.rowGap + ' ' + s.columnGap,
-					fontSize: s.fontSize,
-					background: s.backgroundColor,
-					text: s.color,
-				};
-				if (parseFloat(s.borderTopWidth) > 0) values.border = s.borderTopColor;
-				drawn.instances.push({ story, key, props, values });
-			}
+			const read = ${READ_VALUES};
+			for (const { story, key, props, el } of instances) drawn.instances.push({ story, key, props, values: read(el) });
 			// Elements drawn and not one known to React's record of what it drew: a React that keeps it another way, whose
 			// instances cannot be found. Said as that, not as stories that draw none.
 			if (!reached && document.querySelector('[data-story] *')) throw new Error("React's record of what it drew could not be read, so its instances cannot be found.");

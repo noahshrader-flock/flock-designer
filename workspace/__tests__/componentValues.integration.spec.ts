@@ -206,7 +206,9 @@ describe.skipIf(findChrome() === null)('values tried on a component’s instance
 			const settled = () => frame.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
 			await tryValues([
 				{ property: 'height', value: '40px', targets: [small] },
-				{ property: 'radius', value: '14px', targets: [medium] },
+				{ property: 'radius', value: '14px 14px 14px 14px', targets: [medium] },
+				// Not every part: not set at all, rather than on one corner.
+				{ property: 'radius', value: '30px', targets: [small] },
 				{ property: 'background', value: 'rgb(200, 30, 30)', targets: [medium] },
 			]);
 			await settled();
