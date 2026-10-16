@@ -105,6 +105,23 @@ export const madeOnce = (make: (dir: string) => void): { dir: string } => {
 /** As soon as `check` holds, rather than after a guess at how long a process takes: what a test waits for, it names. */
 export const eventually = (check: () => void | Promise<void>) => vi.waitFor(check, { timeout: 5000 });
 
+/**
+ * What `ask` answers once it is no longer being worked out (`working`): asked again every `every` ms until a deadline, never a
+ * count of tries, since how long a drawing or a write takes depends on how busy the machine is.
+ */
+export const settledAnswer = async <A>(
+	ask: () => A | Promise<A>,
+	working: (answer: A) => boolean,
+	{ within = 30_000, every = 10 } = {},
+): Promise<A> => {
+	for (const until = Date.now() + within; Date.now() < until;) {
+		const answer = await ask();
+		if (!working(answer)) return answer;
+		await new Promise((r) => setTimeout(r, every));
+	}
+	throw new Error(`still being worked out after ${within} ms`);
+};
+
 /** For what must *not* happen there is nothing to wait for: a pause long enough for a process to have done it. */
 export const nothingFollows = () => new Promise((r) => setTimeout(r, 400));
 

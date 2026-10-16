@@ -13,6 +13,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type { ConnectedDesignSystem, ValueProperty, ValueSources as Answer } from '../src/shared/contract';
 import { REAL_LIBRARY, REAL_PRIMER, describeWith, libraryMissing, primerMissing } from './realCheckouts';
+import { settledAnswer } from './fixtures';
 
 /**
  * Where a value of a component's own is written (Phase 4), found by its effect on the real libraries on this machine: Flock's
@@ -47,12 +48,12 @@ const sourcesOf = async (
 	const cell = answer.values.rows.light?.find((r) => r.property === property)?.cells.find((c) => c.variant === variant);
 	if (!cell) throw new Error(`${file} has no ${property} for ${variant}`);
 	const tried = [{ property, value, targets: cell.targets }];
-	for (let n = 0; n < 600; n++) {
-		const found: Answer = await sources.of(file, tried);
-		if (found.state !== 'building') return { found, cell };
-		await new Promise((r) => setTimeout(r, 500));
-	}
-	throw new Error('never found');
+	const found = await settledAnswer(
+		(): Promise<Answer> => sources.of(file, tried),
+		(a) => a.state === 'building',
+		{ within: 300_000, every: 500 },
+	);
+	return { found, cell };
 };
 const moved = (found: Answer) => (found.state === 'ready' && found.reach.state === 'ready' ? found.reach.moved.map((m) => m.file) : []);
 
@@ -148,14 +149,12 @@ describeWith(agentMissing, 'the agent on Flock’s FUI', () => {
 					readStandard: async (path) => readFileSync(resolve(__dirname, '..', '..', path), 'utf8'),
 				});
 				const sources = new ValueSources({ tokens, previews, measure: real.measure, agent });
-				const answerOf = async (file: string, t: { property: ValueProperty; value: string; targets: string[]; follows?: string }) => {
-					for (let n = 0; n < 900; n++) {
-						const a: Answer = await sources.of(file, [t]);
-						if (a.state !== 'building' && !(a.state === 'ready' && a.values[0]?.state === 'writing')) return a;
-						await new Promise((r) => setTimeout(r, 1000));
-					}
-					throw new Error('never answered');
-				};
+				const answerOf = (file: string, t: { property: ValueProperty; value: string; targets: string[]; follows?: string }) =>
+					settledAnswer(
+						(): Promise<Answer> => sources.of(file, [t]),
+						(a) => a.state === 'building' || (a.state === 'ready' && a.values[0]?.state === 'writing'),
+						{ within: 900_000, every: 1000 },
+					);
 				const badge = 'src/components/FSBadge/FSBadge.stories.tsx';
 				const cell = await sourcesOf(tokens, sources, badge, 'radius', null, '6px 6px 6px 6px');
 				expect(cell.found).toMatchObject({ state: 'ready', values: [{ state: 'refused', agent: 'write' }] });

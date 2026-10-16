@@ -7,7 +7,7 @@ import type { Built, Drawn } from '../src/main/services/componentTokens';
 import { libraryCommit, systemReads } from '../src/main/services/designLibrary';
 import { DESIGN_SYSTEM_CODE, ValueAgent, type Written } from '../src/main/services/valueAgent';
 import type { ComponentValues, TriedValue } from '../src/shared/contract';
-import { g } from './fixtures';
+import { g, settledAnswer } from './fixtures';
 
 /**
  * The agent writing a value where there is nothing to swap, and making one follow a token (Phase 4.5, 4.6), against a real
@@ -101,12 +101,10 @@ const agent = () =>
 /** What `a` has written for `t` once it is no longer writing it. */
 const settled = async (a: ValueAgent, t: TriedValue): Promise<Written | null> => {
 	const drawn = { ...index, key: `${await libraryCommit(clone, 'develop')}:` };
-	for (let n = 0; n < 400; n++) {
-		const w = a.of(drawn, BADGE, t);
-		if (w?.state !== 'writing') return w;
-		await new Promise((r) => setTimeout(r, 5));
-	}
-	throw new Error('never written');
+	return settledAnswer(
+		() => a.of(drawn, BADGE, t),
+		(w) => w?.state === 'writing',
+	);
 };
 /** Has `a` write `t`, and waits until it has. */
 const written = async (a: ValueAgent, t: TriedValue): Promise<Written | null> => {

@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { reachOf } from '../src/main/services/changeReach';
+import { settledAnswer } from './fixtures';
 import type { Built, Drawn, Instance, Measure } from '../src/main/services/componentTokens';
 import type { CatalogReads } from '../src/main/services/componentCatalog';
 import { MOST_PLACES, ValueSources } from '../src/main/services/valueSources';
@@ -142,14 +143,11 @@ const sources = () =>
 	});
 
 /** Asked until it is no longer being found. */
-const settled = async (s: ValueSources, file: string, tried: TriedValue[]): Promise<Answer> => {
-	for (let n = 0; n < 200; n++) {
-		const a = await s.of(file, tried);
-		if (a.state !== 'building') return a;
-		await new Promise((r) => setTimeout(r, 5));
-	}
-	throw new Error('never found');
-};
+const settled = (s: ValueSources, file: string, tried: TriedValue[]): Promise<Answer> =>
+	settledAnswer(
+		() => s.of(file, tried),
+		(a) => a.state === 'building',
+	);
 const SM: TriedValue = { property: 'height', value: '32px', targets: ['Sm#1', 'Sm#2'] };
 const BADGE_ALL = ['Badge#1'];
 
