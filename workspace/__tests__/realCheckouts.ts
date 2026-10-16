@@ -11,6 +11,8 @@ const beside = (name: string) => resolve(__dirname, '..', '..', '..', name);
 
 /** The design system's clone: `FUI_ROOT`, or `flock-react-component-lib` beside this repository. */
 export const REAL_LIBRARY = process.env.FUI_ROOT ?? beside('flock-react-component-lib');
+/** The second design system (Phase 4), Primer React, a monorepo: `PRIMER_ROOT`, or `primer-react` beside this repository. */
+export const REAL_PRIMER = process.env.PRIMER_ROOT ?? beside('primer-react');
 /** A product's checkout: `COKE_ROOT`, or `flock-coke` beside this repository. */
 export const REAL_COKE = process.env.COKE_ROOT ?? beside('flock-coke');
 
@@ -26,6 +28,10 @@ export const realDevelop = ((): string | null => {
 
 /** Why the library's tests cannot run here, or null when they can. */
 export const libraryMissing = realDevelop === null ? `no clone of the design system with develop at ${REAL_LIBRARY} (set FUI_ROOT)` : null;
+/** Why Primer's cannot, or null: its clone, with its packages installed. */
+export const primerMissing = existsSync(join(REAL_PRIMER, 'node_modules', '@storybook', 'react', 'package.json'))
+	? null
+	: `no clone of primer/react with its packages installed at ${REAL_PRIMER} (set PRIMER_ROOT)`;
 /** Why Coke's cannot, or null. */
 export const cokeMissing = existsSync(join(REAL_COKE, '.dsnr', 'workspace.json'))
 	? null

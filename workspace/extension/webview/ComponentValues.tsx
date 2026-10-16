@@ -8,6 +8,7 @@ import {
 	type ValueCell,
 	type ValueProperty,
 	type ValueRow,
+	triedId,
 } from '../../src/shared/contract';
 import { plural } from '../../src/shared/plural';
 import { DEFAULT_THEME, THEMES, type Theme, themeLabel } from '../../src/shared/prototypeTheme';
@@ -21,9 +22,6 @@ import { ValueEditor } from './ValueEditor';
 import { VALUE_NAMES, saidValue, valueTitle } from './valueNames';
 
 type Ready = Extract<ComponentTokens, { state: 'ready' }>;
-
-/** What names a value tried: its property and the instances it is for, the same in light and in dark. */
-export const triedId = (property: ValueProperty, cell: ValueCell): string => `${property}\u0000${cell.targets.join('\u0001')}`;
 
 /** The values being tried on the component's instances, by `triedId`, and how one is tried or put back (null). */
 export interface Trying {
@@ -222,7 +220,7 @@ export const ComponentValues = ({
 	// Light until the other is chosen, as a prototype opens: the same first sight for everyone.
 	const [mode, setMode] = useState<Theme>(DEFAULT_THEME);
 	const [editing, setEditing] = useState<{ property: ValueProperty; cell: ValueCell } | null>(null);
-	const tried = (property: ValueProperty) => (cell: ValueCell) => trying.tried.get(triedId(property, cell))?.value ?? null;
+	const tried = (property: ValueProperty) => (cell: ValueCell) => trying.tried.get(triedId({ property, targets: cell.targets }))?.value ?? null;
 	const open = (property: ValueProperty) => (cell: ValueCell) => {
 		const token = cell.kind === 'token' && cell.tokens.length === 1 ? byPath.get(cell.tokens[0] as string) : undefined;
 		if (token) onEditToken(token);
@@ -234,7 +232,9 @@ export const ComponentValues = ({
 			property={property}
 			cell={cell}
 			tried={tried(property)(cell)}
-			onTry={(value) => trying.onTry(triedId(property, cell), value === null ? null : { property, value, targets: cell.targets })}
+			onTry={(value) =>
+				trying.onTry(triedId({ property, targets: cell.targets }), value === null ? null : { property, value, targets: cell.targets })
+			}
 		/>
 	);
 	const tokenName = (path: string) => {

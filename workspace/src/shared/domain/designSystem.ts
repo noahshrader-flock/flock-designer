@@ -165,6 +165,32 @@ export interface TriedValue {
 	targets: string[];
 }
 
+/** What names a value tried: its property and the instances it is for, the same in light and in dark, in the tab and the app. */
+export const triedId = ({ property, targets }: { property: ValueProperty; targets: string[] }): string =>
+	`${property}\u0000${targets.join('\u0001')}`;
+
+/**
+ * A place in the library's source where a tried value is written (Phase 4 of adjusting a component), found by its effect:
+ * the file and line, what is written there, and what saving it writes in its place.
+ */
+export interface ValuePlace {
+	file: string;
+	line: number;
+	written: string;
+	writes: string;
+}
+
+/** Where one tried value (`id`, `triedId`) is written, or why it cannot be saved, in words. */
+export type ValueSource = { id: string; state: 'found'; places: ValuePlace[] } | { id: string; state: 'refused'; why: string };
+
+/**
+ * Where the values tried on a component's instances are written, found in the background as they are tried, newest only:
+ * each value's places, or why it cannot be saved, and what writing every one found reaches, drawn as a change to the tokens
+ * is (Phase 3), which is also how each is read back. None while nothing is tried.
+ */
+export type ValueSources =
+	{ state: 'none' } | { state: 'building' } | { state: 'failed'; error: string } | { state: 'ready'; values: ValueSource[]; reach: ChangeReach };
+
 /**
  * One property's values across the instances drawn. `by` is the prop, or two props, that tell its values apart ("size"),
  * so each cell is one of its values; null when the row has one value, or when no prop explains the difference, in which
