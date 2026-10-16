@@ -1,11 +1,6 @@
-import { mkdtempSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 import { expect, it } from 'vitest';
-import { chromeHeadless, findChrome } from '../src/main/services/chromeHeadless';
-import { ComponentTokens } from '../src/main/services/componentTokens';
-import { PrototypeServer } from '../src/main/services/prototypeServer';
-import { StoryPreviews } from '../src/main/services/storyPreviews';
+import { findChrome } from '../src/main/services/chromeHeadless';
+import type { ComponentTokens } from '../src/main/services/componentTokens';
 import { ValueSources } from '../src/main/services/valueSources';
 import { ValueAgent } from '../src/main/services/valueAgent';
 import { runToEnd } from '../src/main/services/agent';
@@ -121,24 +116,14 @@ describeWith(agentMissing, 'the agent on Flock’s FUI', () => {
 		async () => {
 			const repository = 'flocksafety/flock-react-component-lib';
 			const system = { id: repository, name: 'FUI', repository, root: REAL_LIBRARY, folder: '', branch: 'develop' };
-			const pages = new PrototypeServer();
-			const real = chromeHeadless();
-			try {
-				const previews = new StoryPreviews({ system: () => system, folder: mkdtempSync(join(tmpdir(), 'dsnr-agent-')), server: pages });
-				const tokens = new ComponentTokens({
-					system: () => system,
-					previews,
-					measure: real.measure,
-					pictures: { keep: () => {}, of: async () => ({}) },
-				});
-				await tokens.warm();
+			await onRealLibrary(system, async ({ tokens, previews, measure }) => {
 				const agent = new ValueAgent({
 					system: () => system,
 					tokens,
 					run: (cwd, task, readOnly) => runToEnd(cwd, task, { readOnly }),
 					readStandard: async (path) => readFileSync(resolve(__dirname, '..', '..', path), 'utf8'),
 				});
-				const sources = new ValueSources({ tokens, previews, measure: real.measure, agent });
+				const sources = new ValueSources({ tokens, previews, measure, agent });
 				const answerOf = (file: string, t: { property: ValueProperty; value: string; targets: string[]; follows?: string }) =>
 					settledAnswer(
 						(): Promise<Answer> => sources.of(file, [t]),
@@ -159,10 +144,7 @@ describeWith(agentMissing, 'the agent on Flock’s FUI', () => {
 				const follow = { property: 'radius' as const, value: radius.cell.value, targets: radius.cell.targets, follows: 'radius' };
 				await agent.write(icon, follow);
 				expect(await answerOf(icon, follow)).toMatchObject({ state: 'ready', values: [{ state: 'found', by: 'agent' }] });
-			} finally {
-				await real.close();
-				pages.close();
-			}
+			});
 		},
 		1_800_000,
 	);

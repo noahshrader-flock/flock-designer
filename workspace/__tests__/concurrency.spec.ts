@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { coalescing, coalescingByKey, inTurns, singleFlight } from '../src/main/services/concurrency';
+import { coalescing, coalescingByKey, heldTurns, inTurns, singleFlight } from '../src/main/services/concurrency';
 
 const later = () => {
 	let done!: (v: string) => void;
@@ -108,5 +108,20 @@ describe('in turns', () => {
 		await expect(first).rejects.toThrow('first failed');
 		expect(await second).toBe(2);
 		expect(happened).toEqual(['first starts', 'other', 'first ends', 'second']);
+	});
+});
+
+describe('turns held until given back', () => {
+	it('gives a key’s next turn only once the last is given back, and another key’s at once', async () => {
+		const held = heldTurns<string>();
+		const happened: string[] = [];
+		const back = await held('reach');
+		const next = held('reach').then((b) => (happened.push('next'), b));
+		await held('written').then((b) => (happened.push('other'), b()));
+		await new Promise((r) => setTimeout(r, 10));
+		expect(happened).toEqual(['other']);
+		back();
+		(await next)();
+		expect(happened).toEqual(['other', 'next']);
 	});
 });

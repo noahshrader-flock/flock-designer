@@ -152,6 +152,8 @@ const importedFile = async (reads: CatalogReads, from: string, spec: string): Pr
 			() => true,
 			() => false,
 		);
+	// An address (a web font's) is the browser's to fetch, not a file of the library's.
+	if (/^[a-z][a-z\d+.-]*:/i.test(spec)) return null;
 	const beside = posix.normalize(posix.join(posix.dirname(from), spec));
 	if (/^\.{0,2}\//.test(spec) || (STYLESHEET.test(spec) && (await exists(beside)))) return beside.startsWith('..') ? null : beside;
 	const [, name, sub] = /^((?:@[^/]+\/)?[^/]+)(?:\/(.+))?$/.exec(spec) ?? [];

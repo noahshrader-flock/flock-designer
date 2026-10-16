@@ -1,7 +1,6 @@
 /**
  * The library's own PostCSS configuration, run as its Storybook runs it (Phase 5.5 of adjusting a component,
- * DESIGN_SYSTEM_PLAN.md): Tailwind's, Panda's, Primer's preset, autoprefixer, whichever it names, with nothing here naming
- * any of them. **Its configuration is code, so it is run locked down:** in a process of its own, on the runtime this app
+ * DESIGN_SYSTEM_PLAN.md): Tailwind's, Panda's, autoprefixer, whichever it names, with nothing here naming any of them. **Its configuration is code, so it is run locked down:** in a process of its own, on the runtime this app
  * runs on, under Node's permission model, reading only the library's copy, the clone its packages are in, and this app's
  * own PostCSS; with no environment. It may load native plugins (Tailwind 4's scanner, Lightning CSS), as the library's own
  * Storybook does: those, and the network, are not held by the permission model (DESIGN_SYSTEM_PLAN.md's Risks).
@@ -10,7 +9,7 @@
  * found) lasts the build's life, as it does in the library's Storybook.
  */
 import { type ChildProcess, spawn } from 'node:child_process';
-import { existsSync, realpathSync } from 'node:fs';
+import { existsSync, readFileSync, realpathSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 
@@ -38,19 +37,19 @@ const STYLESHEET_MS = 60_000;
  * The library's PostCSS configuration, as PostCSS's loader finds it: from the design system's package (`folder`) up to the
  * repository's root, the first of its names there (a `package.json` only with a `postcss` entry). Null for a library with none.
  */
-export const postcssConfigIn = (library: string, folder: string, read: (path: string) => string | null): string | null => {
+export const postcssConfigIn = (library: string, folder: string): string | null => {
+	const inManifest = (path: string): boolean => {
+		try {
+			return (JSON.parse(readFileSync(path, 'utf8')) as { postcss?: unknown }).postcss !== undefined;
+		} catch {
+			// None there, or one that is not JSON: no configuration in it.
+			return false;
+		}
+	};
 	for (let dir = join(library, folder); ; dir = dirname(dir)) {
 		for (const name of CONFIG_NAMES) {
 			const path = join(dir, name);
-			if (name !== 'package.json') {
-				if (existsSync(path)) return path;
-				continue;
-			}
-			try {
-				if ((JSON.parse(read(path) ?? '{}') as { postcss?: unknown }).postcss !== undefined) return path;
-			} catch {
-				// A package.json that is not JSON has no configuration in it.
-			}
+			if (name === 'package.json' ? inManifest(path) : existsSync(path)) return path;
 		}
 		if (dir === library || dirname(dir) === dir) return null;
 	}
@@ -102,6 +101,8 @@ fs.existsSync = (p) => {
 		throw e;
 	}
 };
+// What its plugins log goes where a process's errors do: its output is this process's answers only.
+console.log = console.info = console.debug = console.error;
 const { createRequire } = require('node:module');
 const { readFileSync } = fs;
 const { pathToFileURL } = require('node:url');
@@ -161,7 +162,8 @@ const ownPostcss = (): string => createRequire(__filename).resolve('postcss');
 
 /**
  * The library's PostCSS (`config`), in a process locked to `library` (the build's copy, its design system's package at
- * `folder`) and the clone its packages are linked from. Started on the first stylesheet; a process that ends says so to every stylesheet still asked.
+ * `folder`) and the clone its packages are linked from. Started on the first stylesheet; a process that ends says so to
+ * every stylesheet still asked.
  */
 export const postcssRun = (library: string, folder: string, config: string): PostcssRun => {
 	let child: ChildProcess | null = null;
@@ -201,8 +203,15 @@ export const postcssRun = (library: string, folder: string, config: string): Pos
 		started.stdout?.on('data', (d: Buffer) => {
 			buffered += d.toString();
 			for (let n = buffered.indexOf('\n'); n !== -1; n = buffered.indexOf('\n')) {
-				const out = JSON.parse(buffered.slice(0, n)) as { id: number; error?: string } & Partial<Processed>;
+				const line = buffered.slice(0, n);
 				buffered = buffered.slice(n + 1);
+				// A line that is not an answer (a plugin writing to the output itself) is not one to read.
+				let out: { id: number; error?: string } & Partial<Processed>;
+				try {
+					out = JSON.parse(line) as typeof out;
+				} catch {
+					continue;
+				}
 				const w = waiting.get(out.id);
 				waiting.delete(out.id);
 				if (out.error !== undefined) w?.reject(new Error(out.error));

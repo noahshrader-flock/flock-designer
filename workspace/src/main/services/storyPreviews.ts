@@ -14,7 +14,7 @@ import type { BuildContext, BuildOptions, Plugin } from 'esbuild';
 import { ASSET_TYPES, type PrototypeServer } from './prototypeServer';
 import { editedFiles } from './tokenEdits';
 import { errorText } from '../../shared/result';
-import { inTurns, singleFlight } from './concurrency';
+import { heldTurns, singleFlight } from './concurrency';
 import { type Stylesheets, stylesheetsFor } from './stylesheets';
 import { RUNNER, postcssRun } from './postcssProcess';
 import { HOST } from '../../shared/vocabulary';
@@ -134,7 +134,8 @@ import { createRoot } from 'react-dom/client';
 import { flushSync } from 'react-dom';
 import { composeStories, setProjectAnnotations } from '@storybook/react';
 ${preview === null ? '' : `import * as preview from ${JSON.stringify(fromEntry(preview))};`}
-// Dark as the library's Storybook draws it (Phase 5.5): its themes addon's \`theme\` global, beside the page's color scheme.
+// Dark as the library's Storybook draws it (Phase 5.5): its themes addon's \`theme\` global, beside the page's color scheme,
+// given as Storybook 8.2 and later take it (\`initialGlobals\`) and as earlier ones do (\`globals\`).
 const annotations = [${preview === null ? '' : 'preview'}];
 if (matchMedia('(prefers-color-scheme: dark)').matches) annotations.push({ initialGlobals: { theme: 'dark' }, globals: { theme: 'dark' } });
 if (annotations.length > 0) setProjectAnnotations(annotations);
@@ -520,7 +521,7 @@ export class StoryPreviews {
 	 */
 	private builtServed = new Map<BuiltFor, { dir: string; key: string; builds: number }>();
 	/** One build open for each purpose at a time, since each builds in a copy of its own (`builderFor`). */
-	private readonly ownCopy = inTurns<BuiltFor>();
+	private readonly ownCopy = heldTurns<BuiltFor>();
 	/** The copies made in this run of the app: one an earlier run left may have a change still written in it. */
 	private readonly fresh = new Set<string>();
 
@@ -626,9 +627,7 @@ export class StoryPreviews {
 	 */
 	async opened(purpose: BuiltFor): Promise<OpenedBuild | Exclude<StoryPreview, { state: 'ready' }>> {
 		// Its turn, held until it is closed: a second asked for meanwhile waits for it.
-		let closed = () => {};
-		const held = new Promise<void>((r) => (closed = r));
-		await new Promise<void>((entered) => void this.ownCopy(purpose, () => (entered(), held)));
+		const closed = await this.ownCopy(purpose);
 		try {
 			const base = await this.base();
 			const at = this.current;

@@ -92,3 +92,12 @@ export const inTurns = <K>() => {
 		return turn;
 	};
 };
+
+/**
+ * Turns by key, as `inTurns`, held from when one is given until it is given back: for work that ends after the call that
+ * starts it (a build kept open until it is closed). Each waits for the turn before it to be given back.
+ */
+export const heldTurns = <K>() => {
+	const turns = inTurns<K>();
+	return (key: K): Promise<() => void> => new Promise((given) => void turns(key, () => new Promise<void>((back) => given(back))));
+};

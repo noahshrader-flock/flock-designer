@@ -40,13 +40,7 @@ export interface Stylesheets {
 /** The stylesheets of the copy of the library at `library`, its design system's package at `folder`. */
 export const stylesheetsFor = (library: string, folder: string, sass: typeof import('sass')): Stylesheets => {
 	const nodeModules = join(library, 'node_modules');
-	const config = postcssConfigIn(library, folder, (path) => {
-		try {
-			return readFileSync(path, 'utf8');
-		} catch {
-			return null;
-		}
-	});
+	const config = postcssConfigIn(library, folder);
 	let postcss = config === null ? null : postcssRun(library, folder, config);
 	// The configuration as a change names it and as the build does (by its real path).
 	const configPaths = config === null ? [] : [config, realpathSync(config)];

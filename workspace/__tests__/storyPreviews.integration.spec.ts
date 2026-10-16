@@ -752,6 +752,8 @@ module.exports = (options = {}) => ({
 	postcssPlugin: 'utilities',
 	Once(root, { result, postcss }) {
 		runs++;
+		// As plugins do: what it says it did, on the process's output.
+		console.log('utilities: run', runs);
 		const src = join(process.cwd(), 'src');
 		result.messages.push({ type: 'dir-dependency', plugin: 'utilities', dir: src, parent: result.opts.from });
 		const used = new Set();
