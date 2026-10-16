@@ -1,7 +1,8 @@
 /**
  * What every agent task says about accessibility (T7 of the design system plan, part A; decision 30): the rules, from the
  * one standard, and the product's target, from its one manifest, put into the task instead of naming a folder the agent
- * may never open. Neither is copied: both are read each time a task is made.
+ * may never open. Neither is copied: both are read each time a task is made. And the rest a manifest says about it: the
+ * pages of the product's own app to check (`appPages`).
  */
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -49,6 +50,29 @@ export const declaredTarget = (manifest: string | null, where: string): Declared
 	return { declared: true, target, tags, source: `${where}'s .dsnr/${MANIFEST_FILE}` };
 };
 
+/** A page of a product's own app to check: what it is called, and its address from the app's root. */
+export interface AppPage {
+	name: string;
+	path: string;
+}
+
+/** The manifest's section that names the pages of a product's app to check. */
+export const PAGES_SECTION = 'Pages to check for accessibility';
+
+/**
+ * The pages of its own app a manifest names to check, in its "Pages to check for accessibility" section: a table row each,
+ * its name, then its address from the app's root (`| Devices | \`/devices?tab=list\` |`). Only an address on the app itself
+ * is taken, never another site's. Null when it names none.
+ */
+export const appPages = (manifest: string | null): AppPage[] | null => {
+	const rows = manifest === null ? '' : (section(manifest, PAGES_SECTION) ?? '');
+	const pages = [...rows.matchAll(/^\|\s*([^|]*?)\s*\|\s*`?(\/(?!\/)[^|`\s]*)`?\s*\|/gm)].map(([, name, path]) => ({
+		name: (name as string).replace(/\*\*/g, '').trim() || (path as string),
+		path: path as string,
+	}));
+	return pages.length > 0 ? pages : null;
+};
+
 /**
  * What a check found that is still open, as the agent reads it: what failed, where in WCAG, on how many elements, and each
  * element it lists, by its selector with what axe says to change, so it can be found and fixed.
@@ -59,6 +83,13 @@ const issueLine = (i: AccessibilityIssue): string =>
 		...i.elements.map((e) => `  - ${elementLine(e)}`),
 		...(unlisted(i) > 0 ? [`  - and ${plural(unlisted(i), 'more element')}`] : []),
 	].join('\n');
+
+/** What a check found, as the agent reads it: by axe, for a person to judge, and best practice apart. Nothing when it found none. */
+export const findingsLines = (findings: AccessibilityFindings & { bestPractice?: AccessibilityFindings }): string[] => [
+	...(findings.violations.length ? ['', 'Found by axe:', ...findings.violations.map(issueLine)] : []),
+	...(findings.incomplete.length ? ['', 'For a person to judge (axe could not decide):', ...findings.incomplete.map(issueLine)] : []),
+	...(findings.bestPractice?.violations.length ? ['', `${BEST_PRACTICE_TITLE}:`, ...findings.bestPractice.violations.map(issueLine)] : []),
+];
 
 /**
  * The accessibility section of a task. `standard` is the standard's text; `target` the product's; `findings`, when the
@@ -96,9 +127,7 @@ export const accessibilityBrief = ({
 					"### What the prototype's check left open",
 					'',
 					'Fix each in the code, or say in the audit why not. None is dropped by the move.',
-					...(findings.violations.length ? ['', 'Found by axe:', ...findings.violations.map(issueLine)] : []),
-					...(findings.incomplete.length ? ['', 'For a person to judge (axe could not decide):', ...findings.incomplete.map(issueLine)] : []),
-					...(findings.bestPractice?.violations.length ? ['', `${BEST_PRACTICE_TITLE}:`, ...findings.bestPractice.violations.map(issueLine)] : []),
+					...findingsLines(findings),
 				]
 			: []),
 		'',

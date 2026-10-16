@@ -198,6 +198,9 @@ describe('checking a page for accessibility, headless', () => {
 		]);
 		expect(done.visited).toEqual(['http://x/p.html?state=default', 'http://x/p.html?state=empty']);
 		expect(await headless.scan('http://x/p.html', [], ['wcag2a'])).toEqual([{ state: 'default', ...found }]);
+		// A page as it opens is its own address, query and all: a product's page may be one.
+		await headless.scan('http://x/devices?tab=list', [], ['wcag2a']);
+		expect(done.visited.at(-1)).toBe('http://x/devices?tab=list');
 	});
 
 	it('fails in words when a state gives no results', async () => {

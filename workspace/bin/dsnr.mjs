@@ -42,6 +42,8 @@ try {
 		bundle: true,
 		platform: 'node',
 		format: 'esm',
+		// A package written for require (the browser's driver, which measuring accessibility starts) still has it here.
+		banner: { js: "import { createRequire as __dsnrRequire } from 'node:module'; const require = __dsnrRequire(import.meta.url);" },
 		logLevel: 'error',
 	});
 	const { main, ghApi, openInBrowser } = await import(pathToFileURL(file).href);

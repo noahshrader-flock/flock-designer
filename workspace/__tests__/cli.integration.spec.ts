@@ -1,10 +1,12 @@
 import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
+import { type AddressInfo, createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { main } from '../src/cli/dsnr';
+import { findChrome } from '../src/main/services/chromeHeadless';
 import { g, installDesignSystem, makeProduct, addStandards } from './fixtures';
 import type { GitHubApi } from '../src/host/github';
 
@@ -503,4 +505,127 @@ describe('the command', () => {
 		expect(saved.status).toBe(0);
 		expect(readFileSync(join(design, 'projects', 'demo', 'prototypes', 'v1-i1.html'), 'utf8')).toContain('Real component');
 	});
+});
+
+/**
+ * `dsnr accessibility` (A2 of the accessibility plan): the one harness, in a real browser, on a product that is not Coke
+ * and names nothing DSNR knows, a plain page with a known fault served by its own design-mode command, and on a
+ * prototype's page. It needs the browser on this machine, as the app does.
+ */
+describe.skipIf(findChrome() === null)('accessibility', () => {
+	/** A port nothing answers on now, for the plain product to serve on. */
+	const freePort = () =>
+		new Promise<number>((resolve) => {
+			const s = createServer().listen(0, () => {
+				const { port } = s.address() as AddressInfo;
+				s.close(() => resolve(port));
+			});
+		});
+	const PAGE = (title: string, body: string) =>
+		`<!doctype html><html lang="en"><head><title>${title}</title></head><body><main><h1>${title}</h1>${body}</main></body></html>`;
+
+	it('measures a plain product’s own app as its files say: started, each page it names, what did not open said, and stopped after', async () => {
+		const shop = join(home, 'plain-shop');
+		const port = await freePort();
+		mkdirSync(shop);
+		makeProduct(shop, [{ id: 'design-mode', label: 'Design mode', argv: ['node', 'serve.cjs', String(port)], servesPreviewOn: port }]);
+		// A plain server and plain pages: one with an image with no text and faint text, one that throws, one that never answers.
+		writeFileSync(
+			join(shop, 'serve.cjs'),
+			`require('node:http').createServer((req, res) => {
+				if (req.url === '/gone') return req.socket.destroy();
+				res.setHeader('content-type', 'text/html');
+				if (req.url === '/broken') return res.end(${JSON.stringify(PAGE('Broken', '<script>throw new Error("the page broke")</script>'))});
+				res.end(req.url.startsWith('/devices')
+					? ${JSON.stringify(PAGE('Devices', '<img src="data:image/gif;base64,R0lGODlhAQABAAAAACw="><p style="color:#c8c8c8;background:#fff">Faint text</p>'))}
+					: ${JSON.stringify(PAGE('Home', '<p>Welcome</p>'))});
+			}).listen(Number(process.argv[2]));`,
+		);
+		writeFileSync(
+			join(shop, '.dsnr', 'manifest.md'),
+			[
+				'# Plain Shop',
+				'',
+				'## Accessibility conformance target',
+				'',
+				'| | |',
+				'|---|---|',
+				'| **Target** | WCAG 2.1 Level AA |',
+				'',
+				'## Pages to check for accessibility',
+				'',
+				'| Page | Address |',
+				'|---|---|',
+				'| Home | `/` |',
+				'| Devices | `/devices?tab=list` |',
+				'| Broken | `/broken` |',
+				'| Gone | `/gone` |',
+			].join('\n'),
+		);
+		mkdirSync(join(design, 'projects', 'shop'), { recursive: true });
+		writeFileSync(join(design, 'projects', 'shop', 'iterations.json'), '[]\n');
+
+		expect(await main(['accessibility', '--project', 'shop'], deps(shop))).toBe(0);
+		const said = out.join('\n');
+		expect(said).toMatch(/^Measured Test Product's app in design mode: \d+ automated issues?\./);
+		expect(said).toContain('Checked with axe-core 4.14.0 at WCAG 2.1 Level AA, in Home, Devices.');
+		expect(said).toMatch(/- \*\*image-alt\*\* \(WCAG 1\.1\.1\)[^\n]*1 element, in Devices\.\n {2}- `img` \(in Devices\): /);
+		expect(said).toMatch(/- \*\*color-contrast\*\* \(WCAG 1\.4\.3\)[^\n]*in Devices/);
+		expect(said).toContain('Broken (/broken) did not open, so it was not measured: the page broke');
+		expect(said).toContain('Gone (/gone) did not open, so it was not measured: the page did not load in time.');
+		// Said as it went, so a long run is never silent.
+		expect(err.join('\n')).toMatch(/Starting Test Product's app \(node serve\.cjs \d+\)[\s\S]*Checking Home \(\/\)[\s\S]*Checking Gone \(\/gone\)/);
+
+		const kept = JSON.parse(readFileSync(join(design, 'projects', 'shop', 'accessibility', 'app.json'), 'utf8')) as {
+			pages: { name: string }[];
+			notOpened: { name: string }[];
+			result: { ran: { states: string[]; target: string }; violations: { rule: string }[] };
+		};
+		expect(kept.pages.map((p) => p.name)).toEqual(['Home', 'Devices', 'Broken', 'Gone']);
+		expect(kept.notOpened.map((p) => p.name)).toEqual(['Broken', 'Gone']);
+		expect(kept.result.ran.states).toEqual(['Home', 'Devices']);
+		expect(kept.result.violations.map((v) => v.rule)).toEqual(expect.arrayContaining(['image-alt', 'color-contrast']));
+		// Stopped after: nothing answers on its port.
+		await expect(fetch(`http://localhost:${port}/`)).rejects.toThrow();
+	}, 120_000);
+
+	it('says so, and measures nothing, for a product with no workspace file or no design-mode command', async () => {
+		const bare = join(home, 'bare');
+		mkdirSync(bare);
+		g(bare, 'init', '-q');
+		expect(await main(['accessibility', '--project', 'demo'], deps(bare))).toBe(1);
+		expect(err.at(-1)).toBe(`dsnr: ${realpathSync(bare)} has no .dsnr/workspace.json, so DSNR cannot open it, and nothing was measured.`);
+		await run('new-prototype', '--project', 'demo', '--title', 'Demo', '--note', 'A list');
+		expect(await run('accessibility', '--project', 'demo')).toBe(1);
+		expect(err.at(-1)).toBe(
+			`dsnr: Test Product's .dsnr/workspace.json declares no "design-mode" command that serves its app on a port, so DSNR cannot open it, and nothing was measured.`,
+		);
+		expect(existsSync(join(design, 'projects', 'demo', 'accessibility'))).toBe(false);
+	});
+
+	it('measures a prototype’s page in a real browser, and keeps it as the app keeps its check', async () => {
+		await run('new-prototype', '--project', 'demo', '--title', 'Demo', '--note', 'A list');
+		writeFileSync(join(prototypes, 'demo', 'v1-i1.tsx'), "export default () => <main><h1>Cameras</h1><img src='camera.png' /></main>;\n");
+		expect(await run('save-prototype', '--project', 'demo', '--name', 'v1-i1')).toBe(0);
+		out = [];
+		expect(await run('accessibility', '--project', 'demo', '--name', 'v1-i1')).toBe(0);
+		const said = out.join('\n');
+		expect(said).toMatch(/^Measured demo v1-i1's page: \d+ automated issues?\./);
+		expect(said).toMatch(/- \*\*image-alt\*\*[^\n]*\n {2}- `img`: /);
+		const kept = JSON.parse(readFileSync(join(design, 'projects', 'demo', 'accessibility', 'v1-i1.json'), 'utf8')) as { result: unknown };
+		// The same result the app keeps beside the page, so the app shows what was measured here.
+		expect((JSON.parse(readFileSync(join(prototypes, 'demo', 'v1-i1.accessibility.json'), 'utf8')) as { result: unknown }).result).toEqual(
+			kept.result,
+		);
+		// And as the agent runs it, through its launcher's bundle, which starts the browser too.
+		const env = { ...process.env, HOME: home, XDG_CONFIG_HOME: join(home, '.config'), APPDATA: join(home, 'AppData') };
+		const launcher = join(__dirname, '..', 'bin', 'dsnr.mjs');
+		const ran = spawnSync(process.execPath, [launcher, 'accessibility', '--project', 'demo', '--name', 'v1-i1'], {
+			cwd: product,
+			env,
+			encoding: 'utf8',
+		});
+		expect(ran.stdout).toMatch(/^Measured demo v1-i1's page: \d+ automated issues?\./);
+		expect(ran.status).toBe(0);
+	}, 120_000);
 });

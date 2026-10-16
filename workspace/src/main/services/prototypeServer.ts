@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { type IncomingMessage, type Server, type ServerResponse, createServer } from 'node:http';
 import { basename, extname, join, normalize, sep } from 'node:path';
+import { sharedFilesOf } from '../../shared/designPaths';
 import { MIME_TYPES } from '../../shared/mime';
 import { ASK_PATH, KEY_HEADER, isKey } from '../../shared/reviewRelay';
 
@@ -99,16 +100,25 @@ export class PrototypeServer {
 		res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' }).end(JSON.stringify(answer));
 	}
 
-	hasShared(name: string): boolean {
-		return this.shared.has(name);
-	}
-
 	/** Makes a shared file available to every page given whole, at `/_shared/<name>` on the pages' address. */
 	share(name: string, dataUri: string): void {
 		const m = /^data:([^;,]+)(;base64)?,(.*)$/s.exec(dataUri);
 		if (!m) return;
 		const body = m[2] ? Buffer.from(m[3] as string, 'base64') : Buffer.from(decodeURIComponent(m[3] as string));
 		this.shared.set(name, { type: m[1] as string, body });
+	}
+
+	/**
+	 * Serves a prototype's page with the shared files it points at beside it (`sharedText`: this machine's copy, else the
+	 * design repository's): where it is opened and checked, in the app and from the command line alike.
+	 */
+	async servePage(key: string, html: string, sharedText: (name: string) => Promise<string | null>): Promise<string> {
+		for (const n of sharedFilesOf(html)) {
+			if (this.shared.has(n)) continue;
+			const uri = await sharedText(n);
+			if (uri !== null) this.share(n, uri);
+		}
+		return this.serve(key, html);
 	}
 
 	/** Whether an address is one of the pages this serves: a prototype, which is one page. */

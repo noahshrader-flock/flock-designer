@@ -115,6 +115,11 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		dir(projectId);
 		return localFile(projectId, name, 'tsx');
 	};
+	/** Where a prototype's accessibility check is kept on this machine, beside its page (`accessibilityOf`). */
+	const checkFile = (projectId: string, name: string): string => {
+		assertPrototypeName(name);
+		return join(dir(projectId), `${name}.accessibility.json`);
+	};
 	/**
 	 * Large files pages share (the design system's fonts), each kept once by its content: here as builds make them,
 	 * and in the design repository beside the projects, where `_` keeps them off the list.
@@ -426,6 +431,7 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		dir,
 		file,
 		sourceFile,
+		checkFile,
 		sharedText,
 		skill,
 		target,

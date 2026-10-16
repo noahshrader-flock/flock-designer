@@ -28,6 +28,12 @@ export const prototypePagePath = (projectId: string, name: string): string => pr
 export const prototypeSourcePath = (projectId: string, name: string): string => projectPath(projectId, `prototypes/${name}.tsx`);
 
 /**
+ * Where a project's accessibility measure is kept in the design repository, as evidence: of a prototype's page, by its
+ * name, or, with none, of the product's own app (`dsnr accessibility`, decision 2 of the accessibility plan).
+ */
+export const accessibilityPath = (projectId: string, name: string | null): string => projectPath(projectId, `accessibility/${name ?? 'app'}.json`);
+
+/**
  * Where a prototype's picture is kept in the design repository: in its project's `covers/` folder (a folder, so a picture
  * is never one of the project's documents), named by the prototype and the hash of the page it is of, so a file never
  * changes under its name.

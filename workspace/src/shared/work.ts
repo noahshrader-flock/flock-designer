@@ -8,6 +8,13 @@ import { asChangeRequestUrl, treeUrl } from './hostUrls';
 /** The two kinds of work, prototypes and codebase work, and where a project's work is in code. */
 
 /**
+ * The commands a product declares (`.dsnr/workspace.json`) to serve its work: its own app on mock data, where codebase
+ * work is seen and measured, and an older prototype on its branch.
+ */
+export const DESIGN_MODE_COMMAND = 'design-mode';
+export const PREVIEW_COMMAND = 'preview';
+
+/**
  * Where codebase work is on GitHub, for anyone to open whether or not they have the repository: its pull request when
  * one is recorded, else its branch in the repository the record names. Null when the record says neither.
  */

@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { BRIEF_SECTIONS, accessibilityBrief, declaredTarget } from '../src/main/services/accessibilityBrief';
+import { BRIEF_SECTIONS, accessibilityBrief, appPages, declaredTarget } from '../src/main/services/accessibilityBrief';
 import type { AccessibilityIssue } from '../src/shared/contract';
 
 /**
@@ -43,6 +43,39 @@ describe('a product’s target', () => {
 	it('is read only from the target section, so a level named elsewhere in the manifest is not taken for it', () => {
 		const elsewhere = `# Manifest\n\n## Direction\n\n| | |\n|---|---|\n| **Target** | WCAG 2.1 Level AA |\n\n${COKE}`;
 		expect(declaredTarget(elsewhere, 'Coke')).toMatchObject({ target: { version: '2.0', level: 'A' } });
+	});
+});
+
+describe('the pages of a product’s app to check', () => {
+	it('are the rows its manifest names: a name, then an address on the app itself, never another site’s', () => {
+		const manifest = [
+			'# Plain Shop',
+			'',
+			'## Pages to check for accessibility',
+			'',
+			'| Page | Address |',
+			'|---|---|',
+			'| **Home** | `/` |',
+			'| Devices | `/devices?tab=list` |',
+			'| Elsewhere | `//other.example/x` |',
+			'| Outside | `https://other.example/` |',
+			'|  | `/unnamed` |',
+			'',
+			'## Next section',
+			'',
+			'| Later | `/not-this` |',
+		].join('\n');
+		expect(appPages(manifest)).toEqual([
+			{ name: 'Home', path: '/' },
+			{ name: 'Devices', path: '/devices?tab=list' },
+			{ name: '/unnamed', path: '/unnamed' },
+		]);
+	});
+
+	it('are none when it has no manifest, no such section, or no page in it', () => {
+		expect(appPages(null)).toBeNull();
+		expect(appPages(COKE)).toBeNull();
+		expect(appPages('## Pages to check for accessibility\n\nNone yet.\n')).toBeNull();
 	});
 });
 

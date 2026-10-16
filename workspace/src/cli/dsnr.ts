@@ -23,6 +23,7 @@ import { publish, recordsFrom, unpublish } from '../main/services/pages';
 import { buildSite } from '../site/buildSite';
 import { serveSite } from '../site/serveSite';
 import { checkWcagEdition } from './wcagEdition';
+import { measureAccessibility } from './accessibility';
 import { errorText } from '../shared/result';
 import { plural } from '../shared/plural';
 import { loginFromNoreply } from '../shared/hostUrls';
@@ -71,6 +72,7 @@ const USAGE = `Usage:
   dsnr build-site [--out <dir>] [--serve]
   dsnr publish --project <id> --name <v1-i1> [--no-open]
   dsnr unpublish --project <id> --name <v1-i1>
+  dsnr accessibility --project <id> [--name <v1-i1>] [--product <dir>]
 
 new-prototype records the next version (v1-i1 for a new project, then v2-i1, v3-i1) and prints the task: where to
 write the prototype and how to check it builds. change-prototype does the same for a change to one: in its version's
@@ -80,19 +82,21 @@ build-site writes the site prototypes are published as, from the design reposito
 pushes the records, deploys the site and prints the iteration's link, and says who can open it; the first time a page
 goes up the link is also opened in the browser, unless --no-open. unpublish takes an
 iteration off the site: its saved page and source are removed, here and in the design repository, and the site is
-deployed without it. Its record and comments are kept.`;
+deployed without it. Its record and comments are kept. accessibility measures the work in a real browser: with --name,
+that prototype's page in each of its states; without, the product's own app, started by its design-mode command, at the
+pages its manifest names. It writes what it found into the project's folder in the design repository, and prints it.`;
 
 class UsageError extends Error {}
 
-/** The product checkout: the one named, or the repository the agent is working in. */
-const productOf = async (cwd: string, named: string | undefined): Promise<string> => {
+/** The product checkout: the one named, or the repository the agent is working in. `doing` is what needs its workspace file. */
+const productOf = async (cwd: string, named: string | undefined, doing: string): Promise<string> => {
 	let root: string;
 	try {
 		root = realpathSync(named ? resolve(cwd, named) : (await git(cwd, ['rev-parse', '--show-toplevel'])).trim());
 	} catch {
 		throw new Error(named ? `There is no folder at ${named}.` : 'This is not inside a product repository. Run it from one, or pass --product.');
 	}
-	if (!existsSync(join(root, DESCRIPTOR_PATH))) throw new Error(`${root} has no ${DESCRIPTOR_PATH}, so DSNR cannot build prototypes from it.`);
+	if (!existsSync(join(root, DESCRIPTOR_PATH))) throw new Error(`${root} has no ${DESCRIPTOR_PATH}, so DSNR cannot ${doing}.`);
 	return root;
 };
 
@@ -259,7 +263,11 @@ const taskText = (lead: string, task: string, save: string, publishLine: string)
 export const main = async (argv: string[], deps: CliDeps): Promise<number> => {
 	try {
 		const [command, ...rest] = argv;
-		if (!['new-prototype', 'change-prototype', 'save-prototype', 'build-site', 'publish', 'unpublish', 'wcag-edition'].includes(command ?? '')) {
+		if (
+			!['new-prototype', 'change-prototype', 'save-prototype', 'build-site', 'publish', 'unpublish', 'wcag-edition', 'accessibility'].includes(
+				command ?? '',
+			)
+		) {
 			throw new UsageError(command ? `There is no command called ${command}.` : 'Say which command.');
 		}
 		const values = optionsOf(rest);
@@ -276,7 +284,11 @@ export const main = async (argv: string[], deps: CliDeps): Promise<number> => {
 		const projectId = values.project;
 		if (!projectId) throw new UsageError('Say which project, with --project.');
 
-		const root = await productOf(deps.cwd, values.product);
+		const root = await productOf(
+			deps.cwd,
+			values.product,
+			command === 'accessibility' ? 'open it, and nothing was measured' : 'build prototypes from it',
+		);
 		const records = recordsRootFor(root);
 		if (records === null) throw new Error(`There is no design repository beside ${root}. Clone flock-designer into the same folder.`);
 		const designRoot = dirname(records);
@@ -289,6 +301,9 @@ export const main = async (argv: string[], deps: CliDeps): Promise<number> => {
 			readDesignFile: store.readFile,
 			esbuild: () => deps.esbuild,
 		});
+		if (command === 'accessibility') {
+			return await measureAccessibility({ projectId, name: values.name ?? null, root, designRoot, work, out: deps.out, err: deps.err });
+		}
 		const saveCommand = (name: string) => shellLine([...deps.self, 'save-prototype', '--project', projectId, '--name', name, '--product', root]);
 		const publishCommand = (name: string) => shellLine([...deps.self, 'publish', '--project', projectId, '--name', name]);
 		/** The build skill and this run: where to write, and how to check it builds. */

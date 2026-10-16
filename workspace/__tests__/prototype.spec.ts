@@ -393,7 +393,11 @@ describe('PrototypeServer', () => {
 			const font = await fetch(url.replace('/users/i1/', '/_shared/0123456789abcdef'));
 			expect(font.headers.get('content-type')).toBe('font/woff2');
 			expect(await font.text()).toBe('font bytes');
-			expect(server.hasShared('0123456789abcdef')).toBe(true);
+			// A page that points at shared files is served with each it lacks, read once: one it has is not read again.
+			const read = vi.fn(async (n: string) => (n === 'fedcba9876543210' ? 'data:font/woff,abc' : null));
+			const page = await server.servePage('users/i3', '<link href="/_shared/0123456789abcdef"><link href="/_shared/fedcba9876543210">', read);
+			expect(read.mock.calls).toEqual([['fedcba9876543210']]);
+			expect(await (await fetch(page.replace('/users/i3/', '/_shared/fedcba9876543210'))).text()).toBe('abc');
 			// Serving again replaces it.
 			await server.serve('users/i1', '<h1>Again</h1>');
 			expect(await (await fetch(url)).text()).toBe('<h1>Again</h1>');

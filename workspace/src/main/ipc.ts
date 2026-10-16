@@ -29,7 +29,6 @@ import { recordedIteration } from './services/iterations';
 import { readFolderProjects } from './services/localProjects';
 import type { CoverDeps } from './services/projectCovers';
 import { esbuildEntry } from './services/prototypeBundle';
-import { sharedFilesOf } from '../shared/designPaths';
 import { PrototypeServer } from './services/prototypeServer';
 import { localPrototypeFile, prototypeWork } from './services/prototypeWork';
 import { PublishManager, publishInOrder } from './services/publisher';
@@ -333,19 +332,9 @@ export const ipcDeps = ({
 		readDesignFile,
 		esbuild: esbuildEntry,
 	});
-	/** Makes the shared files a page points at available beside it: this machine's copy, else the design repository's. */
-	const serveShared = async (html: string): Promise<void> => {
-		for (const n of sharedFilesOf(html)) {
-			if (prototypeServer.hasShared(n)) continue;
-			const uri = await work.sharedText(n);
-			if (uri !== null) prototypeServer.share(n, uri);
-		}
-	};
 	/** A prototype's page on the local server, with the shared files it points at beside it: where it is opened and checked. */
-	const servePrototype = async (projectId: string, name: string, html: string): Promise<string> => {
-		await serveShared(html);
-		return prototypeServer.serve(`${projectId}/${name}`, withPageTheme(html));
-	};
+	const servePrototype = (projectId: string, name: string, html: string): Promise<string> =>
+		prototypeServer.servePage(`${projectId}/${name}`, withPageTheme(html), work.sharedText);
 	/** The page: this machine's newest build first (built again when its source changed), then the saved one. */
 	const prototypePage = (projectId: string, name: string): Promise<string | null> => work.page(projectId, name, agentBusy());
 	/** Runs `run` once at a time per key: a second caller waits for the first and shares its answer. */
@@ -369,8 +358,14 @@ export const ipcDeps = ({
 		const html = await prototypePage(projectId, name);
 		if (html === null) throw new Error('This prototype has no page yet.');
 		const url = await servePrototype(projectId, name, html);
-		const file = join(dirname(work.file(projectId, name)), `${name}.accessibility.json`);
-		return accessibilityOf({ file, html, url, states: statesOf(html), target: await work.target(projectId, name), check: ports.headless.scan });
+		return accessibilityOf({
+			file: work.checkFile(projectId, name),
+			html,
+			url,
+			states: statesOf(html),
+			target: await work.target(projectId, name),
+			check: ports.headless.scan,
+		});
 	};
 	/**
 	 * The picture of each prototype on its project's card. Asked for by the list once it is on

@@ -19,6 +19,16 @@ those fail now and must pass at the last run. The gate reports; it does not deci
 exception, a check that legitimately cannot run here), so say which it is, and never edit a check to make
 it pass.
 
+**Then measure its accessibility in a real browser,** so the reviews read what was measured, not guessed:
+
+```bash
+node ../flock-designer/workspace/bin/dsnr.mjs accessibility --project <id>
+```
+
+It starts the product's app as the product says (its design mode, on mock data), checks the pages its manifest names,
+writes what it found into the project's folder in the design repository, and prints it. Fix what it found that is in the
+work, and run it again. What it says it could not open, or could not measure, goes into the review record as it said it.
+
 ## 2. Review it, both ways, independently
 
 Two reviews, because *does this read as the product* and *is it built correctly* are different questions

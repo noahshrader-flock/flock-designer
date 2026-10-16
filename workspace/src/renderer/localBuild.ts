@@ -1,4 +1,5 @@
 import type { Project, ProjectIteration, WorkspaceApi } from '../shared/contract';
+import { DESIGN_MODE_COMMAND, PREVIEW_COMMAND } from '../shared/work';
 
 /**
  * Getting an iteration onto the screen from this machine, with nobody asked to do anything.
@@ -36,7 +37,7 @@ export type BuildApi = Pick<WorkspaceApi, 'readCheckout' | 'continueIteration' |
  * From the iteration's own name, which the main process already normalized, rather than a
  * hard-coded branch prefix: the repository declares how its branches are named.
  */
-export const previewCommandFor = (iteration: ProjectIteration): string => (iteration.name === 'codebase' ? 'design-mode' : 'preview');
+export const previewCommandFor = (iteration: ProjectIteration): string => (iteration.name === 'codebase' ? DESIGN_MODE_COMMAND : PREVIEW_COMMAND);
 
 /**
  * Where the preview opens: the iteration's own route within the running app when its record says

@@ -1,5 +1,6 @@
 import { type BuildApi, type BuildPhase, previewCommandFor, runLocalBuild } from '../../src/renderer/localBuild';
 import type { Project, ProjectIteration, ShareStatus, ShareStep, WorkspaceApi } from '../../src/shared/contract';
+import { buildError, outputLines, packagesHint } from '../../src/main/services/serverOutput';
 import { valueOf } from '../../src/shared/result';
 import { codeLink, workOf } from '../../src/shared/work';
 import { type AgentWorkDeps, type Offer, type Tell, agentReady, agentWork, pollOf } from './agentWork';
@@ -83,35 +84,6 @@ export interface LocalRun {
 	loads: (url: string) => Promise<string | null>;
 }
 
-const ANSI = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, 'g');
-/** The line of a server's output (its colour codes already taken out) that says why its build failed, if one does. */
-const buildError = (lines: string[]): string | null => {
-	// The bundler's list of what a package does export is long and says nothing the person needs: it is cut.
-	const bare = lines
-		.map((l) =>
-			l
-				.replace(/^\s*[×✖]\s*/, '')
-				.replace(/\s*\(possible exports:.*$/, '')
-				.trim(),
-		)
-		.filter(Boolean);
-	const failed = bare.some((l) => /build failed|failed to compile|build error/i.test(l));
-	if (!failed) return null;
-	return (
-		bare.find(
-			(l) =>
-				/(Error|error TS\d+|Module not found|was not found in|Cannot find module)/.test(l) &&
-				!/^error\s+build (failed|error)/i.test(l) &&
-				!/^error\s+Build error:?$/i.test(l),
-		) ?? 'its build failed.'
-	);
-};
-/** Said when an error names a package export or module that is not there: the product's packages are older than its code. */
-const packagesHint = (reason: string, install: string | null): string =>
-	/was not found in '[^']+'|has no exported member|Cannot find module '[^']+'/.test(reason)
-		? ` Its packages may be out of date${install ? `: ${install}` : '.'}`
-		: '';
-
 /**
  * Run locally (VIEW_LOCALLY_PLAN): codebase work run on this machine, the way the product says it runs (its design mode, on
  * mock data), and opened in the person's own browser at its route. Its own earlier run is stopped first, so there is only
@@ -132,10 +104,7 @@ export const runLocally = async (deps: CodebaseDeps, local: LocalRun, projectId:
 	deps.log.start(`${project.title}, locally`);
 	const listening = api.onRunLog((l) => {
 		if (l.commandId !== command) return;
-		for (const line of l.text
-			.replace(ANSI, '')
-			.split('\n')
-			.filter((x) => x.trim() !== '')) {
+		for (const line of outputLines(l.text)) {
 			lines.push(line);
 			deps.log.line(line);
 		}

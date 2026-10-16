@@ -265,7 +265,9 @@ export const chromeHeadless = ({
 			const runs: AxeRun[] = [];
 			for (const state of states.length ? states : [null]) {
 				const said = state ?? 'default';
-				const loaded = await within(STATE_MS, page.goto(withState(url, state), { waitUntil: 'load', timeout: STATE_MS }));
+				// With no state, the page's own address as given, its query and all: a product's page may be one.
+				const at = state === null ? url : withState(url, state);
+				const loaded = await within(STATE_MS, page.goto(at, { waitUntil: 'load', timeout: STATE_MS }));
 				if (loaded === null) throw new Error(`The page did not load in its ${said} state, so it could not be checked.`);
 				const found: unknown = await within(STATE_MS, page.evaluate(axeInPage(tags)));
 				if (!axeFound(found)) throw new Error(`The accessibility check did not finish in the page's ${said} state.`);
