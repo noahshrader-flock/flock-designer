@@ -3,7 +3,7 @@ import { Button } from '../ui/button';
 import { Textarea } from '../ui/textarea';
 import type { Comments } from './useComments';
 import { ErrorAlert } from '../ErrorAlert';
-import { Field, FieldDescription, FieldLabel } from '../ui/field';
+import { Field, FieldLabel } from '../ui/field';
 
 /** Where the box sits relative to the pin, whose body is drawn above its tip. */
 const BOX_OFFSET = { x: 22, y: -19 } as const;
@@ -13,18 +13,7 @@ const BOX_OFFSET = { x: 22, y: -19 } as const;
  * is in the window: the pin is placed in the page, the box in the window, so the box is put at window coordinates rather
  * than anchored to an element.
  */
-export const CommentBox = ({
-	comments,
-	origin,
-	error,
-	note,
-}: {
-	comments: Comments;
-	origin: { top: number; left: number };
-	error: string | null;
-	/** Said under the box, about what this comment will and will not carry. */
-	note?: string;
-}) => (
+export const CommentBox = ({ comments, origin, error }: { comments: Comments; origin: { top: number; left: number }; error: string | null }) => (
 	<>
 		{/* Clicking away is the same as canceling, as it was when this was a popover. */}
 		<div className="fixed inset-0 z-(--layer-comment-shade)" onClick={comments.cancelCompose} />
@@ -42,7 +31,6 @@ export const CommentBox = ({
 				<Field>
 					<FieldLabel htmlFor="comment-draft">Comment</FieldLabel>
 					<Textarea id="comment-draft" rows={3} value={comments.draft} onChange={(e) => comments.setDraft(e.target.value)} autoFocus />
-					{note && <FieldDescription>{note}</FieldDescription>}
 				</Field>
 				<div className="flex flex-row justify-end gap-2">
 					<CancelButton onClick={comments.cancelCompose} disabled={comments.posting} />

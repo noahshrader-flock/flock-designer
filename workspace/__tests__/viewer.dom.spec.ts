@@ -342,8 +342,6 @@ describe('commenting on the page', () => {
 		await settle();
 		await press(doc.querySelector('[data-e2e-ref="clear-filter-button"]') as Element);
 		await settle();
-		// No picture of the spot from a page, and it says so.
-		expect(document.body.textContent).toContain('no picture of the spot');
 		await typeInto(document.querySelector('#comment-draft') as HTMLTextAreaElement, 'Make this primary');
 		await press(button('Save'));
 		await settle();

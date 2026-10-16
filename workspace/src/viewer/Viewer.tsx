@@ -371,14 +371,7 @@ const Commenting = ({
 					</div>,
 					slots.panel,
 				)}
-			{comments.composing && (
-				<CommentBox
-					comments={comments}
-					origin={{ top: frameBox.top, left: frameBox.left }}
-					error={error}
-					note="A comment made on this page has no picture of the spot yet: only DSNR in VS Code can take one."
-				/>
-			)}
+			{comments.composing && <CommentBox comments={comments} origin={{ top: frameBox.top, left: frameBox.left }} error={error} />}
 		</>
 	);
 };
