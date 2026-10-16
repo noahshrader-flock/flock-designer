@@ -34,6 +34,7 @@ import { resultOf } from './accessibilityCheck';
 import { readTokens } from './designTokens';
 import { readValues } from './componentValues';
 import { type Drawings, reachOf } from './changeReach';
+import type { BuiltFor } from './storyPreviews';
 import { errorText } from '../../shared/result';
 import { type Tags, asTag, inMode, isNothing, sizeToken, tagsFor } from './tokenTags';
 
@@ -138,12 +139,11 @@ export const decode = (tagged: Partial<Record<Mode, Drawn>>, plain: Drawn | unde
 	};
 };
 
-/** What the index needs of the previews: the commit's own build, and one built with the tags. */
+/** What the index needs of the previews: the commit's own build, and builds with a change (the tags; a change being tried). */
 export interface TaggedPreviews {
 	preview(): Promise<StoryPreview>;
-	tagged(edits: TokenEdit[]): Promise<StoryPreview>;
-	/** The commit's previews built with a change to see what it reaches, apart from the one the person's frame shows (Phase 3). */
-	builtWith(edits: TokenEdit[], purpose: 'reach'): Promise<StoryPreview>;
+	/** The commit's previews built with a change, apart from the one the person's frame shows: T6's tags, and what a change reaches. */
+	builtWith(edits: TokenEdit[], purpose: BuiltFor): Promise<StoryPreview>;
 }
 
 export interface ComponentTokensDeps {
@@ -329,7 +329,7 @@ export class ComponentTokens {
 		// A failure to draw is said once the tags are built, not lost while they are.
 		asIsDrawn.catch(() => undefined);
 		// With no token the library can be tagged by, there is nothing to tag: its stories are still drawn, as they are.
-		const tagged = tags.edits.length === 0 ? null : await this.deps.previews.tagged(tags.edits);
+		const tagged = tags.edits.length === 0 ? null : await this.deps.previews.builtWith(tags.edits, 'tagged');
 		const taggedBase = tagged?.state === 'ready' ? tagged.base : null;
 		const [[asIs, asIsDarkDrawn], [light, dark]] = await Promise.all([
 			asIsDrawn,

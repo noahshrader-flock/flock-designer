@@ -447,12 +447,12 @@ describe('trying a change to the tokens (T3)', () => {
 		expect(scripts(last.base)).toContain('#333333');
 	}, 30_000);
 
-	it('builds the commit’s previews with T6’s tags beside the change being tried, never in its place', async () => {
+	it('builds the commit’s previews with T6’s tags, and with a change to see what it reaches, beside the change being tried, never in its place', async () => {
 		makeLibrary(THEMED);
 		const p = previews();
 		await ready(p);
 		const trying = await p.preview([{ path: 'tone.brand.50', value: '#0A6B52' }]);
-		const tagged = await p.tagged([{ path: 'tone.brand.50', value: '#00015A' }]);
+		const tagged = await p.builtWith([{ path: 'tone.brand.50', value: '#00015A' }], 'tagged');
 		if (trying.state !== 'ready' || tagged.state !== 'ready') throw new Error('not ready');
 		expect(new URL(tagged.base).pathname).toMatch(/^\/tagged-/);
 		const dir = join(folder, readdirSync(folder)[0]!);
@@ -467,7 +467,37 @@ describe('trying a change to the tokens (T3)', () => {
 		expect((await fetch(trying.base)).status).toBe(200);
 		expect(read('trial')).toContain('#0A6B52');
 		expect(read('trial')).not.toContain('#00015A');
+		// What a change reaches is built apart from both, at an address of its own each time: the tags stay served.
+		const reach = await p.builtWith([{ path: 'tone.brand.50', value: '#C80000' }], 'reach');
+		const again = await p.builtWith([{ path: 'tone.brand.50', value: '#C90000' }], 'reach');
+		if (reach.state !== 'ready' || again.state !== 'ready') throw new Error('not ready');
+		expect(new URL(again.base).pathname).toMatch(/^\/reach-/);
+		expect(again.base).not.toBe(reach.base);
+		expect(read('reach')).toContain('#C90000');
+		expect(read('tagged')).toContain('#00015A');
+		expect((await fetch(tagged.base)).status).toBe(200);
+		expect((await fetch(trying.base)).status).toBe(200);
 	}, 30_000);
+
+	it('stops serving the builds with a change made on the commit develop has left: the tags, and what a change reaches', async () => {
+		makeLibrary(THEMED);
+		const p = previews();
+		await ready(p);
+		const change = [{ path: 'tone.brand.50', value: '#00015A' }];
+		const [tagged, reach] = [await p.builtWith(change, 'tagged'), await p.builtWith(change, 'reach')];
+		if (tagged.state !== 'ready' || reach.state !== 'ready') throw new Error('not ready');
+		g(upstream, 'commit', '-q', '--allow-empty', '-m', 'moved');
+		g(upstream, 'push', '-q', 'origin', 'develop');
+		g(clone, 'fetch', '-q', 'origin', 'develop');
+		const forget = vi.spyOn(server, 'stopServing');
+		await ready(p);
+		// Forgotten by the server, not only emptied on disk.
+		const key = (base: string) => new URL(base).pathname.split('/')[1];
+		expect(forget).toHaveBeenCalledWith(key(tagged.base));
+		expect(forget).toHaveBeenCalledWith(key(reach.base));
+		expect((await fetch(tagged.base)).status).toBe(404);
+		expect((await fetch(reach.base)).status).toBe(404);
+	}, 60_000);
 
 	it('says why a change cannot be made, and builds nothing for it', async () => {
 		makeLibrary(THEMED);

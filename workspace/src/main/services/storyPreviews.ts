@@ -429,6 +429,9 @@ const serveKey = (build: string): string => `previews-${build.slice(0, 26)}`;
  */
 const RECIPE = createHash('sha256').update(`${PAGE}${previewEntry.toString()}${libraryBuild.toString()}`).digest('hex').slice(0, 8);
 
+/** The address a build of a commit's copy is served at: what it is for, and how many times, so each is at one of its own. */
+const servedAt = (what: string, times: number, dir: string): string => `${what}-${times}-${basename(dir).slice(0, 12)}`;
+
 /** What a build of the commit's previews with a change is for: T6's tags, or what a change being tried reaches. */
 export type BuiltFor = 'tagged' | 'reach';
 
@@ -485,7 +488,7 @@ export class StoryPreviews {
 	 * and what a change being tried reaches (Phase 3 of adjusting a component). How many each has been built, so each build
 	 * is at an address of its own and a page never reads an older one from its cache.
 	 */
-	private builtServed = new Map<BuiltFor, { key: string; builds: number }>();
+	private builtServed = new Map<BuiltFor, { dir: string; key: string; builds: number }>();
 
 	constructor(private readonly deps: StoryPreviewsDeps) {}
 
@@ -532,7 +535,7 @@ export class StoryPreviews {
 			// Only the build for this commit is kept, and served; a change tried on another is closed with it.
 			if (this.trial !== null && this.trial.dir !== dir) await this.endTrial();
 			for (const [purpose, served] of this.builtServed) {
-				if (served.key.endsWith(basename(dir).slice(0, 12))) continue;
+				if (served.dir === dir) continue;
 				this.deps.server.stopServing(served.key);
 				this.builtServed.delete(purpose);
 			}
@@ -571,7 +574,7 @@ export class StoryPreviews {
 			const trial = this.trial;
 			await trial.builder.build(files);
 			// A new address for each, so a frame showing the last one loads this one.
-			const key = `trial-${++trial.tries}-${basename(at.dir).slice(0, 12)}`;
+			const key = servedAt('trial', ++trial.tries, at.dir);
 			const base = await this.deps.server.serveFolder(key, join(at.dir, 'trial'), CODE);
 			if (trial.served !== null) this.deps.server.stopServing(trial.served);
 			trial.served = key;
@@ -579,11 +582,6 @@ export class StoryPreviews {
 		} catch (err) {
 			return { state: 'failed', error: errorText(err) };
 		}
-	}
-
-	/** The commit's previews built once with T6's tags (`builtWith`). */
-	tagged(edits: TokenEdit[]): Promise<StoryPreview> {
-		return this.builtWith(edits, 'tagged');
 	}
 
 	/**
@@ -605,9 +603,9 @@ export class StoryPreviews {
 			}
 			const last = this.builtServed.get(purpose);
 			const builds = (last?.builds ?? 0) + 1;
-			const key = `${purpose}-${builds}-${basename(at.dir).slice(0, 12)}`;
+			const key = servedAt(purpose, builds, at.dir);
 			if (last) this.deps.server.stopServing(last.key);
-			this.builtServed.set(purpose, { key, builds });
+			this.builtServed.set(purpose, { dir: at.dir, key, builds });
 			return { state: 'ready', base: await this.deps.server.serveFolder(key, join(at.dir, purpose), CODE) };
 		} catch (err) {
 			return { state: 'failed', error: errorText(err) };

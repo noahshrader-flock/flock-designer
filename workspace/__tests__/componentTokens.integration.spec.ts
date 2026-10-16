@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ComponentTokens, type Drawn, type Measure, decode } from '../src/main/services/componentTokens';
+import type { BuiltFor } from '../src/main/services/storyPreviews';
 import { tagsFor } from '../src/main/services/tokenTags';
 import type { DesignToken, TokenEdit } from '../src/shared/contract';
 import { g } from './fixtures';
@@ -174,8 +175,10 @@ describe('the index', () => {
 	};
 	const previews = {
 		preview: async () => ({ state: 'ready' as const, base: 'http://127.0.0.1:1/plain/' }),
-		tagged: async (edits: TokenEdit[]) => (builds.push(edits), { state: 'ready' as const, base: 'http://127.0.0.1:1/tagged/' }),
-		builtWith: async (edits: TokenEdit[]) => (reaches.push(edits), { state: 'ready' as const, base: `http://127.0.0.1:1/reach-${reaches.length}/` }),
+		builtWith: async (edits: TokenEdit[], purpose: BuiltFor) =>
+			purpose === 'tagged'
+				? (builds.push(edits), { state: 'ready' as const, base: 'http://127.0.0.1:1/tagged/' })
+				: (reaches.push(edits), { state: 'ready' as const, base: `http://127.0.0.1:1/reach-${reaches.length}/` }),
 	};
 	const system = () => ({ id: 'acme/ui', name: 'Acme', repository: 'acme/ui', root: clone, folder: '', branch: 'develop' });
 	/** The pictures kept, as the pass gave them: a stand-in for the store, which has tests of its own. */
@@ -274,9 +277,9 @@ describe('the index', () => {
 			const i = index({
 				previews: {
 					...previews,
-					builtWith: async (edits: TokenEdit[]) => {
-						if (reaches.length === 0) await held;
-						return previews.builtWith(edits);
+					builtWith: async (edits: TokenEdit[], purpose: BuiltFor) => {
+						if (purpose === 'reach' && reaches.length === 0) await held;
+						return previews.builtWith(edits, purpose);
 					},
 				},
 			});
@@ -294,8 +297,8 @@ describe('the index', () => {
 			const i = index({
 				previews: {
 					...previews,
-					builtWith: async (edits: TokenEdit[]) =>
-						fail ? { state: 'failed' as const, error: 'the change did not build' } : previews.builtWith(edits),
+					builtWith: async (edits: TokenEdit[], purpose: BuiltFor) =>
+						fail && purpose === 'reach' ? { state: 'failed' as const, error: 'the change did not build' } : previews.builtWith(edits, purpose),
 				},
 			});
 			await i.warm();
@@ -387,7 +390,11 @@ describe('the index', () => {
 	it('says why it could not be built, and tries again on the next ask', async () => {
 		let fail = true;
 		const i = index({
-			previews: { ...previews, tagged: async () => (fail ? { state: 'failed' as const, error: 'tags did not build' } : previews.tagged([])) },
+			previews: {
+				...previews,
+				builtWith: async (edits: TokenEdit[], purpose: BuiltFor) =>
+					fail && purpose === 'tagged' ? { state: 'failed' as const, error: 'tags did not build' } : previews.builtWith(edits, purpose),
+			},
 		});
 		expect(await ready(i, 'src/components/A/A.stories.tsx')).toEqual({ state: 'failed', error: 'tags did not build' });
 		fail = false;
@@ -558,7 +565,11 @@ describe('the index', () => {
 	it('keeps the pictures when the tagged build fails, and says why which tokens each uses cannot be said', async () => {
 		const shot = Buffer.from('jpeg');
 		const i = index({
-			previews: { ...previews, tagged: async () => ({ state: 'failed' as const, error: 'tags did not build' }) },
+			previews: {
+				...previews,
+				builtWith: async (edits: TokenEdit[], purpose: BuiltFor) =>
+					purpose === 'tagged' ? { state: 'failed' as const, error: 'tags did not build' } : previews.builtWith(edits, purpose),
+			},
 			measure: async (runs) => (
 				asked.push(runs),
 				runs.map((run) => run.files.map(() => ({ ...drawn(), ...(run.pictures ? { picture: shot } : {}) })))
