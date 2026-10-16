@@ -1,4 +1,5 @@
-import type { ValueProperty } from './domain/designSystem';
+import { COLOR_VALUES, type ValueProperty } from './domain/designSystem';
+import { hexOf } from './tokens';
 
 /**
  * How a component's drawn value is written (adjusting a component, DESIGN_SYSTEM_PLAN.md), one way for every reader: the
@@ -32,6 +33,16 @@ export const allParts = (value: string, n: 1 | 2 | 4): string[] => {
 	if (n === 1) return [value];
 	const [a, b = a, c = a, d = b] = value.split(' ') as [string, string?, string?, string?];
 	return n === 2 ? [a, b] : [a, b, c, d];
+};
+
+/**
+ * A value as a control writes it when it is tried (Phase 2), or null for one that is not that: a colour as its hex, a length as
+ * every one of its parts in pixels, which is what the page draws and what the writer writes (`writtenAs`).
+ */
+export const asTried = (property: ValueProperty, value: string): string | null => {
+	if (COLOR_VALUES.has(property)) return hexOf(value.trim());
+	const parts = allParts(value.trim().replace(/\s+/g, ' '), partsIn(property));
+	return parts.every((p) => /^-?\d*\.?\d+px$/.test(p)) ? parts.join(' ') : null;
 };
 
 /** A value as it is said: written short, the parts of one written in full (`0px 10px 0px 10px` is `0px 10px`). */

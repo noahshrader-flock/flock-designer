@@ -1,4 +1,4 @@
-import { COLOR_VALUES, type DesignToken, type ValueProperty } from './contract';
+import { COLOR_VALUES, type DesignToken, type ValueCell, type ValueProperty } from './contract';
 import { colorAsRead, hexOf, isDark, pixelsOf } from './tokens';
 import { allParts, shortValue } from './valueParts';
 
@@ -47,3 +47,7 @@ export const tokensItCouldFollow = (property: ValueProperty, value: string, toke
 	};
 	return tokens.filter(equal).slice(0, MOST_FOLLOWED);
 };
+
+/** The tokens a component's value could be made to follow: only a value of its own (one that is a token's already follows it). */
+export const followsOf = (property: ValueProperty, cell: Pick<ValueCell, 'kind' | 'value'>, tokens: DesignToken[]): DesignToken[] =>
+	cell.kind === 'own' ? tokensItCouldFollow(property, cell.value, tokens) : [];

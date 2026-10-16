@@ -663,6 +663,17 @@ describe('a component’s tab', () => {
 			expect(document.querySelector('[data-value-following]')?.textContent).toContain('Follows Radius');
 		});
 
+		it('has the agent write a follow asked in words, as it does one chosen from the popover (Phase 6)', async () => {
+			await analysed();
+			await answer('storyPreview', { state: 'ready', base: BASE });
+			await press(button('Ask…'));
+			await type(document.querySelector('[aria-label="Ask in words"] textarea') as HTMLTextAreaElement, 'use the shared radius');
+			await press(button('Ask'));
+			const follow = { property: 'radius', value: '8px 8px 8px 8px', targets: ['radius:0'], follows: 'radius' };
+			await answer('askInWords', { edits: [], values: [follow], said: 'Follows the radius.' });
+			expect(calls('writeValue').at(-1)?.args).toEqual([BUTTON, follow]);
+		});
+
 		it('offers no token to follow for a value no token has', async () => {
 			await analysed();
 			await press(section('Values')?.querySelector('[aria-label="Change Height · sm"]') as HTMLElement);

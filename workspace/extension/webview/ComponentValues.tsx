@@ -19,7 +19,7 @@ import { Swatch } from './ui/Swatch';
 import { Toggle } from './ui/Toggle';
 import { useDismiss } from './ui/useDismiss';
 import { ValueEditor } from './ValueEditor';
-import { VALUE_NAMES, saidValue, tokensItCouldFollow, valueTitle } from '../../src/shared/valueNames';
+import { VALUE_NAMES, followsOf, saidValue, valueTitle } from '../../src/shared/valueNames';
 
 type Ready = Extract<ComponentTokens, { state: 'ready' }>;
 
@@ -288,15 +288,9 @@ export const ComponentValues = ({
 				tried={following === null ? tried(property)(cell) : null}
 				onTry={(value) => trying.onTry(id, value === null ? null : { property, value, targets: cell.targets })}
 				// A value of its own the same as a token's can follow it (4.6): drawn as it is, written by the agent.
-				follows={
-					cell.kind === 'own' ? tokensItCouldFollow(property, cell.value, [...byPath.values()]).map((t) => ({ path: t.path, name: labelOf(t) })) : []
-				}
+				follows={followsOf(property, cell, [...byPath.values()]).map((t) => ({ path: t.path, name: labelOf(t) }))}
 				following={following === null ? null : tokenName(following)}
-				onFollow={(path) => {
-					const value: TriedValue = { property, value: cell.value, targets: cell.targets, follows: path };
-					trying.onTry(id, value);
-					trying.onWrite(value);
-				}}
+				onFollow={(path) => trying.onTry(id, { property, value: cell.value, targets: cell.targets, follows: path })}
 			/>
 		);
 	};

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { type DesignToken, cellFor } from '../src/shared/contract';
-import { tokensItCouldFollow } from '../src/shared/valueNames';
+import { followsOf, tokensItCouldFollow } from '../src/shared/valueNames';
 
 const token = (path: string, kind: DesignToken['kind'], category: string, group: string, value: string) =>
 	({ path, kind, category, group, set: group, name: path, value, source: { file: 'theme.ts', line: 1 } }) as DesignToken;
@@ -52,5 +52,14 @@ describe('the cell a value tried is of', () => {
 		expect(cellFor(rows, { property: 'height', targets: ['b', 'a'] })?.variant).toBe('sm');
 		expect(cellFor(rows, { property: 'height', targets: ['a'] })).toBeUndefined();
 		expect(cellFor(rows, { property: 'radius', targets: ['a', 'b'] })).toBeUndefined();
+	});
+});
+
+describe('what a value could follow, as its control offers it', () => {
+	it('is the tokens with its value for a value of its own, and none for one that is a token’s or worked out from one', () => {
+		const own = { kind: 'own' as const, value: '8px 8px 8px 8px' };
+		expect(followsOf('radius', own, TOKENS).map((t) => t.path)).toEqual(['radius']);
+		expect(followsOf('radius', { ...own, kind: 'token' }, TOKENS)).toEqual([]);
+		expect(followsOf('radius', { ...own, kind: 'derived' }, TOKENS)).toEqual([]);
 	});
 });

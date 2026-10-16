@@ -72,13 +72,16 @@ export const ComponentTab = ({ id }: { id: string }) => {
 			setWriteError(r.ok ? null : r.error);
 			setWrites((n) => n + 1);
 		});
-	const onTry = (key: string, value: TriedValue | null) =>
+	// A value that follows a token is written by the agent as it is tried (4.6): only the agent can write one, however it is asked.
+	const onTry = (key: string, value: TriedValue | null) => {
 		setTried((was) => {
 			const next = new Map(was);
 			if (value === null) next.delete(key);
 			else next.set(key, value);
 			return next;
 		});
+		if (value?.follows !== undefined) onWrite(value);
+	};
 	const component = ready?.components.find((c) => c.id === id);
 	if (note) return <TabNote note={note.says} onRetry={note.onRetry} />;
 	if (!ready || !component) return <TabNote note="The design system shown no longer has this component. Close this tab." />;
@@ -137,7 +140,7 @@ export const ComponentTab = ({ id }: { id: string }) => {
 					tried={[...tried.values()]}
 					onAsked={(asked) => {
 						changes.changeAll(asked.edits);
-						setTried((was) => new Map([...was, ...asked.values.map((t) => [triedId(t), t] as const)]));
+						for (const t of asked.values) onTry(triedId(t), t);
 					}}
 					onClose={() => setAsking(false)}
 				/>
