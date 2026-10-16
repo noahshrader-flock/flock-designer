@@ -1,4 +1,6 @@
 import { existsSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import { designSystemOf, isTokenGroup } from '../../shared/catalog';
 import type { DeclaredTarget } from '../../shared/wcag';
 import type { Catalog, CatalogComponent, CatalogUpdate, ConnectedDesignSystem, DesignTokens } from '../../shared/contract';
@@ -80,7 +82,9 @@ export const updateLibrary = async (root: string, branch: string): Promise<Exclu
 /**
  * The library's two reads, for the catalog and the tokens, on `ref` (a commit, or the copy of a branch) through git.
  * Listing also reads every story it lists with one `git cat-file --batch`, so the files the catalog asks for next are
- * already here: one git process for eighty stories, not eighty. A file not read that way is read on its own.
+ * already here: one git process for eighty stories, not eighty. A file not read that way is read on its own. A package's
+ * file, which is never in git, is read where the clone has it installed, as the previews are built with it (a theme a
+ * stylesheet imports, Phase 5.5).
  */
 export const libraryReads = (root: string, ref: string): CatalogReads => {
 	const read = new Map<string, Promise<Map<string, string>>>();
@@ -116,6 +120,7 @@ export const libraryReads = (root: string, ref: string): CatalogReads => {
 	return {
 		listFiles: (dir) => listed.get(dir) ?? listed.set(dir, list(dir)).get(dir)!,
 		readFile: async (path) => {
+			if (/(^|\/)node_modules\//.test(path)) return readFile(join(root, path), 'utf8');
 			for (const batch of read.values()) {
 				const text = (await batch).get(path);
 				if (text !== undefined) return text;

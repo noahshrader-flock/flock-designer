@@ -65,7 +65,12 @@ export interface DesignToken {
 	 * pointed-at token's, with the opacity.
 	 */
 	ref?: { path: string; alpha?: string };
-	source: { file: string; line: number };
+	/**
+	 * The library's file and line it is read from. One a package declares, which a library's stylesheet imports (Phase 5.5),
+	 * is read from that `@import`, and `from` says where the package declares it and in which rule (`:root`): a change to
+	 * it is declared again in the library's stylesheet, in a rule of that kind.
+	 */
+	source: { file: string; line: number; from?: { file: string; line: number; rule: string } };
 }
 
 /**

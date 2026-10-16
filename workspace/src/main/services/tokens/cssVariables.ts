@@ -7,6 +7,12 @@
  * (`var(--ring)`) is the color it points at, and points at that variable's token. A change is written in the variable's own
  * declaration, in the form it has: `--primary: #108062;`, channels for channels, or `--primary: var(--ring);` to point it
  * elsewhere.
+ *
+ * **What a stylesheet imports is the library's too** (Phase 5.5): its `@import`s are followed, into its packages as they are
+ * installed (Tailwind 4's theme, any package of variables), where they are in the stylesheet, so its own declarations after
+ * them win as in the browser. A variable declared in a package is changed by declaring it again in the library's stylesheet
+ * that imports it, in a rule of the kind the package declares it in (`:root` for a theme's), which the cascade puts over the
+ * package's; from then on it reads as the library's own.
  */
 import type { DesignToken } from '../../../shared/contract';
 import { DIMENSION, DURATION } from '../../../shared/tokens';
@@ -14,6 +20,8 @@ import { lineAt, replaced } from './objectLiteral';
 import { MOTION_PARTS, SHADOWS, TYPE_PARTS, primitiveOf } from '../../../shared/primitives';
 import { capitalize } from '../../../shared/titleCase';
 import { type TokenSource, notWhereRead, semanticFirst } from './source';
+import type { CatalogReads } from '../componentCatalog';
+import { posix } from 'node:path';
 
 const STYLESHEET = /\.(css|scss|less|pcss)$/;
 /** An easing (`cubic-bezier(…)`, `ease-out`, `linear`): motion, by its value, as a duration is (`DURATION`). */
@@ -79,7 +87,105 @@ interface Variable {
 	value: string;
 	file: string;
 	line: number;
+	/** Where a package declares it, for one a library's stylesheet imports. */
+	from?: NonNullable<DesignToken['source']['from']>;
 }
+
+/**
+ * A stylesheet's variables, each with the rules it is nested in (outermost first); its imports, in the order written; and
+ * its rules at the top, with where each closes.
+ */
+interface Read {
+	vars: { name: string; value: string; at: number; rules: string[] }[];
+	imports: { spec: string; at: number }[];
+	top: { rule: string; close: number }[];
+}
+
+/**
+ * A stylesheet read with its nesting (`@layer theme { @theme { … @keyframes … } }`), its comments already blanked: every
+ * custom property with the rules around it, every `@import` and every rule at its top. Quoted text is skipped, so a `;` or a brace in
+ * a font's name is not taken for one.
+ */
+const readStylesheet = (text: string): Read => {
+	const read: Read = { vars: [], imports: [], top: [] };
+	const rules: string[] = [];
+	let start = 0;
+	const statement = (end: number) => {
+		const said = text.slice(start, end);
+		const v = /^\s*--([\w-]+)\s*:\s*([\s\S]*?)\s*$/.exec(said);
+		if (v && rules.length > 0) read.vars.push({ name: v[1] as string, value: v[2] as string, at: start + said.indexOf('--'), rules: [...rules] });
+		const i = /^\s*@import\s+(?:url\(\s*)?(['"])([^'"]+)\1/.exec(said);
+		if (i && rules.length === 0) read.imports.push({ spec: i[2] as string, at: start + said.indexOf('@') });
+	};
+	for (let at = 0; at < text.length; at++) {
+		const c = text[at];
+		if (c === '"' || c === "'") {
+			const end = text.indexOf(c, at + 1);
+			at = end === -1 ? text.length : end;
+		} else if (c === ';') {
+			statement(at);
+			start = at + 1;
+		} else if (c === '{') {
+			rules.push(text.slice(start, at).trim());
+			start = at + 1;
+		} else if (c === '}') {
+			statement(at);
+			const rule = rules.pop();
+			if (rules.length === 0 && rule !== undefined) read.top.push({ rule, close: at });
+			start = at + 1;
+		}
+	}
+	return read;
+};
+
+/** The rule a variable is declared again in: the innermost of its rules that is a selector, not an at-rule; `:root` with none. */
+const ruleOf = (rules: string[]): string => [...rules].reverse().find((r) => !r.startsWith('@')) ?? ':root';
+
+/**
+ * The file a stylesheet's `@import` names, as the library's tools find it: a path beside it (`./theme.css`, or a bare
+ * `theme.css` that is there), else a package as installed, from its folder up to the repository's root: its own stylesheet
+ * (`exports`' `style`, else `style`) or the file named in it (`tailwindcss/theme.css`). Null for one not found.
+ */
+const importedFile = async (reads: CatalogReads, from: string, spec: string): Promise<string | null> => {
+	const exists = (path: string) =>
+		reads.readFile(path).then(
+			() => true,
+			() => false,
+		);
+	const beside = posix.normalize(posix.join(posix.dirname(from), spec));
+	if (/^\.{0,2}\//.test(spec) || (STYLESHEET.test(spec) && (await exists(beside)))) return beside.startsWith('..') ? null : beside;
+	const [, name, sub] = /^((?:@[^/]+\/)?[^/]+)(?:\/(.+))?$/.exec(spec) ?? [];
+	if (name === undefined) return null;
+	for (let dir = posix.dirname(from); ; dir = posix.dirname(dir)) {
+		const at = posix.join(dir, 'node_modules', name);
+		const manifest = await reads.readFile(`${at}/package.json`).catch(() => null);
+		if (manifest !== null) {
+			if (sub !== undefined) return `${at}/${sub}`;
+			const pkg = JSON.parse(manifest) as { style?: unknown; exports?: unknown };
+			const dot = (pkg.exports as Record<string, unknown> | undefined)?.['.'];
+			const style = (dot as Record<string, unknown> | undefined)?.style ?? pkg.style;
+			return typeof style === 'string' ? posix.join(at, style) : null;
+		}
+		if (dir === '.') return null;
+	}
+};
+
+/**
+ * A stylesheet with `--name` declared again in its last rule `rule` at its top, or in one added at its end: what changes a
+ * variable a package declares (`:root`), over the package's.
+ */
+const declaredAgain = (text: string, rule: string, name: string, value: string): string => {
+	const indent = /\n([ \t]+)\S/.exec(text)?.[1] ?? '\t';
+	const at = readStylesheet(withoutComments(text))
+		.top.filter((t) => t.rule === rule)
+		.pop();
+	if (at === undefined) return `${text.replace(/\s*$/, '')}\n\n${rule} {\n${indent}--${name}: ${value};\n}\n`;
+	const body = text.slice(0, at.close).replace(/\s*$/, '');
+	return `${body}\n${indent}--${name}: ${value};\n${text.slice(at.close)}`;
+};
+
+/** Where a token is read: the library's file and line, and for one a package declares, where the package does. */
+const sourceOf = (v: Variable): DesignToken['source'] => ({ file: v.file, line: v.line, ...(v.from ? { from: v.from } : {}) });
 
 /** Comments as spaces, so what is left keeps every offset, and so every line number. */
 const withoutComments = (css: string): string => css.replace(/\/\*[\s\S]*?\*\//g, (c) => c.replace(/[^\n]/g, ' '));
@@ -95,18 +201,35 @@ export const cssVariables: TokenSource = {
 	read: async (reads, files) => {
 		// Each mode's variables, the last one written winning, as in the browser.
 		const modes = new Map<string, Map<string, Variable>>([['light', new Map()]]);
-		for (const file of files.filter((f) => STYLESHEET.test(f)).sort()) {
+		const followed = new Set<string>();
+		/** A stylesheet's variables, its imports' where they are; one a library file imports is said as that file's. */
+		const take = async (file: string, imported: { file: string; line: number } | null): Promise<void> => {
 			const css = await reads.readFile(file).catch(() => null);
-			if (css === null) continue;
+			if (css === null) return;
 			const text = withoutComments(css);
-			for (const block of text.matchAll(/([^{}]*)\{([^{}]*)\}/g)) {
-				const mode = /dark/i.test(block[1] as string) ? 'dark' : 'light';
-				const vars = modes.get(mode) ?? modes.set(mode, new Map()).get(mode)!;
-				const bodyAt = (block.index ?? 0) + (block[1] as string).length + 1;
-				for (const v of (block[2] as string).matchAll(/--([\w-]+)\s*:\s*([^;]+);/g)) {
-					vars.set(v[1] as string, { value: (v[2] as string).trim(), file, line: lineAt(text, bodyAt + (v.index ?? 0)) });
-				}
+			const { vars, imports } = readStylesheet(text);
+			for (const i of imports) {
+				const path = await importedFile(reads, file, i.spec);
+				if (path === null || followed.has(path)) continue;
+				followed.add(path);
+				// A package's is said as the library's stylesheet that imports it; one of the library's own files is its own.
+				const inPackage = /(^|\/)node_modules\//.test(path);
+				await take(path, inPackage ? (imported ?? { file, line: lineAt(text, i.at) }) : imported);
 			}
+			for (const v of vars) {
+				const mode = v.rules.some((r) => /dark/i.test(r)) ? 'dark' : 'light';
+				const own = modes.get(mode) ?? modes.set(mode, new Map()).get(mode)!;
+				const line = lineAt(text, v.at);
+				own.set(
+					v.name,
+					imported === null ? { value: v.value, file, line } : { value: v.value, ...imported, from: { file, line, rule: ruleOf(v.rules) } },
+				);
+			}
+		};
+		for (const file of files.filter((f) => STYLESHEET.test(f)).sort()) {
+			if (followed.has(file)) continue;
+			followed.add(file);
+			await take(file, null);
 		}
 		/** The mode a variable a pointer names is found in: its own mode first, then the light one. */
 		const modeOf = (name: string, mode: string): string | null =>
@@ -141,7 +264,7 @@ export const cssVariables: TokenSource = {
 						category: primitiveOf(named.kind, name) as string,
 						...named,
 						value,
-						source: { file: v.file, line: v.line },
+						source: sourceOf(v),
 					});
 					continue;
 				}
@@ -167,7 +290,7 @@ export const cssVariables: TokenSource = {
 					name: step ? (step[2] as string) : name,
 					value,
 					...(pointerMode === null ? {} : { ref: { path: `css.${pointerMode}.${pointer}` } }),
-					source: { file: v.file, line: v.line },
+					source: sourceOf(v),
 				});
 			}
 		}
@@ -179,6 +302,8 @@ export const cssVariables: TokenSource = {
 	},
 
 	edit: (text, token, to) => {
+		const declared = token.source.from;
+		if (declared) return declaredAgain(text, declared.rule, variableOf(token.path), 'value' in to ? to.value : `var(--${variableOf(to.ref)})`);
 		// Found in the text with its comments blanked, so a commented-out declaration on the same line is not the one changed.
 		const lines = withoutComments(text).split('\n');
 		const start = lines.slice(0, token.source.line - 1).reduce((n, l) => n + l.length + 1, 0);

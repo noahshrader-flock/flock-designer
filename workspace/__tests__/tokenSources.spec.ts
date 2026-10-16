@@ -189,6 +189,51 @@ describe('CSS variables', () => {
 	});
 });
 
+describe('CSS variables a stylesheet imports (Phase 5.5)', () => {
+	/** A package of variables, as Tailwind 4's theme is one: its stylesheet named by its exports, its theme nested in layers. */
+	const PACKAGE = {
+		'node_modules/theme-kit/package.json': JSON.stringify({ name: 'theme-kit', exports: { '.': { style: './index.css' } } }),
+		'node_modules/theme-kit/index.css': `@layer theme {
+  @theme default {
+    --color-blue-500: oklch(0.62 0.21 259.8);
+    --radius-md: 0.375rem;
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    --font-sans: ui-sans-serif, 'Apple Color Emoji', "Segoe UI; Emoji";
+    --radius-lg: 0.5rem;
+  }
+}
+.dark { --surface: #111111; }
+`,
+	};
+	const LIBRARY = { ...PACKAGE, 'src/globals.css': "@import 'theme-kit';\n\n:root {\n  --radius-lg: 12px;\n}\n" };
+
+	it('are the library’s, read where it imports them, with what it declares after them winning, as in the browser', async () => {
+		const list = await readTokens(memoryReads(LIBRARY));
+		expect(list.source).toBe('CSS variables');
+		const imported = { file: 'src/globals.css', line: 1 };
+		expect(find(list, 'css.light.radius-md')).toMatchObject({
+			value: '0.375rem',
+			source: { ...imported, from: { file: 'node_modules/theme-kit/index.css', line: 4, rule: ':root' } },
+		});
+		expect(find(list, 'css.light.color-blue-500')).toMatchObject({ kind: 'color', source: { ...imported, from: { line: 3 } } });
+		expect(find(list, 'css.dark.surface')?.source.from).toEqual({ file: 'node_modules/theme-kit/index.css', line: 12, rule: '.dark' });
+		// Declared after the package's, and after a rule with braces of its own in the package's: the library's own.
+		expect(find(list, 'css.light.radius-lg')).toMatchObject({ value: '12px', source: { file: 'src/globals.css', line: 4 } });
+		expect(find(list, 'css.light.radius-lg')?.source.from).toBeUndefined();
+		// A `;` inside a font's quoted name is the font's, not the end of its declaration.
+		expect(find(list, 'css.light.font-sans')?.value).toBe(`ui-sans-serif, 'Apple Color Emoji', "Segoe UI; Emoji"`);
+	});
+
+	it('read a stylesheet of the library’s own it imports as its own, and a package not installed as nothing', async () => {
+		const list = await readTokens(
+			memoryReads({ 'src/globals.css': "@import './theme.css';\n@import 'not-installed';\n", 'src/theme.css': ':root {\n  --radius: 4px;\n}\n' }),
+		);
+		expect(list.tokens.map((t) => [t.path, t.source])).toEqual([['css.light.radius', { file: 'src/theme.css', line: 2 }]]);
+	});
+});
+
 describe('design token files', () => {
 	const TOKENS = JSON.stringify(
 		{

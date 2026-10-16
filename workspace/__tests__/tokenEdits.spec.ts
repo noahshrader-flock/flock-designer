@@ -219,6 +219,30 @@ describe('writing a change into CSS variables', () => {
 	});
 });
 
+describe('writing a change into a variable a package declares (Phase 5.5)', () => {
+	const FILES = {
+		'node_modules/theme-kit/package.json': JSON.stringify({ name: 'theme-kit', style: 'theme.css' }),
+		'node_modules/theme-kit/theme.css': ':root {\n  --radius-md: 0.375rem;\n  --spacing: 0.25rem;\n}\n.dark {\n  --radius-md: 0.5rem;\n}\n',
+		'src/globals.css': "@import 'theme-kit';\n\n:root {\n  --brand: #108062;\n}\n",
+	};
+
+	it('declares it again in the library’s stylesheet that imports it, in a rule of the package’s kind, never in the package', async () => {
+		const { written, find } = await change(FILES, [
+			{ path: 'css.light.radius-md', value: '9px' },
+			{ path: 'css.light.spacing', value: '0.3rem' },
+			{ path: 'css.dark.radius-md', value: '10px' },
+		]);
+		expect([...written.keys()]).toEqual(['src/globals.css']);
+		expect(written.get('src/globals.css')).toBe(
+			"@import 'theme-kit';\n\n:root {\n  --brand: #108062;\n  --radius-md: 9px;\n  --spacing: 0.3rem;\n}\n\n.dark {\n  --radius-md: 10px;\n}\n",
+		);
+		// Read back as the library's own from then on, and as the change says.
+		expect(find('css.light.radius-md')).toMatchObject({ value: '9px', source: { file: 'src/globals.css', line: 5 } });
+		expect(find('css.light.radius-md').source.from).toBeUndefined();
+		expect(find('css.dark.radius-md').value).toBe('10px');
+	});
+});
+
 describe('writing a change into token files', () => {
 	const JSON_FILE = {
 		'tokens/color.json': `{

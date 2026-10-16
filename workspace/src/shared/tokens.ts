@@ -165,9 +165,11 @@ export const fitsKind = (kind: DesignToken['kind'], value: string): boolean =>
 
 /**
  * Where a token is written. Two tokens can be written in one place: a palette both modes spread in (FUI's shared roles)
- * is one line read as a Light token and a Dark one, so a change to either is a change to both.
+ * is one line read as a Light token and a Dark one, so a change to either is a change to both. One a package declares is
+ * written where the package declares it, through the library's import of it.
  */
-export const placeOf = (t: DesignToken): string => `${t.source.file}:${t.source.line}:${t.set}.${t.name}`;
+export const placeOf = ({ source: { file, line, from }, set, name }: DesignToken): string =>
+	`${file}:${line}${from ? `:${from.file}:${from.line}` : ''}:${set}.${name}`;
 
 /** The other tokens written where `token` is: what a change to it also changes. */
 export const writtenWith = (tokens: DesignToken[], token: DesignToken): DesignToken[] =>
