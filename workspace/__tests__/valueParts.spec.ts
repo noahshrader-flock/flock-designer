@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CSS_OF, allParts, partsIn, shortParts, shortValue } from '../src/shared/valueParts';
+import { CSS_OF, allParts, isFull, partsIn, shortParts, shortValue } from '../src/shared/valueParts';
 
 /** How a component's drawn value is written, one way for the page, the analysis and the control (adjusting a component). */
 describe('a value’s parts', () => {
@@ -29,5 +29,16 @@ describe('a value’s parts', () => {
 		expect(shortValue('padding', '0px 10px 0px 10px')).toBe('0px 10px');
 		expect(shortValue('gap', 'normal normal')).toBe('normal');
 		expect(shortValue('fontSize', '16px')).toBe('16px');
+	});
+});
+
+describe('a radius that makes its ends round (Phase 5.5)', () => {
+	it('is said as full, as a pill’s 9999px and an infinite one drawn (Tailwind’s rounded-full) are, and a radius that is a size is not', () => {
+		expect(shortValue('radius', '3.35544e+07px 3.35544e+07px 3.35544e+07px 3.35544e+07px')).toBe('full');
+		expect(shortValue('radius', '9999px 9999px 0px 0px')).toBe('full full 0px 0px');
+		expect(shortValue('radius', '8px 8px 8px 8px')).toBe('8px');
+		expect(['9999px', '3.35544e+07px', '9998px', '0.5rem', 'full'].map(isFull)).toEqual([true, true, false, false, false]);
+		// Only a radius: a padding as large is a size.
+		expect(shortValue('padding', '9999px')).toBe('9999px');
 	});
 });

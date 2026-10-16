@@ -14,7 +14,7 @@ import { plural } from '../../src/shared/plural';
 import { DEFAULT_THEME, THEMES, type Theme, themeLabel } from '../../src/shared/prototypeTheme';
 import { labelOf } from '../../src/shared/tokens';
 import { sharedWith } from '../../src/renderer/useComponentTokens';
-import { NO_COLOR } from '../../src/shared/valueParts';
+import { NO_COLOR, allParts, isFull } from '../../src/shared/valueParts';
 import { Swatch } from './ui/Swatch';
 import { Toggle } from './ui/Toggle';
 import { useDismiss } from './ui/useDismiss';
@@ -122,7 +122,8 @@ const Cell = ({
 			)}
 		</>
 	);
-	if (still)
+	// A radius that makes its ends round has no length to change: shown as drawn.
+	if (still || (property === 'radius' && allParts(cell.value, 4).some(isFull)))
 		return (
 			<li data-value-cell className="token">
 				<span className="value-cell" title={made.why}>

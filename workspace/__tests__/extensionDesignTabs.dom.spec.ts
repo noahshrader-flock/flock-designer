@@ -337,6 +337,24 @@ describe('a component’s tab', () => {
 		expect(text.querySelector('h3 [data-value-kind]')).toBeNull();
 	});
 
+	it('says a radius that makes its ends round as full, with no control, and the radii that are sizes as they are (Phase 5.5)', async () => {
+		const rows = (analysis().values as { rows: { light: { property: string }[] } }).rows.light.filter((r) => r.property !== 'radius');
+		const radius = {
+			property: 'radius',
+			by: 'shape',
+			cells: [
+				{ variant: 'pill', value: '3.35544e+07px 3.35544e+07px 3.35544e+07px 3.35544e+07px', kind: 'own', tokens: [], instances: 1 },
+				{ variant: 'square', value: '6px 6px 6px 6px', kind: 'own', tokens: [], instances: 1 },
+			],
+		};
+		await analysed({ values: { state: 'read', instances: 2, unmarked: 0, rows: { light: [...rows, radius], dark: null } } });
+		const row = section('Values')!.querySelector('[data-value-row="radius"]') as HTMLElement;
+		expect([...row.querySelectorAll('[data-value-cell]')].map((c) => [c.textContent, c.querySelector('button') !== null])).toEqual([
+			['pillfull', false],
+			['square6px', true],
+		]);
+	});
+
 	it('shows every value of a row, never behind a “show more”', async () => {
 		const rows = (analysis().values as { rows: { light: unknown[] } }).rows.light;
 		const many = {

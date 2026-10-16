@@ -37,8 +37,18 @@ export const allParts = (value: string, n: 1 | 2 | 4): string[] => {
 /** A value as it is said: written short, the parts of one written in full (`0px 10px 0px 10px` is `0px 10px`). */
 export const shortValue = (property: ValueProperty, value: string): string => {
 	const n = partsIn(property);
-	return n === 1 ? value : shortParts(allParts(value, n)).join(' ');
+	const parts = allParts(value, n).map((p) => (property === 'radius' && isFull(p) ? 'full' : p));
+	return n === 1 ? (parts[0] as string) : shortParts(parts).join(' ');
 };
+
+/** A length beyond any element's size: a pill's `9999px`, and `calc(infinity * 1px)` (Tailwind's `rounded-full`) as drawn. */
+const FULL_PX = 9999;
+
+/**
+ * Whether a radius's corner is one that makes its end round, whatever the element's size: said as "full", and given no
+ * control, since no length of it is one a person picks (Phase 5.5).
+ */
+export const isFull = (part: string): boolean => Number(/^([\d.]+(?:e[+-]?\d+)?)px$/.exec(part)?.[1] ?? 0) >= FULL_PX;
 
 /** A value's parts written as short as CSS writes them: four sides that are one, one; top and bottom and the sides, two. */
 export const shortParts = (parts: string[]): string[] => {
