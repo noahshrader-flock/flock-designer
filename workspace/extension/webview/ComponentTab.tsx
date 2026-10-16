@@ -112,7 +112,7 @@ export const ComponentTab = ({ id }: { id: string }) => {
 							</Button>
 						)}
 						<Button variant="secondary" external onClick={() => link('source')}>
-							Source
+							GitHub
 						</Button>
 					</div>
 				</header>
