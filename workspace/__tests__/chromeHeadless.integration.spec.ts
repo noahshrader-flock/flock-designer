@@ -47,6 +47,16 @@ const PAGES: Record<string, string> = {
 <body style="margin:0;font:16px sans-serif"><main><h1 style="background:#123;color:#fff;padding:40px">Alert history</h1>
 <p style="padding:40px">Every alert from the last day, by camera.</p><img src="data:image/gif;base64,R0lGODlhAQABAAAAACw="></main></body></html>`,
 	'/blank.html': '<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Blank</title></head><body></body></html>',
+	// A story that moves: one padding animating for ever (a spinner's way), one animating in over two seconds.
+	'/moving/': `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Previews</title>
+<style>@keyframes pulse { from { padding-top: 4px } to { padding-top: 40px } } @keyframes enter { from { padding-left: 0 } to { padding-left: 24px } }</style></head>
+<body style="margin:0;background:#fff"><div id="root"></div><script>
+window.__dsnrShow = async () => {
+	document.getElementById('root').innerHTML = '<section data-story>'
+		+ '<i style="display:block;width:20px;height:20px;padding-top:3px;animation:pulse 0.7s linear infinite"></i>'
+		+ '<b style="display:block;width:20px;height:20px;padding-left:24px;animation:enter 2s linear both"></b></section>';
+};
+</script></body></html>`,
 	// A preview build's page, as the Design System tab's are: it draws the story file it is told, in place of the last.
 	'/previews/': `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Previews</title></head>
 <body style="margin:0;background:#fff"><div id="root"></div><script>
@@ -82,6 +92,16 @@ describe.skipIf(findChrome() === null)('with the browser on this machine', () =>
 		expect(picture?.subarray(0, 2)).toEqual(Buffer.from([0xff, 0xd8]));
 		expect(picture!.length).toBeLessThanOrEqual(COVER_BUDGET);
 		expect(await headless.draw(`${base}/blank.html`)).toBeNull();
+	}, 60_000);
+
+	it('holds what moves still, so a story reads the same whenever it is drawn: what turns for ever at rest, what animates in at its end', async () => {
+		const drawn = async () => (await headless.measure([{ base: `${base}/moving/`, mode: 'light', files: ['moving.stories.tsx'] }]))[0]?.[0]?.spacing;
+		const first = await drawn();
+		await new Promise((r) => setTimeout(r, 350));
+		expect(await drawn()).toEqual(first);
+		// At rest, its padding as written, not a moment of its turn; and the one that animates in, as it ends.
+		expect(first).toHaveProperty(['3px']);
+		expect(first).toHaveProperty(['24px']);
 	}, 60_000);
 
 	it('draws stories as the Design System tab asks: what each draws, in its mode, its picture, and what axe finds', async () => {

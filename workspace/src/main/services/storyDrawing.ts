@@ -61,7 +61,7 @@ const instancesIn = `try {
 
 /**
  * What a story file draws, read in the page once it has drawn: the page draws the file in place of the last
- * (`PREVIEW_SHOW`), so the page is loaded once for many. Then its fonts, and what animates in, settle, and its stories'
+ * (`PREVIEW_SHOW`), so the page is loaded once for many. Then its fonts settle and what animates is held still, and its stories'
  * elements that take up room are read: each one's background, text and border colors, its radius, and its padding,
  * margins and gaps, counted by computed value. With `tags`, axe (in the page already) checks the stories' accessibility
  * at them (T7), before anything is hidden for a picture, since axe passes over what is hidden.
@@ -74,8 +74,16 @@ export const readDrawn = (file: string, picture: boolean, tags: string[] | null 
 	while (typeof window[${JSON.stringify(PREVIEW_SHOW)}] !== 'function' && Date.now() < until) await new Promise((r) => setTimeout(r, 50));
 	await window[${JSON.stringify(PREVIEW_SHOW)}](file);
 	await document.fonts.ready;
-	const settled = Date.now() + 600;
-	while (document.getAnimations().some((a) => a.playState === 'running') && Date.now() < settled) await new Promise((r) => setTimeout(r, 25));
+	// Held still, so a story draws the same each time it is drawn: what animates in or moves to a place is put at its end,
+	// and what turns for ever (a spinner) is stopped, at rest. Else what a drawing reads depends on the moment it is read in.
+	// Asking for them brings the page's styles up to date first; a page no one sees may never be given a frame to wait for.
+	for (const a of document.getAnimations()) {
+		try {
+			a.finish();
+		} catch {
+			a.cancel();
+		}
+	}
 	const drawn = { colors: {}, radii: {}, spacing: {} };
 	const add = (m, k) => { if (k) m[k] = (m[k] || 0) + 1; };
 	for (const el of document.querySelectorAll('#root *')) {
