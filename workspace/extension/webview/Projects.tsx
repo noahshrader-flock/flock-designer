@@ -30,6 +30,7 @@ import { ViewOptions } from './ui/ViewOptions';
 import { Row } from './ui/Row';
 import { SearchBox } from './ui/SearchBox';
 import { Section } from './ui/Section';
+import { Thumbnail } from './ui/Thumbnail';
 import { NoMatches } from './ui/NoMatches';
 import { layoutSection } from './layouts';
 import type { View } from './vscode';
@@ -46,12 +47,8 @@ const meta = (p: Project, labels: string[]) => {
 
 /** A project's picture, its newest prototype's (`useCover`); its place kept for one until there is one. */
 const Picture = ({ project, className }: { project: Project; className: string }) => {
-	const { picture } = useCover(project);
-	return picture ? (
-		<img data-part="picture" alt="" className={className} src={picture} />
-	) : (
-		<span data-part="picture" aria-hidden="true" className={className} />
-	);
+	const { picture, waiting } = useCover(project);
+	return <Thumbnail src={picture} loading={waiting} className={className} />;
 };
 
 /**
@@ -106,7 +103,7 @@ const ProjectItem = ({
 			: null;
 	const next: MenuItem[] = stage ? [{ label: stage.label, icon: 'package', onSelect: () => onDialog(stage.dialog) }] : [];
 	const opens: MenuItem[] = [
-		...(newest ? [{ label: 'Open locally', icon: 'browser', onSelect: () => onOpenInBrowser(newest) }] : []),
+		...(newest ? [{ label: 'Open locally', icon: 'link-external', onSelect: () => onOpenInBrowser(newest) }] : []),
 		...(inCode ? [{ label: 'Run locally', icon: 'gear', onSelect: () => onCodebase('run-locally', id) }] : []),
 		...next,
 	];
@@ -185,7 +182,7 @@ const ByProduct = ({
 /** How each way of choosing whose projects is shown in the view options: a focus, not a lock. */
 const SCOPES = {
 	here: { label: 'This product', icon: 'repo' },
-	everyone: { label: 'Everyone’s', icon: 'organization' },
+	everyone: { label: 'All projects', icon: 'organization' },
 	mine: { label: 'Mine', icon: 'person' },
 } as const satisfies Record<Scope, { label: string; icon: string }>;
 
@@ -335,16 +332,16 @@ export const Projects = ({
 				<NoMatches thing="project" search={search} onClear={() => setSearch('')} />
 			) : here.length === 0 && shownScope === 'mine' ? (
 				<EmptyState icon="person" title="No projects of yours yet">
-					<p>None of these projects has your work in it yet. Everyone’s shows what is being made.</p>
+					<p>None of these projects has your work in it yet. All projects shows what is being made.</p>
 					<Button variant="secondary" onClick={() => setScope('everyone')}>
-						Show everyone’s
+						Show all projects
 					</Button>
 				</EmptyState>
 			) : here.length === 0 ? (
 				<EmptyState icon="repo" title={`No projects in ${nameOf(productRepository ?? '')} yet`}>
-					<p>Prototypes made on it appear here. Everyone’s shows what is being made on other products.</p>
+					<p>Prototypes made on it appear here. All projects shows what is being made on other products.</p>
 					<Button variant="secondary" onClick={() => setScope('everyone')}>
-						Show everyone’s
+						Show all projects
 					</Button>
 				</EmptyState>
 			) : focused ? (

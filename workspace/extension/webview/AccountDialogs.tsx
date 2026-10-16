@@ -25,7 +25,6 @@ export const AccountDialog = ({ login, onClose }: { login: string; onClose: () =
 			<p className="dialog-about">
 				Signed in to GitHub as <strong>{login}</strong>.
 			</p>
-			<p className="dialog-about">VS Code keeps your GitHub account in its Accounts menu. Signing out here ends only DSNR’s use of it.</p>
 			<ErrorLine error={error} />
 			<DialogButtons>
 				<Button disabled={busy} onClick={() => void signOut()}>

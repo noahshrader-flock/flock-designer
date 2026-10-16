@@ -43,12 +43,15 @@ export const NewPrototypeDialog = ({
 		<Dialog title="New prototype" onClose={onClose}>
 			<form onSubmit={start}>
 				<Field label="Name">{(control) => <TextInput control={control} value={title} onChange={setTitle} placeholder="Alert history" />}</Field>
-				<Field
-					label="What should it explore?"
-					hint="Claude Code builds it from this, with the real design system, in this window. Paste a Figma link to one screen if you have one, and drag screenshots into the conversation before you press Enter."
-				>
+				<Field label="What should it explore?">
 					{(control) => (
-						<TextArea control={control} value={task} onChange={setTask} placeholder="A history of alerts, filterable by camera and by day" rows={5} />
+						<TextArea
+							control={control}
+							value={task}
+							onChange={setTask}
+							placeholder="A history of alerts, filterable by camera and by day. Paste a Figma link to one screen if you have one, and drag screenshots into the conversation before you press Enter."
+							rows={5}
+						/>
 					)}
 				</Field>
 				<FolderField folders={folders} pick={pick} onPick={setPick} />

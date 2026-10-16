@@ -198,7 +198,6 @@ describe('the account and the sync, in the panel, not as a box at the top (their
 		await say({ type: 'open-dialog', dialog: { kind: 'account' } });
 		expect(dialog()?.getAttribute('aria-label')).toBe('GitHub account');
 		expect(dialog()?.textContent).toContain('Signed in to GitHub as noah');
-		expect(dialog()?.textContent).toContain('VS Code keeps your GitHub account in its Accounts menu');
 		await press(inDialog('Sign out of DSNR'));
 		expect(heard('signOut')).toHaveLength(1);
 		await answer('signOut', null);
@@ -302,14 +301,11 @@ describe('dialogs and menus, in the panel', () => {
 			expect(dialog()).toBeNull();
 		});
 
-		it('names each field by its label alone, and gives its hint as a description: a hint is not part of a name', async () => {
+		it('names each field by its label alone', async () => {
 			await showOpen();
 			await say({ type: 'open-dialog', dialog: { kind: 'new' } });
-			const task = field('What should it explore?');
-			expect(task.labels?.[0]?.textContent).toBe('What should it explore?');
-			const hint = document.getElementById(task.getAttribute('aria-describedby')!);
-			expect(hint?.textContent).toContain('Claude Code builds it from this');
-			expect(field('Name').hasAttribute('aria-describedby')).toBe(false);
+			expect(field('What should it explore?').labels?.[0]?.textContent).toBe('What should it explore?');
+			expect(field('Name').labels?.[0]?.textContent).toBe('Name');
 		});
 
 		it('asks a name, what it should explore and its folder, and is made only once there is a name and something to explore', async () => {
@@ -969,7 +965,7 @@ describe('Projects, focused on the product open', () => {
 		await showOpen(OPEN, PROJECTS);
 		expect((await scopeChoices()).map((o) => [o.textContent, o.getAttribute('aria-checked')])).toEqual([
 			['This product', 'true'],
-			['Everyone’s', 'false'],
+			['All projects', 'false'],
 		]);
 		expect(sections()).toEqual(['Admin', 'No folder']);
 		expect(names()).toEqual(['Alerts', 'Both', 'Old']);
@@ -994,7 +990,7 @@ describe('Projects, focused on the product open', () => {
 		};
 		const inCode = { ...project, id: 'y', title: 'Only code', iterations: [at('codebase', '2026-10-04T10:00:00Z')] };
 		await showOpen(OPEN, [project, inCode]);
-		await choose('Everyone’s');
+		await choose('All projects');
 		expect(meta('Many')).toBe('2 versions');
 		// Nothing to count, so nothing is said of it: the line is its folder and where else it is, when it has them.
 		expect(meta('Only code')).toBeUndefined();
@@ -1002,7 +998,7 @@ describe('Projects, focused on the product open', () => {
 
 	it('shows everyone’s by product, the open one first and No product last, each project once with its folder and where else it is', async () => {
 		await showOpen(OPEN, PROJECTS);
-		await choose('Everyone’s');
+		await choose('All projects');
 		expect(sections()).toEqual(['flock-coke', 'flock-pepsi', 'No product']);
 		expect(names()).toEqual(['Alerts', 'Maps', 'Both', 'Old']);
 		// Both's newest work is Pepsi's, so it is under Pepsi, once, and says it is in Coke too.
@@ -1014,7 +1010,7 @@ describe('Projects, focused on the product open', () => {
 
 	it('changes nothing of what can be done: a project of another product opens for review as any does', async () => {
 		await showOpen(OPEN, PROJECTS);
-		await choose('Everyone’s');
+		await choose('All projects');
 		await press(
 			rows()
 				.find((r) => r.querySelector('[data-part="name"]')?.textContent === 'Maps')!
@@ -1026,7 +1022,7 @@ describe('Projects, focused on the product open', () => {
 	it('says when the open product has none of its own yet, and how to see everyone’s', async () => {
 		await showOpen(OPEN, [PROJECTS[1]!]);
 		expect(body().textContent).toContain('No projects in flock-coke yet');
-		await press(button('Show everyone’s'));
+		await press(button('Show all projects'));
 		expect(names()).toEqual(['Maps']);
 	});
 
@@ -1040,7 +1036,7 @@ describe('Projects, focused on the product open', () => {
 	it('names a product the same in a section’s title and in another project’s Also in', async () => {
 		const ACME = 'acme/flock-coke';
 		await showOpen(OPEN, [...PROJECTS, made('acme', 'Acme', null, [ACME, '2026-10-01T10:00:00Z'], [PEPSI, '2026-10-06T10:00:00Z'])]);
-		await choose('Everyone’s');
+		await choose('All projects');
 		// Two products called flock-coke: each by its owner too, in titles and labels alike.
 		expect(sections()).toEqual(['flocksafety/flock-coke', 'flock-pepsi', 'No product']);
 		expect(meta('Acme')).toBe('1 version · Also in acme/flock-coke');
@@ -1048,7 +1044,7 @@ describe('Projects, focused on the product open', () => {
 
 	it('goes back to the product’s own when another product is opened', async () => {
 		await showOpen(OPEN, PROJECTS);
-		await choose('Everyone’s');
+		await choose('All projects');
 		await say({ type: 'context', context: { ...OPEN, product: '/work/flock-pepsi', productRepository: PEPSI } });
 		await answer('listProjects', PROJECTS);
 		expect((await scopeChoices()).map((o) => o.getAttribute('aria-checked'))).toEqual(['true', 'false']);
@@ -1062,7 +1058,7 @@ describe('Projects, focused on the product open', () => {
 		expect([...menu.querySelectorAll('.menu-heading')].map((h) => h.textContent)).toEqual(['Projects', 'Layout']);
 		expect(menu.querySelectorAll('[role="separator"]')).toHaveLength(1);
 		const choices = [...menu.querySelectorAll<HTMLElement>('[role="menuitemradio"]')];
-		expect(choices.map((c) => c.textContent)).toEqual(['This product', 'Everyone’s', 'Grid', 'List']);
+		expect(choices.map((c) => c.textContent)).toEqual(['This product', 'All projects', 'Grid', 'List']);
 		// An icon at the start of each; a check at the end of the one chosen in its group only.
 		expect(choices.every((c) => c.firstElementChild?.classList.contains('codicon'))).toBe(true);
 		expect(choices.map((c) => c.lastElementChild?.classList.contains('menu-check'))).toEqual([true, false, true, false]);
@@ -1079,9 +1075,9 @@ describe('Projects, focused on the product open', () => {
 
 	it('moves the check to what is chosen, and closes', async () => {
 		await showOpen(OPEN, PROJECTS);
-		await choose('Everyone’s');
+		await choose('All projects');
 		expect(document.querySelector('[role="menu"]')).toBeNull();
-		expect(await checked('Everyone’s')).toBe('true');
+		expect(await checked('All projects')).toBe('true');
 		expect(await checked('This product')).toBe('false');
 		expect(await checked('Grid')).toBe('true');
 	});
@@ -1101,10 +1097,10 @@ describe('Projects, focused on the product open', () => {
 
 		it('is offered once signed in, and not before: nothing says whose they would be', async () => {
 			await showOpen(OPEN, mine);
-			expect((await scopeChoices()).map((o) => o.textContent)).toEqual(['This product', 'Everyone’s']);
+			expect((await scopeChoices()).map((o) => o.textContent)).toEqual(['This product', 'All projects']);
 			await press(document.body);
 			await become(signedIn, mine);
-			expect((await scopeChoices()).map((o) => o.textContent)).toEqual(['This product', 'Everyone’s', 'Mine']);
+			expect((await scopeChoices()).map((o) => o.textContent)).toEqual(['This product', 'All projects', 'Mine']);
 		});
 
 		it('shows the projects I have worked on, whatever product, by product as everyone’s are, and nothing else', async () => {
@@ -1121,7 +1117,7 @@ describe('Projects, focused on the product open', () => {
 			await become(signedIn, [mine[1]!]);
 			await choose('Mine');
 			expect(body().textContent).toContain('None of these projects has your work in it yet');
-			await press(button('Show everyone’s'));
+			await press(button('Show all projects'));
 			expect(names()).toEqual(['Maps']);
 		});
 
@@ -1137,7 +1133,7 @@ describe('Projects, focused on the product open', () => {
 		it('is offered with no product open too, among everyone’s', async () => {
 			await showOpen({ ...OPEN, product: null, productRepository: null, designRepository: null, missing: ['No product is open.'] }, mine);
 			await become(signedIn, mine);
-			expect((await scopeChoices()).map((o) => o.textContent)).toEqual(['Everyone’s', 'Mine']);
+			expect((await scopeChoices()).map((o) => o.textContent)).toEqual(['All projects', 'Mine']);
 		});
 	});
 
