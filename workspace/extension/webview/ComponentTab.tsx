@@ -60,7 +60,8 @@ export const ComponentTab = ({ id }: { id: string }) => {
 	const [edits, setEdits] = useTrial();
 	// The mode its values are shown in: the one chosen in the panel, the same on every page.
 	const mode = useModeChoice();
-	// The token whose control is open: Made from's rows change a token as the panel's do, and every page sees it.
+	// The token whose control is open: Tokens used's rows, and a value that is a token's, change it as the panel's do, and every
+	// page sees it.
 	const [editing, setEditing] = useState<DesignToken | null>(null);
 	// Asking in words (Phase 6): open while its dialog is.
 	const [asking, setAsking] = useState(false);

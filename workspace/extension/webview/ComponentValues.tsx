@@ -4,28 +4,28 @@ import {
 	type ComponentTokens,
 	type ComponentValues as Values,
 	type ComponentVariants,
-	type Unvaried,
 	type DesignToken,
 	type TriedValue,
+	type Unvaried,
 	type ValueCell,
 	type ValueProperty,
 	type ValueRow,
 	shownMode,
 	triedId,
 } from '../../src/shared/contract';
-import { type Picker, type Selection, firstSelection, inspect, optionLabel, pickersOf, propLabel, rowName } from '../../src/shared/inspector';
-import { useMode } from './mode';
-import { Disclosure } from './ui/Disclosure';
-import { Select } from './ui/Field';
-import { Switch } from './ui/Switch';
+import { type Picker, type Selection, firstSelection, inspect, offOf, optionLabel, pickersOf, propLabel, rowName } from '../../src/shared/inspector';
 import { plural } from '../../src/shared/plural';
 import { labelOf } from '../../src/shared/tokens';
-import { sharedWith } from '../../src/renderer/useComponentTokens';
 import { NO_COLOR, allParts, isFull } from '../../src/shared/valueParts';
-import { Swatch } from './ui/Swatch';
-import { useDismiss } from './ui/useDismiss';
-import { ValueEditor } from './ValueEditor';
 import { followsOf, saidValue, valueTitle } from '../../src/shared/valueNames';
+import { sharedWith } from '../../src/renderer/useComponentTokens';
+import { useMode } from './mode';
+import { ValueEditor } from './ValueEditor';
+import { Disclosure } from './ui/Disclosure';
+import { Select } from './ui/Field';
+import { Swatch } from './ui/Swatch';
+import { Switch } from './ui/Switch';
+import { useDismiss } from './ui/useDismiss';
 
 type Ready = Extract<ComponentTokens, { state: 'ready' }>;
 
@@ -52,12 +52,12 @@ const WHY_NONE: Record<Exclude<Values['state'], 'read' | 'failed'>, (name: strin
 };
 
 /**
- * What a value is made of, said short: the token it is (its name; where else it is used is the tooltip, and the Made from and
- * Usage parts say it fully), a part of one, or worked out from one. A value of the component's own has nothing to say; one
- * not checked says so only for the row (`Not checked`).
+ * What a value is made of, said short as its chip: the token it is (its name; where else it is used is the tooltip, and Tokens
+ * used says it fully), a part of one, or from one. A value of the component's own, or one not checked, has no chip: its tooltip
+ * says why.
  */
 interface Made {
-	/** What it says in a line, or null when it is the component's own and there is nothing to add. */
+	/** What its chip says, or null when it has none. */
 	says: string | null;
 	/** More, on hover: where else a token is used, or why a value is not a token. */
 	why: string;
@@ -67,13 +67,10 @@ const madeOf = (cell: ValueCell, name: (path: string) => string, others: (path: 
 		return { says: cell.tokens.map(name).join(', '), why: cell.tokens.map((p) => `${name(p)} · ${sharedWith(others(p))}`).join('\n') };
 	if (cell.kind === 'mixed') return { says: `Partly ${cell.tokens.map(name).join(', ')}`, why: 'Partly a token, partly the component’s own.' };
 	if (cell.kind === 'derived')
-		return { says: 'Worked out from a token', why: 'It changes with the tokens, but is none of them: a shade, or a size that grows with one.' };
+		return { says: 'From a token', why: 'It changes with the tokens, but is none of them: a shade, or a size that grows with one.' };
 	if (cell.kind === 'own') return { says: null, why: 'The component’s own: set in the component itself, no token the analysis can mark gives it.' };
-	return { says: 'Not checked', why: 'No token of this kind is marked when the stories are drawn, so whether it is one is not known.' };
+	return { says: null, why: 'Not checked: no token of this kind is marked when the stories are drawn, so whether it is one is not known.' };
 };
-
-/** What a value is made of, said as a chip: a token's, worked out from one, partly one. A value of its own, or not checked, has none. */
-const CHIPPED: ReadonlySet<ValueCell['kind']> = new Set(['token', 'derived', 'mixed']);
 
 /**
  * One value, as a button that opens its control, as a token's row reads: what it is called on the left (`label`: its
@@ -102,7 +99,7 @@ const Cell = ({
 	editor: ReactNode;
 	onOpen: () => void;
 	onClose: () => void;
-	/** Shown and never tried: a value drawn only from its props, where nothing can be tried on it (Every variant's, Phase 5). */
+	/** Shown and never tried: a value drawn only from its props, where nothing can be tried on it (its props' drawing, Phase 5). */
 	still?: boolean;
 	label: string;
 }) => {
@@ -110,7 +107,8 @@ const Cell = ({
 	const wrap = useRef<HTMLLIElement>(null);
 	const button = useRef<HTMLButtonElement>(null);
 	useDismiss(open, wrap, onClose, button);
-	const chip = !CHIPPED.has(cell.kind) || cell.value === NO_COLOR ? null : cell.kind === 'derived' ? 'From a token' : made.says;
+	// A colour that draws nothing is none, whatever made it.
+	const chip = cell.value === NO_COLOR ? null : made.says;
 	const says = (
 		<>
 			{chip === null ? (
@@ -191,7 +189,7 @@ const PickerRow = ({ picker, value, onChange }: { picker: Picker; value: string 
 				{propLabel(picker.prop)}
 			</label>
 			{picker.switch ? (
-				<Switch id={id} on={value === 'true'} onChange={(on) => onChange(on ? 'true' : picker.options.includes('false') ? 'false' : null)} />
+				<Switch id={id} on={value === 'true'} onChange={(on) => onChange(on ? 'true' : offOf(picker))} />
 			) : (
 				<Select
 					control={{ id }}
@@ -223,7 +221,7 @@ const Inspector = ({
 	onClose,
 }: {
 	rows: ValueRow[];
-	/** What its props declare, drawn on one of its stories (Every variant's): a case its stories never drew is shown from these. */
+	/** What its props declare, drawn on one of its stories (Phase 5): a case its stories never drew is shown from these. */
 	declared: ValueRow[];
 	/** What is said under the pickers of choosing a variant: what its story sets itself, what cannot be varied. */
 	notes: { key: string; text: string }[];
@@ -307,14 +305,14 @@ const Inspector = ({
 };
 
 /**
- * Values (Phase 1 of adjusting a component): what each instance of the component its stories draw measures, by property
- * and by variant, and whether each is a token's (named), worked out from one, or its own, in the mode chosen (`shownMode`); and, when the
- * design system has lengths no tag can be given, that a length said to be its own may be one of them.
+ * Values (Phase 1 of adjusting a component): what each instance of the component its stories draw measures, by property and
+ * by variant, and whether each is a token's (named), worked out from one, or its own, in the mode chosen (`shownMode`); and,
+ * when the design system has lengths no tag can be given, that a length said to be its own may be one of them.
  *
  * Its variants are chosen by its pickers; a case only its props declare (`variants`, drawn on one of its stories, in light)
  * is shown from that drawing and never tried, and what its story sets itself or cannot be varied is said under the pickers.
  *
- * Each value opens its control (Phase 2): a token's opens the token's own (`onEditToken`), as Made from's rows do, since it
+ * Each value opens its control (Phase 2): a token's opens the token's own (`onEditToken`), as Tokens used's rows do, since it
  * is the design system's and moves every component that draws with it; any other is tried on the instances that draw it,
  * in the stories beside this, as it moves (`ValueEditor`), and nothing is saved.
  */

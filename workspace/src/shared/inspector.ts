@@ -45,9 +45,12 @@ export const pickersOf = (rows: ValueRow[]): Picker[] => {
 	return [...seen].map(([prop, options]) => ({ prop, options, switch: options.every((v) => v === 'true' || v === 'false' || v === null) }));
 };
 
+/** A switch's off: false when it was drawn so, else drawn without it. */
+export const offOf = (picker: Picker): string | null => (picker.options.includes('false') ? 'false' : null);
+
 /** What it opens on: each prop's first value drawn, and a switch off, as a component is at rest. */
 export const firstSelection = (pickers: Picker[]): Selection =>
-	Object.fromEntries(pickers.map((p) => [p.prop, p.switch ? (p.options.includes('false') ? 'false' : null) : (p.options[0] ?? null)]));
+	Object.fromEntries(pickers.map((p) => [p.prop, p.switch ? offOf(p) : (p.options[0] ?? null)]));
 
 /** How a picker's value is said: its default when drawn without it. */
 export const optionLabel = (value: string | null): string => value ?? 'default';
@@ -61,7 +64,7 @@ const chosen = (picker: Picker | undefined, drawn: string | null, value: string 
 
 /**
  * A row's value for the variant shown: the cell drawn with it, and for a row told apart by no prop, the value most instances
- * draw, with the others (`more`); `still` when it was drawn only from its props (Every variant's drawing, Phase 5), so it is
+ * draw, with the others (`more`); `still` when it was drawn only from its props (its props' drawing, Phase 5), so it is
  * shown and never tried; or, when no case was drawn with it, none, with the nearest (the cell that has the most of it). Never
  * guessed.
  */
@@ -85,7 +88,7 @@ export const shownFor = (row: ValueRow, pickers: Picker[], selection: Selection)
 };
 
 /**
- * A row's value from its stories' drawing, else from its props' (`declared`, Every variant's: each declared value drawn on one
+ * A row's value from its stories' drawing, else from its props' (`declared`, Phase 5: each declared value drawn on one
  * story), shown as still; a property only the props' drawing has is shown from it alone.
  */
 const shownOf = (row: ValueRow | undefined, declared: ValueRow | undefined, pickers: Picker[], selection: Selection): Shown | null => {

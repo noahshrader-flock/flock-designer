@@ -363,7 +363,7 @@ describe('a component’s tab', () => {
 		expect(shownIn('background').map((c) => c.textContent)).toEqual(['Backgroundnone']);
 		const size = shownIn('fontSize')[0] as HTMLElement;
 		expect(size.textContent).toBe('Font size16px');
-		expect(size.querySelector('button')?.title).toContain('No token of this kind is marked');
+		expect(size.querySelector('button')?.title).toContain('Not checked: no token of this kind is marked');
 	});
 
 	it('says a value worked out from a token as from one, and a combination its stories never drew as not drawn, with the nearest', async () => {

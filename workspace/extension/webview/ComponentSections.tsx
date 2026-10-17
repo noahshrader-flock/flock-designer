@@ -130,10 +130,10 @@ const TokensUsed = ({
 };
 
 /**
- * What the analysis of a component says, in parts (T6, decision 29, T7): its drawn values, by variant (Phase 1 of adjusting
- * a component), what it is made from, its colours, how far its
- * tokens reach, the values it sets itself, and what axe found. Found by drawing every story with the tokens tagged, the first
- * time for each commit, said while that is done.
+ * What the analysis of a component says, in three parts (T6, decision 29, T7): its values as an inspector, a variant chosen by
+ * its pickers, a case only its props declare among them (Phases 1 and 5 of adjusting a component); the tokens it draws with,
+ * closed (Tokens used); and what axe found. Found by drawing every story with the tokens tagged, the first time for each
+ * commit, said while that is done.
  */
 export const ComponentSections = ({
 	component,

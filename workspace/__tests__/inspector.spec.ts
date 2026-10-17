@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { VALUE_PROPERTIES, type ValueCell, type ValueRow } from '../src/shared/contract';
-import { GROUPS, firstSelection, inspect, optionLabel, pickersOf, propLabel, rowName, shownFor } from '../src/shared/inspector';
+import { GROUPS, firstSelection, inspect, offOf, optionLabel, pickersOf, propLabel, rowName, shownFor } from '../src/shared/inspector';
 
 /**
  * A component's values as an inspector reads them (each component's values, DESIGN_SYSTEM.md): the variant shown chosen by
@@ -56,6 +56,9 @@ describe('the inspector of a component’s values', () => {
 			{ prop: 'variant', options: ['primary', 'ghost'], switch: false },
 			{ prop: 'disabled', options: [null, 'false', 'true'], switch: true },
 		]);
+		// A switch's off is false when it was drawn so, else drawn without it.
+		expect(offOf(pickers[2]!)).toBe('false');
+		expect(offOf({ prop: 'loading', options: ['true', null], switch: true })).toBe(null);
 		// It opens on each prop's first value, and a switch off.
 		expect(firstSelection(pickers)).toEqual({ size: 'sm', variant: 'primary', disabled: 'false' });
 		expect([optionLabel(null), optionLabel('lg'), propLabel('size')]).toEqual(['default', 'lg', 'Size']);
