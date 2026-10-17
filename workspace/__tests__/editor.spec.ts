@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { SessionMemory, claudeLink, findEditor, startCommand } from '../src/main/services/editor';
+import { SessionMemory, claudeLink, findEditor, handToClaude, startCommand } from '../src/main/services/editor';
 
 const dirs: string[] = [];
 const temp = () => {
@@ -63,6 +63,38 @@ describe('a new conversation from a terminal', () => {
 		expect(startCommand('/bin/claude', '/Users/a b/flock-coke', "Read /tmp/it's.md")).toBe(
 			`cd '/Users/a b/flock-coke' && /bin/claude 'Read /tmp/it'\\''s.md'`,
 		);
+	});
+});
+
+describe('work handed to Claude Code, as every hand-over is', () => {
+	const ports = (editor: string | null) => {
+		const opened: string[][] = [];
+		const copied: string[] = [];
+		return {
+			opened,
+			copied,
+			ports: {
+				editor: { find: () => editor, openPrompt: async (e: string, root: string, prompt: string) => void opened.push([e, root, prompt]) },
+				claude: () => '/bin/claude',
+				copy: async (text: string) => void copied.push(text),
+			},
+		};
+	};
+
+	it('opens a new conversation in VS Code with the prompt typed in, in the repository, and copies nothing', async () => {
+		const at = ports('vscode');
+		expect(await handToClaude(at.ports, '/work/lib', 'Make the branch.')).toEqual({ editor: true, command: null });
+		expect(at.opened).toEqual([['vscode', '/work/lib', 'Make the branch.']]);
+		expect(at.copied).toEqual([]);
+	});
+
+	it('puts the command that starts it in a terminal on the clipboard when VS Code is not here', async () => {
+		if (process.platform === 'win32') return;
+		const at = ports(null);
+		const command = `cd /work/lib && /bin/claude 'Make the branch.'`;
+		expect(await handToClaude(at.ports, '/work/lib', 'Make the branch.')).toEqual({ editor: false, command });
+		expect(at.copied).toEqual([command]);
+		expect(at.opened).toEqual([]);
 	});
 });
 

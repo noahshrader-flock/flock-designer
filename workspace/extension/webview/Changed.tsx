@@ -5,6 +5,8 @@ import { branchButtons } from '../../src/shared/branchButtons';
 import { useTokenChanges } from '../../src/renderer/tokenChanges';
 import type { BranchControls } from '../../src/renderer/useChangeBranch';
 import type { TokenBranchControls } from '../../src/renderer/useTokenBranch';
+import { type HandoffControls, useHandoff } from '../../src/renderer/useHandoff';
+import { HandoffActions } from './HandoffActions';
 import { Button } from './ui/Button';
 import { ErrorLine } from './ui/Dialog';
 import { Icon } from './ui/Icon';
@@ -16,12 +18,25 @@ import { Swatch } from './ui/Swatch';
  * how many saves, its draft pull request once proposed, with Chromatic's build when the design system's CI has linked one,
  * what went wrong, then Save (to a branch, the first time), Propose and Start over, as the app offers them
  * (`branchButtons`); Save also waits on what must be settled first (`canSave`). Start over forgets the branch, which stays
- * on GitHub with any pull request.
+ * on GitHub with any pull request. With nothing kept yet, Process changes beside Save hands the change to Claude Code
+ * instead (PROCESS_CHANGES_PLAN); a change has one branch in play, so once handed over its hand-off is shown in Save's
+ * place (`HandoffActions`), and with a branch saved, Process changes is not offered, each until it is started over.
  */
-export const BranchActions = <C,>({ controls, canSave = true }: { controls: BranchControls<C>; canSave?: boolean }) => {
+export const BranchActions = <C,>({
+	controls,
+	handoff,
+	canSave = true,
+}: {
+	controls: BranchControls<C>;
+	handoff: HandoffControls;
+	canSave?: boolean;
+}) => {
 	const { branch, unsaved, busy, error, save, propose, startOver } = controls;
 	const chromatic = branch?.pullRequest?.chromatic;
-	const offered = branchButtons({ branch, unsaved, busy, canSave });
+	const offered = branchButtons({ branch, unsaved, busy, canSave: canSave && handoff.busy === null });
+	if (handoff.handoff !== null) return <HandoffActions controls={handoff} />;
+	// Nothing kept, and something changed: what Save would be offered for.
+	const processable = branch === null && unsaved;
 	return (
 		<div data-branch-actions className="branch-actions">
 			{branch && (
@@ -40,11 +55,16 @@ export const BranchActions = <C,>({ controls, canSave = true }: { controls: Bran
 					)}
 				</p>
 			)}
-			<ErrorLine error={error} />
+			<ErrorLine error={error ?? handoff.error} />
 			<div className="branch-buttons">
 				{offered.save && (
 					<Button disabled={offered.save.disabled} onClick={save}>
 						{offered.save.label}
+					</Button>
+				)}
+				{processable && (
+					<Button variant="secondary" disabled={busy !== null || handoff.busy !== null} onClick={handoff.processChanges}>
+						{handoff.busy === 'handing' ? 'Handing to Claude Code…' : 'Process changes'}
 					</Button>
 				)}
 				{offered.propose && (
@@ -121,13 +141,14 @@ export const TokenChanges = () => {
  * What has been changed (6.2), in the panel's Changes dialog: the token changes, where they are tried, then what can be done
  * with them on their branch. A branch kept with nothing changed is still here, so it can be proposed or left.
  */
-export const Changed = ({ controls }: { controls: TokenBranchControls }) => {
+export const Changed = ({ id, controls }: { id: string | null; controls: TokenBranchControls }) => {
 	const { edits } = useTokenChanges();
+	const handoff = useHandoff({ shown: id, file: null, change: { edits }, watch: true });
 	return (
 		<>
 			<TokenChanges />
 			{edits.length > 0 && <p className="quiet">Tried in the stories of every component open, and in Primitives.</p>}
-			<BranchActions controls={controls} />
+			<BranchActions controls={controls} handoff={handoff} />
 		</>
 	);
 };

@@ -1603,6 +1603,7 @@ describe('every change being tried, in the panel’s Changes: the tokens and eac
 		await designOpen();
 		await press(count());
 		await answer('valueBranchFiles', [BUTTON]);
+		await answer('handoffFiles', []);
 		await answer('valueBranch', { branch: 'dsnr/values-20261016-ab12', saved: [SMALL], saves: 1, pullRequest: null });
 		expect(trialsSaid().at(-1)).toEqual({ type: 'value-trial', file: BUTTON, commit: 'abc123', values: [SMALL] });
 		expect(group()).not.toBeNull();
@@ -1621,6 +1622,131 @@ describe('every change being tried, in the panel’s Changes: the tokens and eac
 		expect(changes()).not.toBeNull();
 		await press(changes()!.querySelector('[aria-label="Close"]') as HTMLElement);
 		expect(changes()).toBeNull();
+	});
+
+	describe('Process changes: one group handed to Claude Code on a branch DSNR names, read from git, proposed as the rules allow', () => {
+		const EDITS = [{ path: 'tone.pineGreen.60', value: '#000000' }];
+		const BRANCH = 'dsnr/handoff-20261017-ab12cd';
+		const handoff = () => document.querySelector('[data-handoff]') as HTMLElement | null;
+		/** Answers the page's latest call to `name` that asked about `file` (the tokens' none, or a component's story file). */
+		const answerFor = async (name: string, file: string | null, value: unknown) => {
+			const call = calls(name)
+				.filter((c) => c.args?.[0] === file)
+				.at(-1);
+			if (!call) throw new Error(`the page made no ${name} call for ${String(file)}`);
+			await say({ type: 'answer', id: call.id, result: { ok: true, value } });
+		};
+		/** The Changes dialog open on the token changes, nothing kept for any group. */
+		const tokensChanged = async () => {
+			await designOpen();
+			await say({ type: 'token-edits', edits: EDITS });
+			await press(count());
+			await answerFor('handoffBranch', null, null);
+			await answer('valueBranchFiles', []);
+			await answer('handoffFiles', []);
+		};
+		const READY = {
+			state: 'ready',
+			commits: 2,
+			files: [
+				{ path: 'src/utils/theme.ts', added: 3, removed: 1, out: null },
+				{ path: 'src/components/FSButton/FSButton.stories.tsx', added: 4, removed: 0, out: 'a story' },
+			],
+			lines: 8,
+			large: false,
+		};
+
+		it('offers it beside Save, hands over that one group, and shows its branch in Save’s place until Claude Code makes it', async () => {
+			await tokensChanged();
+			expect(button('Save to a branch')).toBeDefined();
+			await press(button('Process changes'));
+			expect(calls('handOverChanges').at(-1)?.args).toEqual([null, { edits: EDITS }]);
+			await answer('handOverChanges', { branch: BRANCH, editor: true, command: null });
+			await answerFor('handoffBranch', null, { branch: BRANCH, lines: ['primary: #000000'], review: { state: 'missing' }, pullRequest: null });
+			expect(handoff()?.querySelector('.branch-line')?.textContent).toBe(BRANCH);
+			expect(handoff()?.textContent).toContain('This change is in Claude Code in this window now');
+			expect(handoff()?.textContent).toContain('Claude Code makes this branch, by the name its prompt gives');
+			// One branch in play: neither Save nor Process changes again, and nothing proposed before it is made.
+			expect(button('Save to a branch')).toBeUndefined();
+			expect(button('Process changes')).toBeUndefined();
+			expect(button('Propose')).toBeUndefined();
+		});
+
+		it('says why it was not handed over, and opens nothing', async () => {
+			await tokensChanged();
+			await press(button('Process changes'));
+			const call = calls('handOverChanges').at(-1);
+			const why = 'The library’s checkout has changes not committed: commit or stash them, then process the changes again.';
+			await say({ type: 'answer', id: call?.id, result: { ok: false, error: why } });
+			expect(document.querySelector('[data-branch-actions] [role="alert"]')?.textContent).toBe(why);
+			expect(handoff()).toBeNull();
+		});
+
+		it('lists each file the branch changed, flags what the rules keep out, and proposes it only on a deliberate yes', async () => {
+			await designOpen();
+			await press(count());
+			await answerFor('handoffBranch', null, { branch: BRANCH, lines: ['primary: #000000'], review: READY, pullRequest: null });
+			expect(handoff()?.querySelector('.branch-line')?.textContent).toBe(`${BRANCH} · 2 commits`);
+			const files = [...(handoff()?.querySelectorAll('[data-handoff-files] li') ?? [])];
+			expect(files.map((f) => f.getAttribute('data-out'))).toEqual([null, 'a story']);
+			expect(files[1]?.textContent).toContain('A story, which the rules keep out');
+			await press(button('Propose'));
+			expect(calls('proposeHandoff')).toEqual([]);
+			expect(handoff()?.textContent).toContain('Its pull request says so.');
+			await press(button('Cancel'));
+			await press(button('Propose'));
+			await press(button('Propose anyway'));
+			expect(calls('proposeHandoff').at(-1)?.args).toEqual([null, true]);
+			const url = 'https://github.com/flocksafety/flock-react-component-lib/pull/7';
+			await answer('proposeHandoff', { branch: BRANCH, lines: [], review: READY, pullRequest: { number: 7, url } });
+			expect([...document.querySelectorAll('a')].find((a) => a.textContent === 'Draft pull request #7')?.getAttribute('href')).toBe(url);
+			expect(button('Propose')).toBeUndefined();
+			// Start over forgets the hand-over, and the change can be handed over or saved again.
+			await press(button('Start over'));
+			expect(calls('forgetHandoff').at(-1)?.args).toEqual([null]);
+			await answer('forgetHandoff', null);
+			expect(handoff()).toBeNull();
+		});
+
+		it('proposes an unflagged branch in one press', async () => {
+			await designOpen();
+			await press(count());
+			const clean = { ...READY, files: [READY.files[0]] };
+			await answerFor('handoffBranch', null, { branch: BRANCH, lines: [], review: clean, pullRequest: null });
+			await press(button('Propose'));
+			expect(calls('proposeHandoff').at(-1)?.args).toEqual([null, false]);
+		});
+
+		it('is not offered while the group has a branch DSNR saved', async () => {
+			await show();
+			await say({ type: 'context', context: OPEN });
+			await answer('listProjects', SAMPLE_PROJECTS);
+			await press(options()[1]!);
+			await answer('designSystems', { systems: [{ id: SYSTEM, name: 'FUI' }], current: SYSTEM });
+			await answer('designSystemCatalog', SAMPLE_CATALOG);
+			await answer('tokenBranch', { branch: 'dsnr/tokens-1012-abc123', saved: [], saves: 1, pullRequest: null });
+			await say({ type: 'token-edits', edits: EDITS });
+			await press(count());
+			await answerFor('handoffBranch', null, null);
+			expect(button('Save')).toBeDefined();
+			expect(button('Process changes')).toBeUndefined();
+		});
+
+		it('lists a component handed over with nothing tried, by its own hand-over', async () => {
+			await designOpen();
+			await press(count());
+			await answer('valueBranchFiles', []);
+			await answer('handoffFiles', ['', BUTTON]);
+			await answer('valueBranch', null);
+			await answerFor('handoffBranch', BUTTON, {
+				branch: BRANCH,
+				lines: ['FSButton · Height: 28px → 32px'],
+				review: { state: 'empty' },
+				pullRequest: null,
+			});
+			expect(group()?.querySelector('[data-handoff] .branch-line')?.textContent).toBe(BRANCH);
+			expect(group()?.textContent).toContain('nothing is committed on it yet');
+		});
 	});
 });
 

@@ -225,6 +225,13 @@ export interface HandoffBranch {
 	pullRequest: { number: number; url: string } | null;
 }
 
+/** Where a unit was handed over: its branch, and Claude Code in this window (`editor`), or the command that starts it in a terminal. */
+export interface HandedOver {
+	branch: string;
+	editor: boolean;
+	command: string | null;
+}
+
 /**
  * How many values a component's instances can be tried with at once, as the core takes them and the extension keeps them:
  * far beyond any tab's, short of anything that could hurt.

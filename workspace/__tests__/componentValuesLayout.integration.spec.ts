@@ -4,6 +4,7 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { Moved } from '../extension/webview/ChangeReach';
+import { HandoffActions } from '../extension/webview/HandoffActions';
 import { ChangedValues } from '../extension/webview/ValueChanges';
 import { ComponentValues } from '../extension/webview/ComponentValues';
 import { ValueEditor } from '../extension/webview/ValueEditor';
@@ -320,6 +321,15 @@ describe.skipIf(NO_CHROME)('a component’s Values, in the side pane, in the bro
 				propose: () => undefined,
 				startOver: () => undefined,
 			},
+			handoff: {
+				handoff: null,
+				handed: null,
+				busy: null,
+				error: null,
+				processChanges: () => undefined,
+				propose: () => undefined,
+				startOver: () => undefined,
+			},
 		}),
 	);
 
@@ -366,6 +376,64 @@ describe.skipIf(NO_CHROME)('a component’s Values, in the side pane, in the bro
 			});
 			expect(found.values).toBe(3);
 			expect(found.problems).toEqual([]);
+		},
+		60_000,
+	);
+
+	// A hand-over's branch as DSNR read it: a long name, deep paths, a file the rules keep out, and too large for one sitting.
+	const handedOver = renderToStaticMarkup(
+		createElement(HandoffActions, {
+			controls: {
+				handoff: {
+					branch: 'dsnr/handoff-20261017-ab12cd',
+					lines: [],
+					review: {
+						state: 'ready',
+						commits: 3,
+						files: [
+							{ path: 'packages/react/src/components/FSCounterLabel/FSCounterLabel.module.css', added: 120, removed: 48, out: null },
+							{ path: 'packages/react/src/components/FSCounterLabel/FSCounterLabel.stories.tsx', added: 210, removed: 0, out: 'a story' },
+						],
+						lines: 378,
+						large: true,
+					},
+					pullRequest: null,
+				},
+				handed: null,
+				busy: null,
+				error: 'git could not push dsnr/handoff-20261017-ab12cd: the remote refused it.',
+				processChanges: () => undefined,
+				propose: () => undefined,
+				startOver: () => undefined,
+			},
+		}),
+	);
+
+	it.each([PANE, 220])(
+		'lays out a hand-over’s branch and its files without anything past the pane, in a %ipx pane',
+		async (width) => {
+			const problems = await inChrome(async (browser) => {
+				const page = await browser.newPage();
+				await page.setViewport({ width, height: 900 });
+				await page.setContent(
+					`<!doctype html><html><head><meta charset="utf-8"><style>${css}</style></head><body><main class="tab"><aside class="component-aside">${handedOver}</aside></main></body></html>`,
+				);
+				return page.evaluate(() => {
+					const found: string[] = [];
+					const root = document.documentElement;
+					if (root.scrollWidth > root.clientWidth) found.push(`the page is ${root.scrollWidth}px in a ${root.clientWidth}px pane`);
+					const pane = (document.querySelector('.component-aside') as Element).getBoundingClientRect();
+					for (const el of document.querySelectorAll('[data-handoff] *')) {
+						const b = el.getBoundingClientRect();
+						if (b.width === 0) continue;
+						const name = `${el.className || el.tagName}: ${el.textContent?.slice(0, 30)}`;
+						if (b.right > pane.right + 0.5 || b.left < pane.left - 0.5) found.push(`${name} is past the pane`);
+						if (el.scrollWidth > el.clientWidth + 1 && getComputedStyle(el).overflow !== 'visible') found.push(`${name} runs past its box`);
+					}
+					return found;
+				});
+			});
+			expect(problems).toEqual([]);
 		},
 		60_000,
 	);

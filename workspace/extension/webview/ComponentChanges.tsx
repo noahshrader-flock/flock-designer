@@ -1,6 +1,7 @@
 import type { CatalogComponent, ValuePlace } from '../../src/shared/contract';
 import { useTokenChanges } from '../../src/renderer/tokenChanges';
 import { useComponentTokens } from '../../src/renderer/useComponentTokens';
+import { useHandoff } from '../../src/renderer/useHandoff';
 import { useValueBranch } from '../../src/renderer/useValueBranch';
 import { useValueSources } from '../../src/renderer/useValueSources';
 import { labelOf } from '../../src/shared/tokens';
@@ -10,10 +11,10 @@ import { useValueTrials } from './valueTrials';
 
 /**
  * One component's changes in the panel's Changes dialog (the changes being tried, DESIGN_SYSTEM.md): the values tried on
- * it, from its tab, where each is written, what writing them moves, and its branch, with Save, Propose and Start over: the
- * same as its tab has, by its name, among the others'. Its values are named as its drawing reads them
- * (`useComponentTokens`, kept by the core for each commit); where each is written is found once by the core however many
- * ask. A branch kept with nothing tried puts its values back, as opening its tab does.
+ * it, from its tab, where each is written, what writing them moves, and its branch, with Save, Propose and Start over, or
+ * its hand-over to Claude Code (Process changes), by its name, among the others'. Its values are named as its drawing
+ * reads them (`useComponentTokens`, kept by the core for each commit); where each is written is found once by the core
+ * however many ask. A branch kept with nothing tried puts its values back, as opening its tab does.
  */
 export const ComponentChanges = ({
 	component,
@@ -34,6 +35,7 @@ export const ComponentChanges = ({
 	const { answer } = useComponentTokens(component.id);
 	const sources = useValueSources(component.id, tried, trying.writes);
 	const controls = useValueBranch(component.id, tried, trying.onAll);
+	const handoff = useHandoff({ shown: component.id, file: component.id, change: { tried }, watch: true });
 	const { byPath } = useTokenChanges();
 	const tokenName = (path: string) => {
 		const t = byPath.get(path);
@@ -51,6 +53,7 @@ export const ComponentChanges = ({
 			onOpen={onOpen}
 			sources={sources}
 			controls={controls}
+			handoff={handoff}
 		/>
 	);
 };

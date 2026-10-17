@@ -35,6 +35,7 @@
 		"src/renderer/useTokenBranch.ts",
 		"src/renderer/useChangeBranch.ts",
 		"src/renderer/useValueBranch.ts",
+		"src/renderer/useHandoff.ts",
 		"src/renderer/useFrameHeight.ts",
 		"src/renderer/useStoryPreview.ts",
 		"src/renderer/useChangeReach.ts",

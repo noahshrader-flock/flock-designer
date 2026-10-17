@@ -1,7 +1,8 @@
 import type { WorkspaceApi } from '../../src/shared/contract';
 import { valueOf } from '../../src/shared/result';
 import { slugify } from '../../src/shared/validate';
-import { type AgentWorkDeps, type Offer, type Tell, handedTo } from './agentWork';
+import { handedTo } from '../../src/shared/handedTo';
+import { type AgentWorkDeps, type Offer, type Tell } from './agentWork';
 import { LIMITS } from './messages';
 
 export interface NewPrototypeDeps extends Pick<AgentWorkDeps, 'progress'> {

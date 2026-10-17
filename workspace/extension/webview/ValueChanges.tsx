@@ -4,6 +4,7 @@ import type { BranchControls } from '../../src/renderer/useChangeBranch';
 import { cellFor, triedId } from '../../src/shared/contract';
 import { plural } from '../../src/shared/plural';
 import { saidValue, valueTitle } from '../../src/shared/valueNames';
+import { type HandoffControls, useHandoff } from '../../src/renderer/useHandoff';
 import { useValueBranch } from '../../src/renderer/useValueBranch';
 import { useValueSources } from '../../src/renderer/useValueSources';
 import { BranchActions } from './Changed';
@@ -88,11 +89,12 @@ const Said = ({
  * The values tried on a component's instances, and saving them (Phase 4 of adjusting a component): each, from what it is
  * drawn as to what it is tried as, with where it is written in the library's source (each place opens at its line), found
  * as it is tried, or why it cannot be saved; Reset for each and for all; then Save, Propose and Start over on a branch of
- * the component's own, as a change to the tokens has (`BranchActions`), in the panel's Changes (`onActions` on its tab, which
- * opens them there). Save waits until every value is found and read back.
+ * the component's own, or Process changes, as a change to the tokens has (`BranchActions`), in the panel's Changes
+ * (`onActions` on its tab, which opens them there). Save waits until every value is found and read back.
  * Then what writing them reaches (`ReachView`): a size table two components share moves both. Nothing while nothing is
- * tried and no branch is kept. Where each is written and the branch are found while the tab is open (a branch's values are
- * put back when it opens), whether or not the Changes dialog is: what it draws is handed to the dialog (`children`).
+ * tried and no branch is kept or handed over. Where each is written and the branch are found while the tab is open (a
+ * branch's values are put back when it opens), whether or not the Changes dialog is: what it draws is handed to the dialog
+ * (`children`).
  */
 export const ValueChanges = ({
 	children,
@@ -100,15 +102,20 @@ export const ValueChanges = ({
 	...shown
 }: Shown & {
 	children: (values: ReactNode) => ReactNode;
-	/** Told whether it has a branch kept, so its Changes button can still be pressed with nothing tried, to propose or leave it. */
+	/**
+	 * Told whether it has a branch kept or handed over, so its Changes button can still be pressed with nothing tried, to
+	 * propose or leave it.
+	 */
 	onKept: (kept: boolean) => void;
 }) => {
 	const tried = [...shown.trying.tried.values()];
 	const sources = useValueSources(shown.component.id, tried, shown.trying.writes);
 	const controls = useValueBranch(shown.component.id, tried, shown.trying.onAll);
-	const kept = controls.branch !== null;
+	// Read once, not watched: what is done with a hand-over is in the panel's Changes.
+	const handoff = useHandoff({ shown: shown.component.id, file: shown.component.id, change: { tried }, watch: false });
+	const kept = controls.branch !== null || handoff.handoff !== null;
 	useEffect(() => onKept(kept), [kept, onKept]);
-	return children(<ChangedValues {...shown} sources={sources} controls={controls} />);
+	return children(<ChangedValues {...shown} sources={sources} controls={controls} handoff={handoff} />);
 };
 
 interface Shown {
@@ -122,9 +129,9 @@ interface Shown {
 	onSource: (place: ValuePlace) => void;
 	onOpen: (id: string) => void;
 	/**
-	 * Where Save, Propose and Start over are when not here (the changes being tried, DESIGN_SYSTEM.md): on a component's
-	 * tab they are in the panel's Changes, which this opens; in the panel, where every change is, they are here (none
-	 * given).
+	 * Where Save, Process changes, Propose and Start over are when not here (the changes being tried, DESIGN_SYSTEM.md): on
+	 * a component's tab they are in the panel's Changes, which this opens; in the panel, where every change is, they are
+	 * here (none given).
 	 */
 	onActions?: () => void;
 }
@@ -145,9 +152,10 @@ export const ChangedValues = ({
 	name,
 	sources,
 	controls,
-}: Shown & { name?: string; sources: ValueSourcesAnswer; controls: BranchControls<TriedValue[]> }) => {
+	handoff,
+}: Shown & { name?: string; sources: ValueSourcesAnswer; controls: BranchControls<TriedValue[]>; handoff: HandoffControls }) => {
 	const tried = [...trying.tried.values()];
-	if (tried.length === 0 && controls.branch === null) return null;
+	if (tried.length === 0 && controls.branch === null && handoff.handoff === null) return null;
 	const sourceOf = (t: TriedValue): ValueSource | null =>
 		sources.state === 'ready' ? (sources.values.find((v) => v.id === triedId(t)) ?? null) : null;
 
@@ -191,7 +199,7 @@ export const ChangedValues = ({
 						})}
 					</ul>
 				)}
-				{tried.length > 0 && (
+				{tried.length > 0 && handoff.handoff === null && (
 					<p className="quiet">
 						{savable
 							? `Saving writes ${plural(tried.length, 'value')} where ${tried.length === 1 ? 'it is' : 'they are'} written, and nothing else.`
@@ -201,10 +209,10 @@ export const ChangedValues = ({
 				<ErrorLine error={trying.writeError} />
 				{onActions ? (
 					<button type="button" className="link" data-actions-elsewhere onClick={onActions}>
-						Save, propose or start over in the side panel
+						Save or process changes in the side panel
 					</button>
 				) : (
-					<BranchActions controls={controls} canSave={savable} />
+					<BranchActions controls={controls} handoff={handoff} canSave={savable} />
 				)}
 			</section>
 			{sources.state === 'failed' && <Notice title="Where its values are written could not be found">{sources.error}</Notice>}

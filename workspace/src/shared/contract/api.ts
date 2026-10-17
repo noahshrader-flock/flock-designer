@@ -15,6 +15,7 @@ import type {
 	ComponentVariants,
 	ValueBranch,
 	HandedChange,
+	HandedOver,
 	HandoffBranch,
 	ValueSources,
 } from '../domain/designSystem';
@@ -86,10 +87,10 @@ export interface WorkspaceApi {
 	valueBranch(file: string): Promise<Result<ValueBranch | null>>;
 	/**
 	 * Process changes: one unit (the tokens, `null`; or a component's values, by its story file) handed to Claude Code, on a branch
-	 * DSNR names: refused, in words, on a checkout with unfinished work or with a branch of the unit's in play; else its branch and
-	 * the prompt to open Claude Code with, in the library's root.
+	 * DSNR names: refused, in words, on a checkout with unfinished work or with a branch of the unit's in play; else Claude Code
+	 * opened in the library's root with the prompt typed in, as every hand-over is (`handToClaude`), and its branch.
 	 */
-	handOverChanges(file: string | null, change: HandedChange): Promise<Result<{ root: string; branch: string; prompt: string }>>;
+	handOverChanges(file: string | null, change: HandedChange): Promise<Result<HandedOver>>;
 	/** A unit's hand-over, its branch read from git now, or null when there is none. */
 	handoffBranch(file: string | null): Promise<Result<HandoffBranch | null>>;
 	/** The components, by story file, handed to Claude Code (the tokens' as an empty one): what the panel's Changes lists. */

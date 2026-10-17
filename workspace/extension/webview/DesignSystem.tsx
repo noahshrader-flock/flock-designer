@@ -111,13 +111,16 @@ const Ready = ({
 	// The token whose control is open: the one whose row or swatch was pressed.
 	const [editing, setEditing] = useState<DesignToken | null>(null);
 	// Every change being tried, in a dialog from their count beside the not-read one, so nothing opens above the list: the
-	// tokens, then each component with values tried on this commit or a branch of its values kept (asked for once it opens).
+	// tokens, then each component with values tried on this commit, or a branch of its values kept, or handed to Claude Code
+	// (asked for once it opens).
 	const { trials } = useValueTrials();
 	const [keptFiles, setKeptFiles] = useState<string[]>([]);
 	useEffect(() => {
 		if (!changesDialog.open) return;
 		let live = true;
-		void window.workspace.valueBranchFiles().then((r) => live && r.ok && setKeptFiles(r.value));
+		void Promise.all([window.workspace.valueBranchFiles(), window.workspace.handoffFiles()]).then(
+			([saved, handed]) => live && setKeptFiles([...(saved.ok ? saved.value : []), ...(handed.ok ? handed.value : [])]),
+		);
 		return () => {
 			live = false;
 		};
@@ -205,7 +208,7 @@ const Ready = ({
 			{problems && <Problems problems={catalog.tokens.problems} onClose={() => setProblems(false)} />}
 			{changesDialog.open && (
 				<Dialog title="Changes" onClose={changesDialog.onClose}>
-					<Changed controls={branch} />
+					<Changed id={id} controls={branch} />
 					{changed.map((c) => (
 						<ComponentChanges
 							key={c.id}

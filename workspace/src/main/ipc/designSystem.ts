@@ -2,6 +2,7 @@ import type { HandedChange } from '../../shared/contract';
 import { asRecord } from '../../shared/json';
 import { isObjectId } from '../../shared/sha';
 import { type Check, arg, handle } from '../handle';
+import { handToClaude } from '../services/editor';
 import { tokenEditsOf } from '../services/tokenEdits';
 import { triedValuesOf } from '../services/valueSources';
 import type { IpcDeps } from '../ipc';
@@ -55,6 +56,7 @@ export const registerDesignSystem = (d: IpcDeps): void => {
 		valueAgent,
 		valueBranches,
 		handoffBranches,
+		ports,
 		valueSources,
 		voiceFile,
 		warm,
@@ -79,8 +81,12 @@ export const registerDesignSystem = (d: IpcDeps): void => {
 	handle('valueSources', [ds.storyFile, ds.tried], (file, tried) => valueSources.of(file, tried));
 	handle('valueBranch', [ds.storyFile], (file) => valueBranches.current(file));
 	handle('valueBranchFiles', [], () => valueBranches.scopes());
-	// Process changes: a unit by its story file, or the tokens (none); what it hands over checked as a change always is.
-	handle('handOverChanges', [arg.optional(ds.storyFile), ds.handed], (file, change) => handoffBranches.start(file ?? '', change));
+	// Process changes: a unit by its story file, or the tokens (none); what it hands over checked as a change always is, and
+	// handed to Claude Code as every hand-over is, in the library's root, with the prompt typed in.
+	handle('handOverChanges', [arg.optional(ds.storyFile), ds.handed], async (file, change) => {
+		const { root, branch, prompt } = await handoffBranches.start(file ?? '', change);
+		return { branch, ...(await handToClaude(ports, root, prompt)) };
+	});
 	handle('handoffBranch', [arg.optional(ds.storyFile)], (file) => handoffBranches.current(file ?? ''));
 	handle('handoffFiles', [], () => handoffBranches.scopes());
 	handle('proposeHandoff', [arg.optional(ds.storyFile), arg.flag], (file, confirmed) => handoffBranches.propose(file ?? '', confirmed));
