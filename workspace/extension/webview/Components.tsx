@@ -13,6 +13,7 @@ import { Thumbnail } from './ui/Thumbnail';
 import { ViewOptions } from './ui/ViewOptions';
 import { NoMatches } from './ui/NoMatches';
 import { layoutSection } from './layouts';
+import { modeSection, useMode } from './mode';
 import { useOpenTabs } from './openTabs';
 import type { View } from './vscode';
 
@@ -26,6 +27,7 @@ export const ComponentsView = ({
 	pictures,
 	view,
 	onView,
+	hasDark,
 	onOpen,
 	onLink,
 }: {
@@ -33,12 +35,15 @@ export const ComponentsView = ({
 	pictures: ComponentPictures;
 	view: View;
 	onView: (view: View) => void;
+	/** Whether the design system has a dark mode, which is offered only then. */
+	hasDark: boolean;
 	onOpen: (id: string) => void;
 	onLink: (id: string, link: ComponentLink) => void;
 }) => {
 	const [search, setSearch] = useState('');
 	const groups = groupsFound(components, search);
 	const { components: open } = useOpenTabs();
+	const [mode, setMode] = useMode();
 	const item = (c: CatalogComponent) => {
 		const items: MenuItem[] = [
 			...(c.storybook !== null ? [{ label: 'Open in Storybook', icon: 'book', onSelect: () => onLink(c.id, 'storybook') }] : []),
@@ -61,7 +66,7 @@ export const ComponentsView = ({
 		<>
 			<div className="view-bar">
 				<SearchBox label="Search components" value={search} onChange={setSearch} />
-				<ViewOptions sections={[layoutSection(view, onView)]} />
+				<ViewOptions sections={[layoutSection(view, onView), ...(hasDark ? [modeSection(mode, setMode)] : [])]} />
 			</div>
 			{groups.length === 0 ? (
 				<NoMatches thing="component" search={search} onClear={() => setSearch('')} />

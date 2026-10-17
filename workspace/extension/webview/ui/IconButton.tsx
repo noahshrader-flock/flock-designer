@@ -1,4 +1,3 @@
-import type { ReactNode } from 'react';
 import { Icon } from './Icon';
 
 /**
@@ -13,8 +12,7 @@ export const IconButton = ({
 	size = 'default',
 	className,
 }: {
-	/** A codicon's name, or an icon drawn (`ModeIcon`) where the font has none. */
-	icon: string | ReactNode;
+	icon: string;
 	label: string;
 	onClick: () => void;
 	disabled?: boolean;
@@ -30,6 +28,6 @@ export const IconButton = ({
 		disabled={disabled}
 		onClick={onClick}
 	>
-		{typeof icon === 'string' ? <Icon name={icon} /> : icon}
+		<Icon name={icon} />
 	</button>
 );

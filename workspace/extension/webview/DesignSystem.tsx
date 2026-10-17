@@ -2,7 +2,6 @@ import { useState } from 'react';
 import type { Context } from '../../src/main/services/findContext';
 import type { Catalog, ComponentPictures, DesignToken, TokenEdit } from '../../src/shared/contract';
 import { plural } from '../../src/shared/plural';
-import { themeLabel } from '../../src/shared/prototypeTheme';
 import { isDark } from '../../src/shared/tokens';
 import { HOST } from '../../src/shared/vocabulary';
 import { TokenChangesProvider, useTokenChangesFor } from '../../src/renderer/tokenChanges';
@@ -19,9 +18,6 @@ import { Button } from './ui/Button';
 import { Dialog } from './ui/Dialog';
 import { EmptyState } from './ui/EmptyState';
 import { Icon } from './ui/Icon';
-import { IconButton } from './ui/IconButton';
-import { ModeIcon } from './ui/ModeIcon';
-import { useMode } from './mode';
 import { Loading } from './ui/Loading';
 import { Menu } from './ui/Menu';
 import { Toggle } from './ui/Toggle';
@@ -107,9 +103,7 @@ const Ready = ({
 	// Asking in words for its tokens (Phase 6): open while its dialog is.
 	const [asking, setAsking] = useState(false);
 	const notRead = catalog.tokens.problems.length;
-	// The mode components are shown in, offered only when the library has a dark (its tokens have a Dark group).
-	const [mode, setMode] = useMode();
-	const other = mode === 'dark' ? 'light' : 'dark';
+	// Whether the library has a dark (its tokens have a Dark group): only then is a color mode offered.
 	const hasDark = catalog.tokens.tokens.some(isDark);
 	return (
 		<TokenChangesProvider value={changes}>
@@ -160,9 +154,6 @@ const Ready = ({
 			<Changed controls={branch} />
 			<div className="ds-part">
 				<Toggle label="Part" options={PARTS} value={part} onChange={onPart} />
-				{hasDark && (
-					<IconButton icon={<ModeIcon mode={mode} />} label={`Switch to ${themeLabel(other).toLowerCase()}`} onClick={() => setMode(other)} />
-				)}
 			</div>
 			{part === 'components' ? (
 				catalog.components.length === 0 ? (
@@ -173,6 +164,7 @@ const Ready = ({
 						pictures={pictures}
 						view={view}
 						onView={onView}
+						hasDark={hasDark}
 						onOpen={does.openComponent}
 						onLink={does.componentLink}
 					/>

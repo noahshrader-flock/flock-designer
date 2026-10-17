@@ -1380,7 +1380,7 @@ describe('Design System', () => {
 		expect(body().querySelector('.ds-part ~ .view-bar')).not.toBeNull();
 	});
 
-	it('has the same search and view options as Projects, with only the layout to choose: the toolbar is one pattern', async () => {
+	it('has the same search and view options as Projects, with the layout and the color mode to choose: the toolbar is one pattern', async () => {
 		await read();
 		const bar = body().querySelector('.view-bar') as HTMLElement;
 		expect([...bar.children].map((c) => (c.querySelector('input') ? 'search' : c.querySelector('button')?.getAttribute('aria-label')))).toEqual([
@@ -1390,8 +1390,8 @@ describe('Design System', () => {
 		expect(await checked('Grid')).toBe('true');
 		expect(await checked('List')).toBe('false');
 		const menu = document.querySelector('[role="menu"]') as HTMLElement;
-		expect([...menu.querySelectorAll('.menu-heading')].map((h) => h.textContent)).toEqual(['Layout']);
-		expect(menu.querySelectorAll('[role="separator"]')).toHaveLength(0);
+		expect([...menu.querySelectorAll('.menu-heading')].map((h) => h.textContent)).toEqual(['Layout', 'Color mode']);
+		expect(menu.querySelectorAll('[role="separator"]')).toHaveLength(1);
 		expect(body().querySelector('[aria-label="Layout"][role="radiogroup"]')).toBeNull();
 	});
 
@@ -1405,23 +1405,29 @@ describe('Design System', () => {
 		expect(current()).toEqual([]);
 	});
 
-	it('offers the mode components are shown in beside Components and Tokens, said as what pressing it does, and only when the library has a dark', async () => {
+	it('offers the mode components are shown in as a Color mode section of the view options, light chosen, and only when the library has a dark', async () => {
 		await read();
-		const switchTo = (mode: string) => document.querySelector(`.ds-part [aria-label="Switch to ${mode}"]`) as HTMLButtonElement | null;
-		// A sun in light (a circle and its rays), a moon in dark (one crescent).
-		expect(switchTo('dark')!.querySelector('svg circle')).not.toBeNull();
-		await press(switchTo('dark')!);
+		const mode = async () => (await viewChoices()).filter((o) => o.closest('[role="group"]')?.getAttribute('aria-label') === 'Color mode');
+		expect((await mode()).map((o) => [o.textContent, o.getAttribute('aria-checked')])).toEqual([
+			['Light', 'true'],
+			['Dark', 'false'],
+		]);
+		// A sun at the start of Light (a circle and its rays), a moon at the start of Dark (one crescent).
+		const [light, dark] = await mode();
+		expect(light!.querySelector('svg circle')).not.toBeNull();
+		expect(dark!.querySelector('svg circle')).toBeNull();
+		expect(dark!.querySelector('svg path')).not.toBeNull();
+		await viewChoice('Dark');
 		expect(panelSaid().at(-1)).toEqual({ type: 'set-mode', mode: 'dark' });
-		expect(switchTo('light')?.title).toBe('Switch to light');
-		expect(switchTo('light')!.querySelector('svg circle')).toBeNull();
-		expect(switchTo('light')!.querySelector('svg path')).not.toBeNull();
+		expect((await mode()).map((o) => o.getAttribute('aria-checked'))).toEqual(['false', 'true']);
 		// The extension's choice, told to every page, is what it shows.
 		await say({ type: 'mode', mode: 'light' });
-		expect(switchTo('dark')).not.toBeNull();
+		expect((await mode()).map((o) => o.getAttribute('aria-checked'))).toEqual(['true', 'false']);
 		await unmount();
-		// A library with no dark: no switch.
+		// A library with no dark: no section.
 		await read({ ...SAMPLE_CATALOG, tokens: { ...SAMPLE_CATALOG.tokens, tokens: SAMPLE_CATALOG.tokens.tokens.filter((t) => t.group !== 'Dark') } });
-		expect(document.querySelector('.ds-part [aria-label^="Switch to"]')).toBeNull();
+		expect((await mode()).length).toBe(0);
+		expect(document.querySelector('[role="group"][aria-label="Layout"]')).not.toBeNull();
 	});
 
 	it('finds components by the search, says when none matches, and is a list when chosen', async () => {

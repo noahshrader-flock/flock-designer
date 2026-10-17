@@ -1,14 +1,14 @@
-import { type KeyboardEvent as KeyEvent, Fragment, useEffect, useId, useRef, useState } from 'react';
+import { type KeyboardEvent as KeyEvent, type ReactNode, Fragment, useEffect, useId, useRef, useState } from 'react';
 import { Icon } from './Icon';
 import { useDismiss } from './useDismiss';
 
 /**
- * One thing a menu offers: what it says, its codicon (at its start), and what it does. In a choice (`checked` given, true or
- * false) it is a radio of its section: the chosen one has a check at its end.
+ * One thing a menu offers: what it says, its icon (at its start: a codicon's name, or one drawn where the font has none), and
+ * what it does. In a choice (`checked` given, true or false) it is a radio of its section: the chosen one has a check at its end.
  */
 export interface MenuItem {
 	label: string;
-	icon: string;
+	icon: string | ReactNode;
 	onSelect: () => void;
 	checked?: boolean;
 	/** Shown, and not pressable: what cannot be done just now (Sync, while it is syncing). */
@@ -76,7 +76,7 @@ export const Menu = ({
 				item.onSelect();
 			}}
 		>
-			<Icon name={item.icon} />
+			{typeof item.icon === 'string' ? <Icon name={item.icon} /> : item.icon}
 			<span>{item.label}</span>
 			{item.checked === true && <Icon name="check" className="menu-check" />}
 		</button>
