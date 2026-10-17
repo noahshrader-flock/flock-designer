@@ -297,11 +297,10 @@ describe('a component’s tab', () => {
 		if (!document.querySelector('[role="dialog"][aria-label="Changes"]')) await press(document.querySelector('.tab-actions button') as HTMLElement);
 	};
 
-	it('reads in four parts: its values, every variant, the tokens it draws with (closed), and what is wrong with it', async () => {
+	it('reads in three parts: its values, the tokens it draws with (closed), and what is wrong with it', async () => {
 		await analysed();
 		expect([...document.querySelectorAll('.component-aside > [aria-label]')].map((e) => e.getAttribute('aria-label'))).toEqual([
 			'Values',
-			'Every variant',
 			'Tokens used',
 			'Accessibility',
 		]);
@@ -814,12 +813,11 @@ describe('a component’s tab', () => {
 		});
 	});
 
-	describe('every variant its props declare (Phase 5)', () => {
-		const variants = () => section('Every variant') as HTMLElement;
+	describe('every case its props declare, in the Values’ pickers (Phase 5)', () => {
 		const READY = {
 			state: 'ready',
 			props: [
-				{ name: 'size', values: ['sm', 'md', 'lg', 'xl'] },
+				{ name: 'size', values: ['sm', 'md', 'lg', 'xl', '2xl'] },
 				{ name: 'variant', values: ['primary', 'ghost'] },
 			],
 			fixed: ['variant'],
@@ -830,66 +828,65 @@ describe('a component’s tab', () => {
 			],
 			values: {
 				state: 'read',
-				instances: 6,
+				instances: 2,
 				unmarked: 0,
 				rows: {
 					light: [
 						{
 							property: 'height',
 							by: 'size',
-							cells: ['sm', 'md', 'lg', 'xl'].map((variant, i) => ({
-								variant,
-								value: ['28px', '36px', '48px', '56px'][i],
-								kind: 'own',
-								tokens: [],
-								instances: 1,
-								targets: [variant],
-							})),
+							// Its stories drew no 2xl; its props declare one, drawn on one of its stories.
+							cells: [
+								{ variant: 'sm', value: '28px', kind: 'own', tokens: [], instances: 1, targets: ['v:sm'], of: [{ size: 'sm' }] },
+								{ variant: '2xl', value: '64px', kind: 'own', tokens: [], instances: 1, targets: ['v:2xl'], of: [{ size: '2xl' }] },
+							],
 						},
 					],
 					dark: null,
 				},
 			},
 		};
+		const notes = () => [...(section('Values')?.querySelectorAll('[data-variant-note]') ?? [])].map((n) => n.textContent);
 
-		it('is asked for by the story file, and says it is being drawn until it is', async () => {
+		it('is asked for by the story file, and says under the pickers that it is being drawn until it is', async () => {
 			await analysed();
 			expect(calls('componentVariants').at(-1)?.args).toEqual([BUTTON]);
-			expect(variants().textContent).toContain('Reading its props, and drawing it with each of their values.');
+			expect(notes()).toEqual(['Reading its props, and drawing it with each of their values.']);
+			// No section of its own: the pickers are where a variant is chosen.
+			expect(section('Every variant')).toBeNull();
 		});
 
-		it('lists every case its props declare, drawn and shown as Values are, never tried; what its story sets, and what cannot be varied', async () => {
+		it('offers a case only its props declare, shown from their drawing and never tried; and says what its story sets and what cannot be varied', async () => {
 			await analysed();
 			await answer('componentVariants', READY);
-			expect(variants().querySelector('[data-variants-from]')?.textContent).toBe(
-				'From its props: size (4), variant (2), each drawn on one of its stories, in light.',
-			);
-			expect([...variants().querySelectorAll('[data-value-cell] .value-cell')].map((c) => c.textContent)).toEqual([
-				'sm28px',
-				'md36px',
-				'lg48px',
-				'xl56px',
-			]);
-			// Shown, not a control: what is tried is tried in its stories.
-			expect(variants().querySelector('[data-value-cell] button')).toBeNull();
-			expect(variants().querySelector('[data-variants-fixed]')?.textContent).toBe(
+			const size = section('Values')?.querySelector('[data-picker="size"] select') as HTMLSelectElement;
+			expect([...size.options].map((o) => o.textContent)).toEqual(['sm', 'md', 'lg', 'xl', '2xl']);
+			// Where its stories drew it, theirs, which can be tried.
+			expect(shownIn('height')[0]?.querySelector('button')).not.toBeNull();
+			await pick('size', '2xl');
+			const height = shownIn('height')[0] as HTMLElement;
+			expect(height.textContent).toBe('Height64px');
+			expect(height.hasAttribute('data-still')).toBe(true);
+			expect(height.querySelector('button')).toBeNull();
+			expect(height.querySelector('[title]')?.getAttribute('title')).toContain('Drawn from its props');
+			expect(notes()).toEqual([
 				'Its story sets variant itself: drawn with another value, it draws as the story has it.',
-			);
-			expect(variants().querySelector('[data-variants-unvaried]')?.textContent).toBe(
 				'Not varied: children (content), sx (an object), onClick (a callback).',
-			);
+			]);
 		});
 
-		it('is not there when its stories name no component whose props can be read', async () => {
+		it('adds nothing when its stories name no component whose props can be read', async () => {
 			await analysed();
 			await answer('componentVariants', { state: 'none' });
-			expect(variants()).toBeNull();
+			expect(notes()).toEqual([]);
+			const size = section('Values')?.querySelector('[data-picker="size"] select') as HTMLSelectElement;
+			expect([...size.options].map((o) => o.textContent)).toEqual(['sm', 'md', 'lg', 'xl']);
 		});
 
 		it('says why it could not be drawn', async () => {
 			await analysed();
 			await answer('componentVariants', { state: 'failed', error: 'Its story did not draw with its props changed.' });
-			expect(variants().textContent).toContain('Its story did not draw with its props changed.');
+			expect(notes()).toEqual(['Its variants could not be drawn: Its story did not draw with its props changed.']);
 		});
 	});
 

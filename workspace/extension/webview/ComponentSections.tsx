@@ -5,12 +5,12 @@ import { inOrder } from '../../src/shared/primitives';
 import { labelOf } from '../../src/shared/tokens';
 import { useTokenChanges } from '../../src/renderer/tokenChanges';
 import { MOST_LISTED, sharedWith, useComponentTokens } from '../../src/renderer/useComponentTokens';
+import { useComponentVariants } from '../../src/renderer/useComponentVariants';
 import { AccessibilityFindings } from './Accessibility';
 import { TokenChanges } from './Changed';
 import { ChangeReach } from './ChangeReach';
 import { ComponentValues, type Trying } from './ComponentValues';
 import { ValueChanges } from './ValueChanges';
-import { Variants } from './Variants';
 import { Grouped, type TokenActions } from './Tokens';
 import { Dialog } from './ui/Dialog';
 import { Disclosure } from './ui/Disclosure';
@@ -158,6 +158,8 @@ export const ComponentSections = ({
 }) => {
 	const { edits, byPath } = useTokenChanges();
 	const { answer, retry } = useComponentTokens(component.id);
+	// Every case its props declare, drawn: its Values' pickers offer them too.
+	const variants = useComponentVariants(component.id);
 	// The changes being tried on it, in a dialog rather than at the top of this column, so nothing moves while a value is
 	// adjusted: the token changes (they move its stories too) and what they move, drawn only while it is open, then its values.
 	const dialog = (values: ReactNode) =>
@@ -231,8 +233,8 @@ export const ComponentSections = ({
 				others={others}
 				trying={trying}
 				onEditToken={actions.onEdit}
+				variants={variants}
 			/>
-			<Variants file={component.id} name={tokenName} others={others} />
 			<TokensUsed answer={answer} tokens={tokens} note={note} actions={actions} />
 			{/* Open: what axe found is one line, its findings already kept closed under it. */}
 			<Part title="Accessibility">

@@ -114,6 +114,7 @@ const markupFor = (rows: ValueRow[]) =>
 			others: (path: string) => SHARED[path] ?? [],
 			trying: { tried: new Map(), onTry: () => undefined, onAll: () => undefined, onWrite: () => undefined, writes: 0, writeError: null },
 			onEditToken: () => undefined,
+			variants: { state: 'none' },
 		}),
 	);
 const markup = markupFor(ROWS);
@@ -145,22 +146,21 @@ describe.skipIf(NO_CHROME)('a component’s Values, in the side pane, in the bro
 						const name = li.textContent?.slice(0, 30) ?? '';
 						const cellBox = box(li);
 						// What is shown of it: a chip left out where its name's side is too narrow has no box.
-						const parts = [...li.querySelectorAll<HTMLElement>('.value-label, .value-drawn, .value-note, .value-chip, .swatch')]
+						const parts = [...li.querySelectorAll<HTMLElement>('.value-label, .value-drawn, .value-chip, .swatch')]
 							.filter((e) => e.checkVisibility())
 							.map((e) => [e.className, box(e)] as const);
 						for (const [c, b] of parts) if (b.r > cellBox.r + 0.5 || b.l < cellBox.l - 0.5) problems.push(`${name}: ${c} leaves its cell`);
-						const [variant, drawn, note] = ['.value-label', '.value-drawn', '.value-note'].map((s) => li.querySelector(s));
+						const [variant, drawn] = ['.value-label', '.value-drawn'].map((s) => li.querySelector(s));
 						if (variant && drawn && !apart(box(variant), box(drawn))) problems.push(`${name}: the name is over its value`);
 						// Its name on the left and its value on the right, on the one line.
 						if (variant && drawn && !(box(variant).l < box(drawn).l)) problems.push(`${name}: the value is not to the right of its name`);
 						// Words that fit their box: a name that cannot wrap runs on under the value beside it, past its own box.
-						for (const part of [variant, note])
+						for (const part of [variant])
 							if (part && part.scrollWidth > part.clientWidth + 1) problems.push(`${name}: ${part.className} runs past its box`);
 						// Flush to the right of its cell, as a token's value is, whatever its name takes.
 						if (drawn && Math.abs(cellBox.r - 8 - box(drawn).r) > 1.5) problems.push(`${name}: the value is not at the right of its cell`);
 						// A value reads on one line, even when the pane is narrow: it is the name that gives way.
 						if (drawn && box(drawn).h > 24) problems.push(`${name}: its value is broken over lines (${box(drawn).h}px)`);
-						if (drawn && note && !apart(box(drawn), box(note))) problems.push(`${name}: the value is over its note`);
 						const swatch = li.querySelector('.swatch');
 						const text = drawn?.querySelector('span:not(.swatch):not(.token-changed)');
 						if (swatch && text && !apart(box(swatch), box(text))) problems.push(`${name}: the swatch is over its value`);

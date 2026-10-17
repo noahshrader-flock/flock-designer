@@ -60,15 +60,16 @@ const chosen = (picker: Picker | undefined, drawn: string | null, value: string 
 	picker?.switch ? (drawn === 'true') === (value === 'true') : drawn === value;
 
 /**
- * A row's value for the variant shown: the cell drawn with it (`one`), and for a row told apart by no prop, the value most
- * instances draw, with the others (`more`); or, when no case was drawn with it, none, with the nearest (the cell that has the
- * most of it). Never guessed.
+ * A row's value for the variant shown: the cell drawn with it, and for a row told apart by no prop, the value most instances
+ * draw, with the others (`more`); `still` when it was drawn only from its props (Every variant's drawing, Phase 5), so it is
+ * shown and never tried; or, when no case was drawn with it, none, with the nearest (the cell that has the most of it). Never
+ * guessed.
  */
-export type Shown = { cell: ValueCell; more: ValueCell[] } | { cell: null; nearest: ValueCell | null };
+export type Shown = { cell: ValueCell; more: ValueCell[]; still: boolean } | { cell: null; nearest: ValueCell | null };
 
 export const shownFor = (row: ValueRow, pickers: Picker[], selection: Selection): Shown => {
 	const told = row.cells.some((c) => c.of !== undefined);
-	if (!told) return { cell: row.cells[0] as ValueCell, more: row.cells.slice(1) };
+	if (!told) return { cell: row.cells[0] as ValueCell, more: row.cells.slice(1), still: false };
 	const byProp = new Map(pickers.map((p) => [p.prop, p]));
 	const score = (c: ValueCell) =>
 		Math.max(
@@ -78,17 +79,39 @@ export const shownFor = (row: ValueRow, pickers: Picker[], selection: Selection)
 	const all = (c: ValueCell) =>
 		(c.of ?? []).some((drawn) => Object.entries(drawn).every(([prop, v]) => chosen(byProp.get(prop), v, selection[prop] ?? null)));
 	const cell = row.cells.find(all);
-	if (cell) return { cell, more: [] };
+	if (cell) return { cell, more: [], still: false };
 	const nearest = row.cells.reduce<ValueCell | null>((best, c) => (best === null || score(c) > score(best) ? c : best), null);
 	return { cell: null, nearest };
 };
 
-/** The groups with a row in them, each row with its value for the variant shown. */
-export const inspect = (rows: ValueRow[], pickers: Picker[], selection: Selection): { name: string; rows: { row: ValueRow; shown: Shown }[] }[] =>
+/**
+ * A row's value from its stories' drawing, else from its props' (`declared`, Every variant's: each declared value drawn on one
+ * story), shown as still; a property only the props' drawing has is shown from it alone.
+ */
+const shownOf = (row: ValueRow | undefined, declared: ValueRow | undefined, pickers: Picker[], selection: Selection): Shown | null => {
+	const drawn = row ? shownFor(row, pickers, selection) : null;
+	if (drawn?.cell) return drawn;
+	const fromProps = declared ? shownFor(declared, pickers, selection) : null;
+	if (fromProps?.cell) return { ...fromProps, still: true };
+	return drawn ?? fromProps;
+};
+
+/**
+ * The groups with a row in them, each row with its value for the variant shown: from its stories' drawing (`rows`), and for a
+ * case only its props declare, from their drawing (`declared`), shown and never tried.
+ */
+export const inspect = (
+	rows: ValueRow[],
+	pickers: Picker[],
+	selection: Selection,
+	declared: ValueRow[] = [],
+): { name: string; rows: { row: ValueRow; shown: Shown }[] }[] =>
 	GROUPS.map((g) => ({
 		name: g.name,
 		rows: g.properties.flatMap((p) => {
 			const row = rows.find((r) => r.property === p);
-			return row ? [{ row, shown: shownFor(row, pickers, selection) }] : [];
+			const fromProps = declared.find((r) => r.property === p);
+			const shown = shownOf(row, fromProps, pickers, selection);
+			return shown ? [{ row: (row ?? fromProps) as ValueRow, shown }] : [];
 		}),
 	})).filter((g) => g.rows.length > 0);

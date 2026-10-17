@@ -66,13 +66,13 @@ describe('the inspector of a component’s values', () => {
 
 	it('shows each row’s value for the variant chosen: by one prop, by two, a default, and a switch off as false or not set alike', () => {
 		const pickers = pickersOf(ROWS);
-		expect(shownFor(HEIGHT, pickers, { size: 'lg' })).toEqual({ cell: HEIGHT.cells[1], more: [] });
-		expect(shownFor(HEIGHT, pickers, { size: null })).toEqual({ cell: HEIGHT.cells[2], more: [] });
-		expect(shownFor(BACKGROUND, pickers, { variant: 'primary', disabled: 'false' })).toEqual({ cell: BACKGROUND.cells[0], more: [] });
-		expect(shownFor(BACKGROUND, pickers, { variant: 'primary', disabled: null })).toEqual({ cell: BACKGROUND.cells[0], more: [] });
-		expect(shownFor(BACKGROUND, pickers, { variant: 'primary', disabled: 'true' })).toEqual({ cell: BACKGROUND.cells[1], more: [] });
+		expect(shownFor(HEIGHT, pickers, { size: 'lg' })).toEqual({ cell: HEIGHT.cells[1], more: [], still: false });
+		expect(shownFor(HEIGHT, pickers, { size: null })).toEqual({ cell: HEIGHT.cells[2], more: [], still: false });
+		expect(shownFor(BACKGROUND, pickers, { variant: 'primary', disabled: 'false' })).toEqual({ cell: BACKGROUND.cells[0], more: [], still: false });
+		expect(shownFor(BACKGROUND, pickers, { variant: 'primary', disabled: null })).toEqual({ cell: BACKGROUND.cells[0], more: [], still: false });
+		expect(shownFor(BACKGROUND, pickers, { variant: 'primary', disabled: 'true' })).toEqual({ cell: BACKGROUND.cells[1], more: [], still: false });
 		// The same for every instance: its one value, whatever is chosen.
-		expect(shownFor(RADIUS, pickers, { size: 'lg' })).toEqual({ cell: RADIUS.cells[0], more: [] });
+		expect(shownFor(RADIUS, pickers, { size: 'lg' })).toEqual({ cell: RADIUS.cells[0], more: [], still: false });
 	});
 
 	it('says a combination no story drew is not drawn, with the nearest that was, and never guesses one', () => {
@@ -82,7 +82,28 @@ describe('the inspector of a component’s values', () => {
 	});
 
 	it('shows a row no prop explains by the value most instances draw, with the others', () => {
-		expect(shownFor(CHIP, [], {})).toEqual({ cell: CHIP.cells[0], more: CHIP.cells.slice(1) });
+		expect(shownFor(CHIP, [], {})).toEqual({ cell: CHIP.cells[0], more: CHIP.cells.slice(1), still: false });
+	});
+
+	it('takes a case only the props declare from their drawing, shown and never tried: its stories drew no xl, its props did', () => {
+		// Every variant's drawing: each declared size drawn on one story.
+		const DECLARED: ValueRow[] = [
+			{
+				property: 'height',
+				by: 'size',
+				cells: [cell('sm', '28px', [{ size: 'sm' }]), cell('xl', '56px', [{ size: 'xl' }])],
+			},
+			{ property: 'gap', by: null, cells: [cell(null, '4px')] },
+		];
+		const pickers = pickersOf([...ROWS, ...DECLARED]);
+		expect(pickers[0]).toEqual({ prop: 'size', options: ['sm', 'lg', null, 'xl'], switch: false });
+		const shown = (size: string | null) => inspect(ROWS, pickers, { ...firstSelection(pickers), size }, DECLARED)[0]?.rows;
+		// Where its stories drew it, theirs, which can be tried; xl only from its props, still.
+		expect(shown('sm')?.map((r) => [r.row.property, r.shown])).toEqual([
+			['height', { cell: HEIGHT.cells[0], more: [], still: false }],
+			['gap', { cell: DECLARED[1]?.cells[0], more: [], still: true }],
+		]);
+		expect(shown('xl')?.[0]?.shown).toEqual({ cell: DECLARED[0]?.cells[1], more: [], still: true });
 	});
 
 	it('lays the rows out in their groups, in order, and leaves out a group with nothing in it', () => {
