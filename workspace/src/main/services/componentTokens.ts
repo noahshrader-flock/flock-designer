@@ -247,6 +247,9 @@ export class ComponentTokens {
 	 */
 	async reach(edits: TokenEdit[]): Promise<ChangeReach> {
 		if (edits.length === 0) return { state: 'none' };
+		// Not drawn on a branch handed to Claude Code, shown as it was committed: it is the library's own branch a change moves.
+		const system = this.deps.system();
+		if (system !== null && (await (this.deps.at ?? baseAt)(system))?.showing) return { state: 'none' };
 		const index = await this.drawn();
 		if (index.state !== 'ready') return index;
 		const key = `${index.key}\u0000${JSON.stringify(edits)}`;
@@ -379,12 +382,13 @@ export class ComponentTokens {
 	private async started(): Promise<{ index: Building } | { error: string }> {
 		const system = this.deps.system();
 		if (system === null) return { error: 'There is no design system connected.' };
-		const commit = (await (this.deps.at ?? baseAt)(system))?.commit ?? null;
-		if (commit === null) return { error: `The library has no ${system.branch} branch from ${HOST} to read.` };
+		const shown = await (this.deps.at ?? baseAt)(system);
+		if (shown === null) return { error: `The library has no ${system.branch} branch from ${HOST} to read.` };
+		const { commit } = shown;
 		const key = `${commit}:${system.folder}`;
 		if (this.index?.key !== key) {
 			const index: Building = { key, commit, done: null, finished: Promise.resolve() };
-			index.finished = this.build(system, commit).then(
+			index.finished = this.build(system, commit, shown.showing !== null).then(
 				(built) => void (index.done = built),
 				(err: Error) => void (index.done = { error: err.message }),
 			);
@@ -393,7 +397,8 @@ export class ComponentTokens {
 		return { index: this.index };
 	}
 
-	private async build(system: ConnectedDesignSystem, commit: string): Promise<Built> {
+	/** `aside`: a branch handed to Claude Code, shown in place of the library's, whose pictures are not the grid's to keep. */
+	private async build(system: ConnectedDesignSystem, commit: string, aside: boolean): Promise<Built> {
 		const reads = await systemReads(system, commit);
 		const [read, catalog, target] = await Promise.all([
 			readTokens(reads),
@@ -433,7 +438,7 @@ export class ComponentTokens {
 			const picture = asIs?.[i]?.picture;
 			if (picture) taken.set(f, picture);
 		});
-		this.deps.pictures.keep(system.id, files, taken);
+		if (!aside) this.deps.pictures.keep(system.id, files, taken);
 		const at = new Date();
 		const accessibility = new Map<string, AccessibilityResult>();
 		files.forEach((f, i) => {

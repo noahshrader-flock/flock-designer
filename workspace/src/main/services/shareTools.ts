@@ -52,9 +52,9 @@ export const realShareTools = (root: string, host: GitHubApi = ghApi(), repo?: R
 	return {
 		push: (branch) => pushBranch(root, branch),
 		findPr: async (branch) => (await requests()).findOpen(branch),
-		// Onto the repository's default branch, which is what a pull request is opened onto when none is named.
-		createDraftPr: async (branch, title, body) =>
-			(await requests()).openDraft({ head: branch, base: await new RepoFiles(gh, await repository()).defaultBranch(), title, body }),
+		// Onto the branch it was made from when named, else the repository's default, as a pull request is opened when none is.
+		createDraftPr: async (branch, title, body, base) =>
+			(await requests()).openDraft({ head: branch, base: base ?? (await new RepoFiles(gh, await repository()).defaultBranch()), title, body }),
 		checks: async (pr) => (await requests()).checks(pr),
 		sleep: (ms) => new Promise((r) => setTimeout(r, ms)),
 		now: () => Date.now(),

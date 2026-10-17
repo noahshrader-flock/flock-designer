@@ -88,11 +88,15 @@ export const useHandoff = ({
 				'handing',
 				() => window.workspace.handOverChanges(file, change),
 				(over) => {
-					setHanded(handedTo(over, 'This change'));
+					setHanded(handedTo(over, 'This hand-over'));
 					read();
 				},
 			),
-		propose: (confirmed) => void run('proposing', () => window.workspace.proposeHandoff(file, confirmed), setHandoff),
+		// At the commit read here: one Claude Code committed since is refused, to be looked at first.
+		propose: (confirmed) => {
+			const tip = handoff?.review.state === 'ready' ? handoff.review.tip : null;
+			if (tip !== null) void run('proposing', () => window.workspace.proposeHandoff(file, tip, confirmed), setHandoff);
+		},
 		// Every page is told what is shown, and reads the library again: nothing is kept here.
 		preview: (on) =>
 			void run(

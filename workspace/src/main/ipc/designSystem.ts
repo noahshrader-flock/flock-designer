@@ -3,6 +3,7 @@ import { asRecord } from '../../shared/json';
 import { isObjectId } from '../../shared/sha';
 import { type Check, arg, handle } from '../handle';
 import { handToClaude } from '../services/editor';
+import { offBase } from '../services/handoffBranches';
 import { tokenEditsOf } from '../services/tokenEdits';
 import { triedValuesOf } from '../services/valueSources';
 import type { IpcDeps } from '../ipc';
@@ -34,6 +35,11 @@ const ds = {
 		if (typeof text !== 'string' || text.length > 200_000) throw new Error('The voice and tone is saved as text, up to 200,000 characters.');
 		return text;
 	}) as Check<string>,
+	/** A commit, by its sha: the hand-over branch's tip the person looked at. */
+	commit: ((v) => {
+		if (!isObjectId(v)) throw new Error('A branch is proposed at the commit that was shown.');
+		return v;
+	}) as Check<string>,
 	/** The blob a save is made against: its sha (40 hex, or 64 in a repository on SHA-256), or none for a new file. */
 	against: ((v) => {
 		if (v !== null && !isObjectId(v)) throw new Error('A save is made against the file’s sha.');
@@ -58,16 +64,11 @@ export const registerDesignSystem = (d: IpcDeps): void => {
 		handoffBranches,
 		libraryShown,
 		ports,
+		shownSystem,
 		valueSources,
 		voiceFile,
 		warm,
 	} = d;
-
-	/** The design system shown, or null when none is connected or its clone is gone. */
-	const shown = () => {
-		const system = library.current();
-		return typeof system === 'string' ? null : system;
-	};
 
 	handle('componentPictures', [], () => componentTokens.pictures());
 	// The window says only whether to wait for the update; where the design system is, it is never told and never asks.
@@ -91,16 +92,27 @@ export const registerDesignSystem = (d: IpcDeps): void => {
 	// Process changes: a unit by its story file, or the tokens (none); what it hands over checked as a change always is, and
 	// handed to Claude Code as every hand-over is, in the library's root, with the prompt typed in.
 	handle('handOverChanges', [arg.optional(ds.storyFile), ds.handed], async (file, change) => {
-		libraryShown.refuse(shown(), 'hand changes to Claude Code');
+		if ((file === null) !== 'edits' in change)
+			throw new Error('The token changes are handed over as the tokens, and a component’s values as that component.');
+		libraryShown.refuse(shownSystem(), 'process changes');
 		const { root, branch, prompt } = await handoffBranches.start(file ?? '', change);
-		return { branch, ...(await handToClaude(ports, root, prompt)) };
+		// Not opened, it is not handed over: forgotten, so it can be pressed again.
+		const handed = await handToClaude(ports, root, prompt).catch((err: unknown) => {
+			handoffBranches.forget(file ?? '');
+			throw err;
+		});
+		return { branch, ...handed };
 	});
 	handle('handoffBranch', [arg.optional(ds.storyFile)], (file) => handoffBranches.current(file ?? ''));
 	handle('handoffFiles', [], () => handoffBranches.scopes());
-	handle('proposeHandoff', [arg.optional(ds.storyFile), arg.flag], (file, confirmed) => handoffBranches.propose(file ?? '', confirmed));
+	// At the commit the person looked at: what is pushed is what they saw. Never while another branch is shown, as no proposal is.
+	handle('proposeHandoff', [arg.optional(ds.storyFile), ds.commit, arg.flag], (file, tip, confirmed) => {
+		libraryShown.refuse(shownSystem(), 'propose');
+		return handoffBranches.propose(file ?? '', tip, confirmed);
+	});
 	// Forgotten, its branch is no longer shown either.
 	handle('forgetHandoff', [arg.optional(ds.storyFile)], (file) => {
-		const system = shown();
+		const system = shownSystem();
 		if (system !== null && libraryShown.scope(system) === (file ?? '')) libraryShown.stop(system);
 		handoffBranches.forget(file ?? '');
 		return null;
@@ -108,33 +120,34 @@ export const registerDesignSystem = (d: IpcDeps): void => {
 	// Preview this branch (Phase 2): a unit's hand-over shown in the tab once its branch is read ready from git, and the
 	// library's own branch again. Only committed work is shown, read from git's objects.
 	handle('showHandoff', [arg.optional(ds.storyFile)], async (file) => {
-		const system = shown();
+		const system = shownSystem();
 		if (system === null) throw new Error('There is no design system connected.');
 		const handed = await handoffBranches.current(file ?? '');
 		if (handed === null) throw new Error('Nothing is handed to Claude Code for this.');
+		if (handed.review.state === 'off-base') throw new Error(offBase(handed.branch, system.branch));
 		if (handed.review.state !== 'ready')
-			throw new Error(`There is nothing committed from ${system.branch} on ${handed.branch} to show yet: Claude Code commits its work there.`);
+			throw new Error(`Nothing is committed on ${handed.branch} yet, so there is nothing to show: Claude Code commits its work there.`);
 		libraryShown.show(system, file ?? '', handed.branch);
 		return null;
 	});
 	handle('showLibraryBranch', [], () => {
-		const system = shown();
+		const system = shownSystem();
 		if (system !== null) libraryShown.stop(system);
 		return null;
 	});
 	// Only on the person's press: it runs the agent, in a copy of the library.
 	handle('writeValue', [ds.storyFile, ds.value], async (file, value) => {
-		libraryShown.refuse(shown(), 'have the agent write it');
+		libraryShown.refuse(shownSystem(), 'have the agent write it');
 		await valueAgent.write(file, value);
 		return null;
 	});
 	// Never while another branch is shown: a value's save writes the files the index drew.
-	handle('saveValues', [ds.storyFile, ds.tried], (file, tried) => (libraryShown.refuse(shown(), 'save'), valueBranches.save(tried, file)));
-	handle('proposeValues', [ds.storyFile], (file) => valueBranches.propose(file));
+	handle('saveValues', [ds.storyFile, ds.tried], (file, tried) => (libraryShown.refuse(shownSystem(), 'save'), valueBranches.save(tried, file)));
+	handle('proposeValues', [ds.storyFile], (file) => (libraryShown.refuse(shownSystem(), 'propose'), valueBranches.propose(file)));
 	handle('forgetValueBranch', [ds.storyFile], (file) => (valueBranches.forget(file), null));
 	handle('tokenBranch', [], () => tokenBranches.current());
-	handle('saveTokens', [ds.edits], (edits) => (libraryShown.refuse(shown(), 'save'), tokenBranches.save(edits)));
-	handle('proposeTokens', [], () => tokenBranches.propose());
+	handle('saveTokens', [ds.edits], (edits) => (libraryShown.refuse(shownSystem(), 'save'), tokenBranches.save(edits)));
+	handle('proposeTokens', [], () => (libraryShown.refuse(shownSystem(), 'propose'), tokenBranches.propose()));
 	handle('forgetTokenBranch', [], () => (tokenBranches.forget(), null));
 	handle('voiceAndTone', [], () => voiceFile().current());
 	handle('saveVoiceAndTone', [ds.voice, ds.against], (text, against) => voiceFile().save(text, against));

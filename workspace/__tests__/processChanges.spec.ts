@@ -1,6 +1,9 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { DesignToken, ValueRow } from '../src/shared/contract';
 import {
+	COMMIT_HERE,
 	MOST_HANDED,
 	changeLine,
 	classifyPath,
@@ -41,6 +44,19 @@ describe('the prompt a group of changes is handed over with', () => {
 		expect(prompt.endsWith('Anything else, in my own words:\n')).toBe(true);
 	});
 
+	it('carries the real rules, and turns round, after them, the one that would leave the branch empty: commit there', () => {
+		const rules = readFileSync(join(__dirname, '..', '..', 'standards', 'design-system-code.md'), 'utf8');
+		expect(rules).toContain('commit nothing');
+		const prompt = handoffPrompt({
+			group: button,
+			changes: [{ said: 'FSButton · Height · sm: 28px → 32px', where: null }],
+			branch: BRANCH,
+			base: 'develop',
+			rules,
+		});
+		expect(prompt.indexOf(COMMIT_HERE)).toBeGreaterThan(prompt.indexOf('commit nothing'));
+	});
+
 	it('hands over the tokens as their own unit', () => {
 		const prompt = handoffPrompt({
 			group: { kind: 'tokens' },
@@ -53,10 +69,15 @@ describe('the prompt a group of changes is handed over with', () => {
 		expect(prompt).toContain('- Tones pineGreen 60: #15584A → #000000 (src/colors/tones.ts, line 12)');
 	});
 
-	it('says of a value DSNR could not place that where it is written is to be found, and leaves nothing out', () => {
-		expect(changeLine({ said: 'FSButton · Padding · lg: 0px 16px → 0px 20px', where: null })).toBe(
-			'FSButton · Padding · lg: 0px 16px → 0px 20px (where it is written was not found: find it in the design system’s own source)',
-		);
+	it('says of a value DSNR could not place that it was not placed, and asks Claude Code once to find where it is written', () => {
+		const unplaced = { said: 'FSButton · Padding · lg: 0px 16px → 0px 20px', where: null };
+		// The line is the pull request's too, so it says only what is so.
+		expect(changeLine(unplaced)).toBe('FSButton · Padding · lg: 0px 16px → 0px 20px (not placed by DSNR)');
+		const ask = "Where a change says not placed by DSNR, find where it is written in the design system's own source.";
+		const prompt = (changes: { said: string; where: string | null }[]) =>
+			handoffPrompt({ group: button, changes, branch: BRANCH, base: 'develop', rules: RULES });
+		expect(prompt([unplaced]).split(ask)).toHaveLength(2);
+		expect(prompt([{ ...unplaced, where: 'theme.ts, line 1' }])).not.toContain(ask);
 	});
 
 	it('refuses with nothing to hand over, and more than one hand-over carries, rather than leave changes out', () => {
@@ -82,6 +103,7 @@ describe('which files a hand-over may change, by the rules for changing a design
 		['src/__tests__/theme.ts', 'a test'],
 		['src/__snapshots__/x.snap', 'a test'],
 		['.storybook/preview.tsx', 'the Storybook set-up'],
+		['.github/workflows/chromatic.yml', 'the repository’s CI and settings'],
 		['package-lock.json', 'a lockfile'],
 		['yarn.lock', 'a lockfile'],
 		['pnpm-lock.yaml', 'a lockfile'],
@@ -98,9 +120,9 @@ describe('which files a hand-over may change, by the rules for changing a design
 
 	it('needs a deliberate yes for a file out of bounds or a large diff, and not otherwise', () => {
 		const file = (path: string) => ({ path, added: 1, removed: 1, out: classifyPath(path) });
-		expect(flagged({ state: 'ready', commits: 1, files: [file('src/theme.ts')], lines: 2, large: false })).toBe(false);
-		expect(flagged({ state: 'ready', commits: 1, files: [file('src/A.stories.tsx')], lines: 2, large: false })).toBe(true);
-		expect(flagged({ state: 'ready', commits: 1, files: [file('src/theme.ts')], lines: 400, large: true })).toBe(true);
+		expect(flagged({ state: 'ready', tip: 'c', commits: 1, files: [file('src/theme.ts')], lines: 2, large: false })).toBe(false);
+		expect(flagged({ state: 'ready', tip: 'c', commits: 1, files: [file('src/A.stories.tsx')], lines: 2, large: false })).toBe(true);
+		expect(flagged({ state: 'ready', tip: 'c', commits: 1, files: [file('src/theme.ts')], lines: 400, large: true })).toBe(true);
 		expect(flagged({ state: 'empty' })).toBe(false);
 	});
 });
@@ -159,6 +181,7 @@ describe('what each change is said as, for the prompt and the pull request', () 
 describe('a hand-over branch’s draft pull request', () => {
 	const review = {
 		state: 'ready' as const,
+		tip: 'c'.repeat(40),
 		commits: 2,
 		files: [{ path: 'src/utils/theme.ts', added: 1, removed: 1, out: null }],
 		lines: 2,

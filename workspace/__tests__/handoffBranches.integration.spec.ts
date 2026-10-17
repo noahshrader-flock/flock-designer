@@ -16,7 +16,7 @@ let home: string;
 let clone: string;
 let system: ConnectedDesignSystem;
 let pushed: string[];
-let opened: { branch: string; title: string; body: string }[];
+let opened: { branch: string; title: string; body: string; base: string | undefined }[];
 let saved: boolean;
 const BUTTON = 'src/components/FSButton/FSButton.stories.tsx';
 const g = (cwd: string, ...args: string[]) => execFileSync('git', args, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
@@ -24,7 +24,10 @@ const g = (cwd: string, ...args: string[]) => execFileSync('git', args, { cwd, e
 const tools = (): ShareTools => ({
 	push: async (branch) => (pushed.push(branch), { pushed: true }),
 	findPr: async () => null,
-	createDraftPr: async (branch, title, body) => (opened.push({ branch, title, body }), { number: 7, url: 'https://github.com/o/ui/pull/7' }),
+	createDraftPr: async (branch, title, body, base) => (
+		opened.push({ branch, title, body, base }),
+		{ number: 7, url: 'https://github.com/o/ui/pull/7' }
+	),
 	checks: async () => [],
 	sleep: async () => undefined,
 	now: () => 0,
@@ -40,6 +43,9 @@ const handoffs = () =>
 		saved: async () => saved,
 		now: () => new Date('2026-10-17T12:00:00Z'),
 	});
+/** A branch's tip, as the panel was shown it; and one never shown, for a branch not made yet. */
+const tipOf = (branch: string) => g(clone, 'rev-parse', branch);
+const SEEN = 'a'.repeat(40);
 const TRIED = { tried: [{ property: 'height' as const, value: '32px', targets: ['a'] }] };
 /** What Claude Code does with the prompt: the branch it names, from the base, a commit on it. */
 const claudeCommits = (branch: string, files: Record<string, string>) => {
@@ -109,12 +115,14 @@ describe('a unit handed to Claude Code', () => {
 
 	it('is proposed once Claude Code has committed on its branch: pushed, a draft with the lines, the reach, what was checked and the template', async () => {
 		const { branch } = await handoffs().start(BUTTON, TRIED);
-		await expect(handoffs().propose(BUTTON, false)).rejects.toThrow(`There is no branch ${branch} yet`);
+		await expect(handoffs().propose(BUTTON, SEEN, false)).rejects.toThrow(`There is no branch ${branch} yet`);
 		claudeCommits(branch, { 'theme.ts': 'export const height = 32;\n' });
-		const proposed = await handoffs().propose(BUTTON, false);
+		const proposed = await handoffs().propose(BUTTON, tipOf(branch), false);
 		expect(pushed).toEqual([branch]);
 		expect(proposed.pullRequest).toEqual({ number: 7, url: 'https://github.com/o/ui/pull/7' });
 		const [pr] = opened;
+		// Onto the branch it was made from, never the repository's default by chance.
+		expect(pr?.base).toBe('develop');
 		expect(pr?.title).toBe('FSButton: 1 change from DSNR');
 		expect(pr?.body).toContain('- FSButton · Height · sm: 28px → 32px (theme.ts, line 1)');
 		expect(pr?.body).toContain('It moves 1 component (FSButton)');
@@ -126,10 +134,23 @@ describe('a unit handed to Claude Code', () => {
 	it('proposes a flagged branch only when it is sent on purpose, and says so in its description', async () => {
 		const { branch } = await handoffs().start(BUTTON, TRIED);
 		claudeCommits(branch, { 'theme.ts': 'export const height = 32;\n', 'Button.stories.tsx': 'export default {};\n' });
-		await expect(handoffs().propose(BUTTON, false)).rejects.toThrow('send it on purpose');
+		await expect(handoffs().propose(BUTTON, tipOf(branch), false)).rejects.toThrow('send it on purpose');
 		expect(pushed).toEqual([]);
-		await handoffs().propose(BUTTON, true);
+		await handoffs().propose(BUTTON, tipOf(branch), true);
 		expect(opened[0]?.body).toContain('on purpose: Button.stories.tsx (a story).');
+	});
+
+	it('proposes only the commit the person looked at: one Claude Code committed since is refused, and nothing is pushed', async () => {
+		const { branch } = await handoffs().start(BUTTON, TRIED);
+		claudeCommits(branch, { 'theme.ts': 'export const height = 32;\n' });
+		const seen = tipOf(branch);
+		g(clone, 'switch', '-q', branch);
+		writeFileSync(join(clone, 'package.json'), '{}\n');
+		g(clone, 'add', '-A');
+		g(clone, 'commit', '-q', '-m', 'Claude Code: one more');
+		g(clone, 'switch', '-q', 'develop');
+		await expect(handoffs().propose(BUTTON, seen, true)).rejects.toThrow(`has committed on ${branch} since it was shown here`);
+		expect(pushed).toEqual([]);
 	});
 
 	it('is forgotten on start over, leaving its branch, so it can be handed over again', async () => {

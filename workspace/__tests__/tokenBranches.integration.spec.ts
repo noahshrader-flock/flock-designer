@@ -45,8 +45,8 @@ const commitAll = (root: string, message: string) => {
 const tools = (): ShareTools => ({
 	push: async (branch) => (asked.push(`push ${branch}`), { pushed: true }),
 	findPr: async (branch) => (asked.push(`find ${branch}`), openPr),
-	createDraftPr: async (branch, title, body) => {
-		asked.push(`draft ${branch} ${title}`);
+	createDraftPr: async (branch, title, body, base) => {
+		asked.push(`draft ${branch} onto ${base} ${title}`);
 		openPr = { number: 42, url: 'https://github.com/acme/ui/pull/42' };
 		asked.push(body);
 		return openPr;
@@ -182,7 +182,11 @@ describe('proposing it (T5)', () => {
 		]);
 		const p = await branches().propose();
 		expect(p.pullRequest).toEqual({ number: 42, url: 'https://github.com/acme/ui/pull/42', chromatic: null });
-		expect(asked.slice(0, 3)).toEqual([`push ${b.branch}`, `find ${b.branch}`, `draft ${b.branch} Design tokens: Tones brand 50 and 1 more`]);
+		expect(asked.slice(0, 3)).toEqual([
+			`push ${b.branch}`,
+			`find ${b.branch}`,
+			`draft ${b.branch} onto develop Design tokens: Tones brand 50 and 1 more`,
+		]);
 		expect(asked[3]).toContain('- Tones brand 50: #108062 → #0A6B52');
 		expect(asked[3]).toContain('- Spacing base: 8px → 6px');
 		expect(asked[3]).toContain('Opened by DSNR as a draft');

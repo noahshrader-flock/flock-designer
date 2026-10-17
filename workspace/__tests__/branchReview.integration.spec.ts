@@ -58,6 +58,7 @@ describe('a hand-over branch, as DSNR reads it before it is proposed', () => {
 		commitOn({ 'theme.ts': 'export const radius = 12;\n' });
 		expect(await reviewBranch(clone, BRANCH, base, 'develop')).toEqual({
 			state: 'ready',
+			tip: g(clone, 'rev-parse', BRANCH),
 			commits: 1,
 			files: [{ path: 'theme.ts', added: 1, removed: 1, out: null }],
 			lines: 2,
@@ -72,6 +73,16 @@ describe('a hand-over branch, as DSNR reads it before it is proposed', () => {
 		expect(review.state === 'ready' && review.files.map((f) => [f.path, f.out])).toEqual([
 			['src/Button.stories.tsx', 'a story'],
 			['theme.ts', null],
+		]);
+	});
+
+	it('reads a path git would quote as it is, so a story with an unusual name is still out of bounds', async () => {
+		g(clone, 'switch', '-q', '-c', BRANCH, 'origin/develop');
+		commitOn({ 'src/Botón/Botón.stories.tsx': 'export default {};\n', 'src/with\ttab.test.ts': 'test;\n' });
+		const review = await reviewBranch(clone, BRANCH, base, 'develop');
+		expect(review.state === 'ready' && review.files.map((f) => [f.path, f.out])).toEqual([
+			['src/Botón/Botón.stories.tsx', 'a story'],
+			['src/with\ttab.test.ts', 'a test'],
 		]);
 	});
 

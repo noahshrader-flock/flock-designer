@@ -1626,7 +1626,7 @@ describe('every change being tried, in the panel’s Changes: the tokens and eac
 
 	describe('Process changes: one group handed to Claude Code on a branch DSNR names, read from git, proposed as the rules allow', () => {
 		const EDITS = [{ path: 'tone.pineGreen.60', value: '#000000' }];
-		const BRANCH = 'dsnr/handoff-20261017-ab12cd';
+		const BRANCH = 'dsnr/handoff-20261017-ab12';
 		const handoff = () => document.querySelector('[data-handoff]') as HTMLElement | null;
 		/** Answers the page's latest call to `name` that asked about `file` (the tokens' none, or a component's story file). */
 		const answerFor = async (name: string, file: string | null, value: unknown) => {
@@ -1645,8 +1645,10 @@ describe('every change being tried, in the panel’s Changes: the tokens and eac
 			await answer('valueBranchFiles', []);
 			await answer('handoffFiles', []);
 		};
+		const TIP = 'c'.repeat(40);
 		const READY = {
 			state: 'ready',
+			tip: TIP,
 			commits: 2,
 			files: [
 				{ path: 'src/utils/theme.ts', added: 3, removed: 1, out: null },
@@ -1664,7 +1666,7 @@ describe('every change being tried, in the panel’s Changes: the tokens and eac
 			await answer('handOverChanges', { branch: BRANCH, editor: true, command: null });
 			await answerFor('handoffBranch', null, { branch: BRANCH, lines: ['primary: #000000'], review: { state: 'missing' }, pullRequest: null });
 			expect(handoff()?.querySelector('.branch-line')?.textContent).toBe(BRANCH);
-			expect(handoff()?.textContent).toContain('This change is in Claude Code in this window now');
+			expect(handoff()?.textContent).toContain('This hand-over is in Claude Code in this window now');
 			expect(handoff()?.textContent).toContain('Claude Code makes this branch, by the name its prompt gives');
 			// One branch in play: neither Save nor Process changes again, and nothing proposed before it is made.
 			expect(button('Save to a branch')).toBeUndefined();
@@ -1696,7 +1698,7 @@ describe('every change being tried, in the panel’s Changes: the tokens and eac
 			await press(button('Cancel'));
 			await press(button('Propose'));
 			await press(button('Propose anyway'));
-			expect(calls('proposeHandoff').at(-1)?.args).toEqual([null, true]);
+			expect(calls('proposeHandoff').at(-1)?.args).toEqual([null, TIP, true]);
 			const url = 'https://github.com/flocksafety/flock-react-component-lib/pull/7';
 			await answer('proposeHandoff', { branch: BRANCH, lines: [], review: READY, pullRequest: { number: 7, url } });
 			expect([...document.querySelectorAll('a')].find((a) => a.textContent === 'Draft pull request #7')?.getAttribute('href')).toBe(url);
@@ -1714,7 +1716,7 @@ describe('every change being tried, in the panel’s Changes: the tokens and eac
 			const clean = { ...READY, files: [READY.files[0]] };
 			await answerFor('handoffBranch', null, { branch: BRANCH, lines: [], review: clean, pullRequest: null });
 			await press(button('Propose'));
-			expect(calls('proposeHandoff').at(-1)?.args).toEqual([null, false]);
+			expect(calls('proposeHandoff').at(-1)?.args).toEqual([null, TIP, false]);
 		});
 
 		it('is not offered while the group has a branch DSNR saved', async () => {
@@ -1749,6 +1751,8 @@ describe('every change being tried, in the panel’s Changes: the tokens and eac
 			const note = document.querySelector('[data-showing]') as HTMLElement;
 			expect(note.textContent).toContain(`Showing ${BRANCH}, Claude Code’s branch, not develop.`);
 			expect(button('Stop previewing')).toBeDefined();
+			// Nothing is proposed while it is shown.
+			expect(button('Propose')).toBeUndefined();
 			await press(button('Show develop'));
 			expect(calls('showLibraryBranch')).toHaveLength(1);
 			await press(button('Stop previewing'));

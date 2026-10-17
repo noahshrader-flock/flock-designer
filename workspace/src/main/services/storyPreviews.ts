@@ -563,8 +563,16 @@ export class StoryPreviews {
 	async preview(edits: TokenEdit[] = []): Promise<StoryPreview> {
 		const base = await this.base();
 		if (edits.length === 0 || base.state !== 'ready') return base;
+		// A branch handed to Claude Code is shown as it was committed: what is tried waits for the library's own branch.
+		if (await this.showing()) return base;
 		this.wanted = edits;
 		return this.trying.run('newest', () => this.tryNewest());
+	}
+
+	/** Whether a branch handed to Claude Code is shown in place of the library's (`LibraryShown`). */
+	private async showing(): Promise<boolean> {
+		const system = this.deps.system();
+		return system !== null && ((await (this.deps.at ?? baseAt)(system))?.showing ?? null) !== null;
 	}
 
 	private async base(): Promise<StoryPreview> {

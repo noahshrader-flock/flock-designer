@@ -95,8 +95,11 @@ export interface WorkspaceApi {
 	handoffBranch(file: string | null): Promise<Result<HandoffBranch | null>>;
 	/** The components, by story file, handed to Claude Code (the tokens' as an empty one): what the panel's Changes lists. */
 	handoffFiles(): Promise<Result<string[]>>;
-	/** Pushes a unit's hand-over branch and opens its draft pull request; one the rules flag only when `confirmed`. */
-	proposeHandoff(file: string | null, confirmed: boolean): Promise<Result<HandoffBranch>>;
+	/**
+	 * Pushes a unit's hand-over branch and opens its draft pull request, only at `tip`, the commit the person looked at; one the
+	 * rules flag only when `confirmed`. Refused while another branch is shown.
+	 */
+	proposeHandoff(file: string | null, tip: string, confirmed: boolean): Promise<Result<HandoffBranch>>;
 	/** Forgets a unit's hand-over, so it can be handed over again or saved; its branch and any pull request stay. */
 	forgetHandoff(file: string | null): Promise<Result<null>>;
 	/**

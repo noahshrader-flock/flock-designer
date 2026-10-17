@@ -24,8 +24,11 @@ export interface ShareTools {
 	push(branch: string): Promise<{ pushed: boolean }>;
 	/** The open pull request for a branch, if there is one. */
 	findPr(branch: string): Promise<PullRequest | null>;
-	/** Always a draft. Nothing here can open one that is ready for review. */
-	createDraftPr(branch: string, title: string, body: string): Promise<PullRequest>;
+	/**
+	 * Always a draft. Nothing here can open one that is ready for review. Onto `base` when given (the branch it was made from),
+	 * else the repository's default.
+	 */
+	createDraftPr(branch: string, title: string, body: string, base?: string): Promise<PullRequest>;
 	checks(pr: number): Promise<Check[]>;
 	sleep(ms: number): Promise<void>;
 	now(): number;

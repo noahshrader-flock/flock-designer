@@ -5,36 +5,28 @@
  */
 import type { BranchReview } from '../../shared/contract';
 import { LARGE, classifyPath } from '../../shared/processChanges';
-import { branchExists, git } from './git';
-
-const ancestor = async (root: string, older: string, newer: string): Promise<boolean> => {
-	try {
-		await git(root, ['merge-base', '--is-ancestor', older, newer]);
-		return true;
-	} catch {
-		return false;
-	}
-};
+import { branchCommit, git, isAncestor } from './git';
 
 export const reviewBranch = async (root: string, branch: string, base: string, baseBranch: string): Promise<BranchReview> => {
-	if (!(await branchExists(root, branch))) return { state: 'missing' };
-	const tip = await git(root, ['rev-parse', `refs/heads/${branch}`]);
+	const tip = await branchCommit(root, branch).catch(() => null);
+	if (tip === null) return { state: 'missing' };
 	// Where it left the base: the newest commit it shares with the base as GitHub has it now, else with the one recorded.
 	const upstream = await git(root, ['rev-parse', '--verify', '--quiet', `refs/remotes/origin/${baseBranch}`]).catch(() => '');
 	const fork = await git(root, ['merge-base', tip, upstream || base]).catch(() => '');
-	if (fork === '' || !(await ancestor(root, base, fork))) return { state: 'off-base' };
+	if (fork === '' || !(await isAncestor(root, base, fork))) return { state: 'off-base' };
 	const commits = Number(await git(root, ['rev-list', '--count', `${fork}..${tip}`]));
 	if (commits === 0) return { state: 'empty' };
-	const numstat = await git(root, ['diff', '--numstat', '--no-renames', fork, tip]);
-	const files =
-		numstat === ''
-			? []
-			: numstat.split('\n').map((line) => {
-					const [added, removed, ...path] = line.split('\t');
-					const file = path.join('\t');
-					// A binary file says '-' for its lines: counted as none, and still classified.
-					return { path: file, added: Number(added) || 0, removed: Number(removed) || 0, out: classifyPath(file) };
-				});
+	// Each path as it is, NUL-ended (`-z`): git quotes an unusual one otherwise, which would hide a story from the rules.
+	const numstat = await git(root, ['diff', '--numstat', '--no-renames', '-z', fork, tip]);
+	const files = numstat
+		.split('\0')
+		.filter((record) => record !== '')
+		.map((record) => {
+			const [added = '', removed = '', ...path] = record.split('\t');
+			const file = path.join('\t');
+			// A binary file says '-' for its lines: counted as none, and still classified.
+			return { path: file, added: Number(added) || 0, removed: Number(removed) || 0, out: classifyPath(file) };
+		});
 	const lines = files.reduce((n, f) => n + f.added + f.removed, 0);
-	return { state: 'ready', commits, files, lines, large: files.length > LARGE.files || lines > LARGE.lines };
+	return { state: 'ready', tip, commits, files, lines, large: files.length > LARGE.files || lines > LARGE.lines };
 };

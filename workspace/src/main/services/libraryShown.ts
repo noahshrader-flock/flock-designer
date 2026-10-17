@@ -10,10 +10,8 @@
  */
 import type { ConnectedDesignSystem } from '../../shared/contract';
 import { type LibraryAt, baseAt } from './designLibrary';
-import { dsnrBranchPattern } from './dsnrBranch';
-import { git } from './git';
-
-const HANDOFF = dsnrBranchPattern('handoff');
+import { branchCommit } from './git';
+import { HANDOFF_BRANCH } from './handoffBranches';
 
 export class LibraryShown {
 	/** The hand-off branch shown, by the design system's id, and the unit it was handed over for. */
@@ -26,8 +24,8 @@ export class LibraryShown {
 	readonly at: LibraryAt = async (system) => {
 		const chosen = this.shown.get(system.id);
 		if (chosen === undefined) return baseAt(system);
-		const tip = await git(system.root, ['rev-parse', '--verify', '--quiet', `refs/heads/${chosen.branch}^{commit}`]).catch(() => '');
-		if (tip !== '') return { commit: tip, showing: chosen.branch };
+		const tip = await branchCommit(system.root, chosen.branch).catch(() => null);
+		if (tip !== null) return { commit: tip, showing: chosen.branch };
 		// Deleted since it was chosen: the library's own branch again, said to every page.
 		this.stop(system);
 		return baseAt(system);
@@ -35,7 +33,7 @@ export class LibraryShown {
 
 	/** Shows `branch`, the one DSNR named for the unit `scope`. */
 	show(system: ConnectedDesignSystem, scope: string, branch: string): void {
-		if (!HANDOFF.test(branch)) throw new Error(`${branch} is not a branch DSNR named, so it is not shown.`);
+		if (!HANDOFF_BRANCH.test(branch)) throw new Error(`${branch} is not a branch DSNR named, so it is not shown.`);
 		this.shown.set(system.id, { scope, branch });
 		this.changed(branch);
 	}

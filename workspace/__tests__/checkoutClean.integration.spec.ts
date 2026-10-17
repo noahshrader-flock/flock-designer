@@ -37,6 +37,12 @@ describe('a design system checkout handed to Claude Code', () => {
 		expect(await unfinishedWork(root)).toContain('2 files are changed or new');
 	});
 
+	it('counts a new file even when the clone is set to hide them from its status', async () => {
+		g('config', 'status.showUntrackedFiles', 'no');
+		write('notes.md', 'mine\n');
+		expect(await unfinishedWork(root)).toContain('1 file is changed or new');
+	});
+
 	it('is not in the middle of a merge', async () => {
 		g('switch', '-q', '-c', 'other');
 		write('theme.ts', 'export const radius = 10;\n');

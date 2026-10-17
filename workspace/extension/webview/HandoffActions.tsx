@@ -103,14 +103,15 @@ export const HandoffActions = ({ controls }: { controls: HandoffControls }) => {
 				</>
 			) : (
 				<div className="branch-buttons">
-					{ready && !pullRequest && (
+					{/* Not while any branch is shown in the library's place: nothing is proposed then (the note says so). */}
+					{ready && !pullRequest && showing === null && (
 						<Button disabled={busy !== null} onClick={() => (flagged(ready) ? setConfirming(true) : propose(false))}>
 							{busy === 'proposing' ? `Opening a draft ${CHANGE_REQUEST}…` : 'Propose'}
 						</Button>
 					)}
 					{ready && (
 						<Button variant="secondary" disabled={busy !== null} onClick={() => preview(showing !== handoff.branch)}>
-							{showing === handoff.branch ? 'Stop previewing' : 'Preview this branch'}
+							{busy === 'showing' ? 'Switching the previews…' : showing === handoff.branch ? 'Stop previewing' : 'Preview this branch'}
 						</Button>
 					)}
 					<Button variant="ghost" disabled={busy !== null} onClick={startOver}>

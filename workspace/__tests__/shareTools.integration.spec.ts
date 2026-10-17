@@ -164,6 +164,18 @@ describe('sharing through the real tools', () => {
 		expect(readIterations(records, 'demo')[0]?.previewUrl).toBe('https://dev-coke-pr-42.example.test');
 	});
 
+	it('opens a draft onto the branch named, not the default, when one is named: the branch a change was made from', async () => {
+		const gh = github();
+		await realShareTools(work, gh.github, REPO).createDraftPr('dsnr/handoff-20261017-ab12', 'FSButton: 1 change from DSNR', 'draft', 'main');
+		expect(gh.writes).toEqual([
+			{
+				method: 'POST',
+				path: '/repos/o/r/pulls',
+				body: { title: 'FSButton: 1 change from DSNR', head: 'dsnr/handoff-20261017-ab12', base: 'main', body: 'draft', draft: true },
+			},
+		]);
+	});
+
 	it('does not open a second pull request when one is already open for the branch', async () => {
 		const gh = github({ open: [{ number: 9, html_url: 'https://github.test/o/r/pull/9' }] });
 		const runner = new ShareRunner(() => undefined);

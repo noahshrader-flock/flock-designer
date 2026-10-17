@@ -451,6 +451,7 @@ export const ipcDeps = ({
 		valueBranches,
 		handoffBranches,
 		libraryShown,
+		shownSystem,
 		valueAgent,
 		componentVariants,
 		voiceFile,

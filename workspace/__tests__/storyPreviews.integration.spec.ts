@@ -224,6 +224,8 @@ describe('building the previews', () => {
 		const onBranch = await ready(p);
 		expect(onBranch).toContain(`previews-${g(clone, 'rev-parse', branch).trim().slice(0, 12)}-`);
 		expect((await render(onBranch, 'src/components/FSTwo/FSTwo.stories.tsx')).textContent).toContain('Two, by Claude Code');
+		// As it was committed: a change being tried waits for the library's own branch.
+		expect(await p.preview([{ path: 'spacing', value: '12px' }])).toEqual({ state: 'ready', base: onBranch });
 		shown.stop(system);
 		expect(await ready(p)).toContain(`previews-${g(clone, 'rev-parse', 'origin/develop').trim().slice(0, 12)}-`);
 	});

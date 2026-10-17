@@ -386,10 +386,11 @@ describe.skipIf(NO_CHROME)('a component’s Values, in the side pane, in the bro
 		createElement(HandoffActions, {
 			controls: {
 				handoff: {
-					branch: 'dsnr/handoff-20261017-ab12cd',
+					branch: 'dsnr/handoff-20261017-ab12',
 					lines: [],
 					review: {
 						state: 'ready',
+						tip: 'c'.repeat(40),
 						commits: 3,
 						files: [
 							{ path: 'packages/react/src/components/FSCounterLabel/FSCounterLabel.module.css', added: 120, removed: 48, out: null },
@@ -402,7 +403,7 @@ describe.skipIf(NO_CHROME)('a component’s Values, in the side pane, in the bro
 				},
 				handed: null,
 				busy: null,
-				error: 'git could not push dsnr/handoff-20261017-ab12cd: the remote refused it.',
+				error: 'git could not push dsnr/handoff-20261017-ab12: the remote refused it.',
 				processChanges: () => undefined,
 				propose: () => undefined,
 				startOver: () => undefined,

@@ -29,7 +29,8 @@ export const unfinishedWork = async (root: string): Promise<string | null> => {
 		if (existsSync(isAbsolute(path) ? path : join(root, path)))
 			return `The design system’s checkout is in the middle of ${what}. Finish it or abort it first.`;
 	}
-	const status = await git(root, ['status', '--porcelain']);
+	// New files counted whatever the clone's own setting says (`status.showUntrackedFiles`).
+	const status = await git(root, ['status', '--porcelain', '--untracked-files=normal']);
 	if (status !== '') {
 		const files = status.split('\n').length;
 		return `In the design system’s checkout, ${files === 1 ? '1 file is' : `${files} files are`} changed or new and not committed. Commit or stash them first, so Claude Code’s changes are not mixed with yours.`;

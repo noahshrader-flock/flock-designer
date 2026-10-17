@@ -390,6 +390,34 @@ describe('the Design System tab', () => {
 		expect(await call(CHANNELS.forgetTokenBranch)).toEqual({ ok: true, value: null });
 	});
 
+	it('hands over only a change as its unit is (the tokens as the tokens, a component’s values as it), proposes only at a commit, and needs a design system', async () => {
+		const BUTTON = 'src/components/A/A.stories.tsx';
+		const edits = { edits: [{ path: 'spacing', value: '6px' }] };
+		const tried = { tried: [{ property: 'height', value: '32px', targets: ['a'] }] };
+		expect(await call(CHANNELS.handOverChanges, BUTTON, edits)).toMatchObject({
+			ok: false,
+			error: expect.stringContaining('handed over as the tokens'),
+		});
+		expect(await call(CHANNELS.handOverChanges, null, tried)).toMatchObject({
+			ok: false,
+			error: expect.stringContaining('handed over as the tokens'),
+		});
+		expect(await call(CHANNELS.handOverChanges, null, { edits: [], tried: [] })).toMatchObject({
+			ok: false,
+			error: expect.stringContaining('A hand-over is'),
+		});
+		expect(await call(CHANNELS.handOverChanges, null, edits)).toMatchObject({ ok: false, error: 'There is no design system connected.' });
+		expect(await call(CHANNELS.proposeHandoff, null, 'main', true)).toMatchObject({
+			ok: false,
+			error: expect.stringContaining('at the commit that was shown'),
+		});
+		expect(await call(CHANNELS.handoffBranch, null)).toEqual({ ok: true, value: null });
+		expect(await call(CHANNELS.handoffFiles)).toEqual({ ok: true, value: [] });
+		expect(await call(CHANNELS.showHandoff, null)).toMatchObject({ ok: false, error: 'There is no design system connected.' });
+		expect(await call(CHANNELS.showLibraryBranch)).toEqual({ ok: true, value: null });
+		expect(ports.copy).not.toHaveBeenCalled();
+	});
+
 	it('takes only text, and the sha of the file it was opened at, to save the voice and tone, asking GitHub nothing otherwise (T9)', async () => {
 		const asked = githubApi.mock.calls.length;
 		expect(await call(CHANNELS.saveVoiceAndTone, { text: 'x' }, null)).toMatchObject({ ok: false, error: expect.stringContaining('saved as text') });

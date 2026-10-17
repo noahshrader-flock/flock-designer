@@ -159,12 +159,14 @@ const Drawn = ({ primitive, tokens, byPath, preview }: { primitive: Primitive | 
  */
 export const PrimitivesTab = () => {
 	const { ready, note } = useTabCatalog();
-	const [edits] = useTrial();
+	const [tried] = useTrial();
 	const sections = useRef(new Map<string, HTMLElement | null>());
 	const preview = useSpecimenPreview(ready, true);
 	if (note || !ready) return <TabNote note={note?.says ?? ''} onRetry={note?.onRetry ?? null} />;
 
 	const read = ready.tokens;
+	// A branch handed to Claude Code is shown as it was committed: what is tried waits for the library's own branch.
+	const edits = ready.showing === null ? tried : [];
 	const tokens = withEdits(read.tokens, edits);
 	const byPath = new Map(tokens.map((t) => [t.path, t]));
 	const found = byPrimitive(tokens);

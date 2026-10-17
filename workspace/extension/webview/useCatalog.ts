@@ -17,8 +17,9 @@ export interface CatalogRead {
 /**
  * The design system the core shows (the one VS Code found, `showFound`), read as the app's tab reads it (`useCatalogRead`):
  * once `enabled`, at once from what its clone has, then again once GitHub has been asked for changes; after that only on
- * `sync`. Read afresh when another is found (`root`), and again when another commit of it is shown (`onLibraryShown`). Its name is the core's, as connecting it would name it. `onRead` is
- * told each catalog read, for what is kept of the change being tried.
+ * `sync`. Read afresh when another is found (`root`), and again when another commit of it is shown (`onLibraryShown`).
+ * Its name is the core's, as connecting it would name it. `onRead` is told each catalog read, for what is kept of the
+ * change being tried.
  */
 export const useCatalog = (
 	enabled: boolean,
@@ -48,8 +49,9 @@ export const useCatalog = (
 
 /**
  * The design system shown, as a design system's tab reads it: once, when it opens, after saying it is ready (so the
- * extension tells it the change being tried), again on the note's Try again, and when another commit of it is shown. `ready` once it is read and can be shown; else `note`,
- * what the tab says instead: that it is being read, what went wrong, or that it cannot be read (the panel says why).
+ * extension tells it the change being tried), again on the note's Try again, and when another commit of it is shown.
+ * `ready` once it is read and can be shown; else `note`, what the tab says instead: that it is being read, what went
+ * wrong, or that it cannot be read (the panel says why).
  */
 export const useTabCatalog = (): {
 	ready: Extract<Catalog, { state: 'ready' }> | null;

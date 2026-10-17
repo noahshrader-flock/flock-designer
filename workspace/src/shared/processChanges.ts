@@ -21,12 +21,21 @@ export interface HandoffChange {
 	where: string | null;
 }
 
+/**
+ * What turns the rules round for a hand-over: they are DSNR's own agent's too, which commits nothing in a copy DSNR reads;
+ * here, the branch is what DSNR reads.
+ */
+export const COMMIT_HERE =
+	'Those rules are also given to DSNR’s own agent, which commits nothing. Here, commit your work on the branch above: it is what DSNR reads, draws and proposes. Still install nothing.';
+
 /** The most changes one hand-over carries: a pull request a reviewer can read in one sitting. */
 export const MOST_HANDED = 40;
 
-/** A change as a line of the prompt and of the pull request: what it is, and where, or that where is to be found. */
-export const changeLine = (c: HandoffChange): string =>
-	`${c.said} (${c.where ?? 'where it is written was not found: find it in the design system’s own source'})`;
+/** What a change says when DSNR could not find where it is written: the prompt asks Claude Code to find it. */
+const NOT_PLACED = 'not placed by DSNR';
+
+/** A change as a line of the prompt and of the pull request: what it is, and where it is written, or that DSNR did not find where. */
+export const changeLine = (c: HandoffChange): string => `${c.said} (${c.where ?? NOT_PLACED})`;
 
 /** What the hand-over is of, as the prompt says it. */
 const unitOf = (group: HandoffGroup): string => (group.kind === 'tokens' ? 'its design tokens' : `the ${group.name} component alone`);
@@ -34,8 +43,8 @@ const unitOf = (group: HandoffGroup): string => (group.kind === 'tokens' ? 'its 
 /**
  * The prompt typed into Claude Code (not sent: the person adds their own words and presses Enter): what this is, the branch to
  * make and from where, what not to do (push, open a pull request, touch another branch: DSNR checks and proposes), the changes,
- * the rules for changing a design system's code (carried, since the library does not have them; its own docs win), and a last
- * line left open. Throws, in words, with nothing to hand over or more than one hand-over carries.
+ * the rules for changing a design system's code (carried, since the library does not have them; its own docs win), with the one
+ * the hand-over turns round (commit, on the branch, since that is what DSNR reads), and a last line left open. Throws, in words, with nothing to hand over or more than one hand-over carries.
  */
 export const handoffPrompt = ({
 	group,
@@ -67,10 +76,15 @@ export const handoffPrompt = ({
 		'',
 		'The changes:',
 		...changes.map((c) => `- ${changeLine(c)}`),
+		...(changes.some((c) => c.where === null)
+			? ['', `Where a change says ${NOT_PLACED}, find where it is written in the design system's own source.`]
+			: []),
 		'',
 		"The rules for changing a design system's code (this repository's own contributing docs win where they differ):",
 		'',
 		rules.trim(),
+		'',
+		COMMIT_HERE,
 		'',
 		'Anything else, in my own words:',
 		'',
@@ -89,6 +103,7 @@ export const classifyPath = (path: string): string | null => {
 	if (/\.(test|spec)\.[cm]?[jt]sx?$/.test(name) || parts.some((p) => p === '__tests__' || p === '__snapshots__') || name.endsWith('.snap'))
 		return 'a test';
 	if (parts.includes('.storybook')) return 'the Storybook set-up';
+	if (parts[0] === '.github') return 'the repository’s CI and settings';
 	if (['package-lock.json', 'yarn.lock', 'pnpm-lock.yaml', 'bun.lockb', 'npm-shrinkwrap.json'].includes(name)) return 'a lockfile';
 	if (name === 'package.json') return 'the packages it installs';
 	if (parts.some((p) => p === 'node_modules' || p === 'dist' || p === 'build' || p === 'storybook-static') || /\.generated\./.test(name))

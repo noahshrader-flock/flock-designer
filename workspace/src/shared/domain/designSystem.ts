@@ -209,7 +209,15 @@ export type BranchReview =
 	| { state: 'missing' }
 	| { state: 'empty' }
 	| { state: 'off-base' }
-	| { state: 'ready'; commits: number; files: { path: string; added: number; removed: number; out: string | null }[]; lines: number; large: boolean };
+	/** `tip`: the commit read, which Propose is told back, so what is pushed is what the person saw. */
+	| {
+			state: 'ready';
+			tip: string;
+			commits: number;
+			files: { path: string; added: number; removed: number; out: string | null }[];
+			lines: number;
+			large: boolean;
+	  };
 
 /** What one unit's change is when it is handed to Claude Code: the token edits being tried, or one component's values tried. */
 export type HandedChange = { edits: TokenEdit[] } | { tried: TriedValue[] };

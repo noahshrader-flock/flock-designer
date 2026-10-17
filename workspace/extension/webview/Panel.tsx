@@ -224,8 +224,10 @@ export const Panel = () => {
 	// The design system, read once its tab is first shown, and read afresh when another is found; its pictures while it is.
 	const found = context?.designSystem ?? null;
 	const showsDesign = tab === 'design-system' && found !== null && unreadable === null;
-	// A sync keeps only what was tried on tokens the library still has.
+	// A sync keeps only what was tried on tokens the library still has; a branch handed to Claude Code, shown in its place,
+	// is not the library, so nothing tried is let go for it.
 	const design = useCatalog(showsDesign, found?.root ?? null, (catalog) => {
+		if (catalog.state === 'ready' && catalog.showing !== null) return;
 		const still = editsKept(edits, catalog);
 		if (still !== edits) setEdits(still);
 	});

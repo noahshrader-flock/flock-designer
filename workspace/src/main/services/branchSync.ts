@@ -1,7 +1,7 @@
 import type { WorkspaceDescriptor } from './descriptor';
 import { classify } from './branchProjects';
 import type { Problem, SyncResult } from './designSync';
-import { branchAuthors, branchCommit, isSamePerson, listBranches, localIdentity, pushBranch, git } from './git';
+import { branchAuthors, branchCommit, isSamePerson, listBranches, localIdentity, pushBranch, git, isAncestor } from './git';
 import { errorText } from '../../shared/result';
 import { HOST } from '../../shared/vocabulary';
 
@@ -88,10 +88,7 @@ export const syncBranches = async ({ root, descriptor, projects }: BranchSyncInp
 		if (there === here) continue; // already published, exactly
 		if (there !== undefined) {
 			// Only a fast-forward goes. If GitHub has commits this machine lacks (or has never seen), it is a conversation, not a push.
-			const ahead = await git(root, ['merge-base', '--is-ancestor', there, here]).then(
-				() => true,
-				() => false,
-			);
+			const ahead = await isAncestor(root, there, here);
 			if (!ahead) {
 				problems.push(
 					problem(

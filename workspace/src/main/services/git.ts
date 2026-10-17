@@ -344,6 +344,13 @@ export const changedSince = async (root: string, commit: string, path: string): 
 /** The commit a branch is at, without switching to it. */
 export const branchCommit = async (root: string, branch: string): Promise<string> => git(root, ['rev-parse', '--verify', `refs/heads/${branch}`]);
 
+/** Whether `older` is `newer` or one of its ancestors. */
+export const isAncestor = (root: string, older: string, newer: string): Promise<boolean> =>
+	git(root, ['merge-base', '--is-ancestor', older, newer]).then(
+		() => true,
+		() => false,
+	);
+
 export const checkoutBranch = async (root: string, branch: string): Promise<void> => {
 	await requireCleanTree(root, 'switching iteration');
 	if (!(await branchExists(root, branch))) {
