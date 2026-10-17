@@ -710,6 +710,30 @@ describe.skipIf(findChrome() === null)('accessibility', () => {
 		expect(await main(['check-accessibility', '--project', 'demo', '--name', 'v1-i1'], deps(product))).toBe(0);
 	}, 300_000);
 
+	it('keeps nothing of a check on a page changed after it, and says a page with no ledger has not been measured', async () => {
+		expect(await run('new-prototype', '--project', 'demo', '--title', 'Demo', '--note', 'A list')).toBe(0);
+		const task = out.join('\n');
+		const checkLine = /check its accessibility with exactly: `([^`]+)`/.exec(task)?.[1] as string;
+		const build = /Check it builds.*with exactly: `([^`]+)`/.exec(task)?.[1] as string;
+		const sh = (command: string) => spawnSync('/bin/sh', ['-c', command], { cwd: product, encoding: 'utf8' });
+		const source = join(prototypes, 'demo', 'v1-i1.tsx');
+		writeFileSync(
+			source,
+			"export default () => <main><h1>Cameras</h1><button><svg width='16' height='16'><path d='M2 2h12v12H2z' /></svg></button></main>;\n",
+		);
+		expect(sh(build).status).toBe(0);
+		expect(sh(checkLine).status).toBe(1);
+		// Changed after its check: what the check found is not of this page, so none of it is kept.
+		writeFileSync(source, 'export default () => <main><h1>Cameras</h1><button>Add camera</button></main>;\n');
+		expect(await run('save-prototype', '--project', 'demo', '--name', 'v1-i1')).toBe(0);
+		expect(existsSync(join(design, 'projects', 'demo', 'accessibility', 'v1-i1.ledger.json'))).toBe(false);
+		out = [];
+		expect(await main(['check-accessibility', '--project', 'demo', '--name', 'v1-i1'], deps(product))).toBe(1);
+		expect(out.at(-1)).toMatch(
+			/v1-i1\.ledger\.json is not there, or is not a ledger this DSNR writes: run dsnr accessibility --project demo --name v1-i1 first\./,
+		);
+	}, 300_000);
+
 	it('says so, and measures nothing, for a product with no workspace file or no design-mode command', async () => {
 		const bare = join(home, 'bare');
 		mkdirSync(bare);

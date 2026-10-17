@@ -3,7 +3,8 @@ import { join } from 'node:path';
 import axe from 'axe-core';
 import { describe, expect, it } from 'vitest';
 import { criterionOf } from '../src/shared/accessibility';
-import type { AccessibilityIssue, AccessibilityResult } from '../src/shared/contract';
+import type { AccessibilityIssue } from '../src/shared/contract';
+import { AA, cell, issue, result } from './fixtures/accessibilityFixtures';
 import {
 	type Ledger,
 	type LedgerRow,
@@ -13,6 +14,7 @@ import {
 	ledgerFaults,
 	ledgerOf,
 	reviewSection,
+	statusLine,
 	withReviewSection,
 } from '../src/main/services/ledger';
 import type { CellResult } from '../src/main/services/probe/cells';
@@ -24,36 +26,7 @@ import { axeTagsFor } from '../src/shared/wcag';
  * evidence each rests on, review.md's section written from it, what a gate refuses, and how two runs compare.
  */
 
-const target = {
-	declared: true as const,
-	target: { version: '2.1' as const, level: 'AA' as const },
-	tags: axeTagsFor({ version: '2.1', level: 'AA' }),
-	source: 'the manifest',
-};
-const issue = (rule: string, criteria: string[], states = ['Home']): AccessibilityIssue => ({
-	rule,
-	help: rule,
-	impact: 'serious',
-	criteria,
-	nodes: 2,
-	url: '',
-	states,
-	elements: [],
-});
-const result = (violations: AccessibilityIssue[], incomplete: AccessibilityIssue[] = []): AccessibilityResult => ({
-	ran: { axe: axe.version, tags: target.tags, target: 'WCAG 2.1 Level AA', declared: true, at: '2026-10-17T10:00:00.000Z', states: ['Home'] },
-	violations,
-	incomplete,
-	bestPractice: { violations: [], incomplete: [] },
-	notAutomated: [],
-});
-const cell = (id: CellResult['cell'], sc: string, status: CellResult['status'], why?: string): CellResult => ({
-	cell: id,
-	sc,
-	status,
-	findings: status === 'found' ? [{ target: '#a', detail: 'x' }] : [],
-	...(why ? { why } : {}),
-});
+const target = AA;
 const ledger = (views: CellResult[], violations: AccessibilityIssue[] = [], incomplete: AccessibilityIssue[] = []): Ledger =>
 	ledgerOf({
 		key: 'app',
@@ -111,6 +84,33 @@ describe('a ledger', () => {
 		expect(row(l, '1.3.3')).toMatchObject({ status: 'person', by: [], evidence: [], person: 'copy that names shape, color or position' });
 		expect(row(l, '1.4.3')?.person).toBe('what axe could not decide (color-contrast)');
 		expect(row(l, '1.1.1')?.person).toBe('alt text is meaningful; decorative vs informative');
+	});
+});
+
+describe('a status', () => {
+	it('is found when any layer found it, though another did not run: a finding outweighs what was not measured', () => {
+		// 2.2.1: axe measures it (meta-refresh), and the source cell did not run (the ledger's source is not read).
+		const l = ledger([], [issue('meta-refresh', ['2.2.1'])]);
+		expect(row(l, '2.2.1')).toMatchObject({ status: 'found', found: ['axe meta-refresh: 2 elements, in Home'] });
+		expect(row(l, '2.2.1')?.by.map((p) => p.status)).toEqual(['found', 'notRun']);
+	});
+
+	it('says why what was found was left, where it was, and says it in words', () => {
+		const left = ledgerOf({
+			key: 'v1-i1',
+			of: 'demo v1-i1',
+			result: result([issue('button-name', ['4.1.2'])]),
+			resultFile: 'r.json',
+			views: [],
+			source: [],
+			sourceFile: 's.json',
+			target,
+			depth: 'light, at build',
+			left: "the build's own check sent it back 2 times, and it was still there",
+		});
+		expect(statusLine(row(left, '4.1.2') as LedgerRow)).toBe(
+			"found (axe button-name: 2 elements, in Home), left because the build's own check sent it back 2 times, and it was still there",
+		);
 	});
 });
 

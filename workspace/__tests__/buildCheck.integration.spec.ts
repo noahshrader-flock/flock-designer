@@ -61,7 +61,15 @@ describe.skipIf(findChrome() === null)('a build’s own check, run as the agent 
 
 	it('is one script, written beside the build script, that needs nothing installed beside it', () => {
 		expect(script).toBe(join(dir, 'check-prototype.mjs'));
-		expect(statSync(script).size).toBeGreaterThan(500_000);
+		// Bundled whole: what it runs with (the browser's driver, axe) is in it, not imported from beside it.
+		expect(readFileSync(script, 'utf8')).not.toMatch(/(?:from|import\()\s*['"](?:puppeteer-core|axe-core)['"]/);
+	});
+
+	it('is written again only when what it carries changed', async () => {
+		const at = statSync(script).mtimeMs;
+		await new Promise((done) => setTimeout(done, 20));
+		expect(await writeCheckScript(dir)).toBe(script);
+		expect(statSync(script).mtimeMs).toBe(at);
 	});
 
 	it('says what to fix as a build says an error, for two rounds, then what is left, and lets the build finish', () => {

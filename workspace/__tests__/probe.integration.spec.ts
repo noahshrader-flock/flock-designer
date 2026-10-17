@@ -91,6 +91,12 @@ describe.skipIf(findChrome() === null)('a view probed whole', () => {
 		expect(said).toEqual(expect.arrayContaining(['the accessibility tree', 'the Tab walk', 'sending each form']));
 	}, 180_000);
 
+	it('says what it had no time for is not run, never none found', async () => {
+		const { results } = await headless.probe(`${base}/whole`, { depth: 'light', budgetMs: 0 });
+		expect(results.length).toBeGreaterThan(0);
+		for (const r of results) expect(r).toMatchObject({ status: 'notRun', why: "the run's time for this view (0 s) was used up first" });
+	}, 60_000);
+
 	it('runs the light subset (the tree and the Tab walk) quickly enough for a build’s own check', async () => {
 		const { results, ms } = await headless.probe(`${base}/whole`, { depth: 'light' });
 		expect(results.map((r) => r.cell).sort()).toEqual(
@@ -98,6 +104,7 @@ describe.skipIf(findChrome() === null)('a view probed whole', () => {
 				.map((c) => c.id)
 				.sort(),
 		);
-		expect(ms).toBeLessThan(5000);
+		// A build's own check runs it after every build: seconds, not tens of them (machine to machine, the bound is loose).
+		expect(ms).toBeLessThan(10_000);
 	}, 60_000);
 });

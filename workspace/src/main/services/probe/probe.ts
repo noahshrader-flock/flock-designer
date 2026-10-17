@@ -2,7 +2,7 @@
  * The probe (A3 of the accessibility plan): a real browser driven over one view of a page, measuring what axe does not
  * (the accessibility tree, a Tab walk, hover, using each control, changing each field, sending each form, the page at 320
  * pixels, at 200%, with WCAG's text spacing, in forced colors and in grey), and code deciding each cell from what it
- * measured (`cells.ts`). Everything it measured is kept as evidence: the files a person, or the AI review, reads after.
+ * measured (`cells.ts`). Everything it measured is kept as evidence: the files a person reads after.
  * The page's own measures are `page/probe.ts`, added before the page's code runs; nothing here names a framework.
  */
 import axe from 'axe-core';

@@ -97,7 +97,9 @@ describe('the source cells', () => {
 		if (!found) return expect(result).toEqual({ cell, sc: expect.any(String), status: 'none', findings: [] });
 		// By file and line: the line it is on, after the one before it.
 		expect(result).toMatchObject({ cell, status: 'found', findings: [{ target: expect.stringMatching(/^src\/View\.tsx:\d+$/) }] });
-		expect(Number(result?.findings[0]?.target.split(':')[1])).toBeGreaterThan(1);
+		// The line it names is the line it quotes, counted from the file's first (a line is put before the fixture).
+		const at = text.split('\n').findIndex((l) => l.trim() === result?.findings[0]?.detail);
+		expect(result?.findings[0]?.target).toBe(`src/View.tsx:${at + 2}`);
 	});
 
 	it('are not run when the work has no files of its own: reading nothing is never none found', () => {

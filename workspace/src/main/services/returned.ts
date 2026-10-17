@@ -84,7 +84,11 @@ export const parseReturned = (markdown: string): { findings: Returned[]; unreada
 /** How a returned finding stands against what was measured of its criterion. */
 export type ReturnedKind = 'escape' | 'confirmed' | 'unmeasured' | 'person';
 
-/** Each finding sorted by its criterion's row in the ledger: what a machine measured of it, and what it found. */
+/**
+ * Each finding sorted by its criterion's row in the ledger: found by a machine too (confirmed); not measured that time;
+ * reached by no machine (a person's); else an escape, a machine measured it (found none, or found nothing there to
+ * measure) and a person found it.
+ */
 export const sortReturned = (findings: Returned[], ledger: Ledger): { finding: Returned; kind: ReturnedKind; row: LedgerRow }[] =>
 	findings.map((finding) => {
 		const row = ledger.rows.find((r) => r.sc === finding.sc) as LedgerRow;

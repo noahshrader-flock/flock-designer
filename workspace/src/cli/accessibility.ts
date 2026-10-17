@@ -8,7 +8,7 @@
  */
 import { existsSync, rmSync } from 'node:fs';
 import { basename, join } from 'node:path';
-import { checkedWith, countsOf, notAutomatedLine, summaryOf } from '../shared/accessibility';
+import { checkedWith, countsOf, summaryOf } from '../shared/accessibility';
 import type { AccessibilityResult } from '../shared/contract';
 import {
 	accessibilityEvidenceDir,
@@ -287,7 +287,13 @@ export const measureAccessibility = async (deps: MeasureDeps): Promise<number> =
 		[
 			`Measured ${what}: ${summaryOf(countsOf(result))}.`,
 			checkedWith(result),
-			...[notAutomatedLine(result), note].filter((l): l is string => Boolean(l)),
+			// Not the app's line: here the probe and the source measure some of what axe has no rules for.
+			...(result.notAutomated.length
+				? [
+						`axe has no rules for ${result.notAutomated.join(' or ')}: what the probe and the source did not measure of it is a person's, criterion by criterion in the ledger.`,
+					]
+				: []),
+			...(note ? [note] : []),
 			...unopened,
 			...findingsLines(result),
 			...probeLines(measured, depth),

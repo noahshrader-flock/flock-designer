@@ -5,36 +5,14 @@ import { type Ledger, ledgerOf } from '../src/main/services/ledger';
 import { manualListFault, manualSection, withManualSection } from '../src/main/services/manualList';
 import type { CellResult } from '../src/main/services/probe/cells';
 import type { AccessibilityIssue } from '../src/shared/contract';
-import { axeTagsFor } from '../src/shared/wcag';
+import { AA, cell, issue, result } from './fixtures/accessibilityFixtures';
 
 /**
  * The manual list (A8 of the accessibility plan): what is left for whoever tests by hand, from the ledger, in HANDOFF.md.
  * Nothing in it is left unsaid, and nothing in it says the work conforms.
  */
 
-const target = {
-	declared: true as const,
-	target: { version: '2.1' as const, level: 'AA' as const },
-	tags: axeTagsFor({ version: '2.1', level: 'AA' }),
-	source: 'the manifest',
-};
-const issue = (rule: string, criteria: string[]): AccessibilityIssue => ({
-	rule,
-	help: rule,
-	impact: 'serious',
-	criteria,
-	nodes: 2,
-	url: '',
-	states: ['Home'],
-	elements: [],
-});
-const cell = (id: CellResult['cell'], sc: string, status: CellResult['status'], why?: string): CellResult => ({
-	cell: id,
-	sc,
-	status,
-	findings: status === 'found' ? [{ target: 'src/View.tsx:4', detail: 'x' }] : [],
-	...(why ? { why } : {}),
-});
+const target = AA;
 const RUN = {
 	command: 'npm run start:design',
 	address: 'http://localhost:3000/',
@@ -46,13 +24,7 @@ const ledger = (source: CellResult[], violations: AccessibilityIssue[] = [], vie
 	ledgerOf({
 		key: 'app',
 		of: 'Shop’s app in design mode',
-		result: {
-			ran: { axe: axe.version, tags: target.tags, target: 'WCAG 2.1 Level AA', declared: true, at: '2026-10-17T10:00:00.000Z', states: ['Home'] },
-			violations,
-			incomplete: [],
-			bestPractice: { violations: [], incomplete: [] },
-			notAutomated: [],
-		},
+		result: result(violations),
 		resultFile: 'projects/shop/accessibility/app.json',
 		views: [{ state: 'Home', results: views, evidence: 'projects/shop/accessibility/app/home/cells.json' }],
 		source,

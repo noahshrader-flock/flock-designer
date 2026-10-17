@@ -130,8 +130,9 @@ built, always. What changes is how much is **verified and recorded** — never w
 
 ## The manual checklist
 
-Automated tooling cannot answer any of these. Both the review record and the hardening report use
-this same list, so they can be compared across iterations.
+Automated tooling cannot fully answer any of these: a tool may measure part of one (a Tab walk finds
+a trap), and the check is still a person's. Both the review record and the hardening report use this
+same list, so they can be compared across iterations.
 
 | # | Check | Pass means |
 |---|---|---|

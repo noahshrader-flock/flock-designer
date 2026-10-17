@@ -1,54 +1,25 @@
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import axe from 'axe-core';
 import { describe, expect, it } from 'vitest';
 import { guardLines, guardsFor, stacksOf } from '../src/main/services/guards';
 import { type Ledger, ledgerOf } from '../src/main/services/ledger';
 import type { CellResult } from '../src/main/services/probe/cells';
 import { parseReturned, returnedTemplate, sortReturned, withGaps } from '../src/main/services/returned';
 import type { AccessibilityIssue } from '../src/shared/contract';
-import { axeTagsFor } from '../src/shared/wcag';
+import { AA, cell, issue, result } from './fixtures/accessibilityFixtures';
 
 /**
  * Keeping it fixed (A9 of the accessibility plan): what testers send back, read without retyping and sorted by what was
  * measured, its escapes logged once in the product's agent gap log; and a guard proposed for what was fixed.
  */
 
-const target = {
-	declared: true as const,
-	target: { version: '2.1' as const, level: 'AA' as const },
-	tags: axeTagsFor({ version: '2.1', level: 'AA' }),
-	source: 'the manifest',
-};
-const issue = (rule: string, criteria: string[]): AccessibilityIssue => ({
-	rule,
-	help: rule,
-	impact: 'serious',
-	criteria,
-	nodes: 1,
-	url: '',
-	states: ['Home'],
-	elements: [],
-});
-const cell = (id: CellResult['cell'], sc: string, status: CellResult['status'], why?: string): CellResult => ({
-	cell: id,
-	sc,
-	status,
-	findings: [],
-	...(why ? { why } : {}),
-});
+const target = AA;
 const ledger = (violations: AccessibilityIssue[], views: CellResult[]): Ledger =>
 	ledgerOf({
 		key: 'app',
 		of: 'Shop’s app',
-		result: {
-			ran: { axe: axe.version, tags: target.tags, target: 'WCAG 2.1 Level AA', declared: true, at: '2026-10-17T10:00:00.000Z', states: ['Home'] },
-			violations,
-			incomplete: [],
-			bestPractice: { violations: [], incomplete: [] },
-			notAutomated: [],
-		},
+		result: result(violations),
 		resultFile: 'projects/shop/accessibility/app.json',
 		views: [{ state: 'Home', results: views, evidence: 'projects/shop/accessibility/app/home/cells.json' }],
 		source: [],
@@ -108,6 +79,9 @@ describe('what testers send back', () => {
 			['1.4.10', 'unmeasured'],
 			['1.3.3', 'person'],
 		]);
+		// Found nothing there to measure, and a person found one: a machine missed it too.
+		const nothingThere = ledger([], [cell('focus-visible', '2.4.7', 'notApplicable', 'no stops')]);
+		expect(sortReturned(parseReturned(RETURNED).findings.slice(0, 1), nothingThere)[0]?.kind).toBe('escape');
 	});
 });
 
