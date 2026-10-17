@@ -1454,6 +1454,17 @@ textarea.input {
 	font-weight: 600;
 }
 
+/* A part kept closed until it is opened (Tokens used, Accessibility): its title is what opens it, in the title's own colour. */
+.aside-summary {
+	gap: 6px;
+	padding: 0;
+	color: var(--vscode-foreground);
+}
+
+.aside-disclosure > :not(summary) {
+	margin-top: 8px;
+}
+
 /*
  * A component's values, in the narrow side pane, as its tokens read: each property a group, its name in the weight and colour
  * of a token's set, each value a line with what it is called on the left and its value on the right, both at the token

@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import type { CatalogComponent, ComponentTokens, DesignToken } from '../../src/shared/contract';
-import { counted, plural } from '../../src/shared/plural';
+import { plural } from '../../src/shared/plural';
 import { inOrder } from '../../src/shared/primitives';
 import { labelOf } from '../../src/shared/tokens';
 import { useTokenChanges } from '../../src/renderer/tokenChanges';
@@ -11,10 +11,10 @@ import { ChangeReach } from './ChangeReach';
 import { ComponentValues, type Trying } from './ComponentValues';
 import { ValueChanges } from './ValueChanges';
 import { Variants } from './Variants';
-import { SemanticColors } from './SemanticColors';
-import { Sets, TokenRow, type TokenActions } from './Tokens';
+import { Grouped, type TokenActions } from './Tokens';
 import { Dialog } from './ui/Dialog';
 import { Disclosure } from './ui/Disclosure';
+import { Icon } from './ui/Icon';
 import { Notice } from './ui/Notice';
 import { Swatch } from './ui/Swatch';
 
@@ -28,81 +28,25 @@ const Part = ({ title, children }: { title: string; children: ReactNode }) => (
 	</section>
 );
 
+/**
+ * A part kept closed until it is opened, its title the summary that opens it, with how many it holds: what is looked up, not
+ * read every time (the tokens it draws with). The browser's own disclosure, so it opens by click and keyboard.
+ */
+const ClosedPart = ({ title, count, children }: { title: string; count: number; children: ReactNode }) => (
+	<section aria-label={title} className="aside-section">
+		<details className="disclosure aside-disclosure">
+			<summary className="disclosure-summary aside-summary">
+				<Icon name="chevron-right" className="disclosure-chevron" />
+				<h2 className="aside-title">{title}</h2>
+				<span className="section-count">{count}</span>
+			</summary>
+			{children}
+		</details>
+	</section>
+);
+
 /** How the values a component sets itself are named, by kind. */
 const KINDS: Record<Ready['notTokens'][number]['kind'], string> = { color: 'Colors', radius: 'Radius', spacing: 'Spacing' };
-
-/**
- * Made from: what it draws with other than colour, a row for each token by what it is (shape, spacing, type), as the
- * panel's rows are, so a change shows here as there and a row opens its control; under each, how often and which other
- * components share it.
- */
-const MadeFrom = ({ tokens, note, actions }: { tokens: DesignToken[]; note: (t: DesignToken) => ReactNode; actions: TokenActions }) => (
-	<Part title="Made from">
-		{tokens.length === 0 ? (
-			<p className="quiet">It draws with none of the design system’s tokens other than colours.</p>
-		) : (
-			inOrder(tokens, (t) => t.category).map(([category, inCategory]) => (
-				<div key={category} data-made-from={category} className="token-group">
-					<h3 className="token-group-name">{category}</h3>
-					<ul className="tokens">
-						{inCategory.map((t) => (
-							<TokenRow key={t.path} token={t} note={note(t)} {...actions} />
-						))}
-					</ul>
-				</div>
-			))
-		)}
-	</Part>
-);
-
-/**
- * Color tokens: the colours it draws with, as the Design System's semantic tokens show them (`SemanticColors`): each
- * role's variants, a column for each theme, a swatch that opens its control. A palette colour it draws with directly is
- * listed after them, as a row.
- */
-const ColorTokens = ({
-	semantic,
-	palette,
-	note,
-	actions,
-}: {
-	semantic: DesignToken[];
-	palette: DesignToken[];
-	note: (t: DesignToken) => ReactNode;
-	actions: TokenActions;
-}) => (
-	<Part title="Color tokens">
-		{semantic.length > 0 && <SemanticColors tokens={semantic} onEdit={actions.onEdit} />}
-		{palette.length > 0 && <Sets tokens={palette} noteFor={note} {...actions} />}
-	</Part>
-);
-
-/**
- * Usage: how far its tokens reach, in two numbers, from the analysis of its stories: the other components that draw with
- * any of the same tokens, and how often it uses its own. (How many times it is used in the product's code is not found.)
- */
-const Usage = ({ answer }: { answer: Ready }) => {
-	const sharing = new Set(Object.values(answer.sharedWith).flat()).size;
-	const uses = answer.uses.reduce((total, u) => total + u.uses, 0);
-	return (
-		<Part title="Usage">
-			<dl className="usage">
-				<div data-usage="sharing">
-					<dt>Shares its tokens with</dt>
-					<dd>
-						<strong>{sharing}</strong> {counted(sharing, 'component')}
-					</dd>
-				</div>
-				<div data-usage="uses">
-					<dt>Token uses</dt>
-					<dd>
-						<strong>{uses}</strong> {counted(uses, 'use')}
-					</dd>
-				</div>
-			</dl>
-		</Part>
-	);
-};
 
 /** A value it sets itself, with its swatch when it is a colour and how often it is used. */
 const NotToken = ({ value }: { value: Ready['notTokens'][number] }) => (
@@ -116,38 +60,74 @@ const NotToken = ({ value }: { value: Ready['notTokens'][number] }) => (
 );
 
 /**
- * Non-token values: what it sets in the component itself, so is changed in the design system and not here, grouped by kind
- * with how often each is used; the first few of a kind are listed and the rest are kept closed, said by how many.
+ * Tokens used (adjusting a component, the inspector's Phase 2): what its stories draw with, read from all they draw, inner
+ * parts too, where its Values read each instance's top element alone. How far its tokens reach, in two numbers; each token by
+ * its category, then its group and set as the Tokens tab lists them, a row that opens its control, how often it is used and
+ * which other components share it under it; then what it sets itself (changed in the design system, not here), the first
+ * few of a kind and the rest kept closed, and how many uses are shades worked out from a token. Closed until it is opened.
  */
-const NotTokens = ({ answer }: { answer: Ready }) => (
-	<Part title="Non-token values">
-		<p className="quiet">Set in the component itself, so they are changed in the design system, not here.</p>
-		{inOrder(answer.notTokens, (n) => n.kind).map(([kind, values]) => (
-			<div key={kind} data-not-token-kind={kind} className="token-group">
-				<h3 className="token-group-name">{KINDS[kind]}</h3>
-				<ul className="tokens">
-					{values.slice(0, MOST_LISTED).map((n) => (
-						<NotToken key={n.value} value={n} />
-					))}
-				</ul>
-				{values.length > MOST_LISTED && (
-					<Disclosure label={`Show ${values.length - MOST_LISTED} more`}>
-						<ul className="tokens">
-							{values.slice(MOST_LISTED).map((n) => (
-								<NotToken key={n.value} value={n} />
-							))}
-						</ul>
-					</Disclosure>
-				)}
-			</div>
-		))}
-		{answer.derived > 0 && (
-			<p className="quiet">
-				{plural(answer.derived, 'use')} {answer.derived === 1 ? 'is a shade' : 'are shades'} worked out from a token, such as a hover’s darker color.
+const TokensUsed = ({
+	answer,
+	tokens,
+	note,
+	actions,
+}: {
+	answer: Ready;
+	tokens: DesignToken[];
+	note: (t: DesignToken) => ReactNode;
+	actions: TokenActions;
+}) => {
+	const sharing = new Set(Object.values(answer.sharedWith).flat()).size;
+	const uses = answer.uses.reduce((total, u) => total + u.uses, 0);
+	return (
+		<ClosedPart title="Tokens used" count={tokens.length}>
+			<p className="quiet" data-usage>
+				{`Shares its tokens with ${plural(sharing, 'component')}; ${plural(uses, 'token use')} in its stories drawn.`}
 			</p>
-		)}
-	</Part>
-);
+			{tokens.length === 0 ? (
+				<p className="quiet">It draws with none of the design system’s tokens.</p>
+			) : (
+				inOrder(tokens, (t) => t.category).map(([category, inCategory]) => (
+					<div key={category} data-tokens-used={category} className="token-group">
+						<h3 className="token-group-name">{category}</h3>
+						<Grouped tokens={inCategory} noteFor={note} {...actions} />
+					</div>
+				))
+			)}
+			{(answer.notTokens.length > 0 || answer.derived > 0) && (
+				<div data-own-values className="token-group">
+					<h3 className="token-group-name">Set in the component itself</h3>
+					<p className="quiet">Not tokens, so they are changed in the design system, not here.</p>
+					{inOrder(answer.notTokens, (n) => n.kind).map(([kind, values]) => (
+						<div key={kind} data-not-token-kind={kind}>
+							<h4 className="token-set-name">{KINDS[kind]}</h4>
+							<ul className="tokens">
+								{values.slice(0, MOST_LISTED).map((n) => (
+									<NotToken key={n.value} value={n} />
+								))}
+							</ul>
+							{values.length > MOST_LISTED && (
+								<Disclosure label={`Show ${values.length - MOST_LISTED} more`}>
+									<ul className="tokens">
+										{values.slice(MOST_LISTED).map((n) => (
+											<NotToken key={n.value} value={n} />
+										))}
+									</ul>
+								</Disclosure>
+							)}
+						</div>
+					))}
+					{answer.derived > 0 && (
+						<p className="quiet">
+							{plural(answer.derived, 'use')} {answer.derived === 1 ? 'is a shade' : 'are shades'} worked out from a token, such as a hover’s darker
+							color.
+						</p>
+					)}
+				</div>
+			)}
+		</ClosedPart>
+	);
+};
 
 /**
  * What the analysis of a component says, in parts (T6, decision 29, T7): its drawn values, by variant (Phase 1 of adjusting
@@ -176,7 +156,7 @@ export const ComponentSections = ({
 	 */
 	changes: { open: boolean; onClose: () => void; onKept: (kept: boolean) => void; onActions: () => void };
 }) => {
-	const { edits, byPath, isPalette } = useTokenChanges();
+	const { edits, byPath } = useTokenChanges();
 	const { answer, retry } = useComponentTokens(component.id);
 	// The changes being tried on it, in a dialog rather than at the top of this column, so nothing moves while a value is
 	// adjusted: the token changes (they move its stories too) and what they move, drawn only while it is open, then its values.
@@ -228,7 +208,6 @@ export const ComponentSections = ({
 			</span>
 		);
 	};
-	const colors = tokens.filter((t) => t.kind === 'color');
 	return (
 		<>
 			<ValueChanges
@@ -254,12 +233,8 @@ export const ComponentSections = ({
 				onEditToken={actions.onEdit}
 			/>
 			<Variants file={component.id} name={tokenName} others={others} />
-			<MadeFrom tokens={tokens.filter((t) => t.kind !== 'color')} note={note} actions={actions} />
-			{colors.length > 0 && (
-				<ColorTokens semantic={colors.filter((t) => !isPalette(t))} palette={colors.filter(isPalette)} note={note} actions={actions} />
-			)}
-			<Usage answer={answer} />
-			{(answer.notTokens.length > 0 || answer.derived > 0) && <NotTokens answer={answer} />}
+			<TokensUsed answer={answer} tokens={tokens} note={note} actions={actions} />
+			{/* Open: what axe found is one line, its findings already kept closed under it. */}
 			<Part title="Accessibility">
 				{answer.accessibility === null ? (
 					<p className="quiet">Not checked: its stories did not finish drawing for the check.</p>

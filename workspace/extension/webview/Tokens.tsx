@@ -89,17 +89,21 @@ export const Sets = ({ tokens, noteFor, ...actions }: { tokens: DesignToken[]; n
 	</>
 );
 
-/** A primitive's or a category's tokens: under a heading for each group when they are in several (Light, Dark, Tones), else their sets. */
-const Grouped = ({ tokens, ...actions }: { tokens: DesignToken[] } & TokenActions) => {
+/**
+ * A primitive's or a category's tokens: under a heading for each group when they are in several (Light, Dark, Tones), else
+ * their sets; each with `noteFor` its own, when given.
+ */
+export const Grouped = ({ tokens, noteFor, ...actions }: { tokens: DesignToken[]; noteFor?: (token: DesignToken) => ReactNode } & TokenActions) => {
 	const groups = inOrder(tokens, (t) => t.group);
 	// One group would say the category's own name again, so its sets are shown directly.
-	if (groups.length === 1) return <Sets tokens={tokens} {...actions} />;
+	const notes = noteFor ? { noteFor } : {};
+	if (groups.length === 1) return <Sets tokens={tokens} {...notes} {...actions} />;
 	return (
 		<>
 			{groups.map(([group, inGroup]) => (
 				<div key={group} data-token-group={group} className="token-group">
 					<h3 className="token-group-name">{group}</h3>
-					<Sets tokens={inGroup} {...actions} />
+					<Sets tokens={inGroup} {...notes} {...actions} />
 				</div>
 			))}
 		</>

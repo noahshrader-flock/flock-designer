@@ -297,15 +297,12 @@ describe('a component’s tab', () => {
 		if (!document.querySelector('[role="dialog"][aria-label="Changes"]')) await press(document.querySelector('.tab-actions button') as HTMLElement);
 	};
 
-	it('reads in seven parts, in an order that goes from what it is made of to what is wrong with it', async () => {
+	it('reads in four parts: its values, every variant, the tokens it draws with (closed), and what is wrong with it', async () => {
 		await analysed();
 		expect([...document.querySelectorAll('.component-aside > [aria-label]')].map((e) => e.getAttribute('aria-label'))).toEqual([
 			'Values',
 			'Every variant',
-			'Made from',
-			'Color tokens',
-			'Usage',
-			'Non-token values',
+			'Tokens used',
 			'Accessibility',
 		]);
 		// The sixth, its name and links, is the header above.
@@ -518,51 +515,53 @@ describe('a component’s tab', () => {
 		expect(section('Values')?.textContent).toContain('Its stories draw no FSButton on the page, so its values cannot be read.');
 	});
 
-	it('breaks what it is made from down by kind, compactly, apart from its colours, with each token’s uses and who shares it', async () => {
+	it('lists every token it draws with in Tokens used, closed until opened, by category then group and set, with uses and who shares it', async () => {
 		await analysed();
-		const made = section('Made from')!;
-		expect([...made.querySelectorAll('[data-made-from]')].map((c) => c.getAttribute('data-made-from'))).toEqual(['Shape', 'Spacing']);
-		const radius = made.querySelector('[data-token="radius"]') as HTMLElement;
+		const used = section('Tokens used')!;
+		const details = used.querySelector('details') as HTMLDetailsElement;
+		expect(details.open).toBe(false);
+		expect(details.querySelector('summary')?.textContent).toBe('Tokens used5');
+		// Every token Made from and Color tokens listed, colours with the rest: one list.
+		expect([...used.querySelectorAll('[data-token]')].map((t) => t.getAttribute('data-token'))).toEqual([
+			'palette.light.primary.main',
+			'palette.light.primary.contrastText',
+			'palette.dark.primary.main',
+			'radius',
+			'spacing',
+		]);
+		expect([...used.querySelectorAll('[data-tokens-used]')].map((c) => c.getAttribute('data-tokens-used'))).toEqual(['Color', 'Shape', 'Spacing']);
+		// A colour by its theme, then its role, as the Tokens tab lists it.
+		const color = used.querySelector('[data-tokens-used="Color"]') as HTMLElement;
+		expect([...color.querySelectorAll('[data-token-group]')].map((g) => g.getAttribute('data-token-group'))).toEqual(['Light', 'Dark']);
+		const radius = used.querySelector('[data-token="radius"]') as HTMLElement;
 		expect(radius.querySelector('[data-part="name"]')?.textContent).toBe('radius');
 		expect(radius.querySelector('[data-part="value"]')?.textContent).toBe('4px');
 		expect(radius.querySelector('[data-token-use]')?.textContent).toBe('5 uses · also FSIconButton, FSSplitButton');
-		expect(made.querySelector('[data-token="spacing"] [data-token-use]')?.textContent).toBe('4 uses · no other component');
-		// A colour is in Color tokens, not here.
-		expect(made.querySelector('[data-token^="palette"]')).toBeNull();
+		expect(used.querySelector('[data-token="spacing"] [data-token-use]')?.textContent).toBe('4 uses · no other component');
 	});
 
-	it('opens a token’s own control from Made from, as the panel’s row does, and closes it with its X', async () => {
+	it('opens a token’s own control from Tokens used, a colour’s as any other’s, as the panel’s row does, and closes it with its X', async () => {
 		await analysed();
-		await press(section('Made from')!.querySelector('[data-token="radius"] button.token-button') as HTMLElement);
-		expect(document.querySelector('[role="dialog"]')).not.toBeNull();
-		await press(document.querySelector('[role="dialog"] [aria-label="Close"]') as HTMLElement);
-		expect(document.querySelector('[role="dialog"]')).toBeNull();
+		for (const path of ['radius', 'palette.light.primary.main']) {
+			await press(section('Tokens used')!.querySelector(`[data-token="${path}"] button.token-button`) as HTMLElement);
+			expect(document.querySelector('[role="dialog"]')).not.toBeNull();
+			await press(document.querySelector('[role="dialog"] [aria-label="Close"]') as HTMLElement);
+			expect(document.querySelector('[role="dialog"]')).toBeNull();
+		}
 	});
 
-	it('shows the colours it draws with as the semantic tokens do: each role’s variants, Light and Dark side by side, a swatch that opens its control', async () => {
+	it('says in a line how far its tokens reach: the components that share them, and how often it uses them', async () => {
 		await analysed();
-		const colors = section('Color tokens')!;
-		expect([...colors.querySelectorAll('[data-theme-heading]')].map((h) => h.textContent)).toEqual(['Light', 'Dark']);
-		const primary = colors.querySelector('[data-token-set="primary"]') as HTMLElement;
-		expect([...primary.querySelectorAll('[data-token-row]')].map((r) => r.getAttribute('data-token-row'))).toEqual(['main', 'contrastText']);
-		// Both themes of a variant on one row; a variant it draws in one theme only has a dash for the other.
-		expect(primary.querySelectorAll('[data-token-row="main"] [data-token]')).toHaveLength(2);
-		expect(primary.querySelectorAll('[data-token-row="contrastText"] [data-token]')).toHaveLength(1);
-		await press(colors.querySelector('[data-token="palette.light.primary.main"] button') as HTMLElement);
-		expect(document.querySelector('[role="dialog"]')).not.toBeNull();
+		expect(section('Tokens used')?.querySelector('[data-usage]')?.textContent).toBe(
+			'Shares its tokens with 2 components; 15 token uses in its stories drawn.',
+		);
 	});
 
-	it('says in two numbers how far its tokens reach: the components that share them, and how often it uses them', async () => {
-		await analysed();
-		const usage = section('Usage')!;
-		expect(usage.querySelector('[data-usage="sharing"]')?.textContent).toBe('Shares its tokens with2 components');
-		expect(usage.querySelector('[data-usage="uses"]')?.textContent).toBe('Token uses15 uses');
-	});
-
-	it('groups the values it sets itself by kind with their uses, lists the first few, and keeps the rest to open', async () => {
+	it('lists what it sets itself under Tokens used, by kind with their uses, the first few, and keeps the rest to open', async () => {
 		const colors = Array.from({ length: 10 }, (_, i) => ({ kind: 'color', value: `rgb(${i}, 0, 0)`, uses: 10 - i }));
 		await analysed({ notTokens: [...colors, { kind: 'spacing', value: '13px', uses: 1 }] });
-		const values = section('Non-token values')!;
+		const values = section('Tokens used')?.querySelector('[data-own-values]') as HTMLElement;
+		expect(values.querySelector('h3')?.textContent).toBe('Set in the component itself');
 		expect([...values.querySelectorAll('[data-not-token-kind]')].map((g) => g.getAttribute('data-not-token-kind'))).toEqual(['color', 'spacing']);
 		const shown = (kind: string) =>
 			[...values.querySelectorAll(`[data-not-token-kind="${kind}"] > ul > [data-not-token]`)].map((li) => li.textContent);
