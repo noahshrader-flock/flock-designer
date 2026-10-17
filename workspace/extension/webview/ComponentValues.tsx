@@ -72,23 +72,12 @@ const madeOf = (cell: ValueCell, name: (path: string) => string, others: (path: 
 };
 
 /**
- * What a value's colour dot says on hover (`ColorDot`): the token it is, and where else it is used, or its value, then what it
- * is made of, or why it is not a token; what it was drawn as when it is being tried; and that it is only shown when it is.
- */
-const valueColorSays = (cell: ValueCell, made: Made, value: string, tried: string | null, still: boolean): string =>
-	[
-		...(cell.kind === 'token' ? [made.why, value] : [value, made.why]),
-		...(tried === null ? [] : [`Tried; drawn ${cell.value}`]),
-		...(still ? ['Drawn from its props, on one of its stories: shown, not tried.'] : []),
-	].join('\n');
-
-/**
  * One value, as a button that opens its control, as a token's row reads: what it is called on the left (`label`: its
  * property, Padding), with what it is made of as a chip after it (a token's name, "From a token", "Partly" one; nothing for
  * its own, or not checked), its value on the right (marked when it is being tried). **A colour is only its dot**
- * (`ColorDot`), as it is everywhere: its name, value and what it is made of are the dot's tooltip, and the dot is what opens
- * the control. The control of a value of its own is a popover under it (`editor`, shown while `open`), closed by Escape, a
- * press elsewhere or the button again; a token's opens elsewhere, so it has none.
+ * (`ColorDot`), as it is everywhere: its tooltip is the token's name, and the dot is what opens the control. The control of
+ * a value of its own is a popover under it (`editor`, shown while `open`), closed by Escape, a press elsewhere or the button
+ * again; a token's opens elsewhere, so it has none.
  */
 const Cell = ({
 	property,
@@ -126,7 +115,8 @@ const Cell = ({
 					<span className="value-label">{label}</span>
 					<ColorDot
 						value={tried ?? cell.value}
-						says={valueColorSays(cell, made, value, tried, still)}
+						// The token's name and nothing else; a colour that is no token has none to say.
+						{...(cell.kind === 'token' && made.says !== null ? { says: made.says } : {})}
 						name={valueTitle(property, cell.variant)}
 						{...(still ? {} : { onPress: open ? onClose : onOpen, popup: { open } })}
 						{...(tried !== null ? { mark: 'Tried' as const } : {})}

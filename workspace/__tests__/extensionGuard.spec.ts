@@ -348,13 +348,14 @@ describe('the extension’s sources', () => {
 		expect(rule('.codicon.icon-xs')).toMatch(/font-size:\s*var\(--dsnr-icon-xs\)/);
 	});
 
-	it('layer what is above what by names: the bars kept at the top above a row’s actions a list scrolls under, a dialog above all', () => {
+	it('layer what is above what by names: the bars kept at the top above a row’s actions a list scrolls under, a dialog above them, a tooltip above all', () => {
 		const css = files()
 			.find((f) => f.path.endsWith('styles.css'))!
 			.text.replace(/\/\*[\s\S]*?\*\//g, '');
 		const layer = (name: string) => Number(new RegExp(`--dsnr-layer-${name}:\\s*(\\d+)`).exec(css)?.[1]);
 		expect(layer('actions')).toBeLessThan(layer('top'));
 		expect(layer('top')).toBeLessThan(layer('dialog'));
+		expect(layer('dialog')).toBeLessThan(layer('tip'));
 		// No layer is a number of its own: each rule says which, by name.
 		expect([...css.matchAll(/z-index:\s*([^;]+);/g)].map((m) => m[1]).filter((v) => !v!.startsWith('var(--dsnr-layer-'))).toEqual([]);
 		const rule = (selector: string) => css.split('}').find((b) => b.trim().startsWith(selector)) ?? '';
@@ -366,6 +367,14 @@ describe('the extension’s sources', () => {
 		expect(rule('.item-actions {')).toMatch(/z-index:\s*var\(--dsnr-layer-actions\)/);
 		// The tab's bar is kept under the toggle's: its top is the toggle's bar's height.
 		expect(rule('.tab-body .view-bar')).toMatch(/top:\s*var\(--dsnr-top-height\)/);
+	});
+
+	it('tell every page’s tooltips from one host, mounted in the page’s own root, which is the only thing that waits to tell them', () => {
+		const main = files().find((f) => f.path.endsWith('webview/main.tsx'))!.text;
+		expect(main).toMatch(/<TooltipHost \/>/);
+		// The one wait is named once; nothing else in the pages sets a delay for a tooltip.
+		const delays = files().filter(({ path, text }) => /\.tsx?$/.test(path) && /TOOLTIP_DELAY_MS|delayDuration/.test(text));
+		expect(delays.map((f) => f.path)).toEqual(['webview/ui/Tooltip.tsx']);
 	});
 
 	it('keep the design system’s Components and Tokens toggle at the top too, with the search bar stacked under it', () => {

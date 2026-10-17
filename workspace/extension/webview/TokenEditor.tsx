@@ -44,7 +44,7 @@ const ColorScale = ({ token, target }: { token: DesignToken; target: DesignToken
 						role="radio"
 						aria-checked={token.ref?.path === s.path}
 						aria-label={nameOf(s)}
-						title={`${nameOf(s)} · ${s.value}`}
+						title={nameOf(s)}
 						className="step"
 						onClick={() => token.ref?.path !== s.path && change(token, { ref: s.path })}
 					>

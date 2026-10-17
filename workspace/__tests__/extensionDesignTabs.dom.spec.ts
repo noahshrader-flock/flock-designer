@@ -369,20 +369,30 @@ describe('a component’s tab', () => {
 	/** A colour's dot in a row of the inspector: the only thing said of the colour in the row, and what opens its control. */
 	const dotOf = (cell: Element | undefined) => cell?.querySelector('.color-dot') as HTMLElement;
 
-	it('says which token a value is as a chip after its name, with where else it is used on hover; a colour is only its dot, saying it on hover; or nothing, its own or not checked', async () => {
+	it('says nothing on a colour’s dot but the token’s name, in Values and in Tokens used: no hex, no line more, and nothing at all for a colour that is no token', async () => {
+		await analysed();
+		const dots = [...document.querySelectorAll<HTMLElement>('.color-dot')];
+		// Values' colours, and Tokens used's, so both are held to it.
+		expect(dots.some((d) => d.closest('[aria-label="Values"]'))).toBe(true);
+		expect(dots.some((d) => d.closest('[aria-label="Tokens used"]'))).toBe(true);
+		// One line each, and a name: never a hex, nor where else it is used, nor what it points at.
+		for (const d of dots) expect(d.title, d.getAttribute('aria-label') ?? '').toMatch(/^(|(Light|Dark) [A-Za-z ]+)$/);
+	});
+
+	it('says which token a value is as a chip after its name, with where else it is used on hover; a colour is only its dot, whose hover is the token’s name; or nothing, its own or not checked', async () => {
 		await analysed();
 		const radius = shownIn('radius')[0]?.querySelector('button') as HTMLElement;
 		expect(radius.textContent).toBe('RadiusRadius8px');
 		expect(radius.querySelector('.value-chip')?.textContent).toBe('Radius');
 		expect(radius.title).toContain('Radius · also FSIconButton, FSSplitButton');
-		// A colour is its label and its dot: no chip, no swatch beside text, no hex. The token and the colour are the dot's hover.
+		// A colour is its label and its dot: no chip, no swatch beside text, no hex. The dot's hover is the token's name, and only that.
 		const [fill] = shownIn('background');
 		expect(fill?.textContent).toBe('Background');
 		expect(fill?.querySelector('.value-chip')).toBeNull();
 		expect(fill?.querySelectorAll('[data-swatch]')).toHaveLength(1);
 		expect(dotOf(fill).tagName).toBe('BUTTON');
 		expect(dotOf(fill).getAttribute('aria-label')).toBe('Change Background · primary');
-		expect(dotOf(fill).title).toBe('Light primary main · also FSIconButton\n#108062');
+		expect(dotOf(fill).title).toBe('Light primary main');
 		expect(dotOf(fill).getAttribute('aria-description')).toBe(dotOf(fill).title);
 		expect((dotOf(fill).querySelector('[data-swatch]') as HTMLElement).style.backgroundColor).toBe('rgb(16, 128, 98)');
 		// A colour that draws nothing is said as none, with no dot and no chip.
@@ -406,11 +416,11 @@ describe('a component’s tab', () => {
 		};
 		await analysed({ values: { state: 'read', instances: 12, unmarked: 0, rows: { light: [...rows, mixed], dark: null } } });
 		expect(shownIn('text').map((c) => c.textContent)).toEqual(['Text color']);
-		expect(dotOf(shownIn('text')[0]).title).toContain('Light primary main');
+		expect(dotOf(shownIn('text')[0]).title).toBe('Light primary main');
 		await pick('variant', 'hover');
 		expect(shownIn('text').map((c) => c.textContent)).toEqual(['Text color']);
-		// Not a token, so its value first, then what it is made of.
-		expect(dotOf(shownIn('text')[0]).title).toBe('#0A6450\nIt changes with the tokens, but is none of them: a shade, or a size that grows with one.');
+		// Not a token, so no name to say: nothing, and its hex is for its control.
+		expect(dotOf(shownIn('text')[0]).hasAttribute('title')).toBe(false);
 		// The background was never drawn hovered: said, never guessed.
 		const background = section('Values')?.querySelector('[data-value-row="background"]') as HTMLElement;
 		expect(background.hasAttribute('data-not-drawn')).toBe(true);
@@ -418,7 +428,7 @@ describe('a component’s tab', () => {
 		expect(background.querySelector('[title]')?.getAttribute('title')).toContain('Nearest:');
 		await pick('variant', 'plain');
 		expect(shownIn('text').map((c) => c.textContent)).toEqual(['Text color']);
-		expect(dotOf(shownIn('text')[0]).title).toMatch(/^#010203\nThe component’s own/);
+		expect(dotOf(shownIn('text')[0]).hasAttribute('title')).toBe(false);
 	});
 
 	it('chooses a prop that is true or false with a switch, as FSButton’s disabled is: its colours by variant and disabled together', async () => {
@@ -452,10 +462,11 @@ describe('a component’s tab', () => {
 		const toggle = section('Values')?.querySelector('[data-picker="disabled"] [role="switch"]') as HTMLElement;
 		expect(toggle.getAttribute('aria-checked')).toBe('false');
 		expect(shownIn('background').map((c) => c.textContent)).toEqual(['Background']);
-		expect(dotOf(shownIn('background')[0]).title).toMatch(/^#108062\n/);
+		expect(dotOf(shownIn('background')[0]).hasAttribute('title')).toBe(false);
+		expect((dotOf(shownIn('background')[0]).querySelector('[data-swatch]') as HTMLElement).style.backgroundColor).toBe('rgb(16, 128, 98)');
 		await press(toggle);
 		expect(toggle.getAttribute('aria-checked')).toBe('true');
-		expect(dotOf(shownIn('background')[0]).title).toMatch(/^#C8C8C8\n/);
+		expect((dotOf(shownIn('background')[0]).querySelector('[data-swatch]') as HTMLElement).style.backgroundColor).toBe('rgb(200, 200, 200)');
 	});
 
 	it('says a radius that makes its ends round as full, with no control, and the radii that are sizes as they are (Phase 5.5)', async () => {
@@ -485,12 +496,12 @@ describe('a component’s tab', () => {
 		};
 		await analysed({ values: { state: 'read', instances: 14, unmarked: 0, rows: { light: [...rows, many], dark: null } } });
 		expect(shownIn('border').map((c) => c.textContent)).toEqual(['Border']);
-		expect(dotOf(shownIn('border')[0]).title).toMatch(/^#000000\n/);
+		expect(dotOf(shownIn('border')[0]).hasAttribute('title')).toBe(false);
 		const more = section('Values')?.querySelector('[data-value-row="border"] details') as HTMLElement;
 		expect(more.querySelector('summary')?.textContent).toBe('13 more');
 		expect(more.querySelectorAll('[data-value-cell]')).toHaveLength(13);
 		expect(more.querySelector('[data-value-cell]')?.textContent).toBe('13 instances');
-		expect(dotOf(more.querySelector('[data-value-cell]') as Element).title).toMatch(/^#010000\n/);
+		expect(dotOf(more.querySelector('[data-value-cell]') as Element).hasAttribute('title')).toBe(false);
 	});
 
 	it('shows dark’s values when dark is chosen in the panel, as the stories draw it there, and light’s again when light is', async () => {
@@ -499,7 +510,7 @@ describe('a component’s tab', () => {
 		await say({ type: 'mode', mode: 'dark' });
 		expect([...values.querySelectorAll('[data-value-row]')].map((r) => r.getAttribute('data-value-row'))).toEqual(['height', 'background']);
 		expect(shownIn('background').map((c) => c.textContent)).toEqual(['Background']);
-		expect(dotOf(shownIn('background')[0]).title).toMatch(/^Dark primary main · .*\n#2BB48A$/);
+		expect(dotOf(shownIn('background')[0]).title).toBe('Dark primary main');
 		await say({ type: 'mode', mode: 'light' });
 		expect(values.querySelector('[data-value-row="radius"]')).not.toBeNull();
 	});
@@ -572,7 +583,7 @@ describe('a component’s tab', () => {
 		expect(primary.querySelector('[data-part="name"]')?.textContent).toBe('main');
 		expect(primary.querySelector('[data-part="value"], [data-part="ref"]')).toBeNull();
 		expect(primary.querySelectorAll('[data-swatch]')).toHaveLength(1);
-		expect(dotOf(primary).title).toMatch(/^Light primary main\n.*#[0-9A-F]{6}$/);
+		expect(dotOf(primary).title).toBe('Light primary main');
 		const radius = used.querySelector('[data-token="radius"]') as HTMLElement;
 		expect(radius.querySelector('[data-part="name"]')?.textContent).toBe('radius');
 		expect(radius.querySelector('[data-part="value"]')?.textContent).toBe('4px');

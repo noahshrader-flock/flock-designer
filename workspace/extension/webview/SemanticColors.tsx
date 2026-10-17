@@ -1,24 +1,21 @@
 import type { DesignToken } from '../../src/shared/contract';
-import { colorSays, labelOf, rowContrast, semanticTable, type SemanticRow } from '../../src/shared/tokens';
+import { rowContrast, semanticTable, type SemanticRow } from '../../src/shared/tokens';
 import { useTokenChanges } from '../../src/renderer/tokenChanges';
-import { ColorDot } from './ui/ColorDot';
+import { ColorDot, tokenDot } from './ui/ColorDot';
 
 /**
  * One theme's value of a role, as `SemanticColors` draws it: its color as a dot (`ColorDot`), centered under its theme, its
- * name and what it points at in its tooltip, its hex left to its control. Pressing it opens its control, so a change is
- * always to one theme's token. Marked when changed, and when its contrast is below the target.
+ * name as its tooltip, its hex left to its control. Pressing it opens its control, so a change is always to one theme's
+ * token. Marked when changed, and when its contrast is below the target.
  */
 const ThemeValue = ({ token, onEdit }: { token: DesignToken; onEdit: (token: DesignToken) => void }) => {
 	const changes = useTokenChanges();
-	const target = changes.target(token);
 	const edited = changes.isChanged(token);
 	const flagged = rowContrast(token, changes)?.flag === true;
 	return (
 		<span data-token={token.path} data-changed={edited || undefined} className="theme-cell">
 			<ColorDot
-				value={token.value}
-				says={colorSays(token, target)}
-				name={labelOf(token)}
+				{...tokenDot(token)}
 				onPress={() => onEdit(token)}
 				{...(edited ? { mark: 'Changed' as const } : {})}
 				{...(flagged ? { flag: 'Contrast is too low' } : {})}

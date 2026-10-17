@@ -1462,18 +1462,27 @@ describe('Design System', () => {
 		expect(rows.map((r) => r.dataset.tokenRow)).toEqual(['main', 'contrastText']);
 		// Each theme's value is a dot of its own, saying which token it is and what it points at; a theme without the role is a dash.
 		const light = rows[0]!.querySelector('[data-token="palette.light.primary.main"] button') as HTMLElement;
-		expect(light.getAttribute('title')).toBe('Light primary main\npineGreen 50 · #1F6F5C');
+		expect(light.getAttribute('title')).toBe('Light primary main');
 		expect(light.className).toBe('color-dot');
-		expect(rows[0]!.querySelector('[data-token="palette.dark.primary.main"] button')?.getAttribute('title')).toMatch(
-			/^Dark primary main\npineGreen 60 · #/,
-		);
+		expect(rows[0]!.querySelector('[data-token="palette.dark.primary.main"] button')?.getAttribute('title')).toBe('Dark primary main');
 		expect(rows[1]!.querySelector('.theme-none')?.textContent).toBe('—');
 		// Pressed, one theme's value opens its own control.
 		await press(light);
 		expect(document.querySelector('[role="dialog"]')?.getAttribute('aria-label')).toBe('Light · primary.main');
 	});
 
-	it('shows the palette behind the roles, a press away: each step as its name and only its dot, saying its value, and its own file', async () => {
+	it('says nothing on a colour’s dot but the token’s name, in the grid of roles and in the palette: one line, no hex, no pointer', async () => {
+		for (const palette of [false, true]) {
+			await unmount();
+			await tokens(palette);
+			const dots = [...body().querySelectorAll<HTMLElement>('.color-dot')];
+			expect(dots.length).toBeGreaterThan(0);
+			// The token's name, as the row is named, and nothing after it.
+			for (const d of dots) expect(d.title).toBe(d.getAttribute('aria-label')?.replace(/^Change /, ''));
+		}
+	});
+
+	it('shows the palette behind the roles, a press away: each step as its name and only its dot, whose hover is its name, and its own file', async () => {
 		await tokens(true);
 		expect(titles()[0]).toEqual(['Color', '2']);
 		const step = body().querySelector('[data-token="tone.pineGreen.50"]') as HTMLElement;
@@ -1481,7 +1490,7 @@ describe('Design System', () => {
 		expect(step.querySelectorAll('[data-swatch]')).toHaveLength(1);
 		expect(step.querySelector('[data-part="value"]')).toBeNull();
 		expect(step.querySelector('[data-part="name"]')?.textContent).toBe('50');
-		expect(step.querySelector('.color-dot')?.getAttribute('title')).toBe('Tones pineGreen 50\n#1F6F5C');
+		expect(step.querySelector('.color-dot')?.getAttribute('title')).toBe('Tones pineGreen 50');
 		expect(step.title).toBe('src/colors/tones.ts:3');
 		await press(step.querySelector('[aria-label="Open src/colors/tones.ts:3"]') as HTMLElement);
 		expect(panelSaid().at(-1)).toEqual({ type: 'open-library-source', file: 'src/colors/tones.ts', line: 3 });
@@ -1501,7 +1510,7 @@ describe('Design System', () => {
 		await say({ type: 'token-edits', edits: [{ path: 'tone.pineGreen.50', value: '#000000' }] });
 		const step = body().querySelector('[data-token="tone.pineGreen.50"]') as HTMLElement;
 		expect(step.dataset.changed).toBe('true');
-		expect(step.querySelector('.color-dot')?.getAttribute('title')).toBe('Tones pineGreen 50\n#000000');
+		expect((step.querySelector('.color-dot [data-swatch]') as HTMLElement).style.backgroundColor).toBe('rgb(0, 0, 0)');
 		// Marked on the dot, where its color is.
 		expect(step.querySelector('.color-dot [data-changed-mark]')?.getAttribute('aria-label')).toBe('Changed');
 		// The role pointing at it shows the change too.
@@ -1845,6 +1854,8 @@ describe('trying a change to the tokens, saving it to a branch, and proposing it
 			['50', 'true'],
 			['60', 'false'],
 		]);
+		// A step's hover is its name, as every colour's is: not its hex.
+		expect(steps.map((step) => step.title)).toEqual(['pineGreen 50', 'pineGreen 60']);
 		expect(dialog().querySelector('[data-editor-contrast]')?.textContent).toMatch(/^Contrast with contrastText: \d/);
 		await press(steps[1]!);
 		expect(edited()).toEqual([{ path: 'palette.light.primary.main', ref: 'tone.pineGreen.60' }]);

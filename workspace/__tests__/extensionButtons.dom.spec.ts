@@ -152,12 +152,10 @@ describe('the color dot', () => {
 
 	it('is a button named for what it changes, saying what it is on hover and to assistive technology, that opens its control when pressed', async () => {
 		const onPress = vi.fn();
-		await mount(
-			createElement(ColorDot, { value: '#108062', says: 'Light primary main\npineGreen 50 · #108062', name: 'Light primary main', onPress }),
-		);
+		await mount(createElement(ColorDot, { value: '#108062', says: 'Light primary main', name: 'Light primary main', onPress }));
 		expect(dot().tagName).toBe('BUTTON');
 		expect(dot().getAttribute('aria-label')).toBe('Change Light primary main');
-		expect(dot().title).toBe('Light primary main\npineGreen 50 · #108062');
+		expect(dot().title).toBe('Light primary main');
 		expect(dot().getAttribute('aria-description')).toBe(dot().title);
 		expect((dot().querySelector('[data-swatch]') as HTMLElement).style.backgroundColor).toBe('rgb(16, 128, 98)');
 		// Nothing else of the color is written: no name, no hex.
@@ -166,19 +164,30 @@ describe('the color dot', () => {
 		expect(onPress).toHaveBeenCalledTimes(1);
 	});
 
-	it('is the same dot with nothing to press when it has no control, said as an image by its name and what it says on one line', async () => {
-		await mount(createElement(ColorDot, { value: '#108062', says: '#108062\nDrawn from its props', name: 'Background · primary' }));
+	it('is the same dot with nothing to press when it has no control, said as an image by its name and the token it is', async () => {
+		await mount(createElement(ColorDot, { value: '#108062', says: 'Light primary main', name: 'Background · primary' }));
 		expect(dot().tagName).toBe('SPAN');
 		expect(dot().getAttribute('role')).toBe('img');
-		expect(dot().getAttribute('aria-label')).toBe('Background · primary: #108062, Drawn from its props');
-		expect(dot().title).toBe('#108062\nDrawn from its props');
+		expect(dot().getAttribute('aria-label')).toBe('Background · primary: Light primary main');
+		expect(dot().title).toBe('Light primary main');
+	});
+
+	it('has no tooltip when it is no token, said by its name alone, whether it has a control or not', async () => {
+		await mount(createElement(ColorDot, { value: '#108062', name: 'Background', onPress: () => undefined }));
+		expect(dot().hasAttribute('title')).toBe(false);
+		expect(dot().hasAttribute('aria-description')).toBe(false);
+		expect(dot().getAttribute('aria-label')).toBe('Change Background');
+		document.body.innerHTML = '';
+		await mount(createElement(ColorDot, { value: '#108062', name: 'Background' }));
+		expect(dot().hasAttribute('title')).toBe(false);
+		expect(dot().getAttribute('aria-label')).toBe('Background');
 	});
 
 	it('says whether the popover it opens is open, only when it opens one', async () => {
-		await mount(createElement(ColorDot, { value: '#000000', says: '#000000', name: 'Border', onPress: () => undefined, popup: { open: true } }));
+		await mount(createElement(ColorDot, { value: '#000000', name: 'Border', onPress: () => undefined, popup: { open: true } }));
 		expect([dot().getAttribute('aria-haspopup'), dot().getAttribute('aria-expanded')]).toEqual(['dialog', 'true']);
 		document.body.innerHTML = '';
-		await mount(createElement(ColorDot, { value: '#000000', says: '#000000', name: 'Border', onPress: () => undefined }));
+		await mount(createElement(ColorDot, { value: '#000000', name: 'Border', onPress: () => undefined }));
 		expect(dot().hasAttribute('aria-haspopup')).toBe(false);
 		expect(dot().hasAttribute('aria-expanded')).toBe(false);
 	});
@@ -187,7 +196,6 @@ describe('the color dot', () => {
 		await mount(
 			createElement(ColorDot, {
 				value: '#000000',
-				says: '#000000',
 				name: 'Text',
 				onPress: () => undefined,
 				mark: 'Tried',
@@ -197,7 +205,7 @@ describe('the color dot', () => {
 		expect(dot().querySelector('[data-changed-mark]')?.getAttribute('aria-label')).toBe('Tried');
 		expect(dot().querySelector('.badge-warning')?.getAttribute('aria-label')).toBe('Contrast is too low');
 		document.body.innerHTML = '';
-		await mount(createElement(ColorDot, { value: '#000000', says: '#000000', name: 'Text', onPress: () => undefined }));
+		await mount(createElement(ColorDot, { value: '#000000', name: 'Text', onPress: () => undefined }));
 		expect(dot().querySelector('[data-changed-mark], .badge')).toBeNull();
 	});
 });

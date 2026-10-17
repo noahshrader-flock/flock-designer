@@ -1,7 +1,7 @@
 import { type ReactNode, useState } from 'react';
 import type { DesignToken, DesignTokens } from '../../src/shared/contract';
 import { byPrimitive, drawnAs, inOrder, isEditable, listed } from '../../src/shared/primitives';
-import { type ColorView, colorSays, labelOf, pointsAt, rowContrast, tokensShown } from '../../src/shared/tokens';
+import { type ColorView, labelOf, pointsAt, rowContrast, tokensShown } from '../../src/shared/tokens';
 import { useTokenChanges } from '../../src/renderer/tokenChanges';
 import { NoMatches } from './ui/NoMatches';
 import { EmptyState } from './ui/EmptyState';
@@ -10,7 +10,7 @@ import { SearchBox } from './ui/SearchBox';
 import { Section } from './ui/Section';
 import { Toggle } from './ui/Toggle';
 import { SemanticColors } from './SemanticColors';
-import { ColorDot } from './ui/ColorDot';
+import { ColorDot, tokenDot } from './ui/ColorDot';
 
 /** What a token row can do: open its control (a token that can be changed), and open its own file at its line. */
 export interface TokenActions {
@@ -67,13 +67,7 @@ export const TokenRow = ({ token, note, onEdit, onSource }: { token: DesignToken
 				<div className="token-line">
 					{name}
 					{pair}
-					<ColorDot
-						value={token.value}
-						says={colorSays(token, target)}
-						name={labelOf(token)}
-						{...(editable ? { onPress: () => onEdit(token) } : {})}
-						{...(edited ? { mark: 'Changed' as const } : {})}
-					/>
+					<ColorDot {...tokenDot(token)} {...(editable ? { onPress: () => onEdit(token) } : {})} {...(edited ? { mark: 'Changed' as const } : {})} />
 				</div>
 			) : editable ? (
 				<button type="button" className="token-line token-button" aria-label={`Change ${labelOf(token)}`} onClick={() => onEdit(token)}>
