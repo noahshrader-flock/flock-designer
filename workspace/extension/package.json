@@ -22,7 +22,7 @@
 				{
 					"id": "dsnr",
 					"title": "DSNR",
-					"icon": "$(rocket)"
+					"icon": "$(code-oss)"
 				}
 			]
 		},

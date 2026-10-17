@@ -861,7 +861,7 @@ describe('a component’s tab', () => {
 			expect(section('Every variant')).toBeNull();
 		});
 
-		it('offers a case only its props declare, shown from their drawing and never tried; and says what its story sets and what cannot be varied', async () => {
+		it('offers a case only its props declare, shown from their drawing and never tried; and says what its story sets', async () => {
 			await analysed();
 			await answer('componentVariants', READY);
 			const size = section('Values')?.querySelector('[data-picker="size"] select') as HTMLSelectElement;
@@ -874,10 +874,8 @@ describe('a component’s tab', () => {
 			expect(height.hasAttribute('data-still')).toBe(true);
 			expect(height.querySelector('button')).toBeNull();
 			expect(height.querySelector('[title]')?.getAttribute('title')).toContain('Drawn from its props');
-			expect(notes()).toEqual([
-				'Its story sets variant itself: drawn with another value, it draws as the story has it.',
-				'Not varied: children (content), sx (an object), onClick (a callback).',
-			]);
+			// What cannot be varied (children, sx, a callback) is not said: no one chooses between those.
+			expect(notes()).toEqual(['Its story sets variant itself: drawn with another value, it draws as the story has it.']);
 		});
 
 		it('adds nothing when its stories name no component whose props can be read', async () => {

@@ -6,7 +6,6 @@ import {
 	type ComponentVariants,
 	type DesignToken,
 	type TriedValue,
-	type Unvaried,
 	type ValueCell,
 	type ValueProperty,
 	type ValueRow,
@@ -156,12 +155,10 @@ const Cell = ({
 	);
 };
 
-/** Why a prop cannot be varied, as it is said. */
-const UNVARIED: Record<Unvaried, string> = { object: 'an object', callback: 'a callback', content: 'content', text: 'free text', number: 'a number' };
-
 /**
  * What is said under the pickers of choosing a variant, from its props' drawing: that it is being drawn, or why it could not
- * be; what its story sets itself, so a value of that prop draws as the story has it; what cannot be varied, and why.
+ * be; what its story sets itself, so a value of that prop draws as the story has it. What cannot be varied (children, a
+ * class name, an object) is not said: no one chooses between those, and it is most of every component's props.
  */
 const variantNotes = (variants: ComponentVariants): { key: string; text: string }[] => {
 	if (variants.state === 'building') return [{ key: 'building', text: 'Reading its props, and drawing it with each of their values.' }];
@@ -170,9 +167,6 @@ const variantNotes = (variants: ComponentVariants): { key: string; text: string 
 	return [
 		...(variants.fixed.length > 0
 			? [{ key: 'fixed', text: `Its story sets ${variants.fixed.join(', ')} itself: drawn with another value, it draws as the story has it.` }]
-			: []),
-		...(variants.unvaried.length > 0
-			? [{ key: 'unvaried', text: `Not varied: ${variants.unvaried.map((u) => `${u.name} (${UNVARIED[u.why]})`).join(', ')}.` }]
 			: []),
 	];
 };

@@ -31,9 +31,9 @@ describe('the extension’s manifest', () => {
 		expect(m.engines.vscode).toMatch(/^\^1\.\d+\.0$/);
 	});
 
-	it('puts one container in the activity bar, titled DSNR, with VS Code’s own rocket icon', () => {
+	it('puts one container in the activity bar, titled DSNR, with VS Code’s own code-oss icon', () => {
 		const { activitybar } = manifest().contributes.viewsContainers;
-		expect(activitybar.map((c) => [c.id, c.title, c.icon])).toEqual([['dsnr', 'DSNR', '$(rocket)']]);
+		expect(activitybar.map((c) => [c.id, c.title, c.icon])).toEqual([['dsnr', 'DSNR', '$(code-oss)']]);
 		// One of VS Code's codicons, which it draws in the theme's own colour: there is no icon file of ours to carry.
 		expect(existsSync(join(root, 'media'))).toBe(false);
 		expect(readFileSync(join(root, '.vscodeignore'), 'utf8')).not.toContain('media');
