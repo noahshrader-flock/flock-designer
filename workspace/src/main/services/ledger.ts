@@ -7,10 +7,11 @@
  * with none found of what was measured.
  */
 import axe from 'axe-core';
-import { criterionOf } from '../../shared/accessibility';
+import { criterionOf, whereFound } from '../../shared/accessibility';
 import type { AccessibilityResult } from '../../shared/contract';
 import { type DeclaredTarget, requiredAt, targetLine } from '../../shared/wcag';
-import { CRITERIA } from '../../shared/wcagCriteria';
+import { CRITERIA, type ManualMark } from '../../shared/wcagCriteria';
+import { plural } from '../../shared/plural';
 import { CELLS, type CellResult } from './probe/cells';
 
 /**
@@ -35,7 +36,6 @@ export interface LedgerRow {
 	/** Whether the product's target asks for it; one it does not is readiness, never counted as the target's. */
 	atTarget: boolean;
 	status: LedgerStatus;
-	layers: ('axe' | 'probe')[];
 	/** What each layer measured of it, one apiece: axe's rules, or a probe cell in a view or the source, and what it found. */
 	by: LedgerPart[];
 	/** What was found, a line each: the rule or cell, where, and how much. */
@@ -46,9 +46,12 @@ export interface LedgerRow {
 	why?: string;
 	/** What a person still judges of it, whatever a machine found. */
 	person: string | null;
-	/** When the manual list carries it (AT, if, host). */
-	manual: string | null;
+	/** When the manual list carries it (assistive technology, only if the work has something, the page around it). */
+	manual: ManualMark | null;
 }
+
+/** The layers that reached a criterion, as its parts say. */
+export const layersOf = (r: Pick<LedgerRow, 'by'>): ('axe' | 'probe')[] => [...new Set(r.by.map((p) => p.layer))];
 
 /** How the work was run for a measure of a product's own app: what a person runs, where, which pages, and on what data. */
 export interface LedgerRun {
@@ -60,8 +63,11 @@ export interface LedgerRun {
 	assistiveTechnology: string[] | null;
 }
 
+/** How a ledger is written: raised when what it holds changes (2: each layer's measure, structured manual marks, best practice), so one an older DSNR wrote is measured again, never misread. */
+export const LEDGER_VERSION = 2;
+
 export interface Ledger {
-	version: 1;
+	version: typeof LEDGER_VERSION;
 	/** Which measure of the project it is (a prototype's name, or `app`), and what that is, in words. */
 	key: string;
 	of: string;
@@ -71,11 +77,13 @@ export interface Ledger {
 	depth: string;
 	/** How it was run, for a product's own app: what the manual list tells a tester. */
 	run?: LedgerRun;
+	/** What axe's best-practice rules found beside WCAG (a heading out of order), a line each: never a criterion's. */
+	bestPractice: { rule: string; line: string }[];
 	rows: LedgerRow[];
 }
 
 /** One view the probe measured: its name, what each cell found, and the file its results are in. */
-export interface LedgerView {
+interface LedgerView {
 	state: string;
 	results: CellResult[];
 	evidence: string;
@@ -130,20 +138,13 @@ export const ledgerOf = ({
 		const found: string[] = [];
 		const evidence = new Set<string>();
 		const why: string[] = [];
-		const layers: LedgerRow['layers'] = [];
 		const by: LedgerPart[] = [];
 		const undecided: string[] = [];
 		const notMeasured: string[] = [];
 		if (byAxe.has(c.sc)) {
-			layers.push('axe');
 			evidence.add(resultFile);
 			const issues = result.violations.filter((i) => i.criteria.includes(c.sc));
-			found.push(
-				...issues.map(
-					(i) =>
-						`axe ${i.rule}: ${i.nodes} element${i.nodes === 1 ? '' : 's'}${i.states.join(', ') === 'default' ? '' : `, in ${i.states.join(', ')}`}`,
-				),
-			);
+			found.push(...issues.map((i) => `axe ${i.rule}: ${whereFound(i)}`));
 			statuses.push(issues.length ? 'found' : 'measured');
 			by.push(
 				...(issues.length
@@ -156,14 +157,13 @@ export const ledgerOf = ({
 		// A cell that measures this criterion and was not run in this measure (a light one, a build's): not run, said, never
 		// "a person's" or "measured" in its place.
 		const missing = CELLS.filter((cell) => cell.sc === c.sc && !own.some(({ r }) => r.cell === cell.id));
-		if (own.length || missing.length) layers.push('probe');
 		for (const cell of missing) {
 			by.push({ layer: 'probe', what: cell.id, where: cell.kind === 'source' ? 'the source' : 'every page', status: 'notRun' });
 			statuses.push('notRun');
 			notMeasured.push(`${cell.id} was not run in this measure (at ${depth} depth)`);
 		}
 		for (const { r, where, file } of own) {
-			if (r.status === 'found') found.push(`probe ${r.cell}, in ${where}: ${r.findings.length} finding${r.findings.length === 1 ? '' : 's'}`);
+			if (r.status === 'found') found.push(`probe ${r.cell}, in ${where}: ${plural(r.findings.length, 'finding')}`);
 			if (r.status === 'notRun' || r.status === 'notApplicable') why.push(`${r.cell}, in ${where}: ${r.why ?? ''}`);
 			if (r.status !== 'notRun') evidence.add(file);
 			const status = r.status === 'none' ? 'measured' : r.status;
@@ -177,7 +177,6 @@ export const ledgerOf = ({
 			name: c.name,
 			atTarget: requiredAt(c, target.target),
 			status,
-			layers,
 			by,
 			found,
 			evidence: status === 'person' ? [] : [...evidence],
@@ -189,31 +188,46 @@ export const ledgerOf = ({
 			manual: c.manual,
 		};
 	});
-	return { version: 1, key, of, at: result.ran.at, target: targetLine(target), axe: result.ran.axe, depth, ...(run ? { run } : {}), rows };
+	const bestPractice = result.bestPractice.violations.map((i) => ({ rule: i.rule, line: `${i.rule}: ${whereFound(i)}` }));
+	return {
+		version: LEDGER_VERSION,
+		key,
+		of,
+		at: result.ran.at,
+		target: targetLine(target),
+		axe: result.ran.axe,
+		depth,
+		...(run ? { run } : {}),
+		bestPractice,
+		rows,
+	};
 };
 
 /**
- * The standard's ten manual checks, each a view of the criteria it is about: the names people know, kept as they are in
- * `standards/universal/accessibility.md` (a test holds them to it), so the review record reads as it always has.
+ * The standard's ten manual checks, each beside what machines measured toward it: the criteria it is about, where a
+ * measure reaches them, and axe's best-practice rules for it (a heading out of order). The names are the standard's (a test
+ * holds them to `standards/universal/accessibility.md`). A check no measure reaches has none here: focus moving into a
+ * dialog and back, motion that a person who asks for less still gets. Each check stays a person's: what machines
+ * measured is beside it, never in its place.
  */
-export const TEN_CHECKS: { name: string; sc: string[] }[] = [
+export const TEN_CHECKS: { name: string; sc: string[]; bestPractice?: string[] }[] = [
 	{ name: 'Keyboard reachability', sc: ['2.1.1'] },
 	{ name: 'Tab order', sc: ['2.4.3', '2.1.2'] },
 	{ name: 'Focus visibility', sc: ['2.4.7', '2.4.11'] },
-	{ name: 'Focus management', sc: ['3.2.1'] },
+	{ name: 'Focus management', sc: [] },
 	{ name: 'Accessible names', sc: ['4.1.2', '1.1.1', '2.5.3'] },
-	{ name: 'Heading structure', sc: ['1.3.1', '2.4.6'] },
+	{ name: 'Heading structure', sc: ['1.3.1', '2.4.6'], bestPractice: ['heading-order', 'empty-heading', 'page-has-heading-one'] },
 	{ name: 'Status announcement', sc: ['4.1.3'] },
 	{ name: 'Non-color signals', sc: ['1.4.1'] },
 	{ name: 'Error messages', sc: ['3.3.1', '3.3.3'] },
-	{ name: 'Reduced motion', sc: ['2.2.2', '2.3.1'] },
+	{ name: 'Reduced motion', sc: [] },
 ];
 
 /** A row's status in words, the same in the review record and wherever else it is said. A "not run" always says because. */
 export const statusLine = (r: LedgerRow): string => {
 	if (r.status === 'found') return `found (${r.found.join('; ')})${r.why ? `, left because ${r.why}` : ''}`;
 	if (r.status === 'notRun') return `not run, because ${r.why ?? 'it was not run'}`;
-	if (r.status === 'measured') return `measured, none found by ${r.layers.join(' and ')}`;
+	if (r.status === 'measured') return `measured, none found by ${layersOf(r).join(' and ')}`;
 	if (r.status === 'notApplicable') return `does not apply, because ${r.why ?? 'there is nothing here to measure'}`;
 	return 'a person’s to check: no automated measure reaches it';
 };
@@ -234,18 +248,20 @@ export const reviewSection = (ledger: Ledger, ledgerFile: string): string => {
 		opening(ledger.key),
 		`## Accessibility: ${ledger.of}`,
 		'',
-		`Measured ${ledger.at.slice(0, 10)} with axe-core ${ledger.axe} at ${ledger.target}, and the probe at ${ledger.depth} depth, by \`dsnr accessibility\`. Written from \`${ledgerFile}\`: run it again rather than editing this. Automated checks are never a pass: each "measured" says only that none was found of what was measured, and the last column is a person's.`,
+		`Measured ${ledger.at.slice(0, 10)} with axe-core ${ledger.axe} at ${ledger.target}, and the probe at ${ledger.depth} depth, by \`dsnr accessibility\`. Written from \`${ledgerFile}\`: run it again rather than editing this. Automated checks are never a pass: each "measured" says only that none was found of what was measured. Each check is still a person's to make, with the last column what is left of it; the reviews record its outcome, and why when it was not run.`,
 		'',
 		'| # | Check | Measured | A person checks |',
 		'|---|---|---|---|',
 		...TEN_CHECKS.map((c, i) => {
 			const rows = c.sc.map(sc);
+			const practice = ledger.bestPractice.filter((b) => c.bestPractice?.includes(b.rule)).map((b) => `best practice, beside WCAG: ${b.line}`);
+			const measured = [...rows.map(cell), ...practice].join('<br>') || 'No machine measures it here';
 			const person =
 				rows
 					.map((r) => r.person)
 					.filter(Boolean)
-					.join('; ') || '—';
-			return `| ${i + 1} | ${c.name} | ${rows.map(cell).join('<br>')} | ${person} |`;
+					.join('; ') || 'the whole check';
+			return `| ${i + 1} | ${c.name} | ${measured} | ${person} |`;
 		}),
 		'',
 		'### The other criteria at the target',

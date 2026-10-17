@@ -2,6 +2,7 @@ import type { Iteration } from '../../shared/contract';
 import { NOT_READY_LINE, READY_LINE } from '../../shared/handoff';
 import type { PrototypeBuild, PrototypeSources } from './prototype';
 import { HOST } from '../../shared/vocabulary';
+import { MOST_ROUNDS } from './buildCheck';
 
 /**
  * Every task an agent is given, put together here, one function per kind of run, so each gets the same parts in the
@@ -218,11 +219,11 @@ const readableLines = (sources: PrototypeSources): string[] => {
  */
 /**
  * The build's own accessibility check, as both prototype tasks put it (A6; decision 30): run after it builds, its
- * findings fixed as a build error is, for at most two rounds, after which what is left is recorded, not fixed.
+ * findings fixed as a build error is, for at most `MOST_ROUNDS` rounds, after which what is left is recorded, not fixed.
  */
 const checkLines = (build: PrototypeBuild): string[] => [
 	`- When it builds, check its accessibility with exactly: \`${build.checkCommand}\``,
-	`  It measures the page in a real browser at the product's target and says what to fix, as the build says an error: fixing it is part of the work, whatever else was asked. Fix each in \`${build.source}\`, build, and check again. It says when its two rounds are used up: then finish, and what is left is recorded with the page. Never write words it says are a person's.`,
+	`  It measures the page in a real browser at the product's target and says what to fix, as the build says an error: fixing it is part of the work, whatever else was asked. Fix each in \`${build.source}\`, build, and check again. It says when its ${MOST_ROUNDS} rounds are used up: then finish, and what is left is recorded with the page. Never write words it says are a person's.`,
 ];
 
 export const prototypeBuildTask = ({

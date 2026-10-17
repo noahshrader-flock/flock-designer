@@ -36,7 +36,7 @@ const out = mkdtempSync(join(tmpdir(), 'dsnr-'));
 try {
 	const { build } = await import(pathToFileURL(esbuild).href);
 	// What runs inside a measured page (`src/page`) is carried as text, built the way every build carries it.
-	const { pageCodeEsbuild } = await import(pathToFileURL(join(workspace, 'pageBundle.mjs')).href);
+	const { pageCodeEsbuild, REQUIRE_BANNER } = await import(pathToFileURL(join(workspace, 'pageBundle.mjs')).href);
 	const file = join(out, 'dsnr.mjs');
 	await build({
 		entryPoints: [join(workspace, 'src', 'cli', 'dsnr.ts')],
@@ -45,7 +45,7 @@ try {
 		platform: 'node',
 		format: 'esm',
 		// A package written for require (the browser's driver, which measuring accessibility starts) still has it here.
-		banner: { js: "import { createRequire as __dsnrRequire } from 'node:module'; const require = __dsnrRequire(import.meta.url);" },
+		banner: { js: REQUIRE_BANNER },
 		plugins: [pageCodeEsbuild()],
 		logLevel: 'error',
 	});

@@ -120,9 +120,12 @@ describe('the manual list', () => {
 		// Above the target (2.5.7 is WCAG 2.2's), it is not this list's.
 		expect(text).not.toContain('2.5.7');
 		expect(text).toContain("- 2.5.1 Pointer Gestures (if: such a gesture): not known, because the work's own files were not read for it.");
-		expect(text).toContain(
-			'- 1.2.2 Captions (Prerecorded) (if: video): applies if the work has video. No machine looks for it here: check whether it has.',
-		);
+		expect(text).toContain('- 1.2.2 Captions (Prerecorded) (if: video): applies if the work has video. No measure tells whether it has: check.');
+	});
+
+	it('says a criterion that applies only with a thing applies when axe found it on the page', () => {
+		const withVideo = ledger([], [issue('video-caption', ['1.2.2'])]);
+		expect(list(withVideo)).toContain('- 1.2.2 Captions (Prerecorded) (if: video): **applies**: axe found video-caption on the page.');
 	});
 
 	it('gives the words to write to a person, the real page’s criteria apart, and how to send back what is found', () => {

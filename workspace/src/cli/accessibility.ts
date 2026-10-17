@@ -1,55 +1,58 @@
 /**
- * `dsnr accessibility` (A2 and A3 of the accessibility plan; decision 2): measures a project's work in a real browser, the
- * same way for any product, and writes what it found into the project's folder in the design repository as evidence.
- * DSNR calls the product, and the product does not call DSNR: a prototype's page is served here, and a product's own app
- * is started as its `.dsnr/workspace.json` says (`onDesignMode`), at the pages its manifest names. Each view that opens
- * is checked by axe, then probed (`services/probe`), at full depth unless asked for the light subset; the work's own
+ * `dsnr accessibility` (A2, A3, A5, A8 and A9 of the accessibility plan; decision 2): measures a project's work in a real
+ * browser, the same way for any product, and writes what it found into the project's folder in the design repository as
+ * evidence. DSNR calls the product, and the product does not call DSNR: a prototype's page is served here, and a product's
+ * own app is started as its `.dsnr/workspace.json` says (`onDesignMode`), at the pages its manifest names. Each view that
+ * opens is checked by axe, then probed (`services/probe`), at full depth unless asked for the light subset; the work's own
  * source is read for what a page cannot show. What it could not open, it says; with nothing opened, nothing is written.
  */
-import { existsSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, rmSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { checkedWith, countsOf, notAutomatedLine, summaryOf } from '../shared/accessibility';
 import type { AccessibilityResult } from '../shared/contract';
 import {
 	accessibilityEvidenceDir,
+	accessibilityGuardsPath,
 	accessibilityLedgerPath,
 	accessibilityPath,
-	accessibilityViewDir,
+	accessibilityReturnedPath,
+	accessibilityReturnedRecordPath,
+	accessibilityViewDirs,
 	projectPath,
 	prototypeSourcePath,
 } from '../shared/designPaths';
-import { statesOf, withState } from '../shared/prototypeStates';
+import { plural } from '../shared/plural';
+import { errorText } from '../shared/result';
 import type { DeclaredTarget } from '../shared/wcag';
 import { atTarget } from '../shared/wcagCriteria';
-import { accessibilityOf } from '../main/services/accessibilityCheck';
+import { DESIGN_MODE_COMMAND } from '../shared/work';
 import {
-	MANIFEST_FILE,
 	PAGES_SECTION,
 	type AppPage,
 	appPages,
 	assistiveTechnology,
 	declaredTarget,
 	findingsLines,
+	readManifest,
 } from '../main/services/accessibilityBrief';
+import { prototypeMeasureName, recordFiles } from '../main/services/accessibilityRecord';
 import { FIRST_PAGE, type PageNotOpened, checkPages, onDesignMode } from '../main/services/accessibilityRun';
 import { chromeHeadless } from '../main/services/chromeHeadless';
 import { findCommand, readDescriptor } from '../main/services/descriptor';
-import { DESIGN_MODE_COMMAND } from '../shared/work';
-import { errorText } from '../shared/result';
+import { HANDOFF_FILE } from '../main/services/engineeringHandoff';
 import { git } from '../main/services/git';
-import { assertUsableProjectId } from '../main/services/iterations';
-import { writeAtomic } from '../main/services/jsonFile';
-import { assertPrototypeName } from '../main/services/prototype';
-import { PrototypeServer } from '../main/services/prototypeServer';
-import type { prototypeWork } from '../main/services/prototypeWork';
-import { CELLS, type CellResult, type ProbeDepth, cellLines, cellsAt } from '../main/services/probe/cells';
-import type { Evidence } from '../main/services/probe/probe';
-import { type SourceFile, scanSources } from '../main/services/probe/sourceScan';
-import { type Ledger, type LedgerRun, ledgerChanges, ledgerFaults } from '../main/services/ledger';
-import { manualListFault, withManualSection } from '../main/services/manualList';
-import { type ReturnedKind, parseReturned, returnedTemplate, sortReturned, withGaps } from '../main/services/returned';
 import { guardLines, guardsFor, stacksOf } from '../main/services/guards';
-import { recordFiles } from '../main/services/accessibilityRecord';
+import { assertUsableProjectId } from '../main/services/iterations';
+import { jsonFile, readText, writeAtomic } from '../main/services/jsonFile';
+import { LEDGER_VERSION, type Ledger, type LedgerRun, ledgerChanges, ledgerFaults } from '../main/services/ledger';
+import { manualListFault, withManualSection } from '../main/services/manualList';
+import { CELLS, type CellResult, type ProbeDepth, cellLines, cellsAt } from '../main/services/probe/cells';
+import type { ViewProbed } from '../main/services/probe/probe';
+import { type SourceFile, scanSources } from '../main/services/probe/sourceScan';
+import { assertPrototypeName } from '../main/services/prototype';
+import { measurePrototype } from '../main/services/prototypeMeasure';
+import type { prototypeWork } from '../main/services/prototypeWork';
+import { type ReturnedKind, agentGapsFile, parseReturned, returnedTemplate, sortReturned, withGaps } from '../main/services/returned';
 
 export interface MeasureDeps {
 	projectId: string;
@@ -68,13 +71,8 @@ export interface MeasureDeps {
 
 type Browser = ReturnType<typeof chromeHeadless>;
 
-/** One view probed: its name (a state, or a page), how long it took, what each cell found, and its evidence. */
-interface ViewProbed {
-	state: string;
-	ms: number;
-	results: CellResult[];
-	evidence: Evidence[];
-}
+/** One view measured: its name (a state, or a page), and what the probe made of it. */
+type MeasuredView = ViewProbed & { state: string };
 
 /** What was measured, in words, what axe found, and what the probe did; `pages` and `note` for an app, which pages and how they were chosen. */
 interface Measured {
@@ -82,7 +80,7 @@ interface Measured {
 	target: DeclaredTarget;
 	result: AccessibilityResult | null;
 	notOpened: PageNotOpened[];
-	views: ViewProbed[];
+	views: MeasuredView[];
 	source: CellResult[];
 	pages?: AppPage[];
 	note?: string;
@@ -90,27 +88,12 @@ interface Measured {
 	run?: LedgerRun;
 }
 
-/** Probes each view in turn, saying which as it goes. */
-const probeViews = async (
-	browser: Browser,
-	views: { state: string; url: string }[],
-	depth: ProbeDepth,
-	progress: (line: string) => void,
-): Promise<ViewProbed[]> => {
-	const probed: ViewProbed[] = [];
-	for (const { state, url } of views) {
-		const { results, evidence, ms } = await browser.probe(url, { depth, progress: (step) => progress(`Probing ${state}: ${step}`) });
-		probed.push({ state, ms, results, evidence });
-	}
-	return probed;
-};
-
 /** Files the probe does not read for source: words, data and pictures. */
 const NOT_SOURCE = /\.(md|mdx|txt|json|lock|ya?ml|toml|svg|png|jpe?g|gif|webp|ico|woff2?|ttf|map|snap)$/i;
 
 /**
  * The work's own files, for the source cells: what this checkout's branch changed from its remote's default branch,
- * committed or not. Null, with why, when the remote names no default branch to tell them from the rest.
+ * committed or not. Null, with why, when they cannot be told from the rest.
  */
 const changedSources = async (root: string): Promise<{ files: SourceFile[] | null; why: string }> => {
 	const base = (await git(root, ['rev-parse', '--abbrev-ref', 'origin/HEAD']).catch(() => '')).trim();
@@ -119,7 +102,10 @@ const changedSources = async (root: string): Promise<{ files: SourceFile[] | nul
 	try {
 		const from = (await git(root, ['merge-base', 'HEAD', base])).trim();
 		const names = (await git(root, ['diff', '--name-only', '--diff-filter=AMR', from])).split('\n').filter((n) => n.trim() && !NOT_SOURCE.test(n));
-		const files = names.flatMap((path) => (existsSync(join(root, path)) ? [{ path, text: readFileSync(join(root, path), 'utf8') }] : []));
+		const files = names.flatMap((path) => {
+			const text = readText(join(root, path));
+			return text === null ? [] : [{ path, text }];
+		});
 		return { files, why: '' };
 	} catch (err) {
 		// A shallow clone, say, has no shared history to tell the work's files by: said, and the rest is still written.
@@ -132,7 +118,7 @@ const sourceCells = (depth: ProbeDepth) =>
 		.filter((c) => c.kind === 'source')
 		.map((c) => c.id);
 
-/** A prototype's page, served here with its shared files, in each of its states: the check the app makes, and keeps, the same; then probed. */
+/** A prototype's page, measured as its build's check measures it (`measurePrototype`), and its source read. */
 const prototypePage = async (
 	{ projectId, name, work, depth }: MeasureDeps & { name: string },
 	browser: Browser,
@@ -141,55 +127,48 @@ const prototypePage = async (
 	assertPrototypeName(name);
 	const html = await work.page(projectId, name, false);
 	if (html === null) throw new Error(`${projectId} ${name} has no page yet. Save it first (save-prototype), then measure it.`);
-	const server = new PrototypeServer();
-	try {
-		const url = await server.servePage(`${projectId}/${name}`, html, work.sharedText);
-		progress(`Checking ${projectId} ${name}'s page`);
-		const target = await work.target(projectId, name);
-		const states = statesOf(html);
-		const result = await accessibilityOf({ file: work.checkFile(projectId, name), html, url, states, target, check: browser.scan });
-		// Each state as the check opens it: the page as it opens, when it has none.
-		const opened = (states.length ? states : [null]).map((s) => ({ state: s ?? 'default', url: withState(url, s) }));
-		const views = await probeViews(browser, opened, depth, progress);
-		const text = await work.sourceText(projectId, name);
-		const source = scanSources(
-			sourceCells(depth),
-			text === null ? null : [{ path: prototypeSourcePath(projectId, name), text }],
-			'the prototype has no source saved',
-		);
-		return { what: `${projectId} ${name}'s page`, target, result, notOpened: [], views, source };
-	} finally {
-		server.close();
-	}
+	const what = prototypeMeasureName(projectId, name);
+	progress(`Checking ${what}`);
+	const target = await work.target(projectId, name);
+	const { result, views } = await measurePrototype({
+		key: `${projectId}/${name}`,
+		html,
+		target,
+		depth,
+		sharedText: work.sharedText,
+		cache: work.checkFile(projectId, name),
+		browser,
+		progress,
+	});
+	const text = await work.sourceText(projectId, name);
+	const source = scanSources(
+		sourceCells(depth),
+		text === null ? null : [{ path: prototypeSourcePath(projectId, name), text }],
+		'the prototype has no source saved',
+	);
+	return { what, target, result, notOpened: [], views, source };
 };
 
 /** The product's own app in design mode, at the pages its manifest names, else as it opens; at the manifest's target; each page that opened probed. */
 const productApp = async ({ projectId, root, depth }: MeasureDeps, browser: Browser, progress: (line: string) => void): Promise<Measured> => {
 	const descriptor = readDescriptor(root);
-	const file = join(root, descriptor.contextDir, MANIFEST_FILE);
-	const manifest = existsSync(file) ? readFileSync(file, 'utf8') : null;
+	const manifest = readManifest(join(root, descriptor.contextDir));
 	const named = appPages(manifest);
 	const pages = named ?? [FIRST_PAGE];
 	const target = declaredTarget(manifest, descriptor.product);
-	const {
-		result,
-		notOpened,
-		views,
-		origin: served,
-	} = await onDesignMode({ root, descriptor, projectId, loads: browser.loads, progress }, async (origin, opens) => {
-		const checked = await checkPages({ origin, pages, target, check: browser.scan, opens, progress });
-		const opened = pages.filter((p) => !checked.notOpened.some((n) => n.path === p.path));
-		return {
-			...checked,
-			origin,
-			views: await probeViews(
-				browser,
-				opened.map((p) => ({ state: p.name, url: new URL(p.path, origin).href })),
-				depth,
-				progress,
-			),
-		};
-	});
+	const { result, notOpened, views, served } = await onDesignMode(
+		{ root, descriptor, projectId, loads: browser.loads, progress },
+		async (origin, opens) => {
+			const checked = await checkPages({ origin, pages, target, check: browser.scan, opens, progress });
+			const probed: MeasuredView[] = [];
+			for (const p of pages.filter((page) => !checked.notOpened.some((n) => n.path === page.path)))
+				probed.push({
+					state: p.name,
+					...(await browser.probe(new URL(p.path, origin).href, { depth, progress: (step) => progress(`Probing ${p.name}: ${step}`) })),
+				});
+			return { ...checked, views: probed, served: origin };
+		},
+	);
 	const { files, why } = await changedSources(root);
 	return {
 		what: `${descriptor.product}'s app in design mode`,
@@ -225,10 +204,9 @@ const probeLines = ({ views, source, target }: Measured, depth: ProbeDepth): str
 	const at = found.filter(({ r }) => atTarget(r.sc, target.target));
 	const above = found.filter(({ r }) => !atTarget(r.sc, target.target));
 	const notRun = all.filter(({ r }) => r.status === 'notRun');
-	const cells = cellsAt(depth).length;
 	return [
 		'',
-		`Probed at ${depth} depth (${cells} of the ${CELLS.length} cells), in ${views.map((v) => `${v.state} (${(v.ms / 1000).toFixed(1)} s)`).join(', ') || 'no view'}.`,
+		`Probed at ${depth} depth (${cellsAt(depth).length} of the ${CELLS.length} cells), in ${views.map((v) => `${v.state} (${(v.ms / 1000).toFixed(1)} s)`).join(', ') || 'no view'}.`,
 		...(at.length ? ['', 'Found by the probe, at the target:', ...at.flatMap(({ r, where }) => cellLines(r, where))] : []),
 		...(above.length
 			? ['', 'Found by the probe, above the target (readiness, not counted as it):', ...above.flatMap(({ r, where }) => cellLines(r, where))]
@@ -239,13 +217,19 @@ const probeLines = ({ views, source, target }: Measured, depth: ProbeDepth): str
 	];
 };
 
-/** The probe's own evidence, written fresh: a folder per view (its cells are the record's), and nothing of an earlier run left. */
-const writeEvidence = (projectId: string, name: string | null, designRoot: string, views: ViewProbed[]): void => {
+/** The probe's own evidence (pictures, the tree, the Tab walk), written fresh in each view's folder: nothing of an earlier run is left. */
+const writeEvidence = (projectId: string, name: string | null, designRoot: string, views: MeasuredView[]): void => {
 	rmSync(join(designRoot, accessibilityEvidenceDir(projectId, name)), { recursive: true, force: true });
-	for (const view of views)
-		for (const e of view.evidence)
-			if (e.name !== 'cells.json') writeAtomic(join(designRoot, accessibilityViewDir(projectId, name, view.state), e.name), e.data);
+	const dirs = accessibilityViewDirs(
+		projectId,
+		name,
+		views.map((v) => v.state),
+	);
+	for (const view of views) for (const e of view.evidence) writeAtomic(join(designRoot, dirs.get(view.state) as string, e.name), e.data);
 };
+
+/** A day, as the record says when something happened. */
+const dayOf = (iso: string): string => iso.slice(0, 10);
 
 export const measureAccessibility = async (deps: MeasureDeps): Promise<number> => {
 	const { projectId, name, designRoot, depth } = deps;
@@ -268,30 +252,35 @@ export const measureAccessibility = async (deps: MeasureDeps): Promise<number> =
 	}
 	// The probe's pictures and the rest of its evidence; then the record, its ledger and review.md's section, made one way.
 	writeEvidence(projectId, name, designRoot, views);
-	const evidence = accessibilityEvidenceDir(projectId, name);
-	const path = accessibilityPath(projectId, name);
-	const reviewFile = join(designRoot, projectPath(projectId, 'review.md'));
 	const ledgerFile = accessibilityLedgerPath(projectId, name);
 	const last = readLedger(join(designRoot, ledgerFile));
 	const { files, ledger } = recordFiles(
-		{ projectId, name, of: what, result, target: measured.target, depth, views, source, pages, notOpened, run: measured.run },
-		existsSync(reviewFile) ? readFileSync(reviewFile, 'utf8') : null,
+		{
+			projectId,
+			name,
+			of: what,
+			result,
+			target: measured.target,
+			depth,
+			views: views.map((v) => ({ state: v.state, ms: v.ms, results: v.results, files: v.evidence.map((e) => e.name) })),
+			source,
+			pages,
+			notOpened,
+			run: measured.run,
+		},
+		readText(join(designRoot, projectPath(projectId, 'review.md'))),
 	);
 	for (const f of files) writeAtomic(join(designRoot, f.path), f.text);
 	// A product's own app: the manual list, from the ledger, into the work's HANDOFF.md, for whoever tests it by hand (A8).
-	const handoff = join(deps.root, 'HANDOFF.md');
-	if (name === null)
-		writeAtomic(
-			handoff,
-			withManualSection(existsSync(handoff) ? readFileSync(handoff, 'utf8') : null, ...manualArgs(ledger, ledgerFile, projectId, designRoot)),
-		);
+	const handoff = join(deps.root, HANDOFF_FILE);
+	if (name === null) writeAtomic(handoff, withManualSection(readText(handoff), ...manualArgs(ledger, ledgerFile, projectId, designRoot)));
 	const since = last ? ledgerChanges(last, ledger) : null;
 	// A product's own app: what testers sent back since, sorted and its escapes logged; and a guard for what was fixed (A9).
 	const kept =
 		name === null
 			? [
-					...readReturned({ designRoot, root: deps.root, projectId, ledger: last ?? ledger, date: ledger.at.slice(0, 10) }),
-					...keepFixed({ designRoot, root: deps.root, projectId, last, fixed: since?.noLongerFound ?? [], date: ledger.at.slice(0, 10) }),
+					...readReturned({ designRoot, root: deps.root, projectId, ledger: last ?? ledger, date: dayOf(ledger.at) }),
+					...keepFixed({ designRoot, root: deps.root, projectId, last, fixed: since?.noLongerFound ?? [], date: dayOf(ledger.at) }),
 				]
 			: [];
 	deps.out(
@@ -303,15 +292,18 @@ export const measureAccessibility = async (deps: MeasureDeps): Promise<number> =
 			...findingsLines(result),
 			...probeLines(measured, depth),
 			'',
-			since
-				? `Since the last run (${last?.at.slice(0, 10)}): ${since.newlyFound.length ? `newly found ${since.newlyFound.join(', ')}` : 'nothing newly found'}; ${since.noLongerFound.length ? `no longer found ${since.noLongerFound.join(', ')}` : 'nothing no longer found'}; ${since.changed.length} criteria changed in all.`
+			since && last
+				? `Since the last run (${dayOf(last.at)}): ${since.newlyFound.length ? `newly found ${since.newlyFound.join(', ')}` : 'nothing newly found'}; ${since.noLongerFound.length ? `fixed ${since.noLongerFound.join(', ')}` : 'nothing fixed'}; ${since.changed.length === 1 ? '1 criterion' : `${since.changed.length} criteria`} changed in all.`
 				: 'This is the first run of this measure: there is no ledger to compare with.',
 			...kept,
-			`Written to ${path} in ${designRoot}, with the evidence in ${evidence}/, the ledger in ${ledgerFile}, and the accessibility section of ${projectPath(projectId, 'review.md')} written from it.`,
+			`Written to ${accessibilityPath(projectId, name)} in ${designRoot}, with the evidence in ${accessibilityEvidenceDir(projectId, name)}/, the ledger in ${ledgerFile}, and the accessibility section of ${projectPath(projectId, 'review.md')} written from it.`,
 		].join('\n'),
 	);
 	return 0;
 };
+
+/** How each returned finding was sorted, kept so each is sorted once: against the measure it was tested against. */
+type Sorted = { id: string; sc: string; where: string; kind: ReturnedKind; against: string };
 
 /**
  * What testers sent back (A9): the project's `returned.md` read, each finding sorted against the ledger it was tested
@@ -331,37 +323,30 @@ const readReturned = ({
 	ledger: Ledger;
 	date: string;
 }): string[] => {
-	const file = join(designRoot, projectPath(projectId, 'accessibility/returned.md'));
-	if (!existsSync(file)) {
+	const file = join(designRoot, accessibilityReturnedPath(projectId));
+	const returned = readText(file);
+	if (returned === null) {
 		writeAtomic(file, returnedTemplate(projectId));
-		return ['', `Started ${projectPath(projectId, 'accessibility/returned.md')}, for testers to return what they find by hand.`];
+		return ['', `Started ${accessibilityReturnedPath(projectId)}, for testers to return what they find by hand.`];
 	}
-	const { findings, unreadable } = parseReturned(readFileSync(file, 'utf8'));
-	// Each finding is sorted once, when it is first read, against the measure it was tested against; never again later,
-	// when the work may have changed under it.
-	const record = join(designRoot, projectPath(projectId, 'accessibility/returned.json'));
-	type Sorted = { id: string; sc: string; where: string; kind: ReturnedKind; against: string };
-	let before: Sorted[] = [];
-	try {
-		before = (JSON.parse(readFileSync(record, 'utf8')) as { findings: Sorted[] }).findings;
-	} catch {
-		// None read before.
-	}
+	const { findings, unreadable } = parseReturned(returned);
+	// Each finding is sorted once, when it is first read; never again later, when the work may have changed under it.
+	const record = join(designRoot, accessibilityReturnedRecordPath(projectId));
+	const before = jsonFile<Sorted[]>(record, { parse: (raw) => (raw as { findings: Sorted[] }).findings ?? [], fallback: [] }).read();
 	const known = new Map(before.map((f) => [f.id, f]));
 	const fresh = sortReturned(
 		findings.filter((f) => !known.has(f.id)),
 		ledger,
 	);
 	const sorted: Sorted[] = findings.flatMap((f) => {
-		const was = known.get(f.id);
-		if (was) return [was];
 		const now = fresh.find((x) => x.finding.id === f.id);
-		return now ? [{ id: f.id, sc: f.sc, where: f.where, kind: now.kind, against: ledger.at }] : [];
+		const was = known.get(f.id);
+		return was ? [was] : now ? [{ id: f.id, sc: f.sc, where: f.where, kind: now.kind, against: ledger.at }] : [];
 	});
 	const descriptor = readDescriptor(root);
-	const gaps = join(root, descriptor.contextDir, 'knowledge', 'agent-gaps.md');
+	const gaps = join(root, agentGapsFile(descriptor.contextDir));
 	const { text, added } = withGaps(
-		existsSync(gaps) ? readFileSync(gaps, 'utf8') : null,
+		readText(gaps),
 		descriptor.product,
 		fresh.filter((x) => x.kind === 'escape'),
 		date,
@@ -372,14 +357,14 @@ const readReturned = ({
 	const count = (k: ReturnedKind) => sorted.filter((x) => x.kind === k).length;
 	return [
 		'',
-		`Returned by testers: ${findings.length} finding${findings.length === 1 ? '' : 's'}. ${count('escape')} a machine measured and missed (escapes, the goal's count, which should be none)${added ? `, ${added} newly logged in ${join(descriptor.contextDir, 'knowledge', 'agent-gaps.md')}` : ''}; ${count('confirmed')} a machine had found too; ${count('unmeasured')} not measured that time; ${count('person')} only a person could find.`,
+		`Returned by testers: ${plural(findings.length, 'finding')}. ${count('escape')} a machine measured and missed (escapes, the goal's count, which should be none)${added ? `, ${added} newly logged in ${agentGapsFile(descriptor.contextDir)}` : ''}; ${count('confirmed')} a machine had found too; ${count('unmeasured')} not measured that time; ${count('person')} only a person could find.`,
 		...unreadable.map((u) => `- Line ${u.line} of returned.md could not be read as a finding, because ${u.why}: it is left as it is.`),
 	];
 };
 
 /**
- * A guard for what this run no longer finds (A9): each fault the last run found, by what found it, with the product's own
- * lint rule that keeps it fixed where its stack has one, proposed in the record and said. What it did, in lines.
+ * A guard for what this run fixed (A9): each fault the last run found, by what found it, with the product's own lint rule
+ * that keeps it fixed where its stack has one, proposed in the record and said. What it did, in lines.
  */
 const keepFixed = ({
 	designRoot,
@@ -404,12 +389,12 @@ const keepFixed = ({
 		),
 	);
 	if (lines.length === 0) return [];
-	const file = join(designRoot, projectPath(projectId, 'accessibility/guards.md'));
-	const was = existsSync(file)
-		? readFileSync(file, 'utf8')
-		: '# Guards proposed to keep what was fixed fixed\n\nProposed by `dsnr accessibility` when a fault it found is no longer found: each for the product to take, never applied for it.\n';
+	const file = join(designRoot, accessibilityGuardsPath(projectId));
+	const was =
+		readText(file) ??
+		'# Guards proposed to keep what was fixed fixed\n\nProposed by `dsnr accessibility` when a fault it found is no longer found: each for the product to take, never applied for it.\n';
 	writeAtomic(file, `${was.trimEnd()}\n\n## ${date}\n\n${lines.join('\n')}\n`);
-	return ['', `Fixed since the last run, and kept fixed by (proposed, in ${projectPath(projectId, 'accessibility/guards.md')}):`, ...lines];
+	return ['', `Fixed since the last run, and kept fixed by (proposed, in ${accessibilityGuardsPath(projectId)}):`, ...lines];
 };
 
 /** What the manual list is made from: the ledger, and where its evidence and the testers' findings are, as the product's checkout sees them. */
@@ -419,24 +404,25 @@ const manualArgs = (ledger: Ledger, ledgerFile: string, projectId: string, desig
 		ledger,
 		`${design}/${ledgerFile}`,
 		`${design}/${accessibilityEvidenceDir(projectId, null)}`,
-		`${design}/${projectPath(projectId, 'accessibility/returned.md')}`,
+		`${design}/${accessibilityReturnedPath(projectId)}`,
 	];
 };
 
-/** A ledger as it was written, or null when there is none, or it cannot be read as one. */
-const readLedger = (file: string): Ledger | null => {
-	try {
-		const ledger = JSON.parse(readFileSync(file, 'utf8')) as Ledger;
-		return ledger.version === 1 && Array.isArray(ledger.rows) ? ledger : null;
-	} catch {
-		return null;
-	}
-};
+/** A ledger as this DSNR writes it, or null when there is none, or it is not one (or an older DSNR's): then it is measured again. */
+const readLedger = (file: string): Ledger | null =>
+	jsonFile<Ledger | null>(file, {
+		parse: (raw) => {
+			const ledger = raw as Ledger;
+			return ledger.version === LEDGER_VERSION && Array.isArray(ledger.rows) ? ledger : null;
+		},
+		fallback: null,
+	}).read();
 
 /**
- * `dsnr check-accessibility` (A5): what a gate asks of a measure's record. Its ledger is there; every status rests on an
- * evidence file that is there; every "not run" says why; and `review.md`'s section is the one the ledger writes. Says
- * each fault, and exits 1 when there is one, so a product's own gate can call it.
+ * `dsnr check-accessibility` (A5, A8): what a gate asks of a measure's record. Its ledger is there; every status rests on
+ * an evidence file that is there; every "not run" says why; `review.md`'s section is the one the ledger writes; and, run
+ * from the product's checkout, its HANDOFF.md carries the manual list the ledger writes. Says each fault, and exits 1
+ * when there is one, so a product's own gate can call it.
  */
 export const checkAccessibility = ({
 	designRoot,
@@ -457,23 +443,23 @@ export const checkAccessibility = ({
 	const ledgerFile = accessibilityLedgerPath(projectId, name);
 	const ledger = readLedger(join(designRoot, ledgerFile));
 	if (ledger === null) {
-		out(`${ledgerFile} is not there, or is not a ledger: run dsnr accessibility --project ${projectId}${name ? ` --name ${name}` : ''} first.`);
+		out(
+			`${ledgerFile} is not there, or is not a ledger this DSNR writes: run dsnr accessibility --project ${projectId}${name ? ` --name ${name}` : ''} first.`,
+		);
 		return 1;
 	}
-	const reviewFile = join(designRoot, projectPath(projectId, 'review.md'));
-	const handoff = productRoot === null ? null : join(productRoot, 'HANDOFF.md');
-	const listFault =
-		name === null && handoff !== null
-			? manualListFault(existsSync(handoff) ? readFileSync(handoff, 'utf8') : null, ...manualArgs(ledger, ledgerFile, projectId, designRoot))
-			: null;
+	const checksList = name === null && productRoot !== null;
+	const listFault = checksList
+		? manualListFault(readText(join(productRoot, HANDOFF_FILE)), ...manualArgs(ledger, ledgerFile, projectId, designRoot))
+		: null;
 	const faults = [
-		...ledgerFaults(ledger, ledgerFile, (p) => existsSync(join(designRoot, p)), existsSync(reviewFile) ? readFileSync(reviewFile, 'utf8') : null),
+		...ledgerFaults(ledger, ledgerFile, (p) => existsSync(join(designRoot, p)), readText(join(designRoot, projectPath(projectId, 'review.md')))),
 		...(listFault ? [listFault] : []),
 	];
 	out(
 		faults.length
-			? [`${ledgerFile}: ${faults.length} fault${faults.length === 1 ? '' : 's'}.`, ...faults.map((f) => `- ${f}`)].join('\n')
-			: `${ledgerFile}: every status rests on its evidence, and review.md${name === null && handoff !== null ? ' and HANDOFF.md say' : ' says'} what the ledger says.`,
+			? [`${ledgerFile}: ${plural(faults.length, 'fault')}.`, ...faults.map((f) => `- ${f}`)].join('\n')
+			: `${ledgerFile}: every status rests on its evidence, and review.md${checksList ? ' and HANDOFF.md say' : ' says'} what the ledger says.`,
 	);
 	return faults.length ? 1 : 0;
 };
@@ -496,7 +482,7 @@ export const readReturnedNow = ({
 		out(`There is no measure of ${projectId}'s app to read findings against: run dsnr accessibility --project ${projectId} first.`);
 		return 1;
 	}
-	const lines = readReturned({ designRoot, root, projectId, ledger, date: new Date().toISOString().slice(0, 10) });
+	const lines = readReturned({ designRoot, root, projectId, ledger, date: dayOf(new Date().toISOString()) });
 	out(lines.join('\n').trim() || 'Nothing has been returned yet.');
 	return 0;
 };

@@ -7,29 +7,30 @@
  * what they find. It never says the work conforms, or at what level.
  */
 import { WORDS } from '../../shared/accessibility';
+import { ASSISTIVE_SECTION } from './accessibilityBrief';
 import { type Ledger, type LedgerRow, statusLine, withMarked } from './ledger';
 import { type CellId, cellOf } from './probe/cells';
+import { RETURNED_COLUMNS } from './returned';
 
 /** Where the manual list sits in `HANDOFF.md`. */
 const OPEN = '<!-- dsnr:manual-list -->';
 const CLOSE = '<!-- /dsnr:manual-list -->';
 
-/** What applies only when the work has a thing: the criteria whose manual mark is `if: …`, said as the matrix says it. */
-const condition = (r: LedgerRow): string | null => /\bif: ([^;]+)/.exec(r.manual ?? '')?.[1]?.trim() ?? null;
-
 /**
- * Whether a conditional criterion applies, from what was measured: the work's files read for it (a timer, a drag), or, when
- * nothing looks for it, said so, for the tester to find out. Never left unsaid.
+ * Whether a criterion that applies only when the work has a thing does, from what was measured: axe found it on the page,
+ * or the work's files were read for it (a timer, a drag); else said that no measure tells, for the tester to find out.
+ * Axe finding nothing says nothing of whether the thing is there (its rule has nothing to look at either way). Never unsaid.
  */
-const applies = (r: LedgerRow): string => {
+const applies = (r: LedgerRow, when: string): string => {
+	const byAxe = r.by.find((p) => p.layer === 'axe' && p.status === 'found');
+	if (byAxe) return `**applies**: axe found ${byAxe.what} on the page. Check it, with what a person judges here.`;
 	const read = r.by.find((p) => p.where === 'the source');
-	const what = condition(r) as string;
 	const looked = read ? cellOf(read.what as CellId).measures : '';
 	if (read?.status === 'found')
 		return `**applies**: the work's own files have ${looked} (\`source.json\`). Check it, with what a person judges here.`;
 	if (read?.status === 'measured') return `does not apply: the work's own files have no ${looked}. Say so if you find one.`;
-	if (read?.status === 'notRun') return `not known, because the work's own files were not read for it. Check whether the work has ${what}.`;
-	return `applies if the work has ${what}. No machine looks for it here: check whether it has.`;
+	if (read?.status === 'notRun') return `not known, because the work's own files were not read for it. Check whether the work has ${when}.`;
+	return `applies if the work has ${when}. No measure tells whether it has: check.`;
 };
 
 const named = (r: LedgerRow) => `${r.sc} ${r.name}`;
@@ -41,10 +42,10 @@ export const manualSection = (ledger: Ledger, ledgerFile: string, evidence: stri
 	const count = (s: LedgerRow['status']) => at.filter((r) => r.status === s);
 	const found = count('found');
 	const notRun = count('notRun');
-	const conditional = at.filter((r) => condition(r) !== null);
-	const host = at.filter((r) => /\bhost\b/.test(r.manual ?? ''));
-	const assistive = at.filter((r) => /\bAT\b/.test(r.manual ?? ''));
-	const judged = at.filter((r) => r.person && !/\bhost\b/.test(r.manual ?? ''));
+	const conditional = at.flatMap((r) => (r.manual?.when ? [{ r, when: r.manual.when }] : []));
+	const host = at.filter((r) => r.manual?.host);
+	const assistive = at.filter((r) => r.manual?.at);
+	const judged = at.filter((r) => r.person && !r.manual?.host);
 	const words = at.flatMap((r) => r.by.filter((p) => p.layer === 'axe' && p.status === 'found' && WORDS.has(p.what)).map((p) => ({ r, p })));
 	return [
 		OPEN,
@@ -77,7 +78,7 @@ export const manualSection = (ledger: Ledger, ledgerFile: string, evidence: stri
 		'**With assistive technology, on each page above:** a screen reader through each; voice control by each visible label; the whole of it by keyboard alone; browser zoom at 200% and 400%; forced colors.',
 		run?.assistiveTechnology?.length
 			? `Cover at least what the product names: ${run.assistiveTechnology.join('; ')}.`
-			: 'The product names no minimum (its manifest\'s "## Assistive technology to test with" section): choose, and say what you used.',
+			: `The product names no minimum (its manifest's "## ${ASSISTIVE_SECTION}" section): choose, and say what you used.`,
 		`These only assistive technology can answer: ${assistive.map(named).join('; ') || 'none at this target'}.`,
 		'',
 		'**What only a person can judge,** each with what was measured of it:',
@@ -86,7 +87,7 @@ export const manualSection = (ledger: Ledger, ledgerFile: string, evidence: stri
 		),
 		'',
 		'**What applies only if the work has it,** each said either way:',
-		...conditional.map((r) => `- ${named(r)} (if: ${condition(r)}): ${applies(r)}`),
+		...conditional.map(({ r, when }) => `- ${named(r)} (if: ${when}): ${applies(r, when)}`),
 		...(words.length
 			? [
 					'',
@@ -103,8 +104,8 @@ export const manualSection = (ledger: Ledger, ledgerFile: string, evidence: stri
 		'',
 		`Add each to \`${returns}\`, one row each, so it is read without anyone retyping it: what a machine could have caught becomes a check, so it is caught next time.`,
 		'',
-		'| Criterion | Page or state | Steps to reproduce | What was expected | Severity | Evidence | In this work |',
-		'|---|---|---|---|---|---|---|',
+		`| ${RETURNED_COLUMNS.join(' | ')} |`,
+		`|${RETURNED_COLUMNS.map(() => '---').join('|')}|`,
 		CLOSE,
 	].join('\n');
 };

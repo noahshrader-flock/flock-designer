@@ -167,9 +167,7 @@ describe('what the agent is told', () => {
 		expect(task).toContain(`\`${build.buildCommand}\``);
 		// Its accessibility checked after it builds, as the build is, for two rounds, and no words written that are a person's.
 		expect(task).toContain(`check its accessibility with exactly: \`${build.checkCommand}\``);
-		expect(task).toMatch(
-			/two rounds are used up: then finish, and what is left is recorded with the page\. Never write words it says are a person's/,
-		);
+		expect(task).toMatch(/2 rounds are used up: then finish, and what is left is recorded with the page\. Never write words it says are a person's/);
 		expect(task).toContain('Read only: never change anything');
 		for (const dir of ['/q/source/coke', '/c/coke/.dsnr', '/c/fui', '/d/standards', '/c/node_modules']) expect(task).toContain(`\`${dir}\``);
 		expect(task.trimEnd().endsWith('A users list')).toBe(true);

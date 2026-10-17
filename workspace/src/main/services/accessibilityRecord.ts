@@ -5,7 +5,7 @@
  * never differ in shape; each is written by its caller as it writes (to disk, or through the design store).
  */
 import type { AccessibilityResult } from '../../shared/contract';
-import { accessibilityEvidenceDir, accessibilityLedgerPath, accessibilityPath, accessibilityViewDir, projectPath } from '../../shared/designPaths';
+import { accessibilityEvidenceDir, accessibilityLedgerPath, accessibilityPath, accessibilityViewDirs, projectPath } from '../../shared/designPaths';
 import type { DeclaredTarget } from '../../shared/wcag';
 import type { AppPage } from './accessibilityBrief';
 import type { PageNotOpened } from './accessibilityRun';
@@ -21,7 +21,8 @@ export interface MeasureRecord {
 	result: AccessibilityResult;
 	target: DeclaredTarget;
 	depth: string;
-	views: { state: string; ms?: number; results: CellResult[] }[];
+	/** Each view: its results, and the names of the evidence files its caller writes into its folder (pictures, the tree). */
+	views: { state: string; ms?: number; results: CellResult[]; files?: string[] }[];
 	source: CellResult[];
 	pages?: AppPage[];
 	notOpened?: PageNotOpened[];
@@ -40,7 +41,12 @@ export const recordFiles = (
 	const evidence = accessibilityEvidenceDir(projectId, name);
 	const resultFile = accessibilityPath(projectId, name);
 	const sourceFile = `${evidence}/source.json`;
-	const views = m.views.map((v) => ({ ...v, evidence: accessibilityViewDir(projectId, name, v.state) }));
+	const dirs = accessibilityViewDirs(
+		projectId,
+		name,
+		m.views.map((v) => v.state),
+	);
+	const views = m.views.map((v) => ({ ...v, evidence: dirs.get(v.state) as string }));
 	const ledgerFile = accessibilityLedgerPath(projectId, name);
 	const ledger = ledgerOf({
 		key: name ?? 'app',
@@ -58,7 +64,14 @@ export const recordFiles = (
 	const json = (data: unknown, tab: string | number = '\t') => `${JSON.stringify(data, null, tab)}\n`;
 	const probe = {
 		depth: m.depth,
-		views: views.map(({ state, ms, results, evidence: dir }) => ({ state, ...(ms === undefined ? {} : { ms }), results, evidence: dir })),
+		// Each view's folder, and exactly the files of this measure in it: an earlier measure's left there are not this one's.
+		views: views.map(({ state, ms, results, evidence: dir, files }) => ({
+			state,
+			...(ms === undefined ? {} : { ms }),
+			results,
+			evidence: dir,
+			files: ['cells.json', ...(files ?? [])],
+		})),
 		source: m.source,
 	};
 	return {
@@ -83,3 +96,6 @@ export const recordFiles = (
 		],
 	};
 };
+
+/** What a prototype's measure is called, in words: the heading of its record, the same wherever it is made. */
+export const prototypeMeasureName = (projectId: string, name: string): string => `${projectId} ${name}'s page`;

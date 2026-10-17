@@ -23,7 +23,7 @@ import {
 } from './prototype';
 import { bundleCommand, runBundle, shellLine, writeBundleScript, writeCheckScript } from './prototypeBundle';
 import { type CheckConfig, checkedAsSaved } from './buildCheck';
-import { recordFiles } from './accessibilityRecord';
+import { prototypeMeasureName, recordFiles } from './accessibilityRecord';
 import { designSystemFile, taskVoice } from './voiceBrief';
 import { HOST } from '../../shared/vocabulary';
 
@@ -241,7 +241,6 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		};
 	};
 
-	/** Where the agent writes the prototype, and the exact command that checks it builds. */
 	/**
 	 * Where a run's build check (A6) keeps what it is given and what it found, beside the page. A new run starts its rounds
 	 * again: what an earlier run left is its own.
@@ -249,7 +248,7 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 	const buildCheckFiles = (projectId: string, name: string) => ({
 		config: join(dir(projectId), `${name}.build-check.json`),
 		record: join(dir(projectId), `${name}.build-checked.json`),
-		of: `${projectId} ${name}'s page`,
+		of: prototypeMeasureName(projectId, name),
 	});
 	const checkCommandFor = async (projectId: string, name: string): Promise<string> => {
 		const { config, record: kept, of } = buildCheckFiles(projectId, name);
@@ -262,12 +261,14 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 			source: sourceFile(projectId, name),
 			sharedDir,
 			target: await target(projectId, name),
+			cache: checkFile(projectId, name),
 			record: kept,
 		};
 		writeFileSync(config, JSON.stringify(given, null, '\t'));
 		return shellLine(['node', await writeCheckScript(prototypesRoot), config]);
 	};
 
+	/** Where the agent writes the prototype, and the exact commands that check it builds, and check its accessibility. */
 	const buildPlan = async (
 		projectId: string,
 		name: string,

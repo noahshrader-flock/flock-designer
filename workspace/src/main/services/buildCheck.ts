@@ -8,20 +8,16 @@
  * for a person. A check that cannot run never stops a build.
  */
 import { createHash } from 'node:crypto';
-import { existsSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { readFileSync } from 'node:fs';
 import type { AccessibilityIssue, AccessibilityResult } from '../../shared/contract';
-import { statesOf, withState } from '../../shared/prototypeStates';
 import { type DeclaredTarget, targetLine } from '../../shared/wcag';
 import { atTarget } from '../../shared/wcagCriteria';
 import { WORDS } from '../../shared/accessibility';
 import { findingsLines } from './accessibilityBrief';
-import { type CheckPage, resultOf } from './accessibilityCheck';
 import type { MeasureRecord } from './accessibilityRecord';
-import { writeAtomic } from './jsonFile';
+import { jsonFile, writeAtomic } from './jsonFile';
 import { type CellResult, cellLines } from './probe/cells';
-import type { ProbeOptions, ViewProbed } from './probe/probe';
-import { PrototypeServer } from './prototypeServer';
+import { type MeasureBrowser, measurePrototype, sharedIn } from './prototypeMeasure';
 
 /** How many rounds a build's check sends back to the agent before what is left is left (decision 30). */
 export const MOST_ROUNDS = 2;
@@ -36,6 +32,8 @@ export interface CheckConfig {
 	source: string;
 	sharedDir: string;
 	target: DeclaredTarget;
+	/** Where the page's accessibility check is kept as the app keeps it, beside the page, so the app shows what the build found. */
+	cache: string;
 	/** Where the check keeps its rounds and what it found, beside the page. */
 	record: string;
 }
@@ -45,22 +43,15 @@ export interface CheckRecord {
 	page: string;
 	rounds: number;
 	left: boolean;
-	at: string;
 	target: DeclaredTarget;
 	result: AccessibilityResult;
 	views: { state: string; results: CellResult[] }[];
 }
 
-/** The browser, as much of it as the check uses. */
-export interface CheckBrowser {
-	scan: CheckPage;
-	probe(url: string, options: ProbeOptions): Promise<ViewProbed>;
-}
-
 const hashOf = (html: string) => createHash('sha256').update(html).digest('hex').slice(0, 16);
 
 /** What of a check the agent fixes: axe's findings but words, and the probe's at the target. What is above it, and words, are said, not sent back. */
-export const toFix = (result: AccessibilityResult, views: CheckRecord['views'], target: DeclaredTarget) => ({
+const toFix = (result: AccessibilityResult, views: CheckRecord['views'], target: DeclaredTarget) => ({
 	axe: result.violations.filter((i) => !WORDS.has(i.rule)),
 	probe: views.flatMap((v) => v.results.filter((r) => r.status === 'found' && atTarget(r.sc, target.target)).map((r) => ({ r, state: v.state }))),
 	words: result.violations.filter((i) => WORDS.has(i.rule)),
@@ -68,13 +59,8 @@ export const toFix = (result: AccessibilityResult, views: CheckRecord['views'], 
 	notRun: views.flatMap((v) => v.results.filter((r) => r.status === 'notRun').map((r) => ({ r, state: v.state }))),
 });
 
-const readRecord = (file: string): CheckRecord | null => {
-	try {
-		return JSON.parse(readFileSync(file, 'utf8')) as CheckRecord;
-	} catch {
-		return null;
-	}
-};
+const readRecord = (file: string): CheckRecord | null =>
+	jsonFile<CheckRecord | null>(file, { parse: (raw) => raw as CheckRecord, fallback: null }).read();
 
 /** What the agent is told: what to fix, round by round, then what is left; and what is for a person. */
 const checkText = (config: CheckConfig, fix: ReturnType<typeof toFix>, rounds: number, left: boolean): string => {
@@ -125,31 +111,26 @@ const checkText = (config: CheckConfig, fix: ReturnType<typeof toFix>, rounds: n
  * Checks a built page as its task asks (`config`), counts the round, keeps what it found beside the page, and says what
  * to fix. Exits as a build does: 1 while there is something to fix and rounds are left, else 0.
  */
-export const checkBuild = async (config: CheckConfig, browser: CheckBrowser, now = () => new Date()): Promise<{ text: string; code: number }> => {
+export const checkBuild = async (config: CheckConfig, browser: MeasureBrowser): Promise<{ text: string; code: number }> => {
 	const html = readFileSync(config.page, 'utf8');
-	const server = new PrototypeServer();
-	try {
-		const shared = async (n: string) => {
-			const file = join(config.sharedDir, `${n}.datauri`);
-			return existsSync(file) ? readFileSync(file, 'utf8') : null;
-		};
-		const url = await server.servePage(`${config.projectId}/${config.name}`, html, shared);
-		const states = statesOf(html);
-		const result = resultOf(await browser.scan(url, states, config.target.tags), config.target, now());
-		const views: CheckRecord['views'] = [];
-		for (const s of states.length ? states : [null])
-			views.push({ state: s ?? 'default', results: (await browser.probe(withState(url, s), { depth: 'light' })).results });
-		const fix = toFix(result, views, config.target);
-		const needs = fix.axe.length + fix.probe.length > 0;
-		const last = readRecord(config.record);
-		const rounds = (last?.rounds ?? 0) + (needs ? 1 : 0);
-		const left = needs && rounds > MOST_ROUNDS;
-		const record: CheckRecord = { page: hashOf(html), rounds, left, at: now().toISOString(), target: config.target, result, views };
-		writeAtomic(config.record, JSON.stringify(record));
-		return { text: checkText(config, fix, rounds, left), code: needs && !left ? 1 : 0 };
-	} finally {
-		server.close();
-	}
+	const measured = await measurePrototype({
+		key: `${config.projectId}/${config.name}`,
+		html,
+		target: config.target,
+		depth: 'light',
+		sharedText: sharedIn(config.sharedDir),
+		cache: config.cache,
+		browser,
+	});
+	const views = measured.views.map(({ state, results }) => ({ state, results }));
+	const fix = toFix(measured.result, views, config.target);
+	const needs = fix.axe.length + fix.probe.length > 0;
+	const last = readRecord(config.record);
+	const rounds = (last?.rounds ?? 0) + (needs ? 1 : 0);
+	const left = needs && rounds > MOST_ROUNDS;
+	const record: CheckRecord = { page: hashOf(html), rounds, left, target: config.target, result: measured.result, views };
+	writeAtomic(config.record, JSON.stringify(record));
+	return { text: checkText(config, fix, rounds, left), code: needs && !left ? 1 : 0 };
 };
 
 /** Why what a build's check found was left, as the record says it. */

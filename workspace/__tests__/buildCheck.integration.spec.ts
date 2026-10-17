@@ -41,6 +41,7 @@ const configFor = (body: string): CheckConfig => {
 		page,
 		source: join(dir, 'v1-i1.tsx'),
 		sharedDir: join(dir, '_shared'),
+		cache: join(dir, 'v1-i1.accessibility.json'),
 		target: levelA,
 		record: join(dir, 'v1-i1.build-checked.json'),
 	};

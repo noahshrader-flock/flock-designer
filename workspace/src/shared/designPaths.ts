@@ -39,14 +39,31 @@ export const accessibilityLedgerPath = (projectId: string, name: string | null):
 /** The probe's evidence beside it (A3): a folder of the same name, a folder in it per view. */
 export const accessibilityEvidenceDir = (projectId: string, name: string | null): string => projectPath(projectId, `accessibility/${name ?? 'app'}`);
 
-/** One view's folder of that evidence: its name (a state, or a page), as letters, digits and dashes. */
-export const accessibilityViewDir = (projectId: string, name: string | null, view: string): string =>
-	`${accessibilityEvidenceDir(projectId, name)}/${
-		view
-			.toLowerCase()
-			.replace(/[^a-z0-9]+/g, '-')
-			.replace(/^-|-$/g, '') || 'view'
-	}`;
+/**
+ * Each view's folder of that evidence, by the view's name (a state, or a page): its name as letters, digits and dashes,
+ * made unique among the measure's views (`home`, `home-2`), so two never share one, whatever script the names are in.
+ */
+export const accessibilityViewDirs = (projectId: string, name: string | null, views: string[]): Map<string, string> => {
+	const taken = new Set<string>();
+	return new Map(
+		views.map((view) => {
+			const base =
+				view
+					.toLowerCase()
+					.replace(/[^a-z0-9]+/g, '-')
+					.replace(/^-|-$/g, '') || 'view';
+			let folder = base;
+			for (let n = 2; taken.has(folder); n++) folder = `${base}-${n}`;
+			taken.add(folder);
+			return [view, `${accessibilityEvidenceDir(projectId, name)}/${folder}`];
+		}),
+	);
+};
+
+/** Where testers return what they find by hand (A9), the record of how each was sorted, and the guards proposed for what was fixed. */
+export const accessibilityReturnedPath = (projectId: string): string => projectPath(projectId, 'accessibility/returned.md');
+export const accessibilityReturnedRecordPath = (projectId: string): string => projectPath(projectId, 'accessibility/returned.json');
+export const accessibilityGuardsPath = (projectId: string): string => projectPath(projectId, 'accessibility/guards.md');
 
 /**
  * Where a prototype's picture is kept in the design repository: in its project's `covers/` folder (a folder, so a picture

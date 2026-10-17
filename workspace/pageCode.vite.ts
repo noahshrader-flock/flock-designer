@@ -1,6 +1,6 @@
 import { resolve } from 'node:path';
 import type { Plugin } from 'vite';
-import { CARRIED, bundlePage, pageModuleOf } from './pageBundle.mjs';
+import { CARRIED, bundlePage, kindOf, pageModuleOf } from './pageBundle.mjs';
 
 /**
  * The page code (`src/page`) as one string, for the scripts the app and the published page run inside a previewed page.
@@ -14,7 +14,7 @@ export const pageCode = (): Plugin => ({
 	name: 'dsnr-page-code',
 	enforce: 'pre',
 	resolveId: (source, importer) => {
-		const kind = /\?(page|script)$/.exec(source)?.[1];
+		const kind = kindOf(source);
 		return kind && importer ? `\0${kind}:${pageModuleOf(source, importer)}` : null;
 	},
 	async load(id) {

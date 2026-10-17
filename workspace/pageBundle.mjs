@@ -28,6 +28,9 @@ export const bundlePage = async (entry) => {
  * from wherever it is written, with nothing installed beside it. A package written for require still has it, and the page
  * code it carries is bundled as every build bundles it.
  */
+/** What a bundled ES module starts with, so a package written for `require` still has it: every Node bundle DSNR makes. */
+export const REQUIRE_BANNER = "import { createRequire as __dsnrRequire } from 'node:module'; const require = __dsnrRequire(import.meta.url);";
+
 export const bundleScript = async (entry) => {
 	const result = await build({
 		entryPoints: [entry],
@@ -37,7 +40,7 @@ export const bundleScript = async (entry) => {
 		format: 'esm',
 		platform: 'node',
 		target: 'node20',
-		banner: { js: "import { createRequire as __dsnrRequire } from 'node:module'; const require = __dsnrRequire(import.meta.url);" },
+		banner: { js: REQUIRE_BANNER },
 		plugins: [pageCodeEsbuild()],
 		metafile: true,
 		logLevel: 'silent',
@@ -47,7 +50,8 @@ export const bundleScript = async (entry) => {
 
 /** What `import X from './x?page'` or `'./x?script'` is: the module beside the importer, as a TypeScript file, bundled one of these ways. */
 export const CARRIED = { page: bundlePage, script: bundleScript };
-const kindOf = (source) => /\?(page|script)$/.exec(source)?.[1];
+/** Which way an import is carried as text (`page` or `script`), from its suffix; undefined for any other import. */
+export const kindOf = (source) => /\?(page|script)$/.exec(source)?.[1];
 
 /** Where `import X from './x?page'` (or `?script`) points: the module beside the importer, as a TypeScript file. */
 export const pageModuleOf = (source, importer) => `${resolve(dirname(importer), source.replace(/\?(page|script)$/, ''))}.ts`;

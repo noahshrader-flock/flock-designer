@@ -7,7 +7,7 @@
 export type Rgb = readonly [number, number, number];
 
 /** WCAG's relative luminance of a color, 0 (black) to 1 (white). */
-export const luminanceOf = ([r, g, b]: Rgb): number => {
+const luminanceOf = ([r, g, b]: Rgb): number => {
 	const [lr, lg, lb] = [r, g, b].map((v) => {
 		const c = v / 255;
 		return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;

@@ -85,6 +85,17 @@ describe('what testers send back', () => {
 		expect(parseReturned(returnedTemplate('shop'))).toEqual({ findings: [], unreadable: [] });
 	});
 
+	it('keeps its identity when its evidence or severity is corrected, so it is logged once; a `\\|` in a cell stays in it', () => {
+		const [first] = parseReturned(`${returnedTemplate('shop')}| 2.4.7 | Home | Tab to Save | A ring | serious | | yes |\n`).findings;
+		const [edited] = parseReturned(`${returnedTemplate('shop')}| 2.4.7 | Home | Tab  to Save | A ring | minor | ring.png | yes |\n`).findings;
+		expect(edited?.id).toBe(first?.id);
+		const [piped] = parseReturned(`${returnedTemplate('shop')}| 2.4.7 | Home | Press Tab \\| Shift | A ring | serious | | yes |\n`).findings;
+		expect(piped?.steps).toBe('Press Tab | Shift');
+		expect(parseReturned(`${returnedTemplate('shop')}| 2.4.7 | Home | Tab | A ring | serious | | yes | extra |\n`).unreadable).toEqual([
+			{ line: 7, why: 'it has 8 cells, and a finding has 7' },
+		]);
+	});
+
 	it('is sorted by what was measured of its criterion: missed by a machine, found by one too, not measured, or a person’s', () => {
 		const l = ledger(
 			[issue('image-alt', ['1.1.1'])],
@@ -163,6 +174,15 @@ describe('a guard for what was fixed', () => {
 				JSON.stringify({ dependencies: { react: '18' }, devDependencies: { eslint: '9', '@biomejs/biome': '1' } }),
 			);
 			expect(stacksOf(dir).map((s) => s.stack)).toEqual(['biome', 'eslint-jsx-a11y']);
+			// What it read, said: ESLint here has no jsx-a11y plugin yet, and the rule comes with adding it.
+			expect(stacksOf(dir).find((s) => s.stack === 'eslint-jsx-a11y')?.says).toBe(
+				'ESLint, adding eslint-plugin-jsx-a11y, which it does not have yet',
+			);
+			writeFileSync(
+				join(dir, 'package.json'),
+				JSON.stringify({ devDependencies: { eslint: '9', 'eslint-plugin-jsx-a11y': '6' }, dependencies: { react: '18' } }),
+			);
+			expect(stacksOf(dir).find((s) => s.stack === 'eslint-jsx-a11y')?.says).toBe('ESLint with eslint-plugin-jsx-a11y');
 			writeFileSync(join(dir, 'package.json'), JSON.stringify({ devDependencies: { eslint: '9' } }));
 			writeFileSync(join(dir, 'biome.json'), '{}');
 			expect(stacksOf(dir).map((s) => s.stack)).toEqual(['biome']);

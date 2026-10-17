@@ -142,6 +142,13 @@ const optionsOf = (args: string[]) => {
 	}
 };
 
+/** The design repository beside a product's checkout, as the app finds it: the one way it is found from one. */
+const designBeside = (root: string): string => {
+	const records = recordsRootFor(root);
+	if (records === null) throw new Error(`There is no design repository beside ${root}. Clone flock-designer into the same folder.`);
+	return dirname(records);
+};
+
 /** The design repository: the one being worked in, or the one beside the product repository being worked in. */
 const designOf = async (cwd: string): Promise<string> => {
 	let root: string;
@@ -151,9 +158,7 @@ const designOf = async (cwd: string): Promise<string> => {
 		throw new Error('This is not inside a repository. Run it from the design repository, or a product repository beside it.');
 	}
 	if (existsSync(join(root, 'projects')) && existsSync(join(root, 'skills'))) return root;
-	const records = recordsRootFor(root);
-	if (records === null) throw new Error(`There is no design repository beside ${root}. Clone flock-designer into the same folder.`);
-	return dirname(records);
+	return designBeside(root);
 };
 
 /** Builds the site from the design repository, with each iteration's comment count when GitHub can be asked. */
@@ -300,9 +305,7 @@ export const main = async (argv: string[], deps: CliDeps): Promise<number> => {
 		if (command === 'read-returned') {
 			if (!values.project) throw new UsageError('Say which project, with --project.');
 			const root = await productOf(deps.cwd, values.product, 'log what testers found');
-			const records = recordsRootFor(root);
-			if (records === null) throw new Error(`There is no design repository beside ${root}. Clone flock-designer into the same folder.`);
-			return readReturnedNow({ designRoot: dirname(records), root, projectId: values.project, out: deps.out });
+			return readReturnedNow({ designRoot: designBeside(root), root, projectId: values.project, out: deps.out });
 		}
 		if (command === 'check-accessibility') {
 			if (!values.project) throw new UsageError('Say which project, with --project.');
@@ -325,9 +328,7 @@ export const main = async (argv: string[], deps: CliDeps): Promise<number> => {
 			values.product,
 			command === 'accessibility' ? 'open it, and nothing was measured' : 'build prototypes from it',
 		);
-		const records = recordsRootFor(root);
-		if (records === null) throw new Error(`There is no design repository beside ${root}. Clone flock-designer into the same folder.`);
-		const designRoot = dirname(records);
+		const designRoot = designBeside(root);
 		// The clone alone: publishing is its own command here, and there is no app sign-in to read GitHub with.
 		const store = designStore({ clone: () => designRoot, files: null, onWrite: () => undefined });
 		const work = prototypeWork({

@@ -4,7 +4,17 @@ import axe from 'axe-core';
 import { describe, expect, it } from 'vitest';
 import { criterionOf } from '../src/shared/accessibility';
 import type { AccessibilityIssue, AccessibilityResult } from '../src/shared/contract';
-import { type Ledger, TEN_CHECKS, ledgerChanges, ledgerFaults, ledgerOf, reviewSection, withReviewSection } from '../src/main/services/ledger';
+import {
+	type Ledger,
+	type LedgerRow,
+	TEN_CHECKS,
+	layersOf,
+	ledgerChanges,
+	ledgerFaults,
+	ledgerOf,
+	reviewSection,
+	withReviewSection,
+} from '../src/main/services/ledger';
 import type { CellResult } from '../src/main/services/probe/cells';
 import { CRITERIA } from '../src/shared/wcagCriteria';
 import { axeTagsFor } from '../src/shared/wcag';
@@ -80,12 +90,14 @@ describe('a ledger', () => {
 	it('says what was found, by which layer, and rests each status on its evidence file', () => {
 		expect(row(l, '1.1.1')).toMatchObject({
 			status: 'found',
-			layers: ['axe'],
 			found: ['axe image-alt: 2 elements, in Home'],
 			evidence: ['projects/p/accessibility/app.json'],
 		});
-		expect(row(l, '2.4.7')).toMatchObject({ status: 'found', layers: ['probe'], evidence: ['projects/p/accessibility/app/home/cells.json'] });
-		expect(row(l, '4.1.2')).toMatchObject({ status: 'measured', layers: ['axe', 'probe'] });
+		expect(layersOf(row(l, '1.1.1') as LedgerRow)).toEqual(['axe']);
+		expect(row(l, '2.4.7')).toMatchObject({ status: 'found', evidence: ['projects/p/accessibility/app/home/cells.json'] });
+		expect(layersOf(row(l, '2.4.7') as LedgerRow)).toEqual(['probe']);
+		expect(row(l, '4.1.2')?.status).toBe('measured');
+		expect(layersOf(row(l, '4.1.2') as LedgerRow)).toEqual(['axe', 'probe']);
 		expect(row(l, '4.1.2')?.evidence.sort()).toEqual(['projects/p/accessibility/app.json', 'projects/p/accessibility/app/home/cells.json']);
 	});
 
@@ -96,7 +108,7 @@ describe('a ledger', () => {
 	});
 
 	it('leaves to a person what no layer reaches, with what they judge, and adds what axe could not decide', () => {
-		expect(row(l, '1.3.3')).toMatchObject({ status: 'person', layers: [], evidence: [], person: 'copy that names shape, color or position' });
+		expect(row(l, '1.3.3')).toMatchObject({ status: 'person', by: [], evidence: [], person: 'copy that names shape, color or position' });
 		expect(row(l, '1.4.3')?.person).toBe('what axe could not decide (color-contrast)');
 		expect(row(l, '1.1.1')?.person).toBe('alt text is meaningful; decorative vs informative');
 	});
@@ -161,6 +173,13 @@ describe('the review record’s accessibility section', () => {
 		expect(section.replace('never a pass', '')).not.toMatch(/\bpass(es|ed)?\b/i);
 	});
 
+	it('puts beside a check no measure reaches that none does, and best practice beside heading structure, never counted as WCAG', () => {
+		const withPractice = { ...l, bestPractice: [{ rule: 'heading-order', line: 'heading-order: 2 elements' }] };
+		const text = reviewSection(withPractice, FILE);
+		expect(text).toContain('| 4 | Focus management | No machine measures it here | the whole check |');
+		expect(text).toMatch(/\| 6 \| Heading structure \| [^|]*best practice, beside WCAG: heading-order: 2 elements \|/);
+	});
+
 	it('goes in place of its last one, or at the end, and leaves everything else in review.md as it was', () => {
 		const review = '# Review\n\n## Product parity\n\nFine.\n';
 		const once = withReviewSection(review, l, FILE);
@@ -208,5 +227,36 @@ describe('two ledgers', () => {
 		expect(c.noLongerFound).toEqual(['2.4.7']);
 		expect(c.changed).toContainEqual({ sc: '2.4.7', from: 'found', to: 'measured' });
 		expect(ledgerChanges(after, after)).toEqual({ newlyFound: [], noLongerFound: [], changed: [] });
+	});
+});
+
+describe('the record of a measure', () => {
+	it('gives each view a folder of its own, however its name is written, and lists exactly its own files', async () => {
+		const { accessibilityViewDirs } = await import('../src/shared/designPaths');
+		const dirs = accessibilityViewDirs('p', null, ['Home', 'home!', 'Главная', 'Обзор']);
+		expect([...dirs.values()]).toEqual([
+			'projects/p/accessibility/app/home',
+			'projects/p/accessibility/app/home-2',
+			'projects/p/accessibility/app/view',
+			'projects/p/accessibility/app/view-2',
+		]);
+		const { recordFiles } = await import('../src/main/services/accessibilityRecord');
+		const { files } = recordFiles(
+			{
+				projectId: 'p',
+				name: null,
+				of: 'Shop',
+				result: result([]),
+				target,
+				depth: 'full',
+				views: [{ state: 'Home', results: [], files: ['tab.json', 'stops/01.png'] }],
+				source: [],
+			},
+			null,
+		);
+		const kept = JSON.parse(files.find((f) => f.path === 'projects/p/accessibility/app.json')?.text ?? '{}') as {
+			probe: { views: { files: string[] }[] };
+		};
+		expect(kept.probe.views[0]?.files).toEqual(['cells.json', 'tab.json', 'stops/01.png']);
 	});
 });

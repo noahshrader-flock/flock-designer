@@ -1,4 +1,4 @@
-import { type Criterion, requiredAt, type WcagLevel, type WcagTarget, type WcagVersion } from './wcag';
+import { type Criterion, requiredAt, understanding, type WcagLevel, type WcagTarget, type WcagVersion } from './wcag';
 
 /**
  * WCAG 2.2's Level A and AA success criteria: the accessibility plan's matrix, its 55 rows, held here once. Each one's
@@ -7,10 +7,38 @@ import { type Criterion, requiredAt, type WcagLevel, type WcagTarget, type WcagV
  * list must carry it (`manual`: **AT**, assistive technology is the only real answer; **if**, only when the work has that
  * feature; **host**, decided by the page around the work). 4.1.1 Parsing is not here: WCAG 2.2 took it out.
  */
+/** When the manual list must carry a criterion, as the matrix's last column says it. */
+export interface ManualMark {
+	/** Assistive technology is the only real answer (with what, when it says: "voice control"). */
+	at: boolean;
+	with: string | null;
+	/** Only when the work has this ("video", "a time limit exists"). */
+	when: string | null;
+	/** Decided by the page around the work, which a measure of the work alone does not have. */
+	host: boolean;
+}
+
 export interface MatrixRow extends Criterion {
 	person: string | null;
-	manual: string | null;
+	manual: ManualMark | null;
 }
+
+/** The matrix's Manual column, as written ("AT; if: charts or complex images", "AT (voice control)", "host"), as fields. */
+const mark = (written: string | null): ManualMark | null => {
+	if (written === null) return null;
+	const parts = written.split(';').map((p) => p.trim());
+	const at = parts.find((p) => p.startsWith('AT'));
+	return {
+		at: at !== undefined,
+		with: at ? (/\(([^)]+)\)/.exec(at)?.[1] ?? null) : null,
+		when:
+			parts
+				.find((p) => p.startsWith('if:'))
+				?.slice(3)
+				.trim() ?? null,
+		host: parts.includes('host'),
+	};
+};
 
 const row = (
 	sc: string,
@@ -25,9 +53,9 @@ const row = (
 	name,
 	level,
 	since,
-	url: `https://www.w3.org/WAI/WCAG22/Understanding/${slug}.html`,
+	url: understanding(slug),
 	person,
-	manual,
+	manual: mark(manual),
 });
 
 export const CRITERIA: MatrixRow[] = [

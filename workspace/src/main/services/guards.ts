@@ -13,9 +13,15 @@ import type { LedgerPart } from './ledger';
 export type LintStack = 'biome' | 'eslint-jsx-a11y';
 
 /** The lint stacks DSNR proposes rules for, and how each is seen in a product. */
-const STACKS: { stack: LintStack; says: string; is: (deps: Set<string>, has: (file: string) => boolean) => boolean }[] = [
-	{ stack: 'biome', says: 'Biome (its a11y rules)', is: (deps, has) => deps.has('@biomejs/biome') || has('biome.json') || has('biome.jsonc') },
-	{ stack: 'eslint-jsx-a11y', says: 'ESLint with eslint-plugin-jsx-a11y', is: (deps) => deps.has('eslint') && deps.has('react') },
+const STACKS: { stack: LintStack; says: (deps: Set<string>) => string; is: (deps: Set<string>, has: (file: string) => boolean) => boolean }[] = [
+	{ stack: 'biome', says: () => 'Biome (its a11y rules)', is: (deps, has) => deps.has('@biomejs/biome') || has('biome.json') || has('biome.jsonc') },
+	{
+		stack: 'eslint-jsx-a11y',
+		// What it read: whether the plugin is there yet, or would be added with the rule.
+		says: (deps) =>
+			deps.has('eslint-plugin-jsx-a11y') ? 'ESLint with eslint-plugin-jsx-a11y' : 'ESLint, adding eslint-plugin-jsx-a11y, which it does not have yet',
+		is: (deps) => deps.has('eslint') && deps.has('react'),
+	},
 ];
 
 /** The lint stacks a product's checkout has, from its package.json and its files. */
@@ -27,7 +33,7 @@ export const stacksOf = (root: string): { stack: LintStack; says: string }[] => 
 	} catch {
 		// No package.json, or not one that can be read: no stack is known.
 	}
-	return STACKS.filter((s) => s.is(deps, (f) => existsSync(join(root, f)))).map(({ stack, says }) => ({ stack, says }));
+	return STACKS.filter((s) => s.is(deps, (f) => existsSync(join(root, f)))).map(({ stack, says }) => ({ stack, says: says(deps) }));
 };
 
 /**
@@ -46,7 +52,6 @@ const RULES: Record<string, Partial<Record<LintStack, string[]>>> = {
 	'aria-hidden-focus': { biome: ['a11y/noAriaHiddenOnFocusable'], 'eslint-jsx-a11y': ['jsx-a11y/no-aria-hidden-on-focusable'] },
 	'html-has-lang': { biome: ['a11y/useHtmlLang'], 'eslint-jsx-a11y': ['jsx-a11y/html-has-lang'] },
 	'frame-title': { biome: ['a11y/useIframeTitle'], 'eslint-jsx-a11y': ['jsx-a11y/iframe-has-title'] },
-	'empty-heading': { biome: ['a11y/useHeadingContent'], 'eslint-jsx-a11y': ['jsx-a11y/heading-has-content'] },
 	'autocomplete-valid': { biome: ['a11y/useValidAutocomplete'], 'eslint-jsx-a11y': ['jsx-a11y/autocomplete-valid'] },
 	'keyboard-reach': {
 		biome: ['a11y/useKeyWithClickEvents', 'a11y/noStaticElementInteractions'],

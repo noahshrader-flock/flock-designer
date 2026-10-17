@@ -8,8 +8,12 @@
  * fall to none.
  */
 import { createHash } from 'node:crypto';
+import { join } from 'node:path';
 import { CRITERIA } from '../../shared/wcagCriteria';
-import type { Ledger, LedgerRow } from './ledger';
+import { type Ledger, type LedgerRow, layersOf } from './ledger';
+
+/** A product's agent gap log, in its context folder: what DSNR got wrong there, which the product keeps. */
+export const agentGapsFile = (contextDir: string): string => join(contextDir, 'knowledge', 'agent-gaps.md');
 
 /** The table the manual list asks findings to be returned in: its header, as the file starts. */
 export const RETURNED_COLUMNS = [
@@ -44,7 +48,7 @@ export interface Returned {
 	severity: string;
 	evidence: string;
 	inWork: string;
-	/** What it is, by its own words, so the same row is read once however often the file is read. */
+	/** What it is: its criterion, where and how it was found, so the same finding is read once however often the file is read, or a cell of it corrected. */
 	id: string;
 }
 
@@ -54,19 +58,24 @@ export const parseReturned = (markdown: string): { findings: Returned[]; unreada
 	const unreadable: { line: number; why: string }[] = [];
 	markdown.split('\n').forEach((text, i) => {
 		if (!/^\s*\|/.test(text) || /^\s*\|\s*-/.test(text) || /^\s*\|\s*Criterion\s*\|/.test(text)) return;
+		// Cells split where a `|` is not written `\|`: one in a cell's words stays in it.
 		const cells = text
 			.trim()
-			.replace(/^\||\|$/g, '')
-			.split('|')
-			.map((c) => c.trim());
+			.replace(/^\||(?<!\\)\|$/g, '')
+			.split(/(?<!\\)\|/)
+			.map((c) => c.trim().replace(/\\\|/g, '|'));
 		if (cells.every((c) => c === '')) return;
 		const sc = /\b(\d\.\d{1,2}\.\d{1,2})\b/.exec(cells[0] ?? '')?.[1];
-		if (cells.length < RETURNED_COLUMNS.length)
+		if (cells.length !== RETURNED_COLUMNS.length)
 			return void unreadable.push({ line: i + 1, why: `it has ${cells.length} cells, and a finding has ${RETURNED_COLUMNS.length}` });
 		if (!sc || !CRITERIA.some((c) => c.sc === sc))
 			return void unreadable.push({ line: i + 1, why: `"${cells[0]}" is not a WCAG A or AA criterion's number` });
 		const [, where, steps, expected, severity, evidence, inWork] = cells as [string, string, string, string, string, string, string];
-		const id = createHash('sha256').update(cells.join('\u0000')).digest('hex').slice(0, 12);
+		const said = (x: string) => x.toLowerCase().replace(/\s+/g, ' ').trim();
+		const id = createHash('sha256')
+			.update([sc, said(where), said(steps)].join('\u0000'))
+			.digest('hex')
+			.slice(0, 12);
 		findings.push({ line: i + 1, sc, where, steps, expected, severity, evidence, inWork, id });
 	});
 	return { findings, unreadable };
@@ -85,11 +94,11 @@ export const sortReturned = (findings: Returned[], ledger: Ledger): { finding: R
 	});
 
 /** An escape, as a row of the product's agent gap log: what DSNR missed, and what would make it catch it next time. */
-export const gapRow = ({ finding, row }: { finding: Returned; row: LedgerRow }, date: string): string => {
+const gapRow = ({ finding, row }: { finding: Returned; row: LedgerRow }, date: string): string => {
 	const cell = (s: string) => s.replace(/\|/g, '\\|').replace(/\s+/g, ' ').trim();
 	const measured =
-		row.by?.map((p) => `${p.layer === 'axe' ? `axe ${p.what === 'axe' ? '' : p.what}`.trim() : `probe ${p.what}`} (${p.status})`).join(', ') ||
-		row.layers.join(', ');
+		row.by.map((p) => `${p.layer === 'axe' ? `axe ${p.what === 'axe' ? '' : p.what}`.trim() : `probe ${p.what}`} (${p.status})`).join(', ') ||
+		layersOf(row).join(', ');
 	return `| ${date} | **Accessibility: WCAG ${row.sc} ${row.name}, found by a tester in ${cell(finding.where)} and not by DSNR** (${measured}). ${cell(finding.steps)}; expected: ${cell(finding.expected)}. Severity ${cell(finding.severity)}; evidence: ${cell(finding.evidence)}. <!-- returned ${finding.id} --> | missing runtime support | A fixture of this fault, and a change to what measures ${row.sc} in DSNR, so it is caught next time (accessibility plan A9) |`;
 };
 

@@ -31,6 +31,15 @@ export const jsonFile = <T>(path: string, { parse, fallback }: { parse: (raw: un
 	return { read, write, update: (change) => write(change(read())) };
 };
 
+/** A file's text, or null when it is not there or cannot be read. */
+export const readText = (path: string): string | null => {
+	try {
+		return readFileSync(path, 'utf8');
+	} catch {
+		return null;
+	}
+};
+
 /** Writes `data` whole: beside the file first, then renamed over it. Throws when it cannot, for a caller that must know. */
 export const writeAtomic = (path: string, data: string | Buffer, mode?: number): void => {
 	mkdirSync(dirname(path), { recursive: true });

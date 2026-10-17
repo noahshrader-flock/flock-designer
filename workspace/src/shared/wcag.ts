@@ -87,7 +87,8 @@ export interface Criterion {
 	url: string;
 }
 
-const understanding = (slug: string) => `https://www.w3.org/WAI/WCAG22/Understanding/${slug}.html`;
+/** Where the W3C explains a criterion, by its slug. */
+export const understanding = (slug: string) => `https://www.w3.org/WAI/WCAG22/Understanding/${slug}.html`;
 
 /**
  * A contrast criterion: the least ratio it asks of text. Only the ones the app judges are here (a color pair is judged

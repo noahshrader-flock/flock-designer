@@ -4,8 +4,8 @@
  * may never open. Neither is copied: both are read each time a task is made. And the rest a manifest says about it: the
  * pages of the product's own app to check (`appPages`).
  */
-import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { readText } from './jsonFile';
 import { BEST_PRACTICE_TITLE, elementLine, unlisted, whereFound } from '../../shared/accessibility';
 import type { AccessibilityFindings, AccessibilityIssue } from '../../shared/contract';
 import { plural } from '../../shared/plural';
@@ -78,9 +78,10 @@ export const ASSISTIVE_SECTION = 'Assistive technology to test with';
 
 /** What a manifest says testers cover at least, a list item each ("VoiceOver with Safari, on macOS"); null when it names none. */
 export const assistiveTechnology = (manifest: string | null): string[] | null => {
-	const items = (manifest === null ? '' : (section(manifest, ASSISTIVE_SECTION) ?? ''))
-		.split('\n')
-		.flatMap((l) => (/^\s*[-*]\s+(.+)$/.exec(l)?.[1] ? [(/^\s*[-*]\s+(.+)$/.exec(l)?.[1] as string).trim()] : []));
+	const items = (manifest === null ? '' : (section(manifest, ASSISTIVE_SECTION) ?? '')).split('\n').flatMap((l) => {
+		const item = /^\s*[-*]\s+(.+)$/.exec(l)?.[1]?.trim();
+		return item ? [item] : [];
+	});
 	return items.length > 0 ? items : null;
 };
 
@@ -88,7 +89,7 @@ export const assistiveTechnology = (manifest: string | null): string[] | null =>
  * What a check found that is still open, as the agent reads it: what failed, where in WCAG, on how many elements, and each
  * element it lists, by its selector with what axe says to change, so it can be found and fixed.
  */
-const issueLine = (i: AccessibilityIssue): string =>
+const openIssue = (i: AccessibilityIssue): string =>
 	[
 		`- **${i.rule}**${i.criteria.length ? ` (WCAG ${i.criteria.join(', ')})` : ''}: ${i.help}. ${whereFound(i)}.`,
 		...i.elements.map((e) => `  - ${elementLine(e)}`),
@@ -96,10 +97,13 @@ const issueLine = (i: AccessibilityIssue): string =>
 	].join('\n');
 
 /** What a check found, as the agent reads it: by axe, for a person to judge, and best practice apart. Nothing when it found none. */
-export const findingsLines = (findings: AccessibilityFindings & { bestPractice?: AccessibilityFindings }): string[] => [
-	...(findings.violations.length ? ['', 'Found by axe:', ...findings.violations.map(issueLine)] : []),
-	...(findings.incomplete.length ? ['', 'For a person to judge (axe could not decide):', ...findings.incomplete.map(issueLine)] : []),
-	...(findings.bestPractice?.violations.length ? ['', `${BEST_PRACTICE_TITLE}:`, ...findings.bestPractice.violations.map(issueLine)] : []),
+/** What a check found, with what its best-practice rules found beside it when it has them. */
+export type CheckFindings = AccessibilityFindings & { bestPractice?: AccessibilityFindings };
+
+export const findingsLines = (findings: CheckFindings): string[] => [
+	...(findings.violations.length ? ['', 'Found by axe:', ...findings.violations.map(openIssue)] : []),
+	...(findings.incomplete.length ? ['', 'For a person to judge (axe could not decide):', ...findings.incomplete.map(openIssue)] : []),
+	...(findings.bestPractice?.violations.length ? ['', `${BEST_PRACTICE_TITLE}:`, ...findings.bestPractice.violations.map(openIssue)] : []),
 ];
 
 /**
@@ -115,7 +119,7 @@ export const accessibilityBrief = ({
 }: {
 	standard: string;
 	target: DeclaredTarget;
-	findings?: (AccessibilityFindings & { bestPractice?: AccessibilityFindings }) | null;
+	findings?: CheckFindings | null;
 	check?: string | null;
 }): string => {
 	const tags = target.tags.map((t) => `\`${t}\``).join(', ');
@@ -152,11 +156,11 @@ export const accessibilityBrief = ({
 		.trim();
 };
 
-/** A product's target, from the manifest in its guidance folder (`.dsnr`, on the branch worked on), or the default. */
-export const productTarget = (guidance: string | null, product: string): DeclaredTarget => {
-	const file = guidance === null ? null : join(guidance, MANIFEST_FILE);
-	return declaredTarget(file !== null && existsSync(file) ? readFileSync(file, 'utf8') : null, product);
-};
+/** A product's manifest in its guidance folder (`.dsnr`), as text; null when it has none. */
+export const readManifest = (guidance: string | null): string | null => (guidance === null ? null : readText(join(guidance, MANIFEST_FILE)));
+
+/** A product's target, from the manifest in its guidance folder (on the branch worked on), or the default. */
+export const productTarget = (guidance: string | null, product: string): DeclaredTarget => declaredTarget(readManifest(guidance), product);
 
 /**
  * The accessibility section of a task, made the one way every task makes it: the standard read as the skills are
@@ -165,6 +169,6 @@ export const productTarget = (guidance: string | null, product: string): Declare
 export const taskAccessibility = async (
 	readStandard: (path: string) => Promise<string>,
 	target: DeclaredTarget,
-	findings?: (AccessibilityFindings & { bestPractice?: AccessibilityFindings }) | null,
+	findings?: CheckFindings | null,
 	check: string | null = null,
 ): Promise<string> => accessibilityBrief({ standard: await readStandard(ACCESSIBILITY_STANDARD), target, findings, check });

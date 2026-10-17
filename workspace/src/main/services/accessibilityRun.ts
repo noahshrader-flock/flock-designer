@@ -26,7 +26,7 @@ export interface PageNotOpened extends AppPage {
 }
 
 /** What a run of an app's pages found: one result across the pages that opened (null when none did), and those that did not. */
-export interface PagesChecked {
+interface PagesChecked {
 	result: AccessibilityResult | null;
 	notOpened: PageNotOpened[];
 }
