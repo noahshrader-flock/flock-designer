@@ -1,7 +1,7 @@
 /**
- * A count beside a row, as VS Code draws one on a view or a tab: its badge colours, and what the number is, said. A `tone`
- * for a count that means something of DSNR's: the brand's for comments, which are what it is for; the warning's for what
- * is wrong. Other counts stay VS Code's own. With `onPress` it is a button, named and with a tooltip, that opens what the
+ * A count beside a row, as VS Code draws one on a view or a tab, and what the number is, said: in the grey of the toggles
+ * at rest. A `tone` for a count that means something of DSNR's: the brand's for comments and changes, which are what it is
+ * for; the warning's for what is wrong. With `onPress` it is a button, named and with a tooltip, that opens what the
  * count is of. With no count it is the same badge extra small and blank, a mark that something is wrong where a number
  * would not fit (hung off a swatch), said by its label.
  */

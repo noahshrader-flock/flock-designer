@@ -97,7 +97,7 @@ export const ComponentTab = ({ id }: { id: string }) => {
 							</div>
 							<div className="tab-actions">
 								{/* Always there, so nothing moves when the first value is tried; with nothing tried and no branch, it cannot be pressed. */}
-								<Button variant="secondary" disabled={count === 0 && !kept} onClick={() => setChangesOpen(true)}>
+								<Button variant="ghost" disabled={count === 0 && !kept} onClick={() => setChangesOpen(true)}>
 									{count === 0 ? 'No changes' : plural(count, 'change')}
 								</Button>
 								<Button variant="secondary" onClick={() => setAsking(true)}>

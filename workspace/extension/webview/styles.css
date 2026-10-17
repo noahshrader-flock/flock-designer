@@ -335,8 +335,9 @@ body {
 	padding: 0 3px;
 	border: 1px solid var(--dsnr-contrast-border);
 	border-radius: calc(var(--dsnr-badge) / 2);
-	color: var(--vscode-badge-foreground);
-	background: var(--vscode-badge-background);
+	/* At rest, the toggle's own grey (`--dsnr-track`), not VS Code's blue: a count that is none, or not yet anything of DSNR's. */
+	color: var(--vscode-foreground);
+	background: var(--dsnr-track);
 	font-size: 11px;
 	font-weight: 600;
 	line-height: 1;
@@ -1568,6 +1569,11 @@ textarea.input {
 	box-shadow: 0 2px 8px var(--vscode-widget-shadow);
 }
 
+/* It takes the focus when it opens, so the keyboard is in it; nothing is drawn around it for that. */
+.popover:focus {
+	outline: none;
+}
+
 .popover-body {
 	display: flex;
 	flex-direction: column;
@@ -1893,9 +1899,43 @@ textarea.input {
 	font-family: var(--vscode-editor-font-family);
 }
 
+/*
+ * A length's slider: a thin track in the panel's grey, filled in the brand up to where it is (`--fill`, from the field), and a
+ * round thumb. Drawn here because the browser's own is a thick track in white. The thumb sits on the track's middle, wherever
+ * the track's height is.
+ */
 .dimension-field input[type='range'] {
 	flex: 1;
-	accent-color: var(--dsnr-brand);
+	height: 16px;
+	margin: 0;
+	background: transparent;
+	cursor: pointer;
+	appearance: none;
+	-webkit-appearance: none;
+}
+
+.dimension-field input[type='range']::-webkit-slider-runnable-track {
+	height: 4px;
+	border-radius: 2px;
+	background: linear-gradient(to right, var(--dsnr-brand) var(--fill, 0%), var(--dsnr-outline) var(--fill, 0%));
+}
+
+.dimension-field input[type='range']::-webkit-slider-thumb {
+	width: 14px;
+	height: 14px;
+	margin-top: -5px;
+	border: 2px solid var(--dsnr-brand);
+	border-radius: 50%;
+	background: var(--dsnr-brand);
+	-webkit-appearance: none;
+}
+
+.dimension-field input[type='range']:focus-visible {
+	outline: none;
+}
+
+.dimension-field input[type='range']:focus-visible::-webkit-slider-thumb {
+	box-shadow: 0 0 0 2px var(--vscode-focusBorder);
 }
 
 .steps {

@@ -1009,8 +1009,9 @@ describe('a component’s tab', () => {
 			expect(opener.closest('[data-value-cell]')?.contains(popover())).toBe(true);
 			expect(popover()?.getAttribute('aria-modal')).toBeNull();
 			expect(document.querySelector('.scrim')).toBeNull();
-			// Its first field has the focus.
-			expect(document.activeElement).toBe(slider('Height'));
+			// The focus is in it, on the panel and not on its first field: the slider is not drawn as chosen the moment it opens.
+			expect(document.activeElement).toBe(popover());
+			expect(document.activeElement).not.toBe(slider('Height'));
 		});
 
 		it('closes with Escape, the focus going back to its button; with a press elsewhere; and with its button again; not with a press inside it', async () => {

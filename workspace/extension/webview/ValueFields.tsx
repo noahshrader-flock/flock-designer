@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { type CSSProperties, useEffect, useState } from 'react';
 import { lengthSpan } from '../../src/shared/tokens';
 import { useColorField } from '../../src/renderer/useColorField';
 
@@ -59,6 +59,8 @@ export const LengthField = ({
 				max={max}
 				step={step}
 				value={n}
+				// How far along it is, for the stylesheet to fill the track to (a range has no fill of its own once it is drawn here).
+				style={{ '--fill': `${max > 0 ? (n / max) * 100 : 0}%` } as CSSProperties}
 				onChange={(e) => {
 					const next = Number(e.target.value);
 					setN(next);
