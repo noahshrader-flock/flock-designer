@@ -6,7 +6,6 @@ import { isDark } from '../../src/shared/tokens';
 import { HOST } from '../../src/shared/vocabulary';
 import { TokenChangesProvider, useTokenChangesFor } from '../../src/renderer/tokenChanges';
 import { useTokenBranch } from '../../src/renderer/useTokenBranch';
-import { AskInWords } from './AskInWords';
 import { Changed } from './Changed';
 import { ComponentChanges } from './ComponentChanges';
 import { triedOn, useValueTrials } from './valueTrials';
@@ -111,8 +110,6 @@ const Ready = ({
 	const [problems, setProblems] = useState(false);
 	// The token whose control is open: the one whose row or swatch was pressed.
 	const [editing, setEditing] = useState<DesignToken | null>(null);
-	// Asking in words for its tokens (Phase 6): open while its dialog is.
-	const [asking, setAsking] = useState(false);
 	// Every change being tried, in a dialog from their count beside the not-read one, so nothing opens above the list: the
 	// tokens, then each component with values tried on this commit or a branch of its values kept (asked for once it opens).
 	const { trials } = useValueTrials();
@@ -202,7 +199,7 @@ const Ready = ({
 					/>
 				)
 			) : (
-				<TokensView tokens={catalog.tokens} onEdit={setEditing} onSource={does.openTokenSource} onAsk={() => setAsking(true)} />
+				<TokensView tokens={catalog.tokens} onEdit={setEditing} onSource={does.openTokenSource} />
 			)}
 			{editing && <TokenEditor key={editing.path} token={editing} onClose={() => setEditing(null)} />}
 			{problems && <Problems problems={catalog.tokens.problems} onClose={() => setProblems(false)} />}
@@ -220,16 +217,6 @@ const Ready = ({
 						/>
 					))}
 				</Dialog>
-			)}
-			{asking && (
-				<AskInWords
-					file={null}
-					about="Its tokens: what their controls change. To change one component's own values, ask on its tab."
-					edits={edits}
-					tried={[]}
-					onAsked={(asked) => changes.changeAll(asked.edits)}
-					onClose={() => setAsking(false)}
-				/>
 			)}
 		</TokenChangesProvider>
 	);

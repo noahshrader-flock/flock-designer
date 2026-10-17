@@ -151,7 +151,7 @@ export const ComponentSections = ({
 	/** Opens another component's tab. */
 	onOpen: (id: string) => void;
 	/**
-	 * Whether its Changes dialog is open (the button beside Ask opens it), closing it, telling it a branch of its values is kept,
+	 * Whether its Changes dialog is open (the button in its header opens it), closing it, telling it a branch of its values is kept,
 	 * and the panel's Changes, where Save, Propose and Start over are.
 	 */
 	changes: { open: boolean; onClose: () => void; onKept: (kept: boolean) => void; onActions: () => void };

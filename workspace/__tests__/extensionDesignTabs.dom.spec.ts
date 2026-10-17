@@ -292,7 +292,7 @@ describe('a component’s tab', () => {
 		await answer('componentTokens', analysis(over));
 	};
 	const section = (label: string) => document.querySelector(`[aria-label="${label}"]`) as HTMLElement | null;
-	/** Its Changes dialog, opened from the button beside Ask: what is tried is there, not in the column. */
+	/** Its Changes dialog, opened from the button in its header: what is tried is there, not in the column. */
 	const openChanges = async () => {
 		if (!document.querySelector('[role="dialog"][aria-label="Changes"]')) await press(document.querySelector('.tab-actions button') as HTMLElement);
 	};
@@ -762,17 +762,6 @@ describe('a component’s tab', () => {
 			expect(document.querySelector('[data-value-following]')?.textContent).toContain('Follows Radius');
 		});
 
-		it('has the agent write a follow asked in words, as it does one chosen from the popover (Phase 6)', async () => {
-			await analysed();
-			await answer('storyPreview', { state: 'ready', base: BASE });
-			await press(button('Ask…'));
-			await type(document.querySelector('[aria-label="Ask in words"] textarea') as HTMLTextAreaElement, 'use the shared radius');
-			await press(button('Ask'));
-			const follow = { property: 'radius', value: '8px 8px 8px 8px', targets: ['radius:0'], follows: 'radius' };
-			await answer('askInWords', { edits: [], values: [follow], said: 'Follows the radius.' });
-			expect(calls('writeValue').at(-1)?.args).toEqual([BUTTON, follow]);
-		});
-
 		it('offers no token to follow for a value no token has', async () => {
 			await analysed();
 			await press(section('Values')?.querySelector('[aria-label="Change Height · sm"]') as HTMLElement);
@@ -983,44 +972,16 @@ describe('a component’s tab', () => {
 		const escape = () => act(async () => void document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
 		const pressElsewhere = () => act(async () => void document.body.dispatchEvent(new MouseEvent('mousedown', { bubbles: true })));
 
-		it('asks in words, and tries what comes back as the controls would: the token edit for every page, the value on its instances (Phase 6)', async () => {
-			const { tried } = await tryingOpen();
-			await press(button('Ask…'));
-			const dialog = document.querySelector('[role="dialog"][aria-label="Ask in words"]') as HTMLElement;
-			const words = dialog.querySelector('textarea') as HTMLTextAreaElement;
-			expect(button('Ask').disabled).toBe(true);
-			await type(words, 'warmer, and the small one taller');
-			await press(button('Ask'));
-			expect(button('Working…').disabled).toBe(true);
-			expect(calls('askInWords').at(-1)?.args).toEqual([BUTTON, 'warmer, and the small one taller', [], []]);
-			const edit = { path: 'tone.pineGreen.50', value: '#118063' };
-			const taller = { property: 'height', value: '30px', targets: ['height:sm:0', 'height:sm:1', 'height:sm:2'] };
-			await answer('askInWords', { edits: [edit], values: [taller], said: 'A warmer green, and a taller small size.' });
-			// As a control's change: the token edit is every page's, the value is tried on its instances and marked.
-			expect(sent.filter((m) => m.type === 'token-edits').at(-1)).toEqual({ type: 'token-edits', edits: [edit] });
-			expect(tried()).toEqual([taller]);
-			expect(values().querySelector('[data-value-row="height"] [data-tried] .value-cell')?.textContent).toBe('Height30px');
-			// Said, and open for the next words, which are asked on top of what is now tried.
-			expect(dialog.querySelector('[data-asked]')?.textContent).toContain('A warmer green, and a taller small size.');
-			expect(words.value).toBe('');
-			await type(words, 'a little more');
-			await press(button('Ask'));
-			expect(calls('askInWords').at(-1)?.args).toEqual([BUTTON, 'a little more', [edit], [taller]]);
-			const call = calls('askInWords').at(-1);
-			await say({ type: 'answer', id: call?.id, result: { ok: false, error: 'A loading state is new code, not a value.' } });
-			expect(dialog.querySelector('[role="alert"]')?.textContent).toBe('A loading state is new code, not a value.');
-			expect(tried()).toEqual([taller]);
-		});
-
-		it('moves nothing when a value is tried: the column is as it was, and only the count beside Ask changes', async () => {
+		it('moves nothing when a value is tried: the column is as it was, and only the count in its header changes', async () => {
 			const { tried } = await tryingOpen();
 			const column = document.querySelector('.component-aside') as HTMLElement;
 			const first = column.firstElementChild;
 			const count = document.querySelector('.tab-actions button') as HTMLButtonElement;
 			expect(count.textContent).toBe('No changes');
 			expect(count.disabled).toBe(true);
-			// Ask is right after it, and stays so.
-			expect(count.nextElementSibling?.textContent).toBe('Ask…');
+			// What is after it stays, the same element.
+			const after = count.nextElementSibling;
+			expect(after).not.toBeNull();
 			await press(change('Height · sm'));
 			await type(slider('Height'), '30');
 			expect(tried()).toHaveLength(1);
@@ -1030,6 +991,7 @@ describe('a component’s tab', () => {
 			).toBeNull();
 			expect(count.textContent).toBe('1 change');
 			expect(count.disabled).toBe(false);
+			expect(count.nextElementSibling).toBe(after);
 			// A token change being tried moves its stories too, so it is counted here as well; and still nothing is put in the column.
 			await say({ type: 'token-edits', edits: [{ path: 'radius', value: '12px' }] });
 			expect(count.textContent).toBe('2 changes');

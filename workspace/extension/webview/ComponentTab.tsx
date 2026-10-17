@@ -1,13 +1,11 @@
 import { useState } from 'react';
 import { previewAddress, previewProblem } from '../../src/shared/catalog';
 import type { CatalogComponent, DesignToken, TokenEdit, TriedValue } from '../../src/shared/contract';
-import { triedId } from '../../src/shared/contract';
 import { plural } from '../../src/shared/plural';
 import { undeclared } from '../../src/shared/wcag';
 import { TokenChangesProvider, useTokenChangesFor } from '../../src/renderer/tokenChanges';
 import { useStoryPreview } from '../../src/renderer/useStoryPreview';
 import type { ComponentLink } from '../src/messages';
-import { AskInWords } from './AskInWords';
 import { ComponentSections } from './ComponentSections';
 import { StoryFrame } from './StoryFrame';
 import { TokenEditor } from './TokenEditor';
@@ -63,9 +61,7 @@ export const ComponentTab = ({ id }: { id: string }) => {
 	// The token whose control is open: Tokens used's rows, and a value that is a token's, change it as the panel's do, and every
 	// page sees it.
 	const [editing, setEditing] = useState<DesignToken | null>(null);
-	// Asking in words (Phase 6): open while its dialog is.
-	const [asking, setAsking] = useState(false);
-	// Its Changes dialog: what is tried on it and the token changes, from the button beside Ask.
+	// Its Changes dialog: what is tried on it and the token changes, from the button in its header.
 	const [changesOpen, setChangesOpen] = useState(false);
 	// Whether a branch of its values is kept: then the button can be pressed with nothing tried, to propose or leave it.
 	const [kept, setKept] = useState(false);
@@ -74,7 +70,7 @@ export const ComponentTab = ({ id }: { id: string }) => {
 	// they were tried on (another version's instances are drawn anew), and forgotten when another mode is chosen.
 	const trialsChoice = useValueTrialsChoice();
 	const trying = useTrying(trialsChoice, id, ready?.commit ?? null);
-	const { tried, onTry } = trying;
+	const { tried } = trying;
 	const component = ready?.components.find((c) => c.id === id);
 	if (note) return <TabNote note={note.says} onRetry={note.onRetry} />;
 	if (!ready || !component) return <TabNote note="The design system shown no longer has this component. Close this tab." />;
@@ -100,9 +96,6 @@ export const ComponentTab = ({ id }: { id: string }) => {
 								{/* Always there, so nothing moves when the first value is tried; with nothing tried and no branch, it cannot be pressed. */}
 								<Button variant="ghost" disabled={count === 0 && !kept} onClick={() => setChangesOpen(true)}>
 									{count === 0 ? 'No changes' : plural(count, 'change')}
-								</Button>
-								<Button variant="secondary" onClick={() => setAsking(true)}>
-									Ask…
 								</Button>
 								{component.storybook !== null && (
 									<Button variant="secondary" external onClick={() => link('storybook')}>
@@ -136,19 +129,6 @@ export const ComponentTab = ({ id }: { id: string }) => {
 						</div>
 					</main>
 					{editing && <TokenEditor key={editing.path} token={editing} onClose={() => setEditing(null)} />}
-					{asking && (
-						<AskInWords
-							file={id}
-							about={`Its tokens and ${component.name}'s own values: what its controls change.`}
-							edits={edits}
-							tried={[...tried.values()]}
-							onAsked={(asked) => {
-								changes.changeAll(asked.edits);
-								for (const t of asked.values) onTry(triedId(t), t);
-							}}
-							onClose={() => setAsking(false)}
-						/>
-					)}
 				</TokenChangesProvider>
 			</ValueTrialsProvider>
 		</ModeProvider>

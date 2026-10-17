@@ -18,11 +18,6 @@ const ds = {
 	tried: triedValuesOf as Check<ReturnType<typeof triedValuesOf>>,
 	/** One value tried, checked as one of a list is. */
 	value: ((v) => triedValuesOf([v])[0]) as Check<ReturnType<typeof triedValuesOf>[number]>,
-	/** What a person asks in words: a sentence or two, as one request is. */
-	ask: ((words) => {
-		if (typeof words !== 'string' || words.trim() === '' || words.length > 2000) throw new Error('Ask in words: a sentence or two.');
-		return words.trim();
-	}) as Check<string>,
 	/** The voice and tone as it is saved: text, far beyond any real one and short of anything that could hurt. */
 	voice: ((text) => {
 		if (typeof text !== 'string' || text.length > 200_000) throw new Error('The voice and tone is saved as text, up to 200,000 characters.');
@@ -41,7 +36,6 @@ const ds = {
  */
 export const registerDesignSystem = (d: IpcDeps): void => {
 	const {
-		askInWords,
 		componentTokens,
 		componentVariants,
 		designSystems,
@@ -67,10 +61,6 @@ export const registerDesignSystem = (d: IpcDeps): void => {
 	// The window names a story file, and only a story file of the library is answered.
 	handle('componentTokens', [ds.storyFile], (file) => componentTokens.of(file));
 	handle('componentVariants', [ds.storyFile], (file) => componentVariants.of(file));
-	// Words made the changes the controls make (Phase 6), on what is being tried, each part checked as a change always is.
-	handle('askInWords', [arg.optional(ds.storyFile), ds.ask, ds.edits, ds.tried], (file, words, edits, tried) =>
-		askInWords.ask(file, words, { edits, tried }),
-	);
 	// What a change reaches is asked for by the change, checked as a change always is.
 	handle('changeReach', [ds.edits], (edits) => componentTokens.reach(edits));
 	// Values tried on a component's instances, by its story file: checked as the contract says one is, and written only as

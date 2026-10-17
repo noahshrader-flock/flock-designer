@@ -193,16 +193,6 @@ export type Unvaried = 'object' | 'callback' | 'content' | 'text' | 'number';
  * so drawing it with another value changes nothing (`fixed`); and the props that cannot be varied, with why. None when its
  * stories name no component whose props can be read; building while it is drawn.
  */
-/**
- * What words asked for, made the changes the controls make (Phase 6, asking in words): token edits, values tried on a
- * component's instances, and what the agent says it changed. Applied as the controls' are, over what is being tried.
- */
-export interface AskedChange {
-	edits: TokenEdit[];
-	values: TriedValue[];
-	said: string;
-}
-
 export type ComponentVariants =
 	| { state: 'building' }
 	| { state: 'failed'; error: string }

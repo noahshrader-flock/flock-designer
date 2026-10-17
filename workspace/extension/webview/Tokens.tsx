@@ -122,7 +122,7 @@ const COLOR_VIEWS = [
  * at the left of the search: the roles by theme (`SemanticColors`, the default), a row for each and a column for Light
  * and Dark; and the palette behind them, each tone's steps with their values. With no tokens, what was looked for.
  */
-export const TokensView = ({ tokens, onAsk, ...actions }: { tokens: DesignTokens; onAsk: () => void } & TokenActions) => {
+export const TokensView = ({ tokens, ...actions }: { tokens: DesignTokens } & TokenActions) => {
 	const changes = useTokenChanges();
 	const [search, setSearch] = useState('');
 	const [view, setView] = useState<ColorView>('semantic');
@@ -142,8 +142,6 @@ export const TokensView = ({ tokens, onAsk, ...actions }: { tokens: DesignTokens
 			<div className="view-bar">
 				{categories.some((c) => c.choose) && <Toggle label="Color view" options={COLOR_VIEWS} value={view} onChange={setView} iconOnly />}
 				<SearchBox label="Search tokens" value={search} onChange={setSearch} />
-				{/* Asking in words (Phase 6): what the controls below change, said. */}
-				<IconButton icon="comment-discussion" label="Ask in words" onClick={onAsk} />
 			</div>
 			{found.length === 0 ? (
 				<NoMatches thing="token" search={search} onClear={() => setSearch('')} />
