@@ -46,6 +46,8 @@ import type { Evidence } from '../main/services/probe/probe';
 import { type SourceFile, scanSources } from '../main/services/probe/sourceScan';
 import { type Ledger, type LedgerRun, ledgerChanges, ledgerFaults } from '../main/services/ledger';
 import { manualListFault, withManualSection } from '../main/services/manualList';
+import { type ReturnedKind, parseReturned, returnedTemplate, sortReturned, withGaps } from '../main/services/returned';
+import { guardLines, guardsFor, stacksOf } from '../main/services/guards';
 import { recordFiles } from '../main/services/accessibilityRecord';
 
 export interface MeasureDeps {
@@ -278,6 +280,14 @@ export const measureAccessibility = async (deps: MeasureDeps): Promise<number> =
 			withManualSection(existsSync(handoff) ? readFileSync(handoff, 'utf8') : null, ...manualArgs(ledger, ledgerFile, projectId, designRoot)),
 		);
 	const since = last ? ledgerChanges(last, ledger) : null;
+	// A product's own app: what testers sent back since, sorted and its escapes logged; and a guard for what was fixed (A9).
+	const kept =
+		name === null
+			? [
+					...readReturned({ designRoot, root: deps.root, projectId, ledger: last ?? ledger, date: ledger.at.slice(0, 10) }),
+					...keepFixed({ designRoot, root: deps.root, projectId, last, fixed: since?.noLongerFound ?? [], date: ledger.at.slice(0, 10) }),
+				]
+			: [];
 	deps.out(
 		[
 			`Measured ${what}: ${summaryOf(countsOf(result))}.`,
@@ -290,10 +300,110 @@ export const measureAccessibility = async (deps: MeasureDeps): Promise<number> =
 			since
 				? `Since the last run (${last?.at.slice(0, 10)}): ${since.newlyFound.length ? `newly found ${since.newlyFound.join(', ')}` : 'nothing newly found'}; ${since.noLongerFound.length ? `no longer found ${since.noLongerFound.join(', ')}` : 'nothing no longer found'}; ${since.changed.length} criteria changed in all.`
 				: 'This is the first run of this measure: there is no ledger to compare with.',
+			...kept,
 			`Written to ${path} in ${designRoot}, with the evidence in ${evidence}/, the ledger in ${ledgerFile}, and the accessibility section of ${projectPath(projectId, 'review.md')} written from it.`,
 		].join('\n'),
 	);
 	return 0;
+};
+
+/**
+ * What testers sent back (A9): the project's `returned.md` read, each finding sorted against the ledger it was tested
+ * against, each escape logged once in the product's agent gap log, and the sort kept as the record's. A file that is not
+ * there yet is started, with its table, so a tester only adds rows. What it did, in lines.
+ */
+const readReturned = ({
+	designRoot,
+	root,
+	projectId,
+	ledger,
+	date,
+}: {
+	designRoot: string;
+	root: string;
+	projectId: string;
+	ledger: Ledger;
+	date: string;
+}): string[] => {
+	const file = join(designRoot, projectPath(projectId, 'accessibility/returned.md'));
+	if (!existsSync(file)) {
+		writeAtomic(file, returnedTemplate(projectId));
+		return ['', `Started ${projectPath(projectId, 'accessibility/returned.md')}, for testers to return what they find by hand.`];
+	}
+	const { findings, unreadable } = parseReturned(readFileSync(file, 'utf8'));
+	// Each finding is sorted once, when it is first read, against the measure it was tested against; never again later,
+	// when the work may have changed under it.
+	const record = join(designRoot, projectPath(projectId, 'accessibility/returned.json'));
+	type Sorted = { id: string; sc: string; where: string; kind: ReturnedKind; against: string };
+	let before: Sorted[] = [];
+	try {
+		before = (JSON.parse(readFileSync(record, 'utf8')) as { findings: Sorted[] }).findings;
+	} catch {
+		// None read before.
+	}
+	const known = new Map(before.map((f) => [f.id, f]));
+	const fresh = sortReturned(
+		findings.filter((f) => !known.has(f.id)),
+		ledger,
+	);
+	const sorted: Sorted[] = findings.flatMap((f) => {
+		const was = known.get(f.id);
+		if (was) return [was];
+		const now = fresh.find((x) => x.finding.id === f.id);
+		return now ? [{ id: f.id, sc: f.sc, where: f.where, kind: now.kind, against: ledger.at }] : [];
+	});
+	const descriptor = readDescriptor(root);
+	const gaps = join(root, descriptor.contextDir, 'knowledge', 'agent-gaps.md');
+	const { text, added } = withGaps(
+		existsSync(gaps) ? readFileSync(gaps, 'utf8') : null,
+		descriptor.product,
+		fresh.filter((x) => x.kind === 'escape'),
+		date,
+	);
+	if (added) writeAtomic(gaps, text);
+	writeAtomic(record, `${JSON.stringify({ read: date, findings: sorted, unreadable }, null, '\t')}\n`);
+	if (findings.length === 0 && unreadable.length === 0) return [];
+	const count = (k: ReturnedKind) => sorted.filter((x) => x.kind === k).length;
+	return [
+		'',
+		`Returned by testers: ${findings.length} finding${findings.length === 1 ? '' : 's'}. ${count('escape')} a machine measured and missed (escapes, the goal's count, which should be none)${added ? `, ${added} newly logged in ${join(descriptor.contextDir, 'knowledge', 'agent-gaps.md')}` : ''}; ${count('confirmed')} a machine had found too; ${count('unmeasured')} not measured that time; ${count('person')} only a person could find.`,
+		...unreadable.map((u) => `- Line ${u.line} of returned.md could not be read as a finding, because ${u.why}: it is left as it is.`),
+	];
+};
+
+/**
+ * A guard for what this run no longer finds (A9): each fault the last run found, by what found it, with the product's own
+ * lint rule that keeps it fixed where its stack has one, proposed in the record and said. What it did, in lines.
+ */
+const keepFixed = ({
+	designRoot,
+	root,
+	projectId,
+	last,
+	fixed,
+	date,
+}: {
+	designRoot: string;
+	root: string;
+	projectId: string;
+	last: Ledger | null;
+	fixed: string[];
+	date: string;
+}): string[] => {
+	if (!last || fixed.length === 0) return [];
+	const lines = guardLines(
+		guardsFor(
+			fixed.map((sc) => ({ sc, by: last.rows.find((r) => r.sc === sc)?.by ?? [] })),
+			stacksOf(root),
+		),
+	);
+	if (lines.length === 0) return [];
+	const file = join(designRoot, projectPath(projectId, 'accessibility/guards.md'));
+	const was = existsSync(file)
+		? readFileSync(file, 'utf8')
+		: '# Guards proposed to keep what was fixed fixed\n\nProposed by `dsnr accessibility` when a fault it found is no longer found: each for the product to take, never applied for it.\n';
+	writeAtomic(file, `${was.trimEnd()}\n\n## ${date}\n\n${lines.join('\n')}\n`);
+	return ['', `Fixed since the last run, and kept fixed by (proposed, in ${projectPath(projectId, 'accessibility/guards.md')}):`, ...lines];
 };
 
 /** What the manual list is made from: the ledger, and where its evidence and the testers' findings are, as the product's checkout sees them. */
@@ -360,4 +470,27 @@ export const checkAccessibility = ({
 			: `${ledgerFile}: every status rests on its evidence, and review.md${name === null && handoff !== null ? ' and HANDOFF.md say' : ' says'} what the ledger says.`,
 	);
 	return faults.length ? 1 : 0;
+};
+
+/** `dsnr read-returned` (A9): what testers sent back read now, against the project's last measure of its app, rather than at its next. */
+export const readReturnedNow = ({
+	designRoot,
+	root,
+	projectId,
+	out,
+}: {
+	designRoot: string;
+	root: string;
+	projectId: string;
+	out: (text: string) => void;
+}): number => {
+	assertUsableProjectId(projectId);
+	const ledger = readLedger(join(designRoot, accessibilityLedgerPath(projectId, null)));
+	if (ledger === null) {
+		out(`There is no measure of ${projectId}'s app to read findings against: run dsnr accessibility --project ${projectId} first.`);
+		return 1;
+	}
+	const lines = readReturned({ designRoot, root, projectId, ledger, date: new Date().toISOString().slice(0, 10) });
+	out(lines.join('\n').trim() || 'Nothing has been returned yet.');
+	return 0;
 };

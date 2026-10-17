@@ -23,7 +23,7 @@ import { publish, recordsFrom, unpublish } from '../main/services/pages';
 import { buildSite } from '../site/buildSite';
 import { serveSite } from '../site/serveSite';
 import { checkWcagEdition } from './wcagEdition';
-import { checkAccessibility, measureAccessibility } from './accessibility';
+import { checkAccessibility, measureAccessibility, readReturnedNow } from './accessibility';
 import { errorText } from '../shared/result';
 import { plural } from '../shared/plural';
 import { loginFromNoreply } from '../shared/hostUrls';
@@ -74,6 +74,7 @@ const USAGE = `Usage:
   dsnr unpublish --project <id> --name <v1-i1>
   dsnr accessibility --project <id> [--name <v1-i1>] [--light] [--product <dir>]
   dsnr check-accessibility --project <id> [--name <v1-i1>]
+  dsnr read-returned --project <id> [--product <dir>]
 
 new-prototype records the next version (v1-i1 for a new project, then v2-i1, v3-i1) and prints the task: where to
 write the prototype and how to check it builds. change-prototype does the same for a change to one: in its version's
@@ -88,7 +89,9 @@ that prototype's page in each of its states; without, the product's own app, sta
 pages its manifest names. Each view is checked by axe and probed (--light: the accessibility tree and the Tab walk
 alone). It writes what it found, the evidence and its ledger into the project's folder in the design repository, writes
 review.md's accessibility section from the ledger, and prints it. check-accessibility checks that record, for a gate:
-each status rests on its evidence, each "not run" says why, and review.md says what the ledger says.`;
+each status rests on its evidence, each "not run" says why, and review.md says what the ledger says. read-returned reads
+what testers sent back in the project's accessibility/returned.md now, rather than at the next measure: each one a
+machine missed is logged in the product's agent gap log.`;
 
 class UsageError extends Error {}
 
@@ -279,6 +282,7 @@ export const main = async (argv: string[], deps: CliDeps): Promise<number> => {
 				'wcag-edition',
 				'accessibility',
 				'check-accessibility',
+				'read-returned',
 			].includes(command ?? '')
 		) {
 			throw new UsageError(command ? `There is no command called ${command}.` : 'Say which command.');
@@ -293,6 +297,13 @@ export const main = async (argv: string[], deps: CliDeps): Promise<number> => {
 				out: deps.out,
 			});
 		if (command === 'publish') return await publishPage(deps, values);
+		if (command === 'read-returned') {
+			if (!values.project) throw new UsageError('Say which project, with --project.');
+			const root = await productOf(deps.cwd, values.product, 'log what testers found');
+			const records = recordsRootFor(root);
+			if (records === null) throw new Error(`There is no design repository beside ${root}. Clone flock-designer into the same folder.`);
+			return readReturnedNow({ designRoot: dirname(records), root, projectId: values.project, out: deps.out });
+		}
 		if (command === 'check-accessibility') {
 			if (!values.project) throw new UsageError('Say which project, with --project.');
 			// Run from the product's checkout (its gate), its HANDOFF.md is checked too; from the design repository, it is not.
