@@ -3,9 +3,10 @@ import { VALUE_PROPERTIES, type ValueCell, type ValueRow } from '../src/shared/c
 import { GROUPS, firstSelection, inspect, optionLabel, pickersOf, propLabel, rowName, shownFor } from '../src/shared/inspector';
 
 /**
- * A component's values as an inspector reads them (INSPECTOR_PLAN Phase 1): the variant shown chosen by a picker for each prop
- * its rows are told apart by, and each row's value for it, in groups. Cases as the real library draws them: one prop (Height by
- * size, with a size drawn without), two (Background by variant and disabled, not set and false alike), and none.
+ * A component's values as an inspector reads them (each component's values, DESIGN_SYSTEM.md): the variant shown chosen by
+ * a picker for each prop its rows are told apart by, and each row's value for it, in groups. Cases as the real library
+ * draws them: one prop (Height by size, with a size drawn without), two (Background by variant and disabled, not set and
+ * false alike), and none.
  */
 
 const cell = (variant: string | null, value: string, of?: Record<string, string | null>[]): ValueCell => ({

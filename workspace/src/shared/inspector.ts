@@ -1,7 +1,7 @@
 /**
- * A component's values as an inspector reads them (INSPECTOR_PLAN Phase 1): the variant shown chosen with a picker for each
- * prop its rows are told apart by, and each row's value for that choice, in the groups a designer knows. One way for every
- * reader; no React, so it is tested alone.
+ * A component's values as an inspector reads them (each component's values, DESIGN_SYSTEM.md): the variant shown chosen
+ * with a picker for each prop its rows are told apart by, and each row's value for that choice, in the groups a designer
+ * knows. One way for every reader; no React, so it is tested alone.
  */
 import type { ValueCell, ValueProperty, ValueRow } from './contract';
 import { VALUE_NAMES } from './valueNames';

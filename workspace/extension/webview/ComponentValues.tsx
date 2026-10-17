@@ -205,10 +205,10 @@ const PickerRow = ({ picker, value, onChange }: { picker: Picker; value: string 
 };
 
 /**
- * The values as an inspector (INSPECTOR_PLAN Phase 1): a picker for each prop its rows are told apart by, then the groups, each
- * a row a value for the variant chosen: its property's name, its value, and what it is made of as a chip, pressed to change it
- * as any value is. A combination its stories never drew is said, with the nearest that was; a row no prop explains shows the
- * value most instances draw, and the rest under it.
+ * The values as an inspector (each component's values, DESIGN_SYSTEM.md): a picker for each prop its rows are told apart
+ * by, then the groups, each a row a value for the variant chosen: its property's name, its value, and what it is made of as
+ * a chip, pressed to change it as any value is. A combination its stories never drew is said, with the nearest that was; a
+ * row no prop explains shows the value most instances draw, and the rest under it.
  */
 const Inspector = ({
 	rows,
