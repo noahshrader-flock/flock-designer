@@ -5,10 +5,10 @@ import { type ValueTrials, triedOn } from './valueTrials';
 import { vscode } from './vscode';
 
 /**
- * The values tried on every component (CHANGES_PLAN Phase 2), as the extension keeps them (`ValueTrial`), so the panel and
- * every component's tab see the same: told whenever they change, and once the page says it is ready. Trying a component's
- * tells the extension, which tells every page; what is tried here is kept at once, so several tried in a row each build on
- * the last. Called once, where a page starts; its parts read it (`useValueTrials`).
+ * The values tried on every component (the changes being tried, DESIGN_SYSTEM.md), as the extension keeps them
+ * (`ValueTrial`), so the panel and every component's tab see the same: told whenever they change, and once the page says it
+ * is ready. Trying a component's tells the extension, which tells every page; what is tried here is kept at once, so
+ * several tried in a row each build on the last. Called once, where a page starts; its parts read it (`useValueTrials`).
  */
 export const useValueTrialsChoice = (): ValueTrials => {
 	const [trials, setTrials] = useState<Trials>({});

@@ -57,10 +57,10 @@ export class TokenTrial {
 }
 
 /**
- * The values tried on each component (CHANGES_PLAN Phase 2), kept by the extension rather than one tab, as the change to the
- * tokens is (`TokenTrial`): a tab tries them, and every DSNR page is told (`post`), so the panel's Changes lists every
- * component's and its tab draws its own. Each is kept with the library's commit it was tried on; none tried is none kept.
- * Told only when they change; none when another design system or another mode is shown.
+ * The values tried on each component (the changes being tried, DESIGN_SYSTEM.md), kept by the extension rather than one
+ * tab, as the change to the tokens is (`TokenTrial`): a tab tries them, and every DSNR page is told (`post`), so the
+ * panel's Changes lists every component's and its tab draws its own. Each is kept with the library's commit it was tried
+ * on; none tried is none kept. Told only when they change; none when another design system or another mode is shown.
  */
 export class ValueTrial {
 	private trials: ValueTrials = {};

@@ -3,9 +3,9 @@ import type { TriedValue } from '../../src/shared/contract';
 import type { ValueTrials as Trials } from '../src/messages';
 
 /**
- * The values tried on every component, as the extension keeps them (`ValueTrial`, CHANGES_PLAN Phase 2), and trying one
- * component's on a commit, from what it had to what it has now: what a page's parts read (`useValueTrials`), given where
- * the page starts (`useValueTrialsChoice`).
+ * The values tried on every component, as the extension keeps them (`ValueTrial`, the changes being tried,
+ * DESIGN_SYSTEM.md), and trying one component's on a commit, from what it had to what it has now: what a page's parts read
+ * (`useValueTrials`), given where the page starts (`useValueTrialsChoice`).
  */
 export interface ValueTrials {
 	trials: Trials;

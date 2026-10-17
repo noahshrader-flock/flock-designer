@@ -1543,7 +1543,7 @@ describe('Design System', () => {
 	});
 });
 
-describe('every change being tried, in the panel’s Changes: the tokens and each component’s values (CHANGES_PLAN Phase 2)', () => {
+describe('every change being tried, in the panel’s Changes: the tokens and each component’s values (the changes being tried, DESIGN_SYSTEM.md)', () => {
 	const SYSTEM = 'flocksafety/flock-react-component-lib';
 	const BUTTON = 'src/components/FSButton/FSButton.stories.tsx';
 	const SMALL = { property: 'height', value: '32px', targets: ['height:sm:0', 'height:sm:1', 'height:sm:2'] };

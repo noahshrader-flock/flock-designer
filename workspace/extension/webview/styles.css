@@ -1124,12 +1124,13 @@ textarea.input {
 
 /*
  * A line between one set and the next (a role's variants, a tone family's steps, a component's values of one property and of
- * the next), the same in the semantic colors, the palette and a component's values. The panel's one border colour, the search
- * box's.
+ * the next, one group of a Changes dialog and the next), the same in the semantic colors, the palette, a component's values
+ * and Changes. The panel's one border colour, the search box's.
  */
 .theme-set + .theme-set,
 .token-set + .token-set,
-.value-group + .value-group {
+.value-group + .value-group,
+.dialog .changed ~ .changed {
 	margin-top: 6px;
 	padding-top: 6px;
 	border-top: 1px solid var(--dsnr-border);

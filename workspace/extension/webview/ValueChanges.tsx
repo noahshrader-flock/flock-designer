@@ -88,7 +88,8 @@ const Said = ({
  * The values tried on a component's instances, and saving them (Phase 4 of adjusting a component): each, from what it is
  * drawn as to what it is tried as, with where it is written in the library's source (each place opens at its line), found
  * as it is tried, or why it cannot be saved; Reset for each and for all; then Save, Propose and Start over on a branch of
- * the component's own, as a change to the tokens has (`BranchActions`). Save waits until every value is found and read back.
+ * the component's own, as a change to the tokens has (`BranchActions`), in the panel's Changes (`onActions` on its tab, which
+ * opens them there). Save waits until every value is found and read back.
  * Then what writing them reaches (`ReachView`): a size table two components share moves both. Nothing while nothing is
  * tried and no branch is kept. Where each is written and the branch are found while the tab is open (a branch's values are
  * put back when it opens), whether or not the Changes dialog is: what it draws is handed to the dialog (`children`).
@@ -121,8 +122,9 @@ interface Shown {
 	onSource: (place: ValuePlace) => void;
 	onOpen: (id: string) => void;
 	/**
-	 * Where Save, Propose and Start over are when not here (CHANGES_PLAN Phase 2): on a component's tab they are in the panel's
-	 * Changes, which this opens; in the panel, where every change is, they are here (none given).
+	 * Where Save, Propose and Start over are when not here (the changes being tried, DESIGN_SYSTEM.md): on a component's
+	 * tab they are in the panel's Changes, which this opens; in the panel, where every change is, they are here (none
+	 * given).
 	 */
 	onActions?: () => void;
 }

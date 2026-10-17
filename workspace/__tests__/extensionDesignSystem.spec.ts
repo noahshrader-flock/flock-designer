@@ -73,7 +73,7 @@ describe('the mode components are shown in', () => {
 	});
 });
 
-describe('the values tried on every component (CHANGES_PLAN Phase 2)', () => {
+describe('the values tried on every component (the changes being tried, DESIGN_SYSTEM.md)', () => {
 	const SMALL = { property: 'height' as const, value: '32px', targets: ['a', 'b'] };
 	it('are kept by the extension, each with its commit, told to every page only when they change, and none kept when none is tried', () => {
 		const post = vi.fn();

@@ -37,8 +37,9 @@ export type PanelMessage =
 	| { type: 'token-edits'; edits: unknown[] }
 	// The mode components are shown in, chosen in the panel (MODES_PLAN Phase 1), which the extension keeps for every page.
 	| { type: 'set-mode'; mode: Theme }
-	// The values tried on one component, on the library's commit they were tried on (CHANGES_PLAN Phase 2), which the extension
-	// keeps for every page (each value read again where it is kept, `triedValuesOf`); and the panel's Changes asked from a tab.
+	// The values tried on one component, on the library's commit they were tried on (the changes being tried,
+	// DESIGN_SYSTEM.md), which the extension keeps for every page (each value read again where it is kept, `triedValuesOf`);
+	// and the panel's Changes asked from a tab.
 	| { type: 'value-trial'; file: string; commit: string; values: unknown[] }
 	| { type: 'open-changes' };
 
@@ -76,7 +77,7 @@ export const reviewsOf = (project: Pick<Project, 'id' | 'title' | 'iterations'>)
 
 /**
  * The values tried on each component, by its story file, with the library's commit they were tried on: its instances are
- * named by that commit's drawing, so a page on another commit leaves them be (CHANGES_PLAN Phase 2).
+ * named by that commit's drawing, so a page on another commit leaves them be (the changes being tried, DESIGN_SYSTEM.md).
  */
 export type ValueTrials = Record<string, { commit: string; values: TriedValue[] }>;
 
