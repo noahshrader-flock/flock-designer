@@ -3,7 +3,7 @@ import { type EventSink, type Route, served } from '../../src/main/handle';
 import type { EventName, InvokeName, Result, TokenEdit, WorkspaceApi } from '../../src/shared/contract';
 import type { Theme } from '../../src/shared/prototypeTheme';
 import { createApi } from '../../src/shared/workspaceApi';
-import { type ComponentLink, type HostMessage, NO_TABS_SHOWN, type PanelMessage, type TabsShown } from './messages';
+import { type ComponentLink, type HostMessage, NO_TABS_SHOWN, type PanelMessage, type TabsShown, type ValueTrials } from './messages';
 
 type Webview = Pick<VsCode.Webview, 'postMessage'>;
 type Call = Extract<PanelMessage, { type: 'call' }>;
@@ -131,12 +131,21 @@ export interface DesignSystemAsks {
 	/** The mode components are shown in (`ModeChoice`), and choosing another. */
 	mode: () => Theme;
 	setMode: (mode: Theme) => void;
+	/** The values tried on every component (`ValueTrial`), and one component's tried on a commit; read again where they are kept. */
+	valueTrials: () => ValueTrials;
+	setValueTrial: (file: string, commit: string, values: unknown[]) => void;
+	/** The panel's Changes dialog, asked for from a component's tab: every change, with their branches. */
+	openChanges: () => Promise<void>;
 }
 
-/** What the design system's pages are told once they listen, as they are told whenever it changes: the change to the tokens being tried, and the mode. */
-export const toldOnReady = (asks: Pick<DesignSystemAsks, 'edits' | 'mode'>): HostMessage[] => [
+/**
+ * What the design system's pages are told once they listen, as they are told whenever it changes: the change to the tokens
+ * being tried, the mode, and the values tried on every component.
+ */
+export const toldOnReady = (asks: Pick<DesignSystemAsks, 'edits' | 'mode' | 'valueTrials'>): HostMessage[] => [
 	{ type: 'token-edits', edits: asks.edits() },
 	{ type: 'mode', mode: asks.mode() },
+	{ type: 'value-trials', trials: asks.valueTrials() },
 ];
 
 /**
@@ -168,6 +177,12 @@ export const answerPage = async (webview: Webview, message: PanelMessage, asks: 
 			return true;
 		case 'set-mode':
 			asks.setMode(message.mode);
+			return true;
+		case 'value-trial':
+			asks.setValueTrial(message.file, message.commit, message.values);
+			return true;
+		case 'open-changes':
+			await asks.openChanges();
 			return true;
 		default:
 			return false;

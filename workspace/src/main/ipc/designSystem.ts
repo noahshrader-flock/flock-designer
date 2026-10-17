@@ -77,6 +77,7 @@ export const registerDesignSystem = (d: IpcDeps): void => {
 	// the number or colour each reads as, where it was found (Phase 4).
 	handle('valueSources', [ds.storyFile, ds.tried], (file, tried) => valueSources.of(file, tried));
 	handle('valueBranch', [ds.storyFile], (file) => valueBranches.current(file));
+	handle('valueBranchFiles', [], () => valueBranches.scopes());
 	// Only on the person's press: it runs the agent, in a copy of the library.
 	handle('writeValue', [ds.storyFile, ds.value], async (file, value) => {
 		await valueAgent.write(file, value);

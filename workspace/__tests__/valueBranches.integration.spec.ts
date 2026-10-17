@@ -114,6 +114,14 @@ describe('saving the values tried on a component (Phase 4.4)', () => {
 		expect(await branches().current(BADGE)).toBeNull();
 	});
 
+	it('lists the components with a branch kept, and leaves one whose branch is gone from the clone', async () => {
+		expect(await branches().scopes()).toEqual([]);
+		const saved = await branches().save([SMALL], BUTTON);
+		expect(await branches().scopes()).toEqual([BUTTON]);
+		g(clone, 'branch', '-q', '-D', saved.branch);
+		expect(await branches().scopes()).toEqual([]);
+	});
+
 	it('says a value the agent wrote as written by it, and one made to follow a token as following it', async () => {
 		const agentWrote = (t: TriedValue): { answer: Answer; files: Map<string, string> } => ({
 			answer: {

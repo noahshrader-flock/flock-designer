@@ -20,6 +20,7 @@ describe('asking in words, in the panel’s tokens', () => {
 				unreadable: null,
 				read: { catalog: SAMPLE_CATALOG, id: 'fui', name: 'FUI', error: null, syncing: false },
 				pictures: { drawing: false, pictures: {}, issues: {} },
+				changesDialog: { open: false, onOpen: () => undefined, onClose: () => undefined },
 				part: 'tokens',
 				onPart: () => undefined,
 				view: 'grid',

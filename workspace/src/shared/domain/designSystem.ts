@@ -203,6 +203,9 @@ export type ComponentVariants =
 	| { state: 'none' }
 	| { state: 'ready'; props: DeclaredProp[]; fixed: string[]; unvaried: { name: string; why: Unvaried }[]; values: ComponentValues };
 
+/** How many values a component's instances can be tried with at once, as the core takes them and the extension keeps them: far beyond any tab's, short of anything that could hurt. */
+export const MOST_TRIED = 50;
+
 /** What names a value tried: its property and the instances it is for, the same in light and in dark, in the tab and the app. */
 export const triedId = ({ property, targets }: { property: ValueProperty; targets: string[] }): string =>
 	`${property}\u0000${targets.join('\u0001')}`;

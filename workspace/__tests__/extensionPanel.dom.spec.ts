@@ -5,7 +5,7 @@ import type { Context } from '../src/main/services/findContext';
 import type { Catalog, ComponentPictures, ProjectIteration } from '../src/shared/contract';
 import { SAMPLE_CATALOG, SAMPLE_PROJECTS } from './extensionSamples';
 import { projectIteration } from './fixtures';
-import { answer, button, key, kept, mount, panelSaid, press, say, sent, type, unmount } from './webviewHarness';
+import { answer, button, calls, key, kept, mount, panelSaid, press, say, sent, type, unmount } from './webviewHarness';
 
 /**
  * DSNR's panel (Phases 0, 3 and 4): the Projects and Design System toggle at its very top, the projects the core reads
@@ -1286,7 +1286,6 @@ describe('Design System', () => {
 	const under = (header: HTMLElement) => document.getElementById(header.getAttribute('aria-controls') ?? '') as HTMLElement;
 	const namesUnder = (header: HTMLElement) => [...under(header).querySelectorAll('[data-part="name"]')].map((n) => n.textContent);
 	const parts = () => document.querySelector('[aria-label="Part"]') as HTMLElement;
-	const calls = (name: string) => sent.filter((m) => m.type === 'call' && m.name === name);
 
 	it('says, when there is none, what DSNR looked for and where, and offers to locate it', async () => {
 		await open({ ...OPEN, designSystem: null });
@@ -1524,7 +1523,7 @@ describe('Design System', () => {
 	it('has no not-read bubble when every value is read, and the changes count always, muted with none', async () => {
 		await read();
 		expect(body().querySelector('.ds-actions .badge-warning')).toBeNull();
-		const changes = body().querySelector('.ds-actions [aria-label="0 token changes being tried"]') as HTMLElement;
+		const changes = body().querySelector('.ds-actions [aria-label="0 changes being tried"]') as HTMLElement;
 		expect(changes.textContent).toBe('0');
 		expect(changes.classList.contains('badge-brand')).toBe(false);
 	});
@@ -1541,6 +1540,87 @@ describe('Design System', () => {
 		expect(body().querySelector('.empty [data-part="title"]')?.textContent).toBe('This clone has no develop branch');
 		await press(button('Try again'));
 		expect(calls('designSystemCatalog').at(-1)?.args).toEqual([true]);
+	});
+});
+
+describe('every change being tried, in the panel’s Changes: the tokens and each component’s values (CHANGES_PLAN Phase 2)', () => {
+	const SYSTEM = 'flocksafety/flock-react-component-lib';
+	const BUTTON = 'src/components/FSButton/FSButton.stories.tsx';
+	const SMALL = { property: 'height', value: '32px', targets: ['height:sm:0', 'height:sm:1', 'height:sm:2'] };
+	const ID = 'height\u0000height:sm:0\u0001height:sm:1\u0001height:sm:2';
+	const FOUND = {
+		state: 'ready',
+		values: [{ id: ID, state: 'found', places: [{ file: 'src/utils/theme.ts', line: 158, written: '28px', writes: '32px' }] }],
+		reach: { state: 'none' },
+	};
+	/** The panel on the Design System tab, the design system read and its tokens' branch none. */
+	const designOpen = async () => {
+		await show();
+		await say({ type: 'context', context: OPEN });
+		await answer('listProjects', SAMPLE_PROJECTS);
+		await press(options()[1]!);
+		await answer('designSystems', { systems: [{ id: SYSTEM, name: 'FUI' }], current: SYSTEM });
+		await answer('designSystemCatalog', SAMPLE_CATALOG);
+		await answer('tokenBranch', null);
+	};
+	const count = () => document.querySelector('.ds-actions [aria-label$="being tried"]') as HTMLElement;
+	const changes = () => document.querySelector('[role="dialog"][aria-label="Changes"]') as HTMLElement | null;
+	const group = () => document.querySelector('[aria-label="Value changes · FSButton"]') as HTMLElement | null;
+	const trialsSaid = () => panelSaid().filter((m) => m.type === 'value-trial');
+
+	it('counts every component’s values tried on this commit, and lists each by its name, with its Save, Propose and Reset', async () => {
+		await designOpen();
+		// A value tried on another commit is that commit's: not counted, not listed.
+		await say({
+			type: 'value-trials',
+			trials: {
+				[BUTTON]: { commit: 'abc123', values: [SMALL] },
+				'src/components/FSIconButton/FSIconButton.stories.tsx': { commit: 'def456', values: [SMALL] },
+			},
+		});
+		expect(count().getAttribute('aria-label')).toBe('1 change being tried');
+		expect(count().classList.contains('badge-brand')).toBe(true);
+		await press(count());
+		await answer('valueBranchFiles', []);
+		await answer('valueBranch', null);
+		await answer('valueSources', FOUND);
+		expect(calls('valueSources').at(-1)?.args).toEqual([BUTTON, [SMALL]]);
+		expect(group()?.querySelector('.changed-title')?.textContent).toBe('FSButton 1');
+		expect(document.querySelector('[aria-label="Value changes · FSIconButton"]')).toBeNull();
+		// Its actions are here, where every change is.
+		await press(button('Save to a branch'));
+		expect(calls('saveValues').at(-1)?.args).toEqual([BUTTON, [SMALL]]);
+		await answer('saveValues', { branch: 'dsnr/values-20261016-ab12', saved: [SMALL], saves: 1, pullRequest: null });
+		expect(group()?.querySelector('.branch-line')?.textContent).toBe('dsnr/values-20261016-ab12 · 1 save');
+		await press(button('Propose'));
+		expect(calls('proposeValues').at(-1)?.args).toEqual([BUTTON]);
+		// Reset here is the extension's too: every page is told, its tab with it.
+		await press(group()!.querySelector('button.link') as HTMLElement);
+		expect(trialsSaid().at(-1)).toEqual({ type: 'value-trial', file: BUTTON, commit: 'abc123', values: [] });
+	});
+
+	it('lists a component with a branch of its values kept and nothing tried, and puts its values back, as opening its tab does', async () => {
+		await designOpen();
+		await press(count());
+		await answer('valueBranchFiles', [BUTTON]);
+		await answer('valueBranch', { branch: 'dsnr/values-20261016-ab12', saved: [SMALL], saves: 1, pullRequest: null });
+		expect(trialsSaid().at(-1)).toEqual({ type: 'value-trial', file: BUTTON, commit: 'abc123', values: [SMALL] });
+		expect(group()).not.toBeNull();
+	});
+
+	it('opens when a component’s tab asks for it, on the Design System tab', async () => {
+		await show();
+		await say({ type: 'context', context: OPEN });
+		await answer('listProjects', SAMPLE_PROJECTS);
+		expect(chosen()).toBe('Projects');
+		await say({ type: 'open-dialog', dialog: { kind: 'changes' } });
+		expect(chosen()).toBe('Design System');
+		await answer('designSystems', { systems: [{ id: SYSTEM, name: 'FUI' }], current: SYSTEM });
+		await answer('designSystemCatalog', SAMPLE_CATALOG);
+		await answer('tokenBranch', null);
+		expect(changes()).not.toBeNull();
+		await press(changes()!.querySelector('[aria-label="Close"]') as HTMLElement);
+		expect(changes()).toBeNull();
 	});
 });
 
@@ -1639,7 +1719,7 @@ describe('trying a change to the tokens, saving it to a branch, and proposing it
 		await say({ type: 'token-edits', edits: [{ path: 'tone.pineGreen.60', value: '#000000' }] });
 		// Nothing opens above the list: the count says it, in the brand.
 		expect(document.querySelector('[data-changed-tokens]')).toBeNull();
-		expect(document.querySelector('.ds-actions [aria-label="1 token change being tried"]')?.classList.contains('badge-brand')).toBe(true);
+		expect(document.querySelector('.ds-actions [aria-label="1 change being tried"]')?.classList.contains('badge-brand')).toBe(true);
 		await openChanges();
 		const changed = document.querySelector('[data-changed-tokens]') as HTMLElement;
 		expect(changed.querySelector('.changed-title')?.textContent).toBe('Tokens 1');

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { ModeChoice, TokenTrial, componentLink, componentOf, showFound, shownFrom, libraryFileIn } from '../extension/src/designSystem';
+import { ModeChoice, TokenTrial, ValueTrial, componentLink, componentOf, showFound, shownFrom, libraryFileIn } from '../extension/src/designSystem';
 import type { Catalog, CatalogComponent, ConnectedDesignSystem } from '../src/shared/contract';
 import { ok } from '../src/shared/result';
 
@@ -70,6 +70,29 @@ describe('the mode components are shown in', () => {
 		expect(new ModeChoice(kept as never, vi.fn()).current()).toBe('dark');
 		state.set('dsnr.mode', 'sepia');
 		expect(new ModeChoice(kept as never, vi.fn()).current()).toBe('light');
+	});
+});
+
+describe('the values tried on every component (CHANGES_PLAN Phase 2)', () => {
+	const SMALL = { property: 'height' as const, value: '32px', targets: ['a', 'b'] };
+	it('are kept by the extension, each with its commit, told to every page only when they change, and none kept when none is tried', () => {
+		const post = vi.fn();
+		const values = new ValueTrial(post);
+		values.set('Button.stories.tsx', 'abc123', [SMALL]);
+		expect(post).toHaveBeenLastCalledWith({ type: 'value-trials', trials: { 'Button.stories.tsx': { commit: 'abc123', values: [SMALL] } } });
+		// The same again says nothing; on another commit it is another change.
+		values.set('Button.stories.tsx', 'abc123', [SMALL]);
+		expect(post).toHaveBeenCalledTimes(1);
+		values.set('Button.stories.tsx', 'def456', [SMALL]);
+		expect(post).toHaveBeenCalledTimes(2);
+		values.set('Badge.stories.tsx', 'def456', [SMALL]);
+		values.set('Button.stories.tsx', 'def456', []);
+		expect(values.current()).toEqual({ 'Badge.stories.tsx': { commit: 'def456', values: [SMALL] } });
+		values.clear();
+		expect(post).toHaveBeenLastCalledWith({ type: 'value-trials', trials: {} });
+		// Nothing to clear says nothing.
+		values.clear();
+		expect(post).toHaveBeenCalledTimes(5);
 	});
 });
 

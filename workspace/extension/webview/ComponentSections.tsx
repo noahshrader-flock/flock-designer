@@ -170,8 +170,11 @@ export const ComponentSections = ({
 	trying: Trying;
 	/** Opens another component's tab. */
 	onOpen: (id: string) => void;
-	/** Whether its Changes dialog is open (the button beside Ask opens it), closing it, and telling it a branch of its values is kept. */
-	changes: { open: boolean; onClose: () => void; onKept: (kept: boolean) => void };
+	/**
+	 * Whether its Changes dialog is open (the button beside Ask opens it), closing it, telling it a branch of its values is kept,
+	 * and the panel's Changes, where Save, Propose and Start over are.
+	 */
+	changes: { open: boolean; onClose: () => void; onKept: (kept: boolean) => void; onActions: () => void };
 }) => {
 	const { edits, byPath, isPalette } = useTokenChanges();
 	const { answer, retry } = useComponentTokens(component.id);
@@ -237,6 +240,7 @@ export const ComponentSections = ({
 				onSource={actions.onSource}
 				onOpen={onOpen}
 				onKept={changes.onKept}
+				onActions={changes.onActions}
 			>
 				{dialog}
 			</ValueChanges>

@@ -39,6 +39,8 @@ export const PanelDialogs = ({
 	if (dialog === null) return null;
 	if (dialog.kind === 'new') return <NewPrototypeDialog folders={folders} onStart={onStart} onClose={onClose} />;
 	if (dialog.kind === 'sync') return <SyncDialog onClose={onClose} />;
+	// Drawn by the Design System tab, where every change being tried is.
+	if (dialog.kind === 'changes') return null;
 	if (dialog.kind === 'account') return account.state === 'signedIn' ? <AccountDialog login={account.user.login} onClose={onClose} /> : null;
 	const project = projects?.find((p) => p.id === dialog.projectId);
 	if (!project) return null;

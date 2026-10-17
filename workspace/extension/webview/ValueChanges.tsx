@@ -120,9 +120,17 @@ interface Shown {
 	tokenName: (path: string) => string;
 	onSource: (place: ValuePlace) => void;
 	onOpen: (id: string) => void;
+	/**
+	 * Where Save, Propose and Start over are when not here (CHANGES_PLAN Phase 2): on a component's tab they are in the panel's
+	 * Changes, which this opens; in the panel, where every change is, they are here (none given).
+	 */
+	onActions?: () => void;
 }
 
-/** The values tried, where each is written, and their branch (`ValueChanges`), as found and as kept. */
+/**
+ * The values tried, where each is written, and their branch (`ValueChanges`), as found and as kept: titled Values on its own
+ * tab, and by the component's name (`name`) in the panel's Changes, among the others'.
+ */
 export const ChangedValues = ({
 	component,
 	components,
@@ -131,9 +139,11 @@ export const ChangedValues = ({
 	tokenName,
 	onSource,
 	onOpen,
+	onActions,
+	name,
 	sources,
 	controls,
-}: Shown & { sources: ValueSourcesAnswer; controls: BranchControls<TriedValue[]> }) => {
+}: Shown & { name?: string; sources: ValueSourcesAnswer; controls: BranchControls<TriedValue[]> }) => {
 	const tried = [...trying.tried.values()];
 	if (tried.length === 0 && controls.branch === null) return null;
 	const sourceOf = (t: TriedValue): ValueSource | null =>
@@ -143,10 +153,10 @@ export const ChangedValues = ({
 	const savable = tried.length === 0 ? controls.branch !== null : sources.state === 'ready' && sources.values.every((v) => v.state === 'found');
 	return (
 		<>
-			<section aria-label="Value changes" data-value-changes className="changed">
+			<section aria-label={name ? `Value changes · ${name}` : 'Value changes'} data-value-changes className="changed">
 				<div className="changed-header">
 					<span className="changed-title">
-						Values <span className="section-count">{tried.length}</span>
+						{name ?? 'Values'} <span className="section-count">{tried.length}</span>
 					</span>
 					{tried.length > 0 && (
 						<button type="button" className="link" onClick={() => trying.onAll([])}>
@@ -160,11 +170,11 @@ export const ChangedValues = ({
 					<ul className="tokens">
 						{tried.map((t) => {
 							const cell = cellFor(rows, t);
-							const name = valueTitle(t.property, cell?.variant ?? null);
+							const title = valueTitle(t.property, cell?.variant ?? null);
 							return (
 								<li key={triedId(t)} data-value-change={triedId(t)} className="token">
 									<span className="value-cell value-change">
-										<span className="value-label">{name}</span>
+										<span className="value-label">{title}</span>
 										<span className="value-drawn">
 											<span>{cell ? saidValue(t.property, cell.value) : ''}</span>{' '}
 											<span>→ {t.follows === undefined ? saidValue(t.property, t.value) : `follows ${tokenName(t.follows)}`}</span>
@@ -172,7 +182,7 @@ export const ChangedValues = ({
 									</span>
 									<Said source={sources.state === 'failed' ? undefined : sourceOf(t)} onSource={onSource} onWrite={() => trying.onWrite(t)} />
 									<span className="item-actions">
-										<IconButton size="small" icon="discard" label={`Reset ${name}`} onClick={() => trying.onTry(triedId(t), null)} />
+										<IconButton size="small" icon="discard" label={`Reset ${title}`} onClick={() => trying.onTry(triedId(t), null)} />
 									</span>
 								</li>
 							);
@@ -187,7 +197,13 @@ export const ChangedValues = ({
 					</p>
 				)}
 				<ErrorLine error={trying.writeError} />
-				<BranchActions controls={controls} canSave={savable} />
+				{onActions ? (
+					<button type="button" className="link" data-actions-elsewhere onClick={onActions}>
+						Save, propose or start over in the side panel
+					</button>
+				) : (
+					<BranchActions controls={controls} canSave={savable} />
+				)}
 			</section>
 			{sources.state === 'failed' && <Notice title="Where its values are written could not be found">{sources.error}</Notice>}
 			{sources.state === 'ready' && sources.reach.state !== 'none' && (

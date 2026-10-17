@@ -88,6 +88,8 @@ export interface WorkspaceApi {
 	valueSources(file: string, tried: TriedValue[]): Promise<Result<ValueSources>>;
 	/** The branch a component's values are kept on, or null when none has been saved (Phase 4). */
 	valueBranch(file: string): Promise<Result<ValueBranch | null>>;
+	/** The components, by story file, that have a branch of their values kept: what the panel's Changes lists with nothing tried. */
+	valueBranchFiles(): Promise<Result<string[]>>;
 	/** Has the agent write a value tried on a component, or make it follow a token (Phase 4.5, 4.6); what it wrote is in `valueSources`. */
 	writeValue(file: string, value: TriedValue): Promise<Result<null>>;
 	/** Saves the values tried on a component where they were found, as one commit on its branch, made the first time. */
@@ -272,6 +274,7 @@ export const INVOKE = [
 	'askInWords',
 	'valueSources',
 	'valueBranch',
+	'valueBranchFiles',
 	'writeValue',
 	'saveValues',
 	'proposeValues',

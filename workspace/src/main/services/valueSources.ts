@@ -20,7 +20,7 @@
 import { errorText } from '../../shared/result';
 import { PX_PER_REM } from '../../shared/tokens';
 import type { ChangeReach, StoryPreview, TriedValue, ValuePlace, ValueProperty, ValueSource, ValueSources as Answer } from '../../shared/contract';
-import { COLOR_VALUES, VALUE_PROPERTIES, triedId } from '../../shared/contract';
+import { COLOR_VALUES, MOST_TRIED, VALUE_PROPERTIES, triedId } from '../../shared/contract';
 import { asRecord } from '../../shared/json';
 import { allParts, partsIn } from '../../shared/valueParts';
 import type { ComponentTokens, DrawnIndex, Instance, Measure } from './componentTokens';
@@ -31,9 +31,6 @@ import type { ValueAgent } from './valueAgent';
 import { drawsOtherwise, partsBy, same } from './valueReadBack';
 import type { OpenedBuild } from './storyPreviews';
 import { type Place, placesIn, probeFor, searchable, searchedFiles, withWrites, writtenAs } from './valueLocator';
-
-/** How many values a component's instances can be tried with at once: far beyond any tab's, short of anything that could hurt. */
-const MOST_TRIED = 50;
 
 /**
  * The values the window sent as tried, or an error: only what the contract says one is (a property, its value as CSS

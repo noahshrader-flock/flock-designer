@@ -35,7 +35,6 @@ export interface Trying {
 	writes: number;
 	writeError: string | null;
 }
-/** Light and dark, as the review bar names them, as an empty and a filled circle: how a theme's light and dark read in a side bar. */
 
 /** Why a component has no values to show, by what its drawing found. */
 const WHY_NONE: Record<Exclude<Values['state'], 'read' | 'failed'>, (name: string) => string> = {

@@ -600,13 +600,11 @@ describe('a component’s tab', () => {
 
 		it('offers Save only once every value is found where it is written, each place opening the library at its line', async () => {
 			await tryingSmall();
-			expect(button('Save to a branch').disabled).toBe(true);
 			await answer('valueSources', found());
 			expect(changed().querySelector('[data-value-places]')?.textContent).toBe('Written in src/utils/theme.ts, line 158');
 			await press(changed().querySelector('[data-value-places] button') as HTMLElement);
 			expect(sent.at(-1)).toEqual({ type: 'open-library-source', file: 'src/utils/theme.ts', line: 158 });
 			expect(changed().textContent).toContain('Saving writes 1 value where it is written, and nothing else.');
-			expect(button('Save to a branch').disabled).toBe(false);
 			// And what writing it moves, as a token change's is said.
 			expect(section('Moved by these values')?.querySelector('[data-reach-summary]')?.textContent).toBe(
 				'It moves 1 component; 12 unchanged, in their stories drawn.',
@@ -623,19 +621,22 @@ describe('a component’s tab', () => {
 			expect(changed().querySelector('[data-value-refused]')?.textContent).toBe(
 				'28px is written in 2 places that each draw it here, so which to change cannot be said.',
 			);
-			expect(button('Save to a branch').disabled).toBe(true);
 			expect(section('Moved by these values')).toBeNull();
 		});
 
-		it('saves to the component’s own branch, then proposes it, with what was tried', async () => {
+		it('has no Save, Propose or Start over here: they are in the panel’s Changes, which it opens', async () => {
 			await tryingSmall();
 			await answer('valueSources', found());
-			await press(button('Save to a branch'));
-			expect(calls('saveValues').at(-1)?.args).toEqual([BUTTON, [SMALL]]);
-			await answer('saveValues', { branch: 'dsnr/values-20261016-ab12', saved: [SMALL], saves: 1, pullRequest: null });
-			expect(changed().querySelector('.branch-line')?.textContent).toBe('dsnr/values-20261016-ab12 · 1 save');
-			await press(button('Propose'));
-			expect(calls('proposeValues').at(-1)?.args).toEqual([BUTTON]);
+			expect(button('Save to a branch')).toBeUndefined();
+			expect(button('Propose')).toBeUndefined();
+			expect(button('Start over')).toBeUndefined();
+			await press(changed().querySelector('[data-actions-elsewhere]') as HTMLElement);
+			expect(sent.at(-1)).toEqual({ type: 'open-changes' });
+		});
+
+		it('tells the extension what is tried, on the commit it is tried on, so every page has it', async () => {
+			await tryingSmall();
+			expect(sent.filter((m) => m.type === 'value-trial').at(-1)).toEqual({ type: 'value-trial', file: BUTTON, commit: 'abc123', values: [SMALL] });
 		});
 
 		it('offers the agent where a value cannot be found, asks it once pressed, and says what it wrote and why', async () => {
@@ -653,7 +654,6 @@ describe('a component’s tab', () => {
 			// Asked again once it is: being written, and asked again until it is.
 			await answer('valueSources', { state: 'ready', values: [{ id: ID, state: 'writing' }], reach: { state: 'none' } });
 			expect(changed().textContent).toContain('The agent is writing it…');
-			expect(button('Save to a branch').disabled).toBe(true);
 			// Asked again while it writes.
 			const asks = calls('valueSources').length;
 			await act(async () => void (await vi.advanceTimersByTimeAsync(ASK_EVERY_MS)));
@@ -674,7 +674,7 @@ describe('a component’s tab', () => {
 			);
 			expect(changed().querySelector('[data-value-places]')?.textContent).toBe('Written by the agent in src/utils/theme.ts, line 59');
 			expect(changed().textContent).toContain('MUI’s default sets it, so the theme’s override does.');
-			expect(button('Save to a branch').disabled).toBe(false);
+			expect(changed().textContent).toContain('Saving writes 1 value where it is written, and nothing else.');
 		});
 
 		it('offers to follow a token whose value its own value is, from the value’s popover, and has the agent write it', async () => {
@@ -741,18 +741,14 @@ describe('a component’s tab', () => {
 			await openChanges();
 			expect(changed().querySelector('[data-value-change] .value-cell')?.textContent).toBe('Height · sm28px → 32px');
 			expect(calls('valueSources').at(-1)?.args).toEqual([BUTTON, [SMALL]]);
-			// Every value put back: the branch can be saved so, back as the library draws them.
+			// Every value put back: the branch can be saved so, back as the library draws them, in the panel's Changes.
 			await press(button('Reset all'));
 			expect(changed().textContent).toContain('Every value is as the library draws it.');
-			expect(button('Save').disabled).toBe(false);
 			// With nothing tried, the branch can still be reached: the button says so and can be pressed.
 			await press(document.querySelector('[role="dialog"][aria-label="Changes"] [aria-label="Close"]') as HTMLElement);
 			const count = document.querySelector('.tab-actions button') as HTMLButtonElement;
 			expect(count.textContent).toBe('No changes');
 			expect(count.disabled).toBe(false);
-			await openChanges();
-			await press(button('Save'));
-			expect(calls('saveValues').at(-1)?.args).toEqual([BUTTON, []]);
 		});
 	});
 
@@ -1045,15 +1041,21 @@ describe('a component’s tab', () => {
 			expect(popover()?.textContent).toContain('Reset');
 		});
 
-		it('forgets the values tried when another mode is chosen, so one tried in light is never left on dark', async () => {
+		it('draws what the extension says is tried: none once it forgets them (another mode chosen), and none tried on another commit', async () => {
 			const { tried } = await tryingOpen();
 			await press(change('Height · sm'));
 			await type(slider('Height'), '30');
 			expect(tried()).toHaveLength(1);
 			await escape();
-			await say({ type: 'mode', mode: 'dark' });
+			await say({ type: 'value-trials', trials: {} });
 			expect(tried()).toEqual([]);
 			expect(values().querySelector('[data-tried]')).toBeNull();
+			// Its instances are named by its drawing on a commit: what was tried on another is not this one's.
+			const tall = { property: 'height', value: '40px', targets: ['height:sm:0', 'height:sm:1', 'height:sm:2'] };
+			await say({ type: 'value-trials', trials: { [BUTTON]: { commit: 'def456', values: [tall] } } });
+			expect(tried()).toEqual([]);
+			await say({ type: 'value-trials', trials: { [BUTTON]: { commit: 'abc123', values: [tall] } } });
+			expect(tried()).toEqual([tall]);
 		});
 
 		it('puts a value back with Reset, and every value with Reset all', async () => {

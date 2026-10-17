@@ -37,6 +37,9 @@ describe('a message from the panel', () => {
 		[{ type: 'token-edits', edits: [{ path: 'palette.light.primary.main', value: '#112233' }] }],
 		[{ type: 'set-mode', mode: 'dark' }],
 		[{ type: 'set-mode', mode: 'light' }],
+		[{ type: 'value-trial', file: 'src/a.stories.tsx', commit: 'abc123', values: [] }],
+		[{ type: 'value-trial', file: 'src/a.stories.tsx', commit: 'abc123', values: [{ property: 'height', value: '32px', targets: ['a'] }] }],
+		[{ type: 'open-changes' }],
 	])('%o is read', (m) => {
 		expect(readMessage(m)).toEqual(m);
 	});
@@ -94,6 +97,11 @@ describe('a message from the panel', () => {
 		[{ type: 'set-mode', mode: 'sepia' }],
 		[{ type: 'set-mode' }],
 		[{ type: 'set-mode', mode: 'dark', also: 1 }],
+		[{ type: 'value-trial', file: 'src/a.stories.tsx', commit: 'not a commit', values: [] }],
+		[{ type: 'value-trial', file: '', commit: 'abc123', values: [] }],
+		[{ type: 'value-trial', file: 'src/a.stories.tsx', commit: 'abc123', values: 'all' }],
+		[{ type: 'value-trial', file: 'src/a.stories.tsx', commit: 'abc123', values: new Array(51).fill({}) }],
+		[{ type: 'open-changes', which: 'all' }],
 	])('%o is dropped', (m) => {
 		expect(readMessage(m)).toBeNull();
 	});

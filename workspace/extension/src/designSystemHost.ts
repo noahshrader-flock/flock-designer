@@ -1,11 +1,12 @@
 import type * as VsCode from 'vscode';
 import type { DesignSystemsMemory } from '../../src/main/services/designSystems';
 import { tokenEditsOf } from '../../src/main/services/tokenEdits';
+import { triedValuesOf } from '../../src/main/services/valueSources';
 import type { WorkspaceApi } from '../../src/shared/contract';
 import { valueOf } from '../../src/shared/result';
 import type { Tell } from './agentWork';
 import type { Panels } from './bridge';
-import { ModeChoice, TokenTrial, componentLink, componentOf, libraryFileIn } from './designSystem';
+import { ModeChoice, TokenTrial, ValueTrial, componentLink, componentOf, libraryFileIn } from './designSystem';
 import { DesignTabs } from './designTabs';
 import { readComponentArg, readMessage } from './messages';
 import { type DesignSystemAsks, answerPage, toldOnReady } from './bridge';
@@ -26,6 +27,7 @@ export const designSystemHost = ({
 	systems,
 	local,
 	openVoiceAndTone,
+	openChanges,
 	openExternal,
 	tell,
 	failed,
@@ -42,6 +44,8 @@ export const designSystemHost = ({
 	systems: Pick<DesignSystemsMemory, 'current'>;
 	local: () => Promise<LocalAddresses>;
 	openVoiceAndTone: () => Promise<void>;
+	/** Shows the panel and its Changes dialog. */
+	openChanges: () => Promise<void>;
 	openExternal: (url: string) => Promise<void>;
 	tell: Tell;
 	failed: (err: unknown) => void;
@@ -53,6 +57,7 @@ export const designSystemHost = ({
 }) => {
 	const trial = new TokenTrial((m) => panels.post(m));
 	const mode = new ModeChoice(kept, (m) => panels.post(m));
+	const values = new ValueTrial((m) => panels.post(m));
 	const tabs = new DesignTabs({
 		create: (title) =>
 			vscode.window.createWebviewPanel('dsnr.designSystem', title, vscode.ViewColumn.Active, {
@@ -94,7 +99,14 @@ export const designSystemHost = ({
 		edits: () => trial.current(),
 		setEdits: (edits) => trial.set(tokenEditsOf(edits)),
 		mode: () => mode.current(),
-		setMode: (next) => mode.set(next),
+		// Values tried in one mode are not left on the other (the same instances draw another colour there).
+		setMode: (next) => {
+			if (next !== mode.current()) values.clear();
+			mode.set(next);
+		},
+		valueTrials: () => values.current(),
+		setValueTrial: (file, commit, tried) => values.set(file, commit, triedValuesOf(tried)),
+		openChanges,
 	};
 	/** A component of the design system shown, chosen from its catalog in VS Code's quick pick, by its story file. */
 	const pickComponent = async (): Promise<string | undefined> => {
@@ -110,6 +122,7 @@ export const designSystemHost = ({
 		/** Another design system is shown: no change is being tried on it, and the last one's components' tabs are closed. */
 		anotherShown: () => {
 			trial.set([]);
+			values.clear();
 			tabs.closeComponents();
 		},
 		disposables: [

@@ -123,6 +123,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 		systems: core.designSystems,
 		local: () => localAddresses(),
 		openVoiceAndTone: voice.open,
+		openChanges: () => inPanel({ type: 'open-dialog', dialog: { kind: 'changes' } }),
 		openExternal: vscodeOpen,
 		tell: vscodeTell,
 		failed,

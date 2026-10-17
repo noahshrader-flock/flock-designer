@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { Context } from '../../src/main/services/findContext';
 import type { Catalog, ComponentPictures, DesignToken, TokenEdit } from '../../src/shared/contract';
 import { plural } from '../../src/shared/plural';
@@ -8,6 +8,8 @@ import { TokenChangesProvider, useTokenChangesFor } from '../../src/renderer/tok
 import { useTokenBranch } from '../../src/renderer/useTokenBranch';
 import { AskInWords } from './AskInWords';
 import { Changed } from './Changed';
+import { ComponentChanges } from './ComponentChanges';
+import { triedOn, useValueTrials } from './valueTrials';
 import { TokenEditor } from './TokenEditor';
 import type { ComponentLink } from '../src/messages';
 import { ComponentsView } from './Components';
@@ -28,6 +30,13 @@ const PARTS = [
 	{ value: 'components', label: 'Components', icon: 'extensions' },
 	{ value: 'tokens', label: 'Tokens', icon: 'symbol-color' },
 ] as const satisfies { value: Part; label: string; icon: string }[];
+
+/** Whether the panel's Changes dialog is open, and opening and closing it: the panel's, so a component's tab can ask for it. */
+export interface ChangesDialog {
+	open: boolean;
+	onOpen: () => void;
+	onClose: () => void;
+}
 
 /** What the Design System tab does when pressed: what the panel asks the core, or the extension. */
 export interface DesignSystemDoes {
@@ -81,6 +90,7 @@ const Ready = ({
 	onView,
 	edits,
 	does,
+	changesDialog,
 }: {
 	catalog: Extract<Catalog, { state: 'ready' }>;
 	id: string | null;
@@ -93,6 +103,7 @@ const Ready = ({
 	onView: (view: View) => void;
 	edits: TokenEdit[];
 	does: DesignSystemDoes;
+	changesDialog: ChangesDialog;
 }) => {
 	const changes = useTokenChangesFor(catalog.tokens.tokens, edits, does.setEdits, catalog.accessibility);
 	// Where the change is kept once saved, and proposed (T4, T5): a change DSNR was closed with comes back in the panel.
@@ -102,8 +113,21 @@ const Ready = ({
 	const [editing, setEditing] = useState<DesignToken | null>(null);
 	// Asking in words for its tokens (Phase 6): open while its dialog is.
 	const [asking, setAsking] = useState(false);
-	// The changes being tried, in a dialog from their count beside the not-read one, so nothing opens above the list.
-	const [changesOpen, setChangesOpen] = useState(false);
+	// Every change being tried, in a dialog from their count beside the not-read one, so nothing opens above the list: the
+	// tokens, then each component with values tried on this commit or a branch of its values kept (asked for once it opens).
+	const { trials } = useValueTrials();
+	const [keptFiles, setKeptFiles] = useState<string[]>([]);
+	useEffect(() => {
+		if (!changesDialog.open) return;
+		let live = true;
+		void window.workspace.valueBranchFiles().then((r) => live && r.ok && setKeptFiles(r.value));
+		return () => {
+			live = false;
+		};
+	}, [changesDialog.open]);
+	const triedOnIt = (file: string) => triedOn(trials, file, catalog.commit);
+	const changed = catalog.components.filter((c) => triedOnIt(c.id).length > 0 || keptFiles.includes(c.id));
+	const count = edits.length + catalog.components.reduce((n, c) => n + triedOnIt(c.id).length, 0);
 	const notRead = catalog.tokens.problems.length;
 	// Whether the library has a dark (its tokens have a Dark group): only then is a color mode offered.
 	const hasDark = catalog.tokens.tokens.some(isDark);
@@ -130,10 +154,10 @@ const Ready = ({
 					)}
 					{/* Always there, so nothing moves when the first change is made: muted with none, the brand's with some. */}
 					<Badge
-						tone={edits.length > 0 ? 'brand' : 'neutral'}
-						count={edits.length}
-						label={`${plural(edits.length, 'token change')} being tried`}
-						onPress={() => setChangesOpen(true)}
+						tone={count > 0 ? 'brand' : 'neutral'}
+						count={count}
+						label={`${plural(count, 'change')} being tried`}
+						onPress={changesDialog.onOpen}
 					/>
 					<Menu
 						label="Design system actions"
@@ -182,9 +206,19 @@ const Ready = ({
 			)}
 			{editing && <TokenEditor key={editing.path} token={editing} onClose={() => setEditing(null)} />}
 			{problems && <Problems problems={catalog.tokens.problems} onClose={() => setProblems(false)} />}
-			{changesOpen && (
-				<Dialog title="Changes" onClose={() => setChangesOpen(false)}>
+			{changesDialog.open && (
+				<Dialog title="Changes" onClose={changesDialog.onClose}>
 					<Changed controls={branch} />
+					{changed.map((c) => (
+						<ComponentChanges
+							key={c.id}
+							component={c}
+							components={catalog.components}
+							commit={catalog.commit}
+							onSource={({ file, line }) => does.openTokenSource({ file, line })}
+							onOpen={does.openComponent}
+						/>
+					))}
 				</Dialog>
 			)}
 			{asking && (
@@ -217,6 +251,7 @@ export const DesignSystem = ({
 	onView,
 	edits,
 	does,
+	changesDialog,
 }: {
 	found: Context['designSystem'];
 	unreadable: string | null;
@@ -228,6 +263,7 @@ export const DesignSystem = ({
 	onView: (view: View) => void;
 	edits: TokenEdit[];
 	does: DesignSystemDoes;
+	changesDialog: ChangesDialog;
 }) => {
 	if (!found)
 		return (
@@ -285,6 +321,7 @@ export const DesignSystem = ({
 			onView={onView}
 			edits={edits}
 			does={does}
+			changesDialog={changesDialog}
 		/>
 	);
 };

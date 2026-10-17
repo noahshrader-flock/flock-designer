@@ -117,6 +117,21 @@ export class ChangeBranches<C> {
 		return shown(kept);
 	}
 
+	/**
+	 * The scopes that have a branch kept on the design system shown, whose branch is still in its clone (for a component's
+	 * values, the story files with a branch of their own); none for a change kept without a scope.
+	 */
+	async scopes(): Promise<string[]> {
+		const system = this.deps.system();
+		if (!system) return [];
+		const prefix = `${system.id}\u0000`;
+		const scopes = Object.keys(this.file.read())
+			.filter((k) => k.startsWith(prefix))
+			.map((k) => k.slice(prefix.length));
+		const there = await Promise.all(scopes.map(async (scope) => (await this.kept(scope)) !== null));
+		return scopes.filter((_, i) => there[i]);
+	}
+
 	/** Saves `change` as one commit on the branch, made from the library's current commit on the first save. */
 	async save(change: C, scope = ''): Promise<ChangeBranch<C>> {
 		const system = this.system();

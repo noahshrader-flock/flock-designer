@@ -2,11 +2,12 @@ import { resolve, sep } from 'node:path';
 import type * as VsCode from 'vscode';
 import type { Context } from '../../src/main/services/findContext';
 import { type DesignSystemsMemory, systemAt } from '../../src/main/services/designSystems';
-import type { CatalogComponent, ConnectedDesignSystem, TokenEdit, WorkspaceApi } from '../../src/shared/contract';
+import type { CatalogComponent, ConnectedDesignSystem, TokenEdit, TriedValue, WorkspaceApi } from '../../src/shared/contract';
+import { sameTried } from '../../src/shared/contract';
 import { errorText, valueOf } from '../../src/shared/result';
 import { DEFAULT_THEME, type Theme, isTheme } from '../../src/shared/prototypeTheme';
 import { sameChange } from '../../src/shared/tokens';
-import type { ComponentLink, HostMessage } from './messages';
+import type { ComponentLink, HostMessage, ValueTrials } from './messages';
 
 const same = (a: ConnectedDesignSystem, b: ConnectedDesignSystem): boolean =>
 	(Object.keys(a) as (keyof ConnectedDesignSystem)[]).every((k) => a[k] === b[k]);
@@ -52,6 +53,36 @@ export class TokenTrial {
 		if (sameChange(edits, this.edits)) return;
 		this.edits = edits;
 		this.post({ type: 'token-edits', edits });
+	}
+}
+
+/**
+ * The values tried on each component (CHANGES_PLAN Phase 2), kept by the extension rather than one tab, as the change to the
+ * tokens is (`TokenTrial`): a tab tries them, and every DSNR page is told (`post`), so the panel's Changes lists every
+ * component's and its tab draws its own. Each is kept with the library's commit it was tried on; none tried is none kept.
+ * Told only when they change; none when another design system or another mode is shown.
+ */
+export class ValueTrial {
+	private trials: ValueTrials = {};
+
+	constructor(private readonly post: (message: Extract<HostMessage, { type: 'value-trials' }>) => void) {}
+
+	current(): ValueTrials {
+		return this.trials;
+	}
+
+	set(file: string, commit: string, values: TriedValue[]): void {
+		const was = this.trials[file];
+		if (values.length === 0 ? was === undefined : was?.commit === commit && sameTried(was.values, values)) return;
+		const { [file]: _gone, ...rest } = this.trials;
+		this.trials = values.length === 0 ? rest : { ...rest, [file]: { commit, values } };
+		this.post({ type: 'value-trials', trials: this.trials });
+	}
+
+	clear(): void {
+		if (Object.keys(this.trials).length === 0) return;
+		this.trials = {};
+		this.post({ type: 'value-trials', trials: this.trials });
 	}
 }
 

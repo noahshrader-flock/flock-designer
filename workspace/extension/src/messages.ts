@@ -1,6 +1,6 @@
 import type { Context } from '../../src/main/services/findContext';
 import { INVOKE, type InvokeName } from '../../src/shared/contract';
-import type { TokenEdit } from '../../src/shared/domain/designSystem';
+import { MOST_TRIED, type TokenEdit, type TriedValue } from '../../src/shared/domain/designSystem';
 import { MOST_EDITS } from '../../src/shared/tokens';
 import type { Project } from '../../src/shared/domain/projects';
 import { isPrototypeName } from '../../src/shared/prototypeNames';
@@ -36,7 +36,11 @@ export type PanelMessage =
 	| { type: 'open-library-source'; file: string; line: number }
 	| { type: 'token-edits'; edits: unknown[] }
 	// The mode components are shown in, chosen in the panel (MODES_PLAN Phase 1), which the extension keeps for every page.
-	| { type: 'set-mode'; mode: Theme };
+	| { type: 'set-mode'; mode: Theme }
+	// The values tried on one component, on the library's commit they were tried on (CHANGES_PLAN Phase 2), which the extension
+	// keeps for every page (each value read again where it is kept, `triedValuesOf`); and the panel's Changes asked from a tab.
+	| { type: 'value-trial'; file: string; commit: string; values: unknown[] }
+	| { type: 'open-changes' };
 
 /** A component's links, which the extension finds for it from the catalog: its docs on Storybook, and its source on GitHub. */
 const COMPONENT_LINKS = ['storybook', 'source'] as const;
@@ -70,6 +74,12 @@ export const reviewsOf = (project: Pick<Project, 'id' | 'title' | 'iterations'>)
 		.filter((i) => isPrototypeName(i.name))
 		.map((i) => ({ projectId: project.id, name: i.name, title: `${project.title} · ${iterationLabel(i)}` }));
 
+/**
+ * The values tried on each component, by its story file, with the library's commit they were tried on: its instances are
+ * named by that commit's drawing, so a page on another commit leaves them be (CHANGES_PLAN Phase 2).
+ */
+export type ValueTrials = Record<string, { commit: string; values: TriedValue[] }>;
+
 /** The tabs in front in the editor: the projects whose review is, and the design system's components whose tab is. */
 export interface TabsShown {
 	projects: string[];
@@ -94,6 +104,8 @@ export type HostMessage =
 	| { type: 'token-edits'; edits: TokenEdit[] }
 	/** The mode components are shown in, as the extension keeps it (`ModeChoice`): told to every DSNR page whenever it changes. */
 	| { type: 'mode'; mode: Theme }
+	/** The values tried on every component, as the extension keeps them (`ValueTrial`): told to every DSNR page whenever they change. */
+	| { type: 'value-trials'; trials: ValueTrials }
 	/** Which tabs of the editor are in front, as the panel marks them (`TabsShown`): told whenever one opens, closes or is covered. */
 	| ({ type: 'tabs-shown' } & TabsShown);
 
@@ -105,10 +117,12 @@ export type PanelDialog =
 	| { kind: 'hand-off'; projectId: string }
 	// Not about a project: the GitHub account's Sign out, and the sync's what is held back and Sync now.
 	| { kind: 'account' }
-	| { kind: 'sync' };
+	| { kind: 'sync' }
+	// Every change being tried, the tokens and each component's, with their branches: asked for from a component's tab too.
+	| { kind: 'changes' };
 
 const CALLS = new Set<string>(INVOKE);
-const BARE = new Set(['ready', 'locate-design-system', 'get-started', 'ask-new-prototype', 'open-primitives', 'open-voice-and-tone']);
+const BARE = new Set(['ready', 'locate-design-system', 'get-started', 'ask-new-prototype', 'open-primitives', 'open-voice-and-tone', 'open-changes']);
 /** The longest a path in the design system is (a story file, a token's file); a change is at most `MOST_EDITS` edits. */
 const MOST_PATH = 500;
 const isPath = (v: unknown): v is string => typeof v === 'string' && v.length > 0 && v.length <= MOST_PATH;
@@ -174,6 +188,15 @@ export const readMessage = (raw: unknown): PanelMessage | null => {
 	if (m.type === 'token-edits')
 		return hasExactly(m, ['type', 'edits']) && Array.isArray(m.edits) && m.edits.length <= MOST_EDITS
 			? { type: 'token-edits', edits: m.edits }
+			: null;
+	if (m.type === 'value-trial')
+		return hasExactly(m, ['type', 'file', 'commit', 'values']) &&
+			isPath(m.file) &&
+			typeof m.commit === 'string' &&
+			/^[0-9a-f]{4,64}$/.test(m.commit) &&
+			Array.isArray(m.values) &&
+			m.values.length <= MOST_TRIED
+			? { type: 'value-trial', file: m.file, commit: m.commit, values: m.values }
 			: null;
 	if (m.type === 'set-mode') return hasExactly(m, ['type', 'mode']) && isTheme(m.mode) ? { type: 'set-mode', mode: m.mode } : null;
 	return typeof m.type === 'string' && BARE.has(m.type) && hasExactly(m, ['type']) ? ({ type: m.type } as PanelMessage) : null;
