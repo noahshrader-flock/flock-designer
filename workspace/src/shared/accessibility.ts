@@ -155,6 +155,9 @@ export const elementLine = (e: AccessibilityElement): string =>
 /** How many of an issue's elements are not listed: counted, never dropped silently. */
 export const unlisted = (i: AccessibilityIssue): number => i.nodes - i.elements.length;
 
+/** axe's rules whose fix is words a person writes (an image's text alternative): said, never written by an agent (A4, A6). */
+export const WORDS = new Set(['image-alt', 'role-img-alt', 'svg-img-alt', 'input-image-alt', 'object-alt', 'area-alt']);
+
 /** How the best-practice rules' findings are titled, wherever they are said: beside WCAG, never counted as it. */
 export const BEST_PRACTICE_TITLE = 'Best practice, beside WCAG (not counted as it)';
 

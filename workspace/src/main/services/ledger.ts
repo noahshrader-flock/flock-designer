@@ -20,6 +20,15 @@ import type { CellResult } from './probe/cells';
  */
 export type LedgerStatus = 'found' | 'notRun' | 'measured' | 'notApplicable' | 'person';
 
+/** One layer's measure of a criterion: axe (its rule, or `axe` when none of its rules found anything), or a probe cell where it ran. */
+export interface LedgerPart {
+	layer: 'axe' | 'probe';
+	what: string;
+	/** Where: the states axe found it in, or a probe cell's view, or `the source`. */
+	where: string;
+	status: Exclude<LedgerStatus, 'person'>;
+}
+
 export interface LedgerRow {
 	sc: string;
 	name: string;
@@ -27,6 +36,8 @@ export interface LedgerRow {
 	atTarget: boolean;
 	status: LedgerStatus;
 	layers: ('axe' | 'probe')[];
+	/** What each layer measured of it, one apiece: axe's rules, or a probe cell in a view or the source, and what it found. */
+	by: LedgerPart[];
 	/** What was found, a line each: the rule or cell, where, and how much. */
 	found: string[];
 	/** The evidence files the status rests on, from the design repository's root. */
@@ -39,6 +50,16 @@ export interface LedgerRow {
 	manual: string | null;
 }
 
+/** How the work was run for a measure of a product's own app: what a person runs, where, which pages, and on what data. */
+export interface LedgerRun {
+	command: string;
+	address: string;
+	pages: { name: string; path: string }[];
+	data: string;
+	/** The assistive technology the product's manifest says testers cover at least (decision 3); null when it names none. */
+	assistiveTechnology: string[] | null;
+}
+
 export interface Ledger {
 	version: 1;
 	/** Which measure of the project it is (a prototype's name, or `app`), and what that is, in words. */
@@ -48,6 +69,8 @@ export interface Ledger {
 	target: string;
 	axe: string;
 	depth: string;
+	/** How it was run, for a product's own app: what the manual list tells a tester. */
+	run?: LedgerRun;
 	rows: LedgerRow[];
 }
 
@@ -82,6 +105,7 @@ export const ledgerOf = ({
 	target,
 	depth,
 	left,
+	run,
 }: {
 	key: string;
 	of: string;
@@ -94,6 +118,7 @@ export const ledgerOf = ({
 	depth: string;
 	/** Why what was found was left as it is (a build's two rounds of its own check used up): said on each found row. */
 	left?: string;
+	run?: LedgerRun;
 }): Ledger => {
 	const byAxe = axeReaches(result.ran.tags);
 	const cells = [
@@ -106,6 +131,7 @@ export const ledgerOf = ({
 		const evidence = new Set<string>();
 		const why: string[] = [];
 		const layers: LedgerRow['layers'] = [];
+		const by: LedgerPart[] = [];
 		const undecided: string[] = [];
 		if (byAxe.has(c.sc)) {
 			layers.push('axe');
@@ -118,6 +144,11 @@ export const ledgerOf = ({
 				),
 			);
 			statuses.push(issues.length ? 'found' : 'measured');
+			by.push(
+				...(issues.length
+					? issues.map((i): LedgerPart => ({ layer: 'axe', what: i.rule, where: i.states.join(', '), status: 'found' }))
+					: [{ layer: 'axe' as const, what: 'axe', where: result.ran.states.join(', '), status: 'measured' as const }]),
+			);
 			undecided.push(...result.incomplete.filter((i) => i.criteria.includes(c.sc)).map((i) => i.rule));
 		}
 		const own = cells.filter(({ r }) => r.sc === c.sc);
@@ -126,7 +157,9 @@ export const ledgerOf = ({
 			if (r.status === 'found') found.push(`probe ${r.cell}, in ${where}: ${r.findings.length} finding${r.findings.length === 1 ? '' : 's'}`);
 			if (r.status === 'notRun' || r.status === 'notApplicable') why.push(`${r.cell}, in ${where}: ${r.why ?? ''}`);
 			if (r.status !== 'notRun') evidence.add(file);
-			statuses.push(r.status === 'none' ? 'measured' : r.status);
+			const status = r.status === 'none' ? 'measured' : r.status;
+			statuses.push(status);
+			by.push({ layer: 'probe', what: r.cell, where, status });
 		}
 		const status = statuses.length ? (STRONGEST.find((s) => statuses.includes(s)) as LedgerStatus) : 'person';
 		const person = [c.person, undecided.length ? `what axe could not decide (${undecided.join(', ')})` : null].filter(Boolean).join('; ') || null;
@@ -136,6 +169,7 @@ export const ledgerOf = ({
 			atTarget: requiredAt(c, target.target),
 			status,
 			layers,
+			by,
 			found,
 			evidence: status === 'person' ? [] : [...evidence],
 			...(why.length && (status === 'notRun' || status === 'notApplicable') ? { why: why.join('; ') } : {}),
@@ -144,7 +178,7 @@ export const ledgerOf = ({
 			manual: c.manual,
 		};
 	});
-	return { version: 1, key, of, at: result.ran.at, target: targetLine(target), axe: result.ran.axe, depth, rows };
+	return { version: 1, key, of, at: result.ran.at, target: targetLine(target), axe: result.ran.axe, depth, ...(run ? { run } : {}), rows };
 };
 
 /**
@@ -236,12 +270,18 @@ export const reviewSection = (ledger: Ledger, ledgerFile: string): string => {
 };
 
 /** `review.md` with this run's section put in place of its last one, or added at its end; nothing else in it changes. */
-export const withReviewSection = (review: string | null, ledger: Ledger, ledgerFile: string): string => {
-	const section = reviewSection(ledger, ledgerFile);
-	const text = review ?? '';
-	const [start, end] = [text.indexOf(opening(ledger.key)), text.indexOf(closing(ledger.key))];
-	if (start >= 0 && end > start) return `${text.slice(0, start)}${section}${text.slice(end + closing(ledger.key).length)}`;
-	return `${text.trimEnd()}${text.trim() ? '\n\n' : ''}${section}\n`;
+export const withReviewSection = (review: string | null, ledger: Ledger, ledgerFile: string): string =>
+	withMarked(review, opening(ledger.key), closing(ledger.key), reviewSection(ledger, ledgerFile));
+
+/**
+ * A file with a section `dsnr` writes, between its `open` and `close` markers (the section starts and ends with them):
+ * put in place of the last one, or added at the end. Nothing else in the file changes.
+ */
+export const withMarked = (text: string | null, open: string, close: string, section: string): string => {
+	const was = text ?? '';
+	const [start, end] = [was.indexOf(open), was.indexOf(close)];
+	if (start >= 0 && end > start) return `${was.slice(0, start)}${section}${was.slice(end + close.length)}`;
+	return `${was.trimEnd()}${was.trim() ? '\n\n' : ''}${section}\n`;
 };
 
 /**

@@ -14,6 +14,7 @@ import type { AccessibilityIssue, AccessibilityResult } from '../../shared/contr
 import { statesOf, withState } from '../../shared/prototypeStates';
 import { type DeclaredTarget, targetLine } from '../../shared/wcag';
 import { atTarget } from '../../shared/wcagCriteria';
+import { WORDS } from '../../shared/accessibility';
 import { findingsLines } from './accessibilityBrief';
 import { type CheckPage, resultOf } from './accessibilityCheck';
 import type { MeasureRecord } from './accessibilityRecord';
@@ -55,9 +56,6 @@ export interface CheckBrowser {
 	scan: CheckPage;
 	probe(url: string, options: ProbeOptions): Promise<ViewProbed>;
 }
-
-/** axe's rules whose fix is words a person writes (an image's text alternative): said, never written by the agent. */
-export const WORDS = new Set(['image-alt', 'role-img-alt', 'svg-img-alt', 'input-image-alt', 'object-alt', 'area-alt']);
 
 const hashOf = (html: string) => createHash('sha256').update(html).digest('hex').slice(0, 16);
 

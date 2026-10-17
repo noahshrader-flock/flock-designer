@@ -85,12 +85,15 @@ engineering what they picked up; the project folder is why it was built that way
 - **Anything a flag, permission or setup needs** before the work can be seen outside design mode.
 - **Which files are the feature,** with the exact `git diff` command that shows only those: a branch may
   carry unrelated work that has not merged.
-- **Accessibility as run or not run,** each with the reason. An unstated check reads as a passing one.
+- **Accessibility: the manual list.** `dsnr accessibility` writes it into `HANDOFF.md` from what it
+  measured, between its `<!-- dsnr:manual-list -->` lines: what a person must still check, and how. Leave
+  it as it is, and never restate or shorten it; if the work changed since, run the command again.
 
 If something is unfinished, say it is unfinished. Do not hedge.
 
-**Commit it, then run the gate a last time: it must pass.** If it cannot, say why, and that the work is
-not ready.
+**Commit it, then run the gate a last time: it must pass.** Check the accessibility record too, with
+`node ../flock-designer/workspace/bin/dsnr.mjs check-accessibility --project <id>`: it must pass as well.
+If either cannot, say why, and that the work is not ready.
 
 ## When you have finished
 

@@ -295,7 +295,15 @@ export const main = async (argv: string[], deps: CliDeps): Promise<number> => {
 		if (command === 'publish') return await publishPage(deps, values);
 		if (command === 'check-accessibility') {
 			if (!values.project) throw new UsageError('Say which project, with --project.');
-			return checkAccessibility({ designRoot: await designOf(deps.cwd), projectId: values.project, name: values.name ?? null, out: deps.out });
+			// Run from the product's checkout (its gate), its HANDOFF.md is checked too; from the design repository, it is not.
+			const product = await productOf(deps.cwd, values.product, 'check its HANDOFF.md').catch(() => null);
+			return checkAccessibility({
+				designRoot: await designOf(deps.cwd),
+				productRoot: product,
+				projectId: values.project,
+				name: values.name ?? null,
+				out: deps.out,
+			});
 		}
 		if (command === 'unpublish') return await unpublishPage(deps, values);
 		const projectId = values.project;

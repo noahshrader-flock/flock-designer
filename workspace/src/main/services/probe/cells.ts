@@ -64,7 +64,7 @@ export const CELLS = [
 	source('pointer-gestures', '2.5.1', 'handlers of several touches or of a path (touch moves, gestures)'),
 	source('pointer-cancellation', '2.5.2', 'handlers on the down event of a pointer, a mouse or a touch'),
 	source('motion-actuation', '2.5.4', 'handlers of the device’s motion or orientation'),
-	source('dragging', '2.5.7', 'drag handlers, and elements that can be dragged'),
+	source('dragging', '2.5.7', 'drag handlers, or elements that can be dragged'),
 ] as const satisfies readonly Cell[];
 
 export type CellId = (typeof CELLS)[number]['id'];

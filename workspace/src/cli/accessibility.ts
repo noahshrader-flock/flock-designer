@@ -7,7 +7,7 @@
  * source is read for what a page cannot show. What it could not open, it says; with nothing opened, nothing is written.
  */
 import { existsSync, readFileSync, rmSync } from 'node:fs';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import { checkedWith, countsOf, notAutomatedLine, summaryOf } from '../shared/accessibility';
 import type { AccessibilityResult } from '../shared/contract';
 import {
@@ -22,10 +22,19 @@ import { statesOf, withState } from '../shared/prototypeStates';
 import type { DeclaredTarget } from '../shared/wcag';
 import { atTarget } from '../shared/wcagCriteria';
 import { accessibilityOf } from '../main/services/accessibilityCheck';
-import { MANIFEST_FILE, PAGES_SECTION, type AppPage, appPages, declaredTarget, findingsLines } from '../main/services/accessibilityBrief';
+import {
+	MANIFEST_FILE,
+	PAGES_SECTION,
+	type AppPage,
+	appPages,
+	assistiveTechnology,
+	declaredTarget,
+	findingsLines,
+} from '../main/services/accessibilityBrief';
 import { FIRST_PAGE, type PageNotOpened, checkPages, onDesignMode } from '../main/services/accessibilityRun';
 import { chromeHeadless } from '../main/services/chromeHeadless';
-import { readDescriptor } from '../main/services/descriptor';
+import { findCommand, readDescriptor } from '../main/services/descriptor';
+import { DESIGN_MODE_COMMAND } from '../shared/work';
 import { git } from '../main/services/git';
 import { assertUsableProjectId } from '../main/services/iterations';
 import { writeAtomic } from '../main/services/jsonFile';
@@ -35,7 +44,8 @@ import type { prototypeWork } from '../main/services/prototypeWork';
 import { CELLS, type CellResult, type ProbeDepth, cellLines, cellsAt } from '../main/services/probe/cells';
 import type { Evidence } from '../main/services/probe/probe';
 import { type SourceFile, scanSources } from '../main/services/probe/sourceScan';
-import { type Ledger, ledgerChanges, ledgerFaults } from '../main/services/ledger';
+import { type Ledger, type LedgerRun, ledgerChanges, ledgerFaults } from '../main/services/ledger';
+import { manualListFault, withManualSection } from '../main/services/manualList';
 import { recordFiles } from '../main/services/accessibilityRecord';
 
 export interface MeasureDeps {
@@ -73,6 +83,8 @@ interface Measured {
 	source: CellResult[];
 	pages?: AppPage[];
 	note?: string;
+	/** How a product's own app was run, for the manual list. */
+	run?: LedgerRun;
 }
 
 /** Probes each view in turn, saying which as it goes. */
@@ -151,11 +163,17 @@ const productApp = async ({ projectId, root, depth }: MeasureDeps, browser: Brow
 	const named = appPages(manifest);
 	const pages = named ?? [FIRST_PAGE];
 	const target = declaredTarget(manifest, descriptor.product);
-	const { result, notOpened, views } = await onDesignMode({ root, descriptor, projectId, loads: browser.loads, progress }, async (origin, opens) => {
+	const {
+		result,
+		notOpened,
+		views,
+		origin: served,
+	} = await onDesignMode({ root, descriptor, projectId, loads: browser.loads, progress }, async (origin, opens) => {
 		const checked = await checkPages({ origin, pages, target, check: browser.scan, opens, progress });
 		const opened = pages.filter((p) => !checked.notOpened.some((n) => n.path === p.path));
 		return {
 			...checked,
+			origin,
 			views: await probeViews(
 				browser,
 				opened.map((p) => ({ state: p.name, url: new URL(p.path, origin).href })),
@@ -173,6 +191,14 @@ const productApp = async ({ projectId, root, depth }: MeasureDeps, browser: Brow
 		views,
 		source: scanSources(sourceCells(depth), files, why),
 		pages,
+		// How a tester runs it as it was measured: the manual list's first part.
+		run: {
+			command: findCommand(descriptor, DESIGN_MODE_COMMAND).argv.join(' '),
+			address: served,
+			pages,
+			data: 'its own mock data, as its design mode runs',
+			assistiveTechnology: assistiveTechnology(manifest),
+		},
 		...(named
 			? {}
 			: {
@@ -240,10 +266,17 @@ export const measureAccessibility = async (deps: MeasureDeps): Promise<number> =
 	const ledgerFile = accessibilityLedgerPath(projectId, name);
 	const last = readLedger(join(designRoot, ledgerFile));
 	const { files, ledger } = recordFiles(
-		{ projectId, name, of: what, result, target: measured.target, depth, views, source, pages, notOpened },
+		{ projectId, name, of: what, result, target: measured.target, depth, views, source, pages, notOpened, run: measured.run },
 		existsSync(reviewFile) ? readFileSync(reviewFile, 'utf8') : null,
 	);
 	for (const f of files) writeAtomic(join(designRoot, f.path), f.text);
+	// A product's own app: the manual list, from the ledger, into the work's HANDOFF.md, for whoever tests it by hand (A8).
+	const handoff = join(deps.root, 'HANDOFF.md');
+	if (name === null)
+		writeAtomic(
+			handoff,
+			withManualSection(existsSync(handoff) ? readFileSync(handoff, 'utf8') : null, ...manualArgs(ledger, ledgerFile, projectId, designRoot)),
+		);
 	const since = last ? ledgerChanges(last, ledger) : null;
 	deps.out(
 		[
@@ -263,6 +296,17 @@ export const measureAccessibility = async (deps: MeasureDeps): Promise<number> =
 	return 0;
 };
 
+/** What the manual list is made from: the ledger, and where its evidence and the testers' findings are, as the product's checkout sees them. */
+const manualArgs = (ledger: Ledger, ledgerFile: string, projectId: string, designRoot: string): [Ledger, string, string, string] => {
+	const design = basename(designRoot);
+	return [
+		ledger,
+		`${design}/${ledgerFile}`,
+		`${design}/${accessibilityEvidenceDir(projectId, null)}`,
+		`${design}/${projectPath(projectId, 'accessibility/returned.md')}`,
+	];
+};
+
 /** A ledger as it was written, or null when there is none, or it cannot be read as one. */
 const readLedger = (file: string): Ledger | null => {
 	try {
@@ -280,11 +324,14 @@ const readLedger = (file: string): Ledger | null => {
  */
 export const checkAccessibility = ({
 	designRoot,
+	productRoot,
 	projectId,
 	name,
 	out,
 }: {
 	designRoot: string;
+	/** The product's checkout, whose HANDOFF.md carries the manual list of its own app's measure; null when this is not run in one. */
+	productRoot: string | null;
 	projectId: string;
 	name: string | null;
 	out: (text: string) => void;
@@ -298,16 +345,19 @@ export const checkAccessibility = ({
 		return 1;
 	}
 	const reviewFile = join(designRoot, projectPath(projectId, 'review.md'));
-	const faults = ledgerFaults(
-		ledger,
-		ledgerFile,
-		(p) => existsSync(join(designRoot, p)),
-		existsSync(reviewFile) ? readFileSync(reviewFile, 'utf8') : null,
-	);
+	const handoff = productRoot === null ? null : join(productRoot, 'HANDOFF.md');
+	const listFault =
+		name === null && handoff !== null
+			? manualListFault(existsSync(handoff) ? readFileSync(handoff, 'utf8') : null, ...manualArgs(ledger, ledgerFile, projectId, designRoot))
+			: null;
+	const faults = [
+		...ledgerFaults(ledger, ledgerFile, (p) => existsSync(join(designRoot, p)), existsSync(reviewFile) ? readFileSync(reviewFile, 'utf8') : null),
+		...(listFault ? [listFault] : []),
+	];
 	out(
 		faults.length
 			? [`${ledgerFile}: ${faults.length} fault${faults.length === 1 ? '' : 's'}.`, ...faults.map((f) => `- ${f}`)].join('\n')
-			: `${ledgerFile}: every status rests on its evidence, and review.md says what the ledger says.`,
+			: `${ledgerFile}: every status rests on its evidence, and review.md${name === null && handoff !== null ? ' and HANDOFF.md say' : ' says'} what the ledger says.`,
 	);
 	return faults.length ? 1 : 0;
 };

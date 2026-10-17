@@ -560,6 +560,10 @@ describe.skipIf(findChrome() === null)('accessibility', () => {
 				'| Devices | `/devices?tab=list` |',
 				'| Broken | `/broken` |',
 				'| Gone | `/gone` |',
+				'',
+				'## Assistive technology to test with',
+				'',
+				'- VoiceOver with Safari, on macOS',
 			].join('\n'),
 		);
 		mkdirSync(join(design, 'projects', 'shop'), { recursive: true });
@@ -611,9 +615,24 @@ describe.skipIf(findChrome() === null)('accessibility', () => {
 		expect(review).toContain("## Accessibility: Test Product's app in design mode");
 		expect(review).toContain('| 5 | Accessible names | 4.1.2 Name, Role, Value:');
 		expect(said).toContain('This is the first run of this measure: there is no ledger to compare with.');
+		// The manual list, in the work's HANDOFF.md, for whoever tests it by hand.
+		const handoff = readFileSync(join(shop, 'HANDOFF.md'), 'utf8');
+		expect(handoff).toContain('## Accessibility: what is left for a person');
+		expect(handoff).toMatch(
+			new RegExp(`- Run \`node serve\.cjs ${port}\` in the product's checkout\. It serves http://localhost:${port}/ on its own mock data`),
+		);
+		expect(handoff).toContain('- The pages measured: Home (`/`), Devices (`/devices?tab=list`), Broken (`/broken`), Gone (`/gone`).');
+		expect(handoff).toContain('Cover at least what the product names: VoiceOver with Safari, on macOS.');
+		expect(handoff).toContain('Add each to `flock-designer/projects/shop/accessibility/returned.md`');
 		out = [];
 		expect(await main(['check-accessibility', '--project', 'shop'], deps(shop))).toBe(0);
-		expect(out.join('\n')).toMatch(/every status rests on its evidence, and review\.md says what the ledger says/);
+		expect(out.join('\n')).toMatch(/every status rests on its evidence, and review\.md and HANDOFF\.md say what the ledger says/);
+		// Edited by hand, and the gate refuses it.
+		writeFileSync(join(shop, 'HANDOFF.md'), handoff.replace('Cover at least', 'Maybe cover'));
+		out = [];
+		expect(await main(['check-accessibility', '--project', 'shop'], deps(shop))).toBe(1);
+		expect(out.join('\n')).toMatch(/HANDOFF\.md does not carry the manual list its ledger writes/);
+		writeFileSync(join(shop, 'HANDOFF.md'), handoff);
 		// An evidence file gone, and the gate refuses what rested on it.
 		rmSync(join(evidence, 'home', 'cells.json'));
 		out = [];

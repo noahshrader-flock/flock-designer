@@ -9,7 +9,7 @@ import { accessibilityEvidenceDir, accessibilityLedgerPath, accessibilityPath, a
 import type { DeclaredTarget } from '../../shared/wcag';
 import type { AppPage } from './accessibilityBrief';
 import type { PageNotOpened } from './accessibilityRun';
-import { type Ledger, ledgerOf, withReviewSection } from './ledger';
+import { type Ledger, type LedgerRun, ledgerOf, withReviewSection } from './ledger';
 import type { CellResult } from './probe/cells';
 
 export interface MeasureRecord {
@@ -27,6 +27,8 @@ export interface MeasureRecord {
 	notOpened?: PageNotOpened[];
 	/** Why what was found was left as it is, when it was (a build's two rounds used up). */
 	left?: string;
+	/** How a product's own app was run, for the manual list. */
+	run?: LedgerRun;
 }
 
 /** The record's files, by their paths in the design repository, and the ledger they hold. `review` is review.md as it is now. */
@@ -51,6 +53,7 @@ export const recordFiles = (
 		target: m.target,
 		depth: m.depth,
 		left: m.left,
+		run: m.run,
 	});
 	const json = (data: unknown, tab: string | number = '\t') => `${JSON.stringify(data, null, tab)}\n`;
 	const probe = {

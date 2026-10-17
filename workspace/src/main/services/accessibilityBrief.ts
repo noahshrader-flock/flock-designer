@@ -73,6 +73,17 @@ export const appPages = (manifest: string | null): AppPage[] | null => {
 	return pages.length > 0 ? pages : null;
 };
 
+/** The manifest's section that names the assistive technology testers cover at least (the accessibility plan's decision 3). */
+export const ASSISTIVE_SECTION = 'Assistive technology to test with';
+
+/** What a manifest says testers cover at least, a list item each ("VoiceOver with Safari, on macOS"); null when it names none. */
+export const assistiveTechnology = (manifest: string | null): string[] | null => {
+	const items = (manifest === null ? '' : (section(manifest, ASSISTIVE_SECTION) ?? ''))
+		.split('\n')
+		.flatMap((l) => (/^\s*[-*]\s+(.+)$/.exec(l)?.[1] ? [(/^\s*[-*]\s+(.+)$/.exec(l)?.[1] as string).trim()] : []));
+	return items.length > 0 ? items : null;
+};
+
 /**
  * What a check found that is still open, as the agent reads it: what failed, where in WCAG, on how many elements, and each
  * element it lists, by its selector with what axe says to change, so it can be found and fixed.
