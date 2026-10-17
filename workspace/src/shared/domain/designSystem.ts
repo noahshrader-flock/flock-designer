@@ -128,6 +128,12 @@ export interface ValueCell {
 	instances: number;
 	/** The instances that draw it, by their keys: what a value tried in the preview is set on (Phase 2). */
 	targets: string[];
+	/**
+	 * What it is drawn with, for each prop its row is told apart by (`by`): the prop's value, or null when it was drawn without
+	 * it; one for each case it stands for (a cell drawn alike with a prop false and without it stands for both). None for a row
+	 * told apart by no prop. What a picker of the variant shown is matched against (the inspector), beside the sentence.
+	 */
+	of?: Record<string, string | null>[];
 }
 
 /**

@@ -58,9 +58,11 @@ const sized = (more: (i: number) => Partial<Instance['values']> = () => ({})) =>
 /** A property's row, its cells without the instances each is for (pinned on their own, below). */
 const rowOf = (rows: ValueRow[], property: ValueRow['property']) => {
 	const row = rows.find((r) => r.property === property);
-	return row && { ...row, cells: row.cells.map(({ targets: _, ...c }) => c) };
+	return row && { ...row, cells: row.cells.map(({ targets: _, of: __, ...c }) => c) };
 };
 const targetsOf = (rows: ValueRow[], property: ValueRow['property']) => rows.find((r) => r.property === property)?.cells.map((c) => c.targets);
+/** What each cell is drawn with, prop by prop (`of`): what a picker of the variant shown matches. */
+const casesOf = (rows: ValueRow[], property: ValueRow['property']) => rows.find((r) => r.property === property)?.cells.map((c) => [c.variant, c.of]);
 /** The tokens: primary in light and dark, written in two places, with the colour tag given to the light one. */
 const TOKENS = [
 	{
@@ -339,6 +341,39 @@ describe('a component’s drawn values', () => {
 			'secondary · not set',
 			'secondary · true',
 		]);
+	});
+
+	it('say what each cell is drawn with, prop by prop, beside its sentence: one prop, two, a prop drawn without, and a merged cell', () => {
+		const sizes = [instance({ size: 'sm' }, { height: '28px' }), instance({ size: 'lg' }, { height: '48px' }), instance({}, { height: '48px' })];
+		expect(casesOf(read(sizes, sizes, NO_TAGS, ['size']).rows, 'height')).toEqual([
+			['sm', [{ size: 'sm' }]],
+			['lg', [{ size: 'lg' }]],
+			['not set', [{ size: null }]],
+		]);
+		// Not set and false draw the default alike, so "primary" is one cell that stands for both cases.
+		const merged = [
+			instance({ variant: 'primary' }, { background: 'rgb(16, 128, 98)' }),
+			instance({ variant: 'primary', disabled: 'false' }, { background: 'rgb(16, 128, 98)' }),
+			instance({ variant: 'primary', disabled: 'true' }, { background: 'rgb(200, 200, 200)' }),
+			instance({ variant: 'ghost', disabled: 'true' }, { background: 'rgb(200, 200, 200)' }),
+			instance({ variant: 'ghost', disabled: 'true' }, { background: 'rgb(200, 200, 200)' }),
+			instance({ variant: 'ghost' }),
+		];
+		expect(casesOf(read(merged, merged, NO_TAGS, ['variant', 'disabled']).rows, 'background')).toEqual([
+			[
+				'primary',
+				[
+					{ variant: 'primary', disabled: null },
+					{ variant: 'primary', disabled: 'false' },
+				],
+			],
+			['primary · disabled', [{ variant: 'primary', disabled: 'true' }]],
+			['ghost · disabled', [{ variant: 'ghost', disabled: 'true' }]],
+			['ghost', [{ variant: 'ghost', disabled: null }]],
+		]);
+		// A row told apart by no prop says nothing of what it is drawn with.
+		const loose = [instance({}, { height: '40px' }), instance({}, { height: '44px' })];
+		expect(casesOf(read(loose, loose, NO_TAGS).rows, 'height')?.every(([, of]) => of === undefined)).toBe(true);
 	});
 
 	it('list each distinct value with how many draw it when no prop explains them, most drawn first', () => {

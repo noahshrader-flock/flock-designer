@@ -1535,6 +1535,122 @@ textarea.input {
 	margin-left: auto;
 }
 
+/*
+ * What a value is made of, in the inspector, after its name, as Figma puts a variable with its property: a token's name as a
+ * small label in the panel's grey, which gives way first when the pane is narrow (cut with an ellipsis, its whole name on the
+ * value's hover), so the value keeps its line at the right.
+ */
+.value-label-chipped {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	min-width: 0;
+	/* Its width is its column's, so the chip can be left out when the column is too narrow for it (below). */
+	container-type: inline-size;
+}
+
+/*
+ * The chip gives way first, cut with an ellipsis, and is left out where only a stub of it would show; then the name, cut with
+ * an ellipsis. The value keeps its line, and what a token is stays in the value's tooltip.
+ */
+.value-name {
+	flex-shrink: 0;
+	overflow: hidden;
+	max-width: 100%;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.value-chip {
+	overflow: hidden;
+	min-width: 0;
+	padding: 1px 6px;
+	border-radius: var(--dsnr-radius-inner);
+	color: var(--vscode-foreground);
+	background: var(--dsnr-track);
+	font-family: var(--vscode-font-family);
+	font-size: 0.85em;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+@container (max-width: 9em) {
+	.value-chip {
+		display: none;
+	}
+}
+
+/* A row of the inspector: its value, and the rest a row no prop explains draws, under it. */
+.value-row {
+	list-style: none;
+}
+
+/*
+ * The props the variant shown is chosen by, as property rows above the groups: the prop's name on the left, its dropdown or
+ * its switch on the right, as a value is laid out under them.
+ */
+.pickers {
+	display: grid;
+	/* One grid for every picker: the props' names as long as the longest, the dropdowns the rest, all lined up. */
+	grid-template-columns: auto minmax(0, 1fr);
+	align-items: center;
+	gap: 4px 12px;
+	padding: 4px 4px 8px;
+}
+
+.picker-row {
+	display: contents;
+}
+
+.picker-row .select {
+	min-width: 0;
+}
+
+/* A switch: a small track, its knob at the start when off and at the end when on, in the brand when on. */
+.switch {
+	justify-self: end;
+	position: relative;
+	width: 32px;
+	height: 18px;
+	padding: 0;
+	border: 1px solid var(--dsnr-border);
+	border-radius: 9px;
+	background: var(--dsnr-track);
+	cursor: pointer;
+}
+
+.switch-knob {
+	position: absolute;
+	top: 2px;
+	left: 2px;
+	width: 12px;
+	height: 12px;
+	border-radius: 50%;
+	background: var(--vscode-foreground);
+	transition: left 120ms;
+}
+
+.switch[aria-checked='true'] {
+	border-color: var(--dsnr-brand);
+	background: var(--dsnr-brand);
+}
+
+.switch[aria-checked='true'] .switch-knob {
+	left: 16px;
+	background: var(--dsnr-on-brand);
+}
+
+.switch:focus-visible {
+	outline: var(--dsnr-focus);
+	outline-offset: 1px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.switch-knob {
+		transition: none;
+	}
+}
+
 .value-note {
 	grid-column: 1 / -1;
 	color: var(--dsnr-muted);

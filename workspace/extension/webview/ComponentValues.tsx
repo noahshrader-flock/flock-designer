@@ -1,4 +1,4 @@
-import { type ReactNode, useRef, useState } from 'react';
+import { type ReactNode, useId, useRef, useState } from 'react';
 import {
 	COLOR_VALUES,
 	type ComponentTokens,
@@ -11,7 +11,11 @@ import {
 	shownMode,
 	triedId,
 } from '../../src/shared/contract';
+import { type Picker, type Selection, firstSelection, inspect, optionLabel, pickersOf, propLabel, rowName } from '../../src/shared/inspector';
 import { useMode } from './mode';
+import { Disclosure } from './ui/Disclosure';
+import { Select } from './ui/Field';
+import { Switch } from './ui/Switch';
 import { plural } from '../../src/shared/plural';
 import { labelOf } from '../../src/shared/tokens';
 import { sharedWith } from '../../src/renderer/useComponentTokens';
@@ -66,6 +70,9 @@ const madeOf = (cell: ValueCell, name: (path: string) => string, others: (path: 
 	return { says: 'Not checked', why: 'No token of this kind is marked when the stories are drawn, so whether it is one is not known.' };
 };
 
+/** What a value is made of, said as a chip: a token's, worked out from one, partly one. A value of its own, or not checked, has none. */
+const CHIPPED: ReadonlySet<ValueCell['kind']> = new Set(['token', 'derived', 'mixed']);
+
 /**
  * One value, as a button that opens its control, as a token's row reads: what it is called on the left (its variant, or, with
  * none, what it is), its value on the right (a colour with its swatch, marked when it is being tried), and, when it is a
@@ -84,6 +91,7 @@ const Cell = ({
 	onOpen,
 	onClose,
 	still = false,
+	label: named,
 }: {
 	property: ValueProperty;
 	cell: ValueCell;
@@ -97,17 +105,33 @@ const Cell = ({
 	onClose: () => void;
 	/** Shown and never tried: a value drawn where nothing can be tried on it (a variant, Phase 5). */
 	still?: boolean;
+	/**
+	 * What it is called, as the inspector names it (its property, Padding), with what it is made of as a chip after its name (a
+	 * token's name, "from" one, "partly" one); none given, it is named by its variant, as a row of every variant is.
+	 */
+	label?: string;
 }) => {
 	const value = saidValue(property, tried ?? cell.value);
 	const wrap = useRef<HTMLLIElement>(null);
 	const button = useRef<HTMLButtonElement>(null);
 	useDismiss(open, wrap, onClose, button);
-	// With no variant, what it is stands for one; with one, under it.
-	const label = cell.variant ?? made.says ?? 'Its own';
-	const under = line && cell.variant !== null && cell.value !== NO_COLOR ? made.says : null;
+	// With no variant, what it is stands for one; with one, under it. Named by the inspector, what it is made of is a chip.
+	const label = named ?? cell.variant ?? made.says ?? 'Its own';
+	const under = named === undefined && line && cell.variant !== null && cell.value !== NO_COLOR ? made.says : null;
+	const chip =
+		named === undefined || !CHIPPED.has(cell.kind) || cell.value === NO_COLOR ? null : cell.kind === 'derived' ? 'From a token' : made.says;
 	const says = (
 		<>
-			<span className="value-label">{label}</span>
+			{chip === null ? (
+				<span className="value-label">{label}</span>
+			) : (
+				<span className="value-label value-label-chipped">
+					<span className="value-name">{label}</span>
+					<span className="value-chip" data-value-kind={cell.kind}>
+						{chip}
+					</span>
+				</span>
+			)}
 			<span className="value-drawn">
 				{COLOR_VALUES.has(property) && value !== NO_COLOR && <Swatch value={tried ?? cell.value} />}
 				<span>{value}</span>
@@ -215,6 +239,122 @@ const Row = ({
 	);
 };
 
+/** How a picker's value is kept in a dropdown, which takes strings: drawn without the prop (its default) is this. */
+const DEFAULT = '\u0000default';
+
+/** One prop the variant shown is chosen by, as a property row: its name, then its values to choose from, or a switch. */
+const PickerRow = ({ picker, value, onChange }: { picker: Picker; value: string | null; onChange: (value: string | null) => void }) => {
+	const id = useId();
+	return (
+		<div data-picker={picker.prop} className="picker-row">
+			<label htmlFor={id} className="picker-label">
+				{propLabel(picker.prop)}
+			</label>
+			{picker.switch ? (
+				<Switch id={id} on={value === 'true'} onChange={(on) => onChange(on ? 'true' : picker.options.includes('false') ? 'false' : null)} />
+			) : (
+				<Select
+					control={{ id }}
+					value={value ?? DEFAULT}
+					onChange={(v) => onChange(v === DEFAULT ? null : v)}
+					options={picker.options.map((o) => ({ value: o ?? DEFAULT, label: optionLabel(o) }))}
+				/>
+			)}
+		</div>
+	);
+};
+
+/**
+ * The values as an inspector (INSPECTOR_PLAN Phase 1): a picker for each prop its rows are told apart by, then the groups, each
+ * a row a value for the variant chosen: its property's name, its value, and what it is made of as a chip, pressed to change it
+ * as any value is. A combination its stories never drew is said, with the nearest that was; a row no prop explains shows the
+ * value most instances draw, and the rest under it.
+ */
+const Inspector = ({
+	rows,
+	name,
+	others,
+	tried,
+	editing,
+	editor,
+	onOpen,
+	onClose,
+}: {
+	rows: ValueRow[];
+	name: (path: string) => string;
+	others: (path: string) => string[];
+	tried: (property: ValueProperty) => (cell: ValueCell) => string | null;
+	editing: { property: ValueProperty; cell: ValueCell } | null;
+	editor: (property: ValueProperty) => (cell: ValueCell) => ReactNode;
+	onOpen: (property: ValueProperty) => (cell: ValueCell) => void;
+	onClose: () => void;
+}) => {
+	const pickers = pickersOf(rows);
+	// What was chosen, kept while it is still a value of its prop; the rest as it opens.
+	const [chosen, setChosen] = useState<Selection>({});
+	const kept = Object.fromEntries(Object.entries(chosen).filter(([prop, v]) => pickers.some((p) => p.prop === prop && p.options.includes(v))));
+	const selection = { ...firstSelection(pickers), ...kept };
+	const cellOf = (property: ValueProperty, cell: ValueCell, label: string) => (
+		<Cell
+			key={`${property}${triedId({ property, targets: cell.targets })}`}
+			property={property}
+			cell={cell}
+			made={madeOf(cell, name, others)}
+			line={false}
+			tried={tried(property)(cell)}
+			open={editing?.property === property && editing.cell === cell}
+			editor={editor(property)(cell)}
+			onOpen={() => onOpen(property)(cell)}
+			onClose={onClose}
+			label={label}
+		/>
+	);
+	return (
+		<>
+			{pickers.length > 0 && (
+				<div data-pickers className="pickers">
+					{pickers.map((p) => (
+						<PickerRow key={p.prop} picker={p} value={selection[p.prop] ?? null} onChange={(v) => setChosen((was) => ({ ...was, [p.prop]: v }))} />
+					))}
+				</div>
+			)}
+			{inspect(rows, pickers, selection).map((group) => (
+				<div key={group.name} data-value-group={group.name} className="value-group">
+					<h3 className="value-group-name">{group.name}</h3>
+					<ul className="tokens">
+						{group.rows.map(({ row, shown }) =>
+							shown.cell === null ? (
+								<li key={row.property} data-value-row={row.property} data-not-drawn className="token">
+									<span
+										className="value-cell"
+										title={
+											shown.nearest
+												? `Not drawn with this. Nearest: ${shown.nearest.variant ?? ''} ${saidValue(row.property, shown.nearest.value)}`
+												: 'Not drawn with this.'
+										}
+									>
+										<span className="value-label">{rowName(row.property)}</span>
+										<span className="value-drawn quiet">Not drawn with this</span>
+									</span>
+								</li>
+							) : (
+								<li key={row.property} data-value-row={row.property} className="value-row">
+									<ul className="tokens">{cellOf(row.property, shown.cell, rowName(row.property))}</ul>
+									{shown.more.length > 0 && (
+										<Disclosure label={`${shown.more.length} more`}>
+											<ul className="tokens">{shown.more.map((c) => cellOf(row.property, c, plural(c.instances, 'instance')))}</ul>
+										</Disclosure>
+									)}
+								</li>
+							),
+						)}
+					</ul>
+				</div>
+			))}
+		</>
+	);
+};
+
 /** Values shown and never tried, as the Values rows are laid out: a component's variants (Phase 5), drawn where nothing is tried. */
 export const StillRows = ({ rows, name, others }: { rows: ValueRow[]; name: (path: string) => string; others: (path: string) => string[] }) => (
 	<>
@@ -315,19 +455,16 @@ export const ComponentValues = ({
 							Its stories did not draw it in {mode}, so its values there cannot be read.
 						</p>
 					) : (
-						values.rows[mode]?.map((row) => (
-							<Row
-								key={row.property}
-								row={row}
-								name={tokenName}
-								others={others}
-								tried={tried(row.property)}
-								editing={editing?.property === row.property ? editing.cell : null}
-								editor={editor(row.property)}
-								onOpen={open(row.property)}
-								onClose={() => setEditing(null)}
-							/>
-						))
+						<Inspector
+							rows={values.rows[mode] ?? []}
+							name={tokenName}
+							others={others}
+							tried={tried}
+							editing={editing}
+							editor={editor}
+							onOpen={open}
+							onClose={() => setEditing(null)}
+						/>
 					)}
 				</>
 			)}

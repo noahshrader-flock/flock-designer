@@ -18,14 +18,29 @@ import { NO_CHROME, inChrome } from './realChrome';
  * overflows the pane, nothing overlaps, and a value reads on one line where it fits.
  */
 
-const cell = (variant: string | null, value: string, kind: ValueCell['kind'], tokens: string[] = [], instances = 3): ValueCell => ({
+const cell = (
+	variant: string | null,
+	value: string,
+	kind: ValueCell['kind'],
+	tokens: string[] = [],
+	instances = 3,
+	of?: Record<string, string | null>[],
+): ValueCell => ({
 	variant,
 	value,
 	kind,
 	tokens,
 	instances,
 	targets: Array.from({ length: instances }, (_, i) => `${variant}:${i}`),
+	...(of ? { of } : {}),
 });
+/** A cell told apart by size, as FSButton's are: a size, or drawn without one. */
+const bySize = (size: string, value: string, kind: ValueCell['kind']) => cell(size, value, kind, [], 3, [{ size: size === 'not set' ? null : size }]);
+/** A cell told apart by variant and disabled, as FSButton's colours are: "primary · disabled" is disabled, "primary" is not. */
+const byVariant = (variant: string, value: string, kind: ValueCell['kind'], tokens: string[] = []) => {
+	const [name, disabled] = variant.split(' · ');
+	return cell(variant, value, kind, tokens, 3, [{ variant: name as string, disabled: disabled ? 'true' : null }]);
+};
 const token = (path: string, set: string, name: string): DesignToken =>
 	({
 		path,
@@ -42,26 +57,31 @@ const TOKENS = [
 	token('palette.light.secondaryContainer.main', 'secondaryContainer', 'main'),
 	token('palette.light.error.contrastText', 'error', 'contrastText'),
 ];
-/** What Flock's FSButton reads as, which is where it was seen to break: long variants, hex-able colours, long notes. */
+/**
+ * What Flock's FSButton reads as, which is where it was seen to break: hex-able colours, and as the inspector opens on it (its
+ * first variant drawn), the longest token's name as a chip beside a colour; a row no prop explains, as FSChip's are, with the
+ * rest under it; and one value for all.
+ */
 const ROWS: ValueRow[] = [
-	{
-		property: 'fontSize',
-		by: 'size',
-		cells: ['sm', 'md', 'lg', 'xl', 'not set'].map((v) => cell(v, '16px', 'unchecked')),
-	},
+	{ property: 'fontSize', by: 'size', cells: ['sm', 'md', 'lg', 'xl', 'not set'].map((v) => bySize(v, '16px', 'unchecked')) },
 	{
 		property: 'background',
 		by: 'variant, disabled',
 		cells: [
-			cell('primary', 'rgb(16, 128, 98)', 'token', ['palette.light.primary.main']),
-			cell('secondary', 'none', 'own'),
-			cell('tertiary', 'rgb(218, 240, 242)', 'token', ['palette.light.secondaryContainer.main']),
-			cell('destructivePrimary', 'rgb(186, 26, 26)', 'token', ['palette.light.error.contrastText']),
-			cell('destructiveSecondary', 'none', 'own'),
-			cell('primary · disabled', 'rgba(0, 0, 0, 0.12)', 'own'),
+			byVariant('tertiary', 'rgb(218, 240, 242)', 'token', ['palette.light.secondaryContainer.main']),
+			byVariant('primary', 'rgb(16, 128, 98)', 'token', ['palette.light.primary.main']),
+			byVariant('secondary', 'none', 'own'),
+			byVariant('destructivePrimary', 'rgb(186, 26, 26)', 'token', ['palette.light.error.contrastText']),
+			byVariant('primary · disabled', 'rgba(0, 0, 0, 0.12)', 'own'),
 		],
 	},
-	{ property: 'padding', by: 'size', cells: [cell('sm', '0px 10px', 'own'), cell('lg', '0px 16px', 'own')] },
+	{ property: 'padding', by: 'size', cells: [bySize('sm', '0px 10px', 'own'), bySize('lg', '0px 16px', 'own')] },
+	{ property: 'radius', by: null, cells: [cell(null, '8px', 'token', ['palette.light.primary.main'], 12)] },
+	{
+		property: 'border',
+		by: null,
+		cells: [cell(null, 'rgb(1, 2, 3)', 'own', [], 6), cell(null, 'rgb(4, 5, 6)', 'token', ['palette.light.error.contrastText'], 2)],
+	},
 ];
 
 /** The other components that draw with each token, by name. */
@@ -119,10 +139,15 @@ describe.skipIf(NO_CHROME)('a component’s Values, in the side pane, in the bro
 					const problems: string[] = [];
 					const root = document.documentElement;
 					if (root.scrollWidth > root.clientWidth) problems.push(`the page is ${root.scrollWidth}px in a ${root.clientWidth}px pane`);
-					for (const li of document.querySelectorAll('[data-value-cell]')) {
+					// The values shown: the rest of a row no prop explains is under a closed "more", not laid out.
+					const shown = [...document.querySelectorAll<HTMLElement>('[data-value-cell]')].filter((li) => li.checkVisibility());
+					for (const li of shown) {
 						const name = li.textContent?.slice(0, 30) ?? '';
 						const cellBox = box(li);
-						const parts = [...li.querySelectorAll('.value-label, .value-drawn, .value-note, .swatch')].map((e) => [e.className, box(e)] as const);
+						// What is shown of it: a chip left out where its name's side is too narrow has no box.
+						const parts = [...li.querySelectorAll<HTMLElement>('.value-label, .value-drawn, .value-note, .value-chip, .swatch')]
+							.filter((e) => e.checkVisibility())
+							.map((e) => [e.className, box(e)] as const);
 						for (const [c, b] of parts) if (b.r > cellBox.r + 0.5 || b.l < cellBox.l - 0.5) problems.push(`${name}: ${c} leaves its cell`);
 						const [variant, drawn, note] = ['.value-label', '.value-drawn', '.value-note'].map((s) => li.querySelector(s));
 						if (variant && drawn && !apart(box(variant), box(drawn))) problems.push(`${name}: the name is over its value`);
@@ -142,10 +167,18 @@ describe.skipIf(NO_CHROME)('a component’s Values, in the side pane, in the bro
 						// A colour reads on one line: as its hex, it fits where as rgb(...) it did not.
 						if (swatch && text && box(text).h > 24) problems.push(`${name}: its colour is broken over lines (${box(text).h}px)`);
 					}
-					return { problems, cells: document.querySelectorAll('[data-value-cell]').length };
+					// A token's chip after its name, inside its name's side, never over its value.
+					for (const li of shown) {
+						const [chip, drawn] = [li.querySelector<HTMLElement>('.value-chip'), li.querySelector('.value-drawn')];
+						if (chip?.checkVisibility() && drawn && !apart(box(chip), box(drawn)))
+							problems.push(`${li.textContent?.slice(0, 30)}: the chip is over its value`);
+					}
+					return { problems, cells: shown.length, chips: document.querySelectorAll('.value-chip').length };
 				});
 			});
-			expect(found.cells).toBe(13);
+			// The variant it opens on: a value for each row, and a chip for each that is a token's.
+			expect(found.cells).toBe(5);
+			expect(found.chips).toBe(3);
 			expect(found.problems).toEqual([]);
 		},
 		60_000,
@@ -376,7 +409,9 @@ describe.skipIf(NO_CHROME)('a component’s Values, in the side pane, in the bro
 							sliders,
 							width: Math.round(p.width),
 							cellWidth: Math.round(c.width),
-							below: li.nextElementSibling ? box(li.nextElementSibling).top < p.bottom : false,
+							below: ((cells) => ((next) => (next ? box(next).top < p.bottom : false))(cells[cells.indexOf(li) + 1] ?? null))(
+								[...document.querySelectorAll('[data-value-cell]')].filter((other) => (other as HTMLElement).checkVisibility()),
+							),
 						};
 					},
 					popover(property, value),
@@ -396,11 +431,9 @@ describe.skipIf(NO_CHROME)('a component’s Values, in the side pane, in the bro
 	it('keeps a group’s heading at the top of the pane while its values scroll under it, the next replacing it; and the pane is 300px wide', async () => {
 		// As VS Code shows the component's tab with room for two columns: the page is the window's height, the stories and the
 		// analysis each scroll inside it. The editor's own background is what a heading covers what is under it with.
-		// Long enough that every heading can come to the top: a last group needs room under it, as a long one has.
-		const tall = markupFor([
-			...ROWS,
-			{ property: 'text', by: 'variant', cells: Array.from({ length: 16 }, (_, i) => cell(`v${i}`, `rgb(${i}, 9, 9)`, 'own')) },
-		]);
+		// Every group a row a value, so the pane has room under its last for every heading to come to the top, as the sections
+		// under the Values give it in the tab.
+		const tall = `${markupFor([...ROWS, { property: 'text', by: null, cells: [cell(null, 'rgb(9, 9, 9)', 'own')] }])}<div style="flex-shrink: 0; height: 900px"></div>`;
 		const found = await inChrome(async (browser) => {
 			const page = await browser.newPage();
 			await page.setViewport({ width: 1100, height: 300 });
@@ -414,8 +447,9 @@ describe.skipIf(NO_CHROME)('a component’s Values, in the side pane, in the bro
 				const named = (h: HTMLElement) => h.textContent ?? '';
 				const stuck = () => headings.filter((h) => Math.abs(h.getBoundingClientRect().top - top()) < 1.5).map(named);
 				const seen: string[][] = [];
-				// Scrolled a little at a time, from the top to the bottom: which heading is at the top of the pane at each stop.
-				for (let at = 0; at <= aside.scrollHeight; at += 40) {
+				// Scrolled a little at a time, from the top to the bottom, finer than a group of one row is tall: which heading is at
+				// the top of the pane at each stop.
+				for (let at = 0; at <= aside.scrollHeight; at += 10) {
 					aside.scrollTop = at;
 					await new Promise((r) => requestAnimationFrame(() => r(null)));
 					seen.push(stuck());

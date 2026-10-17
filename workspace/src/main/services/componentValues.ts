@@ -112,14 +112,18 @@ const explainedBy = (entries: Entry[], keys: string[]): Found[] | null => {
 	return cells.size < 2 ? null : [...cells.values()];
 };
 
-const cellOf = (variant: string | null, read: Read, targets: string[]): ValueCell => ({
+const cellOf = (variant: string | null, read: Read, targets: string[], of?: Record<string, string | null>[]): ValueCell => ({
 	variant,
 	value: read.shown,
 	kind: read.kind,
 	tokens: read.tokens,
 	instances: targets.length,
 	targets,
+	...(of ? { of } : {}),
 });
+
+/** What a cell is drawn with, prop by prop: the value of each of `keys`, null for one drawn without it. */
+const caseOf = (f: Found, keys: string[]): Record<string, string | null> => Object.fromEntries(keys.map((k, i) => [k, f.parts[i] ?? null]));
 
 /**
  * Each cell's variant as a person reads it: a prop that is true by its name, false as "not" it, one drawn without it as
@@ -139,15 +143,18 @@ const said = (found: Found[], keys: string[]): ValueCell[] => {
 		});
 		return kept.length === 0 ? 'default' : kept.join(' · ');
 	};
-	const merged = new Map<string, { read: Read; targets: string[] }>();
+	const merged = new Map<string, { read: Read; targets: string[]; of: Record<string, string | null>[] }>();
 	for (const f of found) {
 		const variant = short(f);
 		const same = merged.get(variant);
-		if (same === undefined) merged.set(variant, { read: f.read, targets: [...f.targets] });
-		else if (keyOf(same.read) !== keyOf(f.read)) return found.map((x) => cellOf(full(x), x.read, x.targets));
-		else same.targets.push(...f.targets);
+		if (same === undefined) merged.set(variant, { read: f.read, targets: [...f.targets], of: [caseOf(f, keys)] });
+		else if (keyOf(same.read) !== keyOf(f.read)) return found.map((x) => cellOf(full(x), x.read, x.targets, [caseOf(x, keys)]));
+		else {
+			same.targets.push(...f.targets);
+			same.of.push(caseOf(f, keys));
+		}
 	}
-	return [...merged].map(([variant, { read, targets }]) => cellOf(variant, read, targets));
+	return [...merged].map(([variant, { read, targets, of }]) => cellOf(variant, read, targets, of));
 };
 
 const rowOf = (property: ValueProperty, entries: Entry[], candidates: string[]): ValueRow => {
