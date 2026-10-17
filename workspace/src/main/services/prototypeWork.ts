@@ -21,7 +21,9 @@ import {
 	recordPrototype,
 	readRecords,
 } from './prototype';
-import { bundleCommand, runBundle, writeBundleScript } from './prototypeBundle';
+import { bundleCommand, runBundle, shellLine, writeBundleScript, writeCheckScript } from './prototypeBundle';
+import { type CheckConfig, checkedAsSaved } from './buildCheck';
+import { recordFiles } from './accessibilityRecord';
 import { designSystemFile, taskVoice } from './voiceBrief';
 import { HOST } from '../../shared/vocabulary';
 
@@ -240,7 +242,37 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 	};
 
 	/** Where the agent writes the prototype, and the exact command that checks it builds. */
-	const buildPlan = (projectId: string, name: string, found: PrototypeSources | null): { build: PrototypeBuild; sources: PrototypeSources } => {
+	/**
+	 * Where a run's build check (A6) keeps what it is given and what it found, beside the page. A new run starts its rounds
+	 * again: what an earlier run left is its own.
+	 */
+	const buildCheckFiles = (projectId: string, name: string) => ({
+		config: join(dir(projectId), `${name}.build-check.json`),
+		record: join(dir(projectId), `${name}.build-checked.json`),
+		of: `${projectId} ${name}'s page`,
+	});
+	const checkCommandFor = async (projectId: string, name: string): Promise<string> => {
+		const { config, record: kept, of } = buildCheckFiles(projectId, name);
+		rmSync(kept, { force: true });
+		const given: CheckConfig = {
+			projectId,
+			name,
+			of,
+			page: file(projectId, name),
+			source: sourceFile(projectId, name),
+			sharedDir,
+			target: await target(projectId, name),
+			record: kept,
+		};
+		writeFileSync(config, JSON.stringify(given, null, '\t'));
+		return shellLine(['node', await writeCheckScript(prototypesRoot), config]);
+	};
+
+	const buildPlan = async (
+		projectId: string,
+		name: string,
+		found: PrototypeSources | null,
+	): Promise<{ build: PrototypeBuild; sources: PrototypeSources }> => {
 		const why = notReady(ctx.productRoot());
 		if (why !== null || !found?.nodeModules) throw new Error(why ?? NO_PRODUCT);
 		const source = sourceFile(projectId, name);
@@ -250,6 +282,7 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 				source,
 				page,
 				buildCommand: bundleCommand(writeBundleScript(prototypesRoot), ctx.esbuild() as string, source, page, found.nodeModules, sharedDir),
+				checkCommand: await checkCommandFor(projectId, name),
 			},
 			sources: found,
 		};
@@ -289,6 +322,12 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		if (existsSync(source))
 			await store.write(prototypeSourcePath(projectId, name), readFileSync(source, 'utf8'), `${projectId}: prototype ${name} source`);
 		await store.write(prototypePagePath(projectId, name), html, `${projectId}: prototype ${name}`);
+		// What its build's own check found of exactly this page, on its record: what was left, and why (A6).
+		const checked = checkedAsSaved({ projectId, name, ...buildCheckFiles(projectId, name) }, html);
+		if (checked) {
+			const { files } = recordFiles(checked, await ctx.readDesignFile(projectPath(projectId, 'review.md')));
+			for (const f of files) await store.write(f.path, f.text, `${projectId}: accessibility of prototype ${name}`);
+		}
 	};
 
 	/** The page as it will be saved: built from its source when there is one, so it is what the source makes. */

@@ -137,7 +137,12 @@ describe('Handoff, on work with no route recorded', () => {
 });
 
 describe('the builder’s guide, in every task (so no run depends on an agent choosing to read it)', () => {
-	const build = { source: '/p/v1-i1.tsx', page: '/p/v1-i1.html', buildCommand: 'node build.mjs' };
+	const build = {
+		source: '/p/v1-i1.tsx',
+		page: '/p/v1-i1.html',
+		buildCommand: 'node build.mjs',
+		checkCommand: 'node check-prototype.mjs /p/v1-i1.build-check.json',
+	};
 	const sources = {
 		code: '/c',
 		productGuidance: null,

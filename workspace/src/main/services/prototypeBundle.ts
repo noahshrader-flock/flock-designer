@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import { STATE_NAME, STATES_META } from '../../shared/prototypeStates';
@@ -37,6 +37,8 @@ if (/^export const states\b/m.test(source)) {
 		process.exit(1);
 	}
 }
+// Its title (export const title = 'Alert history'): what the browser's tab and a screen reader name the page by.
+const title = /^export const title\b[^=\n]*=\s*(['"])(.*?)\1/m.exec(source)?.[2] ?? '';
 const fileLoaders = Object.fromEntries(['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.woff', '.woff2', '.ttf', '.eot'].map((e) => [e, 'dataurl']));
 try {
 	const result = await build({
@@ -77,6 +79,7 @@ try {
 	const safe = (s) => s.replace(/<\/(script|style)/gi, '<\\/$1');
 	const html =
 		'<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n' +
+		(title ? '<title>' + title.replace(/&/g, '&amp;').replace(/</g, '&lt;') + '</title>\n' : '') +
 		(lead ? '<!--\n' + lead.replace(/--/g, '- -') + '\n-->\n' : '') +
 		(states.length ? '<meta name=${JSON.stringify(STATES_META)} content="' + states.join(',') + '">\n' : '') +
 		'<style>' + safe(css) + '</style>\n</head>\n<body>\n<div id="root"></div>\n<script>' + safe(js) + '</script>\n</body>\n</html>\n';
@@ -103,6 +106,18 @@ export const writeBundleScript = (prototypesRoot: string): string => {
 	mkdirSync(prototypesRoot, { recursive: true });
 	const path = join(prototypesRoot, 'build-prototype.mjs');
 	writeFileSync(path, SCRIPT);
+	return path;
+};
+
+/**
+ * Writes the build's own accessibility check beside the build script (A6): one bundled module, run with Node as the
+ * build is, and loaded only when it is wanted, as it carries a browser's driver. Where it is.
+ */
+export const writeCheckScript = async (prototypesRoot: string): Promise<string> => {
+	const { default: script } = await import('../../cli/checkPrototype?script');
+	mkdirSync(prototypesRoot, { recursive: true });
+	const path = join(prototypesRoot, 'check-prototype.mjs');
+	if (!existsSync(path) || readFileSync(path, 'utf8') !== script) writeFileSync(path, script);
 	return path;
 };
 

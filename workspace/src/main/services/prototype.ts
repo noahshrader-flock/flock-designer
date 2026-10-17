@@ -65,6 +65,8 @@ export interface PrototypeBuild {
 	source: string;
 	page: string;
 	buildCommand: string;
+	/** The build's own accessibility check, run after it builds (A6). */
+	checkCommand: string;
 }
 
 /**

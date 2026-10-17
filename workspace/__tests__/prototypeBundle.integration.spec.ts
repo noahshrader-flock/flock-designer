@@ -94,6 +94,12 @@ describe('bundling a React prototype into one page', () => {
 		};
 		const page = 'export default function Prototype() { return null; }\n';
 
+		it('gives the page the title its source says, and none when it says none', async () => {
+			const titled = await build(`export const title = 'Alert history & <more>';\n${page}`);
+			expect(titled.html).toContain('<title>Alert history &amp; &lt;more></title>');
+			expect((await build(page)).html).not.toContain('<title>');
+		});
+
 		it('are written into the page, in order, for the bar to offer', async () => {
 			const r = await build(`export const states = ['default', 'filtered', "failed"] as const;\n${page}`);
 			expect(r.ok).toBe(true);

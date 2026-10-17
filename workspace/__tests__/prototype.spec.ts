@@ -157,6 +157,7 @@ describe('what the agent is told', () => {
 		source: '/q/users/i1.tsx',
 		page: '/q/users/i1.html',
 		buildCommand: 'node /q/build-prototype.mjs /e /q/users/i1.tsx /q/users/i1.html /c/node_modules /q/_shared',
+		checkCommand: 'node /q/check-prototype.mjs /q/users/i1.build-check.json',
 	};
 
 	it('names the source to write, the exact command that checks it builds, and every folder it may read, read-only', () => {
@@ -164,6 +165,11 @@ describe('what the agent is told', () => {
 		expect(task.startsWith('# Skill')).toBe(true);
 		expect(task).toContain('Write `/q/users/i1.tsx`');
 		expect(task).toContain(`\`${build.buildCommand}\``);
+		// Its accessibility checked after it builds, as the build is, for two rounds, and no words written that are a person's.
+		expect(task).toContain(`check its accessibility with exactly: \`${build.checkCommand}\``);
+		expect(task).toMatch(
+			/two rounds are used up: then finish, and what is left is recorded with the page\. Never write words it says are a person's/,
+		);
 		expect(task).toContain('Read only: never change anything');
 		for (const dir of ['/q/source/coke', '/c/coke/.dsnr', '/c/fui', '/d/standards', '/c/node_modules']) expect(task).toContain(`\`${dir}\``);
 		expect(task.trimEnd().endsWith('A users list')).toBe(true);

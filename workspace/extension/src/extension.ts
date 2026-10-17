@@ -227,8 +227,8 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 		void watchBuild({
 			read: async () => valueOf(await api.prototypeProgress(projectId, name)),
 			save: async () => (await api.savePrototype(projectId, name)).ok,
-			// Saved: the list read again for its picture. Accessibility is checked where it matters, when the work moves into
-			// the code (Build in the codebase) and at Handoff, not with a notification for each save of a prototype.
+			// Saved: the list read again for its picture. Accessibility is the build's own check, in the agent's run (its task
+			// gives the command), and saving puts what it left on the page's record: no notification for each save.
 			onSaved: projectsChanged,
 			since: Date.now(),
 			now: Date.now,

@@ -334,7 +334,7 @@ export const main = async (argv: string[], deps: CliDeps): Promise<number> => {
 		const publishCommand = (name: string) => shellLine([...deps.self, 'publish', '--project', projectId, '--name', name]);
 		/** The build skill and this run: where to write, and how to check it builds. */
 		const buildTask = async (skill: string, name: string, modeledOn: string, request: string): Promise<string> => {
-			const { build, sources } = work.buildPlan(projectId, name, await work.sources(projectId, modeledOn));
+			const { build, sources } = await work.buildPlan(projectId, name, await work.sources(projectId, modeledOn));
 			return prototypeBuildTask({
 				guide: guidePart(await work.skill(GUIDE), designRoot),
 				skill,

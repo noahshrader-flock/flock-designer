@@ -89,6 +89,8 @@ when the prototype moves into the code:
 
 - **Give the things people will comment on a stable name**, `data-e2e-ref="<name>"`, in plain words:
   `invite-button`, `members-table`, `empty-state`.
+- **Give the page its title**, the name a browser tab and a screen reader say it by:
+  `export const title = 'Alert history';`, a plain string. The build puts it in the page.
 - **Say which states it has, and draw no way between them.** List them as
   `export const states = ['default', 'filtered', 'panel'] as const;`, **each one lowercase word** (letters
   and digits, no hyphens: `filtered`, not `no-match`), the first being the one most people should see

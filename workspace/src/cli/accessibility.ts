@@ -10,10 +10,17 @@ import { existsSync, readFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { checkedWith, countsOf, notAutomatedLine, summaryOf } from '../shared/accessibility';
 import type { AccessibilityResult } from '../shared/contract';
-import { accessibilityEvidenceDir, accessibilityLedgerPath, accessibilityPath, projectPath, prototypeSourcePath } from '../shared/designPaths';
+import {
+	accessibilityEvidenceDir,
+	accessibilityLedgerPath,
+	accessibilityPath,
+	accessibilityViewDir,
+	projectPath,
+	prototypeSourcePath,
+} from '../shared/designPaths';
 import { statesOf, withState } from '../shared/prototypeStates';
 import type { DeclaredTarget } from '../shared/wcag';
-import { atTarget, wcagCriterion } from '../shared/wcagCriteria';
+import { atTarget } from '../shared/wcagCriteria';
 import { accessibilityOf } from '../main/services/accessibilityCheck';
 import { MANIFEST_FILE, PAGES_SECTION, type AppPage, appPages, declaredTarget, findingsLines } from '../main/services/accessibilityBrief';
 import { FIRST_PAGE, type PageNotOpened, checkPages, onDesignMode } from '../main/services/accessibilityRun';
@@ -25,10 +32,11 @@ import { writeAtomic } from '../main/services/jsonFile';
 import { assertPrototypeName } from '../main/services/prototype';
 import { PrototypeServer } from '../main/services/prototypeServer';
 import type { prototypeWork } from '../main/services/prototypeWork';
-import { CELLS, type CellResult, type ProbeDepth, cellsAt } from '../main/services/probe/cells';
+import { CELLS, type CellResult, type ProbeDepth, cellLines, cellsAt } from '../main/services/probe/cells';
 import type { Evidence } from '../main/services/probe/probe';
 import { type SourceFile, scanSources } from '../main/services/probe/sourceScan';
-import { type Ledger, ledgerChanges, ledgerFaults, ledgerOf, withReviewSection } from '../main/services/ledger';
+import { type Ledger, ledgerChanges, ledgerFaults } from '../main/services/ledger';
+import { recordFiles } from '../main/services/accessibilityRecord';
 
 export interface MeasureDeps {
 	projectId: string;
@@ -173,21 +181,6 @@ const productApp = async ({ projectId, root, depth }: MeasureDeps, browser: Brow
 	};
 };
 
-/** How many findings of a cell are printed: all of them are in the evidence. */
-const MOST_PRINTED = 5;
-
-/** A cell's result as a line the agent reads: what it is, by WCAG, and where. */
-const cellLine = (r: CellResult, where: string): string[] => {
-	const c = wcagCriterion(r.sc);
-	const head = `- **${r.cell}** (WCAG ${c.sc} ${c.name})${where}`;
-	if (r.status !== 'found') return [`${head}: ${r.why ?? ''}`];
-	return [
-		`${head}:`,
-		...r.findings.slice(0, MOST_PRINTED).map((f) => `  - \`${f.target}\`: ${f.detail}`),
-		...(r.findings.length > MOST_PRINTED ? [`  - and ${r.findings.length - MOST_PRINTED} more, in the evidence`] : []),
-	];
-};
-
 /** What the probe found, as the agent reads it: at the target first, then above it (readiness), then what was not run. */
 const probeLines = ({ views, source, target }: Measured, depth: ProbeDepth): string[] => {
 	const all = [
@@ -202,28 +195,22 @@ const probeLines = ({ views, source, target }: Measured, depth: ProbeDepth): str
 	return [
 		'',
 		`Probed at ${depth} depth (${cells} of the ${CELLS.length} cells), in ${views.map((v) => `${v.state} (${(v.ms / 1000).toFixed(1)} s)`).join(', ') || 'no view'}.`,
-		...(at.length ? ['', 'Found by the probe, at the target:', ...at.flatMap(({ r, where }) => cellLine(r, where))] : []),
+		...(at.length ? ['', 'Found by the probe, at the target:', ...at.flatMap(({ r, where }) => cellLines(r, where))] : []),
 		...(above.length
-			? ['', 'Found by the probe, above the target (readiness, not counted as it):', ...above.flatMap(({ r, where }) => cellLine(r, where))]
+			? ['', 'Found by the probe, above the target (readiness, not counted as it):', ...above.flatMap(({ r, where }) => cellLines(r, where))]
 			: []),
-		...(notRun.length ? ['', 'Not run:', ...notRun.flatMap(({ r, where }) => cellLine(r, where))] : []),
+		...(notRun.length ? ['', 'Not run:', ...notRun.flatMap(({ r, where }) => cellLines(r, where))] : []),
 		'',
 		'Every other cell found none of what it measures, or does not apply here (each is in the evidence): neither is a pass.',
 	];
 };
 
-/** A view's folder name in the evidence: its name, as letters, digits and dashes. */
-const folderOf = (state: string): string =>
-	state
-		.toLowerCase()
-		.replace(/[^a-z0-9]+/g, '-')
-		.replace(/^-|-$/g, '') || 'view';
-
-/** The evidence, written fresh: a folder per view, and the source cells beside them. Nothing of an earlier run is left. */
-const writeEvidence = (dir: string, { views, source }: Measured): void => {
-	rmSync(dir, { recursive: true, force: true });
-	for (const view of views) for (const e of view.evidence) writeAtomic(join(dir, folderOf(view.state), e.name), e.data);
-	writeAtomic(join(dir, 'source.json'), JSON.stringify(source, null, 1));
+/** The probe's own evidence, written fresh: a folder per view (its cells are the record's), and nothing of an earlier run left. */
+const writeEvidence = (projectId: string, name: string | null, designRoot: string, views: ViewProbed[]): void => {
+	rmSync(join(designRoot, accessibilityEvidenceDir(projectId, name)), { recursive: true, force: true });
+	for (const view of views)
+		for (const e of view.evidence)
+			if (e.name !== 'cells.json') writeAtomic(join(designRoot, accessibilityViewDir(projectId, name, view.state), e.name), e.data);
 };
 
 export const measureAccessibility = async (deps: MeasureDeps): Promise<number> => {
@@ -245,28 +232,18 @@ export const measureAccessibility = async (deps: MeasureDeps): Promise<number> =
 		deps.out([`Nothing of ${what} opened, so nothing was measured or written.`, ...unopened].join('\n'));
 		return 1;
 	}
-	const path = accessibilityPath(projectId, name);
+	// The probe's pictures and the rest of its evidence; then the record, its ledger and review.md's section, made one way.
+	writeEvidence(projectId, name, designRoot, views);
 	const evidence = accessibilityEvidenceDir(projectId, name);
-	writeEvidence(join(designRoot, evidence), measured);
-	const probe = { depth, views: views.map(({ state, ms, results }) => ({ state, ms, results, evidence: `${evidence}/${folderOf(state)}` })), source };
-	writeAtomic(join(designRoot, path), `${JSON.stringify({ of: what, ...(pages ? { pages } : {}), notOpened, result, probe }, null, '\t')}\n`);
-	// The ledger, from what was just measured; compared with the last one; and the review record's section written from it.
+	const path = accessibilityPath(projectId, name);
+	const reviewFile = join(designRoot, projectPath(projectId, 'review.md'));
 	const ledgerFile = accessibilityLedgerPath(projectId, name);
 	const last = readLedger(join(designRoot, ledgerFile));
-	const ledger = ledgerOf({
-		key: name ?? 'app',
-		of: what,
-		result,
-		resultFile: path,
-		views: probe.views.map((v) => ({ state: v.state, results: v.results, evidence: `${v.evidence}/cells.json` })),
-		source,
-		sourceFile: `${evidence}/source.json`,
-		target: measured.target,
-		depth,
-	});
-	writeAtomic(join(designRoot, ledgerFile), `${JSON.stringify(ledger, null, '\t')}\n`);
-	const reviewFile = join(designRoot, projectPath(projectId, 'review.md'));
-	writeAtomic(reviewFile, withReviewSection(existsSync(reviewFile) ? readFileSync(reviewFile, 'utf8') : null, ledger, ledgerFile));
+	const { files, ledger } = recordFiles(
+		{ projectId, name, of: what, result, target: measured.target, depth, views, source, pages, notOpened },
+		existsSync(reviewFile) ? readFileSync(reviewFile, 'utf8') : null,
+	);
+	for (const f of files) writeAtomic(join(designRoot, f.path), f.text);
 	const since = last ? ledgerChanges(last, ledger) : null;
 	deps.out(
 		[

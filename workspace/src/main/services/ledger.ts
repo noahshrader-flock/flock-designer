@@ -31,7 +31,7 @@ export interface LedgerRow {
 	found: string[];
 	/** The evidence files the status rests on, from the design repository's root. */
 	evidence: string[];
-	/** Why it was not run, or does not apply. */
+	/** Why it was not run, or does not apply; or, found, why it was left as it is. */
 	why?: string;
 	/** What a person still judges of it, whatever a machine found. */
 	person: string | null;
@@ -81,6 +81,7 @@ export const ledgerOf = ({
 	sourceFile,
 	target,
 	depth,
+	left,
 }: {
 	key: string;
 	of: string;
@@ -91,6 +92,8 @@ export const ledgerOf = ({
 	sourceFile: string;
 	target: DeclaredTarget;
 	depth: string;
+	/** Why what was found was left as it is (a build's two rounds of its own check used up): said on each found row. */
+	left?: string;
 }): Ledger => {
 	const byAxe = axeReaches(result.ran.tags);
 	const cells = [
@@ -136,6 +139,7 @@ export const ledgerOf = ({
 			found,
 			evidence: status === 'person' ? [] : [...evidence],
 			...(why.length && (status === 'notRun' || status === 'notApplicable') ? { why: why.join('; ') } : {}),
+			...(left && status === 'found' ? { why: left } : {}),
 			person,
 			manual: c.manual,
 		};
@@ -162,7 +166,7 @@ export const TEN_CHECKS: { name: string; sc: string[] }[] = [
 
 /** A row's status in words, the same in the review record and wherever else it is said. A "not run" always says because. */
 export const statusLine = (r: LedgerRow): string => {
-	if (r.status === 'found') return `found (${r.found.join('; ')})`;
+	if (r.status === 'found') return `found (${r.found.join('; ')})${r.why ? `, left because ${r.why}` : ''}`;
 	if (r.status === 'notRun') return `not run, because ${r.why ?? 'it was not run'}`;
 	if (r.status === 'measured') return `measured, none found by ${r.layers.join(' and ')}`;
 	if (r.status === 'notApplicable') return `does not apply, because ${r.why ?? 'there is nothing here to measure'}`;

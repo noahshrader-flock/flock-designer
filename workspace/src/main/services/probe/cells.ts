@@ -1,3 +1,5 @@
+import { wcagCriterion } from '../../../shared/wcagCriteria';
+
 /**
  * The probe's cells (A3 of the accessibility plan): one per "Probe measures" entry of its matrix, each a measure that code
  * decides, of one WCAG criterion. What each measures is said once here, and every result is said in the same four words:
@@ -108,3 +110,18 @@ export const resultFrom = (cell: CellId, findings: ProbeFinding[]): CellResult =
 
 export const notApplicable = (cell: CellId, why: string): CellResult => ({ cell, sc: cellOf(cell).sc, status: 'notApplicable', findings: [], why });
 export const notRun = (cell: CellId, why: string): CellResult => ({ cell, sc: cellOf(cell).sc, status: 'notRun', findings: [], why });
+
+/** How many findings of a cell are printed: all of them are in the evidence. */
+const MOST_PRINTED = 5;
+
+/** A cell's result as the agent reads it: what it is, by WCAG, where (`where`), and its first findings. */
+export const cellLines = (r: CellResult, where: string): string[] => {
+	const c = wcagCriterion(r.sc);
+	const head = `- **${r.cell}** (WCAG ${c.sc} ${c.name})${where}`;
+	if (r.status !== 'found') return [`${head}: ${r.why ?? ''}`];
+	return [
+		`${head}:`,
+		...r.findings.slice(0, MOST_PRINTED).map((f) => `  - \`${f.target}\`: ${f.detail}`),
+		...(r.findings.length > MOST_PRINTED ? [`  - and ${r.findings.length - MOST_PRINTED} more, in the evidence`] : []),
+	];
+};

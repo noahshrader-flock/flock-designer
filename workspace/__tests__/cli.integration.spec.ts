@@ -629,6 +629,41 @@ describe.skipIf(findChrome() === null)('accessibility', () => {
 		expect(await main(['check-accessibility', '--project', 'shop'], deps(shop))).toBe(0);
 	}, 120_000);
 
+	it('gives the agent its build’s own check, and puts what two rounds of it left on the page’s record when it is saved (A6)', async () => {
+		expect(await run('new-prototype', '--project', 'demo', '--title', 'Demo', '--note', 'A list')).toBe(0);
+		const task = out.join('\n');
+		const checkLine = /check its accessibility with exactly: `([^`]+)`/.exec(task)?.[1] as string;
+		const build = /Check it builds.*with exactly: `([^`]+)`/.exec(task)?.[1] as string;
+		expect(checkLine).toMatch(/^node .*check-prototype\.mjs .*v1-i1\.build-check\.json$/);
+		// A button drawn as an icon alone, with no name: built, then checked as the agent checks it, three times.
+		writeFileSync(
+			join(prototypes, 'demo', 'v1-i1.tsx'),
+			"export default () => <main><h1>Cameras</h1><button><svg width='16' height='16'><path d='M2 2h12v12H2z' /></svg></button></main>;\n",
+		);
+		const sh = (command: string) => spawnSync('/bin/sh', ['-c', command], { cwd: product, encoding: 'utf8' });
+		expect(sh(build).status).toBe(0);
+		expect(sh(checkLine).status).toBe(1);
+		expect(sh(checkLine).status).toBe(1);
+		const last = sh(checkLine);
+		expect(last.status).toBe(0);
+		expect(last.stdout).toMatch(/left after 2 rounds/);
+		expect(await run('save-prototype', '--project', 'demo', '--name', 'v1-i1')).toBe(0);
+		const ledger = JSON.parse(readFileSync(join(design, 'projects', 'demo', 'accessibility', 'v1-i1.ledger.json'), 'utf8')) as {
+			depth: string;
+			rows: { sc: string; status: string; why?: string }[];
+		};
+		expect(ledger.depth).toBe('light, at build');
+		expect(ledger.rows.find((r) => r.sc === '4.1.2')).toMatchObject({
+			status: 'found',
+			why: expect.stringMatching(/sent it back 2 times, and it was still there/),
+		});
+		expect(readFileSync(join(design, 'projects', 'demo', 'review.md'), 'utf8')).toMatch(
+			/4\.1\.2 Name, Role, Value: found \(.*\), left because the build's own check sent it back 2 times/,
+		);
+		out = [];
+		expect(await main(['check-accessibility', '--project', 'demo', '--name', 'v1-i1'], deps(product))).toBe(0);
+	}, 300_000);
+
 	it('says so, and measures nothing, for a product with no workspace file or no design-mode command', async () => {
 		const bare = join(home, 'bare');
 		mkdirSync(bare);
@@ -678,4 +713,50 @@ describe.skipIf(findChrome() === null)('accessibility', () => {
 		expect(ran.stdout).toMatch(/^Measured demo v1-i1's page: \d+ automated issues?\./);
 		expect(ran.status).toBe(0);
 	}, 120_000);
+});
+
+/**
+ * The agent fixing what its build's own check found (A6), with the real agent: run only where it is asked for
+ * (`DSNR_REAL_AGENT=1`), since it runs Claude Code on the person's account and costs a little. A prototype with a fault
+ * planted in it is changed for something else; the agent builds, runs the check it is given, and fixes the fault in its
+ * own source, so the check finds nothing at the end: fixed, not reported.
+ */
+describe.skipIf(process.env.DSNR_REAL_AGENT !== '1' || findChrome() === null)('the agent, with its build’s own check', () => {
+	it('fixes a fault the check finds while it does what it was asked', async () => {
+		const { runToEnd } = await import('../src/main/services/agent');
+		const request = 'The prototype already exists. Change its heading to say "Camera list".';
+		expect(await run('new-prototype', '--project', 'demo', '--title', 'Demo', '--note', request)).toBe(0);
+		const task = out.join('\n');
+		const checkLine = /check its accessibility with exactly: `([^`]+)`/.exec(task)?.[1] as string;
+		const source = join(prototypes, 'demo', 'v1-i1.tsx');
+		// The planted fault: a button drawn as an icon alone, with no name.
+		writeFileSync(
+			source,
+			"export default () => <main><h1>Cameras</h1><button onClick={() => undefined}><svg width='16' height='16'><path d='M2 2h12v12H2z' /></svg></button></main>;\n",
+		);
+		// As DSNR starts a prototype's run: in its folder, reading what its task says it may read, and nothing else.
+		const { prototypeReadable } = await import('../src/main/services/prototype');
+		const { prototypeWork } = await import('../src/main/services/prototypeWork');
+		const { designStore } = await import('../src/main/services/designStore');
+		const store = designStore({ clone: () => design, files: null, onWrite: () => undefined });
+		const work = prototypeWork({
+			prototypesRoot: prototypes,
+			productRoot: () => product,
+			store: store.records,
+			readDesignFile: store.readFile,
+			esbuild: () => esbuild,
+		});
+		const ended = await runToEnd(join(prototypes, 'demo'), task, { bare: true, readOnly: prototypeReadable(await work.sources('demo', 'v1-i1')) });
+		const fixed = readFileSync(source, 'utf8');
+		console.log(`The agent's last words: ${ended.said}\nIts source:\n${fixed}`);
+		expect(ended.ok, ended.said).toBe(true);
+		expect(fixed).toContain('Camera list');
+		// The check sent it back at least once, and finds nothing now: the agent fixed it, in its own source.
+		const record = JSON.parse(readFileSync(join(prototypes, 'demo', 'v1-i1.build-checked.json'), 'utf8')) as { rounds: number; left: boolean };
+		expect(record.rounds).toBeGreaterThanOrEqual(1);
+		expect(record.left).toBe(false);
+		const after = spawnSync('/bin/sh', ['-c', checkLine], { cwd: product, encoding: 'utf8' });
+		expect(after.status, after.stdout).toBe(0);
+		expect(after.stdout).toMatch(/^Accessibility: none found of what this check measures/);
+	}, 600_000);
 });

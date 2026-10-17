@@ -39,6 +39,15 @@ export const accessibilityLedgerPath = (projectId: string, name: string | null):
 /** The probe's evidence beside it (A3): a folder of the same name, a folder in it per view. */
 export const accessibilityEvidenceDir = (projectId: string, name: string | null): string => projectPath(projectId, `accessibility/${name ?? 'app'}`);
 
+/** One view's folder of that evidence: its name (a state, or a page), as letters, digits and dashes. */
+export const accessibilityViewDir = (projectId: string, name: string | null, view: string): string =>
+	`${accessibilityEvidenceDir(projectId, name)}/${
+		view
+			.toLowerCase()
+			.replace(/[^a-z0-9]+/g, '-')
+			.replace(/^-|-$/g, '') || 'view'
+	}`;
+
 /**
  * Where a prototype's picture is kept in the design repository: in its project's `covers/` folder (a folder, so a picture
  * is never one of the project's documents), named by the prototype and the hash of the page it is of, so a file never

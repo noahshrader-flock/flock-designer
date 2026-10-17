@@ -216,6 +216,15 @@ const readableLines = (sources: PrototypeSources): string[] => {
  * What the agent is told for a prototype. The skill says how; this says where everything is. The
  * request is the person's own words, and comes last, after everything that frames it.
  */
+/**
+ * The build's own accessibility check, as both prototype tasks put it (A6; decision 30): run after it builds, its
+ * findings fixed as a build error is, for at most two rounds, after which what is left is recorded, not fixed.
+ */
+const checkLines = (build: PrototypeBuild): string[] => [
+	`- When it builds, check its accessibility with exactly: \`${build.checkCommand}\``,
+	`  It measures the page in a real browser at the product's target and says what to fix, as the build says an error: fixing it is part of the work, whatever else was asked. Fix each in \`${build.source}\`, build, and check again. It says when its two rounds are used up: then finish, and what is left is recorded with the page. Never write words it says are a person's.`,
+];
+
 export const prototypeBuildTask = ({
 	guide,
 	skill,
@@ -245,6 +254,7 @@ export const prototypeBuildTask = ({
 		`- Write \`${build.source}\`. That file is the whole prototype: nothing else you write is kept.`,
 		`- Check it builds, and build it again after every change, with exactly: \`${build.buildCommand}\``,
 		`  It writes the page to \`${build.page}\`. Do not finish while it reports an error.`,
+		...checkLines(build),
 		'',
 		...readableLines(sources),
 		'',
@@ -302,6 +312,7 @@ export const prototypeAddressTask = ({
 		...(where ? [`- The comment is on ${name}. ${where}`] : []),
 		`- After every change, build it with exactly: \`${build.buildCommand}\``,
 		`  It writes the page to \`${build.page}\`. Do not finish while it reports an error.`,
+		...checkLines(build),
 		'',
 		...readableLines(sources),
 		'',

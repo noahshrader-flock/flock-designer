@@ -11,7 +11,7 @@ const skill = (name: string): string => readFileSync(join(SKILLS, name), 'utf8')
  * believed by the agent; when it is not there, the agent works without it and never knows.
  */
 const parts = { guide: '', lightCheck: null, shared: '', accessibility: '', voice: '' };
-const prototypeBuild = { source: '/p/i1.tsx', page: '/p/i1.html', buildCommand: 'node build' };
+const prototypeBuild = { source: '/p/i1.tsx', page: '/p/i1.html', buildCommand: 'node build', checkCommand: 'node check' };
 const sources = {
 	code: '/p/code',
 	productGuidance: null,

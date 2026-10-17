@@ -1,21 +1,26 @@
 import { resolve } from 'node:path';
 import type { Plugin } from 'vite';
-import { bundlePage, pageModuleOf } from './pageBundle.mjs';
+import { CARRIED, bundlePage, pageModuleOf } from './pageBundle.mjs';
 
 /**
  * The page code (`src/page`) as one string, for the scripts the app and the published page run inside a previewed page.
  * `import PAGE from '../page/index?page'` is that module bundled by esbuild into a script that defines `__fdPage`, as
  * plain text; the app's build, the viewer's and the tests all have this plugin, so nothing is built by hand first.
  * A previewed page's script is run, never imported, so it has to be text: a bundler rewriting a function's body is
- * exactly what cannot cross into another process.
+ * exactly what cannot cross into another process. `import CHECK from '…?script'` is the same for a script an agent
+ * runs with Node (`bundleScript`): one module bundled whole, written where the agent can run it.
  */
 export const pageCode = (): Plugin => ({
 	name: 'dsnr-page-code',
 	enforce: 'pre',
-	resolveId: (source, importer) => (source.endsWith('?page') && importer ? `\0page:${pageModuleOf(source, importer)}` : null),
+	resolveId: (source, importer) => {
+		const kind = /\?(page|script)$/.exec(source)?.[1];
+		return kind && importer ? `\0${kind}:${pageModuleOf(source, importer)}` : null;
+	},
 	async load(id) {
-		if (!id.startsWith('\0page:')) return null;
-		const { text, inputs } = await bundlePage(id.slice('\0page:'.length));
+		const m = /^\0(page|script):(.*)$/.exec(id);
+		if (!m) return null;
+		const { text, inputs } = await CARRIED[m[1] as 'page' | 'script'](m[2] as string);
 		for (const input of inputs) this.addWatchFile(resolve(input));
 		return `export default ${JSON.stringify(text)};`;
 	},
