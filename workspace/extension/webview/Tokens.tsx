@@ -1,7 +1,7 @@
 import { type ReactNode, useState } from 'react';
 import type { DesignToken, DesignTokens } from '../../src/shared/contract';
 import { byPrimitive, drawnAs, inOrder, isEditable, listed } from '../../src/shared/primitives';
-import { type ColorView, labelOf, pointsAt, rowContrast, tokensShown } from '../../src/shared/tokens';
+import { type ColorView, colorSays, labelOf, pointsAt, rowContrast, tokensShown } from '../../src/shared/tokens';
 import { useTokenChanges } from '../../src/renderer/tokenChanges';
 import { NoMatches } from './ui/NoMatches';
 import { EmptyState } from './ui/EmptyState';
@@ -10,7 +10,7 @@ import { SearchBox } from './ui/SearchBox';
 import { Section } from './ui/Section';
 import { Toggle } from './ui/Toggle';
 import { SemanticColors } from './SemanticColors';
-import { Swatch } from './ui/Swatch';
+import { ColorDot } from './ui/ColorDot';
 
 /** What a token row can do: open its control (a token that can be changed), and open its own file at its line. */
 export interface TokenActions {
@@ -19,10 +19,12 @@ export interface TokenActions {
 }
 
 /**
- * A token (`TokenRow`): its swatch, its name, what it points at, the contrast of its
- * pair when it is the one read under the other (flagged when it is below what the design system's target asks), and its
- * value, all as changed, with a mark when it is. Pressed, a token that can be changed opens its control; one that cannot
- * (a font, a shadow) is the same row with nothing to press. Its file and line are its tooltip, and its action opens them.
+ * A token (`TokenRow`): its name, what it points at, the contrast of its pair when it is the one read under the other
+ * (flagged when it is below what the design system's target asks), and its value, all as changed, with a mark when it is.
+ * **A color is its name and only its dot** (`ColorDot`), as a color is everywhere: what it points at and its hex are the dot's
+ * tooltip, and the dot is what opens its control. Any other token's row is itself the button that opens its control; one
+ * that cannot be changed (a font, a shadow) is the same row with nothing to press. Its file and line are its tooltip, and
+ * its action opens them.
  */
 export const TokenRow = ({ token, note, onEdit, onSource }: { token: DesignToken; note?: ReactNode } & TokenActions) => {
 	const changes = useTokenChanges();
@@ -30,24 +32,27 @@ export const TokenRow = ({ token, note, onEdit, onSource }: { token: DesignToken
 	const contrast = rowContrast(token, changes);
 	const edited = changes.isChanged(token);
 	const where = `${token.source.file}:${token.source.line}`;
+	const editable = isEditable(token);
+	const name = (
+		<span data-part="name" className="token-name">
+			{token.name}
+		</span>
+	);
+	const pair = contrast && (
+		<span
+			data-contrast={contrast.ratio}
+			className={contrast.flag ? 'token-contrast token-contrast-low' : 'token-contrast'}
+			title={`${contrast.ratio}:1, ${contrast.words}`}
+		>
+			{contrast.ratio}:1
+		</span>
+	);
 	const parts = (
 		<>
-			{token.kind === 'color' && <Swatch value={token.value} />}
-			<span data-part="name" className="token-name">
-				{token.name}
-			</span>
+			{name}
 			{target && (
 				<span data-part="ref" className="token-ref">
 					{pointsAt(token, target)}
-				</span>
-			)}
-			{contrast && (
-				<span
-					data-contrast={contrast.ratio}
-					className={contrast.flag ? 'token-contrast token-contrast-low' : 'token-contrast'}
-					title={`${contrast.ratio}:1, ${contrast.words}`}
-				>
-					{contrast.ratio}:1
 				</span>
 			)}
 			<span data-part="value" className="token-value">
@@ -58,7 +63,19 @@ export const TokenRow = ({ token, note, onEdit, onSource }: { token: DesignToken
 	);
 	return (
 		<li className="token" data-token={token.path} data-changed={edited || undefined} title={where}>
-			{isEditable(token) ? (
+			{token.kind === 'color' ? (
+				<div className="token-line">
+					{name}
+					{pair}
+					<ColorDot
+						value={token.value}
+						says={colorSays(token, target)}
+						name={labelOf(token)}
+						{...(editable ? { onPress: () => onEdit(token) } : {})}
+						{...(edited ? { mark: 'Changed' as const } : {})}
+					/>
+				</div>
+			) : editable ? (
 				<button type="button" className="token-line token-button" aria-label={`Change ${labelOf(token)}`} onClick={() => onEdit(token)}>
 					{parts}
 				</button>

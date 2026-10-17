@@ -22,7 +22,7 @@ import { useMode } from './mode';
 import { ValueEditor } from './ValueEditor';
 import { Disclosure } from './ui/Disclosure';
 import { Select } from './ui/Field';
-import { Swatch } from './ui/Swatch';
+import { ColorDot } from './ui/ColorDot';
 import { Switch } from './ui/Switch';
 import { useDismiss } from './ui/useDismiss';
 
@@ -72,11 +72,23 @@ const madeOf = (cell: ValueCell, name: (path: string) => string, others: (path: 
 };
 
 /**
+ * What a value's colour dot says on hover (`ColorDot`): the token it is, and where else it is used, or its value, then what it
+ * is made of, or why it is not a token; what it was drawn as when it is being tried; and that it is only shown when it is.
+ */
+const valueColorSays = (cell: ValueCell, made: Made, value: string, tried: string | null, still: boolean): string =>
+	[
+		...(cell.kind === 'token' ? [made.why, value] : [value, made.why]),
+		...(tried === null ? [] : [`Tried; drawn ${cell.value}`]),
+		...(still ? ['Drawn from its props, on one of its stories: shown, not tried.'] : []),
+	].join('\n');
+
+/**
  * One value, as a button that opens its control, as a token's row reads: what it is called on the left (`label`: its
  * property, Padding), with what it is made of as a chip after it (a token's name, "From a token", "Partly" one; nothing for
- * its own, or not checked), its value on the right (a colour with its swatch, marked when it is being tried). The control of
- * a value of its own is a popover under it (`editor`, shown while `open`), closed by Escape, a press elsewhere or the button
- * again; a token's opens elsewhere, so it has none.
+ * its own, or not checked), its value on the right (marked when it is being tried). **A colour is only its dot**
+ * (`ColorDot`), as it is everywhere: its name, value and what it is made of are the dot's tooltip, and the dot is what opens
+ * the control. The control of a value of its own is a popover under it (`editor`, shown while `open`), closed by Escape, a
+ * press elsewhere or the button again; a token's opens elsewhere, so it has none.
  */
 const Cell = ({
 	property,
@@ -106,7 +118,24 @@ const Cell = ({
 	const wrap = useRef<HTMLLIElement>(null);
 	const button = useRef<HTMLButtonElement>(null);
 	useDismiss(open, wrap, onClose, button);
-	// A colour that draws nothing is none, whatever made it.
+	// A colour that draws nothing is none, whatever made it, and has no dot.
+	if (COLOR_VALUES.has(property) && value !== NO_COLOR)
+		return (
+			<li ref={wrap} data-value-cell className="token" {...(still ? { 'data-still': '' } : tried !== null ? { 'data-tried': '' } : {})}>
+				<div className="value-cell">
+					<span className="value-label">{label}</span>
+					<ColorDot
+						value={tried ?? cell.value}
+						says={valueColorSays(cell, made, value, tried, still)}
+						name={valueTitle(property, cell.variant)}
+						{...(still ? {} : { onPress: open ? onClose : onOpen, popup: { open } })}
+						{...(tried !== null ? { mark: 'Tried' as const } : {})}
+						buttonRef={button}
+					/>
+				</div>
+				{open && !still && editor}
+			</li>
+		);
 	const chip = cell.value === NO_COLOR ? null : made.says;
 	const says = (
 		<>
@@ -121,7 +150,6 @@ const Cell = ({
 				</span>
 			)}
 			<span className="value-drawn">
-				{COLOR_VALUES.has(property) && value !== NO_COLOR && <Swatch value={tried ?? cell.value} />}
 				<span>{value}</span>
 				{tried !== null && <span data-changed-mark className="token-changed" aria-label="Tried" />}
 			</span>

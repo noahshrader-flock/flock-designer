@@ -1,35 +1,28 @@
 import type { DesignToken } from '../../src/shared/contract';
-import { labelOf, pointsAt, rowContrast, semanticTable, type SemanticRow } from '../../src/shared/tokens';
+import { colorSays, labelOf, rowContrast, semanticTable, type SemanticRow } from '../../src/shared/tokens';
 import { useTokenChanges } from '../../src/renderer/tokenChanges';
-import { Badge } from './ui/Badge';
-import { Swatch } from './ui/Swatch';
+import { ColorDot } from './ui/ColorDot';
 
 /**
- * One theme's value of a role, as `SemanticColors` draws it: its color as a swatch, centered under its theme, what it
- * points at in its tooltip and said to assistive technology, its hex left to its control. Pressing it opens its control,
- * so a change is always to one theme's token. Marked when changed, and when its contrast is below the target.
+ * One theme's value of a role, as `SemanticColors` draws it: its color as a dot (`ColorDot`), centered under its theme, its
+ * name and what it points at in its tooltip, its hex left to its control. Pressing it opens its control, so a change is
+ * always to one theme's token. Marked when changed, and when its contrast is below the target.
  */
 const ThemeValue = ({ token, onEdit }: { token: DesignToken; onEdit: (token: DesignToken) => void }) => {
 	const changes = useTokenChanges();
 	const target = changes.target(token);
 	const edited = changes.isChanged(token);
 	const flagged = rowContrast(token, changes)?.flag === true;
-	// What it points at, or its own color when it points at nothing.
-	const says = target ? pointsAt(token, target) : token.value;
 	return (
 		<span data-token={token.path} data-changed={edited || undefined} className="theme-cell">
-			<button
-				type="button"
-				className="theme-value"
-				aria-label={`Change ${labelOf(token)}`}
-				aria-description={says}
-				title={says}
-				onClick={() => onEdit(token)}
-			>
-				<Swatch value={token.value} />
-				{flagged && <Badge tone="warning" label="Contrast is too low" className="theme-flag" />}
-				{edited && <span data-changed-mark className="theme-changed" aria-label="Changed" />}
-			</button>
+			<ColorDot
+				value={token.value}
+				says={colorSays(token, target)}
+				name={labelOf(token)}
+				onPress={() => onEdit(token)}
+				{...(edited ? { mark: 'Changed' as const } : {})}
+				{...(flagged ? { flag: 'Contrast is too low' } : {})}
+			/>
 		</span>
 	);
 };

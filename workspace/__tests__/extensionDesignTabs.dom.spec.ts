@@ -366,15 +366,26 @@ describe('a component’s tab', () => {
 		expect(shownIn('height')[0]?.querySelector('[data-value-kind]')).toBeNull();
 	});
 
-	it('says which token a value is as a chip after its name, with where else it is used on hover; or nothing, its own or not checked', async () => {
+	/** A colour's dot in a row of the inspector: the only thing said of the colour in the row, and what opens its control. */
+	const dotOf = (cell: Element | undefined) => cell?.querySelector('.color-dot') as HTMLElement;
+
+	it('says which token a value is as a chip after its name, with where else it is used on hover; a colour is only its dot, saying it on hover; or nothing, its own or not checked', async () => {
 		await analysed();
 		const radius = shownIn('radius')[0]?.querySelector('button') as HTMLElement;
 		expect(radius.textContent).toBe('RadiusRadius8px');
 		expect(radius.querySelector('.value-chip')?.textContent).toBe('Radius');
 		expect(radius.title).toContain('Radius · also FSIconButton, FSSplitButton');
-		expect(shownIn('background').map((c) => c.textContent)).toEqual(['BackgroundLight primary main#108062']);
-		expect(shownIn('background')[0]?.querySelector('button')?.title).toContain('also FSIconButton');
-		// A colour that draws nothing is said as none, with no swatch and no chip.
+		// A colour is its label and its dot: no chip, no swatch beside text, no hex. The token and the colour are the dot's hover.
+		const [fill] = shownIn('background');
+		expect(fill?.textContent).toBe('Background');
+		expect(fill?.querySelector('.value-chip')).toBeNull();
+		expect(fill?.querySelectorAll('[data-swatch]')).toHaveLength(1);
+		expect(dotOf(fill).tagName).toBe('BUTTON');
+		expect(dotOf(fill).getAttribute('aria-label')).toBe('Change Background · primary');
+		expect(dotOf(fill).title).toBe('Light primary main · also FSIconButton\n#108062');
+		expect(dotOf(fill).getAttribute('aria-description')).toBe(dotOf(fill).title);
+		expect((dotOf(fill).querySelector('[data-swatch]') as HTMLElement).style.backgroundColor).toBe('rgb(16, 128, 98)');
+		// A colour that draws nothing is said as none, with no dot and no chip.
 		await pick('variant', 'ghost');
 		expect(shownIn('background').map((c) => c.textContent)).toEqual(['Backgroundnone']);
 		const size = shownIn('fontSize')[0] as HTMLElement;
@@ -394,16 +405,20 @@ describe('a component’s tab', () => {
 			],
 		};
 		await analysed({ values: { state: 'read', instances: 12, unmarked: 0, rows: { light: [...rows, mixed], dark: null } } });
-		expect(shownIn('text').map((c) => c.textContent)).toEqual(['Text colorLight primary main#FFFFFF']);
+		expect(shownIn('text').map((c) => c.textContent)).toEqual(['Text color']);
+		expect(dotOf(shownIn('text')[0]).title).toContain('Light primary main');
 		await pick('variant', 'hover');
-		expect(shownIn('text').map((c) => c.textContent)).toEqual(['Text colorFrom a token#0A6450']);
+		expect(shownIn('text').map((c) => c.textContent)).toEqual(['Text color']);
+		// Not a token, so its value first, then what it is made of.
+		expect(dotOf(shownIn('text')[0]).title).toBe('#0A6450\nIt changes with the tokens, but is none of them: a shade, or a size that grows with one.');
 		// The background was never drawn hovered: said, never guessed.
 		const background = section('Values')?.querySelector('[data-value-row="background"]') as HTMLElement;
 		expect(background.hasAttribute('data-not-drawn')).toBe(true);
 		expect(background.textContent).toBe('BackgroundNot drawn with this');
 		expect(background.querySelector('[title]')?.getAttribute('title')).toContain('Nearest:');
 		await pick('variant', 'plain');
-		expect(shownIn('text').map((c) => c.textContent)).toEqual(['Text color#010203']);
+		expect(shownIn('text').map((c) => c.textContent)).toEqual(['Text color']);
+		expect(dotOf(shownIn('text')[0]).title).toMatch(/^#010203\nThe component’s own/);
 	});
 
 	it('chooses a prop that is true or false with a switch, as FSButton’s disabled is: its colours by variant and disabled together', async () => {
@@ -436,10 +451,11 @@ describe('a component’s tab', () => {
 		await analysed({ values: { state: 'read', instances: 3, unmarked: 0, rows: { light: [...rows, background], dark: null } } });
 		const toggle = section('Values')?.querySelector('[data-picker="disabled"] [role="switch"]') as HTMLElement;
 		expect(toggle.getAttribute('aria-checked')).toBe('false');
-		expect(shownIn('background').map((c) => c.textContent)).toEqual(['Background#108062']);
+		expect(shownIn('background').map((c) => c.textContent)).toEqual(['Background']);
+		expect(dotOf(shownIn('background')[0]).title).toMatch(/^#108062\n/);
 		await press(toggle);
 		expect(toggle.getAttribute('aria-checked')).toBe('true');
-		expect(shownIn('background').map((c) => c.textContent)).toEqual(['Background#C8C8C8']);
+		expect(dotOf(shownIn('background')[0]).title).toMatch(/^#C8C8C8\n/);
 	});
 
 	it('says a radius that makes its ends round as full, with no control, and the radii that are sizes as they are (Phase 5.5)', async () => {
@@ -468,11 +484,13 @@ describe('a component’s tab', () => {
 			cells: Array.from({ length: 14 }, (_, i) => ({ variant: null, value: `rgb(${i}, 0, 0)`, kind: 'own', tokens: [], instances: 14 - i })),
 		};
 		await analysed({ values: { state: 'read', instances: 14, unmarked: 0, rows: { light: [...rows, many], dark: null } } });
-		expect(shownIn('border').map((c) => c.textContent)).toEqual(['Border#000000']);
+		expect(shownIn('border').map((c) => c.textContent)).toEqual(['Border']);
+		expect(dotOf(shownIn('border')[0]).title).toMatch(/^#000000\n/);
 		const more = section('Values')?.querySelector('[data-value-row="border"] details') as HTMLElement;
 		expect(more.querySelector('summary')?.textContent).toBe('13 more');
 		expect(more.querySelectorAll('[data-value-cell]')).toHaveLength(13);
-		expect(more.querySelector('[data-value-cell]')?.textContent).toBe('13 instances#010000');
+		expect(more.querySelector('[data-value-cell]')?.textContent).toBe('13 instances');
+		expect(dotOf(more.querySelector('[data-value-cell]') as Element).title).toMatch(/^#010000\n/);
 	});
 
 	it('shows dark’s values when dark is chosen in the panel, as the stories draw it there, and light’s again when light is', async () => {
@@ -480,7 +498,8 @@ describe('a component’s tab', () => {
 		const values = section('Values')!;
 		await say({ type: 'mode', mode: 'dark' });
 		expect([...values.querySelectorAll('[data-value-row]')].map((r) => r.getAttribute('data-value-row'))).toEqual(['height', 'background']);
-		expect(shownIn('background').map((c) => c.textContent)).toEqual(['BackgroundDark primary main#2BB48A']);
+		expect(shownIn('background').map((c) => c.textContent)).toEqual(['Background']);
+		expect(dotOf(shownIn('background')[0]).title).toMatch(/^Dark primary main · .*\n#2BB48A$/);
 		await say({ type: 'mode', mode: 'light' });
 		expect(values.querySelector('[data-value-row="radius"]')).not.toBeNull();
 	});
@@ -548,6 +567,12 @@ describe('a component’s tab', () => {
 		// A colour by its theme, then its role, as the Tokens tab lists it.
 		const color = used.querySelector('[data-tokens-used="Color"]') as HTMLElement;
 		expect([...color.querySelectorAll('[data-token-group]')].map((g) => g.getAttribute('data-token-group'))).toEqual(['Light', 'Dark']);
+		// A colour token is its name and only its dot: what it is, is the dot's hover, and no hex or reference is written beside it.
+		const primary = used.querySelector('[data-token="palette.light.primary.main"]') as HTMLElement;
+		expect(primary.querySelector('[data-part="name"]')?.textContent).toBe('main');
+		expect(primary.querySelector('[data-part="value"], [data-part="ref"]')).toBeNull();
+		expect(primary.querySelectorAll('[data-swatch]')).toHaveLength(1);
+		expect(dotOf(primary).title).toMatch(/^Light primary main\n.*#[0-9A-F]{6}$/);
 		const radius = used.querySelector('[data-token="radius"]') as HTMLElement;
 		expect(radius.querySelector('[data-part="name"]')?.textContent).toBe('radius');
 		expect(radius.querySelector('[data-part="value"]')?.textContent).toBe('4px');
@@ -558,7 +583,10 @@ describe('a component’s tab', () => {
 	it('opens a token’s own control from Tokens used, a colour’s as any other’s, as the panel’s row does, and closes it with its X', async () => {
 		await analysed();
 		for (const path of ['radius', 'palette.light.primary.main']) {
-			await press(section('Tokens used')!.querySelector(`[data-token="${path}"] button.token-button`) as HTMLElement);
+			// A colour's control opens from its dot, any other's from its row.
+			await press(
+				section('Tokens used')!.querySelector(`[data-token="${path}"] button.token-button, [data-token="${path}"] button.color-dot`) as HTMLElement,
+			);
 			expect(document.querySelector('[role="dialog"]')).not.toBeNull();
 			await press(document.querySelector('[role="dialog"] [aria-label="Close"]') as HTMLElement);
 			expect(document.querySelector('[role="dialog"]')).toBeNull();

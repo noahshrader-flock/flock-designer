@@ -1229,11 +1229,11 @@ textarea.input {
 }
 
 /*
- * A changed or tried value's mark, on its row, its cell or its theme's swatch: a dot in the brand. A change is what a person
+ * A changed or tried value's mark, on its row, its cell or its color's dot: a dot in the brand. A change is what a person
  * is doing, not something wrong; amber is for what needs a look (a warning), and is never used to say a change.
  */
 .token-changed,
-.theme-changed {
+.color-dot-mark {
 	flex-shrink: 0;
 	width: 6px;
 	height: 6px;
@@ -2215,7 +2215,12 @@ textarea.input {
 	color: var(--dsnr-muted);
 }
 
-.theme-value {
+/*
+ * A color a person can look at and press, as only its dot (`ColorDot`): a little larger than a swatch beside text, with a
+ * button's hover. Where it sits beside a name in a row it hangs out of the row's height a little, so its row is no taller
+ * than one without a color, and flush right with the values beside it.
+ */
+.color-dot {
 	position: relative;
 	display: inline-flex;
 	align-items: center;
@@ -2226,31 +2231,43 @@ textarea.input {
 	border: 1px solid transparent;
 	border-radius: var(--dsnr-radius-inner);
 	background: transparent;
+}
+
+button.color-dot {
 	cursor: pointer;
 }
 
-.theme-value .swatch {
+.color-dot .swatch {
 	width: 18px;
 	height: 18px;
 }
 
-.theme-value:hover {
+button.color-dot:hover {
 	background: var(--vscode-toolbar-hoverBackground);
 }
 
-.theme-value:focus-visible {
+.color-dot:focus-visible {
 	outline: var(--dsnr-focus);
 	outline-offset: -1px;
 }
 
-.theme-flag {
+.token-line .color-dot,
+.value-cell .color-dot {
+	margin: -4px -4px -4px 0;
+}
+
+.token-line .color-dot {
+	margin-left: auto;
+}
+
+.color-dot-flag {
 	position: absolute;
 	/* On the circle's edge at its top right, 45 degrees round (the circle is 18px, 4px in from the button's 26), the badge's middle a little below it. */
 	top: 1px;
 	right: 2px;
 }
 
-.theme-changed {
+.color-dot-mark {
 	position: absolute;
 	top: 0;
 	right: 0;

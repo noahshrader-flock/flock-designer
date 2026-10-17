@@ -1,6 +1,7 @@
 import { createElement } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { Badge } from '../extension/webview/ui/Badge';
+import { ColorDot } from '../extension/webview/ui/ColorDot';
 import { Icon } from '../extension/webview/ui/Icon';
 import { Button } from '../extension/webview/ui/Button';
 import { IconButton } from '../extension/webview/ui/IconButton';
@@ -137,11 +138,67 @@ describe('an empty state', () => {
 
 describe('the blank badge', () => {
 	it('is the badge extra small with no number, named by its label, and sits where its parent puts it', async () => {
-		await mount(createElement(Badge, { tone: 'warning', label: 'Contrast is too low', className: 'theme-flag' }));
+		await mount(createElement(Badge, { tone: 'warning', label: 'Contrast is too low', className: 'color-dot-flag' }));
 		const dot = document.querySelector('[aria-label="Contrast is too low"]') as HTMLElement;
-		expect(dot.className).toBe('badge badge-warning badge-xs theme-flag');
+		expect(dot.className).toBe('badge badge-warning badge-xs color-dot-flag');
 		expect(dot.getAttribute('role')).toBe('img');
 		expect(dot.textContent).toBe('');
+	});
+});
+
+/** A color is only its dot, wherever it is something to press: the one piece the grid of roles, Values and a token's row share. */
+describe('the color dot', () => {
+	const dot = () => document.querySelector('.color-dot') as HTMLElement;
+
+	it('is a button named for what it changes, saying what it is on hover and to assistive technology, that opens its control when pressed', async () => {
+		const onPress = vi.fn();
+		await mount(
+			createElement(ColorDot, { value: '#108062', says: 'Light primary main\npineGreen 50 · #108062', name: 'Light primary main', onPress }),
+		);
+		expect(dot().tagName).toBe('BUTTON');
+		expect(dot().getAttribute('aria-label')).toBe('Change Light primary main');
+		expect(dot().title).toBe('Light primary main\npineGreen 50 · #108062');
+		expect(dot().getAttribute('aria-description')).toBe(dot().title);
+		expect((dot().querySelector('[data-swatch]') as HTMLElement).style.backgroundColor).toBe('rgb(16, 128, 98)');
+		// Nothing else of the color is written: no name, no hex.
+		expect(dot().textContent).toBe('');
+		await press(dot());
+		expect(onPress).toHaveBeenCalledTimes(1);
+	});
+
+	it('is the same dot with nothing to press when it has no control, said as an image by its name and what it says on one line', async () => {
+		await mount(createElement(ColorDot, { value: '#108062', says: '#108062\nDrawn from its props', name: 'Background · primary' }));
+		expect(dot().tagName).toBe('SPAN');
+		expect(dot().getAttribute('role')).toBe('img');
+		expect(dot().getAttribute('aria-label')).toBe('Background · primary: #108062, Drawn from its props');
+		expect(dot().title).toBe('#108062\nDrawn from its props');
+	});
+
+	it('says whether the popover it opens is open, only when it opens one', async () => {
+		await mount(createElement(ColorDot, { value: '#000000', says: '#000000', name: 'Border', onPress: () => undefined, popup: { open: true } }));
+		expect([dot().getAttribute('aria-haspopup'), dot().getAttribute('aria-expanded')]).toEqual(['dialog', 'true']);
+		document.body.innerHTML = '';
+		await mount(createElement(ColorDot, { value: '#000000', says: '#000000', name: 'Border', onPress: () => undefined }));
+		expect(dot().hasAttribute('aria-haspopup')).toBe(false);
+		expect(dot().hasAttribute('aria-expanded')).toBe(false);
+	});
+
+	it('is marked when changed or tried, and flagged when its contrast is low, each said by its words, and neither otherwise', async () => {
+		await mount(
+			createElement(ColorDot, {
+				value: '#000000',
+				says: '#000000',
+				name: 'Text',
+				onPress: () => undefined,
+				mark: 'Tried',
+				flag: 'Contrast is too low',
+			}),
+		);
+		expect(dot().querySelector('[data-changed-mark]')?.getAttribute('aria-label')).toBe('Tried');
+		expect(dot().querySelector('.badge-warning')?.getAttribute('aria-label')).toBe('Contrast is too low');
+		document.body.innerHTML = '';
+		await mount(createElement(ColorDot, { value: '#000000', says: '#000000', name: 'Text', onPress: () => undefined }));
+		expect(dot().querySelector('[data-changed-mark], .badge')).toBeNull();
 	});
 });
 

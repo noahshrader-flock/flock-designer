@@ -4,12 +4,15 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { Moved } from '../extension/webview/ChangeReach';
+import { Grouped } from '../extension/webview/Tokens';
 import { HandoffActions } from '../extension/webview/HandoffActions';
 import { ChangedValues } from '../extension/webview/ValueChanges';
 import { ComponentValues } from '../extension/webview/ComponentValues';
 import { ValueEditor } from '../extension/webview/ValueEditor';
 import type { ComponentReach, DesignToken, ValueCell, ValueRow } from '../src/shared/contract';
+import { TokenChangesProvider, useTokenChangesFor } from '../src/renderer/tokenChanges';
 import { labelOf } from '../src/shared/tokens';
+import { undeclared } from '../src/shared/wcag';
 import { NO_CHROME, inChrome } from './realChrome';
 
 /**
@@ -42,7 +45,7 @@ const byVariant = (variant: string, value: string, kind: ValueCell['kind'], toke
 	const [name, disabled] = variant.split(' · ');
 	return cell(variant, value, kind, tokens, 3, [{ variant: name as string, disabled: disabled ? 'true' : null }]);
 };
-const token = (path: string, set: string, name: string): DesignToken =>
+const token = (path: string, set: string, name: string, more: object = {}): DesignToken =>
 	({
 		path,
 		group: 'Light',
@@ -52,6 +55,7 @@ const token = (path: string, set: string, name: string): DesignToken =>
 		category: 'Color',
 		value: '#000000',
 		source: { file: 'light.ts', line: 1 },
+		...more,
 	}) as unknown as DesignToken;
 const TOKENS = [
 	token('palette.light.primary.main', 'primary', 'main'),
@@ -162,11 +166,21 @@ describe.skipIf(NO_CHROME)('a component’s Values, in the side pane, in the bro
 						if (drawn && Math.abs(cellBox.r - 8 - box(drawn).r) > 1.5) problems.push(`${name}: the value is not at the right of its cell`);
 						// A value reads on one line, even when the pane is narrow: it is the name that gives way.
 						if (drawn && box(drawn).h > 24) problems.push(`${name}: its value is broken over lines (${box(drawn).h}px)`);
-						const swatch = li.querySelector('.swatch');
-						const text = drawn?.querySelector('span:not(.swatch):not(.token-changed)');
-						if (swatch && text && !apart(box(swatch), box(text))) problems.push(`${name}: the swatch is over its value`);
-						// A colour reads on one line: as its hex, it fits where as rgb(...) it did not.
-						if (swatch && text && box(text).h > 24) problems.push(`${name}: its colour is broken over lines (${box(text).h}px)`);
+					}
+					// A colour is its name and only its dot: at the right of its cell as a value is, clear of its name, inside its cell,
+					// and no taller a row than a value without one.
+					const textRows = shown.filter((li) => !li.querySelector('.color-dot')).map((li) => box(li).h);
+					for (const li of shown) {
+						const dot = li.querySelector('.color-dot .swatch');
+						if (!dot) continue;
+						const name = li.textContent?.slice(0, 30) ?? '';
+						const [cellBox, dotBox, label] = [box(li), box(dot), li.querySelector('.value-label')];
+						if (Math.abs(cellBox.r - 8 - dotBox.r) > 1.5) problems.push(`${name}: its dot is not at the right of its cell`);
+						if (dotBox.l < cellBox.l - 0.5 || dotBox.t < cellBox.t - 0.5 || dotBox.b > cellBox.b + 0.5)
+							problems.push(`${name}: its dot leaves its cell`);
+						if (label && !apart(box(label), dotBox)) problems.push(`${name}: the name is over its dot`);
+						if (cellBox.h > Math.max(...textRows) + 1) problems.push(`${name}: its row is taller (${cellBox.h}px) than a value's without a color`);
+						if (li.querySelector('.value-drawn, .value-chip')) problems.push(`${name}: a color says more than its dot`);
 					}
 					// A token's chip after its name, inside its name's side, never over its value.
 					for (const li of shown) {
@@ -174,12 +188,82 @@ describe.skipIf(NO_CHROME)('a component’s Values, in the side pane, in the bro
 						if (chip?.checkVisibility() && drawn && !apart(box(chip), box(drawn)))
 							problems.push(`${li.textContent?.slice(0, 30)}: the chip is over its value`);
 					}
-					return { problems, cells: shown.length, chips: document.querySelectorAll('.value-chip').length };
+					return {
+						problems,
+						cells: shown.length,
+						chips: document.querySelectorAll('.value-chip').length,
+						dots: [...document.querySelectorAll<HTMLElement>('.color-dot')].filter((d) => d.checkVisibility()).length,
+					};
 				});
 			});
-			// The variant it opens on: a value for each row, and a chip for each that is a token's.
+			// The variant it opens on: a value for each row, a chip for each that is a token's and not a colour, a dot for each colour.
 			expect(found.cells).toBe(5);
-			expect(found.chips).toBe(3);
+			expect(found.chips).toBe(1);
+			expect(found.dots).toBe(2);
+			expect(found.problems).toEqual([]);
+		},
+		60_000,
+	);
+
+	// The tokens a component draws with, as Tokens used lists them: a colour is its name and only its dot, a length is its row.
+	const ROW_TOKENS = [
+		token('palette.light.main', 'primary', 'main', { value: '#108062' }),
+		token('palette.light.long', 'primary', 'secondaryContainerOnSurfaceVariantContrastText'),
+		token('palette.light.pointing', 'primary', 'pointing', { ref: { path: 'palette.light.main' } }),
+		token('radius', 'primary', 'radius', { kind: 'radius', category: 'Shape', value: '4px' }),
+	];
+	const TokenRows = () => {
+		const changes = useTokenChangesFor(ROW_TOKENS, [], () => undefined, undeclared('a test'));
+		return createElement(
+			TokenChangesProvider,
+			{ value: changes },
+			createElement(Grouped, { tokens: ROW_TOKENS, onEdit: () => undefined, onSource: () => undefined }),
+		);
+	};
+	const tokenRows = renderToStaticMarkup(createElement(TokenRows));
+
+	it.each([PANE, 220])(
+		'lays out a token’s row, a colour as its name and only its dot, without anything past the pane, in a %ipx pane',
+		async (width) => {
+			const found = await inChrome(async (browser) => {
+				const page = await browser.newPage();
+				await page.setViewport({ width, height: 900 });
+				await page.setContent(
+					`<!doctype html><html><head><meta charset="utf-8"><style>${css}</style></head><body><main class="tab"><aside class="component-aside">${tokenRows}</aside></main></body></html>`,
+				);
+				return page.evaluate(() => {
+					const box = (e: Element) => e.getBoundingClientRect();
+					const apart = (a: DOMRect, b: DOMRect) =>
+						a.right <= b.left + 0.5 || b.right <= a.left + 0.5 || a.bottom <= b.top + 0.5 || b.bottom <= a.top + 0.5;
+					const problems: string[] = [];
+					const root = document.documentElement;
+					if (root.scrollWidth > root.clientWidth) problems.push(`the page is ${root.scrollWidth}px in a ${root.clientWidth}px pane`);
+					const rows = [...document.querySelectorAll<HTMLElement>('.token')];
+					const plainHeights = rows.filter((li) => !li.querySelector('.color-dot')).map((li) => box(li).height);
+					for (const li of rows) {
+						const name = li.querySelector('[data-part="name"]');
+						const nameText = name?.textContent?.slice(0, 24) ?? '';
+						const dot = li.querySelector('.color-dot');
+						const swatch = li.querySelector('.color-dot .swatch');
+						const actions = li.querySelector('.item-actions');
+						if (!dot || !swatch) continue;
+						// Only its dot: nothing else says the colour.
+						if (li.querySelector('[data-part="value"], [data-part="ref"]')) problems.push(`${nameText}: a colour says more than its dot`);
+						if (name && !apart(box(name), box(swatch))) problems.push(`${nameText}: the name is over its dot`);
+						if (actions && !apart(box(swatch), box(actions))) problems.push(`${nameText}: the dot is over the row's file button`);
+						if (box(swatch).right > box(li).right + 0.5 || box(swatch).left < box(li).left - 0.5)
+							problems.push(`${nameText}: its dot leaves its row`);
+						if (box(li).height > Math.max(...plainHeights.map(Number)) + 1)
+							problems.push(`${nameText}: its row is taller (${box(li).height}px) than a token's without a colour`);
+						// A long name gives way, cut short, and does not run on under the dot.
+						if (name && name.scrollWidth > name.clientWidth + 1 && getComputedStyle(name).textOverflow !== 'ellipsis')
+							problems.push(`${nameText}: runs past its box`);
+					}
+					return { problems, rows: rows.length, dots: document.querySelectorAll('.color-dot').length };
+				});
+			});
+			expect(found.rows).toBe(4);
+			expect(found.dots).toBe(3);
 			expect(found.problems).toEqual([]);
 		},
 		60_000,

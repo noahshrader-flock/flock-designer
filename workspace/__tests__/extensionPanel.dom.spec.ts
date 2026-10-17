@@ -1460,22 +1460,28 @@ describe('Design System', () => {
 		expect([...set.querySelectorAll('[data-theme-heading]')].map((h) => h.textContent)).toEqual(['Light', 'Dark']);
 		const rows = [...set.querySelectorAll<HTMLElement>('[data-token-row]')];
 		expect(rows.map((r) => r.dataset.tokenRow)).toEqual(['main', 'contrastText']);
-		// Each theme's value is a swatch of its own, saying what it points at; a theme without the role is a dash.
+		// Each theme's value is a dot of its own, saying which token it is and what it points at; a theme without the role is a dash.
 		const light = rows[0]!.querySelector('[data-token="palette.light.primary.main"] button') as HTMLElement;
-		expect(light.getAttribute('title')).toBe('pineGreen 50');
-		expect(rows[0]!.querySelector('[data-token="palette.dark.primary.main"] button')?.getAttribute('title')).toBe('pineGreen 60');
+		expect(light.getAttribute('title')).toBe('Light primary main\npineGreen 50 · #1F6F5C');
+		expect(light.className).toBe('color-dot');
+		expect(rows[0]!.querySelector('[data-token="palette.dark.primary.main"] button')?.getAttribute('title')).toMatch(
+			/^Dark primary main\npineGreen 60 · #/,
+		);
 		expect(rows[1]!.querySelector('.theme-none')?.textContent).toBe('—');
 		// Pressed, one theme's value opens its own control.
 		await press(light);
 		expect(document.querySelector('[role="dialog"]')?.getAttribute('aria-label')).toBe('Light · primary.main');
 	});
 
-	it('shows the palette behind the roles, a press away: each step with its value, and its own file', async () => {
+	it('shows the palette behind the roles, a press away: each step as its name and only its dot, saying its value, and its own file', async () => {
 		await tokens(true);
 		expect(titles()[0]).toEqual(['Color', '2']);
 		const step = body().querySelector('[data-token="tone.pineGreen.50"]') as HTMLElement;
-		expect(step.querySelector('[data-swatch]')).not.toBeNull();
-		expect(step.querySelector('[data-part="value"]')?.textContent).toBe('#1F6F5C');
+		// The color is the dot and nothing else of it is written in the row: no swatch beside its hex, no hex.
+		expect(step.querySelectorAll('[data-swatch]')).toHaveLength(1);
+		expect(step.querySelector('[data-part="value"]')).toBeNull();
+		expect(step.querySelector('[data-part="name"]')?.textContent).toBe('50');
+		expect(step.querySelector('.color-dot')?.getAttribute('title')).toBe('Tones pineGreen 50\n#1F6F5C');
 		expect(step.title).toBe('src/colors/tones.ts:3');
 		await press(step.querySelector('[aria-label="Open src/colors/tones.ts:3"]') as HTMLElement);
 		expect(panelSaid().at(-1)).toEqual({ type: 'open-library-source', file: 'src/colors/tones.ts', line: 3 });
@@ -1495,7 +1501,9 @@ describe('Design System', () => {
 		await say({ type: 'token-edits', edits: [{ path: 'tone.pineGreen.50', value: '#000000' }] });
 		const step = body().querySelector('[data-token="tone.pineGreen.50"]') as HTMLElement;
 		expect(step.dataset.changed).toBe('true');
-		expect(step.querySelector('[data-part="value"]')?.textContent).toBe('#000000');
+		expect(step.querySelector('.color-dot')?.getAttribute('title')).toBe('Tones pineGreen 50\n#000000');
+		// Marked on the dot, where its color is.
+		expect(step.querySelector('.color-dot [data-changed-mark]')?.getAttribute('aria-label')).toBe('Changed');
 		// The role pointing at it shows the change too.
 		await press(body().querySelector('[aria-label="Color view"] [aria-label="Semantic"]') as HTMLElement);
 		expect((body().querySelector('[data-token="palette.light.primary.main"] [data-swatch]') as HTMLElement).style.backgroundColor).toBe(

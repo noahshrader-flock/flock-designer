@@ -365,6 +365,13 @@ export const colorAsRead = (color: string): string => {
 export const pointsAt = (token: DesignToken, target: DesignToken): string =>
 	`${nameOf(target)}${token.ref?.alpha ? ` at ${opacity(token.ref.alpha)}` : ''}`;
 
+/**
+ * What a color token's dot says on hover (`ColorDot`): its name, then what it points at and the color it is. The one way
+ * every dot of a token says it, in the grid of roles and on a token's row.
+ */
+export const colorSays = (token: DesignToken, target: DesignToken | undefined): string =>
+	`${labelOf(token)}\n${target ? `${pointsAt(token, target)} · ` : ''}${token.value}`;
+
 /** A pair's contrast: the color read with this one, the ratio between them, and whether it is enough for text. */
 export interface PairContrast {
 	partner: DesignToken;
