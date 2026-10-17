@@ -86,7 +86,6 @@ const markupFor = (rows: ValueRow[]) =>
 				values: { state: 'read', instances: 12, unmarked: 0, rows: { light: rows, dark: null } },
 			},
 			name: 'FSButton',
-			version: { branch: 'develop', commit: 'abc1234def' },
 			byPath: new Map(TOKENS.map((t) => [t.path, t])),
 			tokenName: (path: string) => {
 				const t = TOKENS.find((x) => x.path === path);

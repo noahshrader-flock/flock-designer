@@ -6,11 +6,14 @@ import { labelOf } from '../../src/shared/tokens';
 import { useTokenChanges } from '../../src/renderer/tokenChanges';
 import { MOST_LISTED, sharedWith, useComponentTokens } from '../../src/renderer/useComponentTokens';
 import { AccessibilityFindings } from './Accessibility';
+import { TokenChanges } from './Changed';
+import { ChangeReach } from './ChangeReach';
 import { ComponentValues, type Trying } from './ComponentValues';
 import { ValueChanges } from './ValueChanges';
 import { Variants } from './Variants';
 import { SemanticColors } from './SemanticColors';
 import { Sets, TokenRow, type TokenActions } from './Tokens';
+import { Dialog } from './ui/Dialog';
 import { Disclosure } from './ui/Disclosure';
 import { Notice } from './ui/Notice';
 import { Swatch } from './ui/Swatch';
@@ -156,31 +159,55 @@ export const ComponentSections = ({
 	component,
 	components,
 	actions,
-	version,
 	trying,
 	onOpen,
+	changes,
 }: {
 	component: CatalogComponent;
 	components: CatalogComponent[];
 	actions: TokenActions;
-	/** The version of the design system shown, which its values are read on. */
-	version: { branch: string; commit: string };
 	/** The values being tried on its instances, in the stories beside this. */
 	trying: Trying;
 	/** Opens another component's tab. */
 	onOpen: (id: string) => void;
+	/** Whether its Changes dialog is open (the button beside Ask opens it), closing it, and telling it a branch of its values is kept. */
+	changes: { open: boolean; onClose: () => void; onKept: (kept: boolean) => void };
 }) => {
-	const { byPath, isPalette } = useTokenChanges();
+	const { edits, byPath, isPalette } = useTokenChanges();
 	const { answer, retry } = useComponentTokens(component.id);
+	// The changes being tried on it, in a dialog rather than at the top of this column, so nothing moves while a value is
+	// adjusted: the token changes (they move its stories too) and what they move, drawn only while it is open, then its values.
+	const dialog = (values: ReactNode) =>
+		changes.open && (
+			<Dialog title="Changes" onClose={changes.onClose}>
+				{edits.length === 0 && trying.tried.size === 0 && <p className="quiet">Nothing is being tried.</p>}
+				{edits.length > 0 && (
+					<>
+						<TokenChanges />
+						<ChangeReach edits={edits} component={component} components={components} onOpen={onOpen} />
+					</>
+				)}
+				{values}
+			</Dialog>
+		);
 
 	if (answer.state === 'none' || answer.state === 'building')
 		return (
-			<p className="quiet">
-				Finding the tokens {component.name} draws with. The first time for each version of the design system, every story is drawn with each token
-				marked, which takes a few seconds.
-			</p>
+			<>
+				<p className="quiet">
+					Finding the tokens {component.name} draws with. The first time for each version of the design system, every story is drawn with each token
+					marked, which takes a few seconds.
+				</p>
+				{dialog(null)}
+			</>
 		);
-	if (answer.state === 'failed') return <Notice onRetry={retry}>{answer.error}</Notice>;
+	if (answer.state === 'failed')
+		return (
+			<>
+				<Notice onRetry={retry}>{answer.error}</Notice>
+				{dialog(null)}
+			</>
+		);
 	const names = new Map(components.map((c) => [c.id, c.name]));
 	// A token as it is named, and the other components that draw with it: one way for every part.
 	const tokenName = (path: string) => {
@@ -209,11 +236,13 @@ export const ComponentSections = ({
 				tokenName={tokenName}
 				onSource={actions.onSource}
 				onOpen={onOpen}
-			/>
+				onKept={changes.onKept}
+			>
+				{dialog}
+			</ValueChanges>
 			<ComponentValues
 				answer={answer}
 				name={component.name}
-				version={version}
 				byPath={byPath}
 				tokenName={tokenName}
 				others={others}

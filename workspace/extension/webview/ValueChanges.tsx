@@ -1,3 +1,4 @@
+import { type ReactNode, useEffect } from 'react';
 import type { CatalogComponent, TriedValue, ValuePlace, ValueRow, ValueSource, ValueSources as ValueSourcesAnswer } from '../../src/shared/contract';
 import type { BranchControls } from '../../src/renderer/useChangeBranch';
 import { cellFor, triedId } from '../../src/shared/contract';
@@ -89,13 +90,24 @@ const Said = ({
  * as it is tried, or why it cannot be saved; Reset for each and for all; then Save, Propose and Start over on a branch of
  * the component's own, as a change to the tokens has (`BranchActions`). Save waits until every value is found and read back.
  * Then what writing them reaches (`ReachView`): a size table two components share moves both. Nothing while nothing is
- * tried and no branch is kept.
+ * tried and no branch is kept. Where each is written and the branch are found while the tab is open (a branch's values are
+ * put back when it opens), whether or not the Changes dialog is: what it draws is handed to the dialog (`children`).
  */
-export const ValueChanges = (shown: Shown) => {
+export const ValueChanges = ({
+	children,
+	onKept,
+	...shown
+}: Shown & {
+	children: (values: ReactNode) => ReactNode;
+	/** Told whether it has a branch kept, so its Changes button can still be pressed with nothing tried, to propose or leave it. */
+	onKept: (kept: boolean) => void;
+}) => {
 	const tried = [...shown.trying.tried.values()];
 	const sources = useValueSources(shown.component.id, tried, shown.trying.writes);
 	const controls = useValueBranch(shown.component.id, tried, shown.trying.onAll);
-	return <ChangedValues {...shown} sources={sources} controls={controls} />;
+	const kept = controls.branch !== null;
+	useEffect(() => onKept(kept), [kept, onKept]);
+	return children(<ChangedValues {...shown} sources={sources} controls={controls} />);
 };
 
 interface Shown {
@@ -131,10 +143,10 @@ export const ChangedValues = ({
 	const savable = tried.length === 0 ? controls.branch !== null : sources.state === 'ready' && sources.values.every((v) => v.state === 'found');
 	return (
 		<>
-			<section aria-label="Changed values" data-value-changes className="changed">
+			<section aria-label="Value changes" data-value-changes className="changed">
 				<div className="changed-header">
 					<span className="changed-title">
-						Changed values <span className="section-count">{tried.length}</span>
+						Values <span className="section-count">{tried.length}</span>
 					</span>
 					{tried.length > 0 && (
 						<button type="button" className="link" onClick={() => trying.onAll([])}>

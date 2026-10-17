@@ -1355,7 +1355,7 @@ describe('Design System', () => {
 		// A card is its picture and its name, and no description under it, nor has a row.
 		expect(under(section('Buttons')).querySelector('[data-part="meta"]')).toBeNull();
 		// What axe found is read, but not drawn on the card: nothing counts on a component for now.
-		expect(body().querySelector('.badge')).toBeNull();
+		expect(under(section('Buttons')).querySelector('.badge')).toBeNull();
 	});
 
 	it('opens a component in its own tab when pressed, and its links, and no Open, from its menu, naming it only', async () => {
@@ -1521,9 +1521,12 @@ describe('Design System', () => {
 		expect(dialog.textContent).toContain('src/colors/tones.ts:9 A value worked out as it runs.');
 	});
 
-	it('has no bubble when every value is read', async () => {
+	it('has no not-read bubble when every value is read, and the changes count always, muted with none', async () => {
 		await read();
-		expect(body().querySelector('.ds-actions .badge')).toBeNull();
+		expect(body().querySelector('.ds-actions .badge-warning')).toBeNull();
+		const changes = body().querySelector('.ds-actions [aria-label="0 token changes being tried"]') as HTMLElement;
+		expect(changes.textContent).toBe('0');
+		expect(changes.classList.contains('badge-brand')).toBe(false);
 	});
 
 	it('says when the design system is no longer on this computer, and offers to locate it', async () => {
@@ -1554,6 +1557,11 @@ describe('trying a change to the tokens, saving it to a branch, and proposing it
 		await press([...document.querySelectorAll<HTMLElement>('[aria-label="Part"] [role="radio"]')][1]!);
 	};
 	const dialog = () => document.querySelector('[role="dialog"]') as HTMLElement;
+	/** The Changes dialog, from the count beside the not-read one: what is changed is there, not above the list. */
+	const openChanges = async () => {
+		if (!document.querySelector('[role="dialog"][aria-label="Changes"]'))
+			await press(document.querySelector('.ds-actions [aria-label$="being tried"]') as HTMLElement);
+	};
 	const edited = () =>
 		panelSaid()
 			.filter((m) => m.type === 'token-edits')
@@ -1616,11 +1624,25 @@ describe('trying a change to the tokens, saving it to a branch, and proposing it
 		expect(font.querySelector('[data-part="value"]')?.textContent).toBe('Inter');
 	});
 
+	it('moves nothing when a token is changed: the toggle and the list under it stay where they were', async () => {
+		await tokensOpen();
+		const part = document.querySelector('.ds-part') as HTMLElement;
+		const before = part.previousElementSibling;
+		await say({ type: 'token-edits', edits: [{ path: 'tone.pineGreen.60', value: '#000000' }] });
+		expect(part.previousElementSibling).toBe(before);
+		expect(document.querySelector('.ds-part')).toBe(part);
+		expect(document.querySelector('[data-changed-tokens]')).toBeNull();
+	});
+
 	it('lists what has been changed, from what it was to what it is, with a reset for each and for all', async () => {
 		await tokensOpen();
 		await say({ type: 'token-edits', edits: [{ path: 'tone.pineGreen.60', value: '#000000' }] });
+		// Nothing opens above the list: the count says it, in the brand.
+		expect(document.querySelector('[data-changed-tokens]')).toBeNull();
+		expect(document.querySelector('.ds-actions [aria-label="1 token change being tried"]')?.classList.contains('badge-brand')).toBe(true);
+		await openChanges();
 		const changed = document.querySelector('[data-changed-tokens]') as HTMLElement;
-		expect(changed.querySelector('.changed-title')?.textContent).toBe('Changed 1');
+		expect(changed.querySelector('.changed-title')?.textContent).toBe('Tokens 1');
 		expect(changed.querySelector('[data-change="tone.pineGreen.60"] .change-values')?.textContent).toBe('#15584A → #000000');
 		await press(changed.querySelector('[aria-label="Reset Tones pineGreen 60"]') as HTMLElement);
 		expect(edited()).toEqual([]);
@@ -1633,6 +1655,7 @@ describe('trying a change to the tokens, saving it to a branch, and proposing it
 		await tokensOpen();
 		const edits = [{ path: 'tone.pineGreen.60', value: '#000000' }];
 		await say({ type: 'token-edits', edits });
+		await openChanges();
 		await press(button('Save to a branch'));
 		expect(sent.filter((m) => m.name === 'saveTokens').at(-1)?.args).toEqual([edits]);
 		await answer('saveTokens', { branch: 'dsnr/tokens-1012-abc123', saved: edits, saves: 1, pullRequest: null });
@@ -1652,17 +1675,18 @@ describe('trying a change to the tokens, saving it to a branch, and proposing it
 		await press(button('Start over'));
 		await answer('forgetTokenBranch', null);
 		expect(edited()).toEqual([]);
-		expect(document.querySelector('[data-changed-tokens]')).toBeNull();
+		expect(document.querySelector('[data-changed-tokens]')?.textContent).toContain('Every token is as the design system has it.');
 	});
 
 	it('says why a save failed, and keeps the change', async () => {
 		await tokensOpen();
 		await say({ type: 'token-edits', edits: [{ path: 'spacing', value: '12px' }] });
+		await openChanges();
 		await press(button('Save to a branch'));
 		const call = sent.filter((m) => m.name === 'saveTokens').at(-1);
 		await say({ type: 'answer', id: call?.id, result: { ok: false, error: 'git is not signed in to GitHub.' } });
 		expect(document.querySelector('[data-branch-actions] [role="alert"]')?.textContent).toBe('git is not signed in to GitHub.');
-		expect(document.querySelector('[data-changed-tokens] .changed-title')?.textContent).toBe('Changed 1');
+		expect(document.querySelector('[data-changed-tokens] .changed-title')?.textContent).toBe('Tokens 1');
 	});
 
 	it('puts back a change saved before DSNR was last closed, when none is being tried', async () => {

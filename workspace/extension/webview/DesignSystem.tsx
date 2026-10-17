@@ -102,6 +102,8 @@ const Ready = ({
 	const [editing, setEditing] = useState<DesignToken | null>(null);
 	// Asking in words for its tokens (Phase 6): open while its dialog is.
 	const [asking, setAsking] = useState(false);
+	// The changes being tried, in a dialog from their count beside the not-read one, so nothing opens above the list.
+	const [changesOpen, setChangesOpen] = useState(false);
 	const notRead = catalog.tokens.problems.length;
 	// Whether the library has a dark (its tokens have a Dark group): only then is a color mode offered.
 	const hasDark = catalog.tokens.tokens.some(isDark);
@@ -126,6 +128,13 @@ const Ready = ({
 							onPress={() => setProblems(true)}
 						/>
 					)}
+					{/* Always there, so nothing moves when the first change is made: muted with none, the brand's with some. */}
+					<Badge
+						tone={edits.length > 0 ? 'brand' : 'neutral'}
+						count={edits.length}
+						label={`${plural(edits.length, 'token change')} being tried`}
+						onPress={() => setChangesOpen(true)}
+					/>
 					<Menu
 						label="Design system actions"
 						size="small"
@@ -151,7 +160,6 @@ const Ready = ({
 					<Icon name="warning" /> Could not update from {HOST}: {catalog.update.failed} It is shown as this computer last had it.
 				</p>
 			)}
-			<Changed controls={branch} />
 			<div className="ds-part">
 				<Toggle label="Part" options={PARTS} value={part} onChange={onPart} />
 			</div>
@@ -174,6 +182,11 @@ const Ready = ({
 			)}
 			{editing && <TokenEditor key={editing.path} token={editing} onClose={() => setEditing(null)} />}
 			{problems && <Problems problems={catalog.tokens.problems} onClose={() => setProblems(false)} />}
+			{changesOpen && (
+				<Dialog title="Changes" onClose={() => setChangesOpen(false)}>
+					<Changed controls={branch} />
+				</Dialog>
+			)}
 			{asking && (
 				<AskInWords
 					file={null}

@@ -1949,6 +1949,14 @@ textarea.input {
 	background: var(--vscode-editorWidget-background);
 }
 
+/* In a Changes dialog, a group is the dialog's own: no box in a box. */
+.dialog .changed {
+	margin: 0;
+	padding: 0;
+	border: none;
+	background: transparent;
+}
+
 .changed-header {
 	display: flex;
 	align-items: center;

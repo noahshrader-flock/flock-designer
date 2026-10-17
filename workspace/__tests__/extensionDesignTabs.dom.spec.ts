@@ -287,6 +287,10 @@ describe('a component’s tab', () => {
 		await answer('componentTokens', analysis(over));
 	};
 	const section = (label: string) => document.querySelector(`[aria-label="${label}"]`) as HTMLElement | null;
+	/** Its Changes dialog, opened from the button beside Ask: what is tried is there, not in the column. */
+	const openChanges = async () => {
+		if (!document.querySelector('[role="dialog"][aria-label="Changes"]')) await press(document.querySelector('.tab-actions button') as HTMLElement);
+	};
 
 	it('reads in seven parts, in an order that goes from what it is made of to what is wrong with it', async () => {
 		await analysed();
@@ -306,7 +310,8 @@ describe('a component’s tab', () => {
 	it('lists its drawn values first, by variant, said as its stories draw them on the version shown', async () => {
 		await analysed();
 		const values = section('Values')!;
-		expect(values.querySelector('[data-values-from]')?.textContent).toBe('As its stories draw it, in light: 12 instances, on develop at abc123.');
+		// What the stories drew, on which version, is not said above the values: the rows are the answer.
+		expect(values.querySelector('[data-values-from]')).toBeNull();
 		// Light until dark is chosen, and chosen in the panel: the tab has no switch of its own.
 		expect(values.querySelector('[role="radio"]')).toBeNull();
 		expect([...values.querySelectorAll('[data-value-row]')].map((r) => r.getAttribute('data-value-row'))).toEqual([
@@ -397,13 +402,11 @@ describe('a component’s tab', () => {
 		await analysed();
 		const values = section('Values')!;
 		await say({ type: 'mode', mode: 'dark' });
-		expect(values.querySelector('[data-values-from]')?.textContent).toContain('in dark:');
 		expect([...values.querySelectorAll('[data-value-row]')].map((r) => r.getAttribute('data-value-row'))).toEqual(['height', 'background']);
 		const background = values.querySelector('[data-value-row="background"]') as HTMLElement;
 		expect([...background.querySelectorAll('[data-value-cell]')].map((c) => c.textContent)).toEqual(['primary#2BB48A', 'ghostnone']);
 		expect(background.querySelector('h3 [data-value-kind="token"]')?.textContent).toBe('Dark primary main');
 		await say({ type: 'mode', mode: 'light' });
-		expect(values.querySelector('[data-values-from]')?.textContent).toContain('in light:');
 		expect(values.querySelector('[data-value-row="radius"]')).not.toBeNull();
 	});
 
@@ -411,13 +414,14 @@ describe('a component’s tab', () => {
 		const light = (analysis().values as { rows: { light: object[] } }).rows.light;
 		await analysed({ values: { ...(analysis().values as { rows: object }), rows: { light, dark: null } } });
 		await say({ type: 'mode', mode: 'dark' });
-		expect(section('Values')?.querySelector('[data-values-from]')?.textContent).toContain('in light:');
-		expect(section('Values')?.querySelector('[data-value-row]')).not.toBeNull();
+		// Light's rows: the radius row is in light and not in dark.
+		expect(section('Values')?.querySelector('[data-value-row="radius"]')).not.toBeNull();
 		document.body.innerHTML = '';
 		// A library DSNR cannot turn dark draws its light twice.
 		await analysed({ values: { ...(analysis().values as { rows: object }), rows: { light, dark: light } } });
 		await say({ type: 'mode', mode: 'dark' });
-		expect(section('Values')?.querySelector('[data-values-from]')?.textContent).toContain('in light:');
+		expect(section('Values')?.querySelector('[data-value-row="radius"]')).not.toBeNull();
+		expect(section('Values')?.querySelector('[data-values-none]')).toBeNull();
 	});
 
 	it('says when a length it calls its own may be a token no tag could be given', async () => {
@@ -553,8 +557,9 @@ describe('a component’s tab', () => {
 			await press(section('Values')?.querySelector('[aria-label="Change Height · sm"]') as HTMLElement);
 			await type(document.querySelector('input[type="range"][aria-label="Height"]') as HTMLInputElement, '32');
 			await act(async () => void document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
+			await openChanges();
 		};
-		const changed = () => section('Changed values') as HTMLElement;
+		const changed = () => section('Value changes') as HTMLElement;
 		const found = (over: Record<string, unknown> = {}) => ({
 			state: 'ready',
 			values: [{ id: ID, state: 'found', places: [{ file: 'src/utils/theme.ts', line: 158, written: '28px', writes: '32px' }] }],
@@ -691,6 +696,7 @@ describe('a component’s tab', () => {
 			const asked = calls('writeValue').at(-1)?.args as [string, { follows: string; value: string }];
 			expect(asked[0]).toBe(BUTTON);
 			expect(asked[1]).toMatchObject({ property: 'radius', value: '4px', follows: 'radius' });
+			await openChanges();
 			expect(changed().querySelector('[data-value-change] .value-cell')?.textContent).toBe('Radius4px → follows Radius');
 			expect(document.querySelector('[data-value-following]')?.textContent).toContain('Follows Radius');
 		});
@@ -732,12 +738,19 @@ describe('a component’s tab', () => {
 			await analysed();
 			await answer('storyPreview', { state: 'ready', base: BASE });
 			await answer('valueBranch', { branch: 'dsnr/values-20261016-ab12', saved: [SMALL], saves: 1, pullRequest: null });
+			await openChanges();
 			expect(changed().querySelector('[data-value-change] .value-cell')?.textContent).toBe('Height · sm28px → 32px');
 			expect(calls('valueSources').at(-1)?.args).toEqual([BUTTON, [SMALL]]);
 			// Every value put back: the branch can be saved so, back as the library draws them.
 			await press(button('Reset all'));
 			expect(changed().textContent).toContain('Every value is as the library draws it.');
 			expect(button('Save').disabled).toBe(false);
+			// With nothing tried, the branch can still be reached: the button says so and can be pressed.
+			await press(document.querySelector('[role="dialog"][aria-label="Changes"] [aria-label="Close"]') as HTMLElement);
+			const count = document.querySelector('.tab-actions button') as HTMLButtonElement;
+			expect(count.textContent).toBe('No changes');
+			expect(count.disabled).toBe(false);
+			await openChanges();
 			await press(button('Save'));
 			expect(calls('saveValues').at(-1)?.args).toEqual([BUTTON, []]);
 		});
@@ -851,9 +864,12 @@ describe('a component’s tab', () => {
 			expect(calls('changeReach')).toHaveLength(0);
 		});
 
-		it('is asked for with the change being tried, and says it is drawing every component until it is answered', async () => {
+		it('is asked for once the Changes dialog is opened with a change being tried, and says it is drawing every component until it is answered', async () => {
 			await analysed();
 			await say({ type: 'token-edits', edits: RED });
+			// Not while the dialog is shut: drawing every component is for someone who asked to see what it moves.
+			expect(calls('changeReach')).toHaveLength(0);
+			await openChanges();
 			expect(calls('changeReach').at(-1)?.args).toEqual([RED]);
 			expect(part()?.textContent).toContain('Drawing every component with the change');
 		});
@@ -861,6 +877,7 @@ describe('a component’s tab', () => {
 		it('names each component the change moves, with what changed as the Values say it, and how many it does not move', async () => {
 			await analysed();
 			await say({ type: 'token-edits', edits: RED });
+			await openChanges();
 			await answer('changeReach', moved());
 			const reach = part() as HTMLElement;
 			expect(reach.querySelector('[data-reach-summary]')?.textContent).toBe(
@@ -881,6 +898,7 @@ describe('a component’s tab', () => {
 		it('says when the change moves nothing, and when it could not be drawn', async () => {
 			await analysed();
 			await say({ type: 'token-edits', edits: RED });
+			await openChanges();
 			await answer('changeReach', moved({ moved: [], unchanged: 44, notDrawn: [] }));
 			expect(part()?.querySelector('[data-reach-summary]')?.textContent).toBe(
 				'It moves no component, in their stories drawn: 44 components unchanged.',
@@ -939,6 +957,31 @@ describe('a component’s tab', () => {
 			expect(tried()).toEqual([taller]);
 		});
 
+		it('moves nothing when a value is tried: the column is as it was, and only the count beside Ask changes', async () => {
+			const { tried } = await tryingOpen();
+			const column = document.querySelector('.component-aside') as HTMLElement;
+			const first = column.firstElementChild;
+			const count = document.querySelector('.tab-actions button') as HTMLButtonElement;
+			expect(count.textContent).toBe('No changes');
+			expect(count.disabled).toBe(true);
+			// Ask is right after it, and stays so.
+			expect(count.nextElementSibling?.textContent).toBe('Ask…');
+			await press(change('Height · sm'));
+			await type(slider('Height'), '30');
+			expect(tried()).toHaveLength(1);
+			expect(column.firstElementChild).toBe(first);
+			expect(
+				column.querySelector('[aria-label="Value changes"], [aria-label="Moved by the change"], [aria-label="Moved by these values"]'),
+			).toBeNull();
+			expect(count.textContent).toBe('1 change');
+			expect(count.disabled).toBe(false);
+			// A token change being tried moves its stories too, so it is counted here as well; and still nothing is put in the column.
+			await say({ type: 'token-edits', edits: [{ path: 'radius', value: '12px' }] });
+			expect(count.textContent).toBe('2 changes');
+			expect(column.firstElementChild).toBe(first);
+			expect(document.querySelector('.tab')?.textContent).not.toContain('Showing the change being tried');
+		});
+
 		it('opens a value of its own as a slider, tries it on the instances that draw it as it moves, and marks it tried', async () => {
 			const { tried } = await tryingOpen();
 			await press(change('Height · sm'));
@@ -951,8 +994,9 @@ describe('a component’s tab', () => {
 			const cell = values().querySelector('[data-value-row="height"] [data-tried]') as HTMLElement;
 			expect(cell.querySelector('.value-cell')?.textContent).toBe('sm30px');
 			expect(cell.querySelector('[data-changed-mark]')).not.toBeNull();
-			// Said once, on the tab: changed, and where it is written is being found.
-			const changed = section('Changed values') as HTMLElement;
+			// Said once, in its Changes dialog: changed, and where it is written is being found.
+			await openChanges();
+			const changed = section('Value changes') as HTMLElement;
 			expect(changed.querySelector('[data-value-change] .value-cell')?.textContent).toBe('Height · sm28px → 30px');
 			expect(changed.textContent).toContain('Finding where it is written…');
 			expect(calls('valueSources').at(-1)?.args).toEqual([BUTTON, tried()]);
@@ -1026,9 +1070,11 @@ describe('a component’s tab', () => {
 			await type(slider('Height'), '40');
 			expect(tried()).toHaveLength(2);
 			await escape();
+			await openChanges();
 			await press(button('Reset all'));
 			expect(tried()).toEqual([]);
-			expect(section('Changed values')).toBeNull();
+			expect(section('Value changes')).toBeNull();
+			expect(document.querySelector('[role="dialog"][aria-label="Changes"]')?.textContent).toContain('Nothing is being tried.');
 		});
 
 		it('tells the frame again when it loads, so a new build of the stories has what is tried', async () => {

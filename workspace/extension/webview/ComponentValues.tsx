@@ -238,9 +238,8 @@ export const StillRows = ({ rows, name, others }: { rows: ValueRow[]; name: (pat
 
 /**
  * Values (Phase 1 of adjusting a component): what each instance of the component its stories draw measures, by property
- * and by variant, and whether each is a token's (named), worked out from one, or its own. Said to be as its
- * stories draw it, in light, on the version of the design system shown, so it is never taken for every use in a product;
- * and, when the design system has lengths no tag can be given, that a length said to be its own may be one of them.
+ * and by variant, and whether each is a token's (named), worked out from one, or its own, in the mode chosen (`shownMode`); and, when the
+ * design system has lengths no tag can be given, that a length said to be its own may be one of them.
  *
  * Each value opens its control (Phase 2): a token's opens the token's own (`onEditToken`), as Made from's rows do, since it
  * is the design system's and moves every component that draws with it; any other is tried on the instances that draw it,
@@ -249,7 +248,6 @@ export const StillRows = ({ rows, name, others }: { rows: ValueRow[]; name: (pat
 export const ComponentValues = ({
 	answer,
 	name,
-	version,
 	byPath,
 	tokenName,
 	others,
@@ -258,7 +256,6 @@ export const ComponentValues = ({
 }: {
 	answer: Ready;
 	name: string;
-	version: { branch: string; commit: string };
 	byPath: ReadonlyMap<string, DesignToken>;
 	/** A token's name, by its path; and the other components that draw with it, by name. */
 	tokenName: (path: string) => string;
@@ -308,9 +305,6 @@ export const ComponentValues = ({
 				<p className="quiet">{WHY_NONE[values.state](name)}</p>
 			) : (
 				<>
-					<p className="quiet" data-values-from>
-						As its stories draw it, in {mode}: {plural(values.instances, 'instance')}, on {version.branch} at {version.commit.slice(0, 7)}.
-					</p>
 					{values.unmarked > 0 && (
 						<p className="quiet" data-values-unmarked>
 							{plural(values.unmarked, 'length')} in the design system {values.unmarked === 1 ? 'is' : 'are'} written in em or %, which cannot be

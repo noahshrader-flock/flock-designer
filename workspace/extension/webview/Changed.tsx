@@ -63,18 +63,16 @@ export const BranchActions = <C,>({ controls, canSave = true }: { controls: Bran
 };
 
 /**
- * What has been changed (6.2), at the top of the Design System tab while there is a change or a branch: each change, from
- * what the design system has to what it is now, with a reset for each and for all, then what can be done with it. It
- * stays while a branch is kept, even with nothing changed, so a branch can still be proposed or left.
+ * The token changes being tried (6.2), as the Tokens group of a Changes dialog, in the panel and in a component's tab: each
+ * change, from what the design system has to what it is now, with a reset for each and for all.
  */
-export const Changed = ({ controls }: { controls: TokenBranchControls }) => {
+export const TokenChanges = () => {
 	const { edits, read, byPath, change, clear } = useTokenChanges();
-	if (edits.length === 0 && controls.branch === null) return null;
 	return (
-		<section aria-label="Changed" data-changed-tokens className="changed">
+		<section aria-label="Token changes" data-changed-tokens className="changed">
 			<div className="changed-header">
 				<span className="changed-title">
-					Changed <span className="section-count">{edits.length}</span>
+					Tokens <span className="section-count">{edits.length}</span>
 				</span>
 				{edits.length > 0 && (
 					<button type="button" className="link" onClick={clear}>
@@ -85,41 +83,52 @@ export const Changed = ({ controls }: { controls: TokenBranchControls }) => {
 			{edits.length === 0 ? (
 				<p className="quiet">Every token is as the design system has it.</p>
 			) : (
-				<>
-					<ul className="tokens">
-						{edits.map((e) => {
-							const was = read.get(e.path);
-							const now = byPath.get(e.path);
-							// A token the library no longer has (it moved since the change was made): named, and nothing else said of it.
-							if (!was || !now)
-								return (
-									<li key={e.path} data-change={e.path} className="token">
-										<span className="token-name">{e.path}</span>
-										<span className="change-values">No longer in the design system, so it is not tried.</span>
-									</li>
-								);
+				<ul className="tokens">
+					{edits.map((e) => {
+						const was = read.get(e.path);
+						const now = byPath.get(e.path);
+						// A token the library no longer has (it moved since the change was made): named, and nothing else said of it.
+						if (!was || !now)
 							return (
 								<li key={e.path} data-change={e.path} className="token">
-									<span className="token-line">
-										{now.kind === 'color' && <Swatch value={now.value} />}
-										<span className="token-name">{labelOf(was)}</span>
-									</span>
-									{/* Under its name, so a long name and its values each have the row's width. */}
-									<span className="change-values">
-										{readsAs(was, read)} → {readsAs(now, byPath)}
-									</span>
-									<span className="item-actions">
-										<IconButton size="small" icon="discard" label={`Reset ${labelOf(was)}`} onClick={() => change(was, null)} />
-									</span>
+									<span className="token-name">{e.path}</span>
+									<span className="change-values">No longer in the design system, so it is not tried.</span>
 								</li>
 							);
-						})}
-					</ul>
-					<p className="quiet">Tried in the stories of every component open, and in Primitives.</p>
-				</>
+						return (
+							<li key={e.path} data-change={e.path} className="token">
+								<span className="token-line">
+									{now.kind === 'color' && <Swatch value={now.value} />}
+									<span className="token-name">{labelOf(was)}</span>
+								</span>
+								{/* Under its name, so a long name and its values each have the row's width. */}
+								<span className="change-values">
+									{readsAs(was, read)} → {readsAs(now, byPath)}
+								</span>
+								<span className="item-actions">
+									<IconButton size="small" icon="discard" label={`Reset ${labelOf(was)}`} onClick={() => change(was, null)} />
+								</span>
+							</li>
+						);
+					})}
+				</ul>
 			)}
-			<BranchActions controls={controls} />
 		</section>
+	);
+};
+
+/**
+ * What has been changed (6.2), in the panel's Changes dialog: the token changes, where they are tried, then what can be done
+ * with them on their branch. A branch kept with nothing changed is still here, so it can be proposed or left.
+ */
+export const Changed = ({ controls }: { controls: TokenBranchControls }) => {
+	const { edits } = useTokenChanges();
+	return (
+		<>
+			<TokenChanges />
+			{edits.length > 0 && <p className="quiet">Tried in the stories of every component open, and in Primitives.</p>}
+			<BranchActions controls={controls} />
+		</>
 	);
 };
 

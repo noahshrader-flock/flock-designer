@@ -2,12 +2,12 @@ import { useEffect, useState } from 'react';
 import { previewAddress, previewProblem } from '../../src/shared/catalog';
 import type { CatalogComponent, DesignToken, TokenEdit, TriedValue } from '../../src/shared/contract';
 import { triedId } from '../../src/shared/contract';
+import { plural } from '../../src/shared/plural';
 import { undeclared } from '../../src/shared/wcag';
 import { TokenChangesProvider, useTokenChangesFor } from '../../src/renderer/tokenChanges';
 import { useStoryPreview } from '../../src/renderer/useStoryPreview';
 import type { ComponentLink } from '../src/messages';
 import { AskInWords } from './AskInWords';
-import { ChangeReach } from './ChangeReach';
 import { ComponentSections } from './ComponentSections';
 import { StoryFrame } from './StoryFrame';
 import { TokenEditor } from './TokenEditor';
@@ -18,7 +18,6 @@ import { ModeProvider } from './mode';
 import { useModeChoice } from './useModeChoice';
 import { Button } from './ui/Button';
 import { Notice, TabNote } from './ui/Notice';
-import { TryingNote } from './Changed';
 import { workspace } from './host';
 import { vscode } from './vscode';
 
@@ -64,6 +63,10 @@ export const ComponentTab = ({ id }: { id: string }) => {
 	const [editing, setEditing] = useState<DesignToken | null>(null);
 	// Asking in words (Phase 6): open while its dialog is.
 	const [asking, setAsking] = useState(false);
+	// Its Changes dialog: what is tried on it and the token changes, from the button beside Ask.
+	const [changesOpen, setChangesOpen] = useState(false);
+	// Whether a branch of its values is kept: then the button can be pressed with nothing tried, to propose or leave it.
+	const [kept, setKept] = useState(false);
 	const changes = useTokenChangesFor(ready?.tokens.tokens ?? [], edits, setEdits, ready?.accessibility ?? NOT_READ);
 	// The values tried on its instances (Phase 2): this tab's alone, kept nowhere, and forgotten when the design system moves
 	// to another version, whose instances are drawn anew, or another mode is chosen, so a value tried in one is never left on the other.
@@ -97,6 +100,8 @@ export const ComponentTab = ({ id }: { id: string }) => {
 		onEdit: setEditing,
 		onSource: ({ file, line }) => vscode().postMessage({ type: 'open-library-source', file, line }),
 	};
+	// What its Changes button counts: the values tried on it and the token changes being tried, which move its stories too.
+	const count = tried.size + edits.length;
 	const link = (to: ComponentLink) => vscode().postMessage({ type: 'component-link', id, link: to });
 	const open = (other: string) => vscode().postMessage({ type: 'open-component', id: other });
 	return (
@@ -109,6 +114,10 @@ export const ComponentTab = ({ id }: { id: string }) => {
 							<p className="quiet">{component.subtitle ?? component.group}</p>
 						</div>
 						<div className="tab-actions">
+							{/* Always there, so nothing moves when the first value is tried; with nothing tried and no branch, it cannot be pressed. */}
+							<Button variant="secondary" disabled={count === 0 && !kept} onClick={() => setChangesOpen(true)}>
+								{count === 0 ? 'No changes' : plural(count, 'change')}
+							</Button>
 							<Button variant="secondary" onClick={() => setAsking(true)}>
 								Ask…
 							</Button>
@@ -122,20 +131,18 @@ export const ComponentTab = ({ id }: { id: string }) => {
 							</Button>
 						</div>
 					</header>
-					<TryingNote count={edits.length} />
 					<div className="component-layout">
 						<div className="component-stories">
 							<Stories component={component} commit={ready.commit} edits={edits} tried={[...tried.values()]} />
 						</div>
 						<aside className="component-aside">
-							<ChangeReach edits={edits} component={component} components={ready.components} onOpen={open} />
 							<ComponentSections
 								component={component}
 								components={ready.components}
 								actions={actions}
-								version={{ branch: ready.branch, commit: ready.commit }}
 								trying={{ tried, onTry, onAll, onWrite, writes, writeError }}
 								onOpen={open}
+								changes={{ open: changesOpen, onClose: () => setChangesOpen(false), onKept: setKept }}
 							/>
 						</aside>
 					</div>
