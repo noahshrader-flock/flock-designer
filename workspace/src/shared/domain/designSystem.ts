@@ -200,6 +200,32 @@ export type ComponentVariants =
 	| { state: 'ready'; props: DeclaredProp[]; fixed: string[]; unvaried: { name: string; why: Unvaried }[]; values: ComponentValues };
 
 /**
+ * A hand-over branch as DSNR reads it from git (Process changes), against the base it was handed over on: not there; there with
+ * nothing committed on it; made from another base (it does not contain the one recorded); or ready, with its commits, each file
+ * changed (its lines added and removed, and why it is out of bounds, if it is), the lines in all, and whether it is large.
+ * What Propose checks.
+ */
+export type BranchReview =
+	| { state: 'missing' }
+	| { state: 'empty' }
+	| { state: 'off-base' }
+	| { state: 'ready'; commits: number; files: { path: string; added: number; removed: number; out: string | null }[]; lines: number; large: boolean };
+
+/** What one unit's change is when it is handed to Claude Code: the token edits being tried, or one component's values tried. */
+export type HandedChange = { edits: TokenEdit[] } | { tried: TriedValue[] };
+
+/**
+ * A unit of review handed to Claude Code (Process changes), as the panel shows it: the branch DSNR named for it, what was handed
+ * over (each change as a line), the branch as DSNR read it from git, and its draft pull request once it is proposed.
+ */
+export interface HandoffBranch {
+	branch: string;
+	lines: string[];
+	review: BranchReview;
+	pullRequest: { number: number; url: string } | null;
+}
+
+/**
  * How many values a component's instances can be tried with at once, as the core takes them and the extension keeps them:
  * far beyond any tab's, short of anything that could hurt.
  */

@@ -1,3 +1,5 @@
+import type { HandedChange } from '../../shared/contract';
+import { asRecord } from '../../shared/json';
 import { isObjectId } from '../../shared/sha';
 import { type Check, arg, handle } from '../handle';
 import { tokenEditsOf } from '../services/tokenEdits';
@@ -16,6 +18,14 @@ const ds = {
 	}) as Check<string>,
 	edits: tokenEditsOf as Check<ReturnType<typeof tokenEditsOf>>,
 	tried: triedValuesOf as Check<ReturnType<typeof triedValuesOf>>,
+	/** What one unit hands to Claude Code: its token edits, or a component's values tried, each checked as those always are. */
+	handed: ((v) => {
+		const r = asRecord(v);
+		const keys = Object.keys(r);
+		if (keys.length === 1 && keys[0] === 'edits') return { edits: tokenEditsOf(r.edits) };
+		if (keys.length === 1 && keys[0] === 'tried') return { tried: triedValuesOf(r.tried) };
+		throw new Error('A hand-over is the token edits being tried, or a component’s values tried.');
+	}) as Check<HandedChange>,
 	/** One value tried, checked as one of a list is. */
 	value: ((v) => triedValuesOf([v])[0]) as Check<ReturnType<typeof triedValuesOf>[number]>,
 	/** The voice and tone as it is saved: text, far beyond any real one and short of anything that could hurt. */
@@ -44,6 +54,7 @@ export const registerDesignSystem = (d: IpcDeps): void => {
 		tokenBranches,
 		valueAgent,
 		valueBranches,
+		handoffBranches,
 		valueSources,
 		voiceFile,
 		warm,
@@ -68,6 +79,12 @@ export const registerDesignSystem = (d: IpcDeps): void => {
 	handle('valueSources', [ds.storyFile, ds.tried], (file, tried) => valueSources.of(file, tried));
 	handle('valueBranch', [ds.storyFile], (file) => valueBranches.current(file));
 	handle('valueBranchFiles', [], () => valueBranches.scopes());
+	// Process changes: a unit by its story file, or the tokens (none); what it hands over checked as a change always is.
+	handle('handOverChanges', [arg.optional(ds.storyFile), ds.handed], (file, change) => handoffBranches.start(file ?? '', change));
+	handle('handoffBranch', [arg.optional(ds.storyFile)], (file) => handoffBranches.current(file ?? ''));
+	handle('handoffFiles', [], () => handoffBranches.scopes());
+	handle('proposeHandoff', [arg.optional(ds.storyFile), arg.flag], (file, confirmed) => handoffBranches.propose(file ?? '', confirmed));
+	handle('forgetHandoff', [arg.optional(ds.storyFile)], (file) => (handoffBranches.forget(file ?? ''), null));
 	// Only on the person's press: it runs the agent, in a copy of the library.
 	handle('writeValue', [ds.storyFile, ds.value], async (file, value) => {
 		await valueAgent.write(file, value);

@@ -1,7 +1,9 @@
 import { withPageTheme } from './services/pageTheme';
 import { existsSync, readFileSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
-import type { AccessibilityResult, Checkout, Person, PublishStatus } from '../shared/contract';
+import type { AccessibilityResult, Checkout, Person, PublishStatus, TriedValue } from '../shared/contract';
+import { reachLine, tokenChanges, valueChanges } from '../shared/processChanges';
+import { storyComponent } from '../shared/valueNames';
 import { statesOf } from '../shared/prototypeStates';
 import { type Check, type EventSink, arg, clearRoutes } from './handle';
 import type { Ports } from './ports';
@@ -15,7 +17,9 @@ import { ComponentPictures } from './services/componentPictures';
 import { ComponentTokens } from './services/componentTokens';
 import { singleFlight } from './services/concurrency';
 import { DESCRIPTOR_PATH, readDescriptor, type WorkspaceDescriptor } from './services/descriptor';
-import { DesignLibrary } from './services/designLibrary';
+import { DesignLibrary, libraryCommit, systemReads } from './services/designLibrary';
+import { readTokens } from './services/designTokens';
+import { HandoffBranches } from './services/handoffBranches';
 import { DesignRepo } from '../host/designRepo';
 import { designStore } from './services/designStore';
 import { syncRecords } from './services/designSync';
@@ -40,7 +44,7 @@ import { StoryPreviews } from './services/storyPreviews';
 import { TokenBranches } from './services/tokenBranches';
 import { ValueBranches } from './services/valueBranches';
 import { ValueSources } from './services/valueSources';
-import { ValueAgent } from './services/valueAgent';
+import { DESIGN_SYSTEM_CODE, ValueAgent } from './services/valueAgent';
 import { ComponentVariants } from './services/componentVariants';
 import { typeLibs } from './services/componentProps';
 import { VOICE_NEEDS_CLI, VoiceAndToneFile } from './services/voiceAndTone';
@@ -271,6 +275,35 @@ export const ipcDeps = ({
 	// Where the values tried on a component are written, found as they are tried, and the branch each component's are saved on (Phase 4).
 	const valueSources = new ValueSources({ tokens: componentTokens, previews, measure: ports.headless.measure, agent: valueAgent });
 	const valueBranches = new ValueBranches({ system: shownSystem, file: valueBranchesFile, tools: ports.shareTools, sources: valueSources });
+	// Process changes: one unit (the tokens, or one component's values) handed to Claude Code on a branch DSNR names, then read from
+	// git and proposed. Its lines are said as a Save's are, with where each is written; what it reaches, as the Values' reach is.
+	const valuesFound = async (file: string, tried: TriedValue[]) => {
+		const found = await valueSources.of(file, tried);
+		return found.state === 'ready' ? found : null;
+	};
+	const handoffBranches = new HandoffBranches({
+		system: shownSystem,
+		file: join(dirname(valueBranchesFile), 'handoff-branches.json'),
+		tools: ports.shareTools,
+		rules: () => readSkillText(DESIGN_SYSTEM_CODE),
+		changes: async (scope, change) => {
+			const system = shownSystem();
+			if (system === null) throw new Error('There is no design system connected.');
+			if ('edits' in change) {
+				const commit = await libraryCommit(system.root, system.branch);
+				if (commit === null) throw new Error(`The library has no ${system.branch} branch from GitHub to read its tokens from.`);
+				return tokenChanges((await readTokens(await systemReads(system, commit))).tokens, change.edits);
+			}
+			const drawn = await componentTokens.of(scope);
+			const rows = drawn.state === 'ready' && drawn.values.state === 'read' ? drawn.values.rows.light : null;
+			const found = await valuesFound(scope, change.tried);
+			const places = new Map((found?.values ?? []).flatMap((v) => (v.state === 'found' ? [[v.id, v.places] as const] : [])));
+			return valueChanges(storyComponent(scope), rows, change.tried, places);
+		},
+		reach: async (scope, change) =>
+			reachLine('edits' in change ? await componentTokens.reach(change.edits) : ((await valuesFound(scope, change.tried))?.reach ?? null)),
+		saved: async (scope) => (scope === '' ? (await tokenBranches.current()) !== null : (await valueBranches.current(scope)) !== null),
+	});
 	// The voice and tone (T9): the connected design system's, read, saved and proposed with the person's own command line.
 	const voiceFile = (): VoiceAndToneFile => {
 		const system = shownSystem();
@@ -411,6 +444,7 @@ export const ipcDeps = ({
 		tokenBranches,
 		valueSources,
 		valueBranches,
+		handoffBranches,
 		valueAgent,
 		componentVariants,
 		voiceFile,

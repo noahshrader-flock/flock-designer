@@ -14,6 +14,8 @@ import type {
 	TriedValue,
 	ComponentVariants,
 	ValueBranch,
+	HandedChange,
+	HandoffBranch,
 	ValueSources,
 } from '../domain/designSystem';
 import type {
@@ -82,6 +84,20 @@ export interface WorkspaceApi {
 	valueSources(file: string, tried: TriedValue[]): Promise<Result<ValueSources>>;
 	/** The branch a component's values are kept on, or null when none has been saved (Phase 4). */
 	valueBranch(file: string): Promise<Result<ValueBranch | null>>;
+	/**
+	 * Process changes: one unit (the tokens, `null`; or a component's values, by its story file) handed to Claude Code, on a branch
+	 * DSNR names: refused, in words, on a checkout with unfinished work or with a branch of the unit's in play; else its branch and
+	 * the prompt to open Claude Code with, in the library's root.
+	 */
+	handOverChanges(file: string | null, change: HandedChange): Promise<Result<{ root: string; branch: string; prompt: string }>>;
+	/** A unit's hand-over, its branch read from git now, or null when there is none. */
+	handoffBranch(file: string | null): Promise<Result<HandoffBranch | null>>;
+	/** The components, by story file, handed to Claude Code (the tokens' as an empty one): what the panel's Changes lists. */
+	handoffFiles(): Promise<Result<string[]>>;
+	/** Pushes a unit's hand-over branch and opens its draft pull request; one the rules flag only when `confirmed`. */
+	proposeHandoff(file: string | null, confirmed: boolean): Promise<Result<HandoffBranch>>;
+	/** Forgets a unit's hand-over, so it can be handed over again or saved; its branch and any pull request stay. */
+	forgetHandoff(file: string | null): Promise<Result<null>>;
 	/** The components, by story file, that have a branch of their values kept: what the panel's Changes lists with nothing tried. */
 	valueBranchFiles(): Promise<Result<string[]>>;
 	/** Has the agent write a value tried on a component, or make it follow a token (Phase 4.5, 4.6); what it wrote is in `valueSources`. */
@@ -268,6 +284,11 @@ export const INVOKE = [
 	'valueSources',
 	'valueBranch',
 	'valueBranchFiles',
+	'handOverChanges',
+	'handoffBranch',
+	'handoffFiles',
+	'proposeHandoff',
+	'forgetHandoff',
 	'writeValue',
 	'saveValues',
 	'proposeValues',
