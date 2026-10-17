@@ -6,6 +6,7 @@
  * the rules would flag is proposed only when the person says so.
  */
 import type { ConnectedDesignSystem, HandedChange, HandoffBranch } from '../../shared/contract';
+import { CHANGE_REQUEST_TEMPLATES } from '../../shared/hostUrls';
 import { asRecord } from '../../shared/json';
 import { type HandoffChange, type HandoffGroup, changeLine, flagged, handoffPrompt, proposalOf } from '../../shared/processChanges';
 import { storyComponent } from '../../shared/valueNames';
@@ -29,16 +30,6 @@ interface Kept {
 
 const KIND = 'handoff';
 const PATTERN = dsnrBranchPattern(KIND);
-
-/** Where a repository keeps its pull request template, as GitHub reads it: one found is used; none, or several, none is. */
-const TEMPLATES = [
-	'.github/pull_request_template.md',
-	'.github/PULL_REQUEST_TEMPLATE.md',
-	'pull_request_template.md',
-	'PULL_REQUEST_TEMPLATE.md',
-	'docs/pull_request_template.md',
-	'docs/PULL_REQUEST_TEMPLATE.md',
-];
 
 export interface HandoffBranchesDeps {
 	system: () => ConnectedDesignSystem | null;
@@ -193,7 +184,7 @@ const ownHandoffs = (raw: unknown): Record<string, Kept> =>
 /** The repository's pull request template, as GitHub has its base: one found, else none. */
 const templateIn = async (root: string, baseBranch: string): Promise<string | null> => {
 	const found: string[] = [];
-	for (const path of TEMPLATES) {
+	for (const path of CHANGE_REQUEST_TEMPLATES) {
 		const text = await git(root, ['show', `refs/remotes/origin/${baseBranch}:${path}`]).catch(() => null);
 		if (text !== null) found.push(text);
 	}

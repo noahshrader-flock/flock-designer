@@ -12,6 +12,14 @@ export const CLI_INSTALL_URL = 'https://cli.github.com';
 /** Where a person is sent to sign in to a GitHub App from a web page (the authorization-code flow, with PKCE). */
 export const SIGN_IN_AUTHORIZE_URL = `${WEB}/login/oauth/authorize`;
 
+/**
+ * Where a repository keeps its change request template, as the host reads it (`.github/`, the root, or `docs/`, in either
+ * case): one found is used; none, or several, none is.
+ */
+export const CHANGE_REQUEST_TEMPLATES = ['.github/', '', 'docs/'].flatMap((folder) =>
+	['pull_request_template.md', 'PULL_REQUEST_TEMPLATE.md'].map((name) => `${folder}${name}`),
+);
+
 /** Where a repository's Pages site is: `<owner>.github.io/<repo>/`, its owner as a host name is, in lower case. */
 export const pagesSiteUrl = ({ owner, repo }: { owner: string; repo: string }): string =>
 	`https://${owner.toLowerCase()}.github.io/${encodeURIComponent(repo)}/`;
