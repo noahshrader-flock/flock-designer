@@ -20,6 +20,7 @@ import { DESCRIPTOR_PATH, readDescriptor, type WorkspaceDescriptor } from './ser
 import { DesignLibrary, libraryCommit, systemReads } from './services/designLibrary';
 import { readTokens } from './services/designTokens';
 import { HandoffBranches } from './services/handoffBranches';
+import { LibraryShown } from './services/libraryShown';
 import { DesignRepo } from '../host/designRepo';
 import { designStore } from './services/designStore';
 import { syncRecords } from './services/designSync';
@@ -241,16 +242,20 @@ export const ipcDeps = ({
 	};
 	const signedInLogin = (): string | null => me()?.login ?? null;
 
-	const library = designLibrary ?? new DesignLibrary({ systems: designSystems });
+	// Which commit the tab reads: the library's own branch, or a branch handed to Claude Code (Preview this branch), told to
+	// every page when it changes, so each reads the library again.
+	const libraryShown = new LibraryShown((showing) => emit('onLibraryShown', showing));
+	const library = designLibrary ?? new DesignLibrary({ systems: designSystems, at: libraryShown.at });
 	const shownSystem = () => {
 		const shown = library.current();
 		return typeof shown === 'string' ? null : shown;
 	};
-	const previews = new StoryPreviews({ system: shownSystem, folder: storyPreviewsRoot, server: prototypeServer });
+	const previews = new StoryPreviews({ system: shownSystem, folder: storyPreviewsRoot, server: prototypeServer, at: libraryShown.at });
 	// Which tokens each component draws with (T6), and its picture (P5), from one drawing pass.
 	const componentPictures = new ComponentPictures({ folder: componentPicturesRoot, server: prototypeServer, recipe: componentPictureRecipe });
 	const componentTokens =
-		injectedComponentTokens ?? new ComponentTokens({ system: shownSystem, previews, measure: ports.headless.measure, pictures: componentPictures });
+		injectedComponentTokens ??
+		new ComponentTokens({ system: shownSystem, previews, measure: ports.headless.measure, pictures: componentPictures, at: libraryShown.at });
 	// The previews and the index are got ready in the background, so a component opened later is drawn at once: as the app
 	// opens, and whenever the library has been read (it may have moved). For a commit already ready it is nothing.
 	const warm = () => void componentTokens.warm();
@@ -445,6 +450,7 @@ export const ipcDeps = ({
 		valueSources,
 		valueBranches,
 		handoffBranches,
+		libraryShown,
 		valueAgent,
 		componentVariants,
 		voiceFile,

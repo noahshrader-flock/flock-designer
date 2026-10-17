@@ -1732,6 +1732,44 @@ describe('every change being tried, in the panel’s Changes: the tokens and eac
 			expect(button('Process changes')).toBeUndefined();
 		});
 
+		it('previews a ready branch in every page, says so at the top, holds Save back while it is shown, and shows develop again', async () => {
+			await designOpen();
+			await say({ type: 'token-edits', edits: EDITS });
+			await press(count());
+			await answerFor('handoffBranch', null, { branch: BRANCH, lines: [], review: { ...READY, files: [READY.files[0]] }, pullRequest: null });
+			await press(button('Preview this branch'));
+			expect(calls('showHandoff').at(-1)?.args).toEqual([null]);
+			await answer('showHandoff', null);
+			// Every page is told, and reads the library again: here, the branch's tip.
+			const reads = calls('designSystemCatalog').length;
+			await say({ type: 'event', name: 'onLibraryShown', payload: BRANCH });
+			expect(calls('designSystemCatalog').length).toBe(reads + 1);
+			expect(calls('designSystemCatalog').at(-1)?.args).toEqual([false]);
+			await answer('designSystemCatalog', { ...SAMPLE_CATALOG, commit: 'f00d42', showing: BRANCH });
+			const note = document.querySelector('[data-showing]') as HTMLElement;
+			expect(note.textContent).toContain(`Showing ${BRANCH}, Claude Code’s branch, not develop.`);
+			expect(button('Stop previewing')).toBeDefined();
+			await press(button('Show develop'));
+			expect(calls('showLibraryBranch')).toHaveLength(1);
+			await press(button('Stop previewing'));
+			expect(calls('showLibraryBranch')).toHaveLength(2);
+		});
+
+		it('offers neither Save nor Process changes while another branch is shown', async () => {
+			await show();
+			await say({ type: 'context', context: OPEN });
+			await answer('listProjects', SAMPLE_PROJECTS);
+			await press(options()[1]!);
+			await answer('designSystems', { systems: [{ id: SYSTEM, name: 'FUI' }], current: SYSTEM });
+			await answer('designSystemCatalog', { ...SAMPLE_CATALOG, showing: BRANCH });
+			await answer('tokenBranch', null);
+			await say({ type: 'token-edits', edits: EDITS });
+			await press(count());
+			await answerFor('handoffBranch', null, null);
+			expect(button('Save to a branch')?.disabled).toBe(true);
+			expect(button('Process changes')?.disabled).toBe(true);
+		});
+
 		it('lists a component handed over with nothing tried, by its own hand-over', async () => {
 			await designOpen();
 			await press(count());

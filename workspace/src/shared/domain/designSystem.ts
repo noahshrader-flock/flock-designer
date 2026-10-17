@@ -426,6 +426,8 @@ export type Catalog =
 			state: 'ready';
 			branch: string;
 			commit: string;
+			/** The branch handed to Claude Code whose tip `commit` is, shown in place of `branch` (Preview this branch); else null. */
+			showing: string | null;
 			committedAt: string;
 			update: CatalogUpdate;
 			components: CatalogComponent[];

@@ -41,11 +41,14 @@ export const useCatalogRead = (onRead: (catalog: Catalog) => void = () => undefi
 		if (first?.state === 'ready' && first.update === 'updating') void sync();
 	}, [ask, sync]);
 
+	/** Reads it again from what the clone has, without asking GitHub: when another commit of it is shown (`onLibraryShown`). */
+	const reread = useCallback(() => void ask(false), [ask]);
+
 	/** Forgets what was read, for another design system shown. */
 	const forget = useCallback(() => {
 		setCatalog(null);
 		setError(null);
 	}, []);
 
-	return { catalog, error, setError, syncing, sync, firstRead, forget };
+	return { catalog, error, setError, syncing, sync, firstRead, forget, reread };
 };

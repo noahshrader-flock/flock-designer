@@ -6,6 +6,7 @@ import { LARGE, flagged } from '../../src/shared/processChanges';
 import { CHANGE_REQUEST } from '../../src/shared/vocabulary';
 import { Button } from './ui/Button';
 import { ErrorLine } from './ui/Dialog';
+import { useShowing } from './Showing';
 import { Icon } from './ui/Icon';
 
 /** What a hand-over's branch is, as DSNR read it from git: not made yet, made with nothing committed, made from the wrong base, or its size. */
@@ -45,11 +46,13 @@ const ReviewLine = ({ review }: { review: BranchReview }) => {
  * A unit handed to Claude Code (Process changes), in place of Save while it is in play: its branch, what DSNR read of it from
  * git (each file it changed, with what the rules keep out flagged), its draft pull request once proposed, then Propose, once
  * it is ready, and Start over. A flagged branch is proposed only when the person says so a second time; its pull request then
- * says what was flagged. Start over forgets the hand-over; the branch stays, with any pull request.
+ * says what was flagged. Preview this branch shows what Claude Code committed in every page's previews, in place of the
+ * library's branch, until it is stopped (Phase 2). Start over forgets the hand-over; the branch stays, with any pull request.
  */
 export const HandoffActions = ({ controls }: { controls: HandoffControls }) => {
-	const { handoff, handed, busy, error, propose, startOver } = controls;
+	const { handoff, handed, busy, error, propose, startOver, preview } = controls;
 	const [confirming, setConfirming] = useState(false);
+	const showing = useShowing();
 	if (handoff === null) return null;
 	const { review, pullRequest } = handoff;
 	const ready = review.state === 'ready' ? review : null;
@@ -103,6 +106,11 @@ export const HandoffActions = ({ controls }: { controls: HandoffControls }) => {
 					{ready && !pullRequest && (
 						<Button disabled={busy !== null} onClick={() => (flagged(ready) ? setConfirming(true) : propose(false))}>
 							{busy === 'proposing' ? `Opening a draft ${CHANGE_REQUEST}…` : 'Propose'}
+						</Button>
+					)}
+					{ready && (
+						<Button variant="secondary" disabled={busy !== null} onClick={() => preview(showing !== handoff.branch)}>
+							{showing === handoff.branch ? 'Stop previewing' : 'Preview this branch'}
 						</Button>
 					)}
 					<Button variant="ghost" disabled={busy !== null} onClick={startOver}>

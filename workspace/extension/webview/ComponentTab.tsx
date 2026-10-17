@@ -10,6 +10,7 @@ import { ComponentSections } from './ComponentSections';
 import { StoryFrame } from './StoryFrame';
 import { TokenEditor } from './TokenEditor';
 import type { TokenActions } from './Tokens';
+import { ShowingNote } from './Showing';
 import { useTabCatalog } from './useCatalog';
 import { useTrial } from './useTrial';
 import { ModeProvider } from './mode';
@@ -107,12 +108,15 @@ export const ComponentTab = ({ id }: { id: string }) => {
 								</Button>
 							</div>
 						</header>
+						<ShowingNote showing={ready.showing} branch={ready.branch} />
 						<div className="component-layout">
 							<div className="component-stories">
 								<Stories component={component} commit={ready.commit} edits={edits} tried={[...tried.values()]} />
 							</div>
 							<aside className="component-aside">
 								<ComponentSections
+									// Asked again on another commit shown (Preview this branch): what it says is that commit's.
+									key={ready.commit}
 									component={component}
 									components={ready.components}
 									actions={actions}

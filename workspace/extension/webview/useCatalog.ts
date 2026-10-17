@@ -17,7 +17,7 @@ export interface CatalogRead {
 /**
  * The design system the core shows (the one VS Code found, `showFound`), read as the app's tab reads it (`useCatalogRead`):
  * once `enabled`, at once from what its clone has, then again once GitHub has been asked for changes; after that only on
- * `sync`. Read afresh when another is found (`root`). Its name is the core's, as connecting it would name it. `onRead` is
+ * `sync`. Read afresh when another is found (`root`), and again when another commit of it is shown (`onLibraryShown`). Its name is the core's, as connecting it would name it. `onRead` is
  * told each catalog read, for what is kept of the change being tried.
  */
 export const useCatalog = (
@@ -25,7 +25,7 @@ export const useCatalog = (
 	root: string | null,
 	onRead: (catalog: Catalog) => void,
 ): CatalogRead & { sync: () => Promise<void> } => {
-	const { catalog, error, syncing, sync, firstRead, forget } = useCatalogRead(onRead);
+	const { catalog, error, syncing, sync, firstRead, forget, reread } = useCatalogRead(onRead);
 	const [shown, setShown] = useState<{ id: string; name: string } | null>(null);
 	// The root it was last read for: another found is read afresh, the same one is not read again when shown again.
 	const readFor = useRef<string | null>(null);
@@ -40,12 +40,15 @@ export const useCatalog = (
 		void firstRead();
 	}, [enabled, root, firstRead, forget]);
 
+	// Read again whenever another commit of it is shown (Preview this branch), as every page is.
+	useEffect(() => (enabled ? workspace().onLibraryShown(reread) : undefined), [enabled, reread]);
+
 	return { catalog, id: shown?.id ?? null, name: shown?.name ?? null, error, syncing, sync };
 };
 
 /**
  * The design system shown, as a design system's tab reads it: once, when it opens, after saying it is ready (so the
- * extension tells it the change being tried), and again on the note's Try again. `ready` once it is read and can be shown; else `note`,
+ * extension tells it the change being tried), again on the note's Try again, and when another commit of it is shown. `ready` once it is read and can be shown; else `note`,
  * what the tab says instead: that it is being read, what went wrong, or that it cannot be read (the panel says why).
  */
 export const useTabCatalog = (): {
@@ -56,6 +59,8 @@ export const useTabCatalog = (): {
 	const [error, setError] = useState<string | null>(null);
 	const [asks, setAsks] = useState(0);
 	useEffect(() => vscode().postMessage({ type: 'ready' }), []);
+	// Read again whenever another commit of it is shown (Preview this branch).
+	useEffect(() => workspace().onLibraryShown(() => setAsks((n) => n + 1)), []);
 	useEffect(() => {
 		setError(null);
 		void workspace()

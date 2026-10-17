@@ -30,7 +30,7 @@ import type { ComponentPictures } from './componentPictures';
 import { type AxeFound, countsOf } from '../../shared/accessibility';
 import { designSystemOf } from '../../shared/catalog';
 import { readCatalog } from './componentCatalog';
-import { libraryCommit, libraryTarget, listedComponents, systemReads } from './designLibrary';
+import { type LibraryAt, baseAt, libraryTarget, listedComponents, systemReads } from './designLibrary';
 import { resultOf } from './accessibilityCheck';
 import { readTokens } from './designTokens';
 import { readValues } from './componentValues';
@@ -172,6 +172,8 @@ export interface ComponentTokensDeps {
 	measure: Measure;
 	/** Where the pictures the same pass takes are kept (P5). */
 	pictures: Pick<ComponentPictures, 'keep' | 'of'>;
+	/** The commit the tab reads (`LibraryShown`): the library's own branch unless another is shown. */
+	at?: LibraryAt;
 }
 
 /**
@@ -377,7 +379,7 @@ export class ComponentTokens {
 	private async started(): Promise<{ index: Building } | { error: string }> {
 		const system = this.deps.system();
 		if (system === null) return { error: 'There is no design system connected.' };
-		const commit = await libraryCommit(system.root, system.branch);
+		const commit = (await (this.deps.at ?? baseAt)(system))?.commit ?? null;
 		if (commit === null) return { error: `The library has no ${system.branch} branch from ${HOST} to read.` };
 		const key = `${commit}:${system.folder}`;
 		if (this.index?.key !== key) {

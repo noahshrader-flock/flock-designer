@@ -329,6 +329,7 @@ describe.skipIf(NO_CHROME)('a component’s Values, in the side pane, in the bro
 				processChanges: () => undefined,
 				propose: () => undefined,
 				startOver: () => undefined,
+				preview: () => undefined,
 			},
 		}),
 	);
@@ -405,6 +406,7 @@ describe.skipIf(NO_CHROME)('a component’s Values, in the side pane, in the bro
 				processChanges: () => undefined,
 				propose: () => undefined,
 				startOver: () => undefined,
+				preview: () => undefined,
 			},
 		}),
 	);

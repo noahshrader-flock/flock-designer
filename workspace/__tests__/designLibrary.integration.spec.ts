@@ -234,6 +234,7 @@ describe('what the tab is told', () => {
 		state: 'ready',
 		branch: 'develop',
 		commit: 'c',
+		showing: null,
 		committedAt: 'd',
 		update,
 		components: [],

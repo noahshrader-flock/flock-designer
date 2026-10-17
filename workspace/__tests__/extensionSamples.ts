@@ -132,6 +132,7 @@ export const SAMPLE_CATALOG: Extract<Catalog, { state: 'ready' }> = {
 	state: 'ready',
 	branch: 'develop',
 	commit: 'abc123',
+	showing: null,
 	committedAt: '2026-10-12T10:00:00Z',
 	update: 'unchanged',
 	components: [

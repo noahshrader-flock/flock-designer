@@ -6,6 +6,7 @@ import { TextEncoder as NodeTextEncoder } from 'node:util';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PREVIEW_HEIGHT, PREVIEW_SHOW, previewAddress } from '../src/shared/catalog';
 import { PrototypeServer } from '../src/main/services/prototypeServer';
+import { LibraryShown } from '../src/main/services/libraryShown';
 import { buildPreviews, hasPackages, notInstalled, previewEntry, StoryPreviews, unresolved } from '../src/main/services/storyPreviews';
 import type { CatalogReads } from '../src/main/services/componentCatalog';
 import { editedFiles } from '../src/main/services/tokenEdits';
@@ -203,6 +204,28 @@ describe('building the previews', () => {
 		expect([...root.querySelectorAll('[data-story]')].map((s) => s.getAttribute('data-story'))).toEqual(['Default', 'Other']);
 		expect(root.textContent).toContain('One');
 		expect(root.textContent).not.toContain('Two');
+	});
+
+	it('builds a branch handed to Claude Code at its tip while it is shown, and the library’s branch again once it is not (Phase 2)', async () => {
+		makeLibrary(LIBRARY);
+		const branch = 'dsnr/handoff-20261017-ab12';
+		g(clone, 'config', 'user.name', 'Noah');
+		g(clone, 'config', 'user.email', 'noah@example.com');
+		g(clone, 'switch', '-q', '-c', branch, 'origin/develop');
+		write(clone, { 'src/components/FSTwo/FSTwo.stories.tsx': story('Inputs/FSTwo', `export const Default = () => <p>Two, by Claude Code</p>;`) });
+		// Its own file only: the clone's installed packages are not the library's.
+		g(clone, 'add', 'src/components/FSTwo/FSTwo.stories.tsx');
+		g(clone, 'commit', '-q', '-m', 'Claude Code');
+		g(clone, 'switch', '-q', 'develop');
+		const shown = new LibraryShown(() => undefined);
+		const p = previews({ at: shown.at });
+		const system = connected(clone)()!;
+		shown.show(system, '', branch);
+		const onBranch = await ready(p);
+		expect(onBranch).toContain(`previews-${g(clone, 'rev-parse', branch).trim().slice(0, 12)}-`);
+		expect((await render(onBranch, 'src/components/FSTwo/FSTwo.stories.tsx')).textContent).toContain('Two, by Claude Code');
+		shown.stop(system);
+		expect(await ready(p)).toContain(`previews-${g(clone, 'rev-parse', 'origin/develop').trim().slice(0, 12)}-`);
 	});
 
 	it('tells the library’s set-up its theme is dark in dark, as Storybook’s themes addon is told, and nothing of it in light', async () => {

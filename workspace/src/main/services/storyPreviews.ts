@@ -20,7 +20,7 @@ import { designSystemOf } from '../../shared/catalog';
 import type { ConnectedDesignSystem, StoryPreview, TokenEdit } from '../../shared/contract';
 import { type CatalogReads, readCatalog } from './componentCatalog';
 import { packageFirst, previewSetup, storybookDefines } from './storybookSetup';
-import { inLibrary, libraryCommit, systemReads } from './designLibrary';
+import { type LibraryAt, baseAt, inLibrary, systemReads } from './designLibrary';
 import { exportCommit } from './git';
 import type { BuildContext, BuildOptions, Plugin } from 'esbuild';
 import { ASSET_TYPES, type PrototypeServer } from './prototypeServer';
@@ -503,6 +503,8 @@ export interface StoryPreviewsDeps {
 	server: PrototypeServer;
 	/** How the stories are built. Given for tests, to count builds. */
 	build?: typeof buildPreviews;
+	/** The commit the tab reads (`LibraryShown`): the library's own branch unless another is shown. */
+	at?: LibraryAt;
 }
 
 /** The build for one commit of one design system: what a change is tried on. */
@@ -569,7 +571,7 @@ export class StoryPreviews {
 		const system = this.deps.system();
 		if (system === null) return { state: 'no-library' };
 		const { root, branch, folder } = system;
-		const commit = await libraryCommit(root, branch);
+		const commit = (await (this.deps.at ?? baseAt)(system))?.commit ?? null;
 		if (commit === null) return { state: 'failed', error: `The library has no ${branch} branch from ${HOST} to build.` };
 		// The packages are the repository's, or in a monorepo the design system package's own.
 		if (!hasPackages(root) && !(folder !== '' && hasPackages(join(root, folder)))) return { state: 'no-packages', root };

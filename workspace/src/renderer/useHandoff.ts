@@ -10,13 +10,15 @@ export interface HandoffControls {
 	handoff: HandoffBranch | null;
 	/** Where it went, said once it is handed over (`handedTo`), until another is shown or it is started over. */
 	handed: string | null;
-	busy: 'handing' | 'proposing' | null;
+	busy: 'handing' | 'proposing' | 'showing' | null;
 	error: string | null;
 	processChanges: () => void;
 	/** Proposes its branch; one the rules flag only when `confirmed`, which the person says on purpose. */
 	propose: (confirmed: boolean) => void;
 	/** Forgets the hand-over, so it can be handed over again or saved. The branch and any pull request stay. */
 	startOver: () => void;
+	/** Shows its branch in the previews in place of the library's (`on`), or the library's again (Phase 2). */
+	preview: (on: boolean) => void;
 }
 
 /**
@@ -65,7 +67,7 @@ export const useHandoff = ({
 		return () => clearInterval(timer);
 	}, [waiting, read]);
 
-	const run = async <T>(what: 'handing' | 'proposing', act: () => Promise<Result<T>>, then: (value: T) => void) => {
+	const run = async <T>(what: NonNullable<HandoffControls['busy']>, act: () => Promise<Result<T>>, then: (value: T) => void) => {
 		const { epoch } = now.current;
 		setBusy(what);
 		setError(null);
@@ -91,6 +93,13 @@ export const useHandoff = ({
 				},
 			),
 		propose: (confirmed) => void run('proposing', () => window.workspace.proposeHandoff(file, confirmed), setHandoff),
+		// Every page is told what is shown, and reads the library again: nothing is kept here.
+		preview: (on) =>
+			void run(
+				'showing',
+				() => (on ? window.workspace.showHandoff(file) : window.workspace.showLibraryBranch()),
+				() => undefined,
+			),
 		// Only once it is forgotten: a hand-over still kept would come back the next time it is read.
 		startOver: () =>
 			void window.workspace.forgetHandoff(file).then((r) => {

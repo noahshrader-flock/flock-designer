@@ -5,6 +5,7 @@ import { type Primitive, byPrimitive, coverageOf, inOrder, listed, primitiveName
 import { typeSpecimens } from '../../src/shared/specimens';
 import { nameOf, pixelsOf, readsAs, withEdits } from '../../src/shared/tokens';
 import { StoryFrame } from './StoryFrame';
+import { ShowingNote } from './Showing';
 import { useTabCatalog } from './useCatalog';
 import { useTrial } from './useTrial';
 import { TabNote } from './ui/Notice';
@@ -174,6 +175,7 @@ export const PrimitivesTab = () => {
 			<header className="tab-header">
 				<h1 className="tab-title">Primitives</h1>
 			</header>
+			<ShowingNote showing={ready.showing} branch={ready.branch} />
 			<div data-coverage className="chips">
 				{chips.map((c) => (
 					<button

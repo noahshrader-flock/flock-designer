@@ -99,6 +99,15 @@ export interface WorkspaceApi {
 	proposeHandoff(file: string | null, confirmed: boolean): Promise<Result<HandoffBranch>>;
 	/** Forgets a unit's hand-over, so it can be handed over again or saved; its branch and any pull request stay. */
 	forgetHandoff(file: string | null): Promise<Result<null>>;
+	/**
+	 * Preview this branch: the tab reads a unit's hand-over branch, at its tip, in place of the library's branch, once it is read
+	 * ready from git. Every page is told (`onLibraryShown`). While it is shown, nothing is saved or handed over.
+	 */
+	showHandoff(file: string | null): Promise<Result<null>>;
+	/** The library's own branch shown again. */
+	showLibraryBranch(): Promise<Result<null>>;
+	/** Told the branch shown in place of the library's (null: the library's own) whenever it changes. */
+	onLibraryShown(listener: (showing: string | null) => void): () => void;
 	/** The components, by story file, that have a branch of their values kept: what the panel's Changes lists with nothing tried. */
 	valueBranchFiles(): Promise<Result<string[]>>;
 	/** Has the agent write a value tried on a component, or make it follow a token (Phase 4.5, 4.6); what it wrote is in `valueSources`. */
@@ -290,6 +299,8 @@ export const INVOKE = [
 	'handoffFiles',
 	'proposeHandoff',
 	'forgetHandoff',
+	'showHandoff',
+	'showLibraryBranch',
 	'writeValue',
 	'saveValues',
 	'proposeValues',
@@ -353,6 +364,7 @@ export const EVENTS = {
 	onPreviewStatus: 'previewStatus',
 	onAgentLog: 'agentLog',
 	onSignInChanged: 'signInChanged',
+	onLibraryShown: 'libraryShown',
 } as const satisfies Partial<Record<keyof WorkspaceApi, string>>;
 
 export type InvokeName = (typeof INVOKE)[number];

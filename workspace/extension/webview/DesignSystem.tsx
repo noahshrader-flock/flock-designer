@@ -8,6 +8,7 @@ import { TokenChangesProvider, useTokenChangesFor } from '../../src/renderer/tok
 import { useTokenBranch } from '../../src/renderer/useTokenBranch';
 import { Changed } from './Changed';
 import { ComponentChanges } from './ComponentChanges';
+import { ShowingContext, ShowingNote } from './Showing';
 import { triedOn, useValueTrials } from './valueTrials';
 import { TokenEditor } from './TokenEditor';
 import type { ComponentLink } from '../src/messages';
@@ -133,94 +134,98 @@ const Ready = ({
 	const hasDark = catalog.tokens.tokens.some(isDark);
 	return (
 		<TokenChangesProvider value={changes}>
-			<div className="ds-header">
-				<span className="ds-title">
-					<span data-part="name" className="ds-name">
-						{name}
+			<ShowingContext.Provider value={catalog.showing}>
+				<div className="ds-header">
+					<span className="ds-title">
+						<span data-part="name" className="ds-name">
+							{name}
+						</span>
+						<span data-part="branch" className="ds-branch" title={`Read from ${catalog.branch} on ${HOST}`}>
+							<Icon name="git-branch" size="xs" />
+							{catalog.branch}
+						</span>
 					</span>
-					<span data-part="branch" className="ds-branch" title={`Read from ${catalog.branch} on ${HOST}`}>
-						<Icon name="git-branch" size="xs" />
-						{catalog.branch}
-					</span>
-				</span>
-				<span className="ds-actions">
-					{notRead > 0 && (
+					<span className="ds-actions">
+						{notRead > 0 && (
+							<Badge
+								tone="warning"
+								count={notRead}
+								label={`${plural(notRead, 'value')} in its token files ${notRead === 1 ? 'is' : 'are'} not read`}
+								onPress={() => setProblems(true)}
+							/>
+						)}
+						{/* Always there, so nothing moves when the first change is made: muted with none, the brand's with some. */}
 						<Badge
-							tone="warning"
-							count={notRead}
-							label={`${plural(notRead, 'value')} in its token files ${notRead === 1 ? 'is' : 'are'} not read`}
-							onPress={() => setProblems(true)}
+							tone={count > 0 ? 'brand' : 'neutral'}
+							count={count}
+							label={`${plural(count, 'change')} being tried`}
+							onPress={changesDialog.onOpen}
 						/>
-					)}
-					{/* Always there, so nothing moves when the first change is made: muted with none, the brand's with some. */}
-					<Badge
-						tone={count > 0 ? 'brand' : 'neutral'}
-						count={count}
-						label={`${plural(count, 'change')} being tried`}
-						onPress={changesDialog.onOpen}
-					/>
-					<Menu
-						label="Design system actions"
-						size="small"
-						always
-						sections={[
-							{
-								items: [
-									{ label: syncing ? 'Syncing…' : `Sync with ${HOST}`, icon: syncing ? 'sync' : 'refresh', disabled: syncing, onSelect: does.sync },
-								],
-							},
-							{
-								items: [
-									{ label: 'Primitives', icon: 'symbol-ruler', onSelect: does.openPrimitives },
-									{ label: 'Voice and Tone', icon: 'quote', onSelect: does.openVoiceAndTone },
-								],
-							},
-						]}
-					/>
-				</span>
-			</div>
-			{typeof catalog.update === 'object' && (
-				<p data-update-failed className="note note-warning">
-					<Icon name="warning" /> Could not update from {HOST}: {catalog.update.failed} It is shown as this computer last had it.
-				</p>
-			)}
-			<div className="ds-part">
-				<Toggle label="Part" options={PARTS} value={part} onChange={onPart} />
-			</div>
-			{part === 'components' ? (
-				catalog.components.length === 0 ? (
-					<p className="note">Its Storybook has no stories on {catalog.branch}, so there are no components to list.</p>
-				) : (
-					<ComponentsView
-						components={catalog.components}
-						pictures={pictures}
-						view={view}
-						onView={onView}
-						hasDark={hasDark}
-						onOpen={does.openComponent}
-						onLink={does.componentLink}
-					/>
-				)
-			) : (
-				<TokensView tokens={catalog.tokens} onEdit={setEditing} onSource={does.openTokenSource} />
-			)}
-			{editing && <TokenEditor key={editing.path} token={editing} onClose={() => setEditing(null)} />}
-			{problems && <Problems problems={catalog.tokens.problems} onClose={() => setProblems(false)} />}
-			{changesDialog.open && (
-				<Dialog title="Changes" onClose={changesDialog.onClose}>
-					<Changed id={id} controls={branch} />
-					{changed.map((c) => (
-						<ComponentChanges
-							key={c.id}
-							component={c}
+						<Menu
+							label="Design system actions"
+							size="small"
+							always
+							sections={[
+								{
+									items: [
+										{ label: syncing ? 'Syncing…' : `Sync with ${HOST}`, icon: syncing ? 'sync' : 'refresh', disabled: syncing, onSelect: does.sync },
+									],
+								},
+								{
+									items: [
+										{ label: 'Primitives', icon: 'symbol-ruler', onSelect: does.openPrimitives },
+										{ label: 'Voice and Tone', icon: 'quote', onSelect: does.openVoiceAndTone },
+									],
+								},
+							]}
+						/>
+					</span>
+				</div>
+				<ShowingNote showing={catalog.showing} branch={catalog.branch} />
+				{typeof catalog.update === 'object' && (
+					<p data-update-failed className="note note-warning">
+						<Icon name="warning" /> Could not update from {HOST}: {catalog.update.failed} It is shown as this computer last had it.
+					</p>
+				)}
+				<div className="ds-part">
+					<Toggle label="Part" options={PARTS} value={part} onChange={onPart} />
+				</div>
+				{part === 'components' ? (
+					catalog.components.length === 0 ? (
+						<p className="note">Its Storybook has no stories on {catalog.branch}, so there are no components to list.</p>
+					) : (
+						<ComponentsView
 							components={catalog.components}
-							commit={catalog.commit}
-							onSource={({ file, line }) => does.openTokenSource({ file, line })}
+							pictures={pictures}
+							view={view}
+							onView={onView}
+							hasDark={hasDark}
 							onOpen={does.openComponent}
+							onLink={does.componentLink}
 						/>
-					))}
-				</Dialog>
-			)}
+					)
+				) : (
+					<TokensView tokens={catalog.tokens} onEdit={setEditing} onSource={does.openTokenSource} />
+				)}
+				{editing && <TokenEditor key={editing.path} token={editing} onClose={() => setEditing(null)} />}
+				{problems && <Problems problems={catalog.tokens.problems} onClose={() => setProblems(false)} />}
+				{changesDialog.open && (
+					<Dialog title="Changes" onClose={changesDialog.onClose}>
+						<Changed id={id} controls={branch} />
+						{changed.map((c) => (
+							<ComponentChanges
+								// Asked again on another commit shown: its values are read on that commit's drawing.
+								key={`${c.id}\u0000${catalog.commit}`}
+								component={c}
+								components={catalog.components}
+								commit={catalog.commit}
+								onSource={({ file, line }) => does.openTokenSource({ file, line })}
+								onOpen={does.openComponent}
+							/>
+						))}
+					</Dialog>
+				)}
+			</ShowingContext.Provider>
 		</TokenChangesProvider>
 	);
 };

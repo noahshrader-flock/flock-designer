@@ -56,11 +56,18 @@ export const registerDesignSystem = (d: IpcDeps): void => {
 		valueAgent,
 		valueBranches,
 		handoffBranches,
+		libraryShown,
 		ports,
 		valueSources,
 		voiceFile,
 		warm,
 	} = d;
+
+	/** The design system shown, or null when none is connected or its clone is gone. */
+	const shown = () => {
+		const system = library.current();
+		return typeof system === 'string' ? null : system;
+	};
 
 	handle('componentPictures', [], () => componentTokens.pictures());
 	// The window says only whether to wait for the update; where the design system is, it is never told and never asks.
@@ -84,23 +91,49 @@ export const registerDesignSystem = (d: IpcDeps): void => {
 	// Process changes: a unit by its story file, or the tokens (none); what it hands over checked as a change always is, and
 	// handed to Claude Code as every hand-over is, in the library's root, with the prompt typed in.
 	handle('handOverChanges', [arg.optional(ds.storyFile), ds.handed], async (file, change) => {
+		libraryShown.refuse(shown(), 'hand changes to Claude Code');
 		const { root, branch, prompt } = await handoffBranches.start(file ?? '', change);
 		return { branch, ...(await handToClaude(ports, root, prompt)) };
 	});
 	handle('handoffBranch', [arg.optional(ds.storyFile)], (file) => handoffBranches.current(file ?? ''));
 	handle('handoffFiles', [], () => handoffBranches.scopes());
 	handle('proposeHandoff', [arg.optional(ds.storyFile), arg.flag], (file, confirmed) => handoffBranches.propose(file ?? '', confirmed));
-	handle('forgetHandoff', [arg.optional(ds.storyFile)], (file) => (handoffBranches.forget(file ?? ''), null));
+	// Forgotten, its branch is no longer shown either.
+	handle('forgetHandoff', [arg.optional(ds.storyFile)], (file) => {
+		const system = shown();
+		if (system !== null && libraryShown.scope(system) === (file ?? '')) libraryShown.stop(system);
+		handoffBranches.forget(file ?? '');
+		return null;
+	});
+	// Preview this branch (Phase 2): a unit's hand-over shown in the tab once its branch is read ready from git, and the
+	// library's own branch again. Only committed work is shown, read from git's objects.
+	handle('showHandoff', [arg.optional(ds.storyFile)], async (file) => {
+		const system = shown();
+		if (system === null) throw new Error('There is no design system connected.');
+		const handed = await handoffBranches.current(file ?? '');
+		if (handed === null) throw new Error('Nothing is handed to Claude Code for this.');
+		if (handed.review.state !== 'ready')
+			throw new Error(`There is nothing committed from ${system.branch} on ${handed.branch} to show yet: Claude Code commits its work there.`);
+		libraryShown.show(system, file ?? '', handed.branch);
+		return null;
+	});
+	handle('showLibraryBranch', [], () => {
+		const system = shown();
+		if (system !== null) libraryShown.stop(system);
+		return null;
+	});
 	// Only on the person's press: it runs the agent, in a copy of the library.
 	handle('writeValue', [ds.storyFile, ds.value], async (file, value) => {
+		libraryShown.refuse(shown(), 'have the agent write it');
 		await valueAgent.write(file, value);
 		return null;
 	});
-	handle('saveValues', [ds.storyFile, ds.tried], (file, tried) => valueBranches.save(tried, file));
+	// Never while another branch is shown: a value's save writes the files the index drew.
+	handle('saveValues', [ds.storyFile, ds.tried], (file, tried) => (libraryShown.refuse(shown(), 'save'), valueBranches.save(tried, file)));
 	handle('proposeValues', [ds.storyFile], (file) => valueBranches.propose(file));
 	handle('forgetValueBranch', [ds.storyFile], (file) => (valueBranches.forget(file), null));
 	handle('tokenBranch', [], () => tokenBranches.current());
-	handle('saveTokens', [ds.edits], (edits) => tokenBranches.save(edits));
+	handle('saveTokens', [ds.edits], (edits) => (libraryShown.refuse(shown(), 'save'), tokenBranches.save(edits)));
 	handle('proposeTokens', [], () => tokenBranches.propose());
 	handle('forgetTokenBranch', [], () => (tokenBranches.forget(), null));
 	handle('voiceAndTone', [], () => voiceFile().current());

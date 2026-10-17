@@ -63,6 +63,15 @@ export const libraryCommit = async (root: string, branch: string): Promise<strin
 	}
 };
 
+/** The commit to read the library at, and the hand-off branch it is the tip of (null: the library's own branch, `LibraryShown`). */
+export type LibraryAt = (system: ConnectedDesignSystem) => Promise<{ commit: string; showing: string | null } | null>;
+
+/** The library's own branch, as GitHub has it: what is read when no other is shown, and by anyone who must not follow one. */
+export const baseAt: LibraryAt = async (system) => {
+	const commit = await libraryCommit(system.root, system.branch);
+	return commit === null ? null : { commit, showing: null };
+};
+
 /**
  * Brings the clone's copy of its design system's branch up to date from GitHub, and nothing else: an explicit refspec,
  * so no other ref moves, no tags, no submodules. Never throws; a failure is said in words.
@@ -157,11 +166,15 @@ export const listedComponents = (components: CatalogComponent[], tokens: DesignT
 export const libraryTarget = async (reads: CatalogReads, name: string): Promise<DeclaredTarget> =>
 	declaredTarget(await reads.readFile(LIBRARY_MANIFEST).catch(() => null), name);
 
-/** The catalog as the clone's copy of the design system's branch has it now, with `update` as given. */
-export const readLibrary = async (system: ConnectedDesignSystem, update: CatalogUpdate): Promise<Catalog> => {
+/**
+ * The catalog as the clone's copy of the design system's branch has it now, or the commit shown in its place (`at`, a branch
+ * handed to Claude Code), with `update` as given.
+ */
+export const readLibrary = async (system: ConnectedDesignSystem, update: CatalogUpdate, at: LibraryAt = baseAt): Promise<Catalog> => {
 	const { root, branch } = system;
-	const commit = await libraryCommit(root, branch);
-	if (commit === null) return { state: 'no-branch', root, branch };
+	const shown = await at(system);
+	if (shown === null) return { state: 'no-branch', root, branch };
+	const { commit, showing } = shown;
 	const committedAt = await git(root, ['log', '-1', '--format=%cI', commit]);
 	// The components and the tokens, from the same reads of the same commit.
 	const reads = await systemReads(system, commit);
@@ -171,14 +184,16 @@ export const readLibrary = async (system: ConnectedDesignSystem, update: Catalog
 		readTokens(reads),
 		libraryTarget(reads, system.name),
 	]);
-	return { state: 'ready', branch, commit, committedAt, update, components: listedComponents(components, tokens), tokens, accessibility };
+	return { state: 'ready', branch, commit, showing, committedAt, update, components: listedComponents(components, tokens), tokens, accessibility };
 };
 
 export interface DesignLibraryDeps {
 	/** The design systems connected, and which is shown: asked on every call, so one connected or switched since is used. */
 	systems: DesignSystemsMemory;
 	update?: (root: string, branch: string) => Promise<Exclude<CatalogUpdate, 'updating'>>;
-	read?: (system: ConnectedDesignSystem, update: CatalogUpdate) => Promise<Catalog>;
+	read?: (system: ConnectedDesignSystem, update: CatalogUpdate, at: LibraryAt) => Promise<Catalog>;
+	/** The commit the tab reads (`LibraryShown`): the library's own branch unless another is shown. */
+	at?: LibraryAt;
 }
 
 /**
@@ -209,10 +224,11 @@ export class DesignLibrary {
 			return { state: 'lost', name: gone.name, root: gone.root };
 		}
 		const read = this.deps.read ?? readLibrary;
-		if (refresh) return read(system, await this.fetch(system.root, system.branch));
+		const at = this.deps.at ?? baseAt;
+		if (refresh) return read(system, await this.fetch(system.root, system.branch), at);
 		// Read before fetching: git runs one command at a time per repository, so the list waits for nothing.
 		const last = this.outcome.get(`${system.root}#${system.branch}`);
-		const now = await read(system, last ?? 'updating');
+		const now = await read(system, last ?? 'updating', at);
 		if (last === undefined) void this.fetch(system.root, system.branch);
 		return now;
 	}

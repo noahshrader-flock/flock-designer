@@ -7,6 +7,7 @@ import type { BranchControls } from '../../src/renderer/useChangeBranch';
 import type { TokenBranchControls } from '../../src/renderer/useTokenBranch';
 import { type HandoffControls, useHandoff } from '../../src/renderer/useHandoff';
 import { HandoffActions } from './HandoffActions';
+import { useShowing } from './Showing';
 import { Button } from './ui/Button';
 import { ErrorLine } from './ui/Dialog';
 import { Icon } from './ui/Icon';
@@ -33,7 +34,9 @@ export const BranchActions = <C,>({
 }) => {
 	const { branch, unsaved, busy, error, save, propose, startOver } = controls;
 	const chromatic = branch?.pullRequest?.chromatic;
-	const offered = branchButtons({ branch, unsaved, busy, canSave: canSave && handoff.busy === null });
+	// While a hand-over's branch is shown, nothing is saved or handed over (the core refuses): the note at the top says so.
+	const showing = useShowing();
+	const offered = branchButtons({ branch, unsaved, busy, canSave: canSave && handoff.busy === null && showing === null });
 	if (handoff.handoff !== null) return <HandoffActions controls={handoff} />;
 	// Nothing kept, and something changed: what Save would be offered for.
 	const processable = branch === null && unsaved;
@@ -63,7 +66,7 @@ export const BranchActions = <C,>({
 					</Button>
 				)}
 				{processable && (
-					<Button variant="secondary" disabled={busy !== null || handoff.busy !== null} onClick={handoff.processChanges}>
+					<Button variant="secondary" disabled={busy !== null || handoff.busy !== null || showing !== null} onClick={handoff.processChanges}>
 						{handoff.busy === 'handing' ? 'Handing to Claude Code…' : 'Process changes'}
 					</Button>
 				)}

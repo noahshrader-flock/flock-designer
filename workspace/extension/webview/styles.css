@@ -2144,8 +2144,10 @@ textarea.input {
 	overflow-wrap: anywhere;
 }
 
+/* Wrapped when a narrow pane cannot hold them in a row: a hand-over has three. */
 .branch-buttons {
 	display: flex;
+	flex-wrap: wrap;
 	gap: 8px;
 }
 

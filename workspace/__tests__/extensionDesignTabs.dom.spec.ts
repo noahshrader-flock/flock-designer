@@ -86,6 +86,22 @@ describe('a component’s tab', () => {
 		expect(frame.style.height).toBe('');
 	});
 
+	it('reads the library again when another commit of it is shown, says which, and builds and reads its component anew', async () => {
+		await open();
+		await answer('storyPreview', { state: 'ready', base: BASE });
+		const tokensAsked = calls('componentTokens').length;
+		const branch = 'dsnr/handoff-20261017-ab12';
+		await say({ type: 'event', name: 'onLibraryShown', payload: branch });
+		expect(calls('designSystemCatalog')).toHaveLength(2);
+		await answer('designSystemCatalog', { ...SAMPLE_CATALOG, commit: 'f00d42', showing: branch });
+		expect(document.querySelector('[data-showing]')?.textContent).toContain(`Showing ${branch}, Claude Code’s branch, not develop.`);
+		// Its stories are built, and what its column says is asked, on the commit shown.
+		expect(document.querySelector('.stories')).toBeNull();
+		expect(calls('componentTokens').length).toBeGreaterThan(tokensAsked);
+		await press(button('Show develop'));
+		expect(calls('showLibraryBranch')).toHaveLength(1);
+	});
+
 	it('builds them again with the change the extension says is being tried, keeping the last until it is built', async () => {
 		await open();
 		await answer('storyPreview', { state: 'ready', base: BASE });
