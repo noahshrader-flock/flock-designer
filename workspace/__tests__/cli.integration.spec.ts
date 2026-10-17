@@ -601,6 +601,32 @@ describe.skipIf(findChrome() === null)('accessibility', () => {
 		]);
 		// Stopped after: nothing answers on its port.
 		await expect(fetch(`http://localhost:${port}/`)).rejects.toThrow();
+
+		// The ledger, and review.md's section written from it; a gate's check finds nothing to refuse.
+		const ledger = JSON.parse(readFileSync(join(design, 'projects', 'shop', 'accessibility', 'app.ledger.json'), 'utf8')) as {
+			rows: { sc: string; status: string }[];
+		};
+		expect(ledger.rows.find((r) => r.sc === '1.1.1')?.status).toBe('found');
+		const review = readFileSync(join(design, 'projects', 'shop', 'review.md'), 'utf8');
+		expect(review).toContain("## Accessibility: Test Product's app in design mode");
+		expect(review).toContain('| 5 | Accessible names | 4.1.2 Name, Role, Value:');
+		expect(said).toContain('This is the first run of this measure: there is no ledger to compare with.');
+		out = [];
+		expect(await main(['check-accessibility', '--project', 'shop'], deps(shop))).toBe(0);
+		expect(out.join('\n')).toMatch(/every status rests on its evidence, and review\.md says what the ledger says/);
+		// An evidence file gone, and the gate refuses what rested on it.
+		rmSync(join(evidence, 'home', 'cells.json'));
+		out = [];
+		expect(await main(['check-accessibility', '--project', 'shop'], deps(shop))).toBe(1);
+		expect(out.join('\n')).toMatch(/rests on projects\/shop\/accessibility\/app\/home\/cells\.json, which is not there/);
+		// Measured again: compared with the last, the record made whole, and what the agent wrote in review.md kept.
+		writeFileSync(join(design, 'projects', 'shop', 'review.md'), `# Review\n\n## Product parity\n\nFine.\n\n${review}`);
+		out = [];
+		expect(await main(['accessibility', '--project', 'shop', '--light'], deps(shop))).toBe(0);
+		expect(out.join('\n')).toMatch(/Since the last run \(\d{4}-\d\d-\d\d\): .*criteria changed in all\./);
+		expect(readFileSync(join(design, 'projects', 'shop', 'review.md'), 'utf8')).toContain('## Product parity\n\nFine.');
+		out = [];
+		expect(await main(['check-accessibility', '--project', 'shop'], deps(shop))).toBe(0);
 	}, 120_000);
 
 	it('says so, and measures nothing, for a product with no workspace file or no design-mode command', async () => {

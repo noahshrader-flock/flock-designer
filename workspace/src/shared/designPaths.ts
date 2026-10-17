@@ -33,6 +33,9 @@ export const prototypeSourcePath = (projectId: string, name: string): string => 
  */
 export const accessibilityPath = (projectId: string, name: string | null): string => `${accessibilityEvidenceDir(projectId, name)}.json`;
 
+/** The run's ledger beside it (A5): a row for each criterion, its status and the evidence it rests on. */
+export const accessibilityLedgerPath = (projectId: string, name: string | null): string => `${accessibilityEvidenceDir(projectId, name)}.ledger.json`;
+
 /** The probe's evidence beside it (A3): a folder of the same name, a folder in it per view. */
 export const accessibilityEvidenceDir = (projectId: string, name: string | null): string => projectPath(projectId, `accessibility/${name ?? 'app'}`);
 

@@ -23,7 +23,7 @@ import { publish, recordsFrom, unpublish } from '../main/services/pages';
 import { buildSite } from '../site/buildSite';
 import { serveSite } from '../site/serveSite';
 import { checkWcagEdition } from './wcagEdition';
-import { measureAccessibility } from './accessibility';
+import { checkAccessibility, measureAccessibility } from './accessibility';
 import { errorText } from '../shared/result';
 import { plural } from '../shared/plural';
 import { loginFromNoreply } from '../shared/hostUrls';
@@ -73,6 +73,7 @@ const USAGE = `Usage:
   dsnr publish --project <id> --name <v1-i1> [--no-open]
   dsnr unpublish --project <id> --name <v1-i1>
   dsnr accessibility --project <id> [--name <v1-i1>] [--light] [--product <dir>]
+  dsnr check-accessibility --project <id> [--name <v1-i1>]
 
 new-prototype records the next version (v1-i1 for a new project, then v2-i1, v3-i1) and prints the task: where to
 write the prototype and how to check it builds. change-prototype does the same for a change to one: in its version's
@@ -85,7 +86,9 @@ iteration off the site: its saved page and source are removed, here and in the d
 deployed without it. Its record and comments are kept. accessibility measures the work in a real browser: with --name,
 that prototype's page in each of its states; without, the product's own app, started by its design-mode command, at the
 pages its manifest names. Each view is checked by axe and probed (--light: the accessibility tree and the Tab walk
-alone). It writes what it found, and the evidence, into the project's folder in the design repository, and prints it.`;
+alone). It writes what it found, the evidence and its ledger into the project's folder in the design repository, writes
+review.md's accessibility section from the ledger, and prints it. check-accessibility checks that record, for a gate:
+each status rests on its evidence, each "not run" says why, and review.md says what the ledger says.`;
 
 class UsageError extends Error {}
 
@@ -266,9 +269,17 @@ export const main = async (argv: string[], deps: CliDeps): Promise<number> => {
 	try {
 		const [command, ...rest] = argv;
 		if (
-			!['new-prototype', 'change-prototype', 'save-prototype', 'build-site', 'publish', 'unpublish', 'wcag-edition', 'accessibility'].includes(
-				command ?? '',
-			)
+			![
+				'new-prototype',
+				'change-prototype',
+				'save-prototype',
+				'build-site',
+				'publish',
+				'unpublish',
+				'wcag-edition',
+				'accessibility',
+				'check-accessibility',
+			].includes(command ?? '')
 		) {
 			throw new UsageError(command ? `There is no command called ${command}.` : 'Say which command.');
 		}
@@ -282,6 +293,10 @@ export const main = async (argv: string[], deps: CliDeps): Promise<number> => {
 				out: deps.out,
 			});
 		if (command === 'publish') return await publishPage(deps, values);
+		if (command === 'check-accessibility') {
+			if (!values.project) throw new UsageError('Say which project, with --project.');
+			return checkAccessibility({ designRoot: await designOf(deps.cwd), projectId: values.project, name: values.name ?? null, out: deps.out });
+		}
 		if (command === 'unpublish') return await unpublishPage(deps, values);
 		const projectId = values.project;
 		if (!projectId) throw new UsageError('Say which project, with --project.');

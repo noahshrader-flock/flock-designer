@@ -10,7 +10,7 @@ import { existsSync, readFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { checkedWith, countsOf, notAutomatedLine, summaryOf } from '../shared/accessibility';
 import type { AccessibilityResult } from '../shared/contract';
-import { accessibilityEvidenceDir, accessibilityPath, projectPath, prototypeSourcePath } from '../shared/designPaths';
+import { accessibilityEvidenceDir, accessibilityLedgerPath, accessibilityPath, projectPath, prototypeSourcePath } from '../shared/designPaths';
 import { statesOf, withState } from '../shared/prototypeStates';
 import type { DeclaredTarget } from '../shared/wcag';
 import { atTarget, wcagCriterion } from '../shared/wcagCriteria';
@@ -28,6 +28,7 @@ import type { prototypeWork } from '../main/services/prototypeWork';
 import { CELLS, type CellResult, type ProbeDepth, cellsAt } from '../main/services/probe/cells';
 import type { Evidence } from '../main/services/probe/probe';
 import { type SourceFile, scanSources } from '../main/services/probe/sourceScan';
+import { type Ledger, ledgerChanges, ledgerFaults, ledgerOf, withReviewSection } from '../main/services/ledger';
 
 export interface MeasureDeps {
 	projectId: string;
@@ -249,6 +250,24 @@ export const measureAccessibility = async (deps: MeasureDeps): Promise<number> =
 	writeEvidence(join(designRoot, evidence), measured);
 	const probe = { depth, views: views.map(({ state, ms, results }) => ({ state, ms, results, evidence: `${evidence}/${folderOf(state)}` })), source };
 	writeAtomic(join(designRoot, path), `${JSON.stringify({ of: what, ...(pages ? { pages } : {}), notOpened, result, probe }, null, '\t')}\n`);
+	// The ledger, from what was just measured; compared with the last one; and the review record's section written from it.
+	const ledgerFile = accessibilityLedgerPath(projectId, name);
+	const last = readLedger(join(designRoot, ledgerFile));
+	const ledger = ledgerOf({
+		key: name ?? 'app',
+		of: what,
+		result,
+		resultFile: path,
+		views: probe.views.map((v) => ({ state: v.state, results: v.results, evidence: `${v.evidence}/cells.json` })),
+		source,
+		sourceFile: `${evidence}/source.json`,
+		target: measured.target,
+		depth,
+	});
+	writeAtomic(join(designRoot, ledgerFile), `${JSON.stringify(ledger, null, '\t')}\n`);
+	const reviewFile = join(designRoot, projectPath(projectId, 'review.md'));
+	writeAtomic(reviewFile, withReviewSection(existsSync(reviewFile) ? readFileSync(reviewFile, 'utf8') : null, ledger, ledgerFile));
+	const since = last ? ledgerChanges(last, ledger) : null;
 	deps.out(
 		[
 			`Measured ${what}: ${summaryOf(countsOf(result))}.`,
@@ -258,8 +277,60 @@ export const measureAccessibility = async (deps: MeasureDeps): Promise<number> =
 			...findingsLines(result),
 			...probeLines(measured, depth),
 			'',
-			`Written to ${path} in ${designRoot}, with the evidence in ${evidence}/.`,
+			since
+				? `Since the last run (${last?.at.slice(0, 10)}): ${since.newlyFound.length ? `newly found ${since.newlyFound.join(', ')}` : 'nothing newly found'}; ${since.noLongerFound.length ? `no longer found ${since.noLongerFound.join(', ')}` : 'nothing no longer found'}; ${since.changed.length} criteria changed in all.`
+				: 'This is the first run of this measure: there is no ledger to compare with.',
+			`Written to ${path} in ${designRoot}, with the evidence in ${evidence}/, the ledger in ${ledgerFile}, and the accessibility section of ${projectPath(projectId, 'review.md')} written from it.`,
 		].join('\n'),
 	);
 	return 0;
+};
+
+/** A ledger as it was written, or null when there is none, or it cannot be read as one. */
+const readLedger = (file: string): Ledger | null => {
+	try {
+		const ledger = JSON.parse(readFileSync(file, 'utf8')) as Ledger;
+		return ledger.version === 1 && Array.isArray(ledger.rows) ? ledger : null;
+	} catch {
+		return null;
+	}
+};
+
+/**
+ * `dsnr check-accessibility` (A5): what a gate asks of a measure's record. Its ledger is there; every status rests on an
+ * evidence file that is there; every "not run" says why; and `review.md`'s section is the one the ledger writes. Says
+ * each fault, and exits 1 when there is one, so a product's own gate can call it.
+ */
+export const checkAccessibility = ({
+	designRoot,
+	projectId,
+	name,
+	out,
+}: {
+	designRoot: string;
+	projectId: string;
+	name: string | null;
+	out: (text: string) => void;
+}): number => {
+	assertUsableProjectId(projectId);
+	if (name !== null) assertPrototypeName(name);
+	const ledgerFile = accessibilityLedgerPath(projectId, name);
+	const ledger = readLedger(join(designRoot, ledgerFile));
+	if (ledger === null) {
+		out(`${ledgerFile} is not there, or is not a ledger: run dsnr accessibility --project ${projectId}${name ? ` --name ${name}` : ''} first.`);
+		return 1;
+	}
+	const reviewFile = join(designRoot, projectPath(projectId, 'review.md'));
+	const faults = ledgerFaults(
+		ledger,
+		ledgerFile,
+		(p) => existsSync(join(designRoot, p)),
+		existsSync(reviewFile) ? readFileSync(reviewFile, 'utf8') : null,
+	);
+	out(
+		faults.length
+			? [`${ledgerFile}: ${faults.length} fault${faults.length === 1 ? '' : 's'}.`, ...faults.map((f) => `- ${f}`)].join('\n')
+			: `${ledgerFile}: every status rests on its evidence, and review.md says what the ledger says.`,
+	);
+	return faults.length ? 1 : 0;
 };
