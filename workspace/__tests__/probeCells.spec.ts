@@ -100,6 +100,10 @@ describe('the source cells', () => {
 		expect(Number(result?.findings[0]?.target.split(':')[1])).toBeGreaterThan(1);
 	});
 
+	it('are not run when the work has no files of its own: reading nothing is never none found', () => {
+		expect(scanSources(['timing'], [])).toEqual([{ cell: 'timing', sc: '2.2.1', status: 'notRun', findings: [], why: 'the work has no files of its own to read' }]);
+	});
+
 	it('are not run, with why, when there is no source to read, and leave the page’s cells to the page', () => {
 		expect(scanSources(['timing', 'structure'], null, 'this checkout has no base to compare with')).toEqual([
 			{ cell: 'timing', sc: '2.2.1', status: 'notRun', findings: [], why: 'this checkout has no base to compare with' },

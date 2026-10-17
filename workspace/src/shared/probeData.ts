@@ -3,6 +3,25 @@
  * (`services/probe`): plain data, as it crosses from the page to the probe.
  */
 
+/** The roles a control may have: what is operated, and named, as a control (WAI-ARIA's widget roles a person acts on). */
+export const INTERACTIVE_ROLES = [
+	'button',
+	'link',
+	'checkbox',
+	'radio',
+	'switch',
+	'tab',
+	'menuitem',
+	'menuitemcheckbox',
+	'menuitemradio',
+	'option',
+	'slider',
+	'spinbutton',
+	'combobox',
+	'textbox',
+	'searchbox',
+];
+
 export interface Box {
 	x: number;
 	y: number;
@@ -27,6 +46,8 @@ export interface Stop extends Spot {
 	/** In a modal dialog, where going round its own controls is what it is for. */
 	modal: boolean;
 	covered: string[];
+	/** Focus is in a frame from another site, whose stops cannot be read: Tab may stay on it for several presses. */
+	opaque: boolean;
 }
 
 /** Something added to the page while it was watched: its text, and whether a live region announced it. */
@@ -39,6 +60,8 @@ export interface Added {
 	dialog: boolean;
 	/** A control, or holding one or a heading: new content, not a status message. */
 	interactive: boolean;
+	/** Text that changed where it was (a clock ticking), not something added: never a status message by itself. */
+	inPlace: boolean;
 }
 
 /** What the page did while it was watched: windows it opened, what was added, and how many changes there were. */
@@ -60,6 +83,17 @@ export interface FormErrors {
 	messages: (Spot & { tied: boolean })[];
 	unnamed: Spot[];
 	native: boolean;
+}
+
+/** A button, and whether it opens or closes something it names (`aria-expanded`, `aria-controls`): what it shows is a disclosure, not a message. */
+export interface Button extends Spot {
+	discloses: boolean;
+}
+
+/** How much of the page the probe read: what it read, and whether there was more than it reads (then a "none found" is only of what it read). */
+export interface Read {
+	elements: number;
+	capped: boolean;
 }
 
 /** A control whose value a person changes: a list, a box to tick, a field to type in. */

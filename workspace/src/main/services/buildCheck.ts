@@ -65,6 +65,7 @@ export const toFix = (result: AccessibilityResult, views: CheckRecord['views'], 
 	probe: views.flatMap((v) => v.results.filter((r) => r.status === 'found' && atTarget(r.sc, target.target)).map((r) => ({ r, state: v.state }))),
 	words: result.violations.filter((i) => WORDS.has(i.rule)),
 	readiness: views.flatMap((v) => v.results.filter((r) => r.status === 'found' && !atTarget(r.sc, target.target))).length,
+	notRun: views.flatMap((v) => v.results.filter((r) => r.status === 'notRun').map((r) => ({ r, state: v.state }))),
 });
 
 const readRecord = (file: string): CheckRecord | null => {
@@ -95,8 +96,17 @@ const checkText = (config: CheckConfig, fix: ReturnType<typeof toFix>, rounds: n
 		? [`(${fix.readiness} probe finding${fix.readiness === 1 ? '' : 's'} above the target were left out: readiness, not this build's.)`]
 		: [];
 	const at = `at ${targetLine(config.target)}`;
+	// What did not run is said with why: none found is only of what was measured.
+	const unmeasured = fix.notRun.length
+		? ['', 'Not run, so not measured:', ...fix.notRun.flatMap(({ r, state }) => cellLines(r, where(state, 2)))]
+		: [];
 	if (count === 0)
-		return [`Accessibility: none found of what this check measures, ${at}. Not a pass: Handoff measures more.`, ...words, ...readiness].join('\n');
+		return [
+			`Accessibility: none found of what this check measures, ${at}. Not a pass: Handoff measures more.`,
+			...unmeasured,
+			...words,
+			...readiness,
+		].join('\n');
 	if (left)
 		return [
 			`Accessibility: ${count} left after ${MOST_ROUNDS} rounds of this check, ${at}. Finish now: what is left is kept with the page, and put on its record when it is saved.`,

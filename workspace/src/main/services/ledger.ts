@@ -11,7 +11,7 @@ import { criterionOf } from '../../shared/accessibility';
 import type { AccessibilityResult } from '../../shared/contract';
 import { type DeclaredTarget, requiredAt, targetLine } from '../../shared/wcag';
 import { CRITERIA } from '../../shared/wcagCriteria';
-import type { CellResult } from './probe/cells';
+import { CELLS, type CellResult } from './probe/cells';
 
 /**
  * A criterion's status, strongest first: `found` by a layer; `notRun`, a layer that could measure it did not (with why);
@@ -133,6 +133,7 @@ export const ledgerOf = ({
 		const layers: LedgerRow['layers'] = [];
 		const by: LedgerPart[] = [];
 		const undecided: string[] = [];
+		const notMeasured: string[] = [];
 		if (byAxe.has(c.sc)) {
 			layers.push('axe');
 			evidence.add(resultFile);
@@ -152,7 +153,15 @@ export const ledgerOf = ({
 			undecided.push(...result.incomplete.filter((i) => i.criteria.includes(c.sc)).map((i) => i.rule));
 		}
 		const own = cells.filter(({ r }) => r.sc === c.sc);
-		if (own.length) layers.push('probe');
+		// A cell that measures this criterion and was not run in this measure (a light one, a build's): not run, said, never
+		// "a person's" or "measured" in its place.
+		const missing = CELLS.filter((cell) => cell.sc === c.sc && !own.some(({ r }) => r.cell === cell.id));
+		if (own.length || missing.length) layers.push('probe');
+		for (const cell of missing) {
+			by.push({ layer: 'probe', what: cell.id, where: cell.kind === 'source' ? 'the source' : 'every page', status: 'notRun' });
+			statuses.push('notRun');
+			notMeasured.push(`${cell.id} was not run in this measure (at ${depth} depth)`);
+		}
 		for (const { r, where, file } of own) {
 			if (r.status === 'found') found.push(`probe ${r.cell}, in ${where}: ${r.findings.length} finding${r.findings.length === 1 ? '' : 's'}`);
 			if (r.status === 'notRun' || r.status === 'notApplicable') why.push(`${r.cell}, in ${where}: ${r.why ?? ''}`);
@@ -172,7 +181,9 @@ export const ledgerOf = ({
 			by,
 			found,
 			evidence: status === 'person' ? [] : [...evidence],
-			...(why.length && (status === 'notRun' || status === 'notApplicable') ? { why: why.join('; ') } : {}),
+			...((why.length || notMeasured.length) && (status === 'notRun' || status === 'notApplicable')
+				? { why: [...why, ...notMeasured].join('; ') }
+				: {}),
 			...(left && status === 'found' ? { why: left } : {}),
 			person,
 			manual: c.manual,
@@ -303,7 +314,11 @@ export const ledgerFaults = (ledger: Ledger, ledgerFile: string, exists: (path: 
 			]),
 ];
 
-/** How one run's ledger differs from the last: what is newly found, what is no longer found, and every other change of status. */
+/**
+ * How one run's ledger differs from the last: what is newly found; what was found and is now measured with none found
+ * (fixed, by what found it); and every other change of status. A criterion found once and not measured now (a light run
+ * after a full one, a page that did not open) has changed, and is not said to be fixed.
+ */
 export const ledgerChanges = (
 	before: Ledger,
 	after: Ledger,
@@ -315,7 +330,7 @@ export const ledgerChanges = (
 	});
 	return {
 		newlyFound: changed.filter((c) => c.to === 'found').map((c) => c.sc),
-		noLongerFound: changed.filter((c) => c.from === 'found').map((c) => c.sc),
+		noLongerFound: changed.filter((c) => c.from === 'found' && c.to === 'measured').map((c) => c.sc),
 		changed,
 	};
 };

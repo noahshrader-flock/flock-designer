@@ -7,7 +7,18 @@
  */
 import axe from 'axe-core';
 import PROBE from '../../../page/probe?page';
-import type { Box, FaintPart, Field, FormErrors, Spot, Stop, Watched } from '../../../shared/probeData';
+import {
+	type Box,
+	type Button,
+	type FaintPart,
+	type Field,
+	type FormErrors,
+	INTERACTIVE_ROLES,
+	type Read,
+	type Spot,
+	type Stop,
+	type Watched,
+} from '../../../shared/probeData';
 import { contrastOf } from '../../../shared/contrast';
 import { errorText } from '../../../shared/result';
 import { CHECK_WINDOW } from '../accessibilityCheck';
@@ -78,8 +89,8 @@ const LOAD_MS = 20_000;
 const ASK_MS = 10_000;
 /** The longest a status message is taken to be: longer text that appears is new content, not a message. */
 const MOST_MESSAGE = 120;
-/** How long after an action the page is given to answer it. */
-const SETTLE_MS = 300;
+/** How long a hovered thing is watched to see that it stays (WCAG 1.4.13's "persistent"). */
+const STAYS_MS = 1000;
 
 /** The probe's page code, put in the page before its own code runs: it watches from the start. */
 const INSTALL = `(() => { ${PROBE}; window.__dsnrProbe = __fdPage; __fdPage.watch(); })()`;
@@ -146,32 +157,16 @@ const contrastScript = (path: string | null, state: string) => `(async () => {
 /** Whether two addresses are other pages: a change of the part after `#` is the same page. */
 const otherPage = (a: string, b: string) => a.split('#')[0] !== b.split('#')[0];
 
-/** A change of context, as 3.2.1 and 3.2.2 mean it, in words; null when there was none. */
-const contextChange = (before: string, after: string, watched: Watched, another: { dialog: boolean; replaced: boolean }): string | null => {
-	if (otherPage(before, after)) return `went to another address (${after})`;
+/** A change of context within the page, as 3.2.1 and 3.2.2 mean it, in words; null when there was none. */
+const contextChange = (watched: Watched, another: { dialog: boolean; replaced: boolean }): string | null => {
 	if (watched.opened.length) return `opened a window (${watched.opened[0] || 'a blank one'})`;
 	if (another.dialog) return 'opened a dialog';
 	if (another.replaced) return 'replaced most of the page';
 	return null;
 };
 
-const INTERACTIVE_ROLES = new Set([
-	'button',
-	'link',
-	'checkbox',
-	'radio',
-	'switch',
-	'tab',
-	'menuitem',
-	'menuitemcheckbox',
-	'menuitemradio',
-	'option',
-	'slider',
-	'spinbutton',
-	'combobox',
-	'textbox',
-	'searchbox',
-]);
+/** The roles a control may have, as the page code reads them too. */
+const CONTROLS = new Set(INTERACTIVE_ROLES);
 /**
  * 4.1.2 in the accessibility tree: each control with no name. (A control's missing state is axe's: the browser gives a
  * checkbox written with a role a state of its own, so the tree cannot show it missing.)
@@ -180,7 +175,7 @@ const treeFaults = (node: AxNode | null, under: string[] = []): ProbeFinding[] =
 	if (!node) return [];
 	const where = under.length ? ` in ${under.slice(-2).join(' › ')}` : '';
 	const own: ProbeFinding[] = [];
-	if (INTERACTIVE_ROLES.has(node.role) && !node.name?.trim()) own.push({ target: `${node.role}${where}`, detail: 'a control with no name' });
+	if (CONTROLS.has(node.role) && !node.name?.trim()) own.push({ target: `${node.role}${where}`, detail: 'a control with no name' });
 	const label = node.name?.trim() ? `${node.role} “${node.name.trim().slice(0, 40)}”` : node.role;
 	return [...own, ...(node.children ?? []).flatMap((c) => treeFaults(c, [...under, label]))];
 };
@@ -223,7 +218,32 @@ export const probeView = async (page: ProbePage, url: string, options: ProbeOpti
 	};
 	const contrast = async (path: string | null, state: string): Promise<ContrastRow[]> => {
 		await axeIn();
-		return ((await within(ASK_MS, page.evaluate(contrastScript(path, state)))) as ContrastRow[] | null) ?? [];
+		const rows = (await within(ASK_MS, page.evaluate(contrastScript(path, state)))) as ContrastRow[] | null;
+		// Not answered is not measured: never an empty table that reads as none found.
+		if (rows === null) throw new Error(`axe's contrast rule did not answer in time, on ${state}`);
+		return rows;
+	};
+
+	/** Until what an action set off is done: the page has stopped changing for a moment. */
+	const settle = async () => {
+		try {
+			await ask('quiet()');
+		} catch {
+			// The page went while it was asked (it navigated): what is next is asked of the one that came.
+			await pause(500);
+		}
+	};
+	/**
+	 * Whether the page changed context since `before` (its address then), as 3.2.1 and 3.2.2 mean it: another address, a
+	 * window or a dialog opened, or most of it replaced; null when it did not.
+	 */
+	const changeSince = async (before: string): Promise<string | null> =>
+		otherPage(before, page.url())
+			? `went to another address (${page.url()})`
+			: contextChange(await ask<Watched>('watched()'), await ask<{ dialog: boolean; replaced: boolean }>('becameAnother()'));
+	/** A cell that found none of only part of what it measures says so: not run, with what was measured, never "none found". */
+	const onlyPart = (cells: CellId[], why: string) => {
+		for (const [i, r] of results.entries()) if (cells.includes(r.cell) && r.status === 'none') results[i] = notRun(r.cell, why);
 	};
 
 	/** Runs one measure for its cells, when any is wanted: not run when the time is up, or when it fails. */
@@ -244,7 +264,13 @@ export const probeView = async (page: ProbePage, url: string, options: ProbeOpti
 	};
 
 	await page.evaluateOnNewDocument(INSTALL);
-	await load();
+	try {
+		await load();
+	} catch (err) {
+		// A page that does not open is measured not at all: each cell says so, and the rest of a run goes on.
+		const why = `the page did not open to be measured: ${errorText(err, { firstLine: true })}`;
+		return { results: [...wanted].map((c) => notRun(c, why)), evidence, ms: Date.now() - started };
+	}
 	const contrastRows: ContrastRow[] = [];
 
 	// The accessibility tree, and the structure drawn against what the markup says.
@@ -275,6 +301,7 @@ export const probeView = async (page: ProbePage, url: string, options: ProbeOpti
 	];
 	const stops: (Stop & { picture: string; changed: number; strongest: number; context: string | null })[] = [];
 	let left = false;
+	let capped = false;
 	let trapped: string[] | null = null;
 	let expected: Spot[] = [];
 	let looksClickable: Spot[] = [];
@@ -285,33 +312,35 @@ export const probeView = async (page: ProbePage, url: string, options: ProbeOpti
 		await page.evaluate('window.scrollTo(0, 0)');
 		await ask('mark()');
 		const seen = new Set<string>();
+		let ended = false;
 		for (let i = 0; i < MOST.stops; i++) {
 			const before = page.url();
 			await page.keyboard.press('Tab');
-			await pause(50);
+			await ask('quiet(100, 1000)');
 			const stop = await ask<Stop | null>('focused()');
 			if (stop === null) {
 				left = true;
+				ended = true;
 				break;
 			}
+			// In a frame from another site, Tab moves among its stops unseen: staying on it is not going round.
+			if (stop.opaque && stops.at(-1)?.path === stop.path) continue;
 			if (seen.has(stop.path)) {
+				ended = true;
 				// Round again without leaving the page: a trap, unless Escape lets it out.
 				const cycle = stops.slice(stops.findIndex((s) => s.path === stop.path)).map((s) => s.path);
 				await page.keyboard.press('Escape');
 				await page.keyboard.press('Tab');
 				const after = await ask<Stop | null>('focused()');
 				const inModal = stops.filter((s) => cycle.includes(s.path)).every((s) => s.modal);
-				if (!inModal && expected.some((e) => !seen.has(e.path)) && (after === null || cycle.includes(after.path))) trapped = cycle;
+				// Out of it after Escape (on another stop, or off the page): not a trap.
+				if (!inModal && expected.some((e) => !seen.has(e.path)) && after !== null && cycle.includes(after.path)) trapped = cycle;
 				break;
 			}
 			seen.add(stop.path);
-			const context = contextChange(
-				before,
-				page.url(),
-				await ask<Watched>('watched()'),
-				await ask<{ dialog: boolean; replaced: boolean }>('becameAnother()'),
-			);
+			const context = await changeSince(before);
 			const clip = around(stop.at);
+			await ask('focusSettled()');
 			const focusedShot = Buffer.from(await page.screenshot({ type: 'png', clip }));
 			await ask('blur()');
 			const plainShot = Buffer.from(await page.screenshot({ type: 'png', clip }));
@@ -320,8 +349,12 @@ export const probeView = async (page: ProbePage, url: string, options: ProbeOpti
 			evidence.push({ name, data: focusedShot });
 			if (wanted.has('contrast-states') && options.depth === 'full') contrastRows.push(...(await contrast(stop.path, 'focus')));
 			stops.push({ ...stop, picture: name, ...focusChange(plainShot, focusedShot), context });
-			if (context && otherPage(before, page.url())) break;
+			if (context && otherPage(before, page.url())) {
+				ended = true;
+				break;
+			}
 		}
+		capped = !ended;
 		evidence.push({ name: 'tab.json', data: JSON.stringify({ stops, left, trapped, expected: expected.length }, null, 1) });
 		const reached = new Set(stops.map((s) => s.path));
 		const backwards = stops.slice(1).flatMap((b, i) => {
@@ -371,6 +404,9 @@ export const probeView = async (page: ProbePage, url: string, options: ProbeOpti
 			]),
 		];
 	});
+
+	if (capped)
+		onlyPart(walkCells, `the page has more than ${MOST.stops} Tab stops: the first ${MOST.stops} were measured, and none of these was found in them`);
 
 	if (options.depth === 'full') {
 		await page.evaluate('window.scrollTo(0, 0)');
@@ -433,13 +469,16 @@ export const probeView = async (page: ProbePage, url: string, options: ProbeOpti
 				),
 			];
 		});
-		const baseline = new Set((await ask<Spot[]>('clipped()')).map((s) => s.path));
-		const newlyClipped = async () =>
-			(await ask<Spot[]>('clipped()')).filter((s) => !baseline.has(s.path)).map((s) => ({ target: s.path, detail: `“${s.text}” is cut off` }));
+		// What is cut off already, at the window's own size: what each of the next three adds to it is theirs.
+		let baseline: Set<string> | null = null;
+		const cutAlready = async () => (baseline ??= new Set((await ask<Spot[]>('clipped()')).map((s) => s.path)));
+		const newlyClipped = async (was: Set<string>) =>
+			(await ask<Spot[]>('clipped()')).filter((s) => !was.has(s.path)).map((s) => ({ target: s.path, detail: `“${s.text}” is cut off` }));
 		await step(['reflow'], 'the page 320 pixels wide', async () => {
+			const was = await cutAlready();
 			await sized(320, 256);
 			const o = await ask<{ width: number; window: number; past: Spot[] }>('overflow()');
-			const cut = await newlyClipped();
+			const cut = await newlyClipped(was);
 			evidence.push({ name: 'reflow-320.jpg', data: await picture(page, 320) });
 			await sized(view.width, view.height);
 			const sideways =
@@ -449,15 +488,17 @@ export const probeView = async (page: ProbePage, url: string, options: ProbeOpti
 			return [resultFrom('reflow', [...sideways, ...cut])];
 		});
 		await step(['resize-text'], 'the page at 200%', async () => {
+			const was = await cutAlready();
 			await sized(view.width / 2, view.height / 2, 2);
-			const cut = await newlyClipped();
+			const cut = await newlyClipped(was);
 			evidence.push({ name: 'zoom-200.jpg', data: await picture(page, view.width / 2) });
 			await sized(view.width, view.height);
 			return [resultFrom('resize-text', cut)];
 		});
 		await step(['text-spacing'], 'WCAG’s text spacing', async () => {
+			const was = await cutAlready();
 			await ask('textSpacing(true)');
-			const cut = await newlyClipped();
+			const cut = await newlyClipped(was);
 			await ask('textSpacing(false)');
 			return [resultFrom('text-spacing', cut)];
 		});
@@ -487,18 +528,18 @@ export const probeView = async (page: ProbePage, url: string, options: ProbeOpti
 				if (!at) continue;
 				await ask('mark()');
 				await page.mouse.move(at.box.x + at.box.width / 2, at.box.y + at.box.height / 2);
-				await pause(SETTLE_MS);
+				await settle();
 				contrastRows.push(...(await contrast(target.path, 'hover')));
-				const content = (await ask<Spot[]>('appeared()')).find((c) => !c.path.startsWith(target.path));
+				const content = (await ask<Spot[]>(`appeared(${quote(target.path)})`))[0];
 				if (content) {
 					shown++;
 					await page.mouse.move(content.box.x + content.box.width / 2, content.box.y + content.box.height / 2);
-					await pause(SETTLE_MS);
+					await settle();
 					const hoverable = await ask<boolean>(`stillShown(${quote(content.path)})`);
-					await pause(1000);
+					await pause(STAYS_MS);
 					const stays = await ask<boolean>(`stillShown(${quote(content.path)})`);
 					await page.keyboard.press('Escape');
-					await pause(SETTLE_MS);
+					await settle();
 					const dismissed = !(await ask<boolean>(`stillShown(${quote(content.path)})`));
 					const faults = [
 						hoverable ? null : 'goes when the pointer moves onto it',
@@ -532,32 +573,39 @@ export const probeView = async (page: ProbePage, url: string, options: ProbeOpti
 			const controls = (await ask<Spot[]>('customControls()')).slice(0, MOST.controls);
 			if (controls.length === 0) return [notApplicable('keyboard-operate', 'no control here is written with a role')];
 			const found: ProbeFinding[] = [];
+			let tried = 0;
 			for (const control of controls) {
 				await load();
+				// One that cannot take focus cannot be tried with a key: that is keyboard-reach's to say.
 				if (!(await ask<boolean>(`focus(${quote(control.path)})`))) continue;
+				tried++;
 				await ask('watched()');
 				const before = page.url();
 				await page.keyboard.press('Enter');
 				await page.keyboard.press(' ');
-				await pause(SETTLE_MS);
+				await settle();
 				const byKey = (await ask<Watched>('watched()')).changes + (otherPage(before, page.url()) ? 1 : 0);
 				await load();
 				const at = await ask<Spot | null>(`reveal(${quote(control.path)})`);
 				if (!at) continue;
 				await ask('watched()');
 				await page.mouse.click(at.box.x + at.box.width / 2, at.box.y + at.box.height / 2);
-				await pause(SETTLE_MS);
+				await settle();
 				const byClick = (await ask<Watched>('watched()')).changes + (otherPage(before, page.url()) ? 1 : 0);
 				if (byClick > 0 && byKey === 0)
 					found.push({ target: control.path, detail: `“${control.text}” does something on a click, and nothing on Enter or Space` });
 			}
+			if (tried === 0) return [notRun('keyboard-operate', 'none of its controls written with a role takes focus, so no key could be tried on one')];
 			return [resultFrom('keyboard-operate', found)];
 		});
 		const liveLog: { used: string; added: Watched['added'] }[] = [];
 		await step(['status-messages'], 'what each button says as it is used', async () => {
 			await load();
-			const buttons = (await ask<Spot[]>('buttons()')).slice(0, MOST.buttons);
-			if (buttons.length === 0) return [notApplicable('status-messages', 'no button here to use')];
+			const all = await ask<Button[]>('buttons()');
+			if (all.length === 0) return [notApplicable('status-messages', 'no button here to use')];
+			// One that opens or closes what it names shows that, which is not a message.
+			const buttons = all.filter((b) => !b.discloses).slice(0, MOST.buttons);
+			if (buttons.length === 0) return [notApplicable('status-messages', 'every button here opens or closes something it names')];
 			const found: ProbeFinding[] = [];
 			for (const button of buttons) {
 				await load();
@@ -565,10 +613,10 @@ export const probeView = async (page: ProbePage, url: string, options: ProbeOpti
 				if (!at) continue;
 				await ask('watched()');
 				await page.mouse.click(at.box.x + at.box.width / 2, at.box.y + at.box.height / 2);
-				await pause(SETTLE_MS * 2);
+				await settle();
 				const added = (await ask<Watched>('watched()')).added;
 				liveLog.push({ used: button.path, added });
-				const message = added.find((a) => !a.live && !a.dialog && !a.interactive && a.length <= MOST_MESSAGE);
+				const message = added.find((a) => !a.live && !a.dialog && !a.interactive && !a.inPlace && a.length <= MOST_MESSAGE);
 				if (message) found.push({ target: button.path, detail: `“${message.text}” appeared after it was used, outside any live region` });
 			}
 			evidence.push({ name: 'live-regions.json', data: JSON.stringify(liveLog, null, 1) });
@@ -590,13 +638,8 @@ export const probeView = async (page: ProbePage, url: string, options: ProbeOpti
 				if (kind === 'select') await ask(`chooseNext(${quote(spot.path)})`);
 				else if (kind === 'toggle') await page.keyboard.press(' ');
 				else await page.keyboard.type('a');
-				await pause(SETTLE_MS * 2);
-				const change = contextChange(
-					before,
-					page.url(),
-					await ask<Watched>('watched()'),
-					await ask<{ dialog: boolean; replaced: boolean }>('becameAnother()'),
-				);
+				await settle();
+				const change = await changeSince(before);
 				if (change) found.push({ target: spot.path, detail: `changing it ${change}` });
 			}
 			return [resultFrom('on-input', found)];
@@ -604,8 +647,12 @@ export const probeView = async (page: ProbePage, url: string, options: ProbeOpti
 		await step(['error-identification'], 'sending each form', async () => {
 			await load();
 			const forms = (await ask<{ path: string; submit: string | null }[]>('forms()')).slice(0, MOST.forms);
-			if (forms.length === 0) return [notApplicable('error-identification', 'no form here to send')];
+			if (forms.length === 0)
+				return (await ask<Field[]>('inputs()')).length
+					? [notRun('error-identification', "the page's fields are in no form, so none could be sent to see its errors: send them by hand")]
+					: [notApplicable('error-identification', 'no form here to send')];
 			const found: ProbeFinding[] = [];
+			let sent = 0;
 			for (const form of forms) {
 				if (!form.submit) continue;
 				await load();
@@ -614,7 +661,8 @@ export const probeView = async (page: ProbePage, url: string, options: ProbeOpti
 				await ask('mark()');
 				const before = page.url();
 				await page.mouse.click(at.box.x + at.box.width / 2, at.box.y + at.box.height / 2);
-				await pause(SETTLE_MS * 2);
+				await settle();
+				sent++;
 				if (otherPage(before, page.url())) continue;
 				const e = await ask<FormErrors>(`errors(${quote(form.path)})`);
 				if (e.native) continue;
@@ -625,10 +673,13 @@ export const probeView = async (page: ProbePage, url: string, options: ProbeOpti
 					...e.unnamed.map((f) => ({ target: f.path, detail: 'marked invalid, and names no message' })),
 				);
 			}
+			if (sent === 0) return [notRun('error-identification', 'no form here has a button that sends it, so none was sent')];
 			return [resultFrom('error-identification', found)];
 		});
 	}
 
-	evidence.push({ name: 'cells.json', data: JSON.stringify(results, null, 1) });
+	// A page with more than the probe reads: what found none found none of what it read.
+	const read = await ask<Read>('howMuch()').catch(() => null);
+	if (read?.capped) onlyPart([...wanted], `the page has more elements than the probe reads (${read.elements}): what it read had none of these`);
 	return { results, evidence, ms: Date.now() - started };
 };

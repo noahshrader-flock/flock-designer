@@ -102,6 +102,28 @@ describe('a ledger', () => {
 	});
 });
 
+describe('a light measure', () => {
+	// What a build's check and --light run: the tree and the Tab walk alone, and no source read.
+	const light = ledger([cell('focus-visible', '2.4.7', 'none'), cell('keyboard-reach', '2.1.1', 'none')]);
+
+	it('says what it did not measure is not run, and why, never a person’s or measured in its place', () => {
+		expect(row(light, '1.4.10')).toMatchObject({ status: 'notRun', why: 'reflow was not run in this measure (at full depth)' });
+		expect(row(light, '2.1.1')).toMatchObject({ status: 'notRun', why: expect.stringContaining('keyboard-operate was not run in this measure') });
+		// Measured by axe and by a cell that did run: still not run, as another cell that measures it did not.
+		expect(row(light, '2.4.7')?.status).toBe('measured');
+		// What no machine measures stays a person's.
+		expect(row(light, '1.3.3')?.status).toBe('person');
+	});
+
+	it('says nothing was fixed when what was found is only not measured this time', () => {
+		const full = ledger([cell('reflow', '1.4.10', 'found'), cell('focus-visible', '2.4.7', 'found')]);
+		const after = ledger([cell('focus-visible', '2.4.7', 'none')]);
+		const c = ledgerChanges(full, after);
+		expect(c.noLongerFound).toEqual(['2.4.7']);
+		expect(c.changed).toContainEqual({ sc: '1.4.10', from: 'found', to: 'notRun' });
+	});
+});
+
 describe('the matrix and the ten checks', () => {
 	it('holds every criterion axe-core has a Level A or AA rule for', () => {
 		// Not in the matrix, and rightly: 4.1.1, which WCAG 2.2 took out, and 2.1.3, a AAA criterion one A rule also names.

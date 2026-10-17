@@ -381,8 +381,13 @@ describe('whether a page loads (Run locally checks before it opens anything)', (
 		expect(await headless.loads('http://localhost:3000/')).toBe("Cannot read properties of undefined (reading 'None')");
 	});
 
-	it('says so when the page draws nothing at all', async () => {
-		const { headless } = loadsWith({ evaluate: () => 0 });
+	it('says so when the page draws nothing at all: no text, and nothing painted', async () => {
+		const { headless } = loadsWith({ evaluate: () => 0, screenshot: () => blank });
 		expect(await headless.loads('http://localhost:3000/')).toBe('the page loaded, but the app drew nothing on it.');
+	});
+
+	it('takes an app that paints without text in the document (a canvas, a shadow root) as drawn', async () => {
+		const { headless } = loadsWith({ evaluate: () => 0, screenshot: () => lit });
+		expect(await headless.loads('http://localhost:3000/')).toBeNull();
 	});
 });

@@ -66,7 +66,7 @@ export const PAGES_SECTION = 'Pages to check for accessibility';
  */
 export const appPages = (manifest: string | null): AppPage[] | null => {
 	const rows = manifest === null ? '' : (section(manifest, PAGES_SECTION) ?? '');
-	const pages = [...rows.matchAll(/^\|\s*([^|]*?)\s*\|\s*`?(\/(?!\/)[^|`\s]*)`?\s*\|/gm)].map(([, name, path]) => ({
+	const pages = [...rows.matchAll(/^\|\s*([^|]*?)\s*\|\s*`?(\/(?![\/\\])[^|`\s]*)`?\s*\|/gm)].map(([, name, path]) => ({
 		name: (name as string).replace(/\*\*/g, '').trim() || (path as string),
 		path: path as string,
 	}));

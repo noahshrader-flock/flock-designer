@@ -327,8 +327,11 @@ export const chromeHeadless = ({
 			if ((await within(LOAD_MS, page.goto(url, { waitUntil: 'load', timeout: LOAD_MS }))) === null) return 'the page did not load in time.';
 			await new Promise((resolve) => setTimeout(resolve, loadSettleMs));
 			if (errors.length > 0) return errors[0] as string;
-			const drawn = Number(await page.evaluate('document.body ? document.body.innerText.trim().length : 0'));
-			return drawn > 0 ? null : 'the page loaded, but the app drew nothing on it.';
+			// Drawn: text in the document, or, for an app that draws in a canvas or behind a shadow root, anything painted.
+			const text = Number(await page.evaluate('document.body ? document.body.innerText.trim().length : 0'));
+			if (text > 0) return null;
+			const drew = !isBlank(decodePng(Buffer.from(await page.screenshot({ type: 'png', clip: { x: 0, y: 0, width: 1280, height: 800 } }))).rgba);
+			return drew ? null : 'the page loaded, but the app drew nothing on it.';
 		});
 
 	return {

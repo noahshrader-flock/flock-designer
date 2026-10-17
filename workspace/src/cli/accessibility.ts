@@ -35,6 +35,7 @@ import { FIRST_PAGE, type PageNotOpened, checkPages, onDesignMode } from '../mai
 import { chromeHeadless } from '../main/services/chromeHeadless';
 import { findCommand, readDescriptor } from '../main/services/descriptor';
 import { DESIGN_MODE_COMMAND } from '../shared/work';
+import { errorText } from '../shared/result';
 import { git } from '../main/services/git';
 import { assertUsableProjectId } from '../main/services/iterations';
 import { writeAtomic } from '../main/services/jsonFile';
@@ -115,10 +116,15 @@ const changedSources = async (root: string): Promise<{ files: SourceFile[] | nul
 	const base = (await git(root, ['rev-parse', '--abbrev-ref', 'origin/HEAD']).catch(() => '')).trim();
 	if (!base || base === 'origin/HEAD')
 		return { files: null, why: "this checkout's remote names no default branch, so the work's own files could not be told from the rest" };
-	const from = (await git(root, ['merge-base', 'HEAD', base])).trim();
-	const names = (await git(root, ['diff', '--name-only', '--diff-filter=AMR', from])).split('\n').filter((n) => n.trim() && !NOT_SOURCE.test(n));
-	const files = names.flatMap((path) => (existsSync(join(root, path)) ? [{ path, text: readFileSync(join(root, path), 'utf8') }] : []));
-	return { files, why: '' };
+	try {
+		const from = (await git(root, ['merge-base', 'HEAD', base])).trim();
+		const names = (await git(root, ['diff', '--name-only', '--diff-filter=AMR', from])).split('\n').filter((n) => n.trim() && !NOT_SOURCE.test(n));
+		const files = names.flatMap((path) => (existsSync(join(root, path)) ? [{ path, text: readFileSync(join(root, path), 'utf8') }] : []));
+		return { files, why: '' };
+	} catch (err) {
+		// A shallow clone, say, has no shared history to tell the work's files by: said, and the rest is still written.
+		return { files: null, why: `the work's own files could not be told from the rest (${errorText(err, { firstLine: true })})` };
+	}
 };
 
 const sourceCells = (depth: ProbeDepth) =>

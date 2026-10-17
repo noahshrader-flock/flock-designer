@@ -199,31 +199,136 @@ export const PROBE_FIXTURES: Partial<Record<CellId, Fixture[]>> = {
 	],
 };
 
+/** A web component: `name`, drawing `inner` in an open shadow root, with its own `css`, as a component library would. */
+const component = (name: string, inner: string, css = '') =>
+	`<${name}></${name}><script>customElements.define(${JSON.stringify(name)}, class extends HTMLElement { constructor() { super(); this.attachShadow({ mode: 'open' }).innerHTML = ${JSON.stringify(`<style>${css}</style>${inner}`)}; } });</script>`;
+const TRAP = (escapeLetsOut: boolean) =>
+	`<script>document.getElementById('trap').addEventListener('keydown', (e) => { if (e.key === 'Tab') e.preventDefault(); if (e.key === 'Escape') ${escapeLetsOut ? "document.getElementById('last').focus()" : 'e.preventDefault()'}; });</script>`;
+
+/**
+ * Pages built other ways (web components, frames, colors written as \`oklch()\`), and twins of false findings the probe once
+ * made: each cell's planted defect again, and a twin that must stay clean however it is built.
+ */
+const OTHER_WAYS: Partial<Record<CellId, Fixture[]>> = {
+	'keyboard-trap': [
+		// Three stops inside one web component are three stops, not a trap.
+		pair(
+			'never leaves them',
+			`${component('x-tools', '<button>A</button><button>B</button><button>C</button>')}<input id="trap" aria-label="Name"><button id="last">Last</button>${TRAP(false)}`,
+			`${component('x-tools', '<button>A</button><button>B</button><button>C</button>')}<input aria-label="Name"><button id="last">Last</button>`,
+		),
+		// Escape that lets focus out is a way out.
+		pair('never leaves them', `<input id="trap" aria-label="Name"><button id="last">Last</button>${TRAP(false)}`, `<input id="trap" aria-label="Name"><button id="last">Last</button>${TRAP(true)}`),
+	],
+	'focus-visible': [
+		pair('drawn as it is when not', component('x-save', '<button>Save</button>', 'button:focus { outline: none; }'), component('x-save', '<button>Save</button>')),
+		pair(
+			'drawn as it is when not',
+			`<iframe title="Payment" srcdoc="${'<style>button:focus { outline: none; }</style><button>Pay</button>'.replace(/"/g, '&quot;')}"></iframe>`,
+			'<iframe title="Payment" srcdoc="<button>Pay</button>"></iframe>',
+		),
+	],
+	'keyboard-reach': [
+		// An item a menu reaches by its arrow keys is reached; the same item on its own is not.
+		pair(
+			'looks clickable',
+			`<div tabindex="-1" style="cursor: pointer" onclick="this.textContent = 'Done'">Archive</div>`,
+			`<div role="menu"><div role="menuitem" tabindex="0">Open</div><div role="menuitem" tabindex="-1" style="cursor: pointer">Archive</div></div>`,
+		),
+		pair('looks clickable', component('x-row', '<div style="cursor: pointer">Delete</div>'), component('x-row', '<button>Delete</button>')),
+	],
+	'color-only': [
+		pair(
+			'forced colors paints it over',
+			'<p><span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: oklch(0.6 0.2 25)"></span> Camera 4</p>',
+			'<p><span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: oklch(0.6 0.2 25); border: 2px solid oklch(0.6 0.2 25)"></span> Camera 4</p>',
+		),
+	],
+	'non-text-contrast': [
+		pair('its edge is', '<input aria-label="Name" style="border: 1px solid oklch(0.92 0 0); background: #fff">', '<input aria-label="Name" style="border: 1px solid oklch(0.45 0 0); background: #fff">'),
+		// A field whose edge its frame draws, as an outlined field often is.
+		pair(
+			'its edge is',
+			'<div style="display: inline-block; border: 1px solid #ddd; border-radius: 4px"><input aria-label="Name" style="border: 0; outline: 0; background: transparent"></div>',
+			'<div style="display: inline-block; border: 1px solid #767676; border-radius: 4px"><input aria-label="Name" style="border: 0; outline: 0; background: transparent"></div>',
+		),
+	],
+	'contrast-states': [
+		// Text already too faint as the page opens is axe's: focus making it no worse is not this cell's.
+		pair('on focus', '<button>Save</button>', '<button>Save</button>', [
+			'button { color: #000; background: #fff; border: 1px solid #000; } button:focus { color: #ccc; }',
+			'button { color: #ccc; background: #fff; border: 1px solid #000; } button:focus { color: #ccc; }',
+		]),
+	],
+	'on-input': [
+		pair(
+			'went to another address',
+			`<select aria-label="Camera" onchange="location.href = '/elsewhere'"><option>One</option><option>Two</option></select>`,
+			`<select aria-label="Camera" onchange="document.getElementById('o').textContent = this.value"><option>One</option><option>Two</option></select><p id="o"></p>`,
+		),
+		pair(
+			'opened a dialog',
+			`<select aria-label="Camera" onchange="document.getElementById('d').show()"><option>One</option><option>Two</option></select><dialog id="d"><p>Pick one</p></dialog>`,
+			`<select aria-label="Camera" onchange="document.getElementById('o').textContent = this.value"><option>One</option><option>Two</option></select><p id="o"></p>`,
+		),
+	],
+	'error-identification': [
+		// The browser's own check, which names the field and says what is wrong: counted as named.
+		pair(
+			'no field names it',
+			`<form novalidate onsubmit="event.preventDefault(); document.getElementById('e').hidden = false"><label for="n">Name</label> <input id="n" required> <span id="e" hidden>Name is required</span> <button>Send</button></form>`,
+			`<form onsubmit="event.preventDefault(); document.getElementById('e').hidden = false"><label for="n">Name</label> <input id="n" required> <span id="e" hidden>Name is required</span> <button>Send</button></form>`,
+		),
+	],
+	'status-messages': [
+		// A clock ticking in place, a button that opens what it names, a button whose own label changes: none is a message.
+		pair(
+			'outside any live region',
+			`<p id="t">0</p><button onclick="document.getElementById('m').textContent = 'Saved'">Save</button><p id="m"></p><script>setInterval(() => (document.getElementById('t').firstChild.data = String(Date.now())), 100);</script>`,
+			`<p id="t">0</p><button onclick="this.textContent = 'Show fewer'">Show more</button><button aria-expanded="false" aria-controls="m" onclick="this.setAttribute('aria-expanded', 'true'); document.getElementById('m').textContent = 'More'">More</button><p id="m"></p><script>setInterval(() => (document.getElementById('t').firstChild.data = String(Date.now())), 100);</script>`,
+		),
+	],
+};
+for (const [cell, more] of Object.entries(OTHER_WAYS) as [CellId, Fixture[]][]) PROBE_FIXTURES[cell] = [...(PROBE_FIXTURES[cell] ?? []), ...more];
+
 /**
  * The source cells' fixtures: lines with a planted defect, each in one of the forms a product's source writes it (a DOM
  * listener, a JSX prop, CSS), and clean twins, each differing by one thing its rule looks at.
  */
 export const SOURCE_FIXTURES: Partial<Record<CellId, { bad: string[]; good: string[] }>> = {
 	'key-shortcuts': {
-		bad: ["document.addEventListener('keydown', (e) => {\n\tif (e.key === 'k') openSearch();\n});", "if ('?' === event.key) showHelp();"],
-		good: ["document.addEventListener('keydown', (e) => {\n\tif (e.key === 'k' && (e.metaKey || e.ctrlKey)) openSearch();\n});", "if (e.key === 'Enter') send();"],
+		bad: ["document.addEventListener('keydown', (e) => {\n\tif (e.key === 'k') openSearch();\n});", "if ('?' === event.key) showHelp();", '<input @keydown.k="openSearch" />'],
+		good: [
+			"document.addEventListener('keydown', (e) => {\n\tif (e.key === 'k' && (e.metaKey || e.ctrlKey)) openSearch();\n});",
+			"if (e.key === 'Enter') send();",
+			'<input @keydown.ctrl.k="openSearch" />',
+		],
 	},
 	timing: { bad: ['setTimeout(signOut, 15 * 60 * 1000);', 'setInterval(refresh, 30_000);'], good: ['setTimeout(hideToast, 4000);', 'const limit = 15 * 60 * 1000;'] },
 	flashing: { bad: ['.alert { animation: blink 0.2s infinite; }', '.alert { animation: blink 150ms linear infinite; }'], good: ['.alert { animation: blink 0.2s 3; }', '.alert { animation: blink 2s infinite; }'] },
 	'pointer-gestures': {
-		bad: ['if (e.touches.length === 2) zoom(e);', "el.addEventListener('touchmove', pan);", '<div onTouchMove={pan} />', "el.addEventListener('gesturestart', pinch);"],
+		bad: ['if (e.touches.length === 2) zoom(e);', "el.addEventListener('touchmove', pan);", '<div onTouchMove={pan} />', "el.addEventListener('gesturestart', pinch);", '<div @touchmove="pan" />', '<div (touchmove)="pan($event)"></div>'],
 		good: ["el.addEventListener('click', zoomIn);", '<div onTouchEnd={tap} />'],
 	},
 	'pointer-cancellation': {
-		bad: ['<button onMouseDown={remove}>Remove</button>', "el.addEventListener('pointerdown', remove);", '<li onTouchStart={pick} />', "el.addEventListener('touchstart', pick);"],
-		good: ['<button onClick={remove}>Remove</button>', "el.addEventListener('pointerup', remove);"],
+		bad: [
+			'<button onMouseDown={remove}>Remove</button>',
+			"el.addEventListener('pointerdown', remove);",
+			'<li onTouchStart={pick} />',
+			"el.addEventListener('touchstart', pick);",
+			'<button @mousedown="remove">Remove</button>',
+			'<button v-on:pointerdown="remove">Remove</button>',
+			'<button on:mousedown={remove}>Remove</button>',
+			'<button (mousedown)="remove()">Remove</button>',
+		],
+		good: ['<button onClick={remove}>Remove</button>', "el.addEventListener('pointerup', remove);", '<button @click="remove">Remove</button>', 'const trackMousedownCount = 0;'],
 	},
 	'motion-actuation': {
 		bad: ["window.addEventListener('devicemotion', undo);", 'if (window.DeviceOrientationEvent) tilt();', 'const sensor = new Accelerometer();'],
 		good: ["window.addEventListener('resize', layout);"],
 	},
 	dragging: {
-		bad: ['<li draggable onClick={open}>Camera 4</li>', '<li onDragStart={pick}>Camera 4</li>', "el.addEventListener('dragstart', pick);"],
+		bad: ['<li draggable onClick={open}>Camera 4</li>', '<li onDragStart={pick}>Camera 4</li>', "el.addEventListener('dragstart', pick);", '<li v-on:dragstart="pick">Camera 4</li>', '<li on:dragstart={pick}>Camera 4</li>'],
 		good: ['<li>Camera 4 <button onClick={moveUp}>Move up</button></li>'],
 	},
 };

@@ -157,22 +157,42 @@ describe('the app, in design mode', () => {
 		expect(work).not.toHaveBeenCalled();
 	});
 
-	it('says a page did not open when the server’s output says its build failed, before or after it answered, with a word on its packages', async () => {
+	it('says why a page did not open from the server’s output, its build error, with a word on its packages', async () => {
 		const failing =
 			"console.log('\\u001b[31merror\\u001b[39m   Build error:'); console.log(\"  × export 'Card' (imported as 'Card') was not found in 'lib' (possible exports: A, B)\"); setInterval(() => {}, 1000)";
 		const descriptor = descriptorWith([serving(['node', '-e', failing]), install]);
 		let why: string | null = null;
 		await onDesignMode(
-			{ root, descriptor, projectId: 'p', loads, progress: () => undefined, deps: deps(() => children.length > 0) },
+			{
+				root,
+				descriptor,
+				projectId: 'p',
+				loads: async () => 'the page loaded, but the app drew nothing on it.',
+				progress: () => undefined,
+				deps: deps(() => children.length > 0),
+			},
 			async (_origin, opens) => {
 				// Its output is read as it comes: given a moment to print what it prints as it starts.
-				for (let i = 0; i < 40 && why === null; i++) {
+				for (let i = 0; i < 40 && !why?.includes('Card'); i++) {
 					why = await opens('http://localhost:4987/');
 					await new Promise((r) => setTimeout(r, 50));
 				}
 			},
 		);
 		expect(why).toBe("export 'Card' (imported as 'Card') was not found in 'lib' Its packages may be out of date: npm ci");
+	});
+
+	it('takes a page that drew as opened, whatever the server printed before it did (a first compile that failed and was fixed)', async () => {
+		const failing = "console.log('error   Build error:'); console.log(\"  × export 'Card' was not found in 'lib'\"); setInterval(() => {}, 1000)";
+		const descriptor = descriptorWith([serving(['node', '-e', failing])]);
+		const opened = await onDesignMode(
+			{ root, descriptor, projectId: 'p', loads, progress: () => undefined, deps: deps(() => children.length > 0) },
+			async (_origin, opens) => {
+				await new Promise((r) => setTimeout(r, 300));
+				return opens('http://localhost:4987/');
+			},
+		);
+		expect(opened).toBeNull();
 	});
 
 	it('says why it did not start, with its last output, and runs nothing', async () => {

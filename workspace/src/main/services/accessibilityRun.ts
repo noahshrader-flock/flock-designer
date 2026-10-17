@@ -138,10 +138,11 @@ export const onDesignMode = async <T>(
 			const why = withHint(buildError(said.log) ?? said.failed ?? 'it stopped');
 			throw new Error(`${descriptor.product}'s app did not start (${why}), so nothing was measured.${tail ? ` Its last output:\n${tail}` : ''}`);
 		}
-		// The output is read before and after the page is: a server can answer before it prints its build error.
+		// The page itself says whether it opened; the server's output says why when it did not (a build error it printed,
+		// which a page that drew well has outlived: a first compile that failed and was fixed).
 		const opens: Opens = async (url) => {
-			const why = buildError(said.log) ?? (await loads(url)) ?? buildError(said.log);
-			return why === null ? null : withHint(why);
+			const refused = await loads(url);
+			return refused === null ? null : withHint(buildError(said.log) ?? refused);
 		};
 		return await work(status.url, opens);
 	} finally {

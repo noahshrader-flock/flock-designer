@@ -81,7 +81,6 @@ describe.skipIf(findChrome() === null)('a view probed whole', () => {
 			'grayscale.jpg',
 			'reflow-320.jpg',
 			'zoom-200.jpg',
-			'cells.json',
 		])
 			expect(names).toContain(name);
 		// The browser's own focus ring is seen on every stop, the two below the fold among them.
