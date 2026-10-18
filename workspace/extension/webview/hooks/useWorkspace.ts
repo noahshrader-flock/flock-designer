@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import type { Result } from '../shared/contract';
+import type { Result } from '../../../src/shared/contract';
 
 /**
  * One way for a screen to read something from the app: what it read (`value`), why it could not (`error`, never thrown

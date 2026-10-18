@@ -6,7 +6,7 @@ import tseslint from 'typescript-eslint';
  * restates it.
  */
 export default tseslint.config(
-	{ ignores: ['out/', 'extension/dist/', 'src/renderer/ui/'] },
+	{ ignores: ['out/', 'extension/dist/', 'src/viewer/ui/'] },
 	// A rule switched off where it was wrong says so; one that no longer switches anything off goes.
 	{ linterOptions: { reportUnusedDisableDirectives: 'error' } },
 	{

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { ProjectWork } from '../src/shared/contract';
-import { type BuildApi, type BuildPhase, previewAddress, runLocalBuild } from '../src/renderer/localBuild';
+import { type BuildApi, type BuildPhase, previewAddress, runLocalBuild } from '../extension/src/localBuild';
 import { agentFinished, agentRunning, aProject, projectWork } from './fixtures';
 
 const work = (over: Partial<ProjectWork> = {}): ProjectWork => projectWork({ name: 'codebase', branch: 'feature/users', ...over });

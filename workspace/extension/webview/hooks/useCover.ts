@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import type { Project } from '../shared/contract';
-import { coverToShow } from '../shared/projectList';
+import type { Project } from '../../../src/shared/contract';
+import { coverToShow } from '../../../src/shared/projectList';
+import { workspace } from '../host';
 
 /** Pictures already read, by what names them: what a picture's name names never changes, so one shown again has it at once. */
 const read = new Map<string, string>();
@@ -16,11 +17,13 @@ export const useCover = (project: Project): { picture: string | undefined; waiti
 	useEffect(() => {
 		if (shown === null || key === null || read.has(key)) return;
 		let live = true;
-		void window.workspace.projectCover(project.id, shown.name, shown.cover).then((r) => {
-			const picture = r.ok ? r.value : null;
-			if (picture !== null) read.set(key, picture);
-			if (live) setAnswer({ key, picture });
-		});
+		void workspace()
+			.projectCover(project.id, shown.name, shown.cover)
+			.then((r) => {
+				const picture = r.ok ? r.value : null;
+				if (picture !== null) read.set(key, picture);
+				if (live) setAnswer({ key, picture });
+			});
 		return () => {
 			live = false;
 		};

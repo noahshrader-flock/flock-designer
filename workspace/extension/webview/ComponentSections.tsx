@@ -3,9 +3,9 @@ import type { CatalogComponent, ComponentTokens, DesignToken } from '../../src/s
 import { plural } from '../../src/shared/plural';
 import { inOrder } from '../../src/shared/primitives';
 import { labelOf } from '../../src/shared/tokens';
-import { useTokenChanges } from '../../src/renderer/tokenChanges';
-import { sharedWith, useComponentTokens } from '../../src/renderer/useComponentTokens';
-import { useComponentVariants } from '../../src/renderer/useComponentVariants';
+import { useTokenChanges } from './hooks/tokenChanges';
+import { sharedWith, useComponentTokens } from './hooks/useComponentTokens';
+import { useComponentVariants } from './hooks/useComponentVariants';
 import { AccessibilityFindings } from './Accessibility';
 import { TokenChanges } from './Changed';
 import { ChangeReach } from './ChangeReach';

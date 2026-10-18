@@ -1,6 +1,6 @@
 import { createElement } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
-import { CommentControl } from '../src/renderer/comments/CommentControl';
+import { CommentControl } from '../src/viewer/comments/CommentControl';
 import { Viewer } from '../src/viewer/Viewer';
 import { PAGE_CONFIG, PAGE_SIGN_IN, sitePage } from './pageHarness';
 import { render, settle, stateMenu, unmountAll } from './reviewHarness';

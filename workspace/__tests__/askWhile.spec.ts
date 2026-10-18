@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ASK_EVERY_MS, askWhile } from '../src/renderer/askWhile';
+import { ASK_EVERY_MS, askWhile } from '../extension/webview/hooks/askWhile';
 
 describe('asking again while an answer is drawn', () => {
 	beforeEach(() => void vi.useFakeTimers());

@@ -1,5 +1,5 @@
 # shadcn's own components, in shadcn's style: kept as `shadcn add` writes them, so an update is a clean diff.
-src/renderer/ui/
+src/viewer/ui/
 # Read byte for byte by the tests.
 __tests__/fixtures/
 # Prose, wrapped by hand.

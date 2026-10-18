@@ -1,7 +1,7 @@
 import './viewer.css';
 import { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { TooltipProvider } from '../renderer/ui/tooltip';
+import { TooltipProvider } from './ui/tooltip';
 import { type Relay, isServedHere, versionAddress, keyFromAddress, listenForDsnr, serverRelay } from './relay';
 import { applyScheme, systemIsDark, watchSystemScheme } from './scheme';
 import { Viewer, type ViewerConfig, type ViewerSlots } from './Viewer';

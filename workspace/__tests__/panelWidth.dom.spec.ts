@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { COMMENTS_PANEL, PANEL_MIN, clampPanelWidth, loadPanelWidth, panelMax, savePanelWidth } from '../src/renderer/panelWidth';
+import { COMMENTS_PANEL, PANEL_MIN, clampPanelWidth, loadPanelWidth, panelMax, savePanelWidth } from '../src/viewer/panelWidth';
 
 describe('clampPanelWidth', () => {
 	it('never goes below the minimum', () => {

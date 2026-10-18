@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import type { Result } from '../shared/contract';
+import type { Result } from '../../../src/shared/contract';
 import { askWhile } from './askWhile';
 
 /** What every answer worked out while a change is tried can be: none with no change, building until it is, failed. */

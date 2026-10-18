@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { HandedChange, HandoffBranch, Result } from '../shared/contract';
-import { handedTo } from '../shared/handedTo';
+import type { HandedChange, HandoffBranch, Result } from '../../../src/shared/contract';
+import { handedTo } from '../../../src/shared/handedTo';
+import { workspace } from '../host';
 
 /** How often a hand-over's branch is read from git again while it is watched, until it is proposed. */
 const READ_EVERY_MS = 5_000;
@@ -47,9 +48,11 @@ export const useHandoff = ({
 
 	const read = useCallback(() => {
 		const { file: asked, epoch } = now.current;
-		void window.workspace.handoffBranch(asked).then((r) => {
-			if (r.ok && now.current.epoch === epoch) setHandoff(r.value);
-		});
+		void workspace()
+			.handoffBranch(asked)
+			.then((r) => {
+				if (r.ok && now.current.epoch === epoch) setHandoff(r.value);
+			});
 	}, []);
 
 	useEffect(() => {
@@ -86,7 +89,7 @@ export const useHandoff = ({
 		processChanges: () =>
 			void run(
 				'handing',
-				() => window.workspace.handOverChanges(file, change),
+				() => workspace().handOverChanges(file, change),
 				(over) => {
 					setHanded(handedTo(over, 'This hand-over'));
 					read();
@@ -95,23 +98,25 @@ export const useHandoff = ({
 		// At the commit read here: one Claude Code committed since is refused, to be looked at first.
 		propose: (confirmed) => {
 			const tip = handoff?.review.state === 'ready' ? handoff.review.tip : null;
-			if (tip !== null) void run('proposing', () => window.workspace.proposeHandoff(file, tip, confirmed), setHandoff);
+			if (tip !== null) void run('proposing', () => workspace().proposeHandoff(file, tip, confirmed), setHandoff);
 		},
 		// Every page is told what is shown, and reads the library again: nothing is kept here.
 		preview: (on) =>
 			void run(
 				'showing',
-				() => (on ? window.workspace.showHandoff(file) : window.workspace.showLibraryBranch()),
+				() => (on ? workspace().showHandoff(file) : workspace().showLibraryBranch()),
 				() => undefined,
 			),
 		// Only once it is forgotten: a hand-over still kept would come back the next time it is read.
 		startOver: () =>
-			void window.workspace.forgetHandoff(file).then((r) => {
-				if (!r.ok) return setError(r.error);
-				now.current.epoch += 1;
-				setHandoff(null);
-				setHanded(null);
-				setError(null);
-			}),
+			void workspace()
+				.forgetHandoff(file)
+				.then((r) => {
+					if (!r.ok) return setError(r.error);
+					now.current.epoch += 1;
+					setHandoff(null);
+					setHanded(null);
+					setError(null);
+				}),
 	};
 };

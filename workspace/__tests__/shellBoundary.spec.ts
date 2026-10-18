@@ -32,7 +32,7 @@ const loads = (text: string): string[] => {
 /** A relative or `@/` import as the file it names, or null for a package. */
 const fileOf = (from: string, spec: string): string | null => {
 	const bare = spec.replace(/\?.*$/, '');
-	const base = bare.startsWith('@/') ? join(src, 'renderer', bare.slice(2)) : bare.startsWith('.') ? resolve(dirname(from), bare) : null;
+	const base = bare.startsWith('@/') ? join(src, 'viewer', bare.slice(2)) : bare.startsWith('.') ? resolve(dirname(from), bare) : null;
 	if (base === null) return null;
 	return [base, `${base}.ts`, `${base}.tsx`, join(base, 'index.ts')].find((p) => existsSync(p) && statSync(p).isFile()) ?? null;
 };

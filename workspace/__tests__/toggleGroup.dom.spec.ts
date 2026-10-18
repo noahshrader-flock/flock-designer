@@ -1,6 +1,6 @@
 import { createElement } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
-import { ToggleGroup, ToggleGroupItem } from '../src/renderer/ui/toggle-group';
+import { ToggleGroup, ToggleGroupItem } from '../src/viewer/ui/toggle-group';
 import { render, unmountAll } from './reviewHarness';
 
 /**

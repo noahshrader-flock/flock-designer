@@ -4,12 +4,12 @@ import { describe, expect, it } from 'vitest';
 import { windowSources } from './windowSources';
 
 /**
- * shadcn's primitives (`src/renderer/ui/`) are its own code, each changed here only where the app needs it, with the
+ * shadcn's primitives (`src/viewer/ui/`) are its own code, each changed here only where the app needs it, with the
  * reason written beside the change. `shadcn add --overwrite` would put each back to stock with nothing failing, so each
  * change is pinned here by what it adds: an overwrite fails loudly, and says which one went.
  */
 
-const ui = (file: string) => readFileSync(join(__dirname, '..', 'src/renderer/ui', file), 'utf8');
+const ui = (file: string) => readFileSync(join(__dirname, '..', 'src/viewer/ui', file), 'utf8');
 
 const PINNED: [file: string, what: string, why: string][] = [
 	['dialog.tsx', 'top-(--nav-height)', 'the overlay starts under the top bar, which stays usable'],
@@ -34,12 +34,12 @@ describe('the changes to shadcn’s primitives', () => {
 	});
 
 	it('has none of the primitives the app’s screens needed and nothing now does (the avatar is the comments’, so it is here)', () => {
-		const present = readdirSync(join(__dirname, '..', 'src/renderer/ui')).sort();
+		const present = readdirSync(join(__dirname, '..', 'src/viewer/ui')).sort();
 		expect(present.filter((f) => ['popover.tsx', 'sheet.tsx', 'slider.tsx', 'accordion.tsx', 'tabs.tsx', 'card.tsx'].includes(f))).toEqual([]);
 	});
 
 	it('has no overlay registry: the native preview it served is gone', () => {
-		expect(existsSync(join(__dirname, '..', 'src/renderer/overlays.ts'))).toBe(false);
+		expect(existsSync(join(__dirname, '..', 'src/viewer/overlays.ts'))).toBe(false);
 		for (const f of ['dialog.tsx', 'tooltip.tsx', 'dropdown-menu.tsx']) expect(ui(f)).not.toContain('useOverlayRef');
 	});
 });
@@ -52,9 +52,9 @@ describe('the window’s own components', () => {
 	it('style inline only where a value is known only at run time', () => {
 		const allowed: Record<string, number> = {
 			// The panel's dragged width.
-			'src/renderer/ResizablePanel.tsx': 1,
+			'src/viewer/ResizablePanel.tsx': 1,
 			// The comment box, at the pin's position in the window.
-			'src/renderer/comments/CommentBox.tsx': 1,
+			'src/viewer/comments/CommentBox.tsx': 1,
 		};
 		const found = Object.fromEntries(
 			windowSources()

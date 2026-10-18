@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { hexAndAlpha, isHex, typedHex } from '../shared/tokens';
+import { hexAndAlpha, isHex, typedHex } from '../../../src/shared/tokens';
 
 /**
  * A color's own value as its control edits it, in the app and in VS Code: a picker, committed when it is closed (the

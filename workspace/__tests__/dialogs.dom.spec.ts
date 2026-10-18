@@ -1,11 +1,11 @@
 import { act, createElement } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { closeUnlessBusy } from '../src/renderer/dialogClose';
-import { ErrorAlert } from '../src/renderer/ErrorAlert';
-import { Alert } from '../src/renderer/ui/alert';
+import { closeUnlessBusy } from '../src/viewer/dialogClose';
+import { ErrorAlert } from '../src/viewer/ErrorAlert';
+import { Alert } from '../src/viewer/ui/alert';
 import { render, unmountAll } from './reviewHarness';
-import { Dialog, DialogContent, DialogTitle } from '../src/renderer/ui/dialog';
-import { TooltipProvider } from '../src/renderer/ui/tooltip';
+import { Dialog, DialogContent, DialogTitle } from '../src/viewer/ui/dialog';
+import { TooltipProvider } from '../src/viewer/ui/tooltip';
 import { badTags, offenders, windowSources } from './windowSources';
 
 /**

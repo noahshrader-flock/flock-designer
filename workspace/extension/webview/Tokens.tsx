@@ -2,7 +2,7 @@ import { useState } from 'react';
 import type { DesignToken, DesignTokens } from '../../src/shared/contract';
 import { byPrimitive, drawnAs, inOrder, isEditable, listed } from '../../src/shared/primitives';
 import { type ColorView, labelOf, pointsAt, rowContrast, tokensShown } from '../../src/shared/tokens';
-import { useTokenChanges } from '../../src/renderer/tokenChanges';
+import { useTokenChanges } from './hooks/tokenChanges';
 import { NoMatches } from './ui/NoMatches';
 import { EmptyState } from './ui/EmptyState';
 import { SearchBox } from './ui/SearchBox';

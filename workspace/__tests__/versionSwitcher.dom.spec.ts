@@ -1,6 +1,6 @@
 import { createElement } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { VersionSwitcher, StateSwitcher } from '../src/renderer/VersionSwitcher';
+import { VersionSwitcher, StateSwitcher } from '../src/viewer/VersionSwitcher';
 import { button, chooseState, openMenu, press, render, shownState, stateMenu, unmountAll } from './reviewHarness';
 
 /**

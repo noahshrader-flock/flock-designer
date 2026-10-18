@@ -333,10 +333,10 @@ describe('what GitHub has that the site does not have yet', () => {
 
 	it.each([
 		'workspace/src/viewer/Viewer.tsx',
-		'workspace/src/renderer/VersionSwitcher.tsx',
-		'workspace/src/renderer/comments/CommentList.tsx',
-		'workspace/src/renderer/ui/button.tsx',
-		'workspace/src/renderer/index.css',
+		'workspace/src/viewer/VersionSwitcher.tsx',
+		'workspace/src/viewer/comments/CommentList.tsx',
+		'workspace/src/viewer/ui/button.tsx',
+		'workspace/src/viewer/index.css',
 		'workspace/src/shared/projectList.ts',
 		'workspace/src/site/buildSite.ts',
 		'workspace/src/github/designRepo.ts',

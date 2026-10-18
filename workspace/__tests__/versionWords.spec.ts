@@ -8,18 +8,7 @@ import { describe, expect, it } from 'vitest';
  * aside; what is inside `${…}` is code, not words, so it is left out too.
  */
 const root = join(__dirname, '..');
-const DIRS = [
-	'src/renderer',
-	'src/viewer',
-	'src/site',
-	'src/cli',
-	'src/core',
-	'src/shared',
-	'src/github',
-	'src/page',
-	'extension/src',
-	'extension/webview',
-];
+const DIRS = ['src/viewer', 'src/site', 'src/cli', 'src/core', 'src/shared', 'src/github', 'src/page', 'extension/src', 'extension/webview'];
 /** Where the word means something else: the product's own command, which it names so. */
 const ELSEWHERE = [/check-iteration/];
 

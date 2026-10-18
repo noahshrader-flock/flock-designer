@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { ChangeBranch, Result } from '../shared/contract';
+import type { ChangeBranch, Result } from '../../../src/shared/contract';
 
 /** How often a proposed change looks for Chromatic's build, and for how long, after which it is left to the pull request. */
 const CHROMATIC_EVERY_MS = 20_000;

@@ -1,5 +1,5 @@
 import { type RefObject, useEffect, useState } from 'react';
-import { PREVIEW_HEIGHT } from '../shared/catalog';
+import { PREVIEW_HEIGHT } from '../../../src/shared/catalog';
 
 /** The tallest a frame grows to; past that it scrolls inside. A page saying more is not believed. */
 const MAX_FRAME = 4000;

@@ -1,6 +1,6 @@
 import { LogOutIcon } from 'lucide-react';
 import type { GitHubUser } from '../shared/domain/account';
-import { Person } from '../renderer/Person';
+import { Person } from './Person';
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -8,7 +8,7 @@ import {
 	DropdownMenuLabel,
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
-} from '../renderer/ui/dropdown-menu';
+} from './ui/dropdown-menu';
 
 /**
  * Who is signed in on the published page, as their picture at the end of the bar, the size of the button beside it. Pressed,

@@ -1,4 +1,4 @@
-import { type AddressPhase, type PrototypeAddressApi, runPrototypeAddress } from '../../src/renderer/address';
+import { type AddressPhase, type PrototypeAddressApi, runPrototypeAddress } from './prototypeAddress';
 import type { CommentRef, Project, WorkspaceApi } from '../../src/shared/contract';
 import { prototypeKey } from '../../src/shared/designPaths';
 import { commentsFromOthers, nextVersionName, othersHaveCommented } from '../../src/shared/prototypeNames';

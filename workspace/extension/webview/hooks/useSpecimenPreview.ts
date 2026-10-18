@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import type { Catalog, StoryPreview } from '../shared/contract';
-import { drawsSpecimens } from '../shared/primitives';
+import type { Catalog, StoryPreview } from '../../../src/shared/contract';
+import { drawsSpecimens } from '../../../src/shared/primitives';
+import { workspace } from '../host';
 
 /** The design system's preview build, or that it is being asked for. */
 export type SpecimenPreview = StoryPreview | { state: 'asking' };
@@ -17,7 +18,7 @@ export const useSpecimenPreview = (catalog: Catalog | null, shown: boolean): Spe
 		if (!shown || commit === null || askedFor.current === commit) return;
 		askedFor.current = commit;
 		setPreview({ state: 'asking' });
-		void window.workspace
+		void workspace()
 			.storyPreview([])
 			.then((r) => setPreview(r.ok && r.value !== null ? r.value : { state: 'failed', error: r.ok ? 'it gave no answer' : r.error }));
 	}, [shown, commit]);

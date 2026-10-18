@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
-import type { Catalog } from '../shared/contract';
+import type { Catalog } from '../../../src/shared/contract';
+import { workspace } from '../host';
 
 /**
  * The design system shown, read as the app's tab and VS Code's panel both read it: `firstRead` at once from what its clone
@@ -15,7 +16,7 @@ export const useCatalogRead = (onRead: (catalog: Catalog) => void = () => undefi
 	told.current = onRead;
 
 	const ask = useCallback(async (refresh: boolean): Promise<Catalog | null> => {
-		const r = await window.workspace.designSystemCatalog(refresh);
+		const r = await workspace().designSystemCatalog(refresh);
 		if (!r.ok) {
 			setError(r.error);
 			return null;

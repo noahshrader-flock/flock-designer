@@ -1,6 +1,6 @@
 import { act, createElement } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { Tooltip, TooltipContent, TooltipTrigger } from '../src/renderer/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '../src/viewer/ui/tooltip';
 import { render, unmountAll } from './reviewHarness';
 import { offenders } from './windowSources';
 

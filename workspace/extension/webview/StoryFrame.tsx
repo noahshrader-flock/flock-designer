@@ -1,7 +1,7 @@
 import { type CSSProperties, useCallback, useEffect, useRef } from 'react';
 import { PREVIEW_TRY } from '../../src/shared/catalog';
 import type { TriedValue } from '../../src/shared/contract';
-import { useFrameHeight } from '../../src/renderer/useFrameHeight';
+import { useFrameHeight } from './hooks/useFrameHeight';
 
 /**
  * A page of the design system's preview, live, in a frame of its own (a story file, or a type specimen), as the app's

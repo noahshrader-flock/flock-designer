@@ -13,7 +13,7 @@ import { ChangedValues } from '../extension/webview/ValueChanges';
 import { ComponentValues } from '../extension/webview/ComponentValues';
 import { ValueEditor } from '../extension/webview/ValueEditor';
 import type { ComponentReach, DesignToken, ValueCell, ValueRow } from '../src/shared/contract';
-import { TokenChangesProvider, useTokenChangesFor } from '../src/renderer/tokenChanges';
+import { TokenChangesProvider, useTokenChangesFor } from '../extension/webview/hooks/tokenChanges';
 import { labelOf } from '../src/shared/tokens';
 import { undeclared } from '../src/shared/wcag';
 import { NO_CHROME, inChrome } from './realChrome';

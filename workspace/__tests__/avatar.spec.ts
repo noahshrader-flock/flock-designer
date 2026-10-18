@@ -38,7 +38,7 @@ describe('where a picture may come from', () => {
 });
 
 describe('the avatar sizes', () => {
-	const ui = (file: string) => readFileSync(join(__dirname, '..', 'src/renderer/ui', file), 'utf8');
+	const ui = (file: string) => readFileSync(join(__dirname, '..', 'src/viewer/ui', file), 'utf8');
 
 	it('have an extra small one that is a card’s and a pin’s alike: the component’s class and the page’s pixels are one size', () => {
 		const rem = /data-\[size=xs\]:size-(\d+)/.exec(ui('avatar.tsx'))?.[1];

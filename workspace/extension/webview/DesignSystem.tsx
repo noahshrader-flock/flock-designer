@@ -4,8 +4,8 @@ import type { Catalog, ComponentPictures, DesignToken, TokenEdit } from '../../s
 import { plural } from '../../src/shared/plural';
 import { isDark } from '../../src/shared/tokens';
 import { HOST } from '../../src/shared/vocabulary';
-import { TokenChangesProvider, useTokenChangesFor } from '../../src/renderer/tokenChanges';
-import { useTokenBranch } from '../../src/renderer/useTokenBranch';
+import { TokenChangesProvider, useTokenChangesFor } from './hooks/tokenChanges';
+import { useTokenBranch } from './hooks/useTokenBranch';
 import { Changed } from './Changed';
 import { DesignSystemHeader } from './DesignSystemHeader';
 import { ComponentChanges } from './ComponentChanges';
@@ -25,6 +25,7 @@ import { Loading } from './ui/Loading';
 import { Menu } from './ui/Menu';
 import { Toggle } from './ui/Toggle';
 import type { Part, View } from './vscode';
+import { workspace } from './host';
 
 /** The design system's two parts in the panel: its components, which it starts on, and its tokens. */
 const PARTS = [
@@ -122,7 +123,7 @@ const Ready = ({
 	const tried = [edits.length > 0, ...Object.keys(trials).sort()].join('\n');
 	useEffect(() => {
 		let live = true;
-		void Promise.all([window.workspace.valueBranchFiles(), window.workspace.handoffFiles()]).then(
+		void Promise.all([workspace().valueBranchFiles(), workspace().handoffFiles()]).then(
 			([saved, handed]) => live && setKeptFiles([...(saved.ok ? saved.value : []), ...(handed.ok ? handed.value : [])]),
 		);
 		return () => {

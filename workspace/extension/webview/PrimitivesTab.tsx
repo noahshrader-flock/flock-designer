@@ -11,7 +11,7 @@ import { useTrial } from './useTrial';
 import { TabNote } from './ui/Notice';
 import { TryingNote } from './Changed';
 import { Swatch } from './ui/Swatch';
-import { type SpecimenPreview, useSpecimenPreview } from '../../src/renderer/useSpecimenPreview';
+import { type SpecimenPreview, useSpecimenPreview } from './hooks/useSpecimenPreview';
 
 /** The design system's preview build, which a type specimen is drawn in, so its fonts are its own; asked for once. */
 

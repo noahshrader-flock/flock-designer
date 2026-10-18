@@ -1,6 +1,6 @@
 import type { CatalogComponent, ChangeReach as ChangeReachAnswer, ComponentReach, TokenEdit, ValueChange } from '../../src/shared/contract';
 import { plural } from '../../src/shared/plural';
-import { useChangeReach } from '../../src/renderer/useChangeReach';
+import { useChangeReach } from './hooks/useChangeReach';
 import { Notice } from './ui/Notice';
 import { saidValue, valueTitle } from '../../src/shared/valueNames';
 

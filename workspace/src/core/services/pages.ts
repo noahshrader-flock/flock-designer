@@ -100,7 +100,7 @@ export const pageStatus = async (github: GitHubApi, ref: RepoRef, projectId: str
  * than leaving the site stale without a word.
  */
 const SITE_SOURCES = [
-	/^workspace\/src\/(site|viewer|renderer|shared|github|page)\//,
+	/^workspace\/src\/(site|viewer|shared|github|page)\//,
 	/^workspace\/src\/cli\/dsnr\.ts$/,
 	/^workspace\/(bin\/|viewer\.vite\.config\.ts$|pageCode\.vite\.ts$|package-lock\.json$)/,
 	/^\.github\/workflows\/publish-prototypes\.yml$/,

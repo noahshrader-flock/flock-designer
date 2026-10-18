@@ -2,7 +2,7 @@ import type { Project } from '../../src/shared/domain/projects';
 import { type ReactNode, useEffect, useState } from 'react';
 import { foldersOf, inFolder } from '../../src/shared/brief';
 import { plural } from '../../src/shared/plural';
-import { useCover } from '../../src/renderer/useCover';
+import { useCover } from './hooks/useCover';
 import { matchesProject, openCommentsOf } from '../../src/shared/projectList';
 import { type CodebaseAction, type PanelDialog, type Review, reviewsOf } from '../src/messages';
 import { workOf } from '../../src/shared/work';

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { type AddressPhase, runPrototypeAddress } from '../src/renderer/address';
+import { type AddressPhase, runPrototypeAddress } from '../extension/src/prototypeAddress';
 import type { AgentStatus, Result } from '../src/shared/contract';
 import { agentFinished, agentRunning } from './fixtures';
 

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import type { ComponentPictures } from '../shared/contract';
+import type { ComponentPictures } from '../../../src/shared/contract';
 import { askWhile } from './askWhile';
+import { workspace } from '../host';
 
 /**
  * The pictures of the shown design system's components (P5), by story file, while `shown` (the list or the grid is on screen):
@@ -14,7 +15,7 @@ export const useComponentPictures = (shown: boolean, commit: string | null): Com
 		if (!shown) return;
 		// One that failed keeps the pictures there, and is not asked again.
 		return askWhile(
-			() => window.workspace.componentPictures(),
+			() => workspace().componentPictures(),
 			(r) => r.ok && r.value.drawing,
 			(r) => {
 				if (r.ok) setPictures(r.value);

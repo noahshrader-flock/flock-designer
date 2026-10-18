@@ -17,7 +17,7 @@ import { plural } from '../../src/shared/plural';
 import { labelOf } from '../../src/shared/tokens';
 import { NO_COLOR, allParts, isFull } from '../../src/shared/valueParts';
 import { followsOf, saidValue, valueTitle } from '../../src/shared/valueNames';
-import { sharedWith } from '../../src/renderer/useComponentTokens';
+import { sharedWith } from './hooks/useComponentTokens';
 import { useMode } from './mode';
 import { ValueEditor } from './ValueEditor';
 import { Disclosure } from './ui/Disclosure';

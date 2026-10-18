@@ -11,33 +11,31 @@ import { connectWorkspace } from './workspace';
  */
 const fromExtension = (e: MessageEvent): boolean => e.origin === location.origin;
 
-/** Everything the extension sends the page, to each listener, as it comes; nothing a framed page sends. */
+/** Everything the extension sends the page, to each listener, as it comes; nothing a framed page sends. Heard from the first listener on. */
 const listeners = new Set<(message: HostMessage) => void>();
-window.addEventListener('message', (e: MessageEvent) => {
-	if (!fromExtension(e)) return;
-	for (const l of listeners) l(e.data as HostMessage);
-});
+let hearing = false;
 
 /** Hears what the extension sends; returns how to stop. */
 export const onHost = (listener: (message: HostMessage) => void): (() => void) => {
+	if (!hearing) {
+		hearing = true;
+		window.addEventListener('message', (e: MessageEvent) => {
+			if (!fromExtension(e)) return;
+			for (const l of listeners) l(e.data as HostMessage);
+		});
+	}
 	listeners.add(listener);
 	return () => void listeners.delete(listener);
 };
 
 let api: WorkspaceApi | undefined;
-/**
- * The window's API in the panel, over the extension's messages: made once, when first used, and kept where the app keeps
- * it (`window.workspace`), so the app's own hooks (`useCover`) reach it as they do in the app.
- */
+/** The core's calls, from a page, over the extension's messages: the one way every page and hook reaches the core, made once, when first used. */
 export const workspace = (): WorkspaceApi => {
 	if (!api) {
 		api = connectWorkspace(
 			(m) => vscode().postMessage(m),
 			(l) => onHost(l),
 		);
-		Object.defineProperty(window, 'workspace', { value: api, configurable: true });
 	}
 	return api;
 };
-// Made at once, so what reads `window.workspace` (the app's hooks) never runs before it is there.
-workspace();

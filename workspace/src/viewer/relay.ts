@@ -1,6 +1,6 @@
 import type { CommentAnchor, CommentRef, Result, ReviewComment, SignInState } from '../shared/contract';
 import { ASK_PATH, KEY_FRAGMENT, KEY_HEADER, type RelayAsk, type RelayCall, isKey, readRelayTell } from '../shared/reviewRelay';
-import type { CommentStore } from '../renderer/comments/surfaces';
+import type { CommentStore } from './comments/surfaces';
 import { isPrototypeName } from '../shared/prototypeNames';
 import { isThisMachine } from '../shared/thisMachine';
 

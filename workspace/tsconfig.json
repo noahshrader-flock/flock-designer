@@ -7,8 +7,5 @@
 		{ "path": "./tsconfig.extension.json" },
 		{ "path": "./tsconfig.test.json" }
 	],
-	"compilerOptions": {
-		"baseUrl": ".",
-		"paths": { "@/*": ["./src/renderer/*"] }
-	}
+	"extends": "./tsconfig.base.json"
 }

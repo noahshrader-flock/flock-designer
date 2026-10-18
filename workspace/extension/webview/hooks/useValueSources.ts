@@ -1,5 +1,6 @@
-import type { TriedValue, ValueSources } from '../shared/contract';
+import type { TriedValue, ValueSources } from '../../../src/shared/contract';
 import { useTriedAnswer } from './useTriedAnswer';
+import { workspace } from '../host';
 
 /**
  * Where the values tried on a component's instances are written, and what writing them reaches (Phase 4), by its story
@@ -10,6 +11,6 @@ export const useValueSources = (file: string, tried: TriedValue[], writes = 0): 
 	useTriedAnswer(
 		JSON.stringify([file, tried, writes]),
 		tried.length === 0,
-		() => window.workspace.valueSources(file, tried),
+		() => workspace().valueSources(file, tried),
 		(answer) => answer.state === 'building' || (answer.state === 'ready' && answer.values.some((v) => v.state === 'writing')),
 	);

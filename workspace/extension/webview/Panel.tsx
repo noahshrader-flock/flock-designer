@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { Context } from '../../src/core/services/findContext';
-import { useComponentPictures } from '../../src/renderer/useComponentPictures';
-import { useWorkspace } from '../../src/renderer/useWorkspace';
+import { useComponentPictures } from './hooks/useComponentPictures';
+import { useWorkspace } from './hooks/useWorkspace';
 import type { ComponentPictures, MadeCover, SignInState, TokenEdit } from '../../src/shared/contract';
 import { withCovers } from '../../src/shared/projectList';
 import { type ChangesDialog, DesignSystem, type DesignSystemDoes } from './DesignSystem';

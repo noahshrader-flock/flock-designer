@@ -1,7 +1,7 @@
 import { act, createElement } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
-import { useWorkspace } from '../src/renderer/useWorkspace';
-import { TooltipProvider } from '../src/renderer/ui/tooltip';
+import { useWorkspace } from '../extension/webview/hooks/useWorkspace';
+import { TooltipProvider } from '../src/viewer/ui/tooltip';
 import type { Result } from '../src/shared/contract';
 import { fail, ok, render, settle, unmountAll } from './reviewHarness';
 

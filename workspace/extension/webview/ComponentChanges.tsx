@@ -1,9 +1,9 @@
 import type { CatalogComponent, ValuePlace } from '../../src/shared/contract';
-import { useTokenChanges } from '../../src/renderer/tokenChanges';
-import { useComponentTokens } from '../../src/renderer/useComponentTokens';
-import { useHandoff } from '../../src/renderer/useHandoff';
-import { useValueBranch } from '../../src/renderer/useValueBranch';
-import { useValueSources } from '../../src/renderer/useValueSources';
+import { useTokenChanges } from './hooks/tokenChanges';
+import { useComponentTokens } from './hooks/useComponentTokens';
+import { useHandoff } from './hooks/useHandoff';
+import { useValueBranch } from './hooks/useValueBranch';
+import { useValueSources } from './hooks/useValueSources';
 import { labelOf } from '../../src/shared/tokens';
 import { useTrying } from './useTrying';
 import { ChangedValues } from './ValueChanges';

@@ -1,12 +1,12 @@
 import { type ReactNode, useEffect } from 'react';
 import type { CatalogComponent, TriedValue, ValuePlace, ValueRow, ValueSource, ValueSources as ValueSourcesAnswer } from '../../src/shared/contract';
-import type { BranchControls } from '../../src/renderer/useChangeBranch';
+import type { BranchControls } from './hooks/useChangeBranch';
 import { cellFor, triedId } from '../../src/shared/contract';
 import { plural } from '../../src/shared/plural';
 import { saidValue, valueTitle } from '../../src/shared/valueNames';
-import { type HandoffControls, useHandoff } from '../../src/renderer/useHandoff';
-import { useValueBranch } from '../../src/renderer/useValueBranch';
-import { useValueSources } from '../../src/renderer/useValueSources';
+import { type HandoffControls, useHandoff } from './hooks/useHandoff';
+import { useValueBranch } from './hooks/useValueBranch';
+import { useValueSources } from './hooks/useValueSources';
 import { BranchActions } from './Changed';
 import { ReachView } from './ChangeReach';
 import type { Trying } from './ComponentValues';

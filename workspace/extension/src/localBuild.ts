@@ -1,5 +1,5 @@
-import type { Project, ProjectWork, WorkspaceApi } from '../shared/contract';
-import { DESIGN_MODE_COMMAND } from '../shared/work';
+import type { Project, ProjectWork, WorkspaceApi } from '../../src/shared/contract';
+import { DESIGN_MODE_COMMAND } from '../../src/shared/work';
 
 /**
  * Getting codebase work onto the screen from this machine, with nobody asked to do anything.

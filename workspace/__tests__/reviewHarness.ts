@@ -1,7 +1,7 @@
 import { act, createElement, type ReactElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import type { ReviewComment, WorkspaceApi } from '../src/shared/contract';
-import { TooltipProvider } from '../src/renderer/ui/tooltip';
+import { TooltipProvider } from '../src/viewer/ui/tooltip';
 import { anAnchor, eventually, reviewComment } from './fixtures';
 
 /**

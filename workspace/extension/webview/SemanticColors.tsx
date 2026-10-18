@@ -1,6 +1,6 @@
 import type { DesignToken } from '../../src/shared/contract';
 import { rowContrast, semanticTable, type SemanticRow } from '../../src/shared/tokens';
-import { useTokenChanges } from '../../src/renderer/tokenChanges';
+import { useTokenChanges } from './hooks/tokenChanges';
 import type { Theme } from '../../src/shared/prototypeTheme';
 import { ColorDot, tokenDot } from './ui/ColorDot';
 import { ModeIcon } from './ui/ModeIcon';

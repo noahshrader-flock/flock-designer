@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useCatalogRead } from '../../src/renderer/useCatalogRead';
+import { useCatalogRead } from './hooks/useCatalogRead';
 import type { Catalog } from '../../src/shared/contract';
 import { workspace } from './host';
 import { vscode } from './vscode';

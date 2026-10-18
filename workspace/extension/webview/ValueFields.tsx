@@ -1,6 +1,6 @@
 import { type CSSProperties, useEffect, useState } from 'react';
 import { lengthSpan } from '../../src/shared/tokens';
-import { useColorField } from '../../src/renderer/useColorField';
+import { useColorField } from './hooks/useColorField';
 
 /**
  * The fields a value is changed with, for a token (T3, `TokenEditor`) and a component's own value (Phase 2, `ValueEditor`)

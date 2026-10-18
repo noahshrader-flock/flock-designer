@@ -1,4 +1,4 @@
-import type { CommentRef, PrototypeAddressed, WorkspaceApi } from '../shared/contract';
+import type { CommentRef, PrototypeAddressed, WorkspaceApi } from '../../src/shared/contract';
 import { waitForAgent } from './localBuild';
 
 /**

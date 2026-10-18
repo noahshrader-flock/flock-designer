@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { StoryPreview, TokenEdit } from '../shared/contract';
+import type { StoryPreview, TokenEdit } from '../../../src/shared/contract';
+import { workspace } from '../host';
 
 /**
  * A component's stories, as its page shows them: built from the design system's branch once per commit, and built again
@@ -17,7 +18,7 @@ export const useStoryPreview = (commit: string, edits: TokenEdit[]) => {
 		const ask = ++asked.current;
 		if (afresh) setPreview({ state: 'building' });
 		setTrying(true);
-		const r = await window.workspace.storyPreview(change);
+		const r = await workspace().storyPreview(change);
 		if (ask !== asked.current) return;
 		const next: StoryPreview = r.ok ? r.value : { state: 'failed', error: r.error };
 		setTrying(false);

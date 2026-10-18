@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { CatalogComponent, DesignToken } from '../../src/shared/contract';
 import { declaredBy, nameOf, pairContrast, pointsAt, reachOf, roleOf, scaleFamilies, tokenTitle } from '../../src/shared/tokens';
-import { useTokenChanges } from '../../src/renderer/tokenChanges';
+import { useTokenChanges } from './hooks/tokenChanges';
 import { TokenUsers } from './TokenUsers';
 import { Button } from './ui/Button';
 import { Dialog, DialogButtons } from './ui/Dialog';

@@ -1,9 +1,9 @@
 import type { CatalogComponent, DesignToken, TokenUser } from '../../src/shared/contract';
 import { plural } from '../../src/shared/plural';
 import { isEditable } from '../../src/shared/primitives';
-import { useChangeReach } from '../../src/renderer/useChangeReach';
-import { useTokenUsers } from '../../src/renderer/useComponentTokens';
-import { useTokenChanges } from '../../src/renderer/tokenChanges';
+import { useChangeReach } from './hooks/useChangeReach';
+import { useTokenUsers } from './hooks/useComponentTokens';
+import { useTokenChanges } from './hooks/tokenChanges';
 import { ShortList } from './ui/ShortList';
 
 /**

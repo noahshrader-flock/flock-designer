@@ -1,6 +1,6 @@
 import { createElement } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
-import { Person } from '../src/renderer/Person';
+import { Person } from '../src/viewer/Person';
 import { render, unmountAll } from './reviewHarness';
 
 /** A person as their picture, on a card in the comments: small by default, the first letter until there is a picture. */

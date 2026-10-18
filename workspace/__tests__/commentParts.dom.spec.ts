@@ -1,11 +1,11 @@
 import { act, createElement, useState } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
-import { CommentBox } from '../src/renderer/comments/CommentBox';
-import { CommentControl } from '../src/renderer/comments/CommentControl';
-import { CommentList } from '../src/renderer/comments/CommentList';
-import { GeneralComment } from '../src/renderer/comments/GeneralComment';
-import type { CommentStore, PageSurface } from '../src/renderer/comments/surfaces';
-import { useComments } from '../src/renderer/comments/useComments';
+import { CommentBox } from '../src/viewer/comments/CommentBox';
+import { CommentControl } from '../src/viewer/comments/CommentControl';
+import { CommentList } from '../src/viewer/comments/CommentList';
+import { GeneralComment } from '../src/viewer/comments/GeneralComment';
+import type { CommentStore, PageSurface } from '../src/viewer/comments/surfaces';
+import { useComments } from '../src/viewer/comments/useComments';
 import type { CommentAnchor, MarkerRequest, PinEvent, ReviewComment } from '../src/shared/contract';
 import { button, cards, comment, menuItem, ok, openMenu, press, render, settle, typeInto, unmountAll } from './reviewHarness';
 import { anAnchor } from './fixtures';

@@ -1,7 +1,7 @@
 import { createContext, useContext, useMemo } from 'react';
-import type { DesignToken, TokenChange, TokenEdit } from '../shared/contract';
-import type { DeclaredTarget } from '../shared/wcag';
-import { familyOf, paletteFamilies, placeOf, sameChange, withEdits } from '../shared/tokens';
+import type { DesignToken, TokenChange, TokenEdit } from '../../../src/shared/contract';
+import type { DeclaredTarget } from '../../../src/shared/wcag';
+import { familyOf, paletteFamilies, placeOf, sameChange, withEdits } from '../../../src/shared/tokens';
 
 /**
  * The change to the tokens as the tokens panel holds it (T3 of the design system plan): the tokens as changed, and how to

@@ -1,4 +1,4 @@
-import { type BuildApi, type BuildPhase, runLocalBuild } from '../../src/renderer/localBuild';
+import { type BuildApi, type BuildPhase, runLocalBuild } from './localBuild';
 import type { Project, ProjectWork, ShareStatus, ShareStep, WorkspaceApi } from '../../src/shared/contract';
 import { buildError, outputLines, packagesHint } from '../../src/core/services/serverOutput';
 import { valueOf } from '../../src/shared/result';

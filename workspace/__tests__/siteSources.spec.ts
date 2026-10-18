@@ -20,7 +20,7 @@ const viewerFiles = (): string[] => {
 		seen.add(file);
 		for (const [, spec] of readFileSync(file, 'utf8').matchAll(/(?:from|import)\s*\(?\s*['"]((?:\.|@\/)[^'"]+)['"]/g)) {
 			const bare = (spec as string).replace(/\?.*$/, '');
-			const path = bare.startsWith('@/') ? join(workspace, 'src/renderer', bare.slice(2)) : join(dirname(file), bare);
+			const path = bare.startsWith('@/') ? join(workspace, 'src/viewer', bare.slice(2)) : join(dirname(file), bare);
 			const found = [path, `${path}.ts`, `${path}.tsx`, join(path, 'index.ts')].find((p) => existsSync(p) && /\.(tsx?|css)$/.test(p));
 			if (found) stack.push(found);
 		}

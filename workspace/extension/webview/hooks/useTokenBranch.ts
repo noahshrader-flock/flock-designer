@@ -1,6 +1,7 @@
-import type { TokenEdit } from '../shared/contract';
-import { sameChange } from '../shared/tokens';
+import type { TokenEdit } from '../../../src/shared/contract';
+import { sameChange } from '../../../src/shared/tokens';
 import { type BranchControls, useChangeBranch } from './useChangeBranch';
+import { workspace } from '../host';
 
 /** The branch the tokens panel's change is kept on, and what can be done with it. */
 export type TokenBranchControls = BranchControls<TokenEdit[]>;
@@ -17,9 +18,9 @@ export const useTokenBranch = (shown: string | null, edits: TokenEdit[], setEdit
 		same: sameChange,
 		empty: [],
 		calls: {
-			current: () => window.workspace.tokenBranch(),
-			save: (change) => window.workspace.saveTokens(change),
-			propose: () => window.workspace.proposeTokens(),
-			forget: () => window.workspace.forgetTokenBranch(),
+			current: () => workspace().tokenBranch(),
+			save: (change) => workspace().saveTokens(change),
+			propose: () => workspace().proposeTokens(),
+			forget: () => workspace().forgetTokenBranch(),
 		},
 	});

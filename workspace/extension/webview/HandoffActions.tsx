@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { BranchReview } from '../../src/shared/contract';
-import type { HandoffControls } from '../../src/renderer/useHandoff';
+import type { HandoffControls } from './hooks/useHandoff';
 import { plural } from '../../src/shared/plural';
 import { LARGE, flagged } from '../../src/shared/processChanges';
 import { CHANGE_REQUEST } from '../../src/shared/vocabulary';

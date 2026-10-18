@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { SemanticColors } from '../extension/webview/SemanticColors';
 import { Grouped } from '../extension/webview/Tokens';
 import type { DesignToken } from '../src/shared/contract';
-import { TokenChangesProvider, useTokenChangesFor } from '../src/renderer/tokenChanges';
+import { TokenChangesProvider, useTokenChangesFor } from '../extension/webview/hooks/tokenChanges';
 import { undeclared } from '../src/shared/wcag';
 import { NO_CHROME, inChrome } from './realChrome';
 
