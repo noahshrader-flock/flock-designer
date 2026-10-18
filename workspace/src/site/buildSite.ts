@@ -8,6 +8,7 @@ import { newestVersionFirst } from '../shared/prototypeNames';
 import { workLabel, projectCodeLink } from '../shared/work';
 import { statesOf } from '../shared/prototypeStates';
 import { workInFolder } from '../main/services/workRecords';
+import { contentHashOf } from '../main/services/prototype';
 import { plural } from '../shared/plural';
 import { extensionOf } from '../shared/mime';
 import type { RepoRef } from '../shared/repoRef';
@@ -223,8 +224,11 @@ const projectPage = (p: SiteProject, comments: Map<string, number> | undefined):
 			.join('\n')}\n</ul>\n</main>`,
 	);
 
-/** What the page's bar and comments are told: which version this is, where the others are, and the states the page has. */
-const viewerConfig = (ref: RepoRef, p: SiteProject, current: Page, states: string[]): string =>
+/**
+ * What the page's bar and comments are told: which version this is, where the others are, the states the page has, and its
+ * fingerprint, which a comment placed on it carries.
+ */
+const viewerConfig = (ref: RepoRef, p: SiteProject, current: Page, states: string[], page: string): string =>
 	jsonScript('dsnr-config', {
 		owner: ref.owner,
 		repo: ref.repo,
@@ -234,6 +238,7 @@ const viewerConfig = (ref: RepoRef, p: SiteProject, current: Page, states: strin
 		projectHref: '../',
 		versions: p.versions.map((pg) => ({ name: pg.record.name, href: `../${pg.path}` })),
 		states,
+		page,
 	});
 
 /** Where the bar's frame loads its page, sandboxed either way: from the pages' address with its own origin, or beside it with none. */
@@ -252,11 +257,12 @@ const viewerPage = (
 	current: Page,
 	viewer: SiteInput['viewer'],
 	states: string[],
+	page: string,
 	pagesAt: string | undefined,
 	signIn: string,
 ): string => {
 	const head = viewer
-		? `${signIn}<link rel="stylesheet" href="../../_viewer/viewer.css">\n${viewerConfig(viewer.ref, p, current, states)}<script type="module" src="../../_viewer/viewer.js"></script>\n`
+		? `${signIn}<link rel="stylesheet" href="../../_viewer/viewer.css">\n${viewerConfig(viewer.ref, p, current, states, page)}<script type="module" src="../../_viewer/viewer.js"></script>\n`
 		: '';
 	return shell(
 		`${p.title} · ${labelOf(current)}`,
@@ -314,7 +320,7 @@ export const buildSite = ({ designRoot, outDir, comments, viewer, pagesAt, signI
 			const at = join(dir, pg.path);
 			mkdirSync(at, { recursive: true });
 			const html = readFileSync(join(designRoot, 'projects', p.id, 'prototypes', `${pg.record.name}.html`), 'utf8');
-			writeFileSync(join(at, 'index.html'), viewerPage(p, pg, viewer, statesOf(html), pagesAt, signIn));
+			writeFileSync(join(at, 'index.html'), viewerPage(p, pg, viewer, statesOf(html), contentHashOf(html), pagesAt, signIn));
 			writeFileSync(join(at, 'page.html'), relink(html));
 		}
 		const newest = p.versions[0] as Page;

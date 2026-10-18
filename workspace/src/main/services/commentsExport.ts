@@ -86,6 +86,7 @@ export const renderComments = ({ projectId, title, iteration, comments, generate
 			lines.push(`- **Element:** \`${oneLine(a.selector)}\``);
 			if (a.nearbyText) lines.push(`- **Text near it:** "${oneLine(a.nearbyText)}"`);
 			if (a.commit) lines.push(`- **Made against commit:** \`${a.commit.slice(0, 12)}\``);
+			if (a.page) lines.push(`- **Placed on the page whose fingerprint is:** \`${a.page}\` (as its picture is named)`);
 		} else {
 			lines.push('- **Not pinned to a spot:** a comment on the page as a whole.');
 		}

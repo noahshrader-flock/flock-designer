@@ -344,6 +344,8 @@ describe('commenting on the page', () => {
 		expect(gh.issues[0]?.labels).toEqual(['flock-designer:review']);
 		expect(gh.issues[0]?.comments[0]?.body).toContain('Make this primary');
 		expect(gh.issues[0]?.comments[0]?.body).toContain('clear-filter-button');
+		// It says which page it was placed on, by the page's fingerprint, so it can say later when the page has changed.
+		expect(gh.issues[0]?.comments[0]?.body).toContain('"page":"aaaaaaaaaaaa"');
 
 		// The numbered pin in the prototype, and the card in the side panel.
 		// The pin carries who made it (here with no picture, so their first letter), and the card too, as the person, not a number.
@@ -352,6 +354,29 @@ describe('commenting on the page', () => {
 		await press(button(/^Show all comments/));
 		await settle();
 		expect(cards().map((c) => c.textContent)).toEqual([expect.stringContaining('Make this primary')]);
+	});
+
+	it('says on a card when the page has changed since it was written, and nothing for one on this page or from before', async () => {
+		const placed = (id: number, text: string, page?: string) => ({
+			id,
+			body: composeBody(text, anAnchor({ route: '/demo/v1/', selector: 'h1', nearbyText: 'Alert history', ...(page ? { page } : {}) })),
+			user: { login: 'pm' },
+			created_at: `2026-10-08T09:0${id}:00Z`,
+		});
+		gh.issues.push({
+			number: 1,
+			body: 'Review thread for **demo**, branch: `prototype/demo/v1`.',
+			labels: ['flock-designer:review'],
+			comments: [placed(1, 'On an earlier page', 'bbbbbbbbbbbb'), placed(2, 'On this page', 'aaaaaaaaaaaa'), placed(3, 'From before')],
+		});
+		await open();
+		await settle();
+		await press(button(/^Show all comments/));
+		await settle();
+		const said = (text: string) => cards().find((c) => c.textContent?.includes(text))?.textContent ?? '';
+		expect(said('On an earlier page')).toContain('The page has changed since this was written.');
+		expect(said('On this page')).not.toContain('has changed since');
+		expect(said('From before')).not.toContain('has changed since');
 	});
 
 	it('resolves a comment from its card, taking its pin off the prototype', async () => {

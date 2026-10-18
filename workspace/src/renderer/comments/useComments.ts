@@ -7,6 +7,13 @@ import type { CommentStore, PageSurface } from './surfaces';
 
 type Mode = 'browse' | 'picking' | 'composing';
 
+/** A spot as it is placed on the page: what the work is at (`commit`), and the page's fingerprint when the store knows it. */
+const stamped = (anchor: CommentAnchor, commit: string, page: string | undefined): CommentAnchor => ({
+	...anchor,
+	commit,
+	...(page ? { page } : {}),
+});
+
 /**
  * The comments on one iteration, and leaving one: everything about them except how they are drawn. Written against a
  * `CommentStore` and a `PageSurface`, so it runs wherever those can be given.
@@ -203,11 +210,11 @@ export const useComments = ({
 					setTimeout(() => cards.current.get(e.id)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 250);
 				} else if (e.id < 0) {
 					// The unsaved pin: just remember where it now is.
-					setPending((p) => (p ? { ...e.anchor, commit: p.commit } : p));
+					setPending((p) => (p ? stamped(e.anchor, p.commit, store.page) : p));
 				} else {
 					const moved = shown.current?.find((c) => c.id === e.id);
 					if (!moved) return setRedraw((n) => n + 1);
-					void store.move(moved, e.anchor).then((r) => {
+					void store.move(moved, stamped(e.anchor, moved.anchor?.commit ?? '', store.page)).then((r) => {
 						if (r.ok) {
 							showChanged(r.value);
 							// The comment now points somewhere else, and the file the agent reads says where.
@@ -246,7 +253,7 @@ export const useComments = ({
 				pickCanceled.current = false;
 				return;
 			}
-			setPending({ ...r.value.anchor, commit: version });
+			setPending(stamped(r.value.anchor, version, store.page));
 			setPendingAt(r.value.at);
 			setPendingPicture(r.value.picture);
 			setMode('composing');

@@ -145,7 +145,10 @@ export const loginIn = (answer: Result<unknown>): string | null => {
  * One version's comments through DSNR (`CommentStore`): the core's own comment calls, made with the extension's
  * sign-in, so a comment is found, made and written exactly it. `branch` is the version's key.
  */
-export const relayComments = (relay: Relay, { projectId, branch }: { projectId: string; branch: string }): CommentStore => ({
+export const relayComments = (
+	relay: Relay,
+	{ projectId, branch, page }: { projectId: string; branch: string; page?: string | undefined },
+): CommentStore => ({
 	read: () => relay.ask('readComments', [projectId, branch]) as Promise<Result<ReviewComment[]>>,
 	// No picture of the spot: a page cannot take one of itself.
 	post: (body: string, anchor: CommentAnchor | null) =>
@@ -154,6 +157,7 @@ export const relayComments = (relay: Relay, { projectId, branch }: { projectId: 
 	move: (comment: CommentRef, anchor: CommentAnchor) => relay.ask('moveComment', [comment, anchor]) as Promise<Result<ReviewComment>>,
 	remove: (comment: CommentRef) => relay.ask('deleteComment', [comment]) as Promise<Result<null>>,
 	viewer: async () => loginIn(await relay.ask('signInState', [])),
-	// A prototype has no commit; what it was made against is its version, which the thread already says.
+	// A prototype has no commit: what it was made against is its version, which the thread says, and its page's fingerprint.
 	version: async () => '',
+	...(page ? { page } : {}),
 });

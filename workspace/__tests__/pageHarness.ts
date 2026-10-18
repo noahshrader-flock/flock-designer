@@ -27,6 +27,7 @@ export const PAGE_CONFIG = {
 		{ name: 'v1', href: '../v1/' },
 		{ name: 'v2', href: '../v2/' },
 	],
+	page: 'aaaaaaaaaaaa',
 };
 
 /**

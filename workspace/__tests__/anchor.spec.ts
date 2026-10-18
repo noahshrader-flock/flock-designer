@@ -73,6 +73,14 @@ describe('sanitizeAnchor', () => {
 		expect(out?.commit).toBe('');
 		expect(out?.offset).toEqual({ x: 1, y: 0 });
 	});
+	it('keeps the fingerprint of the page it was placed on, and only one: twelve hex digits', () => {
+		const base = { route: '/x', selector: 'p' };
+		expect(sanitizeAnchor({ ...base, page: '0123456789ab' })?.page).toBe('0123456789ab');
+		for (const page of ['0123456789AB', '0123456789a', '0123456789abc', '<script>', 12, null])
+			expect(sanitizeAnchor({ ...base, page }), String(page)).not.toHaveProperty('page');
+		// Comments made before it was recorded have none, and say nothing of it.
+		expect(sanitizeAnchor(base)).not.toHaveProperty('page');
+	});
 	it('refuses what is not an anchor', () => {
 		expect(sanitizeAnchor(null)).toBeNull();
 		expect(sanitizeAnchor({ route: 'users', selector: 'x' })).toBeNull();

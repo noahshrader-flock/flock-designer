@@ -15,6 +15,8 @@ import { isThisMachine } from './thisMachine';
 
 const MARK = /<!--\s*fd-anchor:\s*(\{[\s\S]*?\})\s*-->/;
 const PICTURE_MARK = /<!--\s*fd-picture:\s*(\S+)\s*-->/;
+/** A page's fingerprint, as a comment carries it: twelve lower-case hex digits, nothing else. */
+const PAGE = /^[0-9a-f]{12}$/;
 /** A small JPEG as a data URL. The size cap is generous for what is made (about 12 KB), and bounds what a hand-written comment can carry. */
 const PICTURE = /^data:image\/jpeg;base64,[A-Za-z0-9+/]{1,24000}={0,2}$/;
 
@@ -64,6 +66,7 @@ export const sanitizeAnchor = (v: unknown): CommentAnchor | null => {
 		...(isTheme(r.theme) ? { theme: r.theme } : {}),
 		...(tag !== undefined ? { tag } : {}),
 		...(inside.length > 0 ? { inside } : {}),
+		...(typeof r.page === 'string' && PAGE.test(r.page) ? { page: r.page } : {}),
 	};
 };
 

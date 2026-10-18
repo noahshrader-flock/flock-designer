@@ -106,6 +106,12 @@ describe('renderComments', () => {
 		expect(markdown).toContain('**Made against commit:** `abcdef012345`');
 	});
 
+	it('says which page a comment on a prototype was placed on, when it says', () => {
+		const placed = renderComments(input([comment(1, { anchor: anchor({ commit: '', page: '0123456789ab' }) })])).markdown;
+		expect(placed).toContain('**Placed on the page whose fingerprint is:** `0123456789ab`');
+		expect(renderComments(input([comment(1)])).markdown).not.toContain('Placed on the page');
+	});
+
 	it('says what kind of element it is and what it sits inside, which are words an agent can search for', () => {
 		const { markdown } = renderComments(input([comment(1, { anchor: anchor({ tag: 'p', inside: ['Notification Preferences', 'Hotlist Hits'] }) })]));
 		expect(markdown).toContain('**Kind of element:** `p`');

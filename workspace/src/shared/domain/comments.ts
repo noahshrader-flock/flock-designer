@@ -62,6 +62,11 @@ export interface CommentAnchor {
 	 * Absent on comments made before this was recorded.
 	 */
 	theme?: 'light' | 'dark';
+	/**
+	 * On a prototype, the page it was placed on, as its fingerprint (the short hash a page's picture is named by too), so a
+	 * comment can say when the page has changed since. Absent on comments made before this was recorded, which say nothing.
+	 */
+	page?: string;
 }
 
 /** A comment to place on the page, numbered as it is listed beside it. */

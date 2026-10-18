@@ -52,6 +52,8 @@ export interface ViewerConfig {
 	versions: { name: string; href: string }[];
 	/** The states the page has (`shared/prototypeStates`); not there on a page built before pages said. */
 	states?: string[];
+	/** The page's fingerprint, which a comment placed on it carries; not there on a page built before pages said. */
+	page?: string;
 }
 
 /** What is drawn where: the bar, the comments' panel, and the prototype's frame. */
@@ -168,7 +170,8 @@ export const Viewer = ({
 		[token, signIn],
 	);
 	const tokenStore = useMemo(
-		() => (github ? browserComments(github, { owner: config.owner, repo: config.repo }, { projectId: config.projectId, branch }) : null),
+		() =>
+			github ? browserComments(github, { owner: config.owner, repo: config.repo }, { projectId: config.projectId, branch, page: config.page }) : null,
 		[github, config, branch],
 	);
 	useEffect(() => {
@@ -247,7 +250,7 @@ const InDsnr = ({
 		void relay.ask('signInState', []).then((r) => setLogin(loginIn(r)));
 	}, [relay]);
 	const store = useMemo(
-		() => relayComments(relay, { projectId: config.projectId, branch: prototypeKey(config.projectId, config.name) }),
+		() => relayComments(relay, { projectId: config.projectId, branch: prototypeKey(config.projectId, config.name), page: config.page }),
 		[relay, config],
 	);
 	// Signing in is VS Code's own, in its window: while it is open there, the page says so and waits.
@@ -365,6 +368,7 @@ const Commenting = ({
 							states={showing.states}
 							onShowState={showing.onState}
 							shownTheme={showing.theme}
+							page={config.page}
 							addressed={(c) => prototypeAddressed(c, config.name)}
 						/>
 					</div>,

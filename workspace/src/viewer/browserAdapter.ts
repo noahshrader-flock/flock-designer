@@ -25,7 +25,11 @@ export const tokenApi = (token: string, fetcher: Fetcher = fetch as unknown as F
 });
 
 /** One iteration's comments, on GitHub. `branch` is its key, `prototype/<project>/<name>`, which names its thread. */
-export const browserComments = (github: GitHubApi, ref: RepoRef, { projectId, branch }: { projectId: string; branch: string }): CommentStore => {
+export const browserComments = (
+	github: GitHubApi,
+	ref: RepoRef,
+	{ projectId, branch, page }: { projectId: string; branch: string; page?: string | undefined },
+): CommentStore => {
 	const threads = new ReviewThreads(github, ref);
 	/** A person GitHub will not show the design repository: who they are signed in as, and that it is theirs to change (3.3). */
 	const notAllowed = async (err: unknown): Promise<never> => {
@@ -46,8 +50,9 @@ export const browserComments = (github: GitHubApi, ref: RepoRef, { projectId, br
 		viewer: async () => {
 			return loginOf(github).catch(() => null);
 		},
-		// A prototype has no commit; what it was made against is its iteration, which the thread already says.
+		// A prototype has no commit: what it was made against is its version, which the thread says, and its page's fingerprint.
 		version: async () => '',
+		...(page ? { page } : {}),
 	};
 };
 

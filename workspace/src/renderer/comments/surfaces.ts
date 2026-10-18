@@ -21,6 +21,8 @@ export interface CommentStore {
 	viewer(): Promise<string | null>;
 	/** What the work is at now, written into a new comment so it says what it was made against; '' when not known. */
 	version(): Promise<string>;
+	/** On a prototype, the fingerprint of the page shown, written into a comment placed on it (`CommentAnchor.page`). */
+	page?: string;
 }
 
 /** The page being commented on. The app's is its native preview. */

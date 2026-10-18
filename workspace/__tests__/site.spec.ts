@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { buildSite } from '../src/site/buildSite';
 import { serveSite } from '../src/site/serveSite';
+import { contentHashOf } from '../src/main/services/prototype';
 
 /**
  * The site prototypes are published as (M5a of the Pages plan), built from a design repository: every project with a
@@ -284,6 +285,8 @@ describe('comments on the page', () => {
 			],
 			// This page says it has none.
 			states: [],
+			// The saved page's fingerprint, which a comment placed on it carries: the hash its picture is named by too.
+			page: contentHashOf(page('Alpha three')),
 		});
 		for (const id of ['dsnr-bar', 'dsnr-panel', 'dsnr-frame']) expect(html).toContain(`id="${id}"`);
 	});

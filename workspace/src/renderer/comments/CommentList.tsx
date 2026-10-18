@@ -28,6 +28,7 @@ const NOTE: Record<MarkerState, string | null> = {
  * what the agent did with it, both left to the screen this sits in. `states` are the prototype's, so a card can name
  * the state it was made in; `onShowState` opens the page in it (`null` is the first), from a comment made in another.
  * `shownTheme` is the theme the page is shown in: a comment seen in the other one has a button to show the page in that.
+ * `page` is the fingerprint of the page shown: a comment placed on another says the page has changed since.
  */
 export const CommentList = ({
 	comments,
@@ -36,6 +37,7 @@ export const CommentList = ({
 	states = [],
 	onShowState,
 	shownTheme,
+	page,
 }: {
 	comments: Comments;
 	actions?: (comment: ReviewComment) => ReactNode;
@@ -43,6 +45,7 @@ export const CommentList = ({
 	states?: string[];
 	onShowState?: (state: string | null) => void;
 	shownTheme?: ShownTheme;
+	page?: string | undefined;
 }) => {
 	// Deleting cannot be undone, so it asks first, on the card itself (a dialog would have to take the preview's place).
 	const [confirmingDelete, setConfirmingDelete] = useState<number | null>(null);
@@ -142,6 +145,9 @@ export const CommentList = ({
 							{madeIn && <span className="text-muted-foreground text-xs">State: {stateLabel(madeIn)}</span>}
 							{comment.anchor && state === 'elsewhere' && <span className="text-muted-foreground text-xs">On {comment.anchor.route}</span>}
 							{state && NOTE[state] && <span className="text-warning text-xs">{NOTE[state]}</span>}
+							{state && page && comment.anchor?.page && comment.anchor.page !== page && (
+								<span className="text-muted-foreground text-xs">The page has changed since this was written.</span>
+							)}
 							{showIn && (
 								<Button size="sm" variant="outline" className="self-start" onClick={() => onShowState?.(madeIn)}>
 									Show in {stateLabel(showIn)}
