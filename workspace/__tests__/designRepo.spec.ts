@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DesignRepo } from '../src/host/designRepo';
+import { DesignRepo } from '../src/github/designRepo';
 import { b64, fakeGitHub } from './fakes/github';
 
 const REF = { owner: 'acme', repo: 'design' };

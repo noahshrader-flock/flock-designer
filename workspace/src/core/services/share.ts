@@ -1,5 +1,5 @@
 import type { ShareStatus, ShareStep } from '../../shared/contract';
-import type { Check, PullRequest } from '../../host/changeRequests';
+import type { Check, PullRequest } from '../../github/changeRequests';
 import type { ShareDescriptor } from './descriptor';
 import { projectDir } from '../../shared/designPaths';
 import { isSafeBranchName } from './git';

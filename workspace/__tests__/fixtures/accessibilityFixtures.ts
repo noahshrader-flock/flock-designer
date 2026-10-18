@@ -1,6 +1,6 @@
 import axe from 'axe-core';
 import type { AccessibilityIssue, AccessibilityResult } from '../../src/shared/contract';
-import type { CellResult } from '../../src/main/services/probe/cells';
+import type { CellResult } from '../../src/core/services/probe/cells';
 import { type DeclaredTarget, axeTagsFor } from '../../src/shared/wcag';
 
 /** What the accessibility specs build their measures from (A5, A8, A9): a target, what axe found, what a cell found. */

@@ -1,12 +1,12 @@
 import { mkdirSync } from 'node:fs';
 import * as vscode from 'vscode';
-import { networkFetch } from '../../src/host/github';
-import { appPaths } from '../../src/main/appPaths';
-import { cliDataFolder, tellCommandLine } from '../../src/main/services/cliFolder';
+import { networkFetch } from '../../src/github/github';
+import { appPaths } from '../../src/core/appPaths';
+import { cliDataFolder, tellCommandLine } from '../../src/core/services/cliFolder';
 import { settingsFolder } from '../../package.json';
-import { createCore } from '../../src/main/core';
-import { HEADLESS_PICTURE_RECIPE, chromeHeadless } from '../../src/main/services/chromeHeadless';
-import { registerIpc } from '../../src/main/ipc';
+import { createCore } from '../../src/core/core';
+import { HEADLESS_PICTURE_RECIPE, chromeHeadless } from '../../src/core/services/chromeHeadless';
+import { registerCalls } from '../../src/core/calls';
 import type { SignInState } from '../../src/shared/contract';
 import type { Panels } from './bridge';
 import { VsCodeGitHub } from './github';
@@ -44,7 +44,7 @@ export const startCore = (context: vscode.ExtensionContext, panels: Panels, onSi
 		// Components' pictures are drawn by the browser here, so they are told apart from the app's.
 		pictureRecipe: HEADLESS_PICTURE_RECIPE,
 	});
-	const shell = registerIpc(core);
+	const shell = registerCalls(core);
 	context.subscriptions.push(github.watch(), { dispose: () => core.prototypeServer.close() });
 	return { core, github, shell, storage, headless };
 };

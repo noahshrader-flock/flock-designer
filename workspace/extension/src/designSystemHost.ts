@@ -1,7 +1,7 @@
 import type * as VsCode from 'vscode';
-import type { DesignSystemsMemory } from '../../src/main/services/designSystems';
-import { tokenEditsOf } from '../../src/main/services/tokenEdits';
-import { triedValuesOf } from '../../src/main/services/valueSources';
+import type { DesignSystemsMemory } from '../../src/core/services/designSystems';
+import { tokenEditsOf } from '../../src/core/services/tokenEdits';
+import { triedValuesOf } from '../../src/core/services/valueSources';
 import type { WorkspaceApi } from '../../src/shared/contract';
 import { valueOf } from '../../src/shared/result';
 import type { Tell } from './agentWork';

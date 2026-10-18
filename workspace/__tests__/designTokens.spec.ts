@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { readTokens } from '../src/main/services/designTokens';
+import { readTokens } from '../src/core/services/designTokens';
 import { memoryReads } from './fixtures';
 
 /**

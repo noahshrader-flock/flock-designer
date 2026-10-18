@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { settleScript } from '../src/main/services/projectCovers';
+import { settleScript } from '../src/core/services/projectCovers';
 
 /**
  * When a prototype's page is ready for its picture: fonts ready, no animation that ends still running, and the page

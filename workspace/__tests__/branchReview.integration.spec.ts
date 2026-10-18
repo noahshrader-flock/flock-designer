@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { reviewBranch } from '../src/main/services/branchReview';
+import { reviewBranch } from '../src/core/services/branchReview';
 
 /**
  * A hand-over branch read from git, never from what Claude Code says (PROCESS_CHANGES_PLAN Phase 1): each case against a real

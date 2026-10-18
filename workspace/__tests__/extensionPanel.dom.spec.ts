@@ -1,7 +1,7 @@
 import { act, createElement } from 'react';
 import { describe, expect, it } from 'vitest';
 import { Panel } from '../extension/webview/Panel';
-import type { Context } from '../src/main/services/findContext';
+import type { Context } from '../src/core/services/findContext';
 import type { Catalog, ComponentPictures, ProjectWork } from '../src/shared/contract';
 import { SAMPLE_CATALOG, SAMPLE_PROJECTS } from './extensionSamples';
 import { projectWork } from './fixtures';

@@ -2,7 +2,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import { mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import type * as VsCode from 'vscode';
-import type { Route } from '../../src/main/handle';
+import type { Route } from '../../src/core/handle';
 import type { CommentRef, InvokeName, Result, SignInState, WorkspaceApi } from '../../src/shared/contract';
 import { DESIGN_REPO } from '../../src/shared/config';
 import { escapeHtml } from '../../src/shared/html';

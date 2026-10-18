@@ -4,10 +4,10 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { ProjectWork } from '../src/shared/contract';
-import type { WorkspaceDescriptor } from '../src/main/services/descriptor';
-import { classify, patternToRegex, readBranchProjects } from '../src/main/services/branchProjects';
-import { recordsRootFor } from '../src/main/services/discovery';
-import { continueWork, readWork } from '../src/main/services/workRecords';
+import type { WorkspaceDescriptor } from '../src/core/services/descriptor';
+import { classify, patternToRegex, readBranchProjects } from '../src/core/services/branchProjects';
+import { recordsRootFor } from '../src/core/services/discovery';
+import { continueWork, readWork } from '../src/core/services/workRecords';
 import { unionLocal } from '../src/shared/projectList';
 import { projectWork } from './fixtures';
 

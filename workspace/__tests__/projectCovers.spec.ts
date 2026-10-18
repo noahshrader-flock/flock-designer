@@ -2,9 +2,9 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { contentHashOf } from '../src/main/services/prototype';
+import { contentHashOf } from '../src/core/services/prototype';
 import { memoryStore, type Fn } from './fixtures';
-import { type CoverDeps, builtHere, ensureCovers, isBlank } from '../src/main/services/projectCovers';
+import { type CoverDeps, builtHere, ensureCovers, isBlank } from '../src/core/services/projectCovers';
 import { coverPath } from '../src/shared/designPaths';
 
 /**

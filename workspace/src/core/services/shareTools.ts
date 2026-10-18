@@ -1,7 +1,7 @@
-import { ChangeRequests } from '../../host/changeRequests';
-import type { GitHubApi } from '../../host/github';
-import { HostError, hostErrorKind } from '../../host/hostError';
-import { RepoFiles } from '../../host/repoFiles';
+import { ChangeRequests } from '../../github/changeRequests';
+import type { GitHubApi } from '../../github/github';
+import { HostError, hostErrorKind } from '../../github/hostError';
+import { RepoFiles } from '../../github/repoFiles';
 import { type RepoRef, repoRefOf } from '../../shared/repoRef';
 import { ghApi } from './ghCli';
 import { pushBranch, repositoryOf } from './git';

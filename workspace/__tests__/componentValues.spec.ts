@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import type { Drawn, Instance } from '../src/main/services/componentTokens';
-import { readValues } from '../src/main/services/componentValues';
-import type { Tags } from '../src/main/services/tokenTags';
+import type { Drawn, Instance } from '../src/core/services/componentTokens';
+import { readValues } from '../src/core/services/componentValues';
+import type { Tags } from '../src/core/services/tokenTags';
 import type { DesignToken, ValueRow } from '../src/shared/contract';
 
 /**

@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { programFor, propsOf, typeLibs } from '../src/main/services/componentProps';
+import { programFor, propsOf, typeLibs } from '../src/core/services/componentProps';
 
 /**
  * A component's declared props (Phase 5), read by the TypeScript compiler from a small library written here, with React's own

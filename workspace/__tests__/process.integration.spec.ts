@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { NotInstalled, ProcessFailed, runFile } from '../src/main/services/process';
+import { NotInstalled, ProcessFailed, runFile } from '../src/core/services/process';
 
 const node = process.execPath;
 

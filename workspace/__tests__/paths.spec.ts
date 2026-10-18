@@ -2,7 +2,7 @@ import { mkdtempSync, mkdirSync, symlinkSync, writeFileSync, rmSync } from 'node
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { isInside, resolveInside } from '../src/main/services/paths';
+import { isInside, resolveInside } from '../src/core/services/paths';
 
 let base: string;
 let root: string;

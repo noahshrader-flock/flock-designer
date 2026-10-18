@@ -8,8 +8,8 @@ import {
 	previewUrlFor,
 	pullRequestText,
 	runShare,
-} from '../src/main/services/share';
-import { type Check } from '../src/host/changeRequests';
+} from '../src/core/services/share';
+import { type Check } from '../src/github/changeRequests';
 
 const share = { url: 'https://dev-coke-pr-<pr>.example.test', workflow: 'PR Deployment', kinds: ['codebase' as const] };
 const request: ShareRequest = {

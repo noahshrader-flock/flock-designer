@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { reachOf } from '../src/main/services/changeReach';
+import { reachOf } from '../src/core/services/changeReach';
 import { settledAnswer } from './fixtures';
-import type { Built, Drawn, Instance, Measure } from '../src/main/services/componentTokens';
-import type { CatalogReads } from '../src/main/services/componentCatalog';
-import { MOST_PLACES, ValueSources, type Write, placeClashes } from '../src/main/services/valueSources';
-import type { Written } from '../src/main/services/valueAgent';
+import type { Built, Drawn, Instance, Measure } from '../src/core/services/componentTokens';
+import type { CatalogReads } from '../src/core/services/componentCatalog';
+import { MOST_PLACES, ValueSources, type Write, placeClashes } from '../src/core/services/valueSources';
+import type { Written } from '../src/core/services/valueAgent';
 import { triedId } from '../src/shared/contract';
 import type { ComponentValues, TriedValue, ValueSources as Answer } from '../src/shared/contract';
 

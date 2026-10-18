@@ -1,7 +1,5 @@
-import { describe, expect, it, vi } from 'vitest';
-
-vi.mock('electron', () => ({ ipcMain: { handle: vi.fn() } }));
-const { arg } = await import('../src/main/handle');
+import { describe, expect, it } from 'vitest';
+import { arg } from '../src/core/handle';
 
 /** What the window sent, through the check `check`: its value, or the sentence it was refused with. */
 const through = <T>(check: (v: unknown) => T, sent: unknown): T | string => {

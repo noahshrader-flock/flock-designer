@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { designSystemCheckout, findCommand, parseDescriptor } from '../src/main/services/descriptor';
+import { designSystemCheckout, findCommand, parseDescriptor } from '../src/core/services/descriptor';
 
 const valid = {
 	version: 1,

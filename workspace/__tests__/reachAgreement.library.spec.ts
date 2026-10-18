@@ -1,8 +1,8 @@
 import { appendFileSync } from 'node:fs';
 import { expect, it } from 'vitest';
-import { findChrome } from '../src/main/services/chromeHeadless';
-import type { DrawnIndex } from '../src/main/services/componentTokens';
-import { editedFiles } from '../src/main/services/tokenEdits';
+import { findChrome } from '../src/core/services/chromeHeadless';
+import type { DrawnIndex } from '../src/core/services/componentTokens';
+import { editedFiles } from '../src/core/services/tokenEdits';
 import type { ConnectedDesignSystem, DesignToken } from '../src/shared/contract';
 import { lengthParts } from '../src/shared/tokens';
 import { settledAnswer } from './fixtures';

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { browserCommand } from '../src/main/services/openBrowser';
+import { browserCommand } from '../src/core/services/openBrowser';
 
 /** Opening a published page in the browser: only a plain https address, by argv, the way each platform opens one. */
 

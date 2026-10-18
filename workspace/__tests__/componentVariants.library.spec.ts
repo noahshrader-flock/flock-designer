@@ -1,8 +1,8 @@
 import { expect, it } from 'vitest';
-import { typeLibs } from '../src/main/services/componentProps';
-import { ComponentVariants } from '../src/main/services/componentVariants';
+import { typeLibs } from '../src/core/services/componentProps';
+import { ComponentVariants } from '../src/core/services/componentVariants';
 import type { ComponentVariants as Answer, ConnectedDesignSystem } from '../src/shared/contract';
-import { findChrome } from '../src/main/services/chromeHeadless';
+import { findChrome } from '../src/core/services/chromeHeadless';
 import { REAL_PRIMER_SYSTEM, libraryUnbuilt, primerMissing, REAL_FUI } from './realCheckouts';
 import { settledAnswer } from './fixtures';
 import { describeLibrary, onRealLibrary } from './realLibrary';

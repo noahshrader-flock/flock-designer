@@ -1,8 +1,8 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { expect, it } from 'vitest';
-import { findCommand, readDescriptor } from '../src/main/services/descriptor';
-import { recordsRootFor } from '../src/main/services/discovery';
+import { findCommand, readDescriptor } from '../src/core/services/descriptor';
+import { recordsRootFor } from '../src/core/services/discovery';
 import { REAL_COKE as COKE, cokeMissing, describeWith } from './realCheckouts';
 
 /**

@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { unfinishedWork } from '../src/main/services/checkoutClean';
+import { unfinishedWork } from '../src/core/services/checkoutClean';
 
 /**
  * Process changes starts Claude Code only on a design system checkout with no unfinished work (PROCESS_CHANGES_PLAN Phase 1),

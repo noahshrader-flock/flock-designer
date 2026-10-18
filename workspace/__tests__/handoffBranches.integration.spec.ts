@@ -3,8 +3,8 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { HandoffBranches } from '../src/main/services/handoffBranches';
-import type { ShareTools } from '../src/main/services/share';
+import { HandoffBranches } from '../src/core/services/handoffBranches';
+import type { ShareTools } from '../src/core/services/share';
 import type { ConnectedDesignSystem } from '../src/shared/contract';
 
 /**

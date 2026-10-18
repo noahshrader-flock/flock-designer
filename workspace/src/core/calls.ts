@@ -21,14 +21,14 @@ import { DesignLibrary, libraryCommit, systemReads } from './services/designLibr
 import { readTokens } from './services/designTokens';
 import { HandoffBranches } from './services/handoffBranches';
 import { LibraryShown } from './services/libraryShown';
-import { DesignRepo } from '../host/designRepo';
+import { DesignRepo } from '../github/designRepo';
 import { designStore } from './services/designStore';
 import { syncRecords } from './services/designSync';
 import { DesignSystemsMemory } from './services/designSystems';
 import { recordsRootFor } from './services/discovery';
 import { SessionMemory } from './services/editor';
 import { isRepository, readCheckout } from './services/git';
-import type { GitHubAccount } from '../host/github';
+import type { GitHubAccount } from '../github/github';
 import { Installer } from './services/install';
 import { recordedWork } from './services/workRecords';
 import { readFolderProjects } from './services/localProjects';
@@ -50,16 +50,16 @@ import { DESIGN_SYSTEM_CODE, ValueAgent } from './services/valueAgent';
 import { ComponentVariants } from './services/componentVariants';
 import { typeLibs } from './services/componentProps';
 import { VOICE_NEEDS_CLI, VoiceAndToneFile } from './services/voiceAndTone';
-import { registerAccount } from './ipc/account';
-import { registerCheckout } from './ipc/checkout';
-import { registerCodebase } from './ipc/codebase';
-import { registerDesignSystem } from './ipc/designSystem';
-import { registerPrototypes } from './ipc/prototypes';
-import { registerPublishing } from './ipc/publishing';
-import { registerReview } from './ipc/review';
+import { registerAccount } from './calls/account';
+import { registerCheckout } from './calls/checkout';
+import { registerCodebase } from './calls/codebase';
+import { registerDesignSystem } from './calls/designSystem';
+import { registerPrototypes } from './calls/prototypes';
+import { registerPublishing } from './calls/publishing';
+import { registerReview } from './calls/review';
 import { repoRefOf } from '../shared/repoRef';
 
-export interface IpcContext {
+export interface CallsContext {
 	/** How the core tells the window that something happened: the shell's. */
 	emit: EventSink;
 	/** Everything reached outside the app: dialogs, other applications, the clipboard, the network, the person's own tools. */
@@ -105,7 +105,7 @@ export interface IpcContext {
 }
 
 /** Everything the handlers share: the context, and what is made from it once, for the window's whole session. */
-export const ipcDeps = ({
+export const callsDeps = ({
 	emit,
 	ports,
 	opened,
@@ -130,7 +130,7 @@ export const ipcDeps = ({
 	componentPicturesRoot,
 	componentPictureRecipe,
 	warmAfterMs,
-}: IpcContext) => {
+}: CallsContext) => {
 	const { personGitHub } = ports;
 	const openRepository = async (root: string): Promise<Checkout> => {
 		if (!isRepository(root)) {
@@ -476,15 +476,15 @@ export const ipcDeps = ({
 		coverDeps,
 	};
 };
-export type IpcDeps = ReturnType<typeof ipcDeps>;
+export type CallsDeps = ReturnType<typeof callsDeps>;
 
 /**
- * Every operation the window can reach, and nothing else, registered by area (`ipc/`). There is no generic invoke and no
+ * Every operation the window can reach, and nothing else, registered by area (`calls/`). There is no generic invoke and no
  * passthrough: each handler is named, its arguments checked (`handle.ts`), its root resolved against what the person
  * actually opened, and its answer returned as a Result.
  */
-export const registerIpc = (
-	context: IpcContext,
+export const registerCalls = (
+	context: CallsContext,
 ): {
 	publish: (force?: boolean) => Promise<void>;
 	/**
@@ -494,7 +494,7 @@ export const registerIpc = (
 	open: (root: string) => Promise<Checkout>;
 } => {
 	clearRoutes();
-	const d = ipcDeps(context);
+	const d = callsDeps(context);
 	registerCheckout(d);
 	registerDesignSystem(d);
 	registerCodebase(d);

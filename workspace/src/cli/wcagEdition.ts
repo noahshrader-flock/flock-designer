@@ -7,10 +7,10 @@
 
 import { WCAG_EDITION, WCAG_LATEST, editionOf } from '../shared/wcag';
 import type { RepoRef } from '../shared/repoRef';
-import { repoApiPath } from '../host/repoFiles';
+import { repoApiPath } from '../github/repoFiles';
 import { HOST, ISSUE } from '../shared/vocabulary';
-import type { GitHubApi } from '../host/github';
-import { readPages } from '../host/paging';
+import type { GitHubApi } from '../github/github';
+import { readPages } from '../github/paging';
 export interface WcagEditionDeps {
 	fetchText: (url: string) => Promise<string>;
 	/** GitHub, to open the issue on `repo`; null where it cannot be asked, and then the difference is only printed. */

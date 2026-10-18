@@ -4,9 +4,9 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { eventually, type Fn, nothingFollows } from './fixtures';
-import { RuntimeManager, fillProjectId, type RuntimeDeps } from '../src/main/services/runtime';
+import { RuntimeManager, fillProjectId, type RuntimeDeps } from '../src/core/services/runtime';
 import type { PreviewStatus, RunLogLine } from '../src/shared/contract';
-import type { WorkspaceDescriptor } from '../src/main/services/descriptor';
+import type { WorkspaceDescriptor } from '../src/core/services/descriptor';
 
 const descriptor: WorkspaceDescriptor = {
 	version: 1,

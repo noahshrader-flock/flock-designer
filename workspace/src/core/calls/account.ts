@@ -1,10 +1,10 @@
 import { handle } from '../handle';
-import type { IpcDeps } from '../ipc';
+import type { CallsDeps } from '../calls';
 
 /**
  * The person's GitHub sign-in state, and signing out of DSNR.
  */
-export const registerAccount = (d: IpcDeps): void => {
+export const registerAccount = (d: CallsDeps): void => {
 	const { github } = d;
 
 	handle('signInState', [], () => github.state());

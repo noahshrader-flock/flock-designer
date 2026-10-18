@@ -1,12 +1,12 @@
 import type { PageStatus } from '../../shared/contract';
 import { arg, handle } from '../handle';
-import type { IpcDeps } from '../ipc';
+import type { CallsDeps } from '../calls';
 import { HOST } from '../../shared/vocabulary';
 
 /**
  * Publishing the records and pages, and whether a page is on the site.
  */
-export const registerPublishing = (d: IpcDeps): void => {
+export const registerPublishing = (d: CallsDeps): void => {
 	const { github, publishInBackground, publishedPage, publisher } = d;
 
 	// Publishing happens by itself; these only report it, and let a person ask for it now.

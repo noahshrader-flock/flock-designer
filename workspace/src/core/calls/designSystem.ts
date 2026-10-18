@@ -6,7 +6,7 @@ import { handToClaude } from '../services/editor';
 import { offBase } from '../services/handoffBranches';
 import { tokenEditsOf } from '../services/tokenEdits';
 import { triedValuesOf } from '../services/valueSources';
-import type { IpcDeps } from '../ipc';
+import type { CallsDeps } from '../calls';
 
 /**
  * What the Design System tab's calls take, each checked before its handler sees it (`handle`), as every argument is: a
@@ -58,7 +58,7 @@ const ds = {
  * The Design System tab: the design systems connected, their components and tokens, a change to the tokens or to the
  * voice and tone, and its branch.
  */
-export const registerDesignSystem = (d: IpcDeps): void => {
+export const registerDesignSystem = (d: CallsDeps): void => {
 	const {
 		componentTokens,
 		componentVariants,

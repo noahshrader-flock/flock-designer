@@ -3,10 +3,10 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import type { GitHubApi } from '../src/host/github';
+import type { GitHubApi } from '../src/github/github';
 
-import { VOICE_BRANCH, VOICE_FILE, VoiceAndToneFile } from '../src/main/services/voiceAndTone';
-import type { HostErrorKind } from '../src/host/hostError';
+import { VOICE_BRANCH, VOICE_FILE, VoiceAndToneFile } from '../src/core/services/voiceAndTone';
+import type { HostErrorKind } from '../src/github/hostError';
 import { fakeGitHub, refusal } from './fakes/github';
 
 /**

@@ -3,11 +3,11 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { CheckPage } from '../src/main/services/accessibilityCheck';
-import { FIRST_PAGE, checkPages, onDesignMode } from '../src/main/services/accessibilityRun';
-import { NO_BROWSER } from '../src/main/services/chromeHeadless';
-import type { WorkspaceCommand, WorkspaceDescriptor } from '../src/main/services/descriptor';
-import type { RuntimeDeps } from '../src/main/services/runtime';
+import type { CheckPage } from '../src/core/services/accessibilityCheck';
+import { FIRST_PAGE, checkPages, onDesignMode } from '../src/core/services/accessibilityRun';
+import { NO_BROWSER } from '../src/core/services/chromeHeadless';
+import type { WorkspaceCommand, WorkspaceDescriptor } from '../src/core/services/descriptor';
+import type { RuntimeDeps } from '../src/core/services/runtime';
 import { undeclared } from '../src/shared/wcag';
 
 /**

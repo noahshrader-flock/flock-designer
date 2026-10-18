@@ -3,12 +3,12 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { AgentRunner } from '../src/main/services/agent';
-import { readDescriptor } from '../src/main/services/descriptor';
-import { readCheckout } from '../src/main/services/git';
-import { continueWork, createCodebaseWork, readWork } from '../src/main/services/workRecords';
-import { RuntimeManager } from '../src/main/services/runtime';
-import { OpenedCheckouts } from '../src/main/services/session';
+import { AgentRunner } from '../src/core/services/agent';
+import { readDescriptor } from '../src/core/services/descriptor';
+import { readCheckout } from '../src/core/services/git';
+import { continueWork, createCodebaseWork, readWork } from '../src/core/services/workRecords';
+import { RuntimeManager } from '../src/core/services/runtime';
+import { OpenedCheckouts } from '../src/core/services/session';
 import type { PreviewStatus, RunLogLine } from '../src/shared/contract';
 import { agentFinished, eventually } from './fixtures';
 

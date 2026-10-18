@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { BRIEF_SECTIONS, accessibilityBrief, appPages, declaredTarget } from '../src/main/services/accessibilityBrief';
+import { BRIEF_SECTIONS, accessibilityBrief, appPages, declaredTarget } from '../src/core/services/accessibilityBrief';
 import type { AccessibilityIssue } from '../src/shared/contract';
 
 /**

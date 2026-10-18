@@ -2,10 +2,10 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { type CheckConfig, LEFT, MOST_ROUNDS, checkBuild, checkedAsSaved } from '../src/main/services/buildCheck';
-import { NO_BROWSER } from '../src/main/services/chromeHeadless';
-import type { CellResult } from '../src/main/services/probe/cells';
-import type { MeasureBrowser } from '../src/main/services/prototypeMeasure';
+import { type CheckConfig, LEFT, MOST_ROUNDS, checkBuild, checkedAsSaved } from '../src/core/services/buildCheck';
+import { NO_BROWSER } from '../src/core/services/chromeHeadless';
+import type { CellResult } from '../src/core/services/probe/cells';
+import type { MeasureBrowser } from '../src/core/services/prototypeMeasure';
 import { axeTagsFor } from '../src/shared/wcag';
 import { cell } from './fixtures/accessibilityFixtures';
 

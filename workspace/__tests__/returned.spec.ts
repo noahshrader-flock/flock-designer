@@ -2,10 +2,10 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { guardLines, guardsFor, stacksOf } from '../src/main/services/guards';
-import { type Ledger, ledgerOf } from '../src/main/services/ledger';
-import type { CellResult } from '../src/main/services/probe/cells';
-import { parseReturned, returnedTemplate, sortReturned, withGaps } from '../src/main/services/returned';
+import { guardLines, guardsFor, stacksOf } from '../src/core/services/guards';
+import { type Ledger, ledgerOf } from '../src/core/services/ledger';
+import type { CellResult } from '../src/core/services/probe/cells';
+import { parseReturned, returnedTemplate, sortReturned, withGaps } from '../src/core/services/returned';
 import type { AccessibilityIssue } from '../src/shared/contract';
 import { AA, cell, issue, result } from './fixtures/accessibilityFixtures';
 

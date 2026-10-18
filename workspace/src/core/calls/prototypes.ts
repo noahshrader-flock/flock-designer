@@ -17,12 +17,12 @@ import { jpegDataUrl } from '../services/picture';
 import { builtHere, ensureCovers } from '../services/projectCovers';
 import { BUILD_SKILL, GUIDE, type PrototypeSources, assignFolder, prototypeBuildPrompt, prototypeReadable } from '../services/prototype';
 import { type PrototypeChange, whereTheChangeGoes } from '../services/prototypeWork';
-import type { IpcDeps } from '../ipc';
+import type { CallsDeps } from '../calls';
 
 /**
  * Prototypes: making one, building it, changing it for a comment, saving, opening, checking and picturing it.
  */
-export const registerPrototypes = (d: IpcDeps): void => {
+export const registerPrototypes = (d: CallsDeps): void => {
 	const {
 		agent,
 		agentBusy,

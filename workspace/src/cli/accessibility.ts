@@ -35,25 +35,25 @@ import {
 	declaredTarget,
 	findingsLines,
 	readManifest,
-} from '../main/services/accessibilityBrief';
-import { prototypeMeasureName, recordFiles } from '../main/services/accessibilityRecord';
-import { FIRST_PAGE, type PageNotOpened, checkPages, onDesignMode } from '../main/services/accessibilityRun';
-import { chromeHeadless } from '../main/services/chromeHeadless';
-import { findCommand, readDescriptor } from '../main/services/descriptor';
-import { HANDOFF_FILE } from '../main/services/engineeringHandoff';
-import { git } from '../main/services/git';
-import { guardLines, guardsFor, stacksOf } from '../main/services/guards';
-import { assertUsableProjectId } from '../main/services/workRecords';
-import { jsonFile, readText, writeAtomic } from '../main/services/jsonFile';
-import { LEDGER_VERSION, type Ledger, type LedgerRun, ledgerChanges, ledgerFaults } from '../main/services/ledger';
-import { manualListFault, withManualSection } from '../main/services/manualList';
-import { CELLS, type CellResult, type ProbeDepth, cellLines, cellsAt } from '../main/services/probe/cells';
-import type { ViewProbed } from '../main/services/probe/probe';
-import { type SourceFile, scanSources } from '../main/services/probe/sourceScan';
-import { assertPrototypeName } from '../main/services/prototype';
-import { measurePrototype } from '../main/services/prototypeMeasure';
-import type { prototypeWork } from '../main/services/prototypeWork';
-import { type ReturnedKind, agentGapsFile, parseReturned, returnedTemplate, sortReturned, withGaps } from '../main/services/returned';
+} from '../core/services/accessibilityBrief';
+import { prototypeMeasureName, recordFiles } from '../core/services/accessibilityRecord';
+import { FIRST_PAGE, type PageNotOpened, checkPages, onDesignMode } from '../core/services/accessibilityRun';
+import { chromeHeadless } from '../core/services/chromeHeadless';
+import { findCommand, readDescriptor } from '../core/services/descriptor';
+import { HANDOFF_FILE } from '../core/services/engineeringHandoff';
+import { git } from '../core/services/git';
+import { guardLines, guardsFor, stacksOf } from '../core/services/guards';
+import { assertUsableProjectId } from '../core/services/workRecords';
+import { jsonFile, readText, writeAtomic } from '../core/services/jsonFile';
+import { LEDGER_VERSION, type Ledger, type LedgerRun, ledgerChanges, ledgerFaults } from '../core/services/ledger';
+import { manualListFault, withManualSection } from '../core/services/manualList';
+import { CELLS, type CellResult, type ProbeDepth, cellLines, cellsAt } from '../core/services/probe/cells';
+import type { ViewProbed } from '../core/services/probe/probe';
+import { type SourceFile, scanSources } from '../core/services/probe/sourceScan';
+import { assertPrototypeName } from '../core/services/prototype';
+import { measurePrototype } from '../core/services/prototypeMeasure';
+import type { prototypeWork } from '../core/services/prototypeWork';
+import { type ReturnedKind, agentGapsFile, parseReturned, returnedTemplate, sortReturned, withGaps } from '../core/services/returned';
 
 export interface MeasureDeps {
 	projectId: string;

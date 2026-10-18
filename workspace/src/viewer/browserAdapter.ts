@@ -1,12 +1,12 @@
-import { type Fetcher, type GitHubApi, callApi, loginOf } from '../host/github';
+import { type Fetcher, type GitHubApi, callApi, loginOf } from '../github/github';
 import type { PinEvent } from '../shared/contract';
 import { type PageCall, readPageTell } from '../shared/pageChannel';
 import { readMarkers, readPick, readPinMessage } from '../shared/pageReaders';
 import type { CommentStore, PageSurface } from '../renderer/comments/surfaces';
 import { toResult } from '../shared/result';
 import type { RepoRef } from '../shared/repoRef';
-import { ReviewThreads } from '../host/reviewThreads';
-import { hostErrorKind } from '../host/hostError';
+import { ReviewThreads } from '../github/reviewThreads';
+import { hostErrorKind } from '../github/hostError';
 
 /**
  * The comments experience on a prototype's published page: the browser's side of what the app does through its main

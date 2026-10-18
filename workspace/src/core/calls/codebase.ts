@@ -16,13 +16,13 @@ import { branchTip, changedSince, headCommit, readCheckout } from '../services/g
 import { codebaseBranchFor, recordHandoff, recordPath, recordPreview, recordedWork } from '../services/workRecords';
 import { GUIDE, MOVE_SKILL, ROUTE_SKILL, buildInCodebasePrompt } from '../services/prototype';
 import { pullRequestText } from '../services/share';
-import type { IpcDeps } from '../ipc';
+import type { CallsDeps } from '../calls';
 
 /**
  * Codebase work in a product checkout: the agent's runs, handing work to VS Code, Address on a branch, sharing a
  * preview, building a prototype in the codebase, and Handoff.
  */
-export const registerCodebase = (d: IpcDeps): void => {
+export const registerCodebase = (d: CallsDeps): void => {
 	const {
 		agent,
 		agentBusy,

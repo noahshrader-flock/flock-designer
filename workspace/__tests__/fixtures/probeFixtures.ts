@@ -1,4 +1,4 @@
-import type { CellId } from '../../src/main/services/probe/cells';
+import type { CellId } from '../../src/core/services/probe/cells';
 
 /**
  * The probe's known-bad fixtures (A3 of the accessibility plan): for each cell measured in the page, one small page with

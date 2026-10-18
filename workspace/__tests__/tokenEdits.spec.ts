@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { readTokens } from '../src/main/services/designTokens';
-import { editProblem, editedFiles, tokenEditsOf } from '../src/main/services/tokenEdits';
+import { readTokens } from '../src/core/services/designTokens';
+import { editProblem, editedFiles, tokenEditsOf } from '../src/core/services/tokenEdits';
 import type { DesignToken, TokenEdit } from '../src/shared/contract';
 import { contrastPartner, contrastRatio, fitsKind, pointingAt, sameChange, withEdits } from '../src/shared/tokens';
 import { CONTRAST_TEXT } from '../src/shared/wcag';

@@ -8,7 +8,7 @@ import {
 	storybookUrl,
 	UNGROUPED,
 	type CatalogReads,
-} from '../src/main/services/componentCatalog';
+} from '../src/core/services/componentCatalog';
 
 /** A library made of files in memory. A file whose text is null cannot be read. */
 const library = (files: Record<string, string | null>): CatalogReads => ({

@@ -1,8 +1,8 @@
 import { type Server, createServer } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { chromeHeadless, findChrome } from '../src/main/services/chromeHeadless';
-import { CELLS, type CellId } from '../src/main/services/probe/cells';
+import { chromeHeadless, findChrome } from '../src/core/services/chromeHeadless';
+import { CELLS, type CellId } from '../src/core/services/probe/cells';
 import { PROBE_FIXTURES } from './fixtures/probeFixtures';
 
 /**

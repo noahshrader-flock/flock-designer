@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { syncRecords } from '../src/main/services/designSync';
+import { syncRecords } from '../src/core/services/designSync';
 import { madeOnce } from './fixtures';
 
 /**

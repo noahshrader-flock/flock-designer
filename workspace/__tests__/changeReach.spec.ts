@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { reachOf } from '../src/main/services/changeReach';
-import type { Drawn, Instance } from '../src/main/services/componentTokens';
+import { reachOf } from '../src/core/services/changeReach';
+import type { Drawn, Instance } from '../src/core/services/componentTokens';
 import type { ComponentValues } from '../src/shared/contract';
 
 /**

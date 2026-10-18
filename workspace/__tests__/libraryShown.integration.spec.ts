@@ -3,8 +3,8 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { readLibrary } from '../src/main/services/designLibrary';
-import { LibraryShown } from '../src/main/services/libraryShown';
+import { readLibrary } from '../src/core/services/designLibrary';
+import { LibraryShown } from '../src/core/services/libraryShown';
 import type { Catalog, ConnectedDesignSystem } from '../src/shared/contract';
 
 /**

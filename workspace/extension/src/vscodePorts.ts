@@ -1,7 +1,7 @@
 import type * as VsCode from 'vscode';
-import type { Headless, Ports } from '../../src/main/ports';
-import { claudeLink } from '../../src/main/services/editor';
-import { toolPorts } from '../../src/main/toolPorts';
+import type { Headless, Ports } from '../../src/core/ports';
+import { claudeLink } from '../../src/core/services/editor';
+import { toolPorts } from '../../src/core/toolPorts';
 import { isThisMachine } from '../../src/shared/thisMachine';
 
 /** What of VS Code the ports use, so they are tested without one. */

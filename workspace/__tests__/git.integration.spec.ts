@@ -17,7 +17,7 @@ import {
 	git,
 	hasFileAt,
 	originUrl,
-} from '../src/main/services/git';
+} from '../src/core/services/git';
 
 let root: string;
 const g = (...args: string[]) => execFileSync('git', ['-C', root, ...args], { encoding: 'utf8' });

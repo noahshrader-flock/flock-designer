@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ChangeRequests } from '../src/host/changeRequests';
+import { ChangeRequests } from '../src/github/changeRequests';
 import { fakeGitHub } from './fakes/github';
 
 const REF = { owner: 'o', repo: 'r' };

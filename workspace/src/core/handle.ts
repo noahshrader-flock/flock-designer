@@ -7,8 +7,8 @@ import { assertPrototypeName } from './services/prototype';
 
 /**
  * How the core meets the window, whichever shell holds it: each call registered by its name in the contract's table, its
- * answer checked against `WorkspaceApi`, into a table of the core's own that the shell serves (`served`: Electron's IPC in
- * the app, `electronIpc.ts`), and each event sent by name through the shell's sink (`EventSink`).
+ * answer checked against `WorkspaceApi`, into a table of the core's own that the shell serves (`served`: in VS Code, the
+ * bridge to its pages, `extension/src/bridge.ts`), and each event sent by name through the shell's sink (`EventSink`).
  *
  * A handler returns its answer or throws a sentence for a person; it never returns a Result itself. An exception
  * crossing IPC arrives as a shapeless string, which is how a real problem turns into "something went wrong", so this is
@@ -31,7 +31,7 @@ export type Route = (...sent: unknown[]) => Promise<Result<unknown>>;
 /** Every call registered, by its name: what the shell serves, and nothing else. */
 const routes = new Map<InvokeName, Route>();
 
-/** Starts the table again: a registration is the whole of it (`registerIpc`), so registering again replaces it. */
+/** Starts the table again: a registration is the whole of it (`registerCalls`), so registering again replaces it. */
 export const clearRoutes = (): void => routes.clear();
 
 /** The calls registered, for the shell to serve. */

@@ -17,7 +17,7 @@ afterEach(() => rmSync(dir, { recursive: true, force: true }));
 it('keeps every change four processes make to one file at once', async () => {
 	const bundle = join(dir, 'jsonFile.mjs');
 	await build({
-		entryPoints: [join(__dirname, '../src/main/services/jsonFile.ts')],
+		entryPoints: [join(__dirname, '../src/core/services/jsonFile.ts')],
 		outfile: bundle,
 		bundle: true,
 		platform: 'node',

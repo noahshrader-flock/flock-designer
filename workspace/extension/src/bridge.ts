@@ -1,5 +1,5 @@
 import type * as VsCode from 'vscode';
-import { type EventSink, type Route, served } from '../../src/main/handle';
+import { type EventSink, type Route, served } from '../../src/core/handle';
 import type { EventName, InvokeName, Result, TokenEdit, WorkspaceApi } from '../../src/shared/contract';
 import type { Theme } from '../../src/shared/prototypeTheme';
 import { createApi } from '../../src/shared/workspaceApi';

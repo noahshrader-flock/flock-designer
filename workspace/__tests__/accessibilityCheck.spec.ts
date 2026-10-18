@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import axe from 'axe-core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { type CheckPage, accessibilityOf } from '../src/main/services/accessibilityCheck';
+import { type CheckPage, accessibilityOf } from '../src/core/services/accessibilityCheck';
 import {
 	type AxeRule,
 	MOST_ELEMENTS,
@@ -16,7 +16,7 @@ import {
 	summaryOf,
 	unlisted,
 } from '../src/shared/accessibility';
-import { declaredTarget } from '../src/main/services/accessibilityBrief';
+import { declaredTarget } from '../src/core/services/accessibilityBrief';
 import { undeclared } from '../src/shared/wcag';
 
 /**

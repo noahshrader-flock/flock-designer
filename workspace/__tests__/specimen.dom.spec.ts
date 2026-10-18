@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { previewEntry, specimenScript } from '../src/main/services/storyPreviews';
+import { previewEntry, specimenScript } from '../src/core/services/storyPreviews';
 
 /**
  * A type specimen, drawn by the preview page (R3 of the design system plan): in the page the design system's own CSS loads

@@ -1,14 +1,14 @@
 import { DESIGN_REPO } from '../shared/config';
-import { DesignRepo } from '../host/designRepo';
+import { DesignRepo } from '../github/designRepo';
 import type { AppPaths } from './appPaths';
 import type { EventSink } from './handle';
-import type { IpcContext } from './ipc';
+import type { CallsContext } from './calls';
 import type { Ports } from './ports';
 import { AgentRunner } from './services/agent';
 import { CheckoutMemory } from './services/checkoutMemory';
 import { DesignSystemsMemory } from './services/designSystems';
 import { SessionMemory } from './services/editor';
-import type { GitHubAccount } from '../host/github';
+import type { GitHubAccount } from '../github/github';
 import { Installer } from './services/install';
 import { PrototypeServer } from './services/prototypeServer';
 import { RuntimeManager } from './services/runtime';
@@ -28,10 +28,10 @@ export interface Shell {
 
 /**
  * The core's services, made in one place from what a shell gives (`Shell`): the composition root every shell shares.
- * Everything a handler reaches is made here, so `registerIpc` takes every one of them and defaults to nothing real; a
+ * Everything a handler reaches is made here, so `registerCalls` takes every one of them and defaults to nothing real; a
  * test builds its own from a temporary folder and fakes.
  */
-export const createCore = ({ paths, emit, ports, github, pictureRecipe }: Shell): IpcContext => ({
+export const createCore = ({ paths, emit, ports, github, pictureRecipe }: Shell): CallsContext => ({
 	emit,
 	ports,
 	opened: new OpenedCheckouts(),

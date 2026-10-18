@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { PublishStatus } from '../src/shared/contract';
-import { PublishManager, type PublishContext, publishInOrder } from '../src/main/services/publisher';
-import type { SyncResult } from '../src/main/services/designSync';
+import { PublishManager, type PublishContext, publishInOrder } from '../src/core/services/publisher';
+import type { SyncResult } from '../src/core/services/designSync';
 
 const ok: SyncResult = { published: [], problems: [] };
 const bad = (what: string, why: string): SyncResult => ({ published: [], problems: [{ what, why }] });

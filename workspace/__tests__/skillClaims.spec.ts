@@ -1,7 +1,7 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { codebaseTask, handoffTask, buildInCodebaseTask, prototypeAddressTask, prototypeBuildTask } from '../src/main/services/agentTasks';
+import { codebaseTask, handoffTask, buildInCodebaseTask, prototypeAddressTask, prototypeBuildTask } from '../src/core/services/agentTasks';
 
 const SKILLS = join(__dirname, '../../skills');
 const skill = (name: string): string => readFileSync(join(SKILLS, name), 'utf8');

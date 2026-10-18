@@ -6,8 +6,8 @@ import { openableLink, vscodePorts } from '../extension/src/vscodePorts';
 import { reviewsOf } from '../extension/src/messages';
 import { Reviews, answerReview, reviewPage, reviewPath } from '../extension/src/review';
 import { Panels, answerCall, hostApi } from '../extension/src/bridge';
-import type { Route } from '../src/main/handle';
-import { PrototypeServer } from '../src/main/services/prototypeServer';
+import type { Route } from '../src/core/handle';
+import { PrototypeServer } from '../src/core/services/prototypeServer';
 import type { InvokeName } from '../src/shared/contract';
 import type { ProjectWork } from '../src/shared/domain/projects';
 

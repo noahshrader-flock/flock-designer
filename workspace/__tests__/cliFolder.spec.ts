@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { cliDataFolder, commandLinePrototypes, tellCommandLine } from '../src/main/services/cliFolder';
+import { cliDataFolder, commandLinePrototypes, tellCommandLine } from '../src/core/services/cliFolder';
 
 /**
  * One set of prototypes for the panel and the `dsnr` command (QUALITY_PASS finding 1): the extension says in the command's

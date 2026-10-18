@@ -12,7 +12,7 @@ import {
 	nameOf,
 	systemAt,
 	within,
-} from '../src/main/services/designSystems';
+} from '../src/core/services/designSystems';
 import type { ConnectedDesignSystem } from '../src/shared/contract';
 import { memoryReads } from './fixtures';
 
@@ -39,7 +39,7 @@ describe('finding the design systems in a repository', () => {
 		const repo = {
 			'package.json': '{ "name": "acme" }',
 			'apps/web/package.json': '{ "name": "web" }',
-			'apps/web/src/main.tsx': 'export {};\n',
+			'apps/web/src/core.tsx': 'export {};\n',
 			'packages/ui/package.json': '{ "name": "@acme/design" }',
 			'packages/ui/src/Button.stories.tsx': story('Buttons/Button'),
 			'packages/ui/src/theme/tones.ts': tones,

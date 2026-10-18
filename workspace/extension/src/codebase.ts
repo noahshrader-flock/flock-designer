@@ -1,6 +1,6 @@
 import { type BuildApi, type BuildPhase, runLocalBuild } from '../../src/renderer/localBuild';
 import type { Project, ProjectWork, ShareStatus, ShareStep, WorkspaceApi } from '../../src/shared/contract';
-import { buildError, outputLines, packagesHint } from '../../src/main/services/serverOutput';
+import { buildError, outputLines, packagesHint } from '../../src/core/services/serverOutput';
 import { valueOf } from '../../src/shared/result';
 import { DESIGN_MODE_COMMAND, codeLink, workOf } from '../../src/shared/work';
 import { type AgentWorkDeps, type Offer, type Tell, agentReady, agentWork, pollOf } from './agentWork';

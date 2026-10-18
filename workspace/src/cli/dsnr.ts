@@ -6,20 +6,20 @@ import { openComments } from '../shared/comments';
 import { firstHeading } from '../shared/brief';
 import { projectPath, prototypePagePath, prototypeSourcePath, prototypeKey } from '../shared/designPaths';
 import { workLabel } from '../shared/work';
-import { writeCommentsExport } from '../main/services/commentsExport';
-import { DESCRIPTOR_PATH } from '../main/services/descriptor';
-import type { GitHubApi } from '../host/github';
-import { loginOf } from '../host/github';
+import { writeCommentsExport } from '../core/services/commentsExport';
+import { DESCRIPTOR_PATH } from '../core/services/descriptor';
+import type { GitHubApi } from '../github/github';
+import { loginOf } from '../github/github';
 
-import { recordsRootFor } from '../main/services/discovery';
-import { assertUsableProjectId } from '../main/services/workRecords';
-import { readCheckout, git } from '../main/services/git';
-import { guidePart, prototypeBuildTask } from '../main/services/agentTasks';
-import { designStore } from '../main/services/designStore';
-import { BUILD_SKILL, GUIDE, assertPrototypeName } from '../main/services/prototype';
-import { shellLine } from '../main/services/prototypeBundle';
-import { localPrototypeFile, prototypeWork, whereTheChangeGoes } from '../main/services/prototypeWork';
-import { publish, recordsFrom, unpublish } from '../main/services/pages';
+import { recordsRootFor } from '../core/services/discovery';
+import { assertUsableProjectId } from '../core/services/workRecords';
+import { readCheckout, git } from '../core/services/git';
+import { guidePart, prototypeBuildTask } from '../core/services/agentTasks';
+import { designStore } from '../core/services/designStore';
+import { BUILD_SKILL, GUIDE, assertPrototypeName } from '../core/services/prototype';
+import { shellLine } from '../core/services/prototypeBundle';
+import { localPrototypeFile, prototypeWork, whereTheChangeGoes } from '../core/services/prototypeWork';
+import { publish, recordsFrom, unpublish } from '../core/services/pages';
 import { buildSite } from '../site/buildSite';
 import { serveSite } from '../site/serveSite';
 import { checkWcagEdition } from './wcagEdition';
@@ -27,7 +27,7 @@ import { checkAccessibility, measureAccessibility, readReturnedNow } from './acc
 import { errorText } from '../shared/result';
 import { plural } from '../shared/plural';
 import { loginFromNoreply } from '../shared/hostUrls';
-import { ReviewThreads } from '../host/reviewThreads';
+import { ReviewThreads } from '../github/reviewThreads';
 import { CLI, HOST, needsCli } from '../shared/vocabulary';
 import { DESIGN_REPO, PAGES_SIGN_IN } from '../shared/config';
 
@@ -62,9 +62,9 @@ export interface CliDeps {
 	buildViewer?: () => Promise<string>;
 }
 
-export { openInBrowser } from '../main/services/openBrowser';
-export { ghApi } from '../main/services/ghCli';
-export { cliDataFolder, commandLinePrototypes } from '../main/services/cliFolder';
+export { openInBrowser } from '../core/services/openBrowser';
+export { ghApi } from '../core/services/ghCli';
+export { cliDataFolder, commandLinePrototypes } from '../core/services/cliFolder';
 
 const USAGE = `Usage:
   dsnr new-prototype --project <id> --note <what to make> [--title <project title>] [--from <branch>] [--product <dir>]

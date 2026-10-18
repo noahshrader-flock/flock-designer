@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { MarkerRequest } from '../src/shared/contract';
 import { readMarkers, readPick, readPinMessage } from '../src/shared/pageReaders';
 import { MESSAGE_PREFIX } from '../src/shared/pinMessage';
-import { type PrototypeChange, whereTheChangeGoes } from '../src/main/services/prototypeWork';
+import { type PrototypeChange, whereTheChangeGoes } from '../src/core/services/prototypeWork';
 
 /**
  * The gate for whatever a previewed page says (TEST-8). A page can say anything, so each reader is tried with what a page

@@ -11,7 +11,7 @@ import { INVOKE } from '../src/shared/contract';
 
 const workspace = join(__dirname, '..');
 /** The core and the contract itself: where a call is answered and declared, not made. */
-const NOT_CALLERS = ['src/main', 'src/shared/contract'];
+const NOT_CALLERS = ['src/core', 'src/shared/contract'];
 
 const files = (dir: string): string[] =>
 	readdirSync(dir).flatMap((name) => {

@@ -3,9 +3,9 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync
 import { realpathSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { IpcContext } from '../src/main/ipc';
+import type { CallsContext } from '../src/core/calls';
 import { CHANNELS, invokeChannel } from '../src/shared/contract';
-import type { Ports } from '../src/main/ports';
+import type { Ports } from '../src/core/ports';
 import { type Answer, fakeGitHub } from './fakes/github';
 import {
 	addStandards,
@@ -82,7 +82,7 @@ const answer = (routes: Record<string, Answer>) => githubApi.mockImplementation(
 /** The real runner, so its one-run rule is what is tested, over a stand-in agent that runs until the test ends. */
 const realRunner = async () => {
 	const { EventEmitter } = await import('node:events');
-	const { AgentRunner } = await import('../src/main/services/agent');
+	const { AgentRunner } = await import('../src/core/services/agent');
 	const sessionsSpawned: Array<string | undefined> = [];
 	const runner = new AgentRunner(() => {}, {
 		adapter: { name: 'Fake', argvFor: (t, extras) => (sessionsSpawned.push(extras?.session), ['fake', t]) },
@@ -94,7 +94,7 @@ const realRunner = async () => {
 /** Trusting a folder as a shell does, with the core's own `open`: as the answer to a call, ok or not. */
 const trustFolder = async (root: string): Promise<{ ok: boolean; error?: string; value?: unknown }> => {
 	try {
-		return { ok: true, value: await ipc.open(root) };
+		return { ok: true, value: await calls.open(root) };
 	} catch (err) {
 		return { ok: false, error: err instanceof Error ? err.message : String(err) };
 	}
@@ -126,16 +126,16 @@ const JPEG = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 7, 7, 7]);
 const build = (root: string, from?: string) => call(CHANNELS.buildInCodebase, root, 'demo', 'v1', from);
 /** Codebase work for demo, recorded and checked out, as Build or an agent in a terminal would leave it. */
 const codebaseWork = async () => {
-	const { createCodebaseWork } = await import('../src/main/services/workRecords');
-	const { readDescriptor } = await import('../src/main/services/descriptor');
+	const { createCodebaseWork } = await import('../src/core/services/workRecords');
+	const { readDescriptor } = await import('../src/core/services/descriptor');
 	await createCodebaseWork(product, join(design, 'projects'), readDescriptor(product), 'demo', 'x', 'develop');
 };
 
-let registerIpc: (typeof import('../src/main/ipc'))['registerIpc'];
+let registerCalls: (typeof import('../src/core/calls'))['registerCalls'];
 /** What the core hands a shell once registered: the extension trusts a folder with its `open`. */
-let ipc: ReturnType<typeof registerIpc>;
-let coreRoutes: (typeof import('../src/main/handle'))['served'];
-let OpenedCheckouts: (typeof import('../src/main/services/session'))['OpenedCheckouts'];
+let calls: ReturnType<typeof registerCalls>;
+let coreRoutes: (typeof import('../src/core/handle'))['served'];
+let OpenedCheckouts: (typeof import('../src/core/services/session'))['OpenedCheckouts'];
 let opened: InstanceType<typeof OpenedCheckouts>;
 let agentStart: Fn;
 let agentStatus: Fn;
@@ -160,8 +160,8 @@ let checkPage: Fn;
 let drawCover: Fn;
 /** A file read from GitHub as bytes: none, unless a test says otherwise. */
 let readBytes: Fn;
-let register: (more?: Partial<IpcContext>) => ReturnType<typeof registerIpc>;
-let prototypeServer: InstanceType<(typeof import('../src/main/services/prototypeServer'))['PrototypeServer']>;
+let register: (more?: Partial<CallsContext>) => ReturnType<typeof registerCalls>;
+let prototypeServer: InstanceType<(typeof import('../src/core/services/prototypeServer'))['PrototypeServer']>;
 
 // The home every test starts with: a product repository and the design repository beside it, under GitHub/.
 const world = madeOnce((d) => {
@@ -186,9 +186,9 @@ beforeEach(async () => {
 	copied = '';
 	ports = fakePorts();
 
-	({ registerIpc } = await import('../src/main/ipc'));
-	({ served: coreRoutes } = await import('../src/main/handle'));
-	({ OpenedCheckouts } = await import('../src/main/services/session'));
+	({ registerCalls } = await import('../src/core/calls'));
+	({ served: coreRoutes } = await import('../src/core/handle'));
+	({ OpenedCheckouts } = await import('../src/core/services/session'));
 	opened = new OpenedCheckouts();
 	agentStart = vi.fn(() => ({ state: 'idle' }));
 	agentStatus = vi.fn(() => ({ state: 'idle' }));
@@ -206,7 +206,7 @@ beforeEach(async () => {
 	personRepos = [];
 	personLogin = 'noah';
 	designRepoProjects = [];
-	prototypeServer = new (await import('../src/main/services/prototypeServer')).PrototypeServer();
+	prototypeServer = new (await import('../src/core/services/prototypeServer')).PrototypeServer();
 
 	warm = vi.fn(async () => undefined);
 	ask = vi.fn(async () => ({ state: 'building' }));
@@ -229,11 +229,11 @@ beforeEach(async () => {
 	);
 	drawCover = vi.fn(async () => JPEG);
 	readBytes = vi.fn(async () => null);
-	const { Installer } = await import('../src/main/services/install');
-	const { DesignSystemsMemory } = await import('../src/main/services/designSystems');
-	const { SessionMemory } = await import('../src/main/services/editor');
-	register = (more: Partial<IpcContext> = {}) => {
-		const publishing = registerIpc({
+	const { Installer } = await import('../src/core/services/install');
+	const { DesignSystemsMemory } = await import('../src/core/services/designSystems');
+	const { SessionMemory } = await import('../src/core/services/editor');
+	register = (more: Partial<CallsContext> = {}) => {
+		const publishing = registerCalls({
 			emit: vi.fn(),
 			ports,
 			opened,
@@ -280,7 +280,7 @@ beforeEach(async () => {
 		});
 		// The core's table answered as a shell's transport answers it: each route on its channel.
 		for (const [name, route] of coreRoutes()) handlers.set(invokeChannel(name), (_event, ...sent) => route(...sent));
-		ipc = publishing;
+		calls = publishing;
 		return publishing;
 	};
 	register();
@@ -879,7 +879,7 @@ describe('prototypes', () => {
 			});
 
 			it('does nothing for a change the site is not built from', async () => {
-				const asked = await behindBy('workspace/src/main/ipc.ts');
+				const asked = await behindBy('workspace/src/core/calls.ts');
 				await nothingFollows();
 				expect(asked()).toBe(1);
 			});
@@ -1395,7 +1395,7 @@ describe('prototypes', () => {
 describe('the picture of each prototype, on its project’s card', () => {
 	// A prototype is recorded only where it can be built: from the real design system, installed.
 	beforeEach(() => installDesignSystem(product));
-	const hashOf = async (html: string) => (await import('../src/main/services/prototype')).contentHashOf(html);
+	const hashOf = async (html: string) => (await import('../src/core/services/prototype')).contentHashOf(html);
 	const recordOf = (name: string) =>
 		(JSON.parse(readFileSync(join(design, 'projects', 'demo', 'work.json'), 'utf8')) as Array<Record<string, unknown>>).find((r) => r.name === name);
 
@@ -1636,7 +1636,7 @@ describe('one agent, one piece of work', () => {
 	});
 
 	it('joins its own run when asked twice, rather than starting a second, and keeps that run’s conversation', async () => {
-		const { SessionMemory } = await import('../src/main/services/editor');
+		const { SessionMemory } = await import('../src/core/services/editor');
 		const sessions = new SessionMemory(join(home, 'agent-sessions.json'));
 		const { runner, sessionsSpawned } = await realRunner();
 		register({ agent: runner });
@@ -1710,7 +1710,7 @@ describe('Handoff', () => {
 	});
 
 	it('keeps the verdict on the work’s record, with the commit it was ready at, and the list says it only while the branch is still there', async () => {
-		const { readWork } = await import('../src/main/services/workRecords');
+		const { readWork } = await import('../src/core/services/workRecords');
 		const codebase = () => readWork(join(design, 'projects'), 'demo').find((work) => work.name === 'codebase');
 		const listed = async () =>
 			((await call(CHANNELS.listProjects)).value as { id: string; work: { name: string; readyAt: string | null }[] }[])

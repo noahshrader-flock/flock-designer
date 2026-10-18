@@ -1,6 +1,6 @@
 import type * as VsCode from 'vscode';
-import { type Fetcher, ReauthRequired, ReadCache, callApi, readUser } from '../../src/host/github';
-import type { GitHubAccount } from '../../src/host/github';
+import { type Fetcher, ReauthRequired, ReadCache, callApi, readUser } from '../../src/github/github';
+import type { GitHubAccount } from '../../src/github/github';
 import type { SignInState } from '../../src/shared/contract';
 
 /** What DSNR asks of GitHub: the person's private repositories, and the organizations they are in. */

@@ -2,8 +2,8 @@ import { execFileSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { expect, it } from 'vitest';
 import { designSystemOf } from '../src/shared/catalog';
-import { isStoryFile, literalField, readCatalog, UNGROUPED } from '../src/main/services/componentCatalog';
-import { libraryReads } from '../src/main/services/designLibrary';
+import { isStoryFile, literalField, readCatalog, UNGROUPED } from '../src/core/services/componentCatalog';
+import { libraryReads } from '../src/core/services/designLibrary';
 import { REAL_LIBRARY as REAL, describeWith, libraryMissing } from './realCheckouts';
 
 /** The reader against the real library's branch, not a fixture. */

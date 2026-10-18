@@ -1,4 +1,4 @@
-import type { Context } from '../../src/main/services/findContext';
+import type { Context } from '../../src/core/services/findContext';
 import { INVOKE, type InvokeName } from '../../src/shared/contract';
 import { MOST_TRIED, type TokenEdit, type TriedValue } from '../../src/shared/domain/designSystem';
 import { MOST_EDITS } from '../../src/shared/tokens';

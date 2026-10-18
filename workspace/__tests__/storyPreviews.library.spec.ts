@@ -1,6 +1,6 @@
 import { expect, it, vi } from 'vitest';
-import { PrototypeServer } from '../src/main/services/prototypeServer';
-import { StoryPreviews } from '../src/main/services/storyPreviews';
+import { PrototypeServer } from '../src/core/services/prototypeServer';
+import { StoryPreviews } from '../src/core/services/storyPreviews';
 import { REAL_FUI, describeWith, libraryUnbuilt } from './realCheckouts';
 import { libraryFolder } from './realLibrary';
 

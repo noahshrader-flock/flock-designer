@@ -3,7 +3,7 @@ import { mkdtempSync, realpathSync, rmSync } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, expect, it } from 'vitest';
-import { locateGh } from '../src/main/services/ghCli';
+import { locateGh } from '../src/core/services/ghCli';
 import { NOT_FAKED } from './sealed.mjs';
 
 /**

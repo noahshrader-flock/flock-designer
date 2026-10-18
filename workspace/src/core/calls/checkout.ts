@@ -4,13 +4,13 @@ import { DESCRIPTOR_PATH, findCommand } from '../services/descriptor';
 import { branchesWithFile, readCheckout } from '../services/git';
 import { INSTALL_COMMAND } from '../services/install';
 import { continueWork, recordedWork } from '../services/workRecords';
-import type { IpcDeps } from '../ipc';
+import type { CallsDeps } from '../calls';
 
 /**
  * How the window opens a product checkout and works in it: choosing or accepting one, its branches and work,
  * its commands, and installing its packages.
  */
-export const registerCheckout = (d: IpcDeps): void => {
+export const registerCheckout = (d: CallsDeps): void => {
 	const { agent, assertAgentNotHere, checkout, installer, runtime, signedInLogin, state, emit, written } = d;
 
 	handle('branchesWithSetup', [checkout], (workIn) => branchesWithFile(workIn.canonical, DESCRIPTOR_PATH));

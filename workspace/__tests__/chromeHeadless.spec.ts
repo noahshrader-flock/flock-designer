@@ -1,8 +1,8 @@
 import { deflateSync } from 'node:zlib';
 import { describe, expect, it, vi } from 'vitest';
-import { HEADLESS_PICTURE_RECIPE, NO_BROWSER, chromeHeadless, findChrome } from '../src/main/services/chromeHeadless';
-import { fitJpegBy } from '../src/main/services/picture';
-import { decodePng } from '../src/main/services/png';
+import { HEADLESS_PICTURE_RECIPE, NO_BROWSER, chromeHeadless, findChrome } from '../src/core/services/chromeHeadless';
+import { fitJpegBy } from '../src/core/services/picture';
+import { decodePng } from '../src/core/services/png';
 
 /**
  * Drawing out of sight in a shell with no hidden windows (ELECTRON_MIGRATION_PLAN 2B, 4.4): the browser already on the

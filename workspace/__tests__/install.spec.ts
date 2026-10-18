@@ -2,7 +2,7 @@ import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { Installer, installProblem } from '../src/main/services/install';
+import { Installer, installProblem } from '../src/core/services/install';
 
 /**
  * Installing a repository's packages (C5 of the clone plan): the command it declares, run in it, its output passed on

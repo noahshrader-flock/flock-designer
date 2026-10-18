@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { CELLS, type CellId, MOST_FINDINGS, cellsAt, resultFrom } from '../src/main/services/probe/cells';
-import { PATTERNS, scanSources } from '../src/main/services/probe/sourceScan';
+import { CELLS, type CellId, MOST_FINDINGS, cellsAt, resultFrom } from '../src/core/services/probe/cells';
+import { PATTERNS, scanSources } from '../src/core/services/probe/sourceScan';
 import { CRITERIA, atTarget, wcagCriterion } from '../src/shared/wcagCriteria';
 import { SOURCE_FIXTURES } from './fixtures/probeFixtures';
 

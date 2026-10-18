@@ -19,8 +19,8 @@
 	},
 	"include": [
 		"package.json",
-		"src/main/**/*",
-		"src/host/**/*",
+		"src/core/**/*",
+		"src/github/**/*",
 		"src/cli/**/*",
 		"src/site/**/*",
 		"src/preload/**/*",

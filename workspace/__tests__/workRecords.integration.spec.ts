@@ -3,8 +3,8 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'no
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import type { WorkspaceDescriptor } from '../src/main/services/descriptor';
-import { readCheckout } from '../src/main/services/git';
+import type { WorkspaceDescriptor } from '../src/core/services/descriptor';
+import { readCheckout } from '../src/core/services/git';
 import {
 	assertUsableProjectId,
 	codebaseBranchFor,
@@ -13,7 +13,7 @@ import {
 	readWork,
 	recordPreview,
 	recordedWork,
-} from '../src/main/services/workRecords';
+} from '../src/core/services/workRecords';
 
 const descriptor: WorkspaceDescriptor = {
 	version: 1,

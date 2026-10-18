@@ -19,7 +19,7 @@ import {
 import { isPrototypeName, commentsFromOthers, nextVersionName, parseVersion, prototypeName } from '../src/shared/prototypeNames';
 import { PROJECT_ID, asDate, asRoute, slugify, asCover } from '../src/shared/validate';
 import { codeLink, workLabel, workOf } from '../src/shared/work';
-import { readFolderProjects } from '../src/main/services/localProjects';
+import { readFolderProjects } from '../src/core/services/localProjects';
 import { aProject, projectWork } from './fixtures';
 
 const it1 = (over: Partial<ProjectWork> = {}): ProjectWork => projectWork({ name: 'v1', branch: 'prototype/alpha/v1', ...over });

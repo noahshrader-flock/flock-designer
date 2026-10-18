@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { GitHubAccount } from '../src/host/github';
+import type { GitHubAccount } from '../src/github/github';
 
 const pages = vi.hoisted(() => ({
 	siteBehind: vi.fn(),
@@ -8,8 +8,8 @@ const pages = vi.hoisted(() => ({
 	recordsFrom: vi.fn(async () => ({})),
 	redeploySite: vi.fn(),
 }));
-vi.mock('../src/main/services/pages', () => pages);
-const { siteDeploys } = await import('../src/main/services/siteDeploys');
+vi.mock('../src/core/services/pages', () => pages);
+const { siteDeploys } = await import('../src/core/services/siteDeploys');
 
 let signedIn = true;
 const github = {

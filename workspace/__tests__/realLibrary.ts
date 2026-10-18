@@ -1,11 +1,11 @@
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll } from 'vitest';
-import { chromeHeadless } from '../src/main/services/chromeHeadless';
-import { ComponentTokens } from '../src/main/services/componentTokens';
-import type { Measure } from '../src/main/services/componentTokens';
-import { PrototypeServer } from '../src/main/services/prototypeServer';
-import { StoryPreviews } from '../src/main/services/storyPreviews';
+import { chromeHeadless } from '../src/core/services/chromeHeadless';
+import { ComponentTokens } from '../src/core/services/componentTokens';
+import type { Measure } from '../src/core/services/componentTokens';
+import { PrototypeServer } from '../src/core/services/prototypeServer';
+import { StoryPreviews } from '../src/core/services/storyPreviews';
 import type { ConnectedDesignSystem } from '../src/shared/contract';
 import { describeWith } from './realCheckouts';
 

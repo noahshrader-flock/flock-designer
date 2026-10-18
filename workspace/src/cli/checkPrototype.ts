@@ -5,8 +5,8 @@
  * exits as a build does. A check that cannot run says so, and never stops the build.
  */
 import { readFileSync } from 'node:fs';
-import { type CheckConfig, checkBuild } from '../main/services/buildCheck';
-import { chromeHeadless } from '../main/services/chromeHeadless';
+import { type CheckConfig, checkBuild } from '../core/services/buildCheck';
+import { chromeHeadless } from '../core/services/chromeHeadless';
 import { errorText } from '../shared/result';
 
 const browser = chromeHeadless();

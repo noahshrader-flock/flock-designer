@@ -1,7 +1,7 @@
 import { resolve, sep } from 'node:path';
 import type * as VsCode from 'vscode';
-import type { Context } from '../../src/main/services/findContext';
-import { type DesignSystemsMemory, systemAt } from '../../src/main/services/designSystems';
+import type { Context } from '../../src/core/services/findContext';
+import { type DesignSystemsMemory, systemAt } from '../../src/core/services/designSystems';
 import type { CatalogComponent, ConnectedDesignSystem, TokenEdit, TriedValue, WorkspaceApi } from '../../src/shared/contract';
 import { sameTried } from '../../src/shared/contract';
 import { errorText, valueOf } from '../../src/shared/result';

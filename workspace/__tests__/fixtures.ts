@@ -3,8 +3,8 @@ import { execFileSync } from 'node:child_process';
 import { copyFileSync, cpSync, existsSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { CatalogReads } from '../src/main/services/componentCatalog';
-import type { RecordStore } from '../src/main/services/prototype';
+import type { CatalogReads } from '../src/core/services/componentCatalog';
+import type { RecordStore } from '../src/core/services/prototype';
 import type { AgentStatus, CommentAnchor, Project, ProjectWork, ReviewComment, TokenProblem } from '../src/shared/contract';
 import { prototypeKey } from '../src/shared/designPaths';
 

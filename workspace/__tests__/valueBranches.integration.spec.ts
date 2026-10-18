@@ -2,9 +2,9 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import type { PullRequest } from '../src/host/changeRequests';
-import type { ShareTools } from '../src/main/services/share';
-import { ValueBranches } from '../src/main/services/valueBranches';
+import type { PullRequest } from '../src/github/changeRequests';
+import type { ShareTools } from '../src/core/services/share';
+import { ValueBranches } from '../src/core/services/valueBranches';
 import type { TriedValue, ValueSources as Answer } from '../src/shared/contract';
 import { g } from './fixtures';
 

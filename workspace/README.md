@@ -123,7 +123,7 @@ source and page are in its project folder.
 - **Discovery suggests; it never trusts.** A repository's own `.dsnr/workspace.json` is the list of
   commands the app may run in it, so finding that file on disk grants nothing: the repository is
   offered, and accepting it is what admits it. `useCheckout` will only accept a path discovery itself
-  found, and a remembered choice is restored only if the person made one. `__tests__/ipc.integration.spec.ts`
+  found, and a remembered choice is restored only if the person made one. `__tests__/calls.integration.spec.ts`
   asserts this at the handler level — the gate was briefly bypassed while every service test stayed
   green, which is why those tests exist.
 - A project id is validated before it reaches a command's argv **and** before it reaches the agent's

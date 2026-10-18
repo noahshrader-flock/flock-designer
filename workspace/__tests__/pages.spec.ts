@@ -1,10 +1,10 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
-import type { GitHubApi } from '../src/host/github';
+import type { GitHubApi } from '../src/github/github';
 
 import { type Answer, fakeGitHub, notFound, refusal } from './fakes/github';
-import { PUBLISH_WORKFLOW, pageStatus, publish, readVisibility, redeploySite, siteBehind, unpublish, whyPublic } from '../src/main/services/pages';
+import { PUBLISH_WORKFLOW, pageStatus, publish, readVisibility, redeploySite, siteBehind, unpublish, whyPublic } from '../src/core/services/pages';
 
 /**
  * Publishing a prototype to its page (M5b of the Pages plan), against a fake GitHub. What matters most is what it will
@@ -324,7 +324,7 @@ describe('what GitHub has that the site does not have yet', () => {
 			{ filename: 'skills/x.md', status: 'added' },
 			{ filename: 'projects/demo/prototypes/v1.tsx', status: 'modified' },
 			// The app's own screens and its main process, which the site is not built from.
-			{ filename: 'workspace/src/main/ipc.ts', status: 'modified' },
+			{ filename: 'workspace/src/core/calls.ts', status: 'modified' },
 			{ filename: 'workspace/__tests__/viewer.spec.ts', status: 'modified' },
 			{ filename: 'IMPLEMENTATION_PLAN.md', status: 'modified' },
 		];
@@ -339,7 +339,7 @@ describe('what GitHub has that the site does not have yet', () => {
 		'workspace/src/renderer/index.css',
 		'workspace/src/shared/projectList.ts',
 		'workspace/src/site/buildSite.ts',
-		'workspace/src/host/designRepo.ts',
+		'workspace/src/github/designRepo.ts',
 		'workspace/src/cli/dsnr.ts',
 		'workspace/viewer.vite.config.ts',
 		'workspace/bin/dsnr.mjs',

@@ -2,7 +2,7 @@ import { chmodSync, existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, 
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { jsonFile, writeAtomic } from '../src/main/services/jsonFile';
+import { jsonFile, writeAtomic } from '../src/core/services/jsonFile';
 
 let dir: string;
 beforeEach(() => (dir = mkdtempSync(join(tmpdir(), 'fd-json-'))));

@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, expect, it } from 'vitest';
-import { windowFolder } from '../src/main/services/windowFolder';
+import { windowFolder } from '../src/core/services/windowFolder';
 
 /** A folder for each window's DSNR (QUALITY_PASS finding 3), so two windows never build into, or prune, the same one. */
 

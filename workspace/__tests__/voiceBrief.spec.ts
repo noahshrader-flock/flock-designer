@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { VOICE_FILE } from '../src/main/services/voiceAndTone';
-import { taskVoice, voiceBrief } from '../src/main/services/voiceBrief';
+import { VOICE_FILE } from '../src/core/services/voiceAndTone';
+import { taskVoice, voiceBrief } from '../src/core/services/voiceBrief';
 import { voiceIsWritten } from '../src/shared/voice';
 
 /**

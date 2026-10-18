@@ -7,12 +7,12 @@ import { readDescriptor } from '../services/descriptor';
 import { readWork } from '../services/workRecords';
 import { listProjects } from '../services/listProjects';
 import { ProfileNames } from '../services/profileNames';
-import type { IpcDeps } from '../ipc';
+import type { CallsDeps } from '../calls';
 
 /**
  * The project list, its records, and the review comments kept as GitHub issues.
  */
-export const registerReview = (d: IpcDeps): void => {
+export const registerReview = (d: CallsDeps): void => {
 	const { designRepo, github, opened, publisher, signedInLogin, trustedRecords, trustedRoot } = d;
 
 	/** Names people by their GitHub profile, once each, so a person is the same name wherever they appear. */

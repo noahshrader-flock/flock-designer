@@ -4,7 +4,7 @@ import { SHARED_DIR, projectPath, prototypePagePath, sharedFilePath, sharedFiles
 import { parseWork } from '../../shared/workRecords';
 import { isPrototypeName } from '../../shared/prototypeNames';
 import { PROJECT_ID } from '../../shared/validate';
-import type { RepoFiles } from '../../host/repoFiles';
+import type { RepoFiles } from '../../github/repoFiles';
 
 /**
  * One project of the design repository, read through GitHub into `into`, laid out as a checkout's records are

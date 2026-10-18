@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { ProfileNames } from '../src/main/services/profileNames';
+import { ProfileNames } from '../src/core/services/profileNames';
 import type { Person, Project, ProjectWork } from '../src/shared/contract';
 import { aProject, projectWork } from './fixtures';
 

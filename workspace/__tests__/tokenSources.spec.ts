@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { readTokens } from '../src/main/services/designTokens';
-import { editedFiles } from '../src/main/services/tokenEdits';
-import { channelsOf, hexOfChannels } from '../src/main/services/tokens/cssVariables';
+import { readTokens } from '../src/core/services/designTokens';
+import { editedFiles } from '../src/core/services/tokenEdits';
+import { channelsOf, hexOfChannels } from '../src/core/services/tokens/cssVariables';
 import { memoryReads } from './fixtures';
 
 /**
