@@ -111,8 +111,8 @@ export const COLOR_VALUES: ReadonlySet<ValueProperty> = new Set(['background', '
 
 /**
  * What a drawn value is: a token's (`tokens` names it, or them for a value of several parts), the component's own,
- * worked out from a token (a hover's shade, a height that grows with a token's padding), partly a token and partly its own,
- * or not checked (a kind of value no token is tagged for, such as a font size, or drawings that did not pair up).
+ * worked out from a token (a hover's shade, a height that grows with a token's padding), partly a token (`tokens` names it)
+ * and partly its own or worked out, or not checked (a kind of value no token is tagged for, such as a font size, or drawings that did not pair up).
  */
 export type ValueKind = 'token' | 'own' | 'derived' | 'mixed' | 'unchecked';
 

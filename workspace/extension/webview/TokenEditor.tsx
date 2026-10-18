@@ -94,6 +94,7 @@ export const TokenEditor = ({ token, onClose }: { token: DesignToken; onClose: (
 	const pointer = now.ref ?? asRead.ref;
 	const target = pointer && byPath.get(pointer.path);
 	const [custom, setCustom] = useState(now.ref === undefined);
+	const declared = declaredBy(now);
 	return (
 		<Dialog title={tokenTitle(now)} onClose={onClose} focus="panel">
 			<div data-token-editor={now.path} className="token-editor">
@@ -103,7 +104,7 @@ export const TokenEditor = ({ token, onClose }: { token: DesignToken; onClose: (
 						{now.source.file}:{now.source.line}
 					</code>
 				</p>
-				{declaredBy(now) && <p className="quiet token-declared">{declaredBy(now)}</p>}
+				{declared && <p className="quiet">{declared}</p>}
 				{now.kind === 'dimension' ? (
 					<LengthField label={nameOf(asRead)} value={now.value} was={asRead.value} onCommit={(value) => change(now, { value })} />
 				) : target ? (

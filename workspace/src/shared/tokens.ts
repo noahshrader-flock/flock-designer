@@ -397,12 +397,14 @@ export const editsKept = (edits: TokenEdit[], catalog: Catalog): TokenEdit[] => 
 };
 
 /**
- * Where a token a package declares really lives, as its control says it: a change to it is written in the library as an
- * override, which the stories draw, but the token itself is the package's, and a change that is to last is the package's to
- * make. Null for a token the library declares itself.
+ * Where a token a package declares really lives, as its control says it: a change is written in the library as an override,
+ * which its stories draw, but the token is the package's to change for good. Null for one the library declares itself.
  */
-export const declaredBy = ({ source: { from } }: Pick<DesignToken, 'source'>): string | null =>
-	from ? `Declared by ${from.file}:${from.line}. A change is written here as an override; the token itself is that package’s to change.` : null;
+export const declaredBy = ({ source: { from } }: Pick<DesignToken, 'source'>): string | null => {
+	if (!from) return null;
+	const pkg = /(?:^|\/)node_modules\/((?:@[^/]+\/)?[^/]+)\//.exec(from.file)?.[1] ?? from.file;
+	return `Declared by ${pkg}. A change is written here as an override; the token itself is that package’s to change.`;
+};
 
 /**
  * What changing a token reaches, as its control says it, in the app and in VS Code: the roles that point at it, by name

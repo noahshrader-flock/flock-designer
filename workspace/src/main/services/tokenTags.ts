@@ -96,8 +96,11 @@ export const sizeToken = (value: string, sizes: Tags['sizes']): string | null =>
 	const px = Math.abs(pxOf(value) ?? NaN);
 	if (!Number.isFinite(px) || px === 0) return null;
 	// Counted in halves of the tag, to the place a browser writes a computed length to.
-	const inHalves = (tag: number) => (2 * px) / tag;
-	return sizes.find((s) => Math.abs(inHalves(s.px) - Math.round(inHalves(s.px))) < 1e-4 && Math.round(inHalves(s.px)) <= HALF_STEPS)?.path ?? null;
+	const halfSteps = (tag: number): number | null => {
+		const n = (2 * px) / tag;
+		return Math.abs(n - Math.round(n)) < 1e-4 ? Math.round(n) : null;
+	};
+	return sizes.find((s) => (halfSteps(s.px) ?? Infinity) <= HALF_STEPS)?.path ?? null;
 };
 
 /** Nothing worth saying: no color, no size, or a gap left as CSS has it (`normal`). */

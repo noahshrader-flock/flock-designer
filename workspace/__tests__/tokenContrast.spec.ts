@@ -71,7 +71,7 @@ describe('declaredBy', () => {
 		};
 		expect(declaredBy(own)).toBeNull();
 		expect(declaredBy(packaged)).toBe(
-			'Declared by node_modules/@primer/primitives/dist/css/size.css:14. A change is written here as an override; the token itself is that package’s to change.',
+			'Declared by @primer/primitives. A change is written here as an override; the token itself is that package’s to change.',
 		);
 	});
 });

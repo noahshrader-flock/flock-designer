@@ -20,7 +20,7 @@ import { lineAt, replaced } from './objectLiteral';
 import { MOTION_PARTS, SHADOWS, TYPE_PARTS, primitiveOf } from '../../../shared/primitives';
 import { capitalize } from '../../../shared/titleCase';
 import { type TokenSource, notWhereRead, semanticFirst } from './source';
-import type { CatalogReads } from '../componentCatalog';
+import { type CatalogReads, SCRIPT_EXTENSIONS } from '../componentCatalog';
 import { posix } from 'node:path';
 
 const STYLESHEET = /\.(css|scss|less|pcss)$/;
@@ -187,7 +187,7 @@ const importedFile = async (reads: CatalogReads, from: string, spec: string): Pr
 	}
 };
 
-const PREVIEW = /(^|\/)\.storybook\/preview\.(tsx|ts|jsx|js|mjs|cjs|mts|cts)$/;
+const PREVIEW = new RegExp(`(^|/)\\.storybook/preview\\.(${SCRIPT_EXTENSIONS.join('|')})$`);
 /** A stylesheet a script imports for its effect: `import './theme.css';`, not one that is bound to a name. */
 const STYLE_IMPORT = /^\s*import\s+(['"])([^'"]+)\1/gm;
 
@@ -272,7 +272,7 @@ export const cssVariables: TokenSource = {
 			await take(file, null);
 		}
 		// Then what the stories load, read again over them: what the preview imports is the value a story sees, and the file a
-		// change to it must be written in to reach one (a library's other stylesheets, which no story loads, are not it).
+		// change to it must be written in to reach one.
 		followed.clear();
 		for (const file of await previewStylesheets(reads)) {
 			if (followed.has(file)) continue;
