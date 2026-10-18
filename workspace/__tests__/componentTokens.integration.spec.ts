@@ -14,7 +14,7 @@ import { g, settledAnswer } from './fixtures';
 /**
  * Which tokens each component draws with (T6 of the design system plan, decision 29): every token tagged with a value
  * nothing else has, every story drawn, and what it drew read back. Against fixtures; the previews and the drawing are
- * stand-ins, and the real drawing is the app's (`storyMeasure.ts`).
+ * stand-ins, and the real drawing is headless Chrome's (`chromeHeadless.ts`, `measure`).
  */
 
 const TOKENS = [

@@ -33,7 +33,7 @@ export const resolvedComments = (comments: ReviewComment[]): ReviewComment[] => 
 
 /**
  * A comment's reference alone, as the window sends it to act on one: not the comment it was read with, whose picture
- * can be a large data URL that has no business crossing to the main process again.
+ * can be a large data URL that has no business crossing to the core again.
  */
 export const commentRef = ({ thread, id }: CommentRef): CommentRef => ({ thread, id });
 

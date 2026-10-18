@@ -146,7 +146,7 @@ export interface ShareJob {
 /**
  * Holds the one share in progress and tells the window how it is going.
  *
- * One at a time, and it lives in the main process, so leaving the screen does not lose it:
+ * One at a time, and it lives in the core, so leaving the screen does not lose it:
  * coming back finds it where it was. A build takes minutes.
  */
 export class ShareRunner {

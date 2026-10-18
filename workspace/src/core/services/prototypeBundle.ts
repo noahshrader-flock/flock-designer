@@ -142,7 +142,7 @@ export const runBundle = (
 	node: string = process.execPath,
 ): Promise<{ ok: boolean; output: string }> => {
 	mkdirSync(dirname(out), { recursive: true });
-	// Electron runs scripts as Node when told to; plain Node ignores the variable.
+	// VS Code's extension host is Electron, which runs a script as Node only when told to; plain Node ignores the variable.
 	return runFile(node, [script, esbuild, entry, out, nodeModules, shared], { timeoutMs: 120_000, env: { ELECTRON_RUN_AS_NODE: '1' } }).then(
 		(r) => ({ ok: true, output: `${r.stdout}${r.stderr}`.trim() }),
 		(err: Error) => ({ ok: false, output: err instanceof ProcessFailed ? `${err.stdout}${err.stderr}`.trim() || err.message : err.message }),

@@ -1,7 +1,7 @@
 /**
  * The picture of each prototype on its project's card: a file in the design repository, named
- * on the prototype's record, made by one reconcile step. Nothing of Electron is in here: how a page is drawn is passed in
- * (`DrawCover`, a hidden window in the app: `coverWindow.ts`), so all of this is tested without one.
+ * on the prototype's record, made by one reconcile step. Nothing of a browser is in here: how a page is drawn is passed in
+ * (`DrawCover`, headless Chrome: `chromeHeadless.ts`), so all of this is tested without one.
  *
  * - **Who draws:** the machine the page was built on, and only it: its page is in the app's own prototype folder
  *   (`builtHere`). A colleague's page this machine only fetched or pulled is not, so it is never drawn here. One writer
@@ -62,7 +62,7 @@ export const settleScript = (quietMs = COVER_QUIET_MS, capMs = COVER_CAP_MS): st
 
 /**
  * Whether a capture is of one color: a page that painted nothing, whatever its background. Pixels are 4 bytes each, as
- * Electron gives a bitmap; a pixel a step off (a JPEG's or a gradient's edge) counts as the same, and so does one in a
+ * a browser's screenshot decodes; a pixel a step off (a JPEG's or a gradient's edge) counts as the same, and so does one in a
  * hundred of something else (a cursor, a stray line). An empty capture is blank.
  */
 export const isBlank = (data: Uint8Array): boolean => {

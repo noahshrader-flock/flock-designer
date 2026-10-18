@@ -267,7 +267,7 @@ describe('asRoute', () => {
 });
 
 describe('slugify', () => {
-	it('makes an id the main process will accept, however long the name', () => {
+	it('makes an id the core will accept, however long the name', () => {
 		// This used to truncate mid-word and leave a trailing hyphen, which the
 		// dialog showed as valid and createCodebaseWork then rejected.
 		const long = 'Users list inactivity signal for organization administrator review';

@@ -1,7 +1,7 @@
 /**
  * Measuring accessibility (T7 of the design system plan, part B; decision 30): axe-core run on a page in each of its
- * states, with the target's tags only, by whatever the shell gives to run it (`CheckPage`: in the app, a hidden window,
- * `accessibilityWindow.ts`). What it found is kept with what it was made with (the page, axe-core's version, the tags,
+ * states, with the target's tags only, by whatever the shell gives to run it (`CheckPage`: headless Chrome,
+ * `chromeHeadless.ts`). What it found is kept with what it was made with (the page, axe-core's version, the tags,
  * the target), and a result made with anything else is never given as current: it is made again.
  */
 import { createHash } from 'node:crypto';
@@ -43,8 +43,8 @@ export const CHECKED_IN = { name: 'prefers-color-scheme', value: 'light' } as co
 const SETTLE_MS = 300;
 
 /**
- * What runs in a prototype's page to check it, whichever browser it is in (the app's hidden window, a shell's headless
- * browser): once it has settled, axe-core itself, then a run over the whole page with `tags`.
+ * What runs in a prototype's page to check it, whichever browser it is in (headless Chrome, or a
+ * product's own, measured from the command line): once it has settled, axe-core itself, then a run over the whole page with `tags`.
  */
 export const axeInPage = (tags: string[]): string => `(async () => {
 	await document.fonts.ready;

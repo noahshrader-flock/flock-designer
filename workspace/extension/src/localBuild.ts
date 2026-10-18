@@ -87,7 +87,7 @@ export interface BuildRun {
 	work: ProjectWork;
 	/** What to ask the agent to build first, for work that was just created. Omit to go straight to the preview. */
 	task?: string;
-	/** Run a Handoff instead: the main process starts it, and it ends in a report, not the preview. */
+	/** Run a Handoff instead: the core starts it, and it ends in a report, not the preview. */
 	handoff?: boolean;
 	isLive: () => boolean;
 	onPhase: (phase: BuildPhase) => void;

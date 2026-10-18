@@ -168,7 +168,7 @@ export const callsDeps = ({
 	 * **Discovery deliberately does not feed this.** A repository's own
 	 * `.dsnr/workspace.json` is its command allowlist, so a repository that merely
 	 * exists on disk must never become runnable: finding one is a suggestion, and
-	 * accepting it (`useCheckout`, which a click calls) is what trusts it. Only a
+	 * opening it (the folder the person opened in VS Code, through `open`) is what trusts it. Only a
 	 * root that went through `openRepository` is remembered here, so the memory file
 	 * can restore a choice that was made, never manufacture one.
 	 */
@@ -489,7 +489,7 @@ export const registerCalls = (
 	publish: (force?: boolean) => Promise<void>;
 	/**
 	 * Opens and trusts a product checkout: the shell's own way, for the folder the person opened in it (an editor's trusted
-	 * workspace folder). Never reachable from the window, which can only accept what discovery found (`useCheckout`).
+	 * workspace folder). Never reachable from a page: no call opens a checkout.
 	 */
 	open: (root: string) => Promise<Checkout>;
 } => {

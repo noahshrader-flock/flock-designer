@@ -70,7 +70,7 @@ const PAGE = `<!doctype html>
 /**
  * A type specimen (R3 of the design system plan), as the preview page draws one: each line a sample in its own family,
  * size, weight and line height, named with them, in a part of the page of its own (the stories' root is left alone). It is
- * drawn here, not in the app's window, because this page has the design system's own CSS, and so its fonts, as its
+ * drawn here, not in the panel's page, because this page has the design system's own CSS, and so its fonts, as its
  * components do. **A family that is not there is said to be not there,** so a sample in a fallback is never taken for the
  * real one: once the page's fonts have loaded, a family is there when text in it is not the width of text in a fallback.
  * A family every browser has (`sans-serif`) is taken to be there. `var`, so the page can be given it more than once.

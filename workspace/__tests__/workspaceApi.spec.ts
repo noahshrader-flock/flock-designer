@@ -4,7 +4,7 @@ import { createApi } from '../src/shared/workspaceApi';
 
 /**
  * The window's API, built one way from the contract's table (ELECTRON_MIGRATION_PLAN, Phase 1.2), whatever carries it:
- * Electron's IPC in the app's preload, a webview's messages in VS Code. A method is a call or an event by its name, and
+ * a webview's messages in VS Code, a relay's on the published page. A method is a call or an event by its name, and
  * nothing else: no generic invoke, no channel passed in.
  */
 

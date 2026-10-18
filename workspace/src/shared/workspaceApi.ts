@@ -2,8 +2,8 @@ import { EVENTS, type EventName, INVOKE, type InvokeName, type WorkspaceApi } fr
 
 /**
  * The window's API, built from the contract's one table, whatever carries it: `invoke` sends a call by its name,
- * `subscribe` listens for an event by its name and returns how to stop. Electron's IPC in the app's preload; a webview's
- * messages in the VS Code extension. Each method is one name in the table, so there is no way to reach a call that is not
+ * `subscribe` listens for an event by its name and returns how to stop. a webview's messages in the VS Code extension,
+ * a relay's on the published page. Each method is one name in the table, so there is no way to reach a call that is not
  * listed and no way to pass a name in: the difference between a bridge and a hole. Arguments go as given, and are checked
  * where they arrive.
  */

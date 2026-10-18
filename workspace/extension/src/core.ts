@@ -15,7 +15,7 @@ import { vscodePorts } from './vscodePorts';
 /**
  * The core, in VS Code: the same services the app makes (`createCore`), given VS Code's shell. Its files go in the
  * extension's own storage, never the app's settings folder; events go to DSNR's panels; the person signs in through VS
- * Code, and who is signed in is told to the panels and to `onSignInChanged`; there is no native preview; VS Code owns the
+ * Code, and who is signed in is told to the panels and to `onSignInChanged`;VS Code owns the
  * theme; and prototypes' and components' pictures, the stories' tokens and accessibility checks are drawn by the browser
  * on this machine, headless.
  */

@@ -35,10 +35,10 @@ import type { PublishStatus, ShareStatus } from '../domain/publishing';
 import type { VoiceAndTone, VoiceSave } from '../domain/voice';
 
 /**
- * The only vocabulary the renderer has.
+ * The only vocabulary a page has.
  *
  * Everything the window can ask for is a named operation on this contract. There
- * is no generic `invoke(channel, args)` and no shell: a capability the renderer
+ * is no generic `invoke(channel, args)` and no shell: a capability a page
  * does not have a method for is a capability it does not have. Adding one is a
  * deliberate edit to this file, which is the point.
  */
@@ -46,9 +46,9 @@ import type { VoiceAndTone, VoiceSave } from '../domain/voice';
 /**
  * A result that carries its failure instead of throwing across the bridge.
  *
- * An exception crossing IPC arrives as a string with no shape. Every operation
+ * An exception crossing to a page arrives as a string with no shape. Every operation
  * that can fail for an ordinary reason -- no descriptor, dirty tree, command not
- * allowed -- returns this, so the renderer can say what happened.
+ * allowed -- returns this, so a page can say what happened.
  */
 export type Result<T> = { ok: true; value: T } | { ok: false; error: string };
 
@@ -270,7 +270,7 @@ export interface WorkspaceApi {
 /**
  * The window's whole reach, as one table: every call it can make (`INVOKE`, each on the channel `workspace:<name>`) and
  * every event it can hear (`EVENTS`, each on the channel `workspace:event:<name>`, its method's name without `on`). The
- * preload builds the window's API from it, main registers and sends by it, and the check below fails the typecheck when
+ * pages build their API from it (`workspaceApi.ts`), the core registers and sends by it, and the check below fails the typecheck when
  * a method of `WorkspaceApi` is in neither, so the three cannot drift.
  */
 export const INVOKE = [

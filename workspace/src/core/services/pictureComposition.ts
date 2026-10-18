@@ -4,7 +4,7 @@
  * card's cover. From the pixels, so it holds for any component: nothing is assumed of its elements, and a story that
  * painted nothing has no picture, not a blank one.
  *
- * Pixels are 4 bytes each, blue, green, red, alpha, as Electron gives a captured image's bitmap.
+ * Pixels are 4 bytes each, red, green, blue, alpha, as a browser's screenshot decodes (`png.ts`).
  */
 
 export interface Bitmap {
@@ -19,8 +19,8 @@ const LEAST = 960;
 
 /** Whether a pixel is paint: not white, as the page behind the stories is, to the eye. */
 const isPaint = (p: number): boolean => {
-	const [b, g, r, a] = [p & 0xff, (p >>> 8) & 0xff, (p >>> 16) & 0xff, p >>> 24];
-	return a < 255 || b < 248 || g < 248 || r < 248;
+	const [r, g, b, a] = [p & 0xff, (p >>> 8) & 0xff, (p >>> 16) & 0xff, p >>> 24];
+	return a < 255 || r < 248 || g < 248 || b < 248;
 };
 
 /** The smallest box around the pixels that are paint, or null when there are none. */

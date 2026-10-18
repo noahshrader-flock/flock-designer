@@ -361,7 +361,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 			if (github.state().state === 'signedIn') return inPanel({ type: 'open-dialog', dialog: { kind: 'account' } });
 		}),
 		vscode.workspace.onDidChangeWorkspaceFolders(() => void refresh().catch(failed)),
-		// Coming back to VS Code is a good moment to publish what was done meanwhile, as coming back to the app's window is.
+		// Coming back to VS Code is a good moment to publish what was done meanwhile.
 		vscode.window.onDidChangeWindowState((s) => {
 			if (!s.focused) return;
 			void shell.publish().catch(failed);

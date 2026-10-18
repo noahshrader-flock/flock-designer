@@ -4,11 +4,11 @@ import { resolve } from 'node:path';
 /**
  * The repositories this session has actually opened.
  *
- * Every operation takes a `root` from the renderer, so without this the renderer
- * could name any directory on the machine and have the main process read it, run
+ * Every operation takes a `root` from a page, so without this a page
+ * could name any directory on the machine and have the core read it, run
  * a command in it, or write to it. A root is only usable after the designer
- * opened it deliberately -- through the picker, or by an explicit open. The
- * renderer cannot add one.
+ * opened it deliberately -- through the picker, or by an explicit open. A
+ * page cannot add one.
  */
 export class OpenedCheckouts {
 	private readonly roots = new Set<string>();

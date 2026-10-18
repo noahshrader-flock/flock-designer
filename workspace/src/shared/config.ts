@@ -3,7 +3,7 @@ import type { RepoRef } from './repoRef';
 /**
  * The app's settings, in one place: what it is pointed at (the design repository, the published site's sign-in), and what it assumes
  * about where people keep things. Each can be overridden by the environment where that is useful in development; none is
- * a secret. Read in the main process, the command line, the window and the published page alike.
+ * a secret. Read in the core, the command line, the panel and the published page alike.
  */
 
 /** In a browser, where the published site's comments run, there is no environment: the page says which repository. */

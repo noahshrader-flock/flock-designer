@@ -170,7 +170,7 @@ export const designSystemCheckout = (root: string, designSystem: WorkspaceDescri
 	designSystem.folder !== undefined ? join(root, designSystem.folder) : join(dirname(root), basename(designSystem.package));
 
 /**
- * What a repository says about itself, read from `.dsnr/workspace.json`: the main process's alone, never the window's.
+ * What a repository says about itself, read from `.dsnr/workspace.json`: the core's alone, never a page's.
  *
  * Workspace hard-codes nothing about Coke. A repository that wants to be opened
  * here declares where its context lives, what may be run, and how a prototype is
@@ -214,7 +214,7 @@ export interface ShareDescriptor {
 }
 
 export interface WorkspaceCommand {
-	/** Stable id the renderer refers to, e.g. `preview`, `typecheck`. */
+	/** Stable id a page refers to, e.g. `preview`, `typecheck`. */
 	id: string;
 	/** What a designer would call it. */
 	label: string;

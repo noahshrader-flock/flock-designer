@@ -20,7 +20,7 @@ export interface Headless {
 
 /**
  * Everything the handlers reach outside the core, which only the shell can give: the system's dialogs, other applications,
- * the clipboard, the network, the person's own command-line tools, drawing out of sight. Electron's are `electronPorts.ts`. Given to `registerCalls` whole, so a test hands it fakes and nothing real is
+ * the clipboard, the network, the person's own command-line tools, drawing out of sight. VS Code's are `extension/src/vscodePorts.ts`. Given to `registerCalls` whole, so a test hands it fakes and nothing real is
  * reachable by default: a test that forgot one fails to compile, rather than opening VS Code or pushing a branch.
  */
 export interface Ports {

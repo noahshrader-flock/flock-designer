@@ -198,15 +198,14 @@ export const HEADLESS_PICTURE_RECIPE = createHash('sha256')
 	.digest('hex')
 	.slice(0, 12);
 
-/** The most loading the page, and then its getting ready, may take, as the app's hidden windows allow. */
+/** The most loading the page, and then its getting ready, may take. */
 const LOAD_MS = 15_000;
 const READY_MS = 12_000;
 const STATE_MS = 20_000;
 
 /**
- * Drawing out of sight with the browser already on the machine (`Headless`, ELECTRON_MIGRATION_PLAN 2B), for a shell
- * with no hidden windows: a prototype's picture and its accessibility check, done as the app's hidden windows do them
- * (`coverWindow.ts`, `accessibilityWindow.ts`), one page at a time. The browser is started when first needed and kept,
+ * Drawing out of sight with the browser already on the machine (`Headless`): a prototype's picture and its
+ * accessibility check, one page at a time. The browser is started when first needed and kept,
  * as starting it takes a second; `close` ends it. With no browser here, each says what to install. And the Design System
  * tab's stories (`measure`), drawn from the script every drawing runs (`storyDrawing.ts`).
  */

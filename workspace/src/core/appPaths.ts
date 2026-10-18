@@ -1,7 +1,7 @@
 import { join } from 'node:path';
 
 /**
- * The app's own folder (Electron's userData), the one place it is described: what each file and folder in it is for. The
+ * DSNR's own folder (the extension's global storage), the one place it is described: what each file and folder in it is for. The
  * names are the ones each has always had, so an update reads what an older version kept.
  */
 export const appPaths = (userData: string) => ({

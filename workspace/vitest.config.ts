@@ -9,7 +9,7 @@ const sealed = sealedEnv();
 process.once('exit', () => rmSync(sealed.base, { recursive: true, force: true }));
 
 export default defineConfig({
-	// The same `@/` alias the renderer build uses, so a component can be imported by a test as it is by the app.
+	// The same `@/` alias the viewer's build uses, so a component can be imported by a test as it is by the app.
 	resolve: { alias },
 	// The page code as the builds have it: the scripts run in a page are its bundle (`pageCode.vite.ts`).
 	plugins: [pageCode()],

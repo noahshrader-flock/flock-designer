@@ -5,9 +5,8 @@ import { fitJpegBy } from '../src/core/services/picture';
 import { decodePng } from '../src/core/services/png';
 
 /**
- * Drawing out of sight in a shell with no hidden windows (ELECTRON_MIGRATION_PLAN 2B, 4.4): the browser already on the
- * machine (Chrome, Edge or Chromium), driven headless, draws a prototype's picture and checks its page as the app's
- * hidden windows do, and a machine with none says so.
+ * Drawing out of sight: the browser already on the machine (Chrome, Edge or Chromium), driven headless, draws a
+ * prototype's picture and checks its page, and a machine with none says so.
  */
 
 /** A PNG of `rows` (each a list of [r, g, b, a]), each row with its own filter, as an encoder may choose. */

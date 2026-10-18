@@ -4,7 +4,7 @@ import { waitForAgent } from './localBuild';
 /**
  * Asking the agent to act on a project's open comments, and waiting for it.
  *
- * One call does the whole of it on the main process's side (read the comments, write the file,
+ * One call does the whole of it on the core's side (read the comments, write the file,
  * start the agent), so what this adds is the waiting, and saying how it ended.
  */
 

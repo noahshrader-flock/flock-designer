@@ -28,7 +28,7 @@ describe('runPrototypeAddress', () => {
 		return phases;
 	};
 
-	it('waits for the agent, then says where the change went, as the main process found it', async () => {
+	it('waits for the agent, then says where the change went, as the core found it', async () => {
 		const finish = vi.fn(async () => ok(addressed));
 		const phases = await run({ finishPrototypeAddress: finish });
 		expect(finish).toHaveBeenCalledWith({ thread: 1, id: 7 });
@@ -40,7 +40,7 @@ describe('runPrototypeAddress', () => {
 		expect(phases.at(-1)).toEqual({ kind: 'failed', message: 'The prototype did not build' });
 	});
 
-	it('leaves finishing to the main process when nobody is looking any more', async () => {
+	it('leaves finishing to the core when nobody is looking any more', async () => {
 		let live = true;
 		const finish = vi.fn();
 		const phases = await run({ agentStatus: async () => ((live = false), ok(started)), finishPrototypeAddress: finish }, () => live);

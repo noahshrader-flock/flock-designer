@@ -8,7 +8,6 @@ import { hasExactly } from './validate';
  *
  * Each side reads the other's messages only in exactly their shape: a page is code the bar does not trust, and what it
  * says is data, read again by the readers it has always gone through (`readPick`, `readMarkers`, `readPinMessage`).
- * The Electron app does not use this: it runs the same page code from outside its own preview, in another process.
  */
 
 /** What the bar asks: say hello (with its secret), pick a spot, cancel the pick, draw the pins, focus one, say the route. */

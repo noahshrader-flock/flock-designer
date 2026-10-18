@@ -50,7 +50,7 @@ export const handle = <K extends InvokeName, Args extends unknown[]>(
 	checks: { [I in keyof Args]: Check<Args[I]> },
 	fn: (...args: Args) => Answer<K> | Promise<Answer<K>>,
 ): void => {
-	// As Electron's IPC refuses a second handler for a channel: one place answers each call.
+	// One place answers each call: a second handler for a name is refused.
 	if (routes.has(name)) throw new Error(`${name} is answered twice.`);
 	routes.set(
 		name,
@@ -126,5 +126,5 @@ export const arg = {
 			v === undefined || v === null ? null : check(v),
 };
 
-/** How the core tells the window that `name` happened: the shell's (Electron's IPC in the app). */
+/** How the core tells the window that `name` happened: the shell's (in VS Code, a message to its pages). */
 export type EventSink = <K extends EventName>(name: K, payload: Payload<K>) => void;

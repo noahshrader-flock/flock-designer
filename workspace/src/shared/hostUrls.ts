@@ -5,7 +5,7 @@
  */
 
 const WEB = 'https://github.com';
-/** Where the host serves people's avatars. The window's own page allows it by name (`renderer/index.html`'s CSP). */
+/** Where the host serves people's avatars: the only place a page's pin loads a picture from (`isAvatarUrl`). */
 export const AVATAR_ORIGIN = 'https://avatars.githubusercontent.com';
 /** Where the host's command line is installed from. */
 export const CLI_INSTALL_URL = 'https://cli.github.com';

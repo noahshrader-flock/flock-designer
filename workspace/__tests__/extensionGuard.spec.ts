@@ -26,7 +26,7 @@ describe('the extension’s sources', () => {
 
 	it('import none of the app’s shadcn components, their parts, or Tailwind', () => {
 		const forbidden =
-			/from ['"](?:[./]*src\/renderer\/ui\/|@\/|radix-ui|lucide-react|class-variance-authority|tailwind-merge|tailwindcss|@tailwindcss\/)|@import ['"]tailwindcss/;
+			/from ['"](?:[./]*src\/viewer\/ui\/|@\/|radix-ui|lucide-react|class-variance-authority|tailwind-merge|tailwindcss|@tailwindcss\/)|@import ['"]tailwindcss/;
 		expect(
 			files()
 				.filter(({ text }) => forbidden.test(text))

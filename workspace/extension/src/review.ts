@@ -87,7 +87,7 @@ const isRef = (v: unknown): v is CommentRef =>
 	typeof v === 'object' && v !== null && Number.isSafeInteger((v as CommentRef).thread) && Number.isSafeInteger((v as CommentRef).id);
 
 /**
- * What a review page asked (`RelayCall`), answered: a comment call by the core, as the app's window is answered; signing
+ * What a review page asked (`RelayCall`), answered: a comment call by the core, as the panel's are; signing
  * in by VS Code; Address by the extension. **Only on this review's own comments:** read and made only on its project's
  * prototypes (whatever the page says its project is, the branch is what is read), and changed or Addressed only when it is
  * one this tab has been shown or has made (`seen`, the tab's own threads). A page that is not what it should be can then

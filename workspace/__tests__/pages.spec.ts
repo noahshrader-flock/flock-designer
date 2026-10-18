@@ -323,7 +323,7 @@ describe('what GitHub has that the site does not have yet', () => {
 			{ filename: 'projects/demo/comments.md', status: 'modified' },
 			{ filename: 'skills/x.md', status: 'added' },
 			{ filename: 'projects/demo/prototypes/v1.tsx', status: 'modified' },
-			// The app's own screens and its main process, which the site is not built from.
+			// The core, which the site is not built from.
 			{ filename: 'workspace/src/core/calls.ts', status: 'modified' },
 			{ filename: 'workspace/__tests__/viewer.spec.ts', status: 'modified' },
 			{ filename: 'IMPLEMENTATION_PLAN.md', status: 'modified' },

@@ -211,7 +211,7 @@ describe('one port, many prototypes', () => {
 describe('a preview does not open a browser tab of its own', () => {
 	const envOf = (spy: Fn) => (spy.mock.calls[0]?.[2] as { env: Record<string, string> }).env;
 
-	it("tells a command that serves a preview not to open a browser, so the app's window is the only place it appears", async () => {
+	it('tells a command that serves a preview not to open a browser, so DSNR is the only place it appears', async () => {
 		const spawnSpy = vi.fn(spawn);
 		manager = make({ spawnProcess: spawnSpy as unknown as typeof spawn });
 		await manager.start(root, descriptor, 'preview');

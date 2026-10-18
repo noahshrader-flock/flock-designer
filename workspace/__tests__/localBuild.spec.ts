@@ -215,7 +215,7 @@ describe('when nobody is looking any more', () => {
 		expect(calls).not.toContain('startCommand');
 	});
 
-	it('ends a Handoff with a report, not a preview, and has the main process start it', async () => {
+	it('ends a Handoff with a report, not a preview, and has the core start it', async () => {
 		const { a, calls } = api();
 		const { url, phases } = await run(a, { handoff: true });
 		expect(url).toBeNull();

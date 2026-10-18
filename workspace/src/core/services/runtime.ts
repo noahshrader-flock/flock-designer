@@ -9,7 +9,7 @@ import { assertUsableProjectId } from './workRecords';
  * Runs the commands a repository declares, and nothing else.
  *
  * Two properties carry the whole thing. The command is looked up by id in the
- * descriptor, so the renderer names a command rather than supplying one. And it
+ * descriptor, so a page names a command rather than supplying one. And it
  * is spawned from an argv array with `shell: false`, so there is no interpreter
  * to hand a pipe, a semicolon or a substitution to.
  */

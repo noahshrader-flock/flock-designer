@@ -4,8 +4,8 @@ import { delimiter, isAbsolute, join, relative, resolve, sep } from 'node:path';
 /**
  * Keeps every file operation inside the checkout the designer opened.
  *
- * This is the boundary the whole security posture rests on: the renderer can
- * name a path, so the main process must never take one on trust. `..`, an
+ * This is the boundary the whole security posture rests on: a page can
+ * name a path, so the core must never take one on trust. `..`, an
  * absolute path to somewhere else, and a symlink pointing out of the tree all
  * have to fail, and the symlink is the one that string comparison misses.
  */
@@ -35,7 +35,7 @@ export const isInside = (root: string, candidate: string): boolean => {
 /**
  * Returns an absolute path inside `root`, or throws.
  *
- * Use this on every path that came from outside the main process. There is no
+ * Use this on every path that came from outside the core. There is no
  * variant that skips the check.
  */
 export const resolveInside = (root: string, candidate: string): string => {

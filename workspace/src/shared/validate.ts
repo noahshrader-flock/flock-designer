@@ -9,7 +9,7 @@ export const PROJECT_ID = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
 /**
  * A name becomes a project id. Truncation happens before the trailing hyphen is
- * stripped, so a long name cannot produce an id the main process would reject.
+ * stripped, so a long name cannot produce an id the core would reject.
  */
 export const slugify = (name: string): string =>
 	name

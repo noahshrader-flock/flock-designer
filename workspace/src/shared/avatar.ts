@@ -2,7 +2,7 @@ import { AVATAR_ORIGIN } from './hostUrls';
 
 /**
  * The extra small avatar's size, in pixels: what a card carries beside the person's name, and what a pin carries on the page.
- * One number for both, since a pin's picture is drawn in the page, which cannot use the component's classes (`renderer/ui/avatar.tsx`,
+ * One number for both, since a pin's picture is drawn in the page, which cannot use the component's classes (`viewer/ui/avatar.tsx`,
  * whose extra small is this size).
  */
 export const AVATAR_XS_PX = 20;

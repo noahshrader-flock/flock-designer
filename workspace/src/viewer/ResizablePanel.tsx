@@ -7,8 +7,8 @@ import { cn } from '@/lib/utils';
  * width is the panel's own (`PanelWidths`), remembered, and kept within the window as it is resized. One component, so
  * the review screen's comments and the Design System tab's tokens resize the same way.
  *
- * `onResizing` is told when a drag starts and ends, for a screen with something that must step aside meanwhile (the
- * review screen's native preview).
+ * `onResizing` is told when a drag starts and ends, for a screen with something that must step aside meanwhile (a
+ * framed page, which does not pass the pointer on).
  *
  * **Not shadcn's Resizable, on purpose.** That one resizes panes in proportion and follows the pointer across both of
  * them; the review screen's preview is a native view, which never passes the pointer back to the window, so a drag that
@@ -67,7 +67,7 @@ export const ResizablePanel = ({
 	return (
 		<>
 			{/* One pixel to look at, with a wider strip to grab that extends over the panel only: what is on the other side
-			    may not pass the pointer to this window (the review screen's native preview does not). */}
+			    may not pass the pointer to this window (a framed page does not). */}
 			<div
 				role="separator"
 				aria-orientation="vertical"

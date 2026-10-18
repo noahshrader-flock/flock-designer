@@ -17,7 +17,7 @@ import { ShareRunner } from './services/share';
 
 /** What a shell gives the core: where its files go, how it tells the window, and what only it can do. */
 export interface Shell {
-	/** The shell's own folder for the app's files (Electron's userData; the extension's global storage). */
+	/** The shell's own folder for the app's files (the extension's global storage). */
 	paths: AppPaths;
 	emit: EventSink;
 	ports: Ports;

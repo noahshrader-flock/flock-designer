@@ -205,7 +205,7 @@ export const postcssRun = (library: string, folder: string, config: string): Pos
 				realpathSync(config),
 				postcss.entry,
 			],
-			// The runtime as plain Node when it is an app's (VS Code's, Electron's), and nothing else of this app's environment.
+			// The runtime as plain Node when it is an app's (VS Code's extension host is Electron's), and nothing else of this app's environment.
 			{ cwd: copy, env: process.versions.electron ? { ELECTRON_RUN_AS_NODE: '1' } : {}, stdio: ['pipe', 'pipe', 'pipe'] },
 		);
 		let stderr = '';
