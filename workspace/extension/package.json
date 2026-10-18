@@ -16,6 +16,16 @@
 	"activationEvents": [
 		"onFileSystem:dsnr-voice"
 	],
+	"capabilities": {
+		"untrustedWorkspaces": {
+			"supported": false,
+			"description": "DSNR runs the commands a repository declares, builds its code and hands it to Claude Code, so it runs only in a workspace you trust."
+		},
+		"virtualWorkspaces": {
+			"supported": false,
+			"description": "DSNR works on a checkout on this machine, with git and the repository's own tools."
+		}
+	},
 	"contributes": {
 		"viewsContainers": {
 			"activitybar": [

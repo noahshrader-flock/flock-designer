@@ -115,27 +115,37 @@ source and page are in its project folder.
 
 ## Security posture
 
-- `contextIsolation: true`, `sandbox: true`, `nodeIntegration: false`, and a CSP with no remote origins.
-- The renderer sees one object: the named operations in `src/shared/contract.ts`. There is no generic
-  `invoke(channel, …)`, so a capability without a method is a capability it does not have.
-- Every root is checked against the repositories this window actually opened. The renderer cannot
-  name a directory and have the main process act on it.
+- **Only in a trusted workspace.** DSNR runs the commands a repository declares, builds its code and hands it to an agent,
+  so its manifest says it does not run in VS Code's Restricted Mode (`capabilities.untrustedWorkspaces`), nor in a virtual
+  workspace. What it trusts is the folder the person opened, as VS Code does.
+- **A page sees one object:** the named calls in `src/shared/contract.ts`, each argument checked where it arrives
+  (`src/core/handle.ts`). There is no generic `invoke(channel, …)`, so a capability without a call is one a page does not
+  have; and a call nothing makes is removed (`callsHaveCallers.spec.ts`).
+- Every root is checked against the repositories this window actually opened (`session.ts`). A page cannot name a
+  directory and have the core act on it.
 - **Discovery suggests; it never trusts.** A repository's own `.dsnr/workspace.json` is the list of
-  commands the app may run in it, so finding that file on disk grants nothing: the repository is
-  offered, and accepting it is what admits it. `useCheckout` will only accept a path discovery itself
-  found, and a remembered choice is restored only if the person made one. `__tests__/calls.integration.spec.ts`
-  asserts this at the handler level — the gate was briefly bypassed while every service test stayed
-  green, which is why those tests exist.
+  commands DSNR may run in it, so finding that file on disk grants nothing: the repository is
+  offered, and accepting it is what admits it. A remembered choice is restored only if the person made one.
+  `__tests__/calls.integration.spec.ts` asserts this at the handler level — the gate was briefly bypassed while every
+  service test stayed green, which is why those tests exist.
 - A project id is validated before it reaches a command's argv **and** before it reaches the agent's
   prompt; the agent runs unattended with edit permission, so an unchecked id there is prompt
   injection rather than argv injection.
 - Every path is resolved through `resolveInside`, which follows symlinks — the check string
   comparison alone gets wrong.
-- Links open in the real browser.
+- **DSNR's pages load only what they are given:** each has a CSP of its own (`extension/src/html.ts`): scripts by nonce,
+  styles and fonts from the extension, pictures from it and this machine's server, and frames only from that server, on
+  an origin that is not the page's. A design system's code runs only in those frames, so nothing in it can reach DSNR.
+- **A design system's PostCSS configuration is code,** run in a Node process of its own under Node's permission model
+  (`postcssProcess.ts`): it reads only the library's copy, the clone its packages are in and DSNR's own PostCSS, writes
+  nothing and starts nothing. The network is not held, which DESIGN_SYSTEM.md's Risks say.
+- **A link opens in the person's browser only when it is a web page or one served on this machine** (`openableLink`):
+  `file:`, `command:` and any other scheme a page hands DSNR are refused.
 - **A prototype's page cannot reach its review bar** (Review isolation, below). In VS Code it is served
   from another address than the bar and sandboxed; the bar's address serves nothing a repository wrote
   that could open as a page; and the review tab, the panel and the Design System tabs hear only VS Code. On the
   published site it is sandboxed with no origin of its own, so it cannot reach the bar or the token the bar keeps.
+- **Its tests are sealed** (`__tests__/sealed.mjs`): none can reach the person's settings, GitHub sign-in or remotes.
 
 ## DSNR, the VS Code extension
 
