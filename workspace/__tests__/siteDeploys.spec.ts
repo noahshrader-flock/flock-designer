@@ -8,8 +8,8 @@ const pages = vi.hoisted(() => ({
 	recordsFrom: vi.fn(async () => ({})),
 	redeploySite: vi.fn(),
 }));
-vi.mock('../src/core/services/pages', () => pages);
-const { siteDeploys } = await import('../src/core/services/siteDeploys');
+vi.mock('../src/core/services/publishing/pages', () => pages);
+const { siteDeploys } = await import('../src/core/services/publishing/siteDeploys');
 
 let signedIn = true;
 const github = {

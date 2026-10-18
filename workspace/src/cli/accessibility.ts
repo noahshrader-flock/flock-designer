@@ -3,7 +3,7 @@
  * browser, the same way for any product, and writes what it found into the project's folder in the design repository as
  * evidence. DSNR calls the product, and the product does not call DSNR: a prototype's page is served here, and a product's
  * own app is started as its `.dsnr/workspace.json` says (`onDesignMode`), at the pages its manifest names. Each view that
- * opens is checked by axe, then probed (`services/probe`), at full depth unless asked for the light subset; the work's own
+ * opens is checked by axe, then probed (`services/accessibility/probe`), at full depth unless asked for the light subset; the work's own
  * source is read for what a page cannot show. What it could not open, it says; with nothing opened, nothing is written.
  */
 import { existsSync, rmSync } from 'node:fs';
@@ -35,25 +35,25 @@ import {
 	declaredTarget,
 	findingsLines,
 	readManifest,
-} from '../core/services/accessibilityBrief';
-import { prototypeMeasureName, recordFiles } from '../core/services/accessibilityRecord';
-import { FIRST_PAGE, type PageNotOpened, checkPages, onDesignMode } from '../core/services/accessibilityRun';
-import { chromeHeadless } from '../core/services/chromeHeadless';
-import { findCommand, readDescriptor } from '../core/services/descriptor';
-import { HANDOFF_FILE } from '../core/services/engineeringHandoff';
-import { git } from '../core/services/git';
-import { guardLines, guardsFor, stacksOf } from '../core/services/guards';
-import { assertUsableProjectId } from '../core/services/workRecords';
-import { jsonFile, readText, writeAtomic } from '../core/services/jsonFile';
-import { LEDGER_VERSION, type Ledger, type LedgerRun, ledgerChanges, ledgerFaults } from '../core/services/ledger';
-import { manualListFault, withManualSection } from '../core/services/manualList';
-import { CELLS, type CellResult, type ProbeDepth, cellLines, cellsAt } from '../core/services/probe/cells';
-import type { ViewProbed } from '../core/services/probe/probe';
-import { type SourceFile, scanSources } from '../core/services/probe/sourceScan';
-import { assertPrototypeName } from '../core/services/prototype';
-import { measurePrototype } from '../core/services/prototypeMeasure';
-import type { prototypeWork } from '../core/services/prototypeWork';
-import { type ReturnedKind, agentGapsFile, parseReturned, returnedTemplate, sortReturned, withGaps } from '../core/services/returned';
+} from '../core/services/accessibility/accessibilityBrief';
+import { prototypeMeasureName, recordFiles } from '../core/services/accessibility/accessibilityRecord';
+import { FIRST_PAGE, type PageNotOpened, checkPages, onDesignMode } from '../core/services/accessibility/accessibilityRun';
+import { chromeHeadless } from '../core/services/browser/chromeHeadless';
+import { findCommand, readDescriptor } from '../core/services/projects/descriptor';
+import { HANDOFF_FILE } from '../core/services/codebase/engineeringHandoff';
+import { git } from '../core/services/platform/git';
+import { guardLines, guardsFor, stacksOf } from '../core/services/accessibility/guards';
+import { assertUsableProjectId } from '../core/services/projects/workRecords';
+import { jsonFile, readText, writeAtomic } from '../core/services/platform/jsonFile';
+import { LEDGER_VERSION, type Ledger, type LedgerRun, ledgerChanges, ledgerFaults } from '../core/services/accessibility/ledger';
+import { manualListFault, withManualSection } from '../core/services/accessibility/manualList';
+import { CELLS, type CellResult, type ProbeDepth, cellLines, cellsAt } from '../core/services/accessibility/probe/cells';
+import type { ViewProbed } from '../core/services/accessibility/probe/probe';
+import { type SourceFile, scanSources } from '../core/services/accessibility/probe/sourceScan';
+import { assertPrototypeName } from '../core/services/prototypes/prototype';
+import { measurePrototype } from '../core/services/accessibility/prototypeMeasure';
+import type { prototypeWork } from '../core/services/prototypes/prototypeWork';
+import { type ReturnedKind, agentGapsFile, parseReturned, returnedTemplate, sortReturned, withGaps } from '../core/services/accessibility/returned';
 
 export interface MeasureDeps {
 	projectId: string;

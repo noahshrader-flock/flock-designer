@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { COMPOSITION, composeOnWhite } from '../src/core/services/pictureComposition';
+import { COMPOSITION, composeOnWhite } from '../src/core/services/prototypes/pictureComposition';
 
 /**
  * A component's picture from a capture of its page (P5 of the design system plan): what was painted, found from the

@@ -2,8 +2,8 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { codebaseWork } from '../src/core/services/codebaseWork';
-import { readDescriptor } from '../src/core/services/descriptor';
+import { codebaseWork } from '../src/core/services/codebase/codebaseWork';
+import { readDescriptor } from '../src/core/services/projects/descriptor';
 import { g, makeProduct } from './fixtures';
 
 let dir: string;

@@ -1,9 +1,9 @@
 import { type Answer, type CommentRef, type EventName, type InvokeName, type Payload, type Result } from '../shared/contract';
 import { asRecord } from '../shared/json';
 import { fail, ok } from '../shared/result';
-import { isSafeBranchName } from './services/git';
-import { assertUsableProjectId } from './services/workRecords';
-import { assertPrototypeName } from './services/prototype';
+import { isSafeBranchName } from './services/platform/git';
+import { assertUsableProjectId } from './services/projects/workRecords';
+import { assertPrototypeName } from './services/prototypes/prototype';
 
 /**
  * How the core meets the window, whichever shell holds it: each call registered by its name in the contract's table, its

@@ -1,5 +1,5 @@
 /**
- * A design system's preview page, the part DSNR writes: started by the generated entry (`core/services/storyPreviews.ts`,
+ * A design system's preview page, the part DSNR writes: started by the generated entry (`core/services/designSystem/storyPreviews.ts`,
  * `previewEntry`), which imports the library's own React, Storybook and story files and hands them here, so the page is
  * drawn with the library's React and never a second one. Bundled into the entry as text (`?page`). Page code, typed.
  *

@@ -1,7 +1,7 @@
 import { expect, it } from 'vitest';
-import { findChrome } from '../src/core/services/chromeHeadless';
-import type { ComponentTokens } from '../src/core/services/componentTokens';
-import { ValueSources } from '../src/core/services/valueSources';
+import { findChrome } from '../src/core/services/browser/chromeHeadless';
+import type { ComponentTokens } from '../src/core/services/designSystem/componentTokens';
+import { ValueSources } from '../src/core/services/designSystem/valueSources';
 import type { ChangeReach, ValueProperty, ValueSources as Sources } from '../src/shared/contract';
 import { settledAnswer } from './fixtures';
 import { REAL_PRIMER_SYSTEM, REAL_TREMOR3_SYSTEM, REAL_TREMOR4_SYSTEM, primerMissing, tremor3Missing, tremor4Missing } from './realCheckouts';

@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, 
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { copyProject } from '../src/core/services/projectCopy';
+import { copyProject } from '../src/core/services/prototypes/projectCopy';
 import { buildReviewSite } from '../extension/src/review';
 
 /**

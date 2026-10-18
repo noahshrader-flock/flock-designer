@@ -1,0 +1,239 @@
+import { existsSync, readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import type { Work, Person } from '../../../shared/contract';
+import type { WorkspaceDescriptor } from './descriptor';
+import {
+	branchAuthors,
+	branchExists,
+	branchStartedAt,
+	checkoutBranch,
+	createBranch,
+	headCommit,
+	isSamePerson,
+	localIdentity,
+	repositoryOf,
+} from '../platform/git';
+import { resolveInside } from '../platform/paths';
+import { PROJECT_ID } from '../../../shared/validate';
+import { parseWork, serializeWork, unreadableWork } from '../../../shared/workRecords';
+import { writeAtomic } from '../platform/jsonFile';
+import { loginFromNoreply } from '../../../shared/hostUrls';
+import { WORK_FILE, workPath } from '../../../shared/designPaths';
+
+/**
+ * Named attempts at the question, and the record of them.
+ *
+ * **The record does not live in the product checkout.** It lives in the design
+ * repository, one folder per project, because the plan settled that and gave the
+ * reason: a record on the prototype branch means picking up someone's work
+ * requires knowing which branch to check out, and it needs a standing rule to
+ * keep per-project state off `develop`.
+ *
+ * Writing it into the checkout also dirties the working tree, which then blocks
+ * the next piece of work on its own bookkeeping. That is how this was found.
+ */
+
+/**
+ * A project id becomes a directory and a branch name, so it is checked here
+ * rather than trusted. Anything outside this set could escape either one.
+ */
+export const assertUsableProjectId = (projectId: string): void => {
+	if (!PROJECT_ID.test(projectId)) {
+		throw new Error(`"${projectId}" is not a usable project id. Use lower-case words separated by hyphens, like "users-inactivity-signal".`);
+	}
+};
+
+/** A project's records file, `work.json`, inside the records folder. */
+export const recordPath = (recordsRoot: string, projectId: string): string => {
+	assertUsableProjectId(projectId);
+	return resolveInside(recordsRoot, join(projectId, WORK_FILE));
+};
+
+/** The records in a project's folder, as its file has them: none when there is no file, null when it cannot be read. */
+export const workInFolder = (dir: string): Work[] | null => {
+	const path = join(dir, WORK_FILE);
+	return existsSync(path) ? parseWork(readFileSync(path, 'utf8')) : [];
+};
+
+/** A project's records, from the records folder: refused when its file cannot be read. */
+export const readWork = (recordsRoot: string, projectId: string): Work[] => {
+	const records = workInFolder(dirname(recordPath(recordsRoot, projectId)));
+	if (records === null) throw new Error(unreadableWork(workPath(projectId)));
+	return records;
+};
+
+const writeWork = (recordsRoot: string, projectId: string, records: Work[]): void => {
+	// Whole, so a reader never sees half a list, which it would refuse.
+	writeAtomic(recordPath(recordsRoot, projectId), serializeWork(records));
+};
+
+/** The one `feature/<project-id>` branch for real-code work. */
+export const codebaseBranchFor = (descriptor: WorkspaceDescriptor, projectId: string): string =>
+	descriptor.branchPattern.codebase.replace('<project-id>', projectId);
+
+/**
+ * Starts codebase work on a project: its branch, and a record of it in the design repository that
+ * reviewers can read. (A prototype has no branch: it is made by `recordPrototype`.)
+ *
+ * Codebase work is one branch per project, so if it already exists -- someone started it by hand,
+ * which is how the first ones were made -- it is adopted rather than refused, and recorded.
+ */
+export const createCodebaseWork = async (
+	productRoot: string,
+	recordsRoot: string,
+	descriptor: WorkspaceDescriptor,
+	projectId: string,
+	note: string,
+	from: string,
+): Promise<Work> => {
+	const existing = readWork(recordsRoot, projectId);
+	const name = 'codebase';
+	const branch = codebaseBranchFor(descriptor, projectId);
+	if (existing.some((i) => i.name === name)) {
+		throw new Error(`${projectId} already has codebase work recorded. Use Continue on it.`);
+	}
+	// Either way nothing is recorded unless the checkout succeeds, so the
+	// record cannot claim work that is not there.
+	if (await branchExists(productRoot, branch)) {
+		await checkoutBranch(productRoot, branch);
+	} else {
+		await createBranch(productRoot, branch, from);
+	}
+
+	// Where it is on GitHub, so the project links to it for people without the repository.
+	const repository = await repositoryOf(productRoot);
+	const record: Work = {
+		projectId,
+		name,
+		branch,
+		commit: null,
+		createdAt: new Date().toISOString(),
+		note,
+		...(repository ? { repository } : {}),
+	};
+	writeWork(recordsRoot, projectId, [...existing, record]);
+	return record;
+};
+
+/**
+ * Authors on the branch, with a GitHub login where one can be established
+ * without guessing: a noreply address names its account, and the person running
+ * this app is signed in as themselves, so their own commits (matched on the
+ * git identity they commit under) carry their login. Everyone else stays a
+ * name until they open work of their own.
+ */
+export const peopleOn = async (productRoot: string, branch: string, signedInLogin: string | null): Promise<Person[]> => {
+	const me = await localIdentity(productRoot);
+	return (await branchAuthors(productRoot, branch)).map((a) => {
+		const mine = signedInLogin !== null && isSamePerson(me, a);
+		return { name: a.name, login: loginFromNoreply(a.email) ?? (mine ? signedInLogin : null) };
+	});
+};
+
+/**
+ * Saves where reviewers can open a piece of work. Only the record changes; publishing it is the
+ * caller's step, so a person who is signed out still keeps the address.
+ */
+export const recordPreview = (
+	recordsRoot: string,
+	projectId: string,
+	name: string,
+	previewUrl: string,
+	/** The commit that was shared, so a reviewer's comment says what it was made against. */
+	commit?: string,
+	/** The pull request the preview was built from. */
+	pullRequest?: string,
+): Work => {
+	const records = readWork(recordsRoot, projectId);
+	const found = records.find((i) => i.name === name);
+	if (!found) throw new Error(`${projectId} has no ${name}.`);
+	const updated = { ...found, previewUrl, ...(commit ? { commit } : {}), ...(pullRequest ? { pullRequest } : {}) };
+	writeWork(
+		recordsRoot,
+		projectId,
+		records.map((i) => (i.name === name ? updated : i)),
+	);
+	return updated;
+};
+
+/**
+ * Keeps a handoff's verdict on a project's codebase work: the commit it was found ready at, or none once it was found not
+ * ready. Written only when it changes, so asking again writes nothing. Publishing it is the caller's step, as a preview's is.
+ */
+export const recordHandoff = (recordsRoot: string, projectId: string, readyAt: string | null): void => {
+	const records = readWork(recordsRoot, projectId);
+	const found = records.find((i) => i.name === 'codebase');
+	if (!found || (found.readyAt ?? null) === readyAt) return;
+	const { readyAt: _was, ...rest } = found;
+	const updated = readyAt === null ? rest : { ...rest, readyAt };
+	writeWork(
+		recordsRoot,
+		projectId,
+		records.map((i) => (i === found ? updated : i)),
+	);
+};
+
+/**
+ * Codebase work started outside the app (an agent in a terminal, or by hand) has a branch and no record. The branch is
+ * the evidence, so the record is made from it rather than refusing the work: null only if the branch is not there. A
+ * prototype is a page, never a branch, so it is never made this way.
+ */
+const adoptUnrecorded = async (productRoot: string, descriptor: WorkspaceDescriptor, projectId: string, name: string): Promise<Work | null> => {
+	const branch = name === 'codebase' ? codebaseBranchFor(descriptor, projectId) : null;
+	if (!branch || !(await branchExists(productRoot, branch))) return null;
+	// Dated from the work itself, not from the moment the app first needed a record for it.
+	const createdAt = (await branchStartedAt(productRoot, branch)) ?? new Date().toISOString();
+	return { projectId, name, branch, commit: null, createdAt, note: 'Found in the repository; recorded when first opened here.' };
+};
+
+/**
+ * A piece of work's record, written now if it has none. Everything that acts on one (sharing it,
+ * addressing its comments, saying which commit a comment was made against) goes through this, so work an agent
+ * built in a terminal behaves exactly like work made in the app, whether or not the app ever switched branches for it.
+ */
+export const recordedWork = async (
+	productRoot: string,
+	recordsRoot: string,
+	descriptor: WorkspaceDescriptor,
+	projectId: string,
+	name: string,
+): Promise<Work> => {
+	const existing = readWork(recordsRoot, projectId);
+	const found = existing.find((i) => i.name === name);
+	if (found) return found;
+	const adopted = await adoptUnrecorded(productRoot, descriptor, projectId, name);
+	if (!adopted) throw new Error(`${projectId} has no ${name}.`);
+	writeWork(recordsRoot, projectId, [...existing, adopted]);
+	return adopted;
+};
+
+export const continueWork = async (
+	productRoot: string,
+	recordsRoot: string,
+	projectId: string,
+	name: string,
+	signedInLogin: string | null,
+	descriptor: WorkspaceDescriptor,
+): Promise<Work> => {
+	let records = readWork(recordsRoot, projectId);
+	let record = records.find((i) => i.name === name);
+	if (!record) {
+		const adopted = await adoptUnrecorded(productRoot, descriptor, projectId, name);
+		if (adopted) {
+			record = adopted;
+			records = [...records, adopted];
+		}
+	}
+	if (!record) {
+		throw new Error(`${projectId} has no ${name}.`);
+	}
+	await checkoutBranch(productRoot, record.branch);
+
+	// Recorded on return, so the record tracks where the branch actually is
+	// rather than where it started.
+	const commit = await headCommit(productRoot);
+	const contributors = await peopleOn(productRoot, record.branch, signedInLogin);
+	const updated = records.map((i) => (i.name === name ? { ...i, commit, contributors } : i));
+	writeWork(recordsRoot, projectId, updated);
+	return { ...record, commit, contributors };
+};

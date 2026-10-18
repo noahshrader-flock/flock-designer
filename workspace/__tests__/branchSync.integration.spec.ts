@@ -2,9 +2,9 @@ import { execFileSync } from 'node:child_process';
 import { renameSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { syncBranches } from '../src/core/services/branchSync';
+import { syncBranches } from '../src/core/services/publishing/branchSync';
 import { madeOnce } from './fixtures';
-import type { WorkspaceDescriptor } from '../src/core/services/descriptor';
+import type { WorkspaceDescriptor } from '../src/core/services/projects/descriptor';
 
 const descriptor: WorkspaceDescriptor = {
 	version: 1,

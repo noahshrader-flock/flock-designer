@@ -1,8 +1,8 @@
 import type { Ports } from './ports';
-import { locateClaude } from './services/agent';
-import { findEditor, openFolder, openPrompt, openSession } from './services/editor';
-import { ghApi } from './services/ghCli';
-import { realShareTools } from './services/shareTools';
+import { locateClaude } from './services/agent/agent';
+import { findEditor, openFolder, openPrompt, openSession } from './services/agent/editor';
+import { ghApi } from './services/platform/ghCli';
+import { realShareTools } from './services/codebase/shareTools';
 
 /**
  * What every shell's ports share: the person's own tools on this machine, reached the same way from any shell (an address

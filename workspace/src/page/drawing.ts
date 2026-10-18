@@ -1,6 +1,6 @@
 /**
  * What a story file draws, read in its preview page (T6 of the design system plan), as the headless browser asks for it
- * (`core/services/storyDrawing.ts`, which bundles this into the script it runs). Page code, typed like the rest.
+ * (`core/services/designSystem/storyDrawing.ts`, which bundles this into the script it runs). Page code, typed like the rest.
  */
 import { PREVIEW_COMPONENT, PREVIEW_SHOW } from '../shared/catalog';
 import { runAxe } from './axe';

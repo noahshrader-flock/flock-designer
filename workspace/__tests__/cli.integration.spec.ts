@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { main } from '../src/cli/dsnr';
-import { findChrome } from '../src/core/services/chromeHeadless';
+import { findChrome } from '../src/core/services/browser/chromeHeadless';
 import { g, installDesignSystem, makeProduct, addStandards } from './fixtures';
 import type { GitHubApi } from '../src/github/github';
 
@@ -835,7 +835,7 @@ describe.skipIf(findChrome() === null)('accessibility', () => {
  */
 describe.skipIf(process.env.DSNR_REAL_AGENT !== '1' || findChrome() === null)('the agent, with its build’s own check', () => {
 	it('fixes a fault the check finds while it does what it was asked', async () => {
-		const { runToEnd } = await import('../src/core/services/agent');
+		const { runToEnd } = await import('../src/core/services/agent/agent');
 		const request = 'The prototype already exists. Change its heading to say "Camera list".';
 		expect(await run('new-prototype', '--project', 'demo', '--title', 'Demo', '--note', request)).toBe(0);
 		const task = out.join('\n');
@@ -847,9 +847,9 @@ describe.skipIf(process.env.DSNR_REAL_AGENT !== '1' || findChrome() === null)('t
 			"export default () => <main><h1>Cameras</h1><button onClick={() => undefined}><svg width='16' height='16'><path d='M2 2h12v12H2z' /></svg></button></main>;\n",
 		);
 		// As DSNR starts a prototype's run: in its folder, reading what its task says it may read, and nothing else.
-		const { prototypeReadable } = await import('../src/core/services/prototype');
-		const { prototypeWork } = await import('../src/core/services/prototypeWork');
-		const { designStore } = await import('../src/core/services/designStore');
+		const { prototypeReadable } = await import('../src/core/services/prototypes/prototype');
+		const { prototypeWork } = await import('../src/core/services/prototypes/prototypeWork');
+		const { designStore } = await import('../src/core/services/publishing/designStore');
 		const store = designStore({ clone: () => design, files: null, onWrite: () => undefined });
 		const work = prototypeWork({
 			prototypesRoot: prototypes,

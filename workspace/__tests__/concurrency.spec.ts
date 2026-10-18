@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { coalescing, coalescingByKey, heldTurns, inTurns, singleFlight } from '../src/core/services/concurrency';
+import { coalescing, coalescingByKey, heldTurns, inTurns, singleFlight } from '../src/core/services/platform/concurrency';
 
 const later = () => {
 	let done!: (v: string) => void;

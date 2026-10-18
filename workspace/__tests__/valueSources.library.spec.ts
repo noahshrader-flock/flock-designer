@@ -1,9 +1,9 @@
 import { expect, it } from 'vitest';
-import { findChrome } from '../src/core/services/chromeHeadless';
-import type { ComponentTokens } from '../src/core/services/componentTokens';
-import { ValueSources } from '../src/core/services/valueSources';
-import { ValueAgent } from '../src/core/services/valueAgent';
-import { runToEnd } from '../src/core/services/agent';
+import { findChrome } from '../src/core/services/browser/chromeHeadless';
+import type { ComponentTokens } from '../src/core/services/designSystem/componentTokens';
+import { ValueSources } from '../src/core/services/designSystem/valueSources';
+import { ValueAgent } from '../src/core/services/designSystem/valueAgent';
+import { runToEnd } from '../src/core/services/agent/agent';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type { ConnectedDesignSystem, ValueProperty, ValueSources as Answer } from '../src/shared/contract';

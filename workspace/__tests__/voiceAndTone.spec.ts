@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { GitHubApi } from '../src/github/github';
 
-import { VOICE_BRANCH, VOICE_FILE, VoiceAndToneFile } from '../src/core/services/voiceAndTone';
+import { VOICE_BRANCH, VOICE_FILE, VoiceAndToneFile } from '../src/core/services/designSystem/voiceAndTone';
 import type { HostErrorKind } from '../src/github/hostError';
 import { fakeGitHub, refusal } from './fakes/github';
 

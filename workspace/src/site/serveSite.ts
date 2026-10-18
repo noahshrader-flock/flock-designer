@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { createServer, type Server } from 'node:http';
 import { extname, join } from 'node:path';
-import { isInside } from '../core/services/paths';
+import { isInside } from '../core/services/platform/paths';
 import { MIME_TYPES } from '../shared/mime';
 
 /**

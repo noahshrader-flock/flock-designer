@@ -3,8 +3,8 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-import { RuntimeManager } from '../src/core/services/runtime';
-import type { WorkspaceDescriptor } from '../src/core/services/descriptor';
+import { RuntimeManager } from '../src/core/services/codebase/runtime';
+import type { WorkspaceDescriptor } from '../src/core/services/projects/descriptor';
 
 /**
  * A dev server started the way npm starts one (a parent that runs it as a child of its own), where neither takes SIGTERM:

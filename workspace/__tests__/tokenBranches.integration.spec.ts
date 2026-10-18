@@ -3,9 +3,9 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { Check, PullRequest } from '../src/github/changeRequests';
-import type { ShareTools } from '../src/core/services/share';
-import { TOKENS, TOKEN_BRANCH, TokenBranches } from '../src/core/services/tokenBranches';
-import { proposalText } from '../src/core/services/changeBranches';
+import type { ShareTools } from '../src/core/services/codebase/share';
+import { TOKENS, TOKEN_BRANCH, TokenBranches } from '../src/core/services/designSystem/tokenBranches';
+import { proposalText } from '../src/core/services/designSystem/changeBranches';
 import { g } from './fixtures';
 
 /**

@@ -2,9 +2,9 @@ import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import type { Built, Drawn, Instance, Measure } from '../src/core/services/componentTokens';
-import { typeLibs } from '../src/core/services/componentProps';
-import { ComponentVariants } from '../src/core/services/componentVariants';
+import type { Built, Drawn, Instance, Measure } from '../src/core/services/designSystem/componentTokens';
+import { typeLibs } from '../src/core/services/designSystem/componentProps';
+import { ComponentVariants } from '../src/core/services/designSystem/componentVariants';
 import type { ComponentVariants as Answer } from '../src/shared/contract';
 import { settledAnswer } from './fixtures';
 

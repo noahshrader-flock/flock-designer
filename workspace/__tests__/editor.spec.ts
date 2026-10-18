@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { SessionMemory, claudeLink, findEditor, handToClaude, startCommand } from '../src/core/services/editor';
+import { SessionMemory, claudeLink, findEditor, handToClaude, startCommand } from '../src/core/services/agent/editor';
 
 const dirs: string[] = [];
 const temp = () => {

@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { codebaseTask, guidePart, handoffTask, buildInCodebaseTask, prototypeAddressTask, prototypeBuildTask } from '../src/core/services/agentTasks';
+import {
+	codebaseTask,
+	guidePart,
+	handoffTask,
+	buildInCodebaseTask,
+	prototypeAddressTask,
+	prototypeBuildTask,
+} from '../src/core/services/agent/agentTasks';
 
 /** The builder's guide, as every task carries it (`guidePart`). */
 const GUIDE = guidePart('# Building UI in a Flock product\n\n1. **Hard rules:** `../standards/non-negotiables.md`.', '/d');

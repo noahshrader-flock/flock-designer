@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { Context } from '../../src/core/services/findContext';
+import type { Context } from '../../src/core/services/projects/findContext';
 import { useComponentPictures } from './hooks/useComponentPictures';
 import { useWorkspace } from './hooks/useWorkspace';
 import type { ComponentPictures, MadeCover, SignInState, TokenEdit } from '../../src/shared/contract';

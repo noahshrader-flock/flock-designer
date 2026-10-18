@@ -1,6 +1,6 @@
 /**
  * What the probe's page code (`page/probe.ts`) gives back from a page, as the probe outside the page reads it
- * (`services/probe`): plain data, as it crosses from the page to the probe.
+ * (`services/accessibility/probe`): plain data, as it crosses from the page to the probe.
  */
 
 /** The roles a control may have: what is operated, and named, as a control (WAI-ARIA's widget roles a person acts on). */

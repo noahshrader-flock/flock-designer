@@ -1,13 +1,13 @@
 import { type Server, createServer } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { chromeHeadless, composedPicture, findChrome, pictureOf } from '../src/core/services/chromeHeadless';
-import { COVER_BUDGET } from '../src/core/services/projectCovers';
-import { readDrawn } from '../src/core/services/storyDrawing';
-import { resultOf } from '../src/core/services/accessibilityCheck';
+import { chromeHeadless, composedPicture, findChrome, pictureOf } from '../src/core/services/browser/chromeHeadless';
+import { COVER_BUDGET } from '../src/core/services/prototypes/projectCovers';
+import { readDrawn } from '../src/core/services/designSystem/storyDrawing';
+import { resultOf } from '../src/core/services/accessibility/accessibilityCheck';
 import { countsOf } from '../src/shared/accessibility';
 import { undeclared } from '../src/shared/wcag';
-import { withPageTheme } from '../src/core/services/pageTheme';
+import { withPageTheme } from '../src/core/services/browser/pageTheme';
 import { inChrome } from './realChrome';
 
 /**

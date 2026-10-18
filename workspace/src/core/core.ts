@@ -4,16 +4,16 @@ import type { AppPaths } from './appPaths';
 import type { EventSink } from './handle';
 import type { CallsContext } from './calls';
 import type { Ports } from './ports';
-import { AgentRunner } from './services/agent';
-import { CheckoutMemory } from './services/checkoutMemory';
-import { DesignSystemsMemory } from './services/designSystems';
-import { SessionMemory } from './services/editor';
+import { AgentRunner } from './services/agent/agent';
+import { CheckoutMemory } from './services/projects/checkoutMemory';
+import { DesignSystemsMemory } from './services/designSystem/designSystems';
+import { SessionMemory } from './services/agent/editor';
 import type { GitHubAccount } from '../github/github';
-import { Installer } from './services/install';
-import { PrototypeServer } from './services/prototypeServer';
-import { RuntimeManager } from './services/runtime';
-import { OpenedCheckouts } from './services/session';
-import { ShareRunner } from './services/share';
+import { Installer } from './services/codebase/install';
+import { PrototypeServer } from './services/prototypes/prototypeServer';
+import { RuntimeManager } from './services/codebase/runtime';
+import { OpenedCheckouts } from './services/projects/session';
+import { ShareRunner } from './services/codebase/share';
 
 /** What a shell gives the core: where its files go, how it tells the window, and what only it can do. */
 export interface Shell {

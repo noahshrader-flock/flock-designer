@@ -1,12 +1,12 @@
 import { sanitizeAnchor, sanitizePicture } from '../../shared/anchor';
 import type { Project, ReviewComment } from '../../shared/contract';
 import { arg, handle } from '../handle';
-import { classify } from '../services/branchProjects';
-import { projectTitle, writeCommentsExport } from '../services/commentsExport';
-import { readDescriptor } from '../services/descriptor';
-import { readWork } from '../services/workRecords';
-import { listProjects } from '../services/listProjects';
-import { ProfileNames } from '../services/profileNames';
+import { classify } from '../services/projects/branchProjects';
+import { projectTitle, writeCommentsExport } from '../services/prototypes/commentsExport';
+import { readDescriptor } from '../services/projects/descriptor';
+import { readWork } from '../services/projects/workRecords';
+import { listProjects } from '../services/projects/listProjects';
+import { ProfileNames } from '../services/publishing/profileNames';
 import type { CallsDeps } from '../calls';
 
 /**

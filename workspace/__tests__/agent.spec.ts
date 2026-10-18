@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { AGENT_BUSY, AgentRunner, agentReadiness, claudeCodeAdapter, claudeStreamFormatter, locateClaude } from '../src/core/services/agent';
+import { AGENT_BUSY, AgentRunner, agentReadiness, claudeCodeAdapter, claudeStreamFormatter, locateClaude } from '../src/core/services/agent/agent';
 import type { RunLogLine } from '../src/shared/contract';
 import { eventually } from './fixtures';
 

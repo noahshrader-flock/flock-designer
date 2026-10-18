@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, 
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { projectTitle, renderComments, writeCommentsExport } from '../src/core/services/commentsExport';
+import { projectTitle, renderComments, writeCommentsExport } from '../src/core/services/prototypes/commentsExport';
 import { numberComments } from '../src/shared/comments';
 import type { CommentAnchor, ReviewComment } from '../src/shared/contract';
 import { reviewComment } from './fixtures';

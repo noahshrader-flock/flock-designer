@@ -5,11 +5,11 @@ import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { isPrototypeKey, prototypeKey, prototypePagePath } from '../src/shared/designPaths';
 import { nextVersionName } from '../src/shared/prototypeNames';
-import { cloneStore, buildInCodebasePrompt, prototypeReadable, recordPrototype, setCover } from '../src/core/services/prototype';
-import { PrototypeServer } from '../src/core/services/prototypeServer';
+import { cloneStore, buildInCodebasePrompt, prototypeReadable, recordPrototype, setCover } from '../src/core/services/prototypes/prototype';
+import { PrototypeServer } from '../src/core/services/prototypes/prototypeServer';
 import { memoryStore } from './fixtures';
-import { prototypeBuildTask } from '../src/core/services/agentTasks';
-import { claudeCodeAdapter } from '../src/core/services/agent';
+import { prototypeBuildTask } from '../src/core/services/agent/agentTasks';
+import { claudeCodeAdapter } from '../src/core/services/agent/agent';
 
 describe('what a prototype is called', () => {
 	it('is keyed apart from every branch, and numbered one past the highest', () => {

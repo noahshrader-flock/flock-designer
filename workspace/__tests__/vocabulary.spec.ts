@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { VOICE_NEEDS_CLI } from '../src/core/services/voiceAndTone';
-import { SHARE_NEEDS_CLI } from '../src/core/services/shareTools';
+import { VOICE_NEEDS_CLI } from '../src/core/services/designSystem/voiceAndTone';
+import { SHARE_NEEDS_CLI } from '../src/core/services/codebase/shareTools';
 import { needsCli } from '../src/shared/vocabulary';
 
 describe("the host's words", () => {

@@ -1,7 +1,7 @@
 /**
  * axe-core run on a page, as every check runs it: the target's tags and the best-practice group beside them, and each
  * issue kept small (its elements' selectors and HTML cut short, a few of them), so what comes back is read whole. Page
- * code, bundled into the scripts that run it (`core/services/accessibilityCheck.ts`, `storyDrawing.ts`); axe itself is put
+ * code, bundled into the scripts that run it (`core/services/accessibility/accessibilityCheck.ts`, `storyDrawing.ts`); axe itself is put
  * in the page first.
  */
 import { BEST_PRACTICE, MOST_ELEMENTS, MOST_HTML } from '../shared/accessibility';

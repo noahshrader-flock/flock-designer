@@ -5,17 +5,17 @@ import type { BuildInCodebase, BuildInCodebasePlan } from '../../shared/contract
 import { lastVerdict } from '../../shared/handoff';
 import { workLabel } from '../../shared/work';
 import { arg, handle } from '../handle';
-import { A11Y_COMMAND, productTarget, taskAccessibility } from '../services/accessibilityBrief';
-import { type AgentExtras, agentReadiness } from '../services/agent';
-import { type CheckoutParts, codebaseTask, guidePart, handoffTask, buildInCodebaseTask } from '../services/agentTasks';
-import { designSystemCheckout, readDescriptor } from '../services/descriptor';
-import { recordsRootFor } from '../services/discovery';
-import { handToClaude } from '../services/editor';
-import { CODEBASE_SKILL, HANDOFF_FILE, HANDOFF_SKILL, commandLine } from '../services/engineeringHandoff';
-import { branchTip, changedSince, headCommit, readCheckout } from '../services/git';
-import { codebaseBranchFor, recordHandoff, recordPath, recordPreview, recordedWork } from '../services/workRecords';
-import { GUIDE, MOVE_SKILL, ROUTE_SKILL, buildInCodebasePrompt } from '../services/prototype';
-import { pullRequestText } from '../services/share';
+import { A11Y_COMMAND, productTarget, taskAccessibility } from '../services/accessibility/accessibilityBrief';
+import { type AgentExtras, agentReadiness } from '../services/agent/agent';
+import { type CheckoutParts, codebaseTask, guidePart, handoffTask, buildInCodebaseTask } from '../services/agent/agentTasks';
+import { designSystemCheckout, readDescriptor } from '../services/projects/descriptor';
+import { recordsRootFor } from '../services/projects/discovery';
+import { handToClaude } from '../services/agent/editor';
+import { CODEBASE_SKILL, HANDOFF_FILE, HANDOFF_SKILL, commandLine } from '../services/codebase/engineeringHandoff';
+import { branchTip, changedSince, headCommit, readCheckout } from '../services/platform/git';
+import { codebaseBranchFor, recordHandoff, recordPath, recordPreview, recordedWork } from '../services/projects/workRecords';
+import { GUIDE, MOVE_SKILL, ROUTE_SKILL, buildInCodebasePrompt } from '../services/prototypes/prototype';
+import { pullRequestText } from '../services/codebase/share';
 import type { CallsDeps } from '../calls';
 
 /**

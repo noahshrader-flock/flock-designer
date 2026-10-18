@@ -45,11 +45,11 @@ const isHome = (path: string): boolean => path.startsWith('src/github/') || path
 
 /** Still to move behind the host (the plan's Phase 2), or to have a GitLab twin (Phases 3 to 6), with what each holds. */
 const TO_MOVE: Record<string, string> = {
-	'src/core/services/pages.ts': 'GitHub Pages: visibility, deployments, workflow runs and dispatch, compare (Phase 5)',
-	'src/core/services/profileNames.ts': 'a person’s profile, `/users/<login>` (2.3)',
+	'src/core/services/publishing/pages.ts': 'GitHub Pages: visibility, deployments, workflow runs and dispatch, compare (Phase 5)',
+	'src/core/services/publishing/profileNames.ts': 'a person’s profile, `/users/<login>` (2.3)',
 	'src/cli/wcagEdition.ts': 'the weekly WCAG check opens an issue by its REST path (2.3)',
-	'src/core/services/ghCli.ts': 'the person’s own `gh`; GitLab’s is `glab` (Phase 4)',
-	'src/core/services/install.ts': 'says how to sign npm in to GitHub Packages when a private package is refused (Phase 6)',
+	'src/core/services/platform/ghCli.ts': 'the person’s own `gh`; GitLab’s is `glab` (Phase 4)',
+	'src/core/services/codebase/install.ts': 'says how to sign npm in to GitHub Packages when a private package is refused (Phase 6)',
 	'extension/src/github.ts': 'VS Code’s built-in GitHub sign-in; GitLab needs its own account (3.1)',
 };
 

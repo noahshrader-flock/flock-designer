@@ -1,5 +1,5 @@
 import type { Browser } from 'puppeteer-core';
-import { findChrome } from '../src/core/services/chromeHeadless';
+import { findChrome } from '../src/core/services/browser/chromeHeadless';
 
 /** Whether this machine has the Chrome the real-browser tests run in; without one they are skipped. */
 export const NO_CHROME = findChrome() === null;

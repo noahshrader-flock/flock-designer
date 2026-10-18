@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { isSiteSource } from '../src/core/services/pages';
+import { isSiteSource } from '../src/core/services/publishing/pages';
 
 const workspace = resolve(__dirname, '..');
 const repository = resolve(workspace, '..');
@@ -41,7 +41,7 @@ describe('what the site is built from', () => {
 		// The code the viewer runs inside the page, and what turns it into the strings it runs.
 		expect(isSiteSource('workspace/src/page/pins.ts')).toBe(true);
 		expect(isSiteSource('workspace/pageCode.vite.ts')).toBe(true);
-		expect(isSiteSource('workspace/src/core/services/agent.ts')).toBe(false);
+		expect(isSiteSource('workspace/src/core/services/agent/agent.ts')).toBe(false);
 		expect(isSiteSource('projects/demo/brief.md')).toBe(false);
 	});
 });

@@ -2,7 +2,7 @@
  * A component's instances in a preview page, found one way for every reader (adjusting a component, DESIGN_SYSTEM.md): the
  * drawing that measures them (`storyDrawing.ts`, Phase 1) and the preview page that tries a value on them (Phase 2), so an
  * instance measured is the instance a value is tried on. Page code, typed, bundled into the scripts that run it
- * (`core/services/pageInstances.ts`). What React keeps of what it drew is its own, so it is read here as it is, untyped.
+ * (`core/services/designSystem/pageInstances.ts`). What React keeps of what it drew is its own, so it is read here as it is, untyped.
  */
 import { PREVIEW_COMPONENT, PREVIEW_TRY } from '../shared/catalog';
 import { CSS_OF, NOT_VARIANT } from '../shared/valueParts';

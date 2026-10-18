@@ -1,6 +1,6 @@
 import type * as VsCode from 'vscode';
 import type { Headless, Ports } from '../../src/core/ports';
-import { claudeLink } from '../../src/core/services/editor';
+import { claudeLink } from '../../src/core/services/agent/editor';
 import { toolPorts } from '../../src/core/toolPorts';
 import { isThisMachine } from '../../src/shared/thisMachine';
 

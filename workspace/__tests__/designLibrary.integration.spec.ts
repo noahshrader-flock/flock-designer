@@ -4,8 +4,8 @@ import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { Catalog, CatalogUpdate, ConnectedDesignSystem } from '../src/shared/contract';
 import { undeclared } from '../src/shared/wcag';
-import { DesignLibrary, fetchProblem, inLibrary, libraryReads, readLibrary, updateLibrary } from '../src/core/services/designLibrary';
-import { DesignSystemsMemory } from '../src/core/services/designSystems';
+import { DesignLibrary, fetchProblem, inLibrary, libraryReads, readLibrary, updateLibrary } from '../src/core/services/designSystem/designLibrary';
+import { DesignSystemsMemory } from '../src/core/services/designSystem/designSystems';
 import { g } from './fixtures';
 
 const LIBRARY = 'flocksafety/flock-react-component-lib';

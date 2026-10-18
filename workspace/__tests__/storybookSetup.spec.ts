@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { definesIn } from '../src/core/services/storybookSetup';
+import { definesIn } from '../src/core/services/designSystem/storybookSetup';
 
 describe('the globals a library’s Storybook build defines, read from its main configuration', () => {
 	it('reads Vite’s define as Primer writes it: a spread, then JSON.stringify of a literal', () => {

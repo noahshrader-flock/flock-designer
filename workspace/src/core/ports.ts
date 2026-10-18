@@ -1,9 +1,9 @@
 import type { GitHubApi } from '../github/github';
-import type { CheckPage } from './services/accessibilityCheck';
-import type { Measure } from './services/componentTokens';
-import type { AgentSession } from './services/editor';
-import type { DrawCover } from './services/projectCovers';
-import type { ShareTools } from './services/share';
+import type { CheckPage } from './services/accessibility/accessibilityCheck';
+import type { Measure } from './services/designSystem/componentTokens';
+import type { AgentSession } from './services/agent/editor';
+import type { DrawCover } from './services/prototypes/projectCovers';
+import type { ShareTools } from './services/codebase/share';
 
 /**
  * What only a shell can do for the core without being seen: draw a page out of sight, in a headless browser

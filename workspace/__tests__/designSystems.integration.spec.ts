@@ -3,8 +3,16 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { defaultBranch } from '../src/core/services/git';
-import { DesignSystemsMemory, designSystemId, filesOf, findDesignSystems, nameOf, systemAt, within } from '../src/core/services/designSystems';
+import { defaultBranch } from '../src/core/services/platform/git';
+import {
+	DesignSystemsMemory,
+	designSystemId,
+	filesOf,
+	findDesignSystems,
+	nameOf,
+	systemAt,
+	within,
+} from '../src/core/services/designSystem/designSystems';
 import type { ConnectedDesignSystem } from '../src/shared/contract';
 import { memoryReads } from './fixtures';
 

@@ -82,7 +82,7 @@ const answer = (routes: Record<string, Answer>) => githubApi.mockImplementation(
 /** The real runner, so its one-run rule is what is tested, over a stand-in agent that runs until the test ends. */
 const realRunner = async () => {
 	const { EventEmitter } = await import('node:events');
-	const { AgentRunner } = await import('../src/core/services/agent');
+	const { AgentRunner } = await import('../src/core/services/agent/agent');
 	const sessionsSpawned: Array<string | undefined> = [];
 	const runner = new AgentRunner(() => {}, {
 		adapter: { name: 'Fake', argvFor: (t, extras) => (sessionsSpawned.push(extras?.session), ['fake', t]) },
@@ -126,8 +126,8 @@ const JPEG = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 7, 7, 7]);
 const build = (root: string, from?: string) => call(CHANNELS.buildInCodebase, root, 'demo', 'v1', from);
 /** Codebase work for demo, recorded and checked out, as Build or an agent in a terminal would leave it. */
 const codebaseWork = async () => {
-	const { createCodebaseWork } = await import('../src/core/services/workRecords');
-	const { readDescriptor } = await import('../src/core/services/descriptor');
+	const { createCodebaseWork } = await import('../src/core/services/projects/workRecords');
+	const { readDescriptor } = await import('../src/core/services/projects/descriptor');
 	await createCodebaseWork(product, join(design, 'projects'), readDescriptor(product), 'demo', 'x', 'develop');
 };
 
@@ -135,7 +135,7 @@ let registerCalls: (typeof import('../src/core/calls'))['registerCalls'];
 /** What the core hands a shell once registered: the extension trusts a folder with its `open`. */
 let calls: ReturnType<typeof registerCalls>;
 let coreRoutes: (typeof import('../src/core/handle'))['served'];
-let OpenedCheckouts: (typeof import('../src/core/services/session'))['OpenedCheckouts'];
+let OpenedCheckouts: (typeof import('../src/core/services/projects/session'))['OpenedCheckouts'];
 let opened: InstanceType<typeof OpenedCheckouts>;
 let agentStart: Fn;
 let agentStatus: Fn;
@@ -161,7 +161,7 @@ let drawCover: Fn;
 /** A file read from GitHub as bytes: none, unless a test says otherwise. */
 let readBytes: Fn;
 let register: (more?: Partial<CallsContext>) => ReturnType<typeof registerCalls>;
-let prototypeServer: InstanceType<(typeof import('../src/core/services/prototypeServer'))['PrototypeServer']>;
+let prototypeServer: InstanceType<(typeof import('../src/core/services/prototypes/prototypeServer'))['PrototypeServer']>;
 
 // The home every test starts with: a product repository and the design repository beside it, under GitHub/.
 const world = madeOnce((d) => {
@@ -188,7 +188,7 @@ beforeEach(async () => {
 
 	({ registerCalls } = await import('../src/core/calls'));
 	({ served: coreRoutes } = await import('../src/core/handle'));
-	({ OpenedCheckouts } = await import('../src/core/services/session'));
+	({ OpenedCheckouts } = await import('../src/core/services/projects/session'));
 	opened = new OpenedCheckouts();
 	agentStart = vi.fn(() => ({ state: 'idle' }));
 	agentStatus = vi.fn(() => ({ state: 'idle' }));
@@ -206,7 +206,7 @@ beforeEach(async () => {
 	personRepos = [];
 	personLogin = 'noah';
 	designRepoProjects = [];
-	prototypeServer = new (await import('../src/core/services/prototypeServer')).PrototypeServer();
+	prototypeServer = new (await import('../src/core/services/prototypes/prototypeServer')).PrototypeServer();
 
 	warm = vi.fn(async () => undefined);
 	ask = vi.fn(async () => ({ state: 'building' }));
@@ -229,9 +229,9 @@ beforeEach(async () => {
 	);
 	drawCover = vi.fn(async () => JPEG);
 	readBytes = vi.fn(async () => null);
-	const { Installer } = await import('../src/core/services/install');
-	const { DesignSystemsMemory } = await import('../src/core/services/designSystems');
-	const { SessionMemory } = await import('../src/core/services/editor');
+	const { Installer } = await import('../src/core/services/codebase/install');
+	const { DesignSystemsMemory } = await import('../src/core/services/designSystem/designSystems');
+	const { SessionMemory } = await import('../src/core/services/agent/editor');
 	register = (more: Partial<CallsContext> = {}) => {
 		const publishing = registerCalls({
 			emit: vi.fn(),
@@ -1395,7 +1395,7 @@ describe('prototypes', () => {
 describe('the picture of each prototype, on its project’s card', () => {
 	// A prototype is recorded only where it can be built: from the real design system, installed.
 	beforeEach(() => installDesignSystem(product));
-	const hashOf = async (html: string) => (await import('../src/core/services/prototype')).contentHashOf(html);
+	const hashOf = async (html: string) => (await import('../src/core/services/prototypes/prototype')).contentHashOf(html);
 	const recordOf = (name: string) =>
 		(JSON.parse(readFileSync(join(design, 'projects', 'demo', 'work.json'), 'utf8')) as Array<Record<string, unknown>>).find((r) => r.name === name);
 
@@ -1636,7 +1636,7 @@ describe('one agent, one piece of work', () => {
 	});
 
 	it('joins its own run when asked twice, rather than starting a second, and keeps that run’s conversation', async () => {
-		const { SessionMemory } = await import('../src/core/services/editor');
+		const { SessionMemory } = await import('../src/core/services/agent/editor');
 		const sessions = new SessionMemory(join(home, 'agent-sessions.json'));
 		const { runner, sessionsSpawned } = await realRunner();
 		register({ agent: runner });
@@ -1710,7 +1710,7 @@ describe('Handoff', () => {
 	});
 
 	it('keeps the verdict on the work’s record, with the commit it was ready at, and the list says it only while the branch is still there', async () => {
-		const { readWork } = await import('../src/core/services/workRecords');
+		const { readWork } = await import('../src/core/services/projects/workRecords');
 		const codebase = () => readWork(join(design, 'projects'), 'demo').find((work) => work.name === 'codebase');
 		const listed = async () =>
 			((await call(CHANNELS.listProjects)).value as { id: string; work: { name: string; readyAt: string | null }[] }[])

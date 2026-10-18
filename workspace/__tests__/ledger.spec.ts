@@ -16,8 +16,8 @@ import {
 	reviewSection,
 	statusLine,
 	withReviewSection,
-} from '../src/core/services/ledger';
-import type { CellResult } from '../src/core/services/probe/cells';
+} from '../src/core/services/accessibility/ledger';
+import type { CellResult } from '../src/core/services/accessibility/probe/cells';
 import { CRITERIA } from '../src/shared/wcagCriteria';
 import { axeTagsFor } from '../src/shared/wcag';
 
@@ -240,7 +240,7 @@ describe('the record of a measure', () => {
 			'projects/p/accessibility/app/view',
 			'projects/p/accessibility/app/view-2',
 		]);
-		const { recordFiles } = await import('../src/core/services/accessibilityRecord');
+		const { recordFiles } = await import('../src/core/services/accessibility/accessibilityRecord');
 		const { files } = recordFiles(
 			{
 				projectId: 'p',

@@ -5,7 +5,7 @@ import type { Frame, Page } from 'puppeteer-core';
 import { build } from 'vite';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { ReviewThreads } from '../src/github/reviewThreads';
-import { PrototypeServer } from '../src/core/services/prototypeServer';
+import { PrototypeServer } from '../src/core/services/prototypes/prototypeServer';
 import { readRelayAsk } from '../src/shared/reviewRelay';
 import { buildSite } from '../src/site/buildSite';
 import { tokenApi } from '../src/viewer/browserAdapter';

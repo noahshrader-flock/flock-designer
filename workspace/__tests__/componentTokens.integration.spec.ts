@@ -3,11 +3,11 @@ import { token } from './tokenFixtures';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ComponentTokens, type Drawn, type Measure, decode } from '../src/core/services/componentTokens';
-import type { BuiltFor } from '../src/core/services/storyPreviews';
-import { tagsFor } from '../src/core/services/tokenTags';
-import type { CatalogReads } from '../src/core/services/componentCatalog';
-import { libraryCommit, systemReads } from '../src/core/services/designLibrary';
+import { ComponentTokens, type Drawn, type Measure, decode } from '../src/core/services/designSystem/componentTokens';
+import type { BuiltFor } from '../src/core/services/designSystem/storyPreviews';
+import { tagsFor } from '../src/core/services/designSystem/tokenTags';
+import type { CatalogReads } from '../src/core/services/designSystem/componentCatalog';
+import { libraryCommit, systemReads } from '../src/core/services/designSystem/designLibrary';
 import type { TokenEdit } from '../src/shared/contract';
 import { g, settledAnswer } from './fixtures';
 

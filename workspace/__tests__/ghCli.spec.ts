@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { RepoFiles } from '../src/github/repoFiles';
-import { ghApi } from '../src/core/services/ghCli';
+import { ghApi } from '../src/core/services/platform/ghCli';
 import { hostErrorKind } from '../src/github/hostError';
 
 /** GitHub's command line, as the app runs it. */

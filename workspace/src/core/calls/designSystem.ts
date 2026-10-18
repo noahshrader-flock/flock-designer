@@ -2,10 +2,10 @@ import type { HandedChange } from '../../shared/contract';
 import { asRecord } from '../../shared/json';
 import { isObjectId } from '../../shared/sha';
 import { type Check, arg, handle } from '../handle';
-import { handToClaude } from '../services/editor';
-import { offBase } from '../services/handoffBranches';
-import { tokenEditsOf } from '../services/tokenEdits';
-import { triedValuesOf } from '../services/valueSources';
+import { handToClaude } from '../services/agent/editor';
+import { offBase } from '../services/designSystem/handoffBranches';
+import { tokenEditsOf } from '../services/designSystem/tokenEdits';
+import { triedValuesOf } from '../services/designSystem/valueSources';
 import type { CallsDeps } from '../calls';
 
 /**

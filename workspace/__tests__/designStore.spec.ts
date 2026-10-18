@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { designStore } from '../src/core/services/designStore';
+import { designStore } from '../src/core/services/publishing/designStore';
 
 let clone: string;
 beforeEach(() => {

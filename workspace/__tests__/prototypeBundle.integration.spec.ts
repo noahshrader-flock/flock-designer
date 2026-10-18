@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, 
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { bundleCommand, esbuildEntry, runBundle, writeBundleScript } from '../src/core/services/prototypeBundle';
+import { bundleCommand, esbuildEntry, runBundle, writeBundleScript } from '../src/core/services/prototypes/prototypeBundle';
 import { sharedFilesOf } from '../src/shared/designPaths';
 import { statesOf } from '../src/shared/prototypeStates';
 

@@ -2,8 +2,8 @@ import { existsSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { ComponentPictures } from '../src/core/services/componentPictures';
-import { PrototypeServer } from '../src/core/services/prototypeServer';
+import { ComponentPictures } from '../src/core/services/designSystem/componentPictures';
+import { PrototypeServer } from '../src/core/services/prototypes/prototypeServer';
 
 /**
  * Where the pictures of the components are kept (P5 of the design system plan, decision 31): one for each component of a

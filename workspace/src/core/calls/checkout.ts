@@ -1,9 +1,9 @@
 import { basename } from 'node:path';
 import { arg, handle } from '../handle';
-import { DESCRIPTOR_PATH, findCommand } from '../services/descriptor';
-import { branchesWithFile, readCheckout } from '../services/git';
-import { INSTALL_COMMAND } from '../services/install';
-import { continueWork, recordedWork } from '../services/workRecords';
+import { DESCRIPTOR_PATH, findCommand } from '../services/projects/descriptor';
+import { branchesWithFile, readCheckout } from '../services/platform/git';
+import { INSTALL_COMMAND } from '../services/codebase/install';
+import { continueWork, recordedWork } from '../services/projects/workRecords';
 import type { CallsDeps } from '../calls';
 
 /**

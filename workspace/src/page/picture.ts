@@ -1,5 +1,5 @@
 /**
- * A story's picture, made in its preview page (P5), as the headless browser asks for it (`core/services/chromeHeadless.ts`,
+ * A story's picture, made in its preview page (P5), as the headless browser asks for it (`core/services/browser/chromeHeadless.ts`,
  * which bundles this into the scripts it runs). Page code, typed like the rest.
  */
 

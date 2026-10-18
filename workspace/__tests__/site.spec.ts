@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { buildSite } from '../src/site/buildSite';
 import { serveSite } from '../src/site/serveSite';
-import { contentHashOf } from '../src/core/services/prototype';
+import { contentHashOf } from '../src/core/services/prototypes/prototype';
 
 /**
  * The site prototypes are published as (M5a of the Pages plan), built from a design repository: every project with a

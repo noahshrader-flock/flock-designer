@@ -1,7 +1,7 @@
 /**
  * The probe's measurements, run in the page being measured (A3 of the accessibility plan): what the browser has laid out
  * and drawn, read from the page itself, so a page built with anything is measured the same way. Each returns plain data;
- * what counts as a fault is decided outside the page (`services/probe`), where it is tested. Added to the page before its
+ * what counts as a fault is decided outside the page (`services/accessibility/probe`), where it is tested. Added to the page before its
  * own code runs, so what it watches (windows opened, what is added and where) is watched from the start.
  *
  * The page is read as the browser composes it: into open shadow roots (web components) and frames from the same site, an

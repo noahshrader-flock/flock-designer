@@ -18,7 +18,7 @@ import {
 	git,
 	hasFileAt,
 	originUrl,
-} from '../src/core/services/git';
+} from '../src/core/services/platform/git';
 import { recordDefault } from './fixtures';
 
 let root: string;

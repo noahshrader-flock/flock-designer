@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { type Place, placesIn, probeFor, searchedFiles, withWrites, writtenAs, writtenLike } from '../src/core/services/valueLocator';
+import { type Place, placesIn, probeFor, searchedFiles, withWrites, writtenAs, writtenLike } from '../src/core/services/designSystem/valueLocator';
 
 const found = (file: string, text: string, property: Parameters<typeof placesIn>[2], part: string) =>
 	placesIn(file, text, property, part).map(({ line, written, form }) => [line, written, form]);

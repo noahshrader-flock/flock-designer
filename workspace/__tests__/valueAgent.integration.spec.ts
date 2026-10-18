@@ -2,10 +2,10 @@ import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { reachOf } from '../src/core/services/changeReach';
-import type { Built, Drawn } from '../src/core/services/componentTokens';
-import { libraryCommit, systemReads } from '../src/core/services/designLibrary';
-import { DESIGN_SYSTEM_CODE, ValueAgent, type Written } from '../src/core/services/valueAgent';
+import { reachOf } from '../src/core/services/designSystem/changeReach';
+import type { Built, Drawn } from '../src/core/services/designSystem/componentTokens';
+import { libraryCommit, systemReads } from '../src/core/services/designSystem/designLibrary';
+import { DESIGN_SYSTEM_CODE, ValueAgent, type Written } from '../src/core/services/designSystem/valueAgent';
 import type { ComponentValues, TriedValue } from '../src/shared/contract';
 import { g, settledAnswer } from './fixtures';
 

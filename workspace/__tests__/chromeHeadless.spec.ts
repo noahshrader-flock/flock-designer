@@ -1,8 +1,8 @@
 import { deflateSync } from 'node:zlib';
 import { describe, expect, it, vi } from 'vitest';
-import { HEADLESS_PICTURE_RECIPE, NO_BROWSER, chromeHeadless, findChrome } from '../src/core/services/chromeHeadless';
-import { fitJpegBy } from '../src/core/services/picture';
-import { decodePng } from '../src/core/services/png';
+import { HEADLESS_PICTURE_RECIPE, NO_BROWSER, chromeHeadless, findChrome } from '../src/core/services/browser/chromeHeadless';
+import { fitJpegBy } from '../src/core/services/prototypes/picture';
+import { decodePng } from '../src/core/services/prototypes/png';
 
 /**
  * Drawing out of sight: the browser already on the machine (Chrome, Edge or Chromium), driven headless, draws a

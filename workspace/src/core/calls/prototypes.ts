@@ -6,17 +6,17 @@ import { coverPath, prototypeKey, prototypePagePath } from '../../shared/designP
 import { statesOf } from '../../shared/prototypeStates';
 import { workLabel } from '../../shared/work';
 import { arg, handle } from '../handle';
-import { ADDRESS_SKILL, chooseComment } from '../services/address';
-import { guidePart, prototypeAddressTask, prototypeBuildTask } from '../services/agentTasks';
-import { writeCommentsExport } from '../services/commentsExport';
-import { readDescriptor } from '../services/descriptor';
-import { handToClaude } from '../services/editor';
-import { ensureLocalBranch } from '../services/git';
-import { INSTALL_COMMAND } from '../services/install';
-import { jpegDataUrl } from '../services/picture';
-import { builtHere, ensureCovers } from '../services/projectCovers';
-import { BUILD_SKILL, GUIDE, type PrototypeSources, assignFolder, prototypeBuildPrompt, prototypeReadable } from '../services/prototype';
-import { type PrototypeChange, whereTheChangeGoes } from '../services/prototypeWork';
+import { ADDRESS_SKILL, chooseComment } from '../services/prototypes/address';
+import { guidePart, prototypeAddressTask, prototypeBuildTask } from '../services/agent/agentTasks';
+import { writeCommentsExport } from '../services/prototypes/commentsExport';
+import { readDescriptor } from '../services/projects/descriptor';
+import { handToClaude } from '../services/agent/editor';
+import { ensureLocalBranch } from '../services/platform/git';
+import { INSTALL_COMMAND } from '../services/codebase/install';
+import { jpegDataUrl } from '../services/prototypes/picture';
+import { builtHere, ensureCovers } from '../services/prototypes/projectCovers';
+import { BUILD_SKILL, GUIDE, type PrototypeSources, assignFolder, prototypeBuildPrompt, prototypeReadable } from '../services/prototypes/prototype';
+import { type PrototypeChange, whereTheChangeGoes } from '../services/prototypes/prototypeWork';
 import type { CallsDeps } from '../calls';
 
 /**

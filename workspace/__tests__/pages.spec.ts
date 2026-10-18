@@ -4,7 +4,16 @@ import { describe, expect, it, vi } from 'vitest';
 import type { GitHubApi } from '../src/github/github';
 
 import { type Answer, fakeGitHub, notFound, refusal } from './fakes/github';
-import { PUBLISH_WORKFLOW, pageStatus, publish, readVisibility, redeploySite, siteBehind, unpublish, whyPublic } from '../src/core/services/pages';
+import {
+	PUBLISH_WORKFLOW,
+	pageStatus,
+	publish,
+	readVisibility,
+	redeploySite,
+	siteBehind,
+	unpublish,
+	whyPublic,
+} from '../src/core/services/publishing/pages';
 
 /**
  * Publishing a prototype to its page (M5b of the Pages plan), against a fake GitHub. What matters most is what it will

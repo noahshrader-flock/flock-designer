@@ -1,6 +1,6 @@
 /**
  * WCAG's relative luminance and contrast ratio, the one way they are worked out: for the token panel's color pairs
- * (`tokens.ts`), and for what the probe measures in a page (`page/probe.ts`) and in its pictures (`services/probe`).
+ * (`tokens.ts`), and for what the probe measures in a page (`page/probe.ts`) and in its pictures (`services/accessibility/probe`).
  */
 
 /** A color's red, green and blue, 0 to 255. */

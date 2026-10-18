@@ -7,7 +7,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import PAGE_AGENT from '../src/page/agentMain?page';
 import { reviewPage } from '../extension/src/review';
 import { NO_CHROME, inChrome } from './realChrome';
-import { PrototypeServer } from '../src/core/services/prototypeServer';
+import { PrototypeServer } from '../src/core/services/prototypes/prototypeServer';
 import { buildSite } from '../src/site/buildSite';
 import { serveSite } from '../src/site/serveSite';
 

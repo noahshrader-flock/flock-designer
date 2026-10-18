@@ -3,9 +3,9 @@ import { mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { type CheckConfig, LEFT, MOST_ROUNDS, checkedAsSaved } from '../src/core/services/buildCheck';
-import { findChrome } from '../src/core/services/chromeHeadless';
-import { writeCheckScript } from '../src/core/services/prototypeBundle';
+import { type CheckConfig, LEFT, MOST_ROUNDS, checkedAsSaved } from '../src/core/services/accessibility/buildCheck';
+import { findChrome } from '../src/core/services/browser/chromeHeadless';
+import { writeCheckScript } from '../src/core/services/prototypes/prototypeBundle';
 import { axeTagsFor } from '../src/shared/wcag';
 
 /**

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { VOICE_FILE } from '../src/core/services/voiceAndTone';
-import { taskVoice, voiceBrief } from '../src/core/services/voiceBrief';
-import { voiceIsWritten } from '../src/core/services/voice';
+import { VOICE_FILE } from '../src/core/services/designSystem/voiceAndTone';
+import { taskVoice, voiceBrief } from '../src/core/services/designSystem/voiceBrief';
+import { voiceIsWritten } from '../src/core/services/designSystem/voice';
 
 /**
  * What every agent task carries of the company's voice and tone (T9 of the design system plan, step 4): the file's own

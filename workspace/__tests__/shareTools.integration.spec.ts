@@ -3,13 +3,13 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { pushBranch } from '../src/core/services/git';
-import { recordPreview, readWork } from '../src/core/services/workRecords';
+import { pushBranch } from '../src/core/services/platform/git';
+import { recordPreview, readWork } from '../src/core/services/projects/workRecords';
 import { type ShareStatus } from '../src/shared/contract';
-import { ShareRunner, type ShareRequest } from '../src/core/services/share';
-import { ghApi, locateGh } from '../src/core/services/ghCli';
+import { ShareRunner, type ShareRequest } from '../src/core/services/codebase/share';
+import { ghApi, locateGh } from '../src/core/services/platform/ghCli';
 import { fakeGitHub } from './fakes/github';
-import { realShareTools } from '../src/core/services/shareTools';
+import { realShareTools } from '../src/core/services/codebase/shareTools';
 import { g } from './fixtures';
 
 /**

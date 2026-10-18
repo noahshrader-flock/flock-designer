@@ -1,9 +1,9 @@
 import axe from 'axe-core';
 import { describe, expect, it } from 'vitest';
-import { assistiveTechnology } from '../src/core/services/accessibilityBrief';
-import { type Ledger, ledgerOf } from '../src/core/services/ledger';
-import { manualListFault, manualSection, withManualSection } from '../src/core/services/manualList';
-import type { CellResult } from '../src/core/services/probe/cells';
+import { assistiveTechnology } from '../src/core/services/accessibility/accessibilityBrief';
+import { type Ledger, ledgerOf } from '../src/core/services/accessibility/ledger';
+import { manualListFault, manualSection, withManualSection } from '../src/core/services/accessibility/manualList';
+import type { CellResult } from '../src/core/services/accessibility/probe/cells';
 import type { AccessibilityIssue } from '../src/shared/contract';
 import { AA, cell, issue, result } from './fixtures/accessibilityFixtures';
 

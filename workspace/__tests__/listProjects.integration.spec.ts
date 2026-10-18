@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { Project } from '../src/shared/contract';
-import { listProjects } from '../src/core/services/listProjects';
+import { listProjects } from '../src/core/services/projects/listProjects';
 import { makeProduct, projectWork } from './fixtures';
 
 let dir: string;

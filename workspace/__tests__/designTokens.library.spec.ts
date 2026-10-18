@@ -1,8 +1,8 @@
 import { execFileSync } from 'node:child_process';
 import { expect, it } from 'vitest';
-import { libraryReads } from '../src/core/services/designLibrary';
-import { readTokens } from '../src/core/services/designTokens';
-import { editedFiles } from '../src/core/services/tokenEdits';
+import { libraryReads } from '../src/core/services/designSystem/designLibrary';
+import { readTokens } from '../src/core/services/designSystem/designTokens';
+import { editedFiles } from '../src/core/services/designSystem/tokenEdits';
 import { REAL_LIBRARY, describeWith, libraryMissing } from './realCheckouts';
 
 /** The reader against the real library's `develop`, as the app reads it. */

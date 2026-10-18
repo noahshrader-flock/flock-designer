@@ -4,8 +4,8 @@ import { join } from 'node:path';
 import { build } from 'esbuild';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { PREVIEW_COMPONENT, PREVIEW_SHOW, PREVIEW_TRY } from '../src/shared/catalog';
-import { FIND_INSTANCES, TRY_VALUES } from '../src/core/services/pageInstances';
-import { chromeHeadless, findChrome } from '../src/core/services/chromeHeadless';
+import { FIND_INSTANCES, TRY_VALUES } from '../src/core/services/designSystem/pageInstances';
+import { chromeHeadless, findChrome } from '../src/core/services/browser/chromeHeadless';
 
 /**
  * Each instance of a component its stories draw (Phase 1 of adjusting a component), read in the real browser by the

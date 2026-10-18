@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { Context } from '../../src/core/services/findContext';
+import type { Context } from '../../src/core/services/projects/findContext';
 import type { Catalog, ComponentPictures, DesignToken, TokenEdit } from '../../src/shared/contract';
 import { plural } from '../../src/shared/plural';
 import { isDark } from '../../src/shared/tokens';

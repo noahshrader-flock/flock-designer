@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { commandLine } from '../src/core/services/engineeringHandoff';
+import { commandLine } from '../src/core/services/codebase/engineeringHandoff';
 import { lastVerdict } from '../src/shared/handoff';
 
 const commands = [
