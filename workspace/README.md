@@ -10,7 +10,8 @@ installs this app — that is the constraint the design is built around, not a n
 
 ```bash
 npm ci
-npm run check            # format, lint, typecheck, then every test
+npm run check            # format, lint, typecheck, then every test but the real libraries'
+npm run check:full       # the same, then the real libraries on this machine, drawn once each (a few minutes)
 npm run extension:dev    # build the extension and open it in a development window
 npm run extension:test   # the extension's tests, in a real VS Code
 npm run extension:install  # package it and install it into your VS Code
@@ -326,6 +327,12 @@ install it somewhere VS Code is not in `/Applications`, set `CODE_CLI` to its `c
 DSNR › Uninstall.
 
 ### Testing it
+
+**Sealed, every test and the development window** (`__tests__/sealed.mjs`): each runs with a home of its own, no GitHub
+token, a `gh` that refuses, and every push to GitHub refused, so none can reach your settings, your GitHub sign-in or a
+remote, whoever wrote it; one that tried fails, saying it was not faked. A check that needs your GitHub is made in the
+installed extension (`npm run extension:install`). The real agent's tests (`DSNR_REAL_AGENT=1`) keep your home, where
+Claude Code is signed in.
 
 **Automatically.** `npm run extension:test` runs DSNR from its source in the VS Code installed here, and
 `npm run extension:test:packaged` runs it installed from its package, in VS Code's production mode, which is what proves
