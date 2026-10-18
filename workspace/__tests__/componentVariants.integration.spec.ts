@@ -2,7 +2,8 @@ import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import type { Built, Drawn, Instance, Measure } from '../src/core/services/designSystem/componentTokens';
+import type { Built, Drawn, Instance } from '../src/core/services/designSystem/componentTokens';
+import type { Measure } from '../src/core/ports';
 import { typeLibs } from '../src/core/services/designSystem/componentProps';
 import { ComponentVariants } from '../src/core/services/designSystem/componentVariants';
 import type { ComponentVariants as Answer } from '../src/shared/contract';

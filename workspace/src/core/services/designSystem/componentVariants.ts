@@ -6,7 +6,8 @@
  * token's or its own. Worked out in the background when its tab asks, the newest asked alone, and kept for the commit.
  */
 import type { ComponentVariants as Answer, DeclaredProp } from '../../../shared/contract';
-import type { ComponentTokens, Drawn, DrawnIndex, Measure } from './componentTokens';
+import type { ComponentTokens, Drawn, DrawnIndex } from './componentTokens';
+import type { Measure } from '../../ports';
 import { type ComponentProps, programFor, propsOf } from './componentProps';
 import { readValues } from './componentValues';
 import { NOT_VARIANT } from '../../../shared/valueParts';

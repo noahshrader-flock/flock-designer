@@ -4,7 +4,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import axe from 'axe-core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { type CheckPage, accessibilityOf } from '../src/core/services/accessibility/accessibilityCheck';
+import { accessibilityOf } from '../src/core/services/accessibility/accessibilityCheck';
+import type { CheckPage } from '../src/core/ports';
 import {
 	type AxeRule,
 	MOST_ELEMENTS,

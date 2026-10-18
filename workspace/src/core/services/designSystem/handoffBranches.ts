@@ -16,7 +16,7 @@ import { libraryCommit } from './designLibrary';
 import { dsnrBranchPattern, newDsnrBranch } from './dsnrBranch';
 import { git } from '../platform/git';
 import { ScopedRecords } from './scopedRecords';
-import type { ShareTools } from '../codebase/share';
+import type { ShareTools } from '../../ports';
 
 /** A hand-over as it is kept: its branch, the base it was handed over on (its branch and that commit), what was sent, its pull request. */
 interface Kept {

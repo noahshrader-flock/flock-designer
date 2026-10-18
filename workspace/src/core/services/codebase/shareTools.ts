@@ -5,7 +5,7 @@ import { RepoFiles } from '../../../github/repoFiles';
 import { type RepoRef, repoRefOf } from '../../../shared/repoRef';
 import { ghApi } from '../platform/ghCli';
 import { pushBranch, repositoryOf } from '../platform/git';
-import type { ShareTools } from './share';
+import type { ShareTools } from '../../ports';
 import { CHANGE_REQUEST, HOST, needsCli } from '../../../shared/vocabulary';
 
 /**

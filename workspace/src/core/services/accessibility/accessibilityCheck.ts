@@ -12,12 +12,7 @@ import { type AxeFound, type AxeRun, findingsAt, isAxeRules } from '../../../sha
 import type { AccessibilityResult } from '../../../shared/contract';
 import { type DeclaredTarget, notAutomated, targetLine } from '../../../shared/wcag';
 import { writeAtomic } from '../platform/jsonFile';
-
-/**
- * Runs axe on a page in each of its `states`, with `tags`: one run per state, or one of the page as it opens when it has
- * none, said as `default`. A state that will not load or check fails the whole, said in words.
- */
-export type CheckPage = (url: string, states: string[], tags: string[]) => Promise<AxeRun[]>;
+import type { CheckPage } from '../../ports';
 
 /** The size a page is checked at, a desktop's; how long it is given to settle after it has loaded, before axe reads it. */
 export const CHECK_WINDOW = { width: 1280, height: 900 } as const;

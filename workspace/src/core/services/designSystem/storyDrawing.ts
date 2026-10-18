@@ -4,7 +4,8 @@
  */
 import DRAWING from '../../../page/drawing?page';
 import { axeFound } from '../accessibility/accessibilityCheck';
-import type { Drawn, Measure, Mode, Vary } from './componentTokens';
+import type { Drawn, Mode, Vary } from './componentTokens';
+import type { Measure } from '../../ports';
 import { within } from '../platform/within';
 
 /**

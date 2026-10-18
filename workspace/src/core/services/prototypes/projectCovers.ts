@@ -19,6 +19,7 @@ import { coverPath } from '../../../shared/designPaths';
 import { isPrototypeName } from '../../../shared/prototypeNames';
 import { PROJECT_ID } from '../../../shared/validate';
 import { type RecordStore, contentHashOf, readRecords, setCover } from './prototype';
+import type { DrawCover } from '../../ports';
 
 /** The window a picture is drawn in: the shape of a card's cover, twice as wide as tall. */
 export const COVER_WINDOW = { width: 1440, height: 720 } as const;
@@ -33,9 +34,6 @@ export const COVER_STEPS = [
 /** How long a page must be unchanged to be ready for its picture, and the most it is waited for. */
 const COVER_QUIET_MS = 500;
 const COVER_CAP_MS = 8000;
-
-/** A page drawn as its picture, by its address on the local server: the JPEG, or null when it gave no good picture. */
-export type DrawCover = (url: string) => Promise<Buffer | null>;
 
 /**
  * What runs in a page to say it is ready for its picture: its fonts are ready, no animation that ends is still running (one

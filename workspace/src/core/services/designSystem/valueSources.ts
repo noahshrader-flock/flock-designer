@@ -23,7 +23,8 @@ import type { ChangeReach, StoryPreview, TriedValue, ValuePlace, ValueProperty, 
 import { COLOR_VALUES, MOST_TRIED, VALUE_PROPERTIES, triedId } from '../../../shared/contract';
 import { asRecord } from '../../../shared/json';
 import { allParts, partsIn } from '../../../shared/valueParts';
-import type { ComponentTokens, DrawnIndex, Instance, Measure } from './componentTokens';
+import type { ComponentTokens, DrawnIndex, Instance } from './componentTokens';
+import type { Measure } from '../../ports';
 import { isNothing } from './tokenTags';
 import { mergeTexts } from '../platform/git';
 import { newestAnswer } from '../platform/newestAnswer';

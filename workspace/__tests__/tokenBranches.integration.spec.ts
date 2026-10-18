@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { Check, PullRequest } from '../src/github/changeRequests';
-import type { ShareTools } from '../src/core/services/codebase/share';
+import type { ShareTools } from '../src/core/ports';
 import { TOKENS, TOKEN_BRANCH, TokenBranches } from '../src/core/services/designSystem/tokenBranches';
 import { proposalText } from '../src/core/services/designSystem/changeBranches';
 import { g } from './fixtures';

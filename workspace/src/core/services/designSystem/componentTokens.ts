@@ -43,6 +43,7 @@ import { newestAnswer } from '../platform/newestAnswer';
 import { editedFiles } from './tokenEdits';
 import type { CatalogReads } from './componentCatalog';
 import { type Tags, asTag, inMode, isNothing, sizeTokens, tagsFor } from './tokenTags';
+import type { Measure } from '../../ports';
 
 /**
  * What a story draws, as counts of each computed value: its colors (background, text, border), radii and spacing; and,
@@ -90,22 +91,6 @@ export interface Vary {
 	stories: string[];
 	props: DeclaredProp[];
 }
-
-/**
- * Draws story files from a build of the previews (its `base`), in a mode, and says what each drew, in the order given;
- * null for one that would not draw. Several runs at once.
- */
-export type Measure = (
-	runs: {
-		base: string;
-		mode: Mode;
-		files: string[];
-		pictures?: boolean;
-		accessibility?: string[];
-		/** Instead of its stories, one of them drawn once with each value of each prop (Phase 5). */
-		vary?: Vary;
-	}[],
-) => Promise<(Drawn | null)[][]>;
 
 const add = (m: Map<string, number>, k: string, n: number) => m.set(k, (m.get(k) ?? 0) + n);
 

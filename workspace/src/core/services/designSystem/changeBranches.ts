@@ -23,7 +23,7 @@ import { libraryCommit } from './designLibrary';
 import { dsnrBranchPattern, newDsnrBranch } from './dsnrBranch';
 import { branchExists, commitOnto, git } from '../platform/git';
 import { ScopedRecords } from './scopedRecords';
-import type { ShareTools } from '../codebase/share';
+import type { ShareTools } from '../../ports';
 import { errorText } from '../../../shared/result';
 import { HOST } from '../../../shared/vocabulary';
 

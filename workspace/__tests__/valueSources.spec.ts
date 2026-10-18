@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { reachOf } from '../src/core/services/designSystem/changeReach';
 import { settledAnswer } from './fixtures';
-import type { Built, Drawn, Instance, Measure } from '../src/core/services/designSystem/componentTokens';
+import type { Built, Drawn, Instance } from '../src/core/services/designSystem/componentTokens';
+import type { Measure } from '../src/core/ports';
 import type { CatalogReads } from '../src/core/services/designSystem/componentCatalog';
 import { MOST_PLACES, ValueSources, type Write, placeClashes } from '../src/core/services/designSystem/valueSources';
 import type { Written } from '../src/core/services/designSystem/valueAgent';

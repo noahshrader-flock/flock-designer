@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, expect, it } from 'vitest';
-import type { ShareTools } from '../src/core/services/codebase/share';
+import type { ShareTools } from '../src/core/ports';
 import { TokenBranches } from '../src/core/services/designSystem/tokenBranches';
 import { g } from './fixtures';
 import { REAL_FUI, REAL_LIBRARY as REAL, describeWith, libraryMissing, realDevelop } from './realCheckouts';

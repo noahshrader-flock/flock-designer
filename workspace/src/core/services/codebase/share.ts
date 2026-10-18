@@ -1,10 +1,10 @@
 import type { ShareStatus, ShareStep } from '../../../shared/contract';
-import type { Check, PullRequest } from '../../../github/changeRequests';
 import type { ShareDescriptor } from '../projects/descriptor';
 import { projectDir } from '../../../shared/designPaths';
 import { isSafeBranchName } from '../platform/git';
 import { errorText } from '../../../shared/result';
 import { CHANGE_REQUEST } from '../../../shared/vocabulary';
+import type { ShareTools } from '../../ports';
 
 /**
  * Putting codebase work in front of someone who is not on this machine.
@@ -17,22 +17,8 @@ import { CHANGE_REQUEST } from '../../../shared/vocabulary';
  *
  * The flow is a function over a small set of tools rather than code that calls git and gh,
  * because what matters is the order, what each failure says, and what is never done -- and
- * that is testable with no network, no remote and no real pull request.
+ * that is testable with no network, no remote and no real pull request (`ShareTools`, in `ports.ts`).
  */
-
-export interface ShareTools {
-	push(branch: string): Promise<{ pushed: boolean }>;
-	/** The open pull request for a branch, if there is one. */
-	findPr(branch: string): Promise<PullRequest | null>;
-	/**
-	 * Always a draft. Nothing here can open one that is ready for review. Onto `base` when given (the branch it was made from),
-	 * else the repository's default.
-	 */
-	createDraftPr(branch: string, title: string, body: string, base?: string): Promise<PullRequest>;
-	checks(pr: number): Promise<Check[]>;
-	sleep(ms: number): Promise<void>;
-	now(): number;
-}
 
 export interface ShareRequest {
 	share: ShareDescriptor;

@@ -6,12 +6,15 @@ import type { AxeRun } from '../../../shared/accessibility';
 import { previewAddress } from '../../../shared/catalog';
 import { withState } from '../../../shared/prototypeStates';
 import type { Headless } from '../../ports';
-import { CHECKED_IN, CHECK_WINDOW, type CheckPage, axeFound, axeInPage } from '../accessibility/accessibilityCheck';
-import type { Drawn, Measure } from '../designSystem/componentTokens';
+import { CHECKED_IN, CHECK_WINDOW, axeFound, axeInPage } from '../accessibility/accessibilityCheck';
+import type { CheckPage } from '../../ports';
+import type { Drawn } from '../designSystem/componentTokens';
+import type { Measure } from '../../ports';
 import { fitJpegBy } from '../prototypes/picture';
 import { COMPOSITION, painted, placeAround, placeOnWhite } from '../prototypes/pictureComposition';
 import { decodePng } from '../prototypes/png';
-import { COVER_BUDGET, COVER_STEPS, COVER_WINDOW, type DrawCover, isBlank, settleScript } from '../prototypes/projectCovers';
+import { COVER_BUDGET, COVER_STEPS, COVER_WINDOW, isBlank, settleScript } from '../prototypes/projectCovers';
+import type { DrawCover } from '../../ports';
 import {
 	PICTURE_MOST_ACROSS,
 	PICTURE_QUALITY,

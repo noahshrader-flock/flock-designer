@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { afterAll, beforeAll } from 'vitest';
 import { chromeHeadless } from '../src/core/services/browser/chromeHeadless';
 import { ComponentTokens } from '../src/core/services/designSystem/componentTokens';
-import type { Measure } from '../src/core/services/designSystem/componentTokens';
+import type { Measure } from '../src/core/ports';
 import { PrototypeServer } from '../src/core/services/prototypes/prototypeServer';
 import { StoryPreviews } from '../src/core/services/designSystem/storyPreviews';
 import type { ConnectedDesignSystem } from '../src/shared/contract';

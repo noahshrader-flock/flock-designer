@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { HandoffBranches } from '../src/core/services/designSystem/handoffBranches';
-import type { ShareTools } from '../src/core/services/codebase/share';
+import type { ShareTools } from '../src/core/ports';
 import type { ConnectedDesignSystem } from '../src/shared/contract';
 
 /**

@@ -1,9 +1,48 @@
+import type { Check, PullRequest } from '../github/changeRequests';
+import type { AxeRun } from '../shared/accessibility';
+import type { Drawn, Mode, Vary } from './services/designSystem/componentTokens';
 import type { GitHubApi } from '../github/github';
-import type { CheckPage } from './services/accessibility/accessibilityCheck';
-import type { Measure } from './services/designSystem/componentTokens';
 import type { AgentSession } from './services/agent/editor';
-import type { DrawCover } from './services/prototypes/projectCovers';
-import type { ShareTools } from './services/codebase/share';
+
+/**
+ * Draws story files from a build of the previews (its `base`), in a mode, and says what each drew, in the order given;
+ * null for one that would not draw. Several runs at once.
+ */
+export type Measure = (
+	runs: {
+		base: string;
+		mode: Mode;
+		files: string[];
+		pictures?: boolean;
+		accessibility?: string[];
+		/** Instead of its stories, one of them drawn once with each value of each prop (Phase 5). */
+		vary?: Vary;
+	}[],
+) => Promise<(Drawn | null)[][]>;
+
+/**
+ * Runs axe on a page in each of its `states`, with `tags`: one run per state, or one of the page as it opens when it has
+ * none, said as `default`. A state that will not load or check fails the whole, said in words.
+ */
+export type CheckPage = (url: string, states: string[], tags: string[]) => Promise<AxeRun[]>;
+
+/** A page drawn as its picture, by its address on the local server: the JPEG, or null when it gave no good picture. */
+export type DrawCover = (url: string) => Promise<Buffer | null>;
+
+/** The person's own git and GitHub command line, as sharing a branch uses it: pushing, and a draft pull request. */
+export interface ShareTools {
+	push(branch: string): Promise<{ pushed: boolean }>;
+	/** The open pull request for a branch, if there is one. */
+	findPr(branch: string): Promise<PullRequest | null>;
+	/**
+	 * Always a draft. Nothing here can open one that is ready for review. Onto `base` when given (the branch it was made from),
+	 * else the repository's default.
+	 */
+	createDraftPr(branch: string, title: string, body: string, base?: string): Promise<PullRequest>;
+	checks(pr: number): Promise<Check[]>;
+	sleep(ms: number): Promise<void>;
+	now(): number;
+}
 
 /**
  * What only a shell can do for the core without being seen: draw a page out of sight, in a headless browser
