@@ -266,6 +266,19 @@ describe('change-prototype', () => {
 		expect(out.join('\n')).toContain('dsnr save-prototype --project demo --name v1 --product');
 	});
 
+	it('never saves a new version over one made meanwhile under the same name', async () => {
+		signedIn({ v1: ['test-person'] });
+		await made();
+		await run('change-prototype', '--project', 'demo', '--name', 'v1', '--note', 'Try cards', '--new-version');
+		writeFileSync(local('v2'), page('cards'));
+		// Someone else's new idea is recorded as v2 first, on another machine or in another run.
+		await run('new-prototype', '--project', 'demo', '--note', 'Another idea');
+		expect(recorded().map((i) => i.name)).toEqual(['v1', 'v2']);
+		expect(await run('save-prototype', '--project', 'demo', '--name', 'v2', '--from-version', 'v1')).toBe(1);
+		expect(err.join('\n')).toMatch(/demo v2 was made meanwhile, so this new version is not saved over it/);
+		expect(existsSync(join(design, 'projects', 'demo', 'prototypes', 'v2.html'))).toBe(false);
+	});
+
 	it('makes nothing when a new version was asked for and nothing was changed', async () => {
 		signedIn({ v1: ['pm'] });
 		await made();

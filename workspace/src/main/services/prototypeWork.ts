@@ -51,14 +51,15 @@ export interface PrototypeWorkContext {
 /**
  * Where a change to a prototype goes: `target`, which is `from` itself, or, when a new version was asked for, a new
  * version from it, not yet recorded (`fresh`). `before` is the hash of the source the change starts from. `others` is how
- * many comments on `from` are by anyone but its makers, or null when that could not be read.
+ * many open comments on `from` are by anyone but its makers, or null when that could not be read: said when a change is
+ * started, so absent when one is only resumed to be saved.
  */
 export interface PrototypeChange {
 	from: Work;
 	target: string;
 	fresh: boolean;
 	before: string;
-	others: number | null;
+	others?: number | null;
 }
 
 /**
@@ -69,6 +70,7 @@ export interface PrototypeChange {
 export const whereTheChangeGoes = (change: PrototypeChange): string | null => {
 	if (change.fresh)
 		return `A new version was asked for: the change is made in ${change.target}, a new version from ${change.from.name}, which starts as a copy of it. Change that copy, rather than starting again; ${change.from.name} stays as it is.`;
+	if (change.others === undefined) return null;
 	if (change.others === null) return `Who has commented on ${change.from.name} could not be read. The change is made in it, in place.`;
 	if (change.others > 0)
 		return `${othersHaveCommented(change.others, change.from.name)} The change is made in it, in place, so their pins may land on the wrong element: say so when you report.`;
@@ -380,21 +382,24 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 
 	/**
 	 * A change started by the dsnr command is saved by a later run of it: what `startChange` said, worked out again from
-	 * what is there. Null when `name` is recorded, as a change made in place is; otherwise it must be the next version,
-	 * started from `from`, which the command that started it says.
+	 * what is there. Null for a change in place (no `fromName`), to a version that is recorded; otherwise it must be the
+	 * next version, started from `fromName`, which the command that started it says. A new version someone else recorded
+	 * meanwhile, under the same name, is refused rather than saved over.
 	 */
 	const resumeChange = async (projectId: string, name: string, fromName: string | null): Promise<PrototypeChange | null> => {
 		assertPrototypeName(name);
 		const all = await records(projectId);
 		const names = all.map((i) => i.name);
-		if (names.includes(name)) return null;
+		if (names.includes(name)) {
+			if (fromName === null) return null;
+			throw new Error(`${projectId} ${name} was made meanwhile, so this new version is not saved over it: start the change again.`);
+		}
 		if (nextVersionName(names) !== name) throw new Error(`${projectId} has no ${name}, and it is not the next version.`);
 		if (fromName === null) throw new Error(`${name} is a new version: say which it was started from, with --from-version.`);
 		const from = all.find((i) => i.name === fromName);
 		if (!from) throw new Error(`${projectId} has no ${fromName} for ${name} to have been started from.`);
 		const source = await sourceText(projectId, from.name);
-		// Who has commented was said when the change was started, and is not said again when it is saved.
-		return { from, target: name, fresh: true, before: source === null ? '' : contentHashOf(source), others: 0 };
+		return { from, target: name, fresh: true, before: source === null ? '' : contentHashOf(source) };
 	};
 
 	/**
