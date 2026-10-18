@@ -12,6 +12,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { context } from 'esbuild';
 import { pageCodeEsbuild } from '../pageBundle.mjs';
+import { buildViewer } from '../viewerBuild.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const dist = join(here, 'dist');
@@ -75,10 +76,9 @@ cpSync(join(modules, 'esbuild'), join(dist, 'node_modules/esbuild'), { recursive
 for (const binary of readdirSync(join(modules, '@esbuild')))
 	cpSync(join(modules, '@esbuild', binary), join(dist, 'node_modules/@esbuild', binary), { recursive: true });
 
-/** A prototype's review page carries the app's own viewer (its review bar and comments), built with the app's own config. */
+/** A prototype's review page carries DSNR's own viewer (its review bar and comments), built as every build builds it. */
 const viewer = async () => {
-	const { build } = await import('vite');
-	await build({ configFile: join(here, '../viewer.vite.config.ts'), logLevel: 'warn', build: { outDir: join(dist, 'viewer'), emptyOutDir: true } });
+	await buildViewer(join(dist, 'viewer'));
 	console.log('dsnr: viewer built');
 	if (watch && waiting.delete('viewer') && waiting.size === 0) console.log('dsnr: watching for changes');
 };
