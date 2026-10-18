@@ -13,7 +13,7 @@ import type { TokenActions } from './Tokens';
 import { ShowingNote } from './Showing';
 import { useTabCatalog } from './useCatalog';
 import { useTrial } from './useTrial';
-import { ModeProvider } from './mode';
+import { ModeProvider, useMode } from './mode';
 import { useModeChoice } from './useModeChoice';
 import { useTrying } from './useTrying';
 import { useValueTrialsChoice } from './useValueTrialsChoice';
@@ -31,6 +31,8 @@ const NOT_READ = undeclared('the design system is not read yet');
  */
 const Stories = ({ component, commit, edits, tried }: { component: CatalogComponent; commit: string; edits: TokenEdit[]; tried: TriedValue[] }) => {
 	const { preview, trying, refused, retry } = useStoryPreview(commit, edits);
+	// The stories are drawn in the mode chosen in the panel, as the values are; a frame follows it by loading again.
+	const [mode] = useMode();
 	if (preview.state === 'building') return <p className="quiet">Building its previews…</p>;
 	if (preview.state !== 'ready')
 		return (
@@ -42,7 +44,7 @@ const Stories = ({ component, commit, edits, tried }: { component: CatalogCompon
 		<>
 			{refused && <Notice title="This change could not be tried">{refused}</Notice>}
 			<div className="stories" aria-busy={trying}>
-				<StoryFrame src={previewAddress(preview.base, component.id)} title={component.name} tried={tried} />
+				<StoryFrame src={previewAddress(preview.base, component.id, mode)} title={component.name} tried={tried} />
 				{trying && <p className="stories-building">Building…</p>}
 			</div>
 		</>

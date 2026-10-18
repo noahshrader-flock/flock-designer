@@ -1,6 +1,7 @@
 import { matchesWords } from './search';
 import { HOSTED_STORYBOOKS } from './config';
 import type { StoryPreview } from './contract';
+import { type Theme, withTheme } from './prototypeTheme';
 
 /**
  * The design system the Design System tab reads, as the catalog needs it: the repository, the branch that is its source
@@ -46,8 +47,12 @@ export const PREVIEW_SHOW = '__dsnrShow';
 export const PREVIEW_COMPONENT = '__dsnrComponent';
 /** What a tab says to the preview page it frames to try values on the component's instances (Phase 2 of adjusting a component). */
 export const PREVIEW_TRY = 'dsnrTryValues';
-/** A story file's preview page, in the build served at `base`. */
-export const previewAddress = (base: string, file: string): string => `${base}?${PREVIEW_FILE}=${encodeURIComponent(file)}`;
+/**
+ * A story file's preview page, in the build served at `base`, in `theme` (`page/theme.ts` puts it there, whatever the machine
+ * is set to): the one way a frame, and a drawing of the values, are put in dark.
+ */
+export const previewAddress = (base: string, file: string, theme: Theme | null = null): string =>
+	withTheme(`${base}?${PREVIEW_FILE}=${encodeURIComponent(file)}`, theme);
 
 /**
  * One line of a type specimen (R3 of the design system plan): what it is called, and the font it is drawn in, each part

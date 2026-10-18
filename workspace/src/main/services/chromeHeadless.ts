@@ -291,8 +291,8 @@ export const chromeHeadless = ({
 		onPage(async (page) => {
 			const { base, mode, files, pictures, tags } = share;
 			await page.setViewport({ ...WINDOW, deviceScaleFactor: pictures ? PICTURE_SCALE : 1 });
-			await page.emulateMediaFeatures([{ name: 'prefers-color-scheme', value: mode }]);
-			const loaded = await within(STORY_MS, page.goto(previewAddress(base, files[0] as string), { waitUntil: 'load', timeout: STORY_MS }));
+			// In its mode by its address, as a live frame is, so the values and the frame cannot be drawn two ways.
+			const loaded = await within(STORY_MS, page.goto(previewAddress(base, files[0] as string, mode), { waitUntil: 'load', timeout: STORY_MS }));
 			if (loaded === null) return files.map(() => null);
 			if (tags) await within(STORY_MS, page.evaluate(`${axe.source};true`));
 			return drawEach(

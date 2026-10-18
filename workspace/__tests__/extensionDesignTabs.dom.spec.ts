@@ -76,6 +76,19 @@ describe('a component’s tab', () => {
 		expect(frame.getAttribute('sandbox')).toBe('allow-scripts allow-same-origin');
 	});
 
+	it('draws its stories in the mode chosen in the panel, light first, and loads again when it changes', async () => {
+		await open();
+		await answer('storyPreview', { state: 'ready', base: BASE });
+		const src = () => document.querySelector('iframe')?.getAttribute('src');
+		expect(src()).toBe(previewAddress(BASE, BUTTON, 'light'));
+		expect(src()).not.toContain('theme=');
+		await say({ type: 'mode', mode: 'dark' });
+		expect(src()).toBe(previewAddress(BASE, BUTTON, 'dark'));
+		expect(src()).toContain('&theme=dark');
+		await say({ type: 'mode', mode: 'light' });
+		expect(src()).toBe(previewAddress(BASE, BUTTON));
+	});
+
 	it('says the height its stories’ page reports as a variable, which the stylesheet uses, or overrides where the frame fills its pane', async () => {
 		await open();
 		await answer('storyPreview', { state: 'ready', base: BASE });

@@ -7,6 +7,7 @@ import { readDrawn } from '../src/main/services/storyDrawing';
 import { resultOf } from '../src/main/services/accessibilityCheck';
 import { countsOf } from '../src/shared/accessibility';
 import { undeclared } from '../src/shared/wcag';
+import { withPageTheme } from '../src/main/services/pageTheme';
 import { inChrome } from './realChrome';
 
 /**
@@ -64,7 +65,8 @@ window.__dsnrShow = async () => {
 };
 </script></body></html>`,
 	// A preview build's page, as the Design System tab's are: it draws the story file it is told, in place of the last.
-	'/previews/': `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Previews</title></head>
+	// With the page theme first in its head, as the build's page has it: its address says the mode.
+	'/previews/': withPageTheme(`<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Previews</title></head>
 <body style="margin:0;background:#fff"><div id="root"></div><script>
 window.__dsnrShow = async (file) => {
 	const dark = matchMedia('(prefers-color-scheme: dark)').matches;
@@ -73,7 +75,7 @@ window.__dsnrShow = async (file) => {
 		+ '<img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" width="8" height="8"></section>'
 		+ '<section data-story><button style="background:#ff0000;padding:8px">Second</button></section>';
 };
-</script></body></html>`,
+</script></body></html>`),
 };
 
 let server: Server;

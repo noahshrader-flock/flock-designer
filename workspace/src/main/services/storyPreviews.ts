@@ -28,6 +28,7 @@ import { editedFiles } from './tokenEdits';
 import { errorText } from '../../shared/result';
 import { heldTurns, singleFlight } from './concurrency';
 import { type Stylesheets, stylesheetsFor } from './stylesheets';
+import { withPageTheme } from './pageTheme';
 import { HOST } from '../../shared/vocabulary';
 
 /**
@@ -153,10 +154,20 @@ import { createRoot } from 'react-dom/client';
 import { flushSync } from 'react-dom';
 import { composeStories, setProjectAnnotations } from '@storybook/react';
 ${preview === null ? '' : `import * as preview from ${JSON.stringify(fromEntry(preview))};`}
-// Dark as the library's Storybook draws it (Phase 5.5): its themes addon's \`theme\` global, beside the page's color scheme,
-// given as Storybook 8.2 and later take it (\`initialGlobals\`) and as earlier ones do (\`globals\`).
+// Dark as the library's Storybook draws it (Phase 5.5): its themes addon's \`theme\` global, and any global the library's own
+// preview declares in its toolbar with a dark option (Primer's \`colorScheme\`), beside the page's color scheme (which the
+// page's theme script answers from its address). Given as Storybook 8.2 and later take it (\`initialGlobals\`) and as earlier
+// ones do (\`globals\`).
 const annotations = [${preview === null ? '' : 'preview'}];
-if (matchMedia('(prefers-color-scheme: dark)').matches) annotations.push({ initialGlobals: { theme: 'dark' }, globals: { theme: 'dark' } });
+if (matchMedia('(prefers-color-scheme: dark)').matches) {
+	const dark = { theme: 'dark' };
+	for (const [name, type] of Object.entries(${preview === null ? '{}' : '(preview.globalTypes ?? {})'})) {
+		const values = ((type && type.toolbar && type.toolbar.items) || []).map((item) => (typeof item === 'string' ? item : item && item.value)).filter((value) => typeof value === 'string');
+		const hit = values.find((value) => value.toLowerCase() === 'dark') ?? values.find((value) => /dark/i.test(value));
+		if (hit !== undefined) dark[name] = hit;
+	}
+	annotations.push({ initialGlobals: dark, globals: dark });
+}
 if (annotations.length > 0) setProjectAnnotations(annotations);
 
 const files = {
@@ -386,7 +397,7 @@ export const buildPreviews = async (library: string, storyFiles: string[], site:
 	} finally {
 		stylesheets.close();
 	}
-	writeFileSync(join(site, 'index.html'), PAGE);
+	writeFileSync(join(site, 'index.html'), withPageTheme(PAGE));
 };
 
 /** The previews built again with a change: built with a change's files, as often as the change changes; closed when done. */
@@ -419,7 +430,7 @@ export const trialBuild = async (copy: string, work: string, site: string, folde
 	let written = new Map<string, string>();
 	const defines = storybookDefines(work, folder);
 	mkdirSync(site, { recursive: true });
-	writeFileSync(join(site, 'index.html'), PAGE);
+	writeFileSync(join(site, 'index.html'), withPageTheme(PAGE));
 	let open: BuildContext | null = null;
 	return {
 		async build(files) {

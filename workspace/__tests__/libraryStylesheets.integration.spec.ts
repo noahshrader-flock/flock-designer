@@ -4,7 +4,7 @@ import type { ComponentTokens } from '../src/main/services/componentTokens';
 import { ValueSources } from '../src/main/services/valueSources';
 import type { ChangeReach, ConnectedDesignSystem, ValueProperty, ValueSources as Sources } from '../src/shared/contract';
 import { settledAnswer } from './fixtures';
-import { REAL_TREMOR3, REAL_TREMOR4, describeWith, tremor3Missing, tremor4Missing } from './realCheckouts';
+import { REAL_PRIMER, REAL_TREMOR3, REAL_TREMOR4, describeWith, primerMissing, tremor3Missing, tremor4Missing } from './realCheckouts';
 import { onRealLibrary } from './realLibrary';
 
 /**
@@ -38,6 +38,37 @@ const valuesOf = async (tokens: ComponentTokens, file: string) => {
 			(rows[mode] ?? []).find((r) => r.property === property)?.cells.map((c) => c.value) ?? [],
 	};
 };
+
+describeWith(primerMissing, 'Primer React, which goes dark by a setting its own Storybook declares', () => {
+	it.skipIf(findChrome() === null)(
+		'draws a label and a button dark, though its setting is not the themes addon’s `theme`: read from what its preview declares',
+		async () => {
+			const primer: ConnectedDesignSystem = {
+				id: 'primer/react',
+				name: 'Primer',
+				repository: 'primer/react',
+				root: REAL_PRIMER,
+				folder: 'packages/react',
+				branch: 'main',
+			};
+			await onRealLibrary(primer, async ({ previews, measure }) => {
+				const built = await previews.preview();
+				if (built.state !== 'ready') throw new Error(`not built: ${JSON.stringify(built).slice(0, 300)}`);
+				for (const file of ['packages/react/src/Label/Label.stories.tsx', 'packages/react/src/Button/Button.stories.tsx']) {
+					const drawn = await measure([
+						{ base: built.base, mode: 'light', files: [file] },
+						{ base: built.base, mode: 'dark', files: [file] },
+					]);
+					// The colors it draws in light are other ones in dark: its page is dark, so its text and its fills are too.
+					const [light, dark] = [0, 1].map((run) => Object.keys(drawn[run]?.[0]?.colors ?? {}).sort());
+					expect(light?.length, file).toBeGreaterThan(0);
+					expect(dark, file).not.toEqual(light);
+				}
+			});
+		},
+		1_200_000,
+	);
+});
 
 describeWith(tremor3Missing, 'Tremor on Tailwind 3', () => {
 	it.skipIf(findChrome() === null)(

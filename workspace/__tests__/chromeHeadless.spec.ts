@@ -284,9 +284,10 @@ describe('drawing stories, headless (6.1, the Design System tab’s pictures and
 			'http://127.0.0.1:1/p/?file=a.stories.tsx',
 			'http://127.0.0.1:1/p/?file=b.stories.tsx',
 			'http://127.0.0.1:1/p/?file=c.stories.tsx',
-			'http://127.0.0.1:1/p/?file=a.stories.tsx',
+			// In dark by its address, as a live frame is, not by what the browser is told: the one way, so the values and a frame agree.
+			'http://127.0.0.1:1/p/?file=a.stories.tsx&theme=dark',
 		]);
-		expect(done.scheme.slice(-1)).toEqual([[{ name: 'prefers-color-scheme', value: 'dark' }]]);
+		expect(done.scheme).toEqual([]);
 		expect(done.scale).toEqual([1, 1, 1, 1]);
 	});
 
