@@ -33,7 +33,7 @@ beforeEach(() => {
 	g(work, 'commit', '-q', '-m', 'first');
 	g(work, 'remote', 'add', 'origin', remote);
 	g(work, 'push', '-q', 'origin', 'develop');
-	g(work, 'checkout', '-q', '-b', 'prototype/demo/v1');
+	g(work, 'checkout', '-q', '-b', 'feature/demo');
 	writeFileSync(join(work, 'proto.txt'), 'prototype\n');
 	g(work, 'add', '.');
 	g(work, 'commit', '-q', '-m', 'prototype');
@@ -45,39 +45,39 @@ afterEach(() => {
 
 describe('pushBranch', () => {
 	it('sends the branch to the remote, and says so', async () => {
-		expect(await pushBranch(work, 'prototype/demo/v1')).toEqual({ pushed: true });
-		expect(g(remote, 'rev-parse', 'refs/heads/prototype/demo/v1').trim()).toBe(g(work, 'rev-parse', 'HEAD').trim());
+		expect(await pushBranch(work, 'feature/demo')).toEqual({ pushed: true });
+		expect(g(remote, 'rev-parse', 'refs/heads/feature/demo').trim()).toBe(g(work, 'rev-parse', 'HEAD').trim());
 	});
 
 	it('says nothing went when the remote already has exactly this', async () => {
-		await pushBranch(work, 'prototype/demo/v1');
-		expect(await pushBranch(work, 'prototype/demo/v1')).toEqual({ pushed: false });
+		await pushBranch(work, 'feature/demo');
+		expect(await pushBranch(work, 'feature/demo')).toEqual({ pushed: false });
 	});
 
 	it('sends only the new commits when shared again', async () => {
-		await pushBranch(work, 'prototype/demo/v1');
+		await pushBranch(work, 'feature/demo');
 		writeFileSync(join(work, 'proto.txt'), 'changed\n');
 		g(work, 'commit', '-q', '-am', 'change');
-		expect(await pushBranch(work, 'prototype/demo/v1')).toEqual({ pushed: true });
+		expect(await pushBranch(work, 'feature/demo')).toEqual({ pushed: true });
 	});
 
 	it('refuses, rather than forcing, when the remote has work this machine lacks', async () => {
-		await pushBranch(work, 'prototype/demo/v1');
+		await pushBranch(work, 'feature/demo');
 		const other = join(dir, 'other');
 		execFileSync('git', ['clone', '-q', remote, other]);
 		g(other, 'config', 'user.email', 'o@example.test');
 		g(other, 'config', 'user.name', 'Other');
-		g(other, 'checkout', '-q', 'prototype/demo/v1');
+		g(other, 'checkout', '-q', 'feature/demo');
 		writeFileSync(join(other, 'theirs.txt'), 'theirs\n');
 		g(other, 'add', '.');
 		g(other, 'commit', '-q', '-m', 'theirs');
-		g(other, 'push', '-q', 'origin', 'prototype/demo/v1');
+		g(other, 'push', '-q', 'origin', 'feature/demo');
 
 		writeFileSync(join(work, 'proto.txt'), 'mine\n');
 		g(work, 'commit', '-q', '-am', 'mine');
-		const before = g(remote, 'rev-parse', 'refs/heads/prototype/demo/v1');
-		await expect(pushBranch(work, 'prototype/demo/v1')).rejects.toThrow(/changes on the remote that this machine does not have/);
-		expect(g(remote, 'rev-parse', 'refs/heads/prototype/demo/v1')).toBe(before); // nothing was overwritten
+		const before = g(remote, 'rev-parse', 'refs/heads/feature/demo');
+		await expect(pushBranch(work, 'feature/demo')).rejects.toThrow(/changes on the remote that this machine does not have/);
+		expect(g(remote, 'rev-parse', 'refs/heads/feature/demo')).toBe(before); // nothing was overwritten
 	});
 
 	it('refuses a branch that is not on this machine', async () => {
@@ -139,7 +139,7 @@ describe('sharing through the real tools', () => {
 		mkdirSync(join(records, 'demo'), { recursive: true });
 		writeFileSync(
 			join(records, 'demo', 'work.json'),
-			JSON.stringify([{ projectId: 'demo', name: 'v1', branch: 'prototype/demo/v1', commit: null, createdAt: 'x', note: '' }]),
+			JSON.stringify([{ projectId: 'demo', name: 'codebase', branch: 'feature/demo', commit: null, createdAt: 'x', note: '' }]),
 		);
 
 		const seen: ShareStatus[] = [];
@@ -148,18 +148,18 @@ describe('sharing through the real tools', () => {
 			request,
 			tools: realShareTools(work, gh.github, REPO),
 			timings,
-			record: async (url) => void recordPreview(records, 'demo', 'v1', url),
+			record: async (url) => void recordPreview(records, 'demo', 'codebase', url),
 		});
 		const done = await settle(runner);
 
 		expect(done).toMatchObject({ state: 'ready', url: 'https://dev-coke-pr-42.example.test', prUrl: 'https://github.test/o/r/pull/42' });
-		expect(g(remote, 'rev-parse', 'refs/heads/prototype/demo/v1').trim()).toBe(g(work, 'rev-parse', 'HEAD').trim());
+		expect(g(remote, 'rev-parse', 'refs/heads/feature/demo').trim()).toBe(g(work, 'rev-parse', 'HEAD').trim());
 		// One write, and it is a draft: nothing here marks a pull request ready, or merges one.
 		expect(gh.writes).toEqual([
 			{
 				method: 'POST',
 				path: '/repos/o/r/pulls',
-				body: { title: request.title, head: 'prototype/demo/v1', base: 'develop', body: 'draft', draft: true },
+				body: { title: request.title, head: 'feature/demo', base: 'develop', body: 'draft', draft: true },
 			},
 		]);
 		expect(seen.map((s) => (s.state === 'running' ? s.step : s.state))).toEqual(expect.arrayContaining(['pushing', 'opening', 'building', 'ready']));
@@ -214,7 +214,7 @@ describe('sharing through the real tools', () => {
 		const runner = new ShareRunner(() => undefined);
 		runner.start({ request, tools: realShareTools(work, ghApi(join(dir, 'no-such-gh')), REPO), timings, record: async () => undefined });
 		await settle(runner);
-		expect(g(remote, 'rev-parse', '--verify', 'refs/heads/prototype/demo/v1').trim()).toMatch(/^[0-9a-f]{40}$/);
+		expect(g(remote, 'rev-parse', '--verify', 'refs/heads/feature/demo').trim()).toMatch(/^[0-9a-f]{40}$/);
 	});
 
 	it('says so when the repository is not on GitHub, rather than guessing where its pull requests are', async () => {
