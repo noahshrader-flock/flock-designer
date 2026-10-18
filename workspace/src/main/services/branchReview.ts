@@ -5,10 +5,10 @@
  */
 import type { BranchReview } from '../../shared/contract';
 import { LARGE, classifyPath } from '../../shared/processChanges';
-import { branchCommit, git, isAncestor } from './git';
+import { branchTip, git, isAncestor } from './git';
 
 export const reviewBranch = async (root: string, branch: string, base: string, baseBranch: string): Promise<BranchReview> => {
-	const tip = await branchCommit(root, branch).catch(() => null);
+	const tip = await branchTip(root, branch);
 	if (tip === null) return { state: 'missing' };
 	// Where it left the base: the newest commit it shares with the base as GitHub has it now, else with the one recorded.
 	const upstream = await git(root, ['rev-parse', '--verify', '--quiet', `refs/remotes/origin/${baseBranch}`]).catch(() => '');

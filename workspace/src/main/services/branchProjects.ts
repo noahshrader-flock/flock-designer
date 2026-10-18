@@ -1,7 +1,7 @@
 import type { Person, Project, ProjectWork } from '../../shared/contract';
 import type { WorkspaceDescriptor } from './descriptor';
 import { mergePeople } from '../../shared/people';
-import { branchCommit, branchStartedAt, listBranches } from './git';
+import { branchTip, branchStartedAt, listBranches } from './git';
 import { peopleOn } from './workRecords';
 
 /**
@@ -79,7 +79,7 @@ export const readBranchProjects = async (
 				previewUrl: null,
 				// Found as a branch, with no record to say where its work is.
 				route: null,
-				commit: await branchCommit(productRoot, branch).catch(() => null),
+				commit: await branchTip(productRoot, branch),
 				contributors: people,
 				createdAt: await branchStartedAt(productRoot, branch).catch(() => null),
 				repository: null,

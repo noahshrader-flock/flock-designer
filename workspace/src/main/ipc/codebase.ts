@@ -14,7 +14,7 @@ import { designSystemCheckout, readDescriptor } from '../services/descriptor';
 import { recordsRootFor } from '../services/discovery';
 import { handToClaude } from '../services/editor';
 import { CODEBASE_SKILL, HANDOFF_FILE, HANDOFF_SKILL, commandLine } from '../services/engineeringHandoff';
-import { branchCommit, changedSince, headCommit, readCheckout } from '../services/git';
+import { branchTip, changedSince, headCommit, readCheckout } from '../services/git';
 import { codebaseBranchFor, recordHandoff, recordPath, recordPreview, recordedWork } from '../services/workRecords';
 import { GUIDE, MOVE_SKILL, ROUTE_SKILL, buildInCodebasePrompt } from '../services/prototype';
 import { pullRequestText } from '../services/share';
@@ -193,7 +193,7 @@ export const registerCodebase = (d: IpcDeps): void => {
 			throw new Error(`There are uncommitted changes on ${codebaseRecord.branch}, and only committed work is shared. Commit them, then share again.`);
 		}
 		// The commit that goes up now, which is what reviewers will be looking at.
-		const shared = await branchCommit(canonical, codebaseRecord.branch).catch(() => undefined);
+		const shared = (await branchTip(canonical, codebaseRecord.branch)) ?? undefined;
 		return share.start({
 			request: {
 				share: how,

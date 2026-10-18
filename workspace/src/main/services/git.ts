@@ -4,7 +4,7 @@ import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, join, resolve } from 'node:path';
 import type { Checkout } from '../../shared/contract';
-import { runFile } from './process';
+import { NotInstalled, ProcessFailed, runFile } from './process';
 import { errorText } from '../../shared/result';
 import { isBot } from '../../shared/people';
 import { OBJECT_ID_PATTERN } from '../../shared/sha';
@@ -22,6 +22,31 @@ import { OBJECT_ID_PATTERN } from '../../shared/sha';
 const queues = new Map<string, Promise<unknown>>();
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * Why git did not do what it was asked: it ran and said no (`failed`, with its exit code), ran past its time, found the
+ * repository held by another process past every retry, or is not on this machine. Kept on the error, so a caller tells
+ * "not there" from "could not look" (`saidNo`), and never forgets what it could not check.
+ */
+export type GitFailure = 'failed' | 'timeout' | 'locked' | 'notInstalled';
+export class GitError extends Error {
+	constructor(
+		message: string,
+		readonly kind: GitFailure,
+		readonly exitCode: number | null,
+	) {
+		super(message);
+		this.name = 'GitError';
+	}
+}
+const gitError = (err: unknown, message: string): GitError =>
+	err instanceof NotInstalled
+		? new GitError(message, 'notInstalled', null)
+		: err instanceof ProcessFailed
+			? new GitError(message, err.timedOut ? 'timeout' : 'failed', err.code)
+			: new GitError(message, 'failed', null);
+/** Git ran and answered no, as a command that asks a question does by exiting 1 (`rev-parse --verify --quiet`, `--is-ancestor`). */
+const saidNo = (err: unknown): boolean => err instanceof GitError && err.kind === 'failed' && err.exitCode === 1;
 
 const isLockContention = (detail: string): boolean => /index\.lock|Unable to create .*\.lock|another git process/i.test(detail);
 
@@ -69,12 +94,14 @@ const queued = (root: string, args: string[], options: GitOptions): Promise<stri
 				return await attempt(root, args, options);
 			} catch (err) {
 				lastDetail = errorText(err);
-				if (!isLockContention(lastDetail)) throw new Error(lastDetail);
+				if (!isLockContention(lastDetail)) throw gitError(err, lastDetail);
 				if (i < 3) await sleep(250 * (i + 1));
 			}
 		}
-		throw new Error(
+		throw new GitError(
 			`${lastDetail}\n\nGit says another process is using this repository. If nothing else is running git in it, the lock is left over and .git/index.lock can be deleted.`,
+			'locked',
+			null,
 		);
 	};
 	const key = resolve(root);
@@ -109,14 +136,8 @@ export const readCheckout = async (root: string): Promise<Checkout> => {
 
 export const headCommit = async (root: string): Promise<string> => git(root, ['rev-parse', 'HEAD']);
 
-export const branchExists = async (root: string, branch: string): Promise<boolean> => {
-	try {
-		await git(root, ['rev-parse', '--verify', '--quiet', `refs/heads/${branch}`]);
-		return true;
-	} catch {
-		return false;
-	}
-};
+/** Whether `branch` is in the repository: false only when git says it is not, an error for anything that stopped it looking. */
+export const branchExists = async (root: string, branch: string): Promise<boolean> => (await branchTip(root, branch)) !== null;
 
 export const listBranches = async (root: string, prefix: string): Promise<string[]> => {
 	const out = await git(root, ['for-each-ref', '--format=%(refname:short)', `refs/heads/${prefix}`]);
@@ -342,13 +363,26 @@ export const changedSince = async (root: string, commit: string, path: string): 
 	(await git(root, ['diff', '--name-only', commit, 'HEAD', '--', path])) !== '';
 
 /** The commit a branch is at, without switching to it. */
-export const branchCommit = async (root: string, branch: string): Promise<string> => git(root, ['rev-parse', '--verify', `refs/heads/${branch}`]);
+/** The commit `branch` is at, or null when git says there is no such branch; an error for anything that stopped it looking. */
+export const branchTip = (root: string, branch: string): Promise<string | null> =>
+	git(root, ['rev-parse', '--verify', '--quiet', `refs/heads/${branch}`]).catch((err: unknown) => (saidNo(err) ? null : Promise.reject(err)));
 
-/** Whether `older` is `newer` or one of its ancestors. */
-export const isAncestor = (root: string, older: string, newer: string): Promise<boolean> =>
+/** Whether this clone has `commit` (one GitHub has may not be fetched yet): false only when git says it has not. */
+const hasCommit = (root: string, commit: string): Promise<boolean> =>
+	git(root, ['rev-parse', '--verify', '--quiet', `${commit}^{commit}`]).then(
+		() => true,
+		(err: unknown) => (saidNo(err) ? false : Promise.reject(err)),
+	);
+
+/**
+ * Whether `older` is `newer` or one of its ancestors: false when git says it is not, or when this clone has no such commit
+ * (it is then in no history the clone has); an error for anything that stopped git looking.
+ */
+export const isAncestor = async (root: string, older: string, newer: string): Promise<boolean> =>
+	(await hasCommit(root, older)) &&
 	git(root, ['merge-base', '--is-ancestor', older, newer]).then(
 		() => true,
-		() => false,
+		(err: unknown) => (saidNo(err) ? false : Promise.reject(err)),
 	);
 
 export const checkoutBranch = async (root: string, branch: string): Promise<void> => {

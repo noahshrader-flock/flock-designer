@@ -4,7 +4,7 @@ import { workKind } from '../../shared/work';
 import { readBranchProjects } from './branchProjects';
 import { readDescriptor } from './descriptor';
 import { recordsRootFor } from './discovery';
-import { branchCommit, repositoryOf } from './git';
+import { branchTip, repositoryOf } from './git';
 import { codebaseBranchFor } from './workRecords';
 import { readFolderProjects } from './localProjects';
 
@@ -56,7 +56,7 @@ export const listProjects = async ({
 				p.work.map(async (it) => {
 					if (workKind(it) !== 'codebase') return it;
 					const ours = at !== null && it.branch === at.branchOf(p.id);
-					const head = ours && it.readyAt ? await branchCommit(at.root, it.branch).catch(() => null) : null;
+					const head = ours && it.readyAt ? await branchTip(at.root, it.branch) : null;
 					return {
 						...it,
 						...(ours && !it.repository && at.repository !== null ? { repository: at.repository } : {}),

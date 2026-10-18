@@ -10,7 +10,7 @@
  */
 import type { ConnectedDesignSystem } from '../../shared/contract';
 import { type LibraryAt, baseAt } from './designLibrary';
-import { branchCommit } from './git';
+import { branchTip } from './git';
 import { HANDOFF_BRANCH } from './handoffBranches';
 
 export class LibraryShown {
@@ -24,7 +24,7 @@ export class LibraryShown {
 	readonly at: LibraryAt = async (system) => {
 		const chosen = this.shown.get(system.id);
 		if (chosen === undefined) return baseAt(system);
-		const tip = await branchCommit(system.root, chosen.branch).catch(() => null);
+		const tip = await branchTip(system.root, chosen.branch);
 		if (tip !== null) return { commit: tip, showing: chosen.branch };
 		// Deleted since it was chosen: the library's own branch again, said to every page.
 		this.stop(system);

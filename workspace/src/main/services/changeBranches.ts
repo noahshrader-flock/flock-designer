@@ -192,8 +192,8 @@ export class ChangeBranches<C> {
 	private async kept(scope: string): Promise<{ system: ConnectedDesignSystem; kept: Kept<C> } | null> {
 		const at = this.records.read(scope);
 		if (at === null) return null;
-		const there = await branchExists(at.system.root, at.kept.branch).catch(() => false);
-		if (!there) {
+		// Forgotten only when git says the branch is gone: a clone it cannot read now (moved, or git timing out) keeps it.
+		if (!(await branchExists(at.system.root, at.kept.branch))) {
 			this.forget(scope);
 			return null;
 		}

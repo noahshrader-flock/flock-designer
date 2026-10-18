@@ -1,7 +1,7 @@
 import type { WorkspaceDescriptor } from './descriptor';
 import { codebaseBranches, prefixOf } from './branchProjects';
 import type { Problem, SyncResult } from './designSync';
-import { branchAuthors, branchCommit, isSamePerson, localIdentity, pushBranch, git, isAncestor } from './git';
+import { branchAuthors, branchTip, isSamePerson, localIdentity, pushBranch, git, isAncestor } from './git';
 import { errorText } from '../../shared/result';
 import { HOST } from '../../shared/vocabulary';
 
@@ -74,7 +74,7 @@ export const syncBranches = async ({ root, descriptor, projects }: BranchSyncInp
 	}
 
 	for (const branch of mine) {
-		const here = await branchCommit(root, branch).catch(() => null);
+		const here = await branchTip(root, branch);
 		if (here === null) continue;
 		const there = remote.get(branch);
 		if (there === here) continue; // already published, exactly

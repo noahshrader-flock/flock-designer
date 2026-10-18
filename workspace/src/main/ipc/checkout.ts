@@ -1,7 +1,7 @@
 import { basename } from 'node:path';
 import { arg, handle } from '../handle';
 import { DESCRIPTOR_PATH, findCommand } from '../services/descriptor';
-import { branchCommit, branchesWithFile, readCheckout } from '../services/git';
+import { branchTip, branchesWithFile, readCheckout } from '../services/git';
 import { INSTALL_COMMAND } from '../services/install';
 import { continueWork, recordedWork } from '../services/workRecords';
 import type { IpcDeps } from '../ipc';
@@ -54,6 +54,6 @@ export const registerCheckout = (d: IpcDeps): void => {
 	handle('workCommit', [checkout, arg.projectId, arg.codebaseName], async (workIn, projectId, name): Promise<string | null> => {
 		const { canonical } = workIn;
 		const found = await recordedWork(canonical, workIn.recordsRoot, workIn.descriptor, projectId, name).catch(() => null);
-		return found ? branchCommit(canonical, found.branch).catch(() => null) : null;
+		return found ? branchTip(canonical, found.branch) : null;
 	});
 };

@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -161,6 +161,17 @@ describe('saving a change (T4)', () => {
 		expect(next.branch).not.toBe(b.branch);
 		g(clone, 'branch', '-q', '-D', next.branch);
 		expect(await branches().current()).toBeNull();
+	});
+
+	it('keeps the branch when git cannot read the clone, saying why, and has it again once it can', async () => {
+		const b = await branches().save([{ path: 'tone.brand.50', value: '#0A6B52' }]);
+		// The clone moved away for a moment (unmounted, renamed): git cannot look, which is not the branch being gone.
+		renameSync(clone, `${clone}-away`);
+		await expect(branches().current()).rejects.toThrow();
+		renameSync(`${clone}-away`, clone);
+		expect(await branches().current()).toMatchObject({ branch: b.branch });
+		// A second save goes on the same branch, not a new one.
+		expect((await branches().save([{ path: 'spacing', value: '6px' }])).branch).toBe(b.branch);
 	});
 
 	it('writes only to a branch DSNR names as its own, whatever the file it keeps says', async () => {

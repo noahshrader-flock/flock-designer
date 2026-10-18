@@ -8,7 +8,7 @@ import { commentsFromOthers, nextVersionName, othersHaveCommented } from '../../
 import { MANIFEST_FILE, declaredTarget, productTarget, taskAccessibility } from './accessibilityBrief';
 import { designSystemCheckout, readDescriptor } from './descriptor';
 import { recordsRootFor } from './discovery';
-import { branchCommit, branchExists, git, isSafeBranchName, readCheckout, readTreeAt, repositoryOf } from './git';
+import { branchTip, branchExists, git, isSafeBranchName, readCheckout, readTreeAt, repositoryOf } from './git';
 import { assertUsableProjectId } from './workRecords';
 import {
 	MAX_PAGE,
@@ -201,7 +201,7 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		const basedOn = {
 			repository: basename(root),
 			branch,
-			commit: await branchCommit(root, branch).catch(() => null),
+			commit: await branchTip(root, branch),
 			...(product ? { product } : {}),
 		};
 		return recordPrototype(ctx.store(), { projectId, title: name.slice(0, 200), note: String(note).slice(0, 8000), me, basedOn, folder });
