@@ -42,6 +42,7 @@ import { OpenedCheckouts } from './services/session';
 import { type ShareRunner } from './services/share';
 import { siteDeploys } from './services/siteDeploys';
 import { StoryPreviews } from './services/storyPreviews';
+import { windowFolder } from './services/windowFolder';
 import { TokenBranches } from './services/tokenBranches';
 import { ValueBranches } from './services/valueBranches';
 import { ValueSources } from './services/valueSources';
@@ -250,7 +251,8 @@ export const ipcDeps = ({
 		const shown = library.current();
 		return typeof shown === 'string' ? null : shown;
 	};
-	const previews = new StoryPreviews({ system: shownSystem, folder: storyPreviewsRoot, server: prototypeServer, at: libraryShown.at });
+	// In a folder of this window's own: another window's DSNR builds in another, so neither deletes the other's builds.
+	const previews = new StoryPreviews({ system: shownSystem, folder: windowFolder(storyPreviewsRoot), server: prototypeServer, at: libraryShown.at });
 	// Which tokens each component draws with (T6), and its picture (P5), from one drawing pass.
 	const componentPictures = new ComponentPictures({ folder: componentPicturesRoot, server: prototypeServer, recipe: componentPictureRecipe });
 	const componentTokens =
