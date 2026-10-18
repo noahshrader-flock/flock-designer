@@ -44,7 +44,7 @@ export const PanelDialogs = ({
 	if (dialog.kind === 'account') return account.state === 'signedIn' ? <AccountDialog login={account.user.login} onClose={onClose} /> : null;
 	const project = projects?.find((p) => p.id === dialog.projectId);
 	if (!project) return null;
-	const codebase = workOf(project.iterations, 'codebase')[0];
+	const codebase = workOf(project.work, 'codebase')[0];
 	const newest = reviewsOf(project)[0];
 	switch (dialog.kind) {
 		case 'assign':

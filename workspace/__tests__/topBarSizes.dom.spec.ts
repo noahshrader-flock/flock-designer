@@ -32,8 +32,8 @@ describe('the top bar', () => {
 			createElement(Viewer, { config: { ...PAGE_CONFIG, states: ['default', 'panel'] }, slots: page.slots, signIn: PAGE_SIGN_IN }),
 		);
 		await settle();
-		// The way back, the version, the states, the history, light and dark, and Sign in to comment.
-		expect(controls().length).toBeGreaterThanOrEqual(7);
+		// The way back, the version, the states, light and dark, and Sign in to comment.
+		expect(controls().length).toBeGreaterThanOrEqual(6);
 		expect(controls().map(size)).toEqual(controls().map(() => expect.stringMatching(/^(sm|icon-sm)$/)));
 		expect(controls().includes(stateMenu() as HTMLElement)).toBe(true);
 		expect([...document.querySelectorAll<HTMLElement>('[aria-label="Theme"] [data-slot="toggle-group-item"]')].map(size)).toEqual(['sm', 'sm']);

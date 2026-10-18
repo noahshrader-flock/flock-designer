@@ -46,10 +46,10 @@ beforeAll(async () => {
 	mkdirSync(join(design, 'projects', 'demo', 'prototypes'), { recursive: true });
 	writeFileSync(join(design, 'projects', 'demo', 'brief.md'), '# Demo\n');
 	writeFileSync(
-		join(design, 'projects', 'demo', 'iterations.json'),
-		JSON.stringify([{ projectId: 'demo', name: 'v1-i1', branch: 'prototype/demo/v1-i1', commit: null, note: '', createdAt: '2026-10-01T10:00:00Z' }]),
+		join(design, 'projects', 'demo', 'work.json'),
+		JSON.stringify([{ projectId: 'demo', name: 'v1', branch: 'prototype/demo/v1', commit: null, note: '', createdAt: '2026-10-01T10:00:00Z' }]),
 	);
-	writeFileSync(join(design, 'projects', 'demo', 'prototypes', 'v1-i1.html'), PAGE);
+	writeFileSync(join(design, 'projects', 'demo', 'prototypes', 'v1.html'), PAGE);
 
 	// GitHub's sign-in page and the sign-in function, standing in.
 	fake = createServer((req, res) => {
@@ -167,7 +167,7 @@ describe.skipIf(NO_CHROME)('signing in to comment on the published site, in the 
 		await inChrome(async (browser) => {
 			const tab = await browser.newPage();
 			await answerGitHub(tab);
-			const page = `${base}demo/v1/i1/`;
+			const page = `${base}demo/v1/`;
 			await tab.goto(page, { waitUntil: 'load' });
 			await press(tab, 'Sign in to comment');
 			// Through GitHub's sign-in page and the site's front page, and back to the page it started on, signed in.
@@ -205,7 +205,7 @@ describe.skipIf(NO_CHROME)('signing in to comment on the published site, in the 
 		await inChrome(async (browser) => {
 			const tab = await browser.newPage();
 			await answerGitHub(tab);
-			await tab.goto(`${base}demo/v1/i1/`, { waitUntil: 'load' });
+			await tab.goto(`${base}demo/v1/`, { waitUntil: 'load' });
 			await press(tab, 'Sign in to comment');
 			await tab.waitForFunction(() => document.body.textContent?.includes('Signed in as outsider, who has no access to acme/design'), {
 				timeout: 20_000,

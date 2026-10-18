@@ -3,20 +3,20 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import type { ProjectIteration } from '../src/shared/contract';
+import type { ProjectWork } from '../src/shared/contract';
 import type { WorkspaceDescriptor } from '../src/main/services/descriptor';
 import { classify, patternToRegex, readBranchProjects } from '../src/main/services/branchProjects';
 import { recordsRootFor } from '../src/main/services/discovery';
-import { continueIteration, readIterations } from '../src/main/services/iterations';
+import { continueWork, readWork } from '../src/main/services/workRecords';
 import { unionLocal } from '../src/shared/projectList';
-import { projectIteration } from './fixtures';
+import { projectWork } from './fixtures';
 
 const descriptor: WorkspaceDescriptor = {
 	version: 1,
 	product: 'Coke',
 	contextDir: '.dsnr',
 	prototypeRoot: 'src/prototypes',
-	branchPattern: { prototype: 'fd/<project-id>/i<n>', codebase: 'feature/<project-id>' },
+	branchPattern: { codebase: 'feature/<project-id>' },
 	commands: [],
 	designSystem: { package: 'x' },
 };
@@ -29,19 +29,19 @@ describe('finding the design repository', () => {
 });
 
 describe('reading a branch as work', () => {
-	it("uses the repository's own patterns", () => {
-		expect(classify(descriptor, 'fd/users-inactivity-signal/i2')).toEqual({
-			projectId: 'users-inactivity-signal',
-			name: 'i2',
-			branch: 'fd/users-inactivity-signal/i2',
+	it("reads codebase work by the repository's own pattern", () => {
+		expect(classify(descriptor, 'feature/unused-roles-signal')).toEqual({
+			projectId: 'unused-roles-signal',
+			name: 'codebase',
+			branch: 'feature/unused-roles-signal',
 		});
-		expect(classify(descriptor, 'feature/unused-roles-signal')).toMatchObject({ projectId: 'unused-roles-signal', name: 'codebase' });
 	});
-	it('does not mistake ordinary branches for work', () => {
-		for (const b of ['develop', 'main', 'noah/flock-designer', 'fd/x', 'feature/Bad Name', 'fd/a/b/i1']) expect(classify(descriptor, b)).toBeNull();
+	it('does not mistake ordinary branches, or the prototype branches of old, for work', () => {
+		for (const b of ['develop', 'main', 'noah/flock-designer', 'fd/x', 'feature/Bad Name', 'fd/a/b/i1', 'fd/users/i2', 'prototype/users/v2'])
+			expect(classify(descriptor, b)).toBeNull();
 	});
 	it('builds a matcher from any pattern', () => {
-		expect(patternToRegex('work/<project-id>/v<n>').test('work/my-thing/v3')).toBe(true);
+		expect(patternToRegex('work/<project-id>').test('work/my-thing')).toBe(true);
 	});
 });
 
@@ -63,9 +63,11 @@ describe('work found in a real repository, with no record written', () => {
 		g('commit', '-q', '-m', 'first');
 		g('checkout', '-q', '-b', 'feature/real-change');
 		commitAs('Ada Lovelace', 'b.txt');
-		g('checkout', '-q', 'develop');
-		g('checkout', '-q', '-b', 'fd/real-change/i1');
 		commitAs('Grace Hopper', 'c.txt');
+		g('checkout', '-q', 'develop');
+		// A prototype branch of old, from before prototypes were pages: not work, so never listed.
+		g('checkout', '-q', '-b', 'fd/real-change/i1');
+		commitAs('Old Hand', 'd.txt');
 		g('checkout', '-q', 'develop');
 	});
 	afterEach(() => {
@@ -73,12 +75,12 @@ describe('work found in a real repository, with no record written', () => {
 		rmSync(records, { recursive: true, force: true });
 	});
 
-	it('lists it as a project, with its iterations and who committed', async () => {
+	it('lists it as a project, with its work and who committed', async () => {
 		const [p] = await readBranchProjects(root, descriptor, null, new Set(['real-change']));
 		expect(p?.id).toBe('real-change');
-		expect(p?.iterations.map((i) => i.name)).toEqual(['i1', 'codebase']);
+		expect(p?.work.map((i) => i.name)).toEqual(['codebase']);
 		expect(p?.people.map((x) => x.name).sort()).toEqual(['Ada Lovelace', 'Grace Hopper']);
-		expect(p?.iterations[0]?.commit).toMatch(/^[0-9a-f]{40}$/);
+		expect(p?.work[0]?.commit).toMatch(/^[0-9a-f]{40}$/);
 	});
 
 	it("ignores a feature branch no project vouches for, so teammates' tickets stay out", async () => {
@@ -93,32 +95,32 @@ describe('work found in a real repository, with no record written', () => {
 		expect(ids).toContain('real-change');
 	});
 
-	it('still shows a prototype branch with no record, which only this app creates', async () => {
-		const [p] = await readBranchProjects(root, descriptor, null, new Set());
-		expect(p?.id).toBe('real-change');
-		expect(p?.iterations.map((i) => i.name)).toEqual(['i1']);
+	it('lists nothing that no project vouches for: a prototype branch of old is no project', async () => {
+		expect(await readBranchProjects(root, descriptor, null, new Set())).toEqual([]);
 	});
 
 	it('credits the person running the app with their login', async () => {
 		g('config', 'user.name', 'Grace Hopper');
-		const [p] = await readBranchProjects(root, descriptor, 'ghopper');
+		const [p] = await readBranchProjects(root, descriptor, 'ghopper', new Set(['real-change']));
 		expect(p?.people.find((x) => x.name === 'Grace Hopper')?.login).toBe('ghopper');
 	});
 
 	it('opens work that has a branch but no record, and writes the record then', async () => {
-		expect(readIterations(records, 'real-change')).toEqual([]);
-		const opened = await continueIteration(root, records, 'real-change', 'codebase', null, descriptor);
+		expect(readWork(records, 'real-change')).toEqual([]);
+		const opened = await continueWork(root, records, 'real-change', 'codebase', null, descriptor);
 		expect(opened.branch).toBe('feature/real-change');
-		expect(readIterations(records, 'real-change').map((i) => i.name)).toEqual(['codebase']);
+		expect(readWork(records, 'real-change').map((i) => i.name)).toEqual(['codebase']);
 	});
 
-	it('still refuses an iteration that has neither a record nor a branch', async () => {
-		await expect(continueIteration(root, records, 'real-change', 'i9', null, descriptor)).rejects.toThrow(/no iteration called i9/);
+	it('still refuses work that has no record, and is not codebase work on its branch', async () => {
+		await expect(continueWork(root, records, 'real-change', 'v9', null, descriptor)).rejects.toThrow(/real-change has no v9\./);
+		// Nor is a prototype branch of old read as work, even with the name it would once have had.
+		await expect(continueWork(root, records, 'real-change', 'i1', null, descriptor)).rejects.toThrow(/real-change has no i1\./);
 	});
 });
 
 describe('unionLocal', () => {
-	const it1 = (branch: string, over: Partial<ProjectIteration> = {}): ProjectIteration => projectIteration({ name: 'i1', branch, ...over });
+	const it1 = (branch: string, over: Partial<ProjectWork> = {}): ProjectWork => projectWork({ name: 'v1', branch, ...over });
 	it('keeps what a record says and adds branches it did not know about', () => {
 		const rec = [
 			{
@@ -126,15 +128,17 @@ describe('unionLocal', () => {
 				title: 'A, from the brief',
 				folder: null,
 				records: ['brief.md'],
-				iterations: [it1('fd/a/i1', { previewUrl: 'https://p' })],
+				work: [it1('prototype/a/v1', { previewUrl: 'https://p' })],
 				people: [],
 			},
 		];
-		const git = [{ id: 'a', title: 'a', folder: null, records: [], iterations: [it1('fd/a/i1', { commit: 'abc' }), it1('fd/a/i2')], people: [] }];
+		const git = [
+			{ id: 'a', title: 'a', folder: null, records: [], work: [it1('prototype/a/v1', { commit: 'abc' }), it1('prototype/a/v2')], people: [] },
+		];
 		const [u] = unionLocal(rec, git);
 		expect(u?.title).toBe('A, from the brief');
-		expect(u?.iterations.find((i) => i.branch === 'fd/a/i1')).toMatchObject({ previewUrl: 'https://p', commit: 'abc' });
-		expect(u?.iterations).toHaveLength(2);
+		expect(u?.work.find((i) => i.branch === 'prototype/a/v1')).toMatchObject({ previewUrl: 'https://p', commit: 'abc' });
+		expect(u?.work).toHaveLength(2);
 	});
 });
 

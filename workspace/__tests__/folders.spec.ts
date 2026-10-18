@@ -142,7 +142,7 @@ describe('a project’s folder, when this machine and GitHub both know the proje
 		title: 'Alpha',
 		folder: null,
 		records: ['brief.md'],
-		iterations: [],
+		work: [],
 		people: [],
 		...over,
 	});
@@ -215,7 +215,7 @@ describe('assigning a project a folder', () => {
 });
 
 describe('the folders in use', () => {
-	const p = (id: string, folder: string | null): Project => ({ id, title: id, records: [], iterations: [], people: [], folder });
+	const p = (id: string, folder: string | null): Project => ({ id, title: id, records: [], work: [], people: [], folder });
 
 	it('are each folder a project is in, once whatever its case, as the first project in the list spells it, in order', () => {
 		expect(foldersOf([p('a', 'roles'), p('b', 'Admin'), p('c', 'ROLES'), p('d', null), p('e', 'admin')])).toEqual(['Admin', 'roles']);

@@ -1,11 +1,11 @@
 import type { ReviewComment } from './comments';
 
-/** Projects and their iterations: what is kept of them, and how the window shows them. */
+/** Projects and their work: what is kept of them, and how the window shows them. */
 
 /** One named attempt at the question, tied to a branch and a commit. */
-export interface Iteration {
+export interface Work {
 	projectId: string;
-	/** `v2-i3` (`i1` when written before versions), or `codebase`. */
+	/** A prototype's version, `v2`, or `codebase`. */
 	name: string;
 	branch: string;
 	/** Null until the iteration has a commit. */
@@ -45,14 +45,16 @@ export interface Iteration {
 	 * hash. Written after the picture is, by the machine the page was built on.
 	 */
 	cover?: string;
+	/** For a prototype: the version it was started from, `v1`; absent when it was a new idea of its own. */
+	from?: string;
 }
 
 /**
  * The two kinds of work. A **prototype** is one page built from the real components, saved in the design
- * repository and named by version and iteration, `v2-i3` (the older ones made as code on `fd/` branches count as prototypes too).
- * **Codebase** work is the real change, on the project's one `feature/` branch.
+ * repository, each version of it named by one number, `v2`. **Codebase** work is the real change, on the project's one
+ * `feature/` branch.
  */
-export type IterationKind = 'prototype' | 'codebase';
+export type WorkKind = 'prototype' | 'codebase';
 
 /** Where Build in the codebase handed the building: VS Code's Claude Code panel, or a command to start it in a terminal. */
 export interface BuildInCodebase {
@@ -117,8 +119,8 @@ export interface Project {
 	folder: string | null;
 	/** Files present in the project folder, for showing what a project has. */
 	records: string[];
-	/** Its iterations, from its records and this machine's branches, in `iterationOrder`. */
-	iterations: ProjectIteration[];
+	/** Its work, from its records and this machine's branches, in `workOrder`. */
+	work: ProjectWork[];
 	/** Everyone who has committed to the project: code on any iteration, or its design-repo folder. */
 	people: Person[];
 	/**
@@ -131,7 +133,7 @@ export interface Project {
 	localOnly?: boolean;
 }
 
-export interface ProjectIteration {
+export interface ProjectWork {
 	name: string;
 	branch: string;
 	/** The issue that carries this iteration's comments, once one exists. */
@@ -170,7 +172,7 @@ export interface ProjectIteration {
 	/** Codebase work: its repository on GitHub (`owner/repo`) and its pull request, when the record says. Read with `codeLink`. */
 	repository: string | null;
 	pullRequest: string | null;
-	/** A prototype's picture, by the hash on its record (`Iteration.cover`); null when it has none yet. Read with `coverToShow`. */
+	/** A prototype's picture, by the hash on its record (`Work.cover`); null when it has none yet. Read with `coverToShow`. */
 	cover: string | null;
 }
 
@@ -203,6 +205,6 @@ export type PageStatus =
 export interface PrototypeAddressed {
 	changed: boolean;
 	iteration: string;
-	made: Iteration | null;
+	made: Work | null;
 	comment: ReviewComment;
 }

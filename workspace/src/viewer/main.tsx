@@ -2,7 +2,7 @@ import './viewer.css';
 import { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { TooltipProvider } from '../renderer/ui/tooltip';
-import { type Relay, isServedHere, iterationAddress, keyFromAddress, listenForDsnr, serverRelay } from './relay';
+import { type Relay, isServedHere, versionAddress, keyFromAddress, listenForDsnr, serverRelay } from './relay';
 import { applyScheme, systemIsDark, watchSystemScheme } from './scheme';
 import { Viewer, type ViewerConfig, type ViewerSlots } from './Viewer';
 import { saveToken } from './browserAdapter';
@@ -38,7 +38,7 @@ const InPage = ({ config, slots }: { config: ViewerConfig; slots: ViewerSlots })
 	useEffect(() => applyScheme(document, editor ?? system, editor !== null), [editor, system]);
 	// Opened from DSNR in the browser: after Address, to the iteration it showed its change in (the tab shows it in VS Code).
 	const onAddressed = (name: string) => {
-		const to = iterationAddress(config.projectHref, name, location.href.split('#')[0] as string);
+		const to = versionAddress(config.projectHref, name, location.href.split('#')[0] as string);
 		if (to === location.href.split('#')[0]) location.reload();
 		else if (to !== null) location.assign(to);
 	};

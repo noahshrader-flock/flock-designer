@@ -2,7 +2,6 @@ import type { Project } from '../../src/shared/domain/projects';
 import { type ReactNode, useEffect, useState } from 'react';
 import { foldersOf, inFolder } from '../../src/shared/brief';
 import { plural } from '../../src/shared/plural';
-import { byVersion } from '../../src/shared/prototypeNames';
 import { useCover } from '../../src/renderer/useCover';
 import { matchesProject, openCommentsOf } from '../../src/shared/projectList';
 import { type CodebaseAction, type PanelDialog, type Review, reviewsOf } from '../src/messages';
@@ -37,12 +36,11 @@ import { useOpenTabs } from './openTabs';
 import type { View } from './vscode';
 
 /**
- * What a project has, in a line: its versions (the ideas tried: an iteration is a small change within one, so they are not
- * counted; work in the code is not a version), then what its section does not say of it (its folder, across products; that it
- * has no product, or where else it is).
+ * What a project has, in a line: its versions (the ideas tried; work in the code is not a version), then what its section
+ * does not say of it (its folder, across products; that it has no product, or where else it is).
  */
 const meta = (p: Project, labels: string[]) => {
-	const versions = byVersion(p.iterations).length;
+	const versions = workOf(p.work, 'prototype').length;
 	return [...(versions > 0 ? [plural(versions, 'version')] : []), ...labels].join(' · ');
 };
 
@@ -68,7 +66,7 @@ const ProjectItem = ({
 	onCodebase,
 }: {
 	project: Project;
-	/** What its line says beside its iterations: what its section does not. */
+	/** What its line says beside its versions: what its section does not. */
 	labels: string[];
 	view: View;
 	onOpen: (review: Review) => void;
@@ -79,9 +77,9 @@ const ProjectItem = ({
 	onCodebase: (action: CodebaseAction, projectId: string) => void;
 }) => {
 	const shown = useOpenTabs();
-	const open = openCommentsOf(project.iterations);
+	const open = openCommentsOf(project.work);
 	const newest = reviewsOf(project)[0];
-	const inCode = workOf(project.iterations, 'codebase').length > 0;
+	const inCode = workOf(project.work, 'codebase').length > 0;
 	const badge = open > 0 ? <Badge tone="brand" count={open} label={plural(open, 'open comment')} /> : undefined;
 	const id = project.id;
 	// What it offers, in groups: the link to copy; where it opens (the published page as reviewers see it, and the prototype in
@@ -325,7 +323,7 @@ export const Projects = ({
 			)}
 			{projects.length === 0 ? (
 				<EmptyState icon="folder-library" title="No projects yet">
-					<p>A prototype you start appears here, with its iterations and its open comments.</p>
+					<p>A prototype you start appears here, with its versions and its open comments.</p>
 					<Button onClick={onNew}>New prototype</Button>
 				</EmptyState>
 			) : matching.length === 0 || (here.length === 0 && search.trim() !== '') ? (

@@ -16,9 +16,9 @@ const request: ShareRequest = {
 	share,
 	kind: 'prototype',
 	projectId: 'demo',
-	name: 'i1',
-	branch: 'fd/demo/i1',
-	title: 'Preview: demo i1',
+	name: 'v1',
+	branch: 'prototype/demo/v1',
+	title: 'Preview: demo v1',
 	body: 'body',
 };
 const timings = { pollMs: 10, startupMs: 100, timeoutMs: 1000, skewMs: 50 };
@@ -135,7 +135,7 @@ describe('runShare', () => {
 
 describe('the pull request text', () => {
 	it('says it is a preview and not for merge, and where the record is', () => {
-		const { title, body } = pullRequestText('demo', 'i1');
+		const { title, body } = pullRequestText('demo', 'v1');
 		expect(title).toMatch(/not for merge/);
 		expect(body).toMatch(/draft pull request/);
 		expect(body).toMatch(/should not be merged/);
@@ -164,11 +164,11 @@ describe('ShareRunner', () => {
 			record: async (url, prUrl) => void recorded.push([url, prUrl]),
 		});
 		await flush();
-		expect(seen[0]).toMatchObject({ state: 'running', projectId: 'demo', name: 'i1' });
+		expect(seen[0]).toMatchObject({ state: 'running', projectId: 'demo', name: 'v1' });
 		expect(seen.at(-1)).toEqual({
 			state: 'ready',
 			projectId: 'demo',
-			name: 'i1',
+			name: 'v1',
 			url: 'https://dev-coke-pr-42.example.test',
 			prUrl: 'https://github.test/o/r/pull/42',
 		});
@@ -193,7 +193,7 @@ describe('ShareRunner', () => {
 		const runner = new ShareRunner(() => undefined);
 		const h = harness({ checkSequence: [[check('pending')]], sleep: () => new Promise((r) => setTimeout(r, 5)) });
 		runner.start({ request, tools: h.tools, timings: { ...timings, timeoutMs: 10_000 }, record: async () => undefined });
-		expect(() => runner.start({ request, tools: h.tools, timings, record: async () => undefined })).toThrow(/Already sharing demo i1/);
+		expect(() => runner.start({ request, tools: h.tools, timings, record: async () => undefined })).toThrow(/Already sharing demo v1/);
 		runner.stop();
 	});
 

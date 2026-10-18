@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import type { Iteration, Person } from '../../shared/contract';
+import type { Work, Person } from '../../shared/contract';
 import type { WorkspaceDescriptor } from './descriptor';
 import {
 	branchAuthors,
@@ -14,11 +14,11 @@ import {
 	repositoryOf,
 } from './git';
 import { resolveInside } from './paths';
-import { parsePrototypeName } from '../../shared/prototypeNames';
 import { PROJECT_ID } from '../../shared/validate';
-import { parseIterations, serializeIterations } from '../../shared/iterationRecords';
+import { parseWork, serializeWork } from '../../shared/workRecords';
 import { writeAtomic } from './jsonFile';
 import { loginFromNoreply } from '../../shared/hostUrls';
+import { WORK_FILE } from '../../shared/designPaths';
 
 /**
  * Named attempts at the question, and the record of them.
@@ -30,15 +30,8 @@ import { loginFromNoreply } from '../../shared/hostUrls';
  * keep per-project state off `develop`.
  *
  * Writing it into the checkout also dirties the working tree, which then blocks
- * the next iteration on its own bookkeeping. That is how this was found.
+ * the next piece of work on its own bookkeeping. That is how this was found.
  */
-
-/**
- * `fd/<project-id>/i<n>` from the repository's own pattern, never hard-coded. Prototypes were once made on these
- * branches; they are no longer, and this is only for reading the ones that exist.
- */
-export const branchFor = (descriptor: WorkspaceDescriptor, projectId: string, n: number): string =>
-	descriptor.branchPattern.prototype.replace('<project-id>', projectId).replace('<n>', String(n));
 
 /**
  * A project id becomes a directory and a branch name, so it is checked here
@@ -50,25 +43,25 @@ export const assertUsableProjectId = (projectId: string): void => {
 	}
 };
 
-/** A project's records file, `iterations.json`, inside the records folder. */
+/** A project's records file, `work.json`, inside the records folder. */
 export const recordPath = (recordsRoot: string, projectId: string): string => {
 	assertUsableProjectId(projectId);
-	return resolveInside(recordsRoot, join(projectId, 'iterations.json'));
+	return resolveInside(recordsRoot, join(projectId, WORK_FILE));
 };
 
-export const readIterations = (recordsRoot: string, projectId: string): Iteration[] => {
+export const readWork = (recordsRoot: string, projectId: string): Work[] => {
 	const path = recordPath(recordsRoot, projectId);
 	if (!existsSync(path)) {
 		return [];
 	}
-	const parsed = parseIterations(readFileSync(path, 'utf8'));
-	if (parsed === null) throw new Error(`${join(projectId, 'iterations.json')} is not a readable list of records.`);
+	const parsed = parseWork(readFileSync(path, 'utf8'));
+	if (parsed === null) throw new Error(`${join(projectId, WORK_FILE)} is not a readable list of records.`);
 	return parsed;
 };
 
-const writeIterations = (recordsRoot: string, projectId: string, iterations: Iteration[]): void => {
+const writeWork = (recordsRoot: string, projectId: string, records: Work[]): void => {
 	// Whole, so a reader never sees half a list, which it would refuse.
-	writeAtomic(recordPath(recordsRoot, projectId), serializeIterations(iterations));
+	writeAtomic(recordPath(recordsRoot, projectId), serializeWork(records));
 };
 
 /** The one `feature/<project-id>` branch for real-code work. */
@@ -82,15 +75,15 @@ export const codebaseBranchFor = (descriptor: WorkspaceDescriptor, projectId: st
  * Codebase work is one branch per project, so if it already exists -- someone started it by hand,
  * which is how the first ones were made -- it is adopted rather than refused, and recorded.
  */
-export const createIteration = async (
+export const createCodebaseWork = async (
 	productRoot: string,
 	recordsRoot: string,
 	descriptor: WorkspaceDescriptor,
 	projectId: string,
 	note: string,
 	from: string,
-): Promise<Iteration> => {
-	const existing = readIterations(recordsRoot, projectId);
+): Promise<Work> => {
+	const existing = readWork(recordsRoot, projectId);
 	const name = 'codebase';
 	const branch = codebaseBranchFor(descriptor, projectId);
 	if (existing.some((i) => i.name === name)) {
@@ -106,7 +99,7 @@ export const createIteration = async (
 
 	// Where it is on GitHub, so the project links to it for people without the repository.
 	const repository = await repositoryOf(productRoot);
-	const iteration: Iteration = {
+	const record: Work = {
 		projectId,
 		name,
 		branch,
@@ -115,8 +108,8 @@ export const createIteration = async (
 		note,
 		...(repository ? { repository } : {}),
 	};
-	writeIterations(recordsRoot, projectId, [...existing, iteration]);
-	return iteration;
+	writeWork(recordsRoot, projectId, [...existing, record]);
+	return record;
 };
 
 /**
@@ -124,7 +117,7 @@ export const createIteration = async (
  * without guessing: a noreply address names its account, and the person running
  * this app is signed in as themselves, so their own commits (matched on the
  * git identity they commit under) carry their login. Everyone else stays a
- * name until they open an iteration of their own.
+ * name until they open work of their own.
  */
 export const peopleOn = async (productRoot: string, branch: string, signedInLogin: string | null): Promise<Person[]> => {
 	const me = await localIdentity(productRoot);
@@ -135,7 +128,7 @@ export const peopleOn = async (productRoot: string, branch: string, signedInLogi
 };
 
 /**
- * Saves where reviewers can open an iteration. Only the record changes; publishing it is the
+ * Saves where reviewers can open a piece of work. Only the record changes; publishing it is the
  * caller's step, so a person who is signed out still keeps the address.
  */
 export const recordPreview = (
@@ -147,15 +140,15 @@ export const recordPreview = (
 	commit?: string,
 	/** The pull request the preview was built from. */
 	pullRequest?: string,
-): Iteration => {
-	const iterations = readIterations(recordsRoot, projectId);
-	const found = iterations.find((i) => i.name === name);
-	if (!found) throw new Error(`${projectId} has no iteration called ${name}.`);
+): Work => {
+	const records = readWork(recordsRoot, projectId);
+	const found = records.find((i) => i.name === name);
+	if (!found) throw new Error(`${projectId} has no ${name}.`);
 	const updated = { ...found, previewUrl, ...(commit ? { commit } : {}), ...(pullRequest ? { pullRequest } : {}) };
-	writeIterations(
+	writeWork(
 		recordsRoot,
 		projectId,
-		iterations.map((i) => (i.name === name ? updated : i)),
+		records.map((i) => (i.name === name ? updated : i)),
 	);
 	return updated;
 };
@@ -165,28 +158,25 @@ export const recordPreview = (
  * ready. Written only when it changes, so asking again writes nothing. Publishing it is the caller's step, as a preview's is.
  */
 export const recordHandoff = (recordsRoot: string, projectId: string, readyAt: string | null): void => {
-	const iterations = readIterations(recordsRoot, projectId);
-	const found = iterations.find((i) => i.name === 'codebase');
+	const records = readWork(recordsRoot, projectId);
+	const found = records.find((i) => i.name === 'codebase');
 	if (!found || (found.readyAt ?? null) === readyAt) return;
 	const { readyAt: _was, ...rest } = found;
 	const updated = readyAt === null ? rest : { ...rest, readyAt };
-	writeIterations(
+	writeWork(
 		recordsRoot,
 		projectId,
-		iterations.map((i) => (i === found ? updated : i)),
+		records.map((i) => (i === found ? updated : i)),
 	);
 };
 
 /**
- * Work started outside the app (an agent in a terminal, or by hand) has a branch and no record. The branch is
- * the evidence, so the record is made from it rather than refusing the work: null only if the branch is not there.
+ * Codebase work started outside the app (an agent in a terminal, or by hand) has a branch and no record. The branch is
+ * the evidence, so the record is made from it rather than refusing the work: null only if the branch is not there. A
+ * prototype is a page, never a branch, so it is never made this way.
  */
-const adoptUnrecorded = async (productRoot: string, descriptor: WorkspaceDescriptor, projectId: string, name: string): Promise<Iteration | null> => {
-	// Only an old-form name (`i3`) can be an older prototype branch (`fd/<id>/i3`). A versioned name is a page,
-	// never a branch, so it is never read as one.
-	const old = parsePrototypeName(name);
-	const branch =
-		name === 'codebase' ? codebaseBranchFor(descriptor, projectId) : old?.legacy ? branchFor(descriptor, projectId, old.iteration) : null;
+const adoptUnrecorded = async (productRoot: string, descriptor: WorkspaceDescriptor, projectId: string, name: string): Promise<Work | null> => {
+	const branch = name === 'codebase' ? codebaseBranchFor(descriptor, projectId) : null;
 	if (!branch || !(await branchExists(productRoot, branch))) return null;
 	// Dated from the work itself, not from the moment the app first needed a record for it.
 	const createdAt = (await branchStartedAt(productRoot, branch)) ?? new Date().toISOString();
@@ -194,53 +184,53 @@ const adoptUnrecorded = async (productRoot: string, descriptor: WorkspaceDescrip
 };
 
 /**
- * An iteration's record, written now if the work has none. Everything that acts on an iteration (sharing it,
+ * A piece of work's record, written now if it has none. Everything that acts on one (sharing it,
  * addressing its comments, saying which commit a comment was made against) goes through this, so work an agent
  * built in a terminal behaves exactly like work made in the app, whether or not the app ever switched branches for it.
  */
-export const recordedIteration = async (
+export const recordedWork = async (
 	productRoot: string,
 	recordsRoot: string,
 	descriptor: WorkspaceDescriptor,
 	projectId: string,
 	name: string,
-): Promise<Iteration> => {
-	const existing = readIterations(recordsRoot, projectId);
+): Promise<Work> => {
+	const existing = readWork(recordsRoot, projectId);
 	const found = existing.find((i) => i.name === name);
 	if (found) return found;
 	const adopted = await adoptUnrecorded(productRoot, descriptor, projectId, name);
-	if (!adopted) throw new Error(`${projectId} has no iteration called ${name}.`);
-	writeIterations(recordsRoot, projectId, [...existing, adopted]);
+	if (!adopted) throw new Error(`${projectId} has no ${name}.`);
+	writeWork(recordsRoot, projectId, [...existing, adopted]);
 	return adopted;
 };
 
-export const continueIteration = async (
+export const continueWork = async (
 	productRoot: string,
 	recordsRoot: string,
 	projectId: string,
 	name: string,
 	signedInLogin: string | null,
 	descriptor: WorkspaceDescriptor,
-): Promise<Iteration> => {
-	let iterations = readIterations(recordsRoot, projectId);
-	let iteration = iterations.find((i) => i.name === name);
-	if (!iteration) {
+): Promise<Work> => {
+	let records = readWork(recordsRoot, projectId);
+	let record = records.find((i) => i.name === name);
+	if (!record) {
 		const adopted = await adoptUnrecorded(productRoot, descriptor, projectId, name);
 		if (adopted) {
-			iteration = adopted;
-			iterations = [...iterations, adopted];
+			record = adopted;
+			records = [...records, adopted];
 		}
 	}
-	if (!iteration) {
-		throw new Error(`${projectId} has no iteration called ${name}.`);
+	if (!record) {
+		throw new Error(`${projectId} has no ${name}.`);
 	}
-	await checkoutBranch(productRoot, iteration.branch);
+	await checkoutBranch(productRoot, record.branch);
 
 	// Recorded on return, so the record tracks where the branch actually is
 	// rather than where it started.
 	const commit = await headCommit(productRoot);
-	const contributors = await peopleOn(productRoot, iteration.branch, signedInLogin);
-	const updated = iterations.map((i) => (i.name === name ? { ...i, commit, contributors } : i));
-	writeIterations(recordsRoot, projectId, updated);
-	return { ...iteration, commit, contributors };
+	const contributors = await peopleOn(productRoot, record.branch, signedInLogin);
+	const updated = records.map((i) => (i.name === name ? { ...i, commit, contributors } : i));
+	writeWork(recordsRoot, projectId, updated);
+	return { ...record, commit, contributors };
 };

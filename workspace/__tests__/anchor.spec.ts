@@ -129,16 +129,16 @@ describe('addressed marker', () => {
 	});
 
 	it("on a prototype, says which iteration the change is in, and only ever a prototype's name", () => {
-		const marked = withAddressed(anchored(), 'abc1234def56', 'v1-i2');
+		const marked = withAddressed(anchored(), 'abc1234def56', 'v12');
 		expect(addressedAt(marked)).toBe('abc1234def56');
-		expect(addressedIn(marked)).toBe('v1-i2');
+		expect(addressedIn(marked)).toBe('v12');
 		expect(stripAnchor(marked)).toBe('Remove this text');
 		expect(addressedIn(withAddressed('x', 'abc1234'))).toBeNull();
 		expect(addressedIn(withAddressed('x', 'abc1234', 'codebase'))).toBeNull();
 		expect(withAddressed('x', 'abc1234', '--> <script>')).toBe(withAddressed('x', 'abc1234'));
 		// Moved on again: the mark is replaced, never doubled.
-		const again = withAddressed(marked, 'fedcba987654', 'v1-i3');
-		expect(addressedIn(again)).toBe('v1-i3');
+		const again = withAddressed(marked, 'fedcba987654', 'v13');
+		expect(addressedIn(again)).toBe('v13');
 		expect(again.match(/fd-addressed/g)).toHaveLength(1);
 	});
 
@@ -272,7 +272,7 @@ describe('what kind of element, and where it sits', () => {
 
 describe('the theme a comment was made in', () => {
 	it('is kept when it is light or dark, and dropped when it is anything else', () => {
-		const base = { route: '/demo/v1-i1/', selector: 'main', nearbyText: '', viewport: { width: 1, height: 1 }, commit: '' };
+		const base = { route: '/demo/v1/', selector: 'main', nearbyText: '', viewport: { width: 1, height: 1 }, commit: '' };
 		expect(sanitizeAnchor({ ...base, theme: 'dark' })?.theme).toBe('dark');
 		expect(sanitizeAnchor({ ...base, theme: 'light' })?.theme).toBe('light');
 		for (const bad of ['system', '<script>', 3, null]) expect(sanitizeAnchor({ ...base, theme: bad })).not.toHaveProperty('theme');

@@ -1,13 +1,13 @@
 import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import type { Iteration } from '../shared/contract';
+import type { Work } from '../shared/contract';
 import { escapeHtml, firstInHead } from '../shared/html';
 import { fromBrief } from '../shared/brief';
-import { SHARED_DIR, SHARED_REF, isPrototypeKey, sitePath } from '../shared/designPaths';
-import { parsePrototypeName } from '../shared/prototypeNames';
-import { iterationLabel, projectCodeLink } from '../shared/work';
+import { SHARED_DIR, SHARED_REF, isPrototypeKey, sitePath, WORK_FILE } from '../shared/designPaths';
+import { parseVersion } from '../shared/prototypeNames';
+import { workLabel, projectCodeLink } from '../shared/work';
 import { statesOf } from '../shared/prototypeStates';
-import { parseIterations } from '../shared/iterationRecords';
+import { parseWork } from '../shared/workRecords';
 import { plural } from '../shared/plural';
 import { extensionOf } from '../shared/mime';
 import type { RepoRef } from '../shared/repoRef';
@@ -16,14 +16,13 @@ import type { SignInConfig } from '../shared/signInConfig';
 
 /**
  * The site prototypes are published as, built from the design repository: every project with a saved page, every
- * version and iteration of it, and an index, at addresses that follow the project's structure.
+ * version of it, and an index, at addresses that follow the project's structure.
  *
  * ```text
- * /                       the projects
- * /<project>/             its versions side by side, each with its iterations
- * /<project>/v1/i2/       one iteration: its page, under a bar that names the project and switches between them
- * /<project>/v1/latest/   the newest iteration of version 1
- * /<project>/latest/      the newest version's newest iteration
+ * /                    the projects
+ * /<project>/          its versions, the newest first
+ * /<project>/v2/       one version: its page, under a bar that names the project and switches between them
+ * /<project>/latest/   the newest version
  * ```
  *
  * **Built from the repository, in full, every time,** so two people publishing never overwrite each other's pages, and
@@ -35,10 +34,10 @@ export interface SiteInput {
 	designRoot: string;
 	/** Where the site is written. Cleared first, but only if it is a site this made, or empty. */
 	outDir: string;
-	/** How many comments each iteration has, by its key (`prototype/<project>/<name>`), when they could be read. */
+	/** How many comments each version has, by its key (`prototype/<project>/<name>`), when they could be read. */
 	comments?: Map<string, number>;
 	/**
-	 * Comments on each iteration's page: the built viewer (`viewer.js`, `viewer.css`), and the repository whose review
+	 * Comments on each version's page: the built viewer (`viewer.js`, `viewer.css`), and the repository whose review
 	 * threads they are. Without it the pages are as they were, with nothing to comment with.
 	 */
 	viewer?: { dir: string; ref: RepoRef };
@@ -73,22 +72,21 @@ export interface SiteSummary {
 const MARK = '.flock-designer-site';
 
 interface Page {
-	record: Iteration;
+	record: Work;
 	version: number;
-	iteration: number;
-	/** Where it is from its project's folder: `v1/i2/`. */
+	/** Where it is from its project's folder: `v2/`. */
 	path: string;
 }
 interface SiteProject {
 	id: string;
 	title: string;
-	/** Oldest version first; each version's iterations newest first. */
-	versions: { version: number; pages: Page[] }[];
+	/** Newest version first. */
+	versions: Page[];
 	/** Where its codebase work is on GitHub (`codeLink`): its pull request, else its branch. */
 	builtInCode: string | null;
 }
 
-const labelOf = (p: Page): string => iterationLabel(p.record);
+const labelOf = (p: Page): string => workLabel(p.record);
 const dateOf = (iso: string | undefined): string | null => {
 	const d = iso ? new Date(iso) : null;
 	return d && !Number.isNaN(d.getTime()) ? d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }) : null;
@@ -106,29 +104,23 @@ const readProjects = (designRoot: string): SiteProject[] => {
 	return ids.flatMap((id): SiteProject[] => {
 		const dir = join(projectsDir, id);
 		// A project whose records cannot be read has nothing to show; the rest of the site is still built.
-		const path = join(dir, 'iterations.json');
-		const records = existsSync(path) ? parseIterations(readFileSync(path, 'utf8')) : null;
+		const path = join(dir, WORK_FILE);
+		const records = existsSync(path) ? parseWork(readFileSync(path, 'utf8')) : null;
 		if (records === null) return [];
 		const pages = records.flatMap((record): Page[] => {
-			const name = parsePrototypeName(record.name);
+			const version = parseVersion(record.name);
 			const saved = existsSync(join(dir, 'prototypes', `${record.name}.html`));
 			const at = sitePath(id, record.name);
-			return name && at && isPrototypeKey(record.branch) && saved
-				? [{ record, version: name.version, iteration: name.iteration, path: at.slice(id.length + 1) }]
-				: [];
+			return version !== null && at && isPrototypeKey(record.branch) && saved ? [{ record, version, path: at.slice(id.length + 1) }] : [];
 		});
 		if (pages.length === 0) return [];
-		const byVersion = new Map<number, Page[]>();
-		for (const p of pages) byVersion.set(p.version, [...(byVersion.get(p.version) ?? []), p]);
 		const brief = existsSync(join(dir, 'brief.md')) ? readFileSync(join(dir, 'brief.md'), 'utf8') : '';
 		return [
 			{
 				id,
 				title: fromBrief(id, brief).title,
-				versions: [...byVersion.entries()]
-					.sort(([a], [b]) => a - b)
-					.map(([version, ps]) => ({ version, pages: ps.sort((a, b) => b.iteration - a.iteration) })),
-				builtInCode: projectCodeLink({ iterations: records }),
+				versions: pages.sort((a, b) => b.version - a.version),
+				builtInCode: projectCodeLink({ work: records }),
 			},
 		];
 	});
@@ -163,10 +155,7 @@ main h1 { font-size: 22px; font-weight: 600; margin: 0 0 20px; }
 .list { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
 .list a { display: block; padding: 12px 14px; border: 1px solid #8884; border-radius: 8px; text-decoration: none; }
 .list a:hover { border-color: #888c; }
-.versions { display: flex; gap: 16px; align-items: flex-start; overflow-x: auto; }
-.version { min-width: 220px; flex: 0 0 auto; }
-.version h2 { font-size: 15px; font-weight: 600; margin: 0 0 8px; }
-/* An iteration fills the window: the app's own toolbar, then the prototype, and beside it the comments' panel when it is open. */
+/* A version fills the window: the app's own toolbar, then the prototype, and beside it the comments' panel when it is open. */
 .viewer { display: flex; flex-direction: column; height: 100vh; height: 100dvh; }
 .stage { display: flex; flex: 1; min-height: 0; }
 .stage iframe { display: block; flex: 1; min-width: 0; height: 100%; border: 0; }
@@ -213,7 +202,7 @@ const indexPage = (projects: SiteProject[], head = ''): string =>
 				const n = p.versions.length;
 				const newest = dateOf(
 					p.versions
-						.flatMap((v) => v.pages.map((pg) => pg.record.createdAt ?? ''))
+						.map((pg) => pg.record.createdAt ?? '')
 						.sort()
 						.at(-1),
 				);
@@ -226,23 +215,18 @@ const indexPage = (projects: SiteProject[], head = ''): string =>
 const projectPage = (p: SiteProject, comments: Map<string, number> | undefined): string =>
 	shell(
 		p.title,
-		`<main>\n<p class="muted"><a href="../">All prototypes</a></p>\n<h1>${escapeHtml(p.title)}</h1>\n${p.builtInCode ? `<p><a href="${escapeHtml(p.builtInCode)}">Built in code</a></p>\n` : ''}<div class="versions">\n${p.versions
-			.map(
-				(v) =>
-					`<section class="version">\n<h2>V${v.version}</h2>\n<ul class="list">\n${v.pages
-						.map((pg) => {
-							const date = dateOf(pg.record.createdAt);
-							const author = pg.record.contributors?.[0]?.name;
-							const count = comments?.get(pg.record.branch);
-							const facts = [date, author, count === undefined ? null : plural(count, 'comment')].filter(Boolean);
-							return `<li><a href="${pg.path}"><strong>I${pg.iteration}</strong>${facts.length ? `<br><span class="muted">${facts.map((f) => escapeHtml(String(f))).join(' · ')}</span>` : ''}</a></li>`;
-						})
-						.join('\n')}\n</ul>\n</section>`,
-			)
-			.join('\n')}\n</div>\n</main>`,
+		`<main>\n<p class="muted"><a href="../">All prototypes</a></p>\n<h1>${escapeHtml(p.title)}</h1>\n${p.builtInCode ? `<p><a href="${escapeHtml(p.builtInCode)}">Built in code</a></p>\n` : ''}<ul class="list">\n${p.versions
+			.map((pg) => {
+				const date = dateOf(pg.record.createdAt);
+				const author = pg.record.contributors?.[0]?.name;
+				const count = comments?.get(pg.record.branch);
+				const facts = [date, author, count === undefined ? null : plural(count, 'comment')].filter(Boolean);
+				return `<li><a href="${pg.path}"><strong>${labelOf(pg)}</strong>${facts.length ? `<br><span class="muted">${facts.map((f) => escapeHtml(String(f))).join(' · ')}</span>` : ''}</a></li>`;
+			})
+			.join('\n')}\n</ul>\n</main>`,
 	);
 
-/** What the page's bar and comments are told: which iteration this is, where the others are, and the states the page has. */
+/** What the page's bar and comments are told: which version this is, where the others are, and the states the page has. */
 const viewerConfig = (ref: RepoRef, p: SiteProject, current: Page, states: string[]): string =>
 	jsonScript('dsnr-config', {
 		owner: ref.owner,
@@ -250,8 +234,8 @@ const viewerConfig = (ref: RepoRef, p: SiteProject, current: Page, states: strin
 		projectId: p.id,
 		name: current.record.name,
 		title: p.title,
-		projectHref: '../../',
-		iterations: p.versions.flatMap((v) => v.pages.map((pg) => ({ name: pg.record.name, href: `../../${pg.path}` }))),
+		projectHref: '../',
+		versions: p.versions.map((pg) => ({ name: pg.record.name, href: `../${pg.path}` })),
 		states,
 	});
 
@@ -262,7 +246,7 @@ const frameAt = (p: SiteProject, page: Page, pagesAt: string | undefined): strin
 		: `src="page.html" sandbox="${SANDBOX_BESIDE}"`;
 
 /**
- * One iteration: its page in a frame, so the page's own styles never reach the bar, under the bar. The bar is the
+ * One version: its page in a frame, so the page's own styles never reach the bar, under the bar. The bar is the
  * app's own, drawn by the viewer (the switcher, comments); until it takes over, and where it never does, the bar is a
  * link back to the project, and nothing about it is styled here.
  */
@@ -275,11 +259,11 @@ const viewerPage = (
 	signIn: string,
 ): string => {
 	const head = viewer
-		? `${signIn}<link rel="stylesheet" href="../../../_viewer/viewer.css">\n${viewerConfig(viewer.ref, p, current, states)}<script type="module" src="../../../_viewer/viewer.js"></script>\n`
+		? `${signIn}<link rel="stylesheet" href="../../_viewer/viewer.css">\n${viewerConfig(viewer.ref, p, current, states)}<script type="module" src="../../_viewer/viewer.js"></script>\n`
 		: '';
 	return shell(
 		`${p.title} · ${labelOf(current)}`,
-		`<div class="viewer">\n<header id="dsnr-bar"><a href="../../">${escapeHtml(p.title)}</a></header>\n<p class="small-screen">Best on a computer: this prototype is made for a wider screen. Scroll across to see all of it.</p>\n<div class="stage">\n<iframe id="dsnr-frame" ${frameAt(p, current, pagesAt)} title="${escapeHtml(`${p.title}, ${labelOf(current)}`)}"></iframe>\n<aside id="dsnr-panel"></aside>\n</div>\n</div>`,
+		`<div class="viewer">\n<header id="dsnr-bar"><a href="../">${escapeHtml(p.title)}</a></header>\n<p class="small-screen">Best on a computer: this prototype is made for a wider screen. Scroll across to see all of it.</p>\n<div class="stage">\n<iframe id="dsnr-frame" ${frameAt(p, current, pagesAt)} title="${escapeHtml(`${p.title}, ${labelOf(current)}`)}"></iframe>\n<aside id="dsnr-panel"></aside>\n</div>\n</div>`,
 		head,
 	);
 };
@@ -312,14 +296,14 @@ export const buildSite = ({ designRoot, outDir, comments, viewer, pagesAt, signI
 	}
 	// A page sits three folders down (<project>/v1/i2/), and finds the shared files from there.
 	const relink = (html: string): string =>
-		withAgent(html.replace(SHARED_REF, (whole, hash: string) => (shared.has(hash) ? `../../../_shared/${shared.get(hash)}` : whole)));
+		withAgent(html.replace(SHARED_REF, (whole, hash: string) => (shared.has(hash) ? `../../_shared/${shared.get(hash)}` : whole)));
 	/**
 	 * With the viewer, the page agent first in the page's head (the README's Review isolation), before the prototype's own code,
 	 * so the review bar asks it for the page's pins rather than reaching into the page.
 	 */
 	const withAgent = (html: string): string => {
 		if (!viewer) return html;
-		return firstInHead(html, `<script src="../../../_viewer/${PAGE_AGENT}"></script>`);
+		return firstInHead(html, `<script src="../../_viewer/${PAGE_AGENT}"></script>`);
 	};
 
 	const signIn = signInScript(viewer, signingIn);
@@ -329,22 +313,16 @@ export const buildSite = ({ designRoot, outDir, comments, viewer, pagesAt, signI
 		const dir = join(outDir, p.id);
 		mkdirSync(dir, { recursive: true });
 		writeFileSync(join(dir, 'index.html'), projectPage(p, comments));
-		for (const v of p.versions) {
-			for (const pg of v.pages) {
-				const at = join(dir, pg.path);
-				mkdirSync(at, { recursive: true });
-				const html = readFileSync(join(designRoot, 'projects', p.id, 'prototypes', `${pg.record.name}.html`), 'utf8');
-				writeFileSync(join(at, 'index.html'), viewerPage(p, pg, viewer, statesOf(html), pagesAt, signIn));
-				writeFileSync(join(at, 'page.html'), relink(html));
-			}
-			const newest = v.pages[0] as Page;
-			mkdirSync(join(dir, `v${v.version}`, 'latest'), { recursive: true });
-			writeFileSync(join(dir, `v${v.version}`, 'latest', 'index.html'), redirect(`${p.title} · ${labelOf(newest)}`, `../i${newest.iteration}/`));
+		for (const pg of p.versions) {
+			const at = join(dir, pg.path);
+			mkdirSync(at, { recursive: true });
+			const html = readFileSync(join(designRoot, 'projects', p.id, 'prototypes', `${pg.record.name}.html`), 'utf8');
+			writeFileSync(join(at, 'index.html'), viewerPage(p, pg, viewer, statesOf(html), pagesAt, signIn));
+			writeFileSync(join(at, 'page.html'), relink(html));
 		}
-		// The newest version's newest iteration.
-		const newest = (p.versions.at(-1) as SiteProject['versions'][number]).pages[0] as Page;
+		const newest = p.versions[0] as Page;
 		mkdirSync(join(dir, 'latest'), { recursive: true });
 		writeFileSync(join(dir, 'latest', 'index.html'), redirect(`${p.title} · ${labelOf(newest)}`, `../${newest.path}`));
 	}
-	return { projects: projects.map((p) => ({ id: p.id, title: p.title, pages: p.versions.reduce((n, v) => n + v.pages.length, 0) })) };
+	return { projects: projects.map((p) => ({ id: p.id, title: p.title, pages: p.versions.length })) };
 };

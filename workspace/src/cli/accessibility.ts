@@ -20,6 +20,7 @@ import {
 	accessibilityViewDirs,
 	projectPath,
 	prototypeSourcePath,
+	workPath,
 } from '../shared/designPaths';
 import { plural } from '../shared/plural';
 import { errorText } from '../shared/result';
@@ -42,7 +43,7 @@ import { findCommand, readDescriptor } from '../main/services/descriptor';
 import { HANDOFF_FILE } from '../main/services/engineeringHandoff';
 import { git } from '../main/services/git';
 import { guardLines, guardsFor, stacksOf } from '../main/services/guards';
-import { assertUsableProjectId } from '../main/services/iterations';
+import { assertUsableProjectId } from '../main/services/workRecords';
 import { jsonFile, readText, writeAtomic } from '../main/services/jsonFile';
 import { LEDGER_VERSION, type Ledger, type LedgerRun, ledgerChanges, ledgerFaults } from '../main/services/ledger';
 import { manualListFault, withManualSection } from '../main/services/manualList';
@@ -234,7 +235,7 @@ const dayOf = (iso: string): string => iso.slice(0, 10);
 export const measureAccessibility = async (deps: MeasureDeps): Promise<number> => {
 	const { projectId, name, designRoot, depth } = deps;
 	assertUsableProjectId(projectId);
-	if (!existsSync(join(designRoot, projectPath(projectId, 'iterations.json'))))
+	if (!existsSync(join(designRoot, workPath(projectId))))
 		throw new Error(`There is no project ${projectId} in the design repository at ${designRoot}.`);
 	const progress = (line: string) => deps.err(`${line}…`);
 	const browser = chromeHeadless();

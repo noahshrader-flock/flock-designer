@@ -36,7 +36,7 @@ export const measurePrototype = async ({
 	browser,
 	progress,
 }: {
-	/** Where it is served, its project and name (`demo/v1-i1`). */
+	/** Where it is served, its project and name (`demo/v1`). */
 	key: string;
 	html: string;
 	target: DeclaredTarget;

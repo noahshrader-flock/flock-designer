@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { ProjectIteration } from '../src/shared/contract';
-import { type BuildApi, type BuildPhase, previewAddress, previewCommandFor, runLocalBuild } from '../src/renderer/localBuild';
-import { agentFinished, agentRunning, aProject, projectIteration } from './fixtures';
+import type { ProjectWork } from '../src/shared/contract';
+import { type BuildApi, type BuildPhase, previewAddress, runLocalBuild } from '../src/renderer/localBuild';
+import { agentFinished, agentRunning, aProject, projectWork } from './fixtures';
 
-const iteration = (over: Partial<ProjectIteration> = {}): ProjectIteration => projectIteration({ name: 'i1', branch: 'fd/users/i1', ...over });
+const iteration = (over: Partial<ProjectWork> = {}): ProjectWork => projectWork({ name: 'codebase', branch: 'feature/users', ...over });
 const project = aProject({ id: 'users', title: 'Users' });
 
 /** A workspace that does what a healthy one does, with any step overridable. */
@@ -11,12 +11,12 @@ const api = (over: Partial<Record<keyof BuildApi, unknown>> = {}) => {
 	const calls: string[] = [];
 	const ok = (name: string, value: unknown) => vi.fn(async () => (calls.push(name), { ok: true as const, value }));
 	const a = {
-		readCheckout: ok('readCheckout', { root: '/r', name: 'coke', branch: 'fd/users/i1', clean: true }),
-		continueIteration: ok('continueIteration', {}),
+		readCheckout: ok('readCheckout', { root: '/r', name: 'coke', branch: 'feature/users', clean: true }),
+		continueWork: ok('continueWork', {}),
 		startAgent: ok('startAgent', agentRunning()),
-		startHandoff: ok('startHandoff', agentRunning('fd/users/i1', 'handoff')),
+		startHandoff: ok('startHandoff', agentRunning('feature/users', 'handoff')),
 		agentStatus: ok('agentStatus', agentFinished()),
-		startCommand: ok('startCommand', { state: 'running', commandId: 'preview', url: 'http://localhost:3100/' }),
+		startCommand: ok('startCommand', { state: 'running', commandId: 'design-mode', url: 'http://localhost:3100/' }),
 		...over,
 	} as unknown as BuildApi;
 	return { a, calls };
@@ -49,19 +49,14 @@ describe('opening an iteration', () => {
 	it("leaves the checkout alone when it is already on the iteration's branch", async () => {
 		const { a, calls } = api();
 		await run(a);
-		expect(calls).not.toContain('continueIteration');
+		expect(calls).not.toContain('continueWork');
 	});
 
 	it("moves the checkout to the iteration's branch when it is elsewhere", async () => {
 		const { a, calls } = api({ readCheckout: vi.fn(async () => ({ ok: true, value: { branch: 'develop' } })) });
 		await run(a);
-		expect(a.continueIteration).toHaveBeenCalledWith('/r', 'users', 'i1');
+		expect(a.continueWork).toHaveBeenCalledWith('/r', 'users', 'codebase');
 		expect(calls).toContain('startCommand');
-	});
-
-	it('serves a prototype with the prototype command and codebase work with the real shell', () => {
-		expect(previewCommandFor(iteration({ name: 'i3' }))).toBe('preview');
-		expect(previewCommandFor(iteration({ name: 'codebase' }))).toBe('design-mode');
 	});
 
 	it("opens where the work is when the record says, instead of the product's front door", async () => {
@@ -73,10 +68,10 @@ describe('opening an iteration', () => {
 		expect(phases.at(-1)).toEqual({ kind: 'running', url: 'http://localhost:3100/roles/compare' });
 	});
 
-	it('names the project when it starts the preview, because every prototype shares one port', async () => {
+	it("starts the product's own design mode, naming the project, as every piece of work shares one port", async () => {
 		const { a } = api();
 		await run(a);
-		expect(a.startCommand).toHaveBeenCalledWith('/r', 'preview', 'users');
+		expect(a.startCommand).toHaveBeenCalledWith('/r', 'design-mode', 'users');
 	});
 });
 
@@ -121,7 +116,7 @@ describe('when something goes wrong', () => {
 	it('reports a dirty working tree with what it was told, instead of carrying on', async () => {
 		const { a } = api({
 			readCheckout: vi.fn(async () => ({ ok: true, value: { branch: 'develop' } })),
-			continueIteration: vi.fn(async () => ({ ok: false, error: 'There are uncommitted changes. Commit them first.' })),
+			continueWork: vi.fn(async () => ({ ok: false, error: 'There are uncommitted changes. Commit them first.' })),
 		});
 		const { url, phases } = await run(a);
 		expect(url).toBeNull();
@@ -131,7 +126,7 @@ describe('when something goes wrong', () => {
 
 	it('reports a preview that would not start', async () => {
 		const { a } = api({
-			startCommand: vi.fn(async () => ({ ok: true, value: { state: 'failed', commandId: 'preview', detail: 'Port 3100 is in use.' } })),
+			startCommand: vi.fn(async () => ({ ok: true, value: { state: 'failed', commandId: 'design-mode', detail: 'Port 3100 is in use.' } })),
 		});
 		const { phases } = await run(a);
 		expect(phases.at(-1)).toEqual({ kind: 'failed', message: 'Port 3100 is in use.' });
@@ -160,7 +155,7 @@ describe('when nobody is looking any more', () => {
 				...a,
 				readCheckout: vi.fn(async () => {
 					live = false;
-					return { ok: true as const, value: { root: '/r', name: 'c', branch: 'fd/users/i1', clean: true } };
+					return { ok: true as const, value: { root: '/r', name: 'c', branch: 'feature/users', clean: true } };
 				}),
 			} as BuildApi,
 			root: '/r',
@@ -186,7 +181,7 @@ describe('when nobody is looking any more', () => {
 		});
 		const url = await runLocalBuild({ api: a, root: '/r', project, iteration: iteration(), isLive: () => live, onPhase: () => undefined });
 		expect(url).toBeNull();
-		expect(a.continueIteration).not.toHaveBeenCalled();
+		expect(a.continueWork).not.toHaveBeenCalled();
 	});
 
 	it('waits on its own agent when opened again mid-build, without asking for the work twice', async () => {
@@ -194,7 +189,7 @@ describe('when nobody is looking any more', () => {
 		const { a, calls } = api({
 			agentStatus: vi.fn(async () => ({
 				ok: true,
-				value: ++polls < 3 ? { state: 'running', work: 'fd/users/i1' } : agentFinished(),
+				value: ++polls < 3 ? { state: 'running', work: 'feature/users' } : agentFinished(),
 			})),
 		});
 		const { url, phases } = await run(a);
@@ -204,7 +199,7 @@ describe('when nobody is looking any more', () => {
 	});
 
 	it("does not mistake another work's run for its own", async () => {
-		const { a, calls } = api({ agentStatus: vi.fn(async () => ({ ok: true, value: { state: 'running', work: 'prototype/other/i1' } })) });
+		const { a, calls } = api({ agentStatus: vi.fn(async () => ({ ok: true, value: { state: 'running', work: 'prototype/other/v1' } })) });
 		const { phases } = await run(a);
 		expect(calls).not.toContain('startAgent');
 		expect(phases.map((p) => p.kind)).toEqual(['preview', 'running']);
@@ -213,7 +208,7 @@ describe('when nobody is looking any more', () => {
 	it('does not call a run finished that left changes it never committed', async () => {
 		let opens = 0;
 		const { a, calls } = api({
-			readCheckout: vi.fn(async () => ({ ok: true, value: { root: '/r', name: 'coke', branch: 'fd/users/i1', clean: opens++ === 0 } })),
+			readCheckout: vi.fn(async () => ({ ok: true, value: { root: '/r', name: 'coke', branch: 'feature/users', clean: opens++ === 0 } })),
 		});
 		const { phases } = await run(a, { task: 'build it' });
 		expect(phases.at(-1)).toMatchObject({ kind: 'failed', message: expect.stringMatching(/did not commit/) });
@@ -235,7 +230,7 @@ describe('when nobody is looking any more', () => {
 		const { a, calls } = api({
 			agentStatus: vi.fn(async () => ({
 				ok: true,
-				value: ++polls < 3 ? { state: 'running', work: 'fd/users/i1', purpose: 'handoff' } : agentFinished(),
+				value: ++polls < 3 ? { state: 'running', work: 'feature/users', purpose: 'handoff' } : agentFinished(),
 			})),
 		});
 		const { phases } = await run(a);
@@ -245,7 +240,9 @@ describe('when nobody is looking any more', () => {
 	});
 
 	it('says when the checkout has changes nobody here made, and still opens the preview', async () => {
-		const { a } = api({ readCheckout: vi.fn(async () => ({ ok: true, value: { root: '/r', name: 'coke', branch: 'fd/users/i1', clean: false } })) });
+		const { a } = api({
+			readCheckout: vi.fn(async () => ({ ok: true, value: { root: '/r', name: 'coke', branch: 'feature/users', clean: false } })),
+		});
 		const { phases } = await run(a);
 		expect(phases.at(-1)).toMatchObject({ kind: 'running', uncommitted: true });
 	});

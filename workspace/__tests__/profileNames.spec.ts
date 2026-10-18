@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { ProfileNames } from '../src/main/services/profileNames';
-import type { Person, Project, ProjectIteration } from '../src/shared/contract';
-import { aProject, projectIteration } from './fixtures';
+import type { Person, Project, ProjectWork } from '../src/shared/contract';
+import { aProject, projectWork } from './fixtures';
 
 /**
  * One name for a person, everywhere: their GitHub profile name. Against a fake GitHub.
@@ -20,9 +20,9 @@ const fakeGitHub = () =>
 		return PROFILES[login];
 	});
 
-const iteration = (contributors: Person[]): ProjectIteration => projectIteration({ name: 'i1', branch: 'fd/a/i1', contributors });
+const iteration = (contributors: Person[]): ProjectWork => projectWork({ name: 'v1', branch: 'prototype/a/v1', contributors });
 const project = (people: Person[], contributors: Person[] = people): Project =>
-	aProject({ id: 'a', title: 'A', iterations: [iteration(contributors)], people });
+	aProject({ id: 'a', title: 'A', work: [iteration(contributors)], people });
 
 describe('naming people by their GitHub profile', () => {
 	it('shows a person by their profile name, whatever git called them', async () => {
@@ -32,7 +32,7 @@ describe('naming people by their GitHub profile', () => {
 
 	it('names an iteration’s contributors the same way', async () => {
 		const [p] = await new ProfileNames(fakeGitHub()).nameEveryone([project([], [{ name: 'noahshrader', login: 'noahshrader' }])]);
-		expect(p!.iterations[0]!.contributors).toEqual([{ name: 'Noah Shrader', login: 'noahshrader' }]);
+		expect(p!.work[0]!.contributors).toEqual([{ name: 'Noah Shrader', login: 'noahshrader' }]);
 	});
 
 	it('is one person when git called them two things and they are one account', async () => {
@@ -90,6 +90,6 @@ describe('naming people by their GitHub profile', () => {
 		const original = { ...project([{ name: 'a', login: 'noahshrader' }]), records: ['brief.md'], localOnly: true };
 		const [p] = await new ProfileNames(fakeGitHub()).nameEveryone([original]);
 		expect(p).toMatchObject({ id: 'a', title: 'A', records: ['brief.md'], localOnly: true });
-		expect(p!.iterations).toHaveLength(1);
+		expect(p!.work).toHaveLength(1);
 	});
 });

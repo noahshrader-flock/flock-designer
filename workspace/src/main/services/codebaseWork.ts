@@ -1,8 +1,8 @@
 import { basename } from 'node:path';
-import type { Iteration } from '../../shared/contract';
+import type { Work } from '../../shared/contract';
 import { DESCRIPTOR_PATH, type WorkspaceDescriptor } from './descriptor';
 import { branchExists, ensureLocalBranch, hasFileAt, readCheckout } from './git';
-import { codebaseBranchFor, continueIteration, createIteration } from './iterations';
+import { codebaseBranchFor, continueWork, createCodebaseWork } from './workRecords';
 
 /** A checkout the person opened, as a handler has it: its folder, its descriptor, and the records beside it. */
 export interface WorkCheckout {
@@ -23,11 +23,11 @@ export const codebaseWork = ({
 }: {
 	/** Whether the agent is running in this folder. */
 	agentIn: (canonical: string) => boolean;
-	records: (projectId: string) => Promise<Iteration[]>;
+	records: (projectId: string) => Promise<Work[]>;
 	/** Who is signed in to GitHub, whose work this is. */
 	login: () => string | null;
 	/** Called with what was recorded, to publish it. */
-	written: (iteration: Iteration) => Iteration;
+	written: (iteration: Work) => Work;
 }) => {
 	const assertAgentNotHere = (canonical: string): void => {
 		if (agentIn(canonical)) {
@@ -59,7 +59,7 @@ export const codebaseWork = ({
 	 * Codebase work's branch, checked out, and its record: from `from`, or the branch the checkout is on. Only Build
 	 * starts codebase work from the app, so there is no channel for it of its own.
 	 */
-	const start = async (at: WorkCheckout, projectId: string, note: string, from?: string): Promise<Iteration> => {
+	const start = async (at: WorkCheckout, projectId: string, note: string, from?: string): Promise<Work> => {
 		const { canonical } = at;
 		assertAgentNotHere(canonical);
 		// Only ever a branch that exists here or on GitHub, so the window cannot pass git an option or a revision
@@ -72,7 +72,7 @@ export const codebaseWork = ({
 		if (!(await hasSetup(canonical, branch))) {
 			throw new Error(`${branch} has no ${DESCRIPTOR_PATH}, so work cannot start from it. Start from a branch that has the DSNR setup.`);
 		}
-		return written(await createIteration(canonical, at.recordsRoot, at.descriptor, projectId, note, branch));
+		return written(await createCodebaseWork(canonical, at.recordsRoot, at.descriptor, projectId, note, branch));
 	};
 
 	/**
@@ -89,7 +89,7 @@ export const codebaseWork = ({
 		if (!(await hasSetup(canonical, branch))) {
 			throw new Error(`${branch} has no ${DESCRIPTOR_PATH}, so DSNR cannot work in it. Merge a branch that has the DSNR setup into it first.`);
 		}
-		await continueIteration(canonical, at.recordsRoot, projectId, 'codebase', login(), at.descriptor);
+		await continueWork(canonical, at.recordsRoot, projectId, 'codebase', login(), at.descriptor);
 	};
 
 	return { assertAgentNotHere, of, start, resume };

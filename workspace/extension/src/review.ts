@@ -6,8 +6,8 @@ import type { Route } from '../../src/main/handle';
 import type { CommentRef, InvokeName, Result, SignInState, WorkspaceApi } from '../../src/shared/contract';
 import { DESIGN_REPO } from '../../src/shared/config';
 import { escapeHtml } from '../../src/shared/html';
-import { prototypeKey } from '../../src/shared/designPaths';
-import { isPrototypeName, parsePrototypeName } from '../../src/shared/prototypeNames';
+import { prototypeKey, sitePath } from '../../src/shared/designPaths';
+import { isPrototypeName } from '../../src/shared/prototypeNames';
 import { toResult, valueOf } from '../../src/shared/result';
 import { KEY_FRAGMENT, type RelayCall, type RelayTell, readRelayAsk } from '../../src/shared/reviewRelay';
 import { buildSite } from '../../src/site/buildSite';
@@ -15,11 +15,11 @@ import { callRoute } from './bridge';
 import { newNonce } from './html';
 import { type Review, reviewsOf } from './messages';
 
-/** Where a prototype's review is on the site, as the site lays it out: `<project>/v<version>/i<iteration>/`. */
+/** Where a prototype's review is on the site, as the site lays it out (`sitePath`): `<project>/v2/`. */
 export const reviewPath = (projectId: string, name: string): string => {
-	const parsed = parsePrototypeName(name);
-	if (!parsed) throw new Error(`${name} is not a prototype, so it has no review page.`);
-	return `${projectId}/v${parsed.version}/i${parsed.iteration}/`;
+	const at = sitePath(projectId, name);
+	if (at === null) throw new Error(`${name} is not a prototype, so it has no review page.`);
+	return at;
 };
 
 /**

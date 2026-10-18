@@ -51,17 +51,17 @@ describe('the page in a chosen theme', () => {
 
 describe('what a comment records of the page', () => {
 	it('is its state without the theme, so one comment is on the same state in either theme', () => {
-		history.replaceState(null, '', '/demo/v1-i1/?state=panel&theme=dark');
+		history.replaceState(null, '', '/demo/v1/?state=panel&theme=dark');
 		expect(pageState()).toBe('?state=panel');
-		history.replaceState(null, '', '/demo/v1-i1/?theme=light');
+		history.replaceState(null, '', '/demo/v1/?theme=light');
 		expect(pageState()).toBe('');
 	});
 
 	it('is the theme a prototype opened in; a page DSNR did not theme (codebase work: the real app) is the system’s', () => {
-		history.replaceState(null, '', '/demo/v1-i1/?theme=dark');
+		history.replaceState(null, '', '/demo/v1/?theme=dark');
 		applyTheme(window);
 		expect(pageTheme()).toBe('dark');
-		history.replaceState(null, '', '/demo/v1-i1/');
+		history.replaceState(null, '', '/demo/v1/');
 		applyTheme(window);
 		expect(pageTheme()).toBe('light');
 		// The real app's preview: no theme put on it, so what it follows is what it was seen in (light, where nothing says dark).

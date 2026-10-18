@@ -27,7 +27,7 @@ beforeEach(() => {
 	signedIn = true;
 	vi.clearAllMocks();
 	vi.useFakeTimers({ toFake: ['Date'], now: T });
-	pages.siteBehind.mockResolvedValue({ kind: 'page', projectId: 'demo', name: 'v1-i1' });
+	pages.siteBehind.mockResolvedValue({ kind: 'page', projectId: 'demo', name: 'v1' });
 	pages.publish.mockResolvedValue({});
 	pages.pageStatus.mockResolvedValue({ state: 'unpublished' });
 });
@@ -37,11 +37,11 @@ describe("the site's deploys", () => {
 	it('do nothing for someone signed out', async () => {
 		signedIn = false;
 		const d = deploys();
-		d.page('demo', 'v1-i1');
+		d.page('demo', 'v1');
 		await d.catchUp();
 		expect(pages.publish).not.toHaveBeenCalled();
 		expect(pages.siteBehind).not.toHaveBeenCalled();
-		expect(await d.status('demo', 'v1-i1')).toEqual({ state: 'none' });
+		expect(await d.status('demo', 'v1')).toEqual({ state: 'none' });
 	});
 
 	it('catch up at most once a minute, and once every ten after a deploy failed', async () => {
@@ -68,19 +68,19 @@ describe("the site's deploys", () => {
 	it('wait while a deploy is running, and say it is publishing', async () => {
 		pages.publish.mockReturnValue(new Promise(() => undefined));
 		const d = deploys();
-		d.page('demo', 'v1-i1');
+		d.page('demo', 'v1');
 		await d.catchUp();
 		expect(pages.siteBehind).not.toHaveBeenCalled();
-		expect(await d.status('demo', 'v1-i1')).toEqual({ state: 'publishing' });
+		expect(await d.status('demo', 'v1')).toEqual({ state: 'publishing' });
 	});
 
 	it('say why a page is not published when its deploy stopped, and when GitHub would not say', async () => {
 		pages.publish.mockRejectedValue(new Error('The app has no Pages permission.'));
 		const d = deploys();
-		d.page('demo', 'v1-i1');
+		d.page('demo', 'v1');
 		await settle();
-		expect(await d.status('demo', 'v1-i1')).toEqual({ state: 'unpublished', why: 'The app has no Pages permission.' });
+		expect(await d.status('demo', 'v1')).toEqual({ state: 'unpublished', why: 'The app has no Pages permission.' });
 		pages.pageStatus.mockRejectedValue(new Error('HTTP 403'));
-		expect(await d.status('demo', 'v1-i1')).toEqual({ state: 'unavailable', why: 'GitHub would not say whether this is published: HTTP 403' });
+		expect(await d.status('demo', 'v1')).toEqual({ state: 'unavailable', why: 'GitHub would not say whether this is published: HTTP 403' });
 	});
 });

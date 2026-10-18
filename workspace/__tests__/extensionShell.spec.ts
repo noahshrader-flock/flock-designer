@@ -9,7 +9,7 @@ import { Panels, answerCall, hostApi } from '../extension/src/bridge';
 import type { Route } from '../src/main/handle';
 import { PrototypeServer } from '../src/main/services/prototypeServer';
 import type { InvokeName } from '../src/shared/contract';
-import type { ProjectIteration } from '../src/shared/domain/projects';
+import type { ProjectWork } from '../src/shared/domain/projects';
 
 /**
  * DSNR's shell in VS Code (ELECTRON_MIGRATION_PLAN, Phase 3): the person's GitHub account through VS Code's own sign-in,
@@ -219,32 +219,32 @@ describe('VS Code’s ports', () => {
 
 describe('a prototype’s review', () => {
 	it('is its page on the site, by version and iteration, as the site lays it out', () => {
-		expect(reviewPath('alert-history', 'v2-i1')).toBe('alert-history/v2/i1/');
-		expect(reviewPath('admin-usage', 'i1')).toBe('admin-usage/v1/i1/');
+		expect(reviewPath('alert-history', 'v2')).toBe('alert-history/v2/');
+		expect(reviewPath('admin-usage', 'v1')).toBe('admin-usage/v1/');
 		expect(() => reviewPath('admin-usage', 'codebase')).toThrow(/not a prototype/);
 	});
 
 	it('is each of a project’s prototypes that has a page, newest first, titled with its project and its label', () => {
-		const record = (name: string, branch: string, createdAt: string) => ({ name, branch, createdAt }) as ProjectIteration;
+		const record = (name: string, branch: string, createdAt: string) => ({ name, branch, createdAt }) as ProjectWork;
 		const project = {
 			id: 'alert-history',
 			title: 'Alert history',
-			iterations: [
-				record('v1-i1', 'prototype/alert-history/v1-i1', '2026-10-01'),
-				record('v2-i1', 'prototype/alert-history/v2-i1', '2026-10-03'),
+			work: [
+				record('v1', 'prototype/alert-history/v1', '2026-10-01'),
+				record('v2', 'prototype/alert-history/v2', '2026-10-03'),
 				record('codebase', 'feature/alert-history', '2026-10-04'),
-				// A prototype whose name the site cannot lay out has no page to open.
-				record('spike', 'fd/alert-history/spike', '2026-10-05'),
+				// A name that is not a version's has no page to open.
+				record('spike', 'prototype/alert-history/spike', '2026-10-05'),
 			],
 		};
 		expect(reviewsOf(project)).toEqual([
-			{ projectId: 'alert-history', name: 'v2-i1', title: 'Alert history · V2 · I1' },
-			{ projectId: 'alert-history', name: 'v1-i1', title: 'Alert history · V1 · I1' },
+			{ projectId: 'alert-history', name: 'v2', title: 'Alert history · V2' },
+			{ projectId: 'alert-history', name: 'v1', title: 'Alert history · V1' },
 		]);
 	});
 
 	it('frames only the page, from this machine, with its title as text, and runs only its own script', () => {
-		const page = reviewPage({ src: 'http://127.0.0.1:5000/a/v1/i1/', title: 'Fish & <chips> "now"', nonce: 'n1' });
+		const page = reviewPage({ src: 'http://127.0.0.1:5000/a/v1/', title: 'Fish & <chips> "now"', nonce: 'n1' });
 		expect(page).toContain("default-src 'none'; frame-src http://127.0.0.1:5000; style-src 'nonce-n1'; script-src 'nonce-n1'");
 		expect([...page.matchAll(/<script\b[^>]*>/g)].map((m) => m[0])).toEqual(['<script nonce="n1">']);
 		// It says hello to the page, and passes what the page asks up, and the answers down, to that page's address alone.
@@ -258,12 +258,12 @@ describe('a prototype’s review', () => {
 		expect(page).toContain("classList.contains('vscode-high-contrast-light')");
 		expect(page).toContain('new MutationObserver(');
 		expect(page).toContain('<title>Fish &amp; &lt;chips&gt; &quot;now&quot;</title>');
-		expect(page).toContain('<iframe src="http://127.0.0.1:5000/a/v1/i1/" title="Fish &amp; &lt;chips&gt; &quot;now&quot;">');
+		expect(page).toContain('<iframe src="http://127.0.0.1:5000/a/v1/" title="Fish &amp; &lt;chips&gt; &quot;now&quot;">');
 	});
 });
 
 describe('a review tab’s answers to its page', () => {
-	const review = { projectId: 'demo', name: 'v1-i1', title: 'Demo · V1 · I1' };
+	const review = { projectId: 'demo', name: 'v1', title: 'Demo · V1' };
 	const comment = (thread: number, id: number) => ({ thread, id, body: 'Bigger' });
 	const deps = () => {
 		const routes = new Map<InvokeName, Route>([
@@ -288,7 +288,7 @@ describe('a review tab’s answers to its page', () => {
 
 	it('are the core’s comment calls, VS Code’s sign-in, and Address on this review’s prototype', async () => {
 		const { d, ask } = tab();
-		expect(await ask('readComments', ['demo', 'prototype/demo/v1-i1'])).toEqual({ ok: true, value: [comment(1, 2)] });
+		expect(await ask('readComments', ['demo', 'prototype/demo/v1'])).toEqual({ ok: true, value: [comment(1, 2)] });
 		expect(await ask('resolveComment', [{ thread: 1, id: 2 }, true])).toMatchObject({ ok: true });
 		expect(await ask('signIn', [])).toEqual({ ok: true, value: { state: 'signedOut' } });
 		await ask('address', [{ thread: 1, id: 2 }]);
@@ -299,34 +299,34 @@ describe('a review tab’s answers to its page', () => {
 		const d = deps();
 		const seen = new Set<number>();
 		const ask = (args: unknown[]) => answerReview(d, review, 'address', args, seen, 'browser');
-		await answerReview(d, review, 'readComments', ['demo', 'prototype/demo/v1-i2'], seen, 'browser');
-		await ask([{ thread: 1, id: 2 }, 'prototype/demo/v1-i2']);
-		expect(d.address).toHaveBeenCalledWith({ ...review, name: 'v1-i2' }, { thread: 1, id: 2 }, 'browser');
+		await answerReview(d, review, 'readComments', ['demo', 'prototype/demo/v12'], seen, 'browser');
+		await ask([{ thread: 1, id: 2 }, 'prototype/demo/v12']);
+		expect(d.address).toHaveBeenCalledWith({ ...review, name: 'v12' }, { thread: 1, id: 2 }, 'browser');
 		// Only one of this review's project's prototypes, and only one comment.
-		for (const branch of ['prototype/other/v1-i1', 'prototype/demo/../other/v1-i1', 'feature/demo'])
+		for (const branch of ['prototype/other/v1', 'prototype/demo/../other/v1', 'feature/demo'])
 			expect(await ask([{ thread: 1, id: 2 }, branch]), branch).toEqual({
 				ok: false,
 				error: 'This review is of demo, so it comments only on demo’s prototypes.',
 			});
-		expect(await ask([{ thread: 1, id: 2 }, 'prototype/demo/v1-i2', 'more'])).toEqual({ ok: false, error: 'Address is given one comment.' });
+		expect(await ask([{ thread: 1, id: 2 }, 'prototype/demo/v12', 'more'])).toEqual({ ok: false, error: 'Address is given one comment.' });
 		expect(d.address).toHaveBeenCalledTimes(1);
 	});
 
 	it('read and comment only on this review’s project, on any of its prototypes: not another project’s, whatever it is called', async () => {
 		const { ask } = tab();
-		expect(await ask('readComments', ['demo', 'prototype/demo/v2-i1'])).toMatchObject({ ok: true });
+		expect(await ask('readComments', ['demo', 'prototype/demo/v2'])).toMatchObject({ ok: true });
 		for (const args of [
-			['other', 'prototype/other/v1-i1'],
+			['other', 'prototype/other/v1'],
 			// Its own id, with another project's branch: refused too.
-			['demo', 'prototype/other/v1-i1'],
-			['demo', 'prototype/demo/../other/v1-i1'],
+			['demo', 'prototype/other/v1'],
+			['demo', 'prototype/demo/../other/v1'],
 			['demo', 'feature/demo'],
 		])
 			expect(await ask('readComments', args), JSON.stringify(args)).toEqual({
 				ok: false,
 				error: 'This review is of demo, so it comments only on demo’s prototypes.',
 			});
-		expect(await ask('postComment', ['demo', 'prototype/other/v1-i1', 'x', null, null])).toMatchObject({ ok: false });
+		expect(await ask('postComment', ['demo', 'prototype/other/v1', 'x', null, null])).toMatchObject({ ok: false });
 	});
 
 	it('change, and Address, only a comment the review has been shown or made: none of another thread', async () => {
@@ -336,20 +336,20 @@ describe('a review tab’s answers to its page', () => {
 		expect(await ask('resolveComment', [{ thread: 1, id: 2 }, true])).toEqual(refused);
 		expect(await ask('address', [{ thread: 1, id: 2 }])).toEqual(refused);
 		expect(d.address).not.toHaveBeenCalled();
-		await ask('readComments', ['demo', 'prototype/demo/v1-i1']);
+		await ask('readComments', ['demo', 'prototype/demo/v1']);
 		expect(await ask('resolveComment', [{ thread: 1, id: 2 }, true])).toMatchObject({ ok: true });
 		expect(await ask('deleteComment', [{ thread: 9, id: 2 }])).toEqual(refused);
 		// One it made is its own too.
-		await ask('postComment', ['demo', 'prototype/demo/v1-i1', 'Bigger', null, null]);
+		await ask('postComment', ['demo', 'prototype/demo/v1', 'Bigger', null, null]);
 		expect(await ask('address', [{ thread: 1, id: 3 }])).toMatchObject({ ok: true });
 		expect(await ask('address', ['not a comment'])).toEqual({ ok: false, error: 'Address is given one comment.' });
 	});
 
 	it('say a comment was written, once it was, so what shows how many there are is read again', async () => {
 		const { d, ask } = tab();
-		await ask('readComments', ['demo', 'prototype/demo/v1-i1']);
+		await ask('readComments', ['demo', 'prototype/demo/v1']);
 		expect(d.written).not.toHaveBeenCalled();
-		await ask('postComment', ['demo', 'prototype/demo/v1-i1', 'Bigger', null, null]);
+		await ask('postComment', ['demo', 'prototype/demo/v1', 'Bigger', null, null]);
 		await ask('resolveComment', [{ thread: 1, id: 2 }, true]);
 		expect(d.written).toHaveBeenCalledTimes(2);
 		// One that failed wrote nothing.
@@ -425,15 +425,15 @@ describe('the review tabs', () => {
 			serve: async () => 'http://127.0.0.1:5000/review/',
 			answer: async () => ({ ok: true, value: null }),
 		});
-		await reviews.open({ records: '/d/projects', projectId: 'demo', name: 'v1-i1', title: 'Demo · V1 · I1' });
-		await reviews.open({ records: '/d/projects', projectId: 'demo', name: 'v1-i2', title: 'Demo · V1 · I2' });
-		expect(vs.panels.map((p) => p.title)).toEqual(['Demo · V1 · I2']);
-		expect(vs.panels[0]!.html).toContain('http://127.0.0.1:5000/review/demo/v1/i2/');
+		await reviews.open({ records: '/d/projects', projectId: 'demo', name: 'v1', title: 'Demo · V1' });
+		await reviews.open({ records: '/d/projects', projectId: 'demo', name: 'v12', title: 'Demo · V12' });
+		expect(vs.panels.map((p) => p.title)).toEqual(['Demo · V12']);
+		expect(vs.panels[0]!.html).toContain('http://127.0.0.1:5000/review/demo/v12/');
 		expect(vs.panels[0]!.revealed).toBe(1);
 		// Built again each time, so it is the records as they are.
 		expect(built).toEqual(['/d/projects', '/d/projects']);
 		vs.panels[0]!.disposed();
-		await reviews.open({ records: '/d/projects', projectId: 'demo', name: 'v1-i1', title: 'Demo · V1 · I1' });
+		await reviews.open({ records: '/d/projects', projectId: 'demo', name: 'v1', title: 'Demo · V1' });
 		expect(vs.panels).toHaveLength(2);
 	});
 
@@ -446,8 +446,8 @@ describe('the review tabs', () => {
 			serve: async () => 'http://127.0.0.1:5000/review/',
 			answer: async () => ({ ok: true, value: null }),
 		});
-		expect(await reviews.address({ records: '/d/projects', projectId: 'demo', name: 'v2-i1', title: 'Demo · V2 · I1' })).toBe(
-			'http://127.0.0.1:5000/review/demo/v2/i1/',
+		expect(await reviews.address({ records: '/d/projects', projectId: 'demo', name: 'v2', title: 'Demo · V2' })).toBe(
+			'http://127.0.0.1:5000/review/demo/v2/',
 		);
 		expect(built).toEqual(['/d/projects']);
 		expect(vs.panels).toHaveLength(0);
@@ -464,22 +464,22 @@ describe('the review tabs', () => {
 				return { ok: true, value: [] };
 			},
 		});
-		const demo = { projectId: 'demo', name: 'v1-i2', title: 'Demo · V1 · I2' };
+		const demo = { projectId: 'demo', name: 'v12', title: 'Demo · V12' };
 		const first = await reviews.inBrowser({ records: '/d/projects', ...demo });
 		const second = await reviews.inBrowser({ records: '/d/projects', ...demo });
 		// The page's address, its key in the fragment (never sent to a server), new each time.
-		const keyOf = (url: string) => /^http:\/\/127\.0\.0\.1:5000\/review\/demo\/v1\/i2\/#dsnr-key-([A-Za-z0-9_-]{22,})$/.exec(url)?.[1];
+		const keyOf = (url: string) => /^http:\/\/127\.0\.0\.1:5000\/review\/demo\/v12\/#dsnr-key-([A-Za-z0-9_-]{22,})$/.exec(url)?.[1];
 		const [a, b] = [keyOf(first), keyOf(second)];
 		expect(a).toBeDefined();
 		expect(b).toBeDefined();
 		expect(a).not.toBe(b);
 		// An ask with a key is answered as the review's tab is, as that review, in the answer's shape.
-		const ask = { dsnr: 'ask', id: 3, name: 'readComments', args: ['demo', 'prototype/demo/v1-i2'] };
+		const ask = { dsnr: 'ask', id: 3, name: 'readComments', args: ['demo', 'prototype/demo/v12'] };
 		expect(await reviews.answerBrowser(a as string, ask)).toEqual({ dsnr: 'answer', id: 3, result: { ok: true, value: [] } });
 		await reviews.answerBrowser(b as string, ask);
 		expect(answered.map((x) => [x.review, x.name, x.args])).toEqual([
-			[demo, 'readComments', ['demo', 'prototype/demo/v1-i2']],
-			[demo, 'readComments', ['demo', 'prototype/demo/v1-i2']],
+			[demo, 'readComments', ['demo', 'prototype/demo/v12']],
+			[demo, 'readComments', ['demo', 'prototype/demo/v12']],
 		]);
 		// Asked from the browser, as the answer says, for what Address shows.
 		expect(answered.map((x) => x.from)).toEqual(['browser', 'browser']);
@@ -500,7 +500,7 @@ describe('the review tabs', () => {
 				return { ok: true, value: null };
 			},
 		});
-		const url = await reviews.inBrowser({ records: '/d/projects', projectId: 'demo', name: 'v1-i1', title: 'Demo · V1 · I1' });
+		const url = await reviews.inBrowser({ records: '/d/projects', projectId: 'demo', name: 'v1', title: 'Demo · V1' });
 		const key = url.split('#dsnr-key-')[1] as string;
 		const ask = { dsnr: 'ask', id: 1, name: 'readComments', args: [] };
 		expect(await reviews.answerBrowser('A'.repeat(22), ask)).toBeNull();
@@ -510,7 +510,7 @@ describe('the review tabs', () => {
 		expect(await reviews.answerBrowser(key, 'readComments')).toBeNull();
 		expect(answers).toBe(0);
 		// Opening it in a tab makes no key.
-		expect(await reviews.address({ records: '/d/projects', projectId: 'demo', name: 'v1-i1', title: 'Demo · V1 · I1' })).not.toContain('#');
+		expect(await reviews.address({ records: '/d/projects', projectId: 'demo', name: 'v1', title: 'Demo · V1' })).not.toContain('#');
 	});
 
 	it('answer a browser that asks with its key through this machine’s server, as the review’s tab is answered', async () => {
@@ -524,13 +524,13 @@ describe('the review tabs', () => {
 				answer: async (review, name) => ({ ok: true, value: `${name} on ${review.projectId}` }),
 			});
 			server.answerAsks((key, ask) => reviews.answerBrowser(key, ask));
-			const url = await reviews.inBrowser({ records: '/d/projects', projectId: 'demo', name: 'v1-i1', title: 'Demo · V1 · I1' });
+			const url = await reviews.inBrowser({ records: '/d/projects', projectId: 'demo', name: 'v1', title: 'Demo · V1' });
 			const key = url.split('#dsnr-key-')[1] as string;
 			const asked = (k: string) =>
 				fetch(`${app}/_dsnr/ask`, {
 					method: 'POST',
 					headers: { origin: app, 'content-type': 'application/json', 'x-dsnr-key': k },
-					body: JSON.stringify({ dsnr: 'ask', id: 1, name: 'readComments', args: ['demo', 'prototype/demo/v1-i1'] }),
+					body: JSON.stringify({ dsnr: 'ask', id: 1, name: 'readComments', args: ['demo', 'prototype/demo/v1'] }),
 				});
 			const r = await asked(key);
 			expect(await r.json()).toEqual({ dsnr: 'answer', id: 1, result: { ok: true, value: 'readComments on demo' } });
@@ -550,17 +550,17 @@ describe('the review tabs', () => {
 			answer: async () => ({ ok: true, value: null }),
 		});
 		// None open: nothing opened, but the site is built, so the browser has the page to go to.
-		await reviews.showIfOpen({ records: '/d/projects', projectId: 'demo', name: 'v1-i2', title: 'Demo · V1 · I2' });
+		await reviews.showIfOpen({ records: '/d/projects', projectId: 'demo', name: 'v12', title: 'Demo · V12' });
 		expect(vs.panels).toHaveLength(0);
 		expect(built).toEqual(['/d/projects']);
-		await reviews.open({ records: '/d/projects', projectId: 'demo', name: 'v1-i1', title: 'Demo · V1 · I1' });
-		await reviews.showIfOpen({ records: '/d/projects', projectId: 'demo', name: 'v1-i2', title: 'Demo · V1 · I2' });
+		await reviews.open({ records: '/d/projects', projectId: 'demo', name: 'v1', title: 'Demo · V1' });
+		await reviews.showIfOpen({ records: '/d/projects', projectId: 'demo', name: 'v12', title: 'Demo · V12' });
 		expect(vs.panels).toHaveLength(1);
-		expect(vs.panels[0]!.title).toBe('Demo · V1 · I2');
-		expect(vs.panels[0]!.html).toContain('http://127.0.0.1:5000/review/demo/v1/i2/');
+		expect(vs.panels[0]!.title).toBe('Demo · V12');
+		expect(vs.panels[0]!.html).toContain('http://127.0.0.1:5000/review/demo/v12/');
 		expect(vs.panels[0]!.revealed).toBe(0);
 		// Another project's tab is not this one's.
-		await reviews.showIfOpen({ records: '/d/projects', projectId: 'other', name: 'v1-i1', title: 'Other · V1 · I1' });
+		await reviews.showIfOpen({ records: '/d/projects', projectId: 'other', name: 'v1', title: 'Other · V1' });
 		expect(vs.panels).toHaveLength(1);
 	});
 
@@ -573,8 +573,8 @@ describe('the review tabs', () => {
 			answer: async () => ({ ok: true, value: null }),
 		});
 		expect(reviews.inUse()).toEqual([]);
-		await reviews.open({ records: '/d/projects', projectId: 'demo', name: 'v1-i1', title: 'Demo · V1 · I1' });
-		await reviews.inBrowser({ records: '/d/projects', projectId: 'other', name: 'v1-i1', title: 'Other · V1 · I1' });
+		await reviews.open({ records: '/d/projects', projectId: 'demo', name: 'v1', title: 'Demo · V1' });
+		await reviews.inBrowser({ records: '/d/projects', projectId: 'other', name: 'v1', title: 'Other · V1' });
 		expect(reviews.inUse().sort()).toEqual(['demo', 'other']);
 		// A tab closed is no longer in use; a browser's key is, until VS Code reloads.
 		vs.panels[0]!.disposed();
@@ -590,10 +590,10 @@ describe('the review tabs', () => {
 			answer: async () => ({ ok: true, value: null }),
 		});
 		expect(reviews.active()).toBeUndefined();
-		await reviews.open({ records: '/d/projects', projectId: 'demo', name: 'v1-i2', title: 'Demo · V1 · I2' });
-		await reviews.open({ records: '/d/projects', projectId: 'other', name: 'v1-i1', title: 'Other · V1 · I1' });
+		await reviews.open({ records: '/d/projects', projectId: 'demo', name: 'v12', title: 'Demo · V12' });
+		await reviews.open({ records: '/d/projects', projectId: 'other', name: 'v1', title: 'Other · V1' });
 		vs.panels[1]!.active = false;
-		expect(reviews.active()).toEqual({ projectId: 'demo', name: 'v1-i2', title: 'Demo · V1 · I2' });
+		expect(reviews.active()).toEqual({ projectId: 'demo', name: 'v12', title: 'Demo · V12' });
 	});
 });
 
@@ -628,8 +628,8 @@ describe('the review tabs in front', () => {
 			answer: async () => ({ ok: true, value: null }),
 			onShown: () => told.push(reviews.shown()),
 		});
-		await reviews.open({ records: '/d', projectId: 'demo', name: 'v1-i1', title: 'demo' });
-		await reviews.open({ records: '/d', projectId: 'other', name: 'v1-i1', title: 'other' });
+		await reviews.open({ records: '/d', projectId: 'demo', name: 'v1', title: 'demo' });
+		await reviews.open({ records: '/d', projectId: 'other', name: 'v1', title: 'other' });
 		expect(told.at(-1)).toEqual(['demo', 'other']);
 		// One covered by another tab in its group is not in front.
 		panels.get('demo')!.visible = false;

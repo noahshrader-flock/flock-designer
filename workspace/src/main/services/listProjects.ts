@@ -5,7 +5,7 @@ import { readBranchProjects } from './branchProjects';
 import { readDescriptor } from './descriptor';
 import { recordsRootFor } from './discovery';
 import { branchCommit, repositoryOf } from './git';
-import { codebaseBranchFor } from './iterations';
+import { codebaseBranchFor } from './workRecords';
 import { readFolderProjects } from './localProjects';
 
 /**
@@ -36,7 +36,7 @@ export const listProjects = async ({
 		// The branches are the evidence: work made without the app still shows.
 		const branches = await readBranchProjects(root, descriptor, login, new Set(folders.map((p) => p.id))).catch(() => []);
 		// A folder with nothing built yet is a notes folder, not work in progress.
-		local = unionLocal(folders, branches).filter((p) => p.iterations.length > 0);
+		local = unionLocal(folders, branches).filter((p) => p.work.length > 0);
 		here = { root, repository: await repositoryOf(root), branchOf: (projectId) => codebaseBranchFor(descriptor, projectId) };
 	}
 	let fromGitHub: Project[] = [];
@@ -52,8 +52,8 @@ export const listProjects = async ({
 	return Promise.all(
 		merged.map(async (p) => ({
 			...p,
-			iterations: await Promise.all(
-				p.iterations.map(async (it) => {
+			work: await Promise.all(
+				p.work.map(async (it) => {
 					if (workKind(it) !== 'codebase') return it;
 					const ours = at !== null && it.branch === at.branchOf(p.id);
 					const head = ours && it.readyAt ? await branchCommit(at.root, it.branch).catch(() => null) : null;

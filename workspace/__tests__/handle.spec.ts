@@ -22,9 +22,9 @@ describe('what the window sends, checked', () => {
 	});
 
 	it("takes an iteration's name, a prototype's or codebase, and a prototype's only where one is meant", () => {
-		for (const name of ['codebase', 'v2-i3', 'i1']) expect(through(arg.iterationName, name)).toBe(name);
-		expect(through(arg.iterationName, 'feature/x')).toBe('"feature/x" is not an iteration.');
-		expect(through(arg.prototypeName, 'v1-i1')).toBe('v1-i1');
+		for (const name of ['codebase', 'v23', 'v1']) expect(through(arg.workName, name)).toBe(name);
+		expect(through(arg.workName, 'feature/x')).toBe('"feature/x" is not a version or codebase work.');
+		expect(through(arg.prototypeName, 'v1')).toBe('v1');
 		expect(through(arg.prototypeName, 'codebase')).toBe('"codebase" is not a prototype.');
 		expect(through(arg.prototypeName, 5)).toBe('That is not a prototype.');
 	});

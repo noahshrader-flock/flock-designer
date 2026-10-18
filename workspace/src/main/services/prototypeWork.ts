@@ -1,23 +1,23 @@
 import { existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
-import type { Iteration, Person, PrototypeReadiness } from '../../shared/contract';
+import type { Work, Person, PrototypeReadiness } from '../../shared/contract';
 import { type DeclaredTarget, undeclared } from '../../shared/wcag';
 import { fromBrief } from '../../shared/brief';
 import { projectPath, prototypePagePath, prototypeSourcePath, sharedFilePath, sharedFilesOf } from '../../shared/designPaths';
-import { hasOutsideComments, latestIterationName, nextIterationName, parsePrototypeName } from '../../shared/prototypeNames';
+import { hasOutsideComments, nextVersionName } from '../../shared/prototypeNames';
 import { MANIFEST_FILE, declaredTarget, productTarget, taskAccessibility } from './accessibilityBrief';
 import { designSystemCheckout, readDescriptor } from './descriptor';
 import { recordsRootFor } from './discovery';
 import { branchCommit, branchExists, git, isSafeBranchName, readCheckout, readTreeAt, repositoryOf } from './git';
-import { assertUsableProjectId } from './iterations';
+import { assertUsableProjectId } from './workRecords';
 import {
 	MAX_PAGE,
 	type PrototypeBuild,
 	type PrototypeSources,
 	type RecordStore,
 	assertPrototypeName,
-	prototypeVersionOf,
-	recordIteration,
+	contentHashOf,
+	recordVersionFrom,
 	recordPrototype,
 	readRecords,
 } from './prototype';
@@ -53,7 +53,7 @@ export interface PrototypeWorkContext {
  * version's next iteration, not yet recorded (`fresh`). `before` is the version of the source the change starts from.
  */
 export interface PrototypeChange {
-	from: Iteration;
+	from: Work;
 	target: string;
 	fresh: boolean;
 	before: string;
@@ -63,16 +63,16 @@ export interface PrototypeChange {
 
 /**
  * Where a change is made, as the agent making it is told, in the same words from the app and the command. Null when
- * there is nothing to say: the change is made in the iteration the agent was pointed at.
+ * there is nothing to say: the change is made in the version the agent was pointed at.
  */
-export const whereTheChangeGoes = (change: PrototypeChange, pointedAt: string): string | null => {
+export const whereTheChangeGoes = (change: PrototypeChange): string | null => {
 	if (change.fresh) {
 		const why = change.unread
 			? `Who has commented on ${change.from.name} could not be read, so it is left as it is, in case people have seen it`
 			: `Others have commented on ${change.from.name}, so it stays as they saw it`;
-		return `${why}. The change is made in ${change.target}, its next iteration, which starts as a copy of it: change that copy, rather than starting again.`;
+		return `${why}. The change is made in ${change.target}, a new version from it, which starts as a copy of it: change that copy, rather than starting again.`;
 	}
-	return change.target === pointedAt ? null : `${change.target} is the newest iteration of this version, so the change is made there.`;
+	return null;
 };
 
 /** What starting a prototype needs: the product branch it is modeled on, and the person's own words. */
@@ -141,13 +141,13 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		return text;
 	};
 
-	/** A project's records, from its iterations.json: none when it has none, and an error when the file is not readable. */
-	const records = (projectId: string): Promise<Iteration[]> => readRecords({ read: ctx.readDesignFile }, projectId);
+	/** A project's records, from its work.json: none when it has none, and an error when the file is not readable. */
+	const records = (projectId: string): Promise<Work[]> => readRecords({ read: ctx.readDesignFile }, projectId);
 	/** A project's title, from its brief: what people know it by. Its id when the brief has none. */
 	const title = async (projectId: string): Promise<string> =>
 		fromBrief(projectId, await ctx.readDesignFile(projectPath(projectId, 'brief.md'))).title;
 	/** A prototype's record. */
-	const record = async (projectId: string, name: string): Promise<Iteration | undefined> => (await records(projectId)).find((i) => i.name === name);
+	const record = async (projectId: string, name: string): Promise<Work | undefined> => (await records(projectId)).find((i) => i.name === name);
 	/** A prototype's React source: this machine's newest, else the saved one. Reading it makes no folder. */
 	const sourceText = async (projectId: string, name: string): Promise<string | null> => {
 		const local = localFile(projectId, name, 'tsx');
@@ -188,7 +188,7 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 	 * new prototype is a new idea). What it is modeled on is not optional: a prototype is built from a repository's
 	 * real design system, on a branch that exists here.
 	 */
-	const start = async (root: string, { projectId, title: name, note, branch, me, folder }: PrototypeStart): Promise<Iteration> => {
+	const start = async (root: string, { projectId, title: name, note, branch, me, folder }: PrototypeStart): Promise<Work> => {
 		assertUsableProjectId(projectId);
 		const why = notReady(root);
 		if (why !== null) throw new Error(why);
@@ -347,62 +347,49 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 	/** Builds the page, then saves page and source. */
 	const save = async (projectId: string, name: string): Promise<void> => keep(projectId, name, await built(projectId, name));
 
-	/** The version a prototype's name says it belongs to. */
-	const versionOf = (name: string): number => {
-		const p = parsePrototypeName(name);
-		if (p === null) throw new Error(`"${name}" is not a prototype.`);
-		return p.version;
-	};
-
 	/**
-	 * Where a change to a prototype goes, and its source made ready there. The change goes to the newest iteration of
-	 * the prototype's version, so later changes build on earlier ones, unless anyone but its makers has commented on
-	 * that iteration: then what they commented on is left as it is, and the change starts the next iteration from it.
-	 * `authorsOf` says who has commented on an iteration, or null when that cannot be read: then it is taken as
-	 * commented on. Nothing is recorded yet: see `finishChange`.
+	 * Where a change to a prototype goes, and its source made ready there. The change goes to the version it was asked
+	 * of, unless anyone but its makers has commented on it: then what they commented on is left as it is, and the change
+	 * starts a new version from it. `authorsOf` says who has commented on a version, or null when that cannot be read:
+	 * then it is taken as commented on. Nothing is recorded yet: see `finishChange`.
 	 */
-	const startChange = async (
-		projectId: string,
-		name: string,
-		authorsOf: (iteration: Iteration) => Promise<string[] | null>,
-	): Promise<PrototypeChange> => {
-		const version = versionOf(name);
+	const startChange = async (projectId: string, name: string, authorsOf: (version: Work) => Promise<string[] | null>): Promise<PrototypeChange> => {
+		assertPrototypeName(name);
 		const all = await records(projectId);
-		const names = all.map((i) => i.name);
-		const from = all.find((i) => i.name === (latestIterationName(names, version) ?? name));
+		const from = all.find((i) => i.name === name);
 		if (!from) throw new Error(`${projectId} has no prototype called ${name}.`);
 		const source = await sourceText(projectId, from.name);
 		if (source === null) throw new Error('This prototype has no React source saved, so there is nothing for the agent to change.');
 		const authors = await authorsOf(from);
 		const fresh = authors === null || hasOutsideComments(from.contributors, authors);
-		const target = fresh ? nextIterationName(names, version) : from.name;
+		const target = fresh ? nextVersionName(all.map((i) => i.name)) : from.name;
 		const local = sourceFile(projectId, target);
 		if (fresh) {
-			// A page left from an earlier run that changed nothing is not this iteration's.
+			// A page left from an earlier run that changed nothing is not this version's.
 			rmSync(file(projectId, target), { force: true });
 			writeFileSync(local, source);
 		} else if (!existsSync(local)) {
 			// Built on another machine: its saved source is what is changed.
 			writeFileSync(local, source);
 		}
-		return { from, target, fresh, before: prototypeVersionOf(source), unread: authors === null };
+		return { from, target, fresh, before: contentHashOf(source), unread: authors === null };
 	};
 
 	/**
 	 * A change started by the dsnr command is saved by a later run of it: what `startChange` said, worked out again from
-	 * what is there. Null when `name` is recorded, as a change made in place is; otherwise it must be its version's next
-	 * iteration, started from the newest.
+	 * what is there. Null when `name` is recorded, as a change made in place is; otherwise it must be the next version,
+	 * started from `from`, which the command that started it says.
 	 */
-	const resumeChange = async (projectId: string, name: string): Promise<PrototypeChange | null> => {
-		const version = versionOf(name);
+	const resumeChange = async (projectId: string, name: string, fromName: string | null): Promise<PrototypeChange | null> => {
+		assertPrototypeName(name);
 		const all = await records(projectId);
 		const names = all.map((i) => i.name);
 		if (names.includes(name)) return null;
-		const from = all.find((i) => i.name === latestIterationName(names, version));
-		if (!from || nextIterationName(names, version) !== name)
-			throw new Error(`${projectId} has no ${name}, and it is not the next iteration of anything.`);
+		if (nextVersionName(names) !== name) throw new Error(`${projectId} has no ${name}, and it is not the next version.`);
+		const from = all.find((i) => i.name === fromName);
+		if (!from) throw new Error(`${name} is a new version: say which it was started from, with --from-version.`);
 		const source = await sourceText(projectId, from.name);
-		return { from, target: name, fresh: true, before: source === null ? '' : prototypeVersionOf(source), unread: false };
+		return { from, target: name, fresh: true, before: source === null ? '' : contentHashOf(source), unread: false };
 	};
 
 	/**
@@ -416,15 +403,15 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		change: PrototypeChange,
 		me: Person | null,
 		note: string,
-	): Promise<{ version: string | null; made: Iteration | null }> => {
+	): Promise<{ version: string | null; made: Work | null }> => {
 		const now = await sourceText(projectId, change.target);
-		const version = now === null ? null : prototypeVersionOf(now);
+		const version = now === null ? null : contentHashOf(now);
 		if (version === null || version === change.before) {
 			if (change.fresh) for (const f of [sourceFile(projectId, change.target), file(projectId, change.target)]) rmSync(f, { force: true });
 			return { version: null, made: null };
 		}
 		const html = await built(projectId, change.target);
-		const made = change.fresh ? await recordIteration(ctx.store(), { projectId, name: change.target, from: change.from, note, me }) : null;
+		const made = change.fresh ? await recordVersionFrom(ctx.store(), { projectId, name: change.target, from: change.from, note, me }) : null;
 		await keep(projectId, change.target, html);
 		return { version, made };
 	};

@@ -13,7 +13,7 @@ const world = () => {
 	const listeners: Record<string, ((e: unknown) => void)[]> = {};
 	const win = {
 		parent,
-		location: { pathname: '/review/a/v1/i1/page.html', hash: '#/alerts' },
+		location: { pathname: '/review/a/v1/page.html', hash: '#/alerts' },
 		addEventListener: (type: string, l: (e: unknown) => void) => void (listeners[type] ??= []).push(l),
 	} as unknown as AgentWindow;
 	const page = {
@@ -33,7 +33,7 @@ describe('a prototype’s page agent', () => {
 	it('says it is ready, with its route, to the address that said hello, and to it alone', () => {
 		const { send, told } = world();
 		send(hello);
-		expect(told()).toEqual([[{ dsnr: 'page-ready', n: 'n1', route: '/review/a/v1/i1/page.html#/alerts' }, BAR]]);
+		expect(told()).toEqual([[{ dsnr: 'page-ready', n: 'n1', route: '/review/a/v1/page.html#/alerts' }, BAR]]);
 	});
 
 	it('does what it is asked, as the scripts did from outside, and answers by the ask’s id', async () => {
@@ -68,7 +68,7 @@ describe('a prototype’s page agent', () => {
 		listeners.hashchange?.forEach((l) => l({}));
 		expect(told().slice(1)).toEqual([
 			[{ dsnr: 'page-pin', n: 'n1', text: '__fd:{"t":"click","id":1,"n":"n1"}' }, BAR],
-			[{ dsnr: 'page-route', n: 'n1', route: '/review/a/v1/i1/page.html#/alerts' }, BAR],
+			[{ dsnr: 'page-route', n: 'n1', route: '/review/a/v1/page.html#/alerts' }, BAR],
 		]);
 	});
 

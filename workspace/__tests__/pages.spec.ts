@@ -57,7 +57,7 @@ const run = (gh: ReturnType<typeof fakeSite>, more: Partial<Parameters<typeof pu
 		ref: REF,
 		recordsBranch: 'main',
 		projectId: 'demo',
-		name: 'v1-i2',
+		name: 'v12',
 		pushRecords,
 		fetchAnonymously: anonymous,
 		sleep: async () => undefined,
@@ -84,11 +84,11 @@ describe('publishing', () => {
 	it('pushes the records, asks for the deploy, waits for it, and gives the link to the iteration', async () => {
 		const gh = fakeSite();
 		const { done, pushRecords, anonymous } = run(gh);
-		expect(await done).toEqual({ url: `${SITE}demo/v1/i2/`, public: false, first: false });
+		expect(await done).toEqual({ url: `${SITE}demo/v12/`, public: false, first: false });
 		expect(pushRecords).toHaveBeenCalledOnce();
 		const dispatch = gh.calls.find((c) => c.method === 'POST');
 		expect(dispatch).toMatchObject({ path: `/repos/acme/design/actions/workflows/${PUBLISH_WORKFLOW}/dispatches`, body: { ref: 'main' } });
-		expect(anonymous).toHaveBeenCalledWith(`${SITE}demo/v1/i2/`);
+		expect(anonymous).toHaveBeenCalledWith(`${SITE}demo/v12/`);
 	});
 
 	it('says whether this is the first time the page goes up: not on the last deploy, or no deploy yet', async () => {
@@ -99,7 +99,7 @@ describe('publishing', () => {
 		const gh = fakeSite({ onSite: false });
 		await run(gh).done;
 		const asked = new URLSearchParams(gh.calls.find((c) => c.path.startsWith('/repos/acme/design/commits?'))?.path.split('?')[1]);
-		expect([asked.get('sha'), asked.get('path')]).toEqual(['d'.repeat(40), 'projects/demo/prototypes/v1-i2.html']);
+		expect([asked.get('sha'), asked.get('path')]).toEqual(['d'.repeat(40), 'projects/demo/prototypes/v12.html']);
 	});
 
 	it('does not count it as the first time when it cannot tell, so nothing opens by mistake', async () => {
@@ -117,7 +117,7 @@ describe('publishing', () => {
 	it('goes ahead while the repository is public, and says so in its note', async () => {
 		const gh = fakeSite({ repoPrivate: false, sitePublic: true });
 		const { done, log, pushRecords } = run(gh, { fetchAnonymously: async () => ({ status: 200 }) });
-		expect(await done).toEqual({ url: `${SITE}demo/v1/i2/`, public: true, first: false });
+		expect(await done).toEqual({ url: `${SITE}demo/v12/`, public: true, first: false });
 		expect(pushRecords).toHaveBeenCalledOnce();
 		expect(log.join('\n')).toMatch(/Note that the repository is public, so anyone with the link can open this page/);
 		expect(log.join('\n')).not.toMatch(/PUBLIC TEST/);
@@ -215,16 +215,16 @@ describe('whether an iteration is on its page', () => {
 			'/repos/acme/design/deployments/7/statuses?per_page=1': [{ state: 'in_progress' }],
 			'/repos/acme/design/deployments/6/statuses?per_page=1': [{ state: 'success' }],
 			'/repos/acme/design/commits?*': ({ query }) => {
-				expect(query.get('path')).toBe('projects/demo/prototypes/v1-i2.html');
+				expect(query.get('path')).toBe('projects/demo/prototypes/v12.html');
 				expect(query.get('sha')).toBe('main');
 				return changed ? [{ sha: changed }] : [];
 			},
 			'/repos/acme/design/compare/*': { status: compare },
 		}).github;
-	const status = (gh: GitHubApi) => pageStatus(gh, REF, 'demo', 'v1-i2');
+	const status = (gh: GitHubApi) => pageStatus(gh, REF, 'demo', 'v12');
 
 	it('is published when the last deploy includes the last change to its page, with a link that names that deploy', async () => {
-		expect(await status(site())).toEqual({ state: 'published', url: `${SITE}demo/v1/i2/?v=ddddddd` });
+		expect(await status(site())).toEqual({ state: 'published', url: `${SITE}demo/v12/?v=ddddddd` });
 		// The one still deploying is not counted: it may yet fail.
 	});
 
@@ -236,7 +236,7 @@ describe('whether an iteration is on its page', () => {
 
 	it('has nothing to say without a site, or for something that is not a prototype', async () => {
 		const none = fakeGitHub({ '/repos/acme/design': { private: true }, '/repos/acme/design/*': notFound }).github;
-		expect(await pageStatus(none, REF, 'demo', 'v1-i2')).toEqual({ state: 'none' });
+		expect(await pageStatus(none, REF, 'demo', 'v12')).toEqual({ state: 'none' });
 		expect(await pageStatus(site(), REF, 'demo', 'codebase')).toEqual({ state: 'none' });
 	});
 });
@@ -250,7 +250,7 @@ describe('unpublishing', () => {
 			ref: REF,
 			recordsBranch: 'main',
 			projectId: 'demo',
-			name: 'v1-i2',
+			name: 'v12',
 			removePage: async () => void order.push('removed'),
 			pushRecords: async () => (order.push('pushed'), { published: ['demo'], problems: [] }),
 			fetchAnonymously: async () => ({ status: 404 }),
@@ -264,7 +264,7 @@ describe('unpublishing', () => {
 	it('removes the page, pushes that, deploys the site without it, and checks it is gone', async () => {
 		const gh = fakeSite({ repoPrivate: false, sitePublic: true });
 		const { done, order, log } = take(gh);
-		expect(await done).toEqual({ url: `${SITE}demo/v1/i2/`, gone: true });
+		expect(await done).toEqual({ url: `${SITE}demo/v12/`, gone: true });
 		expect(order).toEqual(['removed', 'pushed']);
 		expect(gh.calls.find((c) => c.method === 'POST')?.path).toBe(`/repos/acme/design/actions/workflows/${PUBLISH_WORKFLOW}/dispatches`);
 		expect(log.join('\n')).toMatch(/Taken off the site[\s\S]*record and comments are kept/);
@@ -300,7 +300,7 @@ describe('unpublishing', () => {
 describe('what GitHub has that the site does not have yet', () => {
 	const WORKFLOW_RUNS = `/repos/acme/design/actions/workflows/${PUBLISH_WORKFLOW}/runs?per_page=5`;
 	const github = ({
-		files = [{ filename: 'projects/demo/prototypes/v1-i2.html', status: 'modified' }] as { filename: string; status: string }[],
+		files = [{ filename: 'projects/demo/prototypes/v12.html', status: 'modified' }] as { filename: string; status: string }[],
 		runs = [{ status: 'completed' }] as { status: string }[],
 		deployed = true,
 		pages = true,
@@ -315,14 +315,14 @@ describe('what GitHub has that the site does not have yet', () => {
 		}).github;
 
 	it('is found by what changed since the last deploy: one call, whichever page it was', async () => {
-		expect(await siteBehind(github(), REF)).toEqual({ kind: 'page', projectId: 'demo', name: 'v1-i2' });
+		expect(await siteBehind(github(), REF)).toEqual({ kind: 'page', projectId: 'demo', name: 'v12' });
 	});
 
 	it('is nothing when only things the site does not show have changed', async () => {
 		const files = [
 			{ filename: 'projects/demo/comments.md', status: 'modified' },
 			{ filename: 'skills/x.md', status: 'added' },
-			{ filename: 'projects/demo/prototypes/v1-i2.tsx', status: 'modified' },
+			{ filename: 'projects/demo/prototypes/v12.tsx', status: 'modified' },
 			// The app's own screens and its main process, which the site is not built from.
 			{ filename: 'workspace/src/main/ipc.ts', status: 'modified' },
 			{ filename: 'workspace/__tests__/viewer.spec.ts', status: 'modified' },
@@ -352,9 +352,9 @@ describe('what GitHub has that the site does not have yet', () => {
 	it('names the page when a page and the way the site is built both changed: one deploy does both', async () => {
 		const files = [
 			{ filename: 'workspace/src/viewer/Viewer.tsx', status: 'modified' },
-			{ filename: 'projects/demo/prototypes/v1-i2.html', status: 'modified' },
+			{ filename: 'projects/demo/prototypes/v12.html', status: 'modified' },
 		];
-		expect(await siteBehind(github({ files }), REF)).toEqual({ kind: 'page', projectId: 'demo', name: 'v1-i2' });
+		expect(await siteBehind(github({ files }), REF)).toEqual({ kind: 'page', projectId: 'demo', name: 'v12' });
 	});
 
 	it('waits while a deploy is already on its way, and has nothing to compare before the first deploy', async () => {

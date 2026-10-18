@@ -2,9 +2,9 @@ import { act, createElement } from 'react';
 import { describe, expect, it } from 'vitest';
 import { Panel } from '../extension/webview/Panel';
 import type { Context } from '../src/main/services/findContext';
-import type { Catalog, ComponentPictures, ProjectIteration } from '../src/shared/contract';
+import type { Catalog, ComponentPictures, ProjectWork } from '../src/shared/contract';
 import { SAMPLE_CATALOG, SAMPLE_PROJECTS } from './extensionSamples';
-import { projectIteration } from './fixtures';
+import { projectWork } from './fixtures';
 import { answer, button, calls, key, kept, mount, panelSaid, press, say, sent, type, unmount } from './webviewHarness';
 
 /**
@@ -167,9 +167,7 @@ describe('the account, and reading the projects again', () => {
 		await answer(
 			'listProjects',
 			SAMPLE_PROJECTS.map((p) =>
-				p.id === 'alert-history'
-					? { ...p, iterations: p.iterations.map((i, at) => ({ ...i, openComments: i.openComments + (at === 0 ? 1 : 0) })) }
-					: p,
+				p.id === 'alert-history' ? { ...p, work: p.work.map((i, at) => ({ ...i, openComments: i.openComments + (at === 0 ? 1 : 0) })) } : p,
 			),
 		);
 		expect(badge()).toBe('3 open comments');
@@ -380,7 +378,7 @@ describe('dialogs and menus, in the panel', () => {
 			await showOpen();
 			await press(menuFor(0));
 			await press(item('Copy link'));
-			expect(panelSaid().at(-1)).toEqual({ type: 'copy-review-link', projectId: 'alert-history', name: 'v2-i1', title: 'Alert history · V2 · I1' });
+			expect(panelSaid().at(-1)).toEqual({ type: 'copy-review-link', projectId: 'alert-history', name: 'v2', title: 'Alert history · V2' });
 			expect(items()).toHaveLength(0);
 		});
 
@@ -391,8 +389,8 @@ describe('dialogs and menus, in the panel', () => {
 			expect(panelSaid().at(-1)).toEqual({
 				type: 'open-review-published',
 				projectId: 'alert-history',
-				name: 'v2-i1',
-				title: 'Alert history · V2 · I1',
+				name: 'v2',
+				title: 'Alert history · V2',
 			});
 			expect(items()).toHaveLength(0);
 		});
@@ -411,8 +409,8 @@ describe('dialogs and menus, in the panel', () => {
 			expect(panelSaid().at(-1)).toEqual({
 				type: 'open-review-in-browser',
 				projectId: 'alert-history',
-				name: 'v2-i1',
-				title: 'Alert history · V2 · I1',
+				name: 'v2',
+				title: 'Alert history · V2',
 			});
 			expect(items()).toHaveLength(0);
 		});
@@ -519,12 +517,12 @@ describe('dialogs and menus, in the panel', () => {
 });
 
 describe('codebase work, in the panel', () => {
-	const codebase = (branch: string, more: Partial<ProjectIteration> = {}): ProjectIteration =>
-		projectIteration({ name: 'codebase', branch, createdAt: '2026-10-12T10:00:00Z', repository: 'flocksafety/flock-coke', ...more });
+	const codebase = (branch: string, more: Partial<ProjectWork> = {}): ProjectWork =>
+		projectWork({ name: 'codebase', branch, createdAt: '2026-10-12T10:00:00Z', repository: 'flocksafety/flock-coke', ...more });
 	/** Zone coverage built in the code too, and a project that is only in the code. */
 	const WITH_CODE = [
-		...SAMPLE_PROJECTS.map((p) => (p.id === 'zone-coverage' ? { ...p, iterations: [...p.iterations, codebase('feature/zone-coverage')] } : p)),
-		{ id: 'roles-in-code', title: 'Roles in code', folder: null, records: [], people: [], iterations: [codebase('feature/roles-in-code')] },
+		...SAMPLE_PROJECTS.map((p) => (p.id === 'zone-coverage' ? { ...p, work: [...p.work, codebase('feature/zone-coverage')] } : p)),
+		{ id: 'roles-in-code', title: 'Roles in code', folder: null, records: [], people: [], work: [codebase('feature/roles-in-code')] },
 	] as typeof SAMPLE_PROJECTS;
 	const dialog = () => document.querySelector('[role="dialog"]') as HTMLElement | null;
 	const named = (title: string) =>
@@ -603,9 +601,7 @@ describe('codebase work, in the panel', () => {
 		const READY = 'a1b2c3d';
 		const ready = (more: Record<string, unknown>) =>
 			WITH_CODE.map((p) =>
-				p.id === 'zone-coverage'
-					? { ...p, iterations: p.iterations.map((work) => (work.name === 'codebase' ? { ...work, readyAt: READY, ...more } : work)) }
-					: p,
+				p.id === 'zone-coverage' ? { ...p, work: p.work.map((work) => (work.name === 'codebase' ? { ...work, readyAt: READY, ...more } : work)) } : p,
 			);
 		await showOpen(OPEN, ready({}) as typeof SAMPLE_PROJECTS);
 		await press(menuOf('Zone coverage'));
@@ -624,7 +620,7 @@ describe('codebase work, in the panel', () => {
 			p.id === 'zone-coverage'
 				? {
 						...p,
-						iterations: p.iterations.map((work) =>
+						work: p.work.map((work) =>
 							work.name === 'codebase' ? { ...work, readyAt: 'a1b2c3d', pullRequest: 'https://github.com/flocksafety/flock-coke/pull/9' } : work,
 						),
 					}
@@ -643,9 +639,7 @@ describe('codebase work, in the panel', () => {
 		await showOpen(
 			OPEN,
 			WITH_CODE.map((p) =>
-				p.id === 'zone-coverage'
-					? { ...p, iterations: p.iterations.map((work) => (work.name === 'codebase' ? { ...work, readyAt: 'a1b2c3d' } : work)) }
-					: p,
+				p.id === 'zone-coverage' ? { ...p, work: p.work.map((work) => (work.name === 'codebase' ? { ...work, readyAt: 'a1b2c3d' } : work)) } : p,
 			) as typeof SAMPLE_PROJECTS,
 		);
 		await press(menuOf('Zone coverage'));
@@ -662,7 +656,7 @@ describe('codebase work, in the panel', () => {
 		await press(item('Hand off'));
 		await answer('agentStatus', { state: 'idle' });
 		await press(inDialog('Start handoff'));
-		await answer('agentStatus', { state: 'running', startedAt: '', work: 'prototype/alert-history/v2-i1', purpose: null });
+		await answer('agentStatus', { state: 'running', startedAt: '', work: 'prototype/alert-history/v2', purpose: null });
 		expect(panelSaid().some((m) => m.type === 'codebase')).toBe(false);
 		expect(dialog()!.textContent).toContain('The agent is busy with other work');
 	});
@@ -671,7 +665,7 @@ describe('codebase work, in the panel', () => {
 		await showOpen(OPEN, WITH_CODE);
 		await press(menuOf('Zone coverage'));
 		await press(item('Hand off'));
-		await answer('agentStatus', { state: 'running', startedAt: '', work: 'prototype/alert-history/v2-i1', purpose: null });
+		await answer('agentStatus', { state: 'running', startedAt: '', work: 'prototype/alert-history/v2', purpose: null });
 		expect(dialog()!.textContent).toContain('The agent is busy with other work');
 		expect(inDialog('Start handoff').disabled).toBe(true);
 	});
@@ -701,7 +695,7 @@ describe('codebase work, in the panel', () => {
 		it('reads what it would do in the product open here, for the project’s newest prototype', async () => {
 			await open();
 			expect(dialog()?.getAttribute('aria-label')).toBe('Build in the codebase');
-			expect(sent.filter((m) => m.name === 'buildInCodebasePlan').at(-1)?.args).toEqual(['/work/flock-coke', 'alert-history', 'v2-i1']);
+			expect(sent.filter((m) => m.name === 'buildInCodebasePlan').at(-1)?.args).toEqual(['/work/flock-coke', 'alert-history', 'v2']);
 			expect(sent.filter((m) => m.name === 'branchesWithSetup').at(-1)?.args).toEqual(['/work/flock-coke']);
 			expect(dialog()!.textContent).toContain('Creates feature/alert-history from this branch and moves your checkout to it.');
 			// What happens ends with the check it makes of its own work, and says what is left to Handoff.
@@ -714,7 +708,7 @@ describe('codebase work, in the panel', () => {
 			expect([...select().options].map((o) => o.textContent)).toEqual(['main', 'develop']);
 			expect(select().value).toBe('develop');
 			await press(inDialog('Build in Claude Code'));
-			expect(sent.filter((m) => m.name === 'buildInCodebase').at(-1)?.args).toEqual(['/work/flock-coke', 'alert-history', 'v2-i1', 'develop']);
+			expect(sent.filter((m) => m.name === 'buildInCodebase').at(-1)?.args).toEqual(['/work/flock-coke', 'alert-history', 'v2', 'develop']);
 			const reads = sent.filter((m) => m.name === 'listProjects').length;
 			await answer('buildInCodebase', { editor: true, command: null });
 			expect(dialog()!.textContent).toContain('It is in Claude Code in this window now, on feature/alert-history');
@@ -743,7 +737,7 @@ describe('codebase work, in the panel', () => {
 			expect(select()).toBeNull();
 			expect(dialog()!.textContent).toContain('Continues');
 			await press(inDialog('Continue in Claude Code'));
-			expect(sent.filter((m) => m.name === 'buildInCodebase').at(-1)?.args).toEqual(['/work/flock-coke', 'alert-history', 'v2-i1']);
+			expect(sent.filter((m) => m.name === 'buildInCodebase').at(-1)?.args).toEqual(['/work/flock-coke', 'alert-history', 'v2']);
 		});
 
 		it('will not continue work on a branch with no DSNR setup, and says what to do, before it moves anything', async () => {
@@ -859,7 +853,7 @@ describe('the projects as a list or a grid', () => {
 			'Admin usage',
 			'Role comparison',
 		]);
-		expect(cards()[0]!.querySelector('[data-part="meta"]')?.textContent).toBe('2 versions');
+		expect(cards()[0]!.querySelector('[data-part="meta"]')?.textContent).toBe('3 versions');
 		expect(cards()[0]!.querySelector('.badge')?.getAttribute('aria-label')).toBe('2 open comments');
 		expect(cards()[0]!.querySelector('.badge')?.classList.contains('badge-brand')).toBe(true);
 		expect(cards()[1]!.querySelector('.badge')).toBeNull();
@@ -895,7 +889,7 @@ describe('the projects as a list or a grid', () => {
 			'No folder',
 		]);
 		await press(cards()[0]!);
-		expect(panelSaid().at(-1)).toEqual({ type: 'open-review', projectId: 'alert-history', name: 'v2-i1', title: 'Alert history · V2 · I1' });
+		expect(panelSaid().at(-1)).toEqual({ type: 'open-review', projectId: 'alert-history', name: 'v2', title: 'Alert history · V2' });
 		expect(JSON.parse(cards()[0]!.closest('li')!.dataset.vscodeContext ?? '{}')).toMatchObject({
 			webviewSection: 'project',
 			projectId: 'alert-history',
@@ -905,7 +899,7 @@ describe('the projects as a list or a grid', () => {
 	it('draws the pictures in either', async () => {
 		await showOpen();
 		// A name of its own: a picture read is kept by its name, as the app keeps it, across the tests of this file.
-		await answer('ensureCovers', [{ projectId: 'alert-history', name: 'v2-i1', cover: 'fedcba654321' }]);
+		await answer('ensureCovers', [{ projectId: 'alert-history', name: 'v2', cover: 'fedcba654321' }]);
 		await answer('projectCover', 'data:image/jpeg;base64,BBBB');
 		expect(cards()[0]!.querySelector('[data-part="picture"]')?.getAttribute('src')).toBe('data:image/jpeg;base64,BBBB');
 	});
@@ -946,10 +940,10 @@ describe('Projects, focused on the product open', () => {
 		folder,
 		records: [],
 		people: [],
-		iterations: on.map(([product, createdAt], i) => ({
-			...SAMPLE_PROJECTS[0]!.iterations[0]!,
-			name: `v1-i${i + 1}`,
-			branch: `prototype/${id}/v1-i${i + 1}`,
+		work: on.map(([product, createdAt], i) => ({
+			...SAMPLE_PROJECTS[0]!.work[0]!,
+			name: `v${i + 1}`,
+			branch: `prototype/${id}/v${i + 1}`,
 			product,
 			createdAt,
 		})),
@@ -973,25 +967,25 @@ describe('Projects, focused on the product open', () => {
 		expect(meta('Alerts')).toBe('1 version');
 	});
 
-	it('counts a project’s versions, each however many iterations it has, and no version for work in the code', async () => {
+	it('counts a project’s versions, and no version for work in the code', async () => {
 		const at = (name: string, createdAt: string) => ({
-			...made('x', 'X', null, [COKE, createdAt]).iterations[0]!,
+			...made('x', 'X', null, [COKE, createdAt]).work[0]!,
 			name,
 			branch: name === 'codebase' ? 'feature/x' : `prototype/x/${name}`,
 		});
 		const project = {
 			...made('x', 'Many', null, [COKE, '2026-10-01T10:00:00Z']),
-			iterations: [
-				at('v1-i1', '2026-10-01T10:00:00Z'),
-				at('v1-i2', '2026-10-02T10:00:00Z'),
-				at('v2-i1', '2026-10-03T10:00:00Z'),
+			work: [
+				at('v1', '2026-10-01T10:00:00Z'),
+				at('v12', '2026-10-02T10:00:00Z'),
+				at('v2', '2026-10-03T10:00:00Z'),
 				at('codebase', '2026-10-04T10:00:00Z'),
 			],
 		};
-		const inCode = { ...project, id: 'y', title: 'Only code', iterations: [at('codebase', '2026-10-04T10:00:00Z')] };
+		const inCode = { ...project, id: 'y', title: 'Only code', work: [at('codebase', '2026-10-04T10:00:00Z')] };
 		await showOpen(OPEN, [project, inCode]);
 		await choose('All projects');
-		expect(meta('Many')).toBe('2 versions');
+		expect(meta('Many')).toBe('3 versions');
 		// Nothing to count, so nothing is said of it: the line is its folder and where else it is, when it has them.
 		expect(meta('Only code')).toBeUndefined();
 	});
@@ -1003,8 +997,7 @@ describe('Projects, focused on the product open', () => {
 		expect(names()).toEqual(['Alerts', 'Maps', 'Both', 'Old']);
 		// Both's newest work is Pepsi's, so it is under Pepsi, once, and says it is in Coke too.
 		expect(rows()[2]!.closest('[role="list"]')?.getAttribute('aria-label')).toBe('flock-pepsi');
-		// Two iterations of the same version are one version: iterations are the small changes within an idea.
-		expect(meta('Both')).toBe('1 version · Admin · Also in flock-coke');
+		expect(meta('Both')).toBe('2 versions · Admin · Also in flock-coke');
 		expect(meta('Alerts')).toBe('1 version · Admin');
 	});
 
@@ -1039,7 +1032,7 @@ describe('Projects, focused on the product open', () => {
 		await choose('All projects');
 		// Two products called flock-coke: each by its owner too, in titles and labels alike.
 		expect(sections()).toEqual(['flocksafety/flock-coke', 'flock-pepsi', 'No product']);
-		expect(meta('Acme')).toBe('1 version · Also in acme/flock-coke');
+		expect(meta('Acme')).toBe('2 versions · Also in acme/flock-coke');
 	});
 
 	it('goes back to the product’s own when another product is opened', async () => {
@@ -1154,7 +1147,7 @@ describe('Projects', () => {
 		expect([...body().querySelectorAll('[role="list"]')].map((l) => l.getAttribute('aria-label'))).toEqual(['Admin', 'Maps', 'No folder']);
 		expect(rows().map((r) => part(r, 'name'))).toEqual(['Alert history', 'Zone coverage', 'Admin usage', 'Role comparison']);
 		expect(rows()[0]!.querySelector('[data-part="picture"]')).not.toBeNull();
-		expect(part(rows()[0]!, 'meta')).toBe('2 versions');
+		expect(part(rows()[0]!, 'meta')).toBe('3 versions');
 		expect(part(rows()[3]!, 'meta')).toBe('1 version');
 	});
 
@@ -1182,15 +1175,15 @@ describe('Projects', () => {
 	it('opens a project’s newest prototype for review when its row is pressed', async () => {
 		await showOpen();
 		await press(rows()[0]!.querySelector('button') as HTMLElement);
-		expect(panelSaid().at(-1)).toEqual({ type: 'open-review', projectId: 'alert-history', name: 'v2-i1', title: 'Alert history · V2 · I1' });
+		expect(panelSaid().at(-1)).toEqual({ type: 'open-review', projectId: 'alert-history', name: 'v2', title: 'Alert history · V2' });
 	});
 
 	it('draws each project’s picture: those built here are made once the list is read, then each is read by its name', async () => {
 		await showOpen();
 		expect(rows()[0]!.querySelector('img')).toBeNull();
-		await answer('ensureCovers', [{ projectId: 'alert-history', name: 'v2-i1', cover: 'abc123def456' }]);
+		await answer('ensureCovers', [{ projectId: 'alert-history', name: 'v2', cover: 'abc123def456' }]);
 		const asked = sent.filter((m) => m.name === 'projectCover').at(-1);
-		expect(asked?.args).toEqual(['alert-history', 'v2-i1', 'abc123def456']);
+		expect(asked?.args).toEqual(['alert-history', 'v2', 'abc123def456']);
 		await answer('projectCover', 'data:image/jpeg;base64,AAAA');
 		expect(rows()[0]!.querySelector('[data-part="picture"]')?.getAttribute('src')).toBe('data:image/jpeg;base64,AAAA');
 		// A project with no picture keeps its place for one.
@@ -1199,15 +1192,15 @@ describe('Projects', () => {
 
 	it('shows a picture drawn again, not the one before it', async () => {
 		await showOpen();
-		await answer('ensureCovers', [{ projectId: 'alert-history', name: 'v2-i1', cover: 'aaaaaaaaaaaa' }]);
+		await answer('ensureCovers', [{ projectId: 'alert-history', name: 'v2', cover: 'aaaaaaaaaaaa' }]);
 		await say({ type: 'projects-changed' });
 		// Read again, so a list of its own, as every read is.
 		await answer(
 			'listProjects',
 			SAMPLE_PROJECTS.map((p) => ({ ...p })),
 		);
-		await answer('ensureCovers', [{ projectId: 'alert-history', name: 'v2-i1', cover: 'bbbbbbbbbbbb' }]);
-		expect(sent.filter((m) => m.name === 'projectCover').at(-1)?.args).toEqual(['alert-history', 'v2-i1', 'bbbbbbbbbbbb']);
+		await answer('ensureCovers', [{ projectId: 'alert-history', name: 'v2', cover: 'bbbbbbbbbbbb' }]);
+		expect(sent.filter((m) => m.name === 'projectCover').at(-1)?.args).toEqual(['alert-history', 'v2', 'bbbbbbbbbbbb']);
 	});
 
 	it('groups them by folder, each a section with how many it holds, those in none last', async () => {

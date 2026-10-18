@@ -6,7 +6,7 @@ import type { Project } from '../../src/shared/domain/projects';
 import { isPrototypeName } from '../../src/shared/prototypeNames';
 import { type Theme, isTheme } from '../../src/shared/prototypeTheme';
 import { PROJECT_ID, hasExactly } from '../../src/shared/validate';
-import { iterationLabel, workOf } from '../../src/shared/work';
+import { workLabel, workOf } from '../../src/shared/work';
 
 /**
  * What the panel's page may ask of the extension, and nothing else: a call to the core by its name in the contract's
@@ -70,10 +70,10 @@ export interface Review {
  * A project's prototypes that have a review page, newest first, as opening one asks: the panel's row opens the first, and
  * DSNR: Open a prototype for review offers them all. A prototype has a page when the site can lay its name out.
  */
-export const reviewsOf = (project: Pick<Project, 'id' | 'title' | 'iterations'>): Review[] =>
-	workOf(project.iterations, 'prototype')
+export const reviewsOf = (project: Pick<Project, 'id' | 'title' | 'work'>): Review[] =>
+	workOf(project.work, 'prototype')
 		.filter((i) => isPrototypeName(i.name))
-		.map((i) => ({ projectId: project.id, name: i.name, title: `${project.title} · ${iterationLabel(i)}` }));
+		.map((i) => ({ projectId: project.id, name: i.name, title: `${project.title} · ${workLabel(i)}` }));
 
 /**
  * The values tried on each component, by its story file, with the library's commit they were tried on: its instances are

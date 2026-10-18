@@ -157,7 +157,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 							// Address changes the prototype's code, which is with the product it was made on: that one, open here.
 							const why = needsProduct(project ? productsOf(project) : [], found.product === null ? null : found.productRepository);
 							if (why !== null) throw new Error(why);
-							// Titled as the project's records title it: a browser's page may have moved to another of its iterations.
+							// Titled as the project's records title it: a browser's page may have moved to another of its versions.
 							return addressComment({ ...here, show }, (project && reviewsOf(project).find((x) => x.name === r.name)) || r, comment);
 						};
 						// One place says what went wrong, a refusal included.

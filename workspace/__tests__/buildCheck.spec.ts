@@ -29,18 +29,18 @@ const levelA = {
 const rule = (id: string) => ({ id, help: id, impact: 'serious', tags: ['wcag2a', 'wcag412'], helpUrl: '', nodes: 1, elements: [] });
 
 const config = (html = '<!doctype html><title>Cameras</title><h1>Cameras</h1>'): CheckConfig => {
-	const page = join(dir, 'v1-i1.html');
+	const page = join(dir, 'v1.html');
 	writeFileSync(page, html);
 	return {
 		projectId: 'demo',
-		name: 'v1-i1',
-		of: "demo v1-i1's page",
+		name: 'v1',
+		of: "demo v1's page",
 		page,
-		source: join(dir, 'v1-i1.tsx'),
+		source: join(dir, 'v1.tsx'),
 		sharedDir: dir,
 		target: levelA,
-		cache: join(dir, 'v1-i1.accessibility.json'),
-		record: join(dir, 'v1-i1.build-checked.json'),
+		cache: join(dir, 'v1.accessibility.json'),
+		record: join(dir, 'v1.build-checked.json'),
 	};
 };
 /** A browser whose axe finds `violations`, and whose probe gives `cells`, in every state. */

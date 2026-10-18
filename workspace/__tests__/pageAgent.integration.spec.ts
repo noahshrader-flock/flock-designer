@@ -25,7 +25,7 @@ document.body.dataset.kept = localStorage.getItem('seen') + sessionStorage.getIt
  * the pages' own address with its own (VS Code), each sandboxed as the site builds it.
  */
 const BAR = (pagesAt = '') => `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Bar</title></head>
-<body style="margin:0"><iframe id="dsnr-frame" src="${pagesAt}/review/alpha/v1/i1/page.html" sandbox="${pagesAt ? SANDBOX_APART : SANDBOX_BESIDE}" style="width:800px;height:600px;border:0"></iframe>
+<body style="margin:0"><iframe id="dsnr-frame" src="${pagesAt}/review/alpha/v1/page.html" sandbox="${pagesAt ? SANDBOX_APART : SANDBOX_BESIDE}" style="width:800px;height:600px;border:0"></iframe>
 <script src="/bar.js"></script></body></html>`;
 
 let server: Server;
@@ -55,7 +55,7 @@ beforeAll(async () => {
 				? ['text/html', BAR()]
 				: path === '/bar-apart.html'
 					? ['text/html', BAR(pagesAt)]
-					: path === '/review/alpha/v1/i1/page.html'
+					: path === '/review/alpha/v1/page.html'
 						? ['text/html', PAGE]
 						: path === '/agent.js'
 							? ['text/javascript', PAGE_AGENT]
@@ -70,7 +70,7 @@ beforeAll(async () => {
 	pages = createServer((req, res) => {
 		const path = (req.url ?? '/').split('?')[0] as string;
 		const [type, body] =
-			path === '/review/alpha/v1/i1/page.html' ? ['text/html', PAGE] : path === '/agent.js' ? ['text/javascript', PAGE_AGENT] : ['text/plain', ''];
+			path === '/review/alpha/v1/page.html' ? ['text/html', PAGE] : path === '/agent.js' ? ['text/javascript', PAGE_AGENT] : ['text/plain', ''];
 		res.writeHead(body ? 200 : 404, { 'content-type': type }).end(body);
 	});
 	await new Promise<void>((r) => pages.listen(0, '127.0.0.1', r));
@@ -103,7 +103,7 @@ describe.skipIf(NO_CHROME)('the bar and the page, by message, in the real browse
 							w.page.onReady(resolve);
 						}),
 				);
-				expect(route).toBe('/review/alpha/v1/i1/page.html');
+				expect(route).toBe('/review/alpha/v1/page.html');
 				// Its storage and cookie kept what it set, real or stand-in.
 				const page = tab.frames().find((f) => f.url().endsWith('page.html'));
 				expect(await page?.evaluate(() => document.body.dataset.kept)).toBe('12c=3');
@@ -134,7 +134,7 @@ describe.skipIf(NO_CHROME)('the bar and the page, by message, in the real browse
 				await tab.waitForFunction(() => (window as any).heard.some((h: { route?: string }) => h.route?.endsWith('#/other')));
 				const heard = await tab.evaluate(() => (window as any).heard);
 				expect(heard).toContainEqual({ kind: 'click', id: 7 });
-				expect(heard).toContainEqual({ route: '/review/alpha/v1/i1/page.html#/other' });
+				expect(heard).toContainEqual({ route: '/review/alpha/v1/page.html#/other' });
 			});
 		},
 		60_000,

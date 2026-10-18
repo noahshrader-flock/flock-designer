@@ -21,12 +21,12 @@ describe('what the page may ask', () => {
 		]);
 	});
 
-	it.each([
-		[{ dsnr: 'ask', id: 1, name: 'readComments', args: ['demo', 'prototype/demo/v1-i1'] }],
-		[{ dsnr: 'ask', id: 9, name: 'signIn', args: [] }],
-	])('%o is read', (m) => {
-		expect(readRelayAsk(m)).toEqual(m);
-	});
+	it.each([[{ dsnr: 'ask', id: 1, name: 'readComments', args: ['demo', 'prototype/demo/v1'] }], [{ dsnr: 'ask', id: 9, name: 'signIn', args: [] }]])(
+		'%o is read',
+		(m) => {
+			expect(readRelayAsk(m)).toEqual(m);
+		},
+	);
 
 	it.each([
 		[null],

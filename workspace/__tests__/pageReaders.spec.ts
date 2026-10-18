@@ -96,28 +96,24 @@ describe('where a pick landed', () => {
 
 describe('where a change to a prototype goes', () => {
 	const change = (over: Partial<PrototypeChange>): PrototypeChange => ({
-		from: { name: 'v1-2' } as PrototypeChange['from'],
-		target: 'v1-2',
+		from: { name: 'v2' } as PrototypeChange['from'],
+		target: 'v2',
 		fresh: false,
 		before: 'abc',
 		unread: false,
 		...over,
 	});
 
-	it('says nothing when it is made in the iteration the agent was pointed at', () => {
-		expect(whereTheChangeGoes(change({}), 'v1-2')).toBeNull();
+	it('says nothing when it is made in the version the agent was pointed at', () => {
+		expect(whereTheChangeGoes(change({}))).toBeNull();
 	});
 
-	it('names the newest iteration when that is where it goes', () => {
-		expect(whereTheChangeGoes(change({ target: 'v1-3' }), 'v1-2')).toBe('v1-3 is the newest iteration of this version, so the change is made there.');
-	});
-
-	it('keeps a commented-on iteration as people saw it, and says the change goes in its copy', () => {
-		const where = whereTheChangeGoes(change({ fresh: true, target: 'v1-3' }), 'v1-2');
-		expect(where).toMatch(/^Others have commented on v1-2, so it stays as they saw it\. The change is made in v1-3, its next iteration/);
+	it('keeps a commented-on version as people saw it, and says the change goes in a new version from it', () => {
+		const where = whereTheChangeGoes(change({ fresh: true, target: 'v4' }));
+		expect(where).toMatch(/^Others have commented on v2, so it stays as they saw it\. The change is made in v4, a new version from it/);
 	});
 
 	it('treats comments that could not be read as there, and says so', () => {
-		expect(whereTheChangeGoes(change({ fresh: true, unread: true, target: 'v1-3' }), 'v1-2')).toMatch(/^Who has commented on v1-2 could not be read/);
+		expect(whereTheChangeGoes(change({ fresh: true, unread: true, target: 'v4' }))).toMatch(/^Who has commented on v2 could not be read/);
 	});
 });

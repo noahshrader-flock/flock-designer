@@ -38,7 +38,7 @@ describe('what the bar asks the page', () => {
 
 describe('what the page says back', () => {
 	it.each([
-		[{ dsnr: 'page-ready', n: N, route: '/review/a/v1/i1/page.html#/alerts' }],
+		[{ dsnr: 'page-ready', n: N, route: '/review/a/v1/page.html#/alerts' }],
 		[{ dsnr: 'page-route', n: N, route: '/x#/y' }],
 		[{ dsnr: 'page-answer', n: N, id: 3, value: { anything: 'the readers check it' } }],
 		[{ dsnr: 'page-answer', n: N, id: 4, value: null }],

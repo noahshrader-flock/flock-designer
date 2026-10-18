@@ -7,8 +7,8 @@ import { serveSite } from '../src/site/serveSite';
 
 /**
  * The site prototypes are published as (M5a of the Pages plan), built from a design repository: every project with a
- * saved page, every version and iteration of it, `latest` links, and an index. Against a fixture repository with two
- * projects, two versions and three iterations, and one project with nothing to show.
+ * saved page, every version of it, a `latest` link, and an index. Against a fixture repository with two projects, one
+ * with three versions, and one project with nothing to show.
  */
 
 let root: string;
@@ -27,13 +27,13 @@ const record = (name: string, more: Record<string, unknown> = {}) => ({
 	note: '',
 	...more,
 });
-const project = (id: string, brief: string | null, iterations: Record<string, unknown>[], pages: Record<string, string>) => {
+const project = (id: string, brief: string | null, work: Record<string, unknown>[], pages: Record<string, string>) => {
 	const dir = join(design, 'projects', id);
 	mkdirSync(join(dir, 'prototypes'), { recursive: true });
 	if (brief !== null) writeFileSync(join(dir, 'brief.md'), brief);
 	writeFileSync(
-		join(dir, 'iterations.json'),
-		JSON.stringify(iterations.map((i) => ({ ...i, projectId: id, branch: String(i.branch).replace('/x/', `/${id}/`) }))),
+		join(dir, 'work.json'),
+		JSON.stringify(work.map((i) => ({ ...i, projectId: id, branch: String(i.branch).replace('/x/', `/${id}/`) }))),
 	);
 	for (const [name, html] of Object.entries(pages)) writeFileSync(join(dir, 'prototypes', `${name}.html`), html);
 };
@@ -51,18 +51,17 @@ beforeEach(() => {
 		'alpha',
 		'# Alerts <history>\n\nA list.\n',
 		[
-			record('v1-i1', { createdAt: '2026-10-01T10:00:00Z', contributors: [{ name: 'Noah Shrader', login: 'noah' }] }),
-			record('v1-i2', { createdAt: '2026-10-03T10:00:00Z', contributors: [{ name: 'Pat', login: 'pat' }] }),
-			record('v2-i1', { createdAt: '2026-10-02T10:00:00Z' }),
+			record('v1', { createdAt: '2026-10-01T10:00:00Z', contributors: [{ name: 'Noah Shrader', login: 'noah' }] }),
+			record('v3', { createdAt: '2026-10-03T10:00:00Z', contributors: [{ name: 'Pat', login: 'pat' }] }),
+			record('v2', { createdAt: '2026-10-02T10:00:00Z' }),
 			// Codebase work is not a page.
 			{ name: 'codebase', branch: 'feature/alpha', commit: null, note: '' },
 		],
-		{ 'v1-i1': page('Alpha one'), 'v1-i2': page('Alpha one, refined'), 'v2-i1': page('Alpha two') },
+		{ v1: page('Alpha one'), v3: page('Alpha three'), v2: page('Alpha two') },
 	);
-	// Named before versions: version 1.
-	project('beta', '# Beta\n', [record('i1', { createdAt: '2026-09-30T10:00:00Z' })], { i1: page('Beta') });
+	project('beta', '# Beta\n', [record('v1', { createdAt: '2026-09-30T10:00:00Z' })], { v1: page('Beta') });
 	// Recorded, but no page was ever saved: nothing to show.
-	project('gamma', '# Gamma\n', [record('v1-i1')], {});
+	project('gamma', '# Gamma\n', [record('v1')], {});
 });
 
 afterEach(() => rmSync(root, { recursive: true, force: true }));
@@ -81,42 +80,41 @@ describe('the index', () => {
 	});
 });
 
-describe('an iteration', () => {
+describe('a version', () => {
 	it("is its saved page under a bar that is a link back to the project, which the viewer replaces with the app's own", () => {
 		build();
-		const viewer = read('alpha/v1/i2/index.html');
+		const viewer = read('alpha/v3/index.html');
 		expect(viewer).toContain('<iframe');
 		expect(viewer).toContain('src="page.html"');
-		expect(viewer).toContain('<header id="dsnr-bar"><a href="../../">Alerts &lt;history&gt;</a></header>');
+		expect(viewer).toContain('<header id="dsnr-bar"><a href="../">Alerts &lt;history&gt;</a></header>');
 		// Nothing of the bar is styled or built here: no select of its own, no styles for one.
 		expect(viewer).not.toMatch(/<select|class="bar"|\.bar\b/);
-		expect(read('alpha/v1/i2/page.html')).toContain('Alpha one, refined');
+		expect(read('alpha/v3/page.html')).toContain('Alpha three');
 	});
 
 	it('finds the design system fonts from wherever the site is served', () => {
 		build();
-		const saved = read('alpha/v1/i2/page.html');
-		expect(saved).toContain(`url(../../../_shared/${HASH}.woff2)`);
+		const saved = read('alpha/v3/page.html');
+		expect(saved).toContain(`url(../../_shared/${HASH}.woff2)`);
 		expect(saved).not.toContain('url(/_shared/');
 		expect(readFileSync(join(out, '_shared', `${HASH}.woff2`)).equals(FONT)).toBe(true);
 	});
 
-	it('is at version 1 when it was named before versions', () => {
+	it('is not read from a record in the old shape, a version and its iteration: that project shows nothing', () => {
+		project('delta', '# Delta\n', [record('v1-i1')], { 'v1-i1': page('Delta') });
 		build();
-		expect(read('beta/v1/i1/page.html')).toContain('Beta');
+		expect(existsSync(join(out, 'delta'))).toBe(false);
+		expect(read('index.html')).not.toContain('delta/');
 	});
 });
 
 describe('a project', () => {
-	it('shows its versions side by side, each with its iterations newest first, with date, author and comments', () => {
-		build({ comments: new Map([['prototype/alpha/v1-i2', 3]]) });
+	it('lists its versions, the newest first, with date, author and comments', () => {
+		build({ comments: new Map([['prototype/alpha/v3', 3]]) });
 		const html = read('alpha/index.html');
-		const v1 = html.indexOf('V1');
-		const v2 = html.indexOf('V2');
-		expect(v1).toBeGreaterThan(-1);
-		expect(v2).toBeGreaterThan(v1);
-		// Within V1, I2 (the newer) comes first.
-		expect(html.indexOf('href="v1/i2/"')).toBeLessThan(html.indexOf('href="v1/i1/"'));
+		expect(html.indexOf('>V3<')).toBeGreaterThan(-1);
+		expect(html.indexOf('href="v3/"')).toBeLessThan(html.indexOf('href="v2/"'));
+		expect(html.indexOf('href="v2/"')).toBeLessThan(html.indexOf('href="v1/"'));
 		expect(html).toContain('Oct 3, 2026');
 		expect(html).toContain('Pat');
 		expect(html).toContain('3 comments');
@@ -127,7 +125,7 @@ describe('a project', () => {
 describe('on a phone', () => {
 	it('keeps the prototype at a computer’s width, to scroll across, and says it is best on a computer', () => {
 		build();
-		const html = read('alpha/v1/i2/index.html');
+		const html = read('alpha/v3/index.html');
 		expect(html).toContain('<meta name="viewport" content="width=device-width, initial-scale=1">');
 		expect(html).toContain('<p class="small-screen">Best on a computer');
 		expect(html).toMatch(/@media \(max-width: 767px\) \{[^}]*\.small-screen \{ display: block; \}[\s\S]*\.stage iframe \{ min-width: 1024px; \}/);
@@ -135,28 +133,28 @@ describe('on a phone', () => {
 });
 
 describe('latest', () => {
-	it("goes to a version's newest iteration, and to the newest version's", () => {
+	it('goes to the newest version, and is the only latest there is', () => {
 		build();
-		expect(read('alpha/v1/latest/index.html')).toContain('url=../i2/');
-		expect(read('alpha/latest/index.html')).toContain('url=../v2/i1/');
-		expect(read('beta/latest/index.html')).toContain('url=../v1/i1/');
+		expect(read('alpha/latest/index.html')).toContain('url=../v3/');
+		expect(read('beta/latest/index.html')).toContain('url=../v1/');
+		expect(existsSync(join(out, 'alpha', 'v1', 'latest'))).toBe(false);
 	});
 });
 
 describe('there is no selected version', () => {
-	it('so latest is always the newest version’s newest iteration, and nothing is marked, even by a file left from before', () => {
+	it('so latest is always the newest version, and nothing is marked, even by a file left from before', () => {
 		writeFileSync(join(design, 'projects', 'alpha', 'selected.json'), '{ "version": 1 }\n');
 		build();
 		expect(read('alpha/index.html')).not.toContain('Selected');
 		expect(read('alpha/index.html')).not.toContain('class="version selected"');
-		expect(read('alpha/latest/index.html')).toContain('url=../v2/i1/');
+		expect(read('alpha/latest/index.html')).toContain('url=../v3/');
 	});
 });
 
 describe('built in code', () => {
 	const withCodebase = (pullRequest: string) =>
-		project('alpha', '# Alpha\n', [record('v1-i1'), { name: 'codebase', branch: 'feature/alpha', commit: null, note: '', pullRequest }], {
-			'v1-i1': page('Alpha'),
+		project('alpha', '# Alpha\n', [record('v1'), { name: 'codebase', branch: 'feature/alpha', commit: null, note: '', pullRequest }], {
+			v1: page('Alpha'),
 		});
 
 	it("links the project page to its codebase work's pull request, once it has been shared", () => {
@@ -177,15 +175,15 @@ describe('built in code', () => {
 		project(
 			'alpha',
 			'# Alpha\n',
-			[record('v1-i1'), { name: 'codebase', branch: 'feature/alpha', commit: null, note: '', repository: 'flocksafety/flock-coke' }],
-			{ 'v1-i1': page('Alpha') },
+			[record('v1'), { name: 'codebase', branch: 'feature/alpha', commit: null, note: '', repository: 'flocksafety/flock-coke' }],
+			{ v1: page('Alpha') },
 		);
 		build();
 		expect(read('alpha/index.html')).toContain('<a href="https://github.com/flocksafety/flock-coke/tree/feature/alpha">Built in code</a>');
 	});
 
 	it("does not take a prototype's pull request for codebase work", () => {
-		project('alpha', '# Alpha\n', [record('v1-i1', { pullRequest: 'https://github.com/o/r/pull/5' })], { 'v1-i1': page('Alpha') });
+		project('alpha', '# Alpha\n', [record('v1', { pullRequest: 'https://github.com/o/r/pull/5' })], { v1: page('Alpha') });
 		build();
 		expect(read('alpha/index.html')).not.toContain('Built in code');
 	});
@@ -194,7 +192,7 @@ describe('built in code', () => {
 describe('building', () => {
 	it('links only within itself, so it works from any address it is served at', () => {
 		build();
-		const files = ['index.html', 'alpha/index.html', 'alpha/v1/i2/index.html', 'alpha/latest/index.html'].map(read);
+		const files = ['index.html', 'alpha/index.html', 'alpha/v3/index.html', 'alpha/latest/index.html'].map(read);
 		for (const html of files) expect(html).not.toMatch(/(?:href|src|value)="\//);
 	});
 
@@ -232,9 +230,9 @@ describe('signing in to comment', () => {
 	const said = (html: string) => JSON.parse(/<script type="application\/json" id="dsnr-sign-in">([^<]*)<\/script>/.exec(html)?.[1] ?? 'null');
 	const SIGN_IN = { clientId: 'Iv-test', exchange: 'https://dsnr-auth.vercel.app/api/exchange' };
 
-	it('tells every iteration’s page the App, the function, GitHub’s sign-in page and the site’s own address', () => {
+	it('tells every version’s page the App, the function, GitHub’s sign-in page and the site’s own address', () => {
 		withViewer(SIGN_IN);
-		expect(said(read('alpha/v1/i2/index.html'))).toEqual({
+		expect(said(read('alpha/v3/index.html'))).toEqual({
 			...SIGN_IN,
 			redirect: 'https://acme.github.io/design/',
 			authorize: 'https://github.com/login/oauth/authorize',
@@ -250,7 +248,7 @@ describe('signing in to comment', () => {
 
 	it('says nothing of signing in without a client ID, or without a viewer', () => {
 		withViewer({ clientId: '', exchange: SIGN_IN.exchange });
-		expect(read('alpha/v1/i2/index.html')).not.toContain('dsnr-sign-in');
+		expect(read('alpha/v3/index.html')).not.toContain('dsnr-sign-in');
 		expect(read('index.html')).not.toContain('viewer.js');
 		build({ signIn: SIGN_IN });
 		expect(read('index.html')).not.toContain('dsnr-sign-in');
@@ -258,7 +256,7 @@ describe('signing in to comment', () => {
 });
 
 describe('comments on the page', () => {
-	it('carries the viewer on every iteration, told which iteration it is, with room for it in the bar and beside the frame', () => {
+	it('carries the viewer on every version, told which version it is, with room for it in the bar and beside the frame', () => {
 		const viewer = join(root, 'viewer');
 		mkdirSync(viewer);
 		writeFileSync(join(viewer, 'viewer.js'), 'console.log(1)');
@@ -267,22 +265,22 @@ describe('comments on the page', () => {
 		build({ viewer: { dir: viewer, ref: { owner: 'acme', repo: 'design' } } });
 		expect(readFileSync(join(out, '_viewer', 'viewer.js'), 'utf8')).toBe('console.log(1)');
 		expect(readFileSync(join(out, '_viewer', 'page-agent.js'), 'utf8')).toBe('agent()');
-		const html = read('alpha/v1/i2/index.html');
-		expect(html).toContain('<script type="module" src="../../../_viewer/viewer.js"></script>');
-		expect(html).toContain('href="../../../_viewer/viewer.css"');
+		const html = read('alpha/v3/index.html');
+		expect(html).toContain('<script type="module" src="../../_viewer/viewer.js"></script>');
+		expect(html).toContain('href="../../_viewer/viewer.css"');
 		const config = JSON.parse(/<script type="application\/json" id="dsnr-config">([^<]*)<\/script>/.exec(html)?.[1] ?? 'null');
 		expect(config).toEqual({
 			owner: 'acme',
 			repo: 'design',
 			projectId: 'alpha',
-			name: 'v1-i2',
+			name: 'v3',
 			title: 'Alerts <history>',
-			projectHref: '../../',
-			// Every iteration of every version is a step away, from this page.
-			iterations: [
-				{ name: 'v1-i2', href: '../../v1/i2/' },
-				{ name: 'v1-i1', href: '../../v1/i1/' },
-				{ name: 'v2-i1', href: '../../v2/i1/' },
+			projectHref: '../',
+			// Every version is a step away, from this page, the newest first.
+			versions: [
+				{ name: 'v3', href: '../v3/' },
+				{ name: 'v2', href: '../v2/' },
+				{ name: 'v1', href: '../v1/' },
 			],
 			// This page says it has none.
 			states: [],
@@ -295,13 +293,11 @@ describe('comments on the page', () => {
 		mkdirSync(viewer);
 		for (const f of ['viewer.js', 'viewer.css', 'page-agent.js']) writeFileSync(join(viewer, f), '');
 		writeFileSync(
-			join(design, 'projects', 'alpha', 'prototypes', 'v2-i1.html'),
+			join(design, 'projects', 'alpha', 'prototypes', 'v2.html'),
 			page('Alpha two').replace('<head>', '<head><meta name="dsnr-states" content="default,filtered,panel">'),
 		);
 		build({ viewer: { dir: viewer, ref: { owner: 'acme', repo: 'design' } } });
-		const config = JSON.parse(
-			/<script type="application\/json" id="dsnr-config">([^<]*)<\/script>/.exec(read('alpha/v2/i1/index.html'))?.[1] ?? 'null',
-		);
+		const config = JSON.parse(/<script type="application\/json" id="dsnr-config">([^<]*)<\/script>/.exec(read('alpha/v2/index.html'))?.[1] ?? 'null');
 		expect(config.states).toEqual(['default', 'filtered', 'panel']);
 	});
 
@@ -310,11 +306,11 @@ describe('comments on the page', () => {
 		mkdirSync(viewer);
 		for (const f of ['viewer.js', 'viewer.css', 'page-agent.js']) writeFileSync(join(viewer, f), '');
 		build({ viewer: { dir: viewer, ref: { owner: 'acme', repo: 'design' } } });
-		const agent = '<script src="../../../_viewer/page-agent.js"></script>';
-		const saved = read('alpha/v1/i2/page.html');
+		const agent = '<script src="../../_viewer/page-agent.js"></script>';
+		const saved = read('alpha/v3/page.html');
 		// First in its head, before the prototype's own code, and once.
 		expect(saved.indexOf(agent)).toBeGreaterThan(-1);
-		expect(saved.indexOf(agent)).toBeLessThan(saved.indexOf('Alpha one, refined'));
+		expect(saved.indexOf(agent)).toBeLessThan(saved.indexOf('Alpha three'));
 		expect(saved.split(agent)).toHaveLength(2);
 		expect(saved).toMatch(new RegExp(`<head[^>]*>${agent.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')}`));
 	});
@@ -329,7 +325,7 @@ describe('comments on the page', () => {
 				(m[2] as string).trim(),
 			);
 		// The review page: nothing selects a bare heading, which would reach the bar's title.
-		expect(rules(read('alpha/v1/i2/index.html')).filter((r) => /^h[1-6]\b/.test(r))).toEqual([]);
+		expect(rules(read('alpha/v3/index.html')).filter((r) => /^h[1-6]\b/.test(r))).toEqual([]);
 		// The lists' own headings are still sized, inside their own page.
 		expect(rules(read('index.html'))).toContain('main h1');
 	});
@@ -343,8 +339,8 @@ describe('comments on the page', () => {
 
 	it('frames each page from the pages’ address when told one, sandboxed, so the page cannot reach the bar', () => {
 		build({ pagesAt: 'http://127.0.0.1:4100/review/' });
-		const frame = /<iframe id="dsnr-frame"[^>]*>/.exec(read('alpha/v1/i2/index.html'))?.[0] ?? '';
-		expect(frame).toContain('src="http://127.0.0.1:4100/review/alpha/v1/i2/page.html"');
+		const frame = /<iframe id="dsnr-frame"[^>]*>/.exec(read('alpha/v3/index.html'))?.[0] ?? '';
+		expect(frame).toContain('src="http://127.0.0.1:4100/review/alpha/v3/page.html"');
 		// Its own scripts, its own origin (its cookies and storage), forms, pop-ups and alerts; never the window above it.
 		expect(frame).toContain('sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"');
 		expect(frame).not.toContain('allow-top-navigation');
@@ -352,7 +348,7 @@ describe('comments on the page', () => {
 
 	it('frames each page from beside it, as the published site does, sandboxed with no origin of its own, when told none', () => {
 		build();
-		const frame = /<iframe id="dsnr-frame"[^>]*>/.exec(read('alpha/v1/i2/index.html'))?.[0] ?? '';
+		const frame = /<iframe id="dsnr-frame"[^>]*>/.exec(read('alpha/v3/index.html'))?.[0] ?? '';
 		expect(frame).toContain('src="page.html"');
 		// Its own scripts, forms, pop-ups and alerts. Not its own origin: on the bar's address that would let it take the
 		// sandbox off through the bar, and read the bar's storage, where the sign-in's token is (PUBLISHED_COMMENTS_PLAN, 2.2).
@@ -363,8 +359,8 @@ describe('comments on the page', () => {
 
 	it('leaves the pages as they were without it', () => {
 		build();
-		expect(read('alpha/v1/i2/page.html')).not.toContain('page-agent.js');
-		expect(read('alpha/v1/i2/index.html')).not.toContain('viewer.js');
+		expect(read('alpha/v3/page.html')).not.toContain('page-agent.js');
+		expect(read('alpha/v3/index.html')).not.toContain('viewer.js');
 		expect(existsSync(join(out, '_viewer'))).toBe(false);
 	});
 });
@@ -376,17 +372,17 @@ describe('serving it here, to look at', () => {
 		const { server, url } = await serveSite(out);
 		try {
 			const get = (path: string) => fetch(new URL(path, url), { redirect: 'manual' });
-			expect((await get('alpha/v1/i2/')).headers.get('content-type')).toContain('text/html');
-			expect(await (await get('alpha/v1/i2/page.html')).text()).toContain('Alpha one, refined');
+			expect((await get('alpha/v3/')).headers.get('content-type')).toContain('text/html');
+			expect(await (await get('alpha/v3/page.html')).text()).toContain('Alpha three');
 			expect((await get(`_shared/${HASH}.woff2`)).headers.get('content-type')).toBe('font/woff2');
 			writeFileSync(join(out, 'x.js'), '1');
 			writeFileSync(join(out, 'x.css'), 'a{}');
 			expect((await get('x.js')).headers.get('content-type')).toContain('text/javascript');
 			expect((await get('x.css')).headers.get('content-type')).toContain('text/css');
 			// Without its slash a folder's relative links would point one level up, so it is sent to the slashed address.
-			const bare = await get('alpha/v1/i2');
+			const bare = await get('alpha/v3');
 			expect(bare.status).toBe(301);
-			expect(bare.headers.get('location')).toBe('/alpha/v1/i2/');
+			expect(bare.headers.get('location')).toBe('/alpha/v3/');
 			expect((await get('%2e%2e/secret.txt')).status).toBe(404);
 			expect((await get('nope/')).status).toBe(404);
 		} finally {

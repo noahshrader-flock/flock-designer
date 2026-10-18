@@ -106,26 +106,26 @@ describe('readCheckout', () => {
 
 describe('createBranch', () => {
 	it('creates and switches to the branch', async () => {
-		await createBranch(root, 'fd/demo/i1', 'develop');
-		expect((await readCheckout(root)).branch).toBe('fd/demo/i1');
+		await createBranch(root, 'prototype/demo/v1', 'develop');
+		expect((await readCheckout(root)).branch).toBe('prototype/demo/v1');
 	});
 
 	it('refuses while the tree is dirty, rather than carrying the edits over', async () => {
 		writeFileSync(join(root, 'README.md'), 'work in progress\n');
-		await expect(createBranch(root, 'fd/demo/i1', 'develop')).rejects.toThrow(/uncommitted changes/);
+		await expect(createBranch(root, 'prototype/demo/v1', 'develop')).rejects.toThrow(/uncommitted changes/);
 		// and the edit is still there, on the branch it was made on
 		expect((await readCheckout(root)).branch).toBe('develop');
 	});
 
 	it('refuses to reuse an existing branch name', async () => {
-		await createBranch(root, 'fd/demo/i1', 'develop');
+		await createBranch(root, 'prototype/demo/v1', 'develop');
 		g('checkout', '-q', 'develop');
-		await expect(createBranch(root, 'fd/demo/i1', 'develop')).rejects.toThrow(/already exists/);
+		await expect(createBranch(root, 'prototype/demo/v1', 'develop')).rejects.toThrow(/already exists/);
 	});
 
 	it('treats a branch name with shell metacharacters as a name, not a command', async () => {
 		// If anything here reached a shell, this would run `touch`. argv means it cannot.
-		const nasty = 'fd/demo/i1; touch pwned';
+		const nasty = 'prototype/demo/v1; touch pwned';
 		await expect(createBranch(root, nasty, 'develop')).rejects.toThrow();
 		expect(isRepository(join(root, 'pwned'))).toBe(false);
 	});
@@ -133,17 +133,17 @@ describe('createBranch', () => {
 
 describe('checkoutBranch', () => {
 	it('switches to an existing branch', async () => {
-		await createBranch(root, 'fd/demo/i1', 'develop');
+		await createBranch(root, 'prototype/demo/v1', 'develop');
 		await checkoutBranch(root, 'develop');
 		expect((await readCheckout(root)).branch).toBe('develop');
 	});
 
 	it('refuses a branch that does not exist', async () => {
-		await expect(checkoutBranch(root, 'fd/nope/i9')).rejects.toThrow(/does not exist/);
+		await expect(checkoutBranch(root, 'prototype/nope/v9')).rejects.toThrow(/does not exist/);
 	});
 
 	it('refuses while the tree is dirty', async () => {
-		await createBranch(root, 'fd/demo/i1', 'develop');
+		await createBranch(root, 'prototype/demo/v1', 'develop');
 		writeFileSync(join(root, 'README.md'), 'wip\n');
 		await expect(checkoutBranch(root, 'develop')).rejects.toThrow(/uncommitted changes/);
 	});
@@ -151,12 +151,12 @@ describe('checkoutBranch', () => {
 
 describe('listing', () => {
 	it('lists only branches under the prefix', async () => {
-		await createBranch(root, 'fd/demo/i1', 'develop');
+		await createBranch(root, 'feature/demo/one', 'develop');
 		g('checkout', '-q', 'develop');
-		await createBranch(root, 'fd/demo/i2', 'develop');
+		await createBranch(root, 'feature/demo/two', 'develop');
 		g('checkout', '-q', 'develop');
 		await createBranch(root, 'feature/other', 'develop');
-		expect(await listBranches(root, 'fd/demo')).toEqual(['fd/demo/i1', 'fd/demo/i2']);
+		expect(await listBranches(root, 'feature/demo')).toEqual(['feature/demo/one', 'feature/demo/two']);
 	});
 
 	it('knows whether a branch exists', async () => {
@@ -173,18 +173,18 @@ describe('branchAuthors', () => {
 	};
 
 	it("lists everyone who committed on the branch, once each, and not the trunk's authors", async () => {
-		g('checkout', '-q', '-b', 'fd/p/i1');
+		g('checkout', '-q', '-b', 'prototype/p/v1');
 		commitAs('Ada Lovelace', 'a.txt');
 		commitAs('Grace Hopper', 'b.txt');
 		commitAs('Ada Lovelace', 'c.txt');
-		expect((await branchAuthors(root, 'fd/p/i1')).map((a) => a.name)).toEqual(['Ada Lovelace', 'Grace Hopper']);
+		expect((await branchAuthors(root, 'prototype/p/v1')).map((a) => a.name)).toEqual(['Ada Lovelace', 'Grace Hopper']);
 	});
 
 	it('leaves out automation', async () => {
-		g('checkout', '-q', '-b', 'fd/p/i1');
+		g('checkout', '-q', '-b', 'prototype/p/v1');
 		commitAs('dependabot[bot]', 'a.txt');
 		commitAs('Grace Hopper', 'b.txt');
-		expect((await branchAuthors(root, 'fd/p/i1')).map((a) => a.name)).toEqual(['Grace Hopper']);
+		expect((await branchAuthors(root, 'prototype/p/v1')).map((a) => a.name)).toEqual(['Grace Hopper']);
 	});
 
 	it('credits nobody on the trunk itself, rather than everybody', async () => {

@@ -11,7 +11,7 @@ const descriptor: WorkspaceDescriptor = {
 	product: 'Coke',
 	contextDir: '.dsnr',
 	prototypeRoot: 'src/prototypes',
-	branchPattern: { prototype: 'fd/<project-id>/i<n>', codebase: 'feature/<project-id>' },
+	branchPattern: { codebase: 'feature/<project-id>' },
 	commands: [],
 	designSystem: { package: 'x' },
 };
@@ -61,10 +61,11 @@ describe('publishing my work branches', () => {
 		expect(git(root, 'rev-parse', '--abbrev-ref', 'feature/role-comparison@{u}')).toBe('origin/feature/role-comparison');
 	});
 
-	it('publishes my prototype branch, which is self-evidently the work', async () => {
+	it('does not publish a prototype branch of old, even my own: a prototype is a page, not a branch', async () => {
 		branchFrom(root, 'fd/users-inactivity-signal/i1');
 		commit(root, 'fd/users-inactivity-signal/i1', 'p.tsx');
-		expect((await sync()).published).toEqual(['fd/users-inactivity-signal/i1']);
+		expect(await sync(['users-inactivity-signal'])).toEqual({ published: [], problems: [], mine: [] });
+		expect(remoteBranches()).toEqual(['develop']);
 	});
 
 	it("does not publish a teammate's ticket branch, which only looks like mine because of its name", async () => {

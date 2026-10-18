@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
-import type { IterationKind } from '../../shared/contract';
+import type { WorkKind } from '../../shared/contract';
 import { resolveInside } from './paths';
 import { asRecord } from '../../shared/json';
 import { errorText } from '../../shared/result';
@@ -104,9 +104,10 @@ export const parseDescriptor = (text: string): WorkspaceDescriptor => {
 			throw new Error(`${DESCRIPTOR_PATH} is missing ${key}`);
 		}
 	}
+	// Only codebase work has a branch. A `prototype` pattern, from when prototypes were made as code on branches, is not read.
 	const branch = d.branchPattern as Record<string, unknown> | undefined;
-	if (!branch || typeof branch.prototype !== 'string' || typeof branch.codebase !== 'string') {
-		throw new Error(`${DESCRIPTOR_PATH} is missing branchPattern.prototype or branchPattern.codebase`);
+	if (!branch || typeof branch.codebase !== 'string') {
+		throw new Error(`${DESCRIPTOR_PATH} is missing branchPattern.codebase`);
 	}
 	if (!Array.isArray(d.commands)) {
 		throw new Error(`${DESCRIPTOR_PATH} is missing commands`);
@@ -128,7 +129,7 @@ export const parseDescriptor = (text: string): WorkspaceDescriptor => {
 		product: d.product as string,
 		contextDir: d.contextDir as string,
 		prototypeRoot: d.prototypeRoot as string,
-		branchPattern: { prototype: branch.prototype, codebase: branch.codebase },
+		branchPattern: { codebase: branch.codebase },
 		commands,
 		designSystem: { package: ds.package, ...(folder !== undefined ? { folder } : {}) },
 		...(d.share !== undefined ? { share: parseShare(d.share) } : {}),
@@ -182,8 +183,8 @@ export interface WorkspaceDescriptor {
 	contextDir: string;
 	/** Where prototype directories live, relative to the root. */
 	prototypeRoot: string;
-	/** Branch naming, with `<project-id>` and `<n>` placeholders. */
-	branchPattern: { prototype: string; codebase: string };
+	/** How codebase work's branch is named, with a `<project-id>` placeholder: `feature/<project-id>`. */
+	branchPattern: { codebase: string };
 	/** Every command Workspace may run. Nothing else is runnable. */
 	commands: WorkspaceCommand[];
 	/**
@@ -208,7 +209,7 @@ export interface ShareDescriptor {
 	/** Name of the workflow whose success means the preview is up. */
 	workflow: string;
 	/** Which kinds of work get a preview from this repository's CI. */
-	kinds: IterationKind[];
+	kinds: WorkKind[];
 }
 
 export interface WorkspaceCommand {

@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import type { Project, ProjectIteration } from '../src/shared/contract';
+import type { Project, ProjectWork } from '../src/shared/contract';
 import { recordLabel } from '../src/shared/brief';
 import {
 	lastUpdated,
@@ -16,23 +16,14 @@ import {
 	projectOpening,
 	withCovers,
 } from '../src/shared/projectList';
-import {
-	isPrototypeName,
-	nextIterationName,
-	latestIterationName,
-	hasOutsideComments,
-	nextPrototypeName,
-	byVersion,
-	parsePrototypeName,
-	prototypeName,
-} from '../src/shared/prototypeNames';
+import { isPrototypeName, hasOutsideComments, nextVersionName, parseVersion, prototypeName } from '../src/shared/prototypeNames';
 import { PROJECT_ID, asDate, asRoute, isRecordName, slugify, asCover } from '../src/shared/validate';
-import { codeLink, iterationLabel, workOf } from '../src/shared/work';
+import { codeLink, workLabel, workOf } from '../src/shared/work';
 import { readFolderProjects } from '../src/main/services/localProjects';
-import { aProject, projectIteration } from './fixtures';
+import { aProject, projectWork } from './fixtures';
 
-const it1 = (over: Partial<ProjectIteration> = {}): ProjectIteration => projectIteration({ name: 'i1', branch: 'fd/alpha/i1', ...over });
-const project = (id: string, over: Partial<Project> = {}): Project => aProject({ id, iterations: [it1({ branch: `fd/${id}/i1` })], ...over });
+const it1 = (over: Partial<ProjectWork> = {}): ProjectWork => projectWork({ name: 'v1', branch: 'prototype/alpha/v1', ...over });
+const project = (id: string, over: Partial<Project> = {}): Project => aProject({ id, work: [it1({ branch: `prototype/${id}/v1` })], ...over });
 
 describe('mergeProjects', () => {
 	it('shows work built here that GitHub has never heard of, and says so', () => {
@@ -41,39 +32,36 @@ describe('mergeProjects', () => {
 			['mine', true],
 			['shared', false],
 		]);
-		expect(merged[0]?.iterations[0]?.localOnly).toBe(true);
+		expect(merged[0]?.work[0]?.localOnly).toBe(true);
 	});
 
 	it('does not duplicate a project both sides know, and lets GitHub lead', () => {
 		const merged = mergeProjects(
-			[project('alpha', { title: 'Alpha, as shared', iterations: [it1({ openComments: 3 })] })],
+			[project('alpha', { title: 'Alpha, as shared', work: [it1({ openComments: 3 })] })],
 			[project('alpha', { title: 'Alpha, locally' })],
 		);
 		expect(merged).toHaveLength(1);
 		expect(merged[0]).toMatchObject({ title: 'Alpha, as shared', localOnly: false });
-		expect(merged[0]?.iterations[0]?.openComments).toBe(3);
+		expect(merged[0]?.work[0]?.openComments).toBe(3);
 	});
 
 	it('shows the picture this machine has just made before GitHub has it, and GitHub’s when this machine has none', () => {
-		const made = mergeProjects(
-			[project('alpha', { iterations: [it1({ cover: null })] })],
-			[project('alpha', { iterations: [it1({ cover: 'bbbbbbbbbbbb' })] })],
-		);
-		expect(made[0]?.iterations[0]?.cover).toBe('bbbbbbbbbbbb');
+		const made = mergeProjects([project('alpha', { work: [it1({ cover: null })] })], [project('alpha', { work: [it1({ cover: 'bbbbbbbbbbbb' })] })]);
+		expect(made[0]?.work[0]?.cover).toBe('bbbbbbbbbbbb');
 		const shared = mergeProjects(
-			[project('alpha', { iterations: [it1({ cover: 'aaaaaaaaaaaa' })] })],
-			[project('alpha', { iterations: [it1({ cover: null })] })],
+			[project('alpha', { work: [it1({ cover: 'aaaaaaaaaaaa' })] })],
+			[project('alpha', { work: [it1({ cover: null })] })],
 		);
-		expect(shared[0]?.iterations[0]?.cover).toBe('aaaaaaaaaaaa');
+		expect(shared[0]?.work[0]?.cover).toBe('aaaaaaaaaaaa');
 	});
 
 	it('adds an iteration made here to a project that is already shared', () => {
-		const remote = project('alpha', { iterations: [it1({ branch: 'fd/alpha/i1' })] });
-		const local = project('alpha', { iterations: [it1({ name: 'i2', branch: 'fd/alpha/i2' }), it1({ branch: 'fd/alpha/i1' })] });
+		const remote = project('alpha', { work: [it1({ branch: 'prototype/alpha/v1' })] });
+		const local = project('alpha', { work: [it1({ name: 'v2', branch: 'prototype/alpha/v2' }), it1({ branch: 'prototype/alpha/v1' })] });
 		const [m] = mergeProjects([remote], [local]);
-		expect(m?.iterations.map((i) => [i.name, i.localOnly])).toEqual([
-			['i2', true],
-			['i1', false],
+		expect(m?.work.map((i) => [i.name, i.localOnly])).toEqual([
+			['v2', true],
+			['v1', false],
 		]);
 	});
 
@@ -96,7 +84,7 @@ describe('mergeProjects', () => {
 });
 
 const started = (id: string, ...dates: Array<string | null>): Project =>
-	project(id, { iterations: dates.map((d, i) => it1({ name: `i${i + 1}`, branch: `fd/${id}/i${i + 1}`, createdAt: d })) });
+	project(id, { work: dates.map((d, i) => it1({ name: `i${i + 1}`, branch: `fd/${id}/i${i + 1}`, createdAt: d })) });
 
 describe('the order of the project list', () => {
 	it('puts the most recently started project first', () => {
@@ -107,7 +95,7 @@ describe('the order of the project list', () => {
 		expect(merged.map((p) => p.id)).toEqual(['new', 'mid', 'old']);
 	});
 
-	it('dates a project by its first iteration, so adding iterations to an old project does not make it new', () => {
+	it('dates a project by its first iteration, so adding work to an old project does not make it new', () => {
 		const merged = mergeProjects(
 			[started('long-running', '2026-09-01T00:00:00Z', '2026-10-05T00:00:00Z', '2026-10-06T00:00:00Z'), started('fresh', '2026-10-01T00:00:00Z')],
 			[],
@@ -165,52 +153,52 @@ describe('reading projects from their folders', () => {
 		for (const [name, body] of Object.entries(files)) writeFileSync(join(root, id, name), body);
 	};
 	// The rule the app applies to what it shows: a folder with nothing built yet is a notes folder.
-	const inProgress = (dir: string) => readFolderProjects(dir).filter((p) => p.iterations.length > 0);
+	const inProgress = (dir: string) => readFolderProjects(dir).filter((p) => p.work.length > 0);
 
-	it('finds a project from its folder, with its title and iterations, with nothing registered', () => {
+	it('finds a project from its folder, with its title and work, with nothing registered', () => {
 		write('alpha', {
 			'brief.md': '# Alpha prototype\n\nWhy.',
-			'iterations.json': JSON.stringify([{ name: 'i1', branch: 'fd/alpha/i1', commit: 'abc', contributors: [{ name: 'Noah', login: 'noah' }] }]),
+			'work.json': JSON.stringify([{ name: 'v1', branch: 'prototype/alpha/v1', commit: 'abc', contributors: [{ name: 'Noah', login: 'noah' }] }]),
 		});
 		const [p] = inProgress(root);
 		expect(p).toMatchObject({ id: 'alpha', title: 'Alpha prototype', people: [{ name: 'Noah', login: 'noah' }] });
-		expect(p?.iterations[0]).toMatchObject({ name: 'i1', branch: 'fd/alpha/i1', commit: 'abc' });
+		expect(p?.work[0]).toMatchObject({ name: 'v1', branch: 'prototype/alpha/v1', commit: 'abc' });
 	});
 
 	it('reads when each iteration was started, and ignores a date that is not one', () => {
 		write('dated', {
-			'iterations.json': JSON.stringify([
-				{ name: 'i1', branch: 'fd/dated/i1', createdAt: '2026-09-28T17:13:52-04:00' },
-				{ name: 'i2', branch: 'fd/dated/i2', createdAt: 'not a date' },
+			'work.json': JSON.stringify([
+				{ name: 'v1', branch: 'prototype/dated/v1', createdAt: '2026-09-28T17:13:52-04:00' },
+				{ name: 'v2', branch: 'prototype/dated/v2', createdAt: 'not a date' },
 			]),
 		});
 		const [p] = inProgress(root);
-		expect(p?.iterations.find((i) => i.name === 'i1')?.createdAt).toBe('2026-09-28T17:13:52-04:00');
-		expect(p?.iterations.find((i) => i.name === 'i2')?.createdAt).toBeNull();
+		expect(p?.work.find((i) => i.name === 'v1')?.createdAt).toBe('2026-09-28T17:13:52-04:00');
+		expect(p?.work.find((i) => i.name === 'v2')?.createdAt).toBeNull();
 	});
 
 	it('reads which picture each prototype has, and nothing that is not one', () => {
 		write('pictured', {
-			'iterations.json': JSON.stringify([
-				{ name: 'v1-i1', branch: 'prototype/pictured/v1-i1', cover: 'aaaaaaaaaaaa' },
-				{ name: 'v1-i2', branch: 'prototype/pictured/v1-i2', cover: '../../etc' },
-				{ name: 'v1-i3', branch: 'prototype/pictured/v1-i3' },
+			'work.json': JSON.stringify([
+				{ name: 'v1', branch: 'prototype/pictured/v1', cover: 'aaaaaaaaaaaa' },
+				{ name: 'v12', branch: 'prototype/pictured/v12', cover: '../../etc' },
+				{ name: 'v13', branch: 'prototype/pictured/v13' },
 			]),
 		});
 		const [p] = inProgress(root);
-		expect(Object.fromEntries(p!.iterations.map((i) => [i.name, i.cover]))).toEqual({ 'v1-i1': 'aaaaaaaaaaaa', 'v1-i2': null, 'v1-i3': null });
+		expect(Object.fromEntries(p!.work.map((i) => [i.name, i.cover]))).toEqual({ v1: 'aaaaaaaaaaaa', v12: null, v13: null });
 	});
 
 	it('names a project by its id when it has no brief yet', () => {
-		write('beta', { 'iterations.json': JSON.stringify([{ name: 'i1', branch: 'fd/beta/i1' }]) });
+		write('beta', { 'work.json': JSON.stringify([{ name: 'v1', branch: 'prototype/beta/v1' }]) });
 		expect(inProgress(root)[0]?.title).toBe('beta');
 	});
 
-	it('skips templates, notes folders with no iterations, and unreadable records, without failing', () => {
-		write('_template', { 'iterations.json': JSON.stringify([{ name: 'i1', branch: 'x' }]) });
+	it('skips templates, notes folders with no work, and unreadable records, without failing', () => {
+		write('_template', { 'work.json': JSON.stringify([{ name: 'v1', branch: 'x' }]) });
 		write('notes', { 'brief.md': '# Just notes' });
-		write('broken', { 'iterations.json': '{not json' });
-		write('good', { 'iterations.json': JSON.stringify([{ name: 'i1', branch: 'fd/good/i1' }]) });
+		write('broken', { 'work.json': '{not json' });
+		write('good', { 'work.json': JSON.stringify([{ name: 'v1', branch: 'prototype/good/v1' }]) });
 		expect(inProgress(root).map((p) => p.id)).toEqual(['good']);
 	});
 
@@ -223,7 +211,7 @@ describe('reading projects from their folders', () => {
 		write('new-view', { 'brief.md': '# A new view\n\nWhy.' });
 		write('_template', { 'brief.md': '# t' });
 		expect(readFolderProjects(root).map((p) => p.id)).toEqual(['new-view']);
-		expect(readFolderProjects(root)[0]).toMatchObject({ title: 'A new view', records: ['brief.md'], iterations: [] });
+		expect(readFolderProjects(root)[0]).toMatchObject({ title: 'A new view', records: ['brief.md'], work: [] });
 		expect(inProgress(root)).toEqual([]); // not work in progress until something is recorded
 	});
 });
@@ -281,7 +269,7 @@ describe('asRoute', () => {
 describe('slugify', () => {
 	it('makes an id the main process will accept, however long the name', () => {
 		// This used to truncate mid-word and leave a trailing hyphen, which the
-		// dialog showed as valid and createIteration then rejected.
+		// dialog showed as valid and createCodebaseWork then rejected.
 		const long = 'Users list inactivity signal for organization administrator review';
 		expect(PROJECT_ID.test(slugify(long))).toBe(true);
 		expect(PROJECT_ID.test(slugify(`${'a'.repeat(59)} b`))).toBe(true);
@@ -298,7 +286,7 @@ describe('slugify', () => {
 
 describe('isRecordName', () => {
 	it('accepts the names a project folder holds', () => {
-		for (const n of ['brief.md', 'context-receipt.md', 'iterations.json', 'role-comparison']) expect(isRecordName(n)).toBe(true);
+		for (const n of ['brief.md', 'context-receipt.md', 'work.json', 'role-comparison']) expect(isRecordName(n)).toBe(true);
 	});
 
 	it('refuses anything that is a path, a hidden file or not a name, since it is joined onto a folder and an address', () => {
@@ -307,77 +295,62 @@ describe('isRecordName', () => {
 });
 
 describe('workOf', () => {
-	const iterations = [
+	const work = [
 		it1({ name: 'codebase', branch: 'feature/alpha', createdAt: '2026-10-03T00:00:00Z' }),
-		it1({ name: 'i1', branch: 'fd/alpha/i1', createdAt: '2026-10-01T00:00:00Z' }),
-		it1({ name: 'i2', branch: 'prototype/alpha/i2', createdAt: '2026-10-02T00:00:00Z' }),
-		it1({ name: 'i3', branch: 'prototype/alpha/i3', createdAt: null }),
+		it1({ name: 'v1', branch: 'prototype/alpha/v1', createdAt: '2026-10-01T00:00:00Z' }),
+		it1({ name: 'v2', branch: 'prototype/alpha/v2', createdAt: '2026-10-02T00:00:00Z' }),
+		it1({ name: 'v3', branch: 'prototype/alpha/v3', createdAt: null }),
 	];
 
-	it('counts prototype pages and prototype branches as prototypes, newest first, undated last', () => {
-		expect(workOf(iterations, 'prototype').map((i) => i.name)).toEqual(['i2', 'i1', 'i3']);
+	it('counts each version as a prototype, newest first, undated last', () => {
+		expect(workOf(work, 'prototype').map((i) => i.name)).toEqual(['v2', 'v1', 'v3']);
 	});
 
 	it('keeps codebase work on its own', () => {
-		expect(workOf(iterations, 'codebase').map((i) => i.name)).toEqual(['codebase']);
-	});
-
-	it('does not take a prototype page named codebase for codebase work', () => {
-		expect(workOf([it1({ name: 'codebase', branch: 'prototype/alpha/codebase' })], 'codebase')).toEqual([]);
+		expect(workOf(work, 'codebase').map((i) => i.name)).toEqual(['codebase']);
 	});
 });
 
-describe("versions and iterations in a prototype's name", () => {
+describe("a prototype's name: its version", () => {
 	it.each([
-		['v1-i1', { version: 1, iteration: 1, legacy: false }],
-		['v2-i3', { version: 2, iteration: 3, legacy: false }],
-		['v12-i40', { version: 12, iteration: 40, legacy: false }],
-		// Names from before versions are version 1: the same key, files and thread as always.
-		['i1', { version: 1, iteration: 1, legacy: true }],
-		['i7', { version: 1, iteration: 7, legacy: true }],
-	])('reads %s', (name, parsed) => {
-		expect(parsePrototypeName(name)).toEqual(parsed);
+		['v1', 1],
+		['v2', 2],
+		['v12', 12],
+		['v9999', 9999],
+	])('reads %s', (name, version) => {
+		expect(parseVersion(name)).toBe(version);
 		expect(isPrototypeName(name)).toBe(true);
 	});
 
-	it.each(['codebase', 'v1', 'v1-', 'v1-i', 'v0-i1', 'v1-i0', 'i0', 'V1-I1', 'v1_i1', 'q1', '../i1', 'v1-i1x', ''])('refuses %s', (name) => {
-		expect(parsePrototypeName(name)).toBeNull();
-		expect(isPrototypeName(name)).toBe(false);
+	// The old shapes are not read at all: a version and its iteration, a name from before versions, and an old branch's.
+	it.each(['v1-i1', 'v2-i3', 'i1', 'i7', 'fd/demo/i1', 'codebase', 'v', 'v0', 'v01', 'v10000', 'V1', 'v1x', 'v-1', '../v1', ''])(
+		'refuses %s',
+		(name) => {
+			expect(parseVersion(name)).toBeNull();
+			expect(isPrototypeName(name)).toBe(false);
+		},
+	);
+
+	it('writes a version as v and its number', () => {
+		expect(prototypeName(1)).toBe('v1');
+		expect(prototypeName(3)).toBe('v3');
 	});
 
-	it('writes names in the new form only', () => {
-		expect(prototypeName(1, 1)).toBe('v1-i1');
-		expect(prototypeName(3, 2)).toBe('v3-i2');
+	it('names a new version one past the highest, so no number is reused', () => {
+		expect(nextVersionName([])).toBe('v1');
+		expect(nextVersionName(['codebase'])).toBe('v1');
+		expect(nextVersionName(['v1'])).toBe('v2');
+		expect(nextVersionName(['v1', 'v3', 'codebase'])).toBe('v4');
+		// What is not a version's name is not counted.
+		expect(nextVersionName(['v1-i7', 'i9'])).toBe('v1');
 	});
 
-	it('starts a new idea as the next version, counting older names as version 1', () => {
-		expect(nextPrototypeName([])).toBe('v1-i1');
-		expect(nextPrototypeName(['codebase'])).toBe('v1-i1');
-		expect(nextPrototypeName(['i1'])).toBe('v2-i1');
-		expect(nextPrototypeName(['i1', 'i2', 'codebase'])).toBe('v2-i1');
-		expect(nextPrototypeName(['v1-i1', 'v1-i2', 'v3-i1'])).toBe('v4-i1');
-	});
-
-	it('refines a version as its next iteration, never reusing a number', () => {
-		expect(nextIterationName(['v1-i1'], 1)).toBe('v1-i2');
-		expect(nextIterationName(['v1-i1', 'v1-i3', 'v2-i1'], 1)).toBe('v1-i4');
-		expect(nextIterationName(['v1-i1', 'v2-i1'], 2)).toBe('v2-i2');
-		expect(nextIterationName(['i1', 'i2'], 1)).toBe('v1-i3');
-		expect(nextIterationName([], 1)).toBe('v1-i1');
-	});
-
-	it("finds a version's newest iteration, old names included", () => {
-		expect(latestIterationName(['v1-i1', 'v1-i3', 'v1-i2', 'v2-i1'], 1)).toBe('v1-i3');
-		expect(latestIterationName(['i1', 'i2', 'v2-i1'], 1)).toBe('i2');
-		expect(latestIterationName(['v1-i1', 'codebase'], 2)).toBeNull();
-	});
-
-	it('freezes an iteration once anyone but its makers comments on it', () => {
+	it('knows when anyone but its makers has commented on a version', () => {
 		const noah = { name: 'Noah', login: 'Noah-S' };
 		expect(hasOutsideComments([noah], [])).toBe(false);
 		expect(hasOutsideComments([noah], ['noah-s', 'NOAH-S'])).toBe(false);
 		expect(hasOutsideComments([noah], ['noah-s', 'pm'])).toBe(true);
-		// Makers nobody can name are no one's: a comment from anyone freezes their work rather than having it changed under it.
+		// Makers nobody can name are no one's: a comment from anyone counts as someone else's.
 		expect(hasOutsideComments(undefined, ['noah-s'])).toBe(true);
 		expect(hasOutsideComments([{ name: 'Noah', login: null }], ['noah-s'])).toBe(true);
 		expect(hasOutsideComments(undefined, [])).toBe(false);
@@ -385,29 +358,9 @@ describe("versions and iterations in a prototype's name", () => {
 		expect(hasOutsideComments([noah], ['github-actions[bot]'])).toBe(false);
 	});
 
-	it('labels them for people as V and I', () => {
-		const p = (name: string, branch = `prototype/demo/${name}`) => ({ name, branch });
-		expect(iterationLabel(p('v2-i3'))).toBe('V2 · I3');
-		expect(iterationLabel(p('i1'))).toBe('V1 · I1');
-		expect(iterationLabel(p('i2', 'fd/demo/i2'))).toBe('V1 · I2');
-		// Codebase work keeps the label it has today.
-		expect(iterationLabel({ name: 'codebase', branch: 'feature/demo' })).toBe('I1');
-	});
-});
-
-describe('byVersion', () => {
-	const iterationAt = (name: string, createdAt: string): ProjectIteration => projectIteration({ name, branch: `prototype/demo/${name}`, createdAt });
-
-	it("groups a project's prototypes by version, keeping the order it was given", () => {
-		const newestFirst = [iterationAt('v2-i1', '2026-10-05'), iterationAt('v1-i2', '2026-10-04'), iterationAt('i1', '2026-10-01')];
-		expect(byVersion(newestFirst).map((g) => [g.version, g.iterations.map((i) => i.name)])).toEqual([
-			[2, ['v2-i1']],
-			[1, ['v1-i2', 'i1']],
-		]);
-	});
-
-	it('leaves out anything that is not a prototype name', () => {
-		expect(byVersion([iterationAt('codebase', '2026-10-05')])).toEqual([]);
+	it('labels a version V and its number, and codebase work as codebase', () => {
+		expect(workLabel({ name: 'v3' })).toBe('V3');
+		expect(workLabel({ name: 'codebase' })).toBe('Codebase');
 	});
 });
 
@@ -450,29 +403,29 @@ describe('when a project was last updated', () => {
 	it('is the latest of the activity GitHub knows of and when any iteration was made', () => {
 		const p = project('alpha', {
 			updatedAt: '2026-10-05T10:00:00Z',
-			iterations: [it1({ createdAt: '2026-10-07T09:00:00Z' }), it1({ name: 'i2', createdAt: '2026-10-02T09:00:00Z' })],
+			work: [it1({ createdAt: '2026-10-07T09:00:00Z' }), it1({ name: 'v2', createdAt: '2026-10-02T09:00:00Z' })],
 		});
 		expect(lastUpdated(p)).toBe('2026-10-07T09:00:00Z');
 		expect(lastUpdated({ ...p, updatedAt: '2026-10-09T00:00:00Z' })).toBe('2026-10-09T00:00:00Z');
 	});
 
 	it('is null for a project with nothing dated, and ignores what is not a date', () => {
-		expect(lastUpdated(project('alpha', { iterations: [] }))).toBeNull();
-		expect(lastUpdated(project('alpha', { updatedAt: 'someday', iterations: [it1({ createdAt: null })] }))).toBeNull();
+		expect(lastUpdated(project('alpha', { work: [] }))).toBeNull();
+		expect(lastUpdated(project('alpha', { updatedAt: 'someday', work: [it1({ createdAt: null })] }))).toBeNull();
 	});
 });
 
 describe('sorting the projects', () => {
-	const old = project('b-old', { title: 'Banana', updatedAt: '2026-10-01T00:00:00Z', iterations: [] });
-	const fresh = project('a-new', { title: 'apple', updatedAt: '2026-10-08T00:00:00Z', iterations: [] });
-	const never = project('c-none', { title: 'Cherry', iterations: [] });
+	const old = project('b-old', { title: 'Banana', updatedAt: '2026-10-01T00:00:00Z', work: [] });
+	const fresh = project('a-new', { title: 'apple', updatedAt: '2026-10-08T00:00:00Z', work: [] });
+	const never = project('c-none', { title: 'Cherry', work: [] });
 
 	it('puts the project with the most recent activity first, and those with none last', () => {
 		expect(sortProjects([never, old, fresh], 'updated').map((p) => p.id)).toEqual(['a-new', 'b-old', 'c-none']);
 	});
 
 	it('falls back to the name when two were updated together, so the order never shuffles', () => {
-		const same = { updatedAt: '2026-10-08T00:00:00Z', iterations: [] };
+		const same = { updatedAt: '2026-10-08T00:00:00Z', work: [] };
 		expect(sortProjects([project('z', { title: 'Zed', ...same }), project('m', { title: 'Mid', ...same })], 'updated').map((p) => p.id)).toEqual([
 			'm',
 			'z',
@@ -504,13 +457,13 @@ describe('how a project’s document is named in a menu', () => {
 	it('drops the extension, turns dashes into spaces, and capitalizes the first letter only', () => {
 		expect(recordLabel('brief.md')).toBe('Brief');
 		expect(recordLabel('design-notes.md')).toBe('Design notes');
-		expect(recordLabel('audit-i1.md')).toBe('Audit i1');
-		expect(recordLabel('iterations.json')).toBe('Iterations');
+		expect(recordLabel('audit-v1.md')).toBe('Audit v1');
+		expect(recordLabel('work.json')).toBe('Work');
 	});
 });
 
 describe('the link to codebase work on GitHub', () => {
-	const work = (more: Partial<ProjectIteration> = {}): ProjectIteration => it1({ name: 'codebase', branch: 'feature/alpha', ...more });
+	const work = (more: Partial<ProjectWork> = {}): ProjectWork => it1({ name: 'codebase', branch: 'feature/alpha', ...more });
 
 	it('is its pull request when one is recorded', () => {
 		expect(codeLink(work({ repository: 'flocksafety/flock-coke', pullRequest: 'https://github.com/flocksafety/flock-coke/pull/12' }))).toBe(
@@ -541,23 +494,23 @@ describe('the picture on a project’s card', () => {
 		it1({ name, branch: `prototype/alpha/${name}`, createdAt: `2026-10-0${day}T00:00:00Z`, cover });
 
 	it('is its newest prototype’s', () => {
-		expect(coverToShow(project('alpha', { iterations: [v('v1-i1', 1, A), v('v2-i1', 2, B)] }))).toEqual({ name: 'v2-i1', cover: B });
+		expect(coverToShow(project('alpha', { work: [v('v1', 1, A), v('v2', 2, B)] }))).toEqual({ name: 'v2', cover: B });
 	});
 
 	it('is the newest earlier one that has a picture, while the newest has none yet', () => {
-		expect(coverToShow(project('alpha', { iterations: [v('v1-i1', 1, A), v('v1-i2', 2, null)] }))).toEqual({ name: 'v1-i1', cover: A });
+		expect(coverToShow(project('alpha', { work: [v('v1', 1, A), v('v12', 2, null)] }))).toEqual({ name: 'v1', cover: A });
 	});
 
 	it('is none for a project with no picture, or with only codebase work', () => {
-		expect(coverToShow(project('alpha', { iterations: [v('v1-i1', 1, null)] }))).toBeNull();
-		expect(coverToShow(project('alpha', { iterations: [it1({ name: 'codebase', branch: 'feature/alpha', cover: A })] }))).toBeNull();
-		expect(coverToShow(project('alpha', { iterations: [] }))).toBeNull();
+		expect(coverToShow(project('alpha', { work: [v('v1', 1, null)] }))).toBeNull();
+		expect(coverToShow(project('alpha', { work: [it1({ name: 'codebase', branch: 'feature/alpha', cover: A })] }))).toBeNull();
+		expect(coverToShow(project('alpha', { work: [] }))).toBeNull();
 	});
 
 	it('takes the pictures just made into the list, and leaves everything else as it was', () => {
-		const list = [project('alpha', { iterations: [v('v1-i1', 1, null), v('v2-i1', 2, null)] }), project('beta')];
-		const after = withCovers(list, [{ projectId: 'alpha', name: 'v2-i1', cover: B }]);
-		expect(after[0]?.iterations.map((i) => i.cover)).toEqual([null, B]);
+		const list = [project('alpha', { work: [v('v1', 1, null), v('v2', 2, null)] }), project('beta')];
+		const after = withCovers(list, [{ projectId: 'alpha', name: 'v2', cover: B }]);
+		expect(after[0]?.work.map((i) => i.cover)).toEqual([null, B]);
 		expect(after[1]).toBe(list[1]);
 		expect(withCovers(list, [])).toBe(list);
 	});
@@ -573,9 +526,9 @@ describe('what pressing a project does', () => {
 	const code = it1({ name: 'codebase', branch: 'feature/alpha', repository: 'flocksafety/flock-coke' });
 
 	it('opens its newest prototype in the app', () => {
-		const older = v('v1-i1', 1);
-		const newest = v('v1-i2', 2);
-		expect(projectOpening(project('alpha', { title: 'Alpha', iterations: [older, newest, code] }))).toEqual({
+		const older = v('v1', 1);
+		const newest = v('v12', 2);
+		expect(projectOpening(project('alpha', { title: 'Alpha', work: [older, newest, code] }))).toEqual({
 			kind: 'app',
 			label: 'Open Alpha',
 			iteration: newest,
@@ -583,7 +536,7 @@ describe('what pressing a project does', () => {
 	});
 
 	it('opens a project with only codebase work on GitHub, in the browser', () => {
-		expect(projectOpening(project('alpha', { title: 'Alpha', iterations: [code] }))).toEqual({
+		expect(projectOpening(project('alpha', { title: 'Alpha', work: [code] }))).toEqual({
 			kind: 'link',
 			label: 'Open Alpha on GitHub',
 			url: 'https://github.com/flocksafety/flock-coke/tree/feature/alpha',
@@ -591,7 +544,7 @@ describe('what pressing a project does', () => {
 	});
 
 	it('is nothing for a project with nothing made, or with codebase work that does not say where it is', () => {
-		expect(projectOpening(project('alpha', { iterations: [] }))).toBeNull();
-		expect(projectOpening(project('alpha', { iterations: [{ ...code, repository: null }] }))).toBeNull();
+		expect(projectOpening(project('alpha', { work: [] }))).toBeNull();
+		expect(projectOpening(project('alpha', { work: [{ ...code, repository: null }] }))).toBeNull();
 	});
 });

@@ -130,9 +130,9 @@ describe('a page’s check', () => {
 		);
 	const of = (html: string, c: CheckPage, target = coke, states: string[] = []) =>
 		accessibilityOf({
-			file: join(dir, 'v1-i1.accessibility.json'),
+			file: join(dir, 'v1.accessibility.json'),
 			html,
-			url: 'http://127.0.0.1:1/demo/v1-i1',
+			url: 'http://127.0.0.1:1/demo/v1',
 			states,
 			target,
 			check: c,
@@ -142,7 +142,7 @@ describe('a page’s check', () => {
 	it('runs axe with the target’s tags, in each state, and says what it ran with', async () => {
 		const c = check();
 		const r = await of('<h1>A</h1>', c, coke, ['default', 'empty']);
-		expect(c).toHaveBeenCalledWith('http://127.0.0.1:1/demo/v1-i1', ['default', 'empty'], ['wcag2a']);
+		expect(c).toHaveBeenCalledWith('http://127.0.0.1:1/demo/v1', ['default', 'empty'], ['wcag2a']);
 		expect(r.ran).toEqual({
 			axe: axe.version,
 			tags: ['wcag2a'],
@@ -180,7 +180,7 @@ describe('a page’s check', () => {
 		const older = createHash('sha256')
 			.update(`${html}\0${axe.version}\0${coke.tags.join(',')}\0WCAG 2.0 Level A`)
 			.digest('hex');
-		writeFileSync(join(dir, 'v1-i1.accessibility.json'), JSON.stringify({ key: older, result: { violations: [], incomplete: [] } }));
+		writeFileSync(join(dir, 'v1.accessibility.json'), JSON.stringify({ key: older, result: { violations: [], incomplete: [] } }));
 		const c = check();
 		const r = await of(html, c);
 		expect(c).toHaveBeenCalledTimes(1);
@@ -191,7 +191,7 @@ describe('a page’s check', () => {
 	it('is made again when what was kept cannot be read', async () => {
 		const c = check();
 		await of('<h1>A</h1>', c);
-		writeFileSync(join(dir, 'v1-i1.accessibility.json'), '{not json');
+		writeFileSync(join(dir, 'v1.accessibility.json'), '{not json');
 		await of('<h1>A</h1>', c);
 		expect(c).toHaveBeenCalledTimes(2);
 	});

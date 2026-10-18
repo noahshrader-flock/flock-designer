@@ -1,7 +1,7 @@
-import { HistoryIcon, MoonIcon, SunIcon } from 'lucide-react';
+import { MoonIcon, SunIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { byVersion, latestIterationName, parsePrototypeName } from '../shared/prototypeNames';
-import { iterationLabel } from '../shared/work';
+import { parseVersion } from '../shared/prototypeNames';
+import { workLabel } from '../shared/work';
 import { stateLabel } from '../shared/prototypeStates';
 import { THEMES, isTheme, themeLabel } from '../shared/prototypeTheme';
 import type { ShownTheme } from './useShownTheme';
@@ -10,7 +10,7 @@ import { capitalize } from '../shared/titleCase';
 import { ChoiceMenu } from './ChoiceMenu';
 import type { BarSize } from './Toolbar';
 
-/** What the switcher needs to know of an iteration: how it is named, and which it is. */
+/** What the switcher needs to know of a piece of work: how it is named, and which it is. */
 export interface Switchable {
 	name: string;
 	branch: string;
@@ -27,31 +27,23 @@ const SwitchMenu = ({
 }: {
 	/** The bar's size, when it is a bar's. */
 	size?: BarSize;
-	/** What it picks, for its name for assistive technology: "version", "iteration", "state". */
-	what: 'version' | 'iteration' | 'state';
-	/** The button's own words: `V2`, `I1`, `default`. */
+	/** What it picks, for its name for assistive technology: "version", "state". */
+	what: 'version' | 'state';
+	/** The button's own words: `V2`, `default`. */
 	label: string;
 	value: string;
 	choices: { value: string; label: string }[];
 	onChange: (value: string) => void;
-	/** Drawn instead of the label, which is then only in its name for assistive technology. */
-	icon?: ReactNode;
 }) => <ChoiceMenu name={capitalize(what)} ariaLabel={`${capitalize(what)} ${label}: switch ${what}`} label={label} align="end" {...choice} />;
 
-/** The iteration is picked from its history: a clock icon, the menu newest first with the one shown checked. */
-const HISTORY = { icon: <HistoryIcon /> };
-
 /**
- * Switching between a project's work. Prototypes have two, as they have two ideas of "another": **the version** (a
- * different idea; going to one opens its newest iteration), a dropdown saying which, and beside it **the iteration** (a
- * refinement, among those of the version you are on), a history button whose menu has them newest first. Codebase work
- * is the history button alone. Both are shown even with one of each, so that there can be more is always visible. One
- * component, so the app's review screen and a prototype's published page carry the same ones.
+ * Switching between a project's work: a dropdown saying which version is shown, its menu the newest first, and after it the
+ * page's states. Codebase work is the same dropdown, with its one entry. One component, so the app's review screen and a
+ * prototype's published page carry the same one.
  */
 export const IterationSwitcher = <T extends Switchable>({
 	current,
 	siblings,
-	grouped,
 	onSelect,
 	note,
 	children,
@@ -59,72 +51,30 @@ export const IterationSwitcher = <T extends Switchable>({
 }: {
 	current: Switchable;
 	siblings: T[];
-	/** Prototypes: a dropdown for versions and one for iterations. Codebase work: one list. */
-	grouped: boolean;
 	onSelect: (next: T) => void;
-	/** Said after an iteration's name in the menu, when there is something to say about it. */
-	note?: (iteration: T) => string;
-	/** A prototype's states, between the version and the history, where they read left to right. */
+	/** Said after a version's name in the menu, when there is something to say about it. */
+	note?: (version: T) => string;
+	/** A prototype's states, after the version, where they read left to right. */
 	children?: ReactNode;
-	/** The bar's size, for the dropdowns and the history button. */
+	/** The bar's size, for the dropdowns. */
 	size?: BarSize;
 }) => {
-	const go = (branch: string) => {
-		const next = siblings.find((i) => i.branch === branch);
-		if (next && branch !== current.branch) onSelect(next);
-	};
-	const here = parsePrototypeName(current.name);
-	if (!grouped || here === null) {
-		return (
-			<SwitchMenu
-				size={size}
-				what="iteration"
-				{...HISTORY}
-				label={iterationLabel(current)}
-				value={current.branch}
-				choices={siblings.map((i) => ({ value: i.branch, label: `${iterationLabel(i)}${note?.(i) ?? ''}` }))}
-				onChange={go}
-			/>
-		);
-	}
 	// Newest first, whatever order they were given in: the app and the published page then always agree.
-	const versions = byVersion(siblings)
-		.map((v) => ({
-			...v,
-			iterations: [...v.iterations].sort((a, b) => (parsePrototypeName(b.name)?.iteration ?? 0) - (parsePrototypeName(a.name)?.iteration ?? 0)),
-		}))
-		.sort((a, b) => b.version - a.version);
+	const newestFirst = [...siblings].sort((a, b) => (parseVersion(b.name) ?? 0) - (parseVersion(a.name) ?? 0));
 	return (
 		<>
 			<SwitchMenu
 				size={size}
 				what="version"
-				label={`V${here.version}`}
-				value={String(here.version)}
-				choices={versions.map((v) => ({ value: String(v.version), label: `V${v.version}` }))}
-				// A version opens at its newest iteration.
-				onChange={(v) => {
-					const newest = latestIterationName(
-						siblings.map((i) => i.name),
-						Number(v),
-					);
-					const next = siblings.find((i) => i.name === newest);
-					if (next) go(next.branch);
+				label={workLabel(current)}
+				value={current.branch}
+				choices={newestFirst.map((i) => ({ value: i.branch, label: `${workLabel(i)}${note?.(i) ?? ''}` }))}
+				onChange={(branch) => {
+					const next = siblings.find((i) => i.branch === branch);
+					if (next && branch !== current.branch) onSelect(next);
 				}}
 			/>
 			{children}
-			<SwitchMenu
-				size={size}
-				what="iteration"
-				{...HISTORY}
-				label={`I${here.iteration}`}
-				value={current.branch}
-				choices={(versions.find((v) => v.version === here.version)?.iterations ?? []).map((i) => ({
-					value: i.branch,
-					label: `I${parsePrototypeName(i.name)?.iteration}${note?.(i) ?? ''}`,
-				}))}
-				onChange={go}
-			/>
 		</>
 	);
 };
@@ -161,7 +111,7 @@ export const StateSwitcher = ({
 };
 
 /**
- * Light and Dark, after the history: the prototype in either theme, whatever the machine is set to.
+ * Light and Dark, after the states: the prototype in either theme, whatever the machine is set to.
  * The one shown is pressed: light, the default, until the other is chosen.
  */
 export const ThemeSwitcher = ({ shown, size = 'default' }: { shown: ShownTheme; size?: BarSize }) => (

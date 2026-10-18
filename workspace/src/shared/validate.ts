@@ -56,7 +56,7 @@ export const asRoute = (v: unknown): string | null => {
  */
 export const isRecordName = (n: unknown): n is string => typeof n === 'string' && /^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/.test(n) && !n.includes('..');
 
-/** A picture's hash, as a record names it (`prototypeVersionOf` of the page): twelve lower-case hex digits, nothing else. */
+/** A picture's hash, as a record names it (`contentHashOf` of the page): twelve lower-case hex digits, nothing else. */
 const COVER = /^[0-9a-f]{12}$/;
 
 /** The hash a record gives a prototype's picture, or null when it gives none or anything else. */

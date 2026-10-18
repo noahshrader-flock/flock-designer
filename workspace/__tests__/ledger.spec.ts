@@ -97,8 +97,8 @@ describe('a status', () => {
 
 	it('says why what was found was left, where it was, and says it in words', () => {
 		const left = ledgerOf({
-			key: 'v1-i1',
-			of: 'demo v1-i1',
+			key: 'v1',
+			of: 'demo v1',
 			result: result([issue('button-name', ['4.1.2'])]),
 			resultFile: 'r.json',
 			views: [],

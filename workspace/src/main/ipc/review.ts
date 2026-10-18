@@ -8,7 +8,7 @@ import { arg, handle } from '../handle';
 import { classify } from '../services/branchProjects';
 import { projectTitle, writeCommentsExport } from '../services/commentsExport';
 import { readDescriptor } from '../services/descriptor';
-import { readIterations } from '../services/iterations';
+import { readWork } from '../services/workRecords';
 import { listProjects } from '../services/listProjects';
 import { resolveInside } from '../services/paths';
 import { ProfileNames } from '../services/profileNames';
@@ -33,7 +33,7 @@ export const registerReview = (d: IpcDeps): void => {
 			if (trusted === null) return;
 			const { root, recordsRoot } = trusted;
 			// The record's name for it, or the one the branch's own name gives it (work with no record yet).
-			const name = readIterations(recordsRoot, projectId).find((i) => i.branch === branch)?.name ?? classify(readDescriptor(root), branch)?.name;
+			const name = readWork(recordsRoot, projectId).find((i) => i.branch === branch)?.name ?? classify(readDescriptor(root), branch)?.name;
 			if (!name) return;
 			writeCommentsExport(recordsRoot, {
 				projectId,

@@ -3,7 +3,7 @@ import { browserCommand } from '../src/main/services/openBrowser';
 
 /** Opening a published page in the browser: only a plain https address, by argv, the way each platform opens one. */
 
-const PAGE = 'https://noahshrader-flock.github.io/flock-designer/alert-history/v2/i1/';
+const PAGE = 'https://noahshrader-flock.github.io/flock-designer/alert-history/v2/';
 
 describe('opening an address', () => {
 	it('uses the program each platform opens addresses with, with the address as an argument and never in a shell', () => {

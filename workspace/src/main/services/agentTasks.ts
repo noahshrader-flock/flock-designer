@@ -1,4 +1,4 @@
-import type { Iteration } from '../../shared/contract';
+import type { Work } from '../../shared/contract';
 import { NOT_READY_LINE, READY_LINE } from '../../shared/handoff';
 import type { PrototypeBuild, PrototypeSources } from './prototype';
 import { HOST } from '../../shared/vocabulary';
@@ -137,10 +137,10 @@ export const buildInCodebaseTask = (
 		/** The React source, when the prototype was written in React. */
 		sourceFile?: string | null;
 		auditFile: string;
-		/** The project's `iterations.json`, where the route goes. */
+		/** The project's `work.json`, where the route goes. */
 		recordFile: string;
 		name: string;
-		basedOn?: Iteration['basedOn'];
+		basedOn?: Work['basedOn'];
 	},
 	parts: CheckoutParts,
 ): string =>
@@ -300,7 +300,7 @@ export const prototypeAddressTask = ({
 	number: number;
 	/** The iteration the comment is on. */
 	name: string;
-	/** Where the change is made, when that is not the iteration commented on: see `whereTheChangeGoes`. */
+	/** Where the change is made, when that is not the version commented on: see `whereTheChangeGoes`. */
 	where?: string | null;
 }): string =>
 	guide +

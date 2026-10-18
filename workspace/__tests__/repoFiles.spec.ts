@@ -47,10 +47,10 @@ describe('readFile and writeFile', () => {
 
 	it('reads a file over 1 MB through its blob, as GitHub leaves its content out', async () => {
 		const { github: session } = fakeGitHub({
-			'/repos/acme/design/contents/projects/x/prototypes/i1.html*': { encoding: 'none', content: '', sha: 'big1' },
+			'/repos/acme/design/contents/projects/x/prototypes/v1.html*': { encoding: 'none', content: '', sha: 'big1' },
 			'/repos/acme/design/git/blobs/big1*': { sha: 'f1', content: b64('<html>a large page</html>'), encoding: 'base64' },
 		});
-		expect(await new RepoFiles(session, REF).readFile('projects/x/prototypes/i1.html')).toBe('<html>a large page</html>');
+		expect(await new RepoFiles(session, REF).readFile('projects/x/prototypes/v1.html')).toBe('<html>a large page</html>');
 	});
 
 	it('creates a file, and replaces one with the sha it has', async () => {
@@ -89,11 +89,11 @@ describe('readFile and writeFile', () => {
 			'GET /repos/acme/design/contents/*': notFound,
 		});
 		const repo = new RepoFiles(github, REF);
-		await repo.writeFile('projects/x/covers/v1-i1-aaaaaaaaaaaa.jpg', jpeg, 'm');
+		await repo.writeFile('projects/x/covers/v1-aaaaaaaaaaaa.jpg', jpeg, 'm');
 		expect(writes).toEqual([
 			{
 				method: 'PUT',
-				path: '/repos/acme/design/contents/projects/x/covers/v1-i1-aaaaaaaaaaaa.jpg',
+				path: '/repos/acme/design/contents/projects/x/covers/v1-aaaaaaaaaaaa.jpg',
 				body: { message: 'm', content: jpeg.toString('base64') },
 			},
 		]);

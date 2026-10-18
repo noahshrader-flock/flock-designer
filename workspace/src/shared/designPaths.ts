@@ -1,13 +1,13 @@
-import { parsePrototypeName } from './prototypeNames';
+import { isPrototypeName } from './prototypeNames';
 import { assertCover } from './validate';
 
 /** Where things are in the design repository, and the keys prototypes are known by. */
 
 /**
  * A prototype: one self-contained page, made without running the product, saved in the design repository beside
- * the project's other records. It has no git branch. Its key, in the place a branch name goes (the iteration
- * record, the review thread), is `prototype/<project-id>/<name>`, which no repository's branch pattern makes, so it
- * can never be mistaken for one. (The older prototypes on `fd/` branches have a branch, not a key.)
+ * the project's other records. It has no git branch. Its key, in the place a branch name goes (its record, the review
+ * thread), is `prototype/<project-id>/<name>`, which no repository's branch pattern makes, so it can never be mistaken
+ * for one.
  */
 const PROTOTYPE_PREFIX = 'prototype/';
 
@@ -20,6 +20,10 @@ export const projectDir = (projectId: string): string => `projects/${projectId}`
 
 /** A file in a project's folder in the design repository, by its path from the repository's root. */
 export const projectPath = (projectId: string, file: string): string => `${projectDir(projectId)}/${file}`;
+
+/** A project's records, in its folder: one for each version of its prototype, and one for its codebase work. */
+export const WORK_FILE = 'work.json';
+export const workPath = (projectId: string): string => projectPath(projectId, WORK_FILE);
 
 /** Where a prototype's page is kept in the design repository. */
 export const prototypePagePath = (projectId: string, name: string): string => projectPath(projectId, `prototypes/${name}.html`);
@@ -76,14 +80,11 @@ export const coverPath = (projectId: string, name: string, cover: string): strin
 };
 
 /**
- * Where an iteration is on the published site, from the site's root: `<project>/v1/i2/`. The one place the site's
- * addresses are made, for the site itself, the command that publishes it and the app that opens it. Null for a name
- * that is not a prototype's.
+ * Where a version is on the published site, from the site's root: `<project>/v2/`. The one place the site's addresses
+ * are made, for the site itself, the command that publishes it and the app that opens it. Null for a name that is not a
+ * prototype's.
  */
-export const sitePath = (projectId: string, name: string): string | null => {
-	const p = parsePrototypeName(name);
-	return p ? `${projectId}/v${p.version}/i${p.iteration}/` : null;
-};
+export const sitePath = (projectId: string, name: string): string | null => (isPrototypeName(name) ? `${projectId}/${name}/` : null);
 
 /**
  * The large files pages share (fonts, mostly), kept once in the design repository as the data they were embedded as, each

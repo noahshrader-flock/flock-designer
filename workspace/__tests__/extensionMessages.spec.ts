@@ -22,10 +22,10 @@ describe('a message from the panel', () => {
 		[{ type: 'codebase', action: 'run-locally', projectId: 'zone-coverage' }],
 		[{ type: 'new-prototype', title: 'Alert history', task: 'A history of alerts.', folder: null }],
 		[{ type: 'new-prototype', title: 'Alert history', task: 'A history of alerts.', folder: 'Maps' }],
-		[{ type: 'open-review', projectId: 'alert-history', name: 'v2-i1', title: 'Alert history · V2 · I1' }],
-		[{ type: 'open-review-in-browser', projectId: 'alert-history', name: 'v2-i1', title: 'Alert history · V2 · I1' }],
-		[{ type: 'copy-review-link', projectId: 'alert-history', name: 'v2-i1', title: 'Alert history · V2 · I1' }],
-		[{ type: 'open-review-published', projectId: 'alert-history', name: 'v2-i1', title: 'Alert history · V2 · I1' }],
+		[{ type: 'open-review', projectId: 'alert-history', name: 'v2', title: 'Alert history · V2' }],
+		[{ type: 'open-review-in-browser', projectId: 'alert-history', name: 'v2', title: 'Alert history · V2' }],
+		[{ type: 'copy-review-link', projectId: 'alert-history', name: 'v2', title: 'Alert history · V2' }],
+		[{ type: 'open-review-published', projectId: 'alert-history', name: 'v2', title: 'Alert history · V2' }],
 		// The Design System tab's (6.1 to 6.3): a component's tab, its links, Primitives, the voice and tone, a token's file, the change tried.
 		[{ type: 'open-component', id: 'src/components/FSButton/FSButton.stories.tsx' }],
 		[{ type: 'component-link', id: 'src/components/FSButton/FSButton.stories.tsx', link: 'storybook' }],
@@ -58,18 +58,18 @@ describe('a message from the panel', () => {
 		// Signing in is VS Code's own, from the title bar: the page cannot ask for it.
 		[{ type: 'sign-in' }],
 		[{ type: 'account' }],
-		[{ type: 'open-review', projectId: 'a', name: 'v1-i1' }],
-		[{ type: 'open-review-in-browser', projectId: 'a', name: 'v1-i1' }],
-		[{ type: 'copy-review-link', projectId: 'a', name: 'v1-i1' }],
-		[{ type: 'copy-review-link', projectId: '../a', name: 'v1-i1', title: 'x' }],
-		[{ type: 'open-review-published', projectId: '../a', name: 'v1-i1', title: 'x' }],
+		[{ type: 'open-review', projectId: 'a', name: 'v1' }],
+		[{ type: 'open-review-in-browser', projectId: 'a', name: 'v1' }],
+		[{ type: 'copy-review-link', projectId: 'a', name: 'v1' }],
+		[{ type: 'copy-review-link', projectId: '../a', name: 'v1', title: 'x' }],
+		[{ type: 'open-review-published', projectId: '../a', name: 'v1', title: 'x' }],
 		// Removed: the panel no longer asks for a code preview.
 		[{ type: 'codebase', action: 'preview', projectId: 'zone-coverage' }],
-		[{ type: 'open-review-in-browser', projectId: 'a', name: 'v1-i1', title: 'x'.repeat(301) }],
-		[{ type: 'open-review', projectId: 1, name: 'v1-i1', title: 't' }],
-		[{ type: 'open-review', projectId: 'a', name: 'v1-i1', title: 'x'.repeat(301) }],
+		[{ type: 'open-review-in-browser', projectId: 'a', name: 'v1', title: 'x'.repeat(301) }],
+		[{ type: 'open-review', projectId: 1, name: 'v1', title: 't' }],
+		[{ type: 'open-review', projectId: 'a', name: 'v1', title: 'x'.repeat(301) }],
 		// A review is of a project, by its id, and a prototype, by its name: nothing that would be a path to something else.
-		[{ type: 'open-review', projectId: 'a/../../previews-x', name: 'v1-i1', title: 't' }],
+		[{ type: 'open-review', projectId: 'a/../../previews-x', name: 'v1', title: 't' }],
 		[{ type: 'open-review', projectId: 'a', name: '../../x', title: 't' }],
 		[{ type: 'new-prototype' }],
 		[{ type: 'new-prototype', title: 'A', task: 'B' }],
@@ -119,9 +119,9 @@ describe('a component a command is given', () => {
 
 describe('a review a command is given', () => {
 	it('is read as the panel’s is, in exactly its shape', () => {
-		expect(readReview({ projectId: 'a', name: 'v1-i1', title: 'A · V1 · I1' })).toEqual({ projectId: 'a', name: 'v1-i1', title: 'A · V1 · I1' });
-		expect(readReview({ projectId: 'a', name: 'v1-i1' })).toBeNull();
-		expect(readReview({ projectId: 'a', name: 'v1-i1', title: 'x', type: 'call' })).toBeNull();
+		expect(readReview({ projectId: 'a', name: 'v1', title: 'A · V1' })).toEqual({ projectId: 'a', name: 'v1', title: 'A · V1' });
+		expect(readReview({ projectId: 'a', name: 'v1' })).toBeNull();
+		expect(readReview({ projectId: 'a', name: 'v1', title: 'x', type: 'call' })).toBeNull();
 		expect(readReview('a')).toBeNull();
 	});
 });

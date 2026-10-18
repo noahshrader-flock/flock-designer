@@ -20,12 +20,12 @@ describe('prepareAddress', () => {
 	const target = (id = 1) => ({
 		recordsRoot: records,
 		projectId: 'demo',
-		iteration: { name: 'i1', branch: 'fd/demo/i1' },
+		iteration: { name: 'codebase', branch: 'feature/demo' },
 		comment: { thread: 1, id },
 	});
 	const deps = (over: Partial<Parameters<typeof prepareAddress>[0]> = {}) => ({
 		readComments: vi.fn(async () => [comment(1), comment(2)]),
-		checkout: vi.fn(async () => ({ branch: 'fd/demo/i1' as string | null, clean: true })),
+		checkout: vi.fn(async () => ({ branch: 'feature/demo' as string | null, clean: true })),
 		agentRunning: () => false,
 		skill: () => '# The skill\n\nFollow the rules.',
 		title: 'Demo',
@@ -45,7 +45,7 @@ describe('prepareAddress', () => {
 		// The file still holds every comment; the task says which one to act on.
 		expect(readFileSync(out.path, 'utf8')).toContain('## Comment 2');
 		expect(out.task).toContain(out.path);
-		expect(out.task).toContain('fd/demo/i1');
+		expect(out.task).toContain('feature/demo');
 		// The skill is in the task itself, so the agent cannot miss it and no product repository has to carry it.
 		expect(out.task).toContain('# The skill');
 		expect(out.task).toContain('Follow the rules.');
@@ -99,7 +99,7 @@ describe('prepareAddress', () => {
 	});
 
 	it.each([
-		['another branch', { branch: 'fd/other/i1', clean: true }, /not fd\/demo\/i1/],
+		['another branch', { branch: 'feature/other', clean: true }, /not feature\/demo/],
 		['no branch at all', { branch: null, clean: true }, /no branch/],
 	])('refuses when this machine is on %s, so the agent’s commit cannot land on the wrong work', async (_l, here, message) => {
 		const d = deps({ checkout: async () => here });
@@ -108,7 +108,7 @@ describe('prepareAddress', () => {
 	});
 
 	it('refuses with uncommitted changes, which the agent’s commit would sweep up', async () => {
-		const d = deps({ checkout: async () => ({ branch: 'fd/demo/i1', clean: false }) });
+		const d = deps({ checkout: async () => ({ branch: 'feature/demo', clean: false }) });
 		await expect(prepareAddress(d, target())).rejects.toThrow(/uncommitted changes/);
 		expect(d.readComments).not.toHaveBeenCalled();
 	});
@@ -134,7 +134,7 @@ describe('runPrototypeAddress', () => {
 	const ok = <T>(value: T): Result<T> => ({ ok: true, value });
 	const started: AgentStatus = agentRunning();
 	const finished: AgentStatus = agentFinished();
-	const addressed = { changed: true, iteration: 'v1-i2', made: null, comment: { id: 7 } } as never;
+	const addressed = { changed: true, iteration: 'v12', made: null, comment: { id: 7 } } as never;
 	const run = async (api: Partial<Parameters<typeof runPrototypeAddress>[0]['api']>, isLive = () => true) => {
 		const phases: AddressPhase[] = [];
 		await runPrototypeAddress({
@@ -145,7 +145,7 @@ describe('runPrototypeAddress', () => {
 				...api,
 			},
 			projectId: 'demo',
-			name: 'v1-i1',
+			name: 'v1',
 			comment: { thread: 1, id: 7 },
 			isLive,
 			onPhase: (p) => phases.push(p),

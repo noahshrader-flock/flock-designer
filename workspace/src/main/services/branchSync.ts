@@ -1,19 +1,18 @@
 import type { WorkspaceDescriptor } from './descriptor';
-import { classify } from './branchProjects';
+import { classify, prefixOf } from './branchProjects';
 import type { Problem, SyncResult } from './designSync';
 import { branchAuthors, branchCommit, isSamePerson, listBranches, localIdentity, pushBranch, git, isAncestor } from './git';
 import { errorText } from '../../shared/result';
 import { HOST } from '../../shared/vocabulary';
 
 /**
- * Publishing the person's own work branches, so the design repository never points at a branch that
- * only exists on one machine.
+ * Publishing the person's own codebase work branches, so the design repository never points at a branch that only
+ * exists on one machine.
  *
- * It is deliberately narrow. A branch is published only if it is named the way the repository names
- * work (`fd/<project>/iN`, `feature/<project>`), is the person's own (they have commits on it), and,
- * for a `feature/` branch, has a project folder in the design repository, because `feature/<name>` is
- * also how a whole team names its tickets and a teammate's branch is not this person's to publish.
- * Pushes are plain: a branch that has moved on GitHub is reported, never overwritten.
+ * It is deliberately narrow. A branch is published only if it is named the way the repository names codebase work
+ * (`feature/<project>`), is the person's own (they have commits on it), and has a project folder in the design
+ * repository, because `feature/<name>` is also how a whole team names its tickets and a teammate's branch is not this
+ * person's to publish. Pushes are plain: a branch that has moved on GitHub is reported, never overwritten.
  */
 
 const MAX_BRANCHES = 50;
@@ -31,8 +30,6 @@ export interface BranchSyncInput {
 	projects: ReadonlySet<string>;
 }
 
-const prefixOf = (pattern: string): string => pattern.slice(0, pattern.indexOf('<'));
-
 const problem = (what: string, why: string): Problem => ({ what, why });
 
 export const syncBranches = async ({ root, descriptor, projects }: BranchSyncInput): Promise<BranchSyncResult> => {
@@ -40,15 +37,16 @@ export const syncBranches = async ({ root, descriptor, projects }: BranchSyncInp
 	const published: string[] = [];
 
 	const me = await localIdentity(root);
-	const prefixes = [...new Set([descriptor.branchPattern.prototype, descriptor.branchPattern.codebase].map(prefixOf).filter(Boolean))];
-	const local = (await Promise.all(prefixes.map((p) => listBranches(root, p)))).flat();
+	const prefix = prefixOf(descriptor.branchPattern.codebase);
+	const prefixes = prefix ? [prefix] : [];
+	const local = prefix ? await listBranches(root, prefix) : [];
 
 	// Which of them are this person's to publish.
 	const mine: string[] = [];
 	for (const branch of local.slice(0, MAX_BRANCHES)) {
 		const work = classify(descriptor, branch);
 		if (!work) continue;
-		if (work.name === 'codebase' && !projects.has(work.projectId)) continue;
+		if (!projects.has(work.projectId)) continue;
 		const authors = await branchAuthors(root, branch).catch(() => []);
 		if (authors.some((a) => isSamePerson(me, a))) mine.push(branch);
 	}

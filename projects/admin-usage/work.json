@@ -1,10 +1,37 @@
 [
   {
     "projectId": "admin-usage",
+    "name": "v1",
+    "branch": "prototype/admin-usage/v1",
+    "commit": null,
+    "createdAt": "2026-10-06T23:20:22.781Z",
+    "note": "Add a new tab called \"Usage\" to the Organization page, after the last existing tab in the tab bar.",
+    "contributors": [
+      {
+        "name": "noahshrader-flock",
+        "login": "noahshrader-flock"
+      }
+    ],
+    "basedOn": {
+      "repository": "flock-coke",
+      "branch": "noah/flock-designer",
+      "commit": "21c9b904d36c5bb78f48b433ca3ddef04d564a17"
+    },
+    "cover": "38abc3d6c0af"
+  },
+  {
+    "projectId": "admin-usage",
     "name": "codebase",
     "branch": "feature/admin-usage",
-    "commit": null,
-    "createdAt": "2026-09-02T13:32:27-04:00",
-    "note": "Found in the repository; recorded when first opened here."
+    "commit": "93ef5f5fa6ec24ee3d6e991d47aba6de51ad57a6",
+    "createdAt": "2026-10-07T01:20:54.057Z",
+    "note": "From prototype i1",
+    "contributors": [
+      {
+        "name": "Noah Shrader",
+        "login": "noahshrader-flock"
+      }
+    ],
+    "route": "/organization/79adf41c-d97b-11e9-a45c-73e7540252eb?tab=usage"
   }
 ]

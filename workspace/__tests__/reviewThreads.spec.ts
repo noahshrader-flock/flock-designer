@@ -7,7 +7,7 @@ const REF = { owner: 'acme', repo: 'design' };
 
 describe('comments', () => {
 	const base = {
-		'/repos/acme/design/issues?state=all*': [{ number: 7, comments: 1, body: 'branch: `fd/alpha/i1`' }],
+		'/repos/acme/design/issues?state=all*': [{ number: 7, comments: 1, body: 'branch: `prototype/alpha/v1`' }],
 		'/repos/acme/design/issues/7/comments*': [
 			{ id: 1, user: { login: 'pm', avatar_url: 'a' }, body: 'Make the chip bigger', created_at: '2026-10-05T10:00:00Z' },
 			{ id: 2, user: { login: 'noah' }, body: 'Fixed <!-- resolved -->', created_at: '2026-10-05T11:00:00Z' },
@@ -16,7 +16,7 @@ describe('comments', () => {
 
 	it('reads comments and marks which are resolved', async () => {
 		const { github: session } = fakeGitHub(base);
-		const comments = await new ReviewThreads(session, REF).readComments('fd/alpha/i1');
+		const comments = await new ReviewThreads(session, REF).readComments('prototype/alpha/v1');
 		expect(comments.map((c) => [c.author, c.resolved])).toEqual([
 			['pm', false],
 			['noah', true],
@@ -26,7 +26,7 @@ describe('comments', () => {
 
 	it('returns nothing for an iteration with no thread yet, rather than failing', async () => {
 		const { github: session } = fakeGitHub({ '/repos/acme/design/issues?state=all*': [] });
-		expect(await new ReviewThreads(session, REF).readComments('fd/alpha/i9')).toEqual([]);
+		expect(await new ReviewThreads(session, REF).readComments('prototype/alpha/v9')).toEqual([]);
 	});
 
 	it('creates the thread on the first comment, labeled and naming its branch', async () => {
@@ -35,14 +35,14 @@ describe('comments', () => {
 			'/repos/acme/design/issues*': { number: 12 },
 			'/repos/acme/design/issues/12/comments*': { id: 99, user: { login: 'pm' }, body: 'hi', created_at: 'now' },
 		});
-		const posted = await new ReviewThreads(session, REF).postComment('alpha', 'fd/alpha/i1', 'hi');
+		const posted = await new ReviewThreads(session, REF).postComment('alpha', 'prototype/alpha/v1', 'hi');
 		expect(posted.id).toBe(99);
 
 		const created = writes.find((w) => w.path === '/repos/acme/design/issues');
 		const body = created?.body as { labels: string[]; body: string };
 		expect(body.labels).toContain('flock-designer:review');
 		// The branch line is how the app finds this thread again.
-		expect(body.body).toContain('`fd/alpha/i1`');
+		expect(body.body).toContain('`prototype/alpha/v1`');
 	});
 
 	it('reuses an existing thread instead of opening a second one', async () => {
@@ -50,7 +50,7 @@ describe('comments', () => {
 			...base,
 			'/repos/acme/design/issues/7/comments*': { id: 100, user: { login: 'pm' }, body: 'x', created_at: 'now' },
 		});
-		await new ReviewThreads(session, REF).postComment('alpha', 'fd/alpha/i1', 'x');
+		await new ReviewThreads(session, REF).postComment('alpha', 'prototype/alpha/v1', 'x');
 		expect(writes.filter((w) => w.path === '/repos/acme/design/issues')).toHaveLength(0);
 	});
 });
@@ -87,28 +87,28 @@ describe('comment threads and GitHub listing lag', () => {
 
 	it('puts a second comment in the same thread even though the listing has not caught up', async () => {
 		const { repo, created } = lagging();
-		await repo.postComment('alpha', 'fd/alpha/i1', 'first');
-		await repo.postComment('alpha', 'fd/alpha/i1', 'second');
+		await repo.postComment('alpha', 'prototype/alpha/v1', 'first');
+		await repo.postComment('alpha', 'prototype/alpha/v1', 'second');
 		expect(created).toHaveLength(1);
 	});
 
 	it('shows a comment straight after it is posted', async () => {
 		const { repo } = lagging();
-		await repo.postComment('alpha', 'fd/alpha/i1', 'hello');
-		expect((await repo.readComments('fd/alpha/i1')).map((c) => c.body)).toEqual(['hello']);
+		await repo.postComment('alpha', 'prototype/alpha/v1', 'hello');
+		expect((await repo.readComments('prototype/alpha/v1')).map((c) => c.body)).toEqual(['hello']);
 	});
 
 	it('reads every thread for a branch, so duplicates made earlier are not lost', async () => {
 		const mk = (n: number, at: string, body: string) => [{ id: n, user: { login: 'noah' }, body, created_at: at }];
 		const { github: session } = fakeGitHub({
 			'/repos/acme/design/issues?state=all*': [
-				{ number: 3, comments: 1, body: 'branch: `fd/alpha/i1`' },
-				{ number: 2, comments: 1, body: 'branch: `fd/alpha/i1`' },
+				{ number: 3, comments: 1, body: 'branch: `prototype/alpha/v1`' },
+				{ number: 2, comments: 1, body: 'branch: `prototype/alpha/v1`' },
 			],
 			'/repos/acme/design/issues/2/comments*': mk(2, '2026-10-05T10:00:00Z', 'This is cool'),
 			'/repos/acme/design/issues/3/comments*': mk(3, '2026-10-05T10:00:18Z', 'asdasd'),
 		});
-		const comments = await new ReviewThreads(session, REF).readComments('fd/alpha/i1');
+		const comments = await new ReviewThreads(session, REF).readComments('prototype/alpha/v1');
 		expect(comments.map((c) => c.body)).toEqual(['This is cool', 'asdasd']);
 		// Each with the thread it was read from, not the oldest of them: a host that finds a comment by its thread needs it.
 		expect(comments.map((c) => [c.thread, c.id])).toEqual([
@@ -120,12 +120,12 @@ describe('comment threads and GitHub listing lag', () => {
 	it('writes to the oldest thread when several exist', async () => {
 		const { github: session, writes } = fakeGitHub({
 			'/repos/acme/design/issues?state=all*': [
-				{ number: 3, comments: 1, body: 'branch: `fd/alpha/i1`' },
-				{ number: 2, comments: 1, body: 'branch: `fd/alpha/i1`' },
+				{ number: 3, comments: 1, body: 'branch: `prototype/alpha/v1`' },
+				{ number: 2, comments: 1, body: 'branch: `prototype/alpha/v1`' },
 			],
 			'/repos/acme/design/issues/2/comments*': { id: 9, user: { login: 'noah' }, body: 'x', created_at: 'now' },
 		});
-		await new ReviewThreads(session, REF).postComment('alpha', 'fd/alpha/i1', 'x');
+		await new ReviewThreads(session, REF).postComment('alpha', 'prototype/alpha/v1', 'x');
 		expect(writes.map((w) => w.path)).toEqual(['/repos/acme/design/issues/2/comments']);
 	});
 });
@@ -204,7 +204,7 @@ describe('setResolved', () => {
 	it('reopens one the agent addressed as an ordinary open comment, so it can be addressed again', async () => {
 		const { addressedAt, isResolved, withAddressed, withResolved } = await import('../src/shared/anchor');
 		const { github: session, writes } = fakeGitHub({
-			[`${COMMENT}*`]: { id: 70, user: { login: 'pm' }, created_at: 't', body: withResolved(withAddressed('Looks off', 'abc1234', 'v1-i2'), true) },
+			[`${COMMENT}*`]: { id: 70, user: { login: 'pm' }, created_at: 't', body: withResolved(withAddressed('Looks off', 'abc1234', 'v12'), true) },
 		});
 		await new ReviewThreads(session, REF).setResolved({ thread: 1, id: 70 }, false);
 		const sent = (writes[0]?.body as { body: string }).body;
@@ -239,11 +239,11 @@ describe('setAddressed', () => {
 	it('resolves the comment in the same write that records the change, so its pin leaves the page at once', async () => {
 		const { isResolved, addressedAt, addressedIn } = await import('../src/shared/anchor');
 		const { github: session, writes } = fakeGitHub(comment('Remove this'));
-		await new ReviewThreads(session, REF).setAddressed({ thread: 1, id: 70 }, SHA, 'v1-i2');
+		await new ReviewThreads(session, REF).setAddressed({ thread: 1, id: 70 }, SHA, 'v12');
 		expect(writes).toHaveLength(1);
 		expect(isResolved(sentBody(writes))).toBe(true);
 		expect(addressedAt(sentBody(writes))).toBe(SHA);
-		expect(addressedIn(sentBody(writes))).toBe('v1-i2');
+		expect(addressedIn(sentBody(writes))).toBe('v12');
 	});
 
 	it('resolves a comment on a branch too, which has a commit and no iteration', async () => {
@@ -256,8 +256,8 @@ describe('setAddressed', () => {
 
 	it('writes nothing when it is already recorded and resolved', async () => {
 		const { withAddressed, withResolved } = await import('../src/shared/anchor');
-		const { github: session, writes } = fakeGitHub(comment(withResolved(withAddressed('Remove this', SHA, 'v1-i2'), true)));
-		await new ReviewThreads(session, REF).setAddressed({ thread: 1, id: 70 }, SHA, 'v1-i2');
+		const { github: session, writes } = fakeGitHub(comment(withResolved(withAddressed('Remove this', SHA, 'v12'), true)));
+		await new ReviewThreads(session, REF).setAddressed({ thread: 1, id: 70 }, SHA, 'v12');
 		expect(writes).toEqual([]);
 	});
 
@@ -281,7 +281,7 @@ describe('pictures on comments', () => {
 	it('posts the picture with the comment, and reads it back', async () => {
 		const stored: string[] = [];
 		const { github: session } = fakeGitHub({
-			'/repos/acme/design/issues?state=all*': [{ number: 4, comments: 0, body: 'branch: `fd/alpha/i1`' }],
+			'/repos/acme/design/issues?state=all*': [{ number: 4, comments: 0, body: 'branch: `prototype/alpha/v1`' }],
 			'/repos/acme/design/issues/4/comments*': () => ({ id: 9, user: { login: 'noah' }, body: stored[0] ?? '', created_at: 'now' }),
 		});
 		const api = session as unknown as { api: (p: string, i?: { method?: string; body?: { body: string } }) => unknown };
@@ -290,17 +290,17 @@ describe('pictures on comments', () => {
 			if (i?.method === 'POST' && i.body) stored[0] = i.body.body;
 			return original(p, i);
 		};
-		const posted = await new ReviewThreads(session, REF).postComment('alpha', 'fd/alpha/i1', 'Make this primary', anchor, picture);
+		const posted = await new ReviewThreads(session, REF).postComment('alpha', 'prototype/alpha/v1', 'Make this primary', anchor, picture);
 		expect(posted.picture).toBe(picture);
 		expect(posted.body).toBe('Make this primary');
 	});
 
 	it('reads a comment with no picture as having none', async () => {
 		const { github: session } = fakeGitHub({
-			'/repos/acme/design/issues?state=all*': [{ number: 4, comments: 1, body: 'branch: `fd/alpha/i1`' }],
+			'/repos/acme/design/issues?state=all*': [{ number: 4, comments: 1, body: 'branch: `prototype/alpha/v1`' }],
 			'/repos/acme/design/issues/4/comments*': [{ id: 1, user: { login: 'noah' }, body: 'plain', created_at: 'now' }],
 		});
-		expect((await new ReviewThreads(session, REF).readComments('fd/alpha/i1'))[0]?.picture).toBeNull();
+		expect((await new ReviewThreads(session, REF).readComments('prototype/alpha/v1'))[0]?.picture).toBeNull();
 	});
 });
 
@@ -312,14 +312,14 @@ describe('reading past one page', () => {
 			body: `c${from + i}`,
 			created_at: `2026-10-05T10:${String(Math.floor((from + i) / 60)).padStart(2, '0')}:${String((from + i) % 60).padStart(2, '0')}Z`,
 		}));
-	const thread = [{ number: 4, comments: 150, body: 'branch: `fd/alpha/i1`' }];
+	const thread = [{ number: 4, comments: 150, body: 'branch: `prototype/alpha/v1`' }];
 
 	it('reads every comment on a thread of more than a hundred', async () => {
 		const { github: session, api } = fakeGitHub({
 			'/repos/acme/design/issues?state=all*': thread,
 			'/repos/acme/design/issues/4/comments*': ({ path: p }) => (/[&?]page=1$/.test(p) ? many(100) : many(50, 101)),
 		});
-		const comments = await new ReviewThreads(session, REF).readComments('fd/alpha/i1');
+		const comments = await new ReviewThreads(session, REF).readComments('prototype/alpha/v1');
 		expect(comments).toHaveLength(150);
 		expect(new Set(comments.map((c) => c.id)).size).toBe(150);
 		expect(api.mock.calls.filter(([p]) => String(p).includes('/issues/4/comments')).length).toBe(2);
@@ -327,17 +327,17 @@ describe('reading past one page', () => {
 
 	it('says so, rather than quietly dropping the rest, when a thread is longer than it will read', async () => {
 		const { github: session } = fakeGitHub({ '/repos/acme/design/issues?state=all*': thread, '/repos/acme/design/issues/4/comments*': many(100) });
-		await expect(new ReviewThreads(session, REF).readComments('fd/alpha/i1')).rejects.toThrow(/more than 2000/);
+		await expect(new ReviewThreads(session, REF).readComments('prototype/alpha/v1')).rejects.toThrow(/more than 2000/);
 	});
 
 	it('finds a review thread that is on the second page of threads', async () => {
 		const filler = Array.from({ length: 100 }, (_, i) => ({ number: 1000 + i, comments: 0, body: `branch: \`fd/other/i${i}\`` }));
 		const { github: session } = fakeGitHub({
 			'/repos/acme/design/issues?state=all*': ({ path: p }) =>
-				/[&?]page=1$/.test(p) ? filler : [{ number: 7, comments: 2, body: 'branch: `fd/alpha/i1`' }],
+				/[&?]page=1$/.test(p) ? filler : [{ number: 7, comments: 2, body: 'branch: `prototype/alpha/v1`' }],
 			'/repos/acme/design/issues/7/comments*': [{ id: 1, user: { login: 'pm' }, body: 'late', created_at: 'now' }],
 		});
-		expect((await new ReviewThreads(session, REF).readComments('fd/alpha/i1')).map((c) => c.body)).toEqual(['late']);
+		expect((await new ReviewThreads(session, REF).readComments('prototype/alpha/v1')).map((c) => c.body)).toEqual(['late']);
 	});
 });
 
@@ -370,17 +370,22 @@ describe('the threads of a branch', () => {
 	it('are counted together, with the latest comment of any of them as when the branch last had one', async () => {
 		const { github } = fakeGitHub({
 			'/repos/acme/design/issues?state=all*': [
-				{ number: 3, comments: 2, updated_at: '2026-10-05T10:00:00Z', body: 'branch: `fd/alpha/i1`' },
-				{ number: 2, comments: 1, updated_at: '2026-10-07T10:00:00Z', body: 'branch: `fd/alpha/i1`' },
-				{ number: 4, comments: 5, body: 'branch: `fd/beta/i1`' },
+				{ number: 3, comments: 2, updated_at: '2026-10-05T10:00:00Z', body: 'branch: `prototype/alpha/v1`' },
+				{ number: 2, comments: 1, updated_at: '2026-10-07T10:00:00Z', body: 'branch: `prototype/alpha/v1`' },
+				{ number: 4, comments: 5, body: 'branch: `prototype/beta/v1`' },
 			],
 		});
 		const threads = new ReviewThreads(github, REF);
-		expect((await threads.byBranch()).get('fd/alpha/i1')).toEqual({ number: 2, numbers: [3, 2], openComments: 3, updatedAt: '2026-10-07T10:00:00Z' });
+		expect((await threads.byBranch()).get('prototype/alpha/v1')).toEqual({
+			number: 2,
+			numbers: [3, 2],
+			openComments: 3,
+			updatedAt: '2026-10-07T10:00:00Z',
+		});
 		expect(await threads.commentCounts()).toEqual(
 			new Map([
-				['fd/alpha/i1', 3],
-				['fd/beta/i1', 5],
+				['prototype/alpha/v1', 3],
+				['prototype/beta/v1', 5],
 			]),
 		);
 	});

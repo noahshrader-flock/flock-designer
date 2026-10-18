@@ -3,7 +3,7 @@ import { asRecord } from '../shared/json';
 import { isPrototypeName } from '../shared/prototypeNames';
 import { fail, ok } from '../shared/result';
 import { isSafeBranchName } from './services/git';
-import { assertUsableProjectId } from './services/iterations';
+import { assertUsableProjectId } from './services/workRecords';
 import { assertPrototypeName } from './services/prototype';
 
 /**
@@ -78,15 +78,15 @@ export const arg = {
 		assertUsableProjectId(v);
 		return v;
 	}) as Check<string>,
-	/** A prototype's name, `v2-i3`. */
+	/** A prototype's name, its version: `v2`. */
 	prototypeName: ((v) => {
 		if (typeof v !== 'string') throw new Error('That is not a prototype.');
 		assertPrototypeName(v);
 		return v;
 	}) as Check<string>,
-	/** Any iteration's name: a prototype's, or `codebase`. */
-	iterationName: ((v) => {
-		if (typeof v !== 'string' || !(v === 'codebase' || isPrototypeName(v))) throw new Error(`"${String(v)}" is not an iteration.`);
+	/** Any piece of work's name: a version of the prototype, or `codebase`. */
+	workName: ((v) => {
+		if (typeof v !== 'string' || !(v === 'codebase' || isPrototypeName(v))) throw new Error(`"${String(v)}" is not a version or codebase work.`);
 		return v;
 	}) as Check<string>,
 	branch: ((v) => {

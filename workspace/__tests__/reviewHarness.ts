@@ -1,8 +1,8 @@
 import { act, createElement, type ReactElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
-import type { Project, ProjectIteration, ReviewComment, WorkspaceApi } from '../src/shared/contract';
+import type { Project, ProjectWork, ReviewComment, WorkspaceApi } from '../src/shared/contract';
 import { TooltipProvider } from '../src/renderer/ui/tooltip';
-import { anAnchor, aProject, eventually, projectIteration, reviewComment } from './fixtures';
+import { anAnchor, aProject, eventually, projectWork, reviewComment } from './fixtures';
 
 /**
  * The review screen, rendered for real in jsdom against a fake app: every call the window can make answers, the ones
@@ -24,7 +24,7 @@ export const fakeApp = (overrides: Impl = {}) => {
 	const impl: Impl = {
 		agentStatus: async () => ok({ state: 'idle' }),
 		signInState: async () => ok({ state: 'signedIn', user: { login: 'noah', name: 'Noah', avatarUrl: null } }),
-		openPrototype: async () => ok({ url: 'http://127.0.0.1:9/demo/v1-i1', states: [] }),
+		openPrototype: async () => ok({ url: 'http://127.0.0.1:9/demo/v1', states: [] }),
 		readComments: async () => ok([]),
 		// No design system connected, unless a test says otherwise.
 		designSystems: async () => ok({ systems: [], current: null }),
@@ -82,7 +82,7 @@ export const comment = (id: number, body: string, more: Partial<ReviewComment> =
 
 export const PROJECT: Project = aProject({ id: 'demo', title: 'Demo' });
 
-export const PROTOTYPE: ProjectIteration = projectIteration({ name: 'v1-i1', branch: 'prototype/demo/v1-i1', issueNumber: 1 });
+export const PROTOTYPE: ProjectWork = projectWork({ name: 'v1', branch: 'prototype/demo/v1', issueNumber: 1 });
 
 const CHECKOUT = { root: '/c/flock-coke', name: 'flock-coke', branch: 'develop', clean: true };
 

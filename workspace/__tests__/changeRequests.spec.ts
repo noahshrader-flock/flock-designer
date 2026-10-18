@@ -9,12 +9,12 @@ const BASE = '/repos/o/r';
 describe('change requests, over the API', () => {
 	it('finds the open one from a branch, and says when there is none', async () => {
 		const { github, calls } = fakeGitHub({
-			[`${BASE}/pulls?head=o%3Afd%2Fdemo%2Fi1&state=open`]: [{ number: 9, html_url: 'https://github.com/o/r/pull/9', state: 'open' }],
-			[`${BASE}/pulls?head=o%3Afd%2Fdemo%2Fi2&state=open`]: [],
+			[`${BASE}/pulls?head=o%3Afeature%2Fdemo&state=open`]: [{ number: 9, html_url: 'https://github.com/o/r/pull/9', state: 'open' }],
+			[`${BASE}/pulls?head=o%3Afeature%2Fother&state=open`]: [],
 		});
 		const crs = new ChangeRequests(github, REF);
-		expect(await crs.findOpen('fd/demo/i1')).toEqual({ number: 9, url: 'https://github.com/o/r/pull/9' });
-		expect(await crs.findOpen('fd/demo/i2')).toBeNull();
+		expect(await crs.findOpen('feature/demo')).toEqual({ number: 9, url: 'https://github.com/o/r/pull/9' });
+		expect(await crs.findOpen('feature/other')).toBeNull();
 		expect(calls.every((c) => c.method === 'GET')).toBe(true);
 	});
 
@@ -29,12 +29,12 @@ describe('change requests, over the API', () => {
 
 	it('opens one only as a draft, onto the base it is given', async () => {
 		const { github, writes } = fakeGitHub({ [`POST ${BASE}/pulls`]: { number: 42, html_url: 'https://github.com/o/r/pull/42' } });
-		expect(await new ChangeRequests(github, REF).openDraft({ head: 'fd/demo/i1', base: 'develop', title: 'T', body: 'B' })).toEqual({
+		expect(await new ChangeRequests(github, REF).openDraft({ head: 'prototype/demo/v1', base: 'develop', title: 'T', body: 'B' })).toEqual({
 			number: 42,
 			url: 'https://github.com/o/r/pull/42',
 		});
 		expect(writes).toEqual([
-			{ method: 'POST', path: `${BASE}/pulls`, body: { title: 'T', head: 'fd/demo/i1', base: 'develop', body: 'B', draft: true } },
+			{ method: 'POST', path: `${BASE}/pulls`, body: { title: 'T', head: 'prototype/demo/v1', base: 'develop', body: 'B', draft: true } },
 		]);
 	});
 

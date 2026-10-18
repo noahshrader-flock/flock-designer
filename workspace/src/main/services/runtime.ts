@@ -2,7 +2,7 @@ import { type ChildProcess, spawn } from 'node:child_process';
 import type { PreviewStatus, RunLogLine } from '../../shared/contract';
 import type { WorkspaceDescriptor } from './descriptor';
 import { findCommand } from './descriptor';
-import { assertUsableProjectId } from './iterations';
+import { assertUsableProjectId } from './workRecords';
 
 /**
  * Runs the commands a repository declares, and nothing else.

@@ -30,7 +30,7 @@ describe('every run in a product checkout', () => {
 		'an Address on a branch': codebaseTask({ unattended: null, task: 'Address comment 1.' }, parts),
 		Handoff: handoffTask({ skill: '# Hand off', projectId: 'p', branch: 'feature/p', gate: null }, parts),
 		'building a prototype in the codebase': buildInCodebaseTask(
-			{ skill: '# Move', routeSkill: '# Route', pageFile: '/p.html', auditFile: '/a.md', recordFile: '/i.json', name: 'v1-i1' },
+			{ skill: '# Move', routeSkill: '# Route', pageFile: '/p.html', auditFile: '/a.md', recordFile: '/i.json', name: 'v1' },
 			parts,
 		),
 	};
@@ -74,19 +74,19 @@ describe('codebase work and Handoff', () => {
 
 describe('addressTask', () => {
 	it('asks for the one comment it was given, by the number on its pin', () => {
-		const one = addressTask('/r/comments.md', 'fd/demo/i1', 'SKILL', 3);
+		const one = addressTask('/r/comments.md', 'prototype/demo/v1', 'SKILL', 3);
 		expect(one).toContain('Address comment 3 on this project, and only that one.');
 		expect(one).toContain('leave them');
 		expect(one.endsWith('SKILL')).toBe(true);
 	});
 
 	it('is short and names what the app produced', () => {
-		const task = addressTask('/r/projects/demo/comments.md', 'fd/demo/i1', 'SKILL TEXT', 1);
+		const task = addressTask('/r/projects/demo/comments.md', 'prototype/demo/v1', 'SKILL TEXT', 1);
 		expect(task.split('\n').slice(0, 2)).toEqual([
 			'Address comment 1 on this project, and only that one.',
 			'The comments are in /r/projects/demo/comments.md, written from GitHub a moment ago. Read it first.',
 		]);
-		expect(task).toContain("This iteration's branch is fd/demo/i1.");
+		expect(task).toContain("This iteration's branch is prototype/demo/v1.");
 		expect(task.endsWith('SKILL TEXT')).toBe(true);
 	});
 });
@@ -97,14 +97,14 @@ describe('building a prototype in the codebase', () => {
 			{
 				skill: 's',
 				routeSkill: '# Route',
-				pageFile: '/q/i1.html',
-				auditFile: '/d/projects/users/audit-i1.md',
-				recordFile: '/d/projects/users/iterations.json',
-				name: 'i1',
+				pageFile: '/q/v1.html',
+				auditFile: '/d/projects/users/audit-v1.md',
+				recordFile: '/d/projects/users/work.json',
+				name: 'v1',
 			},
 			{ guide: '', lightCheck: null, shared: '', accessibility: '', voice: '' },
 		);
-		expect(task).toContain('Write the audit to `/d/projects/users/audit-i1.md` before you change any code.');
+		expect(task).toContain('Write the audit to `/d/projects/users/audit-v1.md` before you change any code.');
 	});
 
 	it('carries the route skill, and where the route goes', () => {
@@ -112,15 +112,15 @@ describe('building a prototype in the codebase', () => {
 			{
 				skill: 's',
 				routeSkill: '# Record where the work is\n\nThe plainest form.',
-				pageFile: '/q/i1.html',
-				auditFile: '/d/projects/users/audit-i1.md',
-				recordFile: '/d/projects/users/iterations.json',
-				name: 'i1',
+				pageFile: '/q/v1.html',
+				auditFile: '/d/projects/users/audit-v1.md',
+				recordFile: '/d/projects/users/work.json',
+				name: 'v1',
 			},
 			{ guide: '', lightCheck: null, shared: '', accessibility: '', voice: '' },
 		);
 		expect(task).toContain('# Record where the work is');
-		expect(task).toContain("Record the work's route on the `codebase` entry of `/d/projects/users/iterations.json`");
+		expect(task).toContain("Record the work's route on the `codebase` entry of `/d/projects/users/work.json`");
 	});
 });
 
@@ -129,19 +129,19 @@ describe('Handoff, on work with no route recorded', () => {
 	const base = { skill: '# Hand off', projectId: 'p', branch: 'feature/p', gate: null };
 
 	it('asks for the route first, with how to choose it, and says nothing of it when there is one', () => {
-		const task = handoffTask({ ...base, missingRoute: { skill: '# Record where the work is', recordFile: '/d/projects/p/iterations.json' } }, bare);
+		const task = handoffTask({ ...base, missingRoute: { skill: '# Record where the work is', recordFile: '/d/projects/p/work.json' } }, bare);
 		expect(task).toContain('# Record where the work is');
-		expect(task).toMatch(/no route.*`\/d\/projects\/p\/iterations.json`/);
+		expect(task).toMatch(/no route.*`\/d\/projects\/p\/work.json`/);
 		expect(handoffTask(base, bare)).not.toContain('route');
 	});
 });
 
 describe('the builder’s guide, in every task (so no run depends on an agent choosing to read it)', () => {
 	const build = {
-		source: '/p/v1-i1.tsx',
-		page: '/p/v1-i1.html',
+		source: '/p/v1.tsx',
+		page: '/p/v1.html',
 		buildCommand: 'node build.mjs',
-		checkCommand: 'node check-prototype.mjs /p/v1-i1.build-check.json',
+		checkCommand: 'node check-prototype.mjs /p/v1.build-check.json',
 	};
 	const sources = {
 		code: '/c',
@@ -163,11 +163,11 @@ describe('the builder’s guide, in every task (so no run depends on an agent ch
 			voice: '',
 			commentsPath: '/c.md',
 			number: 1,
-			name: 'v1-i1',
+			name: 'v1',
 			where: 'here',
 		}),
 		'building a prototype in the codebase': buildInCodebaseTask(
-			{ skill: '# Move', routeSkill: '# Route', pageFile: '/p.html', auditFile: '/a.md', recordFile: '/i.json', name: 'v1-i1' },
+			{ skill: '# Move', routeSkill: '# Route', pageFile: '/p.html', auditFile: '/a.md', recordFile: '/i.json', name: 'v1' },
 			parts,
 		),
 		'codebase work': codebaseTask({ unattended: '# Codebase work, unattended', task: 'Build it.' }, parts),

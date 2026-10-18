@@ -5,11 +5,11 @@ import { b64, fakeGitHub } from './fakes/github';
 const REF = { owner: 'acme', repo: 'design' };
 
 const ITERATIONS = [
-	{ projectId: 'alpha', name: 'i1', branch: 'fd/alpha/i1', commit: null, createdAt: '2026-10-01', note: '' },
+	{ projectId: 'alpha', name: 'v1', branch: 'prototype/alpha/v1', commit: null, createdAt: '2026-10-01', note: '' },
 	{
 		projectId: 'alpha',
-		name: 'i2',
-		branch: 'fd/alpha/i2',
+		name: 'v2',
+		branch: 'prototype/alpha/v2',
 		commit: null,
 		createdAt: '2026-10-02',
 		note: '',
@@ -22,7 +22,7 @@ describe('listProjects', () => {
 	const routes = {
 		'/repos/acme/design/contents/projects/alpha*': [
 			{ type: 'file', name: 'brief.md' },
-			{ type: 'file', name: 'iterations.json' },
+			{ type: 'file', name: 'work.json' },
 			{ type: 'file', name: 'review.md' },
 		],
 		'/repos/acme/design/contents/projects*': [
@@ -31,29 +31,29 @@ describe('listProjects', () => {
 			{ type: 'dir', name: '_template' },
 		],
 		'/repos/acme/design/contents/projects/alpha/brief.md*': { sha: 'f1', content: b64('# Inactive users\n') },
-		'/repos/acme/design/contents/projects/alpha/iterations.json*': { sha: 'f1', content: b64(JSON.stringify(ITERATIONS)) },
-		'/repos/acme/design/issues?state=all*': [{ number: 7, comments: 3, body: 'Review thread for alpha, branch: `fd/alpha/i2`.' }],
+		'/repos/acme/design/contents/projects/alpha/work.json*': { sha: 'f1', content: b64(JSON.stringify(ITERATIONS)) },
+		'/repos/acme/design/issues?state=all*': [{ number: 7, comments: 3, body: 'Review thread for alpha, branch: `prototype/alpha/v2`.' }],
 	};
 
 	it('reads when each iteration was started from its record, and treats anything else as unknown', async () => {
 		const { github: session } = fakeGitHub({
 			...routes,
-			'/repos/acme/design/contents/projects/alpha/iterations.json*': {
+			'/repos/acme/design/contents/projects/alpha/work.json*': {
 				sha: 'f1',
 				content: b64(JSON.stringify([...ITERATIONS.slice(0, 2).map((i, n) => ({ ...i, createdAt: n === 0 ? '2026-10-01T00:00:00Z' : 'someday' }))])),
 			},
 		});
 		const [alpha] = await new DesignRepo(session, REF).listProjects();
-		expect(alpha?.iterations.map((i) => [i.name, i.createdAt]).sort()).toEqual([
-			['i1', '2026-10-01T00:00:00Z'],
-			['i2', null],
+		expect(alpha?.work.map((i) => [i.name, i.createdAt]).sort()).toEqual([
+			['v1', '2026-10-01T00:00:00Z'],
+			['v2', null],
 		]);
 	});
 
 	it('reads which picture each prototype has from its record, and nothing that is not one', async () => {
 		const { github: session } = fakeGitHub({
 			...routes,
-			'/repos/acme/design/contents/projects/alpha/iterations.json*': {
+			'/repos/acme/design/contents/projects/alpha/work.json*': {
 				sha: 'f1',
 				content: b64(
 					JSON.stringify([
@@ -64,7 +64,7 @@ describe('listProjects', () => {
 			},
 		});
 		const [alpha] = await new DesignRepo(session, REF).listProjects();
-		expect(Object.fromEntries(alpha!.iterations.map((i) => [i.name, i.cover]))).toEqual({ i1: 'aaaaaaaaaaaa', i2: null });
+		expect(Object.fromEntries(alpha!.work.map((i) => [i.name, i.cover]))).toEqual({ v1: 'aaaaaaaaaaaa', v2: null });
 	});
 
 	it('knows when a project last had activity: the newest of a change to its folder and a comment on its review thread', async () => {
@@ -79,7 +79,7 @@ describe('listProjects', () => {
 			...routes,
 			'/repos/acme/design/commits?path=projects%2Falpha*': commits,
 			'/repos/acme/design/issues?state=all*': [
-				{ number: 7, comments: 3, updated_at: '2026-10-08T08:00:00Z', body: 'Review thread for alpha, branch: `fd/alpha/i2`.' },
+				{ number: 7, comments: 3, updated_at: '2026-10-08T08:00:00Z', body: 'Review thread for alpha, branch: `prototype/alpha/v2`.' },
 			],
 		});
 		expect((await new DesignRepo(commented.github, REF).listProjects())[0]?.updatedAt).toBe('2026-10-08T08:00:00Z');
@@ -107,25 +107,25 @@ describe('listProjects', () => {
 
 		const noBrief = fakeGitHub({
 			...routes,
-			'/repos/acme/design/contents/projects/alpha*': [{ type: 'file', name: 'iterations.json' }],
+			'/repos/acme/design/contents/projects/alpha*': [{ type: 'file', name: 'work.json' }],
 		});
 		expect((await new DesignRepo(noBrief.github, REF).listProjects())[0]?.title).toBe('alpha');
 	});
 
-	it('reads iterations from the project folder, not from branches', async () => {
+	it('reads work from the project folder, not from branches', async () => {
 		// The regression: iteration branches live in the PRODUCT repository, which
 		// this app cannot see. Looking for them in the design repo listed "No
-		// branches yet" for every project, including ones with iterations.
+		// branches yet" for every project, including ones with work.
 		const { github: session, api } = fakeGitHub(routes);
 		const [alpha] = await new DesignRepo(session, REF).listProjects();
-		expect(alpha?.iterations.map((i) => i.branch)).toEqual(['fd/alpha/i2', 'fd/alpha/i1', 'feature/alpha']);
+		expect(alpha?.work.map((i) => i.branch)).toEqual(['prototype/alpha/v2', 'prototype/alpha/v1', 'feature/alpha']);
 		expect(api.mock.calls.some(([path]) => path.includes('/branches'))).toBe(false);
 	});
 
-	it('puts prototype iterations newest first and the codebase branch last', async () => {
+	it('puts prototype work newest first and the codebase branch last', async () => {
 		const { github: session } = fakeGitHub(routes);
 		const [alpha] = await new DesignRepo(session, REF).listProjects();
-		expect(alpha?.iterations.map((i) => i.name)).toEqual(['i2', 'i1', 'codebase']);
+		expect(alpha?.work.map((i) => i.name)).toEqual(['v2', 'v1', 'codebase']);
 	});
 
 	it('carries where codebase work is on GitHub through, and drops what is not a repository or a link', async () => {
@@ -135,47 +135,47 @@ describe('listProjects', () => {
 		];
 		const { github: session } = fakeGitHub({
 			...routes,
-			'/repos/acme/design/contents/projects/alpha/iterations.json*': { sha: 'f1', content: b64(JSON.stringify(records)) },
+			'/repos/acme/design/contents/projects/alpha/work.json*': { sha: 'f1', content: b64(JSON.stringify(records)) },
 		});
 		const [alpha] = await new DesignRepo(session, REF).listProjects();
-		expect(alpha?.iterations.find((i) => i.name === 'codebase')).toMatchObject({
+		expect(alpha?.work.find((i) => i.name === 'codebase')).toMatchObject({
 			repository: 'flocksafety/flock-coke',
 			pullRequest: 'https://github.com/flocksafety/flock-coke/pull/3',
 		});
-		expect(alpha?.iterations.find((i) => i.name === 'i1')).toMatchObject({ repository: null, pullRequest: null });
+		expect(alpha?.work.find((i) => i.name === 'v1')).toMatchObject({ repository: null, pullRequest: null });
 	});
 
 	it('carries a recorded preview link through', async () => {
 		const { github: session } = fakeGitHub(routes);
 		const [alpha] = await new DesignRepo(session, REF).listProjects();
-		expect(alpha?.iterations.find((i) => i.name === 'i2')?.previewUrl).toBe('https://preview.test/alpha-i2');
-		expect(alpha?.iterations.find((i) => i.name === 'i1')?.previewUrl).toBeNull();
+		expect(alpha?.work.find((i) => i.name === 'v2')?.previewUrl).toBe('https://preview.test/alpha-i2');
+		expect(alpha?.work.find((i) => i.name === 'v1')?.previewUrl).toBeNull();
 	});
 
-	it('shows no iterations, not an error, for a project that has none recorded', async () => {
+	it('shows no work, not an error, for a project that has none recorded', async () => {
 		const { github: session } = fakeGitHub({
 			...routes,
 			'/repos/acme/design/contents/projects/alpha*': [{ type: 'file', name: 'brief.md' }],
 		});
-		expect((await new DesignRepo(session, REF).listProjects())[0]?.iterations).toEqual([]);
+		expect((await new DesignRepo(session, REF).listProjects())[0]?.work).toEqual([]);
 	});
 
-	it('shows no iterations, not an error, when the record is unreadable', async () => {
+	it('shows no work, not an error, when the record is unreadable', async () => {
 		const { github: session } = fakeGitHub({
 			...routes,
-			'/repos/acme/design/contents/projects/alpha/iterations.json*': { sha: 'f1', content: b64('{ not json') },
+			'/repos/acme/design/contents/projects/alpha/work.json*': { sha: 'f1', content: b64('{ not json') },
 		});
-		expect((await new DesignRepo(session, REF).listProjects())[0]?.iterations).toEqual([]);
+		expect((await new DesignRepo(session, REF).listProjects())[0]?.work).toEqual([]);
 	});
 
 	it('links an iteration to its review thread and counts open comments', async () => {
 		const { github: session } = fakeGitHub(routes);
 		const [alpha] = await new DesignRepo(session, REF).listProjects();
-		expect(alpha?.iterations.find((i) => i.branch === 'fd/alpha/i2')?.issueNumber).toBe(7);
-		expect(alpha?.iterations.find((i) => i.branch === 'fd/alpha/i1')?.issueNumber).toBeNull();
+		expect(alpha?.work.find((i) => i.branch === 'prototype/alpha/v2')?.issueNumber).toBe(7);
+		expect(alpha?.work.find((i) => i.branch === 'prototype/alpha/v1')?.issueNumber).toBeNull();
 		// Each iteration carries its own count: the one with the thread has the thread's comments, the other none.
-		expect(alpha?.iterations.find((i) => i.branch === 'fd/alpha/i2')?.openComments).toBe(3);
-		expect(alpha?.iterations.find((i) => i.branch === 'fd/alpha/i1')?.openComments).toBe(0);
+		expect(alpha?.work.find((i) => i.branch === 'prototype/alpha/v2')?.openComments).toBe(3);
+		expect(alpha?.work.find((i) => i.branch === 'prototype/alpha/v1')?.openComments).toBe(0);
 		expect(alpha).not.toHaveProperty('openComments');
 	});
 
@@ -195,7 +195,7 @@ describe('listProjects', () => {
 				'/repos/acme/design/contents/projects/alpha/brief.md*': () => ({ sha: 'b', content: b64(state.brief) }),
 				'/repos/acme/design/commits?path=projects%2Falpha*': [],
 				'/repos/acme/design/issues?state=all*': () => [
-					{ number: 7, comments: state.comments, body: 'Review thread for alpha, branch: `fd/alpha/i2`.' },
+					{ number: 7, comments: state.comments, body: 'Review thread for alpha, branch: `prototype/alpha/v2`.' },
 				],
 			});
 		const perProject = (paths: string[]) => paths.filter((p) => p.includes('projects/alpha') || p.includes('projects%2Falpha'));
@@ -219,7 +219,7 @@ describe('listProjects', () => {
 			const design = new DesignRepo(session, REF);
 			await design.listProjects();
 			state.comments = 4;
-			expect((await design.listProjects())[0]?.iterations.find((i) => i.name === 'i2')?.openComments).toBe(4);
+			expect((await design.listProjects())[0]?.work.find((i) => i.name === 'v2')?.openComments).toBe(4);
 			state.tree = 't2';
 			state.brief = '# Dormant users\n';
 			expect((await design.listProjects())[0]?.title).toBe('Dormant users');
@@ -260,8 +260,8 @@ describe('contributors', () => {
 		const records = [
 			{
 				projectId: 'alpha',
-				name: 'i1',
-				branch: 'fd/alpha/i1',
+				name: 'v1',
+				branch: 'prototype/alpha/v1',
 				commit: null,
 				createdAt: '',
 				note: '',
@@ -269,8 +269,8 @@ describe('contributors', () => {
 			},
 			{
 				projectId: 'alpha',
-				name: 'i2',
-				branch: 'fd/alpha/i2',
+				name: 'v2',
+				branch: 'prototype/alpha/v2',
 				commit: null,
 				createdAt: '',
 				note: '',
@@ -278,8 +278,8 @@ describe('contributors', () => {
 			},
 		];
 		const { github: session } = fakeGitHub({
-			'/repos/acme/design/contents/projects/alpha/iterations.json*': { sha: 'f1', content: b64(JSON.stringify(records)) },
-			'/repos/acme/design/contents/projects/alpha*': [{ type: 'file', name: 'iterations.json' }],
+			'/repos/acme/design/contents/projects/alpha/work.json*': { sha: 'f1', content: b64(JSON.stringify(records)) },
+			'/repos/acme/design/contents/projects/alpha*': [{ type: 'file', name: 'work.json' }],
 			'/repos/acme/design/contents/projects*': [{ type: 'dir', name: 'alpha' }],
 			'/repos/acme/design/issues?state=all*': [],
 			'/repos/acme/design/commits?path=projects%2Falpha*': [
@@ -294,7 +294,7 @@ describe('contributors', () => {
 			{ name: 'Grace Hopper', login: 'ghopper' }, // learned from one iteration, applied to the person everywhere
 			{ name: 'Noah Shrader', login: 'noahshrader-flock' },
 		]);
-		expect(project?.iterations.find((i) => i.name === 'i1')?.contributors.map((p) => p.name)).toEqual(['Ada Lovelace', 'Grace Hopper']);
+		expect(project?.work.find((i) => i.name === 'v1')?.contributors.map((p) => p.name)).toEqual(['Ada Lovelace', 'Grace Hopper']);
 	});
 
 	it('still lists the project if the folder history cannot be read', async () => {

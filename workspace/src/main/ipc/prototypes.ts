@@ -4,7 +4,7 @@ import { folderName } from '../../shared/brief';
 import type { BuildInCodebase, CommentRef, OpenedPrototype, PrototypeAddressed, PrototypeReadiness } from '../../shared/contract';
 import { coverPath, prototypeKey, prototypePagePath } from '../../shared/designPaths';
 import { statesOf } from '../../shared/prototypeStates';
-import { iterationLabel } from '../../shared/work';
+import { workLabel } from '../../shared/work';
 import { arg, handle } from '../handle';
 import { ADDRESS_SKILL, chooseComment } from '../services/address';
 import { guidePart, prototypeAddressTask, prototypeBuildTask } from '../services/agentTasks';
@@ -84,7 +84,7 @@ export const registerPrototypes = (d: IpcDeps): void => {
 		refuseWhileBusy();
 		prototypeChanges.delete(keyOf(comment));
 		const { projectId, change } = pending;
-		const { version, made } = await work.finishChange(projectId, change, me(), `For a comment on ${iterationLabel(change.from)}`);
+		const { version, made } = await work.finishChange(projectId, change, me(), `For a comment on ${workLabel(change.from)}`);
 		// Either way: a run that changed nothing clears the mark an earlier one left.
 		const marked = await designRepo.threads.setAddressed(comment, version, version === null ? null : change.target);
 		if (version !== null) publishInBackground(projectId, change.target);
@@ -132,7 +132,7 @@ export const registerPrototypes = (d: IpcDeps): void => {
 			const { task } = await buildTask(projectId, name, request);
 			const taskFile = join(dirname(work.file(projectId, name)), `${name}-build.md`);
 			writeFileSync(taskFile, task);
-			const label = iterationLabel({ name, branch: prototypeKey(projectId, name) });
+			const label = workLabel({ name });
 			return handToClaude(ports, canonical, prototypeBuildPrompt({ label, projectId, taskFile }));
 		},
 	);
@@ -158,7 +158,7 @@ export const registerPrototypes = (d: IpcDeps): void => {
 		// Modeled on what the iteration it comes from was: a new one has no record of its own yet.
 		const { build, sources } = await prototypeRun(projectId, change.target, change.from.name);
 		prototypeChanges.set(keyOf(comment), { comment, projectId, change });
-		const where = whereTheChangeGoes(change, name);
+		const where = whereTheChangeGoes(change);
 		const accessibility = await work.accessibility(projectId, change.from.name);
 		const voice = await work.voice();
 		return startPrototypeAgent(
@@ -181,7 +181,7 @@ export const registerPrototypes = (d: IpcDeps): void => {
 		);
 	});
 	handle('finishPrototypeAddress', [arg.comment], (comment): Promise<PrototypeAddressed> => finishPrototypeChange(comment));
-	handle('savePrototype', [arg.projectId, arg.iterationName], async (projectId, name): Promise<null> => {
+	handle('savePrototype', [arg.projectId, arg.workName], async (projectId, name): Promise<null> => {
 		await work.save(projectId, name);
 		publishInBackground(projectId, name);
 		return null;

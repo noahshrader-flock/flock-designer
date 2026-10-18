@@ -48,7 +48,7 @@ describe('stateOfQuery', () => {
 
 describe('withState', () => {
 	it('asks for the state in the address', () => {
-		expect(withState('http://127.0.0.1:9/demo/v1-i1/', 'panel')).toBe('http://127.0.0.1:9/demo/v1-i1/?state=panel');
+		expect(withState('http://127.0.0.1:9/demo/v1/', 'panel')).toBe('http://127.0.0.1:9/demo/v1/?state=panel');
 		expect(withState('page.html', 'filtered')).toBe('page.html?state=filtered');
 	});
 

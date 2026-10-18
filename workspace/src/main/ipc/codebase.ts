@@ -2,9 +2,8 @@ import { randomUUID } from 'node:crypto';
 import { existsSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
 import type { BuildInCodebase, BuildInCodebasePlan } from '../../shared/contract';
-import { prototypeKey } from '../../shared/designPaths';
 import { lastVerdict } from '../../shared/handoff';
-import { iterationLabel, workKind } from '../../shared/work';
+import { workLabel, workKind } from '../../shared/work';
 import { arg, handle } from '../handle';
 import { A11Y_COMMAND, productTarget, taskAccessibility } from '../services/accessibilityBrief';
 import { ADDRESS_SKILL, prepareAddress } from '../services/address';
@@ -16,7 +15,7 @@ import { recordsRootFor } from '../services/discovery';
 import { handToClaude } from '../services/editor';
 import { CODEBASE_SKILL, HANDOFF_FILE, HANDOFF_SKILL, commandLine } from '../services/engineeringHandoff';
 import { branchCommit, changedSince, headCommit, readCheckout } from '../services/git';
-import { codebaseBranchFor, recordHandoff, recordPath, recordPreview, recordedIteration } from '../services/iterations';
+import { codebaseBranchFor, recordHandoff, recordPath, recordPreview, recordedWork } from '../services/workRecords';
 import { GUIDE, MOVE_SKILL, ROUTE_SKILL, buildInCodebasePrompt } from '../services/prototype';
 import { pullRequestText } from '../services/share';
 import type { IpcDeps } from '../ipc';
@@ -157,10 +156,10 @@ export const registerCodebase = (d: IpcDeps): void => {
 	handle('agentReadiness', [], () => agentReadiness());
 	// One click: read the comments now, write the file from that read, then start the agent. Nothing
 	// a reviewer wrote is put in the task; it reaches the agent only through the file.
-	handle('addressComments', [checkout, arg.projectId, arg.iterationName, arg.comment], async (workIn, projectId, name, comment) => {
+	handle('addressComments', [checkout, arg.projectId, arg.workName, arg.comment], async (workIn, projectId, name, comment) => {
 		// There is no batch: a request with no comment is a mistake, not a request for all of them.
 		const { canonical, recordsRoot } = workIn;
-		const iteration = await recordedIteration(canonical, recordsRoot, workIn.descriptor, projectId, name);
+		const iteration = await recordedWork(canonical, recordsRoot, workIn.descriptor, projectId, name);
 		const skill = await readDesignFile(ADDRESS_SKILL);
 		const prepared = await prepareAddress(
 			{
@@ -181,13 +180,13 @@ export const registerCodebase = (d: IpcDeps): void => {
 	});
 	// Sharing. The branch comes from this person's own record, never from the window, and
 	// the repository's descriptor says what a share is. Starts and returns: it takes minutes.
-	handle('shareIteration', [checkout, arg.projectId, arg.iterationName], async (workIn, projectId, name) => {
+	handle('shareIteration', [checkout, arg.projectId, arg.workName], async (workIn, projectId, name) => {
 		const { canonical, descriptor, recordsRoot } = workIn;
 		const { share: how } = descriptor;
 		if (!how) {
 			throw new Error(`${descriptor.product} does not say how a shared preview is built, so it cannot be shared from here.`);
 		}
-		const iteration = await recordedIteration(canonical, recordsRoot, descriptor, projectId, name);
+		const iteration = await recordedWork(canonical, recordsRoot, descriptor, projectId, name);
 		// Only what is committed goes up. Sharing a branch with unsaved edits would show reviewers less than the designer sees.
 		const here = await readCheckout(canonical);
 		if (here.branch === iteration.branch && !here.clean) {
@@ -231,7 +230,7 @@ export const registerCodebase = (d: IpcDeps): void => {
 	});
 	handle('startHandoff', [checkout, arg.projectId], async (workIn, projectId) => {
 		const { canonical, recordsRoot, descriptor } = workIn;
-		const iteration = await recordedIteration(canonical, recordsRoot, descriptor, projectId, 'codebase');
+		const iteration = await recordedWork(canonical, recordsRoot, descriptor, projectId, 'codebase');
 		const here = await readCheckout(canonical);
 		if (here.branch !== iteration.branch) throw new Error(`Open ${iteration.branch} first: a handoff checks the work where it is.`);
 		refuseWhileBusy();
@@ -281,7 +280,7 @@ export const registerCodebase = (d: IpcDeps): void => {
 			const pageFile = work.file(projectId, name);
 			const sourceFile = work.sourceFile(projectId, name);
 			const source = await work.sourceText(projectId, name);
-			const label = iterationLabel({ name, branch: prototypeKey(projectId, name) });
+			const label = workLabel({ name });
 			// The branch first: nothing is written for the agent if the work cannot start (a dirty tree, work not found).
 			// Work already started, here or recorded, is continued where it is; it is not started a second time.
 			const { branch, started: continuing } = await codebase.of(workIn, projectId);

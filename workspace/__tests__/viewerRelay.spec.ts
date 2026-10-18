@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { iterationAddress, keyFromAddress, listenForDsnr, relayComments, serverRelay } from '../src/viewer/relay';
+import { versionAddress, keyFromAddress, listenForDsnr, relayComments, serverRelay } from '../src/viewer/relay';
 
 /**
  * The review page's side of commenting through DSNR (4.2): it listens only when it is served from this machine and in a
@@ -85,7 +85,7 @@ describe('the comments, through DSNR', () => {
 		const ask = vi.fn(async (name: string) =>
 			name === 'signInState' ? { ok: true as const, value: { state: 'signedIn', user: { login: 'noah' } } } : { ok: true as const, value: null },
 		);
-		const store = relayComments({ ask }, { projectId: 'demo', branch: 'prototype/demo/v1-i1' });
+		const store = relayComments({ ask }, { projectId: 'demo', branch: 'prototype/demo/v1' });
 		const ref = { thread: 7, id: 70 };
 		const anchor = { selector: 'h1' } as never;
 		await store.read();
@@ -94,9 +94,9 @@ describe('the comments, through DSNR', () => {
 		await store.move(ref, anchor);
 		await store.remove(ref);
 		expect(ask.mock.calls).toEqual([
-			['readComments', ['demo', 'prototype/demo/v1-i1']],
+			['readComments', ['demo', 'prototype/demo/v1']],
 			// No picture of the spot: a page cannot take one of itself.
-			['postComment', ['demo', 'prototype/demo/v1-i1', 'Bigger', anchor, null]],
+			['postComment', ['demo', 'prototype/demo/v1', 'Bigger', anchor, null]],
 			['resolveComment', [ref, true]],
 			['moveComment', [ref, anchor]],
 			['deleteComment', [ref]],
@@ -111,7 +111,7 @@ const opened = (host: string, hash: string, kept: string | null = null) => {
 	const store = new Map<string, string>(kept === null ? [] : [['dsnr.review-key', kept]]);
 	const replaced: string[] = [];
 	const win = {
-		location: { hostname: host, hash, pathname: '/review/demo/v1/i1/', search: '' },
+		location: { hostname: host, hash, pathname: '/review/demo/v1/', search: '' },
 		history: { replaceState: (_: unknown, __: string, url: string) => void replaced.push(url) },
 		sessionStorage: { getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => void store.set(k, v) },
 	};
@@ -124,7 +124,7 @@ describe('the key a page opened from DSNR carries', () => {
 		const page = opened('127.0.0.1', `#dsnr-key-${KEY}`);
 		expect(keyFromAddress(page.win)).toBe(KEY);
 		expect(page.store.get('dsnr.review-key')).toBe(KEY);
-		expect(page.replaced).toEqual(['/review/demo/v1/i1/']);
+		expect(page.replaced).toEqual(['/review/demo/v1/']);
 	});
 
 	it('is the one kept, after the page moves to another iteration (whose address has none)', () => {
@@ -177,14 +177,15 @@ describe('asking DSNR through this machine’s server', () => {
 });
 
 describe('where a page in the browser goes after Address (BROWSER_COMMENTS_PLAN 3.2)', () => {
-	const here = 'http://127.0.0.1:5000/review/demo/v1/i1/';
-	it('is the iteration it showed, under the same project, as the site lays them out', () => {
-		expect(iterationAddress('../../', 'v1-i2', here)).toBe('http://127.0.0.1:5000/review/demo/v1/i2/');
-		expect(iterationAddress('../../', 'v2-i1', here)).toBe('http://127.0.0.1:5000/review/demo/v2/i1/');
+	const here = 'http://127.0.0.1:5000/review/demo/v1/';
+	it('is the version it showed, under the same project, as the site lays them out', () => {
+		expect(versionAddress('../', 'v3', here)).toBe('http://127.0.0.1:5000/review/demo/v3/');
+		expect(versionAddress('../', 'v2', here)).toBe('http://127.0.0.1:5000/review/demo/v2/');
 	});
 
-	it('is this page again when the change is in it, and nowhere for what is not an iteration', () => {
-		expect(iterationAddress('../../', 'v1-i1', here)).toBe(here);
-		expect(iterationAddress('../../', '../../etc', here)).toBeNull();
+	it('is this page again when the change is in it, and nowhere for what is not a version', () => {
+		expect(versionAddress('../', 'v1', here)).toBe(here);
+		expect(versionAddress('../', '../../etc', here)).toBeNull();
+		expect(versionAddress('../', 'v1-i2', here)).toBeNull();
 	});
 });

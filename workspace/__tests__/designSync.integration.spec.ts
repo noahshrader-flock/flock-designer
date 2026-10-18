@@ -61,7 +61,7 @@ madeOnce((d) => {
 	write(mine, '.gitignore', 'projects/*/comments.md\nprojects/*/comment-pictures/\n');
 	write(mine, 'README.md', '# design\n');
 	write(mine, 'projects/p/brief.md', '# P\n');
-	write(mine, 'projects/p/iterations.json', `${JSON.stringify([record('i1')], null, 2)}\n`);
+	write(mine, 'projects/p/work.json', `${JSON.stringify([record('v1')], null, 2)}\n`);
 	commitAll(mine, 'base');
 	git(mine, 'push', '-q', '-u', 'origin', 'HEAD:main');
 	git(mine, 'branch', '-q', '-M', 'main');
@@ -75,7 +75,7 @@ describe('publishing records', () => {
 	it('publishes a new project folder, and the tree is clean afterwards', async () => {
 		write(mine, 'projects/new-view/brief.md', '# New view\n');
 		write(mine, 'projects/new-view/context-receipt.md', 'receipt');
-		write(mine, 'projects/new-view/iterations.json', `${JSON.stringify([record('codebase')], null, 2)}\n`);
+		write(mine, 'projects/new-view/work.json', `${JSON.stringify([record('codebase')], null, 2)}\n`);
 		const r = await syncRecords(mine);
 		expect(r).toEqual({ published: ['new-view'], problems: [] });
 		expect(onRemote('projects/new-view/brief.md')).toBe('# New view');
@@ -84,10 +84,10 @@ describe('publishing records', () => {
 	});
 
 	it('publishes a change to a record it already knew', async () => {
-		write(mine, 'projects/p/iterations.json', `${JSON.stringify([record('i1', { commit: 'abc123' })], null, 2)}\n`);
+		write(mine, 'projects/p/work.json', `${JSON.stringify([record('v1', { commit: 'abc123' })], null, 2)}\n`);
 		const r = await syncRecords(mine);
 		expect(r.published).toEqual(['p']);
-		expect(JSON.parse(onRemote('projects/p/iterations.json'))[0].commit).toBe('abc123');
+		expect(JSON.parse(onRemote('projects/p/work.json'))[0].commit).toBe('abc123');
 		expect(git(remote, 'log', '-1', '--format=%s', 'main')).toBe('Update p');
 	});
 
@@ -164,33 +164,33 @@ describe('when someone else has published too', () => {
 		expect(existsSync(join(mine, 'projects/other/brief.md'))).toBe(true);
 	});
 
-	it('combines two people recording different iterations of one project, by meaning, not by lines', async () => {
+	it('combines two people recording different versions of one project, by meaning, not by lines', async () => {
 		write(
 			theirs,
-			'projects/p/iterations.json',
-			`${JSON.stringify([record('i1'), record('i2', { contributors: [{ name: 'Teammate', login: 'tm' }] })], null, 2)}\n`,
+			'projects/p/work.json',
+			`${JSON.stringify([record('v1'), record('v2', { contributors: [{ name: 'Teammate', login: 'tm' }] })], null, 2)}\n`,
 		);
 		commitAll(theirs, 'teammate i2');
 		git(theirs, 'push', '-q', 'origin', 'HEAD:main');
-		write(mine, 'projects/p/iterations.json', `${JSON.stringify([record('i1', { commit: 'mine1' }), record('i3')], null, 2)}\n`);
+		write(mine, 'projects/p/work.json', `${JSON.stringify([record('v1', { commit: 'mine1' }), record('v3')], null, 2)}\n`);
 		const r = await syncRecords(mine);
 		expect(r).toEqual({ published: ['p'], problems: [] });
-		const merged = JSON.parse(onRemote('projects/p/iterations.json')) as Array<{ name: string; commit?: string; contributors?: unknown }>;
-		expect(merged.map((x) => x.name).sort()).toEqual(['i1', 'i2', 'i3']);
-		expect(merged.find((x) => x.name === 'i1')?.commit).toBe('mine1');
-		expect(merged.find((x) => x.name === 'i2')?.contributors).toEqual([{ name: 'Teammate', login: 'tm' }]);
+		const merged = JSON.parse(onRemote('projects/p/work.json')) as Array<{ name: string; commit?: string; contributors?: unknown }>;
+		expect(merged.map((x) => x.name).sort()).toEqual(['v1', 'v2', 'v3']);
+		expect(merged.find((x) => x.name === 'v1')?.commit).toBe('mine1');
+		expect(merged.find((x) => x.name === 'v2')?.contributors).toEqual([{ name: 'Teammate', login: 'tm' }]);
 		expect(git(mine, 'status', '--porcelain')).toBe('');
 		expect(existsSync(join(mine, '.git', 'rebase-merge'))).toBe(false);
 	});
 
 	it('combines two people both creating the same new project, rather than failing on add/add', async () => {
-		write(theirs, 'projects/shared/iterations.json', `${JSON.stringify([record('i1', { projectId: 'shared' })], null, 2)}\n`);
+		write(theirs, 'projects/shared/work.json', `${JSON.stringify([record('v1', { projectId: 'shared' })], null, 2)}\n`);
 		commitAll(theirs, 'teammate shared');
 		git(theirs, 'push', '-q', 'origin', 'HEAD:main');
-		write(mine, 'projects/shared/iterations.json', `${JSON.stringify([record('i2', { projectId: 'shared' })], null, 2)}\n`);
+		write(mine, 'projects/shared/work.json', `${JSON.stringify([record('v2', { projectId: 'shared' })], null, 2)}\n`);
 		const r = await syncRecords(mine);
 		expect(r.problems).toEqual([]);
-		expect((JSON.parse(onRemote('projects/shared/iterations.json')) as Array<{ name: string }>).map((x) => x.name)).toEqual(['i1', 'i2']);
+		expect((JSON.parse(onRemote('projects/shared/work.json')) as Array<{ name: string }>).map((x) => x.name)).toEqual(['v1', 'v2']);
 	});
 
 	it("catches up with GitHub's records even when nothing local changed, so the tree stops being behind", async () => {
@@ -283,19 +283,19 @@ describe('what it refuses to publish', () => {
 
 describe('a record that is not valid', () => {
 	it('is never published, however it got that way, and the reason names the file', async () => {
-		write(mine, 'projects/p/iterations.json', '[{"name": "i1", "branch": ');
+		write(mine, 'projects/p/work.json', '[{"name": "v1", "branch": ');
 		const r = await syncRecords(mine);
 		expect(r.published).toEqual([]);
-		expect(r.problems[0]?.why).toMatch(/projects\/p\/iterations\.json is not a valid record/);
-		expect(JSON.parse(onRemote('projects/p/iterations.json'))[0].name).toBe('i1'); // GitHub's copy is still the good one
+		expect(r.problems[0]?.why).toMatch(/projects\/p\/work\.json is not a valid record/);
+		expect(JSON.parse(onRemote('projects/p/work.json'))[0].name).toBe('v1'); // GitHub's copy is still the good one
 	});
 
 	it('does not hold up a good project because another one is broken', async () => {
-		write(mine, 'projects/broken/iterations.json', 'not json');
+		write(mine, 'projects/broken/work.json', 'not json');
 		write(mine, 'projects/fine/brief.md', '# Fine\n');
 		const r = await syncRecords(mine);
 		// One commit carries both, so the guard holds the whole push: nothing half-published, and the reason names the broken file.
-		expect(r.problems[0]?.why).toMatch(/projects\/broken\/iterations\.json/);
+		expect(r.problems[0]?.why).toMatch(/projects\/broken\/work\.json/);
 		expect(remoteHas('projects/fine/brief.md')).toBe(false);
 	});
 });

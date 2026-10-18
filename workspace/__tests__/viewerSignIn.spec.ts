@@ -29,7 +29,7 @@ const tab = (href: string, kept: Record<string, string> = {}) => {
 };
 
 /** A tab that has started a sign-in from `back`, as `startSignIn` leaves it. */
-const started = async (back = `${SITE}alert-history/v2/i1/`) => {
+const started = async (back = `${SITE}alert-history/v2/`) => {
 	const before = tab(back);
 	await startSignIn(CONFIG, before.win);
 	const sentTo = new URL(before.win.location.assign.mock.calls[0]?.[0] as string);
@@ -50,7 +50,7 @@ describe('signing in on the published page', () => {
 		// GitHub is told the verifier's hash, never the verifier.
 		expect(sentTo.searchParams.get('code_challenge')).toBe(await challengeOf({ crypto: webcrypto } as unknown as SignInWindow, pending.verifier));
 		expect(sentTo.toString()).not.toContain(pending.verifier);
-		expect(pending.back).toBe(`${SITE}alert-history/v2/i1/`);
+		expect(pending.back).toBe(`${SITE}alert-history/v2/`);
 	});
 
 	it('makes a new state and verifier each time', async () => {
@@ -70,7 +70,7 @@ describe('signing in on the published page', () => {
 		expect(url).toBe(CONFIG.exchange);
 		expect(JSON.parse(init.body as string)).toEqual({ code: 'abc123', verifier: pending.verifier });
 		expect(back.win.location.href).toBe(SITE);
-		expect(back.win.location.replace).toHaveBeenCalledWith(`${SITE}alert-history/v2/i1/`);
+		expect(back.win.location.replace).toHaveBeenCalledWith(`${SITE}alert-history/v2/`);
 		// Used once: nothing is left to finish again, and nothing to say.
 		expect(back.store.has('dsnr.sign-in')).toBe(false);
 		expect(takeNote(back.win)).toBeNull();

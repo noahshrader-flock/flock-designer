@@ -1,4 +1,4 @@
-import type { IterationKind, ShareStatus, ShareStep } from '../../shared/contract';
+import type { WorkKind, ShareStatus, ShareStep } from '../../shared/contract';
 import type { Check, PullRequest } from '../../host/changeRequests';
 import type { ShareDescriptor } from './descriptor';
 import { projectDir } from '../../shared/designPaths';
@@ -36,7 +36,7 @@ export interface ShareTools {
 
 export interface ShareRequest {
 	share: ShareDescriptor;
-	kind: IterationKind;
+	kind: WorkKind;
 	projectId: string;
 	name: string;
 	branch: string;

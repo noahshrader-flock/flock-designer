@@ -1,10 +1,10 @@
-import type { Iteration, Person, Project } from '../shared/contract';
+import type { Work, Person, Project } from '../shared/contract';
 import { fromBrief } from '../shared/brief';
-import { projectDir, projectPath } from '../shared/designPaths';
+import { projectDir, projectPath, WORK_FILE, workPath } from '../shared/designPaths';
 import { isBot, mergePeople } from '../shared/people';
-import { iterationOrder, latestDate } from '../shared/projectList';
+import { workOrder, latestDate } from '../shared/projectList';
 import { asRecord } from '../shared/json';
-import { parseIterations, toProjectIteration } from '../shared/iterationRecords';
+import { parseWork, toProjectWork } from '../shared/workRecords';
 import type { RepoRef } from '../shared/repoRef';
 import type { GitHubApi } from './github';
 import { RepoFiles } from './repoFiles';
@@ -24,7 +24,7 @@ type Activity = { people: Person[]; updatedAt: string | null };
 /** A project folder's own files, as last read: everything `listProjects` shows of it but the review threads, read every time. */
 interface FolderReading {
 	records: string[];
-	iterations: Iteration[];
+	work: Work[];
 	brief: ReturnType<typeof fromBrief>;
 	activity: Activity;
 }
@@ -51,20 +51,20 @@ export class DesignRepo {
 		return Promise.all(
 			dirs.map(async ({ name: id, sha }) => {
 				const { records, brief, activity: folder, ...read } = await this.readFolder(id, sha);
-				const iterations = read.iterations.map((it) => toProjectIteration(it, issues.get(it.branch))).sort(iterationOrder);
-				// Alphabetical, so the line does not reshuffle as iterations are added.
+				const work = read.work.map((it) => toProjectWork(it, issues.get(it.branch))).sort(workOrder);
+				// Alphabetical, so the line does not reshuffle as versions are added.
 				const people = mergePeople(
-					iterations.flatMap((it) => it.contributors),
+					work.flatMap((it) => it.contributors),
 					folder.people,
 				);
 				return {
 					id,
 					...brief,
 					records,
-					iterations,
+					work,
 					people,
 					// A change to the folder, or a comment on a review thread (GitHub dates a thread by its latest).
-					updatedAt: latestDate([folder.updatedAt, ...iterations.map((it) => issues.get(it.branch)?.updatedAt)]),
+					updatedAt: latestDate([folder.updatedAt, ...work.map((it) => issues.get(it.branch)?.updatedAt)]),
 				};
 			}),
 		);
@@ -81,7 +81,7 @@ export class DesignRepo {
 		const activity = await this.folderActivity(id);
 		const reading: FolderReading = {
 			records,
-			iterations: await this.readIterations(id, records),
+			work: await this.readWork(id, records),
 			brief: await this.readBrief(id, records),
 			activity: activity ?? { people: [], updatedAt: null },
 		};
@@ -124,22 +124,22 @@ export class DesignRepo {
 	}
 
 	/**
-	 * A project's iterations, from `projects/<id>/iterations.json`.
+	 * A project's work, from `projects/<id>/work.json`.
 	 *
-	 * **Not from branches.** Iteration branches live in the product repository,
+	 * **Not from branches.** Work branches live in the product repository,
 	 * which this app is deliberately unable to see -- that is what keeps a PM out
 	 * of the product's source. The record is written into the project folder when
 	 * an iteration is created, so it is readable here with no extra access. The
 	 * first version of this looked for branches in the design repo and listed
 	 * "No branches yet" for every project.
 	 *
-	 * A missing or unreadable record means "no iterations recorded", never an
+	 * A missing or unreadable record means "no work recorded", never an
 	 * error: a project folder exists before its first iteration does.
 	 */
-	private async readIterations(id: string, records: string[]): Promise<Iteration[]> {
-		if (!records.includes('iterations.json')) return [];
-		const text = await this.files.readFile(projectPath(id, 'iterations.json'));
-		// One that cannot be read is no iterations recorded, as a missing one is: the project is still listed.
-		return parseIterations(text ?? '') ?? [];
+	private async readWork(id: string, records: string[]): Promise<Work[]> {
+		if (!records.includes(WORK_FILE)) return [];
+		const text = await this.files.readFile(workPath(id));
+		// One that cannot be read is no work recorded, as a missing one is: the project is still listed.
+		return parseWork(text ?? '') ?? [];
 	}
 }

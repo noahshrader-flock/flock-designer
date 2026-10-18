@@ -32,7 +32,7 @@ const GUESSED = 'GuE-_s5sSGuE-_s5sSGuEs';
 const HOSTILE = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Hostile</title></head><body><main><h1>Alerts</h1></main><script>
 const tried = {};
 const attempt = async (name, f) => { try { tried[name] = 'allowed: ' + String(await f()); } catch { tried[name] = 'blocked'; } };
-const ask = (headers, more) => fetch(location.ancestorOrigins[0] + '/_dsnr/ask', { method: 'POST', headers, body: JSON.stringify({ dsnr: 'ask', id: 7, name: 'address', args: [{ thread: 1, id: 1 }, 'prototype/hostile/v1-i1'] }), ...more });
+const ask = (headers, more) => fetch(location.ancestorOrigins[0] + '/_dsnr/ask', { method: 'POST', headers, body: JSON.stringify({ dsnr: 'ask', id: 7, name: 'address', args: [{ thread: 1, id: 1 }, 'prototype/hostile/v1'] }), ...more });
 (async () => {
 	await attempt('read the key', () => parent.sessionStorage.getItem('dsnr.review-key'));
 	await attempt('read the bar address', () => parent.location.href);
@@ -64,9 +64,9 @@ beforeAll(async () => {
 	mkdirSync(join(design, 'projects', 'demo', 'prototypes'), { recursive: true });
 	writeFileSync(join(design, 'projects', 'demo', 'brief.md'), '# Demo\n');
 	writeFileSync(
-		join(design, 'projects', 'demo', 'iterations.json'),
+		join(design, 'projects', 'demo', 'work.json'),
 		JSON.stringify(
-			['v1-i1', 'v1-i2'].map((name, i) => ({
+			['v1', 'v12'].map((name, i) => ({
 				projectId: 'demo',
 				name,
 				branch: `prototype/demo/${name}`,
@@ -76,17 +76,15 @@ beforeAll(async () => {
 			})),
 		),
 	);
-	writeFileSync(join(design, 'projects', 'demo', 'prototypes', 'v1-i1.html'), PAGE);
-	writeFileSync(join(design, 'projects', 'demo', 'prototypes', 'v1-i2.html'), PAGE.replace('Alert history</h1>', 'Alert history, addressed</h1>'));
+	writeFileSync(join(design, 'projects', 'demo', 'prototypes', 'v1.html'), PAGE);
+	writeFileSync(join(design, 'projects', 'demo', 'prototypes', 'v12.html'), PAGE.replace('Alert history</h1>', 'Alert history, addressed</h1>'));
 	mkdirSync(join(design, 'projects', 'hostile', 'prototypes'), { recursive: true });
 	writeFileSync(join(design, 'projects', 'hostile', 'brief.md'), '# Hostile\n');
 	writeFileSync(
-		join(design, 'projects', 'hostile', 'iterations.json'),
-		JSON.stringify([
-			{ projectId: 'hostile', name: 'v1-i1', branch: 'prototype/hostile/v1-i1', commit: null, note: '', createdAt: '2026-10-01T10:00:00Z' },
-		]),
+		join(design, 'projects', 'hostile', 'work.json'),
+		JSON.stringify([{ projectId: 'hostile', name: 'v1', branch: 'prototype/hostile/v1', commit: null, note: '', createdAt: '2026-10-01T10:00:00Z' }]),
 	);
-	writeFileSync(join(design, 'projects', 'hostile', 'prototypes', 'v1-i1.html'), HOSTILE);
+	writeFileSync(join(design, 'projects', 'hostile', 'prototypes', 'v1.html'), HOSTILE);
 	server = new PrototypeServer();
 	const out = join(root, 'site');
 	buildSite({
@@ -110,7 +108,7 @@ beforeAll(async () => {
 			readComments: () => threads.readComments(b),
 			postComment: () => threads.postComment(a, b, c, d, null),
 			// Address, as the extension answers it: the change made in the next iteration, which it names.
-			address: () => (addressed.push(ask.args), 'v1-i2'),
+			address: () => (addressed.push(ask.args), 'v12'),
 		};
 		const value = await (answers[ask.name] ?? (() => null))();
 		return { dsnr: 'answer', id: ask.id, result: { ok: true, value } };
@@ -144,10 +142,10 @@ describe.skipIf(NO_CHROME)('a review opened in the browser from DSNR, in the rea
 	it('comments through DSNR with its key, no token of its own, and keeps the key when the page loads again', async () => {
 		await inChrome(async (browser) => {
 			const tab = await browser.newPage();
-			await tab.goto(`${base}demo/v1/i1/#dsnr-key-${KEY}`, { waitUntil: 'load' });
+			await tab.goto(`${base}demo/v1/#dsnr-key-${KEY}`, { waitUntil: 'load' });
 			// Signed in as DSNR in VS Code is: the bar offers Comment, and the key is out of the address, kept for this tab.
 			await tab.waitForFunction(() => [...document.querySelectorAll('button')].some((b) => b.textContent?.trim() === 'Comment'));
-			expect(tab.url()).toBe(`${base}demo/v1/i1/`);
+			expect(tab.url()).toBe(`${base}demo/v1/`);
 			expect(await tab.evaluate(() => sessionStorage.getItem('dsnr.review-key'))).toBe(KEY);
 			expect(await tab.evaluate(() => Object.keys(localStorage))).toEqual([]);
 
@@ -176,16 +174,16 @@ describe.skipIf(NO_CHROME)('a review opened in the browser from DSNR, in the rea
 			expect(await tab.evaluate(() => (document.querySelector('#general-comment') as HTMLTextAreaElement).placeholder)).toBe('Post a comment…');
 			await pressNamed(tab, 'Comment actions');
 			await pressNamed(tab, 'Address');
-			await tab.waitForFunction(() => location.pathname.endsWith('/v1/i2/'));
-			expect(addressed[0]?.[1]).toBe('prototype/demo/v1-i1');
-			const moved = await tab.waitForFrame((f) => f.url().endsWith('/v1/i2/page.html'));
+			await tab.waitForFunction(() => location.pathname.endsWith('/v12/'));
+			expect(addressed[0]?.[1]).toBe('prototype/demo/v1');
+			const moved = await tab.waitForFrame((f) => f.url().endsWith('/v12/page.html'));
 			await moved.waitForFunction(() => document.querySelector('h1')?.textContent === 'Alert history, addressed');
 			// Still DSNR's there: the key kept for the tab, not in its address.
 			await tab.waitForFunction(() => [...document.querySelectorAll('button')].some((b) => b.textContent?.trim() === 'Comment'));
 			expect(tab.url()).not.toContain('dsnr-key');
 
 			// Loaded again, with no key in its address (as moving to another iteration is): still DSNR's, the comment there.
-			await tab.goto(`${base}demo/v1/i1/`, { waitUntil: 'load' });
+			await tab.goto(`${base}demo/v1/`, { waitUntil: 'load' });
 			const again = tab.frames().find((f) => f.url().endsWith('page.html')) as Frame;
 			await again.waitForFunction(() => document.querySelector('[data-fd-layer="pins"]')?.textContent === 'P');
 		});
@@ -201,8 +199,8 @@ describe.skipIf(NO_CHROME)('a review opened in the browser from DSNR, in the rea
 			});
 			// A second tab, opened with its own key, beside it.
 			const other = await browser.newPage();
-			await other.goto(`${base}demo/v1/i1/#dsnr-key-${OTHER_KEY}`, { waitUntil: 'load' });
-			await tab.goto(`${base}hostile/v1/i1/#dsnr-key-${KEY}`, { waitUntil: 'load' });
+			await other.goto(`${base}demo/v1/#dsnr-key-${OTHER_KEY}`, { waitUntil: 'load' });
+			await tab.goto(`${base}hostile/v1/#dsnr-key-${KEY}`, { waitUntil: 'load' });
 			const until = Date.now() + 20_000;
 			while (tried === null && Date.now() < until) await new Promise((r) => setTimeout(r, 50));
 			// The bar beside it still asks DSNR with its key, and is answered.

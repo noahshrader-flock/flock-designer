@@ -24,9 +24,9 @@ const zone = {
 	folder: null,
 	records: [],
 	people: [],
-	iterations: [{ name: 'v1-i1', branch: 'prototype/zone-coverage/v1-i1', createdAt: '2026-10-01T10:00:00Z' }, codebase],
+	work: [{ name: 'v1', branch: 'prototype/zone-coverage/v1', createdAt: '2026-10-01T10:00:00Z' }, codebase],
 } as unknown as Project;
-const prototypeOnly = { ...zone, id: 'alert-history', title: 'Alert history', iterations: [zone.iterations[0]] } as unknown as Project;
+const prototypeOnly = { ...zone, id: 'alert-history', title: 'Alert history', work: [zone.work[0]] } as unknown as Project;
 
 const world = (more: Record<string, unknown> = {}) => {
 	const told: string[] = [];
@@ -38,7 +38,7 @@ const world = (more: Record<string, unknown> = {}) => {
 		agentReadiness: vi.fn(async () => ok({ state: 'ready' })),
 		listProjects: vi.fn(async () => ok([zone, prototypeOnly])),
 		readCheckout: vi.fn(async () => ok({ root: '/p', name: 'p', branch: codebase.branch, clean: true })),
-		continueIteration: vi.fn(async () => ok({ root: '/p', name: 'p', branch: codebase.branch, clean: true })),
+		continueWork: vi.fn(async () => ok({ root: '/p', name: 'p', branch: codebase.branch, clean: true })),
 		agentStatus: vi.fn(async () => ok({ state: 'idle' })),
 		startHandoff: vi.fn(async () => ok({ state: 'running', startedAt: '', work: codebase.branch, purpose: 'handoff' })),
 		startAgent: vi.fn(),
@@ -192,7 +192,7 @@ describe('codebase work on GitHub', () => {
 		expect(deps.openExternal).toHaveBeenCalledWith('https://github.com/flocksafety/flock-coke/tree/feature/zone-coverage');
 		const withPr = world({
 			listProjects: vi.fn(async () =>
-				ok([{ ...zone, iterations: [zone.iterations[0], { ...codebase, pullRequest: 'https://github.com/flocksafety/flock-coke/pull/7' }] }]),
+				ok([{ ...zone, work: [zone.work[0], { ...codebase, pullRequest: 'https://github.com/flocksafety/flock-coke/pull/7' }] }]),
 			),
 		});
 		await openCode(withPr.deps, 'zone-coverage');
@@ -201,7 +201,7 @@ describe('codebase work on GitHub', () => {
 
 	it('says when its record says neither', async () => {
 		const { deps } = world({
-			listProjects: vi.fn(async () => ok([{ ...zone, iterations: [{ ...codebase, repository: null }] }])),
+			listProjects: vi.fn(async () => ok([{ ...zone, work: [{ ...codebase, repository: null }] }])),
 		});
 		await expect(openCode(deps, 'zone-coverage')).rejects.toThrow('The record of Zone coverage’s codebase work does not say where it is on GitHub.');
 	});
@@ -243,7 +243,7 @@ describe('Run locally: codebase work run on this machine, in the browser', () =>
 	});
 
 	it('says when the work has no page recorded, so it opened at the app’s front door', async () => {
-		const noRoute = { ...zone, iterations: [zone.iterations[0], { ...codebase, route: null }] } as unknown as Project;
+		const noRoute = { ...zone, work: [zone.work[0], { ...codebase, route: null }] } as unknown as Project;
 		const { deps, offered, local: l } = run({ listProjects: vi.fn(async () => ok([noRoute])) });
 		await runLocally(deps, l, 'zone-coverage');
 		expect(deps.openExternal).toHaveBeenCalledWith('http://localhost:5173/');
@@ -318,7 +318,7 @@ describe('Run locally: codebase work run on this machine, in the browser', () =>
 	it('says why it did not start, and leaves the checkout alone when it is not clean', async () => {
 		const notClean = run({
 			readCheckout: vi.fn(async () => ok({ root: '/p', name: 'p', branch: 'develop', clean: false })),
-			continueIteration: vi.fn(async () => ({ ok: false, error: 'There are uncommitted changes in p. Commit or stash them first.' })),
+			continueWork: vi.fn(async () => ({ ok: false, error: 'There are uncommitted changes in p. Commit or stash them first.' })),
 		});
 		await expect(runLocally(notClean.deps, notClean.local, 'zone-coverage')).rejects.toThrow(
 			'Zone coverage couldn’t run locally: There are uncommitted changes in p. Commit or stash them first.',

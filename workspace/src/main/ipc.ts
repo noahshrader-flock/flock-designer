@@ -30,7 +30,7 @@ import { SessionMemory } from './services/editor';
 import { isRepository, readCheckout } from './services/git';
 import type { GitHubAccount } from '../host/github';
 import { Installer } from './services/install';
-import { recordedIteration } from './services/iterations';
+import { recordedWork } from './services/workRecords';
 import { readFolderProjects } from './services/localProjects';
 import type { CoverDeps } from './services/projectCovers';
 import { esbuildEntry } from './services/prototypeBundle';
@@ -215,7 +215,7 @@ export const ipcDeps = ({
 								// and no record) is recorded here, then published with the rest.
 								for (const branch of found.mine) {
 									const work = classify(descriptor, branch);
-									if (work) await recordedIteration(root, recordsRoot, descriptor, work.projectId, work.name).catch(() => undefined);
+									if (work) await recordedWork(root, recordsRoot, descriptor, work.projectId, work.name).catch(() => undefined);
 								}
 								return syncRecords(dirname(recordsRoot));
 							},

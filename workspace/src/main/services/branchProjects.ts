@@ -1,53 +1,46 @@
-import type { Person, Project, ProjectIteration } from '../../shared/contract';
+import type { Person, Project, ProjectWork } from '../../shared/contract';
 import type { WorkspaceDescriptor } from './descriptor';
 import { mergePeople } from '../../shared/people';
-import { iterationOrder } from '../../shared/projectList';
+import { workOrder } from '../../shared/projectList';
 import { branchCommit, branchStartedAt, listBranches } from './git';
-import { peopleOn } from './iterations';
+import { peopleOn } from './workRecords';
 
 /**
- * Work found in the product repository's own branches.
+ * Codebase work found in the product repository's own branches.
  *
- * A branch named the way the repository says work branches are named *is* an
- * iteration, whether or not anyone wrote a record for it. So work started by an
- * agent in a terminal, or by hand, appears in the list without a step of its
- * own, and the branch -- not a file that can be forgotten -- is the source of
- * truth. Records add what a branch cannot say (a preview address, a note).
+ * A branch named the way the repository says codebase work is named *is* that work, whether or not anyone wrote a record
+ * for it. So work started by an agent in a terminal, or by hand, appears in the list without a step of its own, and the
+ * branch, not a file that can be forgotten, is the source of truth. Records add what a branch cannot say (a preview
+ * address, a note).
  */
 
 const escape = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-/** `fd/<project-id>/i<n>` as a regular expression, built from the repository's own pattern. */
+/** `feature/<project-id>` as a regular expression, built from the repository's own pattern. */
 export const patternToRegex = (pattern: string): RegExp =>
-	new RegExp(`^${escape(pattern).replace(escape('<project-id>'), '([a-z0-9]+(?:-[a-z0-9]+)*)').replace(escape('<n>'), '(\\d+)')}$`);
+	new RegExp(`^${escape(pattern).replace(escape('<project-id>'), '([a-z0-9]+(?:-[a-z0-9]+)*)')}$`);
 
-/** What to ask git for: everything under the fixed start of each pattern. */
-const prefixOf = (pattern: string): string => pattern.slice(0, pattern.indexOf('<'));
+/** What to ask git for: everything under the fixed start of the pattern. */
+export const prefixOf = (pattern: string): string => pattern.slice(0, pattern.indexOf('<'));
 
-export interface BranchIteration {
+export interface BranchWork {
 	projectId: string;
-	name: string;
+	name: 'codebase';
 	branch: string;
 }
 
-/** Reads a branch name as an iteration, or null if it is not one. */
-export const classify = (descriptor: WorkspaceDescriptor, branch: string): BranchIteration | null => {
-	const proto = patternToRegex(descriptor.branchPattern.prototype).exec(branch);
-	if (proto?.[1]) return { projectId: proto[1], name: `i${proto[2] ?? '1'}`, branch };
+/** Reads a branch name as a project's codebase work, or null if it is not. */
+export const classify = (descriptor: WorkspaceDescriptor, branch: string): BranchWork | null => {
 	const code = patternToRegex(descriptor.branchPattern.codebase).exec(branch);
-	if (code?.[1]) return { projectId: code[1], name: 'codebase', branch };
-	return null;
+	return code?.[1] ? { projectId: code[1], name: 'codebase', branch } : null;
 };
 
 /**
- * Reads the repository's branches as work.
+ * Reads the repository's branches as codebase work.
  *
- * `known` is the set of project ids the design repository already has a record
- * for. A prototype branch is self-evidently ours -- its pattern carries a
- * project id and a number no other work uses. A codebase branch is not:
- * `feature/<project-id>` is how the whole product team names ticket branches,
- * so `feature/dda-1221` would otherwise arrive as a design project. A codebase
- * branch therefore counts only when a project already vouches for it.
+ * `known` is the set of project ids the design repository already has a record for. `feature/<project-id>` is how the
+ * whole product team names ticket branches, so `feature/dda-1221` would otherwise arrive as a design project: a branch
+ * counts only when a project already vouches for it.
  */
 export const readBranchProjects = async (
 	productRoot: string,
@@ -55,18 +48,18 @@ export const readBranchProjects = async (
 	signedInLogin: string | null,
 	known: ReadonlySet<string> = new Set(),
 ): Promise<Project[]> => {
-	const prefixes = [...new Set([descriptor.branchPattern.prototype, descriptor.branchPattern.codebase].map(prefixOf).filter(Boolean))];
-	const branches = (await Promise.all(prefixes.map((p) => listBranches(productRoot, p)))).flat();
+	const prefix = prefixOf(descriptor.branchPattern.codebase);
+	const branches = prefix ? await listBranches(productRoot, prefix) : [];
 
-	const iterations = (
+	const work = (
 		await Promise.all(
 			branches.slice(0, 200).map(async (branch) => {
 				const it = classify(descriptor, branch);
 				if (!it) return null;
-				if (it.name === 'codebase' && !known.has(it.projectId)) return null;
+				if (!known.has(it.projectId)) return null;
 				// The same rule the records use, so one person is one person in both.
 				const people: Person[] = await peopleOn(productRoot, branch, signedInLogin).catch(() => []);
-				const iteration: ProjectIteration = {
+				const iteration: ProjectWork = {
 					name: it.name,
 					branch,
 					issueNumber: null,
@@ -87,17 +80,17 @@ export const readBranchProjects = async (
 				return { id: it.projectId, iteration };
 			}),
 		)
-	).filter((x): x is { id: string; iteration: ProjectIteration } => x !== null);
+	).filter((x): x is { id: string; iteration: ProjectWork } => x !== null);
 
-	const byProject = new Map<string, ProjectIteration[]>();
-	for (const { id, iteration } of iterations) byProject.set(id, [...(byProject.get(id) ?? []), iteration]);
+	const byProject = new Map<string, ProjectWork[]>();
+	for (const { id, iteration } of work) byProject.set(id, [...(byProject.get(id) ?? []), iteration]);
 	return [...byProject].map(([id, its]) => ({
 		id,
 		title: id,
 		// Found as branches: no brief read, so in no folder until one is.
 		folder: null,
 		records: [],
-		iterations: its.sort(iterationOrder),
+		work: its.sort(workOrder),
 		people: mergePeople(...its.map((i) => i.contributors)),
 	}));
 };

@@ -88,9 +88,9 @@ describe('status', () => {
 			spawnProcess: spawn,
 			adapter: { name: 'Sleep', argvFor: () => ['node', '-e', 'setInterval(() => {}, 1000)'] },
 		});
-		const first = runner.start(root, 'demo', 'x', { work: 'prototype/demo/v1-i1' });
-		expect(runner.start(root, 'demo', 'x', { work: 'prototype/demo/v1-i1' })).toEqual(first);
-		expect(() => runner.start(root, 'other', 'y', { work: 'prototype/other/v1-i1' })).toThrow(AGENT_BUSY);
+		const first = runner.start(root, 'demo', 'x', { work: 'prototype/demo/v1' });
+		expect(runner.start(root, 'demo', 'x', { work: 'prototype/demo/v1' })).toEqual(first);
+		expect(() => runner.start(root, 'other', 'y', { work: 'prototype/other/v1' })).toThrow(AGENT_BUSY);
 		// Work with no name can never be told apart from the run, so it is never joined to it.
 		expect(() => runner.start(root, 'demo', 'y')).toThrow(AGENT_BUSY);
 		runner.stop();
@@ -239,10 +239,10 @@ describe('what a run leaves behind for a screen opened again', () => {
 			adapter: { name: 'Echo', argvFor: () => ['node', '-e', 'console.log("one"); console.log("two")'] },
 			spawnProcess: spawn,
 		} as never);
-		const started = runner.start(tmpdir(), 'users', 't', { work: 'prototype/users/i1' });
-		expect(started).toMatchObject({ state: 'running', work: 'prototype/users/i1' });
+		const started = runner.start(tmpdir(), 'users', 't', { work: 'prototype/users/v1' });
+		expect(started).toMatchObject({ state: 'running', work: 'prototype/users/v1' });
 		for (let i = 0; i < 100 && runner.status().state === 'running'; i++) await new Promise((r) => setTimeout(r, 20));
-		expect(runner.status()).toMatchObject({ state: 'finished', work: 'prototype/users/i1' });
-		expect(runner.recentLines()).toEqual({ work: 'prototype/users/i1', lines: ['one', 'two'] });
+		expect(runner.status()).toMatchObject({ state: 'finished', work: 'prototype/users/v1' });
+		expect(runner.recentLines()).toEqual({ work: 'prototype/users/v1', lines: ['one', 'two'] });
 	});
 });

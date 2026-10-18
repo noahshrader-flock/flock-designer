@@ -39,7 +39,7 @@ const deps = (cwd: string) => ({
 	github,
 });
 const run = (...argv: string[]) => main(argv, deps(product));
-const iterations = () => JSON.parse(readFileSync(join(design, 'projects', 'demo', 'iterations.json'), 'utf8')) as { name: string }[];
+const recorded = () => JSON.parse(readFileSync(join(design, 'projects', 'demo', 'work.json'), 'utf8')) as { name: string }[];
 
 beforeEach(() => {
 	home = realpathSync(mkdtempSync(join(tmpdir(), 'fdw-cli-')));
@@ -66,13 +66,13 @@ beforeEach(() => {
 afterEach(() => rmSync(home, { recursive: true, force: true }));
 
 describe('new-prototype', () => {
-	it('records v1-i1 for a new project, with its brief, and prints the task', async () => {
+	it('records v1 for a new project, with its brief, and prints the task', async () => {
 		expect(await run('new-prototype', '--project', 'demo', '--title', 'Demo', '--note', 'A list of cameras')).toBe(0);
 
-		expect(iterations()).toMatchObject([
+		expect(recorded()).toMatchObject([
 			{
-				name: 'v1-i1',
-				branch: 'prototype/demo/v1-i1',
+				name: 'v1',
+				branch: 'prototype/demo/v1',
 				basedOn: { repository: 'flock-coke', branch: 'develop' },
 				contributors: [{ name: 'Test Person', login: 'test-person' }],
 			},
@@ -81,12 +81,12 @@ describe('new-prototype', () => {
 
 		const task = out.join('\n');
 		expect(task).toContain('# Build a prototype');
-		expect(task).toContain(`Write \`${join(prototypes, 'demo', 'v1-i1.tsx')}\``);
+		expect(task).toContain(`Write \`${join(prototypes, 'demo', 'v1.tsx')}\``);
 		expect(task).toContain(join(prototypes, 'build-prototype.mjs'));
 		expect(task).toContain('A list of cameras');
-		expect(task).toContain(`dsnr save-prototype --project demo --name v1-i1 --product ${product}`);
+		expect(task).toContain(`dsnr save-prototype --project demo --name v1 --product ${product}`);
 		// It finishes by publishing, and with the link the command printed, or why there is none.
-		expect(task).toContain('dsnr publish --project demo --name v1-i1');
+		expect(task).toContain('dsnr publish --project demo --name v1');
 		expect(task).toMatch(/Never give a link the command did not print/);
 	});
 
@@ -107,14 +107,14 @@ describe('new-prototype', () => {
 		await run('new-prototype', '--project', 'demo', '--title', 'Demo', '--note', 'A list');
 		const brief = readFileSync(join(design, 'projects', 'demo', 'brief.md'), 'utf8');
 		expect(await run('new-prototype', '--project', 'demo', '--note', 'Another idea: a map')).toBe(0);
-		expect(iterations().map((i) => i.name)).toEqual(['v1-i1', 'v2-i1']);
+		expect(recorded().map((i) => i.name)).toEqual(['v1', 'v2']);
 		expect(readFileSync(join(design, 'projects', 'demo', 'brief.md'), 'utf8')).toBe(brief);
 	});
 
 	it('records the product it was made on as its repository, whatever the clone is called', async () => {
 		// No remote: the folder's name is all there is, and no product is claimed.
 		expect(await run('new-prototype', '--project', 'demo', '--title', 'Demo', '--note', 'A list')).toBe(0);
-		expect((iterations()[0] as { basedOn?: { product?: string } }).basedOn?.product).toBeUndefined();
+		expect((recorded()[0] as { basedOn?: { product?: string } }).basedOn?.product).toBeUndefined();
 		// Its remote says which repository it is, so one clone or another, named anything, is the same product.
 		g(product, 'remote', 'add', 'origin', 'git@github.com:flocksafety/flock-coke.git');
 		expect(await run('new-prototype', '--project', 'demo', '--note', 'Another idea')).toBe(0);
@@ -124,7 +124,7 @@ describe('new-prototype', () => {
 		installDesignSystem(other);
 		g(other, 'remote', 'add', 'origin', 'https://github.com/flocksafety/flock-coke.git');
 		expect(await main(['new-prototype', '--project', 'demo', '--note', 'A third'], deps(other))).toBe(0);
-		expect(iterations().map((i) => (i as { basedOn?: unknown }).basedOn)).toMatchObject([
+		expect(recorded().map((i) => (i as { basedOn?: unknown }).basedOn)).toMatchObject([
 			{ repository: 'flock-coke' },
 			{ repository: 'flock-coke', product: 'flocksafety/flock-coke' },
 			{ repository: 'coke', product: 'flocksafety/flock-coke' },
@@ -134,7 +134,7 @@ describe('new-prototype', () => {
 	it('is modeled on the branch named, when there is one', async () => {
 		g(product, 'branch', 'noah/baseline');
 		expect(await run('new-prototype', '--project', 'demo', '--title', 'Demo', '--note', 'A list', '--from', 'noah/baseline')).toBe(0);
-		expect(iterations()[0]).toMatchObject({ basedOn: { branch: 'noah/baseline' } });
+		expect(recorded()[0]).toMatchObject({ basedOn: { branch: 'noah/baseline' } });
 		expect(await run('new-prototype', '--project', 'demo', '--note', 'A list', '--from', 'nope')).toBe(1);
 		expect(err.join('\n')).toMatch(/no branch called nope/);
 	});
@@ -158,21 +158,21 @@ describe('save-prototype', () => {
 	it('builds the page from its source and saves both to the design repository', async () => {
 		await run('new-prototype', '--project', 'demo', '--title', 'Demo', '--note', 'A list');
 		writeFileSync(
-			join(prototypes, 'demo', 'v1-i1.tsx'),
+			join(prototypes, 'demo', 'v1.tsx'),
 			"/* A page made of the real thing. */\nimport { Hello } from 'x';\nexport default () => <Hello />;\n",
 		);
 
-		expect(await run('save-prototype', '--project', 'demo', '--name', 'v1-i1')).toBe(0);
+		expect(await run('save-prototype', '--project', 'demo', '--name', 'v1')).toBe(0);
 		const saved = join(design, 'projects', 'demo', 'prototypes');
-		expect(readFileSync(join(saved, 'v1-i1.tsx'), 'utf8')).toContain("from 'x'");
-		expect(readFileSync(join(saved, 'v1-i1.html'), 'utf8')).toContain('Real component');
+		expect(readFileSync(join(saved, 'v1.tsx'), 'utf8')).toContain("from 'x'");
+		expect(readFileSync(join(saved, 'v1.html'), 'utf8')).toContain('Real component');
 		expect(out.at(-1)).toMatch(/It is in DSNR/);
 	});
 
 	it('says what the build said when the source does not compile, and saves nothing', async () => {
 		await run('new-prototype', '--project', 'demo', '--title', 'Demo', '--note', 'A list');
-		writeFileSync(join(prototypes, 'demo', 'v1-i1.tsx'), "import { Nope } from 'not-installed';\nexport default () => <Nope />;\n");
-		expect(await run('save-prototype', '--project', 'demo', '--name', 'v1-i1')).toBe(1);
+		writeFileSync(join(prototypes, 'demo', 'v1.tsx'), "import { Nope } from 'not-installed';\nexport default () => <Nope />;\n");
+		expect(await run('save-prototype', '--project', 'demo', '--name', 'v1')).toBe(1);
 		expect(err.join('\n')).toMatch(/did not build[\s\S]*not-installed/);
 		expect(existsSync(join(design, 'projects', 'demo', 'prototypes'))).toBe(false);
 	});
@@ -185,7 +185,7 @@ describe('save-prototype', () => {
 describe('change-prototype', () => {
 	const local = (name: string) => join(prototypes, 'demo', `${name}.tsx`);
 	const page = (text: string) => `import { Hello } from 'x';\nexport default () => <><Hello /><p>${text}</p></>;\n`;
-	/** GitHub as its API answers: who the person is, and each iteration's review thread with its commenters. */
+	/** GitHub as its API answers: who the person is, and each version's review thread with its commenters. */
 	const signedIn = (threads: Record<string, string[]>) => {
 		const names = Object.keys(threads);
 		github = fakeGitHub({
@@ -202,86 +202,96 @@ describe('change-prototype', () => {
 	};
 	const made = async () => {
 		await run('new-prototype', '--project', 'demo', '--title', 'Demo', '--note', 'A list');
-		writeFileSync(local('v1-i1'), page('first'));
-		await run('save-prototype', '--project', 'demo', '--name', 'v1-i1');
+		writeFileSync(local('v1'), page('first'));
+		await run('save-prototype', '--project', 'demo', '--name', 'v1');
 		out = [];
 	};
 
-	it('changes the newest iteration in place when only its maker has commented', async () => {
-		signedIn({ 'v1-i1': ['test-person'] });
+	it('changes the version in place when only its maker has commented', async () => {
+		signedIn({ v1: ['test-person'] });
 		await made();
-		expect(await run('change-prototype', '--project', 'demo', '--name', 'v1-i1', '--note', 'Make the title bigger')).toBe(0);
-		expect(out.join('\n')).toMatch(/The change is made in v1-i1: change it/);
-		expect(out.join('\n')).toContain('dsnr save-prototype --project demo --name v1-i1');
-		writeFileSync(local('v1-i1'), page('bigger'));
-		expect(await run('save-prototype', '--project', 'demo', '--name', 'v1-i1')).toBe(0);
-		expect(iterations().map((i) => i.name)).toEqual(['v1-i1']);
+		expect(await run('change-prototype', '--project', 'demo', '--name', 'v1', '--note', 'Make the title bigger')).toBe(0);
+		expect(out.join('\n')).toMatch(/The change is made in v1: change it/);
+		expect(out.join('\n')).toContain('dsnr save-prototype --project demo --name v1 --product');
+		writeFileSync(local('v1'), page('bigger'));
+		expect(await run('save-prototype', '--project', 'demo', '--name', 'v1')).toBe(0);
+		expect(recorded().map((i) => i.name)).toEqual(['v1']);
 	});
 
-	it('makes the change in the next iteration once someone else has commented, recorded only when saved', async () => {
-		signedIn({ 'v1-i1': ['test-person', 'pm'] });
+	it('makes the change in a new version from it once someone else has commented, recorded only when saved, with what it started from', async () => {
+		signedIn({ v1: ['test-person', 'pm'] });
 		await made();
-		expect(await run('change-prototype', '--project', 'demo', '--name', 'v1-i1', '--note', 'Make the title bigger')).toBe(0);
-		expect(out.join('\n')).toMatch(/Others have commented on v1-i1/);
+		expect(await run('change-prototype', '--project', 'demo', '--name', 'v1', '--note', 'Make the title bigger')).toBe(0);
+		expect(out.join('\n')).toMatch(/Others have commented on v1/);
 		// What they said is read first, from a file, and the person is told how much there is.
-		const said = /2 open comments on v1-i1, in (\S+?): read them first/.exec(out.join('\n'));
+		const said = /2 open comments on v1, in (\S+?): read them first/.exec(out.join('\n'));
 		expect(said).not.toBeNull();
 		expect(readFileSync(said?.[1] as string, 'utf8')).toContain('feedback');
-		expect(out.join('\n')).toContain(`Write \`${local('v1-i2')}\``);
-		expect(out.join('\n')).toContain('dsnr publish --project demo --name v1-i2');
-		expect(out.join('\n')).toContain('dsnr save-prototype --project demo --name v1-i2');
-		expect(readFileSync(local('v1-i2'), 'utf8')).toBe(page('first'));
-		expect(iterations().map((i) => i.name)).toEqual(['v1-i1']);
+		expect(out.join('\n')).toContain(`Write \`${local('v2')}\``);
+		expect(out.join('\n')).toContain('dsnr publish --project demo --name v2');
+		// The command it is given says which version the new one was started from, so saving it records that.
+		expect(out.join('\n')).toContain('dsnr save-prototype --project demo --name v2 --from-version v1');
+		expect(readFileSync(local('v2'), 'utf8')).toBe(page('first'));
+		expect(recorded().map((i) => i.name)).toEqual(['v1']);
 
-		writeFileSync(local('v1-i2'), page('bigger'));
-		expect(await run('save-prototype', '--project', 'demo', '--name', 'v1-i2')).toBe(0);
-		expect(iterations()).toMatchObject([{ name: 'v1-i1' }, { name: 'v1-i2', contributors: [{ name: 'Test Person', login: 'test-person' }] }]);
-		expect(readFileSync(join(design, 'projects', 'demo', 'prototypes', 'v1-i2.html'), 'utf8')).toContain('bigger');
-		expect(readFileSync(join(design, 'projects', 'demo', 'prototypes', 'v1-i1.html'), 'utf8')).toContain('first');
+		writeFileSync(local('v2'), page('bigger'));
+		expect(await run('save-prototype', '--project', 'demo', '--name', 'v2', '--from-version', 'v1')).toBe(0);
+		expect(recorded()).toMatchObject([{ name: 'v1' }, { name: 'v2', from: 'v1', contributors: [{ name: 'Test Person', login: 'test-person' }] }]);
+		expect(readFileSync(join(design, 'projects', 'demo', 'prototypes', 'v2.html'), 'utf8')).toContain('bigger');
+		expect(readFileSync(join(design, 'projects', 'demo', 'prototypes', 'v1.html'), 'utf8')).toContain('first');
 	});
 
 	it('when the comments cannot be read, never changes what people may have seen', async () => {
 		await made();
-		expect(await run('change-prototype', '--project', 'demo', '--name', 'v1-i1', '--note', 'Bigger')).toBe(0);
-		expect(out.join('\n')).toMatch(/could not be read[\s\S]*change is made in v1-i2[\s\S]*gh, is missing or not signed in/);
+		expect(await run('change-prototype', '--project', 'demo', '--name', 'v1', '--note', 'Bigger')).toBe(0);
+		expect(out.join('\n')).toMatch(/could not be read[\s\S]*change is made in v2[\s\S]*gh, is missing or not signed in/);
 	});
 
 	it('makes nothing when the change was not made', async () => {
-		signedIn({ 'v1-i1': ['pm'] });
+		signedIn({ v1: ['pm'] });
 		await made();
-		await run('change-prototype', '--project', 'demo', '--name', 'v1-i1', '--note', 'Bigger');
-		expect(await run('save-prototype', '--project', 'demo', '--name', 'v1-i2')).toBe(0);
+		await run('change-prototype', '--project', 'demo', '--name', 'v1', '--note', 'Bigger');
+		expect(await run('save-prototype', '--project', 'demo', '--name', 'v2', '--from-version', 'v1')).toBe(0);
 		expect(out.at(-1)).toMatch(/nothing was made or saved/);
-		expect(iterations().map((i) => i.name)).toEqual(['v1-i1']);
-		expect(existsSync(local('v1-i2'))).toBe(false);
+		expect(recorded().map((i) => i.name)).toEqual(['v1']);
+		expect(existsSync(local('v2'))).toBe(false);
 	});
 
-	it('refuses to save a name that is not the next iteration of anything', async () => {
+	it('refuses to save a name that is not the next version, or a new version that does not say what it was started from', async () => {
 		await made();
-		expect(await run('save-prototype', '--project', 'demo', '--name', 'v1-i5')).toBe(1);
-		expect(err.join('\n')).toMatch(/not the next iteration/);
+		expect(await run('save-prototype', '--project', 'demo', '--name', 'v15')).toBe(1);
+		expect(err.join('\n')).toMatch(/not the next version/);
+		expect(await run('save-prototype', '--project', 'demo', '--name', 'v2')).toBe(1);
+		expect(err.join('\n')).toMatch(/v2 is a new version: say which it was started from, with --from-version/);
+	});
+
+	it('numbers each new idea one past the highest: v1, v2, v3', async () => {
+		await made();
+		await run('new-prototype', '--project', 'demo', '--note', 'Another idea');
+		await run('new-prototype', '--project', 'demo', '--note', 'A third');
+		expect(recorded().map((i) => i.name)).toEqual(['v1', 'v2', 'v3']);
 	});
 });
 
 describe('build-site', () => {
 	const saved = async () => {
 		await run('new-prototype', '--project', 'demo', '--title', 'Demo', '--note', 'A list');
-		writeFileSync(join(prototypes, 'demo', 'v1-i1.tsx'), "import { Hello } from 'x';\nexport default () => <Hello />;\n");
-		await run('save-prototype', '--project', 'demo', '--name', 'v1-i1');
+		writeFileSync(join(prototypes, 'demo', 'v1.tsx'), "import { Hello } from 'x';\nexport default () => <Hello />;\n");
+		await run('save-prototype', '--project', 'demo', '--name', 'v1');
 		out = [];
 	};
 
 	it('builds the site from the design repository beside the product, into the app folder by default', async () => {
 		await saved();
 		expect(await run('build-site')).toBe(0);
-		expect(readFileSync(join(prototypes, '_site', 'demo', 'v1', 'i1', 'page.html'), 'utf8')).toContain('Real component');
+		expect(readFileSync(join(prototypes, '_site', 'demo', 'v1', 'page.html'), 'utf8')).toContain('Real component');
 		expect(readFileSync(join(prototypes, '_site', 'index.html'), 'utf8')).toContain('Demo');
 		expect(out.join('\n')).toMatch(/Built 1 page in 1 project[\s\S]*Comment counts are left out/);
 	});
 
-	it("counts each iteration's comments when GitHub can be asked, and builds from the design repository itself too", async () => {
+	it("counts each version's comments when GitHub can be asked, and builds from the design repository itself too", async () => {
 		await saved();
-		github = fakeGitHub({ [`${REPO}/issues?*`]: [{ number: 1, body: 'branch: `prototype/demo/v1-i1`', comments: 2 }], '*': [] }).github;
+		github = fakeGitHub({ [`${REPO}/issues?*`]: [{ number: 1, body: 'branch: `prototype/demo/v1`', comments: 2 }], '*': [] }).github;
 		const site = join(home, 'elsewhere-site');
 		expect(await main(['build-site', '--out', site], deps(design))).toBe(0);
 		expect(readFileSync(join(site, 'demo', 'index.html'), 'utf8')).toContain('2 comments');
@@ -291,25 +301,25 @@ describe('build-site', () => {
 describe('publish', () => {
 	const saved = async () => {
 		await run('new-prototype', '--project', 'demo', '--title', 'Demo', '--note', 'A list');
-		writeFileSync(join(prototypes, 'demo', 'v1-i1.tsx'), "import { Hello } from 'x';\nexport default () => <Hello />;\n");
-		await run('save-prototype', '--project', 'demo', '--name', 'v1-i1');
+		writeFileSync(join(prototypes, 'demo', 'v1.tsx'), "import { Hello } from 'x';\nexport default () => <Hello />;\n");
+		await run('save-prototype', '--project', 'demo', '--name', 'v1');
 		out = [];
 	};
 	it('has no public-test option any more: a page says who can open it, and nothing else is asked', async () => {
 		await saved();
-		expect(await main(['publish', '--project', 'demo', '--name', 'v1-i1', '--public-test', 'yes'], deps(design))).toBe(2);
+		expect(await main(['publish', '--project', 'demo', '--name', 'v1', '--public-test', 'yes'], deps(design))).toBe(2);
 		expect(err.join('\n')).toMatch(/Unknown option '--public-test'/);
 		expect(await main(['build-site', '--out', join(home, 's'), '--gate'], deps(design))).toBe(2);
 	});
 
 	it('publishes only a page that has been saved', async () => {
-		expect(await main(['publish', '--project', 'demo', '--name', 'v1-i1'], deps(design))).toBe(1);
+		expect(await main(['publish', '--project', 'demo', '--name', 'v1'], deps(design))).toBe(1);
 		expect(err.join('\n')).toMatch(/no saved page[\s\S]*save-prototype/);
 	});
 
 	it('needs GitHub to be asked, and says how', async () => {
 		await saved();
-		expect(await main(['publish', '--project', 'demo', '--name', 'v1-i1'], deps(design))).toBe(1);
+		expect(await main(['publish', '--project', 'demo', '--name', 'v1'], deps(design))).toBe(1);
 		expect(err.join('\n')).toMatch(/gh auth login/);
 	});
 });
@@ -317,8 +327,8 @@ describe('publish', () => {
 describe('publish opens the page the first time', () => {
 	const saved = async () => {
 		await run('new-prototype', '--project', 'demo', '--title', 'Demo', '--note', 'A list');
-		writeFileSync(join(prototypes, 'demo', 'v1-i1.tsx'), "import { Hello } from 'x';\nexport default () => <Hello />;\n");
-		await run('save-prototype', '--project', 'demo', '--name', 'v1-i1');
+		writeFileSync(join(prototypes, 'demo', 'v1.tsx'), "import { Hello } from 'x';\nexport default () => <Hello />;\n");
+		await run('save-prototype', '--project', 'demo', '--name', 'v1');
 		out = [];
 		// GitHub: a bare repository to push to, and an API whose site deploys at once.
 		const remote = join(home, 'remote.git');
@@ -355,14 +365,14 @@ describe('publish opens the page the first time', () => {
 			fetchAnonymously: async () => ({ status: 404 }),
 			open: (u: string) => void opened.push(u),
 		};
-		return main(['publish', '--project', 'demo', '--name', 'v1-i1', ...more], quick).then((code) => ({ code, opened }));
+		return main(['publish', '--project', 'demo', '--name', 'v1', ...more], quick).then((code) => ({ code, opened }));
 	};
 
 	it('opens the link it printed the first time the page goes up, and only that', async () => {
 		const branch = await saved();
 		const { code, opened } = await publishWith(branch, false);
 		expect(code).toBe(0);
-		expect(opened).toEqual(['https://acme.github.io/design/demo/v1/i1/']);
+		expect(opened).toEqual(['https://acme.github.io/design/demo/v1/']);
 		expect(out.at(-1)).toBe(opened[0]);
 	});
 
@@ -384,7 +394,7 @@ describe('publish opens the page the first time', () => {
 				throw refusal(404);
 			},
 		});
-		const code = await main(['publish', '--project', 'demo', '--name', 'v1-i1'], {
+		const code = await main(['publish', '--project', 'demo', '--name', 'v1'], {
 			...deps(design),
 			github: failing,
 			sleep: async () => undefined,
@@ -398,23 +408,23 @@ describe('publish opens the page the first time', () => {
 describe('unpublish', () => {
 	const saved = async () => {
 		await run('new-prototype', '--project', 'demo', '--title', 'Demo', '--note', 'A list');
-		writeFileSync(join(prototypes, 'demo', 'v1-i1.tsx'), "import { Hello } from 'x';\nexport default () => <Hello />;\n");
-		await run('save-prototype', '--project', 'demo', '--name', 'v1-i1');
+		writeFileSync(join(prototypes, 'demo', 'v1.tsx'), "import { Hello } from 'x';\nexport default () => <Hello />;\n");
+		await run('save-prototype', '--project', 'demo', '--name', 'v1');
 		out = [];
 	};
 
 	it('refuses a name that is not one, before any path is made of it', async () => {
-		expect(await main(['unpublish', '--project', '../x', '--name', 'v1-i1'], deps(design))).toBe(1);
+		expect(await main(['unpublish', '--project', '../x', '--name', 'v1'], deps(design))).toBe(1);
 		expect(await main(['unpublish', '--project', 'demo', '--name', '../../x'], deps(design))).toBe(1);
 	});
 
 	it('takes off only a page that is saved, and needs GitHub to be asked', async () => {
-		expect(await main(['unpublish', '--project', 'demo', '--name', 'v1-i1'], deps(design))).toBe(1);
+		expect(await main(['unpublish', '--project', 'demo', '--name', 'v1'], deps(design))).toBe(1);
 		expect(err.join('\n')).toMatch(/no saved page[\s\S]*not on the site/);
 		await saved();
-		expect(await main(['unpublish', '--project', 'demo', '--name', 'v1-i1'], deps(design))).toBe(1);
+		expect(await main(['unpublish', '--project', 'demo', '--name', 'v1'], deps(design))).toBe(1);
 		expect(err.join('\n')).toMatch(/gh auth login/);
-		expect(existsSync(join(design, 'projects', 'demo', 'prototypes', 'v1-i1.html'))).toBe(true);
+		expect(existsSync(join(design, 'projects', 'demo', 'prototypes', 'v1.html'))).toBe(true);
 	});
 
 	it('removes the page and source, here and in the design repository, pushes, and keeps the record', async () => {
@@ -437,14 +447,14 @@ describe('unpublish', () => {
 			}),
 		}).github;
 		const quick = { ...deps(design), sleep: async () => undefined, fetchAnonymously: async () => ({ status: 404 }) };
-		expect(await main(['unpublish', '--project', 'demo', '--name', 'v1-i1'], quick)).toBe(0);
-		for (const f of ['v1-i1.html', 'v1-i1.tsx']) {
+		expect(await main(['unpublish', '--project', 'demo', '--name', 'v1'], quick)).toBe(0);
+		for (const f of ['v1.html', 'v1.tsx']) {
 			expect(existsSync(join(design, 'projects', 'demo', 'prototypes', f))).toBe(false);
 			expect(existsSync(join(prototypes, 'demo', f))).toBe(false);
 		}
-		expect(iterations().map((i) => i.name)).toEqual(['v1-i1']);
-		expect(g(remote, 'ls-tree', '-r', '--name-only', branch)).not.toContain('v1-i1.html');
-		expect(out.join('\n')).toContain('https://acme.github.io/design/demo/v1/i1/');
+		expect(recorded().map((i) => i.name)).toEqual(['v1']);
+		expect(g(remote, 'ls-tree', '-r', '--name-only', branch)).not.toContain('v1.html');
+		expect(out.join('\n')).toContain('https://acme.github.io/design/demo/v1/');
 	});
 });
 
@@ -471,7 +481,7 @@ describe('the command', () => {
 			expect(await main(argv, deps(elsewhere))).toBe(1);
 			expect(err.join('\n')).toMatch(/not inside a product repository/);
 			expect(await main([...argv, '--product', product], deps(elsewhere))).toBe(0);
-			expect(iterations().map((i) => i.name)).toEqual(['v1-i1']);
+			expect(recorded().map((i) => i.name)).toEqual(['v1']);
 		} finally {
 			rmSync(elsewhere, { recursive: true, force: true });
 		}
@@ -503,7 +513,7 @@ describe('the command', () => {
 		expect(sh(build).status).toBe(0);
 		const saved = sh(save);
 		expect(saved.status).toBe(0);
-		expect(readFileSync(join(design, 'projects', 'demo', 'prototypes', 'v1-i1.html'), 'utf8')).toContain('Real component');
+		expect(readFileSync(join(design, 'projects', 'demo', 'prototypes', 'v1.html'), 'utf8')).toContain('Real component');
 	});
 });
 
@@ -567,7 +577,7 @@ describe.skipIf(findChrome() === null)('accessibility', () => {
 			].join('\n'),
 		);
 		mkdirSync(join(design, 'projects', 'shop'), { recursive: true });
-		writeFileSync(join(design, 'projects', 'shop', 'iterations.json'), '[]\n');
+		writeFileSync(join(design, 'projects', 'shop', 'work.json'), '[]\n');
 
 		expect(await main(['accessibility', '--project', 'shop'], deps(shop))).toBe(0);
 		const said = out.join('\n');
@@ -680,10 +690,10 @@ describe.skipIf(findChrome() === null)('accessibility', () => {
 		const task = out.join('\n');
 		const checkLine = /check its accessibility with exactly: `([^`]+)`/.exec(task)?.[1] as string;
 		const build = /Check it builds.*with exactly: `([^`]+)`/.exec(task)?.[1] as string;
-		expect(checkLine).toMatch(/^node .*check-prototype\.mjs .*v1-i1\.build-check\.json$/);
+		expect(checkLine).toMatch(/^node .*check-prototype\.mjs .*v1\.build-check\.json$/);
 		// A button drawn as an icon alone, with no name: built, then checked as the agent checks it, three times.
 		writeFileSync(
-			join(prototypes, 'demo', 'v1-i1.tsx'),
+			join(prototypes, 'demo', 'v1.tsx'),
 			"export default () => <main><h1>Cameras</h1><button><svg width='16' height='16'><path d='M2 2h12v12H2z' /></svg></button></main>;\n",
 		);
 		const sh = (command: string) => spawnSync('/bin/sh', ['-c', command], { cwd: product, encoding: 'utf8' });
@@ -693,8 +703,8 @@ describe.skipIf(findChrome() === null)('accessibility', () => {
 		const last = sh(checkLine);
 		expect(last.status).toBe(0);
 		expect(last.stdout).toMatch(/left after 2 rounds/);
-		expect(await run('save-prototype', '--project', 'demo', '--name', 'v1-i1')).toBe(0);
-		const ledger = JSON.parse(readFileSync(join(design, 'projects', 'demo', 'accessibility', 'v1-i1.ledger.json'), 'utf8')) as {
+		expect(await run('save-prototype', '--project', 'demo', '--name', 'v1')).toBe(0);
+		const ledger = JSON.parse(readFileSync(join(design, 'projects', 'demo', 'accessibility', 'v1.ledger.json'), 'utf8')) as {
 			depth: string;
 			rows: { sc: string; status: string; why?: string }[];
 		};
@@ -707,7 +717,7 @@ describe.skipIf(findChrome() === null)('accessibility', () => {
 			/4\.1\.2 Name, Role, Value: found \(.*\), left because the build's own check sent it back 2 times/,
 		);
 		out = [];
-		expect(await main(['check-accessibility', '--project', 'demo', '--name', 'v1-i1'], deps(product))).toBe(0);
+		expect(await main(['check-accessibility', '--project', 'demo', '--name', 'v1'], deps(product))).toBe(0);
 	}, 300_000);
 
 	it('keeps nothing of a check on a page changed after it, and says a page with no ledger has not been measured', async () => {
@@ -716,7 +726,7 @@ describe.skipIf(findChrome() === null)('accessibility', () => {
 		const checkLine = /check its accessibility with exactly: `([^`]+)`/.exec(task)?.[1] as string;
 		const build = /Check it builds.*with exactly: `([^`]+)`/.exec(task)?.[1] as string;
 		const sh = (command: string) => spawnSync('/bin/sh', ['-c', command], { cwd: product, encoding: 'utf8' });
-		const source = join(prototypes, 'demo', 'v1-i1.tsx');
+		const source = join(prototypes, 'demo', 'v1.tsx');
 		writeFileSync(
 			source,
 			"export default () => <main><h1>Cameras</h1><button><svg width='16' height='16'><path d='M2 2h12v12H2z' /></svg></button></main>;\n",
@@ -725,12 +735,12 @@ describe.skipIf(findChrome() === null)('accessibility', () => {
 		expect(sh(checkLine).status).toBe(1);
 		// Changed after its check: what the check found is not of this page, so none of it is kept.
 		writeFileSync(source, 'export default () => <main><h1>Cameras</h1><button>Add camera</button></main>;\n');
-		expect(await run('save-prototype', '--project', 'demo', '--name', 'v1-i1')).toBe(0);
-		expect(existsSync(join(design, 'projects', 'demo', 'accessibility', 'v1-i1.ledger.json'))).toBe(false);
+		expect(await run('save-prototype', '--project', 'demo', '--name', 'v1')).toBe(0);
+		expect(existsSync(join(design, 'projects', 'demo', 'accessibility', 'v1.ledger.json'))).toBe(false);
 		out = [];
-		expect(await main(['check-accessibility', '--project', 'demo', '--name', 'v1-i1'], deps(product))).toBe(1);
+		expect(await main(['check-accessibility', '--project', 'demo', '--name', 'v1'], deps(product))).toBe(1);
 		expect(out.at(-1)).toMatch(
-			/v1-i1\.ledger\.json is not there, or is not a ledger this DSNR writes: run dsnr accessibility --project demo --name v1-i1 first\./,
+			/v1\.ledger\.json is not there, or is not a ledger this DSNR writes: run dsnr accessibility --project demo --name v1 first\./,
 		);
 	}, 300_000);
 
@@ -750,37 +760,35 @@ describe.skipIf(findChrome() === null)('accessibility', () => {
 
 	it('measures a prototype’s page in a real browser, and keeps it as the app keeps its check', async () => {
 		await run('new-prototype', '--project', 'demo', '--title', 'Demo', '--note', 'A list');
-		writeFileSync(join(prototypes, 'demo', 'v1-i1.tsx'), "export default () => <main><h1>Cameras</h1><img src='camera.png' /></main>;\n");
-		expect(await run('save-prototype', '--project', 'demo', '--name', 'v1-i1')).toBe(0);
+		writeFileSync(join(prototypes, 'demo', 'v1.tsx'), "export default () => <main><h1>Cameras</h1><img src='camera.png' /></main>;\n");
+		expect(await run('save-prototype', '--project', 'demo', '--name', 'v1')).toBe(0);
 		out = [];
-		expect(await run('accessibility', '--project', 'demo', '--name', 'v1-i1')).toBe(0);
+		expect(await run('accessibility', '--project', 'demo', '--name', 'v1')).toBe(0);
 		const said = out.join('\n');
-		expect(said).toMatch(/^Measured demo v1-i1's page: (?:No issues found|\d+ issues? to fix)\./);
+		expect(said).toMatch(/^Measured demo v1's page: (?:No issues found|\d+ issues? to fix)\./);
 		expect(said).toMatch(/- \*\*image-alt\*\*[^\n]*\n {2}- `img`: /);
-		const kept = JSON.parse(readFileSync(join(design, 'projects', 'demo', 'accessibility', 'v1-i1.json'), 'utf8')) as { result: unknown };
+		const kept = JSON.parse(readFileSync(join(design, 'projects', 'demo', 'accessibility', 'v1.json'), 'utf8')) as { result: unknown };
 		// The same result the app keeps beside the page, so the app shows what was measured here.
-		expect((JSON.parse(readFileSync(join(prototypes, 'demo', 'v1-i1.accessibility.json'), 'utf8')) as { result: unknown }).result).toEqual(
-			kept.result,
-		);
+		expect((JSON.parse(readFileSync(join(prototypes, 'demo', 'v1.accessibility.json'), 'utf8')) as { result: unknown }).result).toEqual(kept.result);
 		// Probed in its one state, its source read for what the page cannot show.
-		expect(existsSync(join(design, 'projects', 'demo', 'accessibility', 'v1-i1', 'default', 'tab.json'))).toBe(true);
-		expect(JSON.parse(readFileSync(join(design, 'projects', 'demo', 'accessibility', 'v1-i1', 'source.json'), 'utf8'))).toEqual(
+		expect(existsSync(join(design, 'projects', 'demo', 'accessibility', 'v1', 'default', 'tab.json'))).toBe(true);
+		expect(JSON.parse(readFileSync(join(design, 'projects', 'demo', 'accessibility', 'v1', 'source.json'), 'utf8'))).toEqual(
 			expect.arrayContaining([{ cell: 'dragging', sc: '2.5.7', status: 'none', findings: [] }]),
 		);
 		// The light subset, as a build runs it: the tree and the Tab walk alone, and a run leaves none of the last one's evidence.
 		out = [];
-		expect(await run('accessibility', '--project', 'demo', '--name', 'v1-i1', '--light')).toBe(0);
+		expect(await run('accessibility', '--project', 'demo', '--name', 'v1', '--light')).toBe(0);
 		expect(out.join('\n')).toMatch(/Probed at light depth \(8 of the 30 cells\)/);
-		expect(existsSync(join(design, 'projects', 'demo', 'accessibility', 'v1-i1', 'default', 'reflow-320.jpg'))).toBe(false);
+		expect(existsSync(join(design, 'projects', 'demo', 'accessibility', 'v1', 'default', 'reflow-320.jpg'))).toBe(false);
 		// And as the agent runs it, through its launcher's bundle, which starts the browser too.
 		const env = { ...process.env, HOME: home, XDG_CONFIG_HOME: join(home, '.config'), APPDATA: join(home, 'AppData') };
 		const launcher = join(__dirname, '..', 'bin', 'dsnr.mjs');
-		const ran = spawnSync(process.execPath, [launcher, 'accessibility', '--project', 'demo', '--name', 'v1-i1'], {
+		const ran = spawnSync(process.execPath, [launcher, 'accessibility', '--project', 'demo', '--name', 'v1'], {
 			cwd: product,
 			env,
 			encoding: 'utf8',
 		});
-		expect(ran.stdout).toMatch(/^Measured demo v1-i1's page: (?:No issues found|\d+ issues? to fix)\./);
+		expect(ran.stdout).toMatch(/^Measured demo v1's page: (?:No issues found|\d+ issues? to fix)\./);
 		expect(ran.status).toBe(0);
 	}, 120_000);
 });
@@ -798,7 +806,7 @@ describe.skipIf(process.env.DSNR_REAL_AGENT !== '1' || findChrome() === null)('t
 		expect(await run('new-prototype', '--project', 'demo', '--title', 'Demo', '--note', request)).toBe(0);
 		const task = out.join('\n');
 		const checkLine = /check its accessibility with exactly: `([^`]+)`/.exec(task)?.[1] as string;
-		const source = join(prototypes, 'demo', 'v1-i1.tsx');
+		const source = join(prototypes, 'demo', 'v1.tsx');
 		// The planted fault: a button drawn as an icon alone, with no name.
 		writeFileSync(
 			source,
@@ -816,13 +824,13 @@ describe.skipIf(process.env.DSNR_REAL_AGENT !== '1' || findChrome() === null)('t
 			readDesignFile: store.readFile,
 			esbuild: () => esbuild,
 		});
-		const ended = await runToEnd(join(prototypes, 'demo'), task, { bare: true, readOnly: prototypeReadable(await work.sources('demo', 'v1-i1')) });
+		const ended = await runToEnd(join(prototypes, 'demo'), task, { bare: true, readOnly: prototypeReadable(await work.sources('demo', 'v1')) });
 		const fixed = readFileSync(source, 'utf8');
 		console.log(`The agent's last words: ${ended.said}\nIts source:\n${fixed}`);
 		expect(ended.ok, ended.said).toBe(true);
 		expect(fixed).toContain('Camera list');
 		// The check sent it back at least once, and finds nothing now: the agent fixed it, in its own source.
-		const record = JSON.parse(readFileSync(join(prototypes, 'demo', 'v1-i1.build-checked.json'), 'utf8')) as { rounds: number; left: boolean };
+		const record = JSON.parse(readFileSync(join(prototypes, 'demo', 'v1.build-checked.json'), 'utf8')) as { rounds: number; left: boolean };
 		expect(record.rounds).toBeGreaterThanOrEqual(1);
 		expect(record.left).toBe(false);
 		const after = spawnSync('/bin/sh', ['-c', checkLine], { cwd: product, encoding: 'utf8' });

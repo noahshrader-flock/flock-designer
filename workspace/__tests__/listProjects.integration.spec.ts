@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { Project } from '../src/shared/contract';
 import { listProjects } from '../src/main/services/listProjects';
-import { makeProduct, projectIteration } from './fixtures';
+import { makeProduct, projectWork } from './fixtures';
 
 let dir: string;
 let product: string;
@@ -16,7 +16,7 @@ beforeEach(() => {
 afterEach(() => rmSync(dir, { recursive: true, force: true }));
 
 describe('the project list', () => {
-	const fromGitHub: Project = { id: 'remote', title: 'Remote', folder: null, records: [], iterations: [], people: [] };
+	const fromGitHub: Project = { id: 'remote', title: 'Remote', folder: null, records: [], work: [], people: [] };
 	const offline = () => Promise.reject(new Error('GitHub is out of reach.'));
 
 	it("is GitHub's when there is no checkout, and GitHub's failure when it cannot be reached", async () => {
@@ -27,10 +27,10 @@ describe('the project list', () => {
 	it('never says codebase work is ready for engineering with no checkout, where it cannot be checked against the branch', async () => {
 		const ready: Project = {
 			...fromGitHub,
-			iterations: [projectIteration({ name: 'codebase', branch: 'feature/remote', readyAt: 'a1b2c3d' })],
+			work: [projectWork({ name: 'codebase', branch: 'feature/remote', readyAt: 'a1b2c3d' })],
 		};
 		const [listed] = await listProjects({ root: null, login: null, remote: async () => [ready] });
-		expect(listed?.iterations[0]?.readyAt).toBeNull();
+		expect(listed?.work[0]?.readyAt).toBeNull();
 	});
 
 	it("still shows this machine's work when GitHub cannot be reached", async () => {
@@ -38,9 +38,9 @@ describe('the project list', () => {
 		mkdirSync(join(design, '.git'), { recursive: true });
 		mkdirSync(join(design, 'projects', 'demo'), { recursive: true });
 		writeFileSync(join(design, 'projects', 'demo', 'brief.md'), '# Demo\n');
-		const record = { projectId: 'demo', name: 'v1-i1', branch: 'prototype/demo/v1-i1', commit: null, createdAt: '2026-10-01T00:00:00Z' };
-		writeFileSync(join(design, 'projects', 'demo', 'iterations.json'), JSON.stringify([record]));
+		const record = { projectId: 'demo', name: 'v1', branch: 'prototype/demo/v1', commit: null, createdAt: '2026-10-01T00:00:00Z' };
+		writeFileSync(join(design, 'projects', 'demo', 'work.json'), JSON.stringify([record]));
 		const listed = await listProjects({ root: product, login: null, remote: offline });
-		expect(listed.map((p) => [p.id, p.iterations.map((i) => i.name)])).toEqual([['demo', ['v1-i1']]]);
+		expect(listed.map((p) => [p.id, p.work.map((i) => i.name)])).toEqual([['demo', ['v1']]]);
 	});
 });

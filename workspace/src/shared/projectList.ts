@@ -1,4 +1,4 @@
-import type { MadeCover, Project, ProjectIteration } from './contract';
+import type { MadeCover, Project, ProjectWork } from './contract';
 import { mergePeople } from './people';
 import { matchesWords } from './search';
 import { asCover, asDate } from './validate';
@@ -19,18 +19,18 @@ const firstDate = (dates: unknown[], order: 1 | -1): string | null =>
 export const latestDate = (dates: unknown[]): string | null => firstDate(dates, -1);
 
 /** When a project was started: its earliest iteration's date, or null if none has one. */
-export const startedAt = (p: Pick<Project, 'iterations'>): string | null =>
+export const startedAt = (p: Pick<Project, 'work'>): string | null =>
 	firstDate(
-		p.iterations.map((i) => i.createdAt),
+		p.work.map((i) => i.createdAt),
 		1,
 	);
 
 /**
  * When anything last happened in a project: the latest of the activity GitHub reported (`updatedAt`) and when each of
- * its iterations was made. Null when nothing is dated.
+ * its pieces of work was made. Null when nothing is dated.
  */
-export const lastUpdated = (p: Pick<Project, 'iterations'> & { updatedAt?: string | null }): string | null =>
-	latestDate([p.updatedAt, ...p.iterations.map((i) => i.createdAt)]);
+export const lastUpdated = (p: Pick<Project, 'work'> & { updatedAt?: string | null }): string | null =>
+	latestDate([p.updatedAt, ...p.work.map((i) => i.createdAt)]);
 
 /** Alphabetical by name without regard to case, and by id when two share a name, so an order never shuffles. */
 const byName = (a: Project, b: Project): number => a.title.localeCompare(b.title, undefined, { sensitivity: 'base' }) || a.id.localeCompare(b.id);
@@ -73,11 +73,11 @@ export const mergeProjects = (remote: Project[], local: Project[]): Project[] =>
 	for (const l of local) {
 		const r = byId.get(l.id);
 		if (!r) {
-			byId.set(l.id, { ...l, localOnly: true, iterations: l.iterations.map((i) => ({ ...i, localOnly: true })) });
+			byId.set(l.id, { ...l, localOnly: true, work: l.work.map((i) => ({ ...i, localOnly: true })) });
 			continue;
 		}
-		const have = new Map<string, ProjectIteration>(r.iterations.map((i) => [i.branch, { ...i, localOnly: false }]));
-		for (const li of l.iterations) {
+		const have = new Map<string, ProjectWork>(r.work.map((i) => [i.branch, { ...i, localOnly: false }]));
+		for (const li of l.work) {
 			const ri = have.get(li.branch);
 			if (!ri) have.set(li.branch, { ...li, localOnly: true });
 			else
@@ -101,7 +101,7 @@ export const mergeProjects = (remote: Project[], local: Project[]): Project[] =>
 			// GitHub's before every push, so it is never behind for longer than a sync. GitHub's otherwise.
 			folder: l.records.includes('brief.md') ? (l.folder ?? null) : (r.folder ?? null),
 			records: [...new Set([...r.records, ...l.records])].sort(),
-			iterations: [...have.values()].sort(iterationOrder),
+			work: [...have.values()].sort(workOrder),
 			people: mergePeople(r.people, l.people, ...[...have.values()].map((i) => i.contributors)),
 		});
 	}
@@ -121,8 +121,8 @@ export const unionLocal = (records: Project[], branches: Project[]): Project[] =
 			byId.set(b.id, b);
 			continue;
 		}
-		const have = new Map(r.iterations.map((i) => [i.branch, i]));
-		for (const bi of b.iterations) {
+		const have = new Map(r.work.map((i) => [i.branch, i]));
+		for (const bi of b.work) {
 			const ri = have.get(bi.branch);
 			have.set(
 				bi.branch,
@@ -136,15 +136,15 @@ export const unionLocal = (records: Project[], branches: Project[]): Project[] =
 					: bi,
 			);
 		}
-		const its = [...have.values()].sort(iterationOrder);
-		byId.set(b.id, { ...r, iterations: its, people: mergePeople(r.people, ...its.map((i) => i.contributors)) });
+		const its = [...have.values()].sort(workOrder);
+		byId.set(b.id, { ...r, work: its, people: mergePeople(r.people, ...its.map((i) => i.contributors)) });
 	}
 	return [...byId.values()];
 };
 
-/** The order a project's iterations are kept in: its prototypes by name, the newest name first, then its codebase work. */
-export const iterationOrder = (a: ProjectIteration, b: ProjectIteration): number => {
-	const codebase = (x: ProjectIteration) => (workKind(x) === 'codebase' ? 1 : 0);
+/** The order a project's records are kept in: its prototypes by name, the newest name first, then its codebase work. */
+export const workOrder = (a: ProjectWork, b: ProjectWork): number => {
+	const codebase = (x: ProjectWork) => (workKind(x) === 'codebase' ? 1 : 0);
 	return codebase(a) - codebase(b) || b.name.localeCompare(a.name, undefined, { numeric: true });
 };
 
@@ -152,8 +152,8 @@ export const iterationOrder = (a: ProjectIteration, b: ProjectIteration): number
  * The picture a project's card shows: its newest prototype's, else the newest earlier one that has a picture, so a card
  * never goes empty while a picture exists. None for a project with no picture, or with only codebase work.
  */
-export const coverToShow = (project: Pick<Project, 'iterations'>): { name: string; cover: string } | null => {
-	const pictured = workOf(project.iterations, 'prototype').find((i) => asCover(i.cover) !== null);
+export const coverToShow = (project: Pick<Project, 'work'>): { name: string; cover: string } | null => {
+	const pictured = workOf(project.work, 'prototype').find((i) => asCover(i.cover) !== null);
 	return pictured ? { name: pictured.name, cover: pictured.cover as string } : null;
 };
 
@@ -162,10 +162,10 @@ export const coverToShow = (project: Pick<Project, 'iterations'>): { name: strin
  * with only codebase work, out to that work on GitHub, in the browser; or nothing, for a project with neither (nothing made
  * yet, or codebase work whose record does not say where it is). `label` names it, for a screen reader.
  */
-export type ProjectOpening = { kind: 'app'; label: string; iteration: ProjectIteration } | { kind: 'link'; label: string; url: string };
+export type ProjectOpening = { kind: 'app'; label: string; iteration: ProjectWork } | { kind: 'link'; label: string; url: string };
 
-export const projectOpening = (project: Pick<Project, 'title' | 'iterations'>): ProjectOpening | null => {
-	const newest = workOf(project.iterations, 'prototype')[0];
+export const projectOpening = (project: Pick<Project, 'title' | 'work'>): ProjectOpening | null => {
+	const newest = workOf(project.work, 'prototype')[0];
 	if (newest !== undefined) return { kind: 'app', label: `Open ${project.title}`, iteration: newest };
 	const url = projectCodeLink(project);
 	return url === null ? null : { kind: 'link', label: `Open ${project.title} on ${HOST}`, url };
@@ -176,9 +176,9 @@ export const withCovers = (projects: Project[], made: MadeCover[]): Project[] =>
 	if (made.length === 0) return projects;
 	const cover = (projectId: string, name: string) => made.find((m) => m.projectId === projectId && m.name === name)?.cover;
 	return projects.map((p) =>
-		made.some((m) => m.projectId === p.id) ? { ...p, iterations: p.iterations.map((i) => ({ ...i, cover: cover(p.id, i.name) ?? i.cover })) } : p,
+		made.some((m) => m.projectId === p.id) ? { ...p, work: p.work.map((i) => ({ ...i, cover: cover(p.id, i.name) ?? i.cover })) } : p,
 	);
 };
 
 /** How many open comments a project's prototypes have, all together: what its card and row say on its badge. */
-export const openCommentsOf = (iterations: Pick<ProjectIteration, 'openComments'>[]): number => iterations.reduce((n, i) => n + i.openComments, 0);
+export const openCommentsOf = (work: Pick<ProjectWork, 'openComments'>[]): number => work.reduce((n, i) => n + i.openComments, 0);

@@ -19,13 +19,13 @@ export const PAGE_CONFIG = {
 	owner: 'acme',
 	repo: 'design',
 	projectId: 'demo',
-	name: 'v1-i1',
+	name: 'v1',
 	title: 'Alert history',
-	projectHref: '../../',
-	iterations: [
-		{ name: 'v1-i2', href: '../../v1/i2/' },
-		{ name: 'v1-i1', href: '../../v1/i1/' },
-		{ name: 'v2-i1', href: '../../v2/i1/' },
+	projectHref: '../',
+	versions: [
+		{ name: 'v3', href: '../v3/' },
+		{ name: 'v1', href: '../v1/' },
+		{ name: 'v2', href: '../v2/' },
 	],
 };
 

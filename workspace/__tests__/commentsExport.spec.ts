@@ -22,7 +22,7 @@ const comment = (id: number, over: Partial<ReviewComment> = {}): ReviewComment =
 const input = (comments: ReviewComment[]) => ({
 	projectId: 'demo',
 	title: 'Demo project',
-	iteration: { name: 'i1', branch: 'fd/demo/i1' },
+	iteration: { name: 'v1', branch: 'prototype/demo/v1' },
 	comments,
 	generatedAt: new Date('2026-10-05T12:00:00Z'),
 });

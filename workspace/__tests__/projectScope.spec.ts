@@ -10,7 +10,7 @@ import {
 	scopesOffered,
 } from '../src/shared/projectScope';
 import { productsOf } from '../src/shared/work';
-import { aProject, projectIteration } from './fixtures';
+import { aProject, projectWork } from './fixtures';
 
 /** What the Projects panel focuses on and groups by (the workspace README's "Projects, by product"), as rules a test can read. */
 
@@ -19,9 +19,7 @@ const PEPSI = 'flocksafety/flock-pepsi';
 const on = (id: string, ...made: [string | null, string][]) =>
 	aProject({
 		id,
-		iterations: made.map(([product, createdAt], i) =>
-			projectIteration({ name: `v1-i${i + 1}`, branch: `prototype/${id}/v1-i${i + 1}`, product, createdAt }),
-		),
+		work: made.map(([product, createdAt], i) => projectWork({ name: `v1-i${i + 1}`, branch: `prototype/${id}/v1-i${i + 1}`, product, createdAt })),
 	});
 
 describe('this product’s projects', () => {

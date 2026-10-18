@@ -2,10 +2,11 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { PublishProblem } from '../../shared/contract';
 import { plural } from '../../shared/plural';
-import { mergeIterationRecords } from '../../shared/iterationRecords';
+import { mergeWorkRecords } from '../../shared/workRecords';
 import { commitOnto, git } from './git';
 import { errorText } from '../../shared/result';
 import { HOST } from '../../shared/vocabulary';
+import { workPath } from '../../shared/designPaths';
 
 /**
  * Keeping the design repository's project records published, with nobody having to remember.
@@ -36,7 +37,8 @@ export interface SyncResult {
 }
 
 const RECORDS = 'Project records';
-const isRecordFile = (f: string): boolean => /^projects\/[^/]+\/iterations\.json$/.test(f);
+/** A project's records file, as `workPath` names it: the one file a sync merges by meaning. */
+const isRecordFile = (f: string): boolean => f === workPath(f.split('/')[1] ?? '');
 const lines = (out: string): string[] => out.split('\n').filter(Boolean);
 /** The first line of what git said: enough to act on, without a wall of its output. */
 const message = (err: unknown): string => errorText(err, { firstLine: true });
@@ -99,7 +101,7 @@ export const syncRecords = async (designRoot: string): Promise<SyncResult> => {
 /**
  * This machine's record changes (what `projects/` has here against where this branch and GitHub's last met), as a commit
  * on GitHub's: made in a temporary index, so nothing of the person's is touched. A file changed on both sides is an
- * ordinary case for `iterations.json` (two people recording iterations of one project) and is merged by meaning; any
+ * ordinary case for `work.json` (two people recording versions of one project) and is merged by meaning; any
  * other is a real disagreement between people, which only they can settle. A string says what to tell the person.
  */
 const recordsOnTopOf = async (
@@ -134,7 +136,7 @@ const recordsOnTopOf = async (
 			hopeless.push(path);
 			continue;
 		}
-		const merged = mergeIterationRecords(
+		const merged = mergeWorkRecords(
 			readFileSync(join(designRoot, path), 'utf8'),
 			await git(designRoot, ['show', `${theirs}:${path}`], { trim: false }),
 		);
@@ -150,7 +152,7 @@ const recordsOnTopOf = async (
 	for (const [path, blob] of changes) {
 		if (!isRecordFile(path) || blob === null) continue;
 		const text = await git(designRoot, ['cat-file', 'blob', blob], { trim: false });
-		if (mergeIterationRecords(text, text) === null) {
+		if (mergeWorkRecords(text, text) === null) {
 			return `${path} is not a valid record, so nothing was published. Fix it in the design repository, and records will flow again.`;
 		}
 	}

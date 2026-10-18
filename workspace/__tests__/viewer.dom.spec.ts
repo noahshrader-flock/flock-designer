@@ -176,27 +176,20 @@ describe('a page from this machine with no key of DSNR’s (BROWSER_COMMENTS_PLA
 });
 
 describe("the page's bar", () => {
-	it("is the app's own: the way back, the project, and a dropdown for the version and one for the iteration", async () => {
+	it("is the app's own: the way back, the project, and a dropdown for the version", async () => {
 		await open();
-		expect(document.querySelector('a[href="../../"]')).not.toBeNull();
+		expect(document.querySelector('a[href="../"]')).not.toBeNull();
 		expect(document.body.textContent).toContain('Alert history');
-		// The versions in one menu, with this one chosen; the iterations of this version in the other.
+		// Every version in one menu, the newest first, with this one chosen.
 		await openMenu(button('Version V1: switch version'));
 		const versions = [...document.querySelectorAll<HTMLElement>('[role="menuitemradio"]')];
-		expect(versions.map((i) => i.textContent?.trim())).toEqual(['V2', 'V1']);
-		expect(versions.map((o) => o.getAttribute('aria-checked'))).toEqual(['false', 'true']);
-		await press(versions[1] as HTMLElement);
-		await settle();
-		await openMenu(button('Iteration I1: switch iteration'));
-		const iterations = [...document.querySelectorAll<HTMLElement>('[role="menuitemradio"]')];
-		expect(iterations.map((i) => i.textContent?.trim())).toEqual(['I2', 'I1']);
-		expect(iterations.map((o) => o.getAttribute('aria-checked'))).toEqual(['false', 'true']);
+		expect(versions.map((i) => i.textContent?.trim())).toEqual(['V3', 'V2', 'V1']);
+		expect(versions.map((o) => o.getAttribute('aria-checked'))).toEqual(['false', 'false', 'true']);
 	});
 
 	it('is there before anyone signs in, beside the way to', async () => {
 		await open();
 		expect(button('Sign in to comment')).toBeTruthy();
-		expect(button('Iteration I1: switch iteration')).toBeTruthy();
 		expect(button('Version V1: switch version')).toBeTruthy();
 	});
 });
@@ -217,14 +210,13 @@ describe('the states of the page', () => {
 		expect(bar.className.split(' ')).not.toContain('border-b');
 	});
 
-	it('are a dropdown between the version and the history, and choosing one opens the page in it', async () => {
+	it('are a dropdown between the version and the theme, and choosing one opens the page in it', async () => {
 		const { frame } = await withStates(['default', 'filtered', 'panel']);
 		expect(shownState()).toBe('Default');
-		// In the bar's order: the version, the states, the history, then the theme.
+		// In the bar's order: the version, the states, then the theme.
 		const before = (a: Element, b: Element) => !!(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
 		expect(before(button('Version V1: switch version'), stateMenu() as Element)).toBe(true);
-		expect(before(stateMenu() as Element, button('Iteration I1: switch iteration'))).toBe(true);
-		expect(before(button('Iteration I1: switch iteration'), themeGroup() as Element)).toBe(true);
+		expect(before(stateMenu() as Element, themeGroup() as Element)).toBe(true);
 		await chooseState('Panel');
 		await settle();
 		expect(frame.getAttribute('src')).toBe('page.html?state=panel');
@@ -239,12 +231,12 @@ describe('the states of the page', () => {
 		saveToken('good-token');
 		gh.issues.push({
 			number: 1,
-			body: 'Review thread for **demo**, branch: `prototype/demo/v1-i1`.',
+			body: 'Review thread for **demo**, branch: `prototype/demo/v1`.',
 			labels: ['flock-designer:review'],
 			comments: [
 				{
 					id: 7,
-					body: composeBody('On the panel', anAnchor({ route: '/demo/v1-i1/', state: '?state=panel' })),
+					body: composeBody('On the panel', anAnchor({ route: '/demo/v1/', state: '?state=panel' })),
 					user: { login: 'noah' },
 					created_at: '2026-10-08T09:00:00Z',
 				},
@@ -282,12 +274,12 @@ describe('the states of the page', () => {
 		saveToken('good-token');
 		gh.issues.push({
 			number: 1,
-			body: 'Review thread for **demo**, branch: `prototype/demo/v1-i1`.',
+			body: 'Review thread for **demo**, branch: `prototype/demo/v1`.',
 			labels: ['flock-designer:review'],
 			comments: [
 				{
 					id: 7,
-					body: composeBody('Too dark to read', anAnchor({ route: '/demo/v1-i1/', theme: 'dark' })),
+					body: composeBody('Too dark to read', anAnchor({ route: '/demo/v1/', theme: 'dark' })),
 					user: { login: 'noah' },
 					created_at: '2026-10-08T09:00:00Z',
 				},
@@ -312,7 +304,7 @@ describe('the states of the page', () => {
 		await unmountAll(current!.root);
 		current = await render(createElement(Viewer, { config: CONFIG, slots: sitePage().slots }));
 		expect(document.querySelector('[aria-label^="State"]')).toBeNull();
-		expect(button('Iteration I1: switch iteration')).toBeTruthy();
+		expect(button('Version V1: switch version')).toBeTruthy();
 	});
 });
 
@@ -348,7 +340,7 @@ describe('commenting on the page', () => {
 
 		// The thread is the iteration's, found and made as the app does it.
 		expect(gh.issues).toHaveLength(1);
-		expect(gh.issues[0]?.body).toContain('branch: `prototype/demo/v1-i1`');
+		expect(gh.issues[0]?.body).toContain('branch: `prototype/demo/v1`');
 		expect(gh.issues[0]?.labels).toEqual(['flock-designer:review']);
 		expect(gh.issues[0]?.comments[0]?.body).toContain('Make this primary');
 		expect(gh.issues[0]?.comments[0]?.body).toContain('clear-filter-button');
@@ -378,7 +370,7 @@ describe('commenting on the page', () => {
 		await unmountAll((current as NonNullable<typeof current>).root);
 		gh.issues.push({
 			number: 1,
-			body: 'Review thread for **demo**, branch: `prototype/demo/v1-i1`.',
+			body: 'Review thread for **demo**, branch: `prototype/demo/v1`.',
 			labels: ['flock-designer:review'],
 			comments: [
 				{
@@ -386,7 +378,7 @@ describe('commenting on the page', () => {
 					// As the app writes it, at its own server's address for this prototype.
 					body: composeBody(
 						'From the app',
-						anAnchor({ route: '/demo/v1-i1/', selector: '[data-e2e-ref="clear-filter-button"]', nearbyText: 'Clear Filter' }),
+						anAnchor({ route: '/demo/v1/', selector: '[data-e2e-ref="clear-filter-button"]', nearbyText: 'Clear Filter' }),
 					),
 					user: { login: 'noah', avatar_url: 'https://avatars.githubusercontent.com/u/9?v=4' },
 					created_at: '2026-10-08T09:00:00Z',
@@ -474,9 +466,7 @@ describe('in DSNR’s review tab, in VS Code', () => {
 		const { doc } = await open(relay);
 		await settle();
 		await commentOnPage(doc, 'h1', 'Bigger');
-		expect(asked.filter(([name]) => name === 'postComment').map(([, args]) => args.slice(0, 3))).toEqual([
-			['demo', 'prototype/demo/v1-i1', 'Bigger'],
-		]);
+		expect(asked.filter(([name]) => name === 'postComment').map(([, args]) => args.slice(0, 3))).toEqual([['demo', 'prototype/demo/v1', 'Bigger']]);
 		expect(gh.issues[0]?.comments[0]?.body).toContain('Bigger');
 		await press(button(/^Show all comments/));
 		await settle();
@@ -493,13 +483,13 @@ describe('in DSNR’s review tab, in VS Code', () => {
 		await press(menuItem(await openMenu(button('Comment actions')), 'Address'));
 		await settle();
 		const comment = gh.issues[0]!.comments[0]!;
-		expect(asked.at(-1)).toEqual(['address', [{ thread: gh.issues[0]!.number, id: comment.id }, 'prototype/demo/v1-i1']]);
+		expect(asked.at(-1)).toEqual(['address', [{ thread: gh.issues[0]!.number, id: comment.id }, 'prototype/demo/v1']]);
 	});
 
 	it('is told which iteration Address shows its change in, for a page in the browser to go to (BROWSER_COMMENTS_PLAN 3.2)', async () => {
 		const { relay } = tab();
 		const addressed = vi.fn();
-		const answering: Relay = { ask: (name, args) => (name === 'address' ? Promise.resolve({ ok: true, value: 'v1-i2' }) : relay.ask(name, args)) };
+		const answering: Relay = { ask: (name, args) => (name === 'address' ? Promise.resolve({ ok: true, value: 'v12' }) : relay.ask(name, args)) };
 		const page = sitePage();
 		current = await render(createElement(Viewer, { config: CONFIG, slots: page.slots, relay: answering, onAddressed: addressed }));
 		await settle();
@@ -508,6 +498,6 @@ describe('in DSNR’s review tab, in VS Code', () => {
 		await settle();
 		await press(menuItem(await openMenu(button('Comment actions')), 'Address'));
 		await settle();
-		expect(addressed).toHaveBeenCalledWith('v1-i2');
+		expect(addressed).toHaveBeenCalledWith('v12');
 	});
 });

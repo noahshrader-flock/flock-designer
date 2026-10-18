@@ -1,13 +1,13 @@
 import type { Catalog, CatalogComponent, DesignToken } from '../src/shared/domain/designSystem';
 import { undeclared } from '../src/shared/wcag';
-import type { Project, ProjectIteration } from '../src/shared/domain/projects';
+import type { Project, ProjectWork } from '../src/shared/domain/projects';
 
 /**
  * Sample data for DSNR's panel in tests: a few projects and a design system's catalog, in the app's own shapes, so the
  * panel is tested with the data it is given.
  */
 
-const iteration = (name: string, openComments = 0, day = 1): ProjectIteration => ({
+const iteration = (name: string, openComments = 0, day = 1): ProjectWork => ({
 	name,
 	branch: `prototype/sample/${name}`,
 	issueNumber: null,
@@ -24,20 +24,20 @@ const iteration = (name: string, openComments = 0, day = 1): ProjectIteration =>
 	readyAt: null,
 });
 
-const project = (id: string, title: string, folder: string | null, iterations: ProjectIteration[]): Project => ({
+const project = (id: string, title: string, folder: string | null, work: ProjectWork[]): Project => ({
 	id,
 	title,
 	folder,
 	records: [],
-	iterations,
+	work,
 	people: [],
 });
 
 export const SAMPLE_PROJECTS: Project[] = [
-	project('alert-history', 'Alert history', 'Admin', [iteration('v1-i1', 0, 1), iteration('v1-i2', 2, 2), iteration('v2-i1', 0, 3)]),
-	project('admin-usage', 'Admin usage', null, [iteration('v1-i1'), iteration('v1-i2')]),
-	project('role-comparison', 'Role comparison', null, [iteration('v1-i1', 5)]),
-	project('zone-coverage', 'Zone coverage', 'Maps', [iteration('v1-i1'), iteration('v1-i2')]),
+	project('alert-history', 'Alert history', 'Admin', [iteration('v1', 0, 1), iteration('v12', 2, 2), iteration('v2', 0, 3)]),
+	project('admin-usage', 'Admin usage', null, [iteration('v1'), iteration('v12')]),
+	project('role-comparison', 'Role comparison', null, [iteration('v1', 5)]),
+	project('zone-coverage', 'Zone coverage', 'Maps', [iteration('v1'), iteration('v12')]),
 ];
 
 const component = (group: string, name: string, storybook: string | null = null): CatalogComponent => ({

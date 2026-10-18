@@ -1,13 +1,13 @@
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
-import type { Iteration, Person } from '../../shared/contract';
+import type { Work, Person } from '../../shared/contract';
 import { briefFolder, firstHeading, folderName, withFolder } from '../../shared/brief';
-import { projectPath, prototypeKey } from '../../shared/designPaths';
-import { isPrototypeName, nextPrototypeName } from '../../shared/prototypeNames';
+import { projectPath, prototypeKey, workPath } from '../../shared/designPaths';
+import { isPrototypeName, nextVersionName } from '../../shared/prototypeNames';
 import { assertCover } from '../../shared/validate';
 import { resolveInside } from './paths';
-import { parseIterations, serializeIterations } from '../../shared/iterationRecords';
+import { parseWork, serializeWork } from '../../shared/workRecords';
 
 /**
  * Prototypes: what is recorded, where the page is kept, and what the agent is told.
@@ -73,28 +73,29 @@ export interface PrototypeBuild {
  * A project's iteration records, through anything that reads a file of the design repository. A file that cannot be read
  * is refused rather than written over, or guessed at.
  */
-export const readRecords = async (store: Pick<RecordStore, 'read'>, projectId: string): Promise<Iteration[]> => {
-	const raw = await store.read(projectPath(projectId, 'iterations.json'));
+export const readRecords = async (store: Pick<RecordStore, 'read'>, projectId: string): Promise<Work[]> => {
+	const raw = await store.read(workPath(projectId));
 	if (raw === null) return [];
-	const records = parseIterations(raw);
-	if (records === null) throw new Error(`${projectPath(projectId, 'iterations.json')} is not a readable list of records, so it was left as it is.`);
+	const records = parseWork(raw);
+	if (records === null) throw new Error(`${workPath(projectId)} is not a readable list of records, so it was left as it is.`);
 	return records;
 };
 
 /** Adds one prototype's record to its project's. */
 const addRecord = async (
 	store: RecordStore,
-	existing: Iteration[],
+	existing: Work[],
 	{
 		projectId,
 		name,
 		note,
 		me,
 		basedOn,
+		from,
 		now,
-	}: { projectId: string; name: string; note: string; me: Person | null; basedOn?: Iteration['basedOn']; now: Date },
-): Promise<Iteration> => {
-	const iteration: Iteration = {
+	}: { projectId: string; name: string; note: string; me: Person | null; basedOn?: Work['basedOn']; from?: string; now: Date },
+): Promise<Work> => {
+	const record: Work = {
 		projectId,
 		name,
 		branch: prototypeKey(projectId, name),
@@ -105,13 +106,10 @@ const addRecord = async (
 		note: note.trim().split('\n')[0] ?? '',
 		...(me ? { contributors: [me] } : {}),
 		...(basedOn ? { basedOn } : {}),
+		...(from ? { from } : {}),
 	};
-	await store.write(
-		projectPath(projectId, 'iterations.json'),
-		serializeIterations([...existing, iteration]),
-		`${projectId}: record prototype ${name}`,
-	);
-	return iteration;
+	await store.write(workPath(projectId), serializeWork([...existing, record]), `${projectId}: record prototype ${name}`);
+	return record;
 };
 
 /**
@@ -130,10 +128,10 @@ export const recordPrototype = async (
 		basedOn,
 		folder = null,
 		now = new Date(),
-	}: { projectId: string; title: string; note: string; me: Person | null; basedOn?: Iteration['basedOn']; folder?: string | null; now?: Date },
-): Promise<Iteration> => {
+	}: { projectId: string; title: string; note: string; me: Person | null; basedOn?: Work['basedOn']; folder?: string | null; now?: Date },
+): Promise<Work> => {
 	const existing = await readRecords(store, projectId);
-	const name = nextPrototypeName(existing.map((i) => i.name));
+	const name = nextVersionName(existing.map((i) => i.name));
 	const brief = projectPath(projectId, 'brief.md');
 	const haveBrief = await store.read(brief);
 	if (haveBrief === null || firstHeading(haveBrief) === null) {
@@ -163,7 +161,7 @@ export const assignFolder = async (store: RecordStore, projectId: string, folder
 };
 
 /**
- * Names a prototype's picture on its record (`Iteration.cover`), changing nothing else in it or in any other record.
+ * Names a prototype's picture on its record (`Work.cover`), changing nothing else in it or in any other record.
  * Written after the picture itself, so a record never names a picture that is not there. False when there is no record
  * of the prototype, as for a page that was never recorded: nothing is written then.
  */
@@ -172,30 +170,23 @@ export const setCover = async (store: RecordStore, projectId: string, name: stri
 	const existing = await readRecords(store, projectId);
 	if (!existing.some((i) => i.name === name)) return false;
 	const updated = existing.map((i) => (i.name === name ? { ...i, cover } : i));
-	await store.write(projectPath(projectId, 'iterations.json'), serializeIterations(updated), `${projectId}: picture of prototype ${name}`);
+	await store.write(workPath(projectId), serializeWork(updated), `${projectId}: picture of prototype ${name}`);
 	return true;
 };
 
 /**
- * Records a refinement of a prototype: the next iteration of its version, named before it was made (its files are
- * already under that name), modeled on what the iteration it came from was. Refused when that name is taken.
+ * Records a new version started from another, named before it was made (its files are already under that name), modeled
+ * on what the version it came from was, and saying which that was. Refused when that name is taken.
  */
-export const recordIteration = async (
+export const recordVersionFrom = async (
 	store: RecordStore,
-	{
-		projectId,
-		name,
-		from,
-		note,
-		me,
-		now = new Date(),
-	}: { projectId: string; name: string; from: Iteration; note: string; me: Person | null; now?: Date },
-): Promise<Iteration> => {
+	{ projectId, name, from, note, me, now = new Date() }: { projectId: string; name: string; from: Work; note: string; me: Person | null; now?: Date },
+): Promise<Work> => {
 	assertPrototypeName(name);
 	const existing = await readRecords(store, projectId);
 	if (existing.some((i) => i.name === name))
-		throw new Error(`${projectId} already has a ${name}. Try again: the change will go in the next iteration.`);
-	return addRecord(store, existing, { projectId, name, note, me, basedOn: from.basedOn, now });
+		throw new Error(`${projectId} already has a ${name}. Try again: the change will go in the next version.`);
+	return addRecord(store, existing, { projectId, name, note, me, basedOn: from.basedOn, from: from.name, now });
 };
 
 export const assertPrototypeName = (name: string): void => {
@@ -203,10 +194,10 @@ export const assertPrototypeName = (name: string): void => {
 };
 
 /**
- * Which version of a prototype's source this is, as a short hash: what tells the screen whether an agent changed it,
+ * A short hash of a prototype's source or page: what tells the screen whether an agent changed it,
  * and what a comment it changed records. A prototype has no commits, so this stands in for one.
  */
-export const prototypeVersionOf = (source: string): string => createHash('sha1').update(source).digest('hex').slice(0, 12);
+export const contentHashOf = (source: string): string => createHash('sha1').update(source).digest('hex').slice(0, 12);
 
 /**
  * What a prototype's agent may read, each a folder: the product's code (on the branch it is modeled

@@ -21,7 +21,7 @@ import type {
 } from '../domain/designSystem';
 import type {
 	BuildInCodebase,
-	Iteration,
+	Work,
 	MadeCover,
 	BuildInCodebasePlan,
 	OpenedPrototype,
@@ -58,7 +58,7 @@ export interface WorkspaceApi {
 	/** Of those, the ones with the DSNR setup, which codebase work can start from. */
 	branchesWithSetup(root: string): Promise<Result<string[]>>;
 	/** Checks out an existing iteration's branch. */
-	continueIteration(root: string, projectId: string, name: string): Promise<Result<Iteration>>;
+	continueWork(root: string, projectId: string, name: string): Promise<Result<Work>>;
 
 	/** `projectId` fills `<project-id>` in a command that serves one project. */
 	startCommand(root: string, commandId: string, projectId?: string): Promise<Result<PreviewStatus>>;
@@ -191,7 +191,7 @@ export interface WorkspaceApi {
 		note: string,
 		from?: { root: string; branch: string },
 		folder?: string | null,
-	): Promise<Result<Iteration>>;
+	): Promise<Result<Work>>;
 	/**
 	 * The same build, handed to Claude Code in the repository `root` instead of run here, as Build in the codebase is: its
 	 * whole task is written beside the prototype, and a conversation starts with a line pointing at it: in VS Code's panel
@@ -286,7 +286,7 @@ export interface WorkspaceApi {
  */
 export const INVOKE = [
 	'readCheckout',
-	'continueIteration',
+	'continueWork',
 	'startCommand',
 	'designSystemCatalog',
 	'designSystems',

@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { isPrototypeKey, prototypeKey, prototypePagePath } from '../src/shared/designPaths';
-import { nextPrototypeName } from '../src/shared/prototypeNames';
+import { nextVersionName } from '../src/shared/prototypeNames';
 import { cloneStore, buildInCodebasePrompt, prototypeReadable, recordPrototype, setCover } from '../src/main/services/prototype';
 import { PrototypeServer } from '../src/main/services/prototypeServer';
 import { memoryStore } from './fixtures';
@@ -13,12 +13,12 @@ import { claudeCodeAdapter } from '../src/main/services/agent';
 
 describe('what a prototype is called', () => {
 	it('is keyed apart from every branch, and numbered one past the highest', () => {
-		expect(prototypeKey('users', 'i2')).toBe('prototype/users/i2');
-		expect(isPrototypeKey('prototype/users/i2')).toBe(true);
-		expect(isPrototypeKey('fd/users/i1')).toBe(false);
-		expect(nextPrototypeName(['codebase'])).toBe('v1-i1');
-		expect(nextPrototypeName(['i1', 'codebase'])).toBe('v2-i1');
-		expect(prototypePagePath('users', 'i1')).toBe('projects/users/prototypes/i1.html');
+		expect(prototypeKey('users', 'v2')).toBe('prototype/users/v2');
+		expect(isPrototypeKey('prototype/users/v2')).toBe(true);
+		expect(isPrototypeKey('feature/users')).toBe(false);
+		expect(nextVersionName(['codebase'])).toBe('v1');
+		expect(nextVersionName(['v1', 'codebase'])).toBe('v2');
+		expect(prototypePagePath('users', 'v1')).toBe('projects/users/prototypes/v1.html');
 	});
 });
 
@@ -29,28 +29,28 @@ describe('recordPrototype', () => {
 	it('starts a new project with its brief, then records the prototype', async () => {
 		const { store, files, writes } = memoryStore();
 		const recorded = await recordPrototype(store, { projectId: 'users', title: 'Users — inactivity', note: 'flag inactive users', me, now });
-		expect(recorded).toMatchObject({ name: 'v1-i1', branch: 'prototype/users/v1-i1', contributors: [me], createdAt: now.toISOString() });
+		expect(recorded).toMatchObject({ name: 'v1', branch: 'prototype/users/v1', contributors: [me], createdAt: now.toISOString() });
 		expect(files['projects/users/brief.md']).toBe('# Users — inactivity\n\nflag inactive users\n');
 		expect(recorded.note).toBe('flag inactive users');
-		expect(JSON.parse(files['projects/users/iterations.json'] as string)).toHaveLength(1);
+		expect(JSON.parse(files['projects/users/work.json'] as string)).toHaveLength(1);
 		// The brief first: a record that names a project with no brief would list recorded under its bare id.
-		expect(writes).toEqual(['projects/users/brief.md', 'projects/users/iterations.json']);
+		expect(writes).toEqual(['projects/users/brief.md', 'projects/users/work.json']);
 	});
 
 	it("adds to an existing project's records and leaves its brief alone", async () => {
 		const { store, files } = memoryStore({
 			'projects/users/brief.md': '# Users\n\nThe real brief.\n',
-			'projects/users/iterations.json': JSON.stringify([
-				{ name: 'i1', branch: 'fd/users/i1' },
-				{ name: 'i2', branch: 'prototype/users/i2' },
+			'projects/users/work.json': JSON.stringify([
+				{ name: 'v1', branch: 'prototype/users/v1' },
+				{ name: 'v2', branch: 'prototype/users/v2' },
 			]),
 		});
 		const recorded = await recordPrototype(store, { projectId: 'users', title: 'Other', note: 'n', me: null, now });
-		// Another prototype on a project is another idea: the next version, after the older names, which are version 1.
-		expect(recorded.name).toBe('v2-i1');
+		// Another prototype on a project is another idea: the next version.
+		expect(recorded.name).toBe('v3');
 		expect(recorded.contributors).toBeUndefined();
 		expect(files['projects/users/brief.md']).toBe('# Users\n\nThe real brief.\n');
-		expect(JSON.parse(files['projects/users/iterations.json'] as string).map((i: { name: string }) => i.name)).toEqual(['i1', 'i2', 'v2-i1']);
+		expect(JSON.parse(files['projects/users/work.json'] as string).map((i: { name: string }) => i.name)).toEqual(['v1', 'v2', 'v3']);
 	});
 
 	it('keeps the whole request in the brief, and its first line on the record', async () => {
@@ -73,20 +73,20 @@ describe('recordPrototype', () => {
 	});
 
 	it('refuses to write over records it cannot read', async () => {
-		const { store, writes } = memoryStore({ 'projects/users/iterations.json': '{not json' });
+		const { store, writes } = memoryStore({ 'projects/users/work.json': '{not json' });
 		await expect(recordPrototype(store, { projectId: 'users', title: 't', note: 'n', me, now })).rejects.toThrow(/not a readable list of records/);
 		expect(writes).toEqual([]);
 	});
 
 	it('refuses records that are readable but not a list, rather than writing a list over them', async () => {
-		const { store, writes } = memoryStore({ 'projects/users/iterations.json': '{"name":"i1"}' });
+		const { store, writes } = memoryStore({ 'projects/users/work.json': '{"name":"v1"}' });
 		await expect(recordPrototype(store, { projectId: 'users', title: 't', note: 'n', me, now })).rejects.toThrow(/not a readable list/);
 		expect(writes).toEqual([]);
 	});
 });
 
 describe('setCover', () => {
-	const RECORDS = 'projects/users/iterations.json';
+	const RECORDS = 'projects/users/work.json';
 	const rec = (name: string, more: Record<string, unknown> = {}) => ({
 		projectId: 'users',
 		name,
@@ -98,16 +98,16 @@ describe('setCover', () => {
 	});
 
 	it('says on one prototype’s record which picture is its, and changes nothing else', async () => {
-		const { store, files } = memoryStore({ [RECORDS]: JSON.stringify([rec('v1-i1', { previewUrl: 'https://x.test' }), rec('v2-i1')]) });
-		expect(await setCover(store, 'users', 'v1-i1', 'aaaaaaaaaaaa')).toBe(true);
+		const { store, files } = memoryStore({ [RECORDS]: JSON.stringify([rec('v1', { previewUrl: 'https://x.test' }), rec('v2')]) });
+		expect(await setCover(store, 'users', 'v1', 'aaaaaaaaaaaa')).toBe(true);
 		const after = JSON.parse(files[RECORDS] as string) as Array<Record<string, unknown>>;
-		expect(after).toEqual([rec('v1-i1', { previewUrl: 'https://x.test', cover: 'aaaaaaaaaaaa' }), rec('v2-i1')]);
+		expect(after).toEqual([rec('v1', { previewUrl: 'https://x.test', cover: 'aaaaaaaaaaaa' }), rec('v2')]);
 	});
 
 	it('writes nothing for a prototype it has no record of, and refuses a picture that is not a hash', async () => {
-		const { store, writes } = memoryStore({ [RECORDS]: JSON.stringify([rec('v1-i1')]) });
-		expect(await setCover(store, 'users', 'v9-i1', 'aaaaaaaaaaaa')).toBe(false);
-		await expect(setCover(store, 'users', 'v1-i1', '../../x')).rejects.toThrow();
+		const { store, writes } = memoryStore({ [RECORDS]: JSON.stringify([rec('v1')]) });
+		expect(await setCover(store, 'users', 'v9', 'aaaaaaaaaaaa')).toBe(false);
+		await expect(setCover(store, 'users', 'v1', '../../x')).rejects.toThrow();
 		expect(writes).toEqual([]);
 	});
 });
@@ -120,9 +120,9 @@ describe('cloneStore', () => {
 		dir = mkdtempSync(join(tmpdir(), 'fd-prototype-clone-'));
 		const published = vi.fn();
 		const store = cloneStore(dir, published);
-		await store.write('projects/users/prototypes/i1.html', '<p>hi</p>', 'm');
-		expect(readFileSync(join(dir, 'projects/users/prototypes/i1.html'), 'utf8')).toBe('<p>hi</p>');
-		expect(await store.read('projects/users/prototypes/i1.html')).toBe('<p>hi</p>');
+		await store.write('projects/users/prototypes/v1.html', '<p>hi</p>', 'm');
+		expect(readFileSync(join(dir, 'projects/users/prototypes/v1.html'), 'utf8')).toBe('<p>hi</p>');
+		expect(await store.read('projects/users/prototypes/v1.html')).toBe('<p>hi</p>');
 		expect(await store.read('projects/users/nothing.md')).toBeNull();
 		expect(published).toHaveBeenCalledOnce();
 	});
@@ -131,9 +131,9 @@ describe('cloneStore', () => {
 		dir = mkdtempSync(join(tmpdir(), 'fd-prototype-clone-'));
 		const store = cloneStore(dir, vi.fn());
 		const jpeg = Buffer.from([0xff, 0xd8, 0xff, 0x00, 0x80, 0xfe]);
-		await store.write('projects/users/covers/v1-i1-aaaaaaaaaaaa.jpg', jpeg, 'm');
-		expect(readFileSync(join(dir, 'projects/users/covers/v1-i1-aaaaaaaaaaaa.jpg'))).toEqual(jpeg);
-		expect(await store.readBytes('projects/users/covers/v1-i1-aaaaaaaaaaaa.jpg')).toEqual(jpeg);
+		await store.write('projects/users/covers/v1-aaaaaaaaaaaa.jpg', jpeg, 'm');
+		expect(readFileSync(join(dir, 'projects/users/covers/v1-aaaaaaaaaaaa.jpg'))).toEqual(jpeg);
+		expect(await store.readBytes('projects/users/covers/v1-aaaaaaaaaaaa.jpg')).toEqual(jpeg);
 		expect(await store.readBytes('projects/users/covers/none.jpg')).toBeNull();
 	});
 
@@ -154,16 +154,16 @@ describe('what the agent is told', () => {
 		nodeModules: '/c/node_modules',
 	};
 	const build = {
-		source: '/q/users/i1.tsx',
-		page: '/q/users/i1.html',
-		buildCommand: 'node /q/build-prototype.mjs /e /q/users/i1.tsx /q/users/i1.html /c/node_modules /q/_shared',
-		checkCommand: 'node /q/check-prototype.mjs /q/users/i1.build-check.json',
+		source: '/q/users/v1.tsx',
+		page: '/q/users/v1.html',
+		buildCommand: 'node /q/build-prototype.mjs /e /q/users/v1.tsx /q/users/v1.html /c/node_modules /q/_shared',
+		checkCommand: 'node /q/check-prototype.mjs /q/users/v1.build-check.json',
 	};
 
 	it('names the source to write, the exact command that checks it builds, and every folder it may read, read-only', () => {
 		const task = prototypeBuildTask({ guide: '', skill: '# Skill', build, sources, accessibility: '', voice: '', request: 'A users list' });
 		expect(task.startsWith('# Skill')).toBe(true);
-		expect(task).toContain('Write `/q/users/i1.tsx`');
+		expect(task).toContain('Write `/q/users/v1.tsx`');
 		expect(task).toContain(`\`${build.buildCommand}\``);
 		// Its accessibility checked after it builds, as the build is, for two rounds, and no words written that are a person's.
 		expect(task).toContain(`check its accessibility with exactly: \`${build.checkCommand}\``);
@@ -201,11 +201,11 @@ describe('PrototypeServer', () => {
 		const site = mkdtempSync(join(tmpdir(), 'dsnr-site-'));
 		const previews = mkdtempSync(join(tmpdir(), 'dsnr-previews-'));
 		try {
-			mkdirSync(join(site, 'a', 'v1', 'i1'), { recursive: true });
+			mkdirSync(join(site, 'a', 'v1'), { recursive: true });
 			mkdirSync(join(site, '_shared'), { recursive: true });
 			mkdirSync(join(site, '_viewer'), { recursive: true });
-			writeFileSync(join(site, 'a', 'v1', 'i1', 'index.html'), '<p>the bar</p>');
-			writeFileSync(join(site, 'a', 'v1', 'i1', 'page.html'), '<p>the prototype</p>');
+			writeFileSync(join(site, 'a', 'v1', 'index.html'), '<p>the bar</p>');
+			writeFileSync(join(site, 'a', 'v1', 'page.html'), '<p>the prototype</p>');
 			writeFileSync(join(site, '_viewer', 'viewer.js'), 'bar();');
 			writeFileSync(join(site, '_shared', 'font.woff2'), 'font');
 			writeFileSync(join(site, '_shared', 'logo.svg'), '<svg onload="alert(1)"/>');
@@ -217,28 +217,28 @@ describe('PrototypeServer', () => {
 			expect(await server.serveFolder('previews-x', previews, { code: true })).toBe(`${pages}/previews-x/`);
 			const status = async (url: string) => (await fetch(url)).status;
 			// The bar and its own files on the app's address.
-			expect(await status(`${app}/review/a/v1/i1/`)).toBe(200);
+			expect(await status(`${app}/review/a/v1/`)).toBe(200);
 			expect(await status(`${app}/review/_viewer/viewer.js`)).toBe(200);
 			expect(await status(`${app}/review/_shared/font.woff2`)).toBe(200);
 			// Nothing a repository wrote that opens as a page: the prototype, however it is spelled (a Mac's disk ignores
 			// case), and a picture that can carry a script.
-			for (const named of ['page.html', 'Page.html', 'PAGE.HTML']) expect(await status(`${app}/review/a/v1/i1/${named}`)).toBe(404);
+			for (const named of ['page.html', 'Page.html', 'PAGE.HTML']) expect(await status(`${app}/review/a/v1/${named}`)).toBe(404);
 			expect(await status(`${app}/review/_shared/logo.svg`)).toBe(404);
 			// All of it on the pages' address.
-			expect(await (await fetch(`${pages}/review/a/v1/i1/page.html`)).text()).toBe('<p>the prototype</p>');
+			expect(await (await fetch(`${pages}/review/a/v1/page.html`)).text()).toBe('<p>the prototype</p>');
 			expect(await status(`${pages}/review/_shared/logo.svg`)).toBe(200);
 			// Story previews, a library's code, on the pages' address only.
 			expect(await status(`${app}/previews-x/`)).toBe(404);
 			expect(await status(`${pages}/previews-x/`)).toBe(200);
 			// A prototype given whole (the app's preview, a cover, a check) and what it shares, on the pages' address only.
-			const own = await server.serve('p/i1', '<h1>Hi</h1>');
+			const own = await server.serve('p/v1', '<h1>Hi</h1>');
 			server.share('0123456789abcdef', 'data:text/html,<script>bar()</script>');
-			expect(own).toBe(`${pages}/p/i1/`);
-			expect(await status(`${app}/p/i1/`)).toBe(404);
+			expect(own).toBe(`${pages}/p/v1/`);
+			expect(await status(`${app}/p/v1/`)).toBe(404);
 			expect(await status(`${app}/_shared/0123456789abcdef`)).toBe(404);
 			expect(await status(`${pages}/_shared/0123456789abcdef`)).toBe(200);
 			// No browser takes a file for something else than it is said to be.
-			expect((await fetch(`${app}/review/a/v1/i1/`)).headers.get('x-content-type-options')).toBe('nosniff');
+			expect((await fetch(`${app}/review/a/v1/`)).headers.get('x-content-type-options')).toBe('nosniff');
 			expect((await fetch(own)).headers.get('x-content-type-options')).toBe('nosniff');
 		} finally {
 			server.close();
@@ -386,24 +386,24 @@ describe('PrototypeServer', () => {
 	it('serves a page it was given on this machine only, and nothing else', async () => {
 		const server = new PrototypeServer();
 		try {
-			const url = await server.serve('users/i1', '<h1>Hi</h1>');
-			expect(url).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/users\/i1\/$/);
+			const url = await server.serve('users/v1', '<h1>Hi</h1>');
+			expect(url).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/users\/v1\/$/);
 			const res = await fetch(url);
 			expect(res.headers.get('content-type')).toContain('text/html');
 			expect(await res.text()).toBe('<h1>Hi</h1>');
-			expect((await fetch(url.replace('/users/i1/', '/users/i2/'))).status).toBe(404);
+			expect((await fetch(url.replace('/users/v1/', '/users/v2/'))).status).toBe(404);
 			// A shared file, served beside every page by its name, as the data it was embedded as.
 			server.share('0123456789abcdef', `data:font/woff2;base64,${Buffer.from('font bytes').toString('base64')}`);
-			const font = await fetch(url.replace('/users/i1/', '/_shared/0123456789abcdef'));
+			const font = await fetch(url.replace('/users/v1/', '/_shared/0123456789abcdef'));
 			expect(font.headers.get('content-type')).toBe('font/woff2');
 			expect(await font.text()).toBe('font bytes');
 			// A page that points at shared files is served with each it lacks, read once: one it has is not read again.
 			const read = vi.fn(async (n: string) => (n === 'fedcba9876543210' ? 'data:font/woff,abc' : null));
-			const page = await server.servePage('users/i3', '<link href="/_shared/0123456789abcdef"><link href="/_shared/fedcba9876543210">', read);
+			const page = await server.servePage('users/v3', '<link href="/_shared/0123456789abcdef"><link href="/_shared/fedcba9876543210">', read);
 			expect(read.mock.calls).toEqual([['fedcba9876543210']]);
-			expect(await (await fetch(page.replace('/users/i3/', '/_shared/fedcba9876543210'))).text()).toBe('abc');
+			expect(await (await fetch(page.replace('/users/v3/', '/_shared/fedcba9876543210'))).text()).toBe('abc');
 			// Serving again replaces it.
-			await server.serve('users/i1', '<h1>Again</h1>');
+			await server.serve('users/v1', '<h1>Again</h1>');
 			expect(await (await fetch(url)).text()).toBe('<h1>Again</h1>');
 		} finally {
 			server.close();
@@ -412,19 +412,19 @@ describe('PrototypeServer', () => {
 });
 
 describe('the first line of a Build conversation', () => {
-	const at = { label: 'V2 · I1', projectId: 'alert-history', taskFile: '/app/prototypes/alert-history/v2-i1-into-code.md' };
+	const at = { label: 'V2', projectId: 'alert-history', taskFile: '/app/prototypes/alert-history/v2-into-code.md' };
 
 	it('says what to build and points at the task, for new work', () => {
 		expect(buildInCodebasePrompt({ ...at, continuing: null })).toBe(
-			"Build prototype V2 · I1 of alert-history into this codebase. Your task, with the skill to follow and the prototype's files, is in /app/prototypes/alert-history/v2-i1-into-code.md: read it and do what it says.",
+			"Build prototype V2 of alert-history into this codebase. Your task, with the skill to follow and the prototype's files, is in /app/prototypes/alert-history/v2-into-code.md: read it and do what it says.",
 		);
 	});
 
 	it('says to look at what is on the branch first, for work started before', () => {
 		const prompt = buildInCodebasePrompt({ ...at, continuing: 'feature/alert-history' });
 		expect(prompt).toMatch(
-			/^Continue building prototype V2 · I1 of alert-history into this codebase, on feature\/alert-history\. Some of it may be done already, so look at the branch and the audit first\./,
+			/^Continue building prototype V2 of alert-history into this codebase, on feature\/alert-history\. Some of it may be done already, so look at the branch and the audit first\./,
 		);
-		expect(prompt).toContain('is in /app/prototypes/alert-history/v2-i1-into-code.md: read it and do what it says.');
+		expect(prompt).toContain('is in /app/prototypes/alert-history/v2-into-code.md: read it and do what it says.');
 	});
 });

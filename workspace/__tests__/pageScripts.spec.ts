@@ -137,21 +137,21 @@ describe('a prototype, which is one page wherever it is served', () => {
 	const invite = '[data-e2e-ref="users-invite"]';
 	it('places a comment made where the app served it, on the published site, and the other way round', () => {
 		// Made in the app, at its own server's address; shown on the site, at the site's.
-		const site = page(CARD, 'https://acme.github.io/design/demo/v1/i1/page.html');
+		const site = page(CARD, 'https://acme.github.io/design/demo/v1/page.html');
 		site.eval(SINGLE_PAGE);
-		const out = site.eval(resolveScript([req(1, { route: '/demo/v1-i1/', selector: invite })], 'nonce')) as Array<{ state: string }>;
+		const out = site.eval(resolveScript([req(1, { route: '/demo/v1/', selector: invite })], 'nonce')) as Array<{ state: string }>;
 		expect(out[0]?.state).toBe('found');
-		const app = page(CARD, 'http://127.0.0.1:5000/demo/v1-i1/');
+		const app = page(CARD, 'http://127.0.0.1:5000/demo/v1/');
 		app.eval(SINGLE_PAGE);
 		expect(
-			(app.eval(resolveScript([req(1, { route: '/design/demo/v1/i1/page.html', selector: invite })], 'nonce')) as Array<{ state: string }>)[0]?.state,
+			(app.eval(resolveScript([req(1, { route: '/design/demo/v1/page.html', selector: invite })], 'nonce')) as Array<{ state: string }>)[0]?.state,
 		).toBe('found');
 	});
 
 	it('still tells apart what follows its #, where a prototype keeps a place within itself', () => {
-		const w = page(CARD, 'https://acme.github.io/design/demo/v1/i1/page.html#/settings');
+		const w = page(CARD, 'https://acme.github.io/design/demo/v1/page.html#/settings');
 		w.eval(SINGLE_PAGE);
-		expect((w.eval(resolveScript([req(1, { route: '/demo/v1-i1/#/list', selector: invite })], 'nonce')) as Array<{ state: string }>)[0]?.state).toBe(
+		expect((w.eval(resolveScript([req(1, { route: '/demo/v1/#/list', selector: invite })], 'nonce')) as Array<{ state: string }>)[0]?.state).toBe(
 			'elsewhere',
 		);
 		expect((w.eval(resolveScript([req(1, { route: '/x/#/settings', selector: invite })], 'nonce')) as Array<{ state: string }>)[0]?.state).toBe(
@@ -160,7 +160,7 @@ describe('a prototype, which is one page wherever it is served', () => {
 	});
 
 	it('gives a picked spot an address a comment can be saved with, wherever the page is served', async () => {
-		const w = page(CARD, 'https://acme.github.io/design/demo/v1/i1/page.html');
+		const w = page(CARD, 'https://acme.github.io/design/demo/v1/page.html');
 		w.eval(SINGLE_PAGE);
 		const picked = w.eval(PICK_SCRIPT) as Promise<unknown>;
 		click(w, w.document.querySelector('[data-e2e-ref="users-invite"]') as Element);
@@ -289,9 +289,9 @@ describe('placing comments on reopening', () => {
 
 	describe('on a prototype, which lists its states', () => {
 		const TAG = '<meta name="dsnr-states" content="default,panel">';
-		const at = (query: string) => page(CARD, `http://localhost:3000/demo/v1-i1/${query}`, TAG);
+		const at = (query: string) => page(CARD, `http://localhost:3000/demo/v1/${query}`, TAG);
 		const placed = (w: ReturnType<typeof page>, state: string) =>
-			(w.eval(resolveScript([req(1, { route: '/demo/v1-i1/', selector: 'main', state })], 'nonce')) as Array<{ state: string }>)[0]?.state;
+			(w.eval(resolveScript([req(1, { route: '/demo/v1/', selector: 'main', state })], 'nonce')) as Array<{ state: string }>)[0]?.state;
 
 		it('counts its first state asked for by name as the page as it opens, either way round', () => {
 			// Made after the bar a prototype once drew switched back to the first state, which it wrote as ?state=default.

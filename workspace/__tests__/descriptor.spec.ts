@@ -6,7 +6,7 @@ const valid = {
 	product: 'Coke',
 	contextDir: '.dsnr',
 	prototypeRoot: 'src/prototypes',
-	branchPattern: { prototype: 'fd/<project-id>/i<n>', codebase: 'feature/<project-id>' },
+	branchPattern: { codebase: 'feature/<project-id>' },
 	commands: [
 		{ id: 'preview', label: 'Run prototype', argv: ['npm', 'run', 'start:prototype'], servesPreviewOn: 3100 },
 		{ id: 'typecheck', label: 'Typecheck', argv: ['npx', 'tsc', '--noEmit'] },
@@ -45,8 +45,14 @@ describe('parseDescriptor', () => {
 		expect(() => parse(broken)).toThrow(new RegExp(key));
 	});
 
-	it('refuses a missing branch pattern', () => {
-		expect(() => parse({ ...valid, branchPattern: { prototype: 'x' } })).toThrow(/branchPattern/);
+	it('refuses a missing branch pattern for codebase work', () => {
+		expect(() => parse({ ...valid, branchPattern: {} })).toThrow(/branchPattern\.codebase/);
+		expect(() => parse({ ...valid, branchPattern: { prototype: 'x' } })).toThrow(/branchPattern\.codebase/);
+	});
+
+	it('is not refused for the prototype pattern of old, and does not read it: prototypes are pages, not branches', () => {
+		const d = parse({ ...valid, branchPattern: { prototype: 'fd/<project-id>/i<n>', codebase: 'feature/<project-id>' } });
+		expect(d.branchPattern).toEqual({ codebase: 'feature/<project-id>' });
 	});
 
 	it('refuses a missing designSystem.package', () => {

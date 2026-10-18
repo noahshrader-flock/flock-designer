@@ -1,8 +1,7 @@
 import { type AddressPhase, type PrototypeAddressApi, runPrototypeAddress } from '../../src/renderer/address';
-import { prototypeKey } from '../../src/shared/designPaths';
 import type { CommentRef, WorkspaceApi } from '../../src/shared/contract';
 import { valueOf } from '../../src/shared/result';
-import { iterationLabel } from '../../src/shared/work';
+import { workLabel } from '../../src/shared/work';
 import { type AgentWorkDeps, type Tell, agentReady, agentWork, pollOf } from './agentWork';
 import { type Review, reviewsOf } from './messages';
 
@@ -12,8 +11,6 @@ export interface AddressDeps extends AgentWorkDeps {
 	/** Shows the iteration the change is in, as whoever asked shows it: a review tab, or a page in the browser (and an open tab). */
 	show: (review: Review) => Promise<void>;
 }
-
-const labelOf = (projectId: string, name: string): string => iterationLabel({ name, branch: prototypeKey(projectId, name) });
 
 /**
  * Address on one of a prototype's comments, from its review in VS Code (ELECTRON_MIGRATION_PLAN 4.2): the core's
@@ -59,7 +56,7 @@ export const addressComment = async (deps: AddressDeps, review: Review, comment:
 	deps.tell(
 		where === review.name
 			? 'The agent has finished. Look at the page, then resolve what is done.'
-			: `Others had commented on ${labelOf(review.projectId, review.name)}, so it stays as they saw it. The change is in ${labelOf(review.projectId, where)}.`,
+			: `Others had commented on ${workLabel({ name: review.name })}, so it stays as they saw it. The change is in ${workLabel({ name: where })}.`,
 	);
 	const project = valueOf(await api.listProjects()).find((p) => p.id === review.projectId);
 	await deps.show((project ? reviewsOf(project).find((r) => r.name === where) : undefined) ?? review);

@@ -44,11 +44,11 @@ export class ProfileNames {
 		// All at once, so a person who is in several places is looked up once for the list, not once each.
 		return Promise.all(
 			projects.map(async (project) => {
-				const [people, iterations] = await Promise.all([
+				const [people, work] = await Promise.all([
 					this.named(project.people),
-					Promise.all(project.iterations.map(async (it) => ({ ...it, contributors: await this.named(it.contributors) }))),
+					Promise.all(project.work.map(async (it) => ({ ...it, contributors: await this.named(it.contributors) }))),
 				]);
-				return { ...project, people, iterations };
+				return { ...project, people, work };
 			}),
 		);
 	}

@@ -1,7 +1,7 @@
 import type { CommentAnchor, CommentRef, Result, ReviewComment, SignInState } from '../shared/contract';
 import { ASK_PATH, KEY_FRAGMENT, KEY_HEADER, type RelayAsk, type RelayCall, isKey, readRelayTell } from '../shared/reviewRelay';
 import type { CommentStore } from '../renderer/comments/surfaces';
-import { parsePrototypeName } from '../shared/prototypeNames';
+import { isPrototypeName } from '../shared/prototypeNames';
 import { isThisMachine } from '../shared/thisMachine';
 
 /** DSNR's review tab in VS Code, as the page asks it: a call by name, answered with its Result. */
@@ -128,14 +128,12 @@ export const serverRelay = (key: string, fetcher: typeof fetch = fetch): Relay =
 };
 
 /**
- * Where a page in the browser goes after Address (BROWSER_COMMENTS_PLAN 3.2): the iteration it showed its change in, as the
+ * Where a page in the browser goes after Address (BROWSER_COMMENTS_PLAN 3.2): the version it showed its change in, as the
  * site lays them out under the project (`projectHref`, from this page, `here`); this page again when the change is in it;
- * null for what is not an iteration's name.
+ * null for what is not a version's name.
  */
-export const iterationAddress = (projectHref: string, name: string, here: string): string | null => {
-	const parsed = parsePrototypeName(name);
-	return parsed ? new URL(`${projectHref}v${parsed.version}/i${parsed.iteration}/`, here).href : null;
-};
+export const versionAddress = (projectHref: string, name: string, here: string): string | null =>
+	isPrototypeName(name) ? new URL(`${projectHref}${name}/`, here).href : null;
 
 /** Who a sign-in answer says is signed in: their login, or null. */
 export const loginIn = (answer: Result<unknown>): string | null => {
@@ -144,8 +142,8 @@ export const loginIn = (answer: Result<unknown>): string | null => {
 };
 
 /**
- * One iteration's comments through DSNR (`CommentStore`): the core's own comment calls, made with the extension's
- * sign-in, so a comment is found, made and written exactly it. `branch` is the iteration's key.
+ * One version's comments through DSNR (`CommentStore`): the core's own comment calls, made with the extension's
+ * sign-in, so a comment is found, made and written exactly it. `branch` is the version's key.
  */
 export const relayComments = (relay: Relay, { projectId, branch }: { projectId: string; branch: string }): CommentStore => ({
 	read: () => relay.ask('readComments', [projectId, branch]) as Promise<Result<ReviewComment[]>>,
@@ -156,6 +154,6 @@ export const relayComments = (relay: Relay, { projectId, branch }: { projectId: 
 	move: (comment: CommentRef, anchor: CommentAnchor) => relay.ask('moveComment', [comment, anchor]) as Promise<Result<ReviewComment>>,
 	remove: (comment: CommentRef) => relay.ask('deleteComment', [comment]) as Promise<Result<null>>,
 	viewer: async () => loginIn(await relay.ask('signInState', [])),
-	// A prototype has no commit; what it was made against is its iteration, which the thread already says.
+	// A prototype has no commit; what it was made against is its version, which the thread already says.
 	version: async () => '',
 });

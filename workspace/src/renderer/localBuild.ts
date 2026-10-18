@@ -1,10 +1,10 @@
-import type { Project, ProjectIteration, WorkspaceApi } from '../shared/contract';
-import { DESIGN_MODE_COMMAND, PREVIEW_COMMAND } from '../shared/work';
+import type { Project, ProjectWork, WorkspaceApi } from '../shared/contract';
+import { DESIGN_MODE_COMMAND } from '../shared/work';
 
 /**
- * Getting an iteration onto the screen from this machine, with nobody asked to do anything.
+ * Getting codebase work onto the screen from this machine, with nobody asked to do anything.
  *
- * Opening an iteration puts the checkout on its branch and starts its preview. Work that
+ * Opening it puts the checkout on its branch and starts its preview. Work that
  * was only just created has a request attached, so the agent builds it first. Each step
  * reports where it is, so the screen can say so instead of sitting blank.
  *
@@ -31,13 +31,7 @@ export type BuildPhase =
 	| { kind: 'reported' }
 	| { kind: 'failed'; message: string };
 
-export type BuildApi = Pick<WorkspaceApi, 'readCheckout' | 'continueIteration' | 'startAgent' | 'startHandoff' | 'agentStatus' | 'startCommand'>;
-
-/**
- * From the iteration's own name, which the main process already normalized, rather than a
- * hard-coded branch prefix: the repository declares how its branches are named.
- */
-export const previewCommandFor = (iteration: ProjectIteration): string => (iteration.name === 'codebase' ? DESIGN_MODE_COMMAND : PREVIEW_COMMAND);
+export type BuildApi = Pick<WorkspaceApi, 'readCheckout' | 'continueWork' | 'startAgent' | 'startHandoff' | 'agentStatus' | 'startCommand'>;
 
 /**
  * Where the preview opens: the iteration's own route within the running app when its record says
@@ -90,7 +84,7 @@ export interface BuildRun {
 	api: BuildApi;
 	root: string;
 	project: Project;
-	iteration: ProjectIteration;
+	iteration: ProjectWork;
 	/** What to ask the agent to build first, for work that was just created. Omit to go straight to the preview. */
 	task?: string;
 	/** Run a Handoff instead: the main process starts it, and it ends in a report, not the preview. */
@@ -126,7 +120,7 @@ export const runLocalBuild = async ({
 	if (!isLive()) return null;
 	if (!opened.ok) return fail(opened.error);
 	if (opened.value.branch !== iteration.branch) {
-		const moved = await api.continueIteration(root, project.id, iteration.name);
+		const moved = await api.continueWork(root, project.id, iteration.name);
 		if (!moved.ok) return fail(moved.error);
 	}
 	if (!isLive()) return null;
@@ -164,7 +158,7 @@ export const runLocalBuild = async ({
 	const uncommitted = !task && !handoff && !stillBuilding && !opened.value.clean;
 
 	onPhase({ kind: 'preview' });
-	const result = await api.startCommand(root, previewCommandFor(iteration), project.id);
+	const result = await api.startCommand(root, DESIGN_MODE_COMMAND, project.id);
 	if (!result.ok) return fail(result.error);
 	if (result.value.state === 'running') {
 		const url = previewAddress(result.value.url, iteration.route);

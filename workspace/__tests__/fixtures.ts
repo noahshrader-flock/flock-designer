@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { CatalogReads } from '../src/main/services/componentCatalog';
 import type { RecordStore } from '../src/main/services/prototype';
-import type { AgentStatus, CommentAnchor, Project, ProjectIteration, ReviewComment, TokenProblem } from '../src/shared/contract';
+import type { AgentStatus, CommentAnchor, Project, ProjectWork, ReviewComment, TokenProblem } from '../src/shared/contract';
 
 /** A mocked function of any shape, called as the code calls it: vitest's own `Procedure`, which it does not export. */
 export type Fn = Mock<(...args: any[]) => any>;
@@ -13,7 +13,7 @@ export type Fn = Mock<(...args: any[]) => any>;
 /** Fixtures more than one spec builds the same way: a product checkout, its design system installed, a design repository in memory. */
 
 /** An iteration as the window is given one: `name` and `branch`, and nothing shared, built or commented on unless `over` says. */
-export const projectIteration = (over: Pick<ProjectIteration, 'name' | 'branch'> & Partial<ProjectIteration>): ProjectIteration => ({
+export const projectWork = (over: Pick<ProjectWork, 'name' | 'branch'> & Partial<ProjectWork>): ProjectWork => ({
 	issueNumber: null,
 	openComments: 0,
 	previewUrl: null,
@@ -30,12 +30,12 @@ export const projectIteration = (over: Pick<ProjectIteration, 'name' | 'branch'>
 });
 
 /** Something in a library's files that could not be read as a token. */
-/** A project as the window is given one: `id`, its title the id, and no folder, records, iterations or people unless `over` says. */
+/** A project as the window is given one: `id`, its title the id, and no folder, records, work or people unless `over` says. */
 export const aProject = (over: Pick<Project, 'id'> & Partial<Project>): Project => ({
 	title: over.id,
 	folder: null,
 	records: [],
-	iterations: [],
+	work: [],
 	people: [],
 	...over,
 });
@@ -137,7 +137,7 @@ export const makeProductFiles = (dir: string, commands: unknown[] = []) => {
 			product: 'Test Product',
 			contextDir: '.dsnr',
 			prototypeRoot: 'src/prototypes',
-			branchPattern: { prototype: 'fd/<project-id>/i<n>', codebase: 'feature/<project-id>' },
+			branchPattern: { codebase: 'feature/<project-id>' },
 			commands,
 			designSystem: { package: 'x' },
 		}),

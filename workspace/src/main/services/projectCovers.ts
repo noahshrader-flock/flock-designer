@@ -6,7 +6,7 @@
  * - **Who draws:** the machine the page was built on, and only it: its page is in the app's own prototype folder
  *   (`builtHere`). A colleague's page this machine only fetched or pulled is not, so it is never drawn here. One writer
  *   for each prototype, with nothing to do with who is signed in.
- * - **When it is current:** when the record's `cover` is the hash of the page (`prototypeVersionOf`). Then nothing is done,
+ * - **When it is current:** when the record's `cover` is the hash of the page (`contentHashOf`). Then nothing is done,
  *   so running this again changes nothing.
  * - **In what order:** the picture first, then the record, so a record never names a picture that is not there. A picture
  *   already at its path is never written over (the path has the page's hash in it).
@@ -18,7 +18,7 @@ import type { MadeCover } from '../../shared/contract';
 import { coverPath } from '../../shared/designPaths';
 import { isPrototypeName } from '../../shared/prototypeNames';
 import { PROJECT_ID } from '../../shared/validate';
-import { type RecordStore, prototypeVersionOf, readRecords, setCover } from './prototype';
+import { type RecordStore, contentHashOf, readRecords, setCover } from './prototype';
 
 /** The window a picture is drawn in: the shape of a card's cover, twice as wide as tall. */
 export const COVER_WINDOW = { width: 1440, height: 720 } as const;
@@ -121,7 +121,7 @@ export const ensureCovers = async (deps: CoverDeps, built: { projectId: string; 
 			const record = records.find((r) => r.name === name);
 			const html = record ? deps.page(projectId, name) : null;
 			if (!record || html === null) continue;
-			const cover = prototypeVersionOf(html);
+			const cover = contentHashOf(html);
 			const key = `${projectId}/${name}/${cover}`;
 			if (record.cover === cover || deps.tried.has(key)) continue;
 			deps.tried.add(key);

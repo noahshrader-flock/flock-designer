@@ -1,18 +1,12 @@
-import type { BuildInCodebasePlan, IterationKind, Project, ProjectIteration } from './contract';
-import { isPrototypeKey } from './designPaths';
+import type { BuildInCodebasePlan, WorkKind, Project, ProjectWork } from './contract';
 import { byNewest } from './sort';
-import { parsePrototypeName } from './prototypeNames';
 import { asRepositoryPath } from './repoRef';
 import { asChangeRequestUrl, treeUrl } from './hostUrls';
 
 /** The two kinds of work, prototypes and codebase work, and where a project's work is in code. */
 
-/**
- * The commands a product declares (`.dsnr/workspace.json`) to serve its work: its own app on mock data, where codebase
- * work is seen and measured, and an older prototype on its branch.
- */
+/** The command a product declares (`.dsnr/workspace.json`) to serve its own app on mock data, where codebase work is seen and measured. */
 export const DESIGN_MODE_COMMAND = 'design-mode';
-export const PREVIEW_COMMAND = 'preview';
 
 /**
  * Where codebase work is on GitHub, for anyone to open whether or not they have the repository: its pull request when
@@ -27,53 +21,43 @@ export const codeLink = (it: { branch: string; repository?: string | null; pullR
 
 /** Where a project's codebase work is on GitHub (`codeLink`), or null when it has none, or its record does not say. */
 export const projectCodeLink = (project: {
-	iterations: { name: string; branch: string; repository?: string | null; pullRequest?: string | null }[];
+	work: { name: string; branch: string; repository?: string | null; pullRequest?: string | null }[];
 }): string | null => {
-	const codebase = project.iterations.find((it) => workKind(it) === 'codebase');
+	const codebase = project.work.find((it) => workKind(it) === 'codebase');
 	return codebase ? codeLink(codebase) : null;
 };
 
-/** Which kind of work an iteration is: codebase work is the one named `codebase` on a branch; anything else is a prototype. */
-export const workKind = (i: Pick<ProjectIteration, 'name' | 'branch'>): IterationKind =>
-	!isPrototypeKey(i.branch) && i.name === 'codebase' ? 'codebase' : 'prototype';
+/** Which kind of work a record is: codebase work is the one named `codebase`; every other is a version of the prototype. */
+export const workKind = (i: Pick<ProjectWork, 'name'>): WorkKind => (i.name === 'codebase' ? 'codebase' : 'prototype');
 
-const newestStarted = byNewest<ProjectIteration>(
+const newestStarted = byNewest<ProjectWork>(
 	(it) => it.createdAt || null,
 	(a, b) => b.name.localeCompare(a.name, undefined, { numeric: true }),
 );
 
 /**
- * A project's work as the screens offer it: its **prototypes** (pages, and the older ones on `fd/` branches: attempts
- * to decide what something should be, kept or carried into the code) and its **codebase** work, the real change. Each
- * is newest first, so the first is what "View prototype" and "View codebase" open, and the rest are the iterations to
- * switch to.
+ * A project's work as the screens offer it: the versions of its **prototype** (pages: ideas for what something should
+ * be, kept or carried into the code) and its **codebase** work, the real change. Each is newest first, so the first is
+ * what "View prototype" and "View codebase" open, and the rest are the versions to switch to.
  */
-export const workOf = (iterations: ProjectIteration[], kind: IterationKind): ProjectIteration[] =>
-	iterations.filter((i) => workKind(i) === kind).sort(newestStarted);
+export const workOf = (work: ProjectWork[], kind: WorkKind): ProjectWork[] => work.filter((i) => workKind(i) === kind).sort(newestStarted);
 
 /**
  * The products a project has work in (the workspace README's "Projects, by product"), each once, its newest work's first: a prototype's the
  * product it was made on, codebase work's its repository, both `owner/repo` on the host. None for work recorded before
  * products were kept: a clone's folder name is never taken for one, since it differs from machine to machine.
  */
-export const productsOf = (project: Pick<Project, 'iterations'>): string[] => {
+export const productsOf = (project: Pick<Project, 'work'>): string[] => {
 	const found: string[] = [];
-	for (const it of [...project.iterations].sort(newestStarted)) {
+	for (const it of [...project.work].sort(newestStarted)) {
 		const product = workKind(it) === 'codebase' ? it.repository : it.product;
 		if (product && !found.includes(product)) found.push(product);
 	}
 	return found;
 };
 
-/**
- * How an iteration is named on screen: `V2 · I3`. A project's codebase work is one branch, so it is its first
- * iteration, and keeps that label.
- */
-export const iterationLabel = (i: Pick<ProjectIteration, 'name' | 'branch'>): string => {
-	if (workKind(i) === 'codebase') return 'I1';
-	const p = parsePrototypeName(i.name);
-	return p ? `V${p.version} · I${p.iteration}` : i.name.toUpperCase();
-};
+/** How a piece of work is named on screen: a version as `V2`, and codebase work as Codebase. */
+export const workLabel = (i: Pick<ProjectWork, 'name'>): string => (workKind(i) === 'codebase' ? 'Codebase' : i.name.toUpperCase());
 
 /**
  * What a person is told when codebase work's branch has no DSNR setup: DSNR could not read what it may run in the branch

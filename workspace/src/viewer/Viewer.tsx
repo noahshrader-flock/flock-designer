@@ -30,7 +30,7 @@ import { useOpenOnError } from '../renderer/comments/useOpenOnError';
 
 /**
  * A prototype's published page, as the app shows one: its bar (the app's own toolbar, back button, title, version and
- * iteration switchers, and the page's states when it has more than one), the Comment control and its count, the side
+ * version switcher, and the page's states when it has more than one), the Comment control and its count, the side
  * panel from the right, the box beside the pin. All of it the app's own parts. Drawn into the page the site built, which
  * holds only a link back to the project until this takes over, so the page still works without it.
  *
@@ -39,7 +39,7 @@ import { useOpenOnError } from '../renderer/comments/useOpenOnError';
  * person in with GitHub (`signIn`, PUBLISHED_COMMENTS_PLAN Phase 3) and comments with their token, kept in the browser.
  */
 
-/** What the site writes into each iteration's page for this. */
+/** What the site writes into each version's page for this. */
 export interface ViewerConfig {
 	owner: string;
 	repo: string;
@@ -48,8 +48,8 @@ export interface ViewerConfig {
 	title: string;
 	/** Where the project's own page is, from this one. */
 	projectHref: string;
-	/** Every iteration of the project that has a page, and where each is from this one. */
-	iterations: { name: string; href: string }[];
+	/** Every version of the project that has a page, and where each is from this one. */
+	versions: { name: string; href: string }[];
 	/** The states the page has (`shared/prototypeStates`); not there on a page built before pages said. */
 	states?: string[];
 }
@@ -76,9 +76,9 @@ const BAR: BarSize = 'sm';
 
 /** The page's bar. `children` is what comes last: the Comment control, or signing in. */
 const PageBar = ({ config, slots, showing, children }: { config: ViewerConfig; slots: ViewerSlots; showing: Showing; children: ReactNode }) => {
-	const iterations = useMemo(
-		() => config.iterations.map((i) => ({ ...i, branch: prototypeKey(config.projectId, i.name) })),
-		[config.iterations, config.projectId],
+	const versions = useMemo(
+		() => config.versions.map((v) => ({ ...v, branch: prototypeKey(config.projectId, v.name) })),
+		[config.versions, config.projectId],
 	);
 	return createPortal(
 		<Toolbar quiet>
@@ -97,8 +97,7 @@ const PageBar = ({ config, slots, showing, children }: { config: ViewerConfig; s
 			<div className="flex items-center gap-2">
 				<IterationSwitcher
 					current={{ name: config.name, branch: prototypeKey(config.projectId, config.name) }}
-					siblings={iterations}
-					grouped
+					siblings={versions}
 					size={BAR}
 					onSelect={(next) => void (location.href = next.href)}
 				>
@@ -130,7 +129,7 @@ export const Viewer = ({
 	note?: SignInNote | null;
 	/** Served from this machine with no way to ask DSNR: opened some other way than DSNR's Open in browser. */
 	openedHere?: boolean;
-	/** Told the iteration Address showed its change in: a page in the browser goes to it (BROWSER_COMMENTS_PLAN D1). */
+	/** Told the version Address showed its change in: a page in the browser goes to it (BROWSER_COMMENTS_PLAN D1). */
 	onAddressed?: (name: string) => void;
 }) => {
 	// The token kept in this browser, on the bar's own origin, which a prototype framed with no origin of its own cannot reach.
@@ -261,7 +260,7 @@ const InDsnr = ({
 	};
 	const address = async (comment: CommentRef) => {
 		setAddressing(comment.id);
-		// On this page's own iteration: in the browser, the page may have moved to another since it was opened.
+		// On this page's own version: in the browser, the page may have moved to another since it was opened.
 		const r = await relay.ask('address', [comment, prototypeKey(config.projectId, config.name)]);
 		setAddressing(null);
 		if (r.ok && typeof r.value === 'string') onAddressed?.(r.value);
@@ -366,7 +365,7 @@ const Commenting = ({
 							states={showing.states}
 							onShowState={showing.onState}
 							shownTheme={showing.theme}
-							addressed={(c) => prototypeAddressed(c, config.projectId, config.name)}
+							addressed={(c) => prototypeAddressed(c, config.name)}
 						/>
 					</div>,
 					slots.panel,

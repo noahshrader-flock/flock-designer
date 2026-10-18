@@ -6,7 +6,7 @@ import { framePage } from '../src/viewer/browserAdapter';
  * address, and only with the secret it said hello with; it asks nothing of a page that has not said it is up.
  */
 
-const world = (src = 'http://127.0.0.1:4100/review/a/v1/i1/page.html', sandbox: string | null = null) => {
+const world = (src = 'http://127.0.0.1:4100/review/a/v1/page.html', sandbox: string | null = null) => {
 	const listeners: ((e: unknown) => void)[] = [];
 	const pageWindow = { postMessage: vi.fn() };
 	const frame = {
@@ -16,7 +16,7 @@ const world = (src = 'http://127.0.0.1:4100/review/a/v1/i1/page.html', sandbox: 
 		removeEventListener: vi.fn(),
 	};
 	const win = {
-		location: { href: 'http://127.0.0.1:4000/review/a/v1/i1/', origin: 'http://127.0.0.1:4000' },
+		location: { href: 'http://127.0.0.1:4000/review/a/v1/', origin: 'http://127.0.0.1:4000' },
 		addEventListener: (_t: string, l: (e: unknown) => void) => void listeners.push(l),
 		removeEventListener: vi.fn(),
 	};

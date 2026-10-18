@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { ReviewComment } from '../../shared/contract';
-import { assertUsableProjectId } from './iterations';
+import { assertUsableProjectId } from './workRecords';
 import { numberComments, openComments, resolvedComments } from '../../shared/comments';
 import { fromBrief } from '../../shared/brief';
 import { isPrototypeKey } from '../../shared/designPaths';

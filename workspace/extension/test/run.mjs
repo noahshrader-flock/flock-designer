@@ -47,7 +47,7 @@ repo(product, {
 		product: 'Test Product',
 		contextDir: '.dsnr',
 		prototypeRoot: 'src/prototypes',
-		branchPattern: { prototype: 'fd/<project-id>/i<n>', codebase: 'feature/<project-id>' },
+		branchPattern: { codebase: 'feature/<project-id>' },
 		commands: [],
 		designSystem: { package: 'x' },
 	}),
@@ -65,15 +65,15 @@ writeFileSync(
 	join(bin, 'claude'),
 	`#!/bin/sh
 if [ "$1" = auth ]; then echo '{"loggedIn":true}'; exit 0; fi
-printf '%s\n' 'export default function Page() { return <main><h1 style={{ background: "#123", color: "#fff", padding: 160 }}>Made here</h1></main>; }' > v1-i1.tsx
+printf '%s\n' 'export default function Page() { return <main><h1 style={{ background: "#123", color: "#fff", padding: 160 }}>Made here</h1></main>; }' > v1.tsx
 echo '{"type":"result","subtype":"success","result":"Built it."}'
 `,
 );
 chmodSync(join(bin, 'claude'), 0o755);
 const record = {
 	projectId: 'fixture',
-	name: 'v1-i1',
-	branch: 'prototype/fixture/v1-i1',
+	name: 'v1',
+	branch: 'prototype/fixture/v1',
 	commit: null,
 	createdAt: '2026-10-01T10:00:00Z',
 	note: 'A test.',
@@ -87,8 +87,8 @@ repo(join(world, 'flock-designer'), {
 	'skills/record-the-route.md': '# Record where the work is\n',
 	'standards/universal/accessibility.md': '# Accessibility\n',
 	'projects/fixture/brief.md': '# Fixture\n',
-	'projects/fixture/iterations.json': `${JSON.stringify([record], null, 2)}\n`,
-	'projects/fixture/prototypes/v1-i1.html':
+	'projects/fixture/work.json': `${JSON.stringify([record], null, 2)}\n`,
+	'projects/fixture/prototypes/v1.html':
 		'<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Fixture</title></head><body><main><h1>Fixture</h1></main></body></html>\n',
 });
 

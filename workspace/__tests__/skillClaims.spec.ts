@@ -11,7 +11,7 @@ const skill = (name: string): string => readFileSync(join(SKILLS, name), 'utf8')
  * believed by the agent; when it is not there, the agent works without it and never knows.
  */
 const parts = { guide: '', lightCheck: null, shared: '', accessibility: '', voice: '' };
-const prototypeBuild = { source: '/p/i1.tsx', page: '/p/i1.html', buildCommand: 'node build', checkCommand: 'node check' };
+const prototypeBuild = { source: '/p/v1.tsx', page: '/p/v1.html', buildCommand: 'node build', checkCommand: 'node check' };
 const sources = {
 	code: '/p/code',
 	productGuidance: null,
@@ -26,10 +26,10 @@ const TASKS: Record<string, (text: string) => string> = {
 			{
 				skill: text,
 				routeSkill: skill('record-the-route.md'),
-				pageFile: '/p/i1.html',
-				auditFile: '/d/audit-i1.md',
-				recordFile: '/d/iterations.json',
-				name: 'i1',
+				pageFile: '/p/v1.html',
+				auditFile: '/d/audit-v1.md',
+				recordFile: '/d/work.json',
+				name: 'v1',
 			},
 			parts,
 		),
@@ -48,7 +48,7 @@ const TASKS: Record<string, (text: string) => string> = {
 			voice: '',
 			commentsPath: '/p/comments.md',
 			number: 1,
-			name: 'v1-i1',
+			name: 'v1',
 		}),
 };
 

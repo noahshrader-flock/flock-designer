@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { AgentRunner } from '../src/main/services/agent';
 import { readDescriptor } from '../src/main/services/descriptor';
 import { readCheckout } from '../src/main/services/git';
-import { continueIteration, createIteration, readIterations } from '../src/main/services/iterations';
+import { continueWork, createCodebaseWork, readWork } from '../src/main/services/workRecords';
 import { RuntimeManager } from '../src/main/services/runtime';
 import { OpenedCheckouts } from '../src/main/services/session';
 import type { PreviewStatus, RunLogLine } from '../src/shared/contract';
@@ -39,7 +39,7 @@ beforeEach(() => {
 			product: 'Test Product',
 			contextDir: '.dsnr',
 			prototypeRoot: 'src/prototypes',
-			branchPattern: { prototype: 'fd/<project-id>/i<n>', codebase: 'feature/<project-id>' },
+			branchPattern: { codebase: 'feature/<project-id>' },
 			commands: [
 				{
 					id: 'preview',
@@ -80,7 +80,7 @@ describe('from a request to a running preview', () => {
 		expect(descriptor.product).toBe('Test Product');
 
 		// 3. Start the codebase work. The branch is made for them.
-		const work = await createIteration(root, records, descriptor, 'inactive-users', 'first try', 'develop');
+		const work = await createCodebaseWork(root, records, descriptor, 'inactive-users', 'first try', 'develop');
 		expect(work.branch).toBe('feature/inactive-users');
 		expect((await readCheckout(root)).branch).toBe('feature/inactive-users');
 
@@ -116,10 +116,10 @@ describe('from a request to a running preview', () => {
 
 		// 8. The record survives leaving the branch, because it never lived on it.
 		g('checkout', '-q', 'develop');
-		expect(readIterations(records, 'inactive-users').map((i) => i.name)).toEqual(['codebase']);
+		expect(readWork(records, 'inactive-users').map((i) => i.name)).toEqual(['codebase']);
 
 		// 9. Come back to it later and the commit is recorded.
-		const back = await continueIteration(root, records, 'inactive-users', 'codebase', null, readDescriptor(root));
+		const back = await continueWork(root, records, 'inactive-users', 'codebase', null, readDescriptor(root));
 		expect(back.commit).toMatch(/^[0-9a-f]{40}$/);
 		expect((await readCheckout(root)).branch).toBe('feature/inactive-users');
 	});
@@ -131,9 +131,9 @@ describe('from a request to a running preview', () => {
 
 		// An uncommitted edit must block the branch move, not be carried across.
 		writeFileSync(join(product, 'src/prototypes/scratch.txt'), 'unsaved thinking\n');
-		await expect(createIteration(root, records, descriptor, 'inactive-users', 'x', 'develop')).rejects.toThrow(/uncommitted changes/);
+		await expect(createCodebaseWork(root, records, descriptor, 'inactive-users', 'x', 'develop')).rejects.toThrow(/uncommitted changes/);
 
-		expect(readIterations(records, 'inactive-users')).toEqual([]);
+		expect(readWork(records, 'inactive-users')).toEqual([]);
 		expect((await readCheckout(root)).branch).toBe('develop');
 	});
 

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { type Given, type NewPrototypeDeps, newPrototype, readAsked, readGiven, readyToStart } from '../extension/src/newPrototype';
-import type { Iteration } from '../src/shared/contract';
+import type { Work } from '../src/shared/contract';
 import { ok } from '../src/shared/result';
 
 /**
@@ -9,10 +9,10 @@ import { ok } from '../src/shared/result';
  * (a name, what it explores, its folder) and its build handed to Claude Code, as Build in the codebase is handed.
  */
 
-const created: Iteration = {
+const created: Work = {
 	projectId: 'alert-history',
-	name: 'v1-i1',
-	branch: 'prototype/alert-history/v1-i1',
+	name: 'v1',
+	branch: 'prototype/alert-history/v1',
 	commit: null,
 	createdAt: '2026-10-13T10:00:00Z',
 	note: 'Explore it.',
@@ -60,7 +60,7 @@ describe('starting a prototype from VS Code', () => {
 		expect(api.createPrototype).toHaveBeenCalledWith('alert-history', 'Alert history', 'Explore it.', { root: '/p', branch: 'main' }, 'Maps');
 		// The list shows it once it is made.
 		expect(deps.onChanged).toHaveBeenCalledTimes(1);
-		expect(api.handPrototypeBuild).toHaveBeenCalledWith('/p', 'alert-history', 'v1-i1', 'Explore it.');
+		expect(api.handPrototypeBuild).toHaveBeenCalledWith('/p', 'alert-history', 'v1', 'Explore it.');
 	});
 
 	it('says it is in Claude Code, with its task typed in for Enter, and that it is opened for review from the list once built', async () => {
@@ -84,7 +84,7 @@ describe('starting a prototype from VS Code', () => {
 	it('starts watching for the build once it is handed over, by the prototype’s name, and not before', async () => {
 		const { deps, api } = world();
 		await newPrototype(deps);
-		expect(deps.watchBuild).toHaveBeenCalledWith('alert-history', 'v1-i1');
+		expect(deps.watchBuild).toHaveBeenCalledWith('alert-history', 'v1');
 		const failed = world({ api: { handPrototypeBuild: vi.fn(async () => ({ ok: false, error: 'No.' })) } });
 		await expect(newPrototype(failed.deps)).rejects.toThrow('No.');
 		expect(failed.deps.watchBuild).not.toHaveBeenCalled();
@@ -108,7 +108,7 @@ describe('starting a prototype from VS Code', () => {
 		const { deps, api } = world({ given: { title: '  Zone coverage ', task: ' Show it.\n', folder: null } });
 		await newPrototype(deps);
 		expect(api.createPrototype).toHaveBeenCalledWith('zone-coverage', 'Zone coverage', 'Show it.', { root: '/p', branch: 'main' }, null);
-		expect(api.handPrototypeBuild).toHaveBeenCalledWith('/p', 'alert-history', 'v1-i1', 'Show it.');
+		expect(api.handPrototypeBuild).toHaveBeenCalledWith('/p', 'alert-history', 'v1', 'Show it.');
 	});
 
 	it('refuses answers the dialog would not take: a name with nothing to make an id of, or nothing to explore', async () => {

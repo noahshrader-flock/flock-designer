@@ -1,18 +1,19 @@
-import type { Iteration, ProjectIteration } from './contract';
+import type { Work, ProjectWork } from './contract';
 import { asRecord } from './json';
 import { asPeople, mergePeople } from './people';
 import { asCover, asDate, asRoute } from './validate';
 import { asRepositoryPath } from './repoRef';
 import { asChangeRequestUrl } from './hostUrls';
 import { isCommit } from './sha';
+import { isPrototypeName } from './prototypeNames';
 
 /**
- * Two copies of one project's `iterations.json`, made on different machines, as one.
+ * Two copies of one project's `work.json`, made on different machines, as one.
  *
- * Git can merge text but not meaning: two people recording different iterations of the same project
+ * Git can merge text but not meaning: two people recording different versions of the same project
  * both rewrite the same short file, and a line-based merge calls that a conflict. This is the merge
- * that understands it. The records are a list keyed by iteration name; where both copies have an
- * iteration, the fields are combined and nothing either side knew is lost.
+ * that understands it. The records are a list keyed by name; where both copies have a
+ * record, the fields are combined and nothing either side knew is lost.
  *
  * Returns null if either side is not a list of records, so the caller can say so rather than
  * write something guessed.
@@ -20,14 +21,17 @@ import { isCommit } from './sha';
 
 type Rec = Record<string, unknown>;
 
+/** A record's name: a version of the prototype, `v2`, or `codebase`. Any other (an old `v1-i1`) is not read. */
+const isWorkName = (v: unknown): boolean => typeof v === 'string' && (v === 'codebase' || isPrototypeName(v));
+
 /**
- * A project's `iterations.json` as written: a list of records, each with a name and a branch, or null when it is anything
- * else. The one place the file is judged, so everything that reads it agrees on what a readable one is.
+ * A project's `work.json` as written: a list of records, each with a name (`isWorkName`) and a branch, or null when it is
+ * anything else. The one place the file is judged, so everything that reads it agrees on what a readable one is.
  */
 const rawRecords = (text: string): Rec[] | null => {
 	try {
 		const value: unknown = JSON.parse(text);
-		return Array.isArray(value) && value.every((r) => typeof asRecord(r).name === 'string' && typeof asRecord(r).branch === 'string')
+		return Array.isArray(value) && value.every((r) => isWorkName(asRecord(r).name) && typeof asRecord(r).branch === 'string')
 			? (value as Rec[])
 			: null;
 	} catch {
@@ -35,7 +39,7 @@ const rawRecords = (text: string): Rec[] | null => {
 	}
 };
 
-const basedOnOf = (v: unknown): Iteration['basedOn'] | undefined => {
+const basedOnOf = (v: unknown): Work['basedOn'] | undefined => {
 	const b = asRecord(v);
 	if (!(typeof b.repository === 'string' && typeof b.branch === 'string' && (typeof b.commit === 'string' || b.commit === null))) return undefined;
 	// The product, only as a repository's path: a record never names anything else as one.
@@ -63,9 +67,10 @@ const KNOWN = [
 	'basedOn',
 	'cover',
 	'readyAt',
+	'from',
 ];
 
-const checked = (r: Rec): Iteration => {
+const checked = (r: Rec): Work => {
 	const rest = Object.fromEntries(Object.entries(r).filter(([k]) => !KNOWN.includes(k)));
 	const pullRequest = asChangeRequestUrl(r.pullRequest);
 	const repository = asRepositoryPath(r.repository);
@@ -88,16 +93,17 @@ const checked = (r: Rec): Iteration => {
 		...(basedOn ? { basedOn } : {}),
 		...(cover !== null ? { cover } : {}),
 		...(isCommit(r.readyAt) ? { readyAt: r.readyAt } : {}),
+		...(typeof r.from === 'string' && isPrototypeName(r.from) ? { from: r.from } : {}),
 	};
 };
 
-export const parseIterations = (text: string): Iteration[] | null => rawRecords(text)?.map(checked) ?? null;
+export const parseWork = (text: string): Work[] | null => rawRecords(text)?.map(checked) ?? null;
 
 /** The file as written, the one way: two-space JSON, ending in a newline. */
-export const serializeIterations = (records: readonly unknown[]): string => `${JSON.stringify(records, null, 2)}\n`;
+export const serializeWork = (records: readonly unknown[]): string => `${JSON.stringify(records, null, 2)}\n`;
 
 /** A record as the window shows it, with its review thread when it has one. */
-export const toProjectIteration = (r: Iteration, thread?: { number: number; openComments: number }): ProjectIteration => ({
+export const toProjectWork = (r: Work, thread?: { number: number; openComments: number }): ProjectWork => ({
 	name: r.name,
 	branch: r.branch,
 	issueNumber: thread?.number ?? null,
@@ -124,7 +130,7 @@ const earliest = (a: unknown, b: unknown): unknown => {
 };
 
 /** `mine` is this machine's copy and wins where the two disagree about a value; `theirs` fills what mine lacks. */
-export const mergeIterationRecords = (mine: string, theirs: string): string | null => {
+export const mergeWorkRecords = (mine: string, theirs: string): string | null => {
 	const a = rawRecords(mine);
 	const b = rawRecords(theirs);
 	if (a === null || b === null) return null;
@@ -146,5 +152,5 @@ export const mergeIterationRecords = (mine: string, theirs: string): string | nu
 		byName.set(String(r.name), merged);
 	}
 	const list = [...byName.values()].sort((x, y) => String(x.name).localeCompare(String(y.name), undefined, { numeric: true }));
-	return serializeIterations(list);
+	return serializeWork(list);
 };

@@ -1,8 +1,8 @@
-import { type BuildApi, type BuildPhase, previewCommandFor, runLocalBuild } from '../../src/renderer/localBuild';
-import type { Project, ProjectIteration, ShareStatus, ShareStep, WorkspaceApi } from '../../src/shared/contract';
+import { type BuildApi, type BuildPhase, runLocalBuild } from '../../src/renderer/localBuild';
+import type { Project, ProjectWork, ShareStatus, ShareStep, WorkspaceApi } from '../../src/shared/contract';
 import { buildError, outputLines, packagesHint } from '../../src/main/services/serverOutput';
 import { valueOf } from '../../src/shared/result';
-import { codeLink, workOf } from '../../src/shared/work';
+import { DESIGN_MODE_COMMAND, codeLink, workOf } from '../../src/shared/work';
 import { type AgentWorkDeps, type Offer, type Tell, agentReady, agentWork, pollOf } from './agentWork';
 
 export interface CodebaseDeps extends AgentWorkDeps {
@@ -18,10 +18,10 @@ export interface CodebaseDeps extends AgentWorkDeps {
 }
 
 /** A project's codebase work, read as the list has it: the project, and the iteration that is its work in the code. */
-const codebaseOf = async (api: CodebaseDeps['api'], projectId: string): Promise<{ project: Project; iteration: ProjectIteration }> => {
+const codebaseOf = async (api: CodebaseDeps['api'], projectId: string): Promise<{ project: Project; iteration: ProjectWork }> => {
 	const project = valueOf(await api.listProjects()).find((p) => p.id === projectId);
 	if (!project) throw new Error(`There is no project ${projectId} here.`);
-	const iteration = workOf(project.iterations, 'codebase')[0];
+	const iteration = workOf(project.work, 'codebase')[0];
 	if (!iteration) throw new Error(`${project.title} has no codebase work yet: build it in the codebase first.`);
 	return { project, iteration };
 };
@@ -94,7 +94,7 @@ export interface LocalRun {
 export const runLocally = async (deps: CodebaseDeps, local: LocalRun, projectId: string): Promise<void> => {
 	const { api, root } = deps;
 	const { project, iteration } = await codebaseOf(api, projectId);
-	const command = previewCommandFor(iteration);
+	const command = DESIGN_MODE_COMMAND;
 	const couldNot = (why: string) => new Error(`${project.title} couldn’t run locally: ${why}`);
 	await api.stopCommand(root, command);
 	const port = local.port(command);

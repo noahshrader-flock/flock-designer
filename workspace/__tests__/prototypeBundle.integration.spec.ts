@@ -31,16 +31,16 @@ describe('bundling a React prototype into one page', () => {
 		const esbuild = esbuildEntry();
 		expect(esbuild).not.toBeNull();
 		const script = writeBundleScript(join(dir, 'prototype'));
-		const entry = join(dir, 'prototype', 'demo', 'i1.tsx');
+		const entry = join(dir, 'prototype', 'demo', 'v1.tsx');
 		mkdirSync(join(dir, 'prototype', 'demo'), { recursive: true });
 		writeFileSync(
 			entry,
 			"/*\n * Usage tab, modeled on the Organization page.\n */\nimport '@acme/ds/style.css';\nimport { DSButton } from '@acme/ds';\nexport default function Prototype() { return <DSButton>Archive roles</DSButton>; }\n",
 		);
-		const out = join(dir, 'prototype', 'demo', 'i1.html');
+		const out = join(dir, 'prototype', 'demo', 'v1.html');
 		const r = await runBundle(script, esbuild as string, entry, out, modules, join(dir, 'shared'), process.execPath);
 		expect(r).toMatchObject({ ok: true });
-		expect(r.output).toMatch(/^Built i1\.html \(\d+ KB\)\.$/);
+		expect(r.output).toMatch(/^Built v1\.html \(\d+ KB\)\.$/);
 		const html = readFileSync(out, 'utf8');
 		expect(html).toContain('<div id="root"></div>');
 		expect(html).toContain('Usage tab, modeled on the Organization page.');
@@ -57,13 +57,13 @@ describe('bundling a React prototype into one page', () => {
 			join(modules, '@acme', 'ds', 'style.css'),
 			`@font-face { font-family: X; src: url(${big}); } .logo { background: url("${small}"); }`,
 		);
-		const entry = join(dir, 'prototype', 'i1.tsx');
+		const entry = join(dir, 'prototype', 'v1.tsx');
 		mkdirSync(join(dir, 'prototype'), { recursive: true });
 		writeFileSync(entry, "import '@acme/ds/style.css';\nexport default () => null;\n");
 		const shared = join(dir, 'shared');
-		const r = await runBundle(script, esbuild, entry, join(dir, 'prototype', 'i1.html'), modules, shared, process.execPath);
+		const r = await runBundle(script, esbuild, entry, join(dir, 'prototype', 'v1.html'), modules, shared, process.execPath);
 		expect(r.ok).toBe(true);
-		const html = readFileSync(join(dir, 'prototype', 'i1.html'), 'utf8');
+		const html = readFileSync(join(dir, 'prototype', 'v1.html'), 'utf8');
 		const names = sharedFilesOf(html);
 		expect(names).toHaveLength(1);
 		expect(readFileSync(join(shared, `${names[0]}.datauri`), 'utf8')).toBe(big);
@@ -74,19 +74,19 @@ describe('bundling a React prototype into one page', () => {
 	it('says what is wrong when the prototype does not compile, and writes nothing', async () => {
 		const esbuild = esbuildEntry() as string;
 		const script = writeBundleScript(join(dir, 'prototype'));
-		const entry = join(dir, 'prototype', 'i1.tsx');
+		const entry = join(dir, 'prototype', 'v1.tsx');
 		writeFileSync(entry, "import { Missing } from '@acme/nothing';\nexport default () => <Missing />;\n");
-		const r = await runBundle(script, esbuild, entry, join(dir, 'prototype', 'i1.html'), modules, join(dir, 'shared'), process.execPath);
+		const r = await runBundle(script, esbuild, entry, join(dir, 'prototype', 'v1.html'), modules, join(dir, 'shared'), process.execPath);
 		expect(r.ok).toBe(false);
 		expect(r.output).toContain('@acme/nothing');
-		expect(existsSync(join(dir, 'prototype', 'i1.html'))).toBe(false);
+		expect(existsSync(join(dir, 'prototype', 'v1.html'))).toBe(false);
 	});
 
 	describe('the states it says it has', () => {
 		const build = async (source: string) => {
 			const script = writeBundleScript(join(dir, 'prototype'));
-			const entry = join(dir, 'prototype', 'i1.tsx');
-			const out = join(dir, 'prototype', 'i1.html');
+			const entry = join(dir, 'prototype', 'v1.tsx');
+			const out = join(dir, 'prototype', 'v1.html');
 			mkdirSync(join(dir, 'prototype'), { recursive: true });
 			writeFileSync(entry, source);
 			const r = await runBundle(script, esbuildEntry() as string, entry, out, modules, join(dir, 'shared'), process.execPath);
@@ -135,8 +135,8 @@ describe('bundling a React prototype into one page', () => {
 	});
 
 	it('gives the agent one command it can run as it is', () => {
-		expect(bundleCommand('/q/build-prototype.mjs', '/app/esbuild/main.js', '/q/a b/i1.tsx', '/q/i1.html', '/c/node_modules', '/q/_shared')).toBe(
-			'node /q/build-prototype.mjs /app/esbuild/main.js "/q/a b/i1.tsx" /q/i1.html /c/node_modules /q/_shared',
+		expect(bundleCommand('/q/build-prototype.mjs', '/app/esbuild/main.js', '/q/a b/v1.tsx', '/q/v1.html', '/c/node_modules', '/q/_shared')).toBe(
+			'node /q/build-prototype.mjs /app/esbuild/main.js "/q/a b/v1.tsx" /q/v1.html /c/node_modules /q/_shared',
 		);
 	});
 });
