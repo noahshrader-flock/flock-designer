@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { RepoFiles } from '../src/github/repoFiles';
+import { RepoFiles } from '../src/codeHost/repoFiles';
 import { b64, fakeGitHub, notFound, refusal, refusing } from './fakes/github';
 
 const REF = { owner: 'acme', repo: 'design' };

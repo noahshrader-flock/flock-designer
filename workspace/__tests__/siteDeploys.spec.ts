@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { GitHubAccount } from '../src/github/github';
+import type { GitHubAccount } from '../src/codeHost/github';
 
 const pages = vi.hoisted(() => ({
 	siteBehind: vi.fn(),

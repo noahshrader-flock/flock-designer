@@ -1,7 +1,7 @@
 import { vi } from 'vitest';
-import type { GitHubApi } from '../../src/github/github';
+import type { GitHubApi } from '../../src/codeHost/github';
 
-import { HostError, type HostErrorKind } from '../../src/github/hostError';
+import { HostError, type HostErrorKind } from '../../src/codeHost/hostError';
 
 /**
  * GitHub's API as the specs fake it, written once: a table of routes, a way to refuse, and a record of what was asked.

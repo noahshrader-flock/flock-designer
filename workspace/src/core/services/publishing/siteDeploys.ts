@@ -4,7 +4,7 @@ import { errorText } from '../../../shared/result';
 import { coalescingByKey } from '../platform/concurrency';
 import { DESIGN_REPO } from '../../../shared/config';
 
-import type { GitHubAccount } from '../../../github/github';
+import type { GitHubAccount } from '../../../codeHost/github';
 import { pageStatus, publish, recordsFrom, redeploySite, siteBehind } from './pages';
 import { HOST } from '../../../shared/vocabulary';
 

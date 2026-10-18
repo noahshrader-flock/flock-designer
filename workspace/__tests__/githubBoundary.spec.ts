@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 /**
  * Where GitHub is (the GitLab plan, 2.6): which files hold GitHub's own addresses, REST paths, sign-in or command line, so
- * that adding GitLab is adding a provider and not a search. GitHub's home is `src/github` and the two shared files that
+ * that adding GitLab is adding a provider and not a search. GitHub's home is `src/codeHost` and the two shared files that
  * hold its words and addresses; until the plan's Phase 2 moves them there, a few more files are named below, each with
  * what it holds. A new file that reaches GitHub directly fails here, and so does a name below once its file no longer
  * does, so this list is always exactly what is left to move. Wording that only says "GitHub" is not counted: it comes
@@ -41,7 +41,8 @@ const reaching = (text: string): string[] =>
 		.map(([kind]) => kind);
 
 /** GitHub's home: the host's folder, and the one place each for its addresses and its words. */
-const isHome = (path: string): boolean => path.startsWith('src/github/') || path === 'src/shared/hostUrls.ts' || path === 'src/shared/vocabulary.ts';
+const isHome = (path: string): boolean =>
+	path.startsWith('src/codeHost/') || path === 'src/shared/hostUrls.ts' || path === 'src/shared/vocabulary.ts';
 
 /** Still to move behind the host (the plan's Phase 2), or to have a GitLab twin (Phases 3 to 6), with what each holds. */
 const TO_MOVE: Record<string, string> = {

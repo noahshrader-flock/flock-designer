@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { HostError, hostErrorKind, kindOfStatus } from '../src/github/hostError';
+import { HostError, hostErrorKind, kindOfStatus } from '../src/codeHost/hostError';
 
 describe('what went wrong with the host, said one way', () => {
 	it('is a kind from the status the host gave', () => {

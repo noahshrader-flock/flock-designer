@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { type Fetcher, ReadCache, ReauthRequired, callApi } from '../src/github/github';
-import { HostError } from '../src/github/hostError';
+import { type Fetcher, ReadCache, ReauthRequired, callApi } from '../src/codeHost/github';
+import { HostError } from '../src/codeHost/hostError';
 
 /** A fetch stub that replays queued responses and records what was sent. */
 const stub = (responses: Array<{ status?: number; body: unknown }>) => {

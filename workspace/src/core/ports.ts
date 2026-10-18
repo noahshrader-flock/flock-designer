@@ -1,7 +1,7 @@
-import type { Check, PullRequest } from '../github/changeRequests';
+import type { Check, PullRequest } from '../codeHost/changeRequests';
 import type { AxeRun } from '../shared/accessibility';
 import type { Drawn, Mode, Vary } from './services/designSystem/componentTokens';
-import type { GitHubApi } from '../github/github';
+import type { GitHubApi } from '../codeHost/github';
 import type { AgentSession } from './services/agent/editor';
 
 /**

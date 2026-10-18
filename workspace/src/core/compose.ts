@@ -21,14 +21,14 @@ import { DesignLibrary, libraryCommit, systemReads } from './services/designSyst
 import { readTokens } from './services/designSystem/designTokens';
 import { HandoffBranches } from './services/designSystem/handoffBranches';
 import { LibraryShown } from './services/designSystem/libraryShown';
-import { DesignRepo } from '../github/designRepo';
+import { DesignRepo } from '../codeHost/designRepo';
 import { designStore } from './services/publishing/designStore';
 import { syncRecords } from './services/publishing/designSync';
 import { DesignSystemsMemory } from './services/designSystem/designSystems';
 import { recordsRootFor } from './services/projects/discovery';
 import { SessionMemory } from './services/agent/editor';
 import { isRepository, readCheckout } from './services/platform/git';
-import type { GitHubAccount } from '../github/github';
+import type { GitHubAccount } from '../codeHost/github';
 import { Installer } from './services/codebase/install';
 import { recordedWork } from './services/projects/workRecords';
 import { readFolderProjects } from './services/projects/localProjects';

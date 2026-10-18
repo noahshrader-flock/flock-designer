@@ -1,4 +1,4 @@
-import type { RepoFiles } from '../../../github/repoFiles';
+import type { RepoFiles } from '../../../codeHost/repoFiles';
 import { type RecordStore, cloneStore } from '../prototypes/prototype';
 
 /**

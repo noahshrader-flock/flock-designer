@@ -1,6 +1,6 @@
 import { mkdirSync } from 'node:fs';
 import * as vscode from 'vscode';
-import { networkFetch } from '../../src/github/github';
+import { networkFetch } from '../../src/codeHost/github';
 import { appPaths } from '../../src/core/appPaths';
 import { cliDataFolder, tellCommandLine } from '../../src/core/services/platform/cliFolder';
 import { settingsFolder } from '../../package.json';

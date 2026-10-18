@@ -8,7 +8,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { main } from '../src/cli/dsnr';
 import { findChrome } from '../src/core/services/browser/chromeHeadless';
 import { g, installDesignSystem, makeProduct, addStandards } from './fixtures';
-import type { GitHubApi } from '../src/github/github';
+import type { GitHubApi } from '../src/codeHost/github';
 
 import { type Answer, fakeGitHub, refusal } from './fakes/github';
 import { DESIGN_REPO } from '../src/shared/config';

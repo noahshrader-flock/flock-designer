@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { ShareStatus } from '../src/shared/contract';
 import { DEFAULT_TIMINGS, type ShareRequest, ShareRunner, previewUrlFor, pullRequestText, runShare } from '../src/core/services/codebase/share';
 import type { ShareTools } from '../src/core/ports';
-import { type Check } from '../src/github/changeRequests';
+import { type Check } from '../src/codeHost/changeRequests';
 
 const share = { url: 'https://dev-coke-pr-<pr>.example.test', workflow: 'PR Deployment', kinds: ['codebase' as const] };
 const request: ShareRequest = {

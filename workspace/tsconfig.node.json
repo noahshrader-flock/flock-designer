@@ -4,7 +4,7 @@
 	"include": [
 		"package.json",
 		"src/core/**/*",
-		"src/github/**/*",
+		"src/codeHost/**/*",
 		"src/cli/**/*",
 		"src/site/**/*",
 		"src/shared/**/*",

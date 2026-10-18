@@ -6,7 +6,7 @@ import { Viewer } from '../src/viewer/Viewer';
 import { saveToken, savedToken, tokenApi } from '../src/viewer/browserAdapter';
 import type { Relay } from '../src/viewer/relay';
 import type { Result } from '../src/shared/contract';
-import { ReviewThreads } from '../src/github/reviewThreads';
+import { ReviewThreads } from '../src/codeHost/reviewThreads';
 import { PAGE_CONFIG as CONFIG, PAGE_SIGN_IN as SIGN_IN, commentOnPage, fakeGitHub, sitePage } from './pageHarness';
 import {
 	button,

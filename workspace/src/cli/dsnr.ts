@@ -8,8 +8,8 @@ import { projectPath, prototypePagePath, prototypeSourcePath, prototypeKey } fro
 import { workLabel } from '../shared/work';
 import { writeCommentsExport } from '../core/services/prototypes/commentsExport';
 import { DESCRIPTOR_PATH } from '../core/services/projects/descriptor';
-import type { GitHubApi } from '../github/github';
-import { loginOf } from '../github/github';
+import type { GitHubApi } from '../codeHost/github';
+import { loginOf } from '../codeHost/github';
 
 import { recordsRootFor } from '../core/services/projects/discovery';
 import { assertUsableProjectId } from '../core/services/projects/workRecords';
@@ -27,7 +27,7 @@ import { checkAccessibility, measureAccessibility, readReturnedNow } from './acc
 import { errorText } from '../shared/result';
 import { plural } from '../shared/plural';
 import { loginFromNoreply } from '../shared/hostUrls';
-import { ReviewThreads } from '../github/reviewThreads';
+import { ReviewThreads } from '../codeHost/reviewThreads';
 import { CLI, HOST, needsCli } from '../shared/vocabulary';
 import { DESIGN_REPO, PAGES_SIGN_IN } from '../shared/config';
 

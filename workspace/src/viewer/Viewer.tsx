@@ -20,7 +20,7 @@ import { DropdownMenuItem } from './ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 import { browserComments, framePage, saveToken, savedToken, tokenApi } from './browserAdapter';
 import { NOTE_WORDS, type SignInConfig, type SignInNote, signedInJustNow, startSignIn } from './signIn';
-import { userOf } from '../github/github';
+import { userOf } from '../codeHost/github';
 import type { GitHubUser } from '../shared/domain/account';
 import { AccountMenu } from './AccountMenu';
 import { type Relay, loginIn, relayComments } from './relay';

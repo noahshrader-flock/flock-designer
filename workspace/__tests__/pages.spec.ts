@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
-import type { GitHubApi } from '../src/github/github';
+import type { GitHubApi } from '../src/codeHost/github';
 
 import { type Answer, fakeGitHub, notFound, refusal } from './fakes/github';
 import {
@@ -348,7 +348,7 @@ describe('what GitHub has that the site does not have yet', () => {
 		'workspace/src/viewer/index.css',
 		'workspace/src/shared/projectList.ts',
 		'workspace/src/site/buildSite.ts',
-		'workspace/src/github/designRepo.ts',
+		'workspace/src/codeHost/designRepo.ts',
 		'workspace/src/cli/dsnr.ts',
 		'workspace/viewer.vite.config.ts',
 		'workspace/bin/dsnr.mjs',

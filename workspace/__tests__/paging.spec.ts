@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { readPages } from '../src/github/paging';
+import { readPages } from '../src/codeHost/paging';
 import { fakeGitHub } from './fakes/github';
 
 /** A list of `total` items the host pages 100 at a time, keeping which pages were asked for, and how many at once. */

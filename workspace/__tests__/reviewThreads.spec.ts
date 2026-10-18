@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ReviewThreads } from '../src/github/reviewThreads';
+import { ReviewThreads } from '../src/codeHost/reviewThreads';
 import { fakeGitHub, refusal, refusing } from './fakes/github';
 import { anAnchor } from './fixtures';
 

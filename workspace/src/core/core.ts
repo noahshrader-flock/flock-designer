@@ -1,5 +1,5 @@
 import { DESIGN_REPO } from '../shared/config';
-import { DesignRepo } from '../github/designRepo';
+import { DesignRepo } from '../codeHost/designRepo';
 import type { AppPaths } from './appPaths';
 import type { EventSink } from './handle';
 import type { CallsContext } from './compose';
@@ -8,7 +8,7 @@ import { AgentRunner } from './services/agent/agent';
 import { CheckoutMemory } from './services/projects/checkoutMemory';
 import { DesignSystemsMemory } from './services/designSystem/designSystems';
 import { SessionMemory } from './services/agent/editor';
-import type { GitHubAccount } from '../github/github';
+import type { GitHubAccount } from '../codeHost/github';
 import { Installer } from './services/codebase/install';
 import { PrototypeServer } from './services/prototypes/prototypeServer';
 import { RuntimeManager } from './services/codebase/runtime';

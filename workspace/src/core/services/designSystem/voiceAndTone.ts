@@ -19,16 +19,16 @@
 import type { VoiceAndTone, VoiceBranch, VoiceSave } from '../../../shared/contract';
 import { asRecord } from '../../../shared/json';
 
-import { RepoFiles, noWriteAccess } from '../../../github/repoFiles';
-import { ChangeRequests, type PullRequest } from '../../../github/changeRequests';
+import { RepoFiles, noWriteAccess } from '../../../codeHost/repoFiles';
+import { ChangeRequests, type PullRequest } from '../../../codeHost/changeRequests';
 import { designSystemId } from './designSystems';
 import { dsnrBranchPattern, newDsnrBranch } from './dsnrBranch';
-import { hostErrorKind } from '../../../github/hostError';
+import { hostErrorKind } from '../../../codeHost/hostError';
 import { type JsonFile, jsonFile } from '../platform/jsonFile';
 import { type RepoRef, formatRepo } from '../../../shared/repoRef';
 import { compareUrl } from '../../../shared/hostUrls';
 import { needsCli } from '../../../shared/vocabulary';
-import type { GitHubApi } from '../../../github/github';
+import type { GitHubApi } from '../../../codeHost/github';
 /** Where the file is, in a design system's agent files: how Flock speaks is the design system's (Noah, 2026-10-10). */
 export const VOICE_FILE = '.dsnr/voice-and-tone.md';
 

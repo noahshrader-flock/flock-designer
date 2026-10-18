@@ -1,9 +1,9 @@
 import { existsSync } from 'node:fs';
-import type { GitHubApi } from '../../../github/github';
+import type { GitHubApi } from '../../../codeHost/github';
 
 import { findOnPath } from './paths';
 import { errorText } from '../../../shared/result';
-import { HostError } from '../../../github/hostError';
+import { HostError } from '../../../codeHost/hostError';
 import { NotInstalled, ProcessFailed, runFile } from './process';
 
 /** How long one call may take before it is given up on: a stuck one must not hold a screen. */
