@@ -20,14 +20,31 @@ const WHOLE = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title
 <button>Below the fold</button> <button>And another</button>
 </main></body></html>`;
 
+/** A page whose dark styles fail contrast where its light ones pass: what a machine set to dark would see, if it were let. */
+const DARK_STYLED = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Cameras</title>
+<style>p { color: #595959; background: #fff; } @media (prefers-color-scheme: dark) { p { color: #555; background: #333; } }</style>
+</head><body><main><h1>Cameras</h1><p>Camera 4 is online.</p></main></body></html>`;
+
 let server: Server;
 let base: string;
 const headless = chromeHeadless();
+/** The browser as a Mac set to dark starts it (its appearance turns dark at night): every page prefers dark. */
+const darkMachine = chromeHeadless({
+	launch: async (path) => {
+		const { default: puppeteer } = await import('puppeteer-core');
+		return (await puppeteer.launch({ executablePath: path, headless: true, args: ['--hide-scrollbars', '--force-dark-mode'] })) as never;
+	},
+});
 
 beforeAll(async () => {
 	server = createServer((req, res) => {
 		const [, cell, n, which] = /^\/([^/]+)\/(\d+)\/(bad|good)$/.exec(req.url ?? '') ?? [];
-		const fixture = req.url === '/whole' ? WHOLE : PROBE_FIXTURES[cell as CellId]?.[Number(n)]?.[which as 'bad' | 'good'];
+		const fixture =
+			req.url === '/whole'
+				? WHOLE
+				: req.url === '/dark-styled'
+					? DARK_STYLED
+					: PROBE_FIXTURES[cell as CellId]?.[Number(n)]?.[which as 'bad' | 'good'];
 		res.writeHead(fixture ? 200 : 404, { 'content-type': 'text/html' });
 		res.end(fixture ?? '<!doctype html><title>Elsewhere</title><p>Elsewhere</p>');
 	});
@@ -36,6 +53,7 @@ beforeAll(async () => {
 });
 afterAll(async () => {
 	await headless.close();
+	await darkMachine.close();
 	server.close();
 });
 
@@ -62,6 +80,32 @@ describe.skipIf(findChrome() === null)('the probe, in a real browser', () => {
 		},
 		60_000,
 	);
+});
+
+describe.skipIf(findChrome() === null)('on a machine set to dark', () => {
+	it('is a machine whose pages prefer dark, as this test needs', async () => {
+		const { default: puppeteer } = await import('puppeteer-core');
+		const browser = await puppeteer.launch({ executablePath: findChrome() as string, headless: true, args: ['--force-dark-mode'] });
+		try {
+			const page = await browser.newPage();
+			await page.goto(`${base}/dark-styled`);
+			expect(await page.evaluate(() => matchMedia('(prefers-color-scheme: dark)').matches)).toBe(true);
+		} finally {
+			await browser.close();
+		}
+	});
+
+	it('checks a page as it opens, in light, so axe finds what it finds on any machine', async () => {
+		const [run] = await darkMachine.scan(`${base}/dark-styled`, [], ['wcag2aa']);
+		expect(run?.violations.map((v) => v.id)).not.toContain('color-contrast');
+	});
+
+	it('probes it in light too, forced colors included: a mark drawn only by its color is found, and its clean twin is not', async () => {
+		const measured = async (which: 'bad' | 'good') =>
+			(await darkMachine.probe(`${base}/color-only/0/${which}`, { depth: 'full', only: ['color-only'] })).results[0];
+		expect(await measured('bad')).toMatchObject({ status: 'found' });
+		expect(await measured('good')).toMatchObject({ status: 'none' });
+	}, 60_000);
 });
 
 describe.skipIf(findChrome() === null)('a view probed whole', () => {

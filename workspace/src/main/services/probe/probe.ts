@@ -21,7 +21,7 @@ import {
 } from '../../../shared/probeData';
 import { contrastOf } from '../../../shared/contrast';
 import { errorText } from '../../../shared/result';
-import { CHECK_WINDOW } from '../accessibilityCheck';
+import { CHECKED_IN, CHECK_WINDOW } from '../accessibilityCheck';
 import { decodePng } from '../png';
 import { within } from '../within';
 import { type CellId, type CellResult, type ProbeDepth, type ProbeFinding, cellsAt, notApplicable, notRun, resultFrom } from './cells';
@@ -207,6 +207,7 @@ export const probeView = async (page: ProbePage, url: string, options: ProbeOpti
 	let withAxe = false;
 	const load = async () => {
 		await sized(view.width, view.height);
+		await page.emulateMediaFeatures([CHECKED_IN]);
 		if ((await within(LOAD_MS, page.goto(url, { waitUntil: 'load', timeout: LOAD_MS }))) === null) throw new Error('the page did not load in time');
 		await page.evaluate('(async () => { await document.fonts.ready; await new Promise((r) => setTimeout(r, 300)); })()');
 		await ask('watched()');
@@ -455,10 +456,10 @@ export const probeView = async (page: ProbePage, url: string, options: ProbeOpti
 		});
 		await step(['color-only'], 'forced colors and grey', async () => {
 			const marks = await ask<string[]>('filledMarks()');
-			await page.emulateMediaFeatures([{ name: 'forced-colors', value: 'active' }]);
+			await page.emulateMediaFeatures([CHECKED_IN, { name: 'forced-colors', value: 'active' }]);
 			const gone = await ask<Spot[]>(`vanished(${quote(marks)})`);
 			evidence.push({ name: 'forced-colors.jpg', data: await picture(page, view.width) });
-			await page.emulateMediaFeatures([{ name: 'forced-colors', value: 'none' }]);
+			await page.emulateMediaFeatures([CHECKED_IN]);
 			await page.emulateVisionDeficiency('achromatopsia');
 			evidence.push({ name: 'grayscale.jpg', data: await picture(page, view.width) });
 			await page.emulateVisionDeficiency('none');

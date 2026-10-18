@@ -6,7 +6,7 @@ import type { AxeRun } from '../../shared/accessibility';
 import { previewAddress } from '../../shared/catalog';
 import { withState } from '../../shared/prototypeStates';
 import type { Headless } from '../ports';
-import { CHECK_WINDOW, type CheckPage, axeFound, axeInPage } from './accessibilityCheck';
+import { CHECKED_IN, CHECK_WINDOW, type CheckPage, axeFound, axeInPage } from './accessibilityCheck';
 import type { Drawn, Measure } from './componentTokens';
 import { fitJpegBy } from './picture';
 import { COMPOSITION, painted, placeAround, placeOnWhite } from './pictureComposition';
@@ -267,6 +267,7 @@ export const chromeHeadless = ({
 	const scan: CheckPage = (url, states, tags) =>
 		onPage(async (page) => {
 			await page.setViewport({ ...CHECK_WINDOW, deviceScaleFactor: 1 });
+			await page.emulateMediaFeatures([CHECKED_IN]);
 			const runs: AxeRun[] = [];
 			for (const state of states.length ? states : [null]) {
 				const said = state ?? 'default';

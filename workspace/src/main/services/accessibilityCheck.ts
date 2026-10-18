@@ -34,6 +34,12 @@ export const axeRun = (context: string, tags: string[]): string => `(async () =>
 
 /** The size a page is checked at, a desktop's; how long it is given to settle after it has loaded, before axe reads it. */
 export const CHECK_WINDOW = { width: 1280, height: 900 } as const;
+/**
+ * The color scheme a page is checked in: light, as it opens, whatever the machine measuring it is set to, so a page's
+ * dark styles never make one run differ from another (a Mac that turns dark at night did). Set with every other media
+ * feature a check sets, since setting them replaces the ones set before.
+ */
+export const CHECKED_IN = { name: 'prefers-color-scheme', value: 'light' } as const;
 const SETTLE_MS = 300;
 
 /**
