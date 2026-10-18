@@ -193,7 +193,7 @@ prototype's own page in the bar's frame (`page.html`), which is a repository's c
   app's preview runs (`src/page`). The bar (`framePage` in `src/viewer/browserAdapter.ts`) says hello with a new secret
   each time the frame loads; the agent answers only the window above it, only at the address that said hello, and every
   message back carries the secret: ready (with its route), an answer to a pick or to drawing the pins, the route moving,
-  a pin clicked or moved. Each side reads what it is told through the same readers (`shared/pageReaders.ts`). A page
+  a pin clicked or moved. Each side reads what it is told through the same readers (`viewer/pageReaders.ts`). A page
   with no agent (a site built before it) has no pins, and the bar says so after eight seconds.
 - **In VS Code the page is on an address of its own.** This machine's server (`PrototypeServer`) answers on two ports.
   Its own (`origin`) serves only what DSNR wrote: a site's index pages, the bar among them, its scripts, styles, fonts

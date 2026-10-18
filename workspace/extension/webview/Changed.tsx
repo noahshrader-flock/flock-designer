@@ -1,7 +1,7 @@
 import { plural } from '../../src/shared/plural';
 import { labelOf, readsAs } from '../../src/shared/tokens';
 import { CHANGE_REQUEST } from '../../src/shared/vocabulary';
-import { branchButtons } from '../../src/shared/branchButtons';
+import { branchButtons } from './branchButtons';
 import { useTokenChanges } from './hooks/tokenChanges';
 import type { BranchControls } from './hooks/useChangeBranch';
 import type { TokenBranchControls } from './hooks/useTokenBranch';

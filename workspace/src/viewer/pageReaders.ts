@@ -1,6 +1,6 @@
-import { MESSAGE_PREFIX } from './pinMessage';
-import { sanitizeAnchor } from './anchor';
-import type { CommentAnchor, MarkerRequest, MarkerResult, PinEvent } from './contract';
+import { MESSAGE_PREFIX } from '../shared/pinMessage';
+import { sanitizeAnchor } from '../shared/anchor';
+import type { CommentAnchor, MarkerRequest, MarkerResult, PinEvent } from '../shared/contract';
 
 /*
  * Reading what the scripts answer. A page can say anything, so each answer is taken only in exactly the shape the

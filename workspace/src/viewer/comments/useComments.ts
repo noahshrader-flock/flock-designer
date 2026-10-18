@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { CommentAnchor, MarkerResult, MarkerState, PinEvent, ReviewComment } from '../../shared/contract';
 import { forgetPosted, markersFor, mergeComments, openComments, sameComments } from '../../shared/comments';
-import { latest } from '../../shared/latest';
+import { latest } from './latest';
 import { REFRESH_MS, USE_EVENTS, dueForCheck } from './refresh';
 import type { CommentStore, PageSurface } from './surfaces';
 

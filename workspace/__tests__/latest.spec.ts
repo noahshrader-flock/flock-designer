@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { latest } from '../src/shared/latest';
+import { latest } from '../src/viewer/comments/latest';
 
 /** A job that can be released on command, so the overlap is exact rather than a matter of timing. */
 const controllable = () => {

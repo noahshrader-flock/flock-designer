@@ -12,7 +12,7 @@ import {
 	shownMode,
 	triedId,
 } from '../../src/shared/contract';
-import { type Picker, type Selection, firstSelection, inspect, offOf, optionLabel, pickersOf, propLabel, rowName } from '../../src/shared/inspector';
+import { type Picker, type Selection, firstSelection, inspect, offOf, optionLabel, pickersOf, propLabel, rowName } from './inspector';
 import { plural } from '../../src/shared/plural';
 import { labelOf } from '../../src/shared/tokens';
 import { NO_COLOR, allParts, isFull } from '../../src/shared/valueParts';

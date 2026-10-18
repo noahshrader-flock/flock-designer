@@ -1,7 +1,7 @@
 import { type Fetcher, type GitHubApi, callApi, loginOf } from '../github/github';
 import type { PinEvent } from '../shared/contract';
 import { type PageCall, readPageTell } from '../shared/pageChannel';
-import { readMarkers, readPick, readPinMessage } from '../shared/pageReaders';
+import { readMarkers, readPick, readPinMessage } from './pageReaders';
 import type { CommentStore, PageSurface } from './comments/surfaces';
 import { toResult } from '../shared/result';
 import type { RepoRef } from '../shared/repoRef';

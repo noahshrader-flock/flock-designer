@@ -1,7 +1,7 @@
-import type { SpecimenLine } from './catalog';
-import type { DesignToken } from './contract';
-import { TYPE_PARTS } from './primitives';
-import { nameOf } from './tokens';
+import type { SpecimenLine } from '../../src/shared/catalog';
+import type { DesignToken } from '../../src/shared/contract';
+import { TYPE_PARTS } from '../../src/shared/primitives';
+import { nameOf } from '../../src/shared/tokens';
 
 /**
  * The lines of a type specimen, from the typography tokens: each family; each style that has a size, drawn in its own weight,

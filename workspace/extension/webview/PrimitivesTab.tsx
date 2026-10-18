@@ -2,7 +2,7 @@ import { type ReactNode, useRef } from 'react';
 import { notBuilt, specimenAddress } from '../../src/shared/catalog';
 import type { DesignToken } from '../../src/shared/contract';
 import { type Primitive, byPrimitive, coverageOf, inOrder, listed, primitiveNamed } from '../../src/shared/primitives';
-import { typeSpecimens } from '../../src/shared/specimens';
+import { typeSpecimens } from './specimens';
 import { nameOf, pixelsOf, readsAs, withEdits } from '../../src/shared/tokens';
 import { StoryFrame } from './StoryFrame';
 import { ShowingNote } from './Showing';

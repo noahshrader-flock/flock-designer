@@ -3,8 +3,8 @@
  * with a picker for each prop its rows are told apart by, and each row's value for that choice, in the groups a designer
  * knows. One way for every reader; no React, so it is tested alone.
  */
-import type { ValueCell, ValueProperty, ValueRow } from './contract';
-import { VALUE_NAMES } from './valueNames';
+import type { ValueCell, ValueProperty, ValueRow } from '../../src/shared/contract';
+import { VALUE_NAMES } from '../../src/shared/valueNames';
 
 /** The groups, in their order, and the rows in each: every property a component's values have is in one. */
 export const GROUPS = [

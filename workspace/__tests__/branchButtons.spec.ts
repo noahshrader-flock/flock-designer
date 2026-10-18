@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { branchButtons } from '../src/shared/branchButtons';
+import { branchButtons } from '../extension/webview/branchButtons';
 
 const kept = { branch: 'dsnr/tokens-1', saves: 2, pullRequest: null };
 const proposed = { ...kept, pullRequest: { number: 7, url: 'https://github.com/a/b/pull/7' } };

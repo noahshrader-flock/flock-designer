@@ -6,7 +6,7 @@
  */
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { voiceIsWritten, voiceWithoutComments } from '../../shared/voice';
+import { voiceIsWritten, voiceWithoutComments } from './voice';
 import { designSystemCheckout } from './descriptor';
 import { VOICE_FILE } from './voiceAndTone';
 import { errorText } from '../../shared/result';

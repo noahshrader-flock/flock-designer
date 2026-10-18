@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { DesignToken } from '../src/shared/contract';
 import { PREVIEW_SPECIMEN, specimenAddress } from '../src/shared/catalog';
 import { MOTION_PARTS, PRIMITIVES, TYPE_PARTS, byPrimitive, isEditable, missingParts, primitiveOf } from '../src/shared/primitives';
-import { typeSpecimens } from '../src/shared/specimens';
+import { typeSpecimens } from '../extension/webview/specimens';
 
 /**
  * The vocabulary of primitives (R1 of the design system plan): the kinds of primitive DSNR knows, in one place, as data.

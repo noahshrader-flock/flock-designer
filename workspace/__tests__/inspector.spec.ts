@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { VALUE_PROPERTIES, type ValueCell, type ValueRow } from '../src/shared/contract';
-import { GROUPS, firstSelection, inspect, offOf, optionLabel, pickersOf, propLabel, rowName, shownFor } from '../src/shared/inspector';
+import { GROUPS, firstSelection, inspect, offOf, optionLabel, pickersOf, propLabel, rowName, shownFor } from '../extension/webview/inspector';
 
 /**
  * A component's values as an inspector reads them (each component's values, DESIGN_SYSTEM.md): the variant shown chosen by

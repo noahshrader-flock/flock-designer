@@ -1,4 +1,4 @@
-import { CHANGE_REQUEST } from './vocabulary';
+import { CHANGE_REQUEST } from '../../src/shared/vocabulary';
 
 /** A change kept on a branch of DSNR's, as either kind of change has one: the tokens' (T4, T5) and the voice and tone's (T9). */
 export interface KeptBranch {
