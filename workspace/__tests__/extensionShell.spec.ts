@@ -311,7 +311,14 @@ describe('a review tab’s answers to its page', () => {
 				ok: false,
 				error: 'This review is of demo, so it comments only on demo’s prototypes.',
 			});
-		expect(await ask([{ thread: 1, id: 2 }, 'prototype/demo/v3', 'more'])).toEqual({ ok: false, error: 'Address is given one comment.' });
+		expect(await ask([{ thread: 1, id: 2 }, 'prototype/demo/v3', true, 'more'])).toEqual({
+			ok: false,
+			error: 'Address is given one comment, and may say the version it is on and whether to make a new one.',
+		});
+		expect(await ask([{ thread: 1, id: 2 }, 'prototype/demo/v3', 'more'])).toEqual({
+			ok: false,
+			error: 'Address is given one comment, and may say the version it is on and whether to make a new one.',
+		});
 		expect(d.address).toHaveBeenCalledTimes(2);
 	});
 
@@ -345,7 +352,10 @@ describe('a review tab’s answers to its page', () => {
 		// One it made is its own too.
 		await ask('postComment', ['demo', 'prototype/demo/v1', 'Bigger', null, null]);
 		expect(await ask('address', [{ thread: 1, id: 3 }])).toMatchObject({ ok: true });
-		expect(await ask('address', ['not a comment'])).toEqual({ ok: false, error: 'Address is given one comment.' });
+		expect(await ask('address', ['not a comment'])).toEqual({
+			ok: false,
+			error: 'Address is given one comment, and may say the version it is on and whether to make a new one.',
+		});
 	});
 
 	it('say a comment was written, once it was, so what shows how many there are is read again', async () => {

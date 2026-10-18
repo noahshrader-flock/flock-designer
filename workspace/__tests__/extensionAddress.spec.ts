@@ -44,7 +44,9 @@ const world = (
 		finishPrototypeAddress: vi.fn(async () => ok({ ...addressed, made: null, comment })),
 		listProjects: vi.fn(async () => ok([demo])),
 		readComments: vi.fn(async () =>
-			commenters === null ? { ok: false, error: 'GitHub could not be reached.' } : ok(commenters.map((author) => ({ author }))),
+			commenters === null
+				? { ok: false, error: 'GitHub could not be reached.' }
+				: ok(commenters.map((author, i) => ({ author, resolved: false, thread: 4, id: i + 1 }))),
 		),
 		stopAgent: vi.fn(async () => ok(null)),
 		onAgentLog: vi.fn(() => () => undefined),
@@ -95,16 +97,31 @@ describe('addressing a comment from a review', () => {
 		expect(told).toEqual(['The change is in Version 4, a new version from Version 1, which stays as it was.']);
 	});
 
+	it('asks nothing for the comment being addressed alone, or for resolved ones: they have no other pin to move', async () => {
+		const { deps, api } = world(undefined, ['noah']);
+		api.readComments.mockResolvedValue(
+			ok([
+				{ author: 'pm', resolved: false, ...comment },
+				{ author: 'qa', resolved: true, thread: 4, id: 41 },
+			]) as never,
+		);
+		expect(await addressComment(deps, review, comment)).toBe('v1');
+		expect(deps.offer).not.toHaveBeenCalled();
+		expect(api.addressPrototype).toHaveBeenCalledWith('demo', 'v1', comment, false);
+	});
+
 	it('makes the change in a new version with no question when one was asked for outright', async () => {
 		const { deps, api } = world({ changed: true, iteration: 'v4' }, ['pm']);
 		expect(await addressComment(deps, review, comment, true)).toBe('v4');
 		expect(deps.offer).not.toHaveBeenCalled();
+		expect(api.readComments).not.toHaveBeenCalled();
 		expect(api.addressPrototype).toHaveBeenCalledWith('demo', 'v1', comment, true);
 	});
 
 	it('does nothing when the person chooses neither, and asks the same when who has commented cannot be read', async () => {
 		const neither = world(undefined, ['pm']);
 		expect(await addressComment(neither.deps, review, comment)).toBeNull();
+		expect(neither.deps.offer).toHaveBeenCalled();
 		expect(neither.api.addressPrototype).not.toHaveBeenCalled();
 		const unread = world(undefined, null, (actions) => actions[0]);
 		expect(await addressComment(unread.deps, review, comment)).toBe('v1');

@@ -24,7 +24,7 @@ export const tokenApi = (token: string, fetcher: Fetcher = fetch as unknown as F
 		}),
 });
 
-/** One iteration's comments, on GitHub. `branch` is its key, `prototype/<project>/<name>`, which names its thread. */
+/** One version's comments, on GitHub. `branch` is its key, `prototype/<project>/<name>`, which names its thread. */
 export const browserComments = (
 	github: GitHubApi,
 	ref: RepoRef,

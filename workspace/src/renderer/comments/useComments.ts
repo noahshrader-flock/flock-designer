@@ -7,7 +7,10 @@ import type { CommentStore, PageSurface } from './surfaces';
 
 type Mode = 'browse' | 'picking' | 'composing';
 
-/** A spot as it is placed on the page: what the work is at (`commit`), and the page's fingerprint when the store knows it. */
+/**
+ * A spot as it is placed on the page: what the work is at (`commit`), and the page's fingerprint when the store knows it,
+ * else the one it carried (`page`), so a pin dragged where no fingerprint is known keeps the one it had.
+ */
 const stamped = (anchor: CommentAnchor, commit: string, page: string | undefined): CommentAnchor => ({
 	...anchor,
 	commit,
@@ -15,7 +18,7 @@ const stamped = (anchor: CommentAnchor, commit: string, page: string | undefined
 });
 
 /**
- * The comments on one iteration, and leaving one: everything about them except how they are drawn. Written against a
+ * The comments on one version, and leaving one: everything about them except how they are drawn. Written against a
  * `CommentStore` and a `PageSurface`, so it runs wherever those can be given.
  *
  * `opened` says the page is up, which is when pins can be drawn and a click on it waited for. `route` is where the
@@ -71,7 +74,7 @@ export const useComments = ({
 
 	/**
 	 * Reading the comments. One read at a time, and never a lost one -- see `latest`. The bug it fixes was visible:
-	 * opening an iteration reads on arrival and again once the preview is up, and while a request made during a read
+	 * opening a version reads on arrival and again once the preview is up, and while a request made during a read
 	 * was simply dropped, the comments stayed as the first read left them until something else happened to ask.
 	 * Posting a comment looked like what made an earlier one appear.
 	 */
@@ -192,7 +195,7 @@ export const useComments = ({
 	}, [opened, drawMarkers, route, redraw]);
 
 	// A pin on the page was clicked or dropped somewhere new. The screen's callback is held in a ref, since it is a new
-	// function each render; everything else here changes only with the iteration, which listens afresh.
+	// function each render; everything else here changes only with the version, which listens afresh.
 	const pinClick = useRef(onPinClick);
 	pinClick.current = onPinClick;
 	// The comments as last read, for a pin that was dragged: its thread, which the host finds it by, is on the comment.
@@ -200,7 +203,7 @@ export const useComments = ({
 	shown.current = comments;
 	useEffect(
 		() =>
-			// Stopped on leaving: the handler for an iteration the person has left must not act on its comment ids.
+			// Stopped on leaving: the handler for a version the person has left must not act on its comment ids.
 			page.onPinEvent((e: PinEvent) => {
 				if (e.kind === 'click') {
 					if (e.id < 0) return;
@@ -210,11 +213,11 @@ export const useComments = ({
 					setTimeout(() => cards.current.get(e.id)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 250);
 				} else if (e.id < 0) {
 					// The unsaved pin: just remember where it now is.
-					setPending((p) => (p ? stamped(e.anchor, p.commit, store.page) : p));
+					setPending((p) => (p ? stamped(e.anchor, p.commit, store.page ?? p.page) : p));
 				} else {
 					const moved = shown.current?.find((c) => c.id === e.id);
 					if (!moved) return setRedraw((n) => n + 1);
-					void store.move(moved, stamped(e.anchor, moved.anchor?.commit ?? '', store.page)).then((r) => {
+					void store.move(moved, stamped(e.anchor, moved.anchor?.commit ?? '', store.page ?? moved.anchor?.page)).then((r) => {
 						if (r.ok) {
 							showChanged(r.value);
 							// The comment now points somewhere else, and the file the agent reads says where.

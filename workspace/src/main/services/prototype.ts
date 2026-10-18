@@ -244,8 +244,8 @@ export const buildInCodebasePrompt = ({
 }): string =>
 	[
 		continuing
-			? `Continue building prototype ${label} of ${projectId} into this codebase, on ${continuing}. Some of it may be done already, so look at the branch and the audit first.`
-			: `Build prototype ${label} of ${projectId} into this codebase.`,
+			? `Continue building ${label} of the ${projectId} prototype into this codebase, on ${continuing}. Some of it may be done already, so look at the branch and the audit first.`
+			: `Build ${label} of the ${projectId} prototype into this codebase.`,
 		`Your task, with the skill to follow and the prototype's files, is in ${taskFile}: read it and do what it says.`,
 	].join(' ');
 

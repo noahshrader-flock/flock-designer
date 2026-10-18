@@ -323,7 +323,7 @@ describe("a prototype's name: its version", () => {
 	});
 
 	// The old shapes are not read at all: a version and its iteration, a name from before versions, and an old branch's.
-	it.each(['v1-i1', 'v2-i3', 'i1', 'i7', 'fd/demo/i1', 'codebase', 'v', 'v0', 'v01', 'v10000', 'Version 1', 'v1x', 'v-1', '../v1', ''])(
+	it.each(['v1-i1', 'v2-i3', 'i1', 'i7', 'fd/demo/i1', 'codebase', 'v', 'v0', 'v01', 'v10000', 'V1', 'Version 1', 'v1x', 'v-1', '../v1', ''])(
 		'refuses %s',
 		(name) => {
 			expect(parseVersion(name)).toBeNull();
@@ -345,19 +345,24 @@ describe("a prototype's name: its version", () => {
 		expect(nextVersionName(['v1-i7', 'i9'])).toBe('v1');
 	});
 
-	it('counts the comments on a version by anyone but its makers', () => {
+	it('counts the open comments on a version by anyone but its makers, the one acted on aside', () => {
 		const noah = { name: 'Noah', login: 'Noah-S' };
+		let id = 0;
+		const by = (author: string, resolved = false) => ({ author, resolved, thread: 1, id: ++id });
 		expect(commentsFromOthers([noah], [])).toBe(0);
-		expect(commentsFromOthers([noah], ['noah-s', 'NOAH-S'])).toBe(0);
-		expect(commentsFromOthers([noah], ['noah-s', 'pm', 'pm'])).toBe(2);
+		expect(commentsFromOthers([noah], [by('noah-s'), by('NOAH-S')])).toBe(0);
+		expect(commentsFromOthers([noah], [by('noah-s'), by('pm'), by('pm')])).toBe(2);
+		// A resolved comment has no pin to land wrong, and the one being acted on is the change asked for.
+		const acted = by('pm');
+		expect(commentsFromOthers([noah], [by('pm', true), acted, by('qa')], acted)).toBe(1);
 		// Makers nobody can name are no one's: every comment counts as someone else's.
-		expect(commentsFromOthers(undefined, ['noah-s'])).toBe(1);
-		expect(commentsFromOthers([{ name: 'Noah', login: null }], ['noah-s'])).toBe(1);
+		expect(commentsFromOthers(undefined, [by('noah-s')])).toBe(1);
+		expect(commentsFromOthers([{ name: 'Noah', login: null }], [by('noah-s')])).toBe(1);
 		// A bot saw nothing.
-		expect(commentsFromOthers([noah], ['github-actions[bot]'])).toBe(0);
+		expect(commentsFromOthers([noah], [by('github-actions[bot]')])).toBe(0);
 	});
 
-	it('labels a version V and its number, and codebase work as codebase', () => {
+	it('labels a version Version and its number, and codebase work as Codebase', () => {
 		expect(workLabel({ name: 'v3' })).toBe('Version 3');
 		expect(workLabel({ name: 'codebase' })).toBe('Codebase');
 	});

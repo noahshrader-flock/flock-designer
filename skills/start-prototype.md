@@ -15,8 +15,8 @@ node ../flock-designer/workspace/bin/dsnr.mjs new-prototype --project <id> --tit
 - **`<id>`** is the project's folder in `../flock-designer/projects/`: the existing one when this continues a
   project, otherwise a short kebab-case name for it (`admin-usage`) that you choose from the request: do not ask the
   person about it. `--title` is needed only for a new project.
-- **Each run is a new version** (`v1`, then `v2`): run it again for "another version" or "a different idea",
-  once per version asked for, finishing each before starting the next.
+- **Each run is a new version from the brief** (`v1`, then `v2`): run it again for "a different idea", once per idea
+  asked for, finishing each before starting the next. Another version of one that exists is `--new-version` (below).
 - **"Based on V1"** is not a new run of this: it is `change-prototype --name v1 --new-version` (below), which starts
   the new version from V1's source and records that it did. Without that, a new version starts from the brief.
 - **`--note`** is the idea, in the person's own words: it becomes the project's brief, which reviewers read. Leave

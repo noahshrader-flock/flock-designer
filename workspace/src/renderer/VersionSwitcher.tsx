@@ -18,7 +18,8 @@ export interface Switchable {
 }
 
 /**
- * One of the switcher's dropdowns: the app's menu of a few choices, named for what it switches ("Version 2: switch version"), opening from its right, as the switcher sits at the toolbar's right.
+ * One of the switcher's dropdowns: the app's menu of a few choices, named for what it switches ("Version 2: switch
+ * version"), opening from its right, as the switcher sits at the toolbar's right.
  */
 const SwitchMenu = ({
 	what,

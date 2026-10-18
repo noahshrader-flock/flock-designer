@@ -237,10 +237,12 @@ describe('change-prototype', () => {
 	});
 
 	it('makes a new version from it only when asked, recorded only when saved, with what it started from', async () => {
-		signedIn({ v1: ['test-person'] });
+		// Others have commented: the new version is what was asked for, and nothing is said of their pins.
+		signedIn({ v1: ['test-person', 'pm'] });
 		await made();
 		expect(await run('change-prototype', '--project', 'demo', '--name', 'v1', '--note', 'Try it as cards', '--new-version')).toBe(0);
 		expect(out.join('\n')).toMatch(/A new version was asked for: the change is made in v2, a new version from v1/);
+		expect(out.join('\n')).not.toContain('from others');
 		expect(out.join('\n')).toContain(`Write \`${local('v2')}\``);
 		expect(out.join('\n')).toContain('dsnr publish --project demo --name v2');
 		// The command it is given says which version the new one was started from, so saving it records that.

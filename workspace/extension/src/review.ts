@@ -132,7 +132,7 @@ const answered = async (
 	// Address is given one comment, and may say which of the review's prototypes the page is on (a browser's moves) and
 	// that the change is to go in a new version.
 	if (name === 'address' && !(args.length >= 1 && args.length <= 3 && isRef(args[0]) && (args[2] === undefined || typeof args[2] === 'boolean')))
-		return { ok: false, error: 'Address is given one comment.' };
+		return { ok: false, error: 'Address is given one comment, and may say the version it is on and whether to make a new one.' };
 	if (name === 'address' && args.length >= 2 && !isPrototypeOf(review.projectId, args[1]))
 		return { ok: false, error: `This review is of ${review.projectId}, so it comments only on ${review.projectId}’s prototypes.` };
 	if (ON_A_COMMENT.has(name) && !(isRef(args[0]) && seen.has(args[0].thread)))

@@ -152,7 +152,7 @@ export const registerPrototypes = (d: IpcDeps): void => {
 			generatedAt: new Date(),
 		});
 		const number = chooseComment(comments, comment);
-		const change = await work.startChange(projectId, name, { newVersion, authorsOf: async () => comments.map((c) => c.author) });
+		const change = await work.startChange(projectId, name, { newVersion, comments, acting: comment });
 		// Modeled on what the version it comes from was: a new one has no record of its own yet.
 		const { build, sources } = await prototypeRun(projectId, change.target, change.from.name);
 		prototypeChanges.set(keyOf(comment), { comment, projectId, change });

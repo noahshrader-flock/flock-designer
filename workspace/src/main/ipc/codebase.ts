@@ -285,7 +285,7 @@ export const registerCodebase = (d: IpcDeps): void => {
 			// Work already started, here or recorded, is continued where it is; it is not started a second time.
 			const { branch, started: continuing } = await codebase.of(workIn, projectId);
 			if (continuing) await codebase.resume(workIn, projectId, branch);
-			else await codebase.start(workIn, projectId, `From prototype ${label}`, from ?? undefined);
+			else await codebase.start(workIn, projectId, `From ${label} of the prototype`, from ?? undefined);
 			writeFileSync(pageFile, html);
 			if (source !== null) writeFileSync(sourceFile, source);
 			const taskFile = join(dirname(pageFile), `${name}-into-code.md`);

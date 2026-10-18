@@ -1,8 +1,7 @@
 import { type AddressPhase, type PrototypeAddressApi, runPrototypeAddress } from '../../src/renderer/address';
 import type { CommentRef, Project, WorkspaceApi } from '../../src/shared/contract';
 import { prototypeKey } from '../../src/shared/designPaths';
-import { plural } from '../../src/shared/plural';
-import { commentsFromOthers, nextVersionName } from '../../src/shared/prototypeNames';
+import { commentsFromOthers, nextVersionName, othersHaveCommented } from '../../src/shared/prototypeNames';
 import { valueOf } from '../../src/shared/result';
 import { workLabel } from '../../src/shared/work';
 import { type AgentWorkDeps, type Offer, type Tell, agentReady, agentWork, pollOf } from './agentWork';
@@ -13,50 +12,47 @@ export interface AddressDeps extends AgentWorkDeps {
 	tell: Tell;
 	/** Asks the person to choose, before a version others have commented on is changed. */
 	offer: Offer;
-	/** Shows the iteration the change is in, as whoever asked shows it: a review tab, or a page in the browser (and an open tab). */
+	/** Shows the version the change is in, as whoever asked shows it: a review tab, or a page in the browser (and an open tab). */
 	show: (review: Review) => Promise<void>;
 }
 
 /**
- * Address on one of a prototype's comments, from its review in VS Code (ELECTRON_MIGRATION_PLAN 4.2): the core's
- * Address (`runPrototypeAddress`), said and stoppable as a build is, its log beside the editor. The change is made in the
- * version commented on, or in a new version from it when asked for outright (`asked`). Otherwise, when others have commented on it (their pins may then land on the wrong element), or who has
- * cannot be read, the person is asked first: update it, or start a new version from it; nothing is done if they choose
- * neither. The page with the change is then shown (`show`), and which it is said, and returned, so a page in the browser can
- * go to it. An agent that changed nothing says why in its log, and the review is left as it is (null).
+ * Whether the change is to go in a new version: false, in place, unless others have open comments on the version besides
+ * the one acted on (`commentsFromOthers`), or who has cannot be read, and the person chooses a new one. Null when they
+ * choose neither.
  */
-/**
- * Whether the change is to go in a new version: false, in place, unless others have commented on the version (or who has
- * cannot be read) and the person chooses a new one. Null when they choose neither.
- */
-const asksForNewVersion = async (deps: AddressDeps, project: Project | undefined, review: Review): Promise<boolean | null> => {
+const asksForNewVersion = async (deps: AddressDeps, project: Project | undefined, review: Review, comment: CommentRef): Promise<boolean | null> => {
 	const made = project?.work.find((w) => w.name === review.name);
 	const read = await deps.api.readComments(review.projectId, prototypeKey(review.projectId, review.name));
-	const others = read.ok
-		? commentsFromOthers(
-				made?.contributors,
-				read.value.map((c) => c.author),
-			)
-		: null;
+	const others = read.ok ? commentsFromOthers(made?.contributors, read.value, comment) : null;
 	if (others === 0) return false;
 	const here = workLabel({ name: review.name });
-	const update = `Update ${here}`;
-	const fresh = `Start ${workLabel({ name: nextVersionName(project?.work.map((w) => w.name) ?? [review.name]) })} from it`;
+	// Named when the project's versions are known, which is when the next one's number is.
+	const next = project ? workLabel({ name: nextVersionName(project.work.map((w) => w.name)) }) : 'a new version';
+	const fresh = `Start ${next} from it`;
 	const said =
 		others === null
 			? `Who has commented on ${here} could not be read.`
-			: `${plural(others, 'comment')} from others ${others === 1 ? 'is' : 'are'} on ${here}. Changing it in place can leave their pins on the wrong element.`;
-	const chosen = await deps.offer(said, [update, fresh]);
+			: `${othersHaveCommented(others, here)} Changing it in place can leave their pins on the wrong element.`;
+	const chosen = await deps.offer(said, [`Update ${here}`, fresh]);
 	return chosen === undefined ? null : chosen === fresh;
 };
 
-export const addressComment = async (deps: AddressDeps, review: Review, comment: CommentRef, asked = false): Promise<string | null> => {
+/**
+ * Address on one of a prototype's comments, from its review in VS Code (ELECTRON_MIGRATION_PLAN 4.2): the core's
+ * Address (`runPrototypeAddress`), said and stoppable as a build is, its log beside the editor. The change is made in the
+ * version commented on, or in a new version from it when the person chose that outright (`newVersion`); otherwise, when
+ * others have open comments on it (their pins may land on the wrong element), or who has cannot be read, the person is
+ * asked first, and nothing is done if they choose neither. The page with the change is then shown (`show`), and which it
+ * is said, and returned, so a page in the browser can go to it. An agent that changed nothing says why in its log, and the
+ * review is left as it is (null).
+ */
+export const addressComment = async (deps: AddressDeps, review: Review, comment: CommentRef, newVersion = false): Promise<string | null> => {
 	const { api } = deps;
 	await agentReady(api);
 	const project = valueOf(await api.listProjects()).find((p) => p.id === review.projectId);
-	// A new version asked for outright is made with no question; otherwise the person is asked only when others have commented.
-	const newVersion = asked || (await asksForNewVersion(deps, project, review));
-	if (newVersion === null) return null;
+	const inNew = newVersion || (await asksForNewVersion(deps, project, review, comment));
+	if (inNew === null) return null;
 	let ended: AddressPhase | null = null;
 	const { stopped } = await agentWork(
 		deps,
@@ -68,7 +64,7 @@ export const addressComment = async (deps: AddressDeps, review: Review, comment:
 				projectId: review.projectId,
 				name: review.name,
 				comment,
-				newVersion,
+				newVersion: inNew,
 				isLive,
 				onPhase: (phase) => {
 					if (phase.kind === 'done' || phase.kind === 'failed') ended = phase;

@@ -1,4 +1,5 @@
-import type { Person } from './contract';
+import type { CommentRef, Person, ReviewComment } from './contract';
+import { plural } from './plural';
 import { isBot } from './people';
 
 /**
@@ -28,12 +29,22 @@ export const newestVersionFirst = (a: string, b: string): number => (parseVersio
 export const nextVersionName = (names: string[]): string => prototypeName(names.reduce((max, n) => Math.max(max, parseVersion(n) ?? 0), 0) + 1);
 
 /**
- * How many comments on a version are by anyone but its makers: what a change in place can leave pointing at the wrong
- * element, so the person is told before it is made. Makers are known by their GitHub login, as comment authors are; a
- * maker with none is not anyone's, so a version whose makers are unknown counts every comment as someone else's. A bot
- * is not someone who saw it.
+ * How many open comments on a version are by anyone but its makers, leaving out the one being acted on (`acting`): the
+ * pins a change in place can leave on the wrong element, so the person is told before it is made. A resolved comment has
+ * no pin. Makers are known by their GitHub login, as comment authors are; a maker with none is not anyone's, so a version
+ * whose makers are unknown counts every comment as someone else's. A bot is not someone who saw it.
  */
-export const commentsFromOthers = (makers: Person[] | undefined, authors: string[]): number => {
+export const commentsFromOthers = (
+	makers: Person[] | undefined,
+	comments: Pick<ReviewComment, 'author' | 'resolved' | 'thread' | 'id'>[],
+	acting?: CommentRef,
+): number => {
 	const own = new Set((makers ?? []).flatMap((p) => (p.login ? [p.login.toLowerCase()] : [])));
-	return authors.filter((a) => !isBot(a) && !own.has(a.toLowerCase())).length;
+	return comments.filter(
+		(c) => !c.resolved && !(acting && c.thread === acting.thread && c.id === acting.id) && !isBot(c.author) && !own.has(c.author.toLowerCase()),
+	).length;
 };
+
+/** Said wherever a change is about to be made in a version others have commented on: the one sentence, for the agent and the person. */
+export const othersHaveCommented = (others: number, label: string): string =>
+	`${plural(others, 'comment')} from others ${others === 1 ? 'is' : 'are'} on ${label}.`;

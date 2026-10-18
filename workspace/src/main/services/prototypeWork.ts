@@ -1,10 +1,10 @@
 import { existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
-import type { Work, Person, PrototypeReadiness } from '../../shared/contract';
+import type { CommentRef, Work, Person, PrototypeReadiness, ReviewComment } from '../../shared/contract';
 import { type DeclaredTarget, undeclared } from '../../shared/wcag';
 import { fromBrief } from '../../shared/brief';
 import { projectPath, prototypePagePath, prototypeSourcePath, sharedFilePath, sharedFilesOf } from '../../shared/designPaths';
-import { commentsFromOthers, nextVersionName } from '../../shared/prototypeNames';
+import { commentsFromOthers, nextVersionName, othersHaveCommented } from '../../shared/prototypeNames';
 import { MANIFEST_FILE, declaredTarget, productTarget, taskAccessibility } from './accessibilityBrief';
 import { designSystemCheckout, readDescriptor } from './descriptor';
 import { recordsRootFor } from './discovery';
@@ -26,7 +26,6 @@ import { type CheckConfig, checkedAsSaved } from './buildCheck';
 import { prototypeMeasureName, recordFiles } from './accessibilityRecord';
 import { designSystemFile, taskVoice } from './voiceBrief';
 import { HOST } from '../../shared/vocabulary';
-import { plural } from '../../shared/plural';
 
 /**
  * Making a prototype, with nothing of the app in it: starting one (its record, its brief, its name), what its agent
@@ -72,7 +71,7 @@ export const whereTheChangeGoes = (change: PrototypeChange): string | null => {
 		return `A new version was asked for: the change is made in ${change.target}, a new version from ${change.from.name}, which starts as a copy of it. Change that copy, rather than starting again; ${change.from.name} stays as it is.`;
 	if (change.others === null) return `Who has commented on ${change.from.name} could not be read. The change is made in it, in place.`;
 	if (change.others > 0)
-		return `${plural(change.others, 'comment')} from others ${change.others === 1 ? 'is' : 'are'} on ${change.from.name}. The change is made in it, in place, so their pins may land on the wrong element: say so when you report.`;
+		return `${othersHaveCommented(change.others, change.from.name)} The change is made in it, in place, so their pins may land on the wrong element: say so when you report.`;
 	return null;
 };
 
@@ -185,7 +184,7 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 	};
 
 	/**
-	 * Starts a prototype: the project's brief if it is new, the iteration record and its name (the next version, so a
+	 * Starts a prototype: the project's brief if it is new, the version's record and its name (the next version, so a
 	 * new prototype is a new idea). What it is modeled on is not optional: a prototype is built from a repository's
 	 * real design system, on a branch that exists here.
 	 */
@@ -350,13 +349,14 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 
 	/**
 	 * Where a change to a prototype goes, and its source made ready there: the version it was asked of, in place, unless a
-	 * new version is asked for (`newVersion`), never otherwise. `authorsOf` says who has commented on the version, or null
-	 * when that cannot be read, for the person to be told. Nothing is recorded yet: see `finishChange`.
+	 * new version is asked for (`newVersion`), never otherwise. `comments` are the version's, or null when they cannot be
+	 * read, for the person to be told who else has commented (`commentsFromOthers`), the one being acted on (`acting`) aside.
+	 * Nothing is recorded yet: see `finishChange`.
 	 */
 	const startChange = async (
 		projectId: string,
 		name: string,
-		{ newVersion, authorsOf }: { newVersion: boolean; authorsOf: (version: Work) => Promise<string[] | null> },
+		{ newVersion, comments, acting }: { newVersion: boolean; comments: ReviewComment[] | null; acting?: CommentRef },
 	): Promise<PrototypeChange> => {
 		assertPrototypeName(name);
 		const all = await records(projectId);
@@ -364,11 +364,9 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		if (!from) throw new Error(`${projectId} has no prototype called ${name}.`);
 		const source = await sourceText(projectId, from.name);
 		if (source === null) throw new Error('This prototype has no React source saved, so there is nothing for the agent to change.');
-		const authors = await authorsOf(from);
-		const fresh = newVersion;
-		const target = fresh ? nextVersionName(all.map((i) => i.name)) : from.name;
+		const target = newVersion ? nextVersionName(all.map((i) => i.name)) : from.name;
 		const local = sourceFile(projectId, target);
-		if (fresh) {
+		if (newVersion) {
 			// A page left from an earlier run that changed nothing is not this version's.
 			rmSync(file(projectId, target), { force: true });
 			writeFileSync(local, source);
@@ -376,7 +374,8 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 			// Built on another machine: its saved source is what is changed.
 			writeFileSync(local, source);
 		}
-		return { from, target, fresh, before: contentHashOf(source), others: authors === null ? null : commentsFromOthers(from.contributors, authors) };
+		const others = comments === null ? null : commentsFromOthers(from.contributors, comments, acting);
+		return { from, target, fresh: newVersion, before: contentHashOf(source), others };
 	};
 
 	/**
@@ -394,14 +393,15 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		const from = all.find((i) => i.name === fromName);
 		if (!from) throw new Error(`${projectId} has no ${fromName} for ${name} to have been started from.`);
 		const source = await sourceText(projectId, from.name);
+		// Who has commented was said when the change was started, and is not said again when it is saved.
 		return { from, target: name, fresh: true, before: source === null ? '' : contentHashOf(source), others: 0 };
 	};
 
 	/**
 	 * After the agent: when the source changed, the page is built (a page that does not build is not recorded or
-	 * saved, and says why), a new iteration is recorded, and both are saved. When it did not change, a new iteration's
-	 * copy is removed, so no iteration is made for nothing. Says which version of the source is there now (null when
-	 * nothing changed), and the new iteration's record when one was made.
+	 * saved, and says why), a new version is recorded when one was asked for, and both are saved. When it did not change, a
+	 * new version's copy is removed, so no version is made for nothing. Says the hash of the source there now (null when
+	 * nothing changed), and the new version's record when one was made.
 	 */
 	const finishChange = async (
 		projectId: string,

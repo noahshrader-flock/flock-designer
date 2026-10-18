@@ -101,22 +101,22 @@ export const withResolved = (body: string, resolved: boolean): string => {
  * verdict. Those still read correctly: an addressed comment that is open is shown as it was.
  *
  * Kept in the body like the resolved mark, so it survives the app restarting and is visible to
- * anyone else reading the thread on GitHub. On a prototype it also says which iteration the change is in, since one
- * that others had commented on is never changed in place: the change is in its next iteration.
+ * anyone else reading the thread on GitHub. On a prototype it also says which version the change is in, since the person
+ * may have had it made in a new version from the one commented on.
  */
 const ADDRESSED = new RegExp(`<!-- fd-addressed: (${COMMIT_PATTERN})(?: in ([\\w-]{1,20}))? -->`);
 
 export const addressedAt = (body: string): string | null => ADDRESSED.exec(body)?.[1] ?? null;
-/** The prototype iteration the change was made in, when the mark names one. */
+/** The prototype version the change was made in, when the mark names one. */
 export const addressedIn = (body: string): string | null => {
 	const name = ADDRESSED.exec(body)?.[2] ?? null;
 	return name !== null && isPrototypeName(name) ? name : null;
 };
 
-/** The body marked as addressed at `commit` (in a prototype's `iteration`), or with the mark cleared when it is null. */
+/** The body marked as addressed at `commit` (in a prototype's version, `iteration`), or with the mark cleared when it is null. */
 export const withAddressed = (body: string, commit: string | null, iteration: string | null = null): string => {
 	const bare = body.replace(ADDRESSED, '').trimEnd();
-	// Only ever a real commit, and a real iteration name: these are read back out and shown on the card.
+	// Only ever a real commit, and a real version's name: these are read back out and shown on the card.
 	if (!isCommit(commit)) return bare;
 	return `${bare}\n<!-- fd-addressed: ${commit}${iteration !== null && isPrototypeName(iteration) ? ` in ${iteration}` : ''} -->`;
 };

@@ -992,7 +992,8 @@ describe('prototypes', () => {
 
 		it('with others commenting too, still changes it in place, and the agent is told so', async () => {
 			await ready();
-			threads({ v1: [comment(7, 'x', 'pm')] });
+			// The comment addressed is the change asked for; the other one's pin is what may land wrong.
+			threads({ v1: [comment(7, 'x', 'pm'), comment(8, 'y', 'pm')] });
 			expect((await call(CHANNELS.addressPrototype, 'demo', 'v1', { thread: 1, id: 7 }, false)).ok).toBe(true);
 			expect(task()).toContain(local('v1'));
 			expect(task()).toContain('1 comment from others is on v1. The change is made in it, in place');
@@ -1044,6 +1045,15 @@ describe('prototypes', () => {
 			expect(setAddressed).toHaveBeenCalledWith({ thread: 1, id: 7 }, null, null);
 		});
 
+		it('changes nothing in place when the agent changed nothing, and clears the mark', async () => {
+			await ready();
+			threads({ v1: [comment(7, 'x', 'pm')] });
+			await call(CHANNELS.addressPrototype, 'demo', 'v1', { thread: 1, id: 7 }, false);
+			expect((await call(CHANNELS.finishPrototypeAddress, { thread: 1, id: 7 })).value).toMatchObject({ changed: false, made: null });
+			expect(records().map((r) => r.name)).toEqual(['v1']);
+			expect(setAddressed).toHaveBeenCalledWith({ thread: 1, id: 7 }, null, null);
+		});
+
 		it('is not lost when the screen was left before the agent finished: it is saved when the prototype is opened', async () => {
 			await ready();
 			threads({ v1: [comment(7, 'x', 'pm')] });
@@ -1061,7 +1071,7 @@ describe('prototypes', () => {
 			await call(CHANNELS.addressPrototype, 'demo', 'v1', { thread: 1, id: 7 }, true);
 			writeFileSync(local('v2'), page('second'));
 			// The screen was left; the next Address is on another comment: the first change is saved before it starts.
-			await call(CHANNELS.addressPrototype, 'demo', 'v1', { thread: 1, id: 8 });
+			await call(CHANNELS.addressPrototype, 'demo', 'v1', { thread: 1, id: 8 }, false);
 			expect(records().map((r) => r.name)).toEqual(['v1', 'v2']);
 			expect(readFileSync(saved('v2.html'), 'utf8')).toContain('second');
 		});
@@ -1204,7 +1214,7 @@ describe('prototypes', () => {
 			// Codebase work, as any: its branch checked out, and its record.
 			expect(g(product, 'branch', '--show-current').trim()).toBe('feature/demo');
 			const records = JSON.parse(readFileSync(join(design, 'projects', 'demo', 'work.json'), 'utf8')) as { name: string; note: string }[];
-			expect(records.find((i) => i.name === 'codebase')?.note).toBe('From prototype Version 1');
+			expect(records.find((i) => i.name === 'codebase')?.note).toBe('From Version 1 of the prototype');
 			// The task: the skill, the page to start from, where the audit goes.
 			const taskFile = join(home, 'prototype', 'demo', 'v1-into-code.md');
 			const task = readFileSync(taskFile, 'utf8');
@@ -1245,7 +1255,7 @@ describe('prototypes', () => {
 				const records = JSON.parse(readFileSync(join(design, 'projects', 'demo', 'work.json'), 'utf8')) as { name: string }[];
 				expect(records.filter((i) => i.name === 'codebase')).toHaveLength(1);
 				const { value } = r as { value: { command: string } };
-				expect(value.command).toContain('Continue building prototype Version 1');
+				expect(value.command).toContain('Continue building Version 1 of the demo prototype');
 				expect(value.command).toContain('feature/demo');
 				expect(value.command).toContain('v1-into-code.md');
 			});
