@@ -1,15 +1,10 @@
 import { handle } from '../handle';
-import type { CallsDeps } from '../calls';
+import type { AccountArea } from '../areas/account';
 
 /**
  * The person's GitHub sign-in state, and signing out of DSNR.
  */
-export const registerAccount = (d: CallsDeps): void => {
-	const { github } = d;
-
-	handle('signInState', [], () => github.state());
-	handle('signOut', [], () => {
-		github.signOut();
-		return null;
-	});
+export const registerAccount = (area: AccountArea): void => {
+	handle('signInState', [], area.signInState);
+	handle('signOut', [], area.signOut);
 };

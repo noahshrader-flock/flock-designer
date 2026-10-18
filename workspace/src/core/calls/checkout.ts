@@ -1,52 +1,20 @@
-import { basename } from 'node:path';
 import { arg, handle } from '../handle';
-import { DESCRIPTOR_PATH, findCommand } from '../services/projects/descriptor';
-import { branchesWithFile, readCheckout } from '../services/platform/git';
-import { INSTALL_COMMAND } from '../services/codebase/install';
-import { continueWork, recordedWork } from '../services/projects/workRecords';
-import type { CallsDeps } from '../calls';
+import type { CheckoutArea } from '../areas/checkout';
 
 /**
  * How the window opens a product checkout and works in it: choosing or accepting one, its branches and work,
  * its commands, and installing its packages.
  */
-export const registerCheckout = (d: CallsDeps): void => {
-	const { agent, assertAgentNotHere, checkout, installer, runtime, signedInLogin, state, emit, written } = d;
-
-	handle('branchesWithSetup', [checkout], (workIn) => branchesWithFile(workIn.canonical, DESCRIPTOR_PATH));
+export const registerCheckout = (area: CheckoutArea): void => {
+	handle('branchesWithSetup', [area.checkout], area.branchesWithSetup);
 	// Re-reads a checkout the person already opened; it trusts and remembers nothing, so the window naming a folder
 	// is never enough to make it trusted (only the picker, a repository discovery found, the last one, and a clone are).
-	handle('readCheckout', [checkout], (workIn) => readCheckout(workIn.canonical));
-	handle('continueWork', [checkout, arg.projectId, arg.codebaseName], async (workIn, projectId, name) => {
-		const { canonical } = workIn;
-		// Opening the run's own work is fine: the checkout is already on its branch, so nothing moves.
-		if (agent.runningIn(canonical)) {
-			const wanted = await recordedWork(canonical, workIn.recordsRoot, workIn.descriptor, projectId, name);
-			if ((await readCheckout(canonical)).branch !== wanted.branch) assertAgentNotHere(canonical);
-		}
-		return written(await continueWork(canonical, workIn.recordsRoot, projectId, name, signedInLogin(), workIn.descriptor));
-	});
-	handle('startCommand', [checkout, arg.name, arg.optional(arg.projectId)], (workIn, commandId, projectId) =>
-		runtime.start(workIn.canonical, workIn.descriptor, commandId, projectId ?? undefined),
-	);
+	handle('readCheckout', [area.checkout], area.readCheckout);
+	handle('continueWork', [area.checkout, arg.projectId, arg.codebaseName], area.continueWork);
+	handle('startCommand', [area.checkout, arg.name, arg.optional(arg.projectId)], area.startCommand);
 	// Only for a checkout the person opened, though the runtime knows its commands by id alone.
-	handle('stopCommand', [checkout, arg.name], (_workIn, commandId) => runtime.stop(commandId));
+	handle('stopCommand', [area.checkout, arg.name], area.stopCommand);
 	// Installing a repository's packages, from the New modal: only the command it declares, one at a time, stoppable.
-	handle('installPackages', [checkout], async (workIn): Promise<null> => {
-		const { canonical } = workIn;
-		// Its packages change under a running agent otherwise.
-		if (agent.runningIn(canonical)) throw new Error(`The agent is working in ${basename(canonical)}. Install the packages when it has finished.`);
-		const command = findCommand(workIn.descriptor, INSTALL_COMMAND);
-		const stop = (state.installing = new AbortController());
-		try {
-			await installer.install(canonical, command, (line) => emit('onInstallLine', line), stop.signal);
-		} finally {
-			state.installing = null;
-		}
-		return null;
-	});
-	handle('cancelInstall', [], () => {
-		state.installing?.abort();
-		return null;
-	});
+	handle('installPackages', [area.checkout], area.installPackages);
+	handle('cancelInstall', [], area.cancelInstall);
 };

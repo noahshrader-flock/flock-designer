@@ -1,24 +1,13 @@
-import type { PageStatus } from '../../shared/contract';
 import { arg, handle } from '../handle';
-import type { CallsDeps } from '../calls';
-import { HOST } from '../../shared/vocabulary';
+import type { PublishingArea } from '../areas/publishing';
 
 /**
  * Publishing the records and pages, and whether a page is on the site.
  */
-export const registerPublishing = (d: CallsDeps): void => {
-	const { github, publishInBackground, publishedPage, publisher } = d;
-
+export const registerPublishing = (area: PublishingArea): void => {
 	// Publishing happens by itself; these only report it, and let a person ask for it now.
-	handle('publishStatus', [], () => publisher.status());
-	handle('publishNow', [], async () => {
-		await publisher.publish(true);
-		return publisher.status();
-	});
-	handle('publishedPage', [arg.projectId, arg.prototypeName], (projectId, name) => publishedPage(projectId, name));
-	handle('publishPage', [arg.projectId, arg.prototypeName], async (projectId, name): Promise<PageStatus> => {
-		if (github.state().state !== 'signedIn') throw new Error(`Sign in to ${HOST} to publish.`);
-		publishInBackground(projectId, name);
-		return publishedPage(projectId, name);
-	});
+	handle('publishStatus', [], area.publishStatus);
+	handle('publishNow', [], area.publishNow);
+	handle('publishedPage', [arg.projectId, arg.prototypeName], area.publishedPage);
+	handle('publishPage', [arg.projectId, arg.prototypeName], area.publishPage);
 };

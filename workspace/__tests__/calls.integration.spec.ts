@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync
 import { realpathSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { CallsContext } from '../src/core/calls';
+import type { CallsContext } from '../src/core/compose';
 import { CHANNELS, invokeChannel } from '../src/shared/contract';
 import type { Ports } from '../src/core/ports';
 import { type Answer, fakeGitHub } from './fakes/github';

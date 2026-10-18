@@ -2,7 +2,7 @@ import { DESIGN_REPO } from '../shared/config';
 import { DesignRepo } from '../github/designRepo';
 import type { AppPaths } from './appPaths';
 import type { EventSink } from './handle';
-import type { CallsContext } from './calls';
+import type { CallsContext } from './compose';
 import type { Ports } from './ports';
 import { AgentRunner } from './services/agent/agent';
 import { CheckoutMemory } from './services/projects/checkoutMemory';
