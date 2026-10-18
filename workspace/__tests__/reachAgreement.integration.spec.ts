@@ -96,7 +96,7 @@ const check = (system: ConnectedDesignSystem) => async () => {
 			const valuesUnnamed = movedOnly.filter((f) => !moved.get(f)?.inside);
 			const noTag = movedOnly.filter((f) => moved.get(f)?.inside && !drawsTag(f));
 			const missed = [...named].filter((f) => !moved.has(f));
-			// What a token's control lists (`users`): every component its Values name is among them.
+			// What a token's control lists (`users`, the components whose stories draw its tag): every one its Values name is too.
 			const users = await tokens.users(token.path);
 			const listed = new Set(users.state === 'ready' ? users.users.map((u) => u.file) : []);
 			notListed.push(...[...named].filter((f) => !listed.has(f)).map((f) => `${token.path}: ${f}`));

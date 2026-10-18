@@ -18,6 +18,7 @@ import type {
 	ComponentTokens as Answer,
 	ComponentValues,
 	ComponentPictures as Pictures,
+	TokenUser,
 	TokenUsers,
 	ConnectedDesignSystem,
 	DeclaredProp,
@@ -41,7 +42,7 @@ import { inTurns } from './concurrency';
 import { newestAnswer } from './newestAnswer';
 import { editedFiles } from './tokenEdits';
 import type { CatalogReads } from './componentCatalog';
-import { type Tags, asTag, inMode, isNothing, sizeToken, tagsFor } from './tokenTags';
+import { type Tags, asTag, inMode, isNothing, sizeTokens, tagsFor } from './tokenTags';
 
 /**
  * What a story draws, as counts of each computed value: its colors (background, text, border), radii and spacing; and,
@@ -141,9 +142,9 @@ export const decode = (tagged: Partial<Record<Mode, Drawn>>, plain: Drawn | unde
 		] as const) {
 			for (const [value, n] of Object.entries(values)) {
 				if (isNothing(value)) continue;
-				const path = sizeToken(value, tags.sizes);
-				if (path) add(uses, inMode(tokens, path, mode), n);
-				else if (mode === 'light') add(notTokens, `${kind} ${value}`, n);
+				const paths = sizeTokens(value, tags.sizes);
+				for (const path of paths) add(uses, inMode(tokens, path, mode), n);
+				if (paths.length === 0 && mode === 'light') add(notTokens, `${kind} ${value}`, n);
 			}
 		}
 	}
@@ -192,6 +193,9 @@ export type Built = {
 };
 type Index = Built | { error: string };
 
+/** The components whose stories draw with a token, in the list's order: who shares it with a component, and who its control lists. */
+const drawsWith = (built: Built, path: string): string[] => built.order.filter((f) => built.files.get(f)?.uses.has(path));
+
 /** The index once every story is drawn: its key, which names the commit and the package, and the commit itself. */
 export interface DrawnIndex {
 	key: string;
@@ -227,7 +231,7 @@ export class ComponentTokens {
 		const use = done.files.get(file);
 		if (!use) return { state: 'failed', error: 'Its stories did not draw, so which tokens it uses cannot be said. Its page says why.' };
 		const sharedWith: Record<string, string[]> = {};
-		for (const path of use.uses.keys()) sharedWith[path] = [...done.files].filter(([f, u]) => f !== file && u?.uses.has(path)).map(([f]) => f);
+		for (const path of use.uses.keys()) sharedWith[path] = drawsWith(done, path).filter((f) => f !== file);
 		return {
 			state: 'ready',
 			uses: [...use.uses].map(([path, uses]) => ({ path, uses })).sort((a, b) => b.uses - a.uses),
@@ -241,24 +245,18 @@ export class ComponentTokens {
 	}
 
 	/**
-	 * The components that draw with a token, read from the same index the other way round: how often each one's stories draw
-	 * it, and how many of its values are it, each value counted once whichever mode names it. None is drawn for it.
+	 * The components that draw with a token (`drawsWith`), read from the same index the other way round: how often each one's
+	 * stories draw it, and how many of its values are it, each value counted once whichever mode names it. None is drawn for it.
 	 */
 	async users(path: string): Promise<TokenUsers> {
 		const index = await this.drawn();
 		if (index.state !== 'ready') return index;
-		const { order, files, values } = index.built;
-		const users = order.flatMap((file) => {
+		const { files, values } = index.built;
+		const users = drawsWith(index.built, path).map((file): TokenUser => {
 			const read = values.get(file);
-			const named = new Set(
-				read?.state === 'read'
-					? [read.rows.light, read.rows.dark].flatMap((rows) =>
-							(rows ?? []).flatMap((r) => r.cells.filter((c) => c.tokens.includes(path)).map((c) => `${r.property}|${c.variant}`)),
-						)
-					: [],
-			);
-			const uses = files.get(file)?.uses.get(path) ?? 0;
-			return uses > 0 || named.size > 0 ? [{ file, uses, values: named.size }] : [];
+			const rows = read?.state === 'read' ? [...(read.rows.light ?? []), ...(read.rows.dark ?? [])] : [];
+			const named = new Set(rows.flatMap((r) => r.cells.filter((c) => c.tokens.includes(path)).map((c) => `${r.property}|${c.variant}`)));
+			return { file, uses: files.get(file)?.uses.get(path) ?? 0, values: named.size };
 		});
 		return { state: 'ready', users: users.sort((a, b) => b.values - a.values || b.uses - a.uses) };
 	}

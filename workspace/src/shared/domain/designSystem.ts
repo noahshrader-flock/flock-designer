@@ -108,10 +108,12 @@ export type ComponentTokens =
  * often its stories draw the token (inner parts too), and how many of its values are that token (its Values name it), most
  * values first. `building` while every story is drawn, the first time for a commit.
  */
-export type TokenUsers =
-	| { state: 'building' }
-	| { state: 'failed'; error: string }
-	| { state: 'ready'; users: { file: string; uses: number; values: number }[] };
+export interface TokenUser {
+	file: string;
+	uses: number;
+	values: number;
+}
+export type TokenUsers = { state: 'building' } | { state: 'failed'; error: string } | { state: 'ready'; users: TokenUser[] };
 
 /** What is read of each instance a component's stories draw, in this order. */
 export const VALUE_PROPERTIES = ['height', 'padding', 'radius', 'gap', 'fontSize', 'background', 'text', 'border'] as const;

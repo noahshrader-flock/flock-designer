@@ -99,6 +99,12 @@ describe('reading what a story drew', () => {
 		expect(Object.fromEntries(use.uses)).toEqual({ 'palette.light.primary.main': 5, 'palette.light.primary.contrastText': 2, radius: 4, spacing: 5 });
 	});
 
+	it('reads a length part by part, as the values do: a corner of two radii names the token its first part is', () => {
+		const use = decode({ light: drawn({}, { '17px 28.3px': 2 }) }, drawn(), tags, TOKENS);
+		expect(Object.fromEntries(use.uses)).toEqual({ radius: 2 });
+		expect(use.notTokens).toEqual([]);
+	});
+
 	it('names, in dark, the Dark token written in the place a shared role was tagged as Light', () => {
 		const use = decode({ dark: drawn({ 'rgb(0, 3, 90)': 2 }) }, undefined, tags, TOKENS);
 		expect(Object.fromEntries(use.uses)).toEqual({ 'palette.dark.info.main': 2 });

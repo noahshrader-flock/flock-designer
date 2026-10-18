@@ -103,5 +103,13 @@ export const sizeToken = (value: string, sizes: Tags['sizes']): string | null =>
 	return sizes.find((s) => (halfSteps(s.px) ?? Infinity) <= HALF_STEPS)?.path ?? null;
 };
 
+/**
+ * The tokens a computed length names, part by part, as a component's values read one: a corner drawn as two radii
+ * (`13px 21.7px`, MUI's skeleton) names the token its first part is, though its second is worked out from it.
+ */
+export const sizeTokens = (value: string, sizes: Tags['sizes']): string[] => [
+	...new Set(value.split(/\s+/).flatMap((part) => sizeToken(part, sizes) ?? [])),
+];
+
 /** Nothing worth saying: no color, no size, or a gap left as CSS has it (`normal`). */
 export const isNothing = (value: string): boolean => ['rgba(0, 0, 0, 0)', 'transparent', '0px', 'normal', 'auto', ''].includes(value);
