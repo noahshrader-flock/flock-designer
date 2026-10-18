@@ -187,6 +187,28 @@ const importedFile = async (reads: CatalogReads, from: string, spec: string): Pr
 	}
 };
 
+const PREVIEW = /(^|\/)\.storybook\/preview\.(tsx|ts|jsx|js|mjs|cjs|mts|cts)$/;
+/** A stylesheet a script imports for its effect: `import './theme.css';`, not one that is bound to a name. */
+const STYLE_IMPORT = /^\s*import\s+(['"])([^'"]+)\1/gm;
+
+/**
+ * The stylesheets the library's Storybook preview imports, in the order it imports them: **what its stories load**, which is
+ * where their variables come from (Primer's `.storybook/primitives-v8.css`, which `@import`s the packages' variables), though
+ * `.storybook/` is not the library's code to read for anything else. Found as the preview's text says, not by what a folder
+ * is called, so the unit tests' own set-up stylesheet, which imports the same packages, is not taken for them.
+ */
+const previewStylesheets = async (reads: CatalogReads): Promise<string[]> => {
+	const sheets: string[] = [];
+	for (const preview of (await reads.listFiles('')).filter((f) => PREVIEW.test(f) && !/(^|\/)node_modules\//.test(f)).sort()) {
+		const text = await reads.readFile(preview).catch(() => '');
+		for (const [, , spec] of text.matchAll(STYLE_IMPORT)) {
+			const path = STYLESHEET.test(spec as string) ? await importedFile(reads, preview, spec as string) : null;
+			if (path !== null && !sheets.includes(path)) sheets.push(path);
+		}
+	}
+	return sheets;
+};
+
 /**
  * A stylesheet with `--name` declared again in its last rule `rule` at its top, or in one added at its end: what changes a
  * variable a package declares (`:root`), over the package's.
@@ -245,6 +267,14 @@ export const cssVariables: TokenSource = {
 			}
 		};
 		for (const file of files.filter((f) => STYLESHEET.test(f)).sort()) {
+			if (followed.has(file)) continue;
+			followed.add(file);
+			await take(file, null);
+		}
+		// Then what the stories load, read again over them: what the preview imports is the value a story sees, and the file a
+		// change to it must be written in to reach one (a library's other stylesheets, which no story loads, are not it).
+		followed.clear();
+		for (const file of await previewStylesheets(reads)) {
 			if (followed.has(file)) continue;
 			followed.add(file);
 			await take(file, null);

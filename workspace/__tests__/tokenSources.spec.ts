@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { readTokens } from '../src/main/services/designTokens';
+import { editedFiles } from '../src/main/services/tokenEdits';
 import { channelsOf, hexOfChannels } from '../src/main/services/tokens/cssVariables';
 import { memoryReads } from './fixtures';
 
@@ -249,6 +250,31 @@ describe('CSS variables a stylesheet imports (Phase 5.5)', () => {
 			memoryReads({ 'src/globals.css': "@import './theme.css';\n@import 'not-installed';\n", 'src/theme.css': ':root {\n  --radius: 4px;\n}\n' }),
 		);
 		expect(list.tokens.map((t) => [t.path, t.source])).toEqual([['css.light.radius', { file: 'src/theme.css', line: 2 }]]);
+	});
+});
+
+describe('CSS variables the library’s stories load (its Storybook preview’s imports)', () => {
+	/** A library whose unit tests' set-up stylesheet and whose Storybook's both import the same package, as Primer's do. */
+	const LIBRARY = {
+		'node_modules/kit/package.json': JSON.stringify({ name: 'kit', exports: { '.': { style: './index.css' } } }),
+		'node_modules/kit/index.css': ':root {\n  --radius-md: 0.375rem;\n}\n',
+		'config/vitest/global.css': "@import 'kit';\n",
+		'.storybook/primitives.css': "@import 'kit';\n",
+		'.storybook/preview.tsx': "import './primitives.css';\nimport { Thing } from './thing';\nexport default {};\n",
+	};
+
+	it('are read from the stylesheet the preview imports, so a change is written where a story sees it', async () => {
+		const list = await readTokens(memoryReads(LIBRARY));
+		expect(find(list, 'css.light.radius-md')?.source).toMatchObject({ file: '.storybook/primitives.css', line: 1 });
+		// Written there, over the package's: the file the stories load, not the tests'.
+		const edited = await editedFiles(memoryReads(LIBRARY), [{ path: 'css.light.radius-md', value: '1rem' }]);
+		expect([...edited.keys()]).toEqual(['.storybook/primitives.css']);
+	});
+
+	it('are read from the library’s own stylesheets as before when its preview imports none', async () => {
+		const { ['.storybook/preview.tsx']: _, ...noPreview } = LIBRARY;
+		const list = await readTokens(memoryReads({ ...noPreview, '.storybook/preview.tsx': 'export default {};\n' }));
+		expect(find(list, 'css.light.radius-md')?.source).toMatchObject({ file: 'config/vitest/global.css' });
 	});
 });
 
