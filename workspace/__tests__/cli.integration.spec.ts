@@ -571,8 +571,8 @@ describe.skipIf(findChrome() === null)('accessibility', () => {
 
 		expect(await main(['accessibility', '--project', 'shop'], deps(shop))).toBe(0);
 		const said = out.join('\n');
-		expect(said).toMatch(/^Measured Test Product's app in design mode: \d+ automated issues?\./);
-		expect(said).toContain('Checked with axe-core 4.14.0 at WCAG 2.1 Level AA, in Home, Devices.');
+		expect(said).toMatch(/^Measured Test Product's app in design mode: (?:No issues found|\d+ issues? to fix)\./);
+		expect(said).toContain('axe-core 4.14.0 checked this against WCAG 2.1 Level AA, in Home, Devices.');
 		expect(said).toMatch(/- \*\*image-alt\*\* \(WCAG 1\.1\.1\)[^\n]*1 element, in Devices\.\n {2}- `img` \(in Devices\): /);
 		expect(said).toMatch(/- \*\*color-contrast\*\* \(WCAG 1\.4\.3\)[^\n]*in Devices/);
 		expect(said).toContain('Broken (/broken) did not open, so it was not measured: the page broke');
@@ -755,7 +755,7 @@ describe.skipIf(findChrome() === null)('accessibility', () => {
 		out = [];
 		expect(await run('accessibility', '--project', 'demo', '--name', 'v1-i1')).toBe(0);
 		const said = out.join('\n');
-		expect(said).toMatch(/^Measured demo v1-i1's page: \d+ automated issues?\./);
+		expect(said).toMatch(/^Measured demo v1-i1's page: (?:No issues found|\d+ issues? to fix)\./);
 		expect(said).toMatch(/- \*\*image-alt\*\*[^\n]*\n {2}- `img`: /);
 		const kept = JSON.parse(readFileSync(join(design, 'projects', 'demo', 'accessibility', 'v1-i1.json'), 'utf8')) as { result: unknown };
 		// The same result the app keeps beside the page, so the app shows what was measured here.
@@ -780,7 +780,7 @@ describe.skipIf(findChrome() === null)('accessibility', () => {
 			env,
 			encoding: 'utf8',
 		});
-		expect(ran.stdout).toMatch(/^Measured demo v1-i1's page: \d+ automated issues?\./);
+		expect(ran.stdout).toMatch(/^Measured demo v1-i1's page: (?:No issues found|\d+ issues? to fix)\./);
 		expect(ran.status).toBe(0);
 	}, 120_000);
 });

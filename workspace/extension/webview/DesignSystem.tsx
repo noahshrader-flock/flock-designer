@@ -7,6 +7,7 @@ import { HOST } from '../../src/shared/vocabulary';
 import { TokenChangesProvider, useTokenChangesFor } from '../../src/renderer/tokenChanges';
 import { useTokenBranch } from '../../src/renderer/useTokenBranch';
 import { Changed } from './Changed';
+import { DesignSystemHeader } from './DesignSystemHeader';
 import { ComponentChanges } from './ComponentChanges';
 import { ShowingContext, ShowingNote } from './Showing';
 import { triedOn, useValueTrials } from './valueTrials';
@@ -135,52 +136,41 @@ const Ready = ({
 	return (
 		<TokenChangesProvider value={changes}>
 			<ShowingContext.Provider value={catalog.showing}>
-				<div className="ds-header">
-					<span className="ds-title">
-						<span data-part="name" className="ds-name">
-							{name}
-						</span>
-						<span data-part="branch" className="ds-branch" title={`Read from ${catalog.branch} on ${HOST}`}>
-							<Icon name="git-branch" size="xs" />
-							{catalog.branch}
-						</span>
-					</span>
-					<span className="ds-actions">
-						{notRead > 0 && (
-							<Badge
-								tone="warning"
-								count={notRead}
-								label={`${plural(notRead, 'value')} in its token files ${notRead === 1 ? 'is' : 'are'} not read`}
-								onPress={() => setProblems(true)}
-							/>
-						)}
-						{/* Always there, so nothing moves when the first change is made: muted with none, the brand's with some. */}
+				<DesignSystemHeader name={name} branch={catalog.branch}>
+					{notRead > 0 && (
 						<Badge
-							tone={count > 0 ? 'brand' : 'neutral'}
-							count={count}
-							label={`${plural(count, 'change')} being tried`}
-							onPress={changesDialog.onOpen}
+							tone="warning"
+							count={notRead}
+							label={`${plural(notRead, 'value')} in its token files ${notRead === 1 ? 'is' : 'are'} not read`}
+							onPress={() => setProblems(true)}
 						/>
-						<Menu
-							label="Design system actions"
-							size="small"
-							always
-							sections={[
-								{
-									items: [
-										{ label: syncing ? 'Syncing…' : `Sync with ${HOST}`, icon: syncing ? 'sync' : 'refresh', disabled: syncing, onSelect: does.sync },
-									],
-								},
-								{
-									items: [
-										{ label: 'Primitives', icon: 'symbol-ruler', onSelect: does.openPrimitives },
-										{ label: 'Voice and Tone', icon: 'quote', onSelect: does.openVoiceAndTone },
-									],
-								},
-							]}
-						/>
-					</span>
-				</div>
+					)}
+					{/* Always there, so nothing moves when the first change is made: muted with none, the brand's with some. */}
+					<Badge
+						tone={count > 0 ? 'brand' : 'neutral'}
+						count={count}
+						label={`${plural(count, 'change')} being tried`}
+						onPress={changesDialog.onOpen}
+					/>
+					<Menu
+						label="Design system actions"
+						size="small"
+						always
+						sections={[
+							{
+								items: [
+									{ label: syncing ? 'Syncing…' : `Sync with ${HOST}`, icon: syncing ? 'sync' : 'refresh', disabled: syncing, onSelect: does.sync },
+								],
+							},
+							{
+								items: [
+									{ label: 'Primitives', icon: 'symbol-ruler', onSelect: does.openPrimitives },
+									{ label: 'Voice and Tone', icon: 'quote', onSelect: does.openVoiceAndTone },
+								],
+							},
+						]}
+					/>
+				</DesignSystemHeader>
 				<ShowingNote showing={catalog.showing} branch={catalog.branch} />
 				{typeof catalog.update === 'object' && (
 					<p data-update-failed className="note note-warning">

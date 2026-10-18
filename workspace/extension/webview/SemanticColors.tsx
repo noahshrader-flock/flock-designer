@@ -1,7 +1,9 @@
 import type { DesignToken } from '../../src/shared/contract';
 import { rowContrast, semanticTable, type SemanticRow } from '../../src/shared/tokens';
 import { useTokenChanges } from '../../src/renderer/tokenChanges';
+import type { Theme } from '../../src/shared/prototypeTheme';
 import { ColorDot, tokenDot } from './ui/ColorDot';
+import { ModeIcon } from './ui/ModeIcon';
 
 /**
  * One theme's value of a role, as `SemanticColors` draws it: its color as a dot (`ColorDot`), centered under its theme, its
@@ -42,15 +44,34 @@ const Row = ({ row, onEdit }: { row: SemanticRow; onEdit: (token: DesignToken) =
 	</li>
 );
 
-/** A set's rows under the themes' names, said again in every set so each reads on its own wherever it is scrolled to. */
+/** The themes that have an icon, as the panel's own mode switch has them (the sun for light, the moon for dark). */
+const MODES: Record<string, Theme> = { light: 'light', dark: 'dark' };
+
+/**
+ * A theme's heading over its column: **its icon**, the sun for Light and the moon for Dark, as the mode switch has them;
+ * named by the theme, in its tooltip and to assistive technology. A theme that is neither is its name, cut short to its column,
+ * with the whole name in its tooltip.
+ */
+const ThemeHeading = ({ theme }: { theme: string }) => {
+	const mode = MODES[theme.toLowerCase()];
+	return mode ? (
+		<span data-theme-heading role="img" aria-label={theme} title={theme} className="theme-cell">
+			<ModeIcon mode={mode} size="xs" />
+		</span>
+	) : (
+		<span data-theme-heading title={theme} className="theme-cell">
+			{theme}
+		</span>
+	);
+};
+
+/** A set's rows under the themes' icons, said again in every set so each reads on its own wherever it is scrolled to. */
 const Rows = ({ title, rows, themes, onEdit }: { title?: string; rows: SemanticRow[]; themes: string[]; onEdit: (token: DesignToken) => void }) => (
 	<div className="theme-set" {...(title ? { 'data-token-set': title } : {})}>
 		<div data-theme-headings className="theme-row theme-headings">
 			<span className="theme-name token-set-name">{title}</span>
 			{themes.map((theme) => (
-				<span key={theme} data-theme-heading className="theme-cell">
-					{theme}
-				</span>
+				<ThemeHeading key={theme} theme={theme} />
 			))}
 		</div>
 		<ul className="tokens" aria-label={title ?? 'Roles'}>
@@ -63,7 +84,7 @@ const Rows = ({ title, rows, themes, onEdit }: { title?: string; rows: SemanticR
 
 /**
  * The semantic colors (the Color tokens plan): a row for each role's variant, a column for each theme
- * the design system has (Light, Dark, or more), each value a swatch that opens its own control. Roles are under their set;
+ * the design system has (Light, Dark, or more, headed by the sun and the moon), each value a dot that opens its own control. Roles are under their set;
  * a role whose name is its set is a plain row, with no heading to say it twice.
  */
 export const SemanticColors = ({ tokens, onEdit }: { tokens: DesignToken[]; onEdit: (token: DesignToken) => void }) => {

@@ -171,7 +171,7 @@ export const ledgerOf = ({
 			by.push({ layer: 'probe', what: r.cell, where, status });
 		}
 		const status = statuses.length ? (STRONGEST.find((s) => statuses.includes(s)) as LedgerStatus) : 'person';
-		const person = [c.person, undecided.length ? `what axe could not decide (${undecided.join(', ')})` : null].filter(Boolean).join('; ') || null;
+		const person = [c.person, undecided.length ? `what axe flagged to review (${undecided.join(', ')})` : null].filter(Boolean).join('; ') || null;
 		return {
 			sc: c.sc,
 			name: c.name,
@@ -229,7 +229,7 @@ export const statusLine = (r: LedgerRow): string => {
 	if (r.status === 'notRun') return `not run, because ${r.why ?? 'it was not run'}`;
 	if (r.status === 'measured') return `measured, none found by ${layersOf(r).join(' and ')}`;
 	if (r.status === 'notApplicable') return `does not apply, because ${r.why ?? 'there is nothing here to measure'}`;
-	return 'a person’s to check: no automated measure reaches it';
+	return 'left to check by hand';
 };
 
 /** Where `dsnr` writes a run's section in `review.md`, between these, so nothing anyone else wrote there is touched. */

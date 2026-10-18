@@ -29,10 +29,11 @@ export interface AccessibilityIssue {
 
 /**
  * What an accessibility check found (T7), and what it was made with: axe-core's version, the tags and the target they came
- * from, whether the target was declared, when, and in which states. `violations` are what axe found; `incomplete` what it
- * could not decide, for a person; `notAutomated` the parts of the target no automated check covers. `bestPractice` is what
- * axe's best-practice rules found beside them (a heading out of order, an empty heading): never counted as WCAG, said
- * apart. Never a pass: at most, no issues found by automated checks.
+ * from, whether the target was declared, when, and in which states. `violations` are what axe found, to fix; `incomplete` what
+ * it flagged for a closer look (the agent's task and the ledger have it; the panel does not list it); `notAutomated` the
+ * parts of the target no automated check covers, left to check by hand. `bestPractice` is what axe's best-practice rules
+ * found beside them (a heading out of order, an empty heading): never counted as WCAG, said apart. Never a pass: what was
+ * checked and what is left are said beside what was found.
  */
 export interface AccessibilityResult {
 	ran: { axe: string; tags: string[]; target: string; declared: boolean; at: string; states: string[] };
@@ -42,7 +43,7 @@ export interface AccessibilityResult {
 	notAutomated: string[];
 }
 
-/** What a check found: the issues axe found, and the ones it could not decide, for a person. */
+/** What a check found: the issues axe found, and the ones it flagged for a closer look. */
 export interface AccessibilityFindings {
 	violations: AccessibilityIssue[];
 	incomplete: AccessibilityIssue[];

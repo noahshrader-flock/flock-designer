@@ -14,7 +14,7 @@ export const tokenDot = (token: DesignToken): { value: string; name: string; say
 /**
  * A color wherever it is something to look at and to press: **only the dot.** Its tooltip is the token's name and nothing
  * else (`says`; none for a color that is no token), and pressing it opens its control. One way for every color a person can
- * open, in the grid of roles, a component's Values, and a token's row, so none says its name, its swatch and its hex side by
+ * open, in the grid of roles, a component's Styles, and a token's row, so none says its name, its swatch and its hex side by
  * side. Without `onPress` it is the same dot with nothing to press (a color shown, not changed here).
  *
  * `name` is what it is called to assistive technology: its button is `Change <name>`, and without a button it is

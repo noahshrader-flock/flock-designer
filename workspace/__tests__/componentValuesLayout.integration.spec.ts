@@ -5,6 +5,9 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { Moved } from '../extension/webview/ChangeReach';
 import { Grouped } from '../extension/webview/Tokens';
+import { AccessibilityFindings } from '../extension/webview/Accessibility';
+import { TokensUsed } from '../extension/webview/ComponentSections';
+import { AsidePart } from '../extension/webview/ui/AsidePart';
 import { HandoffActions } from '../extension/webview/HandoffActions';
 import { ChangedValues } from '../extension/webview/ValueChanges';
 import { ComponentValues } from '../extension/webview/ComponentValues';
@@ -167,6 +170,18 @@ describe.skipIf(NO_CHROME)('a component’s Values, in the side pane, in the bro
 						// A value reads on one line, even when the pane is narrow: it is the name that gives way.
 						if (drawn && box(drawn).h > 24) problems.push(`${name}: its value is broken over lines (${box(drawn).h}px)`);
 					}
+					// Comfortable, not jammed: a row is at least the panel's row height, and the pickers are a gap apart, as one named size.
+					const rowHeight = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--dsnr-row-height'));
+					const rowGap = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--dsnr-row-gap'));
+					if (!(rowHeight >= 28) || !(rowGap >= 8)) problems.push(`the row height and gap are ${rowHeight} and ${rowGap}`);
+					for (const li of shown)
+						if (box(li).h < rowHeight - 0.5) problems.push(`${li.textContent?.slice(0, 30)}: a row is ${box(li).h}px, under ${rowHeight}`);
+					const controls = [...document.querySelectorAll('.pickers .picker-row')].map((r) => box(r.lastElementChild as Element));
+					controls.forEach((c, i) => {
+						const next = controls[i + 1];
+						if (next && next.t - c.b < rowGap - 0.5)
+							problems.push(`pickers ${i + 1} and ${i + 2} are ${Math.round(next.t - c.b)}px apart, under ${rowGap}`);
+					});
 					// A colour is its name and only its dot: at the right of its cell as a value is, clear of its name, inside its cell,
 					// and no taller a row than a value without one.
 					const textRows = shown.filter((li) => !li.querySelector('.color-dot')).map((li) => box(li).h);
@@ -192,14 +207,19 @@ describe.skipIf(NO_CHROME)('a component’s Values, in the side pane, in the bro
 						problems,
 						cells: shown.length,
 						chips: document.querySelectorAll('.value-chip').length,
+						tokenNames: [...document.querySelectorAll<HTMLElement>('.value-token')].filter((t) => t.checkVisibility()).length,
+						pickers: document.querySelectorAll('.pickers .picker-row').length,
 						dots: [...document.querySelectorAll<HTMLElement>('.color-dot')].filter((d) => d.checkVisibility()).length,
 					};
 				});
 			});
-			// The variant it opens on: a value for each row, a chip for each that is a token's and not a colour, a dot for each colour.
+			// The variant it opens on: a value for each row, a token's name for each that is one and not a colour, a dot for each
+			// colour, and no chip: a chip is for what is made from a token without being one.
 			expect(found.cells).toBe(5);
-			expect(found.chips).toBe(1);
+			expect(found.chips).toBe(0);
+			expect(found.tokenNames).toBe(1);
 			expect(found.dots).toBe(2);
+			expect(found.pickers).toBeGreaterThan(1);
 			expect(found.problems).toEqual([]);
 		},
 		60_000,
@@ -246,6 +266,16 @@ describe.skipIf(NO_CHROME)('a component’s Values, in the side pane, in the bro
 						const dot = li.querySelector('.color-dot');
 						const swatch = li.querySelector('.color-dot .swatch');
 						const actions = li.querySelector('.item-actions');
+						// The name is the link to its file, and nothing else is: there is no icon beside it for that.
+						if (name?.tagName !== 'BUTTON' || !name.classList.contains('token-link')) problems.push(`${nameText}: its name is not a link`);
+						if (actions || li.querySelector('.codicon-go-to-file')) problems.push(`${nameText}: has an icon to open its file`);
+						if (box(li).height < 27.5) problems.push(`${nameText}: its row is ${box(li).height}px, under the 28 of a row`);
+						// Flush at the right as a value is in the Styles (8px from the edge): its value, or its dot.
+						const edge = (swatch ?? li.querySelector('.token-value')) as Element | null;
+						if (edge && Math.abs(box(li).right - 8 - box(edge).right) > 1.5)
+							problems.push(
+								`${nameText}: its ${swatch ? 'dot' : 'value'} is not 8px from the right (${Math.round(box(li).right - box(edge).right)}px)`,
+							);
 						if (!dot || !swatch) continue;
 						// Only its dot: nothing else says the colour.
 						if (li.querySelector('[data-part="value"], [data-part="ref"]')) problems.push(`${nameText}: a colour says more than its dot`);
@@ -265,6 +295,78 @@ describe.skipIf(NO_CHROME)('a component’s Values, in the side pane, in the bro
 			expect(found.rows).toBe(4);
 			expect(found.dots).toBe(3);
 			expect(found.problems).toEqual([]);
+		},
+		60_000,
+	);
+
+	// The side pane's two parts as the tab draws them: Styles (its titles, its groups, its pickers, its rows) and Tokens (its
+	// categories, its sets, its rows, and what it sets itself), one above the other.
+	const SidePane = () => {
+		const tokens = [...ROW_TOKENS, token('palette.dark.main', 'primary', 'main', { group: 'Dark' })];
+		const changes = useTokenChangesFor(tokens, [], () => undefined, undeclared('a test'));
+		return createElement(
+			TokenChangesProvider,
+			{ value: changes },
+			createElement('div', { dangerouslySetInnerHTML: { __html: markup } }),
+			createElement(TokensUsed, {
+				answer: {
+					state: 'ready',
+					uses: [],
+					sharedWith: {},
+					notTokens: [{ kind: 'color', value: 'rgb(1, 2, 3)', uses: 2 }],
+					derived: 0,
+					accessibility: null,
+					values: { state: 'none-drawn' },
+				} as never,
+				tokens,
+				info: () => 'a use',
+				actions: { onEdit: () => undefined, onSource: () => undefined },
+			}),
+		);
+	};
+	const sidePane = renderToStaticMarkup(createElement(SidePane));
+
+	it.each([PANE, 220])(
+		'starts every title, group, set and row of the side pane at one left edge, in a %ipx pane',
+		async (width) => {
+			const found = await inChrome(async (browser) => {
+				const page = await browser.newPage();
+				await page.setViewport({ width, height: 1200 });
+				await page.setContent(
+					`<!doctype html><html><head><meta charset="utf-8"><style>${css}</style></head><body><main class="tab"><aside class="component-aside">${sidePane}</aside></main></body></html>`,
+				);
+				return page.evaluate(() => {
+					// Where what is in it starts, not its box: a box's own padding is what would hide an indent.
+					const left = (e: Element) => {
+						// What has no text (a swatch) is its box.
+						const range = document.createRange();
+						range.selectNodeContents(e);
+						const at = e.textContent?.trim() ? range.getBoundingClientRect() : e.getBoundingClientRect();
+						return Math.round(at.left * 10) / 10;
+					};
+					const lefts = (selector: string) => [...document.querySelectorAll(selector)].map(left);
+					const edge = left(document.querySelector('.aside-section .aside-title') as Element);
+					return {
+						edge,
+						// What starts at it: the parts' titles, the groups' names, the pickers' names, the values' labels, the sets' names
+						// and the sub-groups' (Light, Dark), the tokens' names, and what an own value starts with.
+						kinds: {
+							'a part’s title': lefts('.aside-title'),
+							'a group’s name': lefts('.value-group-name'),
+							'a picker’s name': lefts('.picker-name'),
+							'a value’s label': lefts('.value-label'),
+							'a set’s name': lefts('.token-set-name'),
+							'a sub-group’s name': lefts('.token-group-name'),
+							'a token’s name': lefts('.token-link'),
+							'what an own value starts with': [...document.querySelectorAll('[data-not-token] .token-line > :first-child')].map(left),
+						} as Record<string, number[]>,
+					};
+				});
+			});
+			for (const [kind, lefts] of Object.entries(found.kinds)) {
+				expect(lefts.length, kind).toBeGreaterThan(0);
+				for (const l of lefts) expect(l, `${kind} starts at ${l}, not ${found.edge}`).toBeCloseTo(found.edge, 0);
+			}
 		},
 		60_000,
 	);
@@ -332,9 +434,10 @@ describe.skipIf(NO_CHROME)('a component’s Values, in the side pane, in the bro
 							if (ends && Math.abs(box(line).right - 8 - p.right) > 1.5) problems.push(`${name}: a line of its value is not at the right`);
 						}
 					}
-					// A short one reads as a value does: its name and its value on one line.
+					// A short one reads as a value does: its name and its value on one line, a row's own height (28px at least; two lines
+					// would be about 44).
 					const short = lines.find((l) => l.textContent?.startsWith('Radius'));
-					if (!short || box(short).height > 24) problems.push(`the radius's change is not on one line (${short && box(short).height}px)`);
+					if (!short || box(short).height > 30) problems.push(`the radius's change is not on one line (${short && box(short).height}px)`);
 					for (const h of document.querySelectorAll('[data-moved] h3, .value-inside'))
 						if (box(h).right > pane.right + 0.5 || h.scrollWidth > h.clientWidth + 1) problems.push(`${h.textContent}: past the pane`);
 					return { problems, lines: lines.length };
@@ -525,6 +628,49 @@ describe.skipIf(NO_CHROME)('a component’s Values, in the side pane, in the bro
 		60_000,
 	);
 
+	it('puts the accessibility findings behind a link as wide as its words, in the side pane, not stretched across the part', async () => {
+		const result = {
+			violations: [
+				{
+					rule: 'color-contrast',
+					help: 'Text needs more contrast',
+					url: 'https://dequeuniversity.com/x',
+					wcag: ['1.4.3'],
+					impact: 'serious',
+					elements: [],
+					count: 1,
+					states: ['default'],
+				},
+			],
+			incomplete: [],
+			bestPractice: { violations: [], incomplete: [] },
+			notAutomated: [],
+			ran: { axe: '4.10', target: 'WCAG 2.2 AA', states: ['default'] },
+		} as never;
+		const html = renderToStaticMarkup(createElement('section', { className: 'aside-section' }, createElement(AccessibilityFindings, { result })));
+		const found = await inChrome(async (browser) => {
+			const page = await browser.newPage();
+			await page.setViewport({ width: PANE, height: 600 });
+			await page.setContent(
+				`<!doctype html><html><head><meta charset="utf-8"><style>${css}</style></head><body><main class="tab"><aside class="component-aside">${html}</aside></main></body></html>`,
+			);
+			return page.evaluate(() => {
+				const link = document.querySelector('button.link') as HTMLElement;
+				const part = document.querySelector('.aside-section') as HTMLElement;
+				const text = document.createRange();
+				text.selectNodeContents(link);
+				return {
+					link: Math.round(link.getBoundingClientRect().width),
+					words: Math.round(text.getBoundingClientRect().width),
+					part: Math.round(part.getBoundingClientRect().width),
+				};
+			});
+		});
+		// As wide as its words (a pixel or two of padding at most), not the part's width.
+		expect(found.link).toBeLessThanOrEqual(found.words + 2);
+		expect(found.link).toBeLessThan(found.part / 2);
+	}, 60_000);
+
 	it('opens a value’s control as a popover under it, inside the pane, over what is below, with nothing past its edges', async () => {
 		// The real control, drawn into the cell it opens from, as `Cell` draws it: after its button, inside its list item.
 		const popover = (property: 'padding' | 'background', value: string) =>
@@ -559,9 +705,21 @@ describe.skipIf(NO_CHROME)('a component’s Values, in the side pane, in the bro
 						for (const e of pop.querySelectorAll('*'))
 							if (box(e).right > p.right + 0.5) problems.push(`${e.className || e.tagName} leaves the popover`);
 						const sliders = [...pop.querySelectorAll<HTMLElement>('input[type="range"]')].map((e) => Math.round(box(e).width));
+						// Each part with a short name on one line: its name, then its slider, then its number, level with each other.
+						const oneLine = [...pop.querySelectorAll<HTMLElement>('.popover-field-line')].map((f) => {
+							const [name, slider, number] = ['.popover-label', 'input[type="range"]', '.token-value'].map((s) => box(f.querySelector(s) as Element));
+							const middle = (r: DOMRect) => (r.top + r.bottom) / 2;
+							return (
+								name!.right <= slider!.left + 0.5 &&
+								slider!.right <= number!.left + 0.5 &&
+								Math.abs(middle(name!) - middle(slider!)) < 4 &&
+								Math.abs(middle(number!) - middle(slider!)) < 4
+							);
+						});
 						return {
 							problems,
 							sliders,
+							oneLine,
 							width: Math.round(p.width),
 							cellWidth: Math.round(c.width),
 							below: ((cells) => ((next) => (next ? box(next).top < p.bottom : false))(cells[cells.indexOf(li) + 1] ?? null))(
@@ -573,22 +731,25 @@ describe.skipIf(NO_CHROME)('a component’s Values, in the side pane, in the bro
 					row,
 				);
 			}
-			return out as Record<string, { problems: string[]; sliders: number[]; width: number; cellWidth: number; below: boolean }>;
+			return out as Record<string, { problems: string[]; sliders: number[]; oneLine: boolean[]; width: number; cellWidth: number; below: boolean }>;
 		});
 		for (const f of Object.values(found)) expect(f.problems).toEqual([]);
 		// Two parts, two sliders, each wide enough to use; across the cell it opens from; over the next value, not pushing it down.
 		expect(found.padding?.sliders).toHaveLength(2);
-		for (const w of found.padding?.sliders ?? []) expect(w).toBeGreaterThan(100);
+		for (const w of found.padding?.sliders ?? []) expect(w).toBeGreaterThan(80);
+		// X and Y, each on one line with its slider and number.
+		expect(found.padding?.oneLine).toEqual([true, true]);
 		expect(found.padding?.width).toBe(found.padding?.cellWidth);
 		expect(found.padding?.below).toBe(true);
 	}, 60_000);
 
-	it('keeps a group’s heading at the top of the pane while its values scroll under it, the next replacing it; and the pane is 300px wide', async () => {
+	it('keeps a part’s title at the top of the pane while the part is in view, the next part’s replacing it; no group’s heading sticks; and the pane is 300px wide', async () => {
 		// As VS Code shows the component's tab with room for two columns: the page is the window's height, the stories and the
-		// analysis each scroll inside it. The editor's own background is what a heading covers what is under it with.
-		// Every group a row a value, so the pane has room under its last for every heading to come to the top, as the sections
-		// under the Values give it in the tab.
-		const tall = `${markupFor([...ROWS, { property: 'text', by: null, cells: [cell(null, 'rgb(9, 9, 9)', 'own')] }])}<div style="flex-shrink: 0; height: 900px"></div>`;
+		// analysis each scroll inside it. The editor's own background is what a title covers what is under it with. The Styles
+		// part is the real one; the parts after it are as tall as the real ones, so each title has room to come to the top.
+		const part = (title: string) =>
+			renderToStaticMarkup(createElement(AsidePart, { title, children: createElement('div', { style: { height: '500px' } }, `${title} content`) }));
+		const tall = `${markupFor([...ROWS, { property: 'text', by: null, cells: [cell(null, 'rgb(9, 9, 9)', 'own')] }])}${part('Tokens')}${part('Accessibility')}<div style="flex-shrink: 0; height: 400px"></div>`;
 		const found = await inChrome(async (browser) => {
 			const page = await browser.newPage();
 			await page.setViewport({ width: 1100, height: 300 });
@@ -598,33 +759,43 @@ describe.skipIf(NO_CHROME)('a component’s Values, in the side pane, in the bro
 			return page.evaluate(async () => {
 				const aside = document.querySelector('.component-aside') as HTMLElement;
 				const top = () => aside.getBoundingClientRect().top;
-				const headings = [...document.querySelectorAll<HTMLElement>('.value-group-name')];
+				const headings = [...document.querySelectorAll<HTMLElement>('.aside-heading')];
 				const named = (h: HTMLElement) => h.textContent ?? '';
 				const stuck = () => headings.filter((h) => Math.abs(h.getBoundingClientRect().top - top()) < 1.5).map(named);
 				const seen: string[][] = [];
-				// Scrolled a little at a time, from the top to the bottom, finer than a group of one row is tall: which heading is at
-				// the top of the pane at each stop.
+				// Scrolled a little at a time, from the top to the bottom: which title is at the top of the pane at each stop.
 				for (let at = 0; at <= aside.scrollHeight; at += 10) {
 					aside.scrollTop = at;
 					await new Promise((r) => requestAnimationFrame(() => r(null)));
 					seen.push(stuck());
 				}
-				const groups = headings.map(named);
-				// While a group's values are under it, its heading covers them: opaque, over them.
+				// While a part is in view its title covers what scrolls under it: opaque, over it.
 				aside.scrollTop = 0;
 				const covers = headings.map((h) => getComputedStyle(h).backgroundColor !== 'rgba(0, 0, 0, 0)' && Number(getComputedStyle(h).zIndex) >= 1);
-				return { width: Math.round(aside.getBoundingClientRect().width), scrolls: aside.scrollHeight > aside.clientHeight, groups, seen, covers };
+				// And no group's own heading sticks, nor stays at the top of the pane at any stop.
+				const groups = [...document.querySelectorAll<HTMLElement>('.value-group-name')].map((g) => getComputedStyle(g).position);
+				return {
+					width: Math.round(aside.getBoundingClientRect().width),
+					scrolls: aside.scrollHeight > aside.clientHeight,
+					titles: headings.map(named),
+					seen,
+					covers,
+					groups,
+				};
 			});
 		});
 		expect(found.width).toBe(300);
 		expect(found.scrolls).toBe(true);
+		expect(found.titles).toEqual(['Styles', 'Tokens', 'Accessibility']);
 		expect(found.covers.every(Boolean)).toBe(true);
-		// Each group's heading was at the top at some stop, and never two at once: one replaces the next.
+		// Each part's title was at the top at some stop, and never two at once: one replaces the next.
 		const stopped = new Set(found.seen.flat());
-		for (const g of found.groups) expect(stopped.has(g), g).toBe(true);
+		for (const t of found.titles) expect(stopped.has(t), t).toBe(true);
 		expect(found.seen.every((s) => s.length <= 1)).toBe(true);
-		// And in the order the groups are in: a heading is replaced by the next, never the one before.
-		const order = found.seen.flat().filter((g, i, all) => g !== all[i - 1]);
-		expect(order).toEqual(found.groups);
+		// In the order the parts are in: a title is replaced by the next, never the one before.
+		expect(found.seen.flat().filter((g, i, all) => g !== all[i - 1])).toEqual(found.titles);
+		// A group's heading is a heading and nothing more: it does not stick.
+		expect(found.groups.length).toBeGreaterThan(0);
+		expect(found.groups.every((p) => p !== 'sticky')).toBe(true);
 	}, 60_000);
 });

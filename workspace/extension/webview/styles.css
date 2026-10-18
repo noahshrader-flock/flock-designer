@@ -29,6 +29,17 @@
 	 */
 	--dsnr-control: 32px;
 	--dsnr-control-small: 22px;
+	/*
+	 * A color's dot (a button) and the swatch in it: one size, so what lines up with a dot (a theme's column of them, its heading
+	 * above) is as wide as it is, and every list of colors ends at the same place.
+	 */
+	--dsnr-dot: 26px;
+	--dsnr-dot-swatch: 18px;
+	/* A row of the component's side panel (a picker, a value, a token): at least this tall, with this between the pickers. */
+	--dsnr-row-height: 28px;
+	--dsnr-row-gap: 8px;
+	/* How far a row's value, or its dot, ends from the right edge of its part: the same in Styles, Tokens and the grid of roles. */
+	--dsnr-row-edge: 8px;
 	/* An icon beside a button's words (small) or a line of small text (xs): the icon font's own size is 16px. */
 	--dsnr-icon-small: 14px;
 	--dsnr-icon-xs: 12px;
@@ -42,7 +53,14 @@
 	/* What is kept at the top while a list scrolls: the toggle's bar, then the bar of the tab under it (search and options). */
 	--dsnr-top-pad: 8px;
 	--dsnr-top-height: calc(var(--dsnr-control) + 2 * var(--dsnr-top-pad));
-	/* The design system's Components and Tokens toggle, kept under the top bar: its search bar is kept under it. */
+	/*
+	 * The design system's own row (its name, its branch, its buttons), kept under the top bar, one line of the small control
+	 * between its padding; and the gap between what is in it: between the buttons, and between the name's icon and them.
+	 */
+	--dsnr-ds-gap: 4px;
+	--dsnr-ds-pad: 4px;
+	--dsnr-ds-header-height: calc(var(--dsnr-control-small) + 2 * var(--dsnr-ds-pad));
+	/* The design system's Components and Tokens toggle, kept under that: its search bar is kept under it. */
 	--dsnr-part-pad-top: 4px;
 	--dsnr-part-pad-bottom: 8px;
 	--dsnr-part-height: calc(var(--dsnr-control) + var(--dsnr-part-pad-top) + var(--dsnr-part-pad-bottom));
@@ -77,6 +95,11 @@ body.vscode-high-contrast-light {
 	font-size: var(--dsnr-icon-small);
 }
 
+.mode-icon.icon-xs {
+	width: var(--dsnr-icon-xs);
+	height: var(--dsnr-icon-xs);
+}
+
 .codicon.icon-xs {
 	font-size: var(--dsnr-icon-xs);
 }
@@ -99,10 +122,11 @@ body {
 
 /* The bar the toggle sits in: kept at the top while the list under it scrolls. */
 /*
- * Bars kept at the top while a list scrolls under them, each under the one before: the toggle's, then the design system's
- * Components and Tokens toggle, then a tab's search and options.
+ * Bars kept at the top while a list scrolls under them, each under the one before: the toggle's, then the design system's own
+ * row (its name is always shown), then its Components and Tokens toggle, then a tab's search and options.
  */
 .panel-top,
+.ds-header,
 .ds-part,
 .tab-body .view-bar {
 	position: sticky;
@@ -218,6 +242,11 @@ body {
 
 .link:focus-visible {
 	outline: var(--dsnr-focus);
+}
+
+/* In one of the side panel's parts, which stack their children across their width: as wide as its words, not the part. */
+.aside-section > .link {
+	align-self: flex-start;
 }
 
 .toggle-icons {
@@ -1025,25 +1054,34 @@ textarea.input {
 }
 
 /*
- * The Design System tab (6.1, 6.2): the design system's own row, its parts, and its tokens as rows, a swatch at the start
- * and the value at the end.
+ * The Design System tab (6.1, 6.2): the design system's own row, its parts, and its tokens as rows, a name at the start and
+ * the value (or a color's dot) at the end.
+ *
+ * The row's menu opens over the bars under it, which come after it and are at the bars' layer: a sticky row is a layer of its own,
+ * so what is inside it (the menu) cannot rise above a bar outside it. The row itself is at the menu's layer, above them.
  */
 .ds-header {
+	top: var(--dsnr-top-height);
+	z-index: var(--dsnr-layer-menu);
 	display: grid;
 	grid-template-columns: minmax(0, 1fr) auto;
 	align-items: center;
-	column-gap: 8px;
-	padding: 4px 6px 4px 12px;
+	column-gap: var(--dsnr-ds-gap);
+	box-sizing: border-box;
+	height: var(--dsnr-ds-header-height);
+	padding: var(--dsnr-ds-pad) 6px var(--dsnr-ds-pad) 12px;
 }
 
-/* Its children sit in the header's own grid: the name on the first line, the branch under it. */
+/* Its name, then its branch's icon directly after it; a long name gives way, and the icon stays. */
 .ds-title {
-	display: contents;
+	display: flex;
+	align-items: center;
+	gap: var(--dsnr-ds-gap);
+	min-width: 0;
 }
 
 .ds-name {
-	grid-row: 1;
-	grid-column: 1;
+	min-width: 0;
 	overflow: hidden;
 	font-weight: 600;
 	text-overflow: ellipsis;
@@ -1052,32 +1090,27 @@ textarea.input {
 
 .ds-branch {
 	display: inline-flex;
-	grid-row: 2;
-	grid-column: 1;
+	flex-shrink: 0;
 	align-items: center;
-	gap: 4px;
-	min-width: 0;
 	color: var(--dsnr-muted);
-	font-size: 0.92em;
+	cursor: help;
 }
 
-/* Sync, its menu and the count not read, centred on the name's line. */
+/* The count not read, the count of changes and its menu, centred on the name's line. */
 .ds-actions {
 	display: inline-flex;
-	grid-row: 1;
-	grid-column: 2;
 	align-items: center;
-	gap: 4px;
+	gap: var(--dsnr-ds-gap);
 }
 
 .ds-part {
-	top: var(--dsnr-top-height);
+	top: calc(var(--dsnr-top-height) + var(--dsnr-ds-header-height));
 	padding: var(--dsnr-part-pad-top) 12px var(--dsnr-part-pad-bottom);
 }
 
-/* With the toggle above it, the search bar is kept under that too, not under the top bar alone. */
+/* With the toggle above it, the search bar is kept under that too, under the top bar and the design system's row. */
 .tab-body .ds-part ~ .view-bar {
-	top: calc(var(--dsnr-top-height) + var(--dsnr-part-height));
+	top: calc(var(--dsnr-top-height) + var(--dsnr-ds-header-height) + var(--dsnr-part-height));
 }
 
 .note-warning .codicon {
@@ -1118,8 +1151,16 @@ textarea.input {
 	font-weight: 600;
 }
 
-.token-set-name {
-	margin: 6px 0 0;
+/*
+ * A set of colors' heading (the palette's family, the grid's role) is a row of the same height as every row under it, in both
+ * views of the colors, so flipping between them moves nothing: a row of a set, and the heading over it, are `--dsnr-row-height`.
+ */
+.token-set-name,
+.theme-headings {
+	display: flex;
+	align-items: center;
+	min-height: var(--dsnr-row-height);
+	margin: 0;
 	font-size: 1em;
 	font-weight: 600;
 }
@@ -1158,8 +1199,9 @@ textarea.input {
 	align-items: center;
 	gap: 6px;
 	width: 100%;
-	min-height: 22px;
-	padding: 0 34px 0 4px;
+	min-height: var(--dsnr-row-height);
+	/* No indent of its own: a row's name starts where its set's and its part's titles do. At the right, room for a row's reset (`.item-actions`, in the Changes); a token's row has none (`.token-line-flush`). */
+	padding: 0 34px 0 0;
 	box-sizing: border-box;
 	color: inherit;
 	font: inherit;
@@ -1177,6 +1219,11 @@ textarea.input {
 	background: var(--vscode-list-hoverBackground);
 }
 
+/* A pressed row's text is flush with its titles', so its highlight reaches out to the left of it, not the text into the highlight. */
+.value-cell.token-button:hover {
+	box-shadow: -4px 0 0 var(--vscode-list-hoverBackground);
+}
+
 .token-button:focus-visible {
 	outline: var(--dsnr-focus);
 	outline-offset: -1px;
@@ -1186,6 +1233,46 @@ textarea.input {
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
+}
+
+/* A token's row in the Styles' own rhythm: its value, or its dot, flush at the right as a value's is. */
+.token-line-flush {
+	padding-right: var(--dsnr-row-edge);
+}
+
+/* A token's name is a link to the file it is written in: the row's text, underlined and in the link colour when pointed at. */
+.token-link {
+	padding: 0;
+	border: none;
+	border-radius: var(--dsnr-radius-inner);
+	color: inherit;
+	background: transparent;
+	font: inherit;
+	text-align: start;
+	cursor: pointer;
+}
+
+.token-link:hover {
+	color: var(--vscode-textLink-foreground);
+	text-decoration: underline;
+}
+
+.token-link:focus-visible {
+	outline: var(--dsnr-focus);
+}
+
+/* What is at the right of a row that is not a colour: the rest of the row, so pressing it anywhere but the name is its control. */
+.token-fill {
+	display: flex;
+	flex: 1;
+	align-items: center;
+	align-self: stretch;
+	justify-content: flex-end;
+	gap: 6px;
+	min-width: 0;
+	padding: 0 0 0 4px;
+	font: inherit;
+	color: inherit;
 }
 
 .token[data-changed] .token-name {
@@ -1251,12 +1338,6 @@ textarea.input {
 .token:hover .item-actions,
 .token .item-actions:focus-within {
 	opacity: 1;
-}
-
-.token-note {
-	padding: 0 4px 4px 24px;
-	color: var(--dsnr-muted);
-	font-size: 0.92em;
 }
 
 /*
@@ -1449,28 +1530,32 @@ textarea.input {
 	gap: 8px;
 }
 
+/*
+ * Where the side pane scrolls on its own (as the tab has room for two columns), a part's title stays at the top of it while
+ * the part is in view, and goes with the part, the next part's title taking its place. It covers what scrolls under it.
+ */
+@media (min-width: 900px) {
+	.aside-heading {
+		position: sticky;
+		top: 0;
+		z-index: var(--dsnr-layer-top);
+		margin: -12px -12px 0;
+		padding: 12px 12px 6px;
+		border-radius: var(--dsnr-radius-large) var(--dsnr-radius-large) 0 0;
+		background: var(--vscode-editor-background);
+	}
+}
+
 .aside-title {
 	margin: 0;
 	font-size: 1.1em;
 	font-weight: 600;
 }
 
-/* A part kept closed until it is opened (Tokens used, Accessibility): its title is what opens it, in the title's own colour. */
-.aside-summary {
-	gap: 6px;
-	padding: 0;
-	color: var(--vscode-foreground);
-}
-
-.aside-disclosure > :not(summary) {
-	margin-top: 8px;
-}
-
 /*
  * A component's values, in the narrow side pane, as its tokens read: each property a group, its name in the weight and colour
  * of a token's set, each value a line with what it is called on the left and its value on the right, both at the token
- * rows' size. A group's heading stays at the top of the pane while the group is in view (where the pane scrolls on its own,
- * below), the next replacing it.
+ * rows' size. The Tokens part is laid out the same way. No heading sticks but a part's own (`.aside-heading`).
  */
 .value-group-name {
 	display: flex;
@@ -1479,8 +1564,7 @@ textarea.input {
 	justify-content: space-between;
 	gap: 0 8px;
 	margin: 0;
-	padding: 8px 4px 4px;
-	background: var(--vscode-editor-background);
+	padding: 8px 0 4px;
 	font-size: 1em;
 	font-weight: 600;
 }
@@ -1505,7 +1589,10 @@ textarea.input {
 	align-items: center;
 	column-gap: 12px;
 	width: 100%;
-	padding: 3px 8px 3px 4px;
+	min-height: var(--dsnr-row-height);
+	/* Its width is the pane's, so a token's name beside its label can be held to a share of it (`.value-token`). */
+	container-type: inline-size;
+	padding: 3px var(--dsnr-row-edge) 3px 0;
 	box-sizing: border-box;
 	color: inherit;
 	font: inherit;
@@ -1523,6 +1610,15 @@ textarea.input {
 	color: var(--dsnr-muted);
 	font-family: var(--vscode-editor-font-family);
 	font-size: 0.92em;
+}
+
+/* A token's name where its number would be: in the panel's own face, at most half its cell, cut with an ellipsis, so its label keeps the rest. */
+.value-token {
+	overflow: hidden;
+	max-width: 50cqw;
+	font-family: var(--vscode-font-family);
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
 /*
@@ -1600,12 +1696,19 @@ textarea.input {
 	/* One grid for every picker: the props' names as long as the longest, the dropdowns the rest, all lined up. */
 	grid-template-columns: auto minmax(0, 1fr);
 	align-items: center;
-	gap: 4px 12px;
-	padding: 4px 4px 8px;
+	gap: var(--dsnr-row-gap) 12px;
+	padding: 4px 0 8px;
 }
 
 .picker-row {
 	display: contents;
+}
+
+/* A picker's name, with its info icon beside it when it has one: one cell of the pickers' grid. */
+.picker-name {
+	display: flex;
+	align-items: center;
+	gap: 4px;
 }
 
 .picker-row .select {
@@ -1657,14 +1760,6 @@ textarea.input {
 	}
 }
 
-@media (min-width: 900px) {
-	.value-group-name {
-		position: sticky;
-		top: 0;
-		z-index: var(--dsnr-layer-actions);
-	}
-}
-
 /*
  * A tooltip (`TooltipHost`), in the theme's own hover colours, over everything, never something to hover into. It is drawn
  * hidden and placed once its size is known, so it is never seen where it was not put.
@@ -1707,8 +1802,9 @@ textarea.input {
 	box-shadow: 0 2px 8px var(--vscode-widget-shadow);
 }
 
-/* It takes the focus when it opens, so the keyboard is in it; nothing is drawn around it for that. */
-.popover:focus {
+/* It takes the focus when it opens, so the keyboard is in it; nothing is drawn around it for that (`focusPanel`). */
+.popover:focus,
+.dialog:focus {
 	outline: none;
 }
 
@@ -1734,6 +1830,27 @@ textarea.input {
 	display: flex;
 	flex-direction: column;
 	gap: 2px;
+}
+
+/* A part with a short name (X, Y, Top): its name, its slider and its number on one line, the names in a column of their own. */
+.popover-field-line {
+	flex-direction: row;
+	align-items: center;
+	gap: 8px;
+}
+
+.popover-field-line .popover-label {
+	flex: 0 0 3.5em;
+}
+
+.popover-field-line .dimension-field {
+	flex: 1;
+	min-width: 0;
+}
+
+/* A range has a width of its own it will not go under, which would push its number out of the popover beside a name. */
+.popover-field-line input[type='range'] {
+	min-width: 0;
 }
 
 /* At the panel's own text size: a few fields, read at a glance. */
@@ -1797,6 +1914,7 @@ textarea.input {
 	display: flex;
 	flex-direction: column;
 	gap: 2px;
+	overflow-wrap: anywhere;
 	padding: 6px 0;
 	border-bottom: 1px solid var(--dsnr-border);
 }
@@ -1804,6 +1922,25 @@ textarea.input {
 .issue-meta {
 	color: var(--dsnr-muted);
 	font-size: 0.92em;
+}
+
+/*
+ * The elements an issue was found on: a plain list, each with the one bullet and the one size, the meta line's, its selector in
+ * the same size as the words round it, not the editor's larger.
+ */
+.issue-elements {
+	margin: 4px 0 0;
+	padding-left: 18px;
+	list-style: disc;
+}
+
+.issue-elements li::marker {
+	color: var(--dsnr-muted);
+}
+
+.issue-elements code {
+	font-family: var(--vscode-editor-font-family);
+	font-size: inherit;
 }
 
 .tab a {
@@ -2132,7 +2269,6 @@ textarea.input {
 
 .value-place {
 	display: block;
-	padding-left: 4px;
 	font-size: 0.92em;
 	overflow-wrap: anywhere;
 }
@@ -2185,7 +2321,8 @@ textarea.input {
 
 .change-values {
 	display: block;
-	padding: 0 34px 2px 24px;
+	/* In from the left by a swatch (14px) and the line's gap (6px), where its name starts. */
+	padding: 0 34px 2px 20px;
 	color: var(--dsnr-muted);
 	font-family: var(--vscode-editor-font-family);
 	font-size: 0.92em;
@@ -2194,29 +2331,20 @@ textarea.input {
 
 /*
  * The semantic colors as laid out here: a row for each role's variant, its name taking the room there is, and a
- * column for each theme, as wide as its swatch needs, the same on every row and its heading so they line up.
+ * column for each theme, as wide as a dot, the same on every row and its heading so they line up.
  */
-.theme-set {
-	margin-bottom: 6px;
-}
-
 .theme-row {
 	display: flex;
 	align-items: center;
 	gap: 4px;
-	min-height: 26px;
+	min-height: var(--dsnr-row-height);
 	padding-right: 4px;
 }
 
-.theme-headings {
-	min-height: 22px;
-	color: var(--dsnr-muted);
-	font-size: 0.92em;
-}
-
 .theme-name {
+	/* A block, not the flex a set's heading is (`.token-set-name`): an ellipsis needs one. */
+	display: block;
 	flex: 1;
-	color: var(--dsnr-muted);
 	min-width: 0;
 	overflow: hidden;
 	text-overflow: ellipsis;
@@ -2227,16 +2355,36 @@ textarea.input {
 	color: var(--vscode-foreground);
 }
 
+/* The set's name is the text's colour; the icons over the columns are quiet. */
+.theme-headings .theme-cell {
+	color: var(--dsnr-muted);
+}
+
+/*
+ * A theme's column: as wide as a dot, so the last column's dots end where a palette's do (flush right, the same 8px from the
+ * edge), and a heading over them is centred on them. A heading with no icon (a theme that is not Light or Dark) is cut short.
+ */
 .theme-cell {
 	display: flex;
 	flex-shrink: 0;
 	justify-content: center;
-	width: 48px;
+	width: var(--dsnr-dot);
+	overflow: hidden;
+	text-overflow: ellipsis;
 	white-space: nowrap;
 }
 
 .theme-none {
 	color: var(--dsnr-muted);
+}
+
+/* What would be small print, behind an icon beside what it is about: told on hover (`InfoTip`), never in the way. */
+.info-tip {
+	display: inline-flex;
+	flex-shrink: 0;
+	align-items: center;
+	color: var(--dsnr-muted);
+	cursor: help;
 }
 
 /*
@@ -2247,10 +2395,11 @@ textarea.input {
 .color-dot {
 	position: relative;
 	display: inline-flex;
+	flex-shrink: 0;
 	align-items: center;
 	justify-content: center;
-	width: 26px;
-	height: 26px;
+	width: var(--dsnr-dot);
+	height: var(--dsnr-dot);
 	padding: 0;
 	border: 1px solid transparent;
 	border-radius: var(--dsnr-radius-inner);
@@ -2262,8 +2411,8 @@ button.color-dot {
 }
 
 .color-dot .swatch {
-	width: 18px;
-	height: 18px;
+	width: var(--dsnr-dot-swatch);
+	height: var(--dsnr-dot-swatch);
 }
 
 button.color-dot:hover {
@@ -2286,7 +2435,7 @@ button.color-dot:hover {
 
 .color-dot-flag {
 	position: absolute;
-	/* On the circle's edge at its top right, 45 degrees round (the circle is 18px, 4px in from the button's 26), the badge's middle a little below it. */
+	/* On the circle's edge at its top right, 45 degrees round (the circle, `--dsnr-dot-swatch`, is centred in the button, `--dsnr-dot`), the badge's middle a little below it. */
 	top: 1px;
 	right: 2px;
 }

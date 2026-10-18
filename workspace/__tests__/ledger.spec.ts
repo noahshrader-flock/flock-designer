@@ -80,9 +80,9 @@ describe('a ledger', () => {
 		expect(row(l, '2.2.1')).toMatchObject({ status: 'notRun', why: "timing, in the source: this checkout's remote names no default branch" });
 	});
 
-	it('leaves to a person what no layer reaches, with what they judge, and adds what axe could not decide', () => {
+	it('leaves to a person what no layer reaches, with what they judge, and adds what axe flagged to review', () => {
 		expect(row(l, '1.3.3')).toMatchObject({ status: 'person', by: [], evidence: [], person: 'copy that names shape, color or position' });
-		expect(row(l, '1.4.3')?.person).toBe('what axe could not decide (color-contrast)');
+		expect(row(l, '1.4.3')?.person).toBe('what axe flagged to review (color-contrast)');
 		expect(row(l, '1.1.1')?.person).toBe('alt text is meaningful; decorative vs informative');
 	});
 });

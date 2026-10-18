@@ -1,4 +1,4 @@
-import { createElement } from 'react';
+import { act, createElement, useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { Badge } from '../extension/webview/ui/Badge';
 import { ColorDot } from '../extension/webview/ui/ColorDot';
@@ -66,6 +66,67 @@ describe('a dialog', () => {
 	it('puts the focus on what it does when it has no field', async () => {
 		await open(createElement('button', { type: 'button' }, 'Sign out'));
 		expect(document.activeElement?.textContent).toBe('Sign out');
+	});
+
+	it('puts the focus on the dialog itself, not a control, when it is a few controls for one thing, as a popover does (focus="panel")', async () => {
+		// Opened from a button of its own, closed by its own onClose, so what is given back to the button is the dialog's doing.
+		const Opened = () => {
+			const [shown, setShown] = useState(false);
+			return createElement(
+				'div',
+				null,
+				createElement('button', { type: 'button', onClick: () => setShown(true) }, 'Change Radius base'),
+				shown &&
+					createElement(
+						Dialog as never,
+						{ title: 'Radius base', onClose: () => setShown(false), focus: 'panel' },
+						createElement('input', { type: 'range', 'aria-label': 'Radius', defaultValue: 8 }),
+						createElement('button', { type: 'button' }, 'Reset'),
+					),
+			);
+		};
+		await mount(createElement(Opened));
+		const opener = button('Change Radius base');
+		opener.focus();
+		await press(opener);
+		const box = document.querySelector('[role="dialog"]') as HTMLElement;
+		// On the dialog: the keyboard is in it, and no slider is drawn as chosen the moment it opens.
+		expect(document.activeElement).toBe(box);
+		expect(box.getAttribute('tabindex')).toBe('-1');
+		// Tab and Shift+Tab stay inside it, back from the dialog itself going to its last control.
+		const key = (name: string, shiftKey = false) =>
+			act(async () => void box.dispatchEvent(new KeyboardEvent('keydown', { key: name, shiftKey, bubbles: true, cancelable: true })));
+		await key('Tab', true);
+		expect(document.activeElement?.textContent).toBe('Reset');
+		// Closed with Escape, the focus goes back to what opened it, as every dialog's does.
+		await key('Escape');
+		expect(document.querySelector('[role="dialog"]')).toBeNull();
+		expect(document.activeElement).toBe(opener);
+	});
+
+	it('goes through its links too, by Tab, and keeps Tab inside it: from its X to a link, from the last link back to the X', async () => {
+		const box = await open(
+			createElement(
+				'p',
+				null,
+				createElement('a', { href: 'https://example.test/a' }, 'First'),
+				' ',
+				createElement('a', { href: 'https://example.test/b' }, 'Second'),
+			),
+		);
+		const key = (shiftKey = false) =>
+			act(
+				async () =>
+					void document.activeElement?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', shiftKey, bubbles: true, cancelable: true })),
+			);
+		// It opens on the X (the first thing in it); Shift+Tab from it is the last link, not out of the dialog.
+		expect(document.activeElement).toBe(close());
+		await key(true);
+		expect(document.activeElement?.textContent).toBe('Second');
+		// Tab from the last link comes round to the X; the browser's own Tab does the ones between.
+		await key();
+		expect(document.activeElement).toBe(close());
+		expect(box.contains(document.activeElement)).toBe(true);
 	});
 
 	it('has only the X to reach when it has nothing else in it', async () => {

@@ -1,7 +1,9 @@
 /**
  * What an accessibility check found (T7 of the design system plan, part B), as the app keeps and says it: axe-core's
  * results for each state of a page, merged by rule, with the WCAG success criteria each rule checks, and said in the same
- * words wherever they are shown. Never as a pass: at most, no issues found by automated checks.
+ * words wherever they are shown. Said as what was checked and what is left to do, never as a pass and never as what a check
+ * could not do: issues are *to fix*, what axe flagged for a person's eye is *to review*, and what no check reaches is *to check
+ * by hand*.
  */
 import type { AccessibilityCounts, AccessibilityElement, AccessibilityFindings, AccessibilityIssue, AccessibilityResult } from './contract';
 import { plural } from './plural';
@@ -125,14 +127,16 @@ export const foundIn = (i: AccessibilityIssue): string[] => (i.states.length > 1
 export const whereFound = (i: AccessibilityIssue): string =>
 	`${plural(i.nodes, 'element')}${foundIn(i).length ? `, in ${foundIn(i).join(', ')}` : ''}`;
 
+/** What axe found that is to be fixed, as it is titled in the panel's findings and in the task an agent reads; and what it flagged to be reviewed, titled in the task only. */
+export const TO_FIX_TITLE = 'To fix';
+export const TO_REVIEW_TITLE = 'To review';
+
 /**
- * A result in a few words, the same wherever it is shown: "3 automated issues, 2 need a person", or "No issues found by
- * automated checks". Never a pass.
+ * A result in a few words, the same wherever it is shown: "3 issues to fix", or "No issues found". What is left is said
+ * beside it (`checkedWith`, `notAutomatedLine`), so it is never read as a pass. Only what is to fix is counted: what axe
+ * flagged for a closer look is for the agent and the ledger, and is not listed to a person here.
  */
-export const summaryOf = ({ violations, incomplete }: AccessibilityCounts): string => {
-	const found = violations ? plural(violations, 'automated issue') : 'No issues found by automated checks';
-	return incomplete ? `${found}, ${incomplete} ${incomplete === 1 ? 'needs' : 'need'} a person` : found;
-};
+export const summaryOf = ({ violations }: AccessibilityCounts): string => (violations ? `${plural(violations, 'issue')} to fix` : 'No issues found');
 
 /** An issue, in a line: where in WCAG, how bad, on how many elements and in which states. Its rule's page goes after it. */
 export const issueLine = (i: AccessibilityIssue): string =>
@@ -159,12 +163,12 @@ export const unlisted = (i: AccessibilityIssue): number => i.nodes - i.elements.
 export const WORDS = new Set(['image-alt', 'role-img-alt', 'svg-img-alt', 'input-image-alt', 'object-alt', 'area-alt']);
 
 /** How the best-practice rules' findings are titled, wherever they are said: beside WCAG, never counted as it. */
-export const BEST_PRACTICE_TITLE = 'Best practice, beside WCAG (not counted as it)';
+export const BEST_PRACTICE_TITLE = 'Best practice, beyond WCAG';
 
-/** What a check was made with, and that it is never a pass: said above what it found, wherever that is listed. */
+/** What a check was made with, and what is left: said above what it found, wherever that is listed. */
 export const checkedWith = (r: AccessibilityResult): string =>
-	`Checked with axe-core ${r.ran.axe} at ${r.ran.target}${r.ran.states.length > 1 ? `, in ${r.ran.states.join(', ')}` : ''}. Automated checks find about half of the problems WCAG covers: this is not a pass, and the manual checklist is a person’s.`;
+	`axe-core ${r.ran.axe} checked this against ${r.ran.target}${r.ran.states.length > 1 ? `, in ${r.ran.states.join(', ')}` : ''}. What is left is the manual checklist.`;
 
-/** What no automated check covers, for a person to check; null when every criterion has one. */
+/** What is left to check by hand, which no automated check reaches; null when every criterion has one. */
 export const notAutomatedLine = (r: AccessibilityResult): string | null =>
-	r.notAutomated.length > 0 ? `No automated check covers ${r.notAutomated.join(' or ')}: those criteria are a person’s to check.` : null;
+	r.notAutomated.length > 0 ? `Left to check by hand: ${r.notAutomated.join(', ')}.` : null;

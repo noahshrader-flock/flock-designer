@@ -137,7 +137,7 @@ interface Shown {
 }
 
 /**
- * The values tried, where each is written, and their branch (`ValueChanges`), as found and as kept: titled Values on its own
+ * The values tried, where each is written, and their branch (`ValueChanges`), as found and as kept: titled Styles on its own
  * tab, and by the component's name (`name`) in the panel's Changes, among the others'.
  */
 export const ChangedValues = ({
@@ -166,7 +166,7 @@ export const ChangedValues = ({
 			<section aria-label={name ? `Value changes · ${name}` : 'Value changes'} data-value-changes className="changed">
 				<div className="changed-header">
 					<span className="changed-title">
-						{name ?? 'Values'} <span className="section-count">{tried.length}</span>
+						{name ?? 'Styles'} <span className="section-count">{tried.length}</span>
 					</span>
 					{tried.length > 0 && (
 						<button type="button" className="link" onClick={() => trying.onAll([])}>

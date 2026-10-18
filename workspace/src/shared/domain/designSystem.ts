@@ -350,7 +350,7 @@ export type ComponentValues =
 export interface ComponentPictures {
 	drawing: boolean;
 	pictures: Record<string, string>;
-	/** What each card says of its component's accessibility (T7): how many issues axe found, and how many need a person. */
+	/** What each card says of its component's accessibility (T7): how many issues to fix, and how many to review. */
 	issues: Record<string, AccessibilityCounts>;
 }
 

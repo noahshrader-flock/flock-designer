@@ -59,7 +59,7 @@ export const ComponentTab = ({ id }: { id: string }) => {
 	const [edits, setEdits] = useTrial();
 	// The mode its values are shown in: the one chosen in the panel, the same on every page.
 	const mode = useModeChoice();
-	// The token whose control is open: Tokens used's rows, and a value that is a token's, change it as the panel's do, and every
+	// The token whose control is open: the Tokens' rows, and a value that is a token's, change it as the panel's do, and every
 	// page sees it.
 	const [editing, setEditing] = useState<DesignToken | null>(null);
 	// Its Changes dialog: what is tried on it and the token changes, from the button in its header.

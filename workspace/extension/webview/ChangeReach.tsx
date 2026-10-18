@@ -4,7 +4,7 @@ import { useChangeReach } from '../../src/renderer/useChangeReach';
 import { Notice } from './ui/Notice';
 import { saidValue, valueTitle } from '../../src/shared/valueNames';
 
-/** What changed of a value, named as the Values name it, and dark when it is in dark. */
+/** What changed of a value, named as the Styles name it, and dark when it is in dark. */
 const changeName = (c: ValueChange): string =>
 	c.mode === 'dark' ? `${valueTitle(c.property, c.variant)} · dark` : valueTitle(c.property, c.variant);
 

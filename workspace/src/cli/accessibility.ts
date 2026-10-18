@@ -290,7 +290,7 @@ export const measureAccessibility = async (deps: MeasureDeps): Promise<number> =
 			// Not the app's line: here the probe and the source measure some of what axe has no rules for.
 			...(result.notAutomated.length
 				? [
-						`axe has no rules for ${result.notAutomated.join(' or ')}: what the probe and the source did not measure of it is a person's, criterion by criterion in the ledger.`,
+						`Left to check by hand: ${result.notAutomated.join(', ')}. What the probe and the source did not measure of it is listed, criterion by criterion, in the ledger.`,
 					]
 				: []),
 			...(note ? [note] : []),

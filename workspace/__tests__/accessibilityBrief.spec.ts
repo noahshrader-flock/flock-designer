@@ -103,10 +103,10 @@ describe('the accessibility section of a task', () => {
 		expect(brief).toContain('Acme has no .dsnr/manifest.md, so it declares no target. Build to **WCAG 2.1 Level AA**');
 		expect(brief).toContain('say in your summary that there was no declared target');
 		// At the default every criterion has an axe rule; a product that declares 2.2 AA has Level A criteria none covers.
-		expect(brief).not.toContain('No automated check covers');
+		expect(brief).not.toContain('Left to check by hand');
 		const at22 = declaredTarget(COKE.replace('WCAG 2.0 Level A', 'WCAG 2.2 Level AA').replace(/^\| \*\*axe tags\*\*.*\n/m, ''), 'Coke');
 		expect(accessibilityBrief({ standard: STANDARD, target: at22 })).toContain(
-			'No automated check covers WCAG 2.2 Level A: check those criteria by hand, or report them as not run.',
+			'Left to check by hand: WCAG 2.2 Level A. Check them, or report them as not run.',
 		);
 	});
 
@@ -156,11 +156,9 @@ describe('the accessibility section of a task', () => {
 			'- **image-alt** (WCAG 1.1.1): Images must have alternate text. 2 elements.\n  - `img.hero`: Fix any of the following: Element does not have an alt attribute\n  - and 1 more element',
 		);
 		// Best practice, said apart: never counted as WCAG.
+		expect(brief).toContain('Best practice, beyond WCAG:\n- **heading-order**: Heading levels should only increase by one. 1 element.');
 		expect(brief).toContain(
-			'Best practice, beside WCAG (not counted as it):\n- **heading-order**: Heading levels should only increase by one. 1 element.',
-		);
-		expect(brief).toContain(
-			'For a person to judge (axe could not decide):\n- **color-contrast** (WCAG 1.4.3): Elements must meet minimum color contrast. 1 element, in default, empty.',
+			'To review:\n- **color-contrast** (WCAG 1.4.3): Elements must meet minimum color contrast. 1 element, in default, empty.',
 		);
 		expect(
 			accessibilityBrief({ standard: STANDARD, target: declaredTarget(COKE, 'Coke'), findings: { violations: [], incomplete: [] } }),

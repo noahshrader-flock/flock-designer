@@ -22,7 +22,9 @@ import { useMode } from './mode';
 import { ValueEditor } from './ValueEditor';
 import { Disclosure } from './ui/Disclosure';
 import { Select } from './ui/Field';
+import { AsidePart } from './ui/AsidePart';
 import { ColorDot } from './ui/ColorDot';
+import { InfoTip } from './ui/InfoTip';
 import { Switch } from './ui/Switch';
 import { useDismiss } from './ui/useDismiss';
 
@@ -73,11 +75,11 @@ const madeOf = (cell: ValueCell, name: (path: string) => string, others: (path: 
 
 /**
  * One value, as a button that opens its control, as a token's row reads: what it is called on the left (`label`: its
- * property, Padding), with what it is made of as a chip after it (a token's name, "From a token", "Partly" one; nothing for
- * its own, or not checked), its value on the right (marked when it is being tried). **A colour is only its dot**
- * (`ColorDot`), as it is everywhere: its tooltip is the token's name, and the dot is what opens the control. The control of
- * a value of its own is a popover under it (`editor`, shown while `open`), closed by Escape, a press elsewhere or the button
- * again; a token's opens elsewhere, so it has none.
+ * property, Padding), its value on the right (marked when it is being tried): **a token's name where it is one**, else its
+ * number, with what it is made of as a chip after its name ("From a token", "Partly" one; nothing for its own, or not
+ * checked). **A colour is only its dot** (`ColorDot`), as it is everywhere: its tooltip is the token's name, and the dot is
+ * what opens the control. The control of a value of its own is a popover under it (`editor`, shown while `open`), closed by
+ * Escape, a press elsewhere or the button again; a token's opens elsewhere, so it has none.
  */
 const Cell = ({
 	property,
@@ -126,7 +128,11 @@ const Cell = ({
 				{open && !still && editor}
 			</li>
 		);
-	const chip = cell.value === NO_COLOR ? null : made.says;
+	// A value that is a token is that token: its name stands where its number would, so a row reads "Radius · Radius base", not
+	// "Radius · 8px"; the number is the token's own to say, in its control. Any other has its number, and a chip when it is made
+	// from a token without being one.
+	const isToken = cell.kind === 'token' && made.says !== null;
+	const chip = isToken || cell.value === NO_COLOR ? null : made.says;
 	const says = (
 		<>
 			{chip === null ? (
@@ -140,7 +146,7 @@ const Cell = ({
 				</span>
 			)}
 			<span className="value-drawn">
-				<span>{value}</span>
+				{isToken ? <span className="value-token">{made.says}</span> : <span>{value}</span>}
 				{tried !== null && <span data-changed-mark className="token-changed" aria-label="Tried" />}
 			</span>
 		</>
@@ -173,33 +179,36 @@ const Cell = ({
 	);
 };
 
-/**
- * What is said under the pickers of choosing a variant, from its props' drawing: that it is being drawn, or why it could not
- * be; what its story sets itself, so a value of that prop draws as the story has it. What cannot be varied (children, a
- * class name, an object) is not said: no one chooses between those, and it is most of every component's props.
- */
-const variantNotes = (variants: ComponentVariants): { key: string; text: string }[] => {
-	if (variants.state === 'building') return [{ key: 'building', text: 'Reading its props, and drawing it with each of their values.' }];
-	if (variants.state === 'failed') return [{ key: 'failed', text: `Its variants could not be drawn: ${variants.error}` }];
-	if (variants.state !== 'ready') return [];
-	return [
-		...(variants.fixed.length > 0
-			? [{ key: 'fixed', text: `Its story sets ${variants.fixed.join(', ')} itself: drawn with another value, it draws as the story has it.` }]
-			: []),
-	];
-};
-
 /** How a picker's value is kept in a dropdown, which takes strings: drawn without the prop (its default) is this. */
 const DEFAULT = '\u0000default';
 
-/** One prop the variant shown is chosen by, as a property row: its name, then its values to choose from, or a switch. */
-const PickerRow = ({ picker, value, onChange }: { picker: Picker; value: string | null; onChange: (value: string | null) => void }) => {
+/** What an info icon by a picker says of a prop its story sets itself, so a value of it draws as the story has it. */
+const SET_BY_STORY = 'Its story sets this itself: drawn with another value, it draws as the story has it.';
+
+/**
+ * One prop the variant shown is chosen by, as a property row: its name (with an info icon when its story sets it itself),
+ * then its values to choose from, or a switch.
+ */
+const PickerRow = ({
+	picker,
+	value,
+	fixed,
+	onChange,
+}: {
+	picker: Picker;
+	value: string | null;
+	fixed: boolean;
+	onChange: (value: string | null) => void;
+}) => {
 	const id = useId();
 	return (
 		<div data-picker={picker.prop} className="picker-row">
-			<label htmlFor={id} className="picker-label">
-				{propLabel(picker.prop)}
-			</label>
+			<span className="picker-name">
+				<label htmlFor={id} className="picker-label">
+					{propLabel(picker.prop)}
+				</label>
+				{fixed && <InfoTip text={SET_BY_STORY} />}
+			</span>
 			{picker.switch ? (
 				<Switch id={id} on={value === 'true'} onChange={(on) => onChange(on ? 'true' : offOf(picker))} />
 			) : (
@@ -216,14 +225,14 @@ const PickerRow = ({ picker, value, onChange }: { picker: Picker; value: string 
 
 /**
  * The values as an inspector (each component's values, DESIGN_SYSTEM.md): a picker for each prop its rows are told apart
- * by, then the groups, each a row a value for the variant chosen: its property's name, its value, and what it is made of as
- * a chip, pressed to change it as any value is. A combination its stories never drew is said, with the nearest that was; a
+ * by, then the groups, each a row a value for the variant chosen: its property's name, and its value (a token's name where it
+ * is one; a colour is its dot), pressed to change it as any value is. A combination its stories never drew is said, with the nearest that was; a
  * row no prop explains shows the value most instances draw, and the rest under it.
  */
 const Inspector = ({
 	rows,
 	declared,
-	notes,
+	fixed,
 	name,
 	others,
 	tried,
@@ -235,8 +244,8 @@ const Inspector = ({
 	rows: ValueRow[];
 	/** What its props declare, drawn on one of its stories (Phase 5): a case its stories never drew is shown from these. */
 	declared: ValueRow[];
-	/** What is said under the pickers of choosing a variant: what its story sets itself, what cannot be varied. */
-	notes: { key: string; text: string }[];
+	/** The props its story sets itself: their pickers say so behind an info icon. */
+	fixed: string[];
 	name: (path: string) => string;
 	others: (path: string) => string[];
 	tried: (property: ValueProperty) => (cell: ValueCell) => string | null;
@@ -270,15 +279,16 @@ const Inspector = ({
 			{pickers.length > 0 && (
 				<div data-pickers className="pickers">
 					{pickers.map((p) => (
-						<PickerRow key={p.prop} picker={p} value={selection[p.prop] ?? null} onChange={(v) => setChosen((was) => ({ ...was, [p.prop]: v }))} />
+						<PickerRow
+							key={p.prop}
+							picker={p}
+							value={selection[p.prop] ?? null}
+							fixed={fixed.includes(p.prop)}
+							onChange={(v) => setChosen((was) => ({ ...was, [p.prop]: v }))}
+						/>
 					))}
 				</div>
 			)}
-			{notes.map((n) => (
-				<p key={n.key} className="quiet" data-variant-note={n.key}>
-					{n.text}
-				</p>
-			))}
 			{inspect(rows, pickers, selection, declared).map((group) => (
 				<div key={group.name} data-value-group={group.name} className="value-group">
 					<h3 className="value-group-name">{group.name}</h3>
@@ -322,9 +332,9 @@ const Inspector = ({
  * when the design system has lengths no tag can be given, that a length said to be its own may be one of them.
  *
  * Its variants are chosen by its pickers; a case only its props declare (`variants`, drawn on one of its stories, in light)
- * is shown from that drawing and never tried, and what its story sets itself or cannot be varied is said under the pickers.
+ * is shown from that drawing and never tried, and what its story sets itself is said behind an info icon by its picker.
  *
- * Each value opens its control (Phase 2): a token's opens the token's own (`onEditToken`), as Tokens used's rows do, since it
+ * Each value opens its control (Phase 2): a token's opens the token's own (`onEditToken`), as the Tokens' rows do, since it
  * is the design system's and moves every component that draws with it; any other is tried on the instances that draw it,
  * in the stories beside this, as it moves (`ValueEditor`), and nothing is saved.
  */
@@ -383,10 +393,7 @@ export const ComponentValues = ({
 		);
 	};
 	return (
-		<section aria-label="Values" className="aside-section">
-			<div className="aside-heading">
-				<h2 className="aside-title">Values</h2>
-			</div>
+		<AsidePart title="Styles">
 			{values.state === 'failed' ? (
 				<p className="quiet">Its values could not be read: {values.error}</p>
 			) : values.state !== 'read' ? (
@@ -407,7 +414,7 @@ export const ComponentValues = ({
 						<Inspector
 							rows={values.rows[mode] ?? []}
 							declared={declared}
-							notes={variantNotes(variants)}
+							fixed={variants.state === 'ready' ? variants.fixed : []}
 							name={tokenName}
 							others={others}
 							tried={tried}
@@ -419,6 +426,6 @@ export const ComponentValues = ({
 					)}
 				</>
 			)}
-		</section>
+		</AsidePart>
 	);
 };

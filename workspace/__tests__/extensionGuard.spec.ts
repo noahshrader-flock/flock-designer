@@ -333,16 +333,20 @@ describe('the extension’s sources', () => {
 		expect(grid).not.toMatch(/row-gap|column-gap/);
 	});
 
-	it('lay a design system’s header out in two lines: its name, with Sync and its menu centred on that line, and its branch under the name', () => {
+	it('lay a design system’s header out in one line: its name, its branch’s icon directly after it, and its buttons at the right, a gap apart that is one named gap', () => {
 		const css = files()
 			.find((f) => f.path.endsWith('styles.css'))!
 			.text.replace(/\/\*[\s\S]*?\*\//g, '');
 		const rule = (selector: string) => css.split('}').find((b) => b.trim().startsWith(selector)) ?? '';
 		expect(rule('.ds-header')).toMatch(/display:\s*grid/);
-		expect(rule('.ds-title')).toMatch(/display:\s*contents/);
-		expect(rule('.ds-name')).toMatch(/grid-row:\s*1/);
-		expect(rule('.ds-actions {')).toMatch(/grid-row:\s*1/);
-		expect(rule('.ds-branch')).toMatch(/grid-row:\s*2/);
+		// The name and its icon are one flex line, the name giving way (an ellipsis) and the icon not.
+		expect(rule('.ds-title')).toMatch(/display:\s*flex/);
+		expect(rule('.ds-name')).toMatch(/text-overflow:\s*ellipsis/);
+		expect(rule('.ds-branch')).toMatch(/flex-shrink:\s*0/);
+		expect(rule('.ds-branch')).not.toMatch(/grid-row/);
+		// One gap, named: between the buttons, between the name and its icon, and between the icon and the buttons.
+		expect(css).toMatch(/--dsnr-ds-gap:\s*4px/);
+		for (const selector of ['.ds-header', '.ds-title', '.ds-actions {']) expect(rule(selector), selector).toMatch(/gap:\s*var\(--dsnr-ds-gap\)/);
 		// Its icon is the extra small size, a name for it, set over the icon font's own size.
 		expect(css).toMatch(/--dsnr-icon-xs:\s*12px/);
 		expect(rule('.codicon.icon-xs')).toMatch(/font-size:\s*var\(--dsnr-icon-xs\)/);
@@ -365,8 +369,35 @@ describe('the extension’s sources', () => {
 		expect(bars).toMatch(/z-index:\s*var\(--dsnr-layer-top\)/);
 		expect(bars).toMatch(/background:\s*var\(--vscode-sideBar-background\)/);
 		expect(rule('.item-actions {')).toMatch(/z-index:\s*var\(--dsnr-layer-actions\)/);
+		// The design system's row holds a menu, and a sticky row is a layer of its own: it is at the menu's, above the bars under it
+		// (the toggle, the search bar), or its menu would open behind them.
+		expect(rule('.ds-header {')).toMatch(/z-index:\s*var\(--dsnr-layer-menu\)/);
 		// The tab's bar is kept under the toggle's: its top is the toggle's bar's height.
 		expect(rule('.tab-body .view-bar')).toMatch(/top:\s*var\(--dsnr-top-height\)/);
+	});
+
+	it('list an accessibility issue’s elements as a plain list: one bullet and one size, the selector in the size of the words round it', () => {
+		const css = files()
+			.find((f) => f.path.endsWith('styles.css'))!
+			.text.replace(/\/\*[\s\S]*?\*\//g, '');
+		const rule = (selector: string) => css.split('}').find((b) => b.trim().startsWith(selector)) ?? '';
+		// The browser's secondary bullet for a list inside a list is the circle: this one is the disc, as every list is.
+		expect(rule('.issue-elements {')).toMatch(/list-style:\s*disc/);
+		expect(rule('.issue-elements code')).toMatch(/font-size:\s*inherit/);
+	});
+
+	it('draw no outline round a popover or a dialog that takes the focus when it opens, from one rule', () => {
+		const css = files()
+			.find((f) => f.path.endsWith('styles.css'))!
+			.text.replace(/\/\*[\s\S]*?\*\//g, '');
+		const rule = css.split('}').find((b) => b.includes('.popover:focus')) ?? '';
+		expect(rule).toContain('.dialog:focus');
+		expect(rule).toMatch(/outline:\s*none/);
+		// Both take the focus by the one function, never by a call of their own.
+		const sourceOf = (name: string) => files().find((f) => f.path.endsWith(name))!.text;
+		expect(sourceOf('ui/Popover.tsx')).toContain('focusPanel(');
+		expect(sourceOf('ui/Dialog.tsx')).toContain('focusPanel(');
+		expect(sourceOf('ui/Popover.tsx')).not.toMatch(/\.focus\(/);
 	});
 
 	it('tell every page’s tooltips from one host, mounted in the page’s own root, which is the only thing that waits to tell them', () => {
@@ -382,11 +413,18 @@ describe('the extension’s sources', () => {
 			.find((f) => f.path.endsWith('styles.css'))!
 			.text.replace(/\/\*[\s\S]*?\*\//g, '');
 		const rule = (selector: string) => css.split('}').find((b) => b.trim().startsWith(selector)) ?? '';
-		expect(rule('.ds-part {')).toMatch(/top:\s*var\(--dsnr-top-height\)/);
+		// The design system's own row is kept under the top bar, so its name is always shown, and the toggle under that.
+		expect(rule('.ds-header')).toMatch(/top:\s*var\(--dsnr-top-height\)/);
+		expect(css).toMatch(/--dsnr-ds-header-height:\s*calc\(var\(--dsnr-control-small\)\s*\+\s*2\s*\*\s*var\(--dsnr-ds-pad\)\)/);
+		expect(rule('.ds-header')).toMatch(/padding:\s*var\(--dsnr-ds-pad\)/);
+		expect(rule('.ds-header')).toMatch(/height:\s*var\(--dsnr-ds-header-height\)/);
+		expect(rule('.ds-part {')).toMatch(/top:\s*calc\(var\(--dsnr-top-height\)\s*\+\s*var\(--dsnr-ds-header-height\)\)/);
 		// Its height is its own padding and the control's, named, so the bar under it starts where it ends.
 		expect(css).toMatch(/--dsnr-part-height:\s*calc\(var\(--dsnr-control\)\s*\+\s*var\(--dsnr-part-pad-top\)\s*\+\s*var\(--dsnr-part-pad-bottom\)\)/);
 		expect(rule('.ds-part {')).toMatch(/padding:\s*var\(--dsnr-part-pad-top\)[^;]*var\(--dsnr-part-pad-bottom\)/);
-		expect(rule('.tab-body .ds-part ~ .view-bar')).toMatch(/top:\s*calc\(var\(--dsnr-top-height\)\s*\+\s*var\(--dsnr-part-height\)\)/);
+		expect(rule('.tab-body .ds-part ~ .view-bar')).toMatch(
+			/top:\s*calc\(var\(--dsnr-top-height\)\s*\+\s*var\(--dsnr-ds-header-height\)\s*\+\s*var\(--dsnr-part-height\)\)/,
+		);
 	});
 
 	it('size every control from two tokens: the default (the search, the toggle, a button, an icon button) and the small (a row’s, a header’s)', () => {

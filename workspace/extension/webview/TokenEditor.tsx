@@ -95,7 +95,7 @@ export const TokenEditor = ({ token, onClose }: { token: DesignToken; onClose: (
 	const target = pointer && byPath.get(pointer.path);
 	const [custom, setCustom] = useState(now.ref === undefined);
 	return (
-		<Dialog title={tokenTitle(now)} onClose={onClose}>
+		<Dialog title={tokenTitle(now)} onClose={onClose} focus="panel">
 			<div data-token-editor={now.path} className="token-editor">
 				<p className="quiet token-source">
 					{now.kind === 'color' && <Swatch value={now.value} />}

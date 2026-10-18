@@ -5,22 +5,40 @@ import { Popover } from './ui/Popover';
 import { ColorField, LengthField } from './ValueFields';
 import { VALUE_NAMES, valueTitle } from '../../src/shared/valueNames';
 
-/** What each part of a value is called, by how many parts it is written with short, as CSS reads one to four. */
-const PARTS: Partial<Record<ValueProperty, Record<number, string[]>>> = {
+/**
+ * One slider of a value: what it is called, which part of the value it changes (CSS writes a value's parts in an order of its
+ * own), and, for a short name, what it means in words, on its hover.
+ */
+interface Part {
+	label: string;
+	part: number;
+	hint?: string;
+}
+const at = (part: number, label: string, hint?: string): Part => ({ label, part, ...(hint ? { hint } : {}) });
+
+/**
+ * What each part of a value is called, by how many parts it is written with short, as CSS reads one to four, in the order the
+ * sliders are shown. Padding is said as engineers say it: **X** is left and right, **Y** top and bottom, X first, though CSS
+ * writes top and bottom first.
+ */
+const PARTS: Partial<Record<ValueProperty, Record<number, Part[]>>> = {
 	padding: {
-		1: ['All sides'],
-		2: ['Top and bottom', 'Left and right'],
-		3: ['Top', 'Left and right', 'Bottom'],
-		4: ['Top', 'Right', 'Bottom', 'Left'],
+		1: [at(0, 'All sides')],
+		2: [at(1, 'X', 'Left and right'), at(0, 'Y', 'Top and bottom')],
+		3: [at(0, 'Top'), at(1, 'X', 'Left and right'), at(2, 'Bottom')],
+		4: [at(0, 'Top'), at(1, 'Right'), at(2, 'Bottom'), at(3, 'Left')],
 	},
 	radius: {
-		1: ['All corners'],
-		2: ['Top left and bottom right', 'Top right and bottom left'],
-		3: ['Top left', 'Top right and bottom left', 'Bottom right'],
-		4: ['Top left', 'Top right', 'Bottom right', 'Bottom left'],
+		1: [at(0, 'All corners')],
+		2: [at(0, 'Top left and bottom right'), at(1, 'Top right and bottom left')],
+		3: [at(0, 'Top left'), at(1, 'Top right and bottom left'), at(2, 'Bottom right')],
+		4: [at(0, 'Top left'), at(1, 'Top right'), at(2, 'Bottom right'), at(3, 'Bottom left')],
 	},
-	gap: { 1: ['Rows and columns'], 2: ['Rows', 'Columns'] },
+	gap: { 1: [at(0, 'Rows and columns')], 2: [at(0, 'Rows'), at(1, 'Columns')] },
 };
+
+/** The values whose parts have names short enough to sit on their slider's line, label, slider and number; the rest stack. */
+const ON_ONE_LINE: ReadonlySet<ValueProperty> = new Set(['padding']);
 
 /**
  * A component's own value, tried in its stories (Phase 2 of adjusting a component): a small popover under the value, since it
@@ -57,7 +75,7 @@ export const ValueEditor = ({
 	// (never fewer while one is dragged, so two parts made equal stay two); the rest follow them, as CSS reads it.
 	const count = Math.max(shortParts(drawn).length, shortParts(full).length);
 	const parts = full.slice(0, count);
-	const names = PARTS[property]?.[count] ?? [VALUE_NAMES[property]];
+	const fields = PARTS[property]?.[count] ?? [at(0, VALUE_NAMES[property])];
 	const was = drawn.slice(0, count);
 	const title = valueTitle(property, cell.variant);
 	return (
@@ -74,15 +92,19 @@ export const ValueEditor = ({
 				{COLOR_VALUES.has(property) ? (
 					<ColorField live value={hexOf(tried ?? cell.value) ?? NONE_STARTS_AS} onCommit={onTry} />
 				) : (
-					parts.map((part, i) => (
-						<div key={names[i] ?? i} className="popover-field">
-							{parts.length > 1 && <span className="popover-label">{names[i]}</span>}
+					fields.map(({ label, part, hint }) => (
+						<div key={label} className={ON_ONE_LINE.has(property) ? 'popover-field popover-field-line' : 'popover-field'}>
+							{parts.length > 1 && (
+								<span className="popover-label" {...(hint ? { title: hint } : {})}>
+									{label}
+								</span>
+							)}
 							<LengthField
 								live
-								label={names[i] ?? VALUE_NAMES[property]}
-								value={part}
-								was={was[i] ?? part}
-								onCommit={(next) => onTry(allParts(parts.map((p, j) => (j === i ? next : p)).join(' '), n).join(' '))}
+								label={hint ? `${label} (${hint.toLowerCase()})` : label}
+								value={parts[part] as string}
+								was={was[part] ?? (parts[part] as string)}
+								onCommit={(next) => onTry(allParts(parts.map((p, j) => (j === part ? next : p)).join(' '), n).join(' '))}
 							/>
 						</div>
 					))

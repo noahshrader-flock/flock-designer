@@ -102,10 +102,14 @@ describe('a result', () => {
 
 	it('is said the same way everywhere, and never as a pass', () => {
 		const one = mergeRuns([{ state: 'default', violations: [rule('image-alt')], incomplete: [rule('color-contrast'), rule('link-name')] }]);
-		expect(summaryOf(countsOf(one))).toBe('1 automated issue, 2 need a person');
-		expect(summaryOf({ violations: 0, incomplete: 0 })).toBe('No issues found by automated checks');
-		expect(summaryOf({ violations: 0, incomplete: 1 })).toBe('No issues found by automated checks, 1 needs a person');
-		expect(summaryOf({ violations: 0, incomplete: 0 })).not.toMatch(/pass|compliant|conform/i);
+		// What to do, never what could not be done: only what is to fix is counted; what is flagged for a closer look is not listed.
+		expect(summaryOf(countsOf(one))).toBe('1 issue to fix');
+		expect(summaryOf({ violations: 3, incomplete: 0 })).toBe('3 issues to fix');
+		expect(summaryOf({ violations: 0, incomplete: 0 })).toBe('No issues found');
+		expect(summaryOf({ violations: 0, incomplete: 1 })).toBe('No issues found');
+		for (const said of [summaryOf({ violations: 0, incomplete: 0 }), summaryOf({ violations: 2, incomplete: 2 })]) {
+			expect(said).not.toMatch(/pass|compliant|conform|could not|cannot|unable|automated|person/i);
+		}
 	});
 });
 

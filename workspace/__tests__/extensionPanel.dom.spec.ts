@@ -1311,12 +1311,16 @@ describe('Design System', () => {
 		expect(calls('designSystemCatalog').map((c) => c.args)).toEqual([[false], [true]]);
 	});
 
-	it('names the design system and its branch, with Sync and its menu, and starts on its components', async () => {
+	it('names the design system, the icon of its branch directly after it with the branch as its tooltip, with Sync and its menu, and starts on its components', async () => {
 		await read();
 		expect(body().querySelector('.ds-name')?.textContent).toBe('FUI');
-		expect(body().querySelector('.ds-branch')?.textContent).toBe('develop');
-		// The branch's icon is extra small, beside its words.
-		expect(body().querySelector('.ds-branch .codicon')?.classList.contains('icon-xs')).toBe(true);
+		// The branch is not written: it is the tooltip of its icon, which is the name's next sibling in the one line.
+		const branch = body().querySelector('.ds-branch') as HTMLElement;
+		expect(branch.textContent).toBe('');
+		expect(branch.title).toBe('develop');
+		expect(branch.getAttribute('aria-label')).toBe('Branch develop');
+		expect(branch.previousElementSibling).toBe(body().querySelector('.ds-name'));
+		expect(branch.querySelector('.codicon-git-branch')?.classList.contains('icon-xs')).toBe(true);
 		expect([...parts().querySelectorAll('[role="radio"]')].map((o) => [o.textContent, o.getAttribute('aria-checked')])).toEqual([
 			['Components', 'true'],
 			['Tokens', 'false'],
@@ -1457,7 +1461,14 @@ describe('Design System', () => {
 			['Shape', '1'],
 		]);
 		const set = body().querySelector('[data-token-set="primary"]') as HTMLElement;
-		expect([...set.querySelectorAll('[data-theme-heading]')].map((h) => h.textContent)).toEqual(['Light', 'Dark']);
+		// The themes are headed by the icons of the mode switch, the sun and the moon, not by their names: named for assistive
+		// technology and on hover.
+		const headings = [...set.querySelectorAll<HTMLElement>('[data-theme-heading]')];
+		expect(headings.map((h) => [h.getAttribute('aria-label'), h.title, h.textContent])).toEqual([
+			['Light', 'Light', ''],
+			['Dark', 'Dark', ''],
+		]);
+		expect(headings.map((h) => h.querySelector('svg')?.querySelector('circle') !== null)).toEqual([true, false]);
 		const rows = [...set.querySelectorAll<HTMLElement>('[data-token-row]')];
 		expect(rows.map((r) => r.dataset.tokenRow)).toEqual(['main', 'contrastText']);
 		// Each theme's value is a dot of its own, saying which token it is and what it points at; a theme without the role is a dash.
@@ -1492,8 +1503,15 @@ describe('Design System', () => {
 		expect(step.querySelector('[data-part="name"]')?.textContent).toBe('50');
 		expect(step.querySelector('.color-dot')?.getAttribute('title')).toBe('Tones pineGreen 50');
 		expect(step.title).toBe('src/colors/tones.ts:3');
-		await press(step.querySelector('[aria-label="Open src/colors/tones.ts:3"]') as HTMLElement);
+		// Its name is the link to its file, at its line; there is no icon beside it to press for that.
+		const link = step.querySelector('button[data-part="name"]') as HTMLElement;
+		expect(link.getAttribute('aria-label')).toBe('50: open src/colors/tones.ts:3');
+		expect(step.querySelector('.item-actions, .codicon-go-to-file')).toBeNull();
+		await press(link);
 		expect(panelSaid().at(-1)).toEqual({ type: 'open-library-source', file: 'src/colors/tones.ts', line: 3 });
+		// And the dot, not the name, is what opens its control.
+		await press(step.querySelector('button.color-dot') as HTMLElement);
+		expect(document.querySelector('[role="dialog"]')).not.toBeNull();
 	});
 
 	it('keeps a role’s themes together when the search finds it in one', async () => {
@@ -1866,6 +1884,9 @@ describe('trying a change to the tokens, saving it to a branch, and proposing it
 		await press(document.querySelector('[aria-label="Color view"] [aria-label="Palette"]') as HTMLElement);
 		await press(document.querySelector('[aria-label="Change Tones pineGreen 60"]') as HTMLElement);
 		const hex = dialog().querySelector('input[aria-label="Hex"]') as HTMLInputElement;
+		// A token's control opens with the focus on the dialog, as a value's popover does: no field is drawn as chosen.
+		expect(document.activeElement).toBe(dialog());
+		expect(document.activeElement).not.toBe(hex);
 		await type(hex, '#00aa00');
 		await act(async () => void hex.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })));
 		expect(edited()).toEqual([{ path: 'tone.pineGreen.60', value: '#00AA00' }]);
@@ -1875,6 +1896,8 @@ describe('trying a change to the tokens, saving it to a branch, and proposing it
 		expect(document.querySelector('[role="dialog"]')).toBeNull();
 		await press(document.querySelector('[aria-label="Change Spacing"]') as HTMLElement);
 		const slider = dialog().querySelector('input[type="range"]') as HTMLInputElement;
+		expect(document.activeElement).toBe(dialog());
+		expect(document.activeElement).not.toBe(slider);
 		await type(slider, '12');
 		await act(async () => void slider.dispatchEvent(new Event('pointerup', { bubbles: true })));
 		// A change is every token changed: this one joins the first.

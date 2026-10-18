@@ -5,7 +5,7 @@ import { PrimitivesTab } from '../extension/webview/PrimitivesTab';
 import { readTab } from '../extension/webview/tab';
 import { PREVIEW_HEIGHT, PREVIEW_TRY, previewAddress } from '../src/shared/catalog';
 import { SAMPLE_CATALOG } from './extensionSamples';
-import { answer, button, calls, mount, press, say, sent, type } from './webviewHarness';
+import { answer, button, calls, mount, press, say, sent, type, unmount } from './webviewHarness';
 import { ASK_EVERY_MS } from '../src/renderer/askWhile';
 
 /**
@@ -313,13 +313,22 @@ describe('a component’s tab', () => {
 		if (!document.querySelector('[role="dialog"][aria-label="Changes"]')) await press(document.querySelector('.tab-actions button') as HTMLElement);
 	};
 
-	it('reads in three parts: its values, the tokens it draws with (closed), and what is wrong with it', async () => {
+	it('reads in three parts: its styles, the tokens it draws with, and what is wrong with it, each with its title', async () => {
 		await analysed();
 		expect([...document.querySelectorAll('.component-aside > [aria-label]')].map((e) => e.getAttribute('aria-label'))).toEqual([
-			'Values',
-			'Tokens used',
+			'Styles',
+			'Tokens',
 			'Accessibility',
 		]);
+		// Each part's title is what names it, and what stays at the top of the pane while the part is in view.
+		expect([...document.querySelectorAll('.component-aside > section > .aside-heading > h2')].map((h) => h.textContent)).toEqual([
+			'Styles',
+			'Tokens',
+			'Accessibility',
+		]);
+		// Open, with no accordion to open: the tokens are there.
+		expect(document.querySelector('.component-aside details.aside-disclosure')).toBeNull();
+		expect(section('Tokens')?.querySelector('[data-token]')).not.toBeNull();
 		// The sixth, its name and links, is the header above.
 		expect(document.querySelector('.tab-title')?.textContent).toBe('FSButton');
 	});
@@ -333,13 +342,13 @@ describe('a component’s tab', () => {
 		});
 	};
 	const shownIn = (property: string) =>
-		[...(section('Values')?.querySelectorAll<HTMLElement>(`[data-value-row="${property}"] [data-value-cell]`) ?? [])].filter(
+		[...(section('Styles')?.querySelectorAll<HTMLElement>(`[data-value-row="${property}"] [data-value-cell]`) ?? [])].filter(
 			(c) => !c.closest('details'),
 		);
 
 	it('lays its values out as an inspector: a picker for each prop they are told apart by, then a row a value in its group', async () => {
 		await analysed();
-		const values = section('Values')!;
+		const values = section('Styles')!;
 		// What the stories drew, on which version, is not said above the values: the rows are the answer.
 		expect(values.querySelector('[data-values-from]')).toBeNull();
 		// Light until dark is chosen, and chosen in the panel: the tab has no switch of its own.
@@ -373,17 +382,20 @@ describe('a component’s tab', () => {
 		await analysed();
 		const dots = [...document.querySelectorAll<HTMLElement>('.color-dot')];
 		// Values' colours, and Tokens used's, so both are held to it.
-		expect(dots.some((d) => d.closest('[aria-label="Values"]'))).toBe(true);
-		expect(dots.some((d) => d.closest('[aria-label="Tokens used"]'))).toBe(true);
+		expect(dots.some((d) => d.closest('[aria-label="Styles"]'))).toBe(true);
+		expect(dots.some((d) => d.closest('[aria-label="Tokens"]'))).toBe(true);
 		// One line each, and a name: never a hex, nor where else it is used, nor what it points at.
 		for (const d of dots) expect(d.title, d.getAttribute('aria-label') ?? '').toMatch(/^(|(Light|Dark) [A-Za-z ]+)$/);
 	});
 
-	it('says which token a value is as a chip after its name, with where else it is used on hover; a colour is only its dot, whose hover is the token’s name; or nothing, its own or not checked', async () => {
+	it('says which token a value is by its name where its number would be, with where else it is used on hover; a colour is only its dot, whose hover is the token’s name; or its number, its own or not checked', async () => {
 		await analysed();
 		const radius = shownIn('radius')[0]?.querySelector('button') as HTMLElement;
-		expect(radius.textContent).toBe('RadiusRadius8px');
-		expect(radius.querySelector('.value-chip')?.textContent).toBe('Radius');
+		// A token is its name on the right, not its number, and no chip after the label.
+		expect(radius.textContent).toBe('RadiusRadius');
+		expect(radius.querySelector('.value-drawn')?.textContent).toBe('Radius');
+		expect(radius.querySelector('.value-token')?.textContent).toBe('Radius');
+		expect(radius.querySelector('.value-chip')).toBeNull();
 		expect(radius.title).toContain('Radius · also FSIconButton, FSSplitButton');
 		// A colour is its label and its dot: no chip, no swatch beside text, no hex. The dot's hover is the token's name, and only that.
 		const [fill] = shownIn('background');
@@ -422,7 +434,7 @@ describe('a component’s tab', () => {
 		// Not a token, so no name to say: nothing, and its hex is for its control.
 		expect(dotOf(shownIn('text')[0]).hasAttribute('title')).toBe(false);
 		// The background was never drawn hovered: said, never guessed.
-		const background = section('Values')?.querySelector('[data-value-row="background"]') as HTMLElement;
+		const background = section('Styles')?.querySelector('[data-value-row="background"]') as HTMLElement;
 		expect(background.hasAttribute('data-not-drawn')).toBe(true);
 		expect(background.textContent).toBe('BackgroundNot drawn with this');
 		expect(background.querySelector('[title]')?.getAttribute('title')).toContain('Nearest:');
@@ -459,7 +471,7 @@ describe('a component’s tab', () => {
 			],
 		};
 		await analysed({ values: { state: 'read', instances: 3, unmarked: 0, rows: { light: [...rows, background], dark: null } } });
-		const toggle = section('Values')?.querySelector('[data-picker="disabled"] [role="switch"]') as HTMLElement;
+		const toggle = section('Styles')?.querySelector('[data-picker="disabled"] [role="switch"]') as HTMLElement;
 		expect(toggle.getAttribute('aria-checked')).toBe('false');
 		expect(shownIn('background').map((c) => c.textContent)).toEqual(['Background']);
 		expect(dotOf(shownIn('background')[0]).hasAttribute('title')).toBe(false);
@@ -497,7 +509,7 @@ describe('a component’s tab', () => {
 		await analysed({ values: { state: 'read', instances: 14, unmarked: 0, rows: { light: [...rows, many], dark: null } } });
 		expect(shownIn('border').map((c) => c.textContent)).toEqual(['Border']);
 		expect(dotOf(shownIn('border')[0]).hasAttribute('title')).toBe(false);
-		const more = section('Values')?.querySelector('[data-value-row="border"] details') as HTMLElement;
+		const more = section('Styles')?.querySelector('[data-value-row="border"] details') as HTMLElement;
 		expect(more.querySelector('summary')?.textContent).toBe('13 more');
 		expect(more.querySelectorAll('[data-value-cell]')).toHaveLength(13);
 		expect(more.querySelector('[data-value-cell]')?.textContent).toBe('13 instances');
@@ -506,7 +518,7 @@ describe('a component’s tab', () => {
 
 	it('shows dark’s values when dark is chosen in the panel, as the stories draw it there, and light’s again when light is', async () => {
 		await analysed();
-		const values = section('Values')!;
+		const values = section('Styles')!;
 		await say({ type: 'mode', mode: 'dark' });
 		expect([...values.querySelectorAll('[data-value-row]')].map((r) => r.getAttribute('data-value-row'))).toEqual(['height', 'background']);
 		expect(shownIn('background').map((c) => c.textContent)).toEqual(['Background']);
@@ -520,21 +532,21 @@ describe('a component’s tab', () => {
 		await analysed({ values: { ...(analysis().values as { rows: object }), rows: { light, dark: null } } });
 		await say({ type: 'mode', mode: 'dark' });
 		// Light's rows: the radius row is in light and not in dark.
-		expect(section('Values')?.querySelector('[data-value-row="radius"]')).not.toBeNull();
+		expect(section('Styles')?.querySelector('[data-value-row="radius"]')).not.toBeNull();
 		document.body.innerHTML = '';
 		// A library DSNR cannot turn dark draws its light twice.
 		await analysed({ values: { ...(analysis().values as { rows: object }), rows: { light, dark: light } } });
 		await say({ type: 'mode', mode: 'dark' });
-		expect(section('Values')?.querySelector('[data-value-row="radius"]')).not.toBeNull();
-		expect(section('Values')?.querySelector('[data-values-none]')).toBeNull();
+		expect(section('Styles')?.querySelector('[data-value-row="radius"]')).not.toBeNull();
+		expect(section('Styles')?.querySelector('[data-values-none]')).toBeNull();
 	});
 
 	it('says when a length it calls its own may be a token no tag could be given', async () => {
 		await analysed();
-		expect(section('Values')?.querySelector('[data-values-unmarked]')).toBeNull();
+		expect(section('Styles')?.querySelector('[data-values-unmarked]')).toBeNull();
 		document.body.innerHTML = '';
 		await analysed({ values: { ...(analysis().values as object), unmarked: 2 } });
-		expect(section('Values')?.querySelector('[data-values-unmarked]')?.textContent).toBe(
+		expect(section('Styles')?.querySelector('[data-values-unmarked]')?.textContent).toBe(
 			'2 lengths in the design system are written in em or %, which cannot be marked, so a length said to be its own may be one of them.',
 		);
 	});
@@ -543,7 +555,7 @@ describe('a component’s tab', () => {
 		const says = async (values: object) => {
 			document.body.innerHTML = '';
 			await analysed({ values });
-			return section('Values')?.textContent;
+			return section('Styles')?.textContent;
 		};
 		expect(await says({ state: 'wraps' })).toContain('Its stories draw it around other content');
 		expect(await says({ state: 'not-drawn' })).toContain('Its stories did not finish drawing');
@@ -552,20 +564,18 @@ describe('a component’s tab', () => {
 
 	it('says why it has no values when its stories name no component', async () => {
 		await analysed({ values: { state: 'no-component' } });
-		expect(section('Values')?.textContent).toContain('Its stories do not say which component they are of');
+		expect(section('Styles')?.textContent).toContain('Its stories do not say which component they are of');
 	});
 
 	it('says why it has no values when its stories draw none of it', async () => {
 		await analysed({ values: { state: 'none-drawn' } });
-		expect(section('Values')?.textContent).toContain('Its stories draw no FSButton on the page, so its values cannot be read.');
+		expect(section('Styles')?.textContent).toContain('Its stories draw no FSButton on the page, so its values cannot be read.');
 	});
 
-	it('lists every token it draws with in Tokens used, closed until opened, by category then group and set, with uses and who shares it', async () => {
+	it('lists every token it draws with under Tokens, open, by category then group and set, with uses and who shares it', async () => {
 		await analysed();
-		const used = section('Tokens used')!;
-		const details = used.querySelector('details') as HTMLDetailsElement;
-		expect(details.open).toBe(false);
-		expect(details.querySelector('summary')?.textContent).toBe('Tokens used5');
+		const used = section('Tokens')!;
+		expect(used.querySelector('details')).toBeNull();
 		// Every token Made from and Color tokens listed, colours with the rest: one list.
 		expect([...used.querySelectorAll('[data-token]')].map((t) => t.getAttribute('data-token'))).toEqual([
 			'palette.light.primary.main',
@@ -585,10 +595,18 @@ describe('a component’s tab', () => {
 		expect(primary.querySelectorAll('[data-swatch]')).toHaveLength(1);
 		expect(dotOf(primary).title).toBe('Light primary main');
 		const radius = used.querySelector('[data-token="radius"]') as HTMLElement;
+		// Tab goes through a row's name (to its file) and then what opens its control: a length's value, a colour's dot; an info
+		// icon between them is not a stop.
+		expect([...radius.querySelectorAll('button')].map((b) => b.className)).toEqual(['token-name token-link', 'token-fill token-button']);
+		expect([...primary.querySelectorAll('button')].map((b) => b.className.split(' ')[0])).toEqual(['token-name', 'color-dot']);
+		expect(radius.querySelector('.info-tip')?.hasAttribute('tabindex')).toBe(false);
 		expect(radius.querySelector('[data-part="name"]')?.textContent).toBe('radius');
 		expect(radius.querySelector('[data-part="value"]')?.textContent).toBe('4px');
-		expect(radius.querySelector('[data-token-use]')?.textContent).toBe('5 uses · also FSIconButton, FSSplitButton');
-		expect(used.querySelector('[data-token="spacing"] [data-token-use]')?.textContent).toBe('4 uses · no other component');
+		// How often it is used and by whom is behind an info icon beside its name, not a line under it.
+		expect(radius.querySelector('.info-tip')?.getAttribute('title')).toBe('5 uses · also FSIconButton, FSSplitButton');
+		expect(radius.querySelector('.info-tip')?.getAttribute('aria-label')).toBe('5 uses · also FSIconButton, FSSplitButton');
+		expect(used.querySelector('[data-token="spacing"] .info-tip')?.getAttribute('title')).toBe('4 uses · no other component');
+		expect(radius.textContent).not.toMatch(/uses/);
 	});
 
 	it('opens a token’s own control from Tokens used, a colour’s as any other’s, as the panel’s row does, and closes it with its X', async () => {
@@ -596,7 +614,7 @@ describe('a component’s tab', () => {
 		for (const path of ['radius', 'palette.light.primary.main']) {
 			// A colour's control opens from its dot, any other's from its row.
 			await press(
-				section('Tokens used')!.querySelector(`[data-token="${path}"] button.token-button, [data-token="${path}"] button.color-dot`) as HTMLElement,
+				section('Tokens')!.querySelector(`[data-token="${path}"] button.token-button, [data-token="${path}"] button.color-dot`) as HTMLElement,
 			);
 			expect(document.querySelector('[role="dialog"]')).not.toBeNull();
 			await press(document.querySelector('[role="dialog"] [aria-label="Close"]') as HTMLElement);
@@ -604,18 +622,18 @@ describe('a component’s tab', () => {
 		}
 	});
 
-	it('says in a line how far its tokens reach: the components that share them, and how often it uses them', async () => {
+	it('has no line of small print above its tokens: how far they reach is each token’s own info icon, not a paragraph', async () => {
 		await analysed();
-		expect(section('Tokens used')?.querySelector('[data-usage]')?.textContent).toBe(
-			'Shares its tokens with 2 components; 15 token uses in its stories drawn.',
-		);
+		const used = section('Tokens') as HTMLElement;
+		expect(used.textContent).not.toMatch(/Shares its tokens|token uses in its stories/);
+		expect(used.querySelector('p.quiet')).toBeNull();
 	});
 
 	it('lists what it sets itself under Tokens used, by kind with their uses, the first few, and keeps the rest to open', async () => {
 		const colors = Array.from({ length: 10 }, (_, i) => ({ kind: 'color', value: `rgb(${i}, 0, 0)`, uses: 10 - i }));
 		await analysed({ notTokens: [...colors, { kind: 'spacing', value: '13px', uses: 1 }] });
-		const values = section('Tokens used')?.querySelector('[data-own-values]') as HTMLElement;
-		expect(values.querySelector('h3')?.textContent).toBe('Set in the component itself');
+		const values = section('Tokens')?.querySelector('[data-own-values]') as HTMLElement;
+		expect(values.querySelector('h3')?.textContent?.trim()).toBe('Set in the component itself');
 		expect([...values.querySelectorAll('[data-not-token-kind]')].map((g) => g.getAttribute('data-not-token-kind'))).toEqual(['color', 'spacing']);
 		const shown = (kind: string) =>
 			[...values.querySelectorAll(`[data-not-token-kind="${kind}"] > ul > [data-not-token]`)].map((li) => li.textContent);
@@ -629,8 +647,11 @@ describe('a component’s tab', () => {
 		expect([...more.querySelectorAll('[data-not-token]')]).toHaveLength(2);
 		await press(more.querySelector('summary') as HTMLElement);
 		expect(more.open).toBe(true);
-		// What is worked out from a token is said once, below.
-		expect(values.textContent).toContain('1 use is a shade worked out from a token');
+		// What they are, and what is worked out from a token, is said once, behind the info icon by the heading, not in lines.
+		expect(values.querySelector('h3 .info-tip')?.getAttribute('title')).toBe(
+			'Not tokens, so they are changed in the design system, not here. 1 use is a shade worked out from a token, such as a hover’s darker color.',
+		);
+		expect(values.textContent).not.toMatch(/Not tokens, so|shade worked out/);
 	});
 
 	it('has no part for values it sets itself when it sets none', async () => {
@@ -638,17 +659,28 @@ describe('a component’s tab', () => {
 		expect(section('Non-token values')).toBeNull();
 	});
 
-	it('says what axe found in a line, what it was checked with and what is a person’s, and keeps the findings to open', async () => {
+	it('says what axe found in a line, what it was checked with and what is left, and opens the findings in a dialog from a link', async () => {
 		await analysed();
 		const a11y = section('Accessibility')!;
-		expect(a11y.querySelector('[data-accessibility-summary]')?.textContent).toBe('1 automated issue, 1 needs a person');
-		expect(a11y.textContent).toContain('Checked with axe-core 4.10 at WCAG 2.2 AA');
-		expect(a11y.textContent).toContain('No automated check covers 2.4.7');
-		const details = a11y.querySelector('details') as HTMLDetailsElement;
-		expect(details.open).toBe(false);
-		expect(details.querySelector('summary')?.textContent).toBe('Show the findings');
+		expect(a11y.querySelector('[data-accessibility-summary]')?.textContent).toBe('1 issue to fix');
+		expect(a11y.textContent).toContain('axe-core 4.10 checked this against WCAG 2.2 AA. What is left is the manual checklist.');
+		expect(a11y.textContent).toContain('Left to check by hand: 2.4.7');
+		// What was checked and what is left to do: never what a check could not do, nor a pass.
+		expect(a11y.textContent).not.toMatch(/could not|cannot|unable|not a pass|a person|automated/i);
+		// A link, not a list that opens in the narrow column: the findings are not in the page until it is pressed.
+		expect(a11y.querySelector('details')).toBeNull();
+		const link = a11y.querySelector('button.link') as HTMLElement;
+		expect(link.textContent).toBe('Show the findings');
+		expect(a11y.textContent).not.toContain('Text needs more contrast');
+		expect(document.querySelector('[role="dialog"]')).toBeNull();
+		await press(link);
+		const details = document.querySelector('[role="dialog"][aria-label="Accessibility findings"]') as HTMLElement;
+		expect(details.getAttribute('aria-modal')).toBe('true');
+		expect([...details.querySelectorAll('h4')].map((h) => h.textContent)).toEqual(['To fix', 'Best practice, beyond WCAG']);
 		expect(details.textContent).toContain('Text needs more contrast');
-		expect(details.textContent).toContain('Check this attribute');
+		// What axe flagged for a closer look is not listed there: nothing is said in its place.
+		expect(details.textContent).not.toContain('Check this attribute');
+		expect(details.textContent).not.toMatch(/To review/);
 		expect(details.textContent).toContain('WCAG 1.4.3');
 		// Which element, and what to change on it; the rest counted.
 		const elements = details.querySelector('[data-issue-elements="color-contrast"]') as HTMLElement;
@@ -657,9 +689,13 @@ describe('a component’s tab', () => {
 			'and 1 more element',
 		]);
 		// Best practice, apart and never counted: the summary above says only what WCAG's rules found.
-		const best = details.querySelector('[aria-label="Best practice, beside WCAG (not counted as it)"]') as HTMLElement;
+		const best = details.querySelector('[aria-label="Best practice, beyond WCAG"]') as HTMLElement;
 		expect(best.textContent).toContain('Heading levels should only increase by one');
 		expect(best.querySelector('[data-issue-elements="heading-order"] code')?.textContent).toBe('h4');
+		// Closed by its X, and the page is as it was.
+		await press(details.querySelector('[aria-label="Close"]') as HTMLElement);
+		expect(document.querySelector('[role="dialog"]')).toBeNull();
+		expect(a11y.querySelector('button.link')).not.toBeNull();
 	});
 
 	describe('saving the values tried where they are written (Phase 4)', () => {
@@ -670,7 +706,7 @@ describe('a component’s tab', () => {
 		const tryingSmall = async () => {
 			await analysed();
 			await answer('storyPreview', { state: 'ready', base: BASE });
-			await press(section('Values')?.querySelector('[aria-label="Change Height · sm"]') as HTMLElement);
+			await press(section('Styles')?.querySelector('[aria-label="Change Height · sm"]') as HTMLElement);
 			await type(document.querySelector('input[type="range"][aria-label="Height"]') as HTMLInputElement, '32');
 			await act(async () => void document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
 			await openChanges();
@@ -693,7 +729,7 @@ describe('a component’s tab', () => {
 		it('changes a token’s value through the token’s own control, which every page shares, so it is saved as the panel’s changes are', async () => {
 			await analysed();
 			// The radius is the shared token's: its control is the token's, not a value of the component's own.
-			await press(section('Values')?.querySelector('[aria-label="Change Radius"]') as HTMLElement);
+			await press(section('Styles')?.querySelector('[aria-label="Change Radius"]') as HTMLElement);
 			const dialog = document.querySelector('[role="dialog"]') as HTMLElement;
 			expect(dialog).not.toBeNull();
 			expect(document.querySelector('[data-value-cell] [role="dialog"]')).toBeNull();
@@ -805,7 +841,7 @@ describe('a component’s tab', () => {
 			};
 			await analysed({ values: own });
 			await answer('storyPreview', { state: 'ready', base: BASE });
-			await press(section('Values')?.querySelector('[aria-label="Change Radius"]') as HTMLElement);
+			await press(section('Styles')?.querySelector('[aria-label="Change Radius"]') as HTMLElement);
 			const follow = document.querySelector('[data-value-cell] [role="dialog"] [data-value-follow="radius"]') as HTMLElement;
 			expect(follow.textContent).toBe('Follow Radius');
 			await press(follow);
@@ -819,7 +855,7 @@ describe('a component’s tab', () => {
 
 		it('offers no token to follow for a value no token has', async () => {
 			await analysed();
-			await press(section('Values')?.querySelector('[aria-label="Change Height · sm"]') as HTMLElement);
+			await press(section('Styles')?.querySelector('[aria-label="Change Height · sm"]') as HTMLElement);
 			expect(document.querySelector('[data-value-follow]')).toBeNull();
 		});
 
@@ -834,7 +870,7 @@ describe('a component’s tab', () => {
 				},
 			};
 			await analysed({ values: derived });
-			await press(section('Values')?.querySelector('[aria-label="Change Radius"]') as HTMLElement);
+			await press(section('Styles')?.querySelector('[aria-label="Change Radius"]') as HTMLElement);
 			expect(document.querySelector('[data-value-cell] [role="dialog"]')).not.toBeNull();
 			expect(document.querySelector('[data-value-follow]')).toBeNull();
 		});
@@ -890,12 +926,13 @@ describe('a component’s tab', () => {
 				},
 			},
 		};
-		const notes = () => [...(section('Values')?.querySelectorAll('[data-variant-note]') ?? [])].map((n) => n.textContent);
+		/** The small print a Values section could carry about its variants: none is ever written there. */
+		const printed = () => section('Styles')?.textContent ?? '';
 
-		it('is asked for by the story file, and says under the pickers that it is being drawn until it is', async () => {
+		it('is asked for by the story file, and says nothing while it is being drawn', async () => {
 			await analysed();
 			expect(calls('componentVariants').at(-1)?.args).toEqual([BUTTON]);
-			expect(notes()).toEqual(['Reading its props, and drawing it with each of their values.']);
+			expect(printed()).not.toMatch(/Reading its props|drawing it with each/);
 			// No section of its own: the pickers are where a variant is chosen.
 			expect(section('Every variant')).toBeNull();
 		});
@@ -903,7 +940,7 @@ describe('a component’s tab', () => {
 		it('offers a case only its props declare, shown from their drawing and never tried; and says what its story sets', async () => {
 			await analysed();
 			await answer('componentVariants', READY);
-			const size = section('Values')?.querySelector('[data-picker="size"] select') as HTMLSelectElement;
+			const size = section('Styles')?.querySelector('[data-picker="size"] select') as HTMLSelectElement;
 			expect([...size.options].map((o) => o.textContent)).toEqual(['sm', 'md', 'lg', 'xl', '2xl']);
 			// Where its stories drew it, theirs, which can be tried.
 			expect(shownIn('height')[0]?.querySelector('button')).not.toBeNull();
@@ -913,22 +950,28 @@ describe('a component’s tab', () => {
 			expect(height.hasAttribute('data-still')).toBe(true);
 			expect(height.querySelector('button')).toBeNull();
 			expect(height.querySelector('[title]')?.getAttribute('title')).toContain('Drawn from its props');
-			// What cannot be varied (children, sx, a callback) is not said: no one chooses between those.
-			expect(notes()).toEqual(['Its story sets variant itself: drawn with another value, it draws as the story has it.']);
+			// What cannot be varied (children, sx, a callback) is not said: no one chooses between those. What its story sets itself is an
+			// info icon on that picker's name, not a line under the pickers.
+			expect(printed()).not.toMatch(/Not varied|sets variant itself/);
+			expect(section('Styles')?.querySelector('[data-picker="variant"] .info-tip')?.getAttribute('title')).toBe(
+				'Its story sets this itself: drawn with another value, it draws as the story has it.',
+			);
+			expect(section('Styles')?.querySelector('[data-picker="size"] .info-tip')).toBeNull();
 		});
 
 		it('adds nothing when its stories name no component whose props can be read', async () => {
 			await analysed();
 			await answer('componentVariants', { state: 'none' });
-			expect(notes()).toEqual([]);
-			const size = section('Values')?.querySelector('[data-picker="size"] select') as HTMLSelectElement;
+			expect(section('Styles')?.querySelector('.info-tip')).toBeNull();
+			const size = section('Styles')?.querySelector('[data-picker="size"] select') as HTMLSelectElement;
 			expect([...size.options].map((o) => o.textContent)).toEqual(['sm', 'md', 'lg', 'xl']);
 		});
 
-		it('says why it could not be drawn', async () => {
+		it('says nothing when it could not be drawn: the pickers its stories drew are all there is, and no line says why', async () => {
 			await analysed();
 			await answer('componentVariants', { state: 'failed', error: 'Its story did not draw with its props changed.' });
-			expect(notes()).toEqual(['Its variants could not be drawn: Its story did not draw with its props changed.']);
+			expect(printed()).not.toMatch(/could not be drawn|did not draw with its props/);
+			expect(section('Styles')?.querySelectorAll('[data-picker]').length).toBeGreaterThan(0);
 		});
 	});
 
@@ -1016,7 +1059,7 @@ describe('a component’s tab', () => {
 			const tried = () => told.mock.calls.map(([m]) => (m as Record<string, unknown>)[PREVIEW_TRY]).at(-1);
 			return { frame, told, tried };
 		};
-		const values = () => section('Values') as HTMLElement;
+		const values = () => section('Styles') as HTMLElement;
 		const change = (label: string) => values().querySelector(`[aria-label="Change ${label}"]`) as HTMLElement;
 		/** A value of its own's control: a popover inside its cell, not a dialog over the panel. */
 		const popover = () => values().querySelector('[data-value-cell] [role="dialog"]') as HTMLElement | null;
@@ -1185,28 +1228,68 @@ describe('a component’s tab', () => {
 			expect(tried() ?? []).toEqual([]);
 		});
 
+		it('names the parts of a padding written with three or four as CSS reads them, X and Y only where two sides share a part, each slider changing its own', async () => {
+			const rows = (analysis().values as { rows: { light: unknown[] } }).rows.light;
+			const padding = (value: string) => ({
+				property: 'padding',
+				by: null,
+				cells: [{ variant: null, value, kind: 'own', tokens: [], instances: 2 }],
+			});
+			const openPadding = async (value: string) => {
+				const { tried } = await tryingOpen({
+					values: { state: 'read', instances: 2, unmarked: 0, rows: { light: [...rows, padding(value)], dark: null } },
+				});
+				await press(change('Padding'));
+				return tried;
+			};
+			const shown = () => [...(popover()?.querySelectorAll('.popover-label') ?? [])].map((l) => l.textContent);
+			// Three: top, the sides as X, bottom. Moving X changes the sides, not the top.
+			const three = await openPadding('1px 2px 3px');
+			expect(shown()).toEqual(['Top', 'X', 'Bottom']);
+			await type(slider('X (left and right)'), '9');
+			expect((three() as { value: string }[])[0]?.value).toBe('1px 9px 3px 9px');
+			await unmount();
+			// Four: each side by its own name, as CSS writes them, clockwise from the top.
+			const four = await openPadding('1px 2px 3px 4px');
+			expect(shown()).toEqual(['Top', 'Right', 'Bottom', 'Left']);
+			await type(slider('Left'), '8');
+			expect((four() as { value: string }[])[0]?.value).toBe('1px 2px 3px 8px');
+			// One: all sides, with no name to say beside its one slider.
+			await unmount();
+			await openPadding('4px');
+			expect(shown()).toEqual([]);
+			expect(slider('All sides')).not.toBeNull();
+		});
+
 		it('gives each part of a value written with several its own slider, and a colour its picker and hex', async () => {
 			const rows = (analysis().values as { rows: { light: unknown[] } }).rows.light;
 			const padding = { property: 'padding', by: null, cells: [{ variant: null, value: '0px 10px', kind: 'own', tokens: [], instances: 12 }] };
 			const { tried } = await tryingOpen({ values: { state: 'read', instances: 12, unmarked: 0, rows: { light: [...rows, padding], dark: null } } });
 			await press(change('Padding'));
+			// Said as engineers say it, X first: X is left and right, Y top and bottom, each on one line with its slider and number.
 			expect([...(popover()?.querySelectorAll('input[type="range"]') ?? [])].map((r) => r.getAttribute('aria-label'))).toEqual([
-				'Top and bottom',
-				'Left and right',
+				'X (left and right)',
+				'Y (top and bottom)',
 			]);
-			await type(slider('Left and right'), '12');
+			const labels = [...(popover()?.querySelectorAll<HTMLElement>('.popover-label') ?? [])];
+			expect(labels.map((l) => [l.textContent, l.title])).toEqual([
+				['X', 'Left and right'],
+				['Y', 'Top and bottom'],
+			]);
+			expect([...(popover()?.querySelectorAll('.popover-field') ?? [])].every((f) => f.classList.contains('popover-field-line'))).toBe(true);
+			await type(slider('X (left and right)'), '12');
 			// Every part in full, as the page sets it; said short on its cell.
 			expect(tried()).toEqual([
 				{ property: 'padding', value: '0px 12px 0px 12px', targets: Array.from({ length: 12 }, (_, i) => `padding:null:${i}`) },
 			]);
 			expect(values().querySelector('[data-value-row="padding"] [data-tried] .value-drawn')?.textContent).toBe('0px 12px');
 			// Made one value by the drag, its two parts stay two sliders, so it can be split again.
-			await type(slider('Left and right'), '0');
+			await type(slider('X (left and right)'), '0');
 			expect([...(popover()?.querySelectorAll('input[type="range"]') ?? [])].map((r) => r.getAttribute('aria-label'))).toEqual([
-				'Top and bottom',
-				'Left and right',
+				'X (left and right)',
+				'Y (top and bottom)',
 			]);
-			await type(slider('Left and right'), '12');
+			await type(slider('X (left and right)'), '12');
 			await pick('variant', 'ghost');
 			await press(change('Background · ghost'));
 			const hex = popover()?.querySelector('input[aria-label="Hex"]') as HTMLInputElement;
@@ -1227,8 +1310,26 @@ describe('a component’s tab', () => {
 				ran: { axe: '4.10', target: 'WCAG 2.2 AA', states: ['default'] },
 			},
 		});
-		expect(section('Accessibility')!.querySelector('details')).toBeNull();
-		expect(section('Accessibility')!.querySelector('[data-accessibility-summary]')?.textContent).toBe('No issues found by automated checks');
+		expect(section('Accessibility')!.querySelector('details, button.link')).toBeNull();
+		expect(section('Accessibility')!.querySelector('[data-accessibility-summary]')?.textContent).toBe('No issues found');
+	});
+
+	it('says nothing of what axe flagged for a closer look when that is all it has: no issue to fix, no link to an empty dialog', async () => {
+		const flagged = (analysis().accessibility as { incomplete: unknown[] }).incomplete;
+		expect(flagged.length).toBeGreaterThan(0);
+		await analysed({
+			accessibility: {
+				violations: [],
+				incomplete: flagged,
+				bestPractice: { violations: [], incomplete: [] },
+				notAutomated: [],
+				ran: { axe: '4.10', target: 'WCAG 2.2 AA', states: ['default'] },
+			},
+		});
+		const a11y = section('Accessibility')!;
+		expect(a11y.querySelector('[data-accessibility-summary]')?.textContent).toBe('No issues found');
+		expect(a11y.querySelector('button.link')).toBeNull();
+		expect(a11y.textContent).not.toMatch(/review/i);
 	});
 
 	it('says it is finding them while the first reading is drawn, with none of the parts yet', async () => {

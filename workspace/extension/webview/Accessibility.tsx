@@ -1,5 +1,6 @@
 import {
 	BEST_PRACTICE_TITLE,
+	TO_FIX_TITLE,
 	checkedWith,
 	countsOf,
 	fixLine,
@@ -8,9 +9,10 @@ import {
 	summaryOf,
 	unlisted,
 } from '../../src/shared/accessibility';
+import { useState } from 'react';
 import { plural } from '../../src/shared/plural';
 import type { AccessibilityIssue, AccessibilityResult } from '../../src/shared/contract';
-import { Disclosure } from './ui/Disclosure';
+import { Dialog } from './ui/Dialog';
 
 /**
  * One kind of issue: what it asks, where in WCAG, on how many elements and in which states, and axe's page on it; then the
@@ -50,12 +52,14 @@ const Issues = ({ title, issues }: { title: string; issues: AccessibilityIssue[]
 	);
 
 /**
- * What a check found, in the order a person needs it: a line of what it found, what it was checked with
- * and what no automated check covers (never a pass: what is left is a person's), then the findings themselves, kept closed
- * until they are opened, when there are any. axe's pages are links, which VS Code opens in the browser.
+ * What a check found, in the order a person needs it: a line of what it found, what it was checked with and what is left to
+ * check by hand (never a pass: what is left is said beside what was found), then, when there are findings, a link to
+ * them, which opens them in a dialog and not in the side panel's narrow column. axe's pages are links, which VS Code opens in
+ * the browser.
  */
 export const AccessibilityFindings = ({ result }: { result: AccessibilityResult }) => {
 	const counts = countsOf(result);
+	const [open, setOpen] = useState(false);
 	return (
 		<>
 			<p data-accessibility-summary className={counts.violations ? 'warning-text' : undefined}>
@@ -63,12 +67,16 @@ export const AccessibilityFindings = ({ result }: { result: AccessibilityResult 
 			</p>
 			<p className="quiet">{checkedWith(result)}</p>
 			{notAutomatedLine(result) && <p className="quiet">{notAutomatedLine(result)}</p>}
-			{(counts.violations > 0 || counts.incomplete > 0 || result.bestPractice.violations.length > 0) && (
-				<Disclosure label="Show the findings">
-					<Issues title="Found by axe" issues={result.violations} />
-					<Issues title="For a person to judge (axe could not decide)" issues={result.incomplete} />
+			{(counts.violations > 0 || result.bestPractice.violations.length > 0) && (
+				<button type="button" className="link" onClick={() => setOpen(true)}>
+					Show the findings
+				</button>
+			)}
+			{open && (
+				<Dialog title="Accessibility findings" onClose={() => setOpen(false)}>
+					<Issues title={TO_FIX_TITLE} issues={result.violations} />
 					<Issues title={BEST_PRACTICE_TITLE} issues={result.bestPractice.violations} />
-				</Disclosure>
+				</Dialog>
 			)}
 		</>
 	);

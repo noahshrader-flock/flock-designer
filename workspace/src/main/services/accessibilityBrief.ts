@@ -6,7 +6,7 @@
  */
 import { join } from 'node:path';
 import { readText } from './jsonFile';
-import { BEST_PRACTICE_TITLE, elementLine, unlisted, whereFound } from '../../shared/accessibility';
+import { BEST_PRACTICE_TITLE, TO_FIX_TITLE, TO_REVIEW_TITLE, elementLine, unlisted, whereFound } from '../../shared/accessibility';
 import type { AccessibilityFindings, AccessibilityIssue } from '../../shared/contract';
 import { plural } from '../../shared/plural';
 import { axeTagsFor, describeTarget, notAutomated, parseTarget, type DeclaredTarget, undeclared } from '../../shared/wcag';
@@ -96,13 +96,16 @@ const openIssue = (i: AccessibilityIssue): string =>
 		...(unlisted(i) > 0 ? [`  - and ${plural(unlisted(i), 'more element')}`] : []),
 	].join('\n');
 
-/** What a check found, as the agent reads it: by axe, for a person to judge, and best practice apart. Nothing when it found none. */
 /** What a check found, with what its best-practice rules found beside it when it has them. */
 export type CheckFindings = AccessibilityFindings & { bestPractice?: AccessibilityFindings };
 
+/**
+ * What a check found, as the agent reads it, titled as the panel titles it: to fix, to review, and best practice apart.
+ * Nothing when it found none.
+ */
 export const findingsLines = (findings: CheckFindings): string[] => [
-	...(findings.violations.length ? ['', 'Found by axe:', ...findings.violations.map(openIssue)] : []),
-	...(findings.incomplete.length ? ['', 'For a person to judge (axe could not decide):', ...findings.incomplete.map(openIssue)] : []),
+	...(findings.violations.length ? ['', `${TO_FIX_TITLE}:`, ...findings.violations.map(openIssue)] : []),
+	...(findings.incomplete.length ? ['', `${TO_REVIEW_TITLE}:`, ...findings.incomplete.map(openIssue)] : []),
 	...(findings.bestPractice?.violations.length ? ['', `${BEST_PRACTICE_TITLE}:`, ...findings.bestPractice.violations.map(openIssue)] : []),
 ];
 
@@ -132,7 +135,7 @@ export const accessibilityBrief = ({
 		target.declared
 			? `This product's target, from ${target.source}: **${describeTarget(target.target)}**, checked with the axe tags ${tags}. Do not state a conformance level yourself: report what you checked and what you found.`
 			: `${target.why}, so it declares no target. Build to **${describeTarget(target.target)}** (axe tags ${tags}) as a default, and say in your summary that there was no declared target: what you checked is informational, not a claim.`,
-		...(left.length ? ['', `No automated check covers ${left.join(' or ')}: check those criteria by hand, or report them as not run.`] : []),
+		...(left.length ? ['', `Left to check by hand: ${left.join(', ')}. Check them, or report them as not run.`] : []),
 		...(check
 			? ['', `This product's own accessibility check is \`${check}\`: run it as the work goes, not only at the end. Handoff runs it again.`]
 			: []),

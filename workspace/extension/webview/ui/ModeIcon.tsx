@@ -2,11 +2,13 @@ import type { Theme } from '../../../src/shared/prototypeTheme';
 
 /**
  * The sun for light and the moon for dark, drawn here because VS Code's icon font has neither (Feather's, MIT): the size of a
- * codicon (16px), in the text's colour, hidden from assistive technology like `Icon`: whatever it is beside says what it means.
+ * codicon (16px), in the text's colour, hidden from assistive technology like `Icon`: whatever it is beside says what it means. Its
+ * size is as `Icon`'s: its own, or `xs` over a column of small things (a theme's heading).
  */
-export const ModeIcon = ({ mode }: { mode: Theme }) => (
+export const ModeIcon = ({ mode, size = 'default' }: { mode: Theme; size?: 'default' | 'xs' }) => (
 	<svg
 		aria-hidden="true"
+		className={size === 'default' ? 'mode-icon' : `mode-icon icon-${size}`}
 		width="16"
 		height="16"
 		viewBox="0 0 24 24"

@@ -12,38 +12,14 @@ import { ChangeReach } from './ChangeReach';
 import { ComponentValues, type Trying } from './ComponentValues';
 import { ValueChanges } from './ValueChanges';
 import { Grouped, type TokenActions } from './Tokens';
+import { AsidePart } from './ui/AsidePart';
 import { Dialog } from './ui/Dialog';
 import { Disclosure } from './ui/Disclosure';
-import { Icon } from './ui/Icon';
+import { InfoTip } from './ui/InfoTip';
 import { Notice } from './ui/Notice';
 import { Swatch } from './ui/Swatch';
 
 type Ready = Extract<ComponentTokens, { state: 'ready' }>;
-
-/** One part of what is said of a component, in a bordered box under a title; named for assistive technology by it. */
-const Part = ({ title, children }: { title: string; children: ReactNode }) => (
-	<section aria-label={title} className="aside-section">
-		<h2 className="aside-title">{title}</h2>
-		{children}
-	</section>
-);
-
-/**
- * A part kept closed until it is opened, its title the summary that opens it, with how many it holds: what is looked up, not
- * read every time (the tokens it draws with). The browser's own disclosure, so it opens by click and keyboard.
- */
-const ClosedPart = ({ title, count, children }: { title: string; count: number; children: ReactNode }) => (
-	<section aria-label={title} className="aside-section">
-		<details className="disclosure aside-disclosure">
-			<summary className="disclosure-summary aside-summary">
-				<Icon name="chevron-right" className="disclosure-chevron" />
-				<h2 className="aside-title">{title}</h2>
-				<span className="section-count">{count}</span>
-			</summary>
-			{children}
-		</details>
-	</section>
-);
 
 /** How the values a component sets itself are named, by kind. */
 const KINDS: Record<Ready['notTokens'][number]['kind'], string> = { color: 'Colors', radius: 'Radius', spacing: 'Spacing' };
@@ -51,7 +27,7 @@ const KINDS: Record<Ready['notTokens'][number]['kind'], string> = { color: 'Colo
 /** A value it sets itself, with its swatch when it is a colour and how often it is used. */
 const NotToken = ({ value }: { value: Ready['notTokens'][number] }) => (
 	<li data-not-token className="token">
-		<span className="token-line">
+		<span className="token-line token-line-flush">
 			{value.kind === 'color' && <Swatch value={value.value} />}
 			<span className="token-value">{value.value}</span>
 			<span className="token-uses">{plural(value.uses, 'use')}</span>
@@ -60,79 +36,80 @@ const NotToken = ({ value }: { value: Ready['notTokens'][number] }) => (
 );
 
 /**
- * Tokens used (adjusting a component, the inspector's Phase 2): what its stories draw with, read from all they draw, inner
- * parts too, where its Values read each instance's top element alone. How far its tokens reach, in two numbers; each token by
- * its category, then its group and set as the Tokens tab lists them, a row that opens its control, how often it is used and
- * which other components share it under it; then what it sets itself (changed in the design system, not here), the first
- * few of a kind and the rest kept closed, and how many uses are shades worked out from a token. Closed until it is opened.
+ * Tokens (adjusting a component, the inspector's Phase 2): what its stories draw with, read from all they draw, inner parts
+ * too, where its Styles read each instance's top element alone. Open, laid out as the Styles are: each token under its
+ * category, then its group and set as the Tokens tab lists them, a row with its name (which opens its file) at the left and its
+ * value, or its dot, flush at the right (which opens its control), with how often it is used and which other components
+ * share it behind an info icon beside its name; then what it sets itself, the first few of a kind and the rest kept closed, with
+ * what that means (changed in the design system, not here, and how many uses are shades worked out from a token) behind an
+ * info icon by its heading.
  */
-const TokensUsed = ({
+// Exported for its layout test (`componentValuesLayout`), which draws it with the Styles beside it.
+export const TokensUsed = ({
 	answer,
 	tokens,
-	note,
+	info,
 	actions,
 }: {
 	answer: Ready;
 	tokens: DesignToken[];
-	note: (t: DesignToken) => ReactNode;
+	info: (t: DesignToken) => string;
 	actions: TokenActions;
-}) => {
-	const sharing = new Set(Object.values(answer.sharedWith).flat()).size;
-	const uses = answer.uses.reduce((total, u) => total + u.uses, 0);
-	return (
-		<ClosedPart title="Tokens used" count={tokens.length}>
-			<p className="quiet" data-usage>
-				{`Shares its tokens with ${plural(sharing, 'component')}; ${plural(uses, 'token use')} in its stories drawn.`}
-			</p>
-			{tokens.length === 0 ? (
-				<p className="quiet">It draws with none of the design system’s tokens.</p>
-			) : (
-				inOrder(tokens, (t) => t.category).map(([category, inCategory]) => (
-					<div key={category} data-tokens-used={category} className="token-group">
-						<h3 className="token-group-name">{category}</h3>
-						<Grouped tokens={inCategory} noteFor={note} {...actions} />
-					</div>
-				))
-			)}
-			{(answer.notTokens.length > 0 || answer.derived > 0) && (
-				<div data-own-values className="token-group">
-					<h3 className="token-group-name">Set in the component itself</h3>
-					<p className="quiet">Not tokens, so they are changed in the design system, not here.</p>
-					{inOrder(answer.notTokens, (n) => n.kind).map(([kind, values]) => (
-						<div key={kind} data-not-token-kind={kind}>
-							<h4 className="token-set-name">{KINDS[kind]}</h4>
-							<ul className="tokens">
-								{values.slice(0, MOST_LISTED).map((n) => (
-									<NotToken key={n.value} value={n} />
-								))}
-							</ul>
-							{values.length > MOST_LISTED && (
-								<Disclosure label={`Show ${values.length - MOST_LISTED} more`}>
-									<ul className="tokens">
-										{values.slice(MOST_LISTED).map((n) => (
-											<NotToken key={n.value} value={n} />
-										))}
-									</ul>
-								</Disclosure>
-							)}
-						</div>
-					))}
-					{answer.derived > 0 && (
-						<p className="quiet">
-							{plural(answer.derived, 'use')} {answer.derived === 1 ? 'is a shade' : 'are shades'} worked out from a token, such as a hover’s darker
-							color.
-						</p>
-					)}
+}) => (
+	<AsidePart title="Tokens">
+		{tokens.length === 0 ? (
+			<p className="quiet">It draws with none of the design system’s tokens.</p>
+		) : (
+			inOrder(tokens, (t) => t.category).map(([category, inCategory]) => (
+				<div key={category} data-tokens-used={category} className="value-group">
+					<h3 className="value-group-name">{category}</h3>
+					<Grouped tokens={inCategory} infoFor={info} {...actions} />
 				</div>
-			)}
-		</ClosedPart>
-	);
-};
+			))
+		)}
+		{(answer.notTokens.length > 0 || answer.derived > 0) && (
+			<div data-own-values className="value-group">
+				<h3 className="value-group-name">
+					{/* Together, so the icon is beside the words and not at the far end of the heading. */}
+					<span>
+						Set in the component itself{' '}
+						<InfoTip
+							text={`Not tokens, so they are changed in the design system, not here.${
+								answer.derived > 0
+									? ` ${plural(answer.derived, 'use')} ${answer.derived === 1 ? 'is a shade' : 'are shades'} worked out from a token, such as a hover’s darker color.`
+									: ''
+							}`}
+						/>
+					</span>
+				</h3>
+				{inOrder(answer.notTokens, (n) => n.kind).map(([kind, values]) => (
+					<div key={kind} data-not-token-kind={kind}>
+						<h4 className="token-set-name">{KINDS[kind]}</h4>
+						<ul className="tokens">
+							{values.slice(0, MOST_LISTED).map((n) => (
+								<NotToken key={n.value} value={n} />
+							))}
+						</ul>
+						{values.length > MOST_LISTED && (
+							<Disclosure label={`Show ${values.length - MOST_LISTED} more`}>
+								<ul className="tokens">
+									{values.slice(MOST_LISTED).map((n) => (
+										<NotToken key={n.value} value={n} />
+									))}
+								</ul>
+							</Disclosure>
+						)}
+					</div>
+				))}
+			</div>
+		)}
+	</AsidePart>
+);
 
 /**
  * What the analysis of a component says, in three parts (T6, decision 29, T7): its values as an inspector, a variant chosen by
  * its pickers, a case only its props declare among them (Phases 1 and 5 of adjusting a component); the tokens it draws with,
- * closed (Tokens used); and what axe found. Found by drawing every story with the tokens tagged, the first time for each
+ * open, with its own title (Tokens); and what axe found. Found by drawing every story with the tokens tagged, the first time for each
  * commit, said while that is done.
  */
 export const ComponentSections = ({
@@ -158,7 +135,7 @@ export const ComponentSections = ({
 }) => {
 	const { edits, byPath } = useTokenChanges();
 	const { answer, retry } = useComponentTokens(component.id);
-	// Every case its props declare, drawn: its Values' pickers offer them too.
+	// Every case its props declare, drawn: its Styles' pickers offer them too.
 	const variants = useComponentVariants(component.id);
 	// The changes being tried on it, in a dialog rather than at the top of this column, so nothing moves while a value is
 	// adjusted: the token changes (they move its stories too) and what they move, drawn only while it is open, then its values.
@@ -202,14 +179,8 @@ export const ComponentSections = ({
 	const others = (path: string) => (answer.sharedWith[path] ?? []).map((f) => names.get(f) ?? f);
 	const used = new Map(answer.uses.map((u) => [u.path, u.uses]));
 	const tokens = answer.uses.flatMap((u) => (byPath.has(u.path) ? [byPath.get(u.path) as DesignToken] : []));
-	const note = (t: DesignToken) => {
-		const also = others(t.path);
-		return (
-			<span data-token-use title={also.join('\n')}>
-				{plural(used.get(t.path) ?? 0, 'use')} · {sharedWith(also)}
-			</span>
-		);
-	};
+	// How often a token is used and by whom, behind the info icon beside its name.
+	const info = (t: DesignToken) => `${plural(used.get(t.path) ?? 0, 'use')} · ${sharedWith(others(t.path))}`;
 	return (
 		<>
 			<ValueChanges
@@ -235,15 +206,15 @@ export const ComponentSections = ({
 				onEditToken={actions.onEdit}
 				variants={variants}
 			/>
-			<TokensUsed answer={answer} tokens={tokens} note={note} actions={actions} />
-			{/* Open: what axe found is one line, its findings already kept closed under it. */}
-			<Part title="Accessibility">
+			<TokensUsed answer={answer} tokens={tokens} info={info} actions={actions} />
+			{/* What axe found is a line and a link, its findings in a dialog. */}
+			<AsidePart title="Accessibility">
 				{answer.accessibility === null ? (
-					<p className="quiet">Not checked: its stories did not finish drawing for the check.</p>
+					<p className="quiet">Checked once its stories have drawn.</p>
 				) : (
 					<AccessibilityFindings result={answer.accessibility} />
 				)}
-			</Part>
+			</AsidePart>
 		</>
 	);
 };
