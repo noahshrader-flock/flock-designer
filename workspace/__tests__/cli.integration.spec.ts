@@ -259,10 +259,12 @@ describe('change-prototype', () => {
 
 	it('refuses to save a name that is not the next version, or a new version that does not say what it was started from', async () => {
 		await made();
-		expect(await run('save-prototype', '--project', 'demo', '--name', 'v15')).toBe(1);
+		expect(await run('save-prototype', '--project', 'demo', '--name', 'v4')).toBe(1);
 		expect(err.join('\n')).toMatch(/not the next version/);
 		expect(await run('save-prototype', '--project', 'demo', '--name', 'v2')).toBe(1);
 		expect(err.join('\n')).toMatch(/v2 is a new version: say which it was started from, with --from-version/);
+		expect(await run('save-prototype', '--project', 'demo', '--name', 'v2', '--from-version', 'v9')).toBe(1);
+		expect(err.join('\n')).toMatch(/demo has no v9 for v2 to have been started from/);
 	});
 
 	it('numbers each new idea one past the highest: v1, v2, v3', async () => {

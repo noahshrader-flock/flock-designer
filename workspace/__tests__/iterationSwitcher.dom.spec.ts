@@ -4,8 +4,8 @@ import { IterationSwitcher, StateSwitcher } from '../src/renderer/IterationSwitc
 import { button, chooseState, openMenu, press, render, shownState, stateMenu, unmountAll } from './reviewHarness';
 
 /**
- * Switching between a project's work: a dropdown of its versions, the newest first, saying which is shown; codebase work
- * is the same dropdown with its one entry. Against the component on its own.
+ * Switching between a prototype's versions: a dropdown of them, the newest first, saying which is shown. Against the
+ * component on its own.
  */
 
 const at = (name: string) => ({ name, branch: `prototype/demo/${name}` });
@@ -26,7 +26,7 @@ afterEach(async () => {
 const names = (items: HTMLElement[]) => items.map((i) => i.textContent?.trim());
 
 describe('for prototypes', () => {
-	it('is one dropdown that says the version shown, and nothing else', async () => {
+	it('is one dropdown that says the version shown, with no second menu for versions', async () => {
 		await show('v2');
 		expect(button('Version V2: switch version').textContent).toBe('V2');
 		expect(document.querySelector('[aria-label*="iteration"]')).toBeNull();
@@ -66,19 +66,6 @@ describe('for prototypes', () => {
 	it('is there with one version, so where you are is always visible', async () => {
 		await show('v1', { siblings: [at('v1')] });
 		expect(names(await openMenu(button('Version V1: switch version')))).toEqual(['V1']);
-	});
-
-	it('says something after a version’s name in the menu, when asked to', async () => {
-		await show('v2', { note: (i: { name: string }) => (i.name === 'v4' ? ' · only on this machine' : '') });
-		expect(names(await openMenu(button('Version V2: switch version')))).toEqual(['V4 · only on this machine', 'V3', 'V2', 'V1']);
-	});
-});
-
-describe('for codebase work', () => {
-	it('is the same dropdown, with its one entry', async () => {
-		const codebase = { name: 'codebase', branch: 'feature/demo' };
-		await show('codebase', { current: codebase, siblings: [codebase] });
-		expect(names(await openMenu(button('Version Codebase: switch version')))).toEqual(['Codebase']);
 	});
 });
 

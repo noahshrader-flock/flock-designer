@@ -186,7 +186,7 @@ const addressOpening = (number: number, commentsPath: string, subject: string): 
 export const addressTask = (commentsPath: string, branch: string, skill: string, only: number): string =>
 	[
 		...addressOpening(only, commentsPath, 'this project'),
-		`This iteration's branch is ${branch}.`,
+		`This work's branch is ${branch}.`,
 		'',
 		'Follow these instructions:',
 		'',
@@ -298,7 +298,7 @@ export const prototypeAddressTask = ({
 	commentsPath: string;
 	/** The comment's number, as on its pin. */
 	number: number;
-	/** The iteration the comment is on. */
+	/** The version the comment is on. */
 	name: string;
 	/** Where the change is made, when that is not the version commented on: see `whereTheChangeGoes`. */
 	where?: string | null;

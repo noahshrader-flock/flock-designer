@@ -7,7 +7,7 @@ import { projectPath, prototypeKey, workPath } from '../../shared/designPaths';
 import { isPrototypeName, nextVersionName } from '../../shared/prototypeNames';
 import { assertCover } from '../../shared/validate';
 import { resolveInside } from './paths';
-import { parseWork, serializeWork } from '../../shared/workRecords';
+import { parseWork, serializeWork, unreadableWork } from '../../shared/workRecords';
 
 /**
  * Prototypes: what is recorded, where the page is kept, and what the agent is told.
@@ -70,14 +70,14 @@ export interface PrototypeBuild {
 }
 
 /**
- * A project's iteration records, through anything that reads a file of the design repository. A file that cannot be read
- * is refused rather than written over, or guessed at.
+ * A project's records, through anything that reads a file of the design repository. A file that cannot be read is
+ * refused rather than written over, or guessed at.
  */
 export const readRecords = async (store: Pick<RecordStore, 'read'>, projectId: string): Promise<Work[]> => {
 	const raw = await store.read(workPath(projectId));
 	if (raw === null) return [];
 	const records = parseWork(raw);
-	if (records === null) throw new Error(`${workPath(projectId)} is not a readable list of records, so it was left as it is.`);
+	if (records === null) throw new Error(unreadableWork(workPath(projectId)));
 	return records;
 };
 

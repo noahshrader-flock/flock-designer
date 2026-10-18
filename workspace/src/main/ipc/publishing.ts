@@ -19,7 +19,7 @@ export const registerPublishing = (d: IpcDeps): void => {
 	handle('publishedPage', [arg.projectId, arg.prototypeName], (projectId, name) => publishedPage(projectId, name));
 	handle('openPublishedPage', [arg.projectId, arg.prototypeName], async (projectId, name): Promise<null> => {
 		const status = await publishedPage(projectId, name);
-		if (status.state !== 'published') throw new Error('This iteration is not on its page yet.');
+		if (status.state !== 'published') throw new Error('This version is not on its page yet.');
 		await ports.openExternal(assertPreviewUrl(status.url));
 		return null;
 	});

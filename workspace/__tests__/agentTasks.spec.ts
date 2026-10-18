@@ -74,19 +74,19 @@ describe('codebase work and Handoff', () => {
 
 describe('addressTask', () => {
 	it('asks for the one comment it was given, by the number on its pin', () => {
-		const one = addressTask('/r/comments.md', 'prototype/demo/v1', 'SKILL', 3);
+		const one = addressTask('/r/comments.md', 'feature/demo', 'SKILL', 3);
 		expect(one).toContain('Address comment 3 on this project, and only that one.');
 		expect(one).toContain('leave them');
 		expect(one.endsWith('SKILL')).toBe(true);
 	});
 
 	it('is short and names what the app produced', () => {
-		const task = addressTask('/r/projects/demo/comments.md', 'prototype/demo/v1', 'SKILL TEXT', 1);
+		const task = addressTask('/r/projects/demo/comments.md', 'feature/demo', 'SKILL TEXT', 1);
 		expect(task.split('\n').slice(0, 2)).toEqual([
 			'Address comment 1 on this project, and only that one.',
 			'The comments are in /r/projects/demo/comments.md, written from GitHub a moment ago. Read it first.',
 		]);
-		expect(task).toContain("This iteration's branch is prototype/demo/v1.");
+		expect(task).toContain("This work's branch is feature/demo.");
 		expect(task.endsWith('SKILL TEXT')).toBe(true);
 	});
 });

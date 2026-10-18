@@ -79,7 +79,8 @@ const USAGE = `Usage:
 new-prototype records the next version (v1 for a new project, then v2, v3) and prints the task: where to write the
 prototype and how to check it builds. change-prototype does the same for a change to one: in that version, or in a new
 version from it when others have commented on it. save-prototype builds it and saves page and source to the design
-repository; for a new version from another, --from-version says which (the task gives the command whole). --note-file <path> may stand in for --note. --title is needed only for a new project.
+repository; for a new version from another, --from-version says which (the task gives the command whole).
+--note-file <path> may stand in for --note. --title is needed only for a new project.
 build-site writes the site prototypes are published as, from the design repository, and --serve shows it here. publish
 pushes the records, deploys the site and prints the version's link, and says who can open it; the first time a page
 goes up the link is also opened in the browser, unless --no-open. unpublish takes a
@@ -162,7 +163,7 @@ const designOf = async (cwd: string): Promise<string> => {
 	return designBeside(root);
 };
 
-/** Builds the site from the design repository, with each iteration's comment count when GitHub can be asked. */
+/** Builds the site from the design repository, with each version's comment count when GitHub can be asked. */
 const site = async (deps: CliDeps, values: { out?: string; serve?: boolean }): Promise<number> => {
 	const designRoot = await designOf(deps.cwd);
 	const outDir = values.out ? resolve(deps.cwd, values.out) : join(deps.prototypesRoot, '_site');
@@ -197,7 +198,7 @@ const site = async (deps: CliDeps, values: { out?: string; serve?: boolean }): P
 };
 
 /**
- * A saved iteration a page command is for, and GitHub to ask: its names checked before any path is made of them, its
+ * A saved version a page command is for, and GitHub to ask: its names checked before any path is made of them, its
  * page saved in the design repository, and GitHub's command line signed in. `doing` says which, for the messages.
  */
 const savedPage = async (deps: CliDeps, values: { project?: string; name?: string }, doing: 'Publishing' | 'Unpublishing') => {
@@ -229,7 +230,7 @@ const savedPage = async (deps: CliDeps, values: { project?: string; name?: strin
 	};
 };
 
-/** Publishes one saved iteration to its page, and prints the link. */
+/** Publishes one saved version to its page, and prints the link. */
 const publishPage = async (deps: CliDeps, values: { project?: string; name?: string; 'no-open'?: boolean }): Promise<number> => {
 	const published = await publish(await savedPage(deps, values, 'Publishing'));
 	deps.out(published.url);
@@ -238,7 +239,7 @@ const publishPage = async (deps: CliDeps, values: { project?: string; name?: str
 	return 0;
 };
 
-/** Takes one iteration off the site. */
+/** Takes one version off the site. */
 const unpublishPage = async (deps: CliDeps, values: { project?: string; name?: string }): Promise<number> => {
 	const page = await savedPage(deps, values, 'Unpublishing');
 	const { projectId, name, designRoot } = page;

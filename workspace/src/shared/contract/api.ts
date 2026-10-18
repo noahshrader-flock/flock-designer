@@ -57,7 +57,7 @@ export interface WorkspaceApi {
 
 	/** Of those, the ones with the DSNR setup, which codebase work can start from. */
 	branchesWithSetup(root: string): Promise<Result<string[]>>;
-	/** Checks out an existing iteration's branch. */
+	/** Checks out codebase work's branch. */
 	continueWork(root: string, projectId: string, name: string): Promise<Result<Work>>;
 
 	/** `projectId` fills `<project-id>` in a command that serves one project. */
@@ -158,7 +158,7 @@ export interface WorkspaceApi {
 	onPublishStatus(listener: (status: PublishStatus) => void): () => void;
 
 	/**
-	 * Pushes the iteration's branch, opens a draft pull request for it, waits for the repository's
+	 * Pushes the work's branch, opens a draft pull request for it, waits for the repository's
 	 * deploy workflow and records the preview address. Resolves at once with where it has got to;
 	 * progress arrives through `onShareStatus`, because the build takes minutes.
 	 */
@@ -166,9 +166,9 @@ export interface WorkspaceApi {
 	onShareStatus(listener: (status: ShareStatus) => void): () => void;
 
 	/**
-	 * Asks the agent to act on one comment, named by its id: the iteration's comments are read from GitHub now and written
+	 * Asks the agent to act on one comment, named by its id: the work's comments are read from GitHub now and written
 	 * to `comments.md`, then the agent is started on that one. There is no batch: comments are not alike, and the designer
-	 * picks the one that is a clear change. Refused if the agent is busy, the checkout is not on this iteration's branch,
+	 * picks the one that is a clear change. Refused if the agent is busy, the checkout is not on this work's branch,
 	 * the tree is dirty, or the comment is not open. Progress is the agent's own (`agentStatus`, `onAgentLog`).
 	 */
 	addressComments(root: string, projectId: string, name: string, comment: CommentRef): Promise<Result<AgentStatus>>;
@@ -200,22 +200,22 @@ export interface WorkspaceApi {
 	 */
 	handPrototypeBuild(root: string, projectId: string, name: string, request: string): Promise<Result<BuildInCodebase>>;
 	/**
-	 * Starts the agent on one comment on a prototype. There is no batch. The change goes in the newest iteration of the
-	 * prototype's version, or, when others have commented on that, in the next one.
+	 * Starts the agent on one comment on a prototype. There is no batch. The change goes in the version commented on, or,
+	 * when others have commented on it, in a new version from it.
 	 */
 	addressPrototype(projectId: string, name: string, comment: CommentRef): Promise<Result<AgentStatus>>;
 	/**
-	 * Once that agent has finished: a changed prototype is built, recorded when it is a new iteration, and saved, and the
-	 * comment is marked with where the change is. Says whether anything changed, in which iteration, the new
-	 * iteration's record when one was made, and the comment as it is marked now.
+	 * Once that agent has finished: a changed prototype is built, recorded when it is a new version, and saved, and the
+	 * comment is marked with where the change is. Says whether anything changed, in which version, the new version's
+	 * record when one was made, and the comment as it is marked now.
 	 */
 	finishPrototypeAddress(comment: CommentRef): Promise<Result<PrototypeAddressed>>;
-	/** Whether the iteration is on its published page, asked of GitHub. */
+	/** Whether the version is on its published page, asked of GitHub. */
 	publishedPage(projectId: string, name: string): Promise<Result<PageStatus>>;
-	/** Opens the iteration's published page in the person's browser. Its address is worked out there, not taken from here. */
+	/** Opens the version's published page in the person's browser. Its address is worked out there, not taken from here. */
 	openPublishedPage(projectId: string, name: string): Promise<Result<null>>;
 	/**
-	 * Publishes the iteration now: the same publish that runs by itself when it is saved, asked for after one stopped, or
+	 * Publishes the version now: the same publish that runs by itself when it is saved, asked for after one stopped, or
 	 * before it would. Says how the page stands once it has started.
 	 */
 	publishPage(projectId: string, name: string): Promise<Result<PageStatus>>;
@@ -260,7 +260,7 @@ export interface WorkspaceApi {
 	ensureCovers(): Promise<Result<MadeCover[]>>;
 	/** A prototype's picture, by the hash on its record, as a data URL; null when there is none to read. */
 	projectCover(projectId: string, name: string, cover: string): Promise<Result<string | null>>;
-	/** A review thread's comments. `branch`: the iteration's branch, which its thread is filed under (a prototype's is its key). */
+	/** A review thread's comments. `branch`: the work's branch, which its thread is filed under (a prototype's is its key). */
 	readComments(projectId: string, branch: string): Promise<Result<ReviewComment[]>>;
 	/** The text of one file in a project's folder (its brief, its review notes, …): this machine's copy if it has one, else GitHub's. */
 	readRecord(projectId: string, name: string): Promise<Result<string>>;
@@ -274,7 +274,7 @@ export interface WorkspaceApi {
 	deleteComment(comment: CommentRef): Promise<Result<null>>;
 	/** Marks a comment resolved, or open again. GitHub decides who is allowed. */
 	resolveComment(comment: CommentRef, resolved: boolean): Promise<Result<ReviewComment>>;
-	/** The commit an iteration's branch is at on this machine, to say what a comment was made against. Null if unknown. */
+	/** The commit a branch is at on this machine, to say what a comment was made against. Null if unknown. */
 	iterationCommit(root: string, projectId: string, name: string): Promise<Result<string | null>>;
 }
 

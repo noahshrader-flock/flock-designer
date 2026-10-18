@@ -34,12 +34,12 @@ export type BuildPhase =
 export type BuildApi = Pick<WorkspaceApi, 'readCheckout' | 'continueWork' | 'startAgent' | 'startHandoff' | 'agentStatus' | 'startCommand'>;
 
 /**
- * Where the preview opens: the iteration's own route within the running app when its record says
+ * Where the preview opens: the work's own route within the running app when its record says
  * one, and otherwise wherever the preview starts by itself.
  *
- * A codebase iteration runs the whole product, so without this it opens at the product's front door
- * and the designer has to find the change themselves -- which is how a comment meant for an
- * iteration whose work is at `/roles/compare` was made on the Organizations list instead.
+ * Codebase work runs the whole product, so without this it opens at the product's front door
+ * and the designer has to find the change themselves -- which is how a comment meant for
+ * work at `/roles/compare` was made on the Organizations list instead.
  *
  * The route is already checked where it is read from the record. This joins it on, keeping whatever
  * the preview's address carries (its port, any base path), and refuses anything that would move the
@@ -112,7 +112,7 @@ export const runLocalBuild = async ({
 		return null;
 	};
 
-	// The checkout has to be on this iteration's branch. A dirty tree stops it, and the
+	// The checkout has to be on this work's branch. A dirty tree stops it, and the
 	// message says what to do about it.
 	const opened = await api.readCheckout(root);
 	// Checked before every step that changes something, not just at the end: a screen that

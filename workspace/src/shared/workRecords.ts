@@ -99,6 +99,9 @@ const checked = (r: Rec): Work => {
 
 export const parseWork = (text: string): Work[] | null => rawRecords(text)?.map(checked) ?? null;
 
+/** What is said of a records file that cannot be read: it is refused, never written over or guessed at. */
+export const unreadableWork = (path: string): string => `${path} is not a readable list of records, so it was left as it is.`;
+
 /** The file as written, the one way: two-space JSON, ending in a newline. */
 export const serializeWork = (records: readonly unknown[]): string => `${JSON.stringify(records, null, 2)}\n`;
 

@@ -3,6 +3,7 @@ import { mergePeople } from './people';
 import { matchesWords } from './search';
 import { asCover, asDate } from './validate';
 import { projectCodeLink, workKind, workOf } from './work';
+import { newestVersionFirst } from './prototypeNames';
 import { byNewest } from './sort';
 import { HOST } from './vocabulary';
 
@@ -142,10 +143,10 @@ export const unionLocal = (records: Project[], branches: Project[]): Project[] =
 	return [...byId.values()];
 };
 
-/** The order a project's records are kept in: its prototypes by name, the newest name first, then its codebase work. */
+/** The order a project's records are kept in: its versions, the newest first, then its codebase work. */
 export const workOrder = (a: ProjectWork, b: ProjectWork): number => {
 	const codebase = (x: ProjectWork) => (workKind(x) === 'codebase' ? 1 : 0);
-	return codebase(a) - codebase(b) || b.name.localeCompare(a.name, undefined, { numeric: true });
+	return codebase(a) - codebase(b) || newestVersionFirst(a.name, b.name);
 };
 
 /**

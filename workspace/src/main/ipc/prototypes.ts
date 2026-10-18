@@ -181,7 +181,7 @@ export const registerPrototypes = (d: IpcDeps): void => {
 		);
 	});
 	handle('finishPrototypeAddress', [arg.comment], (comment): Promise<PrototypeAddressed> => finishPrototypeChange(comment));
-	handle('savePrototype', [arg.projectId, arg.workName], async (projectId, name): Promise<null> => {
+	handle('savePrototype', [arg.projectId, arg.prototypeName], async (projectId, name): Promise<null> => {
 		await work.save(projectId, name);
 		publishInBackground(projectId, name);
 		return null;

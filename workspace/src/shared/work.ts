@@ -1,4 +1,5 @@
 import type { BuildInCodebasePlan, WorkKind, Project, ProjectWork } from './contract';
+import { newestVersionFirst } from './prototypeNames';
 import { byNewest } from './sort';
 import { asRepositoryPath } from './repoRef';
 import { asChangeRequestUrl, treeUrl } from './hostUrls';
@@ -30,17 +31,13 @@ export const projectCodeLink = (project: {
 /** Which kind of work a record is: codebase work is the one named `codebase`; every other is a version of the prototype. */
 export const workKind = (i: Pick<ProjectWork, 'name'>): WorkKind => (i.name === 'codebase' ? 'codebase' : 'prototype');
 
-const newestStarted = byNewest<ProjectWork>(
-	(it) => it.createdAt || null,
-	(a, b) => b.name.localeCompare(a.name, undefined, { numeric: true }),
-);
-
 /**
  * A project's work as the screens offer it: the versions of its **prototype** (pages: ideas for what something should
  * be, kept or carried into the code) and its **codebase** work, the real change. Each is newest first, so the first is
  * what "View prototype" and "View codebase" open, and the rest are the versions to switch to.
  */
-export const workOf = (work: ProjectWork[], kind: WorkKind): ProjectWork[] => work.filter((i) => workKind(i) === kind).sort(newestStarted);
+export const workOf = (work: ProjectWork[], kind: WorkKind): ProjectWork[] =>
+	work.filter((i) => workKind(i) === kind).sort((a, b) => newestVersionFirst(a.name, b.name));
 
 /**
  * The products a project has work in (the workspace README's "Projects, by product"), each once, its newest work's first: a prototype's the
@@ -49,7 +46,13 @@ export const workOf = (work: ProjectWork[], kind: WorkKind): ProjectWork[] => wo
  */
 export const productsOf = (project: Pick<Project, 'work'>): string[] => {
 	const found: string[] = [];
-	for (const it of [...project.work].sort(newestStarted)) {
+	// Across both kinds, so by when each was started: a version and codebase work have no number in common.
+	for (const it of [...project.work].sort(
+		byNewest<ProjectWork>(
+			(w) => w.createdAt || null,
+			(a, b) => newestVersionFirst(a.name, b.name),
+		),
+	)) {
 		const product = workKind(it) === 'codebase' ? it.repository : it.product;
 		if (product && !found.includes(product)) found.push(product);
 	}

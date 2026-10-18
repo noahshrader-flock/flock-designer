@@ -4,8 +4,8 @@ import type { Project } from '../../shared/contract';
 import { mergePeople } from '../../shared/people';
 import { fromBrief } from '../../shared/brief';
 import { workOrder } from '../../shared/projectList';
-import { parseWork, toProjectWork } from '../../shared/workRecords';
-import { WORK_FILE } from '../../shared/designPaths';
+import { toProjectWork } from '../../shared/workRecords';
+import { workInFolder } from './workRecords';
 
 /**
  * Every project folder in the local copy of the design repository, read straight from disk, with whatever
@@ -27,9 +27,8 @@ export const readFolderProjects = (recordsRoot: string): Project[] => {
 				.map((f) => f.name)
 				.sort();
 			const brief = records.includes('brief.md') ? readFileSync(join(dir, 'brief.md'), 'utf8') : null;
-			const file = join(dir, WORK_FILE);
 			// A record that cannot be read lists the project with nothing built, as a folder with no record does.
-			const work = ((existsSync(file) ? parseWork(readFileSync(file, 'utf8')) : null) ?? []).map((it) => toProjectWork(it)).sort(workOrder);
+			const work = (workInFolder(dir) ?? []).map((it) => toProjectWork(it)).sort(workOrder);
 			return {
 				id: e.name,
 				...fromBrief(e.name, brief),

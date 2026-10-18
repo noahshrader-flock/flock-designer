@@ -49,8 +49,8 @@ export interface PrototypeWorkContext {
 }
 
 /**
- * Where a change to a prototype goes: `target`, which is `from` itself, or, when others have commented on `from`, its
- * version's next iteration, not yet recorded (`fresh`). `before` is the version of the source the change starts from.
+ * Where a change to a prototype goes: `target`, which is `from` itself, or, when others have commented on `from`, a new
+ * version from it, not yet recorded (`fresh`). `before` is the hash of the source the change starts from.
  */
 export interface PrototypeChange {
 	from: Work;
@@ -386,8 +386,9 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		const names = all.map((i) => i.name);
 		if (names.includes(name)) return null;
 		if (nextVersionName(names) !== name) throw new Error(`${projectId} has no ${name}, and it is not the next version.`);
+		if (fromName === null) throw new Error(`${name} is a new version: say which it was started from, with --from-version.`);
 		const from = all.find((i) => i.name === fromName);
-		if (!from) throw new Error(`${name} is a new version: say which it was started from, with --from-version.`);
+		if (!from) throw new Error(`${projectId} has no ${fromName} for ${name} to have been started from.`);
 		const source = await sourceText(projectId, from.name);
 		return { from, target: name, fresh: true, before: source === null ? '' : contentHashOf(source), unread: false };
 	};

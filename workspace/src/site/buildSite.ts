@@ -3,11 +3,11 @@ import { join } from 'node:path';
 import type { Work } from '../shared/contract';
 import { escapeHtml, firstInHead } from '../shared/html';
 import { fromBrief } from '../shared/brief';
-import { SHARED_DIR, SHARED_REF, isPrototypeKey, sitePath, WORK_FILE } from '../shared/designPaths';
-import { parseVersion } from '../shared/prototypeNames';
+import { SHARED_DIR, SHARED_REF, isPrototypeKey, sitePath } from '../shared/designPaths';
+import { newestVersionFirst } from '../shared/prototypeNames';
 import { workLabel, projectCodeLink } from '../shared/work';
 import { statesOf } from '../shared/prototypeStates';
-import { parseWork } from '../shared/workRecords';
+import { workInFolder } from '../main/services/workRecords';
 import { plural } from '../shared/plural';
 import { extensionOf } from '../shared/mime';
 import type { RepoRef } from '../shared/repoRef';
@@ -73,7 +73,6 @@ const MARK = '.flock-designer-site';
 
 interface Page {
 	record: Work;
-	version: number;
 	/** Where it is from its project's folder: `v2/`. */
 	path: string;
 }
@@ -104,14 +103,12 @@ const readProjects = (designRoot: string): SiteProject[] => {
 	return ids.flatMap((id): SiteProject[] => {
 		const dir = join(projectsDir, id);
 		// A project whose records cannot be read has nothing to show; the rest of the site is still built.
-		const path = join(dir, WORK_FILE);
-		const records = existsSync(path) ? parseWork(readFileSync(path, 'utf8')) : null;
+		const records = workInFolder(dir);
 		if (records === null) return [];
 		const pages = records.flatMap((record): Page[] => {
-			const version = parseVersion(record.name);
-			const saved = existsSync(join(dir, 'prototypes', `${record.name}.html`));
 			const at = sitePath(id, record.name);
-			return version !== null && at && isPrototypeKey(record.branch) && saved ? [{ record, version, path: at.slice(id.length + 1) }] : [];
+			const saved = existsSync(join(dir, 'prototypes', `${record.name}.html`));
+			return at && isPrototypeKey(record.branch) && saved ? [{ record, path: at.slice(id.length + 1) }] : [];
 		});
 		if (pages.length === 0) return [];
 		const brief = existsSync(join(dir, 'brief.md')) ? readFileSync(join(dir, 'brief.md'), 'utf8') : '';
@@ -119,7 +116,7 @@ const readProjects = (designRoot: string): SiteProject[] => {
 			{
 				id,
 				title: fromBrief(id, brief).title,
-				versions: pages.sort((a, b) => b.version - a.version),
+				versions: pages.sort((a, b) => newestVersionFirst(a.record.name, b.record.name)),
 				builtInCode: projectCodeLink({ work: records }),
 			},
 		];
@@ -294,7 +291,7 @@ export const buildSite = ({ designRoot, outDir, comments, viewer, pagesAt, signI
 			copyFileSync(join(viewer.dir, f), join(outDir, '_viewer', f));
 		}
 	}
-	// A page sits three folders down (<project>/v1/i2/), and finds the shared files from there.
+	// A page sits two folders down (<project>/v2/), and finds the shared files from there.
 	const relink = (html: string): string =>
 		withAgent(html.replace(SHARED_REF, (whole, hash: string) => (shared.has(hash) ? `../../_shared/${shared.get(hash)}` : whole)));
 	/**

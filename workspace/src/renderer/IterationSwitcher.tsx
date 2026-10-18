@@ -1,6 +1,6 @@
 import { MoonIcon, SunIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { parseVersion } from '../shared/prototypeNames';
+import { newestVersionFirst } from '../shared/prototypeNames';
 import { workLabel } from '../shared/work';
 import { stateLabel } from '../shared/prototypeStates';
 import { THEMES, isTheme, themeLabel } from '../shared/prototypeTheme';
@@ -37,30 +37,26 @@ const SwitchMenu = ({
 }) => <ChoiceMenu name={capitalize(what)} ariaLabel={`${capitalize(what)} ${label}: switch ${what}`} label={label} align="end" {...choice} />;
 
 /**
- * Switching between a project's work: a dropdown saying which version is shown, its menu the newest first, and after it the
- * page's states. Codebase work is the same dropdown, with its one entry. One component, so the app's review screen and a
- * prototype's published page carry the same one.
+ * Switching between a prototype's versions, on its published page (and its review in VS Code, which frames that page): a
+ * dropdown saying which version is shown, its menu the newest first, and after it the page's states.
  */
 export const IterationSwitcher = <T extends Switchable>({
 	current,
 	siblings,
 	onSelect,
-	note,
 	children,
 	size = 'default',
 }: {
 	current: Switchable;
 	siblings: T[];
 	onSelect: (next: T) => void;
-	/** Said after a version's name in the menu, when there is something to say about it. */
-	note?: (version: T) => string;
 	/** A prototype's states, after the version, where they read left to right. */
 	children?: ReactNode;
 	/** The bar's size, for the dropdowns. */
 	size?: BarSize;
 }) => {
 	// Newest first, whatever order they were given in: the app and the published page then always agree.
-	const newestFirst = [...siblings].sort((a, b) => (parseVersion(b.name) ?? 0) - (parseVersion(a.name) ?? 0));
+	const newestFirst = [...siblings].sort((a, b) => newestVersionFirst(a.name, b.name));
 	return (
 		<>
 			<SwitchMenu
@@ -68,7 +64,7 @@ export const IterationSwitcher = <T extends Switchable>({
 				what="version"
 				label={workLabel(current)}
 				value={current.branch}
-				choices={newestFirst.map((i) => ({ value: i.branch, label: `${workLabel(i)}${note?.(i) ?? ''}` }))}
+				choices={newestFirst.map((i) => ({ value: i.branch, label: workLabel(i) }))}
 				onChange={(branch) => {
 					const next = siblings.find((i) => i.branch === branch);
 					if (next && branch !== current.branch) onSelect(next);

@@ -18,6 +18,12 @@ export const isPrototypeName = (name: string): boolean => parseVersion(name) !==
 
 export const prototypeName = (version: number): string => `v${version}`;
 
+/**
+ * Versions the newest first, by their number: a version is numbered one past the highest when it is made, so the highest
+ * is the newest, whatever its record's date says. The one order every screen, the site and the records list them in.
+ */
+export const newestVersionFirst = (a: string, b: string): number => (parseVersion(b) ?? 0) - (parseVersion(a) ?? 0);
+
 /** A new version: one past the highest, so no number is reused. */
 export const nextVersionName = (names: string[]): string => prototypeName(names.reduce((max, n) => Math.max(max, parseVersion(n) ?? 0), 0) + 1);
 

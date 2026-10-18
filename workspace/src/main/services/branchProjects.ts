@@ -1,7 +1,6 @@
 import type { Person, Project, ProjectWork } from '../../shared/contract';
 import type { WorkspaceDescriptor } from './descriptor';
 import { mergePeople } from '../../shared/people';
-import { workOrder } from '../../shared/projectList';
 import { branchCommit, branchStartedAt, listBranches } from './git';
 import { peopleOn } from './workRecords';
 
@@ -36,6 +35,24 @@ export const classify = (descriptor: WorkspaceDescriptor, branch: string): Branc
 };
 
 /**
+ * This checkout's codebase work branches, the first `most` of them: only those of a project the design repository has
+ * (`known`), since `feature/<project-id>` is also how the whole product team names ticket branches.
+ */
+export const codebaseBranches = async (
+	root: string,
+	descriptor: WorkspaceDescriptor,
+	known: ReadonlySet<string>,
+	most: number,
+): Promise<BranchWork[]> => {
+	const prefix = prefixOf(descriptor.branchPattern.codebase);
+	const branches = prefix ? await listBranches(root, prefix) : [];
+	return branches.slice(0, most).flatMap((branch) => {
+		const work = classify(descriptor, branch);
+		return work && known.has(work.projectId) ? [work] : [];
+	});
+};
+
+/**
  * Reads the repository's branches as codebase work.
  *
  * `known` is the set of project ids the design repository already has a record for. `feature/<project-id>` is how the
@@ -48,49 +65,32 @@ export const readBranchProjects = async (
 	signedInLogin: string | null,
 	known: ReadonlySet<string> = new Set(),
 ): Promise<Project[]> => {
-	const prefix = prefixOf(descriptor.branchPattern.codebase);
-	const branches = prefix ? await listBranches(productRoot, prefix) : [];
-
-	const work = (
-		await Promise.all(
-			branches.slice(0, 200).map(async (branch) => {
-				const it = classify(descriptor, branch);
-				if (!it) return null;
-				if (!known.has(it.projectId)) return null;
-				// The same rule the records use, so one person is one person in both.
-				const people: Person[] = await peopleOn(productRoot, branch, signedInLogin).catch(() => []);
-				const iteration: ProjectWork = {
-					name: it.name,
-					branch,
-					issueNumber: null,
-					openComments: 0,
-					previewUrl: null,
-					// Found as a branch, with no record to say where its work is.
-					route: null,
-					commit: await branchCommit(productRoot, branch).catch(() => null),
-					contributors: people,
-					createdAt: await branchStartedAt(productRoot, branch).catch(() => null),
-					repository: null,
-					pullRequest: null,
-					cover: null,
-					// Found as a branch, with no record to say which product it was made on.
-					product: null,
-					readyAt: null,
-				};
-				return { id: it.projectId, iteration };
-			}),
-		)
-	).filter((x): x is { id: string; iteration: ProjectWork } => x !== null);
-
-	const byProject = new Map<string, ProjectWork[]>();
-	for (const { id, iteration } of work) byProject.set(id, [...(byProject.get(id) ?? []), iteration]);
-	return [...byProject].map(([id, its]) => ({
-		id,
-		title: id,
-		// Found as branches: no brief read, so in no folder until one is.
-		folder: null,
-		records: [],
-		work: its.sort(workOrder),
-		people: mergePeople(...its.map((i) => i.contributors)),
-	}));
+	// One branch a project: `feature/<project-id>` names each one's codebase work.
+	const found = await codebaseBranches(productRoot, descriptor, known, 200);
+	return Promise.all(
+		found.map(async ({ projectId, name, branch }): Promise<Project> => {
+			// The same rule the records use, so one person is one person in both.
+			const people: Person[] = await peopleOn(productRoot, branch, signedInLogin).catch(() => []);
+			const work: ProjectWork = {
+				name,
+				branch,
+				issueNumber: null,
+				openComments: 0,
+				previewUrl: null,
+				// Found as a branch, with no record to say where its work is.
+				route: null,
+				commit: await branchCommit(productRoot, branch).catch(() => null),
+				contributors: people,
+				createdAt: await branchStartedAt(productRoot, branch).catch(() => null),
+				repository: null,
+				pullRequest: null,
+				cover: null,
+				// Found as a branch, with no record to say which product it was made on.
+				product: null,
+				readyAt: null,
+			};
+			// Found as a branch: no brief read, so titled by its id, and in no folder until one is.
+			return { id: projectId, title: projectId, folder: null, records: [], work: [work], people: mergePeople(people) };
+		}),
+	);
 };

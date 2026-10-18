@@ -1,5 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import type { Work, Person } from '../../shared/contract';
 import type { WorkspaceDescriptor } from './descriptor';
 import {
@@ -15,10 +15,10 @@ import {
 } from './git';
 import { resolveInside } from './paths';
 import { PROJECT_ID } from '../../shared/validate';
-import { parseWork, serializeWork } from '../../shared/workRecords';
+import { parseWork, serializeWork, unreadableWork } from '../../shared/workRecords';
 import { writeAtomic } from './jsonFile';
 import { loginFromNoreply } from '../../shared/hostUrls';
-import { WORK_FILE } from '../../shared/designPaths';
+import { WORK_FILE, workPath } from '../../shared/designPaths';
 
 /**
  * Named attempts at the question, and the record of them.
@@ -49,14 +49,17 @@ export const recordPath = (recordsRoot: string, projectId: string): string => {
 	return resolveInside(recordsRoot, join(projectId, WORK_FILE));
 };
 
+/** The records in a project's folder, as its file has them: none when there is no file, null when it cannot be read. */
+export const workInFolder = (dir: string): Work[] | null => {
+	const path = join(dir, WORK_FILE);
+	return existsSync(path) ? parseWork(readFileSync(path, 'utf8')) : [];
+};
+
+/** A project's records, from the records folder: refused when its file cannot be read. */
 export const readWork = (recordsRoot: string, projectId: string): Work[] => {
-	const path = recordPath(recordsRoot, projectId);
-	if (!existsSync(path)) {
-		return [];
-	}
-	const parsed = parseWork(readFileSync(path, 'utf8'));
-	if (parsed === null) throw new Error(`${join(projectId, WORK_FILE)} is not a readable list of records.`);
-	return parsed;
+	const records = workInFolder(dirname(recordPath(recordsRoot, projectId)));
+	if (records === null) throw new Error(unreadableWork(workPath(projectId)));
+	return records;
 };
 
 const writeWork = (recordsRoot: string, projectId: string, records: Work[]): void => {

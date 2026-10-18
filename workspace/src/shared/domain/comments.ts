@@ -21,7 +21,7 @@ export interface ReviewComment extends CommentRef {
 	 * says a change is waiting for the person's verdict, which only they can give.
 	 */
 	addressedAt: string | null;
-	/** On a prototype, the iteration that change is in: the next one, when others had commented on this one. */
+	/** On a prototype, the version that change is in: a new one from this, when others had commented on this one. */
 	addressedIn: string | null;
 	/** Where on the page it was placed; null for a comment on the page as a whole. */
 	anchor: CommentAnchor | null;

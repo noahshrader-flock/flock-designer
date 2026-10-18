@@ -94,16 +94,15 @@ export interface LocalRun {
 export const runLocally = async (deps: CodebaseDeps, local: LocalRun, projectId: string): Promise<void> => {
 	const { api, root } = deps;
 	const { project, iteration } = await codebaseOf(api, projectId);
-	const command = DESIGN_MODE_COMMAND;
 	const couldNot = (why: string) => new Error(`${project.title} couldn’t run locally: ${why}`);
-	await api.stopCommand(root, command);
-	const port = local.port(command);
-	if (port === null) throw couldNot(`the product’s .dsnr/workspace.json declares no ${command} command with a port.`);
+	await api.stopCommand(root, DESIGN_MODE_COMMAND);
+	const port = local.port(DESIGN_MODE_COMMAND);
+	if (port === null) throw couldNot(`the product’s .dsnr/workspace.json declares no ${DESIGN_MODE_COMMAND} command with a port.`);
 	if (await local.answers(port)) throw couldNot(`something else is already answering on port ${port}. Stop it, then try again.`);
 	const lines: string[] = [];
 	deps.log.start(`${project.title}, locally`);
 	const listening = api.onRunLog((l) => {
-		if (l.commandId !== command) return;
+		if (l.commandId !== DESIGN_MODE_COMMAND) return;
 		for (const line of outputLines(l.text)) {
 			lines.push(line);
 			deps.log.line(line);
@@ -136,7 +135,7 @@ export const runLocally = async (deps: CodebaseDeps, local: LocalRun, projectId:
 			},
 			() => {
 				stopped = true;
-				void api.stopCommand(root, command);
+				void api.stopCommand(root, DESIGN_MODE_COMMAND);
 			},
 		);
 	} finally {
@@ -144,7 +143,7 @@ export const runLocally = async (deps: CodebaseDeps, local: LocalRun, projectId:
 	}
 	if (stopped) return;
 	if (failed !== null || url === null) {
-		await api.stopCommand(root, command);
+		await api.stopCommand(root, DESIGN_MODE_COMMAND);
 		const why: string = failed ?? 'it gave no address.';
 		const hint = packagesHint(why, local.installCommand());
 		throw couldNot(hint && !/[.!?]$/.test(why) ? `${why}.${hint}` : `${why}${hint}`);
@@ -154,14 +153,15 @@ export const runLocally = async (deps: CodebaseDeps, local: LocalRun, projectId:
 	try {
 		await deps.openExternal(at);
 	} catch (err) {
-		await api.stopCommand(root, command);
+		await api.stopCommand(root, DESIGN_MODE_COMMAND);
 		throw new Error(
 			`${project.title} is running locally at ${at}, but it could not be opened in the browser: ${err instanceof Error ? err.message : String(err)}`,
 		);
 	}
 	// A record with no route opens at the front door: said, so nobody takes it for the page that changed.
 	const where = iteration.route ? '' : ' Its record names no page for this work, so it opened at the app’s front door.';
-	if ((await deps.offer(`${project.title} is running locally at ${at}.${where}`, [STOP])) === STOP) valueOf(await api.stopCommand(root, command));
+	if ((await deps.offer(`${project.title} is running locally at ${at}.${where}`, [STOP])) === STOP)
+		valueOf(await api.stopCommand(root, DESIGN_MODE_COMMAND));
 };
 
 /** What sharing says at each step: it is a push, a pull request and a build. */

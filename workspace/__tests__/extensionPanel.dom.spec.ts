@@ -378,7 +378,7 @@ describe('dialogs and menus, in the panel', () => {
 			await showOpen();
 			await press(menuFor(0));
 			await press(item('Copy link'));
-			expect(panelSaid().at(-1)).toEqual({ type: 'copy-review-link', projectId: 'alert-history', name: 'v2', title: 'Alert history · V2' });
+			expect(panelSaid().at(-1)).toEqual({ type: 'copy-review-link', projectId: 'alert-history', name: 'v3', title: 'Alert history · V3' });
 			expect(items()).toHaveLength(0);
 		});
 
@@ -389,8 +389,8 @@ describe('dialogs and menus, in the panel', () => {
 			expect(panelSaid().at(-1)).toEqual({
 				type: 'open-review-published',
 				projectId: 'alert-history',
-				name: 'v2',
-				title: 'Alert history · V2',
+				name: 'v3',
+				title: 'Alert history · V3',
 			});
 			expect(items()).toHaveLength(0);
 		});
@@ -409,8 +409,8 @@ describe('dialogs and menus, in the panel', () => {
 			expect(panelSaid().at(-1)).toEqual({
 				type: 'open-review-in-browser',
 				projectId: 'alert-history',
-				name: 'v2',
-				title: 'Alert history · V2',
+				name: 'v3',
+				title: 'Alert history · V3',
 			});
 			expect(items()).toHaveLength(0);
 		});
@@ -695,7 +695,7 @@ describe('codebase work, in the panel', () => {
 		it('reads what it would do in the product open here, for the project’s newest prototype', async () => {
 			await open();
 			expect(dialog()?.getAttribute('aria-label')).toBe('Build in the codebase');
-			expect(sent.filter((m) => m.name === 'buildInCodebasePlan').at(-1)?.args).toEqual(['/work/flock-coke', 'alert-history', 'v2']);
+			expect(sent.filter((m) => m.name === 'buildInCodebasePlan').at(-1)?.args).toEqual(['/work/flock-coke', 'alert-history', 'v3']);
 			expect(sent.filter((m) => m.name === 'branchesWithSetup').at(-1)?.args).toEqual(['/work/flock-coke']);
 			expect(dialog()!.textContent).toContain('Creates feature/alert-history from this branch and moves your checkout to it.');
 			// What happens ends with the check it makes of its own work, and says what is left to Handoff.
@@ -708,7 +708,7 @@ describe('codebase work, in the panel', () => {
 			expect([...select().options].map((o) => o.textContent)).toEqual(['main', 'develop']);
 			expect(select().value).toBe('develop');
 			await press(inDialog('Build in Claude Code'));
-			expect(sent.filter((m) => m.name === 'buildInCodebase').at(-1)?.args).toEqual(['/work/flock-coke', 'alert-history', 'v2', 'develop']);
+			expect(sent.filter((m) => m.name === 'buildInCodebase').at(-1)?.args).toEqual(['/work/flock-coke', 'alert-history', 'v3', 'develop']);
 			const reads = sent.filter((m) => m.name === 'listProjects').length;
 			await answer('buildInCodebase', { editor: true, command: null });
 			expect(dialog()!.textContent).toContain('It is in Claude Code in this window now, on feature/alert-history');
@@ -737,7 +737,7 @@ describe('codebase work, in the panel', () => {
 			expect(select()).toBeNull();
 			expect(dialog()!.textContent).toContain('Continues');
 			await press(inDialog('Continue in Claude Code'));
-			expect(sent.filter((m) => m.name === 'buildInCodebase').at(-1)?.args).toEqual(['/work/flock-coke', 'alert-history', 'v2']);
+			expect(sent.filter((m) => m.name === 'buildInCodebase').at(-1)?.args).toEqual(['/work/flock-coke', 'alert-history', 'v3']);
 		});
 
 		it('will not continue work on a branch with no DSNR setup, and says what to do, before it moves anything', async () => {
@@ -889,7 +889,7 @@ describe('the projects as a list or a grid', () => {
 			'No folder',
 		]);
 		await press(cards()[0]!);
-		expect(panelSaid().at(-1)).toEqual({ type: 'open-review', projectId: 'alert-history', name: 'v2', title: 'Alert history · V2' });
+		expect(panelSaid().at(-1)).toEqual({ type: 'open-review', projectId: 'alert-history', name: 'v3', title: 'Alert history · V3' });
 		expect(JSON.parse(cards()[0]!.closest('li')!.dataset.vscodeContext ?? '{}')).toMatchObject({
 			webviewSection: 'project',
 			projectId: 'alert-history',
@@ -899,7 +899,7 @@ describe('the projects as a list or a grid', () => {
 	it('draws the pictures in either', async () => {
 		await showOpen();
 		// A name of its own: a picture read is kept by its name, as the app keeps it, across the tests of this file.
-		await answer('ensureCovers', [{ projectId: 'alert-history', name: 'v2', cover: 'fedcba654321' }]);
+		await answer('ensureCovers', [{ projectId: 'alert-history', name: 'v3', cover: 'fedcba654321' }]);
 		await answer('projectCover', 'data:image/jpeg;base64,BBBB');
 		expect(cards()[0]!.querySelector('[data-part="picture"]')?.getAttribute('src')).toBe('data:image/jpeg;base64,BBBB');
 	});
@@ -977,7 +977,7 @@ describe('Projects, focused on the product open', () => {
 			...made('x', 'Many', null, [COKE, '2026-10-01T10:00:00Z']),
 			work: [
 				at('v1', '2026-10-01T10:00:00Z'),
-				at('v12', '2026-10-02T10:00:00Z'),
+				at('v3', '2026-10-02T10:00:00Z'),
 				at('v2', '2026-10-03T10:00:00Z'),
 				at('codebase', '2026-10-04T10:00:00Z'),
 			],
@@ -1175,15 +1175,15 @@ describe('Projects', () => {
 	it('opens a project’s newest prototype for review when its row is pressed', async () => {
 		await showOpen();
 		await press(rows()[0]!.querySelector('button') as HTMLElement);
-		expect(panelSaid().at(-1)).toEqual({ type: 'open-review', projectId: 'alert-history', name: 'v2', title: 'Alert history · V2' });
+		expect(panelSaid().at(-1)).toEqual({ type: 'open-review', projectId: 'alert-history', name: 'v3', title: 'Alert history · V3' });
 	});
 
 	it('draws each project’s picture: those built here are made once the list is read, then each is read by its name', async () => {
 		await showOpen();
 		expect(rows()[0]!.querySelector('img')).toBeNull();
-		await answer('ensureCovers', [{ projectId: 'alert-history', name: 'v2', cover: 'abc123def456' }]);
+		await answer('ensureCovers', [{ projectId: 'alert-history', name: 'v3', cover: 'abc123def456' }]);
 		const asked = sent.filter((m) => m.name === 'projectCover').at(-1);
-		expect(asked?.args).toEqual(['alert-history', 'v2', 'abc123def456']);
+		expect(asked?.args).toEqual(['alert-history', 'v3', 'abc123def456']);
 		await answer('projectCover', 'data:image/jpeg;base64,AAAA');
 		expect(rows()[0]!.querySelector('[data-part="picture"]')?.getAttribute('src')).toBe('data:image/jpeg;base64,AAAA');
 		// A project with no picture keeps its place for one.
@@ -1192,15 +1192,15 @@ describe('Projects', () => {
 
 	it('shows a picture drawn again, not the one before it', async () => {
 		await showOpen();
-		await answer('ensureCovers', [{ projectId: 'alert-history', name: 'v2', cover: 'aaaaaaaaaaaa' }]);
+		await answer('ensureCovers', [{ projectId: 'alert-history', name: 'v3', cover: 'aaaaaaaaaaaa' }]);
 		await say({ type: 'projects-changed' });
 		// Read again, so a list of its own, as every read is.
 		await answer(
 			'listProjects',
 			SAMPLE_PROJECTS.map((p) => ({ ...p })),
 		);
-		await answer('ensureCovers', [{ projectId: 'alert-history', name: 'v2', cover: 'bbbbbbbbbbbb' }]);
-		expect(sent.filter((m) => m.name === 'projectCover').at(-1)?.args).toEqual(['alert-history', 'v2', 'bbbbbbbbbbbb']);
+		await answer('ensureCovers', [{ projectId: 'alert-history', name: 'v3', cover: 'bbbbbbbbbbbb' }]);
+		expect(sent.filter((m) => m.name === 'projectCover').at(-1)?.args).toEqual(['alert-history', 'v3', 'bbbbbbbbbbbb']);
 	});
 
 	it('groups them by folder, each a section with how many it holds, those in none last', async () => {

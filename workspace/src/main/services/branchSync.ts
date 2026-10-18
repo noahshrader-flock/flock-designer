@@ -1,7 +1,7 @@
 import type { WorkspaceDescriptor } from './descriptor';
-import { classify, prefixOf } from './branchProjects';
+import { codebaseBranches, prefixOf } from './branchProjects';
 import type { Problem, SyncResult } from './designSync';
-import { branchAuthors, branchCommit, isSamePerson, listBranches, localIdentity, pushBranch, git, isAncestor } from './git';
+import { branchAuthors, branchCommit, isSamePerson, localIdentity, pushBranch, git, isAncestor } from './git';
 import { errorText } from '../../shared/result';
 import { HOST } from '../../shared/vocabulary';
 
@@ -37,16 +37,10 @@ export const syncBranches = async ({ root, descriptor, projects }: BranchSyncInp
 	const published: string[] = [];
 
 	const me = await localIdentity(root);
-	const prefix = prefixOf(descriptor.branchPattern.codebase);
-	const prefixes = prefix ? [prefix] : [];
-	const local = prefix ? await listBranches(root, prefix) : [];
 
 	// Which of them are this person's to publish.
 	const mine: string[] = [];
-	for (const branch of local.slice(0, MAX_BRANCHES)) {
-		const work = classify(descriptor, branch);
-		if (!work) continue;
-		if (!projects.has(work.projectId)) continue;
+	for (const { branch } of await codebaseBranches(root, descriptor, projects, MAX_BRANCHES)) {
 		const authors = await branchAuthors(root, branch).catch(() => []);
 		if (authors.some((a) => isSamePerson(me, a))) mine.push(branch);
 	}
@@ -55,7 +49,7 @@ export const syncBranches = async ({ root, descriptor, projects }: BranchSyncInp
 	// What GitHub has of them, in one round trip.
 	let remote: Map<string, string>;
 	try {
-		const out = await git(root, ['ls-remote', '--heads', 'origin', ...prefixes.map((p) => `refs/heads/${p}*`)]);
+		const out = await git(root, ['ls-remote', '--heads', 'origin', `refs/heads/${prefixOf(descriptor.branchPattern.codebase)}*`]);
 		remote = new Map(
 			out
 				.split('\n')

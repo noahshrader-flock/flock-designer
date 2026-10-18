@@ -36,7 +36,7 @@ const InPage = ({ config, slots }: { config: ViewerConfig; slots: ViewerSlots })
 	useEffect(() => (key === null ? listenForDsnr(window, setRelay, setEditor) : undefined), []);
 	useEffect(() => watchSystemScheme(window, setSystem), []);
 	useEffect(() => applyScheme(document, editor ?? system, editor !== null), [editor, system]);
-	// Opened from DSNR in the browser: after Address, to the iteration it showed its change in (the tab shows it in VS Code).
+	// Opened from DSNR in the browser: after Address, to the version it showed its change in (the tab shows it in VS Code).
 	const onAddressed = (name: string) => {
 		const to = versionAddress(config.projectHref, name, location.href.split('#')[0] as string);
 		if (to === location.href.split('#')[0]) location.reload();

@@ -1,28 +1,16 @@
 import type { Catalog, CatalogComponent, DesignToken } from '../src/shared/domain/designSystem';
 import { undeclared } from '../src/shared/wcag';
 import type { Project, ProjectWork } from '../src/shared/domain/projects';
+import { aVersion } from './fixtures';
 
 /**
  * Sample data for DSNR's panel in tests: a few projects and a design system's catalog, in the app's own shapes, so the
  * panel is tested with the data it is given.
  */
 
-const iteration = (name: string, openComments = 0, day = 1): ProjectWork => ({
-	name,
-	branch: `prototype/sample/${name}`,
-	issueNumber: null,
-	openComments,
-	previewUrl: null,
-	commit: null,
-	contributors: [],
-	createdAt: `2026-10-${String(day).padStart(2, '0')}T10:00:00Z`,
-	route: null,
-	repository: null,
-	pullRequest: null,
-	cover: null,
-	product: null,
-	readyAt: null,
-});
+/** A version of the sample project, with its open comments, made on day `day` of the month. */
+const version = (name: string, openComments = 0, day = 1): ProjectWork =>
+	aVersion('sample', name, { openComments, createdAt: `2026-10-${String(day).padStart(2, '0')}T10:00:00Z` });
 
 const project = (id: string, title: string, folder: string | null, work: ProjectWork[]): Project => ({
 	id,
@@ -34,10 +22,10 @@ const project = (id: string, title: string, folder: string | null, work: Project
 });
 
 export const SAMPLE_PROJECTS: Project[] = [
-	project('alert-history', 'Alert history', 'Admin', [iteration('v1', 0, 1), iteration('v12', 2, 2), iteration('v2', 0, 3)]),
-	project('admin-usage', 'Admin usage', null, [iteration('v1'), iteration('v12')]),
-	project('role-comparison', 'Role comparison', null, [iteration('v1', 5)]),
-	project('zone-coverage', 'Zone coverage', 'Maps', [iteration('v1'), iteration('v12')]),
+	project('alert-history', 'Alert history', 'Admin', [version('v1', 0, 1), version('v2', 2, 2), version('v3', 0, 3)]),
+	project('admin-usage', 'Admin usage', null, [version('v1'), version('v2', 0, 2)]),
+	project('role-comparison', 'Role comparison', null, [version('v1', 5)]),
+	project('zone-coverage', 'Zone coverage', 'Maps', [version('v1'), version('v2', 0, 2)]),
 ];
 
 const component = (group: string, name: string, storybook: string | null = null): CatalogComponent => ({

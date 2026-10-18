@@ -8,13 +8,13 @@ export interface Work {
 	/** A prototype's version, `v2`, or `codebase`. */
 	name: string;
 	branch: string;
-	/** Null until the iteration has a commit. */
+	/** Null until the work has a commit. */
 	commit: string | null;
 	createdAt: string;
 	note: string;
-	/** People who have committed on this branch. Refreshed whenever the iteration is opened or shared. */
+	/** People who have committed on this branch. Refreshed whenever the work is opened or shared. */
 	contributors?: Person[];
-	/** Where a reviewer can open this iteration, once it has been shared. */
+	/** Where a reviewer can open this work, once it has been shared. */
 	previewUrl?: string;
 	/** Codebase work's pull request, once it has been shared: what the project's page links to as built in code. */
 	pullRequest?: string;
@@ -26,8 +26,8 @@ export interface Work {
 	/** Codebase work's repository on GitHub (`owner/repo`), from the checkout it was started in, so it can be linked to. */
 	repository?: string;
 	/**
-	 * Where this iteration's work is in the running app, as a path within it (`/roles/compare`).
-	 * Written by whoever built the work, so opening the iteration lands on what was changed rather
+	 * Where this work is in the running app, as a path within it (`/roles/compare`).
+	 * Written by whoever built the work, so opening the work lands on what was changed rather
 	 * than at the app's front door. Checked with `asRoute` wherever it is read back: it comes from a
 	 * file an agent wrote, and it is joined onto the preview's own address.
 	 */
@@ -121,12 +121,12 @@ export interface Project {
 	records: string[];
 	/** Its work, from its records and this machine's branches, in `workOrder`. */
 	work: ProjectWork[];
-	/** Everyone who has committed to the project: code on any iteration, or its design-repo folder. */
+	/** Everyone who has committed to the project: code on its branch, or its design-repo folder. */
 	people: Person[];
 	/**
 	 * The last time anything happened to the project that GitHub knows of: a change to its folder in the design
 	 * repository, or a comment on one of its review threads. Null when it could not be read. Read with `lastUpdated`,
-	 * which also counts when each iteration was made.
+	 * which also counts when each piece of work was made.
 	 */
 	updatedAt?: string | null;
 	/** True when the project exists only on this machine: built here, not yet shared. */
@@ -136,22 +136,22 @@ export interface Project {
 export interface ProjectWork {
 	name: string;
 	branch: string;
-	/** The issue that carries this iteration's comments, once one exists. */
+	/** The issue that carries this work's comments, once one exists. */
 	issueNumber: number | null;
-	/** How many comments are open on this iteration: 0 for work with no thread yet, or only on this machine. */
+	/** How many comments are open on this work: 0 for work with no thread yet, or only on this machine. */
 	openComments: number;
-	/** Preview URL recorded when the iteration was shared, if any. */
+	/** Preview URL recorded when the work was shared, if any. */
 	previewUrl: string | null;
-	/** The commit the iteration was last recorded at, so a comment can say what it was made against. */
+	/** The commit the work was last recorded at, so a comment can say what it was made against. */
 	commit: string | null;
 	contributors: Person[];
 	/**
 	 * When the work was started, as an ISO date: its record's, or for work found only as a branch, its first
-	 * commit. Null when neither is known. A project's date is its earliest iteration's, and orders the list.
+	 * commit. Null when neither is known. A project's date is its earliest record's, and orders the list.
 	 */
 	createdAt: string | null;
 	/**
-	 * Where the work is in the running app (`/roles/compare`), so opening the iteration lands on what
+	 * Where the work is in the running app (`/roles/compare`), so opening the work lands on what
 	 * was changed instead of the app's front door. Null when the record does not say.
 	 */
 	route: string | null;
@@ -167,7 +167,7 @@ export interface ProjectWork {
 	 * a handoff to run again.
 	 */
 	readyAt: string | null;
-	/** True when this iteration exists only on this machine. */
+	/** True when this work exists only on this machine. */
 	localOnly?: boolean;
 	/** Codebase work: its repository on GitHub (`owner/repo`) and its pull request, when the record says. Read with `codeLink`. */
 	repository: string | null;
@@ -190,7 +190,7 @@ export interface Person {
 }
 
 /**
- * Whether a prototype iteration is on the published site: `published` with its link,
+ * Whether a version of a prototype is on the published site: `published` with its link,
  * `publishing` while it is being put there, `unpublished` when it is saved but not deployed (with why, when a publish
  * was tried and stopped), `unavailable` when GitHub would not say, and `none` when there is no site to be on.
  */

@@ -1,6 +1,5 @@
 import { type Answer, type CommentRef, type EventName, type InvokeName, type Payload, type Result } from '../shared/contract';
 import { asRecord } from '../shared/json';
-import { isPrototypeName } from '../shared/prototypeNames';
 import { fail, ok } from '../shared/result';
 import { isSafeBranchName } from './services/git';
 import { assertUsableProjectId } from './services/workRecords';
@@ -84,9 +83,9 @@ export const arg = {
 		assertPrototypeName(v);
 		return v;
 	}) as Check<string>,
-	/** Any piece of work's name: a version of the prototype, or `codebase`. */
-	workName: ((v) => {
-		if (typeof v !== 'string' || !(v === 'codebase' || isPrototypeName(v))) throw new Error(`"${String(v)}" is not a version or codebase work.`);
+	/** Codebase work's name: the one piece of work on a branch, so the one checked out, committed and shared from one. */
+	codebaseName: ((v) => {
+		if (v !== 'codebase') throw new Error(`"${String(v)}" is not codebase work: a version of a prototype is a page, not a branch.`);
 		return v;
 	}) as Check<string>,
 	branch: ((v) => {

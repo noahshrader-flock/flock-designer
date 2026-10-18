@@ -55,7 +55,7 @@ describe('mergeProjects', () => {
 		expect(shared[0]?.work[0]?.cover).toBe('aaaaaaaaaaaa');
 	});
 
-	it('adds an iteration made here to a project that is already shared', () => {
+	it('adds a version made here to a project that is already shared', () => {
 		const remote = project('alpha', { work: [it1({ branch: 'prototype/alpha/v1' })] });
 		const local = project('alpha', { work: [it1({ name: 'v2', branch: 'prototype/alpha/v2' }), it1({ branch: 'prototype/alpha/v1' })] });
 		const [m] = mergeProjects([remote], [local]);
@@ -84,7 +84,7 @@ describe('mergeProjects', () => {
 });
 
 const started = (id: string, ...dates: Array<string | null>): Project =>
-	project(id, { work: dates.map((d, i) => it1({ name: `i${i + 1}`, branch: `fd/${id}/i${i + 1}`, createdAt: d })) });
+	project(id, { work: dates.map((d, i) => it1({ name: `v${i + 1}`, branch: `prototype/${id}/v${i + 1}`, createdAt: d })) });
 
 describe('the order of the project list', () => {
 	it('puts the most recently started project first', () => {
@@ -95,7 +95,7 @@ describe('the order of the project list', () => {
 		expect(merged.map((p) => p.id)).toEqual(['new', 'mid', 'old']);
 	});
 
-	it('dates a project by its first iteration, so adding work to an old project does not make it new', () => {
+	it('dates a project by its first version, so adding work to an old project does not make it new', () => {
 		const merged = mergeProjects(
 			[started('long-running', '2026-09-01T00:00:00Z', '2026-10-05T00:00:00Z', '2026-10-06T00:00:00Z'), started('fresh', '2026-10-01T00:00:00Z')],
 			[],
@@ -165,7 +165,7 @@ describe('reading projects from their folders', () => {
 		expect(p?.work[0]).toMatchObject({ name: 'v1', branch: 'prototype/alpha/v1', commit: 'abc' });
 	});
 
-	it('reads when each iteration was started, and ignores a date that is not one', () => {
+	it('reads when each version was started, and ignores a date that is not one', () => {
 		write('dated', {
 			'work.json': JSON.stringify([
 				{ name: 'v1', branch: 'prototype/dated/v1', createdAt: '2026-09-28T17:13:52-04:00' },
@@ -181,12 +181,12 @@ describe('reading projects from their folders', () => {
 		write('pictured', {
 			'work.json': JSON.stringify([
 				{ name: 'v1', branch: 'prototype/pictured/v1', cover: 'aaaaaaaaaaaa' },
-				{ name: 'v12', branch: 'prototype/pictured/v12', cover: '../../etc' },
-				{ name: 'v13', branch: 'prototype/pictured/v13' },
+				{ name: 'v5', branch: 'prototype/pictured/v5', cover: '../../etc' },
+				{ name: 'v6', branch: 'prototype/pictured/v6' },
 			]),
 		});
 		const [p] = inProgress(root);
-		expect(Object.fromEntries(p!.work.map((i) => [i.name, i.cover]))).toEqual({ v1: 'aaaaaaaaaaaa', v12: null, v13: null });
+		expect(Object.fromEntries(p!.work.map((i) => [i.name, i.cover]))).toEqual({ v1: 'aaaaaaaaaaaa', v5: null, v6: null });
 	});
 
 	it('names a project by its id when it has no brief yet', () => {
@@ -302,8 +302,8 @@ describe('workOf', () => {
 		it1({ name: 'v3', branch: 'prototype/alpha/v3', createdAt: null }),
 	];
 
-	it('counts each version as a prototype, newest first, undated last', () => {
-		expect(workOf(work, 'prototype').map((i) => i.name)).toEqual(['v2', 'v1', 'v3']);
+	it('counts each version as a prototype, the newest first by its number, whatever its record is dated', () => {
+		expect(workOf(work, 'prototype').map((i) => i.name)).toEqual(['v3', 'v2', 'v1']);
 	});
 
 	it('keeps codebase work on its own', () => {
@@ -400,7 +400,7 @@ describe('matchesProject', () => {
 });
 
 describe('when a project was last updated', () => {
-	it('is the latest of the activity GitHub knows of and when any iteration was made', () => {
+	it('is the latest of the activity GitHub knows of and when any version was made', () => {
 		const p = project('alpha', {
 			updatedAt: '2026-10-05T10:00:00Z',
 			work: [it1({ createdAt: '2026-10-07T09:00:00Z' }), it1({ name: 'v2', createdAt: '2026-10-02T09:00:00Z' })],
@@ -498,7 +498,7 @@ describe('the picture on a project’s card', () => {
 	});
 
 	it('is the newest earlier one that has a picture, while the newest has none yet', () => {
-		expect(coverToShow(project('alpha', { work: [v('v1', 1, A), v('v12', 2, null)] }))).toEqual({ name: 'v1', cover: A });
+		expect(coverToShow(project('alpha', { work: [v('v1', 1, A), v('v5', 2, null)] }))).toEqual({ name: 'v1', cover: A });
 	});
 
 	it('is none for a project with no picture, or with only codebase work', () => {
@@ -527,7 +527,7 @@ describe('what pressing a project does', () => {
 
 	it('opens its newest prototype in the app', () => {
 		const older = v('v1', 1);
-		const newest = v('v12', 2);
+		const newest = v('v5', 2);
 		expect(projectOpening(project('alpha', { title: 'Alpha', work: [older, newest, code] }))).toEqual({
 			kind: 'app',
 			label: 'Open Alpha',

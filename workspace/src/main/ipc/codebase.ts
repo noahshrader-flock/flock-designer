@@ -156,7 +156,7 @@ export const registerCodebase = (d: IpcDeps): void => {
 	handle('agentReadiness', [], () => agentReadiness());
 	// One click: read the comments now, write the file from that read, then start the agent. Nothing
 	// a reviewer wrote is put in the task; it reaches the agent only through the file.
-	handle('addressComments', [checkout, arg.projectId, arg.workName, arg.comment], async (workIn, projectId, name, comment) => {
+	handle('addressComments', [checkout, arg.projectId, arg.codebaseName, arg.comment], async (workIn, projectId, name, comment) => {
 		// There is no batch: a request with no comment is a mistake, not a request for all of them.
 		const { canonical, recordsRoot } = workIn;
 		const iteration = await recordedWork(canonical, recordsRoot, workIn.descriptor, projectId, name);
@@ -180,7 +180,7 @@ export const registerCodebase = (d: IpcDeps): void => {
 	});
 	// Sharing. The branch comes from this person's own record, never from the window, and
 	// the repository's descriptor says what a share is. Starts and returns: it takes minutes.
-	handle('shareIteration', [checkout, arg.projectId, arg.workName], async (workIn, projectId, name) => {
+	handle('shareIteration', [checkout, arg.projectId, arg.codebaseName], async (workIn, projectId, name) => {
 		const { canonical, descriptor, recordsRoot } = workIn;
 		const { share: how } = descriptor;
 		if (!how) {

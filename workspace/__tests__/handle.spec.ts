@@ -21,9 +21,10 @@ describe('what the window sends, checked', () => {
 		expect(through(arg.markerId, 3)).toBe(3);
 	});
 
-	it("takes an iteration's name, a prototype's or codebase, and a prototype's only where one is meant", () => {
-		for (const name of ['codebase', 'v23', 'v1']) expect(through(arg.workName, name)).toBe(name);
-		expect(through(arg.workName, 'feature/x')).toBe('"feature/x" is not a version or codebase work.');
+	it('takes codebase work where a branch is meant, and a version where a prototype is, never one for the other', () => {
+		expect(through(arg.codebaseName, 'codebase')).toBe('codebase');
+		for (const name of ['v1', 'feature/x'])
+			expect(through(arg.codebaseName, name)).toBe(`"${name}" is not codebase work: a version of a prototype is a page, not a branch.`);
 		expect(through(arg.prototypeName, 'v1')).toBe('v1');
 		expect(through(arg.prototypeName, 'codebase')).toBe('"codebase" is not a prototype.');
 		expect(through(arg.prototypeName, 5)).toBe('That is not a prototype.');

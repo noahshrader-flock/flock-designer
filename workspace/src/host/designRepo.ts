@@ -129,12 +129,12 @@ export class DesignRepo {
 	 * **Not from branches.** Work branches live in the product repository,
 	 * which this app is deliberately unable to see -- that is what keeps a PM out
 	 * of the product's source. The record is written into the project folder when
-	 * an iteration is created, so it is readable here with no extra access. The
+	 * a piece of work is recorded, so it is readable here with no extra access. The
 	 * first version of this looked for branches in the design repo and listed
 	 * "No branches yet" for every project.
 	 *
 	 * A missing or unreadable record means "no work recorded", never an
-	 * error: a project folder exists before its first iteration does.
+	 * error: a project folder exists before its first record does.
 	 */
 	private async readWork(id: string, records: string[]): Promise<Work[]> {
 		if (!records.includes(WORK_FILE)) return [];
