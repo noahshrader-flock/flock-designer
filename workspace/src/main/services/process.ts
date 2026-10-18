@@ -1,4 +1,4 @@
-import { execFile } from 'node:child_process';
+import { type ChildProcess, execFile } from 'node:child_process';
 
 /**
  * The one way the app runs a program and waits for it: argv only, never a shell, and always within a time limit, so a
@@ -72,3 +72,45 @@ export const runFile = (
 			child.stdin?.end(input);
 		}
 	});
+
+/**
+ * A long-running program started so it can be ended whole: on its own process group (`GROUP`), so stopping it reaches what
+ * it started too (npm's dev server under npm, the agent's tools under the agent). Windows has no process groups: there the
+ * program alone is ended, as before.
+ */
+export const GROUP = { detached: process.platform !== 'win32' } as const;
+
+/** Sends `signal` to the program's whole group, or to the program alone where there is no group (or it was never started). */
+const signalGroup = (child: ChildProcess, signal: NodeJS.Signals): void => {
+	try {
+		if (GROUP.detached && child.pid !== undefined) process.kill(-child.pid, signal);
+		else child.kill(signal);
+	} catch {
+		// Nothing of the group is left to signal.
+	}
+};
+
+/** Whether any of the program's group is still running (where there is no group, the program itself). */
+const stillRunning = (child: ChildProcess): boolean => {
+	if (!GROUP.detached || child.pid === undefined) return child.exitCode === null && child.signalCode === null;
+	try {
+		process.kill(-child.pid, 0);
+		return true;
+	} catch {
+		return false;
+	}
+};
+
+/**
+ * Ends a program started with `GROUP`, and everything it started: SIGTERM to all of them, and once `graceMs` has passed with
+ * any still running, SIGKILL to those, which a dev server ignoring SIGTERM would otherwise be, keeping its port. Resolves
+ * once all of them are gone, or a second after the SIGKILL.
+ */
+export const endGroup = async (child: ChildProcess, graceMs = 5_000): Promise<void> => {
+	const pause = (ms: number) => new Promise((r) => setTimeout(r, ms));
+	signalGroup(child, 'SIGTERM');
+	for (const until = Date.now() + graceMs; stillRunning(child) && Date.now() < until;) await pause(100);
+	if (!stillRunning(child)) return;
+	signalGroup(child, 'SIGKILL');
+	for (const until = Date.now() + 1_000; stillRunning(child) && Date.now() < until;) await pause(50);
+};

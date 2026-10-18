@@ -4,7 +4,7 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { findOnPath } from './paths';
 import type { AgentReadiness, AgentStatus, RunLogLine } from '../../shared/contract';
-import { ProcessFailed, runFile } from './process';
+import { GROUP, ProcessFailed, endGroup, runFile } from './process';
 
 /**
  * Hands a task to the agent the designer already has installed.
@@ -274,11 +274,11 @@ export const runToEnd = (cwd: string, task: string, extras: AgentExtras = {}, de
 		let out = '';
 		let child: ChildProcess;
 		try {
-			child = deps.spawnProcess(file, args, { cwd, shell: false, stdio: ['ignore', 'pipe', 'pipe'], env: process.env });
+			child = deps.spawnProcess(file, args, { ...GROUP, cwd, shell: false, stdio: ['ignore', 'pipe', 'pipe'], env: process.env });
 		} catch (err) {
 			return done({ ok: false, said: (err as Error).message });
 		}
-		const timer = setTimeout(() => child.kill('SIGTERM'), RUN_TO_END_MS);
+		const timer = setTimeout(() => void endGroup(child), RUN_TO_END_MS);
 		child.stdout?.on('data', (d: Buffer) => (out += d.toString()));
 		// Read as it comes, or a run that says much there would wait on it; its last words are kept, for a run that fails.
 		let complained = '';
@@ -380,6 +380,7 @@ export class AgentRunner {
 		let child: ChildProcess;
 		try {
 			child = this.deps.spawnProcess(file, args, {
+				...GROUP,
 				cwd: root,
 				shell: false,
 				stdio: ['ignore', 'pipe', 'pipe'],
@@ -437,8 +438,8 @@ export class AgentRunner {
 		return this.current.state === 'running' ? this.session : null;
 	}
 
-	/** Asks the run to end. The status says finished once it has (the exit handler), not before. */
-	stop(): void {
-		this.child?.kill('SIGTERM');
+	/** Ends the run, and every tool it started. The status says finished once it has (the exit handler), not before. */
+	stop(): Promise<void> {
+		return this.child ? endGroup(this.child) : Promise.resolve();
 	}
 }

@@ -75,6 +75,8 @@ interface PageLike {
 interface BrowserLike {
 	newPage(): Promise<PageLike>;
 	close(): Promise<void>;
+	/** Told when the browser is gone (it crashed, or was ended outside DSNR), as puppeteer's is. */
+	on?(event: 'disconnected', listener: () => void): unknown;
 }
 
 /** Starts the browser at `path`, headless, through puppeteer: loaded when first needed, as the app loads its own tools. */
@@ -227,9 +229,13 @@ export const chromeHeadless = ({
 		if (browser === null) {
 			const path = find();
 			if (path === null) return Promise.reject(new Error(NO_BROWSER));
-			browser = launch(path);
-			// A start that failed is tried again next time.
-			browser.catch(() => (browser = null));
+			const launched = launch(path);
+			browser = launched;
+			// A start that failed, or a browser that is gone since (it crashed), is started again next time, not asked again.
+			const gone = () => {
+				if (browser === launched) browser = null;
+			};
+			launched.then((b) => b.on?.('disconnected', gone), gone);
 		}
 		return browser;
 	};

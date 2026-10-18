@@ -149,8 +149,9 @@ export const registerCodebase = (d: IpcDeps): void => {
 		});
 	});
 	handle('agentStatus', [], () => agent.status());
-	handle('stopAgent', [], () => {
-		agent.stop();
+	// Answered once the run, and every tool it started, has ended.
+	handle('stopAgent', [], async () => {
+		await agent.stop();
 		return null;
 	});
 	handle('agentReadiness', [], () => agentReadiness());

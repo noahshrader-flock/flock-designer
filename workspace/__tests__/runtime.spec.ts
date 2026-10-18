@@ -40,8 +40,8 @@ beforeEach(() => {
 	statuses = [];
 });
 
-afterEach(() => {
-	manager?.stopAll();
+afterEach(async () => {
+	await manager?.stopAll();
 	rmSync(root, { recursive: true, force: true });
 });
 

@@ -1,4 +1,5 @@
 import { type ChildProcess, spawn } from 'node:child_process';
+import { GROUP, endGroup } from './process';
 import type { PreviewStatus, RunLogLine } from '../../shared/contract';
 import type { WorkspaceDescriptor } from './descriptor';
 import { findCommand } from './descriptor';
@@ -87,28 +88,6 @@ export class RuntimeManager {
 		private readonly deps: RuntimeDeps = defaultDeps,
 	) {}
 
-	/**
-	 * Resolves once the process has exited, or after a grace period, in which case
-	 * it is killed outright. A dev server that ignores SIGTERM must not leave the
-	 * port occupied for the next run.
-	 */
-	private gone(child: ChildProcess, graceMs = 5_000): Promise<void> {
-		if (child.exitCode !== null || child.signalCode !== null) return Promise.resolve();
-		return new Promise((resolve) => {
-			const done = () => {
-				clearTimeout(timer);
-				resolve();
-			};
-			const timer = setTimeout(() => {
-				child.kill('SIGKILL');
-				child.once('exit', done);
-				// Even SIGKILL is not instant; do not wait on it forever.
-				setTimeout(done, 1_000);
-			}, graceMs);
-			child.once('exit', done);
-		});
-	}
-
 	status(commandId: string): PreviewStatus {
 		return this.running.get(commandId)?.status ?? { state: 'stopped' };
 	}
@@ -138,6 +117,7 @@ export class RuntimeManager {
 		}
 
 		const child = this.deps.spawnProcess(file, args, {
+			...GROUP,
 			cwd: root,
 			shell: false,
 			stdio: ['ignore', 'pipe', 'pipe'],
@@ -203,22 +183,22 @@ export class RuntimeManager {
 		}
 		this.stopping.add(commandId);
 		entry.status = { state: 'stopped' };
-		entry.child.kill('SIGTERM');
-		// The entry stays until the child is actually gone. Deleting it here let the
+		// The entry stays until the child, and all it started, is actually gone. Deleting it here let the
 		// next `start` through while the old dev server still held its port, so two
 		// servers raced for it and the probe answered from the dying one.
-		await this.gone(entry.child);
+		await endGroup(entry.child);
 		this.running.delete(commandId);
 		this.events.onStatus({ state: 'stopped' });
 		return { state: 'stopped' };
 	}
 
-	/** Called when the window closes, so a dev server does not outlive the app. */
-	stopAll(): void {
-		for (const [commandId, entry] of this.running) {
+	/** Called when DSNR stops, so no dev server, nor anything one started, outlives it. Resolves once they are gone. */
+	stopAll(): Promise<void> {
+		const ending = [...this.running].map(([commandId, entry]) => {
 			this.stopping.add(commandId);
-			entry.child.kill('SIGTERM');
-		}
+			return endGroup(entry.child);
+		});
 		this.running.clear();
+		return Promise.all(ending).then(() => undefined);
 	}
 }

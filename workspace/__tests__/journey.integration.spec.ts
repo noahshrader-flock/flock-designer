@@ -112,7 +112,7 @@ describe('from a request to a running preview', () => {
 		// 7. Stop it, and leave nothing running.
 		await runtime.stop('preview');
 		expect(runtime.status('preview')).toEqual({ state: 'stopped' });
-		runtime.stopAll();
+		await runtime.stopAll();
 
 		// 8. The record survives leaving the branch, because it never lived on it.
 		g('checkout', '-q', 'develop');

@@ -29,7 +29,8 @@ export const startCore = (context: vscode.ExtensionContext, panels: Panels, onSi
 	} catch {
 		// A folder that cannot be written leaves the command its own: nothing in the panel depends on it.
 	}
-	// The browser on this machine, headless: for pictures, stories and accessibility checks. Closed with DSNR.
+	// The browser on this machine, headless: for pictures, stories and accessibility checks. Closed, and waited for, when
+	// DSNR stops (`deactivate`), so none is left running after VS Code quits.
 	const headless = chromeHeadless();
 	const github = new VsCodeGitHub(vscode.authentication, networkFetch, context.globalState, (state) => {
 		panels.sink('onSignInChanged', state);
@@ -44,13 +45,6 @@ export const startCore = (context: vscode.ExtensionContext, panels: Panels, onSi
 		pictureRecipe: HEADLESS_PICTURE_RECIPE,
 	});
 	const shell = registerIpc(core);
-	context.subscriptions.push(
-		github.watch(),
-		{ dispose: () => core.prototypeServer.close() },
-		{ dispose: () => void headless.close() },
-		// As the app does when it quits: the dev servers it started, and the agent's run, end with DSNR.
-		{ dispose: () => core.runtime.stopAll() },
-		{ dispose: () => core.agent.stop() },
-	);
+	context.subscriptions.push(github.watch(), { dispose: () => core.prototypeServer.close() });
 	return { core, github, shell, storage, headless };
 };

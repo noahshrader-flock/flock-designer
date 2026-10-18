@@ -38,6 +38,13 @@ const LOCATED = 'dsnr.located';
  * is open (the product, its design system, the design repository), trusts the product folder the person opened, and
  * restores their GitHub session without asking.
  */
+/**
+ * What stopping DSNR waits for, as VS Code waits for `deactivate` and not for a disposable: the headless browser closed, and
+ * the dev servers it started and the agent's run ended, with everything each of them started.
+ */
+let closing: (() => Promise<void>) | null = null;
+export const deactivate = (): Promise<void> | undefined => closing?.();
+
 export const activate = async (context: vscode.ExtensionContext): Promise<void> => {
 	// Run from its source, in Development or under VS Code's test runner; never once installed from a package.
 	const development = context.extensionMode !== vscode.ExtensionMode.Production;
@@ -67,6 +74,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 		provider.showAccount(state.state === 'signedIn' ? state.user.login : undefined);
 	};
 	const { core, github, shell, storage, headless } = startCore(context, panels, showAccount);
+	closing = () => Promise.all([headless.close(), core.runtime.stopAll(), core.agent.stop()]).then(() => undefined);
 	/** This machine's server's addresses, as DSNR's pages name them: pictures from its own, a library's code from the pages'. */
 	const localAddresses = async () => ({ images: await core.prototypeServer.origin(), frames: await core.prototypeServer.pagesOrigin() });
 	const folders = () => (vscode.workspace.workspaceFolders ?? []).map((f) => f.uri.fsPath);

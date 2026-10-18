@@ -176,6 +176,17 @@ describe('drawing a prototype’s picture, headless', () => {
 		expect(await drawWith({ evaluate: () => ({ capped: false }), screenshot: () => blank }).headless.draw('http://x/')).toBeNull();
 	});
 
+	it('starts the browser again after it is gone, as when it crashed, rather than asking the one that is gone', async () => {
+		const { browser } = fakeBrowser({ evaluate: () => ({ capped: false }), screenshot: () => lit });
+		let gone: (() => void) | null = null;
+		const launch = vi.fn(async () => ({ ...browser, on: (_: 'disconnected', listener: () => void) => void (gone = listener) }));
+		const headless = chromeHeadless({ find: () => '/chrome', launch: launch as never });
+		await headless.draw('http://x/a');
+		(gone as unknown as () => void)();
+		await headless.draw('http://x/b');
+		expect(launch).toHaveBeenCalledTimes(2);
+	});
+
 	it('starts the browser once, and keeps it until it is closed', async () => {
 		const { headless, launch, done } = drawWith({ evaluate: () => ({ capped: false }), screenshot: () => lit });
 		await headless.draw('http://x/a');

@@ -93,7 +93,7 @@ describe('status', () => {
 		expect(() => runner.start(root, 'other', 'y', { work: 'prototype/other/v1' })).toThrow(AGENT_BUSY);
 		// Work with no name can never be told apart from the run, so it is never joined to it.
 		expect(() => runner.start(root, 'demo', 'y')).toThrow(AGENT_BUSY);
-		runner.stop();
+		void runner.stop();
 	});
 });
 
