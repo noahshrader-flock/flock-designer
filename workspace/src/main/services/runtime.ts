@@ -127,7 +127,7 @@ export class RuntimeManager {
 			if (current.projectId === projectId) return this.status(commandId);
 			// Every prototype is served on the same port, so a different project asking
 			// for it means the one running has to go first. Reusing it was the bug where
-			// opening any iteration showed whichever prototype had been run before.
+			// opening any version showed whichever prototype had been run before.
 			await this.stop(commandId);
 		}
 		// Throws if the repository does not declare it. This is the allowlist.

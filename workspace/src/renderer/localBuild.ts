@@ -84,7 +84,7 @@ export interface BuildRun {
 	api: BuildApi;
 	root: string;
 	project: Project;
-	iteration: ProjectWork;
+	work: ProjectWork;
 	/** What to ask the agent to build first, for work that was just created. Omit to go straight to the preview. */
 	task?: string;
 	/** Run a Handoff instead: the main process starts it, and it ends in a report, not the preview. */
@@ -100,7 +100,7 @@ export const runLocalBuild = async ({
 	api,
 	root,
 	project,
-	iteration,
+	work,
 	task,
 	handoff = false,
 	isLive,
@@ -119,8 +119,8 @@ export const runLocalBuild = async ({
 	// has gone (or that React ran twice on purpose) must not still be switching branches.
 	if (!isLive()) return null;
 	if (!opened.ok) return fail(opened.error);
-	if (opened.value.branch !== iteration.branch) {
-		const moved = await api.continueWork(root, project.id, iteration.name);
+	if (opened.value.branch !== work.branch) {
+		const moved = await api.continueWork(root, project.id, work.name);
 		if (!moved.ok) return fail(moved.error);
 	}
 	if (!isLive()) return null;
@@ -128,7 +128,7 @@ export const runLocalBuild = async ({
 	// Opened again while its agent is still at work: wait on that run, as if the screen had never been left, and
 	// end it the way it was started (a Handoff reports; anything else opens the preview).
 	const now = await api.agentStatus();
-	const stillBuilding = now.ok && now.value.state === 'running' && now.value.work === iteration.branch;
+	const stillBuilding = now.ok && now.value.state === 'running' && now.value.work === work.branch;
 	const reporting = stillBuilding ? now.ok && now.value.state === 'running' && now.value.purpose === 'handoff' : handoff;
 	if (task || handoff || stillBuilding) {
 		onPhase({ kind: 'agent', ...(reporting ? { handoff: true } : {}) });
@@ -161,7 +161,7 @@ export const runLocalBuild = async ({
 	const result = await api.startCommand(root, DESIGN_MODE_COMMAND, project.id);
 	if (!result.ok) return fail(result.error);
 	if (result.value.state === 'running') {
-		const url = previewAddress(result.value.url, iteration.route);
+		const url = previewAddress(result.value.url, work.route);
 		onPhase({ kind: 'running', url, ...(uncommitted ? { uncommitted } : {}) });
 		return url;
 	}

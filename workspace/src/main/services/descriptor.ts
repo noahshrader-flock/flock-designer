@@ -46,7 +46,10 @@ const parseCommand = (raw: unknown, index: number): WorkspaceCommand => {
 	};
 };
 
-/** The kinds of work a descriptor may say it can share. */
+/**
+ * The kinds of work a descriptor may say it can share. Only `codebase` is shared now; `prototype`, for prototypes once
+ * built on branches, is still read, so a product that names it is not refused, and means nothing.
+ */
 const KINDS = ['prototype', 'codebase'] as const;
 
 /**

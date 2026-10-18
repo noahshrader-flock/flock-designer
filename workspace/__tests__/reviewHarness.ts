@@ -1,8 +1,8 @@
 import { act, createElement, type ReactElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
-import type { Project, ProjectWork, ReviewComment, WorkspaceApi } from '../src/shared/contract';
+import type { ReviewComment, WorkspaceApi } from '../src/shared/contract';
 import { TooltipProvider } from '../src/renderer/ui/tooltip';
-import { anAnchor, aProject, eventually, projectWork, reviewComment } from './fixtures';
+import { anAnchor, eventually, reviewComment } from './fixtures';
 
 /**
  * The review screen, rendered for real in jsdom against a fake app: every call the window can make answers, the ones
@@ -80,12 +80,6 @@ export const comment = (id: number, body: string, more: Partial<ReviewComment> =
 		...more,
 	});
 
-export const PROJECT: Project = aProject({ id: 'demo', title: 'Demo' });
-
-export const PROTOTYPE: ProjectWork = projectWork({ name: 'v1', branch: 'prototype/demo/v1', issueNumber: 1 });
-
-const CHECKOUT = { root: '/c/flock-coke', name: 'flock-coke', branch: 'develop', clean: true };
-
 /** Lets every pending promise and effect run, as many times as it takes to settle. */
 export const settle = async (rounds = 12) => {
 	for (let i = 0; i < rounds; i++) await act(async () => void (await new Promise((r) => setTimeout(r, 0))));
@@ -132,18 +126,6 @@ export const unmountAll = async (root: Root) => {
 	await act(async () => root.unmount());
 	document.body.innerHTML = '';
 };
-
-/** A prototype's review screen, opened, with a checkout so Address is offered. */
-export const reviewProps = (more: Record<string, unknown> = {}) => ({
-	project: PROJECT,
-	iteration: PROTOTYPE,
-	onBack: () => undefined,
-	checkout: CHECKOUT,
-	onChoose: () => undefined,
-	hidden: false,
-	onOpen: () => undefined,
-	...more,
-});
 
 // ---- Reading and using the page as a person would ----------------------------------------------------------------
 

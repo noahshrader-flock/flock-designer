@@ -13,14 +13,14 @@ export type AddressPhase =
 	| { kind: 'running' }
 	/**
 	 * `changed` is whether the branch moved while the agent ran. An agent that reads the comments and
-	 * decides it should not act -- the change is outside this iteration's boundary, or the comment
+	 * decides it should not act -- the change is outside this work's boundary, or the comment
 	 * needs a decision only a person can make -- finishes exactly as cleanly as one that rewrote half
 	 * the view. Reporting both as "finished" sent people looking for a change that was never made.
 	 */
 	| { kind: 'done'; changed: boolean; commit: string | null; prototype?: PrototypeAddressed }
 	| { kind: 'failed'; message: string };
 
-export type AddressApi = Pick<WorkspaceApi, 'addressComments' | 'agentStatus' | 'iterationCommit'>;
+export type AddressApi = Pick<WorkspaceApi, 'addressComments' | 'agentStatus' | 'workCommit'>;
 
 export type PrototypeAddressApi = Pick<WorkspaceApi, 'addressPrototype' | 'agentStatus' | 'finishPrototypeAddress'>;
 

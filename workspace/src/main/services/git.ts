@@ -242,7 +242,7 @@ export const ensureLocalBranch = async (root: string, branch: string): Promise<v
  *
  * A designer who has edited something and not committed it should be told, not
  * have the edits carried onto another branch or quietly stashed. This is the
- * only guard that stands between "create iteration 2" and losing iteration 1's
+ * only guard that stands between "create a branch" and losing the last one's
  * uncommitted work.
  */
 const requireCleanTree = async (root: string, action: string): Promise<void> => {
@@ -264,7 +264,7 @@ export const createBranch = async (root: string, branch: string, from: string): 
 const isPerson = (name: string): boolean => name !== '' && !isBot(name);
 
 /**
- * The branch the repository treats as its trunk, to measure an iteration against.
+ * The branch the repository treats as its trunk, to measure a branch against.
  * Prefers the remote's own default, then the usual names; null if none exists,
  * in which case nobody is credited rather than everybody.
  */

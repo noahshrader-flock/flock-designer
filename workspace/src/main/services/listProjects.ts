@@ -29,7 +29,7 @@ export const listProjects = async ({
 	let here: { root: string; repository: string | null; branchOf: (projectId: string) => string } | null = null;
 	if (root !== null) {
 		const recordsRoot = recordsRootFor(root);
-		// Every project folder, not only those that record an iteration: the folder is what an agent makes
+		// Every project folder, not only those that record a piece of work: the folder is what an agent makes
 		// first, and it is what vouches for a `feature/<id>` branch (see readBranchProjects).
 		const folders = recordsRoot ? readFolderProjects(recordsRoot) : [];
 		const descriptor = readDescriptor(root);

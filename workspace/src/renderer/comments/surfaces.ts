@@ -8,7 +8,7 @@ import type { CommentAnchor, CommentRef, MarkerRequest, MarkerResult, PickedPoin
  * comments as a changed comment (`showChanged`), as any other change does.
  */
 
-/** The comments on one iteration, and who is reading them. The app's are GitHub's, through its main process. */
+/** The comments on one version, and who is reading them. The app's are GitHub's, through its main process. */
 export interface CommentStore {
 	read(): Promise<Result<ReviewComment[]>>;
 	/** A comment, on a spot of the page (`anchor`) or on the page as a whole (`null`). */

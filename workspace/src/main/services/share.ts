@@ -1,4 +1,4 @@
-import type { WorkKind, ShareStatus, ShareStep } from '../../shared/contract';
+import type { ShareStatus, ShareStep } from '../../shared/contract';
 import type { Check, PullRequest } from '../../host/changeRequests';
 import type { ShareDescriptor } from './descriptor';
 import { projectDir } from '../../shared/designPaths';
@@ -7,7 +7,7 @@ import { errorText } from '../../shared/result';
 import { CHANGE_REQUEST } from '../../shared/vocabulary';
 
 /**
- * Putting an iteration in front of someone who is not on this machine.
+ * Putting codebase work in front of someone who is not on this machine.
  *
  * Four steps, each of which can fail for an ordinary reason with something specific to
  * do about it: push the branch, open a *draft* pull request for it (the repository's CI
@@ -36,7 +36,6 @@ export interface ShareTools {
 
 export interface ShareRequest {
 	share: ShareDescriptor;
-	kind: WorkKind;
 	projectId: string;
 	name: string;
 	branch: string;
@@ -79,8 +78,11 @@ export const runShare = async (
 	timings: ShareTimings = DEFAULT_TIMINGS,
 	isLive: () => boolean = () => true,
 ): Promise<{ url: string; prUrl: string }> => {
-	if (!req.share.kinds.includes(req.kind)) {
-		throw new Error(`This repository does not build a preview for ${req.kind} work. It does for: ${req.share.kinds.join(', ')}.`);
+	// Only codebase work is on a branch, so only it is shared: a prototype is a page, published to its own.
+	if (!req.share.kinds.includes('codebase')) {
+		throw new Error(
+			'This repository does not build a preview for codebase work (its .dsnr/workspace.json share.kinds), so it cannot be shared from here.',
+		);
 	}
 	// It goes to git and gh as an argument; it comes from this person's own record, but is checked all the same.
 	if (!isSafeBranchName(req.branch)) {
@@ -136,7 +138,7 @@ export const runShare = async (
 export interface ShareJob {
 	request: ShareRequest;
 	tools: ShareTools;
-	/** Saves the address, and the pull request it was built from, in the iteration's record and publishes it, so reviewers can open it. */
+	/** Saves the address, and the pull request it was built from, in the work's record and publishes it, so reviewers can open it. */
 	record(url: string, prUrl: string): Promise<void>;
 	timings?: ShareTimings;
 }

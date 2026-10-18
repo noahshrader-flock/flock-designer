@@ -29,7 +29,7 @@ const demo = {
 } as unknown as Project;
 
 const world = (
-	addressed: { changed: boolean; iteration: string } = { changed: true, iteration: 'v1' },
+	addressed: { changed: boolean; version: string } = { changed: true, version: 'v1' },
 	/** Who has commented on the version: its maker alone, unless said; null when that cannot be read. */
 	commenters: string[] | null = ['noah'],
 	/** What the person chooses when asked, or undefined for neither. */
@@ -91,7 +91,7 @@ describe('addressing a comment from a review', () => {
 	});
 
 	it('makes the change in a new version when the person chooses one, shows it, and says so', async () => {
-		const { deps, api, told } = world({ changed: true, iteration: 'v4' }, ['pm'], (actions) => actions[1]);
+		const { deps, api, told } = world({ changed: true, version: 'v4' }, ['pm'], (actions) => actions[1]);
 		expect(await addressComment(deps, review, comment)).toBe('v4');
 		expect(api.addressPrototype).toHaveBeenCalledWith('demo', 'v1', comment, true);
 		expect(told).toEqual(['The change is in Version 4, a new version from Version 1, which stays as it was.']);
@@ -111,7 +111,7 @@ describe('addressing a comment from a review', () => {
 	});
 
 	it('makes the change in a new version with no question when one was asked for outright', async () => {
-		const { deps, api } = world({ changed: true, iteration: 'v4' }, ['pm']);
+		const { deps, api } = world({ changed: true, version: 'v4' }, ['pm']);
 		expect(await addressComment(deps, review, comment, true)).toBe('v4');
 		expect(deps.offer).not.toHaveBeenCalled();
 		expect(api.readComments).not.toHaveBeenCalled();
@@ -132,7 +132,7 @@ describe('addressing a comment from a review', () => {
 	});
 
 	it('says when the agent changed nothing, and leaves the review as it is', async () => {
-		const { deps, told } = world({ changed: false, iteration: 'v1' });
+		const { deps, told } = world({ changed: false, version: 'v1' });
 		expect(await addressComment(deps, review, comment)).toBeNull();
 		expect(told[0]).toMatch(/^The agent finished without changing anything\. Its log says why/);
 		expect(deps.show).not.toHaveBeenCalled();

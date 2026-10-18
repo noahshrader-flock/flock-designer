@@ -200,7 +200,7 @@ beforeEach(async () => {
 	memoryValue = null;
 	deleteComment = vi.fn(async () => undefined);
 	readComments = vi.fn(async () => []);
-	setAddressed = vi.fn(async (id: number, commit: string | null, iteration: string | null) => ({ id, addressedAt: commit, addressedIn: iteration }));
+	setAddressed = vi.fn(async (id: number, commit: string | null, version: string | null) => ({ id, addressedAt: commit, addressedIn: version }));
 	githubState = { state: 'signedOut' };
 	githubApi = vi.fn(fakeGitHub().api);
 	personRepos = [];
@@ -984,7 +984,7 @@ describe('prototypes', () => {
 			writeFileSync(local('v1'), page('changed'));
 
 			const done = await call(CHANNELS.finishPrototypeAddress, { thread: 1, id: 7 });
-			expect(done).toMatchObject({ ok: true, value: { changed: true, iteration: 'v1', made: null } });
+			expect(done).toMatchObject({ ok: true, value: { changed: true, version: 'v1', made: null } });
 			expect(readFileSync(saved('v1.html'), 'utf8')).toContain('changed');
 			expect(records().map((r) => r.name)).toEqual(['v1']);
 			expect(setAddressed).toHaveBeenCalledWith({ thread: 1, id: 7 }, expect.stringMatching(/^[0-9a-f]{12}$/), 'v1');
@@ -1000,7 +1000,7 @@ describe('prototypes', () => {
 			writeFileSync(local('v1'), page('changed'));
 
 			const done = await call(CHANNELS.finishPrototypeAddress, { thread: 1, id: 7 });
-			expect(done).toMatchObject({ ok: true, value: { changed: true, iteration: 'v1', made: null } });
+			expect(done).toMatchObject({ ok: true, value: { changed: true, version: 'v1', made: null } });
 			expect(readFileSync(saved('v1.html'), 'utf8')).toContain('changed');
 			expect(records().map((r) => r.name)).toEqual(['v1']);
 		});
@@ -1015,7 +1015,7 @@ describe('prototypes', () => {
 			writeFileSync(local('v2'), page('changed'));
 
 			const done = await call(CHANNELS.finishPrototypeAddress, { thread: 1, id: 7 });
-			expect(done).toMatchObject({ ok: true, value: { changed: true, iteration: 'v2', made: { name: 'v2', branch: 'prototype/demo/v2' } } });
+			expect(done).toMatchObject({ ok: true, value: { changed: true, version: 'v2', made: { name: 'v2', branch: 'prototype/demo/v2' } } });
 			expect(readFileSync(local('v1'), 'utf8')).toBe(page('first'));
 			expect(existsSync(saved('v1.html'))).toBe(false);
 			expect(readFileSync(saved('v2.html'), 'utf8')).toContain('changed');
@@ -1525,7 +1525,7 @@ describe('work an agent built in a terminal, with no record yet', () => {
 		mkdirSync(join(design, 'projects', 'new-view'));
 		await trustFolder(product);
 
-		const r = await call(CHANNELS.iterationCommit, product, 'new-view', 'codebase');
+		const r = await call(CHANNELS.workCommit, product, 'new-view', 'codebase');
 		expect(r.value).toBe(g(product, 'rev-parse', 'refs/heads/feature/new-view').trim());
 		expect(JSON.parse(readFileSync(join(design, 'projects', 'new-view', 'work.json'), 'utf8'))).toEqual([
 			expect.objectContaining({ name: 'codebase', branch: 'feature/new-view' }),
@@ -1535,7 +1535,7 @@ describe('work an agent built in a terminal, with no record yet', () => {
 	it('says nothing is known for work whose branch does not exist', async () => {
 		mkdirSync(join(design, 'projects', 'ghost'));
 		await trustFolder(product);
-		expect((await call(CHANNELS.iterationCommit, product, 'ghost', 'codebase')).value).toBeNull();
+		expect((await call(CHANNELS.workCommit, product, 'ghost', 'codebase')).value).toBeNull();
 	});
 });
 

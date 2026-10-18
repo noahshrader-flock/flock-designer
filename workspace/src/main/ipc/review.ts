@@ -38,7 +38,7 @@ export const registerReview = (d: IpcDeps): void => {
 			writeCommentsExport(recordsRoot, {
 				projectId,
 				title: projectTitle(recordsRoot, projectId),
-				iteration: { name, branch },
+				work: { name, branch },
 				comments,
 				generatedAt: new Date(),
 			});

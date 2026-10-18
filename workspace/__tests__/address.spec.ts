@@ -20,7 +20,7 @@ describe('prepareAddress', () => {
 	const target = (id = 1) => ({
 		recordsRoot: records,
 		projectId: 'demo',
-		iteration: { name: 'codebase', branch: 'feature/demo' },
+		work: { name: 'codebase', branch: 'feature/demo' },
 		comment: { thread: 1, id },
 	});
 	const deps = (over: Partial<Parameters<typeof prepareAddress>[0]> = {}) => ({
@@ -134,7 +134,7 @@ describe('runPrototypeAddress', () => {
 	const ok = <T>(value: T): Result<T> => ({ ok: true, value });
 	const started: AgentStatus = agentRunning();
 	const finished: AgentStatus = agentFinished();
-	const addressed = { changed: true, iteration: 'v2', made: null, comment: { id: 7 } } as never;
+	const addressed = { changed: true, version: 'v2', made: null, comment: { id: 7 } } as never;
 	const run = async (api: Partial<Parameters<typeof runPrototypeAddress>[0]['api']>, isLive = () => true) => {
 		const phases: AddressPhase[] = [];
 		await runPrototypeAddress({

@@ -162,7 +162,7 @@ export interface WorkspaceApi {
 	 * deploy workflow and records the preview address. Resolves at once with where it has got to;
 	 * progress arrives through `onShareStatus`, because the build takes minutes.
 	 */
-	shareIteration(root: string, projectId: string, name: string): Promise<Result<ShareStatus>>;
+	shareWork(root: string, projectId: string, name: string): Promise<Result<ShareStatus>>;
 	onShareStatus(listener: (status: ShareStatus) => void): () => void;
 
 	/**
@@ -275,7 +275,7 @@ export interface WorkspaceApi {
 	/** Marks a comment resolved, or open again. GitHub decides who is allowed. */
 	resolveComment(comment: CommentRef, resolved: boolean): Promise<Result<ReviewComment>>;
 	/** The commit a branch is at on this machine, to say what a comment was made against. Null if unknown. */
-	iterationCommit(root: string, projectId: string, name: string): Promise<Result<string | null>>;
+	workCommit(root: string, projectId: string, name: string): Promise<Result<string | null>>;
 }
 
 /**
@@ -342,7 +342,7 @@ export const INVOKE = [
 	'prototypeReadiness',
 	'buildInCodebasePlan',
 	'addressComments',
-	'shareIteration',
+	'shareWork',
 	'publishStatus',
 	'publishNow',
 	'signInState',
@@ -356,7 +356,7 @@ export const INVOKE = [
 	'moveComment',
 	'resolveComment',
 	'deleteComment',
-	'iterationCommit',
+	'workCommit',
 ] as const satisfies readonly (keyof WorkspaceApi)[];
 
 export const EVENTS = {

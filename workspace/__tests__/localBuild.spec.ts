@@ -3,7 +3,7 @@ import type { ProjectWork } from '../src/shared/contract';
 import { type BuildApi, type BuildPhase, previewAddress, runLocalBuild } from '../src/renderer/localBuild';
 import { agentFinished, agentRunning, aProject, projectWork } from './fixtures';
 
-const iteration = (over: Partial<ProjectWork> = {}): ProjectWork => projectWork({ name: 'codebase', branch: 'feature/users', ...over });
+const work = (over: Partial<ProjectWork> = {}): ProjectWork => projectWork({ name: 'codebase', branch: 'feature/users', ...over });
 const project = aProject({ id: 'users', title: 'Users' });
 
 /** A workspace that does what a healthy one does, with any step overridable. */
@@ -28,7 +28,7 @@ const run = async (a: BuildApi, extra: Partial<Parameters<typeof runLocalBuild>[
 		api: a,
 		root: '/r',
 		project,
-		iteration: iteration(),
+		work: work(),
 		isLive: () => true,
 		onPhase: (p) => phases.push(p),
 		pollMs: 1,
@@ -63,7 +63,7 @@ describe('opening a version', () => {
 		// Codebase work runs the whole product. Without this it opens on whatever the app shows
 		// first, which is how a comment meant for /roles/compare was made on the Organizations list.
 		const { a } = api();
-		const { url, phases } = await run(a, { iteration: iteration({ name: 'codebase', route: '/roles/compare' }) });
+		const { url, phases } = await run(a, { work: work({ name: 'codebase', route: '/roles/compare' }) });
 		expect(url).toBe('http://localhost:3100/roles/compare');
 		expect(phases.at(-1)).toEqual({ kind: 'running', url: 'http://localhost:3100/roles/compare' });
 	});
@@ -160,7 +160,7 @@ describe('when nobody is looking any more', () => {
 			} as BuildApi,
 			root: '/r',
 			project,
-			iteration: iteration(),
+			work: work(),
 			isLive: () => live,
 			onPhase: (p) => phases.push(p),
 		});
@@ -179,7 +179,7 @@ describe('when nobody is looking any more', () => {
 				return { ok: true, value: { branch: 'develop' } };
 			}),
 		});
-		const url = await runLocalBuild({ api: a, root: '/r', project, iteration: iteration(), isLive: () => live, onPhase: () => undefined });
+		const url = await runLocalBuild({ api: a, root: '/r', project, work: work(), isLive: () => live, onPhase: () => undefined });
 		expect(url).toBeNull();
 		expect(a.continueWork).not.toHaveBeenCalled();
 	});
@@ -261,7 +261,7 @@ describe('when nobody is looking any more', () => {
 			api: a,
 			root: '/r',
 			project,
-			iteration: iteration(),
+			work: work(),
 			task: 'x',
 			isLive: () => live,
 			onPhase: () => undefined,

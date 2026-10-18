@@ -27,7 +27,7 @@ export const codebaseWork = ({
 	/** Who is signed in to GitHub, whose work this is. */
 	login: () => string | null;
 	/** Called with what was recorded, to publish it. */
-	written: (iteration: Work) => Work;
+	written: (work: Work) => Work;
 }) => {
 	const assertAgentNotHere = (canonical: string): void => {
 		if (agentIn(canonical)) {

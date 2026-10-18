@@ -113,12 +113,12 @@ export const addressedIn = (body: string): string | null => {
 	return name !== null && isPrototypeName(name) ? name : null;
 };
 
-/** The body marked as addressed at `commit` (in a prototype's version, `iteration`), or with the mark cleared when it is null. */
-export const withAddressed = (body: string, commit: string | null, iteration: string | null = null): string => {
+/** The body marked as addressed at `commit` (in a prototype's version, `version`), or with the mark cleared when it is null. */
+export const withAddressed = (body: string, commit: string | null, version: string | null = null): string => {
 	const bare = body.replace(ADDRESSED, '').trimEnd();
 	// Only ever a real commit, and a real version's name: these are read back out and shown on the card.
 	if (!isCommit(commit)) return bare;
-	return `${bare}\n<!-- fd-addressed: ${commit}${iteration !== null && isPrototypeName(iteration) ? ` in ${iteration}` : ''} -->`;
+	return `${bare}\n<!-- fd-addressed: ${commit}${version !== null && isPrototypeName(version) ? ` in ${version}` : ''} -->`;
 };
 
 export const parseAnchor = (body: string): CommentAnchor | null => {

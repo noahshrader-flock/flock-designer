@@ -132,7 +132,7 @@ built, always. What changes is how much is **verified and recorded** — never w
 
 Automated tooling cannot fully answer any of these: a tool may measure part of one (a Tab walk finds
 a trap), and the check is still a person's. Both the review record and the hardening report use this
-same list, so they can be compared across iterations.
+same list, so they can be compared across versions.
 
 | # | Check | Pass means |
 |---|---|---|

@@ -1,7 +1,7 @@
 /**
  * Runs one thing at a time, and never loses a request made while it was running.
  *
- * The obvious guard -- "already busy, do nothing" -- silently drops work. Opening an iteration reads
+ * The obvious guard -- "already busy, do nothing" -- silently drops work. Opening a piece of work reads
  * the comments on arrival and again once the preview is up; if the first read was still going, the
  * second was discarded, and the comments stayed hidden until some later trigger happened to ask. That
  * is why posting a comment appeared to be what made an earlier one show up.

@@ -51,7 +51,7 @@ export const registerCheckout = (d: IpcDeps): void => {
 	});
 	// What the branch is at right now: read when a comment is placed, so the comment says
 	// which version of the code it was made against rather than which one was last recorded.
-	handle('iterationCommit', [checkout, arg.projectId, arg.codebaseName], async (workIn, projectId, name): Promise<string | null> => {
+	handle('workCommit', [checkout, arg.projectId, arg.codebaseName], async (workIn, projectId, name): Promise<string | null> => {
 		const { canonical } = workIn;
 		const found = await recordedWork(canonical, workIn.recordsRoot, workIn.descriptor, projectId, name).catch(() => null);
 		return found ? branchCommit(canonical, found.branch).catch(() => null) : null;

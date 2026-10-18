@@ -57,7 +57,7 @@ interface Run {
 }
 
 /**
- * Whether an iteration is on its page: the site's last finished deploy includes the last change to the page. Asked of
+ * Whether a version is on its page: the site's last finished deploy includes the last change to the page. Asked of
  * GitHub, so it is the same for someone with no clone. The link carries the deploy it is from, so a page opened after a
  * new one never shows an old copy. `none` when there is no site, or no page to be on it.
  */
@@ -176,7 +176,7 @@ export interface PublishInput extends DeployInput {
 }
 
 /**
- * Takes an iteration off the site: `removePage` removes its saved files, which the records push carries to GitHub, and
+ * Takes a version off the site: `removePage` removes its saved files, which the records push carries to GitHub, and
  * the site is deployed again without it. Its record and its comments are kept. If it must be gone at once and for
  * everyone, a GitHub admin can switch Pages off for the repository; this is the ordinary way.
  */

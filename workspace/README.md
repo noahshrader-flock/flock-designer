@@ -1,7 +1,7 @@
 # DSNR
 
 A local coordination layer over real Flock product repositories. It opens a checkout, shows what was
-grounded before anything is generated, creates and continues iteration branches, hands a task to the
+grounded before anything is generated, creates and continues codebase work's branch, hands a task to the
 agent you already have installed, and runs the preview commands the repository declares.
 
 **It is not the source of truth for anything.** Standards, product patterns, prototype source and
@@ -19,7 +19,7 @@ npm run extension:install  # package it and install it into your VS Code
 **From the command line:** `node bin/dsnr.mjs` makes and changes a prototype from Claude Code in VS Code (`new-prototype`,
 `change-prototype`, `save-prototype`), with the same code the extension runs. `skills/start-prototype.md` tells an agent how to
 use it. `node bin/dsnr.mjs build-site --serve` builds the site prototypes are published as, and shows it on this machine;
-`publish` puts an iteration on it and says who can open it, and `unpublish` takes one off. Run it with no command for
+`publish` puts a version on it and says who can open it, and `unpublish` takes one off. Run it with no command for
 the full usage.
 
 ## Building a prototype
@@ -30,14 +30,13 @@ kinds, switched at the top, both starting from a repository and a branch in it:
   environment setup. It needs the repository with its packages installed here; the dialog says whether
   they are, and will not start without them. The agent writes one React file, the app bundles it against
   the product's installed packages into one page, and both are kept in the project's folder
-  (`prototypes/v1-i1.tsx`, `prototypes/v1-i1.html`: the version and the iteration; older ones are `i1`). Large files the pages embed (the design system's fonts) are kept once,
+  (`prototypes/v1.tsx`, `prototypes/v1.html`, named by the version). Large files the pages embed (the design system's fonts) are kept once,
   in `projects/_shared/`, and served beside every page. **Build in the codebase** (in the review menu) moves one into the code: it asks first, shows the branch it will create and what would stop it (uncommitted changes, an existing codebase branch, Claude Code not ready), and starts from the branch the prototype was modeled on.
 - **Codebase work**: real work on the project's `feature/<project>` branch, which needs the full setup.
 
 Each runs the agent, then shows the result with pins. The product repository is **suggested** on its own
 — found in the usual places by its `.dsnr/workspace.json` — and you accept it once with a click; after that it
-is remembered. Older prototype branches (`fd/<project>/iN`) appear from the repository with no record needed;
-a `feature/<project>` branch appears only when a project already has a record for it, because that is also
+is remembered. A `feature/<project>` branch appears only when a project already has a record for it, because that is also
 how the whole product team names ticket branches. The design repository is expected beside the product one.
 The agent runs unattended: it may edit and run the repository's own scripts and local git, and nothing
 that pushes, switches branch or deletes.
@@ -49,13 +48,13 @@ that pushes, switches branch or deletes.
 | Open a repository the designer picks | Reach any path outside that repository |
 | Read and write issue comments in the design repository | Reach any repository the GitHub App is not installed on |
 | Run commands the repository declares | Run anything else, or a shell of any kind |
-| Create and switch iteration branches | Rewrite, discard, or force anything in git |
+| Create and switch codebase work's branches | Rewrite, discard, or force anything in git |
 | Invoke a locally installed agent | Hold model credentials, or carry its own prompts |
 | Let a prototype's agent read the product's code, guidance and installed packages, and build its page from them | Let that agent change anything in the product repository, or run the product |
 | Read and write project records | Become the only place those records exist |
 | Show a prototype's preview in the window and place comments on elements | Let that preview call back into the app, or leave the preview's origin |
-| Push the person's own work branches (`fd/*`, `feature/<project>`) and commit and push the design repository's `projects/` folder, by itself | Push anything else, force-push, publish a teammate's branch, or push other unpublished work along with the records |
-| Push an iteration's branch and open a **draft** pull request, as the designer, through their own `git` and `gh` | Force-push, open a pull request that is ready for review, merge one, or see the designer's GitHub token |
+| Push the person's own work branches (`feature/<project>`) and commit and push the design repository's `projects/` folder, by itself | Push anything else, force-push, publish a teammate's branch, or push other unpublished work along with the records |
+| Push codebase work's branch and open a **draft** pull request, as the designer, through their own `git` and `gh` | Force-push, open a pull request that is ready for review, merge one, or see the designer's GitHub token |
 
 ## How a repository joins
 
@@ -68,9 +67,9 @@ this app.
   "product": "Coke (Flock Admin)",
   "contextDir": ".dsnr",
   "prototypeRoot": "src/prototypes",
-  "branchPattern": { "prototype": "fd/<project-id>/i<n>", "codebase": "feature/<project-id>" },
+  "branchPattern": { "codebase": "feature/<project-id>" },
   "commands": [
-    { "id": "preview", "label": "Run the prototype", "argv": ["npm", "run", "start:prototype"], "servesPreviewOn": 3100 }
+    { "id": "design-mode", "label": "Run the real shell on mock data", "argv": ["npm", "run", "start:design"], "servesPreviewOn": 3000 }
   ],
   "designSystem": { "package": "@flocksafety/flock-react-component-lib" }
 }
@@ -82,20 +81,21 @@ descriptor can be opened, but nothing can be run in it.
 
 ### Sharing, and what it needs
 
-*Share for review* (author mode only) pushes the iteration's branch to `origin`, opens a **draft** pull
+*Share for review* (author mode only) pushes codebase work's branch to `origin`, opens a **draft** pull
 request for it, waits for the repository's deploy workflow, and records the preview address on the
-iteration, so a reviewer who opens the app sees it. A repository opts in with a `share` block:
+work's record, so a reviewer who opens the app sees it. A repository opts in with a `share` block:
 
 ```json
 "share": {
   "url": "https://dev-coke-pr-<pr>.flocksafety.com",
   "workflow": "PR Deployment",
-  "kinds": ["prototype"]
+  "kinds": ["codebase"]
 }
 ```
 
 `url` is the address with the pull request number where `<pr>` is, `workflow` is the name of the CI
-workflow whose success means the preview is up, and `kinds` is which work gets a preview. Without the
+workflow whose success means the preview is up, and `kinds` is which work gets a preview: `codebase`, the only work on
+a branch (a `prototype` there, from the prototypes once built on branches, is read and means nothing). Without the
 block a repository cannot be shared from here.
 
 The designer needs the [GitHub CLI](https://cli.github.com) (`gh auth login` once). The app's own
@@ -108,7 +108,7 @@ Project records go to **`flock-designer/projects/<project-id>/`**, not into the 
 The plan settled this and gave the reason: a record on the prototype branch means picking up
 someone's work requires knowing which branch to check out, and it needs a standing rule to keep
 per-project state off `develop`. It also dirties the working tree, which then blocks the next
-iteration on its own bookkeeping — which is how the tests here caught it.
+round of work on its own bookkeeping — which is how the tests here caught it.
 
 Codebase work's code stays on its branch in the product repository, where it can actually run; a prototype's
 source and page are in its project folder.

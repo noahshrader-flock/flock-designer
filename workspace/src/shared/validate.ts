@@ -22,7 +22,7 @@ export const slugify = (name: string): string =>
 export const asDate = (v: unknown): string | null => (typeof v === 'string' && v !== '' && !Number.isNaN(Date.parse(v)) ? v : null);
 
 /**
- * Where in the running app an iteration's work actually is, as a path within it -- `/roles/compare`,
+ * Where in the running app a piece of work actually is, as a path within it -- `/roles/compare`,
  * or `roles/compare?state=error`. Null when the record does not say, and the preview opens at the
  * app's own front door as before.
  *
@@ -44,7 +44,7 @@ export const asRoute = (v: unknown): string | null => {
 	if (path.split(/[/?#]/).includes('..')) return null;
 	// A route pattern is not a route. `/organization/:id/roles` and `/org/{id}/roles` are what a router
 	// matches against; as an address they are taken literally and match nothing, so the preview would
-	// open on an error page that looks like the work failed. Refusing it here means the iteration opens
+	// open on an error page that looks like the work failed. Refusing it here means the work opens
 	// where it always did instead, and the skill says to record the form with no parameters in it.
 	if (/\/:[^/]|[{}*]/.test(path)) return null;
 	return path;

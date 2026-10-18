@@ -23,7 +23,7 @@ const NOTE: Record<MarkerState, string | null> = {
 };
 
 /**
- * Every comment on the iteration, as cards: who wrote it, what it says, the spot it was made on, and a menu to resolve
+ * Every comment on the version, as cards: who wrote it, what it says, the spot it was made on, and a menu to resolve
  * or delete it. `actions` puts more at the top of a card's menu (the app's Address), and `addressed` says on a card
  * what the agent did with it, both left to the screen this sits in. `states` are the prototype's, so a card can name
  * the state it was made in; `onShowState` opens the page in it (`null` is the first), from a comment made in another.

@@ -45,7 +45,7 @@ const world = (more: Record<string, unknown> = {}) => {
 		startCommand: vi.fn(async () => ok({ state: 'running', url: 'http://localhost:5173/' })),
 		stopCommand: vi.fn(async () => ok({ state: 'stopped' })),
 		handoffResult: vi.fn(async () => ok(true)),
-		shareIteration: vi.fn(async () => ok({ state: 'running', projectId: zone.id, name: 'codebase', step: 'pushing' })),
+		shareWork: vi.fn(async () => ok({ state: 'running', projectId: zone.id, name: 'codebase', step: 'pushing' })),
 		onShareStatus: vi.fn((l: (s: ShareStatus) => void) => {
 			shareListeners.push(l);
 			return () => undefined;
@@ -131,7 +131,7 @@ describe('sharing codebase work for review: a draft pull request, with a preview
 			offered.push([message, actions]);
 			return 'Open the pull request';
 		});
-		api.shareIteration.mockImplementation(async () => {
+		api.shareWork.mockImplementation(async () => {
 			setTimeout(() => {
 				for (const l of shareListeners) l({ state: 'running', projectId: zone.id, name: 'codebase', step: 'opening' });
 				for (const l of shareListeners)
@@ -146,7 +146,7 @@ describe('sharing codebase work for review: a draft pull request, with a preview
 			return ok({ state: 'running', projectId: zone.id, name: 'codebase', step: 'pushing' });
 		});
 		await shareCodebase(deps, 'zone-coverage');
-		expect(api.shareIteration).toHaveBeenCalledWith('/p', 'zone-coverage', 'codebase');
+		expect(api.shareWork).toHaveBeenCalledWith('/p', 'zone-coverage', 'codebase');
 		expect(said).toEqual(['Sharing Zone coverage for review', 'Pushing the branch…', 'Opening a draft pull request…']);
 		expect(offered).toEqual([['Zone coverage is shared: a draft pull request, with a preview.', ['Open the pull request', 'Copy the preview link']]]);
 		expect(deps.openExternal).toHaveBeenCalledWith('https://github.com/flocksafety/flock-coke/pull/7');
@@ -155,7 +155,7 @@ describe('sharing codebase work for review: a draft pull request, with a preview
 	it('copies the preview’s link when asked', async () => {
 		const { deps, api, shareListeners } = world();
 		deps.offer = vi.fn(async () => 'Copy the preview link');
-		api.shareIteration.mockImplementation(async () => {
+		api.shareWork.mockImplementation(async () => {
 			setTimeout(() => {
 				for (const l of shareListeners)
 					l({ state: 'ready', projectId: zone.id, name: 'codebase', url: 'https://preview.example/pr-7', prUrl: 'https://github.com/x/y/pull/7' });
@@ -168,7 +168,7 @@ describe('sharing codebase work for review: a draft pull request, with a preview
 
 	it('says why it failed', async () => {
 		const { deps, api, shareListeners } = world();
-		api.shareIteration.mockImplementation(async () => {
+		api.shareWork.mockImplementation(async () => {
 			setTimeout(() => {
 				for (const l of shareListeners) l({ state: 'failed', projectId: zone.id, name: 'codebase', message: 'The preview did not build.' });
 			}, 0);
@@ -178,7 +178,7 @@ describe('sharing codebase work for review: a draft pull request, with a preview
 	});
 
 	it('says at once when it cannot start', async () => {
-		const { deps } = world({ shareIteration: vi.fn(async () => ({ ok: false, error: 'This product does not say how its work is shared.' })) });
+		const { deps } = world({ shareWork: vi.fn(async () => ({ ok: false, error: 'This product does not say how its work is shared.' })) });
 		await expect(shareCodebase(deps, 'zone-coverage')).rejects.toThrow(
 			'Zone coverage was not shared: This product does not say how its work is shared.',
 		);

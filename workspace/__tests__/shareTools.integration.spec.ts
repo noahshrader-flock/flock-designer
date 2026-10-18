@@ -87,12 +87,11 @@ describe('pushBranch', () => {
 
 describe('sharing through the real tools', () => {
 	const request: ShareRequest = {
-		share: { url: 'https://dev-coke-pr-<pr>.example.test', workflow: 'PR Deployment', kinds: ['prototype'] },
-		kind: 'prototype',
+		share: { url: 'https://dev-coke-pr-<pr>.example.test', workflow: 'PR Deployment', kinds: ['codebase'] },
 		projectId: 'demo',
-		name: 'v1',
-		branch: 'prototype/demo/v1',
-		title: 'Preview: demo i1 (not for merge)',
+		name: 'codebase',
+		branch: 'feature/demo',
+		title: 'Preview: demo codebase (not for merge)',
 		body: 'draft',
 	};
 	const timings = { pollMs: 5, startupMs: 200, timeoutMs: 5000, skewMs: 120_000 };

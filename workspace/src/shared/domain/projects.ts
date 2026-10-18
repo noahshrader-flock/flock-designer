@@ -204,7 +204,8 @@ export type PageStatus =
 /** How an Address run on a prototype ended: see `finishPrototypeAddress`. */
 export interface PrototypeAddressed {
 	changed: boolean;
-	iteration: string;
+	/** The version the change is in: the one commented on, or a new version from it. */
+	version: string;
 	made: Work | null;
 	comment: ReviewComment;
 }

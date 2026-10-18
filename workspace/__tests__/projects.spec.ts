@@ -535,7 +535,7 @@ describe('what pressing a project does', () => {
 		expect(projectOpening(project('alpha', { title: 'Alpha', work: [older, newest, code] }))).toEqual({
 			kind: 'app',
 			label: 'Open Alpha',
-			iteration: newest,
+			work: newest,
 		});
 	});
 

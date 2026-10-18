@@ -425,7 +425,7 @@ export const main = async (argv: string[], deps: CliDeps): Promise<number> => {
 				const written = writeCommentsExport(deps.prototypesRoot, {
 					projectId,
 					title: await work.title(projectId),
-					iteration: { name: change.from.name, branch: change.from.branch },
+					work: { name: change.from.name, branch: change.from.branch },
 					comments: comments ?? [],
 					generatedAt: new Date(),
 				});
@@ -448,14 +448,14 @@ export const main = async (argv: string[], deps: CliDeps): Promise<number> => {
 		const branch = values.from ?? (await readCheckout(root)).branch;
 		if (!branch) throw new UsageError('This checkout is not on a branch, so say which branch to model it on, with --from.');
 
-		const iteration = await work.start(root, { projectId, title, note, branch, me: await meOf(designRoot, deps.github) });
-		const text = await buildTask(skill, iteration.name, iteration.name, note);
+		const made = await work.start(root, { projectId, title, note, branch, me: await meOf(designRoot, deps.github) });
+		const text = await buildTask(skill, made.name, made.name, note);
 		deps.out(
 			taskText(
-				`Recorded ${projectId} ${iteration.name}, modeled on ${branch}. Your task follows.`,
+				`Recorded ${projectId} ${made.name}, modeled on ${branch}. Your task follows.`,
 				text,
-				saveCommand(iteration.name),
-				publishCommand(iteration.name),
+				saveCommand(made.name),
+				publishCommand(made.name),
 			),
 		);
 		return 0;

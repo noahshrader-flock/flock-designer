@@ -11,14 +11,13 @@ import {
 } from '../src/main/services/share';
 import { type Check } from '../src/host/changeRequests';
 
-const share = { url: 'https://dev-coke-pr-<pr>.example.test', workflow: 'PR Deployment', kinds: ['prototype' as const] };
+const share = { url: 'https://dev-coke-pr-<pr>.example.test', workflow: 'PR Deployment', kinds: ['codebase' as const] };
 const request: ShareRequest = {
 	share,
-	kind: 'prototype',
 	projectId: 'demo',
-	name: 'v1',
-	branch: 'prototype/demo/v1',
-	title: 'Preview: demo v1',
+	name: 'codebase',
+	branch: 'feature/demo',
+	title: 'Preview: demo codebase',
 	body: 'body',
 };
 const timings = { pollMs: 10, startupMs: 100, timeoutMs: 1000, skewMs: 50 };
@@ -105,10 +104,10 @@ describe('runShare', () => {
 		await expect(runShare(request, h.tools, () => undefined, { ...timings, timeoutMs: 100 })).rejects.toThrow(/still building.*may yet finish/s);
 	});
 
-	it('refuses a kind the repository does not build previews for, before touching anything', async () => {
+	it('refuses when the repository builds no preview for codebase work, as for the prototypes of old, before touching anything', async () => {
 		const h = harness();
-		await expect(runShare({ ...request, kind: 'codebase' }, h.tools, () => undefined, timings)).rejects.toThrow(
-			/does not build a preview for codebase work.*prototype/s,
+		await expect(runShare({ ...request, share: { ...share, kinds: ['prototype'] } }, h.tools, () => undefined, timings)).rejects.toThrow(
+			/does not build a preview for codebase work/,
 		);
 		expect(h.calls).toEqual([]);
 	});
@@ -164,11 +163,11 @@ describe('ShareRunner', () => {
 			record: async (url, prUrl) => void recorded.push([url, prUrl]),
 		});
 		await flush();
-		expect(seen[0]).toMatchObject({ state: 'running', projectId: 'demo', name: 'v1' });
+		expect(seen[0]).toMatchObject({ state: 'running', projectId: 'demo', name: 'codebase' });
 		expect(seen.at(-1)).toEqual({
 			state: 'ready',
 			projectId: 'demo',
-			name: 'v1',
+			name: 'codebase',
 			url: 'https://dev-coke-pr-42.example.test',
 			prUrl: 'https://github.test/o/r/pull/42',
 		});
@@ -193,7 +192,7 @@ describe('ShareRunner', () => {
 		const runner = new ShareRunner(() => undefined);
 		const h = harness({ checkSequence: [[check('pending')]], sleep: () => new Promise((r) => setTimeout(r, 5)) });
 		runner.start({ request, tools: h.tools, timings: { ...timings, timeoutMs: 10_000 }, record: async () => undefined });
-		expect(() => runner.start({ request, tools: h.tools, timings, record: async () => undefined })).toThrow(/Already sharing demo v1/);
+		expect(() => runner.start({ request, tools: h.tools, timings, record: async () => undefined })).toThrow(/Already sharing demo codebase/);
 		runner.stop();
 	});
 

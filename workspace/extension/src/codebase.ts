@@ -8,7 +8,7 @@ import { type AgentWorkDeps, type Offer, type Tell, agentReady, agentWork, pollO
 export interface CodebaseDeps extends AgentWorkDeps {
 	api: AgentWorkDeps['api'] &
 		BuildApi &
-		Pick<WorkspaceApi, 'listProjects' | 'handoffResult' | 'shareIteration' | 'onShareStatus' | 'stopCommand' | 'onRunLog'>;
+		Pick<WorkspaceApi, 'listProjects' | 'handoffResult' | 'shareWork' | 'onShareStatus' | 'stopCommand' | 'onRunLog'>;
 	/** The product folder that is open: where the codebase work is. */
 	root: string;
 	tell: Tell;
@@ -17,13 +17,13 @@ export interface CodebaseDeps extends AgentWorkDeps {
 	copy: (text: string) => Promise<void>;
 }
 
-/** A project's codebase work, read as the list has it: the project, and the iteration that is its work in the code. */
-const codebaseOf = async (api: CodebaseDeps['api'], projectId: string): Promise<{ project: Project; iteration: ProjectWork }> => {
+/** A project's codebase work, read as the list has it: the project, and its work in the code. */
+const codebaseOf = async (api: CodebaseDeps['api'], projectId: string): Promise<{ project: Project; work: ProjectWork }> => {
 	const project = valueOf(await api.listProjects()).find((p) => p.id === projectId);
 	if (!project) throw new Error(`There is no project ${projectId} here.`);
-	const iteration = workOf(project.work, 'codebase')[0];
-	if (!iteration) throw new Error(`${project.title} has no codebase work yet: build it in the codebase first.`);
-	return { project, iteration };
+	const work = workOf(project.work, 'codebase')[0];
+	if (!work) throw new Error(`${project.title} has no codebase work yet: build it in the codebase first.`);
+	return { project, work };
 };
 
 const OPEN_PR = 'Open a draft pull request';
@@ -36,7 +36,7 @@ const OPEN_PR = 'Open a draft pull request';
 export const handOff = async (deps: CodebaseDeps, projectId: string): Promise<void> => {
 	const { api, root } = deps;
 	await agentReady(api);
-	const { project, iteration } = await codebaseOf(api, projectId);
+	const { project, work } = await codebaseOf(api, projectId);
 	let failed: string | null = null;
 	let reported = false;
 	const { stopped } = await agentWork(deps, { title: `Handing off ${project.title}`, logTitle: `${project.title}: handoff` }, async (say, isLive) => {
@@ -45,7 +45,7 @@ export const handOff = async (deps: CodebaseDeps, projectId: string): Promise<vo
 			api,
 			root,
 			project,
-			iteration,
+			work,
 			handoff: true,
 			isLive,
 			onPhase: (phase: BuildPhase) => {
@@ -60,7 +60,7 @@ export const handOff = async (deps: CodebaseDeps, projectId: string): Promise<vo
 	if (!reported) return;
 	const verdict = valueOf(await api.handoffResult(root));
 	if (verdict === true) {
-		const next = await deps.offer(`Ready for engineering: HANDOFF.md is on ${iteration.branch}, and nothing was pushed.`, [OPEN_PR]);
+		const next = await deps.offer(`Ready for engineering: HANDOFF.md is on ${work.branch}, and nothing was pushed.`, [OPEN_PR]);
 		if (next === OPEN_PR) await shareCodebase(deps, projectId);
 	} else
 		deps.tell(
@@ -93,7 +93,7 @@ export interface LocalRun {
  */
 export const runLocally = async (deps: CodebaseDeps, local: LocalRun, projectId: string): Promise<void> => {
 	const { api, root } = deps;
-	const { project, iteration } = await codebaseOf(api, projectId);
+	const { project, work } = await codebaseOf(api, projectId);
 	const couldNot = (why: string) => new Error(`${project.title} couldn’t run locally: ${why}`);
 	await api.stopCommand(root, DESIGN_MODE_COMMAND);
 	const port = local.port(DESIGN_MODE_COMMAND);
@@ -119,7 +119,7 @@ export const runLocally = async (deps: CodebaseDeps, local: LocalRun, projectId:
 					api,
 					root,
 					project,
-					iteration,
+					work,
 					isLive: () => !stopped,
 					onPhase: (phase: BuildPhase) => {
 						if (phase.kind === 'preview') say('Starting its dev server…');
@@ -159,7 +159,7 @@ export const runLocally = async (deps: CodebaseDeps, local: LocalRun, projectId:
 		);
 	}
 	// A record with no route opens at the front door: said, so nobody takes it for the page that changed.
-	const where = iteration.route ? '' : ' Its record names no page for this work, so it opened at the app’s front door.';
+	const where = work.route ? '' : ' Its record names no page for this work, so it opened at the app’s front door.';
 	if ((await deps.offer(`${project.title} is running locally at ${at}.${where}`, [STOP])) === STOP)
 		valueOf(await api.stopCommand(root, DESIGN_MODE_COMMAND));
 };
@@ -177,12 +177,12 @@ const COPY_IT = 'Copy the preview link';
 
 /**
  * Codebase work shared for review (ELECTRON_MIGRATION_PLAN 5.2): the core's share, a draft pull request whose preview
- * is built from it (`shareIteration`), said step by step as the core moves it; then the pull request and the preview's
+ * is built from it (`shareWork`), said step by step as the core moves it; then the pull request and the preview's
  * link, or why it was not shared. It cannot be stopped: a push and a pull request are not taken back halfway.
  */
 export const shareCodebase = async (deps: CodebaseDeps, projectId: string): Promise<void> => {
 	const { api, root } = deps;
-	const { project, iteration } = await codebaseOf(api, projectId);
+	const { project, work } = await codebaseOf(api, projectId);
 	let outcome: Shared | null = null;
 	await deps.progress(`Sharing ${project.title} for review`, async (say) => {
 		const show = (status: ShareStatus) => status.state === 'running' && say(SHARE_WORDS[status.step]);
@@ -190,13 +190,13 @@ export const shareCodebase = async (deps: CodebaseDeps, projectId: string): Prom
 		let stop = (): void => undefined;
 		const ended = new Promise<Shared>((resolve) => {
 			stop = api.onShareStatus((status) => {
-				if (status.state === 'idle' || status.projectId !== project.id || status.name !== iteration.name) return;
+				if (status.state === 'idle' || status.projectId !== project.id || status.name !== work.name) return;
 				show(status);
 				if (status.state === 'ready' || status.state === 'failed') resolve(status);
 			});
 		});
 		try {
-			const started = await api.shareIteration(root, project.id, iteration.name);
+			const started = await api.shareWork(root, project.id, work.name);
 			if (!started.ok) throw new Error(`${project.title} was not shared: ${started.error}`);
 			show(started.value);
 			outcome = started.value.state === 'ready' || started.value.state === 'failed' ? started.value : await ended;
@@ -214,8 +214,8 @@ export const shareCodebase = async (deps: CodebaseDeps, projectId: string): Prom
 
 /** Codebase work on GitHub: its pull request when it has one, else its branch, in the person's browser. */
 export const openCode = async (deps: CodebaseDeps, projectId: string): Promise<void> => {
-	const { project, iteration } = await codebaseOf(deps.api, projectId);
-	const link = codeLink(iteration);
+	const { project, work } = await codebaseOf(deps.api, projectId);
+	const link = codeLink(work);
 	if (link === null) throw new Error(`The record of ${project.title}’s codebase work does not say where it is on GitHub.`);
 	await deps.openExternal(link);
 };

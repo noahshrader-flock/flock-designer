@@ -84,7 +84,7 @@ export const addressComment = async (deps: AddressDeps, review: Review, comment:
 		);
 		return null;
 	}
-	const where = outcome.prototype.iteration;
+	const where = outcome.prototype.version;
 	deps.tell(
 		where === review.name
 			? 'The agent has finished. Look at the page, then resolve what is done.'

@@ -88,7 +88,7 @@ export const registerPrototypes = (d: IpcDeps): void => {
 		// Either way: a run that changed nothing clears the mark an earlier one left.
 		const marked = await designRepo.threads.setAddressed(comment, version, version === null ? null : change.target);
 		if (version !== null) publishInBackground(projectId, change.target);
-		return { changed: version !== null, iteration: change.target, made, comment: marked };
+		return { changed: version !== null, version: change.target, made, comment: marked };
 	};
 	const finishPrototypeChanges = async (projectId: string): Promise<void> => {
 		if (agentBusy()) return;
@@ -147,7 +147,7 @@ export const registerPrototypes = (d: IpcDeps): void => {
 		const exported = writeCommentsExport(prototypesRoot, {
 			projectId,
 			title: await work.title(projectId),
-			iteration: { name, branch: prototypeKey(projectId, name) },
+			work: { name, branch: prototypeKey(projectId, name) },
 			comments,
 			generatedAt: new Date(),
 		});

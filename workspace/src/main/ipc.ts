@@ -211,7 +211,7 @@ export const ipcDeps = ({
 						const done = await publishInOrder(
 							() => syncBranches({ root, descriptor, projects: new Set(readFolderProjects(recordsRoot).map((p) => p.id)) }),
 							async (found) => {
-								// Reviewers find an iteration through its record, so work built in a terminal (a branch, a folder,
+								// Reviewers find a piece of work through its record, so work built in a terminal (a branch, a folder,
 								// and no record) is recorded here, then published with the rest.
 								for (const branch of found.mine) {
 									const work = classify(descriptor, branch);
@@ -377,7 +377,7 @@ export const ipcDeps = ({
 	const once = <T>(key: string, run: () => Promise<T>): Promise<T> => inFlight.run(key, run) as Promise<T>;
 
 	/**
-	 * The site's deploys, run in the background, and whether an iteration's page is on the site (`siteDeploys`): asked of
+	 * The site's deploys, run in the background, and whether a version's page is on the site (`siteDeploys`): asked of
 	 * GitHub as the person signed in to the app, and worked out again here, so the window never hands this an address to open.
 	 */
 	const deploys = siteDeploys({ github, designClone });

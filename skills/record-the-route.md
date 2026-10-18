@@ -2,16 +2,16 @@
 
 **Shared by every product.** Nothing here names a product's routes or tools.
 
-When you build or change a view on a **codebase** iteration — work on a `feature/<project-id>` branch
+When you build or change a view in **codebase work** — work on a `feature/<project-id>` branch
 that runs inside the real product — record where that work is, so DSNR opens on it instead
 of wherever the product happens to start.
 
-Without this, opening the iteration lands on the product's front door and the designer has to find
-the change themselves. That has already put a comment on a page the iteration never touched.
+Without this, opening the work lands on the product's front door and the designer has to find
+the change themselves. That has already put a comment on a page the work never touched.
 
 ## What to write
 
-In the design repository, `projects/<project-id>/iterations.json`, on this iteration's entry, add a
+In the design repository, `projects/<project-id>/work.json`, on the `codebase` entry, add a
 `route`: the path within the running app where the work is reached.
 
 ```json
@@ -40,8 +40,7 @@ In the design repository, `projects/<project-id>/iterations.json`, on this itera
 
 - **New work:** when the view first loads, as part of building it.
 - **Existing work:** if you change where a view is reached, update the route in the same commit.
-- **Prototypes** do not need one: a prototype is one page, and an older prototype branch (`fd/<project-id>/iN`)
-  serves one prototype. Each already opens on itself.
+- **Prototypes** do not need one: each version is one page, and already opens on itself.
 
 If you cannot tell which route is right, leave it out and say so. A wrong landing place is worse than
 none: none opens where it always did.

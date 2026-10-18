@@ -19,7 +19,7 @@ const firstDate = (dates: unknown[], order: 1 | -1): string | null =>
 /** The latest of some dates, ignoring anything that is not one; null when none is. */
 export const latestDate = (dates: unknown[]): string | null => firstDate(dates, -1);
 
-/** When a project was started: its earliest iteration's date, or null if none has one. */
+/** When a project was started: its earliest work's date, or null if none has one. */
 export const startedAt = (p: Pick<Project, 'work'>): string | null =>
 	firstDate(
 		p.work.map((i) => i.createdAt),
@@ -64,7 +64,7 @@ export const newestProjectFirst = byNewest(startedAt, byName);
  * on this machine is marked as such rather than hidden.
  *
  * Where both sides know a project, GitHub's copy leads (it is what everyone
- * else sees) and local facts only fill gaps: an iteration GitHub has not heard
+ * else sees) and local facts only fill gaps: a piece of work GitHub has not heard
  * of, a title it does not have yet, a name it does not list.
  */
 export const mergeProjects = (remote: Project[], local: Project[]): Project[] => {
@@ -163,11 +163,11 @@ export const coverToShow = (project: Pick<Project, 'work'>): { name: string; cov
  * with only codebase work, out to that work on GitHub, in the browser; or nothing, for a project with neither (nothing made
  * yet, or codebase work whose record does not say where it is). `label` names it, for a screen reader.
  */
-export type ProjectOpening = { kind: 'app'; label: string; iteration: ProjectWork } | { kind: 'link'; label: string; url: string };
+export type ProjectOpening = { kind: 'app'; label: string; work: ProjectWork } | { kind: 'link'; label: string; url: string };
 
 export const projectOpening = (project: Pick<Project, 'title' | 'work'>): ProjectOpening | null => {
 	const newest = workOf(project.work, 'prototype')[0];
-	if (newest !== undefined) return { kind: 'app', label: `Open ${project.title}`, iteration: newest };
+	if (newest !== undefined) return { kind: 'app', label: `Open ${project.title}`, work: newest };
 	const url = projectCodeLink(project);
 	return url === null ? null : { kind: 'link', label: `Open ${project.title} on ${HOST}`, url };
 };

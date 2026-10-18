@@ -1,4 +1,4 @@
-/** How often an open iteration looks for new comments while someone is using it. */
+/** How often an open version looks for new comments while someone is using it. */
 export const REFRESH_MS = 60_000;
 /** Nobody has touched it for this long: it looks this often instead. */
 export const IDLE_MS = 5 * 60_000;

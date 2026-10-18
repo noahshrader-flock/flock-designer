@@ -28,7 +28,8 @@ product keeps its own rows.
 ## The words
 
 There are two kinds of work: a **prototype**, one page built from the product's real components to decide what
-something should be, and **codebase work**, the real change, built to ship. Each has iterations, `I1`, `I2`.
+something should be, and **codebase work**, the real change, built to ship. A prototype has versions, Version 1, Version 2;
+codebase work is one branch.
 **Address** asks the agent to act on one comment; **Hand off** is the full check before an engineer takes the
 work. These and the rest are defined once, in [the vocabulary](dsnr.md#vocabulary).
 

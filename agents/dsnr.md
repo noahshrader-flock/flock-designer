@@ -60,12 +60,12 @@ is wiring the plumbing, not rebuilding yours.
   carries in its task. **Build in the codebase** is watched, in the person's editor: `../skills/move-to-code.md` says
   what it needs.
 
-## Is this a new project, or an iteration?
+## Is this a new project, or a later round of one?
 
-**If `projects/<project-id>/context-receipt.md` already exists, start there.** A later iteration does not re-derive
+**If `projects/<project-id>/context-receipt.md` already exists, start there.** A later round does not re-derive
 what the previous one recorded and a human corrected. Read the brief, receipt and review, then **re-verify only what can
 have moved**: the installed design system version, the baseline commit if the branch moved, and whatever the new feedback
-touches. Write the iteration's receipt as a **diff against the last one**: what changed, what you re-checked, what you
+touches. Write this round's receipt as a **diff against the last one**: what changed, what you re-checked, what you
 carried forward.
 
 **If there is no project folder, this is a new project.** Create it, then read everything `ui-guide.md` lists.
@@ -133,20 +133,19 @@ The last row matters most: it is where a wrong assumption is caught before it be
 Run them **as subagents** if the environment has them (read-only by design, which is real isolation). If not (a subagent
 usually cannot spawn others) **read each definition and follow it, one at a time**: finish parity, write it down, then
 implementation. **Say which way they ran**, and when you reviewed your own work, say so. Write both into
-`projects/<project-id>/review.md`, one section per iteration, accessibility kept separate.
+`projects/<project-id>/review.md`, one section per round, accessibility kept separate.
 
 ## Verification
 
 Run the product's checks as `ui-guide.md` says. In DSNR's workflow they are commands in its `.dsnr/workspace.json`:
-`check-iteration` after every iteration on the codebase path (types, lint and the tests for what changed, fast), and
-`handoff`, the gate, at Handoff. **On the codebase path the order is build, check, commit, report.** The older prototype path's checks are
-in the product's skill for it.
+`check-iteration` after every round on the codebase path (types, lint and the tests for what changed, fast), and
+`handoff`, the gate, at Handoff. **On the codebase path the order is build, check, commit, report.**
 
 **Report which endpoints you stubbed (codebase path).** Your report ends with the mock handlers you added or relied on:
 that list is exactly what engineering swaps for real endpoints.
 
-**An iteration that is not committed does not exist.** Commit it, on its own branch, before you report, and only what the
-iteration is: never sweep up unrelated files. If the previous iteration is uncommitted when you arrive, commit it as its
+**A round that is not committed does not exist.** Commit it, on its own branch, before you report, and only what the
+round is: never sweep up unrelated files. If the previous round is uncommitted when you arrive, commit it as its
 own snapshot first and say so.
 
 ## Skills

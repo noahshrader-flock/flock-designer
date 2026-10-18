@@ -12,7 +12,7 @@ import { numberComments, openComments } from '../../shared/comments';
  * file**: the comments are read from GitHub now, `comments.md` is written from that read, and only
  * then is the agent started. Whatever a reviewer said a minute ago is in it.
  *
- * The agent edits the working tree and commits, so the tree must be on this iteration's branch and
+ * The agent edits the working tree and commits, so the tree must be on this work's branch and
  * clean: otherwise its commit would sweep up the designer's own unsaved work, or land on the wrong
  * branch.
  */
@@ -31,7 +31,7 @@ export interface AddressDeps {
 export interface AddressTarget {
 	recordsRoot: string;
 	projectId: string;
-	iteration: { name: string; branch: string };
+	work: { name: string; branch: string };
 	/** The one comment to act on. There is no batch. */
 	comment: CommentRef;
 }
@@ -55,7 +55,7 @@ export const chooseComment = (comments: ReviewComment[], comment: CommentRef): n
 
 export const prepareAddress = async (
 	deps: AddressDeps,
-	{ recordsRoot, projectId, iteration, comment }: AddressTarget,
+	{ recordsRoot, projectId, work, comment }: AddressTarget,
 ): Promise<{ task: string; path: string }> => {
 	if (deps.agentRunning()) {
 		throw new Error(AGENT_BUSY);
@@ -69,13 +69,13 @@ export const prepareAddress = async (
 		);
 	}
 	const here = await deps.checkout();
-	if (here.branch !== iteration.branch) {
+	if (here.branch !== work.branch) {
 		throw new Error(
-			`This machine is on ${here.branch ?? 'no branch'}, not ${iteration.branch}. Open this work here first, so its preview and the agent's changes are the same work.`,
+			`This machine is on ${here.branch ?? 'no branch'}, not ${work.branch}. Open this work here first, so its preview and the agent's changes are the same work.`,
 		);
 	}
 	if (!here.clean) {
-		throw new Error(`There are uncommitted changes on ${iteration.branch}, and the agent commits its work. Commit them or put them aside first.`);
+		throw new Error(`There are uncommitted changes on ${work.branch}, and the agent commits its work. Commit them or put them aside first.`);
 	}
 
 	// Read now, not earlier: this is what makes the file current.
@@ -83,12 +83,12 @@ export const prepareAddress = async (
 	const input: ExportInput = {
 		projectId,
 		title: deps.title,
-		iteration,
+		work,
 		comments,
 		generatedAt: (deps.now ?? (() => new Date()))(),
 	};
 	// Written even when nothing is open, so the file never keeps listing comments that have since been resolved.
 	const written = writeCommentsExport(recordsRoot, input);
 	const number = chooseComment(comments, comment);
-	return { task: addressTask(written.path, iteration.branch, skill, number), path: written.path };
+	return { task: addressTask(written.path, work.branch, skill, number), path: written.path };
 };

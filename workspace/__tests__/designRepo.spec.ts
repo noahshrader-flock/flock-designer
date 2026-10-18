@@ -291,7 +291,7 @@ describe('contributors', () => {
 		const [project] = await new DesignRepo(session, REF).listProjects();
 		expect(project?.people).toEqual([
 			{ name: 'Ada Lovelace', login: 'ada' },
-			{ name: 'Grace Hopper', login: 'ghopper' }, // learned from one iteration, applied to the person everywhere
+			{ name: 'Grace Hopper', login: 'ghopper' }, // learned from one piece of work, applied to the person everywhere
 			{ name: 'Noah Shrader', login: 'noahshrader-flock' },
 		]);
 		expect(project?.work.find((i) => i.name === 'v1')?.contributors.map((p) => p.name)).toEqual(['Ada Lovelace', 'Grace Hopper']);

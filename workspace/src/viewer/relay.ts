@@ -68,7 +68,7 @@ type OpenedWindow = {
 
 /**
  * The key a review opened in the browser from DSNR carries (BROWSER_COMMENTS_PLAN 2.1), or null: in its link's fragment
- * the first time, then kept for this tab, since moving to another iteration loses the fragment. Taken out of the address
+ * the first time, then kept for this tab, since moving to another version loses the fragment. Taken out of the address
  * once kept, so it is in no address that is copied or kept. Only on a page served from this machine.
  */
 export const keyFromAddress = (win: OpenedWindow): string | null => {
@@ -78,7 +78,7 @@ export const keyFromAddress = (win: OpenedWindow): string | null => {
 		try {
 			win.sessionStorage.setItem(KEPT, given);
 		} catch {
-			// A browser that keeps nothing: the key is still this page's, until it moves to another iteration.
+			// A browser that keeps nothing: the key is still this page's, until it moves to another version.
 		}
 		win.history.replaceState(null, '', `${win.location.pathname}${win.location.search}`);
 		return given;

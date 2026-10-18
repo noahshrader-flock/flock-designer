@@ -3,7 +3,7 @@ import { existsSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
 import type { BuildInCodebase, BuildInCodebasePlan } from '../../shared/contract';
 import { lastVerdict } from '../../shared/handoff';
-import { workLabel, workKind } from '../../shared/work';
+import { workLabel } from '../../shared/work';
 import { arg, handle } from '../handle';
 import { A11Y_COMMAND, productTarget, taskAccessibility } from '../services/accessibilityBrief';
 import { ADDRESS_SKILL, prepareAddress } from '../services/address';
@@ -159,17 +159,17 @@ export const registerCodebase = (d: IpcDeps): void => {
 	handle('addressComments', [checkout, arg.projectId, arg.codebaseName, arg.comment], async (workIn, projectId, name, comment) => {
 		// There is no batch: a request with no comment is a mistake, not a request for all of them.
 		const { canonical, recordsRoot } = workIn;
-		const iteration = await recordedWork(canonical, recordsRoot, workIn.descriptor, projectId, name);
+		const codebaseRecord = await recordedWork(canonical, recordsRoot, workIn.descriptor, projectId, name);
 		const skill = await readDesignFile(ADDRESS_SKILL);
 		const prepared = await prepareAddress(
 			{
-				readComments: () => designRepo.threads.readComments(iteration.branch),
+				readComments: () => designRepo.threads.readComments(codebaseRecord.branch),
 				checkout: () => readCheckout(canonical),
 				agentRunning: agentBusy,
 				skill: () => skill,
 				title: projectTitle(recordsRoot, projectId),
 			},
-			{ recordsRoot, projectId, iteration, comment },
+			{ recordsRoot, projectId, work: codebaseRecord, comment },
 		);
 		const { parts, readOnly } = await checkoutParts(canonical, projectId);
 		return startTracked(canonical, projectId, codebaseTask({ unattended: null, task: prepared.task }, parts), {
@@ -180,27 +180,26 @@ export const registerCodebase = (d: IpcDeps): void => {
 	});
 	// Sharing. The branch comes from this person's own record, never from the window, and
 	// the repository's descriptor says what a share is. Starts and returns: it takes minutes.
-	handle('shareIteration', [checkout, arg.projectId, arg.codebaseName], async (workIn, projectId, name) => {
+	handle('shareWork', [checkout, arg.projectId, arg.codebaseName], async (workIn, projectId, name) => {
 		const { canonical, descriptor, recordsRoot } = workIn;
 		const { share: how } = descriptor;
 		if (!how) {
 			throw new Error(`${descriptor.product} does not say how a shared preview is built, so it cannot be shared from here.`);
 		}
-		const iteration = await recordedWork(canonical, recordsRoot, descriptor, projectId, name);
+		const codebaseRecord = await recordedWork(canonical, recordsRoot, descriptor, projectId, name);
 		// Only what is committed goes up. Sharing a branch with unsaved edits would show reviewers less than the designer sees.
 		const here = await readCheckout(canonical);
-		if (here.branch === iteration.branch && !here.clean) {
-			throw new Error(`There are uncommitted changes on ${iteration.branch}, and only committed work is shared. Commit them, then share again.`);
+		if (here.branch === codebaseRecord.branch && !here.clean) {
+			throw new Error(`There are uncommitted changes on ${codebaseRecord.branch}, and only committed work is shared. Commit them, then share again.`);
 		}
 		// The commit that goes up now, which is what reviewers will be looking at.
-		const shared = await branchCommit(canonical, iteration.branch).catch(() => undefined);
+		const shared = await branchCommit(canonical, codebaseRecord.branch).catch(() => undefined);
 		return share.start({
 			request: {
 				share: how,
-				kind: workKind(iteration),
 				projectId,
 				name,
-				branch: iteration.branch,
+				branch: codebaseRecord.branch,
 				...pullRequestText(projectId, name),
 			},
 			tools: ports.shareTools(canonical),
@@ -230,19 +229,19 @@ export const registerCodebase = (d: IpcDeps): void => {
 	});
 	handle('startHandoff', [checkout, arg.projectId], async (workIn, projectId) => {
 		const { canonical, recordsRoot, descriptor } = workIn;
-		const iteration = await recordedWork(canonical, recordsRoot, descriptor, projectId, 'codebase');
+		const codebaseRecord = await recordedWork(canonical, recordsRoot, descriptor, projectId, 'codebase');
 		const here = await readCheckout(canonical);
-		if (here.branch !== iteration.branch) throw new Error(`Open ${iteration.branch} first: a handoff checks the work where it is.`);
+		if (here.branch !== codebaseRecord.branch) throw new Error(`Open ${codebaseRecord.branch} first: a handoff checks the work where it is.`);
 		refuseWhileBusy();
 		const skill = await readSkillText(HANDOFF_SKILL);
 		const { parts, readOnly } = await checkoutParts(canonical, projectId);
-		const missingRoute = iteration.route ? null : { skill: await readSkillText(ROUTE_SKILL), recordFile: recordPath(recordsRoot, projectId) };
+		const missingRoute = codebaseRecord.route ? null : { skill: await readSkillText(ROUTE_SKILL), recordFile: recordPath(recordsRoot, projectId) };
 		const task = handoffTask(
-			{ skill, projectId, branch: iteration.branch, gate: commandLine(descriptor.commands, 'handoff', projectId), missingRoute },
+			{ skill, projectId, branch: codebaseRecord.branch, gate: commandLine(descriptor.commands, 'handoff', projectId), missingRoute },
 			parts,
 		);
-		handoffStarts.set(canonical, { projectId, branch: iteration.branch, head: await headCommit(canonical) });
-		return startTracked(canonical, projectId, task, { branch: iteration.branch, addDirs: [recordsRoot], readOnly, purpose: 'handoff' });
+		handoffStarts.set(canonical, { projectId, branch: codebaseRecord.branch, head: await headCommit(canonical) });
+		return startTracked(canonical, projectId, task, { branch: codebaseRecord.branch, addDirs: [recordsRoot], readOnly, purpose: 'handoff' });
 	});
 	/**
 	 * Whether the last Handoff here found the work ready: the run's own last verdict says so, and HANDOFF.md was
