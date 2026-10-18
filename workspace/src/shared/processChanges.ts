@@ -8,6 +8,7 @@ import { cellFor, triedId } from './contract';
 import { plural } from './plural';
 import { labelOf, readsAs, withEdits } from './tokens';
 import { saidValue, storyComponent, valueTitle } from './valueNames';
+import { inGeneratedFolder } from './generatedFolders';
 
 /** One unit of review: the token changes, or one component's values. */
 export type HandoffGroup = { kind: 'tokens' } | { kind: 'component'; name: string; file: string };
@@ -106,8 +107,7 @@ export const classifyPath = (path: string): string | null => {
 	if (parts[0] === '.github') return 'the repository’s CI and settings';
 	if (['package-lock.json', 'yarn.lock', 'pnpm-lock.yaml', 'bun.lockb', 'npm-shrinkwrap.json'].includes(name)) return 'a lockfile';
 	if (name === 'package.json') return 'the packages it installs';
-	if (parts.some((p) => p === 'node_modules' || p === 'dist' || p === 'build' || p === 'storybook-static') || /\.generated\./.test(name))
-		return 'a generated file';
+	if (inGeneratedFolder(path) || /\.generated\./.test(name)) return 'a generated file';
 	if (/\.mdx?$/.test(name) || parts[0] === 'docs') return 'a doc';
 	return null;
 };

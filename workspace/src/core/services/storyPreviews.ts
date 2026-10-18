@@ -19,7 +19,7 @@ import { TRY_VALUES } from './pageInstances';
 import { designSystemOf } from '../../shared/catalog';
 import type { ConnectedDesignSystem, StoryPreview, TokenEdit } from '../../shared/contract';
 import { type CatalogReads, readCatalog } from './componentCatalog';
-import { packageFirst, previewSetup, storybookDefines } from './storybookSetup';
+import { packageFirst, packagesOf, previewSetup, storybookDefines } from './storybookSetup';
 import { type LibraryAt, baseAt, inLibrary, systemReads } from './designLibrary';
 import { exportCommit } from './git';
 import type { BuildContext, BuildOptions, Plugin } from 'esbuild';
@@ -336,11 +336,8 @@ const asErrors = (err: Partial<BuildErrors>): BuildErrors => ({ errors: err.erro
  * own Storybook build defines (`storybookDefines`) and the production build of React's.
  */
 const ENTRY = 'preview-entry.tsx';
-/** The packages a copy's design system builds with, its package's first (`packageFirst`): what a stylesheet is found in. */
-const packagesOf = (library: string, folder: string): string[] =>
-	packageFirst(folder)
-		.map((at) => join(library, at, 'node_modules'))
-		.filter((p) => existsSync(p));
+/** The packages a copy's design system builds with that are installed, its package's first: what a stylesheet is found in. */
+const installedPackages = (library: string, folder: string): string[] => packagesOf(library, folder).filter((p) => existsSync(p));
 const optionsFor = (library: string, folder: string, site: string, plugin: Plugin, defines: Record<string, string>): BuildOptions => ({
 	// In the design system's package, so its imports resolve from its own packages first, hoisted to the root or not.
 	entryPoints: { entry: join(library, folder, ENTRY) },
@@ -387,7 +384,7 @@ export const unresolved = (errors: { text: string }[]): Set<string> =>
  */
 export const buildPreviews = async (library: string, storyFiles: string[], site: string, folder = ''): Promise<void> => {
 	const [{ build }, sass] = await Promise.all([import('esbuild'), import('sass')]);
-	const packages = packagesOf(library, folder);
+	const packages = installedPackages(library, folder);
 	const preview = previewSetup(library, folder);
 	// Storybook 8 and later have the \`storybook\` package, which carries its preview's channel; older ones do not.
 	const channel = packages.some((p) => existsSync(join(p, 'storybook', 'package.json')));
@@ -421,7 +418,7 @@ export const trialBuild = async (copy: string, work: string, site: string, folde
 	const [{ context }, sass] = await Promise.all([import('esbuild'), import('sass')]);
 	// A clone of each file where the disk can (copy-on-write, so all but free), a copy where not; its packages stay a link.
 	if (!existsSync(work)) cpSync(copy, work, { recursive: true, verbatimSymlinks: true, mode: constants.COPYFILE_FICLONE });
-	const packages = packagesOf(work, folder);
+	const packages = installedPackages(work, folder);
 	const stylesheets = stylesheetsFor(work, folder, sass);
 	// esbuild and the stylesheets' tools name a file by its real path, and a temporary folder can be reached through a link
 	// (macOS's /var); a change names its files by their path in the library.
@@ -468,7 +465,7 @@ export const trialBuild = async (copy: string, work: string, site: string, folde
  * A copy of the library at `commit`, taken out of git (its files as committed, which is small: no packages), with the
  * clone's packages linked in: the repository's, and in a monorepo the design system package's own when it has them.
  */
-const copyAt = async (root: string, commit: string, library: string, folder: string): Promise<void> => {
+const copyWithPackages = async (root: string, commit: string, library: string, folder: string): Promise<void> => {
 	await exportCommit(root, commit, library);
 	// A junction on Windows, a symbolic link elsewhere: the packages are read where the clone has them, by their real path, so
 	// a tool held to the clone (the library's PostCSS) never passes through a link on the way to them (macOS's /var).
@@ -618,7 +615,7 @@ export class StoryPreviews {
 			if (!existsSync(join(site, 'index.html'))) {
 				rmSync(dir, { recursive: true, force: true });
 				const copy = join(dir, 'library');
-				await copyAt(system.root, commit, copy, system.folder);
+				await copyWithPackages(system.root, commit, copy, system.folder);
 				const stories = (await readCatalog(await reads(), designSystemOf(system))).map((c) => c.id);
 				await (this.deps.build ?? buildPreviews)(copy, stories, site, system.folder);
 			}

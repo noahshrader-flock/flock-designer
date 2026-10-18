@@ -15,6 +15,9 @@ import { parseObject } from './tokens/objectLiteral';
  */
 export const packageFirst = (folder: string): string[] => (folder === '' ? [''] : [folder, '']);
 
+/** The packages a design system's code is built with, where they are installed under `root`, in that order. */
+export const packagesOf = (root: string, folder: string): string[] => packageFirst(folder).map((at) => join(root, at, 'node_modules'));
+
 /** The `.storybook/<name>` file a library's stories are drawn with, its package's before the repository's; null for none. */
 const setupFile = (library: string, folder: string, name: 'preview' | 'main'): string | null => {
 	for (const at of packageFirst(folder)) {

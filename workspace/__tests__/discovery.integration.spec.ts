@@ -9,7 +9,7 @@ import { classify, patternToRegex, readBranchProjects } from '../src/core/servic
 import { recordsRootFor } from '../src/core/services/discovery';
 import { continueWork, readWork } from '../src/core/services/workRecords';
 import { unionLocal } from '../src/shared/projectList';
-import { projectWork } from './fixtures';
+import { projectWork, recordDefault } from './fixtures';
 
 const descriptor: WorkspaceDescriptor = {
 	version: 1,
@@ -57,6 +57,7 @@ describe('work found in a real repository, with no record written', () => {
 		root = mkdtempSync(join(tmpdir(), 'fdw-found-'));
 		records = mkdtempSync(join(tmpdir(), 'fdw-found-rec-'));
 		g('init', '-q', '-b', 'develop');
+		recordDefault(root);
 		writeFileSync(join(root, 'a.txt'), 'a');
 		g('add', '.');
 		g('commit', '-q', '-m', 'first');

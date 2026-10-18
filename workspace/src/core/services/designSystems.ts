@@ -12,11 +12,10 @@ import { SCRIPT_EXTENSIONS, isStoryFile, type CatalogReads } from './componentCa
 import { packageFirst } from './storybookSetup';
 import { readTokens } from './designTokens';
 import { folderReads } from './folderReads';
-import { git } from './git';
+import { defaultBranch, git } from './git';
 import { type JsonFile, jsonFile } from './jsonFile';
 import { repositoryAt } from './repositories';
 import { asRepositoryPath, repoName } from '../../shared/repoRef';
-const REMOTE_TIMEOUT_MS = 30_000;
 
 /** A design system's id: its repository, and in a monorepo the folder it is in. */
 export const designSystemId = (repository: string, folder: string): string => (folder === '' ? repository : `${repository}:${folder}`);
@@ -87,22 +86,6 @@ export const findDesignSystems = async (reads: CatalogReads, repository: string)
 	}
 	// The root first, then by folder, so the choice reads the same every time.
 	return found.sort((a, b) => a.folder.localeCompare(b.folder));
-};
-
-/** The branch GitHub calls a clone's repository's default: git's own record of it, else asked of GitHub; null if neither says. */
-export const defaultBranch = async (root: string): Promise<string | null> => {
-	try {
-		const ref = await git(root, ['symbolic-ref', '--quiet', 'refs/remotes/origin/HEAD']);
-		if (ref.startsWith('refs/remotes/origin/')) return ref.slice('refs/remotes/origin/'.length);
-	} catch {
-		// A clone made without it, or an old one: asked of GitHub instead.
-	}
-	try {
-		const out = await git(root, ['ls-remote', '--symref', 'origin', 'HEAD'], { timeoutMs: REMOTE_TIMEOUT_MS });
-		return /^ref: refs\/heads\/(\S+)\s+HEAD$/m.exec(out)?.[1] ?? null;
-	} catch {
-		return null;
-	}
 };
 
 /**

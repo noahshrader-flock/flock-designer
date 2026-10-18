@@ -1,9 +1,10 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import type { CatalogReads } from './componentCatalog';
+import { GENERATED_FOLDERS } from '../../shared/generatedFolders';
 
-/** Folders a design system's files are never in: what is installed, built or kept by git. */
-const SKIPPED = new Set(['node_modules', '.git', 'dist', 'build', 'out', 'coverage', 'storybook-static']);
+/** Folders a design system's files are never in: what is installed or built, and git's own. */
+const SKIPPED = new Set<string>([...GENERATED_FOLDERS, '.git']);
 /** More files than any design system has: a folder past this is not read whole. */
 const MOST = 20_000;
 

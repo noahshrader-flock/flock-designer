@@ -13,15 +13,16 @@
 import type { ValueProperty } from '../../shared/contract';
 import { COLOR_VALUES } from '../../shared/contract';
 import { PX_PER_REM, hexOf } from '../../shared/tokens';
+import { inGeneratedFolder } from '../../shared/generatedFolders';
 
 /** The files a value may be written in: scripts and stylesheets. */
 const SEARCHED = /\.(?:[cm]?[jt]sx?|css|scss|sass|less)$/;
 /** What is not the design system's code: its stories, tests and docs, its Storybook set-up, and what is built or generated. */
-const SKIPPED =
-	/(?:^|\/)(?:\.storybook|__tests__|__snapshots__|__mocks__|node_modules|dist|build|coverage|e2e)\/|\.(?:stories|test|spec|figma|docs)\.[^/]+$|\.d\.ts$/;
+const SKIPPED = /(?:^|\/)(?:\.storybook|__tests__|__snapshots__|__mocks__|e2e)\/|\.(?:stories|test|spec|figma|docs)\.[^/]+$|\.d\.ts$/;
+const skipped = (path: string): boolean => inGeneratedFolder(path) || SKIPPED.test(path);
 
 /** Of the design system's files, those a value of a component's own may be written in. */
-export const searchedFiles = (files: string[]): string[] => files.filter((f) => SEARCHED.test(f) && !SKIPPED.test(f));
+export const searchedFiles = (files: string[]): string[] => files.filter((f) => SEARCHED.test(f) && !skipped(f));
 
 /** How a value is written in a place: a length in px or rem, a bare number (a style object's px), a percent, a colour. */
 export type Form = 'px' | 'rem' | 'number' | 'percent' | 'hex' | 'rgb' | 'name';

@@ -148,10 +148,17 @@ export const makeProductFiles = (dir: string, commands: unknown[] = []) => {
 	);
 };
 
-/** A product repository DSNR can open, on `develop`, with one commit. Its design system is called x. */
+/**
+ * A repository's default branch recorded as cloning records it (`origin/HEAD`), for one made here with `git init`: what
+ * DSNR reads as the default (`defaultBranch`), which it never guesses from a branch's name.
+ */
+export const recordDefault = (dir: string, branch = 'develop') => g(dir, 'symbolic-ref', 'refs/remotes/origin/HEAD', `refs/remotes/origin/${branch}`);
+
+/** A product repository DSNR can open, on `develop` (its default, as cloned), with one commit. Its design system is called x. */
 export const makeProduct = (dir: string, commands: unknown[] = []) => {
 	makeProductFiles(dir, commands);
 	g(dir, 'init', '-q', '-b', 'develop');
+	recordDefault(dir);
 	writeFileSync(join(dir, 'README.md'), '# r\n');
 	g(dir, 'add', '.');
 	g(dir, 'commit', '-q', '-m', 'first');

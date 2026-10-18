@@ -284,20 +284,46 @@ export const createBranch = async (root: string, branch: string, from: string): 
 /** `[bot]` accounts and automation are not people working on a design. */
 const isPerson = (name: string): boolean => name !== '' && !isBot(name);
 
+/** How long asking the remote for its default branch may take: a clone's own record is asked first, and almost always says. */
+const REMOTE_TIMEOUT_MS = 30_000;
+/** Each clone's default branch, once known: it is asked of the remote at most once a session. */
+const defaults = new Map<string, Promise<string | null>>();
+
 /**
- * The branch the repository treats as its trunk, to measure a branch against.
- * Prefers the remote's own default, then the usual names; null if none exists,
- * in which case nobody is credited rather than everybody.
+ * The branch GitHub calls a clone's repository's default, the one answer every part of DSNR asks: git's own record of it
+ * (`origin/HEAD`, which cloning sets), else asked of the remote, once a session for each clone; null if neither says.
+ * Never guessed from a branch's name: a clone with a `develop` whose default is `main` is `main`'s.
+ */
+export const defaultBranch = (root: string): Promise<string | null> => {
+	const key = resolve(root);
+	const known = defaults.get(key);
+	if (known) return known;
+	const asked = (async (): Promise<string | null> => {
+		const ref = await git(root, ['symbolic-ref', '--quiet', 'refs/remotes/origin/HEAD']).catch(() => '');
+		if (ref.startsWith('refs/remotes/origin/')) return ref.slice('refs/remotes/origin/'.length);
+		const out = await git(root, ['ls-remote', '--symref', 'origin', 'HEAD'], { timeoutMs: REMOTE_TIMEOUT_MS }).catch(() => '');
+		return /^ref: refs\/heads\/(\S+)\s+HEAD$/m.exec(out)?.[1] ?? null;
+	})();
+	defaults.set(key, asked);
+	return asked;
+};
+
+/**
+ * What a branch is measured against: the remote's copy of the default branch, else the clone's own; null when there is
+ * no default, in which case nobody is credited rather than everybody.
  */
 const trunk = async (root: string): Promise<string | null> => {
-	try {
-		return (await git(root, ['symbolic-ref', '--short', 'refs/remotes/origin/HEAD'])) || null;
-	} catch {
-		for (const name of ['develop', 'main', 'master']) {
-			if (await branchExists(root, name)) return name;
-		}
-		return null;
-	}
+	const name = await defaultBranch(root);
+	if (name === null) return null;
+	for (const ref of [`origin/${name}`, name])
+		if (
+			await git(root, ['rev-parse', '--verify', '--quiet', ref]).then(
+				() => true,
+				() => false,
+			)
+		)
+			return ref;
+	return null;
 };
 
 /** Someone who committed, as git has them. */

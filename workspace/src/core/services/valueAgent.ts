@@ -10,7 +10,7 @@
  * what was asked; to follow a token, they draw as they did, and with the token changed they draw the token. When it does
  * not read back, the agent is told what it drew, once, and the result is checked again; else it is refused, in words.
  */
-import { packageFirst } from './storybookSetup';
+import { packagesOf } from './storybookSetup';
 import { PX_PER_REM } from '../../shared/tokens';
 import { errorText } from '../../shared/result';
 import { existsSync } from 'node:fs';
@@ -62,7 +62,7 @@ const scratch = (dir: string, args: string[]): Promise<string> =>
 	]);
 
 /** A copy of the library at `commit`, with git of its own, so what the agent writes is its diff against that commit. */
-const copyAt = async (root: string, commit: string): Promise<string> => {
+const scratchCopyAt = async (root: string, commit: string): Promise<string> => {
 	const dir = await mkdtemp(join(tmpdir(), 'dsnr-value-'));
 	try {
 		await exportCommit(root, commit, dir);
@@ -145,12 +145,10 @@ export class ValueAgent {
 		const facts = await this.factsOf(index, file, t);
 		if ('why' in facts) return { state: 'refused', why: facts.why };
 		const standard = await this.deps.readStandard(DESIGN_SYSTEM_CODE);
-		const dir = await copyAt(system.root, index.commit);
+		const dir = await scratchCopyAt(system.root, index.commit);
 		try {
 			// The packages it installs, to read how they draw what is not the library's own (MUI's defaults), never to change.
-			const packages = packageFirst(system.folder)
-				.map((at) => join(system.root, at, 'node_modules'))
-				.filter((p) => existsSync(p));
+			const packages = packagesOf(system.root, system.folder).filter((p) => existsSync(p));
 			const task = taskFor(file, t, facts, standard, packages);
 			const own = await this.ownFiles(index);
 			let ran = await this.deps.run(dir, task, packages);

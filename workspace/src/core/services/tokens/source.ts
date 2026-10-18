@@ -5,6 +5,7 @@
  */
 import type { DesignToken, DesignTokens, TokenChange } from '../../../shared/contract';
 import type { CatalogReads } from '../componentCatalog';
+import { inGeneratedFolder } from '../../../shared/generatedFolders';
 
 /**
  * A way a library can keep its tokens: given the library's own files, the list when it finds tokens there, else `null`;
@@ -26,8 +27,7 @@ export const notWhereRead = (token: DesignToken): Error =>
  * rather than define them.
  */
 export const isLibraryFile = (path: string): boolean =>
-	!/(^|\/)(node_modules|dist|build|out|coverage|storybook-static|\.storybook|__tests__|__mocks__)\//.test(path) &&
-	!/\.(stories|test|spec)\.\w+$/.test(path);
+	!inGeneratedFolder(path) && !/(^|\/)(\.storybook|__tests__|__mocks__)\//.test(path) && !/\.(stories|test|spec)\.\w+$/.test(path);
 
 /**
  * The tokens in the order the panel shows them: **within each category, the semantic ones first** (what a color is for,

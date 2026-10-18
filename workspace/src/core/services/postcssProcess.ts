@@ -11,7 +11,7 @@
 import { type ChildProcess, spawn } from 'node:child_process';
 import { existsSync, readFileSync, realpathSync } from 'node:fs';
 import { createRequire } from 'node:module';
-import { packageFirst } from './storybookSetup';
+import { packagesOf } from './storybookSetup';
 import { dirname, join } from 'node:path';
 
 /** The names a PostCSS configuration is found by, in the order PostCSS's own loader (`postcss-load-config`) looks. */
@@ -185,8 +185,7 @@ export const postcssRun = (library: string, folder: string, config: string): Pos
 		const copy = realpathSync(library);
 		// The clone's folders its packages are linked from (the repository's, and in a monorepo the package's), whose own
 		// links (a workspace's packages) stay inside the clone.
-		const packages = packageFirst(folder)
-			.map((at) => join(library, at, 'node_modules'))
+		const packages = packagesOf(library, folder)
 			.filter(existsSync)
 			.map((m) => dirname(realpathSync(m)));
 		// The folder this app's PostCSS is installed in, which holds the few packages it needs beside it.

@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
 	branchAuthors,
+	defaultBranch,
 	branchExists,
 	checkoutBranch,
 	createBranch,
@@ -18,6 +19,7 @@ import {
 	hasFileAt,
 	originUrl,
 } from '../src/core/services/git';
+import { recordDefault } from './fixtures';
 
 let root: string;
 const g = (...args: string[]) => execFileSync('git', ['-C', root, ...args], { encoding: 'utf8' });
@@ -25,6 +27,7 @@ const g = (...args: string[]) => execFileSync('git', ['-C', root, ...args], { en
 beforeEach(() => {
 	root = mkdtempSync(join(tmpdir(), 'fdw-git-'));
 	g('init', '-q', '-b', 'develop');
+	recordDefault(root);
 	writeFileSync(join(root, 'README.md'), '# repo\n');
 	g('add', '.');
 	g('commit', '-q', '-m', 'first');
@@ -162,6 +165,22 @@ describe('listing', () => {
 	it('knows whether a branch exists', async () => {
 		expect(await branchExists(root, 'develop')).toBe(true);
 		expect(await branchExists(root, 'nope')).toBe(false);
+	});
+});
+
+describe('the default branch', () => {
+	it('is what git recorded when the repository was cloned, and never guessed from a branch’s name', async () => {
+		expect(await defaultBranch(root)).toBe('develop');
+		const bare = mkdtempSync(join(tmpdir(), 'fdw-git-unknown-'));
+		try {
+			execFileSync('git', ['-C', bare, 'init', '-q', '-b', 'develop']);
+			execFileSync('git', ['-C', bare, 'commit', '-q', '--allow-empty', '-m', 'first']);
+			// A develop, a main, and no record and no remote to say which is the default: none is.
+			execFileSync('git', ['-C', bare, 'branch', 'main']);
+			expect(await defaultBranch(bare)).toBeNull();
+		} finally {
+			rmSync(bare, { recursive: true, force: true });
+		}
 	});
 });
 
