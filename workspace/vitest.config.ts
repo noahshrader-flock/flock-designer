@@ -22,7 +22,11 @@ export default defineConfig({
 			// Code alone: no process is started, so these are fast and run side by side.
 			{
 				extends: true,
-				test: { name: 'unit', include: ['__tests__/**/*.spec.ts'], exclude: ['__tests__/**/*.integration.spec.ts', '__tests__/**/*.dom.spec.ts'] },
+				test: {
+					name: 'unit',
+					include: ['__tests__/**/*.spec.ts'],
+					exclude: ['__tests__/**/*.integration.spec.ts', '__tests__/**/*.dom.spec.ts', '__tests__/**/*.library.spec.ts'],
+				},
 			},
 			// The same, for what draws the window or runs in a page: given a document to draw in.
 			{ extends: true, test: { name: 'dom', include: ['__tests__/**/*.dom.spec.ts'], environment: 'jsdom' } },
@@ -38,6 +42,22 @@ export default defineConfig({
 					maxWorkers: '50%',
 					testTimeout: 30_000,
 					sequence: { groupOrder: 1 },
+				},
+			},
+			// The real libraries on this machine (`realCheckouts.ts`): not in `check`, run by `check:full`. One file at a time in one
+			// worker that keeps its modules, so each library is drawn once for the whole run (`realLibrary.ts`) into a folder kept
+			// between runs, and no two builds of one library share a folder at once. No test may take more than five minutes; a
+			// library's first drawing is in its block's set-up, which says how long it took.
+			{
+				extends: true,
+				test: {
+					name: 'library',
+					include: ['__tests__/**/*.library.spec.ts'],
+					fileParallelism: false,
+					isolate: false,
+					testTimeout: 300_000,
+					hookTimeout: 1_800_000,
+					sequence: { groupOrder: 2 },
 				},
 			},
 		],

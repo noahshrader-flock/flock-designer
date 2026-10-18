@@ -11,13 +11,12 @@ import {
 	REAL_PRIMER_SYSTEM,
 	REAL_TREMOR3_SYSTEM,
 	REAL_TREMOR4_SYSTEM,
-	describeWith,
 	libraryUnbuilt,
 	primerMissing,
 	tremor3Missing,
 	tremor4Missing,
 } from './realCheckouts';
-import { onRealLibrary } from './realLibrary';
+import { describeLibrary, onRealLibrary } from './realLibrary';
 
 /**
  * A token's two measurements, held against each other on real libraries: the components whose Values name it (tagging),
@@ -60,7 +59,7 @@ const check = (system: ConnectedDesignSystem) => async () => {
 		const index = await settledAnswer(
 			() => tokens.drawn(),
 			(x) => x.state === 'building',
-			{ within: 1_200_000, every: 1000 },
+			{ within: 240_000, every: 1000 },
 		);
 		if (index.state !== 'ready') throw new Error(`not drawn: ${JSON.stringify(index).slice(0, 300)}`);
 		const { reading, order, values, files } = index.built;
@@ -126,6 +125,6 @@ const LIBRARIES: [string, ConnectedDesignSystem, string | null][] = [
 	['Tremor4', REAL_TREMOR4_SYSTEM, tremor4Missing],
 ];
 for (const [key, system, missing] of LIBRARIES)
-	describeWith(missing, `how far a token reaches, ${key}`, () => {
+	describeLibrary(missing, system, `how far a token reaches, ${key}`, () => {
 		it.runIf(ASKED && findChrome() !== null && (!only || only.includes(key)))('moves every component its Values name', check(system), LIMIT);
 	});

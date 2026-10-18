@@ -7,9 +7,9 @@ import { runToEnd } from '../src/main/services/agent';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type { ConnectedDesignSystem, ValueProperty, ValueSources as Answer } from '../src/shared/contract';
-import { REAL_PRIMER_SYSTEM, describeWith, libraryUnbuilt, primerMissing, REAL_FUI } from './realCheckouts';
+import { REAL_PRIMER_SYSTEM, libraryUnbuilt, primerMissing, REAL_FUI } from './realCheckouts';
 import { settledAnswer } from './fixtures';
-import { onRealLibrary } from './realLibrary';
+import { describeLibrary, onRealLibrary } from './realLibrary';
 
 /**
  * Where a value of a component's own is written (Phase 4), found by its effect on the real libraries on this machine: Flock's
@@ -36,13 +36,13 @@ const sourcesOf = async (
 	const found = await settledAnswer(
 		(): Promise<Answer> => sources.of(file, tried),
 		(a) => a.state === 'building',
-		{ within: 300_000, every: 500 },
+		{ within: 240_000, every: 500 },
 	);
 	return { found, cell };
 };
 const moved = (found: Answer) => (found.state === 'ready' && found.reach.state === 'ready' ? found.reach.moved.map((m) => m.file) : []);
 
-describeWith(libraryUnbuilt, 'on Flock’s FUI, on origin/develop', () => {
+describeLibrary(libraryUnbuilt, REAL_FUI, 'on Flock’s FUI, on origin/develop', () => {
 	it.skipIf(findChrome() === null)(
 		'finds FSButton’s Small height in the one place of the seven it is written, and FSIconButton’s radius in its own seven; a change that writes nothing moves nothing',
 		async () => {
@@ -76,11 +76,10 @@ describeWith(libraryUnbuilt, 'on Flock’s FUI, on origin/develop', () => {
 				expect(moved(radius.found)).not.toContain(button);
 			});
 		},
-		1_800_000,
 	);
 });
 
-describeWith(primerMissing, 'on Primer React, the second library', () => {
+describeLibrary(primerMissing, REAL_PRIMER_SYSTEM, 'on Primer React, the second library', () => {
 	it.skipIf(findChrome() === null)(
 		'finds CounterLabel’s radius in its CSS module, and says Label’s comes from a package, so it cannot be saved yet',
 		async () => {
@@ -100,7 +99,6 @@ describeWith(primerMissing, 'on Primer React, the second library', () => {
 				});
 			});
 		},
-		1_800_000,
 	);
 });
 
@@ -109,7 +107,7 @@ describeWith(primerMissing, 'on Primer React, the second library', () => {
  * (`DSNR_REAL_AGENT=1`), since it runs Claude Code on the person's account and costs a little.
  */
 const agentMissing = process.env.DSNR_REAL_AGENT === '1' ? libraryUnbuilt : 'the agent is run only with DSNR_REAL_AGENT=1 (it costs a little)';
-describeWith(agentMissing, 'the agent on Flock’s FUI', () => {
+describeLibrary(agentMissing, REAL_FUI, 'the agent on Flock’s FUI', () => {
 	it.skipIf(findChrome() === null)(
 		'writes FSBadge’s radius, which MUI sets, as the theme’s override, and makes FSIconButton’s own radius follow the shared one',
 		async () => {
@@ -126,7 +124,7 @@ describeWith(agentMissing, 'the agent on Flock’s FUI', () => {
 					settledAnswer(
 						(): Promise<Answer> => sources.of(file, [t]),
 						(a) => a.state === 'building' || (a.state === 'ready' && a.values[0]?.state === 'writing'),
-						{ within: 900_000, every: 1000 },
+						{ within: 240_000, every: 1000 },
 					);
 				const badge = 'src/components/FSBadge/FSBadge.stories.tsx';
 				const cell = await sourcesOf(tokens, sources, badge, 'radius', null, '6px 6px 6px 6px');
@@ -144,6 +142,5 @@ describeWith(agentMissing, 'the agent on Flock’s FUI', () => {
 				expect(await answerOf(icon, follow)).toMatchObject({ state: 'ready', values: [{ state: 'found', by: 'agent' }] });
 			});
 		},
-		1_800_000,
 	);
 });

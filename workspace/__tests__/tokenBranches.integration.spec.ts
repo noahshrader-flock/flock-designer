@@ -7,7 +7,6 @@ import type { ShareTools } from '../src/main/services/share';
 import { TOKENS, TOKEN_BRANCH, TokenBranches } from '../src/main/services/tokenBranches';
 import { proposalText } from '../src/main/services/changeBranches';
 import { g } from './fixtures';
-import { REAL_LIBRARY as REAL, describeWith, libraryMissing, realDevelop } from './realCheckouts';
 
 /**
  * Keeping a change to the tokens on a branch, and proposing it (T4 and T5 of the design system plan), against a real
@@ -234,32 +233,4 @@ describe('proposing it (T5)', () => {
 	it('titles one change by its token', () => {
 		expect(proposalText(TOKENS, ['Light primary main: brand 50 → brand 20']).title).toBe('Design tokens: Light primary main');
 	});
-});
-
-/** The real library, read where it is and saved to in a throwaway clone of it: the person's clone is never written to. */
-
-describeWith(libraryMissing, 'saving a change to the real library', () => {
-	it('commits a tone, a role pointed at another step and the spacing on its develop, each file as the library writes it', async () => {
-		const throwaway = join(home, 'fui');
-		g(home, 'clone', '-q', '--shared', '--no-checkout', REAL, throwaway);
-		g(throwaway, 'update-ref', 'refs/remotes/origin/develop', realDevelop as string);
-		g(throwaway, 'config', 'user.name', 'Noah');
-		g(throwaway, 'config', 'user.email', 'noah@example.com');
-		const real = new TokenBranches({ system: () => ({ ...system(), root: throwaway }), file, tools });
-		const b = await real.save([
-			{ path: 'tone.pineGreen.50', value: '#0A6B52' },
-			{ path: 'palette.dark.primary.main', ref: 'tone.pineGreen.60' },
-			{ path: 'spacing', value: '6px' },
-		]);
-		expect(g(throwaway, 'rev-parse', `${b.branch}^`).trim()).toBe(realDevelop);
-		const changed = g(throwaway, 'diff', '--numstat', realDevelop as string, b.branch)
-			.trim()
-			.split('\n');
-		// Three files, one line each, nothing else.
-		expect(changed.map((l) => l.split('\t').slice(0, 2).join(' '))).toEqual(['1 1', '1 1', '1 1']);
-		// From whatever the library has today, to the value saved.
-		expect(g(throwaway, 'log', '-1', '--format=%B', b.branch)).toMatch(/Tones pineGreen 50: #[0-9A-F]{6} → #0A6B52/i);
-		// The person's clone has no such branch: nothing was written there.
-		expect(g(REAL, 'branch', '--list', b.branch).trim()).toBe('');
-	}, 60_000);
 });

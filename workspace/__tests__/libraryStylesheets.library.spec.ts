@@ -4,16 +4,8 @@ import type { ComponentTokens } from '../src/main/services/componentTokens';
 import { ValueSources } from '../src/main/services/valueSources';
 import type { ChangeReach, ValueProperty, ValueSources as Sources } from '../src/shared/contract';
 import { settledAnswer } from './fixtures';
-import {
-	REAL_PRIMER_SYSTEM,
-	REAL_TREMOR3_SYSTEM,
-	REAL_TREMOR4_SYSTEM,
-	describeWith,
-	primerMissing,
-	tremor3Missing,
-	tremor4Missing,
-} from './realCheckouts';
-import { onRealLibrary } from './realLibrary';
+import { REAL_PRIMER_SYSTEM, REAL_TREMOR3_SYSTEM, REAL_TREMOR4_SYSTEM, primerMissing, tremor3Missing, tremor4Missing } from './realCheckouts';
+import { describeLibrary, onRealLibrary } from './realLibrary';
 
 /**
  * A library's stylesheets as its own Storybook makes them (Phase 5.5), on two real libraries whose values are in classes:
@@ -26,7 +18,7 @@ const valuesOf = async (tokens: ComponentTokens, file: string) => {
 	const a = await settledAnswer(
 		() => tokens.of(file),
 		(x) => x.state === 'building',
-		{ within: 600_000, every: 500 },
+		{ within: 240_000, every: 500 },
 	);
 	if (a.state !== 'ready' || a.values.state !== 'read') throw new Error(`not read: ${JSON.stringify(a).slice(0, 400)}`);
 	const { rows } = a.values;
@@ -38,7 +30,7 @@ const valuesOf = async (tokens: ComponentTokens, file: string) => {
 	};
 };
 
-describeWith(primerMissing, 'Primer React, which goes dark by a setting its own Storybook declares', () => {
+describeLibrary(primerMissing, REAL_PRIMER_SYSTEM, 'Primer React, which goes dark by a setting its own Storybook declares', () => {
 	it.skipIf(findChrome() === null)(
 		'draws a label and a button dark, though its setting is not the themes addon’s `theme`: read from what its preview declares',
 		async () => {
@@ -57,11 +49,10 @@ describeWith(primerMissing, 'Primer React, which goes dark by a setting its own 
 				}
 			});
 		},
-		1_200_000,
 	);
 });
 
-describeWith(tremor3Missing, 'Tremor on Tailwind 3', () => {
+describeLibrary(tremor3Missing, REAL_TREMOR3_SYSTEM, 'Tremor on Tailwind 3', () => {
 	it.skipIf(findChrome() === null)(
 		'draws its button as its classes say, and its card dark as its Storybook does, through its own configuration',
 		async () => {
@@ -78,14 +69,13 @@ describeWith(tremor3Missing, 'Tremor on Tailwind 3', () => {
 				expect(card.drawn('background', 'dark')).toContain('rgb(17, 24, 39)');
 			});
 		},
-		1_200_000,
 	);
 });
 
 /** The story files a change moved, once what it reaches is drawn. */
 const movedBy = (reach: ChangeReach) => (reach.state === 'ready' ? reach.moved.map((m) => m.file) : []);
 
-describeWith(tremor3Missing, 'Tremor on Tailwind 3, where a value is', () => {
+describeLibrary(tremor3Missing, REAL_TREMOR3_SYSTEM, 'Tremor on Tailwind 3, where a value is', () => {
 	it.skipIf(findChrome() === null)(
 		'finds its button’s radius in its theme’s configuration, a value its classes name, written there, and what else it moves',
 		async () => {
@@ -98,7 +88,7 @@ describeWith(tremor3Missing, 'Tremor on Tailwind 3, where a value is', () => {
 				const found = await settledAnswer(
 					(): Promise<Sources> => sources.of(file, tried),
 					(a) => a.state === 'building',
-					{ within: 600_000, every: 500 },
+					{ within: 240_000, every: 500 },
 				);
 				// `rounded-tremor-default` is 0.5rem in its configuration: found by its effect, its configuration made again with it.
 				expect(found).toMatchObject({
@@ -110,48 +100,39 @@ describeWith(tremor3Missing, 'Tremor on Tailwind 3, where a value is', () => {
 				);
 			});
 		},
-		1_800_000,
 	);
 });
 
-describeWith(tremor4Missing, 'Tremor on Tailwind 4', () => {
-	it.skipIf(findChrome() === null)(
-		'draws its button as its classes say, its radius and spacing the theme’s tokens, and its card dark',
-		async () => {
-			await onRealLibrary(REAL_TREMOR4_SYSTEM, async ({ tokens }) => {
-				const button = await valuesOf(tokens, 'src/components/Button/button.stories.tsx');
-				expect(button.drawn('padding')).toContain('8px 12px');
-				expect(button.drawn('radius')).toContain('6px');
-				expect(button.drawn('fontSize')).toContain('14px');
-				expect(button.drawn('height')).toContain('38px');
-				// Tailwind's theme, which its stylesheet imports, is its tokens: `rounded-md` is `--radius-md`, `px-3` three `--spacing`.
-				expect(button.uses).toEqual(expect.arrayContaining(['css.light.radius-md', 'css.light.spacing']));
-				const card = await valuesOf(tokens, 'src/components/Card/card.stories.tsx');
-				expect(card.drawn('background')).toContain('rgb(255, 255, 255)');
-				expect(card.drawn('background', 'dark')).toContain('rgb(9, 14, 26)');
-			});
-		},
-		1_200_000,
-	);
+describeLibrary(tremor4Missing, REAL_TREMOR4_SYSTEM, 'Tremor on Tailwind 4', () => {
+	it.skipIf(findChrome() === null)('draws its button as its classes say, its radius and spacing the theme’s tokens, and its card dark', async () => {
+		await onRealLibrary(REAL_TREMOR4_SYSTEM, async ({ tokens }) => {
+			const button = await valuesOf(tokens, 'src/components/Button/button.stories.tsx');
+			expect(button.drawn('padding')).toContain('8px 12px');
+			expect(button.drawn('radius')).toContain('6px');
+			expect(button.drawn('fontSize')).toContain('14px');
+			expect(button.drawn('height')).toContain('38px');
+			// Tailwind's theme, which its stylesheet imports, is its tokens: `rounded-md` is `--radius-md`, `px-3` three `--spacing`.
+			expect(button.uses).toEqual(expect.arrayContaining(['css.light.radius-md', 'css.light.spacing']));
+			const card = await valuesOf(tokens, 'src/components/Card/card.stories.tsx');
+			expect(card.drawn('background')).toContain('rgb(255, 255, 255)');
+			expect(card.drawn('background', 'dark')).toContain('rgb(9, 14, 26)');
+		});
+	});
 });
 
-describeWith(tremor4Missing, 'Tremor on Tailwind 4, a token changed', () => {
-	it.skipIf(findChrome() === null)(
-		'moves what uses Tailwind’s radius, declared again in its own stylesheet, and leaves what does not',
-		async () => {
-			await onRealLibrary(REAL_TREMOR4_SYSTEM, async ({ tokens }) => {
-				await valuesOf(tokens, 'src/components/Button/button.stories.tsx');
-				const reach = await settledAnswer(
-					() => tokens.reach([{ path: 'css.light.radius-md', value: '12px' }]),
-					(r) => r.state === 'building',
-					{ within: 600_000, every: 500 },
-				);
-				expect(reach.state).toBe('ready');
-				expect(movedBy(reach)).toContain('src/components/Button/button.stories.tsx');
-				// A component drawn with no radius of Tailwind's own is not one it moves.
-				expect(movedBy(reach)).not.toContain('src/components/Divider/divider.stories.tsx');
-			});
-		},
-		1_800_000,
-	);
+describeLibrary(tremor4Missing, REAL_TREMOR4_SYSTEM, 'Tremor on Tailwind 4, a token changed', () => {
+	it.skipIf(findChrome() === null)('moves what uses Tailwind’s radius, declared again in its own stylesheet, and leaves what does not', async () => {
+		await onRealLibrary(REAL_TREMOR4_SYSTEM, async ({ tokens }) => {
+			await valuesOf(tokens, 'src/components/Button/button.stories.tsx');
+			const reach = await settledAnswer(
+				() => tokens.reach([{ path: 'css.light.radius-md', value: '12px' }]),
+				(r) => r.state === 'building',
+				{ within: 240_000, every: 500 },
+			);
+			expect(reach.state).toBe('ready');
+			expect(movedBy(reach)).toContain('src/components/Button/button.stories.tsx');
+			// A component drawn with no radius of Tailwind's own is not one it moves.
+			expect(movedBy(reach)).not.toContain('src/components/Divider/divider.stories.tsx');
+		});
+	});
 });
