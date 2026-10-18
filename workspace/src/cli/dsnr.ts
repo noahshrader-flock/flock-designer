@@ -34,10 +34,10 @@ import { DESIGN_REPO, PAGES_SIGN_IN } from '../shared/config';
 /**
  * `dsnr`: making a prototype from Claude Code in VS Code, with no app running.
  *
- * The same service the app calls, given this machine's paths instead of the app's: the product checkout the agent is
- * working in, the design repository's clone beside it, and the app's own prototype folder, so a prototype made here
- * is one the app shows, and one made in the app can be saved from here. It writes to the clone only; the app
- * publishes it the next time it is open, as it does every record.
+ * The same service the extension calls, given this machine's paths: the product checkout the agent is working in, the
+ * design repository's clone beside it, and the extension's own prototype folder (`commandLinePrototypes`), so a prototype
+ * made here is one the panel shows, and one made in the panel can be saved from here. It writes to the clone only; the
+ * extension publishes it the next time it is open, as it does every record.
  */
 export interface CliDeps {
 	cwd: string;
@@ -64,6 +64,7 @@ export interface CliDeps {
 
 export { openInBrowser } from '../main/services/openBrowser';
 export { ghApi } from '../main/services/ghCli';
+export { cliDataFolder, commandLinePrototypes } from '../main/services/cliFolder';
 
 const USAGE = `Usage:
   dsnr new-prototype --project <id> --note <what to make> [--title <project title>] [--from <branch>] [--product <dir>]
@@ -246,7 +247,7 @@ const unpublishPage = async (deps: CliDeps, values: { project?: string; name?: s
 	const { projectId, name, designRoot } = page;
 	await unpublish({
 		...page,
-		// This machine's copies too: the app saves a page it finds here and not in the repository, which would put it back.
+		// This machine's copies too, so the panel draws no picture of a page that is gone.
 		removePage: async () => {
 			for (const path of [prototypePagePath(projectId, name), prototypeSourcePath(projectId, name)]) rmSync(join(designRoot, path), { force: true });
 			for (const ext of ['html', 'tsx'] as const) rmSync(localPrototypeFile(deps.prototypesRoot, projectId, name, ext), { force: true });

@@ -2,6 +2,8 @@ import { mkdirSync } from 'node:fs';
 import * as vscode from 'vscode';
 import { networkFetch } from '../../src/host/github';
 import { appPaths } from '../../src/main/appPaths';
+import { cliDataFolder, tellCommandLine } from '../../src/main/services/cliFolder';
+import { settingsFolder } from '../../package.json';
 import { createCore } from '../../src/main/core';
 import { HEADLESS_PICTURE_RECIPE, chromeHeadless } from '../../src/main/services/chromeHeadless';
 import { registerIpc } from '../../src/main/ipc';
@@ -20,6 +22,13 @@ import { vscodePorts } from './vscodePorts';
 export const startCore = (context: vscode.ExtensionContext, panels: Panels, onSignInChanged: (state: SignInState) => void) => {
 	const storage = context.globalStorageUri.fsPath;
 	mkdirSync(storage, { recursive: true });
+	const paths = appPaths(storage);
+	// The `dsnr` command builds its prototypes here too, so a page made from Claude Code is one the panel has.
+	try {
+		tellCommandLine(cliDataFolder(settingsFolder), paths.prototypes);
+	} catch {
+		// A folder that cannot be written leaves the command its own: nothing in the panel depends on it.
+	}
 	// The browser on this machine, headless: for pictures, stories and accessibility checks. Closed with DSNR.
 	const headless = chromeHeadless();
 	const github = new VsCodeGitHub(vscode.authentication, networkFetch, context.globalState, (state) => {
@@ -27,7 +36,7 @@ export const startCore = (context: vscode.ExtensionContext, panels: Panels, onSi
 		onSignInChanged(state);
 	});
 	const core = createCore({
-		paths: appPaths(storage),
+		paths,
 		emit: panels.sink,
 		ports: vscodePorts(vscode, headless),
 		github,

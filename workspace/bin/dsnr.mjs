@@ -8,7 +8,7 @@
  */
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { createRequire } from 'node:module';
-import { homedir, tmpdir } from 'node:os';
+import { tmpdir } from 'node:os';
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -23,14 +23,8 @@ try {
 	process.exit(1);
 }
 
-/** The command's prototype folder: DSNR's data folder in the person's application-data directory, named by the package's `settingsFolder`. */
+/** The command's data folder, in the person's application-data directory, named by the package's `settingsFolder`. */
 const pkg = JSON.parse(readFileSync(join(workspace, 'package.json'), 'utf8'));
-const appData =
-	process.platform === 'darwin'
-		? join(homedir(), 'Library', 'Application Support')
-		: process.platform === 'win32'
-			? (process.env.APPDATA ?? join(homedir(), 'AppData', 'Roaming'))
-			: (process.env.XDG_CONFIG_HOME ?? join(homedir(), '.config'));
 
 const out = mkdtempSync(join(tmpdir(), 'dsnr-'));
 try {
@@ -49,12 +43,13 @@ try {
 		plugins: [pageCodeEsbuild()],
 		logLevel: 'error',
 	});
-	const { main, ghApi, openInBrowser } = await import(pathToFileURL(file).href);
+	const { main, ghApi, openInBrowser, cliDataFolder, commandLinePrototypes } = await import(pathToFileURL(file).href);
 	process.exitCode = await main(process.argv.slice(2), {
 		cwd: process.cwd(),
 		out: (text) => console.log(text),
 		err: (text) => console.error(text),
-		prototypesRoot: join(appData, pkg.settingsFolder, 'prototypes'),
+		// The extension's prototypes, where it said they are, so the panel and the command keep one set.
+		prototypesRoot: commandLinePrototypes(cliDataFolder(pkg.settingsFolder)),
 		esbuild,
 		// As it would be typed where it is run, so the commands it prints match what a repository's settings allow.
 		self: ['node', relative(process.cwd(), fileURLToPath(import.meta.url))],
