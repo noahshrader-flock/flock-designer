@@ -10,8 +10,8 @@ import { Icon } from './Icon';
 interface ToggleOption<Value extends string> {
 	value: Value;
 	label: string;
-	/** A codicon's name: `folder-library` for `codicon-folder-library`. */
-	icon: string;
+	/** A codicon's name: `folder-library` for `codicon-folder-library`. Without one, the option is its words alone. */
+	icon?: string;
 }
 
 export const Toggle = <Value extends string>({
@@ -58,7 +58,7 @@ export const Toggle = <Value extends string>({
 					onClick={() => onChange(o.value)}
 					{...(iconOnly ? { 'aria-label': o.label, title: o.label } : {})}
 				>
-					<Icon name={o.icon} />
+					{o.icon !== undefined && <Icon name={o.icon} />}
 					{!iconOnly && <span className="toggle-label">{o.label}</span>}
 				</button>
 			))}

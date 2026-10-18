@@ -28,9 +28,9 @@ import type { Part, View } from './vscode';
 
 /** The design system's two parts in the panel: its components, which it starts on, and its tokens. */
 const PARTS = [
-	{ value: 'components', label: 'Components', icon: 'extensions' },
-	{ value: 'tokens', label: 'Tokens', icon: 'symbol-color' },
-] as const satisfies { value: Part; label: string; icon: string }[];
+	{ value: 'components', label: 'Components' },
+	{ value: 'tokens', label: 'Tokens' },
+] as const satisfies { value: Part; label: string }[];
 
 /** Whether the panel's Changes dialog is open, and opening and closing it: the panel's, so a component's tab can ask for it. */
 export interface ChangesDialog {
@@ -73,11 +73,12 @@ const Problems = ({ problems, onClose }: { problems: Extract<Catalog, { state: '
 );
 
 /**
- * The design system, read (6.1): its name, its branch under it, and its menu (Sync, then Primitives and the voice and tone) beside the
- * name, with a count of the values not read as a button that opens them; what else is wrong with it if anything (an
- * update that failed), what has been changed and its branch, then Components or Tokens. The change to
- * the tokens being tried is the extension's (`edits`), so its tabs see it too; every token row here shows the tokens as
- * changed, and a token that can be changed opens its control when pressed (6.2).
+ * The design system, read (6.1): its name, its branch under it, and beside the name the count of changes being tried and
+ * the count of values not read (each a button that opens them, there only when there is one), then its menu (Sync, then
+ * Primitives and the voice and tone); what else is wrong with it if anything (an update that failed), what has been
+ * changed and its branch, then Components or Tokens. The change to the tokens being tried is the extension's (`edits`),
+ * so its tabs see it too; every token row here shows the tokens as changed, and a token that can be changed opens its
+ * control when pressed (6.2).
  */
 const Ready = ({
 	catalog,
@@ -113,12 +114,13 @@ const Ready = ({
 	// The token whose control is open: the one whose row or swatch was pressed.
 	const [editing, setEditing] = useState<DesignToken | null>(null);
 	// Every change being tried, in a dialog from their count beside the not-read one, so nothing opens above the list: the
-	// tokens, then each component with values tried on this commit, or a branch of its values kept, or handed to Claude Code
-	// (asked for once it opens).
+	// tokens, then each component with values tried on this commit, or a branch of its values kept, or handed to Claude Code.
 	const { trials } = useValueTrials();
 	const [keptFiles, setKeptFiles] = useState<string[]>([]);
+	// What is kept is asked again whenever what is being tried starts or ends (a branch kept ends a trial), as the count
+	// shows it, and when the dialog opens; not at every value moved.
+	const tried = [edits.length > 0, ...Object.keys(trials).sort()].join('\n');
 	useEffect(() => {
-		if (!changesDialog.open) return;
 		let live = true;
 		void Promise.all([window.workspace.valueBranchFiles(), window.workspace.handoffFiles()]).then(
 			([saved, handed]) => live && setKeptFiles([...(saved.ok ? saved.value : []), ...(handed.ok ? handed.value : [])]),
@@ -126,10 +128,12 @@ const Ready = ({
 		return () => {
 			live = false;
 		};
-	}, [changesDialog.open]);
+	}, [changesDialog.open, catalog.commit, tried]);
 	const triedOnIt = (file: string) => triedOn(trials, file, catalog.commit);
 	const changed = catalog.components.filter((c) => triedOnIt(c.id).length > 0 || keptFiles.includes(c.id));
-	const count = edits.length + catalog.components.reduce((n, c) => n + triedOnIt(c.id).length, 0);
+	// What the dialog lists, counted: each value tried, and the tokens (`''`) or a component with a branch kept or handed
+	// over and nothing tried, once.
+	const count = (edits.length || (keptFiles.includes('') ? 1 : 0)) + changed.reduce((n, c) => n + Math.max(triedOnIt(c.id).length, 1), 0);
 	const notRead = catalog.tokens.problems.length;
 	// Whether the library has a dark (its tokens have a Dark group): only then is a color mode offered.
 	const hasDark = catalog.tokens.tokens.some(isDark);
@@ -137,6 +141,7 @@ const Ready = ({
 		<TokenChangesProvider value={changes}>
 			<ShowingContext.Provider value={catalog.showing}>
 				<DesignSystemHeader name={name} branch={catalog.branch}>
+					{count > 0 && <Badge tone="brand" count={count} label={`${plural(count, 'change')} being tried`} onPress={changesDialog.onOpen} />}
 					{notRead > 0 && (
 						<Badge
 							tone="warning"
@@ -145,13 +150,6 @@ const Ready = ({
 							onPress={() => setProblems(true)}
 						/>
 					)}
-					{/* Always there, so nothing moves when the first change is made: muted with none, the brand's with some. */}
-					<Badge
-						tone={count > 0 ? 'brand' : 'neutral'}
-						count={count}
-						label={`${plural(count, 'change')} being tried`}
-						onPress={changesDialog.onOpen}
-					/>
 					<Menu
 						label="Design system actions"
 						size="small"

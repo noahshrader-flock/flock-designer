@@ -1325,6 +1325,8 @@ describe('Design System', () => {
 			['Components', 'true'],
 			['Tokens', 'false'],
 		]);
+		// Words alone: no icon before Components or Tokens.
+		expect(parts().querySelector('.codicon')).toBeNull();
 		// Its menu: Sync first, then a divider, then what needs the editor's room: Primitives, and the voice and tone, a
 		// document of its own. Always there, small, not only on hover as a row's is; and no button of Sync's own beside it.
 		expect(body().querySelector('.ds-actions [aria-label="Sync with GitHub"]')).toBeNull();
@@ -1550,17 +1552,25 @@ describe('Design System', () => {
 		expect(bubble.textContent).toBe('1');
 		expect(bubble.className).toBe('badge badge-warning badge-button');
 		expect(body().querySelector('.note .link')).toBeNull();
+		// In the row the changes count comes first, then what is not read, then the menu.
+		await say({ type: 'token-edits', edits: [{ path: 'tone.pineGreen.60', value: '#000000' }] });
+		const order = [...body().querySelectorAll('.ds-actions > *')].map((e) => e.getAttribute('aria-label') ?? e.className);
+		expect(order.slice(0, 2)).toEqual(['1 change being tried', '1 value in its token files is not read']);
+		expect(body().querySelector('.ds-actions')?.lastElementChild?.matches('.menu, .menu *, [aria-label="Design system actions"]')).toBe(true);
 		await press(bubble);
 		const dialog = document.querySelector('[role="dialog"]') as HTMLElement;
 		expect(dialog.textContent).toContain('src/colors/tones.ts:9 A value worked out as it runs.');
 	});
 
-	it('has no not-read bubble when every value is read, and the changes count always, muted with none', async () => {
+	it('has no not-read bubble when every value is read, and no changes count until something is being tried, then always the brand’s', async () => {
 		await read();
 		expect(body().querySelector('.ds-actions .badge-warning')).toBeNull();
-		const changes = body().querySelector('.ds-actions [aria-label="0 changes being tried"]') as HTMLElement;
-		expect(changes.textContent).toBe('0');
-		expect(changes.classList.contains('badge-brand')).toBe(false);
+		expect(body().querySelector('.ds-actions [aria-label$="being tried"]')).toBeNull();
+		await say({ type: 'token-edits', edits: [{ path: 'tone.pineGreen.60', value: '#000000' }] });
+		const changes = body().querySelector('.ds-actions [aria-label="1 change being tried"]') as HTMLElement;
+		expect(changes.classList.contains('badge-brand')).toBe(true);
+		await say({ type: 'token-edits', edits: [] });
+		expect(body().querySelector('.ds-actions [aria-label$="being tried"]')).toBeNull();
 	});
 
 	it('says when the design system is no longer on this computer, and offers to locate it', async () => {
@@ -1636,12 +1646,32 @@ describe('every change being tried, in the panel’s Changes: the tokens and eac
 
 	it('lists a component with a branch of its values kept and nothing tried, and puts its values back, as opening its tab does', async () => {
 		await designOpen();
-		await press(count());
+		// Asked as the panel opens, so the count is there for it: a branch kept with nothing tried is a change in the Changes.
 		await answer('valueBranchFiles', [BUTTON]);
 		await answer('handoffFiles', []);
+		await press(count());
 		await answer('valueBranch', { branch: 'dsnr/values-20261016-ab12', saved: [SMALL], saves: 1, pullRequest: null });
 		expect(trialsSaid().at(-1)).toEqual({ type: 'value-trial', file: BUTTON, commit: 'abc123', values: [SMALL] });
 		expect(group()).not.toBeNull();
+	});
+
+	it('counts what it lists, kept up as a trial ends: its values kept as a branch are still one change', async () => {
+		await designOpen();
+		await answer('valueBranchFiles', []);
+		await answer('handoffFiles', []);
+		expect(count()).toBeNull();
+		await say({ type: 'value-trials', trials: { [BUTTON]: { commit: 'abc123', values: [SMALL] } } });
+		expect(count().getAttribute('aria-label')).toBe('1 change being tried');
+		// A value moved is not a trial started or ended: what is kept is not asked again for it.
+		const asked = calls('valueBranchFiles').length;
+		await say({ type: 'value-trials', trials: { [BUTTON]: { commit: 'abc123', values: [{ ...SMALL, value: '36px' }] } } });
+		expect(calls('valueBranchFiles')).toHaveLength(asked);
+		// Its values kept as a branch: the trial ends, what is kept is asked again, and the branch is the one change.
+		await say({ type: 'value-trials', trials: {} });
+		expect(calls('valueBranchFiles')).toHaveLength(asked + 1);
+		await answer('valueBranchFiles', [BUTTON]);
+		await answer('handoffFiles', []);
+		expect(count().getAttribute('aria-label')).toBe('1 change being tried');
 	});
 
 	it('opens when a component’s tab asks for it, on the Design System tab', async () => {
@@ -1721,6 +1751,8 @@ describe('every change being tried, in the panel’s Changes: the tokens and eac
 
 		it('lists each file the branch changed, flags what the rules keep out, and proposes it only on a deliberate yes', async () => {
 			await designOpen();
+			await answer('valueBranchFiles', []);
+			await answer('handoffFiles', ['']);
 			await press(count());
 			await answerFor('handoffBranch', null, { branch: BRANCH, lines: ['primary: #000000'], review: READY, pullRequest: null });
 			expect(handoff()?.querySelector('.branch-line')?.textContent).toBe(`${BRANCH} · 2 commits`);
@@ -1747,6 +1779,8 @@ describe('every change being tried, in the panel’s Changes: the tokens and eac
 
 		it('proposes an unflagged branch in one press', async () => {
 			await designOpen();
+			await answer('valueBranchFiles', []);
+			await answer('handoffFiles', ['']);
 			await press(count());
 			const clean = { ...READY, files: [READY.files[0]] };
 			await answerFor('handoffBranch', null, { branch: BRANCH, lines: [], review: clean, pullRequest: null });
@@ -1811,9 +1845,9 @@ describe('every change being tried, in the panel’s Changes: the tokens and eac
 
 		it('lists a component handed over with nothing tried, by its own hand-over', async () => {
 			await designOpen();
-			await press(count());
 			await answer('valueBranchFiles', []);
 			await answer('handoffFiles', ['', BUTTON]);
+			await press(count());
 			await answer('valueBranch', null);
 			await answerFor('handoffBranch', BUTTON, {
 				branch: BRANCH,
