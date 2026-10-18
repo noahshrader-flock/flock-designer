@@ -373,7 +373,8 @@ describe('commenting on the page', () => {
 		await settle();
 		await press(button(/^Show all comments/));
 		await settle();
-		const said = (text: string) => cards().find((c) => c.textContent?.includes(text))?.textContent ?? '';
+		expect(cards()).toHaveLength(3);
+		const said = (text: string) => cards().find((c) => c.textContent?.includes(text))?.textContent as string;
 		expect(said('On an earlier page')).toContain('The page has changed since this was written.');
 		expect(said('On this page')).not.toContain('has changed since');
 		expect(said('From before')).not.toContain('has changed since');

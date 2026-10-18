@@ -53,7 +53,7 @@ beforeEach(() => {
 		'# Alerts <history>\n\nA list.\n',
 		[
 			record('v1', { createdAt: '2026-10-01T10:00:00Z', contributors: [{ name: 'Noah Shrader', login: 'noah' }] }),
-			record('v3', { createdAt: '2026-10-03T10:00:00Z', contributors: [{ name: 'Pat', login: 'pat' }] }),
+			record('v3', { createdAt: '2026-10-03T10:00:00Z', contributors: [{ name: 'Pat', login: 'pat' }], from: 'v1' }),
 			record('v2', { createdAt: '2026-10-02T10:00:00Z' }),
 			// Codebase work is not a page.
 			{ name: 'codebase', branch: 'feature/alpha', commit: null, note: '' },
@@ -277,9 +277,9 @@ describe('comments on the page', () => {
 			name: 'v3',
 			title: 'Alerts <history>',
 			projectHref: '../',
-			// Every version is a step away, from this page, the newest first.
+			// Every version is a step away, from this page, the newest first, with the one each was started from.
 			versions: [
-				{ name: 'v3', href: '../v3/' },
+				{ name: 'v3', href: '../v3/', from: 'v1' },
 				{ name: 'v2', href: '../v2/' },
 				{ name: 'v1', href: '../v1/' },
 			],

@@ -120,6 +120,7 @@ describe('where a change to a prototype goes', () => {
 	});
 
 	it('makes it in a new version only when one was asked for, whoever has commented', () => {
+		for (const others of [3, null]) expect(whereTheChangeGoes(change({ fresh: true, target: 'v4', others }))).toMatch(/^A new version was asked for/);
 		expect(whereTheChangeGoes(change({ fresh: true, target: 'v4', others: 0 }))).toMatch(
 			/^A new version was asked for: the change is made in v4, a new version from v2, which starts as a copy of it\./,
 		);
