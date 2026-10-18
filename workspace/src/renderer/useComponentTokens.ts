@@ -2,8 +2,6 @@ import { useState } from 'react';
 import type { ComponentTokens, TokenUsers } from '../shared/contract';
 import { useTriedAnswer } from './useTriedAnswer';
 
-/** How many of the values a component sets itself are listed before the rest: counted in the app, kept to open in VS Code. */
-export const MOST_LISTED = 8;
 /** How many of the other components that share a token are named on its row. */
 const MOST_NAMED = 3;
 

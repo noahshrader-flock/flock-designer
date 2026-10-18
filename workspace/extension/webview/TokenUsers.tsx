@@ -1,12 +1,10 @@
-import type { CatalogComponent, DesignToken } from '../../src/shared/contract';
+import type { CatalogComponent, DesignToken, TokenUser } from '../../src/shared/contract';
 import { plural } from '../../src/shared/plural';
 import { isEditable } from '../../src/shared/primitives';
 import { useChangeReach } from '../../src/renderer/useChangeReach';
-import { MOST_LISTED, useTokenUsers } from '../../src/renderer/useComponentTokens';
+import { useTokenUsers } from '../../src/renderer/useComponentTokens';
 import { useTokenChanges } from '../../src/renderer/tokenChanges';
-import { Disclosure } from './ui/Disclosure';
-
-type User = { file: string; uses: number; values: number };
+import { ShortList } from './ui/ShortList';
 
 /**
  * The components that draw with a token, in its control: each by name, which opens its tab, with how many of its values the
@@ -21,7 +19,7 @@ export const TokenUsers = ({ token, components, onOpen }: { token: DesignToken; 
 	if (!isEditable(token)) return null;
 	const names = new Map(components.map((c) => [c.id, c.name]));
 	const moved = reach.state === 'ready' ? new Set(reach.moved.map((m) => m.file)) : null;
-	const row = (u: User) => (
+	const row = (u: TokenUser) => (
 		<li key={u.file} className="token" data-token-user={u.file} data-moved={moved?.has(u.file) ? '' : undefined}>
 			<button type="button" className="token-line token-line-flush token-button" onClick={() => onOpen(u.file)}>
 				<span className="token-name">{names.get(u.file) ?? u.file}</span>
@@ -48,12 +46,7 @@ export const TokenUsers = ({ token, components, onOpen }: { token: DesignToken; 
 						{reach.state === 'building' && '; drawing the change to see which move'}
 						{reach.state === 'failed' && '; which move could not be drawn'}
 					</p>
-					<ul className="tokens">{answer.users.slice(0, MOST_LISTED).map(row)}</ul>
-					{answer.users.length > MOST_LISTED && (
-						<Disclosure label={`Show ${answer.users.length - MOST_LISTED} more`}>
-							<ul className="tokens">{answer.users.slice(MOST_LISTED).map(row)}</ul>
-						</Disclosure>
-					)}
+					<ShortList items={answer.users} row={row} />
 				</>
 			)}
 		</section>

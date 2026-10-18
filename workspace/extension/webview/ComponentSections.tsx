@@ -4,7 +4,7 @@ import { plural } from '../../src/shared/plural';
 import { inOrder } from '../../src/shared/primitives';
 import { labelOf } from '../../src/shared/tokens';
 import { useTokenChanges } from '../../src/renderer/tokenChanges';
-import { MOST_LISTED, sharedWith, useComponentTokens } from '../../src/renderer/useComponentTokens';
+import { sharedWith, useComponentTokens } from '../../src/renderer/useComponentTokens';
 import { useComponentVariants } from '../../src/renderer/useComponentVariants';
 import { AccessibilityFindings } from './Accessibility';
 import { TokenChanges } from './Changed';
@@ -14,9 +14,9 @@ import { ValueChanges } from './ValueChanges';
 import { Grouped, type TokenActions } from './Tokens';
 import { AsidePart } from './ui/AsidePart';
 import { Dialog } from './ui/Dialog';
-import { Disclosure } from './ui/Disclosure';
 import { InfoTip } from './ui/InfoTip';
 import { Notice } from './ui/Notice';
+import { ShortList } from './ui/ShortList';
 import { Swatch } from './ui/Swatch';
 
 type Ready = Extract<ComponentTokens, { state: 'ready' }>;
@@ -85,20 +85,7 @@ export const TokensUsed = ({
 				{inOrder(answer.notTokens, (n) => n.kind).map(([kind, values]) => (
 					<div key={kind} data-not-token-kind={kind}>
 						<h4 className="token-set-name">{KINDS[kind]}</h4>
-						<ul className="tokens">
-							{values.slice(0, MOST_LISTED).map((n) => (
-								<NotToken key={n.value} value={n} />
-							))}
-						</ul>
-						{values.length > MOST_LISTED && (
-							<Disclosure label={`Show ${values.length - MOST_LISTED} more`}>
-								<ul className="tokens">
-									{values.slice(MOST_LISTED).map((n) => (
-										<NotToken key={n.value} value={n} />
-									))}
-								</ul>
-							</Disclosure>
-						)}
+						<ShortList items={values} row={(n) => <NotToken key={n.value} value={n} />} />
 					</div>
 				))}
 			</div>
