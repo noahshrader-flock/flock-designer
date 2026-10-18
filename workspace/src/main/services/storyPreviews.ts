@@ -154,18 +154,21 @@ import { createRoot } from 'react-dom/client';
 import { flushSync } from 'react-dom';
 import { composeStories, setProjectAnnotations } from '@storybook/react';
 ${preview === null ? '' : `import * as preview from ${JSON.stringify(fromEntry(preview))};`}
-// Dark as the library's Storybook draws it (Phase 5.5): its themes addon's \`theme\` global, and any global the library's own
-// preview declares in its toolbar with a dark option (Primer's \`colorScheme\`), beside the page's color scheme (which the
-// page's theme script answers from its address). Given as Storybook 8.2 and later take it (\`initialGlobals\`) and as earlier
-// ones do (\`globals\`).
+// Dark as the library's Storybook draws it, when the page is in dark (its theme script answers from its address): its themes
+// addon's \`theme\` global, and every global the library's preview declares with a \`dark\` option in its toolbar (Primer's
+// \`colorScheme\`), declared as a named export or on its default one. Given as Storybook 8.2 and later take it
+// (\`initialGlobals\`) and as earlier ones do (\`globals\`).
+const darkGlobals = (declared) => {
+	const dark = { theme: 'dark' };
+	for (const [name, type] of Object.entries(declared)) {
+		const value = (type?.toolbar?.items ?? []).map((item) => (typeof item === 'string' ? item : item?.value)).find((v) => typeof v === 'string' && v.toLowerCase() === 'dark');
+		if (value !== undefined) dark[name] = value;
+	}
+	return dark;
+};
 const annotations = [${preview === null ? '' : 'preview'}];
 if (matchMedia('(prefers-color-scheme: dark)').matches) {
-	const dark = { theme: 'dark' };
-	for (const [name, type] of Object.entries(${preview === null ? '{}' : '(preview.globalTypes ?? {})'})) {
-		const values = ((type && type.toolbar && type.toolbar.items) || []).map((item) => (typeof item === 'string' ? item : item && item.value)).filter((value) => typeof value === 'string');
-		const hit = values.find((value) => value.toLowerCase() === 'dark') ?? values.find((value) => /dark/i.test(value));
-		if (hit !== undefined) dark[name] = hit;
-	}
+	const dark = darkGlobals(${preview === null ? '{}' : '{ ...preview.default?.globalTypes, ...preview.globalTypes }'});
 	annotations.push({ initialGlobals: dark, globals: dark });
 }
 if (annotations.length > 0) setProjectAnnotations(annotations);

@@ -242,6 +242,21 @@ describe('building the previews', () => {
 		expect(given()[1]).toEqual({ initialGlobals: { theme: 'dark' }, globals: { theme: 'dark' } });
 	});
 
+	it('tells it dark in every setting its preview declares a dark option for, on its default export or its own, and no other', async () => {
+		const items = (...values: string[]) => ({ toolbar: { items: values.map((value) => ({ value, title: value })) } });
+		makeLibrary({
+			...LIBRARY,
+			'.storybook/preview.tsx': `export const globalTypes = ${JSON.stringify({ colorScheme: items('light', 'dark', 'dark_dimmed') })};
+export default { globalTypes: ${JSON.stringify({ mode: { toolbar: { items: ['light', 'Dark'] } }, locale: items('en', 'fr'), contrast: items('dark_high') })} };
+`,
+		});
+		const base = await ready(previews());
+		const given = () => (globalThis as { projectAnnotations?: unknown[] }).projectAnnotations ?? [];
+		await render(base, 'src/components/FSOne/FSOne.stories.tsx', { dark: true });
+		const dark = { theme: 'dark', colorScheme: 'dark', mode: 'Dark' };
+		expect(given()[1]).toEqual({ initialGlobals: dark, globals: dark });
+	});
+
 	it('builds a library with no Storybook preview set-up, rendering its stories plainly', async () => {
 		const { ['.storybook/preview.tsx']: _, ...noPreview } = LIBRARY;
 		makeLibrary(noPreview);
