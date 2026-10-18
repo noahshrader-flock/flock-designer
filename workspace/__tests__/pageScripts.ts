@@ -1,9 +1,9 @@
-import PAGE from '../src/page/index?page';
+import PAGE from './pageEntry?page';
 import type { MarkerRequest } from '../src/shared/contract';
 
 /**
- * What the app runs *inside* a preview page, as the text of a script: the page code (`src/page`), bundled once, then the
- * one call each needs, all in a function of its own so nothing of it is left on the page's window but the hooks it is
+ * The page code (`src/page`) as the tests run it inside a page, as the text of a script (`pageEntry.ts`), bundled once, then
+ * the one call each needs, all in a function of its own so nothing of it is left on the page's window but the hooks it is
  * called by (`src/page/window.d.ts`).
  *
  * Text, not functions: a script is run in another process, so it is sent as source. Each script returns its result to

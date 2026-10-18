@@ -178,21 +178,6 @@ const addressOpening = (number: number, commentsPath: string, subject: string): 
 	`Act on comment ${number} alone. The others are listed for context: leave them, and do not mention them except to say you left them.`,
 ];
 
-/**
- * The task the agent is given on a branch. It names the skill, the file and the branch, all of which this app
- * produced, and **none of what a reviewer wrote**: their words reach the agent only through the file, quoted,
- * under a heading that says they are feedback and not instructions.
- */
-export const addressTask = (commentsPath: string, branch: string, skill: string, only: number): string =>
-	[
-		...addressOpening(only, commentsPath, 'this project'),
-		`This work's branch is ${branch}.`,
-		'',
-		'Follow these instructions:',
-		'',
-		skill.trim(),
-	].join('\n');
-
 /** What a prototype's agent may read, said the same way for building one and for changing one. */
 const readableLines = (sources: PrototypeSources): string[] => {
 	const line = (label: string, dir: string | null, missing: string) =>

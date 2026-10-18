@@ -50,12 +50,6 @@ export const asRoute = (v: unknown): string | null => {
 	return path;
 };
 
-/**
- * One plain file or folder name, never a path. Project ids and record names reach the main process from the window and
- * are joined onto a folder or a repository address, so they are checked before they are used for either.
- */
-export const isRecordName = (n: unknown): n is string => typeof n === 'string' && /^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/.test(n) && !n.includes('..');
-
 /** A picture's hash, as a record names it (`contentHashOf` of the page): twelve lower-case hex digits, nothing else. */
 const COVER = /^[0-9a-f]{12}$/;
 

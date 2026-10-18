@@ -71,9 +71,6 @@ export const fromBrief = (projectId: string, brief: string | null): { title: str
 /** A brief as a person reads it: without its front matter. */
 export const briefBody = (markdown: string): string => frontMatterOf(markdown).body;
 
-/** A record's text as a person is shown it: the brief without its front matter, every other record as it is. */
-export const shownRecord = (name: string, text: string): string => (name === 'brief.md' ? briefBody(text) : text);
-
 /**
  * A brief with its project in `folder`, or in none for null: only the folder's line changes, anything else in the front
  * matter is kept, and a brief left with nothing in it is as it was before it had a folder.

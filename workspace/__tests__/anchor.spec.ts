@@ -3,7 +3,6 @@ import {
 	RESOLVED_MARK,
 	addressedAt,
 	addressedIn,
-	assertPreviewUrl,
 	composeBody,
 	isResolved,
 	parseAnchor,
@@ -86,16 +85,6 @@ describe('sanitizeAnchor', () => {
 		expect(sanitizeAnchor({ route: 'users', selector: 'x' })).toBeNull();
 		expect(sanitizeAnchor({ route: '/x', selector: '' })).toBeNull();
 	});
-});
-
-describe('assertPreviewUrl', () => {
-	it('accepts a local dev server and a shared https preview', () => {
-		expect(assertPreviewUrl('http://localhost:3000/')).toBe('http://localhost:3000/');
-		expect(assertPreviewUrl('https://pr-12.preview.example.com/a')).toContain('https://');
-	});
-	it.each(['file:///etc/passwd', 'javascript:alert(1)', 'http://example.com', 'https://user:pw@example.com', 'nonsense'])('refuses %s', (u) =>
-		expect(() => assertPreviewUrl(u)).toThrow(),
-	);
 });
 
 describe('addressed marker', () => {

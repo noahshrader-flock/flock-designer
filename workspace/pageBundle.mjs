@@ -12,7 +12,7 @@ export const bundlePage = async (entry) => {
 		bundle: true,
 		write: false,
 		format: 'iife',
-		// What the scripts call it by: `__fdPage.pick()`, and so on (`shared/pageScripts.ts`).
+		// What the scripts call it by: `__fdPage.pick()`, and so on (`__tests__/pageScripts.ts`).
 		globalName: '__fdPage',
 		platform: 'browser',
 		// The browsers a reviewer opens the published site in, and the app's own.

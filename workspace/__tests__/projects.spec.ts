@@ -17,7 +17,7 @@ import {
 	withCovers,
 } from '../src/shared/projectList';
 import { isPrototypeName, commentsFromOthers, nextVersionName, parseVersion, prototypeName } from '../src/shared/prototypeNames';
-import { PROJECT_ID, asDate, asRoute, isRecordName, slugify, asCover } from '../src/shared/validate';
+import { PROJECT_ID, asDate, asRoute, slugify, asCover } from '../src/shared/validate';
 import { codeLink, workLabel, workOf } from '../src/shared/work';
 import { readFolderProjects } from '../src/main/services/localProjects';
 import { aProject, projectWork } from './fixtures';
@@ -281,16 +281,6 @@ describe('slugify', () => {
 
 	it('gives an empty id for a name with nothing usable in it, so Create stays disabled', () => {
 		expect(slugify('   ---   ')).toBe('');
-	});
-});
-
-describe('isRecordName', () => {
-	it('accepts the names a project folder holds', () => {
-		for (const n of ['brief.md', 'context-receipt.md', 'work.json', 'role-comparison']) expect(isRecordName(n)).toBe(true);
-	});
-
-	it('refuses anything that is a path, a hidden file or not a name, since it is joined onto a folder and an address', () => {
-		for (const n of ['../brief.md', 'a/b.md', '..', '.env', '', 'a..b', 'brief.md\n', 7, null]) expect(isRecordName(n)).toBe(false);
 	});
 });
 

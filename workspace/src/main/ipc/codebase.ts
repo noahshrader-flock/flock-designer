@@ -6,10 +6,8 @@ import { lastVerdict } from '../../shared/handoff';
 import { workLabel } from '../../shared/work';
 import { arg, handle } from '../handle';
 import { A11Y_COMMAND, productTarget, taskAccessibility } from '../services/accessibilityBrief';
-import { ADDRESS_SKILL, prepareAddress } from '../services/address';
 import { type AgentExtras, agentReadiness } from '../services/agent';
 import { type CheckoutParts, codebaseTask, guidePart, handoffTask, buildInCodebaseTask } from '../services/agentTasks';
-import { projectTitle } from '../services/commentsExport';
 import { designSystemCheckout, readDescriptor } from '../services/descriptor';
 import { recordsRootFor } from '../services/discovery';
 import { handToClaude } from '../services/editor';
@@ -30,7 +28,6 @@ export const registerCodebase = (d: IpcDeps): void => {
 		agentBusy,
 		checkout,
 		codebase,
-		designRepo,
 		ports,
 		prototypeAccessibility,
 		prototypePage,
@@ -157,28 +154,6 @@ export const registerCodebase = (d: IpcDeps): void => {
 	handle('agentReadiness', [], () => agentReadiness());
 	// One click: read the comments now, write the file from that read, then start the agent. Nothing
 	// a reviewer wrote is put in the task; it reaches the agent only through the file.
-	handle('addressComments', [checkout, arg.projectId, arg.codebaseName, arg.comment], async (workIn, projectId, name, comment) => {
-		// There is no batch: a request with no comment is a mistake, not a request for all of them.
-		const { canonical, recordsRoot } = workIn;
-		const codebaseRecord = await recordedWork(canonical, recordsRoot, workIn.descriptor, projectId, name);
-		const skill = await readDesignFile(ADDRESS_SKILL);
-		const prepared = await prepareAddress(
-			{
-				readComments: () => designRepo.threads.readComments(codebaseRecord.branch),
-				checkout: () => readCheckout(canonical),
-				agentRunning: agentBusy,
-				skill: () => skill,
-				title: projectTitle(recordsRoot, projectId),
-			},
-			{ recordsRoot, projectId, work: codebaseRecord, comment },
-		);
-		const { parts, readOnly } = await checkoutParts(canonical, projectId);
-		return startTracked(canonical, projectId, codebaseTask({ unattended: null, task: prepared.task }, parts), {
-			branch: null,
-			addDirs: [recordsRoot],
-			readOnly,
-		});
-	});
 	// Sharing. The branch comes from this person's own record, never from the window, and
 	// the repository's descriptor says what a share is. Starts and returns: it takes minutes.
 	handle('shareWork', [checkout, arg.projectId, arg.codebaseName], async (workIn, projectId, name) => {

@@ -168,14 +168,6 @@ export interface WorkspaceApi {
 	shareWork(root: string, projectId: string, name: string): Promise<Result<ShareStatus>>;
 	onShareStatus(listener: (status: ShareStatus) => void): () => void;
 
-	/**
-	 * Asks the agent to act on one comment, named by its id: the work's comments are read from GitHub now and written
-	 * to `comments.md`, then the agent is started on that one. There is no batch: comments are not alike, and the designer
-	 * picks the one that is a clear change. Refused if the agent is busy, the checkout is not on this work's branch,
-	 * the tree is dirty, or the comment is not open. Progress is the agent's own (`agentStatus`, `onAgentLog`).
-	 */
-	addressComments(root: string, projectId: string, name: string, comment: CommentRef): Promise<Result<AgentStatus>>;
-
 	/** Hands the task to the locally installed agent. Never bundles credentials. */
 	startAgent(root: string, projectId: string, task: string): Promise<Result<AgentStatus>>;
 	agentStatus(): Promise<Result<AgentStatus>>;
@@ -215,8 +207,6 @@ export interface WorkspaceApi {
 	finishPrototypeAddress(comment: CommentRef): Promise<Result<PrototypeAddressed>>;
 	/** Whether the version is on its published page, asked of GitHub. */
 	publishedPage(projectId: string, name: string): Promise<Result<PageStatus>>;
-	/** Opens the version's published page in the person's browser. Its address is worked out there, not taken from here. */
-	openPublishedPage(projectId: string, name: string): Promise<Result<null>>;
 	/**
 	 * Publishes the version now: the same publish that runs by itself when it is saved, asked for after one stopped, or
 	 * before it would. Says how the page stands once it has started.
@@ -265,8 +255,6 @@ export interface WorkspaceApi {
 	projectCover(projectId: string, name: string, cover: string): Promise<Result<string | null>>;
 	/** A review thread's comments. `branch`: the work's branch, which its thread is filed under (a prototype's is its key). */
 	readComments(projectId: string, branch: string): Promise<Result<ReviewComment[]>>;
-	/** The text of one file in a project's folder (its brief, its review notes, …): this machine's copy if it has one, else GitHub's. */
-	readRecord(projectId: string, name: string): Promise<Result<string>>;
 	/** Puts a project in a folder, or in none for null, in its brief in the design repository (the folders plan). */
 	assignFolder(projectId: string, folder: string | null): Promise<Result<null>>;
 	postComment(projectId: string, branch: string, body: string, anchor: CommentAnchor | null, picture?: string | null): Promise<Result<ReviewComment>>;
@@ -277,8 +265,6 @@ export interface WorkspaceApi {
 	deleteComment(comment: CommentRef): Promise<Result<null>>;
 	/** Marks a comment resolved, or open again. GitHub decides who is allowed. */
 	resolveComment(comment: CommentRef, resolved: boolean): Promise<Result<ReviewComment>>;
-	/** The commit a branch is at on this machine, to say what a comment was made against. Null if unknown. */
-	workCommit(root: string, projectId: string, name: string): Promise<Result<string | null>>;
 }
 
 /**
@@ -337,7 +323,6 @@ export const INVOKE = [
 	'addressPrototype',
 	'finishPrototypeAddress',
 	'publishedPage',
-	'openPublishedPage',
 	'publishPage',
 	'savePrototype',
 	'prototypeProgress',
@@ -345,7 +330,6 @@ export const INVOKE = [
 	'buildInCodebase',
 	'prototypeReadiness',
 	'buildInCodebasePlan',
-	'addressComments',
 	'shareWork',
 	'publishStatus',
 	'publishNow',
@@ -355,12 +339,10 @@ export const INVOKE = [
 	'ensureCovers',
 	'projectCover',
 	'readComments',
-	'readRecord',
 	'postComment',
 	'moveComment',
 	'resolveComment',
 	'deleteComment',
-	'workCommit',
 ] as const satisfies readonly (keyof WorkspaceApi)[];
 
 export const EVENTS = {

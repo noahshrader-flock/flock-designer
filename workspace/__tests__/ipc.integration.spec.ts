@@ -1473,23 +1473,6 @@ describe('the picture of each prototype, on its project’s card', () => {
 	});
 });
 
-describe('readRecord', () => {
-	it('refuses a name that is a path, before anything is read', async () => {
-		for (const name of ['../outside.md', 'a/b.md', '..']) {
-			const r = await call(CHANNELS.readRecord, 'alpha', name);
-			expect(r.ok).toBe(false);
-		}
-	});
-
-	it("reads this machine's copy of a record", async () => {
-		await trustFolder(product);
-		mkdirSync(join(design, 'projects', 'alpha'), { recursive: true });
-		writeFileSync(join(design, 'projects', 'alpha', 'brief.md'), '# Alpha\n');
-		const r = await call(CHANNELS.readRecord, 'alpha', 'brief.md');
-		expect(r).toEqual({ ok: true, value: '# Alpha\n' });
-	});
-});
-
 describe('work an agent built in a terminal, with no record yet', () => {
 	const branchWithCommit = (name: string) => {
 		g(product, 'checkout', '-q', '-b', name);
@@ -1511,6 +1494,8 @@ describe('work an agent built in a terminal, with no record yet', () => {
 		expect(projects.map((p) => p.id)).toEqual(['new-view']);
 		expect(projects[0]).toMatchObject({ title: 'A new view', records: ['brief.md'] });
 		expect(projects[0]?.work).toEqual([expect.objectContaining({ name: 'codebase', branch: 'feature/new-view' })]);
+		// The work is recorded too, in the background: waited for, so it is not written into the next test's world.
+		await eventually(() => expect(existsSync(join(design, 'projects', 'new-view', 'work.json'))).toBe(true));
 	});
 
 	it('does not show a project folder that has no work behind it yet', async () => {
@@ -1518,24 +1503,6 @@ describe('work an agent built in a terminal, with no record yet', () => {
 		writeFileSync(join(design, 'projects', 'only-notes', 'brief.md'), '# Notes\n');
 		await trustFolder(product);
 		expect((await call(CHANNELS.listProjects)).value).toEqual([]);
-	});
-
-	it('can say which commit a comment was made against, and records the work, without the app ever switching branches', async () => {
-		branchWithCommit('feature/new-view');
-		mkdirSync(join(design, 'projects', 'new-view'));
-		await trustFolder(product);
-
-		const r = await call(CHANNELS.workCommit, product, 'new-view', 'codebase');
-		expect(r.value).toBe(g(product, 'rev-parse', 'refs/heads/feature/new-view').trim());
-		expect(JSON.parse(readFileSync(join(design, 'projects', 'new-view', 'work.json'), 'utf8'))).toEqual([
-			expect.objectContaining({ name: 'codebase', branch: 'feature/new-view' }),
-		]);
-	});
-
-	it('says nothing is known for work whose branch does not exist', async () => {
-		mkdirSync(join(design, 'projects', 'ghost'));
-		await trustFolder(product);
-		expect((await call(CHANNELS.workCommit, product, 'ghost', 'codebase')).value).toBeNull();
 	});
 });
 

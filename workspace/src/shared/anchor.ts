@@ -2,7 +2,6 @@ import type { CommentAnchor } from './contract';
 import { isPrototypeName } from './prototypeNames';
 import { isTheme } from './prototypeTheme';
 import { COMMIT_PATTERN, isCommit } from './sha';
-import { isThisMachine } from './thisMachine';
 
 /**
  * Where a comment points, carried inside the comment itself.
@@ -141,25 +140,3 @@ export const stripAnchor = (body: string): string =>
 				.replace(/\n*_On `[^\n]*`_\s*$/, '')
 				.trim()
 		: body.replace(ADDRESSED, '').trimEnd();
-
-/**
- * Only addresses a preview can legitimately have. A local dev server is http on
- * this machine; a shared preview is https. Anything else -- file:, javascript:,
- * an address with a password in it -- is refused before a view is ever created.
- */
-export const assertPreviewUrl = (raw: string): string => {
-	let url: URL;
-	try {
-		url = new URL(raw.trim());
-	} catch {
-		throw new Error(`"${raw}" is not a web address.`);
-	}
-	const local = isThisMachine(url.hostname);
-	if (url.username || url.password) throw new Error('A preview address cannot contain a username or password.');
-	if (url.protocol === 'https:' || (url.protocol === 'http:' && local)) return url.href;
-	throw new Error(
-		url.protocol === 'http:'
-			? 'Only a preview on this machine can use http. A shared preview must be https.'
-			: `A preview must be a web address, not ${url.protocol}`,
-	);
-};

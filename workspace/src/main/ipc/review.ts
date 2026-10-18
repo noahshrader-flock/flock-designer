@@ -1,16 +1,11 @@
-import { existsSync, readFileSync, statSync } from 'node:fs';
-import { join } from 'node:path';
 import { sanitizeAnchor, sanitizePicture } from '../../shared/anchor';
-import { shownRecord } from '../../shared/brief';
 import type { Project, ReviewComment } from '../../shared/contract';
-import { isRecordName } from '../../shared/validate';
 import { arg, handle } from '../handle';
 import { classify } from '../services/branchProjects';
 import { projectTitle, writeCommentsExport } from '../services/commentsExport';
 import { readDescriptor } from '../services/descriptor';
 import { readWork } from '../services/workRecords';
 import { listProjects } from '../services/listProjects';
-import { resolveInside } from '../services/paths';
 import { ProfileNames } from '../services/profileNames';
 import type { IpcDeps } from '../ipc';
 
@@ -46,8 +41,6 @@ export const registerReview = (d: IpcDeps): void => {
 			// Nothing to do: the comments themselves were read fine.
 		}
 	};
-	/** A record is text a person reads; anything larger than this is not one, and is cut rather than sent whole. */
-	const MAX_RECORD = 400_000;
 
 	// Reviewer mode: read through the API, never a checkout.
 	// Everything on GitHub plus everything built on this machine. Work made here
@@ -62,16 +55,6 @@ export const registerReview = (d: IpcDeps): void => {
 		// Reading the list is a good moment to make sure what it shows is published.
 		void publisher.publish();
 		return profiles.nameEveryone(projects);
-	});
-	handle('readRecord', [arg.name, arg.name], async (projectId, name): Promise<string> => {
-		if (!isRecordName(projectId) || !isRecordName(name)) throw new Error('That is not a file in a project.');
-		// This machine's copy first: it is the one being written, and may not be published yet.
-		const recordsRoot = trustedRecords()?.recordsRoot ?? null;
-		const path = recordsRoot === null ? null : resolveInside(recordsRoot, join(projectId, name));
-		const text =
-			path !== null && existsSync(path) && statSync(path).isFile() ? readFileSync(path, 'utf8') : await designRepo.readRecord(projectId, name);
-		// The brief without its front matter (its folder), which is the app's and not the person's to read.
-		return shownRecord(name, text).slice(0, MAX_RECORD);
 	});
 	handle('readComments', [arg.projectId, arg.branch], async (projectId, branch): Promise<ReviewComment[]> => {
 		const comments = await designRepo.threads.readComments(branch);

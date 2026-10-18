@@ -20,8 +20,6 @@ export type AddressPhase =
 	| { kind: 'done'; changed: boolean; commit: string | null; prototype?: PrototypeAddressed }
 	| { kind: 'failed'; message: string };
 
-export type AddressApi = Pick<WorkspaceApi, 'addressComments' | 'agentStatus' | 'workCommit'>;
-
 export type PrototypeAddressApi = Pick<WorkspaceApi, 'addressPrototype' | 'agentStatus' | 'finishPrototypeAddress'>;
 
 /**

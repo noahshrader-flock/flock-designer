@@ -4,7 +4,7 @@ import { CARRIED, bundlePage, kindOf, pageModuleOf } from './pageBundle.mjs';
 
 /**
  * The page code (`src/page`) as one string, for the scripts the app and the published page run inside a previewed page.
- * `import PAGE from '../page/index?page'` is that module bundled by esbuild into a script that defines `__fdPage`, as
+ * `import PAGE from '../page/theme?page'` is that module bundled by esbuild into a script that defines `__fdPage`, as
  * plain text; the app's build, the viewer's and the tests all have this plugin, so nothing is built by hand first.
  * A previewed page's script is run, never imported, so it has to be text: a bundler rewriting a function's body is
  * exactly what cannot cross into another process. `import CHECK from '…?script'` is the same for a script an agent

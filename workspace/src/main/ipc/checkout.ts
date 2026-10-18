@@ -1,7 +1,7 @@
 import { basename } from 'node:path';
 import { arg, handle } from '../handle';
 import { DESCRIPTOR_PATH, findCommand } from '../services/descriptor';
-import { branchTip, branchesWithFile, readCheckout } from '../services/git';
+import { branchesWithFile, readCheckout } from '../services/git';
 import { INSTALL_COMMAND } from '../services/install';
 import { continueWork, recordedWork } from '../services/workRecords';
 import type { IpcDeps } from '../ipc';
@@ -48,12 +48,5 @@ export const registerCheckout = (d: IpcDeps): void => {
 	handle('cancelInstall', [], () => {
 		state.installing?.abort();
 		return null;
-	});
-	// What the branch is at right now: read when a comment is placed, so the comment says
-	// which version of the code it was made against rather than which one was last recorded.
-	handle('workCommit', [checkout, arg.projectId, arg.codebaseName], async (workIn, projectId, name): Promise<string | null> => {
-		const { canonical } = workIn;
-		const found = await recordedWork(canonical, workIn.recordsRoot, workIn.descriptor, projectId, name).catch(() => null);
-		return found ? branchTip(canonical, found.branch) : null;
 	});
 };

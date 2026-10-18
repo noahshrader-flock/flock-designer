@@ -6,7 +6,7 @@ import type { Project } from '../src/shared/contract';
 import { DesignRepo } from '../src/host/designRepo';
 import { readFolderProjects } from '../src/main/services/localProjects';
 import { assignFolder, recordPrototype, type RecordStore } from '../src/main/services/prototype';
-import { briefBody, briefFolder, firstHeading, folderName, foldersOf, inFolder, sameFolder, shownRecord, withFolder } from '../src/shared/brief';
+import { briefFolder, firstHeading, folderName, foldersOf, inFolder, sameFolder, withFolder } from '../src/shared/brief';
 import { projectDir, projectPath } from '../src/shared/designPaths';
 import { mergeProjects } from '../src/shared/projectList';
 import { b64, fakeGitHub } from './fakes/github';
@@ -51,18 +51,6 @@ describe('a brief’s folder', () => {
 
 	it('leaves the title as it was', () => {
 		expect(firstHeading(FILED)).toBe('Alert history');
-	});
-});
-
-describe('a brief, as a person is shown it', () => {
-	it('is the brief without its front matter', () => {
-		expect(briefBody(FILED)).toBe(BRIEF);
-		expect(briefBody(BRIEF)).toBe(BRIEF);
-	});
-
-	it('is shown so in a project’s record sheet, and every other record as it is', () => {
-		expect(shownRecord('brief.md', FILED)).toBe(BRIEF);
-		expect(shownRecord('review.md', FILED)).toBe(FILED);
 	});
 });
 

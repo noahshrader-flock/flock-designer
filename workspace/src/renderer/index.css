@@ -159,12 +159,6 @@
 	/* What is left under the top bar: the height of a screen. */
 	--content-height: calc(100dvh - var(--nav-height));
 	/*
-	 * Room in the top bar for the window's own buttons: macOS's at the left (they end near 76px, so 108px leaves a clear
-	 * gap), the overlay controls elsewhere at the right.
-	 */
-	--window-buttons-left: 108px;
-	--window-buttons-right: 150px;
-	/*
 	 * Layers, low to high. Tooltips, menus and dialogs are portalled to the page at z-50, so the top bar and a screen
 	 * stacked over the page (the review screen, a sticky toolbar) sit under them, or they would hide every one. The
 	 * comment box is over everything, the preview's picture included: its shade, then the box.
@@ -172,15 +166,4 @@
 	--layer-screen: 40;
 	--layer-comment-shade: 1100;
 	--layer-comment-box: 1101;
-}
-
-/*
- * The window has no native title bar on macOS, so the top bar is what you drag, and the controls on it
- * opt out. Electron's app-region has no Tailwind utility of its own.
- */
-@utility app-drag {
-	-webkit-app-region: drag;
-}
-@utility app-no-drag {
-	-webkit-app-region: no-drag;
 }
