@@ -245,16 +245,9 @@ describe('a prototype’s review', () => {
 		const page = reviewPage({ src: 'http://127.0.0.1:5000/a/v1/', title: 'Fish & <chips> "now"', nonce: 'n1' });
 		expect(page).toContain("default-src 'none'; frame-src http://127.0.0.1:5000; style-src 'nonce-n1'; script-src 'nonce-n1'");
 		expect([...page.matchAll(/<script\b[^>]*>/g)].map((m) => m[0])).toEqual(['<script nonce="n1">']);
-		// It says hello to the page, and passes what the page asks up, and the answers down, to that page's address alone.
-		expect(page).toContain(`const page = "http://127.0.0.1:5000";`);
-		expect(page).toContain("postMessage({ dsnr: 'hello' }, page)");
-		// It tells the page whether VS Code is dark, once it has said hello and whenever the theme changes, from the classes
-		// VS Code puts on the tab's body (high contrast included), to the page's address alone.
-		expect(page).toContain("postMessage({ dsnr: 'scheme', dark: isDark() }, page)");
-		expect(page).toContain("classList.contains('vscode-dark')");
-		expect(page).toContain("classList.contains('vscode-high-contrast')");
-		expect(page).toContain("classList.contains('vscode-high-contrast-light')");
-		expect(page).toContain('new MutationObserver(');
+		// Its one script is the review tab's (`page/reviewTab.ts`, whose behaviour a real browser checks in
+		// `reviewIsolation.integration.spec.ts`), started for that page's address alone.
+		expect(page).toContain(`__fdPage.startReviewTab("http://127.0.0.1:5000");`);
 		expect(page).toContain('<title>Fish &amp; &lt;chips&gt; &quot;now&quot;</title>');
 		expect(page).toContain('<iframe src="http://127.0.0.1:5000/a/v1/" title="Fish &amp; &lt;chips&gt; &quot;now&quot;">');
 	});

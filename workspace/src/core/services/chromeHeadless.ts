@@ -26,6 +26,7 @@ import {
 } from './storyDrawing';
 import { type ProbeOptions, type ProbePage, type ViewProbed, probeView } from './probe/probe';
 import { within } from './within';
+import PICTURE from '../../page/picture?page';
 
 /** Said when there is no browser to draw or check with: what to install, or where to point. */
 export const NO_BROWSER =
@@ -85,27 +86,17 @@ const launchChrome = async (path: string): Promise<BrowserLike> => {
 	return (await puppeteer.launch({ executablePath: path, headless: true, args: ['--hide-scrollbars', '--mute-audio'] })) as unknown as BrowserLike;
 };
 
+/** A call to the picture's page code (`page/picture.ts`, bundled to text when DSNR is built), given what it needs as one object. */
+const inPage = (name: 'encodeJpeg' | 'readyToPicture' | 'pictured', args: unknown = {}): string =>
+	`(async () => {\n${PICTURE}\nreturn await __fdPage.${name}(${JSON.stringify(args)});\n})()`;
+
 /**
  * A story's picture, from a PNG of the top of its page (`PICTURE_TOP` down, at `PICTURE_SCALE`): what it painted, placed
  * on white as the app's are (`placeOnWhite`), then drawn by the page's own canvas at most `PICTURE_MOST_ACROSS` across, as
  * JPEG. Only the PNG and where it goes are handed to the page, never the pixels; nothing when it painted nothing.
  */
-const encodeInPage = (png: Buffer, place: NonNullable<ReturnType<typeof placeOnWhite>>): string => `(async (png, p, most, quality) => {
-	const bytes = Uint8Array.from(atob(png), (c) => c.charCodeAt(0));
-	const image = await createImageBitmap(new Blob([bytes], { type: 'image/png' }));
-	const scale = Math.min(1, most / p.width);
-	const canvas = new OffscreenCanvas(Math.round(p.width * scale), Math.round(p.height * scale));
-	const g = canvas.getContext('2d');
-	g.fillStyle = '#fff';
-	g.fillRect(0, 0, canvas.width, canvas.height);
-	g.imageSmoothingQuality = 'high';
-	g.drawImage(image, p.box.x, p.box.y, p.box.width, p.box.height, p.left * scale, p.top * scale, p.box.width * scale, p.box.height * scale);
-	const blob = await canvas.convertToBlob({ type: 'image/jpeg', quality });
-	const read = new Uint8Array(await blob.arrayBuffer());
-	let text = '';
-	for (let i = 0; i < read.length; i += 0x8000) text += String.fromCharCode(...read.subarray(i, i + 0x8000));
-	return btoa(text);
-})(${JSON.stringify(png.toString('base64'))}, ${JSON.stringify(place)}, ${PICTURE_MOST_ACROSS}, ${PICTURE_QUALITY / 100})`;
+const encodeInPage = (png: Buffer, place: NonNullable<ReturnType<typeof placeOnWhite>>): string =>
+	inPage('encodeJpeg', { png: png.toString('base64'), place, most: PICTURE_MOST_ACROSS, quality: PICTURE_QUALITY / 100 });
 
 /** A story's picture as the composition makes it, from a full capture: exact for any story, and the slower way. Exported for its test. */
 export const composedPicture = async (page: PageLike): Promise<Buffer | undefined> => {
@@ -117,29 +108,9 @@ export const composedPicture = async (page: PageLike): Promise<Buffer | undefine
 	return typeof jpeg === 'string' && jpeg !== '' ? Buffer.from(jpeg, 'base64') : undefined;
 };
 
-/**
- * Readies the page for the picture's one region: the stories clipped to what was captured, when the story runs past it (so
- * what is past it is white, as in the composition, which never saw it), and moved by `dx`, `dy` so the region starts on the
- * page; false, and nothing changed, when the page draws something outside the stories (a dialog, a menu or a tooltip opened
- * in a layer of its own, which neither moves nor is clipped with them), or when moving them would move what is fixed to the
- * window inside them. Undone by `pictured`.
- */
-const readyToPicture = (cut: boolean, dx: number, dy: number) => `(() => {
-	const root = document.getElementById('root');
-	const drawsOutside = (e) => e !== root && e.tagName !== 'SCRIPT' && getComputedStyle(e).visibility !== 'hidden' && e.getBoundingClientRect().width > 0;
-	if ([...document.body.children].some(drawsOutside)) return false;
-	// Everything that moves is the stories' root's: a file whose stories could not be drawn at all has no story in it, only
-	// what it says instead, and is pictured all the same.
-	if ((${dx} > 0 || ${dy} > 0) && [...root.querySelectorAll('*')].some((e) => getComputedStyle(e).position === 'fixed')) return false;
-	if (${cut}) {
-		const r = root.getBoundingClientRect();
-		const [l, t, w, h] = [-r.left, -r.top, ${WINDOW.width}, ${PICTURE_TOP}];
-		root.style.clipPath = 'polygon(' + [[l, t], [l + w, t], [l + w, t + h], [l, t + h]].map(([x, y]) => x + 'px ' + y + 'px').join(', ') + ')';
-	}
-	root.style.translate = '${dx}px ${dy}px';
-	return true;
-})()`;
-const pictured = `(() => { const root = document.getElementById('root'); root.style.clipPath = ''; root.style.translate = ''; })()`;
+/** Readies the page for the picture's one region (`readyToPicture`), and undoes it (`pictured`). */
+const readyToPicture = (cut: boolean, dx: number, dy: number) => inPage('readyToPicture', { cut, dx, dy, width: WINDOW.width, height: PICTURE_TOP });
+const pictured = inPage('pictured');
 
 /**
  * A story's picture, the same as the composition's (`composedPicture`) and about twice as fast (about 220 ms against 470): what it painted is found
@@ -193,7 +164,7 @@ export const pictureOf = async (page: PageLike): Promise<Buffer | undefined> => 
 /** How pictures are taken here, as a fingerprint of the code that takes them: never the same as the app's (`PICTURE_RECIPE`). */
 export const HEADLESS_PICTURE_RECIPE = createHash('sha256')
 	.update(
-		`headless${readDrawn('', true)}${encodeInPage.toString()}${composedPicture}${readyToPicture(false, 0, 0)}${pictured}${pictureOf}${COMPOSITION}${[WINDOW.width, PICTURE_TOP, PICTURE_SCALE, PICTURE_MOST_ACROSS, PICTURE_QUALITY]}`,
+		`headless${readDrawn('', true)}${PICTURE}${composedPicture}${pictureOf}${COMPOSITION}${[WINDOW.width, PICTURE_TOP, PICTURE_SCALE, PICTURE_MOST_ACROSS, PICTURE_QUALITY]}`,
 	)
 	.digest('hex')
 	.slice(0, 12);

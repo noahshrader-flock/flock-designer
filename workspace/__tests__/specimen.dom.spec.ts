@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { previewEntry, specimenScript } from '../src/core/services/storyPreviews';
+import { drawSpecimens } from '../src/page/specimens';
 
 /**
  * A type specimen, drawn by the preview page (R3 of the design system plan): in the page the design system's own CSS loads
  * its fonts in, so a family is shown in itself or said plainly not to be there, never shown in another that looks right.
- * Run here as the page runs it.
+ * The page's own code (`page/specimens.ts`), run here as the page runs it.
  */
 
 type Draw = (lines: unknown[], into?: HTMLElement) => Promise<void>;
@@ -12,8 +12,7 @@ let draw: Draw;
 beforeEach(() => {
 	document.body.innerHTML = '<div id="root"></div>';
 	Object.defineProperty(document, 'fonts', { configurable: true, value: { ready: Promise.resolve() } });
-	// The script is the page's own text, run as the page runs it.
-	draw = (0, eval)(`${specimenScript}; drawSpecimens`) as Draw;
+	draw = drawSpecimens as Draw;
 });
 const sections = () => [...document.querySelectorAll<HTMLElement>('[data-specimen]')];
 
@@ -54,13 +53,5 @@ describe('a type specimen', () => {
 		await draw([{ key: 'a', label: 'a' }]);
 		expect(document.getElementById('root')!.children).toHaveLength(0);
 		expect(sections()).toHaveLength(1);
-	});
-});
-
-describe('the preview page', () => {
-	it('draws the specimen it is given in its address instead of a story file', () => {
-		const entry = previewEntry('/lib', ['src/a/A.stories.tsx'], { preview: null, channel: false });
-		expect(entry).toContain('drawSpecimens');
-		expect(entry).toMatch(/get\("specimen"\)/);
 	});
 });

@@ -200,7 +200,7 @@ describe('drawing a prototype’s picture, headless', () => {
 describe('checking a page for accessibility, headless', () => {
 	it('runs axe in each of its states, one run each, or the page as it opens', async () => {
 		const found = { violations: [], incomplete: [] };
-		const { browser, done } = fakeBrowser({ evaluate: (code) => (code.includes('window.axe.run') ? found : undefined) });
+		const { browser, done } = fakeBrowser({ evaluate: (code) => (code.includes('__fdPage.checkPage(') ? found : undefined) });
 		const headless = chromeHeadless({ find: () => '/chrome', launch: (async () => browser) as never });
 		expect(await headless.scan('http://x/p.html', ['default', 'empty'], ['wcag2a'])).toEqual([
 			{ state: 'default', ...found },
@@ -261,11 +261,12 @@ describe('drawing stories, headless (6.1, the Design System tab’s pictures and
 						await new Promise((r) => setTimeout(r, loadMs));
 					},
 					evaluate: async (code: string) => {
-						if (code.includes('OffscreenCanvas')) return (done.encoded++, Buffer.from('jpeg').toString('base64'));
-						const asked = /^\(async \(file, picture, vary\)[\s\S]*\}\)\(("[^"]*"), (?:true|false), (.*)\)$/.exec(code);
+						if (code.includes('__fdPage.encodeJpeg(')) return (done.encoded++, Buffer.from('jpeg').toString('base64'));
+						// The drawing's script asks the page code for one story file, as one object (`readDrawn`).
+						const asked = /__fdPage\.readDrawn\((\{.*\})\);\n\}\)\(\)$/.exec(code);
 						if (!asked) return (done.axeLoaded++, true);
-						const name = JSON.parse(asked[1] as string) as string;
-						done.varied.push(JSON.parse(asked[2] as string));
+						const { file: name, vary } = JSON.parse(asked[1] as string) as { file: string; vary: unknown };
+						done.varied.push(vary);
 						if (fails.includes(name)) throw new Error('did not draw');
 						return { colors: { [name]: 1 }, radii: {}, spacing: {}, ...(axe ? { accessibility: { violations: [], incomplete: [] } } : {}) };
 					},

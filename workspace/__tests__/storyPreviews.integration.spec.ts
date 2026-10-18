@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { TextEncoder as NodeTextEncoder } from 'node:util';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { PREVIEW_HEIGHT, PREVIEW_SHOW, previewAddress } from '../src/shared/catalog';
+import { PREVIEW_HEIGHT, PREVIEW_SHOW, previewAddress, specimenAddress } from '../src/shared/catalog';
 import { PrototypeServer } from '../src/core/services/prototypeServer';
 import { LibraryShown } from '../src/core/services/libraryShown';
 import { buildPreviews, hasPackages, notInstalled, previewEntry, StoryPreviews, unresolved } from '../src/core/services/storyPreviews';
@@ -154,16 +154,20 @@ const ready = async (p: StoryPreviews) => {
  * Renders the page served at `base` for one story file in this DOM window, as the preview frame does: what it drew. In
  * light, or in dark (`dark`), as the browser's color scheme says, which a DOM window does not have on its own.
  */
-const render = async (base: string, file: string, { dark = false } = {}): Promise<HTMLElement> => {
-	expect((await fetch(previewAddress(base, file))).status).toBe(200);
+/** The built page run in this DOM window at `address` (its path and query), in light or in dark (`dark`). */
+const runPage = async (address: string, { dark = false } = {}): Promise<void> => {
 	window.matchMedia = ((query: string) => ({ matches: dark && /prefers-color-scheme:\s*dark/.test(query) })) as unknown as typeof window.matchMedia;
 	document.body.innerHTML = '<div id="root"></div>';
-	window.history.pushState({}, '', previewAddress('/', file));
+	window.history.pushState({}, '', address);
 	const entry = join(folder, readdirSync(folder)[0]!, 'site', 'entry.js');
 	// The built page is modules in chunks, which a DOM window cannot load itself: joined into one script, as built, and run.
 	const { build } = await import('esbuild');
 	const joined = await build({ entryPoints: [entry], bundle: true, write: false, format: 'iife', logLevel: 'silent' });
 	(0, eval)(joined.outputFiles[0]!.text);
+};
+const render = async (base: string, file: string, { dark = false } = {}): Promise<HTMLElement> => {
+	expect((await fetch(previewAddress(base, file))).status).toBe(200);
+	await runPage(previewAddress('/', file), { dark });
 	await eventually(() => expect(document.querySelector('#root')!.children.length).toBeGreaterThan(0));
 	return document.querySelector('#root') as HTMLElement;
 };
@@ -254,6 +258,16 @@ export default { globalTypes: ${JSON.stringify({ mode: { toolbar: { items: ['lig
 		await render(base, 'src/components/FSOne/FSOne.stories.tsx', { dark: true });
 		const dark = { theme: 'dark', colorScheme: 'dark', mode: 'Dark' };
 		expect(given()[1]).toEqual({ initialGlobals: dark, globals: dark });
+	});
+
+	it('draws a type specimen in place of a story file when its address asks for one', async () => {
+		makeLibrary(LIBRARY);
+		await ready(previews());
+		Object.defineProperty(document, 'fonts', { configurable: true, value: { ready: Promise.resolve() } });
+		await runPage(specimenAddress('/', [{ key: 'h1', label: 'h1', size: '20px' }]));
+		await eventually(() => expect(document.querySelector('[data-specimen="h1"] .fd-name')?.textContent).toBe('h1 · 20px'));
+		// No story file was drawn: the stories' root is left alone.
+		expect(document.querySelector('#root')!.children).toHaveLength(0);
 	});
 
 	it('builds a library with no Storybook preview set-up, rendering its stories plainly', async () => {

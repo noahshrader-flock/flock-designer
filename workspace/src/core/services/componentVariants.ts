@@ -9,7 +9,7 @@ import type { ComponentVariants as Answer, DeclaredProp } from '../../shared/con
 import type { ComponentTokens, Drawn, DrawnIndex, Measure } from './componentTokens';
 import { type ComponentProps, programFor, propsOf } from './componentProps';
 import { readValues } from './componentValues';
-import { NOT_VARIANT } from './pageInstances';
+import { NOT_VARIANT } from '../../shared/valueParts';
 import { newestAnswer } from './newestAnswer';
 import type { StoryPreview } from '../../shared/contract';
 

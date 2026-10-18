@@ -6,6 +6,7 @@ import type { Route } from '../../src/core/handle';
 import type { CommentRef, InvokeName, Result, SignInState, WorkspaceApi } from '../../src/shared/contract';
 import { DESIGN_REPO } from '../../src/shared/config';
 import { escapeHtml } from '../../src/shared/html';
+import REVIEW_TAB from '../../src/page/reviewTab?page';
 import { prototypeKey, sitePath } from '../../src/shared/designPaths';
 import { isPrototypeName } from '../../src/shared/prototypeNames';
 import { toResult, valueOf } from '../../src/shared/result';
@@ -41,27 +42,8 @@ export const reviewPage = ({ src, title, nonce }: { src: string; title: string; 
 </head>
 <body><iframe src="${escapeHtml(src)}" title="${escapeHtml(title)}"></iframe>
 <script nonce="${nonce}">
-const vscode = acquireVsCodeApi();
-const frame = document.querySelector('iframe');
-const page = ${JSON.stringify(origin)};
-// Whether VS Code is dark, from the classes it puts on this page's body (high contrast included): told to the page once it
-// has said hello, and whenever the theme changes, so its bar follows the editor.
-const isDark = () =>
-	document.body.classList.contains('vscode-dark') ||
-	(document.body.classList.contains('vscode-high-contrast') && !document.body.classList.contains('vscode-high-contrast-light'));
-const tellScheme = () => frame.contentWindow.postMessage({ dsnr: 'scheme', dark: isDark() }, page);
-frame.addEventListener('load', () => {
-	frame.contentWindow.postMessage({ dsnr: 'hello' }, page);
-	tellScheme();
-});
-new MutationObserver(tellScheme).observe(document.body, { attributes: true, attributeFilter: ['class'] });
-// Only the bar may ask the extension, and only VS Code answers it: its host frame posts on this tab's own origin, which no
-// frame inside it has (the bar and the prototype's page are this machine's, any frame they make theirs or none). VS Code
-// makes window.parent this window itself, so the origin is what says who sent it.
-window.addEventListener('message', (e) => {
-	if (e.source === frame.contentWindow && e.origin === page) vscode.postMessage(e.data);
-	else if (e.origin === location.origin) frame.contentWindow.postMessage(e.data, page);
-});
+${REVIEW_TAB.replace(/<\/script/gi, '<\\/script')}
+__fdPage.startReviewTab(${JSON.stringify(origin)});
 </script>
 </body>
 </html>`;

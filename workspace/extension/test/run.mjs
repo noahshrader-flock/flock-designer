@@ -163,7 +163,8 @@ const cap = setTimeout(() => {
 }, 300_000);
 run.on('exit', (status) => {
 	clearTimeout(cap);
-	rmSync(base, { recursive: true, force: true });
+	// Retried: VS Code's extension host can still be finishing a write here a moment after its window has gone.
+	rmSync(base, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
 	const line = said.split('\n').find((l) => l.includes('dsnr-test:'));
 	if (status === 0 && line) console.log(`${line.trim()}${packaged ? ' (installed from its package)' : ''}`);
 	else

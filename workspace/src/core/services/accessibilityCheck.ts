@@ -7,7 +7,8 @@
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import axe from 'axe-core';
-import { type AxeFound, type AxeRun, BEST_PRACTICE, MOST_ELEMENTS, MOST_HTML, findingsAt, isAxeRules } from '../../shared/accessibility';
+import AXE from '../../page/axe?page';
+import { type AxeFound, type AxeRun, findingsAt, isAxeRules } from '../../shared/accessibility';
 import type { AccessibilityResult } from '../../shared/contract';
 import { type DeclaredTarget, notAutomated, targetLine } from '../../shared/wcag';
 import { writeAtomic } from './jsonFile';
@@ -17,20 +18,6 @@ import { writeAtomic } from './jsonFile';
  * none, said as `default`. A state that will not load or check fails the whole, said in words.
  */
 export type CheckPage = (url: string, states: string[], tags: string[]) => Promise<AxeRun[]>;
-
-/**
- * A run of axe already in the page (`axe.source`), as an expression: on `context` (axe's own, as source: `document`, or
- * what to include and exclude), with the `tags` and axe's best-practice rules beside them (`findingsAt` says them apart),
- * kept to violations and what it could not decide, each trimmed to what is kept: its first elements (`MOST_ELEMENTS`),
- * each by axe's selector (into a frame or a shadow root, its parts joined as axe writes them), its HTML cut short, and what
- * axe says to change. The one way the app runs axe: on a prototype's page, and on a design system's stories (D).
- */
-export const axeRun = (context: string, tags: string[]): string => `(async () => {
-	const r = await window.axe.run(${context}, { runOnly: { type: 'tag', values: ${JSON.stringify([...tags, BEST_PRACTICE])} }, resultTypes: ['violations', 'incomplete'] });
-	const element = (n) => ({ target: n.target.flat().join(' >>> '), html: String(n.html ?? '').slice(0, ${MOST_HTML}), fix: String(n.failureSummary ?? '') });
-	const trim = (x) => ({ id: x.id, help: x.help, impact: x.impact ?? null, tags: x.tags, helpUrl: x.helpUrl, nodes: x.nodes.length, elements: x.nodes.slice(0, ${MOST_ELEMENTS}).map(element) });
-	return { violations: r.violations.map(trim), incomplete: r.incomplete.map(trim) };
-})()`;
 
 /** The size a page is checked at, a desktop's; how long it is given to settle after it has loaded, before axe reads it. */
 export const CHECK_WINDOW = { width: 1280, height: 900 } as const;
@@ -46,14 +33,10 @@ const SETTLE_MS = 300;
  * What runs in a prototype's page to check it, whichever browser it is in (headless Chrome, or a
  * product's own, measured from the command line): once it has settled, axe-core itself, then a run over the whole page with `tags`.
  */
-export const axeInPage = (tags: string[]): string => `(async () => {
-	await document.fonts.ready;
-	await new Promise((r) => setTimeout(r, ${SETTLE_MS}));
-	${axe.source}
-	return await ${axeRun('document', tags)};
-})()`;
+export const axeInPage = (tags: string[]): string =>
+	`(async () => {\n${axe.source}\n${AXE}\nreturn await __fdPage.checkPage(${JSON.stringify(tags)}, ${SETTLE_MS});\n})()`;
 
-/** Whether what a page gave back for `axeRun` is its results: a page's word, checked before it is used. */
+/** Whether what a page gave back for `runAxe` is its results: a page's word, checked before it is used. */
 export const axeFound = (v: unknown): v is AxeFound =>
 	typeof v === 'object' &&
 	v !== null &&

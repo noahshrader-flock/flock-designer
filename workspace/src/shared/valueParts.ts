@@ -11,9 +11,17 @@ import { hexOf } from './tokens';
 export const NO_COLOR = 'none';
 
 /**
+ * The props an instance is never told apart by, so never read off it: its content, handlers, styling, identity, and what it
+ * is for assistive technology. Shared by the page that reads an instance's props (`page/instances.ts`) and what reads them
+ * back (Phase 5), so a prop not read is never taken as not given.
+ */
+export const NOT_VARIANT =
+	/^(children|className|style|sx|css|id|key|ref|role|tabIndex|href|src|alt|title|name|value|defaultValue|placeholder|label|as|component|slot|form|htmlFor|type)$|^(on[A-Z]|aria-|data-)/;
+
+/**
  * The CSS longhands each property is read from and tried on, and how many parts its value is written with: a padding's four
  * sides, a radius's four corners and a gap's row and column each a part, in this order; a font size and a colour one, which a
- * border's colour is set on every side with (and read from its first side that has a border, `BORDER_COLOR`). A height is the element's box, read and set apart.
+ * border's colour is set on every side with (and read from its first side that has a border, `borderColor`). A height is the element's box, read and set apart.
  */
 export const CSS_OF: Record<Exclude<ValueProperty, 'height'>, { names: string[]; parts: 1 | 2 | 4 }> = {
 	padding: { names: ['padding-top', 'padding-right', 'padding-bottom', 'padding-left'], parts: 4 },

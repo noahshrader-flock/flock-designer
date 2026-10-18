@@ -14,8 +14,7 @@ import {
 } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { basename, dirname, join, relative, sep } from 'node:path';
-import { PREVIEW_COMPONENT, PREVIEW_FILE, PREVIEW_HEIGHT, PREVIEW_SHOW, PREVIEW_SPECIMEN } from '../../shared/catalog';
-import { TRY_VALUES } from './pageInstances';
+import PREVIEW_PAGE from '../../page/preview?page';
 import { designSystemOf } from '../../shared/catalog';
 import type { ConnectedDesignSystem, StoryPreview, TokenEdit } from '../../shared/contract';
 import { type CatalogReads, readCatalog } from './componentCatalog';
@@ -68,74 +67,11 @@ const PAGE = `<!doctype html>
 `;
 
 /**
- * A type specimen (R3 of the design system plan), as the preview page draws one: each line a sample in its own family,
- * size, weight and line height, named with them, in a part of the page of its own (the stories' root is left alone). It is
- * drawn here, not in the panel's page, because this page has the design system's own CSS, and so its fonts, as its
- * components do. **A family that is not there is said to be not there,** so a sample in a fallback is never taken for the
- * real one: once the page's fonts have loaded, a family is there when text in it is not the width of text in a fallback.
- * A family every browser has (`sans-serif`) is taken to be there. `var`, so the page can be given it more than once.
- */
-export const specimenScript = `var drawSpecimens = (() => {
-	const SAMPLE = 'The quick brown fox jumps over the lazy dog';
-	const GENERIC = new Set(['serif', 'sans-serif', 'monospace', 'cursive', 'fantasy', 'system-ui', 'ui-serif', 'ui-sans-serif', 'ui-monospace', 'ui-rounded', 'emoji', 'math', 'fangsong']);
-	const first = (family) => family.split(',')[0].trim().replace(/^['"]|['"]$/g, '');
-	const there = (family) => {
-		if (GENERIC.has(family)) return true;
-		const probe = (fallback) => {
-			const s = document.createElement('span');
-			s.textContent = 'mmmmmmmmmmlli10WQ@';
-			s.style.cssText = 'position:absolute;visibility:hidden;font-size:72px;white-space:nowrap';
-			s.style.fontFamily = fallback;
-			document.body.append(s);
-			const plain = s.offsetWidth;
-			s.style.fontFamily = JSON.stringify(family) + ', ' + fallback;
-			const own = s.offsetWidth;
-			s.remove();
-			return plain !== own;
-		};
-		return probe('monospace') || probe('serif');
-	};
-	const element = (tag, className, text) => {
-		const e = document.createElement(tag);
-		if (className) e.className = className;
-		if (text !== undefined) e.textContent = text;
-		return e;
-	};
-	return async (lines, into) => {
-		const page = into || document.body.appendChild(document.createElement('div'));
-		page.replaceChildren();
-		const drawn = lines.map((line) => {
-			const section = element('section', 'fd-story');
-			section.dataset.specimen = line.key;
-			const said = [line.label, line.size, line.weight && 'weight ' + line.weight, line.lineHeight && 'line height ' + line.lineHeight];
-			const sample = element('p', '', SAMPLE);
-			sample.dataset.sample = '';
-			sample.style.margin = '0';
-			if (line.family) sample.style.fontFamily = line.family;
-			if (line.size) sample.style.fontSize = line.size;
-			if (line.weight) sample.style.fontWeight = line.weight;
-			if (line.lineHeight) sample.style.lineHeight = line.lineHeight;
-			section.append(element('h4', 'fd-name', said.filter(Boolean).join(' · ')), sample);
-			page.append(section);
-			return { line, section };
-		});
-		if (document.fonts) await document.fonts.ready;
-		for (const { line, section } of drawn) {
-			const family = line.family && first(line.family);
-			if (family && !there(family)) section.append(element('p', 'fd-name', family + ' is not available here: shown in a fallback.'));
-		}
-	};
-})();`;
-
-/**
- * The page's script: the story file named in its address, every story in it by name, each in its own error boundary so
- * one that throws does not take the others down. It tells the frame's owner its height, and nothing else; and hears from it
- * only the values to try on the component's instances (`TRY_VALUES`).
- *
- * **A story behaves as it does in Storybook, no more.** Portable stories leave out the one part of Storybook's preview
- * that redraws a story when it updates its own args (`useArgs`), so a story wired that way (tabs, selects, drawers in
- * FUI) would not respond; the page supplies just that. A story that pins a value without it does not respond in
- * Storybook either, and does not here: making it respond is the story's to do, in the library.
+ * The page's entry, generated for the library: only what must be its own, its React, its Storybook, its preview set-up and
+ * its story files, imported where the library has them and handed to the page's own code (`page/preview.ts`, bundled in as
+ * text), which draws the story file named in its address, every story in it by name, each in its own error boundary so one
+ * that throws does not take the others down. It tells the frame's owner its height, and nothing else; and hears from it
+ * only the values to try on the component's instances.
  */
 export const previewEntry = (
 	library: string,
@@ -149,134 +85,27 @@ export const previewEntry = (
 		return from.startsWith('../') ? from : `./${from}`;
 	};
 	return `
-import { Component, Fragment, createElement as h, useEffect, useState } from 'react';
+import * as React from 'react';
 import { createRoot } from 'react-dom/client';
 import { flushSync } from 'react-dom';
 import { composeStories, setProjectAnnotations } from '@storybook/react';
 ${preview === null ? '' : `import * as preview from ${JSON.stringify(fromEntry(preview))};`}
-// Dark as the library's Storybook draws it, when the page is in dark (its theme script answers from its address): its themes
-// addon's \`theme\` global, and every global the library's preview declares with a \`dark\` option in its toolbar (Primer's
-// \`colorScheme\`), declared as a named export or on its default one. Given as Storybook 8.2 and later take it
-// (\`initialGlobals\`) and as earlier ones do (\`globals\`).
-const darkGlobals = (declared) => {
-	const dark = { theme: 'dark' };
-	for (const [name, type] of Object.entries(declared)) {
-		const value = (type?.toolbar?.items ?? []).map((item) => (typeof item === 'string' ? item : item?.value)).find((v) => typeof v === 'string' && v.toLowerCase() === 'dark');
-		if (value !== undefined) dark[name] = value;
-	}
-	return dark;
-};
-const annotations = [${preview === null ? '' : 'preview'}];
-if (matchMedia('(prefers-color-scheme: dark)').matches) {
-	const dark = darkGlobals(${preview === null ? '{}' : '{ ...preview.default?.globalTypes, ...preview.globalTypes }'});
-	annotations.push({ initialGlobals: dark, globals: dark });
-}
-if (annotations.length > 0) setProjectAnnotations(annotations);
 
 const files = {
 ${storyFiles.map((f) => `\t${JSON.stringify(f)}: () => import(${JSON.stringify(fromEntry(join(library, f)))}),`).join('\n')}
 };
 
-class Boundary extends Component {
-	state = { error: null };
-	static getDerivedStateFromError(error) { return { error }; }
-	render() { return this.state.error ? h('pre', { className: 'fd-error' }, String(this.state.error?.message ?? this.state.error)) : this.props.children; }
-}
-
-const argsOf = new Map();
-// Storybook's channel, as its preview speaks on it (Storybook 8 and later), for the two parts of its preview portable stories
-// leave out. When a story calls useArgs' updateArgs or resetArgs, it is drawn again with its args as updated; and once a
-// story is drawn, it is said to be, which is when its decorators' effects run (the themes addon setting the theme). Nothing
-// else, so a story behaves here as it does in Storybook.
-const storybook = ${
-		channel
-			? `Promise.all([import('storybook/internal/preview-api'), import('storybook/internal/core-events')]).then(([{ addons }, events]) => {
-	const channel = addons.getChannel();
-	channel.on(events.UPDATE_STORY_ARGS, ({ storyId, updatedArgs }) => argsOf.get(storyId)?.((args) => ({ ...args, ...updatedArgs })));
-	channel.on(events.RESET_STORY_ARGS, ({ storyId }) => argsOf.get(storyId)?.({}));
-	return { rendered: (id) => channel.emit(events.STORY_RENDERED, id) };
-})`
-			: 'Promise.resolve(null)'
-	};
-// A story that only sets args, with no render of its own, and sets \`checked\` (a switch, a checkbox) has it held by React
-// for good, so a click does nothing. It is given as where the control starts instead, by React's own rule for a checkable
-// control: \`defaultChecked\`. Only \`checked\`, which means one thing: \`value\` is also what a label shows (FUI's
-// PopoverLineItem), so it is left alone. A story that draws itself holds its own values, as with useArgs.
-const startingValues = (args) => ('checked' in args ? { checked: undefined, defaultChecked: args.checked } : {});
-
-const Live = ({ Story, drawsItself }) => {
-	const [args, setArgs] = useState({});
-	useEffect(() => {
-		argsOf.set(Story.id, setArgs);
-		return () => argsOf.delete(Story.id);
-	}, []);
-	return h(Story, { ...(drawsItself ? {} : startingValues(Story.args ?? {})), ...args });
-};
-
-const spaced = (name) => name.replace(/([a-z0-9])([A-Z])/g, '$1 $2');
-const root = createRoot(document.getElementById('root'));
-const fail = (error) => root.render(h('pre', { className: 'fd-error' }, String(error?.message ?? error)));
-const tell = () => parent.postMessage({ ${PREVIEW_HEIGHT}: Math.ceil(document.documentElement.scrollHeight) }, '*');
-new ResizeObserver(tell).observe(document.body);
-
-// One story file drawn in place of the last, resolved once it is on the page. What reads every story (T6) draws them one
-// after another in one page this way, rather than loading the page again for each.
-// The last asked for is what is drawn: one asked before it (the page's own, as it opens) that loads after it draws nothing.
-let shown = 0;
-const show = (file, vary) => {
-	const turn = ++shown;
-	// The component the stories are of, as their default export names it, and the props its stories name as controls: what
-	// reads its values finds its instances by it, and tells them apart by those. Never the last file's.
-	window[${JSON.stringify(PREVIEW_COMPONENT)}] = null;
-	const load = files[file];
-	if (!load) return Promise.resolve(fail('There is no such story file in this build.'));
-	return load().then((m) => {
-		if (turn !== shown) return;
-		const stories = Object.entries(composeStories(m));
-		try {
-			const component = m.default?.component;
-			// Varied, the props varied are what tells its instances apart.
-			const controls = vary ? vary.props.map((p) => p.name) : [...new Set(stories.flatMap(([, Story]) => Object.keys({ ...Story.args, ...Story.argTypes })))];
-			window[${JSON.stringify(PREVIEW_COMPONENT)}] = component ? { component, controls } : null;
-		} catch {
-			// A file whose stories cannot be asked is drawn all the same; only its values are not read.
-		}
-		const drawsItself = (name) => typeof m[name] === 'function' || typeof m[name]?.render === 'function' || typeof m.default?.render === 'function';
-		// Each value of each prop asked for (Phase 5), on the story asked for, else the file's first drawn from its args, else its
-		// first: a section for each, named for the story and the value, in place of the stories.
-		const base = (vary && stories.find(([name]) => vary.stories.includes(name))) || stories.find(([name]) => !drawsItself(name)) || stories[0];
-		const drawn = !vary
-			? stories.map(([name, Story]) => [name, Story, null])
-			: !base
-				? []
-				: vary.props.flatMap(({ name: prop, values }) => values.map((value) => [base[0] + ' · ' + prop + '=' + value, base[1], { [prop]: value }]));
-		// Drawn at once, not at the next frame: a page drawn where nobody sees it gets no frames.
-		flushSync(() => root.render(h(Fragment, { key: file }, ...drawn.map(([name, Story, args]) =>
-			h('section', { key: name, className: 'fd-story', 'data-story': name },
-				h('h4', { className: 'fd-name' }, spaced(name)),
-				h(Boundary, null, args ? h(Story, args) : h(Live, { Story, drawsItself: drawsItself(name) })))))));
-		return storybook.then((said) => {
-			for (const id of new Set(drawn.map(([, Story]) => Story.id).filter(Boolean))) said?.rendered(id);
-		});
-	}, fail);
-};
-window[${JSON.stringify(PREVIEW_SHOW)}] = show;
-
-// Values a tab tries on the component's instances, set over the library's own and taken off again (Phase 2).
-${TRY_VALUES}
-
-${specimenScript}
-// A type specimen when the address asks for one (R3), in place of a story file.
-const asked = new URLSearchParams(location.search);
-const specimen = asked.get(${JSON.stringify(PREVIEW_SPECIMEN)});
-if (specimen === null) show(asked.get(${JSON.stringify(PREVIEW_FILE)}));
-else {
-	try {
-		drawSpecimens(JSON.parse(specimen)).then(tell, fail);
-	} catch (error) {
-		fail(error);
-	}
-}
+${PREVIEW_PAGE}
+__fdPage.startPreview({
+	React,
+	createRoot,
+	flushSync,
+	composeStories,
+	setProjectAnnotations,
+	preview: ${preview === null ? 'null' : 'preview'},
+	files,
+	channel: ${channel ? "Promise.all([import('storybook/internal/preview-api'), import('storybook/internal/core-events')])" : 'Promise.resolve(null)'},
+});
 `;
 };
 
