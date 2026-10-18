@@ -78,13 +78,13 @@ describe('ensureCovers', () => {
 	});
 
 	it('keeps every prototype’s picture: drawing one never touches another’s', async () => {
-		mem.files[RECORDS] = records(record('v1', { cover: 'aaaaaaaaaaaa' }), record('v12'));
+		mem.files[RECORDS] = records(record('v1', { cover: 'aaaaaaaaaaaa' }), record('v10'));
 		mem.files[coverPath('demo', 'v1', 'aaaaaaaaaaaa')] = JPEG;
-		pages = { 'demo/v12': '<h1>Two</h1>' };
-		await ensureCovers(deps, built('v12'));
+		pages = { 'demo/v10': '<h1>Two</h1>' };
+		await ensureCovers(deps, built('v10'));
 		expect(coverOf(mem.files, 'v1')).toBe('aaaaaaaaaaaa');
 		expect(mem.files[coverPath('demo', 'v1', 'aaaaaaaaaaaa')]).toEqual(JPEG);
-		expect(coverOf(mem.files, 'v12')).toBe(contentHashOf('<h1>Two</h1>'));
+		expect(coverOf(mem.files, 'v10')).toBe(contentHashOf('<h1>Two</h1>'));
 	});
 
 	it('draws nothing for a page that was not built here, or a prototype with no record', async () => {

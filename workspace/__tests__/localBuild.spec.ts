@@ -37,7 +37,7 @@ const run = async (a: BuildApi, extra: Partial<Parameters<typeof runLocalBuild>[
 	return { url, phases };
 };
 
-describe('opening an iteration', () => {
+describe('opening a version', () => {
 	it('starts its preview and reports the address, with no one asked to do anything', async () => {
 		const { a, calls } = api();
 		const { url, phases } = await run(a);
@@ -46,13 +46,13 @@ describe('opening an iteration', () => {
 		expect(calls).not.toContain('startAgent');
 	});
 
-	it("leaves the checkout alone when it is already on the iteration's branch", async () => {
+	it("leaves the checkout alone when it is already on the version's branch", async () => {
 		const { a, calls } = api();
 		await run(a);
 		expect(calls).not.toContain('continueWork');
 	});
 
-	it("moves the checkout to the iteration's branch when it is elsewhere", async () => {
+	it("moves the checkout to the version's branch when it is elsewhere", async () => {
 		const { a, calls } = api({ readCheckout: vi.fn(async () => ({ ok: true, value: { branch: 'develop' } })) });
 		await run(a);
 		expect(a.continueWork).toHaveBeenCalledWith('/r', 'users', 'codebase');
@@ -60,7 +60,7 @@ describe('opening an iteration', () => {
 	});
 
 	it("opens where the work is when the record says, instead of the product's front door", async () => {
-		// A codebase iteration runs the whole product. Without this it opens on whatever the app shows
+		// Codebase work runs the whole product. Without this it opens on whatever the app shows
 		// first, which is how a comment meant for /roles/compare was made on the Organizations list.
 		const { a } = api();
 		const { url, phases } = await run(a, { iteration: iteration({ name: 'codebase', route: '/roles/compare' }) });
@@ -198,7 +198,7 @@ describe('when nobody is looking any more', () => {
 		expect(url).toBe('http://localhost:3100/');
 	});
 
-	it("does not mistake another work's run for its own", async () => {
+	it("does not mistake another piece of work's run for its own", async () => {
 		const { a, calls } = api({ agentStatus: vi.fn(async () => ({ ok: true, value: { state: 'running', work: 'prototype/other/v1' } })) });
 		const { phases } = await run(a);
 		expect(calls).not.toContain('startAgent');
@@ -274,7 +274,7 @@ describe('when nobody is looking any more', () => {
 });
 
 describe('previewAddress', () => {
-	it("joins the iteration's route onto the preview, keeping its port", () => {
+	it("joins the version's route onto the preview, keeping its port", () => {
 		expect(previewAddress('http://localhost:3100/', '/roles/compare')).toBe('http://localhost:3100/roles/compare');
 		expect(previewAddress('http://localhost:3000/', '/roles/compare?state=error')).toBe('http://localhost:3000/roles/compare?state=error');
 	});

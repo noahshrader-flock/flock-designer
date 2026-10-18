@@ -65,10 +65,6 @@ describe('work found in a real repository, with no record written', () => {
 		commitAs('Ada Lovelace', 'b.txt');
 		commitAs('Grace Hopper', 'c.txt');
 		g('checkout', '-q', 'develop');
-		// A prototype branch of old, from before prototypes were pages: not work, so never listed.
-		g('checkout', '-q', '-b', 'fd/real-change/i1');
-		commitAs('Old Hand', 'd.txt');
-		g('checkout', '-q', 'develop');
 	});
 	afterEach(() => {
 		rmSync(root, { recursive: true, force: true });
@@ -95,7 +91,7 @@ describe('work found in a real repository, with no record written', () => {
 		expect(ids).toContain('real-change');
 	});
 
-	it('lists nothing that no project vouches for: a prototype branch of old is no project', async () => {
+	it('lists nothing that no project vouches for', async () => {
 		expect(await readBranchProjects(root, descriptor, null, new Set())).toEqual([]);
 	});
 
@@ -114,8 +110,6 @@ describe('work found in a real repository, with no record written', () => {
 
 	it('still refuses work that has no record, and is not codebase work on its branch', async () => {
 		await expect(continueWork(root, records, 'real-change', 'v9', null, descriptor)).rejects.toThrow(/real-change has no v9\./);
-		// Nor is a prototype branch of old read as work, even with the name it would once have had.
-		await expect(continueWork(root, records, 'real-change', 'i1', null, descriptor)).rejects.toThrow(/real-change has no i1\./);
 	});
 });
 

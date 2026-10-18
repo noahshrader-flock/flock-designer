@@ -328,7 +328,7 @@ describe('signing in', () => {
 describe('commenting on the page', () => {
 	beforeEach(() => saveToken('good-token'));
 
-	it('picks an element in the prototype, writes the comment in the box, and puts it on the iteration’s thread with its pin', async () => {
+	it('picks an element in the prototype, writes the comment in the box, and puts it on the version’s thread with its pin', async () => {
 		const { doc } = await open();
 		await press(button('Comment'));
 		await settle();
@@ -338,7 +338,7 @@ describe('commenting on the page', () => {
 		await press(button('Save'));
 		await settle();
 
-		// The thread is the iteration's, found and made as the app does it.
+		// The thread is the version's, found and made as the app does it.
 		expect(gh.issues).toHaveLength(1);
 		expect(gh.issues[0]?.body).toContain('branch: `prototype/demo/v1`');
 		expect(gh.issues[0]?.labels).toEqual(['flock-designer:review']);
@@ -365,7 +365,7 @@ describe('commenting on the page', () => {
 		expect(doc.querySelector('[data-fd-layer="pins"]')).toBeNull();
 	});
 
-	it('shows the comments made in the app, on the same iteration, pinned where they were made', async () => {
+	it('shows the comments made in the app, on the same version, pinned where they were made', async () => {
 		const made = await open();
 		await unmountAll((current as NonNullable<typeof current>).root);
 		gh.issues.push({
@@ -461,7 +461,7 @@ describe('in DSNR’s review tab, in VS Code', () => {
 		expect(button('Sign in to comment').disabled).toBe(false);
 	});
 
-	it('puts a comment on the iteration’s thread through DSNR, and has no Sign out of its own', async () => {
+	it('puts a comment on the version’s thread through DSNR, and has no Sign out of its own', async () => {
 		const { relay, asked } = tab();
 		const { doc } = await open(relay);
 		await settle();
@@ -473,7 +473,7 @@ describe('in DSNR’s review tab, in VS Code', () => {
 		expect([...document.querySelectorAll('button')].some((b) => b.textContent === 'Sign out')).toBe(false);
 	});
 
-	it('offers Address on an open comment, which asks DSNR to address it, on the iteration this page is', async () => {
+	it('offers Address on an open comment, which asks DSNR to address it, on the version this page is', async () => {
 		const { relay, asked } = tab();
 		const { doc } = await open(relay);
 		await settle();
@@ -486,10 +486,10 @@ describe('in DSNR’s review tab, in VS Code', () => {
 		expect(asked.at(-1)).toEqual(['address', [{ thread: gh.issues[0]!.number, id: comment.id }, 'prototype/demo/v1']]);
 	});
 
-	it('is told which iteration Address shows its change in, for a page in the browser to go to (BROWSER_COMMENTS_PLAN 3.2)', async () => {
+	it('is told which version Address shows its change in, for a page in the browser to go to (BROWSER_COMMENTS_PLAN 3.2)', async () => {
 		const { relay } = tab();
 		const addressed = vi.fn();
-		const answering: Relay = { ask: (name, args) => (name === 'address' ? Promise.resolve({ ok: true, value: 'v12' }) : relay.ask(name, args)) };
+		const answering: Relay = { ask: (name, args) => (name === 'address' ? Promise.resolve({ ok: true, value: 'v4' }) : relay.ask(name, args)) };
 		const page = sitePage();
 		current = await render(createElement(Viewer, { config: CONFIG, slots: page.slots, relay: answering, onAddressed: addressed }));
 		await settle();
@@ -498,6 +498,6 @@ describe('in DSNR’s review tab, in VS Code', () => {
 		await settle();
 		await press(menuItem(await openMenu(button('Comment actions')), 'Address'));
 		await settle();
-		expect(addressed).toHaveBeenCalledWith('v12');
+		expect(addressed).toHaveBeenCalledWith('v4');
 	});
 });

@@ -61,7 +61,7 @@ describe('latest', () => {
 	});
 
 	it('never loses a request, which is the whole point', async () => {
-		// The bug: opening an iteration reads on arrival and again when the preview is up. With the
+		// The bug: opening a version reads on arrival and again when the preview is up. With the
 		// second dropped, the comments stayed as the first read left them.
 		const c = controllable();
 		void c.run(); // on arrival

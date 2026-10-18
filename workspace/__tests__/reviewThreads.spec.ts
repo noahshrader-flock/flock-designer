@@ -24,7 +24,7 @@ describe('comments', () => {
 		expect(comments[1]?.body).toBe('Fixed');
 	});
 
-	it('returns nothing for an iteration with no thread yet, rather than failing', async () => {
+	it('returns nothing for a version with no thread yet, rather than failing', async () => {
 		const { github: session } = fakeGitHub({ '/repos/acme/design/issues?state=all*': [] });
 		expect(await new ReviewThreads(session, REF).readComments('prototype/alpha/v9')).toEqual([]);
 	});
@@ -204,7 +204,7 @@ describe('setResolved', () => {
 	it('reopens one the agent addressed as an ordinary open comment, so it can be addressed again', async () => {
 		const { addressedAt, isResolved, withAddressed, withResolved } = await import('../src/shared/anchor');
 		const { github: session, writes } = fakeGitHub({
-			[`${COMMENT}*`]: { id: 70, user: { login: 'pm' }, created_at: 't', body: withResolved(withAddressed('Looks off', 'abc1234', 'v12'), true) },
+			[`${COMMENT}*`]: { id: 70, user: { login: 'pm' }, created_at: 't', body: withResolved(withAddressed('Looks off', 'abc1234', 'v10'), true) },
 		});
 		await new ReviewThreads(session, REF).setResolved({ thread: 1, id: 70 }, false);
 		const sent = (writes[0]?.body as { body: string }).body;
@@ -239,14 +239,14 @@ describe('setAddressed', () => {
 	it('resolves the comment in the same write that records the change, so its pin leaves the page at once', async () => {
 		const { isResolved, addressedAt, addressedIn } = await import('../src/shared/anchor');
 		const { github: session, writes } = fakeGitHub(comment('Remove this'));
-		await new ReviewThreads(session, REF).setAddressed({ thread: 1, id: 70 }, SHA, 'v12');
+		await new ReviewThreads(session, REF).setAddressed({ thread: 1, id: 70 }, SHA, 'v10');
 		expect(writes).toHaveLength(1);
 		expect(isResolved(sentBody(writes))).toBe(true);
 		expect(addressedAt(sentBody(writes))).toBe(SHA);
-		expect(addressedIn(sentBody(writes))).toBe('v12');
+		expect(addressedIn(sentBody(writes))).toBe('v10');
 	});
 
-	it('resolves a comment on a branch too, which has a commit and no iteration', async () => {
+	it('resolves a comment on a branch too, which has a commit and no version', async () => {
 		const { isResolved, addressedAt } = await import('../src/shared/anchor');
 		const { github: session, writes } = fakeGitHub(comment('Remove this'));
 		await new ReviewThreads(session, REF).setAddressed({ thread: 1, id: 70 }, SHA);
@@ -256,8 +256,8 @@ describe('setAddressed', () => {
 
 	it('writes nothing when it is already recorded and resolved', async () => {
 		const { withAddressed, withResolved } = await import('../src/shared/anchor');
-		const { github: session, writes } = fakeGitHub(comment(withResolved(withAddressed('Remove this', SHA, 'v12'), true)));
-		await new ReviewThreads(session, REF).setAddressed({ thread: 1, id: 70 }, SHA, 'v12');
+		const { github: session, writes } = fakeGitHub(comment(withResolved(withAddressed('Remove this', SHA, 'v10'), true)));
+		await new ReviewThreads(session, REF).setAddressed({ thread: 1, id: 70 }, SHA, 'v10');
 		expect(writes).toEqual([]);
 	});
 

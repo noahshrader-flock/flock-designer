@@ -13,7 +13,7 @@ const ITERATIONS = [
 		commit: null,
 		createdAt: '2026-10-02',
 		note: '',
-		previewUrl: 'https://preview.test/alpha-i2',
+		previewUrl: 'https://preview.test/alpha-v2',
 	},
 	{ projectId: 'alpha', name: 'codebase', branch: 'feature/alpha', commit: null, createdAt: '2026-10-03', note: '' },
 ];
@@ -35,7 +35,7 @@ describe('listProjects', () => {
 		'/repos/acme/design/issues?state=all*': [{ number: 7, comments: 3, body: 'Review thread for alpha, branch: `prototype/alpha/v2`.' }],
 	};
 
-	it('reads when each iteration was started from its record, and treats anything else as unknown', async () => {
+	it('reads when each version was started from its record, and treats anything else as unknown', async () => {
 		const { github: session } = fakeGitHub({
 			...routes,
 			'/repos/acme/design/contents/projects/alpha/work.json*': {
@@ -113,7 +113,7 @@ describe('listProjects', () => {
 	});
 
 	it('reads work from the project folder, not from branches', async () => {
-		// The regression: iteration branches live in the PRODUCT repository, which
+		// The regression: work branches live in the PRODUCT repository, which
 		// this app cannot see. Looking for them in the design repo listed "No
 		// branches yet" for every project, including ones with work.
 		const { github: session, api } = fakeGitHub(routes);
@@ -148,7 +148,7 @@ describe('listProjects', () => {
 	it('carries a recorded preview link through', async () => {
 		const { github: session } = fakeGitHub(routes);
 		const [alpha] = await new DesignRepo(session, REF).listProjects();
-		expect(alpha?.work.find((i) => i.name === 'v2')?.previewUrl).toBe('https://preview.test/alpha-i2');
+		expect(alpha?.work.find((i) => i.name === 'v2')?.previewUrl).toBe('https://preview.test/alpha-v2');
 		expect(alpha?.work.find((i) => i.name === 'v1')?.previewUrl).toBeNull();
 	});
 
@@ -168,12 +168,12 @@ describe('listProjects', () => {
 		expect((await new DesignRepo(session, REF).listProjects())[0]?.work).toEqual([]);
 	});
 
-	it('links an iteration to its review thread and counts open comments', async () => {
+	it('links a version to its review thread and counts open comments', async () => {
 		const { github: session } = fakeGitHub(routes);
 		const [alpha] = await new DesignRepo(session, REF).listProjects();
 		expect(alpha?.work.find((i) => i.branch === 'prototype/alpha/v2')?.issueNumber).toBe(7);
 		expect(alpha?.work.find((i) => i.branch === 'prototype/alpha/v1')?.issueNumber).toBeNull();
-		// Each iteration carries its own count: the one with the thread has the thread's comments, the other none.
+		// Each version carries its own count: the one with the thread has the thread's comments, the other none.
 		expect(alpha?.work.find((i) => i.branch === 'prototype/alpha/v2')?.openComments).toBe(3);
 		expect(alpha?.work.find((i) => i.branch === 'prototype/alpha/v1')?.openComments).toBe(0);
 		expect(alpha).not.toHaveProperty('openComments');

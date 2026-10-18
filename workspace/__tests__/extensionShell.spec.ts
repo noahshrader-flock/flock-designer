@@ -218,7 +218,7 @@ describe('VS Code’s ports', () => {
 });
 
 describe('a prototype’s review', () => {
-	it('is its page on the site, by version and iteration, as the site lays it out', () => {
+	it('is its page on the site, by version, as the site lays it out', () => {
 		expect(reviewPath('alert-history', 'v2')).toBe('alert-history/v2/');
 		expect(reviewPath('admin-usage', 'v1')).toBe('admin-usage/v1/');
 		expect(() => reviewPath('admin-usage', 'codebase')).toThrow(/not a prototype/);
@@ -295,20 +295,20 @@ describe('a review tab’s answers to its page', () => {
 		expect(d.address).toHaveBeenCalledWith(review, { thread: 1, id: 2 }, 'tab');
 	});
 
-	it('Address the iteration the page is on, when it says which, and say who asked (BROWSER_COMMENTS_PLAN 3.1)', async () => {
+	it('Address the version the page is on, when it says which, and say who asked (BROWSER_COMMENTS_PLAN 3.1)', async () => {
 		const d = deps();
 		const seen = new Set<number>();
 		const ask = (args: unknown[]) => answerReview(d, review, 'address', args, seen, 'browser');
-		await answerReview(d, review, 'readComments', ['demo', 'prototype/demo/v12'], seen, 'browser');
-		await ask([{ thread: 1, id: 2 }, 'prototype/demo/v12']);
-		expect(d.address).toHaveBeenCalledWith({ ...review, name: 'v12' }, { thread: 1, id: 2 }, 'browser');
+		await answerReview(d, review, 'readComments', ['demo', 'prototype/demo/v3'], seen, 'browser');
+		await ask([{ thread: 1, id: 2 }, 'prototype/demo/v3']);
+		expect(d.address).toHaveBeenCalledWith({ ...review, name: 'v3' }, { thread: 1, id: 2 }, 'browser');
 		// Only one of this review's project's prototypes, and only one comment.
 		for (const branch of ['prototype/other/v1', 'prototype/demo/../other/v1', 'feature/demo'])
 			expect(await ask([{ thread: 1, id: 2 }, branch]), branch).toEqual({
 				ok: false,
 				error: 'This review is of demo, so it comments only on demo’s prototypes.',
 			});
-		expect(await ask([{ thread: 1, id: 2 }, 'prototype/demo/v12', 'more'])).toEqual({ ok: false, error: 'Address is given one comment.' });
+		expect(await ask([{ thread: 1, id: 2 }, 'prototype/demo/v3', 'more'])).toEqual({ ok: false, error: 'Address is given one comment.' });
 		expect(d.address).toHaveBeenCalledTimes(1);
 	});
 
@@ -426,9 +426,9 @@ describe('the review tabs', () => {
 			answer: async () => ({ ok: true, value: null }),
 		});
 		await reviews.open({ records: '/d/projects', projectId: 'demo', name: 'v1', title: 'Demo · V1' });
-		await reviews.open({ records: '/d/projects', projectId: 'demo', name: 'v12', title: 'Demo · V12' });
-		expect(vs.panels.map((p) => p.title)).toEqual(['Demo · V12']);
-		expect(vs.panels[0]!.html).toContain('http://127.0.0.1:5000/review/demo/v12/');
+		await reviews.open({ records: '/d/projects', projectId: 'demo', name: 'v3', title: 'Demo · V3' });
+		expect(vs.panels.map((p) => p.title)).toEqual(['Demo · V3']);
+		expect(vs.panels[0]!.html).toContain('http://127.0.0.1:5000/review/demo/v3/');
 		expect(vs.panels[0]!.revealed).toBe(1);
 		// Built again each time, so it is the records as they are.
 		expect(built).toEqual(['/d/projects', '/d/projects']);
@@ -464,22 +464,22 @@ describe('the review tabs', () => {
 				return { ok: true, value: [] };
 			},
 		});
-		const demo = { projectId: 'demo', name: 'v12', title: 'Demo · V12' };
+		const demo = { projectId: 'demo', name: 'v3', title: 'Demo · V3' };
 		const first = await reviews.inBrowser({ records: '/d/projects', ...demo });
 		const second = await reviews.inBrowser({ records: '/d/projects', ...demo });
 		// The page's address, its key in the fragment (never sent to a server), new each time.
-		const keyOf = (url: string) => /^http:\/\/127\.0\.0\.1:5000\/review\/demo\/v12\/#dsnr-key-([A-Za-z0-9_-]{22,})$/.exec(url)?.[1];
+		const keyOf = (url: string) => /^http:\/\/127\.0\.0\.1:5000\/review\/demo\/v3\/#dsnr-key-([A-Za-z0-9_-]{22,})$/.exec(url)?.[1];
 		const [a, b] = [keyOf(first), keyOf(second)];
 		expect(a).toBeDefined();
 		expect(b).toBeDefined();
 		expect(a).not.toBe(b);
 		// An ask with a key is answered as the review's tab is, as that review, in the answer's shape.
-		const ask = { dsnr: 'ask', id: 3, name: 'readComments', args: ['demo', 'prototype/demo/v12'] };
+		const ask = { dsnr: 'ask', id: 3, name: 'readComments', args: ['demo', 'prototype/demo/v3'] };
 		expect(await reviews.answerBrowser(a as string, ask)).toEqual({ dsnr: 'answer', id: 3, result: { ok: true, value: [] } });
 		await reviews.answerBrowser(b as string, ask);
 		expect(answered.map((x) => [x.review, x.name, x.args])).toEqual([
-			[demo, 'readComments', ['demo', 'prototype/demo/v12']],
-			[demo, 'readComments', ['demo', 'prototype/demo/v12']],
+			[demo, 'readComments', ['demo', 'prototype/demo/v3']],
+			[demo, 'readComments', ['demo', 'prototype/demo/v3']],
 		]);
 		// Asked from the browser, as the answer says, for what Address shows.
 		expect(answered.map((x) => x.from)).toEqual(['browser', 'browser']);
@@ -550,14 +550,14 @@ describe('the review tabs', () => {
 			answer: async () => ({ ok: true, value: null }),
 		});
 		// None open: nothing opened, but the site is built, so the browser has the page to go to.
-		await reviews.showIfOpen({ records: '/d/projects', projectId: 'demo', name: 'v12', title: 'Demo · V12' });
+		await reviews.showIfOpen({ records: '/d/projects', projectId: 'demo', name: 'v3', title: 'Demo · V3' });
 		expect(vs.panels).toHaveLength(0);
 		expect(built).toEqual(['/d/projects']);
 		await reviews.open({ records: '/d/projects', projectId: 'demo', name: 'v1', title: 'Demo · V1' });
-		await reviews.showIfOpen({ records: '/d/projects', projectId: 'demo', name: 'v12', title: 'Demo · V12' });
+		await reviews.showIfOpen({ records: '/d/projects', projectId: 'demo', name: 'v3', title: 'Demo · V3' });
 		expect(vs.panels).toHaveLength(1);
-		expect(vs.panels[0]!.title).toBe('Demo · V12');
-		expect(vs.panels[0]!.html).toContain('http://127.0.0.1:5000/review/demo/v12/');
+		expect(vs.panels[0]!.title).toBe('Demo · V3');
+		expect(vs.panels[0]!.html).toContain('http://127.0.0.1:5000/review/demo/v3/');
 		expect(vs.panels[0]!.revealed).toBe(0);
 		// Another project's tab is not this one's.
 		await reviews.showIfOpen({ records: '/d/projects', projectId: 'other', name: 'v1', title: 'Other · V1' });
@@ -590,10 +590,10 @@ describe('the review tabs', () => {
 			answer: async () => ({ ok: true, value: null }),
 		});
 		expect(reviews.active()).toBeUndefined();
-		await reviews.open({ records: '/d/projects', projectId: 'demo', name: 'v12', title: 'Demo · V12' });
+		await reviews.open({ records: '/d/projects', projectId: 'demo', name: 'v3', title: 'Demo · V3' });
 		await reviews.open({ records: '/d/projects', projectId: 'other', name: 'v1', title: 'Other · V1' });
 		vs.panels[1]!.active = false;
-		expect(reviews.active()).toEqual({ projectId: 'demo', name: 'v12', title: 'Demo · V12' });
+		expect(reviews.active()).toEqual({ projectId: 'demo', name: 'v3', title: 'Demo · V3' });
 	});
 });
 

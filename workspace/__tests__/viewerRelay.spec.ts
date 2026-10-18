@@ -81,7 +81,7 @@ describe('the tab’s light or dark', () => {
 });
 
 describe('the comments, through DSNR', () => {
-	it('are the core’s comment calls for this iteration, and the viewer is who is signed in', async () => {
+	it('are the core’s comment calls for this version, and the viewer is who is signed in', async () => {
 		const ask = vi.fn(async (name: string) =>
 			name === 'signInState' ? { ok: true as const, value: { state: 'signedIn', user: { login: 'noah' } } } : { ok: true as const, value: null },
 		);
@@ -127,7 +127,7 @@ describe('the key a page opened from DSNR carries', () => {
 		expect(page.replaced).toEqual(['/review/demo/v1/']);
 	});
 
-	it('is the one kept, after the page moves to another iteration (whose address has none)', () => {
+	it('is the one kept, after the page moves to another version (whose address has none)', () => {
 		const page = opened('127.0.0.1', '', KEY);
 		expect(keyFromAddress(page.win)).toBe(KEY);
 		expect(page.replaced).toEqual([]);

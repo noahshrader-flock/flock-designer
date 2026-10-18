@@ -31,7 +31,7 @@ const write = (root: string, path: string, body: string) => {
 const record = (name: string, extra: Record<string, unknown> = {}) => ({
 	projectId: 'p',
 	name,
-	branch: `fd/p/${name}`,
+	branch: `prototype/p/${name}`,
 	commit: null,
 	createdAt: '2026-10-01T00:00:00Z',
 	note: '',

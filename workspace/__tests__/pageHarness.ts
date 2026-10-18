@@ -7,7 +7,6 @@ import { button, press, settle, typeInto } from './reviewHarness';
  * viewer is concerned. Shared by the viewer's tests and the round trip, so both run against the same GitHub.
  */
 
-/** Which iteration the page is, as the site writes it into the page. */
 /** Signing in, as the published site tells every page (`#dsnr-sign-in`). */
 export const PAGE_SIGN_IN = {
 	clientId: 'Iv-test',
@@ -15,6 +14,7 @@ export const PAGE_SIGN_IN = {
 	redirect: 'https://acme.github.io/design/',
 	authorize: 'https://github.com/login/oauth/authorize',
 };
+/** Which version the page is, and the project's others, as the site writes them into the page. */
 export const PAGE_CONFIG = {
 	owner: 'acme',
 	repo: 'design',

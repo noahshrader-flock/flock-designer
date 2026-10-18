@@ -506,13 +506,13 @@ describe('a repository must be opened before anything acts on it', () => {
 
 describe('listProjects', () => {
 	it('names every person by their GitHub profile, however git named them, and joins them when they are one account', async () => {
-		const iteration = (people: { name: string; login: string | null }[]) =>
+		const version = (people: { name: string; login: string | null }[]) =>
 			projectWork({ name: 'v1', branch: 'prototype/alpha/v1', contributors: people });
 		const shared = {
 			id: 'alpha',
 			title: 'Alpha',
 			records: [],
-			work: [iteration([{ name: 'noahshrader-flock', login: 'noahshrader-flock' }])],
+			work: [version([{ name: 'noahshrader-flock', login: 'noahshrader-flock' }])],
 			people: [
 				{ name: 'noahshrader-flock', login: 'noahshrader-flock' },
 				{ name: 'Noah Shrader', login: 'noahshrader-flock' },
@@ -572,7 +572,7 @@ describe('where new work starts', () => {
 		await savedPrototype();
 		const r = await build(product, '--orphan');
 		expect(r.ok).toBe(false);
-		expect(g(product, 'branch', '--list', 'fd/*').trim()).toBe('');
+		expect(g(product, 'for-each-ref', '--format=%(refname)', 'refs/heads/--orphan').trim()).toBe('');
 	});
 });
 
@@ -932,7 +932,7 @@ describe('prototypes', () => {
 				basedOn?: unknown;
 			}[];
 		const page = (text: string) => `import { Hello } from 'x';\nexport default () => <><Hello /><p>${text}</p></>;\n`;
-		/** Comments by iteration: v1's thread, and any other's. */
+		/** Comments by version: v1's thread, and any other's. */
 		const threads = (byName: Record<string, ReturnType<typeof comment>[]>) =>
 			readComments.mockImplementation(async (key: string) => byName[key.split('/').at(-1) as string] ?? []);
 		/** A v1 Noah made, signed in, with a source. */

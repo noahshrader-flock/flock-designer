@@ -128,17 +128,17 @@ describe('addressed marker', () => {
 		expect(stripAnchor(withAddressed('Just a note', 'abc1234'))).toBe('Just a note');
 	});
 
-	it("on a prototype, says which iteration the change is in, and only ever a prototype's name", () => {
-		const marked = withAddressed(anchored(), 'abc1234def56', 'v12');
+	it("on a prototype, says which version the change is in, and only ever a prototype's name", () => {
+		const marked = withAddressed(anchored(), 'abc1234def56', 'v2');
 		expect(addressedAt(marked)).toBe('abc1234def56');
-		expect(addressedIn(marked)).toBe('v12');
+		expect(addressedIn(marked)).toBe('v2');
 		expect(stripAnchor(marked)).toBe('Remove this text');
 		expect(addressedIn(withAddressed('x', 'abc1234'))).toBeNull();
 		expect(addressedIn(withAddressed('x', 'abc1234', 'codebase'))).toBeNull();
 		expect(withAddressed('x', 'abc1234', '--> <script>')).toBe(withAddressed('x', 'abc1234'));
 		// Moved on again: the mark is replaced, never doubled.
-		const again = withAddressed(marked, 'fedcba987654', 'v13');
-		expect(addressedIn(again)).toBe('v13');
+		const again = withAddressed(marked, 'fedcba987654', 'v3');
+		expect(addressedIn(again)).toBe('v3');
 		expect(again.match(/fd-addressed/g)).toHaveLength(1);
 	});
 

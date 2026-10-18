@@ -19,7 +19,7 @@ const PEPSI = 'flocksafety/flock-pepsi';
 const on = (id: string, ...made: [string | null, string][]) =>
 	aProject({
 		id,
-		work: made.map(([product, createdAt], i) => projectWork({ name: `v1-i${i + 1}`, branch: `prototype/${id}/v1-i${i + 1}`, product, createdAt })),
+		work: made.map(([product, createdAt], i) => projectWork({ name: `v${i + 1}`, branch: `prototype/${id}/v${i + 1}`, product, createdAt })),
 	});
 
 describe('this product’s projects', () => {

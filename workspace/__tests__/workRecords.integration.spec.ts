@@ -233,10 +233,9 @@ describe('recordedWork: work started outside the app', () => {
 		expect(new Date(found.createdAt).toISOString()).toBe('2026-09-02T08:00:00.000Z');
 	});
 
-	it('never makes a version from a branch: a version is a page, and the prototype branches of old are not work', async () => {
-		for (const branch of ['prototype/demo/v2', 'fd/demo/i2']) g('checkout', '-q', '-b', branch, 'develop');
+	it('never makes a version from a branch: a version is a page', async () => {
+		g('checkout', '-q', '-b', 'prototype/demo/v2', 'develop');
 		await expect(recordedWork(root, records, descriptor, 'demo', 'v2')).rejects.toThrow(/demo has no v2\./);
-		await expect(recordedWork(root, records, descriptor, 'demo', 'i2')).rejects.toThrow(/demo has no i2\./);
 		expect(readWork(records, 'demo')).toEqual([]);
 	});
 

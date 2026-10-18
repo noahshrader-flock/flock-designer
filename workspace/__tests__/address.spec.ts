@@ -134,7 +134,7 @@ describe('runPrototypeAddress', () => {
 	const ok = <T>(value: T): Result<T> => ({ ok: true, value });
 	const started: AgentStatus = agentRunning();
 	const finished: AgentStatus = agentFinished();
-	const addressed = { changed: true, iteration: 'v12', made: null, comment: { id: 7 } } as never;
+	const addressed = { changed: true, iteration: 'v2', made: null, comment: { id: 7 } } as never;
 	const run = async (api: Partial<Parameters<typeof runPrototypeAddress>[0]['api']>, isLive = () => true) => {
 		const phases: AddressPhase[] = [];
 		await runPrototypeAddress({

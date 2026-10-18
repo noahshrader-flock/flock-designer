@@ -66,7 +66,7 @@ beforeAll(async () => {
 	writeFileSync(
 		join(design, 'projects', 'demo', 'work.json'),
 		JSON.stringify(
-			['v1', 'v12'].map((name, i) => ({
+			['v1', 'v2'].map((name, i) => ({
 				projectId: 'demo',
 				name,
 				branch: `prototype/demo/${name}`,
@@ -77,7 +77,7 @@ beforeAll(async () => {
 		),
 	);
 	writeFileSync(join(design, 'projects', 'demo', 'prototypes', 'v1.html'), PAGE);
-	writeFileSync(join(design, 'projects', 'demo', 'prototypes', 'v12.html'), PAGE.replace('Alert history</h1>', 'Alert history, addressed</h1>'));
+	writeFileSync(join(design, 'projects', 'demo', 'prototypes', 'v2.html'), PAGE.replace('Alert history</h1>', 'Alert history, addressed</h1>'));
 	mkdirSync(join(design, 'projects', 'hostile', 'prototypes'), { recursive: true });
 	writeFileSync(join(design, 'projects', 'hostile', 'brief.md'), '# Hostile\n');
 	writeFileSync(
@@ -107,8 +107,8 @@ beforeAll(async () => {
 			signInState: () => ({ state: 'signedIn', user: { login: 'noah', name: 'Noah', avatarUrl: null } }),
 			readComments: () => threads.readComments(b),
 			postComment: () => threads.postComment(a, b, c, d, null),
-			// Address, as the extension answers it: the change made in the next iteration, which it names.
-			address: () => (addressed.push(ask.args), 'v12'),
+			// Address, as the extension answers it: the change made in a new version, which it names.
+			address: () => (addressed.push(ask.args), 'v2'),
 		};
 		const value = await (answers[ask.name] ?? (() => null))();
 		return { dsnr: 'answer', id: ask.id, result: { ok: true, value } };
@@ -162,7 +162,7 @@ describe.skipIf(NO_CHROME)('a review opened in the browser from DSNR, in the rea
 			expect(gh.issues[0]?.comments.map((c) => c.body).join('\n')).toContain('Bigger, please');
 			expect(asked).toContain('postComment');
 
-			// Address, from the browser: asked of this page's own iteration, then the page goes to the one that has the change.
+			// Address, from the browser: asked of this page's own version, then the page goes to the one that has the change.
 			await pressNamed(tab, 'Show all comments');
 			// The box for a comment on the whole page, at the panel's foot, and its Send button: one height, as measured.
 			const sizes = await tab.evaluate(() => {
@@ -174,15 +174,15 @@ describe.skipIf(NO_CHROME)('a review opened in the browser from DSNR, in the rea
 			expect(await tab.evaluate(() => (document.querySelector('#general-comment') as HTMLTextAreaElement).placeholder)).toBe('Post a comment…');
 			await pressNamed(tab, 'Comment actions');
 			await pressNamed(tab, 'Address');
-			await tab.waitForFunction(() => location.pathname.endsWith('/v12/'));
+			await tab.waitForFunction(() => location.pathname.endsWith('/v2/'));
 			expect(addressed[0]?.[1]).toBe('prototype/demo/v1');
-			const moved = await tab.waitForFrame((f) => f.url().endsWith('/v12/page.html'));
+			const moved = await tab.waitForFrame((f) => f.url().endsWith('/v2/page.html'));
 			await moved.waitForFunction(() => document.querySelector('h1')?.textContent === 'Alert history, addressed');
 			// Still DSNR's there: the key kept for the tab, not in its address.
 			await tab.waitForFunction(() => [...document.querySelectorAll('button')].some((b) => b.textContent?.trim() === 'Comment'));
 			expect(tab.url()).not.toContain('dsnr-key');
 
-			// Loaded again, with no key in its address (as moving to another iteration is): still DSNR's, the comment there.
+			// Loaded again, with no key in its address (as moving to another version is): still DSNR's, the comment there.
 			await tab.goto(`${base}demo/v1/`, { waitUntil: 'load' });
 			const again = tab.frames().find((f) => f.url().endsWith('page.html')) as Frame;
 			await again.waitForFunction(() => document.querySelector('[data-fd-layer="pins"]')?.textContent === 'P');

@@ -14,7 +14,7 @@ describe('productsOf', () => {
 			work: [
 				prototype('v1', 'flocksafety/flock-coke', '2026-10-01T10:00:00Z'),
 				// Two clones of one repository, whatever they were called: one product.
-				prototype('v12', 'flocksafety/flock-coke', '2026-10-02T10:00:00Z'),
+				prototype('v2', 'flocksafety/flock-coke', '2026-10-02T10:00:00Z'),
 				codebase('flocksafety/flock-pepsi', '2026-10-03T10:00:00Z'),
 			],
 		});

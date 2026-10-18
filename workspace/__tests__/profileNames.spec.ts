@@ -20,9 +20,9 @@ const fakeGitHub = () =>
 		return PROFILES[login];
 	});
 
-const iteration = (contributors: Person[]): ProjectWork => projectWork({ name: 'v1', branch: 'prototype/a/v1', contributors });
+const version = (contributors: Person[]): ProjectWork => projectWork({ name: 'v1', branch: 'prototype/a/v1', contributors });
 const project = (people: Person[], contributors: Person[] = people): Project =>
-	aProject({ id: 'a', title: 'A', work: [iteration(contributors)], people });
+	aProject({ id: 'a', title: 'A', work: [version(contributors)], people });
 
 describe('naming people by their GitHub profile', () => {
 	it('shows a person by their profile name, whatever git called them', async () => {
@@ -30,7 +30,7 @@ describe('naming people by their GitHub profile', () => {
 		expect(p!.people).toEqual([{ name: 'Noah Shrader', login: 'noahshrader-flock' }]);
 	});
 
-	it('names an iteration’s contributors the same way', async () => {
+	it('names a version’s contributors the same way', async () => {
 		const [p] = await new ProfileNames(fakeGitHub()).nameEveryone([project([], [{ name: 'noahshrader', login: 'noahshrader' }])]);
 		expect(p!.work[0]!.contributors).toEqual([{ name: 'Noah Shrader', login: 'noahshrader' }]);
 	});

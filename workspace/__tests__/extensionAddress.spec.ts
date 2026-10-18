@@ -12,13 +12,13 @@ import { ok } from '../src/shared/result';
 const review = { projectId: 'demo', name: 'v1', title: 'Demo · V1' };
 const comment = { thread: 4, id: 40 };
 const finished: AgentStatus = { state: 'finished', exitCode: 0, work: 'prototype/demo/v1', purpose: null };
-const iteration = (name: string) => ({ name, branch: `prototype/demo/${name}`, createdAt: `2026-10-0${name.at(-1)}T10:00:00Z` });
+const version = (name: string) => ({ name, branch: `prototype/demo/${name}`, createdAt: `2026-10-0${name.at(-1)}T10:00:00Z` });
 const demo = {
 	id: 'demo',
 	title: 'Demo',
 	folder: null,
 	records: [],
-	work: [iteration('v1'), iteration('v3')],
+	work: [version('v1'), version('v3')],
 	people: [],
 } as unknown as Project;
 
