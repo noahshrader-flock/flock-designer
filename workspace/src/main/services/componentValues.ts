@@ -61,7 +61,8 @@ const lengthRead = (plain: string, tagged: string, { tags, tokens: all, mode }: 
 		if (path) tokens.add(inMode(all, path, mode));
 		else derived++;
 	});
-	if (derived > 0) return { kind: 'derived', tokens: [] };
+	// A part that is a token exactly is named even when another part is worked out from one (MUI's skeleton: a radius and that over 0.6).
+	if (derived > 0) return tokens.size === 0 ? { kind: 'derived', tokens: [] } : { kind: 'mixed', tokens: [...tokens] };
 	return { kind: tokens.size === 0 ? 'own' : own > 0 ? 'mixed' : 'token', tokens: [...tokens] };
 };
 

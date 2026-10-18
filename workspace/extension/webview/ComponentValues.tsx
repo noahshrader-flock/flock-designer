@@ -66,7 +66,8 @@ interface Made {
 const madeOf = (cell: ValueCell, name: (path: string) => string, others: (path: string) => string[]): Made => {
 	if (cell.kind === 'token')
 		return { says: cell.tokens.map(name).join(', '), why: cell.tokens.map((p) => `${name(p)} · ${sharedWith(others(p))}`).join('\n') };
-	if (cell.kind === 'mixed') return { says: `Partly ${cell.tokens.map(name).join(', ')}`, why: 'Partly a token, partly the component’s own.' };
+	if (cell.kind === 'mixed')
+		return { says: `Partly ${cell.tokens.map(name).join(', ')}`, why: 'Partly a token; the rest is the component’s own, or worked out from tokens.' };
 	if (cell.kind === 'derived')
 		return { says: 'From a token', why: 'It changes with the tokens, but is none of them: a shade, or a size that grows with one.' };
 	if (cell.kind === 'own') return { says: null, why: 'The component’s own: set in the component itself, no token the analysis can mark gives it.' };

@@ -23,8 +23,13 @@ const nextSizeTag = (px: number): number => {
 	while (!isPrime(k)) k++;
 	return k;
 };
-/** The largest multiple of a size tag read as that token: a theme's spacing is used up to a few times over. */
+/**
+ * The largest multiple of a size tag read as that token: a theme's spacing is used up to a few times over, in whole and half
+ * steps (Tailwind's `py-1.5`). A half step of one tag is never a half step of another: both are halves of a multiple of a
+ * prime from 13, at most 16 of them, and the next prime is 17.
+ */
 const MOST_MULTIPLE = 8;
+const HALF_STEPS = 2 * MOST_MULTIPLE;
 
 export interface Tags {
 	edits: TokenEdit[];
@@ -86,11 +91,13 @@ export const asTag = (color: string): string | null => {
 	return `#${[m[1], m[2], m[3]].map((c) => Number(c).toString(16).padStart(2, '0')).join('')}`.toUpperCase();
 };
 
-/** The size tag a computed size (`26px`) is a whole multiple of, if any. */
+/** The size tag a computed size (`26px`, `19.5px`) is a whole or half multiple of, if any. */
 export const sizeToken = (value: string, sizes: Tags['sizes']): string | null => {
 	const px = Math.abs(pxOf(value) ?? NaN);
 	if (!Number.isFinite(px) || px === 0) return null;
-	return sizes.find((s) => px % s.px === 0 && px / s.px <= MOST_MULTIPLE)?.path ?? null;
+	// Counted in halves of the tag, to the place a browser writes a computed length to.
+	const inHalves = (tag: number) => (2 * px) / tag;
+	return sizes.find((s) => Math.abs(inHalves(s.px) - Math.round(inHalves(s.px))) < 1e-4 && Math.round(inHalves(s.px)) <= HALF_STEPS)?.path ?? null;
 };
 
 /** Nothing worth saying: no color, no size, or a gap left as CSS has it (`normal`). */

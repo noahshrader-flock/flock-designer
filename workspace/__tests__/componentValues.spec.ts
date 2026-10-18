@@ -178,6 +178,18 @@ describe('a component’s drawn values', () => {
 		]);
 	});
 
+	it('read a half step of a token as that token (Tailwind’s 1.5 times a spacing), and name the token a part worked out from tokens leaves', () => {
+		// A tag of 13px: 1.5 times it is 19.5px, and twice 13 and a half is 33.8px, no multiple of any tag: worked out from tokens.
+		const plain = [instance({}, { padding: '6px 12px 6px 12px', radius: '8px 13.3px 8px 13.3px' })];
+		const tagged = [instance({}, { padding: '19.5px 39px 19.5px 39px', radius: '17px 28.2px 17px 28.2px' })];
+		const rows = read(plain, tagged).rows;
+		expect(rowOf(rows, 'padding')?.cells).toEqual([{ variant: null, value: '6px 12px', kind: 'token', tokens: ['spacing'], instances: 1 }]);
+		// The radius written as a token and that over 0.6: the token is named, as partly one.
+		expect(rowOf(rows, 'radius')?.cells).toEqual([
+			{ variant: null, value: '8px 13.3px', kind: 'mixed', tokens: ['shape.borderRadius'], instances: 1 },
+		]);
+	});
+
 	it('never call a height a token, even when the tags move it onto a multiple of one: it is a sum, worked out from what is inside it', () => {
 		const plain = [instance({ size: 'sm' }, { height: '28px' }), instance({ size: 'lg' }, { height: '48px' })];
 		// Its padding tagged, sm's height comes to 46px, twice the 23px tag; lg's is a literal the tags leave alone.
