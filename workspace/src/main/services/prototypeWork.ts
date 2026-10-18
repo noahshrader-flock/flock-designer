@@ -4,7 +4,7 @@ import type { Work, Person, PrototypeReadiness } from '../../shared/contract';
 import { type DeclaredTarget, undeclared } from '../../shared/wcag';
 import { fromBrief } from '../../shared/brief';
 import { projectPath, prototypePagePath, prototypeSourcePath, sharedFilePath, sharedFilesOf } from '../../shared/designPaths';
-import { hasOutsideComments, nextVersionName } from '../../shared/prototypeNames';
+import { commentsFromOthers, nextVersionName } from '../../shared/prototypeNames';
 import { MANIFEST_FILE, declaredTarget, productTarget, taskAccessibility } from './accessibilityBrief';
 import { designSystemCheckout, readDescriptor } from './descriptor';
 import { recordsRootFor } from './discovery';
@@ -26,6 +26,7 @@ import { type CheckConfig, checkedAsSaved } from './buildCheck';
 import { prototypeMeasureName, recordFiles } from './accessibilityRecord';
 import { designSystemFile, taskVoice } from './voiceBrief';
 import { HOST } from '../../shared/vocabulary';
+import { plural } from '../../shared/plural';
 
 /**
  * Making a prototype, with nothing of the app in it: starting one (its record, its brief, its name), what its agent
@@ -49,29 +50,29 @@ export interface PrototypeWorkContext {
 }
 
 /**
- * Where a change to a prototype goes: `target`, which is `from` itself, or, when others have commented on `from`, a new
- * version from it, not yet recorded (`fresh`). `before` is the hash of the source the change starts from.
+ * Where a change to a prototype goes: `target`, which is `from` itself, or, when a new version was asked for, a new
+ * version from it, not yet recorded (`fresh`). `before` is the hash of the source the change starts from. `others` is how
+ * many comments on `from` are by anyone but its makers, or null when that could not be read.
  */
 export interface PrototypeChange {
 	from: Work;
 	target: string;
 	fresh: boolean;
 	before: string;
-	/** Who has commented on `from` could not be read, so it was taken as commented on. */
-	unread: boolean;
+	others: number | null;
 }
 
 /**
- * Where a change is made, as the agent making it is told, in the same words from the app and the command. Null when
- * there is nothing to say: the change is made in the version the agent was pointed at.
+ * Where a change is made, as the agent making it is told, in the same words from the app and the command: in a new
+ * version when one was asked for; else in place, saying so when others have commented, since their pins may then land on
+ * the wrong element. Null when there is nothing to say.
  */
 export const whereTheChangeGoes = (change: PrototypeChange): string | null => {
-	if (change.fresh) {
-		const why = change.unread
-			? `Who has commented on ${change.from.name} could not be read, so it is left as it is, in case people have seen it`
-			: `Others have commented on ${change.from.name}, so it stays as they saw it`;
-		return `${why}. The change is made in ${change.target}, a new version from it, which starts as a copy of it: change that copy, rather than starting again.`;
-	}
+	if (change.fresh)
+		return `A new version was asked for: the change is made in ${change.target}, a new version from ${change.from.name}, which starts as a copy of it. Change that copy, rather than starting again; ${change.from.name} stays as it is.`;
+	if (change.others === null) return `Who has commented on ${change.from.name} could not be read. The change is made in it, in place.`;
+	if (change.others > 0)
+		return `${plural(change.others, 'comment')} from others ${change.others === 1 ? 'is' : 'are'} on ${change.from.name}. The change is made in it, in place, so their pins may land on the wrong element: say so when you report.`;
 	return null;
 };
 
@@ -348,12 +349,15 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 	const save = async (projectId: string, name: string): Promise<void> => keep(projectId, name, await built(projectId, name));
 
 	/**
-	 * Where a change to a prototype goes, and its source made ready there. The change goes to the version it was asked
-	 * of, unless anyone but its makers has commented on it: then what they commented on is left as it is, and the change
-	 * starts a new version from it. `authorsOf` says who has commented on a version, or null when that cannot be read:
-	 * then it is taken as commented on. Nothing is recorded yet: see `finishChange`.
+	 * Where a change to a prototype goes, and its source made ready there: the version it was asked of, in place, unless a
+	 * new version is asked for (`newVersion`), never otherwise. `authorsOf` says who has commented on the version, or null
+	 * when that cannot be read, for the person to be told. Nothing is recorded yet: see `finishChange`.
 	 */
-	const startChange = async (projectId: string, name: string, authorsOf: (version: Work) => Promise<string[] | null>): Promise<PrototypeChange> => {
+	const startChange = async (
+		projectId: string,
+		name: string,
+		{ newVersion, authorsOf }: { newVersion: boolean; authorsOf: (version: Work) => Promise<string[] | null> },
+	): Promise<PrototypeChange> => {
 		assertPrototypeName(name);
 		const all = await records(projectId);
 		const from = all.find((i) => i.name === name);
@@ -361,7 +365,7 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		const source = await sourceText(projectId, from.name);
 		if (source === null) throw new Error('This prototype has no React source saved, so there is nothing for the agent to change.');
 		const authors = await authorsOf(from);
-		const fresh = authors === null || hasOutsideComments(from.contributors, authors);
+		const fresh = newVersion;
 		const target = fresh ? nextVersionName(all.map((i) => i.name)) : from.name;
 		const local = sourceFile(projectId, target);
 		if (fresh) {
@@ -372,7 +376,7 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 			// Built on another machine: its saved source is what is changed.
 			writeFileSync(local, source);
 		}
-		return { from, target, fresh, before: contentHashOf(source), unread: authors === null };
+		return { from, target, fresh, before: contentHashOf(source), others: authors === null ? null : commentsFromOthers(from.contributors, authors) };
 	};
 
 	/**
@@ -390,7 +394,7 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		const from = all.find((i) => i.name === fromName);
 		if (!from) throw new Error(`${projectId} has no ${fromName} for ${name} to have been started from.`);
 		const source = await sourceText(projectId, from.name);
-		return { from, target: name, fresh: true, before: source === null ? '' : contentHashOf(source), unread: false };
+		return { from, target: name, fresh: true, before: source === null ? '' : contentHashOf(source), others: 0 };
 	};
 
 	/**

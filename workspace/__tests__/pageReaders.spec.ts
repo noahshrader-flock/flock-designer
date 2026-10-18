@@ -100,20 +100,28 @@ describe('where a change to a prototype goes', () => {
 		target: 'v2',
 		fresh: false,
 		before: 'abc',
-		unread: false,
+		others: 0,
 		...over,
 	});
 
-	it('says nothing when it is made in the version the agent was pointed at', () => {
+	it('says nothing when it is made in place and no one else has commented', () => {
 		expect(whereTheChangeGoes(change({}))).toBeNull();
 	});
 
-	it('keeps a commented-on version as people saw it, and says the change goes in a new version from it', () => {
-		const where = whereTheChangeGoes(change({ fresh: true, target: 'v4' }));
-		expect(where).toMatch(/^Others have commented on v2, so it stays as they saw it\. The change is made in v4, a new version from it/);
+	it('says others have commented, and that the change is still made in place, for the person to be told', () => {
+		expect(whereTheChangeGoes(change({ others: 3 }))).toBe(
+			'3 comments from others are on v2. The change is made in it, in place, so their pins may land on the wrong element: say so when you report.',
+		);
+		expect(whereTheChangeGoes(change({ others: 1 }))).toMatch(/^1 comment from others is on v2\./);
 	});
 
-	it('treats comments that could not be read as there, and says so', () => {
-		expect(whereTheChangeGoes(change({ fresh: true, unread: true, target: 'v4' }))).toMatch(/^Who has commented on v2 could not be read/);
+	it('says when who has commented could not be read, and still changes it in place', () => {
+		expect(whereTheChangeGoes(change({ others: null }))).toBe('Who has commented on v2 could not be read. The change is made in it, in place.');
+	});
+
+	it('makes it in a new version only when one was asked for, whoever has commented', () => {
+		expect(whereTheChangeGoes(change({ fresh: true, target: 'v4', others: 0 }))).toMatch(
+			/^A new version was asked for: the change is made in v4, a new version from v2, which starts as a copy of it\./,
+		);
 	});
 });

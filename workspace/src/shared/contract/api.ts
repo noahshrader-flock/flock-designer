@@ -200,10 +200,10 @@ export interface WorkspaceApi {
 	 */
 	handPrototypeBuild(root: string, projectId: string, name: string, request: string): Promise<Result<BuildInCodebase>>;
 	/**
-	 * Starts the agent on one comment on a prototype. There is no batch. The change goes in the version commented on, or,
-	 * when others have commented on it, in a new version from it.
+	 * Starts the agent on one comment on a prototype. There is no batch. The change goes in the version commented on, in
+	 * place, or in a new version from it when `newVersion` asks for one.
 	 */
-	addressPrototype(projectId: string, name: string, comment: CommentRef): Promise<Result<AgentStatus>>;
+	addressPrototype(projectId: string, name: string, comment: CommentRef, newVersion: boolean): Promise<Result<AgentStatus>>;
 	/**
 	 * Once that agent has finished: a changed prototype is built, recorded when it is a new version, and saved, and the
 	 * comment is marked with where the change is. Says whether anything changed, in which version, the new version's

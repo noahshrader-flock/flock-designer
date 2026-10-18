@@ -146,6 +146,7 @@ describe('runPrototypeAddress', () => {
 			},
 			projectId: 'demo',
 			name: 'v1',
+			newVersion: false,
 			comment: { thread: 1, id: 7 },
 			isLive,
 			onPhase: (p) => phases.push(p),

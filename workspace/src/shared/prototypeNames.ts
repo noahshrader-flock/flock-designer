@@ -28,12 +28,12 @@ export const newestVersionFirst = (a: string, b: string): number => (parseVersio
 export const nextVersionName = (names: string[]): string => prototypeName(names.reduce((max, n) => Math.max(max, parseVersion(n) ?? 0), 0) + 1);
 
 /**
- * Whether anyone but a version's makers has commented on it. Once someone has, what they commented on is not changed under
- * them: the change is made in a new version from it. Makers are known by their GitHub login, as comment authors are; a
- * maker with none is not anyone's, so a version whose makers are unknown counts any comment as someone else's. A bot is
- * not someone who saw it.
+ * How many comments on a version are by anyone but its makers: what a change in place can leave pointing at the wrong
+ * element, so the person is told before it is made. Makers are known by their GitHub login, as comment authors are; a
+ * maker with none is not anyone's, so a version whose makers are unknown counts every comment as someone else's. A bot
+ * is not someone who saw it.
  */
-export const hasOutsideComments = (makers: Person[] | undefined, authors: string[]): boolean => {
+export const commentsFromOthers = (makers: Person[] | undefined, authors: string[]): number => {
 	const own = new Set((makers ?? []).flatMap((p) => (p.login ? [p.login.toLowerCase()] : [])));
-	return authors.some((a) => !isBot(a) && !own.has(a.toLowerCase()));
+	return authors.filter((a) => !isBot(a) && !own.has(a.toLowerCase())).length;
 };

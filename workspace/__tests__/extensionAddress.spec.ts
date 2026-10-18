@@ -6,13 +6,19 @@ import { ok } from '../src/shared/result';
 /**
  * Address on a prototype's comment, from its review in VS Code (ELECTRON_MIGRATION_PLAN 4.2): the app's own Address
  * (`runPrototypeAddress`), shown as a build is, with Stop and its log; then the review shows where the change went, and
- * says so, or says the agent changed nothing.
+ * says so, or says the agent changed nothing. Before a version others have commented on is changed, the person chooses.
  */
 
 const review = { projectId: 'demo', name: 'v1', title: 'Demo · V1' };
 const comment = { thread: 4, id: 40 };
 const finished: AgentStatus = { state: 'finished', exitCode: 0, work: 'prototype/demo/v1', purpose: null };
-const version = (name: string) => ({ name, branch: `prototype/demo/${name}`, createdAt: `2026-10-0${name.at(-1)}T10:00:00Z` });
+const noah = { name: 'Noah', login: 'noah' };
+const version = (name: string) => ({
+	name,
+	branch: `prototype/demo/${name}`,
+	createdAt: `2026-10-0${name.at(-1)}T10:00:00Z`,
+	contributors: [noah],
+});
 const demo = {
 	id: 'demo',
 	title: 'Demo',
@@ -22,7 +28,13 @@ const demo = {
 	people: [],
 } as unknown as Project;
 
-const world = (addressed: { changed: boolean; iteration: string } = { changed: true, iteration: 'v1' }) => {
+const world = (
+	addressed: { changed: boolean; iteration: string } = { changed: true, iteration: 'v1' },
+	/** Who has commented on the version: its maker alone, unless said; null when that cannot be read. */
+	commenters: string[] | null = ['noah'],
+	/** What the person chooses when asked, or undefined for neither. */
+	chooses?: (actions: string[]) => string | undefined,
+) => {
 	const said: string[] = [];
 	const told: string[] = [];
 	const api = {
@@ -31,6 +43,9 @@ const world = (addressed: { changed: boolean; iteration: string } = { changed: t
 		agentStatus: vi.fn(async () => ok(finished)),
 		finishPrototypeAddress: vi.fn(async () => ok({ ...addressed, made: null, comment })),
 		listProjects: vi.fn(async () => ok([demo])),
+		readComments: vi.fn(async () =>
+			commenters === null ? { ok: false, error: 'GitHub could not be reached.' } : ok(commenters.map((author) => ({ author }))),
+		),
 		stopAgent: vi.fn(async () => ok(null)),
 		onAgentLog: vi.fn(() => () => undefined),
 	};
@@ -42,6 +57,7 @@ const world = (addressed: { changed: boolean; iteration: string } = { changed: t
 		}),
 		log: { start: vi.fn(), line: vi.fn() },
 		tell: (m) => void told.push(m),
+		offer: vi.fn(async (_m: string, actions: string[]) => chooses?.(actions)),
 		show: vi.fn(async () => undefined),
 		pollMs: 0,
 	};
@@ -53,18 +69,39 @@ describe('addressing a comment from a review', () => {
 		const { deps, api, said, told } = world();
 		// It says which version it showed, for whoever asked to go to it (a browser).
 		expect(await addressComment(deps, review, comment)).toBe('v1');
-		expect(api.addressPrototype).toHaveBeenCalledWith('demo', 'v1', comment);
+		// Only its maker has commented: no question, and the change is made in place.
+		expect(deps.offer).not.toHaveBeenCalled();
+		expect(api.addressPrototype).toHaveBeenCalledWith('demo', 'v1', comment, false);
 		expect(said).toEqual(['Addressing a comment on Demo · V1', 'The agent is working on the comment. This takes a few minutes.']);
 		expect(deps.log.start).toHaveBeenCalledWith('Demo · V1: addressing a comment');
 		expect(told).toEqual(['The agent has finished. Look at the page, then resolve what is done.']);
 		expect(deps.show).toHaveBeenCalledWith(review);
 	});
 
-	it('shows the new version when others had commented on this one, and says why', async () => {
-		const { deps, told } = world({ changed: true, iteration: 'v3' });
-		expect(await addressComment(deps, review, comment)).toBe('v3');
-		expect(told).toEqual(['Others had commented on V1, so it stays as they saw it. The change is in V3.']);
-		expect(deps.show).toHaveBeenCalledWith({ projectId: 'demo', name: 'v3', title: 'Demo · V3' });
+	it('asks first when others have commented, and changes it in place when the person says update', async () => {
+		const { deps, api } = world(undefined, ['noah', 'pm', 'pm'], (actions) => actions[0]);
+		expect(await addressComment(deps, review, comment)).toBe('v1');
+		expect(deps.offer).toHaveBeenCalledWith('2 comments from others are on V1. Changing it in place can leave their pins on the wrong element.', [
+			'Update V1',
+			'Start V4 from it',
+		]);
+		expect(api.addressPrototype).toHaveBeenCalledWith('demo', 'v1', comment, false);
+	});
+
+	it('makes the change in a new version when the person chooses one, shows it, and says so', async () => {
+		const { deps, api, told } = world({ changed: true, iteration: 'v4' }, ['pm'], (actions) => actions[1]);
+		expect(await addressComment(deps, review, comment)).toBe('v4');
+		expect(api.addressPrototype).toHaveBeenCalledWith('demo', 'v1', comment, true);
+		expect(told).toEqual(['The change is in V4, a new version from V1, which stays as it was.']);
+	});
+
+	it('does nothing when the person chooses neither, and asks the same when who has commented cannot be read', async () => {
+		const neither = world(undefined, ['pm']);
+		expect(await addressComment(neither.deps, review, comment)).toBeNull();
+		expect(neither.api.addressPrototype).not.toHaveBeenCalled();
+		const unread = world(undefined, null, (actions) => actions[0]);
+		expect(await addressComment(unread.deps, review, comment)).toBe('v1');
+		expect(unread.deps.offer).toHaveBeenCalledWith('Who has commented on V1 could not be read.', ['Update V1', 'Start V4 from it']);
 	});
 
 	it('says when the agent changed nothing, and leaves the review as it is', async () => {

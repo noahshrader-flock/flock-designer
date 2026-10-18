@@ -67,7 +67,7 @@ export { ghApi } from '../main/services/ghCli';
 
 const USAGE = `Usage:
   dsnr new-prototype --project <id> --note <what to make> [--title <project title>] [--from <branch>] [--product <dir>]
-  dsnr change-prototype --project <id> --name <v1> --note <what to change> [--product <dir>]
+  dsnr change-prototype --project <id> --name <v1> --note <what to change> [--new-version] [--product <dir>]
   dsnr save-prototype --project <id> --name <v1> [--from-version <v1>] [--product <dir>]
   dsnr build-site [--out <dir>] [--serve]
   dsnr publish --project <id> --name <v1> [--no-open]
@@ -77,8 +77,8 @@ const USAGE = `Usage:
   dsnr read-returned --project <id> [--product <dir>]
 
 new-prototype records the next version (v1 for a new project, then v2, v3) and prints the task: where to write the
-prototype and how to check it builds. change-prototype does the same for a change to one: in that version, or in a new
-version from it when others have commented on it. save-prototype builds it and saves page and source to the design
+prototype and how to check it builds. change-prototype does the same for a change to one: in that version, in place, or,
+with --new-version only, in a new version from it. save-prototype builds it and saves page and source to the design
 repository; for a new version from another, --from-version says which (the task gives the command whole).
 --note-file <path> may stand in for --note. --title is needed only for a new project.
 build-site writes the site prototypes are published as, from the design repository, and --serve shows it here. publish
@@ -133,6 +133,7 @@ const OPTIONS = {
 	serve: { type: 'boolean' },
 	'no-open': { type: 'boolean' },
 	light: { type: 'boolean' },
+	'new-version': { type: 'boolean' },
 } as const;
 
 /** The options, or a usage error that says which one was wrong. */
@@ -416,11 +417,11 @@ export const main = async (argv: string[], deps: CliDeps): Promise<number> => {
 				read.comments = threads ? await threads.readComments(it.branch).catch(() => null) : null;
 				return read.comments?.map((c) => c.author) ?? null;
 			};
-			const change = await work.startChange(projectId, name, authorsOf);
+			const change = await work.startChange(projectId, name, { newVersion: values['new-version'] === true, authorsOf });
 			const text = await buildTask(skill, change.target, change.from.name, note);
 			const where = whereTheChangeGoes(change) ?? `The change is made in ${change.target}: change it, rather than starting again.`;
 			const unsaved = change.fresh ? ` ${change.target} is recorded when it is saved.` : '';
-			const signIn = change.unread ? ` (${HOST}'s command line, ${CLI}, is missing or not signed in.)` : '';
+			const signIn = change.others === null ? ` (${HOST}'s command line, ${CLI}, is missing or not signed in.)` : '';
 			// What people have said about it so far, for the agent to read before it changes anything, and to tell the person.
 			const open = openComments(read.comments ?? []);
 			let said = '';

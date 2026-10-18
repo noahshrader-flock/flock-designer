@@ -218,15 +218,29 @@ describe('change-prototype', () => {
 		expect(recorded().map((i) => i.name)).toEqual(['v1']);
 	});
 
-	it('makes the change in a new version from it once someone else has commented, recorded only when saved, with what it started from', async () => {
+	it('changes it in place when others have commented too, and has the person told', async () => {
 		signedIn({ v1: ['test-person', 'pm'] });
 		await made();
 		expect(await run('change-prototype', '--project', 'demo', '--name', 'v1', '--note', 'Make the title bigger')).toBe(0);
-		expect(out.join('\n')).toMatch(/Others have commented on v1/);
+		expect(out.join('\n')).toContain(
+			'1 comment from others is on v1. The change is made in it, in place, so their pins may land on the wrong element',
+		);
 		// What they said is read first, from a file, and the person is told how much there is.
 		const said = /2 open comments on v1, in (\S+?): read them first/.exec(out.join('\n'));
 		expect(said).not.toBeNull();
 		expect(readFileSync(said?.[1] as string, 'utf8')).toContain('feedback');
+		expect(out.join('\n')).toContain('dsnr save-prototype --project demo --name v1 --product');
+		writeFileSync(local('v1'), page('bigger'));
+		expect(await run('save-prototype', '--project', 'demo', '--name', 'v1')).toBe(0);
+		expect(recorded().map((i) => i.name)).toEqual(['v1']);
+		expect(readFileSync(join(design, 'projects', 'demo', 'prototypes', 'v1.html'), 'utf8')).toContain('bigger');
+	});
+
+	it('makes a new version from it only when asked, recorded only when saved, with what it started from', async () => {
+		signedIn({ v1: ['test-person'] });
+		await made();
+		expect(await run('change-prototype', '--project', 'demo', '--name', 'v1', '--note', 'Try it as cards', '--new-version')).toBe(0);
+		expect(out.join('\n')).toMatch(/A new version was asked for: the change is made in v2, a new version from v1/);
 		expect(out.join('\n')).toContain(`Write \`${local('v2')}\``);
 		expect(out.join('\n')).toContain('dsnr publish --project demo --name v2');
 		// The command it is given says which version the new one was started from, so saving it records that.
@@ -234,23 +248,26 @@ describe('change-prototype', () => {
 		expect(readFileSync(local('v2'), 'utf8')).toBe(page('first'));
 		expect(recorded().map((i) => i.name)).toEqual(['v1']);
 
-		writeFileSync(local('v2'), page('bigger'));
+		writeFileSync(local('v2'), page('cards'));
 		expect(await run('save-prototype', '--project', 'demo', '--name', 'v2', '--from-version', 'v1')).toBe(0);
 		expect(recorded()).toMatchObject([{ name: 'v1' }, { name: 'v2', from: 'v1', contributors: [{ name: 'Test Person', login: 'test-person' }] }]);
-		expect(readFileSync(join(design, 'projects', 'demo', 'prototypes', 'v2.html'), 'utf8')).toContain('bigger');
+		expect(readFileSync(join(design, 'projects', 'demo', 'prototypes', 'v2.html'), 'utf8')).toContain('cards');
 		expect(readFileSync(join(design, 'projects', 'demo', 'prototypes', 'v1.html'), 'utf8')).toContain('first');
 	});
 
-	it('when the comments cannot be read, never changes what people may have seen', async () => {
+	it('when the comments cannot be read, says so, and still changes it in place', async () => {
 		await made();
 		expect(await run('change-prototype', '--project', 'demo', '--name', 'v1', '--note', 'Bigger')).toBe(0);
-		expect(out.join('\n')).toMatch(/could not be read[\s\S]*change is made in v2[\s\S]*gh, is missing or not signed in/);
+		expect(out.join('\n')).toMatch(
+			/Who has commented on v1 could not be read\. The change is made in it, in place\.[\s\S]*gh, is missing or not signed in/,
+		);
+		expect(out.join('\n')).toContain('dsnr save-prototype --project demo --name v1 --product');
 	});
 
-	it('makes nothing when the change was not made', async () => {
+	it('makes nothing when a new version was asked for and nothing was changed', async () => {
 		signedIn({ v1: ['pm'] });
 		await made();
-		await run('change-prototype', '--project', 'demo', '--name', 'v1', '--note', 'Bigger');
+		await run('change-prototype', '--project', 'demo', '--name', 'v1', '--note', 'Bigger', '--new-version');
 		expect(await run('save-prototype', '--project', 'demo', '--name', 'v2', '--from-version', 'v1')).toBe(0);
 		expect(out.at(-1)).toMatch(/nothing was made or saved/);
 		expect(recorded().map((i) => i.name)).toEqual(['v1']);

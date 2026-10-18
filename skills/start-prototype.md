@@ -15,11 +15,10 @@ node ../flock-designer/workspace/bin/dsnr.mjs new-prototype --project <id> --tit
 - **`<id>`** is the project's folder in `../flock-designer/projects/`: the existing one when this continues a
   project, otherwise a short kebab-case name for it (`admin-usage`) that you choose from the request: do not ask the
   person about it. `--title` is needed only for a new project.
-- **Each run is a new version** (`v1-i1`, then `v2-i1`): run it again for "another version" or "a different idea",
+- **Each run is a new version** (`v1`, then `v2`): run it again for "another version" or "a different idea",
   once per version asked for, finishing each before starting the next.
-- **"Based on V1"**: say so in the note, and start from that version's newest source,
-  `../flock-designer/projects/<id>/prototypes/v1-i<n>.tsx` (the highest `n`), changing what the new idea changes.
-  Without that, a new version starts from the brief.
+- **"Based on V1"** is not a new run of this: it is `change-prototype --name v1 --new-version` (below), which starts
+  the new version from V1's source and records that it did. Without that, a new version starts from the brief.
 - **`--note`** is the idea, in the person's own words: it becomes the project's brief, which reviewers read. Leave
   out instructions about how to make it ("mock data only", "a prototype, not codebase work"): the skills already
   say those.
@@ -32,19 +31,21 @@ If it says something must be installed first, tell the person what, and stop.
 
 ## Or change one
 
-When asked to change a prototype that exists (a refinement of the same idea, not a different one), run:
+When asked to change a prototype that exists, run:
 
 ```bash
-node ../flock-designer/workspace/bin/dsnr.mjs change-prototype --project <id> --name <v1-i1> --note "<what they asked to change>"
+node ../flock-designer/workspace/bin/dsnr.mjs change-prototype --project <id> --name <v1> --note "<what they asked to change>"
 ```
 
-- **`--name`** is any iteration of the version to change; the change goes in that version's newest iteration.
-- **It decides where the change goes**, and says so: in that iteration, or, when someone other than its makers has
-  commented on it, in the version's next iteration (`v1-i2`), so what they commented on is never changed under them.
-  Say which in your summary.
+- **`--name`** is the version to change (`v1`, `v2`); the change is made in it, in place.
+- **Add `--new-version` only when the person asks for a new version** ("make a new version", "try it as another
+  version"). Then the change is made in a copy of it, the next version, and what they had stays as it was. Never start
+  one on your own, whoever has commented.
+- **When others have commented on the version, the command says so:** changing it in place can leave their pins on the
+  wrong element. Say that in your summary, with how many comments.
 - **Save each change before starting another:** a change not yet saved is only on this machine, and the next
-  `change-prototype` would start again from what people saw.
-- A different idea is a new version: `new-prototype`, as above.
+  `change-prototype` would start again from what was saved.
+- A different idea, not started from this one, is a new version too: `new-prototype`, as above.
 
 ## Then build it
 
@@ -60,6 +61,6 @@ repository is.
 
 ## Taking a page down
 
-Only when the person asks for an iteration to come off its page:
-`node ../flock-designer/workspace/bin/dsnr.mjs unpublish --project <id> --name <v1-i2>`. It removes the saved page and
+Only when the person asks for a version to come off its page:
+`node ../flock-designer/workspace/bin/dsnr.mjs unpublish --project <id> --name <v2>`. It removes the saved page and
 source, pushes, and deploys the site without it; the record and comments stay. Pass on what it printed.

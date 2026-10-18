@@ -16,7 +16,7 @@ import {
 	projectOpening,
 	withCovers,
 } from '../src/shared/projectList';
-import { isPrototypeName, hasOutsideComments, nextVersionName, parseVersion, prototypeName } from '../src/shared/prototypeNames';
+import { isPrototypeName, commentsFromOthers, nextVersionName, parseVersion, prototypeName } from '../src/shared/prototypeNames';
 import { PROJECT_ID, asDate, asRoute, isRecordName, slugify, asCover } from '../src/shared/validate';
 import { codeLink, workLabel, workOf } from '../src/shared/work';
 import { readFolderProjects } from '../src/main/services/localProjects';
@@ -345,17 +345,16 @@ describe("a prototype's name: its version", () => {
 		expect(nextVersionName(['v1-i7', 'i9'])).toBe('v1');
 	});
 
-	it('knows when anyone but its makers has commented on a version', () => {
+	it('counts the comments on a version by anyone but its makers', () => {
 		const noah = { name: 'Noah', login: 'Noah-S' };
-		expect(hasOutsideComments([noah], [])).toBe(false);
-		expect(hasOutsideComments([noah], ['noah-s', 'NOAH-S'])).toBe(false);
-		expect(hasOutsideComments([noah], ['noah-s', 'pm'])).toBe(true);
-		// Makers nobody can name are no one's: a comment from anyone counts as someone else's.
-		expect(hasOutsideComments(undefined, ['noah-s'])).toBe(true);
-		expect(hasOutsideComments([{ name: 'Noah', login: null }], ['noah-s'])).toBe(true);
-		expect(hasOutsideComments(undefined, [])).toBe(false);
+		expect(commentsFromOthers([noah], [])).toBe(0);
+		expect(commentsFromOthers([noah], ['noah-s', 'NOAH-S'])).toBe(0);
+		expect(commentsFromOthers([noah], ['noah-s', 'pm', 'pm'])).toBe(2);
+		// Makers nobody can name are no one's: every comment counts as someone else's.
+		expect(commentsFromOthers(undefined, ['noah-s'])).toBe(1);
+		expect(commentsFromOthers([{ name: 'Noah', login: null }], ['noah-s'])).toBe(1);
 		// A bot saw nothing.
-		expect(hasOutsideComments([noah], ['github-actions[bot]'])).toBe(false);
+		expect(commentsFromOthers([noah], ['github-actions[bot]'])).toBe(0);
 	});
 
 	it('labels a version V and its number, and codebase work as codebase', () => {

@@ -67,8 +67,8 @@ export const registerPrototypes = (d: IpcDeps): void => {
 	/**
 	 * Acting on one comment on a prototype. The same steps as on a branch -- comments read from GitHub now, the file
 	 * written from that read, then the agent started -- but the agent changes the prototype's source in the app's own
-	 * folder, where it was built, and nothing is committed. What others commented on is never changed under them: the
-	 * service says which iteration the change goes in (`startChange`), and `finishPrototypeAddress` records and saves it.
+	 * folder, where it was built, and nothing is committed. The change is made in the version commented on, or in a new
+	 * version from it when that was asked for (`startChange`), and `finishPrototypeAddress` records and saves it.
 	 */
 	const prototypeChanges = new Map<string, { comment: CommentRef; projectId: string; change: PrototypeChange }>();
 	/** A comment's key among them: its thread and its number, which together name one. */
@@ -136,7 +136,7 @@ export const registerPrototypes = (d: IpcDeps): void => {
 			return handToClaude(ports, canonical, prototypeBuildPrompt({ label, projectId, taskFile }));
 		},
 	);
-	handle('addressPrototype', [arg.projectId, arg.prototypeName, arg.comment], async (projectId, name, comment) => {
+	handle('addressPrototype', [arg.projectId, arg.prototypeName, arg.comment, arg.flag], async (projectId, name, comment, newVersion) => {
 		refuseWhileBusy();
 		// One left from a run whose screen was closed is finished first, or this run would start from the same copy.
 		await finishPrototypeChanges(projectId);
@@ -152,10 +152,8 @@ export const registerPrototypes = (d: IpcDeps): void => {
 			generatedAt: new Date(),
 		});
 		const number = chooseComment(comments, comment);
-		const change = await work.startChange(projectId, name, async (it) =>
-			(it.name === name ? comments : await designRepo.threads.readComments(it.branch)).map((c) => c.author),
-		);
-		// Modeled on what the iteration it comes from was: a new one has no record of its own yet.
+		const change = await work.startChange(projectId, name, { newVersion, authorsOf: async () => comments.map((c) => c.author) });
+		// Modeled on what the version it comes from was: a new one has no record of its own yet.
 		const { build, sources } = await prototypeRun(projectId, change.target, change.from.name);
 		prototypeChanges.set(keyOf(comment), { comment, projectId, change });
 		const where = whereTheChangeGoes(change);
