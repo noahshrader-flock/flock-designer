@@ -29,7 +29,9 @@ describe('the section a task carries', () => {
 	it('is the file’s own words, under the task’s heading for it, with the product’s guidance said to win', () => {
 		const brief = voiceBrief(WRITTEN);
 		expect(brief.startsWith('## Voice and tone\n')).toBe(true);
-		expect(brief).toContain(`from \`${VOICE_FILE}\` in the design system's agent files`);
+		expect(brief).toContain(`in the design system's voice and tone, below, from \`${VOICE_FILE}\` in its agent files`);
+		// Whichever design system is connected: the brief names none.
+		expect(brief).not.toContain('Flock');
 		expect(brief).toContain("Where this product's own conventions say otherwise, the product's win.");
 		expect(brief).toContain('Calm and exact. We say what happened and what to do next.');
 		expect(brief).toContain('- No exclamation marks.');

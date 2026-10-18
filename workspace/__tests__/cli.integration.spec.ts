@@ -90,7 +90,7 @@ describe('new-prototype', () => {
 		expect(task).toMatch(/Never give a link the command did not print/);
 	});
 
-	it('carries Flock’s voice and tone in the task when the design repository has it written, and nothing when it has none (T9)', async () => {
+	it('carries the design system’s voice and tone in the task when the design repository has it written, and nothing when it has none (T9)', async () => {
 		expect(await run('new-prototype', '--project', 'demo', '--title', 'Demo', '--note', 'A list')).toBe(0);
 		expect(out.join('\n')).not.toContain('## Voice and tone');
 		mkdirSync(join(dirname(product), 'x', '.dsnr'), { recursive: true });

@@ -676,7 +676,7 @@ describe('prototypes', () => {
 		expect(existsSync(written)).toBe(false);
 	});
 
-	it('carry Flock’s voice and tone, read from the design repository each time, once it has something written in it (T9)', async () => {
+	it('carry the design system’s voice and tone, read from the design repository each time, once it has something written in it (T9)', async () => {
 		writeSkill();
 		await trustFolder(product);
 		await call(CHANNELS.createPrototype, 'demo', 'Demo', 'A list', { root: product, branch: 'develop' });
@@ -966,7 +966,7 @@ describe('prototypes', () => {
 			expect(readFileSync(join(home, 'prototype', 'demo', 'comments.md'), 'utf8')).toContain('Make this primary');
 		});
 
-		it('carries Flock’s voice and tone, as every task does (T9)', async () => {
+		it('carries the design system’s voice and tone, as every task does (T9)', async () => {
 			await ready();
 			mkdirSync(join(dirname(product), 'x', '.dsnr'), { recursive: true });
 			writeFileSync(join(dirname(product), 'x', '.dsnr', 'voice-and-tone.md'), '# Voice and tone\n\n## Voice\n\nCalm and exact.\n');
@@ -1175,7 +1175,7 @@ describe('prototypes', () => {
 			expect(task).toMatch(/- Shared standards: `[^`]*flock-designer\/standards`/);
 		});
 
-		it('writes Flock’s voice and tone into the task beside the prototype, after the accessibility rules (T9)', async () => {
+		it('writes the design system’s voice and tone into the task beside the prototype, after the accessibility rules (T9)', async () => {
 			await saved();
 			mkdirSync(join(dirname(product), 'x', '.dsnr'), { recursive: true });
 			writeFileSync(join(dirname(product), 'x', '.dsnr', 'voice-and-tone.md'), '# Voice and tone\n\n## Voice\n\nCalm and exact.\n');
@@ -1612,7 +1612,7 @@ describe('one agent, one piece of work', () => {
 		for (const dir of shared) expect(task).toContain(dir);
 	});
 
-	it('gives every codebase run Flock’s voice and tone, after the accessibility rules, once it is written (T9)', async () => {
+	it('gives every codebase run the design system’s voice and tone, after the accessibility rules, once it is written (T9)', async () => {
 		await trustFolder(product);
 		await call(CHANNELS.startAgent, product, 'demo', 'do it');
 		expect(agentStart.mock.calls.at(-1)?.[2]).not.toContain('## Voice and tone');

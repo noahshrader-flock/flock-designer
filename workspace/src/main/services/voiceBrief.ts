@@ -1,5 +1,5 @@
 /**
- * What every agent task says about the company's voice and tone (T9 of the design system plan, step 4): the file's own
+ * What every agent task says about the design system's voice and tone, whichever is connected (T9 of the design system plan, step 4): the file's own
  * words, read from the design system's agent files each time a task is made, as the accessibility standard is (T7, part A), and put
  * into the task instead of naming a file the agent may never open. Nothing is copied. With no file, or one with nothing
  * written in it yet, the task says nothing about it: the file is not required.
@@ -33,7 +33,7 @@ export const voiceBrief = (text: string | null): string => {
 	return [
 		HEADING,
 		'',
-		`Write every word a person will read in Flock's voice and tone, below, from \`${VOICE_FILE}\` in the design system's agent files. Where this product's own conventions say otherwise, the product's win.`,
+		`Write every word a person will read in the design system's voice and tone, below, from \`${VOICE_FILE}\` in its agent files. Where this product's own conventions say otherwise, the product's win.`,
 		'',
 		underTheTask(voiceWithoutComments(text)),
 	].join('\n');
@@ -58,7 +58,7 @@ export const taskVoice = async (read: (path: string) => Promise<string | null>):
 		return [
 			HEADING,
 			'',
-			`Flock's voice and tone could not be read (${errorText(err)}). Write in this product's own voice, from its guidance, and say in your summary that it was not read.`,
+			`The design system's voice and tone could not be read (${errorText(err)}). Write in this product's own voice, from its guidance, and say in your summary that it was not read.`,
 		].join('\n');
 	}
 };
