@@ -22,7 +22,7 @@ import { onRealLibrary } from './realLibrary';
 /**
  * A token's two measurements, held against each other on real libraries: the components whose Values name it (tagging),
  * against the components that move when it is changed (`reachWith`). **Every component a token's Values name moves when it
- * changes**, or the test fails. The other way is said, not failed: a component moves in a part its Values do not read, or
+ * changes, and is listed in the token's control** (`users`), or the test fails. The other way is said, not failed: a component moves in a part its Values do not read, or
  * its Values move and name no token (a height), or it moves with no tag of the token drawn.
  *
  * Long (a build and every component drawn twice, per token), so run only when asked: `DSNR_REACH=1`, with `REACH_TOKENS` (how
@@ -82,6 +82,7 @@ const check = (system: ConnectedDesignSystem) => async () => {
 		];
 		say(`${candidates.filter((c) => c.named.size > 0).length} tokens named by some component's Values; checking ${picked.length}`);
 		const notMoved: string[] = [];
+		const notListed: string[] = [];
 		for (const { token, to, named } of picked) {
 			const t0 = Date.now();
 			const { reach } = await tokens.reachWith(index, (reads) => editedFiles(reads, [{ path: token.path, value: to }]));
@@ -95,6 +96,10 @@ const check = (system: ConnectedDesignSystem) => async () => {
 			const valuesUnnamed = movedOnly.filter((f) => !moved.get(f)?.inside);
 			const noTag = movedOnly.filter((f) => moved.get(f)?.inside && !drawsTag(f));
 			const missed = [...named].filter((f) => !moved.has(f));
+			// What a token's control lists (`users`): every component its Values name is among them.
+			const users = await tokens.users(token.path);
+			const listed = new Set(users.state === 'ready' ? users.users.map((u) => u.file) : []);
+			notListed.push(...[...named].filter((f) => !listed.has(f)).map((f) => `${token.path}: ${f}`));
 			notMoved.push(...missed.map((f) => `${token.path}: ${f}`));
 			say(
 				`- ${token.path} (${token.kind} ${token.value} → ${to}; ${seconds(t0)}): named ${named.size}, moved ${moved.size}; in parts its Values do not read ${inParts.length}; not drawn ${reach.notDrawn.length}`,
@@ -108,6 +113,7 @@ const check = (system: ConnectedDesignSystem) => async () => {
 		}
 		say(`(${system.name} done in ${seconds(started)})`);
 		expect(notMoved).toEqual([]);
+		expect(notListed).toEqual([]);
 	});
 };
 

@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import type { DesignToken } from '../../src/shared/contract';
+import type { CatalogComponent, DesignToken } from '../../src/shared/contract';
 import { declaredBy, nameOf, pairContrast, pointsAt, reachOf, roleOf, scaleFamilies, tokenTitle } from '../../src/shared/tokens';
 import { useTokenChanges } from '../../src/renderer/tokenChanges';
+import { TokenUsers } from './TokenUsers';
 import { Button } from './ui/Button';
 import { Dialog, DialogButtons } from './ui/Dialog';
 import { Field, Select } from './ui/Field';
@@ -86,7 +87,18 @@ const Reach = ({ token }: { token: DesignToken }) => {
  * references, the scale it is chosen from, and its own color as a second choice, which cuts the pointer), a color of its
  * own (a picker and its hex), or a length (a slider). Then the contrast it leaves, what it reaches, and Reset when changed.
  */
-export const TokenEditor = ({ token, onClose }: { token: DesignToken; onClose: () => void }) => {
+export const TokenEditor = ({
+	token,
+	components,
+	onOpen,
+	onClose,
+}: {
+	token: DesignToken;
+	/** The library's components, by name, for the ones that draw with it; a name opens its tab. */
+	components: CatalogComponent[];
+	onOpen: (id: string) => void;
+	onClose: () => void;
+}) => {
 	const { read, byPath, change, isChanged } = useTokenChanges();
 	// As changed now: the row was pressed on what it showed then.
 	const now = byPath.get(token.path) ?? token;
@@ -128,6 +140,7 @@ export const TokenEditor = ({ token, onClose }: { token: DesignToken; onClose: (
 				)}
 				<Contrast token={now} />
 				<Reach token={now} />
+				<TokenUsers token={now} components={components} onOpen={onOpen} />
 				{target &&
 					now.kind !== 'dimension' &&
 					(custom ? (

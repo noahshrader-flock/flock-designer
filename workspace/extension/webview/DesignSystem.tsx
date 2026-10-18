@@ -195,7 +195,15 @@ const Ready = ({
 				) : (
 					<TokensView tokens={catalog.tokens} onEdit={setEditing} onSource={does.openTokenSource} />
 				)}
-				{editing && <TokenEditor key={editing.path} token={editing} onClose={() => setEditing(null)} />}
+				{editing && (
+					<TokenEditor
+						key={editing.path}
+						token={editing}
+						components={catalog.components}
+						onOpen={does.openComponent}
+						onClose={() => setEditing(null)}
+					/>
+				)}
 				{problems && <Problems problems={catalog.tokens.problems} onClose={() => setProblems(false)} />}
 				{changesDialog.open && (
 					<Dialog title="Changes" onClose={changesDialog.onClose}>

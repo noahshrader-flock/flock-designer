@@ -1241,6 +1241,38 @@ describe('a component’s tab', () => {
 			expect(tried() ?? []).toEqual([]);
 		});
 
+		it('lists in a token’s control the components that draw with it, each opening its tab, and marks those the change being tried moves', async () => {
+			await tryingOpen();
+			await press(change('Radius'));
+			expect(calls('tokenUsers').at(-1)?.args).toEqual(['radius']);
+			await answer('tokenUsers', {
+				state: 'ready',
+				users: [
+					{ file: BUTTON, uses: 5, values: 1 },
+					{ file: STORY('FSIconButton'), uses: 2, values: 0 },
+				],
+			});
+			const users = () => [...document.querySelectorAll('[role="dialog"] [data-token-user]')] as HTMLElement[];
+			const summary = () => document.querySelector('[data-token-users-summary]')?.textContent;
+			expect(users().map((u) => u.textContent)).toEqual(['FSButton1 value', 'FSIconButtoninside']);
+			expect(summary()).toBe('Drawn by 2 components');
+			await press(users()[1]?.querySelector('button') as HTMLElement);
+			expect(sent.at(-1)).toEqual({ type: 'open-component', id: STORY('FSIconButton') });
+			// Changed: what the change reaches, as "Moved by the change" has it, marks the ones that moved.
+			await say({ type: 'token-edits', edits: [{ path: 'radius', value: '12px' }] });
+			expect(calls('changeReach').at(-1)?.args).toEqual([[{ path: 'radius', value: '12px' }]]);
+			expect(summary()).toBe('Drawn by 2 components; drawing the change to see which move');
+			await answer('changeReach', {
+				state: 'ready',
+				moved: [{ file: STORY('FSIconButton'), changes: [], inside: true }],
+				unchanged: 1,
+				notDrawn: [],
+			});
+			expect(users().map((u) => u.hasAttribute('data-moved'))).toEqual([false, true]);
+			expect(users()[1]?.textContent).toBe('FSIconButtoninside · moved');
+			expect(summary()).toBe('Drawn by 2 components; 1 moved with the change being tried');
+		});
+
 		it('names the parts of a padding written with three or four as CSS reads them, X and Y only where two sides share a part, each slider changing its own', async () => {
 			const rows = (analysis().values as { rows: { light: unknown[] } }).rows.light;
 			const padding = (value: string) => ({

@@ -134,7 +134,7 @@ export const ComponentTab = ({ id }: { id: string }) => {
 							</aside>
 						</div>
 					</main>
-					{editing && <TokenEditor key={editing.path} token={editing} onClose={() => setEditing(null)} />}
+					{editing && <TokenEditor key={editing.path} token={editing} components={ready.components} onOpen={open} onClose={() => setEditing(null)} />}
 				</TokenChangesProvider>
 			</ValueTrialsProvider>
 		</ModeProvider>
