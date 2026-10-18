@@ -9,7 +9,7 @@ import { errorText } from '../../shared/result';
  * Reads what a repository says about itself.
  *
  * Nothing about Coke is compiled into this app. A repository declares its own
- * context directory, prototype root, branch naming and -- the part that matters
+ * context directory, codebase branch naming and -- the part that matters
  * -- the complete list of commands Workspace may run in it. If it is not in the
  * descriptor, it cannot be run.
  */
@@ -80,7 +80,7 @@ const parseShare = (raw: unknown): ShareDescriptor | undefined => {
 		throw new Error(`${DESCRIPTOR_PATH} share.workflow must name the workflow that deploys a preview`);
 	}
 	if (!Array.isArray(s.kinds) || s.kinds.length === 0 || !s.kinds.every((k) => (KINDS as readonly unknown[]).includes(k))) {
-		throw new Error(`${DESCRIPTOR_PATH} share.kinds must list "prototype", "codebase" or both`);
+		throw new Error(`${DESCRIPTOR_PATH} share.kinds must list "codebase" (a "prototype" there is read, and means nothing)`);
 	}
 	return { url: s.url, workflow: s.workflow, kinds: s.kinds as ShareDescriptor['kinds'] };
 };
@@ -102,7 +102,8 @@ export const parseDescriptor = (text: string): WorkspaceDescriptor => {
 		// running something that means what a later schema said it meant.
 		throw new Error(`${DESCRIPTOR_PATH} declares version ${String(d.version)}; this app understands 1`);
 	}
-	for (const key of ['product', 'contextDir', 'prototypeRoot'] as const) {
+	// A `prototypeRoot`, where prototypes once lived as code on branches, is not read: prototypes are pages now.
+	for (const key of ['product', 'contextDir'] as const) {
 		if (typeof d[key] !== 'string' || d[key] === '') {
 			throw new Error(`${DESCRIPTOR_PATH} is missing ${key}`);
 		}
@@ -131,7 +132,6 @@ export const parseDescriptor = (text: string): WorkspaceDescriptor => {
 		version: 1,
 		product: d.product as string,
 		contextDir: d.contextDir as string,
-		prototypeRoot: d.prototypeRoot as string,
 		branchPattern: { codebase: branch.codebase },
 		commands,
 		designSystem: { package: ds.package, ...(folder !== undefined ? { folder } : {}) },
@@ -184,8 +184,6 @@ export interface WorkspaceDescriptor {
 	product: string;
 	/** Path to the agent-context directory, relative to the root. */
 	contextDir: string;
-	/** Where prototype directories live, relative to the root. */
-	prototypeRoot: string;
 	/** How codebase work's branch is named, with a `<project-id>` placeholder: `feature/<project-id>`. */
 	branchPattern: { codebase: string };
 	/** Every command Workspace may run. Nothing else is runnable. */
@@ -211,7 +209,7 @@ export interface ShareDescriptor {
 	url: string;
 	/** Name of the workflow whose success means the preview is up. */
 	workflow: string;
-	/** Which kinds of work get a preview from this repository's CI. */
+	/** Which kinds of work get a preview from this repository's CI: only `codebase` is shared (see `KINDS`). */
 	kinds: WorkKind[];
 }
 

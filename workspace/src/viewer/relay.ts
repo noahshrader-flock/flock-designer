@@ -157,7 +157,6 @@ export const relayComments = (
 	move: (comment: CommentRef, anchor: CommentAnchor) => relay.ask('moveComment', [comment, anchor]) as Promise<Result<ReviewComment>>,
 	remove: (comment: CommentRef) => relay.ask('deleteComment', [comment]) as Promise<Result<null>>,
 	viewer: async () => loginIn(await relay.ask('signInState', [])),
-	// A prototype has no commit: what it was made against is its version, which the thread says, and its page's fingerprint.
-	version: async () => '',
+	// A prototype has no commit: what a comment was made against is its version, which the thread says, and its page.
 	...(page ? { page } : {}),
 });

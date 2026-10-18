@@ -242,8 +242,8 @@ export const ensureLocalBranch = async (root: string, branch: string): Promise<v
  *
  * A designer who has edited something and not committed it should be told, not
  * have the edits carried onto another branch or quietly stashed. This is the
- * only guard that stands between "create a branch" and losing the last one's
- * uncommitted work.
+ * only guard that stands between switching branches and losing the current
+ * branch's uncommitted work.
  */
 const requireCleanTree = async (root: string, action: string): Promise<void> => {
 	const { clean } = await readCheckout(root);

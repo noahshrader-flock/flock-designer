@@ -50,8 +50,7 @@ export const browserComments = (
 		viewer: async () => {
 			return loginOf(github).catch(() => null);
 		},
-		// A prototype has no commit: what it was made against is its version, which the thread says, and its page's fingerprint.
-		version: async () => '',
+		// A prototype has no commit: what a comment was made against is its version, which the thread says, and its page.
 		...(page ? { page } : {}),
 	};
 };

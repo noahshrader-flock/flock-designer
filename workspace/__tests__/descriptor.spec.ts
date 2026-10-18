@@ -39,7 +39,13 @@ describe('parseDescriptor', () => {
 		expect(() => parse({ ...valid, version: 2 })).toThrow(/understands 1/);
 	});
 
-	it.each(['product', 'contextDir', 'prototypeRoot'])('refuses a descriptor missing %s', (key) => {
+	it('reads one with no prototypeRoot, and ignores one that still names it: prototypes are pages, not code in the product', () => {
+		const { prototypeRoot: _gone, ...without } = valid;
+		expect(() => parse(without)).not.toThrow();
+		expect(parse(valid)).not.toHaveProperty('prototypeRoot');
+	});
+
+	it.each(['product', 'contextDir'])('refuses a descriptor missing %s', (key) => {
 		const broken: Record<string, unknown> = { ...valid };
 		delete broken[key];
 		expect(() => parse(broken)).toThrow(new RegExp(key));
@@ -109,7 +115,7 @@ describe('findCommand', () => {
 });
 
 describe('share', () => {
-	const share = { url: 'https://dev-coke-pr-<pr>.flocksafety.com', workflow: 'PR Deployment', kinds: ['prototype'] };
+	const share = { url: 'https://dev-coke-pr-<pr>.flocksafety.com', workflow: 'PR Deployment', kinds: ['codebase'] };
 
 	it('is optional: a repository that cannot build a preview just omits it', () => {
 		expect(parse(valid).share).toBeUndefined();
@@ -117,6 +123,10 @@ describe('share', () => {
 
 	it('reads how a preview is built', () => {
 		expect(parse({ ...valid, share }).share).toEqual(share);
+	});
+
+	it('still reads the prototype kind of old, which a product may name, and which shares nothing', () => {
+		expect(parse({ ...valid, share: { ...share, kinds: ['prototype'] } }).share?.kinds).toEqual(['prototype']);
 	});
 
 	it.each([

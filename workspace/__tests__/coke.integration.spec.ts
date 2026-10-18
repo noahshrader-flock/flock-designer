@@ -16,7 +16,6 @@ describeWith(cokeMissing, 'against the real Coke checkout', () => {
 	it('parses the descriptor Coke ships', () => {
 		const descriptor = readDescriptor(COKE);
 		expect(descriptor.product).toContain('Coke');
-		expect(descriptor.prototypeRoot).toBe('src/prototypes');
 		expect(descriptor.commands.length).toBeGreaterThan(0);
 	});
 

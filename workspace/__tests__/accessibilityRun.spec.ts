@@ -96,7 +96,6 @@ describe('the app, in design mode', () => {
 		version: 1,
 		product: 'Plain Shop',
 		contextDir: '.dsnr',
-		prototypeRoot: 'src/prototypes',
 		branchPattern: { codebase: 'feature/<project-id>' },
 		commands,
 		designSystem: { package: 'x' },

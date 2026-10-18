@@ -27,7 +27,7 @@ export const productsByProject = (projects: Project[]): Map<Project, string[]> =
 export const inThisProduct = (products: string[], open: string): boolean => products.length === 0 || products.includes(open);
 
 /**
- * Whether a project is mine: I have worked on it (code on any work, or its folder in the design repository), by my
+ * Whether a project is mine: I have worked on it (code in any of its work, or its folder in the design repository), by my
  * login. A name alone is not an account, and with no login, signed out, none is.
  */
 export const isMine = (project: Project, login: string | null): boolean =>

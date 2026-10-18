@@ -1,7 +1,7 @@
 # DSNR
 
 A local coordination layer over real Flock product repositories. It opens a checkout, shows what was
-grounded before anything is generated, creates and continues codebase work's branch, hands a task to the
+grounded before anything is generated, creates and continues a project's `feature/` branch, hands a task to the
 agent you already have installed, and runs the preview commands the repository declares.
 
 **It is not the source of truth for anything.** Standards, product patterns, prototype source and
@@ -48,13 +48,13 @@ that pushes, switches branch or deletes.
 | Open a repository the designer picks | Reach any path outside that repository |
 | Read and write issue comments in the design repository | Reach any repository the GitHub App is not installed on |
 | Run commands the repository declares | Run anything else, or a shell of any kind |
-| Create and switch codebase work's branches | Rewrite, discard, or force anything in git |
+| Create and switch a project's `feature/` branch | Rewrite, discard, or force anything in git |
 | Invoke a locally installed agent | Hold model credentials, or carry its own prompts |
 | Let a prototype's agent read the product's code, guidance and installed packages, and build its page from them | Let that agent change anything in the product repository, or run the product |
 | Read and write project records | Become the only place those records exist |
 | Show a prototype's preview in the window and place comments on elements | Let that preview call back into the app, or leave the preview's origin |
 | Push the person's own work branches (`feature/<project>`) and commit and push the design repository's `projects/` folder, by itself | Push anything else, force-push, publish a teammate's branch, or push other unpublished work along with the records |
-| Push codebase work's branch and open a **draft** pull request, as the designer, through their own `git` and `gh` | Force-push, open a pull request that is ready for review, merge one, or see the designer's GitHub token |
+| Push a project's `feature/` branch and open a **draft** pull request, as the designer, through their own `git` and `gh` | Force-push, open a pull request that is ready for review, merge one, or see the designer's GitHub token |
 
 ## How a repository joins
 
@@ -66,7 +66,6 @@ this app.
   "version": 1,
   "product": "Coke (Flock Admin)",
   "contextDir": ".dsnr",
-  "prototypeRoot": "src/prototypes",
   "branchPattern": { "codebase": "feature/<project-id>" },
   "commands": [
     { "id": "design-mode", "label": "Run the real shell on mock data", "argv": ["npm", "run", "start:design"], "servesPreviewOn": 3000 }
@@ -81,7 +80,7 @@ descriptor can be opened, but nothing can be run in it.
 
 ### Sharing, and what it needs
 
-*Share for review* (author mode only) pushes codebase work's branch to `origin`, opens a **draft** pull
+*Share for review* pushes a project's `feature/` branch to `origin`, opens a **draft** pull
 request for it, waits for the repository's deploy workflow, and records the preview address on the
 work's record, so a reviewer who opens the app sees it. A repository opts in with a `share` block:
 

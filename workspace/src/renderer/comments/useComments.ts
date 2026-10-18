@@ -8,14 +8,10 @@ import type { CommentStore, PageSurface } from './surfaces';
 type Mode = 'browse' | 'picking' | 'composing';
 
 /**
- * A spot as it is placed on the page: what the work is at (`commit`), and the page's fingerprint when the store knows it,
- * else the one it carried (`page`), so a pin dragged where no fingerprint is known keeps the one it had.
+ * A spot as it is placed on the page, with the page's fingerprint when the store knows it, else the one it carried
+ * (`page`), so a pin dragged where no fingerprint is known keeps the one it had.
  */
-const stamped = (anchor: CommentAnchor, commit: string, page: string | undefined): CommentAnchor => ({
-	...anchor,
-	commit,
-	...(page ? { page } : {}),
-});
+const stamped = (anchor: CommentAnchor, page: string | undefined): CommentAnchor => ({ ...anchor, ...(page ? { page } : {}) });
 
 /**
  * The comments on one version, and leaving one: everything about them except how they are drawn. Written against a
@@ -213,11 +209,11 @@ export const useComments = ({
 					setTimeout(() => cards.current.get(e.id)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 250);
 				} else if (e.id < 0) {
 					// The unsaved pin: just remember where it now is.
-					setPending((p) => (p ? stamped(e.anchor, p.commit, store.page ?? p.page) : p));
+					setPending((p) => (p ? stamped(e.anchor, store.page ?? p.page) : p));
 				} else {
 					const moved = shown.current?.find((c) => c.id === e.id);
 					if (!moved) return setRedraw((n) => n + 1);
-					void store.move(moved, stamped(e.anchor, moved.anchor?.commit ?? '', store.page ?? moved.anchor?.page)).then((r) => {
+					void store.move(moved, stamped(e.anchor, store.page ?? moved.anchor?.page)).then((r) => {
 						if (r.ok) {
 							showChanged(r.value);
 							// The comment now points somewhere else, and the file the agent reads says where.
@@ -249,14 +245,13 @@ export const useComments = ({
 			setMode('browse');
 			setCommentMode(false);
 		} else if (r.value) {
-			const version = await store.version();
-			// That takes a moment, and Escape may have landed in it. Backing out while this was in flight means there is
-			// nothing to write on: setting the pin now would leave one on the page with no box, so the pick is dropped.
+			// Backing out while the pick was in flight means there is nothing to write on: setting the pin now would leave
+			// one on the page with no box, so the pick is dropped.
 			if (pickCanceled.current) {
 				pickCanceled.current = false;
 				return;
 			}
-			setPending(stamped(r.value.anchor, version, store.page));
+			setPending(stamped(r.value.anchor, store.page));
 			setPendingAt(r.value.at);
 			setPendingPicture(r.value.picture);
 			setMode('composing');

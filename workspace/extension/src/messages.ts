@@ -68,12 +68,10 @@ export interface Review {
 
 /**
  * A project's prototypes that have a review page, newest first, as opening one asks: the panel's row opens the first, and
- * DSNR: Open a prototype for review offers them all. A prototype has a page when the site can lay its name out.
+ * DSNR: Open a prototype for review offers them all.
  */
 export const reviewsOf = (project: Pick<Project, 'id' | 'title' | 'work'>): Review[] =>
-	workOf(project.work, 'prototype')
-		.filter((i) => isPrototypeName(i.name))
-		.map((i) => ({ projectId: project.id, name: i.name, title: `${project.title} · ${workLabel(i)}` }));
+	workOf(project.work, 'prototype').map((i) => ({ projectId: project.id, name: i.name, title: `${project.title} · ${workLabel(i)}` }));
 
 /**
  * The values tried on each component, by its story file, with the library's commit they were tried on: its instances are

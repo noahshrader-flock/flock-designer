@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import type { Work } from '../shared/contract';
 import { escapeHtml, firstInHead } from '../shared/html';
 import { fromBrief } from '../shared/brief';
-import { SHARED_DIR, SHARED_REF, isPrototypeKey, sitePath } from '../shared/designPaths';
+import { SHARED_DIR, SHARED_REF, sitePath } from '../shared/designPaths';
 import { newestVersionFirst } from '../shared/prototypeNames';
 import { workLabel, projectCodeLink } from '../shared/work';
 import { statesOf } from '../shared/prototypeStates';
@@ -109,7 +109,7 @@ const readProjects = (designRoot: string): SiteProject[] => {
 		const pages = records.flatMap((record): Page[] => {
 			const at = sitePath(id, record.name);
 			const saved = existsSync(join(dir, 'prototypes', `${record.name}.html`));
-			return at && isPrototypeKey(record.branch) && saved ? [{ record, path: at.slice(id.length + 1) }] : [];
+			return at && saved ? [{ record, path: at.slice(id.length + 1) }] : [];
 		});
 		if (pages.length === 0) return [];
 		const brief = existsSync(join(dir, 'brief.md')) ? readFileSync(join(dir, 'brief.md'), 'utf8') : '';

@@ -102,7 +102,6 @@ describe('the comments, through DSNR', () => {
 			['deleteComment', [ref]],
 		]);
 		expect(await store.viewer()).toBe('noah');
-		expect(await store.version()).toBe('');
 	});
 });
 

@@ -20,8 +20,8 @@ const DIRS = [
 	'extension/src',
 	'extension/webview',
 ];
-/** Where the word means something else: a design token's saves, and the product's own command, which it names so. */
-const ELSEWHERE = [/the history is the iterations/, /check-iteration/];
+/** Where the word means something else: the product's own command, which it names so. */
+const ELSEWHERE = [/check-iteration/];
 
 const files = (dir: string): string[] =>
 	readdirSync(join(root, dir), { withFileTypes: true }).flatMap((e) =>

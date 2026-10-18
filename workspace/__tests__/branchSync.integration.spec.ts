@@ -10,7 +10,6 @@ const descriptor: WorkspaceDescriptor = {
 	version: 1,
 	product: 'Coke',
 	contextDir: '.dsnr',
-	prototypeRoot: 'src/prototypes',
 	branchPattern: { codebase: 'feature/<project-id>' },
 	commands: [],
 	designSystem: { package: 'x' },

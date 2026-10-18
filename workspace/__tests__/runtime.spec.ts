@@ -12,7 +12,6 @@ const descriptor: WorkspaceDescriptor = {
 	version: 1,
 	product: 'Test',
 	contextDir: '.dsnr',
-	prototypeRoot: 'src/prototypes',
 	branchPattern: { codebase: 'feature/<project-id>' },
 	commands: [
 		{ id: 'echo', label: 'Echo', argv: ['node', '-e', 'console.log("hello from the command")'] },

@@ -21,14 +21,15 @@ import { repoApiPath } from './repoFiles';
 import { ISSUE } from '../shared/vocabulary';
 
 /**
- * The review threads of a repository: comments are its issue comments, one issue per version, found by the branch line
+ * The review threads of a repository: comments are its issue comments, one issue per piece of work (a version of a
+ * prototype, or codebase work), found by the key on the branch line
  * in its body. That choice is what keeps a server out of the design: the host already stores them, notifies people, and
  * lets someone with only read access comment. Verified against the real API on 2026-10-05.
  */
 
-const ITERATION_LABEL = 'flock-designer:review';
+const REVIEW_LABEL = 'flock-designer:review';
 
-/** What the app knows of a version's review thread (or threads: a branch can have more than one). */
+/** What the app knows of a piece of work's review thread (or threads: a key can have more than one). */
 export interface ReviewThread {
 	number: number;
 	numbers: number[];
@@ -60,7 +61,7 @@ export class ReviewThreads {
 	/** The review threads, by the branch they carry comments for. */
 	async byBranch(): Promise<Map<string, ReviewThread>> {
 		const issues = (
-			await readPages(this.session, `${this.apiPath}/issues?state=all&labels=${encodeURIComponent(ITERATION_LABEL)}`, { maxPages: 10 })
+			await readPages(this.session, `${this.apiPath}/issues?state=all&labels=${encodeURIComponent(REVIEW_LABEL)}`, { maxPages: 10 })
 		).map(asRecord);
 
 		// More than one thread can exist for a branch (the listing lag above made
@@ -87,7 +88,7 @@ export class ReviewThreads {
 		return byBranch;
 	}
 
-	/** The issue carrying a version's comments, created on first use. */
+	/** The issue carrying a piece of work's comments, created on first use. */
 	async ensureIssue(projectId: string, branch: string): Promise<number> {
 		const existing = (await this.byBranch()).get(branch);
 		if (existing) return existing.number;
@@ -104,7 +105,7 @@ export class ReviewThreads {
 						'Comments here are written by DSNR and exported to the project record.',
 						`Do not change the branch line above — the app finds this ${ISSUE} by it.`,
 					].join('\n'),
-					labels: [ITERATION_LABEL],
+					labels: [REVIEW_LABEL],
 				},
 			}),
 		);
@@ -134,7 +135,7 @@ export class ReviewThreads {
 		};
 	}
 
-	/** How many comments each version's thread has, by the version's key: what the published site shows. */
+	/** How many comments each piece of work's thread has, by its key: what the published site shows of each version. */
 	async commentCounts(): Promise<Map<string, number>> {
 		return new Map([...(await this.byBranch())].map(([branch, thread]) => [branch, thread.openComments]));
 	}

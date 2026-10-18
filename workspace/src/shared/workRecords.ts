@@ -21,7 +21,7 @@ import { isPrototypeName } from './prototypeNames';
 
 type Rec = Record<string, unknown>;
 
-/** A record's name: a version of the prototype, `v2`, or `codebase`. Any other (an old `v1-i1`) is not read. */
+/** A record's name: a version of the prototype, `v2`, or `codebase`. A file with any other (an old `v1-i1`) is refused whole. */
 const isWorkName = (v: unknown): boolean => typeof v === 'string' && (v === 'codebase' || isPrototypeName(v));
 
 /**

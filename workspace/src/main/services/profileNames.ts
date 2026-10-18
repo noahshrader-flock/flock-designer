@@ -39,7 +39,7 @@ export class ProfileNames {
 		return mergePeople(resolved);
 	}
 
-	/** Every project's people, and every work's contributors, named the same way. */
+	/** Every project's people, and each piece of work's contributors, named the same way. */
 	async nameEveryone(projects: Project[]): Promise<Project[]> {
 		// All at once, so a person who is in several places is looked up once for the list, not once each.
 		return Promise.all(

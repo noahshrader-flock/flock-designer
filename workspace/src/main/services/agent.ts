@@ -126,7 +126,7 @@ const DISALLOWED_TOOLS = ['ScheduleWakeup', 'CronCreate', 'CronDelete', 'RemoteT
 /**
  * Work the agent commits is the designer's own work, committed under their name, and carries no
  * attribution line. Claude Code adds a `Co-Authored-By` trailer to its commits by default, which
- * would put one in every work's history; this turns that off for the commits (and pull
+ * would put one in every branch's history; this turns that off for the commits (and pull
  * request text) of a run started from here.
  */
 const settingsFor = (readOnly: string[]): string =>

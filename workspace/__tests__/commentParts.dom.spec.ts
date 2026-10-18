@@ -46,7 +46,7 @@ const fakes = (initial: ReviewComment[]) => {
 		},
 		move: async ({ id }, anchor) => ok({ ...(saved.find((c) => c.id === id) as ReviewComment), anchor }),
 		viewer: async () => 'reviewer',
-		version: async () => 'abc1234',
+		page: 'abc123def456',
 	};
 	const page: PageSurface = {
 		pick: () => new Promise((r) => (clicked = r)),
@@ -126,7 +126,7 @@ describe('the comments experience, through another store and page', () => {
 		const made = cards().map((c) => c.textContent);
 		expect(made).toEqual([expect.stringContaining('Bigger')]);
 		const saved = (await f.store.read()) as { value: ReviewComment[] };
-		expect(saved.value[0]?.anchor).toMatchObject({ selector: '#cta', commit: 'abc1234' });
+		expect(saved.value[0]?.anchor).toMatchObject({ selector: '#cta', page: 'abc123def456' });
 	});
 
 	it('resolves through the store, and takes the pin off the page', async () => {

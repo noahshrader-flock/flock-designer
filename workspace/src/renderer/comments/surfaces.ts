@@ -19,8 +19,6 @@ export interface CommentStore {
 	move(comment: CommentRef, anchor: CommentAnchor): Promise<Result<ReviewComment>>;
 	/** The viewer's GitHub login, or null when not signed in: only their own pins can be dragged. */
 	viewer(): Promise<string | null>;
-	/** What the work is at now, written into a new comment so it says what it was made against; '' when not known. */
-	version(): Promise<string>;
 	/** On a prototype, the fingerprint of the page shown, written into a comment placed on it (`CommentAnchor.page`). */
 	page?: string;
 }

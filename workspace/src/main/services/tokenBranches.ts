@@ -25,7 +25,7 @@ export const TOKENS: ChangeKind<TokenEdit[]> = {
 	subject: 'Design tokens',
 	asItWas: 'back as the library has them',
 	about: 'A change to the design tokens, made and tried in DSNR.',
-	checked: 'Each commit is one save, so the history is the iterations. Chromatic’s build shows every component with the change.',
+	checked: 'Each commit is one save, so the history is every change tried. Chromatic’s build shows every component with the change.',
 	saving: 'save design tokens',
 };
 

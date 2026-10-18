@@ -233,8 +233,6 @@ describe('a prototype’s review', () => {
 				record('v1', 'prototype/alert-history/v1', '2026-10-01'),
 				record('v2', 'prototype/alert-history/v2', '2026-10-03'),
 				record('codebase', 'feature/alert-history', '2026-10-04'),
-				// A name that is not a version's has no page to open.
-				record('spike', 'prototype/alert-history/spike', '2026-10-05'),
 			],
 		};
 		expect(reviewsOf(project)).toEqual([

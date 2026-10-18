@@ -1,6 +1,6 @@
 /** Putting work in front of people: sharing a preview, and publishing the site. */
 
-/** Where sharing a version has got to. One at a time: it is a push, a pull request and a build. */
+/** Where sharing codebase work has got to. One at a time: it is a push, a pull request and a build. */
 export type ShareStatus =
 	| { state: 'idle' }
 	| { state: 'running'; projectId: string; name: string; step: ShareStep; detail?: string }
