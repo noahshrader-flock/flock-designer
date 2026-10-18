@@ -2,9 +2,17 @@ import { expect, it } from 'vitest';
 import { findChrome } from '../src/main/services/chromeHeadless';
 import type { ComponentTokens } from '../src/main/services/componentTokens';
 import { ValueSources } from '../src/main/services/valueSources';
-import type { ChangeReach, ConnectedDesignSystem, ValueProperty, ValueSources as Sources } from '../src/shared/contract';
+import type { ChangeReach, ValueProperty, ValueSources as Sources } from '../src/shared/contract';
 import { settledAnswer } from './fixtures';
-import { REAL_PRIMER, REAL_TREMOR3, REAL_TREMOR4, describeWith, primerMissing, tremor3Missing, tremor4Missing } from './realCheckouts';
+import {
+	REAL_PRIMER_SYSTEM,
+	REAL_TREMOR3_SYSTEM,
+	REAL_TREMOR4_SYSTEM,
+	describeWith,
+	primerMissing,
+	tremor3Missing,
+	tremor4Missing,
+} from './realCheckouts';
 import { onRealLibrary } from './realLibrary';
 
 /**
@@ -13,15 +21,6 @@ import { onRealLibrary } from './realLibrary';
  * the tokens are read from). Nothing here or in what it tests names Tailwind: each library's own PostCSS configuration does.
  * What each reads is what its classes say: `rounded-md border px-3 py-2 text-sm` is a 6px radius, 8 by 12 padding, 14px.
  */
-const system = (root: string, repository: string): ConnectedDesignSystem => ({
-	id: repository,
-	name: repository,
-	repository,
-	root,
-	folder: '',
-	branch: 'main',
-});
-
 /** A component's values once its library is read: by property, in light or in dark, every value its stories draw. */
 const valuesOf = async (tokens: ComponentTokens, file: string) => {
 	const a = await settledAnswer(
@@ -43,15 +42,7 @@ describeWith(primerMissing, 'Primer React, which goes dark by a setting its own 
 	it.skipIf(findChrome() === null)(
 		'draws a label and a button dark, though its setting is not the themes addon’s `theme`: read from what its preview declares',
 		async () => {
-			const primer: ConnectedDesignSystem = {
-				id: 'primer/react',
-				name: 'Primer',
-				repository: 'primer/react',
-				root: REAL_PRIMER,
-				folder: 'packages/react',
-				branch: 'main',
-			};
-			await onRealLibrary(primer, async ({ previews, measure }) => {
+			await onRealLibrary(REAL_PRIMER_SYSTEM, async ({ previews, measure }) => {
 				const built = await previews.preview();
 				if (built.state !== 'ready') throw new Error(`not built: ${JSON.stringify(built).slice(0, 300)}`);
 				for (const file of ['packages/react/src/Label/Label.stories.tsx', 'packages/react/src/Button/Button.stories.tsx']) {
@@ -74,7 +65,7 @@ describeWith(tremor3Missing, 'Tremor on Tailwind 3', () => {
 	it.skipIf(findChrome() === null)(
 		'draws its button as its classes say, and its card dark as its Storybook does, through its own configuration',
 		async () => {
-			await onRealLibrary(system(REAL_TREMOR3, 'tremorlabs/tremor-npm'), async ({ tokens }) => {
+			await onRealLibrary(REAL_TREMOR3_SYSTEM, async ({ tokens }) => {
 				const button = await valuesOf(tokens, 'src/stories/input-elements/Button.stories.tsx');
 				// Size sm, its default: `px-4 py-2 text-sm`, its theme's `rounded-tremor-default` (0.5rem).
 				expect(button.drawn('padding')).toContain('8px 16px');
@@ -98,7 +89,7 @@ describeWith(tremor3Missing, 'Tremor on Tailwind 3, where a value is', () => {
 	it.skipIf(findChrome() === null)(
 		'finds its button’s radius in its theme’s configuration, a value its classes name, written there, and what else it moves',
 		async () => {
-			await onRealLibrary(system(REAL_TREMOR3, 'tremorlabs/tremor-npm'), async ({ tokens, previews, measure }) => {
+			await onRealLibrary(REAL_TREMOR3_SYSTEM, async ({ tokens, previews, measure }) => {
 				const file = 'src/stories/input-elements/Button.stories.tsx';
 				const cell = (await valuesOf(tokens, file)).cell('radius', '8px');
 				if (!cell) throw new Error('no 8px radius drawn');
@@ -127,7 +118,7 @@ describeWith(tremor4Missing, 'Tremor on Tailwind 4', () => {
 	it.skipIf(findChrome() === null)(
 		'draws its button as its classes say, its radius and spacing the theme’s tokens, and its card dark',
 		async () => {
-			await onRealLibrary(system(REAL_TREMOR4, 'tremorlabs/tremor'), async ({ tokens }) => {
+			await onRealLibrary(REAL_TREMOR4_SYSTEM, async ({ tokens }) => {
 				const button = await valuesOf(tokens, 'src/components/Button/button.stories.tsx');
 				expect(button.drawn('padding')).toContain('8px 12px');
 				expect(button.drawn('radius')).toContain('6px');
@@ -148,7 +139,7 @@ describeWith(tremor4Missing, 'Tremor on Tailwind 4, a token changed', () => {
 	it.skipIf(findChrome() === null)(
 		'moves what uses Tailwind’s radius, declared again in its own stylesheet, and leaves what does not',
 		async () => {
-			await onRealLibrary(system(REAL_TREMOR4, 'tremorlabs/tremor'), async ({ tokens }) => {
+			await onRealLibrary(REAL_TREMOR4_SYSTEM, async ({ tokens }) => {
 				await valuesOf(tokens, 'src/components/Button/button.stories.tsx');
 				const reach = await settledAnswer(
 					() => tokens.reach([{ path: 'css.light.radius-md', value: '12px' }]),

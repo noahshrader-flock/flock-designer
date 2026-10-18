@@ -7,7 +7,7 @@ import { runToEnd } from '../src/main/services/agent';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type { ConnectedDesignSystem, ValueProperty, ValueSources as Answer } from '../src/shared/contract';
-import { REAL_PRIMER, describeWith, libraryUnbuilt, primerMissing, REAL_FUI } from './realCheckouts';
+import { REAL_PRIMER_SYSTEM, describeWith, libraryUnbuilt, primerMissing, REAL_FUI } from './realCheckouts';
 import { settledAnswer } from './fixtures';
 import { onRealLibrary } from './realLibrary';
 
@@ -84,7 +84,7 @@ describeWith(primerMissing, 'on Primer React, the second library', () => {
 	it.skipIf(findChrome() === null)(
 		'finds CounterLabel’s radius in its CSS module, and says Label’s comes from a package, so it cannot be saved yet',
 		async () => {
-			const system = { id: 'primer/react', name: 'Primer', repository: 'primer/react', root: REAL_PRIMER, folder: 'packages/react', branch: 'main' };
+			const system = REAL_PRIMER_SYSTEM;
 			await withLibrary(system, async (tokens, sources) => {
 				const counter = 'packages/react/src/CounterLabel/CounterLabel.stories.tsx';
 				const { found } = await sourcesOf(tokens, sources, counter, 'radius', null, '4px 4px 4px 4px');

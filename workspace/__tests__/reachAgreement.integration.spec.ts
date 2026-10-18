@@ -3,16 +3,16 @@ import { expect, it } from 'vitest';
 import { findChrome } from '../src/main/services/chromeHeadless';
 import type { DrawnIndex } from '../src/main/services/componentTokens';
 import { editedFiles } from '../src/main/services/tokenEdits';
-import type { ConnectedDesignSystem, DesignToken, TokenEdit } from '../src/shared/contract';
+import type { ConnectedDesignSystem, DesignToken } from '../src/shared/contract';
 import { lengthParts } from '../src/shared/tokens';
 import { settledAnswer } from './fixtures';
 import {
 	REAL_FUI,
-	REAL_PRIMER,
-	REAL_TREMOR3,
-	REAL_TREMOR4,
+	REAL_PRIMER_SYSTEM,
+	REAL_TREMOR3_SYSTEM,
+	REAL_TREMOR4_SYSTEM,
 	describeWith,
-	libraryMissing,
+	libraryUnbuilt,
 	primerMissing,
 	tremor3Missing,
 	tremor4Missing,
@@ -20,12 +20,13 @@ import {
 import { onRealLibrary } from './realLibrary';
 
 /**
- * REACH_PLAN Phase 1: the two measurements of a token, held against each other on real libraries. For each token, the
- * components whose Values name it (tagging), against the components that move when it is changed (`reachWith`, drawn again).
- * They should agree. Each that is in one and not the other is written down with what else is known of it, never hidden.
+ * A token's two measurements, held against each other on real libraries: the components whose Values name it (tagging),
+ * against the components that move when it is changed (`reachWith`). **Every component a token's Values name moves when it
+ * changes**, or the test fails. The other way is said, not failed: a component moves in a part its Values do not read, or
+ * its Values move and name no token (a height), or it moves with no tag of the token drawn.
  *
  * Long (a build and every component drawn twice, per token), so run only when asked: `DSNR_REACH=1`, with `REACH_TOKENS` (how
- * many tokens Values name, most named first) and `REACH_UNNAMED` (how many no Values name) per library, and `REACH_OUT`.
+ * many tokens Values name, most named first), `REACH_UNNAMED` (how many no Values name), `REACH_LIBS` and `REACH_OUT`.
  */
 const ASKED = process.env.DSNR_REACH === '1';
 const NAMED = Number(process.env.REACH_TOKENS ?? 6);
@@ -36,9 +37,8 @@ const say = (line: string) => (process.env.REACH_OUT ? appendFileSync(process.en
 const changedValue = (t: DesignToken): string | null => {
 	if (t.kind === 'color') return t.value.toUpperCase() === '#E01E5A' ? '#1EE05A' : '#E01E5A';
 	const parts = lengthParts(t.value);
-	if (!parts) return null;
-	if (parts.unit === 'px') return `${parts.number + 5}px`;
-	if (parts.unit === 'rem') return `${(parts.number * 16 + 5) / 16}rem`;
+	if (parts?.unit === 'px') return `${parts.number + 5}px`;
+	if (parts?.unit === 'rem') return `${(parts.number * 16 + 5) / 16}rem`;
 	return null;
 };
 
@@ -52,6 +52,8 @@ const namedBy = (index: DrawnIndex, path: string): Set<string> => {
 	return named;
 };
 
+const seconds = (since: number) => `${Math.round((Date.now() - since) / 1000)}s`;
+
 const check = (system: ConnectedDesignSystem) => async () => {
 	await onRealLibrary(system, async ({ tokens }) => {
 		const started = Date.now();
@@ -62,13 +64,15 @@ const check = (system: ConnectedDesignSystem) => async () => {
 		);
 		if (index.state !== 'ready') throw new Error(`not drawn: ${JSON.stringify(index).slice(0, 300)}`);
 		const { reading, order, values, files } = index.built;
-		const drawnValues = [...values.values()].filter((v) => v.state === 'read').length;
+		const withValues = [...values.values()].filter((v) => v.state === 'read').length;
 		say(
-			`\n## ${system.name}: ${order.length} components, ${drawnValues} with values, ${reading.tags.edits.length} tokens tagged, ${reading.tags.unmarked} untaggable; drawn in ${Math.round((Date.now() - started) / 1000)}s`,
+			`\n## ${system.name}: ${order.length} components, ${withValues} with values, ${reading.tags.edits.length} tokens tagged; drawn in ${seconds(started)}`,
 		);
-		const candidates = reading.tags.edits
-			.map((e) => ({ token: reading.tokens.find((t) => t.path === e.path) as DesignToken, named: namedBy(index, e.path) }))
-			.filter((c) => c.token && changedValue(c.token) !== null);
+		const candidates = reading.tags.edits.flatMap((e) => {
+			const token = reading.tokens.find((t) => t.path === e.path);
+			const to = token && changedValue(token);
+			return token && to ? [{ token, to, named: namedBy(index, e.path) }] : [];
+		});
 		const picked = [
 			...candidates
 				.filter((c) => c.named.size > 0)
@@ -77,79 +81,45 @@ const check = (system: ConnectedDesignSystem) => async () => {
 			...candidates.filter((c) => c.named.size === 0).slice(0, UNNAMED),
 		];
 		say(`${candidates.filter((c) => c.named.size > 0).length} tokens named by some component's Values; checking ${picked.length}`);
-		const total = { tokens: 0, named: 0, both: 0, namedOnly: 0, inParts: 0, valuesUnnamed: 0, noTag: 0, failed: 0 };
-		for (const { token, named } of picked) {
+		const notMoved: string[] = [];
+		for (const { token, to, named } of picked) {
 			const t0 = Date.now();
-			const edits: TokenEdit[] = [{ path: token.path, value: changedValue(token) as string }];
-			const { reach } = await tokens.reachWith(index, (reads) => editedFiles(reads, edits));
-			if (reach.state !== 'ready') {
-				total.failed++;
-				say(`- ${token.path}: reach ${reach.state} ${'error' in reach ? reach.error : ''}`);
-				continue;
-			}
-			total.tokens++;
+			const { reach } = await tokens.reachWith(index, (reads) => editedFiles(reads, [{ path: token.path, value: to }]));
+			if (reach.state !== 'ready') throw new Error(`${token.path}: reach ${JSON.stringify(reach).slice(0, 300)}`);
 			const moved = new Map(reach.moved.map((m) => [m.file, m]));
-			const both = [...named].filter((f) => moved.has(f));
-			const namedOnly = [...named].filter((f) => !moved.has(f));
 			const movedOnly = [...moved.keys()].filter((f) => !named.has(f));
-			// What is known of each that moved and is not named: its stories draw the token in a part its Values do not read (the
-			// limit the tab says), its Values moved and do not name it, or its stories draw no tag of it at all.
-			const inParts = movedOnly.filter((f) => files.get(f)?.uses.has(token.path) && moved.get(f)?.inside);
+			const drawsTag = (f: string) => files.get(f)?.uses.has(token.path) === true;
+			// What is known of each that moved and is not named: inside, in a part its Values do not read (the limit the tab says);
+			// its Values moved and name no token; or its stories draw no tag of the token at all.
+			const inParts = movedOnly.filter((f) => moved.get(f)?.inside && drawsTag(f));
 			const valuesUnnamed = movedOnly.filter((f) => !moved.get(f)?.inside);
-			const noTag = movedOnly.filter((f) => !files.get(f)?.uses.has(token.path) && moved.get(f)?.inside);
-			Object.assign(total, {
-				named: total.named + named.size,
-				both: total.both + both.length,
-				namedOnly: total.namedOnly + namedOnly.length,
-				inParts: total.inParts + inParts.length,
-				valuesUnnamed: total.valuesUnnamed + valuesUnnamed.length,
-				noTag: total.noTag + noTag.length,
-			});
+			const noTag = movedOnly.filter((f) => moved.get(f)?.inside && !drawsTag(f));
+			const missed = [...named].filter((f) => !moved.has(f));
+			notMoved.push(...missed.map((f) => `${token.path}: ${f}`));
 			say(
-				`- ${token.path} (${token.kind} ${token.value} → ${changedValue(token)}; ${Math.round((Date.now() - t0) / 1000)}s): named ${named.size}, moved ${moved.size}, both ${both.length}; moved in parts its Values do not read ${inParts.length}; not drawn ${reach.notDrawn.length}`,
+				`- ${token.path} (${token.kind} ${token.value} → ${to}; ${seconds(t0)}): named ${named.size}, moved ${moved.size}; in parts its Values do not read ${inParts.length}; not drawn ${reach.notDrawn.length}`,
 			);
-			for (const f of namedOnly) say(`    NAMED, NOT MOVED: ${f}`);
+			for (const f of missed) say(`    NAMED, NOT MOVED: ${f}`);
 			for (const f of valuesUnnamed) {
 				const changes = (moved.get(f)?.changes ?? []).map((c) => `${c.mode} ${c.property} ${c.from}→${c.to}`).slice(0, 3);
-				say(`    VALUES MOVED, NOT NAMED: ${f} — ${changes.join('; ')}${files.get(f)?.uses.has(token.path) ? ' (its stories draw the tag)' : ''}`);
+				say(`    VALUES MOVED, NOT NAMED: ${f} — ${changes.join('; ')}`);
 			}
 			for (const f of noTag) say(`    MOVED INSIDE, NO TAG DRAWN: ${f}`);
 		}
-		say(`SUMMARY ${system.name}: ${JSON.stringify(total)}`);
-		say(`(${system.name} done in ${Math.round((Date.now() - started) / 1000)}s)`);
-		expect(order.length).toBeGreaterThan(0);
+		say(`(${system.name} done in ${seconds(started)})`);
+		expect(notMoved).toEqual([]);
 	});
 };
 
 const LIMIT = 6 * 3_600_000;
-const primer: ConnectedDesignSystem = {
-	id: 'primer/react',
-	name: 'Primer',
-	repository: 'primer/react',
-	root: REAL_PRIMER,
-	folder: 'packages/react',
-	branch: 'main',
-};
-const tremor = (root: string, repository: string, name: string): ConnectedDesignSystem => ({
-	id: repository,
-	name,
-	repository,
-	root,
-	folder: '',
-	branch: 'main',
-});
 const only = process.env.REACH_LIBS?.split(',');
-const wanted = (name: string) => ASKED && findChrome() !== null && (!only || only.includes(name));
-
-describeWith(libraryMissing, 'how far a token reaches, FUI', () => {
-	it.runIf(wanted('FUI'))('agrees with the components its Values name', check(REAL_FUI), LIMIT);
-});
-describeWith(primerMissing, 'how far a token reaches, Primer', () => {
-	it.runIf(wanted('Primer'))('agrees with the components its Values name', check(primer), LIMIT);
-});
-describeWith(tremor3Missing, 'how far a token reaches, Tremor on Tailwind 3', () => {
-	it.runIf(wanted('Tremor3'))('agrees with the components its Values name', check(tremor(REAL_TREMOR3, 'tremorlabs/tremor-npm', 'Tremor3')), LIMIT);
-});
-describeWith(tremor4Missing, 'how far a token reaches, Tremor on Tailwind 4', () => {
-	it.runIf(wanted('Tremor4'))('agrees with the components its Values name', check(tremor(REAL_TREMOR4, 'tremorlabs/tremor', 'Tremor4')), LIMIT);
-});
+const LIBRARIES: [string, ConnectedDesignSystem, string | null][] = [
+	['FUI', REAL_FUI, libraryUnbuilt],
+	['Primer', REAL_PRIMER_SYSTEM, primerMissing],
+	['Tremor3', REAL_TREMOR3_SYSTEM, tremor3Missing],
+	['Tremor4', REAL_TREMOR4_SYSTEM, tremor4Missing],
+];
+for (const [key, system, missing] of LIBRARIES)
+	describeWith(missing, `how far a token reaches, ${key}`, () => {
+		it.runIf(ASKED && findChrome() !== null && (!only || only.includes(key)))('moves every component its Values name', check(system), LIMIT);
+	});

@@ -47,6 +47,19 @@ export const REAL_FUI = {
 	folder: '',
 	branch: 'develop',
 };
+/** Primer React, connected as the app connects a monorepo's package: `packages/react`, on main. */
+export const REAL_PRIMER_SYSTEM = {
+	id: 'primer/react',
+	name: 'Primer',
+	repository: 'primer/react',
+	root: REAL_PRIMER,
+	folder: 'packages/react',
+	branch: 'main',
+};
+/** Tremor's two libraries, each the whole repository, on main. */
+const tremor = (repository: string, root: string) => ({ id: repository, name: repository, repository, root, folder: '', branch: 'main' });
+export const REAL_TREMOR3_SYSTEM = tremor('tremorlabs/tremor-npm', REAL_TREMOR3);
+export const REAL_TREMOR4_SYSTEM = tremor('tremorlabs/tremor', REAL_TREMOR4);
 /** Why Primer's cannot, or null: its clone, with its packages installed. */
 export const primerMissing = existsSync(join(REAL_PRIMER, 'node_modules', '@storybook', 'react', 'package.json'))
 	? null

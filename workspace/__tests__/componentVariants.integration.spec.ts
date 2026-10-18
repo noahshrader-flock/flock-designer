@@ -7,7 +7,7 @@ import { typeLibs } from '../src/main/services/componentProps';
 import { ComponentVariants } from '../src/main/services/componentVariants';
 import type { ComponentVariants as Answer, ConnectedDesignSystem } from '../src/shared/contract';
 import { findChrome } from '../src/main/services/chromeHeadless';
-import { REAL_PRIMER, describeWith, libraryUnbuilt, primerMissing, REAL_FUI } from './realCheckouts';
+import { REAL_PRIMER_SYSTEM, describeWith, libraryUnbuilt, primerMissing, REAL_FUI } from './realCheckouts';
 import { settledAnswer } from './fixtures';
 import { onRealLibrary } from './realLibrary';
 
@@ -188,7 +188,7 @@ describeWith(primerMissing, 'on Primer React', () => {
 	it.skipIf(findChrome() === null)(
 		'draws Label’s sizes on the story that takes its props, not the one that sets them itself',
 		async () => {
-			const system = { id: 'primer/react', name: 'Primer', repository: 'primer/react', root: REAL_PRIMER, folder: 'packages/react', branch: 'main' };
+			const system = REAL_PRIMER_SYSTEM;
 			await onReal(system, async (of) => {
 				const label = await of('packages/react/src/Label/Label.stories.tsx');
 				expect(label).toMatchObject({ state: 'ready', fixed: [] });
