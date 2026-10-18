@@ -71,12 +71,14 @@ describe('the tags', () => {
 		expect(tags.unmarked).toBe(1);
 	});
 
-	it('give every length a tag however many a library has, each a prime, none a multiple of another', () => {
+	it('give every length a tag however many a library has, each a prime, none a whole or half multiple of another', () => {
 		const many = Array.from({ length: 40 }, (_, i) => token(`space.${i}`, 'dimension', `${i + 1}px`));
 		const sizes = tagsFor(many).sizes.map((s) => s.px);
 		expect(sizes).toHaveLength(40);
 		expect(sizes.slice(0, 6)).toEqual([13, 17, 19, 23, 29, 31]);
-		for (const a of sizes) for (const b of sizes) if (a !== b) for (let k = 1; k <= 8; k++) expect((a * k) % b === 0 && (a * k) / b <= 8).toBe(false);
+		// Nor a half step of one a half step of another, up to 8 times over: a tag's halves are read as that token too.
+		for (const a of sizes)
+			for (const b of sizes) if (a !== b) for (let k = 1; k <= 16; k++) expect((a * k) % b === 0 && (a * k) / b <= 16).toBe(false);
 	});
 
 	it('are edits of values, so a pointer is given the tag and named by it, not by what it points at', () => {
@@ -421,6 +423,19 @@ describe('the index', () => {
 		});
 		const a = await i.of('src/components/A/A.stories.tsx');
 		expect(a).toMatchObject({ state: 'ready', uses: [{ path: 'palette.light.primary.main', uses: 6 }] });
+	});
+
+	it('says which components draw with a token, from the same index the other way round: how often, and how many of their values it is', async () => {
+		const i = index();
+		expect(await i.users('tone.brand.50')).toEqual({ state: 'building' });
+		await ready(i, 'src/components/A/A.stories.tsx');
+		// B's one value is the tone in light and in dark: one value, counted once whichever mode names it.
+		expect(await i.users('tone.brand.50')).toEqual({ state: 'ready', users: [{ file: 'src/components/B/B.stories.tsx', uses: 2, values: 1 }] });
+		expect(await i.users('palette.light.primary.main')).toMatchObject({
+			state: 'ready',
+			users: [{ file: 'src/components/A/A.stories.tsx', uses: 6 }],
+		});
+		expect(await i.users('no.such.token')).toEqual({ state: 'ready', users: [] });
 	});
 
 	it('is built once for a commit, however often it is asked, and refuses a file that is not a story', async () => {

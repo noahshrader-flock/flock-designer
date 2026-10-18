@@ -103,6 +103,16 @@ export type ComponentTokens =
 			values: ComponentValues;
 	  };
 
+/**
+ * The components that draw with one token, from the same drawings as each component's tokens: each by its story file, how
+ * often its stories draw the token (inner parts too), and how many of its values are that token (its Values name it), most
+ * values first. `building` while every story is drawn, the first time for a commit.
+ */
+export type TokenUsers =
+	| { state: 'building' }
+	| { state: 'failed'; error: string }
+	| { state: 'ready'; users: { file: string; uses: number; values: number }[] };
+
 /** What is read of each instance a component's stories draw, in this order. */
 export const VALUE_PROPERTIES = ['height', 'padding', 'radius', 'gap', 'fontSize', 'background', 'text', 'border'] as const;
 export type ValueProperty = (typeof VALUE_PROPERTIES)[number];

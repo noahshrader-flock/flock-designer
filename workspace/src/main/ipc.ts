@@ -94,7 +94,7 @@ export interface IpcContext {
 	 * Which tokens each component draws with (T6), what a change reaches (Phase 3) and what writing a value does (Phase 4),
 	 * and so what is got ready in the background: given for tests.
 	 */
-	componentTokens?: Pick<ComponentTokens, 'of' | 'warm' | 'pictures' | 'reach' | 'drawn' | 'asIs' | 'reachWith'>;
+	componentTokens?: Pick<ComponentTokens, 'of' | 'users' | 'warm' | 'pictures' | 'reach' | 'drawn' | 'asIs' | 'reachWith'>;
 	/** Where the pictures of the components are kept (P5): the app's own folder. */
 	componentPicturesRoot: string;
 	/** How the pictures are taken: a fingerprint, so only pictures taken that way are shown. */

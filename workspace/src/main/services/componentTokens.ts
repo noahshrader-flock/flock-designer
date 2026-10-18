@@ -18,6 +18,7 @@ import type {
 	ComponentTokens as Answer,
 	ComponentValues,
 	ComponentPictures as Pictures,
+	TokenUsers,
 	ConnectedDesignSystem,
 	DeclaredProp,
 	DesignToken,
@@ -237,6 +238,29 @@ export class ComponentTokens {
 			// A file whose stories did not finish drawing as the library has them has no values to say.
 			values: done.values.get(file) ?? { state: 'not-drawn' },
 		};
+	}
+
+	/**
+	 * The components that draw with a token, read from the same index the other way round: how often each one's stories draw
+	 * it, and how many of its values are it, each value counted once whichever mode names it. None is drawn for it.
+	 */
+	async users(path: string): Promise<TokenUsers> {
+		const index = await this.drawn();
+		if (index.state !== 'ready') return index;
+		const { order, files, values } = index.built;
+		const users = order.flatMap((file) => {
+			const read = values.get(file);
+			const named = new Set(
+				read?.state === 'read'
+					? [read.rows.light, read.rows.dark].flatMap((rows) =>
+							(rows ?? []).flatMap((r) => r.cells.filter((c) => c.tokens.includes(path)).map((c) => `${r.property}|${c.variant}`)),
+						)
+					: [],
+			);
+			const uses = files.get(file)?.uses.get(path) ?? 0;
+			return uses > 0 || named.size > 0 ? [{ file, uses, values: named.size }] : [];
+		});
+		return { state: 'ready', users: users.sort((a, b) => b.values - a.values || b.uses - a.uses) };
 	}
 
 	/**

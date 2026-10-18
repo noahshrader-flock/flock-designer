@@ -18,6 +18,11 @@ const ds = {
 		if (typeof file !== 'string' || file.length === 0 || file.length > 500) throw new Error('A component is asked for by its story file.');
 		return file;
 	}) as Check<string>,
+	/** A token, by its path: a name, never anything else. */
+	tokenPath: ((path) => {
+		if (typeof path !== 'string' || path.length === 0 || path.length > 500) throw new Error('A token is asked for by its path.');
+		return path;
+	}) as Check<string>,
 	edits: tokenEditsOf as Check<ReturnType<typeof tokenEditsOf>>,
 	tried: triedValuesOf as Check<ReturnType<typeof triedValuesOf>>,
 	/** What one unit hands to Claude Code: its token edits, or a component's values tried, each checked as those always are. */
@@ -83,6 +88,7 @@ export const registerDesignSystem = (d: IpcDeps): void => {
 	handle('componentTokens', [ds.storyFile], (file) => componentTokens.of(file));
 	handle('componentVariants', [ds.storyFile], (file) => componentVariants.of(file));
 	// What a change reaches is asked for by the change, checked as a change always is.
+	handle('tokenUsers', [ds.tokenPath], (path) => componentTokens.users(path));
 	handle('changeReach', [ds.edits], (edits) => componentTokens.reach(edits));
 	// Values tried on a component's instances, by its story file: checked as the contract says one is, and written only as
 	// the number or colour each reads as, where it was found (Phase 4).

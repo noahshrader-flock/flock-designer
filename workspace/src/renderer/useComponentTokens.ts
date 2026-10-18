@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { ComponentTokens } from '../shared/contract';
+import type { ComponentTokens, TokenUsers } from '../shared/contract';
 import { useTriedAnswer } from './useTriedAnswer';
 
 /** How many of the values a component sets itself are listed before the rest: counted in the app, kept to open in VS Code. */
@@ -17,6 +17,10 @@ export const useComponentTokens = (file: string): { answer: ComponentTokens | { 
 	const answer = useTriedAnswer<ComponentTokens | { state: 'none' }>(`${file}\u0000${asks}`, false, () => window.workspace.componentTokens(file));
 	return { answer, retry: () => setAsks((n) => n + 1) };
 };
+
+/** The components that draw with a token, by its path, asked as a component's tokens are; again while every story is drawn. */
+export const useTokenUsers = (path: string): TokenUsers | { state: 'none' } =>
+	useTriedAnswer<TokenUsers | { state: 'none' }>(path, false, () => window.workspace.tokenUsers(path));
 
 /** Which other components share a token, in a few words: none, or the first few by name and how many more. */
 export const sharedWith = (others: string[]): string =>

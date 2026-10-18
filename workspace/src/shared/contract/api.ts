@@ -7,6 +7,7 @@ import type {
 	ComponentPictures,
 	ChangeReach,
 	ComponentTokens,
+	TokenUsers,
 	ConnectedDesignSystems,
 	StoryPreview,
 	TokenBranch,
@@ -77,6 +78,8 @@ export interface WorkspaceApi {
 	storyPreview(edits: TokenEdit[]): Promise<Result<StoryPreview>>;
 	/** Which tokens a component draws with, by its story file (T6); `building` while every story is drawn, the first time. */
 	componentTokens(file: string): Promise<Result<ComponentTokens>>;
+	/** The components that draw with a token, by its path, and how many of their values it is; `building` while every story is drawn. */
+	tokenUsers(path: string): Promise<Result<TokenUsers>>;
 	/** What a token change being tried reaches: each component it moves, and how (Phase 3); `building` while it is drawn. */
 	changeReach(edits: TokenEdit[]): Promise<Result<ChangeReach>>;
 	/** A component drawn in every case its declared props give, by its story file (Phase 5); `building` while it is drawn. */
@@ -292,6 +295,7 @@ export const INVOKE = [
 	'designSystems',
 	'storyPreview',
 	'componentTokens',
+	'tokenUsers',
 	'changeReach',
 	'componentVariants',
 	'valueSources',
