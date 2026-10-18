@@ -104,13 +104,18 @@ const stillRunning = (child: ChildProcess): boolean => {
 /**
  * Ends a program started with `GROUP`, and everything it started: SIGTERM to all of them, and once `graceMs` has passed with
  * any still running, SIGKILL to those, which a dev server ignoring SIGTERM would otherwise be, keeping its port. Resolves
- * once all of them are gone, or a second after the SIGKILL.
+ * once all of them are gone and the program's exit is handled, or a second after the SIGKILL.
  */
 export const endGroup = async (child: ChildProcess, graceMs = 5_000): Promise<void> => {
 	const pause = (ms: number) => new Promise((r) => setTimeout(r, ms));
+	// Heard before anything is signalled, so its exit is never missed: a group can be gone a moment before Node has handled
+	// its leader's exit, and whoever waits on this sees the program as ended once it resolves.
+	const handled = child.exitCode !== null || child.signalCode !== null ? Promise.resolve() : new Promise<void>((r) => child.once('exit', () => r()));
 	signalGroup(child, 'SIGTERM');
 	for (const until = Date.now() + graceMs; stillRunning(child) && Date.now() < until;) await pause(100);
-	if (!stillRunning(child)) return;
-	signalGroup(child, 'SIGKILL');
-	for (const until = Date.now() + 1_000; stillRunning(child) && Date.now() < until;) await pause(50);
+	if (stillRunning(child)) {
+		signalGroup(child, 'SIGKILL');
+		for (const until = Date.now() + 1_000; stillRunning(child) && Date.now() < until;) await pause(50);
+	}
+	await Promise.race([handled, pause(1_000)]);
 };
