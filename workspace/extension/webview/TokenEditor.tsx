@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { DesignToken } from '../../src/shared/contract';
-import { nameOf, pairContrast, pointsAt, reachOf, roleOf, scaleFamilies, tokenTitle } from '../../src/shared/tokens';
+import { declaredBy, nameOf, pairContrast, pointsAt, reachOf, roleOf, scaleFamilies, tokenTitle } from '../../src/shared/tokens';
 import { useTokenChanges } from '../../src/renderer/tokenChanges';
 import { Button } from './ui/Button';
 import { Dialog, DialogButtons } from './ui/Dialog';
@@ -103,6 +103,7 @@ export const TokenEditor = ({ token, onClose }: { token: DesignToken; onClose: (
 						{now.source.file}:{now.source.line}
 					</code>
 				</p>
+				{declaredBy(now) && <p className="quiet token-declared">{declaredBy(now)}</p>}
 				{now.kind === 'dimension' ? (
 					<LengthField label={nameOf(asRead)} value={now.value} was={asRead.value} onCommit={(value) => change(now, { value })} />
 				) : target ? (

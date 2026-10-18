@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { pairContrast, pointsAt, reachOf, rowContrast } from '../src/shared/tokens';
+import { declaredBy, pairContrast, pointsAt, reachOf, rowContrast } from '../src/shared/tokens';
 import { undeclared } from '../src/shared/wcag';
 import { color } from './tokenFixtures';
 
@@ -60,5 +60,18 @@ describe('reachOf', () => {
 			also: 'Also changes Light divider: written in one place.',
 		});
 		expect(reachOf(alone, { shown: [alone], isPointedInto: () => false })).toBeNull();
+	});
+});
+
+describe('declaredBy', () => {
+	it('says a token a package declares is the package’s, written here as an override, and nothing of one the library declares', () => {
+		const own = { source: { file: '.storybook/theme.css', line: 3 } };
+		const packaged = {
+			source: { file: '.storybook/theme.css', line: 1, from: { file: 'node_modules/@primer/primitives/dist/css/size.css', line: 14, rule: ':root' } },
+		};
+		expect(declaredBy(own)).toBeNull();
+		expect(declaredBy(packaged)).toBe(
+			'Declared by node_modules/@primer/primitives/dist/css/size.css:14. A change is written here as an override; the token itself is that package’s to change.',
+		);
 	});
 });
