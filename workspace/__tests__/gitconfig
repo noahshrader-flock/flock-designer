@@ -1,4 +1,4 @@
-# The git configuration every test runs with, in place of the person's own (vitest.config.ts points git at it): the same
+# The git configuration every test runs with, in place of the person's own (`sealed.mjs` points git at it): the same
 # on every machine and in CI, so a test's commits never carry the person's name and never ask for a signing key. A test
 # that is about who made a commit sets that itself, in its repository.
 [user]
@@ -8,3 +8,9 @@
 	gpgsign = false
 [tag]
 	gpgsign = false
+# A push to GitHub, by any of its addresses, goes to a path that is not a repository, so it fails, saying so; a push to a
+# test's own repository (a path on disk) is untouched.
+[url "/nonexistent/not-faked/github.com/"]
+	pushInsteadOf = https://github.com/
+	pushInsteadOf = git@github.com:
+	pushInsteadOf = ssh://git@github.com/

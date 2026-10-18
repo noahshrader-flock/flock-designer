@@ -13,6 +13,7 @@ import { spawn } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { extensionDir as here, vscodeApp, vscodeEnv } from './tools.mjs';
+import { sealedEnv } from '../__tests__/sealed.mjs';
 
 const profile = join(tmpdir(), 'dsnr-dev');
 
@@ -32,7 +33,9 @@ build.stdout.on('data', (chunk) => {
 			'--skip-release-notes',
 			'--new-window',
 		],
-		{ stdio: 'ignore', env: vscodeEnv() },
+		// In the sealed world the tests run in (`sealed.mjs`), kept with the profile: a hand check here reaches none of the
+		// person's settings, GitHub sign-in or remotes. A check that needs them is made in the installed extension.
+		{ stdio: 'ignore', env: vscodeEnv(sealedEnv({ base: join(profile, 'world') }).env) },
 	);
 	window.on('error', (err) => {
 		console.error(`dsnr: VS Code did not start (${err.message}). Set CODE_BIN to its path.`);

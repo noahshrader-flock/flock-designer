@@ -23,6 +23,7 @@ import { chmodSync, existsSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, wri
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { extensionDir, installVsix, packageVsix, vscodeApp, vscodeEnv } from '../tools.mjs';
+import { sealedEnv } from '../../__tests__/sealed.mjs';
 
 const here = join(extensionDir, 'test');
 const extension = extensionDir;
@@ -143,8 +144,9 @@ const run = spawn(
 		'--new-window',
 	],
 	{
+		// In the sealed world every test runs in (`sealed.mjs`), with the stand-in Claude Code first.
 		env: vscodeEnv({
-			PATH: `${bin}:${process.env.PATH}`,
+			...sealedEnv({ base: join(base, 'sealed'), path: `${bin}:${process.env.PATH}` }).env,
 			DSNR_TEST_PROFILE: profile.user,
 			...(hasFui ? { DSNR_TEST_DESIGN_SYSTEM: '1' } : {}),
 			...(packaged ? { DSNR_INSTALLED_IN: profile.extensions } : {}),
