@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 
 /**
@@ -28,7 +28,42 @@ export const jsonFile = <T>(path: string, { parse, fallback }: { parse: (raw: un
 			// Kept again next time.
 		}
 	};
-	return { read, write, update: (change) => write(change(read())) };
+	// Read, changed and written under the file's lock, so two windows' DSNR changing it at once do not lose either change.
+	return { read, write, update: (change) => locked(path, () => write(change(read()))) };
+};
+
+/** How long a lock may be held before it is taken as left by a DSNR that stopped while holding it. */
+const STALE_MS = 5_000;
+/** How long a change waits for the lock before it goes ahead regardless: a choice forgotten is an inconvenience, never a failure. */
+const WAIT_MS = 2_000;
+const pause = (ms: number) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+
+/** `work`, holding `<path>.lock`, a file only one process can make; one left longer than `STALE_MS` is taken over. */
+const locked = (path: string, work: () => void): void => {
+	const lock = `${path}.lock`;
+	try {
+		mkdirSync(dirname(path), { recursive: true });
+	} catch {
+		return work();
+	}
+	for (const until = Date.now() + WAIT_MS; ; pause(20)) {
+		try {
+			writeFileSync(lock, String(process.pid), { flag: 'wx' });
+			break;
+		} catch (err) {
+			if ((err as NodeJS.ErrnoException).code !== 'EEXIST' || Date.now() > until) return work();
+			try {
+				if (Date.now() - statSync(lock).mtimeMs > STALE_MS) rmSync(lock, { force: true });
+			} catch {
+				// Gone since: tried again.
+			}
+		}
+	}
+	try {
+		work();
+	} finally {
+		rmSync(lock, { force: true });
+	}
 };
 
 /** A file's text, or null when it is not there or cannot be read. */
