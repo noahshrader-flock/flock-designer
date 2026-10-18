@@ -65,6 +65,18 @@ window.__dsnrShow = async () => {
 };
 </script></body></html>`,
 	// A preview build's page, as the Design System tab's are: it draws the story file it is told, in place of the last.
+	// Its styles put in by script when a story draws, into a sheet already on the page, as a CSS-in-JS library puts them
+	// (Emotion, built for production): the page theme answers them as the story's elements go in.
+	'/inserted/': withPageTheme(`<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Previews</title></head>
+<body style="margin:0;background:#fff"><div id="root"></div><script>
+const sheet = document.head.appendChild(document.createElement('style')).sheet;
+window.__dsnrShow = async () => {
+	// Into the sheet already there, when the story draws, as Emotion does.
+	sheet.insertRule('.save { background: #123456 }', 0);
+	sheet.insertRule('@media (prefers-color-scheme: dark) { .save { background: #654321 } }', 1);
+	document.getElementById('root').innerHTML = '<section data-story><button class="save" style="color:#fff;padding:12px 20px;border:0">Save</button></section>';
+};
+</script></body></html>`),
 	// With the page theme first in its head, as the build's page has it: its address says the mode.
 	'/previews/': withPageTheme(`<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Previews</title></head>
 <body style="margin:0;background:#fff"><div id="root"></div><script>
@@ -128,6 +140,16 @@ describe.skipIf(findChrome() === null)('with the browser on this machine', () =>
 		const picture = light?.[0]?.picture;
 		expect(picture?.subarray(0, 2)).toEqual(Buffer.from([0xff, 0xd8]));
 		expect(light?.[0]?.accessibility?.violations.map((v) => v.id)).toContain('image-alt');
+	}, 60_000);
+
+	it('draws a story in its mode by its address, the styles a script put in too, whatever the browser is set to', async () => {
+		const [light, dark] = await headless.measure([
+			{ base: `${base}/inserted/`, mode: 'light', files: ['a.stories.tsx'] },
+			{ base: `${base}/inserted/`, mode: 'dark', files: ['a.stories.tsx'] },
+		]);
+		expect(Object.keys(light?.[0]?.colors ?? {})).toContain('rgb(18, 52, 86)');
+		expect(Object.keys(light?.[0]?.colors ?? {})).not.toContain('rgb(101, 67, 33)');
+		expect(Object.keys(dark?.[0]?.colors ?? {})).toContain('rgb(101, 67, 33)');
 	}, 60_000);
 
 	it('pictures a story as the composition does, in one capture taken by the browser: moved into view, cut, wide, beside a dialog, fixed', async () => {

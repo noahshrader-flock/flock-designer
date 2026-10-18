@@ -5,7 +5,9 @@ import { DEFAULT_THEME, themeOfQuery, type Theme } from '../shared/prototypeThem
  * (`?theme=dark`), else light, the default. Built as the product is, a prototype would follow the machine's light or dark
  * setting: through `matchMedia` (MUI's `useMediaQuery`, in `FSApp`) and through `prefers-color-scheme` rules in its
  * stylesheets (the design system's). Both are answered here with the theme, so every reviewer sees the same page whatever
- * their machine is set to. Only prototypes carry this: codebase work is the real app, and follows what its codebase does.
+ * their machine is set to. A design system's story previews carry it too, so a component's frame and its values are drawn in
+ * the mode chosen in the side panel, by the same address. Codebase work does not: it is the real app, and follows what its
+ * codebase does.
  */
 
 const SCHEME = /\(\s*prefers-color-scheme\s*:\s*(light|dark)\s*\)/gi;
@@ -45,6 +47,7 @@ export const applyTheme = (win: Window): void => {
 	}
 	const doc = win.document;
 	const all = () => Array.from(doc.styleSheets).forEach((sheet) => themeSheet(sheet, theme));
+	// Whenever the page changes: a sheet as it arrives, and a rule a script puts in one as a story draws (a CSS-in-JS library's).
 	new MutationObserver(all).observe(doc, { childList: true, subtree: true });
 	doc.addEventListener('DOMContentLoaded', all);
 	// The browser's own controls (scroll bars, form fields) in it too.
