@@ -9,7 +9,7 @@ import { ok } from '../src/shared/result';
  * says so, or says the agent changed nothing. Before a version others have commented on is changed, the person chooses.
  */
 
-const review = { projectId: 'demo', name: 'v1', title: 'Demo · V1' };
+const review = { projectId: 'demo', name: 'v1', title: 'Demo · Version 1' };
 const comment = { thread: 4, id: 40 };
 const finished: AgentStatus = { state: 'finished', exitCode: 0, work: 'prototype/demo/v1', purpose: null };
 const noah = { name: 'Noah', login: 'noah' };
@@ -72,8 +72,8 @@ describe('addressing a comment from a review', () => {
 		// Only its maker has commented: no question, and the change is made in place.
 		expect(deps.offer).not.toHaveBeenCalled();
 		expect(api.addressPrototype).toHaveBeenCalledWith('demo', 'v1', comment, false);
-		expect(said).toEqual(['Addressing a comment on Demo · V1', 'The agent is working on the comment. This takes a few minutes.']);
-		expect(deps.log.start).toHaveBeenCalledWith('Demo · V1: addressing a comment');
+		expect(said).toEqual(['Addressing a comment on Demo · Version 1', 'The agent is working on the comment. This takes a few minutes.']);
+		expect(deps.log.start).toHaveBeenCalledWith('Demo · Version 1: addressing a comment');
 		expect(told).toEqual(['The agent has finished. Look at the page, then resolve what is done.']);
 		expect(deps.show).toHaveBeenCalledWith(review);
 	});
@@ -81,10 +81,10 @@ describe('addressing a comment from a review', () => {
 	it('asks first when others have commented, and changes it in place when the person says update', async () => {
 		const { deps, api } = world(undefined, ['noah', 'pm', 'pm'], (actions) => actions[0]);
 		expect(await addressComment(deps, review, comment)).toBe('v1');
-		expect(deps.offer).toHaveBeenCalledWith('2 comments from others are on V1. Changing it in place can leave their pins on the wrong element.', [
-			'Update V1',
-			'Start V4 from it',
-		]);
+		expect(deps.offer).toHaveBeenCalledWith(
+			'2 comments from others are on Version 1. Changing it in place can leave their pins on the wrong element.',
+			['Update Version 1', 'Start Version 4 from it'],
+		);
 		expect(api.addressPrototype).toHaveBeenCalledWith('demo', 'v1', comment, false);
 	});
 
@@ -92,7 +92,14 @@ describe('addressing a comment from a review', () => {
 		const { deps, api, told } = world({ changed: true, iteration: 'v4' }, ['pm'], (actions) => actions[1]);
 		expect(await addressComment(deps, review, comment)).toBe('v4');
 		expect(api.addressPrototype).toHaveBeenCalledWith('demo', 'v1', comment, true);
-		expect(told).toEqual(['The change is in V4, a new version from V1, which stays as it was.']);
+		expect(told).toEqual(['The change is in Version 4, a new version from Version 1, which stays as it was.']);
+	});
+
+	it('makes the change in a new version with no question when one was asked for outright', async () => {
+		const { deps, api } = world({ changed: true, iteration: 'v4' }, ['pm']);
+		expect(await addressComment(deps, review, comment, true)).toBe('v4');
+		expect(deps.offer).not.toHaveBeenCalled();
+		expect(api.addressPrototype).toHaveBeenCalledWith('demo', 'v1', comment, true);
 	});
 
 	it('does nothing when the person chooses neither, and asks the same when who has commented cannot be read', async () => {
@@ -101,7 +108,10 @@ describe('addressing a comment from a review', () => {
 		expect(neither.api.addressPrototype).not.toHaveBeenCalled();
 		const unread = world(undefined, null, (actions) => actions[0]);
 		expect(await addressComment(unread.deps, review, comment)).toBe('v1');
-		expect(unread.deps.offer).toHaveBeenCalledWith('Who has commented on V1 could not be read.', ['Update V1', 'Start V4 from it']);
+		expect(unread.deps.offer).toHaveBeenCalledWith('Who has commented on Version 1 could not be read.', [
+			'Update Version 1',
+			'Start Version 4 from it',
+		]);
 	});
 
 	it('says when the agent changed nothing, and leaves the review as it is', async () => {

@@ -38,8 +38,8 @@ exports.run = async () => {
 	// the projects, the site is built and served from this machine, and the review is an editor tab. Given the review, as
 	// code can: the quick pick that offers it is VS Code's own.
 	const tabs = () => vscode.window.tabGroups.all.flatMap((g) => g.tabs.map((t) => t.label));
-	await vscode.commands.executeCommand('dsnr.openReview', { projectId: 'fixture', name: 'v1', title: 'Fixture · V1' });
-	await until('the review opening', () => tabs().includes('Fixture · V1'));
+	await vscode.commands.executeCommand('dsnr.openReview', { projectId: 'fixture', name: 'v1', title: 'Fixture · Version 1' });
+	await until('the review opening', () => tabs().includes('Fixture · Version 1'));
 
 	// A prototype is started: made, and its building handed to Claude Code as Build in the codebase's is. This VS Code has no
 	// Claude Code in it, so what the person is given is the command that starts it in a terminal, on the clipboard, pointing
@@ -64,8 +64,8 @@ exports.run = async () => {
 		90000,
 	);
 	// …and it opens for review, as saved.
-	await vscode.commands.executeCommand('dsnr.openReview', { projectId: 'made-here', name: 'v1', title: 'Made here · V1' });
-	await until('the new prototype opening', () => tabs().includes('Made here · V1'), 60000);
+	await vscode.commands.executeCommand('dsnr.openReview', { projectId: 'made-here', name: 'v1', title: 'Made here · Version 1' });
+	await until('the new prototype opening', () => tabs().includes('Made here · Version 1'), 60000);
 	// The dialogs open in the panel, from the commands the title bar and the right-click menu run: shown, and asked of the
 	// panel, without failing. (What the page then draws is tested in its own tests; this cannot see inside a webview.)
 	await vscode.commands.executeCommand('dsnr.newPrototype');
@@ -89,6 +89,6 @@ exports.run = async () => {
 	}
 
 	console.log(
-		`dsnr-test: activated; its commands are there; Fixture · V1 opened for review; Made here was started, handed to Claude Code, saved when built, pictured and opened${designSystem}`,
+		`dsnr-test: activated; its commands are there; Fixture · Version 1 opened for review; Made here was started, handed to Claude Code, saved when built, pictured and opened${designSystem}`,
 	);
 };

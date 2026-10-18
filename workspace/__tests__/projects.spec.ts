@@ -323,7 +323,7 @@ describe("a prototype's name: its version", () => {
 	});
 
 	// The old shapes are not read at all: a version and its iteration, a name from before versions, and an old branch's.
-	it.each(['v1-i1', 'v2-i3', 'i1', 'i7', 'fd/demo/i1', 'codebase', 'v', 'v0', 'v01', 'v10000', 'V1', 'v1x', 'v-1', '../v1', ''])(
+	it.each(['v1-i1', 'v2-i3', 'i1', 'i7', 'fd/demo/i1', 'codebase', 'v', 'v0', 'v01', 'v10000', 'Version 1', 'v1x', 'v-1', '../v1', ''])(
 		'refuses %s',
 		(name) => {
 			expect(parseVersion(name)).toBeNull();
@@ -358,7 +358,7 @@ describe("a prototype's name: its version", () => {
 	});
 
 	it('labels a version V and its number, and codebase work as codebase', () => {
-		expect(workLabel({ name: 'v3' })).toBe('V3');
+		expect(workLabel({ name: 'v3' })).toBe('Version 3');
 		expect(workLabel({ name: 'codebase' })).toBe('Codebase');
 	});
 });

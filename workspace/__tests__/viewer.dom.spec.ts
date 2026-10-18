@@ -181,16 +181,16 @@ describe("the page's bar", () => {
 		expect(document.querySelector('a[href="../"]')).not.toBeNull();
 		expect(document.body.textContent).toContain('Alert history');
 		// Every version in one menu, the newest first, with this one chosen.
-		await openMenu(button('Version V1: switch version'));
+		await openMenu(button('Version 1: switch version'));
 		const versions = [...document.querySelectorAll<HTMLElement>('[role="menuitemradio"]')];
-		expect(versions.map((i) => i.textContent?.trim())).toEqual(['V3', 'V2', 'V1']);
+		expect(versions.map((i) => i.textContent?.trim())).toEqual(['Version 3', 'Version 2', 'Version 1']);
 		expect(versions.map((o) => o.getAttribute('aria-checked'))).toEqual(['false', 'false', 'true']);
 	});
 
 	it('is there before anyone signs in, beside the way to', async () => {
 		await open();
 		expect(button('Sign in to comment')).toBeTruthy();
-		expect(button('Version V1: switch version')).toBeTruthy();
+		expect(button('Version 1: switch version')).toBeTruthy();
 	});
 });
 
@@ -215,7 +215,7 @@ describe('the states of the page', () => {
 		expect(shownState()).toBe('Default');
 		// In the bar's order: the version, the states, then the theme.
 		const before = (a: Element, b: Element) => !!(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
-		expect(before(button('Version V1: switch version'), stateMenu() as Element)).toBe(true);
+		expect(before(button('Version 1: switch version'), stateMenu() as Element)).toBe(true);
 		expect(before(stateMenu() as Element, themeGroup() as Element)).toBe(true);
 		await chooseState('Panel');
 		await settle();
@@ -304,7 +304,7 @@ describe('the states of the page', () => {
 		await unmountAll(current!.root);
 		current = await render(createElement(Viewer, { config: CONFIG, slots: sitePage().slots }));
 		expect(document.querySelector('[aria-label^="State"]')).toBeNull();
-		expect(button('Version V1: switch version')).toBeTruthy();
+		expect(button('Version 1: switch version')).toBeTruthy();
 	});
 });
 
@@ -508,7 +508,11 @@ describe('in DSNR’s review tab, in VS Code', () => {
 		await press(menuItem(await openMenu(button('Comment actions')), 'Address'));
 		await settle();
 		const comment = gh.issues[0]!.comments[0]!;
-		expect(asked.at(-1)).toEqual(['address', [{ thread: gh.issues[0]!.number, id: comment.id }, 'prototype/demo/v1']]);
+		expect(asked.at(-1)).toEqual(['address', [{ thread: gh.issues[0]!.number, id: comment.id }, 'prototype/demo/v1', false]]);
+		// Or in a new version from this one, whoever has commented: the person chooses it here.
+		await press(menuItem(await openMenu(button('Comment actions')), 'Address in a new version'));
+		await settle();
+		expect(asked.at(-1)).toEqual(['address', [{ thread: gh.issues[0]!.number, id: comment.id }, 'prototype/demo/v1', true]]);
 	});
 
 	it('is told which version Address shows its change in, for a page in the browser to go to (BROWSER_COMMENTS_PLAN 3.2)', async () => {

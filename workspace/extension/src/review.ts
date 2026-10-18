@@ -71,8 +71,11 @@ window.addEventListener('message', (e) => {
 interface ReviewAnswers {
 	routes: () => ReadonlyMap<InvokeName, Route>;
 	signIn: () => Promise<SignInState>;
-	/** Address, on the iteration the page is on, shown where it was asked from (BROWSER_COMMENTS_PLAN D1): the iteration it shows. */
-	address: (review: Review, comment: CommentRef, from: AskedFrom) => Promise<unknown>;
+	/**
+	 * Address, on the version the page is on, in it or in a new version from it (`newVersion`), shown where it was asked
+	 * from (BROWSER_COMMENTS_PLAN D1): the version it shows.
+	 */
+	address: (review: Review, comment: CommentRef, from: AskedFrom, newVersion: boolean) => Promise<unknown>;
 	/** Told once a comment was written (made, moved, resolved, deleted, addressed), so what counts them is read again. */
 	written: () => void;
 }
@@ -126,16 +129,17 @@ const answered = async (
 	from: AskedFrom,
 ): Promise<Result<unknown>> => {
 	if (name === 'signIn') return toResult(answers.signIn());
-	// Address is given one comment, and may say which of the review's prototypes the page is on (a browser's moves).
-	if (name === 'address' && !((args.length === 1 || args.length === 2) && isRef(args[0])))
+	// Address is given one comment, and may say which of the review's prototypes the page is on (a browser's moves) and
+	// that the change is to go in a new version.
+	if (name === 'address' && !(args.length >= 1 && args.length <= 3 && isRef(args[0]) && (args[2] === undefined || typeof args[2] === 'boolean')))
 		return { ok: false, error: 'Address is given one comment.' };
-	if (name === 'address' && args.length === 2 && !isPrototypeOf(review.projectId, args[1]))
+	if (name === 'address' && args.length >= 2 && !isPrototypeOf(review.projectId, args[1]))
 		return { ok: false, error: `This review is of ${review.projectId}, so it comments only on ${review.projectId}’s prototypes.` };
 	if (ON_A_COMMENT.has(name) && !(isRef(args[0]) && seen.has(args[0].thread)))
 		return { ok: false, error: 'That comment is not one of this review’s.' };
 	if (name === 'address') {
-		const on = args.length === 2 ? { ...review, name: (args[1] as string).slice(prototypeKey(review.projectId, '').length) } : review;
-		return toResult(answers.address(on, args[0] as CommentRef, from));
+		const on = args.length >= 2 ? { ...review, name: (args[1] as string).slice(prototypeKey(review.projectId, '').length) } : review;
+		return toResult(answers.address(on, args[0] as CommentRef, from, args[2] === true));
 	}
 	if ((name === 'readComments' || name === 'postComment') && !(args[0] === review.projectId && isPrototypeOf(review.projectId, args[1])))
 		return { ok: false, error: `This review is of ${review.projectId}, so it comments only on ${review.projectId}’s prototypes.` };

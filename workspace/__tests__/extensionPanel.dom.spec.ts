@@ -378,7 +378,7 @@ describe('dialogs and menus, in the panel', () => {
 			await showOpen();
 			await press(menuFor(0));
 			await press(item('Copy link'));
-			expect(panelSaid().at(-1)).toEqual({ type: 'copy-review-link', projectId: 'alert-history', name: 'v3', title: 'Alert history · V3' });
+			expect(panelSaid().at(-1)).toEqual({ type: 'copy-review-link', projectId: 'alert-history', name: 'v3', title: 'Alert history · Version 3' });
 			expect(items()).toHaveLength(0);
 		});
 
@@ -390,7 +390,7 @@ describe('dialogs and menus, in the panel', () => {
 				type: 'open-review-published',
 				projectId: 'alert-history',
 				name: 'v3',
-				title: 'Alert history · V3',
+				title: 'Alert history · Version 3',
 			});
 			expect(items()).toHaveLength(0);
 		});
@@ -410,7 +410,7 @@ describe('dialogs and menus, in the panel', () => {
 				type: 'open-review-in-browser',
 				projectId: 'alert-history',
 				name: 'v3',
-				title: 'Alert history · V3',
+				title: 'Alert history · Version 3',
 			});
 			expect(items()).toHaveLength(0);
 		});
@@ -889,7 +889,7 @@ describe('the projects as a list or a grid', () => {
 			'No folder',
 		]);
 		await press(cards()[0]!);
-		expect(panelSaid().at(-1)).toEqual({ type: 'open-review', projectId: 'alert-history', name: 'v3', title: 'Alert history · V3' });
+		expect(panelSaid().at(-1)).toEqual({ type: 'open-review', projectId: 'alert-history', name: 'v3', title: 'Alert history · Version 3' });
 		expect(JSON.parse(cards()[0]!.closest('li')!.dataset.vscodeContext ?? '{}')).toMatchObject({
 			webviewSection: 'project',
 			projectId: 'alert-history',
@@ -1175,7 +1175,7 @@ describe('Projects', () => {
 	it('opens a project’s newest prototype for review when its row is pressed', async () => {
 		await showOpen();
 		await press(rows()[0]!.querySelector('button') as HTMLElement);
-		expect(panelSaid().at(-1)).toEqual({ type: 'open-review', projectId: 'alert-history', name: 'v3', title: 'Alert history · V3' });
+		expect(panelSaid().at(-1)).toEqual({ type: 'open-review', projectId: 'alert-history', name: 'v3', title: 'Alert history · Version 3' });
 	});
 
 	it('draws each project’s picture: those built here are made once the list is read, then each is read by its name', async () => {

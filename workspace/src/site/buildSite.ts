@@ -236,7 +236,7 @@ const viewerConfig = (ref: RepoRef, p: SiteProject, current: Page, states: strin
 		name: current.record.name,
 		title: p.title,
 		projectHref: '../',
-		versions: p.versions.map((pg) => ({ name: pg.record.name, href: `../${pg.path}` })),
+		versions: p.versions.map((pg) => ({ name: pg.record.name, href: `../${pg.path}`, ...(pg.record.from ? { from: pg.record.from } : {}) })),
 		states,
 		page,
 	});

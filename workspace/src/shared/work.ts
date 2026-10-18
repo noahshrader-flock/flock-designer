@@ -1,5 +1,5 @@
 import type { BuildInCodebasePlan, WorkKind, Project, ProjectWork } from './contract';
-import { newestVersionFirst } from './prototypeNames';
+import { newestVersionFirst, parseVersion } from './prototypeNames';
 import { byNewest } from './sort';
 import { asRepositoryPath } from './repoRef';
 import { asChangeRequestUrl, treeUrl } from './hostUrls';
@@ -59,8 +59,9 @@ export const productsOf = (project: Pick<Project, 'work'>): string[] => {
 	return found;
 };
 
-/** How a piece of work is named on screen: a version as `V2`, and codebase work as Codebase. */
-export const workLabel = (i: Pick<ProjectWork, 'name'>): string => (workKind(i) === 'codebase' ? 'Codebase' : i.name.toUpperCase());
+/** How a piece of work is named on screen: a version as `Version 2`, and codebase work as Codebase. */
+export const workLabel = (i: Pick<ProjectWork, 'name'>): string =>
+	workKind(i) === 'codebase' ? 'Codebase' : `Version ${parseVersion(i.name) ?? i.name}`;
 
 /**
  * What a person is told when codebase work's branch has no DSNR setup: DSNR could not read what it may run in the branch

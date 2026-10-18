@@ -71,7 +71,7 @@ export const prepareAddress = async (
 	const here = await deps.checkout();
 	if (here.branch !== iteration.branch) {
 		throw new Error(
-			`This machine is on ${here.branch ?? 'no branch'}, not ${iteration.branch}. Open this iteration here first, so its preview and the agent's changes are the same work.`,
+			`This machine is on ${here.branch ?? 'no branch'}, not ${iteration.branch}. Open this work here first, so its preview and the agent's changes are the same work.`,
 		);
 	}
 	if (!here.clean) {

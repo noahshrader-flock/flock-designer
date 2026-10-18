@@ -1,4 +1,4 @@
-import { ChevronLeftIcon, WandSparklesIcon } from 'lucide-react';
+import { ChevronLeftIcon, CopyPlusIcon, WandSparklesIcon } from 'lucide-react';
 import { type ReactNode, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { commentRef } from '../shared/comments';
@@ -12,7 +12,7 @@ import { prototypeAddressed } from '../renderer/comments/addressed';
 import { CommentBox } from '../renderer/comments/CommentBox';
 import { CommentControl } from '../renderer/comments/CommentControl';
 import { useComments } from '../renderer/comments/useComments';
-import { IterationSwitcher, StateSwitcher, ThemeSwitcher } from '../renderer/IterationSwitcher';
+import { VersionSwitcher, StateSwitcher, ThemeSwitcher } from '../renderer/VersionSwitcher';
 import { type BarSize, Toolbar, barButtonSize } from '../renderer/Toolbar';
 import { Button } from '../renderer/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../renderer/ui/dialog';
@@ -48,8 +48,8 @@ export interface ViewerConfig {
 	title: string;
 	/** Where the project's own page is, from this one. */
 	projectHref: string;
-	/** Every version of the project that has a page, and where each is from this one. */
-	versions: { name: string; href: string }[];
+	/** Every version of the project that has a page, where each is from this one, and the version it was started from. */
+	versions: { name: string; href: string; from?: string }[];
 	/** The states the page has (`shared/prototypeStates`); not there on a page built before pages said. */
 	states?: string[];
 	/** The page's fingerprint, which a comment placed on it carries; not there on a page built before pages said. */
@@ -97,14 +97,14 @@ const PageBar = ({ config, slots, showing, children }: { config: ViewerConfig; s
 			<h1 className="truncate text-sm font-semibold">{config.title}</h1>
 			<div className="grow" />
 			<div className="flex items-center gap-2">
-				<IterationSwitcher
+				<VersionSwitcher
 					current={{ name: config.name, branch: prototypeKey(config.projectId, config.name) }}
 					siblings={versions}
 					size={BAR}
 					onSelect={(next) => void (location.href = next.href)}
 				>
 					<StateSwitcher states={showing.states} current={showing.state} onSelect={showing.onState} size={BAR} />
-				</IterationSwitcher>
+				</VersionSwitcher>
 				<ThemeSwitcher shown={showing.theme} size={BAR} />
 				{children}
 			</div>
@@ -261,10 +261,11 @@ const InDsnr = ({
 		setSigningIn(false);
 		if (signedIn !== null) setLogin(signedIn);
 	};
-	const address = async (comment: CommentRef) => {
+	/** Address in this version, or in a new version from it (`newVersion`), which the person chose. */
+	const address = async (comment: CommentRef, newVersion: boolean) => {
 		setAddressing(comment.id);
 		// On this page's own version: in the browser, the page may have moved to another since it was opened.
-		const r = await relay.ask('address', [comment, prototypeKey(config.projectId, config.name)]);
+		const r = await relay.ask('address', [comment, prototypeKey(config.projectId, config.name), newVersion]);
 		setAddressing(null);
 		if (r.ok && typeof r.value === 'string') onAddressed?.(r.value);
 	};
@@ -285,10 +286,16 @@ const InDsnr = ({
 			store={store}
 			actions={(comment: ReviewComment) =>
 				comment.resolved ? null : (
-					<DropdownMenuItem disabled={addressing !== null} onSelect={() => void address(commentRef(comment))}>
-						<WandSparklesIcon />
-						{addressing === comment.id ? 'Working…' : 'Address'}
-					</DropdownMenuItem>
+					<>
+						<DropdownMenuItem disabled={addressing !== null} onSelect={() => void address(commentRef(comment), false)}>
+							<WandSparklesIcon />
+							{addressing === comment.id ? 'Working…' : 'Address'}
+						</DropdownMenuItem>
+						<DropdownMenuItem disabled={addressing !== null} onSelect={() => void address(commentRef(comment), true)}>
+							<CopyPlusIcon />
+							Address in a new version
+						</DropdownMenuItem>
+					</>
 				)
 			}
 		/>

@@ -113,7 +113,7 @@ describe('a project', () => {
 	it('lists its versions, the newest first, with date, author and comments', () => {
 		build({ comments: new Map([['prototype/alpha/v3', 3]]) });
 		const html = read('alpha/index.html');
-		expect(html.indexOf('>V3<')).toBeGreaterThan(-1);
+		expect(html.indexOf('>Version 3<')).toBeGreaterThan(-1);
 		expect(html.indexOf('href="v3/"')).toBeLessThan(html.indexOf('href="v2/"'));
 		expect(html.indexOf('href="v2/"')).toBeLessThan(html.indexOf('href="v1/"'));
 		expect(html).toContain('Oct 3, 2026');

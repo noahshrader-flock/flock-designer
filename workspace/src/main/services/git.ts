@@ -253,7 +253,7 @@ const requireCleanTree = async (root: string, action: string): Promise<void> => 
 };
 
 export const createBranch = async (root: string, branch: string, from: string): Promise<void> => {
-	await requireCleanTree(root, 'creating a new iteration');
+	await requireCleanTree(root, 'starting a new branch');
 	if (await branchExists(root, branch)) {
 		throw new Error(`Branch ${branch} already exists.`);
 	}
@@ -352,7 +352,7 @@ export const isAncestor = (root: string, older: string, newer: string): Promise<
 	);
 
 export const checkoutBranch = async (root: string, branch: string): Promise<void> => {
-	await requireCleanTree(root, 'switching iteration');
+	await requireCleanTree(root, 'switching branches');
 	if (!(await branchExists(root, branch))) {
 		throw new Error(`Branch ${branch} does not exist.`);
 	}

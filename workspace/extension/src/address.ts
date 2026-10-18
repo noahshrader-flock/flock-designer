@@ -20,7 +20,7 @@ export interface AddressDeps extends AgentWorkDeps {
 /**
  * Address on one of a prototype's comments, from its review in VS Code (ELECTRON_MIGRATION_PLAN 4.2): the core's
  * Address (`runPrototypeAddress`), said and stoppable as a build is, its log beside the editor. The change is made in the
- * version commented on. When others have commented on it (their pins may then land on the wrong element), or who has
+ * version commented on, or in a new version from it when asked for outright (`asked`). Otherwise, when others have commented on it (their pins may then land on the wrong element), or who has
  * cannot be read, the person is asked first: update it, or start a new version from it; nothing is done if they choose
  * neither. The page with the change is then shown (`show`), and which it is said, and returned, so a page in the browser can
  * go to it. An agent that changed nothing says why in its log, and the review is left as it is (null).
@@ -50,11 +50,12 @@ const asksForNewVersion = async (deps: AddressDeps, project: Project | undefined
 	return chosen === undefined ? null : chosen === fresh;
 };
 
-export const addressComment = async (deps: AddressDeps, review: Review, comment: CommentRef): Promise<string | null> => {
+export const addressComment = async (deps: AddressDeps, review: Review, comment: CommentRef, asked = false): Promise<string | null> => {
 	const { api } = deps;
 	await agentReady(api);
 	const project = valueOf(await api.listProjects()).find((p) => p.id === review.projectId);
-	const newVersion = await asksForNewVersion(deps, project, review);
+	// A new version asked for outright is made with no question; otherwise the person is asked only when others have commented.
+	const newVersion = asked || (await asksForNewVersion(deps, project, review));
 	if (newVersion === null) return null;
 	let ended: AddressPhase | null = null;
 	const { stopped } = await agentWork(
@@ -83,7 +84,7 @@ export const addressComment = async (deps: AddressDeps, review: Review, comment:
 	if (outcome.kind !== 'done' || !outcome.prototype) return null;
 	if (!outcome.changed) {
 		deps.tell(
-			'The agent finished without changing anything. Its log says why: often the change is outside this iteration, or the comment needs a decision from you.',
+			'The agent finished without changing anything. Its log says why: often the change is outside this version, or the comment needs a decision from you.',
 		);
 		return null;
 	}

@@ -147,7 +147,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 					routes: served,
 					signIn: () => github.signIn(),
 					written: () => projectsChanged(),
-					address: (r, comment, asked): Promise<string | null | void> => {
+					address: (r, comment, asked, newVersion): Promise<string | null | void> => {
 						const show: (shown: Review) => Promise<void> =
 							asked === 'browser'
 								? async (shown: Review) => reviews.showIfOpen({ records: await recordsFor(shown.projectId), ...shown })
@@ -158,7 +158,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 							const why = needsProduct(project ? productsOf(project) : [], found.product === null ? null : found.productRepository);
 							if (why !== null) throw new Error(why);
 							// Titled as the project's records title it: a browser's page may have moved to another of its versions.
-							return addressComment({ ...here, show }, (project && reviewsOf(project).find((x) => x.name === r.name)) || r, comment);
+							return addressComment({ ...here, show }, (project && reviewsOf(project).find((x) => x.name === r.name)) || r, comment, newVersion);
 						};
 						// One place says what went wrong, a refusal included.
 						return run().catch(failedFor(true));

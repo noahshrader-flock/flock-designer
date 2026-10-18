@@ -47,10 +47,10 @@ describe('finding the editor', () => {
 describe('a conversation opened in VS Code', () => {
 	it('is Claude Code’s own link: a session to continue, or a new one with its first prompt', () => {
 		expect(claudeLink({ session: id })).toBe(`vscode://anthropic.claude-code/open?session=${id}`);
-		const link = claudeLink({ prompt: 'Build V1 into the codebase: read /tmp/a b.md & do it' });
+		const link = claudeLink({ prompt: 'Build Version 1 into the codebase: read /tmp/a b.md & do it' });
 		expect(link.startsWith('vscode://anthropic.claude-code/open?prompt=')).toBe(true);
 		// Read back as the extension reads it.
-		expect(new URLSearchParams(link.split('?')[1]).get('prompt')).toBe('Build V1 into the codebase: read /tmp/a b.md & do it');
+		expect(new URLSearchParams(link.split('?')[1]).get('prompt')).toBe('Build Version 1 into the codebase: read /tmp/a b.md & do it');
 	});
 
 	it('is never made with something that is not a session', () => {

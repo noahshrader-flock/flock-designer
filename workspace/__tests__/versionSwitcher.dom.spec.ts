@@ -1,6 +1,6 @@
 import { createElement } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { IterationSwitcher, StateSwitcher } from '../src/renderer/IterationSwitcher';
+import { VersionSwitcher, StateSwitcher } from '../src/renderer/VersionSwitcher';
 import { button, chooseState, openMenu, press, render, shownState, stateMenu, unmountAll } from './reviewHarness';
 
 /**
@@ -15,7 +15,7 @@ const PROTOTYPES = ['v4', 'v3', 'v2', 'v1'].map(at);
 let current: Awaited<ReturnType<typeof render>> | null = null;
 const show = async (name: string, more: Record<string, unknown> = {}) => {
 	const onSelect = vi.fn();
-	current = await render(createElement(IterationSwitcher, { current: at(name), siblings: PROTOTYPES, onSelect, ...more } as never));
+	current = await render(createElement(VersionSwitcher, { current: at(name), siblings: PROTOTYPES, onSelect, ...more } as never));
 	return onSelect;
 };
 afterEach(async () => {
@@ -28,44 +28,49 @@ const names = (items: HTMLElement[]) => items.map((i) => i.textContent?.trim());
 describe('for prototypes', () => {
 	it('is one dropdown that says the version shown, with no second menu for versions', async () => {
 		await show('v2');
-		expect(button('Version V2: switch version').textContent).toBe('V2');
+		expect(button('Version 2: switch version').textContent).toBe('Version 2');
 		expect(document.querySelector('[aria-label*="iteration"]')).toBeNull();
 		expect(document.querySelector('.lucide-history')).toBeNull();
 	});
 
 	it('scrolls its menu when there are many versions', async () => {
 		await show('v2');
-		await openMenu(button('Version V2: switch version'));
+		await openMenu(button('Version 2: switch version'));
 		expect(document.querySelector('[data-slot="dropdown-menu-content"]')?.className.split(' ')).toContain('max-h-72');
 	});
 
 	it('lists every version, the newest first, with this one chosen', async () => {
 		await show('v2');
-		const items = await openMenu(button('Version V2: switch version'));
-		expect(names(items)).toEqual(['V4', 'V3', 'V2', 'V1']);
+		const items = await openMenu(button('Version 2: switch version'));
+		expect(names(items)).toEqual(['Version 4', 'Version 3', 'Version 2', 'Version 1']);
 		expect(items.map((i) => i.getAttribute('aria-checked'))).toEqual(['false', 'false', 'true', 'false']);
 	});
 
 	it('lists them newest first, whatever order it was given them in, by number and not by spelling', async () => {
 		await show('v2', { siblings: ['v1', 'v10', 'v2', 'v9'].map(at) });
-		expect(names(await openMenu(button('Version V2: switch version')))).toEqual(['V10', 'V9', 'V2', 'V1']);
+		expect(names(await openMenu(button('Version 2: switch version')))).toEqual(['Version 10', 'Version 9', 'Version 2', 'Version 1']);
 	});
 
 	it('goes to the version chosen', async () => {
 		const onSelect = await show('v2');
-		await press((await openMenu(button('Version V2: switch version')))[0]!);
+		await press((await openMenu(button('Version 2: switch version')))[0]!);
 		expect(onSelect).toHaveBeenLastCalledWith(at('v4'));
 	});
 
 	it('does nothing when the one you are on is chosen again', async () => {
 		const onSelect = await show('v2');
-		await press((await openMenu(button('Version V2: switch version')))[2]!);
+		await press((await openMenu(button('Version 2: switch version')))[2]!);
 		expect(onSelect).not.toHaveBeenCalled();
+	});
+
+	it('says which version one was started from, beside its name', async () => {
+		await show('v1', { siblings: [{ ...at('v3'), from: 'v1' }, at('v2'), at('v1')] });
+		expect(names(await openMenu(button('Version 1: switch version')))).toEqual(['Version 3 · based on Version 1', 'Version 2', 'Version 1']);
 	});
 
 	it('is there with one version, so where you are is always visible', async () => {
 		await show('v1', { siblings: [at('v1')] });
-		expect(names(await openMenu(button('Version V1: switch version')))).toEqual(['V1']);
+		expect(names(await openMenu(button('Version 1: switch version')))).toEqual(['Version 1']);
 	});
 });
 

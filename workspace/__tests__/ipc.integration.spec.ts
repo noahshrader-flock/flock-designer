@@ -654,7 +654,7 @@ describe('prototypes', () => {
 			expect(copied).toBe(value.command);
 			expect(value.command).toMatch(new RegExp(`^cd .*${basename(product)} && .*claude `));
 			expect(value.command).toContain(taskFile);
-			expect(value.command).toContain('V1');
+			expect(value.command).toContain('Version 1');
 			expect(agentStart).not.toHaveBeenCalled();
 		});
 	});
@@ -1204,7 +1204,7 @@ describe('prototypes', () => {
 			// Codebase work, as any: its branch checked out, and its record.
 			expect(g(product, 'branch', '--show-current').trim()).toBe('feature/demo');
 			const records = JSON.parse(readFileSync(join(design, 'projects', 'demo', 'work.json'), 'utf8')) as { name: string; note: string }[];
-			expect(records.find((i) => i.name === 'codebase')?.note).toBe('From prototype V1');
+			expect(records.find((i) => i.name === 'codebase')?.note).toBe('From prototype Version 1');
 			// The task: the skill, the page to start from, where the audit goes.
 			const taskFile = join(home, 'prototype', 'demo', 'v1-into-code.md');
 			const task = readFileSync(taskFile, 'utf8');
@@ -1245,7 +1245,7 @@ describe('prototypes', () => {
 				const records = JSON.parse(readFileSync(join(design, 'projects', 'demo', 'work.json'), 'utf8')) as { name: string }[];
 				expect(records.filter((i) => i.name === 'codebase')).toHaveLength(1);
 				const { value } = r as { value: { command: string } };
-				expect(value.command).toContain('Continue building prototype V1');
+				expect(value.command).toContain('Continue building prototype Version 1');
 				expect(value.command).toContain('feature/demo');
 				expect(value.command).toContain('v1-into-code.md');
 			});

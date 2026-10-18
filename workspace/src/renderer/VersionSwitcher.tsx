@@ -10,15 +10,15 @@ import { capitalize } from '../shared/titleCase';
 import { ChoiceMenu } from './ChoiceMenu';
 import type { BarSize } from './Toolbar';
 
-/** What the switcher needs to know of a piece of work: how it is named, and which it is. */
+/** What the switcher needs to know of a version: how it is named, which it is, and the version it was started from. */
 export interface Switchable {
 	name: string;
 	branch: string;
+	from?: string | undefined;
 }
 
 /**
- * One of the switcher's dropdowns: the app's menu of a few choices, named for what it switches ("Version V2: switch
- * version"), opening from its right, as the switcher sits at the toolbar's right.
+ * One of the switcher's dropdowns: the app's menu of a few choices, named for what it switches ("Version 2: switch version"), opening from its right, as the switcher sits at the toolbar's right.
  */
 const SwitchMenu = ({
 	what,
@@ -29,18 +29,27 @@ const SwitchMenu = ({
 	size?: BarSize;
 	/** What it picks, for its name for assistive technology: "version", "state". */
 	what: 'version' | 'state';
-	/** The button's own words: `V2`, `default`. */
+	/** The button's own words: `Version 2`, `default`. */
 	label: string;
 	value: string;
 	choices: { value: string; label: string }[];
 	onChange: (value: string) => void;
-}) => <ChoiceMenu name={capitalize(what)} ariaLabel={`${capitalize(what)} ${label}: switch ${what}`} label={label} align="end" {...choice} />;
+}) => (
+	<ChoiceMenu
+		name={capitalize(what)}
+		// Named once: a version's label says it is one ("Version 2: switch version"), a state's does not ("State Default").
+		ariaLabel={`${label.startsWith(capitalize(what)) ? label : `${capitalize(what)} ${label}`}: switch ${what}`}
+		label={label}
+		align="end"
+		{...choice}
+	/>
+);
 
 /**
  * Switching between a prototype's versions, on its published page (and its review in VS Code, which frames that page): a
  * dropdown saying which version is shown, its menu the newest first, and after it the page's states.
  */
-export const IterationSwitcher = <T extends Switchable>({
+export const VersionSwitcher = <T extends Switchable>({
 	current,
 	siblings,
 	onSelect,
@@ -64,7 +73,7 @@ export const IterationSwitcher = <T extends Switchable>({
 				what="version"
 				label={workLabel(current)}
 				value={current.branch}
-				choices={newestFirst.map((i) => ({ value: i.branch, label: workLabel(i) }))}
+				choices={newestFirst.map((i) => ({ value: i.branch, label: `${workLabel(i)}${i.from ? ` · based on ${workLabel({ name: i.from })}` : ''}` }))}
 				onChange={(branch) => {
 					const next = siblings.find((i) => i.branch === branch);
 					if (next && branch !== current.branch) onSelect(next);

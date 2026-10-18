@@ -190,7 +190,7 @@ export const unpublish = async (input: PublishInput & { removePage: () => Promis
 	const gone = (await anonymous(url)).status !== 200;
 	log(
 		gone
-			? `Taken off the site: ${url} no longer has this iteration. Its record and comments are kept.`
+			? `Taken off the site: ${url} no longer has this version. Its record and comments are kept.`
 			: `The site was deployed without it, but ${url} still opens. ${HOST} can take a few minutes to stop serving it. If it still opens after that, ask a ${HOST} admin to switch Pages off for the repository.`,
 	);
 	return { url, gone };
