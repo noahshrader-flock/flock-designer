@@ -121,8 +121,6 @@ const run = spawn(
 		'--skip-welcome',
 		'--skip-release-notes',
 		'--new-window',
-		// GitHub's runners have no graphics hardware, and VS Code's window has gone unresponsive there.
-		...(process.env.CI ? ['--disable-gpu'] : []),
 	],
 	{
 		// Sealed (`sealed.mjs`), with the stand-in Claude Code first on the PATH.

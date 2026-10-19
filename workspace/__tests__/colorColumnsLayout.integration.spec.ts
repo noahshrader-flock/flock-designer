@@ -6,7 +6,7 @@ import { Grouped } from '../extension/webview/Tokens';
 import type { DesignToken } from '../src/shared/contract';
 import { TokenChangesProvider, useTokenChangesFor } from '../extension/webview/hooks/tokenChanges';
 import { undeclared } from '../src/shared/wcag';
-import { NO_CHROME, inChrome } from './realChrome';
+import { inChrome, NO_CHROME, OWN_WINDOW } from './realChrome';
 import { panelCss } from './panelStyles';
 
 /** The grid of roles and the palette are two views of the same colors, so their dots must line up flush right. */
@@ -50,7 +50,7 @@ describe.skipIf(NO_CHROME)('the colors of the Tokens tab, in the browser on this
 		'heads the themes with the sun and the moon, and ends the grid’s dots where the palette’s end, in a %ipx panel',
 		async (width) => {
 			const found = await inChrome(async (browser) => {
-				const page = await browser.newPage();
+				const page = await browser.newPage(OWN_WINDOW);
 				await page.setViewport({ width, height: 700 });
 				await page.setContent(
 					`<!doctype html><html><head><meta charset="utf-8"><style>:root{--vscode-foreground:#cccccc;--vscode-descriptionForeground:#888888}${css}</style></head><body>${markup}</body></html>`,

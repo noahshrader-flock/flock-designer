@@ -10,7 +10,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { buildSite } from '../src/site/buildSite';
 import { serveSite } from '../src/site/serveSite';
 import { fakeGitHubFetch } from './pageHarness';
-import { NO_CHROME, inChrome } from './realChrome';
+import { inChrome, NO_CHROME, OWN_WINDOW } from './realChrome';
 
 /** GitHub's sign-in page, the sign-in function and GitHub's API are stand-ins; the viewer and site build are real. */
 
@@ -156,7 +156,7 @@ describe.skipIf(NO_CHROME)('signing in to comment on the published site, in the 
 	it('signs a person in with GitHub, comments as them, and signs them out', async () => {
 		next = 'good-token';
 		await inChrome(async (browser) => {
-			const tab = await browser.newPage();
+			const tab = await browser.newPage(OWN_WINDOW);
 			await answerGitHub(tab);
 			const page = `${base}demo/v1/`;
 			await tab.goto(page, { waitUntil: 'load' });
@@ -191,7 +191,7 @@ describe.skipIf(NO_CHROME)('signing in to comment on the published site, in the 
 	it('tells a person GitHub will not show the repository who they are signed in as', async () => {
 		next = 'outsider-token';
 		await inChrome(async (browser) => {
-			const tab = await browser.newPage();
+			const tab = await browser.newPage(OWN_WINDOW);
 			await answerGitHub(tab);
 			await tab.goto(`${base}demo/v1/`, { waitUntil: 'load' });
 			await press(tab, 'Sign in to comment');

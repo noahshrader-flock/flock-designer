@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { DesignSystemHeader } from '../extension/webview/DesignSystemHeader';
 import { Badge } from '../src/ui/Badge';
 import { Menu } from '../src/ui/Menu';
-import { NO_CHROME, inChrome } from './realChrome';
+import { inChrome, NO_CHROME, OWN_WINDOW } from './realChrome';
 import { panelCss } from './panelStyles';
 
 const css = panelCss();
@@ -38,7 +38,7 @@ describe.skipIf(NO_CHROME)('the design system’s row, in the side panel, in the
 			const found = await inChrome(async (browser) => {
 				const out: Record<string, unknown> = {};
 				for (const name of NAMES) {
-					const tab = await browser.newPage();
+					const tab = await browser.newPage(OWN_WINDOW);
 					await tab.setViewport({ width, height: 400 });
 					await tab.setContent(page(name));
 					out[name] = await tab.evaluate(() => {
@@ -102,7 +102,7 @@ describe.skipIf(NO_CHROME)('the design system’s row, in the side panel, in the
 
 	it('has its menu open over the toggle and the list under it, not behind them', async () => {
 		const found = await inChrome(async (browser) => {
-			const tab = await browser.newPage();
+			const tab = await browser.newPage(OWN_WINDOW);
 			await tab.setViewport({ width: 300, height: 400 });
 			await tab.setContent(page(NAMES[0] as string));
 			return tab.evaluate(() => {
@@ -130,7 +130,7 @@ describe.skipIf(NO_CHROME)('the design system’s row, in the side panel, in the
 
 	it('is kept at the top under the top bar while the list scrolls, with the toggle kept under it, so its name is always shown', async () => {
 		const found = await inChrome(async (browser) => {
-			const tab = await browser.newPage();
+			const tab = await browser.newPage(OWN_WINDOW);
 			await tab.setViewport({ width: 300, height: 400 });
 			await tab.setContent(page(NAMES[0] as string));
 			return tab.evaluate(async () => {

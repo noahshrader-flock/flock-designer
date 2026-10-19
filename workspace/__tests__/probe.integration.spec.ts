@@ -4,7 +4,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { chromeHeadless } from '../src/core/services/browser/chromeHeadless';
 import { CELLS, type CellId } from '../src/core/services/accessibility/probe/cells';
 import { PROBE_FIXTURES } from './fixtures/probeFixtures';
-import { NO_CHROME, inChrome } from './realChrome';
+import { inChrome, NO_CHROME, OWN_WINDOW } from './realChrome';
 
 /** Long enough that Tab scrolls it: buttons below the fold. */
 const WHOLE = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Cameras</title></head><body>
@@ -82,7 +82,7 @@ describe.skipIf(NO_CHROME)('on a machine set to dark', () => {
 	it('is a machine whose pages prefer dark, as this test needs', async () => {
 		await inChrome(
 			async (browser) => {
-				const page = await browser.newPage();
+				const page = await browser.newPage(OWN_WINDOW);
 				await page.goto(`${base}/dark-styled`);
 				expect(await page.evaluate(() => matchMedia('(prefers-color-scheme: dark)').matches)).toBe(true);
 			},

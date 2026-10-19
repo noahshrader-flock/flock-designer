@@ -74,10 +74,16 @@ interface PageLike {
 	close(): Promise<void>;
 }
 interface BrowserLike {
-	newPage(): Promise<PageLike>;
+	newPage(o: typeof OWN_WINDOW): Promise<PageLike>;
 	close(): Promise<void>;
 	on?(event: 'disconnected', listener: () => void): unknown;
 }
+
+/**
+ * Each page in a window of its own. Tabs of one window are hidden behind the newest, and a hidden page draws nothing new:
+ * pages drawn side by side, or a picture taken behind another page, would wait for it, and on Linux never get it.
+ */
+export const OWN_WINDOW = { type: 'window' } as const;
 
 const launchChrome = async (path: string): Promise<BrowserLike> => {
 	const { default: puppeteer } = await import('puppeteer-core');
@@ -190,7 +196,7 @@ export const chromeHeadless = ({
 		return browser;
 	};
 	const onPage = async <T>(work: (page: PageLike) => Promise<T>): Promise<T> => {
-		const page = await (await started()).newPage();
+		const page = await (await started()).newPage(OWN_WINDOW);
 		try {
 			return await work(page);
 		} finally {

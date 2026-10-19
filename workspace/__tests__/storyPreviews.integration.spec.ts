@@ -13,7 +13,7 @@ import type { CatalogReads } from '../src/core/services/designSystem/componentCa
 import { editedFiles } from '../src/core/services/designSystem/tokenEdits';
 import type { TokenEdit } from '../src/shared/contract';
 import { eventually, g, writeFiles } from './fixtures';
-import { NO_CHROME, inChrome } from './realChrome';
+import { inChrome, NO_CHROME, OWN_WINDOW } from './realChrome';
 
 /** Counted on the real esbuild and Sass, so a test says how a change is built, not how long it took on a busy machine. */
 const counted = vi.hoisted(() => ({ contexts: 0, rebuilds: 0, sass: 0 }));
@@ -350,7 +350,7 @@ export const Default = { args: { size: 'md' } };`;
 			makeLibrary({ ...LIBRARY, 'src/components/Slow/Slow.stories.tsx': slow });
 			const base = await ready(previews());
 			const drawn = await inChrome(async (browser) => {
-				const page = await browser.newPage();
+				const page = await browser.newPage(OWN_WINDOW);
 				await page.goto(previewAddress(base, 'src/components/FSTwo/FSTwo.stories.tsx'));
 				await page.waitForSelector('[data-story]');
 				return page.evaluate(async (show) => {

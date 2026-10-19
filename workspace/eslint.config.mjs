@@ -34,4 +34,17 @@ export default tseslint.config(
 			],
 		},
 	},
+	{
+		// A browser's page in a tab is hidden behind the next, and a hidden page draws nothing new (`OWN_WINDOW`).
+		files: ['src/core/**/*.ts', 'src/cli/**/*.ts', '__tests__/**/*.ts'],
+		rules: {
+			'no-restricted-syntax': [
+				'error',
+				{
+					selector: "CallExpression[callee.property.name='newPage'][arguments.length=0]",
+					message: 'Open the page with newPage(OWN_WINDOW), in a window of its own, so it is never hidden behind another.',
+				},
+			],
+		},
+	},
 );

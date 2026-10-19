@@ -10,7 +10,7 @@ import { readRelayAsk } from '../src/shared/reviewRelay';
 import { buildSite } from '../src/site/buildSite';
 import { tokenApi } from '../src/viewer/browserAdapter';
 import { fakeGitHubFetch } from './pageHarness';
-import { NO_CHROME, inChrome } from './realChrome';
+import { inChrome, NO_CHROME, OWN_WINDOW } from './realChrome';
 
 /**
  * The server will not serve a prototype on the bar's address, so the hostile case's failing case is a mutation: with that
@@ -127,7 +127,7 @@ const press = async (at: Page | Frame, text: string) => {
 describe.skipIf(NO_CHROME)('a review opened in the browser from DSNR, in the real browser', () => {
 	it('comments through DSNR with its key, no token of its own, and keeps the key when the page loads again', async () => {
 		await inChrome(async (browser) => {
-			const tab = await browser.newPage();
+			const tab = await browser.newPage(OWN_WINDOW);
 			await tab.goto(`${base}demo/v1/#dsnr-key-${KEY}`, { waitUntil: 'load' });
 			await tab.waitForFunction(() => [...document.querySelectorAll('button')].some((b) => b.textContent?.trim() === 'Comment'));
 			expect(tab.url()).toBe(`${base}demo/v1/`);
@@ -171,12 +171,12 @@ describe.skipIf(NO_CHROME)('a review opened in the browser from DSNR, in the rea
 
 	const hostile = () =>
 		inChrome(async (browser) => {
-			const tab = await browser.newPage();
+			const tab = await browser.newPage(OWN_WINDOW);
 			let tried: Record<string, string> | null = null;
 			tab.on('console', (m) => {
 				if (m.text().startsWith('HOSTILE ')) tried = JSON.parse(m.text().slice('HOSTILE '.length));
 			});
-			const other = await browser.newPage();
+			const other = await browser.newPage(OWN_WINDOW);
 			await other.goto(`${base}demo/v1/#dsnr-key-${OTHER_KEY}`, { waitUntil: 'load' });
 			await tab.goto(`${base}hostile/v1/#dsnr-key-${KEY}`, { waitUntil: 'load' });
 			const until = Date.now() + 20_000;

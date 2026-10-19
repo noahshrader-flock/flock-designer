@@ -8,7 +8,7 @@ import { resultOf } from '../src/core/services/accessibility/accessibilityCheck'
 import { countsOf } from '../src/shared/accessibility';
 import { undeclared } from '../src/shared/wcag';
 import { withPageTheme } from '../src/core/services/browser/pageTheme';
-import { inChrome, NO_CHROME } from './realChrome';
+import { inChrome, NO_CHROME, OWN_WINDOW } from './realChrome';
 
 /**
  * One story file of each kind a picture has to get right: small at the top left (its region starts off the page, so it is
@@ -66,6 +66,14 @@ window.__dsnrShow = async () => {
 	document.getElementById('root').innerHTML = '<section data-story><button class="save" style="color:#fff;padding:12px 20px;border:0">Save</button></section>';
 };
 </script></body></html>`),
+	// Red when drawn while hidden: a hidden page draws nothing new, and on Linux a picture of one waits for ever.
+	'/visible/': `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Previews</title></head>
+<body style="margin:0;background:#fff"><div id="root"></div><script>
+window.__dsnrShow = async () => {
+	const seen = document.visibilityState === 'visible' ? '#123456' : '#ff0000';
+	document.getElementById('root').innerHTML = '<section data-story><button style="background:' + seen + ';color:#fff;padding:12px 20px;border:0">Save</button></section>';
+};
+</script></body></html>`,
 	'/previews/': withPageTheme(`<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Previews</title></head>
 <body style="margin:0;background:#fff"><div id="root"></div><script>
 window.__dsnrShow = async (file) => {
@@ -139,17 +147,21 @@ describe.skipIf(NO_CHROME)('with the browser on this machine', () => {
 		expect(Object.keys(dark?.[0]?.colors ?? {})).toContain('rgb(101, 67, 33)');
 	}, 60_000);
 
+	it('draws every page in view, however many are drawn at once', async () => {
+		const files = ['a.stories.tsx', 'b.stories.tsx', 'c.stories.tsx'];
+		const runs = await headless.measure((['light', 'dark'] as const).map((mode) => ({ base: `${base}/visible/`, mode, files, pictures: true })));
+		const drawn = runs.flat();
+		expect(drawn).toHaveLength(6);
+		for (const d of drawn) expect(Object.keys(d?.colors ?? {})).toEqual(expect.arrayContaining(['rgb(18, 52, 86)']));
+		expect(drawn.some((d) => Object.keys(d?.colors ?? {}).includes('rgb(255, 0, 0)'))).toBe(false);
+	}, 60_000);
+
 	it('pictures a story as the composition does, in one capture taken by the browser: moved into view, cut, wide, beside a dialog, fixed', async () => {
-		// A browser that stalls would only be timed out, saying nothing of where: so a stall names the step it is in.
-		let step = 'starting';
-		const watchdog = new Promise<never>((_, stalled) => setTimeout(() => stalled(new Error(`stalled at: ${step}`)), 45_000).unref());
-		const body = inChrome(async (browser) => {
-			const page = await browser.newPage();
+		await inChrome(async (browser) => {
+			const page = await browser.newPage(OWN_WINDOW);
 			await page.setViewport({ width: 1200, height: 900, deviceScaleFactor: 2 });
-			step = 'opening the pictures page';
 			await page.goto(`${base}/pictures/`, { waitUntil: 'load' });
-			step = 'opening the page that compares';
-			const compare = await browser.newPage();
+			const compare = await browser.newPage(OWN_WINDOW);
 			/**
 			 * Compared as a person sees it (size, painted box ignoring near-white JPEG noise, mean pixel distance out of 255), so
 			 * the test does not depend on how one version of the browser smooths an edge.
@@ -182,13 +194,9 @@ describe.skipIf(NO_CHROME)('with the browser on this machine', () => {
 					b.toString('base64'),
 				);
 			for (const file of Object.keys(STORIES)) {
-				step = `${file}: drawing it`;
 				await page.evaluate(readDrawn(file, true));
-				step = `${file}: the fast picture`;
 				const fastPicture = (await pictureOf(page as never)) as Buffer;
-				step = `${file}: the composed picture`;
 				const composedOne = (await composedPicture(page as never)) as Buffer;
-				step = `${file}: comparing them`;
 				const { fast, composed, apart } = await seen(fastPicture, composedOne);
 				// To within the pixel or two the half-size capture finds an edge to.
 				fast.size.forEach((n, i) => expect(Math.abs(n - (composed.size[i] as number)), `${file} size`).toBeLessThanOrEqual(2));
@@ -196,7 +204,6 @@ describe.skipIf(NO_CHROME)('with the browser on this machine', () => {
 				if (fast.size.join() === composed.size.join()) expect(apart, `${file} pixels`).toBeLessThan(3);
 			}
 		});
-		await Promise.race([body, watchdog]);
 	}, 60_000);
 
 	it('checks a page with axe, finding what is wrong with it, and on which element, with what to change', async () => {

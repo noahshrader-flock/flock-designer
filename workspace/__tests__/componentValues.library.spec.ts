@@ -50,9 +50,9 @@ describeLibrary(libraryUnbuilt, REAL_FUI, 'FUI’s own components’ values', ()
 				const small = height?.cells.find((c) => c.variant === 'sm');
 				const preview = await previews.preview();
 				if (!small || preview.state !== 'ready') throw new Error('no Small cell, or no previews');
-				const { inChrome } = await import('./realChrome');
+				const { inChrome, OWN_WINDOW } = await import('./realChrome');
 				await inChrome(async (browser) => {
-					const tab = await browser.newPage();
+					const tab = await browser.newPage(OWN_WINDOW);
 					const file = 'src/components/FSButton/FSButton.stories.tsx';
 					await tab.setContent(`<iframe src="${previewAddress(preview.base, file)}" style="width:700px;height:900px"></iframe>`);
 					const frame = await tab.waitForFrame((f) => f.url().includes('FSButton'));

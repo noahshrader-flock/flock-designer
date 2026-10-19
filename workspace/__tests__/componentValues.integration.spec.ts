@@ -172,9 +172,9 @@ describe.skipIf(NO_CHROME)('values tried on a component’s instances, in the br
 	});
 
 	it('sets a value tried on the instance that is now its variant, when a story changes which one is by its props and class alone', async () => {
-		const { inChrome } = await import('./realChrome');
+		const { inChrome, OWN_WINDOW } = await import('./realChrome');
 		await inChrome(async (browser) => {
-			const tab = await browser.newPage();
+			const tab = await browser.newPage(OWN_WINDOW);
 			await tab.setContent(`<iframe src="${base}" style="width:800px;height:600px"></iframe>`);
 			const frame = await tab.waitForFrame((f) => f.url() === base);
 			await frame.waitForFunction((name) => typeof (window as unknown as Record<string, unknown>)[name] === 'function', {}, PREVIEW_SHOW);
@@ -204,9 +204,9 @@ describe.skipIf(NO_CHROME)('values tried on a component’s instances, in the br
 	}, 60_000);
 
 	it('sets each on the instances it is for alone, over the library’s own, again when the stories draw anew, and takes them off', async () => {
-		const { inChrome } = await import('./realChrome');
+		const { inChrome, OWN_WINDOW } = await import('./realChrome');
 		await inChrome(async (browser) => {
-			const tab = await browser.newPage();
+			const tab = await browser.newPage(OWN_WINDOW);
 			await tab.setContent(`<iframe src="${base}" style="width:800px;height:600px"></iframe>`);
 			const frame = await tab.waitForFrame((f) => f.url() === base);
 			const show = (file: string) =>

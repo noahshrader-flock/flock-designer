@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import PAGE_AGENT from '../src/page/agentMain?page';
 import { reviewPage } from '../extension/src/review';
-import { NO_CHROME, inChrome } from './realChrome';
+import { inChrome, NO_CHROME, OWN_WINDOW } from './realChrome';
 import { PrototypeServer } from '../src/core/services/prototypes/prototypeServer';
 import { buildSite } from '../src/site/buildSite';
 import { serveSite } from '../src/site/serveSite';
@@ -118,7 +118,7 @@ afterAll(async () => {
 
 const review = (bar: string, steps: string[]) =>
 	inChrome(async (browser) => {
-		const tab = await browser.newPage();
+		const tab = await browser.newPage(OWN_WINDOW);
 		let tried: Record<string, string> = {};
 		const made = new Set<string>();
 		tab.on('console', (m) => {
@@ -194,7 +194,7 @@ describe.skipIf(NO_CHROME)('a hostile prototype in a review, in the real browser
 /** The bar keeps the person's token in its own storage; the hostile page beside it must reach none of it. */
 const published = (bar: string, steps: string[]) =>
 	inChrome(async (browser) => {
-		const tab = await browser.newPage();
+		const tab = await browser.newPage(OWN_WINDOW);
 		let tried: Record<string, string> = {};
 		const made = new Set<string>();
 		tab.on('console', (m) => {

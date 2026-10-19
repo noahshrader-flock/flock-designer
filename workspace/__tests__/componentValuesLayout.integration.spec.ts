@@ -14,7 +14,7 @@ import type { ComponentReach, DesignToken, ValueCell, ValueRow } from '../src/sh
 import { TokenChangesProvider, useTokenChangesFor } from '../extension/webview/hooks/tokenChanges';
 import { labelOf } from '../src/shared/tokens';
 import { undeclared } from '../src/shared/wcag';
-import { NO_CHROME, inChrome } from './realChrome';
+import { inChrome, NO_CHROME, OWN_WINDOW } from './realChrome';
 import { panelCss } from './panelStyles';
 
 /** The real components and the real stylesheet, in a real browser, at the width of VS Code's side pane. */
@@ -120,7 +120,7 @@ describe.skipIf(NO_CHROME)('a component’s Values, in the side pane, in the bro
 		'lays out each value without anything laid over anything, past the pane, or cut off, in a %ipx pane',
 		async (width) => {
 			const found = await inChrome(async (browser) => {
-				const page = await browser.newPage();
+				const page = await browser.newPage(OWN_WINDOW);
 				await page.setViewport({ width, height: 900 });
 				await page.setContent(
 					`<!doctype html><html><head><meta charset="utf-8"><style>${css}</style></head><body><main class="tab"><aside class="component-aside">${markup}</aside></main></body></html>`,
@@ -218,7 +218,7 @@ describe.skipIf(NO_CHROME)('a component’s Values, in the side pane, in the bro
 		'lays out a token’s row, a colour as its name and only its dot, without anything past the pane, in a %ipx pane',
 		async (width) => {
 			const found = await inChrome(async (browser) => {
-				const page = await browser.newPage();
+				const page = await browser.newPage(OWN_WINDOW);
 				await page.setViewport({ width, height: 900 });
 				await page.setContent(
 					`<!doctype html><html><head><meta charset="utf-8"><style>${css}</style></head><body><main class="tab"><aside class="component-aside">${tokenRows}</aside></main></body></html>`,
@@ -296,7 +296,7 @@ describe.skipIf(NO_CHROME)('a component’s Values, in the side pane, in the bro
 		'starts every title, group, set and row of the side pane at one left edge, in a %ipx pane',
 		async (width) => {
 			const found = await inChrome(async (browser) => {
-				const page = await browser.newPage();
+				const page = await browser.newPage(OWN_WINDOW);
 				await page.setViewport({ width, height: 1200 });
 				await page.setContent(
 					`<!doctype html><html><head><meta charset="utf-8"><style>${css}</style></head><body><main class="tab"><aside class="component-aside">${sidePane}</aside></main></body></html>`,
@@ -362,7 +362,7 @@ describe.skipIf(NO_CHROME)('a component’s Values, in the side pane, in the bro
 		'lays out what a token change moves without anything over anything, past the pane, or cut off, in a %ipx pane',
 		async (width) => {
 			const found = await inChrome(async (browser) => {
-				const page = await browser.newPage();
+				const page = await browser.newPage(OWN_WINDOW);
 				await page.setViewport({ width, height: 900 });
 				await page.setContent(
 					`<!doctype html><html><head><meta charset="utf-8"><style>${css}</style></head><body><main class="tab"><aside class="component-aside"><section class="aside-section">${moved}</section></aside></main></body></html>`,
@@ -481,7 +481,7 @@ describe.skipIf(NO_CHROME)('a component’s Values, in the side pane, in the bro
 		'lays out the values changed, where each is written, and their branch, without anything over anything or past the pane, in a %ipx pane',
 		async (width) => {
 			const found = await inChrome(async (browser) => {
-				const page = await browser.newPage();
+				const page = await browser.newPage(OWN_WINDOW);
 				await page.setViewport({ width, height: 900 });
 				await page.setContent(
 					`<!doctype html><html><head><meta charset="utf-8"><style>${css}</style></head><body><main class="tab"><aside class="component-aside">${changedValues}</aside></main></body></html>`,
@@ -559,7 +559,7 @@ describe.skipIf(NO_CHROME)('a component’s Values, in the side pane, in the bro
 		'lays out a hand-over’s branch and its files without anything past the pane, in a %ipx pane',
 		async (width) => {
 			const problems = await inChrome(async (browser) => {
-				const page = await browser.newPage();
+				const page = await browser.newPage(OWN_WINDOW);
 				await page.setViewport({ width, height: 900 });
 				await page.setContent(
 					`<!doctype html><html><head><meta charset="utf-8"><style>${css}</style></head><body><main class="tab"><aside class="component-aside">${handedOver}</aside></main></body></html>`,
@@ -605,7 +605,7 @@ describe.skipIf(NO_CHROME)('a component’s Values, in the side pane, in the bro
 		} as never;
 		const html = renderToStaticMarkup(createElement('section', { className: 'aside-section' }, createElement(AccessibilityFindings, { result })));
 		const found = await inChrome(async (browser) => {
-			const page = await browser.newPage();
+			const page = await browser.newPage(OWN_WINDOW);
 			await page.setViewport({ width: PANE, height: 600 });
 			await page.setContent(
 				`<!doctype html><html><head><meta charset="utf-8"><style>${css}</style></head><body><main class="tab"><aside class="component-aside">${html}</aside></main></body></html>`,
@@ -631,7 +631,7 @@ describe.skipIf(NO_CHROME)('a component’s Values, in the side pane, in the bro
 		const popover = (property: 'padding' | 'background', value: string) =>
 			renderToStaticMarkup(createElement(ValueEditor, { property, cell: cell('sm', value, 'own', [], 6), tried: null, onTry: () => undefined }));
 		const found = await inChrome(async (browser) => {
-			const page = await browser.newPage();
+			const page = await browser.newPage(OWN_WINDOW);
 			await page.setViewport({ width: PANE, height: 900 });
 			await page.setContent(
 				`<!doctype html><html><head><meta charset="utf-8"><style>${css}</style></head><body><main class="tab"><aside class="component-aside">${markup}</aside></main></body></html>`,
@@ -700,7 +700,7 @@ describe.skipIf(NO_CHROME)('a component’s Values, in the side pane, in the bro
 			renderToStaticMarkup(createElement(AsidePart, { title, children: createElement('div', { style: { height: '500px' } }, `${title} content`) }));
 		const tall = `${markupFor([...ROWS, { property: 'text', by: null, cells: [cell(null, 'rgb(9, 9, 9)', 'own')] }])}${part('Tokens')}${part('Accessibility')}<div style="flex-shrink: 0; height: 400px"></div>`;
 		const found = await inChrome(async (browser) => {
-			const page = await browser.newPage();
+			const page = await browser.newPage(OWN_WINDOW);
 			await page.setViewport({ width: 1100, height: 300 });
 			await page.setContent(
 				`<!doctype html><html><head><meta charset="utf-8"><style>:root{--vscode-editor-background:#1e1e1e;--vscode-editor-foreground:#ddd}${css}</style></head><body><main class="tab tab-split"><header class="tab-header"><h1 class="heading heading-page">FSButton</h1></header><div class="component-layout"><div class="component-stories"></div><aside class="component-aside">${tall}</aside></div></main></body></html>`,

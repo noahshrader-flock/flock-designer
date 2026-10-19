@@ -9,7 +9,7 @@ import { Menu } from '../src/ui/Menu';
 import { ModeIcon } from '../src/ui/ModeIcon';
 import { SearchBox } from '../src/ui/SearchBox';
 import { Toggle } from '../src/ui/Toggle';
-import { NO_CHROME, inChrome } from './realChrome';
+import { inChrome, NO_CHROME, OWN_WINDOW } from './realChrome';
 import { panelCss } from './panelStyles';
 
 /** Measured in a row too narrow for them, which must not squeeze them out of square. */
@@ -46,7 +46,7 @@ const row = () =>
 describe.skipIf(NO_CHROME)('an icon alone, in the browser on this machine', () => {
 	it('is a square, of the control’s size or the small one’s, however narrow its row', async () => {
 		const sizes = await inChrome(async (browser) => {
-			const tab = await browser.newPage();
+			const tab = await browser.newPage(OWN_WINDOW);
 			await tab.setViewport({ width: 400, height: 300 });
 			await tab.setContent(
 				`<!doctype html><html><head><meta charset="utf-8"><style>${panelCss()}\n${viewer}</style></head><body>${row()}</body></html>`,

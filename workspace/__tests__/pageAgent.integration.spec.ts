@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { build } from 'esbuild';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import PAGE_AGENT from '../src/page/agentMain?page';
-import { NO_CHROME, inChrome } from './realChrome';
+import { inChrome, NO_CHROME, OWN_WINDOW } from './realChrome';
 import { SANDBOX_APART, SANDBOX_BESIDE } from '../src/site/buildSite';
 
 /** The README's Review isolation: the bar's driver (`framePage`) and the page's agent talk only by message. */
@@ -81,7 +81,7 @@ describe.skipIf(NO_CHROME)('the bar and the page, by message, in the real browse
 		'picks a spot, draws its pin, hears the pin clicked and the route move, the page %s',
 		async (_where, at) => {
 			await inChrome(async (browser) => {
-				const tab = await browser.newPage();
+				const tab = await browser.newPage(OWN_WINDOW);
 				await tab.goto(`${base}${at}`, { waitUntil: 'load' });
 				const route = await tab.evaluate(
 					() =>

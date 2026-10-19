@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { decodePng } from '../src/core/services/prototypes/png';
 import { buildSite } from '../src/site/buildSite';
-import { NO_CHROME, inChrome } from './realChrome';
+import { inChrome, NO_CHROME, OWN_WINDOW } from './realChrome';
 
 let root: string;
 let front: string;
@@ -32,7 +32,7 @@ describe.skipIf(NO_CHROME)('the front page, in a real browser', () => {
 		'is readable when the system is set to %s: its text and its background are opposites',
 		async (scheme) => {
 			await inChrome(async (browser) => {
-				const page = await browser.newPage();
+				const page = await browser.newPage(OWN_WINDOW);
 				await page.emulateMediaFeatures([{ name: 'prefers-color-scheme', value: scheme }]);
 				await page.setViewport({ width: 900, height: 500 });
 				await page.goto(front);
