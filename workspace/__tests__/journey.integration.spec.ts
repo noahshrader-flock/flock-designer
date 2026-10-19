@@ -1,4 +1,4 @@
-import { execFileSync, spawn } from 'node:child_process';
+import { spawn } from 'node:child_process';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -10,7 +10,7 @@ import { continueWork, createCodebaseWork, readWork } from '../src/core/services
 import { RuntimeManager } from '../src/core/services/codebase/runtime';
 import { OpenedCheckouts } from '../src/core/services/projects/session';
 import type { PreviewStatus, RunLogLine } from '../src/shared/contract';
-import { agentFinished, eventually } from './fixtures';
+import { g, agentFinished, eventually } from './fixtures';
 
 /**
  * Every piece has its own tests; this runs the same services the IPC handlers call, against a real repository on disk,
@@ -19,7 +19,6 @@ import { agentFinished, eventually } from './fixtures';
 
 let product: string;
 let records: string;
-const g = (...args: string[]) => execFileSync('git', ['-C', product, ...args], { encoding: 'utf8' });
 
 beforeEach(() => {
 	product = mkdtempSync(join(tmpdir(), 'fdw-journey-'));
@@ -52,9 +51,9 @@ beforeEach(() => {
 		JSON.stringify({ packages: { 'node_modules/@flocksafety/flock-react-component-lib': { version: '5.5.4' } } }),
 	);
 
-	g('init', '-q', '-b', 'develop');
-	g('add', '.');
-	g('commit', '-q', '-m', 'baseline');
+	g(product, 'init', '-q', '-b', 'develop');
+	g(product, 'add', '.');
+	g(product, 'commit', '-q', '-m', 'baseline');
 });
 
 afterEach(() => {
@@ -88,8 +87,8 @@ describe('from a request to a running preview', () => {
 		expect(logs.map((l) => l.text).join('')).toContain('Project: inactive-users');
 
 		writeFileSync(join(product, 'src/prototypes/view.tsx'), 'export const View = () => null;\n');
-		g('add', '.');
-		g('commit', '-q', '-m', 'prototype');
+		g(product, 'add', '.');
+		g(product, 'commit', '-q', '-m', 'prototype');
 
 		const statuses: PreviewStatus[] = [];
 		const runtime = new RuntimeManager(
@@ -104,7 +103,7 @@ describe('from a request to a running preview', () => {
 		await runtime.stopAll();
 
 		// The record survives leaving the branch, because it never lived on it.
-		g('checkout', '-q', 'develop');
+		g(product, 'checkout', '-q', 'develop');
 		expect(readWork(records, 'inactive-users').map((i) => i.name)).toEqual(['codebase']);
 
 		const back = await continueWork(root, records, 'inactive-users', 'codebase', null, readDescriptor(root));

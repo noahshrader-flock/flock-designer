@@ -68,17 +68,3 @@ export const answerOf = async (name: string, kind: string, value: unknown) => {
 	if (!call) throw new Error(`the page made no ${name} call for ${kind}: ${JSON.stringify(sent)}`);
 	await say({ type: 'answer', id: call.id, result: { ok: true, value } });
 };
-
-export const button = (name: string) => [...document.querySelectorAll('button')].find((b) => b.textContent === name) as HTMLButtonElement;
-export const press = async (el: Element) => act(async () => (el as HTMLElement).click());
-export const key = async (el: HTMLElement, name: string) =>
-	act(async () => void el.dispatchEvent(new KeyboardEvent('keydown', { key: name, bubbles: true })));
-/** Through the prototype's value setter, so React sees the change. */
-export const type = async (el: Element, text: string) =>
-	act(async () => {
-		const field = el as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
-		const proto =
-			field instanceof HTMLSelectElement ? HTMLSelectElement : field instanceof HTMLTextAreaElement ? HTMLTextAreaElement : HTMLInputElement;
-		Object.getOwnPropertyDescriptor(proto.prototype, 'value')!.set!.call(field, text);
-		field.dispatchEvent(new Event(field instanceof HTMLSelectElement ? 'change' : 'input', { bubbles: true }));
-	});

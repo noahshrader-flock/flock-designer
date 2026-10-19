@@ -2,7 +2,8 @@ import { createElement } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { Viewer } from '../src/viewer/Viewer';
 import { PAGE_CONFIG, PAGE_SIGN_IN, sitePage } from './pageHarness';
-import { render, settle, stateMenu, unmountAll } from './reviewHarness';
+import { stateMenu } from './reviewHarness';
+import { render, settle, unmountAll } from './ui';
 
 /** A control of another size than the kit's default is what makes a row look uneven. */
 

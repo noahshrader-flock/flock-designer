@@ -6,7 +6,7 @@ import type { PullRequest } from '../src/codeHost/changeRequests';
 import type { ShareTools } from '../src/core/ports';
 import { VOICE_CHANGED, VOICE_FILE, VoiceBranches, readVoice } from '../src/core/services/designSystem/voiceAndTone';
 import type { ConnectedDesignSystem } from '../src/shared/contract';
-import { g } from './fixtures';
+import { g, gitFile } from './fixtures';
 
 /** Against a real clone of a small library; GitHub is a stand-in, and nothing is pushed anywhere. */
 
@@ -103,7 +103,7 @@ describe('reading the file', () => {
 		committed('one');
 		expect((await opened()).path).toBe('packages/ui/.dsnr/voice-and-tone.md');
 		const b = await voice().save({ text: 'mine', against: (await opened()).sha });
-		expect(g(clone, 'show', `${b.branch}:packages/ui/.dsnr/voice-and-tone.md`)).toBe('mine');
+		expect(gitFile(clone, b.branch, 'packages/ui/.dsnr/voice-and-tone.md')).toBe('mine');
 	});
 });
 
@@ -113,7 +113,7 @@ describe('saving a change', () => {
 		const before = { head: g(clone, 'rev-parse', 'HEAD'), status: g(clone, 'status', '--porcelain') };
 		const b = await voice().save({ text: 'mine', against: (await opened()).sha });
 		expect(b).toMatchObject({ branch: 'dsnr/voice-20261018-' + b.branch.slice(-4), saves: 1, saved: { text: 'mine' }, pullRequest: null });
-		expect(g(clone, 'show', `${b.branch}:${VOICE_FILE}`)).toBe('mine');
+		expect(gitFile(clone, b.branch, VOICE_FILE)).toBe('mine');
 		expect(g(clone, 'rev-parse', `${b.branch}^`)).toBe(g(clone, 'rev-parse', 'origin/develop'));
 		expect({ head: g(clone, 'rev-parse', 'HEAD'), status: g(clone, 'status', '--porcelain') }).toEqual(before);
 	});
@@ -137,7 +137,7 @@ describe('saving a change', () => {
 
 	it('starts the file when there is none', async () => {
 		const b = await voice().save({ text: '# Voice and tone\n', against: null });
-		expect(g(clone, 'show', `${b.branch}:${VOICE_FILE}`)).toBe('# Voice and tone\n');
+		expect(gitFile(clone, b.branch, VOICE_FILE)).toBe('# Voice and tone\n');
 	});
 
 	it('refuses, writing nothing, when the file changed on the library’s branch since the text was opened', async () => {

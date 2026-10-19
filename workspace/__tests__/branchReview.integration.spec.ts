@@ -1,9 +1,9 @@
-import { execFileSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { reviewBranch } from '../src/core/services/designSystem/branchReview';
+import { g } from './fixtures';
 
 /** A hand-over branch is read from git, never from what Claude Code says. */
 
@@ -11,7 +11,6 @@ let home: string;
 let clone: string;
 let base: string;
 const BRANCH = 'dsnr/handoff-20261017-ab12';
-const g = (cwd: string, ...args: string[]) => execFileSync('git', args, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
 const write = (file: string, text: string) => {
 	mkdirSync(dirname(join(clone, file)), { recursive: true });
 	writeFileSync(join(clone, file), text);

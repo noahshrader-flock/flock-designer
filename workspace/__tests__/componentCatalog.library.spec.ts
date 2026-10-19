@@ -1,20 +1,19 @@
-import { execFileSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { expect, it } from 'vitest';
 import { designSystemOf } from '../src/shared/catalog';
 import { isStoryFile, literalField, readCatalog, UNGROUPED } from '../src/core/services/designSystem/componentCatalog';
 import { libraryReads } from '../src/core/services/designSystem/designLibrary';
 import { REAL_LIBRARY as REAL, describeWith, libraryMissing } from './realCheckouts';
+import { g } from './fixtures';
 
 const FUI = designSystemOf({ repository: 'flocksafety/flock-react-component-lib', branch: 'develop' });
-const git = (...args: string[]) => execFileSync('git', ['-C', REAL, ...args], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
 
 describeWith(libraryMissing, 'against the real library', () => {
 	const reads = libraryReads(REAL, `refs/remotes/origin/${FUI.branch}`);
 
 	it('lists every story file Storybook has, and nothing else', async () => {
 		const catalog = await readCatalog(reads, FUI);
-		const stories = git('ls-tree', '-r', '--name-only', `refs/remotes/origin/${FUI.branch}`).split('\n').filter(isStoryFile);
+		const stories = g(REAL, 'ls-tree', '-r', '--name-only', `refs/remotes/origin/${FUI.branch}`).split('\n').filter(isStoryFile);
 		expect(catalog.map((c) => c.id).sort()).toEqual(stories.sort());
 		expect(catalog.length).toBeGreaterThan(70);
 	});

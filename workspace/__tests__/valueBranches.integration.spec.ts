@@ -6,7 +6,7 @@ import type { PullRequest } from '../src/codeHost/changeRequests';
 import type { ShareTools } from '../src/core/ports';
 import { ValueBranches } from '../src/core/services/designSystem/valueBranches';
 import type { TriedValue, ValueSources as Answer } from '../src/shared/contract';
-import { g } from './fixtures';
+import { g, gitFile } from './fixtures';
 
 /**
  * Against a real clone of a small library. Where each value is written is a stand-in, said as `ValueSources` says it;
@@ -108,7 +108,7 @@ describe('saving the values tried on a component (Phase 4.4)', () => {
 			pullRequest: null,
 		});
 		expect(g(clone, 'diff', '--name-only', 'origin/develop', saved.branch).trim()).toBe('src/utils/theme.ts');
-		expect(g(clone, 'show', `${saved.branch}:src/utils/theme.ts`)).toContain("sm: { height: '32px' }");
+		expect(gitFile(clone, saved.branch, 'src/utils/theme.ts')).toContain("sm: { height: '32px' }");
 		expect(g(clone, 'log', '-1', '--format=%B', saved.branch).trim()).toBe(
 			'Component values: 1 changed\n\nFSButton · Height: 28px → 32px (src/utils/theme.ts, line 2)\n\nSaved from DSNR.',
 		);
@@ -154,7 +154,7 @@ describe('saving the values tried on a component (Phase 4.4)', () => {
 		found.set(BUTTON, smallFound('40px'));
 		const second = await branches().save([{ ...SMALL, value: '40px' }], BUTTON);
 		expect(second).toMatchObject({ branch: first.branch, saves: 2 });
-		expect(g(clone, 'show', `${second.branch}:src/utils/theme.ts`)).toContain("sm: { height: '40px' }");
+		expect(gitFile(clone, second.branch, 'src/utils/theme.ts')).toContain("sm: { height: '40px' }");
 		expect(g(clone, 'rev-list', '--count', `origin/develop..${second.branch}`).trim()).toBe('2');
 	});
 

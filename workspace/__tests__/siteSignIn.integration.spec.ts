@@ -9,7 +9,7 @@ import { build } from 'vite';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { buildSite } from '../src/site/buildSite';
 import { serveSite } from '../src/site/serveSite';
-import { fakeGitHub } from './pageHarness';
+import { fakeGitHubFetch } from './pageHarness';
 import { NO_CHROME, inChrome } from './realChrome';
 
 /** GitHub's sign-in page, the sign-in function and GitHub's API are stand-ins; the viewer and site build are real. */
@@ -22,7 +22,7 @@ let site: Server;
 let base: string;
 let fake: Server;
 let fakeAt: string;
-let gh: ReturnType<typeof fakeGitHub>;
+let gh: ReturnType<typeof fakeGitHubFetch>;
 /** `outsider-token` is one GitHub will show nothing to. */
 let next: 'good-token' | 'outsider-token' = 'good-token';
 const challenges = new Map<string, string>();
@@ -94,7 +94,7 @@ beforeAll(async () => {
 				.replace('https://acme.github.io/design/', base)
 				.replace('https://github.com/login/oauth/authorize', `${fakeAt}/authorize`),
 		);
-	gh = fakeGitHub();
+	gh = fakeGitHubFetch();
 }, 120_000);
 afterAll(async () => {
 	await new Promise((r) => site.close(r));

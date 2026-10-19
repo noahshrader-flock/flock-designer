@@ -1,7 +1,7 @@
 import { act, createElement } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { Avatar } from '../src/ui/Avatar';
-import { render, unmountAll } from './reviewHarness';
+import { render, unmountAll } from './ui';
 
 let current: Awaited<ReturnType<typeof render>> | null = null;
 afterEach(async () => {

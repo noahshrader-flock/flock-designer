@@ -1,7 +1,8 @@
 import { createElement } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { VersionSwitcher, StateSwitcher } from '../src/viewer/VersionSwitcher';
-import { choicesIn, choose, chooseState, render, shownIn, shownState, stateMenu, switchMenu, unmountAll } from './reviewHarness';
+import { choicesIn, choose, chooseState, shownIn, shownState, stateMenu, switchMenu } from './reviewHarness';
+import { render, unmountAll } from './ui';
 
 const at = (name: string) => ({ name, branch: `prototype/demo/${name}` });
 const PROTOTYPES = ['v4', 'v3', 'v2', 'v1'].map(at);

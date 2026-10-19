@@ -19,18 +19,17 @@ import {
 	hasFileAt,
 	originUrl,
 } from '../src/core/services/platform/git';
-import { recordDefault } from './fixtures';
+import { g, recordDefault } from './fixtures';
 
 let root: string;
-const g = (...args: string[]) => execFileSync('git', ['-C', root, ...args], { encoding: 'utf8' });
 
 beforeEach(() => {
 	root = mkdtempSync(join(tmpdir(), 'fdw-git-'));
-	g('init', '-q', '-b', 'develop');
+	g(root, 'init', '-q', '-b', 'develop');
 	recordDefault(root);
 	writeFileSync(join(root, 'README.md'), '# repo\n');
-	g('add', '.');
-	g('commit', '-q', '-m', 'first');
+	g(root, 'add', '.');
+	g(root, 'commit', '-q', '-m', 'first');
 });
 
 afterEach(() => rmSync(root, { recursive: true, force: true }));
@@ -38,19 +37,19 @@ afterEach(() => rmSync(root, { recursive: true, force: true }));
 describe('what a repository says', () => {
 	it('gives origin as git resolves it, rewritten by insteadOf', async () => {
 		expect(await originUrl(root)).toBeNull();
-		g('remote', 'add', 'origin', 'gh:flocksafety/flock-coke');
-		g('config', 'url.git@github.com:.insteadOf', 'gh:');
+		g(root, 'remote', 'add', 'origin', 'gh:flocksafety/flock-coke');
+		g(root, 'config', 'url.git@github.com:.insteadOf', 'gh:');
 		expect(await originUrl(root)).toBe('git@github.com:flocksafety/flock-coke');
 	});
 
 	it('says whether a file is on a branch, and whether a commit since changed it', async () => {
-		const first = g('rev-parse', 'HEAD').trim();
+		const first = g(root, 'rev-parse', 'HEAD').trim();
 		expect(await hasFileAt(root, 'refs/heads/develop', 'README.md')).toBe(true);
 		expect(await hasFileAt(root, 'refs/heads/develop', 'HANDOFF.md')).toBe(false);
 		expect(await changedSince(root, first, 'HANDOFF.md')).toBe(false);
 		writeFileSync(join(root, 'HANDOFF.md'), 'done');
-		g('add', '.');
-		g('commit', '-q', '-m', 'handoff');
+		g(root, 'add', '.');
+		g(root, 'commit', '-q', '-m', 'handoff');
 		expect(await changedSince(root, first, 'HANDOFF.md')).toBe(true);
 		expect(await changedSince(root, first, 'README.md')).toBe(false);
 	});
@@ -120,7 +119,7 @@ describe('createBranch', () => {
 
 	it('refuses to reuse an existing branch name', async () => {
 		await createBranch(root, 'prototype/demo/v1', 'develop');
-		g('checkout', '-q', 'develop');
+		g(root, 'checkout', '-q', 'develop');
 		await expect(createBranch(root, 'prototype/demo/v1', 'develop')).rejects.toThrow(/already exists/);
 	});
 
@@ -153,9 +152,9 @@ describe('checkoutBranch', () => {
 describe('listing', () => {
 	it('lists only branches under the prefix', async () => {
 		await createBranch(root, 'feature/demo/one', 'develop');
-		g('checkout', '-q', 'develop');
+		g(root, 'checkout', '-q', 'develop');
 		await createBranch(root, 'feature/demo/two', 'develop');
-		g('checkout', '-q', 'develop');
+		g(root, 'checkout', '-q', 'develop');
 		await createBranch(root, 'feature/other', 'develop');
 		expect(await listBranches(root, 'feature/demo')).toEqual(['feature/demo/one', 'feature/demo/two']);
 	});
@@ -185,12 +184,12 @@ describe('the default branch', () => {
 describe('branchAuthors', () => {
 	const commitAs = (name: string, file: string) => {
 		writeFileSync(join(root, file), `${name}\n`);
-		g('add', '.');
-		g('-c', `user.name=${name}`, '-c', 'user.email=x@example.test', 'commit', '-q', '-m', `by ${name}`);
+		g(root, 'add', '.');
+		g(root, '-c', `user.name=${name}`, '-c', 'user.email=x@example.test', 'commit', '-q', '-m', `by ${name}`);
 	};
 
 	it("lists everyone who committed on the branch, once each, and not the trunk's authors", async () => {
-		g('checkout', '-q', '-b', 'prototype/p/v1');
+		g(root, 'checkout', '-q', '-b', 'prototype/p/v1');
 		commitAs('Ada Lovelace', 'a.txt');
 		commitAs('Grace Hopper', 'b.txt');
 		commitAs('Ada Lovelace', 'c.txt');
@@ -198,7 +197,7 @@ describe('branchAuthors', () => {
 	});
 
 	it('leaves out automation', async () => {
-		g('checkout', '-q', '-b', 'prototype/p/v1');
+		g(root, 'checkout', '-q', '-b', 'prototype/p/v1');
 		commitAs('dependabot[bot]', 'a.txt');
 		commitAs('Grace Hopper', 'b.txt');
 		expect((await branchAuthors(root, 'prototype/p/v1')).map((a) => a.name)).toEqual(['Grace Hopper']);
@@ -217,13 +216,13 @@ describe('two commands at once in one repository', () => {
 		// the lock takes a moment, and enough commands at once that two are bound to overlap.
 		mkdirSync(join(root, 'src'), { recursive: true });
 		for (let i = 0; i < 400; i++) writeFileSync(join(root, 'src', `f${i}.txt`), `${i}\n`.repeat(50));
-		g('add', '.');
-		g('commit', '-q', '-m', 'many files');
-		g('checkout', '-q', '-b', 'a');
+		g(root, 'add', '.');
+		g(root, 'commit', '-q', '-m', 'many files');
+		g(root, 'checkout', '-q', '-b', 'a');
 		writeFileSync(join(root, 'src', 'f0.txt'), 'different\n');
-		g('commit', '-q', '-am', 'a differs');
-		g('checkout', '-q', 'develop');
-		g('branch', 'b');
+		g(root, 'commit', '-q', '-am', 'a differs');
+		g(root, 'checkout', '-q', 'develop');
+		g(root, 'branch', 'b');
 
 		const jobs = Array.from({ length: 24 }, (_, i) => (i % 3 === 0 ? readCheckout(root) : checkoutBranch(root, i % 2 ? 'a' : 'b')));
 		const results = await Promise.allSettled(jobs);
@@ -231,14 +230,14 @@ describe('two commands at once in one repository', () => {
 	}, 60_000);
 
 	it('run in the order they were asked for', async () => {
-		g('branch', 'a');
-		g('branch', 'b');
+		g(root, 'branch', 'a');
+		g(root, 'branch', 'b');
 		await Promise.all([checkoutBranch(root, 'a'), checkoutBranch(root, 'b')]);
 		expect((await readCheckout(root)).branch).toBe('b');
 	});
 
 	it('do not let a failure stop the commands queued behind it', async () => {
-		g('branch', 'a');
+		g(root, 'branch', 'a');
 		await expect(checkoutBranch(root, 'no-such-branch')).rejects.toThrow(/Branch no-such-branch does not exist/);
 		await checkoutBranch(root, 'a');
 		expect((await readCheckout(root)).branch).toBe('a');
@@ -249,7 +248,7 @@ describe('a lock held by something outside the app', () => {
 	const lock = () => join(root, '.git', 'index.lock');
 
 	it("is waited out when it clears by itself, as an editor's brief lock does", async () => {
-		g('branch', 'a');
+		g(root, 'branch', 'a');
 		writeFileSync(lock(), '');
 		setTimeout(() => existsSync(lock()) && unlinkSync(lock()), 400);
 		await checkoutBranch(root, 'a');
@@ -257,7 +256,7 @@ describe('a lock held by something outside the app', () => {
 	}, 10_000);
 
 	it('is never deleted for the person, and the error says what to check', async () => {
-		g('branch', 'a');
+		g(root, 'branch', 'a');
 		writeFileSync(lock(), '');
 		const err = await checkoutBranch(root, 'a').catch((e: Error) => e);
 		expect((err as Error).message).toMatch(/index\.lock/);
@@ -277,12 +276,12 @@ describe('a lock held by something outside the app', () => {
 describe('branchStartedAt', () => {
 	const commitOn = (iso: string, file: string) => {
 		writeFileSync(join(root, file), file);
-		g('add', '.');
+		g(root, 'add', '.');
 		execFileSync('git', ['-C', root, 'commit', '-q', '-m', file], { env: { ...process.env, GIT_AUTHOR_DATE: iso, GIT_COMMITTER_DATE: iso } });
 	};
 
 	it('is the date of the first commit the branch has beyond the trunk', async () => {
-		g('checkout', '-q', '-b', 'feature/new-view');
+		g(root, 'checkout', '-q', '-b', 'feature/new-view');
 		commitOn('2026-10-01T09:00:00+00:00', 'one.txt');
 		commitOn('2026-10-04T09:00:00+00:00', 'two.txt');
 		commitOn('2026-10-06T09:00:00+00:00', 'three.txt');
@@ -291,13 +290,13 @@ describe('branchStartedAt', () => {
 
 	it('does not count commits the trunk already had', async () => {
 		commitOn('2026-09-01T09:00:00+00:00', 'trunk.txt');
-		g('checkout', '-q', '-b', 'feature/later');
+		g(root, 'checkout', '-q', '-b', 'feature/later');
 		commitOn('2026-10-03T09:00:00+00:00', 'mine.txt');
 		expect(new Date((await branchStartedAt(root, 'feature/later')) as string).toISOString()).toBe('2026-10-03T09:00:00.000Z');
 	});
 
 	it('falls back to the newest commit for a branch with nothing of its own yet, and to null for no branch', async () => {
-		g('checkout', '-q', '-b', 'feature/just-cut');
+		g(root, 'checkout', '-q', '-b', 'feature/just-cut');
 		expect(await branchStartedAt(root, 'feature/just-cut')).toMatch(/^\d{4}-\d{2}-\d{2}T/);
 		expect(await branchStartedAt(root, 'feature/nope')).toBeNull();
 	});

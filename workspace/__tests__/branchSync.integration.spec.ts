@@ -3,7 +3,7 @@ import { renameSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { syncBranches } from '../src/core/services/publishing/branchSync';
-import { madeOnce } from './fixtures';
+import { g, madeOnce } from './fixtures';
 import type { WorkspaceDescriptor } from '../src/core/services/projects/descriptor';
 
 const descriptor: WorkspaceDescriptor = {
@@ -18,18 +18,17 @@ const descriptor: WorkspaceDescriptor = {
 let dir: string;
 let remote: string;
 let root: string;
-const git = (cwd: string, ...args: string[]) => execFileSync('git', ['-C', cwd, ...args], { encoding: 'utf8' }).trim();
-const remoteBranches = () => git(remote, 'for-each-ref', '--format=%(refname:short)', 'refs/heads').split('\n').filter(Boolean).sort();
-const remoteSha = (branch: string) => git(remote, 'rev-parse', `refs/heads/${branch}`);
+const remoteBranches = () => g(remote, 'for-each-ref', '--format=%(refname:short)', 'refs/heads').split('\n').filter(Boolean).sort();
+const remoteSha = (branch: string) => g(remote, 'rev-parse', `refs/heads/${branch}`);
 
 const commit = (cwd: string, branch: string, file: string, by: 'me' | 'teammate' = 'me') => {
-	git(cwd, 'checkout', '-q', branch);
+	g(cwd, 'checkout', '-q', branch);
 	writeFileSync(join(cwd, file), `${file}\n${Math.random()}`);
-	git(cwd, 'add', '.');
+	g(cwd, 'add', '.');
 	const author = by === 'me' ? [] : ['--author', 'Teammate <teammate@example.test>'];
-	git(cwd, 'commit', '-q', ...author, '-m', file);
+	g(cwd, 'commit', '-q', ...author, '-m', file);
 };
-const branchFrom = (cwd: string, name: string, from = 'develop') => git(cwd, 'checkout', '-q', '-b', name, from);
+const branchFrom = (cwd: string, name: string, from = 'develop') => g(cwd, 'checkout', '-q', '-b', name, from);
 
 madeOnce((d) => {
 	dir = d;
@@ -37,13 +36,13 @@ madeOnce((d) => {
 	root = join(dir, 'coke');
 	execFileSync('git', ['init', '-q', '--bare', '-b', 'develop', remote]);
 	execFileSync('git', ['clone', '-q', remote, root], { stdio: 'ignore' });
-	git(root, 'config', 'user.email', 'me@example.test');
-	git(root, 'config', 'user.name', 'Me');
-	git(root, 'checkout', '-q', '-b', 'develop');
+	g(root, 'config', 'user.email', 'me@example.test');
+	g(root, 'config', 'user.name', 'Me');
+	g(root, 'checkout', '-q', '-b', 'develop');
 	writeFileSync(join(root, 'README.md'), 'x');
-	git(root, 'add', '.');
-	git(root, 'commit', '-q', '-m', 'base');
-	git(root, 'push', '-q', '-u', 'origin', 'develop');
+	g(root, 'add', '.');
+	g(root, 'commit', '-q', '-m', 'base');
+	g(root, 'push', '-q', '-u', 'origin', 'develop');
 });
 
 const sync = (projects: string[] = []) => syncBranches({ root, descriptor, projects: new Set(projects) });
@@ -55,7 +54,7 @@ describe('publishing my work branches', () => {
 		const r = await sync(['role-comparison']);
 		expect(r).toEqual({ published: ['feature/role-comparison'], problems: [], mine: ['feature/role-comparison'] });
 		expect(remoteBranches()).toEqual(['develop', 'feature/role-comparison']);
-		expect(git(root, 'rev-parse', '--abbrev-ref', 'feature/role-comparison@{u}')).toBe('origin/feature/role-comparison');
+		expect(g(root, 'rev-parse', '--abbrev-ref', 'feature/role-comparison@{u}')).toBe('origin/feature/role-comparison');
 	});
 
 	it('does not publish a prototype branch of old, even my own: a prototype is a page, not a branch', async () => {
@@ -113,7 +112,7 @@ describe('publishing my work branches', () => {
 		commit(root, 'feature/role-comparison', 'two.tsx');
 		const r = await sync(['role-comparison']);
 		expect(r.published).toEqual(['feature/role-comparison']);
-		expect(remoteSha('feature/role-comparison')).toBe(git(root, 'rev-parse', 'feature/role-comparison'));
+		expect(remoteSha('feature/role-comparison')).toBe(g(root, 'rev-parse', 'feature/role-comparison'));
 	});
 });
 
@@ -124,12 +123,12 @@ describe('when GitHub has something this machine does not', () => {
 		await sync(['role-comparison']);
 		const other = join(dir, 'other');
 		execFileSync('git', ['clone', '-q', '-b', 'feature/role-comparison', remote, other], { stdio: 'ignore' });
-		git(other, 'config', 'user.email', 't@example.test');
-		git(other, 'config', 'user.name', 'Teammate');
+		g(other, 'config', 'user.email', 't@example.test');
+		g(other, 'config', 'user.name', 'Teammate');
 		writeFileSync(join(other, 'theirs.tsx'), 'theirs');
-		git(other, 'add', '.');
-		git(other, 'commit', '-q', '-m', 'theirs');
-		git(other, 'push', '-q', 'origin', 'feature/role-comparison');
+		g(other, 'add', '.');
+		g(other, 'commit', '-q', '-m', 'theirs');
+		g(other, 'push', '-q', 'origin', 'feature/role-comparison');
 		const theirs = remoteSha('feature/role-comparison');
 		commit(root, 'feature/role-comparison', 'two.tsx');
 
@@ -146,12 +145,12 @@ describe('when GitHub has something this machine does not', () => {
 		await sync(['a', 'b']);
 		const other = join(dir, 'other');
 		execFileSync('git', ['clone', '-q', '-b', 'feature/a', remote, other], { stdio: 'ignore' });
-		git(other, 'config', 'user.email', 't@example.test');
-		git(other, 'config', 'user.name', 'T');
+		g(other, 'config', 'user.email', 't@example.test');
+		g(other, 'config', 'user.name', 'T');
 		writeFileSync(join(other, 't.tsx'), 't');
-		git(other, 'add', '.');
-		git(other, 'commit', '-q', '-m', 't');
-		git(other, 'push', '-q', 'origin', 'feature/a');
+		g(other, 'add', '.');
+		g(other, 'commit', '-q', '-m', 't');
+		g(other, 'push', '-q', 'origin', 'feature/a');
 		commit(root, 'feature/a', 'a2.tsx');
 		branchFrom(root, 'feature/b', 'develop');
 		commit(root, 'feature/b', 'b.tsx');

@@ -9,7 +9,7 @@ import { PrototypeServer } from '../src/core/services/prototypes/prototypeServer
 import { readRelayAsk } from '../src/shared/reviewRelay';
 import { buildSite } from '../src/site/buildSite';
 import { tokenApi } from '../src/viewer/browserAdapter';
-import { fakeGitHub } from './pageHarness';
+import { fakeGitHubFetch } from './pageHarness';
 import { NO_CHROME, inChrome } from './realChrome';
 
 /**
@@ -41,7 +41,7 @@ const PAGE = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>
 let root: string;
 let server: PrototypeServer;
 let base: string;
-let gh: ReturnType<typeof fakeGitHub>;
+let gh: ReturnType<typeof fakeGitHubFetch>;
 const asked: string[] = [];
 const keys: string[] = [];
 const addressed: unknown[][] = [];
@@ -84,7 +84,7 @@ beforeAll(async () => {
 		pagesAt: `${await server.pagesOrigin()}/review/`,
 	});
 	base = await server.serveFolder('review', out);
-	gh = fakeGitHub();
+	gh = fakeGitHubFetch();
 	const threads = new ReviewThreads(tokenApi('good-token', gh.fetch), { owner: 'acme', repo: 'design' });
 	server.answerAsks(async (key, raw) => {
 		keys.push(key);

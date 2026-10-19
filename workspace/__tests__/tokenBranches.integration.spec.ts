@@ -6,7 +6,7 @@ import type { Check, PullRequest } from '../src/codeHost/changeRequests';
 import type { ShareTools } from '../src/core/ports';
 import { TOKENS, TOKEN_BRANCH, TokenBranches } from '../src/core/services/designSystem/tokenBranches';
 import { proposalText } from '../src/core/services/designSystem/changeBranches';
-import { g } from './fixtures';
+import { g, gitFile } from './fixtures';
 
 /** GitHub is a stand-in: nothing here is pushed anywhere or opened as a pull request. */
 
@@ -58,7 +58,7 @@ const tools = (): ShareTools => ({
 });
 const system = () => ({ id: REPOSITORY, name: 'Acme UI', repository: REPOSITORY, root: clone, folder: '', branch: 'develop' });
 const branches = () => new TokenBranches({ system, file, tools, now: () => new Date('2026-10-09T12:00:00Z') });
-const at = (ref: string, path: string) => g(clone, 'show', `${ref}:${path}`);
+const at = (ref: string, path: string) => gitFile(clone, ref, path);
 const snapshot = () => ({
 	head: g(clone, 'rev-parse', 'HEAD'),
 	branch: g(clone, 'branch', '--show-current'),

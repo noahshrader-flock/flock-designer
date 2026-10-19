@@ -1,4 +1,3 @@
-import { execFileSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -6,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { HandOverBranches } from '../src/core/services/designSystem/handOverBranches';
 import type { ShareTools } from '../src/core/ports';
 import type { ConnectedDesignSystem } from '../src/shared/contract';
+import { g } from './fixtures';
 
 let home: string;
 let clone: string;
@@ -15,7 +15,6 @@ let opened: { branch: string; title: string; body: string; base: string | undefi
 let saved: boolean;
 let stillOpen: boolean;
 const BUTTON = 'src/components/FSButton/FSButton.stories.tsx';
-const g = (cwd: string, ...args: string[]) => execFileSync('git', args, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
 
 const tools = (): ShareTools => ({
 	push: async (branch) => (pushed.push(branch), { pushed: true }),

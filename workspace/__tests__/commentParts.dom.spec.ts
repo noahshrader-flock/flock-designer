@@ -7,8 +7,9 @@ import { GeneralComment } from '../src/viewer/comments/GeneralComment';
 import type { CommentStore, PageSurface } from '../src/viewer/comments/surfaces';
 import { useComments } from '../src/viewer/comments/useComments';
 import type { CommentAnchor, MarkerRequest, PinEvent, ReviewComment } from '../src/shared/contract';
-import { button, cards, comment, fieldNamed, menuItem, ok, openMenu, press, render, settle, typeInto, unmountAll } from './reviewHarness';
+import { cards, comment, ok } from './reviewHarness';
 import { anAnchor } from './fixtures';
+import { button, fieldNamed, menuItem, openMenu, press, render, settle, type, unmountAll } from './ui';
 
 /** Through a store and a page that are not the app's; nothing here goes near `window.workspace`, which is not there. */
 
@@ -113,7 +114,7 @@ describe('the comments experience, through another store and page', () => {
 		await settle();
 		f.click({ selector: '#cta' });
 		await settle();
-		await typeInto(fieldNamed('Comment'), 'Bigger');
+		await type(fieldNamed('Comment'), 'Bigger');
 		await press(button('Save'));
 		await settle();
 		const made = cards().map((c) => c.textContent);
@@ -176,7 +177,7 @@ describe('the comments experience, through another store and page', () => {
 		await mount(f);
 		const box = document.querySelector('#general-comment') as HTMLTextAreaElement;
 		expect(button('Send').hasAttribute('disabled')).toBe(true);
-		await typeInto(box, 'The spacing feels tight overall');
+		await type(box, 'The spacing feels tight overall');
 		await key(box, { key: 'Enter', shiftKey: true });
 		expect(((await f.store.read()) as { value: ReviewComment[] }).value).toHaveLength(1);
 		await key(box, { key: 'Enter' });
@@ -193,7 +194,7 @@ describe('the comments experience, through another store and page', () => {
 		f.store.post = async () => ({ ok: false, error: 'GitHub could not be reached.' });
 		await mount(f);
 		const box = document.querySelector('#general-comment') as HTMLTextAreaElement;
-		await typeInto(box, 'Still here');
+		await type(box, 'Still here');
 		await press(button('Send'));
 		await settle();
 		expect(box.value).toBe('Still here');

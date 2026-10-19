@@ -6,8 +6,9 @@ import { PrimitivesTab } from '../extension/webview/PrimitivesTab';
 import { readTab } from '../extension/webview/tab';
 import { PREVIEW_HEIGHT, PREVIEW_TRY, previewAddress } from '../src/shared/catalog';
 import { SAMPLE_CATALOG } from './extensionSamples';
-import { answer, answerOf, button, calls, callsOf, lastAsk, mountPage, press, say, sent, share, shareCatalog, type, unmount } from './webviewHarness';
+import { answer, answerOf, calls, callsOf, lastAsk, mountPage, say, sent, share, shareCatalog, unmount } from './webviewHarness';
 import { ASK_EVERY_MS } from '../extension/webview/hooks/ask';
+import { allByRole, button, press, type } from './ui';
 
 const BUTTON = 'src/components/FSButton/FSButton.stories.tsx';
 const BASE = 'http://127.0.0.1:4321/previews-abc/';
@@ -749,9 +750,9 @@ describe('a component’s tab', () => {
 		it('has no Save, Propose or Start over here: they are in the panel’s Changes, which it opens', async () => {
 			await tryingSmall();
 			await answer('valueSources', found());
-			expect(button('Save to a branch')).toBeUndefined();
-			expect(button('Propose')).toBeUndefined();
-			expect(button('Start over')).toBeUndefined();
+			expect(allByRole('button', 'Save to a branch')).toEqual([]);
+			expect(allByRole('button', 'Propose')).toEqual([]);
+			expect(allByRole('button', 'Start over')).toEqual([]);
 			await press(changed().querySelector('[data-actions-elsewhere]') as HTMLElement);
 			expect(lastAsk()).toEqual(['openChanges', []]);
 		});

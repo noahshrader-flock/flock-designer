@@ -8,7 +8,8 @@ import { IconButton } from '../src/ui/IconButton';
 import { Menu } from '../src/ui/Menu';
 import { Message } from '../src/ui/Message';
 import { Dialog, DialogButtons } from '../src/ui/Dialog';
-import { button, mount, press } from './webviewHarness';
+import { mount } from './webviewHarness';
+import { button, press } from './ui';
 
 describe('the panel’s buttons', () => {
 	it('are primary unless said otherwise, and draw each kind by its own class', async () => {

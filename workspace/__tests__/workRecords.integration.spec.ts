@@ -14,6 +14,7 @@ import {
 	recordPreview,
 	recordedWork,
 } from '../src/core/services/projects/workRecords';
+import { g } from './fixtures';
 
 const descriptor: WorkspaceDescriptor = {
 	version: 1,
@@ -26,20 +27,19 @@ const descriptor: WorkspaceDescriptor = {
 
 let root: string;
 let records: string;
-const g = (...args: string[]) => execFileSync('git', ['-C', root, ...args], { encoding: 'utf8' });
 
 beforeEach(() => {
 	root = mkdtempSync(join(tmpdir(), 'fdw-iter-'));
 	records = mkdtempSync(join(tmpdir(), 'fdw-records-'));
-	g('init', '-q', '-b', 'develop');
+	g(root, 'init', '-q', '-b', 'develop');
 	writeFileSync(join(root, 'README.md'), '# repo\n');
-	g('add', '.');
-	g('commit', '-q', '-m', 'first');
+	g(root, 'add', '.');
+	g(root, 'commit', '-q', '-m', 'first');
 });
 
 const codebase = async () => {
 	const made = await createCodebaseWork(root, records, descriptor, 'demo', 'real change', 'develop');
-	g('checkout', '-q', 'develop');
+	g(root, 'checkout', '-q', 'develop');
 	return made;
 };
 const version = (name: string) =>
@@ -77,7 +77,7 @@ describe('codebaseBranchFor', () => {
 
 describe('createCodebaseWork', () => {
 	it('records which GitHub repository the work is in, from the checkout’s origin, so it can be linked to', async () => {
-		g('remote', 'add', 'origin', 'git@github.com:FlockSafety/flock-coke.git');
+		g(root, 'remote', 'add', 'origin', 'git@github.com:FlockSafety/flock-coke.git');
 		const made = await createCodebaseWork(root, records, descriptor, 'demo', 'first try', 'develop');
 		expect(made.repository).toBe('FlockSafety/flock-coke');
 		expect(readWork(records, 'demo')[0]?.repository).toBe('FlockSafety/flock-coke');
@@ -103,7 +103,7 @@ describe('createCodebaseWork', () => {
 
 	it('survives switching branches, which a record on the branch would not', async () => {
 		await createCodebaseWork(root, records, descriptor, 'demo', 'first', 'develop');
-		g('checkout', '-q', 'develop');
+		g(root, 'checkout', '-q', 'develop');
 		expect(readWork(records, 'demo')).toHaveLength(1);
 	});
 });
@@ -111,11 +111,11 @@ describe('createCodebaseWork', () => {
 describe('continueWork', () => {
 	it('switches back and records where the branch now is', async () => {
 		await codebase();
-		g('checkout', '-q', 'feature/demo');
+		g(root, 'checkout', '-q', 'feature/demo');
 		writeFileSync(join(root, 'work.txt'), 'done\n');
-		g('add', '.');
-		g('commit', '-q', '-m', 'work');
-		g('checkout', '-q', 'develop');
+		g(root, 'add', '.');
+		g(root, 'commit', '-q', '-m', 'work');
+		g(root, 'checkout', '-q', 'develop');
 
 		const back = await continueWork(root, records, 'demo', 'codebase', null, descriptor);
 		expect((await readCheckout(root)).branch).toBe('feature/demo');
@@ -138,21 +138,21 @@ describe('codebase work', () => {
 	});
 
 	it('adopts a feature branch someone already made by hand, keeping its commits', async () => {
-		g('checkout', '-q', '-b', 'feature/demo');
+		g(root, 'checkout', '-q', '-b', 'feature/demo');
 		writeFileSync(join(root, 'work.txt'), 'x\n');
-		g('add', '.');
-		g('commit', '-q', '-m', 'by hand');
-		const head = g('rev-parse', 'HEAD').trim();
-		g('checkout', '-q', 'develop');
+		g(root, 'add', '.');
+		g(root, 'commit', '-q', '-m', 'by hand');
+		const head = g(root, 'rev-parse', 'HEAD').trim();
+		g(root, 'checkout', '-q', 'develop');
 
 		await createCodebaseWork(root, records, descriptor, 'demo', '', 'develop');
-		expect(g('rev-parse', 'feature/demo').trim()).toBe(head);
+		expect(g(root, 'rev-parse', 'feature/demo').trim()).toBe(head);
 		expect(readWork(records, 'demo')[0]?.name).toBe('codebase');
 	});
 
 	it('refuses a second codebase record for the same project', async () => {
 		await createCodebaseWork(root, records, descriptor, 'demo', '', 'develop');
-		g('checkout', '-q', 'develop');
+		g(root, 'checkout', '-q', 'develop');
 		await expect(createCodebaseWork(root, records, descriptor, 'demo', '', 'develop')).rejects.toThrow(/already has codebase work/);
 	});
 
@@ -206,10 +206,10 @@ describe('recordPreview', () => {
 
 describe('recordedWork: work started outside the app', () => {
 	it('records codebase work an agent built in a terminal, even with the checkout already on its branch', async () => {
-		g('checkout', '-q', '-b', 'feature/new-view');
+		g(root, 'checkout', '-q', '-b', 'feature/new-view');
 		writeFileSync(join(root, 'view.tsx'), 'x');
-		g('add', '.');
-		g('commit', '-q', '-m', 'build the view');
+		g(root, 'add', '.');
+		g(root, 'commit', '-q', '-m', 'build the view');
 		expect(readWork(records, 'new-view')).toEqual([]);
 
 		const found = await recordedWork(root, records, descriptor, 'new-view', 'codebase');
@@ -219,9 +219,9 @@ describe('recordedWork: work started outside the app', () => {
 	});
 
 	it('dates adopted work from the work itself, not from when the app first needed a record', async () => {
-		g('checkout', '-q', '-b', 'feature/old-work');
+		g(root, 'checkout', '-q', '-b', 'feature/old-work');
 		writeFileSync(join(root, 'old.txt'), 'x');
-		g('add', '.');
+		g(root, 'add', '.');
 		execFileSync('git', ['-C', root, 'commit', '-q', '-m', 'old'], {
 			env: { ...process.env, GIT_AUTHOR_DATE: '2026-09-02T08:00:00+00:00', GIT_COMMITTER_DATE: '2026-09-02T08:00:00+00:00' },
 		});
@@ -230,7 +230,7 @@ describe('recordedWork: work started outside the app', () => {
 	});
 
 	it('never makes a version from a branch: a version is a page', async () => {
-		g('checkout', '-q', '-b', 'prototype/demo/v2', 'develop');
+		g(root, 'checkout', '-q', '-b', 'prototype/demo/v2', 'develop');
 		await expect(recordedWork(root, records, descriptor, 'demo', 'v2')).rejects.toThrow(/demo has no v2\./);
 		expect(readWork(records, 'demo')).toEqual([]);
 	});

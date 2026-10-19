@@ -9,33 +9,14 @@ import { saveToken, savedToken, tokenApi } from '../src/viewer/browserAdapter';
 import type { Relay } from '../src/viewer/relay';
 import type { Result } from '../src/shared/contract';
 import { ReviewThreads } from '../src/codeHost/reviewThreads';
-import { PAGE_CONFIG as CONFIG, PAGE_SIGN_IN as SIGN_IN, commentOnPage, fakeGitHub, sitePage } from './pageHarness';
-import {
-	button,
-	cards,
-	choicesIn,
-	fieldNamed,
-	menuItem,
-	openMenu,
-	press,
-	render,
-	settle,
-	shownIn,
-	shownState,
-	switchMenu,
-	chooseState,
-	stateMenu,
-	typeInto,
-	unmountAll,
-	shownTheme,
-	themeButton,
-	themeGroup,
-} from './reviewHarness';
+import { PAGE_CONFIG as CONFIG, PAGE_SIGN_IN as SIGN_IN, commentOnPage, fakeGitHubFetch, sitePage } from './pageHarness';
+import { cards, choicesIn, shownIn, shownState, switchMenu, chooseState, stateMenu, shownTheme, themeButton, themeGroup } from './reviewHarness';
 import { anAnchor } from './fixtures';
+import { allByRole, button, fieldNamed, menuItem, openMenu, press, render, settle, type, unmountAll } from './ui';
 
 /** Against a GitHub that answers as its API does, with the real pick and pin scripts running in the prototype's frame. */
 
-let gh: ReturnType<typeof fakeGitHub>;
+let gh: ReturnType<typeof fakeGitHubFetch>;
 let current: Awaited<ReturnType<typeof render>> | null = null;
 const open = async (relay: Relay | null = null, signIn: typeof SIGN_IN | null = SIGN_IN) => {
 	const page = sitePage();
@@ -44,7 +25,7 @@ const open = async (relay: Relay | null = null, signIn: typeof SIGN_IN | null = 
 };
 
 beforeEach(() => {
-	gh = fakeGitHub();
+	gh = fakeGitHubFetch();
 	vi.stubGlobal('fetch', gh.fetch);
 	localStorage.clear();
 });
@@ -115,7 +96,7 @@ describe('signing in on the published site (PUBLISHED_COMMENTS_PLAN, Phase 3)', 
 		await press(button(/^Show all comments/));
 		await settle();
 		expect(cards()).toHaveLength(0);
-		expect([...(document.querySelector('.viewer-panel')?.querySelectorAll('button') ?? [])].some((b) => b.textContent === 'Sign out')).toBe(false);
+		expect(allByRole('button', 'Sign out', document.querySelector('.viewer-panel') ?? document)).toEqual([]);
 	});
 
 	it('tells a person GitHub will not show the design repository who they are signed in as, and to sign out', async () => {
@@ -292,7 +273,7 @@ describe('the states of the page', () => {
 		await settle();
 		expect(frame.getAttribute('src')).toBe('page.html?theme=dark');
 		expect(shownTheme()).toBe('Dark');
-		expect([...card.querySelectorAll('button')].map((b) => b.textContent)).not.toContain('Show in Dark');
+		expect(allByRole('button', 'Show in Dark', card)).toEqual([]);
 	});
 
 	it('are not offered for a page with one, or a page built before pages said', async () => {
@@ -308,7 +289,7 @@ describe('the states of the page', () => {
 describe('signing in', () => {
 	it('has no Sign in to comment on a site built without signing in: there is nothing for it to do', async () => {
 		await open(null, null);
-		expect([...document.querySelectorAll('button')].some((b) => b.textContent === 'Sign in to comment')).toBe(false);
+		expect(allByRole('button', 'Sign in to comment')).toEqual([]);
 	});
 
 	it('forgets the token on signing out', async () => {
@@ -331,7 +312,7 @@ describe('commenting on the page', () => {
 		await settle();
 		await press(doc.querySelector('[data-e2e-ref="clear-filter-button"]') as Element);
 		await settle();
-		await typeInto(fieldNamed('Comment'), 'Make this primary');
+		await type(fieldNamed('Comment'), 'Make this primary');
 		await press(button('Save'));
 		await settle();
 
@@ -489,7 +470,7 @@ describe('in DSNR’s review tab, in VS Code', () => {
 		expect(gh.issues[0]?.comments[0]?.body).toContain('Bigger');
 		await press(button(/^Show all comments/));
 		await settle();
-		expect([...document.querySelectorAll('button')].some((b) => b.textContent === 'Sign out')).toBe(false);
+		expect(allByRole('button', 'Sign out')).toEqual([]);
 	});
 
 	it('offers Address on an open comment, which asks DSNR to address it, on the version this page is', async () => {

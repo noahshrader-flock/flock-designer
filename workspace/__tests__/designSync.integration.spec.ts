@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from '
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { syncRecords } from '../src/core/services/publishing/designSync';
-import { madeOnce } from './fixtures';
+import { g, madeOnce } from './fixtures';
 
 /** Real repositories, not a mocked git: mocking git here would test the mock. */
 
@@ -11,11 +11,10 @@ let dir: string;
 let remote: string;
 let mine: string;
 let theirs: string;
-const git = (cwd: string, ...args: string[]) => execFileSync('git', ['-C', cwd, ...args], { encoding: 'utf8' }).trim();
-const onRemote = (path: string) => git(remote, 'show', `main:${path}`);
+const onRemote = (path: string) => g(remote, 'show', `main:${path}`);
 const remoteHas = (path: string) => {
 	try {
-		git(remote, 'cat-file', '-e', `main:${path}`);
+		g(remote, 'cat-file', '-e', `main:${path}`);
 		return true;
 	} catch {
 		return false;
@@ -35,8 +34,8 @@ const record = (name: string, extra: Record<string, unknown> = {}) => ({
 	...extra,
 });
 const commitAll = (root: string, msg: string) => {
-	git(root, 'add', '-A');
-	git(root, 'commit', '-q', '-m', msg);
+	g(root, 'add', '-A');
+	g(root, 'commit', '-q', '-m', msg);
 };
 
 madeOnce((d) => {
@@ -51,20 +50,20 @@ madeOnce((d) => {
 	] as const) {
 		const root = join(dir, name);
 		execFileSync('git', ['clone', '-q', remote, root], { stdio: 'ignore' });
-		git(root, 'config', 'user.email', `${name}@example.test`);
-		git(root, 'config', 'user.name', who);
+		g(root, 'config', 'user.email', `${name}@example.test`);
+		g(root, 'config', 'user.name', who);
 	}
 	write(mine, '.gitignore', 'projects/*/comments.md\nprojects/*/comment-pictures/\n');
 	write(mine, 'README.md', '# design\n');
 	write(mine, 'projects/p/brief.md', '# P\n');
 	write(mine, 'projects/p/work.json', `${JSON.stringify([record('v1')], null, 2)}\n`);
 	commitAll(mine, 'base');
-	git(mine, 'push', '-q', '-u', 'origin', 'HEAD:main');
-	git(mine, 'branch', '-q', '-M', 'main');
-	git(mine, 'branch', '-q', '-u', 'origin/main');
-	git(theirs, 'pull', '-q', 'origin', 'main');
-	git(theirs, 'branch', '-q', '-M', 'main');
-	git(theirs, 'branch', '-q', '-u', 'origin/main');
+	g(mine, 'push', '-q', '-u', 'origin', 'HEAD:main');
+	g(mine, 'branch', '-q', '-M', 'main');
+	g(mine, 'branch', '-q', '-u', 'origin/main');
+	g(theirs, 'pull', '-q', 'origin', 'main');
+	g(theirs, 'branch', '-q', '-M', 'main');
+	g(theirs, 'branch', '-q', '-u', 'origin/main');
 });
 
 describe('publishing records', () => {
@@ -75,8 +74,8 @@ describe('publishing records', () => {
 		const r = await syncRecords(mine);
 		expect(r).toEqual({ published: ['new-view'], problems: [] });
 		expect(onRemote('projects/new-view/brief.md')).toBe('# New view');
-		expect(git(mine, 'status', '--porcelain')).toBe('');
-		expect(git(mine, 'rev-list', '--count', 'origin/main..HEAD')).toBe('0');
+		expect(g(mine, 'status', '--porcelain')).toBe('');
+		expect(g(mine, 'rev-list', '--count', 'origin/main..HEAD')).toBe('0');
 	});
 
 	it('publishes a change to a record it already knew', async () => {
@@ -84,13 +83,13 @@ describe('publishing records', () => {
 		const r = await syncRecords(mine);
 		expect(r.published).toEqual(['p']);
 		expect(JSON.parse(onRemote('projects/p/work.json'))[0].commit).toBe('abc123');
-		expect(git(remote, 'log', '-1', '--format=%s', 'main')).toBe('Update p');
+		expect(g(remote, 'log', '-1', '--format=%s', 'main')).toBe('Update p');
 	});
 
 	it('does nothing, and makes no commit, when there is nothing to publish', async () => {
-		const before = git(mine, 'rev-parse', 'HEAD');
+		const before = g(mine, 'rev-parse', 'HEAD');
 		expect(await syncRecords(mine)).toEqual({ published: [], problems: [] });
-		expect(git(mine, 'rev-parse', 'HEAD')).toBe(before);
+		expect(g(mine, 'rev-parse', 'HEAD')).toBe(before);
 	});
 
 	it('never publishes the generated files', async () => {
@@ -107,16 +106,16 @@ describe('publishing records', () => {
 		expect(onRemote('projects/p/brief.md')).toBe('# P, edited');
 		expect(onRemote('README.md')).toBe('# design');
 		expect(readFileSync(join(mine, 'README.md'), 'utf8')).toBe('# design, edited\n');
-		expect(git(mine, 'status', '--porcelain')).toBe('M README.md');
+		expect(g(mine, 'status', '--porcelain')).toBe('M README.md');
 	});
 
 	it('does not take a file the person staged elsewhere into the records commit', async () => {
 		write(mine, 'standards.md', 'x');
-		git(mine, 'add', 'standards.md');
+		g(mine, 'add', 'standards.md');
 		write(mine, 'projects/p/brief.md', '# P, edited\n');
 		await syncRecords(mine);
 		expect(remoteHas('standards.md')).toBe(false);
-		expect(git(mine, 'diff', '--cached', '--name-only')).toBe('standards.md');
+		expect(g(mine, 'diff', '--cached', '--name-only')).toBe('standards.md');
 	});
 });
 
@@ -124,39 +123,39 @@ describe('when someone else has published too', () => {
 	it("never stashes the person's uncommitted edits, nor leaves them in a stash, when GitHub changed the same file", async () => {
 		write(theirs, 'README.md', '# design, by a teammate\n');
 		commitAll(theirs, 'teammate readme');
-		git(theirs, 'push', '-q', 'origin', 'HEAD:main');
+		g(theirs, 'push', '-q', 'origin', 'HEAD:main');
 		write(mine, 'README.md', '# design, my edit\n');
 		write(mine, 'projects/p/brief.md', '# P, edited\n');
-		const before = git(mine, 'rev-parse', 'HEAD');
+		const before = g(mine, 'rev-parse', 'HEAD');
 		const r = await syncRecords(mine);
 		// The records still go; the person's branch stays where it was, since catching up would overwrite their edit.
 		expect(r).toEqual({ published: ['p'], problems: [] });
 		expect(onRemote('projects/p/brief.md')).toBe('# P, edited');
 		expect(onRemote('README.md')).toBe('# design, by a teammate');
 		expect(readFileSync(join(mine, 'README.md'), 'utf8')).toBe('# design, my edit\n');
-		expect(git(mine, 'rev-parse', 'HEAD')).toBe(before);
-		expect(git(mine, 'stash', 'list')).toBe('');
+		expect(g(mine, 'rev-parse', 'HEAD')).toBe(before);
+		expect(g(mine, 'stash', 'list')).toBe('');
 	});
 
 	it('publishes once when asked twice at the same moment, and both runs end well', async () => {
 		write(mine, 'projects/p/brief.md', '# P, edited\n');
-		const base = git(remote, 'rev-parse', 'main');
+		const base = g(remote, 'rev-parse', 'main');
 		const [a, b] = await Promise.all([syncRecords(mine), syncRecords(mine)]);
 		expect([a.problems, b.problems]).toEqual([[], []]);
-		expect(git(remote, 'rev-list', '--count', `${base}..main`)).toBe('1');
-		expect(git(mine, 'status', '--porcelain')).toBe('');
+		expect(g(remote, 'rev-list', '--count', `${base}..main`)).toBe('1');
+		expect(g(mine, 'status', '--porcelain')).toBe('');
 	});
 
 	it("fits onto a teammate's work without a merge commit, and keeps both", async () => {
 		write(theirs, 'projects/other/brief.md', '# Other\n');
 		commitAll(theirs, 'teammate project');
-		git(theirs, 'push', '-q', 'origin', 'HEAD:main');
+		g(theirs, 'push', '-q', 'origin', 'HEAD:main');
 		write(mine, 'projects/mine/brief.md', '# Mine\n');
 		const r = await syncRecords(mine);
 		expect(r.problems).toEqual([]);
 		expect(onRemote('projects/other/brief.md')).toBe('# Other');
 		expect(onRemote('projects/mine/brief.md')).toBe('# Mine');
-		expect(git(mine, 'log', '--merges', '--format=%h')).toBe('');
+		expect(g(mine, 'log', '--merges', '--format=%h')).toBe('');
 		expect(existsSync(join(mine, 'projects/other/brief.md'))).toBe(true);
 	});
 
@@ -167,7 +166,7 @@ describe('when someone else has published too', () => {
 			`${JSON.stringify([record('v1'), record('v2', { contributors: [{ name: 'Teammate', login: 'tm' }] })], null, 2)}\n`,
 		);
 		commitAll(theirs, 'teammate i2');
-		git(theirs, 'push', '-q', 'origin', 'HEAD:main');
+		g(theirs, 'push', '-q', 'origin', 'HEAD:main');
 		write(mine, 'projects/p/work.json', `${JSON.stringify([record('v1', { commit: 'mine1' }), record('v3')], null, 2)}\n`);
 		const r = await syncRecords(mine);
 		expect(r).toEqual({ published: ['p'], problems: [] });
@@ -175,14 +174,14 @@ describe('when someone else has published too', () => {
 		expect(merged.map((x) => x.name).sort()).toEqual(['v1', 'v2', 'v3']);
 		expect(merged.find((x) => x.name === 'v1')?.commit).toBe('mine1');
 		expect(merged.find((x) => x.name === 'v2')?.contributors).toEqual([{ name: 'Teammate', login: 'tm' }]);
-		expect(git(mine, 'status', '--porcelain')).toBe('');
+		expect(g(mine, 'status', '--porcelain')).toBe('');
 		expect(existsSync(join(mine, '.git', 'rebase-merge'))).toBe(false);
 	});
 
 	it('combines two people both creating the same new project, rather than failing on add/add', async () => {
 		write(theirs, 'projects/shared/work.json', `${JSON.stringify([record('v1', { projectId: 'shared' })], null, 2)}\n`);
 		commitAll(theirs, 'teammate shared');
-		git(theirs, 'push', '-q', 'origin', 'HEAD:main');
+		g(theirs, 'push', '-q', 'origin', 'HEAD:main');
 		write(mine, 'projects/shared/work.json', `${JSON.stringify([record('v2', { projectId: 'shared' })], null, 2)}\n`);
 		const r = await syncRecords(mine);
 		expect(r.problems).toEqual([]);
@@ -192,16 +191,16 @@ describe('when someone else has published too', () => {
 	it("catches up with GitHub's records even when nothing local changed, so the tree stops being behind", async () => {
 		write(theirs, 'projects/p/brief.md', '# P, by a teammate\n');
 		commitAll(theirs, 'teammate edit');
-		git(theirs, 'push', '-q', 'origin', 'HEAD:main');
+		g(theirs, 'push', '-q', 'origin', 'HEAD:main');
 		await syncRecords(mine);
 		expect(readFileSync(join(mine, 'projects/p/brief.md'), 'utf8')).toBe('# P, by a teammate\n');
-		expect(git(mine, 'status', '-sb').split('\n')[0]).not.toMatch(/behind/);
+		expect(g(mine, 'status', '-sb').split('\n')[0]).not.toMatch(/behind/);
 	});
 
 	it('holds, and loses nothing, when two people changed the same brief, which only they can settle', async () => {
 		write(theirs, 'projects/p/brief.md', '# P, teammate version\n');
 		commitAll(theirs, 'teammate brief');
-		git(theirs, 'push', '-q', 'origin', 'HEAD:main');
+		g(theirs, 'push', '-q', 'origin', 'HEAD:main');
 		write(mine, 'projects/p/brief.md', '# P, my version\n');
 		const r = await syncRecords(mine);
 		expect(r.published).toEqual([]);
@@ -210,7 +209,7 @@ describe('when someone else has published too', () => {
 		expect(onRemote('projects/p/brief.md')).toBe('# P, teammate version');
 		expect(readFileSync(join(mine, 'projects/p/brief.md'), 'utf8')).toBe('# P, my version\n');
 		expect(existsSync(join(mine, '.git', 'rebase-merge'))).toBe(false);
-		expect(git(mine, 'diff', '--name-only', '--diff-filter=U')).toBe('');
+		expect(g(mine, 'diff', '--name-only', '--diff-filter=U')).toBe('');
 	});
 });
 
@@ -228,20 +227,20 @@ describe('what it refuses to publish', () => {
 		expect(r.problems[0]?.why).toMatch(/Records are held back/);
 		expect(remoteHas('workspace/app.ts')).toBe(false);
 		expect(onRemote('projects/p/brief.md')).toBe('# P');
-		expect(git(mine, 'log', '-1', '--format=%s')).toBe('app change, not for auto-publishing');
+		expect(g(mine, 'log', '-1', '--format=%s')).toBe('app change, not for auto-publishing');
 		expect(readFileSync(join(mine, 'projects/p/brief.md'), 'utf8')).toBe('# P, edited\n');
 	});
 
 	it("never rewrites the person's own commits, even when a teammate has published since", async () => {
 		write(mine, 'workspace/app.ts', 'export {}');
 		commitAll(mine, 'app change');
-		const own = git(mine, 'rev-parse', 'HEAD');
+		const own = g(mine, 'rev-parse', 'HEAD');
 		write(theirs, 'projects/other/brief.md', '# Other\n');
 		commitAll(theirs, 'teammate project');
-		git(theirs, 'push', '-q', 'origin', 'HEAD:main');
+		g(theirs, 'push', '-q', 'origin', 'HEAD:main');
 		write(mine, 'projects/p/brief.md', '# P, edited\n');
 		expect((await syncRecords(mine)).problems[0]?.why).toMatch(/Records are held back/);
-		expect(git(mine, 'rev-parse', 'HEAD')).toBe(own);
+		expect(g(mine, 'rev-parse', 'HEAD')).toBe(own);
 		expect(existsSync(join(mine, '.git', 'rebase-merge'))).toBe(false);
 	});
 
@@ -250,14 +249,14 @@ describe('what it refuses to publish', () => {
 		commitAll(mine, 'app change');
 		write(mine, 'projects/p/brief.md', '# P, edited\n');
 		await syncRecords(mine);
-		git(mine, 'push', '-q', 'origin', 'HEAD:main');
+		g(mine, 'push', '-q', 'origin', 'HEAD:main');
 		write(mine, 'projects/p/brief.md', '# P, edited again\n');
 		expect((await syncRecords(mine)).problems).toEqual([]);
 		expect(onRemote('projects/p/brief.md')).toBe('# P, edited again');
 	});
 
 	it('holds when the design repository is not tracking a branch on GitHub, saying how to fix it', async () => {
-		git(mine, 'checkout', '-q', '-b', 'scratch');
+		g(mine, 'checkout', '-q', '-b', 'scratch');
 		write(mine, 'projects/p/brief.md', '# P, edited\n');
 		const r = await syncRecords(mine);
 		expect(r.problems[0]?.why).toMatch(/not tracking a branch on GitHub.*git push -u origin scratch/);
@@ -265,14 +264,14 @@ describe('what it refuses to publish', () => {
 	});
 
 	it('holds when the branch tracks one with a different name, rather than publishing into it', async () => {
-		git(mine, 'checkout', '-q', '-b', 'feature-x', 'origin/main');
-		git(mine, 'branch', '-q', '-u', 'origin/main');
+		g(mine, 'checkout', '-q', '-b', 'feature-x', 'origin/main');
+		g(mine, 'branch', '-q', '-u', 'origin/main');
 		write(mine, 'projects/p/brief.md', '# P, edited\n');
 		expect((await syncRecords(mine)).problems[0]?.why).toMatch(/differently named branch/);
 	});
 
 	it('holds on a detached head', async () => {
-		git(mine, 'checkout', '-q', '--detach');
+		g(mine, 'checkout', '-q', '--detach');
 		expect((await syncRecords(mine)).problems[0]?.why).toMatch(/not on a branch/);
 	});
 });
@@ -316,21 +315,21 @@ describe('when GitHub cannot be reached', () => {
 		renameSync(remote, `${remote}.away`);
 		await syncRecords(mine);
 		await syncRecords(mine);
-		expect(git(mine, 'rev-list', '--count', 'origin/main..HEAD')).toBe('0');
+		expect(g(mine, 'rev-list', '--count', 'origin/main..HEAD')).toBe('0');
 	});
 });
 
 describe('safety', () => {
 	it('never force-pushes: GitHub keeps what it had', async () => {
-		const before = git(remote, 'rev-parse', 'main');
+		const before = g(remote, 'rev-parse', 'main');
 		write(mine, 'projects/p/brief.md', '# P, edited\n');
 		await syncRecords(mine);
-		expect(git(remote, 'merge-base', '--is-ancestor', before, 'main') ?? '').toBe('');
+		expect(g(remote, 'merge-base', '--is-ancestor', before, 'main') ?? '').toBe('');
 	});
 
 	it('creates no branch on GitHub other than the one it tracks', async () => {
 		write(mine, 'projects/p/brief.md', '# P, edited\n');
 		await syncRecords(mine);
-		expect(git(remote, 'for-each-ref', '--format=%(refname:short)', 'refs/heads')).toBe('main');
+		expect(g(remote, 'for-each-ref', '--format=%(refname:short)', 'refs/heads')).toBe('main');
 	});
 });

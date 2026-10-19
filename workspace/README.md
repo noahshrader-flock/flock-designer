@@ -10,8 +10,8 @@ installs this app — that is the constraint the design is built around, not a n
 
 ```bash
 npm ci
-npm run check            # format, lint, typecheck, then every test but the real libraries'
-npm run check:full       # the same, then the real libraries on this machine, drawn once each (a few minutes)
+npm run check            # format, lint, typecheck, then every test but the slow ones and the real libraries' (about 2 minutes)
+npm run check:full       # the same, then the slow accessibility suites and the real libraries on this machine
 npm run extension:dev    # build the extension and open it in a development window
 npm run extension:test   # the extension's tests, in a real VS Code
 npm run extension:install  # package it and install it into your VS Code
@@ -22,6 +22,10 @@ npm run extension:install  # package it and install it into your VS Code
 use it. `node bin/dsnr.mjs build-site --serve` builds the site prototypes are published as, and shows it on this machine;
 `publish` puts a version on it and says who can open it, and `unpublish` takes one off. Run it with no command for
 the full usage.
+
+**CI** (`.github/workflows/ci.yml`) runs on every push, so nothing depends on someone remembering: the static checks and
+the unit tests; every integration test, the slow accessibility suites (`cli`, `buildCheck`, `probe`) included; and the
+extension in a real VS Code. Only the real-library tests need the design systems' clones, and are left to `check:full`.
 
 ## Building a prototype
 **Building on this machine** is part of Projects, not a separate mode. **New** opens one dialog with two
@@ -362,7 +366,11 @@ stand-in for Claude Code, so no agent runs. It checks that DSNR starts and has e
 prototype's review, then starts a new prototype, builds it, checks it and pictures it with the real browser, saves it and
 opens its review. When the design system the tests use is on this machine (Flock's FUI beside this repository, or
 `FUI_ROOT`), a copy of it is in the world too, its fetches pointed at the clone here: it is read, FSButton and Primitives
-open in their tabs, and its components are pictured. Neither is part of `npm run check`.
+open in their tabs, and its components are pictured. Neither is part of `npm run check`; CI runs the first on every push.
+Its commands' behaviour is tested in `check` itself (`extensionCommands.spec.ts`), on a slice of VS Code's API.
+
+**The UI tests** find what a person finds, by role and accessible name, through one module (`__tests__/ui.ts`); the
+panel's and the review bar's harnesses only set up the page each runs in.
 
 **By hand, on purpose (Phase 4.6 of the plan): the comments test.** It publishes to the real design repository and runs
 Claude Code, so do it on a test project you can delete:

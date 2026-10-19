@@ -5,25 +5,8 @@ import type { Context } from '../src/core/services/projects/findContext';
 import type { Catalog, ComponentPictures, ProjectWork } from '../src/shared/contract';
 import { SAMPLE_CATALOG, SAMPLE_PROJECTS } from './extensionSamples';
 import { projectWork } from './fixtures';
-import {
-	answer,
-	answerOf,
-	button,
-	calls,
-	callsOf,
-	kept,
-	key,
-	lastAsk,
-	mountPage,
-	panelSaid,
-	press,
-	say,
-	sent,
-	share,
-	shareCatalog,
-	type,
-	unmount,
-} from './webviewHarness';
+import { answer, answerOf, calls, callsOf, kept, lastAsk, mountPage, panelSaid, say, sent, share, shareCatalog, unmount } from './webviewHarness';
+import { allByRole, button, dialog, key, press, type } from './ui';
 
 const OPEN: Context = {
 	product: '/work/flock-coke',
@@ -74,14 +57,14 @@ describe('the toggle at the top', () => {
 	it('moves with the arrow keys, Home and End, and only the chosen one is in the tab order', async () => {
 		await show();
 		expect(options().map((o) => o.tabIndex)).toEqual([0, -1]);
-		await key(options()[0]!, 'ArrowRight');
+		await key('ArrowRight', { on: options()[0]! });
 		expect(chosen()).toBe('Design System');
 		expect(document.activeElement).toBe(options()[1]);
-		await key(options()[1]!, 'ArrowRight');
+		await key('ArrowRight', { on: options()[1]! });
 		expect(chosen()).toBe('Projects');
-		await key(options()[0]!, 'End');
+		await key('End', { on: options()[0]! });
 		expect(chosen()).toBe('Design System');
-		await key(options()[1]!, 'Home');
+		await key('Home', { on: options()[1]! });
 		expect(chosen()).toBe('Projects');
 		expect(options().map((o) => o.tabIndex)).toEqual([0, -1]);
 	});
@@ -138,8 +121,7 @@ describe('what is open', () => {
 	it('says why Build in the codebase cannot be done with no product open, rather than opening nothing', async () => {
 		await showOpen(NONE);
 		await say({ type: 'open-dialog', dialog: { kind: 'build', projectId: 'alert-history' } });
-		const dialog = document.querySelector('[role="dialog"]') as HTMLElement;
-		expect(dialog.textContent).toContain('Open the product');
+		expect(dialog()?.textContent).toContain('Open the product');
 		expect(sent.some((m) => m.name === 'buildInCodebasePlan')).toBe(false);
 	});
 
@@ -185,9 +167,8 @@ describe('the account, and reading the projects again', () => {
 
 describe('the account and the sync, in the panel, not as a box at the top (their title bar and status bar items open them)', () => {
 	const signedIn = { state: 'signedIn', user: { login: 'noah', name: 'Noah', avatarUrl: 'https://avatars.githubusercontent.com/u/1' } };
-	const dialog = () => document.querySelector('[role="dialog"]') as HTMLElement | null;
-	const inDialog = (name: string) => [...dialog()!.querySelectorAll('button')].find((b) => b.textContent === name) as HTMLButtonElement;
-	const closeX = () => dialog()!.querySelector('[aria-label="Close"]') as HTMLButtonElement;
+	const inDialog = (name: string) => button(name, dialog()!);
+	const closeX = () => button('Close', dialog()!);
 	const heard = (name: string) => sent.filter((m) => m.type === 'call' && m.name === name);
 
 	it('says who is signed in, and signs out when asked, then closes', async () => {
@@ -206,7 +187,7 @@ describe('the account and the sync, in the panel, not as a box at the top (their
 		await showOpen();
 		await say({ type: 'event', name: 'onSignInChanged', payload: signedIn });
 		await say({ type: 'open-dialog', dialog: { kind: 'account' } });
-		expect(inDialog('Close')).toBeUndefined();
+		expect(allByRole('button', 'Close', dialog()!)).toEqual([closeX()]);
 		await press(closeX());
 		expect(dialog()).toBeNull();
 		expect(heard('signOut')).toHaveLength(0);
@@ -259,12 +240,11 @@ describe('the account and the sync, in the panel, not as a box at the top (their
 		await say({ type: 'open-dialog', dialog: { kind: 'sync' } });
 		await answer('publishStatus', { state: 'unavailable' });
 		expect(dialog()?.textContent).toContain('Nothing to sync from here');
-		expect(button('Sync now')).toBeUndefined();
+		expect(allByRole('button', 'Sync now')).toEqual([]);
 	});
 });
 
 describe('dialogs and menus, in the panel', () => {
-	const dialog = () => document.querySelector('[role="dialog"]') as HTMLElement | null;
 	const field = (name: string) => [...dialog()!.querySelectorAll('label')].find((l) => l.textContent === name)!.control as HTMLInputElement;
 	const choose = async (select: HTMLElement, label: string) => {
 		const option = [...(select as HTMLSelectElement).options].find((o) => o.textContent === label);
@@ -273,7 +253,7 @@ describe('dialogs and menus, in the panel', () => {
 	};
 	const selected = (select: HTMLElement) => (select as HTMLSelectElement).selectedOptions[0]?.textContent;
 	const submit = () => dialog()!.querySelector('button[type="submit"]') as HTMLButtonElement;
-	const closeX = () => dialog()!.querySelector('[aria-label="Close"]') as HTMLButtonElement;
+	const closeX = () => button('Close', dialog()!);
 	const menuFor = (n: number) => [...body().querySelectorAll<HTMLElement>('[aria-label="Project actions"]')][n] as HTMLElement;
 	const items = () => [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')];
 	const item = (label: string) => items().find((i) => i.textContent === label)!;
@@ -508,15 +488,14 @@ describe('codebase work, in the panel', () => {
 		...SAMPLE_PROJECTS.map((p) => (p.id === 'zone-coverage' ? { ...p, work: [...p.work, codebase('feature/zone-coverage')] } : p)),
 		{ id: 'roles-in-code', title: 'Roles in code', folder: null, records: [], people: [], work: [codebase('feature/roles-in-code')] },
 	] as typeof SAMPLE_PROJECTS;
-	const dialog = () => document.querySelector('[role="dialog"]') as HTMLElement | null;
 	const named = (title: string) =>
 		[...body().querySelectorAll<HTMLElement>('[role="listitem"]')].find((r) => r.querySelector('[data-part="name"]')?.textContent === title)!;
 	const menuOf = (title: string) => named(title).querySelector<HTMLElement>('[aria-label="Project actions"]')!;
 	const items = () => [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')].map((i) => i.textContent);
 	const item = (label: string) => [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')].find((i) => i.textContent === label)!;
 	const elsewhere = async () => act(async () => void document.body.dispatchEvent(new MouseEvent('mousedown', { bubbles: true })));
-	const inDialog = (name: string) => [...dialog()!.querySelectorAll('button')].find((b) => b.textContent === name) as HTMLButtonElement;
-	const closeX = () => dialog()!.querySelector('[aria-label="Close"]') as HTMLButtonElement;
+	const inDialog = (name: string) => button(name, dialog()!);
+	const closeX = () => button('Close', dialog()!);
 
 	it('offers what a project has, in groups: its link to copy, where it opens, what runs it, with the next stage (build, or handoff, never both), the code on GitHub, and its folder', async () => {
 		await showOpen(OPEN, WITH_CODE);
@@ -608,7 +587,7 @@ describe('codebase work, in the panel', () => {
 		await press(menuOf('Zone coverage'));
 		await press(item('Hand off'));
 		await answer('agentStatus', { state: 'idle' });
-		expect([...dialog()!.querySelectorAll('button')].map((b) => b.textContent)).not.toContain('Open a draft pull request');
+		expect(allByRole('button', 'Open a draft pull request', dialog()!)).toEqual([]);
 		await press(inDialog('View on GitHub'));
 		expect(lastAsk()).toEqual(['codebase', ['open-code', 'zone-coverage']]);
 	});
@@ -788,7 +767,7 @@ describe('searching the projects', () => {
 		expect(search().value).toBe('');
 		expect(names()).toHaveLength(4);
 		await type(search(), 'zone');
-		await key(search(), 'Escape');
+		await key('Escape', { on: search() });
 		expect(search().value).toBe('');
 		expect(names()).toHaveLength(4);
 	});
@@ -1486,8 +1465,7 @@ describe('Design System', () => {
 		expect(order.slice(0, 2)).toEqual(['1 change being tried', '1 value in its token files is not read']);
 		expect(body().querySelector('.ds-actions')?.lastElementChild?.matches('.menu, .menu *, [aria-label="Design system actions"]')).toBe(true);
 		await press(bubble);
-		const dialog = document.querySelector('[role="dialog"]') as HTMLElement;
-		expect(dialog.textContent).toContain('src/colors/tones.ts:9 A value worked out as it runs.');
+		expect(dialog()?.textContent).toContain('src/colors/tones.ts:9 A value worked out as it runs.');
 	});
 
 	it('has no not-read bubble when every value is read, and no changes count until something is being tried, then always the brand’s', async () => {
@@ -1649,9 +1627,9 @@ describe('every change being tried, in the panel’s Changes: the tokens and eac
 			expect(handOver()?.querySelector('.branch-line')?.textContent).toBe(BRANCH);
 			expect(handOver()?.textContent).toContain('This hand-over is in Claude Code in this window now');
 			expect(handOver()?.textContent).toContain('Claude Code makes this branch, by the name its prompt gives');
-			expect(button('Save to a branch')).toBeUndefined();
-			expect(button('Process changes')).toBeUndefined();
-			expect(button('Propose')).toBeUndefined();
+			expect(allByRole('button', 'Save to a branch')).toEqual([]);
+			expect(allByRole('button', 'Process changes')).toEqual([]);
+			expect(allByRole('button', 'Propose')).toEqual([]);
 		});
 
 		it('says why it was not handed over, and opens nothing', async () => {
@@ -1684,7 +1662,7 @@ describe('every change being tried, in the panel’s Changes: the tokens and eac
 			const url = 'https://github.com/flocksafety/flock-react-component-lib/pull/7';
 			await answerOf('proposeChange', 'handOver', { branch: BRANCH, lines: [], review: READY, pullRequest: { number: 7, url } });
 			expect([...document.querySelectorAll('a')].find((a) => a.textContent === 'Draft pull request #7')?.getAttribute('href')).toBe(url);
-			expect(button('Propose')).toBeUndefined();
+			expect(allByRole('button', 'Propose')).toEqual([]);
 			await press(button('Start over'));
 			expect(callsOf('forgetChange', 'handOver').at(-1)?.args).toEqual(['handOver', null]);
 			await answerOf('forgetChange', 'handOver', null);
@@ -1713,7 +1691,7 @@ describe('every change being tried, in the panel’s Changes: the tokens and eac
 			await press(count());
 			await answerHandOver(null, null);
 			expect(button('Save')).toBeDefined();
-			expect(button('Process changes')).toBeUndefined();
+			expect(allByRole('button', 'Process changes')).toEqual([]);
 		});
 
 		it('previews a ready branch in every page, says so at the top, holds Save back while it is shown, and shows develop again', async () => {
@@ -1728,7 +1706,7 @@ describe('every change being tried, in the panel’s Changes: the tokens and eac
 			const note = document.querySelector('[data-showing]') as HTMLElement;
 			expect(note.textContent).toContain(`Showing ${BRANCH}, Claude Code’s branch, not develop.`);
 			expect(button('Stop previewing')).toBeDefined();
-			expect(button('Propose')).toBeUndefined();
+			expect(allByRole('button', 'Propose')).toEqual([]);
 			await press(button('Show develop'));
 			expect(calls('showLibraryBranch')).toHaveLength(1);
 			await press(button('Stop previewing'));
@@ -1778,7 +1756,6 @@ describe('trying a change to the tokens, saving it to a branch, and proposing it
 		await answerOf('changeBranch', 'tokens', null);
 		await press([...document.querySelectorAll<HTMLElement>('[aria-label="Part"] [role="radio"]')][1]!);
 	};
-	const dialog = () => document.querySelector('[role="dialog"]') as HTMLElement;
 	const openChanges = async () => {
 		if (!document.querySelector('[role="dialog"][aria-label="Changes"]'))
 			await press(document.querySelector('.ds-actions [aria-label$="being tried"]') as HTMLElement);
@@ -1797,15 +1774,15 @@ describe('trying a change to the tokens, saving it to a branch, and proposing it
 	it('opens a role’s control: what it points at, and its tone’s steps to point it at another, which keeps the link', async () => {
 		await tokensOpen();
 		await press(document.querySelector('[aria-label="Change Light primary main"]') as HTMLElement);
-		expect(dialog().getAttribute('aria-label')).toBe('Light · primary.main');
-		expect(dialog().querySelector('[data-reference]')?.textContent).toBe('primary.main → pineGreen 50');
-		const steps = [...dialog().querySelectorAll<HTMLElement>('[aria-label="Steps of pineGreen"] [role="radio"]')];
+		expect(dialog()!.getAttribute('aria-label')).toBe('Light · primary.main');
+		expect(dialog()!.querySelector('[data-reference]')?.textContent).toBe('primary.main → pineGreen 50');
+		const steps = [...dialog()!.querySelectorAll<HTMLElement>('[aria-label="Steps of pineGreen"] [role="radio"]')];
 		expect(steps.map((s) => [s.textContent, s.getAttribute('aria-checked')])).toEqual([
 			['50', 'true'],
 			['60', 'false'],
 		]);
 		expect(steps.map((step) => step.title)).toEqual(['pineGreen 50', 'pineGreen 60']);
-		expect(dialog().querySelector('[data-editor-contrast]')?.textContent).toMatch(/^Contrast with contrastText: \d/);
+		expect(dialog()!.querySelector('[data-editor-contrast]')?.textContent).toMatch(/^Contrast with contrastText: \d/);
 		await press(steps[1]!);
 		expect(edited()).toEqual([{ path: 'palette.light.primary.main', ref: 'tone.pineGreen.60' }]);
 	});
@@ -1814,18 +1791,18 @@ describe('trying a change to the tokens, saving it to a branch, and proposing it
 		await tokensOpen();
 		await press(document.querySelector('[aria-label="Color view"] [aria-label="Palette"]') as HTMLElement);
 		await press(document.querySelector('[aria-label="Change Tones pineGreen 60"]') as HTMLElement);
-		const hex = dialog().querySelector('input[aria-label="Hex"]') as HTMLInputElement;
+		const hex = dialog()!.querySelector('input[aria-label="Hex"]') as HTMLInputElement;
 		// Focus starts on the dialog, so no field is drawn as chosen.
 		expect(document.activeElement).toBe(dialog());
 		expect(document.activeElement).not.toBe(hex);
 		await type(hex, '#00aa00');
 		await act(async () => void hex.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })));
 		expect(edited()).toEqual([{ path: 'tone.pineGreen.60', value: '#00AA00' }]);
-		expect([...dialog().querySelectorAll('button')].map((b) => b.textContent)).not.toContain('Done');
-		await press(dialog().querySelector('[aria-label="Close"]') as HTMLElement);
+		expect(allByRole('button', 'Done', dialog()!)).toEqual([]);
+		await press(button('Close', dialog()!));
 		expect(document.querySelector('[role="dialog"]')).toBeNull();
 		await press(document.querySelector('[aria-label="Change Spacing"]') as HTMLElement);
-		const slider = dialog().querySelector('input[type="range"]') as HTMLInputElement;
+		const slider = dialog()!.querySelector('input[type="range"]') as HTMLInputElement;
 		expect(document.activeElement).toBe(dialog());
 		expect(document.activeElement).not.toBe(slider);
 		await type(slider, '12');
@@ -1879,7 +1856,7 @@ describe('trying a change to the tokens, saving it to a branch, and proposing it
 		await answerOf('saveChange', 'tokens', { branch: 'dsnr/tokens-1012-abc123', saved: edits, saves: 1, pullRequest: null });
 		const actions = document.querySelector('[data-branch-actions]') as HTMLElement;
 		expect(actions.querySelector('.branch-line')?.textContent).toBe('dsnr/tokens-1012-abc123 · 1 save');
-		expect(button('Save to a branch')).toBeUndefined();
+		expect(allByRole('button', 'Save to a branch')).toEqual([]);
 		await press(button('Propose'));
 		expect(sent.some((m) => m.name === 'proposeChange' && m.args?.[0] === 'tokens')).toBe(true);
 		await answerOf('proposeChange', 'tokens', {

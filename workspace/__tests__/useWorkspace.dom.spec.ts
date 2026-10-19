@@ -2,7 +2,8 @@ import { act, createElement } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { useWorkspace } from '../extension/webview/hooks/useWorkspace';
 import type { Result } from '../src/shared/contract';
-import { fail, ok, render, settle, unmountAll } from './reviewHarness';
+import { fail, ok } from './reviewHarness';
+import { render, settle, unmountAll } from './ui';
 
 type Seen = ReturnType<typeof useWorkspace<string>>;
 let current: Awaited<ReturnType<typeof render>> | null = null;

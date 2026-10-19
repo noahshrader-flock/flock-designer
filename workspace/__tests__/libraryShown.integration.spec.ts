@@ -1,4 +1,3 @@
-import { execFileSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
@@ -6,13 +5,13 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { readLibrary } from '../src/core/services/designSystem/designLibrary';
 import { LibraryShown } from '../src/core/services/designSystem/libraryShown';
 import type { Catalog, ConnectedDesignSystem } from '../src/shared/contract';
+import { g } from './fixtures';
 
 let home: string;
 let clone: string;
 let system: ConnectedDesignSystem;
 let told: (string | null)[];
 const BRANCH = 'dsnr/handoff-20261017-ab12';
-const g = (cwd: string, ...args: string[]) => execFileSync('git', args, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
 const story = (title: string) => `const meta = {\n  title: '${title}',\n};\nexport default meta;\n`;
 const write = (root: string, files: Record<string, string>) => {
 	for (const [path, text] of Object.entries(files)) {

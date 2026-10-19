@@ -1,6 +1,6 @@
 import PAGE_AGENT from '../src/page/agentMain?page';
 import { vi } from 'vitest';
-import { button, fieldNamed, press, settle, typeInto } from './reviewHarness';
+import { button, fieldNamed, press, settle, type } from './ui';
 
 /** Shared by the viewer's tests and the round trip, so both run against the same GitHub. */
 
@@ -30,7 +30,8 @@ export const TOKENS: Record<string, string> = { 'good-token': 'pat', 'app-token'
 const PEOPLE: Record<string, { name: string; avatar_url: string }> = {
 	pat: { name: 'Pat Brennan', avatar_url: 'https://avatars.githubusercontent.com/u/1?v=4' },
 };
-export const fakeGitHub = () => {
+/** GitHub's REST API as the page reaches it, through `fetch` (the core's fake is `fakes/github.ts`). */
+export const fakeGitHubFetch = () => {
 	const issues: {
 		number: number;
 		body: string;
@@ -137,7 +138,7 @@ export const commentOnPage = async (doc: Document, selector: string, words: stri
 	await settle();
 	await press(doc.querySelector(selector) as Element);
 	await settle();
-	await typeInto(fieldNamed('Comment'), words);
+	await type(fieldNamed('Comment'), words);
 	await press(button('Save'));
 	await settle();
 	// Comment mode carries on, waiting for the next click: the reviewer is done.

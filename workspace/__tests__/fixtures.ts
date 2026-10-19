@@ -117,7 +117,14 @@ export const settledAnswer = async <A>(
 /** For what must *not* happen there is nothing to wait for: a pause long enough for a process to have done it. */
 export const nothingFollows = () => new Promise((r) => setTimeout(r, 400));
 
-export const g = (root: string, ...args: string[]) => execFileSync('git', ['-C', root, ...args], { encoding: 'utf8' });
+const git = (root: string, args: string[]) =>
+	execFileSync('git', ['-C', root, ...args], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], maxBuffer: 64 * 1024 * 1024 });
+
+/** Git in `root`: what it says, trimmed (a branch, a commit); what it says on stderr is kept out of the test's output. */
+export const g = (root: string, ...args: string[]) => git(root, args).trim();
+
+/** A file at `ref`, exactly as it is there. */
+export const gitFile = (root: string, ref: string, path: string) => git(root, ['show', `${ref}:${path}`]);
 
 export const makeProductFiles = (dir: string, commands: unknown[] = []) => {
 	mkdirSync(join(dir, '.dsnr'), { recursive: true });
