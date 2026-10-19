@@ -16,6 +16,8 @@ export const CommentBox = ({ comments, origin, error }: { comments: Comments; or
 		{/* Clicking away is the same as canceling, as it was when this was a popover. */}
 		<div className="comment-shade" onClick={comments.cancelCompose} />
 		<div
+			role="dialog"
+			aria-label="New comment"
 			className="comment-box"
 			onKeyDown={(e: React.KeyboardEvent) => {
 				// Cmd or Ctrl and Enter saves, as in the tools people already use. Escape is the screen's, as everywhere.

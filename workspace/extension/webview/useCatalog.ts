@@ -3,7 +3,7 @@ import { asks } from './host';
 import { useShared } from './shared';
 
 /** The design system as the panel shows it: its catalog (null while it is first read), its name, and what went wrong. */
-export interface CatalogRead {
+interface CatalogRead {
 	catalog: Catalog | null;
 	/** The design system shown, by the core's id for it, and what it is called. */
 	id: string | null;

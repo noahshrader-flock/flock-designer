@@ -107,13 +107,16 @@ export const useChangeBranch = <K extends TriedKind>(
 		error,
 		save: () => void run('saving', () => calls.save(change)),
 		propose: () => void run('proposing', () => calls.propose()),
-		// Only once it is forgotten: a branch still kept would come back the next time.
-		startOver: () =>
+		// Only once it is forgotten: a branch still kept would come back the next time. Not for another shown since.
+		startOver: () => {
+			const asked = now.current.shown;
 			void calls.forget().then((r) => {
+				if (now.current.shown !== asked) return;
 				if (!r.ok) return setError(r.error);
 				setBranch(null);
 				setError(null);
 				setChange(empty);
-			}),
+			});
+		},
 	};
 };

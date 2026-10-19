@@ -1526,7 +1526,7 @@ describe('Design System', () => {
 		expect(step.dataset.changed).toBe('true');
 		expect((step.querySelector('.color-dot [data-swatch]') as HTMLElement).style.backgroundColor).toBe('rgb(0, 0, 0)');
 		// Marked on the dot, where its color is.
-		expect(step.querySelector('.color-dot [data-changed-mark]')?.getAttribute('aria-label')).toBe('Changed');
+		expect(step.querySelector('.color-dot [data-changed-mark]')?.getAttribute('data-changed-mark')).toBe('Changed');
 		// The role pointing at it shows the change too.
 		await press(body().querySelector('[aria-label="Color view"] [aria-label="Semantic"]') as HTMLElement);
 		expect((body().querySelector('[data-token="palette.light.primary.main"] [data-swatch]') as HTMLElement).style.backgroundColor).toBe(

@@ -30,6 +30,7 @@ import { useDismiss } from '../../src/ui/useDismiss';
 import { ValueItem, ValueList } from '../../src/ui/ValueItem';
 import { Message } from '../../src/ui/Message';
 import { Heading } from '../../src/ui/Heading';
+import { ChangedMark } from '../../src/ui/ChangedMark';
 
 type Ready = Extract<ComponentTokens, { state: 'ready' }>;
 
@@ -151,7 +152,7 @@ const Cell = ({
 			)}
 			<span className="value-drawn">
 				{isToken ? <span className="value-token">{made.says}</span> : <span>{value}</span>}
-				{tried !== null && <span data-changed-mark className="token-changed" aria-label="Tried" />}
+				{tried !== null && <ChangedMark says="Tried" />}
 			</span>
 		</>
 	);

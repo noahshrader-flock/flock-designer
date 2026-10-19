@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Result } from '../../../src/shared/contract';
 import { askOnce } from './ask';
 
@@ -22,5 +22,7 @@ export const useWorkspace = <T>(read: () => Promise<Result<T>>, deps: unknown[],
 		);
 		// What is read is said by `deps`, as with an effect's own: `read` is a new function on every render.
 	}, [enabled, asked, ...deps]); // eslint-disable-line react-hooks/exhaustive-deps
-	return { ...state, reload: () => setAsked((n) => n + 1) };
+	// The same `reload` every render, so an effect can depend on it.
+	const reload = useCallback(() => setAsked((n) => n + 1), []);
+	return { ...state, reload };
 };

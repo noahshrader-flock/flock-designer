@@ -237,12 +237,17 @@ describe('the color dot', () => {
 		expect(dot().tagName).toBe('BUTTON');
 		expect(dot().getAttribute('aria-label')).toBe('Change Light primary main');
 		expect(dot().title).toBe('Light primary main');
-		expect(dot().getAttribute('aria-description')).toBe(dot().title);
+		// Its tooltip is its name, so it is not said a second time as its description.
+		expect(dot().hasAttribute('aria-description')).toBe(false);
 		expect((dot().querySelector('[data-swatch]') as HTMLElement).style.backgroundColor).toBe('rgb(16, 128, 98)');
 		// Nothing else of the color is written: no name, no hex.
 		expect(dot().textContent).toBe('');
 		await press(dot());
 		expect(onPress).toHaveBeenCalledTimes(1);
+		// A tooltip that says more than its name (the token a value is) is its description.
+		document.body.innerHTML = '';
+		await mount(createElement(ColorDot, { value: '#108062', says: 'primary.main', name: 'Background', onPress }));
+		expect(dot().getAttribute('aria-description')).toBe('primary.main');
 	});
 
 	it('is the same dot with nothing to press when it has no control, said as an image by its name and the token it is', async () => {
@@ -283,8 +288,10 @@ describe('the color dot', () => {
 				flag: 'Contrast is too low',
 			}),
 		);
-		expect(dot().querySelector('[data-changed-mark]')?.getAttribute('aria-label')).toBe('Tried');
-		expect(dot().querySelector('.badge-warning')?.getAttribute('aria-label')).toBe('Contrast is too low');
+		// A button's name is all that is read of what is inside it: the mark and the flag are said as its description.
+		expect(dot().getAttribute('aria-description')).toBe('Tried, Contrast is too low');
+		expect(dot().querySelector('[data-changed-mark]')?.getAttribute('aria-hidden')).toBe('true');
+		expect(dot().querySelector('.badge-warning')?.getAttribute('aria-hidden')).toBe('true');
 		document.body.innerHTML = '';
 		await mount(createElement(ColorDot, { value: '#000000', name: 'Text', onPress: () => undefined }));
 		expect(dot().querySelector('[data-changed-mark], .badge')).toBeNull();

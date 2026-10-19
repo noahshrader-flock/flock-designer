@@ -1,15 +1,7 @@
 import type { Ref } from 'react';
-import type { DesignToken } from '../shared/contract';
-import { labelOf } from '../shared/tokens';
 import { Badge } from './Badge';
+import { ChangedMark } from './ChangedMark';
 import { Swatch } from './Swatch';
-
-/** What a color token's dot is: its color, called and told by its name, as the grid of roles and a token's row both have it. */
-export const tokenDot = (token: DesignToken): { value: string; name: string; says: string } => ({
-	value: token.value,
-	name: labelOf(token),
-	says: labelOf(token),
-});
 
 /**
  * A color wherever it is something to look at and to press: **only the dot.** Its tooltip is the token's name and nothing
@@ -18,9 +10,10 @@ export const tokenDot = (token: DesignToken): { value: string; name: string; say
  * side. Without `onPress` it is the same dot with nothing to press (a color shown, not changed here).
  *
  * `name` is what it is called to assistive technology: its button is `Change <name>`, and without a button it is
- * `<name>`, with the token's name after it when it has one. Marked when changed or tried (`mark`, by what it is said to be),
- * and when its contrast is below the target (`flag`, said by that text). Its color is the token's own, a value known only as
- * it runs, set on the element as `Swatch` does.
+ * `<name>`. Marked when changed or tried (`mark`), and when its contrast is below the target (`flag`, said by that text).
+ * What else it says (its tooltip when that is not its name, the mark, the flag) is its description: a button's name is all
+ * that is read of what is inside it, so the mark and the flag drawn on it say nothing themselves. Its color is the token's
+ * own, a value known only as it runs, set on the element as `Swatch` does.
  */
 export const ColorDot = ({
 	value,
@@ -45,18 +38,15 @@ export const ColorDot = ({
 	const parts = (
 		<>
 			<Swatch value={value} />
-			{flag && <Badge tone="warning" label={flag} className="color-dot-flag" />}
-			{mark && <span data-changed-mark className="color-dot-mark" aria-label={mark} />}
+			{flag && <Badge tone="warning" label={flag} className="color-dot-flag" said />}
+			{mark && <ChangedMark says={mark} said />}
 		</>
 	);
+	const described = [says === name ? undefined : says, mark, flag].filter((s): s is string => s !== undefined).join(', ');
+	const tooltip = says === undefined ? {} : { title: says };
 	if (!onPress)
 		return (
-			<span
-				role="img"
-				className="color-dot"
-				aria-label={says === undefined ? name : `${name}: ${says}`}
-				{...(says === undefined ? {} : { title: says })}
-			>
+			<span role="img" className="color-dot" aria-label={described ? `${name}: ${described}` : name} {...tooltip}>
 				{parts}
 			</span>
 		);
@@ -66,7 +56,8 @@ export const ColorDot = ({
 			type="button"
 			className="color-dot"
 			aria-label={`Change ${name}`}
-			{...(says === undefined ? {} : { 'aria-description': says, title: says })}
+			{...(described ? { 'aria-description': described } : {})}
+			{...tooltip}
 			{...(popup ? { 'aria-haspopup': 'dialog', 'aria-expanded': popup.open } : {})}
 			onClick={onPress}
 		>

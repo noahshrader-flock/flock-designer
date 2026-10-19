@@ -3,7 +3,8 @@
  * at rest. A `tone` for a count that means something of DSNR's: the brand's for comments and changes, which are what it is
  * for; the warning's for what is wrong. With `onPress` it is a button, named and with a tooltip, that opens what the
  * count is of. With no count it is the same badge extra small and blank, a mark that something is wrong where a number
- * would not fit (hung off a swatch), said by its label.
+ * would not fit (hung off a swatch), said by its label; or hidden from assistive technology inside what says it already
+ * (`said`: a color's dot).
  */
 export const Badge = ({
 	count,
@@ -11,6 +12,7 @@ export const Badge = ({
 	tone = 'neutral',
 	onPress,
 	className: extra,
+	said = false,
 }: {
 	count?: number;
 	label: string;
@@ -18,9 +20,11 @@ export const Badge = ({
 	onPress?: () => void;
 	/** Where it sits, for a badge placed by its parent. */
 	className?: string;
+	said?: boolean;
 }) => {
 	const className = `${tone === 'neutral' ? 'badge' : `badge badge-${tone}`}${count === undefined ? ' badge-xs' : ''}${extra ? ` ${extra}` : ''}`;
-	if (count === undefined) return <span role="img" className={className} aria-label={label} title={label} />;
+	if (count === undefined)
+		return said ? <span className={className} aria-hidden="true" /> : <span role="img" className={className} aria-label={label} title={label} />;
 	return onPress ? (
 		<button type="button" className={`${className} badge-button`} aria-label={label} title={label} onClick={onPress}>
 			{count}

@@ -1407,7 +1407,16 @@ button.color-dot:hover {
 	right: 2px;
 }
 
-.color-dot-mark {
+/* A changed or tried mark (`ui/ChangedMark.tsx`): a dot in the brand, and on a color's dot at its top right. */
+.changed-mark {
+	flex-shrink: 0;
+	width: 6px;
+	height: 6px;
+	border-radius: 50%;
+	background: var(--dsnr-brand);
+}
+
+.color-dot .changed-mark {
 	position: absolute;
 	top: 0;
 	right: 0;

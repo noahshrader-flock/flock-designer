@@ -10,7 +10,7 @@ import { workspace } from './host';
 import { Message } from '../../src/ui/Message';
 
 /** What a prototype is started from, as the extension takes it: its name, what it explores, and its folder. */
-export interface NewPrototypeAnswers {
+interface NewPrototypeAnswers {
 	title: string;
 	task: string;
 	folder: string | null;

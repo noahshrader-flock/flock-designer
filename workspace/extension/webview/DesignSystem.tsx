@@ -33,7 +33,7 @@ const PARTS = [
 ] as const satisfies { value: Part; label: string }[];
 
 /** Whether the panel's Changes dialog is open, and opening and closing it: the panel's, so a component's tab can ask for it. */
-export interface ChangesDialog {
+interface ChangesDialog {
 	open: boolean;
 	onOpen: () => void;
 	onClose: () => void;

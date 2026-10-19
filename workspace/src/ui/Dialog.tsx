@@ -4,9 +4,9 @@ import { focusPanel } from './focusPanel';
 import { useEscape } from './useDismiss';
 
 // What Tab goes through inside it: fields, buttons, and links (a finding's page), but not the dialog itself (`tabindex=-1`).
-const FOCUSABLE = 'input, textarea, select, button:not(:disabled), a[href]';
+const FOCUSABLE = 'input:not(:disabled), textarea:not(:disabled), select:not(:disabled), button:not(:disabled), a[href]';
 /** Where the focus goes first: a field, else what the dialog does; the X it closes with is where it ends up only if there is nothing else. */
-const FIRST = 'input, textarea, select, button:not(:disabled):not(.dialog-close)';
+const FIRST = 'input:not(:disabled), textarea:not(:disabled), select:not(:disabled), button:not(:disabled):not(.dialog-close)';
 
 /**
  * A dialog over the panel, as VS Code's own are: a title with its close X at the far right of the same row, what it asks,

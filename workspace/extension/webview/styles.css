@@ -487,19 +487,6 @@
 	margin-left: auto;
 }
 
-/*
- * A changed or tried value's mark, on its row, its cell or its color's dot: a dot in the brand. A change is what a person
- * is doing, not something wrong; amber is for what needs a look (a warning), and is never used to say a change.
- */
-.token-changed,
-.color-dot-mark {
-	flex-shrink: 0;
-	width: 6px;
-	height: 6px;
-	border-radius: 50%;
-	background: var(--dsnr-brand);
-}
-
 /* == The semantic colors’ grid (`SemanticColors.tsx`) == */
 
 /*

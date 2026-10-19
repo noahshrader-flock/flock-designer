@@ -23,8 +23,8 @@ export const useTriedAnswer = <A extends Worked>(
 	const asking = useRef({ ask, working });
 	asking.current = { ask, working };
 	useEffect(() => {
-		if (nothing) return void setAnswer({ state: 'none' } as A);
-		setAnswer({ state: 'building' } as A);
+		setAnswer({ state: nothing ? 'none' : 'building' } as A);
+		if (nothing) return;
 		return askWhile(
 			async (): Promise<A> => {
 				const r = await asking.current.ask();

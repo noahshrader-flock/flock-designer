@@ -29,7 +29,12 @@ export default tseslint.config(
 		rules: {
 			'no-restricted-syntax': [
 				'error',
-				...["CallExpression[callee.property.name='then']", 'CallExpression > :function.callee[async=true]'].map((read) => ({
+				...[
+					"CallExpression[callee.property.name='then']",
+					'CallExpression > :function.callee[async=true]',
+					// A promise let go of (`void read()`): what it answers is set whenever it comes, with nothing to drop it.
+					"UnaryExpression[operator='void'] > CallExpression",
+				].map((read) => ({
 					selector: `CallExpression[callee.name=/^use(Layout)?Effect$/] ${read}`,
 					message: 'Read for an effect with askOnce or askWhile (hooks/ask.ts), or useWorkspace, and return what stops it.',
 				})),

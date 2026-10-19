@@ -114,16 +114,19 @@ export const useHandOver = ({
 				() => (on ? workspace().showHandOver(file) : workspace().showLibraryBranch()),
 				() => undefined,
 			),
-		// Only once it is forgotten: a hand-over still kept would come back the next time it is read.
-		startOver: () =>
+		// Only once it is forgotten: a hand-over still kept would come back the next time it is read. Not for another shown since.
+		startOver: () => {
+			const { epoch } = now.current;
 			void workspace()
 				.forgetChange('handOver', file)
 				.then((r) => {
+					if (now.current.epoch !== epoch) return;
 					if (!r.ok) return setError(r.error);
 					now.current.epoch += 1;
 					setBranch(null);
 					setHanded(null);
 					setError(null);
-				}),
+				});
+		},
 	};
 };

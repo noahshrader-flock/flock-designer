@@ -8,12 +8,14 @@ import { SearchBox } from '../../src/ui/SearchBox';
 import { Section } from '../../src/ui/Section';
 import { Toggle } from '../../src/ui/Toggle';
 import { SemanticColors } from './SemanticColors';
-import { ColorDot, tokenDot } from '../../src/ui/ColorDot';
+import { ColorDot } from '../../src/ui/ColorDot';
+import { tokenDot } from './tokenDot';
 import { InfoTip } from '../../src/ui/InfoTip';
 import { ValueItem, ValueLine, ValueList } from '../../src/ui/ValueItem';
 import { Message } from '../../src/ui/Message';
 import { Heading } from '../../src/ui/Heading';
 import { asks } from './host';
+import { ChangedMark } from '../../src/ui/ChangedMark';
 
 /** What a token row can do besides open its own file at its line: open its control (a token that can be changed). */
 export interface TokenActions {
@@ -71,7 +73,7 @@ export const TokenRow = ({ token, info, onEdit }: { token: DesignToken; info?: s
 			<span data-part="value" className="token-value">
 				{token.value}
 			</span>
-			{edited && <span data-changed-mark className="token-changed" aria-label="Changed" />}
+			{edited && <ChangedMark says="Changed" />}
 		</>
 	);
 	return (

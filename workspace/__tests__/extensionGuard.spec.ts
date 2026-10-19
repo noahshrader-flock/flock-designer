@@ -47,7 +47,7 @@ describe('the extension’s sources', () => {
 		const amber = rules.filter(([, body]) => /editorWarning-foreground/.test(body ?? '')).map(([selector]) => selector);
 		expect(amber.sort()).toEqual(['.badge-warning', '.message-warning .codicon', '.token-contrast-low,\n.warning-text']);
 		// A change's mark is the brand.
-		const mark = rules.find(([selector]) => selector?.startsWith('.token-changed'));
+		const mark = rules.find(([selector]) => selector?.startsWith('.changed-mark'));
 		expect(mark?.[1]).toMatch(/background:\s*var\(--dsnr-brand\)/);
 	});
 

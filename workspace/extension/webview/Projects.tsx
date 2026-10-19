@@ -162,7 +162,7 @@ const SCOPES = {
 } as const satisfies Record<Scope, { label: string; icon: string }>;
 
 /** The projects as the core read them: the list (null while it is still reading), or what went wrong. */
-export interface ProjectsRead {
+interface ProjectsRead {
 	value: Project[] | null;
 	error: string | null;
 }

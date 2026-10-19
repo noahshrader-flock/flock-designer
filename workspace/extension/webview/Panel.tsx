@@ -76,7 +76,7 @@ export const Panel = () => {
 	const { reload } = read;
 	useEffect(() => {
 		if (changes > 0) reload();
-	}, [changes]); // eslint-disable-line react-hooks/exhaustive-deps
+	}, [changes, reload]);
 	// With the list read: pictures for the prototypes built here that have none current, taken in once made;
 	// the newest first, so a picture drawn again is the one shown.
 	const [made, setMade] = useState<MadeCover[]>([]);
