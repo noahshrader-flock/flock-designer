@@ -8,6 +8,7 @@ import { type EditorTheme, isDarkTheme } from '../shared/reviewRelay';
 import { Viewer, type ViewerConfig, type ViewerSlots } from './Viewer';
 import { saveToken } from './browserAdapter';
 import { type SignInConfig, finishSignIn, takeNote } from './signIn';
+import { applyBrand } from '../ui/brand';
 
 /**
  * Started by a prototype's page, which says what it is in `#dsnr-config`; a page without it is left as it is. In DSNR's
@@ -68,6 +69,7 @@ if (config && bar && panel && frame) {
 	bar.replaceChildren();
 	const root = document.createElement('div');
 	document.body.append(root);
+	applyBrand(document);
 	createRoot(root).render(
 		<>
 			<InPage config={JSON.parse(config.textContent ?? '{}') as ViewerConfig} slots={{ bar, panel, frame }} />

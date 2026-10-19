@@ -3,6 +3,7 @@ import { join, relative } from 'node:path';
 import { contrastRatio } from '../src/shared/tokens';
 import { describe, expect, it } from 'vitest';
 import { INK } from '../src/shared/pageInk';
+import { BRAND, ON_BRAND } from '../src/shared/brand';
 import { panelCss } from './panelStyles';
 
 /**
@@ -51,7 +52,7 @@ describe('the extension’s sources', () => {
 		expect(mark?.[1]).toMatch(/background:\s*var\(--dsnr-brand\)/);
 	});
 
-	it('write one colour of their own, DSNR’s brand: every other is one of VS Code’s theme variables, and high contrast gives way to the theme’s button', () => {
+	it('write no colour of their own: the brand is written once (`shared/brand.ts`) and set on each page, every other is VS Code’s theme, and high contrast gives way to the theme’s button', () => {
 		const colour = /#[0-9a-fA-F]{3,8}\b|\brgba?\(|\bhsla?\(|\boklch\(/;
 		// VS Code's own theme, written once for where VS Code gives none (below), is not a colour of DSNR's.
 		const said = files()
@@ -62,12 +63,19 @@ describe('the extension’s sources', () => {
 					.filter((line) => colour.test(line))
 					.map((line) => `${path.split('/').at(-1)}: ${line.trim()}`),
 			);
-		expect(said).toEqual(['kit.css: --dsnr-brand: #7c3aed;', 'kit.css: --dsnr-on-brand: #ffffff;']);
+		expect(said).toEqual([]);
+		// The brand's value is in one file of all DSNR's code, so changing it there changes it everywhere (the pins too).
+		const everywhere = ['src', 'extension']
+			.flatMap((dir) => sources(join(root, dir)))
+			.filter((path) => readFileSync(path, 'utf8').toLowerCase().includes(BRAND.toLowerCase()));
+		expect(everywhere.map((path) => relative(root, path))).toEqual(['src/shared/brand.ts']);
+		// Each page DSNR draws with the kit is given it as it starts.
+		for (const entry of ['extension/webview/main.tsx', 'src/viewer/main.tsx'])
+			expect(readFileSync(join(root, entry), 'utf8')).toMatch(/applyBrand\(document\)/);
 		// The words on the brand are readable: WCAG AA's 4.5:1 for text, on the fill and on its darker hover.
 		const css0 = panelCss();
-		const brand = /--dsnr-brand:\s*(#[0-9a-f]{6})/i.exec(css0)![1]!;
 		const hover = /--dsnr-brand-hover:\s*color-mix\(in srgb,\s*var\(--dsnr-brand\)\s*(\d+)%,\s*black\)/.exec(css0);
-		expect(contrastRatio('#ffffff', brand)).toBeGreaterThanOrEqual(4.5);
+		expect(contrastRatio(ON_BRAND, BRAND)).toBeGreaterThanOrEqual(4.5);
 		// Hover is the brand mixed toward black, so it is only darker, and white on it only more readable.
 		expect(hover).not.toBeNull();
 		const css = panelCss();
@@ -233,11 +241,9 @@ describe('the extension’s sources', () => {
 		expect(shown).toBeGreaterThan(hidden);
 	});
 
-	it('draw the pins on a prototype’s page in the brand’s purple: the page cannot read the theme, so its palette says it again, and agrees', () => {
-		const css = panelCss();
-		const brand = /--dsnr-brand:\s*(#[0-9a-f]{6})/i.exec(css)![1]!.toLowerCase();
-		// Its wash is made from it, so agreeing here is agreeing for both.
-		expect(INK.pin.toLowerCase()).toBe(brand);
+	it('draw the pins on a prototype’s page in the brand: the page cannot read the theme, so its palette takes it from where it is written', () => {
+		// Its wash is made from it, so it follows for both.
+		expect(INK.pin).toBe(BRAND);
 	});
 
 	it('pad the text under a card’s picture at its sides and bottom from one name, and sit it under the picture by the card’s own gap, for every card (projects and components alike)', () => {

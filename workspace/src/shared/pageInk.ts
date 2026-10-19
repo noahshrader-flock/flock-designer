@@ -1,9 +1,10 @@
+import { BRAND } from './brand';
+
 /**
- * The colors DSNR draws *inside someone else's page*: literals on purpose, and the only place that is right, since the
- * previewed product's document cannot see DSNR's theme. Tailwind's values, so they match around them; the brand agrees
- * with `--dsnr-brand` (a guard test says so), and the page smoke test reads these same colours.
+ * The colours DSNR draws inside a page it does not style (a prototype's, a story's frame), which cannot see the kit's
+ * theme: the one palette for them, the brand from `brand.ts`, the rest Tailwind's so they sit well on any page.
  */
-const PIN = '#7c3aed';
+const PIN = BRAND;
 
 /** The pin's colour as red, green and blue, 0 to 255: what a check that counts its pixels compares against. */
 export const PIN_RGB = [1, 3, 5].map((i) => parseInt(PIN.slice(i, i + 2), 16)) as [number, number, number];
@@ -17,4 +18,10 @@ export const INK = {
 	draft: '#f59e0b',
 	on: '#fff',
 	shadow: 'rgba(0,0,0,.45)',
+	/** What a picture or a story is drawn on, as a page is. */
+	paper: '#fff',
+	/** tailwind gray-500: a story's name over it */
+	muted: '#6b7280',
+	/** tailwind red-700: what went wrong drawing it */
+	error: '#b91c1c',
 } as const;

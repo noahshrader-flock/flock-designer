@@ -1,3 +1,4 @@
+import { INK } from '../shared/pageInk';
 /**
  * A story's picture, made in its preview page, as the headless browser asks for it (`core/services/browser/chromeHeadless.ts`,
  * which bundles this into the scripts it runs). Page code, typed like the rest.
@@ -32,7 +33,7 @@ export const encodeJpeg = async ({
 	const scale = Math.min(1, most / p.width);
 	const canvas = new OffscreenCanvas(Math.round(p.width * scale), Math.round(p.height * scale));
 	const g = canvas.getContext('2d') as OffscreenCanvasRenderingContext2D;
-	g.fillStyle = '#fff';
+	g.fillStyle = INK.paper;
 	g.fillRect(0, 0, canvas.width, canvas.height);
 	g.imageSmoothingQuality = 'high';
 	g.drawImage(image, p.box.x, p.box.y, p.box.width, p.box.height, p.left * scale, p.top * scale, p.box.width * scale, p.box.height * scale);

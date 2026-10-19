@@ -7,9 +7,11 @@ import { readTab } from './tab';
 import { TooltipHost } from '../../src/ui/Tooltip';
 import '../../src/ui/kit.css';
 import './styles.css';
+import { applyBrand } from '../../src/ui/brand';
 
 // The same page is the panel or one of the design system's tabs, as its body says (`panelHtml`).
 const tab = readTab(document.body.dataset.tab);
+applyBrand(document);
 createRoot(document.getElementById('root') as HTMLElement).render(
 	// What every page shows the same, the one provider for all of them.
 	<SharedProvider>

@@ -8,6 +8,7 @@ import type { BuildContext, BuildOptions, Plugin } from 'esbuild';
 import { ASSET_TYPES } from '../prototypes/prototypeServer';
 import { type Stylesheets, stylesheetsFor } from './stylesheets';
 import { withPageTheme } from '../browser/pageTheme';
+import { INK } from '../../../shared/pageInk';
 
 /**
  * How a design system's previews are built: the page, the entry generated for the library, esbuild configured as its own
@@ -22,11 +23,11 @@ export const PAGE = `<!doctype html>
 		<meta charset="utf-8" />
 		<link rel="stylesheet" href="./entry.css" />
 		<style>
-			body { margin: 0; padding: 16px; background: #fff; }
+			body { margin: 0; padding: 16px; background: ${INK.paper}; }
 			.fd-story { margin: 0 0 24px; }
 			.fd-story:last-child { margin-bottom: 0; }
-			.fd-name { margin: 0 0 8px; font: 500 12px/1.4 -apple-system, system-ui, sans-serif; color: #6b7280; }
-			.fd-error { margin: 0; color: #b91c1c; white-space: pre-wrap; font: 12px/1.4 ui-monospace, monospace; }
+			.fd-name { margin: 0 0 8px; font: 500 12px/1.4 -apple-system, system-ui, sans-serif; color: ${INK.muted}; }
+			.fd-error { margin: 0; color: ${INK.error}; white-space: pre-wrap; font: 12px/1.4 ui-monospace, monospace; }
 		</style>
 	</head>
 	<body>
