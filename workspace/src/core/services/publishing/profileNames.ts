@@ -2,12 +2,9 @@ import { isBot, mergePeople } from '../../../shared/people';
 import type { Person, Project } from '../../../shared/contract';
 
 /**
- * One name for a person, everywhere: their GitHub profile name.
- *
- * Names reach the app from git commits, and a git name is whatever that tool was set to (`Noah Shrader` from one,
- * `noahshrader-flock` from another), so the same person looked like two. A person whose GitHub login is known is
- * shown by their profile name instead; a profile with no name is shown by its login; a person known only by a git name
- * keeps it. Looked up once per login for as long as the app runs, and a lookup that fails changes nothing.
+ * One name for a person, everywhere: their GitHub profile name, else their login, else their git name. Git names are
+ * whatever each tool was set to, so one person can arrive under two. Looked up once per login while the app runs; a
+ * lookup that fails changes nothing.
  */
 export class ProfileNames {
 	private readonly names = new Map<string, Promise<string>>();

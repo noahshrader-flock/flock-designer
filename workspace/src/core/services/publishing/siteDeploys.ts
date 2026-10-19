@@ -36,13 +36,9 @@ export const siteDeploys = ({ github, designClone }: { github: Pick<GitHubAccoun
 	const site = (): void => inBackground('the site', async () => redeploySite({ github, ref: DESIGN_REPO, ...(await recordsFrom(designClone())) }));
 
 	/**
-	 * Brings the site up to date with what GitHub has, by itself: on every cycle of the publisher (opening, focusing,
-	 * refreshing, any record written), if a page was pushed, or what the site is built from changed, and no deploy has
-	 * it, one is started. That can reach GitHub without a deploy (an edit made outside a save, a deploy that failed, a
-	 * push from another machine), and nothing else would ever notice. Asked at most once a minute, and after a deploy
-	 * that failed, once every ten, so a permission that is missing is not retried on every focus. A failed deploy of
-	 * the site alone is only remembered for that pause: a page's failure is shown on its screen, and the cause (the
-	 * permission) shows there too the next time a page is published.
+	 * Starts a deploy for anything GitHub has that no deploy does (an edit outside a save, a failed deploy, a push from
+	 * elsewhere), which nothing else would notice. At most once a minute, and once every ten after a failure, so a missing
+	 * permission is not retried on every focus.
 	 */
 	let lastCatchUp = 0;
 	const catchUp = async (): Promise<void> => {

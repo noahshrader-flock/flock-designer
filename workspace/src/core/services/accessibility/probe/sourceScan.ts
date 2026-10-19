@@ -1,9 +1,7 @@
 /**
- * The probe's source cells (A3): what a page cannot show, found in the work's own source by the names the web platform
- * gives it (DOM events and APIs, CSS). An event is found by its own name however a framework binds it (`onMouseDown`,
- * `@mousedown`, `v-on:mousedown`, `on:mousedown`, `(mousedown)`, `addEventListener('mousedown')`), so it reads the same in
- * any framework's files. A finding here is something to look at, not a fault: whether a shortcut can be turned off, or a
- * drag has another way, is a person's to judge (the manual list says so).
+ * The probe's source cells: what a page cannot show, found in the work's own source by the web platform's own names (DOM
+ * events and APIs, CSS), so it reads the same in any framework's files. A finding here is something to look at, not a
+ * fault: whether a shortcut can be turned off, or a drag has another way, is a person's to judge.
  */
 import { type CellId, type CellResult, type ProbeFinding, notRun, resultFrom } from './cells';
 

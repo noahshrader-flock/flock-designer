@@ -39,10 +39,8 @@ export const reviewArea = (d: CallsDeps) => {
 		}
 	};
 	return {
-		// Reviewer mode: read through the API, never a checkout.
-		// Everything on GitHub plus everything built on this machine. Work made here
-		// must appear here, shared or not, so the two are merged; if GitHub cannot be
-		// reached, what is local still shows.
+		// Reviewer mode: read through the API, never a checkout. Everything on GitHub merged with everything built on this
+		// machine, so work made here appears here, shared or not; if GitHub cannot be reached, what is local still shows.
 		listProjects: async (): Promise<Project[]> => {
 			// The gate, not the discovery list: nothing is read or run in a repository this window has not opened. One remembered
 			// from an earlier window is not one: with no product open here, the list is the design repository's alone.

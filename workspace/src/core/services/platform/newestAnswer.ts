@@ -1,11 +1,9 @@
 import { errorText } from '../../../shared/result';
 
 /**
- * An answer worked out in the background for the newest thing asked for alone, and kept for it: what a change being tried
- * reaches (Phase 3), and where a value of a component's own is written (Phase 4), each a few seconds to a minute of
- * drawing. Asking for what is kept answers it; asking for anything else answers null (still being worked out) and has it
- * worked out once the one under way is done, never anything asked for in between. One that failed is said once, and
- * worked out again on the next ask.
+ * A slow answer (seconds to a minute of drawing) worked out in the background for the newest key only. Any other key
+ * answers null and is worked out after the one under way, skipping keys asked for in between. A failure is returned once,
+ * then worked out again on the next ask.
  */
 export const newestAnswer = <A extends { state: string }>(failed: (error: string) => A) => {
 	let kept: { key: string; answer: A } | null = null;

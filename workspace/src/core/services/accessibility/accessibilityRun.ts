@@ -1,7 +1,6 @@
 /**
- * Measuring a product's own app, the same way whatever it is built with (A2 of the accessibility plan; decision 2): DSNR
- * starts it as its `.dsnr/workspace.json` says (its design-mode command, on the port that command serves), opens each page
- * its manifest names in a real browser, and runs the one check every page gets (`CheckPage`) at its declared target.
+ * Measuring a product's own app, the same way whatever it is built with: DSNR starts it as its `.dsnr/workspace.json`
+ * says, opens each page its manifest names in a real browser, and runs the one check every page gets (`CheckPage`).
  * Nothing here names a product or a framework: what it is told is all it knows, and what it could not open, it says.
  */
 import type { AxeRun } from '../../../shared/accessibility';
@@ -81,12 +80,9 @@ export const checkPages = async ({
 const LOG_TAIL = 15;
 
 /**
- * Runs `work` on the product's app on mock data, at its address: its design-mode command, started in `root` as its
- * workspace file says and stopped after, whatever happens. `work` is given how to tell that a page really opened, as Run
- * locally tells it: no build error in the server's output, before or after the page is loaded (`loads`, which says the
- * page's own error, or that it drew nothing), with a word when the product's packages look older than its code. A product
- * that declares no such command, whose port something else already answers on (it may not be this checkout's app), or
- * whose app will not start, is said, with its last output, and nothing is run.
+ * Runs `work` on the product's app on mock data: its design-mode command, started in `root` and stopped after, whatever
+ * happens. `work` is given how to tell that a page really opened, as Run locally tells it (`loads`, and no build error in
+ * the server's output). A product with no such command, a port already taken, or an app that will not start is said.
  */
 export const onDesignMode = async <T>(
 	{

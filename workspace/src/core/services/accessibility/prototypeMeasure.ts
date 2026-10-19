@@ -1,7 +1,7 @@
 /**
- * A prototype's page measured (A2, A3 and A6 of the accessibility plan): served here with the shared files it points at,
- * checked by axe in each of its states as the app checks and keeps it (`accessibilityOf`, in the app's own cache beside
- * the page), then probed in each state. One way, for `dsnr accessibility --name` and for the build's own check alike.
+ * A prototype's page measured: served here with the shared files it points at, checked by axe in each of its states
+ * (`accessibilityOf`, kept in the cache beside the page), then probed in each state. One way, for
+ * `dsnr accessibility --name` and for the build's own check alike.
  */
 import { join } from 'node:path';
 import type { AccessibilityResult } from '../../../shared/contract';

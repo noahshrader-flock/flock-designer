@@ -6,13 +6,9 @@ import { assertUsableProjectId } from './services/projects/workRecords';
 import { assertPrototypeName } from './services/prototypes/prototype';
 
 /**
- * How the core meets the window, whichever shell holds it: each call registered by its name in the contract's table, its
- * answer checked against `WorkspaceApi`, into a table of the core's own that the shell serves (`served`: in VS Code, the
- * bridge to its pages, `extension/src/bridge.ts`), and each event sent by name through the shell's sink (`EventSink`).
- *
- * A handler returns its answer or throws a sentence for a person; it never returns a Result itself. An exception
- * crossing IPC arrives as a shapeless string, which is how a real problem turns into "something went wrong", so this is
- * the one place a throw becomes a Result.
+ * How the core meets the window, whichever shell holds it: each call registered by name, its answer checked against
+ * `WorkspaceApi`, in a table the shell serves (`served`), and each event sent through the shell's sink (`EventSink`). A handler
+ * throws a sentence for a person and this is the one place it becomes a Result: a throw crossing IPC arrives shapeless.
  */
 
 const guard =

@@ -1,7 +1,7 @@
 /**
- * What went wrong with the host, said one way, whichever way it was asked: the app's session, the person's command line
- * (`gh api`), or the published page's own calls. Each raises a `HostError`, and a caller tests its
- * `kind`, never a status, a class or the words of a message, so a second host only has to say which kind it was.
+ * What went wrong with the host, said one way whichever way it was asked: the app's session, the person's `gh api`, or the
+ * published page's own calls. A caller tests a `HostError`'s `kind`, never a status, a class or the words of a message, so a
+ * second host only has to say which kind it was.
  */
 
 export type HostErrorKind =

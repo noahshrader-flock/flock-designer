@@ -7,13 +7,9 @@ import type { AgentReadiness, AgentStatus, RunLogLine } from '../../../shared/co
 import { GROUP, ProcessFailed, endGroup, runFile } from '../platform/process';
 
 /**
- * Hands a task to the agent the designer already has installed.
- *
- * Workspace does not bundle model credentials, does not carry prompts, and does
- * not restate the standards. The repository holds its own instructions and the
- * agent reads them; this passes a task reference and gets out of the way. That
- * is what keeps the workflow usable by someone who never installs this app, and
- * what keeps the adapter replaceable when a second harness turns up.
+ * Hands a task to the agent the designer already has installed: no bundled credentials, prompts or restated standards,
+ * since the repository holds its own instructions. That keeps the workflow usable without DSNR, and the adapter
+ * replaceable when a second harness turns up.
  */
 
 /** Said wherever a second run is refused: the app runs one agent at a time. */
@@ -50,14 +46,8 @@ export interface AgentAdapter {
 }
 
 /**
- * Where to find Claude Code.
- *
- * An app opened from the Dock has none of a terminal's PATH, and many people
- * run Claude Code only inside an editor, which ships its own copy and puts
- * nothing on PATH -- which is exactly this project's author's machine. So: the
- * PATH first, then the usual install places, then the newest copy bundled with
- * an editor extension. Falls back to the bare name, whose failure message says
- * what to do.
+ * Where to find Claude Code: the PATH, then the usual install places, then the newest copy bundled with an editor
+ * extension (many run it only there, with nothing on PATH). Falls back to the bare name, whose failure says what to do.
  */
 export const locateClaude = (
 	env: NodeJS.ProcessEnv = process.env,
@@ -89,11 +79,8 @@ export const locateClaude = (
 };
 
 /**
- * What an unattended run may do without asking, because nobody is there to ask.
- * Edits are allowed (the work is the point). Commands are the repository's own
- * scripts and local git that adds or reads; no git command that pushes, switches
- * branch, or discards work is on the list. This is about git, not a sandbox:
- * `npm`, `npx` and `node` run whatever the repository's scripts do.
+ * What an unattended run may do without asking: edits, the repository's scripts, and local git that adds or reads, never
+ * one that pushes, switches branch or discards work. Not a sandbox: `npm`, `npx` and `node` run whatever the scripts do.
  */
 const ALLOWED_TOOLS = [
 	'Bash(npm run:*)',
@@ -124,10 +111,8 @@ const ALLOWED_TOOLS = [
 const DISALLOWED_TOOLS = ['ScheduleWakeup', 'CronCreate', 'CronDelete', 'RemoteTrigger', 'PushNotification', 'AskUserQuestion'].join(',');
 
 /**
- * Work the agent commits is the designer's own work, committed under their name, and carries no
- * attribution line. Claude Code adds a `Co-Authored-By` trailer to its commits by default, which
- * would put one in every branch's history; this turns that off for the commits (and pull
- * request text) of a run started from here.
+ * Work the agent commits is the designer's own, so this turns off Claude Code's default `Co-Authored-By` trailer for a
+ * run's commits and pull request text, which would otherwise be in every branch's history.
  */
 const settingsFor = (readOnly: string[]): string =>
 	JSON.stringify({
@@ -143,11 +128,6 @@ const settingsFor = (readOnly: string[]): string =>
 			: {}),
 	});
 
-/**
- * Reads Claude Code's streamed JSON and returns what a person would want to
- * see: what it says, and which file it is touching. Everything else is noise.
- * A chunk can end mid-line, so the unfinished tail is kept for the next one.
- */
 /** Runs a command and resolves with what it printed, or rejects. Bounded, so a hung check never holds anything up. */
 type RunCommand = (file: string, args: string[]) => Promise<string>;
 const runCommand: RunCommand = (file, args) =>
@@ -161,12 +141,9 @@ const runCommand: RunCommand = (file, args) =>
 	);
 
 /**
- * Whether new work can be built here, asked before anyone types a request rather than after the branch is made.
- *
- * Claude Code says itself whether someone is signed in (`claude auth status`); only that yes or no is read. The
- * app never sees, keeps or handles the sign-in, which stays Claude Code's own. When the answer cannot be had --
- * an older Claude Code without the command, a slow machine -- it does not stand in the way: the run itself
- * still reports a real failure.
+ * Whether new work can be built here, asked before anyone types a request. Only `claude auth status`'s yes or no is
+ * read, never the sign-in itself. No answer (an older Claude Code, a slow machine) does not stand in the way: the run
+ * itself still reports a real failure.
  */
 export const agentReadiness = async (locate: () => string = () => locateClaude(), run: RunCommand = runCommand): Promise<AgentReadiness> => {
 	const bin = locate();
@@ -188,6 +165,10 @@ export const agentReadiness = async (locate: () => string = () => locateClaude()
 	return { state: 'unknown' };
 };
 
+/**
+ * Reads Claude Code's streamed JSON as what a person would want to see: what it says, and which file it touches. A chunk
+ * can end mid-line, so the unfinished tail is kept for the next one.
+ */
 export const claudeStreamFormatter = (): ((chunk: string) => string[]) => {
 	let tail = '';
 	// The run's closing event repeats the agent's last message verbatim, so it is said once.
@@ -210,9 +191,8 @@ export const claudeStreamFormatter = (): ((chunk: string) => string[]) => {
 				return [];
 			});
 		}
-		// What the agent says at the end is the part a person most needs: it is where it explains what
-		// it changed and -- the case that matters -- why it changed nothing. Saying only "Finished."
-		// threw that away, so a considered refusal looked exactly like success.
+		// The agent's last words say what it changed or why it changed nothing; without them a considered refusal would
+		// look exactly like success.
 		if (e.type === 'result') {
 			const said = typeof e.result === 'string' ? e.result.trim() : '';
 			if (e.is_error) return [`Stopped: ${said || e.subtype || 'error'}`];
@@ -263,9 +243,9 @@ export interface RunEnded {
 }
 
 /**
- * A task run to its end in `cwd`, unattended, with the adapter's own permissions (no attribution, nothing that needs
- * someone there), and what it said last: for work in a scratch copy that nobody watches (writing a component's value,
- * Phase 4), so it is not the person's one run at a time (`AgentRunner`) and does not wait on it, nor it on this.
+ * A task run to its end in `cwd`, unattended, with the adapter's own permissions, and what it said last: for work in a
+ * scratch copy nobody watches (writing a component's value), so it is apart from the person's one run at a time
+ * (`AgentRunner`), and neither waits on the other.
  */
 export const runToEnd = (cwd: string, task: string, extras: AgentExtras = {}, deps: AgentDeps = defaultAgentDeps): Promise<RunEnded> =>
 	new Promise((done) => {
@@ -364,11 +344,8 @@ export class AgentRunner {
 	}
 
 	/**
-	 * The task text the agent receives.
-	 *
-	 * It names the project and the boundary and then stops. Everything about how
-	 * to build lives in the repository's own instructions, so restating it here
-	 * would create a second source that drifts from the first.
+	 * The task text the agent receives: the project and the task, nothing more. How to build lives in the repository's
+	 * own instructions, and restating it here would make a second source that drifts.
 	 */
 	taskFor(projectId: string, task: string): string {
 		return [`Project: ${projectId}`, "Read this repository's own agent instructions and follow them.", '', task].join('\n');

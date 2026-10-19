@@ -1,8 +1,7 @@
 /**
- * A measure's record in the design repository (A2, A3, A5, A6): what axe found, what each view's probe cells found, the
- * source cells, the ledger made from them, and `review.md`'s accessibility section written from the ledger. The files
- * are made here, one way, for `dsnr accessibility` and for a saved prototype's own build check alike, so the two records
- * never differ in shape; each is written by its caller as it writes (to disk, or through the design store).
+ * A measure's record in the design repository: what axe and the probe found, the ledger made from them, and
+ * `review.md`'s section written from it. Made here, one way, for `dsnr accessibility` and a saved prototype's build
+ * check alike, so the two never differ in shape; each caller writes the files as it writes (to disk, or the design store).
  */
 import type { AccessibilityResult } from '../../../shared/contract';
 import {

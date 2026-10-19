@@ -1,8 +1,7 @@
 /**
- * `dsnr wcag-edition` (T7 of the design system plan): asks the W3C which edition of WCAG 2 is its latest published one, and
- * when it is not the one the app's numbers come from (`WCAG_EDITION`), opens an issue on the design repository saying so,
- * once. Run every week by `.github/workflows/wcag-edition.yml`, so a new version, or a corrected edition, is seen the week
- * it is published. What it means for the app is a person's to decide; this makes sure one is asked.
+ * `dsnr wcag-edition`: asks the W3C which edition of WCAG 2 is its latest published one and, when it is not the one
+ * DSNR's numbers come from (`WCAG_EDITION`), opens an issue on the design repository saying so, once. Run weekly by
+ * `.github/workflows/wcag-edition.yml`; what a new edition means is a person's to decide, and this makes sure one is asked.
  */
 
 import { WCAG_EDITION, WCAG_LATEST, editionOf } from '../shared/wcag';

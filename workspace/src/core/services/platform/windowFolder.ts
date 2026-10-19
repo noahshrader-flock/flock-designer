@@ -2,13 +2,13 @@ import { linkSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync }
 import { join } from 'node:path';
 
 /**
- * A folder of `root` for this window's DSNR alone. Each VS Code window runs its own DSNR, all sharing one storage folder, and
- * two building into one folder delete each other's builds (QUALITY_PASS finding 3). A window takes the first folder no
- * running DSNR holds, so one opened again uses the builds the last one kept, else a new one.
- *
- * A folder's holders are its turns, `owner-<n>`, each naming its window's process; the newest holds it. A window takes a
- * folder by making the turn after the newest it read, which only one window can make: two that read the same holder gone
- * cannot both take it. A turn is linked into place once it is written, so none is read half written.
+ * A folder of `root` for this window's DSNR alone: windows share one storage folder, and two building into one folder
+ * delete each other's builds. A window takes the first folder no running DSNR holds, so one reopened reuses kept builds.
+ */
+
+/*
+ * The newest turn, `owner-<n>` (naming its process), holds a folder. Taking one means making the next turn, which only
+ * one window can do; a turn is linked into place once written, so none is read half written.
  */
 
 /** Whether a process is running. A process of another user's answers that it is (EPERM). */

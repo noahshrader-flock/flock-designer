@@ -83,7 +83,7 @@ interface BrowserLike {
 	on?(event: 'disconnected', listener: () => void): unknown;
 }
 
-/** Starts the browser at `path`, headless, through puppeteer: loaded when first needed, as the app loads its own tools. */
+/** Starts the browser at `path`, headless, through puppeteer: loaded when first needed. */
 const launchChrome = async (path: string): Promise<BrowserLike> => {
 	const { default: puppeteer } = await import('puppeteer-core');
 	return (await puppeteer.launch({ executablePath: path, headless: true, args: ['--hide-scrollbars', '--mute-audio'] })) as unknown as BrowserLike;
@@ -95,7 +95,7 @@ const inPage = (name: 'encodeJpeg' | 'readyToPicture' | 'pictured', args: unknow
 
 /**
  * A story's picture, from a PNG of the top of its page (`PICTURE_TOP` down, at `PICTURE_SCALE`): what it painted, placed
- * on white as the app's are (`placeOnWhite`), then drawn by the page's own canvas at most `PICTURE_MOST_ACROSS` across, as
+ * on white (`placeOnWhite`), then drawn by the page's own canvas at most `PICTURE_MOST_ACROSS` across, as
  * JPEG. Only the PNG and where it goes are handed to the page, never the pixels; nothing when it painted nothing.
  */
 const encodeInPage = (png: Buffer, place: NonNullable<ReturnType<typeof placeOnWhite>>): string =>
@@ -116,14 +116,9 @@ const readyToPicture = (cut: boolean, dx: number, dy: number) => inPage('readyTo
 const pictured = inPage('pictured');
 
 /**
- * A story's picture, the same as the composition's (`composedPicture`) and about twice as fast (about 220 ms against 470): what it painted is found
- * from a capture at half the size (a quarter of the pixels to read, one per pixel of the page, with one more each side for
- * what halving blurs), placed as the composition places it (`placeAround`), and then the browser takes that one region as
- * the JPEG itself, so no capture is read back into the page or drawn again. The page behind the stories is white, as the
- * composition's canvas is; a story that runs past what is captured is clipped to it, as the composition sees it; one whose
- * region would start above or left of the page is moved into view, and one wider or taller than the window is taken past
- * it. Where that cannot hold (something drawn outside the stories, such as an open dialog, or something fixed to the window
- * in a story that would have to move), the composition makes it. Exported for its test.
+ * A story's picture, the same as `composedPicture` and about twice as fast: what it painted is found from a half-size
+ * capture, placed as the composition places it (`placeAround`), and the browser takes that one region as the JPEG itself.
+ * Where that cannot hold (something drawn outside the stories, such as an open dialog), the composition makes it.
  */
 export const pictureOf = async (page: PageLike): Promise<Buffer | undefined> => {
 	const small = Buffer.from(
@@ -164,7 +159,7 @@ export const pictureOf = async (page: PageLike): Promise<Buffer | undefined> => 
 	}
 };
 
-/** How pictures are taken here, as a fingerprint of the code that takes them: never the same as the app's (`PICTURE_RECIPE`). */
+/** How pictures are taken here, as a fingerprint of the code that takes them. */
 export const HEADLESS_PICTURE_RECIPE = createHash('sha256')
 	.update(
 		`headless${readDrawn('', true)}${PICTURE}${composedPicture}${pictureOf}${COMPOSITION}${[WINDOW.width, PICTURE_TOP, PICTURE_SCALE, PICTURE_MOST_ACROSS, PICTURE_QUALITY]}`,
@@ -178,10 +173,9 @@ const READY_MS = 12_000;
 const STATE_MS = 20_000;
 
 /**
- * Drawing out of sight with the browser already on the machine (`Headless`): a prototype's picture and its
- * accessibility check, one page at a time. The browser is started when first needed and kept,
- * as starting it takes a second; `close` ends it. With no browser here, each says what to install. And the Design System
- * tab's stories (`measure`), drawn from the script every drawing runs (`storyDrawing.ts`).
+ * Drawing out of sight with the browser already on the machine (`Headless`): prototype pictures, accessibility checks and
+ * the Design System tab's stories (`measure`). The browser is started when first needed and kept, as starting it takes a
+ * second; `close` ends it. With no browser here, each says what to install.
  */
 export const chromeHeadless = ({
 	find = () => findChrome(),
@@ -238,7 +232,7 @@ export const chromeHeadless = ({
 				COVER_STEPS,
 			);
 		}).catch((err: unknown) => {
-			// No browser is said; any other failure is no picture, as in the app.
+			// No browser is said; any other failure is no picture.
 			if (err instanceof Error && err.message === NO_BROWSER) throw err;
 			return null;
 		});
@@ -280,13 +274,13 @@ export const chromeHeadless = ({
 				() => pictureOf(page),
 			);
 		}).catch((err: unknown) => {
-			// No browser is said; any other failure is its share not drawn, as a window that fails is in the app.
+			// No browser is said; any other failure is its share not drawn.
 			if (err instanceof Error && err.message === NO_BROWSER) throw err;
 			return share.files.map(() => null);
 		});
 
 	/**
-	 * The probe (A3 of the accessibility plan) on one view of a page, in a page of its own. It drives more of the page than
+	 * The probe on one view of a page, in a page of its own. It drives more of the page than
 	 * the rest (keys, the pointer, the accessibility tree), which puppeteer's page has: the narrow `PageLike` is what the
 	 * rest is tested against without a browser.
 	 */

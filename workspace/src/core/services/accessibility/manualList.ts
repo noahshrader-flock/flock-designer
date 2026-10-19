@@ -1,10 +1,7 @@
 /**
- * The manual list (A8 of the accessibility plan): what is left for whoever tests by hand, generated from a measure's
- * ledger and written into the product's `HANDOFF.md`, so it is never written from memory and never says less than was
- * measured. For someone who has not seen the work: how to run it and where to look, what machines already did (never a
- * pass), what is theirs to do (assistive technology, the criteria only a person can check, what applies only if the work
- * has it, each stated either way, and the words to write), what to check in the real page around it, and how to send back
- * what they find. It never says the work conforms, or at what level.
+ * The manual list: what is left for whoever tests by hand, generated from a measure's ledger into the product's
+ * `HANDOFF.md`, so it is never written from memory and never says less than was measured. Written for someone who has
+ * not seen the work; it never says the work conforms, or at what level.
  */
 import { WORDS } from '../../../shared/accessibility';
 import { ASSISTIVE_SECTION } from './accessibilityBrief';

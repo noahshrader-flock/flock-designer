@@ -4,10 +4,8 @@ import { isAbsolute, join } from 'node:path';
 import { readText, writeAtomic } from './jsonFile';
 
 /**
- * The `dsnr` command's data folder, and how it finds the prototypes the extension builds, so a page made from the command
- * line is one the panel has, and the other way round: the extension leaves a note in that folder saying where its own
- * prototypes are (`tellCommandLine`), and the command reads it (`commandLinePrototypes`). With no note, as on a machine
- * with no extension, the command keeps its own.
+ * The `dsnr` command's data folder. The extension leaves a note there saying where its prototypes are, so the command and
+ * the panel share one set of pages; with no note (no extension on this machine) the command keeps its own.
  */
 
 const NOTE = 'extension.json';

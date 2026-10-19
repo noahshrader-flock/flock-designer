@@ -9,23 +9,9 @@ import { HOST } from '../../../shared/vocabulary';
 import { workPath } from '../../../shared/designPaths';
 
 /**
- * Keeping the design repository's project records published, with nobody having to remember.
- *
- * **One writer.** Records used to be written into this clone *and* committed to GitHub through its
- * API, so the clone could never catch up: git refuses to fast-forward over a file that already matches
- * what is coming in, which left the tree dirty and `git pull` stuck. Now there is one copy of each
- * change, published from here.
- *
- * **Only the records, and never the person's work.** The records commit is made on top of what GitHub has, in a
- * temporary index, and pushed: the person's branch, index and files are never rebased or stashed. Their branch is then
- * fast-forwarded to it, which git does only when the branch has nothing of its own and their edits are not in the way. When
- * it has commits of its own, records wait (they would land on GitHub but stay uncommitted here, and the person's next
- * `git pull` would refuse); what is held back is said, with why.
- *
- * **Never destructive.** Plain pushes only; a combination it cannot make is abandoned with the records left as they are
- * here, and the next run tries again. Two runs at once (the app's publisher, a page deploy, the `dsnr` command in
- * another process) need no lock: each builds on what GitHub has, and the second's push is refused, builds again, and
- * finds nothing left to do.
+ * Publishes the project records from this clone, their one writer. The commit is built on GitHub's tip in a temporary
+ * index and pushed plainly, so the person's branch, index and files are never rebased or stashed. Runs at once need no
+ * lock: a refused push builds again on what GitHub has, and finds nothing left to do.
  */
 
 export type Problem = PublishProblem;
@@ -99,10 +85,9 @@ export const syncRecords = async (designRoot: string): Promise<SyncResult> => {
 };
 
 /**
- * This machine's record changes (what `projects/` has here against where this branch and GitHub's last met), as a commit
- * on GitHub's: made in a temporary index, so nothing of the person's is touched. A file changed on both sides is an
- * ordinary case for `work.json` (two people recording versions of one project) and is merged by meaning; any
- * other is a real disagreement between people, which only they can settle. A string says what to tell the person.
+ * This machine's `projects/` changes since its branch and GitHub's met, as a commit on GitHub's. A `work.json` changed on
+ * both sides is ordinary and merged by meaning; any other file changed on both is for people to settle. A string says
+ * what to tell the person.
  */
 const recordsOnTopOf = async (
 	designRoot: string,
@@ -167,10 +152,9 @@ const recordsOnTopOf = async (
 };
 
 /**
- * Brings the person's branch up to `target` when it has nothing of its own, so the tree stops being behind. A record
- * merged with GitHub's is written here first, only if it is still as it was read (`read`): one written since is newer,
- * and is left for the next run. The records are then staged, so git can
- * move over them, and git itself refuses when anything else of the person's would be overwritten. Then nothing moves.
+ * Fast-forwards the person's branch to `target` when it has nothing of its own. A merged record is written here first only
+ * if unchanged since `read` (a newer one waits for the next run), then staged so git can move over it; git itself refuses
+ * when anything else of the person's would be overwritten.
  */
 const catchUp = async (designRoot: string, target: string, paths: string[], read: Map<string, string | null>): Promise<void> => {
 	const g = (...args: string[]) => git(designRoot, args);

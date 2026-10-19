@@ -6,12 +6,8 @@ import { asRecord } from '../../../shared/json';
 import { errorText } from '../../../shared/result';
 
 /**
- * Reads what a repository says about itself.
- *
- * Nothing about Coke is compiled into this app. A repository declares its own
- * context directory, codebase branch naming and -- the part that matters
- * -- the complete list of commands Workspace may run in it. If it is not in the
- * descriptor, it cannot be run.
+ * Reads what a repository says about itself: nothing about a product is compiled in. It declares its context directory,
+ * codebase branch naming and, above all, the complete list of commands that may run in it; nothing else can be run.
  */
 
 export const DESCRIPTOR_PATH = '.dsnr/workspace.json';
@@ -47,8 +43,8 @@ const parseCommand = (raw: unknown, index: number): WorkspaceCommand => {
 };
 
 /**
- * The kinds of work a descriptor may say it can share. Only `codebase` is shared now; `prototype`, for prototypes once
- * built on branches, is still read, so a product that names it is not refused, and means nothing.
+ * The kinds of work a descriptor may say it can share. Only `codebase` is shared; `prototype` is read, so a product that
+ * names it is not refused, and means nothing.
  */
 const KINDS = ['prototype', 'codebase'] as const;
 
@@ -102,13 +98,13 @@ export const parseDescriptor = (text: string): WorkspaceDescriptor => {
 		// running something that means what a later schema said it meant.
 		throw new Error(`${DESCRIPTOR_PATH} declares version ${String(d.version)}; this app understands 1`);
 	}
-	// A `prototypeRoot`, where prototypes once lived as code on branches, is not read: prototypes are pages now.
+	// A `prototypeRoot` is not read: prototypes are pages, not code on branches.
 	for (const key of ['product', 'contextDir'] as const) {
 		if (typeof d[key] !== 'string' || d[key] === '') {
 			throw new Error(`${DESCRIPTOR_PATH} is missing ${key}`);
 		}
 	}
-	// Only codebase work has a branch. A `prototype` pattern, from when prototypes were made as code on branches, is not read.
+	// Only codebase work has a branch, so a `prototype` pattern is not read.
 	const branch = d.branchPattern as Record<string, unknown> | undefined;
 	if (!branch || typeof branch.codebase !== 'string') {
 		throw new Error(`${DESCRIPTOR_PATH} is missing branchPattern.codebase`);
@@ -160,22 +156,16 @@ export const findCommand = (descriptor: WorkspaceDescriptor, commandId: string):
 };
 
 /**
- * Where the design system's own files are: its agent files (`.dsnr/`, including the voice and tone), its guidance and its
- * source. **A design system's agent files are in its own folder, wherever it is.** A design system that is a folder of the
- * product's repository (`designSystem.folder`, a monorepo) is that folder; one that is a repository of its own is the
- * checkout beside the product, named as its package is. Read by an agent and by the tasks DSNR makes alike: one rule, so
- * they never look in different places.
+ * Where the design system's own files are (its `.dsnr/` agent files, guidance and source): `designSystem.folder` in a
+ * monorepo, else the checkout beside the product named as its package is. The one rule for agents and DSNR's tasks alike,
+ * so they never look in different places.
  */
 export const designSystemCheckout = (root: string, designSystem: WorkspaceDescriptor['designSystem'] = readDescriptor(root).designSystem): string =>
 	designSystem.folder !== undefined ? join(root, designSystem.folder) : join(dirname(root), basename(designSystem.package));
 
 /**
- * What a repository says about itself, read from `.dsnr/workspace.json`: the core's alone, never a page's.
- *
- * Workspace hard-codes nothing about Coke. A repository that wants to be opened
- * here declares where its context lives, what may be run, and how a prototype is
- * addressed. A repository without this file can be opened read-only, but nothing
- * can be run in it.
+ * What a repository says about itself, read from `.dsnr/workspace.json`: the core's alone, never a page's. A repository
+ * without this file can be opened read-only, but nothing can be run in it.
  */
 export interface WorkspaceDescriptor {
 	/** Schema version, so an older app can refuse a newer descriptor honestly. */
@@ -199,10 +189,8 @@ export interface WorkspaceDescriptor {
 }
 
 /**
- * The repository's own account of how a shared preview comes about, so Workspace
- * hard-codes nothing about one product's CI. A draft pull request is opened for
- * the branch; the repository's deploy workflow builds it; the address follows a
- * fixed pattern.
+ * How a shared preview comes about, so nothing about one product's CI is hard-coded: a draft pull request is opened for
+ * the branch, the repository's deploy workflow builds it, and the address follows a fixed pattern.
  */
 export interface ShareDescriptor {
 	/** The preview's address, with `<pr>` where the pull request number goes. Must be https. */

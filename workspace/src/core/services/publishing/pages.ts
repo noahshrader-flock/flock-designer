@@ -11,12 +11,9 @@ import { type RepoRef, formatRepo } from '../../../shared/repoRef';
 import { HOST } from '../../../shared/vocabulary';
 
 /**
- * Publishing a prototype to its page on the design repository's GitHub Pages site: the one way it is done, from the
- * command an agent runs and anything else that publishes. Nothing of the app is in it.
- *
- * **It says who can open the page.** The site is meant to be private, where viewing needs a GitHub sign-in. While the
- * repository is public, it is not, and publishing says so in its note rather than stopping. Afterwards it asks for the
- * page with no credentials, and says plainly if it opened.
+ * Publishing a prototype to the design repository's GitHub Pages site: the one way it is done, for the agent's command and
+ * anything else. The site is meant to be private; when it is not, publishing says so rather than stopping, and it checks
+ * whether the page opens with no credentials.
  */
 
 /** The workflow that builds the site from the repository and deploys it. It runs only when asked. */
@@ -56,11 +53,6 @@ interface Run {
 	html_url: string;
 }
 
-/**
- * Whether a version is on its page: the site's last finished deploy includes the last change to the page. Asked of
- * GitHub, so it is the same for someone with no clone. The link carries the deploy it is from, so a page opened after a
- * new one never shows an old copy. `none` when there is no site, or no page to be on it.
- */
 /** The commit the newest finished deploy of the site was built from, or null when none has. One still running may yet fail. */
 const deployedSha = async (github: GitHubApi, base: string): Promise<string | null> => {
 	for (const d of ((await github.api(`${base}/deployments?environment=github-pages&per_page=5`)) as { id: number; sha: string }[] | null) ?? []) {
@@ -70,6 +62,10 @@ const deployedSha = async (github: GitHubApi, base: string): Promise<string | nu
 	return null;
 };
 
+/**
+ * Whether a version is on its page: the site's last finished deploy includes the last change to the page. The link
+ * carries the deploy it is from, so a page opened after a new one never shows an old copy.
+ */
 export const pageStatus = async (github: GitHubApi, ref: RepoRef, projectId: string, name: string): Promise<PageStatus> => {
 	const path = sitePath(projectId, name);
 	if (path === null) return { state: 'none' };
@@ -90,14 +86,9 @@ export const pageStatus = async (github: GitHubApi, ref: RepoRef, projectId: str
 };
 
 /**
- * What the site is built from, besides the pages: the viewer on every page (and DSNR's kit it is drawn with, `src/ui`), the
- * generator, the workflow that runs it, and the packages it installs. The page code (`src/page`) is in the viewer too,
- * bundled into the scripts it runs in a page (`pageCode.vite.ts`). A change to any of these changes how the pages
- * look and work, so the site needs a deploy as much as it does for a new page. The viewer's folder is all of it, not
- * only what its entry imports: one deploy too many after an edit to a screen the site does not carry costs a minute
- * of the workflow. What the viewer reaches GitHub with is `src/codeHost`, kept out of the core for this. A test
- * follows the viewer's imports (`siteSources.spec.ts`), so a file it reaches outside these folders fails there, rather
- * than leaving the site stale without a word.
+ * What the site is built from besides the pages, so a change to any of it needs a deploy too. Whole folders, not only what
+ * is imported: a needless deploy costs a minute. `siteSources.spec.ts` follows the viewer's imports, so a file it reaches
+ * outside these fails there rather than leaving the site stale.
  */
 const SITE_SOURCES = [
 	/^workspace\/src\/(site|viewer|ui|shared|codeHost|page)\//,
@@ -113,10 +104,9 @@ export const isSiteSource = (file: string): boolean => SITE_SOURCES.some((s) => 
 export type SiteBehind = { kind: 'page'; projectId: string; name: string } | { kind: 'code' };
 
 /**
- * Whether the site is behind GitHub, found without anyone asking: what changed since the last deploy is read in one
- * call. A prototype page in it is named (one deploy builds the whole site, so one is enough); otherwise a change to what
- * the site is built from is `code`. Null when the site has what GitHub has, when a deploy is already on its way (it will
- * take what is there), or when there is nothing to compare with yet.
+ * Whether the site is behind GitHub, from one compare against the last deploy: one changed page is enough to name, as a
+ * deploy builds the whole site. Null when it is current, when a deploy is already on its way (it will take what is
+ * there), or when there is nothing to compare with yet.
  */
 export const siteBehind = async (github: GitHubApi, ref: RepoRef): Promise<SiteBehind | null> => {
 	const vis = await readVisibility(github, ref);

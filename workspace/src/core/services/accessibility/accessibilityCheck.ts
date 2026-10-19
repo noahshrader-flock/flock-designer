@@ -1,8 +1,7 @@
 /**
- * Measuring accessibility (T7 of the design system plan, part B; decision 30): axe-core run on a page in each of its
- * states, with the target's tags only, by whatever the shell gives to run it (`CheckPage`: headless Chrome,
- * `chromeHeadless.ts`). What it found is kept with what it was made with (the page, axe-core's version, the tags,
- * the target), and a result made with anything else is never given as current: it is made again.
+ * Measuring accessibility: axe-core run on a page in each of its states, with the target's tags only, by whatever the
+ * shell gives to run it (`CheckPage`). A result is kept with what it was made with (the page, axe-core's version, the
+ * tags, the target), and one made with anything else is never given as current: it is made again.
  */
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
@@ -17,9 +16,9 @@ import type { CheckPage } from '../../ports';
 /** The size a page is checked at, a desktop's; how long it is given to settle after it has loaded, before axe reads it. */
 export const CHECK_WINDOW = { width: 1280, height: 900 } as const;
 /**
- * The color scheme a page is checked in: light, as it opens, whatever the machine measuring it is set to, so a page's
- * dark styles never make one run differ from another (a Mac that turns dark at night did). Set with every other media
- * feature a check sets, since setting them replaces the ones set before.
+ * The color scheme a page is checked in: light, whatever the machine measuring it is set to, so a page's dark styles
+ * never make one run differ from another. Set with every other media feature a check sets, since setting them replaces
+ * the ones set before.
  */
 export const CHECKED_IN = { name: 'prefers-color-scheme', value: 'light' } as const;
 const SETTLE_MS = 300;
@@ -52,10 +51,7 @@ export const resultOf = (runs: AxeRun[], target: DeclaredTarget, at: Date): Acce
 	notAutomated: notAutomated(target.target),
 });
 
-/**
- * How a result is written: what it holds, as this app keeps it. Raised whenever that changes (2: each issue's elements, and
- * the best-practice rules apart, A1), so one an older app kept is made again.
- */
+/** How a result is written: raised whenever what it holds changes, so a result an older DSNR kept is made again. */
 const FORMAT = 2;
 
 /** What a result is made with: the page, axe-core's version, the tags and the target, and how it is written. Any change makes a new result. */

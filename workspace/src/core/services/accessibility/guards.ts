@@ -1,9 +1,7 @@
 /**
- * Keeping it fixed (A9 of the accessibility plan): a kind of fault a run found and the next run no longer finds was fixed,
- * and gets a guard, so the next quarter does not find it again. Where the product's own lint has a rule that catches the
- * same fault as code is written, that rule is proposed to the product; where it has none DSNR knows of, its own
- * accessibility command is what keeps it, and that is said. Proposed, never written into the product's configuration:
- * that is the product's to take. DSNR reads the stack from the product's own files and says what it read.
+ * Keeping it fixed: a fault one run found and the next does not was fixed, and gets a guard. Where the product's own
+ * lint has a rule for the same fault, that rule is proposed; where it has none DSNR knows of, its own accessibility
+ * command keeps it. Proposed, never written into the product's configuration: that is the product's to take.
  */
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';

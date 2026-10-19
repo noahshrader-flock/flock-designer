@@ -21,16 +21,9 @@ import { loginFromNoreply } from '../../../shared/hostUrls';
 import { WORK_FILE, workPath } from '../../../shared/designPaths';
 
 /**
- * Named attempts at the question, and the record of them.
- *
- * **The record does not live in the product checkout.** It lives in the design
- * repository, one folder per project, because the plan settled that and gave the
- * reason: a record on the prototype branch means picking up someone's work
- * requires knowing which branch to check out, and it needs a standing rule to
- * keep per-project state off `develop`.
- *
- * Writing it into the checkout also dirties the working tree, which then blocks
- * the next piece of work on its own bookkeeping. That is how this was found.
+ * Named attempts at the question, and their record: in the design repository, one folder per project, never the product
+ * checkout. There, picking up work would need its branch first, per-project state would need keeping off `develop`, and
+ * the dirty tree would block the next piece of work on its own bookkeeping.
  */
 
 /**
@@ -72,11 +65,8 @@ export const codebaseBranchFor = (descriptor: WorkspaceDescriptor, projectId: st
 	descriptor.branchPattern.codebase.replace('<project-id>', projectId);
 
 /**
- * Starts codebase work on a project: its branch, and a record of it in the design repository that
- * reviewers can read. (A prototype has no branch: it is made by `recordPrototype`.)
- *
- * Codebase work is one branch per project, so if it already exists -- someone started it by hand,
- * which is how the first ones were made -- it is adopted rather than refused, and recorded.
+ * Starts codebase work on a project: its branch, and a record reviewers can read. (A prototype has no branch: see
+ * `recordPrototype`.) It is one branch per project, so one already started by hand is adopted and recorded, not refused.
  */
 export const createCodebaseWork = async (
 	productRoot: string,
@@ -116,11 +106,8 @@ export const createCodebaseWork = async (
 };
 
 /**
- * Authors on the branch, with a GitHub login where one can be established
- * without guessing: a noreply address names its account, and the person running
- * this app is signed in as themselves, so their own commits (matched on the
- * git identity they commit under) carry their login. Everyone else stays a
- * name until they open work of their own.
+ * Authors on the branch, with a GitHub login only where it is not a guess: a noreply address names its account, and the
+ * signed-in person's own commits (matched on their git identity) carry their login. Others stay a name until they open work.
  */
 export const peopleOn = async (productRoot: string, branch: string, signedInLogin: string | null): Promise<Person[]> => {
 	const me = await localIdentity(productRoot);

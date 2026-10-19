@@ -1,8 +1,7 @@
 /**
- * What every agent task says about accessibility (T7 of the design system plan, part A; decision 30): the rules, from the
- * one standard, and the product's target, from its one manifest, put into the task instead of naming a folder the agent
- * may never open. Neither is copied: both are read each time a task is made. And the rest a manifest says about it: the
- * pages of the product's own app to check (`appPages`).
+ * What every agent task says about accessibility: the rules, from the one standard, and the product's target, from its
+ * one manifest, put into the task instead of naming a folder the agent may never open. Neither is copied: both are read
+ * each time a task is made.
  */
 import { join } from 'node:path';
 import { readText } from '../platform/jsonFile';
@@ -73,7 +72,7 @@ export const appPages = (manifest: string | null): AppPage[] | null => {
 	return pages.length > 0 ? pages : null;
 };
 
-/** The manifest's section that names the assistive technology testers cover at least (the accessibility plan's decision 3). */
+/** The manifest's section that names the assistive technology testers cover at least. */
 export const ASSISTIVE_SECTION = 'Assistive technology to test with';
 
 /** What a manifest says testers cover at least, a list item each ("VoiceOver with Safari, on macOS"); null when it names none. */

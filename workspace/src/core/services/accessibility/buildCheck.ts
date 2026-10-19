@@ -1,11 +1,7 @@
 /**
- * A prototype build's own accessibility check (A6 of the accessibility plan; decision 30): run by the agent after it
- * builds, as it runs the build, it measures the page in a real browser in each of its states (axe at the product's
- * target, and the probe's light subset: the tree and the Tab walk), and says what to fix as a build says an error. What a
- * machine can verify, of the kinds the plan says AI can fix, the agent fixes in its own source, and builds and checks
- * again, for at most two rounds; then what is left is said, the agent finishes, and it is kept with the page, so saving
- * puts it on the record with why. Words a person must write (an image's text) are never for the agent: they are said,
- * for a person. A check that cannot run never stops a build.
+ * A prototype build's own accessibility check, run by the agent after each build: axe at the product's target and the
+ * probe's light subset, in each state, said as a build says an error. The agent fixes for at most two rounds; what is
+ * left is kept with the page, so saving puts it on the record with why. A check that cannot run never stops a build.
  */
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
@@ -19,7 +15,7 @@ import { jsonFile, writeAtomic } from '../platform/jsonFile';
 import { type CellResult, cellLines } from './probe/cells';
 import { type MeasureBrowser, measurePrototype, sharedIn } from './prototypeMeasure';
 
-/** How many rounds a build's check sends back to the agent before what is left is left (decision 30). */
+/** How many rounds a build's check sends back to the agent before what is left is left. */
 export const MOST_ROUNDS = 2;
 
 /** What a build's check is given, by the task that asks for it: where the page and its shared files are, the target, and where its record goes. */
@@ -32,7 +28,7 @@ export interface CheckConfig {
 	source: string;
 	sharedDir: string;
 	target: DeclaredTarget;
-	/** Where the page's accessibility check is kept as the app keeps it, beside the page, so the app shows what the build found. */
+	/** Where the page's accessibility check is kept, beside the page, so the panel shows what the build found. */
 	cache: string;
 	/** Where the check keeps its rounds and what it found, beside the page. */
 	record: string;

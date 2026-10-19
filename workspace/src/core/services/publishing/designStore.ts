@@ -34,7 +34,6 @@ export const designStore = ({
 		here !== null || clone() === null || files === null ? here : there(files);
 	return {
 		records,
-		/** A file, as text. */
 		readFile: async (path: string): Promise<string | null> => orFromGitHub(await records().read(path), (repo) => repo.readFile(path)),
 		/** A file's bytes: a picture. */
 		readBytes: async (path: string): Promise<Buffer | null> => orFromGitHub(await records().readBytes(path), (repo) => repo.readBytes(path)),

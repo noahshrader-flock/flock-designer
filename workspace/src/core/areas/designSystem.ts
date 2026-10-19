@@ -35,13 +35,13 @@ export const designSystemArea = (d: CallsDeps) => {
 			if (catalog.state === 'ready') warm();
 			return catalog;
 		},
-		// Its edits are checked again before anything is written (T3, T4).
+		// Its edits are checked again before anything is written.
 		storyPreview: (edits: TokenEdit[]) => previews.preview(edits),
 		componentTokens: (file: string) => componentTokens.of(file),
 		componentVariants: (file: string) => componentVariants.of(file),
 		tokenUsers: (path: string) => componentTokens.users(path),
 		changeReach: (edits: TokenEdit[]) => componentTokens.reach(edits),
-		// Each value is written only as the number or colour it reads as, where it was found (Phase 4).
+		// Each value is written only as the number or colour it reads as, where it was found.
 		valueSources: (file: string, tried: TriedValue[]) => valueSources.of(file, tried),
 		// Handed to Claude Code as every hand-over is, in the library's root, with the prompt typed in.
 		handOverChanges: async (file: string | null, change: HandedChange) => {
@@ -81,7 +81,7 @@ export const designSystemArea = (d: CallsDeps) => {
 			branches[kind].forget(at);
 			return null;
 		},
-		// Preview this branch (Phase 2): a unit's hand-over shown in the tab once its branch is read ready from git, and the
+		// Preview this branch: a unit's hand-over shown in the tab once its branch is read ready from git, and the
 		// library's own branch again. Only committed work is shown, read from git's objects.
 		showHandOver: async (file: string | null) => {
 			const system = shownSystem();

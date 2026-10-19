@@ -6,13 +6,9 @@ import { errorText } from '../../../shared/result';
 import { HOST } from '../../../shared/vocabulary';
 
 /**
- * Publishing the person's own codebase work branches, so the design repository never points at a branch that only
- * exists on one machine.
- *
- * It is deliberately narrow. A branch is published only if it is named the way the repository names codebase work
- * (`feature/<project>`), is the person's own (they have commits on it), and has a project folder in the design
- * repository, because `feature/<name>` is also how a whole team names its tickets and a teammate's branch is not this
- * person's to publish. Pushes are plain: a branch that has moved on GitHub is reported, never overwritten.
+ * Publishes the person's own codebase work branches, so the design repository never points at one only this machine has.
+ * Only a `feature/<project>` branch they have commits on and with a project folder, as a team's tickets use the same
+ * names. Pushes are plain: a branch that has moved on GitHub is reported, never overwritten.
  */
 
 const MAX_BRANCHES = 50;

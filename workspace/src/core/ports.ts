@@ -14,7 +14,7 @@ export type Measure = (
 		files: string[];
 		pictures?: boolean;
 		accessibility?: string[];
-		/** Instead of its stories, one of them drawn once with each value of each prop (Phase 5). */
+		/** Instead of its stories, one of them drawn once with each value of each prop. */
 		vary?: Vary;
 	}[],
 ) => Promise<(Drawn | null)[][]>;
@@ -50,9 +50,9 @@ export interface ShareTools {
  * (`chromeHeadless.ts`).
  */
 export interface Headless {
-	/** How stories are drawn to read what they draw (T6). */
+	/** How stories are drawn to read what they draw. */
 	measure: Measure;
-	/** How a page is checked for accessibility (T7): axe-core in each of its states. */
+	/** How a page is checked for accessibility: axe-core in each of its states. */
 	scan: CheckPage;
 	/** How a prototype's page is drawn as its picture on its project's card. */
 	draw: DrawCover;
@@ -60,8 +60,8 @@ export interface Headless {
 
 /**
  * Everything the handlers reach outside the core, which only the shell can give: the system's dialogs, other applications,
- * the clipboard, the network, the person's own command-line tools, drawing out of sight. VS Code's are `extension/src/vscodePorts.ts`. Given to `registerCalls` whole, so a test hands it fakes and nothing real is
- * reachable by default: a test that forgot one fails to compile, rather than opening VS Code or pushing a branch.
+ * the clipboard, the network, the person's own command-line tools, drawing out of sight (VS Code's: `extension/src/vscodePorts.ts`).
+ * Given to `registerCalls` whole, so a test that forgot one fails to compile rather than opening VS Code or pushing a branch.
  */
 export interface Ports {
 	/** The system's folder picker, over the window; null when the person cancels. */

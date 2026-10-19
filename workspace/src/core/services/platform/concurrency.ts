@@ -1,16 +1,7 @@
 /**
- * The ways the app shares work between callers, written once.
- *
- * `singleFlight`: one run per key at a time, its answer given to everyone who asks meanwhile, and forgotten once it has
- * settled, failure included, so the next caller tries again rather than being handed an old failure for good.
- *
- * `coalescing`: one run at a time, and exactly one more for however many ask while it runs, so nothing asked for during
- * a run is missed and nothing runs twice at once (publishing, a site deploy).
- *
- * `inTurns`: one run per key at a time, every one run, each in the order asked: work that must not overlap another of its
- * kind, where each caller needs its own answer (a build of the previews and the drawing of it, which the next would replace).
+ * One run per key at a time, shared with everyone who asks meanwhile, and forgotten once settled (failure included), so
+ * the next caller tries again rather than getting an old failure for good.
  */
-
 export const singleFlight = <K, T>() => {
 	const running = new Map<K, Promise<T>>();
 	return {
@@ -28,6 +19,10 @@ export const singleFlight = <K, T>() => {
 
 export type Coalescing = (() => Promise<void>) & { readonly running: boolean };
 
+/**
+ * One run at a time, and exactly one more for however many ask while it runs, so nothing asked for is missed and nothing
+ * runs twice at once (publishing, a site deploy).
+ */
 export const coalescing = (run: () => Promise<void>): Coalescing => {
 	let current: Promise<void> | null = null;
 	let again = false;
@@ -78,6 +73,10 @@ export const coalescingByKey = <K>() => {
 	};
 };
 
+/**
+ * One run per key at a time, every one run in the order asked, each caller getting its own answer: for work that must not
+ * overlap its kind (a build of the previews and the drawing of it, which the next would replace).
+ */
 export const inTurns = <K>() => {
 	const last = new Map<K, Promise<unknown>>();
 	return <T>(key: K, work: () => Promise<T>): Promise<T> => {

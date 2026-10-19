@@ -82,14 +82,14 @@ export interface CallsContext {
 	designSystems: DesignSystemsMemory;
 	/** Where the previews of the library's stories are built: the app's own folder, never the library's. */
 	storyPreviewsRoot: string;
-	/** Which branch each change to the library is kept on, a file for each kind (T4, Phase 4, T9, Process changes). */
+	/** Which branch each change to the library is kept on, a file for each kind. */
 	changeBranchFiles: Record<ChangeKind, string>;
 	/**
-	 * Which tokens each component draws with (T6), what a change reaches (Phase 3) and what writing a value does (Phase 4),
-	 * and so what is got ready in the background: given for tests.
+	 * Which tokens each component draws with, what a change reaches and what writing a value does, and so what is got
+	 * ready in the background: given for tests.
 	 */
 	componentTokens?: Pick<ComponentTokens, 'of' | 'users' | 'warm' | 'pictures' | 'reach' | 'drawn' | 'asIs' | 'reachWith'>;
-	/** Where the pictures of the components are kept (P5): the app's own folder. */
+	/** Where the pictures of the components are kept: the app's own folder. */
 	componentPicturesRoot: string;
 	/** How the pictures are taken: a fingerprint, so only pictures taken that way are shown. */
 	componentPictureRecipe: string;
@@ -133,7 +133,7 @@ export const composeCore = ({
 
 	/**
 	 * A checkout the window names, found once among those the person opened: its folder as named and as resolved, and its
-	 * descriptor and the design repository's records beside it, each read when first asked for, as before.
+	 * descriptor and the design repository's records beside it, each read when first asked for.
 	 */
 	const checkout: Check<CheckedCheckout> = (v) => {
 		const root = arg.root(v);
@@ -153,14 +153,9 @@ export const composeCore = ({
 	};
 
 	/**
-	 * The product checkout this person has already accepted, or null.
-	 *
-	 * **Discovery deliberately does not feed this.** A repository's own
-	 * `.dsnr/workspace.json` is its command allowlist, so a repository that merely
-	 * exists on disk must never become runnable: finding one is a suggestion, and
-	 * opening it (the folder the person opened in VS Code, through `open`) is what trusts it. Only a
-	 * root that went through `openRepository` is remembered here, so the memory file
-	 * can restore a choice that was made, never manufacture one.
+	 * The product checkout this person has already accepted, or null. Discovery deliberately does not feed this: a
+	 * repository's `.dsnr/workspace.json` is its command allowlist, so only a root opened through `openRepository` is
+	 * trusted, and the memory file can restore a choice that was made, never manufacture one.
 	 */
 	const trustedRoot = (): string | null => {
 		const saved = memory.read();
@@ -243,7 +238,7 @@ export const composeCore = ({
 	};
 	// In a folder of this window's own: another window's DSNR builds in another, so neither deletes the other's builds.
 	const previews = new StoryPreviews({ system: shownSystem, folder: windowFolder(storyPreviewsRoot), server: prototypeServer, at: libraryShown.at });
-	// Which tokens each component draws with (T6), and its picture (P5), from one drawing pass.
+	// Which tokens each component draws with, and its picture, from one drawing pass.
 	const componentPictures = new ComponentPictures({ folder: componentPicturesRoot, server: prototypeServer, recipe: componentPictureRecipe });
 	const componentTokens =
 		injectedComponentTokens ??
@@ -254,7 +249,7 @@ export const composeCore = ({
 	if (warmAfterMs !== undefined) setTimeout(warm, warmAfterMs).unref();
 	const branchDeps = (kind: ChangeKind) => ({ system: shownSystem, file: changeBranchFiles[kind], tools: ports.shareTools });
 	const tokenBranches = new TokenBranches(branchDeps('tokens'));
-	// What the agent writes for a value where there is no literal, or to follow a token (4.5, 4.6): in a copy of the library,
+	// What the agent writes for a value where there is no literal, or to follow a token: in a copy of the library,
 	// under the standard every run is given, as the app's tasks are given theirs.
 	const valueAgent = new ValueAgent({
 		system: shownSystem,
@@ -262,7 +257,7 @@ export const composeCore = ({
 		run: (cwd, task, readOnly) => runToEnd(cwd, task, { readOnly }),
 		readStandard: (path) => readSkillText(path),
 	});
-	// Every case a component's props declare, drawn (Phase 5), its props read by the compiler the app carries.
+	// Every case a component's props declare, drawn, its props read by the compiler the app carries.
 	const componentVariants = new ComponentVariants({
 		tokens: componentTokens,
 		previews,
@@ -270,7 +265,7 @@ export const composeCore = ({
 		typeLibs: typeLibs(),
 		folder: () => shownSystem()?.folder ?? '',
 	});
-	// Where the values tried on a component are written, found as they are tried, and the branch each component's are saved on (Phase 4).
+	// Where the values tried on a component are written, found as they are tried, and the branch each component's are saved on.
 	const valueSources = new ValueSources({ tokens: componentTokens, previews, measure: ports.headless.measure, agent: valueAgent });
 	const valueBranches = new ValueBranches({ ...branchDeps('values'), sources: valueSources });
 	// Process changes: one unit (the tokens, or one component's values) handed to Claude Code on a branch DSNR names, then read from
@@ -300,7 +295,7 @@ export const composeCore = ({
 			reachLine('edits' in change ? await componentTokens.reach(change.edits) : ((await valuesFound(scope, change.tried))?.reach ?? null)),
 		saved: async (scope) => (scope === '' ? (await tokenBranches.current()) !== null : (await valueBranches.current(scope)) !== null),
 	});
-	// The voice and tone (T9): the connected design system's, kept on a branch as every change to it is.
+	// The voice and tone: the connected design system's, kept on a branch as every change to it is.
 	const voiceBranches = new VoiceBranches(branchDeps('voice'));
 
 	// Starting and picking up a project's codebase work, never under a running agent (`codebaseWork`).

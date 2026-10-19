@@ -1,10 +1,7 @@
 /**
- * `dsnr accessibility` (A2, A3, A5, A8 and A9 of the accessibility plan; decision 2): measures a project's work in a real
- * browser, the same way for any product, and writes what it found into the project's folder in the design repository as
- * evidence. DSNR calls the product, and the product does not call DSNR: a prototype's page is served here, and a product's
- * own app is started as its `.dsnr/workspace.json` says (`onDesignMode`), at the pages its manifest names. Each view that
- * opens is checked by axe, then probed (`services/accessibility/probe`), at full depth unless asked for the light subset; the work's own
- * source is read for what a page cannot show. What it could not open, it says; with nothing opened, nothing is written.
+ * `dsnr accessibility`: measures a project's work in a real browser, the same way for any product, and writes what it
+ * found into the project's folder in the design repository as evidence. DSNR calls the product, never the reverse: a
+ * prototype's page is served here; a product's own app is started as its `.dsnr/workspace.json` says.
  */
 import { existsSync, rmSync } from 'node:fs';
 import { basename, join } from 'node:path';
@@ -272,11 +269,11 @@ export const measureAccessibility = async (deps: MeasureDeps): Promise<number> =
 		readText(join(designRoot, projectPath(projectId, 'review.md'))),
 	);
 	for (const f of files) writeAtomic(join(designRoot, f.path), f.text);
-	// A product's own app: the manual list, from the ledger, into the work's HANDOFF.md, for whoever tests it by hand (A8).
+	// A product's own app: the manual list, from the ledger, into the work's HANDOFF.md, for whoever tests it by hand.
 	const handoff = join(deps.root, HANDOFF_FILE);
 	if (name === null) writeAtomic(handoff, withManualSection(readText(handoff), ...manualArgs(ledger, ledgerFile, projectId, designRoot)));
 	const since = last ? ledgerChanges(last, ledger) : null;
-	// A product's own app: what testers sent back since, sorted and its escapes logged; and a guard for what was fixed (A9).
+	// A product's own app: what testers sent back since, sorted and its escapes logged; and a guard for what was fixed.
 	const kept =
 		name === null
 			? [
@@ -288,7 +285,7 @@ export const measureAccessibility = async (deps: MeasureDeps): Promise<number> =
 		[
 			`Measured ${what}: ${summaryOf(countsOf(result))}.`,
 			checkedWith(result),
-			// Not the app's line: here the probe and the source measure some of what axe has no rules for.
+			// Not axe's own line: here the probe and the source measure some of what axe has no rules for.
 			...(result.notAutomated.length
 				? [
 						`Left to check by hand: ${result.notAutomated.join(', ')}. What the probe and the source did not measure of it is listed, criterion by criterion, in the ledger.`,
@@ -313,7 +310,7 @@ export const measureAccessibility = async (deps: MeasureDeps): Promise<number> =
 type Sorted = { id: string; sc: string; where: string; kind: ReturnedKind; against: string };
 
 /**
- * What testers sent back (A9): the project's `returned.md` read, each finding sorted against the ledger it was tested
+ * What testers sent back: the project's `returned.md` read, each finding sorted against the ledger it was tested
  * against, each escape logged once in the product's agent gap log, and the sort kept as the record's. A file that is not
  * there yet is started, with its table, so a tester only adds rows. What it did, in lines.
  */
@@ -370,7 +367,7 @@ const readReturned = ({
 };
 
 /**
- * A guard for what this run fixed (A9): each fault the last run found, by what found it, with the product's own lint rule
+ * A guard for what this run fixed: each fault the last run found, by what found it, with the product's own lint rule
  * that keeps it fixed where its stack has one, proposed in the record and said. What it did, in lines.
  */
 const keepFixed = ({
@@ -426,10 +423,9 @@ const readLedger = (file: string): Ledger | null =>
 	}).read();
 
 /**
- * `dsnr check-accessibility` (A5, A8): what a gate asks of a measure's record. Its ledger is there; every status rests on
- * an evidence file that is there; every "not run" says why; `review.md`'s section is the one the ledger writes; and, run
- * from the product's checkout, its HANDOFF.md carries the manual list the ledger writes. Says each fault, and exits 1
- * when there is one, so a product's own gate can call it.
+ * `dsnr check-accessibility`: what a gate asks of a measure's record. Every status rests on an evidence file that is
+ * there, every "not run" says why, and `review.md`'s section (and, from the product's checkout, HANDOFF.md's manual list)
+ * is the one the ledger writes. Exits 1 on any fault, so a product's own gate can call it.
  */
 export const checkAccessibility = ({
 	designRoot,
@@ -471,7 +467,7 @@ export const checkAccessibility = ({
 	return faults.length ? 1 : 0;
 };
 
-/** `dsnr read-returned` (A9): what testers sent back read now, against the project's last measure of its app, rather than at its next. */
+/** `dsnr read-returned`: what testers sent back read now, against the project's last measure of its app, rather than at its next. */
 export const readReturnedNow = ({
 	designRoot,
 	root,

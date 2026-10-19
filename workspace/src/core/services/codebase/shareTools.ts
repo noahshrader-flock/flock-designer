@@ -10,13 +10,8 @@ import { CHANGE_REQUEST, HOST, needsCli } from '../../../shared/vocabulary';
 
 /**
  * The real tools behind sharing: the designer's own git for the push, and their own GitHub CLI (`gh api`) for the pull
- * request (`ChangeRequests`).
- *
- * **Why the GitHub CLI and not this app's own sign-in.** The app's GitHub App is installed on
- * the design repository only, and is deliberately limited to it; the pull request lives in the
- * product repository. Widening the app's token to every repository its user can reach would
- * undo the reason it is narrow. The designer's own `gh` is already signed in as them, with
- * whatever they are allowed to do, and the app never sees its token.
+ * request. Not DSNR's sign-in: its GitHub App is deliberately limited to the design repository, and the pull request
+ * lives in the product repository; the designer's `gh` is already signed in as them, and DSNR never sees its token.
  */
 
 /** What is said when the person's own command line cannot be used, missing or signed out: sharing goes through it. */

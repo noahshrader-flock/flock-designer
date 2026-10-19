@@ -6,11 +6,9 @@ import { type JsonFile, jsonFile } from '../platform/jsonFile';
 import { runFile } from '../platform/process';
 
 /**
- * Handing the agent's work to the person, in their own editor.
- *
- * Every codebase run is a Claude Code session with an ID the app chose, so the same conversation can be
- * opened in VS Code afterwards with all its context: what it read, what it decided, what it changed. The
- * latest one for each branch is remembered here, so it can be continued after the app has been closed.
+ * Handing the agent's work to the person in their own editor. Every codebase run is a Claude Code session with an ID
+ * DSNR chose, so the conversation can be opened in VS Code afterwards with all its context; the latest for each branch
+ * is remembered, so it can be continued after DSNR has been closed.
  */
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;

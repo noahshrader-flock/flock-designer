@@ -11,11 +11,9 @@ import { RepoFiles } from './repoFiles';
 import { ReviewThreads } from './reviewThreads';
 
 /**
- * The design repository, read through the API: its files (`RepoFiles`) and its review threads (`ReviewThreads`), and
- * what needs both, the project list.
- *
- * This is what makes reviewer mode possible: a PM opens the app and sees every project without cloning anything or
- * having git installed. Authors still use a real checkout -- that is the only difference between the two modes.
+ * The design repository, read through the API: its files (`RepoFiles`), its review threads (`ReviewThreads`), and what
+ * needs both, the project list. This is what makes reviewer mode possible: a PM sees every project without cloning
+ * anything or having git installed. Authors still use a real checkout: that is the only difference between the modes.
  */
 
 /** Who has committed to a project's folder, and when it last changed. */
@@ -124,17 +122,9 @@ export class DesignRepo {
 	}
 
 	/**
-	 * A project's work, from `projects/<id>/work.json`.
-	 *
-	 * **Not from branches.** Work branches live in the product repository,
-	 * which this app is deliberately unable to see -- that is what keeps a PM out
-	 * of the product's source. The record is written into the project folder when
-	 * a piece of work is recorded, so it is readable here with no extra access. The
-	 * first version of this looked for branches in the design repo and listed
-	 * "No branches yet" for every project.
-	 *
-	 * A missing or unreadable record means "no work recorded", never an
-	 * error: a project folder exists before its first record does.
+	 * A project's work, from `projects/<id>/work.json`, not from branches: work branches live in the product repository,
+	 * which this is deliberately unable to see, so a PM stays out of the product's source. A missing or unreadable record
+	 * means no work recorded, never an error: a project folder exists before its first record does.
 	 */
 	private async readWork(id: string, records: string[]): Promise<Work[]> {
 		if (!records.includes(WORK_FILE)) return [];

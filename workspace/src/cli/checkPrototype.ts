@@ -1,8 +1,7 @@
 /**
- * The script a prototype build's own accessibility check runs as (A6 of the accessibility plan): written beside the build
- * script for the agent to run after each build (`writeCheckScript`), bundled whole, so it needs nothing installed beside
- * it. Given its task's file (`CheckConfig`), it checks the page and says what to fix, as the build says an error, and
- * exits as a build does. A check that cannot run says so, and never stops the build.
+ * The script a prototype build's own accessibility check runs as: written beside the build script (`writeCheckScript`)
+ * and bundled whole, so it needs nothing installed beside it. It says what to fix as a build says an error, and exits as
+ * a build does; a check that cannot run says so, and never stops the build.
  */
 import { readFileSync } from 'node:fs';
 import { type CheckConfig, checkBuild } from '../core/services/accessibility/buildCheck';

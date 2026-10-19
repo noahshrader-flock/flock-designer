@@ -5,12 +5,9 @@ import { branchTip, branchStartedAt, listBranches } from '../platform/git';
 import { peopleOn } from './workRecords';
 
 /**
- * Codebase work found in the product repository's own branches.
- *
- * A branch named the way the repository says codebase work is named *is* that work, whether or not anyone wrote a record
- * for it. So work started by an agent in a terminal, or by hand, appears in the list without a step of its own, and the
- * branch, not a file that can be forgotten, is the source of truth. Records add what a branch cannot say (a preview
- * address, a note).
+ * Codebase work found in the product repository's branches. A branch named by the repository's pattern *is* that work,
+ * record or not, so work started in a terminal or by hand still appears. Records add what a branch cannot say (a
+ * preview address, a note).
  */
 
 const escape = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -53,11 +50,8 @@ export const codebaseBranches = async (
 };
 
 /**
- * Reads the repository's branches as codebase work.
- *
- * `known` is the set of project ids the design repository already has a record for. `feature/<project-id>` is how the
- * whole product team names ticket branches, so `feature/dda-1221` would otherwise arrive as a design project: a branch
- * counts only when a project already vouches for it.
+ * Reads the repository's branches as codebase work. `known` is the project ids the design repository has: a branch
+ * counts only when one vouches for it, or a ticket branch such as `feature/dda-1221` would arrive as a design project.
  */
 export const readBranchProjects = async (
 	productRoot: string,

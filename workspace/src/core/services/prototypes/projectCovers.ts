@@ -1,16 +1,7 @@
 /**
- * The picture of each prototype on its project's card: a file in the design repository, named
- * on the prototype's record, made by one reconcile step. Nothing of a browser is in here: how a page is drawn is passed in
- * (`DrawCover`, headless Chrome: `chromeHeadless.ts`), so all of this is tested without one.
- *
- * - **Who draws:** the machine the page was built on, and only it: its page is in the app's own prototype folder
- *   (`builtHere`). A colleague's page this machine only fetched or pulled is not, so it is never drawn here. One writer
- *   for each prototype, with nothing to do with who is signed in.
- * - **When it is current:** when the record's `cover` is the hash of the page (`contentHashOf`). Then nothing is done,
- *   so running this again changes nothing.
- * - **In what order:** the picture first, then the record, so a record never names a picture that is not there. A picture
- *   already at its path is never written over (the path has the page's hash in it).
- * - **When drawing fails:** nothing is written, and that page is not tried again until the app is next opened.
+ * Each prototype's card picture, drawn only by the machine that built its page (`builtHere`), so each has one writer. It is
+ * current when the record's `cover` is the page's hash; the picture is written before the record, so a record never names
+ * a missing one. A page that fails to draw is not tried again until the app next opens.
  */
 import { existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
@@ -36,10 +27,9 @@ const COVER_QUIET_MS = 500;
 const COVER_CAP_MS = 8000;
 
 /**
- * What runs in a page to say it is ready for its picture: its fonts are ready, no animation that ends is still running (one
- * that loops forever is part of the page, not on its way), and nothing in it has changed for `quietMs`. Or `capMs` has
- * passed, which it says (`capped`), and that picture is not kept: a page that never settles has no picture rather than a
- * wrong one. Measured on the real prototypes: ready within half a second, with no more than one change after loading.
+ * Resolves when a page is ready for its picture: fonts ready, no finite animation running (a looping one is part of the
+ * page), and nothing changed for `quietMs`. After `capMs` it resolves `capped`, and that picture is not kept: a page that
+ * never settles has no picture rather than a wrong one.
  */
 export const settleScript = (quietMs = COVER_QUIET_MS, capMs = COVER_CAP_MS): string => `new Promise((resolve) => {
 	const started = performance.now();

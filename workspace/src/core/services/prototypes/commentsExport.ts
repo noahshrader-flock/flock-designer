@@ -10,17 +10,9 @@ import { resolveInside } from '../platform/paths';
 import { HOST } from '../../../shared/vocabulary';
 
 /**
- * The comments on a version of a prototype, or on codebase work, written as a file an agent can read.
- *
- * **Generated, never edited, never committed.** GitHub holds the comments; this is a view of
- * them, rewritten whenever they are read, so there is nothing to keep in step and nothing to
- * conflict between two machines. It is `comments.md`, not `review.md`: every project folder
- * already has a `review.md`, which is the agent's own record, and comments must not be mixed into it.
- *
- * **Reviewers' words are untrusted input to something that can edit files.** So each comment's
- * text is quoted line by line (nothing in it can open a section of its own, or look like the
- * file's structure), and the file says outright that it is feedback to act on and not
- * instructions that change the agent's rules.
+ * The comments on a prototype version or codebase work, as `comments.md` for an agent: a view of GitHub's, rewritten on
+ * every read and never committed (`review.md` is the agent's own record). Reviewers' words are untrusted input to
+ * something that edits files, so each is quoted line by line and the file says it is feedback, not instructions.
  */
 
 export interface ExportInput {

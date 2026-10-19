@@ -17,21 +17,9 @@ export const ASSET_TYPES = typesOf(ASSETS);
 const TYPES = typesOf(['.html', '.js', '.css', ...ASSETS]);
 
 /**
- * Serves prototypes to the review screen, and the component previews to the Design System tab, from this process, on
- * this machine only.
- *
- * A prototype is one HTML page with nothing to run, so there is no dev server to start: the page
- * is handed to this and given an address. It answers only on the loopback address, only for pages it
- * was given, and keeps nothing on disk. The preview shows it in its own sandboxed view, like any other.
- * The component previews are a built folder, served whole (`serveFolder`) and read from disk.
- *
- * **Two addresses.** What came from a repository is served on an address of its own, the pages' (`pagesOrigin`): a
- * prototype given whole (`serve`) and what it shares, a built site's prototype pages (`page.html`), and folders of a
- * repository's code (story previews). The server's own address (`origin`) serves only what DSNR wrote: a built site's
- * index pages (the review bar among them), its scripts, styles, fonts and raster pictures; never a page or an SVG a
- * repository wrote, which a page could open in its own frame to be on the bar's address. A page on the pages' address is
- * then another origin than the bar that frames it, and can neither read nor script it. Each answers only to its own name,
- * and says what each file is, so no browser takes it for anything else (`nosniff`). See the README's "Review isolation".
+ * Serves prototypes and component previews on loopback only. What a repository wrote is served on its own origin
+ * (`pagesOrigin`); the server's own (`origin`) serves only DSNR's files, never a repository's page or SVG, so such a page
+ * can neither read nor script the bar that frames it. See the README's "Review isolation".
  */
 type Listener = { server: Server | null; port: number; starting: Promise<void> | null };
 
@@ -67,10 +55,9 @@ export class PrototypeServer {
 	private asks: AskHandler | null = null;
 
 	/**
-	 * Answers a browser's ask (BROWSER_COMMENTS_PLAN 1.1): `POST /_dsnr/ask` on the server's own address, and only from a
-	 * page on it (its `Origin`), as JSON, with a key (`X-DSNR-Key`), no bigger than a comment. The handler is given only a
-	 * request with every part right, and decides whether the key is one. No answer says another origin may read it, and the
-	 * header makes another origin's browser ask first, which is refused: so no other page can ask at all.
+	 * Answers a browser's ask: `POST /_dsnr/ask` from a page on the server's own address (`Origin`), JSON, with a key
+	 * (`X-DSNR-Key`), no bigger than a comment. No answer lets another origin read it, and the key header makes another
+	 * origin's browser ask first, which is refused, so no other page can ask at all.
 	 */
 	answerAsks(handler: AskHandler): void {
 		this.asks = handler;
@@ -134,10 +121,8 @@ export class PrototypeServer {
 	}
 
 	/**
-	 * Serves a built folder at `/<key>/`, its `index.html` at the root, every other file by its path under it. Nothing
-	 * outside the folder is reachable. A preview frame loads it from this origin, which is not the app window's, so the
-	 * page and its scripts are same-origin to the frame and nothing has to be shared with any other origin. A folder of a
-	 * repository's code (`code`: story previews) is served on the pages' address alone, and its address is that one.
+	 * Serves a built folder at `/<key>/`, its `index.html` at the root, and nothing outside it. A folder of a repository's
+	 * code (`code`: story previews) is served on the pages' address alone.
 	 */
 	async serveFolder(key: string, dir: string, { code = false }: { code?: boolean } = {}): Promise<string> {
 		this.folders.set(key, { dir, code });

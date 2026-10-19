@@ -1,12 +1,10 @@
 import { type ChildProcess, execFile } from 'node:child_process';
 
 /**
- * The one way the app runs a program and waits for it: argv only, never a shell, and always within a time limit, so a
- * program that hangs (a credential helper waiting on someone, a tool asking a question nobody sees) fails with a reason
- * instead of holding up whatever waits behind it. Output that streams while it runs is `streamed.ts`'s.
+ * Runs a program and waits for it: argv only, never a shell, always within a time limit, so one that hangs (a credential
+ * helper, a question nobody sees) fails with a reason instead of holding up what waits on it. Streamed output: `streamed.ts`.
  */
 
-/** What a program is given when nothing says otherwise. */
 export const DEFAULT_TIMEOUT_MS = 60_000;
 
 export interface RunOptions {
@@ -76,7 +74,7 @@ export const runFile = (
 /**
  * A long-running program started so it can be ended whole: on its own process group (`GROUP`), so stopping it reaches what
  * it started too (npm's dev server under npm, the agent's tools under the agent). Windows has no process groups: there the
- * program alone is ended, as before.
+ * program alone is ended.
  */
 export const GROUP = { detached: process.platform !== 'win32' } as const;
 

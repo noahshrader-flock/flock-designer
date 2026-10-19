@@ -9,7 +9,7 @@ import { repositoryOf } from '../platform/git';
 /** How the design system was found, in the order it is looked for. */
 export type FoundHow = 'named' | 'open' | 'located';
 
-/** What a shell works on, found from what is open in it (ELECTRON_MIGRATION_PLAN, §1.6), and what is missing, said. */
+/** What a shell works on, found from what is open in it, and what is missing, said. */
 export interface Context {
 	/** The product repository: the open folder with a `.dsnr/workspace.json`. */
 	product: string | null;
@@ -26,7 +26,7 @@ export interface Context {
 
 const isFolder = (p: string): boolean => existsSync(p) && statSync(p).isDirectory();
 
-/** The design system in `dir`: the folder itself, or the package in it with stories or tokens (the app's own rule). */
+/** The design system in `dir`: the folder itself, or the package in it with stories or tokens. */
 const designSystemIn = async (dir: string): Promise<string | null> => {
 	if (!isFolder(dir)) return null;
 	const found = await findDesignSystems(folderReads(dir), basename(dir)).catch(() => []);

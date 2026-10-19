@@ -22,9 +22,8 @@ import { ISSUE } from '../shared/vocabulary';
 
 /**
  * The review threads of a repository: comments are its issue comments, one issue per piece of work (a version of a
- * prototype, or codebase work), found by the key on the branch line
- * in its body. That choice is what keeps a server out of the design: the host already stores them, notifies people, and
- * lets someone with only read access comment. Verified against the real API on 2026-10-05.
+ * prototype, or codebase work), found by the key on the branch line in its body. That keeps a server out of the design:
+ * the host already stores them, notifies people, and lets someone with only read access comment.
  */
 
 const REVIEW_LABEL = 'flock-designer:review';
@@ -49,12 +48,9 @@ export class ReviewThreads {
 	}
 
 	/**
-	 * Review threads we created or found this session, by branch.
-	 *
-	 * GitHub's issue *listing* lags a new issue by ten seconds or more -- measured
-	 * 2026-10-05 -- even though fetching the issue by number is immediate. Without
-	 * this, the first comment on a version created a thread nobody could find,
-	 * so it never appeared, and the next comment created a second thread.
+	 * Review threads created or found this session, by branch. GitHub's issue *listing* lags a new issue by ten seconds or
+	 * more, though fetching it by number is immediate: without this, a thread just created could not be found, its first
+	 * comment would never appear, and the next comment would create a second thread.
 	 */
 	private readonly known = new Map<string, Set<number>>();
 
@@ -64,8 +60,8 @@ export class ReviewThreads {
 			await readPages(this.session, `${this.apiPath}/issues?state=all&labels=${encodeURIComponent(REVIEW_LABEL)}`, { maxPages: 10 })
 		).map(asRecord);
 
-		// More than one thread can exist for a branch (the listing lag above made
-		// some). All of them are read, the oldest is written to, and none is lost.
+		// More than one thread can exist for a branch (the listing lag above can make some). All of them are read, the
+		// oldest is written to, and none is lost.
 		const byBranch = new Map<string, ReviewThread>();
 		for (const issue of issues) {
 			const branch = /branch:\s*`([^`]+)`/.exec(String(issue.body ?? ''))?.[1];
@@ -173,11 +169,9 @@ export class ReviewThreads {
 	}
 
 	/**
-	 * Marks a comment resolved, or open again. GitHub decides who may: the comment's author,
-	 * or anyone who can write to the repository, so nothing is enforced here.
-	 *
-	 * Reopening also clears the agent's mark: a comment reopened is one whose change was not what was meant, so it is
-	 * open as any other, with its pin, and Address can be run on it again.
+	 * Marks a comment resolved, or open again. GitHub decides who may (the comment's author, or anyone who can write to the
+	 * repository), so nothing is enforced here. Reopening also clears the agent's mark: its change was not what was meant,
+	 * so it is open as any other, with its pin, and Address can be run on it again.
 	 */
 	async setResolved(comment: CommentRef, resolved: boolean): Promise<ReviewComment> {
 		const path = `${this.apiPath}/issues/comments/${comment.id}`;
@@ -190,12 +184,9 @@ export class ReviewThreads {
 	}
 
 	/**
-	 * Records that the agent acted on a comment, with the commit it made (on a prototype, the hash of its source, and
-	 * the version it is in), and resolves it in the same write: its pin leaves the page, where it would otherwise point
-	 * at what the agent just changed or removed. The person can still reopen it, and the mark stays to say what was done.
-	 *
-	 * Clears the mark when the commit is null, which is what re-addressing a comment that changed nothing should do. That
-	 * leaves the comment open or resolved as the person had it.
+	 * Records that the agent acted on a comment, with the commit it made (on a prototype, its source's hash and version),
+	 * and resolves it in the same write, so its pin does not point at what the agent just changed. A null commit (a
+	 * re-address that changed nothing) clears the mark and leaves the comment open or resolved as the person had it.
 	 */
 	async setAddressed(comment: CommentRef, commit: string | null, version: string | null = null): Promise<ReviewComment> {
 		const path = `${this.apiPath}/issues/comments/${comment.id}`;

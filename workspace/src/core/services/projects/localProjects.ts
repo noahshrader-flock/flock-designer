@@ -8,13 +8,9 @@ import { toProjectWork } from '../../../shared/workRecords';
 import { workInFolder } from './workRecords';
 
 /**
- * Every project folder in the local copy of the design repository, read straight from disk, with whatever
- * work it records (none, for a project an agent has only just started). Nothing is registered anywhere:
- * the folder is the project. That is also what vouches for a `feature/<id>` branch, which a repository's whole
- * team names tickets with: the agent makes this folder before it writes any code.
- *
- * Unreadable pieces are skipped, never fatal -- a half-written record must not
- * hide every other project.
+ * Every project folder in the local design repository, with whatever work it records: the folder is the project, and
+ * what vouches for a `feature/<id>` branch (a name the whole team uses for tickets), as the agent makes it before any
+ * code. Unreadable pieces are skipped, so a half-written record cannot hide every other project.
  */
 export const readFolderProjects = (recordsRoot: string): Project[] => {
 	if (!existsSync(recordsRoot)) return [];

@@ -77,10 +77,9 @@ export const prototypesArea = (d: CallsDeps) => {
 	const runPrototypeAgent = (projectId: string, name: string, sources: PrototypeSources, task: string) =>
 		agent.run(work.dir(projectId), projectId, task, { bare: true, readOnly: prototypeReadable(sources), work: prototypeKey(projectId, name) });
 	/**
-	 * Acting on one comment on a prototype. The same steps as on a branch -- comments read from GitHub now, the file
-	 * written from that read, then the agent started -- but the agent changes the prototype's source in the app's own
-	 * folder, where it was built, and nothing is committed. The change is made in the version commented on, or in a new
-	 * version from it when that was asked for (`startChange`), and once the agent has finished it is recorded and saved.
+	 * Acting on one comment on a prototype: the same steps as on a branch, but the agent changes the prototype's source in
+	 * the app's own folder, where it was built, and nothing is committed. The change goes in the version commented on, or a
+	 * new version from it (`startChange`), and is recorded and saved once the agent has finished.
 	 */
 	const prototypeChanges = new Map<string, { comment: CommentRef; projectId: string; change: PrototypeChange }>();
 	/** A comment's key among them: its thread and its number, which together name one. */

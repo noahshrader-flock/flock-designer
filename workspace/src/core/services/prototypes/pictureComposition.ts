@@ -1,10 +1,7 @@
 /**
- * A component's picture, from a capture of the top of its page (P5 of the design system plan): what the story painted,
- * found from the pixels themselves and put in the middle of a white canvas twice as wide as it is tall, the shape of a
- * card's cover. From the pixels, so it holds for any component: nothing is assumed of its elements, and a story that
- * painted nothing has no picture, not a blank one.
- *
- * Pixels are 4 bytes each, red, green, blue, alpha, as a browser's screenshot decodes (`png.ts`).
+ * A component's picture: what its story painted, found from the pixels so nothing is assumed of its elements, centered on a
+ * white canvas twice as wide as tall (a card cover's shape). A story that painted nothing has no picture, not a blank one.
+ * Pixels are 4 bytes each, RGBA, as `png.ts` decodes them.
  */
 
 export interface Bitmap {

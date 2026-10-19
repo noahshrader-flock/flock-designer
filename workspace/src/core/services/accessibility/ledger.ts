@@ -1,10 +1,7 @@
 /**
- * The accessibility ledger (A5 of the accessibility plan): one record per `dsnr accessibility` run, a row for each WCAG A
- * and AA criterion, saying which layers reached it (axe, the probe), its status, the evidence file each status rests on,
- * and what a person still judges of it. The accessibility section of a project's `review.md` is written from it, as the
- * standard's ten checks (each a view of its criteria), so the record people read and the record a gate checks are one.
- * Two ledgers are compared by their rows, so a quarter's change is a diff. Never a pass: a criterion is at most measured,
- * with none found of what was measured.
+ * The accessibility ledger: one record per `dsnr accessibility` run, a row for each WCAG A and AA criterion with the
+ * layers that reached it, its status and the evidence that rests on. `review.md`'s section is written from it, so the
+ * record people read and the one a gate checks are one. Never a pass: a criterion is at most measured, with none found.
  */
 import axe from 'axe-core';
 import { criterionOf, whereFound } from '../../../shared/accessibility';
@@ -59,11 +56,11 @@ export interface LedgerRun {
 	address: string;
 	pages: { name: string; path: string }[];
 	data: string;
-	/** The assistive technology the product's manifest says testers cover at least (decision 3); null when it names none. */
+	/** The assistive technology the product's manifest says testers cover at least; null when it names none. */
 	assistiveTechnology: string[] | null;
 }
 
-/** How a ledger is written: raised when what it holds changes (2: each layer's measure, structured manual marks, best practice), so one an older DSNR wrote is measured again, never misread. */
+/** How a ledger is written: raised when what it holds changes, so one an older DSNR wrote is measured again, never misread. */
 export const LEDGER_VERSION = 2;
 
 export interface Ledger {
@@ -204,11 +201,9 @@ export const ledgerOf = ({
 };
 
 /**
- * The standard's ten manual checks, each beside what machines measured toward it: the criteria it is about, where a
- * measure reaches them, and axe's best-practice rules for it (a heading out of order). The names are the standard's (a test
- * holds them to `standards/universal/accessibility.md`). A check no measure reaches has none here: focus moving into a
- * dialog and back, motion that a person who asks for less still gets. Each check stays a person's: what machines
- * measured is beside it, never in its place.
+ * The standard's ten manual checks (a test holds the names to `standards/universal/accessibility.md`), each with the
+ * criteria and best-practice rules machines measure toward it; one no measure reaches has none. Each stays a person's:
+ * what machines measured is beside it, never in its place.
  */
 export const TEN_CHECKS: { name: string; sc: string[]; bestPractice?: string[] }[] = [
 	{ name: 'Keyboard reachability', sc: ['2.1.1'] },

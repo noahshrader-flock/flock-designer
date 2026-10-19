@@ -1,11 +1,7 @@
 /**
- * What testers send back (A9 of the accessibility plan): the findings a person makes by hand, one row each in the
- * project's `accessibility/returned.md` (the table the manual list gives), read without anyone retyping them. Each is
- * sorted by what was measured of its criterion, not by judgment: a criterion a machine measured and found nothing in is
- * an **escape** (a machine could have caught it), logged once in the product's `agent-gaps.md` so a fixture and a probe
- * change catch it next time; one a machine had found too is confirmed; one not measured this time says why; one no
- * machine reaches is a person's, as the manual list said. The goal's own measure is the count of escapes, which should
- * fall to none.
+ * What testers send back: the findings a person makes by hand, a row each in the project's `accessibility/returned.md`,
+ * read without anyone retyping them. One a machine measured and found nothing in is an **escape**, logged once in the
+ * product's `agent-gaps.md` so a fixture and a probe change catch it next time; the count of escapes should fall to none.
  */
 import { createHash } from 'node:crypto';
 import { join } from 'node:path';

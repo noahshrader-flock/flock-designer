@@ -57,7 +57,7 @@ export const codebaseWork = ({
 
 	/**
 	 * Codebase work's branch, checked out, and its record: from `from`, or the branch the checkout is on. Only Build
-	 * starts codebase work from the app, so there is no channel for it of its own.
+	 * starts codebase work, so there is no channel for it of its own.
 	 */
 	const start = async (at: WorkCheckout, projectId: string, note: string, from?: string): Promise<Work> => {
 		const { canonical } = at;
@@ -68,7 +68,7 @@ export const codebaseWork = ({
 		const branch = from ?? (await readCheckout(canonical)).branch;
 		if (branch === null) throw new Error('This repository has a detached HEAD. Check out a branch first.');
 		// Work is built where the product's DSNR setup is. A branch without it (develop, before the
-		// setup is merged there) would leave the checkout on a branch this app can no longer work in.
+		// setup is merged there) would leave the checkout on a branch DSNR cannot work in.
 		if (!(await hasSetup(canonical, branch))) {
 			throw new Error(`${branch} has no ${DESCRIPTOR_PATH}, so work cannot start from it. Start from a branch that has the DSNR setup.`);
 		}

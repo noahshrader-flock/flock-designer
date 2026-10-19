@@ -6,11 +6,8 @@ import { findCommand } from '../projects/descriptor';
 import { assertUsableProjectId } from '../projects/workRecords';
 
 /**
- * Runs the commands a repository declares, and nothing else.
- *
- * Two properties carry the whole thing. The command is looked up by id in the
- * descriptor, so a page names a command rather than supplying one. And it
- * is spawned from an argv array with `shell: false`, so there is no interpreter
+ * Runs the commands a repository declares, and nothing else: each is looked up by id in the descriptor, so a page names
+ * a command rather than supplying one, and spawned from an argv array with `shell: false`, so there is no interpreter
  * to hand a pipe, a semicolon or a substitution to.
  */
 
@@ -64,22 +61,17 @@ interface Running {
 }
 
 /**
- * A preview is shown inside this app, so the server behind it must not also open a browser tab: most dev
- * servers do by default, and a designer clicking a project would find a stray tab beside the app. The
- * switch differs by tool, and these two cover the common ones: `CI` (rsbuild, and the many tools that
- * treat it as "no interactive extras") and `BROWSER=none` (Vite, webpack-dev-server, Create React App).
- * Only for commands that serve a preview. Opening one in a real browser is a button, not a side effect.
+ * A preview is shown inside DSNR, so the server behind it must not also open a browser tab, as most dev servers do by
+ * default. The switch differs by tool: `CI` (rsbuild, and many that read it as "no interactive extras") and
+ * `BROWSER=none` (Vite, webpack-dev-server, Create React App) cover the common ones. Only for commands that serve a preview.
  */
 const QUIET_PREVIEW = { CI: 'true', BROWSER: 'none' } as const;
 
 export class RuntimeManager {
 	private readonly running = new Map<string, Running>();
 	/**
-	 * Commands the designer asked to stop.
-	 *
-	 * `exit` fires after `stop()` has already removed the entry, so without this
-	 * the handler cannot tell a deliberate stop from a crash and reports every
-	 * stopped preview as a failure.
+	 * Commands the designer asked to stop: without this, the `exit` handler cannot tell a deliberate stop from a crash,
+	 * and reports every stopped preview as a failure.
 	 */
 	private readonly stopping = new Set<string>();
 
@@ -104,9 +96,8 @@ export class RuntimeManager {
 		const current = this.running.get(commandId);
 		if (current) {
 			if (current.projectId === projectId) return this.status(commandId);
-			// Every prototype is served on the same port, so a different project asking
-			// for it means the one running has to go first. Reusing it was the bug where
-			// opening any version showed whichever prototype had been run before.
+			// Every prototype is served on the same port, so a different project asking for it means the one running has
+			// to go first; reused, it would show whichever prototype had been run before.
 			await this.stop(commandId);
 		}
 		// Throws if the repository does not declare it. This is the allowlist.
@@ -183,9 +174,8 @@ export class RuntimeManager {
 		}
 		this.stopping.add(commandId);
 		entry.status = { state: 'stopped' };
-		// The entry stays until the child, and all it started, is actually gone. Deleting it here let the
-		// next `start` through while the old dev server still held its port, so two
-		// servers raced for it and the probe answered from the dying one.
+		// The entry stays until the child, and all it started, is actually gone, so the next `start` waits rather than
+		// racing the old dev server for its port, and the probe never answers from the dying one.
 		await endGroup(entry.child);
 		this.running.delete(commandId);
 		this.events.onStatus({ state: 'stopped' });

@@ -5,15 +5,9 @@ import { STATE_NAME, STATES_META } from '../../../shared/prototypeStates';
 import { ProcessFailed, runFile } from '../platform/process';
 
 /**
- * Turns a prototype written in React into one HTML file anyone can open.
- *
- * The prototype is a single `.tsx` file that uses the product's real design system, resolved from the
- * product's own installed packages, so what reviewers see is the real components and not an imitation.
- * Everything it needs is bundled in: the page has no build step and no network after it is made.
- *
- * **One build, two callers.** The same script is what the app runs when the page is saved and what the
- * agent runs to check its work compiles, so "it built for the agent" and "it builds when saved" are the
- * same fact. It runs as plain Node: the app runs it with its own binary, the agent with `node`.
+ * Turns a React prototype, built against the product's own installed design system, into one self-contained HTML file.
+ * The app runs the same script on save as the agent runs to check its work compiles, so "it built for the agent" and "it
+ * builds when saved" are the same fact. It runs as plain Node.
  */
 
 const SCRIPT = String.raw`
@@ -110,7 +104,7 @@ export const writeBundleScript = (prototypesRoot: string): string => {
 };
 
 /**
- * Writes the build's own accessibility check beside the build script (A6): one bundled module, run with Node as the
+ * Writes the build's own accessibility check beside the build script: one bundled module, run with Node as the
  * build is, and loaded only when it is wanted, as it carries a browser's driver. Where it is.
  */
 export const writeCheckScript = async (prototypesRoot: string): Promise<string> => {

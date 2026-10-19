@@ -7,17 +7,9 @@ import { CHANGE_REQUEST } from '../../../shared/vocabulary';
 import type { ShareTools } from '../../ports';
 
 /**
- * Putting codebase work in front of someone who is not on this machine.
- *
- * Four steps, each of which can fail for an ordinary reason with something specific to
- * do about it: push the branch, open a *draft* pull request for it (the repository's CI
- * builds pull requests, which is the whole mechanism), wait for the deploy workflow, and
- * record the address. The address is not scraped from anywhere: the repository's descriptor
- * says what it looks like, and the pull request number fills it in.
- *
- * The flow is a function over a small set of tools rather than code that calls git and gh,
- * because what matters is the order, what each failure says, and what is never done -- and
- * that is testable with no network, no remote and no real pull request (`ShareTools`, in `ports.ts`).
+ * Putting codebase work in front of someone not on this machine: push the branch, open a *draft* pull request (the
+ * repository's CI builds pull requests), wait for the deploy workflow, and record the address the descriptor's pattern
+ * makes with the pull request's number. A function over `ShareTools`, so its order and failures test with no network.
  */
 
 export interface ShareRequest {

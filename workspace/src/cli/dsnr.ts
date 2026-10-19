@@ -32,18 +32,15 @@ import { CLI, HOST, needsCli } from '../shared/vocabulary';
 import { DESIGN_REPO, PAGES_SIGN_IN } from '../shared/config';
 
 /**
- * `dsnr`: making a prototype from Claude Code in VS Code, with no app running.
- *
- * The same service the extension calls, given this machine's paths: the product checkout the agent is working in, the
- * design repository's clone beside it, and the extension's own prototype folder (`commandLinePrototypes`), so a prototype
- * made here is one the panel shows, and one made in the panel can be saved from here. It writes to the clone only; the
- * extension publishes it the next time it is open, as it does every record.
+ * `dsnr`: the service the extension calls, given this machine's paths. It shares the extension's prototype folder
+ * (`commandLinePrototypes`), so a prototype made here is one the panel shows, and the reverse. It writes to the
+ * design repository's clone only; the extension publishes it the next time it is open, as it does every record.
  */
 export interface CliDeps {
 	cwd: string;
 	out: (text: string) => void;
 	err: (text: string) => void;
-	/** The app's prototype folder on this machine. */
+	/** The extension's prototype folder on this machine. */
 	prototypesRoot: string;
 	/** The bundler's entry point, or null when it is not installed here. */
 	esbuild: string | null;
@@ -146,7 +143,7 @@ const optionsOf = (args: string[]) => {
 	}
 };
 
-/** The design repository beside a product's checkout, as the app finds it: the one way it is found from one. */
+/** The design repository beside a product's checkout: the one way it is found from one. */
 const designBeside = (root: string): string => {
 	const records = recordsRootFor(root);
 	if (records === null) throw new Error(`There is no design repository beside ${root}. Clone flock-designer into the same folder.`);
@@ -333,7 +330,7 @@ export const main = async (argv: string[], deps: CliDeps): Promise<number> => {
 			command === 'accessibility' ? 'open it, and nothing was measured' : 'build prototypes from it',
 		);
 		const designRoot = designBeside(root);
-		// The clone alone: publishing is its own command here, and there is no app sign-in to read GitHub with.
+		// The clone alone: publishing is its own command here, and there is no extension sign-in to read GitHub with.
 		const store = designStore({ clone: () => designRoot, files: null, onWrite: () => undefined });
 		const work = prototypeWork({
 			prototypesRoot: deps.prototypesRoot,

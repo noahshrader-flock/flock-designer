@@ -16,19 +16,9 @@ import { SIGN_IN_AUTHORIZE_URL, pagesSiteUrl } from '../shared/hostUrls';
 import type { SignInConfig } from '../shared/signInConfig';
 
 /**
- * The site prototypes are published as, built from the design repository: every project with a saved page, every
- * version of it, and an index, at addresses that follow the project's structure.
- *
- * ```text
- * /                    the projects
- * /<project>/          its versions, the newest first
- * /<project>/v2/       one version: its page, under a bar that names the project and switches between them
- * /<project>/latest/   the newest version
- * ```
- *
- * **Built from the repository, in full, every time,** so two people publishing never overwrite each other's pages, and
- * what is gone from the repository is gone from the site. Every link is relative, so it works wherever it is served
- * (GitHub Pages puts a project's site under its name). Nothing of the app is in it.
+ * The published site (`/`, `/<project>/`, `/<project>/v2/` under the review bar, `/<project>/latest/`), rebuilt in full
+ * from the design repository every time, so two publishers never overwrite each other and what is gone there is gone
+ * here. Every link is relative, as GitHub Pages serves a site under the repository's name.
  */
 export interface SiteInput {
 	/** The design repository: its `projects/` folder is what is published. */
@@ -38,8 +28,8 @@ export interface SiteInput {
 	/** How many comments each version has, by its key (`prototype/<project>/<name>`), when they could be read. */
 	comments?: Map<string, number>;
 	/**
-	 * Comments on each version's page: the built viewer (`viewer.js`, `viewer.css`, its icons' `viewer.ttf`), and the repository whose review
-	 * threads they are. Without it the pages are as they were, with nothing to comment with.
+	 * Comments on each version's page: the built viewer (`viewer.js`, `viewer.css`, its icons' `viewer.ttf`), and the
+	 * repository whose review threads they are. Without it a page has nothing to comment with.
 	 */
 	viewer?: { dir: string; ref: RepoRef };
 	/**
@@ -49,9 +39,8 @@ export interface SiteInput {
 	 */
 	pagesAt?: string;
 	/**
-	 * Signing in to comment (PUBLISHED_COMMENTS_PLAN, Phase 3): the GitHub App's client ID and the sign-in function's address.
-	 * With it and a viewer, every page carries what the viewer needs to sign a person in, and the site's front page, which
-	 * GitHub sends a person back to, finishes it. An empty client ID is none.
+	 * Signing in to comment: the GitHub App's client ID and the sign-in function's address. With it and a viewer, every
+	 * page can sign a person in, and the front page, which GitHub sends them back to, finishes it. An empty client ID is none.
 	 */
 	signIn?: { clientId: string; exchange: string };
 }
@@ -61,7 +50,7 @@ export const SANDBOX_APART = 'allow-scripts allow-same-origin allow-forms allow-
 /**
  * A page beside its bar (the published site): the same, but **no origin of its own**. On the bar's address its own origin
  * would be the bar's, and it could take the sandbox off through the bar and read the bar's storage, where the person's token
- * is (PUBLISHED_COMMENTS_PLAN, 2.2). The browser then refuses its storage and cookies; the page agent gives it stand-ins.
+ * is. The browser then refuses its storage and cookies; the page agent gives it stand-ins.
  */
 export const SANDBOX_BESIDE = 'allow-scripts allow-forms allow-popups allow-modals';
 
@@ -290,8 +279,8 @@ export const buildSite = ({ designRoot, outDir, comments, viewer, pagesAt, signI
 	const shared = writeShared(designRoot, outDir);
 	if (viewer) {
 		mkdirSync(join(outDir, '_viewer'), { recursive: true });
-		// Its icons' font, which its stylesheet names, and the page agent with them: every prototype's page carries it, so the
-		// bar asks it for the page's pins. A viewer without one of them is one built before it was made of them.
+		// Its icons' font, which its stylesheet names, and the page agent, which every page carries so the bar can ask it for
+		// the page's pins. A viewer missing any of them is out of date.
 		for (const f of ['viewer.js', 'viewer.css', 'viewer.ttf', PAGE_AGENT]) {
 			if (!existsSync(join(viewer.dir, f))) throw new Error(`The viewer at ${viewer.dir} has no ${f}: build it again.`);
 			copyFileSync(join(viewer.dir, f), join(outDir, '_viewer', f));

@@ -10,12 +10,9 @@ import { isBot } from '../../../shared/people';
 import { OBJECT_ID_PATTERN } from '../../../shared/sha';
 
 /**
- * Git, through argv only.
- *
- * Every call goes through `runFile` with an argument array, so no shell parses anything -- a branch name containing `;`
- * or backticks is a bad branch name, not a command. The helpers here never rewrite history or discard a person's work:
- * the one forced checkout is in a worktree of the app's own (`readTreeAt`), and a branch is only ever switched on a clean
- * tree. `git` itself runs what it is given; a caller that changes a repository says what it changes.
+ * Git, through argv only, so a branch name with `;` or backticks is a bad name, not a command. These helpers never rewrite
+ * history or discard a person's work: the one forced checkout is in DSNR's own worktree (`readTreeAt`), and a branch is
+ * only switched on a clean tree.
  */
 
 /** One queue per repository: git takes a lock on the index, so two commands at once can collide. */
@@ -79,12 +76,8 @@ const attempt = async (root: string, args: string[], { timeoutMs, env, input }: 
 };
 
 /**
- * Runs git, one command at a time per repository, retrying briefly if something outside
- * this app (an editor, a terminal) holds the lock for a moment.
- *
- * A lock that stays is not removed here: a lock file is how git says "someone is writing
- * to this", and deleting one under a live process corrupts the index. The error says what
- * to check instead.
+ * Runs git one command at a time per repository, retrying briefly while something else (an editor, a terminal) holds the
+ * lock. A lock that stays is never removed: deleting one under a live process corrupts the index.
  */
 const queued = (root: string, args: string[], options: GitOptions): Promise<string> => {
 	const run1 = async (): Promise<string> => {
@@ -259,12 +252,8 @@ export const ensureLocalBranch = async (root: string, branch: string): Promise<v
 };
 
 /**
- * Refuses to move HEAD while the tree is dirty.
- *
- * A designer who has edited something and not committed it should be told, not
- * have the edits carried onto another branch or quietly stashed. This is the
- * only guard that stands between switching branches and losing the current
- * branch's uncommitted work.
+ * Refuses to move HEAD while the tree is dirty: uncommitted edits are told about, never carried onto another branch or
+ * quietly stashed. The only guard between switching branches and losing that work.
  */
 const requireCleanTree = async (root: string, action: string): Promise<void> => {
 	const { clean } = await readCheckout(root);
@@ -400,7 +389,6 @@ export const fileAt = async (root: string, ref: string, path: string): Promise<{
 export const changedSince = async (root: string, commit: string, path: string): Promise<boolean> =>
 	(await git(root, ['diff', '--name-only', commit, 'HEAD', '--', path])) !== '';
 
-/** The commit a branch is at, without switching to it. */
 /** The commit `branch` is at, or null when git says there is no such branch; an error for anything that stopped it looking. */
 export const branchTip = (root: string, branch: string): Promise<string | null> =>
 	git(root, ['rev-parse', '--verify', '--quiet', `refs/heads/${branch}`]).catch((err: unknown) => (saidNo(err) ? null : Promise.reject(err)));
@@ -432,12 +420,8 @@ export const checkoutBranch = async (root: string, branch: string): Promise<void
 };
 
 /**
- * Sends a branch to `origin` and says whether anything actually went.
- *
- * `--porcelain` is git's own format for scripts: a line starting with `=` means the remote
- * already had exactly this, which is how sharing again with nothing new is told apart from
- * sharing new work. Plain push only ever *adds* to the branch: it is refused, not forced,
- * if the remote has commits this machine lacks.
+ * Sends a branch to `origin` and says whether anything went: a `--porcelain` line starting with `=` means the remote
+ * already had it. Never forced, so it is refused when the remote has commits this machine lacks.
  */
 export const pushBranch = async (root: string, branch: string): Promise<{ pushed: boolean }> => {
 	if (!(await branchExists(root, branch))) {

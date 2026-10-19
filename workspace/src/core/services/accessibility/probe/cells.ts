@@ -1,10 +1,9 @@
 import { wcagCriterion } from '../../../../shared/wcagCriteria';
 
 /**
- * The probe's cells (A3 of the accessibility plan): one per "Probe measures" entry of its matrix, each a measure that code
- * decides, of one WCAG criterion. What each measures is said once here, and every result is said in the same four words:
- * found, none found, does not apply, not run (with why). None of them is a pass: a measure that finds nothing has measured
- * only what it says it measures.
+ * The probe's cells: each a measure that code decides, of one WCAG criterion, said once here. Every result is one of
+ * found, none found, does not apply, not run (with why). None is a pass: a measure that finds nothing has measured only
+ * what it says it measures.
  */
 
 /** Where a cell's measure is made: in the page, in the browser, or in the work's source. */

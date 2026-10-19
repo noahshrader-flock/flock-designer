@@ -3,12 +3,9 @@ import type { GitHubApi } from './github';
 import { HOST } from '../shared/vocabulary';
 
 /**
- * Every item of a list the host pages, 100 at a time, read up to the first page that is not full. A first version read
- * one page and stopped, so the 101st comment on a thread never appeared.
- *
- * `together`: after a full first page, the rest are asked for at once, for a list where each call can take a second or
- * more (through the command line, a process each). `atMost`: what reaching `maxPages` of full pages means, a failure said
- * aloud (`fail`, for a list that must be whole) or the list as far as it was read (`stop`, for one that is a choice).
+ * Every item of a list the host pages, 100 at a time, read up to the first page that is not full. `together`: after a full
+ * first page, the rest are asked for at once, where each call is slow (a process each, through the command line). `atMost`:
+ * on reaching `maxPages` full pages, `fail` aloud (a list that must be whole) or `stop` with what was read (one that is a choice).
  */
 export const readPages = async (
 	github: GitHubApi,

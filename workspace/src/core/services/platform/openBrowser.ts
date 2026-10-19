@@ -2,11 +2,9 @@ import { spawn } from 'node:child_process';
 import { COMMIT_PATTERN } from '../../../shared/sha';
 
 /**
- * Opens an address in the person's default browser, from a command that has just published a page.
- *
- * Only an https address of the plain kind a published page has (host, path, and the deploy's `?v=`): anything else is
- * not opened, so nothing a page, a comment or an agent says can make this open some other place. Argv only, never a
- * shell. Not being able to open one is not an error: the link was printed.
+ * Opens a just-published page in the default browser. Only a plain https address (host, path, the deploy's `?v=`), so
+ * nothing a page, comment or agent says can open somewhere else; argv only, never a shell. Failing to open is not an
+ * error: the link was printed.
  */
 
 const PLAIN = new RegExp(`^https://[A-Za-z0-9.-]+(?::\\d+)?(?:/[A-Za-z0-9._~/-]*)?(?:\\?v=${COMMIT_PATTERN})?$`);

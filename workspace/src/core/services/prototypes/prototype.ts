@@ -10,11 +10,9 @@ import { resolveInside } from '../platform/paths';
 import { parseWork, serializeWork, unreadableWork } from '../../../shared/workRecords';
 
 /**
- * Prototypes: what is recorded, where the page is kept, and what the agent is told.
- *
- * **One writer per machine.** A machine with the design repository cloned writes into the clone and lets
- * the publisher send it, exactly as the other records go; one without a clone writes through GitHub's
- * API. Never both from one machine, which is what once left a clone that could not catch up.
+ * Prototypes: what is recorded, where the page is kept, and what the agent is told. One writer per machine: into the
+ * design repository's clone for the publisher to send, or, without a clone, through GitHub's API; never both, or the
+ * clone could not catch up.
  */
 export interface RecordStore {
 	/** A file in the design repository, by its path from the repository's root, or null. */
@@ -23,7 +21,6 @@ export interface RecordStore {
 	readBytes(path: string): Promise<Buffer | null>;
 	/** Whether a file is there, without fetching it: shared files run to megabytes. */
 	has(path: string): Promise<boolean>;
-	/** Text, or the bytes of a picture. */
 	write(path: string, content: string | Buffer, message: string): Promise<void>;
 }
 
@@ -53,10 +50,8 @@ export const MOVE_SKILL = 'skills/move-to-code.md';
 export const ROUTE_SKILL = 'skills/record-the-route.md';
 
 /**
- * The most a page may be: GitHub's own limit for a file (100 MB), with room to spare. Nothing of ours sits
- * below it. A page built from the real design system is several MB, and a prototype with images can be far
- * more; refusing one for being "too big" would leave someone unable to save what they made, which is the one
- * thing this must not do.
+ * The most a page may be: GitHub's own file limit (100 MB), with room to spare, and no lower limit of ours. A page with
+ * images can run large, and refusing it would leave someone unable to save what they made.
  */
 export const MAX_PAGE = 90_000_000;
 
@@ -65,7 +60,7 @@ export interface PrototypeBuild {
 	source: string;
 	page: string;
 	buildCommand: string;
-	/** The build's own accessibility check, run after it builds (A6). */
+	/** The build's own accessibility check, run after it builds. */
 	checkCommand: string;
 }
 
@@ -113,10 +108,9 @@ const addRecord = async (
 };
 
 /**
- * Records a new prototype, the next version, and the project itself when this is its first work: a brief with its
- * title, which is what the project list names it by, in the folder it is started in. A project that has a brief already
- * stays in its folder: a new version started from another folder's view does not move it. The page comes later, once the
- * agent has made it.
+ * Records the next version of a prototype, and the project itself (a brief with its title, in the folder it is started
+ * in) when this is its first work. A project with a brief stays in its folder, wherever the new version is started from.
+ * The page comes later, once the agent has made it.
  */
 export const recordPrototype = async (
 	store: RecordStore,
@@ -143,7 +137,7 @@ export const recordPrototype = async (
 };
 
 /**
- * Puts a project in a folder, or in none for null (the folders plan): its brief, read just before, with only its folder
+ * Puts a project in a folder, or in none for null: its brief, read just before, with only its folder
  * changed, written once with a message that says so. Nothing is written when it is in that folder already. The brief is
  * where the folder is kept, so a project with none is refused rather than given one.
  */

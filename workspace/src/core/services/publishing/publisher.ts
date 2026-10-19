@@ -4,17 +4,9 @@ import { coalescing } from '../platform/concurrency';
 import { errorText } from '../../../shared/result';
 
 /**
- * Keeps the person's work published, by itself.
- *
- * It runs the two syncs in order, because order is the point: a project's branch goes up first, so the
- * design repository never points at a branch that exists only on one machine; then the project records.
- * It starts when the app opens, when the window is focused, when the list is refreshed and after any
- * record is written, and overlapping requests collapse into one more run rather than queueing up.
- *
- * It asks nothing and blocks nothing. Publishing is what this app is for, so there is no permission step:
- * what protects the person is how narrow it is (their own branches, plain pushes, only the project records;
- * see `branchSync` and `designSync`). A failure is shown with its reason and retried on the next trigger,
- * never silent.
+ * Keeps the person's work published, by itself, asking nothing: what protects them is how narrow publishing is (see
+ * `branchSync` and `designSync`), not a permission step. A failure is shown with its reason and retried on the next
+ * trigger, never silent.
  */
 
 /**

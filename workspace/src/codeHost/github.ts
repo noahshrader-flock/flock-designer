@@ -148,9 +148,8 @@ export const callApi = async (token: string, call: ApiCall, fetcher: Fetcher, ca
 		const limit = rateLimited(res.status, message, res.headers);
 		if (limit) throw limit;
 
-		// GitHub's own wording for a missing permission is "Resource not accessible
-		// by integration", which tells you nothing about which permission or where
-		// to set it. Name both -- this cost a round trip the first time it happened.
+		// GitHub's own wording for a missing permission, "Resource not accessible by integration", says nothing about which
+		// permission or where to set it, so name both.
 		if (res.status === 403 && /not accessible by integration/i.test(message)) {
 			const writing = call.method !== undefined && call.method !== 'GET';
 			const needed =

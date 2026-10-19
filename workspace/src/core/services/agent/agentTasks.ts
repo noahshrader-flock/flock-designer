@@ -5,25 +5,15 @@ import { HOST } from '../../../shared/vocabulary';
 import { MOST_ROUNDS } from '../accessibility/buildCheck';
 
 /**
- * Every task an agent is given, put together here, one function per kind of run, so each gets the same parts in the
- * same order and none is missed (a run that left one out is how Build in the codebase once went without the light
- * check and the shared folders). What goes into a part (a skill's text, the product's target, the voice) is read by
- * the caller; this only says where it goes.
- *
- * - **Every run begins with the builder's guide** (`guidePart`): how to build UI in a Flock product, carried in the task
- *   itself so that no run depends on an agent choosing to open it.
- * - **A run in a product checkout** (codebase work, Address on a branch, Handoff, building a prototype in the codebase) ends
- *   with `CheckoutParts`, always in this order: the product's light check, the shared folders it may read, the
- *   accessibility rules and target, the voice and tone.
- * - **A prototype run** (building one, changing one for a comment) says what it may read, then the accessibility rules
- *   and target and the voice and tone, and the person's request last, after everything that frames it.
+ * Every task an agent is given, one function per kind of run, so each gets the same parts in the same order and none is
+ * missed. Each begins with the builder's guide (`guidePart`), so no run depends on an agent choosing to open it. The
+ * caller reads what goes into a part; this only says where it goes.
  */
 
 /**
- * The builder's guide (`agents/ui-guide.md`) as the first section of a task: said to be followed always, with the run's
- * own skill winning where it is more specific, and what to do when nobody is there to answer. Its links (`../standards/…`)
- * are pointed at the shared folder on this machine (`sharedRoot`, the folder that holds `agents/`), so the task names real
- * files wherever it is read; with none known they are left as written.
+ * The builder's guide (`agents/ui-guide.md`) as a task's first section, the run's own skill winning where more specific.
+ * Its links (`../standards/…`) are pointed at `sharedRoot` (the folder holding `agents/`) so they name real files
+ * wherever the task is read; with none known they are left as written.
  */
 export const guidePart = (guide: string, sharedRoot: string | null): string =>
 	[
@@ -161,9 +151,8 @@ export const buildInCodebaseTask = (
 	].join('\n');
 
 /**
- * How every address task begins, on a branch or on a prototype. `number` is the comment to act on -- the number the
- * designer read off its pin. The file still holds every comment, because it is the project's file and its pictures
- * are kept in step with it, so which one to act on is said here rather than by narrowing the file.
+ * How every address task begins, on a branch or on a prototype. `number` is the comment's number on its pin. The file
+ * keeps every comment, since its pictures are kept in step with it, so which one to act on is said here.
  */
 const addressOpening = (number: number, commentsPath: string, subject: string): string[] => [
 	`Address comment ${number} on ${subject}, and only that one.`,
@@ -192,18 +181,18 @@ const readableLines = (sources: PrototypeSources): string[] => {
 };
 
 /**
- * What the agent is told for a prototype. The skill says how; this says where everything is. The
- * request is the person's own words, and comes last, after everything that frames it.
- */
-/**
- * The build's own accessibility check, as both prototype tasks put it (A6; decision 30): run after it builds, its
- * findings fixed as a build error is, for at most `MOST_ROUNDS` rounds, after which what is left is recorded, not fixed.
+ * The build's own accessibility check, as both prototype tasks put it: run after it builds, its findings fixed as a
+ * build error is, for at most `MOST_ROUNDS` rounds, after which what is left is recorded, not fixed.
  */
 const checkLines = (build: PrototypeBuild): string[] => [
 	`- When it builds, check its accessibility with exactly: \`${build.checkCommand}\``,
 	`  It measures the page in a real browser at the product's target and says what to fix, as the build says an error: fixing it is part of the work, whatever else was asked. Fix each in \`${build.source}\`, build, and check again. It says when its ${MOST_ROUNDS} rounds are used up: then finish, and what is left is recorded with the page. Never write words it says are a person's.`,
 ];
 
+/**
+ * What the agent is told for a prototype. The skill says how; this says where everything is. The request is the
+ * person's own words, and comes last, after everything that frames it.
+ */
 export const prototypeBuildTask = ({
 	guide,
 	skill,

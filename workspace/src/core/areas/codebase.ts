@@ -39,7 +39,7 @@ export const codebaseArea = (d: CallsDeps) => {
 		written,
 	} = d;
 	/**
-	 * A prototype's accessibility (T7): its saved page, served as it is opened, checked in each of its states at its
+	 * A prototype's accessibility: its saved page, served as it is opened, checked in each of its states at its
 	 * product's target, and kept beside it. Made again only when what it was made with changes.
 	 */
 	const prototypeAccessibility = async (projectId: string, name: string): Promise<AccessibilityResult> => {
@@ -55,7 +55,7 @@ export const codebaseArea = (d: CallsDeps) => {
 			check: ports.headless.scan,
 		});
 	};
-	/** The accessibility section of a codebase task (T7): the product's target from its own manifest, on the branch it is on. */
+	/** The accessibility section of a codebase task: the product's target from its own manifest, on the branch it is on. */
 	const codebaseAccessibility = (canonical: string, findings?: Parameters<typeof taskAccessibility>[2]): Promise<string> => {
 		const descriptor = readDescriptor(canonical);
 		// The product's own check, where its setup declares one (Coke's `a11y`), run as the work goes; its gate runs it at handoff.
@@ -106,16 +106,15 @@ export const codebaseArea = (d: CallsDeps) => {
 				lightCheck: commandLine(readDescriptor(canonical).commands, 'check-iteration', projectId),
 				shared: shared.note,
 				accessibility: await codebaseAccessibility(canonical, findings),
-				// The voice and tone (T9), from the design system beside this product; nothing while it is blank.
+				// The voice and tone, from the design system beside this product; nothing while it is blank.
 				voice: await work.voice(canonical),
 			},
 		};
 	};
 	/**
-	 * Runs the agent where the person can come back to it, and resolves at its end: tagged with its branch, and its
-	 * conversation named and kept, so it can be continued in VS Code. A run already going for the same branch (a screen
-	 * opened again) is waited on rather than started twice, which `joined` says. Every run in a product checkout is this
-	 * one, with its whole task (`agentTasks`).
+	 * Runs the agent where the person can come back to it, and resolves at its end: tagged with its branch, its conversation
+	 * kept to continue in VS Code. A run already going for the same branch (a screen opened again) is waited on, not started
+	 * twice, which `joined` says. Every run in a product checkout is this one, with its whole task (`agentTasks`).
 	 */
 	const runTracked = (
 		canonical: string,
@@ -211,11 +210,9 @@ export const codebaseArea = (d: CallsDeps) => {
 			};
 		},
 		/**
-		 * Handoff: the heavy pass on codebase work, from its checks to its verdict in one step: on the work's branch, the
-		 * product's gate, both reviews, their fixes and HANDOFF.md, run here to its end (or a run of it already going, waited
-		 * on). Ready when the run's own last verdict says so and HANDOFF.md was committed since it started; the verdict is kept
-		 * on the work's record (`recordHandoff`), with the commit it was ready at, so it outlives this run and this machine.
-		 * Null when it cannot be told: a run left from before this app started.
+		 * Handoff, on the work's branch: the product's gate, both reviews, their fixes and HANDOFF.md, run to its end (or a run
+		 * already going, waited on). Ready when its last verdict says so and HANDOFF.md was committed since it started; kept on
+		 * the work's record with that commit (`recordHandoff`). Null when it cannot be told: a run from before this app started.
 		 */
 		handOff: async (workIn: CheckedCheckout, projectId: string): Promise<JobEnd<{ ready: boolean | null }>> => {
 			const { canonical, recordsRoot, descriptor } = workIn;
@@ -236,9 +233,9 @@ export const codebaseArea = (d: CallsDeps) => {
 			return { state: 'done', value: { ready } };
 		},
 		/**
-		 * Run locally: codebase work on its branch (the checkout moved to it as opening it moves it, never one with work
-		 * uncommitted), once a run of its agent going on has ended, then its preview (the product's design mode) started, at
-		 * the work's own route. `uncommitted`: the checkout had changes nobody committed, and no agent made them here.
+		 * Run locally: the checkout moved to the work's branch (never one with work uncommitted) once its agent's run has ended,
+		 * then its preview (the product's design mode) started at the work's own route. `uncommitted`: the checkout had changes
+		 * nobody committed, and no agent made them here.
 		 */
 		runLocally: async (workIn: CheckedCheckout, projectId: string, name: string): Promise<{ url: string; uncommitted: boolean }> => {
 			const { canonical, recordsRoot, descriptor } = workIn;
@@ -258,11 +255,9 @@ export const codebaseArea = (d: CallsDeps) => {
 			throw new Error(result.state === 'failed' ? result.detail : 'The preview stopped before it was ready. Its output is above.');
 		},
 		/**
-		 * Build, from a prototype: its branch and record are made here, as all codebase work's are (or, when the work was
-		 * started before, picked up where it is), and the building is handed to Claude Code in the product repository, where
-		 * the person watches it and can step in. The task is written beside the prototype's own copy (the skill, the page and
-		 * source to start from, where the audit goes); the conversation starts with a line pointing at it. In VS Code when it
-		 * has Claude Code; otherwise the command that starts it in a terminal is put on the clipboard.
+		 * Build, from a prototype: its branch and record made (or picked up where they are), and the building handed to Claude
+		 * Code in the product repository, where the person can step in. The task is written beside the prototype's own copy, and
+		 * the conversation starts pointing at it; without Claude Code in VS Code, the command for a terminal is copied instead.
 		 */
 		buildInCodebase: async (workIn: CheckedCheckout, projectId: string, name: string, from: string | null): Promise<BuildInCodebase> => {
 			const { canonical, recordsRoot } = workIn;

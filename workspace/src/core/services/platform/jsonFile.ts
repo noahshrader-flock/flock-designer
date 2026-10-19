@@ -2,10 +2,8 @@ import { mkdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } 
 import { dirname } from 'node:path';
 
 /**
- * A small JSON file the app keeps (a choice, a memory, a cache), the one way: read through a check of its own, so a file
- * that was edited, damaged or written by another version reads as `fallback`; written whole (to a file beside it, then
- * renamed over it), so a reader never sees part of one; and never failing the app when it cannot be written, since
- * forgetting a choice is an inconvenience, never a failure.
+ * A small kept JSON file (a choice, a memory, a cache). One edited, damaged or from another version reads as `fallback`;
+ * it is written whole, so no reader sees part of one; and a failed write is ignored, as forgetting a choice is no failure.
  */
 export interface JsonFile<T> {
 	read(): T;

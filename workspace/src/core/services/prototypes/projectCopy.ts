@@ -7,12 +7,9 @@ import { PROJECT_ID } from '../../../shared/validate';
 import type { RepoFiles } from '../../../codeHost/repoFiles';
 
 /**
- * One project of the design repository, read through GitHub into `into`, laid out as a checkout's records are
- * (`projects/<id>/`), so its review can be built on a machine with no checkout of it (the workspace README's "Projects, by
- * product"): its brief, its records, the pages they name, and the shared files those pages use, nothing else. Read again
- * each time, so it is the project as GitHub has it now. Other projects' copies are kept only while still in use (`keep`:
- * a review open, a browser's key), and shared files only while a kept page names them, so the copy never grows past what
- * is open. Returns where its records are, as a checkout's would be (the `projects` folder).
+ * One project read fresh from GitHub into `into`, laid out as a checkout's `projects/<id>/` is, so its review can be built
+ * with no checkout. Other projects' copies survive only while in use (`keep`), and shared files only while a kept page
+ * names them, so the copy never grows past what is open. Returns the `projects` folder.
  */
 export const copyProject = async (files: Pick<RepoFiles, 'readFile'>, id: string, into: string, keep: string[] = []): Promise<string> => {
 	if (!PROJECT_ID.test(id)) throw new Error(`${id.slice(0, 80)} is not a project.`);

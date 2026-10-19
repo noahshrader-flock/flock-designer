@@ -2,13 +2,8 @@ import { realpathSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 /**
- * The repositories this session has actually opened.
- *
- * Every operation takes a `root` from a page, so without this a page
- * could name any directory on the machine and have the core read it, run
- * a command in it, or write to it. A root is only usable after the designer
- * opened it deliberately -- through the picker, or by an explicit open. A
- * page cannot add one.
+ * The repositories this session has opened. Every operation takes a `root` from a page, so without this a page could
+ * have the core read, run in or write to any directory. Only the designer's own open (the picker, an explicit open) adds one.
  */
 export class OpenedCheckouts {
 	private readonly roots = new Set<string>();
