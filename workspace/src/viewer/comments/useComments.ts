@@ -14,11 +14,9 @@ type Mode = 'browse' | 'picking' | 'composing';
 const stamped = (anchor: CommentAnchor, page: string | undefined): CommentAnchor => ({ ...anchor, ...(page ? { page } : {}) });
 
 /**
- * The comments on one version, and leaving one: everything about them except how they are drawn. Written against a
- * `CommentStore` and a `PageSurface`, so it runs wherever those can be given.
- *
- * `opened` says the page is up, which is when pins can be drawn and a click on it waited for. `route` is where the
- * page is, so the pins are drawn again when it moves. Errors go to `setError`, which the screen around this shows.
+ * The comments on one version, and leaving one: everything but how they are drawn, against a `CommentStore` and a
+ * `PageSurface`. `opened` says the page is up, so pins can be drawn and a click waited for; the pins are drawn again
+ * when `route` moves. Errors go to `setError`, which the screen around this shows.
  */
 export const useComments = ({
 	store,
@@ -68,21 +66,13 @@ export const useComments = ({
 	// kept here and merged into whatever is read back.
 	const posted = useRef(new Map<number, ReviewComment>());
 
-	/**
-	 * Reading the comments. One read at a time, and never a lost one -- see `latest`. The bug it fixes was visible:
-	 * opening a version reads on arrival and again once the preview is up, and while a request made during a read
-	 * was simply dropped, the comments stayed as the first read left them until something else happened to ask.
-	 * Posting a comment looked like what made an earlier one appear.
-	 */
+	// Reading the comments: one read at a time, and never a lost one (`latest`), as opening a version reads on arrival
+	// and again once the preview is up.
 	/** True when someone asked for this read, so a failure is worth saying. Background reads are silent. */
 	const asked = useRef(false);
 	/**
-	 * Counts the changes made from this window.
-	 *
-	 * GitHub answers a read as things stood *when the read began*. Resolve, move or delete something while one is in
-	 * flight and that answer is already out of date when it lands: applying it puts the change back the way it was, and
-	 * the comment reopens or the pin jumps back. So each change bumps this, and a read whose generation has moved on is
-	 * dropped. The change stands, and the next read brings GitHub's own account of it.
+	 * Counts the changes made from this window. GitHub answers a read as things stood *when it began*, so a read that
+	 * lands after a change here would undo it (a comment reopens, a pin jumps back); such a read is dropped.
 	 */
 	const changes = useRef(0);
 	const read = useCallback(async () => {
@@ -162,8 +152,6 @@ export const useComments = ({
 		});
 	}, []);
 
-	// Put the markers on the page. A function, not just an effect, because a screen that pictures the page (to draw
-	// over it) must first make sure the picture includes them.
 	const drawRun = useRef(0);
 	const drawMarkers = useCallback(async () => {
 		// Only your own pins can be dragged; GitHub would refuse anyone else's edit anyway.

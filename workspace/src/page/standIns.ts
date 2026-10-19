@@ -1,9 +1,7 @@
 /**
- * Stand-ins for what a page framed with **no origin of its own** is refused (PUBLISHED_COMMENTS_PLAN, 2.2): its
- * `localStorage`, `sessionStorage` and `document.cookie`, which a design system's code may read as it loads. Each is kept in
- * memory for the page's life, not between loads, and installed only where the browser refuses the real one. Nothing else
- * is stood in for: a prototype that needs more (IndexedDB, a service worker) is the reason for the pages' own address, not
- * for more stand-ins here.
+ * In-memory stand-ins for the `localStorage`, `sessionStorage` and `document.cookie` a page framed with **no origin of its
+ * own** is refused, which a design system's code may read as it loads; installed only where the real one is refused. A
+ * prototype that needs more (IndexedDB, a service worker) needs the pages' own address, not more stand-ins.
  */
 
 const memoryStorage = (): Storage => {

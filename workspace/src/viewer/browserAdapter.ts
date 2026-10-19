@@ -9,10 +9,9 @@ import { ReviewThreads } from '../codeHost/reviewThreads';
 import { hostErrorKind } from '../codeHost/hostError';
 
 /**
- * The comments experience on a prototype's published page: the browser's side of what the app does through its main
- * process. GitHub is reached with the app's own code (`ReviewThreads`, `callApi`), given a token instead of the app's
- * sign-in, so a thread is found, made and written exactly it. The page is the frame the prototype is
- * in, whose agent runs the same pick and pin code there when it is asked.
+ * Comments on a prototype's published page, in the browser. GitHub is reached with DSNR's own code (`ReviewThreads`,
+ * `callApi`) given the person's token, so a thread is found, made and written exactly as in VS Code. The page is the
+ * prototype's frame, whose agent runs the pick and pin code there when asked.
  */
 
 /** GitHub's API, as the person whose token this is; `onEnded` is told when GitHub says the token has ended. */
@@ -31,7 +30,7 @@ export const browserComments = (
 	{ projectId, branch, page }: { projectId: string; branch: string; page?: string | undefined },
 ): CommentStore => {
 	const threads = new ReviewThreads(github, ref);
-	/** A person GitHub will not show the design repository: who they are signed in as, and that it is theirs to change (3.3). */
+	/** A person GitHub will not show the design repository: who they are signed in as, and that it is theirs to change. */
 	const notAllowed = async (err: unknown): Promise<never> => {
 		const kind = hostErrorKind(err);
 		if (kind !== 'notFound' && kind !== 'forbidden') throw err;
@@ -70,9 +69,8 @@ export type FramePage = PageSurface & {
 
 /**
  * The prototype's frame, as the page the comments are left on (the README's Review isolation): **asked, by message**, as
- * the page's agent answers (`shared/pageChannel.ts`, `src/page/agent.ts`), never reached into. The bar says hello with a
- * secret each time the frame loads; the page says it is ready, then answers and reports with that secret. Only messages
- * from the frame's own window and address are heard, and what they say is read by the readers it always went through.
+ * the page's agent answers (`src/page/agent.ts`), never reached into. The bar says hello with a secret each time the frame
+ * loads, and the page answers with it. Only the frame's own window and address are heard, read through `pageReaders`.
  */
 export const framePage = (frame: HTMLIFrameElement, win: Window = window): FramePage => {
 	const nonce = crypto.randomUUID();
@@ -94,9 +92,7 @@ export const framePage = (frame: HTMLIFrameElement, win: Window = window): Frame
 			return win.location.origin;
 		}
 	};
-	/** Where the page's messages come from. */
 	const origin = (): string => (opaque() ? 'null' : address());
-	/** Where a message to the page is sent. */
 	const target = (): string => (opaque() ? '*' : address());
 	const pins = new Set<(e: PinEvent) => void>();
 	const readies = new Set<(route: string) => void>();

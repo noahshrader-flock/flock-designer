@@ -21,9 +21,8 @@ const unique = (sel: string): boolean => {
 	}
 };
 
-// A prototype is one page wherever it is served (the app's own server, the published site), so only what follows its #
-// says where in it a comment is; its driver says when it is one (SINGLE_PAGE). Anything else is a real app, where the
-// path is the place.
+// A prototype is one page wherever it is served, so only what follows its # says where in it a comment is; the agent's
+// bundle says when it is one (`singlePage.ts`). Anything else is a real app, where the path is the place.
 const single = !!window.__fdSinglePage;
 export const place = (r: string): string => {
 	if (!single) return r;
@@ -32,11 +31,9 @@ export const place = (r: string): string => {
 };
 export const route = (): string => place(location.pathname + location.hash);
 
-// Which state of the page a prototype is showing. Recorded with a comment and compared when the comment is placed again,
-// so the two must read it the same way: one definition, used by both. A prototype lists its states in its own tag, the
-// first being the page as it opens; that one asked for by name (?state=default, as the bars prototypes once drew wrote
-// it) is the same as no query (stateOfQuery in shared/prototypeStates says so for the app). A page with no tag is
-// compared as it is.
+// Which state of the page a prototype is showing, recorded with a comment and compared when it is placed again, so one
+// definition serves both. The first state in a prototype's tag is the page as it opens, so asking for it by name is the
+// same as no query (as `stateOfQuery` in shared/prototypeStates has it). A page with no tag is compared as it is.
 const statesTag = document.querySelector(`meta[name="${STATES_META}"]`);
 const firstState = statesTag ? String(statesTag.getAttribute('content') || '').split(',')[0] : null;
 export const asState = (q: string): string => (firstState && q === '?state=' + firstState ? '' : q);
@@ -75,13 +72,9 @@ const namedScope = (el: Element): Element | null => {
 };
 
 /**
- * How an element is found again after the code has changed.
- *
- * A path of direct children says where an element sits in a tree that is about to be rearranged: inserting one wrapper
- * div, which is what restyling does, breaks it. So when the element has no stable name of its own, it is described as a
- * *descendant* of the nearest element that does ("the p inside billing-card"). That holds through anything done inside
- * the card, and is scoped to the card, so it cannot drift onto an identical-looking element elsewhere on the page. The
- * old path remains for a page with no stable names anywhere.
+ * How an element is found again after the code has changed. A path of direct children breaks when restyling adds one
+ * wrapper div, so an element with no stable name is described as a *descendant* of the nearest one that has one ("the p
+ * inside billing-card"). The full path is kept for a page with no stable names anywhere.
  */
 const selectorFor = (el: Element): string => {
 	const own = segment(el);
@@ -111,7 +104,7 @@ const selectorFor = (el: Element): string => {
 	return parts.join(' > ') || 'html';
 };
 
-/** The page's own element at a point, ignoring this app's pins. */
+/** The page's own element at a point, ignoring DSNR's pins. */
 export const underlying = (x: number, y: number): Element | null => {
 	const stack = document.elementsFromPoint ? document.elementsFromPoint(x, y) : [];
 	return stack.find((el) => !el.closest('[data-fd-layer]')) ?? null;
@@ -207,10 +200,9 @@ const hoverOutline = () => {
 };
 
 /**
- * The outline, shown only while Shift is held: placing a pin and dragging one show what it will attach to only when the
- * person asks, so the page is not lit up under every move. Shared by both: a pin that is dropped re-attaches to whatever is
- * under it, so the person moving it sees the same thing as the person placing it, looking the same way. `show` says what would be outlined (and, from a pointer event,
- * whether Shift is down); pressing or letting go of Shift shows or hides it where it is, without the pointer moving.
+ * The outline, shown only while Shift is held, so the page is not lit up under every move. Placing a pin and dragging one
+ * share it, as a dropped pin re-attaches to whatever is under it. Pressing or letting go of Shift shows or hides it where
+ * it is, without the pointer moving.
  */
 export const shiftOutline = () => {
 	const hover = hoverOutline();

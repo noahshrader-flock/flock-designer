@@ -1,5 +1,5 @@
 /**
- * A story's picture, made in its preview page (P5), as the headless browser asks for it (`core/services/browser/chromeHeadless.ts`,
+ * A story's picture, made in its preview page, as the headless browser asks for it (`core/services/browser/chromeHeadless.ts`,
  * which bundles this into the scripts it runs). Page code, typed like the rest.
  */
 
@@ -44,11 +44,9 @@ export const encodeJpeg = async ({
 };
 
 /**
- * Readies the page for the picture's one region: the stories clipped to what was captured, when the story runs past it (so
- * what is past it is white, as in the composition, which never saw it), and moved by `dx`, `dy` so the region starts on the
- * page; false, and nothing changed, when the page draws something outside the stories (a dialog, a menu or a tooltip opened
- * in a layer of its own, which neither moves nor is clipped with them), or when moving them would move what is fixed to the
- * window inside them. Undone by `pictured`.
+ * Readies the page for the picture's one region: the stories clipped to what was captured (so what runs past is white, as
+ * in the composition) and moved by `dx`, `dy`. False, with nothing changed, when something draws outside the stories (a
+ * dialog in its own layer) or something fixed would move. Undone by `pictured`.
  */
 export const readyToPicture = ({ cut, dx, dy, width, height }: { cut: boolean; dx: number; dy: number; width: number; height: number }): boolean => {
 	const root = document.getElementById('root') as HTMLElement;

@@ -1,11 +1,8 @@
 import type { CommentAnchor, CommentRef, MarkerRequest, MarkerResult, PickedPoint, PinEvent, Result, ReviewComment } from '../../shared/contract';
 
 /**
- * What the comments experience needs from where it runs, in two parts, so it can run in the app today and on a
- * prototype's own page later with nothing of it written twice.
- *
- * Address, Hand off and anything else that runs an agent are not here: they stay the app's. Their result reaches the
- * comments as a changed comment (`showChanged`), as any other change does.
+ * What the comments experience needs from where it runs, so none of it is written twice. Address and anything else that
+ * runs an agent are not here: their result reaches the comments as a changed comment (`showChanged`).
  */
 
 /** The comments on one version, and who is reading them. On the published page, GitHub's, through the relay. */

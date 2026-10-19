@@ -3,8 +3,8 @@ import { sanitizeAnchor } from '../shared/anchor';
 import type { CommentAnchor, MarkerRequest, MarkerResult, PinEvent } from '../shared/contract';
 
 /*
- * Reading what the scripts answer. A page can say anything, so each answer is taken only in exactly the shape the
- * scripts give: the same readers for every driver (the app's preview, the published site's frame), so they agree.
+ * Reading what the page agent answers. A page can say anything, so each answer is taken only in exactly the shape the
+ * page code gives.
  */
 
 /** Where a pick landed: the anchor, the point (only for placing the comment box), and the element's own box. */
@@ -15,7 +15,7 @@ export interface PickedSpot {
 }
 
 /**
- * The answer to PICK_SCRIPT: null when the pick was canceled. Throws, to be said aloud, when the spot could not be
+ * The answer to a pick: null when the pick was canceled. Throws, to be said aloud, when the spot could not be
  * pinned: a click that silently did nothing is indistinguishable from a comment that was lost.
  */
 export const readPick = (raw: unknown): PickedSpot | null => {
@@ -39,7 +39,7 @@ export const readPick = (raw: unknown): PickedSpot | null => {
 
 const MARKER_STATES = new Set(['found', 'moved', 'missing', 'elsewhere', 'otherState']);
 
-/** The answer to resolveScript: how each pin asked for was placed, and nothing else. */
+/** The answer to drawing the pins: how each pin asked for was placed, and nothing else. */
 export const readMarkers = (raw: unknown, items: MarkerRequest[]): MarkerResult[] => {
 	const wanted = new Set(items.map((i) => i.id));
 	return (Array.isArray(raw) ? raw : []).flatMap((r): MarkerResult[] => {
@@ -52,7 +52,7 @@ export const readMarkers = (raw: unknown, items: MarkerRequest[]): MarkerResult[
 };
 
 /**
- * A pin's report, from the page's console. It counts only if it carries the secret its pins were drawn with and has
+ * A pin's report, from the page agent. It counts only if it carries the secret its pins were drawn with and has
  * exactly the shape of a click or a move.
  */
 export const readPinMessage = (message: string, nonce: string): PinEvent | null => {

@@ -1,12 +1,7 @@
 /**
- * A design system's preview page, the part DSNR writes: started by the generated entry (`core/services/designSystem/previewBuild.ts`,
- * `previewEntry`), which imports the library's own React, Storybook and story files and hands them here, so the page is
- * drawn with the library's React and never a second one. Bundled into the entry as text (`?page`). Page code, typed.
- *
- * **A story behaves as it does in Storybook, no more.** Portable stories leave out the one part of Storybook's preview
- * that redraws a story when it updates its own args (`useArgs`), so a story wired that way (tabs, selects, drawers in
- * FUI) would not respond; the page supplies just that. A story that pins a value without it does not respond in
- * Storybook either, and does not here: making it respond is the story's to do, in the library.
+ * A design system's preview page, started by the generated entry (`previewBuild.ts`), which hands it the library's own
+ * React, Storybook and story files, so it never draws with a second React. **A story behaves as it does in Storybook, no
+ * more:** portable stories leave out redrawing on `useArgs`, so the page supplies just that.
  */
 import type * as ReactNamespace from 'react';
 import { PREVIEW_COMPONENT, PREVIEW_FILE, PREVIEW_HEIGHT, PREVIEW_SHOW, PREVIEW_SPECIMEN, type SpecimenLine } from '../shared/catalog';
@@ -66,10 +61,9 @@ const darkGlobals = (declared: GlobalTypes): Record<string, string> => {
 };
 
 /**
- * A story that only sets args, with no render of its own, and sets `checked` (a switch, a checkbox) has it held by React
- * for good, so a click does nothing. It is given as where the control starts instead, by React's own rule for a checkable
- * control: `defaultChecked`. Only `checked`, which means one thing: `value` is also what a label shows (FUI's
- * PopoverLineItem), so it is left alone. A story that draws itself holds its own values, as with useArgs.
+ * A story that only sets args and sets `checked` has it held by React for good, so a click does nothing; it is given as
+ * `defaultChecked` instead. Only `checked`: `value` is also what a label shows (FUI's PopoverLineItem), so it is left
+ * alone. A story that draws itself holds its own values.
  */
 const startingValues = (args: Args) => ('checked' in args ? { checked: undefined, defaultChecked: args.checked } : {});
 
@@ -102,10 +96,9 @@ export const startPreview = ({ React, createRoot, flushSync, composeStories, set
 		}
 	}
 
-	// Storybook's channel, as its preview speaks on it (Storybook 8 and later), for the two parts of its preview portable stories
-	// leave out. When a story calls useArgs' updateArgs or resetArgs, it is drawn again with its args as updated; and once a
-	// story is drawn, it is said to be, which is when its decorators' effects run (the themes addon setting the theme). Nothing
-	// else, so a story behaves here as it does in Storybook.
+	// Storybook's channel (8 and later), for the two parts portable stories leave out: a story drawn again when it calls
+	// useArgs' updateArgs or resetArgs, and STORY_RENDERED once drawn, which is when decorators' effects run (the themes
+	// addon setting the theme).
 	const argsOf = new Map<string, ReactNamespace.Dispatch<ReactNamespace.SetStateAction<Args>>>();
 	const storybook = channel.then((given) => {
 		if (given === null) return null;
@@ -130,9 +123,8 @@ export const startPreview = ({ React, createRoot, flushSync, composeStories, set
 	const tell = () => parent.postMessage({ [PREVIEW_HEIGHT]: Math.ceil(document.documentElement.scrollHeight) }, '*');
 	new ResizeObserver(tell).observe(document.body);
 
-	// One story file drawn in place of the last, resolved once it is on the page. What reads every story (T6) draws them one
-	// after another in one page this way, rather than loading the page again for each.
-	// The last asked for is what is drawn: one asked before it (the page's own, as it opens) that loads after it draws nothing.
+	// One story file drawn in place of the last, so reading every story loads the page once. The last asked for wins: one
+	// asked before it (the page's own, as it opens) that loads after it draws nothing.
 	let shown = 0;
 	const show = (file: string | null, vary?: { stories: string[]; props: { name: string; values: unknown[] }[] } | null): Promise<void> => {
 		const turn = ++shown;
@@ -155,7 +147,7 @@ export const startPreview = ({ React, createRoot, flushSync, composeStories, set
 				// A file whose stories cannot be asked is drawn all the same; only its values are not read.
 			}
 			const drawsItself = (name: string) => renders(m[name]) || typeof m.default?.render === 'function';
-			// Each value of each prop asked for (Phase 5), on the story asked for, else the file's first drawn from its args, else
+			// Each value of each prop asked for, on the story asked for, else the file's first drawn from its args, else
 			// its first: a section for each, named for the story and the value, in place of the stories.
 			const base = (vary && stories.find(([name]) => vary.stories.includes(name))) || stories.find(([name]) => !drawsItself(name)) || stories[0];
 			const drawn: [string, ComposedStory, Args | null][] = !vary
@@ -189,10 +181,9 @@ export const startPreview = ({ React, createRoot, flushSync, composeStories, set
 	};
 	page[PREVIEW_SHOW] = show;
 
-	// Values a tab tries on the component's instances, set over the library's own and taken off again (Phase 2).
 	tryValues();
 
-	// A type specimen when the address asks for one (R3), in place of a story file.
+	// A type specimen when the address asks for one, in place of a story file.
 	const asked = new URLSearchParams(location.search);
 	const specimen = asked.get(PREVIEW_SPECIMEN);
 	if (specimen === null) void show(asked.get(PREVIEW_FILE));

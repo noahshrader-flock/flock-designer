@@ -5,13 +5,9 @@ import { describe, shiftOutline, underlying } from './helpers';
 type Picked = CommentAnchor & { at: { x: number; y: number }; box: { x: number; y: number; width: number; height: number } };
 
 /**
- * Pin mode. Resolves with where the next click landed, or null if the person presses Escape or the app cancels. The
- * click is swallowed, so placing a pin never also follows a link or presses a button.
- *
- * A plain click places the pin on what is under it, with nothing outlined on the way. The element is still recorded, with
- * the click's position inside it, because that is what lets the pin stay in the right place when the window is resized
- * or the page reflows, and what an agent reads to find it. Holding Shift outlines what it will attach to, and a
- * Shift-click takes exactly what is outlined.
+ * Pin mode. Resolves with where the next click landed, or null on Escape or a cancel. The click is swallowed, so placing a
+ * pin never also follows a link. The element and the click's position in it are recorded so the pin stays put through a
+ * reflow and an agent can find it; a Shift-click takes exactly what is outlined.
  */
 export const pick = (): Promise<Picked | null> =>
 	new Promise((resolve) => {
@@ -20,9 +16,8 @@ export const pick = (): Promise<Picked | null> =>
 		style.textContent = 'html, html * { cursor: crosshair !important }';
 		document.head.appendChild(style);
 
-		// With Shift held, what the pin will attach to is shown before the click: the element under the pointer is outlined
-		// and named, and Up and Down climb to its container and back, for a comment about a section and not a line. A
-		// Shift-click records exactly what is outlined, never a guess about what was meant.
+		// With Shift held, Up and Down climb to the outlined element's container and back, for a comment about a section and
+		// not a line.
 		const hover = shiftOutline();
 		let stack: Element[] = [];
 		const chosen = (): Element | null => stack[stack.length - 1] ?? null;
@@ -57,10 +52,9 @@ export const pick = (): Promise<Picked | null> =>
 		};
 		const click = (e: MouseEvent) => {
 			swallow(e);
-			// A Shift-click takes what is outlined, which is the one the person chose. A plain click, or one that arrives with
-			// nothing outlined yet (no pointer move came first), takes the element under it.
+			// A click with nothing outlined yet (no pointer move came first) takes the element under it.
 			let el = e.shiftKey ? chosen() : null;
-			// What is under it is found past this app's own layers, so a click on one lands on the page beneath it.
+			// What is under it is found past DSNR's own layers, so a click on one lands on the page beneath it.
 			if (!el || !el.isConnected) el = underlying(e.clientX, e.clientY) ?? (e.target as Element | null);
 			if (!el || el.nodeType !== 1) return done(null);
 			// Where the click landed in the page, so the app can put the comment box beside the pin; and the element's own

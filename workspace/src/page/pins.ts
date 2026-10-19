@@ -18,9 +18,9 @@ interface Placed {
 }
 
 /**
- * What a pin carries, upright inside its turned shape, as a card carries them (the extra small avatar): the person's picture over their first letter, which shows until the
- * picture loads, and stays when there is none or it does not. A pin being placed is nobody's yet, and carries nothing. The
- * picture is drawn only from where the host serves them (`isAvatarUrl`), whoever asked, and never sends where the page is.
+ * What a pin carries, upright inside its turned shape: the person's picture over their first letter, which shows until
+ * it loads or if it fails. A draft pin carries nothing. The picture is drawn only from the host's own address
+ * (`isAvatarUrl`), whoever asked, and never sends where the page is.
  */
 const faceOf = (p: Placed): HTMLElement | null => {
 	if (p.draft) return null;
@@ -44,25 +44,16 @@ const faceOf = (p: Placed): HTMLElement | null => {
 };
 
 /**
- * Finds each comment's element and draws a pin on it, carrying the person who made it. Returns, per comment, how it was placed:
- *
- * - `found`: the selector still matches exactly one element;
- * - `moved`: it does not, but one element still starts with the text that was beside the comment, so the pin follows the
- *   text;
- * - `missing`: neither; the comment stays, as a page-level comment;
- * - `elsewhere`: it belongs to a different page of the preview;
- * - `otherState`: it belongs to this page but another state of it (`?state=error`), where the element may not exist or
- *   may be a different thing, so it is not drawn.
- *
- * A pin can be clicked (the app highlights its comment) and, if it is the viewer's own, dragged (the app saves where it
- * was dropped). Calling this again replaces the pins; calling it with nothing clears them.
+ * Draws a pin on each comment's element and returns how each was placed: `moved` when only its text was found again,
+ * `missing` when neither selector nor text was (it stays as a page-level comment), `otherState` for another state of this
+ * page, where the element may be a different thing. Calling it again replaces the pins; with nothing, clears them.
  */
 export const drawPins = (items: MarkerRequest[], nonce: string): MarkerResult[] => {
 	window.__fdMarkers?.stop();
-	// The pins' own layer, not the first of the app's layers: comment mode keeps an outline on the page too, and a redraw
-	// that took that one left the old pins behind (a deleted comment's pin stayed on the page).
+	// The pins' own layer, not the first of DSNR's layers: comment mode keeps an outline on the page too, and taking that
+	// one would leave the old pins behind.
 	document.querySelector('[data-fd-layer="pins"]')?.remove();
-	// To the page agent when there is one (the published site, VS Code), else the console, which the app listens to.
+	// To the page agent when there is one (the published site, VS Code), else the console.
 	const say = (msg: Record<string, unknown>) => {
 		const text = MESSAGE_PREFIX + JSON.stringify({ ...msg, n: nonce });
 		if (window.__fdReport) window.__fdReport(text);
@@ -90,11 +81,9 @@ export const drawPins = (items: MarkerRequest[], nonce: string): MarkerResult[] 
 		} catch {
 			// A selector the page cannot read is one that matches nothing.
 		}
-		// The selector did not match, so follow the text instead. The stored text is a prefix cut at 80 characters, often
-		// mid-word, and the page may have changed a little since; so this takes the smallest element whose text *begins
-		// like* the stored text, rather than demanding the whole prefix still match. A comment that lands roughly in the
-		// right place is worth far more than one that disappears, which is what an exact match gave whenever a single
-		// character moved.
+		// Else follow the text. The stored text is cut at 80 characters and the page may have changed a little, so this takes
+		// the smallest element whose text *begins like* it: a pin roughly in the right place beats one that disappears
+		// whenever a single character moves.
 		if (!el && a.nearbyText.length >= 3) {
 			const want = a.nearbyText;
 			// Enough to identify the element, short enough to survive an edit further along the line.
@@ -199,8 +188,7 @@ export const drawPins = (items: MarkerRequest[], nonce: string): MarkerResult[] 
 				p.pos = { x: ev.clientX, y: ev.clientY };
 				pin.style.cursor = 'grabbing';
 				positionPins();
-				// Dropping re-attaches the pin to whatever is under it; holding Shift shows what that is while it is dragged: the
-				// same outline, from the same code, as when a pin is first placed. It exists only for the length of the drag.
+				// Dropping re-attaches the pin to whatever is under it, which holding Shift outlines for the length of the drag.
 				hover ??= shiftOutline();
 				hover.show(underlying(ev.clientX, ev.clientY), '', ev.shiftKey);
 			};

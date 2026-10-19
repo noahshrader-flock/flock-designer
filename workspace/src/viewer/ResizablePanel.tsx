@@ -2,12 +2,9 @@ import { type ReactNode, useEffect, useRef, useState } from 'react';
 import { PANEL_MIN, PANEL_STEP, type PanelWidths, clampPanelWidth, loadPanelWidth, panelMax, savePanelWidth } from './panelWidth';
 
 /**
- * A side panel at the right of a screen, with a divider to resize it: drag it, or focus it and use the arrow keys. Its
- * width is the panel's own (`PanelWidths`), remembered, and kept within the window as it is resized: the comments' panel
- * beside a prototype's page.
- *
- * It keeps a width in pixels, grabs only over its own side, and holds the pointer while dragging: the prototype's frame
- * beside it never passes the pointer back to the page, so a drag that crossed it would be lost.
+ * A side panel at the right of a screen, resized by dragging its divider or with the arrow keys; its width is remembered
+ * and kept within the window. It holds the pointer while dragging: the prototype's frame beside it never passes the
+ * pointer back, so a drag that crossed it would be lost.
  */
 export const ResizablePanel = ({
 	panel,

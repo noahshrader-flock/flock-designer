@@ -28,14 +28,9 @@ import { CommentsPanel } from './comments/CommentsPanel';
 import { useOpenOnError } from './comments/useOpenOnError';
 
 /**
- * A prototype's published page: its bar (the way back, its title, the version and the page's states when it has more than
- * one, light and dark), the Comment control and its count, the comments' panel from the right, the box beside the pin. All
- * of it the kit's (`src/ui`), as DSNR's pages in VS Code are. Drawn into the page the site built, which
- * holds only a link back to the project until this takes over, so the page still works without it.
- *
- * In DSNR's review tab in VS Code (`relay`, ELECTRON_MIGRATION_PLAN 4.2) it comments through the extension: signing in
- * is VS Code's, the comments are the core's, and an open comment can be addressed. On the published site it signs the
- * person in with GitHub (`signIn`, PUBLISHED_COMMENTS_PLAN Phase 3) and comments with their token, kept in the browser.
+ * A prototype's published page: its bar, comments panel and comment box, all from the kit (`src/ui`). Drawn into the page
+ * the site built, which works without it. In DSNR's review tab (`relay`) it comments through the extension; on the
+ * published site it signs the person in with GitHub (`signIn`) and comments with their token, kept in the browser.
  */
 
 /** What the site writes into each version's page for this. */
@@ -116,7 +111,7 @@ export const Viewer = ({
 	note?: SignInNote | null;
 	/** Served from this machine with no way to ask DSNR: opened some other way than DSNR's Open in browser. */
 	openedHere?: boolean;
-	/** Told the version Address showed its change in: a page in the browser goes to it (BROWSER_COMMENTS_PLAN D1). */
+	/** Told the version Address showed its change in: a page in the browser goes to it. */
 	onAddressed?: (name: string) => void;
 }) => {
 	// The token kept in this browser, on the bar's own origin, which a prototype framed with no origin of its own cannot reach.
@@ -144,7 +139,7 @@ export const Viewer = ({
 		() =>
 			token
 				? tokenApi(token, undefined, () => {
-						// Ended (D3): through GitHub again, which comes straight back for an App already approved; unless it was
+						// Ended: through GitHub again, which comes straight back for an App already approved; unless it was
 						// just now, so a token GitHub keeps refusing is said, not sent round again and again.
 						saveToken(null);
 						setToken(null);
@@ -210,8 +205,8 @@ export const Viewer = ({
 };
 
 /**
- * Through DSNR, in its review tab or a page opened from it in the browser: who is signed in is the extension's, signing in is VS Code's own (from Sign in to comment), and
- * the comments are the core's, with Address on an open one, run by the extension as it runs a build.
+ * Through DSNR, in its review tab or a page opened from it in the browser: signing in is VS Code's own, the comments are
+ * the core's, and Address on an open one is run by the extension as it runs a build.
  */
 const InDsnr = ({
 	config,

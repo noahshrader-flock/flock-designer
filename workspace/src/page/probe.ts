@@ -1,12 +1,7 @@
 /**
- * The probe's measurements, run in the page being measured (A3 of the accessibility plan): what the browser has laid out
- * and drawn, read from the page itself, so a page built with anything is measured the same way. Each returns plain data;
- * what counts as a fault is decided outside the page (`services/accessibility/probe`), where it is tested. Added to the page before its
- * own code runs, so what it watches (windows opened, what is added and where) is watched from the start.
- *
- * The page is read as the browser composes it: into open shadow roots (web components) and frames from the same site, an
- * element in one named as axe names it (`host >>> inside`). A color is read by the browser itself, so any color it can draw
- * (`oklch()`, `lab()`, `color()`) is measured as `rgb()` is.
+ * The probe's measurements, run in the page before its own code: what the browser drew, so any page is measured alike,
+ * into open shadow roots and same-site frames (`host >>> inside`). Each returns plain data; what counts as a fault is
+ * decided outside (`services/accessibility/probe`). Colors are read by the browser, so `oklch()` counts as `rgb()` does.
  */
 
 import { type Rgb, contrastOf } from '../shared/contrast';

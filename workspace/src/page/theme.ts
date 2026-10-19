@@ -1,13 +1,9 @@
 import { DEFAULT_THEME, themeOfQuery, type Theme } from '../shared/prototypeTheme';
 
 /**
- * A prototype's page in its theme, run before the prototype's own code: the one its address asks for
- * (`?theme=dark`), else light, the default. Built as the product is, a prototype would follow the machine's light or dark
- * setting: through `matchMedia` (MUI's `useMediaQuery`, in `FSApp`) and through `prefers-color-scheme` rules in its
- * stylesheets (the design system's). Both are answered here with the theme, so every reviewer sees the same page whatever
- * their machine is set to. A design system's story previews carry it too, so a component's frame and its values are drawn in
- * the mode chosen in the side panel, by the same address. Codebase work does not: it is the real app, and follows what its
- * codebase does.
+ * A prototype's page in the theme its address asks for (`?theme=dark`, else light), run before its own code. `matchMedia`
+ * and `prefers-color-scheme` rules are both answered with it, so every reviewer sees the same page whatever their machine
+ * is set to. Story previews use it too; codebase work does not, as the real app follows its own code.
  */
 
 const SCHEME = /\(\s*prefers-color-scheme\s*:\s*(light|dark)\s*\)/gi;

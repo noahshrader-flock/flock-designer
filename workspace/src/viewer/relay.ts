@@ -19,10 +19,9 @@ const WEBVIEW = 'vscode-webview://';
 export const isServedHere = (location: Pick<Location, 'hostname'>): boolean => isThisMachine(location.hostname);
 
 /**
- * Listens for DSNR's review tab, when this page is served from this machine and in a frame, and gives `onRelay` the way
- * to ask it once it says hello. The tab is the parent, from VS Code, that said hello first: from then on only it is
- * asked, and only its answers, in their shape, are taken; so is its word of VS Code's theme, to `onTheme`. Returns how
- * to stop listening.
+ * Listens for DSNR's review tab, when this page is served from this machine and framed, and gives `onRelay` the way to ask
+ * it. The tab is the VS Code parent that said hello first: from then on only it is asked, and only its well-formed answers
+ * (and its word of VS Code's theme) are taken. Returns how to stop listening.
  */
 export const listenForDsnr = (win: PageWindow, onRelay: (relay: Relay) => void, onTheme?: (theme: EditorTheme) => void): (() => void) => {
 	if ((win.parent as unknown) === win || !isThisMachine(win.location.hostname)) return () => undefined;
@@ -67,7 +66,7 @@ type OpenedWindow = {
 };
 
 /**
- * The key a review opened in the browser from DSNR carries (BROWSER_COMMENTS_PLAN 2.1), or null: in its link's fragment
+ * The key a review opened in the browser from DSNR carries, or null: in its link's fragment
  * the first time, then kept for this tab, since moving to another version loses the fragment. Taken out of the address
  * once kept, so it is in no address that is copied or kept. Only on a page served from this machine.
  */
@@ -100,9 +99,9 @@ const NOT_ANSWERED = {
 };
 
 /**
- * DSNR, asked through this machine's server by a page opened in the browser from it (BROWSER_COMMENTS_PLAN 2.1), as a
- * review tab asks it through VS Code: the same asks, by the same names, answered with VS Code's sign-in, so no token is
- * ever here. Each answer is taken only if it is exactly the answer to that ask; anything else is said, in words.
+ * DSNR, asked through this machine's server by a page opened in the browser from it, with the same asks as a review tab:
+ * answered with VS Code's sign-in, so no token is ever here. Each answer is taken only if it is exactly the answer to that
+ * ask; anything else is said, in words.
  */
 export const serverRelay = (key: string, fetcher: typeof fetch = fetch): Relay => {
 	let next = 0;
@@ -128,7 +127,7 @@ export const serverRelay = (key: string, fetcher: typeof fetch = fetch): Relay =
 };
 
 /**
- * Where a page in the browser goes after Address (BROWSER_COMMENTS_PLAN 3.2): the version it showed its change in, as the
+ * Where a page in the browser goes after Address: the version it showed its change in, as the
  * site lays them out under the project (`projectHref`, from this page, `here`); this page again when the change is in it;
  * null for what is not a version's name.
  */
@@ -143,7 +142,7 @@ export const loginIn = (answer: Result<unknown>): string | null => {
 
 /**
  * One version's comments through DSNR (`CommentStore`): the core's own comment calls, made with the extension's
- * sign-in, so a comment is found, made and written exactly it. `branch` is the version's key.
+ * sign-in, so a comment is found, made and written exactly as there. `branch` is the version's key.
  */
 export const relayComments = (
 	relay: Relay,

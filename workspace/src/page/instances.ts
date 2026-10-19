@@ -1,8 +1,7 @@
 /**
- * A component's instances in a preview page, found one way for every reader (adjusting a component, DESIGN_SYSTEM.md): the
- * drawing that measures them (`storyDrawing.ts`, Phase 1) and the preview page that tries a value on them (Phase 2), so an
- * instance measured is the instance a value is tried on. Page code, typed, bundled into the scripts that run it
- * (`drawing.ts`, `preview.ts`). What React keeps of what it drew is its own: only the parts read here are typed.
+ * A component's instances in a preview page, found one way for the drawing that measures them and the preview that tries
+ * a value on them, so an instance measured is the instance a value is tried on. Page code, bundled by `drawing.ts` and
+ * `preview.ts`. React's fibers are its own: only the parts read here are typed.
  */
 import { PREVIEW_COMPONENT, PREVIEW_TRY } from '../shared/catalog';
 import { CSS_OF, NOT_VARIANT } from '../shared/valueParts';
@@ -41,17 +40,9 @@ const fiberOf = (el: Element): Fiber | null => {
 };
 
 /**
- * The instances of `component` the page's stories draw, in the page's order: found in what React drew by identity, since a
- * build's names are minified. Each instance's top element is the first element on the page inside it that takes up room,
- * found going up from each element, never down, since an element may be held by either of the two copies React keeps of
- * what it drew, and a copy's children can be stale. Each has the props it was drawn with that say which variant it is (a
- * string, a number or a true or false, not its content, its handlers, its styling or what it is for assistive technology),
- * and a `key` that names it in any drawing of the same file: its story, those props, and which of the story's instances with
- * them it is, so the narrower page a tab shows, where another instance may take no room, still names the same one.
- *
- * An instance whose top element is part of what it was given (a tooltip around a button) draws nothing of its own there,
- * so is counted apart (`wrapping`), never taken for the content. `reached` is whether any element was known to React's
- * record of what it drew (its `__reactFiber` key on each element): a React that keeps it another way finds nothing.
+ * The instances of `component` the stories draw, matched by identity (a build's names are minified) walking up from each
+ * element, as a copy's children can be stale. `key` names the same one in any drawing of the file; one that only wraps
+ * what it was given is counted apart (`wrapping`); `reached` is whether any element had a `__reactFiber` key.
  */
 export const findInstances = (component: unknown): { instances: Found[]; wrapping: number; reached: boolean } => {
 	const isIt = (f: Fiber) => f.type === component || f.elementType === component;
@@ -134,7 +125,7 @@ export const borderColor = (s: CSSStyleDeclaration): string | null => {
 };
 
 /**
- * An instance's values, from its top element, as the browser computes them (Phase 1): its height, the box it takes up, and
+ * An instance's values, from its top element, as the browser computes them: its height, the box it takes up, and
  * each other property from its longhands (`CSS_OF`), its parts in full, a border's colour only where it has a border.
  */
 export const readValues = (el: Element): Record<string, string> => {
@@ -154,14 +145,9 @@ export const readValues = (el: Element): Record<string, string> => {
 type Tried = { property: string; value: string; targets: string[] };
 
 /**
- * Values tried on a component's instances in the preview page (Phase 2), said to it by the tab that frames it: each a
- * property, a value, and the instances it is for, by their keys (`findInstances`). Set on each instance's top element over
- * whatever its styles say, and taken off before the next are set, so the page is always the library's own plus what is being
- * tried, and never the last try's leftovers. Set again whenever the stories draw anew (a story that redraws itself, or the
- * file drawn in place of another), since the elements may then be new ones. Heard from the frame's parent alone.
- *
- * A height is set as the height the element must be given, in its own way of sizing, to take up the height tried; any other
- * on its longhands (`CSS_OF`), from its parts in full, one on each, or a value of one part on every one.
+ * Values tried on a component's instances in the preview page, sent by the tab that frames it (its parent alone). Each
+ * try is undone before the next is set, so the page is never the last try's leftovers, and set again whenever the stories
+ * redraw, since the elements may be new. A height is set as what the element must be given to take up the height tried.
  */
 export const tryValues = (): void => {
 	const root = () => document.getElementById('root');

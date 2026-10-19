@@ -1,14 +1,7 @@
 /**
- * Runs one thing at a time, and never loses a request made while it was running.
- *
- * The obvious guard -- "already busy, do nothing" -- silently drops work. Opening a piece of work reads
- * the comments on arrival and again once the preview is up; if the first read was still going, the
- * second was discarded, and the comments stayed hidden until some later trigger happened to ask. That
- * is why posting a comment appeared to be what made an earlier one show up.
- *
- * So a request that arrives mid-run is remembered and answered exactly once afterwards, however many
- * arrive. The caller's promise resolves when a run that *began after it asked* has finished, so
- * awaiting it means the answer includes what the caller wanted it to.
+ * Runs one thing at a time, and never loses a request made while it was running ("already busy, do nothing" drops
+ * work). Requests made mid-run get exactly one run afterwards, and a caller's promise resolves when a run that *began
+ * after it asked* has finished, so awaiting it means the answer includes what it wanted.
  */
 export const latest = (work: () => Promise<void>): (() => Promise<void>) => {
 	let running: Promise<void> | null = null;

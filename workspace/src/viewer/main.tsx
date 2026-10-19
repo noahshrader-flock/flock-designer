@@ -10,10 +10,9 @@ import { saveToken } from './browserAdapter';
 import { type SignInConfig, finishSignIn, takeNote } from './signIn';
 
 /**
- * Started by a prototype's page on the published site, which says what it is in `#dsnr-config` and holds a plain link
- * back to the project in `#dsnr-bar` until this takes the bar over. A page without those has nothing to show, and is
- * left as it is. In DSNR's review tab in VS Code, the tab says hello, and from then on the viewer comments through it. Opened
- * in the browser from DSNR, the page has a key, and comments through this machine's server with it (BROWSER_COMMENTS_PLAN).
+ * Started by a prototype's page, which says what it is in `#dsnr-config`; a page without it is left as it is. In DSNR's
+ * review tab the viewer comments through the tab once it says hello; opened in the browser from DSNR, the page has a key
+ * and comments through this machine's server with it.
  */
 
 /**

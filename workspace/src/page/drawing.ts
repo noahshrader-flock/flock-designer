@@ -1,12 +1,12 @@
 /**
- * What a story file draws, read in its preview page (T6 of the design system plan), as the headless browser asks for it
+ * What a story file draws, read in its preview page, as the headless browser asks for it
  * (`core/services/designSystem/storyDrawing.ts`, which bundles this into the script it runs). Page code, typed like the rest.
  */
 import { PREVIEW_COMPONENT, PREVIEW_SHOW } from '../shared/catalog';
 import { runAxe } from './axe';
 import { borderColor, findInstances, readValues } from './instances';
 
-/** What the drawing is asked to read: the file, whether a picture is taken, a story drawn once per value (Phase 5), axe's tags. */
+/** What the drawing is asked to read: the file, whether a picture is taken, a story drawn once per value, axe's tags. */
 export interface DrawAsk {
 	file: string;
 	picture: boolean;
@@ -32,14 +32,9 @@ interface Read {
 }
 
 /**
- * Each instance of the component a story file is of (Phase 1 of adjusting a component), read in the page: found as every
- * reader finds them (`findInstances`), and its top element's values as the browser computes them (`readValues`), with the
- * props it was drawn with and its key.
- *
- * Those that only wrap what they were given are counted (`wrapping`); the stories that threw are counted (`storiesFailed`),
- * so none drawn because of them is not taken for none drawn at all; and a React whose record of what it drew cannot be read
- * is said as that, never as stories that draw none. **Nothing here can stop the rest of the drawing being read:** a failure
- * is kept as what it said (`instancesFailed`).
+ * Each instance of the component a story file is of, with its computed values, props and key. Stories that threw are
+ * counted so none drawn because of them is not taken for none drawn at all. **Nothing here can stop the rest of the
+ * drawing being read:** a failure is kept as what it said (`instancesFailed`).
  */
 const instancesIn = (drawn: Read): void => {
 	try {
@@ -66,14 +61,9 @@ const instancesIn = (drawn: Read): void => {
 };
 
 /**
- * What a story file draws, read once it has drawn: the page draws the file in place of the last (`PREVIEW_SHOW`), so the
- * page is loaded once for many. Then its fonts settle and what animates is held still, and its stories' elements that take
- * up room are read: each one's background, text and border colors, its radius, and its padding, margins and gaps, counted by
- * computed value. With `tags`, axe (in the page already) checks the stories' accessibility at them (T7), before anything is
- * hidden for a picture, since axe passes over what is hidden.
- *
- * **And each instance of the component the stories are of** (`instancesIn`), with its values and the props it was drawn
- * with, in light and in dark: a value is a token's in a mode when the tags show through in it.
+ * What a story file draws, read once it has drawn: the page draws the file in place of the last (`PREVIEW_SHOW`), so it
+ * is loaded once for many. Visible elements' colors, radii and spacing are counted by computed value. axe runs before
+ * anything is hidden for a picture, since axe passes over what is hidden.
  */
 export const readDrawn = async ({ file, picture, vary, tags, waitMs }: DrawAsk): Promise<Read> => {
 	const page = window as unknown as Record<string, ((file: string, vary: unknown) => Promise<void>) | undefined> & { axe?: unknown };
@@ -110,10 +100,8 @@ export const readDrawn = async ({ file, picture, vary, tags, waitMs }: DrawAsk):
 	// The stories only: not the page they are drawn on, nor the names it gives them.
 	if (tags) drawn.accessibility = page.axe ? await runAxe({ include: [['#root']], exclude: [['.fd-name']] }, tags) : null;
 	if (!picture) return drawn;
-	// A picture (P5): the first story alone, at the top of the page, which is white. Everything else is hidden first (hidden,
-	// so nothing moves), or a short story would have the next one, and its own name, in its picture. No wait after: a
-	// screenshot is of the next frame the browser paints, which has this in it (every one of Flock's pictures was the same
-	// taken at once as after a wait, but for what animates).
+	// A picture: the first story alone, at the top of the white page. The rest is hidden, not removed, so nothing moves.
+	// No wait after: a screenshot is of the next frame the browser paints, which has this in it.
 	const first = document.querySelector('[data-story]');
 	for (const el of Array.from(document.querySelectorAll<HTMLElement>('[data-story]'))) if (el !== first) el.style.visibility = 'hidden';
 	const name = first?.querySelector<HTMLElement>('.fd-name');

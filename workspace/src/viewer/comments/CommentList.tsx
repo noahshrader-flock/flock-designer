@@ -19,12 +19,9 @@ const NOTE: Record<MarkerState, string | null> = {
 };
 
 /**
- * Every comment on the version, as cards: who wrote it, what it says, the spot it was made on, and a menu to resolve
- * or delete it. `actions` puts more at the top of a card's menu (Address, in DSNR), and `addressed` says on a card
- * what the agent did with it, both left to the screen this sits in. `states` are the prototype's, so a card can name
- * the state it was made in; `onShowState` opens the page in it (`null` is the first), from a comment made in another.
- * `shownTheme` is the theme the page is shown in: a comment seen in the other one has a button to show the page in that.
- * `page` is the fingerprint of the page shown: a comment placed on another says the page has changed since.
+ * Every comment on the version, as cards. `actions` puts more at the top of a card's menu (Address, in DSNR) and
+ * `addressed` says what the agent did, both left to the screen around. `onShowState` and `shownTheme` let a comment made
+ * in another state or theme show the page in it; `page` is the fingerprint of the page shown, to say it has changed.
  */
 export const CommentList = ({
 	comments,
@@ -51,9 +48,8 @@ export const CommentList = ({
 	return (
 		<>
 			{list?.map((comment) => {
-				// A resolved comment is not drawn on the page at all, so whatever was last said about placing it ("the
-				// element is no longer there") is about a pin that no longer exists, and saying it again would be about
-				// nothing. One the agent addressed is resolved with it, so this covers that too.
+				// A resolved comment has no pin, so what was last said about placing it is about nothing. One the agent
+				// addressed is resolved with it, so this covers that too.
 				const state = comment.resolved ? undefined : comments.placed.get(comment.id);
 				// Choosing a card shows its pin, so only one with a pin on the page can be chosen: not a resolved one, which has none,
 				// nor one with nothing to point at here (page-level, gone, on another page or in another state).

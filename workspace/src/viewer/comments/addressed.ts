@@ -3,7 +3,7 @@ import { workLabel } from '../../shared/work';
 
 /**
  * What a card on a prototype says the agent did with its comment: where the change is, when that is another version
- * than the one the comment is on. The same words in the app and on the published page.
+ * than the one the comment is on.
  */
 export const prototypeAddressed = (comment: ReviewComment, current: string): string =>
 	comment.addressedIn && comment.addressedIn !== current

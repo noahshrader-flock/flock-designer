@@ -12,10 +12,9 @@ export const startReviewTab = (page: string): void => {
 	const vscode = acquireVsCodeApi();
 	const frame = document.querySelector('iframe') as HTMLIFrameElement;
 	const toPage = (message: unknown) => frame.contentWindow?.postMessage(message, page);
-	// VS Code's theme, as it gives it to this page: its kind, the class on the body (high contrast light is also high
-	// contrast, so it is looked for first), and its colours, the variables it sets on the page. Told to the page once it has
-	// said hello, and whenever the theme changes, so its bar is drawn in the editor's theme; the bar's frame is on another
-	// origin, which VS Code's variables do not reach.
+	// VS Code's theme: its kind (the body's class; high contrast light is also high contrast, so it is looked for first) and
+	// its colour variables. Told to the page on hello and on every change, since the bar's frame is on another origin,
+	// which VS Code's variables do not reach.
 	const theme = (): EditorTheme => {
 		const c = document.body.classList;
 		const kind = [...THEME_KINDS].reverse().find((k) => c.contains(k)) ?? 'vscode-light';

@@ -1,10 +1,7 @@
 /**
- * Signing in to comment on a published prototype (PUBLISHED_COMMENTS_PLAN, Phase 3), with GitHub's own sign-in page, in one
- * redirect each way. **Start:** a one-time `state` and a PKCE verifier are kept in this tab (the bar's own origin, which a
- * prototype framed with no origin of its own cannot reach), with the page to come back to, and the person is sent to
- * GitHub with the verifier's hash. **Finish:** GitHub sends them back to the site's own address (the App's one redirect
- * address) with a one-time `code`; the `state` is checked, both are taken out of the address, the code and the verifier
- * are traded for a token by the sign-in function, and the person is sent back to the page they started from.
+ * Signing in to comment on a published prototype with GitHub's own page, one redirect each way (PKCE). The `state` and
+ * verifier are kept in this tab, on the bar's own origin, which a prototype framed with no origin cannot reach. GitHub
+ * comes back to the App's one redirect address, the site's front page, which sends the person on to where they started.
  */
 
 import type { SignInConfig } from '../shared/signInConfig';

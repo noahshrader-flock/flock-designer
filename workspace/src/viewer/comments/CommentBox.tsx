@@ -16,7 +16,7 @@ const BOX_OFFSET = { x: 22, y: -19 } as const;
  */
 export const CommentBox = ({ comments, origin, error }: { comments: Comments; origin: { top: number; left: number }; error: string | null }) => (
 	<>
-		{/* Clicking away is the same as canceling, as it was when this was a popover. */}
+		{/* Clicking away is the same as canceling. */}
 		<div className="comment-shade" onClick={comments.cancelCompose} />
 		<div
 			role="dialog"
