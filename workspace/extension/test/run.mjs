@@ -157,8 +157,10 @@ const run = spawn(
 let said = '';
 run.stdout.on('data', (d) => (said += d));
 run.stderr.on('data', (d) => (said += d));
+let timedOut = false;
 const cap = setTimeout(() => {
 	console.error('dsnr-test: VS Code did not finish within 300 s');
+	timedOut = true;
 	run.kill('SIGKILL');
 }, 300_000);
 run.on('exit', (status) => {
@@ -171,7 +173,8 @@ run.on('exit', (status) => {
 		console.error(
 			`dsnr-test: failed (VS Code exited with ${status})\n${said
 				.split('\n')
-				.filter((l) => /assert|Error|dsnr-test/i.test(l))
+				// Stopped from outside, nothing said why: the last of what VS Code said, whole.
+				.filter((l, i, all) => /assert|Error|dsnr-test/i.test(l) || (timedOut && i >= all.length - 40))
 				.join('\n')}`,
 		);
 	process.exit(status === 0 && line ? 0 : 1);

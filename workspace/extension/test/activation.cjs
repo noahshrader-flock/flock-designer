@@ -7,6 +7,8 @@ const vscode = require('vscode');
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 /** Until `check` holds, or `ms` passes, then says `what` did not happen: the extension takes as long as it takes, within reason. */
 const until = async (what, check, ms = 15000) => {
+	// Said as it starts, so a run stopped from outside says which step it was waiting on.
+	console.log(`dsnr-test-step: waiting for ${what}`);
 	for (let t = 0; t < ms; t += 250) {
 		if (await check()) return;
 		await wait(250);
