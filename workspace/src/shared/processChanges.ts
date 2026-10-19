@@ -11,13 +11,13 @@ import { saidValue, storyComponent, valueTitle } from './valueNames';
 import { inGeneratedFolder } from './generatedFolders';
 
 /** One unit of review: the token changes, or one component's values. */
-export type HandoffGroup = { kind: 'tokens' } | { kind: 'component'; name: string; file: string };
+export type HandOverGroup = { kind: 'tokens' } | { kind: 'component'; name: string; file: string };
 
 /**
  * One change as it is handed over: what it is, as DSNR's controls tried it ("FSButton · Height · sm: 28px → 32px"), and where it
  * is written in the design system's source ("src/utils/theme.ts, line 158"), or null when DSNR could not find where.
  */
-export interface HandoffChange {
+export interface HandOverChange {
 	said: string;
 	where: string | null;
 }
@@ -36,10 +36,10 @@ export const MOST_HANDED = 40;
 const NOT_PLACED = 'not placed by DSNR';
 
 /** A change as a line of the prompt and of the pull request: what it is, and where it is written, or that DSNR did not find where. */
-export const changeLine = (c: HandoffChange): string => `${c.said} (${c.where ?? NOT_PLACED})`;
+export const changeLine = (c: HandOverChange): string => `${c.said} (${c.where ?? NOT_PLACED})`;
 
 /** What the hand-over is of, as the prompt says it. */
-const unitOf = (group: HandoffGroup): string => (group.kind === 'tokens' ? 'its design tokens' : `the ${group.name} component alone`);
+const unitOf = (group: HandOverGroup): string => (group.kind === 'tokens' ? 'its design tokens' : `the ${group.name} component alone`);
 
 /**
  * The prompt typed into Claude Code (not sent: the person adds their own words and presses Enter): what this is, the branch to
@@ -47,15 +47,15 @@ const unitOf = (group: HandoffGroup): string => (group.kind === 'tokens' ? 'its 
  * the rules for changing a design system's code (carried, since the library does not have them; its own docs win), with the one
  * the hand-over turns round (commit, on the branch, since that is what DSNR reads), and a last line left open. Throws, in words, with nothing to hand over or more than one hand-over carries.
  */
-export const handoffPrompt = ({
+export const handOverPrompt = ({
 	group,
 	changes,
 	branch,
 	base,
 	rules,
 }: {
-	group: HandoffGroup;
-	changes: HandoffChange[];
+	group: HandOverGroup;
+	changes: HandOverChange[];
 	branch: string;
 	base: string;
 	rules: string;
@@ -119,7 +119,7 @@ export const LARGE = { files: 10, lines: 300 } as const;
 export const flagged = (review: BranchReview): boolean => review.state === 'ready' && (review.large || review.files.some((f) => f.out !== null));
 
 /** The token changes being tried, each as it is handed over: what it is, as a Save's commit says it, and where it is written. */
-export const tokenChanges = (tokens: DesignToken[], edits: TokenEdit[]): HandoffChange[] => {
+export const tokenChanges = (tokens: DesignToken[], edits: TokenEdit[]): HandOverChange[] => {
 	const read = new Map(tokens.map((t) => [t.path, t]));
 	const changed = new Map(withEdits(tokens, edits).map((t) => [t.path, t]));
 	return edits.flatMap((e) => {
@@ -141,7 +141,7 @@ export const valueChanges = (
 	rows: ValueRow[] | null,
 	tried: TriedValue[],
 	places: ReadonlyMap<string, ValuePlace[]>,
-): HandoffChange[] =>
+): HandOverChange[] =>
 	tried.map((t) => {
 		const cell = cellFor(rows, t);
 		const was = cell ? saidValue(t.property, cell.value) : 'as drawn';
@@ -174,7 +174,7 @@ export const proposalOf = ({
 	base,
 	template,
 }: {
-	group: HandoffGroup;
+	group: HandOverGroup;
 	lines: string[];
 	reach: string;
 	review: Extract<BranchReview, { state: 'ready' }>;

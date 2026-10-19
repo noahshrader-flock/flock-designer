@@ -114,14 +114,14 @@ export const shownBranch = <C>({ branch, saved, lines, saves, pullRequest }: Kep
 });
 
 /** What every kind's branches share: the records, a change forgotten once it is done with, the scopes kept, and proposing. */
-export abstract class KeptBranches<C> {
+export abstract class KeptBranches<C, R extends KindRules<C> = KindRules<C>> {
 	/** Each change's branch, by its design system and scope. Only a branch DSNR names as its own is ever written to, whatever the file says. */
 	protected readonly records: ScopedRecords<Kept<C>>;
 	readonly pattern: RegExp;
 
 	constructor(
 		protected readonly deps: ChangeBranchesDeps,
-		readonly rules: KindRules<C>,
+		readonly rules: R,
 	) {
 		this.pattern = dsnrBranchPattern(rules.branchWord);
 		this.records = new ScopedRecords(deps.system, deps.file, (raw) => this.whole(raw));
@@ -174,13 +174,12 @@ export abstract class KeptBranches<C> {
 	): Promise<Kept<C>> {
 		const tools = this.deps.tools(system.root);
 		await tools.push(kept.branch);
-		const open = await tools.findPr(kept.branch);
-		const pr =
-			open ??
-			(await (async () => {
-				const { title, body } = await proposal();
-				return tools.createDraftPr(kept.branch, title, body, kept.baseBranch);
-			})());
+		let pr = await tools.findPr(kept.branch);
+		// Said only when one is opened: the one open already says what it says.
+		if (pr === null) {
+			const { title, body } = await proposal();
+			pr = await tools.createDraftPr(kept.branch, title, body, kept.baseBranch);
+		}
 		const next: Kept<C> = { ...kept, pullRequest: { number: pr.number, url: pr.url, chromatic: kept.pullRequest?.chromatic ?? null } };
 		this.records.keep(system, scope, next);
 		return next;
@@ -237,14 +236,7 @@ const commitFiles = async (root: string, base: string, parent: string, files: Ma
 };
 
 /** The branches of a kind DSNR saves itself: the tokens, a component's values, the voice and tone. */
-export class ChangeBranches<C> extends KeptBranches<C> {
-	constructor(
-		deps: ChangeBranchesDeps,
-		private readonly of: SavedKindRules<C>,
-	) {
-		super(deps, of);
-	}
-
+export class ChangeBranches<C> extends KeptBranches<C, SavedKindRules<C>> {
 	protected stands(system: ConnectedDesignSystem, kept: Kept<C>): Promise<boolean> {
 		// Gone only when git says so: a clone it cannot read now (moved, or git timing out) is said, and keeps it.
 		return branchExists(system.root, kept.branch);
@@ -276,13 +268,13 @@ export class ChangeBranches<C> extends KeptBranches<C> {
 		const kept = at?.kept ?? null;
 		const base = kept?.base ?? (await libraryCommit(system.root, system.branch));
 		if (base === null) throw new Error(`The library has no ${system.branch} branch from ${HOST} to make a change on.`);
-		if (kept === null && this.of.empty(change)) throw new Error('There is no change to save.');
+		if (kept === null && this.rules.empty(change)) throw new Error('There is no change to save.');
 
-		const files = await this.of.files(system, base, change, scope);
-		const lines = await this.of.lines(system, base, change, scope);
-		const message = commitText(this.of, lines);
+		const files = await this.rules.files(system, base, change, scope);
+		const lines = await this.rules.lines(system, base, change, scope);
+		const message = commitText(this.rules, lines);
 
-		const branch = kept?.branch ?? newDsnrBranch(this.of.branchWord, this.deps.now?.() ?? new Date());
+		const branch = kept?.branch ?? newDsnrBranch(this.rules.branchWord, this.deps.now?.() ?? new Date());
 		const parent = kept?.tip ?? base;
 		const commit = await commitFiles(system.root, base, parent, files, message);
 		// The same files as the last save: no commit, but the change as asked is the one saved.
@@ -293,9 +285,11 @@ export class ChangeBranches<C> extends KeptBranches<C> {
 		}
 		if (commit === null) throw new Error('This change leaves the library as it is, so there is nothing to save.');
 		// From where DSNR left it, or for a new branch only if there is none of that name: never over a commit it did not make.
-		await git(system.root, ['update-ref', '-m', `DSNR: ${this.of.saving}`, `refs/heads/${branch}`, commit, kept?.tip ?? '']).catch((err: unknown) => {
-			throw new Error(`${branch} has moved since DSNR last saved to it, so nothing was saved. ${errorText(err)}`);
-		});
+		await git(system.root, ['update-ref', '-m', `DSNR: ${this.rules.saving}`, `refs/heads/${branch}`, commit, kept?.tip ?? '']).catch(
+			(err: unknown) => {
+				throw new Error(`${branch} has moved since DSNR last saved to it, so nothing was saved. ${errorText(err)}`);
+			},
+		);
 		const next: Kept<C> = {
 			...(kept ?? { branch, base, baseBranch: system.branch, saves: 0, pullRequest: null }),
 			tip: commit,
@@ -314,6 +308,6 @@ export class ChangeBranches<C> extends KeptBranches<C> {
 		const at = await this.kept(scope);
 		if (at === null) throw new Error('Save the change to a branch first; then it can be proposed.');
 		const { system, kept } = at;
-		return shownBranch(await this.open(system, scope, kept, async () => proposalText(this.of, kept.lines)));
+		return shownBranch(await this.open(system, scope, kept, async () => proposalText(this.rules, kept.lines)));
 	}
 }

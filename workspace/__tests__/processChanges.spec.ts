@@ -8,7 +8,7 @@ import {
 	changeLine,
 	classifyPath,
 	flagged,
-	handoffPrompt,
+	handOverPrompt,
 	proposalOf,
 	reachLine,
 	tokenChanges,
@@ -26,7 +26,7 @@ const button = { kind: 'component' as const, name: 'FSButton', file: 'src/compon
 
 describe('the prompt a group of changes is handed over with', () => {
 	it('says what it is, for one component alone, the branch exactly, and what is DSNR’s to do', () => {
-		const prompt = handoffPrompt({
+		const prompt = handOverPrompt({
 			group: button,
 			changes: [{ said: 'FSButton · Height · sm: 28px → 32px', where: 'src/utils/theme.ts, line 158' }],
 			branch: BRANCH,
@@ -47,7 +47,7 @@ describe('the prompt a group of changes is handed over with', () => {
 	it('carries the real rules, and turns round, after them, the one that would leave the branch empty: commit there', () => {
 		const rules = readFileSync(join(__dirname, '..', '..', 'standards', 'design-system-code.md'), 'utf8');
 		expect(rules).toContain('commit nothing');
-		const prompt = handoffPrompt({
+		const prompt = handOverPrompt({
 			group: button,
 			changes: [{ said: 'FSButton · Height · sm: 28px → 32px', where: null }],
 			branch: BRANCH,
@@ -58,7 +58,7 @@ describe('the prompt a group of changes is handed over with', () => {
 	});
 
 	it('hands over the tokens as their own unit', () => {
-		const prompt = handoffPrompt({
+		const prompt = handOverPrompt({
 			group: { kind: 'tokens' },
 			changes: [{ said: 'Tones pineGreen 60: #15584A → #000000', where: 'src/colors/tones.ts, line 12' }],
 			branch: BRANCH,
@@ -75,19 +75,19 @@ describe('the prompt a group of changes is handed over with', () => {
 		expect(changeLine(unplaced)).toBe('FSButton · Padding · lg: 0px 16px → 0px 20px (not placed by DSNR)');
 		const ask = "Where a change says not placed by DSNR, find where it is written in the design system's own source.";
 		const prompt = (changes: { said: string; where: string | null }[]) =>
-			handoffPrompt({ group: button, changes, branch: BRANCH, base: 'develop', rules: RULES });
+			handOverPrompt({ group: button, changes, branch: BRANCH, base: 'develop', rules: RULES });
 		expect(prompt([unplaced]).split(ask)).toHaveLength(2);
 		expect(prompt([{ ...unplaced, where: 'theme.ts, line 1' }])).not.toContain(ask);
 	});
 
 	it('refuses with nothing to hand over, and more than one hand-over carries, rather than leave changes out', () => {
 		const one = { group: button, branch: BRANCH, base: 'develop', rules: RULES };
-		expect(() => handoffPrompt({ ...one, changes: [] })).toThrow('There is nothing tried to hand over.');
+		expect(() => handOverPrompt({ ...one, changes: [] })).toThrow('There is nothing tried to hand over.');
 		const many = Array.from({ length: MOST_HANDED + 1 }, (_, i) => ({ said: `FSButton · Height · v${i}: 1px → 2px`, where: null }));
-		expect(() => handoffPrompt({ ...one, changes: many })).toThrow(
+		expect(() => handOverPrompt({ ...one, changes: many })).toThrow(
 			`This is ${MOST_HANDED + 1} changes; one hand-over carries at most ${MOST_HANDED}`,
 		);
-		expect(handoffPrompt({ ...one, changes: many.slice(0, MOST_HANDED) }).split('\n- ')).toHaveLength(MOST_HANDED + 1);
+		expect(handOverPrompt({ ...one, changes: many.slice(0, MOST_HANDED) }).split('\n- ')).toHaveLength(MOST_HANDED + 1);
 	});
 });
 

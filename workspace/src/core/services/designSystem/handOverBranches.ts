@@ -11,7 +11,7 @@
 import type { ChangeBranchOf, HandedChange } from '../../../shared/contract';
 import { CHANGE_REQUEST_TEMPLATES } from '../../../shared/hostUrls';
 import { asRecord } from '../../../shared/json';
-import { type HandoffChange, type HandoffGroup, changeLine, flagged, handoffPrompt, proposalOf } from '../../../shared/processChanges';
+import { type HandOverChange, type HandOverGroup, changeLine, flagged, handOverPrompt, proposalOf } from '../../../shared/processChanges';
 import { storyComponent } from '../../../shared/valueNames';
 import { tokenEditsOf } from './tokenEdits';
 import { triedValuesOf } from './valueSources';
@@ -46,7 +46,7 @@ export interface HandOverBranchesDeps extends ChangeBranchesDeps {
 	/** The rules for changing a design system's code (`standards/design-system-code.md`), as text. */
 	rules: () => Promise<string>;
 	/** Each change of a unit as it is handed over: the lines DSNR says it in, and where it is written. */
-	changes: (scope: string, change: HandedChange) => Promise<HandoffChange[]>;
+	changes: (scope: string, change: HandedChange) => Promise<HandOverChange[]>;
 	/** What the change reaches, as a pull request says it (`reachLine`). */
 	reach: (scope: string, change: HandedChange) => Promise<string>;
 	/** Whether the unit has a branch DSNR's Save made: then no hand-over is offered until it is started over. */
@@ -54,7 +54,7 @@ export interface HandOverBranchesDeps extends ChangeBranchesDeps {
 }
 
 /** A unit as its prompt names it: the tokens, or a component by its story file's name. */
-const groupOf = (scope: string): HandoffGroup =>
+const groupOf = (scope: string): HandOverGroup =>
 	scope === '' ? { kind: 'tokens' } : { kind: 'component', name: storyComponent(scope), file: scope };
 
 export class HandOverBranches extends KeptBranches<HandedChange> {
@@ -82,7 +82,7 @@ export class HandOverBranches extends KeptBranches<HandedChange> {
 		if (base === null) throw new Error(`The library has no ${system.branch} branch from GitHub to make a branch from.`);
 		const changes = await this.handOver.changes(scope, change);
 		const branch = newDsnrBranch(HAND_OVER.branchWord, this.deps.now?.() ?? new Date());
-		const prompt = handoffPrompt({ group: groupOf(scope), changes, branch, base: system.branch, rules: await this.handOver.rules() });
+		const prompt = handOverPrompt({ group: groupOf(scope), changes, branch, base: system.branch, rules: await this.handOver.rules() });
 		const kept: Kept<HandedChange> = {
 			branch,
 			base,

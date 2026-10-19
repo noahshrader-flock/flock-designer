@@ -1,7 +1,7 @@
 import type { CallsDeps } from '../compose';
 import type { ChangeBranchOf, ChangeKind, ChangeKinds, HandedChange, SavedKind, TokenEdit, TriedValue } from '../../shared/contract';
 import { handToClaude } from '../services/agent/editor';
-import { type ChangeBranches, type KindRules, scopeOf } from '../services/designSystem/changeBranches';
+import { type ChangeBranches, scopeOf } from '../services/designSystem/changeBranches';
 import { offBase } from '../services/designSystem/handOverBranches';
 import { readVoice } from '../services/designSystem/voiceAndTone';
 
@@ -24,13 +24,10 @@ export const designSystemArea = (d: CallsDeps) => {
 		valueSources,
 		warm,
 	} = d;
-	/** Each kind of change's branches (`ChangeKinds`): every branch call is one of these, by its kind. */
-	const branches = { tokens: tokenBranches, values: valueBranches, voice: voiceBranches, handOver: handOverBranches } satisfies Record<
-		ChangeKind,
-		{ rules: KindRules<unknown>; forget(scope: string): void; scopes(): Promise<string[]>; current(scope: string): Promise<unknown> }
-	>;
 	/** The kinds DSNR saves itself, each saving its own kind of change. */
 	const saved: { [K in SavedKind]: ChangeBranches<ChangeKinds[K]> } = { tokens: tokenBranches, values: valueBranches, voice: voiceBranches };
+	/** Each kind of change's branches (`ChangeKinds`): every branch call is one of these, by its kind. */
+	const branches = { ...saved, handOver: handOverBranches };
 	return {
 		componentPictures: () => componentTokens.pictures(),
 		designSystemCatalog: async (refresh: boolean) => {
