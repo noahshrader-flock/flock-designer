@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { ComponentPictures } from '../../../src/shared/contract';
-import { askWhile } from './askWhile';
+import { askWhile } from './ask';
 import { workspace } from '../host';
 
 /**

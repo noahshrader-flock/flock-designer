@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ASK_EVERY_MS, askWhile } from '../extension/webview/hooks/askWhile';
+import { ASK_EVERY_MS, ASK_FOR_MS, askOnce, askWhile } from '../extension/webview/hooks/ask';
 
 describe('asking again while an answer is drawn', () => {
 	beforeEach(() => void vi.useFakeTimers());
@@ -55,5 +55,37 @@ describe('asking again while an answer is drawn', () => {
 		stop();
 		await vi.advanceTimersByTimeAsync(ASK_EVERY_MS * 3);
 		expect(ask).toHaveBeenCalledTimes(1);
+	});
+
+	it('stops once it has asked for as long as it may, however long the answer takes to come', async () => {
+		const ask = answering('building');
+		askWhile(
+			ask,
+			() => true,
+			() => undefined,
+		);
+		await vi.advanceTimersByTimeAsync(ASK_FOR_MS * 2);
+		expect(ask).toHaveBeenCalledTimes(ASK_FOR_MS / ASK_EVERY_MS + 1);
+	});
+
+	it('asks as often and for as long as a poll says', async () => {
+		const ask = answering('building');
+		askWhile(
+			ask,
+			() => true,
+			() => undefined,
+			{ every: 1000, for: 5000 },
+		);
+		await vi.advanceTimersByTimeAsync(60_000);
+		expect(ask).toHaveBeenCalledTimes(6);
+	});
+
+	it('asks once for an effect, and drops the answer when the effect is cleaned up first', async () => {
+		const got: string[] = [];
+		askOnce(answering('read'), (a) => got.push(a));
+		const stop = askOnce(answering('stale'), (a) => got.push(a));
+		stop();
+		await vi.advanceTimersByTimeAsync(ASK_EVERY_MS * 3);
+		expect(got).toEqual(['read']);
 	});
 });

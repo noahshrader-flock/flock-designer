@@ -1,10 +1,15 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ChangeBranchOf, HandedChange, Result } from '../../../src/shared/contract';
 import { handedTo } from '../../../src/shared/handedTo';
 import { workspace } from '../host';
+import { askOnce, askWhile } from './ask';
 
-/** How often a hand-over's branch is read from git again while it is watched, until it is proposed. */
+/**
+ * How often a hand-over's branch is read from git again while it is watched, until it is proposed, and for how long: as long
+ * as Claude Code may still be working on it, after which it is read again when Changes is opened again.
+ */
 const READ_EVERY_MS = 5_000;
+const READ_FOR_MS = 2 * 60 * 60_000;
 
 /** A unit's hand-over to Claude Code (Process changes), as the window shows it, and what can be done with it. */
 export interface HandOverControls {
@@ -45,30 +50,32 @@ export const useHandOver = ({
 	// What is shown now, and how many times it was set afresh: an answer asked before (another unit, or before Start over) is dropped.
 	const now = useRef({ file, epoch: 0 });
 	now.current.file = file;
-
-	const read = useCallback(() => {
-		const { file: asked, epoch } = now.current;
-		void workspace()
-			.changeBranch('handOver', asked)
-			.then((r) => {
-				if (r.ok && now.current.epoch === epoch) setBranch(r.value);
-			});
-	}, []);
+	// Read again when it is handed over, so its branch is seen at once.
+	const [handings, setHandings] = useState(0);
+	const read = () => workspace().changeBranch('handOver', now.current.file);
 
 	useEffect(() => {
 		now.current.epoch += 1;
 		setBranch(null);
 		setHanded(null);
 		setError(null);
-		if (shown !== null) read();
-	}, [shown, read]);
+	}, [shown]);
+
+	useEffect(() => {
+		if (shown === null) return;
+		return askOnce(read, (r) => r.ok && setBranch(r.value));
+	}, [shown, handings]);
 
 	const waiting = watch && branch !== null && branch.pullRequest === null;
 	useEffect(() => {
 		if (!waiting) return;
-		const timer = setInterval(read, READ_EVERY_MS);
-		return () => clearInterval(timer);
-	}, [waiting, read]);
+		return askWhile(
+			read,
+			(r) => !r.ok || r.value?.pullRequest === null,
+			(r) => r.ok && setBranch(r.value),
+			{ every: READ_EVERY_MS, for: READ_FOR_MS },
+		);
+	}, [waiting]);
 
 	const run = async <T>(what: NonNullable<HandOverControls['busy']>, act: () => Promise<Result<T>>, then: (value: T) => void) => {
 		const { epoch } = now.current;
@@ -92,7 +99,7 @@ export const useHandOver = ({
 				() => workspace().handOverChanges(file, change),
 				(over) => {
 					setHanded(handedTo(over, 'This hand-over'));
-					read();
+					setHandings((n) => n + 1);
 				},
 			),
 		// At the commit read here: one Claude Code committed since is refused, to be looked at first.

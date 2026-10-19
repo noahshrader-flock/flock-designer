@@ -3,6 +3,7 @@ import type { ChangeBranch, ChangeKinds, Result } from '../../../src/shared/cont
 import { sameTried } from '../../../src/shared/contract';
 import { sameChange } from '../../../src/shared/tokens';
 import { workspace } from '../host';
+import { askOnce, askWhile } from './ask';
 
 /** How often a proposed change looks for Chromatic's build, and for how long, after which it is left to the pull request. */
 const CHROMATIC_EVERY_MS = 20_000;
@@ -68,28 +69,24 @@ export const useChangeBranch = <K extends TriedKind>(
 		setBranch(null);
 		setError(null);
 		if (shown === null) return;
-		let live = true;
-		void now.current.calls.current().then((r) => {
-			if (!live || !r.ok || r.value === null) return;
+		return askOnce(now.current.calls.current, (r) => {
+			if (!r.ok || r.value === null) return;
 			setBranch(r.value);
 			if (nothing) setChange(r.value.saved);
 		});
-		return () => {
-			live = false;
-		};
 		// Only when another is shown: the change being tried is the person's after that.
 	}, [shown]); // eslint-disable-line react-hooks/exhaustive-deps
 
 	const waiting = Boolean(branch?.pullRequest) && branch?.pullRequest?.chromatic === null;
 	useEffect(() => {
 		if (!waiting) return;
-		const started = Date.now();
-		const timer = setInterval(() => {
-			if (Date.now() - started > CHROMATIC_FOR_MS) return clearInterval(timer);
-			const asked = now.current.shown;
-			void now.current.calls.current().then((r) => r.ok && r.value && now.current.shown === asked && setBranch(r.value));
-		}, CHROMATIC_EVERY_MS);
-		return () => clearInterval(timer);
+		// Another shown empties the branch, so `waiting` ends and this stops before it is answered.
+		return askWhile(
+			now.current.calls.current,
+			(r) => !r.ok || r.value?.pullRequest?.chromatic === null,
+			(r) => r.ok && r.value && setBranch(r.value),
+			{ every: CHROMATIC_EVERY_MS, for: CHROMATIC_FOR_MS },
+		);
 	}, [waiting]);
 
 	const run = useCallback(async (what: 'saving' | 'proposing', act: () => Promise<Result<ChangeBranch<C>>>) => {

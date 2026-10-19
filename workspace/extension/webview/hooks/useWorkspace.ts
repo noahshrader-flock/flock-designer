@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Result } from '../../../src/shared/contract';
+import { askOnce } from './ask';
 
 /**
  * One way for a screen to read something from the app: what it read (`value`), why it could not (`error`, never thrown
@@ -15,14 +16,10 @@ export const useWorkspace = <T>(read: () => Promise<Result<T>>, deps: unknown[],
 		const again = lastAsked.current !== asked;
 		lastAsked.current = asked;
 		if (!enabled) return setState({ value: null, error: null, loading: false });
-		let live = true;
 		setState((s) => ({ value: again ? s.value : null, error: null, loading: true }));
-		void read().then((r) => {
-			if (live) setState((s) => (r.ok ? { value: r.value, error: null, loading: false } : { value: s.value, error: r.error, loading: false }));
-		});
-		return () => {
-			live = false;
-		};
+		return askOnce(read, (r) =>
+			setState((s) => (r.ok ? { value: r.value, error: null, loading: false } : { value: s.value, error: r.error, loading: false })),
+		);
 		// What is read is said by `deps`, as with an effect's own: `read` is a new function on every render.
 	}, [enabled, asked, ...deps]); // eslint-disable-line react-hooks/exhaustive-deps
 	return { ...state, reload: () => setAsked((n) => n + 1) };

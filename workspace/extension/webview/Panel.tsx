@@ -14,6 +14,7 @@ import { Toggle } from './ui/Toggle';
 import { type CatalogRead, useCatalog } from './useCatalog';
 import { type Part, type Tab, type View, vscode } from './vscode';
 import { Message } from './ui/Message';
+import { askOnce } from './hooks/ask';
 
 const TABS = [
 	{ value: 'projects', label: 'Projects', icon: 'folder-library' },
@@ -167,10 +168,15 @@ export const Panel = () => {
 		[],
 	);
 	useEffect(() => {
-		void workspace()
-			.signInState()
-			.then((r) => r.ok && setAccount(r.value));
-		return workspace().onSignInChanged(setAccount);
+		const stop = askOnce(
+			() => workspace().signInState(),
+			(r) => r.ok && setAccount(r.value),
+		);
+		const off = workspace().onSignInChanged(setAccount);
+		return () => {
+			stop();
+			off();
+		};
 	}, []);
 	const login = account.state === 'signedIn' ? account.user.login : null;
 	// Read once what is open is known, a product or none (with none, everyone's projects are listed: the workspace README's "Projects, by product").
@@ -186,15 +192,14 @@ export const Panel = () => {
 	const [made, setMade] = useState<MadeCover[]>([]);
 	useEffect(() => {
 		if (read.value === null) return;
-		void workspace()
-			.ensureCovers()
-			.then(
-				(r) =>
-					r.ok &&
-					r.value.length > 0 &&
-					// One for each prototype: a picture drawn again replaces the last.
-					setMade((now) => [...r.value, ...now.filter((m) => !r.value.some((n) => n.projectId === m.projectId && n.name === m.name))]),
-			);
+		return askOnce(
+			() => workspace().ensureCovers(),
+			(r) =>
+				r.ok &&
+				r.value.length > 0 &&
+				// One for each prototype: a picture drawn again replaces the last.
+				setMade((now) => [...r.value, ...now.filter((m) => !r.value.some((n) => n.projectId === m.projectId && n.name === m.name))]),
+		);
 	}, [read.value]);
 	const projects = useMemo(() => (read.value === null ? null : withCovers(read.value, made)), [read.value, made]);
 	// A project that is not in the list once it is read is not one to open a dialog about.

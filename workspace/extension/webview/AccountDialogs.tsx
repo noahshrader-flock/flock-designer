@@ -5,6 +5,7 @@ import { Button } from './ui/Button';
 import { Dialog, DialogButtons } from './ui/Dialog';
 import { workspace } from './host';
 import { Message } from './ui/Message';
+import { askOnce } from './hooks/ask';
 
 /**
  * The GitHub account, as a dialog in the panel (the title bar's account action opens it): who is signed in, and Sign out.
@@ -45,10 +46,15 @@ export const SyncDialog = ({ onClose }: { onClose: () => void }) => {
 	const [status, setStatus] = useState<PublishStatus | null>(null);
 	const [error, setError] = useState<string | null>(null);
 	useEffect(() => {
-		void workspace()
-			.publishStatus()
-			.then((r) => (r.ok ? setStatus(r.value) : setError(r.error)));
-		return workspace().onPublishStatus(setStatus);
+		const stop = askOnce(
+			() => workspace().publishStatus(),
+			(r) => (r.ok ? setStatus(r.value) : setError(r.error)),
+		);
+		const off = workspace().onPublishStatus(setStatus);
+		return () => {
+			stop();
+			off();
+		};
 	}, []);
 	const syncNow = async () => {
 		setError(null);

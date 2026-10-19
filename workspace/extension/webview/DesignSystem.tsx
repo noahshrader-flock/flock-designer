@@ -25,6 +25,7 @@ import { Toggle } from './ui/Toggle';
 import type { Part, View } from './vscode';
 import { workspace } from './host';
 import { Message } from './ui/Message';
+import { askOnce } from './hooks/ask';
 
 /** The design system's two parts in the panel: its components, which it starts on, and its tokens. */
 const PARTS = [
@@ -120,15 +121,14 @@ const Ready = ({
 	// What is kept is asked again whenever what is being tried starts or ends (a branch kept ends a trial), as the count
 	// shows it, and when the dialog opens; not at every value moved.
 	const tried = [edits.length > 0, ...Object.keys(trials).sort()].join('\n');
-	useEffect(() => {
-		let live = true;
-		void Promise.all([workspace().changeScopes('values'), workspace().changeScopes('handOver')]).then(
-			([saved, handed]) => live && setKeptFiles([...(saved.ok ? saved.value : []), ...(handed.ok ? handed.value : [])]),
-		);
-		return () => {
-			live = false;
-		};
-	}, [changesDialog.open, catalog.commit, tried]);
+	useEffect(
+		() =>
+			askOnce(
+				() => Promise.all([workspace().changeScopes('values'), workspace().changeScopes('handOver')]),
+				([saved, handed]) => setKeptFiles([...(saved.ok ? saved.value : []), ...(handed.ok ? handed.value : [])]),
+			),
+		[changesDialog.open, catalog.commit, tried],
+	);
 	const triedOnIt = (file: string) => triedOn(trials, file, catalog.commit);
 	const changed = catalog.components.filter((c) => triedOnIt(c.id).length > 0 || keptFiles.includes(c.id));
 	// What the dialog lists, counted: each value tried, and the tokens (`''`) or a component with a branch kept or handed

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { Project } from '../../../src/shared/contract';
 import { coverToShow } from '../../../src/shared/projectList';
 import { workspace } from '../host';
+import { askOnce } from './ask';
 
 /** Pictures already read, by what names them: what a picture's name names never changes, so one shown again has it at once. */
 const read = new Map<string, string>();
@@ -16,17 +17,14 @@ export const useCover = (project: Project): { picture: string | undefined; waiti
 	const [answer, setAnswer] = useState<{ key: string; picture: string | null } | null>(null);
 	useEffect(() => {
 		if (shown === null || key === null || read.has(key)) return;
-		let live = true;
-		void workspace()
-			.projectCover(project.id, shown.name, shown.cover)
-			.then((r) => {
+		return askOnce(
+			() => workspace().projectCover(project.id, shown.name, shown.cover),
+			(r) => {
 				const picture = r.ok ? r.value : null;
 				if (picture !== null) read.set(key, picture);
-				if (live) setAnswer({ key, picture });
-			});
-		return () => {
-			live = false;
-		};
+				setAnswer({ key, picture });
+			},
+		);
 		// Asked again only when the picture is another: the key is the project, its prototype and the hash.
 	}, [key]); // eslint-disable-line react-hooks/exhaustive-deps
 	if (key === null) return { picture: undefined, waiting: false };

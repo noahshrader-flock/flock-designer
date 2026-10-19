@@ -22,4 +22,18 @@ export default tseslint.config(
 			'react-hooks/exhaustive-deps': 'error',
 		},
 	},
+	{
+		// A page reads for an effect one way (`hooks/ask.ts`, `useWorkspace`), whose clean-up drops an answer to what was asked
+		// before; a read of its own in an effect shows a stale one.
+		files: ['extension/webview/**/*.{ts,tsx}'],
+		rules: {
+			'no-restricted-syntax': [
+				'error',
+				...["CallExpression[callee.property.name='then']", 'CallExpression > :function.callee[async=true]'].map((read) => ({
+					selector: `CallExpression[callee.name=/^use(Layout)?Effect$/] ${read}`,
+					message: 'Read for an effect with askOnce or askWhile (hooks/ask.ts), or useWorkspace, and return what stops it.',
+				})),
+			],
+		},
+	},
 );

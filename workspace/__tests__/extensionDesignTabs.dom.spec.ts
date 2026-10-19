@@ -7,7 +7,7 @@ import { readTab } from '../extension/webview/tab';
 import { PREVIEW_HEIGHT, PREVIEW_TRY, previewAddress } from '../src/shared/catalog';
 import { SAMPLE_CATALOG } from './extensionSamples';
 import { answer, answerOf, button, calls, callsOf, lastAsk, mountPage, press, say, sent, share, shareCatalog, type, unmount } from './webviewHarness';
-import { ASK_EVERY_MS } from '../extension/webview/hooks/askWhile';
+import { ASK_EVERY_MS } from '../extension/webview/hooks/ask';
 
 /**
  * The design system's tabs in the editor (ELECTRON_MIGRATION_PLAN 6.1): a component's, its stories live and what it is

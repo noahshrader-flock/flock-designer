@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Result } from '../../../src/shared/contract';
-import { askWhile } from './askWhile';
+import { askWhile } from './ask';
 
 /** What every answer worked out while a change is tried can be: none with no change, building until it is, failed. */
 type Worked = { state: 'none' } | { state: 'building' } | { state: 'failed'; error: string } | { state: string };
