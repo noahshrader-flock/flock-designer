@@ -3,7 +3,6 @@ import { existsSync, readdirSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { findOnPath } from '../platform/paths';
-import type { AgentReadiness } from '../../../shared/contract';
 import { GROUP, ProcessFailed, endGroup, runFile } from '../platform/process';
 import { startCommand } from './terminal';
 
@@ -14,18 +13,22 @@ import { startCommand } from './terminal';
 
 export type AgentId = 'claude-code';
 
+/** `unknown`: it could not be told, which blocks nothing. */
+export type AgentReadiness = { state: 'ready' } | { state: 'missing' } | { state: 'signedOut' } | { state: 'unknown' };
+
 /** `said`: what it changed, or why not. */
 export interface RunEnded {
 	ok: boolean;
 	said: string;
 }
 
-/** An agent DSNR hands work to. What names one agent, its commands and its words, is in its adapter and nowhere else. */
+/**
+ * An agent DSNR hands work to. What names one agent, its commands and its words, is in its adapter here and, for its own
+ * window in VS Code, in `extension/src/agentWindows.ts`, and nowhere else.
+ */
 export interface Agent {
 	readonly id: AgentId;
 	readonly name: string;
-	/** The bare name when it is found nowhere, whose failure says what to do. */
-	locate(): string;
 	/** Read only: what it says of its sign-in, never the sign-in itself. */
 	readiness(): Promise<AgentReadiness>;
 	/** Said when it is not ready, and nothing is handed over. */
@@ -163,7 +166,6 @@ const defaultClaudeDeps: ClaudeDeps = { locate: () => locateClaude(), run: runCo
 export const claudeCode = (deps: ClaudeDeps = defaultClaudeDeps): Agent => ({
 	id: 'claude-code',
 	name: 'Claude Code',
-	locate: deps.locate,
 	/**
 	 * Only `claude auth status`'s yes or no is read. No answer (an older Claude Code, a slow machine) does not stand in the
 	 * way: what it is handed still says a real failure.

@@ -2,7 +2,8 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { VsCodeGitHub } from '../extension/src/github';
-import { moveLocationSetting, openableLink, vscodePorts } from '../extension/src/vscodePorts';
+import { claudeLink, moveLocationSetting } from '../extension/src/agentWindows';
+import { openableLink, vscodePorts } from '../extension/src/vscodePorts';
 import { NO_TABS_SHOWN, reviewsOf } from '../extension/src/messages';
 import { Reviews, answerReview, reviewPage, reviewPath } from '../extension/src/review';
 import { Panels, answerCall, hostApi } from '../extension/src/bridge';
@@ -164,6 +165,12 @@ describe('VS Code’s ports', () => {
 		settings['dsnr.agent.location'] = 'editor';
 		await vscodePorts(v as never, none).agentWindow.open('claude-code', '/work/coke', 'Build it.');
 		expect(v.commands.executeCommand.mock.calls).toEqual([[OPEN, undefined, 'Build it.']]);
+	});
+
+	it('give Claude Code’s link the prompt whole, whatever it holds', () => {
+		const link = claudeLink('Build Version 1 into the codebase: read /tmp/a b.md & do it');
+		expect(link.startsWith('vscode://anthropic.claude-code/open?prompt=')).toBe(true);
+		expect(new URLSearchParams(link.split('?')[1]).get('prompt')).toBe('Build Version 1 into the codebase: read /tmp/a b.md & do it');
 	});
 
 	it('fall back to Claude Code’s link (an editor tab) when its open command is not there, as in another version', async () => {

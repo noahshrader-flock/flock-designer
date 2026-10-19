@@ -96,7 +96,10 @@ const packagesReady = async ({ api, choose, progress }: NewPrototypeDeps, root: 
 export const readyToStart = async ({
 	product,
 	api,
-}: Pick<NewPrototypeDeps, 'product'> & { api: Pick<NewPrototypeDeps['api'], 'agentReady'> }): Promise<void> => {
+}: {
+	product: NewPrototypeDeps['product'];
+	api: Pick<WorkspaceApi, 'agentReady'>;
+}): Promise<void> => {
 	if (product.root === null) throw new Error(product.why);
 	valueOf(await api.agentReady());
 };

@@ -45,16 +45,13 @@ export const designSystemArea = (d: CallsDeps) => {
 			if ((file === null) !== 'edits' in change)
 				throw new Error('The token changes are handed over as the tokens, and a component’s values as that component.');
 			libraryShown.refuse(shownSystem(), 'process changes');
-			// Not opened, it is not handed over: forgotten, so it can be pressed again. A branch is started only once the agent is ready.
-			let started = false;
-			const { handed, prepared } = await handOver(ports, agent, async () => {
-				const made = await handOverBranches.start(file ?? '', change);
-				started = true;
-				return made;
-			}).catch((err: unknown) => {
-				if (started) handOverBranches.forget(file ?? '');
-				throw err;
-			});
+			// Not opened, it is not handed over: forgotten, so it can be pressed again.
+			const { handed, prepared } = await handOver(
+				ports,
+				agent,
+				() => handOverBranches.start(file ?? '', change),
+				() => handOverBranches.forget(file ?? ''),
+			);
 			return { branch: prepared.branch, ...handed };
 		},
 		changeBranch: <K extends ChangeKind>(kind: K, scope: string | null) =>

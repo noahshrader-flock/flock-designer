@@ -10,7 +10,7 @@ import { addressComment } from './address';
 import { Panels, hostApi } from './bridge';
 import { type LocalRun, handOff, openCode, shareCodebase, runLocally } from './codebase';
 import { startCore } from './core';
-import { moveLocationSetting } from './vscodePorts';
+import { moveLocationSetting } from './agentWindows';
 import { showFound, shownFrom } from './designSystem';
 import { designSystemHost } from './designSystemHost';
 import { registerVoice } from './voice';

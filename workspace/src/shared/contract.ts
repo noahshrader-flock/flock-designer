@@ -1,7 +1,6 @@
 export * from './contract/api';
 export * from './domain/accessibility';
 export * from './domain/account';
-export * from './domain/agent';
 export * from './domain/checkout';
 export * from './domain/comments';
 export * from './domain/designSystem';

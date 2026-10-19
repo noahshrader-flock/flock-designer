@@ -2,7 +2,6 @@ import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { claudeLink } from '../extension/src/vscodePorts';
 import { type Agent, claudeCode } from '../src/core/services/agent/agent';
 import { handTask } from '../src/core/services/agent/handOver';
 import { startCommand } from '../src/core/services/agent/terminal';
@@ -29,14 +28,6 @@ describe('a task handed over', () => {
 				`Build prototype Version 1 of demo. Your task is in ${taskFile}. It is complete: read all of it, then do what it says, in order.`,
 			],
 		]);
-	});
-});
-
-describe('Claude Code’s link, when its own command will not open', () => {
-	it('carries the prompt, whatever it holds', () => {
-		const link = claudeLink('Build Version 1 into the codebase: read /tmp/a b.md & do it');
-		expect(link.startsWith('vscode://anthropic.claude-code/open?prompt=')).toBe(true);
-		expect(new URLSearchParams(link.split('?')[1]).get('prompt')).toBe('Build Version 1 into the codebase: read /tmp/a b.md & do it');
 	});
 });
 

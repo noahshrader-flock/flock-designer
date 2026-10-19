@@ -113,6 +113,17 @@ describe.each(ROWS)('$name, behind the seam', (row) => {
 		expect((await hand(ports, agent(row.answers.unreadable))).editor).toBe(true);
 	});
 
+	it('undoes what was made for a hand-off its window could not then open, and nothing for one it opened', async () => {
+		const undo = vi.fn();
+		const prepare = async () => ({ root: '/work', prompt: 'Go.', branch: 'dsnr/handoff-x' });
+		const broken = { agentWindow: { open: async () => Promise.reject(new Error('The window would not open.')) }, copy: async () => undefined };
+		await expect(handOver(broken, agent(), prepare, undo)).rejects.toThrow('The window would not open.');
+		expect(undo).toHaveBeenCalledExactlyOnceWith({ root: '/work', prompt: 'Go.', branch: 'dsnr/handoff-x' });
+		undo.mockClear();
+		await handOver({ agentWindow: { open: async () => true }, copy: async () => undefined }, agent(), prepare, undo);
+		expect(undo).not.toHaveBeenCalled();
+	});
+
 	it('runs unattended, if it says it can, to its end: what it said, and whether it failed, never guessed', async () => {
 		const a = agent();
 		if (!a.runUnattended) return;

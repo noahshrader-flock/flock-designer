@@ -14,21 +14,27 @@ type HandPorts = Pick<Ports, 'agentWindow' | 'copy'>;
 
 /**
  * `prepare` makes what is handed (a branch, a file) and runs only once the agent is known to be ready, so a hand-off that is
- * refused leaves nothing behind. When the agent's window is not in this editor, the command that starts it in a terminal is
- * put on the clipboard and returned as `command`.
+ * refused leaves nothing behind; `undo` is for what it made, when it could not then be opened. When the agent's window is
+ * not in this editor, the command that starts it in a terminal is put on the clipboard and returned as `command`.
  */
 export const handOver = async <T extends { root: string; prompt: string }>(
 	ports: HandPorts,
 	agent: Agent,
 	prepare: () => Promise<T>,
+	undo: (prepared: T) => void = () => undefined,
 ): Promise<{ handed: Handed; prepared: T }> => {
 	await assertReady(agent);
 	const prepared = await prepare();
 	const { root, prompt } = prepared;
-	if (await ports.agentWindow.open(agent.id, root, prompt)) return { handed: { agent: agent.name, editor: true, command: null }, prepared };
-	const command = agent.terminalCommand(root, prompt);
-	await ports.copy(command);
-	return { handed: { agent: agent.name, editor: false, command }, prepared };
+	try {
+		if (await ports.agentWindow.open(agent.id, root, prompt)) return { handed: { agent: agent.name, editor: true, command: null }, prepared };
+		const command = agent.terminalCommand(root, prompt);
+		await ports.copy(command);
+		return { handed: { agent: agent.name, editor: false, command }, prepared };
+	} catch (err) {
+		undo(prepared);
+		throw err;
+	}
 };
 
 /** Every task is handed over as a file and one line saying what it is for, so each agent is told the same way. */
