@@ -177,6 +177,12 @@ describe('CSS variables', () => {
 		expect(hexOfChannels(channelsOf('#11223380'))).toBe('#11223380');
 	});
 
+	it('give a color written short (Tremor’s --color-black: #000) as its full hex, so it is matched where it is drawn', async () => {
+		const list = await readTokens(memoryReads({ 'src/globals.css': ':root {\n  --color-black: #000;\n  --color-tint: #f0a8;\n}\n' }));
+		expect(find(list, 'css.light.color-black')?.value).toBe('#000000');
+		expect(find(list, 'css.light.color-tint')?.value).toBe('#FF00AA88');
+	});
+
 	it('group a scale of steps into one set: Tailwind’s --color-red-500 is step 500 of color-red', async () => {
 		const list = await readTokens(memoryReads({ 'src/styles/globals.css': CSS }));
 		expect(find(list, 'css.light.color-red-500')).toMatchObject({ set: 'color-red', name: '500' });

@@ -267,10 +267,11 @@ export const NONE_STARTS_AS = '#FFFFFF';
 
 /**
  * From the browser's computed form (`rgba(0, 0, 0, 0.5)`): two more digits only for an opacity less than whole. A hex is
- * given back as it is.
+ * given back as it is, a short one (`#000`, `#f0a8`) written out whole.
  */
 export const hexOf = (color: string): string | null => {
 	if (/^#[0-9a-f]{6}([0-9a-f]{2})?$/i.test(color)) return color.toUpperCase();
+	if (/^#[0-9a-f]{3,4}$/i.test(color)) return `#${[...color.slice(1)].map((d) => d + d).join('')}`.toUpperCase();
 	const m = /^rgba?\((\d+), (\d+), (\d+)(?:, ([\d.]+))?\)$/.exec(color);
 	if (!m) return null;
 	const byte = (n: number) => Math.round(n).toString(16).padStart(2, '0');

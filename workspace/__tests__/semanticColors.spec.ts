@@ -133,6 +133,10 @@ describe('a value as its control edits it', () => {
 		expect(hexOf('rgba(0, 0, 0, 0.5)')).toBe('#00000080');
 		expect(hexOf('rgba(16, 128, 98, 1)')).toBe('#108062');
 		expect(hexOf('#abcdef')).toBe('#ABCDEF');
+		// Written short, as a stylesheet may: the same color, in the one form every comparison and the picker take.
+		expect(hexOf('#000')).toBe('#000000');
+		expect(hexOf('#f0a8')).toBe('#FF00AA88');
+		expect(hexOf('#ab')).toBeNull();
 		expect(hexOf('none')).toBeNull();
 		expect(hexOf('oklch(0.5 0.1 120)')).toBeNull();
 	});

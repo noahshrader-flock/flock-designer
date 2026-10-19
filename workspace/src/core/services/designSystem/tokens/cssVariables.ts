@@ -3,7 +3,7 @@
  * guessed. A package's variable is changed by declaring it again in the library's stylesheet that imports it.
  */
 import type { DesignToken } from '../../../../shared/contract';
-import { DIMENSION, DURATION } from '../../../../shared/tokens';
+import { DIMENSION, DURATION, hexOf } from '../../../../shared/tokens';
 import { lineAt, replaced } from './objectLiteral';
 import { MOTION_PARTS, SHADOWS, TYPE_PARTS, primitiveOf } from '../../../../shared/primitives';
 import { capitalize } from '../../../../shared/titleCase';
@@ -251,7 +251,7 @@ export const cssVariables: TokenSource = {
 		for (const [mode, vars] of modes) {
 			for (const [name, v] of vars) {
 				const resolved = resolve(v.value, mode);
-				const value = hexOfChannels(resolved) ?? resolved;
+				const value = hexOfChannels(resolved) ?? (/^#[0-9a-f]{3,4}$/i.test(resolved) ? (hexOf(resolved) as string) : resolved);
 				const pointer = POINTER.exec(v.value)?.[1];
 				const pointerMode = pointer === undefined ? null : modeOf(pointer, mode);
 				// Typography and shadows are known by their names; a color is a color, however it is named (`--shadow-color`).
