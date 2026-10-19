@@ -5,11 +5,14 @@ const path = require('node:path');
 const vscode = require('vscode');
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+/** How long each step took, said when the run passes, so a wait a person would feel shows as it grows. */
+const took = [];
 const until = async (what, check, ms = 15000) => {
 	// Said as it starts, so a run stopped from outside says which step it was waiting on.
 	console.log(`dsnr-test-step: waiting for ${what}`);
+	const started = Date.now();
 	for (let t = 0; t < ms; t += 250) {
-		if (await check()) return;
+		if (await check()) return void took.push(`${what} ${((Date.now() - started) / 1000).toFixed(1)} s`);
 		await wait(250);
 	}
 	assert.fail(`${what} did not happen in time`);
@@ -81,14 +84,12 @@ exports.run = async () => {
 		const pictures = path.join(String(process.env.DSNR_TEST_PROFILE), 'User/globalStorage/flocksafety.dsnr/component-pictures');
 		const drawn = () => (fs.existsSync(pictures) ? fs.readdirSync(pictures, { recursive: true }).filter((f) => String(f).endsWith('.jpg')) : []);
 		// Read cold, the library is built and each story pictured and checked (FUI took 16 s here): a minute, as a busy
-		// machine has not failed, and the time is said, so a slower read shows.
-		const started = Date.now();
+		// machine has not failed.
 		await until('its components being pictured', () => drawn().length >= 10, 60000);
-		const took = Math.round((Date.now() - started) / 1000);
-		designSystem = `; FUI was read, FSButton and Primitives opened in their tabs, and ${drawn().length} components pictured (${took} s)`;
+		designSystem = `; FUI was read, FSButton and Primitives opened in their tabs, and ${drawn().length} components pictured`;
 	}
 
 	console.log(
-		`dsnr-test: activated; its commands are there; Fixture · Version 1 opened for review; Made here was started, handed to Claude Code, saved when built, pictured and opened${designSystem}`,
+		`dsnr-test: activated; its commands are there; Fixture · Version 1 opened for review; Made here was started, handed to Claude Code, saved when built, pictured and opened${designSystem}. Took: ${took.join(', ')}`,
 	);
 };
