@@ -328,10 +328,15 @@ export class ComponentTokens {
 		const key = `${commit}:${system.folder}`;
 		if (this.index?.key !== key) {
 			const index: Building = { key, commit, done: null, finished: Promise.resolve() };
-			index.finished = this.build(system, commit, shown.showing !== null).then(
-				(built) => void (index.done = built),
-				(err: Error) => void (index.done = { error: err.message }),
-			);
+			// After the read it replaces (the library moved while it was read): each tagged build replaces the last, so one made
+			// while another is drawn would leave that one's pages unloadable, every story then waiting out its time.
+			const before = this.index?.finished ?? Promise.resolve();
+			index.finished = before
+				.then(() => this.build(system, commit, shown.showing !== null))
+				.then(
+					(built) => void (index.done = built),
+					(err: Error) => void (index.done = { error: err.message }),
+				);
 			this.index = index;
 		}
 		return { index: this.index };
@@ -358,6 +363,17 @@ export class ComponentTokens {
 		const asIsDrawn = this.deps.measure([asIsRun, { base: plain.base, mode: 'dark', files }]);
 		// A failure to draw is said once the tags are built, not lost while they are.
 		asIsDrawn.catch(() => undefined);
+		// The pictures come from this pass alone: kept once it is drawn, so they show whatever the tags take.
+		const pictured = asIsDrawn.then(([asIs]) => {
+			if (aside) return;
+			const taken = new Map<string, Buffer>();
+			files.forEach((f, i) => {
+				const picture = asIs?.[i]?.picture;
+				if (picture) taken.set(f, picture);
+			});
+			this.deps.pictures.keep(system.id, files, taken);
+		});
+		pictured.catch(() => undefined);
 		const tagged = tags.edits.length === 0 ? null : await this.deps.previews.builtWith('tagged', () => editedFiles(reads, tags.edits));
 		const taggedBase = tagged?.state === 'ready' ? tagged.base : null;
 		const [[asIs, asIsDarkDrawn], [light, dark]] = await Promise.all([
@@ -369,12 +385,7 @@ export class ComponentTokens {
 						{ base: taggedBase, mode: 'dark', files },
 					]),
 		]);
-		const taken = new Map<string, Buffer>();
-		files.forEach((f, i) => {
-			const picture = asIs?.[i]?.picture;
-			if (picture) taken.set(f, picture);
-		});
-		if (!aside) this.deps.pictures.keep(system.id, files, taken);
+		await pictured;
 		const at = new Date();
 		const accessibility = new Map<string, AccessibilityResult>();
 		files.forEach((f, i) => {

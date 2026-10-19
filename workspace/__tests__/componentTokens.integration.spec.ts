@@ -10,7 +10,7 @@ import { tagsFor } from '../src/core/services/designSystem/tokenTags';
 import type { CatalogReads } from '../src/core/services/designSystem/componentCatalog';
 import { libraryCommit, systemReads } from '../src/core/services/designSystem/designLibrary';
 import type { TokenEdit } from '../src/shared/contract';
-import { g, settledAnswer } from './fixtures';
+import { g, nothingFollows, settledAnswer } from './fixtures';
 
 /** The previews and the drawing are stand-ins; the real drawing is headless Chrome's (`chromeHeadless.ts`, `measure`). */
 
@@ -439,6 +439,41 @@ describe('the index', () => {
 		});
 	});
 
+	it('reads a newer commit only once the read under way is drawn: two at once build over each other', async () => {
+		// Each tagged build replaces the last, so one made while another is drawn leaves that one's pages unloadable.
+		const order: string[] = [];
+		let open: () => void = () => undefined;
+		const gate = new Promise<void>((go) => (open = go));
+		const i = index({
+			measure: async (runs) => {
+				await gate;
+				const result = await measure(runs);
+				if (runs.some((r) => r.base.includes('tagged'))) order.push('tagged drawn');
+				return result;
+			},
+			previews: {
+				...previews,
+				builtWith: async (purpose: BuiltFor, files: Files) => {
+					if (purpose === 'tagged') order.push('tagged built');
+					return previews.builtWith(purpose, files);
+				},
+			},
+		});
+		const first = i.warm();
+		await vi.waitFor(() => expect(order).toEqual(['tagged built']));
+		// The library moves while it is read, as an update that brings new commits does.
+		writeFileSync(join(clone, 'src/components/A/A.stories.tsx'), "export default { title: 'Buttons/A' };\nexport const Other = () => null;\n");
+		g(clone, 'commit', '-q', '-am', 'moved');
+		g(clone, 'update-ref', 'refs/remotes/origin/develop', 'HEAD');
+		const second = i.warm();
+		// Time for the second read to build its tags over the first's, if it may.
+		await nothingFollows();
+		open();
+		await Promise.all([first, second]);
+		expect(order).toEqual(['tagged built', 'tagged drawn', 'tagged built', 'tagged drawn']);
+		expect(builds).toHaveLength(2);
+	});
+
 	it('says why it could not be built, and tries again on the next ask', async () => {
 		let fail = true;
 		const i = index({
@@ -608,6 +643,23 @@ describe('the index', () => {
 		const b = await i.of('src/components/B/B.stories.tsx');
 		expect(b.state === 'ready' && b.accessibility).toBeNull();
 		expect((await i.pictures()).issues).toEqual({ 'src/components/A/A.stories.tsx': { violations: 1, incomplete: 0 } });
+	});
+
+	it('keeps the pictures as soon as the plain pass is drawn, not once the tags are too', async () => {
+		const shot = Buffer.from('jpeg');
+		let open: () => void = () => undefined;
+		const tags = new Promise<void>((go) => (open = go));
+		const i = index({
+			measure: async (runs) => {
+				if (runs.some((r) => r.base.includes('tagged'))) await tags;
+				return (await measure(runs)).map((drawnRun, n) => drawnRun.map((d) => (d && runs[n]?.pictures ? { ...d, picture: shot } : d)));
+			},
+		});
+		const read = i.warm();
+		await vi.waitFor(() => expect(kept).toHaveLength(1));
+		expect([...(kept[0]?.taken.keys() ?? [])]).toEqual(['src/components/A/A.stories.tsx', 'src/components/B/B.stories.tsx']);
+		open();
+		await read;
 	});
 
 	it('keeps the pictures when the tagged build fails, and says why which tokens each uses cannot be said', async () => {

@@ -80,10 +80,10 @@ exports.run = async () => {
 		await until('Primitives opening in its own tab', () => tabs().includes('Primitives'));
 		const pictures = path.join(String(process.env.DSNR_TEST_PROFILE), 'User/globalStorage/flocksafety.dsnr/component-pictures');
 		const drawn = () => (fs.existsSync(pictures) ? fs.readdirSync(pictures, { recursive: true }).filter((f) => String(f).endsWith('.jpg')) : []);
-		// Read cold, the library is built and each story checked for accessibility as it is pictured (FUI took 347 s here):
-		// about twice that, as a busy machine has not failed, and the time is said, so a slower read shows.
+		// Read cold, the library is built and each story pictured and checked (FUI took 16 s here): a minute, as a busy
+		// machine has not failed, and the time is said, so a slower read shows.
 		const started = Date.now();
-		await until('its components being pictured', () => drawn().length >= 10, 700000);
+		await until('its components being pictured', () => drawn().length >= 10, 60000);
 		const took = Math.round((Date.now() - started) / 1000);
 		designSystem = `; FUI was read, FSButton and Primitives opened in their tabs, and ${drawn().length} components pictured (${took} s)`;
 	}
