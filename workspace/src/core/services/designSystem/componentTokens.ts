@@ -78,7 +78,7 @@ export interface Drawn {
  */
 export interface Instance {
 	story: string;
-	/** What names it in any drawing of the same file (`FIND_INSTANCES`): what a value tried in the preview is set on. */
+	/** What names it in any drawing of the same file (`findInstances`): what a value tried in the preview is set on. */
 	key: string;
 	props: Record<string, string>;
 	values: Partial<Record<ValueProperty, string>>;

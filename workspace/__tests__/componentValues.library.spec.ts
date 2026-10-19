@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest';
 import { PREVIEW_COMPONENT, PREVIEW_TRY, previewAddress } from '../src/shared/catalog';
-import { FIND_INSTANCES } from '../src/core/services/designSystem/pageInstances';
+import { FIND_INSTANCES } from './pageInstances';
 import { findChrome } from '../src/core/services/browser/chromeHeadless';
 import type { ValueRow } from '../src/shared/contract';
 import { REAL_FUI, libraryUnbuilt } from './realCheckouts';

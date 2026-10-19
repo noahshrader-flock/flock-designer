@@ -2,13 +2,30 @@
  * A component's instances in a preview page, found one way for every reader (adjusting a component, DESIGN_SYSTEM.md): the
  * drawing that measures them (`storyDrawing.ts`, Phase 1) and the preview page that tries a value on them (Phase 2), so an
  * instance measured is the instance a value is tried on. Page code, typed, bundled into the scripts that run it
- * (`core/services/designSystem/pageInstances.ts`). What React keeps of what it drew is its own, so it is read here as it is, untyped.
+ * (`drawing.ts`, `preview.ts`). What React keeps of what it drew is its own: only the parts read here are typed.
  */
 import { PREVIEW_COMPONENT, PREVIEW_TRY } from '../shared/catalog';
 import { CSS_OF, NOT_VARIANT } from '../shared/valueParts';
 
-/** One of React's fibers: its internals, read as they are. */
-type Fiber = any;
+/** One of React's fibers, its record of one thing it drew: only the parts read here, as React keeps them. */
+interface Fiber {
+	type: unknown;
+	elementType: unknown;
+	memoizedProps: Record<string, unknown> | null;
+	/** Its parent; null at the root. */
+	return: Fiber | null;
+	/** The other of the two copies React keeps of it, if any. */
+	alternate: Fiber | null;
+	/** At the root, its root, which holds the copy that is current. */
+	stateNode: { current?: unknown } | null;
+}
+
+/** A React element, as a component is given one to draw. */
+interface GivenElement {
+	$$typeof: symbol;
+	type: unknown;
+	props: unknown;
+}
 
 /** One instance as the readers know it: its story, the props that say its variant, the key that names it, its top element. */
 export interface Found {
@@ -20,7 +37,7 @@ export interface Found {
 
 const fiberOf = (el: Element): Fiber | null => {
 	const k = Object.keys(el).find((x) => x.startsWith('__reactFiber$'));
-	return k ? (el as unknown as Record<string, Fiber>)[k] : null;
+	return k ? ((el as unknown as Record<string, Fiber | undefined>)[k] ?? null) : null;
 };
 
 /**
@@ -47,11 +64,11 @@ export const findInstances = (component: unknown): { instances: Found[]; wrappin
 		return top.stateNode?.current === top || !f.alternate ? f : f.alternate;
 	};
 	// What an instance was given to draw, as React elements: its children, however nested.
-	const given = (f: Fiber): Fiber[] => {
-		const out: Fiber[] = [];
+	const given = (f: Fiber): GivenElement[] => {
+		const out: GivenElement[] = [];
 		const walk = (c: unknown): void => {
 			if (Array.isArray(c)) c.forEach(walk);
-			else if (c && typeof c === 'object' && (c as Fiber).$$typeof) out.push(c);
+			else if (c && typeof c === 'object' && '$$typeof' in c) out.push(c as GivenElement);
 		};
 		walk(f.memoizedProps?.children);
 		return out;

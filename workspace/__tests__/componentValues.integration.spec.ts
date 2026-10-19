@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { build } from 'esbuild';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { PREVIEW_COMPONENT, PREVIEW_SHOW, PREVIEW_TRY } from '../src/shared/catalog';
-import { FIND_INSTANCES, TRY_VALUES } from '../src/core/services/designSystem/pageInstances';
+import { FIND_INSTANCES, TRY_VALUES } from './pageInstances';
 import { chromeHeadless, findChrome } from '../src/core/services/browser/chromeHeadless';
 
 /**
