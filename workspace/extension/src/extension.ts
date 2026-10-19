@@ -13,7 +13,7 @@ import { startCore } from './core';
 import { showFound, shownFrom } from './designSystem';
 import { designSystemHost } from './designSystemHost';
 import { registerVoice } from './voice';
-import { valueOf } from '../../src/shared/result';
+import { errorText, valueOf } from '../../src/shared/result';
 import { type CodebaseAction, type HostMessage, NO_TABS_SHOWN, type Review, reviewsOf } from './messages';
 import { askRoutes } from './asks';
 import { commands } from './commands';
@@ -197,6 +197,12 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 			saveBuilt: async () => valueOf(await api.saveBuilt(projectId, name)),
 			// No notification for each save: accessibility is the build's own check, in the agent's run.
 			onSaved: projectsChanged,
+			onGaveUp: (err) =>
+				failed(
+					new Error(
+						`DSNR could not save the build of ${projectId} ${name}: ${errorText(err, { firstLine: true }).replace(/\.?$/, '.')} Opening it for review saves it.`,
+					),
+				),
 			now: Date.now,
 			sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
 			pollMs: 2000,

@@ -2,6 +2,7 @@
 export const watchBuild = async ({
 	saveBuilt,
 	onSaved,
+	onGaveUp,
 	now,
 	sleep,
 	pollMs,
@@ -10,6 +11,8 @@ export const watchBuild = async ({
 }: {
 	saveBuilt: () => Promise<'saved' | 'waiting'>;
 	onSaved: () => void;
+	/** Saving failed three times running, with the last error: the person is told, as no build of theirs is saved after. */
+	onGaveUp: (err: unknown) => void;
 	now: () => number;
 	sleep: (ms: number) => Promise<void>;
 	pollMs: number;
@@ -18,12 +21,14 @@ export const watchBuild = async ({
 }): Promise<void> => {
 	const start = now();
 	let failed = 0;
+	let last: unknown = null;
 	while (isLive() && now() - start < giveUpMs && failed < 3) {
 		const saved = await saveBuilt().then(
 			(r) => ((failed = 0), r),
-			() => ((failed += 1), 'waiting' as const),
+			(err: unknown) => ((failed += 1), (last = err), 'waiting' as const),
 		);
 		if (saved === 'saved') onSaved();
-		await sleep(pollMs);
+		if (failed < 3) await sleep(pollMs);
 	}
+	if (failed >= 3 && isLive()) onGaveUp(last);
 };
