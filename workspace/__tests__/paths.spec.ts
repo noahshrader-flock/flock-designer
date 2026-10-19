@@ -52,6 +52,15 @@ describe('isInside', () => {
 	it('rejects a path through a symlinked DIRECTORY pointing out of the checkout', () => {
 		expect(isInside(root, 'escape/secret.txt')).toBe(false);
 	});
+
+	it('rejects a file not written yet through a symlinked DIRECTORY pointing out, where it would be written', () => {
+		expect(isInside(root, 'escape/new.txt')).toBe(false);
+		expect(isInside(root, 'escape/deeper/new.txt')).toBe(false);
+	});
+
+	it('accepts a file not written yet in a folder not made yet, inside', () => {
+		expect(isInside(root, 'src/new-folder/new.txt')).toBe(true);
+	});
 });
 
 describe('resolveInside', () => {

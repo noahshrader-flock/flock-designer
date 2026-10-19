@@ -1,18 +1,21 @@
 import { existsSync, realpathSync } from 'node:fs';
-import { delimiter, isAbsolute, join, relative, resolve, sep } from 'node:path';
+import { basename, delimiter, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 
 /**
  * Keeps every file operation inside the opened checkout: the security boundary, since a page can name a path. `..`, an
  * absolute path elsewhere and a symlink out of the tree must all fail; string comparison misses the symlink.
  */
 
-/** Resolves symlinks where the path exists, and leaves it alone where it does not. */
+/**
+ * The path as it is on disk, symlinks resolved: where it does not exist yet (a file to be written), its nearest folder that
+ * does is resolved and the rest joined to it, so a new file under a symlinked folder is placed where it would really land.
+ */
 const realOrLexical = (path: string): string => {
 	try {
 		return realpathSync(path);
 	} catch {
-		// Not there yet, as for a file being created.
-		return resolve(path);
+		const parent = dirname(path);
+		return parent === path ? path : join(realOrLexical(parent), basename(path));
 	}
 };
 
