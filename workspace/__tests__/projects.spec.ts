@@ -268,8 +268,7 @@ describe('asRoute', () => {
 
 describe('slugify', () => {
 	it('makes an id the core will accept, however long the name', () => {
-		// This used to truncate mid-word and leave a trailing hyphen, which the
-		// dialog showed as valid and createCodebaseWork then rejected.
+		// Never cut mid-word with a trailing hyphen, which the dialog shows as valid and createCodebaseWork rejects.
 		const long = 'Users list inactivity signal for organization administrator review';
 		expect(PROJECT_ID.test(slugify(long))).toBe(true);
 		expect(PROJECT_ID.test(slugify(`${'a'.repeat(59)} b`))).toBe(true);

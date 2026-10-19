@@ -24,15 +24,9 @@ import {
 } from './fixtures';
 
 /**
- * The IPC layer itself: which handlers demand that a repository was actually
- * opened, and which arguments they refuse.
- *
- * This file exists because of a real regression. `lastCheckout` was written to
- * fall back to a home-directory scan and open whatever it found, which admitted
- * a repository nobody had chosen into the trusted set -- and a repository's own
- * `.dsnr/workspace.json` is the list of commands the app will run in it. Every
- * service was unit-tested and the whole suite stayed green, because nothing
- * tested the wiring. These tests assert the gate, not the services behind it.
+ * The call layer itself: which handlers demand that a repository was actually opened, and which arguments they refuse.
+ * A repository's own `.dsnr/workspace.json` is the list of commands DSNR will run in it, so admitting one nobody chose
+ * is the risk, and unit tests of each service cannot see the wiring. These tests assert the gate, not the services.
  */
 
 const handlers = new Map<string, (...args: unknown[]) => unknown>();
@@ -59,7 +53,6 @@ const fakePorts = () =>
 		headless: {
 			scan: (...a: Parameters<Ports['headless']['scan']>) => checkPage(...a),
 			draw: (url: string) => drawCover(url),
-			// Stories are drawn only in the app: a test that reaches for it says so.
 			measure: async () => {
 				throw new Error('Stories are drawn only in the app.');
 			},
@@ -157,9 +150,9 @@ let githubApi: Fn;
 let designRepoProjects: unknown[] = [];
 let warm: Fn;
 let ask: Fn;
-/** What a page's accessibility check finds (T7): axe in the app, a stand-in here, finding an image with no text. */
+/** What a page's accessibility check finds: axe in headless Chrome in use, a stand-in here, finding an image with no text. */
 let checkPage: Fn;
-/** How a prototype's picture is drawn: a window in the app, a stand-in here that gives the same few bytes. */
+/** How a prototype's picture is drawn: headless Chrome in use, a stand-in here that gives the same few bytes. */
 let drawCover: Fn;
 /** A file read from GitHub as bytes: none, unless a test says otherwise. */
 let readBytes: Fn;
@@ -982,7 +975,7 @@ describe('prototypes', () => {
 		/** Comments by version: v1's thread, and any other's. */
 		const threads = (byName: Record<string, ReturnType<typeof comment>[]>) =>
 			readComments.mockImplementation(async (key: string) => byName[key.split('/').at(-1) as string] ?? []);
-		/** A v1 Noah made, signed in, with a source. */
+		/** A v1 made by a signed-in person, with a source. */
 		const ready = async () => {
 			githubState = { state: 'signedIn', user: { login: 'noah', name: 'Noah' } };
 			await trustFolder(product);
@@ -1283,7 +1276,7 @@ describe('prototypes', () => {
 			// Where the work is, on its record: a Build that leaves none opens at the app's front door.
 			expect(task).toContain('# Record where the work is');
 			expect(task).toMatch(/Record the work's route on the `codebase` entry of `[^`]*projects\/demo\/work\.json`/);
-			// Built toward the product's accessibility target from the start (T7).
+			// Built toward the product's accessibility target from the start.
 			expect(task).toContain('## Accessibility');
 			expect(task).toContain('Build toward the target as you go, not at the end');
 			// No VS Code in a test: the command that starts it in a terminal, on the clipboard, pointing at the task.
@@ -1292,7 +1285,7 @@ describe('prototypes', () => {
 			expect(copied).toBe(value.command);
 			expect(value.command).toMatch(new RegExp(`^cd .*${basename(product)} && .*claude `));
 			expect(value.command).toContain(taskFile);
-			// Nothing is run in the app.
+			// Nothing is run by DSNR itself.
 			expect(agentStart).not.toHaveBeenCalled();
 		});
 

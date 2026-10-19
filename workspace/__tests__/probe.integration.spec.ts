@@ -6,7 +6,7 @@ import { CELLS, type CellId } from '../src/core/services/accessibility/probe/cel
 import { PROBE_FIXTURES } from './fixtures/probeFixtures';
 
 /**
- * The probe (A3 of the accessibility plan) in a real browser: each cell measured in the page catches its planted defect,
+ * The probe in a real browser: each cell measured in the page catches its planted defect,
  * and finds nothing in the defect's clean twin. Then a view probed whole, its evidence, and how long the light subset takes.
  */
 

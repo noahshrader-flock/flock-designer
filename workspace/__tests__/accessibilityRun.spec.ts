@@ -11,7 +11,7 @@ import type { RuntimeDeps } from '../src/core/services/codebase/runtime';
 import { undeclared } from '../src/shared/wcag';
 
 /**
- * Measuring a product's own app (A2 of the accessibility plan): its pages checked one at a time, each a state of one
+ * Measuring a product's own app: its pages checked one at a time, each a state of one
  * result, and the app started as its workspace file says, and stopped after.
  */
 

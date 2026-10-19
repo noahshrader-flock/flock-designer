@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { drawSpecimens } from '../src/page/specimens';
 
 /**
- * A type specimen, drawn by the preview page (R3 of the design system plan): in the page the design system's own CSS loads
+ * A type specimen, drawn by the preview page: in the page the design system's own CSS loads
  * its fonts in, so a family is shown in itself or said plainly not to be there, never shown in another that looks right.
  * The page's own code (`page/specimens.ts`), run here as the page runs it.
  */

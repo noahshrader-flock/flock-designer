@@ -10,7 +10,7 @@ import type { ComponentVariants as Answer } from '../src/shared/contract';
 import { settledAnswer } from './fixtures';
 
 /**
- * A component drawn in every case its props declare (Phase 5), against a small library written here, its props read by the
+ * A component drawn in every case its props declare, against a small library written here, its props read by the
  * real compiler; drawn by a stand-in that draws as this test says: `Default` takes its args, `Fixed` sets its size itself,
  * `AllSizes` draws every size at once.
  */

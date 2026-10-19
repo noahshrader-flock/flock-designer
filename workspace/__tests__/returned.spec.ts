@@ -10,7 +10,7 @@ import type { AccessibilityIssue } from '../src/shared/contract';
 import { AA, cell, issue, result } from './fixtures/accessibilityFixtures';
 
 /**
- * Keeping it fixed (A9 of the accessibility plan): what testers send back, read without retyping and sorted by what was
+ * Keeping it fixed: what testers send back, read without retyping and sorted by what was
  * measured, its escapes logged once in the product's agent gap log; and a guard proposed for what was fixed.
  */
 

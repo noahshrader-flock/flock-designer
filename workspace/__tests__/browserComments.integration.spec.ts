@@ -13,13 +13,12 @@ import { fakeGitHub } from './pageHarness';
 import { NO_CHROME, inChrome } from './realChrome';
 
 /**
- * A review opened in the browser from DSNR, in the real browser (BROWSER_COMMENTS_PLAN 2): the real viewer, built as the
- * extension carries it, on this machine's server as VS Code serves it (the page on its own address), opened with a key.
- * It asks DSNR, standing in here as the extension answers (the core's comment calls over a GitHub that answers as its
- * API does), through the server, shows the comments, and posts one; and keeps its key when the page loads again.
- * A hostile prototype in such a review can neither learn the key nor ask without it (BROWSER_COMMENTS_PLAN 4.1). The server
- * will not serve a prototype on the bar's address, so the failing case is a mutation: with that refusal taken out and the
- * page framed from there, the same page reads the key (checked 2026-10-15).
+ * A review opened in the browser from DSNR, in the real browser: the real viewer, built as the extension carries it, on
+ * this machine's server as VS Code serves it, opened with a key; it asks DSNR (the core's comment calls over a stand-in
+ * GitHub) through the server, shows the comments, posts one, and keeps its key when the page loads again.
+ * A hostile prototype in such a review can neither learn the key nor ask without it. The server will not serve a
+ * prototype on the bar's address, so the failing case is a mutation: with that refusal taken out and the page framed
+ * from there, the same page reads the key.
  */
 
 const KEY = 'AbC-_x9yZAbC-_x9yZAbCd';

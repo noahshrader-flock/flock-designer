@@ -3,7 +3,7 @@ import { declaredBy, pairContrast, pointsAt, reachOf, rowContrast } from '../src
 import { undeclared } from '../src/shared/wcag';
 import { color } from './tokenFixtures';
 
-/** What every place a token is shown says of it, in the app and in VS Code, from the one source (`shared/tokens.ts`). */
+/** What every place a token is shown says of it, from the one source (`shared/tokens.ts`). */
 
 const main = color('light.primary.main', 'Light', 'primary', 'main', '#ffffff');
 const text = color('light.primary.contrastText', 'Light', 'primary', 'contrastText', '#777777');

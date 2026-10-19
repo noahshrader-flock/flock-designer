@@ -22,7 +22,7 @@ import { CRITERIA } from '../src/shared/wcagCriteria';
 import { axeTagsFor } from '../src/shared/wcag';
 
 /**
- * The accessibility ledger (A5 of the accessibility plan): each criterion's status from what axe and the probe found, the
+ * The accessibility ledger: each criterion's status from what axe and the probe found, the
  * evidence each rests on, review.md's section written from it, what a gate refuses, and how two runs compare.
  */
 

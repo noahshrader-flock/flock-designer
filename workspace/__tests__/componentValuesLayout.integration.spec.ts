@@ -18,10 +18,9 @@ import { NO_CHROME, inChrome } from './realChrome';
 import { panelCss } from './panelStyles';
 
 /**
- * A component's Values, laid out as VS Code lays out its side pane (adjusting a component, DESIGN_SYSTEM.md): the real
- * component and the real stylesheet, in a real browser, at the width of the pane. What a person saw once was every part laid
- * over the next (a variant over its swatch, a value broken across three lines, a note cut off); what must hold is that nothing
- * overflows the pane, nothing overlaps, and a value reads on one line where it fits.
+ * A component's Values, laid out as VS Code lays out its side pane: the real component and the real stylesheet, in a real
+ * browser, at the width of the pane. Nothing overflows the pane, nothing overlaps (a variant over its swatch, a note cut
+ * off), and a value reads on one line where it fits.
  */
 
 const cell = (

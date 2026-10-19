@@ -20,7 +20,7 @@ import {
 } from '../src/shared/wcag';
 
 /**
- * WCAG, as the app holds it (T7 of the design system plan): each number held to the W3C's, the tags to axe-core's own
+ * WCAG, as DSNR holds it: each number held to the W3C's, the tags to axe-core's own
  * rules and to the ladder in the standard, so a wrong number, an axe upgrade or an edit to the standard fails here
  * rather than drifting.
  */
@@ -76,7 +76,7 @@ describe('a target', () => {
 });
 
 describe('the tags', () => {
-	// What axe-core has rules for, by WCAG tag: read from the axe-core the app ships.
+	// What axe-core has rules for, by WCAG tag: read from the axe-core DSNR ships.
 	const ruled = new Set(axe.getRules().flatMap((r) => r.tags.filter((t) => /^wcag\d+a+$/.test(t))));
 
 	it('are each one axe-core has rules for, and every WCAG tag axe-core has rules for is one of them', () => {

@@ -10,7 +10,7 @@ import { axeTagsFor } from '../src/shared/wcag';
 import { cell } from './fixtures/accessibilityFixtures';
 
 /**
- * A prototype build's own check (A6 of the accessibility plan), with a stand-in browser: what is sent back and what is not,
+ * A prototype build's own check, with a stand-in browser: what is sent back and what is not,
  * the rounds and what is left, and that a check that cannot run says so. The real browser is the integration spec's.
  */
 

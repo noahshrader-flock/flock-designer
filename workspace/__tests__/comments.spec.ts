@@ -110,9 +110,8 @@ describe('markersFor', () => {
 	});
 
 	it('never leaves a pin behind when there is no box to type in', () => {
-		// The bug this was written for: backing out between placing the pin and the box opening left an
-		// amber pin on the page that could be neither finished nor dismissed, looking like a comment
-		// that was not one. The pin and the box now hang off the same value.
+		// Backing out between placing the pin and the box opening must not leave an amber pin that can be neither
+		// finished nor dismissed, looking like a comment that is not one: the pin and the box hang off the same value.
 		const list = [pinned(1)];
 		expect(markersFor(list, 'a', { anchor: at(), composing: false }).map((m) => m.id)).toEqual([1]);
 	});

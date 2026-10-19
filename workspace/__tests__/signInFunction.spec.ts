@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { MAX_BODY, handleExchange } from '../functions/sign-in/lib/exchange.mjs';
 
-/** The function that trades a page's one-time code for a person's token (PUBLISHED_COMMENTS_PLAN, Phase 1.1). */
+/** The function that trades a page's one-time code for a person's token. */
 
 const SITE = 'https://noahshrader-flock.github.io';
 const ENV = { GITHUB_CLIENT_ID: 'Iv1.abc', ALLOWED_ORIGIN: SITE, REDIRECT_URI: `${SITE}/flock-designer/` };

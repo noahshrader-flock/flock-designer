@@ -3,7 +3,7 @@ import { readTokens } from '../src/core/services/designSystem/designTokens';
 import { memoryReads } from './fixtures';
 
 /**
- * T1 of the design system plan: the library's tokens as one list, found and not listed. Read from the library's own theme
+ * The library's tokens as one list, found and not listed. Read from the library's own theme
  * files as text, never by running them: the tone families its index exports, the palette roles of each mode (each
  * pointing at a tone, sometimes with an opacity), and the theme's spacing and radius. Against fixtures, then the real
  * library.

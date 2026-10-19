@@ -212,9 +212,8 @@ describe('branchAuthors', () => {
 });
 
 describe('two commands at once in one repository', () => {
-	// The bug this guards: opening a version ran its branch switch twice at the same
-	// moment (React runs effects twice in development), and one `git checkout` hit the
-	// other's index.lock and failed, with "Another git process seems to be running".
+	// Opening a version can run its branch switch twice at the same moment (React runs effects twice in development),
+	// and one `git checkout` must not hit the other's index.lock and fail with "Another git process seems to be running".
 	it('do not collide: every one of them succeeds', async () => {
 		// Real checkouts are prototype, so a collision needs a repository big enough that holding
 		// the lock takes a moment, and enough commands at once that two are bound to overlap.

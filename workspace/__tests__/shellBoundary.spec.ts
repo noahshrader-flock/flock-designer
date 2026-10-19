@@ -5,9 +5,8 @@ import { describe, expect, it } from 'vitest';
 /**
  * Which shell the code is in. The core (the services, the handlers, the host, the shared domain, the viewer's parts) runs in
  * whichever shell starts it, so nothing in it may reach `vscode`, directly or through what it imports; only the VS Code
- * extension's own files, in `extension/`, may. DSNR was an Electron app too, until 2026-10-15; nothing loads `electron`
- * any more, and this keeps it so. Followed through every import that loads code; an `import type` loads nothing, so it is
- * not followed.
+ * extension's own files, in `extension/`, may, and nothing loads `electron`. Followed through every import that loads
+ * code; an `import type` loads nothing, so it is not followed.
  */
 
 const workspace = join(__dirname, '..');

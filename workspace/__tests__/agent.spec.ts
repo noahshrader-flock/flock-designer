@@ -212,9 +212,8 @@ describe('reading the stream', () => {
 	});
 
 	it('keeps what the agent said at the end, which is where it explains why it changed nothing', () => {
-		// From a real run: the agent found the text, saw it was outside this version's boundary, and
-		// said so without committing. Reporting only "Finished." threw that explanation away and sent
-		// the designer looking for a change that was never made.
+		// From a real run: the agent found the text outside this version's boundary and said so without committing.
+		// Reporting only "Finished." would throw that away and send the designer looking for a change never made.
 		const said = 'No changes were made. Comment 1 refers to text outside this iteration’s boundary.';
 		const lines = claudeStreamFormatter()(`${JSON.stringify({ type: 'result', subtype: 'success', is_error: false, result: said })}\n`);
 		expect(lines).toEqual([said, 'Finished.']);

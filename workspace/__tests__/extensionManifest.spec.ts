@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 /**
- * DSNR, the VS Code extension (ELECTRON_MIGRATION_PLAN, Phase 0): what VS Code reads from its manifest to put it in the
+ * DSNR, the VS Code extension: what VS Code reads from its manifest to put it in the
  * activity bar. The manifest is the extension's own (`extension/package.json`): VS Code takes the icon, the views and
  * the commands from it, not from the workspace's `package.json`.
  */

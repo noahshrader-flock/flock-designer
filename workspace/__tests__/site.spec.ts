@@ -7,7 +7,7 @@ import { serveSite } from '../src/site/serveSite';
 import { contentHashOf } from '../src/core/services/prototypes/prototype';
 
 /**
- * The site prototypes are published as (M5a of the Pages plan), built from a design repository: every project with a
+ * The site prototypes are published as, built from a design repository: every project with a
  * saved page, every version of it, a `latest` link, and an index. Against a fixture repository with two projects, one
  * with three versions, and one project with nothing to show.
  */
@@ -355,7 +355,7 @@ describe('comments on the page', () => {
 		const frame = /<iframe id="dsnr-frame"[^>]*>/.exec(read('alpha/v3/index.html'))?.[0] ?? '';
 		expect(frame).toContain('src="page.html"');
 		// Its own scripts, forms, pop-ups and alerts. Not its own origin: on the bar's address that would let it take the
-		// sandbox off through the bar, and read the bar's storage, where the sign-in's token is (PUBLISHED_COMMENTS_PLAN, 2.2).
+		// sandbox off through the bar, and read the bar's storage, where the sign-in's token is.
 		expect(frame).toContain('sandbox="allow-scripts allow-forms allow-popups allow-modals"');
 		expect(frame).not.toContain('allow-same-origin');
 		expect(frame).not.toContain('allow-top-navigation');

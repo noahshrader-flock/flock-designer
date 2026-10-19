@@ -6,7 +6,7 @@ import { WCAG_LATEST } from '../src/shared/wcag';
 import { fakeGitHub } from './fakes/github';
 
 /**
- * The weekly check of WCAG's edition (T7 of the design system plan): the W3C's page against the one recorded, an issue
+ * The weekly check of WCAG's edition: the W3C's page against the one recorded, an issue
  * opened once when they differ. Against the W3C's own page as it was served, and a stand-in GitHub.
  */
 

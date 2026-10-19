@@ -150,7 +150,7 @@ describe('the comments experience, through another store and page', () => {
 	it('is chosen by pressing anywhere on its card, which shows its pin; but not by its menu', async () => {
 		const f = fakes([comment(1, 'First', { author: 'noah' }), comment(2, 'Second', { author: 'pat' })]);
 		await mount(f);
-		// Its author's name, at the top of the card, which was not pressable before.
+		// Its author's name, at the top of the card.
 		await press(card('Second').querySelector('.comment-author') as HTMLElement);
 		expect(card('Second').hasAttribute('data-selected')).toBe(true);
 		expect(f.focused).toEqual([2]);

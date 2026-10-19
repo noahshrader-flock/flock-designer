@@ -26,7 +26,7 @@ import {
 } from './webviewHarness';
 
 /**
- * DSNR's panel (Phases 0, 3 and 4): the Projects and Design System toggle at its very top, the projects the core reads
+ * DSNR's panel: the Projects and Design System toggle at its very top, the projects the core reads
  * under their folders with their pictures, opening one for review, and the design system found. Played against as the extension
  * plays it: what is open is said once the page is ready, the core's calls are answered by their ids, and its events
  * arrive by name.
@@ -1064,7 +1064,7 @@ describe('Projects, focused on the product open', () => {
 		expect(choices.every((c) => c.firstElementChild?.classList.contains('codicon'))).toBe(true);
 		expect(choices.map((c) => c.lastElementChild?.classList.contains('menu-check'))).toEqual([true, false, true, false]);
 		expect(choices.map((c) => c.getAttribute('aria-checked'))).toEqual(['true', 'false', 'true', 'false']);
-		// The old toggles are gone from the tab.
+		// And no radio toggles in the tab.
 		expect(body().querySelector('[role="radiogroup"]')).toBeNull();
 	});
 

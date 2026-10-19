@@ -9,7 +9,7 @@ import { writeCheckScript } from '../src/core/services/prototypes/prototypeBundl
 import { axeTagsFor } from '../src/shared/wcag';
 
 /**
- * A prototype build's own accessibility check (A6 of the accessibility plan), as the agent runs it: the bundled script,
+ * A prototype build's own accessibility check, as the agent runs it: the bundled script,
  * written beside the build script, run with Node from that folder on a built page in a real browser.
  */
 

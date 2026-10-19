@@ -5,16 +5,16 @@ import { describe, it } from 'vitest';
 
 /**
  * The real repositories some integration tests read: never written to, and never assumed to be here. Each is found
- * where its variable says, or beside this repository, which is where the app looks for them too.
+ * where its variable says, or beside this repository, which is where DSNR looks for them too.
  */
 const beside = (name: string) => resolve(__dirname, '..', '..', '..', name);
 
 /** The design system's clone: `FUI_ROOT`, or `flock-react-component-lib` beside this repository. */
 export const REAL_LIBRARY = process.env.FUI_ROOT ?? beside('flock-react-component-lib');
-/** The second design system (Phase 4), Primer React, a monorepo: `PRIMER_ROOT`, or `primer-react` beside this repository. */
+/** A second design system, Primer React, a monorepo: `PRIMER_ROOT`, or `primer-react` beside this repository. */
 export const REAL_PRIMER = process.env.PRIMER_ROOT ?? beside('primer-react');
 /**
- * Two libraries styled by Tailwind (Phase 5.5), Tremor's, which put their values in classes: Tailwind 3's
+ * Two libraries styled by Tailwind, Tremor's, which put their values in classes: Tailwind 3's
  * (`TREMOR3_ROOT`, or `tremor-npm` beside this repository) and Tailwind 4's (`TREMOR4_ROOT`, or `tremor-raw`).
  */
 export const REAL_TREMOR3 = process.env.TREMOR3_ROOT ?? beside('tremor-npm');
@@ -38,7 +38,7 @@ export const libraryMissing = realDevelop === null ? `no clone of the design sys
 export const libraryUnbuilt =
 	libraryMissing ??
 	(existsSync(join(REAL_LIBRARY, 'node_modules', '@storybook', 'react', 'package.json')) ? null : `${REAL_LIBRARY} has no packages installed`);
-/** Flock's FUI, connected as the app connects it: the whole repository, on develop. */
+/** Flock's FUI, connected as DSNR connects it: the whole repository, on develop. */
 export const REAL_FUI = {
 	id: 'flocksafety/flock-react-component-lib',
 	name: 'FUI',
@@ -47,7 +47,7 @@ export const REAL_FUI = {
 	folder: '',
 	branch: 'develop',
 };
-/** Primer React, connected as the app connects a monorepo's package: `packages/react`, on main. */
+/** Primer React, connected as DSNR connects a monorepo's package: `packages/react`, on main. */
 export const REAL_PRIMER_SYSTEM = {
 	id: 'primer/react',
 	name: 'Primer',

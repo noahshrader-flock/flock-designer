@@ -5,7 +5,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { programFor, propsOf, typeLibs } from '../src/core/services/designSystem/componentProps';
 
 /**
- * A component's declared props (Phase 5), read by the TypeScript compiler from a small library written here, with React's own
+ * A component's declared props, read by the TypeScript compiler from a small library written here, with React's own
  * types: the cases its props declare, whatever the component is made with, and why the rest cannot be varied.
  */
 const LIBRARY: Record<string, string> = {

@@ -21,9 +21,9 @@ import { declaredTarget } from '../src/core/services/accessibility/accessibility
 import { undeclared } from '../src/shared/wcag';
 
 /**
- * Measuring a page's accessibility (T7 of the design system plan, part B): axe's runs, one per state, merged and said
+ * Measuring a page's accessibility: axe's runs, one per state, merged and said
  * the same way everywhere, never as a pass; and each result kept with what it was made with, made again when any of
- * that changes. The windows themselves run only in the app; here, a stand-in gives what axe would.
+ * that changes. The real browser is not run here; a stand-in gives what axe would.
  */
 
 const rule = (id: string, more: Partial<AxeRule> = {}): AxeRule => ({

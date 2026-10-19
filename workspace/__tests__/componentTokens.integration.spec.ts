@@ -13,7 +13,7 @@ import type { TokenEdit } from '../src/shared/contract';
 import { g, settledAnswer } from './fixtures';
 
 /**
- * Which tokens each component draws with (T6 of the design system plan, decision 29): every token tagged with a value
+ * Which tokens each component draws with: every token tagged with a value
  * nothing else has, every story drawn, and what it drew read back. Against fixtures; the previews and the drawing are
  * stand-ins, and the real drawing is headless Chrome's (`chromeHeadless.ts`, `measure`).
  */
@@ -373,7 +373,7 @@ describe('the index', () => {
 		// Not the token page: it is not a component, and would be said to share every token.
 		const files = ['src/components/A/A.stories.tsx', 'src/components/B/B.stories.tsx'];
 		// Asked twice: as it is, at once, while the tags are built (pictured and checked for accessibility at the library's
-		// target, none declared, so the default, T7; the longest, so first), and in dark; then with the tags, in each mode.
+		// target, none declared, so the default; the longest, so first), and in dark; then with the tags, in each mode.
 		expect(asked).toEqual([
 			[
 				{

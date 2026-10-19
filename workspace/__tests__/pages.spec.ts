@@ -16,7 +16,7 @@ import {
 } from '../src/core/services/publishing/pages';
 
 /**
- * Publishing a prototype to its page (M5b of the Pages plan), against a fake GitHub. What matters most is what it will
+ * Publishing a prototype to its page, against a fake GitHub. What matters most is what it will
  * not do: hand out a link to a site anyone can open, unless the person said in so many words that this is a test.
  */
 

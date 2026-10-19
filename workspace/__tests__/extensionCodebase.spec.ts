@@ -4,7 +4,7 @@ import type { Project, RunLogLine, ShareStatus } from '../src/shared/contract';
 import { ok } from '../src/shared/result';
 
 /**
- * A project's codebase work in VS Code (ELECTRON_MIGRATION_PLAN 5.2, 5.3): Handoff (the product's gate, both reviews,
+ * A project's codebase work in VS Code: Handoff (the product's gate, both reviews,
  * HANDOFF.md, a verdict) as a build is shown, with Stop and its log; a draft pull request with a preview (Share); the
  * branch's own preview in the person's browser; and the work on GitHub. No pins: comments on it go on its pull request.
  */

@@ -191,8 +191,7 @@ describe('one port, many prototypes', () => {
 		await manager.start(root, proto, 'preview', 'users-inactivity-signal');
 		const second = await manager.start(root, proto, 'preview', 'alert-notification-prefs');
 
-		// The bug this guards: the second call used to return the first project's
-		// running status, so every piece of work opened showed the same prototype.
+		// Not the first project's running status, or every piece of work opened shows the same prototype.
 		expect(spawnSpy).toHaveBeenCalledTimes(2);
 		expect(second).toMatchObject({ state: 'running', projectId: 'alert-notification-prefs' });
 		expect(manager.status('preview')).toMatchObject({ projectId: 'alert-notification-prefs' });

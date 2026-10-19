@@ -6,7 +6,7 @@ import { branchesWithFile, ensureLocalBranch } from '../src/core/services/platfo
 import { g, makeProduct } from './fixtures';
 
 /**
- * What work starts from (C4 of the clone plan), in a fresh clone: most of its branches are only on GitHub, and only
+ * What work starts from, in a fresh clone: most of its branches are only on GitHub, and only
  * some carry the DSNR setup.
  */
 

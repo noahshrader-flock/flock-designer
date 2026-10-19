@@ -4,8 +4,8 @@ import { taskVoice, voiceBrief } from '../src/core/services/designSystem/voiceBr
 import { voiceIsWritten } from '../src/core/services/designSystem/voice';
 
 /**
- * What every agent task carries of the company's voice and tone (T9 of the design system plan, step 4): the file's own
- * words, read each time a task is made, as the accessibility standard is (T7).
+ * What every agent task carries of the company's voice and tone: the file's own words, read each time a task is made,
+ * as the accessibility standard is.
  */
 
 const WRITTEN = `# Voice and tone

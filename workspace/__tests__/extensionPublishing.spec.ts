@@ -3,7 +3,7 @@ import { publishedLink, syncItem } from '../extension/src/publishing';
 import { ok } from '../src/shared/result';
 
 /**
- * Publish and share in VS Code (ELECTRON_MIGRATION_PLAN 4.3): whether the person's work is synced, in VS Code's status
+ * Publish and share in VS Code: whether the person's work is synced, in VS Code's status
  * bar, with what is held back and why; and a review's published page, to open or to share its link, or why it has none.
  */
 

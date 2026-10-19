@@ -8,7 +8,7 @@ import { LibraryShown } from '../src/core/services/designSystem/libraryShown';
 import type { Catalog, ConnectedDesignSystem } from '../src/shared/contract';
 
 /**
- * Preview this branch (PROCESS_CHANGES_PLAN Phase 2): the commit the tab reads is one choice, the library's own branch or a
+ * Preview this branch: the commit the tab reads is one choice, the library's own branch or a
  * branch handed to Claude Code, read from git's objects at its tip. Against a real clone.
  */
 

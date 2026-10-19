@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { connectPage } from '../extension/webview/workspace';
 
 /**
- * The window's API in DSNR's panel (Phase 3.1): the app's own `createApi`, carried by webview messages. A call goes out
+ * The window's API in DSNR's panel: the shared `createApi`, carried by webview messages. A call goes out
  * with an id and comes back by it; an event comes to whoever listens for it by name.
  */
 

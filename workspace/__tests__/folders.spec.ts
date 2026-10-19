@@ -13,7 +13,7 @@ import { b64, fakeGitHub } from './fakes/github';
 import { memoryStore } from './fixtures';
 
 /**
- * A project's folder (F1 of the folders plan): a label, kept in its brief's front matter in the design repository, read
+ * A project's folder: a label, kept in its brief's front matter in the design repository, read
  * with the brief wherever the brief is read, and left out of what a person is shown of the brief.
  */
 

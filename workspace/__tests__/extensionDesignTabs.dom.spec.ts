@@ -10,7 +10,7 @@ import { answer, answerOf, button, calls, callsOf, lastAsk, mountPage, press, sa
 import { ASK_EVERY_MS } from '../extension/webview/hooks/ask';
 
 /**
- * The design system's tabs in the editor (ELECTRON_MIGRATION_PLAN 6.1): a component's, its stories live and what it is
+ * The design system's tabs in the editor: a component's, its stories live and what it is
  * made from, and Primitives, the design system drawn whole. Each reads the design system shown through the bridge, as the
  * panel does, and is told the change being tried by the extension.
  */

@@ -8,7 +8,7 @@ import type { WorkspaceDescriptor } from '../src/core/services/projects/descript
 
 /**
  * A dev server started the way npm starts one (a parent that runs it as a child of its own), where neither takes SIGTERM:
- * stopped, nothing of it is left running (QUALITY_PASS finding 6, which this showed before the fix: the child was).
+ * stopped, nothing of it is left running, the child included.
  */
 
 let root: string;

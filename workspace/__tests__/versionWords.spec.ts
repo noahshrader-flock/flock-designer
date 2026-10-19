@@ -3,8 +3,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 /**
- * What a person reads never says "iteration", nor names work as an iteration once was (`I3`): a prototype has versions
- * (VERSIONS_PLAN Phase 4). Read from the text in the code that draws the screens and writes their messages, its comments
+ * What a person reads never says "iteration", nor names work like one (`I3`): a prototype has versions. Read from the text in the code that draws the screens and writes their messages, its comments
  * aside; what is inside `${…}` is code, not words, so it is left out too.
  */
 const root = join(__dirname, '..');

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { installStandIns } from '../src/page/standIns';
 
 /**
- * A prototype on the published site is framed with no origin of its own (PUBLISHED_COMMENTS_PLAN, 2.2), where the browser
+ * A prototype on the published site is framed with no origin of its own, where the browser
  * refuses its storage and cookies outright. The page agent gives it stand-ins, in memory, before its own code runs, so a
  * design system that reads them still loads. Only those three, and only where the browser refuses them.
  */

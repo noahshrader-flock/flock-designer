@@ -13,11 +13,9 @@ import { fakeGitHub } from './pageHarness';
 import { NO_CHROME, inChrome } from './realChrome';
 
 /**
- * Signing in to comment on the published site, in the real browser (PUBLISHED_COMMENTS_PLAN, Phase 3): the real viewer on
- * the real site build, the prototype sandboxed with no origin of its own. GitHub's sign-in page, the sign-in function and
- * GitHub's API are stand-ins: the sign-in page sends the person back with a one-time code, the function trades it only for
- * the verifier whose hash the page sent, and the API answers as GitHub's does. A person signs in, comments, signs out; one
- * GitHub will not show the repository is told so.
+ * Signing in to comment on the published site, in the real browser: the real viewer on the real site build, the prototype
+ * sandboxed with no origin of its own. GitHub's sign-in page, the sign-in function and GitHub's API are stand-ins; the
+ * function trades the one-time code only for the verifier whose hash the page sent.
  */
 
 const PAGE = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Alert history</title></head>

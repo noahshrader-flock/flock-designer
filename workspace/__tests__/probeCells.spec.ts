@@ -5,7 +5,7 @@ import { CRITERIA, atTarget, wcagCriterion } from '../src/shared/wcagCriteria';
 import { SOURCE_FIXTURES } from './fixtures/probeFixtures';
 
 /**
- * The probe's cells (A3 of the accessibility plan): one for each criterion its matrix says the probe measures, held to
+ * The probe's cells: one for each criterion its matrix says the probe measures, held to
  * WCAG's own list, and the source cells, each against its planted defect and clean twin.
  */
 

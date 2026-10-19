@@ -226,10 +226,8 @@ describe('placing comments on reopening', () => {
 	});
 
 	it('still follows the text when the page changed a little since the comment', () => {
-		// The real case. The stored text is cut at 80 characters, often mid-word, and the page it was
-		// taken from has since changed slightly. Demanding the whole prefix still match made the pin
-		// disappear over a single character, which is how a comment on text still plainly on the page
-		// came back as "the element is no longer on the page".
+		// The stored text is cut at 80 characters, often mid-word, and the page it was taken from has changed slightly.
+		// Demanding the whole prefix match would lose the pin over a single character, on text still plainly on the page.
 		const stored = '< Roles Compare Roles See what a user gains and loses when they move from one ro';
 		const w = page('<div><a>< Roles</a><h1>Compare Roles</h1><p>See what a user gains and loses when they move from one role to another.</p></div>');
 		const out = w.eval(resolveScript([req(1, { selector: '#root > div:nth-of-type(3)', nearbyText: stored })], 'nonce')) as Array<{ state: string }>;

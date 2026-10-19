@@ -6,7 +6,7 @@ import type { Catalog, Result } from '../src/shared/contract';
 import { ok } from '../src/shared/result';
 
 /**
- * The design system shown, read by the extension once for every page (QUALITY_PASS finding 4), so the panel and every tab
+ * The design system shown, read by the extension once for every page, so the panel and every tab
  * show the same commit and follow a Sync: what its clone has, then what GitHub has; again on Sync and on another branch
  * shown; and only the latest read shown.
  */

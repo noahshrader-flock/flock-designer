@@ -17,7 +17,7 @@ import type { ConnectedDesignSystem } from '../src/shared/contract';
 import { memoryReads } from './fixtures';
 
 /**
- * Connecting any repository (P4 of the design system plan): what a design system is (stories or tokens), where it is in a
+ * Connecting any repository: what a design system is (stories or tokens), where it is in a
  * monorepo, what it is called, its default branch, and the ones connected, remembered.
  */
 

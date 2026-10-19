@@ -208,7 +208,7 @@ describe.skipIf(NO_CHROME)('a hostile prototype in a review, in the real browser
 });
 
 /**
- * The published site (PUBLISHED_COMMENTS_PLAN, Phase 2): the bar's page opened in the browser as a reviewer opens a link, the
+ * The published site: the bar's page opened in the browser as a reviewer opens a link, the
  * prototype beside it on the same address, framed with no origin of its own. The bar keeps the person's token in its own
  * storage; the hostile page must reach none of it, and still have its own storage and cookie (the agent's stand-ins).
  */

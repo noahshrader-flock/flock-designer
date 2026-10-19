@@ -9,7 +9,7 @@ import type { TriedValue, ValueSources as Answer } from '../src/shared/contract'
 import { g } from './fixtures';
 
 /**
- * Keeping the values tried on a component on a branch, and proposing them (Phase 4.4), against a real clone of a small
+ * Keeping the values tried on a component on a branch, and proposing them, against a real clone of a small
  * library, as a change to the tokens is kept. Where each value is written is a stand-in, said as `ValueSources` says it;
  * GitHub is a stand-in too: nothing is pushed anywhere or opened as a pull request.
  */

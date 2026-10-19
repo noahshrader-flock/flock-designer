@@ -8,7 +8,7 @@ import type { AccessibilityIssue } from '../src/shared/contract';
 import { AA, cell, issue, result } from './fixtures/accessibilityFixtures';
 
 /**
- * The manual list (A8 of the accessibility plan): what is left for whoever tests by hand, from the ledger, in HANDOFF.md.
+ * The manual list: what is left for whoever tests by hand, from the ledger, in HANDOFF.md.
  * Nothing in it is left unsaid, and nothing in it says the work conforms.
  */
 

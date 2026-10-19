@@ -3,7 +3,7 @@ import { RELAY_CALLS, readRelayAsk, readRelayTell } from '../src/shared/reviewRe
 
 /**
  * A prototype's review page, framed in DSNR's review tab in VS Code, comments through the extension rather than with a
- * token of its own (ELECTRON_MIGRATION_PLAN 2A, 4.2). What the page may ask the tab, and what the tab may tell the page,
+ * token of its own. What the page may ask the tab, and what the tab may tell the page,
  * are read in exactly their shapes on each side, so a page that went wrong can ask for nothing more.
  */
 

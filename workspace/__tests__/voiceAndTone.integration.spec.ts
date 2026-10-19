@@ -9,7 +9,7 @@ import type { ConnectedDesignSystem } from '../src/shared/contract';
 import { g } from './fixtures';
 
 /**
- * The voice and tone (T9 of the design system plan): a file in the design system's agent files, read from the library's
+ * The voice and tone: a file in the design system's agent files, read from the library's
  * branch in its clone, a change kept on DSNR's own branch as every change to the library is (one commit each save, nothing
  * checked out) and proposed as a draft pull request. Against a real clone of a small library; GitHub is a stand-in, and
  * nothing is pushed anywhere.

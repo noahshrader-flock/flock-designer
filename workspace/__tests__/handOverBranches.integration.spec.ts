@@ -8,7 +8,7 @@ import type { ShareTools } from '../src/core/ports';
 import type { ConnectedDesignSystem } from '../src/shared/contract';
 
 /**
- * Process changes in the core (PROCESS_CHANGES_PLAN Phase 1): a unit handed to Claude Code on a branch DSNR names, found and
+ * Process changes in the core: a unit handed to Claude Code on a branch DSNR names, found and
  * read from git, and proposed as a draft pull request only as the rules allow. Against a real clone; GitHub is the tools'.
  */
 

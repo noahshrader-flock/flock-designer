@@ -6,8 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { reviewBranch } from '../src/core/services/designSystem/branchReview';
 
 /**
- * A hand-over branch read from git, never from what Claude Code says (PROCESS_CHANGES_PLAN Phase 1): each case against a real
- * clone, with GitHub's copy of its base as `origin/develop`.
+ * A hand-over branch read from git, never from what Claude Code says: each case against a real clone, with GitHub's copy of its base as `origin/develop`.
  */
 
 let home: string;

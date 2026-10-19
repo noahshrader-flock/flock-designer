@@ -16,8 +16,7 @@ import {
 } from '../src/shared/processChanges';
 
 /**
- * Process changes (PROCESS_CHANGES_PLAN Phase 1): the prompt typed into Claude Code for one unit of review, set up to put its
- * changes on the branch DSNR names, and to leave pushing and the pull request to DSNR.
+ * Process changes: the prompt typed into Claude Code for one unit of review, set up to put its changes on the branch DSNR names, and to leave pushing and the pull request to DSNR.
  */
 
 const RULES = '# Changing a design system’s code\n\n1. Its own source only.\n';

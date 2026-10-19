@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { versionAddress, keyFromAddress, listenForDsnr, relayComments, serverRelay } from '../src/viewer/relay';
 
 /**
- * The review page's side of commenting through DSNR (4.2): it listens only when it is served from this machine and in a
+ * The review page's side of commenting through DSNR: it listens only when it is served from this machine and in a
  * frame, takes DSNR's review tab as the one that said hello from VS Code, and from then on asks only it.
  */
 
@@ -107,7 +107,7 @@ describe('the comments, through DSNR', () => {
 	});
 });
 
-/** A page opened in the browser from VS Code (BROWSER_COMMENTS_PLAN 2.1): its key in its fragment, then in its tab's keeping. */
+/** A page opened in the browser from VS Code: its key in its fragment, then in its tab's keeping. */
 const opened = (host: string, hash: string, kept: string | null = null) => {
 	const store = new Map<string, string>(kept === null ? [] : [['dsnr.review-key', kept]]);
 	const replaced: string[] = [];

@@ -20,7 +20,7 @@ describe('an address in a theme', () => {
 	it('adds, replaces and takes off the theme, keeping the state', () => {
 		expect(withTheme('page.html', 'dark')).toBe('page.html?theme=dark');
 		expect(withTheme('page.html?state=panel', 'dark')).toBe('page.html?state=panel&theme=dark');
-		// Light is the prototype's default (Noah, 2026-10-14), so its address does not say it: one address per page and theme.
+		// Light is the prototype's default, so its address does not say it: one address per page and theme.
 		expect(DEFAULT_THEME).toBe('light');
 		expect(withTheme('page.html?state=panel&theme=dark', 'light')).toBe('page.html?state=panel');
 		expect(withTheme('page.html', 'light')).toBe('page.html');

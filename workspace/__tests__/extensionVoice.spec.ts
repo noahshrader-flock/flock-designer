@@ -4,7 +4,7 @@ import type { ChangeBranchOf, VoiceAndTone } from '../src/shared/contract';
 import { ok } from '../src/shared/result';
 
 /**
- * The voice and tone in VS Code (ELECTRON_MIGRATION_PLAN 6.3): a document in the editor, read from the library's branch,
+ * The voice and tone in VS Code: a document in the editor, read from the library's branch,
  * saved as VS Code saves (⌘S) to a branch of DSNR's, as every change to the library is, proposed as a draft pull request;
  * a save made against the file it was opened at, so a change on GitHub meanwhile is never overwritten.
  */

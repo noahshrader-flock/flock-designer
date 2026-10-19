@@ -7,7 +7,7 @@ import { findContext } from '../src/core/services/projects/findContext';
 import { makeProductFiles } from './fixtures';
 
 /**
- * What a shell works on, found from the folders open in it instead of chosen and cloned (ELECTRON_MIGRATION_PLAN, §1.6):
+ * What a shell works on, found from the folders open in it instead of chosen and cloned:
  * the product, its design system, and the design repository its projects are kept in. In order: what the product says,
  * then any open folder that holds a design system, then the one the person located; and for each, what is missing, said.
  */

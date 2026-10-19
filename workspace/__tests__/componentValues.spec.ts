@@ -5,10 +5,9 @@ import type { Tags } from '../src/core/services/designSystem/tokenTags';
 import type { DesignToken, ValueRow } from '../src/shared/contract';
 
 /**
- * A component's drawn values (Phase 1 of adjusting a component): each instance its stories draw, as the library has it and
- * with every token tagged, read into rows by property, each told apart by the prop that explains it, and each value said to
- * be a token's, the component's own, or worked out from one. Against fixtures; the page that reads them is drawn in real
- * Chrome in `componentValues.integration.spec.ts`. Values come as the page reads them: each side and corner as it is.
+ * A component's drawn values: each instance its stories draw, read into rows by property, each told apart by the prop
+ * that explains it, and each value said to be a token's, the component's own, or worked out from one. Against fixtures,
+ * as the page reads them (each side and corner as it is); the page itself runs in `componentValues.integration.spec.ts`.
  */
 
 const BASE = {

@@ -47,7 +47,7 @@ const REPOSITORY = 'flocksafety/flock-react-component-lib';
 const connected = (root: string) => () => ({ id: REPOSITORY, name: 'FUI', repository: REPOSITORY, root, folder: '', branch: 'develop' });
 
 /**
- * The previews of the library's stories (P1 of the design system plan), against a small library made here: a bare
+ * The previews of the library's stories, against a small library made here: a bare
  * `develop` cloned, with the packages a build needs linked in. A stand-in for Storybook's portable stories is the only
  * fake; the real ones are built and rendered against the real library when it is on this machine.
  */

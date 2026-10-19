@@ -8,7 +8,7 @@ import { FIND_INSTANCES, TRY_VALUES } from './pageInstances';
 import { chromeHeadless, findChrome } from '../src/core/services/browser/chromeHeadless';
 
 /**
- * Each instance of a component its stories draw (Phase 1 of adjusting a component), read in the real browser by the
+ * Each instance of a component its stories draw, read in the real browser by the
  * script the Design System tab draws with: a preview page built here with React, minified as the previews are, so the
  * component is found by identity and not by name. Skipped where there is no Chrome, Edge or Chromium.
  */
@@ -294,6 +294,6 @@ describe.skipIf(findChrome() === null)('values tried on a component’s instance
 });
 
 /**
- * The real library on this machine, through the whole pass the tab's analysis makes (T6): every story drawn as the library
- * has it and with every token tagged. What the spike measured by hand (dsnr.md's Change log) is what the tab says.
+ * The real library on this machine, through the whole pass the tab's analysis makes: every story drawn as the library
+ * has it and with every token tagged. What was measured on it by hand is what the tab says.
  */

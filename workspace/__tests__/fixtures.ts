@@ -178,7 +178,7 @@ export const installDesignSystem = (product: string) => {
 
 /**
  * The shared standards a design repository has, which every agent task reads: the real accessibility standard, so a task
- * is built from what it is built from in use (T7).
+ * is built from what it is built from in use.
  */
 export const addStandards = (design: string) => {
 	mkdirSync(join(design, 'standards', 'universal'), { recursive: true });

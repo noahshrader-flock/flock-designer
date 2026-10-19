@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { Installer, installProblem } from '../src/core/services/codebase/install';
 
 /**
- * Installing a repository's packages (C5 of the clone plan): the command it declares, run in it, its output passed on
+ * Installing a repository's packages: the command it declares, run in it, its output passed on
  * line by line, and its failures said in words a person can act on. A small node script stands in for npm.
  */
 

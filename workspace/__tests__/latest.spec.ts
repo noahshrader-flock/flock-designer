@@ -61,8 +61,8 @@ describe('latest', () => {
 	});
 
 	it('never loses a request, which is the whole point', async () => {
-		// The bug: opening a version reads on arrival and again when the preview is up. With the
-		// second dropped, the comments stayed as the first read left them.
+		// Opening a version reads on arrival and again when the preview is up. With the second dropped, the comments
+		// would stay as the first read left them.
 		const c = controllable();
 		void c.run(); // on arrival
 		await settle();

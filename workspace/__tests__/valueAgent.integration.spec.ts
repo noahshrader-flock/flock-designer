@@ -10,7 +10,7 @@ import type { ComponentValues, TriedValue } from '../src/shared/contract';
 import { g, settledAnswer } from './fixtures';
 
 /**
- * The agent writing a value where there is nothing to swap, and making one follow a token (Phase 4.5, 4.6), against a real
+ * The agent writing a value where there is nothing to swap, and making one follow a token, against a real
  * clone of a small library, so the copy it works in and what it changed are git's. The agent is a stand-in that writes as
  * a run would; the library is drawn by a rule this test knows: the Badge's radius is its stylesheet's, or the theme's
  * shape when the stylesheet reads it.

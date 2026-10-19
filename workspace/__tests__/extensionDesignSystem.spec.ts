@@ -6,9 +6,8 @@ import { Shared } from '../extension/src/sharedValues';
 import type { Catalog, CatalogComponent, ConnectedDesignSystem } from '../src/shared/contract';
 
 /**
- * The design system VS Code found is the one the core shows (ELECTRON_MIGRATION_PLAN 6.1): the core reads, previews,
- * pictures and changes the design system it is told is shown, as the app's connected one, so the folder found is told to it
- * as that, and only when it is a different one. When it cannot be read, why is said instead.
+ * The design system VS Code found is the one the core shows: the core reads, previews, pictures and changes the design
+ * system it is told is shown, so the folder found is told to it, and only when it is a different one. When it cannot be read, why is said instead.
  */
 
 const fui: ConnectedDesignSystem = {

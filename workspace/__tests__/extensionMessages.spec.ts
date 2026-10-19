@@ -31,7 +31,7 @@ describe('a message from a page', () => {
 		[{ type: 'ready', as: 'someone' }],
 		// Signing in is VS Code's own, from the title bar: the page cannot ask for it.
 		[{ type: 'call', id: 1, name: 'signIn', args: [] }],
-		// Only the calls, by name: a message of its own is not one any more.
+		// Only the calls, by name: a message of its own is refused.
 		[{ type: 'open-component', id: 'a' }],
 		[{ type: 'run', command: 'rm -rf /' }],
 	])('%o is dropped', (m) => {
@@ -98,7 +98,7 @@ describe('an ask from a page', () => {
 		['newPrototype', ['A', 'x'.repeat(4001), null]],
 		['newPrototype', ['x'.repeat(301), 'B', null]],
 		['newPrototype', ['A', 'B', 'x'.repeat(101)]],
-		// Removed: the panel no longer asks for a code preview.
+		// Not a call the panel makes: no code preview.
 		['codebase', ['preview', 'zone-coverage']],
 		['codebase', ['push', 'zone-coverage']],
 		['codebase', ['open-code', '../etc']],

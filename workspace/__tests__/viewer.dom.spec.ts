@@ -34,7 +34,7 @@ import {
 import { anAnchor } from './fixtures';
 
 /**
- * Commenting on a prototype's published page (M7 of the Pages plan): the viewer, drawn into the page the site builds,
+ * Commenting on a prototype's published page: the viewer, drawn into the page the site builds,
  * against a GitHub that answers as its API does, with the real pick and pin scripts running in the prototype's frame.
  */
 

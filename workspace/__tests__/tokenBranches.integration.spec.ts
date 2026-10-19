@@ -9,7 +9,7 @@ import { proposalText } from '../src/core/services/designSystem/changeBranches';
 import { g } from './fixtures';
 
 /**
- * Keeping a change to the tokens on a branch, and proposing it (T4 and T5 of the design system plan), against a real
+ * Keeping a change to the tokens on a branch, and proposing it, against a real
  * clone of a small library. GitHub is a stand-in: nothing here is pushed anywhere or opened as a pull request.
  */
 

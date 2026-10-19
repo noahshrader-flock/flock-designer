@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { afterQuiet, whatChanged } from '../extension/src/devReload';
 
 /**
- * The loop you can watch (Phase 0.3): while DSNR runs from its source, a rebuilt page reloads the panel and a rebuilt
+ * The loop you can watch: while DSNR runs from its source, a rebuilt page reloads the panel and a rebuilt
  * extension restarts VS Code's extension host, so a saved change is on screen with no reinstall.
  */
 

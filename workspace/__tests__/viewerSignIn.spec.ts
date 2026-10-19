@@ -2,7 +2,7 @@ import { webcrypto } from 'node:crypto';
 import { describe, expect, it, vi } from 'vitest';
 import { type SignInWindow, challengeOf, finishSignIn, signedInJustNow, startSignIn, takeNote } from '../src/viewer/signIn';
 
-/** Signing in on the published page (PUBLISHED_COMMENTS_PLAN, 3.1): to GitHub with PKCE, and back with a one-time code. */
+/** Signing in on the published page: to GitHub with PKCE, and back with a one-time code. */
 
 const SITE = 'https://noahshrader-flock.github.io/flock-designer/';
 const CONFIG = {

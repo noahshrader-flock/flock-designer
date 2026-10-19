@@ -14,7 +14,7 @@ describeWith(libraryMissing, 'against the real library', () => {
 
 	it('reads every tone, both palettes, spacing and radius; all it cannot read is a tone step written wrong in the library', async () => {
 		const list = await readTokens(real);
-		// On 2026-10-09, three of neutral's steps: 94 is '@ECEEEB', 70 'AEB0B2' and 4 '0B0F0D'. The library's to fix; never guessed here.
+		// Some of neutral's steps are written wrong (such as '@ECEEEB' or 'AEB0B2'). The library's to fix; never guessed here.
 		expect(list.problems.map((p) => p.reason)).toEqual(list.problems.map(() => expect.stringMatching(/not a hex color/)));
 		expect(list.problems.every((p) => p.file.startsWith('src/colors/tones/'))).toBe(true);
 		expect(new Set(list.tokens.filter((t) => t.group === 'Tones').map((t) => t.set)).size).toBeGreaterThanOrEqual(11);

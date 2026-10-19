@@ -113,9 +113,8 @@ describe('listProjects', () => {
 	});
 
 	it('reads work from the project folder, not from branches', async () => {
-		// The regression: work branches live in the PRODUCT repository, which
-		// this app cannot see. Looking for them in the design repo listed "No
-		// branches yet" for every project, including ones with work.
+		// Work branches live in the PRODUCT repository, which this reader cannot see: looking for them in the design
+		// repo would list "No branches yet" for every project, including ones with work.
 		const { github: session, api } = fakeGitHub(routes);
 		const [alpha] = await new DesignRepo(session, REF).listProjects();
 		expect(alpha?.work.map((i) => i.branch)).toEqual(['prototype/alpha/v2', 'prototype/alpha/v1', 'feature/alpha']);

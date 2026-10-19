@@ -6,8 +6,8 @@ import { isPrototypeName } from '../src/shared/prototypeNames';
 import { parseWork } from '../src/shared/workRecords';
 
 /**
- * The projects this repository holds, as the design repository (VERSIONS_PLAN Phase 1): read, never written. Each opens with
- * the record DSNR reads now, its versions by one number, and the files a version is known by, so a project in an old shape
+ * The projects this repository holds, as the design repository: read, never written. Each opens with the record DSNR
+ * reads, its versions by one number, and the files a version is known by, so a project in an old shape
  * is found here and not by a person whose project has stopped opening.
  */
 const design = join(__dirname, '..', '..');

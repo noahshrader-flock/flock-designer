@@ -6,8 +6,8 @@ import { build } from 'esbuild';
 import { afterEach, beforeEach, expect, it } from 'vitest';
 
 /**
- * Two windows' DSNR changing one record file at once (QUALITY_PASS finding 3): each change is read, made and written under the
- * file's lock, so none is lost. Real processes, each running the app's own `jsonFile`.
+ * Two windows' DSNR changing one record file at once: each change is read, made and written under the file's lock, so
+ * none is lost. Real processes, each running DSNR's own `jsonFile`.
  */
 
 let dir: string;

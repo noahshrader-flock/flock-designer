@@ -4,8 +4,7 @@ import type { Project } from '../src/shared/contract';
 import { ok } from '../src/shared/result';
 
 /**
- * Address on a prototype's comment, from its review in VS Code (ELECTRON_MIGRATION_PLAN 4.2): the app's own Address
- * (`runPrototypeAddress`), shown as a build is, with Stop and its log; then the review shows where the change went, and
+ * Address on a prototype's comment, from its review in VS Code: the core's Address (`runPrototypeAddress`), shown as a build is, with Stop and its log; then the review shows where the change went, and
  * says so, or says the agent changed nothing. Before a version others have commented on is changed, the person chooses.
  */
 

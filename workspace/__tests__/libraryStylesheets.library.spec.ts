@@ -8,7 +8,7 @@ import { REAL_PRIMER_SYSTEM, REAL_TREMOR3_SYSTEM, REAL_TREMOR4_SYSTEM, primerMis
 import { describeLibrary, onRealLibrary } from './realLibrary';
 
 /**
- * A library's stylesheets as its own Storybook makes them (Phase 5.5), on two real libraries whose values are in classes:
+ * A library's stylesheets as its own Storybook makes them, on two real libraries whose values are in classes:
  * Tremor's, on Tailwind 3 (its theme a JavaScript configuration, run locked down) and on Tailwind 4 (its theme in CSS, which
  * the tokens are read from). Nothing here or in what it tests names Tailwind: each library's own PostCSS configuration does.
  * What each reads is what its classes say: `rounded-md border px-3 py-2 text-sm` is a 6px radius, 8 by 12 padding, 14px.

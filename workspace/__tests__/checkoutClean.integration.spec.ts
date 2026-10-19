@@ -6,8 +6,8 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { unfinishedWork } from '../src/core/services/codebase/checkoutClean';
 
 /**
- * Process changes starts Claude Code only on a design system checkout with no unfinished work (PROCESS_CHANGES_PLAN Phase 1),
- * so its edits never mix with the person's: each case against a real repository.
+ * Process changes starts Claude Code only on a design system checkout with no unfinished work, so
+ * its edits never mix with the person's: each case against a real repository.
  */
 
 let root: string;

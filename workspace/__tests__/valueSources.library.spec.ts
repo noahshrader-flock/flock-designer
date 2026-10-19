@@ -12,8 +12,8 @@ import { settledAnswer } from './fixtures';
 import { describeLibrary, onRealLibrary } from './realLibrary';
 
 /**
- * Where a value of a component's own is written (Phase 4), found by its effect on the real libraries on this machine: Flock's
- * FUI, a TypeScript theme, as the spike found it by hand (dsnr.md's Change log); and Primer React, a monorepo of CSS
+ * Where a value of a component's own is written, found by its effect on the real libraries on this machine: Flock's FUI,
+ * a TypeScript theme; and Primer React, a monorepo of CSS
  * modules whose tokens come from a package, so the locator is not proved on Flock's alone.
  */
 const withLibrary = (system: ConnectedDesignSystem, check: (tokens: ComponentTokens, sources: ValueSources) => Promise<void>) =>
@@ -103,7 +103,7 @@ describeLibrary(primerMissing, REAL_PRIMER_SYSTEM, 'on Primer React, the second 
 });
 
 /**
- * The agent writing what the locator cannot, on FUI (Phase 4.5, 4.6), as the spike did it: run only where it is asked for
+ * The agent writing what the locator cannot, on FUI: run only where it is asked for
  * (`DSNR_REAL_AGENT=1`), since it runs Claude Code on the person's account and costs a little.
  */
 const agentMissing = process.env.DSNR_REAL_AGENT === '1' ? libraryUnbuilt : 'the agent is run only with DSNR_REAL_AGENT=1 (it costs a little)';

@@ -12,7 +12,7 @@ import type { InvokeName } from '../src/shared/contract';
 import type { ProjectWork } from '../src/shared/domain/projects';
 
 /**
- * DSNR's shell in VS Code (ELECTRON_MIGRATION_PLAN, Phase 3): the person's GitHub account through VS Code's own sign-in,
+ * DSNR's shell in VS Code: the person's GitHub account through VS Code's own sign-in,
  * VS Code's ports, where a prototype's review is, and the bridge that answers the panel's calls from the core's table.
  * Each takes what it uses of VS Code, so it is tested without one.
  */
@@ -156,7 +156,7 @@ describe('VS Code’s ports', () => {
 		expect(editor.find()).toBe('vscode');
 		await editor.openPrompt('vscode', '/work/coke', 'Build it.');
 		expect(v.commands.executeCommand.mock.calls).toEqual([[SIDEBAR], [OPEN, undefined, 'Build it.', undefined, undefined, undefined, WHERE]]);
-		// Opened only once Claude Code had saved the sidebar as its place: before, it would read its old place, an editor tab.
+		// Opened only once Claude Code has saved the sidebar as its place; sooner, it reads its last place, an editor tab.
 		expect(placeWhenOpened).toBe('sidebar');
 		expect(v.env.openExternal).not.toHaveBeenCalled();
 	});
@@ -710,8 +710,8 @@ describe('what the extension asks the panel to show', () => {
 	};
 
 	it('reaches a page VS Code keeps while hidden: hiding it is not losing it, so a dialog asked for after still opens', async () => {
-		// The regression: the panel is kept while hidden (PANEL_VIEW_OPTIONS), so its page never loads again and never says
-		// it listens again. Taking it for gone when hidden held every dialog from then on, until the window was reloaded.
+		// The panel is kept while hidden (PANEL_VIEW_OPTIONS), so its page never loads again and never says it listens
+		// again. Taking it for gone when hidden would hold every dialog from then on, until the window is reloaded.
 		const panels = new Panels();
 		const a = webview();
 		const v = view(a);

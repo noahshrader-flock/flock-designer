@@ -552,9 +552,9 @@ describe('the command', () => {
 });
 
 /**
- * `dsnr accessibility` (A2 of the accessibility plan): the one harness, in a real browser, on a product that is not Coke
+ * `dsnr accessibility`: the one harness, in a real browser, on a product that is not Coke
  * and names nothing DSNR knows, a plain page with a known fault served by its own design-mode command, and on a
- * prototype's page. It needs the browser on this machine, as the app does.
+ * prototype's page. It needs the browser on this machine, as DSNR does.
  */
 describe.skipIf(findChrome() === null)('accessibility', () => {
 	/** A port nothing answers on now, for the plain product to serve on. */
@@ -684,7 +684,7 @@ describe.skipIf(findChrome() === null)('accessibility', () => {
 		expect(out.join('\n')).toMatch(/rests on projects\/shop\/accessibility\/app\/home\/cells\.json, which is not there/);
 		// Measured again: compared with the last, the record made whole, and what the agent wrote in review.md kept.
 		writeFileSync(join(design, 'projects', 'shop', 'review.md'), `# Review\n\n## Product parity\n\nFine.\n\n${review}`);
-		// What testers send back (A9), in the file the first run started for them: one a machine missed, one it had found.
+		// What testers send back, in the file the first run started for them: one a machine missed, one it had found.
 		const returned = join(design, 'projects', 'shop', 'accessibility', 'returned.md');
 		expect(readFileSync(returned, 'utf8')).toContain('| Criterion | Page or state | Steps to reproduce |');
 		writeFileSync(
@@ -828,7 +828,7 @@ describe.skipIf(findChrome() === null)('accessibility', () => {
 });
 
 /**
- * The agent fixing what its build's own check found (A6), with the real agent: run only where it is asked for
+ * The agent fixing what its build's own check found, with the real agent: run only where it is asked for
  * (`DSNR_REAL_AGENT=1`), since it runs Claude Code on the person's account and costs a little. A prototype with a fault
  * planted in it is changed for something else; the agent builds, runs the check it is given, and fixes the fault in its
  * own source, so the check finds nothing at the end: fixed, not reported.

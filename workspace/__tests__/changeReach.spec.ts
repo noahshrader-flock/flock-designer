@@ -4,7 +4,7 @@ import type { Drawn, Instance } from '../src/core/services/designSystem/componen
 import type { ComponentValues } from '../src/shared/contract';
 
 /**
- * What a token change reaches (Phase 3 of adjusting a component): each component's drawing with the change against its
+ * What a token change reaches: each component's drawing with the change against its
  * drawing as the library has it, by its values (instance by instance, by key) and by everything its stories draw.
  */
 

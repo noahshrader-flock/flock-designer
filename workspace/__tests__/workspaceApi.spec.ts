@@ -3,7 +3,7 @@ import { EVENTS, INVOKE } from '../src/shared/contract';
 import { createApi } from '../src/shared/workspaceApi';
 
 /**
- * The window's API, built one way from the contract's table (ELECTRON_MIGRATION_PLAN, Phase 1.2), whatever carries it:
+ * The window's API, built one way from the contract's table, whatever carries it:
  * a webview's messages in VS Code, a relay's on the published page. A method is a call or an event by its name, and
  * nothing else: no generic invoke, no channel passed in.
  */

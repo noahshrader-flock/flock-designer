@@ -10,7 +10,7 @@ import { triedId } from '../src/shared/contract';
 import type { ComponentValues, TriedValue, ValueSources as Answer } from '../src/shared/contract';
 
 /**
- * Where a value tried on a component's instances is written (Phase 4), against a library drawn by a rule this test knows:
+ * Where a value tried on a component's instances is written, against a library drawn by a rule this test knows:
  * a size table gives each Button size its height, a CSS module gives a Badge its radius and padding, and what is drawn is
  * read from the files each build is given. So which places move what is known, and each answer can be checked exactly.
  */

@@ -4,7 +4,7 @@ import type { Work } from '../src/shared/contract';
 import { ok } from '../src/shared/result';
 
 /**
- * Starting a prototype from DSNR in VS Code (ELECTRON_MIGRATION_PLAN 4.1): what stands in the way said first (a product
+ * Starting a prototype from DSNR in VS Code: what stands in the way said first (a product
  * open, the product's packages, with Install when it says how); then the prototype made from what the panel's dialog asked
  * (a name, what it explores, its folder) and its build handed to Claude Code, as Build in the codebase is handed.
  */

@@ -6,7 +6,7 @@ import { ComponentPictures } from '../src/core/services/designSystem/componentPi
 import { PrototypeServer } from '../src/core/services/prototypes/prototypeServer';
 
 /**
- * Where the pictures of the components are kept (P5 of the design system plan, decision 31): one for each component of a
+ * Where the pictures of the components are kept: one for each component of a
  * design system, replaced in place by a newer one, kept across restarts, and served to the window. Against a folder here.
  */
 
@@ -103,7 +103,7 @@ describe('the pictures of the components', () => {
 			]),
 		);
 		expect(Object.keys(await pictures('before').of('acme/ui'))).toEqual([A, B]);
-		// After the app changes how it takes them: the old are no picture, not a stretched or cropped one.
+		// After DSNR changes how it takes them: the old are no picture, not a stretched or cropped one.
 		expect(await pictures('now').of('acme/ui')).toEqual({});
 		// A pass that did not take a component's picture does not bring back an old one.
 		pictures('now').keep('acme/ui', [A, B], new Map([[A, picture('a2')]]));

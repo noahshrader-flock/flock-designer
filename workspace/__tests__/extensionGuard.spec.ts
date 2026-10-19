@@ -6,7 +6,7 @@ import { INK } from '../src/shared/pageInk';
 import { panelCss } from './panelStyles';
 
 /**
- * DSNR is drawn in VS Code's own design language (ELECTRON_MIGRATION_PLAN, §1.4, decision 6), with one kit of its own
+ * DSNR is drawn in VS Code's own design language, with one kit of its own
  * (`src/ui`), on its pages in VS Code and the published page alike: no colour of its own, only VS Code's theme variables,
  * so it follows every theme, high contrast included.
  */

@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { cliDataFolder, commandLinePrototypes, tellCommandLine } from '../src/core/services/platform/cliFolder';
 
 /**
- * One set of prototypes for the panel and the `dsnr` command (QUALITY_PASS finding 1): the extension says in the command's
+ * One set of prototypes for the panel and the `dsnr` command: the extension says in the command's
  * folder where it builds them, and the command builds them there too.
  */
 

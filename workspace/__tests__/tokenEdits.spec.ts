@@ -7,7 +7,7 @@ import { CONTRAST_TEXT } from '../src/shared/wcag';
 import { memoryReads } from './fixtures';
 
 /**
- * A change to the library's tokens (T3 of the design system plan, decisions 19, 26 and 27): what it does to the list,
+ * A change to the library's tokens: what it does to the list,
  * worked out once; and how it is written into the library's files, by each source in its own way, read back and checked
  * against that. Against fixtures of each way a library keeps its tokens.
  */

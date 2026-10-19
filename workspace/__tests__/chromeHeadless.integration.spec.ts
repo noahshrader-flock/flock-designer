@@ -11,7 +11,7 @@ import { withPageTheme } from '../src/core/services/browser/pageTheme';
 import { inChrome } from './realChrome';
 
 /**
- * The headless port with the browser on this machine (4.4): a real picture and a real check of real pages, served from
+ * The headless port with the browser on this machine: a real picture and a real check of real pages, served from
  * this machine as prototypes are. Skipped where there is no Chrome, Edge or Chromium.
  */
 

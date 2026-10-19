@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { COMPOSITION, composeOnWhite } from '../src/core/services/prototypes/pictureComposition';
 
 /**
- * A component's picture from a capture of its page (P5 of the design system plan): what was painted, found from the
+ * A component's picture from a capture of its page: what was painted, found from the
  * pixels and centered on white, twice as wide as it is tall. Against bitmaps made here, pixel by pixel.
  */
 

@@ -5,7 +5,7 @@ import { BRIEF_SECTIONS, accessibilityBrief, appPages, declaredTarget } from '..
 import type { AccessibilityIssue } from '../src/shared/contract';
 
 /**
- * What every agent task says about accessibility (T7 of the design system plan, part A): the product's target, read from
+ * What every agent task says about accessibility: the product's target, read from
  * its manifest, and the rules, read from the one standard. Against Coke's own manifest section and the real standard.
  */
 
