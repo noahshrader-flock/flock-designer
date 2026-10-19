@@ -99,7 +99,9 @@ describe('the commands', () => {
 		const registered = new Set(
 			readdirSync(dir)
 				.filter((f) => f.endsWith('.ts'))
-				.flatMap((f) => [...readFileSync(join(dir, f), 'utf8').matchAll(/registerCommand\(\s*'(dsnr\.[A-Za-z]+)'/g)].map((m) => m[1] as string)),
+				.flatMap((f) =>
+					[...readFileSync(join(dir, f), 'utf8').matchAll(/(?:registerCommand\(\s*|^\t\t)'(dsnr\.[A-Za-z]+)'/gm)].map((m) => m[1] as string),
+				),
 		);
 		const manifest = JSON.parse(readFileSync(join(__dirname, '../extension/package.json'), 'utf8')) as {
 			contributes: { commands: { command: string }[] };

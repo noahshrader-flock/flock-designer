@@ -14,9 +14,10 @@ import { showFound, shownFrom } from './designSystem';
 import { designSystemHost } from './designSystemHost';
 import { registerVoice } from './voice';
 import { valueOf } from '../../src/shared/result';
-import { type CodebaseAction, type HostMessage, NO_TABS_SHOWN, type Review, readProjectArg, reviewsOf } from './messages';
-import { askRoutes, readReview } from './asks';
-import { type Given, newPrototype, readAsked, readyToStart } from './newPrototype';
+import { type CodebaseAction, type HostMessage, NO_TABS_SHOWN, type Review, reviewsOf } from './messages';
+import { askRoutes } from './asks';
+import { commands } from './commands';
+import { type Given, newPrototype } from './newPrototype';
 import { watchBuild } from './watchBuild';
 import { coalesce } from './coalesce';
 import { PanelProvider } from './panel';
@@ -257,11 +258,6 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 		copyReviewLink: copyPublishedLink,
 		openReviewPublished: openPublishedPage,
 	});
-	const inFront = (act: (review: Review) => Promise<void>) => {
-		const review = reviews.active();
-		if (!review) return vscodeTell('Open a prototype for review first.');
-		return act(review).catch(failed);
-	};
 	const sync = new SyncStatus();
 	void api.publishStatus().then((r) => r.ok && sync.show(r.value));
 
@@ -272,46 +268,24 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 		...voice.disposables,
 		...design.disposables,
 		vscode.window.registerWebviewViewProvider('dsnr.panel', provider, PANEL_VIEW_OPTIONS),
-		vscode.commands.registerCommand('dsnr.newPrototype', async (raw: unknown) => {
-			const asked = readAsked(raw);
-			if (asked === 'ask')
-				return readyToStart({ product: productNow() })
-					.then(() => inPanel({ type: 'open-dialog', dialog: { kind: 'new' } }))
-					.catch(failed);
-			if (!asked) throw new Error('DSNR: New prototype was given something that is not a name and what it should explore.');
-			return startPrototype(asked).catch(failedFor(true));
-		}),
-		vscode.commands.registerCommand('dsnr.open', () => vscode.commands.executeCommand('workbench.view.extension.dsnr')),
-		vscode.commands.registerCommand('dsnr.getStarted', () => vscode.commands.executeCommand('git.clone')),
-		vscode.commands.registerCommand('dsnr.openReview', async (raw: unknown) => {
-			if (raw !== undefined) {
-				const given = readReview(raw);
-				if (!given) throw new Error('DSNR: Open a prototype for review was given something that is not a review.');
-				return openReview(given).catch(failedFor(true));
-			}
-			const picked = await pickReview(vscode.window, api, vscodeTell).catch(failed);
-			if (picked) await openReview(picked).catch(failed);
-		}),
-		vscode.commands.registerCommand('dsnr.openPublishedPage', () =>
-			inFront(async (review) => {
-				const url = await publishedLink(here, review);
-				if (url) await vscodeOpen(url);
+		...Object.entries(
+			commands({
+				run: (command) => vscode.commands.executeCommand(command),
+				tell: vscodeTell,
+				inPanel,
+				product: productNow,
+				startPrototype,
+				openReview,
+				pickReview: () => pickReview(vscode.window, api, vscodeTell),
+				activeReview: () => reviews.active(),
+				openPublishedPage,
+				copyPublishedLink,
+				signIn: () => github.signIn(),
+				signedIn: () => github.state().state === 'signedIn',
+				failed,
+				failedFor,
 			}),
-		),
-		vscode.commands.registerCommand('dsnr.copyPublishedLink', () => inFront(copyPublishedLink)),
-		vscode.commands.registerCommand('dsnr.assignFolder', (raw: unknown) => {
-			const projectId = readProjectArg(raw) ?? reviews.active()?.projectId;
-			if (!projectId) return vscodeTell('Right-click a project in DSNR, or open one for review, to assign its folder.');
-			return inPanel({ type: 'open-dialog', dialog: { kind: 'assign', projectId } });
-		}),
-		vscode.commands.registerCommand('dsnr.buildInCodebase', () =>
-			inFront((review) => inPanel({ type: 'open-dialog', dialog: { kind: 'build', projectId: review.projectId } })),
-		),
-		vscode.commands.registerCommand('dsnr.sync', () => inPanel({ type: 'open-dialog', dialog: { kind: 'sync' } })),
-		vscode.commands.registerCommand('dsnr.signIn', () => github.signIn().catch(failed)),
-		vscode.commands.registerCommand('dsnr.account', () => {
-			if (github.state().state === 'signedIn') return inPanel({ type: 'open-dialog', dialog: { kind: 'account' } });
-		}),
+		).map(([id, handler]) => vscode.commands.registerCommand(id, handler)),
 		vscode.workspace.onDidChangeWorkspaceFolders(() => void refresh().catch(failed)),
 		// Coming back to VS Code is a good moment to publish what was done meanwhile.
 		vscode.window.onDidChangeWindowState((s) => {
