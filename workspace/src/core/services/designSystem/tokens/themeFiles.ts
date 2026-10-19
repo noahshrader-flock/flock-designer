@@ -6,17 +6,17 @@ import type { DesignToken, TokenProblem } from '../../../../shared/contract';
 import { type Entry, arrayItems, entryAt, exportedObjects, lineAt, literal, parseObject, replaced } from './objectLiteral';
 import { MOTION_PARTS, SHADOWS, TYPE_KEYS, TYPE_PARTS, primitiveOf } from '../../../../shared/primitives';
 import { capitalize } from '../../../../shared/titleCase';
-import { PALETTE_GROUP } from '../../../../shared/tokens';
+import { PALETTE_GROUP, wholeHex } from '../../../../shared/tokens';
+import { isScript } from '../componentCatalog';
 import { type TokenSource, notWhereRead, semanticFirst } from './source';
 
-const SCRIPT = /\.(ts|tsx|js|jsx|mjs)$/;
 const THEME_PATH = /(^|\/)(colou?rs?|tokens?|themes?|palettes?|tones?)(\/|\.|$)/i;
-const HEX = /^#(?:[0-9a-f]{6}|[0-9a-f]{8})$/i;
 
 /** A string is the reason it is not read. */
 const colorOf = (text: string, tones: Map<string, Map<string, string>>): { value: string; ref?: DesignToken['ref'] } | string => {
 	const hex = literal(text);
-	if (hex !== null && HEX.test(hex)) return { value: hex.toUpperCase() };
+	const whole = hex === null ? null : wholeHex(hex);
+	if (whole !== null) return { value: whole };
 	const m = /^(?:(\w+)\[(\d+)\]|`\$\{(\w+)\[(\d+)\]\}([0-9a-fA-F]{2})`)$/.exec(text);
 	if (!m) return `${text} is not a tone step, a tone step with an opacity, or a hex, so it is not read`;
 	const [tone, step, alpha] = m[1] ? [m[1], m[2] as string, undefined] : [m[3] as string, m[4] as string, m[5]];
@@ -29,7 +29,7 @@ const colorOf = (text: string, tones: Map<string, Map<string, string>>): { value
 const isTones = (entries: Entry[]): boolean =>
 	entries.length > 0 &&
 	entries.every((e) => e.key !== null && /^\d+$/.test(e.key)) &&
-	entries.some((e) => e.value.kind === 'value' && HEX.test(literal(e.value.text) ?? ''));
+	entries.some((e) => e.value.kind === 'value' && wholeHex(literal(e.value.text) ?? '') !== null);
 
 const modeOf = (entries: Entry[]): string | null => {
 	const mode = entries.find((e) => e.key === 'mode')?.value;
@@ -177,7 +177,7 @@ export const themeFiles: TokenSource = {
 		const tokens: DesignToken[] = [];
 		const problems: TokenProblem[] = [];
 		const texts = new Map<string, string>();
-		for (const file of files.filter((f) => SCRIPT.test(f) && THEME_PATH.test(f)).sort()) {
+		for (const file of files.filter((f) => isScript(f) && THEME_PATH.test(f)).sort()) {
 			const text = await reads.readFile(file).catch(() => null);
 			if (text === null) problems.push({ file, reason: `${file} could not be read` });
 			else texts.set(file, text);
@@ -190,13 +190,13 @@ export const themeFiles: TokenSource = {
 			if (!isTones(entries)) continue;
 			const steps = new Map<string, string>();
 			for (const e of entries) {
-				const hex = e.value.kind === 'value' ? literal(e.value.text) : null;
-				if (hex === null || !HEX.test(hex)) {
+				const hex = e.value.kind === 'value' ? wholeHex(literal(e.value.text) ?? '') : null;
+				if (hex === null) {
 					const written = e.value.kind === 'value' ? e.value.text : 'an object';
 					problems.push({ file, line: e.line, reason: `${name} ${e.key} is ${written}, not a hex color, so this step is not read` });
 					continue;
 				}
-				steps.set(e.key as string, hex.toUpperCase());
+				steps.set(e.key as string, hex);
 				tokens.push({
 					path: `tone.${name}.${e.key}`,
 					kind: 'color',
@@ -204,7 +204,7 @@ export const themeFiles: TokenSource = {
 					group: PALETTE_GROUP,
 					set: name,
 					name: e.key as string,
-					value: hex.toUpperCase(),
+					value: hex,
 					source: { file, line: e.line },
 				});
 			}

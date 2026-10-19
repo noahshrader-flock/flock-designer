@@ -15,6 +15,17 @@ export const isDark = (t: Pick<DesignToken, 'group'>): boolean => t.group === th
 /** Eight digits carry an opacity. */
 export const HEX_COLOR = /^#(?:[0-9a-f]{6}|[0-9a-f]{8})$/i;
 
+/** A color as a stylesheet or a script may write one: a hex of any length a browser takes, or a color function. */
+export const COLOR_WRITTEN = /^(#([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})|(rgba?|hsla?|oklch|oklab|lab|lch|hwb|color)\(.*\))$/i;
+
+const SHORT_HEX = /^#[0-9a-f]{3,4}$/i;
+
+/** A hex written short or whole, as its whole upper-case form; null for anything that is not a hex. */
+export const wholeHex = (written: string): string | null => (SHORT_HEX.test(written) || HEX_COLOR.test(written) ? hexOf(written) : null);
+
+/** As written, but a short hex spelled out whole (`#000` is `#000000`): for a reader that keeps what the library wrote. */
+export const hexSpelledOut = (written: string): string => (SHORT_HEX.test(written) ? (hexOf(written) as string) : written);
+
 export const DIMENSION = /^(-?\d*\.?\d+)(px|rem|em)$/;
 
 export const DURATION = /^-?\d*\.?\d+m?s$/;

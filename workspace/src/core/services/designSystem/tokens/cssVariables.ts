@@ -3,12 +3,12 @@
  * guessed. A package's variable is changed by declaring it again in the library's stylesheet that imports it.
  */
 import type { DesignToken } from '../../../../shared/contract';
-import { DIMENSION, DURATION, hexOf } from '../../../../shared/tokens';
+import { COLOR_WRITTEN, DIMENSION, DURATION, hexSpelledOut } from '../../../../shared/tokens';
 import { lineAt, replaced } from './objectLiteral';
 import { MOTION_PARTS, SHADOWS, TYPE_PARTS, primitiveOf } from '../../../../shared/primitives';
 import { capitalize } from '../../../../shared/titleCase';
 import { type TokenSource, notWhereRead, semanticFirst } from './source';
-import { type CatalogReads, SCRIPT_EXTENSIONS, readMany } from '../componentCatalog';
+import { type CatalogReads, SCRIPT_EXTENSIONS, isScript, readMany } from '../componentCatalog';
 import { posix } from 'node:path';
 
 const STYLESHEET = /\.(css|scss|less|pcss)$/;
@@ -26,7 +26,6 @@ const typography = (name: string, value: string): { group: string; set: string; 
 	if ((found = m(/^font-(.+)$/))) return { group: TYPE_PARTS.family, set: 'font', name: found[1] as string };
 	return null;
 };
-const COLOR = /^(#[0-9a-f]{3,8}|(rgba?|hsla?|oklch|oklab|lab|lch|hwb|color)\(.*\))$/i;
 
 /**
  * A color kept as bare HSL channels, as shadcn keeps them to use inside `hsl()`: `222.2 47.4% 11.2%`, with an opacity after a
@@ -126,6 +125,22 @@ const modeDeclaredIn = (rules: string[]): 'light' | 'dark' | null => {
 
 const ruleOf = (rules: string[]): string => [...rules].reverse().find((r) => !r.startsWith('@')) ?? ':root';
 
+type Manifest = { style?: unknown; exports?: unknown; main?: unknown };
+/** A package's manifest, or an empty one when it is not JSON: one broken manifest never stops the rest being read. */
+const manifestOf = (text: string): Manifest => {
+	try {
+		const parsed: unknown = JSON.parse(text);
+		return parsed !== null && typeof parsed === 'object' ? (parsed as Manifest) : {};
+	} catch {
+		return {};
+	}
+};
+/** The stylesheet a package names: its exports' `style`, its `style`, or its `main` when that is a stylesheet. */
+const stylesOf = (pkg: Manifest): string[] =>
+	[((pkg.exports as Record<string, unknown> | undefined)?.['.'] as Record<string, unknown> | undefined)?.style, pkg.style, pkg.main].filter(
+		(s): s is string => typeof s === 'string' && STYLESHEET.test(s),
+	);
+
 /**
  * As the library's tools find it: a path beside it (a bare `theme.css` too, when it is there), else a package as installed,
  * from the folder up to the repository's root, by its `exports`' `style`, else `style`.
@@ -147,10 +162,8 @@ const importedFile = async (reads: CatalogReads, from: string, spec: string): Pr
 		const manifest = await reads.readFile(`${at}/package.json`).catch(() => null);
 		if (manifest !== null) {
 			if (sub !== undefined) return `${at}/${sub}`;
-			const pkg = JSON.parse(manifest) as { style?: unknown; exports?: unknown };
-			const dot = (pkg.exports as Record<string, unknown> | undefined)?.['.'];
-			const style = (dot as Record<string, unknown> | undefined)?.style ?? pkg.style;
-			return typeof style === 'string' ? posix.join(at, style) : null;
+			const [style] = stylesOf(manifestOf(manifest));
+			return style === undefined ? null : posix.join(at, style);
 		}
 		if (dir === '.') return null;
 	}
@@ -175,7 +188,6 @@ const previewStylesheets = async (reads: CatalogReads): Promise<string[]> => {
 	return sheets;
 };
 
-const SCRIPT = /\.(ts|tsx|js|jsx|mjs|cjs)$/;
 /** `import './a.css'`, `import styles from './a.module.css'`, `import('./a.css')` and `require('./a.css')`. */
 const SHEET_IMPORT = /(?:\bimport\s*(?:[\w$*{}\s,]+?\s*from\s*)?|\b(?:require|import)\s*\(\s*)(['"])([^'"\n]+\.(?:css|scss|less|pcss))\1/g;
 
@@ -185,20 +197,15 @@ const SHEET_IMPORT = /(?:\bimport\s*(?:[\w$*{}\s,]+?\s*from\s*)?|\b(?:require|im
  */
 const loadedStylesheets = async (reads: CatalogReads, files: string[]): Promise<string[]> => {
 	const sheets = new Set<string>();
-	for (const [file, text] of await readMany(
-		reads,
-		files.filter((f) => SCRIPT.test(f)),
-	)) {
+	for (const [file, text] of await readMany(reads, files.filter(isScript))) {
 		for (const [, , spec] of text.matchAll(SHEET_IMPORT)) {
 			const path = await importedFile(reads, file, spec as string);
 			if (path !== null) sheets.add(path);
 		}
 	}
 	for (const manifest of files.filter((f) => /(^|\/)package\.json$/.test(f))) {
-		const pkg = JSON.parse(await reads.readFile(manifest).catch(() => '{}')) as { style?: unknown; exports?: unknown; main?: unknown };
-		const dot = (pkg.exports as Record<string, unknown> | undefined)?.['.'];
-		for (const named of [(dot as Record<string, unknown> | undefined)?.style, pkg.style, pkg.main])
-			if (typeof named === 'string' && STYLESHEET.test(named)) sheets.add(posix.normalize(posix.join(posix.dirname(manifest), named)));
+		for (const style of stylesOf(manifestOf(await reads.readFile(manifest).catch(() => '{}'))))
+			sheets.add(posix.normalize(posix.join(posix.dirname(manifest), style)));
 	}
 	return [...sheets].sort();
 };
@@ -279,12 +286,12 @@ export const cssVariables: TokenSource = {
 		for (const [mode, vars] of modes) {
 			for (const [name, v] of vars) {
 				const resolved = resolve(v.value, mode);
-				const value = hexOfChannels(resolved) ?? (/^#[0-9a-f]{3,4}$/i.test(resolved) ? (hexOf(resolved) as string) : resolved);
+				const value = hexOfChannels(resolved) ?? hexSpelledOut(resolved);
 				const pointer = POINTER.exec(v.value)?.[1];
 				const pointerMode = pointer === undefined ? null : modeOf(pointer, mode);
 				// Typography and shadows are known by their names; a color is a color, however it is named (`--shadow-color`).
-				const type = COLOR.test(value) ? null : typography(name, value);
-				const shadow = COLOR.test(value) ? null : /^(.*shadow)(?:-(.+))?$/.exec(name);
+				const type = COLOR_WRITTEN.test(value) ? null : typography(name, value);
+				const shadow = COLOR_WRITTEN.test(value) ? null : /^(.*shadow)(?:-(.+))?$/.exec(name);
 				const named =
 					type !== null
 						? { kind: 'font' as const, ...type }
@@ -301,7 +308,7 @@ export const cssVariables: TokenSource = {
 					});
 					continue;
 				}
-				const kind = COLOR.test(value)
+				const kind = COLOR_WRITTEN.test(value)
 					? 'color'
 					: DIMENSION.test(value)
 						? 'dimension'

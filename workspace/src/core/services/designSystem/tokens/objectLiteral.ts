@@ -190,6 +190,16 @@ export const exportedObjects = (text: string): Map<string, Entry[]> => {
 	return found;
 };
 
+/** Every top-level object, exported or not: a token may point into one the file keeps to itself. */
+export const declaredObjects = (text: string): Map<string, Entry[]> => {
+	const found = new Map<string, Entry[]>();
+	for (const m of text.matchAll(/(?:^|\n)\s*(?:export\s+)?const\s+(\w+)\s*(?::[^=]+)?=\s*\{/g)) {
+		const { node } = parseObject(text, (m.index ?? 0) + m[0].length - 1);
+		if (node.kind === 'object') found.set(m[1] as string, node.entries);
+	}
+	return found;
+};
+
 /** Null unless exactly one entry matches, so a change is never written to a guess. */
 export const entryAt = (text: string, key: string, line: number, also: Entry[] = []): Entry | null => {
 	const found = new Map<number, Entry>();

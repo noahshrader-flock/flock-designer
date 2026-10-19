@@ -4,16 +4,16 @@
  * else is left out, and a value worked out by code is said, never guessed.
  */
 import type { DesignToken, TokenProblem } from '../../../../shared/contract';
-import { DIMENSION, DURATION, hexOf, lengthParts } from '../../../../shared/tokens';
+import { COLOR_WRITTEN, DIMENSION, DURATION, lengthParts, wholeHex } from '../../../../shared/tokens';
 import { MOTION_PARTS, SHADOWS, TYPE_PARTS, primitiveOf } from '../../../../shared/primitives';
 import { capitalize } from '../../../../shared/titleCase';
-import { type Entry, exportedObjects, literal, parseObject, replaced } from './objectLiteral';
+import { type Entry, declaredObjects, exportedObjects, literal, replaced } from './objectLiteral';
 import { type TokenSource, notWhereRead, semanticFirst } from './source';
+import { isScript } from '../componentCatalog';
 
 /** `tokens.ts`, `design-tokens.ts`, `theme.tokens.ts`: a script named for its tokens. */
-const TOKEN_SCRIPT = /(^|\/)([^/]*[._-])?tokens?([._-][^/]*)?\.(ts|tsx|js|jsx|mjs)$/i;
+const NAMED_FOR_TOKENS = /(^|\/)([^/]*[._-])?tokens?([._-][^/]*)?\.\w+$/i;
 const NUMBER = /^-?\d+(\.\d+)?$/;
-const COLOR = /^(#([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})|(rgba?|hsla?|oklch|oklab|lab|lch|hwb|color)\(.*\))$/i;
 /** `scales.blue[500]`, `tokens.colors.primary`, `palette['brand-pink']`: a value named by where it is. */
 const POINTER = /^[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*|\[\s*(?:\d+|'[^']*'|"[^"]*")\s*\])+$/;
 const MODES = new Set(['light', 'dark']);
@@ -28,16 +28,6 @@ const pointerTo = (path: string): string =>
 		.map((part, i) => (i === 0 ? part : /^\d+$/.test(part) ? `[${part}]` : /^[A-Za-z_$][\w$]*$/.test(part) ? `.${part}` : `['${part}']`))
 		.join('');
 
-/** Every top-level object, exported or not: a token may point into one the file keeps to itself. */
-const declaredObjects = (text: string): Map<string, Entry[]> => {
-	const found = new Map<string, Entry[]>();
-	for (const m of text.matchAll(/(?:^|\n)\s*(?:export\s+)?const\s+(\w+)\s*(?::[^=]+)?=\s*\{/g)) {
-		const { node } = parseObject(text, (m.index ?? 0) + m[0].length - 1);
-		if (node.kind === 'object') found.set(m[1] as string, node.entries);
-	}
-	return found;
-};
-
 interface Leaf {
 	path: string[];
 	written: string;
@@ -51,8 +41,8 @@ const tokenOf = (path: string[], value: string): Omit<DesignToken, 'path' | 'sou
 	const name = path[path.length - 1] as string;
 	const set = path[path.length - 2] ?? name;
 	const number = NUMBER.test(value);
-	if (COLOR.test(value))
-		return { kind: 'color', category: primitiveOf('color', words) as string, group: '', set, name, value: hexOf(value) ?? value };
+	if (COLOR_WRITTEN.test(value))
+		return { kind: 'color', category: primitiveOf('color', words) as string, group: '', set, name, value: wholeHex(value) ?? value };
 	if (/shadow/i.test(words) && !number) return { kind: 'shadow', category: primitiveOf('shadow', words) as string, group: SHADOWS, set, name, value };
 	if (/^cubic-bezier\(|^(ease|ease-in|ease-out|ease-in-out|linear)$/.test(value) || (/(?:^|[._])eas(?:e|ing)/i.test(words) && !number))
 		return { kind: 'easing', category: primitiveOf('easing', words) as string, group: MOTION_PARTS.easing, set, name, value };
@@ -91,7 +81,7 @@ export const tokenObjects: TokenSource = {
 		/** A path standing for another's object: `{ ...scales }`, or `alpha: alphas`. */
 		const aliases = new Map<string, string>();
 		const objects = new Map<string, { file: string; entries: Entry[]; exported: boolean }>();
-		for (const file of files.filter((f) => TOKEN_SCRIPT.test(f)).sort()) {
+		for (const file of files.filter((f) => isScript(f) && NAMED_FOR_TOKENS.test(f)).sort()) {
 			const text = await reads.readFile(file).catch(() => null);
 			if (text === null) continue;
 			const exported = exportedObjects(text);

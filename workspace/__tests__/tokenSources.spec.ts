@@ -285,6 +285,17 @@ describe('CSS variables the library’s stories load (its Storybook preview’s 
 		}
 	});
 
+	it('are read past a package manifest that is not JSON: one broken file never stops the rest', async () => {
+		const list = await readTokens(
+			memoryReads({
+				'broken/package.json': '{ not json',
+				'package.json': '{ "style": "theme.css" }',
+				'theme.css': ':root {\n  --brand: #123456;\n}\n',
+			}),
+		);
+		expect(find(list, 'css.light.brand')?.value).toBe('#123456');
+	});
+
 	it('are read from the stylesheet a library that ships only CSS names in its package: its style, main or exports', async () => {
 		for (const named of [{ style: 'dist/theme.css' }, { main: 'dist/theme.css' }, { exports: { '.': { style: './dist/theme.css' } } }]) {
 			const list = await readTokens(memoryReads({ 'package.json': JSON.stringify(named), 'dist/theme.css': ':root {\n  --brand: #123456;\n}\n' }));

@@ -35,6 +35,8 @@ export const overlaid = (reads: CatalogReads, texts: Map<string, string>): Catal
 export const UNGROUPED = 'Ungrouped';
 
 export const SCRIPT_EXTENSIONS = ['tsx', 'ts', 'jsx', 'js', 'mjs', 'cjs', 'mts', 'cts'];
+const SCRIPT = new RegExp(`\\.(${SCRIPT_EXTENSIONS.join('|')})$`);
+export const isScript = (path: string): boolean => SCRIPT.test(path);
 const STORY_FILE = new RegExp(`\\.stories\\.(${SCRIPT_EXTENSIONS.join('|')})$`);
 
 export const isStoryFile = (path: string): boolean => STORY_FILE.test(path);

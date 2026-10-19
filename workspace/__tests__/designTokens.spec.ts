@@ -71,6 +71,14 @@ export const sharedPalette = {
 const find = (list: Awaited<ReturnType<typeof readTokens>>, path: string) => list.tokens.find((t) => t.path === path);
 
 describe('the tones', () => {
+	it('take a step written as a short hex as its whole one, as every reader does', async () => {
+		const list = await readTokens(memoryReads({ 'src/colors/tones/gray.ts': "export const gray = {\n  0: '#fff',\n  100: '#000000',\n};\n" }));
+		expect(list.tokens.map((t) => [t.path, t.value])).toEqual([
+			['tone.gray.0', '#FFFFFF'],
+			['tone.gray.100', '#000000'],
+		]);
+	});
+
 	it('are every family the index exports, each step with its color, in the file’s order', async () => {
 		const list = await readTokens(memoryReads(LIBRARY));
 		const tones = list.tokens.filter((t) => t.group === 'Tones');
