@@ -13,8 +13,8 @@ import { Thumbnail } from './ui/Thumbnail';
 import { ViewOptions } from './ui/ViewOptions';
 import { NoMatches } from './ui/NoMatches';
 import { layoutSection } from './layouts';
-import { modeSection, useMode } from './mode';
-import { useOpenTabs } from './openTabs';
+import { modeSection } from './mode';
+import { useMode, useShared } from './shared';
 import type { View } from './vscode';
 
 /**
@@ -42,7 +42,7 @@ export const ComponentsView = ({
 }) => {
 	const [search, setSearch] = useState('');
 	const groups = groupsFound(components, search);
-	const { components: open } = useOpenTabs();
+	const { components: open } = useShared('tabs');
 	const [mode, setMode] = useMode();
 	const item = (c: CatalogComponent) => {
 		const items: MenuItem[] = [

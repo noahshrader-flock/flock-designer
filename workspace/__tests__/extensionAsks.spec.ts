@@ -1,55 +1,59 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
-import { type DesignSystemAsks, answerPage } from '../extension/src/bridge';
+import { receivePage } from '../extension/src/bridge';
 import { agentWork } from '../extension/src/agentWork';
-import type { PanelMessage } from '../extension/src/messages';
 
 /**
- * What any DSNR page may ask (`answerPage`), the panel or a design system's tab: a call to the core, answered by its id,
- * and the design system's asks, each to its own; the rest is the panel's alone. Then the agent at work, as every flow has
- * it, and the manifest and the code agreeing on the commands.
+ * What any DSNR page sends (`receivePage`), the panel or a design system's tab: that it listens, a call to the core, or an
+ * ask of the extension's, each answered by its id, and a failed ask said. Then the agent at work, as every flow has it,
+ * and the manifest and the code agreeing on the commands.
  */
 
-const asks = (): DesignSystemAsks & Record<string, ReturnType<typeof vi.fn>> =>
-	({
-		openComponent: vi.fn(async () => undefined),
-		componentLink: vi.fn(async () => undefined),
-		openPrimitives: vi.fn(async () => undefined),
-		openVoiceAndTone: vi.fn(async () => undefined),
-		openLibrarySource: vi.fn(async () => undefined),
-		edits: vi.fn(() => []),
-		setEdits: vi.fn(),
-	}) as never;
+const page = () => {
+	const webview = { postMessage: vi.fn(async () => true) };
+	const panels = { ready: vi.fn(async () => undefined) };
+	const failed = vi.fn();
+	const opened = vi.fn(async (_file: string) => undefined);
+	const asks = new Map([
+		[
+			'openComponent',
+			async (...args: unknown[]) =>
+				typeof args[0] === 'string' ? (await opened(args[0]), { ok: true, value: null }) : { ok: false, error: 'That is not a file.' },
+		],
+	]) as never;
+	const said = (raw: unknown) => receivePage(panels, webview as never, raw, asks, failed);
+	return { webview, panels, failed, opened, said };
+};
 
-describe('what any DSNR page may ask', () => {
-	it('is each design system ask, given to its own, and said to be answered', async () => {
-		const a = asks();
-		const webview = { postMessage: vi.fn(async () => true) };
-		const cases: [PanelMessage, string, unknown[]][] = [
-			[{ type: 'open-component', id: 'a.stories.tsx' }, 'openComponent', ['a.stories.tsx']],
-			[{ type: 'component-link', id: 'a.stories.tsx', link: 'source' }, 'componentLink', ['a.stories.tsx', 'source']],
-			[{ type: 'open-primitives' }, 'openPrimitives', []],
-			[{ type: 'open-voice-and-tone' }, 'openVoiceAndTone', []],
-			[{ type: 'open-library-source', file: 'a.ts', line: 3 }, 'openLibrarySource', ['a.ts', 3]],
-			[{ type: 'token-edits', edits: [] }, 'setEdits', [[]]],
-		];
-		for (const [message, ask, args] of cases) {
-			expect(await answerPage(webview as never, message, a), message.type).toBe(true);
-			expect(a[ask]).toHaveBeenLastCalledWith(...args);
-		}
-		expect(webview.postMessage).not.toHaveBeenCalled();
+describe('what any DSNR page sends', () => {
+	it('says it listens, and is told every value pages share', async () => {
+		const p = page();
+		await p.said({ type: 'ready' });
+		expect(p.panels.ready).toHaveBeenCalledWith(p.webview);
 	});
 
 	it('answers a call to the core by its id, with the core’s own result', async () => {
-		const webview = { postMessage: vi.fn(async () => true) };
-		expect(await answerPage(webview as never, { type: 'call', id: 7, name: 'signInState', args: [] }, asks())).toBe(true);
-		expect(webview.postMessage).toHaveBeenCalledWith(expect.objectContaining({ type: 'answer', id: 7 }));
+		const p = page();
+		await p.said({ type: 'call', id: 7, name: 'signInState', args: [] });
+		expect(p.webview.postMessage).toHaveBeenCalledWith(expect.objectContaining({ type: 'answer', id: 7 }));
 	});
 
-	it('leaves the panel’s own asks to the panel', async () => {
-		for (const message of [{ type: 'ready' }, { type: 'locate-design-system' }, { type: 'ask-new-prototype' }] as PanelMessage[])
-			expect(await answerPage({ postMessage: vi.fn() } as never, message, asks()), message.type).toBe(false);
+	it('answers an ask from the extension’s own table, and says one refused, as the extension says what goes wrong', async () => {
+		const p = page();
+		await p.said({ type: 'call', id: 3, name: 'openComponent', args: ['a.stories.tsx'] });
+		expect(p.opened).toHaveBeenCalledWith('a.stories.tsx');
+		expect(p.webview.postMessage).toHaveBeenLastCalledWith({ type: 'answer', id: 3, result: { ok: true, value: null } });
+		await p.said({ type: 'call', id: 4, name: 'openComponent', args: [3] });
+		expect(p.failed).toHaveBeenCalledWith(new Error('That is not a file.'));
+		expect(p.webview.postMessage).toHaveBeenLastCalledWith({ type: 'answer', id: 4, result: { ok: false, error: 'That is not a file.' } });
+	});
+
+	it('drops anything else, answering nothing', async () => {
+		const p = page();
+		for (const raw of [{ type: 'open-component', id: 'a' }, { type: 'call', id: 1, name: 'runAnything', args: [] }, null]) await p.said(raw);
+		expect(p.webview.postMessage).not.toHaveBeenCalled();
+		expect(p.panels.ready).not.toHaveBeenCalled();
 	});
 });
 

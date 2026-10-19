@@ -32,7 +32,7 @@ import { Section } from './ui/Section';
 import { Thumbnail } from './ui/Thumbnail';
 import { NoMatches } from './ui/NoMatches';
 import { layoutSection } from './layouts';
-import { useOpenTabs } from './openTabs';
+import { useShared } from './shared';
 import type { View } from './vscode';
 
 /**
@@ -76,7 +76,7 @@ const ProjectItem = ({
 	onDialog: (dialog: PanelDialog) => void;
 	onCodebase: (action: CodebaseAction, projectId: string) => void;
 }) => {
-	const shown = useOpenTabs();
+	const shown = useShared('tabs');
 	const open = openCommentsOf(project.work);
 	const newest = reviewsOf(project)[0];
 	const inCode = workOf(project.work, 'codebase').length > 0;

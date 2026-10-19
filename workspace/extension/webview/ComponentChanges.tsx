@@ -7,7 +7,7 @@ import { useValueSources } from './hooks/useValueSources';
 import { labelOf } from '../../src/shared/tokens';
 import { useTrying } from './useTrying';
 import { ChangedValues } from './ValueChanges';
-import { useValueTrials } from './valueTrials';
+import { useValueTrials } from './shared';
 
 /**
  * One component's changes in the panel's Changes dialog (the changes being tried, DESIGN_SYSTEM.md): the values tried on

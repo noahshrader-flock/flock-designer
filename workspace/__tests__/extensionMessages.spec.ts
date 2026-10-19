@@ -1,45 +1,19 @@
 import { describe, expect, it } from 'vitest';
-import { readComponentArg, readMessage, readProjectArg, readReview } from '../extension/src/messages';
+import { type AskHandlers, askRoutes, readComponentArg, readReview } from '../extension/src/asks';
+import { ASKS, type AskName, readMessage, readProjectArg } from '../extension/src/messages';
 
 /**
- * What the panel's page may ask of the extension (Phase 3): a call to the core by its name in the contract's table, or
- * one of the panel's own few requests, each in exactly its shape, as the app checks what its window sends. Anything else
- * is dropped.
+ * What a DSNR page may send the extension: that it listens, or a call by its name, the core's or one of the extension's
+ * own asks (`PageAsks`), each ask's arguments checked as the core checks a call's, before anything is done. Anything else
+ * is dropped, or refused, in words.
  */
 
-describe('a message from the panel', () => {
+describe('a message from a page', () => {
 	it.each([
 		[{ type: 'call', id: 1, name: 'listProjects', args: [] }],
 		[{ type: 'call', id: 7, name: 'readCheckout', args: ['/a', 2] }],
+		[{ type: 'call', id: 8, name: 'openComponent', args: ['x'] }],
 		[{ type: 'ready' }],
-		[{ type: 'locate-design-system' }],
-		[{ type: 'get-started' }],
-		[{ type: 'ask-new-prototype' }],
-		[{ type: 'codebase', action: 'hand-off', projectId: 'zone-coverage' }],
-		// The draft pull request, from the Hand off dialog once a handoff found the work ready.
-		[{ type: 'codebase', action: 'share', projectId: 'zone-coverage' }],
-		[{ type: 'codebase', action: 'open-code', projectId: 'zone-coverage' }],
-		[{ type: 'codebase', action: 'run-locally', projectId: 'zone-coverage' }],
-		[{ type: 'new-prototype', title: 'Alert history', task: 'A history of alerts.', folder: null }],
-		[{ type: 'new-prototype', title: 'Alert history', task: 'A history of alerts.', folder: 'Maps' }],
-		[{ type: 'open-review', projectId: 'alert-history', name: 'v2', title: 'Alert history · Version 2' }],
-		[{ type: 'open-review-in-browser', projectId: 'alert-history', name: 'v2', title: 'Alert history · Version 2' }],
-		[{ type: 'copy-review-link', projectId: 'alert-history', name: 'v2', title: 'Alert history · Version 2' }],
-		[{ type: 'open-review-published', projectId: 'alert-history', name: 'v2', title: 'Alert history · Version 2' }],
-		// The Design System tab's (6.1 to 6.3): a component's tab, its links, Primitives, the voice and tone, a token's file, the change tried.
-		[{ type: 'open-component', id: 'src/components/FSButton/FSButton.stories.tsx' }],
-		[{ type: 'component-link', id: 'src/components/FSButton/FSButton.stories.tsx', link: 'storybook' }],
-		[{ type: 'component-link', id: 'src/components/FSButton/FSButton.stories.tsx', link: 'source' }],
-		[{ type: 'open-primitives' }],
-		[{ type: 'open-voice-and-tone' }],
-		[{ type: 'open-library-source', file: 'src/colors/theme/light.ts', line: 12 }],
-		[{ type: 'token-edits', edits: [] }],
-		[{ type: 'token-edits', edits: [{ path: 'palette.light.primary.main', value: '#112233' }] }],
-		[{ type: 'set-mode', mode: 'dark' }],
-		[{ type: 'set-mode', mode: 'light' }],
-		[{ type: 'value-trial', file: 'src/a.stories.tsx', commit: 'abc123', values: [] }],
-		[{ type: 'value-trial', file: 'src/a.stories.tsx', commit: 'abc123', values: [{ property: 'height', value: '32px', targets: ['a'] }] }],
-		[{ type: 'open-changes' }],
 	])('%o is read', (m) => {
 		expect(readMessage(m)).toEqual(m);
 	});
@@ -56,54 +30,97 @@ describe('a message from the panel', () => {
 		[{ type: 'call', id: 1, name: 'listProjects', args: [], extra: true }],
 		[{ type: 'ready', as: 'someone' }],
 		// Signing in is VS Code's own, from the title bar: the page cannot ask for it.
-		[{ type: 'sign-in' }],
-		[{ type: 'account' }],
-		[{ type: 'open-review', projectId: 'a', name: 'v1' }],
-		[{ type: 'open-review-in-browser', projectId: 'a', name: 'v1' }],
-		[{ type: 'copy-review-link', projectId: 'a', name: 'v1' }],
-		[{ type: 'copy-review-link', projectId: '../a', name: 'v1', title: 'x' }],
-		[{ type: 'open-review-published', projectId: '../a', name: 'v1', title: 'x' }],
-		// Removed: the panel no longer asks for a code preview.
-		[{ type: 'codebase', action: 'preview', projectId: 'zone-coverage' }],
-		[{ type: 'open-review-in-browser', projectId: 'a', name: 'v1', title: 'x'.repeat(301) }],
-		[{ type: 'open-review', projectId: 1, name: 'v1', title: 't' }],
-		[{ type: 'open-review', projectId: 'a', name: 'v1', title: 'x'.repeat(301) }],
-		// A review is of a project, by its id, and a prototype, by its name: nothing that would be a path to something else.
-		[{ type: 'open-review', projectId: 'a/../../previews-x', name: 'v1', title: 't' }],
-		[{ type: 'open-review', projectId: 'a', name: '../../x', title: 't' }],
-		[{ type: 'new-prototype' }],
-		[{ type: 'new-prototype', title: 'A', task: 'B' }],
-		[{ type: 'new-prototype', title: 1, task: 'B', folder: null }],
-		[{ type: 'new-prototype', title: 'A', task: 'x'.repeat(4001), folder: null }],
-		[{ type: 'new-prototype', title: 'x'.repeat(301), task: 'B', folder: null }],
-		[{ type: 'new-prototype', title: 'A', task: 'B', folder: 'x'.repeat(101) }],
-		[{ type: 'new-prototype', title: 'A', task: 'B', folder: null, more: 1 }],
-		[{ type: 'codebase', action: 'push', projectId: 'zone-coverage' }],
-		[{ type: 'codebase', action: 'preview', projectId: '../etc' }],
-		[{ type: 'codebase', action: 'preview' }],
-		[{ type: 'codebase', action: 'open-code', projectId: 'zone-coverage', url: 'https://evil.example' }],
+		[{ type: 'call', id: 1, name: 'signIn', args: [] }],
+		// Only the calls, by name: a message of its own is not one any more.
+		[{ type: 'open-component', id: 'a' }],
 		[{ type: 'run', command: 'rm -rf /' }],
-		[{ type: 'open-component' }],
-		[{ type: 'open-component', id: '' }],
-		[{ type: 'open-component', id: 'x'.repeat(501) }],
-		[{ type: 'component-link', id: 'a.stories.tsx', link: 'https://evil.example' }],
-		[{ type: 'component-link', id: 'a.stories.tsx', link: 'source', url: 'https://evil.example' }],
-		[{ type: 'open-library-source', file: 'a.ts', line: 0 }],
-		[{ type: 'open-library-source', file: 'a.ts', line: 1.5 }],
-		[{ type: 'open-library-source', file: '', line: 1 }],
-		[{ type: 'token-edits', edits: 'all' }],
-		[{ type: 'token-edits', edits: new Array(501).fill({ path: 'a', value: '#000000' }) }],
-		[{ type: 'open-primitives', which: 'all' }],
-		[{ type: 'set-mode', mode: 'sepia' }],
-		[{ type: 'set-mode' }],
-		[{ type: 'set-mode', mode: 'dark', also: 1 }],
-		[{ type: 'value-trial', file: 'src/a.stories.tsx', commit: 'not a commit', values: [] }],
-		[{ type: 'value-trial', file: '', commit: 'abc123', values: [] }],
-		[{ type: 'value-trial', file: 'src/a.stories.tsx', commit: 'abc123', values: 'all' }],
-		[{ type: 'value-trial', file: 'src/a.stories.tsx', commit: 'abc123', values: new Array(51).fill({}) }],
-		[{ type: 'open-changes', which: 'all' }],
 	])('%o is dropped', (m) => {
 		expect(readMessage(m)).toBeNull();
+	});
+});
+
+/** Every ask answered by a stand-in that says what it was given. */
+const handled = () => {
+	const given: [string, unknown[]][] = [];
+	const handlers = Object.fromEntries(ASKS.map((name) => [name, (...args: unknown[]) => void given.push([name, args])])) as unknown as AskHandlers;
+	return { routes: askRoutes(handlers), given };
+};
+
+describe('an ask from a page', () => {
+	it.each([
+		['locateDesignSystem', []],
+		['getStarted', []],
+		['askNewPrototype', []],
+		['codebase', ['hand-off', 'zone-coverage']],
+		// The draft pull request, from the Hand off dialog once a handoff found the work ready.
+		['codebase', ['share', 'zone-coverage']],
+		['codebase', ['open-code', 'zone-coverage']],
+		['codebase', ['run-locally', 'zone-coverage']],
+		['newPrototype', ['Alert history', 'A history of alerts.', null]],
+		['newPrototype', ['Alert history', 'A history of alerts.', 'Maps']],
+		['openReview', [{ projectId: 'alert-history', name: 'v2', title: 'Alert history · Version 2' }]],
+		['openReviewInBrowser', [{ projectId: 'alert-history', name: 'v2', title: 'Alert history · Version 2' }]],
+		['copyReviewLink', [{ projectId: 'alert-history', name: 'v2', title: 'Alert history · Version 2' }]],
+		['openReviewPublished', [{ projectId: 'alert-history', name: 'v2', title: 'Alert history · Version 2' }]],
+		// The Design System tab's (6.1 to 6.3): a component's tab, its links, Primitives, the voice and tone, a token's file, the change tried.
+		['openComponent', ['src/components/FSButton/FSButton.stories.tsx']],
+		['componentLink', ['src/components/FSButton/FSButton.stories.tsx', 'storybook']],
+		['componentLink', ['src/components/FSButton/FSButton.stories.tsx', 'source']],
+		['openPrimitives', []],
+		['openVoiceAndTone', []],
+		['openLibrarySource', ['src/colors/theme/light.ts', 12]],
+		['setTokenEdits', [[]]],
+		['setTokenEdits', [[{ path: 'palette.light.primary.main', value: '#112233' }]]],
+		['setMode', ['dark']],
+		['setMode', ['light']],
+		['setValueTrial', ['src/a.stories.tsx', 'abc123', []]],
+		['setValueTrial', ['src/a.stories.tsx', 'abc123', [{ property: 'height', value: '32px', targets: ['a'] }]]],
+		['openChanges', []],
+		['syncDesignSystem', []],
+	] as [AskName, unknown[]][])('%s %o is done', async (name, args) => {
+		const { routes, given } = handled();
+		expect(await routes.get(name)?.(...args)).toEqual({ ok: true, value: null });
+		expect(given).toEqual([[name, args]]);
+	});
+
+	it.each([
+		['openReview', [{ projectId: 'a', name: 'v1' }]],
+		['openReviewInBrowser', [{ projectId: 'a', name: 'v1' }]],
+		['copyReviewLink', [{ projectId: '../a', name: 'v1', title: 'x' }]],
+		['openReviewPublished', [{ projectId: '../a', name: 'v1', title: 'x' }]],
+		['openReviewInBrowser', [{ projectId: 'a', name: 'v1', title: 'x'.repeat(301) }]],
+		['openReview', [{ projectId: 1, name: 'v1', title: 't' }]],
+		// A review is of a project, by its id, and a prototype, by its name: nothing that would be a path to something else.
+		['openReview', [{ projectId: 'a/../../previews-x', name: 'v1', title: 't' }]],
+		['openReview', [{ projectId: 'a', name: '../../x', title: 't' }]],
+		['openReview', [{ projectId: 'a', name: 'v1', title: 't', more: 1 }]],
+		['newPrototype', [1, 'B', null]],
+		['newPrototype', ['A', 'x'.repeat(4001), null]],
+		['newPrototype', ['x'.repeat(301), 'B', null]],
+		['newPrototype', ['A', 'B', 'x'.repeat(101)]],
+		// Removed: the panel no longer asks for a code preview.
+		['codebase', ['preview', 'zone-coverage']],
+		['codebase', ['push', 'zone-coverage']],
+		['codebase', ['open-code', '../etc']],
+		['openComponent', [undefined]],
+		['openComponent', ['']],
+		['openComponent', ['x'.repeat(501)]],
+		['componentLink', ['a.stories.tsx', 'https://evil.example']],
+		['openLibrarySource', ['a.ts', 0]],
+		['openLibrarySource', ['a.ts', 1.5]],
+		['openLibrarySource', ['', 1]],
+		['setTokenEdits', ['all']],
+		['setTokenEdits', [new Array(501).fill({ path: 'a', value: '#000000' })]],
+		['setMode', ['sepia']],
+		['setMode', [undefined]],
+		['setValueTrial', ['src/a.stories.tsx', 'not a commit', []]],
+		['setValueTrial', ['', 'abc123', []]],
+		['setValueTrial', ['src/a.stories.tsx', 'abc123', 'all']],
+		['setValueTrial', ['src/a.stories.tsx', 'abc123', new Array(51).fill({})]],
+	] as [AskName, unknown[]][])('%s %o is refused, and nothing is done', async (name, args) => {
+		const { routes, given } = handled();
+		expect((await routes.get(name)?.(...args))?.ok).toBe(false);
+		expect(given).toEqual([]);
 	});
 });
 

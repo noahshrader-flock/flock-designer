@@ -5,7 +5,25 @@ import type { Context } from '../src/core/services/projects/findContext';
 import type { Catalog, ComponentPictures, ProjectWork } from '../src/shared/contract';
 import { SAMPLE_CATALOG, SAMPLE_PROJECTS } from './extensionSamples';
 import { projectWork } from './fixtures';
-import { answer, answerOf, button, calls, callsOf, key, kept, mount, panelSaid, press, say, sent, type, unmount } from './webviewHarness';
+import {
+	answer,
+	answerOf,
+	button,
+	calls,
+	callsOf,
+	kept,
+	key,
+	lastAsk,
+	mountPage,
+	panelSaid,
+	press,
+	say,
+	sent,
+	share,
+	shareCatalog,
+	type,
+	unmount,
+} from './webviewHarness';
 
 /**
  * DSNR's panel (Phases 0, 3 and 4): the Projects and Design System toggle at its very top, the projects the core reads
@@ -22,11 +40,11 @@ const OPEN: Context = {
 	missing: [],
 };
 /** The panel as the extension starts it. */
-const show = () => mount(createElement(Panel));
+const show = () => mountPage(createElement(Panel));
 /** The panel open on a product, its projects read. */
 const showOpen = async (context: Context = OPEN, projects = SAMPLE_PROJECTS) => {
 	await show();
-	await say({ type: 'context', context });
+	await share('placed', { context, unreadable: null });
 	await answer('listProjects', projects);
 };
 
@@ -144,7 +162,7 @@ describe('what is open', () => {
 	it('offers Get started beside everyone’s projects too', async () => {
 		await showOpen(NONE);
 		await press(button('Get started'));
-		expect(panelSaid().at(-1)).toEqual({ type: 'get-started' });
+		expect(lastAsk()).toEqual(['getStarted', []]);
 	});
 });
 
@@ -295,7 +313,7 @@ describe('dialogs and menus, in the panel', () => {
 		it('is asked of the extension by the empty list’s button, which says whether it can be started, and opens nothing itself', async () => {
 			await showOpen(OPEN, []);
 			await press(button('New prototype'));
-			expect(panelSaid().at(-1)).toEqual({ type: 'ask-new-prototype' });
+			expect(lastAsk()).toEqual(['askNewPrototype', []]);
 			expect(dialog()).toBeNull();
 		});
 
@@ -326,7 +344,7 @@ describe('dialogs and menus, in the panel', () => {
 			await type(field('Name'), 'Alert history 2');
 			await type(field('What should it explore?'), 'A history of alerts.');
 			await press(submit());
-			expect(panelSaid().at(-1)).toEqual({ type: 'new-prototype', title: 'Alert history 2', task: 'A history of alerts.', folder: null });
+			expect(lastAsk()).toEqual(['newPrototype', ['Alert history 2', 'A history of alerts.', null]]);
 			expect(dialog()).toBeNull();
 		});
 
@@ -337,7 +355,7 @@ describe('dialogs and menus, in the panel', () => {
 			await type(field('What should it explore?'), 'Two.');
 			await choose(field('Folder'), 'Maps');
 			await press(submit());
-			expect(panelSaid().at(-1)).toMatchObject({ folder: 'Maps' });
+			expect(lastAsk()).toEqual(['newPrototype', ['One', 'Two.', 'Maps']]);
 			await say({ type: 'open-dialog', dialog: { kind: 'new' } });
 			await type(field('Name'), 'One');
 			await type(field('What should it explore?'), 'Two.');
@@ -345,7 +363,7 @@ describe('dialogs and menus, in the panel', () => {
 			expect(submit().disabled).toBe(true);
 			await type(field('New folder'), ' Zones ');
 			await press(submit());
-			expect(panelSaid().at(-1)).toMatchObject({ folder: 'Zones' });
+			expect(lastAsk()).toEqual(['newPrototype', ['One', 'Two.', 'Zones']]);
 		});
 
 		it('closes on Escape, nothing sent, and gives the focus back to what opened it', async () => {
@@ -378,7 +396,7 @@ describe('dialogs and menus, in the panel', () => {
 			await showOpen();
 			await press(menuFor(0));
 			await press(item('Copy link'));
-			expect(panelSaid().at(-1)).toEqual({ type: 'copy-review-link', projectId: 'alert-history', name: 'v3', title: 'Alert history · Version 3' });
+			expect(lastAsk()).toEqual(['copyReviewLink', [{ projectId: 'alert-history', name: 'v3', title: 'Alert history · Version 3' }]]);
 			expect(items()).toHaveLength(0);
 		});
 
@@ -386,12 +404,7 @@ describe('dialogs and menus, in the panel', () => {
 			await showOpen();
 			await press(menuFor(0));
 			await press(item('Open published page'));
-			expect(panelSaid().at(-1)).toEqual({
-				type: 'open-review-published',
-				projectId: 'alert-history',
-				name: 'v3',
-				title: 'Alert history · Version 3',
-			});
+			expect(lastAsk()).toEqual(['openReviewPublished', [{ projectId: 'alert-history', name: 'v3', title: 'Alert history · Version 3' }]]);
 			expect(items()).toHaveLength(0);
 		});
 
@@ -406,12 +419,7 @@ describe('dialogs and menus, in the panel', () => {
 			await showOpen();
 			await press(menuFor(0));
 			await press(item('Open locally'));
-			expect(panelSaid().at(-1)).toEqual({
-				type: 'open-review-in-browser',
-				projectId: 'alert-history',
-				name: 'v3',
-				title: 'Alert history · Version 3',
-			});
+			expect(lastAsk()).toEqual(['openReviewInBrowser', [{ projectId: 'alert-history', name: 'v3', title: 'Alert history · Version 3' }]]);
 			expect(items()).toHaveLength(0);
 		});
 
@@ -560,7 +568,7 @@ describe('codebase work, in the panel', () => {
 		await showOpen(OPEN, WITH_CODE);
 		await press(menuOf('Zone coverage'));
 		await press(item('Run locally'));
-		expect(panelSaid().at(-1)).toEqual({ type: 'codebase', action: 'run-locally', projectId: 'zone-coverage' });
+		expect(lastAsk()).toEqual(['codebase', ['run-locally', 'zone-coverage']]);
 		await press(menuOf('Alert history'));
 		expect(items()).not.toContain('Run locally');
 	});
@@ -569,13 +577,13 @@ describe('codebase work, in the panel', () => {
 		await showOpen(OPEN, WITH_CODE);
 		await press(menuOf('Zone coverage'));
 		await press(item('View on GitHub'));
-		expect(panelSaid().at(-1)).toEqual({ type: 'codebase', action: 'open-code', projectId: 'zone-coverage' });
+		expect(lastAsk()).toEqual(['codebase', ['open-code', 'zone-coverage']]);
 	});
 
 	it('opens a project that is only in the code on GitHub when it is pressed, as the app does', async () => {
 		await showOpen(OPEN, WITH_CODE);
 		await press(named('Roles in code').querySelector('button') as HTMLElement);
-		expect(panelSaid().at(-1)).toEqual({ type: 'codebase', action: 'open-code', projectId: 'roles-in-code' });
+		expect(lastAsk()).toEqual(['codebase', ['open-code', 'roles-in-code']]);
 	});
 
 	it('hands off after saying what happens, and only once Start handoff is pressed', async () => {
@@ -593,7 +601,7 @@ describe('codebase work, in the panel', () => {
 		await press(inDialog('Start handoff'));
 		// Asked again as it is pressed: free still, so it starts.
 		await answer('agentStatus', { state: 'idle' });
-		expect(panelSaid().at(-1)).toEqual({ type: 'codebase', action: 'hand-off', projectId: 'zone-coverage' });
+		expect(lastAsk()).toEqual(['codebase', ['hand-off', 'zone-coverage']]);
 		expect(dialog()).toBeNull();
 	});
 
@@ -611,7 +619,7 @@ describe('codebase work, in the panel', () => {
 		expect(inDialog('Open a draft pull request').className).toContain('button-primary');
 		expect(inDialog('Run again').className).toContain('button-secondary');
 		await press(inDialog('Open a draft pull request'));
-		expect(panelSaid().at(-1)).toEqual({ type: 'codebase', action: 'share', projectId: 'zone-coverage' });
+		expect(lastAsk()).toEqual(['codebase', ['share', 'zone-coverage']]);
 		expect(dialog()).toBeNull();
 	});
 
@@ -632,7 +640,7 @@ describe('codebase work, in the panel', () => {
 		await answer('agentStatus', { state: 'idle' });
 		expect([...dialog()!.querySelectorAll('button')].map((b) => b.textContent)).not.toContain('Open a draft pull request');
 		await press(inDialog('View on GitHub'));
-		expect(panelSaid().at(-1)).toEqual({ type: 'codebase', action: 'open-code', projectId: 'zone-coverage' });
+		expect(lastAsk()).toEqual(['codebase', ['open-code', 'zone-coverage']]);
 	});
 
 	it('runs a handoff again from there, as a first one runs', async () => {
@@ -647,7 +655,7 @@ describe('codebase work, in the panel', () => {
 		await answer('agentStatus', { state: 'idle' });
 		await press(inDialog('Run again'));
 		await answer('agentStatus', { state: 'idle' });
-		expect(panelSaid().at(-1)).toEqual({ type: 'codebase', action: 'hand-off', projectId: 'zone-coverage' });
+		expect(lastAsk()).toEqual(['codebase', ['hand-off', 'zone-coverage']]);
 	});
 
 	it('does not start a handoff when the agent was given other work since the dialog opened', async () => {
@@ -889,7 +897,7 @@ describe('the projects as a list or a grid', () => {
 			'No folder',
 		]);
 		await press(cards()[0]!);
-		expect(panelSaid().at(-1)).toEqual({ type: 'open-review', projectId: 'alert-history', name: 'v3', title: 'Alert history · Version 3' });
+		expect(lastAsk()).toEqual(['openReview', [{ projectId: 'alert-history', name: 'v3', title: 'Alert history · Version 3' }]]);
 		expect(JSON.parse(cards()[0]!.closest('li')!.dataset.vscodeContext ?? '{}')).toMatchObject({
 			webviewSection: 'project',
 			projectId: 'alert-history',
@@ -1009,7 +1017,7 @@ describe('Projects, focused on the product open', () => {
 				.find((r) => r.querySelector('[data-part="name"]')?.textContent === 'Maps')!
 				.querySelector('button')!,
 		);
-		expect(panelSaid().at(-1)).toMatchObject({ type: 'open-review', projectId: 'maps' });
+		expect(lastAsk()).toEqual(['openReview', [expect.objectContaining({ projectId: 'maps' })]]);
 	});
 
 	it('says when the open product has none of its own yet, and how to see everyone’s', async () => {
@@ -1038,7 +1046,7 @@ describe('Projects, focused on the product open', () => {
 	it('goes back to the product’s own when another product is opened', async () => {
 		await showOpen(OPEN, PROJECTS);
 		await choose('All projects');
-		await say({ type: 'context', context: { ...OPEN, product: '/work/flock-pepsi', productRepository: PEPSI } });
+		await share('placed', { context: { ...OPEN, product: '/work/flock-pepsi', productRepository: PEPSI }, unreadable: null });
 		await answer('listProjects', PROJECTS);
 		expect((await scopeChoices()).map((o) => o.getAttribute('aria-checked'))).toEqual(['true', 'false']);
 	});
@@ -1155,13 +1163,13 @@ describe('Projects', () => {
 		await showOpen();
 		const current = () => [...body().querySelectorAll<HTMLElement>('[data-current]')].map((i) => i.querySelector('[data-part="name"]')?.textContent);
 		expect(current()).toEqual([]);
-		await say({ type: 'tabs-shown', projects: ['zone-coverage'], components: [] });
+		await share('tabs', { projects: ['zone-coverage'], components: [] });
 		expect(current()).toEqual(['Zone coverage']);
 		expect(body().querySelector('[aria-current="true"] [data-part="name"]')?.textContent).toBe('Zone coverage');
 		await viewChoice('List');
 		expect(current()).toEqual(['Zone coverage']);
 		// Covered or closed, it is marked no more.
-		await say({ type: 'tabs-shown', projects: [], components: [] });
+		await share('tabs', { projects: [], components: [] });
 		expect(current()).toEqual([]);
 	});
 
@@ -1175,7 +1183,7 @@ describe('Projects', () => {
 	it('opens a project’s newest prototype for review when its row is pressed', async () => {
 		await showOpen();
 		await press(rows()[0]!.querySelector('button') as HTMLElement);
-		expect(panelSaid().at(-1)).toEqual({ type: 'open-review', projectId: 'alert-history', name: 'v3', title: 'Alert history · Version 3' });
+		expect(lastAsk()).toEqual(['openReview', [{ projectId: 'alert-history', name: 'v3', title: 'Alert history · Version 3' }]]);
 	});
 
 	it('draws each project’s picture: those built here are made once the list is read, then each is read by its name', async () => {
@@ -1238,7 +1246,7 @@ describe('Projects', () => {
 
 	it('says why it could not read them', async () => {
 		await show();
-		await say({ type: 'context', context: OPEN });
+		await share('placed', { context: OPEN, unreadable: null });
 		const call = sent.find((m) => m.name === 'listProjects');
 		await say({ type: 'answer', id: call?.id, result: { ok: false, error: 'GitHub could not be reached.' } });
 		expect(body().querySelector('.empty [data-part="title"]')?.textContent).toBe('The projects could not be read');
@@ -1249,7 +1257,7 @@ describe('Projects', () => {
 		await showOpen(OPEN, []);
 		expect(body().querySelector('.empty [data-part="title"]')?.textContent).toBe('No projects yet');
 		await press(button('New prototype'));
-		expect(panelSaid().at(-1)).toEqual({ type: 'ask-new-prototype' });
+		expect(lastAsk()).toEqual(['askNewPrototype', []]);
 	});
 });
 
@@ -1257,18 +1265,14 @@ describe('Design System', () => {
 	/** The panel open on the Design System tab, with what the extension said is open. */
 	const open = async (context: Context = OPEN, unreadable?: string) => {
 		await show();
-		await say({ type: 'context', context, ...(unreadable ? { unreadable } : {}) });
+		await share('placed', { context, unreadable: unreadable ?? null });
 		if (context.product) await answer('listProjects', SAMPLE_PROJECTS);
 		await press(options()[1]!);
 	};
 	/** …and the design system read: its name, its catalog, and its components' pictures. */
 	const read = async (catalog: Catalog = SAMPLE_CATALOG, pictures: Partial<ComponentPictures> = {}) => {
 		await open();
-		await answer('designSystems', {
-			systems: [{ id: 'flocksafety/flock-react-component-lib', name: 'FUI' }],
-			current: 'flocksafety/flock-react-component-lib',
-		});
-		await answer('designSystemCatalog', catalog);
+		await shareCatalog(catalog);
 		if (catalog.state === 'ready' && sent.some((m) => m.name === 'componentPictures'))
 			await answer('componentPictures', { drawing: false, pictures: {}, issues: {}, ...pictures });
 	};
@@ -1285,23 +1289,20 @@ describe('Design System', () => {
 		expect(body().querySelector('.empty [data-part="title"]')?.textContent).toBe('No design system found');
 		expect(body().textContent).toContain('DSNR looks in the folders open in this window');
 		await press(button('Locate design system…'));
-		expect(panelSaid().at(-1)).toEqual({ type: 'locate-design-system' });
-		expect(calls('designSystemCatalog')).toEqual([]);
+		expect(lastAsk()).toEqual(['locateDesignSystem', []]);
 	});
 
 	it('says why the one found cannot be read, reads nothing, and offers to locate another', async () => {
 		await open(OPEN, '/work/plain is not a git repository.');
 		expect(body().querySelector('.empty [data-part="title"]')?.textContent).toBe('The design system cannot be read');
 		expect(body().textContent).toContain('/work/plain is not a git repository.');
-		expect(calls('designSystemCatalog')).toEqual([]);
 	});
 
-	it('is read once its tab is shown, at once from what its clone has, then again once GitHub has been asked', async () => {
+	it('says it is reading the design system until the extension says what it read, which every page is told', async () => {
 		await open();
 		expect(body().textContent).toBe('Reading the design system…');
-		expect(calls('designSystemCatalog').map((c) => c.args)).toEqual([[false]]);
-		await answer('designSystemCatalog', { ...SAMPLE_CATALOG, update: 'updating' });
-		expect(calls('designSystemCatalog').map((c) => c.args)).toEqual([[false], [true]]);
+		await shareCatalog(SAMPLE_CATALOG);
+		expect(body().querySelector('.ds-name')?.textContent).toBe('FUI');
 	});
 
 	it('names the design system, the icon of its branch directly after it with the branch as its tooltip, with Sync and its menu, and starts on its components', async () => {
@@ -1330,10 +1331,10 @@ describe('Design System', () => {
 		expect(body().querySelectorAll('.ds-actions [role="separator"]')).toHaveLength(1);
 		expect(items[0]!.nextElementSibling?.getAttribute('role')).toBe('separator');
 		await press(items[2]!);
-		expect(panelSaid().at(-1)).toEqual({ type: 'open-voice-and-tone' });
+		expect(lastAsk()).toEqual(['openVoiceAndTone', []]);
 		await press(body().querySelector('[aria-label="Design system actions"]') as HTMLElement);
 		await press(body().querySelector<HTMLElement>('.ds-actions [role="menuitem"]')!);
-		expect(calls('designSystemCatalog').at(-1)?.args).toEqual([true]);
+		expect(lastAsk()).toEqual(['syncDesignSystem', []]);
 	});
 
 	it('lists its components under their groups, as cards with their pictures, the first view, and no count of what axe found on them', async () => {
@@ -1360,11 +1361,11 @@ describe('Design System', () => {
 		await read();
 		const card = [...body().querySelectorAll<HTMLElement>('.card-item')].find((c) => c.textContent?.includes('FSButton')) as HTMLElement;
 		await press(card.querySelector('.card') as HTMLElement);
-		expect(panelSaid().at(-1)).toEqual({ type: 'open-component', id: 'src/components/FSButton/FSButton.stories.tsx' });
+		expect(lastAsk()).toEqual(['openComponent', ['src/components/FSButton/FSButton.stories.tsx']]);
 		await press(card.querySelector('.menu-button') as HTMLElement);
 		expect([...card.querySelectorAll('[role="menuitem"]')].map((i) => i.textContent)).toEqual(['Open in Storybook', 'View on GitHub']);
 		await press([...card.querySelectorAll<HTMLElement>('[role="menuitem"]')].find((i) => i.textContent === 'Open in Storybook')!);
-		expect(panelSaid().at(-1)).toEqual({ type: 'component-link', id: 'src/components/FSButton/FSButton.stories.tsx', link: 'storybook' });
+		expect(lastAsk()).toEqual(['componentLink', ['src/components/FSButton/FSButton.stories.tsx', 'storybook']]);
 		// One with no hosted Storybook offers none.
 		const other = [...body().querySelectorAll<HTMLElement>('.card-item')].find((c) => c.textContent?.includes('FSSelect')) as HTMLElement;
 		await press(other.querySelector('.menu-button') as HTMLElement);
@@ -1397,9 +1398,9 @@ describe('Design System', () => {
 		await read();
 		const current = () => [...body().querySelectorAll<HTMLElement>('[data-current]')].map((i) => i.querySelector('[data-part="name"]')?.textContent);
 		expect(current()).toEqual([]);
-		await say({ type: 'tabs-shown', projects: [], components: ['src/components/FSButton/FSButton.stories.tsx'] });
+		await share('tabs', { projects: [], components: ['src/components/FSButton/FSButton.stories.tsx'] });
 		expect(current()).toEqual(['FSButton']);
-		await say({ type: 'tabs-shown', projects: [], components: [] });
+		await share('tabs', { projects: [], components: [] });
 		expect(current()).toEqual([]);
 	});
 
@@ -1416,10 +1417,10 @@ describe('Design System', () => {
 		expect(dark!.querySelector('svg circle')).toBeNull();
 		expect(dark!.querySelector('svg path')).not.toBeNull();
 		await viewChoice('Dark');
-		expect(panelSaid().at(-1)).toEqual({ type: 'set-mode', mode: 'dark' });
+		expect(lastAsk()).toEqual(['setMode', ['dark']]);
 		expect((await mode()).map((o) => o.getAttribute('aria-checked'))).toEqual(['false', 'true']);
 		// The extension's choice, told to every page, is what it shows.
-		await say({ type: 'mode', mode: 'light' });
+		await share('mode', 'light');
 		expect((await mode()).map((o) => o.getAttribute('aria-checked'))).toEqual(['true', 'false']);
 		await unmount();
 		// A library with no dark: no section.
@@ -1503,7 +1504,7 @@ describe('Design System', () => {
 		expect(link.getAttribute('aria-label')).toBe('50: open src/colors/tones.ts:3');
 		expect(step.querySelector('.item-actions, .codicon-go-to-file')).toBeNull();
 		await press(link);
-		expect(panelSaid().at(-1)).toEqual({ type: 'open-library-source', file: 'src/colors/tones.ts', line: 3 });
+		expect(lastAsk()).toEqual(['openLibrarySource', ['src/colors/tones.ts', 3]]);
 		// And the dot, not the name, is what opens its control.
 		await press(step.querySelector('button.color-dot') as HTMLElement);
 		expect(document.querySelector('[role="dialog"]')).not.toBeNull();
@@ -1520,7 +1521,7 @@ describe('Design System', () => {
 
 	it('shows the tokens as the change the extension keeps changes them, marked', async () => {
 		await tokens(true);
-		await say({ type: 'token-edits', edits: [{ path: 'tone.pineGreen.50', value: '#000000' }] });
+		await share('tokenEdits', [{ path: 'tone.pineGreen.50', value: '#000000' }]);
 		const step = body().querySelector('[data-token="tone.pineGreen.50"]') as HTMLElement;
 		expect(step.dataset.changed).toBe('true');
 		expect((step.querySelector('.color-dot [data-swatch]') as HTMLElement).style.backgroundColor).toBe('rgb(0, 0, 0)');
@@ -1546,7 +1547,7 @@ describe('Design System', () => {
 		expect(bubble.className).toBe('badge badge-warning badge-button');
 		expect(body().querySelector('.note .link')).toBeNull();
 		// In the row the changes count comes first, then what is not read, then the menu.
-		await say({ type: 'token-edits', edits: [{ path: 'tone.pineGreen.60', value: '#000000' }] });
+		await share('tokenEdits', [{ path: 'tone.pineGreen.60', value: '#000000' }]);
 		const order = [...body().querySelectorAll('.ds-actions > *')].map((e) => e.getAttribute('aria-label') ?? e.className);
 		expect(order.slice(0, 2)).toEqual(['1 change being tried', '1 value in its token files is not read']);
 		expect(body().querySelector('.ds-actions')?.lastElementChild?.matches('.menu, .menu *, [aria-label="Design system actions"]')).toBe(true);
@@ -1559,10 +1560,10 @@ describe('Design System', () => {
 		await read();
 		expect(body().querySelector('.ds-actions .badge-warning')).toBeNull();
 		expect(body().querySelector('.ds-actions [aria-label$="being tried"]')).toBeNull();
-		await say({ type: 'token-edits', edits: [{ path: 'tone.pineGreen.60', value: '#000000' }] });
+		await share('tokenEdits', [{ path: 'tone.pineGreen.60', value: '#000000' }]);
 		const changes = body().querySelector('.ds-actions [aria-label="1 change being tried"]') as HTMLElement;
 		expect(changes.classList.contains('badge-brand')).toBe(true);
-		await say({ type: 'token-edits', edits: [] });
+		await share('tokenEdits', []);
 		expect(body().querySelector('.ds-actions [aria-label$="being tried"]')).toBeNull();
 	});
 
@@ -1570,21 +1571,21 @@ describe('Design System', () => {
 		await read({ state: 'lost', name: 'FUI', root: '/work/flock-react-component-lib' });
 		expect(body().querySelector('.empty [data-part="title"]')?.textContent).toBe('FUI is no longer on this computer');
 		await press(button('Locate design system…'));
-		expect(panelSaid().at(-1)).toEqual({ type: 'locate-design-system' });
+		expect(lastAsk()).toEqual(['locateDesignSystem', []]);
 	});
 
 	it('says why a clone with no copy of its branch cannot be read, with a way to try again', async () => {
 		await read({ state: 'no-branch', root: '/work/flock-react-component-lib', branch: 'develop' });
 		expect(body().querySelector('.empty [data-part="title"]')?.textContent).toBe('This clone has no develop branch');
 		await press(button('Try again'));
-		expect(calls('designSystemCatalog').at(-1)?.args).toEqual([true]);
+		expect(lastAsk()).toEqual(['syncDesignSystem', []]);
 	});
 });
 
 describe('every change being tried, in the panel’s Changes: the tokens and each component’s values (the changes being tried, DESIGN_SYSTEM.md)', () => {
 	const SYSTEM = 'flocksafety/flock-react-component-lib';
 	const BUTTON = 'src/components/FSButton/FSButton.stories.tsx';
-	const SMALL = { property: 'height', value: '32px', targets: ['height:sm:0', 'height:sm:1', 'height:sm:2'] };
+	const SMALL = { property: 'height' as const, value: '32px', targets: ['height:sm:0', 'height:sm:1', 'height:sm:2'] };
 	const ID = 'height\u0000height:sm:0\u0001height:sm:1\u0001height:sm:2';
 	const FOUND = {
 		state: 'ready',
@@ -1594,27 +1595,23 @@ describe('every change being tried, in the panel’s Changes: the tokens and eac
 	/** The panel on the Design System tab, the design system read and its tokens' branch none. */
 	const designOpen = async () => {
 		await show();
-		await say({ type: 'context', context: OPEN });
+		await share('placed', { context: OPEN, unreadable: null });
 		await answer('listProjects', SAMPLE_PROJECTS);
 		await press(options()[1]!);
-		await answer('designSystems', { systems: [{ id: SYSTEM, name: 'FUI' }], current: SYSTEM });
-		await answer('designSystemCatalog', SAMPLE_CATALOG);
+		await share('catalog', { system: { id: SYSTEM, name: 'FUI' }, catalog: SAMPLE_CATALOG, error: null, syncing: false });
 		await answerOf('changeBranch', 'tokens', null);
 	};
 	const count = () => document.querySelector('.ds-actions [aria-label$="being tried"]') as HTMLElement;
 	const changes = () => document.querySelector('[role="dialog"][aria-label="Changes"]') as HTMLElement | null;
 	const group = () => document.querySelector('[aria-label="Value changes · FSButton"]') as HTMLElement | null;
-	const trialsSaid = () => panelSaid().filter((m) => m.type === 'value-trial');
+	const trialsSaid = () => calls('setValueTrial').map((c) => c.args);
 
 	it('counts every component’s values tried on this commit, and lists each by its name, with its Save, Propose and Reset', async () => {
 		await designOpen();
 		// A value tried on another commit is that commit's: not counted, not listed.
-		await say({
-			type: 'value-trials',
-			trials: {
-				[BUTTON]: { commit: 'abc123', values: [SMALL] },
-				'src/components/FSIconButton/FSIconButton.stories.tsx': { commit: 'def456', values: [SMALL] },
-			},
+		await share('valueTrials', {
+			[BUTTON]: { commit: 'abc123', values: [SMALL] },
+			'src/components/FSIconButton/FSIconButton.stories.tsx': { commit: 'def456', values: [SMALL] },
 		});
 		expect(count().getAttribute('aria-label')).toBe('1 change being tried');
 		expect(count().classList.contains('badge-brand')).toBe(true);
@@ -1634,7 +1631,7 @@ describe('every change being tried, in the panel’s Changes: the tokens and eac
 		expect(callsOf('proposeChange', 'values').at(-1)?.args).toEqual(['values', BUTTON, null]);
 		// Reset here is the extension's too: every page is told, its tab with it.
 		await press(group()!.querySelector('button.link') as HTMLElement);
-		expect(trialsSaid().at(-1)).toEqual({ type: 'value-trial', file: BUTTON, commit: 'abc123', values: [] });
+		expect(trialsSaid().at(-1)).toEqual([BUTTON, 'abc123', []]);
 	});
 
 	it('lists a component with a branch of its values kept and nothing tried, and puts its values back, as opening its tab does', async () => {
@@ -1644,7 +1641,7 @@ describe('every change being tried, in the panel’s Changes: the tokens and eac
 		await answerOf('changeScopes', 'handOver', []);
 		await press(count());
 		await answerOf('changeBranch', 'values', { branch: 'dsnr/values-20261016-ab12', saved: [SMALL], saves: 1, pullRequest: null });
-		expect(trialsSaid().at(-1)).toEqual({ type: 'value-trial', file: BUTTON, commit: 'abc123', values: [SMALL] });
+		expect(trialsSaid().at(-1)).toEqual([BUTTON, 'abc123', [SMALL]]);
 		expect(group()).not.toBeNull();
 	});
 
@@ -1653,14 +1650,14 @@ describe('every change being tried, in the panel’s Changes: the tokens and eac
 		await answerOf('changeScopes', 'values', []);
 		await answerOf('changeScopes', 'handOver', []);
 		expect(count()).toBeNull();
-		await say({ type: 'value-trials', trials: { [BUTTON]: { commit: 'abc123', values: [SMALL] } } });
+		await share('valueTrials', { [BUTTON]: { commit: 'abc123', values: [SMALL] } });
 		expect(count().getAttribute('aria-label')).toBe('1 change being tried');
 		// A value moved is not a trial started or ended: what is kept is not asked again for it.
 		const asked = callsOf('changeScopes', 'values').length;
-		await say({ type: 'value-trials', trials: { [BUTTON]: { commit: 'abc123', values: [{ ...SMALL, value: '36px' }] } } });
+		await share('valueTrials', { [BUTTON]: { commit: 'abc123', values: [{ ...SMALL, value: '36px' }] } });
 		expect(callsOf('changeScopes', 'values')).toHaveLength(asked);
 		// Its values kept as a branch: the trial ends, what is kept is asked again, and the branch is the one change.
-		await say({ type: 'value-trials', trials: {} });
+		await share('valueTrials', {});
 		expect(callsOf('changeScopes', 'values')).toHaveLength(asked + 1);
 		await answerOf('changeScopes', 'values', [BUTTON]);
 		await answerOf('changeScopes', 'handOver', []);
@@ -1669,13 +1666,12 @@ describe('every change being tried, in the panel’s Changes: the tokens and eac
 
 	it('opens when a component’s tab asks for it, on the Design System tab', async () => {
 		await show();
-		await say({ type: 'context', context: OPEN });
+		await share('placed', { context: OPEN, unreadable: null });
 		await answer('listProjects', SAMPLE_PROJECTS);
 		expect(chosen()).toBe('Projects');
 		await say({ type: 'open-dialog', dialog: { kind: 'changes' } });
 		expect(chosen()).toBe('Design System');
-		await answer('designSystems', { systems: [{ id: SYSTEM, name: 'FUI' }], current: SYSTEM });
-		await answer('designSystemCatalog', SAMPLE_CATALOG);
+		await share('catalog', { system: { id: SYSTEM, name: 'FUI' }, catalog: SAMPLE_CATALOG, error: null, syncing: false });
 		await answerOf('changeBranch', 'tokens', null);
 		expect(changes()).not.toBeNull();
 		await press(changes()!.querySelector('[aria-label="Close"]') as HTMLElement);
@@ -1697,7 +1693,7 @@ describe('every change being tried, in the panel’s Changes: the tokens and eac
 		/** The Changes dialog open on the token changes, nothing kept for any group. */
 		const tokensChanged = async () => {
 			await designOpen();
-			await say({ type: 'token-edits', edits: EDITS });
+			await share('tokenEdits', EDITS);
 			await press(count());
 			await answerHandOver(null, null);
 			await answerOf('changeScopes', 'values', []);
@@ -1783,13 +1779,12 @@ describe('every change being tried, in the panel’s Changes: the tokens and eac
 
 		it('is not offered while the group has a branch DSNR saved', async () => {
 			await show();
-			await say({ type: 'context', context: OPEN });
+			await share('placed', { context: OPEN, unreadable: null });
 			await answer('listProjects', SAMPLE_PROJECTS);
 			await press(options()[1]!);
-			await answer('designSystems', { systems: [{ id: SYSTEM, name: 'FUI' }], current: SYSTEM });
-			await answer('designSystemCatalog', SAMPLE_CATALOG);
+			await share('catalog', { system: { id: SYSTEM, name: 'FUI' }, catalog: SAMPLE_CATALOG, error: null, syncing: false });
 			await answerOf('changeBranch', 'tokens', { branch: 'dsnr/tokens-1012-abc123', saved: [], saves: 1, pullRequest: null });
-			await say({ type: 'token-edits', edits: EDITS });
+			await share('tokenEdits', EDITS);
 			await press(count());
 			await answerHandOver(null, null);
 			expect(button('Save')).toBeDefined();
@@ -1798,18 +1793,14 @@ describe('every change being tried, in the panel’s Changes: the tokens and eac
 
 		it('previews a ready branch in every page, says so at the top, holds Save back while it is shown, and shows develop again', async () => {
 			await designOpen();
-			await say({ type: 'token-edits', edits: EDITS });
+			await share('tokenEdits', EDITS);
 			await press(count());
 			await answerHandOver(null, { branch: BRANCH, lines: [], review: { ...READY, files: [READY.files[0]] }, pullRequest: null });
 			await press(button('Preview this branch'));
 			expect(calls('showHandOver').at(-1)?.args).toEqual([null]);
 			await answer('showHandOver', null);
-			// Every page is told, and reads the library again: here, the branch's tip.
-			const reads = calls('designSystemCatalog').length;
-			await say({ type: 'event', name: 'onLibraryShown', payload: BRANCH });
-			expect(calls('designSystemCatalog').length).toBe(reads + 1);
-			expect(calls('designSystemCatalog').at(-1)?.args).toEqual([false]);
-			await answer('designSystemCatalog', { ...SAMPLE_CATALOG, commit: 'f00d42', showing: BRANCH });
+			// The extension reads the library again for every page: here, the branch's tip.
+			await shareCatalog({ ...SAMPLE_CATALOG, commit: 'f00d42', showing: BRANCH } as Catalog);
 			const note = document.querySelector('[data-showing]') as HTMLElement;
 			expect(note.textContent).toContain(`Showing ${BRANCH}, Claude Code’s branch, not develop.`);
 			expect(button('Stop previewing')).toBeDefined();
@@ -1823,13 +1814,12 @@ describe('every change being tried, in the panel’s Changes: the tokens and eac
 
 		it('offers neither Save nor Process changes while another branch is shown', async () => {
 			await show();
-			await say({ type: 'context', context: OPEN });
+			await share('placed', { context: OPEN, unreadable: null });
 			await answer('listProjects', SAMPLE_PROJECTS);
 			await press(options()[1]!);
-			await answer('designSystems', { systems: [{ id: SYSTEM, name: 'FUI' }], current: SYSTEM });
-			await answer('designSystemCatalog', { ...SAMPLE_CATALOG, showing: BRANCH });
+			await share('catalog', { system: { id: SYSTEM, name: 'FUI' }, catalog: { ...SAMPLE_CATALOG, showing: BRANCH }, error: null, syncing: false });
 			await answerOf('changeBranch', 'tokens', null);
-			await say({ type: 'token-edits', edits: EDITS });
+			await share('tokenEdits', EDITS);
 			await press(count());
 			await answerHandOver(null, null);
 			expect(button('Save to a branch')?.disabled).toBe(true);
@@ -1858,11 +1848,10 @@ describe('trying a change to the tokens, saving it to a branch, and proposing it
 	const ID = 'flocksafety/flock-react-component-lib';
 	const tokensOpen = async () => {
 		await show();
-		await say({ type: 'context', context: OPEN });
+		await share('placed', { context: OPEN, unreadable: null });
 		await answer('listProjects', SAMPLE_PROJECTS);
 		await press(options()[1]!);
-		await answer('designSystems', { systems: [{ id: ID, name: 'FUI' }], current: ID });
-		await answer('designSystemCatalog', SAMPLE_CATALOG);
+		await share('catalog', { system: { id: ID, name: 'FUI' }, catalog: SAMPLE_CATALOG, error: null, syncing: false });
 		await answerOf('changeBranch', 'tokens', null);
 		await press([...document.querySelectorAll<HTMLElement>('[aria-label="Part"] [role="radio"]')][1]!);
 	};
@@ -1872,21 +1861,15 @@ describe('trying a change to the tokens, saving it to a branch, and proposing it
 		if (!document.querySelector('[role="dialog"][aria-label="Changes"]'))
 			await press(document.querySelector('.ds-actions [aria-label$="being tried"]') as HTMLElement);
 	};
-	const edited = () =>
-		panelSaid()
-			.filter((m) => m.type === 'token-edits')
-			.at(-1)?.edits;
+	const edited = () => calls('setTokenEdits').at(-1)?.args?.[0];
 
-	it('drops, after a sync, what was tried on a token the library no longer has, as the app does', async () => {
+	it('syncs by asking the extension, which reads it for every page, and shows what it is told it read', async () => {
 		await tokensOpen();
-		const gone = { path: 'tone.pineGreen.50', value: '#000000' };
-		await say({ type: 'token-edits', edits: [gone, { path: 'spacing', value: '12px' }] });
 		await press(document.querySelector('[aria-label="Design system actions"]') as HTMLElement);
 		await press(document.querySelector('.ds-actions [role="menuitem"]') as HTMLElement);
-		const ready = SAMPLE_CATALOG as Extract<Catalog, { state: 'ready' }>;
-		const without = { ...ready, tokens: { ...ready.tokens, tokens: ready.tokens.tokens.filter((t) => t.path !== gone.path) } };
-		await answer('designSystemCatalog', without);
-		expect(edited()).toEqual([{ path: 'spacing', value: '12px' }]);
+		expect(lastAsk()).toEqual(['syncDesignSystem', []]);
+		await shareCatalog({ ...SAMPLE_CATALOG, commit: 'f00d42' } as Catalog);
+		expect(document.querySelector('[data-showing]')).toBeNull();
 	});
 
 	it('opens a role’s control: what it points at, and its tone’s steps to point it at another, which keeps the link', async () => {
@@ -1945,7 +1928,7 @@ describe('trying a change to the tokens, saving it to a branch, and proposing it
 		await tokensOpen();
 		const part = document.querySelector('.ds-part') as HTMLElement;
 		const before = part.previousElementSibling;
-		await say({ type: 'token-edits', edits: [{ path: 'tone.pineGreen.60', value: '#000000' }] });
+		await share('tokenEdits', [{ path: 'tone.pineGreen.60', value: '#000000' }]);
 		expect(part.previousElementSibling).toBe(before);
 		expect(document.querySelector('.ds-part')).toBe(part);
 		expect(document.querySelector('[data-changed-tokens]')).toBeNull();
@@ -1953,7 +1936,7 @@ describe('trying a change to the tokens, saving it to a branch, and proposing it
 
 	it('lists what has been changed, from what it was to what it is, with a reset for each and for all', async () => {
 		await tokensOpen();
-		await say({ type: 'token-edits', edits: [{ path: 'tone.pineGreen.60', value: '#000000' }] });
+		await share('tokenEdits', [{ path: 'tone.pineGreen.60', value: '#000000' }]);
 		// Nothing opens above the list: the count says it, in the brand.
 		expect(document.querySelector('[data-changed-tokens]')).toBeNull();
 		expect(document.querySelector('.ds-actions [aria-label="1 change being tried"]')?.classList.contains('badge-brand')).toBe(true);
@@ -1963,7 +1946,7 @@ describe('trying a change to the tokens, saving it to a branch, and proposing it
 		expect(changed.querySelector('[data-change="tone.pineGreen.60"] .change-values')?.textContent).toBe('#15584A → #000000');
 		await press(changed.querySelector('[aria-label="Reset Tones pineGreen 60"]') as HTMLElement);
 		expect(edited()).toEqual([]);
-		await say({ type: 'token-edits', edits: [{ path: 'tone.pineGreen.60', value: '#000000' }] });
+		await share('tokenEdits', [{ path: 'tone.pineGreen.60', value: '#000000' }]);
 		await press(button('Reset all'));
 		expect(edited()).toEqual([]);
 	});
@@ -1971,7 +1954,7 @@ describe('trying a change to the tokens, saving it to a branch, and proposing it
 	it('saves the change to a branch, proposes it as a draft pull request, and starts over, as the core does them', async () => {
 		await tokensOpen();
 		const edits = [{ path: 'tone.pineGreen.60', value: '#000000' }];
-		await say({ type: 'token-edits', edits });
+		await share('tokenEdits', edits);
 		await openChanges();
 		await press(button('Save to a branch'));
 		expect(sent.filter((m) => m.name === 'saveChange' && m.args?.[0] === 'tokens').at(-1)?.args).toEqual(['tokens', null, edits]);
@@ -1997,7 +1980,7 @@ describe('trying a change to the tokens, saving it to a branch, and proposing it
 
 	it('says why a save failed, and keeps the change', async () => {
 		await tokensOpen();
-		await say({ type: 'token-edits', edits: [{ path: 'spacing', value: '12px' }] });
+		await share('tokenEdits', [{ path: 'spacing', value: '12px' }]);
 		await openChanges();
 		await press(button('Save to a branch'));
 		const call = sent.filter((m) => m.name === 'saveChange' && m.args?.[0] === 'tokens').at(-1);
@@ -2008,11 +1991,10 @@ describe('trying a change to the tokens, saving it to a branch, and proposing it
 
 	it('puts back a change saved before DSNR was last closed, when none is being tried', async () => {
 		await show();
-		await say({ type: 'context', context: OPEN });
+		await share('placed', { context: OPEN, unreadable: null });
 		await answer('listProjects', SAMPLE_PROJECTS);
 		await press(options()[1]!);
-		await answer('designSystems', { systems: [{ id: ID, name: 'FUI' }], current: ID });
-		await answer('designSystemCatalog', SAMPLE_CATALOG);
+		await share('catalog', { system: { id: ID, name: 'FUI' }, catalog: SAMPLE_CATALOG, error: null, syncing: false });
 		const saved = [{ path: 'radius', value: '8px' }];
 		await answerOf('changeBranch', 'tokens', { branch: 'dsnr/tokens-1012-abc123', saved, saves: 2, pullRequest: null });
 		expect(edited()).toEqual(saved);

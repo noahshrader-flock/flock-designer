@@ -6,20 +6,14 @@ import type { ComponentPictures, MadeCover, SignInState, TokenEdit } from '../..
 import { withCovers } from '../../src/shared/projectList';
 import { type ChangesDialog, DesignSystem, type DesignSystemDoes } from './DesignSystem';
 import { PanelDialogs } from './Dialogs';
-import { onHost, workspace } from './host';
+import { asks, onHost, workspace } from './host';
+import { useShared, useTokenEdits } from './shared';
 import { Projects, type ProjectsRead } from './Projects';
-import { type CodebaseAction, NO_TABS_SHOWN, type PanelDialog, type Review, type TabsShown } from '../src/messages';
-import { ModeProvider } from './mode';
-import { useModeChoice } from './useModeChoice';
-import { useValueTrialsChoice } from './useValueTrialsChoice';
-import { ValueTrialsProvider } from './valueTrials';
-import { OpenTabsProvider } from './openTabs';
+import type { CodebaseAction, PanelDialog, Review } from '../src/messages';
 import { Loading } from './ui/Loading';
 import { Toggle } from './ui/Toggle';
 import { type CatalogRead, useCatalog } from './useCatalog';
-import { useTrial } from './useTrial';
 import { type Part, type Tab, type View, vscode } from './vscode';
-import { editsKept } from '../../src/shared/tokens';
 
 const TABS = [
 	{ value: 'projects', label: 'Projects', icon: 'folder-library' },
@@ -151,39 +145,27 @@ export const Panel = () => {
 	// What is chosen is kept for the panel, so a reload leaves it where it was.
 	const keep = (next: Partial<{ tab: Tab; view: View; part: Part; componentsView: View }>) =>
 		vscode().setState({ tab, view, part, componentsView, ...next });
-	const [context, setContext] = useState<Context | null>(null);
-	const [unreadable, setUnreadable] = useState<string | null>(null);
-	// The change to the tokens being tried: the extension's, heard before the page says it is ready.
-	const [edits, setEdits] = useTrial();
+	// What is open, and why its design system cannot be read when it cannot: the extension's, as every page's.
+	const { context, unreadable } = useShared('placed');
+	// The change to the tokens being tried: the extension's, the same on every page.
+	const [edits, setEdits] = useTokenEdits();
 	const [account, setAccount] = useState<SignInState>({ state: 'signedOut' });
 	// Counts the times the extension said the projects changed: each reads them again.
 	const [changes, setChanges] = useState(0);
 	// The dialog over the panel, if one is open: opened by what is pressed here or by the extension (its title bar's +).
 	const [dialog, setDialog] = useState<PanelDialog | null>(null);
-	// The tabs in front in the editor, which the projects and components that stand for them are marked by.
-	const [tabs, setTabs] = useState<TabsShown>(NO_TABS_SHOWN);
-	// The mode components are shown in: the extension's, heard before the page says it is ready.
-	const mode = useModeChoice();
-	// The values tried on every component: the extension's, heard before the page says it is ready.
-	const trialsChoice = useValueTrialsChoice();
-	useEffect(() => {
-		const stop = onHost((m) => {
-			if (m.type === 'context') {
-				setContext(m.context);
-				setUnreadable(m.unreadable ?? null);
-			}
-			if (m.type === 'projects-changed') setChanges((n) => n + 1);
-			if (m.type === 'open-dialog') {
-				setDialog(m.dialog);
-				// Every change being tried is the Design System tab's: asked for from a component's tab, it is shown there.
-				if (m.dialog.kind === 'changes') setTab('design-system');
-			}
-			if (m.type === 'tabs-shown') setTabs({ projects: m.projects, components: m.components });
-		});
-		// Said once the page listens, so what is open is never sent before it can be heard.
-		vscode().postMessage({ type: 'ready' });
-		return stop;
-	}, []);
+	useEffect(
+		() =>
+			onHost((m) => {
+				if (m.type === 'projects-changed') setChanges((n) => n + 1);
+				if (m.type === 'open-dialog') {
+					setDialog(m.dialog);
+					// Every change being tried is the Design System tab's: asked for from a component's tab, it is shown there.
+					if (m.dialog.kind === 'changes') setTab('design-system');
+				}
+			}),
+		[],
+	);
 	useEffect(() => {
 		void workspace()
 			.signInState()
@@ -220,89 +202,79 @@ export const Panel = () => {
 	useEffect(() => {
 		if (about !== null && projects !== null && !projects.some((p) => p.id === about)) setDialog(null);
 	}, [about, projects]);
-	const codebase = (action: CodebaseAction, projectId: string) => vscode().postMessage({ type: 'codebase', action, projectId });
-	// The design system, read once its tab is first shown, and read afresh when another is found; its pictures while it is.
+	const codebase = (action: CodebaseAction, projectId: string) => void asks().codebase(action, projectId);
+	// The design system, as the extension reads it for every page; its pictures while its tab is shown.
 	const found = context?.designSystem ?? null;
 	const showsDesign = tab === 'design-system' && found !== null && unreadable === null;
-	// A sync keeps only what was tried on tokens the library still has; a branch handed to Claude Code, shown in its place,
-	// is not the library, so nothing tried is let go for it.
-	const design = useCatalog(showsDesign, found?.root ?? null, (catalog) => {
-		if (catalog.state === 'ready' && catalog.showing !== null) return;
-		const still = editsKept(edits, catalog);
-		if (still !== edits) setEdits(still);
-	});
+	const design = useCatalog();
 	const ready = design.catalog?.state === 'ready' ? design.catalog : null;
 	const pictures = useComponentPictures(showsDesign && part === 'components' && ready !== null, ready?.commit ?? null);
 	const does: DesignSystemDoes = {
 		sync: () => void design.sync(),
-		locate: () => vscode().postMessage({ type: 'locate-design-system' }),
-		openComponent: (id) => vscode().postMessage({ type: 'open-component', id }),
-		componentLink: (id, link) => vscode().postMessage({ type: 'component-link', id, link }),
-		openPrimitives: () => vscode().postMessage({ type: 'open-primitives' }),
-		openVoiceAndTone: () => vscode().postMessage({ type: 'open-voice-and-tone' }),
-		openTokenSource: ({ file, line }) => vscode().postMessage({ type: 'open-library-source', file, line }),
+		locate: () => void asks().locateDesignSystem(),
+		openComponent: (id) => void asks().openComponent(id),
+		componentLink: (id, link) => void asks().componentLink(id, link),
+		openPrimitives: () => void asks().openPrimitives(),
+		openVoiceAndTone: () => void asks().openVoiceAndTone(),
+		openTokenSource: ({ file, line }) => void asks().openLibrarySource(file, line),
 		setEdits,
 	};
 	return (
-		<OpenTabsProvider value={tabs}>
-			<ModeProvider value={mode}>
-				<ValueTrialsProvider value={trialsChoice}>
-					<PanelView
-						tab={tab}
-						onTab={(next) => {
-							setTab(next);
-							keep({ tab: next });
-						}}
-						view={view}
-						onView={(next) => {
-							setView(next);
-							keep({ view: next });
-						}}
-						account={account}
-						context={context}
-						projects={{ value: projects, error: read.error }}
-						onOpen={(review) => vscode().postMessage({ type: 'open-review', ...review })}
-						onOpenInBrowser={(review) => vscode().postMessage({ type: 'open-review-in-browser', ...review })}
-						onCopyLink={(review) => vscode().postMessage({ type: 'copy-review-link', ...review })}
-						onOpenPublished={(review) => vscode().postMessage({ type: 'open-review-published', ...review })}
-						// Asked of the extension, which knows whether it can be started, and opens the dialog (`open-dialog`) if so.
-						onNew={() => vscode().postMessage({ type: 'ask-new-prototype' })}
-						onDialog={setDialog}
-						onCodebase={codebase}
-						onGetStarted={() => vscode().postMessage({ type: 'get-started' })}
-						unreadable={unreadable}
-						design={design}
-						pictures={pictures}
-						part={part}
-						onPart={(next) => {
-							setPart(next);
-							keep({ part: next });
-						}}
-						componentsView={componentsView}
-						onComponentsView={(next) => {
-							setComponentsView(next);
-							keep({ componentsView: next });
-						}}
-						edits={edits}
-						does={does}
-						changesDialog={{
-							open: dialog?.kind === 'changes',
-							onOpen: () => setDialog({ kind: 'changes' }),
-							onClose: () => setDialog(null),
-						}}
-					/>
-					<PanelDialogs
-						dialog={dialog}
-						projects={projects}
-						root={context?.product ?? null}
-						account={account}
-						onStart={(answers) => vscode().postMessage({ type: 'new-prototype', ...answers })}
-						onCodebase={codebase}
-						onChanged={() => setChanges((n) => n + 1)}
-						onClose={() => setDialog(null)}
-					/>
-				</ValueTrialsProvider>
-			</ModeProvider>
-		</OpenTabsProvider>
+		<>
+			<PanelView
+				tab={tab}
+				onTab={(next) => {
+					setTab(next);
+					keep({ tab: next });
+				}}
+				view={view}
+				onView={(next) => {
+					setView(next);
+					keep({ view: next });
+				}}
+				account={account}
+				context={context}
+				projects={{ value: projects, error: read.error }}
+				onOpen={(review) => void asks().openReview(review)}
+				onOpenInBrowser={(review) => void asks().openReviewInBrowser(review)}
+				onCopyLink={(review) => void asks().copyReviewLink(review)}
+				onOpenPublished={(review) => void asks().openReviewPublished(review)}
+				// Asked of the extension, which knows whether it can be started, and opens the dialog (`open-dialog`) if so.
+				onNew={() => void asks().askNewPrototype()}
+				onDialog={setDialog}
+				onCodebase={codebase}
+				onGetStarted={() => void asks().getStarted()}
+				unreadable={unreadable}
+				design={design}
+				pictures={pictures}
+				part={part}
+				onPart={(next) => {
+					setPart(next);
+					keep({ part: next });
+				}}
+				componentsView={componentsView}
+				onComponentsView={(next) => {
+					setComponentsView(next);
+					keep({ componentsView: next });
+				}}
+				edits={edits}
+				does={does}
+				changesDialog={{
+					open: dialog?.kind === 'changes',
+					onOpen: () => setDialog({ kind: 'changes' }),
+					onClose: () => setDialog(null),
+				}}
+			/>
+			<PanelDialogs
+				dialog={dialog}
+				projects={projects}
+				root={context?.product ?? null}
+				account={account}
+				onStart={({ title, task, folder }) => void asks().newPrototype(title, task, folder)}
+				onCodebase={codebase}
+				onChanged={() => setChanges((n) => n + 1)}
+				onClose={() => setDialog(null)}
+			/>
+		</>
 	);
 };

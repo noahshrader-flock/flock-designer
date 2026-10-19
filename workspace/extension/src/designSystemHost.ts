@@ -1,29 +1,33 @@
 import type * as VsCode from 'vscode';
+import type { Route } from '../../src/core/handle';
 import type { DesignSystemsMemory } from '../../src/core/services/designSystem/designSystems';
-import { tokenEditsOf } from '../../src/core/services/designSystem/tokenEdits';
-import { triedValuesOf } from '../../src/core/services/designSystem/valueSources';
-import type { WorkspaceApi } from '../../src/shared/contract';
+import type { TokenEdit, TriedValue, WorkspaceApi } from '../../src/shared/contract';
+import type { Theme } from '../../src/shared/prototypeTheme';
 import { valueOf } from '../../src/shared/result';
+import { sameChange } from '../../src/shared/tokens';
 import type { Tell } from './agentWork';
-import type { Panels } from './bridge';
-import { ModeChoice, TokenTrial, ValueTrial, componentLink, componentOf, libraryFileIn } from './designSystem';
+import { type AskHandlers, readComponentArg } from './asks';
+import { type Panels, receivePage } from './bridge';
+import { CatalogShare } from './catalogShare';
+import { componentLink, componentOf, editsAfterRead, keepMode, keptMode, libraryFileIn, withTrial } from './designSystem';
 import { DesignTabs } from './designTabs';
-import { readComponentArg, readMessage } from './messages';
-import { type DesignSystemAsks, answerPage, toldOnReady } from './bridge';
+import { type AskName, type ComponentLink, SHARED_START } from './messages';
 import { dsnrPage } from './panel';
 import type { LocalAddresses } from './html';
 
 /**
- * The design system in VS Code (6.1, 6.2), wired: the change to its tokens being tried, kept here for every page
- * (`TokenTrial`); its tabs in the editor, each DSNR's own page answered as the panel is (`DesignTabs`); what its pages ask
- * (`DesignSystemAsks`); and its commands, Open a component (given one by code, or chosen in VS Code's quick pick, the
- * natural form for one of many) and Open Primitives. What goes wrong is said (`failed`).
+ * The design system in VS Code (6.1, 6.2), wired: what its pages share, kept here for every page (`Shared`): the change to
+ * its tokens being tried, the mode, the values tried, and its catalog, read once for all of them (`CatalogShare`); its
+ * tabs in the editor, each DSNR's own page answered as the panel is (`receivePage`); what its pages ask (`handlers`, in the
+ * extension's table of asks); and its commands, Open a component (given one by code, or chosen in VS Code's quick pick,
+ * the natural form for one of many) and Open Primitives. What goes wrong is said (`failed`).
  */
 export const designSystemHost = ({
 	vscode,
 	dist,
 	api,
 	panels,
+	asks,
 	systems,
 	local,
 	openVoiceAndTone,
@@ -38,8 +42,10 @@ export const designSystemHost = ({
 	vscode: typeof VsCode;
 	/** The extension's build, which its pages load from. */
 	dist: VsCode.Uri;
-	api: Pick<WorkspaceApi, 'designSystemCatalog'>;
+	api: Pick<WorkspaceApi, 'designSystemCatalog' | 'designSystems' | 'onLibraryShown'>;
 	panels: Panels;
+	/** The extension's asks, which its tabs make as the panel does. */
+	asks: () => ReadonlyMap<AskName, Route>;
 	/** The design system the core shows, whose clone a token's file is in. */
 	systems: Pick<DesignSystemsMemory, 'current'>;
 	local: () => Promise<LocalAddresses>;
@@ -52,12 +58,18 @@ export const designSystemHost = ({
 	failedFor: (fromCode: boolean) => (err: unknown) => void;
 	/** Told when a component's tab opens, closes, or is brought in front or covered. */
 	onShown: () => void;
-	/** VS Code's state for the extension, where the mode chosen is kept (`ModeChoice`). */
+	/** VS Code's state for the extension, where the mode chosen is kept. */
 	kept: Pick<VsCode.Memento, 'get' | 'update'>;
 }) => {
-	const trial = new TokenTrial((m) => panels.post(m));
-	const mode = new ModeChoice(kept, (m) => panels.post(m));
-	const values = new ValueTrial((m) => panels.post(m));
+	const edits = panels.share('tokenEdits', [], sameChange);
+	const mode = panels.share('mode', keptMode(kept), Object.is, (next) => keepMode(kept, next));
+	const values = panels.share('valueTrials', {});
+	const catalog = new CatalogShare({
+		api,
+		shared: panels.share('catalog', SHARED_START.catalog),
+		// What is tried is kept only on tokens the library still has (`editsAfterRead`).
+		onRead: (read) => edits.set(editsAfterRead(edits.current(), read)),
+	});
 	const tabs = new DesignTabs({
 		create: (title) =>
 			vscode.window.createWebviewPanel('dsnr.designSystem', title, vscode.ViewColumn.Active, {
@@ -69,61 +81,56 @@ export const designSystemHost = ({
 		page: async (webview, tab) => dsnrPage(webview as VsCode.Webview, dist, await local(), tab),
 		panels,
 		onShown,
-		receive: async (webview, raw) => {
-			const message = readMessage(raw);
-			if (!message) return;
-			try {
-				if (message.type === 'ready') for (const told of toldOnReady(asks)) await webview.postMessage(told);
-				else await answerPage(webview as VsCode.Webview, message, asks);
-			} catch (err) {
-				failed(err);
-			}
-		},
+		receive: (webview, raw) => receivePage(panels, webview, raw, asks(), failed),
 	});
-	const asks: DesignSystemAsks = {
-		openComponent: async (id) => {
+	const handlers = {
+		openComponent: async (id: string) => {
 			const component = await componentOf(api, id);
 			await tabs.open({ kind: 'component', id: component.id, name: component.name });
 		},
-		componentLink: async (id, link) => openExternal(componentLink(await componentOf(api, id), link)),
+		componentLink: async (id: string, link: ComponentLink) => openExternal(componentLink(await componentOf(api, id), link)),
 		openPrimitives: () => tabs.open({ kind: 'primitives' }),
 		openVoiceAndTone,
 		// A file of the design system, as the person's clone has it, at its line: a token's, or where a value is written.
-		openLibrarySource: async (file, line) => {
+		openLibrarySource: async (file: string, line: number) => {
 			const system = systems.current();
 			const path = system === null ? null : libraryFileIn(system, file);
 			if (path === null) throw new Error(`${file} is not a file of the design system shown.`);
 			const at = new vscode.Position(line - 1, 0);
 			await vscode.window.showTextDocument(vscode.Uri.file(path), { selection: new vscode.Range(at, at), preview: true });
 		},
-		edits: () => trial.current(),
-		setEdits: (edits) => trial.set(tokenEditsOf(edits)),
-		mode: () => mode.current(),
+		setTokenEdits: (next: TokenEdit[]) => edits.set(next),
 		// Values tried in one mode are not left on the other (the same instances draw another colour there).
-		setMode: (next) => {
-			if (next !== mode.current()) values.clear();
+		setMode: (next: Theme) => {
+			if (next !== mode.current()) values.set({});
 			mode.set(next);
 		},
-		valueTrials: () => values.current(),
-		setValueTrial: (file, commit, tried) => values.set(file, commit, triedValuesOf(tried)),
+		setValueTrial: (file: string, commit: string, tried: TriedValue[]) => values.set(withTrial(values.current(), file, commit, tried)),
 		openChanges,
-	};
+		syncDesignSystem: () => catalog.sync(),
+	} satisfies Partial<AskHandlers>;
 	/** A component of the design system shown, chosen from its catalog in VS Code's quick pick, by its story file. */
 	const pickComponent = async (): Promise<string | undefined> => {
-		const catalog = valueOf(await api.designSystemCatalog(false));
-		if (catalog.state !== 'ready') return void tell('There is no design system shown here: the Design System tab says why.');
-		const items = catalog.components.map((c) => ({ label: c.name, description: c.group, id: c.id }));
+		const read = valueOf(await api.designSystemCatalog(false));
+		if (read.state !== 'ready') return void tell('There is no design system shown here: the Design System tab says why.');
+		const items = read.components.map((c) => ({ label: c.name, description: c.group, id: c.id }));
 		return (await vscode.window.showQuickPick(items, { placeHolder: 'Open a component', matchOnDescription: true }))?.id;
 	};
 	return {
-		asks,
+		handlers,
 		/** The components whose tab is in front. */
 		shownComponents: () => tabs.shownComponents(),
-		/** Another design system is shown: no change is being tried on it, and the last one's components' tabs are closed. */
+		/** The design system shown is read for every page: the first found, once VS Code has found it. */
+		read: () => catalog.start(),
+		/**
+		 * Another design system is shown: no change is being tried on it, the last one's components' tabs are closed, and it
+		 * is read for every page.
+		 */
 		anotherShown: () => {
-			trial.set([]);
-			values.clear();
+			edits.set([]);
+			values.set({});
 			tabs.closeComponents();
+			void catalog.start();
 		},
 		disposables: [
 			// A component in its own tab: given one by its story file, by code, or chosen from the design system shown.
@@ -131,12 +138,12 @@ export const designSystemHost = ({
 				if (raw !== undefined) {
 					const id = readComponentArg(raw);
 					if (id === null) throw new Error('DSNR: Open a component was given something that is not a component.');
-					return asks.openComponent(id).catch(failedFor(true));
+					return handlers.openComponent(id).catch(failedFor(true));
 				}
 				const picked = await pickComponent().catch(failed);
-				if (picked) await asks.openComponent(picked).catch(failed);
+				if (picked) await handlers.openComponent(picked).catch(failed);
 			}),
-			vscode.commands.registerCommand('dsnr.openPrimitives', () => asks.openPrimitives().catch(failed)),
+			vscode.commands.registerCommand('dsnr.openPrimitives', () => handlers.openPrimitives().catch(failed)),
 		],
 	};
 };

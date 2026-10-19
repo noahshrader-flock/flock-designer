@@ -14,7 +14,8 @@ import { showFound, shownFrom } from './designSystem';
 import { designSystemHost } from './designSystemHost';
 import { registerVoice } from './voice';
 import { valueOf } from '../../src/shared/result';
-import { type CodebaseAction, type HostMessage, type Review, readProjectArg, readReview, reviewsOf } from './messages';
+import { type CodebaseAction, type HostMessage, NO_TABS_SHOWN, type Review, readProjectArg, reviewsOf, sameTabs } from './messages';
+import { askRoutes, readReview } from './asks';
 import { type Given, newPrototype, readAsked, readyToStart } from './newPrototype';
 import { watchBuild } from './watchBuild';
 import { coalesce } from './coalesce';
@@ -55,16 +56,8 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 	const provider = new PanelProvider({
 		extensionUri: context.extensionUri,
 		panels,
-		context: () => said(),
 		local: () => localAddresses(),
-		design: () => design.asks,
-		locate: () => locate(),
-		openReview: (review) => openReview(review),
-		openReviewInBrowser: (review) => openReviewInBrowser(review),
-		copyReviewLink: (review) => copyPublishedLink(review),
-		openReviewPublished: (review) => openPublishedPage(review),
-		startPrototype: (answers) => startPrototype(answers).catch(failed),
-		codebase: (action, projectId) => codebaseWork(action, projectId).catch(failed),
+		asks: () => asks,
 		development,
 		...(log ? { log } : {}),
 	});
@@ -92,8 +85,8 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 		return { found: { ...at, designSystem: shown.designSystem }, unreadable: shown.unreadable };
 	};
 	let { found, unreadable } = await findHere();
-	/** What is open, as the panel is told it. */
-	const said = (): Extract<HostMessage, { type: 'context' }> => ({ type: 'context', context: found, ...(unreadable === null ? {} : { unreadable }) });
+	/** What is open, as every page is told it. */
+	const placed = panels.share('placed', { context: found, unreadable });
 	/** The product folder the person opened: VS Code trusts it, so DSNR does, as the app trusts a checkout accepted. */
 	const trust = async () => {
 		if (found.product) await shell.open(found.product).catch(failed);
@@ -103,7 +96,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 		({ found, unreadable } = await findHere());
 		if (core.designSystems.current()?.id !== before) design.anotherShown();
 		await trust();
-		panels.post(said());
+		placed.set({ context: found, unreadable });
 	};
 	await trust();
 	void github.restore().catch(failed);
@@ -128,6 +121,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 		dist: vscode.Uri.joinPath(context.extensionUri, 'dist'),
 		api,
 		panels,
+		asks: () => asks,
 		systems: core.designSystems,
 		local: () => localAddresses(),
 		openVoiceAndTone: voice.open,
@@ -139,6 +133,8 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 		onShown: () => tabsShown(),
 		kept: context.globalState,
 	});
+	// The design system found is read for every page from the start, so the panel and its tabs show the same commit.
+	void design.read();
 	const site = siteIn(storage);
 	const buildReview = buildReviewSite(site, join(context.extensionUri.fsPath, 'dist', 'viewer'));
 	const reviews = new Reviews({
@@ -292,7 +288,25 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 		panels.post({ type: 'projects-changed' });
 	}, 1500);
 	/** The panel marks what is open in the editor: the projects whose review is in front, and the components whose tab is. */
-	const tabsShown = () => panels.showTabs({ projects: reviews.shown(), components: design.shownComponents() });
+	const tabs = panels.share('tabs', NO_TABS_SHOWN, sameTabs);
+	const tabsShown = () => tabs.set({ projects: reviews.shown(), components: design.shownComponents() });
+	/**
+	 * What a DSNR page asks of the extension itself, each checked as the core checks a call's, in one table (`askRoutes`):
+	 * the design system's, and the panel's own. What goes wrong is said where it is answered (`answerCall`).
+	 */
+	const asks = askRoutes({
+		...design.handlers,
+		locateDesignSystem: () => locate(),
+		getStarted: () => vscode.commands.executeCommand('dsnr.getStarted'),
+		// The extension knows whether one can be started, and opens the New dialog if so.
+		askNewPrototype: () => vscode.commands.executeCommand('dsnr.newPrototype'),
+		newPrototype: (title, task, folder) => startPrototype({ title, task, folder }),
+		codebase: (action, projectId) => codebaseWork(action, projectId),
+		openReview,
+		openReviewInBrowser,
+		copyReviewLink: copyPublishedLink,
+		openReviewPublished: openPublishedPage,
+	});
 	/** What a review tab's title bar does, on the review in front; said when there is none. */
 	const inFront = (act: (review: Review) => Promise<void>) => {
 		const review = reviews.active();

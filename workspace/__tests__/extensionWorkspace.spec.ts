@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { connectWorkspace } from '../extension/webview/workspace';
+import { connectPage } from '../extension/webview/workspace';
 
 /**
  * The window's API in DSNR's panel (Phase 3.1): the app's own `createApi`, carried by webview messages. A call goes out
@@ -9,11 +9,12 @@ import { connectWorkspace } from '../extension/webview/workspace';
 const wire = () => {
 	const sent: unknown[] = [];
 	let deliver: (m: unknown) => void = () => undefined;
-	const api = connectWorkspace(
+	const page = connectPage(
 		(m) => sent.push(m),
 		(listener) => (deliver = listener),
-	) as unknown as Record<string, (...a: unknown[]) => unknown>;
-	return { api, sent, deliver: (m: unknown) => deliver(m) };
+	);
+	const api = page.workspace as unknown as Record<string, (...a: unknown[]) => unknown>;
+	return { api, asks: page.asks, sent, deliver: (m: unknown) => deliver(m) };
 };
 
 describe('the panel’s calls to the core', () => {
@@ -29,6 +30,15 @@ describe('the panel’s calls to the core', () => {
 		deliver({ type: 'answer', id: 1, result: { ok: true, value: 'a' } });
 		await expect(a).resolves.toEqual({ ok: true, value: 'a' });
 		await expect(b).resolves.toEqual({ ok: true, value: 'b' });
+	});
+
+	it('send the extension’s asks the same way, by name, numbered with the core’s calls', async () => {
+		const { api, asks, sent, deliver } = wire();
+		void api.listProjects?.();
+		const opened = asks.openComponent('src/A.stories.tsx');
+		expect(sent.at(-1)).toEqual({ type: 'call', id: 2, name: 'openComponent', args: ['src/A.stories.tsx'] });
+		deliver({ type: 'answer', id: 2, result: { ok: true, value: null } });
+		await expect(opened).resolves.toEqual({ ok: true, value: null });
 	});
 
 	it('ignore an answer to nothing asked', () => {

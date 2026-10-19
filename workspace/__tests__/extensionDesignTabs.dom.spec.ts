@@ -1,3 +1,4 @@
+import type { Catalog } from '../src/shared/contract';
 import { act, createElement } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ComponentTab } from '../extension/webview/ComponentTab';
@@ -5,7 +6,7 @@ import { PrimitivesTab } from '../extension/webview/PrimitivesTab';
 import { readTab } from '../extension/webview/tab';
 import { PREVIEW_HEIGHT, PREVIEW_TRY, previewAddress } from '../src/shared/catalog';
 import { SAMPLE_CATALOG } from './extensionSamples';
-import { answer, answerOf, button, calls, callsOf, mount, press, say, sent, type, unmount } from './webviewHarness';
+import { answer, answerOf, button, calls, callsOf, lastAsk, mountPage, press, say, sent, share, shareCatalog, type, unmount } from './webviewHarness';
 import { ASK_EVERY_MS } from '../extension/webview/hooks/askWhile';
 
 /**
@@ -29,19 +30,18 @@ describe('which tab a page is', () => {
 
 describe('a component’s tab', () => {
 	const open = async () => {
-		await mount(createElement(ComponentTab, { id: BUTTON }));
-		await answer('designSystemCatalog', SAMPLE_CATALOG);
+		await mountPage(createElement(ComponentTab, { id: BUTTON }));
+		await shareCatalog(SAMPLE_CATALOG);
 	};
 
-	it('says it is ready, reads the design system shown, and is titled for its component, with its links', async () => {
+	it('says it is ready, shows the design system as the extension read it for every page, and is titled for its component, with its links', async () => {
 		await open();
 		expect(sent[0]).toEqual({ type: 'ready' });
-		expect(calls('designSystemCatalog')[0]?.args).toEqual([false]);
 		expect(document.querySelector('.tab-title')?.textContent).toBe('FSButton');
 		await press(button('Storybook'));
-		expect(sent.at(-1)).toEqual({ type: 'component-link', id: BUTTON, link: 'storybook' });
+		expect(lastAsk()).toEqual(['componentLink', [BUTTON, 'storybook']]);
 		await press(button('GitHub'));
-		expect(sent.at(-1)).toEqual({ type: 'component-link', id: BUTTON, link: 'source' });
+		expect(lastAsk()).toEqual(['componentLink', [BUTTON, 'source']]);
 	});
 
 	it('marks its links as going out of VS Code: the external link icon after each one’s words, not read aloud', async () => {
@@ -82,10 +82,10 @@ describe('a component’s tab', () => {
 		const src = () => document.querySelector('iframe')?.getAttribute('src');
 		expect(src()).toBe(previewAddress(BASE, BUTTON, 'light'));
 		expect(src()).not.toContain('theme=');
-		await say({ type: 'mode', mode: 'dark' });
+		await share('mode', 'dark');
 		expect(src()).toBe(previewAddress(BASE, BUTTON, 'dark'));
 		expect(src()).toContain('&theme=dark');
-		await say({ type: 'mode', mode: 'light' });
+		await share('mode', 'light');
 		expect(src()).toBe(previewAddress(BASE, BUTTON));
 	});
 
@@ -99,14 +99,12 @@ describe('a component’s tab', () => {
 		expect(frame.style.height).toBe('');
 	});
 
-	it('reads the library again when another commit of it is shown, says which, and builds and reads its component anew', async () => {
+	it('shows another commit of the library when the extension reads one, says which, and builds and reads its component anew', async () => {
 		await open();
 		await answer('storyPreview', { state: 'ready', base: BASE });
 		const tokensAsked = calls('componentTokens').length;
 		const branch = 'dsnr/handoff-20261017-ab12';
-		await say({ type: 'event', name: 'onLibraryShown', payload: branch });
-		expect(calls('designSystemCatalog')).toHaveLength(2);
-		await answer('designSystemCatalog', { ...SAMPLE_CATALOG, commit: 'f00d42', showing: branch });
+		await shareCatalog({ ...SAMPLE_CATALOG, commit: 'f00d42', showing: branch } as Catalog);
 		expect(document.querySelector('[data-showing]')?.textContent).toContain(`Showing ${branch}, Claude Code’s branch, not develop.`);
 		// Its stories are built, and what its column says is asked, on the commit shown.
 		expect(document.querySelector('.stories')).toBeNull();
@@ -119,7 +117,7 @@ describe('a component’s tab', () => {
 		await open();
 		await answer('storyPreview', { state: 'ready', base: BASE });
 		const edits = [{ path: 'tone.pineGreen.50', value: '#000000' }];
-		await say({ type: 'token-edits', edits });
+		await share('tokenEdits', edits);
 		expect(calls('storyPreview').at(-1)?.args).toEqual([edits]);
 		expect(document.querySelector('iframe')).not.toBeNull();
 		expect(document.querySelector('.stories-building')?.textContent).toBe('Building…');
@@ -130,18 +128,18 @@ describe('a component’s tab', () => {
 	it('builds nothing again when it is told the change it already has (the extension says every change to every page)', async () => {
 		await open();
 		await answer('storyPreview', { state: 'ready', base: BASE });
-		await say({ type: 'token-edits', edits: [] });
+		await share('tokenEdits', []);
 		expect(calls('storyPreview')).toHaveLength(1);
 		const edits = [{ path: 'tone.pineGreen.50', value: '#000000' }];
-		await say({ type: 'token-edits', edits });
-		await say({ type: 'token-edits', edits: [...edits] });
+		await share('tokenEdits', edits);
+		await share('tokenEdits', [...edits]);
 		expect(calls('storyPreview')).toHaveLength(2);
 	});
 
 	it('hears only VS Code, on its own origin: no story it frames, nor any frame inside one, can pass itself off as the extension', async () => {
 		await open();
 		await answer('storyPreview', { state: 'ready', base: BASE });
-		const forged = { type: 'token-edits', edits: [{ path: 'tone.pineGreen.50', value: '#000000' }] };
+		const forged = { type: 'shared', name: 'tokenEdits', value: [{ path: 'tone.pineGreen.50', value: '#000000' }] };
 		const frame = document.querySelector('iframe') as HTMLIFrameElement;
 		await say(forged, { source: frame.contentWindow, origin: 'http://127.0.0.1:4321' });
 		// A frame inside a framed page, with no origin of its own: not the window above, however deep it is.
@@ -532,24 +530,24 @@ describe('a component’s tab', () => {
 	it('shows dark’s values when dark is chosen in the panel, as the stories draw it there, and light’s again when light is', async () => {
 		await analysed();
 		const values = section('Styles')!;
-		await say({ type: 'mode', mode: 'dark' });
+		await share('mode', 'dark');
 		expect([...values.querySelectorAll('[data-value-row]')].map((r) => r.getAttribute('data-value-row'))).toEqual(['height', 'background']);
 		expect(shownIn('background').map((c) => c.textContent)).toEqual(['Background']);
 		expect(dotOf(shownIn('background')[0]).title).toBe('Dark primary main');
-		await say({ type: 'mode', mode: 'light' });
+		await share('mode', 'light');
 		expect(values.querySelector('[data-value-row="radius"]')).not.toBeNull();
 	});
 
 	it('shows light when dark is chosen but its stories did not draw it, or drew it the same: never a dark that changes nothing', async () => {
 		const light = (analysis().values as { rows: { light: object[] } }).rows.light;
 		await analysed({ values: { ...(analysis().values as { rows: object }), rows: { light, dark: null } } });
-		await say({ type: 'mode', mode: 'dark' });
+		await share('mode', 'dark');
 		// Light's rows: the radius row is in light and not in dark.
 		expect(section('Styles')?.querySelector('[data-value-row="radius"]')).not.toBeNull();
 		document.body.innerHTML = '';
 		// A library DSNR cannot turn dark draws its light twice.
 		await analysed({ values: { ...(analysis().values as { rows: object }), rows: { light, dark: light } } });
-		await say({ type: 'mode', mode: 'dark' });
+		await share('mode', 'dark');
 		expect(section('Styles')?.querySelector('[data-value-row="radius"]')).not.toBeNull();
 		expect(section('Styles')?.querySelector('[data-values-none]')).toBeNull();
 	});
@@ -713,7 +711,7 @@ describe('a component’s tab', () => {
 
 	describe('saving the values tried where they are written (Phase 4)', () => {
 		afterEach(() => void vi.useRealTimers());
-		const SMALL = { property: 'height', value: '32px', targets: ['height:sm:0', 'height:sm:1', 'height:sm:2'] };
+		const SMALL = { property: 'height' as const, value: '32px', targets: ['height:sm:0', 'height:sm:1', 'height:sm:2'] };
 		const ID = 'height\u0000height:sm:0\u0001height:sm:1\u0001height:sm:2';
 		/** The tab with Small's height tried at 32px. */
 		const tryingSmall = async () => {
@@ -751,8 +749,7 @@ describe('a component’s tab', () => {
 			// Let go: a token's change is built, so it is made then, not as it moves.
 			await act(async () => void slider.dispatchEvent(new Event('pointerup', { bubbles: true })));
 			// Told to the extension, which keeps the change for every page: the panel's Changed, and its Save, have it.
-			const told = sent.filter((m) => m.type === 'token-edits').at(-1) as { edits: unknown[] } | undefined;
-			expect(told?.edits).toEqual([{ path: 'radius', value: '12px' }]);
+			expect(calls('setTokenEdits').at(-1)?.args).toEqual([[{ path: 'radius', value: '12px' }]]);
 			expect(changed()).toBeNull();
 		});
 
@@ -768,7 +765,7 @@ describe('a component’s tab', () => {
 			await answer('valueSources', found());
 			expect(changed().querySelector('[data-value-places]')?.textContent).toBe('Written in src/utils/theme.ts, line 158');
 			await press(changed().querySelector('[data-value-places] button') as HTMLElement);
-			expect(sent.at(-1)).toEqual({ type: 'open-library-source', file: 'src/utils/theme.ts', line: 158 });
+			expect(lastAsk()).toEqual(['openLibrarySource', ['src/utils/theme.ts', 158]]);
 			expect(changed().textContent).toContain('Saving writes 1 value where it is written, and nothing else.');
 			// And what writing it moves, as a token change's is said.
 			expect(section('Moved by these values')?.querySelector('[data-reach-summary]')?.textContent).toBe(
@@ -796,12 +793,12 @@ describe('a component’s tab', () => {
 			expect(button('Propose')).toBeUndefined();
 			expect(button('Start over')).toBeUndefined();
 			await press(changed().querySelector('[data-actions-elsewhere]') as HTMLElement);
-			expect(sent.at(-1)).toEqual({ type: 'open-changes' });
+			expect(lastAsk()).toEqual(['openChanges', []]);
 		});
 
 		it('tells the extension what is tried, on the commit it is tried on, so every page has it', async () => {
 			await tryingSmall();
-			expect(sent.filter((m) => m.type === 'value-trial').at(-1)).toEqual({ type: 'value-trial', file: BUTTON, commit: 'abc123', values: [SMALL] });
+			expect(calls('setValueTrial').at(-1)?.args).toEqual([BUTTON, 'abc123', [SMALL]]);
 		});
 
 		it('offers the agent where a value cannot be found, asks it once pressed, and says what it wrote and why', async () => {
@@ -1019,7 +1016,7 @@ describe('a component’s tab', () => {
 
 		it('is asked for once the Changes dialog is opened with a change being tried, and says it is drawing every component until it is answered', async () => {
 			await analysed();
-			await say({ type: 'token-edits', edits: RED });
+			await share('tokenEdits', RED);
 			// Not while the dialog is shut: drawing every component is for someone who asked to see what it moves.
 			expect(calls('changeReach')).toHaveLength(0);
 			await openChanges();
@@ -1029,7 +1026,7 @@ describe('a component’s tab', () => {
 
 		it('names each component the change moves, with what changed as the Values say it, and how many it does not move', async () => {
 			await analysed();
-			await say({ type: 'token-edits', edits: RED });
+			await share('tokenEdits', RED);
 			await openChanges();
 			await answer('changeReach', moved());
 			const reach = part() as HTMLElement;
@@ -1043,20 +1040,20 @@ describe('a component’s tab', () => {
 			const icon = reach.querySelector(`[data-moved="${STORY('FSIconButton')}"]`) as HTMLElement;
 			expect(icon.querySelector('.value-cell')?.textContent).toBe('Radius · sm · dark8px → 12px');
 			await press(icon.querySelector('h3 button') as HTMLElement);
-			expect(sent.at(-1)).toEqual({ type: 'open-component', id: STORY('FSIconButton') });
+			expect(lastAsk()).toEqual(['openComponent', [STORY('FSIconButton')]]);
 			// Moved in a part its values do not read: said as that.
 			expect(reach.querySelector(`[data-moved="${STORY('FSTextField')}"]`)?.textContent).toContain('in a part its values do not read');
 		});
 
 		it('says when the change moves nothing, and when it could not be drawn', async () => {
 			await analysed();
-			await say({ type: 'token-edits', edits: RED });
+			await share('tokenEdits', RED);
 			await openChanges();
 			await answer('changeReach', moved({ moved: [], unchanged: 44, notDrawn: [] }));
 			expect(part()?.querySelector('[data-reach-summary]')?.textContent).toBe(
 				'It moves no component, in their stories drawn: 44 components unchanged.',
 			);
-			await say({ type: 'token-edits', edits: [{ path: 'tone.pineGreen.50', value: '#000000' }] });
+			await share('tokenEdits', [{ path: 'tone.pineGreen.50', value: '#000000' }]);
 			await answer('changeReach', { state: 'failed', error: 'the change did not build' });
 			expect(part()?.textContent).toContain('the change did not build');
 		});
@@ -1102,7 +1099,7 @@ describe('a component’s tab', () => {
 			expect(count.disabled).toBe(false);
 			expect(count.nextElementSibling).toBe(after);
 			// A token change being tried moves its stories too, so it is counted here as well; and still nothing is put in the column.
-			await say({ type: 'token-edits', edits: [{ path: 'radius', value: '12px' }] });
+			await share('tokenEdits', [{ path: 'radius', value: '12px' }]);
 			expect(count.textContent).toBe('2 changes');
 			expect(column.firstElementChild).toBe(first);
 			expect(document.querySelector('.tab')?.textContent).not.toContain('Showing the change being tried');
@@ -1178,14 +1175,14 @@ describe('a component’s tab', () => {
 			await type(slider('Height'), '30');
 			expect(tried()).toHaveLength(1);
 			await escape();
-			await say({ type: 'value-trials', trials: {} });
+			await share('valueTrials', {});
 			expect(tried()).toEqual([]);
 			expect(values().querySelector('[data-tried]')).toBeNull();
 			// Its instances are named by its drawing on a commit: what was tried on another is not this one's.
-			const tall = { property: 'height', value: '40px', targets: ['height:sm:0', 'height:sm:1', 'height:sm:2'] };
-			await say({ type: 'value-trials', trials: { [BUTTON]: { commit: 'def456', values: [tall] } } });
+			const tall = { property: 'height' as const, value: '40px', targets: ['height:sm:0', 'height:sm:1', 'height:sm:2'] };
+			await share('valueTrials', { [BUTTON]: { commit: 'def456', values: [tall] } });
 			expect(tried()).toEqual([]);
-			await say({ type: 'value-trials', trials: { [BUTTON]: { commit: 'abc123', values: [tall] } } });
+			await share('valueTrials', { [BUTTON]: { commit: 'abc123', values: [tall] } });
 			expect(tried()).toEqual([tall]);
 		});
 
@@ -1257,9 +1254,9 @@ describe('a component’s tab', () => {
 			expect(users().map((u) => u.textContent)).toEqual(['FSButton1 value', 'FSIconButtoninside']);
 			expect(summary()).toBe('Drawn by 2 components');
 			await press(users()[1]?.querySelector('button') as HTMLElement);
-			expect(sent.at(-1)).toEqual({ type: 'open-component', id: STORY('FSIconButton') });
+			expect(lastAsk()).toEqual(['openComponent', [STORY('FSIconButton')]]);
 			// Changed: what the change reaches, as "Moved by the change" has it, marks the ones that moved.
-			await say({ type: 'token-edits', edits: [{ path: 'radius', value: '12px' }] });
+			await share('tokenEdits', [{ path: 'radius', value: '12px' }]);
 			expect(calls('changeReach').at(-1)?.args).toEqual([[{ path: 'radius', value: '12px' }]]);
 			expect(summary()).toBe('Drawn by 2 components; drawing the change to see which move');
 			await answer('changeReach', {
@@ -1385,35 +1382,34 @@ describe('a component’s tab', () => {
 	});
 
 	it('says, when the design system cannot be read here, that the panel says why, and reads it again on Try again', async () => {
-		await mount(createElement(ComponentTab, { id: BUTTON }));
-		await answer('designSystemCatalog', { state: 'no-branch', root: '/work/lib', branch: 'develop' });
+		await mountPage(createElement(ComponentTab, { id: BUTTON }));
+		await shareCatalog({ state: 'no-branch', root: '/work/lib', branch: 'develop' });
 		expect(document.querySelector('.tab-note')?.textContent).toContain('The design system cannot be read here: the DSNR panel says why.');
 		await press(button('Try again'));
-		expect(calls('designSystemCatalog')).toHaveLength(2);
-		await answer('designSystemCatalog', SAMPLE_CATALOG);
+		expect(lastAsk()).toEqual(['syncDesignSystem', []]);
+		await shareCatalog(SAMPLE_CATALOG);
 		expect(document.querySelector('.tab-title')?.textContent).toBe('FSButton');
 	});
 
 	it('says why it could not be read, with Try again', async () => {
-		await mount(createElement(PrimitivesTab));
-		const call = calls('designSystemCatalog').at(-1);
-		await say({ type: 'answer', id: call?.id, result: { ok: false, error: 'git could not read it.' } });
+		await mountPage(createElement(PrimitivesTab));
+		await share('catalog', { system: null, catalog: null, error: 'git could not read it.', syncing: false });
 		expect(document.querySelector('.tab-note')?.textContent).toContain('git could not read it.');
 		await press(button('Try again'));
-		expect(calls('designSystemCatalog')).toHaveLength(2);
+		expect(lastAsk()).toEqual(['syncDesignSystem', []]);
 	});
 
 	it('says when the design system shown no longer has it', async () => {
-		await mount(createElement(ComponentTab, { id: 'src/Gone.stories.tsx' }));
-		await answer('designSystemCatalog', SAMPLE_CATALOG);
+		await mountPage(createElement(ComponentTab, { id: 'src/Gone.stories.tsx' }));
+		await shareCatalog(SAMPLE_CATALOG);
 		expect(document.querySelector('.tab-note')?.textContent).toBe('The design system shown no longer has this component. Close this tab.');
 	});
 });
 
 describe('the Primitives tab', () => {
 	const open = async () => {
-		await mount(createElement(PrimitivesTab));
-		await answer('designSystemCatalog', SAMPLE_CATALOG);
+		await mountPage(createElement(PrimitivesTab));
+		await shareCatalog(SAMPLE_CATALOG);
 	};
 
 	it('has a chip for each primitive, how many it has or that it is not defined, in the vocabulary’s order', async () => {
@@ -1455,7 +1451,7 @@ describe('the Primitives tab', () => {
 
 	it('shows the change being tried in the panel', async () => {
 		await open();
-		await say({ type: 'token-edits', edits: [{ path: 'tone.pineGreen.60', value: '#000000' }] });
+		await share('tokenEdits', [{ path: 'tone.pineGreen.60', value: '#000000' }]);
 		expect(document.querySelector('.tab')?.textContent).toContain('Showing the change being tried in the panel (1 token).');
 	});
 });

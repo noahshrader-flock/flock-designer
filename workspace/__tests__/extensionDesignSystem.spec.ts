@@ -1,5 +1,18 @@
 import { describe, expect, it, vi } from 'vitest';
-import { ModeChoice, TokenTrial, ValueTrial, componentLink, componentOf, showFound, shownFrom, libraryFileIn } from '../extension/src/designSystem';
+import {
+	componentLink,
+	componentOf,
+	editsAfterRead,
+	keepMode,
+	keptMode,
+	libraryFileIn,
+	showFound,
+	shownFrom,
+	withTrial,
+} from '../extension/src/designSystem';
+import { SAMPLE_CATALOG } from './extensionSamples';
+import { Shared } from '../extension/src/sharedValues';
+import { sameChange } from '../src/shared/tokens';
 import type { Catalog, CatalogComponent, ConnectedDesignSystem } from '../src/shared/contract';
 import { ok } from '../src/shared/result';
 
@@ -60,16 +73,16 @@ describe('the mode components are shown in', () => {
 		const state = new Map<string, unknown>();
 		const kept = { get: (key: string) => state.get(key), update: async (key: string, value: unknown) => void state.set(key, value) };
 		const post = vi.fn();
-		const mode = new ModeChoice(kept as never, post);
+		const mode = new Shared('mode', keptMode(kept), post, Object.is, (next) => keepMode(kept, next));
 		expect(mode.current()).toBe('light');
 		mode.set('dark');
-		expect(post).toHaveBeenCalledWith({ type: 'mode', mode: 'dark' });
+		expect(post).toHaveBeenCalledWith({ type: 'shared', name: 'mode', value: 'dark' });
 		mode.set('dark');
 		expect(post).toHaveBeenCalledTimes(1);
 		// A new session reads what was kept; what was kept that is no mode is light.
-		expect(new ModeChoice(kept as never, vi.fn()).current()).toBe('dark');
+		expect(keptMode(kept)).toBe('dark');
 		state.set('dsnr.mode', 'sepia');
-		expect(new ModeChoice(kept as never, vi.fn()).current()).toBe('light');
+		expect(keptMode(kept)).toBe('light');
 	});
 });
 
@@ -77,42 +90,57 @@ describe('the values tried on every component (the changes being tried, DESIGN_S
 	const SMALL = { property: 'height' as const, value: '32px', targets: ['a', 'b'] };
 	it('are kept by the extension, each with its commit, told to every page only when they change, and none kept when none is tried', () => {
 		const post = vi.fn();
-		const values = new ValueTrial(post);
-		values.set('Button.stories.tsx', 'abc123', [SMALL]);
-		expect(post).toHaveBeenLastCalledWith({ type: 'value-trials', trials: { 'Button.stories.tsx': { commit: 'abc123', values: [SMALL] } } });
+		const values = new Shared('valueTrials', {}, post);
+		const set = (file: string, commit: string, tried: (typeof SMALL)[]) => values.set(withTrial(values.current(), file, commit, tried));
+		set('Button.stories.tsx', 'abc123', [SMALL]);
+		expect(post).toHaveBeenLastCalledWith({
+			type: 'shared',
+			name: 'valueTrials',
+			value: { 'Button.stories.tsx': { commit: 'abc123', values: [SMALL] } },
+		});
 		// The same again says nothing; on another commit it is another change.
-		values.set('Button.stories.tsx', 'abc123', [SMALL]);
+		set('Button.stories.tsx', 'abc123', [SMALL]);
 		expect(post).toHaveBeenCalledTimes(1);
-		values.set('Button.stories.tsx', 'def456', [SMALL]);
+		set('Button.stories.tsx', 'def456', [SMALL]);
 		expect(post).toHaveBeenCalledTimes(2);
-		values.set('Badge.stories.tsx', 'def456', [SMALL]);
-		values.set('Button.stories.tsx', 'def456', []);
+		set('Badge.stories.tsx', 'def456', [SMALL]);
+		set('Button.stories.tsx', 'def456', []);
 		expect(values.current()).toEqual({ 'Badge.stories.tsx': { commit: 'def456', values: [SMALL] } });
-		values.clear();
-		expect(post).toHaveBeenLastCalledWith({ type: 'value-trials', trials: {} });
-		// Nothing to clear says nothing.
-		values.clear();
-		expect(post).toHaveBeenCalledTimes(5);
+		// None tried on one that has none is no change.
+		set('Card.stories.tsx', 'def456', []);
+		expect(post).toHaveBeenCalledTimes(4);
+	});
+});
+
+describe('the change to the tokens being tried, once the library is read again', () => {
+	const ready = SAMPLE_CATALOG;
+	const gone = { path: 'tone.pineGreen.50', value: '#000000' };
+	const kept = { path: 'spacing', value: '12px' };
+	const without = { ...ready, tokens: { ...ready.tokens, tokens: ready.tokens.tokens.filter((t) => t.path !== gone.path) } };
+	it('keeps only what was tried on tokens the library still has, as the app does', () => {
+		expect(editsAfterRead([gone, kept], without)).toEqual([kept]);
+	});
+	it('lets nothing go for a branch handed to Claude Code shown in the library’s place', () => {
+		expect(editsAfterRead([gone, kept], { ...without, showing: 'dsnr/handoff-20261017-ab12' })).toEqual([gone, kept]);
 	});
 });
 
 describe('the change to the tokens being tried', () => {
 	it('is kept by the extension and told to every page, only when it changes', () => {
 		const post = vi.fn();
-		const trial = new TokenTrial(post);
-		expect(trial.current()).toEqual([]);
+		const trial = new Shared('tokenEdits', [], post, sameChange);
 		const edits = [
 			{ path: 'palette.light.primary.main', value: '#112233' },
 			{ path: 'spacing', value: '12px' },
 		];
 		trial.set(edits);
-		expect(post).toHaveBeenCalledWith({ type: 'token-edits', edits });
+		expect(post).toHaveBeenCalledWith({ type: 'shared', name: 'tokenEdits', value: edits });
 		expect(trial.current()).toEqual(edits);
 		// The same change in another order is the same change: nothing is told.
 		trial.set([...edits].reverse());
 		expect(post).toHaveBeenCalledTimes(1);
 		trial.set([]);
-		expect(post).toHaveBeenLastCalledWith({ type: 'token-edits', edits: [] });
+		expect(post).toHaveBeenLastCalledWith({ type: 'shared', name: 'tokenEdits', value: [] });
 	});
 });
 

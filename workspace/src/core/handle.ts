@@ -1,4 +1,4 @@
-import { type Answer, type CommentRef, type EventName, type InvokeName, type Payload, type Result } from '../shared/contract';
+import { type Answer, type CommentRef, type EventName, type InvokeName, type Payload, type Result, type WorkspaceApi } from '../shared/contract';
 import { asRecord } from '../shared/json';
 import { fail, ok } from '../shared/result';
 import { isSafeBranchName } from './services/platform/git';
@@ -28,35 +28,53 @@ const guard =
 /** A call the window may make, as the core answers it: what it sent, untrusted, in; a Result out, never a throw. */
 export type Route = (...sent: unknown[]) => Promise<Result<unknown>>;
 
-/** Every call registered, by its name: what the shell serves, and nothing else. */
-const routes = new Map<InvokeName, Route>();
-
-/** Starts the table again: a registration is the whole of it (`registerCalls`), so registering again replaces it. */
-export const clearRoutes = (): void => routes.clear();
-
-/** The calls registered, for the shell to serve. */
-export const served = (): ReadonlyMap<InvokeName, Route> => routes;
-
 /** Turns what the window sent into what a handler takes, or throws a sentence saying why it will not. */
 export type Check<T> = (value: unknown) => T;
 
+/** What a call of `Api` answers, unwrapped from its Result. */
+export type AnswerOf<Api, K extends keyof Api> = Api[K] extends (...args: never[]) => Promise<Result<infer T>> ? T : never;
+
 /**
- * Answers the window's call `name`: each argument through its check, in order, before `fn` sees it, so the types a
- * handler declares are what it really has. Whatever the window sends is untrusted, and this is the one place it is
- * checked.
+ * A table of calls, by name, each answered by one handler with its arguments checked first: the core's own (`handle`), and
+ * any shell's for what it answers itself (the VS Code extension's asks). `served` is the table, for the shell to serve.
  */
-export const handle = <K extends InvokeName, Args extends unknown[]>(
+export const callTable = <Api>() => {
+	const routes = new Map<keyof Api & string, Route>();
+	return {
+		/**
+		 * Answers the call `name`: each argument through its check, in order, before `fn` sees it, so the types a handler
+		 * declares are what it really has. Whatever the window sends is untrusted, and this is the one place it is checked.
+		 */
+		handle: <K extends keyof Api & string, Args extends unknown[]>(
+			name: K,
+			checks: { [I in keyof Args]: Check<Args[I]> },
+			fn: (...args: Args) => AnswerOf<Api, K> | Promise<AnswerOf<Api, K>>,
+		): void => {
+			// One place answers each call: a second handler for a name is refused.
+			if (routes.has(name)) throw new Error(`${name} is answered twice.`);
+			routes.set(
+				name,
+				guard((...sent: unknown[]) => fn(...((checks as Check<unknown>[]).map((check, i) => check(sent[i])) as Args))),
+			);
+		},
+		served: (): ReadonlyMap<keyof Api & string, Route> => routes,
+		/** Starts the table again: a registration is the whole of it, so registering again replaces it. */
+		clear: (): void => routes.clear(),
+	};
+};
+
+// The contract's calls, not its events (`onAgentLog`, ...), which `WorkspaceApi` has too: so narrowed to `InvokeName`.
+const core = callTable<WorkspaceApi>();
+/** Starts the core's table again: a registration is the whole of it (`registerCalls`), so registering again replaces it. */
+export const clearRoutes = core.clear;
+/** The core's calls registered, for the shell to serve. */
+export const served = core.served as () => ReadonlyMap<InvokeName, Route>;
+/** Answers the window's call `name` in the core's table (`callTable`). */
+export const handle = core.handle as <K extends InvokeName, Args extends unknown[]>(
 	name: K,
 	checks: { [I in keyof Args]: Check<Args[I]> },
 	fn: (...args: Args) => Answer<K> | Promise<Answer<K>>,
-): void => {
-	// One place answers each call: a second handler for a name is refused.
-	if (routes.has(name)) throw new Error(`${name} is answered twice.`);
-	routes.set(
-		name,
-		guard((...sent: unknown[]) => fn(...((checks as Check<unknown>[]).map((check, i) => check(sent[i])) as Args))),
-	);
-};
+) => void;
 
 const isPositiveInteger = (v: unknown): v is number => typeof v === 'number' && Number.isSafeInteger(v) && v > 0;
 

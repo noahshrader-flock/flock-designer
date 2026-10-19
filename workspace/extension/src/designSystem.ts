@@ -2,12 +2,12 @@ import { resolve, sep } from 'node:path';
 import type * as VsCode from 'vscode';
 import type { Context } from '../../src/core/services/projects/findContext';
 import { type DesignSystemsMemory, systemAt } from '../../src/core/services/designSystem/designSystems';
-import type { CatalogComponent, ConnectedDesignSystem, TokenEdit, TriedValue, WorkspaceApi } from '../../src/shared/contract';
+import type { Catalog, CatalogComponent, ConnectedDesignSystem, TokenEdit, TriedValue, WorkspaceApi } from '../../src/shared/contract';
+import { editsKept } from '../../src/shared/tokens';
 import { sameTried } from '../../src/shared/contract';
 import { errorText, valueOf } from '../../src/shared/result';
 import { DEFAULT_THEME, type Theme, isTheme } from '../../src/shared/prototypeTheme';
-import { sameChange } from '../../src/shared/tokens';
-import type { ComponentLink, HostMessage, ValueTrials } from './messages';
+import type { ComponentLink, ValueTrials } from './messages';
 
 const same = (a: ConnectedDesignSystem, b: ConnectedDesignSystem): boolean =>
 	(Object.keys(a) as (keyof ConnectedDesignSystem)[]).every((k) => a[k] === b[k]);
@@ -36,80 +36,36 @@ export const showFound = async (
 };
 
 /**
- * The change to the tokens being tried (ELECTRON_MIGRATION_PLAN 6.2), kept by the extension rather than one page: the
- * panel makes it, and every DSNR page is told it (`post`), so a component's tab builds its stories with it, and a panel
- * loaded again finds it as it was. Told only when it changes; none when another design system is shown.
+ * The values tried on every component with one component's set (the changes being tried, DESIGN_SYSTEM.md): kept with the
+ * library's commit they were tried on, none tried none kept. The same object when nothing changes, so it tells nobody
+ * (`Shared`).
  */
-export class TokenTrial {
-	private edits: TokenEdit[] = [];
-
-	constructor(private readonly post: (message: Extract<HostMessage, { type: 'token-edits' }>) => void) {}
-
-	current(): TokenEdit[] {
-		return this.edits;
-	}
-
-	set(edits: TokenEdit[]): void {
-		if (sameChange(edits, this.edits)) return;
-		this.edits = edits;
-		this.post({ type: 'token-edits', edits });
-	}
-}
+export const withTrial = (trials: ValueTrials, file: string, commit: string, values: TriedValue[]): ValueTrials => {
+	const was = trials[file];
+	if (values.length === 0 ? was === undefined : was?.commit === commit && sameTried(was.values, values)) return trials;
+	const { [file]: _gone, ...rest } = trials;
+	return values.length === 0 ? rest : { ...rest, [file]: { commit, values } };
+};
 
 /**
- * The values tried on each component (the changes being tried, DESIGN_SYSTEM.md), kept by the extension rather than one
- * tab, as the change to the tokens is (`TokenTrial`): a tab tries them, and every DSNR page is told (`post`), so the
- * panel's Changes lists every component's and its tab draws its own. Each is kept with the library's commit it was tried
- * on; none tried is none kept. Told only when they change; none when another design system or another mode is shown.
+ * The change to the tokens being tried, once the library has been read again: only what was tried on tokens it still has.
+ * A branch handed to Claude Code, shown in the library's place, is not the library, so nothing tried is let go for it.
  */
-export class ValueTrial {
-	private trials: ValueTrials = {};
-
-	constructor(private readonly post: (message: Extract<HostMessage, { type: 'value-trials' }>) => void) {}
-
-	current(): ValueTrials {
-		return this.trials;
-	}
-
-	set(file: string, commit: string, values: TriedValue[]): void {
-		const was = this.trials[file];
-		if (values.length === 0 ? was === undefined : was?.commit === commit && sameTried(was.values, values)) return;
-		const { [file]: _gone, ...rest } = this.trials;
-		this.trials = values.length === 0 ? rest : { ...rest, [file]: { commit, values } };
-		this.post({ type: 'value-trials', trials: this.trials });
-	}
-
-	clear(): void {
-		if (Object.keys(this.trials).length === 0) return;
-		this.trials = {};
-		this.post({ type: 'value-trials', trials: this.trials });
-	}
-}
+export const editsAfterRead = (edits: TokenEdit[], read: Catalog): TokenEdit[] =>
+	read.state === 'ready' && read.showing !== null ? edits : editsKept(edits, read);
 
 /** Where the mode chosen is kept, in VS Code's state for the extension: the same in every window, and after a restart. */
 const MODE = 'dsnr.mode';
 
 /**
- * The mode components are shown in (MODES_PLAN Phase 1): one choice, made in the panel, kept (`kept`) so every page and
- * every session opens in it, and told to every DSNR page when it changes (`post`). Light until dark is chosen.
+ * The mode components are shown in (MODES_PLAN Phase 1), as it was kept (`keepMode`): one choice, so every page and every
+ * session opens in it. Light until dark is chosen.
  */
-export class ModeChoice {
-	constructor(
-		private readonly kept: Pick<VsCode.Memento, 'get' | 'update'>,
-		private readonly post: (message: Extract<HostMessage, { type: 'mode' }>) => void,
-	) {}
-
-	current(): Theme {
-		const kept = this.kept.get<unknown>(MODE);
-		return isTheme(kept) ? kept : DEFAULT_THEME;
-	}
-
-	set(mode: Theme): void {
-		if (mode === this.current()) return;
-		void this.kept.update(MODE, mode);
-		this.post({ type: 'mode', mode });
-	}
-}
+export const keptMode = (kept: Pick<VsCode.Memento, 'get'>): Theme => {
+	const mode = kept.get<unknown>(MODE);
+	return isTheme(mode) ? mode : DEFAULT_THEME;
+};
+export const keepMode = (kept: Pick<VsCode.Memento, 'update'>, mode: Theme): void => void kept.update(MODE, mode);
 
 /** The component of the design system shown with this story file, as its catalog lists it now; refused for any other. */
 export const componentOf = async (api: Pick<WorkspaceApi, 'designSystemCatalog'>, id: string): Promise<CatalogComponent> => {

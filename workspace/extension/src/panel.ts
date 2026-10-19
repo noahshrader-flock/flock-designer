@@ -1,10 +1,10 @@
 import { watch } from 'node:fs';
 import * as vscode from 'vscode';
-import { type DesignSystemAsks, type Panels, answerPage, toldOnReady } from './bridge';
+import type { Route } from '../../src/core/handle';
+import { type Panels, receivePage } from './bridge';
 import { afterQuiet, whatChanged } from './devReload';
 import { type LocalAddresses, newNonce, panelHtml } from './html';
-import { type CodebaseAction, type DesignTab, type HostMessage, type Review, readMessage } from './messages';
-import type { Given } from './newPrototype';
+import type { AskName, DesignTab } from './messages';
 import { failed } from './ui';
 
 /**
@@ -28,35 +28,12 @@ interface PanelDeps {
 	extensionUri: vscode.Uri;
 	panels: Panels;
 	local: () => Promise<LocalAddresses>;
-	/** The design system's asks, made once the core is: the page asks them only once it is shown. */
-	design: () => DesignSystemAsks;
-	/** What is open now (the product, its design system, the design repository, and what is missing), as the page is told it. */
-	context: () => Extract<HostMessage, { type: 'context' }>;
-	locate: () => Promise<void>;
-	openReview: (review: Review) => Promise<void>;
-	openReviewInBrowser: (review: Review) => Promise<void>;
-	/** Copies the link of the review's published page, or says it is not published yet. */
-	copyReviewLink: (review: Review) => Promise<void>;
-	/** Opens the review's published page in the browser, or says it is not published yet. */
-	openReviewPublished: (review: Review) => Promise<void>;
-	/** Does what the panel asked of a project's codebase work: Handoff, Share, or the work on GitHub. */
-	codebase: (action: CodebaseAction, projectId: string) => Promise<void>;
-	/** Starts a prototype from what the panel's dialog asked. */
-	startPrototype: (answers: Given) => Promise<void>;
-	/** Run from its source: the panel follows its own build. */
+	/** The extension's asks, which the panel makes as every page does (`receivePage`). */
+	asks: () => ReadonlyMap<AskName, Route>;
 	development: boolean;
-	/** Where a run from source says what it did: View › Output › DSNR. */
 	log?: vscode.LogOutputChannel;
 }
 
-/**
- * DSNR's panel in the side bar: a webview of the extension's own build, allowed to load from its `dist/` folder and
- * nowhere else. What it asks is read in exactly its shape (`readMessage`): a call is answered from the core's table, the
- * design system's asks as any DSNR page's are (`answerPage`), and the panel's own (locate the design system, get started,
- * a review in a tab or the browser, New prototype and starting one, a project's codebase work) are the shell's. Who is
- * signed in is said beside the DSNR mark in VS Code's own title bar (`showAccount`), where Sign in and the account are. Run from its
- * source, it follows its own build: a rebuilt page reloads the panel, a rebuilt extension restarts the extension host.
- */
 export class PanelProvider implements vscode.WebviewViewProvider {
 	private view: vscode.WebviewView | undefined;
 	private login: string | undefined;
@@ -83,47 +60,10 @@ export class PanelProvider implements vscode.WebviewViewProvider {
 		view.onDidDispose(() => {
 			this.view = undefined;
 		});
-		view.webview.onDidReceiveMessage((raw: unknown) => void this.receive(view.webview, raw));
+		view.webview.onDidReceiveMessage((raw: unknown) => void receivePage(this.deps.panels, view.webview, raw, this.deps.asks(), failed));
 		if (this.deps.development) this.follow(view);
 	}
 
-	private async receive(webview: vscode.Webview, raw: unknown): Promise<void> {
-		const message = readMessage(raw);
-		if (!message) return;
-		try {
-			if (await answerPage(webview, message, this.deps.design())) return;
-			switch (message.type) {
-				case 'ready':
-					// Told once the page listens: a message posted before then is lost. And the change to the tokens being tried, and the mode.
-					await webview.postMessage(this.deps.context());
-					for (const told of toldOnReady(this.deps.design())) await webview.postMessage(told);
-					// And what was held for the page until it listened (a dialog asked for while the panel was hidden).
-					return this.deps.panels.ready(webview);
-				case 'locate-design-system':
-					return await this.deps.locate();
-				case 'open-review':
-					return await this.deps.openReview(message);
-				case 'open-review-in-browser':
-					return await this.deps.openReviewInBrowser(message);
-				case 'copy-review-link':
-					return await this.deps.copyReviewLink(message);
-				case 'open-review-published':
-					return await this.deps.openReviewPublished(message);
-				case 'codebase':
-					return await this.deps.codebase(message.action, message.projectId);
-				case 'get-started':
-					return void (await vscode.commands.executeCommand('dsnr.getStarted'));
-				case 'ask-new-prototype':
-					return void (await vscode.commands.executeCommand('dsnr.newPrototype'));
-				case 'new-prototype':
-					return await this.deps.startPrototype(message);
-			}
-		} catch (err) {
-			failed(err);
-		}
-	}
-
-	/** Reloads the panel, or restarts the extension, when the build in `dist/` changes. Stops when the panel goes. */
 	private follow(view: vscode.WebviewView): void {
 		const reload = afterQuiet(150, () => {
 			this.deps.panels.unready(view.webview);

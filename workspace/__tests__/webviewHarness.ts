@@ -1,4 +1,7 @@
-import { act, type createElement } from 'react';
+import { SharedProvider } from '../extension/webview/shared';
+import { type SharedName, type SharedValues, isAsk } from '../extension/src/messages';
+import type { Catalog } from '../src/shared/contract';
+import { act, createElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach } from 'vitest';
 
@@ -36,6 +39,9 @@ export const mount = async (element: ReturnType<typeof createElement>) => {
 	await act(async () => root?.render(element));
 };
 
+/** A DSNR page mounted as `main.tsx` mounts it: inside the one provider of what every page shares, which says it is ready. */
+export const mountPage = (page: ReturnType<typeof createElement>) => mount(createElement(SharedProvider, null, page));
+
 /**
  * A message to the page, as it is posted: by default the extension's, which VS Code posts on the page's own origin, from
  * its host frame, which the page cannot name (VS Code's own script makes `window.parent` the page itself). A test of what
@@ -53,6 +59,19 @@ export const answer = async (name: string, value: unknown) => {
 	if (!call) throw new Error(`the page made no ${name} call: ${JSON.stringify(sent)}`);
 	await say({ type: 'answer', id: call.id, result: { ok: true, value } });
 };
+
+/** The last ask of the extension's the page made (`PageAsks`): its name and what it carried. */
+export const lastAsk = (): [string, unknown[]] | undefined => {
+	const asked = sent.filter((m) => m.type === 'call' && isAsk(String(m.name))).at(-1);
+	return asked && [String(asked.name), asked.args as unknown[]];
+};
+
+/** The design system as the extension reads it for every page, told to the page: FUI, read as `catalog`. */
+export const shareCatalog = async (catalog: Catalog, more: Partial<SharedValues['catalog']> = {}) =>
+	share('catalog', { system: { id: 'flocksafety/flock-react-component-lib', name: 'FUI' }, catalog, error: null, syncing: false, ...more });
+
+/** A value every page shares, told as the extension tells it (`Shared`). */
+export const share = async <K extends SharedName>(name: K, value: SharedValues[K]) => say({ type: 'shared', name, value });
 
 /** The page's calls to `name` for one kind of change (`ChangeKinds`), its first argument, in order. */
 export const callsOf = (name: string, kind: string) => calls(name).filter((c) => c.args?.[0] === kind);

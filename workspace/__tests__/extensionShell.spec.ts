@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { VsCodeGitHub } from '../extension/src/github';
 import { openableLink, vscodePorts } from '../extension/src/vscodePorts';
-import { reviewsOf } from '../extension/src/messages';
+import { NO_TABS_SHOWN, reviewsOf, sameTabs } from '../extension/src/messages';
 import { Reviews, answerReview, reviewPage, reviewPath } from '../extension/src/review';
 import { Panels, answerCall, hostApi } from '../extension/src/bridge';
 import type { Route } from '../src/core/handle';
@@ -650,39 +650,44 @@ describe('what the extension asks the panel to show', () => {
 		return { posted, webview: { postMessage: async (m: unknown) => void posted.push(m) } as never };
 	};
 
-	it('tells a page that listens which tabs are in front, once one is, and every page when they change', () => {
+	it('tells a page that listens every value pages share, and every page when one changes, only then', async () => {
 		const panels = new Panels();
+		const tabs = panels.share('tabs', NO_TABS_SHOWN, sameTabs);
 		const a = webview();
 		panels.add(a.webview);
-		panels.ready(a.webview);
-		expect(a.posted).toEqual([]);
-		panels.showTabs({ projects: ['demo'], components: ['src/FSButton.stories.tsx'] });
-		expect(a.posted).toEqual([{ type: 'tabs-shown', projects: ['demo'], components: ['src/FSButton.stories.tsx'] }]);
+		await panels.ready(a.webview);
+		expect(a.posted).toEqual([{ type: 'shared', name: 'tabs', value: NO_TABS_SHOWN }]);
+		const front = { projects: ['demo'], components: ['src/FSButton.stories.tsx'] };
+		tabs.set(front);
+		expect(a.posted.at(-1)).toEqual({ type: 'shared', name: 'tabs', value: front });
+		// The same again tells nobody.
+		tabs.set({ projects: ['demo'], components: ['src/FSButton.stories.tsx'] });
+		expect(a.posted).toHaveLength(2);
 		// A page that starts later is told what is in front now.
 		const b = webview();
 		panels.add(b.webview);
-		panels.ready(b.webview);
-		expect(b.posted).toEqual([{ type: 'tabs-shown', projects: ['demo'], components: ['src/FSButton.stories.tsx'] }]);
+		await panels.ready(b.webview);
+		expect(b.posted).toEqual([{ type: 'shared', name: 'tabs', value: front }]);
 	});
 
-	it('is held until the page is listening, then sent once: a later request replaces an earlier one it never saw', () => {
+	it('is held until the page is listening, then sent once: a later request replaces an earlier one it never saw', async () => {
 		const panels = new Panels();
 		const a = webview();
 		panels.add(a.webview);
 		panels.show({ type: 'open-dialog', dialog: { kind: 'assign', projectId: 'demo' } });
 		panels.show({ type: 'open-dialog', dialog: { kind: 'new' } });
 		expect(a.posted).toEqual([]);
-		panels.ready(a.webview);
+		await panels.ready(a.webview);
 		expect(a.posted).toEqual([{ type: 'open-dialog', dialog: { kind: 'new' } }]);
-		panels.ready(a.webview);
+		await panels.ready(a.webview);
 		expect(a.posted).toHaveLength(1);
 	});
 
-	it('is sent at once to a page that is listening', () => {
+	it('is sent at once to a page that is listening', async () => {
 		const panels = new Panels();
 		const a = webview();
 		panels.add(a.webview);
-		panels.ready(a.webview);
+		await panels.ready(a.webview);
 		panels.show({ type: 'open-dialog', dialog: { kind: 'new' } });
 		expect(a.posted).toEqual([{ type: 'open-dialog', dialog: { kind: 'new' } }]);
 	});
@@ -704,14 +709,14 @@ describe('what the extension asks the panel to show', () => {
 		return { view: v, hide: () => set(false), showAgain: () => set(true), dispose: () => disposed.forEach((l) => l()) };
 	};
 
-	it('reaches a page VS Code keeps while hidden: hiding it is not losing it, so a dialog asked for after still opens', () => {
+	it('reaches a page VS Code keeps while hidden: hiding it is not losing it, so a dialog asked for after still opens', async () => {
 		// The regression: the panel is kept while hidden (PANEL_VIEW_OPTIONS), so its page never loads again and never says
 		// it listens again. Taking it for gone when hidden held every dialog from then on, until the window was reloaded.
 		const panels = new Panels();
 		const a = webview();
 		const v = view(a);
 		panels.attach(v.view);
-		panels.ready(a.webview);
+		await panels.ready(a.webview);
 		v.hide();
 		v.showAgain();
 		panels.show({ type: 'open-dialog', dialog: { kind: 'new' } });
@@ -729,54 +734,56 @@ describe('what the extension asks the panel to show', () => {
 		expect(source).not.toMatch(/onDidChangeVisibility/);
 	});
 
-	it('holds it once VS Code has thrown the page away, for the page it makes next', () => {
+	it('holds it once VS Code has thrown the page away, for the page it makes next', async () => {
 		const panels = new Panels();
 		const a = webview();
 		const v = view(a);
 		panels.attach(v.view);
-		panels.ready(a.webview);
+		await panels.ready(a.webview);
 		v.dispose();
 		panels.show({ type: 'open-dialog', dialog: { kind: 'new' } });
 		expect(a.posted).toEqual([]);
 		const b = webview();
 		panels.attach(view(b).view);
-		panels.ready(b.webview);
+		await panels.ready(b.webview);
 		expect(b.posted).toEqual([{ type: 'open-dialog', dialog: { kind: 'new' } }]);
 	});
 
-	it('is held again when the page goes (it is reloading), until it says it listens again', () => {
+	it('is held again when the page goes (it is reloading), until it says it listens again', async () => {
 		const panels = new Panels();
 		const a = webview();
 		panels.add(a.webview);
-		panels.ready(a.webview);
+		await panels.ready(a.webview);
 		panels.unready(a.webview);
 		panels.show({ type: 'open-dialog', dialog: { kind: 'new' } });
 		expect(a.posted).toEqual([]);
-		panels.ready(a.webview);
+		await panels.ready(a.webview);
 		expect(a.posted).toEqual([{ type: 'open-dialog', dialog: { kind: 'new' } }]);
 	});
 });
 
 describe('the bridge', () => {
-	it('answers a call from the core’s table, by its id, and says when nothing answers it', async () => {
+	it('answers a call from the core’s table and an ask from the extension’s, by its id, and says when nothing answers it', async () => {
 		const posted: unknown[] = [];
-		const routes = new Map<InvokeName, Route>([['listProjects', async () => ({ ok: true, value: [] })]]);
-		await answerCall({ postMessage: async (m: unknown) => void posted.push(m) } as never, routes, {
-			type: 'call',
-			id: 3,
-			name: 'listProjects',
-			args: [],
-		});
-		await answerCall({ postMessage: async (m: unknown) => void posted.push(m) } as never, routes, {
-			type: 'call',
-			id: 4,
-			name: 'readCheckout',
-			args: [],
-		});
+		const failed = vi.fn();
+		const tables = {
+			core: new Map<InvokeName, Route>([['listProjects', async () => ({ ok: true, value: [] })]]),
+			asks: new Map([['openPrimitives', async () => ({ ok: true, value: null })]]) as never,
+		};
+		const page = { postMessage: async (m: unknown) => void posted.push(m) } as never;
+		await answerCall(page, tables, { type: 'call', id: 3, name: 'listProjects', args: [] }, failed);
+		await answerCall(page, tables, { type: 'call', id: 4, name: 'readCheckout', args: [] }, failed);
+		await answerCall(page, tables, { type: 'call', id: 5, name: 'openPrimitives', args: [] }, failed);
+		await answerCall(page, tables, { type: 'call', id: 6, name: 'openChanges', args: [] }, failed);
 		expect(posted).toEqual([
 			{ type: 'answer', id: 3, result: { ok: true, value: [] } },
 			{ type: 'answer', id: 4, result: { ok: false, error: 'readCheckout is not answered in VS Code.' } },
+			{ type: 'answer', id: 5, result: { ok: true, value: null } },
+			{ type: 'answer', id: 6, result: { ok: false, error: 'openChanges is not answered in VS Code.' } },
 		]);
+		// An ask that failed is said, as the extension says what goes wrong; a call's failure is the page's to show.
+		expect(failed).toHaveBeenCalledTimes(1);
+		expect(failed).toHaveBeenCalledWith(new Error('openChanges is not answered in VS Code.'));
 	});
 
 	it('gives the extension the same API the panel has, from the same table, and the core’s events as they are sent', async () => {

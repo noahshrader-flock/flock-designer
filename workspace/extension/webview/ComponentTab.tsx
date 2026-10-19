@@ -12,15 +12,11 @@ import { TokenEditor } from './TokenEditor';
 import type { TokenActions } from './Tokens';
 import { ShowingNote } from './Showing';
 import { useTabCatalog } from './useCatalog';
-import { useTrial } from './useTrial';
-import { ModeProvider, useMode } from './mode';
-import { useModeChoice } from './useModeChoice';
 import { useTrying } from './useTrying';
-import { useValueTrialsChoice } from './useValueTrialsChoice';
-import { ValueTrialsProvider } from './valueTrials';
 import { Button } from './ui/Button';
 import { Notice, TabNote } from './ui/Notice';
-import { vscode } from './vscode';
+import { asks } from './host';
+import { useMode, useTokenEdits, useValueTrials } from './shared';
 
 /** The target while the design system is not read yet: nothing is judged at it then. */
 const NOT_READ = undeclared('the design system is not read yet');
@@ -58,9 +54,7 @@ const Stories = ({ component, commit, edits, tried }: { component: CatalogCompon
  */
 export const ComponentTab = ({ id }: { id: string }) => {
 	const { ready, note } = useTabCatalog();
-	const [edits, setEdits] = useTrial();
-	// The mode its values are shown in: the one chosen in the panel, the same on every page.
-	const mode = useModeChoice();
+	const [edits, setEdits] = useTokenEdits();
 	// The token whose control is open: the Tokens' rows, and a value that is a token's, change it as the panel's do, and every
 	// page sees it.
 	const [editing, setEditing] = useState<DesignToken | null>(null);
@@ -71,72 +65,67 @@ export const ComponentTab = ({ id }: { id: string }) => {
 	const changes = useTokenChangesFor(ready?.tokens.tokens ?? [], edits, setEdits, ready?.accessibility ?? NOT_READ);
 	// The values tried on its instances (Phase 2): the extension's, so the panel's Changes has them too, on the library's commit
 	// they were tried on (another version's instances are drawn anew), and forgotten when another mode is chosen.
-	const trialsChoice = useValueTrialsChoice();
-	const trying = useTrying(trialsChoice, id, ready?.commit ?? null);
+	const trying = useTrying(useValueTrials(), id, ready?.commit ?? null);
 	const { tried } = trying;
 	const component = ready?.components.find((c) => c.id === id);
 	if (note) return <TabNote note={note.says} onRetry={note.onRetry} />;
 	if (!ready || !component) return <TabNote note="The design system shown no longer has this component. Close this tab." />;
 	const actions: TokenActions = {
 		onEdit: setEditing,
-		onSource: ({ file, line }) => vscode().postMessage({ type: 'open-library-source', file, line }),
+		onSource: ({ file, line }) => void asks().openLibrarySource(file, line),
 	};
 	// What its Changes button counts: the values tried on it and the token changes being tried, which move its stories too.
 	const count = tried.size + edits.length;
-	const link = (to: ComponentLink) => vscode().postMessage({ type: 'component-link', id, link: to });
-	const open = (other: string) => vscode().postMessage({ type: 'open-component', id: other });
+	const link = (to: ComponentLink) => void asks().componentLink(id, to);
+	const open = (other: string) => void asks().openComponent(other);
 	return (
-		<ModeProvider value={mode}>
-			<ValueTrialsProvider value={trialsChoice}>
-				<TokenChangesProvider value={changes}>
-					<main className="tab tab-split">
-						<header className="tab-header">
-							<div className="tab-heading">
-								<h1 className="tab-title">{component.name}</h1>
-								<p className="quiet">{component.subtitle ?? component.group}</p>
-							</div>
-							<div className="tab-actions">
-								{/* Always there, so nothing moves when the first value is tried; with nothing tried and no branch, it cannot be pressed. */}
-								<Button variant="ghost" disabled={count === 0 && !kept} onClick={() => setChangesOpen(true)}>
-									{count === 0 ? 'No changes' : plural(count, 'change')}
-								</Button>
-								{component.storybook !== null && (
-									<Button variant="secondary" external onClick={() => link('storybook')}>
-										Storybook
-									</Button>
-								)}
-								<Button variant="secondary" external onClick={() => link('source')}>
-									GitHub
-								</Button>
-							</div>
-						</header>
-						<ShowingNote showing={ready.showing} branch={ready.branch} />
-						<div className="component-layout">
-							<div className="component-stories">
-								<Stories component={component} commit={ready.commit} edits={edits} tried={[...tried.values()]} />
-							</div>
-							<aside className="component-aside">
-								<ComponentSections
-									// Asked again on another commit shown (Preview this branch): what it says is that commit's.
-									key={ready.commit}
-									component={component}
-									components={ready.components}
-									actions={actions}
-									trying={trying}
-									onOpen={open}
-									changes={{
-										open: changesOpen,
-										onClose: () => setChangesOpen(false),
-										onKept: setKept,
-										onActions: () => vscode().postMessage({ type: 'open-changes' }),
-									}}
-								/>
-							</aside>
-						</div>
-					</main>
-					{editing && <TokenEditor key={editing.path} token={editing} components={ready.components} onOpen={open} onClose={() => setEditing(null)} />}
-				</TokenChangesProvider>
-			</ValueTrialsProvider>
-		</ModeProvider>
+		<TokenChangesProvider value={changes}>
+			<main className="tab tab-split">
+				<header className="tab-header">
+					<div className="tab-heading">
+						<h1 className="tab-title">{component.name}</h1>
+						<p className="quiet">{component.subtitle ?? component.group}</p>
+					</div>
+					<div className="tab-actions">
+						{/* Always there, so nothing moves when the first value is tried; with nothing tried and no branch, it cannot be pressed. */}
+						<Button variant="ghost" disabled={count === 0 && !kept} onClick={() => setChangesOpen(true)}>
+							{count === 0 ? 'No changes' : plural(count, 'change')}
+						</Button>
+						{component.storybook !== null && (
+							<Button variant="secondary" external onClick={() => link('storybook')}>
+								Storybook
+							</Button>
+						)}
+						<Button variant="secondary" external onClick={() => link('source')}>
+							GitHub
+						</Button>
+					</div>
+				</header>
+				<ShowingNote showing={ready.showing} branch={ready.branch} />
+				<div className="component-layout">
+					<div className="component-stories">
+						<Stories component={component} commit={ready.commit} edits={edits} tried={[...tried.values()]} />
+					</div>
+					<aside className="component-aside">
+						<ComponentSections
+							// Asked again on another commit shown (Preview this branch): what it says is that commit's.
+							key={ready.commit}
+							component={component}
+							components={ready.components}
+							actions={actions}
+							trying={trying}
+							onOpen={open}
+							changes={{
+								open: changesOpen,
+								onClose: () => setChangesOpen(false),
+								onKept: setKept,
+								onActions: () => void asks().openChanges(),
+							}}
+						/>
+					</aside>
+				</div>
+			</main>
+			{editing && <TokenEditor key={editing.path} token={editing} components={ready.components} onOpen={open} onClose={() => setEditing(null)} />}
+		</TokenChangesProvider>
 	);
 };

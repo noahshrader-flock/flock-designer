@@ -1,7 +1,7 @@
 import type { WorkspaceApi } from '../../src/shared/contract';
-import type { HostMessage } from '../src/messages';
+import type { HostMessage, PageAsks } from '../src/messages';
 import { vscode } from './vscode';
-import { connectWorkspace } from './workspace';
+import { connectPage } from './workspace';
 
 /**
  * Whether a message is the extension's: VS Code's host frame posts it on this page's own origin (`vscode-webview:`), and
@@ -28,14 +28,14 @@ export const onHost = (listener: (message: HostMessage) => void): (() => void) =
 	return () => void listeners.delete(listener);
 };
 
-let api: WorkspaceApi | undefined;
-/** The core's calls, from a page, over the extension's messages: the one way every page and hook reaches the core, made once, when first used. */
-export const workspace = (): WorkspaceApi => {
-	if (!api) {
-		api = connectWorkspace(
-			(m) => vscode().postMessage(m),
-			(l) => onHost(l),
-		);
-	}
-	return api;
-};
+let page: { workspace: WorkspaceApi; asks: PageAsks } | undefined;
+/** The page's calls, over the extension's messages, made once, when first used. */
+const connected = () =>
+	(page ??= connectPage(
+		(m) => vscode().postMessage(m),
+		(l) => onHost(l),
+	));
+/** The core's calls, from a page: the one way every page and hook reaches the core. */
+export const workspace = (): WorkspaceApi => connected().workspace;
+/** The extension's own asks, from a page (`PageAsks`): a component's tab, a review, the change being tried. */
+export const asks = (): PageAsks => connected().asks;

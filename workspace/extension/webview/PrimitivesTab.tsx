@@ -7,7 +7,7 @@ import { nameOf, pixelsOf, readsAs, withEdits } from '../../src/shared/tokens';
 import { StoryFrame } from './StoryFrame';
 import { ShowingNote } from './Showing';
 import { useTabCatalog } from './useCatalog';
-import { useTrial } from './useTrial';
+import { useTokenEdits } from './shared';
 import { TabNote } from './ui/Notice';
 import { TryingNote } from './Changed';
 import { Swatch } from './ui/Swatch';
@@ -159,7 +159,7 @@ const Drawn = ({ primitive, tokens, byPath, preview }: { primitive: Primitive | 
  */
 export const PrimitivesTab = () => {
 	const { ready, note } = useTabCatalog();
-	const [tried] = useTrial();
+	const [tried] = useTokenEdits();
 	const sections = useRef(new Map<string, HTMLElement | null>());
 	const preview = useSpecimenPreview(ready, true);
 	if (note || !ready) return <TabNote note={note?.says ?? ''} onRetry={note?.onRetry ?? null} />;

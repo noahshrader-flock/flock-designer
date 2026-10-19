@@ -2,7 +2,8 @@ import { useMemo, useState } from 'react';
 import { type TriedValue, triedId } from '../../src/shared/contract';
 import type { Trying } from './ComponentValues';
 import { workspace } from './host';
-import { type ValueTrials, triedOn } from './valueTrials';
+import type { ValueTrials } from './shared';
+import { triedOn } from './valueTrials';
 
 /**
  * Trying a component's values (Phase 2 of adjusting a component), by its story file, on the library's commit: the same on

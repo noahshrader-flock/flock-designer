@@ -1,4 +1,4 @@
-import type { Result } from './contract';
+import type { InvokeName, Result } from './contract';
 import { hasExactly } from './validate';
 
 /**
@@ -8,16 +8,18 @@ import { hasExactly } from './validate';
  * core checks where it answers them; and the extension's own two, signing in and Address. Nothing else can be asked, and
  * each side reads what the other sends in exactly its shape.
  */
-export const RELAY_CALLS = [
+/** The core's calls a review page makes, checked against the contract: one renamed or removed there fails the build here. */
+const REVIEW_CALLS = [
 	'signInState',
 	'readComments',
 	'postComment',
 	'moveComment',
 	'resolveComment',
 	'deleteComment',
-	'signIn',
-	'address',
-] as const;
+] as const satisfies readonly InvokeName[];
+/** The extension's own: signing in, and Address, which the extension runs as it runs one from its panel. */
+const EXTENSION_CALLS = ['signIn', 'address'] as const;
+export const RELAY_CALLS = [...REVIEW_CALLS, ...EXTENSION_CALLS] as const;
 export type RelayCall = (typeof RELAY_CALLS)[number];
 
 /** What the page asks: a call by its name, with its arguments, answered by its id. */
