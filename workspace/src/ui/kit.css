@@ -7,8 +7,8 @@
  * look is changed in one place. A theme variable that already names one part's colour (the
  * badge's, the button's, a section header's) is used by that part directly: a token for it would only rename it.
  *
- * Every page DSNR draws takes it first (the panel and its tabs, `extension/webview/styles.css`), so a page's own rules
- * can say otherwise.
+ * Every page DSNR draws takes it first (the panel and its tabs, `extension/webview/styles.css`; the review bar,
+ * `src/viewer/viewer.css`), so a page's own rules can say otherwise.
  */
 
 /* == The theme’s names, the focus, and text helpers == */
@@ -19,7 +19,7 @@
 	--dsnr-muted: var(--vscode-descriptionForeground);
 	/* Drawn only in high contrast, where VS Code sets it: a border nothing else needs. */
 	--dsnr-contrast-border: var(--vscode-contrastBorder, transparent);
-	/* Every outline and line in the panel, the search box's: the theme's input border, then its widget border, then the contrast border. */
+	/* Every outline and line on a page, the search box's: the theme's input border, then its widget border, then the contrast border. */
 	--dsnr-border: var(--vscode-input-border, var(--vscode-widget-border, var(--dsnr-contrast-border)));
 	/*
 	 * The keyboard's focus, one ring for every control: the theme's focus colour, just inside its edge, as VS Code's own lists
@@ -52,6 +52,10 @@
 	 */
 	--dsnr-control: 32px;
 	--dsnr-control-small: 22px;
+	/* A row of VS Code's own lists, and a section's header: its height, as the side bar draws them. */
+	--dsnr-list-row: 22px;
+	/* Words a little smaller than the text's: what is said beside or under what matters (a count, a value, a hint). */
+	--dsnr-text-small: 0.92em;
 	/* A toggle's option: the control's height less the track's padding and border, so the toggle is as tall as a control. */
 	--dsnr-toggle-option: calc(var(--dsnr-control) - 6px);
 	/*
@@ -62,12 +66,8 @@
 	--dsnr-dot-swatch: 18px;
 	/* A person's picture beside their name, as a pin carries it on the page (`AVATAR_XS_PX`). */
 	--dsnr-avatar-xs: 20px;
-	/* A slider's track and its thumb, which is centred on it. */
-	--dsnr-slider-track: 4px;
-	--dsnr-slider-thumb: 14px;
-	/* A row of the component's side panel (a picker, a value, a token): at least this tall, with this between the pickers. */
+	/* A row of a list of values (a picker, a value, a token): at least this tall. */
 	--dsnr-row-height: 28px;
-	--dsnr-row-gap: var(--dsnr-space-4);
 	/* How far a row's value, or its dot, ends from the right edge of its part: the same in Styles, Tokens and the grid of roles. */
 	--dsnr-row-edge: var(--dsnr-space-4);
 	/* Above and below a value in its row: what centres a small control in a row's height. */
@@ -92,17 +92,6 @@
 	/* What is kept at the top while a list scrolls: the toggle's bar, then the bar of the tab under it (search and options). */
 	--dsnr-top-pad: var(--dsnr-space-4);
 	--dsnr-top-height: calc(var(--dsnr-control) + 2 * var(--dsnr-top-pad));
-	/*
-	 * The design system's own row (its name, its branch, its buttons), kept under the top bar, one line of the small control
-	 * between its padding; and the gap between what is in it: between the buttons, and between the name's icon and them.
-	 */
-	--dsnr-ds-gap: var(--dsnr-space-2);
-	--dsnr-ds-pad: var(--dsnr-space-2);
-	--dsnr-ds-header-height: calc(var(--dsnr-control-small) + 2 * var(--dsnr-ds-pad));
-	/* The design system's Components and Tokens toggle, kept under that: its search bar is kept under it. */
-	--dsnr-part-pad-top: var(--dsnr-space-2);
-	--dsnr-part-pad-bottom: var(--dsnr-space-4);
-	--dsnr-part-height: calc(var(--dsnr-control) + var(--dsnr-part-pad-top) + var(--dsnr-part-pad-bottom));
 	/*
 	 * What is above what, from the back: a row's or card's actions, the bars kept at the top (which a list scrolls under, so
 	 * they are above the actions), an open menu, a dialog.
@@ -158,7 +147,6 @@ body {
 	font-weight: var(--vscode-font-weight);
 }
 
-.token-contrast-low,
 .warning-text {
 	color: var(--vscode-editorWarning-foreground);
 }
@@ -201,15 +189,14 @@ body {
 .heading-label {
 	margin: var(--dsnr-space-4) 0 var(--dsnr-space-1);
 	color: var(--dsnr-muted);
-	font-size: 0.92em;
+	font-size: var(--dsnr-text-small);
 }
 
 /*
  * A set's heading (the palette's family, the grid's role) is a row of the same height as every row under it, in both views of
  * the colors, so flipping between them moves nothing: a row of a set, and the heading over it, are `--dsnr-row-height`.
  */
-.heading-set,
-.theme-headings {
+.heading-set {
 	display: flex;
 	align-items: center;
 	min-height: var(--dsnr-row-height);
@@ -283,7 +270,7 @@ body {
 
 .search .codicon {
 	position: absolute;
-	left: 8px;
+	left: var(--dsnr-space-4);
 	color: var(--vscode-input-placeholderForeground);
 	pointer-events: none;
 }
@@ -331,6 +318,28 @@ body {
 	line-height: 18px;
 	text-align: center;
 	cursor: pointer;
+}
+
+/*
+ * Buttons in a row (`ButtonRow`): each as wide as its words, wrapping when the row is narrow. Below a single class, so an icon
+ * alone in a row is still its square (below).
+ */
+.button-row {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--dsnr-space-4);
+}
+
+.button-row-end {
+	justify-content: flex-end;
+}
+
+:where(.button-row) .button {
+	width: auto;
+	max-width: none;
+	margin: 0;
+	white-space: nowrap;
 }
 
 /* A button with an icon: before its words, or the external link icon after them (one that goes out of VS Code), centred together. */
@@ -446,11 +455,6 @@ body {
 .menu-button:hover,
 .icon-button:hover:not(:disabled) {
 	background: var(--vscode-toolbar-hoverBackground);
-}
-
-.icon-button:disabled {
-	opacity: 0.5;
-	cursor: default;
 }
 
 /* == Count bubbles (`ui/Badge.tsx`) == */
@@ -585,7 +589,7 @@ body {
 
 .empty code {
 	font-family: var(--vscode-editor-font-family);
-	font-size: 0.92em;
+	font-size: var(--dsnr-text-small);
 }
 
 /*
@@ -597,7 +601,7 @@ body {
 	margin: var(--dsnr-space-2) var(--dsnr-space-5) var(--dsnr-space-4);
 }
 
-.dialog .message {
+:where(.dialog) .message {
 	margin: 0 0 var(--dsnr-space-4);
 }
 
@@ -610,8 +614,7 @@ body {
 }
 
 /* What went wrong, said where it happened, under what it is about. */
-.message-error,
-.dialog .message-error {
+.message-error {
 	margin: var(--dsnr-space-4) 0 0;
 	color: var(--vscode-errorForeground);
 }
@@ -627,26 +630,16 @@ body {
 	margin: 0;
 }
 
-.notice {
-	display: flex;
-	flex-direction: column;
-	gap: var(--dsnr-space-4);
+/* A warning's block is a box of its own: something in the way, said where it is (a preview that could not be built). */
+.message-block.message-warning {
 	padding: var(--dsnr-space-4) var(--dsnr-space-5);
 	border: 1px solid var(--vscode-inputValidation-warningBorder, var(--dsnr-contrast-border));
 	border-radius: var(--dsnr-radius);
+	color: var(--vscode-foreground);
 	background: var(--vscode-inputValidation-warningBackground, transparent);
 }
 
-.notice p {
-	margin: 0;
-}
-
-.notice .button {
-	width: auto;
-	align-self: flex-start;
-}
-
-.notice-title {
+.message-title {
 	font-weight: 600;
 }
 
@@ -663,7 +656,7 @@ body {
 	display: flex;
 	align-items: center;
 	gap: var(--dsnr-space-3);
-	min-height: 22px;
+	min-height: var(--dsnr-list-row);
 	padding: 0 var(--dsnr-space-5);
 }
 
@@ -696,7 +689,7 @@ body {
 
 .row-meta {
 	color: var(--dsnr-muted);
-	font-size: 0.92em;
+	font-size: var(--dsnr-text-small);
 }
 
 /* The name of a project or a component, in a card or a row alike: semi-bold. */
@@ -766,13 +759,9 @@ body {
 	cursor: pointer;
 }
 
-.row-button:hover {
+/* What has a picture says it opens on the picture (`.thumb-wash`), so only a row with none is turned grey. */
+.row-button:not(:has(.thumb-wash)):hover {
 	background: var(--vscode-list-hoverBackground);
-}
-
-/* What has a picture says it opens on the picture (`.thumb-wash`), so the row or card is not also turned grey. */
-.row-button:has(.thumb-wash):hover {
-	background: transparent;
 }
 
 /*
@@ -829,8 +818,8 @@ body {
 
 .card-badge {
 	position: absolute;
-	top: 4px;
-	right: 4px;
+	top: var(--dsnr-space-2);
+	right: var(--dsnr-space-2);
 }
 
 /* A row's picture and its wash, in one box the picture's size. */
@@ -888,14 +877,14 @@ body {
 .item-actions {
 	position: absolute;
 	top: 50%;
-	right: 6px;
+	right: var(--dsnr-space-3);
 	z-index: var(--dsnr-layer-actions);
 	transform: translateY(-50%);
 }
 
 .card-item .item-actions {
-	top: 4px;
-	right: 4px;
+	top: var(--dsnr-space-2);
+	right: var(--dsnr-space-2);
 	transform: none;
 }
 
@@ -933,7 +922,7 @@ body {
 	align-items: center;
 	gap: var(--dsnr-space-2);
 	width: 100%;
-	height: 22px;
+	height: var(--dsnr-list-row);
 	padding: 0 var(--dsnr-space-5) 0 var(--dsnr-space-4);
 	border: none;
 	border-top: 1px solid var(--vscode-sideBarSectionHeader-border, transparent);
@@ -999,6 +988,16 @@ details[open] > summary > .collapse-chevron {
 	display: inline-block;
 }
 
+/* What opens over the page from a button of its own, a menu and a popover alike: VS Code's menu's surface. */
+.menu-list,
+.popover {
+	border: 1px solid var(--vscode-menu-border, var(--dsnr-contrast-border));
+	border-radius: var(--dsnr-radius);
+	color: var(--vscode-menu-foreground);
+	background: var(--vscode-menu-background);
+	box-shadow: 0 2px 8px var(--vscode-widget-shadow);
+}
+
 .menu-list {
 	position: absolute;
 	top: 100%;
@@ -1009,11 +1008,6 @@ details[open] > summary > .collapse-chevron {
 	min-width: 170px;
 	margin-top: var(--dsnr-space-1);
 	padding: var(--dsnr-space-2);
-	border: 1px solid var(--vscode-menu-border, var(--dsnr-contrast-border));
-	border-radius: var(--dsnr-radius);
-	color: var(--vscode-menu-foreground);
-	background: var(--vscode-menu-background);
-	box-shadow: 0 2px 8px var(--vscode-widget-shadow);
 }
 
 .menu-item {
@@ -1066,8 +1060,8 @@ details[open] > summary > .collapse-chevron {
 /* == Dialogs (`ui/Dialog.tsx`) == */
 
 /*
- * A dialog over the panel, as VS Code's own are: a box from the top of the panel, in the widget colours, over a scrim of
- * the side bar's own colour so what is behind is dimmed, not hidden. A webview cannot draw outside itself.
+ * A dialog over the page, as VS Code's own are: a box from the top of the page, in the widget colours, over a scrim of
+ * the side bar's own colour so what is behind is dimmed, not hidden. A page cannot draw outside itself.
  */
 .scrim {
 	position: fixed;
@@ -1142,7 +1136,7 @@ details[open] > summary > .collapse-chevron {
 
 .field-hint {
 	color: var(--dsnr-muted);
-	font-size: 0.92em;
+	font-size: var(--dsnr-text-small);
 }
 
 /* VS Code's input box and dropdown, drawn as the search box is: one height, one corner, one inset, wherever it is. */
@@ -1167,7 +1161,7 @@ details[open] > summary > .collapse-chevron {
 
 .select .codicon {
 	position: absolute;
-	right: 8px;
+	right: var(--dsnr-space-4);
 	color: var(--vscode-dropdown-foreground);
 	pointer-events: none;
 }
@@ -1211,67 +1205,6 @@ textarea.input {
 	z-index: var(--dsnr-layer-menu);
 	margin-top: var(--dsnr-space-1);
 	padding: var(--dsnr-space-4) var(--dsnr-space-5);
-	border: 1px solid var(--vscode-menu-border, var(--dsnr-contrast-border));
-	border-radius: var(--dsnr-radius);
-	color: var(--vscode-menu-foreground);
-	background: var(--vscode-menu-background);
-	box-shadow: 0 2px 8px var(--vscode-widget-shadow);
-}
-
-.popover-body {
-	display: flex;
-	flex-direction: column;
-	gap: var(--dsnr-space-4);
-}
-
-.popover-head {
-	display: flex;
-	align-items: baseline;
-	justify-content: space-between;
-	gap: var(--dsnr-space-4);
-}
-
-.popover-title {
-	font-weight: 600;
-	overflow-wrap: anywhere;
-}
-
-.popover-field {
-	display: flex;
-	flex-direction: column;
-	gap: var(--dsnr-space-1);
-}
-
-/* A part with a short name (X, Y, Top): its name, its slider and its number on one line, the names in a column of their own. */
-.popover-field-line {
-	flex-direction: row;
-	align-items: center;
-	gap: var(--dsnr-space-4);
-}
-
-.popover-field-line .popover-label {
-	flex: 0 0 3.5em;
-}
-
-.popover-field-line .dimension-field {
-	flex: 1;
-	min-width: 0;
-}
-
-/* A range has a width of its own it will not go under, which would push its number out of the popover beside a name. */
-.popover-field-line input[type='range'] {
-	min-width: 0;
-}
-
-/* At the panel's own text size: a few fields, read at a glance. */
-.popover-label,
-.popover-note {
-	margin: 0;
-	color: var(--dsnr-muted);
-}
-
-.popover .token-value {
-	font-size: inherit;
 }
 
 /* == Tooltips (`ui/Tooltip.tsx`, `ui/InfoTip.tsx`) == */
@@ -1293,7 +1226,7 @@ textarea.input {
 	color: var(--vscode-editorHoverWidget-foreground, var(--vscode-foreground));
 	background: var(--vscode-editorHoverWidget-background, var(--vscode-editorWidget-background));
 	box-shadow: 0 2px 8px var(--vscode-widget-shadow);
-	font-size: 0.92em;
+	font-size: var(--dsnr-text-small);
 	overflow-wrap: anywhere;
 	white-space: pre-line;
 	pointer-events: none;
@@ -1424,26 +1357,6 @@ button.color-dot:hover {
 
 /* == Values and tokens in a list (`ui/ValueItem.tsx`) == */
 
-/*
- * A line between one set and the next (a role's variants, a tone family's steps, a component's values of one property and of
- * the next, one group of a Changes dialog and the next), the same in the semantic colors, the palette, a component's values
- * and Changes. The panel's one border colour, the search box's. A component's group's heading has room of its own above
- * it, so the line is all that group adds.
- */
-.theme-set + .theme-set,
-.token-set + .token-set,
-.value-group + .value-group,
-.dialog .changed ~ .changed {
-	margin-top: var(--dsnr-space-3);
-	border-top: 1px solid var(--dsnr-border);
-}
-
-.theme-set + .theme-set,
-.token-set + .token-set,
-.dialog .changed ~ .changed {
-	padding-top: var(--dsnr-space-3);
-}
-
 .tokens {
 	margin: 0;
 	padding: 0;
@@ -1481,7 +1394,7 @@ button.color-dot:hover {
 
 /* A pressed row's text is flush with its titles', so its highlight reaches out to the left of it, not the text into the highlight. */
 .value-cell.token-button:hover {
-	box-shadow: -4px 0 0 var(--vscode-list-hoverBackground);
+	box-shadow: calc(-1 * var(--dsnr-space-2)) 0 0 var(--vscode-list-hoverBackground);
 }
 
 /* A token's row in the Styles' own rhythm: its value, or its dot, flush at the right as a value's is. */
@@ -1489,15 +1402,10 @@ button.color-dot:hover {
 	padding-right: var(--dsnr-row-edge);
 }
 
+/* A token's reset at the top of its row, however many lines it grows to: half a small control down, as it is centred. */
 .token .item-actions {
-	top: 11px;
-	right: 4px;
-	opacity: 0;
-}
-
-.token:hover .item-actions,
-.token .item-actions:focus-within {
-	opacity: 1;
+	top: calc(var(--dsnr-control-small) / 2);
+	right: var(--dsnr-space-2);
 }
 
 /*
@@ -1530,7 +1438,7 @@ button.color-dot:hover {
 	gap: var(--dsnr-space-3);
 	color: var(--dsnr-muted);
 	font-family: var(--vscode-editor-font-family);
-	font-size: 0.92em;
+	font-size: var(--dsnr-text-small);
 }
 
 /*

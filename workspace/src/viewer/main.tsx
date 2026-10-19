@@ -65,7 +65,7 @@ const bar = document.getElementById('dsnr-bar');
 const panel = document.getElementById('dsnr-panel');
 const frame = document.querySelector<HTMLIFrameElement>('iframe#dsnr-frame');
 if (config && bar && panel && frame) {
-	// The plain link is only for a page this never reaches: the app's bar replaces it.
+	// The plain link is only for a page this never reaches: the review bar replaces it.
 	bar.replaceChildren();
 	const root = document.createElement('div');
 	document.body.append(root);

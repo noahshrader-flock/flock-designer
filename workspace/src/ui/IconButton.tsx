@@ -8,26 +8,24 @@ import { Icon } from './Icon';
 export const IconButton = ({
 	icon,
 	label,
-	onClick,
+	onPress,
 	href,
-	disabled = false,
 	size = 'default',
 	className,
 }: {
 	icon: string;
 	label: string;
-	disabled?: boolean;
 	size?: 'default' | 'small';
 	/** What it is called by where it is, for the stylesheet to place it. */
 	className?: string;
-} & ({ onClick: () => void; href?: undefined } | { href: string; onClick?: undefined })) => {
+} & ({ onPress: () => void; href?: undefined } | { href: string; onPress?: undefined })) => {
 	const classes = ['icon-button', ...(size === 'small' ? ['icon-button-small'] : []), ...(className ? [className] : [])].join(' ');
 	return href !== undefined ? (
 		<a className={classes} href={href} aria-label={label} title={label}>
 			<Icon name={icon} />
 		</a>
 	) : (
-		<button type="button" className={classes} aria-label={label} title={label} disabled={disabled} onClick={onClick}>
+		<button type="button" className={classes} aria-label={label} title={label} onClick={onPress}>
 			<Icon name={icon} />
 		</button>
 	);

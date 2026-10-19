@@ -38,24 +38,10 @@ body {
 	white-space: nowrap;
 }
 
-.viewer-bar-end,
-.comment-control {
-	display: flex;
-	align-items: center;
+/* What the bar shows and commenting, at its end (`ButtonRow`): one line, never wrapped, as the bar is one line high. */
+.viewer-bar .button-row {
+	flex-wrap: nowrap;
 	gap: var(--dsnr-space-3);
-}
-
-/* In a row, a button is as wide as its words (an icon alone is a square, the kit's), and a dropdown or a toggle as what it shows. */
-.viewer-bar .button:not(.button-icon),
-.viewer-panel .button:not(.button-icon) {
-	width: auto;
-	margin: 0;
-	white-space: nowrap;
-}
-
-.viewer-bar .select,
-.viewer-bar .toggle {
-	width: auto;
 }
 
 /* Commenting needs a computer: on a phone the bar's room goes to the title and what it shows. */
@@ -154,10 +140,6 @@ body {
 	opacity: 0.65;
 }
 
-.comment-card .button {
-	align-self: flex-start;
-}
-
 .comment-head {
 	display: flex;
 	align-items: center;
@@ -198,17 +180,6 @@ button.comment-body {
 	border-radius: var(--dsnr-radius-inner);
 }
 
-.comment-delete {
-	display: flex;
-	flex-wrap: wrap;
-	align-items: center;
-	gap: var(--dsnr-space-3);
-}
-
-.comment-delete .message {
-	flex: 1 1 100%;
-}
-
 /* A comment on the whole page, at the panel's foot: the box grows with what is written, up to a few lines, its button beside it. */
 .general-comment {
 	display: flex;
@@ -228,7 +199,10 @@ button.comment-body {
 
 /* == The comment box, beside its pin (`comments/CommentBox.tsx`) == */
 
-/* What is behind it, which a press closes it from, and the box above it, over the prototype's page. */
+/*
+ * What is behind it, which a press closes it from, and the box above it, over the prototype's page: a dialog (the kit's
+ * surface), placed by its pin and narrower than one.
+ */
 .comment-shade {
 	position: fixed;
 	inset: 0;
@@ -244,21 +218,4 @@ button.comment-body {
 	box-sizing: border-box;
 	width: 300px;
 	max-width: calc(100vw - var(--dsnr-space-6));
-	padding: var(--dsnr-space-5);
-	border: 1px solid var(--vscode-editorWidget-border);
-	border-radius: var(--dsnr-radius);
-	color: var(--vscode-editorWidget-foreground);
-	background: var(--vscode-editorWidget-background);
-	box-shadow: 0 2px 8px var(--vscode-widget-shadow);
-}
-
-.comment-box-buttons {
-	display: flex;
-	justify-content: flex-end;
-	gap: var(--dsnr-space-3);
-}
-
-.comment-box-buttons .button {
-	width: auto;
-	margin: 0;
 }

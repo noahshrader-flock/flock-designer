@@ -70,13 +70,17 @@ export const readRelayAsk = (raw: unknown): RelayAsk | null => {
 		: null;
 };
 
-/** A theme's colours: VS Code's variables and nothing else, each a value of a reasonable length, and not without end. */
+/** One of a theme's colours: one of VS Code's variables, its value words of a reasonable length. The tab sends only these. */
+export const isThemeColor = (name: string, value: unknown): value is string =>
+	/^--vscode-[\w-]+$/.test(name) && typeof value === 'string' && value.length <= 400;
+
+/** A theme's colours: its colours (`isThemeColor`) and nothing else, and not without end. */
 const isColors = (v: unknown): v is Record<string, string> =>
 	typeof v === 'object' &&
 	v !== null &&
 	!Array.isArray(v) &&
 	Object.keys(v).length <= 2000 &&
-	Object.entries(v).every(([name, value]) => /^--vscode-[\w-]+$/.test(name) && typeof value === 'string' && value.length <= 400);
+	Object.entries(v).every(([name, value]) => isThemeColor(name, value));
 
 const isTheme = (v: unknown): v is EditorTheme =>
 	typeof v === 'object' &&

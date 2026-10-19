@@ -4,7 +4,7 @@ import { stateLabel, stateOfQuery } from '../../shared/prototypeStates';
 import type { ShownTheme } from '../useShownTheme';
 import { themeLabel } from '../../shared/prototypeTheme';
 import { Avatar } from '../../ui/Avatar';
-import { Button } from '../../ui/Button';
+import { Button, ButtonRow } from '../../ui/Button';
 import { Menu, type MenuItem } from '../../ui/Menu';
 import { Message } from '../../ui/Message';
 import type { Comments } from './useComments';
@@ -109,13 +109,15 @@ export const CommentList = ({
 						</div>
 						{note && <Message>{note}</Message>}
 						{confirmingDelete === comment.id && (
-							<div className="comment-delete">
+							<>
 								<Message tone="warning">Delete this comment for good? It cannot be brought back.</Message>
-								<Button variant="ghost" onClick={() => setConfirmingDelete(null)}>
-									Keep
-								</Button>
-								<Button onClick={() => void comments.remove(comment).then((gone) => gone && setConfirmingDelete(null))}>Delete</Button>
-							</div>
+								<ButtonRow>
+									<Button variant="ghost" onPress={() => setConfirmingDelete(null)}>
+										Keep
+									</Button>
+									<Button onPress={() => void comments.remove(comment).then((gone) => gone && setConfirmingDelete(null))}>Delete</Button>
+								</ButtonRow>
+							</>
 						)}
 						{/* Choosing a comment shows its pin: anywhere on its card with a pointer, and by its own text, a button, for the keyboard. */}
 						{choosable ? (
@@ -135,15 +137,19 @@ export const CommentList = ({
 						{comment.anchor && state === 'elsewhere' && <Message>On {comment.anchor.route}</Message>}
 						{state && NOTE[state] && <Message tone="warning">{NOTE[state]}</Message>}
 						{state && page && comment.anchor?.page && comment.anchor.page !== page && <Message>The page has changed since this was written.</Message>}
-						{showIn && (
-							<Button variant="secondary" onClick={() => onShowState?.(madeIn)}>
-								Show in {stateLabel(showIn)}
-							</Button>
-						)}
-						{showTheme && (
-							<Button variant="secondary" onClick={() => shownTheme?.onTheme(showTheme)}>
-								Show in {themeLabel(showTheme)}
-							</Button>
+						{(showIn || showTheme) && (
+							<ButtonRow>
+								{showIn && (
+									<Button variant="secondary" onPress={() => onShowState?.(madeIn)}>
+										Show in {stateLabel(showIn)}
+									</Button>
+								)}
+								{showTheme && (
+									<Button variant="secondary" onPress={() => shownTheme?.onTheme(showTheme)}>
+										Show in {themeLabel(showTheme)}
+									</Button>
+								)}
+							</ButtonRow>
 						)}
 					</div>
 				);

@@ -12,7 +12,7 @@ import { CommentBox } from './comments/CommentBox';
 import { CommentControl } from './comments/CommentControl';
 import { useComments } from './comments/useComments';
 import { VersionSwitcher, StateSwitcher, ThemeSwitcher } from './VersionSwitcher';
-import { Button } from '../ui/Button';
+import { Button, ButtonRow } from '../ui/Button';
 import { Dialog } from '../ui/Dialog';
 import { Heading } from '../ui/Heading';
 import { IconButton } from '../ui/IconButton';
@@ -83,17 +83,16 @@ const PageBar = ({ config, slots, showing, children }: { config: ViewerConfig; s
 		<div className="viewer-bar">
 			<IconButton icon="chevron-left" label="Back to the project" href={config.projectHref} />
 			<Heading size="page">{config.title}</Heading>
-			<div className="viewer-bar-end">
+			<ButtonRow>
 				<VersionSwitcher
 					current={{ name: config.name, branch: prototypeKey(config.projectId, config.name) }}
 					siblings={versions}
 					onSelect={(next) => void (location.href = next.href)}
-				>
-					<StateSwitcher states={showing.states} current={showing.state} onSelect={showing.onState} />
-				</VersionSwitcher>
+				/>
+				<StateSwitcher states={showing.states} current={showing.state} onSelect={showing.onState} />
 				<ThemeSwitcher shown={showing.theme} />
 				{children}
-			</div>
+			</ButtonRow>
 		</div>,
 		slots.bar,
 	);
@@ -186,7 +185,7 @@ export const Viewer = ({
 					    built without signing in has no way to: no button. */}
 					{(signIn || openedHere) && (
 						<span className="viewer-sign-in">
-							<Button variant="secondary" onClick={() => (openedHere ? setAskedHere(true) : signIn && void startSignIn(signIn, window))}>
+							<Button variant="secondary" onPress={() => (openedHere ? setAskedHere(true) : signIn && void startSignIn(signIn, window))}>
 								Sign in to comment
 							</Button>
 						</span>
@@ -256,7 +255,7 @@ const InDsnr = ({
 	if (login === null)
 		return (
 			<PageBar config={config} slots={slots} showing={showing}>
-				<Button variant="secondary" disabled={signingIn} onClick={() => void signIn()}>
+				<Button variant="secondary" disabled={signingIn} onPress={() => void signIn()}>
 					{signingIn ? 'Continue in VS Code…' : 'Sign in to comment'}
 				</Button>
 			</PageBar>

@@ -9,9 +9,9 @@ const FOCUSABLE = 'input:not(:disabled), textarea:not(:disabled), select:not(:di
 const FIRST = 'input:not(:disabled), textarea:not(:disabled), select:not(:disabled), button:not(:disabled):not(.dialog-close)';
 
 /**
- * A dialog over the panel, as VS Code's own are: a title with its close X at the far right of the same row, what it asks,
- * and its buttons below, over a scrim that dims what is behind. A side bar's webview cannot draw outside itself, so it covers
- * the panel. The X, Escape (`useEscape`, unless something opened over it since) and a press on the scrim close it; Tab stays inside it; the focus goes to its first field (or what
+ * A dialog over the page, as VS Code's own are: a title with its close X at the far right of the same row, what it asks,
+ * and its buttons below, over a scrim that dims what is behind. A page cannot draw outside itself (a side bar's webview, a
+ * framed bar), so it covers the page. The X, Escape (`useEscape`, unless something opened over it since) and a press on the scrim close it; Tab stays inside it; the focus goes to its first field (or what
  * it does), and back to what opened it once it is gone. A dialog that is a few controls for one thing, as a popover is
  * (`focus="panel"`: a token's), takes the focus on the dialog itself instead, as the popover does (`focusPanel`), so no
  * control is drawn as chosen the moment it opens.
@@ -49,7 +49,7 @@ export const Dialog = ({
 			<div ref={box} role="dialog" aria-modal="true" aria-label={title} tabIndex={-1} className="dialog" onKeyDown={onKeyDown}>
 				<div className="dialog-head">
 					<h2 className="dialog-title">{title}</h2>
-					<IconButton size="small" icon="close" label="Close" onClick={onClose} className="dialog-close" />
+					<IconButton size="small" icon="close" label="Close" onPress={onClose} className="dialog-close" />
 				</div>
 				{children}
 			</div>

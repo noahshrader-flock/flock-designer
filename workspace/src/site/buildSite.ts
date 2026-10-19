@@ -38,7 +38,7 @@ export interface SiteInput {
 	/** How many comments each version has, by its key (`prototype/<project>/<name>`), when they could be read. */
 	comments?: Map<string, number>;
 	/**
-	 * Comments on each version's page: the built viewer (`viewer.js`, `viewer.css`), and the repository whose review
+	 * Comments on each version's page: the built viewer (`viewer.js`, `viewer.css`, its icons' `viewer.ttf`), and the repository whose review
 	 * threads they are. Without it the pages are as they were, with nothing to comment with.
 	 */
 	viewer?: { dir: string; ref: RepoRef };
@@ -153,7 +153,7 @@ main h1 { font-size: 22px; font-weight: 600; margin: 0 0 20px; }
 .list { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
 .list a { display: block; padding: 12px 14px; border: 1px solid #8884; border-radius: 8px; text-decoration: none; }
 .list a:hover { border-color: #888c; }
-/* A version fills the window: the app's own toolbar, then the prototype, and beside it the comments' panel when it is open. */
+/* A version fills the window: DSNR's review bar, then the prototype, and beside it the comments' panel when it is open. */
 .viewer { display: flex; flex-direction: column; height: 100vh; height: 100dvh; }
 .stage { display: flex; flex: 1; min-height: 0; }
 .stage iframe { display: block; flex: 1; min-width: 0; height: 100%; border: 0; }
@@ -248,8 +248,8 @@ const frameAt = (p: SiteProject, page: Page, pagesAt: string | undefined): strin
 		: `src="page.html" sandbox="${SANDBOX_BESIDE}"`;
 
 /**
- * One version: its page in a frame, so the page's own styles never reach the bar, under the bar. The bar is the
- * app's own, drawn by the viewer (the switcher, comments); until it takes over, and where it never does, the bar is a
+ * One version: its page in a frame, so the page's own styles never reach the bar, under the bar. The bar is DSNR's
+ * review bar, drawn by the viewer with DSNR's kit (the switcher, comments); until it takes over, and where it never does, the bar is a
  * link back to the project, and nothing about it is styled here.
  */
 const viewerPage = (

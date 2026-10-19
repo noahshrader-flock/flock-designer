@@ -45,7 +45,7 @@ describe('the extension’s sources', () => {
 		expect(css).not.toMatch(/gitDecoration/);
 		const rules = css.split('}').map((b) => b.split('{').map((x) => x.trim()));
 		const amber = rules.filter(([, body]) => /editorWarning-foreground/.test(body ?? '')).map(([selector]) => selector);
-		expect(amber.sort()).toEqual(['.badge-warning', '.message-warning .codicon', '.token-contrast-low,\n.warning-text']);
+		expect(amber.sort()).toEqual(['.badge-warning', '.message-warning .codicon', '.warning-text']);
 		// A change's mark is the brand.
 		const mark = rules.find(([selector]) => selector?.startsWith('.changed-mark'));
 		expect(mark?.[1]).toMatch(/background:\s*var\(--dsnr-brand\)/);
@@ -104,8 +104,9 @@ describe('the extension’s sources', () => {
 		expect(wash).toMatch(/opacity:\s*0/);
 		expect(rule('.row-button:hover .thumb-wash')).toMatch(/opacity:\s*1/);
 		expect(css).toMatch(/\.row-button:focus-visible \.thumb-wash/);
-		// What has a picture to wash does not also turn the whole row or card grey.
-		expect(rule('.row-button:has(.thumb-wash):hover')).toMatch(/background:\s*transparent/);
+		// What has a picture to wash does not also turn the whole row or card grey: only one with none is.
+		expect(rule('.row-button:not(:has(.thumb-wash)):hover')).toMatch(/background:\s*var\(--vscode-list-hoverBackground\)/);
+		expect(css).not.toMatch(/\.row-button:hover\s*\{/);
 		// Its corners are its picture's.
 		expect(rule('.card-media .thumb-wash')).toMatch(/border-radius:\s*var\(--dsnr-radius-thumb-card\)/);
 		expect(rule('.thumb .thumb-wash')).toMatch(/border-radius:\s*var\(--dsnr-radius-thumb\)/);

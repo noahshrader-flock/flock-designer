@@ -1,6 +1,6 @@
 import { type RefObject, useEffect, useRef } from 'react';
 
-/** What is open over the panel (a dialog, a menu, a popover), in the order it opened: Escape is for the last. */
+/** What is open over the page (a dialog, a menu, a popover), in the order it opened: Escape is for the last. */
 const opened: { close: () => void }[] = [];
 
 /** The one Escape: it closes what opened last, and only that, unless what has the focus used it first (a search, clearing). */
@@ -29,7 +29,7 @@ export const useEscape = (open: boolean, onClose: () => void): void => {
 };
 
 /**
- * How what is drawn over the panel from a button of its own goes away, for a menu and a popover alike: Escape closes it
+ * How what is drawn over the page from a button of its own goes away, for a menu and a popover alike: Escape closes it
  * (`useEscape`) and the keyboard goes on from the button it opened from; a press anywhere outside `within` (the button and
  * what it opened) closes it, leaving the focus where the press put it.
  */

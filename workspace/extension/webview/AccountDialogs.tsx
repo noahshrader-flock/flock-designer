@@ -29,7 +29,7 @@ export const AccountDialog = ({ login, onClose }: { login: string; onClose: () =
 			</Message>
 			<Message tone="error">{error}</Message>
 			<DialogButtons>
-				<Button disabled={busy} onClick={() => void signOut()}>
+				<Button disabled={busy} onPress={() => void signOut()}>
 					{busy ? 'Signing out…' : 'Sign out of DSNR'}
 				</Button>
 			</DialogButtons>
@@ -84,7 +84,7 @@ export const SyncDialog = ({ onClose }: { onClose: () => void }) => {
 			<Message tone="error">{error}</Message>
 			<DialogButtons>
 				{status !== null && status.state !== 'unavailable' ? (
-					<Button disabled={status.state === 'working'} onClick={() => void syncNow()}>
+					<Button disabled={status.state === 'working'} onPress={() => void syncNow()}>
 						Sync now
 					</Button>
 				) : undefined}

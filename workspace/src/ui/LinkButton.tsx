@@ -1,7 +1,5 @@
 import type { ReactNode } from 'react';
-
-/** Data attributes it is found by. */
-type Marks = Record<`data-${string}`, string | boolean | undefined>;
+import type { Marks } from './marks';
 
 /**
  * A button that reads as a link, in the link colour and underlined when pointed at: for what is done in passing, in a line of

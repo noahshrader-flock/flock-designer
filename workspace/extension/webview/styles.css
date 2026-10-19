@@ -3,6 +3,26 @@
  * on its names, its spacing scale and its focus ring.
  */
 
+/* The panel's own sizes, made from the kit's. */
+:root {
+	/* Between the pickers in a component's side panel (a row is `--dsnr-row-height`). */
+	--dsnr-row-gap: var(--dsnr-space-4);
+	/*
+	 * The design system's own row (its name, its branch, its buttons), kept under the top bar, one line of the small control
+	 * between its padding; and the gap between what is in it: between the buttons, and between the name's icon and them.
+	 */
+	--dsnr-ds-gap: var(--dsnr-space-2);
+	--dsnr-ds-pad: var(--dsnr-space-2);
+	--dsnr-ds-header-height: calc(var(--dsnr-control-small) + 2 * var(--dsnr-ds-pad));
+	/* The design system's Components and Tokens toggle, kept under that: its search bar is kept under it. */
+	--dsnr-part-pad-top: var(--dsnr-space-2);
+	--dsnr-part-pad-bottom: var(--dsnr-space-4);
+	--dsnr-part-height: calc(var(--dsnr-control) + var(--dsnr-part-pad-top) + var(--dsnr-part-pad-bottom));
+	/* A slider's track and its thumb, which is centred on it. */
+	--dsnr-slider-track: 4px;
+	--dsnr-slider-thumb: 14px;
+}
+
 /* == What the panel’s dialogs hold, before what is drawn in one (`CodebaseDialogs.tsx`, `AccountDialogs.tsx`, `DesignSystem.tsx`) == */
 
 /* What a dialog says will happen, in steps. */
@@ -16,7 +36,7 @@
 .dialog code,
 .dialog-command {
 	font-family: var(--vscode-editor-font-family);
-	font-size: 0.92em;
+	font-size: var(--dsnr-text-small);
 }
 
 /* A command for a terminal, as it is to be pasted. */
@@ -94,7 +114,7 @@
 }
 
 /*
- * A view with nothing to show (`ui/EmptyState.tsx`): centered across and down the room the tab has, which fills the
+ * A view with nothing to show (`Message size="page"`): centered across and down the room the tab has, which fills the
  * window's height.
  */
 .tab-body {
@@ -189,15 +209,6 @@
 .tab-heading {
 	flex: 1;
 	min-width: 0;
-}
-
-.tab-actions {
-	display: flex;
-	gap: var(--dsnr-space-4);
-}
-
-.tab-actions .button {
-	width: auto;
 }
 
 /* A component's stories beside what it is made from, when there is room for both; one under the other when not. */
@@ -315,7 +326,7 @@
 .value-group-note {
 	margin-left: auto;
 	color: var(--dsnr-muted);
-	font-size: 0.92em;
+	font-size: var(--dsnr-text-small);
 	font-weight: 400;
 	text-align: end;
 	overflow-wrap: anywhere;
@@ -406,6 +417,26 @@
 
 /* == Tokens (`Tokens.tsx`) == */
 
+/*
+ * A line between one set and the next (a role's variants, a tone family's steps, a component's values of one property and of
+ * the next, one group of a Changes dialog and the next), the same in the semantic colors, the palette, a component's values
+ * and Changes. The panel's one border colour, the search box's. A component's group's heading has room of its own above
+ * it, so the line is all that group adds.
+ */
+.theme-set + .theme-set,
+.token-set + .token-set,
+.value-group + .value-group,
+.dialog .changed ~ .changed {
+	margin-top: var(--dsnr-space-3);
+	border-top: 1px solid var(--dsnr-border);
+}
+
+.theme-set + .theme-set,
+.token-set + .token-set,
+.dialog .changed ~ .changed {
+	padding-top: var(--dsnr-space-3);
+}
+
 .token-body {
 	/* In from the right as the cards and the section headers are, not out to the panel's edge. */
 	padding: 0 var(--dsnr-space-5) var(--dsnr-space-2) var(--dsnr-indent);
@@ -456,7 +487,7 @@
 .token-contrast,
 .token-uses {
 	color: var(--dsnr-muted);
-	font-size: 0.92em;
+	font-size: var(--dsnr-text-small);
 }
 
 .token-contrast,
@@ -479,7 +510,7 @@
 .drawn-value {
 	color: var(--dsnr-muted);
 	font-family: var(--vscode-editor-font-family);
-	font-size: 0.92em;
+	font-size: var(--dsnr-text-small);
 }
 
 .token-value {
@@ -488,6 +519,11 @@
 }
 
 /* == The semantic colors’ grid (`SemanticColors.tsx`) == */
+
+/* The headings over the columns: a row as tall as a role's, as a set's heading is (`.heading-set`), in its weight. */
+.theme-headings {
+	font-weight: 600;
+}
 
 /*
  * The semantic colors as laid out here: a row for each role's variant, its name taking the room there is, and a
@@ -557,7 +593,7 @@
 
 .issue-meta {
 	color: var(--dsnr-muted);
-	font-size: 0.92em;
+	font-size: var(--dsnr-text-small);
 }
 
 /*
@@ -650,7 +686,7 @@
 }
 
 .drawn-name {
-	font-size: 0.92em;
+	font-size: var(--dsnr-text-small);
 	font-weight: 600;
 }
 
@@ -733,6 +769,62 @@
 }
 
 /* == A token’s control and a value’s (`TokenEditor.tsx`, `ValueFields.tsx`) == */
+
+.popover-body {
+	display: flex;
+	flex-direction: column;
+	gap: var(--dsnr-space-4);
+}
+
+.popover-head {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: var(--dsnr-space-4);
+}
+
+.popover-title {
+	font-weight: 600;
+	overflow-wrap: anywhere;
+}
+
+.popover-field {
+	display: flex;
+	flex-direction: column;
+	gap: var(--dsnr-space-1);
+}
+
+/* A part with a short name (X, Y, Top): its name, its slider and its number on one line, the names in a column of their own. */
+.popover-field-line {
+	flex-direction: row;
+	align-items: center;
+	gap: var(--dsnr-space-4);
+}
+
+.popover-field-line .popover-label {
+	flex: 0 0 3.5em;
+}
+
+.popover-field-line .dimension-field {
+	flex: 1;
+	min-width: 0;
+}
+
+/* A range has a width of its own it will not go under, which would push its number out of the popover beside a name. */
+.popover-field-line input[type='range'] {
+	min-width: 0;
+}
+
+/* At the panel's own text size: a few fields, read at a glance. */
+.popover-label,
+.popover-note {
+	margin: 0;
+	color: var(--dsnr-muted);
+}
+
+.popover .token-value {
+	font-size: inherit;
+}
 
 /* A token's control (6.2), in a dialog: a picker and its hex, a slider, a tone's steps as swatches to choose from. */
 .token-editor {
@@ -878,10 +970,6 @@
 	justify-content: space-between;
 }
 
-.changed .token .item-actions {
-	opacity: 1;
-}
-
 /*
  * A value changed (Phase 4): room on its right for its reset, as a token's row has, and under its name where it is
  * written, or why it cannot be saved, with a path broken anywhere rather than past the pane.
@@ -892,7 +980,7 @@
 
 .value-place {
 	display: block;
-	font-size: 0.92em;
+	font-size: var(--dsnr-text-small);
 	overflow-wrap: anywhere;
 }
 
@@ -923,17 +1011,8 @@
 	margin: 0;
 	padding: 0;
 	list-style: none;
-	font-size: 0.92em;
+	font-size: var(--dsnr-text-small);
 	overflow-wrap: anywhere;
 }
 
 /* Wrapped when a narrow pane cannot hold them in a row: a hand-over has three. */
-.branch-buttons {
-	display: flex;
-	flex-wrap: wrap;
-	gap: var(--dsnr-space-4);
-}
-
-.branch-buttons .button {
-	width: auto;
-}

@@ -158,7 +158,7 @@ export const TokenEditor = ({
 			</div>
 			<DialogButtons>
 				{isChanged(now) && (
-					<Button variant="secondary" onClick={() => change(now, null)}>
+					<Button variant="secondary" onPress={() => change(now, null)}>
 						Reset
 					</Button>
 				)}

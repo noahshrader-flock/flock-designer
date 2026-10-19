@@ -56,7 +56,7 @@ export const TokenRow = ({ token, info, onEdit }: { token: DesignToken; info?: s
 	const pair = contrast && (
 		<span
 			data-contrast={contrast.ratio}
-			className={contrast.flag ? 'token-contrast token-contrast-low' : 'token-contrast'}
+			className={contrast.flag ? 'token-contrast warning-text' : 'token-contrast'}
 			title={`${contrast.ratio}:1, ${contrast.words}`}
 		>
 			{contrast.ratio}:1

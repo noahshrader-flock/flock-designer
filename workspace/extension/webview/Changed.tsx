@@ -8,7 +8,7 @@ import type { TokenEdit } from '../../src/shared/contract';
 import { type HandOverControls, useHandOver } from './hooks/useHandOver';
 import { HandOverActions } from './HandOverActions';
 import { useShowing } from './Showing';
-import { Button } from '../../src/ui/Button';
+import { Button, ButtonRow } from '../../src/ui/Button';
 import { Icon } from '../../src/ui/Icon';
 import { ChangeRow, ValueList, ValueItem } from '../../src/ui/ValueItem';
 import { Swatch } from '../../src/ui/Swatch';
@@ -61,28 +61,28 @@ export const BranchActions = <C,>({
 				</p>
 			)}
 			<Message tone="error">{error ?? handOver.error}</Message>
-			<div className="branch-buttons">
+			<ButtonRow>
 				{offered.save && (
-					<Button disabled={offered.save.disabled} onClick={save}>
+					<Button disabled={offered.save.disabled} onPress={save}>
 						{offered.save.label}
 					</Button>
 				)}
 				{processable && (
-					<Button variant="secondary" disabled={busy !== null || handOver.busy !== null || showing !== null} onClick={handOver.processChanges}>
+					<Button variant="secondary" disabled={busy !== null || handOver.busy !== null || showing !== null} onPress={handOver.processChanges}>
 						{handOver.busy === 'handing' ? 'Handing to Claude Code…' : 'Process changes'}
 					</Button>
 				)}
 				{offered.propose && (
-					<Button disabled={offered.propose.disabled} onClick={propose}>
+					<Button disabled={offered.propose.disabled} onPress={propose}>
 						{offered.propose.label}
 					</Button>
 				)}
 				{offered.startOver && (
-					<Button variant="ghost" disabled={offered.startOver.disabled} onClick={startOver}>
+					<Button variant="ghost" disabled={offered.startOver.disabled} onPress={startOver}>
 						Start over
 					</Button>
 				)}
-			</div>
+			</ButtonRow>
 		</div>
 	);
 };

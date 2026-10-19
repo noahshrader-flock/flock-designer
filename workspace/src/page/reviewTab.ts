@@ -3,7 +3,7 @@
  * prototype's review page and carries messages between it and the extension, and tells it VS Code's theme.
  * Nothing from anywhere else (the prototype's page in the bar, a frame it makes) goes anywhere.
  */
-import { type EditorTheme, THEME_KINDS, type ThemeKind } from '../shared/reviewRelay';
+import { type EditorTheme, THEME_KINDS, isThemeColor } from '../shared/reviewRelay';
 
 declare const acquireVsCodeApi: () => { postMessage(message: unknown): void };
 
@@ -18,13 +18,14 @@ export const startReviewTab = (page: string): void => {
 	// origin, which VS Code's variables do not reach.
 	const theme = (): EditorTheme => {
 		const c = document.body.classList;
-		const kind = ([...THEME_KINDS].reverse().find((k) => c.contains(k)) ?? 'vscode-light') as ThemeKind;
+		const kind = [...THEME_KINDS].reverse().find((k) => c.contains(k)) ?? 'vscode-light';
 		const style = document.documentElement.style;
+		// Only what the page takes (`isThemeColor`): one it would refuse would lose it the whole theme.
 		const colors = Object.fromEntries(
 			[...Array(style.length).keys()]
 				.map((i) => style.item(i))
-				.filter((name) => name.startsWith('--vscode-'))
-				.map((name) => [name, style.getPropertyValue(name).trim()]),
+				.map((name) => [name, style.getPropertyValue(name).trim()] as const)
+				.filter(([name, value]) => isThemeColor(name, value)),
 		);
 		return { kind, colors };
 	};

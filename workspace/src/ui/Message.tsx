@@ -1,10 +1,8 @@
 import type { ReactNode } from 'react';
-import { Button } from './Button';
+import { Button, ButtonRow } from './Button';
 import { Icon } from './Icon';
 import { LinkButton } from './LinkButton';
-
-/** Data attributes it is found by. */
-type Marks = Record<`data-${string}`, string | boolean | undefined>;
+import type { Marks } from './marks';
 
 /**
  * What a view says, the one way everywhere: how much it matters (`tone`: quiet, a warning, or an error, which alone is
@@ -58,7 +56,7 @@ export const Message = ({
 					)}
 					<div className="empty-body">
 						{children}
-						{action && <Button onClick={action.onPress}>{action.label}</Button>}
+						{action && <Button onPress={action.onPress}>{action.label}</Button>}
 					</div>
 				</div>
 			</div>
@@ -66,32 +64,22 @@ export const Message = ({
 			<div className="empty" {...marks}>
 				<div className="empty-content">
 					<p role={tone === 'error' ? 'alert' : 'status'}>{children}</p>
-					{action && <Button onClick={action.onPress}>{action.label}</Button>}
+					{action && <Button onPress={action.onPress}>{action.label}</Button>}
 				</div>
-			</div>
-		);
-	if (size === 'block' && tone !== 'warning')
-		return (
-			<div className={`message message-${tone} message-block${inset ? ' message-inset' : ''}`} {...alert} {...marks}>
-				{title && <p className="notice-title">{title}</p>}
-				<p>{children}</p>
-				{action && (
-					<Button variant="secondary" onClick={action.onPress}>
-						{action.label}
-					</Button>
-				)}
 			</div>
 		);
 	if (size === 'block')
 		return (
-			<div className="notice" {...marks}>
-				{title && <p className="notice-title">{title}</p>}
+			<div className={`message message-${tone} message-block${inset ? ' message-inset' : ''}`} {...alert} {...marks}>
+				{title && <p className="message-title">{title}</p>}
 				<p>{children}</p>
-				{/* Outlined: the box is the message, and what is done about it should not outshout the page around it. */}
+				{/* Outlined, as wide as its words: what is done about it should not outshout the page around it. */}
 				{action && (
-					<Button variant="secondary" onClick={action.onPress}>
-						{action.label}
-					</Button>
+					<ButtonRow>
+						<Button variant="secondary" onPress={action.onPress}>
+							{action.label}
+						</Button>
+					</ButtonRow>
 				)}
 			</div>
 		);

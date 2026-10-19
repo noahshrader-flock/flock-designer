@@ -1,8 +1,10 @@
+import { type EditorTheme, THEME_KINDS } from '../shared/reviewRelay';
+
 /**
- * Light or dark, for the published page's bar: the computer's setting when it is in a browser, VS Code's when DSNR's review tab
- * frames it (the tab says, `listenForDsnr`). Dark is the `dark` class, which the kit's theme outside VS Code reads (`ui/theme.css`), and the
- * colour-scheme says so to the browser as well: a framed page whose colour-scheme differs from the page around it is drawn
- * on an opaque backdrop, not see-through.
+ * Light or dark, for the published page's bar: the computer's setting when it is in a browser, VS Code's when DSNR's review
+ * tab frames it (the tab says, `listenForDsnr`). Dark is the `dark` class, which the kit's theme outside VS Code reads
+ * (`ui/theme.css`), and the colour-scheme says so to the browser as well: a framed page whose colour-scheme differs from the
+ * page around it is drawn on an opaque backdrop, not see-through.
  */
 const DARK = '(prefers-color-scheme: dark)';
 export const systemIsDark = (win: Pick<Window, 'matchMedia'>): boolean => win.matchMedia?.(DARK).matches ?? false;
@@ -15,11 +17,9 @@ export const watchSystemScheme = (win: Pick<Window, 'matchMedia'>, onChange: (da
 	return () => query?.removeEventListener('change', changed);
 };
 
-import { type EditorTheme, THEME_KINDS } from '../shared/reviewRelay';
-
 /**
  * Shows the page as `dark` or light. `overEditor` is a page VS Code frames: its background is taken off, so what is behind its
- * bar is the editor's own, as the bar is quiet (`Toolbar quiet`). In a browser the page keeps its own background.
+ * bar is the editor's own, as the bar has no background of its own (`.viewer-bar`). In a browser the page keeps its own background.
  */
 export const applyScheme = (doc: Document, dark: boolean, overEditor: boolean): void => {
 	doc.documentElement.classList.toggle('dark', dark);

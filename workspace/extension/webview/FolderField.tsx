@@ -1,4 +1,4 @@
-import { Field, Select, TextInput } from './Field';
+import { Field, Select, TextInput } from '../../src/ui/Field';
 
 /** A project's folder as chosen in a form: none, one there is, or a new one still being named. */
 export type FolderPick = { kind: 'none' } | { kind: 'existing'; name: string } | { kind: 'new'; name: string };

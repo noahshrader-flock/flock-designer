@@ -16,7 +16,7 @@ import { Icon } from './Icon';
  * and to the eye: filled as the primary when it is, outlined as the secondary when it is not.
  */
 export const Button = ({
-	onClick,
+	onPress,
 	type = 'button',
 	variant = 'primary',
 	disabled = false,
@@ -27,7 +27,7 @@ export const Button = ({
 	title,
 	children,
 }: {
-	onClick?: () => void;
+	onPress?: () => void;
 	type?: 'button' | 'submit';
 	variant?: 'primary' | 'secondary' | 'ghost';
 	disabled?: boolean;
@@ -47,7 +47,7 @@ export const Button = ({
 			type={type}
 			className={`button button-${pressed === undefined ? variant : pressed ? 'primary' : 'secondary'}${external || icon ? ' button-with-icon' : ''}${icon && !hasWords ? ' button-icon' : ''}`}
 			disabled={disabled}
-			{...(onClick ? { onClick } : {})}
+			{...(onPress ? { onClick: onPress } : {})}
 			{...(pressed === undefined ? {} : { 'aria-pressed': pressed })}
 			{...(label ? { 'aria-label': label } : {})}
 			{...(title ? { title } : {})}
@@ -64,3 +64,11 @@ export const Button = ({
 		</button>
 	);
 };
+
+/**
+ * Buttons side by side, each as wide as its words, wrapping when the row is narrow (a tab's actions, a branch's, a message's,
+ * a bar's): where a button is not the width of the side bar. `end` puts them at the row's end (a form's Cancel and Save).
+ */
+export const ButtonRow = ({ end = false, children }: { end?: boolean; children: ReactNode }) => (
+	<div className={end ? 'button-row button-row-end' : 'button-row'}>{children}</div>
+);

@@ -5,7 +5,7 @@ import { slugify } from '../../src/shared/validate';
 import { Button } from '../../src/ui/Button';
 import { Dialog, DialogButtons } from '../../src/ui/Dialog';
 import { Field, TextArea, TextInput } from '../../src/ui/Field';
-import { FolderField, type FolderPick, folderOf, isChosen, pickOf } from '../../src/ui/FolderField';
+import { FolderField, type FolderPick, folderOf, isChosen, pickOf } from './FolderField';
 import { workspace } from './host';
 import { Message } from '../../src/ui/Message';
 

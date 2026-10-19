@@ -4,7 +4,7 @@ import type { HandOverControls } from './hooks/useHandOver';
 import { plural } from '../../src/shared/plural';
 import { LARGE, flagged } from '../../src/shared/processChanges';
 import { CHANGE_REQUEST } from '../../src/shared/vocabulary';
-import { Button } from '../../src/ui/Button';
+import { Button, ButtonRow } from '../../src/ui/Button';
 import { useShowing } from './Showing';
 import { Icon } from '../../src/ui/Icon';
 import { Message } from '../../src/ui/Message';
@@ -85,37 +85,37 @@ export const HandOverActions = ({ controls }: { controls: HandOverControls }) =>
 			{confirming ? (
 				<>
 					<p className="warning-text">It changes what the rules keep out, or more than one sitting’s review. Its {CHANGE_REQUEST} says so.</p>
-					<div className="branch-buttons">
+					<ButtonRow>
 						<Button
-							onClick={() => {
+							onPress={() => {
 								setConfirming(false);
 								propose(true);
 							}}
 						>
 							Propose anyway
 						</Button>
-						<Button variant="ghost" onClick={() => setConfirming(false)}>
+						<Button variant="ghost" onPress={() => setConfirming(false)}>
 							Cancel
 						</Button>
-					</div>
+					</ButtonRow>
 				</>
 			) : (
-				<div className="branch-buttons">
+				<ButtonRow>
 					{/* Not while any branch is shown in the library's place: nothing is proposed then (the note says so). */}
 					{ready && !pullRequest && showing === null && (
-						<Button disabled={busy !== null} onClick={() => (flagged(ready) ? setConfirming(true) : propose(false))}>
+						<Button disabled={busy !== null} onPress={() => (flagged(ready) ? setConfirming(true) : propose(false))}>
 							{busy === 'proposing' ? `Opening a draft ${CHANGE_REQUEST}…` : 'Propose'}
 						</Button>
 					)}
 					{ready && (
-						<Button variant="secondary" disabled={busy !== null} onClick={() => preview(showing !== branch.branch)}>
+						<Button variant="secondary" disabled={busy !== null} onPress={() => preview(showing !== branch.branch)}>
 							{busy === 'showing' ? 'Switching the previews…' : showing === branch.branch ? 'Stop previewing' : 'Preview this branch'}
 						</Button>
 					)}
-					<Button variant="ghost" disabled={busy !== null} onClick={startOver}>
+					<Button variant="ghost" disabled={busy !== null} onPress={startOver}>
 						Start over
 					</Button>
-				</div>
+				</ButtonRow>
 			)}
 		</div>
 	);

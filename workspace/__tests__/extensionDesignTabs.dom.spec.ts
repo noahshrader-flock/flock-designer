@@ -156,7 +156,9 @@ describe('a component’s tab', () => {
 	it('says why its previews could not be built, with a way to try again', async () => {
 		await open();
 		await answer('storyPreview', { state: 'no-packages', root: '/work/lib' });
-		expect(document.querySelector('.notice')?.textContent).toContain("The design system's packages are not installed in /work/lib.");
+		expect(document.querySelector('.message-block.message-warning')?.textContent).toContain(
+			"The design system's packages are not installed in /work/lib.",
+		);
 		await press(button('Try again'));
 		expect(calls('storyPreview')).toHaveLength(2);
 	});
@@ -321,7 +323,8 @@ describe('a component’s tab', () => {
 	const section = (label: string) => document.querySelector(`[aria-label="${label}"]`) as HTMLElement | null;
 	/** Its Changes dialog, opened from the button in its header: what is tried is there, not in the column. */
 	const openChanges = async () => {
-		if (!document.querySelector('[role="dialog"][aria-label="Changes"]')) await press(document.querySelector('.tab-actions button') as HTMLElement);
+		if (!document.querySelector('[role="dialog"][aria-label="Changes"]'))
+			await press(document.querySelector('.tab-header .button-row button') as HTMLElement);
 	};
 
 	it('reads in three parts: its styles, the tokens it draws with, and what is wrong with it, each with its title', async () => {
@@ -897,7 +900,7 @@ describe('a component’s tab', () => {
 			expect(changed().textContent).toContain('Every value is as the library draws it.');
 			// With nothing tried, the branch can still be reached: the button says so and can be pressed.
 			await press(document.querySelector('[role="dialog"][aria-label="Changes"] [aria-label="Close"]') as HTMLElement);
-			const count = document.querySelector('.tab-actions button') as HTMLButtonElement;
+			const count = document.querySelector('.tab-header .button-row button') as HTMLButtonElement;
 			expect(count.textContent).toBe('No changes');
 			expect(count.disabled).toBe(false);
 		});
@@ -1082,7 +1085,7 @@ describe('a component’s tab', () => {
 			const { tried } = await tryingOpen();
 			const column = document.querySelector('.component-aside') as HTMLElement;
 			const first = column.firstElementChild;
-			const count = document.querySelector('.tab-actions button') as HTMLButtonElement;
+			const count = document.querySelector('.tab-header .button-row button') as HTMLButtonElement;
 			expect(count.textContent).toBe('No changes');
 			expect(count.disabled).toBe(true);
 			// What is after it stays, the same element.

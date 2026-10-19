@@ -1,4 +1,4 @@
-import { type ReactNode, useId } from 'react';
+import { useId } from 'react';
 import { newestVersionFirst } from '../shared/prototypeNames';
 import { workLabel } from '../shared/work';
 import { stateLabel } from '../shared/prototypeStates';
@@ -43,36 +43,31 @@ const SwitchMenu = ({
 
 /**
  * Switching between a prototype's versions, on its published page (and its review in VS Code, which frames that page): a
- * dropdown saying which version is shown, its list the newest first, and after it the page's states.
+ * dropdown saying which version is shown, its list the newest first. What is chosen is given back as it was given (`T`:
+ * with where its page is).
  */
 export const VersionSwitcher = <T extends Switchable>({
 	current,
 	siblings,
 	onSelect,
-	children,
 }: {
 	current: Switchable;
 	siblings: T[];
 	onSelect: (next: T) => void;
-	/** A prototype's states, after the version, where they read left to right. */
-	children?: ReactNode;
 }) => {
-	// Newest first, whatever order they were given in: the app and the published page then always agree.
+	// Newest first, whatever order they were given in, as every list of versions is.
 	const newestFirst = [...siblings].sort((a, b) => newestVersionFirst(a.name, b.name));
 	return (
-		<>
-			<SwitchMenu
-				what="version"
-				label={workLabel(current)}
-				value={current.branch}
-				choices={newestFirst.map((i) => ({ value: i.branch, label: `${workLabel(i)}${i.from ? ` · based on ${workLabel({ name: i.from })}` : ''}` }))}
-				onChange={(branch) => {
-					const next = siblings.find((i) => i.branch === branch);
-					if (next && branch !== current.branch) onSelect(next);
-				}}
-			/>
-			{children}
-		</>
+		<SwitchMenu
+			what="version"
+			label={workLabel(current)}
+			value={current.branch}
+			choices={newestFirst.map((i) => ({ value: i.branch, label: `${workLabel(i)}${i.from ? ` · based on ${workLabel({ name: i.from })}` : ''}` }))}
+			onChange={(branch) => {
+				const next = siblings.find((i) => i.branch === branch);
+				if (next) onSelect(next);
+			}}
+		/>
 	);
 };
 

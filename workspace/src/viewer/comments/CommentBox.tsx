@@ -1,9 +1,12 @@
-import { Button } from '../../ui/Button';
+import { Button, ButtonRow } from '../../ui/Button';
 import { Field, TextArea } from '../../ui/Field';
 import { Message } from '../../ui/Message';
 import type { Comments } from './useComments';
 
-/** Where the box sits relative to the pin, whose body is drawn above its tip. */
+/**
+ * Where the box sits relative to the pin's tip: past the right of its body (drawn 14px either side of the tip, `page/pins.ts`)
+ * with a gap, and level with its middle (its 28px body is drawn 33px above the tip).
+ */
 const BOX_OFFSET = { x: 22, y: -19 } as const;
 
 /**
@@ -18,7 +21,7 @@ export const CommentBox = ({ comments, origin, error }: { comments: Comments; or
 		<div
 			role="dialog"
 			aria-label="New comment"
-			className="comment-box"
+			className="dialog comment-box"
 			onKeyDown={(e: React.KeyboardEvent) => {
 				// Cmd or Ctrl and Enter saves, as in the tools people already use. Escape is the screen's, as everywhere.
 				if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') void comments.post();
@@ -32,14 +35,14 @@ export const CommentBox = ({ comments, origin, error }: { comments: Comments; or
 			<Field label="Comment">
 				{(control) => <TextArea control={control} rows={3} value={comments.draft} onChange={comments.setDraft} focused />}
 			</Field>
-			<div className="comment-box-buttons">
-				<Button variant="ghost" onClick={comments.cancelCompose} disabled={comments.posting}>
+			<ButtonRow end>
+				<Button variant="ghost" onPress={comments.cancelCompose} disabled={comments.posting}>
 					Cancel
 				</Button>
-				<Button onClick={() => void comments.post()} disabled={comments.posting || !comments.draft.trim()}>
+				<Button onPress={() => void comments.post()} disabled={comments.posting || !comments.draft.trim()}>
 					{comments.posting ? 'Saving…' : 'Save'}
 				</Button>
-			</div>
+			</ButtonRow>
 		</div>
 	</>
 );

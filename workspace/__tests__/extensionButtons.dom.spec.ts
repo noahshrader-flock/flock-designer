@@ -158,8 +158,8 @@ describe('icon buttons and menus', () => {
 	it('are the default size, the search’s, unless a row or a header makes them small', async () => {
 		await mount(
 			createElement('div', null, [
-				createElement(IconButton, { key: 'a', icon: 'refresh', label: 'Default', onClick: () => undefined }),
-				createElement(IconButton, { key: 'b', icon: 'refresh', label: 'Small', size: 'small', onClick: () => undefined }),
+				createElement(IconButton, { key: 'a', icon: 'refresh', label: 'Default', onPress: () => undefined }),
+				createElement(IconButton, { key: 'b', icon: 'refresh', label: 'Small', size: 'small', onPress: () => undefined }),
 				createElement(Menu, { key: 'c', label: 'Menu default', sections: [{ items: [] }] }),
 				createElement(Menu, { key: 'd', label: 'Menu small', size: 'small', sections: [{ items: [] }] }),
 			]),

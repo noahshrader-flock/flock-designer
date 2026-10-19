@@ -13,7 +13,7 @@ import type { TokenActions } from './Tokens';
 import { ShowingNote } from './Showing';
 import { useTabCatalog } from './useCatalog';
 import { useTrying } from './useTrying';
-import { Button } from '../../src/ui/Button';
+import { Button, ButtonRow } from '../../src/ui/Button';
 import { asks } from './host';
 import { useMode, useTokenEdits, useValueTrials } from './shared';
 import { Message, tryAgain } from '../../src/ui/Message';
@@ -92,20 +92,20 @@ export const ComponentTab = ({ id }: { id: string }) => {
 						<Heading size="page">{component.name}</Heading>
 						<Message>{component.subtitle ?? component.group}</Message>
 					</div>
-					<div className="tab-actions">
+					<ButtonRow>
 						{/* Always there, so nothing moves when the first value is tried; with nothing tried and no branch, it cannot be pressed. */}
-						<Button variant="ghost" disabled={count === 0 && !kept} onClick={() => setChangesOpen(true)}>
+						<Button variant="ghost" disabled={count === 0 && !kept} onPress={() => setChangesOpen(true)}>
 							{count === 0 ? 'No changes' : plural(count, 'change')}
 						</Button>
 						{component.storybook !== null && (
-							<Button variant="secondary" external onClick={() => link('storybook')}>
+							<Button variant="secondary" external onPress={() => link('storybook')}>
 								Storybook
 							</Button>
 						)}
-						<Button variant="secondary" external onClick={() => link('source')}>
+						<Button variant="secondary" external onPress={() => link('source')}>
 							GitHub
 						</Button>
-					</div>
+					</ButtonRow>
 				</header>
 				<ShowingNote showing={ready.showing} branch={ready.branch} />
 				<div className="component-layout">

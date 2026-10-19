@@ -6,29 +6,22 @@ import { PANEL_MIN, PANEL_STEP, type PanelWidths, clampPanelWidth, loadPanelWidt
  * width is the panel's own (`PanelWidths`), remembered, and kept within the window as it is resized: the comments' panel
  * beside a prototype's page.
  *
- * `onResizing` is told when a drag starts and ends, for a screen with something that must step aside meanwhile (a
- * framed page, which does not pass the pointer on).
- *
  * It keeps a width in pixels, grabs only over its own side, and holds the pointer while dragging: the prototype's frame
  * beside it never passes the pointer back to the page, so a drag that crossed it would be lost.
  */
 export const ResizablePanel = ({
 	panel,
 	label,
-	onResizing,
 	children,
 }: {
 	panel: PanelWidths;
 	/** The divider's name for assistive technology: "Resize the comments sidebar". */
 	label: string;
-	onResizing?: (resizing: boolean) => void;
 	children: ReactNode;
 }) => {
 	const [width, setWidth] = useState(() => loadPanelWidth(window.innerWidth, panel));
 	const [resizing, setResizing] = useState(false);
 	const dragging = useRef(false);
-
-	useEffect(() => onResizing?.(resizing), [resizing]); // eslint-disable-line react-hooks/exhaustive-deps
 
 	// A narrower window may no longer have room for the width that was set.
 	useEffect(() => {
