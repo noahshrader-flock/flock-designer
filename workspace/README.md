@@ -27,6 +27,13 @@ the full usage.
 the unit tests; every integration test, the slow accessibility suites (`cliAccessibility`, `buildCheck`, `probe`) included; and the
 extension in a real VS Code. Only the real-library tests need the design systems' clones, and are left to `check:full`.
 
+**A failure on CI is reproduced here before anything is changed for it.** `npm run test:linux -- <command>` runs the
+command on a Linux like CI's (`linux/Dockerfile`: x86_64 Ubuntu 24.04, CI's Node and VS Code, Chrome stable, 4 CPUs), from
+this working tree as it is, with packages of its own: for example `npm run test:linux -- npx vitest run --project
+integration chromeHeadless`. It needs Docker; on a Mac, `brew install colima docker`, then
+`colima start --cpu 4 --memory 16 --vm-type vz --vz-rosetta`. The first run builds the image (a few minutes). CI's
+"Versions" step and this command print the same line, so the two are compared.
+
 ## Building a prototype
 **Building on this machine** is part of Projects, not a separate mode. **New** opens one dialog with two
 kinds, switched at the top, both starting from a repository and a branch in it:

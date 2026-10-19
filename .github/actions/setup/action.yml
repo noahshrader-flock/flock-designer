@@ -17,3 +17,7 @@ runs:
     - name: Let Chrome and VS Code sandbox themselves
       shell: bash
       run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+    # What the tests run on, said as `npm run test:linux` says it, so the two are compared, not assumed alike.
+    - name: Versions
+      shell: bash
+      run: echo "linux: node $(node --version), $(google-chrome --version), $(nproc) CPUs"
