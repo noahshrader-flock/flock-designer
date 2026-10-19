@@ -395,6 +395,14 @@ uncommitted changes:
 6. When you are done: close the draft pull request, delete the branch, and remove the project from the design
    repository, as above.
 
+### Comments in the code
+
+A comment says **why**, or a constraint the code cannot show, never what the line already says, and there is none where a
+name would do. Three lines at most, about two on average; but a comment is as long as it takes to say what a reader
+cannot see, so none is cut to fit a number. No history in a comment (who, when, which plan or phase): that is git's.
+`npm run check` holds it (`commentCheck.mjs`, which also says the average): it fails on a longer block in shipping code
+and on a date, a plan or a phase in any comment.
+
 ## A note on npm
 
 `.npmrc` here points everything at npmjs.org. The machine-level `~/.npmrc` routes everything through
