@@ -3,9 +3,6 @@ import { type Server, createServer } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { afterAll, beforeAll, expect, it } from 'vitest';
 import { readDrawn } from '../src/core/services/designSystem/storyDrawing';
-import { painted } from '../src/core/services/prototypes/pictureComposition';
-import { decodePng } from '../src/core/services/prototypes/png';
-import PICTURE from '../src/page/picture?page';
 import { OWN_WINDOW, inChrome } from './realChrome';
 
 const STORIES: Record<string, string> = {
@@ -39,40 +36,58 @@ it('reports where each step puts the painted edges', async () => {
 		const page = await browser.newPage(OWN_WINDOW);
 		await page.setViewport({ width: 1200, height: 900, deviceScaleFactor: 2 });
 		await page.goto(base, { waitUntil: 'load' });
-		const inPage = (name: string, args: unknown = {}) => `(async () => {\n${PICTURE}\nreturn await __fdPage.${name}(${JSON.stringify(args)});\n})()`;
-		/** Painted edges [left, top, right, bottom] in CSS pixels of the page, from a PNG at `scale`. */
-		const edges = async (o: Record<string, unknown>, scale: number, at = { x: 0, y: 0 }) => {
-			const png = decodePng(Buffer.from(await page.screenshot({ type: 'png', ...o } as never)));
-			const f = painted({ data: Buffer.from(png.rgba.buffer, png.rgba.byteOffset, png.rgba.byteLength), width: png.width, height: png.height });
-			const k = 2 * scale;
-			return f === null
-				? 'none'
-				: [f.x / k + at.x, f.y / k + at.y, (f.x + f.width) / k + at.x, (f.y + f.height) / k + at.y].map((n) => n.toFixed(1)).join(' ');
-		};
+		const compare = await browser.newPage(OWN_WINDOW);
+		/** Edges by the picture test's own rule (white is all three above 240); `re` re-encodes it as the composition does, at `k`. */
+		const boxOf = (image: Buffer, type: string, re: boolean, k: number) =>
+			compare.evaluate(
+				async (b64: string, t: string, again: boolean, scale: number) => {
+					let m = await createImageBitmap(await (await fetch(`data:${t};base64,${b64}`)).blob());
+					if (again || scale !== 1) {
+						const c = new OffscreenCanvas(Math.round(m.width * scale), Math.round(m.height * scale));
+						const g = c.getContext('2d') as OffscreenCanvasRenderingContext2D;
+						g.fillStyle = '#fff';
+						g.fillRect(0, 0, c.width, c.height);
+						g.imageSmoothingQuality = 'high';
+						g.drawImage(m, 0, 0, c.width, c.height);
+						m = await createImageBitmap(again ? await c.convertToBlob({ type: 'image/jpeg', quality: 0.85 }) : await c.convertToBlob());
+					}
+					const c = new OffscreenCanvas(m.width, m.height).getContext('2d') as OffscreenCanvasRenderingContext2D;
+					c.drawImage(m, 0, 0);
+					const d = c.getImageData(0, 0, m.width, m.height).data;
+					let [l, top, r, bottom] = [m.width, m.height, -1, -1];
+					for (let i = 0; i < d.length; i += 4) {
+						if (d[i]! > 240 && d[i + 1]! > 240 && d[i + 2]! > 240) continue;
+						const [x, y] = [(i / 4) % m.width, Math.floor(i / 4 / m.width)];
+						[l, top, r, bottom] = [Math.min(l, x), Math.min(top, y), Math.max(r, x), Math.max(bottom, y)];
+					}
+					return [l, top, r + 1, bottom + 1].join(' ');
+				},
+				image.toString('base64'),
+				type,
+				re,
+				k,
+			);
 		const clip = { x: 0, y: 0, width: 1200, height: 640 };
+		const shot = async (o: Record<string, unknown>) => Buffer.from(await page.screenshot(o as never));
 		for (const file of Object.keys(STORIES)) {
 			await page.evaluate(readDrawn(file, true));
-			const say = (what: string, v: string) => lines.push(`${file.padEnd(6)} ${what.padEnd(34)} ${v}`);
-			say('png', await edges({ clip }, 1));
-			say('png, optimizeForSpeed', await edges({ clip, optimizeForSpeed: true }, 1));
-			say('png, captureBeyondViewport false', await edges({ clip, captureBeyondViewport: false }, 1));
-			say('png at half size', await edges({ clip: { ...clip, scale: 0.5 } }, 0.5));
-			say('png at half size, optimizeForSpeed', await edges({ clip: { ...clip, scale: 0.5 }, optimizeForSpeed: true }, 0.5));
-			say('png at 0.5625', await edges({ clip: { ...clip, scale: 0.5625 } }, 0.5625));
-			await page.evaluate(`document.getElementById('root').style.translate = '0px 0px'`);
-			say('png, translated 0', await edges({ clip }, 1));
-			await page.evaluate(`document.getElementById('root').style.translate = '0px 3px'`);
-			say('png, translated 3 down', await edges({ clip }, 1));
-			await page.evaluate(`document.getElementById('root').style.translate = ''`);
-			// The cut as the fast picture makes it, taken past the cut line.
-			if ((await page.evaluate(inPage('readyToPicture', { cut: true, dx: 0, dy: 0, width: 1200, height: 640 }))) === true) {
-				say('cut by clip-path, taken to 900', await edges({ clip: { ...clip, height: 900 } }, 1));
-				say('cut by clip-path, 0.5625, to 900', await edges({ clip: { ...clip, height: 900, scale: 0.5625 } }, 0.5625));
-			}
-			await page.evaluate(inPage('pictured'));
-			lines.push(
-				`${file.padEnd(6)} viewport ${JSON.stringify(await page.evaluate('[innerWidth, innerHeight, document.documentElement.clientWidth, document.documentElement.scrollHeight, devicePixelRatio]'))}`,
+			const say = (what: string, v: string) => lines.push(`${file.padEnd(6)} ${what.padEnd(44)} ${v}`);
+			const png = await shot({ type: 'png', clip });
+			say('full size: png', await boxOf(png, 'image/png', false, 1));
+			say(
+				'full size: Chrome jpeg 85, optimizeForSpeed',
+				await boxOf(await shot({ type: 'jpeg', quality: 85, optimizeForSpeed: true, clip }), 'image/jpeg', false, 1),
 			);
+			say('full size: Chrome jpeg 85', await boxOf(await shot({ type: 'jpeg', quality: 85, clip }), 'image/jpeg', false, 1));
+			say('full size: canvas jpeg 85 of the png', await boxOf(png, 'image/png', true, 1));
+			const k = 0.5625;
+			say('0.5625: Chrome png', await boxOf(await shot({ type: 'png', clip: { ...clip, scale: k } }), 'image/png', false, 1));
+			say('0.5625: canvas png of the full png', await boxOf(png, 'image/png', false, k));
+			say(
+				'0.5625: Chrome jpeg 85, optimizeForSpeed',
+				await boxOf(await shot({ type: 'jpeg', quality: 85, optimizeForSpeed: true, clip: { ...clip, scale: k } }), 'image/jpeg', false, 1),
+			);
+			say('0.5625: canvas jpeg 85 of the full png', await boxOf(png, 'image/png', true, k));
 		}
 	});
 	expect(lines.join('\n')).toBe('');
