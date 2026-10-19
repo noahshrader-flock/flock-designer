@@ -70,7 +70,7 @@ describe('what a skill says is in its task', () => {
 	});
 
 	it('is found when a skill says it', () => {
-		expect(claimed('`codebase-work.md` (in your task too) says how it runs')).toEqual(['codebase-work.md']);
+		expect(claimed('`move-to-code.md` (in your task too) says how it runs')).toEqual(['move-to-code.md']);
 		expect(claimed('read `x.md`, beside this file')).toEqual([]);
 		// "It" here is the skill itself, in the next sentence.
 		expect(claimed('from Claude Code (`start-prototype.md`), so nobody has to find it. It is also in the task')).toEqual([]);
