@@ -528,3 +528,120 @@ describe('the order they are tried in', () => {
 		expect(list.tokens.some((t) => t.path.startsWith('css.'))).toBe(false);
 	});
 });
+
+describe('token scripts: a script named for its tokens, exporting objects of plain values', () => {
+	const FILE = 'src/theme/design-tokens.ts';
+	const TEXT = `import { mix } from './mix';
+
+export const scales = {
+  blue: {
+    100: '#E8F0FF',
+    500: '#2563EB',
+  },
+  slate: {
+    900: '#0F172A',
+  },
+};
+
+export const tokens = {
+  colors: {
+    ...scales,
+    light: {
+      primary: { main: scales.blue[500], text: '#FFFFFF' },
+    },
+    dark: {
+      primary: { main: scales.blue[100], text: scales.slate[900] },
+    },
+    overlay: mix('#000000', 0.5),
+  },
+  spacing: { sm: 4, md: 8 },
+  radius: { md: 12 },
+  typography: { fontFamily: '"Inter", sans-serif', fontSize: { body: 14 }, fontWeight: { bold: 700 } },
+  motion: { duration: { fast: 100 }, easing: { out: 'cubic-bezier(0, 0, 0.2, 1)' } },
+  shadows: { sm: '0 1px 2px rgb(0 0 0 / 0.1)' },
+  zIndex: { modal: 50 },
+  indicators: { thickness: '3px' },
+};
+`;
+	const read = (files: Record<string, string> = { [FILE]: TEXT }) => readTokens(memoryReads(files));
+
+	it('reads each value as the primitive its value and its path say: scales, roles by mode, lengths, type, motion, shadows', async () => {
+		const list = await read();
+		expect(list.source).toBe('token scripts');
+		expect(find(list, 'scales.blue.500')).toMatchObject({ kind: 'color', group: 'Light', set: 'blue', name: '500', value: '#2563EB' });
+		expect(find(list, 'tokens.colors.light.primary.main')).toMatchObject({
+			group: 'Light',
+			set: 'primary',
+			value: '#2563EB',
+			ref: { path: 'scales.blue.500' },
+		});
+		expect(find(list, 'tokens.colors.dark.primary.main')).toMatchObject({
+			group: 'Dark',
+			set: 'primary',
+			value: '#E8F0FF',
+			ref: { path: 'scales.blue.100' },
+		});
+		// Numbers are pixels for a length, as a theme means them, and milliseconds for a duration.
+		expect(find(list, 'tokens.spacing.sm')).toMatchObject({ kind: 'dimension', category: 'Spacing', value: '4px' });
+		expect(find(list, 'tokens.radius.md')).toMatchObject({ category: 'Shape', value: '12px' });
+		expect(find(list, 'tokens.typography.fontSize.body')).toMatchObject({ kind: 'font', group: 'Size', value: '14px' });
+		expect(find(list, 'tokens.typography.fontFamily')).toMatchObject({ group: 'Family', value: '"Inter", sans-serif' });
+		expect(find(list, 'tokens.motion.duration.fast')).toMatchObject({ kind: 'duration', value: '100ms' });
+		expect(find(list, 'tokens.motion.easing.out')).toMatchObject({ kind: 'easing' });
+		expect(find(list, 'tokens.shadows.sm')).toMatchObject({ kind: 'shadow' });
+		// The roles that point at a step before the steps, which are the primitives.
+		const colors = list.tokens.filter((t) => t.kind === 'color').map((t) => t.path);
+		expect(colors.indexOf('tokens.colors.light.primary.main')).toBeLessThan(colors.indexOf('scales.blue.500'));
+	});
+
+	it('reads a scale spread in as the same tokens, once, and follows a pointer through it', async () => {
+		const list = await read({ [FILE]: TEXT.replace("main: scales.blue[500], text: '#FFFFFF'", "main: tokens.colors.blue[500], text: '#FFFFFF'") });
+		expect(list.tokens.filter((t) => t.value === '#2563EB' && t.ref === undefined).map((t) => t.path)).toEqual(['scales.blue.500']);
+		expect(find(list, 'tokens.colors.light.primary.main')?.ref?.path).toBe('scales.blue.500');
+	});
+
+	it('says a value worked out by code, never guesses one, and leaves out a value no primitive has a place for', async () => {
+		const list = await read();
+		expect(list.problems).toEqual([
+			expect.objectContaining({ file: FILE, reason: expect.stringMatching(/tokens\.colors\.overlay is mix\(.*worked out by code/) }),
+		]);
+		expect(find(list, 'tokens.colors.overlay')).toBeUndefined();
+		expect(find(list, 'tokens.zIndex.modal')).toBeUndefined();
+		expect(find(list, 'tokens.indicators.thickness')).toBeUndefined();
+	});
+
+	it('follows a pointer into an object the file keeps to itself, which is no token, and says why one worked out by code is not read', async () => {
+		const text = `const shades = {\n  dim: mix('#000000', 0.5),\n  ink: '#111111',\n};\n\nexport const tokens = {\n  colors: { light: { overlay: shades.dim, text: shades.ink } },\n};\n`;
+		const list = await read({ [FILE]: text });
+		expect(find(list, 'tokens.colors.light.text')).toMatchObject({ value: '#111111' });
+		expect(find(list, 'tokens.colors.light.text')?.ref).toBeUndefined();
+		expect(list.tokens.map((t) => t.path)).toEqual(['tokens.colors.light.text']);
+		expect(list.problems.map((p) => p.reason)).toEqual([
+			"tokens.colors.light.overlay points at shades.dim, which is worked out by code (mix('#000000', 0.5)), so it is not read",
+		]);
+	});
+
+	it('reads only a script named for its tokens, never an object that only looks like them', async () => {
+		expect((await read({ 'src/config.ts': TEXT })).source).not.toBe('token scripts');
+		for (const name of ['src/tokens.ts', 'src/theme.tokens.ts', 'lib/designTokens/tokens.js'])
+			expect((await read({ [name]: TEXT })).source, name).toBe('token scripts');
+	});
+
+	it('writes a change in place, in the shape it had: a step keeps its quotes, a length its number, a role its pointer', async () => {
+		const reads = memoryReads({ [FILE]: TEXT });
+		const written = await editedFiles(reads, [
+			{ path: 'scales.blue.500', value: '#1D4ED8' },
+			{ path: 'tokens.spacing.md', value: '10px' },
+			{ path: 'tokens.colors.dark.primary.main', ref: 'scales.slate.900' },
+		]);
+		const text = written.get(FILE) as string;
+		expect(text).toContain("500: '#1D4ED8',");
+		expect(text).toContain('md: 10 }');
+		expect(text).toContain('main: scales.slate[900]');
+		expect(text.split('\n').filter((line, i) => line !== TEXT.split('\n')[i])).toHaveLength(3);
+	});
+
+	it('refuses a length a number cannot be, rather than write it some other way', async () => {
+		await expect(editedFiles(memoryReads({ [FILE]: TEXT }), [{ path: 'tokens.spacing.md', value: '1rem' }])).rejects.toThrow(/written as a number/);
+	});
+});

@@ -451,7 +451,7 @@ export const theme = createTheme({
 
 	it('gives no tokens, says what it looked for, and nothing is guessed', async () => {
 		const list = await readTokens(memoryReads({ 'src/index.ts': 'export {};\n' }));
-		expect(list).toEqual({ source: null, tokens: [], problems: [], looked: ['theme files', 'CSS variables', 'token files'] });
+		expect(list).toEqual({ source: null, tokens: [], problems: [], looked: ['theme files', 'token scripts', 'CSS variables', 'token files'] });
 	});
 
 	it('says which way it read them when it does', async () => {

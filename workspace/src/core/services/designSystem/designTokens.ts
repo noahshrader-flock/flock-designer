@@ -8,8 +8,10 @@ import { cssVariables } from './tokens/cssVariables';
 import { type TokenSource, isLibraryFile } from './tokens/source';
 import { themeFiles } from './tokens/themeFiles';
 import { tokenFiles } from './tokens/tokenFiles';
+import { tokenObjects } from './tokens/tokenObjects';
 
-const SOURCES: TokenSource[] = [themeFiles, cssVariables, tokenFiles];
+// A file named for its tokens says more than variables a stylesheet happens to declare, so it is read before them.
+const SOURCES: TokenSource[] = [themeFiles, tokenObjects, cssVariables, tokenFiles];
 
 /** The source that read a list of tokens is also the one that must write a change to them. */
 export const sourceNamed = (name: string | null): TokenSource | undefined => SOURCES.find((s) => s.name === name);
