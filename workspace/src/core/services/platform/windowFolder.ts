@@ -1,11 +1,14 @@
-import { mkdirSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { linkSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 /**
  * A folder of `root` for this window's DSNR alone. Each VS Code window runs its own DSNR, all sharing one storage folder, and
  * two building into one folder delete each other's builds (QUALITY_PASS finding 3). A window takes the first folder no
- * running DSNR holds, so one opened again uses the builds the last one kept, else a new one; each folder says, in its
- * `owner` file, which process holds it. Taking one over is a rename only one window can win.
+ * running DSNR holds, so one opened again uses the builds the last one kept, else a new one.
+ *
+ * A folder's holders are its turns, `owner-<n>`, each naming its window's process; the newest holds it. A window takes a
+ * folder by making the turn after the newest it read, which only one window can make: two that read the same holder gone
+ * cannot both take it. A turn is linked into place once it is written, so none is read half written.
  */
 
 /** Whether a process is running. A process of another user's answers that it is (EPERM). */
@@ -19,35 +22,45 @@ const running = (pid: number): boolean => {
 };
 
 const SLOT = /^w\d+$/;
+const TURN = /^owner-(\d+)$/;
+
+/** A folder's turns, oldest first. */
+const turnsOf = (dir: string): number[] =>
+	readdirSync(dir)
+		.flatMap((name) => {
+			const m = TURN.exec(name);
+			return m ? [Number(m[1])] : [];
+		})
+		.sort((a, b) => a - b);
 
 export const windowFolder = (root: string, pid: number = process.pid, alive: (pid: number) => boolean = running): string => {
 	mkdirSync(root, { recursive: true });
 	// The builds of a version before this, made straight in `root`, which no window will use again.
 	for (const old of readdirSync(root)) if (!SLOT.test(old)) rmSync(join(root, old), { recursive: true, force: true });
-	for (let n = 1; ; n++) {
-		const dir = join(root, `w${n}`);
-		const owner = join(dir, 'owner');
+	for (let slot = 1; ; slot++) {
+		const dir = join(root, `w${slot}`);
 		mkdirSync(dir, { recursive: true });
-		const take = (): boolean => {
-			try {
-				writeFileSync(owner, String(pid), { flag: 'wx' });
-				return true;
-			} catch {
-				return false;
-			}
-		};
-		if (take()) return dir;
-		const holder = Number(readFileSync(owner, 'utf8').trim());
-		if (holder === pid) return dir;
-		if (Number.isInteger(holder) && holder > 0 && alive(holder)) continue;
-		// Its DSNR is gone: taken over by moving its note aside, which only one window can do.
-		const aside = `${owner}.${pid}.gone`;
-		try {
-			renameSync(owner, aside);
-		} catch {
-			continue;
+		const turns = turnsOf(dir);
+		const newest = turns.at(-1);
+		if (newest !== undefined) {
+			const holder = Number(readFileSync(join(dir, `owner-${newest}`), 'utf8'));
+			if (holder === pid) return dir;
+			if (alive(holder)) continue;
 		}
-		rmSync(aside, { force: true });
-		if (take()) return dir;
+		const turn = join(dir, `owner-${(newest ?? 0) + 1}`);
+		const mine = `${turn}.${pid}`;
+		writeFileSync(mine, String(pid));
+		try {
+			linkSync(mine, turn);
+		} catch {
+			// Another window made it first: the folder is theirs.
+			continue;
+		} finally {
+			rmSync(mine, { force: true });
+		}
+		// The turns before the last one are forgotten; the last is kept, so a window that read it gone as this one did finds
+		// the turn it would make already taken.
+		for (const old of turns.slice(0, -1)) rmSync(join(dir, `owner-${old}`), { force: true });
+		return dir;
 	}
 };
