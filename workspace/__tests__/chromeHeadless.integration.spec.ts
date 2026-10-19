@@ -163,32 +163,43 @@ describe.skipIf(NO_CHROME)('with the browser on this machine', () => {
 			await page.goto(`${base}/pictures/`, { waitUntil: 'load' });
 			const compare = await browser.newPage(OWN_WINDOW);
 			/**
-			 * Compared as a person sees it (size, painted box ignoring near-white JPEG noise, mean pixel distance out of 255), so
-			 * the test does not depend on how one version of the browser smooths an edge.
+			 * Compared as a person sees it, never by how near white a pixel is (JPEG's noise reaches 236 of 255, a dialog's grey is
+			 * 221): their sizes, the shift that lays one over the other best, and the 16-pixel tile where they differ most.
 			 */
 			const seen = (a: Buffer, b: Buffer) =>
 				compare.evaluate(
 					async (x: string, y: string) => {
-						const load = async (s: string) => createImageBitmap(await (await fetch(`data:image/jpeg;base64,${s}`)).blob());
-						const read = (m: ImageBitmap) => {
+						const read = async (s: string) => {
+							const m = await createImageBitmap(await (await fetch(`data:image/jpeg;base64,${s}`)).blob());
 							const c = new OffscreenCanvas(m.width, m.height).getContext('2d') as OffscreenCanvasRenderingContext2D;
 							c.drawImage(m, 0, 0);
-							const d = c.getImageData(0, 0, m.width, m.height).data;
-							let [l, t, r, bottom] = [m.width, m.height, -1, -1];
-							for (let i = 0; i < d.length; i += 4) {
-								if (d[i]! > 240 && d[i + 1]! > 240 && d[i + 2]! > 240) continue;
-								const [px, py] = [(i / 4) % m.width, Math.floor(i / 4 / m.width)];
-								[l, t, r, bottom] = [Math.min(l, px), Math.min(t, py), Math.max(r, px), Math.max(bottom, py)];
-							}
-							return { size: [m.width, m.height], painted: [l, t, r, bottom], data: d };
+							return { width: m.width, height: m.height, data: c.getImageData(0, 0, m.width, m.height).data };
 						};
-						const [p, q] = [read(await load(x)), read(await load(y))];
-						let apart = 0;
-						if (p.size.join() === q.size.join())
-							for (let k = 0; k < p.data.length; k += 4)
-								apart +=
-									(Math.abs(p.data[k]! - q.data[k]!) + Math.abs(p.data[k + 1]! - q.data[k + 1]!) + Math.abs(p.data[k + 2]! - q.data[k + 2]!)) / 3;
-						return { fast: { size: p.size, painted: p.painted }, composed: { size: q.size, painted: q.painted }, apart: apart / (p.data.length / 4) };
+						const [p, q] = [await read(x), await read(y)];
+						// How far apart a pixel of the fast picture is from the composed one's, shifted; past its edge, from white.
+						const apart = (px: number, py: number, sx: number, sy: number) => {
+							const [qx, qy, i] = [px + sx, py + sy, (py * p.width + px) * 4];
+							const j = (qy * q.width + qx) * 4;
+							const out = qx < 0 || qy < 0 || qx >= q.width || qy >= q.height;
+							let sum = 0;
+							for (let c = 0; c < 3; c++) sum += Math.abs(p.data[i + c]! - (out ? 255 : q.data[j + c]!));
+							return sum / 3;
+						};
+						let shift = [0, 0];
+						let least = Infinity;
+						for (let sy = -3; sy <= 3; sy++)
+							for (let sx = -3; sx <= 3; sx++) {
+								let sum = 0;
+								for (let py = 0; py < p.height; py += 2) for (let px = 0; px < p.width; px += 2) sum += apart(px, py, sx, sy);
+								if (sum < least) [least, shift] = [sum, [sx, sy]];
+							}
+						const TILE = 16;
+						const across = Math.ceil(p.width / TILE);
+						const tiles = new Float64Array(across * Math.ceil(p.height / TILE));
+						for (let py = 0; py < p.height; py++)
+							for (let px = 0; px < p.width; px++)
+								tiles[Math.floor(py / TILE) * across + Math.floor(px / TILE)]! += apart(px, py, shift[0]!, shift[1]!);
+						return { sizes: [p.width, p.height, q.width, q.height], shift, worstTile: Math.max(...tiles) / (TILE * TILE) };
 					},
 					a.toString('base64'),
 					b.toString('base64'),
@@ -197,13 +208,14 @@ describe.skipIf(NO_CHROME)('with the browser on this machine', () => {
 				await page.evaluate(readDrawn(file, true));
 				const fastPicture = (await pictureOf(page as never)) as Buffer;
 				const composedOne = (await composedPicture(page as never)) as Buffer;
-				const { fast, composed, apart } = await seen(fastPicture, composedOne);
-				// To within the pixel or two the half-size capture finds an edge to.
-				// All of both, and for every story, so a failure says by how much and where, not only that.
-				const said = `${file}: fast ${JSON.stringify(fast)}, composed ${JSON.stringify(composed)}, apart ${apart.toFixed(2)}`;
-				fast.size.forEach((n, i) => expect.soft(Math.abs(n - (composed.size[i] as number)), said).toBeLessThanOrEqual(2));
-				fast.painted.forEach((n, i) => expect.soft(Math.abs(n - (composed.painted[i] as number)), said).toBeLessThanOrEqual(2));
-				if (fast.size.join() === composed.size.join()) expect.soft(apart, said).toBeLessThan(3);
+				const { sizes, shift, worstTile } = await seen(fastPicture, composedOne);
+				const [fw, fh, cw, ch] = sizes as [number, number, number, number];
+				const said = `${file}: fast ${fw}x${fh}, composed ${cw}x${ch}, shifted ${shift.join(',')}, worst tile ${worstTile.toFixed(1)}`;
+				// To within the 2 pixels the half-size capture finds an edge to. Measured: real pairs differ by at most 12 in their
+				// worst tile, on the Mac and on Linux; a 40-pixel piece missing makes it 42 or more.
+				expect.soft(Math.max(Math.abs(fw - cw), Math.abs(fh - ch)), said).toBeLessThanOrEqual(2);
+				expect.soft(Math.max(...shift.map(Math.abs)), said).toBeLessThanOrEqual(2);
+				expect.soft(worstTile, said).toBeLessThan(25);
 			}
 		});
 	}, 60_000);
