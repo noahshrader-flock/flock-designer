@@ -1,18 +1,7 @@
 /**
- * Tokens kept as CSS variables, as shadcn and Tailwind design systems keep them: `--primary: oklch(…)` in `:root` (or
- * shadcn's older bare channels, `222.2 47.4% 11.2%`), the dark values in `.dark`, a Tailwind scale in `@theme`
- * (`--color-red-500`). A variable is a token when its value is a color, or a length whose name says which primitive it is
- * (`primitiveOf`), or typography or a shadow by its name (a family, a weight, a size, a line height; `--shadow-sm`), or a
- * duration or an easing; every other variable (a z-index) is left out, not guessed. A value that names another variable
- * (`var(--ring)`) is the color it points at, and points at that variable's token. A change is written in the variable's own
- * declaration, in the form it has: `--primary: #108062;`, channels for channels, or `--primary: var(--ring);` to point it
- * elsewhere.
- *
- * **What a stylesheet imports is the library's too** (Phase 5.5): its `@import`s are followed, into its packages as they are
- * installed (Tailwind 4's theme, any package of variables), where they are in the stylesheet, so its own declarations after
- * them win as in the browser. A variable declared in a package is changed by declaring it again in the library's stylesheet
- * that imports it, in a rule of the kind the package declares it in (`:root` for a theme's), which the cascade puts over the
- * package's; from then on it reads as the library's own.
+ * Tokens kept as CSS variables, as shadcn and Tailwind keep them (`:root`, `.dark`, `@theme`). A variable is a token only
+ * when its value or name says which primitive it is; any other (a z-index) is left out, not guessed. Imports are followed
+ * into packages; a package's variable is changed by declaring it again in the library's stylesheet that imports it.
  */
 import type { DesignToken } from '../../../../shared/contract';
 import { DIMENSION, DURATION } from '../../../../shared/tokens';
@@ -102,9 +91,8 @@ interface Read {
 }
 
 /**
- * A stylesheet read with its nesting (`@layer theme { @theme { … @keyframes … } }`), its comments already blanked: every
- * custom property with the rules around it, every `@import` and every rule at its top. Quoted text is skipped, so a `;` or a brace in
- * a font's name is not taken for one.
+ * A stylesheet read with its nesting (`@layer theme { @theme { … } }`), its comments already blanked. Quoted text is
+ * skipped, so a `;` or a brace in a font's name is not taken for one.
  */
 const readStylesheet = (text: string): Read => {
 	const read: Read = { vars: [], imports: [], top: [] };
@@ -142,10 +130,9 @@ const readStylesheet = (text: string): Read => {
 const LIGHT = /^(?::root|html|:host|body|\*)$|^(?::root|html)?(?:\.light|\[[\w-]+=(["']?)light\1\])$/i;
 
 /**
- * The mode a variable is a token of, by the rules it is declared in: dark in a rule that names dark (`.dark`,
- * `[data-theme="dark"]`, a `prefers-color-scheme: dark` query); light in the page's own rules, at-rules alone (`@theme`,
- * `@layer`), or a rule that is only its light mode (`LIGHT`). Null for one scoped to anything else (`.card`, a high-contrast theme): a variable of
- * a component or another theme, not the design system's, which would otherwise be read over its light tokens.
+ * The mode a variable is a token of, by the rules it is declared in: dark in a rule that names dark; light in the page's
+ * own rules, at-rules alone, or a `LIGHT` rule. Null for one scoped to anything else (`.card`, a high-contrast theme),
+ * which would otherwise be read over the design system's light tokens.
  */
 const modeDeclaredIn = (rules: string[]): 'light' | 'dark' | null => {
 	if (rules.some((r) => /\bdark\b/i.test(r))) return 'dark';
@@ -192,10 +179,9 @@ const PREVIEW = new RegExp(`(^|/)\\.storybook/preview\\.(${SCRIPT_EXTENSIONS.joi
 const STYLE_IMPORT = /^\s*import\s+(['"])([^'"]+)\1/gm;
 
 /**
- * The stylesheets the library's Storybook preview imports, in the order it imports them: **what its stories load**, which is
- * where their variables come from (Primer's `.storybook/primitives-v8.css`, which `@import`s the packages' variables), though
- * `.storybook/` is not the library's code to read for anything else. Found as the preview's text says, not by what a folder
- * is called, so the unit tests' own set-up stylesheet, which imports the same packages, is not taken for them.
+ * The stylesheets the library's Storybook preview imports, in order: what its stories load, so where their variables
+ * come from (Primer's `.storybook/primitives-v8.css`). Found by the preview's text, not a folder's name, so a unit-test
+ * set-up stylesheet importing the same packages is not taken for them.
  */
 const previewStylesheets = async (reads: CatalogReads): Promise<string[]> => {
 	const sheets: string[] = [];

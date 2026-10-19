@@ -10,10 +10,9 @@ import { type Stylesheets, stylesheetsFor } from './stylesheets';
 import { withPageTheme } from '../browser/pageTheme';
 
 /**
- * How a design system's previews are built (DESIGN_SYSTEM.md, P1): the page every preview frame loads, the entry generated
- * for the library (its own React, Storybook and story files, handed to DSNR's page code), esbuild configured as the
- * library's own Storybook builds it, a copy of the library at a commit with its packages linked in, and a build kept open
- * to try a change on. Which builds are kept, served and cleared is `storyPreviews.ts`.
+ * How a design system's previews are built: the page, the entry generated for the library, esbuild configured as its own
+ * Storybook builds it, a copy at a commit with its packages linked in, and a build kept open to try a change on. Which
+ * builds are kept, served and cleared is `storyPreviews.ts`.
  */
 
 /** The page every preview frame loads. Plain styles of its own: the stories bring the library's. */
@@ -38,11 +37,9 @@ export const PAGE = `<!doctype html>
 `;
 
 /**
- * The page's entry, generated for the library: only what must be its own, its React, its Storybook, its preview set-up and
- * its story files, imported where the library has them and handed to the page's own code (`page/preview.ts`, bundled in as
- * text), which draws the story file named in its address, every story in it by name, each in its own error boundary so one
- * that throws does not take the others down. It tells the frame's owner its height, and nothing else; and hears from it
- * only the values to try on the component's instances.
+ * The page's entry: only what must be the library's own (React, Storybook, its preview set-up and story files), handed to
+ * the page's code (`page/preview.ts`). It tells the frame's owner its height and nothing else, and hears from it only the
+ * values to try on the component's instances.
  */
 export const previewEntry = (
 	library: string,
@@ -88,13 +85,9 @@ export const hasPackages = (root: string, exists: (p: string) => boolean = exist
 export const notInstalled = (what: string): string => `Not installed here: ${what}. Run npm install in the library, then sync.`;
 
 /**
- * What the library's own Storybook set-up gives its build, given here: its stylesheets as it makes them (`stylesheets.ts`:
- * Sass, then its own PostCSS), a package's stylesheet reached by its path even when its package does not list it
- * (`react-image-gallery`), and nothing for `.mdx` (the docs template `preview.tsx` imports, which a preview does not show).
- *
- * `missing` are imports that could not be resolved in a first build: a package the clone has not installed, or a file the
- * library generates at install time (`symbols.generated`). Each becomes a stand-in that says so when a story reaches for
- * it, so the stories that do not need it still build and render.
+ * What the library's own Storybook set-up gives its build: its stylesheets as it makes them, a package's stylesheet by
+ * path even when unlisted, and nothing for `.mdx`. `missing` (not installed, or generated at install time) become stand-ins
+ * that throw only when a story reaches for them, so the stories that do not need them still build.
  */
 const libraryBuild = (packages: string[], stylesheets: Stylesheets, missing: ReadonlySet<string>): Plugin => ({
 	name: 'library',
@@ -131,13 +124,10 @@ type BuildErrors = { errors: { text: string; location?: { file: string } | null 
 /** A build's failure as its errors, as a build that worked has none. */
 const asErrors = (err: Partial<BuildErrors>): BuildErrors => ({ errors: err.errors ?? [{ text: String(err) }] });
 
-/**
- * What the preview page is built with, from a copy of the library at `library` into `site`, with the globals the library's
- * own Storybook build defines (`storybookDefines`) and the production build of React's.
- */
 const ENTRY = 'preview-entry.tsx';
 /** The packages a copy's design system builds with that are installed, its package's first: what a stylesheet is found in. */
 const installedPackages = (library: string, folder: string): string[] => packagesOf(library, folder).filter((p) => existsSync(p));
+/** What the preview page is built with, with the globals the library's own Storybook build defines and React's production build. */
 const optionsFor = (library: string, folder: string, site: string, plugin: Plugin, defines: Record<string, string>): BuildOptions => ({
 	// In the design system's package, so its imports resolve from its own packages first, hoisted to the root or not.
 	entryPoints: { entry: join(library, folder, ENTRY) },
@@ -186,7 +176,7 @@ export const buildPreviews = async (library: string, storyFiles: string[], site:
 	const [{ build }, sass] = await Promise.all([import('esbuild'), import('sass')]);
 	const packages = installedPackages(library, folder);
 	const preview = previewSetup(library, folder);
-	// Storybook 8 and later have the \`storybook\` package, which carries its preview's channel; older ones do not.
+	// Storybook 8 and later have the `storybook` package, which carries its preview's channel; older ones do not.
 	const channel = packages.some((p) => existsSync(join(p, 'storybook', 'package.json')));
 	writeFileSync(join(library, folder, ENTRY), previewEntry(library, storyFiles, { preview, channel, folder }));
 	mkdirSync(site, { recursive: true });
@@ -207,12 +197,9 @@ export interface TrialBuild {
 }
 
 /**
- * The previews built again with a change (to the tokens, T3, decision 26; to where a value is written, Phase 4) in `work`,
- * a copy of its own of the commit's copy (`copy`), so a change's files are on disk where every tool reads the library from
- * (Tailwind's scan of its classes, Sass's imports of a partial, Phase 5.5) and no other build sees them. Each build writes the
- * files it is given and puts back the ones the last wrote, as the commit has them; closing puts back the last. **Kept open
- * between changes,** so each is esbuild's incremental rebuild, about a second for the real library, and a stylesheet no change
- * touches is made once (`stylesheets.ts`).
+ * The previews built again with a change in `work`, a copy of `copy` of its own, so the change's files are on disk where
+ * every tool reads (Tailwind's scan, Sass's partials) and no other build sees them. Kept open between changes, so each is
+ * esbuild's incremental rebuild (about a second); each build puts back the files the last one wrote.
  */
 export const trialBuild = async (copy: string, work: string, site: string, folder = ''): Promise<TrialBuild> => {
 	const [{ context }, sass] = await Promise.all([import('esbuild'), import('sass')]);

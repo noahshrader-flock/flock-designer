@@ -1,7 +1,7 @@
 /**
- * Where a change to the library's tokens is kept, and how it is proposed (T4 and T5 of the design system plan), on a
- * `dsnr/tokens-…` branch, as every change to the library is (`changeBranches.ts`). The files come from the same writer the
- * previews are tried with (`editedFiles`), read back and checked before anything is written.
+ * Where a change to the library's tokens is kept and proposed, on a `dsnr/tokens-…` branch (`changeBranches.ts`). The
+ * files come from the same writer the previews are tried with (`editedFiles`), read back and checked before anything is
+ * written.
  */
 import type { TokenEdit } from '../../../shared/contract';
 import { describeChange } from '../../../shared/tokens';

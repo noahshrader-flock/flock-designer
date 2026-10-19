@@ -1,8 +1,7 @@
 /**
- * The values tried on a component's instances, saved where they are found (Phase 4.4 of adjusting a component), on a
- * `dsnr/values-…` branch of the library kept for that component, as every change to the library is (`changeBranches.ts`).
- * What is written is what was found and read back while the values were tried (`ValueSources`), on the commit the library
- * is at: a change first saved on an older one is not saved on top of it.
+ * The values tried on a component's instances, saved where they are found, on a `dsnr/values-…` branch per component
+ * (`changeBranches.ts`). What is written is what was found and read back (`ValueSources`) on the library's current
+ * commit, so a change first saved on an older one is not saved on top of it.
  */
 import type { TriedValue, ValuePlace } from '../../../shared/contract';
 import { VALUE_NAMES, storyComponent } from '../../../shared/valueNames';

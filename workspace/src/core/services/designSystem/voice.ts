@@ -1,5 +1,5 @@
 /**
- * What of the voice and tone file is its own words (T9 of the design system plan), shared by the tasks that carry it: a file
+ * What of the voice and tone file is its own words, shared by the tasks that carry it: a file
  * may have headings and comments for its writer, and until there is more than those, nothing is put in a task.
  */
 

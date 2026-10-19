@@ -1,15 +1,7 @@
 /**
- * The design library's tokens, as one list (T1 of the design system plan): what the Design System tab shows and, later,
- * lets a person adjust. **Found, not listed:** read from the library's own files, so a color added to the library is
- * here with nothing written in this app. Read as text, never run, as the catalog reads stories (`componentCatalog.ts`).
- *
- * **In layers, behind one reader** (decision 18): each way a library can keep its tokens is a source (`tokens/`), tried
- * in order on the library's own files, and the first that finds tokens gives the list, so one library is never read two
- * ways at once. Every source returns the same shape, so nothing that shows or changes a token learns where it came from.
- * Theme files (MUI's way, and FUI's) are tried first, then CSS variables (shadcn's and Tailwind's), then design token
- * files (the standard JSON, and Tokens Studio's). The fourth layer, an agent reading what is there, is not built.
- *
- * A value that is not plain is named, with its file and line, and the rest are still read: this never guesses.
+ * The design library's tokens, read as text from its own files, never run. Each way a library keeps tokens is a source
+ * (`tokens/`), tried in order; the first that finds any gives the list, so a library is never read two ways at once, and
+ * every source returns the same shape. A value that is not plain is named with its file and line: this never guesses.
  */
 import type { DesignTokens } from '../../../shared/contract';
 import type { CatalogReads } from './componentCatalog';

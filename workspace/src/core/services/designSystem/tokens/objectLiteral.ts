@@ -1,8 +1,7 @@
 /**
- * A reader for the object literals design libraries keep their tokens in, as text, never run: each entry with the line it
- * starts on. Strings, templates and comments are stepped over whole, so a brace or a comma inside them counts for
- * nothing. Each value also has where it is written (`span`), so a change replaces exactly the text that was read. Used
- * by the theme-files source (`themeFiles.ts`), and for token files (JSON is an object literal too).
+ * A reader for the object literals design libraries keep their tokens in, as text, never run. Strings, templates and
+ * comments are stepped over whole, so a brace or comma inside them counts for nothing. Each value has where it is
+ * written (`span`), so a change replaces exactly the text that was read.
  */
 
 export type Node = { kind: 'object'; entries: Entry[] } | { kind: 'value'; text: string };

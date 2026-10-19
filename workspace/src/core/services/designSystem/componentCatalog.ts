@@ -1,12 +1,7 @@
 /**
- * The component library's catalog, as its Storybook has it, for the Design System tab. **Storybook is the source of
- * truth:** a component is a story file, wherever it is in the repository, named and grouped by its Storybook title and
- * listed alphabetically. Nothing here knows how one library lays out its
- * folders or names its components, so a story added to the library is in the list, and a library set up like any other
- * Storybook library reads the same way. An index of the library, never a copy: no story is run here, nothing is compiled.
- *
- * The reads are passed in, so this decides only what the files mean. In the app they read the library's branch on
- * GitHub through git (`designLibrary.ts`); in the tests they read a fixture.
+ * The component library's catalog, with Storybook as the source of truth: a component is a story file, wherever it is,
+ * named and grouped by its Storybook title. Nothing here knows one library's layout, and nothing is run or compiled.
+ * The reads are passed in (the library's branch through git, `designLibrary.ts`; a fixture in tests).
  */
 import { dirname } from 'node:path';
 import type { DesignSystem } from '../../../shared/catalog';

@@ -1,12 +1,7 @@
 /**
- * Which commit of the library the Design System tab shows (PROCESS_CHANGES_PLAN Phase 2): its branch on GitHub, as it always
- * has, or the tip of a branch handed to Claude Code (Preview this branch), so what Claude Code committed is seen in the
- * stories. One choice for the design system shown, asked by everything that reads the library for the tab (the catalog, the
- * previews, the component index), so no part of it shows two versions. Only committed work is read, through git's objects,
- * never the folder. Kept in memory only: a restart shows the library's branch again.
- *
- * While a branch is shown, nothing is saved or handed over (`refuse`): a value's Save writes the files the index drew, which
- * would be the branch's, onto the library's branch.
+ * Which commit of the library the Design System tab shows: its branch on GitHub, or the tip of a branch handed to Claude
+ * Code. One choice asked by everything that reads the library, so no part shows two versions; kept in memory only. While a
+ * branch is shown nothing is saved (`refuse`): a Save would write the branch's files onto the library's branch.
  */
 import type { ConnectedDesignSystem } from '../../../shared/contract';
 import { type LibraryAt, baseAt } from './designLibrary';

@@ -1,13 +1,7 @@
 /**
- * A component's drawn values (Phase 1 of adjusting a component, DESIGN_SYSTEM.md): each instance its stories draw,
- * read in the page (`storyDrawing.ts`) as the library has it and with every token tagged (T6's two light drawings), put
- * together into one row for each property. **Nothing is read from the component's source:** a value is a token's when the
- * token's tag shows through in the tagged drawing, the component's own when the tags leave it as it is, and worked out from
- * a token when the tags change it into no tag. A height is never said to be a token: it is a sum of what is inside it, so it
- * moves with any token that is. A font size is never said to be either, since no type token is tagged.
- *
- * A row's values are told apart by the prop that explains them ("by size": sm 28px, md 36px), or two props together, of
- * those the stories name as controls; else by distinct value, most drawn first.
+ * A component's drawn values, one row per property, from its instances drawn as the library has it and with every token
+ * tagged: a token's when its tag shows through, its own when the tags leave it, worked out when they change it into no tag.
+ * A height is never a token: it sums what is inside it, so it moves with any token that does.
  */
 import {
 	COLOR_VALUES,
@@ -127,10 +121,9 @@ const cellOf = (variant: string | null, read: Read, targets: string[], of?: Reco
 const caseOf = (f: Found, keys: string[]): Record<string, string | null> => Object.fromEntries(keys.map((k, i) => [k, f.parts[i] ?? null]));
 
 /**
- * Each cell's variant as a person reads it: a prop that is true by its name, false as "not" it, one drawn without it as
- * not set (it draws its default); of two props, a part that is false or not set is left out ("primary", "primary ·
- * disabled"), "default" when both are. Cells that then read the same and draw the same are one (not set and false draw the
- * default alike); when two would read the same and draw differently, each is said in full.
+ * Each cell's variant as a person reads it: true by its name, false as "not" it, unset as "not set"; of two props, a
+ * false or unset part is left out ("primary · disabled", "default" when both). Cells that then read and draw the same are
+ * one; when two would read the same and draw differently, each is said in full.
  */
 const said = (found: Found[], keys: string[]): ValueCell[] => {
 	const alone = keys.length === 1;
@@ -219,10 +212,9 @@ const rowsIn = (drawings: ModeDrawings | undefined, reading: Reading): ValueRow[
 };
 
 /**
- * The values a story file's instances draw, in light and in dark, each from its drawing as the library has it and with the
- * tags. What is said of the file (it names no component, its stories draw none, they only wrap, they threw) is said from
- * its light drawing: dark is the same stories. With no tag to draw with, every value is the component's own; when two
- * drawings do not pair up, no value is said to be a token or not.
+ * The values a story file's instances draw, in light and in dark. What is said of the file (no component, none drawn,
+ * only wrapping, threw) is from its light drawing: dark is the same stories. With no tag every value is the component's
+ * own; when two drawings do not pair up, no value is said to be a token or not.
  */
 export const readValues = (light: ModeDrawings, dark: ModeDrawings | undefined, tags: Tags, tokens: DesignToken[]): ComponentValues => {
 	const plain = light.plain;

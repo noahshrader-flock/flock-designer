@@ -1,8 +1,8 @@
 import { randomBytes } from 'node:crypto';
 
 /**
- * The branches DSNR makes to keep a change on (`dsnr/<kind>-<day>-<4 hex>`): the tokens' (T4) and the voice and tone's
- * (T9). Named one way, so the pattern that keeps a save off anyone else's work is one pattern.
+ * The branches DSNR makes to keep a change on (`dsnr/<kind>-<day>-<4 hex>`). Named one way, so the pattern that keeps a
+ * save off anyone else's work is one pattern.
  */
 export const dsnrBranchPattern = (kind: string): RegExp => new RegExp(`^dsnr/${kind}-\\d{8}-[0-9a-f]{4}$`);
 

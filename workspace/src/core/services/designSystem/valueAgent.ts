@@ -1,14 +1,7 @@
 /**
- * A value of a component's own written by the agent (Phase 4.5 of adjusting a component, DESIGN_SYSTEM.md), where
- * there is no literal to swap (MUI's own default, a size worked out from a padding and an icon), and a component's own
- * value made to follow a token (4.6). Spiked on FUI: small, idiomatic changes, in about thirty seconds each.
- *
- * Only on the person's press, since it runs the agent and costs a little. The agent works in a **copy of the library at
- * the commit being previewed**, never the person's clone, given the facts (the component, the value, its variant, the
- * stories that draw it, what it draws and what it should) and the standard for changing a design system's code. Then DSNR
- * checks it as it checks any write: the whole library drawn with what the agent wrote, and the instances tried must draw
- * what was asked; to follow a token, they draw as they did, and with the token changed they draw the token. When it does
- * not read back, the agent is told what it drew, once, and the result is checked again; else it is refused, in words.
+ * A component's own value written by the agent where there is no literal to swap (MUI's default, a size worked out), or
+ * made to follow a token. Only on the person's press, in a copy of the library at the commit previewed, never their
+ * clone. Checked by drawing, as any write is; one that does not read back gets one retry, else it is refused in words.
  */
 import { packagesOf } from './storybookSetup';
 import { PX_PER_REM } from '../../../shared/tokens';

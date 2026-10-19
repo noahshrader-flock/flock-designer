@@ -1,12 +1,7 @@
 /**
- * The library's own PostCSS configuration, run as its Storybook runs it (Phase 5.5 of adjusting a component,
- * DESIGN_SYSTEM.md): Tailwind's, Panda's, autoprefixer, whichever it names, with nothing here naming any of them. **Its configuration is code, so it is run locked down:** in a process of its own, on the runtime this app
- * runs on, under Node's permission model, reading only the library's copy, the clone its packages are in, and this app's
- * own PostCSS; with no environment. It may load native plugins (Tailwind 4's scanner, Lightning CSS), as the library's own
- * Storybook does: those, and the network, are not held by the permission model (DESIGN_SYSTEM.md's Risks).
- *
- * One process per build, asked for each stylesheet in turn, so a plugin's own cache (Tailwind's of the classes it has
- * found) lasts the build's life, as it does in the library's Storybook.
+ * The library's own PostCSS configuration, run as its Storybook runs it. It is code, so it runs locked down: its own
+ * process under Node's permission model, reading only the library's copy, its packages and our PostCSS, with no
+ * environment. Native plugins and the network are not held by that model. One process per build, so a plugin's cache lasts.
  */
 import { type ChildProcess, spawn } from 'node:child_process';
 import { existsSync, readFileSync, realpathSync } from 'node:fs';
@@ -57,10 +52,9 @@ export const postcssConfigIn = (library: string, folder: string): string | null 
 };
 
 /**
- * What the process runs: the configuration loaded as PostCSS's loader loads it (a module's default, a function of the
- * context, `plugins` as an object of names and options or a list), its plugins required from where the configuration is, then
- * each stylesheet asked for, one line of JSON in, one out: its CSS, and the files and folders it read (PostCSS's
- * `dependency` and `dir-dependency` messages), so what read a file a change writes is made again.
+ * What the process runs: the configuration loaded as PostCSS's loader loads it, its plugins required from where it is,
+ * then one line of JSON in and out per stylesheet: its CSS, and the files and folders it read (PostCSS's dependency
+ * messages), so a stylesheet that read a file a change writes is made again.
  */
 const RUNNER = String.raw`
 // Outside what it may read is as if nothing were there: a tool that looks up the folders above for its configuration
@@ -193,7 +187,7 @@ export const postcssRun = (library: string, folder: string, config: string): Pos
 		const reads = [...new Set([copy, ...packages, own])];
 		const started = spawn(
 			process.execPath,
-			// Workers (a plugin's module hooks, Tailwind 4's) are held as it is; native plugins are not (DESIGN_SYSTEM.md's Risks).
+			// Workers (a plugin's module hooks, Tailwind 4's) are held as it is; native plugins are not.
 			[
 				'--permission',
 				'--allow-addons',

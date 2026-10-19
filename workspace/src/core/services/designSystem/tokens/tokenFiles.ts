@@ -1,13 +1,7 @@
 /**
- * Tokens kept in design token files: the standard JSON format (the Design Tokens Community Group's), where a token is an
- * object with a `$value`, its kind the `$type` it has or its group has; or, in a file with no `$value`, the `value` and
- * `type` Tokens Studio and Style Dictionary's older format write, with Tokens Studio's names for the types
- * (`TYPE_NAMES`). Colors, lengths (by the primitive their type or name says), typography (a family, a weight, a line
- * height, a size named as one, a typography token as each of its parts), shadows, borders (as their width) and motion (a
- * duration, a cubic Bézier, a transition) are read; other kinds (a gradient) are left out until a primitive reads them. A
- * value that names another token (`{color.red.500}`) is that token's value, and points at it. Each token's line is exact:
- * the file is read a second time for where things are, by the same reader the theme files use (JSON is an object literal
- * too). A change is written in the token's value, in the shape it had.
+ * Tokens kept in design token files: the standard JSON format (`$value`, `$type`), or Tokens Studio's and Style
+ * Dictionary's `value` and `type`. Kinds no primitive reads (a gradient) are left out. Each line is exact: the file is read
+ * again with the theme files' reader (JSON is an object literal too), so a change is written in the shape it had.
  */
 import type { DesignToken, TokenProblem } from '../../../../shared/contract';
 import { DIMENSION, DURATION, lengthParts } from '../../../../shared/tokens';
@@ -161,7 +155,7 @@ export const tokenFiles: TokenSource = {
 		const tokens: DesignToken[] = [];
 		for (const [path, raw] of raws) {
 			const value = resolve(raw.value);
-			// Typography (R3): a family, a weight, a size named as one, or a typography token as each of its parts.
+			// Typography: a family, a weight, a size named as one, or a typography token as each of its parts.
 			const typeToken = (at: string, group: string, set: string, name: string, written: string | null) => {
 				if (written !== null)
 					tokens.push({
@@ -187,7 +181,7 @@ export const tokenFiles: TokenSource = {
 				typeToken(path, TYPE_PARTS.size, set, last, lengthOf(value));
 				continue;
 			}
-			// Motion (R5): a duration, an easing as a cubic Bézier, and a transition as its duration and its easing; one that
+			// Motion: a duration, an easing as a cubic Bézier, and a transition as its duration and its easing; one that
 			// cannot be read is named.
 			const motion = (at: string, kind: 'duration' | 'easing', motionSet: string, name: string, written: string | null) => {
 				if (written === null) problems.push({ file: raw.file, line: raw.line, reason: `${at} is not a duration or an easing that can be read` });
@@ -213,7 +207,7 @@ export const tokenFiles: TokenSource = {
 				motion(`${path}.timingFunction`, 'easing', path, 'timingFunction', easingOf(resolve(o.timingFunction)));
 				continue;
 			}
-			// A shadow (R4), as the box shadow it draws; one that cannot be drawn is named.
+			// A shadow, as the box shadow it draws; one that cannot be drawn is named.
 			if (raw.type === 'shadow') {
 				const shadow = boxShadowOf(value, resolve);
 				if (shadow === null)

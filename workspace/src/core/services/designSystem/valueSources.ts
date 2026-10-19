@@ -1,21 +1,7 @@
 /**
- * Where the values tried on a component's instances are written, and what writing them reaches (Phase 4 of adjusting a
- * component, DESIGN_SYSTEM.md), found in the background while they are tried, the newest only, so the tab says each
- * value's place, or why it cannot be saved, before Save.
- *
- * **Found by its effect** (`valueLocator.ts`): each place the drawn value is written is changed alone, on a build kept
- * open for it, to a value of DSNR's own, and the component's stories drawn again, light, against what the index drew
- * (T6): the places that move the instances tried on are where it is written. That depends on the value drawn, not on the
- * one tried, so each is found once per commit and kept: moving a slider only writes and reads back.
- *
- * **Then written and read back:** every value found is written in its place, the whole library drawn with the writes, light
- * and dark, as a change to the tokens is (`ComponentTokens.reachWith`), and each value tried must draw on its instances as
- * asked, or it is refused and written with none. What the writes reach is what else they move: a size table two
- * components share moves both.
- *
- * Refused, in words, and never guessed at: a value not written in the design system's own files (from a package, or worked
- * out: `${n}px`); written in more places than are tried one by one; written in places that each draw it; written once for
- * parts tried apart; or one that does not read back as asked.
+ * Where the values tried on a component's instances are written (`valueLocator.ts`), and what writing them reaches, found
+ * in the background so the tab says each place, or why not, before Save. Places depend on the value drawn, not the one
+ * tried, so they are found once per commit: moving a slider only writes and reads back. Anything ambiguous is refused.
  */
 import { errorText } from '../../../shared/result';
 import { PX_PER_REM } from '../../../shared/tokens';
@@ -80,7 +66,7 @@ export interface ValueSourcesDeps {
 type Located =
 	{ state: 'found'; places: { place: Place; moves: Set<string> }[] } | { state: 'refused'; why: string } | { state: 'failed'; error: string };
 
-/** How a value is written: in the places it is found written in, or as the agent wrote it (Phase 4.5, 4.6). */
+/** How a value is written: in the places it is found written in, or as the agent wrote it. */
 export type Write =
 	{ by: 'place'; writes: { place: Place; literal: string }[] } | { by: 'agent'; files: Map<string, string>; places: ValuePlace[]; said: string };
 
@@ -335,11 +321,9 @@ export class ValueSources {
 	}
 
 	/**
-	 * The places drawn part `part` of `t`'s instances is written: every place it is written in the design system's files, tried
-	 * **in halves** (each half written with a value of DSNR's own at once, and only a half that moves the instances tried
-	 * further), down to each place alone. A place is where it is written when the instances then draw that value exactly, not
-	 * when they only change: a change that breaks what draws them (a stylesheet that no longer applies) is not where the
-	 * value is. A half that does not build is halved again; a place alone that does not build is not where it is.
+	 * The places drawn part `part` of `t`'s instances is written, tried in halves with a probe, down to each place alone. A
+	 * place counts only when the instances then draw the probe exactly, not when they merely change: a change that breaks a
+	 * stylesheet is not where the value is.
 	 */
 	private async find(file: string, t: TriedValue, part: string, perRem: number): Promise<Located> {
 		const opened = await this.deps.previews.opened('locate');

@@ -1,12 +1,7 @@
 /**
- * Process changes (PROCESS_CHANGES_PLAN Phase 1), in the core: one unit of review (the tokens, `scope` none; or one
- * component's values, by its story file) handed over to Claude Code, on a branch DSNR names and keeps a record of as it
- * keeps every change's (`changeBranches.ts`), then read from git and proposed as a draft pull request when the person
- * asks. Claude Code commits on the branch, not DSNR. DSNR verifies and does not trust: it starts only on a clean checkout,
- * never with another branch of the unit's in play, never pushes a branch it did not name, never by force, and a branch the
- * rules would flag is proposed only when the person says so.
- *
- * A hand-over, not Handoff: that is codebase work's hand-off to engineering (`engineeringHandoff.ts`).
+ * One unit of review (the tokens, or one component's values) handed to Claude Code on a branch DSNR names, then read
+ * from git and proposed as a draft pull request. DSNR verifies, never trusts: a clean checkout only, never pushes a branch
+ * it did not name, never by force. Not Handoff, which is codebase work's hand-off to engineering (`engineeringHandoff.ts`).
  */
 import type { ChangeBranchOf, HandedChange } from '../../../shared/contract';
 import { CHANGE_REQUEST_TEMPLATES } from '../../../shared/hostUrls';
@@ -24,7 +19,7 @@ import { type ChangeBranchesDeps, type Kept, type KindRules, KeptBranches, shown
 
 /**
  * What one unit hands over: its token edits, or a component's values tried, each checked as those always are. Its branches
- * are named `dsnr/handoff-…`, as every prompt since Process changes was built has told Claude Code to name them.
+ * are named `dsnr/handoff-…`, as the prompt tells Claude Code to name them.
  */
 export const HAND_OVER: KindRules<HandedChange> = {
 	kind: 'handOver',

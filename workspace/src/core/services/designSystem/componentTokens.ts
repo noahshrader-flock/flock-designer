@@ -1,16 +1,7 @@
 /**
- * Which tokens each component draws with, and so which components share a token (T6 of the design system plan,
- * decision 29). **Found by tagging, for any library the token writers support:** every token is given a value nothing
- * else has, the previews are built once with those values (`StoryPreviews.tagged`), every story is drawn, and what it
- * draws is read back: a color that is a tag, or a size that is a whole multiple of one, names its token exactly. Nothing
- * is read from the components' own source, which every library writes differently.
- *
- * Each story is drawn three times: tagged, in light and in dark, for the tokens it uses in each mode; and as the library
- * has it, in light, so a color that is in both is one the component sets itself (not a token), and a color only in the
- * tagged drawing is one worked out from a token (a hover's darker shade), which is counted but cannot be named.
- *
- * Kept for the library's commit: the first ask starts it in the background and says `building`; later asks for that
- * commit answer at once.
+ * Which tokens each component draws with, found by tagging: every token gets a value nothing else has, the previews are
+ * built with those values and drawn, and a drawn tag names its token exactly. Nothing is read from the components' source,
+ * which every library writes differently. Kept per commit: the first ask starts it in the background (`building`).
  */
 import type {
 	AccessibilityResult,
@@ -47,8 +38,7 @@ import type { Measure } from '../../ports';
 
 /**
  * What a story draws, as counts of each computed value: its colors (background, text, border), radii and spacing; and,
- * when its run asked for one (P5), a picture of its first story, as JPEG; and, when its run gave tags (T7), what axe
- * found in its stories at them.
+ * when its run asked for them, a JPEG of its first story and what axe found in its stories.
  */
 export interface Drawn {
 	colors: Record<string, number>;
@@ -57,9 +47,8 @@ export interface Drawn {
 	picture?: Buffer;
 	accessibility?: AxeFound;
 	/**
-	 * Whether the story file names the component it is of, and each instance of it drawn (Phase 1 of adjusting a component),
-	 * in the light drawings only; how many instances only wrap what they were given; how many of its stories threw; and why
-	 * reading them failed, if it did.
+	 * Whether the story file names the component it is of, and each instance of it drawn, in the light drawings only; how
+	 * many instances only wrap what they were given; how many of its stories threw; and why reading them failed, if it did.
 	 */
 	component?: boolean;
 	instances?: Instance[];
@@ -86,7 +75,7 @@ export interface Instance {
 
 export type Mode = 'light' | 'dark';
 
-/** A story drawn once with each value of each of `props` (Phase 5): the first of `stories`, else the file's first drawn from its args. */
+/** A story drawn once with each value of each of `props`: the first of `stories`, else the file's first drawn from its args. */
 export interface Vary {
 	stories: string[];
 	props: DeclaredProp[];
@@ -157,7 +146,7 @@ export interface ComponentTokensDeps {
 	system: () => ConnectedDesignSystem | null;
 	previews: TaggedPreviews;
 	measure: Measure;
-	/** Where the pictures the same pass takes are kept (P5). */
+	/** Where the pictures the same pass takes are kept. */
 	pictures: Pick<ComponentPictures, 'keep' | 'of'>;
 	/** The commit the tab reads (`LibraryShown`): the library's own branch unless another is shown. */
 	at?: LibraryAt;
@@ -165,7 +154,7 @@ export interface ComponentTokensDeps {
 
 /**
  * Each story file's tokens, or null for one that did not draw, of which nothing can be said; its drawn values, from the
- * same drawings (Phase 1 of adjusting a component); and what axe found in each that drew, at the design system's target (T7).
+ * same drawings; and what axe found in each that drew, at the design system's target.
  */
 export type Built = {
 	files: Map<string, FileUse | null>;
@@ -247,10 +236,8 @@ export class ComponentTokens {
 	}
 
 	/**
-	 * What a token change being tried reaches (Phase 3 of adjusting a component): every component drawn on a build with it,
-	 * light and dark, against itself as the library has it (`reachOf`). Drawn in the background for the newest change asked
-	 * for alone, and kept for that change on this commit: `building` until then, as the index is. None for no change. One that
-	 * did not work is said once, and drawn again on the next ask.
+	 * What a token change being tried reaches (`reachOf`). Drawn in the background for the newest change asked for alone,
+	 * and kept for it on this commit: `building` until then. One that did not work is said once, and drawn again next ask.
 	 */
 	async reach(edits: TokenEdit[]): Promise<ChangeReach> {
 		if (edits.length === 0) return { state: 'none' };
@@ -265,10 +252,9 @@ export class ComponentTokens {
 	}
 
 	/**
-	 * Every component drawn on a build with `files` written into the library (a token change's; where a value of a
-	 * component's own is written, Phase 4, built apart as `written`, so neither is built over the other), light and dark,
-	 * against itself as the library has it (`asIs`): what the files reach (`reachOf`), and what each drew with them. A component
-	 * that differs is drawn again, both ways, and said to move only when it differs again.
+	 * Every component drawn with `files` written into the library, against itself as it is (`asIs`): what the files reach,
+	 * and what each drew with them. `written` builds apart from `reach` so neither is built over the other. A component that
+	 * differs is drawn again, both ways, and said to move only when it differs again.
 	 */
 	async reachWith(
 		index: DrawnIndex,
@@ -316,10 +302,9 @@ export class ComponentTokens {
 	}
 
 	/**
-	 * Every component as the library has it, drawn **as a change is drawn** (light and dark, every story in one page, no
-	 * picture and no check), once for the commit: what a change is held against, so the change is all that differs. The
-	 * index's own drawings take pictures and check each story as they go, and some stories draw otherwise for it (a spinner
-	 * mid-turn, a popover still placing itself): against those, a change that writes nothing moved sixteen of FUI's.
+	 * Every component as the library has it, drawn as a change is drawn (no picture, no check), once for the commit, so the
+	 * change is all that differs. The index's drawings take pictures and check as they go, and some stories draw otherwise
+	 * for it (a spinner mid-turn): against those, a change that writes nothing moved sixteen of FUI's.
 	 */
 	asIs(index: DrawnIndex): Promise<Map<string, Drawings>> {
 		if (this.asIsDrawn?.key !== index.key) {
@@ -361,7 +346,7 @@ export class ComponentTokens {
 	}
 
 	/**
-	 * The pictures of the shown design system's components (P5), as they are now, and whether a pass that may replace them
+	 * The pictures of the shown design system's components, and whether a pass that may replace them
 	 * is drawing. Pictures from an earlier pass are given while a new one draws, never none in their place.
 	 */
 	async pictures(): Promise<Pictures> {
@@ -370,7 +355,7 @@ export class ComponentTokens {
 		const started = await this.started().catch(() => null);
 		const index = started === null || 'error' in started ? null : started.index;
 		const built = index?.done && !('error' in index.done) ? index.done : null;
-		// What each card says of its component's accessibility (T7): how many of each, once the pass has checked it.
+		// What each card says of its component's accessibility: how many of each, once the pass has checked it.
 		const issues = built ? Object.fromEntries([...built.accessibility].map(([f, r]) => [f, countsOf(r)])) : {};
 		return { drawing: index !== null && index.done === null, pictures: await this.deps.pictures.of(system.id), issues };
 	}
@@ -419,10 +404,8 @@ export class ComponentTokens {
 		const plain = await this.deps.previews.preview();
 		if (plain.state !== 'ready')
 			throw new Error(plain.state === 'failed' ? plain.error : 'The previews could not be built, so the components could not be drawn.');
-		// The library as it is, in light, is always drawn: it is what the grid's pictures are of (P5), whatever the tags do,
-		// and what each component's accessibility is checked on, at the design system's target (T7). And in dark, for the
-		// values (what the tags change in dark says which are tokens there). Started at once, while the tags are built: the
-		// one with the pictures and the check first, as it is the longest.
+		// The library as it is is always drawn: in light for the pictures and the accessibility check, whatever the tags do,
+		// and in dark for the values there. Started at once, while the tags are built, the longest (light) first.
 		const asIsRun = { base: plain.base, mode: 'light' as const, files, pictures: true, accessibility: target.tags };
 		const asIsDrawn = this.deps.measure([asIsRun, { base: plain.base, mode: 'dark', files }]);
 		// A failure to draw is said once the tags are built, not lost while they are.

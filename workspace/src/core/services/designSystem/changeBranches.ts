@@ -1,24 +1,7 @@
 /**
- * Where a change to the library is kept, and how it is proposed: one model for every kind (`ChangeKinds`), the tokens (T4
- * and T5 of the design system plan), a component's values written where they are found (Phase 4 of adjusting a
- * component), the voice and tone (T9), and a unit handed to Claude Code (Process changes, `handOverBranches.ts`). What
- * differs is who commits on the branch (DSNR, a save at a time, or Claude Code), and what a change writes and how it is
- * said (`SavedKindRules`).
- *
- * **Saving** writes the change as one commit on a branch of the library that DSNR makes for it (`dsnr/<kind>-…`), and on
- * no other. The commit is made by git's own plumbing: the edited files are written as objects, put into a tree made from
- * the commit the change was made on, and committed with the last save as its parent. **Nothing is checked out**, so the
- * person's checkout, its index and its files are never touched, and no working copy is needed. Each save holds the whole
- * change, so a part put back since the last save is back as the library has it; a save that changes nothing makes no
- * commit. The branch only moves from where DSNR left it, so work someone else put on it is never lost.
- *
- * **Proposing** pushes the branch and opens a **draft** pull request through the tools Share uses (the person's own git
- * and GitHub command line), and finds Chromatic's build among the pull request's checks once the library's CI has made
- * one. A save after that is pushed, so the pull request always has the last save.
- *
- * Which branch each change is on is remembered on disk, one record shape for every kind, by the design system and, for a
- * kind kept per component, the component (`scope`), so the app can be closed and the change carried on. A change is
- * forgotten once its pull request is merged or closed, or (for one DSNR saves) its branch is gone from the clone.
+ * Where a change to the library is kept, and how it is proposed: one model for every kind (`ChangeKinds`). What differs is
+ * who commits on the branch (DSNR a save at a time, or Claude Code), and what a change writes and how it is said.
+ * Kept on disk by design system and `scope`, so the change can be carried on later; forgotten once its pull request closes.
  */
 import type { ChangeBranch, ChangeKind, ConnectedDesignSystem } from '../../../shared/contract';
 import { asRecord } from '../../../shared/json';
@@ -261,7 +244,10 @@ export class ChangeBranches<C> extends KeptBranches<C, SavedKindRules<C>> {
 		return shownBranch(kept);
 	}
 
-	/** Saves `change` as one commit on the branch, made from the library's current commit on the first save. */
+	/**
+	 * Saves `change` as one commit on the branch, made from the library's current commit on the first save. Nothing is
+	 * checked out: the person's checkout, index and files are never touched. Each save holds the whole change.
+	 */
 	async save(change: C, scope = ''): Promise<ChangeBranch<C>> {
 		const system = this.records.system();
 		const at = await this.kept(scope);

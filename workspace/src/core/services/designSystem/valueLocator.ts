@@ -1,14 +1,7 @@
 /**
- * Where a value of a component's own is written in the library's source (Phase 4 of adjusting a component,
- * DESIGN_SYSTEM.md), **found by its effect**, since the browser cannot say: what is drawn is hashed classes and
- * literals, with no address and no source maps. Every place the drawn value is written, in the design system's own files,
- * in any of the ways it may be (`28px`, `1.75rem`, `28` in a style object; a colour as hex, `rgb()` or its name), is a
- * candidate; each is changed alone, on a build kept open for it, to a value of DSNR's own (`probeFor`), and the component's
- * instances drawn again: the places that move them are where the value is written. A text search alone would say what is
- * not so (FUI's `8px` is written in 19 places, none of them FSButton's radius).
- *
- * This module is what is the same for every library: which files are searched, the ways a value is written, and how a
- * new value is written in the way it was. What draws and measures is `ValueSources` (`valueSources.ts`).
+ * Where a component's own value is written, found by its effect, since the browser cannot say (hashed classes, no source
+ * maps): each candidate place is changed alone to a probe and the instances drawn again. A text search alone misleads
+ * (FUI's `8px` is in 19 places, none FSButton's radius). What draws and measures is `valueSources.ts`.
  */
 import type { ValueProperty } from '../../../shared/contract';
 import { COLOR_VALUES } from '../../../shared/contract';

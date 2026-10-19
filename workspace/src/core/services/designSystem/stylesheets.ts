@@ -1,13 +1,7 @@
 /**
- * The library's stylesheets as its own Storybook makes them (Phase 5.5 of adjusting a component, DESIGN_SYSTEM.md):
- * Sass for a `.scss`, then the library's own PostCSS configuration when it has one (`postcssProcess.ts`), for every
- * stylesheet the build loads; with neither, a stylesheet is esbuild's to read as it is. Nothing here knows what the
- * library styles with (Tailwind, Panda, a preset): that is its configuration's to say.
- *
- * **Kept until a file it read changes:** a build kept open between changes (`trialBuild`) asks again for every stylesheet
- * on every rebuild, so each is made once, and made again only when a change writes a file it read, by its tools' own
- * account: Sass's list of what it loaded, PostCSS's `dependency` and `dir-dependency` messages (Tailwind's scan of the
- * components for classes). A change to the PostCSS configuration starts its process again.
+ * The library's stylesheets as its own Storybook makes them: Sass for a `.scss`, then its own PostCSS configuration.
+ * Each is kept until a file it read changes, by its tools' own account (Sass's loaded files, PostCSS's dependency
+ * messages), since a kept-open build asks for every stylesheet again on each rebuild.
  */
 import { readFileSync, realpathSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';

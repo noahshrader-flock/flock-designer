@@ -1,15 +1,7 @@
 /**
- * Tokens kept as a JavaScript or TypeScript theme, as MUI libraries keep them (FUI among them). **Found by their shape,
- * not by where they are:** a tone family is an exported object of numbered steps with hex colors (`pineGreen = { 50:
- * '#108062', … }`), a palette is an exported object with a `mode` (`lightPalette = { mode: 'light', primary: { main:
- * pineGreen[50] } }`), or, with neither, the palette given to `createTheme` in place; the theme's spacing and radius are its
- * `spacing` and its `shape.borderRadius`; its typography, shadows, breakpoints and transitions, shown and never changed, are
- * where it sets them (`themePart`). A file with no tones, no palette and no `createTheme` is not a theme. Only files
- * whose path says colors, tokens, themes, palettes or tones are read; any other object in them is left alone.
- *
- * **A change is written as the library writes it** (decision 26): a tone step's hex as a quoted hex, a role pointed at
- * another step of its tone as `pineGreen[60]` (with its opacity, as before), a role given its own color as a quoted hex,
- * and the spacing or radius as its number of pixels.
+ * Tokens kept as a JavaScript or TypeScript theme, as MUI libraries keep them, found by shape: a tone family is an object
+ * of numbered hex steps, a palette an object with a `mode`. Only files whose path says colors, tokens, themes, palettes
+ * or tones are read. A change is written as the library writes it (`pineGreen[60]`, a quoted hex, a number of pixels).
  */
 import type { DesignToken, TokenProblem } from '../../../../shared/contract';
 import { type Entry, arrayItems, entryAt, exportedObjects, lineAt, literal, parseObject, replaced } from './objectLiteral';
@@ -80,7 +72,7 @@ const themeValue = (written: string, unit = ''): string | null => {
 };
 
 /**
- * A theme's typography as tokens (R3): its family, its base size, its weights (`fontWeightBold`), and each style's family,
+ * A theme's typography as tokens: its family, its base size, its weights (`fontWeightBold`), and each style's family,
  * size, weight and line height (`h1: { … }`). A size written as a number is in pixels, as MUI reads it. A value that is not
  * written as one (`pxToRem(60)`) is named, never guessed.
  */
@@ -113,7 +105,7 @@ const typographyOf = (file: string, text: string): { tokens: DesignToken[]; prob
 const SHADOWS_AT = themePart('shadows', '[');
 
 /**
- * A theme's shadows as tokens (R4): MUI's list of elevations, each by its level, the first (`'none'`, the flat surface) left
+ * A theme's shadows as tokens: MUI's list of elevations, each by its level, the first (`'none'`, the flat surface) left
  * out. A level that is not written as a string (`createShadow(1, 2)`) is named, never guessed.
  */
 const shadowsOf = (file: string, text: string): { tokens: DesignToken[]; problems: TokenProblem[] } => {
@@ -143,7 +135,7 @@ const BREAKPOINTS = themePart('breakpoints', '{');
 const TRANSITIONS = themePart('transitions', '{');
 
 /**
- * A theme's breakpoints and transitions as tokens (R5): each breakpoint in `breakpoints.values`, in pixels, MUI's and the
+ * A theme's breakpoints and transitions as tokens: each breakpoint in `breakpoints.values`, in pixels, MUI's and the
  * theme's own alike; each duration in `transitions.duration`, in milliseconds, and each easing in `transitions.easing`. A
  * value that is not written as one (`theme.duration`) is named, never guessed.
  */

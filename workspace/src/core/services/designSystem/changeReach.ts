@@ -1,9 +1,7 @@
 /**
- * What a token change being tried reaches (Phase 3 of adjusting a component, DESIGN_SYSTEM.md): every component drawn on
- * a build with the change, against itself as the library has it, in light and in dark. Two ways, so neither says what is not
- * so: **by its values** (Phase 1's reading, instance by instance, by key), said as the Values say them; and **by everything
- * its stories draw** (every element's colours, radii and spacing, as T6 counts them), so a component whose change is in a part
- * its values do not read (an input's outline) is still said to move, as that. The rest are unchanged in the stories drawn.
+ * What a token change being tried reaches: every component drawn with the change against itself as the library has it,
+ * in light and dark. Compared by its values (instance by key) and by everything its stories draw, so a change in a part
+ * its values do not read (an input's outline) is still said to move.
  */
 import type { ChangeReach, ComponentReach, ComponentValues, ValueChange, ValueProperty } from '../../../shared/contract';
 import { VALUE_PROPERTIES } from '../../../shared/contract';

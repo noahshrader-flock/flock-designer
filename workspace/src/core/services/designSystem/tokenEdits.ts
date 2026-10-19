@@ -1,12 +1,7 @@
 /**
- * A change to the library's tokens, written into its files (T3 of the design system plan, decisions 19 and 26): what the
- * previews are built from to try a change, and what T4 will commit to a branch. **One writer for both.**
- *
- * Each edit is checked before anything is written: the token is one the library has, a value fits its kind, and only a
- * token written as a pointer is pointed elsewhere. Each is then written by the source that read the token, in its place
- * and nowhere else (`tokens/`). **Then the files are read back**, by the same reader, and must read exactly as the change
- * says they will (`withEdits`, which the panel shows): every token edited, any written in the same place, every one
- * that points at one, and nothing else moved. A change that would not read back so is refused in words, and nothing is built from it.
+ * A change to the library's tokens, written into its files: one writer for trying a change in the previews and for
+ * committing it. Each edit is checked, written by the source that read the token, then read back by the same reader and
+ * must read exactly as the change says (`withEdits`), nothing else moved; else it is refused in words.
  */
 import type { DesignToken, TokenEdit } from '../../../shared/contract';
 import { isEditable } from '../../../shared/primitives';

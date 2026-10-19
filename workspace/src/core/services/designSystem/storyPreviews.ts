@@ -14,18 +14,9 @@ import { HOST } from '../../../shared/vocabulary';
 import { BUILD_RECIPE, type TrialBuild, buildPreviews, copyWithPackages, hasPackages, trialBuild } from './previewBuild';
 
 /**
- * Previews of the component library's stories, for the Design System tab (DESIGN_SYSTEM.md, P1).
- *
- * **The library's own stories, run as its Storybook runs them,** and nothing written here per component: the stories
- * are the catalog's, each rendered with Storybook's portable stories (`composeStories`) and the library's own
- * `.storybook/preview` when it has one (FUI's wraps every story in its `FSApp`, and so its theme). Storybook itself is
- * not run; its docs, controls and prop tables stay in Storybook.
- *
- * **One build per commit of the library's branch,** from a copy of it taken out of git into the app's own folder (the
- * clone's files and branches are never touched), with the clone's installed packages, by the app's own esbuild and Sass.
- * **No npm and no registry login:** a package the branch added that the clone has not installed makes only the stories
- * that use it say so. It is kept until the branch moves, and served by the app's local server. A page shows one story
- * file: `?file=<path>`.
+ * Previews of the library's own stories, through Storybook's portable stories and its `.storybook/preview`; Storybook
+ * itself is not run. One build per commit, from a copy taken out of git (the clone is never touched) with the clone's
+ * installed packages: no npm, no registry login. A page shows one story file: `?file=<path>`.
  */
 
 /** A build runs the library's code: served on the pages' address, never the review bar's (the README's Review isolation). */
@@ -35,9 +26,8 @@ const CODE = { code: true };
 const serveKey = (build: string): string => `previews-${build.slice(0, 26)}`;
 
 /**
- * How this app builds a preview, as one short fingerprint: this code and how a build is made (`previewBuild.ts`), as it was built (the extension is one file),
- * so whatever in it changes how a preview is made (the page, its script, the stylesheets' step, the set-up read), a newer
- * app never shows a build an older one made from the same commit. A build is kept for a commit **and** this.
+ * How DSNR builds a preview, as one short fingerprint of this code and `previewBuild.ts` as bundled, so a newer DSNR never
+ * shows a build an older one made from the same commit. A build is kept for a commit and this.
  */
 const RECIPE = createHash('sha256').update(readFileSync(__filename)).update(BUILD_RECIPE).digest('hex').slice(0, 8);
 
@@ -45,8 +35,8 @@ const RECIPE = createHash('sha256').update(readFileSync(__filename)).update(BUIL
 const servedAt = (what: string, times: number, dir: string): string => `${what}-${times}-${basename(dir).slice(0, 12)}`;
 
 /**
- * What a build of the commit's previews with a change is for: T6's tags, what a change being tried reaches, finding where
- * a value of a component's own is written, and what writing it there reaches (Phase 4).
+ * What a build of the commit's previews with a change is for: the tags, what a change being tried reaches, finding where
+ * a value of a component's own is written, and what writing it there reaches.
  */
 export type BuiltFor = 'tagged' | 'reach' | 'locate' | 'written';
 
@@ -98,10 +88,9 @@ const keptReads = (reads: CatalogReads): CatalogReads => {
 };
 
 /**
- * What the tab asks for. One build per commit of the library's branch; a second ask while it builds waits for the same one.
- * **A change is tried on that build** (T3): built again with the change, served at an address of its own each time so
- * every frame showing it loads it afresh, and only the newest change asked for is built, however many come while one
- * builds. Leaving a change is asking with none: the commit's own build, which a change never touches.
+ * One build per commit; a second ask while it builds waits for it. A change is tried on that build, served at a new
+ * address each time so every frame loads it afresh, and only the newest change asked for is built. Asking with none is
+ * the commit's own build, which a change never touches.
  */
 export class StoryPreviews {
 	/** The build for the commit the branch was last at: only that one is kept, on disk and in the server. */
@@ -112,9 +101,8 @@ export class StoryPreviews {
 	private wanted: TokenEdit[] = [];
 	private trying = singleFlight<'newest', StoryPreview>();
 	/**
-	 * The address each of the commit's builds with a change was last served at, by what it is for: the tags T6 draws with,
-	 * and what a change being tried reaches (Phase 3 of adjusting a component). How many each has been built, so each build
-	 * is at an address of its own and a page never reads an older one from its cache.
+	 * The address each of the commit's builds with a change was last served at, by purpose, and how many times each was
+	 * built, so each build is at an address of its own and a page never reads an older one from its cache.
 	 */
 	private builtServed = new Map<BuiltFor, { dir: string; key: string; builds: number }>();
 	/** One build open for each purpose at a time, since each builds in a copy of its own (`builderFor`). */
@@ -227,10 +215,9 @@ export class StoryPreviews {
 	}
 
 	/**
-	 * A build of the commit's previews kept open for `purpose`, built again with each set of files given in place of the
-	 * library's own (`build`, which answers with the address that build is served at), until it is closed: beside the change
-	 * being tried in the frame, which is the person's, never in its place, so a frame showing it is never pulled from under
-	 * it. With the commit's files as read (`reads`), which a change is made from. Only the last build of each is served.
+	 * A build of the commit's previews kept open for `purpose`, built again with each set of files given, until closed.
+	 * It sits beside the change tried in the person's frame, never in its place, so that frame is never pulled from under
+	 * it. Only the last build of each is served.
 	 */
 	async opened(purpose: BuiltFor): Promise<OpenedBuild | Exclude<StoryPreview, { state: 'ready' }>> {
 		// Its turn, held until it is closed: a second asked for meanwhile waits for it.
@@ -285,7 +272,7 @@ export class StoryPreviews {
 		}
 	}
 
-	/** The copy of the commit the previews are built from, on disk, with its packages: what its types are read from (Phase 5). */
+	/** The copy of the commit the previews are built from, on disk, with its packages: what its types are read from. */
 	async copy(): Promise<string | Exclude<StoryPreview, { state: 'ready' }>> {
 		const base = await this.base();
 		if (base.state !== 'ready') return base;

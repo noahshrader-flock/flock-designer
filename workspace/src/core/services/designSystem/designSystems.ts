@@ -1,9 +1,7 @@
 /**
- * The design systems a person connected, for the Design System tab (P4 of the design system plan): any repository they
- * can reach, **accepted by what is found in it, not by its name** (decision 23). A design system is a folder with
- * Storybook stories or tokens (decision 25): in a repository of one, its root; in a monorepo, the package that has them,
- * and when several do, the person chooses. Its branch is the repository's default (decision 24). Several can be
- * connected, one shown at a time, and each is remembered.
+ * The design systems a person connected: any repository they can reach, accepted by what is in it, not by its name. A
+ * design system is a folder with Storybook stories or tokens (the root, or in a monorepo the package that has them), read
+ * on the repository's default branch. Several can be connected, one shown at a time.
  */
 import { dirname, isAbsolute, relative, resolve, sep } from 'node:path';
 import type { ConnectedDesignSystem, ConnectedDesignSystems, FoundDesignSystem } from '../../../shared/contract';
@@ -71,7 +69,7 @@ export const nameOf = async (reads: CatalogReads, files: string[], repository: s
 };
 
 /**
- * Where in a repository its design systems are (decision 25): each package with Storybook stories or tokens of its own,
+ * Where in a repository its design systems are: each package with Storybook stories or tokens of its own,
  * with how many of each and what it is called. None is a repository with no design system in it.
  */
 export const findDesignSystems = async (reads: CatalogReads, repository: string): Promise<FoundDesignSystem[]> => {
@@ -89,10 +87,8 @@ export const findDesignSystems = async (reads: CatalogReads, repository: string)
 };
 
 /**
- * The design system in a folder found on this machine (VS Code, ELECTRON_MIGRATION_PLAN §1.6), as connecting it would
- * keep it: its repository on GitHub, the folder in it, the repository's default branch, and its name. What is read is
- * that branch as git has it from GitHub, as for one connected, so a folder that is not a clone of a repository there
- * cannot be read, and says why.
+ * The design system in a folder on this machine, as connecting it would keep it. It is read from its default branch as
+ * git has it from GitHub, so a folder that is not a clone of a repository there cannot be read, and says why.
  */
 export const systemAt = async (root: string): Promise<ConnectedDesignSystem> => {
 	let up: string;

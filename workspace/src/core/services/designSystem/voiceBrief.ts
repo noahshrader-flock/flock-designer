@@ -1,8 +1,7 @@
 /**
- * What every agent task says about the design system's voice and tone, whichever is connected (T9 of the design system plan, step 4): the file's own
- * words, read from the design system's agent files each time a task is made, as the accessibility standard is (T7, part A), and put
- * into the task instead of naming a file the agent may never open. Nothing is copied. With no file, or one with nothing
- * written in it yet, the task says nothing about it: the file is not required.
+ * What every agent task says about the design system's voice and tone: the file's own words, read each time a task is
+ * made and put into the task, not named as a file the agent may never open. With no file, or nothing written in it yet,
+ * the task says nothing about it: the file is not required.
  */
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';

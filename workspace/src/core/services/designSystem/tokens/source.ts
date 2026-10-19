@@ -1,7 +1,7 @@
 /**
- * What every way of finding a library's tokens shares (decision 18): the shape of a source, which of the library's files
- * are its own. Which primitive a token is, is the vocabulary's (`primitiveOf` in `shared/primitives.ts`). A source decides
- * only what its files mean, and how a change is written back into them (decision 26).
+ * What every way of finding a library's tokens shares: the shape of a source, which of the library's files are its own.
+ * Which primitive a token is, is the vocabulary's (`primitiveOf` in `shared/primitives.ts`). A source decides only what
+ * its files mean, and how a change is written back into them.
  */
 import type { DesignToken, DesignTokens, TokenChange } from '../../../../shared/contract';
 import type { CatalogReads } from '../componentCatalog';
@@ -30,10 +30,9 @@ export const isLibraryFile = (path: string): boolean =>
 	!inGeneratedFolder(path) && !/(^|\/)(\.storybook|__tests__|__mocks__)\//.test(path) && !/\.(stories|test|spec)\.\w+$/.test(path);
 
 /**
- * The tokens in the order the panel shows them: **within each category, the semantic ones first** (what a color is for,
- * such as `primary` or a surface, in each mode) and the primitives last (the raw scales and tones they are made from).
- * The panel shows tabs and groups in the order they first appear, so this is where that order is decided, once, the same
- * for every source; each source says which of its own tokens are primitive. The categories keep their order.
+ * The tokens in the order the panel shows them: within each category, the semantic ones (`primary`, a surface) first and
+ * the primitives (raw scales) last. The panel shows groups in the order they first appear, so this decides it once for
+ * every source; each source says which of its tokens are primitive.
  */
 export const semanticFirst = (tokens: DesignToken[], isPrimitive: (t: DesignToken) => boolean): DesignToken[] => {
 	const byCategory = new Map<string, DesignToken[]>();

@@ -1,9 +1,7 @@
 /**
- * A component drawn in every case its props declare (Phase 5 of adjusting a component, DESIGN_SYSTEM.md): its stories show
- * the cases someone wrote; its props are its own list. Its declared props are read by the TypeScript compiler from the
- * commit's copy (`componentProps.ts`), one of its stories drawn with each value of each, in light (as the tab shows them), as
- * it is and with the tags, and read as its values are (`readValues`), so a size its stories never show is listed, drawn, and said to be a
- * token's or its own. Worked out in the background when its tab asks, the newest asked alone, and kept for the commit.
+ * A component drawn in every case its declared props allow (`componentProps.ts`), not only those its stories show: one
+ * story drawn with each value, in light, as it is and with the tags, read as its values are, so a size no story shows is
+ * still said to be a token's or its own. Worked out in the background, the newest asked alone, kept for the commit.
  */
 import type { ComponentVariants as Answer, DeclaredProp } from '../../../shared/contract';
 import type { ComponentTokens, Drawn, DrawnIndex } from './componentTokens';
@@ -110,7 +108,7 @@ export class ComponentVariants {
 		if (props.length === 0) return { state: 'ready', props, fixed: [], unvaried, values: { state: 'none-drawn' } };
 		const plain = await this.deps.previews.preview();
 		if (plain.state !== 'ready') throw new Error('The previews could not be built, so its variants could not be drawn.');
-		// As it is and with the tags, as its stories are read (T6, Phase 1); in light, which is what the tab shows of them.
+		// In light only, which is what the tab shows of them.
 		const { tags, tokens, tagged } = index.built.reading;
 		const taking = await this.storyTaking(plain.base, file, props, await this.storiesFor(index, file));
 		const vary = { stories: taking === null ? [] : [taking.story], props };

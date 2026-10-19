@@ -1,13 +1,7 @@
 /**
- * The company's voice and tone (T9 of the design system plan): one file in the design system's agent files
- * (`.dsnr/voice-and-tone.md`, in its folder when it lives in a larger repository), read and changed in VS Code, and put
- * into every agent task (`voiceBrief.ts`).
- *
- * **Reading** is from the library's branch as its clone has it, brought up to date first, so a commit made on GitHub
- * shows the next time it is opened. **A change** is kept on a branch as every change to the library is
- * (`changeBranches.ts`): saved as one commit for each save, nothing checked out, and proposed as a draft pull request. A
- * save is refused when the file on the library's branch is no longer the one the text was opened at, so nobody's change
- * is overwritten.
+ * The company's voice and tone: one file in the design system's agent files, read from the library's branch and put into
+ * every agent task (`voiceBrief.ts`). A change is kept on a branch as every change is (`changeBranches.ts`); a save is
+ * refused when the file on the branch is no longer the one opened, so nobody's change is overwritten.
  */
 import type { ConnectedDesignSystem, VoiceAndTone, VoiceText } from '../../../shared/contract';
 import { asRecord } from '../../../shared/json';
@@ -16,7 +10,7 @@ import { fileAt } from '../platform/git';
 import { type ChangeBranchesDeps, ChangeBranches, type SavedKindRules } from './changeBranches';
 import { libraryCommit } from './designLibrary';
 
-/** Where the file is, in a design system's agent files: how Flock speaks is the design system's (Noah, 2026-10-10). */
+/** Where the file is, in a design system's agent files: how Flock speaks is the design system's. */
 export const VOICE_FILE = '.dsnr/voice-and-tone.md';
 
 /** What a save says when the library's file changed since the text was opened: nothing is saved over it. */

@@ -1,6 +1,6 @@
 /**
- * How a story file is drawn to read what it draws (T6 of the design system plan), in a headless browser
- * (`chromeHeadless.ts`). The script the page runs, the size it is drawn at, and how long a story may take; and how a run's files are shared between a few pages and put back in order.
+ * How a story file is drawn in a headless browser (`chromeHeadless.ts`) to read what it draws, and how a run's files are
+ * shared between a few pages and put back in order.
  */
 import DRAWING from '../../../page/drawing?page';
 import { axeFound } from '../accessibility/accessibilityCheck';
@@ -18,7 +18,7 @@ const WINDOWS_PER_RUN = 3;
 export const STORY_MS = 15_000;
 export const WINDOW = { width: 1200, height: 900 };
 /**
- * A picture (P5): the top of the page this many pixels down, drawn at twice the size (`PICTURE_SCALE`) so it is sharp,
+ * A picture: the top of the page this many pixels down, drawn at twice the size (`PICTURE_SCALE`) so it is sharp,
  * is what `composeOnWhite` finds the story in; it is kept at most this many pixels across, as JPEG.
  */
 export const PICTURE_TOP = 640;
@@ -48,7 +48,7 @@ export interface Share {
 	files: string[];
 	pictures: boolean;
 	tags: string[] | null;
-	/** A story drawn with each value of each prop, in place of its stories (Phase 5); null for its stories. */
+	/** A story drawn with each value of each prop, in place of its stories; null for its stories. */
 	vary: Vary | null;
 }
 

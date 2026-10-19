@@ -1,7 +1,7 @@
 /**
- * A hand-over branch read from git (Process changes, PROCESS_CHANGES_PLAN Phase 1), against the commit of the base it was
- * handed over on (`base`) and the base as GitHub has it now (`origin/<baseBranch>`): what Claude Code says it did is never read,
- * only what is on the branch. The diff is from where the branch left the base, so a base fetched since adds nothing of its own.
+ * A hand-over branch read from git, against the commit of the base it was handed over on (`base`) and the base as GitHub
+ * has it now (`origin/<baseBranch>`): what Claude Code says it did is never read, only what is on the branch. The diff is
+ * from where the branch left the base, so a base fetched since adds nothing of its own.
  */
 import type { BranchReview } from '../../../shared/contract';
 import { LARGE, classifyPath } from '../../../shared/processChanges';

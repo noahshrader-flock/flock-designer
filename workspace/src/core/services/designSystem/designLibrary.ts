@@ -14,13 +14,9 @@ import { errorText } from '../../../shared/result';
 import { CLI, HOST } from '../../../shared/vocabulary';
 
 /**
- * The connected design system on this machine, for the Design System tab: kept up to date, and read.
- *
- * **Its branch on GitHub is the source of truth** (the repository's default, decision 24), so what is read is git's copy
- * of it, `origin/<branch>`, and never the folder: whatever branch the clone has checked out, and whatever is unfinished in
- * it, makes no difference. Bringing it up to date is a fetch of that one ref, which moves no branch and writes no file.
- * Nothing is checked out, and no code from the library is run. In a monorepo only the design system's own package is read
- * (decision 25).
+ * The connected design system, read from git's copy of its branch on GitHub (`origin/<branch>`), never the folder: what
+ * the clone has checked out or unfinished makes no difference. Updating is a fetch of that one ref; nothing is checked
+ * out, and no code from the library is run.
  */
 
 const FETCH_TIMEOUT_MS = 120_000;
@@ -89,13 +85,6 @@ export const updateLibrary = async (root: string, branch: string): Promise<Exclu
 };
 
 /**
- * The library's two reads, for the catalog and the tokens, on `ref` (a commit, or the copy of a branch) through git.
- * Listing also reads every story it lists with one `git cat-file --batch`, so the files the catalog asks for next are
- * already here: one git process for eighty stories, not eighty. A file not read that way is read on its own. A package's
- * file, which is never in git, is read where the clone has it installed, as the previews are built with it (a theme a
- * stylesheet imports, Phase 5.5).
- */
-/**
  * A path in the library as its reads take one, from its root, `/` between its parts; throws for one that leaves it (`..`, or
  * from the disk's root), as a stylesheet's import or a package's `style` could say: what is read stays in the clone.
  */
@@ -105,6 +94,10 @@ export const inLibrary = (path: string): string => {
 	return normal;
 };
 
+/**
+ * The library's reads on `ref` through git. Listing reads every story it lists in one `git cat-file --batch`: one git
+ * process for eighty stories, not eighty. A package's file, never in git, is read where the clone has it installed.
+ */
 export const libraryReads = (root: string, ref: string): CatalogReads => {
 	const read = new Map<string, Promise<Map<string, string>>>();
 	const readStories = async (paths: string[]): Promise<Map<string, string>> => {
@@ -149,7 +142,7 @@ export const libraryReads = (root: string, ref: string): CatalogReads => {
 	};
 };
 
-/** The design system's own reads: its package of the repository (decision 25), at `commit`. */
+/** The design system's own reads: its package of the repository, at `commit`. */
 export const systemReads = async (system: ConnectedDesignSystem, commit: string): Promise<CatalogReads> => {
 	const all = libraryReads(system.root, commit);
 	return within(all, filesOf(await all.listFiles(''), system.folder));
@@ -157,12 +150,12 @@ export const systemReads = async (system: ConnectedDesignSystem, commit: string)
 
 /**
  * The components the tab lists: the library's own token pages leave the list only when the panel has the tokens to show
- * instead (decision 22). The one rule, for the list and for what is drawn to find each component's tokens (T6).
+ * instead. The one rule, for the list and for what is drawn to find each component's tokens.
  */
 export const listedComponents = (components: CatalogComponent[], tokens: DesignTokens): CatalogComponent[] =>
 	tokens.source !== null ? components.filter((c) => !isTokenGroup(c.group)) : components;
 
-/** A design system's accessibility target (T7): what its own manifest declares on the commit read, or the default. */
+/** A design system's accessibility target: what its own manifest declares on the commit read, or the default. */
 export const libraryTarget = async (reads: CatalogReads, name: string): Promise<DeclaredTarget> =>
 	declaredTarget(await reads.readFile(LIBRARY_MANIFEST).catch(() => null), name);
 
@@ -178,7 +171,6 @@ export const readLibrary = async (system: ConnectedDesignSystem, update: Catalog
 	const committedAt = await git(root, ['log', '-1', '--format=%cI', commit]);
 	// The components and the tokens, from the same reads of the same commit.
 	const reads = await systemReads(system, commit);
-	// With its accessibility target (T7), as its own manifest declares it on the same commit.
 	const [components, tokens, accessibility] = await Promise.all([
 		readCatalog(reads, designSystemOf(system)),
 		readTokens(reads),

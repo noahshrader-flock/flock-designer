@@ -1,5 +1,5 @@
 /**
- * How a value written into the library is read back (Phase 4 of adjusting a component), one way for every writer: where
+ * How a value written into the library is read back, one way for every writer: where
  * it is found (`ValueSources`), and what the agent writes (`ValueAgent`). The instances it was tried on are drawn with the
  * write, and each must draw what was asked, part by part.
  */

@@ -1,15 +1,7 @@
 /**
- * The pictures of a design system's components, for the grid view (P5 of the design system plan, decision 31): one for
- * each component, taken in the drawing pass T6 makes (`ComponentTokens`), kept the way good apps keep thumbnails.
- *
- * - **Replaced in place, never blanked:** a pass's picture of a component replaces that component's last one; a component
- *   the pass did not picture (its story did not draw) keeps its last; a component no longer listed loses its picture. Only
- *   a last one taken the way the app takes them now: after the app changes how, the old ones are not shown, not stretched.
- * - **Kept across restarts,** in the app's own folder, apart for each design system, and not in the previews' build
- *   folder, which is removed when the library moves.
- * - **Each file named by its content,** so a newer picture is at a new address (nothing shows an old one from a cache), and
- *   a file no longer named is removed. Which picture is whose is a small record, written whole, so it is never half
- *   written.
+ * The grid view's picture of each component, taken in the drawing pass (`ComponentTokens`). Replaced in place, never
+ * blanked: a component the pass did not picture keeps its last. Kept outside the previews' build folder, which is removed
+ * when the library moves; each file is named by its content, so a newer picture is never shown stale from a cache.
  */
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
@@ -26,10 +18,7 @@ export interface ComponentPicturesDeps {
 	/** The app's own folder for pictures. */
 	folder: string;
 	server: PrototypeServer;
-	/**
-	 * How pictures are taken, as a fingerprint of the code that takes them, so a picture is only ever shown that was taken
-	 * the way the app takes them now: one from an older way (another shape, another crop) is no picture, not a wrong one.
-	 */
+	/** A fingerprint of the code that takes pictures: one taken another way (another shape, crop) is no picture, not a wrong one. */
 	recipe: string;
 }
 
@@ -77,7 +66,7 @@ export class ComponentPictures {
 		rmSync(this.folderOf(system), { recursive: true, force: true });
 	}
 
-	/** Which picture is whose; none when it is missing, cannot be read, or was taken another way than the app takes them now. */
+	/** Which picture is whose; none when it is missing, cannot be read, or was taken by another `recipe`. */
 	private record(system: string): Record<string, string> {
 		try {
 			const kept = JSON.parse(readFileSync(join(this.folderOf(system), RECORD), 'utf8')) as { recipe?: unknown; pictures?: unknown };

@@ -1,5 +1,5 @@
 /**
- * The tags T6 draws every story with (decision 29): each token that can be changed given a value nothing else has, a color
+ * The tags every story is drawn with: each token that can be changed given a value nothing else has, a color
  * by its number and a length by a prime number of pixels; and how a drawn value is read back as the token it is. Used by
  * which tokens a component draws with (`componentTokens.ts`) and by its drawn values (`componentValues.ts`).
  */

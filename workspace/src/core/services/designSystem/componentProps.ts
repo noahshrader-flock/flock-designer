@@ -1,15 +1,7 @@
 /**
- * A component's declared props (Phase 5 of adjusting a component, DESIGN_SYSTEM.md): its own list of the cases it
- * draws, where its stories show only the ones someone wrote. Read by the TypeScript compiler from the library's files at the
- * commit drawn (the previews' copy, with its packages' declarations), **as data**: the program is made here, with the
- * library's own `tsconfig.json` for how its imports resolve, and nothing of the library's (its own TypeScript, its compiler
- * plugins) is run.
- *
- * The component is the one the story file names (`component` in its default export), as everywhere else; its props are its
- * call's first parameter, whatever it is made with (a function, `forwardRef`, `memo`, a class). A prop is a **design prop**
- * when it is a finite choice (a union of literals, a boolean) declared for a component: its own, or the underlying library's
- * (MUI's `size` and `variant` on FSTextField), by that one rule; never an HTML or ARIA attribute (`@types/react`) or CSS's own
- * types (`csstype`). The rest are said apart, with why they cannot be varied.
+ * A component's declared props: the cases it can draw, where its stories show only the ones someone wrote. Read by our
+ * TypeScript compiler as data, with the library's `tsconfig.json` only for how imports resolve; nothing of the library's is
+ * run. A design prop is a finite choice (literals, a boolean), never an HTML/ARIA attribute or CSS's own types.
  */
 import { existsSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -29,8 +21,8 @@ const MOST_VALUES = 24;
 const NOT_DESIGN = /[\\/]node_modules[\\/](?:@types[\\/]react|csstype)[\\/]/;
 
 /**
- * Where the compiler's own type libraries are, resolved from this app (as the bundler is, `esbuildEntry`): its package's, which
- * the packaged extension carries beside it with nothing else of the package. Null when they are not with the app.
+ * Where the compiler's own type libraries are, resolved as the bundler resolves (`esbuildEntry`): the packaged extension
+ * carries them beside it with nothing else of the package. Null when they are not there.
  */
 export const typeLibs = (): string | null => {
 	try {
