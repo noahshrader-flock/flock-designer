@@ -1,11 +1,7 @@
 import type { ReactNode } from 'react';
 import { ThumbWash } from './ThumbWash';
 
-/**
- * One thing in a list, as a row of VS Code's own lists: the name and its line are cut with an ellipsis, never wrapped. With
- * `onOpen` the whole row is a button. `context` is its `data-vscode-context`, which VS Code's `webview/context` items are
- * chosen by.
- */
+/** `context` is its `data-vscode-context`, which VS Code's `webview/context` items are chosen by. */
 export const Row = ({
 	start,
 	name,
@@ -21,10 +17,8 @@ export const Row = ({
 	meta?: string;
 	end?: ReactNode;
 	onOpen?: () => void;
-	/** Its tab is the one in front in the editor: marked on its picture (`aria-current`). */
 	current?: boolean;
 	context?: Record<string, unknown>;
-	/** What more can be done with it (`Menu`), beside the row and not in the button that opens it. */
 	actions?: ReactNode;
 }) => {
 	const parts = (

@@ -9,11 +9,7 @@ import { useTrying } from './useTrying';
 import { ChangedValues } from './ValueChanges';
 import { useValueTrials } from './shared';
 
-/**
- * One component's changes in the panel's Changes dialog, by its name: the values tried on its tab, where each is written,
- * what writing them moves, and its branch or hand-over. Its values are named as its drawing reads them (`useComponentTokens`).
- * A branch kept with nothing tried puts its values back, as opening its tab does.
- */
+/** A branch kept with nothing tried puts its values back, as opening its tab does. */
 export const ComponentChanges = ({
 	component,
 	components,

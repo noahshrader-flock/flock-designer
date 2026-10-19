@@ -2,33 +2,22 @@ import { type KeyboardEvent as KeyEvent, type ReactNode, Fragment, useEffect, us
 import { Icon } from './Icon';
 import { useDismiss } from './useDismiss';
 
-/**
- * One thing a menu offers: what it says, its icon (at its start: a codicon's name, or one drawn where the font has none), and
- * what it does. In a choice (`checked` given, true or false) it is a radio of its section: the chosen one has a check at its end.
- */
+/** In a choice (`checked` given, true or false) it is a radio of its section. */
 export interface MenuItem {
 	label: string;
 	icon: string | ReactNode;
 	onSelect: () => void;
 	checked?: boolean;
-	/** Shown, and not pressable: what cannot be done just now (Sync, while it is syncing). */
 	disabled?: boolean;
 }
 
-/** A group of what a menu offers, under a heading of its own when it has one (a choice's name: Layout). */
 export interface MenuSection {
 	heading?: string;
 	items: MenuItem[];
 }
 
-/** What a menu's entries are, whichever kind: for the keyboard to move among. */
 const ENTRIES = '[role^="menuitem"]';
 
-/**
- * A menu in a popover under its button: the ellipsis by default, shown only on hover or focus as VS Code's lists have it;
- * or another `icon` shown `always` (a view's options); or `face` in place of an icon (a person's picture, for who is signed
- * in). The arrow keys move through it.
- */
 export const Menu = ({
 	label,
 	sections,
@@ -48,7 +37,6 @@ export const Menu = ({
 	const wrap = useRef<HTMLSpanElement>(null);
 	const button = useRef<HTMLButtonElement>(null);
 	const list = useId();
-	// Escape closes it, and the keyboard goes on from the button it opened from; so does a press elsewhere.
 	useDismiss(open, wrap, () => setOpen(false), button);
 	useEffect(() => {
 		if (open) wrap.current?.querySelector<HTMLElement>(ENTRIES)?.focus();

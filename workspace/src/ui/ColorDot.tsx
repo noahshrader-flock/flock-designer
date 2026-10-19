@@ -3,11 +3,7 @@ import { Badge } from './Badge';
 import { ChangedMark } from './ChangedMark';
 import { Swatch } from './Swatch';
 
-/**
- * Every color a person can open, as **only the dot**: its tooltip is the token's name (`says`), never name, swatch and hex
- * side by side. Its tooltip, `mark` and `flag` (contrast below the target) are its description, since a button's name
- * (`Change <name>`) is all that is read of what is inside it.
- */
+/** Its tooltip, `mark` and `flag` are its description, since a button's name (`Change <name>`) is all that is read of what is inside it. */
 export const ColorDot = ({
 	value,
 	says,
@@ -22,7 +18,6 @@ export const ColorDot = ({
 	says?: string;
 	name: string;
 	onPress?: () => void;
-	/** Its control is a popover under it, shown while `open`. */
 	popup?: { open: boolean };
 	mark?: 'Changed' | 'Tried';
 	flag?: string;

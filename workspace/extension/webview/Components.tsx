@@ -14,11 +14,6 @@ import type { View } from '../../src/ui/Collection';
 import { Collection, CollectionItem } from '../../src/ui/Collection';
 import { asks } from './host';
 
-/**
- * The design system's components: a search and Grid or List, as the projects have, then a section for each group in
- * the order the library lists them (a group with nothing found is left out), each component a card or a row with its
- * picture. Pressed, a component opens in its own tab; its menu has its links (Storybook, when it has one, and its source).
- */
 export const ComponentsView = ({
 	components,
 	pictures,
@@ -30,7 +25,6 @@ export const ComponentsView = ({
 	pictures: ComponentPictures;
 	view: View;
 	onView: (view: View) => void;
-	/** Whether the design system has a dark mode, which is offered only then. */
 	hasDark: boolean;
 }) => {
 	const [search, setSearch] = useState('');

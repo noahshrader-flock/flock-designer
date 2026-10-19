@@ -3,11 +3,7 @@ import type { DesignToken } from '../../src/shared/contract';
 import { TYPE_PARTS } from '../../src/shared/primitives';
 import { nameOf } from '../../src/shared/tokens';
 
-/**
- * The lines of a type specimen, from the typography tokens: each family; each style that has a size, drawn in its own weight,
- * line height and family (else the first family); and each weight that belongs to no sized style. Nothing is guessed: a part a
- * style does not set is left to the page's own.
- */
+/** Nothing is guessed: a part a style does not set is left to the page's own. */
 export const typeSpecimens = (tokens: DesignToken[]): SpecimenLine[] => {
 	const of = (group: string) => tokens.filter((t) => t.group === group);
 	const families = of(TYPE_PARTS.family);

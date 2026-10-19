@@ -11,17 +11,9 @@ import { ColorField, LengthField } from './ValueFields';
 import { LinkButton } from '../../src/ui/LinkButton';
 import { Message } from '../../src/ui/Message';
 
-/**
- * Changing a token, in a dialog chosen by what the token is and whether it points at another. **Not an editor**: a change is
- * tried in the previews and kept nowhere until saved, and what it does is said where it is made. Each is applied when it is
- * let go of (the picker closed, the slider released, the hex entered): building again takes about a second.
- */
+/** Each change is applied when let go of (the picker closed, the slider released, the hex entered): building again takes about a second. */
 
-/**
- * The scale a role is pointed within: the families its group's palette has (a choice when there are several), and the
- * steps of the one shown as swatches, the one pointed at chosen. Pressing a step points the token at it, which keeps the
- * link and changes only this token; choosing another family changes nothing until one of its steps is chosen.
- */
+/** A step pressed points the token at it, keeping the link; another family chosen changes nothing until one of its steps is. */
 const ColorScale = ({ token, target }: { token: DesignToken; target: DesignToken }) => {
 	const { shown, change, isPalette } = useTokenChanges();
 	const [family, setFamily] = useState(target.set);
@@ -58,7 +50,6 @@ const ColorScale = ({ token, target }: { token: DesignToken; target: DesignToken
 	);
 };
 
-/** The contrast a color leaves with the one it is read with, and whether that is enough for text at the design system's target. */
 const Contrast = ({ token }: { token: DesignToken }) => {
 	const contrast = pairContrast(token, useTokenChanges());
 	if (contrast === null) return null;
@@ -70,7 +61,6 @@ const Contrast = ({ token }: { token: DesignToken }) => {
 	);
 };
 
-/** What changing a token also moves: the roles that point at it, and any written in the same place. */
 const Reach = ({ token }: { token: DesignToken }) => {
 	const reach = reachOf(token, useTokenChanges());
 	if (reach === null) return null;
@@ -86,21 +76,8 @@ const Reach = ({ token }: { token: DesignToken }) => {
 	);
 };
 
-/**
- * A token's control, in a dialog: its title and file, then by what it is: a role that points at another (what it
- * references, the scale it is chosen from, and its own color as a second choice, which cuts the pointer), a color of its
- * own (a picker and its hex), or a length (a slider). Then the contrast it leaves, what it reaches, and Reset when changed.
- */
-export const TokenEditor = ({
-	token,
-	components,
-	onClose,
-}: {
-	token: DesignToken;
-	/** The library's components, by name, for the ones that draw with it; a name opens its tab. */
-	components: CatalogComponent[];
-	onClose: () => void;
-}) => {
+/** A role's own color, offered beside its scale, cuts its pointer. */
+export const TokenEditor = ({ token, components, onClose }: { token: DesignToken; components: CatalogComponent[]; onClose: () => void }) => {
 	const { read, byPath, change, isChanged } = useTokenChanges();
 	// As changed now: the row was pressed on what it showed then.
 	const now = byPath.get(token.path) ?? token;

@@ -9,13 +9,11 @@ import { Field, Select } from '../../src/ui/Field';
 import { workspace } from './host';
 import { Message } from '../../src/ui/Message';
 
-/** Said when the agent is at other work: it does one thing at a time. */
 const BUSY = 'The agent is busy with other work. It does one thing at a time: open this again when that work has finished.';
 
 /**
- * Hand off to engineering, said before it starts: what the run does on the work's branch, and that nothing is pushed. It
- * starts only once the agent is known to be free. When a handoff already found the work ready and its branch has not
- * changed (`readyAt`), its draft pull request is offered instead, with Run again, so a dismissed offer is never a dead end.
+ * It starts only once the agent is known to be free. With the work found ready (`readyAt`), Run again sits beside its pull
+ * request, so a dismissed offer is never a dead end.
  */
 export const HandoffDialog = ({
 	project,
@@ -31,10 +29,8 @@ export const HandoffDialog = ({
 	branch: string;
 	/** The commit a handoff found the work ready at, while its branch is still there; null when it has to be run. */
 	readyAt: string | null;
-	/** Its pull request, once one is open. */
 	pullRequest: string | null;
 	onStart: () => void;
-	/** Opens its draft pull request, with a preview built from it. */
 	onShare: () => void;
 	onOpenCode: () => void;
 	onClose: () => void;
@@ -100,11 +96,6 @@ export const HandoffDialog = ({
 	);
 };
 
-/**
- * Build in the codebase, for a project's newest prototype, in the product open here: what it would do, read first (the
- * branch, where it starts from, a clean checkout), then handed to Claude Code in this window, which writes the audit and
- * builds it. The core's plan, hand-over and rules (`buildInCodebasePlan`, `buildInCodebase`, `buildStart`).
- */
 export const BuildInCodebaseDialog = ({
 	root,
 	project,
@@ -114,7 +105,6 @@ export const BuildInCodebaseDialog = ({
 }: {
 	root: string;
 	project: Project;
-	/** The prototype built: the project's newest. */
 	name: string;
 	onBuilt: () => void;
 	onClose: () => void;

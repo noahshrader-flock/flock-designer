@@ -1,8 +1,4 @@
-/**
- * A count beside a row, as VS Code draws one, said by `label`: `brand` for comments and changes, `warning` for what is wrong.
- * With no count it is a small blank mark where a number would not fit (off a swatch); `said` hides it from assistive
- * technology inside what says it already (a color's dot).
- */
+/** `said` hides it from assistive technology inside what says it already (a color's dot). */
 export const Badge = ({
 	count,
 	label,
@@ -15,7 +11,6 @@ export const Badge = ({
 	label: string;
 	tone?: 'neutral' | 'brand' | 'warning';
 	onPress?: () => void;
-	/** Where it sits, for a badge placed by its parent. */
 	className?: string;
 	said?: boolean;
 }) => {

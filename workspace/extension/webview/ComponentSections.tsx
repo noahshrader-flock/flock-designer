@@ -23,10 +23,8 @@ import { Heading } from '../../src/ui/Heading';
 
 type Ready = Extract<ComponentTokens, { state: 'ready' }>;
 
-/** How the values a component sets itself are named, by kind. */
 const KINDS: Record<Ready['notTokens'][number]['kind'], string> = { color: 'Colors', radius: 'Radius', spacing: 'Spacing' };
 
-/** A value it sets itself, with its swatch when it is a colour and how often it is used. */
 const NotToken = ({ value }: { value: Ready['notTokens'][number] }) => (
 	<ValueItem marks={{ 'data-not-token': '' }}>
 		<ValueLine>
@@ -37,11 +35,6 @@ const NotToken = ({ value }: { value: Ready['notTokens'][number] }) => (
 	</ValueItem>
 );
 
-/**
- * Tokens: what its stories draw with, inner parts too (its Styles read each instance's top element alone), laid out as the
- * Styles are, under the Tokens tab's categories, groups and sets. A name opens its file, a value its control; what it sets
- * itself follows, with what that means behind an info icon by its heading.
- */
 // Exported for its layout test (`componentValuesLayout`), which draws it with the Styles beside it.
 export const TokensUsed = ({
 	answer,
@@ -91,11 +84,6 @@ export const TokensUsed = ({
 	</AsidePart>
 );
 
-/**
- * What the analysis of a component says, in three parts: its values as an inspector, a variant chosen by its pickers; the
- * tokens it draws with (Tokens); and what axe found. Found by drawing every story with the tokens tagged, the first time
- * for each commit, said while that is done.
- */
 export const ComponentSections = ({
 	component,
 	components,
@@ -106,20 +94,13 @@ export const ComponentSections = ({
 	component: CatalogComponent;
 	components: CatalogComponent[];
 	actions: TokenActions;
-	/** The values being tried on its instances, in the stories beside this. */
 	trying: Trying;
-	/**
-	 * Whether its Changes dialog is open (the button in its header opens it), closing it, telling it a branch of its values is kept,
-	 * and the panel's Changes, where Save, Propose and Start over are.
-	 */
 	changes: { open: boolean; onClose: () => void; onKept: (kept: boolean) => void; onActions: () => void };
 }) => {
 	const { edits, byPath } = useTokenChanges();
 	const { answer, retry } = useComponentTokens(component.id);
-	// Every case its props declare, drawn: its Styles' pickers offer them too.
 	const variants = useComponentVariants(component.id);
-	// The changes being tried on it, in a dialog rather than at the top of this column, so nothing moves while a value is
-	// adjusted: the token changes (they move its stories too) and what they move, drawn only while it is open, then its values.
+	// In a dialog, not at the top of this column, so nothing moves while a value is adjusted.
 	const dialog = (values: ReactNode) =>
 		changes.open && (
 			<Dialog title="Changes" onClose={changes.onClose}>
@@ -154,7 +135,6 @@ export const ComponentSections = ({
 			</>
 		);
 	const names = new Map(components.map((c) => [c.id, c.name]));
-	// A token as it is named, and the other components that draw with it: one way for every part.
 	const tokenName = (path: string) => {
 		const t = byPath.get(path);
 		return t ? labelOf(t) : path;
@@ -162,7 +142,6 @@ export const ComponentSections = ({
 	const others = (path: string) => (answer.sharedWith[path] ?? []).map((f) => names.get(f) ?? f);
 	const used = new Map(answer.uses.map((u) => [u.path, u.uses]));
 	const tokens = answer.uses.flatMap((u) => (byPath.has(u.path) ? [byPath.get(u.path) as DesignToken] : []));
-	// How often a token is used and by whom, behind the info icon beside its name.
 	const info = (t: DesignToken) => `${plural(used.get(t.path) ?? 0, 'use')} · ${sharedWith(others(t.path))}`;
 	return (
 		<>
@@ -188,7 +167,6 @@ export const ComponentSections = ({
 				variants={variants}
 			/>
 			<TokensUsed answer={answer} tokens={tokens} info={info} actions={actions} />
-			{/* What axe found is a line and a link, its findings in a dialog. */}
 			<AsidePart title="Accessibility">
 				{answer.accessibility === null ? (
 					<Message>Checked once its stories have drawn.</Message>

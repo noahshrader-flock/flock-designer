@@ -20,16 +20,11 @@ import { Message, tryAgain } from '../../src/ui/Message';
 import { Heading } from '../../src/ui/Heading';
 import { TabNote } from './TabNote';
 
-/** The target while the design system is not read yet: nothing is judged at it then. */
 const NOT_READ = undeclared('the design system is not read yet');
 
-/**
- * Its stories, live (`useStoryPreview`): with the change to the tokens being tried, the stories shown stay while it builds,
- * said over them, and a change that cannot be tried says why.
- */
 const Stories = ({ component, commit, edits, tried }: { component: CatalogComponent; commit: string; edits: TokenEdit[]; tried: TriedValue[] }) => {
 	const { preview, trying, refused, retry } = useStoryPreview(commit, edits);
-	// The stories are drawn in the mode chosen in the panel, as the values are; a frame follows it by loading again.
+	// The panel's chosen mode, as the values use; a frame follows a change of it by loading again.
 	const [mode] = useMode();
 	if (preview.state === 'building') return <Message>Building its previews…</Message>;
 	if (preview.state !== 'ready')
@@ -53,31 +48,22 @@ const Stories = ({ component, commit, edits, tried }: { component: CatalogCompon
 	);
 };
 
-/**
- * A component's tab: its name and line, its links (Storybook when a hosted one is known, and its source), its stories live,
- * and beside them what its analysis says (`ComponentSections`). The change to the tokens being tried is the extension's, so
- * a change made in the panel is seen here.
- */
+/** The token change being tried is the extension's, so a change made in the panel is seen here. */
 export const ComponentTab = ({ id }: { id: string }) => {
 	const { ready, note } = useTabCatalog();
 	const [edits, setEdits] = useTokenEdits();
-	// The token whose control is open: the Tokens' rows, and a value that is a token's, change it as the panel's do, and every
-	// page sees it.
 	const [editing, setEditing] = useState<DesignToken | null>(null);
-	// Its Changes dialog: what is tried on it and the token changes, from the button in its header.
 	const [changesOpen, setChangesOpen] = useState(false);
-	// Whether a branch of its values is kept: then the button can be pressed with nothing tried, to propose or leave it.
+	// A kept branch lets Changes open with nothing tried, to propose or leave it.
 	const [kept, setKept] = useState(false);
 	const changes = useTokenChangesFor(ready?.tokens.tokens ?? [], edits, setEdits, ready?.accessibility ?? NOT_READ);
-	// The values tried on its instances: the extension's, so the panel's Changes has them too, on the library's commit
-	// they were tried on (another version's instances are drawn anew), and forgotten when another mode is chosen.
+	// The extension's, so the panel's Changes has them too; on the commit tried on, since another version's instances are drawn anew.
 	const trying = useTrying(useValueTrials(), id, ready?.commit ?? null);
 	const { tried } = trying;
 	const component = ready?.components.find((c) => c.id === id);
 	if (note) return <TabNote {...note} />;
 	if (!component) return <Message size="page">The design system shown no longer has this component. Close this tab.</Message>;
 	const actions: TokenActions = { onEdit: setEditing };
-	// What its Changes button counts: the values tried on it and the token changes being tried, which move its stories too.
 	const count = tried.size + edits.length;
 	const link = (to: ComponentLink) => void asks().componentLink(id, to);
 	return (

@@ -2,17 +2,11 @@ import { createContext, useContext } from 'react';
 import { workspace } from './host';
 import { Message } from '../../src/ui/Message';
 
-/**
- * The branch handed to Claude Code that the previews show in place of the library's (Preview this branch), as the catalog
- * says it; null when the library's own is shown. Given by the panel, for what is offered while it is.
- */
+/** The hand-over branch the previews show in place of the library's; null when the library's own is shown. */
 export const ShowingContext = createContext<string | null>(null);
 export const useShowing = (): string | null => useContext(ShowingContext);
 
-/**
- * Said at the top of every DSNR page while a hand-over's branch is shown: which, that it is not the library's branch, and a
- * way back. Nothing is saved or handed over until it is (the core refuses).
- */
+/** Nothing is saved or handed over while a hand-over's branch is shown (the core refuses). */
 export const ShowingNote = ({ showing, branch }: { showing: string | null; branch: string }) =>
 	showing === null ? null : (
 		<Message

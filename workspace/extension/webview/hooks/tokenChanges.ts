@@ -3,31 +3,21 @@ import type { DesignToken, TokenChange, TokenEdit } from '../../../src/shared/co
 import type { DeclaredTarget } from '../../../src/shared/wcag';
 import { familyOf, paletteFamilies, placeOf, sameChange, withEdits } from '../../../src/shared/tokens';
 
-/**
- * The change to the tokens as the tokens panel holds it: the tokens as changed, and how to
- * change one. Worked out once per change, here, so a row asks it and does not search the list itself. The panel makes
- * it (`useTokenChangesFor`); every row and control reads it (`useTokenChanges`).
- */
+/** Worked out once per change, here, so a row asks it and does not search the list itself. */
 export interface TokenChanges {
-	/** The tokens with the change made (`withEdits`): what the panel shows. */
 	shown: DesignToken[];
 	/** As changed, and as the library has them, by path. */
 	byPath: Map<string, DesignToken>;
 	read: Map<string, DesignToken>;
 	edits: TokenEdit[];
-	/** The token a token points at, as changed. */
 	target: (token: DesignToken) => DesignToken | undefined;
 	/** Whether a token is changed: edited, or written in a place that is. */
 	isChanged: (token: DesignToken) => boolean;
-	/** Whether a token's family is one some token points into (a tone roles use). */
 	isPointedInto: (token: DesignToken) => boolean;
-	/** Whether a color is part of the design system's palette (`paletteFamilies`), not a semantic color: what roles point at. */
 	isPalette: (token: DesignToken) => boolean;
 	/** Changes a token, by its path (`null`: back as it was). A change back to what the library has is no change. */
 	change: (token: DesignToken, to: TokenChange | null) => void;
-	/** Every token back as the library has it. */
 	clear: () => void;
-	/** The accessibility target a pair's contrast is judged at: the design system's, or the default. */
 	accessibility: DeclaredTarget;
 }
 
@@ -40,10 +30,7 @@ export const useTokenChanges = (): TokenChanges => {
 	return changes;
 };
 
-/**
- * `edits` with `token` changed to `to`: the edit of its place replaced, and none kept that leaves it as the library has
- * it. The same list, not a copy, when nothing would change, so the same change again builds nothing.
- */
+/** The same list, not a copy, when nothing would change, so the same change again builds nothing. */
 const changed = (edits: TokenEdit[], read: Map<string, DesignToken>, token: DesignToken, to: TokenChange | null): TokenEdit[] => {
 	const atPlace = (e: TokenEdit) => {
 		const t = read.get(e.path);
@@ -57,10 +44,6 @@ const changed = (edits: TokenEdit[], read: Map<string, DesignToken>, token: Desi
 	return next ? [...edits.filter((e) => !atPlace(e)), next] : edits.filter((e) => !atPlace(e));
 };
 
-/**
- * The change as the panel holds it, for the library's `tokens`, the `edits` being tried and what changes them, judged at
- * the library's `accessibility` target.
- */
 export const useTokenChangesFor = (
 	tokens: DesignToken[],
 	edits: TokenEdit[],

@@ -9,18 +9,12 @@ import { FolderField, type FolderPick, folderOf, isChosen, pickOf } from './Fold
 import { workspace } from './host';
 import { Message } from '../../src/ui/Message';
 
-/** What a prototype is started from, as the extension takes it: its name, what it explores, and its folder. */
 interface NewPrototypeAnswers {
 	title: string;
 	task: string;
 	folder: string | null;
 }
 
-/**
- * New prototype, as a dialog in the panel: a name, what it should explore (as many lines as it takes), and its folder.
- * Made once it has a name with a letter or a number in it and something to explore; what is asked is then the
- * extension's, which makes it and hands its building to Claude Code, as Build in the codebase is handed.
- */
 export const NewPrototypeDialog = ({
 	folders,
 	onStart,
@@ -66,10 +60,6 @@ export const NewPrototypeDialog = ({
 	);
 };
 
-/**
- * Assign folder, as a dialog in the panel: the project's folder, with the one it is in chosen, to change or to take it
- * out of. Kept in its brief by the core; what the core says if it cannot is said in the dialog, which stays open.
- */
 export const AssignFolderDialog = ({
 	project,
 	folders,

@@ -7,10 +7,7 @@ import { workspace } from './host';
 import { Message } from '../../src/ui/Message';
 import { askOnce } from './hooks/ask';
 
-/**
- * The GitHub account, as a dialog in the panel (the title bar's account action opens it): who is signed in, and Sign out.
- * VS Code keeps the account itself in its Accounts menu, so only DSNR's use of it ends. What went wrong is said, and it stays.
- */
+/** Sign out ends only DSNR's use of the account: VS Code keeps the account itself in its Accounts menu. */
 export const AccountDialog = ({ login, onClose }: { login: string; onClose: () => void }) => {
 	const [error, setError] = useState<string | null>(null);
 	const [busy, setBusy] = useState(false);
@@ -37,11 +34,6 @@ export const AccountDialog = ({ login, onClose }: { login: string; onClose: () =
 	);
 };
 
-/**
- * Whether the person's work is synced, as a dialog in the panel (the status bar's item opens it): said in the status
- * bar's own words (`syncWords`), what is held back with why and its files, and Sync now. It follows the sync while it is
- * open, so a sync that finishes is seen finishing.
- */
 export const SyncDialog = ({ onClose }: { onClose: () => void }) => {
 	const [status, setStatus] = useState<PublishStatus | null>(null);
 	const [error, setError] = useState<string | null>(null);

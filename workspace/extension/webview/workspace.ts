@@ -2,11 +2,6 @@ import type { WorkspaceApi } from '../../src/shared/contract';
 import { createApi } from '../../src/shared/workspaceApi';
 import { type HostMessage, type PageAsks, type PanelMessage, asksOver } from '../src/messages';
 
-/**
- * A DSNR page's calls, carried by webview messages: the core's (`createApi`) and the extension's asks (`asksOver`). A call
- * goes out with an id and resolves with the answer that comes back with that id; an event reaches whoever listens for it
- * by name. `post` sends to the extension; `listen` is given what it sends.
- */
 export const connectPage = (
 	post: (message: PanelMessage) => void,
 	listen: (listener: (message: unknown) => void) => void,

@@ -2,15 +2,9 @@ import { type CSSProperties, useEffect, useState } from 'react';
 import { lengthSpan } from '../../src/shared/tokens';
 import { useColorField } from './hooks/useColorField';
 
-/**
- * The fields a value is changed with, for a token (`TokenEditor`) and a component's own value (`ValueEditor`) alike, so
- * each kind of value is changed one way wherever it is.
- */
+/** For a token (`TokenEditor`) and a component's own value (`ValueEditor`) alike, so each kind of value is changed one way. */
 
-/**
- * A color picker and its hex: the picker applies when it is closed, the hex when Enter is pressed or it is left. An opacity is
- * kept. With `live`, the picker applies as it moves too, for a value tried without a build.
- */
+/** The picker applies when closed, the hex on Enter or blur; with `live`, the picker applies as it moves, for a value tried without a build. */
 export const ColorField = ({ value, onCommit, live = false }: { value: string; onCommit: (hex: string) => void; live?: boolean }) => {
 	const { picker, hex, setHex, commit } = useColorField(value, onCommit, { live });
 	return (
@@ -29,10 +23,7 @@ export const ColorField = ({ value, onCommit, live = false }: { value: string; o
 	);
 };
 
-/**
- * A length as a slider and its number, from nothing to twice what it was (`was`): applied when the slider is let go of, as
- * building again takes about a second; with `live`, as it moves, for a value tried without a build.
- */
+/** Applied when the slider is let go of, as building again takes about a second; with `live`, as it moves, for a value tried without a build. */
 export const LengthField = ({
 	label,
 	value,

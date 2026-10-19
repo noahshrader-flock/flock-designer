@@ -34,10 +34,6 @@ import { ChangedMark } from '../../src/ui/ChangedMark';
 
 type Ready = Extract<ComponentTokens, { state: 'ready' }>;
 
-/**
- * The values being tried on the component's instances, by `triedId`; how one is tried or put back (null); every one at once;
- * and having the agent write one, how many times it has been asked, and what went wrong asking.
- */
 export interface Trying {
 	tried: ReadonlyMap<string, TriedValue>;
 	onTry: (id: string, value: TriedValue | null) => void;
@@ -47,7 +43,6 @@ export interface Trying {
 	writeError: string | null;
 }
 
-/** Why a component has no values to show, by what its drawing found. */
 const WHY_NONE: Record<Exclude<Values['state'], 'read' | 'failed'>, (name: string) => string> = {
 	'no-component': () => 'Its stories do not say which component they are of (`component` in their default export), so its values cannot be read.',
 	'none-drawn': (name) =>
@@ -56,15 +51,8 @@ const WHY_NONE: Record<Exclude<Values['state'], 'read' | 'failed'>, (name: strin
 	'not-drawn': () => 'Its stories did not finish drawing, so its values cannot be read. Its stories, beside this, say why.',
 };
 
-/**
- * What a value is made of, said short as its chip: the token it is (its name; where else it is used is the tooltip, and Tokens
- * used says it fully), a part of one, or from one. A value of the component's own, or one not checked, has no chip: its tooltip
- * says why.
- */
 interface Made {
-	/** What its chip says, or null when it has none. */
 	says: string | null;
-	/** More, on hover: where else a token is used, or why a value is not a token. */
 	why: string;
 }
 const madeOf = (cell: ValueCell, name: (path: string) => string, others: (path: string) => string[]): Made => {
@@ -78,11 +66,6 @@ const madeOf = (cell: ValueCell, name: (path: string) => string, others: (path: 
 	return { says: null, why: 'Not checked: no token of this kind is marked when the stories are drawn, so whether it is one is not known.' };
 };
 
-/**
- * One value, as a button that opens its control, as a token's row reads: its property on the left, its value on the right:
- * **a token's name where it is one**, else its number with a chip for what it is made of. **A colour is only its dot**. A
- * value of its own opens a popover under it (`editor`); a token's control opens elsewhere, so it has none.
- */
 const Cell = ({
 	property,
 	cell,
@@ -103,7 +86,7 @@ const Cell = ({
 	editor: ReactNode;
 	onOpen: () => void;
 	onClose: () => void;
-	/** Shown and never tried: a value drawn only from its props, where nothing can be tried on it (its props' drawing). */
+	/** Drawn only from its props, where nothing can be tried on it: shown, never tried. */
 	still?: boolean;
 	label: string;
 }) => {
@@ -119,7 +102,6 @@ const Cell = ({
 					<span className="value-label">{label}</span>
 					<ColorDot
 						value={tried ?? cell.value}
-						// The token's name and nothing else; a colour that is no token has none to say.
 						{...(cell.kind === 'token' && made.says !== null ? { says: made.says } : {})}
 						name={valueTitle(property, cell.variant)}
 						{...(still ? {} : { onPress: open ? onClose : onOpen, popup: { open } })}
@@ -130,9 +112,7 @@ const Cell = ({
 				{open && !still && editor}
 			</ValueItem>
 		);
-	// A value that is a token is that token: its name stands where its number would, so a row reads "Radius · Radius base", not
-	// "Radius · 8px"; the number is the token's own to say, in its control. Any other has its number, and a chip when it is made
-	// from a token without being one.
+	// A token's name stands where its number would ("Radius · Radius base", not "Radius · 8px"): the number is the token's to say, in its control.
 	const isToken = cell.kind === 'token' && made.says !== null;
 	const chip = isToken || cell.value === NO_COLOR ? null : made.says;
 	const says = (
@@ -184,13 +164,8 @@ const Cell = ({
 /** How a picker's value is kept in a dropdown, which takes strings: drawn without the prop (its default) is this. */
 const DEFAULT = '\u0000default';
 
-/** What an info icon by a picker says of a prop its story sets itself, so a value of it draws as the story has it. */
 const SET_BY_STORY = 'Its story sets this itself: drawn with another value, it draws as the story has it.';
 
-/**
- * One prop the variant shown is chosen by, as a property row: its name (with an info icon when its story sets it itself),
- * then its values to choose from, or a switch.
- */
 const PickerRow = ({
 	picker,
 	value,
@@ -225,11 +200,6 @@ const PickerRow = ({
 	);
 };
 
-/**
- * The values as an inspector: a picker for each prop its rows are told apart by, then the groups, a row for each value of
- * the variant chosen. A combination its stories never drew is said, with the nearest that was; a row no prop explains shows
- * the value most instances draw, and the rest under it.
- */
 const Inspector = ({
 	rows,
 	declared,
@@ -243,9 +213,7 @@ const Inspector = ({
 	onClose,
 }: {
 	rows: ValueRow[];
-	/** What its props declare, drawn on one of its stories: a case its stories never drew is shown from these. */
 	declared: ValueRow[];
-	/** The props its story sets itself: their pickers say so behind an info icon. */
 	fixed: string[];
 	name: (path: string) => string;
 	others: (path: string) => string[];
@@ -256,7 +224,6 @@ const Inspector = ({
 	onClose: () => void;
 }) => {
 	const pickers = pickersOf([...rows, ...declared]);
-	// What was chosen, kept while it is still a value of its prop; the rest as it opens.
 	const [chosen, setChosen] = useState<Selection>({});
 	const kept = Object.fromEntries(Object.entries(chosen).filter(([prop, v]) => pickers.some((p) => p.prop === prop && p.options.includes(v))));
 	const selection = { ...firstSelection(pickers), ...kept };
@@ -327,11 +294,7 @@ const Inspector = ({
 	);
 };
 
-/**
- * Values: what each instance its stories draw measures, by property and variant, and whether each is a token's, worked out
- * from one, or its own, in `shownMode`. A token's value opens the token's own control (`onEditToken`), since it moves every
- * component that draws with it; any other is tried on the instances in the stories beside this (`ValueEditor`), never saved.
- */
+/** A token's value opens the token's own control, since it moves every component drawn with it; any other is only tried here, never saved. */
 export const ComponentValues = ({
 	answer,
 	name,
@@ -343,18 +306,15 @@ export const ComponentValues = ({
 	variants,
 }: {
 	answer: Ready;
-	/** Every case its props declare, drawn: what the pickers offer beyond what its stories drew. */
 	variants: ComponentVariants;
 	name: string;
 	byPath: ReadonlyMap<string, DesignToken>;
-	/** A token's name, by its path; and the other components that draw with it, by name. */
 	tokenName: (path: string) => string;
 	others: (path: string) => string[];
 	trying: Trying;
 	onEditToken: (token: DesignToken) => void;
 }) => {
 	const { values } = answer;
-	// The mode chosen in the panel, shown here only when its stories drew it in that mode and it differs (`shownMode`).
 	const [chosen] = useMode();
 	const mode = values.state === 'read' ? shownMode(values.rows, chosen) : chosen;
 	const [editing, setEditing] = useState<{ property: ValueProperty; cell: ValueCell } | null>(null);
@@ -366,7 +326,6 @@ export const ComponentValues = ({
 		if (token) onEditToken(token);
 		else setEditing({ property, cell });
 	};
-	// A value of its own's control, to be drawn under its cell.
 	const editor = (property: ValueProperty) => (cell: ValueCell) => {
 		const id = triedId({ property, targets: cell.targets });
 		const following = trying.tried.get(id)?.follows ?? null;
@@ -376,7 +335,6 @@ export const ComponentValues = ({
 				cell={cell}
 				tried={following === null ? tried(property)(cell) : null}
 				onTry={(value) => trying.onTry(id, value === null ? null : { property, value, targets: cell.targets })}
-				// A value of its own the same as a token's can follow it: drawn as it is, written by the agent.
 				follows={followsOf(property, cell, [...byPath.values()], values.state === 'read' ? values.rootPx : undefined).map((t) => ({
 					path: t.path,
 					name: labelOf(t),

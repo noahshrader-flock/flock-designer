@@ -5,11 +5,7 @@ import { workspace } from './host';
 import type { ValueTrials } from './shared';
 import { triedOn } from './valueTrials';
 
-/**
- * Trying a component's values, by its story file, on the library's commit: the same on its tab and in the panel's Changes,
- * since what is tried is the extension's (`useValueTrials`). Having the agent write one is asked of the core; a value that
- * follows a token is written by the agent as it is tried, since only the agent can write one.
- */
+/** A value that follows a token is written by the agent as it is tried, since only the agent can write one. */
 export const useTrying = ({ trials, change }: ValueTrials, file: string, commit: string | null): Trying => {
 	const values = triedOn(trials, file, commit);
 	const tried = useMemo(() => new Map(values.map((t) => [triedId(t), t])), [values]);

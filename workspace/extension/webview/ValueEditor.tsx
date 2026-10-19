@@ -6,10 +6,6 @@ import { ColorField, LengthField } from './ValueFields';
 import { VALUE_NAMES, valueTitle } from '../../src/shared/valueNames';
 import { LinkButton } from '../../src/ui/LinkButton';
 
-/**
- * One slider of a value: what it is called, which part of the value it changes (CSS writes a value's parts in an order of its
- * own), and, for a short name, what it means in words, on its hover.
- */
 interface Part {
 	label: string;
 	part: number;
@@ -17,11 +13,7 @@ interface Part {
 }
 const at = (part: number, label: string, hint?: string): Part => ({ label, part, ...(hint ? { hint } : {}) });
 
-/**
- * What each part of a value is called, by how many parts it is written with short, as CSS reads one to four, in the order the
- * sliders are shown. Padding is said as engineers say it: **X** is left and right, **Y** top and bottom, X first, though CSS
- * writes top and bottom first.
- */
+/** Padding is said as engineers say it: X (left and right) before Y (top and bottom), though CSS writes top and bottom first. */
 const PARTS: Partial<Record<ValueProperty, Record<number, Part[]>>> = {
 	padding: {
 		1: [at(0, 'All sides')],
@@ -38,14 +30,9 @@ const PARTS: Partial<Record<ValueProperty, Record<number, Part[]>>> = {
 	gap: { 1: [at(0, 'Rows and columns')], 2: [at(0, 'Rows'), at(1, 'Columns')] },
 };
 
-/** The values whose parts have names short enough to sit on their slider's line, label, slider and number; the rest stack. */
 const ON_ONE_LINE: ReadonlySet<ValueProperty> = new Set(['padding']);
 
-/**
- * A component's own value, tried in its stories: a popover, a few fields for one thing (a token's is a dialog). A length is a
- * slider for each part it is written with short, a colour a picker and its hex, each tried as it moves, since nothing is
- * built; what is tried is every part in full. **Nothing is saved**; Reset puts the value back as the library draws it.
- */
+/** Tried as it moves, since nothing is built; nothing is saved, and Reset puts the value back as the library draws it. */
 export const ValueEditor = ({
 	property,
 	cell,
@@ -60,9 +47,7 @@ export const ValueEditor = ({
 	/** The value being tried, in full, or null when it is as drawn. */
 	tried: string | null;
 	onTry: (value: string | null) => void;
-	/** The tokens whose value it is, which it could follow, by path and name. */
 	follows?: { path: string; name: string }[];
-	/** The token it is to follow, by name, or null. */
 	following?: string | null;
 	onFollow?: (path: string) => void;
 }) => {

@@ -6,11 +6,7 @@ import { asks, onHost } from './host';
 import { triedOn } from './valueTrials';
 import { vscode } from './vscode';
 
-/**
- * The values every DSNR page shows the same, as the extension keeps them (`SharedValues`, its `Shared`): heard as they
- * change, and all of them once the page says it is ready, which this says, once it listens. One provider, at the root of
- * every page (`main.tsx`); one hook for each value (`useShared`).
- */
+/** All of them are sent once the page says it is ready, which it says only once it listens. */
 interface Held {
 	values: SharedValues;
 	/**
@@ -18,7 +14,6 @@ interface Held {
 	 * other; whether it was another value than the one held.
 	 */
 	keep: <K extends SharedName>(name: K, value: SharedValues[K]) => boolean;
-	/** What is kept now, for a change worked out from it. */
 	now: () => SharedValues;
 }
 
@@ -44,10 +39,9 @@ export const SharedProvider = ({ children }: { children: ReactNode }) => {
 	return <SharedContext.Provider value={held}>{children}</SharedContext.Provider>;
 };
 
-/** A value every page shows the same. */
 export const useShared = <K extends SharedName>(name: K): SharedValues[K] => useContext(SharedContext).values[name];
 
-/** The change to the tokens being tried, and changing it: kept here at once, and told to the extension, which tells every page. */
+/** Kept here at once, and told to the extension, which tells every page. */
 export const useTokenEdits = (): [TokenEdit[], (edits: TokenEdit[]) => void] => {
 	const { values, keep } = useContext(SharedContext);
 	const set = useCallback(
@@ -59,7 +53,6 @@ export const useTokenEdits = (): [TokenEdit[], (edits: TokenEdit[]) => void] => 
 	return [values.tokenEdits, set];
 };
 
-/** The mode components are shown in, and choosing another, as the token edits are changed. */
 export const useMode = (): [Theme, (mode: Theme) => void] => {
 	const { values, keep } = useContext(SharedContext);
 	const choose = useCallback(
@@ -71,13 +64,11 @@ export const useMode = (): [Theme, (mode: Theme) => void] => {
 	return [values.mode, choose];
 };
 
-/** The values tried on every component, and how one component's are changed, from what is kept now. */
 export interface ValueTrials {
 	trials: SharedValues['valueTrials'];
 	change: (file: string, commit: string, next: (was: TriedValue[]) => TriedValue[]) => void;
 }
 
-/** The values tried on every component, and changing one's, as the token edits are changed. */
 export const useValueTrials = (): ValueTrials => {
 	const { values, keep, now } = useContext(SharedContext);
 	const change = useCallback<ValueTrials['change']>(

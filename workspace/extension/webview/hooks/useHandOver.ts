@@ -4,34 +4,24 @@ import { handedTo } from '../../../src/shared/handedTo';
 import { workspace } from '../host';
 import { askOnce, askWhile } from './ask';
 
-/**
- * How often a hand-over's branch is read from git again while it is watched, until it is proposed, and for how long: as long
- * as Claude Code may still be working on it, after which it is read again when Changes is opened again.
- */
+/** As long as Claude Code may still be working on it; after that it is read again when Changes is opened again. */
 const READ_EVERY_MS = 5_000;
 const READ_FOR_MS = 2 * 60 * 60_000;
 
-/** A unit's hand-over to Claude Code (Process changes), as the window shows it, and what can be done with it. */
 export interface HandOverControls {
 	branch: ChangeBranchOf<'handOver'> | null;
-	/** Where it went, said once it is handed over (`handedTo`), until another is shown or it is started over. */
 	handed: string | null;
 	busy: 'handing' | 'proposing' | 'showing' | null;
 	error: string | null;
 	processChanges: () => void;
 	/** Proposes its branch; one the rules flag only when `confirmed`, which the person says on purpose. */
 	propose: (confirmed: boolean) => void;
-	/** Forgets the hand-over, so it can be handed over again or saved. The branch and any pull request stay. */
+	/** The branch and any pull request stay. */
 	startOver: () => void;
-	/** Shows its branch in the previews in place of the library's (`on`), or the library's again. */
 	preview: (on: boolean) => void;
 }
 
-/**
- * A unit's hand-over (the tokens, `file` none; or a component's values, by its story file), asked for whenever `shown` is
- * another. Its branch is DSNR's reading of git, never what Claude Code says: while `watch` (the panel's Changes is open), it
- * is read again as Claude Code makes and commits it, until it is proposed. `change` is what Process changes hands over.
- */
+/** Its branch is DSNR's reading of git, never what Claude Code says: read again while `watch`, until it is proposed. */
 export const useHandOver = ({
 	shown,
 	file,

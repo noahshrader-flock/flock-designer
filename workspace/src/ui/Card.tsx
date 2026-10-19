@@ -1,11 +1,7 @@
 import type { ReactNode } from 'react';
 import { ThumbWash } from './ThumbWash';
 
-/**
- * One thing in a grid, as a card: its picture across the top, its name and a quieter line under it, and whatever belongs
- * with them (a badge, at the corner of the picture). The same things a row (`Row`) has, in a card's shape. With `onOpen`,
- * the whole card is a button. `context` is what VS Code's right-click menu for it is given.
- */
+/** `context` is what VS Code's right-click menu for it is given. */
 export const Card = ({
 	picture,
 	name,
@@ -21,10 +17,8 @@ export const Card = ({
 	meta?: string;
 	badge?: ReactNode;
 	onOpen?: () => void;
-	/** Its tab is the one in front in the editor: marked on its picture (`aria-current`). */
 	current?: boolean;
 	context?: Record<string, unknown>;
-	/** What more can be done with it (`Menu`), at the card's corner and not in the button that opens it. */
 	actions?: ReactNode;
 }) => {
 	const parts = (

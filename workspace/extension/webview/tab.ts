@@ -1,6 +1,5 @@
 import type { DesignTab } from '../src/messages';
 
-/** Which design system tab the page is, as its body says it (`data-tab`), or null for the panel or anything else. */
 export const readTab = (said: string | undefined): DesignTab | null => {
 	if (said === undefined) return null;
 	try {

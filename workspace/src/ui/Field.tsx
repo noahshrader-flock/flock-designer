@@ -1,21 +1,12 @@
 import { type ChangeEvent, type KeyboardEvent, type ReactNode, useId } from 'react';
 import { Icon } from './Icon';
 
-/**
- * What a control is given to be named and described by its field: its id, and the hint that describes it, if it has one.
- * One with no field around it is named by its own label (`aria-label`): a box whose place says what it is for.
- */
 interface FieldControl {
 	id: string;
 	'aria-describedby'?: string;
 	'aria-label'?: string;
 }
 
-/**
- * A labelled field of a form, as VS Code's settings draw one: the label above, then the control, then what to know. The
- * label alone names the control, and the hint describes it, so a screen reader says each as what it is. `children` draws
- * the control, given what ties it to them.
- */
 export const Field = ({ label, hint, children }: { label: string; hint?: string; children: (control: FieldControl) => ReactNode }) => {
 	const id = useId();
 	const hintId = `${id}-hint`;
@@ -34,7 +25,6 @@ export const Field = ({ label, hint, children }: { label: string; hint?: string;
 	);
 };
 
-/** VS Code's input box. */
 export const TextInput = ({
 	value,
 	onChange,
@@ -56,7 +46,6 @@ export const TextInput = ({
 	/>
 );
 
-/** VS Code's input box, for more than a line. */
 export const TextArea = ({
 	value,
 	onChange,
@@ -73,9 +62,7 @@ export const TextArea = ({
 	rows?: number;
 	control: FieldControl;
 	disabled?: boolean;
-	/** Has the focus as it is drawn: what was opened to write in it (a comment's box beside its pin). */
 	focused?: boolean;
-	/** A key pressed in it, for what it does on one (Enter sends a message). */
 	onKeyDown?: (e: KeyboardEvent<HTMLTextAreaElement>) => void;
 }) => (
 	<textarea
@@ -91,7 +78,7 @@ export const TextArea = ({
 	/>
 );
 
-/** VS Code's dropdown, with its chevron drawn inset from the border (the browser's own sits against it). */
+/** Its chevron is drawn inset from the border; the browser's own sits against it. */
 export const Select = ({
 	value,
 	onChange,

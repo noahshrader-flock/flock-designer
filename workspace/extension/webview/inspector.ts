@@ -1,7 +1,4 @@
-/**
- * A component's values as an inspector reads them: the variant shown chosen with a picker for each prop its rows are told
- * apart by, and each row's value for that choice, in the groups a designer knows. No React, so it is tested alone.
- */
+/** No React, so it is tested alone. */
 import type { ValueCell, ValueProperty, ValueRow } from '../../src/shared/contract';
 import { VALUE_NAMES } from '../../src/shared/valueNames';
 
@@ -15,7 +12,6 @@ export const GROUPS = [
 	{ name: 'Stroke', properties: ['border'] },
 ] as const satisfies readonly { name: string; properties: readonly ValueProperty[] }[];
 
-/** How a row is named in its group: as the Values name it, but Text's color, in a group called Text. */
 export const rowName = (property: ValueProperty): string => (property === 'text' ? 'Text color' : VALUE_NAMES[property]);
 
 /**
@@ -31,7 +27,6 @@ export interface Picker {
 /** The variant shown: a value for each picker's prop. A switch is on as `'true'`, off as anything else. */
 export type Selection = Record<string, string | null>;
 
-/** Every prop any row is told apart by, in the order first met, each with its values in the order first drawn. */
 export const pickersOf = (rows: ValueRow[]): Picker[] => {
 	const seen = new Map<string, (string | null)[]>();
 	for (const cell of rows.flatMap((r) => r.cells))
@@ -44,28 +39,19 @@ export const pickersOf = (rows: ValueRow[]): Picker[] => {
 	return [...seen].map(([prop, options]) => ({ prop, options, switch: options.every((v) => v === 'true' || v === 'false' || v === null) }));
 };
 
-/** A switch's off: false when it was drawn so, else drawn without it. */
 export const offOf = (picker: Picker): string | null => (picker.options.includes('false') ? 'false' : null);
 
-/** What it opens on: each prop's first value drawn, and a switch off, as a component is at rest. */
 export const firstSelection = (pickers: Picker[]): Selection =>
 	Object.fromEntries(pickers.map((p) => [p.prop, p.switch ? offOf(p) : (p.options[0] ?? null)]));
 
-/** How a picker's value is said: its default when drawn without it. */
 export const optionLabel = (value: string | null): string => value ?? 'default';
 
-/** How a prop is said as a picker's name: `size` is Size. */
 export const propLabel = (prop: string): string => prop.charAt(0).toUpperCase() + prop.slice(1);
 
-/** Whether a case drawn has `prop` as chosen: a switch's off is false or drawn without, alike. */
 const chosen = (picker: Picker | undefined, drawn: string | null, value: string | null): boolean =>
 	picker?.switch ? (drawn === 'true') === (value === 'true') : drawn === value;
 
-/**
- * A row's value for the variant shown: the cell drawn with it, and for a row no prop tells apart, the value most instances
- * draw, with the others (`more`); `still` when drawn only from its props, so shown and never tried; or, when no case was
- * drawn with it, none, with the nearest (the cell with the most of it). Never guessed.
- */
+/** `still`: drawn only from its props, so shown and never tried. With no case drawn, none and the nearest: never guessed. */
 export type Shown = { cell: ValueCell; more: ValueCell[]; still: boolean } | { cell: null; nearest: ValueCell | null };
 
 export const shownFor = (row: ValueRow, pickers: Picker[], selection: Selection): Shown => {
@@ -85,10 +71,6 @@ export const shownFor = (row: ValueRow, pickers: Picker[], selection: Selection)
 	return { cell: null, nearest };
 };
 
-/**
- * A row's value from its stories' drawing, else from its props' (`declared`: each declared value drawn on one
- * story), shown as still; a property only the props' drawing has is shown from it alone.
- */
 const shownOf = (row: ValueRow | undefined, declared: ValueRow | undefined, pickers: Picker[], selection: Selection): Shown | null => {
 	const drawn = row ? shownFor(row, pickers, selection) : null;
 	if (drawn?.cell) return drawn;
@@ -97,10 +79,6 @@ const shownOf = (row: ValueRow | undefined, declared: ValueRow | undefined, pick
 	return drawn ?? fromProps;
 };
 
-/**
- * The groups with a row in them, each row with its value for the variant shown: from its stories' drawing (`rows`), and for a
- * case only its props declare, from their drawing (`declared`), shown and never tried.
- */
 export const inspect = (
 	rows: ValueRow[],
 	pickers: Picker[],

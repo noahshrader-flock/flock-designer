@@ -13,7 +13,6 @@ import { applyBrand } from '../../src/ui/brand';
 const tab = readTab(document.body.dataset.tab);
 applyBrand(document);
 createRoot(document.getElementById('root') as HTMLElement).render(
-	// What every page shows the same, the one provider for all of them.
 	<SharedProvider>
 		{/* Every tooltip of the page, told here: the browser's own wait is seconds, and not ours to set. */}
 		<TooltipHost />

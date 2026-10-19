@@ -15,14 +15,12 @@ import { Message } from '../../src/ui/Message';
 import { Heading } from '../../src/ui/Heading';
 import { TabNote } from './TabNote';
 
-/** What every drawing is given: its tokens, every token by its path (to say what one points at), and the preview build. */
 interface Drawing {
 	tokens: DesignToken[];
 	byPath: Map<string, DesignToken>;
 	preview: SpecimenPreview;
 }
 
-/** Colors: each set in a row of swatches, each captioned with its name and what it points at, or its value. */
 const Swatches = ({ tokens, byPath }: Drawing) => (
 	<div className="drawn-sets">
 		{inOrder(tokens, (t) => `${t.group}/${t.set}`).map(([key, inSet]) => (
@@ -42,7 +40,6 @@ const Swatches = ({ tokens, byPath }: Drawing) => (
 	</div>
 );
 
-/** Spacing: each step a bar as long as it is. */
 const Bars = ({ tokens }: Drawing) => (
 	<ul className="drawn-bars">
 		{tokens.map((t) => {
@@ -58,7 +55,6 @@ const Bars = ({ tokens }: Drawing) => (
 	</ul>
 );
 
-/** A radius: a corner of its size, on a box. */
 const Corners = ({ tokens }: Drawing) => (
 	<div className="drawn-row">
 		{tokens.map((t) => {
@@ -74,7 +70,6 @@ const Corners = ({ tokens }: Drawing) => (
 	</div>
 );
 
-/** Elevation: each shadow on a box it raises, with its name and what it is. */
 const Shadows = ({ tokens }: Drawing) => (
 	<div className="drawn-row">
 		{tokens.map((t) => (
@@ -87,7 +82,6 @@ const Shadows = ({ tokens }: Drawing) => (
 	</div>
 );
 
-/** Anything with no drawing of its own: its names and values. */
 const Table = ({ tokens }: Drawing) => (
 	<table className="drawn-table">
 		<thead>
@@ -107,7 +101,6 @@ const Table = ({ tokens }: Drawing) => (
 	</table>
 );
 
-/** Typography: a specimen of each family and style, drawn in the design system's own preview, then the values as written. */
 const Specimens = ({ tokens, byPath, preview }: Drawing) => (
 	<div className="drawn-sets">
 		{preview.state === 'ready' ? (
@@ -123,7 +116,6 @@ const Specimens = ({ tokens, byPath, preview }: Drawing) => (
 	</div>
 );
 
-/** Each of the vocabulary's drawings, by the word it uses for it. */
 const DRAWINGS: Record<Primitive['drawn'], (props: Drawing) => ReactNode> = {
 	swatches: Swatches,
 	bars: Bars,
@@ -133,7 +125,6 @@ const DRAWINGS: Record<Primitive['drawn'], (props: Drawing) => ReactNode> = {
 	table: Table,
 };
 
-/** A primitive's tokens as the vocabulary says to draw them, a heading over each group when it has several. */
 const Drawn = ({ primitive, tokens, byPath, preview }: { primitive: Primitive | undefined } & Drawing) => {
 	const Draw = primitive ? DRAWINGS[primitive.drawn] : Table;
 	const draw = (list: DesignToken[]): ReactNode => <Draw tokens={list} byPath={byPath} preview={preview} />;
@@ -151,11 +142,7 @@ const Drawn = ({ primitive, tokens, byPath, preview }: { primitive: Primitive | 
 	);
 };
 
-/**
- * The Primitives tab: the design system seen whole, from the same list the panel shows, as the change tried there leaves it.
- * A chip for each primitive, each a way to its section; then each drawn as the vocabulary says; then what it does not
- * define, with where DSNR looked. For looking: nothing here changes a token.
- */
+/** For looking only: nothing here changes a token. */
 export const PrimitivesTab = () => {
 	const { ready, note } = useTabCatalog();
 	const [tried] = useTokenEdits();

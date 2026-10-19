@@ -9,7 +9,6 @@ import { useShowing } from './Showing';
 import { Icon } from '../../src/ui/Icon';
 import { Message } from '../../src/ui/Message';
 
-/** What a hand-over's branch is, as DSNR read it from git: not made yet, made with nothing committed, made from the wrong base, or its size. */
 const ReviewLine = ({ review }: { review: BranchReview }) => {
 	switch (review.state) {
 		case 'missing':
@@ -40,11 +39,7 @@ const ReviewLine = ({ review }: { review: BranchReview }) => {
 	}
 };
 
-/**
- * A unit handed to Claude Code (Process changes), in place of Save: its branch as DSNR read it from git (each file, with what
- * the rules keep out flagged), its draft pull request, then Propose once ready, and Start over. A flagged branch is proposed
- * only when the person confirms; Preview this branch shows Claude Code's commits in every page's previews until stopped.
- */
+/** A branch the rules flag is proposed only when the person confirms. */
 export const HandOverActions = ({ controls }: { controls: HandOverControls }) => {
 	const { branch, handed, busy, error, propose, startOver, preview } = controls;
 	const [confirming, setConfirming] = useState(false);

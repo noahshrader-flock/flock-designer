@@ -15,10 +15,6 @@ import { LinkButton } from '../../src/ui/LinkButton';
 import { Message } from '../../src/ui/Message';
 import { asks } from './host';
 
-/**
- * Where a value is written, each place a link to its line: by file, its lines after it (`src/utils/theme.ts, lines 58,
- * 70`); by whom, when the agent wrote it.
- */
 const Places = ({ places, by }: { places: ValuePlace[]; by?: 'agent' }) => {
 	const files = [...new Set(places.map((p) => p.file))];
 	return (
@@ -43,11 +39,6 @@ const Places = ({ places, by }: { places: ValuePlace[]; by?: 'agent' }) => {
 	);
 };
 
-/**
- * What is said under a value: where it is written (and, when the agent wrote it, why it wrote it so), that it is being found
- * or written, or why it cannot be saved, with the agent offered where it can write it; nothing when
- * finding failed.
- */
 const Said = ({ source, onWrite }: { source: ValueSource | null | undefined; onWrite: () => void }) => {
 	if (source === undefined) return null;
 	if (source === null) return <span className="value-place quiet">Finding where it is written…</span>;
@@ -76,21 +67,14 @@ const Said = ({ source, onWrite }: { source: ValueSource | null | undefined; onW
 	);
 };
 
-/**
- * The values tried on a component, and saving them: each from what it is drawn as to what it is tried as, where it is
- * written (found as it is tried), Reset, `BranchActions`, then what writing them reaches (`ReachView`). Save waits until
- * every value is found. Found while the tab is open, whether or not the dialog is: what it draws is handed to it (`children`).
- */
+/** Found while the tab is open, whether or not the dialog is: what it draws is handed to it (`children`). Save waits until every value is found. */
 export const ValueChanges = ({
 	children,
 	onKept,
 	...shown
 }: Shown & {
 	children: (values: ReactNode) => ReactNode;
-	/**
-	 * Told whether it has a branch kept or handed over, so its Changes button can still be pressed with nothing tried, to
-	 * propose or leave it.
-	 */
+	/** Told whether a branch is kept or handed over, so its Changes button can still be pressed with nothing tried. */
 	onKept: (kept: boolean) => void;
 }) => {
 	const tried = [...shown.trying.tried.values()];
@@ -106,23 +90,14 @@ export const ValueChanges = ({
 interface Shown {
 	component: CatalogComponent;
 	components: CatalogComponent[];
-	/** Its values in light, as read: what names each value tried and says what it was. */
+	/** Its values in light, as read. */
 	rows: ValueRow[] | null;
 	trying: Trying;
-	/** A token's name, by its path: what a value made to follow one says it follows. */
 	tokenName: (path: string) => string;
-	/**
-	 * Where Save, Process changes, Propose and Start over are when not here: on
-	 * a component's tab they are in the panel's Changes, which this opens; in the panel, where every change is, they are
-	 * here (none given).
-	 */
+	/** On a component's tab, opens the panel's Changes, where Save, Propose and Start over are; not given in the panel, which has them here. */
 	onActions?: () => void;
 }
 
-/**
- * The values tried, where each is written, and their branch (`ValueChanges`), as found and as kept: titled Styles on its own
- * tab, and by the component's name (`name`) in the panel's Changes, among the others'.
- */
 export const ChangedValues = ({
 	component,
 	components,

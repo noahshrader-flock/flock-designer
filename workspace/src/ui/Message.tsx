@@ -16,10 +16,7 @@ export const Message = ({
 	children,
 }: {
 	tone?: 'quiet' | 'warning' | 'error';
-	/**
-	 * `line`: in the flow, its action a link (`inset` lines it up with a list's rows). `block`: in a box of its own, its action
-	 * a button under it. `page`: the whole of a view while it has nothing else; with no icon nor title it is a status.
-	 */
+	/** `line` in the flow, its action a link; `block` in a box of its own, its action a button; `page` the whole of an empty view. */
 	size?: 'line' | 'block' | 'page';
 	title?: string;
 	icon?: string;
@@ -28,7 +25,6 @@ export const Message = ({
 	marks?: Marks;
 	children: ReactNode;
 }) => {
-	// With nothing to say, it says nothing: an error that did not happen is no line.
 	if (children === null || children === undefined || children === false || children === '') return null;
 	const alert = tone === 'error' ? { role: 'alert' } : {};
 	if (size === 'page')
@@ -93,6 +89,5 @@ export const Message = ({
 	);
 };
 
-/** Try again, as a message's action, when there is a way to; none when there is not. */
 export const tryAgain = (onRetry: (() => void) | null | undefined): { label: string; onPress: () => void } | null =>
 	onRetry ? { label: 'Try again', onPress: onRetry } : null;

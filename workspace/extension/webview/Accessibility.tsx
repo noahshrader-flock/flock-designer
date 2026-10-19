@@ -17,10 +17,6 @@ import { LinkButton } from '../../src/ui/LinkButton';
 import { Message } from '../../src/ui/Message';
 import { Heading } from '../../src/ui/Heading';
 
-/**
- * One kind of issue: what it asks, where in WCAG, on how many elements and in which states, and axe's page on it; then the
- * elements it was found on, each by its selector with what axe says to change, and how many more there are.
- */
 const Issue = ({ issue }: { issue: AccessibilityIssue }) => (
 	<li className="issue">
 		<span className="issue-help">{issue.help}</span>
@@ -54,11 +50,7 @@ const Issues = ({ title, issues }: { title: string; issues: AccessibilityIssue[]
 		</section>
 	);
 
-/**
- * What a check found, in the order a person needs it: what it found, what it was checked with and what is left to check by
- * hand (never a pass: what is left is said beside what was found), then a link to the findings, which opens them in a
- * dialog rather than the side panel's narrow column.
- */
+/** Never reads as a pass: what is left to check by hand is always said beside what was found. */
 export const AccessibilityFindings = ({ result }: { result: AccessibilityResult }) => {
 	const counts = countsOf(result);
 	const [open, setOpen] = useState(false);

@@ -1,23 +1,15 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 
-/**
- * How long a pointer stays on something before it is told what it is: **one wait for every tooltip DSNR draws**. The
- * browser's own wait for a `title` is its to set and long (seconds), and no page can change it, so every page's tooltips
- * are told here (`TooltipHost`) and nothing sets a delay of its own.
- */
+/** One wait for every tooltip: the browser's own for a `title` is long and no page can change it, so nothing sets a delay of its own. */
 export const TOOLTIP_DELAY_MS = 1000;
 
 /** Once one has been told, the next opens at once for this long: moving along a row of buttons is not a wait for each. */
 export const TOOLTIP_SKIP_MS = 300;
 
-/** What a tooltip keeps from the edge of the page, and from what it is about. */
 const EDGE = 8;
 const GAP = 4;
 
-/**
- * What a pointer is on that has something to tell: the nearest thing at or above it with a `title` (a frame's is its name,
- * not a tooltip).
- */
+/** A frame's `title` is its name, not a tooltip. */
 const titled = (el: Element | null, current: HTMLElement | null): HTMLElement | null => {
 	for (let n = el; n instanceof HTMLElement; n = n.parentElement) {
 		// The one being told of has had its title taken: it is still what the pointer is on, whatever is above it.
@@ -27,11 +19,7 @@ const titled = (el: Element | null, current: HTMLElement | null): HTMLElement | 
 	return null;
 };
 
-/**
- * Every tooltip in a DSNR page, mounted once on each, so they all wait and look the same; a tooltip is written as a `title`.
- * The title is taken while the pointer is on it, so the browser does not tell it as well, and given back after. Keyboard
- * focus is not told: what needs a name for it has one in its label.
- */
+/** The title is taken while the pointer is on it, so the browser does not tell it as well, and given back after. Keyboard focus is not told. */
 export const TooltipHost = () => {
 	const [shown, setShown] = useState<{ text: string; rect: DOMRect } | null>(null);
 	const box = useRef<HTMLDivElement>(null);
@@ -99,7 +87,6 @@ export const TooltipHost = () => {
 		};
 	}, []);
 
-	// Placed once it is drawn and its size is known: under what it is about, over it where there is no room, inside the page.
 	useLayoutEffect(() => {
 		const tip = box.current;
 		if (shown === null || tip === null) return;

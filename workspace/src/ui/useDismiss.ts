@@ -11,7 +11,6 @@ const escape = (e: KeyboardEvent) => {
 	top.close();
 };
 
-/** Closes it on Escape while it is `open` and nothing opened over it since. */
 export const useEscape = (open: boolean, onClose: () => void): void => {
 	// The latest `onClose`, so a new one each render does not take it off the stack and put it back on top.
 	const close = useRef(onClose);
@@ -28,11 +27,7 @@ export const useEscape = (open: boolean, onClose: () => void): void => {
 	}, [open]);
 };
 
-/**
- * How what is drawn over the page from a button of its own goes away, for a menu and a popover alike: Escape closes it
- * (`useEscape`) and the keyboard goes on from the button it opened from; a press anywhere outside `within` (the button and
- * what it opened) closes it, leaving the focus where the press put it.
- */
+/** A press anywhere outside `within` (the button and what it opened) closes it, leaving the focus where the press put it. */
 export const useDismiss = (
 	open: boolean,
 	within: RefObject<HTMLElement | null>,

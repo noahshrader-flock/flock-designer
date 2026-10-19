@@ -1,11 +1,6 @@
 import { useState } from 'react';
 import { initialOf } from '../shared/avatar';
 
-/**
- * A person, as their picture: the first letter of their name until it loads, and when there is none or it does not. Named
- * for them as its tooltip; what it is beside says who it is to assistive technology. The size of a small control; or
- * extra small (`xs`) beside a name, the size a pin's picture is drawn at on the page (`AVATAR_XS_PX`).
- */
 export const Avatar = ({ name, src, size = 'default' }: { name: string; src: string | null; size?: 'default' | 'xs' }) => {
 	const [failed, setFailed] = useState<string | null>(null);
 	return (

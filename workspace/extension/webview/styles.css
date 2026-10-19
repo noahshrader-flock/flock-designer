@@ -1,31 +1,17 @@
-/*
- * DSNR's panel and its tabs: their own parts, each drawn with the kit (`src/ui/kit.css`, which the page takes first) and
- * on its names, its spacing scale and its focus ring.
- */
+/* Drawn with the kit (`src/ui/kit.css`), which the page takes first. */
 
-/* The panel's own sizes, made from the kit's. */
 :root {
-	/* Between the pickers in a component's side panel (a row is `--dsnr-row-height`). */
 	--dsnr-row-gap: var(--dsnr-space-4);
-	/*
-	 * The design system's own row (its name, its branch, its buttons), kept under the top bar, one line of the small control
-	 * between its padding; and the gap between what is in it: between the buttons, and between the name's icon and them.
-	 */
 	--dsnr-ds-gap: var(--dsnr-space-2);
 	--dsnr-ds-pad: var(--dsnr-space-2);
 	--dsnr-ds-header-height: calc(var(--dsnr-control-small) + 2 * var(--dsnr-ds-pad));
-	/* The design system's Components and Tokens toggle, kept under that: its search bar is kept under it. */
 	--dsnr-part-pad-top: var(--dsnr-space-2);
 	--dsnr-part-pad-bottom: var(--dsnr-space-4);
 	--dsnr-part-height: calc(var(--dsnr-control) + var(--dsnr-part-pad-top) + var(--dsnr-part-pad-bottom));
-	/* A slider's track and its thumb, which is centred on it. */
 	--dsnr-slider-track: 4px;
 	--dsnr-slider-thumb: 14px;
 }
 
-/* == What the panel’s dialogs hold, before what is drawn in one (`CodebaseDialogs.tsx`, `AccountDialogs.tsx`, `DesignSystem.tsx`) == */
-
-/* What a dialog says will happen, in steps. */
 .dialog-steps {
 	margin: var(--dsnr-space-2) 0 0;
 	padding-left: var(--dsnr-space-7);
@@ -39,7 +25,6 @@
 	font-size: var(--dsnr-text-small);
 }
 
-/* A command for a terminal, as it is to be pasted. */
 .dialog-command {
 	margin: var(--dsnr-space-4) 0 0;
 	padding: var(--dsnr-space-4);
@@ -49,7 +34,6 @@
 	background: var(--vscode-textCodeBlock-background);
 }
 
-/* A dialog's list of things (what is not read, what is held back): scrolling inside it, never past it. */
 .problem-list {
 	display: flex;
 	flex-direction: column;
@@ -61,7 +45,6 @@
 	list-style: none;
 }
 
-/* What the sync holds back: what it is, and why under it. */
 .held {
 	display: flex;
 	flex-direction: column;
@@ -72,8 +55,6 @@
 	overflow-wrap: anywhere;
 }
 
-/* == The panel: its bars, kept at the top while the list scrolls (`Panel.tsx`) == */
-
 .panel {
 	display: flex;
 	flex-direction: column;
@@ -81,10 +62,6 @@
 	min-height: 100vh;
 }
 
-/*
- * Bars kept at the top while a list scrolls under them, each under the one before: the toggle's, then the design system's own
- * row (its name is always shown), then its Components and Tokens toggle, then a tab's search and options.
- */
 .panel-top,
 .ds-header,
 .ds-part,
@@ -103,7 +80,6 @@
 	top: var(--dsnr-top-height);
 }
 
-/* The choice of list or grid, at the right, above the projects: just its icons, so it takes little of the side bar. */
 .view-bar {
 	display: flex;
 	align-items: center;
@@ -112,22 +88,15 @@
 	padding: var(--dsnr-space-1) var(--dsnr-space-5) var(--dsnr-space-5);
 }
 
-/*
- * A view with nothing to show (`Message size="page"`): centered across and down the room the tab has, which fills the
- * window's height.
- */
 .tab-body {
 	display: flex;
 	flex: 1;
 	flex-direction: column;
 }
 
-/* With the toggle above it, the search bar is kept under that too, under the top bar and the design system's row. */
 .tab-body .ds-part ~ .view-bar {
 	top: calc(var(--dsnr-top-height) + var(--dsnr-ds-header-height) + var(--dsnr-part-height));
 }
-
-/* == A design system’s header and its parts (`DesignSystemHeader.tsx`, `DesignSystem.tsx`) == */
 
 /*
  * The design system's own row: its menu opens over the bars that come after it, but a sticky row is a layer of its own, so
@@ -145,7 +114,6 @@
 	padding: var(--dsnr-ds-pad) var(--dsnr-space-3) var(--dsnr-ds-pad) var(--dsnr-space-5);
 }
 
-/* Its name, then its branch's icon directly after it; a long name gives way, and the icon stays. */
 .ds-title {
 	display: flex;
 	align-items: center;
@@ -169,7 +137,6 @@
 	cursor: help;
 }
 
-/* The count not read, the count of changes and its menu, centred on the name's line. */
 .ds-actions {
 	display: inline-flex;
 	align-items: center;
@@ -181,12 +148,6 @@
 	padding: var(--dsnr-part-pad-top) var(--dsnr-space-5) var(--dsnr-part-pad-bottom);
 }
 
-/* == A tab: its header, and a component’s stories beside its side pane (`ComponentTab.tsx`, `Stories.tsx`) == */
-
-/*
- * A design system's tab in the editor (a component, Primitives): the editor's own colours, its content in a column with
- * room at the sides, as VS Code's own editors that are pages (Settings, an extension's details) have.
- */
 .tab {
 	display: flex;
 	flex-direction: column;
@@ -207,7 +168,6 @@
 	min-width: 0;
 }
 
-/* A component's stories beside what it is made from, when there is room for both; one under the other when not. */
 .component-layout {
 	display: grid;
 	grid-template-columns: minmax(0, 1fr);
@@ -220,11 +180,6 @@
 	}
 }
 
-/*
- * A component's page keeps its name, description and links where they are and lets what is under them scroll. With room for
- * two columns, the page is the window's height and the stories and the analysis each scroll inside it, apart; without,
- * the page scrolls as a whole and the header stays at the top of it.
- */
 .tab-split .tab-header {
 	position: sticky;
 	top: 0;
@@ -311,13 +266,6 @@
 	color: var(--vscode-textLink-foreground);
 }
 
-/* == A component’s values and pickers (`ComponentValues.tsx`) == */
-
-/*
- * A component's values, in the narrow side pane, as its tokens read: each property a group headed as a token's set, each
- * value a line, its name on the left and its value on the right. No heading sticks but a part's own (`.aside-heading`).
- * What a group's values all are is to the right of its name: quiet, and not bold.
- */
 .value-group-note {
 	margin-left: auto;
 	color: var(--dsnr-muted);
@@ -327,7 +275,7 @@
 	overflow-wrap: anywhere;
 }
 
-/* A token's name where its number would be: in the panel's own face, at most half its cell, cut with an ellipsis, so its label keeps the rest. */
+/* At most half its cell, so its label keeps the rest. */
 .value-token {
 	overflow: hidden;
 	max-width: 50cqw;
@@ -336,11 +284,6 @@
 	white-space: nowrap;
 }
 
-/*
- * What a value is made of, in the inspector, after its name, as Figma puts a variable with its property: a token's name as a
- * small label in the panel's grey, which gives way first when the pane is narrow (cut with an ellipsis, its whole name on the
- * value's hover), so the value keeps its line at the right.
- */
 .value-label-chipped {
 	display: flex;
 	align-items: center;
@@ -350,10 +293,6 @@
 	container-type: inline-size;
 }
 
-/*
- * The chip gives way first, cut with an ellipsis, and is left out where only a stub of it would show; then the name, cut with
- * an ellipsis. The value keeps its line, and what a token is stays in the value's tooltip.
- */
 .value-name {
 	flex-shrink: 0;
 	overflow: hidden;
@@ -381,13 +320,8 @@
 	}
 }
 
-/*
- * The props the variant shown is chosen by, as property rows above the groups: the prop's name on the left, its dropdown or
- * its switch on the right, as a value is laid out under them.
- */
 .pickers {
 	display: grid;
-	/* One grid for every picker: the props' names as long as the longest, the dropdowns the rest, all lined up. */
 	grid-template-columns: auto minmax(0, 1fr);
 	align-items: center;
 	gap: var(--dsnr-row-gap) var(--dsnr-space-5);
@@ -398,7 +332,6 @@
 	display: contents;
 }
 
-/* A picker's name, with its info icon beside it when it has one: one cell of the pickers' grid. */
 .picker-name {
 	display: flex;
 	align-items: center;
@@ -409,13 +342,6 @@
 	min-width: 0;
 }
 
-/* == Tokens (`Tokens.tsx`) == */
-
-/*
- * A line between one set and the next (a role's variants, a tone's steps, a property's values, a Changes group), the same
- * everywhere, in the panel's one border colour. A component's group's heading has room of its own above it, so the line is
- * all that group adds.
- */
 .theme-set + .theme-set,
 .token-set + .token-set,
 .value-group + .value-group,
@@ -431,7 +357,6 @@
 }
 
 .token-body {
-	/* In from the right as the cards and the section headers are, not out to the panel's edge. */
 	padding: 0 var(--dsnr-space-5) var(--dsnr-space-2) var(--dsnr-indent);
 }
 
@@ -441,7 +366,6 @@
 	white-space: nowrap;
 }
 
-/* A token's name is a link to the file it is written in: the row's text, underlined and in the link colour when pointed at. */
 .token-link {
 	padding: 0;
 	border: none;
@@ -498,7 +422,6 @@
 	white-space: nowrap;
 }
 
-/* A value as it is written: a token's on its row, and under each drawing on Primitives. */
 .token-value,
 .drawn-value {
 	color: var(--dsnr-muted);
@@ -511,17 +434,10 @@
 	margin-left: auto;
 }
 
-/* == The semantic colors’ grid (`SemanticColors.tsx`) == */
-
-/* The headings over the columns: a row as tall as a role's, as a set's heading is (`.heading-set`), in its weight. */
 .theme-headings {
 	font-weight: 600;
 }
 
-/*
- * The semantic colors as laid out here: a row for each role's variant, its name taking the room there is, and a
- * column for each theme, as wide as a dot, the same on every row and its heading so they line up.
- */
 .theme-row {
 	display: flex;
 	align-items: center;
@@ -544,15 +460,11 @@
 	color: var(--vscode-foreground);
 }
 
-/* The set's name is the text's colour; the icons over the columns are quiet. */
 .theme-headings .theme-cell {
 	color: var(--dsnr-muted);
 }
 
-/*
- * A theme's column: as wide as a dot, so the last column's dots end where a palette's do (flush right, the same 8px from the
- * edge), and a heading over them is centred on them. A heading with no icon (a theme that is not Light or Dark) is cut short.
- */
+/* As wide as a dot, so the last column's dots end where a palette's do. */
 .theme-cell {
 	display: flex;
 	flex-shrink: 0;
@@ -566,8 +478,6 @@
 .theme-none {
 	color: var(--dsnr-muted);
 }
-
-/* == What axe found (`Accessibility.tsx`) == */
 
 .issue-list {
 	margin: 0;
@@ -589,10 +499,6 @@
 	font-size: var(--dsnr-text-small);
 }
 
-/*
- * The elements an issue was found on: a plain list, each with the one bullet and the one size, the meta line's, its selector in
- * the same size as the words round it, not the editor's larger.
- */
 .issue-elements {
 	margin: var(--dsnr-space-2) 0 0;
 	padding-left: var(--dsnr-space-6);
@@ -608,9 +514,6 @@
 	font-size: inherit;
 }
 
-/* == Primitives (`PrimitivesTab.tsx`) == */
-
-/* Primitives: a chip for each at the top, then each drawn as the vocabulary says. */
 .chips {
 	display: flex;
 	flex-wrap: wrap;
@@ -761,8 +664,6 @@
 	list-style: none;
 }
 
-/* == A token’s control and a value’s (`TokenEditor.tsx`, `ValueFields.tsx`) == */
-
 .popover-body {
 	display: flex;
 	flex-direction: column;
@@ -787,7 +688,6 @@
 	gap: var(--dsnr-space-1);
 }
 
-/* A part with a short name (X, Y, Top): its name, its slider and its number on one line, the names in a column of their own. */
 .popover-field-line {
 	flex-direction: row;
 	align-items: center;
@@ -808,7 +708,6 @@
 	min-width: 0;
 }
 
-/* At the panel's own text size: a few fields, read at a glance. */
 .popover-label,
 .popover-note {
 	margin: 0;
@@ -819,7 +718,6 @@
 	font-size: inherit;
 }
 
-/* A token's control, in a dialog: a picker and its hex, a slider, a tone's steps as swatches to choose from. */
 .token-editor {
 	display: flex;
 	flex-direction: column;
@@ -856,11 +754,7 @@
 	font-family: var(--vscode-editor-font-family);
 }
 
-/*
- * A length's slider: a thin track in the panel's grey, filled in the brand up to where it is (`--fill`, from the field), and a
- * round thumb. Drawn here because the browser's own is a thick track in white. The thumb sits on the track's middle, wherever
- * the track's height is.
- */
+/* Drawn here because the browser's own is a thick track in white. */
 .dimension-field input[type='range'] {
 	flex: 1;
 	height: 16px;
@@ -935,9 +829,6 @@
 	align-self: flex-start;
 }
 
-/* == Changes and their branches (`Changed.tsx`, `ValueChanges.tsx`, `HandOverActions.tsx`) == */
-
-/* What has been changed, at the top of the tab, and what can be done with it. */
 .changed {
 	display: flex;
 	flex-direction: column;
@@ -963,10 +854,6 @@
 	justify-content: space-between;
 }
 
-/*
- * A value changed: room on its right for its reset, as a token's row has, and under its name where it is
- * written, or why it cannot be saved, with a path broken anywhere rather than past the pane.
- */
 .changed .value-change {
 	padding-right: var(--dsnr-actions-room);
 }
@@ -996,7 +883,6 @@
 	color: var(--vscode-textLink-foreground);
 }
 
-/* The files a hand-over's branch changed, as DSNR read them from git. */
 .branch-files {
 	display: flex;
 	flex-direction: column;
@@ -1007,5 +893,3 @@
 	font-size: var(--dsnr-text-small);
 	overflow-wrap: anywhere;
 }
-
-/* Wrapped when a narrow pane cannot hold them in a row: a hand-over has three. */

@@ -2,11 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Result } from '../../../src/shared/contract';
 import { askOnce } from './ask';
 
-/**
- * One way for a screen to read from the core: `value`, `error` (never thrown away), `loading` and `reload`. Read again when
- * `deps` change, forgetting what it read before; kept while the same is read again. An answer that comes back after the
- * screen asked for something else, or left, is dropped. Nothing is read while `enabled` is false.
- */
+/** An answer that comes back after the screen asked for something else, or left, is dropped; `error` is never thrown away. */
 export const useWorkspace = <T>(read: () => Promise<Result<T>>, deps: unknown[], { enabled = true }: { enabled?: boolean } = {}) => {
 	const [state, setState] = useState<{ value: T | null; error: string | null; loading: boolean }>({ value: null, error: null, loading: enabled });
 	const [asked, setAsked] = useState(0);

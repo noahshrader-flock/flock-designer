@@ -11,11 +11,6 @@ import { BuildInCodebaseDialog, HandoffDialog } from './CodebaseDialogs';
 import { AssignFolderDialog, NewPrototypeDialog } from './ProjectDialogs';
 import { Message } from '../../src/ui/Message';
 
-/**
- * The dialog open over the panel, if one is, drawn for the project it is about as the list has it: none for a project
- * not in the list. What is the extension's is asked of it here, what is the core's is done in the dialog, and what changes
- * the projects reads them again (`onChanged`).
- */
 export const PanelDialogs = ({
 	dialog,
 	projects,
@@ -26,9 +21,7 @@ export const PanelDialogs = ({
 }: {
 	dialog: PanelDialog | null;
 	projects: Project[] | null;
-	/** The product open here, which codebase work is in. */
 	root: string | null;
-	/** Who is signed in: the account dialog is only for someone who is, and goes when they are not. */
 	account: SignInState;
 	onChanged: () => void;
 	onClose: () => void;
@@ -53,7 +46,6 @@ export const PanelDialogs = ({
 			return <AssignFolderDialog project={project} folders={folders} onAssigned={onChanged} onClose={onClose} />;
 		case 'build':
 			if (!newest) return null;
-			// Built in the product's own code: with none open, said, not a dialog that never comes.
 			return root ? (
 				<BuildInCodebaseDialog root={root} project={project} name={newest.name} onBuilt={onChanged} onClose={onClose} />
 			) : (

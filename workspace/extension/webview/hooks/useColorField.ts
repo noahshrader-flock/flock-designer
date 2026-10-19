@@ -1,11 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { hexAndAlpha, isHex, typedHex } from '../../../src/shared/tokens';
 
-/**
- * A color's own value as its control edits it: a picker, committed when it is closed (the browser's `change`, not every color
- * it passes), and a hex field, committed when left or on Enter, or put back when not a color. The opacity is kept either way.
- * With `live`, the picker also commits every color it passes, for a value tried without a build.
- */
+/** The picker commits when closed (the browser's `change`, not every color it passes), unless `live`; the opacity is kept either way. */
 export const useColorField = (value: string, onCommit: (hex: string) => void, { live = false }: { live?: boolean } = {}) => {
 	const { hex: own, alpha } = hexAndAlpha(value);
 	const [hex, setHex] = useState(own);
@@ -26,7 +22,6 @@ export const useColorField = (value: string, onCommit: (hex: string) => void, { 
 		else setHex(own);
 	};
 	return {
-		/** The picker's own props. */
 		picker: {
 			ref: picker,
 			value: (isHex(hex) ? hex : own).toLowerCase(),

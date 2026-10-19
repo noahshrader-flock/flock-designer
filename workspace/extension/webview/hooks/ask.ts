@@ -2,18 +2,10 @@
 export const ASK_EVERY_MS = 3000;
 export const ASK_FOR_MS = 30 * 60_000;
 
-/**
- * Asks once and gives the answer to `got`: the one way a page reads something for an effect. Returns what stops it, for the
- * effect's clean-up, after which the answer is dropped, so an answer to what was asked before (another thing shown, or a page
- * left) is never shown.
- */
+/** Returns what stops it, for the effect's clean-up, after which the answer is dropped, so an answer to an earlier ask is never shown. */
 export const askOnce = <T>(ask: () => Promise<T>, got: (answer: T) => void): (() => void) => askWhile(ask, () => false, got);
 
-/**
- * Asks once, gives the answer to `got`, and asks again `every` few seconds while `again` says it is still coming: one way
- * for every panel that waits. It stops at the first answer that is not, or after `for`, so nothing is asked forever.
- * Returns what stops it, for an effect's clean-up, after which no answer is given.
- */
+/** Stops at the first answer `again` says is not still coming, or after `for`, so nothing is asked forever; what it returns stops it too. */
 export const askWhile = <T>(
 	ask: () => Promise<T>,
 	again: (answer: T) => boolean,

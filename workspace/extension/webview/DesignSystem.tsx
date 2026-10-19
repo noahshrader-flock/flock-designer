@@ -26,13 +26,12 @@ import { asks, workspace } from './host';
 import { Message, tryAgain } from '../../src/ui/Message';
 import { askOnce } from './hooks/ask';
 
-/** The design system's two parts in the panel: its components, which it starts on, and its tokens. */
 const PARTS = [
 	{ value: 'components', label: 'Components' },
 	{ value: 'tokens', label: 'Tokens' },
 ] as const satisfies { value: Part; label: string }[];
 
-/** Whether the panel's Changes dialog is open, and opening and closing it: the panel's, so a component's tab can ask for it. */
+/** The panel's, so a component's tab can ask for it. */
 interface ChangesDialog {
 	open: boolean;
 	onOpen: () => void;
@@ -43,7 +42,6 @@ const locate = { label: 'Locate design system…', onPress: () => void asks().lo
 
 const folderName = (path: string): string => path.split(/[\\/]/).filter(Boolean).at(-1) ?? path;
 
-/** What the library has that is not read, said where it can be read: each with its file and line. */
 const Problems = ({ problems, onClose }: { problems: Extract<Catalog, { state: 'ready' }>['tokens']['problems']; onClose: () => void }) => (
 	<Dialog title="Not read" onClose={onClose}>
 		<Message>These values in its token files are not read, so they are not shown or changed here. The rest are.</Message>
@@ -61,11 +59,7 @@ const Problems = ({ problems, onClose }: { problems: Extract<Catalog, { state: '
 	</Dialog>
 );
 
-/**
- * The design system, read: its name and branch, the counts of changes being tried and of values not read (each a button that
- * opens them), its menu, then Components or Tokens. The change to the tokens being tried is the extension's (`edits`), so
- * its tabs see it too; every token row here shows the tokens as changed.
- */
+/** The token change being tried is the extension's (`edits`), so its tabs see it too. */
 const Ready = ({
 	catalog,
 	id,
@@ -91,13 +85,10 @@ const Ready = ({
 }) => {
 	const [edits, setEdits] = useTokenEdits();
 	const changes = useTokenChangesFor(catalog.tokens.tokens, edits, setEdits, catalog.accessibility);
-	// Where the change is kept once saved, and proposed: a change DSNR was closed with comes back in the panel.
 	const branch = useChangeBranch('tokens', { shown: id, scope: null, change: edits, setChange: setEdits });
 	const [problems, setProblems] = useState(false);
-	// The token whose control is open: the one whose row or swatch was pressed.
 	const [editing, setEditing] = useState<DesignToken | null>(null);
-	// Every change being tried, in a dialog from their count beside the not-read one, so nothing opens above the list: the
-	// tokens, then each component with values tried on this commit, or a branch of its values kept, or handed to Claude Code.
+	// In a dialog from their count, so nothing opens above the list.
 	const { trials } = useValueTrials();
 	const [keptFiles, setKeptFiles] = useState<string[]>([]);
 	// What is kept is asked again whenever what is being tried starts or ends (a branch kept ends a trial), as the count
@@ -117,7 +108,6 @@ const Ready = ({
 	// over and nothing tried, once.
 	const count = (edits.length || (keptFiles.includes('') ? 1 : 0)) + changed.reduce((n, c) => n + Math.max(triedOnIt(c.id).length, 1), 0);
 	const notRead = catalog.tokens.problems.length;
-	// Whether the library has a dark (its tokens have a Dark group): only then is a color mode offered.
 	const hasDark = catalog.tokens.tokens.some(isDark);
 	return (
 		<TokenChangesProvider value={changes}>
@@ -195,10 +185,6 @@ const Ready = ({
 	);
 };
 
-/**
- * The Design System tab: the design system found, read from its branch on GitHub as its clone has it. With none found, what
- * DSNR looked for and where, and Locate design system; found but not readable, why; while it is read, a line saying so.
- */
 export const DesignSystem = ({
 	found,
 	unreadable,

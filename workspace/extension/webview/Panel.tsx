@@ -21,24 +21,16 @@ const TABS = [
 	{ value: 'design-system', label: 'Design System', icon: 'symbol-color' },
 ] as const satisfies { value: Tab; label: string; icon: string }[];
 
-/**
- * DSNR's panel: the toggle at its very top, and under it the view chosen. What is open is the extension's (`context`); the
- * account and the projects are the core's, read again when either changes or the extension says the projects did. Who is
- * signed in is VS Code's to show, in its title bar; the page reads it to say whose projects these are.
- */
 export const Panel = () => {
 	const kept = vscode().getState();
 	const [tab, setTab] = useState<Tab>(() => kept?.tab ?? 'projects');
 	const [view, setView] = useState<View>(() => kept?.view ?? 'grid');
 	const [part, setPart] = useState<Part>(() => kept?.part ?? 'components');
 	const [componentsView, setComponentsView] = useState<View>(() => kept?.componentsView ?? 'grid');
-	// What is chosen is kept for the panel, so a reload leaves it where it was.
 	const keep = (next: Partial<{ tab: Tab; view: View; part: Part; componentsView: View }>) =>
 		vscode().setState({ tab, view, part, componentsView, ...next });
-	// What is open, and why its design system cannot be read when it cannot: the extension's, as every page's.
 	const { context, unreadable } = useShared('placed');
 	const [account, setAccount] = useState<SignInState>({ state: 'signedOut' });
-	// The dialog over the panel, if one is open: opened by what is pressed here or by the extension (its title bar's +).
 	const [dialog, setDialog] = useState<PanelDialog | null>(null);
 	useEffect(() => {
 		const stop = askOnce(
@@ -52,10 +44,8 @@ export const Panel = () => {
 		};
 	}, []);
 	const login = account.state === 'signedIn' ? account.user.login : null;
-	// Read once what is open is known, a product or none (with none, everyone's projects are listed: the workspace README's "Projects, by product").
 	const read = useWorkspace(() => workspace().listProjects(), [context?.product ?? null, login], { enabled: context !== null });
-	// Told the projects changed, they are read again, keeping what is shown until the new is there (a comment made in a
-	// review is a number on its project, without the list giving way to a line saying it is reading).
+	// Keeps what is shown until the new list is there, so a reload never gives way to a line saying it is reading.
 	const { reload } = read;
 	useEffect(
 		() =>
@@ -69,8 +59,7 @@ export const Panel = () => {
 			}),
 		[reload],
 	);
-	// With the list read: pictures for the prototypes built here that have none current, taken in once made;
-	// the newest first, so a picture drawn again is the one shown.
+	// The newest first, so a picture drawn again is the one shown.
 	const [made, setMade] = useState<MadeCover[]>([]);
 	useEffect(() => {
 		if (read.value === null) return;
@@ -79,17 +68,14 @@ export const Panel = () => {
 			(r) =>
 				r.ok &&
 				r.value.length > 0 &&
-				// One for each prototype: a picture drawn again replaces the last.
 				setMade((now) => [...r.value, ...now.filter((m) => !r.value.some((n) => n.projectId === m.projectId && n.name === m.name))]),
 		);
 	}, [read.value]);
 	const projects = useMemo(() => (read.value === null ? null : withCovers(read.value, made)), [read.value, made]);
-	// A project that is not in the list once it is read is not one to open a dialog about.
 	const about = dialog !== null && 'projectId' in dialog ? dialog.projectId : null;
 	useEffect(() => {
 		if (about !== null && projects !== null && !projects.some((p) => p.id === about)) setDialog(null);
 	}, [about, projects]);
-	// The design system, as the extension reads it for every page; its pictures while its tab is shown.
 	const found = context?.designSystem ?? null;
 	const showsDesign = tab === 'design-system' && found !== null && unreadable === null;
 	const design = useCatalog();

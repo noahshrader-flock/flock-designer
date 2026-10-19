@@ -18,11 +18,6 @@ import { Message } from '../../src/ui/Message';
 import { Heading } from '../../src/ui/Heading';
 import type { Marks } from '../../src/ui/marks';
 
-/**
- * What can be done with a change once tried (the tokens, a component's values): its branch, its draft pull request and
- * Chromatic's build once CI links one, then Save, Propose and Start over (`branchButtons`). A change has one branch in play:
- * with nothing kept, Process changes hands it to Claude Code, and its hand-over then takes Save's place (`HandOverActions`).
- */
 export const BranchActions = <C,>({
 	controls,
 	handOver,
@@ -38,7 +33,6 @@ export const BranchActions = <C,>({
 	const showing = useShowing();
 	const offered = branchButtons({ branch, unsaved, busy, canSave: canSave && handOver.busy === null && showing === null });
 	if (handOver.branch !== null) return <HandOverActions controls={handOver} />;
-	// Nothing kept, and something changed: what Save would be offered for.
 	const processable = branch === null && unsaved;
 	return (
 		<div data-branch-actions className="branch-actions">
@@ -85,11 +79,6 @@ export const BranchActions = <C,>({
 	);
 };
 
-/**
- * One group of a Changes dialog, the same for the tokens and for a component's values: its name and how many it holds,
- * Reset all while it holds any, then its changes (`rows`), or what it says with none (`empty`), then what it adds after
- * them (`children`: what saving does, its branch's actions).
- */
 export const ChangesGroup = ({
 	label,
 	title,
@@ -100,7 +89,6 @@ export const ChangesGroup = ({
 	marks,
 	children,
 }: {
-	/** Its name to assistive technology. */
 	label: string;
 	title: string;
 	count: number;
@@ -122,10 +110,6 @@ export const ChangesGroup = ({
 	</section>
 );
 
-/**
- * The token changes being tried, as the Tokens group of a Changes dialog, in the panel and in a component's tab: each
- * change, from what the design system has to what it is now, with a reset for each and for all.
- */
 export const TokenChanges = () => {
 	const { edits, read, byPath, change, clear } = useTokenChanges();
 	return (
@@ -165,10 +149,7 @@ export const TokenChanges = () => {
 	);
 };
 
-/**
- * What has been changed, in the panel's Changes dialog: the token changes, where they are tried, then what can be done
- * with them on their branch. A branch kept with nothing changed is still here, so it can be proposed or left.
- */
+/** A branch kept with nothing changed is still listed, so it can be proposed or left. */
 export const Changed = ({ id, controls }: { id: string | null; controls: BranchControls<TokenEdit[]> }) => {
 	const { edits } = useTokenChanges();
 	const handOver = useHandOver({ shown: id, file: null, change: { edits }, watch: true });
@@ -181,6 +162,5 @@ export const Changed = ({ id, controls }: { id: string | null; controls: BranchC
 	);
 };
 
-/** Said on a design system tab while a change is being tried in the panel: what it shows is as changed. */
 export const TryingNote = ({ count }: { count: number }) =>
 	count > 0 ? <Message>Showing the change being tried in the panel ({plural(count, 'token')}).</Message> : null;

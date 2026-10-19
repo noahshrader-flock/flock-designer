@@ -30,30 +30,12 @@ import { Message } from '../../src/ui/Message';
 import { Collection, CollectionItem } from '../../src/ui/Collection';
 import { asks } from './host';
 
-/**
- * What a project has, in a line: its versions (the ideas tried; work in the code is not a version), then what its section
- * does not say of it (its folder, across products; that it has no product, or where else it is).
- */
 const meta = (p: Project, labels: string[]) => {
 	const versions = workOf(p.work, 'prototype').length;
 	return [...(versions > 0 ? [plural(versions, 'version')] : []), ...labels].join(' · ');
 };
 
-/**
- * A project: its picture (its newest prototype's, `useCover`), its name, what it has, its open comments, opening its newest
- * prototype for review.
- */
-const ProjectItem = ({
-	project,
-	labels,
-	onDialog,
-}: {
-	project: Project;
-	/** What its line says beside its versions: what its section does not. */
-	labels: string[];
-	/** Opens a dialog about it: its folder, Build in the codebase, Handoff. */
-	onDialog: (dialog: PanelDialog) => void;
-}) => {
+const ProjectItem = ({ project, labels, onDialog }: { project: Project; labels: string[]; onDialog: (dialog: PanelDialog) => void }) => {
 	const shown = useShared('tabs');
 	const cover = useCover(project);
 	const open = openCommentsOf(project.work);
@@ -61,11 +43,8 @@ const ProjectItem = ({
 	const inCode = workOf(project.work, 'codebase').length > 0;
 	const badge = open > 0 ? <Badge tone="brand" count={open} label={plural(open, 'open comment')} /> : undefined;
 	const id = project.id;
-	// What it offers, in groups: the link to copy; where it opens (pressing it opens it in VS Code, so no item says so); run in
-	// the product, and its next stage, one item named for what it opens: Build, or Hand off once there is work there. Sharing
-	// code is not an item: once a handoff finds the work ready, the Hand off dialog offers its pull request.
+	// Sharing code is not an item: once a handoff finds the work ready, the Hand off dialog offers its pull request.
 	const onCodebase = (action: CodebaseAction) => void asks().codebase(action, id);
-	// Copy link says when it is not published yet; Open locally opens it in the person's browser, outside VS Code.
 	const copy: MenuItem[] = newest ? [{ label: 'Copy link', icon: 'link', onSelect: () => void asks().copyReviewLink(newest) }] : [];
 	const pages: MenuItem[] = newest
 		? [
@@ -85,12 +64,10 @@ const ProjectItem = ({
 	const code: MenuItem[] = inCode ? [{ label: 'View on GitHub', icon: 'github', onSelect: () => onCodebase('open-code') }] : [];
 	const folder: MenuItem[] = [{ label: 'Assign folder…', icon: 'folder', onSelect: () => onDialog({ kind: 'assign', projectId: id }) }];
 	const sections = [copy, pages, runs, code, folder].filter((group) => group.length > 0).map((group) => ({ items: group }));
-	// Pressed, it opens its newest prototype for review; a project only in the code opens its work on GitHub.
 	const press = newest ? () => void asks().openReview(newest) : inCode ? () => onCodebase('open-code') : undefined;
 	const shared = {
 		name: project.title,
 		meta: meta(project, labels),
-		// What its right-click menu acts on: this project, with none of a webview's own items (Cut, Copy, Paste).
 		context: { webviewSection: 'project', projectId: id, preventDefaultContextMenuItems: true },
 		...(press ? { onOpen: press } : {}),
 		current: shown.projects.includes(id),
@@ -99,10 +76,6 @@ const ProjectItem = ({
 	return <CollectionItem {...shared} picture={{ src: cover.picture, loading: cover.waiting }} badge={badge} />;
 };
 
-/**
- * The projects under a section for each folder they are in, then those in none, each section saying how many it holds;
- * or one list when none is in a folder.
- */
 const ByFolder = ({ projects, children }: { projects: Project[]; children: (group: Project[], label: string) => ReactNode }) => {
 	const folders = foldersOf(projects);
 	if (folders.length === 0) return <>{children(projects, 'Projects')}</>;
@@ -123,17 +96,12 @@ const ByFolder = ({ projects, children }: { projects: Project[]; children: (grou
 	);
 };
 
-/**
- * The projects under a section for each product they have work in, across products (`byProduct`): the open one first,
- * "No product" last; one list when they are all in one.
- */
 const ByProduct = ({
 	groups,
 	nameOf,
 	children,
 }: {
 	groups: ProductGroup[];
-	/** A product's name on screen, the same in a title as in another project's "Also in". */
 	nameOf: (product: string) => string;
 	children: (group: ProductGroup, label: string) => ReactNode;
 }) => {
@@ -151,24 +119,18 @@ const ByProduct = ({
 	);
 };
 
-/** How each way of choosing whose projects is shown in the view options: a focus, not a lock. */
 const SCOPES = {
 	here: { label: 'This product', icon: 'repo' },
 	everyone: { label: 'All projects', icon: 'organization' },
 	mine: { label: 'Mine', icon: 'person' },
 } as const satisfies Record<Scope, { label: string; icon: string }>;
 
-/** The projects as the core read them: the list (null while it is still reading), or what went wrong. */
 interface ProjectsRead {
 	value: Project[] | null;
 	error: string | null;
 }
 
-/**
- * The Projects tab, as a list or a grid. **Focused on the product open** (the workspace README's "Projects, by product"): its
- * projects and those with no product, by folder; or everyone's, or mine, by product (`ByProduct`). The view chooses what is
- * first, not what is allowed: every project can be opened and commented on.
- */
+/** The view chooses what is first, not what is allowed: every project can be opened and commented on. */
 export const Projects = ({
 	read,
 	product,
@@ -178,26 +140,18 @@ export const Projects = ({
 	onView,
 }: {
 	read: ProjectsRead;
-	/**
-	 * The product open, from the context: which repository it is (`owner/repo`, what the view focuses on; null when it
-	 * cannot be said), or, with none, what to do.
-	 */
+	/** The open product's repository (`owner/repo`; null when it cannot be said), or, with none open, what to do. */
 	product: { open: true; repository: string | null } | { open: false; why: string };
-	/** Who is signed in, by login: whose are the projects that are mine; null when nobody is. */
 	login: string | null;
-	/** Opens a dialog about a project: its folder, Build in the codebase, Handoff. */
 	onDialog: (dialog: PanelDialog) => void;
-	/** The projects as a list of rows or a grid of cards, and choosing the other. */
 	view: View;
 	onView: (view: View) => void;
 }) => {
-	// What is typed in the search: the projects are narrowed to what matches.
 	const [search, setSearch] = useState('');
 	const [scope, setScope] = useState<Scope>('here');
 	const productRepository = product.open ? product.repository : null;
 	const offered = scopesOffered({ hasProduct: productRepository !== null, signedIn: login !== null });
 	const shownScope = scopeShown(scope, offered);
-	// Another product opened: its own first again.
 	useEffect(() => setScope('here'), [productRepository]);
 	if (read.error !== null && read.value === null)
 		return (
@@ -207,20 +161,17 @@ export const Projects = ({
 		);
 	if (read.value === null) return <Message size="page">Reading the projects…</Message>;
 	const projects = read.value;
-	// With nothing open but VS Code and no projects anywhere: there are none, whoever's they would be.
 	if (!product.open && projects.length === 0)
 		return (
 			<Message size="page" icon="folder-library" title="No projects yet">
 				<p>Projects anyone on the team makes appear here.</p>
 			</Message>
 		);
-	// Each project's products, worked out once; and each product's name, the same wherever it is said.
 	const products = productsByProject(projects);
 	const productsOfIt = (p: Project) => products.get(p) ?? [];
 	const named = productNames([...new Set([...[...products.values()].flat(), ...(productRepository ? [productRepository] : [])])]);
 	const nameOf = (repository: string) => named.get(repository) ?? repository;
 	const matching = projects.filter((p) => matchesProject(p, search));
-	// With a product to focus on, its own first; otherwise, or when asked, everyone's, or mine.
 	const focused = productRepository !== null && shownScope === 'here';
 	const here =
 		shownScope === 'mine'
@@ -228,7 +179,6 @@ export const Projects = ({
 			: focused
 				? matching.filter((p) => inThisProduct(productsOfIt(p), productRepository))
 				: matching;
-	/** What the view options offer: whose projects, when there is a choice of them, then the layout. */
 	const options: MenuSection[] = [
 		...(offered.length > 1
 			? [
@@ -253,7 +203,6 @@ export const Projects = ({
 		<>
 			{login === null && <Message inset>These are the projects on this machine. Sign in to see your team's too.</Message>}
 			{!product.open && (
-				// Get started gets a product onto this machine: VS Code's own clone.
 				<Message size="block" inset action={{ label: 'Get started', onPress: () => void asks().getStarted() }}>
 					No product is open, so these are everyone’s projects. Open a product to make a prototype, or to build or Address one.
 				</Message>

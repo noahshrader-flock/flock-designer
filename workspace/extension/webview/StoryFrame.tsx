@@ -4,9 +4,8 @@ import type { TriedValue } from '../../src/shared/contract';
 import { useFrameHeight } from './hooks/useFrameHeight';
 
 /**
- * A page of the design system's preview, live, in a frame of its own: the library's code runs there, on this machine's own
- * server, an origin that is not the page's, so nothing in it can reach DSNR. Only its height is taken (`--frame-height`).
- * It is told the values tried (`tried`) whenever they change and whenever it loads, so it always has them.
+ * The library's code runs here on this machine's own server, an origin that is not the page's, so nothing in it can reach
+ * DSNR; only its height is taken (`--frame-height`). It is told the values tried on every change and every load.
  */
 export const StoryFrame = ({ src, title, tried = [] }: { src: string; title: string; tried?: TriedValue[] }) => {
 	const frame = useRef<HTMLIFrameElement>(null);

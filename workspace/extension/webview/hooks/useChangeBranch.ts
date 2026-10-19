@@ -9,31 +9,24 @@ import { askOnce, askWhile } from './ask';
 const CHROMATIC_EVERY_MS = 20_000;
 const CHROMATIC_FOR_MS = 30 * 60_000;
 
-/** The branch a change is kept on, as the window shows it, and what can be done with it. */
 export interface BranchControls<C> {
 	branch: ChangeBranch<C> | null;
-	/** Whether the change being tried is not the one last saved. */
 	unsaved: boolean;
 	busy: 'saving' | 'proposing' | null;
 	error: string | null;
 	save: () => void;
 	propose: () => void;
-	/** Forgets the branch and empties the change, to start a new one. The branch and any pull request stay. */
+	/** The branch and any pull request stay. */
 	startOver: () => void;
 }
 
-/** The kinds a panel tries before it saves them: when two of a kind are the same change, whatever their order, and none of it. */
 type TriedKind = 'tokens' | 'values';
 const TRIED: { [K in TriedKind]: { same: (a: ChangeKinds[K], b: ChangeKinds[K]) => boolean; empty: ChangeKinds[K] } } = {
 	tokens: { same: sameChange, empty: [] },
 	values: { same: sameTried, empty: [] },
 };
 
-/**
- * The branch a change being tried is kept on (the tokens', or a component's values), asked for whenever `shown` is another;
- * `scope` is the component's story file, or null for the whole design system. A change DSNR was closed with is put back when
- * none is tried. Once proposed, it looks for Chromatic's build until the library's CI has linked one.
- */
+/** `scope` is the component's story file, or null for the whole design system. A change DSNR was closed with is put back when none is tried. */
 export const useChangeBranch = <K extends TriedKind>(
 	kind: K,
 	{

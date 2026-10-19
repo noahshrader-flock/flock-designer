@@ -1,10 +1,6 @@
 import type { Theme } from '../shared/prototypeTheme';
 
-/**
- * The sun for light and the moon for dark, drawn here because VS Code's icon font has neither (Feather's, MIT): the size of a
- * codicon (16px), in the text's colour, hidden from assistive technology like `Icon`: whatever it is beside says what it means. Its
- * size is as `Icon`'s: its own, or `xs` over a column of small things (a theme's heading).
- */
+/** Drawn here because VS Code's icon font has neither (Feather's, MIT); hidden from assistive technology like `Icon`. */
 export const ModeIcon = ({ mode, size = 'default' }: { mode: Theme; size?: 'default' | 'xs' }) => (
 	<svg
 		aria-hidden="true"

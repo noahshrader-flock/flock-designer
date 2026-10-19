@@ -7,10 +7,6 @@ import { askOnce } from './ask';
 /** Pictures already read, by what names them: what a picture's name names never changes, so one shown again has it at once. */
 const read = new Map<string, string>();
 
-/**
- * The picture of a project: its newest prototype's, else the newest earlier one that has one (`coverToShow`), read by the
- * name its record gives it. `waiting` while it is being read; no picture when there is none, or it cannot be read.
- */
 export const useCover = (project: Project): { picture: string | undefined; waiting: boolean } => {
 	const shown = coverToShow(project);
 	const key = shown === null ? null : `${project.id}/${shown.name}/${shown.cover}`;

@@ -10,11 +10,10 @@ import { connectPage } from './workspace';
  */
 const fromExtension = (e: MessageEvent): boolean => e.origin === location.origin;
 
-/** Everything the extension sends the page, to each listener, as it comes; nothing a framed page sends. Heard from the first listener on. */
+/** Nothing a framed page sends reaches these; heard from the first listener on. */
 const listeners = new Set<(message: HostMessage) => void>();
 let hearing = false;
 
-/** Hears what the extension sends; returns how to stop. */
 export const onHost = (listener: (message: HostMessage) => void): (() => void) => {
 	if (!hearing) {
 		hearing = true;
@@ -28,13 +27,10 @@ export const onHost = (listener: (message: HostMessage) => void): (() => void) =
 };
 
 let page: { workspace: WorkspaceApi; asks: PageAsks } | undefined;
-/** The page's calls, over the extension's messages, made once, when first used. */
 const connected = () =>
 	(page ??= connectPage(
 		(m) => vscode().postMessage(m),
 		(l) => onHost(l),
 	));
-/** The core's calls, from a page: the one way every page and hook reaches the core. */
 export const workspace = (): WorkspaceApi => connected().workspace;
-/** The extension's own asks, from a page (`PageAsks`): a component's tab, a review, the change being tried. */
 export const asks = (): PageAsks => connected().asks;

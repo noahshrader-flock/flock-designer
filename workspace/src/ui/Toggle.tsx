@@ -1,18 +1,10 @@
 import { type KeyboardEvent, type ReactNode, useRef } from 'react';
 import { Icon } from './Icon';
 
-/**
- * A choice of a few views, one always chosen, drawn as Claude Code's side bar draws one since VS Code has no such control.
- * A radio group: only the chosen one is in the tab order, and the arrow keys, Home and End move the choice. `iconOnly`
- * keeps each named by its label and tooltip.
- */
+/** Drawn as Claude Code's side bar draws one, since VS Code has no such control. */
 interface ToggleOption<Value extends string> {
 	value: Value;
 	label: string;
-	/**
-	 * A codicon's name (`folder-library` for `codicon-folder-library`), or one the kit draws where the font has none (the sun
-	 * and the moon, `ModeIcon`). Without one, the option is its words alone.
-	 */
 	icon?: string | ReactNode;
 }
 
@@ -23,7 +15,6 @@ export const Toggle = <Value extends string>({
 	onChange,
 	iconOnly = false,
 }: {
-	/** Its name to assistive technology. */
 	label: string;
 	options: readonly ToggleOption<Value>[];
 	value: Value;

@@ -1,7 +1,6 @@
 /*
- * VS Code's Light Modern and Dark Modern (`.dark`, from `viewer/scheme.ts`), for pages VS Code's variables do not reach: the
- * published site and the framed review bar. The review tab's real theme (`applyEditorTheme`) is set on the page and wins.
- * The contrast borders are left out on purpose: VS Code sets them only in high contrast, and unset means no border.
+ * The review tab's real theme (`applyEditorTheme`) is set on the page and wins. The contrast borders are left out on purpose:
+ * VS Code sets them only in high contrast, and unset means no border.
  */
 :root {
 	--vscode-font-family: -apple-system, BlinkMacSystemFont, 'Segoe WPC', 'Segoe UI', system-ui, Ubuntu, 'Droid Sans', sans-serif;

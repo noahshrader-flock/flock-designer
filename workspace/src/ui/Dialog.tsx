@@ -5,13 +5,11 @@ import { useEscape } from './useDismiss';
 
 // What Tab goes through inside it: fields, buttons, and links (a finding's page), but not the dialog itself (`tabindex=-1`).
 const FOCUSABLE = 'input:not(:disabled), textarea:not(:disabled), select:not(:disabled), button:not(:disabled), a[href]';
-/** Where the focus goes first: a field, else what the dialog does; the X it closes with is where it ends up only if there is nothing else. */
 const FIRST = 'input:not(:disabled), textarea:not(:disabled), select:not(:disabled), button:not(:disabled):not(.dialog-close)';
 
 /**
- * A dialog as VS Code's own are, over a scrim that covers the page, since a webview cannot draw outside itself. Tab stays
- * inside; the focus goes to its first field and back to what opened it once it is gone. `focus="panel"` (a few controls for
- * one thing, a token's) focuses the dialog itself, as a popover does, so no control is drawn as chosen as it opens.
+ * Over a scrim that covers the page, since a webview cannot draw outside itself. `focus="panel"` focuses the dialog itself,
+ * as a popover does, so no control is drawn as chosen as it opens.
  */
 export const Dialog = ({
 	title,
@@ -54,8 +52,5 @@ export const Dialog = ({
 	);
 };
 
-/**
- * What a dialog does, as its buttons in a row across its width: one fills it, several share it. Closing is the X in the
- * dialog's title, so there is no Cancel or Close here; a dialog that does nothing has no row at all.
- */
+/** Closing is the X in the dialog's title, so there is no Cancel or Close here. */
 export const DialogButtons = ({ children }: { children?: ReactNode }) => (children ? <div className="dialog-buttons">{children}</div> : null);

@@ -17,16 +17,10 @@ import { Heading } from '../../src/ui/Heading';
 import { asks } from './host';
 import { ChangedMark } from '../../src/ui/ChangedMark';
 
-/** What a token row can do besides open its own file at its line: open its control (a token that can be changed). */
 export interface TokenActions {
 	onEdit: (token: DesignToken) => void;
 }
 
-/**
- * A token's row, laid out as a value is in the Styles, all as changed: **its name is a link to its file at its line**, and
- * the rest of the row opens its control. A color is only its dot (`ColorDot`); its pair's contrast is flagged below the
- * target. One that cannot be changed (a font, a shadow) has nothing to press.
- */
 const TokenRow = ({ token, info, onEdit }: { token: DesignToken; info?: string } & TokenActions) => {
 	const changes = useTokenChanges();
 	const target = changes.target(token);
@@ -34,7 +28,6 @@ const TokenRow = ({ token, info, onEdit }: { token: DesignToken; info?: string }
 	const edited = changes.isChanged(token);
 	const where = `${token.source.file}:${token.source.line}`;
 	const editable = isEditable(token);
-	// Its name, a link to where it is written, with what is good to know of it behind an info icon beside it.
 	const name = (
 		<>
 			<button
@@ -58,7 +51,6 @@ const TokenRow = ({ token, info, onEdit }: { token: DesignToken; info?: string }
 			{contrast.ratio}:1
 		</span>
 	);
-	// What is at the right of a length, a duration, a font: what it points at, its value, a mark when changed.
 	const value = (
 		<>
 			{target && (
@@ -97,7 +89,6 @@ const TokenRow = ({ token, info, onEdit }: { token: DesignToken; info?: string }
 	);
 };
 
-/** The sets of some tokens (a tone family's steps, a role's variants): each its name over its tokens, each with `infoFor` its own, behind an info icon. */
 export const Sets = ({ tokens, infoFor, ...actions }: { tokens: DesignToken[]; infoFor?: (token: DesignToken) => string } & TokenActions) => (
 	<>
 		{inOrder(tokens, (t) => `${t.group}/${t.set}`).map(([key, inSet]) => (
@@ -113,10 +104,6 @@ export const Sets = ({ tokens, infoFor, ...actions }: { tokens: DesignToken[]; i
 	</>
 );
 
-/**
- * A primitive's or a category's tokens: under a heading for each group when they are in several (Light, Dark, Tones), else
- * their sets; each with `infoFor` its own, when given.
- */
 export const Grouped = ({ tokens, infoFor, ...actions }: { tokens: DesignToken[]; infoFor?: (token: DesignToken) => string } & TokenActions) => {
 	const groups = inOrder(tokens, (t) => t.group);
 	// One group would say the category's own name again, so its sets are shown directly.
@@ -134,17 +121,11 @@ export const Grouped = ({ tokens, infoFor, ...actions }: { tokens: DesignToken[]
 	);
 };
 
-/** The two views of the colors: the roles by theme, and the palette they are made from. */
 const COLOR_VIEWS = [
 	{ value: 'semantic', label: 'Semantic', icon: 'tag' },
 	{ value: 'palette', label: 'Palette', icon: 'symbol-color' },
 ] as const satisfies { value: ColorView; label: string; icon: string }[];
 
-/**
- * The design system's tokens in the panel (`tokensShown`): a search, then a section for each primitive in the vocabulary's
- * order, as changed. **Colors have two views,** the roles by theme (`SemanticColors`, the default) and the palette behind
- * them. With no tokens, what was looked for.
- */
 export const TokensView = ({ tokens, ...actions }: { tokens: DesignTokens } & TokenActions) => {
 	const changes = useTokenChanges();
 	const [search, setSearch] = useState('');
