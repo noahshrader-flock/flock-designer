@@ -25,27 +25,22 @@ export const designSystemArea = (d: CallsDeps) => {
 	} = d;
 	return {
 		componentPictures: () => componentTokens.pictures(),
-		// The window says only whether to wait for the update; where the design system is, it is never told and never asks.
 		designSystemCatalog: async (refresh: boolean) => {
 			const catalog = await library.catalog(refresh);
 			if (catalog.state === 'ready') warm();
 			return catalog;
 		},
-		// A change is only ever a list of token edits, checked here and again before anything is written (T3, T4).
+		// Its edits are checked again before anything is written (T3, T4).
 		storyPreview: (edits: TokenEdit[]) => previews.preview(edits),
-		// The window names a story file, and only a story file of the library is answered.
 		componentTokens: (file: string) => componentTokens.of(file),
 		componentVariants: (file: string) => componentVariants.of(file),
 		tokenUsers: (path: string) => componentTokens.users(path),
-		// What a change reaches is asked for by the change, checked as a change always is.
 		changeReach: (edits: TokenEdit[]) => componentTokens.reach(edits),
-		// Values tried on a component's instances, by its story file: checked as the contract says one is, and written only as
-		// the number or colour each reads as, where it was found (Phase 4).
+		// Each value is written only as the number or colour it reads as, where it was found (Phase 4).
 		valueSources: (file: string, tried: TriedValue[]) => valueSources.of(file, tried),
 		valueBranch: (file: string) => valueBranches.current(file),
 		valueBranchFiles: () => valueBranches.scopes(),
-		// Process changes: a unit by its story file, or the tokens (none); what it hands over checked as a change always is, and
-		// handed to Claude Code as every hand-over is, in the library's root, with the prompt typed in.
+		// Handed to Claude Code as every hand-over is, in the library's root, with the prompt typed in.
 		handOverChanges: async (file: string | null, change: HandedChange) => {
 			if ((file === null) !== 'edits' in change)
 				throw new Error('The token changes are handed over as the tokens, and a component’s values as that component.');

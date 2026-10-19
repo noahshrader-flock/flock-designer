@@ -14,7 +14,6 @@ export const registerCheckout = (area: CheckoutArea): void => {
 	handle('startCommand', [area.checkout, arg.name, arg.optional(arg.projectId)], area.startCommand);
 	// Only for a checkout the person opened, though the runtime knows its commands by id alone.
 	handle('stopCommand', [area.checkout, arg.name], area.stopCommand);
-	// Installing a repository's packages, from the New modal: only the command it declares, one at a time, stoppable.
 	handle('installPackages', [area.checkout], area.installPackages);
 	handle('cancelInstall', [], area.cancelInstall);
 };

@@ -5,7 +5,6 @@ import type { PublishingArea } from '../areas/publishing';
  * Publishing the records and pages, and whether a page is on the site.
  */
 export const registerPublishing = (area: PublishingArea): void => {
-	// Publishing happens by itself; these only report it, and let a person ask for it now.
 	handle('publishStatus', [], area.publishStatus);
 	handle('publishNow', [], area.publishNow);
 	handle('publishedPage', [arg.projectId, arg.prototypeName], area.publishedPage);
