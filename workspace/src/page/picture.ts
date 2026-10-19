@@ -1,4 +1,4 @@
-import { INK } from '../shared/pageInk';
+import { INK } from '../shared/pageTokens';
 
 /** `box` is the region painted in the capture; `left`, `top` are where it goes on the white picture of `width` by `height`. */
 export interface Placed {

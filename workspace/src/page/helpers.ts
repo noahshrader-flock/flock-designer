@@ -1,7 +1,7 @@
 import { type Theme, isTheme, withoutTheme } from '../shared/prototypeTheme';
 import type { CommentAnchor } from '../shared/contract';
 import { STATES_META } from '../shared/prototypeStates';
-import { INK } from '../shared/pageInk';
+import { FONT, INK, LEADING, RADIUS, SIZE, WEIGHT, px, space } from '../shared/pageTokens';
 
 // Module-level reads are afresh each run: every script is the whole bundle, run once.
 
@@ -143,10 +143,10 @@ export const describe = (el: Element, x: number, y: number): CommentAnchor => {
 const hoverOutline = () => {
 	const outline = document.createElement('div');
 	outline.setAttribute('data-fd-layer', 'hover');
-	outline.style.cssText = `position:fixed;pointer-events:none;z-index:2147483646;display:none;border:2px solid ${INK.pin};background:${INK.pinWash};border-radius:2px;box-sizing:border-box`;
+	outline.style.cssText = `position:fixed;pointer-events:none;z-index:2147483646;display:none;border:2px solid ${INK.pin};background:${INK.pinWash};border-radius:${px(RADIUS.small)};box-sizing:border-box`;
 	const chip = document.createElement('div');
 	chip.setAttribute('data-fd-layer', 'hover');
-	chip.style.cssText = `position:fixed;pointer-events:none;z-index:2147483647;display:none;background:${INK.pin};color:${INK.on};font:600 11px/1.4 sans-serif;padding:2px 6px;border-radius:3px;max-width:360px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis`;
+	chip.style.cssText = `position:fixed;pointer-events:none;z-index:2147483647;display:none;background:${INK.pin};color:${INK.on};font:${WEIGHT.semibold} ${px(SIZE.label)}/${LEADING} ${FONT.ui};padding:${space(1)} ${space(3)};border-radius:${px(RADIUS.small)};max-width:360px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis`;
 	document.documentElement.appendChild(outline);
 	document.documentElement.appendChild(chip);
 	const hide = () => {

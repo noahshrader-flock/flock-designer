@@ -1,9 +1,8 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
-import { contrastRatio } from '../src/shared/tokens';
 import { describe, expect, it } from 'vitest';
-import { INK } from '../src/shared/pageInk';
-import { BRAND, ON_BRAND } from '../src/shared/brand';
+import { INK } from '../src/shared/pageTokens';
+import { BRAND } from '../src/shared/dsnrTokens';
 import { panelCss } from './panelStyles';
 
 const root = join(__dirname, '..');
@@ -42,35 +41,6 @@ describe('the extension’s sources', () => {
 		expect(amber.sort()).toEqual(['.badge-warning', '.message-warning .codicon', '.warning-text']);
 		const mark = rules.find(([selector]) => selector?.startsWith('.changed-mark'));
 		expect(mark?.[1]).toMatch(/background:\s*var\(--dsnr-brand\)/);
-	});
-
-	it('write no colour of their own: the brand is written once (`shared/brand.ts`) and set on each page, every other is VS Code’s theme, and high contrast gives way to the theme’s button', () => {
-		const colour = /#[0-9a-fA-F]{3,8}\b|\brgba?\(|\bhsla?\(|\boklch\(/;
-		// VS Code's own theme, written once for where VS Code gives none (below), is not a colour of DSNR's.
-		const said = files()
-			.filter(({ path }) => /\.(tsx|css)$/.test(path) && !path.endsWith('ui/theme.css'))
-			.flatMap(({ path, text }) =>
-				text
-					.split('\n')
-					.filter((line) => colour.test(line))
-					.map((line) => `${path.split('/').at(-1)}: ${line.trim()}`),
-			);
-		expect(said).toEqual([]);
-		const everywhere = ['src', 'extension']
-			.flatMap((dir) => sources(join(root, dir)))
-			.filter((path) => readFileSync(path, 'utf8').toLowerCase().includes(BRAND.toLowerCase()));
-		expect(everywhere.map((path) => relative(root, path))).toEqual(['src/shared/brand.ts']);
-		for (const entry of ['extension/webview/main.tsx', 'src/viewer/main.tsx'])
-			expect(readFileSync(join(root, entry), 'utf8')).toMatch(/applyBrand\(document\)/);
-		const css0 = panelCss();
-		const hover = /--dsnr-brand-hover:\s*color-mix\(in srgb,\s*var\(--dsnr-brand\)\s*(\d+)%,\s*black\)/.exec(css0);
-		expect(contrastRatio(ON_BRAND, BRAND)).toBeGreaterThanOrEqual(4.5);
-		// Hover is the brand mixed toward black, so it is only darker, and white on it only more readable.
-		expect(hover).not.toBeNull();
-		const css = panelCss();
-		const highContrast = css.split('}').find((b) => b.includes('body.vscode-high-contrast')) ?? '';
-		expect(highContrast).toMatch(/--dsnr-brand:\s*var\(--vscode-button-background\)/);
-		expect(highContrast).toMatch(/--dsnr-on-brand:\s*var\(--vscode-button-foreground\)/);
 	});
 
 	it('keep a card’s ellipsis button opaque on hover: it is over a picture, and the toolbar’s hover colour is see-through', () => {

@@ -302,8 +302,11 @@ or copies its link; when it is not there yet, it says why and offers Publish.
 Like the app, it publishes the person's work branches and records when the project list is read and when VS Code is
 focused, so it pushes with their own git credentials.
 
-It is drawn in VS Code's own design language, with no colour of its own (a test fails if one creeps in), so it follows
-every theme.
+It is drawn in VS Code's own design language, so it follows every theme, and only with tokens: no raw colour, type size,
+weight, radius, shadow, opacity, timing or spacing anywhere in DSNR's own look. The base ones (the brand, the spacing
+scale, radii, weights) are written once, in `src/shared/dsnrTokens.ts`, set on each kit page as it starts and used by
+`src/shared/pageTokens.ts` for what DSNR draws on other pages (pins, the picking outline, previews, the site's lists); the
+rest are the kit's `--dsnr-*` in `kit.css`. `__tests__/tokensGuard.spec.ts` fails on a raw value outside them.
 
 **One kit.** Everything DSNR draws is drawn with its own kit (`src/ui`: the components, and `kit.css`, with one spacing
 scale and one focus ring): the panel and its tabs, and the review bar on a prototype's page (`src/viewer`), the page

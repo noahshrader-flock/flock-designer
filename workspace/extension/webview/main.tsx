@@ -7,11 +7,11 @@ import { readTab } from './tab';
 import { TooltipHost } from '../../src/ui/Tooltip';
 import '../../src/ui/kit.css';
 import './styles.css';
-import { applyBrand } from '../../src/ui/brand';
+import { applyTokens } from '../../src/ui/applyTokens';
 
 // The same page is the panel or one of the design system's tabs, as its body says (`panelHtml`).
 const tab = readTab(document.body.dataset.tab);
-applyBrand(document);
+applyTokens(document);
 createRoot(document.getElementById('root') as HTMLElement).render(
 	<SharedProvider>
 		{/* Every tooltip of the page, told here: the browser's own wait is seconds, and not ours to set. */}

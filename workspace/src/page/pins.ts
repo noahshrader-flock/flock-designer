@@ -1,8 +1,8 @@
 import type { MarkerRequest, MarkerResult } from '../shared/contract';
-import { INK } from '../shared/pageInk';
+import { AVATAR_XS, FONT, INK, PIN_SHADOW, SIZE, WEIGHT, px } from '../shared/pageTokens';
 import { asState, collapse, describe, pageState, place, route, shiftOutline, underlying } from './helpers';
 import { MESSAGE_PREFIX } from '../shared/pinMessage';
-import { AVATAR_XS_PX, initialOf, isAvatarUrl } from '../shared/avatar';
+import { initialOf, isAvatarUrl } from '../shared/avatar';
 
 interface Placed {
 	id: number;
@@ -20,9 +20,9 @@ interface Placed {
 // The picture is drawn only from the host's own address (`isAvatarUrl`), whoever asked, and never sends where the page is.
 const faceOf = (p: Placed): HTMLElement | null => {
 	if (p.draft) return null;
-	const size = AVATAR_XS_PX;
+	const size = AVATAR_XS;
 	const face = document.createElement('span');
-	face.style.cssText = `position:relative;transform:rotate(45deg);width:${size}px;height:${size}px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;background:${INK.on};color:${INK.pin};font:700 11px/1 sans-serif;pointer-events:none`;
+	face.style.cssText = `position:relative;transform:rotate(45deg);width:${size}px;height:${size}px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;background:${INK.on};color:${INK.pin};font:${WEIGHT.bold} ${px(SIZE.label)}/1 ${FONT.ui};pointer-events:none`;
 	const letter = document.createElement('span');
 	letter.textContent = initialOf(p.author);
 	face.appendChild(letter);
@@ -148,7 +148,7 @@ export const drawPins = (items: MarkerRequest[], nonce: string): MarkerResult[] 
 		const m = document.createElement('div');
 		m.style.cssText = 'position:fixed;width:0;height:0;pointer-events:none';
 		const pin = document.createElement('div');
-		pin.style.cssText = `position:absolute;left:-14px;top:-33px;width:28px;height:28px;border-radius:50% 50% 50% 0;background:${p.draft ? INK.draft : INK.pin};border:2px solid ${INK.on};box-shadow:0 2px 6px ${INK.shadow};transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;pointer-events:auto;cursor:${p.movable ? 'grab' : 'pointer'}`;
+		pin.style.cssText = `position:absolute;left:-14px;top:-33px;width:28px;height:28px;border-radius:50% 50% 50% 0;background:${p.draft ? INK.draft : INK.pin};border:2px solid ${INK.on};box-shadow:${PIN_SHADOW};transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;pointer-events:auto;cursor:${p.movable ? 'grab' : 'pointer'}`;
 		const face = faceOf(p);
 		if (face) pin.appendChild(face);
 		if (!p.draft) pin.title = p.author;

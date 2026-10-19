@@ -14,6 +14,7 @@ import { extensionOf } from '../shared/mime';
 import type { RepoRef } from '../shared/repoRef';
 import { SIGN_IN_AUTHORIZE_URL, pagesSiteUrl } from '../shared/hostUrls';
 import type { SignInConfig } from '../shared/signInConfig';
+import { FONT, INK, OPACITY, RADIUS, SIZE, WEIGHT, px, space } from '../shared/pageTokens';
 
 /**
  * Rebuilt in full every time, so two publishers never overwrite each other and what is gone there is gone here. Every
@@ -120,23 +121,23 @@ const writeShared = (designRoot: string, outDir: string): Map<string, string> =>
 };
 
 const STYLE = `
-:root { color-scheme: light dark; font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; }
+:root { color-scheme: light dark; font-family: ${FONT.ui}; }
 body { margin: 0; }
 a { color: inherit; }
-main { max-width: 1080px; margin: 0 auto; padding: 32px 24px; }
+main { max-width: 1080px; margin: 0 auto; padding: ${space(8)} ${space(7)}; }
 /* The lists' own headings, in their <main>: never a bare heading, which would also size the review bar's title. */
-main h1 { font-size: 22px; font-weight: 600; margin: 0 0 20px; }
-.muted { opacity: 0.65; font-size: 13px; }
-.list { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
-.list a { display: block; padding: 12px 14px; border: 1px solid #8884; border-radius: 8px; text-decoration: none; }
-.list a:hover { border-color: #888c; }
+main h1 { font-size: ${px(SIZE.title)}; font-weight: ${WEIGHT.semibold}; margin: 0 0 ${space(7)}; }
+.muted { opacity: ${OPACITY.receded}; font-size: ${px(SIZE.body)}; }
+.list { list-style: none; padding: 0; margin: 0; display: grid; gap: ${space(4)}; }
+.list a { display: block; padding: ${space(5)} ${space(6)}; border: 1px solid ${INK.line}; border-radius: ${px(RADIUS.large)}; text-decoration: none; }
+.list a:hover { border-color: ${INK.lineStrong}; }
 /* A version fills the window: DSNR's review bar, then the prototype, and beside it the comments' panel when it is open. */
 .viewer { display: flex; flex-direction: column; height: 100vh; height: 100dvh; }
 .stage { display: flex; flex: 1; min-height: 0; }
 .stage iframe { display: block; flex: 1; min-width: 0; height: 100%; border: 0; }
 #dsnr-panel:empty { display: none; }
 /* A prototype is made for a computer's screen: on a phone it keeps that width, to scroll across, and says so. */
-.small-screen { display: none; margin: 0; padding: 6px 16px; font-size: 13px; border-bottom: 1px solid #8884; }
+.small-screen { display: none; margin: 0; padding: ${space(3)} ${space(6)}; font-size: ${px(SIZE.body)}; border-bottom: 1px solid ${INK.line}; }
 @media (max-width: 767px) {
 	.small-screen { display: block; }
 	.stage { overflow-x: auto; }

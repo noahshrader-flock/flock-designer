@@ -8,7 +8,7 @@ import type { BuildContext, BuildOptions, Plugin } from 'esbuild';
 import { ASSET_TYPES } from '../prototypes/prototypeServer';
 import { type Stylesheets, stylesheetsFor } from './stylesheets';
 import { withPageTheme } from '../browser/pageTheme';
-import { INK } from '../../../shared/pageInk';
+import { FONT, INK, LEADING, SIZE, WEIGHT, px, space } from '../../../shared/pageTokens';
 
 export const PAGE = `<!doctype html>
 <html>
@@ -16,11 +16,11 @@ export const PAGE = `<!doctype html>
 		<meta charset="utf-8" />
 		<link rel="stylesheet" href="./entry.css" />
 		<style>
-			body { margin: 0; padding: 16px; background: ${INK.paper}; }
-			.fd-story { margin: 0 0 24px; }
+			body { margin: 0; padding: ${space(6)}; background: ${INK.paper}; }
+			.fd-story { margin: 0 0 ${space(7)}; }
 			.fd-story:last-child { margin-bottom: 0; }
-			.fd-name { margin: 0 0 8px; font: 500 12px/1.4 -apple-system, system-ui, sans-serif; color: ${INK.muted}; }
-			.fd-error { margin: 0; color: ${INK.error}; white-space: pre-wrap; font: 12px/1.4 ui-monospace, monospace; }
+			.fd-name { margin: 0 0 ${space(4)}; font: ${WEIGHT.medium} ${px(SIZE.note)}/${LEADING} ${FONT.ui}; color: ${INK.muted}; }
+			.fd-error { margin: 0; color: ${INK.error}; white-space: pre-wrap; font: ${px(SIZE.note)}/${LEADING} ${FONT.mono}; }
 		</style>
 	</head>
 	<body>

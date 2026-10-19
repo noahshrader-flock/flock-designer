@@ -22,12 +22,15 @@ const GENERIC = new Set([
 ]);
 const first = (family: string) => (family.split(',')[0] ?? '').trim().replace(/^['"]|['"]$/g, '');
 
+// Large, so two families' widths differ by whole pixels: a measure, not a size anyone sees.
+const PROBE_PX = 72;
+
 const there = (family: string): boolean => {
 	if (GENERIC.has(family)) return true;
 	const probe = (fallback: string) => {
 		const s = document.createElement('span');
 		s.textContent = 'mmmmmmmmmmlli10WQ@';
-		s.style.cssText = 'position:absolute;visibility:hidden;font-size:72px;white-space:nowrap';
+		s.style.cssText = `position:absolute;visibility:hidden;font-size:${PROBE_PX}px;white-space:nowrap`;
 		s.style.fontFamily = fallback;
 		document.body.append(s);
 		const plain = s.offsetWidth;

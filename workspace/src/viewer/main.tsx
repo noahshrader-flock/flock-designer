@@ -8,7 +8,7 @@ import { type EditorTheme, isDarkTheme } from '../shared/reviewRelay';
 import { Viewer, type ViewerConfig, type ViewerSlots } from './Viewer';
 import { saveToken } from './browserAdapter';
 import { type SignInConfig, finishSignIn, takeNote } from './signIn';
-import { applyBrand } from '../ui/brand';
+import { applyTokens } from '../ui/applyTokens';
 
 const signInAt = document.getElementById('dsnr-sign-in');
 const signIn = signInAt ? (JSON.parse(signInAt.textContent ?? 'null') as SignInConfig | null) : null;
@@ -58,7 +58,7 @@ if (config && bar && panel && frame) {
 	bar.replaceChildren();
 	const root = document.createElement('div');
 	document.body.append(root);
-	applyBrand(document);
+	applyTokens(document);
 	createRoot(root).render(
 		<>
 			<InPage config={JSON.parse(config.textContent ?? '{}') as ViewerConfig} slots={{ bar, panel, frame }} />

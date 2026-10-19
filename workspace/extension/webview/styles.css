@@ -16,7 +16,7 @@
 	margin: var(--dsnr-space-2) 0 0;
 	padding-left: var(--dsnr-space-7);
 	color: var(--dsnr-muted);
-	line-height: 1.5;
+	line-height: var(--dsnr-leading);
 }
 
 .dialog code,
@@ -124,7 +124,7 @@
 .ds-name {
 	min-width: 0;
 	overflow: hidden;
-	font-weight: 600;
+	font-weight: var(--dsnr-weight-semibold);
 	text-overflow: ellipsis;
 	white-space: nowrap;
 }
@@ -270,7 +270,7 @@
 	margin-left: auto;
 	color: var(--dsnr-muted);
 	font-size: var(--dsnr-text-small);
-	font-weight: 400;
+	font-weight: var(--dsnr-weight-regular);
 	text-align: end;
 	overflow-wrap: anywhere;
 }
@@ -309,7 +309,7 @@
 	color: var(--vscode-foreground);
 	background: var(--dsnr-track);
 	font-family: var(--vscode-font-family);
-	font-size: 0.85em;
+	font-size: var(--dsnr-text-xs);
 	text-overflow: ellipsis;
 	white-space: nowrap;
 }
@@ -397,7 +397,7 @@
 }
 
 .token[data-changed] .token-name {
-	font-weight: 600;
+	font-weight: var(--dsnr-weight-semibold);
 }
 
 .token-ref,
@@ -435,7 +435,7 @@
 }
 
 .theme-headings {
-	font-weight: 600;
+	font-weight: var(--dsnr-weight-semibold);
 }
 
 .theme-row {
@@ -523,7 +523,7 @@
 .chip {
 	padding: var(--dsnr-space-1) var(--dsnr-space-5);
 	border: 1px solid var(--dsnr-border);
-	border-radius: 12px;
+	border-radius: var(--dsnr-radius-pill);
 	color: var(--vscode-badge-foreground);
 	background: var(--vscode-badge-background);
 	font: inherit;
@@ -583,7 +583,7 @@
 
 .drawn-name {
 	font-size: var(--dsnr-text-small);
-	font-weight: 600;
+	font-weight: var(--dsnr-weight-semibold);
 }
 
 .drawn-value {
@@ -640,7 +640,7 @@
 
 .drawn-table th {
 	color: var(--dsnr-muted);
-	font-weight: 600;
+	font-weight: var(--dsnr-weight-semibold);
 	text-align: start;
 }
 
@@ -678,7 +678,7 @@
 }
 
 .popover-title {
-	font-weight: 600;
+	font-weight: var(--dsnr-weight-semibold);
 	overflow-wrap: anywhere;
 }
 
@@ -767,7 +767,7 @@
 
 .dimension-field input[type='range']::-webkit-slider-runnable-track {
 	height: var(--dsnr-slider-track);
-	border-radius: 2px;
+	border-radius: var(--dsnr-radius-small);
 	background: linear-gradient(to right, var(--dsnr-brand) var(--fill, 0%), var(--dsnr-outline) var(--fill, 0%));
 }
 
@@ -787,7 +787,7 @@
 }
 
 .dimension-field input[type='range']:focus-visible::-webkit-slider-thumb {
-	box-shadow: 0 0 0 2px var(--vscode-focusBorder);
+	box-shadow: var(--dsnr-ring-focus);
 }
 
 .steps {
@@ -808,7 +808,7 @@
 	color: inherit;
 	background: transparent;
 	font: inherit;
-	font-size: 0.85em;
+	font-size: var(--dsnr-text-xs);
 	cursor: pointer;
 }
 
