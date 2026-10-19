@@ -199,9 +199,11 @@ describe.skipIf(NO_CHROME)('with the browser on this machine', () => {
 				const composedOne = (await composedPicture(page as never)) as Buffer;
 				const { fast, composed, apart } = await seen(fastPicture, composedOne);
 				// To within the pixel or two the half-size capture finds an edge to.
-				fast.size.forEach((n, i) => expect(Math.abs(n - (composed.size[i] as number)), `${file} size`).toBeLessThanOrEqual(2));
-				fast.painted.forEach((n, i) => expect(Math.abs(n - (composed.painted[i] as number)), `${file} painted`).toBeLessThanOrEqual(2));
-				if (fast.size.join() === composed.size.join()) expect(apart, `${file} pixels`).toBeLessThan(3);
+				// All of both, so a failure says by how much and where, not only that.
+				const said = `${file}: fast ${JSON.stringify(fast)}, composed ${JSON.stringify(composed)}, apart ${apart.toFixed(2)}`;
+				fast.size.forEach((n, i) => expect(Math.abs(n - (composed.size[i] as number)), said).toBeLessThanOrEqual(2));
+				fast.painted.forEach((n, i) => expect(Math.abs(n - (composed.painted[i] as number)), said).toBeLessThanOrEqual(2));
+				if (fast.size.join() === composed.size.join()) expect(apart, said).toBeLessThan(3);
 			}
 		});
 	}, 60_000);
