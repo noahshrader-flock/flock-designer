@@ -38,7 +38,7 @@ for (const { key, system, missing } of EVERY_LIBRARY)
 
 		const toId = csfOf(join(system.root, system.folder));
 		it.skipIf(toId === null)(
-			`names each Storybook page exactly as ${key}’s own Storybook does${toId === null ? ' (its Storybook gives no id rule)' : ''}`,
+			`names each Storybook page exactly as ${key}’s own Storybook does${toId === null ? ' (no id rule of its Storybook could be loaded here)' : ''}`,
 			async () => {
 				const reads = await readsOf(system);
 				for (const c of await readCatalog(reads, designSystemOf(system))) {

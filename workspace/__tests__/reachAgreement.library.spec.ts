@@ -104,7 +104,7 @@ const check = (system: ConnectedDesignSystem) => async () => {
 
 const LIMIT = 6 * 3_600_000;
 const only = process.env.REACH_LIBS?.split(',');
-for (const { key, system, missing } of EVERY_LIBRARY)
-	describeLibrary(missing, system, `how far a token reaches, ${key}`, () => {
+for (const { key, system, missing, unbuilt } of EVERY_LIBRARY)
+	describeLibrary(missing ?? unbuilt, system, `how far a token reaches, ${key}`, () => {
 		it.runIf(ASKED && findChrome() !== null && (!only || only.includes(key)))('moves every component its Values name', check(system), LIMIT);
 	});

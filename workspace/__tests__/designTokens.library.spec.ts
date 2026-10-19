@@ -92,3 +92,36 @@ describeWith(fui?.missing ?? null, 'FUI’s own tokens', () => {
 		}
 	});
 });
+
+const paradome = EVERY_LIBRARY.find((l) => l.key === 'Paradome');
+describeWith(paradome?.missing ?? null, 'Paradome’s own tokens', () => {
+	it('are its token script’s, scales and both modes’ roles pointing at their steps, and nothing of a stylesheet nothing loads', async () => {
+		const list = await readTokens(await readsOf(paradome!.system));
+		expect(list.source).toBe('token scripts');
+		expect([...new Set(list.tokens.map((t) => t.source.file))]).toEqual(['src/constants/design/design-tokens.ts']);
+		expect(list.tokens.some((t) => t.source.file.includes('oldStyleVars'))).toBe(false);
+		expect(find(list, 'TOKENS.colors.light.primary.main')?.ref?.path).toMatch(/^baseColors\.gray\.\d+$/);
+		expect(find(list, 'TOKENS.colors.dark.primary.main')?.ref?.path).toMatch(/^baseColors\.gray\.\d+$/);
+		expect(['Spacing', 'Shape', 'Typography', 'Breakpoints', 'Motion', 'Elevation'].every((c) => list.tokens.some((t) => t.category === c))).toBe(
+			true,
+		);
+		// What it cannot read is said: a color worked out by code, never guessed.
+		expect(list.problems.every((p) => /worked out by code/.test(p.reason))).toBe(true);
+	});
+
+	it('writes a scale step and a spacing in place, the spacing still a number, each reading back exactly', async () => {
+		const reads = await readsOf(paradome!.system);
+		const written = await editedFiles(reads, [
+			{ path: 'baseColors.brandPink.500', value: '#E0006A' },
+			{ path: 'TOKENS.spacing.unit', value: '5px' },
+		]);
+		const text = written.get('src/constants/design/design-tokens.ts') as string;
+		const before = (await reads.readFile('src/constants/design/design-tokens.ts')).split('\n');
+		expect(
+			text
+				.split('\n')
+				.filter((line, i) => line !== before[i])
+				.map((l) => l.trim()),
+		).toEqual(["500: '#E0006A',", 'unit: 5,']);
+	});
+});

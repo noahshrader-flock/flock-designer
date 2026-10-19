@@ -63,15 +63,42 @@ export const cokeMissing = existsSync(join(REAL_COKE, '.dsnr', 'workspace.json')
 export const describeWith = (missing: string | null, name: string, tests: () => void) =>
 	missing === null ? describe(name, tests) : describe(name, () => it.skip(`not run: ${missing}`));
 
+/** A product's own design system, not a library's: its packages come from a private registry, so they may not be here. */
+export const REAL_PARADOME = process.env.PARADOME_ROOT ?? resolve(__dirname, '..', '..', '..', '..', 'FLCKDSNR', 'paradome');
+export const REAL_PARADOME_SYSTEM = {
+	id: 'ct-dev/paradome-console',
+	name: 'Paradome',
+	repository: 'ct-dev/paradome-console',
+	root: REAL_PARADOME,
+	folder: '',
+	branch: 'development',
+};
+const branchHere = (root: string, branch: string): boolean => {
+	try {
+		execFileSync('git', ['-C', root, 'rev-parse', '--verify', '--quiet', `refs/remotes/origin/${branch}`], { stdio: 'ignore' });
+		return true;
+	} catch {
+		return false;
+	}
+};
+const paradomeMissing = branchHere(REAL_PARADOME, 'development')
+	? null
+	: `no clone of Paradome with origin/development at ${REAL_PARADOME} (set PARADOME_ROOT)`;
+const paradomeUnbuilt = existsSync(join(REAL_PARADOME, 'node_modules', '@storybook'))
+	? null
+	: `${REAL_PARADOME} has no packages installed (they come from its private registry)`;
+
 /**
- * Every real library a test can run on: one that is not here is said by its row's test, never passed quietly. `tokens`
- * is false for one that writes none DSNR reads (Tremor 3 keeps its theme in Tailwind 3's config).
+ * Every real library a test can run on: one that is not here is said by its row's test, never passed quietly. `missing`
+ * stops every test of it; `unbuilt` only those that build or draw it (its packages are not installed). `tokens` is false
+ * for one that writes none DSNR reads (Tremor 3 keeps its theme in Tailwind 3's config).
  */
-export const EVERY_LIBRARY: { key: string; system: ConnectedDesignSystem; missing: string | null; tokens: boolean }[] = [
-	{ key: 'FUI', system: REAL_FUI, missing: libraryUnbuilt, tokens: true },
-	{ key: 'Primer', system: REAL_PRIMER_SYSTEM, missing: primerMissing, tokens: true },
-	{ key: 'Tremor3', system: REAL_TREMOR3_SYSTEM, missing: tremor3Missing, tokens: false },
-	{ key: 'Tremor4', system: REAL_TREMOR4_SYSTEM, missing: tremor4Missing, tokens: true },
+export const EVERY_LIBRARY: { key: string; system: ConnectedDesignSystem; missing: string | null; unbuilt: string | null; tokens: boolean }[] = [
+	{ key: 'FUI', system: REAL_FUI, missing: libraryUnbuilt, unbuilt: null, tokens: true },
+	{ key: 'Primer', system: REAL_PRIMER_SYSTEM, missing: primerMissing, unbuilt: null, tokens: true },
+	{ key: 'Tremor3', system: REAL_TREMOR3_SYSTEM, missing: tremor3Missing, unbuilt: null, tokens: false },
+	{ key: 'Tremor4', system: REAL_TREMOR4_SYSTEM, missing: tremor4Missing, unbuilt: null, tokens: true },
+	{ key: 'Paradome', system: REAL_PARADOME_SYSTEM, missing: paradomeMissing, unbuilt: paradomeUnbuilt, tokens: true },
 ];
 
 /** The library's files at the tip of its branch, as DSNR reads them. */

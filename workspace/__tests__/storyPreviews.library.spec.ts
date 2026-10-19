@@ -35,8 +35,8 @@ vi.mock('sass', async (original) => {
 	};
 });
 
-for (const { key, system, missing, tokens } of EVERY_LIBRARY)
-	describeWith(missing, `the previews of ${key}`, () => {
+for (const { key, system, missing, unbuilt, tokens } of EVERY_LIBRARY)
+	describeWith(missing ?? unbuilt, `the previews of ${key}`, () => {
 		it('builds every story file with the clone’s own packages, and serves it', async () => {
 			const real = new PrototypeServer();
 			try {

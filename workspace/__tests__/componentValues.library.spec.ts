@@ -109,8 +109,8 @@ describeLibrary(libraryUnbuilt, REAL_FUI, 'FUI’s own components’ values', ()
 	);
 });
 
-for (const { key, system, missing } of EVERY_LIBRARY)
-	describeLibrary(missing, system, `the values of ${key}’s components`, () => {
+for (const { key, system, missing, unbuilt } of EVERY_LIBRARY)
+	describeLibrary(missing ?? unbuilt, system, `the values of ${key}’s components`, () => {
 		it.skipIf(findChrome() === null)(
 			'are read for its components, or say why not, and every token a value is said to be drawn with is one of its tokens',
 			async () => {
