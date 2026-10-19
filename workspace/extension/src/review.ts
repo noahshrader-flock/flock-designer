@@ -25,7 +25,7 @@ export const reviewPath = (projectId: string, name: string): string => {
 
 /**
  * The tab's page: only the review, framed from this machine, and one script that tells the page DSNR frames it and
- * whether VS Code is dark, and relays what the page asks to the extension and back, to the page's own address alone
+ * VS Code's theme, and relays what the page asks to the extension and back, to the page's own address alone
  * (`shared/reviewRelay`). A message from anywhere else (the prototype in the bar, a frame it makes) goes nowhere.
  */
 export const reviewPage = ({ src, title, nonce }: { src: string; title: string; nonce: string }): string => {
