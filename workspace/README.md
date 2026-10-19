@@ -397,11 +397,13 @@ uncommitted changes:
 
 ### Comments in the code
 
-A comment says **why**, or a constraint the code cannot show, never what the line already says, and there is none where a
-name would do. Three lines at most, about two on average; but a comment is as long as it takes to say what a reader
-cannot see, so none is cut to fit a number. No history in a comment (who, when, which plan or phase): that is git's.
-`npm run check` holds it (`commentCheck.mjs`, which also says the average): it fails on a longer block in shipping code
-and on a date, a plan or a phase in any comment.
+**The default is no comment.** One is written, and kept, only when it is a **why** a reader would otherwise ask, a
+**constraint** the code cannot show (a security boundary, an order that matters, a quirk of VS Code, git or GitHub), an
+exported API's **contract** a caller would get wrong without it, or, in a test, the **intent** its name does not say.
+Nothing that says what the code, a name or a type already says; no file header that only lists what the file holds; no
+narration of steps. A kept comment is three lines at most (a ceiling, not a target) and carries no history (who, when,
+which plan): that is git's. `npm run check` holds the length and the history (`commentCheck.mjs`) and says how many lines
+of comment there are per hundred of code, so growth shows.
 
 ## A note on npm
 

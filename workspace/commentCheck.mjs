@@ -105,18 +105,21 @@ export const review = (file, text) => {
 /** `areas`, folders or files from the workspace, narrow it to them (`node commentCheck.mjs src/ui`); none is every file. */
 const run = (areas) => {
 	const failures = [];
+	// Lines of comment and lines of everything else, for each: a reading, held to nothing, so growth shows.
 	const counts = { shipping: [0, 0], tests: [0, 0] };
 	for (const path of files()) {
 		const file = relative(root, path);
 		if (areas.length && !areas.some((a) => file === a || file.startsWith(`${a.replace(/\/$/, '')}/`))) continue;
-		const found = review(file, readFileSync(path, 'utf8'));
+		const text = readFileSync(path, 'utf8');
+		const found = review(file, text);
 		failures.push(...found.failures);
 		const count = counts[file.startsWith('__tests__') ? 'tests' : 'shipping'];
-		count[0] += found.lines.length;
-		count[1] += found.lines.reduce((a, b) => a + b, 0);
+		const commented = found.lines.reduce((a, b) => a + b, 0);
+		count[0] += commented;
+		count[1] += text.split('\n').filter((l) => l.trim()).length - commented;
 	}
-	const average = ([n, lines]) => (n ? (lines / n).toFixed(2) : '0');
-	console.log(`comments: ${average(counts.shipping)} lines a block in shipping code, ${average(counts.tests)} in tests (about 2 is the aim)`);
+	const per100 = ([comment, code]) => (code ? Math.round((comment / code) * 100) : 0);
+	console.log(`comments: ${per100(counts.shipping)} lines per 100 of code in shipping code, ${per100(counts.tests)} in tests`);
 	for (const f of failures) console.log(`  ${f}`);
 	if (failures.length) {
 		console.log(`comments: ${failures.length} to fix. A comment says why, or what the code cannot show, in three lines at most.`);
