@@ -313,14 +313,14 @@ const Inspector = ({
 									</span>
 								</ValueItem>
 							) : (
-								<li key={row.property} data-value-row={row.property} className="value-row">
+								<ValueItem key={row.property} marks={{ 'data-value-row': row.property }}>
 									<ValueList>{cellOf(row.property, shown.cell, rowName(row.property), shown.still)}</ValueList>
 									{shown.more.length > 0 && (
 										<Disclosure label={`${shown.more.length} more`}>
 											<ValueList>{shown.more.map((c) => cellOf(row.property, c, plural(c.instances, 'instance'), shown.still))}</ValueList>
 										</Disclosure>
 									)}
-								</li>
+								</ValueItem>
 							),
 						)}
 					</ValueList>

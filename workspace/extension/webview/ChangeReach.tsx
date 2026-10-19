@@ -2,7 +2,7 @@ import type { CatalogComponent, ChangeReach as ChangeReachAnswer, ComponentReach
 import { plural } from '../../src/shared/plural';
 import { useChangeReach } from './hooks/useChangeReach';
 import { saidValue, valueTitle } from '../../src/shared/valueNames';
-import { ChangeRow, ValueList } from './ui/ValueItem';
+import { ChangeRow, ValueItem, ValueList } from './ui/ValueItem';
 import { LinkButton } from './ui/LinkButton';
 import { Message } from './ui/Message';
 import { Heading } from './ui/Heading';
@@ -28,7 +28,11 @@ export const Moved = ({ reach, name, here }: { reach: ComponentReach; name: stri
 					to={saidValue(c.property, c.to)}
 				/>
 			))}
-			{reach.inside && <li className="quiet value-inside">Its stories draw differently, in a part its values do not read.</li>}
+			{reach.inside && (
+				<ValueItem marks={{ 'data-value-inside': '' }}>
+					<Message>Its stories draw differently, in a part its values do not read.</Message>
+				</ValueItem>
+			)}
 		</ValueList>
 	</div>
 );

@@ -158,7 +158,9 @@ body {
 	color: var(--vscode-editorWarning-foreground);
 }
 
-.quiet {
+/* Quieter words: what a view says (`.message`, `ui/Message.tsx`), and what is said quietly inside a row or a line. */
+.quiet,
+.message {
 	margin: 0;
 	color: var(--dsnr-muted);
 	line-height: 1.4;
@@ -522,15 +524,10 @@ body {
 }
 
 /*
- * What a view says (`ui/Message.tsx`), quiet unless it is a warning or an error: in the flow of what is around it, or in
- * line with the rows of a panel's list (`message-inset`); in a dialog, with room under it before what comes next.
+ * What a view says (`ui/Message.tsx`), quiet (`.message`, with the text helpers) unless it is a warning or an error: in the
+ * flow of what is around it, or in line with the rows of a panel's list (`message-inset`); in a dialog, with room under it
+ * before what comes next.
  */
-.message {
-	margin: 0;
-	color: var(--dsnr-muted);
-	line-height: 1.4;
-}
-
 .message-inset {
 	margin: var(--dsnr-space-2) var(--dsnr-space-5) var(--dsnr-space-4);
 }
@@ -1903,10 +1900,6 @@ button.color-dot:hover {
 }
 
 /* A row of the inspector: its value, and the rest a row no prop explains draws, under it. */
-.value-row {
-	list-style: none;
-}
-
 /*
  * The props the variant shown is chosen by, as property rows above the groups: the prop's name on the left, its dropdown or
  * its switch on the right, as a value is laid out under them.

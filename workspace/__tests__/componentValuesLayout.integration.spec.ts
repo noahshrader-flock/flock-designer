@@ -434,7 +434,7 @@ describe.skipIf(NO_CHROME)('a component’s Values, in the side pane, in the bro
 					// would be about 44).
 					const short = lines.find((l) => l.textContent?.startsWith('Radius'));
 					if (!short || box(short).height > 30) problems.push(`the radius's change is not on one line (${short && box(short).height}px)`);
-					for (const h of document.querySelectorAll('[data-moved] h3, .value-inside'))
+					for (const h of document.querySelectorAll('[data-moved] h3, [data-value-inside]'))
 						if (box(h).right > pane.right + 0.5 || h.scrollWidth > h.clientWidth + 1) problems.push(`${h.textContent}: past the pane`);
 					return { problems, lines: lines.length };
 				}, width === PANE);

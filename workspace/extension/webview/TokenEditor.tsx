@@ -65,10 +65,10 @@ const Contrast = ({ token }: { token: DesignToken }) => {
 	const contrast = pairContrast(token, useTokenChanges());
 	if (contrast === null) return null;
 	return (
-		<p data-editor-contrast className="quiet">
+		<Message marks={{ 'data-editor-contrast': '' }}>
 			Contrast with {contrast.partner.name}: <strong className={contrast.flag ? 'warning-text' : undefined}>{contrast.ratio}:1</strong>,{' '}
 			{contrast.words}
-		</p>
+		</Message>
 	);
 };
 
@@ -77,9 +77,13 @@ const Reach = ({ token }: { token: DesignToken }) => {
 	const reach = reachOf(token, useTokenChanges());
 	if (reach === null) return null;
 	return (
-		<div data-reach className="quiet">
-			{reach.used && <p title={reach.used.who}>{reach.used.says}</p>}
-			{reach.also && <p>{reach.also}</p>}
+		<div data-reach>
+			{reach.used && (
+				<div title={reach.used.who}>
+					<Message>{reach.used.says}</Message>
+				</div>
+			)}
+			<Message>{reach.also}</Message>
 		</div>
 	);
 };
