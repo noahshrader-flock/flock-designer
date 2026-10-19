@@ -545,11 +545,9 @@ describe('codebase work, in the panel', () => {
 		expect(dialog()!.textContent).toContain('HANDOFF.md');
 		expect(dialog()!.textContent).toContain('feature/zone-coverage');
 		expect(dialog()!.textContent).toContain('Nothing is pushed');
+		expect(dialog()!.textContent).toContain('The task opens in Claude Code in this window');
 		expect(panelSaid().some((m) => m.type === 'codebase')).toBe(false);
-		expect(inDialog('Start handoff').disabled).toBe(true);
-		await answer('agentStatus', { state: 'idle' });
 		await press(inDialog('Start handoff'));
-		await answer('agentStatus', { state: 'idle' });
 		expect(lastAsk()).toEqual(['codebase', ['hand-off', 'zone-coverage']]);
 		expect(dialog()).toBeNull();
 	});
@@ -563,7 +561,6 @@ describe('codebase work, in the panel', () => {
 		await showOpen(OPEN, ready({}) as typeof SAMPLE_PROJECTS);
 		await press(menuOf('Zone coverage'));
 		await press(item('Hand off'));
-		await answer('agentStatus', { state: 'idle' });
 		expect(dialog()!.textContent).toContain('ready for engineering');
 		expect(inDialog('Open a draft pull request').className).toContain('button-primary');
 		expect(inDialog('Run again').className).toContain('button-secondary');
@@ -586,7 +583,6 @@ describe('codebase work, in the panel', () => {
 		await showOpen(OPEN, ready as typeof SAMPLE_PROJECTS);
 		await press(menuOf('Zone coverage'));
 		await press(item('Hand off'));
-		await answer('agentStatus', { state: 'idle' });
 		expect(allByRole('button', 'Open a draft pull request', dialog()!)).toEqual([]);
 		await press(inDialog('View on GitHub'));
 		expect(lastAsk()).toEqual(['codebase', ['open-code', 'zone-coverage']]);
@@ -601,30 +597,8 @@ describe('codebase work, in the panel', () => {
 		);
 		await press(menuOf('Zone coverage'));
 		await press(item('Hand off'));
-		await answer('agentStatus', { state: 'idle' });
 		await press(inDialog('Run again'));
-		await answer('agentStatus', { state: 'idle' });
 		expect(lastAsk()).toEqual(['codebase', ['hand-off', 'zone-coverage']]);
-	});
-
-	it('does not start a handoff when the agent was given other work since the dialog opened', async () => {
-		await showOpen(OPEN, WITH_CODE);
-		await press(menuOf('Zone coverage'));
-		await press(item('Hand off'));
-		await answer('agentStatus', { state: 'idle' });
-		await press(inDialog('Start handoff'));
-		await answer('agentStatus', { state: 'running', startedAt: '', work: 'prototype/alert-history/v2', purpose: null });
-		expect(panelSaid().some((m) => m.type === 'codebase')).toBe(false);
-		expect(dialog()!.textContent).toContain('The agent is busy with other work');
-	});
-
-	it('says when the agent is busy with other work, and does not start a handoff then', async () => {
-		await showOpen(OPEN, WITH_CODE);
-		await press(menuOf('Zone coverage'));
-		await press(item('Hand off'));
-		await answer('agentStatus', { state: 'running', startedAt: '', work: 'prototype/alert-history/v2', purpose: null });
-		expect(dialog()!.textContent).toContain('The agent is busy with other work');
-		expect(inDialog('Start handoff').disabled).toBe(true);
 	});
 
 	describe('Build in the codebase', () => {

@@ -97,6 +97,6 @@ If either cannot, say why, and that the work is not ready.
 
 ## When you have finished
 
-Say whether the work is ready, and what is still open. If the gate or a review still blocks it, say what
+Say whether the work is ready, and what is still open: the task says where the verdict goes in `HANDOFF.md` too. If the gate or a review still blocks it, say what
 and why you could not clear it: that is a complete answer. **The person hands it to the engineer, not you.**
 Never push.

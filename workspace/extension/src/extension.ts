@@ -206,6 +206,18 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 			giveUpMs: 2 * 60 * 60 * 1000,
 			isLive: () => watching,
 		});
+	const watchHandoff = (check: () => Promise<boolean>) =>
+		void watchBuild({
+			saveBuilt: async () => ((await check()) ? 'saved' : 'waiting'),
+			onSaved: projectsChanged,
+			onGaveUp: (err) => failed(new Error(`DSNR could not read the handoff's result: ${errorText(err, { firstLine: true }).replace(/\.?$/, '.')}`)),
+			now: Date.now,
+			sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+			pollMs: 5000,
+			giveUpMs: 4 * 60 * 60 * 1000,
+			isLive: () => watching,
+			once: true,
+		});
 	const startPrototype = (given: Given) =>
 		newPrototype({ ...here, given, product: productNow(), onChanged: projectsChanged, watchBuild: watchPrototype });
 	const localRun = (root: string): LocalRun => {
@@ -231,7 +243,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 			'run-locally': (deps: Parameters<typeof runLocally>[0], id: string) => runLocally(deps, localRun(root), id),
 		}[action];
 		try {
-			await run({ ...here, root }, projectId);
+			await run({ ...here, root, watch: watchHandoff }, projectId);
 		} finally {
 			if (action === 'hand-off' || action === 'share') projectsChanged();
 		}

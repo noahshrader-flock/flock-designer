@@ -79,7 +79,7 @@ describe('status', () => {
 			adapter: { name: 'Exit', argvFor: () => ['node', '-e', 'process.exit(0)'] },
 		});
 		runner.start(root, 'demo', 'x');
-		await eventually(() => expect(runner.status()).toEqual({ state: 'finished', exitCode: 0, work: null, purpose: null }));
+		await eventually(() => expect(runner.status()).toEqual({ state: 'finished', exitCode: 0, work: null }));
 	});
 
 	it('does not start a second run over a running one: the same work joins it, anything else is told it is busy', async () => {

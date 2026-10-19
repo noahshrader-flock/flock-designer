@@ -45,6 +45,20 @@ export interface BuildInCodebase {
 	command: string | null;
 }
 
+/** `none`: no handoff was handed over here, or its result was given already. */
+export type HandoffResult =
+	| { state: 'none' }
+	| { state: 'waiting' }
+	| {
+			state: 'done';
+			/** What HANDOFF.md's first line says; null when it says neither. */
+			verdict: 'ready' | 'not ready' | null;
+			/** The branch's remote moved while it was handed over: a handoff never pushes. */
+			pushed: boolean;
+			/** Changed files a handoff leaves alone. */
+			outside: string[];
+	  };
+
 export interface OpenedPrototype {
 	url: string;
 	states: string[];

@@ -10,7 +10,6 @@ import type { AgentEnd } from '../src/core/services/agent/agent';
 import { type Answer, fakeGitHub } from './fakes/github';
 import {
 	addStandards,
-	agentRunning,
 	eventually,
 	g,
 	installDesignSystem,
@@ -57,24 +56,6 @@ const fakePorts = () =>
 let ports: ReturnType<typeof fakePorts>;
 
 const answer = (routes: Record<string, Answer>) => githubApi.mockImplementation(fakeGitHub(routes).api);
-
-/** The real runner, so its one-run rule is what is tested. */
-const realRunner = async () => {
-	const { EventEmitter } = await import('node:events');
-	const { AgentRunner } = await import('../src/core/services/agent/agent');
-	const sessionsSpawned: Array<string | undefined> = [];
-	const children: InstanceType<typeof EventEmitter>[] = [];
-	const runner = new AgentRunner(() => {}, {
-		adapter: { name: 'Fake', argvFor: (t, extras) => (sessionsSpawned.push(extras?.session), ['fake', t]) },
-		spawnProcess: (() => {
-			const child = Object.assign(new EventEmitter(), { stdout: null, stderr: null, kill: () => true });
-			children.push(child);
-			return child;
-		}) as never,
-	});
-	const exit = (code = 0) => children.at(-1)?.emit('exit', code);
-	return { runner, sessionsSpawned, exit };
-};
 
 const trustFolder = async (root: string): Promise<{ ok: boolean; error?: string; value?: unknown }> => {
 	try {
@@ -1479,18 +1460,7 @@ describe('one agent, one piece of work', () => {
 		writeFileSync(join(design, 'skills', 'record-the-route.md'), '# Record where the work is\n');
 		await codebaseWork();
 	};
-	const task = () => agentStart.mock.calls.at(-1)?.[2] as string;
-
-	it('refuses while the agent is busy with other work, instead of waiting on it as if it were this', async () => {
-		const { runner, sessionsSpawned } = await realRunner();
-		register({ agent: runner });
-		await onItsBranch();
-		runner.start(product, 'other', 't', { work: 'prototype/other/v1' });
-		const r = await call(CHANNELS.handOff, product, 'demo');
-		expect(r.ok).toBe(false);
-		expect(r.error).toMatch(/already working on something else/);
-		expect(sessionsSpawned).toHaveLength(1);
-	});
+	const task = () => readFileSync(join(home, 'prototype', 'demo', 'handoff-task.md'), 'utf8');
 
 	it('stops the run when asked: Stop on a build, in a shell that shows one', async () => {
 		const r = await call(CHANNELS.stopAgent);
@@ -1498,16 +1468,13 @@ describe('one agent, one piece of work', () => {
 		expect(agentStop).toHaveBeenCalledTimes(1);
 	});
 
-	it('gives a run in a checkout the shared agents, skills, standards and logging to read, and says where they are', async () => {
+	it('tells a handoff in a checkout where the shared agents, skills, standards and logging are, to read', async () => {
 		for (const dir of ['agents', 'skills', 'standards', 'knowledge']) mkdirSync(join(design, dir), { recursive: true });
 		await onItsBranch();
 		await call(CHANNELS.handOff, product, 'demo');
-		const [, , text, extras] = agentStart.mock.calls.at(-1) as [string, string, string, { readOnly: string[] }];
 		const real = realpathSync(design);
-		// The product's shims point at the shared agents: a run that could not read them would have no definition.
-		const shared = ['agents', 'skills', 'standards', 'knowledge'].map((d) => join(real, d));
-		expect(extras.readOnly).toEqual(expect.arrayContaining(shared));
-		for (const dir of shared) expect(text).toContain(dir);
+		// The product's shims point at the shared agents: a run that is not told where they are has no definition.
+		for (const dir of ['agents', 'skills', 'standards', 'knowledge']) expect(task()).toContain(join(real, dir));
 	});
 
 	it('gives every run in a checkout the design system’s voice and tone, after the accessibility rules, once it is written (T9)', async () => {
@@ -1548,25 +1515,6 @@ describe('one agent, one piece of work', () => {
 		expect(r.ok).toBe(false);
 		expect(r.error).toMatch(/agent is working in flock-coke/);
 	});
-
-	it('waits on its own run when asked again, rather than starting a second, and keeps that run’s conversation', async () => {
-		const { SessionMemory } = await import('../src/core/services/agent/editor');
-		const sessions = new SessionMemory(join(home, 'agent-sessions.json'));
-		const { runner, sessionsSpawned, exit } = await realRunner();
-		register({ agent: runner });
-		await onItsBranch();
-		const asked = vi.spyOn(runner, 'ended');
-		const first = call(CHANNELS.handOff, product, 'demo');
-		await vi.waitFor(() => expect(sessionsSpawned).toHaveLength(1));
-		const again = call(CHANNELS.handOff, product, 'demo');
-		await vi.waitFor(() => expect(asked.mock.results.some((r) => r.value !== null)).toBe(true));
-		exit(0);
-		expect(await first).toMatchObject({ ok: true, value: { state: 'done' } });
-		// No verdict of its own, as it did not start the run.
-		expect(await again).toEqual({ ok: true, value: { state: 'done', value: { ready: null } } });
-		expect(sessionsSpawned).toHaveLength(1);
-		expect(sessions.read(realpathSync(product), 'feature/demo')?.session).toBe(sessionsSpawned[0]);
-	});
 });
 
 describe('Handoff', () => {
@@ -1576,103 +1524,98 @@ describe('Handoff', () => {
 		writeFileSync(join(design, 'skills', 'handoff.md'), '# Hand work to engineering\nThe shared steps.\n');
 		writeFileSync(join(design, 'skills', 'record-the-route.md'), '# Record where the work is\n');
 		await codebaseWork();
-		agentStart.mockReturnValue(agentRunning('feature/demo', 'handoff'));
 	};
-	const commitHandoff = (text = '# Handoff\n') => {
-		writeFileSync(join(product, 'HANDOFF.md'), text);
-		g(product, 'add', 'HANDOFF.md');
-		g(product, 'commit', '-q', '-m', 'handoff');
+	const taskFile = () => join(home, 'prototype', 'demo', 'handoff-task.md');
+	const commit = (file: string, text: string) => {
+		mkdirSync(dirname(join(product, file)), { recursive: true });
+		writeFileSync(join(product, file), text);
+		g(product, 'add', file);
+		g(product, 'commit', '-q', '-m', `Change ${file}`);
 	};
-	const runs = (lines: string[], commits = true) =>
-		(agentDoes = () => {
-			if (commits) commitHandoff(`# Handoff, ${lines.join(' ')}\n`);
-			recent = { work: 'feature/demo', lines };
-		});
+	const result = async () => (await call(CHANNELS.handoffResult, product, 'demo')).value;
 
-	it("runs the shared skill on the work's own branch, tagged as a Handoff, and says when the product names no gate", async () => {
+	it("writes the shared skill's task for the work's own branch and hands it over, running no agent here", async () => {
 		await ready();
 		const r = await call(CHANNELS.handOff, product, 'demo');
-		expect(r.ok).toBe(true);
-		const [, , task, extras] = agentStart.mock.calls.at(-1) as [string, string, string, { work: string; purpose: string; session: string }];
+		expect(r).toMatchObject({ ok: true, value: { editor: false } });
+		expect(copied).toContain(taskFile());
+		expect(agentStart).not.toHaveBeenCalled();
+		const task = readFileSync(taskFile(), 'utf8');
 		expect(task).toContain('The shared steps.');
 		expect(task).toContain('`feature/demo`');
 		expect(task).toMatch(/names no handoff gate/);
-		expect(task).toMatch(/Ready for engineering/);
+		expect(task).toContain("HANDOFF.md's first line is the verdict, alone: `Ready for engineering` or `Not ready`");
+		expect(task).toMatch(/If a sandbox refuses a git command/);
 		// Its record has no route, so recording it comes first.
 		expect(task).toContain('# Record where the work is');
-		expect(extras).toMatchObject({ work: 'feature/demo', purpose: 'handoff' });
 	});
 
-	it('refuses when the checkout is somewhere else, or the agent is busy', async () => {
+	it('refuses when the checkout is somewhere else, and a project with no codebase work', async () => {
 		await ready();
 		g(product, 'checkout', '-q', 'develop');
 		expect((await call(CHANNELS.handOff, product, 'demo')).error).toMatch(/Open feature\/demo first/);
-		g(product, 'checkout', '-q', 'feature/demo');
-		agentStatus.mockReturnValue(agentRunning());
-		expect((await call(CHANNELS.handOff, product, 'demo')).error).toMatch(/already working/);
-		expect(agentStart).not.toHaveBeenCalled();
+		expect(existsSync(taskFile())).toBe(false);
+		expect((await call(CHANNELS.handOff, product, 'other')).ok).toBe(false);
 	});
 
-	it('refuses a project with no codebase work', async () => {
-		await trustFolder(product);
-		expect((await call(CHANNELS.handOff, product, 'demo')).ok).toBe(false);
-	});
-
-	it('is ready only when the run says so last and HANDOFF.md was committed since it started', async () => {
+	it('has nothing to say of a handoff never handed over here', async () => {
 		await ready();
-		const verdict = async () => ((await call(CHANNELS.handOff, product, 'demo')).value as { value: { ready: boolean } }).value.ready;
-		runs(['Ready for engineering once the gate passes.', 'Not ready', 'The a11y scan fails.']);
-		expect(await verdict()).toBe(false);
-		// A handoff note left from before does not count.
-		runs(['**Ready for engineering**'], false);
-		expect(await verdict()).toBe(false);
-		runs(['Fixed it.', '**Ready for engineering**', 'The gate passes.']);
-		expect(await verdict()).toBe(true);
+		expect(await result()).toEqual({ state: 'none' });
 	});
 
-	it('keeps the verdict on the work’s record, with the commit it was ready at, and the list says it only while the branch is still there', async () => {
+	it('waits until HANDOFF.md is committed since it was handed over and nothing is left uncommitted, then says what its first line says', async () => {
+		await ready();
+		// A note left from before does not count.
+		commit('HANDOFF.md', 'Ready for engineering\n');
+		await call(CHANNELS.handOff, product, 'demo');
+		expect(await result()).toEqual({ state: 'waiting' });
+		writeFileSync(join(product, 'HANDOFF.md'), 'Not ready\n\nThe gate fails.\n');
+		expect(await result()).toEqual({ state: 'waiting' });
+		g(product, 'commit', '-q', '-am', 'Handoff');
+		writeFileSync(join(product, 'half.ts'), 'half\n');
+		expect(await result()).toEqual({ state: 'waiting' });
+		rmSync(join(product, 'half.ts'));
+		expect(await result()).toEqual({ state: 'done', verdict: 'not ready', pushed: false, outside: [] });
+		// Said once: the next look has nothing handed over to wait on.
+		expect(await result()).toEqual({ state: 'none' });
+	});
+
+	it('keeps a ready verdict on the work’s record, with the commit it was ready at, while nothing has been committed since', async () => {
 		const { readWork } = await import('../src/core/services/projects/workRecords');
 		const codebase = () => readWork(join(design, 'projects'), 'demo').find((work) => work.name === 'codebase');
-		const listed = async () =>
-			((await call(CHANNELS.listProjects)).value as { id: string; work: { name: string; readyAt: string | null }[] }[])
-				.find((p) => p.id === 'demo')
-				?.work.find((work) => work.name === 'codebase')?.readyAt;
 		await ready();
-		runs(['**Ready for engineering**']);
-		expect((await call(CHANNELS.handOff, product, 'demo')).value).toEqual({ state: 'done', value: { ready: true } });
-		const head = g(product, 'rev-parse', 'HEAD').trim();
-		expect(codebase()?.readyAt).toBe(head);
-		expect(await listed()).toBe(head);
-		// A commit since means it is no longer what was found ready.
-		writeFileSync(join(product, 'more.txt'), 'more\n');
-		g(product, 'add', 'more.txt');
-		g(product, 'commit', '-q', '-m', 'more');
-		expect(await listed()).toBeNull();
-		runs(['Not ready']);
-		expect((await call(CHANNELS.handOff, product, 'demo')).value).toEqual({ state: 'done', value: { ready: false } });
+		await call(CHANNELS.handOff, product, 'demo');
+		commit('HANDOFF.md', '**Ready for engineering**\n\nThe gate passes.\n');
+		expect(await result()).toMatchObject({ state: 'done', verdict: 'ready' });
+		expect(codebase()?.readyAt).toBe(g(product, 'rev-parse', 'HEAD').trim());
+		await call(CHANNELS.handOff, product, 'demo');
+		commit('HANDOFF.md', 'Not ready\n');
+		expect(await result()).toMatchObject({ state: 'done', verdict: 'not ready' });
 		expect(codebase()?.readyAt).toBeUndefined();
 	});
 
-	it('says it was stopped when the person stops it, and gives no verdict', async () => {
+	it('says neither when the first line is not a verdict', async () => {
 		await ready();
-		agentEnds = { state: 'stopped' };
-		expect((await call(CHANNELS.handOff, product, 'demo')).value).toEqual({ state: 'stopped' });
+		await call(CHANNELS.handOff, product, 'demo');
+		commit('HANDOFF.md', '# Handoff\n\nReady for engineering\n');
+		expect(await result()).toMatchObject({ state: 'done', verdict: null });
 	});
 
-	it('did not finish when the agent stopped with an error, or left changes it never committed, and says so', async () => {
+	it('names files a handoff leaves alone, and a push, which keeps it from being recorded as ready', async () => {
+		const { readWork } = await import('../src/core/services/projects/workRecords');
 		await ready();
-		agentEnds = { state: 'finished', exitCode: 2 };
-		expect((await call(CHANNELS.handOff, product, 'demo')).error).toBe('The agent stopped with code 2.');
-		agentEnds = { state: 'finished', exitCode: 0 };
-		agentDoes = () => writeFileSync(join(product, 'half.ts'), 'half\n');
-		expect((await call(CHANNELS.handOff, product, 'demo')).error).toMatch(/did not commit/);
-	});
-
-	it('waits on a Handoff of it already going, rather than starting one', async () => {
-		await ready();
-		agentGoing = Promise.resolve({ state: 'finished', exitCode: 0 });
-		expect((await call(CHANNELS.handOff, product, 'demo')).value).toEqual({ state: 'done', value: { ready: null } });
-		expect(agentStart).not.toHaveBeenCalled();
+		const remote = join(home, 'remote.git');
+		g(home, 'init', '-q', '--bare', remote);
+		g(product, 'remote', 'add', 'origin', remote);
+		g(product, 'push', '-q', '-u', 'origin', 'feature/demo');
+		await call(CHANNELS.handOff, product, 'demo');
+		commit('.github/workflows/ci.yml', 'on: push\n');
+		commit('package-lock.json', '{}\n');
+		commit('src/page.tsx', 'export {};\n');
+		commit('HANDOFF.md', 'Ready for engineering\n');
+		g(product, 'push', '-q', 'origin', 'feature/demo');
+		expect(await result()).toEqual({ state: 'done', verdict: 'ready', pushed: true, outside: ['.github/workflows/ci.yml', 'package-lock.json'] });
+		expect(readWork(join(design, 'projects'), 'demo').find((work) => work.name === 'codebase')?.readyAt).toBeUndefined();
 	});
 });
 

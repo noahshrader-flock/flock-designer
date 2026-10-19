@@ -13,3 +13,6 @@ export const lastVerdict = (lines: string[]): 'ready' | 'not ready' | null => {
 	}
 	return null;
 };
+
+/** HANDOFF.md's first line, alone: the task asks for the verdict there, where any agent can write it. */
+export const handoffVerdict = (text: string): 'ready' | 'not ready' | null => lastVerdict([text.split('\n').find((l) => l.trim() !== '') ?? '']);

@@ -1,5 +1,5 @@
 import type { SignInState } from '../domain/account';
-import type { AgentReadiness, AgentStatus, JobEnd } from '../domain/agent';
+import type { AgentReadiness, AgentStatus } from '../domain/agent';
 import type { Checkout, PreviewStatus, RunLogLine } from '../domain/checkout';
 import type { CommentAnchor, CommentRef, ReviewComment } from '../domain/comments';
 import type {
@@ -30,6 +30,7 @@ import type {
 	PageStatus,
 	Project,
 	HandedComment,
+	HandoffResult,
 	PrototypeReadiness,
 } from '../domain/projects';
 import type { PublishStatus, ShareStatus } from '../domain/publishing';
@@ -156,11 +157,10 @@ export interface WorkspaceApi {
 	/** Makes the project's codebase branch (from `from`) and its record, then hands the building to Claude Code. */
 	buildInCodebase(root: string, projectId: string, name: string, from?: string): Promise<Result<BuildInCodebase>>;
 	agentReadiness(): Promise<Result<AgentReadiness>>;
-	/**
-	 * Refused unless the checkout is on the work's branch and the agent is free (a Handoff already going is waited on).
-	 * `ready` is null when that cannot be told.
-	 */
-	handOff(root: string, projectId: string): Promise<Result<JobEnd<{ ready: boolean | null }>>>;
+	/** Hands the handoff's task to the agent, as a build is handed; refused unless the checkout is on the work's branch. */
+	handOff(root: string, projectId: string): Promise<Result<BuildInCodebase>>;
+	/** Asked as often as one likes: `done` is said once, and the verdict recorded then. */
+	handoffResult(root: string, projectId: string): Promise<Result<HandoffResult>>;
 	/** `uncommitted`: the checkout had changes nobody committed, and no agent made them here. */
 	runLocally(root: string, projectId: string, name: string): Promise<Result<{ url: string; uncommitted: boolean }>>;
 	onAgentLog(listener: (line: RunLogLine) => void): () => void;
@@ -218,6 +218,7 @@ export const INVOKE = [
 	'stopAgent',
 	'agentReadiness',
 	'handOff',
+	'handoffResult',
 	'runLocally',
 	'createPrototype',
 	'assignFolder',

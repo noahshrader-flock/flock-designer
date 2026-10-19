@@ -1,4 +1,7 @@
-/** Polls, because DSNR does not run Claude Code and is not told when its build is done. `saveBuilt` saves each build once. */
+/**
+ * Polls, because DSNR does not run Claude Code and is not told when its build is done. `saveBuilt` saves each build once;
+ * with `once`, the watch ends at the first.
+ */
 export const watchBuild = async ({
 	saveBuilt,
 	onSaved,
@@ -8,6 +11,7 @@ export const watchBuild = async ({
 	pollMs,
 	giveUpMs,
 	isLive,
+	once = false,
 }: {
 	saveBuilt: () => Promise<'saved' | 'waiting'>;
 	onSaved: () => void;
@@ -18,6 +22,7 @@ export const watchBuild = async ({
 	pollMs: number;
 	giveUpMs: number;
 	isLive: () => boolean;
+	once?: boolean;
 }): Promise<void> => {
 	const start = now();
 	let failed = 0;
@@ -28,6 +33,7 @@ export const watchBuild = async ({
 			(err: unknown) => ((failed += 1), (last = err), 'waiting' as const),
 		);
 		if (saved === 'saved') onSaved();
+		if (saved === 'saved' && once) return;
 		if (failed < 3) await sleep(pollMs);
 	}
 	if (failed >= 3 && isLive()) onGaveUp(last);

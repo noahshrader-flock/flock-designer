@@ -371,6 +371,15 @@ export const changedSince = async (root: string, commit: string, path: string): 
 export const branchTip = (root: string, branch: string): Promise<string | null> =>
 	git(root, ['rev-parse', '--verify', '--quiet', `refs/heads/${branch}`]).catch((err: unknown) => (saidNo(err) ? null : Promise.reject(err)));
 
+/** The branch as this clone last saw it on `origin`: a push moves it. Null when it has none there. */
+export const remoteTip = (root: string, branch: string): Promise<string | null> =>
+	git(root, ['rev-parse', '--verify', '--quiet', `refs/remotes/origin/${branch}`]).catch((err: unknown) =>
+		saidNo(err) ? null : Promise.reject(err),
+	);
+
+export const changedFiles = async (root: string, commit: string): Promise<string[]> =>
+	(await git(root, ['diff', '--name-only', commit, 'HEAD'])).split('\n').filter((f) => f !== '');
+
 /** One GitHub has may not be fetched yet. False only when git says it has not. */
 const hasCommit = (root: string, commit: string): Promise<boolean> =>
 	git(root, ['rev-parse', '--verify', '--quiet', `${commit}^{commit}`]).then(

@@ -1,17 +1,20 @@
-import type { Project, ProjectWork, ShareStatus, ShareStep, WorkspaceApi } from '../../src/shared/contract';
+import type { HandoffResult, Project, ProjectWork, ShareStatus, ShareStep, WorkspaceApi } from '../../src/shared/contract';
 import { buildError, outputLines, packagesHint } from '../../src/core/services/codebase/serverOutput';
+import { handedTo } from '../../src/shared/handedTo';
 import { valueOf } from '../../src/shared/result';
 import { DESIGN_MODE_COMMAND, codeLink, workOf } from '../../src/shared/work';
-import { type AgentWorkDeps, type Offer, type Tell, agentReady, agentWork } from './agentWork';
+import type { AgentWorkDeps, Offer, Tell } from './agentWork';
 
 export interface CodebaseDeps extends AgentWorkDeps {
 	api: AgentWorkDeps['api'] &
-		Pick<WorkspaceApi, 'listProjects' | 'handOff' | 'runLocally' | 'shareWork' | 'onShareStatus' | 'stopCommand' | 'onRunLog'>;
+		Pick<WorkspaceApi, 'listProjects' | 'handOff' | 'handoffResult' | 'runLocally' | 'shareWork' | 'onShareStatus' | 'stopCommand' | 'onRunLog'>;
 	root: string;
 	tell: Tell;
 	offer: Offer;
 	openExternal: (url: string) => Promise<void>;
 	copy: (text: string) => Promise<void>;
+	/** Asks `check` until it says it is done, as a handed build is watched. */
+	watch: (check: () => Promise<boolean>) => void;
 }
 
 const codebaseOf = async (api: CodebaseDeps['api'], projectId: string): Promise<{ project: Project; work: ProjectWork }> => {
@@ -24,30 +27,43 @@ const codebaseOf = async (api: CodebaseDeps['api'], projectId: string): Promise<
 
 const OPEN_PR = 'Open a draft pull request';
 
-/** Commits HANDOFF.md on the work's branch and pushes nothing; a draft pull request is offered only when it is ready. */
+const reportHandoff = async (
+	deps: CodebaseDeps,
+	project: Project,
+	branch: string,
+	result: Extract<HandoffResult, { state: 'done' }>,
+): Promise<void> => {
+	const { verdict, pushed, outside } = result;
+	const wrong = [
+		...(pushed ? [`the agent pushed ${branch}, which a handoff never does: look at what reached GitHub.`] : []),
+		...(outside.length ? [`${pushed ? 'It also' : 'The agent'} changed files a handoff leaves alone: ${outside.join(', ')}.`] : []),
+	];
+	if (verdict === 'ready' && wrong.length === 0) {
+		const next = await deps.offer(`Ready for engineering: HANDOFF.md is on ${branch}, and nothing was pushed.`, [OPEN_PR]);
+		if (next === OPEN_PR) await shareCodebase(deps, project.id);
+		return;
+	}
+	const said =
+		verdict === 'ready'
+			? `HANDOFF.md says ${project.title} is ready, but`
+			: verdict === 'not ready'
+				? `${project.title} is not ready for engineering yet: HANDOFF.md says why.`
+				: `HANDOFF.md is committed on ${branch}, but its first line says neither Ready for engineering nor Not ready.`;
+	deps.tell(verdict === 'ready' ? `${said} ${wrong.join(' ')}` : [said, ...wrong.map((w) => w.charAt(0).toUpperCase() + w.slice(1))].join(' '));
+};
+
+/** Hands the task over; the person runs it in the agent's window, and the verdict is read from HANDOFF.md once committed. */
 export const handOff = async (deps: CodebaseDeps, projectId: string): Promise<void> => {
 	const { api, root } = deps;
-	await agentReady(api);
 	const { project, work } = await codebaseOf(api, projectId);
-	let ended: Awaited<ReturnType<typeof api.handOff>> | null = null;
-	const { stopped } = await agentWork(deps, { title: `Handing off ${project.title}`, logTitle: `${project.title}: handoff` }, async (say) => {
-		say('Running the product’s gate, both reviews and the fixes. This takes a while.');
-		ended = await api.handOff(root, project.id);
+	const handed = valueOf(await api.handOff(root, project.id));
+	deps.watch(async () => {
+		const result = valueOf(await api.handoffResult(root, project.id));
+		if (result.state === 'waiting') return false;
+		if (result.state === 'done') await reportHandoff(deps, project, work.branch, result);
+		return true;
 	});
-	const outcome = ended as Awaited<ReturnType<typeof api.handOff>> | null;
-	if (stopped || outcome === null) return;
-	if (!outcome.ok) throw new Error(`The handoff of ${project.title} did not finish: ${outcome.error}`);
-	if (outcome.value.state === 'stopped') return;
-	const verdict = outcome.value.value.ready;
-	if (verdict === true) {
-		const next = await deps.offer(`Ready for engineering: HANDOFF.md is on ${work.branch}, and nothing was pushed.`, [OPEN_PR]);
-		if (next === OPEN_PR) await shareCodebase(deps, projectId);
-	} else
-		deps.tell(
-			verdict === false
-				? `${project.title} is not ready for engineering yet: its log says why.`
-				: `The handoff of ${project.title} finished: its log says how it went.`,
-		);
+	deps.tell(`${handedTo(handed, `The handoff of ${project.title}`)} When HANDOFF.md is committed on ${work.branch}, DSNR says whether it is ready.`);
 };
 
 const STOP = 'Stop';

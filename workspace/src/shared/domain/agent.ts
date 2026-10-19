@@ -18,11 +18,8 @@ export type AgentStatus =
 	| { state: 'idle' }
 	/**
 	 * `work`: which piece of work this run is for, so a screen opened again can tell its own run from another; null when
-	 * started for none. A Handoff ends in a report rather than a preview.
+	 * started for none.
 	 */
-	| { state: 'running'; startedAt: string; work: string | null; purpose: 'handoff' | null }
-	| { state: 'finished'; exitCode: number; work: string | null; purpose: 'handoff' | null }
+	| { state: 'running'; startedAt: string; work: string | null }
+	| { state: 'finished'; exitCode: number; work: string | null }
 	| { state: 'unavailable'; detail: string };
-
-/** What went wrong is not a state here: it is the call's failure. */
-export type JobEnd<T> = { state: 'done'; value: T } | { state: 'stopped' };

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { commandLine } from '../src/core/services/codebase/engineeringHandoff';
-import { lastVerdict } from '../src/shared/handoff';
+import { handoffVerdict, lastVerdict } from '../src/shared/handoff';
 
 const commands = [
 	{ id: 'preview', label: 'Run', argv: ['npm', 'start'] },
@@ -28,5 +28,14 @@ describe('the verdict', () => {
 	it('is nothing when the run never said one, or said it mid-sentence', () => {
 		expect(lastVerdict(['It will be Ready for engineering once the flag exists.'])).toBeNull();
 		expect(lastVerdict([])).toBeNull();
+	});
+});
+
+describe('the verdict a handoff commits', () => {
+	it('is the first line of HANDOFF.md, alone, and nothing further down', () => {
+		expect(handoffVerdict('\n**Ready for engineering**\n\nThe gate passes.\n')).toBe('ready');
+		expect(handoffVerdict('Not ready\n')).toBe('not ready');
+		expect(handoffVerdict('# Handoff\n\nReady for engineering\n')).toBeNull();
+		expect(handoffVerdict('')).toBeNull();
 	});
 });

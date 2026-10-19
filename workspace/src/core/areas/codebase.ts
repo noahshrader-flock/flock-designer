@@ -1,42 +1,26 @@
 import type { CallsDeps, CheckedCheckout } from '../compose';
-import { randomUUID } from 'node:crypto';
-import { existsSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
-import type { AccessibilityResult, BuildInCodebase, BuildInCodebasePlan, JobEnd } from '../../shared/contract';
+import type { AccessibilityResult, BuildInCodebase, BuildInCodebasePlan, HandoffResult } from '../../shared/contract';
 import { statesOf } from '../../shared/prototypeStates';
-import { lastVerdict } from '../../shared/handoff';
+import { handoffVerdict } from '../../shared/handoff';
 import { DESIGN_MODE_COMMAND, routeIn, workLabel } from '../../shared/work';
 import { A11Y_COMMAND, productTarget, taskAccessibility } from '../services/accessibility/accessibilityBrief';
 import { accessibilityOf } from '../services/accessibility/accessibilityCheck';
-import { type AgentEnd, type AgentExtras, afterRun, agentReadiness } from '../services/agent/agent';
+import { afterRun, agentReadiness } from '../services/agent/agent';
 import { type CheckoutParts, guidePart, handoffTask, buildInCodebaseTask } from '../services/agent/agentTasks';
 import { designSystemCheckout, readDescriptor } from '../services/projects/descriptor';
 import { recordsRootFor } from '../services/projects/discovery';
 import { handToClaude } from '../services/agent/editor';
-import { HANDOFF_FILE, HANDOFF_SKILL, commandLine } from '../services/codebase/engineeringHandoff';
-import { branchTip, changedSince, headCommit, readCheckout } from '../services/platform/git';
+import { HANDOFF_FILE, HANDOFF_SKILL, commandLine, handoffPrompt, leftAlone } from '../services/codebase/engineeringHandoff';
+import { branchTip, changedFiles, changedSince, fileAt, headCommit, readCheckout, remoteTip } from '../services/platform/git';
 import { continueWork, recordHandoff, recordPath, recordPreview, recordedWork } from '../services/projects/workRecords';
 import { GUIDE, MOVE_SKILL, ROUTE_SKILL, buildInCodebasePrompt } from '../services/prototypes/prototype';
 import { pullRequestText } from '../services/codebase/share';
 
 export const codebaseArea = (d: CallsDeps) => {
-	const {
-		agent,
-		checkout,
-		codebase,
-		ports,
-		prototypePage,
-		publisher,
-		readSkillText,
-		refuseWhileBusy,
-		servePrototype,
-		runtime,
-		sessions,
-		share,
-		signedInLogin,
-		work,
-		written,
-	} = d;
+	const { agent, checkout, codebase, ports, prototypePage, publisher, readSkillText, servePrototype, runtime, share, signedInLogin, work, written } =
+		d;
 	const prototypeAccessibility = async (projectId: string, name: string): Promise<AccessibilityResult> => {
 		const html = await prototypePage(projectId, name);
 		if (html === null) throw new Error('This prototype has no page yet.');
@@ -95,28 +79,9 @@ export const codebaseArea = (d: CallsDeps) => {
 			},
 		};
 	};
-	/** A run already going for the same branch (a screen opened again) is waited on, not started twice, which `joined` says. */
-	const runTracked = (
-		canonical: string,
-		projectId: string,
-		task: string,
-		{ branch, addDirs, readOnly, purpose }: { branch: string; addDirs: string[]; readOnly: string[]; purpose?: AgentExtras['purpose'] },
-	): { end: Promise<AgentEnd>; joined: boolean } => {
-		const going = agent.ended(branch);
-		if (going) return { end: going, joined: true };
-		refuseWhileBusy();
-		const session = randomUUID();
-		const ended = agent.run(canonical, projectId, task, {
-			addDirs,
-			readOnly,
-			work: branch,
-			...(purpose ? { purpose } : {}),
-			session,
-			name: `DSNR: ${projectId}`,
-		});
-		if (agent.status().state === 'running') sessions.write(canonical, branch, session);
-		return { end: ended, joined: false };
-	};
+	/** Where each handoff handed over here started, so its result is read from what changed since. */
+	const handoffs = new Map<string, { head: string; remote: string | null; branch: string }>();
+	const handoffKey = (canonical: string, projectId: string) => `${canonical}\n${projectId}`;
 	/** A run that says it finished but left changes uncommitted did not finish: anything shown from it would be half of it. */
 	const committedAll = async (canonical: string): Promise<void> => {
 		if (!(await readCheckout(canonical)).clean)
@@ -180,27 +145,34 @@ export const codebaseArea = (d: CallsDeps) => {
 				setup,
 			};
 		},
-		/**
-		 * Ready when its last verdict says so and HANDOFF.md was committed since it started. Null when it cannot be told: a run
-		 * joined, not started here.
-		 */
-		handOff: async (workIn: CheckedCheckout, projectId: string): Promise<JobEnd<{ ready: boolean | null }>> => {
+		handOff: async (workIn: CheckedCheckout, projectId: string): Promise<BuildInCodebase> => {
 			const { canonical, recordsRoot, descriptor } = workIn;
 			const codebaseRecord = await recordedWork(canonical, recordsRoot, descriptor, projectId, 'codebase');
 			const { branch } = codebaseRecord;
 			if ((await readCheckout(canonical)).branch !== branch) throw new Error(`Open ${branch} first: a handoff checks the work where it is.`);
-			const head = await headCommit(canonical);
 			const skill = await readSkillText(HANDOFF_SKILL);
-			const { parts, readOnly } = await checkoutParts(canonical, projectId);
+			const { parts } = await checkoutParts(canonical, projectId);
 			const missingRoute = codebaseRecord.route ? null : { skill: await readSkillText(ROUTE_SKILL), recordFile: recordPath(recordsRoot, projectId) };
 			const task = handoffTask({ skill, projectId, branch, gate: commandLine(descriptor.commands, 'handoff', projectId), missingRoute }, parts);
-			const { end, joined } = runTracked(canonical, projectId, task, { branch, addDirs: [recordsRoot], readOnly, purpose: 'handoff' });
-			if (afterRun(await end) === 'stopped') return { state: 'stopped' };
-			await committedAll(canonical);
-			if (joined) return { state: 'done', value: { ready: null } };
-			const ready = (await changedSince(canonical, head, HANDOFF_FILE)) && lastVerdict(agent.recentLines().lines) === 'ready';
-			recordHandoff(recordsRoot, projectId, ready ? await headCommit(canonical) : null);
-			return { state: 'done', value: { ready } };
+			const taskFile = join(work.dir(projectId), 'handoff-task.md');
+			mkdirSync(dirname(taskFile), { recursive: true });
+			writeFileSync(taskFile, task);
+			handoffs.set(handoffKey(canonical, projectId), { head: await headCommit(canonical), remote: await remoteTip(canonical, branch), branch });
+			return handToClaude(ports, canonical, handoffPrompt({ projectId, branch, taskFile }));
+		},
+		/** Done once HANDOFF.md is committed since it was handed over and nothing is left uncommitted: the agent's work is in. */
+		handoffResult: async (workIn: CheckedCheckout, projectId: string): Promise<HandoffResult> => {
+			const { canonical, recordsRoot } = workIn;
+			const key = handoffKey(canonical, projectId);
+			const started = handoffs.get(key);
+			if (!started) return { state: 'none' };
+			if (!(await changedSince(canonical, started.head, HANDOFF_FILE)) || !(await readCheckout(canonical)).clean) return { state: 'waiting' };
+			handoffs.delete(key);
+			const verdict = handoffVerdict((await fileAt(canonical, 'HEAD', HANDOFF_FILE))?.text ?? '');
+			const pushed = (await remoteTip(canonical, started.branch)) !== started.remote;
+			const outside = (await changedFiles(canonical, started.head)).filter(leftAlone);
+			recordHandoff(recordsRoot, projectId, verdict === 'ready' && !pushed ? await headCommit(canonical) : null);
+			return { state: 'done', verdict, pushed, outside };
 		},
 		/** `uncommitted`: the checkout had changes nobody committed, and no agent made them here. */
 		runLocally: async (workIn: CheckedCheckout, projectId: string, name: string): Promise<{ url: string; uncommitted: boolean }> => {

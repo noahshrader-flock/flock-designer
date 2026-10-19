@@ -23,6 +23,13 @@ describe('watching a prototype Claude Code builds', () => {
 		expect(w.saved).toHaveBeenCalledTimes(2);
 	});
 
+	it('asked to watch for one result, ends at it', async () => {
+		const w = world(['waiting', 'saved', 'saved']);
+		await w.run({ once: true });
+		expect(w.saveBuilt).toHaveBeenCalledTimes(2);
+		expect(w.saved).toHaveBeenCalledTimes(1);
+	});
+
 	it('asks until it gives up, and not after the window has gone', async () => {
 		const w = world();
 		await w.run();

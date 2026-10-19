@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { type CodebaseDeps, type LocalRun, handOff, openCode, shareCodebase, runLocally } from '../extension/src/codebase';
-import type { Project, RunLogLine, ShareStatus } from '../src/shared/contract';
+import type { HandoffResult, Project, RunLogLine, ShareStatus } from '../src/shared/contract';
 import { ok } from '../src/shared/result';
 
 const codebase = {
@@ -27,10 +27,12 @@ const world = (more: Record<string, unknown> = {}) => {
 	const said: string[] = [];
 	const offered: [string, string[]][] = [];
 	const shareListeners: ((s: ShareStatus) => void)[] = [];
+	const watching: (() => Promise<boolean>)[] = [];
 	const api = {
 		agentReadiness: vi.fn(async () => ok({ state: 'ready' })),
 		listProjects: vi.fn(async () => ok([zone, prototypeOnly])),
-		handOff: vi.fn(async () => ok({ state: 'done', value: { ready: true as boolean | null } })),
+		handOff: vi.fn(async () => ok({ editor: true, command: null })),
+		handoffResult: vi.fn(async () => ok({ state: 'waiting' } as HandoffResult)),
 		runLocally: vi.fn(async () => ok({ url: 'http://localhost:5173/zones', uncommitted: false })),
 		stopCommand: vi.fn(async () => ok({ state: 'stopped' })),
 		shareWork: vi.fn(async () => ok({ state: 'running', projectId: zone.id, name: 'codebase', step: 'pushing' })),
@@ -57,55 +59,67 @@ const world = (more: Record<string, unknown> = {}) => {
 		}),
 		openExternal: vi.fn(async () => undefined),
 		copy: vi.fn(async () => undefined),
+		watch: (check) => void watching.push(check),
 	};
-	return { deps, api, told, said, offered, shareListeners };
+	return { deps, api, told, said, offered, shareListeners, watching };
 };
 
 describe('Handoff, from VS Code', () => {
-	it('runs on the project’s codebase work, said as it goes, and gives the verdict: ready, with a draft pull request offered', async () => {
-		const { deps, api, said, offered } = world();
+	const done = (result: Partial<Extract<HandoffResult, { state: 'done' }>>) =>
+		vi.fn(async () => ok({ state: 'done', verdict: 'ready', pushed: false, outside: [], ...result } as HandoffResult));
+
+	it('hands the project’s codebase work to the agent, says so, and watches for HANDOFF.md', async () => {
+		const { deps, api, told, watching } = world();
 		await handOff(deps, 'zone-coverage');
 		expect(api.handOff).toHaveBeenCalledWith('/p', 'zone-coverage');
-		expect(said).toEqual(['Handing off Zone coverage', 'Running the product’s gate, both reviews and the fixes. This takes a while.']);
-		expect(deps.log.start).toHaveBeenCalledWith('Zone coverage: handoff');
+		expect(told).toHaveLength(1);
+		expect(told[0]).toMatch(/^The handoff of Zone coverage is in Claude Code in this window now/);
+		expect(told[0]).toMatch(/When HANDOFF\.md is committed on feature\/zone-coverage, DSNR says whether it is ready\.$/);
+		expect(watching).toHaveLength(1);
+		// Still going: it keeps watching and says nothing more.
+		expect(await watching[0]!()).toBe(false);
+		expect(told).toHaveLength(1);
+	});
+
+	it('offers a draft pull request once HANDOFF.md says ready and nothing was pushed', async () => {
+		const { deps, offered, watching } = world({ handoffResult: done({}) });
+		await handOff(deps, 'zone-coverage');
+		expect(await watching[0]!()).toBe(true);
 		expect(offered).toEqual([
 			['Ready for engineering: HANDOFF.md is on feature/zone-coverage, and nothing was pushed.', ['Open a draft pull request']],
 		]);
 	});
 
-	it('says when it is not ready, or finished without saying, and offers nothing', async () => {
+	it('says when it is not ready, or HANDOFF.md says neither, and offers nothing', async () => {
 		for (const [verdict, words] of [
-			[false, 'Zone coverage is not ready for engineering yet: its log says why.'],
-			[null, 'The handoff of Zone coverage finished: its log says how it went.'],
+			['not ready', 'Zone coverage is not ready for engineering yet: HANDOFF.md says why.'],
+			[null, 'HANDOFF.md is committed on feature/zone-coverage, but its first line says neither Ready for engineering nor Not ready.'],
 		] as const) {
-			const { deps, told, offered } = world({ handOff: vi.fn(async () => ok({ state: 'done', value: { ready: verdict } })) });
+			const { deps, told, offered, watching } = world({ handoffResult: done({ verdict }) });
 			await handOff(deps, 'zone-coverage');
-			expect(told).toEqual([words]);
+			await watching[0]!();
+			expect(told.slice(1)).toEqual([words]);
 			expect(offered).toEqual([]);
 		}
 	});
 
-	it('stops the agent when Stop is pressed, and gives no verdict', async () => {
-		const { deps, api, told, offered } = world({ handOff: vi.fn(async () => ok({ state: 'stopped' })) });
-		deps.progress = vi.fn(async (_title, task, onStop) => {
-			onStop?.();
-			await task(() => undefined);
+	it('says what a handoff should not have done: pushed, or changed files it leaves alone, and offers no pull request', async () => {
+		const { deps, told, offered, watching } = world({
+			handoffResult: done({ pushed: true, outside: ['.github/workflows/ci.yml', 'package-lock.json'] }),
 		});
 		await handOff(deps, 'zone-coverage');
-		expect(api.stopAgent).toHaveBeenCalled();
-		expect([told, offered]).toEqual([[], []]);
+		await watching[0]!();
+		expect(offered).toEqual([]);
+		expect(told.slice(1)).toEqual([
+			'HANDOFF.md says Zone coverage is ready, but the agent pushed feature/zone-coverage, which a handoff never does: look at what reached GitHub. It also changed files a handoff leaves alone: .github/workflows/ci.yml, package-lock.json.',
+		]);
 	});
 
-	it('is only for codebase work, and needs Claude Code', async () => {
+	it('is only for codebase work, and says why one was refused', async () => {
 		await expect(handOff(world().deps, 'alert-history')).rejects.toThrow('Alert history has no codebase work yet: build it in the codebase first.');
-		const missing = world({ agentReadiness: vi.fn(async () => ok({ state: 'missing' })) });
-		await expect(handOff(missing.deps, 'zone-coverage')).rejects.toThrow(/Claude Code is not installed/);
-		expect(missing.api.handOff).not.toHaveBeenCalled();
-	});
-
-	it('says how a run that failed failed', async () => {
-		const { deps } = world({ handOff: vi.fn(async () => ({ ok: false, error: 'Open feature/zone-coverage first.' })) });
-		await expect(handOff(deps, 'zone-coverage')).rejects.toThrow('The handoff of Zone coverage did not finish: Open feature/zone-coverage first.');
+		const { deps, watching } = world({ handOff: vi.fn(async () => ({ ok: false, error: 'Open feature/zone-coverage first.' })) });
+		await expect(handOff(deps, 'zone-coverage')).rejects.toThrow('Open feature/zone-coverage first.');
+		expect(watching).toEqual([]);
 	});
 });
 

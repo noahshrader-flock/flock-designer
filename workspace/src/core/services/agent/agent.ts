@@ -24,8 +24,6 @@ export interface AgentExtras {
 	readOnly?: string[];
 	/** A prototype's key, carried on its status. */
 	work?: string;
-	/** A run that is a Handoff, so a screen opened again knows it ends in a report, not a preview. */
-	purpose?: 'handoff';
 	/** Chosen by the app, so the person can continue the conversation in their editor afterwards. */
 	session?: string;
 	name?: string;
@@ -302,11 +300,6 @@ export class AgentRunner {
 	/** A checkout must not change branch under the run, and only its own conversation is taken over. */
 	private root: string | null = null;
 	private session: string | null = null;
-	private purpose: 'handoff' | null = null;
-
-	private tags(): { work: string | null; purpose: 'handoff' | null } {
-		return { work: this.work, purpose: this.purpose };
-	}
 	/** Kept here so a screen that was left and opened again can pick up where it was. */
 	private recent: string[] = [];
 
@@ -386,8 +379,7 @@ export class AgentRunner {
 		this.root = root;
 		this.session = extras?.session ?? null;
 		this.recent = [];
-		this.purpose = extras?.purpose ?? null;
-		this.current = { state: 'running', startedAt: new Date().toISOString(), ...this.tags() };
+		this.current = { state: 'running', startedAt: new Date().toISOString(), work: this.work };
 
 		const format = this.deps.adapter.formatter?.();
 		child.stdout?.on('data', (d: Buffer) => {
@@ -413,7 +405,7 @@ export class AgentRunner {
 			this.ending = null;
 			// A crash and a clean finish are both "finished" with a code. The caller
 			// decides what a non-zero code means; this does not editorialize.
-			this.current = { state: 'finished', exitCode: code ?? -1, ...this.tags() };
+			this.current = { state: 'finished', exitCode: code ?? -1, work: this.work };
 			end(this.stopping ? { state: 'stopped' } : { state: 'finished', exitCode: code ?? -1 });
 		});
 

@@ -9,11 +9,8 @@ import { Field, Select } from '../../src/ui/Field';
 import { workspace } from './host';
 import { Message } from '../../src/ui/Message';
 
-const BUSY = 'The agent is busy with other work. It does one thing at a time: open this again when that work has finished.';
-
 /**
- * It starts only once the agent is known to be free. With the work found ready (`readyAt`), Run again sits beside its pull
- * request, so a dismissed offer is never a dead end.
+ * With the work found ready (`readyAt`), Run again sits beside its pull request, so a dismissed offer is never a dead end.
  */
 export const HandoffDialog = ({
 	project,
@@ -35,14 +32,8 @@ export const HandoffDialog = ({
 	onOpenCode: () => void;
 	onClose: () => void;
 }) => {
-	const status = useWorkspace(() => workspace().agentStatus(), []);
-	const [busy, setBusy] = useState(false);
-	useEffect(() => setBusy(status.value?.state === 'running'), [status.value]);
-	const known = status.value !== null || status.error !== null;
-	const start = async (e: FormEvent) => {
+	const start = (e: FormEvent) => {
 		e.preventDefault();
-		const now = await workspace().agentStatus();
-		if (now.ok && now.value.state === 'running') return setBusy(true);
 		onStart();
 		onClose();
 	};
@@ -52,7 +43,7 @@ export const HandoffDialog = ({
 	};
 	return (
 		<Dialog title="Hand off to engineering" onClose={onClose}>
-			<form onSubmit={(e) => void start(e)}>
+			<form onSubmit={start}>
 				{readyAt !== null ? (
 					<Message>
 						A handoff found <strong>{project.title}</strong>’s codebase work ready for engineering, and nothing has changed on <code>{branch}</code>{' '}
@@ -65,18 +56,18 @@ export const HandoffDialog = ({
 						</Message>
 						<p className="field-label">What happens</p>
 						<ol className="dialog-steps">
+							<li>The task opens in Claude Code in this window: press Enter there, and answer it as it goes.</li>
 							<li>The product’s handoff gate runs: every test, accessibility, the app bundling, the standards.</li>
 							<li>Two independent reviews: does it read as the product, and is it built correctly.</li>
 							<li>What they block on is fixed and committed on {branch}, one fix at a time.</li>
-							<li>A note for the engineer, HANDOFF.md, is written on the branch. Nothing is pushed.</li>
+							<li>A note for the engineer, HANDOFF.md, is written on the branch, and says whether it is ready. Nothing is pushed.</li>
 						</ol>
 					</>
 				)}
-				<Message tone="warning">{busy ? BUSY : null}</Message>
 				<DialogButtons>
 					{readyAt !== null ? (
 						<>
-							<Button type="submit" variant="secondary" disabled={busy || !known}>
+							<Button type="submit" variant="secondary">
 								Run again
 							</Button>
 							{pullRequest ? (
@@ -86,9 +77,7 @@ export const HandoffDialog = ({
 							)}
 						</>
 					) : (
-						<Button type="submit" disabled={busy || !known}>
-							Start handoff
-						</Button>
+						<Button type="submit">Start handoff</Button>
 					)}
 				</DialogButtons>
 			</form>

@@ -68,13 +68,7 @@ export const reviewComment = (over: Pick<ReviewComment, 'id'> & Partial<ReviewCo
 	...over,
 });
 
-export const agentRunning = (work: string | null = null, purpose: 'handoff' | null = null): AgentStatus => ({
-	state: 'running',
-	startedAt: 'now',
-	work,
-	purpose,
-});
-export const agentFinished = (exitCode = 0, work: string | null = null): AgentStatus => ({ state: 'finished', exitCode, work, purpose: null });
+export const agentFinished = (exitCode = 0, work: string | null = null): AgentStatus => ({ state: 'finished', exitCode, work });
 
 /**
  * Made once and copied back before each test, at the same path so a clone's origin still points at the remote beside it:
