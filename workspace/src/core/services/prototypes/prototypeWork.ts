@@ -348,6 +348,19 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 	};
 	/** Builds the page, then saves page and source. */
 	const save = async (projectId: string, name: string): Promise<void> => keep(projectId, name, await built(projectId, name));
+	/**
+	 * Saves a prototype someone else builds (Claude Code, in the person's editor) once it is built: its page written by a
+	 * build of its source as it is now (the build reads the source, then writes the page), and that source not the one saved
+	 * already. `waiting` otherwise: not built yet, or nothing new. Asked as often as a watcher likes, it saves each build once.
+	 */
+	const saveBuilt = async (projectId: string, name: string): Promise<'saved' | 'waiting'> => {
+		const source = localFile(projectId, name, 'tsx');
+		const page = file(projectId, name);
+		if (!existsSync(source) || !existsSync(page) || statSync(page).mtimeMs < statSync(source).mtimeMs) return 'waiting';
+		if (readFileSync(source, 'utf8') === (await ctx.readDesignFile(prototypeSourcePath(projectId, name)))) return 'waiting';
+		await save(projectId, name);
+		return 'saved';
+	};
 
 	/**
 	 * Where a change to a prototype goes, and its source made ready there: the version it was asked of, in place, unless a
@@ -485,6 +498,7 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		buildPage,
 		keep,
 		save,
+		saveBuilt,
 		page,
 		startChange,
 		resumeChange,

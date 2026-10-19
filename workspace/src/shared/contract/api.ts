@@ -191,12 +191,12 @@ export interface WorkspaceApi {
 	 * before it would. Says how the page stands once it has started.
 	 */
 	publishPage(projectId: string, name: string): Promise<Result<PageStatus>>;
-	savePrototype(projectId: string, name: string): Promise<Result<null>>;
 	/**
-	 * When a prototype's source and page were last written on this machine (milliseconds, null when there is none): for what
-	 * watches a build that Claude Code does, to save it once it has stopped changing.
+	 * Saves a prototype Claude Code builds once it is built (`saved`): its page a build of its source as it is now, and that
+	 * source not the one saved already; `waiting` otherwise. What watches a build handed to Claude Code asks, as often as it
+	 * likes: each build is saved once, then published as every save is.
 	 */
-	prototypeProgress(projectId: string, name: string): Promise<Result<{ sourceAt: number | null; pageAt: number | null }>>;
+	saveBuilt(projectId: string, name: string): Promise<Result<'saved' | 'waiting'>>;
 	openPrototype(projectId: string, name: string): Promise<Result<OpenedPrototype>>;
 	/** What building a prototype in the codebase would do in this checkout, asked before it is offered. */
 	buildInCodebasePlan(root: string, projectId: string, name: string): Promise<Result<BuildInCodebasePlan>>;
@@ -293,8 +293,7 @@ export const INVOKE = [
 	'addressPrototype',
 	'publishedPage',
 	'publishPage',
-	'savePrototype',
-	'prototypeProgress',
+	'saveBuilt',
 	'openPrototype',
 	'buildInCodebase',
 	'prototypeReadiness',

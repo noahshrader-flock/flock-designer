@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { realpathSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -117,7 +117,7 @@ const savedPrototype = async (root = product) => {
 	await call(CHANNELS.createPrototype, 'demo', 'Demo', 'A list', { root, branch: 'develop' });
 	mkdirSync(join(home, 'prototype', 'demo'), { recursive: true });
 	writeFileSync(join(home, 'prototype', 'demo', 'v1.html'), '<h1>Demo</h1>');
-	expect((await call(CHANNELS.savePrototype, 'demo', 'v1')).ok).toBe(true);
+	expect((await call(CHANNELS.openPrototype, 'demo', 'v1')).ok).toBe(true);
 };
 const JPEG = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 7, 7, 7]);
 /** Build on that prototype, from `from`: how codebase work is started from the window. */
@@ -642,17 +642,32 @@ describe('prototypes', () => {
 			await call(CHANNELS.createPrototype, 'demo', 'Demo', 'A list', { root: product, branch: 'develop' });
 		};
 
-		it('says when its source and page were last written, for what watches a build Claude Code does', async () => {
+		it('saves a build Claude Code made, once: never before it is built, and again only for the next build', async () => {
 			await made();
-			const none = await call(CHANNELS.prototypeProgress, 'demo', 'v1');
-			expect(none).toEqual({ ok: true, value: { sourceAt: null, pageAt: null } });
-			writeFileSync(join(home, 'prototype', 'demo', 'v1.tsx'), 'export default () => null;');
-			const written = (await call(CHANNELS.prototypeProgress, 'demo', 'v1')).value as { sourceAt: number | null; pageAt: number | null };
-			expect(written.pageAt).toBeNull();
-			expect(Math.abs((written.sourceAt as number) - Date.now())).toBeLessThan(10_000);
-			writeFileSync(join(home, 'prototype', 'demo', 'v1.html'), '<html></html>');
-			expect(((await call(CHANNELS.prototypeProgress, 'demo', 'v1')).value as { pageAt: number }).pageAt).toBeGreaterThan(0);
-			expect((await call(CHANNELS.prototypeProgress, '../x', 'v1')).ok).toBe(false);
+			const source = join(home, 'prototype', 'demo', 'v1.tsx');
+			const built = join(home, 'prototype', 'demo', 'v1.html');
+			const saveBuilt = async () => (await call(CHANNELS.saveBuilt, 'demo', 'v1')).value;
+			/** Written `at` seconds from now, as the agent writes a source and its build writes the page, each after the last. */
+			const start = Math.floor(Date.now() / 1000);
+			const write = (file: string, text: string, at: number) => {
+				writeFileSync(file, text);
+				utimesSync(file, start + at, start + at);
+			};
+			const sourceSaved = () => readFileSync(join(design, 'projects', 'demo', 'prototypes', 'v1.tsx'), 'utf8');
+			expect(await saveBuilt()).toBe('waiting');
+			write(source, "import { Hello } from 'x';\nexport default () => <Hello />;\n", 100);
+			expect(await saveBuilt()).toBe('waiting');
+			write(built, '<html>built</html>', 101);
+			expect(await saveBuilt()).toBe('saved');
+			expect(sourceSaved()).toContain('<Hello />');
+			// Built and saved: nothing new until the agent changes it, and nothing while that change is not built yet.
+			expect(await saveBuilt()).toBe('waiting');
+			write(source, "import { Hello } from 'x';\nexport default () => <><Hello /><p>more</p></>;\n", 200);
+			expect(await saveBuilt()).toBe('waiting');
+			write(built, '<html>built again</html>', 201);
+			expect(await saveBuilt()).toBe('saved');
+			expect(sourceSaved()).toContain('more');
+			expect((await call(CHANNELS.saveBuilt, '../x', 'v1')).ok).toBe(false);
 		});
 
 		it('refuses, starting nothing, when the design repository has no builder’s guide to put in the task', async () => {
@@ -787,11 +802,11 @@ describe('prototypes', () => {
 		expect(made).toMatchObject({ ok: true, value: { name: 'v1', branch: 'prototype/demo/v1' } });
 		expect(readFileSync(join(design, 'projects', 'demo', 'brief.md'), 'utf8')).toBe('# Demo\n\nA list\n');
 
-		// Nothing to save until the agent has written the page.
-		expect((await call(CHANNELS.savePrototype, 'demo', 'v1')).ok).toBe(false);
+		// Nothing to open, or save, until the agent has written the page; opened, it is saved.
+		expect((await call(CHANNELS.openPrototype, 'demo', 'v1')).ok).toBe(false);
 		mkdirSync(join(home, 'prototype', 'demo'), { recursive: true });
 		writeFileSync(join(home, 'prototype', 'demo', 'v1.html'), '<h1>Demo</h1>');
-		expect((await call(CHANNELS.savePrototype, 'demo', 'v1')).ok).toBe(true);
+		expect((await call(CHANNELS.openPrototype, 'demo', 'v1')).ok).toBe(true);
 		expect(readFileSync(join(design, 'projects', 'demo', 'prototypes', 'v1.html'), 'utf8')).toBe('<h1>Demo</h1>');
 
 		const shown = await call(CHANNELS.openPrototype, 'demo', 'v1');
@@ -802,7 +817,7 @@ describe('prototypes', () => {
 
 		// With the states the page says it has, for the bar to offer; the page is the same in each, asked for in it.
 		writeFileSync(join(home, 'prototype', 'demo', 'v1.html'), '<meta name="dsnr-states" content="default,empty"><h1>Demo</h1>');
-		expect((await call(CHANNELS.savePrototype, 'demo', 'v1')).ok).toBe(true);
+		expect((await call(CHANNELS.openPrototype, 'demo', 'v1')).ok).toBe(true);
 		const again = (await call(CHANNELS.openPrototype, 'demo', 'v1')).value as { url: string; states: string[] };
 		expect(again.states).toEqual(['default', 'empty']);
 		expect(await (await fetch(`${again.url}?state=empty`)).text()).toContain('<h1>Demo</h1>');
@@ -822,7 +837,7 @@ describe('prototypes', () => {
 			await call(CHANNELS.createPrototype, 'demo', 'Demo', 'A list', { root: product, branch: 'develop' });
 			mkdirSync(join(home, 'prototype', 'demo'), { recursive: true });
 			writeFileSync(join(home, 'prototype', 'demo', 'v1.html'), '<h1>Demo</h1>');
-			expect((await call(CHANNELS.savePrototype, 'demo', 'v1')).ok).toBe(true);
+			expect((await call(CHANNELS.openPrototype, 'demo', 'v1')).ok).toBe(true);
 			// It runs on its own; the screen asks how it is going.
 			let status = (await call(CHANNELS.publishedPage, 'demo', 'v1')).value as { state: string; why?: string };
 			for (let i = 0; i < 50 && status.state === 'publishing'; i++) {
@@ -846,9 +861,9 @@ describe('prototypes', () => {
 			await call(CHANNELS.createPrototype, 'demo', 'Demo', 'A list', { root: product, branch: 'develop' });
 			mkdirSync(join(home, 'prototype', 'demo'), { recursive: true });
 			writeFileSync(join(home, 'prototype', 'demo', 'v1.html'), '<h1>Demo</h1>');
-			await call(CHANNELS.savePrototype, 'demo', 'v1');
+			await call(CHANNELS.openPrototype, 'demo', 'v1');
 			// Saved again while the first publish runs.
-			await call(CHANNELS.savePrototype, 'demo', 'v1');
+			await call(CHANNELS.openPrototype, 'demo', 'v1');
 			for (let i = 0; i < 50 && asked() < 2; i++) await new Promise((r) => setTimeout(r, 10));
 			expect(asked()).toBe(2);
 		});
@@ -929,7 +944,7 @@ describe('prototypes', () => {
 			mkdirSync(join(home, 'prototype', 'demo'), { recursive: true });
 			writeFileSync(join(home, 'prototype', 'demo', 'v1.html'), '<h1>Demo</h1>');
 			// Saved while signed out, so nothing was published by itself.
-			await call(CHANNELS.savePrototype, 'demo', 'v1');
+			await call(CHANNELS.openPrototype, 'demo', 'v1');
 			githubState = { state: 'signedIn', user: { login: 'noah', name: 'Noah' } };
 			expect((await call(CHANNELS.publishPage, 'demo', 'v1')).value).toEqual({ state: 'publishing' });
 			let status = (await call(CHANNELS.publishedPage, 'demo', 'v1')).value as { state: string; why?: string };
@@ -1172,7 +1187,7 @@ describe('prototypes', () => {
 				join(home, 'prototype', 'demo', `${name}.tsx`),
 				"import 'x/style.css';\nimport { Hello } from 'x';\nexport default () => <Hello />;\n",
 			);
-			expect((await call(CHANNELS.savePrototype, 'demo', name)).ok).toBe(true);
+			expect((await call(CHANNELS.openPrototype, 'demo', name)).ok).toBe(true);
 		}
 		const kept = readdirSync(join(design, 'projects', '_shared'));
 		expect(kept).toHaveLength(1);
@@ -1410,7 +1425,7 @@ describe('prototypes', () => {
 		await call(CHANNELS.createPrototype, 'demo', 'Demo', 'A list', { root: product, branch: 'develop' });
 		mkdirSync(join(home, 'prototype', 'demo'), { recursive: true });
 		writeFileSync(join(home, 'prototype', 'demo', 'v1.tsx'), "import { Nope } from 'not-installed';\nexport default () => <Nope />;\n");
-		const saved = await call(CHANNELS.savePrototype, 'demo', 'v1');
+		const saved = await call(CHANNELS.openPrototype, 'demo', 'v1');
 		expect(saved.ok).toBe(false);
 		expect(saved.error).toMatch(/did not build[\s\S]*not-installed/);
 		expect(existsSync(join(design, 'projects', 'demo', 'prototypes', 'v1.html'))).toBe(false);
@@ -1429,7 +1444,7 @@ describe('prototypes', () => {
 			['../demo', 'v1'],
 		]) {
 			expect((await call(CHANNELS.openPrototype, id, name)).ok).toBe(false);
-			expect((await call(CHANNELS.savePrototype, id, name)).ok).toBe(false);
+			expect((await call(CHANNELS.openPrototype, id, name)).ok).toBe(false);
 		}
 	});
 });

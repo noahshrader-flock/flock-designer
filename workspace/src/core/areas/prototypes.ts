@@ -1,5 +1,5 @@
 import type { CallsDeps } from '../compose';
-import { existsSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { folderName } from '../../shared/brief';
 import type { BuildInCodebase, CommentRef, JobEnd, OpenedPrototype, PrototypeAddressed, PrototypeReadiness } from '../../shared/contract';
@@ -189,24 +189,24 @@ export const prototypesArea = (d: CallsDeps) => {
 			if (afterRun(end) === 'stopped') return { state: 'stopped' };
 			return { state: 'done', value: await finishPrototypeChange(comment) };
 		},
-		savePrototype: async (projectId: string, name: string): Promise<null> => {
-			await work.save(projectId, name);
-			deploys.page(projectId, name);
-			return null;
-		},
-		prototypeProgress: (projectId: string, name: string) => {
-			const at = (file: string): number | null => (existsSync(file) ? statSync(file).mtimeMs : null);
-			return { sourceAt: at(work.sourceFile(projectId, name)), pageAt: at(work.file(projectId, name)) };
+		saveBuilt: async (projectId: string, name: string): Promise<'saved' | 'waiting'> => {
+			const saved = await work.saveBuilt(projectId, name);
+			if (saved === 'saved') deploys.page(projectId, name);
+			return saved;
 		},
 		openPrototype: async (projectId: string, name: string): Promise<OpenedPrototype> => {
 			await finishPrototypeChanges(projectId);
 			const html = await prototypePage(projectId, name);
 			if (html === null) throw new Error('This prototype has no page yet.');
-			// A page built here but never saved (the screen was left, or gave up, while the agent finished) is saved
-			// now: what this machine shows is what reviewers get, and no finished page is stranded on one machine.
+			// A page built here but never saved (the screen was left, or gave up, while the agent finished) is saved and
+			// published now, as every save is: what this machine shows is what reviewers get, and no finished page is
+			// stranded on one machine.
 			const local = work.file(projectId, name);
 			const path = prototypePagePath(projectId, name);
-			if (existsSync(local) && !agentBusy() && (await store.records().read(path)) !== html) await work.keep(projectId, name, html);
+			if (existsSync(local) && !agentBusy() && (await store.records().read(path)) !== html) {
+				await work.keep(projectId, name, html);
+				deploys.page(projectId, name);
+			}
 			return { url: await servePrototype(projectId, name, html), states: statesOf(html) };
 		},
 		ensureCovers: () => once('covers', async () => (agentBusy() ? [] : ensureCovers(coverDeps, builtHere(prototypesRoot)))),
