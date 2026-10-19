@@ -1,7 +1,7 @@
 import type { Check, PullRequest } from '../codeHost/changeRequests';
 import type { AxeRun } from '../shared/accessibility';
 import type { Drawn, Mode, Vary } from './services/designSystem/componentTokens';
-import type { AgentSession } from './services/agent/editor';
+import type { AgentId } from './services/agent/agent';
 
 /** What each story file drew, in the order given; null for one that would not draw. */
 export type Measure = (
@@ -49,13 +49,8 @@ export interface Ports {
 	copy(text: string): Promise<void>;
 	/** Follows redirects; throws when nothing answers within a few seconds. */
 	httpStatus(url: string): Promise<number>;
-	editor: {
-		find(): string | null;
-		openFolder(editor: string, folder: string): Promise<void>;
-		openPrompt(editor: string, root: string, prompt: string): Promise<void>;
-		openSession(editor: string, session: AgentSession, then: () => void): Promise<void>;
-	};
-	claude(): string;
+	/** Opens the agent's own window in `root` with `prompt` typed in; false when this editor has none for it. */
+	agentWindow: { open(agent: AgentId, root: string, prompt: string): Promise<boolean> };
 	shareTools(root: string): ShareTools;
 	headless: Headless;
 }

@@ -3,38 +3,37 @@ import { existsSync, readdirSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { findOnPath } from '../platform/paths';
-import type { AgentReadiness, AgentStatus, RunLogLine } from '../../../shared/contract';
+import type { AgentReadiness } from '../../../shared/contract';
 import { GROUP, ProcessFailed, endGroup, runFile } from '../platform/process';
+import { startCommand } from './terminal';
 
 /**
  * No bundled credentials, prompts or restated standards, since the repository holds its own instructions: that keeps the
  * workflow usable without DSNR.
  */
 
-export const AGENT_BUSY = 'The agent is already working on something else. Wait for it to finish, then try again.';
+export type AgentId = 'claude-code';
 
-export interface AgentExtras {
-	/** Folders outside the repository the agent may also write to: the project's records in the design repository. */
-	addDirs?: string[];
-	/**
-	 * Folders the agent may read but never change: the product repository, for a prototype that
-	 * should look like it. Not working directories, so nothing there is edited even in accept-edits mode,
-	 * and an edit rule denies it outright as well.
-	 */
-	readOnly?: string[];
-	/** A prototype's key, carried on its status. */
-	work?: string;
-	/** Chosen by the app, so the person can continue the conversation in their editor afterwards. */
-	session?: string;
-	name?: string;
+/** `said`: what it changed, or why not. */
+export interface RunEnded {
+	ok: boolean;
+	said: string;
 }
 
-export interface AgentAdapter {
+/** An agent DSNR hands work to. What names one agent, its commands and its words, is in its adapter and nowhere else. */
+export interface Agent {
+	readonly id: AgentId;
 	readonly name: string;
-	/** Never a shell string. */
-	argvFor(task: string, extras?: AgentExtras): string[];
-	/** Without one, text is passed through. */
-	formatter?(): (chunk: string) => string[];
+	/** The bare name when it is found nowhere, whose failure says what to do. */
+	locate(): string;
+	/** Read only: what it says of its sign-in, never the sign-in itself. */
+	readiness(): Promise<AgentReadiness>;
+	/** Said when it is not ready, and nothing is handed over. */
+	notReady: { missing: string; signedOut: string };
+	/** Starts it in `root` with `prompt` typed in, for a terminal, when its own window is not in this editor. */
+	terminalCommand(root: string, prompt: string): string;
+	/** Only an agent that can be held to editing `cwd`, and nothing it may only read, declares it. */
+	runUnattended?(cwd: string, task: string, options: { readOnly: string[] }): Promise<RunEnded>;
 }
 
 /**
@@ -120,6 +119,24 @@ const settingsFor = (readOnly: string[]): string =>
 			: {}),
 	});
 
+/** Never a shell string. */
+export const claudeArgv = (claude: string, task: string, readOnly: string[]): string[] => [
+	claude,
+	'-p',
+	task,
+	'--output-format',
+	'stream-json',
+	'--verbose',
+	'--permission-mode',
+	'acceptEdits',
+	'--settings',
+	settingsFor(readOnly),
+	'--allowedTools',
+	ALLOWED_TOOLS,
+	'--disallowedTools',
+	DISALLOWED_TOOLS,
+];
+
 /** Bounded, so a hung check never holds anything up. */
 type RunCommand = (file: string, args: string[]) => Promise<string>;
 const runCommand: RunCommand = (file, args) =>
@@ -132,298 +149,82 @@ const runCommand: RunCommand = (file, args) =>
 		},
 	);
 
-/**
- * Only `claude auth status`'s yes or no is read, never the sign-in itself. No answer (an older Claude Code, a slow
- * machine) does not stand in the way: the run itself still reports a real failure.
- */
-export const agentReadiness = async (locate: () => string = () => locateClaude(), run: RunCommand = runCommand): Promise<AgentReadiness> => {
-	const bin = locate();
-	let out: string;
-	try {
-		out = await run(bin, ['auth', 'status', '--json']);
-	} catch (err) {
-		// The bare name is what locating falls back to when it found nothing anywhere.
-		if ((err as NodeJS.ErrnoException).code === 'ENOENT') return { state: 'missing' };
-		return { state: 'unknown' };
-	}
-	try {
-		const status = JSON.parse(out) as { loggedIn?: unknown };
-		if (status.loggedIn === true) return { state: 'ready' };
-		if (status.loggedIn === false) return { state: 'signedOut' };
-	} catch {
-		// Not the JSON this was asked for.
-	}
-	return { state: 'unknown' };
-};
-
-/** A chunk can end mid-line, so the unfinished tail is kept for the next one. */
-export const claudeStreamFormatter = (): ((chunk: string) => string[]) => {
-	let tail = '';
-	// The run's closing event repeats the agent's last message verbatim, so it is said once.
-	let lastSaid = '';
-	const describe = (line: string): string[] => {
-		let e: { type?: string; message?: { content?: unknown }; subtype?: string; is_error?: boolean; result?: string };
-		try {
-			e = JSON.parse(line);
-		} catch {
-			return line.trim() ? [line.trim()] : [];
-		}
-		if (e.type === 'assistant' && Array.isArray(e.message?.content)) {
-			return (e.message.content as Array<Record<string, unknown>>).flatMap((b) => {
-				if (b.type === 'text' && typeof b.text === 'string') return b.text.trim() ? [(lastSaid = b.text.trim())] : [];
-				if (b.type === 'tool_use') {
-					const input = (b.input ?? {}) as Record<string, unknown>;
-					const what = input.file_path ?? input.path ?? input.command ?? input.pattern ?? '';
-					return [`→ ${String(b.name)} ${String(what)}`.trim()];
-				}
-				return [];
-			});
-		}
-		// The agent's last words say what it changed or why it changed nothing; without them a considered refusal would
-		// look exactly like success.
-		if (e.type === 'result') {
-			const said = typeof e.result === 'string' ? e.result.trim() : '';
-			if (e.is_error) return [`Stopped: ${said || e.subtype || 'error'}`];
-			return said && said !== lastSaid ? [said, 'Finished.'] : ['Finished.'];
-		}
-		return [];
-	};
-	return (chunk) => {
-		const parts = (tail + chunk).split('\n');
-		tail = parts.pop() ?? '';
-		return parts.flatMap(describe);
-	};
-};
-
-export const claudeCodeAdapter: AgentAdapter = {
-	name: 'Claude Code',
-	argvFor: (task, extras) => [
-		locateClaude(),
-		'-p',
-		task,
-		'--output-format',
-		'stream-json',
-		'--verbose',
-		'--permission-mode',
-		'acceptEdits',
-		'--settings',
-		settingsFor(extras?.readOnly ?? []),
-		'--allowedTools',
-		ALLOWED_TOOLS,
-		'--disallowedTools',
-		DISALLOWED_TOOLS,
-		...(extras?.session ? ['--session-id', extras.session] : []),
-		...(extras?.name ? ['--name', extras.name] : []),
-		// Last: it takes a list, and would swallow anything after it.
-		...(extras?.addDirs?.length ? ['--add-dir', ...extras.addDirs] : []),
-	],
-	formatter: claudeStreamFormatter,
-};
-
 /** How long a run to its end may take before it is stopped: a value's change takes under a minute. */
 const RUN_TO_END_MS = 5 * 60_000;
 
-/** `said`: what it changed, or why not. */
-export interface RunEnded {
-	ok: boolean;
-	said: string;
-}
-
-/**
- * For work in a scratch copy nobody watches, so it is apart from the person's one run at a time (`AgentRunner`), and
- * neither waits on the other.
- */
-export const runToEnd = (cwd: string, task: string, extras: AgentExtras = {}, deps: AgentDeps = defaultAgentDeps): Promise<RunEnded> =>
-	new Promise((done) => {
-		const [file, ...args] = deps.adapter.argvFor(task, extras);
-		if (file === undefined) return done({ ok: false, said: 'The agent adapter produced no command.' });
-		let out = '';
-		let child: ChildProcess;
-		try {
-			child = deps.spawnProcess(file, args, { ...GROUP, cwd, shell: false, stdio: ['ignore', 'pipe', 'pipe'], env: process.env });
-		} catch (err) {
-			return done({ ok: false, said: (err as Error).message });
-		}
-		const timer = setTimeout(() => void endGroup(child), RUN_TO_END_MS);
-		child.stdout?.on('data', (d: Buffer) => (out += d.toString()));
-		// Read as it comes, or a run that says much there would wait on it; its last words are kept, for a run that fails.
-		let complained = '';
-		child.stderr?.on('data', (d: Buffer) => (complained = `${complained}${d.toString()}`.slice(-2000)));
-		child.on('error', (err) => done({ ok: false, said: `Could not run ${deps.adapter.name}: ${err.message}.` }));
-		child.on('exit', (code) => {
-			clearTimeout(timer);
-			// The stream's closing event says how it ended, and repeats what the agent said last.
-			const result = out
-				.split('\n')
-				.map((line) => {
-					try {
-						return JSON.parse(line) as { type?: string; is_error?: boolean; result?: string };
-					} catch {
-						return null;
-					}
-				})
-				.find((e) => e?.type === 'result');
-			const said = typeof result?.result === 'string' ? result.result.trim() : '';
-			done({
-				ok: code === 0 && result?.is_error === false,
-				said: said || complained.trim() || `${deps.adapter.name} ended without saying what it did.`,
-			});
-		});
-	});
-
-export interface AgentDeps {
+export interface ClaudeDeps {
+	locate: () => string;
+	run: RunCommand;
 	spawnProcess: typeof spawn;
-	adapter: AgentAdapter;
 }
 
-export const defaultAgentDeps: AgentDeps = {
-	spawnProcess: spawn,
-	adapter: claudeCodeAdapter,
-};
+const defaultClaudeDeps: ClaudeDeps = { locate: () => locateClaude(), run: runCommand, spawnProcess: spawn };
 
-export type AgentEnd = { state: 'finished'; exitCode: number } | { state: 'stopped' } | { state: 'unavailable'; detail: string };
-
-/** Throws, in words, unless the run finished with code 0 or was stopped. */
-export const afterRun = (end: AgentEnd): 'finished' | 'stopped' => {
-	if (end.state === 'stopped') return 'stopped';
-	if (end.state === 'unavailable') throw new Error(end.detail);
-	if (end.exitCode !== 0) throw new Error(`The agent stopped with code ${end.exitCode}.`);
-	return 'finished';
-};
-
-export class AgentRunner {
-	private child: ChildProcess | null = null;
-	private ending: Promise<AgentEnd> | null = null;
-	private stopping = false;
-	private current: AgentStatus = { state: 'idle' };
-	private work: string | null = null;
-	/** A checkout must not change branch under the run, and only its own conversation is taken over. */
-	private root: string | null = null;
-	private session: string | null = null;
-	/** Kept here so a screen that was left and opened again can pick up where it was. */
-	private recent: string[] = [];
-
-	constructor(
-		private readonly onLog: (line: RunLogLine) => void,
-		private readonly deps: AgentDeps = defaultAgentDeps,
-	) {}
-
-	recentLines(): { work: string | null; lines: string[] } {
-		return { work: this.work, lines: [...this.recent] };
-	}
-
-	private keep(text: string): void {
-		this.recent.push(...text.split('\n').filter((l) => l.trim() !== ''));
-		if (this.recent.length > 200) this.recent.splice(0, this.recent.length - 200);
-	}
-
-	status(): AgentStatus {
-		return this.current;
-	}
-
+export const claudeCode = (deps: ClaudeDeps = defaultClaudeDeps): Agent => ({
+	id: 'claude-code',
+	name: 'Claude Code',
+	locate: deps.locate,
 	/**
-	 * How to build lives in the repository's own instructions; restating it here would make a second source that drifts.
+	 * Only `claude auth status`'s yes or no is read. No answer (an older Claude Code, a slow machine) does not stand in the
+	 * way: what it is handed still says a real failure.
 	 */
-	taskFor(projectId: string, task: string): string {
-		return [`Project: ${projectId}`, "Read this repository's own agent instructions and follow them.", '', task].join('\n');
-	}
-
-	/** Resolves when the run's process has exited, never guessed. */
-	run(root: string, projectId: string, task: string, extras?: AgentExtras): Promise<AgentEnd> {
-		const started = this.start(root, projectId, task, extras);
-		if (started.state === 'unavailable') return Promise.resolve({ state: 'unavailable', detail: started.detail });
-		return this.ending as Promise<AgentEnd>;
-	}
-
-	/** Null when no run for `work` is going on. */
-	ended(work: string): Promise<AgentEnd> | null {
-		return this.current.state === 'running' && this.work === work ? this.ending : null;
-	}
-
-	/**
-	 * One run at a time. The same work asked again (a screen opened twice, Try again) joins the run that is going;
-	 * anything else is refused, never handed that run, or its screen would wait on someone else's work and report its own
-	 * as done. Decided here, where nothing can start in between, rather than by each caller checking first.
-	 */
-	start(root: string, projectId: string, task: string, extras?: AgentExtras): AgentStatus {
-		if (this.current.state === 'running') {
-			if (extras?.work !== undefined && extras.work === this.work) return this.current;
-			throw new Error(AGENT_BUSY);
-		}
-		const argv = this.deps.adapter.argvFor(this.taskFor(projectId, task), extras);
-		const [file, ...args] = argv;
-		if (file === undefined) {
-			this.current = { state: 'unavailable', detail: 'The agent adapter produced no command.' };
-			return this.current;
-		}
-
-		let child: ChildProcess;
+	readiness: async () => {
+		let out: string;
 		try {
-			child = this.deps.spawnProcess(file, args, {
-				...GROUP,
-				cwd: root,
-				shell: false,
-				stdio: ['ignore', 'pipe', 'pipe'],
-				env: process.env,
-			});
+			out = await deps.run(deps.locate(), ['auth', 'status', '--json']);
 		} catch (err) {
-			this.current = { state: 'unavailable', detail: (err as Error).message };
-			return this.current;
+			// The bare name is what locating falls back to when it found nothing anywhere.
+			if ((err as NodeJS.ErrnoException).code === 'ENOENT') return { state: 'missing' };
+			return { state: 'unknown' };
 		}
-
-		this.child = child;
-		this.stopping = false;
-		let end: (how: AgentEnd) => void = () => undefined;
-		this.ending = new Promise<AgentEnd>((resolve) => (end = resolve));
-		this.work = extras?.work ?? null;
-		this.root = root;
-		this.session = extras?.session ?? null;
-		this.recent = [];
-		this.current = { state: 'running', startedAt: new Date().toISOString(), work: this.work };
-
-		const format = this.deps.adapter.formatter?.();
-		child.stdout?.on('data', (d: Buffer) => {
-			if (!format) {
-				this.keep(d.toString());
-				return this.onLog({ commandId: 'agent', stream: 'stdout', text: d.toString() });
+		try {
+			const status = JSON.parse(out) as { loggedIn?: unknown };
+			if (status.loggedIn === true) return { state: 'ready' };
+			if (status.loggedIn === false) return { state: 'signedOut' };
+		} catch {
+			// Not the JSON this was asked for.
+		}
+		return { state: 'unknown' };
+	},
+	notReady: {
+		missing: 'Claude Code is not installed. Install it from claude.com/claude-code, sign in, then start again.',
+		signedOut: 'Claude Code is not signed in. Sign in in the Claude Code panel, or by running claude in a terminal, then start again.',
+	},
+	terminalCommand: (root, prompt) => startCommand(deps.locate(), root, prompt),
+	runUnattended: (cwd, task, { readOnly }) =>
+		new Promise((done) => {
+			const [file, ...args] = claudeArgv(deps.locate(), task, readOnly) as [string, ...string[]];
+			let out = '';
+			let child: ChildProcess;
+			try {
+				child = deps.spawnProcess(file, args, { ...GROUP, cwd, shell: false, stdio: ['ignore', 'pipe', 'pipe'], env: process.env });
+			} catch (err) {
+				return done({ ok: false, said: (err as Error).message });
 			}
-			for (const text of format(d.toString())) {
-				this.keep(text);
-				this.onLog({ commandId: 'agent', stream: 'stdout', text: `${text}\n` });
-			}
-		});
-		child.stderr?.on('data', (d: Buffer) => this.onLog({ commandId: 'agent', stream: 'stderr', text: d.toString() }));
-		child.on('error', (err) => {
-			this.child = null;
-			this.ending = null;
-			const detail = `Could not run ${this.deps.adapter.name}: ${err.message}. Is it installed and on PATH?`;
-			this.current = { state: 'unavailable', detail };
-			end({ state: 'unavailable', detail });
-		});
-		child.on('exit', (code) => {
-			this.child = null;
-			this.ending = null;
-			// A crash and a clean finish are both "finished" with a code. The caller
-			// decides what a non-zero code means; this does not editorialize.
-			this.current = { state: 'finished', exitCode: code ?? -1, work: this.work };
-			end(this.stopping ? { state: 'stopped' } : { state: 'finished', exitCode: code ?? -1 });
-		});
-
-		return this.current;
-	}
-
-	runningIn(root: string): boolean {
-		return this.current.state === 'running' && this.root === root;
-	}
-
-	runningSession(): string | null {
-		return this.current.state === 'running' ? this.session : null;
-	}
-
-	/** The status says finished once the run has ended (the exit handler), not before. */
-	stop(): Promise<void> {
-		if (!this.child) return Promise.resolve();
-		this.stopping = true;
-		return endGroup(this.child);
-	}
-}
+			const timer = setTimeout(() => void endGroup(child), RUN_TO_END_MS);
+			child.stdout?.on('data', (d: Buffer) => (out += d.toString()));
+			// Read as it comes, or a run that says much there would wait on it; its last words are kept, for a run that fails.
+			let complained = '';
+			child.stderr?.on('data', (d: Buffer) => (complained = `${complained}${d.toString()}`.slice(-2000)));
+			child.on('error', (err) => done({ ok: false, said: `Could not run Claude Code: ${err.message}.` }));
+			child.on('exit', (code) => {
+				clearTimeout(timer);
+				// The stream's closing event says how it ended, and repeats what the agent said last.
+				const result = out
+					.split('\n')
+					.map((line) => {
+						try {
+							return JSON.parse(line) as { type?: string; is_error?: boolean; result?: string };
+						} catch {
+							return null;
+						}
+					})
+					.find((e) => e?.type === 'result');
+				const said = typeof result?.result === 'string' ? result.result.trim() : '';
+				done({
+					ok: code === 0 && result?.is_error === false,
+					said: said || complained.trim() || 'Claude Code ended without saying what it did.',
+				});
+			});
+		}),
+});

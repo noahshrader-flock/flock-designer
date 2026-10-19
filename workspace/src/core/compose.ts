@@ -5,7 +5,7 @@ import { reachLine, tokenChanges, valueChanges } from '../shared/processChanges'
 import { storyComponent } from '../shared/valueNames';
 import { type Check, type EventSink, arg } from './handle';
 import type { Ports } from './ports';
-import { AGENT_BUSY, AgentRunner, runToEnd } from './services/agent/agent';
+import type { Agent } from './services/agent/agent';
 import { classify } from './services/projects/branchProjects';
 import { syncBranches } from './services/publishing/branchSync';
 import type { CheckoutMemory } from './services/projects/checkoutMemory';
@@ -22,7 +22,6 @@ import { designStore } from './services/publishing/designStore';
 import { syncRecords } from './services/publishing/designSync';
 import { DesignSystemsMemory } from './services/designSystem/designSystems';
 import { recordsRootFor } from './services/projects/discovery';
-import { SessionMemory } from './services/agent/editor';
 import { isRepository, readCheckout } from './services/platform/git';
 import type { GitHubAccount } from '../codeHost/github';
 import { Installer } from './services/codebase/install';
@@ -54,7 +53,8 @@ export interface CallsContext {
 	ports: Ports;
 	opened: OpenedCheckouts;
 	runtime: RuntimeManager;
-	agent: AgentRunner;
+	/** The one work is handed to. */
+	agent: Agent;
 	share: ShareRunner;
 	github: GitHubAccount;
 	designRepo: DesignRepo;
@@ -63,7 +63,6 @@ export interface CallsContext {
 	/** The app's own folder, never a repository. */
 	prototypesRoot: string;
 	prototypeServer: PrototypeServer;
-	sessions: SessionMemory;
 	installer: Installer;
 	designLibrary?: DesignLibrary;
 	designSystems: DesignSystemsMemory;
@@ -92,7 +91,6 @@ export const composeCore = ({
 	onPublishStatus,
 	prototypesRoot,
 	prototypeServer,
-	sessions,
 	installer,
 	designLibrary,
 	designSystems,
@@ -216,7 +214,10 @@ export const composeCore = ({
 	const valueAgent = new ValueAgent({
 		system: shownSystem,
 		tokens: componentTokens,
-		run: (cwd, task, readOnly) => runToEnd(cwd, task, { readOnly }),
+		run: (cwd, task, readOnly) => {
+			if (!agent.runUnattended) throw new Error(`Changing a value in words runs on its own, which ${agent.name} does not do here.`);
+			return agent.runUnattended(cwd, task, { readOnly });
+		},
 		readStandard: (path) => readSkillText(path),
 	});
 	const componentVariants = new ComponentVariants({
@@ -256,18 +257,10 @@ export const composeCore = ({
 	const voiceBranches = new VoiceBranches(branchDeps('voice'));
 
 	const codebase = codebaseWork({
-		agentIn: (canonical) => agent.runningIn(canonical),
 		records: (projectId) => work.records(projectId),
 		login: signedInLogin,
 		written,
 	});
-
-	/** Starting the agent is the runner's to refuse; this is for what must wait for it. */
-	const agentBusy = (): boolean => agent.status().state === 'running';
-	/** For what writes something before starting the agent: nothing is left behind for a run that cannot start. */
-	const refuseWhileBusy = (): void => {
-		if (agentBusy()) throw new Error(AGENT_BUSY);
-	};
 
 	const designClone = (): string | null => {
 		const trusted = trustedRecords();
@@ -290,7 +283,7 @@ export const composeCore = ({
 	const servePrototype = (projectId: string, name: string, html: string): Promise<string> =>
 		prototypeServer.servePage(`${projectId}/${name}`, withPageTheme(html), work.sharedText);
 	/** This machine's newest build first (built again when its source changed), then the saved one. */
-	const prototypePage = (projectId: string, name: string): Promise<string | null> => work.page(projectId, name, agentBusy());
+	const prototypePage = (projectId: string, name: string): Promise<string | null> => work.page(projectId, name);
 
 	// Whether a version's page is on the site is worked out here, so the window never hands this an address to open.
 	const deploys = siteDeploys({ github, designClone });
@@ -305,7 +298,6 @@ export const composeCore = ({
 		github,
 		designRepo,
 		prototypesRoot,
-		sessions,
 		installer,
 		designSystems,
 		componentTokens,
@@ -330,8 +322,6 @@ export const composeCore = ({
 		componentVariants,
 		voiceBranches,
 		codebase,
-		agentBusy,
-		refuseWhileBusy,
 		readSkillText,
 		store,
 		work,

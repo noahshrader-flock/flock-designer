@@ -7,11 +7,10 @@ import { handoffReady, handoffVerdict } from '../../shared/handoff';
 import { DESIGN_MODE_COMMAND, routeIn, workLabel } from '../../shared/work';
 import { A11Y_COMMAND, productTarget, taskAccessibility } from '../services/accessibility/accessibilityBrief';
 import { accessibilityOf } from '../services/accessibility/accessibilityCheck';
-import { afterRun, agentReadiness } from '../services/agent/agent';
 import { type CheckoutParts, guidePart, handoffTask, buildInCodebaseTask } from '../services/agent/agentTasks';
 import { designSystemCheckout, readDescriptor } from '../services/projects/descriptor';
 import { recordsRootFor } from '../services/projects/discovery';
-import { handTask } from '../services/agent/editor';
+import { assertReady, handTask } from '../services/agent/handOver';
 import { HANDOFF_FILE, HANDOFF_SKILL, commandLine, leftAlone } from '../services/codebase/engineeringHandoff';
 import { branchTip, changedFiles, changedSince, fileAt, headCommit, readCheckout, remoteTip } from '../services/platform/git';
 import { continueWork, recordHandoff, recordPath, recordPreview, recordedWork } from '../services/projects/workRecords';
@@ -68,20 +67,8 @@ export const codebaseArea = (d: CallsDeps) => {
 	/** Where each handoff handed over here started, so its result is read from what changed since. */
 	const handoffs = new Map<string, { head: string; remote: string | null; branch: string }>();
 	const handoffKey = (canonical: string, projectId: string) => `${canonical}\n${projectId}`;
-	/** A run that says it finished but left changes uncommitted did not finish: anything shown from it would be half of it. */
-	const committedAll = async (canonical: string): Promise<void> => {
-		if (!(await readCheckout(canonical)).clean)
-			throw new Error(
-				'The agent stopped before it committed all of its work: there are changes in the checkout it did not commit. Continue in Claude Code to finish them.',
-			);
-	};
 	return {
 		checkout,
-		stopAgent: async () => {
-			await agent.stop();
-			return null;
-		},
-		agentReadiness: () => agentReadiness(),
 		// The branch comes from this person's own record, never from the window. Starts and returns: it takes minutes.
 		shareWork: async (workIn: CheckedCheckout, projectId: string, name: string) => {
 			const { canonical, descriptor, recordsRoot } = workIn;
@@ -130,6 +117,10 @@ export const codebaseArea = (d: CallsDeps) => {
 				setup,
 			};
 		},
+		agentReady: async (): Promise<null> => {
+			await assertReady(agent);
+			return null;
+		},
 		handOff: async (workIn: CheckedCheckout, projectId: string): Promise<Handed> => {
 			const { canonical, recordsRoot, descriptor } = workIn;
 			const codebaseRecord = await recordedWork(canonical, recordsRoot, descriptor, projectId, 'codebase');
@@ -139,9 +130,16 @@ export const codebaseArea = (d: CallsDeps) => {
 			const parts = await checkoutParts(canonical, projectId);
 			const missingRoute = codebaseRecord.route ? null : { skill: await readSkillText(ROUTE_SKILL), recordFile: recordPath(recordsRoot, projectId) };
 			const task = handoffTask({ skill, projectId, branch, gate: commandLine(descriptor.commands, 'handoff', projectId), missingRoute }, parts);
-			handoffs.set(handoffKey(canonical, projectId), { head: await headCommit(canonical), remote: await remoteTip(canonical, branch), branch });
-			const taskFile = join(work.dir(projectId), 'codebase-handoff.md');
-			return handTask(ports, canonical, { what: `Hand ${projectId} to engineering, on ${branch}.`, taskFile, task });
+			const { handed } = await handTask(ports, agent, async () => {
+				handoffs.set(handoffKey(canonical, projectId), { head: await headCommit(canonical), remote: await remoteTip(canonical, branch), branch });
+				return {
+					root: canonical,
+					what: `Hand ${projectId} to engineering, on ${branch}.`,
+					taskFile: join(work.dir(projectId), 'codebase-handoff.md'),
+					task,
+				};
+			});
+			return handed;
 		},
 		/** Done once HANDOFF.md is committed since it was handed over and nothing is left uncommitted: the agent's work is in. */
 		handoffResult: async (workIn: CheckedCheckout, projectId: string): Promise<HandoffResult> => {
@@ -162,14 +160,9 @@ export const codebaseArea = (d: CallsDeps) => {
 			const { canonical, recordsRoot, descriptor } = workIn;
 			const record = await recordedWork(canonical, recordsRoot, descriptor, projectId, name);
 			if ((await readCheckout(canonical)).branch !== record.branch) {
-				codebase.assertAgentNotHere(canonical);
 				written(await continueWork(canonical, recordsRoot, projectId, name, signedInLogin(), descriptor));
 			}
-			const going = agent.ended(record.branch);
-			if (going) {
-				if (afterRun(await going) === 'finished') await committedAll(canonical);
-			}
-			const uncommitted = going === null && !(await readCheckout(canonical)).clean;
+			const uncommitted = !(await readCheckout(canonical)).clean;
 			const result = await runtime.start(canonical, descriptor, DESIGN_MODE_COMMAND, projectId);
 			if (result.state === 'running') return { url: routeIn(result.url, record.route), uncommitted };
 			// `stopped` here means the process ended before it ever answered; its output is what was said.
@@ -184,28 +177,31 @@ export const codebaseArea = (d: CallsDeps) => {
 			const sourceFile = work.sourceFile(projectId, name);
 			const source = await work.sourceText(projectId, name);
 			const label = workLabel({ name });
-			// The branch first: nothing is written for the agent if the work cannot start (a dirty tree, work not found).
-			const { branch, started: continuing } = await codebase.of(workIn, projectId);
-			if (continuing) await codebase.resume(workIn, projectId, branch);
-			else await codebase.start(workIn, projectId, `From ${label} of the prototype`, from ?? undefined);
-			writeFileSync(pageFile, html);
-			if (source !== null) writeFileSync(sourceFile, source);
-			const task = buildInCodebaseTask(
-				{
-					skill,
-					routeSkill: await readSkillText(ROUTE_SKILL),
-					pageFile,
-					sourceFile: source !== null ? sourceFile : null,
-					auditFile: join(recordsRoot, projectId, `audit-${name}.md`),
-					recordFile: recordPath(recordsRoot, projectId),
-					name,
-					basedOn: (await work.record(projectId, name))?.basedOn,
-				},
-				// A check that cannot run leaves the findings out, never the move.
-				await checkoutParts(canonical, projectId, await prototypeAccessibility(projectId, name).catch(() => null)),
-			);
-			const taskFile = join(dirname(pageFile), `${name}-into-code.md`);
-			return handTask(ports, canonical, { what: buildInCodebaseLead({ label, projectId, continuing: continuing ? branch : null }), taskFile, task });
+			const { handed } = await handTask(ports, agent, async () => {
+				// The branch first: nothing is written for the agent if the work cannot start (a dirty tree, work not found).
+				const { branch, started: continuing } = await codebase.of(workIn, projectId);
+				if (continuing) await codebase.resume(workIn, projectId, branch);
+				else await codebase.start(workIn, projectId, `From ${label} of the prototype`, from ?? undefined);
+				writeFileSync(pageFile, html);
+				if (source !== null) writeFileSync(sourceFile, source);
+				const task = buildInCodebaseTask(
+					{
+						skill,
+						routeSkill: await readSkillText(ROUTE_SKILL),
+						pageFile,
+						sourceFile: source !== null ? sourceFile : null,
+						auditFile: join(recordsRoot, projectId, `audit-${name}.md`),
+						recordFile: recordPath(recordsRoot, projectId),
+						name,
+						basedOn: (await work.record(projectId, name))?.basedOn,
+					},
+					// A check that cannot run leaves the findings out, never the move.
+					await checkoutParts(canonical, projectId, await prototypeAccessibility(projectId, name).catch(() => null)),
+				);
+				const what = buildInCodebaseLead({ label, projectId, continuing: continuing ? branch : null });
+				return { root: canonical, what, taskFile: join(dirname(pageFile), `${name}-into-code.md`), task };
+			});
+			return handed;
 		},
 	};
 };

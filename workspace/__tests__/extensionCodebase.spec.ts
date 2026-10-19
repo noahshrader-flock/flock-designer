@@ -31,7 +31,7 @@ const world = (more: Record<string, unknown> = {}) => {
 	const api = {
 		agentReadiness: vi.fn(async () => ok({ state: 'ready' })),
 		listProjects: vi.fn(async () => ok([zone, prototypeOnly])),
-		handOff: vi.fn(async () => ok({ editor: true, command: null })),
+		handOff: vi.fn(async () => ok({ agent: 'Claude Code', editor: true, command: null })),
 		handoffResult: vi.fn(async () => ok({ state: 'waiting' } as HandoffResult)),
 		runLocally: vi.fn(async () => ok({ url: 'http://localhost:5173/zones', uncommitted: false })),
 		stopCommand: vi.fn(async () => ok({ state: 'stopped' })),

@@ -1,4 +1,3 @@
-import { basename } from 'node:path';
 import type { Work } from '../../../shared/contract';
 import { DESCRIPTOR_PATH, type WorkspaceDescriptor } from '../projects/descriptor';
 import { branchExists, ensureLocalBranch, hasFileAt, readCheckout } from '../platform/git';
@@ -10,26 +9,15 @@ export interface WorkCheckout {
 	readonly recordsRoot: string;
 }
 
-/** The branch is never changed under a running agent. */
 export const codebaseWork = ({
-	agentIn,
 	records,
 	login,
 	written,
 }: {
-	agentIn: (canonical: string) => boolean;
 	records: (projectId: string) => Promise<Work[]>;
 	login: () => string | null;
 	written: (work: Work) => Work;
 }) => {
-	const assertAgentNotHere = (canonical: string): void => {
-		if (agentIn(canonical)) {
-			throw new Error(
-				`The agent is working in ${basename(canonical)}, and this would change its branch. Wait for it to finish, or take it over, then try again.`,
-			);
-		}
-	};
-
 	/** Started when the branch is here or the work is recorded; Build then continues it rather than starting a second. */
 	const of = async ({ canonical, descriptor }: WorkCheckout, projectId: string) => {
 		const branch = codebaseBranchFor(descriptor, projectId);
@@ -46,7 +34,6 @@ export const codebaseWork = ({
 
 	const start = async (at: WorkCheckout, projectId: string, note: string, from?: string): Promise<Work> => {
 		const { canonical } = at;
-		assertAgentNotHere(canonical);
 		// Only ever a branch that exists here or on GitHub, so the window cannot pass git an option or a revision
 		// expression. One only on GitHub (as most are in a fresh clone) is made local, with nothing checked out.
 		if (from !== undefined) await ensureLocalBranch(canonical, from);
@@ -66,7 +53,6 @@ export const codebaseWork = ({
 	 */
 	const resume = async (at: WorkCheckout, projectId: string, branch: string): Promise<void> => {
 		const { canonical } = at;
-		assertAgentNotHere(canonical);
 		await ensureLocalBranch(canonical, branch);
 		if ((await readCheckout(canonical)).branch === branch) return;
 		// Before the checkout moves, not after: a branch without the setup would leave it somewhere DSNR cannot work.
@@ -76,5 +62,5 @@ export const codebaseWork = ({
 		await continueWork(canonical, at.recordsRoot, projectId, 'codebase', login(), at.descriptor);
 	};
 
-	return { assertAgentNotHere, of, start, resume };
+	return { of, start, resume };
 };

@@ -385,12 +385,12 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		return { version, made };
 	};
 
-	/** A source changed since its page was last built is built first, unless an agent is still writing it. */
-	const page = async (projectId: string, name: string, agentBusy: boolean): Promise<string | null> => {
+	/** A source changed since its page was last built is built first. */
+	const page = async (projectId: string, name: string): Promise<string | null> => {
 		const local = file(projectId, name);
 		const source = sourceFile(projectId, name);
 		const stale = existsSync(source) && (!existsSync(local) || statSync(source).mtimeMs > statSync(local).mtimeMs);
-		if (stale && !agentBusy) await buildPage(projectId, name);
+		if (stale) await buildPage(projectId, name);
 		if (existsSync(local)) return readFileSync(local, 'utf8');
 		return ctx.readDesignFile(prototypePagePath(projectId, name));
 	};

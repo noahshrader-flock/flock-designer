@@ -3,7 +3,7 @@ import { findChrome } from '../src/core/services/browser/chromeHeadless';
 import type { ComponentTokens } from '../src/core/services/designSystem/componentTokens';
 import { ValueSources } from '../src/core/services/designSystem/valueSources';
 import { ValueAgent } from '../src/core/services/designSystem/valueAgent';
-import { runToEnd } from '../src/core/services/agent/agent';
+import { claudeCode } from '../src/core/services/agent/agent';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type { ConnectedDesignSystem, ValueProperty, ValueSources as Answer } from '../src/shared/contract';
@@ -106,7 +106,7 @@ describeLibrary(agentMissing, REAL_FUI, 'the agent on Flock’s FUI', () => {
 				const agent = new ValueAgent({
 					system: () => system,
 					tokens,
-					run: (cwd, task, readOnly) => runToEnd(cwd, task, { readOnly }),
+					run: (cwd, task, readOnly) => claudeCode().runUnattended!(cwd, task, { readOnly }),
 					readStandard: async (path) => readFileSync(resolve(__dirname, '..', '..', path), 'utf8'),
 				});
 				const sources = new ValueSources({ tokens, previews, measure, agent });

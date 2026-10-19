@@ -190,9 +190,9 @@ review**.
 **New prototype** (the **+** in its title bar, **DSNR: New prototype**, or the panel's button) says first, before
 anything is asked, what stands in the way (no product open, Claude Code missing or signed out), then opens a dialog in
 the panel for the name, what it should explore (as many lines as it takes) and its folder, then says if the product's
-packages are not installed (with Install packages when it says how), and builds it from the branch the product is on,
-with the app's own build: its progress is a notification with Stop, the agent's log is in View › Output ›
-DSNR: Agent, and when it is saved its review opens. The command can also be given its answers
+packages are not installed (with Install packages when it says how), and hands its build to Claude Code in this window,
+from the branch the product is on, with the task typed in: press Enter there. DSNR saves it when it is built, and its
+picture appears in the list. The command can also be given its answers
 (`{ title, task, folder }`), as **DSNR: Open a prototype for review** can be given its review, so a keybinding or another
 extension can run them; called that way, a failure is also returned to the caller. The `.vsix` carries esbuild, which
 builds a prototype's page, for the machine it was packaged on.
@@ -275,8 +275,8 @@ there.
 starts in, or a list of rows (the icons at the right above them, remembered with the tab). **Assign folder…**, from a
 project's menu, its right-click menu or a review tab's menu, opens a dialog in the panel to put it in a folder, a new
 one, or none, with the same folder choice New prototype has; it uses the projects the panel already has, so it opens at
-once. The app's one setting, its theme, is VS Code's here; DSNR's one setting is where Claude Code opens what it is handed
-(`dsnr.claudeCode.location`, below).
+once. The app's one setting, its theme, is VS Code's here; DSNR's one setting is where an agent with a panel opens what it
+is handed (`dsnr.agent.location`, below; it was `dsnr.claudeCode.location`, and a value set there is moved to it once).
 
 **Moving into the code (Phase 5):** a prototype's menu has **Build in the codebase…** (and a review tab's menu does,
 for the prototype in front): a dialog says what it would do in the product open here (the branch, where it starts
@@ -289,7 +289,7 @@ review** (a draft pull request, with a preview, said step by step). A project on
 pressed. Build in the codebase checks its own work once before it reports: Claude Code asks the implementation reviewer
 (a read-only subagent, where there are subagents) about the branch's changes, fixes what blocks, and checks once more;
 product parity and the full gate stay at Handoff. VS Code is the editor here: work handed to Claude Code opens in this window's Claude Code, in its side panel by
-default, or in an editor tab if you set `dsnr.claudeCode.location` to `editor`; it uses Claude Code's own commands for
+default, or in an editor tab if you set `dsnr.agent.location` to `editor`; it uses Claude Code's own commands for
 this, and a Claude Code without them opens an editor tab through its link.
 
 **The Design System tab (Phase 6):** the design system found beside the product (the one it names, any open folder
@@ -384,7 +384,8 @@ Claude Code, so do it on a test project you can delete:
 
 1. Install DSNR (above) and open a product. Sign in.
 2. **New prototype** (the **+** in DSNR's title bar): name it something like "DSNR test", say what it explores, and choose
-   no folder. Watch the notification and View › Output › DSNR: Agent. When it is built, its review opens.
+   no folder. Press Enter in Claude Code's panel, where the task is typed in. When it is built, its picture appears in
+   the list.
 3. In the review: **Sign in to comment** if it asks, then **Comment**, click something on the page, write a comment, and
    save it. Check the comment is on the design repository's GitHub issues, and in the app.
 4. On the comment's menu: **Resolve**, then **Reopen**.

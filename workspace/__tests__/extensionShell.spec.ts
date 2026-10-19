@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { VsCodeGitHub } from '../extension/src/github';
-import { openableLink, vscodePorts } from '../extension/src/vscodePorts';
+import { moveLocationSetting, openableLink, vscodePorts } from '../extension/src/vscodePorts';
 import { NO_TABS_SHOWN, reviewsOf } from '../extension/src/messages';
 import { Reviews, answerReview, reviewPage, reviewPath } from '../extension/src/review';
 import { Panels, answerCall, hostApi } from '../extension/src/bridge';
@@ -144,35 +144,25 @@ describe('VS Code’s ports', () => {
 			if (id === OPEN) placeWhenOpened = settings['claudeCode.preferredLocation'];
 			return opened(id, ...args);
 		});
-		const { editor } = vscodePorts(v as never, none);
-		expect(editor.find()).toBe('vscode');
-		await editor.openPrompt('vscode', '/work/coke', 'Build it.');
+		const { agentWindow } = vscodePorts(v as never, none);
+		expect(await agentWindow.open('claude-code', '/work/coke', 'Build it.')).toBe(true);
 		expect(v.commands.executeCommand.mock.calls).toEqual([[SIDEBAR], [OPEN, undefined, 'Build it.', undefined, undefined, undefined, WHERE]]);
 		// Opened only once Claude Code has saved the sidebar as its place; sooner, it reads its last place, an editor tab.
 		expect(placeWhenOpened).toBe('sidebar');
 		expect(v.env.openExternal).not.toHaveBeenCalled();
 	});
 
-	it('open it there at once when Claude Code already keeps its conversations in its side panel, and continue a session the same way', async () => {
+	it('open it there at once when Claude Code already keeps its conversations in its side panel', async () => {
 		const v = fake();
 		settings['claudeCode.preferredLocation'] = 'sidebar';
-		const { editor } = vscodePorts(v as never, none);
-		await editor.openPrompt('vscode', '/work/coke', 'Build it.');
-		const then = vi.fn();
-		const session = '0b2e5b8e-46ac-4823-9acb-716bcb37aa64';
-		await editor.openSession('vscode', { session, root: '/work/coke' } as never, then);
-		expect(then).toHaveBeenCalled();
-		expect(v.commands.executeCommand.mock.calls).toEqual([
-			[OPEN, undefined, 'Build it.', undefined, undefined, undefined, WHERE],
-			[OPEN, session, undefined, undefined, undefined, undefined, WHERE],
-		]);
+		await vscodePorts(v as never, none).agentWindow.open('claude-code', '/work/coke', 'Build it.');
+		expect(v.commands.executeCommand.mock.calls).toEqual([[OPEN, undefined, 'Build it.', undefined, undefined, undefined, WHERE]]);
 	});
 
 	it('hand it to an editor tab instead, when that is the person’s setting', async () => {
 		const v = fake();
-		settings['dsnr.claudeCode.location'] = 'editor';
-		const { editor } = vscodePorts(v as never, none);
-		await editor.openPrompt('vscode', '/work/coke', 'Build it.');
+		settings['dsnr.agent.location'] = 'editor';
+		await vscodePorts(v as never, none).agentWindow.open('claude-code', '/work/coke', 'Build it.');
 		expect(v.commands.executeCommand.mock.calls).toEqual([[OPEN, undefined, 'Build it.']]);
 	});
 
@@ -181,25 +171,34 @@ describe('VS Code’s ports', () => {
 		v.commands.executeCommand.mockImplementation(async (id: string) => {
 			if (id.startsWith('claude-vscode.')) throw new Error(`command '${id}' not found`);
 		});
-		const { editor } = vscodePorts(v as never, none);
-		await editor.openPrompt('vscode', '/work/coke', 'Build it.');
+		await vscodePorts(v as never, none).agentWindow.open('claude-code', '/work/coke', 'Build it.');
 		expect(String(v.env.openExternal.mock.calls.at(-1)?.[0])).toBe('vscode://anthropic.claude-code/open?prompt=Build+it.');
 	});
 
-	it('refuse what is not a session, before asking Claude Code anything', async () => {
+	it('open a folder that is not in this window in a window of its own, and say there is no window without Claude Code', async () => {
 		const v = fake();
-		const { editor } = vscodePorts(v as never, none);
-		await expect(editor.openSession('vscode', { session: '../x', root: '/work/coke' } as never, vi.fn())).rejects.toThrow('That is not a session.');
+		await vscodePorts(v as never, none).agentWindow.open('claude-code', '/work/other', 'Build it.');
+		expect(v.commands.executeCommand).toHaveBeenCalledWith('vscode.openFolder', { fsPath: '/work/other' }, { forceNewWindow: true });
+		v.extensions.getExtension.mockReturnValue(undefined as never);
+		v.commands.executeCommand.mockClear();
+		expect(await vscodePorts(v as never, none).agentWindow.open('claude-code', '/work/coke', 'Build it.')).toBe(false);
 		expect(v.commands.executeCommand).not.toHaveBeenCalled();
 	});
 
-	it('open a folder that is not in this window in a window of its own, and say there is no editor without Claude Code', async () => {
-		const v = fake();
-		const { editor } = vscodePorts(v as never, none);
-		await editor.openFolder('vscode', '/work/other');
-		expect(v.commands.executeCommand).toHaveBeenCalledWith('vscode.openFolder', { fsPath: '/work/other' }, { forceNewWindow: true });
-		v.extensions.getExtension.mockReturnValue(undefined as never);
-		expect(vscodePorts(v as never, none).editor.find()).toBeNull();
+	it('move a location set under the setting’s old name to its new one, at each level it was set, once', async () => {
+		const values = new Map<string, unknown>([
+			['dsnr.claudeCode.location@1', 'editor'],
+			['dsnr.claudeCode.location@2', 'sidebar'],
+		]);
+		const config = (section: string) => ({
+			inspect: (key: string) => ({ globalValue: values.get(`${section}.${key}@1`), workspaceValue: values.get(`${section}.${key}@2`) }),
+			update: async (key: string, value: unknown, target: number) =>
+				void (value === undefined ? values.delete(`${section}.${key}@${target}`) : values.set(`${section}.${key}@${target}`, value)),
+		});
+		const v = { workspace: { getConfiguration: config }, ConfigurationTarget: { Global: 1, Workspace: 2, WorkspaceFolder: 3 } };
+		expect(await moveLocationSetting(v as never)).toBe(true);
+		expect(Object.fromEntries(values)).toEqual({ 'dsnr.agent.location@1': 'editor', 'dsnr.agent.location@2': 'sidebar' });
+		expect(await moveLocationSetting(v as never)).toBe(false);
 	});
 
 	it('draw and check out of sight with the headless browser they are given', () => {
@@ -746,14 +745,14 @@ describe('the bridge', () => {
 		expect(await api.listProjects()).toEqual({ ok: true, value: ['p'] });
 		expect(await api.readCheckout('/p')).toEqual({ ok: false, error: 'readCheckout is not answered in VS Code.' });
 		const heard: unknown[] = [];
-		const stop = api.onAgentLog((l) => void heard.push(l));
-		panels.sink('onAgentLog', line('one'));
+		const stop = api.onRunLog((l) => void heard.push(l));
+		panels.sink('onRunLog', line('one'));
 		stop();
-		panels.sink('onAgentLog', line('two'));
+		panels.sink('onRunLog', line('two'));
 		expect(heard).toEqual([line('one')]);
 		expect(posted).toEqual([
-			{ type: 'event', name: 'onAgentLog', payload: line('one') },
-			{ type: 'event', name: 'onAgentLog', payload: line('two') },
+			{ type: 'event', name: 'onRunLog', payload: line('one') },
+			{ type: 'event', name: 'onRunLog', payload: line('two') },
 		]);
 	});
 });

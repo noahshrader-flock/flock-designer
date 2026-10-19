@@ -45,7 +45,7 @@ export const callTable = <Api>() => {
 	};
 };
 
-// The contract's calls, not its events (`onAgentLog`, ...), which `WorkspaceApi` has too: so narrowed to `InvokeName`.
+// The contract's calls, not its events (`onRunLog`, ...), which `WorkspaceApi` has too: so narrowed to `InvokeName`.
 const core = callTable<WorkspaceApi>();
 export const clearRoutes = core.clear;
 export const served = core.served as () => ReadonlyMap<InvokeName, Route>;

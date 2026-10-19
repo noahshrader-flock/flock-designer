@@ -3,7 +3,7 @@ import type { ChangeBranchOf, VoiceAndTone, WorkspaceApi } from '../../src/share
 import { compareUrl } from '../../src/shared/hostUrls';
 import { plural } from '../../src/shared/plural';
 import { errorText, valueOf } from '../../src/shared/result';
-import type { Offer } from './agentWork';
+import type { Offer } from './say';
 import { CHANGE_REQUEST, HOST } from '../../src/shared/vocabulary';
 
 const VOICE_SCHEME = 'dsnr-voice';

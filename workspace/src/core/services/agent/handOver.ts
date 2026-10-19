@@ -1,0 +1,46 @@
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { dirname } from 'node:path';
+import type { Handed } from '../../../shared/contract';
+import type { Ports } from '../../ports';
+import type { Agent } from './agent';
+
+/** Refused, in the agent's own words, when it is missing or signed out; one it cannot tell about is not held back. */
+export const assertReady = async (agent: Agent): Promise<void> => {
+	const { state } = await agent.readiness();
+	if (state === 'missing' || state === 'signedOut') throw new Error(agent.notReady[state]);
+};
+
+type HandPorts = Pick<Ports, 'agentWindow' | 'copy'>;
+
+/**
+ * `prepare` makes what is handed (a branch, a file) and runs only once the agent is known to be ready, so a hand-off that is
+ * refused leaves nothing behind. When the agent's window is not in this editor, the command that starts it in a terminal is
+ * put on the clipboard and returned as `command`.
+ */
+export const handOver = async <T extends { root: string; prompt: string }>(
+	ports: HandPorts,
+	agent: Agent,
+	prepare: () => Promise<T>,
+): Promise<{ handed: Handed; prepared: T }> => {
+	await assertReady(agent);
+	const prepared = await prepare();
+	const { root, prompt } = prepared;
+	if (await ports.agentWindow.open(agent.id, root, prompt)) return { handed: { agent: agent.name, editor: true, command: null }, prepared };
+	const command = agent.terminalCommand(root, prompt);
+	await ports.copy(command);
+	return { handed: { agent: agent.name, editor: false, command }, prepared };
+};
+
+/** Every task is handed over as a file and one line saying what it is for, so each agent is told the same way. */
+export const handTask = <T extends { root: string; what: string; taskFile: string; task: string }>(
+	ports: HandPorts,
+	agent: Agent,
+	prepare: () => Promise<T>,
+): Promise<{ handed: Handed; prepared: T }> =>
+	handOver(ports, agent, async () => {
+		const prepared = await prepare();
+		const { what, taskFile, task } = prepared;
+		mkdirSync(dirname(taskFile), { recursive: true });
+		writeFileSync(taskFile, task);
+		return { ...prepared, prompt: `${what} Your task is in ${taskFile}. It is complete: read all of it, then do what it says, in order.` };
+	});

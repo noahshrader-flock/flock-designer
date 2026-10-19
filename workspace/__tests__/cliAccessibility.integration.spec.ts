@@ -277,7 +277,7 @@ describe.skipIf(NO_CHROME)('accessibility', () => {
 /** Run only when asked for (`DSNR_REAL_AGENT=1`), since it runs Claude Code on the person's account and costs a little. */
 describe.skipIf(process.env.DSNR_REAL_AGENT !== '1' || NO_CHROME)('the agent, with its build’s own check', () => {
 	it('fixes a fault the check finds while it does what it was asked', async () => {
-		const { runToEnd } = await import('../src/core/services/agent/agent');
+		const { claudeCode } = await import('../src/core/services/agent/agent');
 		const request = 'The prototype already exists. Change its heading to say "Camera list".';
 		expect(await run('new-prototype', '--project', 'demo', '--title', 'Demo', '--note', request)).toBe(0);
 		const task = world.out.join('\n');
@@ -287,7 +287,7 @@ describe.skipIf(process.env.DSNR_REAL_AGENT !== '1' || NO_CHROME)('the agent, wi
 			source,
 			"export default () => <main><h1>Cameras</h1><button onClick={() => undefined}><svg width='16' height='16'><path d='M2 2h12v12H2z' /></svg></button></main>;\n",
 		);
-		const ended = await runToEnd(join(world.prototypes, 'demo'), task);
+		const ended = await claudeCode().runUnattended!(join(world.prototypes, 'demo'), task, { readOnly: [] });
 		const fixed = readFileSync(source, 'utf8');
 		console.log(`The agent's last words: ${ended.said}\nIts source:\n${fixed}`);
 		expect(ended.ok, ended.said).toBe(true);

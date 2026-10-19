@@ -4,7 +4,7 @@ import { handedTo } from '../../src/shared/handedTo';
 import { commentsFromOthers, nextVersionName, othersHaveCommented } from '../../src/shared/prototypeNames';
 import { valueOf } from '../../src/shared/result';
 import { workLabel } from '../../src/shared/work';
-import type { Offer, Tell } from './agentWork';
+import type { Offer, Tell } from './say';
 import type { Review } from './messages';
 
 export interface AddressDeps {

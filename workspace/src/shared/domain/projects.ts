@@ -42,6 +42,8 @@ export type WorkKind = 'prototype' | 'codebase';
 /** `command` is for a terminal, when Claude Code is not in VS Code. */
 /** What any hand-off to the agent did: opened in this window, or `command` for a terminal, on the clipboard. */
 export interface Handed {
+	/** The agent's name, as its adapter says it. */
+	agent: string;
 	editor: boolean;
 	command: string | null;
 }

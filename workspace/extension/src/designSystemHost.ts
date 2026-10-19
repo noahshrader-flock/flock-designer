@@ -3,7 +3,7 @@ import type { Route } from '../../src/core/handle';
 import type { DesignSystemsMemory } from '../../src/core/services/designSystem/designSystems';
 import type { TokenEdit, TriedValue, WorkspaceApi } from '../../src/shared/contract';
 import type { Theme } from '../../src/shared/prototypeTheme';
-import type { Tell } from './agentWork';
+import type { Tell } from './say';
 import { type AskHandlers, readComponentArg } from './asks';
 import { type Panels, receivePage } from './bridge';
 import { CatalogShare } from './catalogShare';

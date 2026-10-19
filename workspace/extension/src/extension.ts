@@ -10,6 +10,7 @@ import { addressComment } from './address';
 import { Panels, hostApi } from './bridge';
 import { type LocalRun, handOff, openCode, shareCodebase, runLocally } from './codebase';
 import { startCore } from './core';
+import { moveLocationSetting } from './vscodePorts';
 import { showFound, shownFrom } from './designSystem';
 import { designSystemHost } from './designSystemHost';
 import { registerVoice } from './voice';
@@ -27,7 +28,7 @@ import { copyProject } from '../../src/core/services/prototypes/projectCopy';
 import { needsProduct } from '../../src/shared/projectScope';
 import { productsOf } from '../../src/shared/work';
 import { REVIEW_KEY, Reviews, answerReview, buildReviewSite, pickReview, siteIn } from './review';
-import { AgentLog, SyncStatus, failed, failedFor, vscodeChoose, vscodeCopy, vscodeOffer, vscodeOpen, vscodeProgress, vscodeTell } from './ui';
+import { RunOutput, SyncStatus, failed, failedFor, vscodeChoose, vscodeCopy, vscodeOffer, vscodeOpen, vscodeProgress, vscodeTell } from './ui';
 
 /** Coming back to VS Code rereads the projects only this long after the last read: each read asks GitHub. */
 const REREAD_MS = 60_000;
@@ -58,7 +59,11 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 		provider.showAccount(state.state === 'signedIn' ? state.user.login : undefined);
 	};
 	const { core, github, shell, storage, headless } = startCore(context, panels, showAccount);
-	closing = () => Promise.all([headless.close(), core.runtime.stopAll(), core.agent.stop()]).then(() => undefined);
+	closing = () => Promise.all([headless.close(), core.runtime.stopAll()]).then(() => undefined);
+	void moveLocationSetting(vscode).then(
+		(moved) => moved && vscodeTell('DSNR’s setting dsnr.claudeCode.location is now dsnr.agent.location, and yours was moved to it.'),
+		failed,
+	);
 	const localAddresses = async () => ({ images: await core.prototypeServer.origin(), frames: await core.prototypeServer.pagesOrigin() });
 	const folders = () => (vscode.workspace.workspaceFolders ?? []).map((f) => f.uri.fsPath);
 	const located = () => context.globalState.get<string>(LOCATED) ?? null;
@@ -86,11 +91,11 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 	void github.restore().catch(failed);
 
 	const api = hostApi(served, panels);
-	const agentLog = new AgentLog();
+	const runOutput = new RunOutput();
 	const here = {
 		api,
 		progress: vscodeProgress,
-		log: agentLog,
+		log: runOutput,
 		tell: vscodeTell,
 		offer: vscodeOffer,
 		choose: vscodeChoose,
@@ -275,7 +280,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 	context.subscriptions.push(
 		sync,
 		{ dispose: panels.listen('onPublishStatus', (status) => sync.show(status as PublishStatus)) },
-		agentLog,
+		runOutput,
 		...voice.disposables,
 		...design.disposables,
 		vscode.window.registerWebviewViewProvider('dsnr.panel', provider, PANEL_VIEW_OPTIONS),
@@ -285,6 +290,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 				tell: vscodeTell,
 				inPanel,
 				product: productNow,
+				api,
 				startPrototype,
 				openReview,
 				pickReview: () => pickReview(vscode.window, api, vscodeTell),

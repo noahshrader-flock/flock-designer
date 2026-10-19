@@ -1,6 +1,6 @@
 import type { CallsDeps } from '../compose';
 import type { ChangeBranchOf, ChangeKind, ChangeKinds, HandedChange, SavedKind, TokenEdit, TriedValue } from '../../shared/contract';
-import { handToClaude } from '../services/agent/editor';
+import { handOver } from '../services/agent/handOver';
 import { type ChangeBranches, scopeOf } from '../services/designSystem/changeBranches';
 import { offBase } from '../services/designSystem/handOverBranches';
 import { readVoice } from '../services/designSystem/voiceAndTone';
@@ -16,6 +16,7 @@ export const designSystemArea = (d: CallsDeps) => {
 		valueAgent,
 		valueBranches,
 		voiceBranches,
+		agent,
 		handOverBranches,
 		libraryShown,
 		ports,
@@ -44,13 +45,17 @@ export const designSystemArea = (d: CallsDeps) => {
 			if ((file === null) !== 'edits' in change)
 				throw new Error('The token changes are handed over as the tokens, and a component’s values as that component.');
 			libraryShown.refuse(shownSystem(), 'process changes');
-			const { root, branch, prompt } = await handOverBranches.start(file ?? '', change);
-			// Not opened, it is not handed over: forgotten, so it can be pressed again.
-			const handed = await handToClaude(ports, root, prompt).catch((err: unknown) => {
-				handOverBranches.forget(file ?? '');
+			// Not opened, it is not handed over: forgotten, so it can be pressed again. A branch is started only once the agent is ready.
+			let started = false;
+			const { handed, prepared } = await handOver(ports, agent, async () => {
+				const made = await handOverBranches.start(file ?? '', change);
+				started = true;
+				return made;
+			}).catch((err: unknown) => {
+				if (started) handOverBranches.forget(file ?? '');
 				throw err;
 			});
-			return { branch, ...handed };
+			return { branch: prepared.branch, ...handed };
 		},
 		changeBranch: <K extends ChangeKind>(kind: K, scope: string | null) =>
 			branches[kind].current(scopeOf(branches[kind].rules, scope)) as Promise<ChangeBranchOf<K> | null>,

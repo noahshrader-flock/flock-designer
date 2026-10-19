@@ -1,6 +1,6 @@
 import type { PublishStatus, WorkspaceApi } from '../../src/shared/contract';
 import { valueOf } from '../../src/shared/result';
-import type { Offer, Tell } from './agentWork';
+import type { Offer, Tell } from './say';
 import type { Review } from './messages';
 
 export const syncWords = (status: PublishStatus): string => {

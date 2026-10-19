@@ -3,14 +3,13 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { AgentRunner } from '../src/core/services/agent/agent';
 import { readDescriptor } from '../src/core/services/projects/descriptor';
 import { readCheckout } from '../src/core/services/platform/git';
 import { continueWork, createCodebaseWork, readWork } from '../src/core/services/projects/workRecords';
 import { RuntimeManager } from '../src/core/services/codebase/runtime';
 import { OpenedCheckouts } from '../src/core/services/projects/session';
 import type { PreviewStatus, RunLogLine } from '../src/shared/contract';
-import { g, agentFinished, eventually } from './fixtures';
+import { g } from './fixtures';
 
 /**
  * Every piece has its own tests; this runs the same services the IPC handlers call, against a real repository on disk,
@@ -76,16 +75,8 @@ describe('from a request to a running preview', () => {
 		expect(work.branch).toBe('feature/inactive-users');
 		expect((await readCheckout(root)).branch).toBe('feature/inactive-users');
 
-		// The agent is substituted so the journey does not depend on Claude Code being installed.
+		// The work, as the person's agent leaves it in the checkout: it is handed over, never run here.
 		const logs: RunLogLine[] = [];
-		const agent = new AgentRunner((l) => logs.push(l), {
-			spawnProcess: spawn,
-			adapter: { name: 'Stub', argvFor: (t) => ['node', '-e', `console.log(${JSON.stringify(t)})`] },
-		});
-		agent.start(root, 'inactive-users', 'Flag users who have not signed in for 90 days.');
-		await eventually(() => expect(agent.status()).toEqual(agentFinished()));
-		expect(logs.map((l) => l.text).join('')).toContain('Project: inactive-users');
-
 		writeFileSync(join(product, 'src/prototypes/view.tsx'), 'export const View = () => null;\n');
 		g(product, 'add', '.');
 		g(product, 'commit', '-q', '-m', 'prototype');

@@ -4,10 +4,9 @@ import type { AppPaths } from './appPaths';
 import type { EventSink } from './handle';
 import type { CallsContext } from './compose';
 import type { Ports } from './ports';
-import { AgentRunner } from './services/agent/agent';
+import { claudeCode } from './services/agent/agent';
 import { CheckoutMemory } from './services/projects/checkoutMemory';
 import { DesignSystemsMemory } from './services/designSystem/designSystems';
-import { SessionMemory } from './services/agent/editor';
 import type { GitHubAccount } from '../codeHost/github';
 import { Installer } from './services/codebase/install';
 import { PrototypeServer } from './services/prototypes/prototypeServer';
@@ -33,7 +32,7 @@ export const createCore = ({ paths, emit, ports, github, pictureRecipe }: Shell)
 		onLog: (line) => emit('onRunLog', line),
 		onStatus: (status) => emit('onPreviewStatus', status),
 	}),
-	agent: new AgentRunner((line) => emit('onAgentLog', line)),
+	agent: claudeCode(),
 	share: new ShareRunner((status) => emit('onShareStatus', status)),
 	github,
 	designRepo: new DesignRepo(github, DESIGN_REPO),
@@ -41,7 +40,6 @@ export const createCore = ({ paths, emit, ports, github, pictureRecipe }: Shell)
 	onPublishStatus: (status) => emit('onPublishStatus', status),
 	prototypesRoot: paths.prototypes,
 	prototypeServer: new PrototypeServer(),
-	sessions: new SessionMemory(paths.agentSessions),
 	installer: new Installer(),
 	designSystems: new DesignSystemsMemory(paths.designSystems),
 	storyPreviewsRoot: paths.storyPreviews,

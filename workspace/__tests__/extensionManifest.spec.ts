@@ -77,11 +77,13 @@ describe('the extension’s manifest', () => {
 		]);
 	});
 
-	it('lets the person choose where Claude Code opens what DSNR hands it: its side panel, or an editor tab', () => {
+	it('lets the person choose where an agent with a panel opens what DSNR hands it, under the setting’s new name and its old', () => {
 		const { properties } = manifest().contributes.configuration;
-		expect(Object.keys(properties)).toEqual(['dsnr.claudeCode.location']);
-		expect(properties['dsnr.claudeCode.location']).toMatchObject({ type: 'string', enum: ['sidebar', 'editor'], default: 'sidebar' });
-		expect(properties['dsnr.claudeCode.location']!.description).toMatch(/Claude Code/);
+		expect(Object.keys(properties)).toEqual(['dsnr.agent.location', 'dsnr.claudeCode.location']);
+		expect(properties['dsnr.agent.location']).toMatchObject({ type: 'string', enum: ['sidebar', 'editor'], default: 'sidebar' });
+		expect(properties['dsnr.agent.location']!.description).toMatch(/Claude Code/);
+		// The old name is kept, marked, so a settings file not yet moved is still understood.
+		expect(properties['dsnr.claudeCode.location']).toMatchObject({ deprecationMessage: expect.stringMatching(/dsnr\.agent\.location/) });
 	});
 
 	it('builds the prototype in front in the codebase from a review tab’s own menu', () => {

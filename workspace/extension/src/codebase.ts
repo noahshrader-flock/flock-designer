@@ -4,11 +4,12 @@ import { handedTo } from '../../src/shared/handedTo';
 import { handoffReady } from '../../src/shared/handoff';
 import { valueOf } from '../../src/shared/result';
 import { DESIGN_MODE_COMMAND, codeLink, workOf } from '../../src/shared/work';
-import type { AgentWorkDeps, Offer, Tell } from './agentWork';
+import type { Offer, OutputLike, Progress, Tell } from './say';
 
-export interface CodebaseDeps extends AgentWorkDeps {
-	api: AgentWorkDeps['api'] &
-		Pick<WorkspaceApi, 'listProjects' | 'handOff' | 'handoffResult' | 'runLocally' | 'shareWork' | 'onShareStatus' | 'stopCommand' | 'onRunLog'>;
+export interface CodebaseDeps {
+	progress: Progress;
+	log: OutputLike;
+	api: Pick<WorkspaceApi, 'listProjects' | 'handOff' | 'handoffResult' | 'runLocally' | 'shareWork' | 'onShareStatus' | 'stopCommand' | 'onRunLog'>;
 	root: string;
 	tell: Tell;
 	offer: Offer;

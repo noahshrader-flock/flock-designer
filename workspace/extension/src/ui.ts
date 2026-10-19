@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { errorText } from '../../src/shared/result';
-import type { AgentLogLike, Offer, Progress, Tell } from './agentWork';
+import type { Offer, OutputLike, Progress, Tell } from './say';
 import type { PublishStatus } from '../../src/shared/contract';
 import { syncItem } from './publishing';
 import { openLink } from './vscodePorts';
@@ -39,12 +39,13 @@ export const vscodeProgress: Progress = (title, task, onStop) =>
 		),
 	);
 
-export class AgentLog implements AgentLogLike, vscode.Disposable {
-	private readonly channel = vscode.window.createOutputChannel('DSNR: Agent');
+/** What a product's own command prints while it runs here (Run locally). */
+export class RunOutput implements OutputLike, vscode.Disposable {
+	private readonly channel = vscode.window.createOutputChannel('DSNR: Run locally');
 
 	start(title: string): void {
 		this.channel.clear();
-		this.channel.appendLine(`${title}: the agent's log`);
+		this.channel.appendLine(`${title}: its output`);
 		this.channel.show(true);
 	}
 

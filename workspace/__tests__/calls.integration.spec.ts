@@ -6,7 +6,7 @@ import type { CallsContext } from '../src/core/compose';
 import { appPaths } from '../src/core/appPaths';
 import { CHANNELS, invokeChannel } from '../src/shared/contract';
 import type { Ports } from '../src/core/ports';
-import type { AgentEnd } from '../src/core/services/agent/agent';
+import { claudeCode } from '../src/core/services/agent/agent';
 import { type Answer, fakeGitHub } from './fakes/github';
 import {
 	addStandards,
@@ -40,8 +40,7 @@ const fakePorts = () =>
 		copy: vi.fn(async (t: string) => void (copied = t)),
 		httpStatus: vi.fn(async () => 200),
 		// Never another application from a test: VS Code is treated as not installed.
-		editor: { find: (): string | null => null, openFolder: vi.fn(), openPrompt: vi.fn(), openSession: vi.fn() },
-		claude: () => 'claude',
+		agentWindow: { open: vi.fn(async () => false) },
 		shareTools: vi.fn(() => {
 			throw new Error('Sharing is not faked in this test.');
 		}),
@@ -98,16 +97,8 @@ let calls: ReturnType<typeof registerCalls>;
 let coreRoutes: (typeof import('../src/core/handle'))['served'];
 let OpenedCheckouts: (typeof import('../src/core/services/projects/session'))['OpenedCheckouts'];
 let opened: InstanceType<typeof OpenedCheckouts>;
-let agentStart: Fn;
-let agentStatus: Fn;
-let agentStop: Fn;
-let agentRunningIn: Fn;
-let runningSession: string | null;
-let recent: { work: string | null; lines: string[] };
-let agentDoes: () => void;
-let agentEnds: AgentEnd;
-/** The end of a run of the work asked about that is already going (a screen opened again), or null for none. */
-let agentGoing: Promise<AgentEnd> | null;
+/** What `claude auth status --json` answers: no agent is ever run here. */
+let signedIn: string;
 let runtimeStart: Fn;
 let memoryValue: string | null;
 let deleteComment: Fn;
@@ -149,15 +140,7 @@ beforeEach(async () => {
 	({ served: coreRoutes } = await import('../src/core/handle'));
 	({ OpenedCheckouts } = await import('../src/core/services/projects/session'));
 	opened = new OpenedCheckouts();
-	agentStart = vi.fn(() => ({ state: 'idle' }));
-	agentStatus = vi.fn(() => ({ state: 'idle' }));
-	agentStop = vi.fn();
-	agentRunningIn = vi.fn(() => false);
-	runningSession = null;
-	recent = { work: null, lines: [] };
-	agentDoes = () => undefined;
-	agentEnds = { state: 'finished', exitCode: 0 };
-	agentGoing = null;
+	signedIn = '{"loggedIn":true}';
 	runtimeStart = vi.fn(async () => ({ state: 'stopped' }));
 	memoryValue = null;
 	deleteComment = vi.fn(async () => undefined);
@@ -190,28 +173,19 @@ beforeEach(async () => {
 	readBytes = vi.fn(async () => null);
 	const { Installer } = await import('../src/core/services/codebase/install');
 	const { DesignSystemsMemory } = await import('../src/core/services/designSystem/designSystems');
-	const { SessionMemory } = await import('../src/core/services/agent/editor');
 	register = (more: Partial<CallsContext> = {}) => {
 		const publishing = registerCalls({
 			emit: vi.fn(),
 			ports,
 			opened,
 			runtime: { start: runtimeStart, stop: vi.fn(), status: vi.fn(() => ({ state: 'stopped' })) } as never,
-			agent: {
-				start: agentStart,
-				run: async (...a: unknown[]) => {
-					const started = agentStart(...a) as { state: string; detail?: string } | undefined;
-					if (started?.state === 'unavailable') return { state: 'unavailable', detail: started.detail };
-					agentDoes();
-					return agentEnds;
-				},
-				ended: () => agentGoing,
-				status: agentStatus,
-				stop: agentStop,
-				runningIn: agentRunningIn,
-				runningSession: () => runningSession,
-				recentLines: () => recent,
-			} as never,
+			agent: claudeCode({
+				locate: () => 'claude',
+				run: async () => signedIn,
+				spawnProcess: (() => {
+					throw new Error('No agent is run in these tests.');
+				}) as never,
+			}),
 			github: { state: () => githubState, api: (...a: unknown[]) => githubApi(...a) } as never,
 			designRepo: {
 				listProjects: vi.fn(async () => designRepoProjects),
@@ -231,7 +205,6 @@ beforeEach(async () => {
 			prototypeServer,
 			designSystems: new DesignSystemsMemory(join(home, 'design-system.json')),
 			// Every file the app keeps is in this test's own folder: none is shared with another run or worker.
-			sessions: new SessionMemory(join(home, 'agent-sessions.json')),
 			changeBranchFiles: appPaths(home).changeBranches,
 			storyPreviewsRoot: join(home, 'story-previews'),
 			componentPicturesRoot: join(home, 'component-pictures'),
@@ -439,13 +412,6 @@ describe('installing its packages', () => {
 		expect((await call(CHANNELS.prototypeReadiness, product)).value).toMatchObject({ ready: false, why: 'not-installed', canInstall: false });
 		expect((await call(CHANNELS.installPackages, product)).error).toMatch(/"install" is not a command this repository declares/);
 	});
-
-	it('waits while the agent is working in it', async () => {
-		const dir = withInstall("console.log('x')");
-		await trustFolder(dir);
-		agentRunningIn.mockReturnValue(true);
-		expect((await call(CHANNELS.installPackages, dir)).error).toMatch(/agent is working in flock-installs/);
-	});
 });
 
 describe('codebase work recorded before records named its repository', () => {
@@ -623,6 +589,16 @@ describe('prototypes', () => {
 			expect(copied).toBe('');
 		});
 
+		it('hands nothing over, and writes no task, when Claude Code is signed out or missing, and says what to do', async () => {
+			await made();
+			signedIn = '{"loggedIn":false}';
+			expect((await call(CHANNELS.handPrototypeBuild, product, 'demo', 'v1', 'A list')).error).toMatch(/^Claude Code is not signed in\./);
+			expect(existsSync(join(home, 'prototype', 'demo', 'v1-build.md'))).toBe(false);
+			expect(copied).toBe('');
+			signedIn = 'not the JSON asked for';
+			expect((await call(CHANNELS.handPrototypeBuild, product, 'demo', 'v1', 'A list')).ok).toBe(true);
+		});
+
 		it('writes the whole task beside the prototype and gives the command that starts it, running no agent here', async () => {
 			await made();
 			const r = await call(CHANNELS.handPrototypeBuild, product, 'demo', 'v1', 'A list of alerts');
@@ -643,7 +619,6 @@ describe('prototypes', () => {
 			expect(value.command).toMatch(new RegExp(`^cd .*${basename(product)} && .*claude `));
 			expect(value.command).toContain(taskFile);
 			expect(value.command).toContain('Version 1');
-			expect(agentStart).not.toHaveBeenCalled();
 		});
 	});
 
@@ -943,7 +918,6 @@ describe('prototypes', () => {
 			// The reviewer's words reach the agent through the file, beside the prototype.
 			expect(readFileSync(join(home, 'prototype', 'demo', 'comments.md'), 'utf8')).toContain('Make this primary');
 			expect(copied).toContain(join(home, 'prototype', 'demo', 'v1-address.md'));
-			expect(agentStart).not.toHaveBeenCalled();
 		});
 
 		it('carries the design system’s voice and tone, as every task does (T9)', async () => {
@@ -1162,7 +1136,6 @@ describe('prototypes', () => {
 			expect(copied).toBe(value.command);
 			expect(value.command).toMatch(new RegExp(`^cd .*${basename(product)} && .*claude `));
 			expect(value.command).toContain(taskFile);
-			expect(agentStart).not.toHaveBeenCalled();
 		});
 
 		describe('coming back to codebase work already started', () => {
@@ -1354,13 +1327,6 @@ describe('the picture of each prototype, on its project’s card', () => {
 		expect(readdirSync(join(design, 'projects', 'demo', 'covers')).sort()).toEqual([`v1-${first}.jpg`, `v1-${second}.jpg`].sort());
 	});
 
-	it('is not drawn while an agent is working, since the page may be half written', async () => {
-		await savedPrototype();
-		agentStatus.mockReturnValue({ state: 'running' });
-		expect(await call(CHANNELS.ensureCovers)).toEqual({ ok: true, value: [] });
-		expect(drawCover).not.toHaveBeenCalled();
-	});
-
 	it('is not drawn for a prototype whose page was not built here, and is nothing when it cannot be drawn', async () => {
 		await savedPrototype();
 		rmSync(join(home, 'prototype', 'demo', 'v1.html'));
@@ -1435,7 +1401,6 @@ describe('a run of the agent validates the project id', () => {
 		await trustFolder(product);
 		const r = await call(CHANNELS.handOff, product, bad);
 		expect(r.ok).toBe(false);
-		expect(agentStart).not.toHaveBeenCalled();
 	});
 });
 
@@ -1467,12 +1432,6 @@ describe('one agent, one piece of work', () => {
 		await codebaseWork();
 	};
 	const task = () => readFileSync(join(home, 'prototype', 'demo', 'codebase-handoff.md'), 'utf8');
-
-	it('stops the run when asked: Stop on a build, in a shell that shows one', async () => {
-		const r = await call(CHANNELS.stopAgent);
-		expect(r).toEqual({ ok: true, value: null });
-		expect(agentStop).toHaveBeenCalledTimes(1);
-	});
 
 	it('tells a handoff in a checkout where the shared agents, skills, standards and logging are, to read', async () => {
 		for (const dir of ['agents', 'skills', 'standards', 'knowledge']) mkdirSync(join(design, dir), { recursive: true });
@@ -1513,14 +1472,6 @@ describe('one agent, one piece of work', () => {
 			"This product's own accessibility check is `npm run a11y`: run it as the work goes, not only at the end. Handoff runs it again.",
 		);
 	});
-
-	it("does not switch the checkout's branch under a running agent", async () => {
-		await savedPrototype();
-		agentRunningIn.mockReturnValue(true);
-		const r = await build(product, 'develop');
-		expect(r.ok).toBe(false);
-		expect(r.error).toMatch(/agent is working in flock-coke/);
-	});
 });
 
 describe('Handoff', () => {
@@ -1545,7 +1496,6 @@ describe('Handoff', () => {
 		const r = await call(CHANNELS.handOff, product, 'demo');
 		expect(r).toMatchObject({ ok: true, value: { editor: false } });
 		expect(copied).toContain(taskFile());
-		expect(agentStart).not.toHaveBeenCalled();
 		const task = readFileSync(taskFile(), 'utf8');
 		expect(task).toContain('The shared steps.');
 		expect(task).toContain('`feature/demo`');
@@ -1652,17 +1602,6 @@ describe('Run locally', () => {
 		await ready();
 		writeFileSync(join(product, 'mine.txt'), 'by hand\n');
 		expect((await call(CHANNELS.runLocally, product, 'demo', 'codebase')).value).toMatchObject({ uncommitted: true });
-	});
-
-	it('waits for its own agent when it is still at work, then opens the preview', async () => {
-		await ready();
-		let finish: (end: AgentEnd) => void = () => undefined;
-		agentGoing = new Promise((r) => (finish = r));
-		const ran = call(CHANNELS.runLocally, product, 'demo', 'codebase');
-		await new Promise((r) => setTimeout(r, 20));
-		expect(runtimeStart).not.toHaveBeenCalled();
-		finish({ state: 'finished', exitCode: 0 });
-		expect((await ran).value).toEqual({ url: 'http://localhost:3100/', uncommitted: false });
 	});
 
 	it('says why the preview did not start, or that it stopped before it answered', async () => {

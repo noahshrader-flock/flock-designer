@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import type { CatalogReads } from '../src/core/services/designSystem/componentCatalog';
 import type { RecordStore } from '../src/core/services/prototypes/prototype';
-import type { AgentStatus, CommentAnchor, Project, ProjectWork, ReviewComment, TokenProblem } from '../src/shared/contract';
+import type { CommentAnchor, Project, ProjectWork, ReviewComment, TokenProblem } from '../src/shared/contract';
 import { prototypeKey } from '../src/shared/designPaths';
 
 /** A mocked function of any shape, called as the code calls it: vitest's own `Procedure`, which it does not export. */
@@ -67,8 +67,6 @@ export const reviewComment = (over: Pick<ReviewComment, 'id'> & Partial<ReviewCo
 	picture: null,
 	...over,
 });
-
-export const agentFinished = (exitCode = 0, work: string | null = null): AgentStatus => ({ state: 'finished', exitCode, work });
 
 /**
  * Made once and copied back before each test, at the same path so a clone's origin still points at the remote beside it:

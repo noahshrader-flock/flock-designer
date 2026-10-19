@@ -228,7 +228,7 @@
 		"configuration": {
 			"title": "DSNR",
 			"properties": {
-				"dsnr.claudeCode.location": {
+				"dsnr.agent.location": {
 					"type": "string",
 					"enum": [
 						"sidebar",
@@ -236,10 +236,18 @@
 					],
 					"default": "sidebar",
 					"enumDescriptions": [
-						"Claude Code's side panel.",
+						"The agent's side panel.",
 						"An editor tab."
 					],
-					"description": "Where Claude Code opens what DSNR hands it (Build in the codebase's task, a conversation to continue): its side panel, or an editor tab."
+					"description": "Where an agent that has a panel in VS Code (Claude Code) opens what DSNR hands it: its side panel, or an editor tab."
+				},
+				"dsnr.claudeCode.location": {
+					"type": "string",
+					"enum": [
+						"sidebar",
+						"editor"
+					],
+					"deprecationMessage": "Now dsnr.agent.location: DSNR moves a value set here to it when it starts."
 				}
 			}
 		}

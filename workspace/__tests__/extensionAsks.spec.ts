@@ -2,7 +2,6 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import { receivePage } from '../extension/src/bridge';
-import { agentWork } from '../extension/src/agentWork';
 
 const page = () => {
 	const webview = { postMessage: vi.fn(async () => true) };
@@ -48,48 +47,6 @@ describe('what any DSNR page sends', () => {
 		for (const raw of [{ type: 'open-component', id: 'a' }, { type: 'call', id: 1, name: 'runAnything', args: [] }, null]) await p.said(raw);
 		expect(p.webview.postMessage).not.toHaveBeenCalled();
 		expect(p.panels.ready).not.toHaveBeenCalled();
-	});
-});
-
-describe('the agent at work, as every flow has it', () => {
-	const world = () => {
-		const lines: ((l: { text: string }) => void)[] = [];
-		const stopped = vi.fn();
-		return {
-			api: {
-				agentReadiness: vi.fn(),
-				stopAgent: vi.fn(async () => ({ ok: true, value: null })),
-				onAgentLog: vi.fn((l: (line: { text: string }) => void) => (lines.push(l), stopped)),
-			},
-			log: { start: vi.fn(), line: vi.fn() },
-			lines,
-			stopped,
-		};
-	};
-
-	it('starts its log afresh, feeds it each line as it comes, and stops listening once the work is done', async () => {
-		const w = world();
-		const progress = vi.fn(async (_title: string, task: (say: (m: string) => void) => Promise<void>) => task(() => undefined));
-		const { stopped } = await agentWork({ ...w, progress } as never, { title: 'Building X', logTitle: 'X' }, async () => {
-			w.lines[0]?.({ text: 'Reading the brief\n' });
-		});
-		expect(stopped).toBe(false);
-		expect(w.log.start).toHaveBeenCalledWith('X');
-		expect(w.log.line).toHaveBeenCalledWith('Reading the brief');
-		expect(progress).toHaveBeenCalledWith('Building X', expect.any(Function), expect.any(Function));
-		expect(w.stopped).toHaveBeenCalled();
-	});
-
-	it('stops the agent when Stop is pressed, which ends the core’s job, and says it was stopped', async () => {
-		const w = world();
-		const progress = vi.fn(async (_title: string, task: (say: (m: string) => void) => Promise<void>, onStop?: () => void) => {
-			onStop?.();
-			await task(() => undefined);
-		});
-		const { stopped } = await agentWork({ ...w, progress } as never, { title: 't', logTitle: 't' }, async () => undefined);
-		expect(stopped).toBe(true);
-		expect(w.api.stopAgent).toHaveBeenCalled();
-		expect(w.stopped).toHaveBeenCalled();
 	});
 });
 

@@ -2,13 +2,21 @@ import type { WorkspaceApi } from '../../src/shared/contract';
 import { valueOf } from '../../src/shared/result';
 import { slugify } from '../../src/shared/validate';
 import { handedTo } from '../../src/shared/handedTo';
-import { type AgentWorkDeps, type Offer, type Tell } from './agentWork';
+import type { Offer, Progress, Tell } from './say';
 import { LIMITS } from './messages';
 
-export interface NewPrototypeDeps extends Pick<AgentWorkDeps, 'progress'> {
+export interface NewPrototypeDeps {
+	progress: Progress;
 	api: Pick<
 		WorkspaceApi,
-		'prototypeReadiness' | 'installPackages' | 'cancelInstall' | 'onInstallLine' | 'readCheckout' | 'createPrototype' | 'handPrototypeBuild'
+		| 'agentReady'
+		| 'prototypeReadiness'
+		| 'installPackages'
+		| 'cancelInstall'
+		| 'onInstallLine'
+		| 'readCheckout'
+		| 'createPrototype'
+		| 'handPrototypeBuild'
 	>;
 	/** `why` says why `root` is null. */
 	product: { root: string | null; why: string };
@@ -84,12 +92,13 @@ const packagesReady = async ({ api, choose, progress }: NewPrototypeDeps, root: 
 	return true;
 };
 
-/**
- * Said before the person is asked anything. Claude Code is not checked: without it, the person is given the command that
- * starts it in a terminal.
- */
-export const readyToStart = async ({ product }: Pick<NewPrototypeDeps, 'product'>): Promise<void> => {
+/** Said before the person is asked anything: no product open, or the agent missing or signed out. */
+export const readyToStart = async ({
+	product,
+	api,
+}: Pick<NewPrototypeDeps, 'product'> & { api: Pick<NewPrototypeDeps['api'], 'agentReady'> }): Promise<void> => {
 	if (product.root === null) throw new Error(product.why);
+	valueOf(await api.agentReady());
 };
 
 export const newPrototype = async (deps: NewPrototypeDeps): Promise<void> => {

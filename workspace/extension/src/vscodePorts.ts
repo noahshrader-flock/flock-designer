@@ -1,6 +1,5 @@
 import type * as VsCode from 'vscode';
 import type { Headless, Ports } from '../../src/core/ports';
-import { claudeLink } from '../../src/core/services/agent/editor';
 import { toolPorts } from '../../src/core/toolPorts';
 import { isThisMachine } from '../../src/shared/thisMachine';
 
@@ -12,6 +11,7 @@ export interface VsCodeApi {
 	Uri: Pick<typeof VsCode.Uri, 'file' | 'parse'>;
 	extensions: Pick<typeof VsCode.extensions, 'getExtension'>;
 	workspace: Pick<typeof VsCode.workspace, 'workspaceFolders' | 'getConfiguration'>;
+	ConfigurationTarget: typeof VsCode.ConfigurationTarget;
 }
 
 /** Anything but `https:` or `http:` on this machine (`file:`, `command:`, another scheme a page might hand it) is refused. */
@@ -38,8 +38,32 @@ const CLAUDE_CODE = 'anthropic.claude-code';
 const SHOW_SIDEBAR = 'claude-vscode.sidebar.open';
 const OPEN_CONVERSATION = 'claude-vscode.editor.open';
 
-const editorHere = (vscode: VsCodeApi): Ports['editor'] => {
-	const openFolder = async (_editor: string, folder: string) => {
+export const claudeLink = (prompt: string): string => `vscode://anthropic.claude-code/open?${new URLSearchParams({ prompt }).toString()}`;
+
+/**
+ * `dsnr.claudeCode.location` became `dsnr.agent.location`: a value set under the old name, at any level, is moved to the new
+ * one and the old cleared, so it is moved, and said, once. True when anything was moved.
+ */
+export const moveLocationSetting = async (vscode: Pick<VsCodeApi, 'workspace' | 'ConfigurationTarget'>): Promise<boolean> => {
+	const old = vscode.workspace.getConfiguration('dsnr.claudeCode');
+	const now = vscode.workspace.getConfiguration('dsnr.agent');
+	const set = old.inspect<string>('location');
+	let moved = false;
+	for (const [value, target] of [
+		[set?.globalValue, vscode.ConfigurationTarget.Global],
+		[set?.workspaceValue, vscode.ConfigurationTarget.Workspace],
+		[set?.workspaceFolderValue, vscode.ConfigurationTarget.WorkspaceFolder],
+	] as const) {
+		if (value === undefined) continue;
+		await now.update('location', value, target);
+		await old.update('location', undefined, target);
+		moved = true;
+	}
+	return moved;
+};
+
+const agentWindowHere = (vscode: VsCodeApi): Ports['agentWindow'] => {
+	const openFolder = async (folder: string) => {
 		const here = (vscode.workspace.workspaceFolders ?? []).some((f) => f.uri.fsPath === folder);
 		if (!here) await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(folder), { forceNewWindow: true });
 	};
@@ -53,35 +77,26 @@ const editorHere = (vscode: VsCodeApi): Ports['editor'] => {
 		await vscode.commands.executeCommand(SHOW_SIDEBAR);
 		for (let waited = 0; place() !== 'sidebar' && waited < 1000; waited += 25) await new Promise((r) => setTimeout(r, 25));
 	};
-	/** The link is made first: it also checks a session. */
-	const open = async (what: { session: string } | { prompt: string }) => {
-		const link = claudeLink(what);
-		const session = 'session' in what ? what.session : undefined;
-		const prompt = 'prompt' in what ? what.prompt : undefined;
+	const openClaude = async (prompt: string) => {
 		try {
-			if (vscode.workspace.getConfiguration('dsnr.claudeCode').get<string>('location', 'sidebar') === 'editor')
-				await vscode.commands.executeCommand(OPEN_CONVERSATION, session, prompt);
+			if (vscode.workspace.getConfiguration('dsnr.agent').get<string>('location', 'sidebar') === 'editor')
+				await vscode.commands.executeCommand(OPEN_CONVERSATION, undefined, prompt);
 			else {
 				await keptInSidebar();
-				await vscode.commands.executeCommand(OPEN_CONVERSATION, session, prompt, undefined, undefined, undefined, {
+				await vscode.commands.executeCommand(OPEN_CONVERSATION, undefined, prompt, undefined, undefined, undefined, {
 					programmatic: 'honor-preferred-location',
 				});
 			}
 		} catch {
-			await vscode.env.openExternal(vscode.Uri.parse(link));
+			await vscode.env.openExternal(vscode.Uri.parse(claudeLink(prompt)));
 		}
 	};
 	return {
-		find: () => (vscode.extensions.getExtension(CLAUDE_CODE) ? 'vscode' : null),
-		openFolder,
-		openPrompt: async (editor, root, prompt) => {
-			await openFolder(editor, root);
-			await open({ prompt });
-		},
-		openSession: async (editor, session, then) => {
-			await openFolder(editor, session.root);
-			then();
-			await open({ session: session.session });
+		open: async (agent, root, prompt) => {
+			if (agent !== 'claude-code' || !vscode.extensions.getExtension(CLAUDE_CODE)) return false;
+			await openFolder(root);
+			await openClaude(prompt);
+			return true;
 		},
 	};
 };
@@ -107,6 +122,6 @@ export const vscodePorts = (vscode: VsCodeApi, headless: Headless): Ports => ({
 	},
 	copy: (text) => Promise.resolve(vscode.env.clipboard.writeText(text)),
 	...toolPorts(),
-	editor: editorHere(vscode),
+	agentWindow: agentWindowHere(vscode),
 	headless,
 });

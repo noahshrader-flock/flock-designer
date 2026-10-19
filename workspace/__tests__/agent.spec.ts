@@ -1,129 +1,8 @@
-import { spawn } from 'node:child_process';
-import { mkdtempSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { AGENT_BUSY, AgentRunner, agentReadiness, claudeCodeAdapter, claudeStreamFormatter, locateClaude } from '../src/core/services/agent/agent';
-import type { RunLogLine } from '../src/shared/contract';
-import { eventually } from './fixtures';
-
-let root: string;
-let logs: RunLogLine[];
-
-beforeEach(() => {
-	root = mkdtempSync(join(tmpdir(), 'fdw-agent-'));
-	logs = [];
-});
-afterEach(() => rmSync(root, { recursive: true, force: true }));
-
-describe('the task handed over', () => {
-	it("names the project and points at the repository's own instructions", () => {
-		const runner = new AgentRunner((l) => logs.push(l));
-		const task = runner.taskFor('users-inactivity-signal', 'Flag users who have not signed in.');
-		expect(task).toContain('Project: users-inactivity-signal');
-		expect(task).toContain("this repository's own agent instructions");
-		expect(task).toContain('Flag users who have not signed in.');
-	});
-
-	it('does not restate standards, which would be a second source that drifts', () => {
-		const runner = new AgentRunner((l) => logs.push(l));
-		const task = runner.taskFor('demo', 'do the thing');
-		expect(task.split('\n').length).toBeLessThan(8);
-	});
-});
-
-describe('the adapter boundary', () => {
-	it('produces argv, not a shell string', () => {
-		const argv = claudeCodeAdapter.argvFor('a task with ; and && in it');
-		expect(argv[0]).toMatch(/claude$/);
-		expect(argv[argv.indexOf('-p') + 1]).toBe('a task with ; and && in it');
-	});
-
-	it('names the conversation with the ID the app chose, so it can be continued elsewhere', () => {
-		const argv = claudeCodeAdapter.argvFor('t', { session: '5ea94a82-46ac-4823-9acb-716bcb37aa64', name: 'DSNR: demo', addDirs: ['/r'] });
-		expect(argv[argv.indexOf('--session-id') + 1]).toBe('5ea94a82-46ac-4823-9acb-716bcb37aa64');
-		expect(argv[argv.indexOf('--name') + 1]).toBe('DSNR: demo');
-		// --add-dir takes a list, so it stays last.
-		expect(argv.at(-2)).toBe('--add-dir');
-	});
-
-	it('can be swapped without touching the runner, so the tool is replaceable', async () => {
-		const runner = new AgentRunner((l) => logs.push(l), {
-			spawnProcess: spawn,
-			adapter: { name: 'Echo', argvFor: (t) => ['node', '-e', `console.log(${JSON.stringify(t)})`] },
-		});
-		runner.start(root, 'demo', 'hello');
-		await eventually(() => expect(logs.map((l) => l.text).join('')).toContain('Project: demo'));
-	});
-});
-
-describe('status', () => {
-	it('starts idle', () => {
-		expect(new AgentRunner(() => {}).status()).toEqual({ state: 'idle' });
-	});
-
-	it('says the agent is unavailable rather than failing silently', async () => {
-		const runner = new AgentRunner((l) => logs.push(l), {
-			spawnProcess: spawn,
-			adapter: { name: 'Nothing', argvFor: () => ['definitely-not-installed-xyz'] },
-		});
-		runner.start(root, 'demo', 'x');
-		await eventually(() => expect(runner.status().state).toBe('unavailable'));
-		const status = runner.status();
-		expect(status.state === 'unavailable' && status.detail).toMatch(/installed and on PATH/);
-	});
-
-	it('reports the exit code when the agent finishes', async () => {
-		const runner = new AgentRunner((l) => logs.push(l), {
-			spawnProcess: spawn,
-			adapter: { name: 'Exit', argvFor: () => ['node', '-e', 'process.exit(0)'] },
-		});
-		runner.start(root, 'demo', 'x');
-		await eventually(() => expect(runner.status()).toEqual({ state: 'finished', exitCode: 0, work: null }));
-	});
-
-	it('does not start a second run over a running one: the same work joins it, anything else is told it is busy', async () => {
-		const runner = new AgentRunner((l) => logs.push(l), {
-			spawnProcess: spawn,
-			adapter: { name: 'Sleep', argvFor: () => ['node', '-e', 'setInterval(() => {}, 1000)'] },
-		});
-		const first = runner.start(root, 'demo', 'x', { work: 'prototype/demo/v1' });
-		expect(runner.start(root, 'demo', 'x', { work: 'prototype/demo/v1' })).toEqual(first);
-		expect(() => runner.start(root, 'other', 'y', { work: 'prototype/other/v1' })).toThrow(AGENT_BUSY);
-		// Work with no name can never be told apart from the run, so it is never joined to it.
-		expect(() => runner.start(root, 'demo', 'y')).toThrow(AGENT_BUSY);
-		void runner.stop();
-	});
-});
-
-describe('a run to its end', () => {
-	const runner = (argv: string[]) => new AgentRunner((l) => logs.push(l), { spawnProcess: spawn, adapter: { name: 'Node', argvFor: () => argv } });
-
-	it('ends when its process exits, with its code, never guessed', async () => {
-		expect(await runner(['node', '-e', 'process.exit(0)']).run(root, 'demo', 'x')).toEqual({ state: 'finished', exitCode: 0 });
-		expect(await runner(['node', '-e', 'process.exit(3)']).run(root, 'demo', 'x')).toEqual({ state: 'finished', exitCode: 3 });
-	});
-
-	it('says it could not run, rather than waiting for a run that never started', async () => {
-		const end = await runner(['definitely-not-installed-xyz']).run(root, 'demo', 'x');
-		expect(end.state === 'unavailable' && end.detail).toMatch(/installed and on PATH/);
-	});
-
-	it('says it was stopped when the person stops it, and the same work asked again waits for that end', async () => {
-		const going = runner(['node', '-e', 'setInterval(() => {}, 1000)']);
-		const first = going.run(root, 'demo', 'x', { work: 'prototype/demo/v1' });
-		const again = going.run(root, 'demo', 'x', { work: 'prototype/demo/v1' });
-		expect(going.ended('prototype/demo/v1')).not.toBeNull();
-		expect(going.ended('prototype/other/v1')).toBeNull();
-		await going.stop();
-		expect(await first).toEqual({ state: 'stopped' });
-		expect(await again).toEqual({ state: 'stopped' });
-		expect(going.ended('prototype/demo/v1')).toBeNull();
-	});
-});
+import { describe, expect, it } from 'vitest';
+import { claudeArgv, locateClaude } from '../src/core/services/agent/agent';
 
 describe('running unattended', () => {
-	const argv = claudeCodeAdapter.argvFor('build it', { addDirs: ['/design/projects'] });
+	const argv = claudeArgv('/bin/claude', 'change it', []);
 
 	it('prints, allows edits, and streams, since nobody is there to answer a prompt', () => {
 		expect(argv).toContain('-p');
@@ -143,8 +22,13 @@ describe('running unattended', () => {
 		expect(settings).toEqual({ attribution: { commit: '', pr: '' } });
 	});
 
-	it('lets it write to the design repository, and puts that list last so it swallows nothing', () => {
-		expect(argv.slice(-2)).toEqual(['--add-dir', '/design/projects']);
+	it('lets it read the folders given as read only and change none of them, and gives no rules when there are none', () => {
+		const settingsOf = (given: string[]) => JSON.parse(given[given.indexOf('--settings') + 1] ?? '{}');
+		expect(settingsOf(claudeArgv('/bin/claude', 't', ['/c/coke'])).permissions).toEqual({
+			allow: ['Read(//c/coke/**)'],
+			deny: ['Edit(//c/coke/**)', 'Write(//c/coke/**)'],
+		});
+		expect(settingsOf(claudeArgv('/bin/claude', 't', [])).permissions).toBeUndefined();
 	});
 });
 
@@ -174,97 +58,5 @@ describe('finding Claude Code', () => {
 
 	it('falls back to the bare name, whose failure says what to install', () => {
 		expect(locateClaude({ PATH: '' }, '/h', none, () => [])).toBe('claude');
-	});
-});
-
-describe('reading the stream', () => {
-	const events = [
-		{ type: 'system', subtype: 'init' },
-		{
-			type: 'assistant',
-			message: {
-				content: [
-					{ type: 'text', text: 'Reading the brief.' },
-					{ type: 'tool_use', name: 'Write', input: { file_path: 'src/prototypes/x/index.tsx' } },
-				],
-			},
-		},
-		{ type: 'result', subtype: 'success', is_error: false },
-	].map((e) => JSON.stringify(e));
-
-	it('shows what it says and which file it touches, and nothing else', () => {
-		const lines = claudeStreamFormatter()(`${events.join('\n')}\n`);
-		expect(lines).toEqual(['Reading the brief.', '→ Write src/prototypes/x/index.tsx', 'Finished.']);
-	});
-
-	it('copes with a chunk that ends in the middle of a line', () => {
-		const f = claudeStreamFormatter();
-		const whole = `${events[1]}\n`;
-		expect([...f(whole.slice(0, 20)), ...f(whole.slice(20))]).toEqual(['Reading the brief.', '→ Write src/prototypes/x/index.tsx']);
-	});
-
-	it('reports a failed run as stopped', () => {
-		expect(claudeStreamFormatter()(`${JSON.stringify({ type: 'result', is_error: true, result: 'out of turns' })}\n`)).toEqual([
-			'Stopped: out of turns',
-		]);
-	});
-
-	it('keeps what the agent said at the end, which is where it explains why it changed nothing', () => {
-		const said = 'No changes were made. Comment 1 refers to text outside this iteration’s boundary.';
-		const lines = claudeStreamFormatter()(`${JSON.stringify({ type: 'result', subtype: 'success', is_error: false, result: said })}\n`);
-		expect(lines).toEqual([said, 'Finished.']);
-	});
-
-	it('says it once when the closing event repeats the last message, which is what the real stream does', () => {
-		const said = 'No changes were made.';
-		const f = claudeStreamFormatter();
-		const lines = f(
-			`${JSON.stringify({ type: 'assistant', message: { content: [{ type: 'text', text: said }] } })}\n` +
-				`${JSON.stringify({ type: 'result', subtype: 'success', is_error: false, result: said })}\n`,
-		);
-		expect(lines).toEqual([said, 'Finished.']);
-	});
-});
-
-describe('agentReadiness', () => {
-	const locate = () => '/bin/claude';
-	it('is ready when Claude Code says someone is signed in, and asks it nothing else', async () => {
-		const run = vi.fn(async () => JSON.stringify({ loggedIn: true, email: 'someone@example.test' }));
-		expect(await agentReadiness(locate, run)).toEqual({ state: 'ready' });
-		expect(run).toHaveBeenCalledWith('/bin/claude', ['auth', 'status', '--json']);
-	});
-
-	it('says signed out when Claude Code says so', async () => {
-		expect(await agentReadiness(locate, async () => '{"loggedIn":false}')).toEqual({ state: 'signedOut' });
-	});
-
-	it('says missing when there is no Claude Code to run', async () => {
-		const run = async () => {
-			throw Object.assign(new Error('spawn claude ENOENT'), { code: 'ENOENT' });
-		};
-		expect(await agentReadiness(() => 'claude', run)).toEqual({ state: 'missing' });
-	});
-
-	it("stands in nobody's way when it cannot tell: an older Claude Code, a timeout, an answer it does not understand", async () => {
-		expect(
-			await agentReadiness(locate, async () => {
-				throw Object.assign(new Error('unknown command'), { code: 1 });
-			}),
-		).toEqual({ state: 'unknown' });
-		expect(await agentReadiness(locate, async () => 'Logged in as someone')).toEqual({ state: 'unknown' });
-	});
-});
-
-describe('what a run leaves behind for a screen opened again', () => {
-	it('tags the run with its work and keeps its recent lines', async () => {
-		const runner = new AgentRunner(() => {}, {
-			adapter: { name: 'Echo', argvFor: () => ['node', '-e', 'console.log("one"); console.log("two")'] },
-			spawnProcess: spawn,
-		} as never);
-		const started = runner.start(tmpdir(), 'users', 't', { work: 'prototype/users/v1' });
-		expect(started).toMatchObject({ state: 'running', work: 'prototype/users/v1' });
-		for (let i = 0; i < 100 && runner.status().state === 'running'; i++) await new Promise((r) => setTimeout(r, 20));
-		expect(runner.status()).toMatchObject({ state: 'finished', work: 'prototype/users/v1' });
-		expect(runner.recentLines()).toEqual({ work: 'prototype/users/v1', lines: ['one', 'two'] });
 	});
 });

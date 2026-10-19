@@ -18,13 +18,14 @@ const world = (more: { given?: Given; api?: Record<string, unknown>; choose?: (s
 	const told: string[] = [];
 	const toldDone: string[] = [];
 	const api = {
+		agentReady: vi.fn(async () => ok(null)),
 		prototypeReadiness: vi.fn(async () => ok({ ready: true, designSystem: '@acme/ui', version: '1.0.0' })),
 		installPackages: vi.fn(async () => ok(null)),
 		cancelInstall: vi.fn(async () => ok(null)),
 		onInstallLine: vi.fn(() => () => undefined),
 		readCheckout: vi.fn(async () => ok({ root: '/p', name: 'p', branch: 'main', clean: true })),
 		createPrototype: vi.fn(async () => ok(created)),
-		handPrototypeBuild: vi.fn(async () => ok({ editor: true, command: null })),
+		handPrototypeBuild: vi.fn(async () => ok({ agent: 'Claude Code', editor: true, command: null })),
 		...more.api,
 	};
 	const deps: NewPrototypeDeps = {
@@ -67,7 +68,9 @@ describe('starting a prototype from VS Code', () => {
 	});
 
 	it('says, when Claude Code is not in this VS Code, that the command is on the clipboard', async () => {
-		const { deps, toldDone } = world({ api: { handPrototypeBuild: vi.fn(async () => ok({ editor: false, command: 'cd /p && claude "x"' })) } });
+		const { deps, toldDone } = world({
+			api: { handPrototypeBuild: vi.fn(async () => ok({ agent: 'Claude Code', editor: false, command: 'cd /p && claude "x"' })) },
+		});
 		await newPrototype(deps);
 		expect(toldDone[0]).toContain('Claude Code is not in this VS Code');
 		expect(toldDone[0]).toContain('on your clipboard');
@@ -167,11 +170,14 @@ describe('what stands in the way, said first', () => {
 });
 
 describe('ready to start', () => {
-	it('is a product open, said before the person is asked anything', async () => {
+	it('is a product open and the agent ready, said before the person is asked anything', async () => {
 		const { deps } = world();
 		await expect(readyToStart(deps)).resolves.toBeUndefined();
 		deps.product = { root: null, why: 'No product is open: open its folder.' };
 		await expect(readyToStart(deps)).rejects.toThrow('No product is open: open its folder.');
+		deps.product = { root: '/p', why: '' };
+		deps.api.agentReady = vi.fn(async () => ({ ok: false as const, error: 'Claude Code is not signed in.' }));
+		await expect(readyToStart(deps)).rejects.toThrow('Claude Code is not signed in.');
 	});
 });
 

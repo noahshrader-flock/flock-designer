@@ -116,7 +116,7 @@ const prototypePage = async (
 	progress: (line: string) => void,
 ): Promise<Measured> => {
 	assertPrototypeName(name);
-	const html = await work.page(projectId, name, false);
+	const html = await work.page(projectId, name);
 	if (html === null) throw new Error(`${projectId} ${name} has no page yet. Save it first (save-prototype), then measure it.`);
 	const what = prototypeMeasureName(projectId, name);
 	progress(`Checking ${what}`);

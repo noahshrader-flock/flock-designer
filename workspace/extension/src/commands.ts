@@ -1,3 +1,4 @@
+import type { WorkspaceApi } from '../../src/shared/contract';
 import { readReview } from './asks';
 import { type HostMessage, type Review, readProjectArg } from './messages';
 import { type Given, readAsked, readyToStart } from './newPrototype';
@@ -8,6 +9,7 @@ export interface CommandDeps {
 	tell: (message: string) => void;
 	inPanel: (message: HostMessage) => Promise<void>;
 	product: () => { root: string | null; why: string };
+	api: Pick<WorkspaceApi, 'agentReady'>;
 	startPrototype: (given: Given) => Promise<void>;
 	openReview: (review: Review) => Promise<void>;
 	pickReview: () => Promise<Review | null | undefined>;
@@ -31,7 +33,7 @@ export const commands = (d: CommandDeps): Record<string, (raw?: unknown) => unkn
 		'dsnr.newPrototype': (raw) => {
 			const asked = readAsked(raw);
 			if (asked === 'ask')
-				return readyToStart({ product: d.product() })
+				return readyToStart({ product: d.product(), api: d.api })
 					.then(() => d.inPanel({ type: 'open-dialog', dialog: { kind: 'new' } }))
 					.catch(d.failed);
 			if (!asked) throw new Error('DSNR: New prototype was given something that is not a name and what it should explore.');

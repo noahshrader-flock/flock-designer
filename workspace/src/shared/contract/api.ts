@@ -1,5 +1,4 @@
 import type { SignInState } from '../domain/account';
-import type { AgentReadiness } from '../domain/agent';
 import type { Checkout, PreviewStatus, RunLogLine } from '../domain/checkout';
 import type { CommentAnchor, CommentRef, ReviewComment } from '../domain/comments';
 import type {
@@ -125,7 +124,6 @@ export interface WorkspaceApi {
 	shareWork(root: string, projectId: string, name: string): Promise<Result<ShareStatus>>;
 	onShareStatus(listener: (status: ShareStatus) => void): () => void;
 
-	stopAgent(): Promise<Result<null>>;
 	/**
 	 * `from`: a repository on this machine and a branch to model the page on. `folder` applies to a new project only; one
 	 * that has a brief already stays where it is.
@@ -155,14 +153,14 @@ export interface WorkspaceApi {
 	prototypeReadiness(root: string): Promise<Result<PrototypeReadiness>>;
 	/** Makes the project's codebase branch (from `from`) and its record, then hands the building to Claude Code. */
 	buildInCodebase(root: string, projectId: string, name: string, from?: string): Promise<Result<Handed>>;
-	agentReadiness(): Promise<Result<AgentReadiness>>;
+	/** Refused, in the agent's own words, when it is missing or signed out: asked before anything is made for it. */
+	agentReady(): Promise<Result<null>>;
 	/** Hands the handoff's task to the agent, as a build is handed; refused unless the checkout is on the work's branch. */
 	handOff(root: string, projectId: string): Promise<Result<Handed>>;
 	/** Asked as often as one likes: `done` is said once, and the verdict recorded then. */
 	handoffResult(root: string, projectId: string): Promise<Result<HandoffResult>>;
 	/** `uncommitted`: the checkout had changes nobody committed, and no agent made them here. */
 	runLocally(root: string, projectId: string, name: string): Promise<Result<{ url: string; uncommitted: boolean }>>;
-	onAgentLog(listener: (line: RunLogLine) => void): () => void;
 
 	signInState(): Promise<Result<SignInState>>;
 	signOut(): Promise<Result<null>>;
@@ -213,8 +211,7 @@ export const INVOKE = [
 	'cancelInstall',
 	'branchesWithSetup',
 	'stopCommand',
-	'stopAgent',
-	'agentReadiness',
+	'agentReady',
 	'handOff',
 	'handoffResult',
 	'runLocally',
@@ -250,7 +247,6 @@ export const EVENTS = {
 	onShareStatus: 'shareStatus',
 	onRunLog: 'runLog',
 	onPreviewStatus: 'previewStatus',
-	onAgentLog: 'agentLog',
 	onSignInChanged: 'signInChanged',
 	onLibraryShown: 'libraryShown',
 } as const satisfies Partial<Record<keyof WorkspaceApi, string>>;

@@ -10,6 +10,7 @@ const given = (more: Partial<CommandDeps> = {}) => {
 		tell: vi.fn(),
 		inPanel: vi.fn(async () => undefined),
 		product: () => ({ root: '/product', why: '' }),
+		api: { agentReady: vi.fn(async () => ({ ok: true as const, value: null })) },
 		startPrototype: vi.fn(async () => undefined),
 		openReview: vi.fn(async () => undefined),
 		pickReview: vi.fn(async () => review),
@@ -36,6 +37,11 @@ describe('DSNR’s commands', () => {
 		await none.run('dsnr.newPrototype');
 		expect(none.d.inPanel).not.toHaveBeenCalled();
 		expect(none.d.failed).toHaveBeenCalledWith(new Error('Open a product first.'));
+		// Before the dialog, so nobody fills it in for an agent that cannot take it.
+		const out = given({ api: { agentReady: vi.fn(async () => ({ ok: false as const, error: 'Claude Code is not signed in.' })) } });
+		await out.run('dsnr.newPrototype');
+		expect(out.d.inPanel).not.toHaveBeenCalled();
+		expect(out.d.failed).toHaveBeenCalledWith(new Error('Claude Code is not signed in.'));
 	});
 
 	it('start a prototype they are given, and refuse one that is not a name and a task', async () => {

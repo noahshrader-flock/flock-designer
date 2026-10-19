@@ -9,7 +9,6 @@ import { cloneStore, buildInCodebaseLead, recordPrototype, setCover } from '../s
 import { PrototypeServer } from '../src/core/services/prototypes/prototypeServer';
 import { memoryStore } from './fixtures';
 import { prototypeBuildTask } from '../src/core/services/agent/agentTasks';
-import { claudeCodeAdapter } from '../src/core/services/agent/agent';
 
 describe('what a prototype is called', () => {
 	it('is keyed apart from every branch, and numbered one past the highest', () => {
@@ -176,15 +175,6 @@ describe('what the agent is told', () => {
 		expect(prototypeBuildTask({ guide: '', skill: 's', build, sources, accessibility: '', voice: '', request: 'r' })).toContain(
 			'The design system as installed:** not on this machine',
 		);
-	});
-
-	it('lets the agent read the product but never change it', () => {
-		const argv = claudeCodeAdapter.argvFor('t', { readOnly: ['/c/coke'] });
-		const settings = JSON.parse(argv[argv.indexOf('--settings') + 1] as string);
-		expect(settings.permissions).toEqual({ allow: ['Read(//c/coke/**)'], deny: ['Edit(//c/coke/**)', 'Write(//c/coke/**)'] });
-		expect(argv).not.toContain('--add-dir');
-		const plain = JSON.parse(claudeCodeAdapter.argvFor('t')[claudeCodeAdapter.argvFor('t').indexOf('--settings') + 1] as string);
-		expect(plain.permissions).toBeUndefined();
 	});
 });
 
