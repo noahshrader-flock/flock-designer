@@ -124,10 +124,6 @@ export class ReviewThreads {
 		};
 	}
 
-	async commentCounts(): Promise<Map<string, number>> {
-		return new Map([...(await this.byBranch())].map(([branch, thread]) => [branch, thread.openComments]));
-	}
-
 	async readComments(branch: string): Promise<ReviewComment[]> {
 		const issue = (await this.byBranch()).get(branch);
 		if (!issue) return [];

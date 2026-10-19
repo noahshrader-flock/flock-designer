@@ -382,11 +382,5 @@ describe('the threads of a branch', () => {
 			openComments: 3,
 			updatedAt: '2026-10-07T10:00:00Z',
 		});
-		expect(await threads.commentCounts()).toEqual(
-			new Map([
-				['prototype/alpha/v1', 3],
-				['prototype/beta/v1', 5],
-			]),
-		);
 	});
 });

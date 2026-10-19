@@ -9,7 +9,6 @@ on:
 
 permissions:
   contents: read
-  issues: read
   pages: write
   id-token: write
 
@@ -34,7 +33,6 @@ jobs:
         working-directory: workspace
       - name: Build the site
         env:
-          GH_TOKEN: ${{ github.token }}
           DSNR_REPO_OWNER: ${{ github.repository_owner }}
           DSNR_REPO_NAME: ${{ github.event.repository.name }}
         run: node workspace/bin/dsnr.mjs build-site --out _site
