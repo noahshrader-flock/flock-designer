@@ -6,7 +6,7 @@ import type { Catalog, ComponentPictures, ProjectWork } from '../src/shared/cont
 import { SAMPLE_CATALOG, SAMPLE_PROJECTS } from './extensionSamples';
 import { projectWork } from './fixtures';
 import { answer, answerOf, calls, callsOf, kept, lastAsk, mountPage, panelSaid, say, sent, share, shareCatalog, unmount } from './webviewHarness';
-import { allByRole, button, dialog, key, press, type } from './ui';
+import { allByRole, button, dialog, fieldNamed, key, menuItem, press, type } from './ui';
 
 const OPEN: Context = {
 	product: '/work/flock-coke',
@@ -245,7 +245,7 @@ describe('the account and the sync, in the panel, not as a box at the top (their
 });
 
 describe('dialogs and menus, in the panel', () => {
-	const field = (name: string) => [...dialog()!.querySelectorAll('label')].find((l) => l.textContent === name)!.control as HTMLInputElement;
+	const field = (name: string) => fieldNamed<HTMLInputElement>(name, dialog()!);
 	const choose = async (select: HTMLElement, label: string) => {
 		const option = [...(select as HTMLSelectElement).options].find((o) => o.textContent === label);
 		if (!option) throw new Error(`no option ${label}`);
@@ -255,8 +255,8 @@ describe('dialogs and menus, in the panel', () => {
 	const submit = () => dialog()!.querySelector('button[type="submit"]') as HTMLButtonElement;
 	const closeX = () => button('Close', dialog()!);
 	const menuFor = (n: number) => [...body().querySelectorAll<HTMLElement>('[aria-label="Project actions"]')][n] as HTMLElement;
-	const items = () => [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')];
-	const item = (label: string) => items().find((i) => i.textContent === label)!;
+	const items = () => allByRole('menuitem');
+	const item = (label: string) => menuItem(items(), label);
 
 	describe('New prototype', () => {
 		it('opens in the panel, not as a box at the top, when the extension says it can be started (its title bar’s +, or the empty list’s button)', async () => {
@@ -331,7 +331,7 @@ describe('dialogs and menus, in the panel', () => {
 			opener.focus();
 			await say({ type: 'open-dialog', dialog: { kind: 'new' } });
 			expect(document.activeElement?.closest('[role="dialog"]')).not.toBeNull();
-			await act(async () => void dialog()!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
+			await key('Escape', { on: dialog()! });
 			expect(dialog()).toBeNull();
 			expect(document.activeElement).toBe(opener);
 			expect(panelSaid().some((m) => m.type === 'new-prototype')).toBe(false);
@@ -344,7 +344,7 @@ describe('dialogs and menus, in the panel', () => {
 			await press(menuFor(0));
 			expect(items().map((i) => i.textContent)).toEqual(['Copy link', 'Open published page', 'Open locally', 'Build', 'Assign folder…']);
 			expect(menuFor(0).getAttribute('aria-expanded')).toBe('true');
-			await act(async () => void document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
+			await key('Escape');
 			expect(items()).toHaveLength(0);
 			await press(menuFor(0));
 			await act(async () => void document.body.dispatchEvent(new MouseEvent('mousedown', { bubbles: true })));
@@ -386,7 +386,7 @@ describe('dialogs and menus, in the panel', () => {
 			await showOpen();
 			await press(menuFor(0));
 			expect(document.activeElement?.getAttribute('role')).toBe('menuitem');
-			await act(async () => void document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
+			await key('Escape');
 			expect(document.activeElement).toBe(menuFor(0));
 			await press(menuFor(0));
 			await press(item('Copy link'));
@@ -491,8 +491,8 @@ describe('codebase work, in the panel', () => {
 	const named = (title: string) =>
 		[...body().querySelectorAll<HTMLElement>('[role="listitem"]')].find((r) => r.querySelector('[data-part="name"]')?.textContent === title)!;
 	const menuOf = (title: string) => named(title).querySelector<HTMLElement>('[aria-label="Project actions"]')!;
-	const items = () => [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')].map((i) => i.textContent);
-	const item = (label: string) => [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')].find((i) => i.textContent === label)!;
+	const items = () => allByRole('menuitem').map((i) => i.textContent);
+	const item = (label: string) => menuItem(allByRole('menuitem'), label);
 	const elsewhere = async () => act(async () => void document.body.dispatchEvent(new MouseEvent('mousedown', { bubbles: true })));
 	const inDialog = (name: string) => button(name, dialog()!);
 	const closeX = () => button('Close', dialog()!);
@@ -1258,14 +1258,14 @@ describe('Design System', () => {
 		expect(body().querySelector('.ds-actions [aria-label="Sync with GitHub"]')).toBeNull();
 		expect(body().querySelector('[aria-label="Design system actions"]')?.className).toBe('menu-button menu-button-small menu-button-shown');
 		await press(body().querySelector('[aria-label="Design system actions"]') as HTMLElement);
-		const items = [...body().querySelectorAll<HTMLElement>('.ds-actions [role="menuitem"]')];
+		const items = allByRole('menuitem', undefined, body().querySelector('.ds-actions')!);
 		expect(items.map((i) => i.textContent)).toEqual(['Sync with GitHub', 'Primitives', 'Voice and Tone']);
 		expect(body().querySelectorAll('.ds-actions [role="separator"]')).toHaveLength(1);
 		expect(items[0]!.nextElementSibling?.getAttribute('role')).toBe('separator');
 		await press(items[2]!);
 		expect(lastAsk()).toEqual(['openVoiceAndTone', []]);
 		await press(body().querySelector('[aria-label="Design system actions"]') as HTMLElement);
-		await press(body().querySelector<HTMLElement>('.ds-actions [role="menuitem"]')!);
+		await press(allByRole('menuitem', undefined, body().querySelector('.ds-actions')!)[0]!);
 		expect(lastAsk()).toEqual(['syncDesignSystem', []]);
 	});
 
@@ -1293,12 +1293,12 @@ describe('Design System', () => {
 		await press(card.querySelector('.card') as HTMLElement);
 		expect(lastAsk()).toEqual(['openComponent', ['src/components/FSButton/FSButton.stories.tsx']]);
 		await press(card.querySelector('.menu-button') as HTMLElement);
-		expect([...card.querySelectorAll('[role="menuitem"]')].map((i) => i.textContent)).toEqual(['Open in Storybook', 'View on GitHub']);
-		await press([...card.querySelectorAll<HTMLElement>('[role="menuitem"]')].find((i) => i.textContent === 'Open in Storybook')!);
+		expect(allByRole('menuitem', undefined, card).map((i) => i.textContent)).toEqual(['Open in Storybook', 'View on GitHub']);
+		await press(allByRole('menuitem', undefined, card).find((i) => i.textContent === 'Open in Storybook')!);
 		expect(lastAsk()).toEqual(['componentLink', ['src/components/FSButton/FSButton.stories.tsx', 'storybook']]);
 		const other = [...body().querySelectorAll<HTMLElement>('.card-item')].find((c) => c.textContent?.includes('FSSelect')) as HTMLElement;
 		await press(other.querySelector('.menu-button') as HTMLElement);
-		expect([...other.querySelectorAll('[role="menuitem"]')].map((i) => i.textContent)).toEqual(['View on GitHub']);
+		expect(allByRole('menuitem', undefined, other).map((i) => i.textContent)).toEqual(['View on GitHub']);
 	});
 
 	it('keeps the Components and Tokens toggle and the search bar together, as siblings, which the stylesheet stacks at the top', async () => {
@@ -1396,7 +1396,7 @@ describe('Design System', () => {
 		expect(rows[0]!.querySelector('[data-token="palette.dark.primary.main"] button')?.getAttribute('title')).toBe('Dark primary main');
 		expect(rows[1]!.querySelector('.theme-none')?.textContent).toBe('—');
 		await press(light);
-		expect(document.querySelector('[role="dialog"]')?.getAttribute('aria-label')).toBe('Light · primary.main');
+		expect(dialog()?.getAttribute('aria-label')).toBe('Light · primary.main');
 	});
 
 	it('says nothing on a colour’s dot but the token’s name, in the grid of roles and in the palette: one line, no hex, no pointer', async () => {
@@ -1424,7 +1424,7 @@ describe('Design System', () => {
 		await press(link);
 		expect(lastAsk()).toEqual(['openLibrarySource', ['src/colors/tones.ts', 3]]);
 		await press(step.querySelector('button.color-dot') as HTMLElement);
-		expect(document.querySelector('[role="dialog"]')).not.toBeNull();
+		expect(dialog()).not.toBeNull();
 	});
 
 	it('keeps a role’s themes together when the search finds it in one', async () => {
@@ -1513,7 +1513,7 @@ describe('every change being tried, in the panel’s Changes: the tokens and eac
 		await answerOf('changeBranch', 'tokens', null);
 	};
 	const count = () => document.querySelector('.ds-actions [aria-label$="being tried"]') as HTMLElement;
-	const changes = () => document.querySelector('[role="dialog"][aria-label="Changes"]') as HTMLElement | null;
+	const changes = () => dialog('Changes');
 	const group = () => document.querySelector('[aria-label="Value changes · FSButton"]') as HTMLElement | null;
 	const trialsSaid = () => calls('setValueTrial').map((c) => c.args);
 
@@ -1580,7 +1580,7 @@ describe('every change being tried, in the panel’s Changes: the tokens and eac
 		await share('catalog', { system: { id: SYSTEM, name: 'FUI' }, catalog: SAMPLE_CATALOG, error: null, syncing: false });
 		await answerOf('changeBranch', 'tokens', null);
 		expect(changes()).not.toBeNull();
-		await press(changes()!.querySelector('[aria-label="Close"]') as HTMLElement);
+		await press(button('Close', changes()!));
 		expect(changes()).toBeNull();
 	});
 
@@ -1757,15 +1757,14 @@ describe('trying a change to the tokens, saving it to a branch, and proposing it
 		await press([...document.querySelectorAll<HTMLElement>('[aria-label="Part"] [role="radio"]')][1]!);
 	};
 	const openChanges = async () => {
-		if (!document.querySelector('[role="dialog"][aria-label="Changes"]'))
-			await press(document.querySelector('.ds-actions [aria-label$="being tried"]') as HTMLElement);
+		if (!dialog('Changes')) await press(document.querySelector('.ds-actions [aria-label$="being tried"]') as HTMLElement);
 	};
 	const edited = () => calls('setTokenEdits').at(-1)?.args?.[0];
 
 	it('syncs by asking the extension, which reads it for every page, and shows what it is told it read', async () => {
 		await tokensOpen();
 		await press(document.querySelector('[aria-label="Design system actions"]') as HTMLElement);
-		await press(document.querySelector('.ds-actions [role="menuitem"]') as HTMLElement);
+		await press(allByRole('menuitem', undefined, document.querySelector('.ds-actions')!)[0]!);
 		expect(lastAsk()).toEqual(['syncDesignSystem', []]);
 		await shareCatalog({ ...SAMPLE_CATALOG, commit: 'f00d42' } as Catalog);
 		expect(document.querySelector('[data-showing]')).toBeNull();
@@ -1796,11 +1795,11 @@ describe('trying a change to the tokens, saving it to a branch, and proposing it
 		expect(document.activeElement).toBe(dialog());
 		expect(document.activeElement).not.toBe(hex);
 		await type(hex, '#00aa00');
-		await act(async () => void hex.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })));
+		await key('Enter', { on: hex });
 		expect(edited()).toEqual([{ path: 'tone.pineGreen.60', value: '#00AA00' }]);
 		expect(allByRole('button', 'Done', dialog()!)).toEqual([]);
 		await press(button('Close', dialog()!));
-		expect(document.querySelector('[role="dialog"]')).toBeNull();
+		expect(dialog()).toBeNull();
 		await press(document.querySelector('[aria-label="Change Spacing"]') as HTMLElement);
 		const slider = dialog()!.querySelector('input[type="range"]') as HTMLInputElement;
 		expect(document.activeElement).toBe(dialog());

@@ -1,12 +1,12 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { PullRequest } from '../src/codeHost/changeRequests';
 import type { ShareTools } from '../src/core/ports';
 import { ValueBranches } from '../src/core/services/designSystem/valueBranches';
 import type { TriedValue, ValueSources as Answer } from '../src/shared/contract';
-import { g, gitFile } from './fixtures';
+import { g, gitFile, writeFiles } from './fixtures';
 
 /**
  * Against a real clone of a small library. Where each value is written is a stand-in, said as `ValueSources` says it;
@@ -30,12 +30,6 @@ let openPr: PullRequest | null;
 /** An Error for `files` is why the values cannot be written. */
 let found: Map<string, { answer: Answer; files: Map<string, string> | Error }>;
 
-const write = (root: string, files: Record<string, string>) => {
-	for (const [path, text] of Object.entries(files)) {
-		mkdirSync(dirname(join(root, path)), { recursive: true });
-		writeFileSync(join(root, path), text);
-	}
-};
 const tools = (): ShareTools => ({
 	push: async (branch) => (asked.push(`push ${branch}`), { pushed: true }),
 	findPr: async () => openPr,
@@ -80,7 +74,7 @@ beforeEach(() => {
 	file = join(home, 'app', 'value-branches.json');
 	g(home, 'init', '-q', '--bare', '-b', 'develop', join(home, 'remote.git'));
 	g(home, 'init', '-q', '-b', 'develop', upstream);
-	write(upstream, LIBRARY);
+	writeFiles(upstream, LIBRARY);
 	g(upstream, 'add', '-A');
 	g(upstream, 'commit', '-q', '-m', 'library');
 	g(upstream, 'remote', 'add', 'origin', join(home, 'remote.git'));
@@ -89,7 +83,7 @@ beforeEach(() => {
 	g(clone, 'config', 'user.name', 'Noah');
 	g(clone, 'config', 'user.email', 'noah@example.com');
 	g(clone, 'checkout', '-q', '-b', 'noah/work');
-	write(clone, { 'README.md': 'Unsaved notes.\n' });
+	writeFiles(clone, { 'README.md': 'Unsaved notes.\n' });
 	asked = [];
 	openPr = null;
 	found = new Map([[BUTTON, smallFound()]]);
@@ -176,7 +170,7 @@ describe('saving the values tried on a component (Phase 4.4)', () => {
 
 	it('is not saved on top of a first save the library has moved on from: started over, it is saved on the library as it is', async () => {
 		await branches().save([SMALL], BUTTON);
-		write(upstream, { 'README.md': 'Moved.\n' });
+		writeFiles(upstream, { 'README.md': 'Moved.\n' });
 		g(upstream, 'commit', '-q', '-am', 'moved');
 		g(upstream, 'push', '-q', 'origin', 'develop');
 		g(clone, 'fetch', '-q', 'origin');

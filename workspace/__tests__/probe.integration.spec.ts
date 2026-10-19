@@ -1,10 +1,10 @@
 import { type Server, createServer } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { chromeHeadless, findChrome } from '../src/core/services/browser/chromeHeadless';
+import { chromeHeadless } from '../src/core/services/browser/chromeHeadless';
 import { CELLS, type CellId } from '../src/core/services/accessibility/probe/cells';
 import { PROBE_FIXTURES } from './fixtures/probeFixtures';
-import { NO_CHROME } from './realChrome';
+import { NO_CHROME, inChrome } from './realChrome';
 
 /** Long enough that Tab scrolls it: buttons below the fold. */
 const WHOLE = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Cameras</title></head><body>
@@ -80,15 +80,14 @@ describe.skipIf(NO_CHROME)('the probe, in a real browser', () => {
 
 describe.skipIf(NO_CHROME)('on a machine set to dark', () => {
 	it('is a machine whose pages prefer dark, as this test needs', async () => {
-		const { default: puppeteer } = await import('puppeteer-core');
-		const browser = await puppeteer.launch({ executablePath: findChrome() as string, headless: true, args: ['--force-dark-mode'] });
-		try {
-			const page = await browser.newPage();
-			await page.goto(`${base}/dark-styled`);
-			expect(await page.evaluate(() => matchMedia('(prefers-color-scheme: dark)').matches)).toBe(true);
-		} finally {
-			await browser.close();
-		}
+		await inChrome(
+			async (browser) => {
+				const page = await browser.newPage();
+				await page.goto(`${base}/dark-styled`);
+				expect(await page.evaluate(() => matchMedia('(prefers-color-scheme: dark)').matches)).toBe(true);
+			},
+			['--force-dark-mode'],
+		);
 	});
 
 	it('checks a page as it opens, in light, so axe finds what it finds on any machine', async () => {

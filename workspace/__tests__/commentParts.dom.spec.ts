@@ -1,4 +1,4 @@
-import { act, createElement, useState } from 'react';
+import { createElement, useState } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { CommentBox } from '../src/viewer/comments/CommentBox';
 import { CommentControl } from '../src/viewer/comments/CommentControl';
@@ -9,12 +9,9 @@ import { useComments } from '../src/viewer/comments/useComments';
 import type { CommentAnchor, MarkerRequest, PinEvent, ReviewComment } from '../src/shared/contract';
 import { cards, comment, ok } from './reviewHarness';
 import { anAnchor } from './fixtures';
-import { button, fieldNamed, menuItem, openMenu, press, render, settle, type, unmountAll } from './ui';
+import { button, fieldNamed, key, menuItem, openMenu, press, render, settle, type, unmountAll } from './ui';
 
 /** Through a store and a page that are not the app's; nothing here goes near `window.workspace`, which is not there. */
-
-const key = (el: Element, init: KeyboardEventInit) =>
-	act(async () => void el.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, cancelable: true, ...init })));
 
 const card = (text: string) => cards().find((c) => c.textContent?.includes(text)) as HTMLElement;
 
@@ -178,9 +175,9 @@ describe('the comments experience, through another store and page', () => {
 		const box = document.querySelector('#general-comment') as HTMLTextAreaElement;
 		expect(button('Send').hasAttribute('disabled')).toBe(true);
 		await type(box, 'The spacing feels tight overall');
-		await key(box, { key: 'Enter', shiftKey: true });
+		await key('Enter', { on: box, shiftKey: true });
 		expect(((await f.store.read()) as { value: ReviewComment[] }).value).toHaveLength(1);
-		await key(box, { key: 'Enter' });
+		await key('Enter', { on: box });
 		await settle();
 		const saved = ((await f.store.read()) as { value: ReviewComment[] }).value;
 		expect(saved.at(-1)).toMatchObject({ body: 'The spacing feels tight overall', anchor: null });

@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
@@ -6,23 +6,17 @@ import { BRAND, ON_BRAND } from '../src/shared/dsnrTokens';
 import { contrastRatio } from '../src/shared/tokens';
 import { tokenProperties } from '../src/ui/applyTokens';
 import { panelCss } from './panelStyles';
+import { sourceFiles } from './fixtures';
 
 const root = join(__dirname, '..');
 
 // Where values are written: a token's definition, here, is the one place a raw value may be.
 const HOMES = ['src/shared/dsnrTokens.ts', 'src/shared/pageTokens.ts', 'src/ui/theme.css'];
 
-// Not DSNR's look: what reads a design system's files, whose colours and sizes are their data, and the accessibility
-// probe, whose values are WCAG's (text spacing) or a sentinel it reads back.
+// Not DSNR's look: what reads a design system's files, whose colours and sizes are their data; the accessibility probe,
+// whose values are WCAG's (text spacing) or a sentinel it reads back; and the extension test's world, a product's pages.
 const NOT_LOOK =
-	/^src\/(core\/services\/designSystem|core\/services\/tokens|shared\/(tokens|tokenTags|cssVariables|objectLiteral|valueLocator|themeFiles)|page\/probe\.ts)/;
-
-const sources = (dir: string): string[] =>
-	readdirSync(dir).flatMap((name) => {
-		const path = join(dir, name);
-		if (name === 'dist' || name === 'node_modules' || name.startsWith('.')) return [];
-		return statSync(path).isDirectory() ? sources(path) : /\.(tsx?|css)$/.test(name) && !/\.d\.ts$/.test(name) ? [path] : [];
-	});
+	/^(src\/(core\/services\/designSystem|core\/services\/tokens|shared\/(tokens|tokenTags|cssVariables|objectLiteral|valueLocator|themeFiles)|page\/probe\.ts)|extension\/test\/)/;
 
 const COLOUR =
 	/#[0-9a-f]{3,8}\b|\b(?:rgba?|hsla?|hwb|lab|lch|oklab|oklch)\(|(?<![-\w])(?:white|black|red|green|blue|gr[ae]y|orange|yellow|purple|pink)(?![-\w])/i;
@@ -84,7 +78,7 @@ const stringsOf = (path: string, text: string): string[] => {
 
 const offences = () =>
 	['src', 'extension']
-		.flatMap((dir) => sources(join(root, dir)))
+		.flatMap((dir) => sourceFiles(join(root, dir)))
 		.map((path) => ({ path: relative(root, path), text: readFileSync(path, 'utf8') }))
 		.filter(({ path }) => !HOMES.includes(path) && !NOT_LOOK.test(path))
 		.flatMap(({ path, text }) => {

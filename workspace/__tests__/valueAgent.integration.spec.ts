@@ -1,13 +1,13 @@
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { reachOf } from '../src/core/services/designSystem/changeReach';
 import type { Built, Drawn } from '../src/core/services/designSystem/componentTokens';
 import { libraryCommit, systemReads } from '../src/core/services/designSystem/designLibrary';
 import { DESIGN_SYSTEM_CODE, ValueAgent, type Written } from '../src/core/services/designSystem/valueAgent';
 import type { ComponentValues, TriedValue } from '../src/shared/contract';
-import { g, settledAnswer } from './fixtures';
+import { g, settledAnswer, writeFiles } from './fixtures';
 
 /** A real clone, so the copy the agent works in and what it changed are git's; the agent is a stand-in that writes as a run would. */
 const BADGE = 'src/Badge/Badge.stories.tsx';
@@ -26,12 +26,6 @@ let readable: string[][];
 let copies: { hasPackages: boolean }[];
 let runs: { files: Record<string, string>; said: string; held?: Promise<void>; remove?: string[] }[];
 
-const write = (root: string, files: Record<string, string>) => {
-	for (const [path, text] of Object.entries(files)) {
-		mkdirSync(dirname(join(root, path)), { recursive: true });
-		writeFileSync(join(root, path), text);
-	}
-};
 const draw = (files: Record<string, string>): Drawn => {
 	const css = files[CSS] ?? '';
 	const shape = /borderRadius: (\d+)/.exec(files[THEME] ?? '')?.[1];
@@ -93,7 +87,7 @@ const agent = () =>
 			const next = runs.shift();
 			if (!next) return { ok: false, said: 'no run' };
 			await next.held;
-			write(cwd, next.files);
+			writeFiles(cwd, next.files);
 			for (const gone of next.remove ?? []) rmSync(join(cwd, gone));
 			return { ok: true, said: next.said };
 		},
@@ -120,7 +114,7 @@ beforeEach(() => {
 	clone = join(home, 'ui');
 	g(home, 'init', '-q', '--bare', '-b', 'develop', join(home, 'remote.git'));
 	g(home, 'init', '-q', '-b', 'develop', upstream);
-	write(upstream, LIBRARY);
+	writeFiles(upstream, LIBRARY);
 	g(upstream, 'add', '-A');
 	g(upstream, 'commit', '-q', '-m', 'library');
 	g(upstream, 'remote', 'add', 'origin', join(home, 'remote.git'));

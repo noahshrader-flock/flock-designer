@@ -12,7 +12,7 @@ import { ReviewThreads } from '../src/codeHost/reviewThreads';
 import { PAGE_CONFIG as CONFIG, PAGE_SIGN_IN as SIGN_IN, commentOnPage, fakeGitHubFetch, sitePage } from './pageHarness';
 import { cards, choicesIn, shownIn, shownState, switchMenu, chooseState, stateMenu, shownTheme, themeButton, themeGroup } from './reviewHarness';
 import { anAnchor } from './fixtures';
-import { allByRole, button, fieldNamed, menuItem, openMenu, press, render, settle, type, unmountAll } from './ui';
+import { allByRole, button, dialog, fieldNamed, menuItem, openMenu, press, render, settle, type, unmountAll } from './ui';
 
 /** Against a GitHub that answers as its API does, with the real pick and pin scripts running in the prototype's frame. */
 
@@ -136,16 +136,16 @@ describe('signing in on the published site (PUBLISHED_COMMENTS_PLAN, Phase 3)', 
 		await settle();
 		expect(savedToken()).toBeNull();
 		expect(sessionStorage.getItem('dsnr.sign-in')).toBeNull();
-		expect(document.querySelector('[role="dialog"]')?.textContent).toContain('Your sign-in has ended');
+		expect(dialog()?.textContent).toContain('Your sign-in has ended');
 	});
 
 	it('says how the last sign-in went, when it did not go', async () => {
 		await openSigning({ note: 'cancelled' });
 		await settle();
-		expect(document.querySelector('[role="dialog"]')?.textContent).toContain('Signing in was cancelled.');
+		expect(dialog()?.textContent).toContain('Signing in was cancelled.');
 		await press(button('Close'));
 		await settle();
-		expect(document.querySelector('[role="dialog"]')).toBeNull();
+		expect(dialog()).toBeNull();
 	});
 });
 
@@ -154,7 +154,7 @@ describe('a page from this machine with no key of DSNR’s (BROWSER_COMMENTS_PLA
 		current = await render(createElement(Viewer, { config: CONFIG, slots: sitePage().slots, relay: null, openedHere: true }));
 		await press(button('Sign in to comment'));
 		await settle();
-		expect(document.querySelector('[role="dialog"]')?.textContent).toContain('Open in browser');
+		expect(dialog()?.textContent).toContain('Open in browser');
 		expect(document.body.textContent).not.toContain('Commenting here is coming');
 	});
 });

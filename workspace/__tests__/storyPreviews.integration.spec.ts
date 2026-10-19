@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { join } from 'node:path';
 import { TextEncoder as NodeTextEncoder } from 'node:util';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PREVIEW_HEIGHT, PREVIEW_SHOW, previewAddress, specimenAddress } from '../src/shared/catalog';
@@ -12,7 +12,7 @@ import { buildPreviews, hasPackages, notInstalled, previewEntry, unresolved } fr
 import type { CatalogReads } from '../src/core/services/designSystem/componentCatalog';
 import { editedFiles } from '../src/core/services/designSystem/tokenEdits';
 import type { TokenEdit } from '../src/shared/contract';
-import { eventually, g } from './fixtures';
+import { eventually, g, writeFiles } from './fixtures';
 import { NO_CHROME, inChrome } from './realChrome';
 
 /** Counted on the real esbuild and Sass, so a test says how a change is built, not how long it took on a busy machine. */
@@ -63,12 +63,6 @@ let upstream: string;
 let folder: string;
 let server: PrototypeServer;
 
-const write = (root: string, files: Record<string, string>) => {
-	for (const [path, text] of Object.entries(files)) {
-		mkdirSync(dirname(join(root, path)), { recursive: true });
-		writeFileSync(join(root, path), text);
-	}
-};
 const commit = (root: string, message: string) => {
 	g(root, 'add', '-A');
 	g(root, 'commit', '-q', '-m', message);
@@ -111,7 +105,7 @@ export const addons = { getChannel: () => channel };
 };
 
 const makeLibrary = (files: Record<string, string>, packages = true) => {
-	write(upstream, files);
+	writeFiles(upstream, files);
 	commit(upstream, 'library');
 	g(upstream, 'push', '-q', 'origin', 'develop');
 	g(home, 'clone', '-q', join(home, 'remote.git'), clone);
@@ -121,7 +115,7 @@ const makeLibrary = (files: Record<string, string>, packages = true) => {
 	if (packages) {
 		mkdirSync(join(clone, 'node_modules', '@storybook'), { recursive: true });
 		for (const p of ['react', 'react-dom', 'scheduler']) symlinkSync(join(APP_MODULES, p), join(clone, 'node_modules', p), 'junction');
-		write(clone, FAKE_STORYBOOK);
+		writeFiles(clone, FAKE_STORYBOOK);
 	}
 };
 const previews = (more: Partial<ConstructorParameters<typeof StoryPreviews>[0]> = {}) =>
@@ -191,7 +185,9 @@ describe('building the previews', () => {
 		g(clone, 'config', 'user.name', 'Noah');
 		g(clone, 'config', 'user.email', 'noah@example.com');
 		g(clone, 'switch', '-q', '-c', branch, 'origin/develop');
-		write(clone, { 'src/components/FSTwo/FSTwo.stories.tsx': story('Inputs/FSTwo', `export const Default = () => <p>Two, by Claude Code</p>;`) });
+		writeFiles(clone, {
+			'src/components/FSTwo/FSTwo.stories.tsx': story('Inputs/FSTwo', `export const Default = () => <p>Two, by Claude Code</p>;`),
+		});
 		// Its own file only: the clone's installed packages are not the library's.
 		g(clone, 'add', 'src/components/FSTwo/FSTwo.stories.tsx');
 		g(clone, 'commit', '-q', '-m', 'Claude Code');
@@ -294,7 +290,7 @@ export default config
 		const own = join(clone, 'packages', 'ui');
 		mkdirSync(join(own, 'node_modules', '@storybook'), { recursive: true });
 		for (const p of ['react', 'react-dom', 'scheduler']) symlinkSync(join(APP_MODULES, p), join(own, 'node_modules', p), 'junction');
-		write(own, FAKE_STORYBOOK);
+		writeFiles(own, FAKE_STORYBOOK);
 		const p = previews({ system: () => ({ ...connected(clone)(), folder: 'packages/ui' }) });
 		const root = await render(await ready(p), 'packages/ui/src/Badge/Badge.stories.tsx');
 		expect(root.textContent).toContain('Own');
@@ -308,7 +304,7 @@ export default config
 				"import 'kit/theme.css';\nimport 'kit/dist/raw.css';\nexport const Default = () => <p className=\"kit\">Two</p>;",
 			),
 		});
-		write(clone, {
+		writeFiles(clone, {
 			'node_modules/kit/package.json': JSON.stringify({ name: 'kit', exports: { './theme.css': './dist/theme.css' } }),
 			'node_modules/kit/dist/theme.css': '.kit { color: rgb(4, 5, 6); }\n',
 			'node_modules/kit/dist/raw.css': '.raw { color: rgb(7, 8, 9); }\n',
@@ -379,7 +375,7 @@ export const Counting = { args: { value: 1 }, render: (args) => <button onClick=
 export const Pinned = { args: { checked: true }, render: (args) => <input type="checkbox" checked={args.checked} onChange={() => {}} /> };`,
 			),
 		});
-		write(clone, FAKE_STORYBOOK_CHANNEL);
+		writeFiles(clone, FAKE_STORYBOOK_CHANNEL);
 		const root = await render(await ready(previews()), 'src/components/FSTwo/FSTwo.stories.tsx');
 		const counting = root.querySelector('[data-story="Counting"] button') as HTMLButtonElement;
 		expect(counting.textContent).toBe('value 1');
@@ -400,7 +396,7 @@ export const Pinned = { args: { checked: true }, render: (args) => <input type="
 				'export const Plain = { args: {}, render: () => <p>Plain</p> };\nexport const Other = { args: {}, render: () => <p>Other</p> };',
 			),
 		});
-		write(clone, FAKE_STORYBOOK_CHANNEL);
+		writeFiles(clone, FAKE_STORYBOOK_CHANNEL);
 		await render(await ready(previews()), 'src/components/FSTwo/FSTwo.stories.tsx');
 		await eventually(() =>
 			expect(
@@ -516,7 +512,9 @@ describe('keeping them', () => {
 		makeLibrary(LIBRARY);
 		const p = previews();
 		const first = await ready(p);
-		write(upstream, { 'src/components/FSThree/FSThree.stories.tsx': story('Data Display/FSThree', 'export const Default = () => <i>Three</i>;') });
+		writeFiles(upstream, {
+			'src/components/FSThree/FSThree.stories.tsx': story('Data Display/FSThree', 'export const Default = () => <i>Three</i>;'),
+		});
 		commit(upstream, 'three');
 		g(upstream, 'push', '-q', 'origin', 'develop');
 		g(clone, 'fetch', '-q', 'origin', 'develop');
@@ -535,7 +533,7 @@ describe('keeping them', () => {
 		makeLibrary(LIBRARY);
 		const head = g(clone, 'rev-parse', 'refs/remotes/origin/develop').trim();
 		const stale = join(folder, `${head.slice(0, 12)}-00000000`, 'site');
-		write(stale, { 'index.html': 'an older app’s page' });
+		writeFiles(stale, { 'index.html': 'an older app’s page' });
 		const build = vi.fn(buildPreviews);
 		const base = await ready(previews({ build }));
 		expect(build).toHaveBeenCalledOnce();
@@ -764,7 +762,7 @@ describe('leaving the library alone', () => {
 	it('changes no branch, no file and no ref in the clone, and writes nothing into it', async () => {
 		makeLibrary(LIBRARY);
 		g(clone, 'checkout', '-q', '-b', 'noah/work');
-		write(clone, { 'src/components/FSOne/FSOne.stories.tsx': 'unsaved\n' });
+		writeFiles(clone, { 'src/components/FSOne/FSOne.stories.tsx': 'unsaved\n' });
 		const snapshot = () => ({
 			head: g(clone, 'rev-parse', 'HEAD'),
 			status: g(clone, 'status', '--porcelain', '--ignored'),
@@ -779,7 +777,7 @@ describe('leaving the library alone', () => {
 
 	it('builds develop as GitHub has it, not what the clone has checked out', async () => {
 		makeLibrary(LIBRARY);
-		write(clone, { 'src/components/FSOne/FSOne.stories.tsx': story('Buttons/FSOne', 'export const Local = () => <u>local</u>;') });
+		writeFiles(clone, { 'src/components/FSOne/FSOne.stories.tsx': story('Buttons/FSOne', 'export const Local = () => <u>local</u>;') });
 		commit(clone, 'local');
 		const root = await render(await ready(previews()), 'src/components/FSOne/FSOne.stories.tsx');
 		expect([...root.querySelectorAll('[data-story]')].map((s) => s.getAttribute('data-story'))).toEqual(['Default', 'Other']);
@@ -832,7 +830,10 @@ const WITH_POSTCSS = {
 	'src/components/FSTwo/FSTwo.stories.tsx': story('Inputs/FSTwo', `export const Default = () => <p className="x-two">Two</p>;`),
 };
 const withUtilities = () =>
-	write(clone, { 'node_modules/utilities/package.json': '{"name":"utilities","main":"index.js"}', 'node_modules/utilities/index.js': UTILITIES });
+	writeFiles(clone, {
+		'node_modules/utilities/package.json': '{"name":"utilities","main":"index.js"}',
+		'node_modules/utilities/index.js': UTILITIES,
+	});
 const ruleIn = (css: string, selector: string): string | null =>
 	new RegExp(`${selector.replace(/[.[\]]/g, '\\$&')}\\s*\\{([^}]*)\\}`).exec(css)?.[1]?.replace(/\s/g, '') ?? null;
 
@@ -963,8 +964,8 @@ describe('the page', () => {
 describe('serving a built folder', () => {
 	it('serves files under it only, by their type, and nothing else', async () => {
 		const dir = join(home, 'site');
-		write(dir, { 'index.html': '<p>home</p>', 'a/b.css': 'x{}', 'secret.txt': 'no', 'f.woff2': 'font' });
-		write(home, { 'outside.html': 'outside' });
+		writeFiles(dir, { 'index.html': '<p>home</p>', 'a/b.css': 'x{}', 'secret.txt': 'no', 'f.woff2': 'font' });
+		writeFiles(home, { 'outside.html': 'outside' });
 		const base = await server.serveFolder('k1', dir);
 		expect(await (await fetch(base)).text()).toBe('<p>home</p>');
 		expect((await fetch(`${base}a/b.css`)).headers.get('content-type')).toContain('text/css');
@@ -981,7 +982,7 @@ describe('serving a built folder', () => {
 
 	it('answers a folder’s address with its index page, at any depth, as a built site addresses its pages', async () => {
 		const dir = join(home, 'site');
-		write(dir, { 'index.html': '<p>home</p>', 'proj/v2/index.html': '<p>review</p>', 'proj/v2/page.html': '<p>page</p>' });
+		writeFiles(dir, { 'index.html': '<p>home</p>', 'proj/v2/index.html': '<p>review</p>', 'proj/v2/page.html': '<p>page</p>' });
 		const base = await server.serveFolder('k1', dir);
 		expect(await (await fetch(`${base}proj/v2/`)).text()).toBe('<p>review</p>');
 		// The prototype's page itself, on the pages' address alone (the README's Review isolation).
@@ -992,7 +993,7 @@ describe('serving a built folder', () => {
 
 	it('shares its files with no other origin', async () => {
 		const dir = join(home, 'site');
-		write(dir, { 'entry.js': 'x' });
+		writeFiles(dir, { 'entry.js': 'x' });
 		const base = await server.serveFolder('k1', dir);
 		for (const origin of ['null', 'https://example.com']) {
 			expect((await fetch(`${base}entry.js`, { headers: { Origin: origin } })).headers.get('access-control-allow-origin')).toBeNull();

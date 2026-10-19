@@ -1,7 +1,7 @@
 import { act, createElement } from 'react';
 import type { ReviewComment, WorkspaceApi } from '../src/shared/contract';
 import { anAnchor, eventually, reviewComment } from './fixtures';
-import { named, render, settle } from './ui';
+import { allByRole, byRole, named, render, settle } from './ui';
 
 /** The review bar's page: the app it talks to, faked, and what only it has (its menus, its cards, its theme switch). */
 
@@ -113,12 +113,8 @@ export const afterAgentCheck = (check: () => void) =>
 
 export const cards = (): HTMLElement[] => [...document.querySelectorAll<HTMLElement>('.comment-card')];
 export const themeGroup = (): HTMLElement | null => document.querySelector<HTMLElement>('[role="radiogroup"][aria-label="Theme"]');
-export const themeButton = (name: 'Light' | 'Dark'): HTMLElement => {
-	const b = themeGroup()?.querySelector<HTMLElement>(`[aria-label="${name}"]`);
-	if (!b) throw new Error(`no ${name} in the theme switch`);
-	return b;
+export const themeButton = (name: 'Light' | 'Dark'): HTMLElement => byRole('radio', name, themeGroup() ?? document);
+export const shownTheme = (): string | undefined => {
+	const checked = allByRole('radio', undefined, themeGroup() ?? document).find((b) => b.getAttribute('aria-checked') === 'true');
+	return checked && named(checked);
 };
-export const shownTheme = (): string | undefined =>
-	[...(themeGroup()?.querySelectorAll<HTMLElement>('[role="radio"]') ?? [])]
-		.find((b) => b.getAttribute('aria-checked') === 'true')
-		?.getAttribute('aria-label') ?? undefined;

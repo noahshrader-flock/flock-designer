@@ -8,7 +8,7 @@ import { PREVIEW_HEIGHT, PREVIEW_TRY, previewAddress } from '../src/shared/catal
 import { SAMPLE_CATALOG } from './extensionSamples';
 import { answer, answerOf, calls, callsOf, lastAsk, mountPage, say, sent, share, shareCatalog, unmount } from './webviewHarness';
 import { ASK_EVERY_MS } from '../extension/webview/hooks/ask';
-import { allByRole, button, press, type } from './ui';
+import { allByRole, button, dialog, key, press, type } from './ui';
 
 const BUTTON = 'src/components/FSButton/FSButton.stories.tsx';
 const BASE = 'http://127.0.0.1:4321/previews-abc/';
@@ -311,8 +311,7 @@ describe('a component’s tab', () => {
 	};
 	const section = (label: string) => document.querySelector(`[aria-label="${label}"]`) as HTMLElement | null;
 	const openChanges = async () => {
-		if (!document.querySelector('[role="dialog"][aria-label="Changes"]'))
-			await press(document.querySelector('.tab-header .button-row button') as HTMLElement);
+		if (!dialog('Changes')) await press(document.querySelector('.tab-header .button-row button') as HTMLElement);
 	};
 
 	it('reads in three parts: its styles, the tokens it draws with, and what is wrong with it, each with its title', async () => {
@@ -596,9 +595,9 @@ describe('a component’s tab', () => {
 			await press(
 				section('Tokens')!.querySelector(`[data-token="${path}"] button.token-button, [data-token="${path}"] button.color-dot`) as HTMLElement,
 			);
-			expect(document.querySelector('[role="dialog"]')).not.toBeNull();
-			await press(document.querySelector('[role="dialog"] [aria-label="Close"]') as HTMLElement);
-			expect(document.querySelector('[role="dialog"]')).toBeNull();
+			expect(dialog()).not.toBeNull();
+			await press(button('Close', dialog()!));
+			expect(dialog()).toBeNull();
 		}
 	});
 
@@ -649,9 +648,9 @@ describe('a component’s tab', () => {
 		const link = a11y.querySelector('button.link') as HTMLElement;
 		expect(link.textContent).toBe('Show the findings');
 		expect(a11y.textContent).not.toContain('Text needs more contrast');
-		expect(document.querySelector('[role="dialog"]')).toBeNull();
+		expect(dialog()).toBeNull();
 		await press(link);
-		const details = document.querySelector('[role="dialog"][aria-label="Accessibility findings"]') as HTMLElement;
+		const details = dialog('Accessibility findings')!;
 		expect(details.getAttribute('aria-modal')).toBe('true');
 		expect([...details.querySelectorAll('h3')].map((h) => h.textContent)).toEqual(['To fix', 'Best practice, beyond WCAG']);
 		expect(details.textContent).toContain('Text needs more contrast');
@@ -668,8 +667,8 @@ describe('a component’s tab', () => {
 		const best = details.querySelector('[aria-label="Best practice, beyond WCAG"]') as HTMLElement;
 		expect(best.textContent).toContain('Heading levels should only increase by one');
 		expect(best.querySelector('[data-issue-elements="heading-order"] code')?.textContent).toBe('h4');
-		await press(details.querySelector('[aria-label="Close"]') as HTMLElement);
-		expect(document.querySelector('[role="dialog"]')).toBeNull();
+		await press(button('Close', details));
+		expect(dialog()).toBeNull();
 		expect(a11y.querySelector('button.link')).not.toBeNull();
 	});
 
@@ -682,7 +681,7 @@ describe('a component’s tab', () => {
 			await answer('storyPreview', { state: 'ready', base: BASE });
 			await press(section('Styles')?.querySelector('[aria-label="Change Height · sm"]') as HTMLElement);
 			await type(document.querySelector('input[type="range"][aria-label="Height"]') as HTMLInputElement, '32');
-			await act(async () => void document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
+			await key('Escape');
 			await openChanges();
 		};
 		const changed = () => section('Value changes') as HTMLElement;
@@ -704,10 +703,10 @@ describe('a component’s tab', () => {
 			await analysed();
 			// The radius is the shared token's: its control is the token's, not a value of the component's own.
 			await press(section('Styles')?.querySelector('[aria-label="Change Radius"]') as HTMLElement);
-			const dialog = document.querySelector('[role="dialog"]') as HTMLElement;
-			expect(dialog).not.toBeNull();
+			const editor = dialog()!;
+			expect(editor).not.toBeNull();
 			expect(document.querySelector('[data-value-cell] [role="dialog"]')).toBeNull();
-			const slider = dialog.querySelector('input[type="range"]') as HTMLInputElement;
+			const slider = editor.querySelector('input[type="range"]') as HTMLInputElement;
 			await type(slider, '12');
 			// Let go: a token's change is built, so it is made then, not as it moves.
 			await act(async () => void slider.dispatchEvent(new Event('pointerup', { bubbles: true })));
@@ -853,7 +852,7 @@ describe('a component’s tab', () => {
 			expect(calls('valueSources').at(-1)?.args).toEqual([BUTTON, [SMALL]]);
 			await press(button('Reset all'));
 			expect(changed().textContent).toContain('Every value is as the library draws it.');
-			await press(document.querySelector('[role="dialog"][aria-label="Changes"] [aria-label="Close"]') as HTMLElement);
+			await press(button('Close', dialog('Changes')!));
 			const count = document.querySelector('.tab-header .button-row button') as HTMLButtonElement;
 			expect(count.textContent).toBe('No changes');
 			expect(count.disabled).toBe(false);
@@ -1024,7 +1023,6 @@ describe('a component’s tab', () => {
 		const popover = () => values().querySelector('[data-value-cell] [role="dialog"]') as HTMLElement | null;
 		const editor = () => (popover()?.querySelector('[data-value-editor]') as HTMLElement | null | undefined) ?? null;
 		const slider = (label: string) => popover()?.querySelector(`input[type="range"][aria-label="${label}"]`) as HTMLInputElement;
-		const escape = () => act(async () => void document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
 		const pressElsewhere = () => act(async () => void document.body.dispatchEvent(new MouseEvent('mousedown', { bubbles: true })));
 
 		it('moves nothing when a value is tried: the column is as it was, and only the count in its header changes', async () => {
@@ -1090,7 +1088,7 @@ describe('a component’s tab', () => {
 			await tryingOpen();
 			const opener = change('Height · sm');
 			await press(opener);
-			await escape();
+			await key('Escape');
 			expect(popover()).toBeNull();
 			expect(document.activeElement).toBe(opener);
 			await press(opener);
@@ -1107,7 +1105,7 @@ describe('a component’s tab', () => {
 			const { tried } = await tryingOpen();
 			await press(change('Height · sm'));
 			await type(slider('Height'), '30');
-			await escape();
+			await key('Escape');
 			expect(tried()).toHaveLength(1);
 			await press(change('Height · sm'));
 			expect(slider('Height').value).toBe('30');
@@ -1119,7 +1117,7 @@ describe('a component’s tab', () => {
 			await press(change('Height · sm'));
 			await type(slider('Height'), '30');
 			expect(tried()).toHaveLength(1);
-			await escape();
+			await key('Escape');
 			await share('valueTrials', {});
 			expect(tried()).toEqual([]);
 			expect(values().querySelector('[data-tried]')).toBeNull();
@@ -1144,12 +1142,12 @@ describe('a component’s tab', () => {
 			expect(values().querySelectorAll('[data-value-cell] [role="dialog"]')).toHaveLength(1);
 			await type(slider('Height'), '40');
 			expect(tried()).toHaveLength(2);
-			await escape();
+			await key('Escape');
 			await openChanges();
 			await press(button('Reset all'));
 			expect(tried()).toEqual([]);
 			expect(section('Value changes')).toBeNull();
-			expect(document.querySelector('[role="dialog"][aria-label="Changes"]')?.textContent).toContain('Nothing is being tried.');
+			expect(dialog('Changes')?.textContent).toContain('Nothing is being tried.');
 		});
 
 		it('tells the frame again when it loads, so a new build of the stories has what is tried', async () => {
@@ -1276,7 +1274,7 @@ describe('a component’s tab', () => {
 			const hex = popover()?.querySelector('input[aria-label="Hex"]') as HTMLInputElement;
 			expect(hex).not.toBeNull();
 			await type(hex, '#123456');
-			await act(async () => void hex.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })));
+			await key('Enter', { on: hex });
 			expect((tried() as { property: string; value: string }[]).find((t) => t.property === 'background')?.value).toBe('#123456');
 		});
 	});

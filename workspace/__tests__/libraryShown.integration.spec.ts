@@ -1,11 +1,11 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { readLibrary } from '../src/core/services/designSystem/designLibrary';
 import { LibraryShown } from '../src/core/services/designSystem/libraryShown';
 import type { Catalog, ConnectedDesignSystem } from '../src/shared/contract';
-import { g } from './fixtures';
+import { g, writeFiles } from './fixtures';
 
 let home: string;
 let clone: string;
@@ -13,19 +13,13 @@ let system: ConnectedDesignSystem;
 let told: (string | null)[];
 const BRANCH = 'dsnr/handoff-20261017-ab12';
 const story = (title: string) => `const meta = {\n  title: '${title}',\n};\nexport default meta;\n`;
-const write = (root: string, files: Record<string, string>) => {
-	for (const [path, text] of Object.entries(files)) {
-		mkdirSync(dirname(join(root, path)), { recursive: true });
-		writeFileSync(join(root, path), text);
-	}
-};
 const ready = (c: Catalog) => {
 	if (c.state !== 'ready') throw new Error(`not ready: ${c.state}`);
 	return c;
 };
 const claudeCommits = (files: Record<string, string>) => {
 	g(clone, 'switch', '-q', '-c', BRANCH, 'origin/develop');
-	write(clone, files);
+	writeFiles(clone, files);
 	g(clone, 'add', '-A');
 	g(clone, 'commit', '-q', '-m', 'Claude Code: a new component');
 	g(clone, 'switch', '-q', 'develop');
@@ -40,7 +34,7 @@ beforeEach(() => {
 	g(upstream, 'init', '-q', '-b', 'develop');
 	g(upstream, 'config', 'user.name', 'Noah');
 	g(upstream, 'config', 'user.email', 'noah@example.com');
-	write(upstream, { 'src/components/FSButton/FSButton.stories.tsx': story('Buttons/FSButton') });
+	writeFiles(upstream, { 'src/components/FSButton/FSButton.stories.tsx': story('Buttons/FSButton') });
 	g(upstream, 'add', '-A');
 	g(upstream, 'commit', '-q', '-m', 'library');
 	g(upstream, 'remote', 'add', 'origin', join(home, 'remote.git'));
@@ -74,7 +68,7 @@ describe('the commit the tab reads', () => {
 	it('reads only what is committed on the branch, whatever the folder has', async () => {
 		claudeCommits({ 'src/components/FSChip/FSChip.stories.tsx': story('Inputs/FSChip') });
 		g(clone, 'switch', '-q', BRANCH);
-		write(clone, { 'src/components/FSTag/FSTag.stories.tsx': story('Inputs/FSTag') });
+		writeFiles(clone, { 'src/components/FSTag/FSTag.stories.tsx': story('Inputs/FSTag') });
 		const shown = new LibraryShown(() => undefined);
 		shown.show(system, '', BRANCH);
 		expect(ready(await readLibrary(system, 'unchanged', shown.at)).components.map((c) => c.name)).not.toContain('FSTag');

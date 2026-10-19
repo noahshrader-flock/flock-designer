@@ -65,20 +65,16 @@ export const named = (el: Element): string => {
 	return (field ?? el).textContent?.trim() ?? '';
 };
 
-const ROLES: Record<string, string> = {
+const ROLES = {
 	button: 'button, [role="button"]',
 	menuitem: '[role^="menuitem"]',
-	textbox: 'input:not([type]), input[type="text"], input[type="search"], textarea, [role="textbox"]',
-	combobox: 'select, [role="combobox"]',
 	radio: 'input[type="radio"], [role="radio"]',
-	tab: '[role="tab"]',
-	link: 'a[href]',
 	dialog: '[role="dialog"]',
-};
+} as const;
 
-/** Every element of the role named so; one name matches whole, a pattern anywhere. */
+/** Every element of the role named so; a name matches whole, a pattern anywhere. */
 export const allByRole = (role: keyof typeof ROLES, name?: string | RegExp, scope: ParentNode = document): HTMLElement[] =>
-	[...scope.querySelectorAll<HTMLElement>(ROLES[role] ?? `[role="${role}"]`)].filter(
+	[...scope.querySelectorAll<HTMLElement>(ROLES[role])].filter(
 		(el) => name === undefined || (typeof name === 'string' ? named(el) === name : name.test(named(el))),
 	);
 
@@ -91,13 +87,19 @@ export const byRole = <T extends HTMLElement = HTMLElement>(role: keyof typeof R
 };
 
 export const button = (name: string | RegExp, scope: ParentNode = document) => byRole<HTMLButtonElement>('button', name, scope);
-export const dialog = () => document.querySelector<HTMLElement>('[role="dialog"]');
+/** The open dialog, or the one named so; null when there is none. */
+export const dialog = (name?: string): HTMLElement | null => allByRole('dialog', name)[0] ?? null;
 
 export const press = (el: Element) => act(async () => void el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })));
 
-/** A key pressed on what has focus, the window if nothing is given. */
-export const key = (name: string, { on = window, ...init }: KeyboardEventInit & { on?: EventTarget } = {}) =>
-	act(async () => void on.dispatchEvent(new KeyboardEvent('keydown', { key: name, bubbles: true, ...init })));
+/** A key pressed where a person's goes: on what has focus (or `on`), up through the page to the window. */
+export const key = (name: string, { on, ...init }: KeyboardEventInit & { on?: Element } = {}) =>
+	act(
+		async () =>
+			void (on ?? document.activeElement ?? document.body).dispatchEvent(
+				new KeyboardEvent('keydown', { key: name, bubbles: true, cancelable: true, ...init }),
+			),
+	);
 
 /** Through the element's own kind's value setter, as typing does, so React sees the change. */
 export const type = (el: Element, text: string) =>
@@ -119,9 +121,8 @@ export const menuItem = (items: HTMLElement[], name: string): HTMLElement => {
 };
 
 /** The field a label names. */
-export const fieldNamed = <T extends HTMLElement = HTMLTextAreaElement>(label: string): T => {
-	const found = [...document.querySelectorAll('label')].find((l) => l.textContent?.trim() === label);
-	const control = found ? document.getElementById(found.htmlFor) : null;
+export const fieldNamed = <T extends HTMLElement = HTMLTextAreaElement>(label: string, scope: ParentNode = document): T => {
+	const control = [...scope.querySelectorAll('label')].find((l) => l.textContent?.trim() === label)?.control;
 	if (!control) throw new Error(`no field labelled ${label}`);
 	return control as T;
 };

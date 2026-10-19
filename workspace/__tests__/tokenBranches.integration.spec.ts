@@ -6,7 +6,7 @@ import type { Check, PullRequest } from '../src/codeHost/changeRequests';
 import type { ShareTools } from '../src/core/ports';
 import { TOKENS, TOKEN_BRANCH, TokenBranches } from '../src/core/services/designSystem/tokenBranches';
 import { proposalText } from '../src/core/services/designSystem/changeBranches';
-import { g, gitFile } from './fixtures';
+import { g, gitFile, writeFiles } from './fixtures';
 
 /** GitHub is a stand-in: nothing here is pushed anywhere or opened as a pull request. */
 
@@ -28,12 +28,6 @@ let openPr: PullRequest | null;
 /** `undefined` when GitHub cannot say. */
 let stillOpen: boolean | undefined;
 
-const write = (root: string, files: Record<string, string>) => {
-	for (const [path, text] of Object.entries(files)) {
-		mkdirSync(dirname(join(root, path)), { recursive: true });
-		writeFileSync(join(root, path), text);
-	}
-};
 const commitAll = (root: string, message: string) => {
 	g(root, 'add', '-A');
 	g(root, 'commit', '-q', '-m', message);
@@ -72,7 +66,7 @@ beforeEach(() => {
 	file = join(home, 'app', 'token-branches.json');
 	g(home, 'init', '-q', '--bare', '-b', 'develop', join(home, 'remote.git'));
 	g(home, 'init', '-q', '-b', 'develop', upstream);
-	write(upstream, THEME);
+	writeFiles(upstream, THEME);
 	commitAll(upstream, 'library');
 	g(upstream, 'remote', 'add', 'origin', join(home, 'remote.git'));
 	g(upstream, 'push', '-q', 'origin', 'develop');
@@ -80,7 +74,7 @@ beforeEach(() => {
 	g(clone, 'config', 'user.name', 'Noah');
 	g(clone, 'config', 'user.email', 'noah@example.com');
 	g(clone, 'checkout', '-q', '-b', 'noah/work');
-	write(clone, { 'README.md': 'Unsaved notes.\n' });
+	writeFiles(clone, { 'README.md': 'Unsaved notes.\n' });
 	asked = [];
 	checks = [];
 	openPr = null;

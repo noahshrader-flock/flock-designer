@@ -1,8 +1,8 @@
 import { afterAll, beforeAll, beforeEach, type Mock, vi } from 'vitest';
 import { execFileSync } from 'node:child_process';
-import { copyFileSync, cpSync, existsSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { copyFileSync, cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, statSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import type { CatalogReads } from '../src/core/services/designSystem/componentCatalog';
 import type { RecordStore } from '../src/core/services/prototypes/prototype';
 import type { AgentStatus, CommentAnchor, Project, ProjectWork, ReviewComment, TokenProblem } from '../src/shared/contract';
@@ -125,6 +125,22 @@ export const g = (root: string, ...args: string[]) => git(root, args).trim();
 
 /** A file at `ref`, exactly as it is there. */
 export const gitFile = (root: string, ref: string, path: string) => git(root, ['show', `${ref}:${path}`]);
+
+/** Each file at its path under `root`, its folders made. */
+export const writeFiles = (root: string, files: Record<string, string>) => {
+	for (const [path, text] of Object.entries(files)) {
+		mkdirSync(dirname(join(root, path)), { recursive: true });
+		writeFileSync(join(root, path), text);
+	}
+};
+
+/** DSNR's own source files under `dir`: scripts and stylesheets, not what is built, installed or hidden. */
+export const sourceFiles = (dir: string): string[] =>
+	readdirSync(dir).flatMap((name) => {
+		const path = join(dir, name);
+		if (name === 'dist' || name === 'node_modules' || name.startsWith('.')) return [];
+		return statSync(path).isDirectory() ? sourceFiles(path) : /\.(tsx?|css|mjs)$/.test(name) && !name.endsWith('.d.ts') ? [path] : [];
+	});
 
 export const makeProductFiles = (dir: string, commands: unknown[] = []) => {
 	mkdirSync(join(dir, '.dsnr'), { recursive: true });

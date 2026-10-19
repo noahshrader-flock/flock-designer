@@ -6,7 +6,7 @@ import type { Catalog, CatalogUpdate, ConnectedDesignSystem } from '../src/share
 import { undeclared } from '../src/shared/wcag';
 import { DesignLibrary, fetchProblem, inLibrary, libraryReads, readLibrary, updateLibrary } from '../src/core/services/designSystem/designLibrary';
 import { DesignSystemsMemory } from '../src/core/services/designSystem/designSystems';
-import { g } from './fixtures';
+import { g, writeFiles } from './fixtures';
 
 const LIBRARY = 'flocksafety/flock-react-component-lib';
 const GITHUB_URL = `https://github.com/${LIBRARY}.git`;
@@ -28,18 +28,12 @@ let upstream: string;
 /** The person's clone. Its origin says GitHub; git is told to reach it here. */
 let clone: string;
 
-const write = (root: string, files: Record<string, string>) => {
-	for (const [path, text] of Object.entries(files)) {
-		mkdirSync(dirname(join(root, path)), { recursive: true });
-		writeFileSync(join(root, path), text);
-	}
-};
 const commit = (root: string, message: string) => {
 	g(root, 'add', '-A');
 	g(root, 'commit', '-q', '-m', message);
 };
 const pushDevelop = (files: Record<string, string>, message = 'change') => {
-	write(upstream, files);
+	writeFiles(upstream, files);
 	commit(upstream, message);
 	g(upstream, 'push', '-q', 'origin', 'develop');
 };
@@ -75,12 +69,12 @@ describe('reading develop', () => {
 
 	it('reads develop whatever the clone has checked out, and leaves the branch, the files and HEAD exactly as they were', async () => {
 		g(clone, 'checkout', '-q', '-b', 'noah/work');
-		write(clone, {
+		writeFiles(clone, {
 			'src/components/FSButton/FSButton.stories.tsx': story('Changed/FSButton'),
 			'src/components/FSNew/FSNew.stories.tsx': story('Inputs/FSNew'),
 		});
 		commit(clone, 'work in progress');
-		write(clone, { 'src/components/FSButton/FSButton.stories.tsx': story('Unsaved/FSButton') });
+		writeFiles(clone, { 'src/components/FSButton/FSButton.stories.tsx': story('Unsaved/FSButton') });
 		const before = {
 			head: g(clone, 'rev-parse', 'HEAD'),
 			branch: g(clone, 'branch', '--show-current'),
@@ -156,7 +150,7 @@ describe('reading develop', () => {
 	});
 
 	it('reads develop from GitHub, not a local develop that is behind or ahead of it', async () => {
-		write(clone, { 'src/components/FSLocal/FSLocal.stories.tsx': story('Inputs/FSLocal') });
+		writeFiles(clone, { 'src/components/FSLocal/FSLocal.stories.tsx': story('Inputs/FSLocal') });
 		commit(clone, 'local only, on develop');
 		expect(ready(await readLibrary(at(clone), 'unchanged')).components.map((x) => x.name)).toEqual(['FSButton']);
 	});
@@ -200,7 +194,7 @@ describe('bringing develop up to date', () => {
 
 	it('moves no other ref: a branch on GitHub is not fetched', async () => {
 		g(upstream, 'checkout', '-q', '-b', 'other');
-		write(upstream, { 'x.txt': 'x' });
+		writeFiles(upstream, { 'x.txt': 'x' });
 		commit(upstream, 'other');
 		g(upstream, 'push', '-q', 'origin', 'other');
 		await updateLibrary(clone, 'develop');

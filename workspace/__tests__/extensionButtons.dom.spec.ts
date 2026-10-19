@@ -1,4 +1,4 @@
-import { act, createElement, useState } from 'react';
+import { createElement, useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { Badge } from '../src/ui/Badge';
 import { ColorDot } from '../src/ui/ColorDot';
@@ -9,7 +9,7 @@ import { Menu } from '../src/ui/Menu';
 import { Message } from '../src/ui/Message';
 import { Dialog, DialogButtons } from '../src/ui/Dialog';
 import { mount } from './webviewHarness';
-import { button, press } from './ui';
+import { button, dialog, key, press } from './ui';
 
 describe('the panel’s buttons', () => {
 	it('are primary unless said otherwise, and draw each kind by its own class', async () => {
@@ -41,9 +41,9 @@ describe('the panel’s buttons', () => {
 describe('a dialog', () => {
 	const open = async (children: unknown, onClose = () => undefined) => {
 		await mount(createElement(Dialog as never, { title: 'GitHub account', onClose }, children as never));
-		return document.querySelector('[role="dialog"]') as HTMLElement;
+		return dialog()!;
 	};
-	const close = () => document.querySelector<HTMLButtonElement>('[role="dialog"] [aria-label="Close"]') as HTMLButtonElement;
+	const close = () => button('Close', dialog()!);
 
 	it('has its close X in the row of its title, at the far right, and closes with it', async () => {
 		const onClose = vi.fn();
@@ -89,15 +89,13 @@ describe('a dialog', () => {
 		const opener = button('Change Radius base');
 		opener.focus();
 		await press(opener);
-		const box = document.querySelector('[role="dialog"]') as HTMLElement;
+		const box = dialog()!;
 		expect(document.activeElement).toBe(box);
 		expect(box.getAttribute('tabindex')).toBe('-1');
-		const key = (name: string, shiftKey = false) =>
-			act(async () => void box.dispatchEvent(new KeyboardEvent('keydown', { key: name, shiftKey, bubbles: true, cancelable: true })));
-		await key('Tab', true);
+		await key('Tab', { on: box, shiftKey: true });
 		expect(document.activeElement?.textContent).toBe('Reset');
-		await key('Escape');
-		expect(document.querySelector('[role="dialog"]')).toBeNull();
+		await key('Escape', { on: box });
+		expect(dialog()).toBeNull();
 		expect(document.activeElement).toBe(opener);
 	});
 
@@ -110,13 +108,11 @@ describe('a dialog', () => {
 		const opener = document.querySelector('[aria-label="Account actions"]') as HTMLElement;
 		await press(opener);
 		expect(document.querySelector('[role="menu"]')).not.toBeNull();
-		const escape = () =>
-			act(async () => void document.activeElement?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })));
-		await escape();
+		await key('Escape');
 		expect(document.querySelector('[role="menu"]')).toBeNull();
 		expect(onClose).not.toHaveBeenCalled();
 		expect(document.activeElement).toBe(opener);
-		await escape();
+		await key('Escape');
 		expect(onClose).toHaveBeenCalledTimes(1);
 	});
 
@@ -130,16 +126,11 @@ describe('a dialog', () => {
 				createElement('a', { href: 'https://example.test/b' }, 'Second'),
 			),
 		);
-		const key = (shiftKey = false) =>
-			act(
-				async () =>
-					void document.activeElement?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', shiftKey, bubbles: true, cancelable: true })),
-			);
 		expect(document.activeElement).toBe(close());
-		await key(true);
+		await key('Tab', { shiftKey: true });
 		expect(document.activeElement?.textContent).toBe('Second');
 		// Tab from the last link comes round to the X; the browser's own Tab does the ones between.
-		await key();
+		await key('Tab');
 		expect(document.activeElement).toBe(close());
 		expect(box.contains(document.activeElement)).toBe(true);
 	});

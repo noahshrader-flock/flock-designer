@@ -1,20 +1,15 @@
-import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { INK } from '../src/shared/pageTokens';
 import { BRAND } from '../src/shared/dsnrTokens';
 import { panelCss } from './panelStyles';
+import { sourceFiles } from './fixtures';
 
 const root = join(__dirname, '..');
-const sources = (dir: string): string[] =>
-	readdirSync(dir).flatMap((name) => {
-		const path = join(dir, name);
-		if (name === 'dist' || name === 'node_modules' || name.startsWith('.')) return [];
-		return statSync(path).isDirectory() ? sources(path) : /\.(tsx?|css|mjs)$/.test(name) ? [path] : [];
-	});
 const files = () =>
 	[join(root, 'extension'), join(root, 'src/ui'), join(root, 'src/viewer')]
-		.flatMap(sources)
+		.flatMap(sourceFiles)
 		.map((path) => ({ path: relative(root, path), text: readFileSync(path, 'utf8') }));
 
 describe('the extension’s sources', () => {
