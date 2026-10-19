@@ -10,8 +10,6 @@ export const registerCheckout = (area: CheckoutArea): void => {
 	// Re-reads a checkout the person already opened; it trusts and remembers nothing, so the window naming a folder
 	// is never enough to make it trusted (only the picker, a repository discovery found, the last one, and a clone are).
 	handle('readCheckout', [area.checkout], area.readCheckout);
-	handle('continueWork', [area.checkout, arg.projectId, arg.codebaseName], area.continueWork);
-	handle('startCommand', [area.checkout, arg.name, arg.optional(arg.projectId)], area.startCommand);
 	// Only for a checkout the person opened, though the runtime knows its commands by id alone.
 	handle('stopCommand', [area.checkout, arg.name], area.stopCommand);
 	handle('installPackages', [area.checkout], area.installPackages);

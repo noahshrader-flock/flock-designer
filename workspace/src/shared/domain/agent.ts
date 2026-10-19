@@ -27,3 +27,9 @@ export type AgentStatus =
 	| { state: 'running'; startedAt: string; work: string | null; purpose: 'handoff' | null }
 	| { state: 'finished'; exitCode: number; work: string | null; purpose: 'handoff' | null }
 	| { state: 'unavailable'; detail: string };
+
+/**
+ * How a job that runs the agent here ended, as each says it: what it did (`done`, with what it made), or stopped by the
+ * person. What went wrong is the call's failure, in words.
+ */
+export type JobEnd<T> = { state: 'done'; value: T } | { state: 'stopped' };

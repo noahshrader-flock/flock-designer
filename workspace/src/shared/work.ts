@@ -106,3 +106,22 @@ export const buildStart = (
 			: null;
 	return { continuing, canStart: plan.setup && uncommitted === null && (continuing || from !== null), uncommitted };
 };
+
+/**
+ * Where codebase work's preview opens: the work's own route within the running app when its record says one, and otherwise
+ * wherever the preview starts by itself. Codebase work runs the whole product, so without this it opens at the product's
+ * front door and the designer has to find the change themselves -- which is how a comment meant for work at
+ * `/roles/compare` was made on the Organizations list instead. The route is already checked where it is read from the
+ * record; this joins it on, keeping whatever the preview's address carries (its port, any base path), and refuses
+ * anything that would move the origin rather than quietly following it.
+ */
+export const routeIn = (previewUrl: string, route: string | null | undefined): string => {
+	if (!route) return previewUrl;
+	try {
+		const base = new URL(previewUrl);
+		const at = new URL(route, base);
+		return at.origin === base.origin ? at.href : previewUrl;
+	} catch {
+		return previewUrl;
+	}
+};

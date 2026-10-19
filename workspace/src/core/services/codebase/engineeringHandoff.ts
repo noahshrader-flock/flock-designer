@@ -5,9 +5,6 @@ import type { WorkspaceCommand } from '../projects/descriptor';
  * told to use. How the work is done is the same in every product (`skills/`); the commands come from the
  * product's workspace file, so nothing here names one product's tools.
  */
-
-/** How any unattended run on a codebase branch starts and finishes. */
-export const CODEBASE_SKILL = 'skills/codebase-work.md';
 /** Handoff: the once-only, heavy pass that proves codebase work is fit for an engineer. */
 export const HANDOFF_SKILL = 'skills/handoff.md';
 /** What engineering receives first on checkout, and so how the app knows a handoff was written. */

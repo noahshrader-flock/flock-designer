@@ -1,12 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-	codebaseTask,
-	guidePart,
-	handoffTask,
-	buildInCodebaseTask,
-	prototypeAddressTask,
-	prototypeBuildTask,
-} from '../src/core/services/agent/agentTasks';
+import { guidePart, handoffTask, buildInCodebaseTask, prototypeAddressTask, prototypeBuildTask } from '../src/core/services/agent/agentTasks';
 
 /** The builder's guide, as every task carries it (`guidePart`). */
 const GUIDE = guidePart('# Building UI in a Flock product\n\n1. **Hard rules:** `../standards/non-negotiables.md`.', '/d');
@@ -25,8 +18,6 @@ const order = (task: string) =>
 
 describe('every run in a product checkout', () => {
 	const tasks = {
-		'codebase work': codebaseTask({ unattended: '# Codebase work, unattended', task: 'Build it.' }, parts),
-		'an Address on a branch': codebaseTask({ unattended: null, task: 'Address comment 1.' }, parts),
 		Handoff: handoffTask({ skill: '# Hand off', projectId: 'p', branch: 'feature/p', gate: null }, parts),
 		'building a prototype in the codebase': buildInCodebaseTask(
 			{ skill: '# Move', routeSkill: '# Route', pageFile: '/p.html', auditFile: '/a.md', recordFile: '/i.json', name: 'v1' },
@@ -41,21 +32,20 @@ describe('every run in a product checkout', () => {
 	});
 
 	it('leaves out the voice when the design system has none written, and the folders when there are none', () => {
-		const task = codebaseTask({ unattended: null, task: 'x' }, { ...parts, shared: '', voice: '' });
+		const task = handoffTask({ skill: '# Hand off', projectId: 'p', branch: 'feature/p', gate: null }, { ...parts, shared: '', voice: '' });
 		expect(task).not.toContain('## Voice and tone');
 		expect(task).not.toContain('## Also yours to read');
 		expect(task).toContain('## Accessibility');
 	});
 });
 
-describe('codebase work and Handoff', () => {
+describe('Handoff', () => {
 	const bare = { ...parts, shared: '', voice: '' };
 
-	it("carry the shared rules for codebase work before the task, and this product's light check after it", () => {
-		const task = codebaseTask({ unattended: '# Codebase work, unattended\n', task: 'Do the thing.' }, bare);
-		expect(task.indexOf('# Codebase work, unattended')).toBeLessThan(task.indexOf('Do the thing.'));
-		expect(task.indexOf('Do the thing.')).toBeLessThan(task.indexOf('`npm run check:iteration`'));
-		expect(codebaseTask({ unattended: null, task: 'x' }, { ...bare, lightCheck: null })).toMatch(/names no light check/);
+	it('says when the product names no light check', () => {
+		expect(handoffTask({ skill: '# Hand off', projectId: 'p', branch: 'feature/p', gate: null }, { ...bare, lightCheck: null })).toMatch(
+			/names no light check/,
+		);
 	});
 
 	it('Handoff: the shared skill, the branch, the gate first and last, the light check, and the verdict line asked for', () => {
@@ -150,7 +140,6 @@ describe('the builder’s guide, in every task (so no run depends on an agent ch
 			{ skill: '# Move', routeSkill: '# Route', pageFile: '/p.html', auditFile: '/a.md', recordFile: '/i.json', name: 'v1' },
 			parts,
 		),
-		'codebase work': codebaseTask({ unattended: '# Codebase work, unattended', task: 'Build it.' }, parts),
 		Handoff: handoffTask({ skill: '# Hand off', projectId: 'p', branch: 'feature/p', gate: null }, parts),
 	};
 

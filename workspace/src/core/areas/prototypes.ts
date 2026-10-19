@@ -2,11 +2,12 @@ import type { CallsDeps } from '../compose';
 import { existsSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { folderName } from '../../shared/brief';
-import type { BuildInCodebase, CommentRef, OpenedPrototype, PrototypeAddressed, PrototypeReadiness } from '../../shared/contract';
+import type { BuildInCodebase, CommentRef, JobEnd, OpenedPrototype, PrototypeAddressed, PrototypeReadiness } from '../../shared/contract';
 import { coverPath, prototypeKey, prototypePagePath } from '../../shared/designPaths';
 import { statesOf } from '../../shared/prototypeStates';
 import { workLabel } from '../../shared/work';
 import { ADDRESS_SKILL, chooseComment } from '../services/prototypes/address';
+import { afterRun } from '../services/agent/agent';
 import { guidePart, prototypeAddressTask, prototypeBuildTask } from '../services/agent/agentTasks';
 import { writeCommentsExport } from '../services/prototypes/commentsExport';
 import { readDescriptor } from '../services/projects/descriptor';
@@ -72,22 +73,22 @@ export const prototypesArea = (d: CallsDeps) => {
 		const voice = await work.voice();
 		return { task: prototypeBuildTask({ guide: await guideFor(sources), skill, build, sources, accessibility, voice, request }), sources };
 	};
-	/** Its agent, in the folder it was built in, reading the product read-only, and nothing committed. */
-	const startPrototypeAgent = (projectId: string, name: string, sources: PrototypeSources, task: string) =>
-		agent.start(work.dir(projectId), projectId, task, { bare: true, readOnly: prototypeReadable(sources), work: prototypeKey(projectId, name) });
+	/** Its agent, run to its end in the folder it was built in, reading the product read-only, and nothing committed. */
+	const runPrototypeAgent = (projectId: string, name: string, sources: PrototypeSources, task: string) =>
+		agent.run(work.dir(projectId), projectId, task, { bare: true, readOnly: prototypeReadable(sources), work: prototypeKey(projectId, name) });
 	/**
 	 * Acting on one comment on a prototype. The same steps as on a branch -- comments read from GitHub now, the file
 	 * written from that read, then the agent started -- but the agent changes the prototype's source in the app's own
 	 * folder, where it was built, and nothing is committed. The change is made in the version commented on, or in a new
-	 * version from it when that was asked for (`startChange`), and `finishPrototypeAddress` records and saves it.
+	 * version from it when that was asked for (`startChange`), and once the agent has finished it is recorded and saved.
 	 */
 	const prototypeChanges = new Map<string, { comment: CommentRef; projectId: string; change: PrototypeChange }>();
 	/** A comment's key among them: its thread and its number, which together name one. */
 	const keyOf = (comment: CommentRef) => `${comment.thread}/${comment.id}`;
 	/**
 	 * Finishes one: a changed prototype built, recorded when new, and saved, and the comment marked with where the change
-	 * is. Run by the screen when the agent ends, and when the prototype is opened again, so a change made while the screen
-	 * was left is never stranded.
+	 * is. Run when the agent ends, and when the prototype is opened again, so a change whose run was stopped is never
+	 * stranded.
 	 */
 	const finishPrototypeChange = async (comment: CommentRef): Promise<PrototypeAddressed> => {
 		const pending = prototypeChanges.get(keyOf(comment));
@@ -143,7 +144,7 @@ export const prototypesArea = (d: CallsDeps) => {
 			const label = workLabel({ name });
 			return handToClaude(ports, canonical, prototypeBuildPrompt({ label, projectId, taskFile }));
 		},
-		addressPrototype: async (projectId: string, name: string, comment: CommentRef, newVersion: boolean) => {
+		addressPrototype: async (projectId: string, name: string, comment: CommentRef, newVersion: boolean): Promise<JobEnd<PrototypeAddressed>> => {
 			refuseWhileBusy();
 			// One left from a run whose screen was closed is finished first, or this run would start from the same copy.
 			await finishPrototypeChanges(projectId);
@@ -166,7 +167,7 @@ export const prototypesArea = (d: CallsDeps) => {
 			const where = whereTheChangeGoes(change);
 			const accessibility = await work.accessibility(projectId, change.from.name);
 			const voice = await work.voice();
-			return startPrototypeAgent(
+			const end = await runPrototypeAgent(
 				projectId,
 				name,
 				sources,
@@ -184,8 +185,10 @@ export const prototypesArea = (d: CallsDeps) => {
 					where,
 				}),
 			);
+			// Stopped, the change is finished the next time the prototype is opened, from what the agent left.
+			if (afterRun(end) === 'stopped') return { state: 'stopped' };
+			return { state: 'done', value: await finishPrototypeChange(comment) };
 		},
-		finishPrototypeAddress: (comment: CommentRef): Promise<PrototypeAddressed> => finishPrototypeChange(comment),
 		savePrototype: async (projectId: string, name: string): Promise<null> => {
 			await work.save(projectId, name);
 			deploys.page(projectId, name);

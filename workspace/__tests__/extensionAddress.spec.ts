@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { type AddressDeps, addressComment } from '../extension/src/address';
-import type { AgentStatus, Project } from '../src/shared/contract';
+import type { Project } from '../src/shared/contract';
 import { ok } from '../src/shared/result';
 
 /**
@@ -11,7 +11,6 @@ import { ok } from '../src/shared/result';
 
 const review = { projectId: 'demo', name: 'v1', title: 'Demo · Version 1' };
 const comment = { thread: 4, id: 40 };
-const finished: AgentStatus = { state: 'finished', exitCode: 0, work: 'prototype/demo/v1', purpose: null };
 const noah = { name: 'Noah', login: 'noah' };
 const version = (name: string) => ({
 	name,
@@ -39,9 +38,8 @@ const world = (
 	const told: string[] = [];
 	const api = {
 		agentReadiness: vi.fn(async () => ok({ state: 'ready' })),
-		addressPrototype: vi.fn(async () => ok({ state: 'running', startedAt: '', work: 'prototype/demo/v1', purpose: null })),
-		agentStatus: vi.fn(async () => ok(finished)),
-		finishPrototypeAddress: vi.fn(async () => ok({ ...addressed, made: null, comment })),
+		// The core's Address, run to its end: where the change went.
+		addressPrototype: vi.fn(async () => ok({ state: 'done', value: { ...addressed, made: null, comment } })),
 		listProjects: vi.fn(async () => ok([demo])),
 		readComments: vi.fn(async () =>
 			commenters === null
@@ -61,7 +59,6 @@ const world = (
 		tell: (m) => void told.push(m),
 		offer: vi.fn(async (_m: string, actions: string[]) => chooses?.(actions)),
 		show: vi.fn(async () => undefined),
-		pollMs: 0,
 	};
 	return { deps, api, said, told };
 };
@@ -139,15 +136,17 @@ describe('addressing a comment from a review', () => {
 	});
 
 	it('stops when Stop is pressed, and finishes nothing', async () => {
-		const { deps, api } = world();
+		const { deps, api, told } = world();
+		// Stopped, the core's Address ends as stopped: the change is finished the next time the prototype is opened.
+		api.addressPrototype.mockResolvedValue(ok({ state: 'stopped' }) as never);
 		deps.progress = vi.fn(async (_title, task, onStop) => {
 			onStop();
 			await task(() => undefined);
 		});
 		expect(await addressComment(deps, review, comment)).toBeNull();
 		expect(api.stopAgent).toHaveBeenCalled();
-		expect(api.finishPrototypeAddress).not.toHaveBeenCalled();
 		expect(deps.show).not.toHaveBeenCalled();
+		expect(told).toEqual([]);
 	});
 
 	it('fails saying why, and before anything when Claude Code is not here', async () => {

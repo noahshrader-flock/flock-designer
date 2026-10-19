@@ -315,8 +315,22 @@ export const defaultAgentDeps: AgentDeps = {
 	adapter: claudeCodeAdapter,
 };
 
+/** How a run ended, as everything that waits on one is told: finished with its exit code, stopped by the person, or it could not run. */
+export type AgentEnd = { state: 'finished'; exitCode: number } | { state: 'stopped' } | { state: 'unavailable'; detail: string };
+
+/** A run's end, as a job goes on from it: finished, stopped by the person, or why it did not finish, thrown in words. */
+export const afterRun = (end: AgentEnd): 'finished' | 'stopped' => {
+	if (end.state === 'stopped') return 'stopped';
+	if (end.state === 'unavailable') throw new Error(end.detail);
+	if (end.exitCode !== 0) throw new Error(`The agent stopped with code ${end.exitCode}.`);
+	return 'finished';
+};
+
 export class AgentRunner {
 	private child: ChildProcess | null = null;
+	/** The run going on's end, told once its process has exited (or could not start); whether the person stopped it. */
+	private ending: Promise<AgentEnd> | null = null;
+	private stopping = false;
 	private current: AgentStatus = { state: 'idle' };
 	private work: string | null = null;
 	/** Where the run is, and its conversation: a checkout must not change branch under it, and only its own conversation is taken over. */
@@ -361,6 +375,21 @@ export class AgentRunner {
 	}
 
 	/**
+	 * Runs `task` and resolves when the run has ended, told by its process exiting, never guessed: what every job waits on.
+	 * The same work asked again while it runs joins that run and waits for its end; anything else is refused (`start`).
+	 */
+	run(root: string, projectId: string, task: string, extras?: AgentExtras): Promise<AgentEnd> {
+		const started = this.start(root, projectId, task, extras);
+		if (started.state === 'unavailable') return Promise.resolve({ state: 'unavailable', detail: started.detail });
+		return this.ending as Promise<AgentEnd>;
+	}
+
+	/** The end of the run going on for `work` (one a screen opened again finds still going); null when none is. */
+	ended(work: string): Promise<AgentEnd> | null {
+		return this.current.state === 'running' && this.work === work ? this.ending : null;
+	}
+
+	/**
 	 * One run at a time. The same work asked again (a screen opened twice, Try again) joins the run that is going;
 	 * anything else is refused, never handed that run, or its screen would wait on someone else's work and report its own
 	 * as done. Decided here, where nothing can start in between, rather than by each caller checking first.
@@ -392,6 +421,9 @@ export class AgentRunner {
 		}
 
 		this.child = child;
+		this.stopping = false;
+		let end: (how: AgentEnd) => void = () => undefined;
+		this.ending = new Promise<AgentEnd>((resolve) => (end = resolve));
 		this.work = extras?.work ?? null;
 		this.root = root;
 		this.session = extras?.session ?? null;
@@ -413,16 +445,18 @@ export class AgentRunner {
 		child.stderr?.on('data', (d: Buffer) => this.onLog({ commandId: 'agent', stream: 'stderr', text: d.toString() }));
 		child.on('error', (err) => {
 			this.child = null;
-			this.current = {
-				state: 'unavailable',
-				detail: `Could not run ${this.deps.adapter.name}: ${err.message}. Is it installed and on PATH?`,
-			};
+			this.ending = null;
+			const detail = `Could not run ${this.deps.adapter.name}: ${err.message}. Is it installed and on PATH?`;
+			this.current = { state: 'unavailable', detail };
+			end({ state: 'unavailable', detail });
 		});
 		child.on('exit', (code) => {
 			this.child = null;
+			this.ending = null;
 			// A crash and a clean finish are both "finished" with a code. The caller
 			// decides what a non-zero code means; this does not editorialize.
 			this.current = { state: 'finished', exitCode: code ?? -1, ...this.tags() };
+			end(this.stopping ? { state: 'stopped' } : { state: 'finished', exitCode: code ?? -1 });
 		});
 
 		return this.current;
@@ -440,6 +474,8 @@ export class AgentRunner {
 
 	/** Ends the run, and every tool it started. The status says finished once it has (the exit handler), not before. */
 	stop(): Promise<void> {
-		return this.child ? endGroup(this.child) : Promise.resolve();
+		if (!this.child) return Promise.resolve();
+		this.stopping = true;
+		return endGroup(this.child);
 	}
 }

@@ -1,5 +1,5 @@
 import type { SignInState } from '../domain/account';
-import type { AgentReadiness, AgentStatus } from '../domain/agent';
+import type { AgentReadiness, AgentStatus, JobEnd } from '../domain/agent';
 import type { Checkout, PreviewStatus, RunLogLine } from '../domain/checkout';
 import type { CommentAnchor, CommentRef, ReviewComment } from '../domain/comments';
 import type {
@@ -59,11 +59,6 @@ export interface WorkspaceApi {
 
 	/** Of those, the ones with the DSNR setup, which codebase work can start from. */
 	branchesWithSetup(root: string): Promise<Result<string[]>>;
-	/** Checks out codebase work's branch. */
-	continueWork(root: string, projectId: string, name: string): Promise<Result<Work>>;
-
-	/** `projectId` fills `<project-id>` in a command that serves one project. */
-	startCommand(root: string, commandId: string, projectId?: string): Promise<Result<PreviewStatus>>;
 	/**
 	 * The component library's catalog, from its clone's copy of its branch on GitHub. Without `refresh` it answers at once
 	 * with what the clone already has and starts bringing the branch up to date; with it, it waits for that and answers with the
@@ -157,8 +152,6 @@ export interface WorkspaceApi {
 	shareWork(root: string, projectId: string, name: string): Promise<Result<ShareStatus>>;
 	onShareStatus(listener: (status: ShareStatus) => void): () => void;
 
-	/** Hands the task to the locally installed agent. Never bundles credentials. */
-	startAgent(root: string, projectId: string, task: string): Promise<Result<AgentStatus>>;
 	agentStatus(): Promise<Result<AgentStatus>>;
 	/** Stops the agent's run, whatever it is doing: Stop on a build, where a shell shows one (the VS Code extension). */
 	stopAgent(): Promise<Result<null>>;
@@ -184,16 +177,13 @@ export interface WorkspaceApi {
 	 */
 	handPrototypeBuild(root: string, projectId: string, name: string, request: string): Promise<Result<BuildInCodebase>>;
 	/**
-	 * Starts the agent on one comment on a prototype. There is no batch. The change goes in the version commented on, in
-	 * place, or in a new version from it when `newVersion` asks for one.
+	 * Address on one comment on a prototype, run here to its end: the agent makes the change in the version commented on,
+	 * in place, or in a new version from it when `newVersion` asks for one; then a changed prototype is built, recorded when
+	 * it is a new version, and saved, and the comment is marked with where the change is. There is no batch. Says whether
+	 * anything changed, in which version, the new version's record when one was made, and the comment as it is marked now;
+	 * or that the person stopped it, when the change is finished the next time the prototype is opened.
 	 */
-	addressPrototype(projectId: string, name: string, comment: CommentRef, newVersion: boolean): Promise<Result<AgentStatus>>;
-	/**
-	 * Once that agent has finished: a changed prototype is built, recorded when it is a new version, and saved, and the
-	 * comment is marked with where the change is. Says whether anything changed, in which version, the new version's
-	 * record when one was made, and the comment as it is marked now.
-	 */
-	finishPrototypeAddress(comment: CommentRef): Promise<Result<PrototypeAddressed>>;
+	addressPrototype(projectId: string, name: string, comment: CommentRef, newVersion: boolean): Promise<Result<JobEnd<PrototypeAddressed>>>;
 	/** Whether the version is on its published page, asked of GitHub. */
 	publishedPage(projectId: string, name: string): Promise<Result<PageStatus>>;
 	/**
@@ -221,12 +211,17 @@ export interface WorkspaceApi {
 	/** Asked when new work is about to be started: is Claude Code installed here, and signed in? */
 	agentReadiness(): Promise<Result<AgentReadiness>>;
 	/**
-	 * Starts Handoff on a project's codebase work: the product's gate, both reviews, their fixes, and HANDOFF.md.
-	 * Refused unless the checkout is on the work's branch and the agent is free.
+	 * Handoff on a project's codebase work, run here to its end: the product's gate, both reviews, their fixes, and
+	 * HANDOFF.md. Refused unless the checkout is on the work's branch and the agent is free (a Handoff of it already going
+	 * is waited on). Says whether it found the work ready (its verdict, and HANDOFF.md committed since; null when that
+	 * cannot be told), or that the person stopped it.
 	 */
-	startHandoff(root: string, projectId: string): Promise<Result<AgentStatus>>;
-	/** Whether the last Handoff here found the work ready (its verdict, and HANDOFF.md committed since); null if unknown. */
-	handoffResult(root: string): Promise<Result<boolean | null>>;
+	handOff(root: string, projectId: string): Promise<Result<JobEnd<{ ready: boolean | null }>>>;
+	/**
+	 * Run locally: codebase work on its branch, once its agent has finished, and its preview started at the work's own route.
+	 * `uncommitted`: the checkout had changes nobody committed, and no agent made them here.
+	 */
+	runLocally(root: string, projectId: string, name: string): Promise<Result<{ url: string; uncommitted: boolean }>>;
 	onAgentLog(listener: (line: RunLogLine) => void): () => void;
 
 	signInState(): Promise<Result<SignInState>>;
@@ -264,8 +259,6 @@ export interface WorkspaceApi {
  */
 export const INVOKE = [
 	'readCheckout',
-	'continueWork',
-	'startCommand',
 	'designSystemCatalog',
 	'designSystems',
 	'storyPreview',
@@ -289,17 +282,15 @@ export const INVOKE = [
 	'cancelInstall',
 	'branchesWithSetup',
 	'stopCommand',
-	'startAgent',
 	'agentStatus',
 	'stopAgent',
 	'agentReadiness',
-	'startHandoff',
-	'handoffResult',
+	'handOff',
+	'runLocally',
 	'createPrototype',
 	'assignFolder',
 	'handPrototypeBuild',
 	'addressPrototype',
-	'finishPrototypeAddress',
 	'publishedPage',
 	'publishPage',
 	'savePrototype',

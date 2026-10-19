@@ -22,8 +22,6 @@ export interface AgentWorkDeps {
 	api: Pick<WorkspaceApi, 'agentReadiness' | 'stopAgent' | 'onAgentLog'>;
 	progress: Progress;
 	log: AgentLogLike;
-	/** How often the agent is asked how it is getting on (a test's is 0). */
-	pollMs?: number;
 }
 
 /** Claude Code does the work: said when it is not here, or not signed in, before anything is started. */
@@ -39,13 +37,13 @@ export const agentReady = async (api: Pick<WorkspaceApi, 'agentReadiness'>): Pro
 
 /**
  * The agent at work, as VS Code shows it, the same for a build and for Address: its log started (`logTitle`) and fed as
- * it runs, a notification (`title`) saying how it is going, and Stop, which stops the agent. `work` is told to go on only
- * while nobody has stopped it. Says whether it was stopped.
+ * it runs, a notification (`title`) saying how it is going, and Stop, which stops the agent, which ends the core's job
+ * too. Says whether it was stopped.
  */
 export const agentWork = async (
 	{ api, progress, log }: AgentWorkDeps,
 	{ title, logTitle }: { title: string; logTitle: string },
-	work: (say: (message: string) => void, isLive: () => boolean) => Promise<void>,
+	work: (say: (message: string) => void) => Promise<void>,
 ): Promise<{ stopped: boolean }> => {
 	let stopped = false;
 	log.start(logTitle);
@@ -53,7 +51,7 @@ export const agentWork = async (
 	try {
 		await progress(
 			title,
-			(say) => work(say, () => !stopped),
+			(say) => work(say),
 			() => {
 				stopped = true;
 				void api.stopAgent();
@@ -64,6 +62,3 @@ export const agentWork = async (
 	}
 	return { stopped };
 };
-
-/** How often to ask the agent how it is getting on, passed to the app's own run as its option: only when one is set. */
-export const pollOf = ({ pollMs }: { pollMs?: number }): { pollMs?: number } => (pollMs !== undefined ? { pollMs } : {});

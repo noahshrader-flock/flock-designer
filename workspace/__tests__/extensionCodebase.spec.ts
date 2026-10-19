@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { type CodebaseDeps, type LocalRun, handOff, openCode, shareCodebase, runLocally } from '../extension/src/codebase';
-import type { AgentStatus, Project, RunLogLine, ShareStatus } from '../src/shared/contract';
+import type { Project, RunLogLine, ShareStatus } from '../src/shared/contract';
 import { ok } from '../src/shared/result';
 
 /**
@@ -33,18 +33,13 @@ const world = (more: Record<string, unknown> = {}) => {
 	const said: string[] = [];
 	const offered: [string, string[]][] = [];
 	const shareListeners: ((s: ShareStatus) => void)[] = [];
-	const finished: AgentStatus = { state: 'finished', exitCode: 0, work: codebase.branch, purpose: 'handoff' };
 	const api = {
 		agentReadiness: vi.fn(async () => ok({ state: 'ready' })),
 		listProjects: vi.fn(async () => ok([zone, prototypeOnly])),
-		readCheckout: vi.fn(async () => ok({ root: '/p', name: 'p', branch: codebase.branch, clean: true })),
-		continueWork: vi.fn(async () => ok({ root: '/p', name: 'p', branch: codebase.branch, clean: true })),
-		agentStatus: vi.fn(async () => ok({ state: 'idle' })),
-		startHandoff: vi.fn(async () => ok({ state: 'running', startedAt: '', work: codebase.branch, purpose: 'handoff' })),
-		startAgent: vi.fn(),
-		startCommand: vi.fn(async () => ok({ state: 'running', url: 'http://localhost:5173/' })),
+		// The core's Handoff and Run locally, each run to its end.
+		handOff: vi.fn(async () => ok({ state: 'done', value: { ready: true as boolean | null } })),
+		runLocally: vi.fn(async () => ok({ url: 'http://localhost:5173/zones', uncommitted: false })),
 		stopCommand: vi.fn(async () => ok({ state: 'stopped' })),
-		handoffResult: vi.fn(async () => ok(true)),
 		shareWork: vi.fn(async () => ok({ state: 'running', projectId: zone.id, name: 'codebase', step: 'pushing' })),
 		onShareStatus: vi.fn((l: (s: ShareStatus) => void) => {
 			shareListeners.push(l);
@@ -54,7 +49,6 @@ const world = (more: Record<string, unknown> = {}) => {
 		onAgentLog: vi.fn(() => () => undefined),
 		...more,
 	};
-	api.agentStatus.mockResolvedValueOnce(ok({ state: 'idle' })).mockResolvedValue(ok(finished));
 	const deps: CodebaseDeps = {
 		api: api as unknown as CodebaseDeps['api'],
 		root: '/p',
@@ -70,7 +64,6 @@ const world = (more: Record<string, unknown> = {}) => {
 		}),
 		openExternal: vi.fn(async () => undefined),
 		copy: vi.fn(async () => undefined),
-		pollMs: 0,
 	};
 	return { deps, api, told, said, offered, shareListeners };
 };
@@ -79,10 +72,9 @@ describe('Handoff, from VS Code', () => {
 	it('runs on the project’s codebase work, said as it goes, and gives the verdict: ready, with a draft pull request offered', async () => {
 		const { deps, api, said, offered } = world();
 		await handOff(deps, 'zone-coverage');
-		expect(api.startHandoff).toHaveBeenCalledWith('/p', 'zone-coverage');
+		expect(api.handOff).toHaveBeenCalledWith('/p', 'zone-coverage');
 		expect(said).toEqual(['Handing off Zone coverage', 'Running the product’s gate, both reviews and the fixes. This takes a while.']);
 		expect(deps.log.start).toHaveBeenCalledWith('Zone coverage: handoff');
-		expect(api.handoffResult).toHaveBeenCalledWith('/p');
 		expect(offered).toEqual([
 			['Ready for engineering: HANDOFF.md is on feature/zone-coverage, and nothing was pushed.', ['Open a draft pull request']],
 		]);
@@ -93,7 +85,7 @@ describe('Handoff, from VS Code', () => {
 			[false, 'Zone coverage is not ready for engineering yet: its log says why.'],
 			[null, 'The handoff of Zone coverage finished: its log says how it went.'],
 		] as const) {
-			const { deps, told, offered } = world({ handoffResult: vi.fn(async () => ok(verdict)) });
+			const { deps, told, offered } = world({ handOff: vi.fn(async () => ok({ state: 'done', value: { ready: verdict } })) });
 			await handOff(deps, 'zone-coverage');
 			expect(told).toEqual([words]);
 			expect(offered).toEqual([]);
@@ -101,25 +93,25 @@ describe('Handoff, from VS Code', () => {
 	});
 
 	it('stops the agent when Stop is pressed, and gives no verdict', async () => {
-		const { deps, api } = world();
+		const { deps, api, told, offered } = world({ handOff: vi.fn(async () => ok({ state: 'stopped' })) });
 		deps.progress = vi.fn(async (_title, task, onStop) => {
 			onStop?.();
 			await task(() => undefined);
 		});
 		await handOff(deps, 'zone-coverage');
 		expect(api.stopAgent).toHaveBeenCalled();
-		expect(api.handoffResult).not.toHaveBeenCalled();
+		expect([told, offered]).toEqual([[], []]);
 	});
 
 	it('is only for codebase work, and needs Claude Code', async () => {
 		await expect(handOff(world().deps, 'alert-history')).rejects.toThrow('Alert history has no codebase work yet: build it in the codebase first.');
 		const missing = world({ agentReadiness: vi.fn(async () => ok({ state: 'missing' })) });
 		await expect(handOff(missing.deps, 'zone-coverage')).rejects.toThrow(/Claude Code is not installed/);
-		expect(missing.api.startHandoff).not.toHaveBeenCalled();
+		expect(missing.api.handOff).not.toHaveBeenCalled();
 	});
 
 	it('says how a run that failed failed', async () => {
-		const { deps } = world({ startHandoff: vi.fn(async () => ({ ok: false, error: 'Open feature/zone-coverage first.' })) });
+		const { deps } = world({ handOff: vi.fn(async () => ({ ok: false, error: 'Open feature/zone-coverage first.' })) });
 		await expect(handOff(deps, 'zone-coverage')).rejects.toThrow('The handoff of Zone coverage did not finish: Open feature/zone-coverage first.');
 	});
 });
@@ -235,7 +227,7 @@ describe('Run locally: codebase work run on this machine, in the browser', () =>
 		// Its own earlier run first, so there is only ever one; then the port is checked as free; then it starts.
 		expect(api.stopCommand).toHaveBeenCalledWith('/p', 'design-mode');
 		expect(l.answers).toHaveBeenCalledWith(3000);
-		expect(api.startCommand).toHaveBeenCalledWith('/p', 'design-mode', 'zone-coverage');
+		expect(api.runLocally).toHaveBeenCalledWith('/p', 'zone-coverage', 'codebase');
 		expect(said[0]).toBe('Starting Zone coverage locally');
 		expect(l.loads).toHaveBeenCalledWith('http://localhost:5173/zones');
 		expect(deps.openExternal).toHaveBeenCalledWith('http://localhost:5173/zones');
@@ -244,7 +236,14 @@ describe('Run locally: codebase work run on this machine, in the browser', () =>
 
 	it('says when the work has no page recorded, so it opened at the app’s front door', async () => {
 		const noRoute = { ...zone, work: [zone.work[0], { ...codebase, route: null }] } as unknown as Project;
-		const { deps, offered, local: l } = run({ listProjects: vi.fn(async () => ok([noRoute])) });
+		const {
+			deps,
+			offered,
+			local: l,
+		} = run({
+			listProjects: vi.fn(async () => ok([noRoute])),
+			runLocally: vi.fn(async () => ok({ url: 'http://localhost:5173/', uncommitted: false })),
+		});
 		await runLocally(deps, l, 'zone-coverage');
 		expect(deps.openExternal).toHaveBeenCalledWith('http://localhost:5173/');
 		expect(offered.at(-1)).toEqual([
@@ -278,7 +277,7 @@ describe('Run locally: codebase work run on this machine, in the browser', () =>
 		await expect(runLocally(deps, l, 'zone-coverage')).rejects.toThrow(
 			'Zone coverage couldn’t run locally: something else is already answering on port 3000. Stop it, then try again.',
 		);
-		expect(api.startCommand).not.toHaveBeenCalled();
+		expect(api.runLocally).not.toHaveBeenCalled();
 	});
 
 	it('says the product does not say how to run it, when it declares no port for design mode', async () => {
@@ -286,18 +285,18 @@ describe('Run locally: codebase work run on this machine, in the browser', () =>
 		await expect(runLocally(deps, l, 'zone-coverage')).rejects.toThrow(
 			'Zone coverage couldn’t run locally: the product’s .dsnr/workspace.json declares no design-mode command with a port.',
 		);
-		expect(api.startCommand).not.toHaveBeenCalled();
+		expect(api.runLocally).not.toHaveBeenCalled();
 	});
 
 	it('takes a build error in the server’s output as a failure, with that line, stops the server, and opens nothing', async () => {
 		const { deps, api, local: l, say } = run();
-		api.startCommand.mockImplementation((async () => {
+		api.runLocally.mockImplementation((async () => {
 			say('\u001b[31merror\u001b[39m   Build error:\n');
 			say(
 				"  × ESModulesLinkingError: export 'TransparencyPortalV2' (imported as 'TransparencyPortalV2') was not found in '@flocksafety/flock-transparency-portal' (possible exports: CsvComponent, DATA_UNAVAILABLE, FlockLogoComponent)\n",
 			);
 			say('error   build failed in 1.07 s\n');
-			return ok({ state: 'running', url: 'http://localhost:5173/' });
+			return ok({ url: 'http://localhost:5173/', uncommitted: false });
 		}) as never);
 		await expect(runLocally(deps, l, 'zone-coverage')).rejects.toThrow(
 			"Zone coverage couldn’t run locally: ESModulesLinkingError: export 'TransparencyPortalV2' (imported as 'TransparencyPortalV2') was not found in '@flocksafety/flock-transparency-portal'. Its packages may be out of date: npm ci",
@@ -317,22 +316,20 @@ describe('Run locally: codebase work run on this machine, in the browser', () =>
 
 	it('says why it did not start, and leaves the checkout alone when it is not clean', async () => {
 		const notClean = run({
-			readCheckout: vi.fn(async () => ok({ root: '/p', name: 'p', branch: 'develop', clean: false })),
-			continueWork: vi.fn(async () => ({ ok: false, error: 'There are uncommitted changes in p. Commit or stash them first.' })),
+			runLocally: vi.fn(async () => ({ ok: false, error: 'There are uncommitted changes in p. Commit or stash them first.' })),
 		});
 		await expect(runLocally(notClean.deps, notClean.local, 'zone-coverage')).rejects.toThrow(
 			'Zone coverage couldn’t run locally: There are uncommitted changes in p. Commit or stash them first.',
 		);
-		expect(notClean.api.startCommand).not.toHaveBeenCalled();
-		const failed = run({ startCommand: vi.fn(async () => ok({ state: 'failed', detail: 'exited with code 1' })) });
+		const failed = run({ runLocally: vi.fn(async () => ({ ok: false, error: 'exited with code 1' })) });
 		await expect(runLocally(failed.deps, failed.local, 'zone-coverage')).rejects.toThrow('Zone coverage couldn’t run locally: exited with code 1');
 	});
 
 	it('shows what the server prints in the log as it starts', async () => {
 		const { deps, api, local: l, say } = run();
-		api.startCommand.mockImplementation((async () => {
+		api.runLocally.mockImplementation((async () => {
 			say('ready   built in 4.2 s\n');
-			return ok({ state: 'running', url: 'http://localhost:5173/' });
+			return ok({ url: 'http://localhost:5173/', uncommitted: false });
 		}) as never);
 		await runLocally(deps, l, 'zone-coverage');
 		expect(deps.log.start).toHaveBeenCalledWith('Zone coverage, locally');

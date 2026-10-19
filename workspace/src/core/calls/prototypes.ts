@@ -10,7 +10,6 @@ export const registerPrototypes = (area: PrototypesArea): void => {
 	handle('assignFolder', [arg.projectId, arg.unknown], area.assignFolder);
 	handle('handPrototypeBuild', [arg.root, arg.projectId, arg.prototypeName, arg.words], area.handPrototypeBuild);
 	handle('addressPrototype', [arg.projectId, arg.prototypeName, arg.comment, arg.flag], area.addressPrototype);
-	handle('finishPrototypeAddress', [arg.comment], area.finishPrototypeAddress);
 	handle('savePrototype', [arg.projectId, arg.prototypeName], area.savePrototype);
 	handle('prototypeProgress', [arg.projectId, arg.prototypeName], area.prototypeProgress);
 	handle('openPrototype', [arg.projectId, arg.prototypeName], area.openPrototype);

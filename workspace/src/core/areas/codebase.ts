@@ -2,20 +2,20 @@ import type { CallsDeps, CheckedCheckout } from '../compose';
 import { randomUUID } from 'node:crypto';
 import { existsSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
-import type { AccessibilityResult, BuildInCodebase, BuildInCodebasePlan } from '../../shared/contract';
+import type { AccessibilityResult, BuildInCodebase, BuildInCodebasePlan, JobEnd } from '../../shared/contract';
 import { statesOf } from '../../shared/prototypeStates';
 import { lastVerdict } from '../../shared/handoff';
-import { workLabel } from '../../shared/work';
+import { DESIGN_MODE_COMMAND, routeIn, workLabel } from '../../shared/work';
 import { A11Y_COMMAND, productTarget, taskAccessibility } from '../services/accessibility/accessibilityBrief';
 import { accessibilityOf } from '../services/accessibility/accessibilityCheck';
-import { type AgentExtras, agentReadiness } from '../services/agent/agent';
-import { type CheckoutParts, codebaseTask, guidePart, handoffTask, buildInCodebaseTask } from '../services/agent/agentTasks';
+import { type AgentEnd, type AgentExtras, afterRun, agentReadiness } from '../services/agent/agent';
+import { type CheckoutParts, guidePart, handoffTask, buildInCodebaseTask } from '../services/agent/agentTasks';
 import { designSystemCheckout, readDescriptor } from '../services/projects/descriptor';
 import { recordsRootFor } from '../services/projects/discovery';
 import { handToClaude } from '../services/agent/editor';
-import { CODEBASE_SKILL, HANDOFF_FILE, HANDOFF_SKILL, commandLine } from '../services/codebase/engineeringHandoff';
+import { HANDOFF_FILE, HANDOFF_SKILL, commandLine } from '../services/codebase/engineeringHandoff';
 import { branchTip, changedSince, headCommit, readCheckout } from '../services/platform/git';
-import { codebaseBranchFor, recordHandoff, recordPath, recordPreview, recordedWork } from '../services/projects/workRecords';
+import { continueWork, recordHandoff, recordPath, recordPreview, recordedWork } from '../services/projects/workRecords';
 import { GUIDE, MOVE_SKILL, ROUTE_SKILL, buildInCodebasePrompt } from '../services/prototypes/prototype';
 import { pullRequestText } from '../services/codebase/share';
 
@@ -23,20 +23,20 @@ import { pullRequestText } from '../services/codebase/share';
 export const codebaseArea = (d: CallsDeps) => {
 	const {
 		agent,
-		agentBusy,
 		checkout,
 		codebase,
 		ports,
 		prototypePage,
-		prototypesRoot,
 		publisher,
 		readSkillText,
 		refuseWhileBusy,
 		servePrototype,
+		runtime,
 		sessions,
 		share,
-		store,
+		signedInLogin,
 		work,
+		written,
 	} = d;
 	/**
 	 * A prototype's accessibility (T7): its saved page, served as it is opened, checked in each of its states at its
@@ -112,63 +112,46 @@ export const codebaseArea = (d: CallsDeps) => {
 		};
 	};
 	/**
-	 * Starts a run the person can come back to: tagged with its branch, and its conversation named and kept, so it can
-	 * be continued in VS Code. Every run in a product checkout starts here, with its whole task (`agentTasks`).
+	 * Runs the agent where the person can come back to it, and resolves at its end: tagged with its branch, and its
+	 * conversation named and kept, so it can be continued in VS Code. A run already going for the same branch (a screen
+	 * opened again) is waited on rather than started twice, which `joined` says. Every run in a product checkout is this
+	 * one, with its whole task (`agentTasks`).
 	 */
-	const startTracked = (
+	const runTracked = (
 		canonical: string,
 		projectId: string,
 		task: string,
-		{ branch, addDirs, readOnly, purpose }: { branch: string | null; addDirs: string[]; readOnly: string[]; purpose?: AgentExtras['purpose'] },
-	) => {
+		{ branch, addDirs, readOnly, purpose }: { branch: string; addDirs: string[]; readOnly: string[]; purpose?: AgentExtras['purpose'] },
+	): { end: Promise<AgentEnd>; joined: boolean } => {
+		const going = agent.ended(branch);
+		if (going) return { end: going, joined: true };
+		refuseWhileBusy();
 		const session = randomUUID();
-		// Joining the run already going on this branch keeps that run's conversation, not this new name for it.
-		const joining = agentBusy();
-		const started = agent.start(canonical, projectId, task, {
+		const ended = agent.run(canonical, projectId, task, {
 			// The project's records live in the design repository, beside the product checkout.
 			addDirs,
 			readOnly,
-			...(branch !== null ? { work: branch } : {}),
+			work: branch,
 			...(purpose ? { purpose } : {}),
 			session,
 			name: `DSNR: ${projectId}`,
 		});
-		if (!joining && started.state === 'running' && branch !== null) sessions.write(canonical, branch, session);
-		return started;
+		if (agent.status().state === 'running') sessions.write(canonical, branch, session);
+		return { end: ended, joined: false };
 	};
-	// Handoff: the heavy pass on codebase work, started here so the checks and the start are one step. Where the
-	// branch stood when it started is kept, so the verdict can tell a handoff written now from one left from before.
-	const handoffStarts = new Map<string, { projectId: string; branch: string; head: string }>();
 	/**
-	 * Whether the last Handoff here found the work ready: the run's own last verdict says so, and HANDOFF.md was
-	 * committed since it started. Null when this app did not start one on this branch (it was restarted since). A verdict
-	 * is kept on the work's record (`recordHandoff`), with the commit it was ready at, so it outlives this run and this
-	 * machine: what the Hand off dialog offers later, while the branch is still there.
+	 * A run that says it finished but left changes it never committed did not finish: what it was doing is not on the
+	 * branch, and anything shown from it would be half of it.
 	 */
-	/**
-	 * Build, from a prototype: its branch and record are made here, as all codebase work's are (or, when the work was
-	 * started before, picked up where it is), and the building is handed to Claude Code in the product repository, where
-	 * the person watches it and can step in. The task is written beside the prototype's own copy (the skill, the page and source to start from, where the audit
-	 * goes); the conversation starts with a line pointing at it. In VS Code when it has Claude Code; otherwise the
-	 * command that starts it in a terminal is put on the clipboard.
-	 */
+	const committedAll = async (canonical: string): Promise<void> => {
+		if (!(await readCheckout(canonical)).clean)
+			throw new Error(
+				'The agent stopped before it committed all of its work: there are changes in the checkout it did not commit. Continue in Claude Code to finish them.',
+			);
+	};
 	return {
 		/** The check a root the window names goes through: one this window opened, read whole (`calls.ts`). */
 		checkout,
-		startAgent: async (workIn: CheckedCheckout, projectId: string, task: string) => {
-			const { canonical, descriptor } = workIn;
-			const branch = (await readCheckout(canonical)).branch;
-			// On the project's codebase branch, the shared rules for unattended codebase work, and this product's light check.
-			const unattended = branch === codebaseBranchFor(descriptor, projectId) ? await store.readFile(CODEBASE_SKILL) : null;
-			// A prototype being moved into the code is read from the app's own copy of it.
-			const prototypeFolder = join(prototypesRoot, projectId);
-			const { parts, readOnly } = await checkoutParts(canonical, projectId);
-			return startTracked(canonical, projectId, codebaseTask({ unattended, task }, parts), {
-				branch,
-				addDirs: [workIn.recordsRoot, ...(existsSync(prototypeFolder) ? [prototypeFolder] : [])],
-				readOnly,
-			});
-		},
 		agentStatus: () => agent.status(),
 		// Answered once the run, and every tool it started, has ended.
 		stopAgent: async () => {
@@ -176,8 +159,6 @@ export const codebaseArea = (d: CallsDeps) => {
 			return null;
 		},
 		agentReadiness: () => agentReadiness(),
-		// One click: read the comments now, write the file from that read, then start the agent. Nothing
-		// a reviewer wrote is put in the task; it reaches the agent only through the file.
 		// Sharing. The branch comes from this person's own record, never from the window, and
 		// the repository's descriptor says what a share is. Starts and returns: it takes minutes.
 		shareWork: async (workIn: CheckedCheckout, projectId: string, name: string) => {
@@ -229,33 +210,60 @@ export const codebaseArea = (d: CallsDeps) => {
 				setup,
 			};
 		},
-		startHandoff: async (workIn: CheckedCheckout, projectId: string) => {
+		/**
+		 * Handoff: the heavy pass on codebase work, from its checks to its verdict in one step: on the work's branch, the
+		 * product's gate, both reviews, their fixes and HANDOFF.md, run here to its end (or a run of it already going, waited
+		 * on). Ready when the run's own last verdict says so and HANDOFF.md was committed since it started; the verdict is kept
+		 * on the work's record (`recordHandoff`), with the commit it was ready at, so it outlives this run and this machine.
+		 * Null when it cannot be told: a run left from before this app started.
+		 */
+		handOff: async (workIn: CheckedCheckout, projectId: string): Promise<JobEnd<{ ready: boolean | null }>> => {
 			const { canonical, recordsRoot, descriptor } = workIn;
 			const codebaseRecord = await recordedWork(canonical, recordsRoot, descriptor, projectId, 'codebase');
-			const here = await readCheckout(canonical);
-			if (here.branch !== codebaseRecord.branch) throw new Error(`Open ${codebaseRecord.branch} first: a handoff checks the work where it is.`);
-			refuseWhileBusy();
+			const { branch } = codebaseRecord;
+			if ((await readCheckout(canonical)).branch !== branch) throw new Error(`Open ${branch} first: a handoff checks the work where it is.`);
+			const head = await headCommit(canonical);
 			const skill = await readSkillText(HANDOFF_SKILL);
 			const { parts, readOnly } = await checkoutParts(canonical, projectId);
 			const missingRoute = codebaseRecord.route ? null : { skill: await readSkillText(ROUTE_SKILL), recordFile: recordPath(recordsRoot, projectId) };
-			const task = handoffTask(
-				{ skill, projectId, branch: codebaseRecord.branch, gate: commandLine(descriptor.commands, 'handoff', projectId), missingRoute },
-				parts,
-			);
-			handoffStarts.set(canonical, { projectId, branch: codebaseRecord.branch, head: await headCommit(canonical) });
-			return startTracked(canonical, projectId, task, { branch: codebaseRecord.branch, addDirs: [recordsRoot], readOnly, purpose: 'handoff' });
+			const task = handoffTask({ skill, projectId, branch, gate: commandLine(descriptor.commands, 'handoff', projectId), missingRoute }, parts);
+			const { end, joined } = runTracked(canonical, projectId, task, { branch, addDirs: [recordsRoot], readOnly, purpose: 'handoff' });
+			if (afterRun(await end) === 'stopped') return { state: 'stopped' };
+			await committedAll(canonical);
+			if (joined) return { state: 'done', value: { ready: null } };
+			const ready = (await changedSince(canonical, head, HANDOFF_FILE)) && lastVerdict(agent.recentLines().lines) === 'ready';
+			recordHandoff(recordsRoot, projectId, ready ? await headCommit(canonical) : null);
+			return { state: 'done', value: { ready } };
 		},
-		handoffResult: async (workIn: CheckedCheckout): Promise<boolean | null> => {
-			const { canonical, recordsRoot } = workIn;
-			const started = handoffStarts.get(canonical);
-			const here = await readCheckout(canonical);
-			const recent = agent.recentLines();
-			if (!started || started.branch !== here.branch || recent.work !== here.branch) return null;
-			const committed = await changedSince(canonical, started.head, HANDOFF_FILE);
-			const ready = committed && lastVerdict(recent.lines) === 'ready';
-			recordHandoff(recordsRoot, started.projectId, ready ? await headCommit(canonical) : null);
-			return ready;
+		/**
+		 * Run locally: codebase work on its branch (the checkout moved to it as opening it moves it, never one with work
+		 * uncommitted), once a run of its agent going on has ended, then its preview (the product's design mode) started, at
+		 * the work's own route. `uncommitted`: the checkout had changes nobody committed, and no agent made them here.
+		 */
+		runLocally: async (workIn: CheckedCheckout, projectId: string, name: string): Promise<{ url: string; uncommitted: boolean }> => {
+			const { canonical, recordsRoot, descriptor } = workIn;
+			const record = await recordedWork(canonical, recordsRoot, descriptor, projectId, name);
+			if ((await readCheckout(canonical)).branch !== record.branch) {
+				codebase.assertAgentNotHere(canonical);
+				written(await continueWork(canonical, recordsRoot, projectId, name, signedInLogin(), descriptor));
+			}
+			const going = agent.ended(record.branch);
+			if (going) {
+				if (afterRun(await going) === 'finished') await committedAll(canonical);
+			}
+			const uncommitted = going === null && !(await readCheckout(canonical)).clean;
+			const result = await runtime.start(canonical, descriptor, DESIGN_MODE_COMMAND, projectId);
+			if (result.state === 'running') return { url: routeIn(result.url, record.route), uncommitted };
+			// `stopped` here means the process ended before it ever answered; its output is what was said.
+			throw new Error(result.state === 'failed' ? result.detail : 'The preview stopped before it was ready. Its output is above.');
 		},
+		/**
+		 * Build, from a prototype: its branch and record are made here, as all codebase work's are (or, when the work was
+		 * started before, picked up where it is), and the building is handed to Claude Code in the product repository, where
+		 * the person watches it and can step in. The task is written beside the prototype's own copy (the skill, the page and
+		 * source to start from, where the audit goes); the conversation starts with a line pointing at it. In VS Code when it
+		 * has Claude Code; otherwise the command that starts it in a terminal is put on the clipboard.
+		 */
 		buildInCodebase: async (workIn: CheckedCheckout, projectId: string, name: string, from: string | null): Promise<BuildInCodebase> => {
 			const { canonical, recordsRoot } = workIn;
 			const skill = await readSkillText(MOVE_SKILL);

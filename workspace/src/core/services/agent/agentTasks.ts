@@ -73,13 +73,6 @@ const checkoutEnding = ({ lightCheck, shared, accessibility, voice }: CheckoutPa
 	...(voice ? ['', voice] : []),
 ];
 
-/**
- * A run on codebase work, or any other the person starts in a checkout: `unattended` is the shared skill for unattended
- * codebase work, given on the project's codebase branch, before the task.
- */
-export const codebaseTask = ({ unattended, task }: { unattended: string | null; task: string }, parts: CheckoutParts): string =>
-	parts.guide + [...(unattended ? [unattended.trim(), '', '---', ''] : []), task.trim(), '', ...checkoutEnding(parts)].join('\n');
-
 export const handoffTask = (
 	{
 		skill,

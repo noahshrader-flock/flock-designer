@@ -82,18 +82,14 @@ describe('the agent at work, as every flow has it', () => {
 		expect(w.stopped).toHaveBeenCalled();
 	});
 
-	it('stops the agent when Stop is pressed, tells the work it is no longer live, and says it was stopped', async () => {
+	it('stops the agent when Stop is pressed, which ends the core’s job, and says it was stopped', async () => {
 		const w = world();
-		let live: boolean | null = null;
 		const progress = vi.fn(async (_title: string, task: (say: (m: string) => void) => Promise<void>, onStop?: () => void) => {
 			onStop?.();
 			await task(() => undefined);
 		});
-		const { stopped } = await agentWork({ ...w, progress } as never, { title: 't', logTitle: 't' }, async (_say, isLive) => {
-			live = isLive();
-		});
+		const { stopped } = await agentWork({ ...w, progress } as never, { title: 't', logTitle: 't' }, async () => undefined);
 		expect(stopped).toBe(true);
-		expect(live).toBe(false);
 		expect(w.api.stopAgent).toHaveBeenCalled();
 		expect(w.stopped).toHaveBeenCalled();
 	});

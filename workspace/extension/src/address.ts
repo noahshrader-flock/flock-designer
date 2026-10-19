@@ -1,14 +1,13 @@
-import { type AddressPhase, type PrototypeAddressApi, runPrototypeAddress } from './prototypeAddress';
-import type { CommentRef, Project, WorkspaceApi } from '../../src/shared/contract';
+import type { CommentRef, Project, PrototypeAddressed, Result, JobEnd, WorkspaceApi } from '../../src/shared/contract';
 import { prototypeKey } from '../../src/shared/designPaths';
 import { commentsFromOthers, nextVersionName, othersHaveCommented } from '../../src/shared/prototypeNames';
 import { valueOf } from '../../src/shared/result';
 import { workLabel } from '../../src/shared/work';
-import { type AgentWorkDeps, type Offer, type Tell, agentReady, agentWork, pollOf } from './agentWork';
+import { type AgentWorkDeps, type Offer, type Tell, agentReady, agentWork } from './agentWork';
 import { type Review, reviewsOf } from './messages';
 
 export interface AddressDeps extends AgentWorkDeps {
-	api: AgentWorkDeps['api'] & PrototypeAddressApi & Pick<WorkspaceApi, 'listProjects' | 'readComments'>;
+	api: AgentWorkDeps['api'] & Pick<WorkspaceApi, 'addressPrototype' | 'listProjects' | 'readComments'>;
 	tell: Tell;
 	/** Asks the person to choose, before a version others have commented on is changed. */
 	offer: Offer;
@@ -40,7 +39,7 @@ const asksForNewVersion = async (deps: AddressDeps, project: Project | undefined
 
 /**
  * Address on one of a prototype's comments, from its review in VS Code (ELECTRON_MIGRATION_PLAN 4.2): the core's
- * Address (`runPrototypeAddress`), said and stoppable as a build is, its log beside the editor. The change is made in the
+ * Address (`addressPrototype`), run to its end and said and stoppable as a build is, its log beside the editor. The change is made in the
  * version commented on, or in a new version from it when the person chose that outright (`newVersion`); otherwise, when
  * others have open comments on it (their pins may land on the wrong element), or who has cannot be read, the person is
  * asked first, and nothing is done if they choose neither. The page with the change is then shown (`show`), and which it
@@ -53,38 +52,28 @@ export const addressComment = async (deps: AddressDeps, review: Review, comment:
 	const project = valueOf(await api.listProjects()).find((p) => p.id === review.projectId);
 	const inNew = newVersion || (await asksForNewVersion(deps, project, review, comment));
 	if (inNew === null) return null;
-	let ended: AddressPhase | null = null;
+	let ended: Result<JobEnd<PrototypeAddressed>> | null = null;
 	const { stopped } = await agentWork(
 		deps,
 		{ title: `Addressing a comment on ${review.title}`, logTitle: `${review.title}: addressing a comment` },
-		async (say, isLive) => {
+		async (say) => {
 			say('The agent is working on the comment. This takes a few minutes.');
-			await runPrototypeAddress({
-				api,
-				projectId: review.projectId,
-				name: review.name,
-				comment,
-				newVersion: inNew,
-				isLive,
-				onPhase: (phase) => {
-					if (phase.kind === 'done' || phase.kind === 'failed') ended = phase;
-				},
-				...pollOf(deps),
-			});
+			ended = await api.addressPrototype(review.projectId, review.name, comment, inNew);
 		},
 	);
 	// Set as the run ended: read as what it is, not as it was before the run began.
-	const outcome = ended as AddressPhase | null;
+	const outcome = ended as Result<JobEnd<PrototypeAddressed>> | null;
 	if (stopped || outcome === null) return null;
-	if (outcome.kind === 'failed') throw new Error(`The comment was not addressed: ${outcome.message}`);
-	if (outcome.kind !== 'done' || !outcome.prototype) return null;
-	if (!outcome.changed) {
+	if (!outcome.ok) throw new Error(`The comment was not addressed: ${outcome.error}`);
+	if (outcome.value.state === 'stopped') return null;
+	const addressed = outcome.value.value;
+	if (!addressed.changed) {
 		deps.tell(
 			'The agent finished without changing anything. Its log says why: often the change is outside this version, or the comment needs a decision from you.',
 		);
 		return null;
 	}
-	const where = outcome.prototype.version;
+	const where = addressed.version;
 	deps.tell(
 		where === review.name
 			? 'The agent has finished. Look at the page, then resolve what is done.'

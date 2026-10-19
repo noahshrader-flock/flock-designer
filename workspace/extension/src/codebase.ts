@@ -1,14 +1,12 @@
-import { type BuildApi, type BuildPhase, runLocalBuild } from './localBuild';
 import type { Project, ProjectWork, ShareStatus, ShareStep, WorkspaceApi } from '../../src/shared/contract';
 import { buildError, outputLines, packagesHint } from '../../src/core/services/codebase/serverOutput';
 import { valueOf } from '../../src/shared/result';
 import { DESIGN_MODE_COMMAND, codeLink, workOf } from '../../src/shared/work';
-import { type AgentWorkDeps, type Offer, type Tell, agentReady, agentWork, pollOf } from './agentWork';
+import { type AgentWorkDeps, type Offer, type Tell, agentReady, agentWork } from './agentWork';
 
 export interface CodebaseDeps extends AgentWorkDeps {
 	api: AgentWorkDeps['api'] &
-		BuildApi &
-		Pick<WorkspaceApi, 'listProjects' | 'handoffResult' | 'shareWork' | 'onShareStatus' | 'stopCommand' | 'onRunLog'>;
+		Pick<WorkspaceApi, 'listProjects' | 'handOff' | 'runLocally' | 'shareWork' | 'onShareStatus' | 'stopCommand' | 'onRunLog'>;
 	/** The product folder that is open: where the codebase work is. */
 	root: string;
 	tell: Tell;
@@ -29,36 +27,24 @@ const codebaseOf = async (api: CodebaseDeps['api'], projectId: string): Promise<
 const OPEN_PR = 'Open a draft pull request';
 
 /**
- * Handoff, from VS Code (ELECTRON_MIGRATION_PLAN 5.2): the core's run (`runLocalBuild` with `handoff`) on the project's
- * codebase work, on its branch: the product's gate, both reviews, the fixes, HANDOFF.md committed, nothing pushed. Said
- * and stoppable as a build is, its log beside the editor; then the verdict, and when it is ready, a draft pull request.
+ * Handoff, from VS Code (ELECTRON_MIGRATION_PLAN 5.2): the core's (`handOff`) on the project's codebase work, on its
+ * branch: the product's gate, both reviews, the fixes, HANDOFF.md committed, nothing pushed. Said and stoppable as a build
+ * is, its log beside the editor; then the verdict, and when it is ready, a draft pull request.
  */
 export const handOff = async (deps: CodebaseDeps, projectId: string): Promise<void> => {
 	const { api, root } = deps;
 	await agentReady(api);
 	const { project, work } = await codebaseOf(api, projectId);
-	let failed: string | null = null;
-	let reported = false;
-	const { stopped } = await agentWork(deps, { title: `Handing off ${project.title}`, logTitle: `${project.title}: handoff` }, async (say, isLive) => {
+	let ended: Awaited<ReturnType<typeof api.handOff>> | null = null;
+	const { stopped } = await agentWork(deps, { title: `Handing off ${project.title}`, logTitle: `${project.title}: handoff` }, async (say) => {
 		say('Running the product’s gate, both reviews and the fixes. This takes a while.');
-		await runLocalBuild({
-			api,
-			root,
-			project,
-			work,
-			handoff: true,
-			isLive,
-			onPhase: (phase: BuildPhase) => {
-				if (phase.kind === 'failed') failed = phase.message;
-				if (phase.kind === 'reported') reported = true;
-			},
-			...pollOf(deps),
-		});
+		ended = await api.handOff(root, project.id);
 	});
-	if (stopped) return;
-	if (failed !== null) throw new Error(`The handoff of ${project.title} did not finish: ${failed}`);
-	if (!reported) return;
-	const verdict = valueOf(await api.handoffResult(root));
+	const outcome = ended as Awaited<ReturnType<typeof api.handOff>> | null;
+	if (stopped || outcome === null) return;
+	if (!outcome.ok) throw new Error(`The handoff of ${project.title} did not finish: ${outcome.error}`);
+	if (outcome.value.state === 'stopped') return;
+	const verdict = outcome.value.value.ready;
 	if (verdict === true) {
 		const next = await deps.offer(`Ready for engineering: HANDOFF.md is on ${work.branch}, and nothing was pushed.`, [OPEN_PR]);
 		if (next === OPEN_PR) await shareCodebase(deps, projectId);
@@ -115,18 +101,11 @@ export const runLocally = async (deps: CodebaseDeps, local: LocalRun, projectId:
 		await deps.progress(
 			`Starting ${project.title} locally`,
 			async (say) => {
-				url = await runLocalBuild({
-					api,
-					root,
-					project,
-					work,
-					isLive: () => !stopped,
-					onPhase: (phase: BuildPhase) => {
-						if (phase.kind === 'preview') say('Starting its dev server…');
-						if (phase.kind === 'failed') failed = phase.message;
-					},
-					...pollOf(deps),
-				});
+				say('Opening its branch and starting its dev server…');
+				const ran = await api.runLocally(root, project.id, work.name);
+				if (ran.ok) url = ran.value.url;
+				else failed = ran.error;
+				if (stopped) return;
 				if (url !== null && failed === null) {
 					say('Checking that it loads…');
 					// The output is read before and after the page is: a server can answer before it prints its build error.

@@ -3,11 +3,10 @@ import { basename } from 'node:path';
 import { DESCRIPTOR_PATH, findCommand } from '../services/projects/descriptor';
 import { branchesWithFile, readCheckout } from '../services/platform/git';
 import { INSTALL_COMMAND } from '../services/codebase/install';
-import { continueWork, recordedWork } from '../services/projects/workRecords';
 
 /** What the Checkout calls do, each called by its handler once its arguments are checked (`calls/checkout.ts`). */
 export const checkoutArea = (d: CallsDeps) => {
-	const { agent, checkout, codebase, installer, runtime, signedInLogin, emit, written } = d;
+	const { agent, checkout, installer, runtime, emit } = d;
 	// The install in progress, which Cancel stops.
 	let installing: AbortController | null = null;
 	return {
@@ -15,17 +14,6 @@ export const checkoutArea = (d: CallsDeps) => {
 		checkout,
 		branchesWithSetup: (workIn: CheckedCheckout) => branchesWithFile(workIn.canonical, DESCRIPTOR_PATH),
 		readCheckout: (workIn: CheckedCheckout) => readCheckout(workIn.canonical),
-		continueWork: async (workIn: CheckedCheckout, projectId: string, name: string) => {
-			const { canonical } = workIn;
-			// Opening the run's own work is fine: the checkout is already on its branch, so nothing moves.
-			if (agent.runningIn(canonical)) {
-				const wanted = await recordedWork(canonical, workIn.recordsRoot, workIn.descriptor, projectId, name);
-				if ((await readCheckout(canonical)).branch !== wanted.branch) codebase.assertAgentNotHere(canonical);
-			}
-			return written(await continueWork(canonical, workIn.recordsRoot, projectId, name, signedInLogin(), workIn.descriptor));
-		},
-		startCommand: (workIn: CheckedCheckout, commandId: string, projectId: string | null) =>
-			runtime.start(workIn.canonical, workIn.descriptor, commandId, projectId ?? undefined),
 		stopCommand: (_workIn: CheckedCheckout, commandId: string) => runtime.stop(commandId),
 		// Installing a repository's packages, from the New modal: only the command it declares, one at a time, stoppable.
 		installPackages: async (workIn: CheckedCheckout): Promise<null> => {

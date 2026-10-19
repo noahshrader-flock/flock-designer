@@ -97,6 +97,33 @@ describe('status', () => {
 	});
 });
 
+describe('a run to its end', () => {
+	const runner = (argv: string[]) => new AgentRunner((l) => logs.push(l), { spawnProcess: spawn, adapter: { name: 'Node', argvFor: () => argv } });
+
+	it('ends when its process exits, with its code, never guessed', async () => {
+		expect(await runner(['node', '-e', 'process.exit(0)']).run(root, 'demo', 'x')).toEqual({ state: 'finished', exitCode: 0 });
+		expect(await runner(['node', '-e', 'process.exit(3)']).run(root, 'demo', 'x')).toEqual({ state: 'finished', exitCode: 3 });
+	});
+
+	it('says it could not run, rather than waiting for a run that never started', async () => {
+		const end = await runner(['definitely-not-installed-xyz']).run(root, 'demo', 'x');
+		expect(end.state === 'unavailable' && end.detail).toMatch(/installed and on PATH/);
+	});
+
+	it('says it was stopped when the person stops it, and the same work asked again waits for that end', async () => {
+		const going = runner(['node', '-e', 'setInterval(() => {}, 1000)']);
+		const first = going.run(root, 'demo', 'x', { work: 'prototype/demo/v1' });
+		const again = going.run(root, 'demo', 'x', { work: 'prototype/demo/v1' });
+		expect(going.ended('prototype/demo/v1')).not.toBeNull();
+		expect(going.ended('prototype/other/v1')).toBeNull();
+		await going.stop();
+		expect(await first).toEqual({ state: 'stopped' });
+		expect(await again).toEqual({ state: 'stopped' });
+		// Ended, there is nothing to wait for.
+		expect(going.ended('prototype/demo/v1')).toBeNull();
+	});
+});
+
 describe('running unattended', () => {
 	const argv = claudeCodeAdapter.argvFor('build it', { addDirs: ['/design/projects'] });
 
