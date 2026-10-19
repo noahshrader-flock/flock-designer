@@ -11,6 +11,7 @@ import { Toggle } from './ui/Toggle';
 import { SemanticColors } from './SemanticColors';
 import { ColorDot, tokenDot } from './ui/ColorDot';
 import { InfoTip } from './ui/InfoTip';
+import { ValueItem, ValueLine, ValueList } from './ui/ValueItem';
 
 /** What a token row can do: open its control (a token that can be changed), and open its own file at its line. */
 export interface TokenActions {
@@ -73,8 +74,8 @@ export const TokenRow = ({ token, info, onEdit, onSource }: { token: DesignToken
 		</>
 	);
 	return (
-		<li className="token" data-token={token.path} data-changed={edited || undefined} title={where}>
-			<div className="token-line token-line-flush">
+		<ValueItem marks={{ 'data-token': token.path, 'data-changed': edited || undefined }} title={where}>
+			<ValueLine>
 				{name}
 				{token.kind === 'color' ? (
 					<>
@@ -92,8 +93,8 @@ export const TokenRow = ({ token, info, onEdit, onSource }: { token: DesignToken
 				) : (
 					<span className="token-fill">{value}</span>
 				)}
-			</div>
-		</li>
+			</ValueLine>
+		</ValueItem>
 	);
 };
 
@@ -103,11 +104,11 @@ export const Sets = ({ tokens, infoFor, ...actions }: { tokens: DesignToken[]; i
 		{inOrder(tokens, (t) => `${t.group}/${t.set}`).map(([key, inSet]) => (
 			<div key={key} data-token-set={key} className="token-set">
 				<h4 className="token-set-name">{(inSet[0] as DesignToken).set}</h4>
-				<ul className="tokens" aria-label={(inSet[0] as DesignToken).set}>
+				<ValueList label={(inSet[0] as DesignToken).set}>
 					{inSet.map((t) => (
 						<TokenRow key={t.path} token={t} {...(infoFor ? { info: infoFor(t) } : {})} {...actions} />
 					))}
-				</ul>
+				</ValueList>
 			</div>
 		))}
 	</>

@@ -27,6 +27,7 @@ import { ColorDot } from './ui/ColorDot';
 import { InfoTip } from './ui/InfoTip';
 import { Switch } from './ui/Switch';
 import { useDismiss } from './ui/useDismiss';
+import { ValueItem, ValueList } from './ui/ValueItem';
 
 type Ready = Extract<ComponentTokens, { state: 'ready' }>;
 
@@ -113,7 +114,7 @@ const Cell = ({
 	// A colour that draws nothing is none, whatever made it, and has no dot.
 	if (COLOR_VALUES.has(property) && value !== NO_COLOR)
 		return (
-			<li ref={wrap} data-value-cell className="token" {...(still ? { 'data-still': '' } : tried !== null ? { 'data-tried': '' } : {})}>
+			<ValueItem rowRef={wrap} marks={{ 'data-value-cell': '', ...(still ? { 'data-still': '' } : tried !== null ? { 'data-tried': '' } : {}) }}>
 				<div className="value-cell">
 					<span className="value-label">{label}</span>
 					<ColorDot
@@ -127,7 +128,7 @@ const Cell = ({
 					/>
 				</div>
 				{open && !still && editor}
-			</li>
+			</ValueItem>
 		);
 	// A value that is a token is that token: its name stands where its number would, so a row reads "Radius · Radius base", not
 	// "Radius · 8px"; the number is the token's own to say, in its control. Any other has its number, and a chip when it is made
@@ -155,14 +156,14 @@ const Cell = ({
 	// A radius that makes its ends round has no length to change: shown as drawn.
 	if (still || (property === 'radius' && allParts(cell.value, 4).some(isFull)))
 		return (
-			<li data-value-cell className="token" {...(still ? { 'data-still': '' } : {})}>
+			<ValueItem marks={{ 'data-value-cell': '', ...(still ? { 'data-still': '' } : {}) }}>
 				<span className="value-cell" title={still ? `${made.why}\nDrawn from its props, on one of its stories: shown, not tried.` : made.why}>
 					{says}
 				</span>
-			</li>
+			</ValueItem>
 		);
 	return (
-		<li ref={wrap} data-value-cell className="token" {...(tried !== null ? { 'data-tried': '' } : {})}>
+		<ValueItem rowRef={wrap} marks={{ 'data-value-cell': '', ...(tried !== null ? { 'data-tried': '' } : {}) }}>
 			<button
 				ref={button}
 				type="button"
@@ -176,7 +177,7 @@ const Cell = ({
 				{says}
 			</button>
 			{open && editor}
-		</li>
+		</ValueItem>
 	);
 };
 
@@ -293,10 +294,10 @@ const Inspector = ({
 			{inspect(rows, pickers, selection, declared).map((group) => (
 				<div key={group.name} data-value-group={group.name} className="value-group">
 					<h3 className="value-group-name">{group.name}</h3>
-					<ul className="tokens">
+					<ValueList>
 						{group.rows.map(({ row, shown }) =>
 							shown.cell === null ? (
-								<li key={row.property} data-value-row={row.property} data-not-drawn className="token">
+								<ValueItem key={row.property} marks={{ 'data-value-row': row.property, 'data-not-drawn': '' }}>
 									<span
 										className="value-cell"
 										title={
@@ -308,19 +309,19 @@ const Inspector = ({
 										<span className="value-label">{rowName(row.property)}</span>
 										<span className="value-drawn quiet">Not drawn with this</span>
 									</span>
-								</li>
+								</ValueItem>
 							) : (
 								<li key={row.property} data-value-row={row.property} className="value-row">
-									<ul className="tokens">{cellOf(row.property, shown.cell, rowName(row.property), shown.still)}</ul>
+									<ValueList>{cellOf(row.property, shown.cell, rowName(row.property), shown.still)}</ValueList>
 									{shown.more.length > 0 && (
 										<Disclosure label={`${shown.more.length} more`}>
-											<ul className="tokens">{shown.more.map((c) => cellOf(row.property, c, plural(c.instances, 'instance'), shown.still))}</ul>
+											<ValueList>{shown.more.map((c) => cellOf(row.property, c, plural(c.instances, 'instance'), shown.still))}</ValueList>
 										</Disclosure>
 									)}
 								</li>
 							),
 						)}
-					</ul>
+					</ValueList>
 				</div>
 			))}
 		</>

@@ -3,6 +3,7 @@ import { plural } from '../../src/shared/plural';
 import { useChangeReach } from './hooks/useChangeReach';
 import { Notice } from './ui/Notice';
 import { saidValue, valueTitle } from '../../src/shared/valueNames';
+import { ChangeRow, ValueList } from './ui/ValueItem';
 
 /** What changed of a value, named as the Styles name it, and dark when it is in dark. */
 const changeName = (c: ValueChange): string =>
@@ -21,19 +22,17 @@ export const Moved = ({ reach, name, here, onOpen }: { reach: ComponentReach; na
 			)}
 			{here && <span className="value-group-note">This one</span>}
 		</h3>
-		<ul className="tokens">
+		<ValueList>
 			{reach.changes.map((c) => (
-				<li key={`${c.mode}|${c.property}|${c.variant}|${c.from}|${c.to}`} className="token">
-					<span className="value-cell value-change">
-						<span className="value-label">{changeName(c)}</span>
-						<span className="value-drawn">
-							<span>{saidValue(c.property, c.from)}</span> <span>→ {saidValue(c.property, c.to)}</span>
-						</span>
-					</span>
-				</li>
+				<ChangeRow
+					key={`${c.mode}|${c.property}|${c.variant}|${c.from}|${c.to}`}
+					name={changeName(c)}
+					from={saidValue(c.property, c.from)}
+					to={saidValue(c.property, c.to)}
+				/>
 			))}
 			{reach.inside && <li className="quiet value-inside">Its stories draw differently, in a part its values do not read.</li>}
-		</ul>
+		</ValueList>
 	</div>
 );
 

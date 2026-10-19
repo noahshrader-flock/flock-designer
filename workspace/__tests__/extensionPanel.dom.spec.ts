@@ -1943,7 +1943,7 @@ describe('trying a change to the tokens, saving it to a branch, and proposing it
 		await openChanges();
 		const changed = document.querySelector('[data-changed-tokens]') as HTMLElement;
 		expect(changed.querySelector('.changed-title')?.textContent).toBe('Tokens 1');
-		expect(changed.querySelector('[data-change="tone.pineGreen.60"] .change-values')?.textContent).toBe('#15584A → #000000');
+		expect(changed.querySelector('[data-change="tone.pineGreen.60"] .value-drawn')?.textContent).toBe('#15584A → #000000');
 		await press(changed.querySelector('[aria-label="Reset Tones pineGreen 60"]') as HTMLElement);
 		expect(edited()).toEqual([]);
 		await share('tokenEdits', [{ path: 'tone.pineGreen.60', value: '#000000' }]);

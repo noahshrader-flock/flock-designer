@@ -4,6 +4,7 @@ import { useTokenChanges } from './hooks/tokenChanges';
 import type { Theme } from '../../src/shared/prototypeTheme';
 import { ColorDot, tokenDot } from './ui/ColorDot';
 import { ModeIcon } from './ui/ModeIcon';
+import { ValueList } from './ui/ValueItem';
 
 /**
  * One theme's value of a role, as `SemanticColors` draws it: its color as a dot (`ColorDot`), centered under its theme, its
@@ -26,8 +27,11 @@ const ThemeValue = ({ token, onEdit }: { token: DesignToken; onEdit: (token: Des
 	);
 };
 
-/** A role's variant: its name, and its value in each theme, under the theme's heading; a dash where a theme has none. */
-const Row = ({ row, onEdit }: { row: SemanticRow; onEdit: (token: DesignToken) => void }) => (
+/**
+ * A role's variant, as a row of the table of roles and themes: its name, and its value in each theme, under the theme's
+ * heading; a dash where a theme has none.
+ */
+const RoleRow = ({ row, onEdit }: { row: SemanticRow; onEdit: (token: DesignToken) => void }) => (
 	<li data-token-row={row.name} className="theme-row">
 		<span className="theme-name" title={row.name}>
 			{row.name}
@@ -74,11 +78,11 @@ const Rows = ({ title, rows, themes, onEdit }: { title?: string; rows: SemanticR
 				<ThemeHeading key={theme} theme={theme} />
 			))}
 		</div>
-		<ul className="tokens" aria-label={title ?? 'Roles'}>
+		<ValueList label={title ?? 'Roles'}>
 			{rows.map((row) => (
-				<Row key={`${row.set}/${row.name}`} row={row} onEdit={onEdit} />
+				<RoleRow key={`${row.set}/${row.name}`} row={row} onEdit={onEdit} />
 			))}
-		</ul>
+		</ValueList>
 	</div>
 );
 

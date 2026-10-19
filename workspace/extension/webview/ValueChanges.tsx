@@ -10,7 +10,7 @@ import { useValueSources } from './hooks/useValueSources';
 import { BranchActions } from './Changed';
 import { ReachView } from './ChangeReach';
 import type { Trying } from './ComponentValues';
-import { IconButton } from './ui/IconButton';
+import { ChangeRow, ValueList } from './ui/ValueItem';
 import { ErrorLine } from './ui/Dialog';
 import { Notice } from './ui/Notice';
 
@@ -177,27 +177,22 @@ export const ChangedValues = ({
 				{tried.length === 0 ? (
 					<p className="quiet">Every value is as the library draws it.</p>
 				) : (
-					<ul className="tokens">
+					<ValueList>
 						{tried.map((t) => {
 							const cell = cellFor(rows, t);
-							const title = valueTitle(t.property, cell?.variant ?? null);
 							return (
-								<li key={triedId(t)} data-value-change={triedId(t)} className="token">
-									<span className="value-cell value-change">
-										<span className="value-label">{title}</span>
-										<span className="value-drawn">
-											<span>{cell ? saidValue(t.property, cell.value) : ''}</span>{' '}
-											<span>→ {t.follows === undefined ? saidValue(t.property, t.value) : `follows ${tokenName(t.follows)}`}</span>
-										</span>
-									</span>
-									<Said source={sources.state === 'failed' ? undefined : sourceOf(t)} onSource={onSource} onWrite={() => trying.onWrite(t)} />
-									<span className="item-actions">
-										<IconButton size="small" icon="discard" label={`Reset ${title}`} onClick={() => trying.onTry(triedId(t), null)} />
-									</span>
-								</li>
+								<ChangeRow
+									key={triedId(t)}
+									marks={{ 'data-value-change': triedId(t) }}
+									name={valueTitle(t.property, cell?.variant ?? null)}
+									from={cell ? saidValue(t.property, cell.value) : ''}
+									to={t.follows === undefined ? saidValue(t.property, t.value) : `follows ${tokenName(t.follows)}`}
+									under={<Said source={sources.state === 'failed' ? undefined : sourceOf(t)} onSource={onSource} onWrite={() => trying.onWrite(t)} />}
+									onReset={() => trying.onTry(triedId(t), null)}
+								/>
 							);
 						})}
-					</ul>
+					</ValueList>
 				)}
 				{tried.length > 0 && handOver.branch === null && (
 					<p className="quiet">

@@ -11,7 +11,7 @@ import { useShowing } from './Showing';
 import { Button } from './ui/Button';
 import { ErrorLine } from './ui/Dialog';
 import { Icon } from './ui/Icon';
-import { IconButton } from './ui/IconButton';
+import { ChangeRow, ValueList, ValueItem } from './ui/ValueItem';
 import { Swatch } from './ui/Swatch';
 
 /**
@@ -106,35 +106,33 @@ export const TokenChanges = () => {
 			{edits.length === 0 ? (
 				<p className="quiet">Every token is as the design system has it.</p>
 			) : (
-				<ul className="tokens">
+				<ValueList>
 					{edits.map((e) => {
 						const was = read.get(e.path);
 						const now = byPath.get(e.path);
-						// A token the library no longer has (it moved since the change was made): named, and nothing else said of it.
+						// A token the library no longer has (it moved since the change was made): named, and why it is not tried.
 						if (!was || !now)
 							return (
-								<li key={e.path} data-change={e.path} className="token">
-									<span className="token-name">{e.path}</span>
-									<span className="change-values">No longer in the design system, so it is not tried.</span>
-								</li>
+								<ValueItem key={e.path} marks={{ 'data-change': e.path }}>
+									<span className="value-cell">
+										<span className="value-label">{e.path}</span>
+									</span>
+									<span className="value-place quiet">No longer in the design system, so it is not tried.</span>
+								</ValueItem>
 							);
 						return (
-							<li key={e.path} data-change={e.path} className="token">
-								<span className="token-line">
-									{now.kind === 'color' && <Swatch value={now.value} />}
-									<span className="token-name">{labelOf(was)}</span>
-								</span>
-								{/* Under its name, so a long name and its values each have the row's width. */}
-								<span className="change-values">
-									{readsAs(was, read)} → {readsAs(now, byPath)}
-								</span>
-								<span className="item-actions">
-									<IconButton size="small" icon="discard" label={`Reset ${labelOf(was)}`} onClick={() => change(was, null)} />
-								</span>
-							</li>
+							<ChangeRow
+								key={e.path}
+								marks={{ 'data-change': e.path }}
+								name={labelOf(was)}
+								start={now.kind === 'color' && <Swatch value={now.value} />}
+								from={readsAs(was, read)}
+								to={readsAs(now, byPath)}
+								onReset={() => change(was, null)}
+							/>
 						);
 					})}
-				</ul>
+				</ValueList>
 			)}
 		</section>
 	);

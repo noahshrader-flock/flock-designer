@@ -5,6 +5,7 @@ import { useChangeReach } from './hooks/useChangeReach';
 import { useTokenUsers } from './hooks/useComponentTokens';
 import { useTokenChanges } from './hooks/tokenChanges';
 import { ShortList } from './ui/ShortList';
+import { ValueLine, ValueItem } from './ui/ValueItem';
 
 /**
  * The components that draw with a token, in its control: each by name, which opens its tab, with how many of its values the
@@ -20,15 +21,15 @@ export const TokenUsers = ({ token, components, onOpen }: { token: DesignToken; 
 	const names = new Map(components.map((c) => [c.id, c.name]));
 	const moved = reach.state === 'ready' ? new Set(reach.moved.map((m) => m.file)) : null;
 	const row = (u: TokenUser) => (
-		<li key={u.file} className="token" data-token-user={u.file} data-moved={moved?.has(u.file) ? '' : undefined}>
-			<button type="button" className="token-line token-line-flush token-button" onClick={() => onOpen(u.file)}>
+		<ValueItem key={u.file} marks={{ 'data-token-user': u.file, 'data-moved': moved?.has(u.file) ? '' : undefined }}>
+			<ValueLine onPress={() => onOpen(u.file)}>
 				<span className="token-name">{names.get(u.file) ?? u.file}</span>
 				<span className="token-uses" title={u.values > 0 ? undefined : 'Its stories draw it in parts its values do not read.'}>
 					{u.values > 0 ? plural(u.values, 'value') : 'inside'}
 					{moved?.has(u.file) && ' · moved'}
 				</span>
-			</button>
-		</li>
+			</ValueLine>
+		</ValueItem>
 	);
 	return (
 		<section aria-label="Components that draw with it" className="token-users">

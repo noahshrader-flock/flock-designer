@@ -18,6 +18,7 @@ import { InfoTip } from './ui/InfoTip';
 import { Notice } from './ui/Notice';
 import { ShortList } from './ui/ShortList';
 import { Swatch } from './ui/Swatch';
+import { ValueLine, ValueItem } from './ui/ValueItem';
 
 type Ready = Extract<ComponentTokens, { state: 'ready' }>;
 
@@ -26,13 +27,13 @@ const KINDS: Record<Ready['notTokens'][number]['kind'], string> = { color: 'Colo
 
 /** A value it sets itself, with its swatch when it is a colour and how often it is used. */
 const NotToken = ({ value }: { value: Ready['notTokens'][number] }) => (
-	<li data-not-token className="token">
-		<span className="token-line token-line-flush">
+	<ValueItem marks={{ 'data-not-token': '' }}>
+		<ValueLine>
 			{value.kind === 'color' && <Swatch value={value.value} />}
 			<span className="token-value">{value.value}</span>
 			<span className="token-uses">{plural(value.uses, 'use')}</span>
-		</span>
-	</li>
+		</ValueLine>
+	</ValueItem>
 );
 
 /**
