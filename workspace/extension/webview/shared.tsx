@@ -1,8 +1,7 @@
 import { type ReactNode, createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type { TokenEdit, TriedValue } from '../../src/shared/contract';
 import type { Theme } from '../../src/shared/prototypeTheme';
-import { sameChange } from '../../src/shared/tokens';
-import { SHARED_START, type SharedName, type SharedValues } from '../src/messages';
+import { SHARED_START, type SharedName, type SharedValues, sameShared, withTrial } from '../src/messages';
 import { asks, onHost } from './host';
 import { triedOn } from './valueTrials';
 import { vscode } from './vscode';
@@ -14,24 +13,26 @@ import { vscode } from './vscode';
  */
 interface Held {
 	values: SharedValues;
-	/** Keeps a value the page changed at once, before the extension says it back, so changes made in a row build on each other. */
-	keep: <K extends SharedName>(name: K, value: SharedValues[K]) => void;
+	/**
+	 * Keeps a value the page changed at once, before the extension says it back, so changes made in a row build on each
+	 * other; whether it was another value than the one held.
+	 */
+	keep: <K extends SharedName>(name: K, value: SharedValues[K]) => boolean;
 	/** What is kept now, for a change worked out from it. */
 	now: () => SharedValues;
 }
 
-/** When a value told is the one held, so nothing that reads it is done again: a change to the tokens in another order is the same change. */
-const SAME: { [K in SharedName]?: (a: SharedValues[K], b: SharedValues[K]) => boolean } = { tokenEdits: sameChange };
-
-const SharedContext = createContext<Held>({ values: SHARED_START, keep: () => undefined, now: () => SHARED_START });
+const SharedContext = createContext<Held>({ values: SHARED_START, keep: () => false, now: () => SHARED_START });
 
 export const SharedProvider = ({ children }: { children: ReactNode }) => {
 	const [values, setValues] = useState<SharedValues>(SHARED_START);
 	const latest = useRef(values);
 	const keep = useCallback(<K extends SharedName>(name: K, value: SharedValues[K]) => {
-		if ((SAME[name] as ((a: SharedValues[K], b: SharedValues[K]) => boolean) | undefined)?.(value, latest.current[name])) return;
+		// The one held again (a change to the tokens in another order): nothing that reads it is done again.
+		if (sameShared(name, value, latest.current[name])) return false;
 		latest.current = { ...latest.current, [name]: value };
 		setValues(latest.current);
+		return true;
 	}, []);
 	useEffect(() => {
 		const stop = onHost((m) => m.type === 'shared' && keep(m.name, m.value));
@@ -48,14 +49,12 @@ export const useShared = <K extends SharedName>(name: K): SharedValues[K] => use
 
 /** The change to the tokens being tried, and changing it: kept here at once, and told to the extension, which tells every page. */
 export const useTokenEdits = (): [TokenEdit[], (edits: TokenEdit[]) => void] => {
-	const { values, keep, now } = useContext(SharedContext);
+	const { values, keep } = useContext(SharedContext);
 	const set = useCallback(
 		(next: TokenEdit[]) => {
-			if (sameChange(next, now().tokenEdits)) return;
-			keep('tokenEdits', next);
-			void asks().setTokenEdits(next);
+			if (keep('tokenEdits', next)) void asks().setTokenEdits(next);
 		},
-		[keep, now],
+		[keep],
 	);
 	return [values.tokenEdits, set];
 };
@@ -65,8 +64,7 @@ export const useMode = (): [Theme, (mode: Theme) => void] => {
 	const { values, keep } = useContext(SharedContext);
 	const choose = useCallback(
 		(next: Theme) => {
-			keep('mode', next);
-			void asks().setMode(next);
+			if (keep('mode', next)) void asks().setMode(next);
 		},
 		[keep],
 	);
@@ -86,9 +84,7 @@ export const useValueTrials = (): ValueTrials => {
 		(file, commit, next) => {
 			const was = now().valueTrials;
 			const tried = next(triedOn(was, file, commit));
-			const { [file]: _gone, ...rest } = was;
-			keep('valueTrials', tried.length === 0 ? rest : { ...rest, [file]: { commit, values: tried } });
-			void asks().setValueTrial(file, commit, tried);
+			if (keep('valueTrials', withTrial(was, file, commit, tried))) void asks().setValueTrial(file, commit, tried);
 		},
 		[keep, now],
 	);

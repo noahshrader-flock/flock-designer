@@ -14,7 +14,7 @@ import { showFound, shownFrom } from './designSystem';
 import { designSystemHost } from './designSystemHost';
 import { registerVoice } from './voice';
 import { valueOf } from '../../src/shared/result';
-import { type CodebaseAction, type HostMessage, NO_TABS_SHOWN, type Review, readProjectArg, reviewsOf, sameTabs } from './messages';
+import { type CodebaseAction, type HostMessage, NO_TABS_SHOWN, type Review, readProjectArg, reviewsOf } from './messages';
 import { askRoutes, readReview } from './asks';
 import { type Given, newPrototype, readAsked, readyToStart } from './newPrototype';
 import { watchBuild } from './watchBuild';
@@ -288,7 +288,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 		panels.post({ type: 'projects-changed' });
 	}, 1500);
 	/** The panel marks what is open in the editor: the projects whose review is in front, and the components whose tab is. */
-	const tabs = panels.share('tabs', NO_TABS_SHOWN, sameTabs);
+	const tabs = panels.share('tabs', NO_TABS_SHOWN);
 	const tabsShown = () => tabs.set({ projects: reviews.shown(), components: design.shownComponents() });
 	/**
 	 * What a DSNR page asks of the extension itself, each checked as the core checks a call's, in one table (`askRoutes`):

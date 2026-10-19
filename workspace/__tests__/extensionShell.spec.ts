@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { VsCodeGitHub } from '../extension/src/github';
 import { openableLink, vscodePorts } from '../extension/src/vscodePorts';
-import { NO_TABS_SHOWN, reviewsOf, sameTabs } from '../extension/src/messages';
+import { NO_TABS_SHOWN, reviewsOf } from '../extension/src/messages';
 import { Reviews, answerReview, reviewPage, reviewPath } from '../extension/src/review';
 import { Panels, answerCall, hostApi } from '../extension/src/bridge';
 import type { Route } from '../src/core/handle';
@@ -652,7 +652,7 @@ describe('what the extension asks the panel to show', () => {
 
 	it('tells a page that listens every value pages share, and every page when one changes, only then', async () => {
 		const panels = new Panels();
-		const tabs = panels.share('tabs', NO_TABS_SHOWN, sameTabs);
+		const tabs = panels.share('tabs', NO_TABS_SHOWN);
 		const a = webview();
 		panels.add(a.webview);
 		await panels.ready(a.webview);

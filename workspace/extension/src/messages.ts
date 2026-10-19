@@ -1,5 +1,6 @@
 import type { Context } from '../../src/core/services/projects/findContext';
-import { type Catalog, INVOKE, type InvokeName, type Result } from '../../src/shared/contract';
+import { type Catalog, INVOKE, type InvokeName, type Result, sameTried } from '../../src/shared/contract';
+import { sameChange } from '../../src/shared/tokens';
 import type { TokenEdit, TriedValue } from '../../src/shared/domain/designSystem';
 import type { Project } from '../../src/shared/domain/projects';
 import { DEFAULT_THEME, type Theme } from '../../src/shared/prototypeTheme';
@@ -164,6 +165,27 @@ export interface SharedValues {
 	catalog: CatalogState;
 }
 export type SharedName = keyof SharedValues;
+
+/**
+ * The values tried on every component with one component's set (the changes being tried, DESIGN_SYSTEM.md): kept with the
+ * library's commit they were tried on, none tried none kept. The same object when nothing changes, so it tells nobody
+ * (`Shared`).
+ */
+export const withTrial = (trials: ValueTrials, file: string, commit: string, values: TriedValue[]): ValueTrials => {
+	const was = trials[file];
+	if (values.length === 0 ? was === undefined : was?.commit === commit && sameTried(was.values, values)) return trials;
+	const { [file]: _gone, ...rest } = trials;
+	return values.length === 0 ? rest : { ...rest, [file]: { commit, values } };
+};
+
+/**
+ * When a value told is the one kept, so nothing that reads it is told or done again: a change to the tokens in another
+ * order, the same tabs in front. The rest are the same only when they are the same value. One rule, for the extension that
+ * tells it and the page that hears it.
+ */
+const SAME: { [K in SharedName]?: (a: SharedValues[K], b: SharedValues[K]) => boolean } = { tokenEdits: sameChange, tabs: sameTabs };
+export const sameShared = <K extends SharedName>(name: K, a: SharedValues[K], b: SharedValues[K]): boolean =>
+	((SAME[name] as ((x: SharedValues[K], y: SharedValues[K]) => boolean) | undefined) ?? Object.is)(a, b);
 
 /** What a page shows until the extension has told it each. */
 export const SHARED_START: SharedValues = {

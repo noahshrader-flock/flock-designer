@@ -3,15 +3,13 @@ import type { Route } from '../../src/core/handle';
 import type { DesignSystemsMemory } from '../../src/core/services/designSystem/designSystems';
 import type { TokenEdit, TriedValue, WorkspaceApi } from '../../src/shared/contract';
 import type { Theme } from '../../src/shared/prototypeTheme';
-import { valueOf } from '../../src/shared/result';
-import { sameChange } from '../../src/shared/tokens';
 import type { Tell } from './agentWork';
 import { type AskHandlers, readComponentArg } from './asks';
 import { type Panels, receivePage } from './bridge';
 import { CatalogShare } from './catalogShare';
-import { componentLink, componentOf, editsAfterRead, keepMode, keptMode, libraryFileIn, withTrial } from './designSystem';
+import { componentLink, componentOf, editsAfterRead, keepMode, keptMode, libraryFileIn } from './designSystem';
 import { DesignTabs } from './designTabs';
-import { type AskName, type ComponentLink, SHARED_START } from './messages';
+import { type AskName, type ComponentLink, SHARED_START, withTrial } from './messages';
 import { dsnrPage } from './panel';
 import type { LocalAddresses } from './html';
 
@@ -61,12 +59,14 @@ export const designSystemHost = ({
 	/** VS Code's state for the extension, where the mode chosen is kept. */
 	kept: Pick<VsCode.Memento, 'get' | 'update'>;
 }) => {
-	const edits = panels.share('tokenEdits', [], sameChange);
-	const mode = panels.share('mode', keptMode(kept), Object.is, (next) => keepMode(kept, next));
+	const edits = panels.share('tokenEdits', []);
+	const mode = panels.share('mode', keptMode(kept), (next) => keepMode(kept, next));
 	const values = panels.share('valueTrials', {});
+	// The catalog every page shows, as the extension read it.
+	const shownCatalog = panels.share('catalog', SHARED_START.catalog);
 	const catalog = new CatalogShare({
 		api,
-		shared: panels.share('catalog', SHARED_START.catalog),
+		shared: shownCatalog,
 		// What is tried is kept only on tokens the library still has (`editsAfterRead`).
 		onRead: (read) => edits.set(editsAfterRead(edits.current(), read)),
 	});
@@ -85,10 +85,10 @@ export const designSystemHost = ({
 	});
 	const handlers = {
 		openComponent: async (id: string) => {
-			const component = await componentOf(api, id);
+			const component = componentOf(shownCatalog.current().catalog, id);
 			await tabs.open({ kind: 'component', id: component.id, name: component.name });
 		},
-		componentLink: async (id: string, link: ComponentLink) => openExternal(componentLink(await componentOf(api, id), link)),
+		componentLink: (id: string, link: ComponentLink) => openExternal(componentLink(componentOf(shownCatalog.current().catalog, id), link)),
 		openPrimitives: () => tabs.open({ kind: 'primitives' }),
 		openVoiceAndTone,
 		// A file of the design system, as the person's clone has it, at its line: a token's, or where a value is written.
@@ -109,11 +109,11 @@ export const designSystemHost = ({
 		openChanges,
 		syncDesignSystem: () => catalog.sync(),
 	} satisfies Partial<AskHandlers>;
-	/** A component of the design system shown, chosen from its catalog in VS Code's quick pick, by its story file. */
+	/** A component of the design system shown, chosen from its catalog (the one every page shows) in VS Code's quick pick, by its story file. */
 	const pickComponent = async (): Promise<string | undefined> => {
-		const read = valueOf(await api.designSystemCatalog(false));
-		if (read.state !== 'ready') return void tell('There is no design system shown here: the Design System tab says why.');
-		const items = read.components.map((c) => ({ label: c.name, description: c.group, id: c.id }));
+		const shown = shownCatalog.current().catalog;
+		if (shown?.state !== 'ready') return void tell('There is no design system shown here: the Design System tab says why.');
+		const items = shown.components.map((c) => ({ label: c.name, description: c.group, id: c.id }));
 		return (await vscode.window.showQuickPick(items, { placeHolder: 'Open a component', matchOnDescription: true }))?.id;
 	};
 	return {

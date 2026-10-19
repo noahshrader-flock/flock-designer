@@ -1,20 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
-import {
-	componentLink,
-	componentOf,
-	editsAfterRead,
-	keepMode,
-	keptMode,
-	libraryFileIn,
-	showFound,
-	shownFrom,
-	withTrial,
-} from '../extension/src/designSystem';
+import { componentLink, componentOf, editsAfterRead, keepMode, keptMode, libraryFileIn, showFound, shownFrom } from '../extension/src/designSystem';
 import { SAMPLE_CATALOG } from './extensionSamples';
+import { withTrial } from '../extension/src/messages';
 import { Shared } from '../extension/src/sharedValues';
-import { sameChange } from '../src/shared/tokens';
 import type { Catalog, CatalogComponent, ConnectedDesignSystem } from '../src/shared/contract';
-import { ok } from '../src/shared/result';
 
 /**
  * The design system VS Code found is the one the core shows (ELECTRON_MIGRATION_PLAN 6.1): the core reads, previews,
@@ -73,7 +62,7 @@ describe('the mode components are shown in', () => {
 		const state = new Map<string, unknown>();
 		const kept = { get: (key: string) => state.get(key), update: async (key: string, value: unknown) => void state.set(key, value) };
 		const post = vi.fn();
-		const mode = new Shared('mode', keptMode(kept), post, Object.is, (next) => keepMode(kept, next));
+		const mode = new Shared('mode', keptMode(kept), post, (next) => keepMode(kept, next));
 		expect(mode.current()).toBe('light');
 		mode.set('dark');
 		expect(post).toHaveBeenCalledWith({ type: 'shared', name: 'mode', value: 'dark' });
@@ -128,7 +117,7 @@ describe('the change to the tokens being tried, once the library is read again',
 describe('the change to the tokens being tried', () => {
 	it('is kept by the extension and told to every page, only when it changes', () => {
 		const post = vi.fn();
-		const trial = new Shared('tokenEdits', [], post, sameChange);
+		const trial = new Shared('tokenEdits', [], post);
 		const edits = [
 			{ path: 'palette.light.primary.main', value: '#112233' },
 			{ path: 'spacing', value: '12px' },
@@ -156,11 +145,11 @@ const catalog = (components: CatalogComponent[]) =>
 	({ state: 'ready', components, tokens: { source: null, tokens: [], problems: [], looked: [] } }) as unknown as Catalog;
 
 describe('a component the page names', () => {
-	it('is found in the catalog shown, by its story file, and nothing else is', async () => {
-		const api = { designSystemCatalog: vi.fn(async () => ok(catalog([button]))) };
-		expect(await componentOf(api, button.id)).toEqual(button);
-		expect(api.designSystemCatalog).toHaveBeenCalledWith(false);
-		await expect(componentOf(api, 'src/Other.stories.tsx')).rejects.toThrow('The design system shown has no component src/Other.stories.tsx.');
+	it('is found in the catalog every page shows, by its story file, and nothing else is', () => {
+		expect(componentOf(catalog([button]), button.id)).toEqual(button);
+		expect(() => componentOf(catalog([button]), 'src/Other.stories.tsx')).toThrow('The design system shown has no component src/Other.stories.tsx.');
+		// Not read yet: no component of it can be named.
+		expect(() => componentOf(null, button.id)).toThrow('The design system shown has no component');
 	});
 
 	it('has its links from the catalog: its source always, its Storybook only when a hosted one is known', () => {

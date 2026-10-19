@@ -40,8 +40,8 @@ export class Panels {
 	/** The pages that have said they listen, and what is for them until one does (`show`). */
 	private readonly listening = new Set<Webview>();
 	private held: HostMessage | null = null;
-	/** The values every page shows the same, each told to a page once it listens. */
-	private readonly shared: Shared<SharedName>[] = [];
+	/** What a page is told, once it listens, of each value every page shows the same. */
+	private readonly shared: (() => HostMessage)[] = [];
 	private readonly listeners = new Map<string, Set<(payload: unknown) => void>>();
 
 	add(webview: Webview): VsCode.Disposable {
@@ -66,14 +66,9 @@ export class Panels {
 	}
 
 	/** A value every page shows the same, starting at `value`: kept here, and told to every page (`Shared`). */
-	share<K extends SharedName>(
-		name: K,
-		value: SharedValues[K],
-		same?: (a: SharedValues[K], b: SharedValues[K]) => boolean,
-		kept?: (value: SharedValues[K]) => void,
-	): Shared<K> {
-		const made = new Shared(name, value, (m) => this.post(m), same, kept);
-		this.shared.push(made as unknown as Shared<SharedName>);
+	share<K extends SharedName>(name: K, value: SharedValues[K], kept?: (value: SharedValues[K]) => void): Shared<K> {
+		const made = new Shared(name, value, (m) => this.post(m), kept);
+		this.shared.push(() => made.message());
 		return made;
 	}
 
@@ -90,7 +85,7 @@ export class Panels {
 	/** A page said it listens: every value they share, then what was held for it. */
 	async ready(webview: Webview): Promise<void> {
 		this.listening.add(webview);
-		for (const value of this.shared) await webview.postMessage(value.message());
+		for (const message of this.shared) await webview.postMessage(message());
 		const held = this.held;
 		this.held = null;
 		if (held) await webview.postMessage(held);

@@ -2,12 +2,11 @@ import { resolve, sep } from 'node:path';
 import type * as VsCode from 'vscode';
 import type { Context } from '../../src/core/services/projects/findContext';
 import { type DesignSystemsMemory, systemAt } from '../../src/core/services/designSystem/designSystems';
-import type { Catalog, CatalogComponent, ConnectedDesignSystem, TokenEdit, TriedValue, WorkspaceApi } from '../../src/shared/contract';
+import type { Catalog, CatalogComponent, ConnectedDesignSystem, TokenEdit } from '../../src/shared/contract';
 import { editsKept } from '../../src/shared/tokens';
-import { sameTried } from '../../src/shared/contract';
-import { errorText, valueOf } from '../../src/shared/result';
+import { errorText } from '../../src/shared/result';
 import { DEFAULT_THEME, type Theme, isTheme } from '../../src/shared/prototypeTheme';
-import type { ComponentLink, ValueTrials } from './messages';
+import type { ComponentLink } from './messages';
 
 const same = (a: ConnectedDesignSystem, b: ConnectedDesignSystem): boolean =>
 	(Object.keys(a) as (keyof ConnectedDesignSystem)[]).every((k) => a[k] === b[k]);
@@ -36,18 +35,6 @@ export const showFound = async (
 };
 
 /**
- * The values tried on every component with one component's set (the changes being tried, DESIGN_SYSTEM.md): kept with the
- * library's commit they were tried on, none tried none kept. The same object when nothing changes, so it tells nobody
- * (`Shared`).
- */
-export const withTrial = (trials: ValueTrials, file: string, commit: string, values: TriedValue[]): ValueTrials => {
-	const was = trials[file];
-	if (values.length === 0 ? was === undefined : was?.commit === commit && sameTried(was.values, values)) return trials;
-	const { [file]: _gone, ...rest } = trials;
-	return values.length === 0 ? rest : { ...rest, [file]: { commit, values } };
-};
-
-/**
  * The change to the tokens being tried, once the library has been read again: only what was tried on tokens it still has.
  * A branch handed to Claude Code, shown in the library's place, is not the library, so nothing tried is let go for it.
  */
@@ -67,10 +54,12 @@ export const keptMode = (kept: Pick<VsCode.Memento, 'get'>): Theme => {
 };
 export const keepMode = (kept: Pick<VsCode.Memento, 'update'>, mode: Theme): void => void kept.update(MODE, mode);
 
-/** The component of the design system shown with this story file, as its catalog lists it now; refused for any other. */
-export const componentOf = async (api: Pick<WorkspaceApi, 'designSystemCatalog'>, id: string): Promise<CatalogComponent> => {
-	const catalog = valueOf(await api.designSystemCatalog(false));
-	const component = catalog.state === 'ready' ? catalog.components.find((c) => c.id === id) : undefined;
+/**
+ * The component of the design system shown with this story file, as its catalog lists it now, the one every page shows
+ * (`CatalogShare`); refused for any other.
+ */
+export const componentOf = (catalog: Catalog | null, id: string): CatalogComponent => {
+	const component = catalog?.state === 'ready' ? catalog.components.find((c) => c.id === id) : undefined;
 	if (!component) throw new Error(`The design system shown has no component ${id}.`);
 	return component;
 };
