@@ -15,7 +15,24 @@
 	--dsnr-contrast-border: var(--vscode-contrastBorder, transparent);
 	/* Every outline and line in the panel, the search box's: the theme's input border, then its widget border, then the contrast border. */
 	--dsnr-border: var(--vscode-input-border, var(--vscode-widget-border, var(--dsnr-contrast-border)));
+	/*
+	 * The keyboard's focus, one ring for every control: the theme's focus colour, just inside its edge, as VS Code's own lists
+	 * and inputs draw it, so a pane that scrolls never cuts it off and it never covers what is beside it.
+	 */
 	--dsnr-focus: 1px solid var(--vscode-focusBorder);
+	--dsnr-focus-offset: -1px;
+	/*
+	 * The spacing scale: every padding, margin and gap is one of these steps, or a size made from them, never a number of its
+	 * own. 2, 4, 6, 8, 12, 16, 24 and 32 pixels.
+	 */
+	--dsnr-space-1: 2px;
+	--dsnr-space-2: 4px;
+	--dsnr-space-3: 6px;
+	--dsnr-space-4: 8px;
+	--dsnr-space-5: 12px;
+	--dsnr-space-6: 16px;
+	--dsnr-space-7: 24px;
+	--dsnr-space-8: 32px;
 	--dsnr-radius: 6px;
 	--dsnr-radius-inner: 4px;
 	--dsnr-radius-small: 2px;
@@ -35,34 +52,46 @@
 	 */
 	--dsnr-dot: 26px;
 	--dsnr-dot-swatch: 18px;
+	/* A slider's track and its thumb, which is centred on it. */
+	--dsnr-slider-track: 4px;
+	--dsnr-slider-thumb: 14px;
 	/* A row of the component's side panel (a picker, a value, a token): at least this tall, with this between the pickers. */
 	--dsnr-row-height: 28px;
-	--dsnr-row-gap: 8px;
+	--dsnr-row-gap: var(--dsnr-space-4);
 	/* How far a row's value, or its dot, ends from the right edge of its part: the same in Styles, Tokens and the grid of roles. */
-	--dsnr-row-edge: 8px;
+	--dsnr-row-edge: var(--dsnr-space-4);
+	/* Above and below a value in its row: what centres a small control in a row's height. */
+	--dsnr-row-inset: calc((var(--dsnr-row-height) - var(--dsnr-control-small)) / 2);
+	/* Room at a row's right for its actions (`.item-actions`): a small control, with its edge on either side. */
+	--dsnr-actions-room: calc(var(--dsnr-control-small) + 2 * var(--dsnr-space-3));
+	/*
+	 * Where a section's title starts (its header's edge, its chevron and the gap after it), and so what is under it; what has
+	 * an icon before its text, or after it (a search, a select's arrow), leaves it the same room.
+	 */
+	--dsnr-indent: calc(var(--dsnr-space-4) + 16px + var(--dsnr-space-2));
 	/* An icon beside a button's words (small) or a line of small text (xs): the icon font's own size is 16px. */
 	--dsnr-icon-small: 14px;
 	--dsnr-icon-xs: 12px;
 	/* The room around the text under a card's picture, on all four sides, for every card. */
-	--dsnr-card-text-pad: 8px;
+	--dsnr-card-text-pad: var(--dsnr-space-4);
 	/* Every count bubble's height, and its width for one digit: a circle, the same in a row, a card and a header. */
 	--dsnr-badge: 17px;
 	--dsnr-badge-xs: 9px;
 	/* The space between a grid's cards, across and down. */
-	--dsnr-grid-gap: 8px;
+	--dsnr-grid-gap: var(--dsnr-space-4);
 	/* What is kept at the top while a list scrolls: the toggle's bar, then the bar of the tab under it (search and options). */
-	--dsnr-top-pad: 8px;
+	--dsnr-top-pad: var(--dsnr-space-4);
 	--dsnr-top-height: calc(var(--dsnr-control) + 2 * var(--dsnr-top-pad));
 	/*
 	 * The design system's own row (its name, its branch, its buttons), kept under the top bar, one line of the small control
 	 * between its padding; and the gap between what is in it: between the buttons, and between the name's icon and them.
 	 */
-	--dsnr-ds-gap: 4px;
-	--dsnr-ds-pad: 4px;
+	--dsnr-ds-gap: var(--dsnr-space-2);
+	--dsnr-ds-pad: var(--dsnr-space-2);
 	--dsnr-ds-header-height: calc(var(--dsnr-control-small) + 2 * var(--dsnr-ds-pad));
 	/* The design system's Components and Tokens toggle, kept under that: its search bar is kept under it. */
-	--dsnr-part-pad-top: 4px;
-	--dsnr-part-pad-bottom: 8px;
+	--dsnr-part-pad-top: var(--dsnr-space-2);
+	--dsnr-part-pad-bottom: var(--dsnr-space-4);
 	--dsnr-part-height: calc(var(--dsnr-control) + var(--dsnr-part-pad-top) + var(--dsnr-part-pad-bottom));
 	/*
 	 * What is above what, from the back: a row's or card's actions, the bars kept at the top (which a list scrolls under, so
@@ -104,6 +133,12 @@ body.vscode-high-contrast-light {
 	font-size: var(--dsnr-icon-xs);
 }
 
+/* What has the keyboard's focus, whatever it is (`--dsnr-focus`). */
+:focus-visible {
+	outline: var(--dsnr-focus);
+	outline-offset: var(--dsnr-focus-offset);
+}
+
 body {
 	margin: 0;
 	padding: 0;
@@ -136,7 +171,7 @@ body {
 
 .panel-top {
 	top: 0;
-	padding: var(--dsnr-top-pad) 12px;
+	padding: var(--dsnr-top-pad) var(--dsnr-space-5);
 }
 
 .tab-body .view-bar {
@@ -151,8 +186,8 @@ body {
 	display: grid;
 	grid-auto-columns: 1fr;
 	grid-auto-flow: column;
-	gap: 2px;
-	padding: 2px;
+	gap: var(--dsnr-space-1);
+	padding: var(--dsnr-space-1);
 	border: 1px solid var(--dsnr-contrast-border);
 	border-radius: var(--dsnr-radius);
 	background: var(--dsnr-track);
@@ -162,11 +197,11 @@ body {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	gap: 6px;
+	gap: var(--dsnr-space-3);
 	min-width: 0;
 	/* The track's height less its padding and border: the toggle is the default control's height. */
 	height: calc(var(--dsnr-control) - 6px);
-	padding: 0 8px;
+	padding: 0 var(--dsnr-space-4);
 	border: 1px solid transparent;
 	border-radius: var(--dsnr-radius-inner);
 	color: var(--dsnr-muted);
@@ -192,18 +227,13 @@ body {
 	background: var(--dsnr-raised);
 }
 
-.toggle-option:focus-visible {
-	outline: var(--dsnr-focus);
-	outline-offset: -1px;
-}
-
 /* The choice of list or grid, at the right, above the projects: just its icons, so it takes little of the side bar. */
 .view-bar {
 	display: flex;
 	align-items: center;
-	gap: 8px;
+	gap: var(--dsnr-space-4);
 	/* The room below is the room at its sides, so the bar sits evenly in its container. */
-	padding: 2px 12px 12px;
+	padding: var(--dsnr-space-1) var(--dsnr-space-5) var(--dsnr-space-5);
 }
 
 /* VS Code's search box: its icon at the start, filling what the toggle beside it leaves; the box itself is `.input`. */
@@ -223,7 +253,7 @@ body {
 }
 
 .search .search-input {
-	padding-left: 28px;
+	padding-left: var(--dsnr-indent);
 }
 
 /* An action in a line of text, as VS Code's links are. */
@@ -238,10 +268,6 @@ body {
 
 .link:hover {
 	text-decoration: underline;
-}
-
-.link:focus-visible {
-	outline: var(--dsnr-focus);
 }
 
 /* In one of the side panel's parts, which stack their children across their width: as wide as its words, not the part. */
@@ -263,21 +289,21 @@ body {
 .row {
 	display: flex;
 	align-items: center;
-	gap: 6px;
+	gap: var(--dsnr-space-3);
 	min-height: 22px;
-	padding: 0 12px;
+	padding: 0 var(--dsnr-space-5);
 }
 
 /* A row with a line under its name or a picture at its start, as a project's and a component's are: taller, and its picture given room. */
 .row-two-lines {
-	gap: 12px;
+	gap: var(--dsnr-space-5);
 	min-height: 40px;
-	padding-block: 4px;
+	padding-block: var(--dsnr-space-2);
 }
 
 /* Under a section's header, as a tree's items are under theirs: in line with its title, past the chevron. */
 .section .row {
-	padding-left: 28px;
+	padding-left: var(--dsnr-indent);
 }
 
 .row-text {
@@ -362,7 +388,7 @@ body {
 	justify-content: center;
 	height: var(--dsnr-badge);
 	min-width: var(--dsnr-badge);
-	padding: 0 3px;
+	padding: 0 var(--dsnr-space-2);
 	border: 1px solid var(--dsnr-contrast-border);
 	border-radius: calc(var(--dsnr-badge) / 2);
 	/* At rest, the toggle's own grey (`--dsnr-track`), not VS Code's blue: a count that is none, or not yet anything of DSNR's. */
@@ -404,20 +430,15 @@ body {
 	filter: brightness(1.1);
 }
 
-.badge-button:focus-visible {
-	outline: var(--dsnr-focus);
-	outline-offset: 1px;
-}
-
 /* A section's header, as VS Code's side bar draws one: a chevron, the title in small capitals, how many it holds. */
 .section-header {
 	list-style: none;
 	display: flex;
 	align-items: center;
-	gap: 4px;
+	gap: var(--dsnr-space-2);
 	width: 100%;
 	height: 22px;
-	padding: 0 12px 0 8px;
+	padding: 0 var(--dsnr-space-5) 0 var(--dsnr-space-4);
 	border: none;
 	border-top: 1px solid var(--vscode-sideBarSectionHeader-border, transparent);
 	color: var(--vscode-sideBarSectionHeader-foreground, var(--vscode-foreground));
@@ -450,11 +471,6 @@ details[open] > summary > .collapse-chevron {
 	}
 }
 
-.section-header:focus-visible {
-	outline: var(--dsnr-focus);
-	outline-offset: -1px;
-}
-
 .section-title {
 	flex: 1;
 	min-width: 0;
@@ -484,7 +500,7 @@ details[open] > summary > .collapse-chevron {
 	flex: 1;
 	align-items: center;
 	justify-content: center;
-	padding: 24px 12px;
+	padding: var(--dsnr-space-7) var(--dsnr-space-5);
 	color: var(--dsnr-muted);
 	text-align: center;
 }
@@ -504,7 +520,7 @@ details[open] > summary > .collapse-chevron {
 }
 
 .empty-title {
-	margin: 12px 0 4px;
+	margin: var(--dsnr-space-5) 0 var(--dsnr-space-2);
 	color: var(--vscode-foreground);
 	font-weight: 600;
 }
@@ -517,7 +533,7 @@ details[open] > summary > .collapse-chevron {
 }
 
 .empty-body p {
-	margin: 0 0 8px;
+	margin: 0 0 var(--dsnr-space-4);
 	line-height: 1.4;
 }
 
@@ -535,11 +551,11 @@ details[open] > summary > .collapse-chevron {
 	display: block;
 	width: 100%;
 	max-width: 300px;
-	margin: 4px 0 8px;
+	margin: var(--dsnr-space-2) 0 var(--dsnr-space-4);
 	/* The default control's height, from its padding and line when it is one line; a longer one grows. */
 	box-sizing: border-box;
 	min-height: var(--dsnr-control);
-	padding: 6px 12px;
+	padding: var(--dsnr-space-3) var(--dsnr-space-5);
 	border: 1px solid transparent;
 	border-radius: var(--dsnr-radius-inner);
 	font: inherit;
@@ -554,7 +570,7 @@ details[open] > summary > .collapse-chevron {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	gap: 6px;
+	gap: var(--dsnr-space-3);
 }
 
 .button-primary {
@@ -583,16 +599,6 @@ details[open] > summary > .collapse-chevron {
 .button-ghost:hover:not(:disabled) {
 	color: var(--vscode-foreground);
 	background: var(--dsnr-track);
-}
-
-.button:focus-visible {
-	outline: var(--dsnr-focus);
-	outline-offset: 2px;
-}
-
-.row-button:focus-visible {
-	outline: var(--dsnr-focus);
-	outline-offset: -1px;
 }
 
 /* A row that opens something: the whole row is the button, drawn as the row, with VS Code's list hover. */
@@ -628,12 +634,12 @@ details[open] > summary > .collapse-chevron {
 	grid-template-columns: repeat(auto-fill, minmax(min(100%, 190px), 1fr));
 	gap: var(--dsnr-grid-gap);
 	margin: 0;
-	padding: 4px 12px 8px;
+	padding: var(--dsnr-space-2) var(--dsnr-space-5) var(--dsnr-space-4);
 	list-style: none;
 }
 
 .section .grid {
-	padding-left: 28px;
+	padding-left: var(--dsnr-indent);
 }
 
 .card-item {
@@ -644,18 +650,13 @@ details[open] > summary > .collapse-chevron {
 .card {
 	display: flex;
 	flex-direction: column;
-	gap: 8px;
+	gap: var(--dsnr-space-4);
 	width: 100%;
 	padding: 0;
 	border: none;
 	background: transparent;
 	font: inherit;
 	text-align: start;
-}
-
-.card.row-button:focus-visible {
-	outline: var(--dsnr-focus);
-	outline-offset: 2px;
 }
 
 .card-media {
@@ -745,7 +746,7 @@ details[open] > summary > .collapse-chevron {
 	display: flex;
 	align-items: flex-start;
 	justify-content: center;
-	padding: 12px;
+	padding: var(--dsnr-space-5);
 	overflow-y: auto;
 	background: color-mix(in srgb, var(--vscode-sideBar-background) 70%, transparent);
 }
@@ -753,7 +754,7 @@ details[open] > summary > .collapse-chevron {
 .dialog {
 	width: 100%;
 	max-width: 420px;
-	padding: 12px;
+	padding: var(--dsnr-space-5);
 	border: 1px solid var(--vscode-editorWidget-border, var(--dsnr-contrast-border));
 	border-radius: var(--dsnr-radius);
 	color: var(--vscode-editorWidget-foreground, var(--vscode-foreground));
@@ -766,8 +767,8 @@ details[open] > summary > .collapse-chevron {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
-	gap: 8px;
-	margin: 0 0 8px;
+	gap: var(--dsnr-space-4);
+	margin: 0 0 var(--dsnr-space-4);
 }
 
 .dialog-title {
@@ -779,8 +780,8 @@ details[open] > summary > .collapse-chevron {
 /* What a dialog does, across its width: one button fills it, several share it. */
 .dialog-buttons {
 	display: flex;
-	gap: 8px;
-	margin-top: 12px;
+	gap: var(--dsnr-space-4);
+	margin-top: var(--dsnr-space-5);
 }
 
 .dialog-buttons .button {
@@ -793,8 +794,8 @@ details[open] > summary > .collapse-chevron {
 .field {
 	display: flex;
 	flex-direction: column;
-	gap: 4px;
-	margin-bottom: 10px;
+	gap: var(--dsnr-space-2);
+	margin-bottom: var(--dsnr-space-5);
 }
 
 .field-label {
@@ -811,7 +812,7 @@ details[open] > summary > .collapse-chevron {
 	box-sizing: border-box;
 	width: 100%;
 	height: var(--dsnr-control);
-	padding: 0 8px;
+	padding: 0 var(--dsnr-space-4);
 	border: 1px solid var(--dsnr-border);
 	border-radius: var(--dsnr-radius);
 	color: var(--vscode-input-foreground);
@@ -835,7 +836,7 @@ details[open] > summary > .collapse-chevron {
 
 select.input {
 	appearance: none;
-	padding-right: 28px;
+	padding-right: var(--dsnr-indent);
 	color: var(--vscode-dropdown-foreground);
 	border-color: var(--vscode-dropdown-border, var(--dsnr-contrast-border));
 	background: var(--vscode-dropdown-background);
@@ -844,7 +845,7 @@ select.input {
 textarea.input {
 	height: auto;
 	min-height: 96px;
-	padding: 6px 8px;
+	padding: var(--dsnr-space-3) var(--dsnr-space-4);
 	resize: vertical;
 }
 
@@ -852,9 +853,10 @@ textarea.input {
 	color: var(--vscode-input-placeholderForeground);
 }
 
+/* A field is drawn as focused however the focus came to it, as VS Code's are. */
 .input:focus {
-	outline: 1px solid var(--vscode-focusBorder);
-	outline-offset: -1px;
+	outline: var(--dsnr-focus);
+	outline-offset: var(--dsnr-focus-offset);
 }
 
 /*
@@ -940,12 +942,6 @@ textarea.input {
 	background: linear-gradient(var(--vscode-toolbar-hoverBackground), var(--vscode-toolbar-hoverBackground)), var(--vscode-editorWidget-background);
 }
 
-.menu-button:focus-visible,
-.icon-button:focus-visible {
-	outline: var(--dsnr-focus);
-	outline-offset: -1px;
-}
-
 /* Under a row's own badge: while its button shows, the badge gives way to it. */
 .row-item:hover .badge,
 .row-item:has(.menu-open) .badge,
@@ -966,8 +962,8 @@ textarea.input {
 	display: flex;
 	flex-direction: column;
 	min-width: 170px;
-	margin-top: 2px;
-	padding: 4px;
+	margin-top: var(--dsnr-space-1);
+	padding: var(--dsnr-space-2);
 	border: 1px solid var(--vscode-menu-border, var(--dsnr-contrast-border));
 	border-radius: var(--dsnr-radius);
 	color: var(--vscode-menu-foreground);
@@ -978,8 +974,8 @@ textarea.input {
 .menu-item {
 	display: flex;
 	align-items: center;
-	gap: 8px;
-	padding: 4px 8px;
+	gap: var(--dsnr-space-4);
+	padding: var(--dsnr-space-2) var(--dsnr-space-4);
 	border: none;
 	border-radius: var(--dsnr-radius-inner);
 	color: inherit;
@@ -993,12 +989,12 @@ textarea.input {
 /* A choice's chosen one: its check at the end. */
 .menu-check {
 	margin-left: auto;
-	padding-left: 12px;
+	padding-left: var(--dsnr-space-5);
 }
 
 /* A section's name, and the line between sections. */
 .menu-heading {
-	padding: 4px 8px 6px;
+	padding: var(--dsnr-space-2) var(--dsnr-space-4) var(--dsnr-space-3);
 	color: var(--dsnr-muted);
 	font-size: 0.9em;
 	font-weight: 600;
@@ -1006,7 +1002,7 @@ textarea.input {
 
 .menu-divider {
 	height: 1px;
-	margin: 4px 0;
+	margin: var(--dsnr-space-2) 0;
 	background: var(--vscode-menu-separatorBackground, var(--dsnr-outline));
 }
 
@@ -1024,8 +1020,8 @@ textarea.input {
 
 /* What a dialog says will happen, in steps. */
 .dialog-steps {
-	margin: 4px 0 0;
-	padding-left: 20px;
+	margin: var(--dsnr-space-2) 0 0;
+	padding-left: var(--dsnr-space-7);
 	color: var(--dsnr-muted);
 	line-height: 1.5;
 }
@@ -1038,8 +1034,8 @@ textarea.input {
 
 /* A command for a terminal, as it is to be pasted. */
 .dialog-command {
-	margin: 8px 0 0;
-	padding: 8px;
+	margin: var(--dsnr-space-4) 0 0;
+	padding: var(--dsnr-space-4);
 	border-radius: var(--dsnr-radius-small);
 	overflow-wrap: anywhere;
 	white-space: pre-wrap;
@@ -1050,9 +1046,9 @@ textarea.input {
 .problem-list {
 	display: flex;
 	flex-direction: column;
-	gap: 8px;
+	gap: var(--dsnr-space-4);
 	max-height: 50vh;
-	margin: 0 0 8px;
+	margin: 0 0 var(--dsnr-space-4);
 	padding: 0;
 	overflow-y: auto;
 	list-style: none;
@@ -1074,7 +1070,7 @@ textarea.input {
 	column-gap: var(--dsnr-ds-gap);
 	box-sizing: border-box;
 	height: var(--dsnr-ds-header-height);
-	padding: var(--dsnr-ds-pad) 6px var(--dsnr-ds-pad) 12px;
+	padding: var(--dsnr-ds-pad) var(--dsnr-space-3) var(--dsnr-ds-pad) var(--dsnr-space-5);
 }
 
 /* Its name, then its branch's icon directly after it; a long name gives way, and the icon stays. */
@@ -1110,7 +1106,7 @@ textarea.input {
 
 .ds-part {
 	top: calc(var(--dsnr-top-height) + var(--dsnr-ds-header-height));
-	padding: var(--dsnr-part-pad-top) 12px var(--dsnr-part-pad-bottom);
+	padding: var(--dsnr-part-pad-top) var(--dsnr-space-5) var(--dsnr-part-pad-bottom);
 }
 
 /* With the toggle above it, the search bar is kept under that too, under the top bar and the design system's row. */
@@ -1141,7 +1137,7 @@ textarea.input {
 
 .token-body {
 	/* In from the right as the cards and the section headers are, not out to the panel's edge. */
-	padding: 0 12px 4px 28px;
+	padding: 0 var(--dsnr-space-5) var(--dsnr-space-2) var(--dsnr-indent);
 }
 
 /* Every heading (`ui/Heading.tsx`), by where it stands: bold, at the text's size unless it heads a tab or a part of one. */
@@ -1165,12 +1161,12 @@ textarea.input {
 	flex-wrap: wrap;
 	align-items: baseline;
 	justify-content: space-between;
-	gap: 0 8px;
-	padding: 8px 0 4px;
+	gap: 0 var(--dsnr-space-4);
+	padding: var(--dsnr-space-4) 0 var(--dsnr-space-2);
 }
 
 .heading-label {
-	margin: 8px 0 2px;
+	margin: var(--dsnr-space-4) 0 var(--dsnr-space-1);
 	color: var(--dsnr-muted);
 	font-size: 0.92em;
 }
@@ -1196,8 +1192,8 @@ textarea.input {
 .token-set + .token-set,
 .value-group + .value-group,
 .dialog .changed ~ .changed {
-	margin-top: 6px;
-	padding-top: 6px;
+	margin-top: var(--dsnr-space-3);
+	padding-top: var(--dsnr-space-3);
 	border-top: 1px solid var(--dsnr-border);
 }
 
@@ -1219,11 +1215,11 @@ textarea.input {
 .token-line {
 	display: flex;
 	align-items: center;
-	gap: 6px;
+	gap: var(--dsnr-space-3);
 	width: 100%;
 	min-height: var(--dsnr-row-height);
 	/* No indent of its own: a row's name starts where its set's and its part's titles do. At the right, room for a row's reset (`.item-actions`, in the Changes); a token's row has none (`.token-line-flush`). */
-	padding: 0 34px 0 0;
+	padding: 0 var(--dsnr-actions-room) 0 0;
 	box-sizing: border-box;
 	color: inherit;
 	font: inherit;
@@ -1244,11 +1240,6 @@ textarea.input {
 /* A pressed row's text is flush with its titles', so its highlight reaches out to the left of it, not the text into the highlight. */
 .value-cell.token-button:hover {
 	box-shadow: -4px 0 0 var(--vscode-list-hoverBackground);
-}
-
-.token-button:focus-visible {
-	outline: var(--dsnr-focus);
-	outline-offset: -1px;
 }
 
 .token-name {
@@ -1279,10 +1270,6 @@ textarea.input {
 	text-decoration: underline;
 }
 
-.token-link:focus-visible {
-	outline: var(--dsnr-focus);
-}
-
 /* What is at the right of a row that is not a colour: the rest of the row, so pressing it anywhere but the name is its control. */
 .token-fill {
 	display: flex;
@@ -1290,9 +1277,9 @@ textarea.input {
 	align-items: center;
 	align-self: stretch;
 	justify-content: flex-end;
-	gap: 6px;
+	gap: var(--dsnr-space-3);
 	min-width: 0;
-	padding: 0 0 0 4px;
+	padding: 0 0 0 var(--dsnr-space-2);
 	font: inherit;
 	color: inherit;
 }
@@ -1310,7 +1297,7 @@ textarea.input {
 }
 
 .token-uses {
-	margin-left: 8px;
+	margin-left: var(--dsnr-space-4);
 }
 
 .token-ref {
@@ -1369,16 +1356,16 @@ textarea.input {
 .tab {
 	display: flex;
 	flex-direction: column;
-	gap: 12px;
+	gap: var(--dsnr-space-5);
 	max-width: 1200px;
-	padding: 16px 24px 32px;
+	padding: var(--dsnr-space-6) var(--dsnr-space-7) var(--dsnr-space-8);
 	color: var(--vscode-editor-foreground);
 }
 
 .tab-header {
 	display: flex;
 	align-items: flex-start;
-	gap: 12px;
+	gap: var(--dsnr-space-5);
 }
 
 .tab-heading {
@@ -1388,7 +1375,7 @@ textarea.input {
 
 .tab-actions {
 	display: flex;
-	gap: 8px;
+	gap: var(--dsnr-space-4);
 }
 
 .tab-actions .button {
@@ -1412,11 +1399,11 @@ textarea.input {
 }
 
 .message-inset {
-	margin: 4px 12px 8px;
+	margin: var(--dsnr-space-2) var(--dsnr-space-5) var(--dsnr-space-4);
 }
 
 .dialog .message {
-	margin: 0 0 8px;
+	margin: 0 0 var(--dsnr-space-4);
 }
 
 .message .codicon {
@@ -1430,7 +1417,7 @@ textarea.input {
 /* What went wrong, said where it happened, under what it is about. */
 .message-error,
 .dialog .message-error {
-	margin: 8px 0 0;
+	margin: var(--dsnr-space-4) 0 0;
 	color: var(--vscode-errorForeground);
 }
 
@@ -1438,7 +1425,7 @@ textarea.input {
 .message-block {
 	display: flex;
 	flex-direction: column;
-	gap: 8px;
+	gap: var(--dsnr-space-4);
 }
 
 .message-block p {
@@ -1448,8 +1435,8 @@ textarea.input {
 .notice {
 	display: flex;
 	flex-direction: column;
-	gap: 8px;
-	padding: 8px 12px;
+	gap: var(--dsnr-space-4);
+	padding: var(--dsnr-space-4) var(--dsnr-space-5);
 	border: 1px solid var(--vscode-inputValidation-warningBorder, var(--dsnr-contrast-border));
 	border-radius: var(--dsnr-radius);
 	background: var(--vscode-inputValidation-warningBackground, transparent);
@@ -1472,7 +1459,7 @@ textarea.input {
 .component-layout {
 	display: grid;
 	grid-template-columns: minmax(0, 1fr);
-	gap: 24px;
+	gap: var(--dsnr-space-7);
 }
 
 @media (min-width: 900px) {
@@ -1490,7 +1477,7 @@ textarea.input {
 	position: sticky;
 	top: 0;
 	z-index: var(--dsnr-layer-top);
-	padding-bottom: 12px;
+	padding-bottom: var(--dsnr-space-5);
 	background: var(--vscode-editor-background);
 }
 
@@ -1499,7 +1486,7 @@ textarea.input {
 		box-sizing: border-box;
 		height: 100vh;
 		/* Under both panes, so they end on one line. */
-		padding-bottom: 16px;
+		padding-bottom: var(--dsnr-space-6);
 		overflow: hidden;
 	}
 
@@ -1530,7 +1517,7 @@ textarea.input {
 .component-stories {
 	display: flex;
 	flex-direction: column;
-	gap: 8px;
+	gap: var(--dsnr-space-4);
 	min-width: 0;
 }
 
@@ -1554,7 +1541,7 @@ textarea.input {
 	top: 12px;
 	left: 50%;
 	margin: 0;
-	padding: 2px 8px;
+	padding: var(--dsnr-space-1) var(--dsnr-space-4);
 	border-radius: var(--dsnr-radius);
 	color: var(--vscode-editorWidget-foreground, var(--vscode-foreground));
 	background: var(--vscode-editorWidget-background);
@@ -1564,15 +1551,15 @@ textarea.input {
 .component-aside {
 	display: flex;
 	flex-direction: column;
-	gap: 20px;
+	gap: var(--dsnr-space-7);
 	min-width: 0;
 }
 
 .aside-section {
 	display: flex;
 	flex-direction: column;
-	gap: 4px;
-	padding: 12px;
+	gap: var(--dsnr-space-2);
+	padding: var(--dsnr-space-5);
 	border: 1px solid var(--dsnr-border);
 	border-radius: var(--dsnr-radius-large);
 }
@@ -1582,7 +1569,7 @@ textarea.input {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
-	gap: 8px;
+	gap: var(--dsnr-space-4);
 }
 
 /*
@@ -1594,8 +1581,8 @@ textarea.input {
 		position: sticky;
 		top: 0;
 		z-index: var(--dsnr-layer-top);
-		margin: -12px -12px 0;
-		padding: 12px 12px 6px;
+		margin: calc(-1 * var(--dsnr-space-5)) calc(-1 * var(--dsnr-space-5)) 0;
+		padding: var(--dsnr-space-5) var(--dsnr-space-5) var(--dsnr-space-3);
 		border-radius: var(--dsnr-radius-large) var(--dsnr-radius-large) 0 0;
 		background: var(--vscode-editor-background);
 	}
@@ -1624,12 +1611,12 @@ textarea.input {
 	display: grid;
 	grid-template-columns: minmax(0, 1fr) auto;
 	align-items: center;
-	column-gap: 12px;
+	column-gap: var(--dsnr-space-5);
 	width: 100%;
 	min-height: var(--dsnr-row-height);
 	/* Its width is the pane's, so a token's name beside its label can be held to a share of it (`.value-token`). */
 	container-type: inline-size;
-	padding: 3px var(--dsnr-row-edge) 3px 0;
+	padding: var(--dsnr-row-inset) var(--dsnr-row-edge) var(--dsnr-row-inset) 0;
 	box-sizing: border-box;
 	color: inherit;
 	font: inherit;
@@ -1643,7 +1630,7 @@ textarea.input {
 .value-drawn {
 	display: flex;
 	align-items: center;
-	gap: 6px;
+	gap: var(--dsnr-space-3);
 	color: var(--dsnr-muted);
 	font-family: var(--vscode-editor-font-family);
 	font-size: 0.92em;
@@ -1682,7 +1669,7 @@ textarea.input {
 .value-label-chipped {
 	display: flex;
 	align-items: center;
-	gap: 6px;
+	gap: var(--dsnr-space-3);
 	min-width: 0;
 	/* Its width is its column's, so the chip can be left out when the column is too narrow for it (below). */
 	container-type: inline-size;
@@ -1703,7 +1690,7 @@ textarea.input {
 .value-chip {
 	overflow: hidden;
 	min-width: 0;
-	padding: 1px 6px;
+	padding: var(--dsnr-space-1) var(--dsnr-space-3);
 	border-radius: var(--dsnr-radius-inner);
 	color: var(--vscode-foreground);
 	background: var(--dsnr-track);
@@ -1733,8 +1720,8 @@ textarea.input {
 	/* One grid for every picker: the props' names as long as the longest, the dropdowns the rest, all lined up. */
 	grid-template-columns: auto minmax(0, 1fr);
 	align-items: center;
-	gap: var(--dsnr-row-gap) 12px;
-	padding: 4px 0 8px;
+	gap: var(--dsnr-row-gap) var(--dsnr-space-5);
+	padding: var(--dsnr-space-2) 0 var(--dsnr-space-4);
 }
 
 .picker-row {
@@ -1745,7 +1732,7 @@ textarea.input {
 .picker-name {
 	display: flex;
 	align-items: center;
-	gap: 4px;
+	gap: var(--dsnr-space-2);
 }
 
 .picker-row .select {
@@ -1786,11 +1773,6 @@ textarea.input {
 	background: var(--dsnr-on-brand);
 }
 
-.switch:focus-visible {
-	outline: var(--dsnr-focus);
-	outline-offset: 1px;
-}
-
 @media (prefers-reduced-motion: reduce) {
 	.switch-knob {
 		transition: none;
@@ -1808,7 +1790,7 @@ textarea.input {
 	z-index: var(--dsnr-layer-tip);
 	visibility: hidden;
 	max-width: min(320px, calc(100vw - 16px));
-	padding: 4px 8px;
+	padding: var(--dsnr-space-2) var(--dsnr-space-4);
 	border: 1px solid var(--vscode-editorHoverWidget-border, var(--dsnr-contrast-border));
 	border-radius: var(--dsnr-radius-inner);
 	color: var(--vscode-editorHoverWidget-foreground, var(--vscode-foreground));
@@ -1830,8 +1812,8 @@ textarea.input {
 	left: 0;
 	right: 0;
 	z-index: var(--dsnr-layer-menu);
-	margin-top: 2px;
-	padding: 8px 10px;
+	margin-top: var(--dsnr-space-1);
+	padding: var(--dsnr-space-4) var(--dsnr-space-5);
 	border: 1px solid var(--vscode-menu-border, var(--dsnr-contrast-border));
 	border-radius: var(--dsnr-radius);
 	color: var(--vscode-menu-foreground);
@@ -1848,14 +1830,14 @@ textarea.input {
 .popover-body {
 	display: flex;
 	flex-direction: column;
-	gap: 8px;
+	gap: var(--dsnr-space-4);
 }
 
 .popover-head {
 	display: flex;
 	align-items: baseline;
 	justify-content: space-between;
-	gap: 8px;
+	gap: var(--dsnr-space-4);
 }
 
 .popover-title {
@@ -1866,14 +1848,14 @@ textarea.input {
 .popover-field {
 	display: flex;
 	flex-direction: column;
-	gap: 2px;
+	gap: var(--dsnr-space-1);
 }
 
 /* A part with a short name (X, Y, Top): its name, its slider and its number on one line, the names in a column of their own. */
 .popover-field-line {
 	flex-direction: row;
 	align-items: center;
-	gap: 8px;
+	gap: var(--dsnr-space-4);
 }
 
 .popover-field-line .popover-label {
@@ -1905,16 +1887,11 @@ textarea.input {
 .disclosure-summary {
 	display: flex;
 	align-items: center;
-	gap: 4px;
-	padding: 4px 0;
+	gap: var(--dsnr-space-2);
+	padding: var(--dsnr-space-2) 0;
 	color: var(--dsnr-muted);
 	cursor: pointer;
 	list-style: none;
-}
-
-.disclosure-summary:focus-visible {
-	outline: var(--dsnr-focus);
-	outline-offset: 1px;
 }
 
 .issue-list {
@@ -1926,9 +1903,9 @@ textarea.input {
 .issue {
 	display: flex;
 	flex-direction: column;
-	gap: 2px;
+	gap: var(--dsnr-space-1);
 	overflow-wrap: anywhere;
-	padding: 6px 0;
+	padding: var(--dsnr-space-3) 0;
 	border-bottom: 1px solid var(--dsnr-border);
 }
 
@@ -1942,8 +1919,8 @@ textarea.input {
  * the same size as the words round it, not the editor's larger.
  */
 .issue-elements {
-	margin: 4px 0 0;
-	padding-left: 18px;
+	margin: var(--dsnr-space-2) 0 0;
+	padding-left: var(--dsnr-space-6);
 	list-style: disc;
 }
 
@@ -1964,11 +1941,11 @@ textarea.input {
 .chips {
 	display: flex;
 	flex-wrap: wrap;
-	gap: 6px;
+	gap: var(--dsnr-space-3);
 }
 
 .chip {
-	padding: 2px 10px;
+	padding: var(--dsnr-space-1) var(--dsnr-space-5);
 	border: 1px solid var(--dsnr-border);
 	border-radius: 12px;
 	color: var(--vscode-badge-foreground);
@@ -1982,16 +1959,11 @@ textarea.input {
 	background: transparent;
 }
 
-.chip:focus-visible {
-	outline: var(--dsnr-focus);
-	outline-offset: 1px;
-}
-
 .primitive {
 	display: flex;
 	flex-direction: column;
-	gap: 12px;
-	padding-top: 20px;
+	gap: var(--dsnr-space-5);
+	padding-top: var(--dsnr-space-7);
 	border-top: 1px solid var(--dsnr-border);
 	scroll-margin-top: 16px;
 }
@@ -2000,33 +1972,33 @@ textarea.input {
 .drawn-group {
 	display: flex;
 	flex-direction: column;
-	gap: 12px;
+	gap: var(--dsnr-space-5);
 }
 
 .drawn-set {
 	display: flex;
 	flex-direction: column;
-	gap: 6px;
+	gap: var(--dsnr-space-3);
 }
 
 .drawn-swatches,
 .drawn-row {
 	display: flex;
 	flex-wrap: wrap;
-	gap: 16px;
+	gap: var(--dsnr-space-6);
 }
 
 .drawn-swatch {
 	display: flex;
 	flex-direction: column;
-	gap: 2px;
+	gap: var(--dsnr-space-1);
 	width: 112px;
 }
 
 .drawn-item {
 	display: flex;
 	flex-direction: column;
-	gap: 4px;
+	gap: var(--dsnr-space-2);
 }
 
 .drawn-item-wide {
@@ -2045,7 +2017,7 @@ textarea.input {
 .drawn-bars {
 	display: flex;
 	flex-direction: column;
-	gap: 8px;
+	gap: var(--dsnr-space-4);
 	margin: 0;
 	padding: 0;
 	list-style: none;
@@ -2054,7 +2026,7 @@ textarea.input {
 .drawn-bar-row {
 	display: flex;
 	align-items: center;
-	gap: 12px;
+	gap: var(--dsnr-space-5);
 }
 
 .drawn-bar-name {
@@ -2098,7 +2070,7 @@ textarea.input {
 
 .drawn-table td,
 .drawn-table th {
-	padding: 4px 0;
+	padding: var(--dsnr-space-2) 0;
 	border-bottom: 1px solid var(--dsnr-border);
 }
 
@@ -2110,7 +2082,7 @@ textarea.input {
 .not-defined {
 	display: flex;
 	flex-direction: column;
-	gap: 4px;
+	gap: var(--dsnr-space-2);
 	margin: 0;
 	padding: 0;
 	list-style: none;
@@ -2120,14 +2092,14 @@ textarea.input {
 .token-editor {
 	display: flex;
 	flex-direction: column;
-	gap: 10px;
-	margin-bottom: 8px;
+	gap: var(--dsnr-space-5);
+	margin-bottom: var(--dsnr-space-4);
 }
 
 .token-source {
 	display: flex;
 	align-items: center;
-	gap: 6px;
+	gap: var(--dsnr-space-3);
 	overflow-wrap: anywhere;
 }
 
@@ -2135,7 +2107,7 @@ textarea.input {
 .dimension-field {
 	display: flex;
 	align-items: center;
-	gap: 8px;
+	gap: var(--dsnr-space-4);
 }
 
 .color-picker {
@@ -2169,15 +2141,16 @@ textarea.input {
 }
 
 .dimension-field input[type='range']::-webkit-slider-runnable-track {
-	height: 4px;
+	height: var(--dsnr-slider-track);
 	border-radius: 2px;
 	background: linear-gradient(to right, var(--dsnr-brand) var(--fill, 0%), var(--dsnr-outline) var(--fill, 0%));
 }
 
 .dimension-field input[type='range']::-webkit-slider-thumb {
-	width: 14px;
-	height: 14px;
-	margin-top: -5px;
+	width: var(--dsnr-slider-thumb);
+	height: var(--dsnr-slider-thumb);
+	/* Centred on its track: up by half of what the thumb is taller by. */
+	margin-top: calc((var(--dsnr-slider-track) - var(--dsnr-slider-thumb)) / 2);
 	border: 2px solid var(--dsnr-brand);
 	border-radius: 50%;
 	background: var(--dsnr-brand);
@@ -2195,16 +2168,16 @@ textarea.input {
 .steps {
 	display: flex;
 	flex-wrap: wrap;
-	gap: 4px;
+	gap: var(--dsnr-space-2);
 }
 
 .step {
 	display: flex;
 	flex-direction: column;
 	align-items: center;
-	gap: 2px;
+	gap: var(--dsnr-space-1);
 	width: 38px;
-	padding: 3px 0;
+	padding: var(--dsnr-space-2) 0;
 	border: 1px solid transparent;
 	border-radius: var(--dsnr-radius-inner);
 	color: inherit;
@@ -2227,18 +2200,13 @@ textarea.input {
 	border-color: var(--vscode-focusBorder);
 }
 
-.step:focus-visible {
-	outline: var(--dsnr-focus);
-	outline-offset: -1px;
-}
-
 /* What has been changed, at the top of the tab, and what can be done with it. */
 .changed {
 	display: flex;
 	flex-direction: column;
-	gap: 6px;
-	margin: 0 12px 8px;
-	padding: 8px;
+	gap: var(--dsnr-space-3);
+	margin: 0 var(--dsnr-space-5) var(--dsnr-space-4);
+	padding: var(--dsnr-space-4);
 	border: 1px solid var(--dsnr-border);
 	border-radius: var(--dsnr-radius);
 	background: var(--vscode-editorWidget-background);
@@ -2267,7 +2235,7 @@ textarea.input {
  * written, or why it cannot be saved, with a path broken anywhere rather than past the pane.
  */
 .changed .value-change {
-	padding-right: 34px;
+	padding-right: var(--dsnr-actions-room);
 }
 
 .value-place {
@@ -2279,14 +2247,14 @@ textarea.input {
 .branch-actions {
 	display: flex;
 	flex-direction: column;
-	gap: 6px;
+	gap: var(--dsnr-space-3);
 }
 
 .branch-line {
 	display: flex;
 	flex-wrap: wrap;
 	align-items: center;
-	gap: 4px 8px;
+	gap: var(--dsnr-space-2) var(--dsnr-space-4);
 	margin: 0;
 	overflow-wrap: anywhere;
 }
@@ -2299,7 +2267,7 @@ textarea.input {
 .branch-files {
 	display: flex;
 	flex-direction: column;
-	gap: 2px;
+	gap: var(--dsnr-space-1);
 	margin: 0;
 	padding: 0;
 	list-style: none;
@@ -2311,7 +2279,7 @@ textarea.input {
 .branch-buttons {
 	display: flex;
 	flex-wrap: wrap;
-	gap: 8px;
+	gap: var(--dsnr-space-4);
 }
 
 .branch-buttons .button {
@@ -2329,9 +2297,9 @@ textarea.input {
 .theme-row {
 	display: flex;
 	align-items: center;
-	gap: 4px;
+	gap: var(--dsnr-space-2);
 	min-height: var(--dsnr-row-height);
-	padding-right: 4px;
+	padding-right: var(--dsnr-space-2);
 }
 
 .theme-name {
@@ -2412,14 +2380,9 @@ button.color-dot:hover {
 	background: var(--vscode-toolbar-hoverBackground);
 }
 
-.color-dot:focus-visible {
-	outline: var(--dsnr-focus);
-	outline-offset: -1px;
-}
-
 .token-line .color-dot,
 .value-cell .color-dot {
-	margin: -4px -4px -4px 0;
+	margin: calc(-1 * var(--dsnr-space-2)) calc(-1 * var(--dsnr-space-2)) calc(-1 * var(--dsnr-space-2)) 0;
 }
 
 .token-line .color-dot {

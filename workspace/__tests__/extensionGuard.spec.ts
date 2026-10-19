@@ -140,6 +140,28 @@ describe('the extension’s sources', () => {
 		expect(rounded.filter((value) => value !== '50%')).toEqual([]);
 	});
 
+	it('space everything by the one scale: no padding, margin or gap is a number of pixels of its own', () => {
+		const css = files()
+			.find((f) => f.path.endsWith('styles.css'))!
+			.text.replace(/\/\*[\s\S]*?\*\//g, '');
+		// Outside the variables, where the scale and the sizes made from it are written.
+		const rules = css.slice(css.indexOf('}', css.indexOf(':root')) + 1);
+		const spacing = [...rules.matchAll(/^\s*((?:padding|margin|gap|row-gap|column-gap)[a-z-]*):\s*([^;]+);/gm)];
+		expect(spacing.length).toBeGreaterThan(100);
+		expect(spacing.filter(([, , value]) => /\d+px/.test(value!)).map(([line]) => line.trim())).toEqual([]);
+	});
+
+	it('draw the keyboard’s focus as one ring, from one rule, with one offset', () => {
+		const css = files()
+			.find((f) => f.path.endsWith('styles.css'))!
+			.text.replace(/\/\*[\s\S]*?\*\//g, '');
+		const rings = css.split('}').filter((b) => /outline:\s*var\(--dsnr-focus\)/.test(b));
+		// Every control's, and a field's, which is drawn however the focus came to it.
+		expect(rings.map((b) => b.split('{')[0]!.trim())).toEqual([':focus-visible', '.input:focus']);
+		expect(rings.every((b) => /outline-offset:\s*var\(--dsnr-focus-offset\)/.test(b))).toBe(true);
+		expect(css.match(/outline-offset:\s*[^;]+;/g)).toEqual(Array(2).fill('outline-offset: var(--dsnr-focus-offset);'));
+	});
+
 	it('draw every outline and line in the panel in one border colour, the search box’s, from one name', () => {
 		const css = files()
 			.find((f) => f.path.endsWith('styles.css'))!
@@ -174,9 +196,11 @@ describe('the extension’s sources', () => {
 			.find((f) => f.path.endsWith('styles.css'))!
 			.text.replace(/\/\*[\s\S]*?\*\//g, '');
 		const body = css.split('}').find((b) => b.trim().startsWith('.token-body')) ?? '';
-		expect(body).toMatch(/padding:\s*0 12px 4px 28px;/);
+		expect(body).toMatch(/padding:\s*0 var\(--dsnr-space-5\) var\(--dsnr-space-2\) var\(--dsnr-indent\);/);
 		// 12px is the grid's own inset on the right.
-		expect(css.split('}').find((b) => b.trim().startsWith('.grid {'))).toMatch(/padding:\s*4px 12px 8px;/);
+		expect(css.split('}').find((b) => b.trim().startsWith('.grid {'))).toMatch(
+			/padding:\s*var\(--dsnr-space-2\) var\(--dsnr-space-5\) var\(--dsnr-space-4\);/,
+		);
 	});
 
 	it('lay a dialog’s title and its close X in one row, the X at the far right', () => {
@@ -220,11 +244,11 @@ describe('the extension’s sources', () => {
 		const css = files()
 			.find((f) => f.path.endsWith('styles.css'))!
 			.text.replace(/\/\*[\s\S]*?\*\//g, '');
-		expect(css).toMatch(/--dsnr-card-text-pad:\s*8px/);
+		expect(css).toMatch(/--dsnr-card-text-pad:\s*var\(--dsnr-space-4\)/);
 		const rule = (selector: string) => css.split('}').find((b) => b.trim().startsWith(selector)) ?? '';
 		// No padding above: the name sits close under its picture, by the card's gap alone.
 		expect(rule('.card-text {')).toMatch(/padding:\s*0 var\(--dsnr-card-text-pad\) var\(--dsnr-card-text-pad\);/);
-		expect(rule('.card {')).toMatch(/gap:\s*8px;/);
+		expect(rule('.card {')).toMatch(/gap:\s*var\(--dsnr-space-4\);/);
 	});
 
 	it('divide the design system’s sets from one another, in the semantic colors and in the palette alike, with one line that reads in any theme', () => {
@@ -252,7 +276,7 @@ describe('the extension’s sources', () => {
 		expect(badge).toMatch(/border-radius:\s*calc\(var\(--dsnr-badge\) \/ 2\);/);
 		expect(badge).toMatch(/box-sizing:\s*border-box/);
 		// Little enough padding that one digit never makes it wider than it is tall.
-		expect(badge).toMatch(/padding:\s*0 3px;/);
+		expect(badge).toMatch(/padding:\s*0 var\(--dsnr-space-2\);/);
 		// No other rule sizes a bubble, but the blank one: extra small, a circle, from its own name.
 		expect(css).toMatch(/--dsnr-badge-xs:\s*9px/);
 		const xs = css.split('}').find((b) => b.trim().startsWith('.badge-xs {')) ?? '';
@@ -300,7 +324,7 @@ describe('the extension’s sources', () => {
 		expect(panes).toMatch(/min-height:\s*0/);
 		// Both end on one line: no room left under either inside its scroll, the page's own below both.
 		expect(panes).not.toMatch(/padding-bottom/);
-		expect(within('.tab-split')).toMatch(/padding-bottom:\s*16px/);
+		expect(within('.tab-split')).toMatch(/padding-bottom:\s*var\(--dsnr-space-6\)/);
 		// The stories' box fills its pane, and its page scrolls inside it, so its bottom is the analysis's bottom.
 		expect(within('.stories')).toMatch(/flex:\s*1/);
 		expect(within('.stories')).toMatch(/min-height:\s*0/);
@@ -326,7 +350,7 @@ describe('the extension’s sources', () => {
 		const css = files()
 			.find((f) => f.path.endsWith('styles.css'))!
 			.text.replace(/\/\*[\s\S]*?\*\//g, '');
-		expect(css).toMatch(/--dsnr-grid-gap:\s*8px/);
+		expect(css).toMatch(/--dsnr-grid-gap:\s*var\(--dsnr-space-4\)/);
 		const grid = css.split('}').find((b) => b.trim().startsWith('.grid {')) ?? '';
 		// One value for both directions: `gap` alone, never a row and a column of their own.
 		expect(grid).toMatch(/\sgap:\s*var\(--dsnr-grid-gap\);/);
@@ -345,7 +369,7 @@ describe('the extension’s sources', () => {
 		expect(rule('.ds-branch')).toMatch(/flex-shrink:\s*0/);
 		expect(rule('.ds-branch')).not.toMatch(/grid-row/);
 		// One gap, named: between the buttons, between the name and its icon, and between the icon and the buttons.
-		expect(css).toMatch(/--dsnr-ds-gap:\s*4px/);
+		expect(css).toMatch(/--dsnr-ds-gap:\s*var\(--dsnr-space-2\)/);
 		for (const selector of ['.ds-header', '.ds-title', '.ds-actions {']) expect(rule(selector), selector).toMatch(/gap:\s*var\(--dsnr-ds-gap\)/);
 		// Its icon is the extra small size, a name for it, set over the icon font's own size.
 		expect(css).toMatch(/--dsnr-icon-xs:\s*12px/);

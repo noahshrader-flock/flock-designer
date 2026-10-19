@@ -1,6 +1,7 @@
 import { type KeyboardEvent as KeyEvent, type ReactNode, useEffect, useRef } from 'react';
 import { IconButton } from './IconButton';
 import { focusPanel } from './focusPanel';
+import { useEscape } from './useDismiss';
 
 // What Tab goes through inside it: fields, buttons, and links (a finding's page), but not the dialog itself (`tabindex=-1`).
 const FOCUSABLE = 'input, textarea, select, button:not(:disabled), a[href]';
@@ -10,7 +11,7 @@ const FIRST = 'input, textarea, select, button:not(:disabled):not(.dialog-close)
 /**
  * A dialog over the panel, as VS Code's own are: a title with its close X at the far right of the same row, what it asks,
  * and its buttons below, over a scrim that dims what is behind. A side bar's webview cannot draw outside itself, so it covers
- * the panel. The X, Escape and a press on the scrim close it; Tab stays inside it; the focus goes to its first field (or what
+ * the panel. The X, Escape (`useEscape`, unless something opened over it since) and a press on the scrim close it; Tab stays inside it; the focus goes to its first field (or what
  * it does), and back to what opened it once it is gone. A dialog that is a few controls for one thing, as a popover is
  * (`focus="panel"`: a token's), takes the focus on the dialog itself instead, as the popover does (`focusPanel`), so no
  * control is drawn as chosen the moment it opens.
@@ -27,6 +28,7 @@ export const Dialog = ({
 	children: ReactNode;
 }) => {
 	const box = useRef<HTMLDivElement>(null);
+	useEscape(true, onClose);
 	useEffect(() => {
 		const opener = document.activeElement as HTMLElement | null;
 		if (focus === 'panel') focusPanel(box.current);
@@ -35,7 +37,6 @@ export const Dialog = ({
 		// Only as it opens: where the focus is after that is the person's.
 	}, []); // eslint-disable-line react-hooks/exhaustive-deps
 	const onKeyDown = (e: KeyEvent) => {
-		if (e.key === 'Escape') return void (e.stopPropagation(), onClose());
 		if (e.key !== 'Tab') return;
 		const inside = [...(box.current?.querySelectorAll<HTMLElement>(FOCUSABLE) ?? [])];
 		const [first, last] = [inside[0], inside.at(-1)];

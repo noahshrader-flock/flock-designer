@@ -104,6 +104,22 @@ describe('a dialog', () => {
 		expect(document.activeElement).toBe(opener);
 	});
 
+	it('closes on Escape only once what opened over it has: a menu in it closes first, then the dialog', async () => {
+		const onClose = vi.fn();
+		await open(createElement(Menu, { label: 'Account actions', sections: [{ items: [{ label: 'Sign out', onSelect: () => undefined }] }] }), onClose);
+		const opener = document.querySelector('[aria-label="Account actions"]') as HTMLElement;
+		await press(opener);
+		expect(document.querySelector('[role="menu"]')).not.toBeNull();
+		const escape = () =>
+			act(async () => void document.activeElement?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })));
+		await escape();
+		expect(document.querySelector('[role="menu"]')).toBeNull();
+		expect(onClose).not.toHaveBeenCalled();
+		expect(document.activeElement).toBe(opener);
+		await escape();
+		expect(onClose).toHaveBeenCalledTimes(1);
+	});
+
 	it('goes through its links too, by Tab, and keeps Tab inside it: from its X to a link, from the last link back to the X', async () => {
 		const box = await open(
 			createElement(
