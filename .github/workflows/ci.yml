@@ -21,13 +21,7 @@ jobs:
         working-directory: workspace
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version-file: workspace/.nvmrc
-          cache: npm
-          cache-dependency-path: workspace/package-lock.json
-      - name: Install
-        run: npm ci
+      - uses: ./.github/actions/setup
       - name: Format, lint and typecheck
         run: npm run check:static
       - name: Unit tests
@@ -40,16 +34,7 @@ jobs:
         working-directory: workspace
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version-file: workspace/.nvmrc
-          cache: npm
-          cache-dependency-path: workspace/package-lock.json
-      - name: Install
-        run: npm ci
-      # Ubuntu's runners keep unprivileged user namespaces from apps, which Chrome's sandbox needs.
-      - name: Let Chrome sandbox itself
-        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+      - uses: ./.github/actions/setup
       - name: Integration tests, the slow ones included
         run: npm run test:integration && npm run test:slow
 
@@ -60,15 +45,7 @@ jobs:
         working-directory: workspace
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version-file: workspace/.nvmrc
-          cache: npm
-          cache-dependency-path: workspace/package-lock.json
-      - name: Install
-        run: npm ci
-      - name: Let VS Code sandbox itself
-        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+      - uses: ./.github/actions/setup
       - name: Get VS Code
         run: curl -fsSL https://update.code.visualstudio.com/latest/linux-x64/stable | tar -xz -C "$RUNNER_TEMP"
       # On a screen of its own (xvfb), as VS Code needs one.

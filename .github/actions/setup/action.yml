@@ -1,0 +1,19 @@
+# What every job starts with, once the repository is checked out.
+name: Set up
+description: Node as .nvmrc says, the workspace's packages, and a sandbox Chrome and VS Code can use.
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v4
+      with:
+        node-version-file: workspace/.nvmrc
+        cache: npm
+        cache-dependency-path: workspace/package-lock.json
+    - name: Install
+      shell: bash
+      working-directory: workspace
+      run: npm ci
+    # Ubuntu's runners keep unprivileged user namespaces from apps, which Chrome's and VS Code's sandboxes need.
+    - name: Let Chrome and VS Code sandbox themselves
+      shell: bash
+      run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
