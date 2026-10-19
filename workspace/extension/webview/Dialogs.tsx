@@ -4,24 +4,23 @@ import { foldersOf } from '../../src/shared/brief';
 import { productsOf, workOf } from '../../src/shared/work';
 import { needsProduct } from '../../src/shared/projectScope';
 import { type CodebaseAction, type PanelDialog, reviewsOf } from '../src/messages';
+import { asks } from './host';
 import { AccountDialog, SyncDialog } from './AccountDialogs';
 import { Dialog } from './ui/Dialog';
 import { BuildInCodebaseDialog, HandoffDialog } from './CodebaseDialogs';
-import { AssignFolderDialog, NewPrototypeDialog, type NewPrototypeAnswers } from './ProjectDialogs';
+import { AssignFolderDialog, NewPrototypeDialog } from './ProjectDialogs';
 import { Message } from './ui/Message';
 
 /**
  * The dialog open over the panel, if one is, drawn for the project it is about as the list has it: none for a project
- * not in the list. What each does is given: what is the extension's is asked of it (`onStart`, `onCodebase`), what is
- * the core's is done here, and what changes the projects reads them again (`onChanged`).
+ * not in the list. What is the extension's is asked of it here, what is the core's is done in the dialog, and what changes
+ * the projects reads them again (`onChanged`).
  */
 export const PanelDialogs = ({
 	dialog,
 	projects,
 	root,
 	account,
-	onStart,
-	onCodebase,
 	onChanged,
 	onClose,
 }: {
@@ -31,14 +30,15 @@ export const PanelDialogs = ({
 	root: string | null;
 	/** Who is signed in: the account dialog is only for someone who is, and goes when they are not. */
 	account: SignInState;
-	onStart: (answers: NewPrototypeAnswers) => void;
-	onCodebase: (action: CodebaseAction, projectId: string) => void;
 	onChanged: () => void;
 	onClose: () => void;
 }) => {
 	const folders = projects ? foldersOf(projects) : [];
 	if (dialog === null) return null;
-	if (dialog.kind === 'new') return <NewPrototypeDialog folders={folders} onStart={onStart} onClose={onClose} />;
+	if (dialog.kind === 'new')
+		return (
+			<NewPrototypeDialog folders={folders} onStart={({ title, task, folder }) => void asks().newPrototype(title, task, folder)} onClose={onClose} />
+		);
 	if (dialog.kind === 'sync') return <SyncDialog onClose={onClose} />;
 	// Drawn by the Design System tab, where every change being tried is.
 	if (dialog.kind === 'changes') return null;
@@ -46,6 +46,7 @@ export const PanelDialogs = ({
 	const project = projects?.find((p) => p.id === dialog.projectId);
 	if (!project) return null;
 	const codebase = workOf(project.work, 'codebase')[0];
+	const onCodebase = (action: CodebaseAction) => () => void asks().codebase(action, project.id);
 	const newest = reviewsOf(project)[0];
 	switch (dialog.kind) {
 		case 'assign':
@@ -67,9 +68,9 @@ export const PanelDialogs = ({
 					branch={codebase.branch}
 					readyAt={codebase.readyAt}
 					pullRequest={codebase.pullRequest}
-					onStart={() => onCodebase('hand-off', project.id)}
-					onShare={() => onCodebase('share', project.id)}
-					onOpenCode={() => onCodebase('open-code', project.id)}
+					onStart={onCodebase('hand-off')}
+					onShare={onCodebase('share')}
+					onOpenCode={onCodebase('open-code')}
 					onClose={onClose}
 				/>
 			) : null;

@@ -13,11 +13,11 @@ import { InfoTip } from './ui/InfoTip';
 import { ValueItem, ValueLine, ValueList } from './ui/ValueItem';
 import { Message } from './ui/Message';
 import { Heading } from './ui/Heading';
+import { asks } from './host';
 
-/** What a token row can do: open its control (a token that can be changed), and open its own file at its line. */
+/** What a token row can do besides open its own file at its line: open its control (a token that can be changed). */
 export interface TokenActions {
 	onEdit: (token: DesignToken) => void;
-	onSource: (source: DesignToken['source']) => void;
 }
 
 /**
@@ -29,7 +29,7 @@ export interface TokenActions {
  * token's value is the rest of its row, one button with what it points at; one that cannot be changed (a font, a shadow) has
  * nothing to press there. Its file and line are the row's tooltip.
  */
-export const TokenRow = ({ token, info, onEdit, onSource }: { token: DesignToken; info?: string } & TokenActions) => {
+export const TokenRow = ({ token, info, onEdit }: { token: DesignToken; info?: string } & TokenActions) => {
 	const changes = useTokenChanges();
 	const target = changes.target(token);
 	const contrast = rowContrast(token, changes);
@@ -44,7 +44,7 @@ export const TokenRow = ({ token, info, onEdit, onSource }: { token: DesignToken
 				data-part="name"
 				className="token-name token-link"
 				aria-label={`${token.name}: open ${where}`}
-				onClick={() => onSource(token.source)}
+				onClick={() => void asks().openLibrarySource(token.source.file, token.source.line)}
 			>
 				{token.name}
 			</button>

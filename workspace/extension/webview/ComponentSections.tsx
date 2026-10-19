@@ -106,7 +106,6 @@ export const ComponentSections = ({
 	components,
 	actions,
 	trying,
-	onOpen,
 	changes,
 }: {
 	component: CatalogComponent;
@@ -114,8 +113,6 @@ export const ComponentSections = ({
 	actions: TokenActions;
 	/** The values being tried on its instances, in the stories beside this. */
 	trying: Trying;
-	/** Opens another component's tab. */
-	onOpen: (id: string) => void;
 	/**
 	 * Whether its Changes dialog is open (the button in its header opens it), closing it, telling it a branch of its values is kept,
 	 * and the panel's Changes, where Save, Propose and Start over are.
@@ -135,7 +132,7 @@ export const ComponentSections = ({
 				{edits.length > 0 && (
 					<>
 						<TokenChanges />
-						<ChangeReach edits={edits} component={component} components={components} onOpen={onOpen} />
+						<ChangeReach edits={edits} component={component} components={components} />
 					</>
 				)}
 				{values}
@@ -180,8 +177,6 @@ export const ComponentSections = ({
 				rows={answer.values.state === 'read' ? answer.values.rows.light : null}
 				trying={trying}
 				tokenName={tokenName}
-				onSource={actions.onSource}
-				onOpen={onOpen}
 				onKept={changes.onKept}
 				onActions={changes.onActions}
 			>

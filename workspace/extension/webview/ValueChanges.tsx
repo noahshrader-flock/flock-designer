@@ -14,12 +14,13 @@ import { ChangeRow, ValueList } from './ui/ValueItem';
 import { LinkButton } from './ui/LinkButton';
 import { Message } from './ui/Message';
 import { Heading } from './ui/Heading';
+import { asks } from './host';
 
 /**
  * Where a value is written, each place a link to its line: by file, its lines after it (`src/utils/theme.ts, lines 58,
  * 70`); by whom, when the agent wrote it.
  */
-const Places = ({ places, by, onSource }: { places: ValuePlace[]; by?: 'agent'; onSource: (place: ValuePlace) => void }) => {
+const Places = ({ places, by }: { places: ValuePlace[]; by?: 'agent' }) => {
 	const files = [...new Set(places.map((p) => p.file))];
 	return (
 		<span className="value-place quiet" data-value-places>
@@ -33,7 +34,7 @@ const Places = ({ places, by, onSource }: { places: ValuePlace[]; by?: 'agent'; 
 						{here.map((p, j) => (
 							<span key={p.line}>
 								{j > 0 && ', '}
-								<LinkButton onPress={() => onSource(p)}>{p.line}</LinkButton>
+								<LinkButton onPress={() => void asks().openLibrarySource(p.file, p.line)}>{p.line}</LinkButton>
 							</span>
 						))}
 					</span>
@@ -48,15 +49,7 @@ const Places = ({ places, by, onSource }: { places: ValuePlace[]; by?: 'agent'; 
  * or written, or why it cannot be saved, with the agent offered where it can write it (Phase 4.5, 4.6); nothing when
  * finding failed.
  */
-const Said = ({
-	source,
-	onSource,
-	onWrite,
-}: {
-	source: ValueSource | null | undefined;
-	onSource: (place: ValuePlace) => void;
-	onWrite: () => void;
-}) => {
+const Said = ({ source, onWrite }: { source: ValueSource | null | undefined; onWrite: () => void }) => {
 	if (source === undefined) return null;
 	if (source === null) return <span className="value-place quiet">Finding where it is written…</span>;
 	if (source.state === 'writing') return <span className="value-place quiet">The agent is writing it…</span>;
@@ -78,7 +71,7 @@ const Said = ({
 	if (source.places.length === 0) return <span className="value-place quiet">As the library draws it: nothing to write.</span>;
 	return (
 		<>
-			<Places places={source.places} by={source.by} onSource={onSource} />
+			<Places places={source.places} by={source.by} />
 			{source.said && <span className="value-place quiet">{source.said}</span>}
 		</>
 	);
@@ -125,8 +118,6 @@ interface Shown {
 	trying: Trying;
 	/** A token's name, by its path: what a value made to follow one says it follows. */
 	tokenName: (path: string) => string;
-	onSource: (place: ValuePlace) => void;
-	onOpen: (id: string) => void;
 	/**
 	 * Where Save, Process changes, Propose and Start over are when not here (the changes being tried, DESIGN_SYSTEM.md): on
 	 * a component's tab they are in the panel's Changes, which this opens; in the panel, where every change is, they are
@@ -145,8 +136,6 @@ export const ChangedValues = ({
 	rows,
 	trying,
 	tokenName,
-	onSource,
-	onOpen,
 	onActions,
 	name,
 	sources,
@@ -182,7 +171,7 @@ export const ChangedValues = ({
 									name={valueTitle(t.property, cell?.variant ?? null)}
 									from={cell ? saidValue(t.property, cell.value) : ''}
 									to={t.follows === undefined ? saidValue(t.property, t.value) : `follows ${tokenName(t.follows)}`}
-									under={<Said source={sources.state === 'failed' ? undefined : sourceOf(t)} onSource={onSource} onWrite={() => trying.onWrite(t)} />}
+									under={<Said source={sources.state === 'failed' ? undefined : sourceOf(t)} onWrite={() => trying.onWrite(t)} />}
 									onReset={() => trying.onTry(triedId(t), null)}
 								/>
 							);
@@ -211,7 +200,7 @@ export const ChangedValues = ({
 				</Message>
 			)}
 			{sources.state === 'ready' && sources.reach.state !== 'none' && (
-				<ReachView reach={sources.reach} title="Moved by these values" component={component} components={components} onOpen={onOpen} />
+				<ReachView reach={sources.reach} title="Moved by these values" component={component} components={components} />
 			)}
 		</>
 	);

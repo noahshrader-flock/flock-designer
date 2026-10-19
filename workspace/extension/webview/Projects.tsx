@@ -4,7 +4,7 @@ import { foldersOf, inFolder } from '../../src/shared/brief';
 import { plural } from '../../src/shared/plural';
 import { useCover } from './hooks/useCover';
 import { matchesProject, openCommentsOf } from '../../src/shared/projectList';
-import { type CodebaseAction, type PanelDialog, type Review, reviewsOf } from '../src/messages';
+import { type CodebaseAction, type PanelDialog, reviewsOf } from '../src/messages';
 import { workOf } from '../../src/shared/work';
 import {
 	type ProductGroup,
@@ -18,7 +18,6 @@ import {
 	scopesOffered,
 } from '../../src/shared/projectScope';
 import { Badge } from './ui/Badge';
-import { Button } from './ui/Button';
 import { type MenuItem, type MenuSection, Menu } from './ui/Menu';
 import { ViewOptions } from './ui/ViewOptions';
 import { SearchBox } from './ui/SearchBox';
@@ -29,6 +28,7 @@ import { useShared } from './shared';
 import type { View } from './vscode';
 import { Message } from './ui/Message';
 import { Collection, CollectionItem } from './ui/Collection';
+import { asks } from './host';
 
 /**
  * What a project has, in a line: its versions (the ideas tried; work in the code is not a version), then what its section
@@ -46,22 +46,13 @@ const meta = (p: Project, labels: string[]) => {
 const ProjectItem = ({
 	project,
 	labels,
-	onOpen,
-	onOpenInBrowser,
-	onCopyLink,
-	onOpenPublished,
 	onDialog,
-	onCodebase,
 }: {
 	project: Project;
 	/** What its line says beside its versions: what its section does not. */
 	labels: string[];
-	onOpen: (review: Review) => void;
-	onOpenInBrowser: (review: Review) => void;
-	onCopyLink: (review: Review) => void;
-	onOpenPublished: (review: Review) => void;
+	/** Opens a dialog about it: its folder, Build in the codebase, Handoff. */
 	onDialog: (dialog: PanelDialog) => void;
-	onCodebase: (action: CodebaseAction, projectId: string) => void;
 }) => {
 	const shown = useShared('tabs');
 	const cover = useCover(project);
@@ -76,13 +67,15 @@ const ProjectItem = ({
 	// there, Hand off once there is work there (a record of work is made when a build starts; the Hand off dialog says when
 	// its agent is still busy). Sharing code is not an item: once a handoff finds the work ready, the Hand off dialog offers
 	// its pull request.
-	const copy: MenuItem[] = newest ? [{ label: 'Copy link', icon: 'link', onSelect: () => onCopyLink(newest) }] : [];
+	const onCodebase = (action: CodebaseAction) => void asks().codebase(action, id);
+	// Copy link says when it is not published yet; Open locally opens it in the person's browser, outside VS Code.
+	const copy: MenuItem[] = newest ? [{ label: 'Copy link', icon: 'link', onSelect: () => void asks().copyReviewLink(newest) }] : [];
 	const pages: MenuItem[] = newest
 		? [
 				// Not known to be there without asking GitHub, which a menu does not do for every project: pressed, it opens the
 				// page, or says why there is none and offers to publish it, as Copy link does.
-				{ label: 'Open published page', icon: 'globe', onSelect: () => onOpenPublished(newest) },
-				{ label: 'Open locally', icon: 'link-external', onSelect: () => onOpenInBrowser(newest) },
+				{ label: 'Open published page', icon: 'globe', onSelect: () => void asks().openReviewPublished(newest) },
+				{ label: 'Open locally', icon: 'link-external', onSelect: () => void asks().openReviewInBrowser(newest) },
 			]
 		: [];
 	const stage: { label: string; dialog: PanelDialog } | null = inCode
@@ -91,12 +84,12 @@ const ProjectItem = ({
 			? { label: 'Build', dialog: { kind: 'build', projectId: id } }
 			: null;
 	const next: MenuItem[] = stage ? [{ label: stage.label, icon: 'package', onSelect: () => onDialog(stage.dialog) }] : [];
-	const runs: MenuItem[] = [...(inCode ? [{ label: 'Run locally', icon: 'gear', onSelect: () => onCodebase('run-locally', id) }] : []), ...next];
-	const code: MenuItem[] = inCode ? [{ label: 'View on GitHub', icon: 'github', onSelect: () => onCodebase('open-code', id) }] : [];
+	const runs: MenuItem[] = [...(inCode ? [{ label: 'Run locally', icon: 'gear', onSelect: () => onCodebase('run-locally') }] : []), ...next];
+	const code: MenuItem[] = inCode ? [{ label: 'View on GitHub', icon: 'github', onSelect: () => onCodebase('open-code') }] : [];
 	const folder: MenuItem[] = [{ label: 'Assign folder…', icon: 'folder', onSelect: () => onDialog({ kind: 'assign', projectId: id }) }];
 	const sections = [copy, pages, runs, code, folder].filter((group) => group.length > 0).map((group) => ({ items: group }));
 	// Pressed, it opens its newest prototype for review; a project only in the code opens its work on GitHub, as the app's does.
-	const press = newest ? () => onOpen(newest) : inCode ? () => onCodebase('open-code', id) : undefined;
+	const press = newest ? () => void asks().openReview(newest) : inCode ? () => onCodebase('open-code') : undefined;
 	const shared = {
 		name: project.title,
 		meta: meta(project, labels),
@@ -186,14 +179,7 @@ export const Projects = ({
 	read,
 	product,
 	login,
-	onOpen,
-	onOpenInBrowser,
-	onCopyLink,
-	onOpenPublished,
-	onNew,
-	onGetStarted,
 	onDialog,
-	onCodebase,
 	view,
 	onView,
 }: {
@@ -205,19 +191,8 @@ export const Projects = ({
 	product: { open: true; repository: string | null } | { open: false; why: string };
 	/** Who is signed in, by login: whose are the projects that are mine; null when nobody is. */
 	login: string | null;
-	onOpen: (review: Review) => void;
-	/** Opens the review in the person's browser, outside VS Code. */
-	onOpenInBrowser: (review: Review) => void;
-	/** Copies the link of the review's published page, or says it is not published yet. */
-	onCopyLink: (review: Review) => void;
-	onOpenPublished: (review: Review) => void;
-	onNew: () => void;
-	/** Gets a product onto this machine: VS Code's own clone. */
-	onGetStarted: () => void;
 	/** Opens a dialog about a project: its folder, Build in the codebase, Handoff. */
 	onDialog: (dialog: PanelDialog) => void;
-	/** Asks the extension to do something with a project's codebase work. */
-	onCodebase: (action: CodebaseAction, projectId: string) => void;
 	/** The projects as a list of rows or a grid of cards, and choosing the other. */
 	view: View;
 	onView: (view: View) => void;
@@ -273,19 +248,8 @@ export const Projects = ({
 	];
 	// "No product" says something only once some projects have one: before, it would be on every project.
 	const anyProduct = [...products.values()].some((ps) => ps.length > 0);
-	const item = (p: Project, labels: string[]) => (
-		<ProjectItem
-			key={p.id}
-			project={p}
-			labels={labels}
-			onOpen={onOpen}
-			onOpenInBrowser={onOpenInBrowser}
-			onCopyLink={onCopyLink}
-			onOpenPublished={onOpenPublished}
-			onDialog={onDialog}
-			onCodebase={onCodebase}
-		/>
-	);
+	const item = (p: Project, labels: string[]) => <ProjectItem key={p.id} project={p} labels={labels} onDialog={onDialog} />;
+	const showAll = { label: 'Show all projects', onPress: () => setScope('everyone') };
 	const shown = (items: ReactNode[], label: string) => (
 		<Collection view={view} label={label}>
 			{items}
@@ -295,7 +259,8 @@ export const Projects = ({
 		<>
 			{login === null && <Message inset>These are the projects on this machine. Sign in to see your team's too.</Message>}
 			{!product.open && (
-				<Message size="block" inset action={{ label: 'Get started', onPress: onGetStarted }}>
+				// Get started gets a product onto this machine: VS Code's own clone.
+				<Message size="block" inset action={{ label: 'Get started', onPress: () => void asks().getStarted() }}>
 					No product is open, so these are everyone’s projects. Open a product to make a prototype, or to build or Address one.
 				</Message>
 			)}
@@ -306,25 +271,24 @@ export const Projects = ({
 				</div>
 			)}
 			{projects.length === 0 ? (
-				<Message size="page" icon="folder-library" title="No projects yet">
+				// Asked of the extension, which knows whether one can be started, and opens the dialog (`open-dialog`) if so.
+				<Message
+					size="page"
+					icon="folder-library"
+					title="No projects yet"
+					action={{ label: 'New prototype', onPress: () => void asks().askNewPrototype() }}
+				>
 					<p>A prototype you start appears here, with its versions and its open comments.</p>
-					<Button onClick={onNew}>New prototype</Button>
 				</Message>
 			) : matching.length === 0 || (here.length === 0 && search.trim() !== '') ? (
 				<NoMatches thing="project" search={search} onClear={() => setSearch('')} />
 			) : here.length === 0 && shownScope === 'mine' ? (
-				<Message size="page" icon="person" title="No projects of yours yet">
+				<Message size="page" icon="person" title="No projects of yours yet" action={showAll}>
 					<p>None of these projects has your work in it yet. All projects shows what is being made.</p>
-					<Button variant="secondary" onClick={() => setScope('everyone')}>
-						Show all projects
-					</Button>
 				</Message>
 			) : here.length === 0 ? (
-				<Message size="page" icon="repo" title={`No projects in ${nameOf(productRepository ?? '')} yet`}>
+				<Message size="page" icon="repo" title={`No projects in ${nameOf(productRepository ?? '')} yet`} action={showAll}>
 					<p>Prototypes made on it appear here. All projects shows what is being made on other products.</p>
-					<Button variant="secondary" onClick={() => setScope('everyone')}>
-						Show all projects
-					</Button>
 				</Message>
 			) : focused ? (
 				<ByFolder projects={here}>

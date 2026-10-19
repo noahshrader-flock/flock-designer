@@ -80,14 +80,10 @@ export const ComponentTab = ({ id }: { id: string }) => {
 			</Message>
 		);
 	if (!ready || !component) return <Message size="page">The design system shown no longer has this component. Close this tab.</Message>;
-	const actions: TokenActions = {
-		onEdit: setEditing,
-		onSource: ({ file, line }) => void asks().openLibrarySource(file, line),
-	};
+	const actions: TokenActions = { onEdit: setEditing };
 	// What its Changes button counts: the values tried on it and the token changes being tried, which move its stories too.
 	const count = tried.size + edits.length;
 	const link = (to: ComponentLink) => void asks().componentLink(id, to);
-	const open = (other: string) => void asks().openComponent(other);
 	return (
 		<TokenChangesProvider value={changes}>
 			<main className="tab tab-split">
@@ -124,7 +120,6 @@ export const ComponentTab = ({ id }: { id: string }) => {
 							components={ready.components}
 							actions={actions}
 							trying={trying}
-							onOpen={open}
 							changes={{
 								open: changesOpen,
 								onClose: () => setChangesOpen(false),
@@ -135,7 +130,7 @@ export const ComponentTab = ({ id }: { id: string }) => {
 					</aside>
 				</div>
 			</main>
-			{editing && <TokenEditor key={editing.path} token={editing} components={ready.components} onOpen={open} onClose={() => setEditing(null)} />}
+			{editing && <TokenEditor key={editing.path} token={editing} components={ready.components} onClose={() => setEditing(null)} />}
 		</TokenChangesProvider>
 	);
 };

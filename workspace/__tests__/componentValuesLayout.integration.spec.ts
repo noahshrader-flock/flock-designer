@@ -234,11 +234,7 @@ describe.skipIf(NO_CHROME)('a component’s Values, in the side pane, in the bro
 	];
 	const TokenRows = () => {
 		const changes = useTokenChangesFor(ROW_TOKENS, [], () => undefined, undeclared('a test'));
-		return createElement(
-			TokenChangesProvider,
-			{ value: changes },
-			createElement(Grouped, { tokens: ROW_TOKENS, onEdit: () => undefined, onSource: () => undefined }),
-		);
+		return createElement(TokenChangesProvider, { value: changes }, createElement(Grouped, { tokens: ROW_TOKENS, onEdit: () => undefined }));
 	};
 	const tokenRows = renderToStaticMarkup(createElement(TokenRows));
 
@@ -320,7 +316,7 @@ describe.skipIf(NO_CHROME)('a component’s Values, in the side pane, in the bro
 				} as never,
 				tokens,
 				info: () => 'a use',
-				actions: { onEdit: () => undefined, onSource: () => undefined },
+				actions: { onEdit: () => undefined },
 			}),
 		);
 	};
@@ -392,9 +388,9 @@ describe.skipIf(NO_CHROME)('a component’s Values, in the side pane, in the bro
 		},
 		{ file: 'FSTextField', changes: [], inside: true },
 	];
-	const moved = MOVED.map((reach) =>
-		renderToStaticMarkup(createElement(Moved, { reach, name: reach.file, here: reach.file === 'FSButton', onOpen: () => undefined })),
-	).join('');
+	const moved = MOVED.map((reach) => renderToStaticMarkup(createElement(Moved, { reach, name: reach.file, here: reach.file === 'FSButton' }))).join(
+		'',
+	);
 
 	it.each([PANE, 220])(
 		'lays out what a token change moves without anything over anything, past the pane, or cut off, in a %ipx pane',
@@ -473,8 +469,6 @@ describe.skipIf(NO_CHROME)('a component’s Values, in the side pane, in the bro
 				writeError: null,
 			},
 			tokenName: (path: string) => path,
-			onSource: () => undefined,
-			onOpen: () => undefined,
 			sources: {
 				state: 'ready',
 				values: [

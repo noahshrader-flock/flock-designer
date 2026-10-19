@@ -12,6 +12,7 @@ import { modeSection } from './mode';
 import { useMode, useShared } from './shared';
 import type { View } from './vscode';
 import { Collection, CollectionItem } from './ui/Collection';
+import { asks } from './host';
 
 /**
  * The design system's components (6.1): a search and Grid or List, as the projects have, then a section for each group in
@@ -24,8 +25,6 @@ export const ComponentsView = ({
 	view,
 	onView,
 	hasDark,
-	onOpen,
-	onLink,
 }: {
 	components: CatalogComponent[];
 	pictures: ComponentPictures;
@@ -33,21 +32,20 @@ export const ComponentsView = ({
 	onView: (view: View) => void;
 	/** Whether the design system has a dark mode, which is offered only then. */
 	hasDark: boolean;
-	onOpen: (id: string) => void;
-	onLink: (id: string, link: ComponentLink) => void;
 }) => {
 	const [search, setSearch] = useState('');
 	const groups = groupsFound(components, search);
 	const { components: open } = useShared('tabs');
 	const [mode, setMode] = useMode();
 	const item = (c: CatalogComponent) => {
+		const link = (to: ComponentLink) => () => void asks().componentLink(c.id, to);
 		const items: MenuItem[] = [
-			...(c.storybook !== null ? [{ label: 'Open in Storybook', icon: 'book', onSelect: () => onLink(c.id, 'storybook') }] : []),
-			{ label: 'View on GitHub', icon: 'github', onSelect: () => onLink(c.id, 'source') },
+			...(c.storybook !== null ? [{ label: 'Open in Storybook', icon: 'book', onSelect: link('storybook') }] : []),
+			{ label: 'View on GitHub', icon: 'github', onSelect: link('source') },
 		];
 		const shared = {
 			name: c.name,
-			onOpen: () => onOpen(c.id),
+			onOpen: () => void asks().openComponent(c.id),
 			current: open.includes(c.id),
 			actions: <Menu label={`${c.name} actions`} size="small" sections={[{ items }]} />,
 		};

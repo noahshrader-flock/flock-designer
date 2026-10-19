@@ -13,19 +13,16 @@ export interface CatalogRead {
 }
 
 /** Reads it again, asking GitHub for changes first: every page is told what it reads. */
-const sync = (): Promise<void> =>
-	asks()
-		.syncDesignSystem()
-		.then(() => undefined);
+export const syncDesignSystem = (): void => void asks().syncDesignSystem();
 
 /**
  * The design system shown, as the panel shows it: the extension reads it once for every page (`CatalogShare`), at once
- * from what its clone has, then again once GitHub has been asked for changes, again on `sync`, and when another commit of
+ * from what its clone has, then again once GitHub has been asked for changes, again on a sync, and when another commit of
  * it is shown, so the panel and every tab show the same commit.
  */
-export const useCatalog = (): CatalogRead & { sync: () => Promise<void> } => {
+export const useCatalog = (): CatalogRead => {
 	const { system, catalog, error, syncing } = useShared('catalog');
-	return { catalog, id: system?.id ?? null, name: system?.name ?? null, error, syncing, sync };
+	return { catalog, id: system?.id ?? null, name: system?.name ?? null, error, syncing };
 };
 
 /**
@@ -39,7 +36,7 @@ export const useTabCatalog = (): {
 } => {
 	const { catalog, error } = useShared('catalog');
 	const ready = catalog?.state === 'ready' ? catalog : null;
-	const retry = () => void sync();
+	const retry = syncDesignSystem;
 	const note =
 		error !== null
 			? { says: error, onRetry: retry }

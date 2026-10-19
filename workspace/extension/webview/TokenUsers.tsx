@@ -7,6 +7,7 @@ import { useTokenChanges } from './hooks/tokenChanges';
 import { ShortList } from './ui/ShortList';
 import { ValueLine, ValueItem } from './ui/ValueItem';
 import { Message } from './ui/Message';
+import { asks } from './host';
 
 /**
  * The components that draw with a token, in its control: each by name, which opens its tab, with how many of its values the
@@ -14,7 +15,7 @@ import { Message } from './ui/Message';
  * changed, each that moved with the change being tried is marked, from what the change reaches (the same answer as a
  * component's "Moved by the change", not drawn again). A kind of token that is never tagged (a font, a shadow) has none.
  */
-export const TokenUsers = ({ token, components, onOpen }: { token: DesignToken; components: CatalogComponent[]; onOpen: (id: string) => void }) => {
+export const TokenUsers = ({ token, components }: { token: DesignToken; components: CatalogComponent[] }) => {
 	const { edits, isChanged } = useTokenChanges();
 	const answer = useTokenUsers(token.path);
 	const reach = useChangeReach(isChanged(token) ? edits : []);
@@ -23,7 +24,7 @@ export const TokenUsers = ({ token, components, onOpen }: { token: DesignToken; 
 	const moved = reach.state === 'ready' ? new Set(reach.moved.map((m) => m.file)) : null;
 	const row = (u: TokenUser) => (
 		<ValueItem key={u.file} marks={{ 'data-token-user': u.file, 'data-moved': moved?.has(u.file) ? '' : undefined }}>
-			<ValueLine onPress={() => onOpen(u.file)}>
+			<ValueLine onPress={() => void asks().openComponent(u.file)}>
 				<span className="token-name">{names.get(u.file) ?? u.file}</span>
 				<span className="token-uses" title={u.values > 0 ? undefined : 'Its stories draw it in parts its values do not read.'}>
 					{u.values > 0 ? plural(u.values, 'value') : 'inside'}

@@ -1,4 +1,4 @@
-import type { CatalogComponent, ValuePlace } from '../../src/shared/contract';
+import type { CatalogComponent } from '../../src/shared/contract';
 import { useTokenChanges } from './hooks/tokenChanges';
 import { useComponentTokens } from './hooks/useComponentTokens';
 import { useHandOver } from './hooks/useHandOver';
@@ -20,15 +20,11 @@ export const ComponentChanges = ({
 	component,
 	components,
 	commit,
-	onSource,
-	onOpen,
 }: {
 	component: CatalogComponent;
 	components: CatalogComponent[];
 	/** The library's commit shown: values tried on another are not this one's to list. */
 	commit: string;
-	onSource: (place: ValuePlace) => void;
-	onOpen: (id: string) => void;
 }) => {
 	const trying = useTrying(useValueTrials(), component.id, commit);
 	const tried = [...trying.tried.values()];
@@ -49,8 +45,6 @@ export const ComponentChanges = ({
 			rows={answer.state === 'ready' && answer.values.state === 'read' ? answer.values.rows.light : null}
 			trying={trying}
 			tokenName={tokenName}
-			onSource={onSource}
-			onOpen={onOpen}
 			sources={sources}
 			controls={controls}
 			handOver={handOver}

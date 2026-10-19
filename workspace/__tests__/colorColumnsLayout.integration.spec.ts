@@ -46,7 +46,7 @@ const Both = () => {
 			'div',
 			{ className: 'token-body' },
 			createElement(SemanticColors, { tokens: ROLES, onEdit: () => undefined }),
-			createElement(Grouped, { tokens: TONES, onEdit: () => undefined, onSource: () => undefined }),
+			createElement(Grouped, { tokens: TONES, onEdit: () => undefined }),
 		),
 	);
 };

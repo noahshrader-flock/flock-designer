@@ -92,13 +92,11 @@ const Reach = ({ token }: { token: DesignToken }) => {
 export const TokenEditor = ({
 	token,
 	components,
-	onOpen,
 	onClose,
 }: {
 	token: DesignToken;
 	/** The library's components, by name, for the ones that draw with it; a name opens its tab. */
 	components: CatalogComponent[];
-	onOpen: (id: string) => void;
 	onClose: () => void;
 }) => {
 	const { read, byPath, change, isChanged } = useTokenChanges();
@@ -142,7 +140,7 @@ export const TokenEditor = ({
 				)}
 				<Contrast token={now} />
 				<Reach token={now} />
-				<TokenUsers token={now} components={components} onOpen={onOpen} />
+				<TokenUsers token={now} components={components} />
 				{target &&
 					now.kind !== 'dimension' &&
 					(custom ? (

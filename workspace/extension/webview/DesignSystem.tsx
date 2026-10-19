@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { Context } from '../../src/core/services/projects/findContext';
-import type { Catalog, ComponentPictures, DesignToken, TokenEdit } from '../../src/shared/contract';
+import type { Catalog, ComponentPictures, DesignToken } from '../../src/shared/contract';
 import { plural } from '../../src/shared/plural';
 import { isDark } from '../../src/shared/tokens';
 import { HOST } from '../../src/shared/vocabulary';
@@ -10,21 +10,19 @@ import { Changed } from './Changed';
 import { DesignSystemHeader } from './DesignSystemHeader';
 import { ComponentChanges } from './ComponentChanges';
 import { ShowingContext, ShowingNote } from './Showing';
-import { useValueTrials } from './shared';
+import { useTokenEdits, useValueTrials } from './shared';
 import { triedOn } from './valueTrials';
 import { TokenEditor } from './TokenEditor';
-import type { ComponentLink } from '../src/messages';
 import { ComponentsView } from './Components';
 import { TokensView } from './Tokens';
-import type { CatalogRead } from './useCatalog';
+import { syncDesignSystem, useCatalog } from './useCatalog';
 import { Badge } from './ui/Badge';
-import { Button } from './ui/Button';
 import { Dialog } from './ui/Dialog';
 import { Menu } from './ui/Menu';
 import { Toggle } from './ui/Toggle';
 import type { Part, View } from './vscode';
-import { workspace } from './host';
-import { Message } from './ui/Message';
+import { asks, workspace } from './host';
+import { Message, tryAgain } from './ui/Message';
 import { askOnce } from './hooks/ask';
 
 /** The design system's two parts in the panel: its components, which it starts on, and its tokens. */
@@ -40,17 +38,8 @@ export interface ChangesDialog {
 	onClose: () => void;
 }
 
-/** What the Design System tab does when pressed: what the panel asks the core, or the extension. */
-export interface DesignSystemDoes {
-	sync: () => void;
-	locate: () => void;
-	openComponent: (id: string) => void;
-	componentLink: (id: string, link: ComponentLink) => void;
-	openPrimitives: () => void;
-	openVoiceAndTone: () => void;
-	openTokenSource: (source: DesignToken['source']) => void;
-	setEdits: (edits: TokenEdit[]) => void;
-}
+/** Asks the extension to locate another design system. */
+const locate = { label: 'Locate design system…', onPress: () => void asks().locateDesignSystem() };
 
 /** A folder's own name, from its path. */
 const folderName = (path: string): string => path.split(/[\\/]/).filter(Boolean).at(-1) ?? path;
@@ -91,8 +80,6 @@ const Ready = ({
 	onPart,
 	view,
 	onView,
-	edits,
-	does,
 	changesDialog,
 }: {
 	catalog: Extract<Catalog, { state: 'ready' }>;
@@ -104,13 +91,12 @@ const Ready = ({
 	onPart: (part: Part) => void;
 	view: View;
 	onView: (view: View) => void;
-	edits: TokenEdit[];
-	does: DesignSystemDoes;
 	changesDialog: ChangesDialog;
 }) => {
-	const changes = useTokenChangesFor(catalog.tokens.tokens, edits, does.setEdits, catalog.accessibility);
+	const [edits, setEdits] = useTokenEdits();
+	const changes = useTokenChangesFor(catalog.tokens.tokens, edits, setEdits, catalog.accessibility);
 	// Where the change is kept once saved, and proposed (T4, T5): a change DSNR was closed with comes back in the panel.
-	const branch = useChangeBranch('tokens', { shown: id, scope: null, change: edits, setChange: does.setEdits });
+	const branch = useChangeBranch('tokens', { shown: id, scope: null, change: edits, setChange: setEdits });
 	const [problems, setProblems] = useState(false);
 	// The token whose control is open: the one whose row or swatch was pressed.
 	const [editing, setEditing] = useState<DesignToken | null>(null);
@@ -157,13 +143,18 @@ const Ready = ({
 						sections={[
 							{
 								items: [
-									{ label: syncing ? 'Syncing…' : `Sync with ${HOST}`, icon: syncing ? 'sync' : 'refresh', disabled: syncing, onSelect: does.sync },
+									{
+										label: syncing ? 'Syncing…' : `Sync with ${HOST}`,
+										icon: syncing ? 'sync' : 'refresh',
+										disabled: syncing,
+										onSelect: syncDesignSystem,
+									},
 								],
 							},
 							{
 								items: [
-									{ label: 'Primitives', icon: 'symbol-ruler', onSelect: does.openPrimitives },
-									{ label: 'Voice and Tone', icon: 'quote', onSelect: does.openVoiceAndTone },
+									{ label: 'Primitives', icon: 'symbol-ruler', onSelect: () => void asks().openPrimitives() },
+									{ label: 'Voice and Tone', icon: 'quote', onSelect: () => void asks().openVoiceAndTone() },
 								],
 							},
 						]}
@@ -182,28 +173,12 @@ const Ready = ({
 					catalog.components.length === 0 ? (
 						<Message inset>Its Storybook has no stories on {catalog.branch}, so there are no components to list.</Message>
 					) : (
-						<ComponentsView
-							components={catalog.components}
-							pictures={pictures}
-							view={view}
-							onView={onView}
-							hasDark={hasDark}
-							onOpen={does.openComponent}
-							onLink={does.componentLink}
-						/>
+						<ComponentsView components={catalog.components} pictures={pictures} view={view} onView={onView} hasDark={hasDark} />
 					)
 				) : (
-					<TokensView tokens={catalog.tokens} onEdit={setEditing} onSource={does.openTokenSource} />
+					<TokensView tokens={catalog.tokens} onEdit={setEditing} />
 				)}
-				{editing && (
-					<TokenEditor
-						key={editing.path}
-						token={editing}
-						components={catalog.components}
-						onOpen={does.openComponent}
-						onClose={() => setEditing(null)}
-					/>
-				)}
+				{editing && <TokenEditor key={editing.path} token={editing} components={catalog.components} onClose={() => setEditing(null)} />}
 				{problems && <Problems problems={catalog.tokens.problems} onClose={() => setProblems(false)} />}
 				{changesDialog.open && (
 					<Dialog title="Changes" onClose={changesDialog.onClose}>
@@ -215,8 +190,6 @@ const Ready = ({
 								component={c}
 								components={catalog.components}
 								commit={catalog.commit}
-								onSource={({ file, line }) => does.openTokenSource({ file, line })}
-								onOpen={does.openComponent}
 							/>
 						))}
 					</Dialog>
@@ -234,69 +207,59 @@ const Ready = ({
 export const DesignSystem = ({
 	found,
 	unreadable,
-	read,
 	pictures,
 	part,
 	onPart,
 	view,
 	onView,
-	edits,
-	does,
 	changesDialog,
 }: {
 	found: Context['designSystem'];
 	unreadable: string | null;
-	read: CatalogRead;
 	pictures: ComponentPictures;
 	part: Part;
 	onPart: (part: Part) => void;
 	view: View;
 	onView: (view: View) => void;
-	edits: TokenEdit[];
-	does: DesignSystemDoes;
 	changesDialog: ChangesDialog;
 }) => {
+	const read = useCatalog();
 	if (!found)
 		return (
-			<Message size="page" icon="symbol-color" title="No design system found">
+			<Message size="page" icon="symbol-color" title="No design system found" action={locate}>
 				<p>
 					DSNR looks in the folders open in this window for a design system: the one the product names in its <code>.dsnr/workspace.json</code>, or
 					any folder with stories or tokens.
 				</p>
-				<Button onClick={does.locate}>Locate design system…</Button>
 			</Message>
 		);
 	if (unreadable !== null)
 		return (
-			<Message size="page" icon="warning" title="The design system cannot be read">
+			<Message size="page" icon="warning" title="The design system cannot be read" action={locate}>
 				<p>{unreadable}</p>
-				<Button onClick={does.locate}>Locate design system…</Button>
 			</Message>
 		);
 	const { catalog, error } = read;
 	if (catalog === null && error !== null)
 		return (
-			<Message size="page" icon="warning" title="The design system could not be read">
+			<Message size="page" icon="warning" title="The design system could not be read" action={tryAgain(syncDesignSystem)}>
 				<p>{error}</p>
-				<Button onClick={does.sync}>Try again</Button>
 			</Message>
 		);
 	if (catalog === null || catalog.state === 'none') return <Message size="page">Reading the design system…</Message>;
 	if (catalog.state === 'lost')
 		return (
-			<Message size="page" icon="warning" title={`${catalog.name} is no longer on this computer`}>
+			<Message size="page" icon="warning" title={`${catalog.name} is no longer on this computer`} action={locate}>
 				<p>Its copy was at {catalog.root}. Open its folder again, or locate it.</p>
-				<Button onClick={does.locate}>Locate design system…</Button>
 			</Message>
 		);
 	if (catalog.state === 'no-branch')
 		return (
-			<Message size="page" icon="warning" title={`This clone has no ${catalog.branch} branch`}>
+			<Message size="page" icon="warning" title={`This clone has no ${catalog.branch} branch`} action={tryAgain(syncDesignSystem)}>
 				<p>
 					The clone at {catalog.root} has no {catalog.branch} branch from {HOST} to read, and no other branch is read in its place. Check it is a
 					clone of the design system, and that this computer can reach {HOST}.
 				</p>
-				<Button onClick={does.sync}>Try again</Button>
 			</Message>
 		);
 	return (
@@ -310,8 +273,6 @@ export const DesignSystem = ({
 			onPart={onPart}
 			view={view}
 			onView={onView}
-			edits={edits}
-			does={does}
 			changesDialog={changesDialog}
 		/>
 	);

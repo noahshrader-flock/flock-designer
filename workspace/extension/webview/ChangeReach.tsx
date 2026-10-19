@@ -6,16 +6,17 @@ import { ChangeRow, ValueList } from './ui/ValueItem';
 import { LinkButton } from './ui/LinkButton';
 import { Message } from './ui/Message';
 import { Heading } from './ui/Heading';
+import { asks } from './host';
 
 /** What changed of a value, named as the Styles name it, and dark when it is in dark. */
 const changeName = (c: ValueChange): string =>
 	c.mode === 'dark' ? `${valueTitle(c.property, c.variant)} · dark` : valueTitle(c.property, c.variant);
 
 /** One component the change moves: its name, which opens its tab, then what changed of its values, or that it moved inside. */
-export const Moved = ({ reach, name, here, onOpen }: { reach: ComponentReach; name: string; here: boolean; onOpen: () => void }) => (
+export const Moved = ({ reach, name, here }: { reach: ComponentReach; name: string; here: boolean }) => (
 	<div data-moved={reach.file} className="value-group">
 		<Heading size="group">
-			{here ? <span>{name}</span> : <LinkButton onPress={onOpen}>{name}</LinkButton>}
+			{here ? <span>{name}</span> : <LinkButton onPress={() => void asks().openComponent(reach.file)}>{name}</LinkButton>}
 			{here && <span className="value-group-note">This one</span>}
 		</Heading>
 		<ValueList>
@@ -43,13 +44,11 @@ export const ReachView = ({
 	title,
 	component,
 	components,
-	onOpen,
 }: {
 	reach: Exclude<ChangeReachAnswer, { state: 'none' }>;
 	title: string;
 	component: CatalogComponent;
 	components: CatalogComponent[];
-	onOpen: (id: string) => void;
 }) => {
 	const names = new Map(components.map((c) => [c.id, c.name]));
 	return (
@@ -70,7 +69,7 @@ export const ReachView = ({
 						{reach.notDrawn.length > 0 && ` ${plural(reach.notDrawn.length, 'component')} did not draw, so cannot be said.`}
 					</Message>
 					{reach.moved.map((m) => (
-						<Moved key={m.file} reach={m} name={names.get(m.file) ?? m.file} here={m.file === component.id} onOpen={() => onOpen(m.file)} />
+						<Moved key={m.file} reach={m} name={names.get(m.file) ?? m.file} here={m.file === component.id} />
 					))}
 				</>
 			)}
@@ -79,15 +78,7 @@ export const ReachView = ({
 };
 
 /** Moved by the change: what the token change being tried moves (`ReachView`); nothing while no token change is tried. */
-export const ChangeReach = ({
-	edits,
-	...shown
-}: {
-	edits: TokenEdit[];
-	component: CatalogComponent;
-	components: CatalogComponent[];
-	onOpen: (id: string) => void;
-}) => {
+export const ChangeReach = ({ edits, ...shown }: { edits: TokenEdit[]; component: CatalogComponent; components: CatalogComponent[] }) => {
 	const reach = useChangeReach(edits);
 	return reach.state === 'none' ? null : <ReachView reach={reach} title="Moved by the change" {...shown} />;
 };
