@@ -16,13 +16,14 @@ import { TokenEditor } from './TokenEditor';
 import { ComponentsView } from './Components';
 import { TokensView } from './Tokens';
 import { syncDesignSystem, useCatalog } from './useCatalog';
-import { Badge } from './ui/Badge';
-import { Dialog } from './ui/Dialog';
-import { Menu } from './ui/Menu';
-import { Toggle } from './ui/Toggle';
-import type { Part, View } from './vscode';
+import { Badge } from '../../src/ui/Badge';
+import { Dialog } from '../../src/ui/Dialog';
+import { Menu } from '../../src/ui/Menu';
+import { Toggle } from '../../src/ui/Toggle';
+import type { View } from '../../src/ui/Collection';
+import type { Part } from './vscode';
 import { asks, workspace } from './host';
-import { Message, tryAgain } from './ui/Message';
+import { Message, tryAgain } from '../../src/ui/Message';
 import { askOnce } from './hooks/ask';
 
 /** The design system's two parts in the panel: its components, which it starts on, and its tokens. */

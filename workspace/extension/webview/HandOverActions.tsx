@@ -4,10 +4,10 @@ import type { HandOverControls } from './hooks/useHandOver';
 import { plural } from '../../src/shared/plural';
 import { LARGE, flagged } from '../../src/shared/processChanges';
 import { CHANGE_REQUEST } from '../../src/shared/vocabulary';
-import { Button } from './ui/Button';
+import { Button } from '../../src/ui/Button';
 import { useShowing } from './Showing';
-import { Icon } from './ui/Icon';
-import { Message } from './ui/Message';
+import { Icon } from '../../src/ui/Icon';
+import { Message } from '../../src/ui/Message';
 
 /** What a hand-over's branch is, as DSNR read it from git: not made yet, made with nothing committed, made from the wrong base, or its size. */
 const ReviewLine = ({ review }: { review: BranchReview }) => {

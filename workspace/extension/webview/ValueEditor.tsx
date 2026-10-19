@@ -1,10 +1,10 @@
 import { COLOR_VALUES, type ValueCell, type ValueProperty } from '../../src/shared/contract';
 import { NONE_STARTS_AS, hexOf } from '../../src/shared/tokens';
 import { allParts, partsIn, shortParts } from '../../src/shared/valueParts';
-import { Popover } from './ui/Popover';
+import { Popover } from '../../src/ui/Popover';
 import { ColorField, LengthField } from './ValueFields';
 import { VALUE_NAMES, valueTitle } from '../../src/shared/valueNames';
-import { LinkButton } from './ui/LinkButton';
+import { LinkButton } from '../../src/ui/LinkButton';
 
 /**
  * One slider of a value: what it is called, which part of the value it changes (CSS writes a value's parts in an order of its

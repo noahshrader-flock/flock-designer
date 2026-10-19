@@ -3,6 +3,7 @@ import { join, relative } from 'node:path';
 import { contrastRatio } from '../src/shared/tokens';
 import { describe, expect, it } from 'vitest';
 import { INK } from '../src/shared/pageInk';
+import { panelCss } from './panelStyles';
 
 /**
  * DSNR is drawn in VS Code's own design language (ELECTRON_MIGRATION_PLAN, §1.4, decision 6): none of the app's shadcn
@@ -10,14 +11,16 @@ import { INK } from '../src/shared/pageInk';
  * contrast included.
  */
 
-const root = join(__dirname, '../extension');
+// The extension's sources and the kit's, which its pages are drawn with.
+const root = join(__dirname, '..');
 const sources = (dir: string): string[] =>
 	readdirSync(dir).flatMap((name) => {
 		const path = join(dir, name);
 		if (name === 'dist' || name === 'node_modules' || name.startsWith('.')) return [];
 		return statSync(path).isDirectory() ? sources(path) : /\.(tsx?|css|mjs)$/.test(name) ? [path] : [];
 	});
-const files = () => sources(root).map((path) => ({ path: relative(root, path), text: readFileSync(path, 'utf8') }));
+const files = () =>
+	[join(root, 'extension'), join(root, 'src/ui')].flatMap(sources).map((path) => ({ path: relative(root, path), text: readFileSync(path, 'utf8') }));
 
 describe('the extension’s sources', () => {
 	it('are there to check', () => {
@@ -35,9 +38,7 @@ describe('the extension’s sources', () => {
 	});
 
 	it('use amber only to say something needs a look: a change, a tried value, a mark is the brand, and a warning’s selectors are the only ones that take the warning colour', () => {
-		const css = files()
-			.find((f) => f.path.endsWith('styles.css'))!
-			.text.replace(/\/\*[\s\S]*?\*\//g, '');
+		const css = panelCss().replace(/\/\*[\s\S]*?\*\//g, '');
 		// The theme's "modified" colour is amber in most themes: it is how VS Code says a file changed, never how this does.
 		expect(css).not.toMatch(/gitDecoration/);
 		const rules = css.split('}').map((b) => b.split('{').map((x) => x.trim()));
@@ -58,24 +59,22 @@ describe('the extension’s sources', () => {
 					.filter((line) => colour.test(line))
 					.map((line) => `${path.split('/').at(-1)}: ${line.trim()}`),
 			);
-		expect(said).toEqual(['styles.css: --dsnr-brand: #7c3aed;', 'styles.css: --dsnr-on-brand: #ffffff;']);
+		expect(said).toEqual(['kit.css: --dsnr-brand: #7c3aed;', 'kit.css: --dsnr-on-brand: #ffffff;']);
 		// The words on the brand are readable: WCAG AA's 4.5:1 for text, on the fill and on its darker hover.
-		const css0 = files().find((f) => f.path.endsWith('styles.css'))!.text;
+		const css0 = panelCss();
 		const brand = /--dsnr-brand:\s*(#[0-9a-f]{6})/i.exec(css0)![1]!;
 		const hover = /--dsnr-brand-hover:\s*color-mix\(in srgb,\s*var\(--dsnr-brand\)\s*(\d+)%,\s*black\)/.exec(css0);
 		expect(contrastRatio('#ffffff', brand)).toBeGreaterThanOrEqual(4.5);
 		// Hover is the brand mixed toward black, so it is only darker, and white on it only more readable.
 		expect(hover).not.toBeNull();
-		const css = files().find((f) => f.path.endsWith('styles.css'))!.text;
+		const css = panelCss();
 		const highContrast = css.split('}').find((b) => b.includes('body.vscode-high-contrast')) ?? '';
 		expect(highContrast).toMatch(/--dsnr-brand:\s*var\(--vscode-button-background\)/);
 		expect(highContrast).toMatch(/--dsnr-on-brand:\s*var\(--vscode-button-foreground\)/);
 	});
 
 	it('keep a card’s ellipsis button opaque on hover: it is over a picture, and the toolbar’s hover colour is see-through', () => {
-		const css = files()
-			.find((f) => f.path.endsWith('styles.css'))!
-			.text.replace(/\/\*[\s\S]*?\*\//g, '');
+		const css = panelCss().replace(/\/\*[\s\S]*?\*\//g, '');
 		const rule = (selector: string) => css.split('}').find((block) => block.trim().startsWith(selector)) ?? '';
 		// The tint is a layer over the widget's own colour, which is solid; a plain tint would let the picture through.
 		expect(rule('.card-item .menu-button:hover')).toMatch(
@@ -84,9 +83,7 @@ describe('the extension’s sources', () => {
 	});
 
 	it('round a thumbnail by its own radius: a row’s, a card’s by a larger one, neither the smallest', () => {
-		const css = files()
-			.find((f) => f.path.endsWith('styles.css'))!
-			.text.replace(/\/\*[\s\S]*?\*\//g, '');
+		const css = panelCss().replace(/\/\*[\s\S]*?\*\//g, '');
 		const radius = (selector: string) => /border-radius:\s*([^;]+);/.exec(css.split('}').find((b) => b.trim().startsWith(selector)) ?? '')?.[1];
 		expect(radius('.picture')).toBe('var(--dsnr-radius-thumb)');
 		expect(radius('.card-picture')).toBe('var(--dsnr-radius-thumb-card)');
@@ -96,9 +93,7 @@ describe('the extension’s sources', () => {
 	});
 
 	it('wash a pressed thumbnail with the brand, lightly, not the list’s grey: shown on hover and focus, and over the picture only', () => {
-		const css = files()
-			.find((f) => f.path.endsWith('styles.css'))!
-			.text.replace(/\/\*[\s\S]*?\*\//g, '');
+		const css = panelCss().replace(/\/\*[\s\S]*?\*\//g, '');
 		const rule = (selector: string) => css.split('}').find((block) => block.trim().startsWith(selector)) ?? '';
 		const wash = rule('.thumb-wash');
 		// The brand at 25%, out of the way until asked for, and nothing else: no icon, no text.
@@ -114,9 +109,7 @@ describe('the extension’s sources', () => {
 	});
 
 	it('stretch a dialog’s buttons across its width, one or several alike', () => {
-		const css = files()
-			.find((f) => f.path.endsWith('styles.css'))!
-			.text.replace(/\/\*[\s\S]*?\*\//g, '');
+		const css = panelCss().replace(/\/\*[\s\S]*?\*\//g, '');
 		const rule = (selector: string) => css.split('}').find((b) => b.trim().startsWith(selector)) ?? '';
 		expect(rule('.dialog-buttons {')).toMatch(/display:\s*flex/);
 		expect(rule('.dialog-buttons {')).not.toMatch(/justify-content/);
@@ -126,9 +119,7 @@ describe('the extension’s sources', () => {
 	});
 
 	it('draw a color as a circle, wherever it is drawn: one rule, and the large one only sets its size', () => {
-		const css = files()
-			.find((f) => f.path.endsWith('styles.css'))!
-			.text.replace(/\/\*[\s\S]*?\*\//g, '');
+		const css = panelCss().replace(/\/\*[\s\S]*?\*\//g, '');
 		const rule = (selector: string) => css.split('}').find((b) => b.trim().startsWith(selector)) ?? '';
 		expect(rule('.swatch {')).toMatch(/border-radius:\s*50%/);
 		expect(rule('.swatch-large {')).not.toMatch(/border-radius/);
@@ -141,9 +132,7 @@ describe('the extension’s sources', () => {
 	});
 
 	it('space everything by the one scale: no padding, margin or gap is a number of pixels of its own', () => {
-		const css = files()
-			.find((f) => f.path.endsWith('styles.css'))!
-			.text.replace(/\/\*[\s\S]*?\*\//g, '');
+		const css = panelCss().replace(/\/\*[\s\S]*?\*\//g, '');
 		// Outside the variables, where the scale and the sizes made from it are written.
 		const rules = css.slice(css.indexOf('}', css.indexOf(':root')) + 1);
 		const spacing = [...rules.matchAll(/^\s*((?:padding|margin|gap|row-gap|column-gap)[a-z-]*):\s*([^;]+);/gm)];
@@ -152,9 +141,7 @@ describe('the extension’s sources', () => {
 	});
 
 	it('draw the keyboard’s focus as one ring, from one rule, with one offset', () => {
-		const css = files()
-			.find((f) => f.path.endsWith('styles.css'))!
-			.text.replace(/\/\*[\s\S]*?\*\//g, '');
+		const css = panelCss().replace(/\/\*[\s\S]*?\*\//g, '');
 		const rings = css.split('}').filter((b) => /outline:\s*var\(--dsnr-focus\)/.test(b));
 		// Every control's, and a field's, which is drawn however the focus came to it.
 		expect(rings.map((b) => b.split('{')[0]!.trim())).toEqual([':focus-visible', '.input:focus']);
@@ -163,9 +150,7 @@ describe('the extension’s sources', () => {
 	});
 
 	it('draw every outline and line in the panel in one border colour, the search box’s, from one name', () => {
-		const css = files()
-			.find((f) => f.path.endsWith('styles.css'))!
-			.text.replace(/\/\*[\s\S]*?\*\//g, '');
+		const css = panelCss().replace(/\/\*[\s\S]*?\*\//g, '');
 		// The theme's input border, then its widget border, then the contrast border: written once.
 		expect(css).toMatch(/--dsnr-border:\s*var\(--vscode-input-border,\s*var\(--vscode-widget-border,\s*var\(--dsnr-contrast-border\)\)\);/);
 		const rule = (selector: string) => css.split('}').find((b) => b.trim().startsWith(selector)) ?? '';
@@ -192,9 +177,7 @@ describe('the extension’s sources', () => {
 	});
 
 	it('inset the design system’s tokens from the panel’s right edge as from its left, as the cards are', () => {
-		const css = files()
-			.find((f) => f.path.endsWith('styles.css'))!
-			.text.replace(/\/\*[\s\S]*?\*\//g, '');
+		const css = panelCss().replace(/\/\*[\s\S]*?\*\//g, '');
 		const body = css.split('}').find((b) => b.trim().startsWith('.token-body')) ?? '';
 		expect(body).toMatch(/padding:\s*0 var\(--dsnr-space-5\) var\(--dsnr-space-2\) var\(--dsnr-indent\);/);
 		// 12px is the grid's own inset on the right.
@@ -204,9 +187,7 @@ describe('the extension’s sources', () => {
 	});
 
 	it('lay a dialog’s title and its close X in one row, the X at the far right', () => {
-		const css = files()
-			.find((f) => f.path.endsWith('styles.css'))!
-			.text.replace(/\/\*[\s\S]*?\*\//g, '');
+		const css = panelCss().replace(/\/\*[\s\S]*?\*\//g, '');
 		const head = css.split('}').find((b) => b.trim().startsWith('.dialog-head')) ?? '';
 		expect(head).toMatch(/display:\s*flex/);
 		expect(head).toMatch(/justify-content:\s*space-between/);
@@ -214,9 +195,7 @@ describe('the extension’s sources', () => {
 	});
 
 	it('size a picture to the box it is in, border and all, so what is laid over it covers it exactly', () => {
-		const css = files()
-			.find((f) => f.path.endsWith('styles.css'))!
-			.text.replace(/\/\*[\s\S]*?\*\//g, '');
+		const css = panelCss().replace(/\/\*[\s\S]*?\*\//g, '');
 		const rule = (selector: string) => css.split('}').find((block) => block.trim().startsWith(selector)) ?? '';
 		// `width: 100%` with a border is two pixels wider than its box otherwise: a sliver the wash does not reach.
 		expect(rule('.card-picture')).toMatch(/box-sizing:\s*border-box/);
@@ -224,9 +203,7 @@ describe('the extension’s sources', () => {
 	});
 
 	it('show a view’s own menu button always, after the rule that hides a row’s until it is hovered, so it wins', () => {
-		const css = files()
-			.find((f) => f.path.endsWith('styles.css'))!
-			.text.replace(/\/\*[\s\S]*?\*\//g, '');
+		const css = panelCss().replace(/\/\*[\s\S]*?\*\//g, '');
 		const hidden = css.search(/\.menu-button\s*\{\s*opacity:\s*0/);
 		const shown = css.search(/\.menu-button-shown\s*\{\s*opacity:\s*1/);
 		expect(hidden).toBeGreaterThan(-1);
@@ -234,16 +211,14 @@ describe('the extension’s sources', () => {
 	});
 
 	it('draw the pins on a prototype’s page in the brand’s purple: the page cannot read the theme, so its palette says it again, and agrees', () => {
-		const css = files().find((f) => f.path.endsWith('styles.css'))!.text;
+		const css = panelCss();
 		const brand = /--dsnr-brand:\s*(#[0-9a-f]{6})/i.exec(css)![1]!.toLowerCase();
 		// Its wash is made from it, so agreeing here is agreeing for both.
 		expect(INK.pin.toLowerCase()).toBe(brand);
 	});
 
 	it('pad the text under a card’s picture at its sides and bottom from one name, and sit it under the picture by the card’s own gap, for every card (projects and components alike)', () => {
-		const css = files()
-			.find((f) => f.path.endsWith('styles.css'))!
-			.text.replace(/\/\*[\s\S]*?\*\//g, '');
+		const css = panelCss().replace(/\/\*[\s\S]*?\*\//g, '');
 		expect(css).toMatch(/--dsnr-card-text-pad:\s*var\(--dsnr-space-4\)/);
 		const rule = (selector: string) => css.split('}').find((b) => b.trim().startsWith(selector)) ?? '';
 		// No padding above: the name sits close under its picture, by the card's gap alone.
@@ -252,9 +227,7 @@ describe('the extension’s sources', () => {
 	});
 
 	it('divide the design system’s sets from one another, in the semantic colors and in the palette alike, with one line that reads in any theme', () => {
-		const css = files()
-			.find((f) => f.path.endsWith('styles.css'))!
-			.text.replace(/\/\*[\s\S]*?\*\//g, '');
+		const css = panelCss().replace(/\/\*[\s\S]*?\*\//g, '');
 		const rule = css.split('}').find((b) => /\.theme-set \+ \.theme-set/.test(b)) ?? '';
 		// One rule for both, so a set is never divided in one view and not in the other.
 		expect(rule).toMatch(/\.token-set \+ \.token-set/);
@@ -263,9 +236,7 @@ describe('the extension’s sources', () => {
 	});
 
 	it('draw every count bubble one size, from one name: a circle for a digit, wherever it sits (a row, a card, a header)', () => {
-		const css = files()
-			.find((f) => f.path.endsWith('styles.css'))!
-			.text.replace(/\/\*[\s\S]*?\*\//g, '');
+		const css = panelCss().replace(/\/\*[\s\S]*?\*\//g, '');
 		expect(css).toMatch(/--dsnr-badge:\s*17px/);
 		const badge = css.split('}').find((b) => b.trim().startsWith('.badge {')) ?? '';
 		// A box of its own wherever it is: a plain inline span ignores a height and a minimum width, which is how a card's
@@ -287,9 +258,7 @@ describe('the extension’s sources', () => {
 	});
 
 	it('stretch a dialog’s buttons across its width, one or several alike', () => {
-		const css = files()
-			.find((f) => f.path.endsWith('styles.css'))!
-			.text.replace(/\/\*[\s\S]*?\*\//g, '');
+		const css = panelCss().replace(/\/\*[\s\S]*?\*\//g, '');
 		const rule = (selector: string) => css.split('}').find((b) => b.trim().startsWith(selector)) ?? '';
 		expect(rule('.dialog-buttons {')).toMatch(/display:\s*flex/);
 		expect(rule('.dialog-buttons {')).not.toMatch(/justify-content/);
@@ -299,9 +268,7 @@ describe('the extension’s sources', () => {
 	});
 
 	it('lay a dialog’s title and its close X in one row, the X at the far right', () => {
-		const css = files()
-			.find((f) => f.path.endsWith('styles.css'))!
-			.text.replace(/\/\*[\s\S]*?\*\//g, '');
+		const css = panelCss().replace(/\/\*[\s\S]*?\*\//g, '');
 		const head = css.split('}').find((b) => b.trim().startsWith('.dialog-head')) ?? '';
 		expect(head).toMatch(/display:\s*flex/);
 		expect(head).toMatch(/justify-content:\s*space-between/);
@@ -309,9 +276,7 @@ describe('the extension’s sources', () => {
 	});
 
 	it('hold a component page’s header fixed with its stories and its analysis scrolling apart when there is room for both, and the header sticky when there is not', () => {
-		const css = files()
-			.find((f) => f.path.endsWith('styles.css'))!
-			.text.replace(/\/\*[\s\S]*?\*\//g, '');
+		const css = panelCss().replace(/\/\*[\s\S]*?\*\//g, '');
 		const wide = /@media \(min-width: 900px\) \{([\s\S]*?)\n\}/.exec(css.slice(css.indexOf('.tab-split')))?.[1] ?? '';
 		const within = (selector: string) => new RegExp(`${selector.replace('.', '\\.')} \\{([^}]*)\\}`).exec(wide)?.[1] ?? '';
 		// Room for two columns: the page is the window's height, and each pane scrolls inside it.
@@ -338,18 +303,14 @@ describe('the extension’s sources', () => {
 	});
 
 	it('draw a row’s thumbnail 56px wide, in the shape of a card’s picture', () => {
-		const css = files()
-			.find((f) => f.path.endsWith('styles.css'))!
-			.text.replace(/\/\*[\s\S]*?\*\//g, '');
+		const css = panelCss().replace(/\/\*[\s\S]*?\*\//g, '');
 		const picture = css.split('}').find((b) => b.trim().startsWith('.picture {')) ?? '';
 		expect(picture).toMatch(/width:\s*56px;/);
 		expect(picture).toMatch(/aspect-ratio:\s*16 \/ 9;/);
 	});
 
 	it('space a grid’s cards by one named gap, across and down alike', () => {
-		const css = files()
-			.find((f) => f.path.endsWith('styles.css'))!
-			.text.replace(/\/\*[\s\S]*?\*\//g, '');
+		const css = panelCss().replace(/\/\*[\s\S]*?\*\//g, '');
 		expect(css).toMatch(/--dsnr-grid-gap:\s*var\(--dsnr-space-4\)/);
 		const grid = css.split('}').find((b) => b.trim().startsWith('.grid {')) ?? '';
 		// One value for both directions: `gap` alone, never a row and a column of their own.
@@ -358,9 +319,7 @@ describe('the extension’s sources', () => {
 	});
 
 	it('lay a design system’s header out in one line: its name, its branch’s icon directly after it, and its buttons at the right, a gap apart that is one named gap', () => {
-		const css = files()
-			.find((f) => f.path.endsWith('styles.css'))!
-			.text.replace(/\/\*[\s\S]*?\*\//g, '');
+		const css = panelCss().replace(/\/\*[\s\S]*?\*\//g, '');
 		const rule = (selector: string) => css.split('}').find((b) => b.trim().startsWith(selector)) ?? '';
 		expect(rule('.ds-header')).toMatch(/display:\s*grid/);
 		// The name and its icon are one flex line, the name giving way (an ellipsis) and the icon not.
@@ -377,9 +336,7 @@ describe('the extension’s sources', () => {
 	});
 
 	it('layer what is above what by names: the bars kept at the top above a row’s actions a list scrolls under, a dialog above them, a tooltip above all', () => {
-		const css = files()
-			.find((f) => f.path.endsWith('styles.css'))!
-			.text.replace(/\/\*[\s\S]*?\*\//g, '');
+		const css = panelCss().replace(/\/\*[\s\S]*?\*\//g, '');
 		const layer = (name: string) => Number(new RegExp(`--dsnr-layer-${name}:\\s*(\\d+)`).exec(css)?.[1]);
 		expect(layer('actions')).toBeLessThan(layer('top'));
 		expect(layer('top')).toBeLessThan(layer('dialog'));
@@ -401,9 +358,7 @@ describe('the extension’s sources', () => {
 	});
 
 	it('list an accessibility issue’s elements as a plain list: one bullet and one size, the selector in the size of the words round it', () => {
-		const css = files()
-			.find((f) => f.path.endsWith('styles.css'))!
-			.text.replace(/\/\*[\s\S]*?\*\//g, '');
+		const css = panelCss().replace(/\/\*[\s\S]*?\*\//g, '');
 		const rule = (selector: string) => css.split('}').find((b) => b.trim().startsWith(selector)) ?? '';
 		// The browser's secondary bullet for a list inside a list is the circle: this one is the disc, as every list is.
 		expect(rule('.issue-elements {')).toMatch(/list-style:\s*disc/);
@@ -411,9 +366,7 @@ describe('the extension’s sources', () => {
 	});
 
 	it('draw no outline round a popover or a dialog that takes the focus when it opens, from one rule', () => {
-		const css = files()
-			.find((f) => f.path.endsWith('styles.css'))!
-			.text.replace(/\/\*[\s\S]*?\*\//g, '');
+		const css = panelCss().replace(/\/\*[\s\S]*?\*\//g, '');
 		const rule = css.split('}').find((b) => b.includes('.popover:focus')) ?? '';
 		expect(rule).toContain('.dialog:focus');
 		expect(rule).toMatch(/outline:\s*none/);
@@ -429,13 +382,11 @@ describe('the extension’s sources', () => {
 		expect(main).toMatch(/<TooltipHost \/>/);
 		// The one wait is named once; nothing else in the pages sets a delay for a tooltip.
 		const delays = files().filter(({ path, text }) => /\.tsx?$/.test(path) && /TOOLTIP_DELAY_MS|delayDuration/.test(text));
-		expect(delays.map((f) => f.path)).toEqual(['webview/ui/Tooltip.tsx']);
+		expect(delays.map((f) => f.path)).toEqual(['src/ui/Tooltip.tsx']);
 	});
 
 	it('keep the design system’s Components and Tokens toggle at the top too, with the search bar stacked under it', () => {
-		const css = files()
-			.find((f) => f.path.endsWith('styles.css'))!
-			.text.replace(/\/\*[\s\S]*?\*\//g, '');
+		const css = panelCss().replace(/\/\*[\s\S]*?\*\//g, '');
 		const rule = (selector: string) => css.split('}').find((b) => b.trim().startsWith(selector)) ?? '';
 		// The design system's own row is kept under the top bar, so its name is always shown, and the toggle under that.
 		expect(rule('.ds-header')).toMatch(/top:\s*var\(--dsnr-top-height\)/);
@@ -452,9 +403,7 @@ describe('the extension’s sources', () => {
 	});
 
 	it('size every control from two tokens: the default (the search, the toggle, a button, an icon button) and the small (a row’s, a header’s)', () => {
-		const css = files()
-			.find((f) => f.path.endsWith('styles.css'))!
-			.text.replace(/\/\*[\s\S]*?\*\//g, '');
+		const css = panelCss().replace(/\/\*[\s\S]*?\*\//g, '');
 		const token = (name: string) => new RegExp(`--dsnr-${name}:\\s*(\\d+)px`).exec(css)?.[1];
 		expect(token('control')).toBe('32');
 		expect(token('control-small')).toBe('22');
@@ -468,9 +417,7 @@ describe('the extension’s sources', () => {
 	});
 
 	it('hide a row’s badge only when the ellipsis button takes its place, not whenever the row has focus', () => {
-		const css = files()
-			.find((f) => f.path.endsWith('styles.css'))!
-			.text.replace(/\/\*[\s\S]*?\*\//g, '');
+		const css = panelCss().replace(/\/\*[\s\S]*?\*\//g, '');
 		const selectors = css
 			.split('}')
 			.filter((b) => /visibility:\s*hidden/.test(b) && b.includes('.badge'))

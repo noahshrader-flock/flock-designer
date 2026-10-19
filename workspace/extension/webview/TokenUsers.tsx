@@ -4,9 +4,9 @@ import { isEditable } from '../../src/shared/primitives';
 import { useChangeReach } from './hooks/useChangeReach';
 import { useTokenUsers } from './hooks/useComponentTokens';
 import { useTokenChanges } from './hooks/tokenChanges';
-import { ShortList } from './ui/ShortList';
-import { ValueLine, ValueItem } from './ui/ValueItem';
-import { Message } from './ui/Message';
+import { ShortList } from '../../src/ui/ShortList';
+import { ValueLine, ValueItem } from '../../src/ui/ValueItem';
+import { Message } from '../../src/ui/Message';
 import { asks } from './host';
 
 /**

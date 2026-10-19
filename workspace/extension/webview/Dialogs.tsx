@@ -6,10 +6,10 @@ import { needsProduct } from '../../src/shared/projectScope';
 import { type CodebaseAction, type PanelDialog, reviewsOf } from '../src/messages';
 import { asks } from './host';
 import { AccountDialog, SyncDialog } from './AccountDialogs';
-import { Dialog } from './ui/Dialog';
+import { Dialog } from '../../src/ui/Dialog';
 import { BuildInCodebaseDialog, HandoffDialog } from './CodebaseDialogs';
 import { AssignFolderDialog, NewPrototypeDialog } from './ProjectDialogs';
-import { Message } from './ui/Message';
+import { Message } from '../../src/ui/Message';
 
 /**
  * The dialog open over the panel, if one is, drawn for the project it is about as the list has it: none for a project

@@ -13,11 +13,11 @@ import type { TokenActions } from './Tokens';
 import { ShowingNote } from './Showing';
 import { useTabCatalog } from './useCatalog';
 import { useTrying } from './useTrying';
-import { Button } from './ui/Button';
+import { Button } from '../../src/ui/Button';
 import { asks } from './host';
 import { useMode, useTokenEdits, useValueTrials } from './shared';
-import { Message, tryAgain } from './ui/Message';
-import { Heading } from './ui/Heading';
+import { Message, tryAgain } from '../../src/ui/Message';
+import { Heading } from '../../src/ui/Heading';
 
 /** The target while the design system is not read yet: nothing is judged at it then. */
 const NOT_READ = undeclared('the design system is not read yet');

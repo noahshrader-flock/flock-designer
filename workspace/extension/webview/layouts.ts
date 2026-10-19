@@ -1,5 +1,5 @@
-import type { MenuSection } from './ui/Menu';
-import type { View } from './vscode';
+import type { MenuSection } from '../../src/ui/Menu';
+import type { View } from '../../src/ui/Collection';
 
 /** The two ways to see a list of things with pictures them: a grid of cards, which it starts in, or rows. */
 const LAYOUTS = [

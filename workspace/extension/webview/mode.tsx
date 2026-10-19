@@ -1,6 +1,6 @@
 import { THEMES, type Theme, themeLabel } from '../../src/shared/prototypeTheme';
-import type { MenuSection } from './ui/Menu';
-import { ModeIcon } from './ui/ModeIcon';
+import type { MenuSection } from '../../src/ui/Menu';
+import { ModeIcon } from '../../src/ui/ModeIcon';
 
 /**
  * Light and Dark as a section of the components' options (`ViewOptions`): Color mode, the sun or the moon at the start of each

@@ -3,11 +3,11 @@ import { useWorkspace } from './hooks/useWorkspace';
 import type { BuildInCodebase } from '../../src/shared/contract';
 import type { Project } from '../../src/shared/domain/projects';
 import { buildStart, buildSteps, noSetupNote, startBranch } from '../../src/shared/work';
-import { Button } from './ui/Button';
-import { Dialog, DialogButtons } from './ui/Dialog';
-import { Field, Select } from './ui/Field';
+import { Button } from '../../src/ui/Button';
+import { Dialog, DialogButtons } from '../../src/ui/Dialog';
+import { Field, Select } from '../../src/ui/Field';
 import { workspace } from './host';
-import { Message } from './ui/Message';
+import { Message } from '../../src/ui/Message';
 
 /** Said when the agent is at other work: it does one thing at a time. */
 const BUSY = 'The agent is busy with other work. It does one thing at a time: open this again when that work has finished.';

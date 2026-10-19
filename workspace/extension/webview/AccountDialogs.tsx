@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import type { PublishStatus } from '../../src/shared/contract';
 import { syncWords } from '../src/publishing';
-import { Button } from './ui/Button';
-import { Dialog, DialogButtons } from './ui/Dialog';
+import { Button } from '../../src/ui/Button';
+import { Dialog, DialogButtons } from '../../src/ui/Dialog';
 import { workspace } from './host';
-import { Message } from './ui/Message';
+import { Message } from '../../src/ui/Message';
 import { askOnce } from './hooks/ask';
 
 /**

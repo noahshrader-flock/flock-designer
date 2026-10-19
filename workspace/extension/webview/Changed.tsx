@@ -8,13 +8,13 @@ import type { TokenEdit } from '../../src/shared/contract';
 import { type HandOverControls, useHandOver } from './hooks/useHandOver';
 import { HandOverActions } from './HandOverActions';
 import { useShowing } from './Showing';
-import { Button } from './ui/Button';
-import { Icon } from './ui/Icon';
-import { ChangeRow, ValueList, ValueItem } from './ui/ValueItem';
-import { Swatch } from './ui/Swatch';
-import { LinkButton } from './ui/LinkButton';
-import { Message } from './ui/Message';
-import { Heading } from './ui/Heading';
+import { Button } from '../../src/ui/Button';
+import { Icon } from '../../src/ui/Icon';
+import { ChangeRow, ValueList, ValueItem } from '../../src/ui/ValueItem';
+import { Swatch } from '../../src/ui/Swatch';
+import { LinkButton } from '../../src/ui/LinkButton';
+import { Message } from '../../src/ui/Message';
+import { Heading } from '../../src/ui/Heading';
 
 /**
  * What can be done with a change once it is tried (6.2, the app's T4 and T5; a component's values, Phase 4): its branch and

@@ -2,16 +2,16 @@ import { useState } from 'react';
 import { groupsFound } from '../../src/shared/catalog';
 import type { CatalogComponent, ComponentPictures } from '../../src/shared/contract';
 import type { ComponentLink } from '../src/messages';
-import { type MenuItem, Menu } from './ui/Menu';
-import { SearchBox } from './ui/SearchBox';
-import { Section } from './ui/Section';
-import { ViewOptions } from './ui/ViewOptions';
-import { NoMatches } from './ui/NoMatches';
+import { type MenuItem, Menu } from '../../src/ui/Menu';
+import { SearchBox } from '../../src/ui/SearchBox';
+import { Section } from '../../src/ui/Section';
+import { ViewOptions } from '../../src/ui/ViewOptions';
+import { NoMatches } from '../../src/ui/NoMatches';
 import { layoutSection } from './layouts';
 import { modeSection } from './mode';
 import { useMode, useShared } from './shared';
-import type { View } from './vscode';
-import { Collection, CollectionItem } from './ui/Collection';
+import type { View } from '../../src/ui/Collection';
+import { Collection, CollectionItem } from '../../src/ui/Collection';
 import { asks } from './host';
 
 /**

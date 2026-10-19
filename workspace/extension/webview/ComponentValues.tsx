@@ -20,16 +20,16 @@ import { followsOf, saidValue, valueTitle } from '../../src/shared/valueNames';
 import { sharedWith } from './hooks/useComponentTokens';
 import { useMode } from './shared';
 import { ValueEditor } from './ValueEditor';
-import { Disclosure } from './ui/Section';
-import { Select } from './ui/Field';
-import { AsidePart } from './ui/AsidePart';
-import { ColorDot } from './ui/ColorDot';
-import { InfoTip } from './ui/InfoTip';
-import { Switch } from './ui/Switch';
-import { useDismiss } from './ui/useDismiss';
-import { ValueItem, ValueList } from './ui/ValueItem';
-import { Message } from './ui/Message';
-import { Heading } from './ui/Heading';
+import { Disclosure } from '../../src/ui/Section';
+import { Select } from '../../src/ui/Field';
+import { AsidePart } from '../../src/ui/AsidePart';
+import { ColorDot } from '../../src/ui/ColorDot';
+import { InfoTip } from '../../src/ui/InfoTip';
+import { Switch } from '../../src/ui/Switch';
+import { useDismiss } from '../../src/ui/useDismiss';
+import { ValueItem, ValueList } from '../../src/ui/ValueItem';
+import { Message } from '../../src/ui/Message';
+import { Heading } from '../../src/ui/Heading';
 
 type Ready = Extract<ComponentTokens, { state: 'ready' }>;
 

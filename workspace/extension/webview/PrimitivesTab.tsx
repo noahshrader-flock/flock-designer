@@ -9,10 +9,10 @@ import { ShowingNote } from './Showing';
 import { useTabCatalog } from './useCatalog';
 import { useTokenEdits } from './shared';
 import { TryingNote } from './Changed';
-import { Swatch } from './ui/Swatch';
+import { Swatch } from '../../src/ui/Swatch';
 import { type SpecimenPreview, useSpecimenPreview } from './hooks/useSpecimenPreview';
-import { Message, tryAgain } from './ui/Message';
-import { Heading } from './ui/Heading';
+import { Message, tryAgain } from '../../src/ui/Message';
+import { Heading } from '../../src/ui/Heading';
 
 /** The design system's preview build, which a type specimen is drawn in, so its fonts are its own; asked for once. */
 

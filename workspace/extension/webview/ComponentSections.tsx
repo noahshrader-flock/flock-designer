@@ -12,14 +12,14 @@ import { ChangeReach } from './ChangeReach';
 import { ComponentValues, type Trying } from './ComponentValues';
 import { ValueChanges } from './ValueChanges';
 import { Grouped, type TokenActions } from './Tokens';
-import { AsidePart } from './ui/AsidePart';
-import { Dialog } from './ui/Dialog';
-import { InfoTip } from './ui/InfoTip';
-import { ShortList } from './ui/ShortList';
-import { Swatch } from './ui/Swatch';
-import { ValueLine, ValueItem } from './ui/ValueItem';
-import { Message, tryAgain } from './ui/Message';
-import { Heading } from './ui/Heading';
+import { AsidePart } from '../../src/ui/AsidePart';
+import { Dialog } from '../../src/ui/Dialog';
+import { InfoTip } from '../../src/ui/InfoTip';
+import { ShortList } from '../../src/ui/ShortList';
+import { Swatch } from '../../src/ui/Swatch';
+import { ValueLine, ValueItem } from '../../src/ui/ValueItem';
+import { Message, tryAgain } from '../../src/ui/Message';
+import { Heading } from '../../src/ui/Heading';
 
 type Ready = Extract<ComponentTokens, { state: 'ready' }>;
 

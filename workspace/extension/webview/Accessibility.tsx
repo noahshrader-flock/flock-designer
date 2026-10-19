@@ -12,10 +12,10 @@ import {
 import { useState } from 'react';
 import { plural } from '../../src/shared/plural';
 import type { AccessibilityIssue, AccessibilityResult } from '../../src/shared/contract';
-import { Dialog } from './ui/Dialog';
-import { LinkButton } from './ui/LinkButton';
-import { Message } from './ui/Message';
-import { Heading } from './ui/Heading';
+import { Dialog } from '../../src/ui/Dialog';
+import { LinkButton } from '../../src/ui/LinkButton';
+import { Message } from '../../src/ui/Message';
+import { Heading } from '../../src/ui/Heading';
 
 /**
  * One kind of issue: what it asks, where in WCAG, on how many elements and in which states, and axe's page on it; then the

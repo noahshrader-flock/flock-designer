@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Icon } from './ui/Icon';
+import { Icon } from '../../src/ui/Icon';
 
 /**
  * The design system's own row, kept at the top of the panel while its lists scroll: its name, then, directly after it, an icon

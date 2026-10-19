@@ -4,7 +4,8 @@ import { Panel } from './Panel';
 import { PrimitivesTab } from './PrimitivesTab';
 import { SharedProvider } from './shared';
 import { readTab } from './tab';
-import { TooltipHost } from './ui/Tooltip';
+import { TooltipHost } from '../../src/ui/Tooltip';
+import '../../src/ui/kit.css';
 import './styles.css';
 
 // The same page is the panel or one of the design system's tabs, as its body says (`panelHtml`).

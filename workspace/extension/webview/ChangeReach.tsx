@@ -2,10 +2,10 @@ import type { CatalogComponent, ChangeReach as ChangeReachAnswer, ComponentReach
 import { plural } from '../../src/shared/plural';
 import { useChangeReach } from './hooks/useChangeReach';
 import { saidValue, valueTitle } from '../../src/shared/valueNames';
-import { ChangeRow, ValueItem, ValueList } from './ui/ValueItem';
-import { LinkButton } from './ui/LinkButton';
-import { Message } from './ui/Message';
-import { Heading } from './ui/Heading';
+import { ChangeRow, ValueItem, ValueList } from '../../src/ui/ValueItem';
+import { LinkButton } from '../../src/ui/LinkButton';
+import { Message } from '../../src/ui/Message';
+import { Heading } from '../../src/ui/Heading';
 import { asks } from './host';
 
 /** What changed of a value, named as the Styles name it, and dark when it is in dark. */

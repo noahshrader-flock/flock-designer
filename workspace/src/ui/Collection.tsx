@@ -1,8 +1,10 @@
 import { createContext, type ReactNode, useContext } from 'react';
-import type { View } from '../vscode';
 import { Card } from './Card';
 import { Row } from './Row';
 import { Thumbnail } from './Thumbnail';
+
+/** How things are shown: as cards in a grid, or as rows in a list. */
+export type View = 'list' | 'grid';
 
 const Shown = createContext<View>('list');
 

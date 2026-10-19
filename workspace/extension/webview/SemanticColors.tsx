@@ -2,9 +2,9 @@ import type { DesignToken } from '../../src/shared/contract';
 import { rowContrast, semanticTable, type SemanticRow } from '../../src/shared/tokens';
 import { useTokenChanges } from './hooks/tokenChanges';
 import type { Theme } from '../../src/shared/prototypeTheme';
-import { ColorDot, tokenDot } from './ui/ColorDot';
-import { ModeIcon } from './ui/ModeIcon';
-import { ValueList } from './ui/ValueItem';
+import { ColorDot, tokenDot } from '../../src/ui/ColorDot';
+import { ModeIcon } from '../../src/ui/ModeIcon';
+import { ValueList } from '../../src/ui/ValueItem';
 
 /**
  * One theme's value of a role, as `SemanticColors` draws it: its color as a dot (`ColorDot`), centered under its theme, its

@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { TOOLTIP_DELAY_MS, TOOLTIP_SKIP_MS } from '../../../src/shared/tooltipTiming';
+import { TOOLTIP_DELAY_MS, TOOLTIP_SKIP_MS } from '../shared/tooltipTiming';
 
 // The browser's own wait for a `title` is its to set and long (seconds), and no page can change it, so the pages' tooltips
 // are told here (`TooltipHost`), after DSNR's one wait.

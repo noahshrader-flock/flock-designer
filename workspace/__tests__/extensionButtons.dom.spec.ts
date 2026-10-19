@@ -1,13 +1,13 @@
 import { act, createElement, useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
-import { Badge } from '../extension/webview/ui/Badge';
-import { ColorDot } from '../extension/webview/ui/ColorDot';
-import { Icon } from '../extension/webview/ui/Icon';
-import { Button } from '../extension/webview/ui/Button';
-import { IconButton } from '../extension/webview/ui/IconButton';
-import { Menu } from '../extension/webview/ui/Menu';
-import { Message } from '../extension/webview/ui/Message';
-import { Dialog, DialogButtons } from '../extension/webview/ui/Dialog';
+import { Badge } from '../src/ui/Badge';
+import { ColorDot } from '../src/ui/ColorDot';
+import { Icon } from '../src/ui/Icon';
+import { Button } from '../src/ui/Button';
+import { IconButton } from '../src/ui/IconButton';
+import { Menu } from '../src/ui/Menu';
+import { Message } from '../src/ui/Message';
+import { Dialog, DialogButtons } from '../src/ui/Dialog';
 import { button, mount, press } from './webviewHarness';
 
 /** DSNR's three buttons in VS Code: the primary in its brand, the secondary outlined, and the ghost for a way out. */

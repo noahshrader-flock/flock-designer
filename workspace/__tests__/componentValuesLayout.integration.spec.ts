@@ -1,5 +1,3 @@
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
@@ -7,7 +5,7 @@ import { Moved } from '../extension/webview/ChangeReach';
 import { Grouped } from '../extension/webview/Tokens';
 import { AccessibilityFindings } from '../extension/webview/Accessibility';
 import { TokensUsed } from '../extension/webview/ComponentSections';
-import { AsidePart } from '../extension/webview/ui/AsidePart';
+import { AsidePart } from '../src/ui/AsidePart';
 import { HandOverActions } from '../extension/webview/HandOverActions';
 import { ChangedValues } from '../extension/webview/ValueChanges';
 import { ComponentValues } from '../extension/webview/ComponentValues';
@@ -17,6 +15,7 @@ import { TokenChangesProvider, useTokenChangesFor } from '../extension/webview/h
 import { labelOf } from '../src/shared/tokens';
 import { undeclared } from '../src/shared/wcag';
 import { NO_CHROME, inChrome } from './realChrome';
+import { panelCss } from './panelStyles';
 
 /**
  * A component's Values, laid out as VS Code lays out its side pane (adjusting a component, DESIGN_SYSTEM.md): the real
@@ -100,7 +99,7 @@ const SHARED: Record<string, string[]> = {
 };
 
 const PANE = 300;
-const css = readFileSync(join(__dirname, '..', 'extension', 'webview', 'styles.css'), 'utf8');
+const css = panelCss();
 const markupFor = (rows: ValueRow[]) =>
 	renderToStaticMarkup(
 		createElement(ComponentValues, {

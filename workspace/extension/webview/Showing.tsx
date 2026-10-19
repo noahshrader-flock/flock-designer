@@ -1,6 +1,6 @@
 import { createContext, useContext } from 'react';
 import { workspace } from './host';
-import { Message } from './ui/Message';
+import { Message } from '../../src/ui/Message';
 
 /**
  * The branch handed to Claude Code that the previews show in place of the library's (Preview this branch, PROCESS_CHANGES_PLAN

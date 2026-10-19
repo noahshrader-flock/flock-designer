@@ -1,3 +1,4 @@
+import type { View } from '../../src/ui/Collection';
 /**
  * What VS Code gives the panel's page: its state, kept while the panel lives (across a reload, too), and a way to send the
  * extension a message. Asked for once, as VS Code allows only once per page; asked for when first needed, so a test can
@@ -23,8 +24,6 @@ interface PanelState {
 }
 
 export type Tab = 'projects' | 'design-system';
-/** The projects as a list of rows, or a grid of cards. */
-export type View = 'list' | 'grid';
 /** The design system's two parts in the panel. */
 export type Part = 'components' | 'tokens';
 

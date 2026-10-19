@@ -1,4 +1,4 @@
-import type { Theme } from '../../../src/shared/prototypeTheme';
+import type { Theme } from '../shared/prototypeTheme';
 
 /**
  * The sun for light and the moon for dark, drawn here because VS Code's icon font has neither (Feather's, MIT): the size of a

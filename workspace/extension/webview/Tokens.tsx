@@ -3,16 +3,16 @@ import type { DesignToken, DesignTokens } from '../../src/shared/contract';
 import { byPrimitive, drawnAs, inOrder, isEditable, listed } from '../../src/shared/primitives';
 import { type ColorView, labelOf, pointsAt, rowContrast, tokensShown } from '../../src/shared/tokens';
 import { useTokenChanges } from './hooks/tokenChanges';
-import { NoMatches } from './ui/NoMatches';
-import { SearchBox } from './ui/SearchBox';
-import { Section } from './ui/Section';
-import { Toggle } from './ui/Toggle';
+import { NoMatches } from '../../src/ui/NoMatches';
+import { SearchBox } from '../../src/ui/SearchBox';
+import { Section } from '../../src/ui/Section';
+import { Toggle } from '../../src/ui/Toggle';
 import { SemanticColors } from './SemanticColors';
-import { ColorDot, tokenDot } from './ui/ColorDot';
-import { InfoTip } from './ui/InfoTip';
-import { ValueItem, ValueLine, ValueList } from './ui/ValueItem';
-import { Message } from './ui/Message';
-import { Heading } from './ui/Heading';
+import { ColorDot, tokenDot } from '../../src/ui/ColorDot';
+import { InfoTip } from '../../src/ui/InfoTip';
+import { ValueItem, ValueLine, ValueList } from '../../src/ui/ValueItem';
+import { Message } from '../../src/ui/Message';
+import { Heading } from '../../src/ui/Heading';
 import { asks } from './host';
 
 /** What a token row can do besides open its own file at its line: open its control (a token that can be changed). */

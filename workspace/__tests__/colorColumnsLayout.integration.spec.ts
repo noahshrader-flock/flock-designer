@@ -1,5 +1,3 @@
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
@@ -9,6 +7,7 @@ import type { DesignToken } from '../src/shared/contract';
 import { TokenChangesProvider, useTokenChangesFor } from '../extension/webview/hooks/tokenChanges';
 import { undeclared } from '../src/shared/wcag';
 import { NO_CHROME, inChrome } from './realChrome';
+import { panelCss } from './panelStyles';
 
 /**
  * The colors in the Tokens tab, in the browser on this machine, with the real components and the real stylesheet: the grid of
@@ -16,7 +15,7 @@ import { NO_CHROME, inChrome } from './realChrome';
  * colors, so their dots end at the same place, flush right, and a heading is centred over its column of dots.
  */
 
-const css = readFileSync(join(__dirname, '..', 'extension', 'webview', 'styles.css'), 'utf8');
+const css = panelCss();
 const token = (path: string, group: string, set: string, name: string, value: string): DesignToken =>
 	({ path, group, set, name, kind: 'color', category: 'Color', value, source: { file: 'src/colors.ts', line: 1 } }) as unknown as DesignToken;
 /** A role set whose name cannot fit its row beside the icons: it is cut with an ellipsis, as the palette's family name is. */

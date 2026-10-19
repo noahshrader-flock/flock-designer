@@ -1,6 +1,6 @@
 import type { Ref } from 'react';
-import type { DesignToken } from '../../../src/shared/contract';
-import { labelOf } from '../../../src/shared/tokens';
+import type { DesignToken } from '../shared/contract';
+import { labelOf } from '../shared/tokens';
 import { Badge } from './Badge';
 import { Swatch } from './Swatch';
 

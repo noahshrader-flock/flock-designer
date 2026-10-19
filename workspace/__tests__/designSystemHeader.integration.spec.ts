@@ -1,12 +1,11 @@
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { DesignSystemHeader } from '../extension/webview/DesignSystemHeader';
-import { Badge } from '../extension/webview/ui/Badge';
-import { Menu } from '../extension/webview/ui/Menu';
+import { Badge } from '../src/ui/Badge';
+import { Menu } from '../src/ui/Menu';
 import { NO_CHROME, inChrome } from './realChrome';
+import { panelCss } from './panelStyles';
 
 /**
  * The design system's own row in the side panel, in the browser on this machine, with the real component and the real stylesheet:
@@ -15,7 +14,7 @@ import { NO_CHROME, inChrome } from './realChrome';
  * top bar, with the Components and Tokens toggle under it, so its name is always shown while the list scrolls.
  */
 
-const css = readFileSync(join(__dirname, '..', 'extension', 'webview', 'styles.css'), 'utf8');
+const css = panelCss();
 const NAMES = ['FUI', 'Flock’s React component library, the design system every product of its team is built from'];
 
 const page = (name: string) => {

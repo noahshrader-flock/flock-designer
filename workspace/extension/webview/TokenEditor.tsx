@@ -3,13 +3,13 @@ import type { CatalogComponent, DesignToken } from '../../src/shared/contract';
 import { declaredBy, nameOf, pairContrast, pointsAt, reachOf, roleOf, scaleFamilies, tokenTitle } from '../../src/shared/tokens';
 import { useTokenChanges } from './hooks/tokenChanges';
 import { TokenUsers } from './TokenUsers';
-import { Button } from './ui/Button';
-import { Dialog, DialogButtons } from './ui/Dialog';
-import { Field, Select } from './ui/Field';
-import { Swatch } from './ui/Swatch';
+import { Button } from '../../src/ui/Button';
+import { Dialog, DialogButtons } from '../../src/ui/Dialog';
+import { Field, Select } from '../../src/ui/Field';
+import { Swatch } from '../../src/ui/Swatch';
 import { ColorField, LengthField } from './ValueFields';
-import { LinkButton } from './ui/LinkButton';
-import { Message } from './ui/Message';
+import { LinkButton } from '../../src/ui/LinkButton';
+import { Message } from '../../src/ui/Message';
 
 /**
  * Changing a token (6.2, the app's T3, rebuilt in VS Code's language): what opens from a token's row, in a dialog over the

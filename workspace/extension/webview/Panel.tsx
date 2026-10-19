@@ -9,10 +9,11 @@ import { onHost, workspace } from './host';
 import { useShared } from './shared';
 import { Projects } from './Projects';
 import type { PanelDialog } from '../src/messages';
-import { Toggle } from './ui/Toggle';
+import { Toggle } from '../../src/ui/Toggle';
 import { useCatalog } from './useCatalog';
-import { type Part, type Tab, type View, vscode } from './vscode';
-import { Message } from './ui/Message';
+import type { View } from '../../src/ui/Collection';
+import { type Part, type Tab, vscode } from './vscode';
+import { Message } from '../../src/ui/Message';
 import { askOnce } from './hooks/ask';
 
 const TABS = [

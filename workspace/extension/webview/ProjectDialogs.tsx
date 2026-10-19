@@ -2,12 +2,12 @@ import { type FormEvent, useState } from 'react';
 import { sameFolder } from '../../src/shared/brief';
 import type { Project } from '../../src/shared/domain/projects';
 import { slugify } from '../../src/shared/validate';
-import { Button } from './ui/Button';
-import { Dialog, DialogButtons } from './ui/Dialog';
-import { Field, TextArea, TextInput } from './ui/Field';
-import { FolderField, type FolderPick, folderOf, isChosen, pickOf } from './ui/FolderField';
+import { Button } from '../../src/ui/Button';
+import { Dialog, DialogButtons } from '../../src/ui/Dialog';
+import { Field, TextArea, TextInput } from '../../src/ui/Field';
+import { FolderField, type FolderPick, folderOf, isChosen, pickOf } from '../../src/ui/FolderField';
 import { workspace } from './host';
-import { Message } from './ui/Message';
+import { Message } from '../../src/ui/Message';
 
 /** What a prototype is started from, as the extension takes it: its name, what it explores, and its folder. */
 export interface NewPrototypeAnswers {

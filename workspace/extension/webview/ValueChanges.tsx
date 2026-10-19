@@ -10,10 +10,10 @@ import { useValueSources } from './hooks/useValueSources';
 import { BranchActions } from './Changed';
 import { ReachView } from './ChangeReach';
 import type { Trying } from './ComponentValues';
-import { ChangeRow, ValueList } from './ui/ValueItem';
-import { LinkButton } from './ui/LinkButton';
-import { Message } from './ui/Message';
-import { Heading } from './ui/Heading';
+import { ChangeRow, ValueList } from '../../src/ui/ValueItem';
+import { LinkButton } from '../../src/ui/LinkButton';
+import { Message } from '../../src/ui/Message';
+import { Heading } from '../../src/ui/Heading';
 import { asks } from './host';
 
 /**

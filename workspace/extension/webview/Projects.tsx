@@ -17,17 +17,17 @@ import {
 	scopeShown,
 	scopesOffered,
 } from '../../src/shared/projectScope';
-import { Badge } from './ui/Badge';
-import { type MenuItem, type MenuSection, Menu } from './ui/Menu';
-import { ViewOptions } from './ui/ViewOptions';
-import { SearchBox } from './ui/SearchBox';
-import { Section } from './ui/Section';
-import { NoMatches } from './ui/NoMatches';
+import { Badge } from '../../src/ui/Badge';
+import { type MenuItem, type MenuSection, Menu } from '../../src/ui/Menu';
+import { ViewOptions } from '../../src/ui/ViewOptions';
+import { SearchBox } from '../../src/ui/SearchBox';
+import { Section } from '../../src/ui/Section';
+import { NoMatches } from '../../src/ui/NoMatches';
 import { layoutSection } from './layouts';
 import { useShared } from './shared';
-import type { View } from './vscode';
-import { Message } from './ui/Message';
-import { Collection, CollectionItem } from './ui/Collection';
+import type { View } from '../../src/ui/Collection';
+import { Message } from '../../src/ui/Message';
+import { Collection, CollectionItem } from '../../src/ui/Collection';
 import { asks } from './host';
 
 /**

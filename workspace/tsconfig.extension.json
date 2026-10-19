@@ -4,6 +4,7 @@
 	"include": [
 		"extension/src/**/*",
 		"extension/webview/**/*",
+		"src/ui/**/*",
 		"src/shared/**/*",
 		"src/codeHost/**/*",
 		"src/core/**/*",

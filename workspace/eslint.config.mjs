@@ -25,7 +25,7 @@ export default tseslint.config(
 	{
 		// A page reads for an effect one way (`hooks/ask.ts`, `useWorkspace`), whose clean-up drops an answer to what was asked
 		// before; a read of its own in an effect shows a stale one.
-		files: ['extension/webview/**/*.{ts,tsx}'],
+		files: ['extension/webview/**/*.{ts,tsx}', 'src/ui/**/*.{ts,tsx}'],
 		rules: {
 			'no-restricted-syntax': [
 				'error',
