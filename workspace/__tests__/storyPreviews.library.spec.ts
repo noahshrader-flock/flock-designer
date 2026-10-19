@@ -1,7 +1,11 @@
 import { expect, it, vi } from 'vitest';
 import { PrototypeServer } from '../src/core/services/prototypes/prototypeServer';
 import { StoryPreviews } from '../src/core/services/designSystem/storyPreviews';
-import { REAL_FUI, describeWith, libraryUnbuilt } from './realCheckouts';
+import { readCatalog } from '../src/core/services/designSystem/componentCatalog';
+import { readTokens } from '../src/core/services/designSystem/designTokens';
+import { designSystemOf } from '../src/shared/catalog';
+import { EVERY_LIBRARY, describeWith, readsOf } from './realCheckouts';
+import { aColorAndALength } from './tokenFixtures';
 import { libraryFolder } from './realLibrary';
 
 /**
@@ -31,45 +35,52 @@ vi.mock('sass', async (original) => {
 	};
 });
 
-describeWith(libraryUnbuilt, 'against the real library on origin/develop', () => {
-	it('builds every story file with the clone’s own packages, and serves it', async () => {
-		const real = new PrototypeServer();
-		try {
-			const r = await new StoryPreviews({ system: () => REAL_FUI, folder: libraryFolder(REAL_FUI), server: real }).preview();
-			expect(r.state).toBe('ready');
-			if (r.state !== 'ready') return;
-			expect((await fetch(r.base)).status).toBe(200);
-			const entry = await (await fetch(`${r.base}entry.js`)).text();
-			expect(entry).toContain('FSButton');
-		} finally {
-			real.close();
-		}
-	}, 120_000);
-
-	it('tries each change to a tone on one build kept open: rebuilt each time, with the Sass compiled once', async () => {
-		const real = new PrototypeServer();
-		try {
-			const p = new StoryPreviews({ system: () => REAL_FUI, folder: libraryFolder(REAL_FUI), server: real });
-			expect((await p.preview()).state).toBe('ready');
-			const times: number[] = [];
-			const after: Array<typeof counted> = [];
-			for (const value of ['#0A6B52', '#0B7055', '#0C7558']) {
-				const started = performance.now();
-				const r = await p.preview([{ path: 'tone.pineGreen.50', value }]);
-				times.push(Math.round(performance.now() - started));
-				after.push({ ...counted });
+for (const { key, system, missing, tokens } of EVERY_LIBRARY)
+	describeWith(missing, `the previews of ${key}`, () => {
+		it('builds every story file with the clone’s own packages, and serves it', async () => {
+			const real = new PrototypeServer();
+			try {
+				const r = await new StoryPreviews({ system: () => system, folder: libraryFolder(system), server: real }).preview();
 				expect(r.state).toBe('ready');
+				if (r.state !== 'ready') return;
+				expect((await fetch(r.base)).status).toBe(200);
+				const [first] = await readCatalog(await readsOf(system), designSystemOf(system));
+				expect(await (await fetch(`${r.base}entry.js`)).text()).toContain(first?.name);
+			} finally {
+				real.close();
 			}
-			// Not asserted: a busy machine's clock says nothing of the code.
-			console.log(`trying a change on the real library: ${times.join(' ms, ')} ms`);
-			// The first change opens the build (and opens it again if it has to set aside what is not installed); each
-			// after is one rebuild of it, and a change to a tone touches no Sass, so none is compiled again.
-			const [first, , last] = after as [typeof counted, typeof counted, typeof counted];
-			expect(last.contexts).toBe(first.contexts);
-			expect(last.rebuilds - first.rebuilds).toBe(2);
-			expect(last.sass).toBe(first.sass);
-		} finally {
-			real.close();
-		}
-	}, 180_000);
-});
+		}, 300_000);
+
+		it.skipIf(!tokens)(
+			'tries each change to a token on one build kept open: rebuilt each time, no Sass compiled again',
+			async () => {
+				const real = new PrototypeServer();
+				try {
+					const p = new StoryPreviews({ system: () => system, folder: libraryFolder(system), server: real });
+					expect((await p.preview()).state).toBe('ready');
+					const [color] = aColorAndALength((await readTokens(await readsOf(system))).tokens);
+					if (!color) throw new Error(`${key} has no color of its own to change`);
+					const times: number[] = [];
+					const after: Array<typeof counted> = [];
+					for (const value of ['#0A6B52', '#0B7055', '#0C7558']) {
+						const started = performance.now();
+						const r = await p.preview([{ path: color.path, value }]);
+						times.push(Math.round(performance.now() - started));
+						after.push({ ...counted });
+						expect(r.state).toBe('ready');
+					}
+					// Not asserted: a busy machine's clock says nothing of the code.
+					console.log(`trying a change on ${key}: ${times.join(' ms, ')} ms`);
+					// The first change opens the build (and opens it again if it has to set aside what is not installed); each
+					// after is one rebuild of it, and a change to a token's value touches no Sass, so none is compiled again.
+					const [first, , last] = after as [typeof counted, typeof counted, typeof counted];
+					expect(last.contexts).toBe(first.contexts);
+					expect(last.rebuilds - first.rebuilds).toBe(2);
+					expect(last.sass).toBe(first.sass);
+				} finally {
+					real.close();
+				}
+			},
+			300_000,
+		);
+	});

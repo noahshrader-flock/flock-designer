@@ -3,11 +3,15 @@ import { PREVIEW_COMPONENT, PREVIEW_TRY, previewAddress } from '../src/shared/ca
 import { FIND_INSTANCES } from './pageInstances';
 import { findChrome } from '../src/core/services/browser/chromeHeadless';
 import type { ValueRow } from '../src/shared/contract';
-import { REAL_FUI, libraryUnbuilt } from './realCheckouts';
+import { EVERY_LIBRARY, REAL_FUI, libraryUnbuilt, readsOf } from './realCheckouts';
+import { readTokens } from '../src/core/services/designSystem/designTokens';
+import { designSystemOf } from '../src/shared/catalog';
+import { listedComponents } from '../src/core/services/designSystem/designLibrary';
+import { readCatalog } from '../src/core/services/designSystem/componentCatalog';
 import { describeLibrary, onRealLibrary } from './realLibrary';
 import { settledAnswer } from './fixtures';
 
-describeLibrary(libraryUnbuilt, REAL_FUI, 'against the real library on origin/develop', () => {
+describeLibrary(libraryUnbuilt, REAL_FUI, 'FUI’s own components’ values', () => {
 	it.skipIf(findChrome() === null)(
 		'reads FSButton’s heights by size, its radius and colors as tokens, and FSIconButton’s radius as its own',
 		async () => {
@@ -104,3 +108,36 @@ describeLibrary(libraryUnbuilt, REAL_FUI, 'against the real library on origin/de
 		},
 	);
 });
+
+for (const { key, system, missing } of EVERY_LIBRARY)
+	describeLibrary(missing, system, `the values of ${key}’s components`, () => {
+		it.skipIf(findChrome() === null)(
+			'are read for its components, or say why not, and every token a value is said to be drawn with is one of its tokens',
+			async () => {
+				await onRealLibrary(system, async ({ tokens }) => {
+					const reads = await readsOf(system);
+					const read = await readTokens(reads);
+					const paths = new Set(read.tokens.map((t) => t.path));
+					const listed = listedComponents(await readCatalog(reads, designSystemOf(system)), read);
+					const states: Record<string, number> = {};
+					for (const c of listed) {
+						const answer = await tokens.of(c.id);
+						expect(answer.state, c.id).toBe('ready');
+						if (answer.state !== 'ready') continue;
+						const values = answer.values;
+						states[values.state] = (states[values.state] ?? 0) + 1;
+						if (values.state === 'failed') throw new Error(`${c.id}: ${values.error}`);
+						if (values.state !== 'read') continue;
+						for (const row of [...(values.rows.light ?? []), ...(values.rows.dark ?? [])])
+							for (const cell of row.cells) {
+								expect(cell.kind === 'token' ? cell.tokens.length > 0 : true, `${c.id} ${row.property}`).toBe(true);
+								for (const path of cell.tokens) expect(paths.has(path), `${c.id} ${row.property}: ${path}`).toBe(true);
+							}
+					}
+					console.log(`${key}: ${listed.length} components, values ${JSON.stringify(states)}`);
+					expect(states.read ?? 0).toBeGreaterThan(0);
+				});
+			},
+			600_000,
+		);
+	});

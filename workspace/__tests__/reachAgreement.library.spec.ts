@@ -6,16 +6,7 @@ import { editedFiles } from '../src/core/services/designSystem/tokenEdits';
 import type { ConnectedDesignSystem, DesignToken } from '../src/shared/contract';
 import { lengthParts } from '../src/shared/tokens';
 import { settledAnswer } from './fixtures';
-import {
-	REAL_FUI,
-	REAL_PRIMER_SYSTEM,
-	REAL_TREMOR3_SYSTEM,
-	REAL_TREMOR4_SYSTEM,
-	libraryUnbuilt,
-	primerMissing,
-	tremor3Missing,
-	tremor4Missing,
-} from './realCheckouts';
+import { EVERY_LIBRARY } from './realCheckouts';
 import { describeLibrary, onRealLibrary } from './realLibrary';
 
 /**
@@ -113,13 +104,7 @@ const check = (system: ConnectedDesignSystem) => async () => {
 
 const LIMIT = 6 * 3_600_000;
 const only = process.env.REACH_LIBS?.split(',');
-const LIBRARIES: [string, ConnectedDesignSystem, string | null][] = [
-	['FUI', REAL_FUI, libraryUnbuilt],
-	['Primer', REAL_PRIMER_SYSTEM, primerMissing],
-	['Tremor3', REAL_TREMOR3_SYSTEM, tremor3Missing],
-	['Tremor4', REAL_TREMOR4_SYSTEM, tremor4Missing],
-];
-for (const [key, system, missing] of LIBRARIES)
+for (const { key, system, missing } of EVERY_LIBRARY)
 	describeLibrary(missing, system, `how far a token reaches, ${key}`, () => {
 		it.runIf(ASKED && findChrome() !== null && (!only || only.includes(key)))('moves every component its Values name', check(system), LIMIT);
 	});

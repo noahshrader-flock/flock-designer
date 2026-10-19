@@ -2,6 +2,9 @@ import { execFileSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { describe, it } from 'vitest';
+import type { CatalogReads } from '../src/core/services/designSystem/componentCatalog';
+import { libraryCommit, systemReads } from '../src/core/services/designSystem/designLibrary';
+import type { ConnectedDesignSystem } from '../src/shared/contract';
 
 /** Real repositories, never written to and never assumed to be here: found by their variable, or beside this repository. */
 const beside = (name: string) => resolve(__dirname, '..', '..', '..', name);
@@ -59,3 +62,21 @@ export const cokeMissing = existsSync(join(REAL_COKE, '.dsnr', 'workspace.json')
 /** Skipped with why in the name, so a run that did not check them says so rather than passing quietly. */
 export const describeWith = (missing: string | null, name: string, tests: () => void) =>
 	missing === null ? describe(name, tests) : describe(name, () => it.skip(`not run: ${missing}`));
+
+/**
+ * Every real library a test can run on: one that is not here is said by its row's test, never passed quietly. `tokens`
+ * is false for one that writes none DSNR reads (Tremor 3 keeps its theme in Tailwind 3's config).
+ */
+export const EVERY_LIBRARY: { key: string; system: ConnectedDesignSystem; missing: string | null; tokens: boolean }[] = [
+	{ key: 'FUI', system: REAL_FUI, missing: libraryUnbuilt, tokens: true },
+	{ key: 'Primer', system: REAL_PRIMER_SYSTEM, missing: primerMissing, tokens: true },
+	{ key: 'Tremor3', system: REAL_TREMOR3_SYSTEM, missing: tremor3Missing, tokens: false },
+	{ key: 'Tremor4', system: REAL_TREMOR4_SYSTEM, missing: tremor4Missing, tokens: true },
+];
+
+/** The library's files at the tip of its branch, as DSNR reads them. */
+export const readsOf = async (system: ConnectedDesignSystem): Promise<CatalogReads> => {
+	const commit = await libraryCommit(system.root, system.branch);
+	if (commit === null) throw new Error(`${system.name} has no ${system.branch} from origin`);
+	return systemReads(system, commit);
+};
