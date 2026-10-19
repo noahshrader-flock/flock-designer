@@ -152,8 +152,8 @@ run.on('exit', (status) => {
 		console.error(
 			`dsnr-test: failed (VS Code exited with ${status})\n${said
 				.split('\n')
-				// Stopped from outside, nothing said why: the last of what VS Code said, whole.
-				.filter((l, i, all) => /assert|Error|dsnr-test/i.test(l) || (timedOut && i >= all.length - 40))
+				// Stopped from outside, or gone before a step began, nothing said why: the last of what VS Code said, whole.
+				.filter((l, i, all) => /assert|Error|dsnr-test/i.test(l) || ((timedOut || !said.includes('dsnr-test-step')) && i >= all.length - 40))
 				.join('\n')}`,
 		);
 	process.exit(status === 0 && line ? 0 : 1);
