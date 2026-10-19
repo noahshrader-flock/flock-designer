@@ -46,10 +46,9 @@ const SHOW_SIDEBAR = 'claude-vscode.sidebar.open';
 const OPEN_CONVERSATION = 'claude-vscode.editor.open';
 
 /**
- * Handing work to Claude Code, where the editor is this window: there is one when Claude Code is installed in it. A
- * folder open here is not opened again; another gets a window of its own. A conversation starts, or continues, in this
- * window's Claude Code: in its side panel, or an editor tab, as the person's setting says (`dsnr.claudeCode.location`);
- * with a Claude Code that has none of these commands, through its link, which is an editor tab.
+ * Handing work to Claude Code, where the editor is this window (there is one when Claude Code is installed). A folder
+ * open here is not opened again; another gets a window of its own. A conversation opens in this window's Claude Code,
+ * where `dsnr.claudeCode.location` says, or through its link (an editor tab) when its commands are missing.
  */
 const editorHere = (vscode: VsCodeApi): Ports['editor'] => {
 	const openFolder = async (_editor: string, folder: string) => {
@@ -104,7 +103,7 @@ const editorHere = (vscode: VsCodeApi): Ports['editor'] => {
 /**
  * VS Code's ports (`Ports`): its folder picker, its messages, its links, its clipboard, its reveal in the file manager,
  * with the tools every shell shares, except the editor, which is this window (`editorHere`); drawing and checking out
- * of sight with the `headless` browser it is given (`chromeHeadless`, ELECTRON_MIGRATION_PLAN 2B).
+ * of sight with the `headless` browser it is given (`chromeHeadless`).
  */
 export const vscodePorts = (vscode: VsCodeApi, headless: Headless): Ports => ({
 	chooseFolder: async ({ title, defaultPath }) =>

@@ -3,7 +3,7 @@ import { dirname, resolve } from 'node:path';
 
 /**
  * A module of the page code (`src/page`), bundled into one script, as text: what is run in, or added to, a page. One
- * definition for every build that carries page code: the app's and the viewer's (`pageCode.vite.ts`) and the extension's
+ * definition for every build that carries page code: the viewer's and the tests' (`pageCode.vite.ts`) and the extension's
  * (`extension/build.mjs`), so what runs in a page is built the same way wherever it is carried.
  */
 export const bundlePage = async (entry) => {
@@ -15,7 +15,7 @@ export const bundlePage = async (entry) => {
 		// What the scripts call it by: `__fdPage.pick()`, and so on (`__tests__/pageScripts.ts`).
 		globalName: '__fdPage',
 		platform: 'browser',
-		// The browsers a reviewer opens the published site in, and the app's own.
+		// The browsers a reviewer opens the published site in.
 		target: 'es2020',
 		metafile: true,
 		logLevel: 'silent',
@@ -23,14 +23,14 @@ export const bundlePage = async (entry) => {
 	return { text: result.outputFiles[0]?.text ?? '', inputs: Object.keys(result.metafile.inputs) };
 };
 
+/** What a bundled ES module starts with, so a package written for `require` still has it: every Node bundle DSNR makes. */
+export const REQUIRE_BANNER = "import { createRequire as __dsnrRequire } from 'node:module'; const require = __dsnrRequire(import.meta.url);";
+
 /**
  * A script DSNR writes for an agent to run (`src/cli/…`), bundled whole into one ES module, as text: it runs with Node
  * from wherever it is written, with nothing installed beside it. A package written for require still has it, and the page
  * code it carries is bundled as every build bundles it.
  */
-/** What a bundled ES module starts with, so a package written for `require` still has it: every Node bundle DSNR makes. */
-export const REQUIRE_BANNER = "import { createRequire as __dsnrRequire } from 'node:module'; const require = __dsnrRequire(import.meta.url);";
-
 export const bundleScript = async (entry) => {
 	const result = await build({
 		entryPoints: [entry],

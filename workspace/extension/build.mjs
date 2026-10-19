@@ -1,11 +1,7 @@
 /**
- * Builds DSNR: the extension's own code for VS Code (Node, with `vscode` left to VS Code), its panel's page (the browser),
- * each into one file under `dist/`, the codicons beside them, and the viewer a prototype's review page carries
- * (`dist/viewer`, once: it is the app's own), and esbuild itself, which builds a prototype's page when it is saved
- * (`dist/node_modules`). `--watch` rebuilds on every change and says when it has.
- *
- *   node extension/build.mjs          once
- *   node extension/build.mjs --watch  on every change
+ * Builds DSNR into `dist/`: the extension (Node, with `vscode` left to VS Code), its panel's page, the codicons, the
+ * viewer a prototype's review page carries (`dist/viewer`, built once), and esbuild itself, which builds a prototype's
+ * page when it is saved. `--watch` rebuilds on every change and says when it has.
  */
 import { copyFileSync, cpSync, mkdirSync, readFileSync, readdirSync, rmSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -40,7 +36,7 @@ const builds = [
 		target: 'node20',
 		// VS Code gives `vscode`; esbuild finds its own native binary when it runs, so it cannot be bundled: it is copied in.
 		external: ['vscode', 'esbuild'],
-		// Page code carried as text (`import X from '…?page'`), as the app's build carries it.
+		// Page code carried as text (`import X from '…?page'`), as every build carries it.
 		plugins: [pageCodeEsbuild(), report('extension')],
 	},
 	{

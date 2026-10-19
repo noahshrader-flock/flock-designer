@@ -43,10 +43,9 @@ exports.run = async () => {
 	await vscode.commands.executeCommand('dsnr.openReview', { projectId: 'fixture', name: 'v1', title: 'Fixture · Version 1' });
 	await until('the review opening', () => tabs().includes('Fixture · Version 1'));
 
-	// A prototype is started: made, and its building handed to Claude Code as Build in the codebase's is. This VS Code has no
-	// Claude Code in it, so what the person is given is the command that starts it in a terminal, on the clipboard, pointing
-	// at the task written beside the prototype. The agent is then stood in for: its page written where it would write it,
-	// and the review opened, which saves what it built.
+	// A prototype is started and its building handed to Claude Code. This VS Code has none, so the person is given the
+	// command that starts it in a terminal, on the clipboard, pointing at the task beside the prototype. The agent is then
+	// stood in for: its page written where it would write it.
 	await vscode.commands.executeCommand('dsnr.newPrototype', { title: 'Made here', task: 'Show a heading.', folder: null });
 	let command = '';
 	await until('the build being handed over', async () => /claude/.test((command = await vscode.env.clipboard.readText())), 60000);
@@ -76,7 +75,7 @@ exports.run = async () => {
 	await vscode.commands.executeCommand('dsnr.sync');
 	await vscode.commands.executeCommand('dsnr.account');
 
-	// The design system (6.1), when the world has one: found beside the product, read from its develop, a component opened
+	// The design system, when the world has one: found beside the product, read from its develop, a component opened
 	// in its own tab and Primitives in another, and its components pictured by the browser here, in DSNR's own storage.
 	let designSystem = '';
 	if (process.env.DSNR_TEST_DESIGN_SYSTEM) {

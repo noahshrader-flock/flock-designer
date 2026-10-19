@@ -1,13 +1,7 @@
 /**
- * `npm run extension:dev`: DSNR from its source, in a VS Code window of its own, rebuilt as it is edited.
- *
- * Builds the extension and its page in watch mode, then opens an Extension Development Host (a second VS Code window with
- * DSNR loaded from here) on a throwaway profile in the system's temporary folder, so the person's own VS Code, its
- * settings and its extensions are never touched. The profile is kept between runs, so the panel stays where it was put.
- * Its path is short on purpose: VS Code keeps a socket in it, and a socket's path may be no longer than 103 characters.
- *
- * Quitting that VS Code (⌘Q: on a Mac, closing its last window leaves it running) stops the build. Ctrl+C here stops the
- * build and leaves the window, which then stops following changes.
+ * `npm run extension:dev`: DSNR from its source in an Extension Development Host, rebuilt as it is edited, on a throwaway
+ * profile kept between runs so the panel stays where it was put. The profile's path is short on purpose: VS Code keeps
+ * a socket in it, and a socket's path may be no longer than 103 characters.
  */
 import { spawn } from 'node:child_process';
 import { tmpdir } from 'node:os';
@@ -42,6 +36,7 @@ build.stdout.on('data', (chunk) => {
 		build.kill();
 		process.exit(1);
 	});
+	// Quitting it (⌘Q: on a Mac, closing its last window leaves it running).
 	window.on('exit', () => {
 		console.log('dsnr: the window closed; stopping the build');
 		build.kill();

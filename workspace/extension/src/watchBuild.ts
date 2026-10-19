@@ -1,9 +1,7 @@
 /**
- * Watching a prototype that Claude Code builds, since DSNR does not run that agent and so is not told when it is done:
- * every `pollMs` the core is asked to save it if it is built (`saveBuilt`, which knows from its source and page, never
- * from how long they have been still, and saves each build once), and `onSaved` says when it did, so the list is read
- * again and the picture on the card is drawn. A later build is saved again. A save that fails three times running (the
- * design repository could not be written) ends the watching, as does `giveUpMs` or `isLive`: opening the prototype saves it.
+ * Watching a prototype Claude Code builds, since DSNR does not run that agent and is not told when it is done: every
+ * `pollMs` the core saves it if it is built (`saveBuilt` knows from its source and page, and saves each build once).
+ * Three failed saves running end the watching, as do `giveUpMs` and `isLive`: opening the prototype saves it too.
  */
 export const watchBuild = async ({
 	saveBuilt,

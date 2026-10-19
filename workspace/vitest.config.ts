@@ -27,10 +27,9 @@ export default defineConfig({
 			},
 			// The same, for what draws the window or runs in a page: given a document to draw in.
 			{ extends: true, test: { name: 'dom', include: ['__tests__/**/*.dom.spec.ts'], environment: 'jsdom' } },
-			// Real git, esbuild and the real library. Fewer at once and more time each: they share one machine's disk and
-			// processor, and a test that waits on a busy machine is not a test that failed.
-			// They run after the rest (their own group), so one filter can name both kinds of file: vitest refuses projects
-			// that share a group but not how many run at once.
+			// Real git, esbuild and the real library: fewer at once and more time each, since a test waiting on a busy machine
+			// has not failed. Their own group runs after the rest, so one filter can name both kinds of file (vitest refuses
+			// projects that share a group but not how many run at once).
 			{
 				extends: true,
 				test: {
@@ -41,10 +40,9 @@ export default defineConfig({
 					sequence: { groupOrder: 1 },
 				},
 			},
-			// The real libraries on this machine (`realCheckouts.ts`): not in `check`, run by `check:full`. One file at a time in one
-			// worker that keeps its modules, so each library is drawn once for the whole run (`realLibrary.ts`) into a folder kept
-			// between runs, and no two builds of one library share a folder at once. No test may take more than five minutes; a
-			// library's first drawing is in its block's set-up, which says how long it took.
+			// The real libraries on this machine (`realCheckouts.ts`), run by `check:full`: one file at a time in one worker that
+			// keeps its modules, so each library is drawn once a run (`realLibrary.ts`) and no two builds share a folder at once.
+			// A library's first drawing is in its block's set-up, which says how long it took.
 			{
 				extends: true,
 				test: {

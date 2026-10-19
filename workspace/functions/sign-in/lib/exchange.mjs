@@ -1,11 +1,7 @@
 /**
- * Signing in to comment on a published prototype: the one thing that needs a server. A page cannot call GitHub's token
- * endpoint itself (it does not accept calls from a web page), so the page sends the one-time `code` GitHub gave it, and
- * its PKCE `verifier`, here, and this trades them for the person's token and hands the token back. It reads and writes
- * nothing, stores nothing, logs nothing, and returns the access token only: never GitHub's longer-lived refresh token.
- *
- * Plain functions over plain values, so the same logic runs on any host and in a test: `handleExchange` takes the request
- * and returns the response.
+ * Signing in to comment on a published prototype: GitHub's token endpoint takes no calls from a web page, so the page
+ * sends its one-time `code` and PKCE `verifier` here to trade for the person's access token (never the refresh token).
+ * Stores and logs nothing; plain functions over plain values, so it runs on any host and in a test.
  */
 
 const GITHUB_TOKEN_URL = 'https://github.com/login/oauth/access_token';
@@ -36,10 +32,9 @@ const parse = (text) => {
 };
 
 /**
- * `request`: `{ method, origin, body }` (`body` the raw text, already cut at `MAX_BODY + 1` by the caller, so its length says
- * whether it was too long). `env`: `GITHUB_CLIENT_ID`, `ALLOWED_ORIGIN` and `REDIRECT_URI`, and `GITHUB_CLIENT_SECRET` if
- * PKCE alone is not enough for GitHub. `fetchImpl`: `fetch`, or a stand-in.
- * Returns `{ status, headers, body }`.
+ * `request`: `{ method, origin, body }`, `body` already cut at `MAX_BODY + 1` by the caller so its length says whether it
+ * was too long. `env`: `GITHUB_CLIENT_ID`, `ALLOWED_ORIGIN`, `REDIRECT_URI`, and `GITHUB_CLIENT_SECRET` if PKCE alone is
+ * not enough for GitHub. Returns `{ status, headers, body }`.
  */
 export const handleExchange = async ({ method, origin, body }, env, fetchImpl = fetch) => {
 	const allowed = env.ALLOWED_ORIGIN;

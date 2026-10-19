@@ -1,10 +1,9 @@
 #!/usr/bin/env node
 /**
- * Runs `dsnr` (src/cli/dsnr.ts): making a prototype from Claude Code in VS Code, with no app running.
+ * Runs `dsnr` (src/cli/dsnr.ts): making a prototype from Claude Code in VS Code.
  *
- * It is built from the app's own source each time it runs, with the bundler the app already installed, so it can
- * never be a different version from the app beside it, and there is no built copy to fall out of date. The same
- * bundler builds the prototypes, so nothing is needed here that making one in the app does not already need.
+ * Built from this source each time it runs, with the workspace's own esbuild, so it can never be a different version
+ * from the extension beside it and there is no built copy to fall out of date.
  */
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { createRequire } from 'node:module';

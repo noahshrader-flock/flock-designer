@@ -35,17 +35,17 @@ const REREAD_MS = 60_000;
 const LOCATED = 'dsnr.located';
 
 /**
- * DSNR, started when its panel is first shown or a command of its is run. The core starts in VS Code's shell, finds what
- * is open (the product, its design system, the design repository), trusts the product folder the person opened, and
- * restores their GitHub session without asking.
- */
-/**
  * What stopping DSNR waits for, as VS Code waits for `deactivate` and not for a disposable: the headless browser closed, and
  * the dev servers it started and the agent's run ended, with everything each of them started.
  */
 let closing: (() => Promise<void>) | null = null;
 export const deactivate = (): Promise<void> | undefined => closing?.();
 
+/**
+ * DSNR, started when its panel is first shown or a command of its is run. The core starts in VS Code's shell, finds what
+ * is open (the product, its design system, the design repository), trusts the product folder the person opened, and
+ * restores their GitHub session without asking.
+ */
 export const activate = async (context: vscode.ExtensionContext): Promise<void> => {
 	// Run from its source, in Development or under VS Code's test runner; never once installed from a package.
 	const development = context.extensionMode !== vscode.ExtensionMode.Production;
@@ -87,7 +87,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 	let { found, unreadable } = await findHere();
 	/** What is open, as every page is told it. */
 	const placed = panels.share('placed', { context: found, unreadable });
-	/** The product folder the person opened: VS Code trusts it, so DSNR does, as the app trusts a checkout accepted. */
+	/** The product folder the person opened: VS Code trusts it, so DSNR does. */
 	const trust = async () => {
 		if (found.product) await shell.open(found.product).catch(failed);
 	};
@@ -114,7 +114,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 		openExternal: vscodeOpen,
 		copy: vscodeCopy,
 	};
-	// The voice and tone (6.3), a document in the editor; and the design system (6.1, 6.2), its tabs and what its pages ask.
+	// The voice and tone, a document in the editor; and the design system, its tabs and what its pages ask.
 	const voice = registerVoice(vscode, { api, offer: vscodeOffer, choose: vscodeChoose, openExternal: vscodeOpen, failed });
 	const design = designSystemHost({
 		vscode,
@@ -178,18 +178,17 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 	});
 	/**
 	 * Where a project's records are, to build its review from: the design repository's checkout beside the product, or with
-	 * none (only VS Code open), that project alone, read through GitHub into DSNR's own storage, kept while a review uses it.
-	 * That storage is VS Code's for the extension, shared by every window, as the review site's folder already is: two
-	 * windows opening reviews at once write the same folders.
+	 * none, that project alone, read through GitHub into DSNR's storage and kept while a review uses it. That storage is
+	 * shared by every window, so two windows opening reviews at once write the same folders.
 	 */
 	const recordsFor = (projectId: string): Promise<string> =>
 		found.designRepository !== null
 			? Promise.resolve(found.designRepository)
 			: copyProject(core.designRepo.files, projectId, join(storage, 'review-copy'), reviews.inUse());
 	/**
-	 * A prototype Claude Code built is saved when it is opened, as the app saves it (`openPrototype`): its page built from
-	 * its source, and kept in the design repository, so what the review shows is what reviewers get. Nothing then, and no
-	 * error, for one with nothing built here. The list is read again, for the picture a built page now has.
+	 * A prototype Claude Code built is saved when it is opened (`openPrototype`): its page built from its source and kept in
+	 * the design repository, so the review shows what reviewers get (one with nothing built here is left as it is). The
+	 * list is read again, for the picture a built page now has.
 	 */
 	const openReview = async (review: Review): Promise<void> => {
 		await api.openPrototype(review.projectId, review.name);
@@ -198,7 +197,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 	};
 	/**
 	 * The review's page in the person's browser, outside VS Code: the same page, from this machine, with a key of its own,
-	 * so it comments through DSNR as a tab does (BROWSER_COMMENTS_PLAN).
+	 * so it comments through DSNR as a tab does.
 	 */
 	const openReviewInBrowser = async (review: Review) => {
 		await vscodeOpen(await reviews.inBrowser({ records: await recordsFor(review.projectId), ...review }));
@@ -255,9 +254,8 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 		};
 	};
 	/**
-	 * What the panel asked of a project's codebase work (ELECTRON_MIGRATION_PLAN 5.2, 5.3), in the product open here, with
-	 * VS Code's notifications, the agent's log and the browser. Handoff and its draft pull request change its records: the
-	 * list is read again.
+	 * What the panel asked of a project's codebase work, in the product open here, with VS Code's notifications, the agent's
+	 * log and the browser. Handoff and its draft pull request change its records: the list is read again.
 	 */
 	const codebaseWork = async (action: CodebaseAction, projectId: string) => {
 		const root = found.product;
@@ -376,7 +374,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 		vscode.window.onDidChangeWindowState((s) => {
 			if (!s.focused) return;
 			void shell.publish().catch(failed);
-			// Comments made elsewhere (the app, GitHub) while away: the counts are read again, not more than once in a while.
+			// Comments made elsewhere (by others, on GitHub) while away: the counts are read again, not more than once in a while.
 			if (Date.now() - lastRead > REREAD_MS) projectsChanged();
 		}),
 	);

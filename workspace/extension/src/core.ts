@@ -13,11 +13,9 @@ import { VsCodeGitHub } from './github';
 import { vscodePorts } from './vscodePorts';
 
 /**
- * The core, in VS Code: the same services the app makes (`createCore`), given VS Code's shell. Its files go in the
- * extension's own storage, never the app's settings folder; events go to DSNR's panels; the person signs in through VS
- * Code, and who is signed in is told to the panels and to `onSignInChanged`;VS Code owns the
- * theme; and prototypes' and components' pictures, the stories' tokens and accessibility checks are drawn by the browser
- * on this machine, headless.
+ * The core in VS Code (`createCore`), given VS Code's shell: its files in the extension's own storage, events to DSNR's
+ * panels, sign-in through VS Code (told to the panels and `onSignInChanged`), and pictures, the stories' tokens and
+ * accessibility checks drawn by the browser on this machine, headless.
  */
 export const startCore = (context: vscode.ExtensionContext, panels: Panels, onSignInChanged: (state: SignInState) => void) => {
 	const storage = context.globalStorageUri.fsPath;
@@ -41,7 +39,7 @@ export const startCore = (context: vscode.ExtensionContext, panels: Panels, onSi
 		emit: panels.sink,
 		ports: vscodePorts(vscode, headless),
 		github,
-		// Components' pictures are drawn by the browser here, so they are told apart from the app's.
+		// Components' pictures are drawn by the browser here, and fingerprinted as drawn that way.
 		pictureRecipe: HEADLESS_PICTURE_RECIPE,
 	});
 	const shell = registerCalls(core);

@@ -27,7 +27,7 @@ const codebaseOf = async (api: CodebaseDeps['api'], projectId: string): Promise<
 const OPEN_PR = 'Open a draft pull request';
 
 /**
- * Handoff, from VS Code (ELECTRON_MIGRATION_PLAN 5.2): the core's (`handOff`) on the project's codebase work, on its
+ * Handoff, from VS Code: the core's (`handOff`) on the project's codebase work, on its
  * branch: the product's gate, both reviews, the fixes, HANDOFF.md committed, nothing pushed. Said and stoppable as a build
  * is, its log beside the editor; then the verdict, and when it is ready, a draft pull request.
  */
@@ -71,11 +71,9 @@ export interface LocalRun {
 }
 
 /**
- * Run locally (VIEW_LOCALLY_PLAN): codebase work run on this machine, the way the product says it runs (its design mode, on
- * mock data), and opened in the person's own browser at its route. Its own earlier run is stopped first, so there is only
- * one; a port something else already answers on is refused. The checkout is moved to the branch as a build moves it (a
- * checkout with uncommitted changes is not moved). "Up" is checked, not assumed: a build error in the server's output, or a
- * page that errors or draws nothing in the browser out of sight, is a failure, the server stopped and nothing opened.
+ * Run locally: codebase work run on this machine the way the product says it runs (its design mode, on mock data), and
+ * opened in the person's browser at its route. Its earlier run is stopped first, a port in use is refused, and a checkout
+ * with uncommitted changes is not moved. "Up" is checked: a build error, or a page that errors or draws nothing, stops it.
  */
 export const runLocally = async (deps: CodebaseDeps, local: LocalRun, projectId: string): Promise<void> => {
 	const { api, root } = deps;
@@ -155,7 +153,7 @@ const OPEN_IT = 'Open the pull request';
 const COPY_IT = 'Copy the preview link';
 
 /**
- * Codebase work shared for review (ELECTRON_MIGRATION_PLAN 5.2): the core's share, a draft pull request whose preview
+ * Codebase work shared for review: the core's share, a draft pull request whose preview
  * is built from it (`shareWork`), said step by step as the core moves it; then the pull request and the preview's
  * link, or why it was not shared. It cannot be stopped: a push and a pull request are not taken back halfway.
  */

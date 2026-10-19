@@ -18,7 +18,7 @@ export const syncWords = (status: PublishStatus): string => {
 };
 
 /**
- * Whether the person's work is synced, as VS Code's status bar says it (ELECTRON_MIGRATION_PLAN 4.3): it syncs by
+ * Whether the person's work is synced, as VS Code's status bar says it: it syncs by
  * itself, so this only reports; pressed, it opens the sync dialog in the panel. Nothing when there is nothing to sync from here.
  */
 export const syncItem = (status: PublishStatus): { text: string; tooltip: string } | null => {

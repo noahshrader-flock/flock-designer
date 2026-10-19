@@ -55,10 +55,9 @@ export class Panels {
 	}
 
 	/**
-	 * A panel view's page, from when VS Code makes it until it throws it away. It is kept while hidden
-	 * (`PANEL_VIEW_OPTIONS`), so being hidden is not being gone: it still listens, and what is asked for meanwhile is sent to
-	 * it, to show when it is shown again. Taking it for gone when hidden held every dialog from then on, as a kept page never
-	 * loads again to say it listens.
+	 * A panel view's page, from when VS Code makes it until it throws it away. Hidden is not gone (`PANEL_VIEW_OPTIONS`
+	 * keeps it): it still listens and is sent what is asked for meanwhile, since a kept page never loads again to say it
+	 * listens.
 	 */
 	attach(view: { webview: Webview; onDidDispose(listener: () => void): unknown }): void {
 		const listening = this.add(view.webview);
@@ -135,7 +134,7 @@ export const receivePage = async (
 };
 
 /**
- * The window's API in the extension itself: the app's own `createApi` over the core's table (`routes`) and its events
+ * The window's API in the extension itself: the same `createApi` the pages use, over the core's table (`routes`) and its events
  * (`events.listen`), so a flow the extension runs (starting a prototype) calls the core exactly as a page does.
  */
 export const hostApi = (routes: () => ReadonlyMap<InvokeName, Route>, events: Pick<Panels, 'listen'>): WorkspaceApi =>

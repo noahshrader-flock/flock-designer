@@ -1,22 +1,7 @@
 /**
- * `npm run extension:test`: DSNR in the VS Code installed on this machine, on a throwaway world, checked as a person
- * meets it (`activation.cjs`). Not part of `npm run check`: it opens a VS Code window for a minute.
- *
- * `npm run extension:test:packaged`: the same, against DSNR as it is handed out, not its source: packaged as
- * `dsnr.vsix`, installed into the throwaway VS Code, and run as an installed extension runs (VS Code's Production
- * mode, with nothing of this workspace's `node_modules`).
- *
- * The world is made here and removed after: a product with DSNR's setup and the design repository beside it, with one
- * project and one saved prototype, neither with a remote, so nothing can be pushed anywhere. The product has its design
- * system installed (a stand-in package, and React from this workspace, which a page is built with), and Claude Code is a
- * stand-in on the PATH that writes a page where the agent would, so a prototype is started and built with no agent run.
- * The profile is throwaway too, in the temporary folder (its path is short: VS Code keeps a socket in it), so the
- * person's own VS Code is never touched.
- *
- * When the design system the tests use is on this machine (Flock's FUI, beside this repository, or `FUI_ROOT`), the world
- * has a copy of it beside the product, named by it as Coke names its own: its develop as GitHub had it when the clone last
- * fetched, its packages linked in, and its origin GitHub's address with fetches from it pointed back at that clone, so
- * nothing is fetched from GitHub and the clone is only read. Its components are then opened and pictured (6.1).
+ * `npm run extension:test` (`:packaged`: against DSNR packaged and installed as it is handed out): DSNR in this machine's
+ * VS Code, checked as a person meets it (`activation.cjs`), on a throwaway world made here and removed after. Not part of
+ * `npm run check`: it opens a VS Code window for a minute.
  */
 import { execFileSync, spawn } from 'node:child_process';
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
@@ -41,6 +26,7 @@ const repo = (dir, files) => {
 	git(dir, 'add', '.');
 	git(dir, '-c', 'user.email=test@example.test', '-c', 'user.name=Test', 'commit', '-q', '-m', 'test');
 };
+// A product with DSNR's setup and the design repository beside it, neither with a remote, so nothing can be pushed.
 const product = join(world, 'product');
 repo(product, {
 	'.dsnr/workspace.json': JSON.stringify({
@@ -93,7 +79,8 @@ repo(join(world, 'flock-designer'), {
 		'<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Fixture</title></head><body><main><h1>Fixture</h1></main></body></html>\n',
 });
 
-// The design system, when it is here: a copy of FUI at `x`, the package the product names.
+// The design system, when it is here (beside this repository, or `FUI_ROOT`): a copy of FUI at `x`, the package the
+// product names, its develop as the clone last fetched it, and fetches pointed back at that clone, never at GitHub.
 const FUI_URL = 'https://github.com/flocksafety/flock-react-component-lib.git';
 const fui = process.env.FUI_ROOT ?? join(extension, '../../../flock-react-component-lib');
 const hasFui = (() => {
@@ -117,6 +104,7 @@ if (hasFui) {
 	symlinkSync(join(fui, 'node_modules'), join(copy, 'node_modules'));
 } else console.log(`dsnr-test: no clone of the design system with develop and its packages at ${fui} (set FUI_ROOT): its part is not run`);
 
+// The profile is throwaway too, its path short: VS Code keeps a socket in it.
 const profile = { user: join(base, 'u'), extensions: join(base, 'e') };
 // Packaged: DSNR installed from its package, and the tests run from a runner of their own, which is all VS Code's test
 // runner needs to be given. Otherwise: DSNR from its source here.

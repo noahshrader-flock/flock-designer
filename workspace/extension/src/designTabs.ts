@@ -12,10 +12,9 @@ const COMPONENT = 'component:';
 const keyOf = (tab: DesignTab): string => (tab.kind === 'component' ? `${COMPONENT}${tab.id}` : 'primitives');
 
 /**
- * The design system's tabs in VS Code's editor (ELECTRON_MIGRATION_PLAN 6.1): a component's, with its stories live and
- * what it is made from, and Primitives, the design system whole: what needs the room the side bar does not have. Each is
- * DSNR's own page (`page`), told the core's events as the panel is (`panels`), its asks answered as the panel's are
- * (`receive`). One tab each, brought forward when it is opened again.
+ * The design system's tabs in VS Code's editor, for what needs more room than the side bar: a component's (its stories
+ * live, and what it is made from) and Primitives. Each is DSNR's own page, told the core's events and answered as the
+ * panel is. One tab each, brought forward when it is opened again.
  */
 export class DesignTabs {
 	private readonly tabs = new Map<string, TabPanel>();

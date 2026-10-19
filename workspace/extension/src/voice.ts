@@ -27,11 +27,9 @@ export interface VoiceDeps {
 }
 
 /**
- * The design system's voice and tone as a document in VS Code's editor (ELECTRON_MIGRATION_PLAN 6.3, the app's T9): read
- * from the library's branch when opened and when reverted, so a commit made on GitHub shows; saved, as VS Code saves (⌘S),
- * to a branch of DSNR's, each save one commit, as every change to the library is; proposed as a draft pull request. **A
- * save is made against the file it was opened at**, so a change made on GitHub meanwhile is never overwritten: the save is
- * refused, and the person compares, keeps theirs as a change to it, or takes GitHub's.
+ * The design system's voice and tone as a document in VS Code's editor: read from the library's branch when opened and
+ * reverted, saved (⌘S) to a branch of DSNR's, one commit a save, and proposed as a draft pull request. A save is made
+ * against the file it was opened at, so a change made on GitHub meanwhile is refused rather than overwritten.
  */
 export class VoiceDocument {
 	/** The file as the library's branch had it when it was last read, and the change kept on its branch. */
@@ -193,10 +191,9 @@ export const voiceFileSystem = (
 const REFUSED = `The voice and tone changed on ${HOST} since it was opened, so nothing was saved.`;
 
 /**
- * The voice and tone in VS Code (6.3), wired: its file system, the document VS Code opens from it, and its commands. A save
- * refused because GitHub's file changed meanwhile offers to compare, keep the person's text, or take GitHub's; Propose
- * saves what is unsaved first; Start over forgets the branch, then reads the document again from GitHub, only once it is
- * forgotten. What goes wrong is said (`failed`). Returns how to open it, and what to dispose of.
+ * The voice and tone in VS Code, wired: its file system, the document VS Code opens from it, and its commands. A refused
+ * save offers to compare, keep the person's text, or take GitHub's; Start over reads the document again only once the
+ * branch is forgotten. Returns how to open it, and what to dispose of.
  */
 export const registerVoice = (
 	vscode: typeof VsCode,

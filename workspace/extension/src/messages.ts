@@ -8,10 +8,9 @@ import { PROJECT_ID, hasExactly } from '../../src/shared/validate';
 import { workLabel, workOf } from '../../src/shared/work';
 
 /**
- * What a DSNR page (the panel, a design system's tab) asks of the extension itself, beside the core's calls: one table, as
- * the core's contract is, each answered by one handler with its arguments checked first (`asks.ts`, the core's `handle`).
- * Signing in is VS Code's, from its title bar, so a page cannot ask for it. The page is the extension's own, but what it
- * sends is still read as the app reads what its window sends.
+ * What a DSNR page (the panel, a design system's tab) asks of the extension itself, beside the core's calls: one table,
+ * each answered by one handler with its arguments checked first (`asks.ts`). Signing in is VS Code's, from its title bar,
+ * so a page cannot ask for it. The page is the extension's own, but what it sends is still checked.
  */
 export interface PageAsks {
 	locateDesignSystem(): Promise<Result<null>>;
@@ -35,12 +34,9 @@ export interface PageAsks {
 	openChanges(): Promise<Result<null>>;
 	/** The change to the tokens being tried, which the extension keeps for every DSNR page (`Shared`). */
 	setTokenEdits(edits: TokenEdit[]): Promise<Result<null>>;
-	/** The mode components are shown in (MODES_PLAN Phase 1), which the extension keeps for every page. */
+	/** The mode components are shown in, which the extension keeps for every page. */
 	setMode(mode: Theme): Promise<Result<null>>;
-	/**
-	 * The values tried on one component, on the library's commit they were tried on (the changes being tried,
-	 * DESIGN_SYSTEM.md), which the extension keeps for every page.
-	 */
+	/** The values tried on one component, on the library's commit they were tried on, which the extension keeps for every page. */
 	setValueTrial(file: string, commit: string, values: TriedValue[]): Promise<Result<null>>;
 	/** The design system read again, asking GitHub for changes first (Sync, and a tab's Try again). */
 	syncDesignSystem(): Promise<Result<null>>;
@@ -88,9 +84,8 @@ export type ComponentLink = (typeof COMPONENT_LINKS)[number];
 export type DesignTab = { kind: 'component'; id: string; name: string } | { kind: 'primitives' };
 
 /**
- * What can be done with a project's codebase work from the panel: Handoff, its draft pull request (from the
- * Hand off dialog once a handoff found the work ready: never a menu item), the work on GitHub, and the work run on this
- * machine in the browser (Run locally). The page names the
+ * What can be done with a project's codebase work from the panel: Handoff, its draft pull request (from the Hand off
+ * dialog once a handoff found the work ready, never a menu item), the work on GitHub, and Run locally. The page names the
  * project only; the extension finds the work, and where it is, itself.
  */
 export const CODEBASE_ACTIONS = ['hand-off', 'share', 'open-code', 'run-locally'] as const;
@@ -112,7 +107,7 @@ export const reviewsOf = (project: Pick<Project, 'id' | 'title' | 'work'>): Revi
 
 /**
  * The values tried on each component, by its story file, with the library's commit they were tried on: its instances are
- * named by that commit's drawing, so a page on another commit leaves them be (the changes being tried, DESIGN_SYSTEM.md).
+ * named by that commit's drawing, so a page on another commit leaves them be.
  */
 export type ValueTrials = Record<string, { commit: string; values: TriedValue[] }>;
 
@@ -158,7 +153,7 @@ export interface SharedValues {
 	tabs: TabsShown;
 	/** The change to the tokens being tried. */
 	tokenEdits: TokenEdit[];
-	/** The mode components are shown in (MODES_PLAN Phase 1). */
+	/** The mode components are shown in. */
 	mode: Theme;
 	/** The values tried on every component. */
 	valueTrials: ValueTrials;
@@ -167,9 +162,8 @@ export interface SharedValues {
 export type SharedName = keyof SharedValues;
 
 /**
- * The values tried on every component with one component's set (the changes being tried, DESIGN_SYSTEM.md): kept with the
- * library's commit they were tried on, none tried none kept. The same object when nothing changes, so it tells nobody
- * (`Shared`).
+ * The values tried on every component with one component's set, kept with the library's commit they were tried on (none
+ * tried, none kept). The same object when nothing changes, so it tells nobody (`Shared`).
  */
 export const withTrial = (trials: ValueTrials, file: string, commit: string, values: TriedValue[]): ValueTrials => {
 	const was = trials[file];

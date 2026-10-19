@@ -1,10 +1,9 @@
 import { type HostMessage, type SharedName, type SharedValues, sameShared } from './messages';
 
 /**
- * A value every DSNR page shows the same (`SharedValues`), kept by the extension rather than any one page: told to every
- * page whenever it changes (`post`), and to a page once it listens (`message`, `Panels.ready`), so a page loaded again finds
- * it as it was. A change that is the same as what is kept (`sameShared`) tells nobody. `kept` is told each change, for a
- * value kept beyond the session (the mode, in VS Code's state).
+ * A value every DSNR page shows the same (`SharedValues`), kept by the extension rather than any one page, so a page
+ * loaded again finds it as it was: told to every page when it changes (unless `sameShared`), and to a page once it
+ * listens. `kept` is told each change, for a value kept beyond the session (the mode).
  */
 export class Shared<K extends SharedName> {
 	constructor(

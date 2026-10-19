@@ -47,10 +47,9 @@ export const readGiven = (raw: unknown): Given | null => {
 };
 
 /**
- * What DSNR: New prototype was called with: the dialog to ask (`'ask'`), the answers code gave (`Given`), or null when code
- * meant to give answers and they are wrong. **Anything that is not an attempt at answers is a request to ask:** VS Code hands a
- * command run from a title bar or a menu an argument of its own (a view's, a context's), and that must never be taken for a
- * request that was badly made.
+ * What DSNR: New prototype was called with: the dialog to ask (`'ask'`), the answers code gave (`Given`), or null when
+ * code meant to give answers and they are wrong. Anything else is a request to ask: VS Code hands a command run from a
+ * title bar or a menu an argument of its own, which must never be taken for a badly made request.
  */
 export const readAsked = (raw: unknown): 'ask' | Given | null => {
 	const meant = typeof raw === 'object' && raw !== null && !Array.isArray(raw) && ('title' in raw || 'task' in raw);
@@ -106,11 +105,9 @@ export const readyToStart = async ({ product }: Pick<NewPrototypeDeps, 'product'
 };
 
 /**
- * Starting a prototype, the designer's loop in VS Code (ELECTRON_MIGRATION_PLAN 4.1), from what the panel's dialog asked
- * (`given`): what stands in the way is said first (`readyToStart`, then the packages not installed, with Install, when the
- * product says how). It starts from the branch the product is on. Then its building is handed to Claude Code in this
- * window, as Build in the codebase's is: a conversation with the task typed in, for the person to start and watch. Nothing
- * is built from here; DSNR watches for the build to be done and saves it (`watchBuild`), and opening it saves it too.
+ * Starting a prototype in VS Code, from what the panel's dialog asked (`given`): what stands in the way is said first,
+ * then it is made on the product's branch and its building handed to Claude Code in this window, a conversation for the
+ * person to start and watch. DSNR builds nothing itself; it saves the build when it is done (`watchBuild`).
  */
 export const newPrototype = async (deps: NewPrototypeDeps): Promise<void> => {
 	const { api, product, given } = deps;

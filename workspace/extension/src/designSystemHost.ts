@@ -14,11 +14,9 @@ import { dsnrPage } from './panel';
 import type { LocalAddresses } from './html';
 
 /**
- * The design system in VS Code (6.1, 6.2), wired: what its pages share, kept here for every page (`Shared`): the change to
- * its tokens being tried, the mode, the values tried, and its catalog, read once for all of them (`CatalogShare`); its
- * tabs in the editor, each DSNR's own page answered as the panel is (`receivePage`); what its pages ask (`handlers`, in the
- * extension's table of asks); and its commands, Open a component (given one by code, or chosen in VS Code's quick pick,
- * the natural form for one of many) and Open Primitives. What goes wrong is said (`failed`).
+ * The design system in VS Code, wired: what its pages share (`Shared`: the tokens and values being tried, the mode, and
+ * its catalog, read once for all in `CatalogShare`), its tabs, each answered as the panel is (`receivePage`), what its
+ * pages ask (`handlers`), and its commands Open a component and Open Primitives. What goes wrong is said (`failed`).
  */
 export const designSystemHost = ({
 	vscode,

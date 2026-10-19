@@ -38,13 +38,9 @@ const asksForNewVersion = async (deps: AddressDeps, project: Project | undefined
 };
 
 /**
- * Address on one of a prototype's comments, from its review in VS Code (ELECTRON_MIGRATION_PLAN 4.2): the core's
- * Address (`addressPrototype`), run to its end and said and stoppable as a build is, its log beside the editor. The change is made in the
- * version commented on, or in a new version from it when the person chose that outright (`newVersion`); otherwise, when
- * others have open comments on it (their pins may land on the wrong element), or who has cannot be read, the person is
- * asked first, and nothing is done if they choose neither. The page with the change is then shown (`show`), and which it
- * is said, and returned, so a page in the browser can go to it. An agent that changed nothing says why in its log, and the
- * review is left as it is (null).
+ * Address on one of a prototype's comments, from its review: the core's `addressPrototype`, run to its end, stoppable as
+ * a build is, after asking about a new version (`asksForNewVersion`) unless `newVersion` chose one outright. Returns the
+ * version with the change, so a page in the browser can go to it, or null when nothing was changed.
  */
 export const addressComment = async (deps: AddressDeps, review: Review, comment: CommentRef, newVersion = false): Promise<string | null> => {
 	const { api } = deps;

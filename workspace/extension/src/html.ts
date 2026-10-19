@@ -9,11 +9,9 @@ export interface LocalAddresses {
 }
 
 /**
- * The page DSNR's panel loads, as tight as VS Code's webview guidance asks: nothing loads unless named here, the one
- * script runs by a nonce made for this page, and styles, fonts and pictures come only from the extension's own build
- * (`cspSource`, which is VS Code's name for it), the design system's stories framed from this machine's pages' address
- * and its pictures from the server's own (`local`, each an exact origin), and nowhere else. The same page is the panel or a design system's tab (`tab`), which
- * it reads from its body. No `vscode` import, so it is tested as plain text.
+ * The page DSNR's panel, or a design system's tab (`tab`), loads, as tight as VS Code's webview guidance asks: nothing
+ * loads but what the policy names, each local address an exact origin, and the one script by a nonce. No `vscode`
+ * import, so it is tested as plain text.
  */
 export const panelHtml = ({
 	cspSource,

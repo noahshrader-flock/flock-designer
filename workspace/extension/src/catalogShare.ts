@@ -2,12 +2,9 @@ import type { Catalog, WorkspaceApi } from '../../src/shared/contract';
 import type { Shared } from './sharedValues';
 
 /**
- * The design system shown, read by the extension once for every page (`CatalogState`), so the panel and each design
- * system's tab show the same commit, and an open tab follows a Sync (QUALITY_PASS finding 4): at once from what its clone
- * has, then again once GitHub has been asked for changes (`start`); again on Sync (`sync`); and again whenever another
- * commit of it is shown (Preview this branch). Only the latest read is shown: an answer to one asked before it is dropped,
- * so a slow answer never puts an older commit back. `onRead` is told each catalog read, for what is kept of it (the change
- * being tried).
+ * The design system shown, read once for every page (`CatalogState`) so the panel and each tab show the same commit:
+ * from its clone, then from GitHub (`start`), on Sync (`sync`), and whenever another commit is shown. Only the latest
+ * read is shown, so a slow answer never puts an older commit back. `onRead` is told each one, for the change being tried.
  */
 export class CatalogShare {
 	/** Each read's turn: only the latest asked is shown. */

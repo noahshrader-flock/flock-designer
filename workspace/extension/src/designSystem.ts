@@ -12,10 +12,9 @@ const same = (a: ConnectedDesignSystem, b: ConnectedDesignSystem): boolean =>
 	(Object.keys(a) as (keyof ConnectedDesignSystem)[]).every((k) => a[k] === b[k]);
 
 /**
- * The design system VS Code found, told to the core as the one shown (ELECTRON_MIGRATION_PLAN 6.1): the core reads,
- * previews, pictures and changes the one it is told is shown, as it does the app's connected one, so the folder found is
- * read as connecting it would keep it (`systemAt`) and kept, only when it differs from the one shown. Says why when the
- * folder cannot be read that way; null otherwise, and when none was found.
+ * The design system VS Code found, told to the core as the one shown: the core reads, previews and changes the one it is
+ * told is shown, so the folder is read as connecting it would keep it (`systemAt`), and kept only when it differs. Says
+ * why when the folder cannot be read that way; null otherwise, and when none was found.
  */
 export const showFound = async (
 	memory: Pick<DesignSystemsMemory, 'current' | 'add'>,
@@ -45,7 +44,7 @@ export const editsAfterRead = (edits: TokenEdit[], read: Catalog): TokenEdit[] =
 const MODE = 'dsnr.mode';
 
 /**
- * The mode components are shown in (MODES_PLAN Phase 1), as it was kept (`keepMode`): one choice, so every page and every
+ * The mode components are shown in, as it was kept (`keepMode`): one choice, so every page and every
  * session opens in it. Light until dark is chosen.
  */
 export const keptMode = (kept: Pick<VsCode.Memento, 'get'>): Theme => {
