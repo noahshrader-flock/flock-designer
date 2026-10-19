@@ -4,7 +4,7 @@ import { type Given, readAsked, readyToStart } from './newPrototype';
 
 /** What the commands need of VS Code and of the rest of the extension: a slice, so a test gives its own. */
 export interface CommandDeps {
-	run: (command: string) => Thenable<unknown>;
+	run: (command: string) => PromiseLike<unknown>;
 	tell: (message: string) => void;
 	inPanel: (message: HostMessage) => Promise<void>;
 	product: () => { root: string | null; why: string };

@@ -22,7 +22,7 @@ const sources = (dir) =>
 		const path = join(dir, name);
 		if (SKIP.has(name) || name.startsWith('.')) return [];
 		if (statSync(path).isDirectory()) return sources(path);
-		return /\.(tsx?|mjs|css)$/.test(name) && !name.endsWith('.d.ts') && !name.endsWith('.d.mts') ? [path] : [];
+		return /\.(tsx?|[mc]js|css)$/.test(name) && !name.endsWith('.d.ts') && !name.endsWith('.d.mts') ? [path] : [];
 	});
 
 const files = () => [

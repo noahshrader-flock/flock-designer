@@ -9,5 +9,6 @@
 		"composite": false,
 		"noImplicitAny": false
 	},
-	"include": ["*.mjs", "bin/**/*.mjs", "extension/*.mjs", "extension/test/*.mjs", "extension/test/*.cjs", "functions/**/*.mjs", "__tests__/*.mjs"]
+	"include": ["**/*.mjs", "**/*.cjs"],
+	"exclude": ["node_modules", "extension/dist", "out"]
 }
