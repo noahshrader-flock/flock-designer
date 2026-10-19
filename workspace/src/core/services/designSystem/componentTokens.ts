@@ -1,7 +1,6 @@
 /**
- * Which tokens each component draws with, found by tagging: every token gets a value nothing else has, the previews are
- * built with those values and drawn, and a drawn tag names its token exactly. Nothing is read from the components' source,
- * which every library writes differently. Kept per commit: the first ask starts it in the background (`building`).
+ * Found by tagging, never by reading the components' source, which every library writes differently: a drawn tag names its
+ * token exactly.
  */
 import type {
 	AccessibilityResult,
@@ -36,38 +35,28 @@ import type { CatalogReads } from './componentCatalog';
 import { type Tags, asTag, inMode, isNothing, sizeTokens, tagsFor } from './tokenTags';
 import type { Measure } from '../../ports';
 
-/**
- * What a story draws, as counts of each computed value: its colors (background, text, border), radii and spacing; and,
- * when its run asked for them, a JPEG of its first story and what axe found in its stories.
- */
+/** Each computed value to how many times it is drawn; `picture` and `accessibility` only when the run asked for them. */
 export interface Drawn {
 	colors: Record<string, number>;
 	radii: Record<string, number>;
 	spacing: Record<string, number>;
 	picture?: Buffer;
 	accessibility?: AxeFound;
-	/**
-	 * Whether the story file names the component it is of, and each instance of it drawn, in the light drawings only; how
-	 * many instances only wrap what they were given; how many of its stories threw; and why reading them failed, if it did.
-	 */
+	/** Set in the light drawings only. */
 	component?: boolean;
 	instances?: Instance[];
 	wrapping?: number;
 	storiesFailed?: number;
 	instancesFailed?: string;
-	/** The props the story file's stories name as their controls (their `args` and `argTypes`). */
 	controls?: string[];
-	/** The page's root font size, in px: what a `rem` written in the library is of. */
+	/** The page's root font size, in px. */
 	rootPx?: number;
 }
 
-/**
- * One instance of a component as a story drew it: its story, the props that say its variant, and its values as computed,
- * each part as it is (padding's four sides, a radius's four corners, a gap's row and column).
- */
+/** Values keep every part as computed (padding's four sides, a radius's four corners, a gap's row and column). */
 export interface Instance {
 	story: string;
-	/** What names it in any drawing of the same file (`findInstances`): what a value tried in the preview is set on. */
+	/** Stable across drawings of the same file (`findInstances`), so a value tried in the preview is set on it. */
 	key: string;
 	props: Record<string, string>;
 	values: Partial<Record<ValueProperty, string>>;
@@ -75,7 +64,7 @@ export interface Instance {
 
 export type Mode = 'light' | 'dark';
 
-/** A story drawn once with each value of each of `props`: the first of `stories`, else the file's first drawn from its args. */
+/** With no `stories`, the file's first story drawn from its args is used. */
 export interface Vary {
 	stories: string[];
 	props: DeclaredProp[];
@@ -83,17 +72,13 @@ export interface Vary {
 
 const add = (m: Map<string, number>, k: string, n: number) => m.set(k, (m.get(k) ?? 0) + n);
 
-/** One component's tokens, from its story drawn tagged (in each mode) and as the library has it. */
 export interface FileUse {
 	uses: Map<string, number>;
 	notTokens: { kind: 'color' | 'radius' | 'spacing'; value: string; uses: number }[];
 	derived: number;
 }
 
-/**
- * What a story's drawings say about its tokens. In dark, a tag given to a role both modes share (tagged once, as Light)
- * is the Dark token written in that place.
- */
+/** In dark, a tag given to a role both modes share (tagged once, as Light) is the Dark token written in that place. */
 export const decode = (tagged: Partial<Record<Mode, Drawn>>, plain: Drawn | undefined, tags: Tags, tokens: DesignToken[]): FileUse => {
 	const uses = new Map<string, number>();
 	const notTokens = new Map<string, number>();
@@ -135,10 +120,8 @@ export const decode = (tagged: Partial<Record<Mode, Drawn>>, plain: Drawn | unde
 	};
 };
 
-/** What the index needs of the previews: the commit's own build, and builds with a change (the tags; a change being tried). */
 export interface TaggedPreviews {
 	preview(): Promise<StoryPreview>;
-	/** The commit's previews built with files a change writes, apart from the one the person's frame shows (`StoryPreviews.builtWith`). */
 	builtWith(purpose: BuiltFor, files: (reads: CatalogReads) => Promise<Map<string, string>>): Promise<StoryPreview>;
 }
 
@@ -146,38 +129,29 @@ export interface ComponentTokensDeps {
 	system: () => ConnectedDesignSystem | null;
 	previews: TaggedPreviews;
 	measure: Measure;
-	/** Where the pictures the same pass takes are kept. */
 	pictures: Pick<ComponentPictures, 'keep' | 'of'>;
-	/** The commit the tab reads (`LibraryShown`): the library's own branch unless another is shown. */
 	at?: LibraryAt;
 }
 
-/**
- * Each story file's tokens, or null for one that did not draw, of which nothing can be said; its drawn values, from the
- * same drawings; and what axe found in each that drew, at the design system's target.
- */
+/** `files` is null for a story file that did not draw, of which nothing can be said. */
 export type Built = {
 	files: Map<string, FileUse | null>;
 	values: Map<string, ComponentValues>;
 	accessibility: Map<string, AccessibilityResult>;
-	/** The components, in the list's order: what a change is drawn for. */
 	order: string[];
-	/** What its values are read with (`readValues`): the tags, the tokens, and the build with the tags, if one was made. */
 	reading: { tags: Tags; tokens: DesignToken[]; tagged: string | null };
 };
 type Index = Built | { error: string };
 
-/** The components whose stories draw with a token, in the list's order: who shares it with a component, and who its control lists. */
 const drawsWith = (built: Built, path: string): string[] => built.order.filter((f) => built.files.get(f)?.uses.has(path));
 
-/** The index once every story is drawn: its key, which names the commit and the package, and the commit itself. */
+/** `key` names the commit and the package. */
 export interface DrawnIndex {
 	key: string;
 	commit: string;
 	built: Built;
 }
 
-/** The index for one commit: `done` once it is built or has failed, and `finished` for whoever waits for that. */
 interface Building {
 	key: string;
 	commit: string;
@@ -185,14 +159,10 @@ interface Building {
 	finished: Promise<void>;
 }
 
-/** The index of what every component draws with, for the commit the library's branch is at. */
 export class ComponentTokens {
 	private index: Building | null = null;
-	/** What the newest token change asked for reaches, worked out in the background and kept for it. */
 	private readonly reached = newestAnswer<ChangeReach>((error) => ({ state: 'failed', error }));
-	/** What a change is drawn with, one build of each purpose at a time (`reachWith`). */
 	private readonly inTurn = inTurns<'reach' | 'written'>();
-	/** The library as it is, drawn as a change is, for the commit of `key` (`asIs`). */
 	private asIsDrawn: { key: string; drawn: Promise<Map<string, Drawings>> } | null = null;
 
 	constructor(private readonly deps: ComponentTokensDeps) {}
@@ -213,15 +183,11 @@ export class ComponentTokens {
 			notTokens: use.notTokens,
 			derived: use.derived,
 			accessibility: done.accessibility.get(file) ?? null,
-			// A file whose stories did not finish drawing as the library has them has no values to say.
 			values: done.values.get(file) ?? { state: 'not-drawn' },
 		};
 	}
 
-	/**
-	 * The components that draw with a token (`drawsWith`), read from the same index the other way round: how often each one's
-	 * stories draw it, and how many of its values are it, each value counted once whichever mode names it. None is drawn for it.
-	 */
+	/** Read from the index the other way round; nothing is drawn for it. Each value counts once whichever mode names it. */
 	async users(path: string): Promise<TokenUsers> {
 		const index = await this.drawn();
 		if (index.state !== 'ready') return index;
@@ -235,10 +201,7 @@ export class ComponentTokens {
 		return { state: 'ready', users: users.sort((a, b) => b.values - a.values || b.uses - a.uses) };
 	}
 
-	/**
-	 * What a token change being tried reaches (`reachOf`). Drawn in the background for the newest change asked for alone,
-	 * and kept for it on this commit: `building` until then. One that did not work is said once, and drawn again next ask.
-	 */
+	/** Only the newest change asked for is drawn, in the background; one that failed is said once, and drawn again next ask. */
 	async reach(edits: TokenEdit[]): Promise<ChangeReach> {
 		if (edits.length === 0) return { state: 'none' };
 		// Not drawn on a branch handed to Claude Code, shown as it was committed: it is the library's own branch a change moves.
@@ -252,9 +215,8 @@ export class ComponentTokens {
 	}
 
 	/**
-	 * Every component drawn with `files` written into the library, against itself as it is (`asIs`): what the files reach,
-	 * and what each drew with them. `written` builds apart from `reach` so neither is built over the other. A component that
-	 * differs is drawn again, both ways, and said to move only when it differs again.
+	 * `written` builds apart from `reach` so neither is built over the other. A component that differs is drawn again, both
+	 * ways, and said to move only when it differs again.
 	 */
 	async reachWith(
 		index: DrawnIndex,
@@ -319,7 +281,6 @@ export class ComponentTokens {
 		return this.asIsDrawn.drawn;
 	}
 
-	/** Each of `files` drawn from the build at `base`, light and dark, in one page each. */
 	private async drawnAt(base: string, files: string[]): Promise<Map<string, Drawings>> {
 		const [light, dark] = await this.deps.measure([
 			{ base, mode: 'light', files },
@@ -328,10 +289,6 @@ export class ComponentTokens {
 		return new Map(files.map((f, i) => [f, { light: light?.[i] ?? null, dark: dark?.[i] ?? null }]));
 	}
 
-	/**
-	 * The index of the commit the library's branch is at, once every story is drawn: `building` until then, and a failure,
-	 * said once and built again on the next ask, as `of` says it. With its key, which names the commit and the package.
-	 */
 	async drawn(): Promise<{ state: 'building' } | { state: 'failed'; error: string } | ({ state: 'ready' } & DrawnIndex)> {
 		const started = await this.started();
 		if ('error' in started) return { state: 'failed', error: started.error };
@@ -345,32 +302,23 @@ export class ComponentTokens {
 		return { state: 'ready', key: started.index.key, commit: started.index.commit, built: done };
 	}
 
-	/**
-	 * The pictures of the shown design system's components, and whether a pass that may replace them
-	 * is drawing. Pictures from an earlier pass are given while a new one draws, never none in their place.
-	 */
+	/** Pictures from an earlier pass are given while a new one draws, never none in their place. */
 	async pictures(): Promise<Pictures> {
 		const system = this.deps.system();
 		if (system === null) return { drawing: false, pictures: {}, issues: {} };
 		const started = await this.started().catch(() => null);
 		const index = started === null || 'error' in started ? null : started.index;
 		const built = index?.done && !('error' in index.done) ? index.done : null;
-		// What each card says of its component's accessibility: how many of each, once the pass has checked it.
 		const issues = built ? Object.fromEntries([...built.accessibility].map(([f, r]) => [f, countsOf(r)])) : {};
 		return { drawing: index !== null && index.done === null, pictures: await this.deps.pictures.of(system.id), issues };
 	}
 
-	/**
-	 * Gets the index for the commit the library is at ready in the background, without waiting for a component to be asked
-	 * for, so it is there by the time one is. Resolves once it is built, or has failed; never rejects, since a failure is said
-	 * to whoever asks for a component, and tried again then.
-	 */
+	/** Never rejects: a failure is said to whoever asks for a component, and tried again then. */
 	async warm(): Promise<void> {
 		const started = await this.started().catch(() => null);
 		if (started !== null && !('error' in started)) await started.index.finished;
 	}
 
-	/** The index for the commit the library's branch is at, started if it is not, or why there is none. */
 	private async started(): Promise<{ index: Building } | { error: string }> {
 		const system = this.deps.system();
 		if (system === null) return { error: 'There is no design system connected.' };
@@ -410,7 +358,6 @@ export class ComponentTokens {
 		const asIsDrawn = this.deps.measure([asIsRun, { base: plain.base, mode: 'dark', files }]);
 		// A failure to draw is said once the tags are built, not lost while they are.
 		asIsDrawn.catch(() => undefined);
-		// With no token the library can be tagged by, there is nothing to tag: its stories are still drawn, as they are.
 		const tagged = tags.edits.length === 0 ? null : await this.deps.previews.builtWith('tagged', () => editedFiles(reads, tags.edits));
 		const taggedBase = tagged?.state === 'ready' ? tagged.base : null;
 		const [[asIs, asIsDarkDrawn], [light, dark]] = await Promise.all([
@@ -422,7 +369,6 @@ export class ComponentTokens {
 						{ base: taggedBase, mode: 'dark', files },
 					]),
 		]);
-		// The pictures, each replacing its component's last; a component that did not draw keeps its last.
 		const taken = new Map<string, Buffer>();
 		files.forEach((f, i) => {
 			const picture = asIs?.[i]?.picture;
@@ -446,7 +392,6 @@ export class ComponentTokens {
 				return [f, asDrawn ? decode({ light: asDrawn, dark: dark?.[i] ?? undefined }, asIs?.[i] ?? undefined, tags, tokens) : null];
 			}),
 		);
-		// Its values, from the same drawings: as the library has it, and with the tags, in light and in dark.
 		const values = new Map<string, ComponentValues>();
 		files.forEach((f, i) => {
 			const lightDrawn = asIs?.[i];

@@ -1,7 +1,6 @@
 /**
- * Where the values tried on a component's instances are written (`valueLocator.ts`), and what writing them reaches, found
- * in the background so the tab says each place, or why not, before Save. Places depend on the value drawn, not the one
- * tried, so they are found once per commit: moving a slider only writes and reads back. Anything ambiguous is refused.
+ * Places depend on the value drawn, not the one tried, so they are found once per commit: moving a slider only writes and
+ * reads back. Anything ambiguous is refused.
  */
 import { errorText } from '../../../shared/result';
 import { PX_PER_REM } from '../../../shared/tokens';
@@ -20,9 +19,8 @@ import type { OpenedBuild } from './storyPreviews';
 import { type Place, placesIn, probeFor, searchable, searchedFiles, withWrites, writtenAs } from './valueLocator';
 
 /**
- * The values the window sent as tried, or an error: only what the contract says one is (a property, its value as CSS
- * writes it, the instances it is on). What is written into the library is never this text: it is the number or the colour
- * it reads as, in the way its place writes it (`writtenAs`), so nothing else can be written.
+ * What is written into the library is never this text but the number or colour it reads as, in its place's form
+ * (`writtenAs`), so nothing else can be written.
  */
 export const triedValuesOf = (sent: unknown): TriedValue[] => {
 	if (!Array.isArray(sent) || sent.length > MOST_TRIED) throw new Error('Values tried are a list of values.');
@@ -52,35 +50,27 @@ export const MOST_PLACES = 400;
 
 export interface ValueSourcesDeps {
 	tokens: Pick<ComponentTokens, 'drawn' | 'reachWith' | 'asIs'>;
-	/** What the agent has written for a value, when the person had it write one (`ValueAgent`). */
 	agent: Pick<ValueAgent, 'of'>;
 	previews: { opened(purpose: 'locate'): Promise<OpenedBuild | Exclude<StoryPreview, { state: 'ready' }>> };
 	measure: Measure;
 }
 
-/**
- * The places that move a value's instances, each with which of them and which of their parts it moves (`moved`): a size
- * table writes each size's in a place of its own. Or why there are none to try; or that they could not be tried (the
- * previews would not build), which is not kept, so it is tried again.
- */
+/** `moves` is per instance part, since a size table writes each size in a place of its own. `failed` is not kept, so it is tried again. */
 type Located =
 	{ state: 'found'; places: { place: Place; moves: Set<string> }[] } | { state: 'refused'; why: string } | { state: 'failed'; error: string };
 
-/** How a value is written: in the places it is found written in, or as the agent wrote it. */
 export type Write =
 	{ by: 'place'; writes: { place: Place; literal: string }[] } | { by: 'agent'; files: Map<string, string>; places: ValuePlace[]; said: string };
 
 /** An answer, with the files it writes kept here for Save: never sent. */
 type Worked = Answer & { files?: Map<string, string> };
 
-/** One instance's part, by the instance's key and the part's place in the value: what a place is found to move. */
 const moved = (key: string, part: number): string => `${key}\u0000${part}`;
 const partOf = (pair: string): number => Number(pair.slice(pair.lastIndexOf('\u0000') + 1));
 
 /**
- * The values found written in places that write a place another writes otherwise, each with the first such place, in the
- * order tried: the second is refused, the whole of it, so a value is written in all its places or in none, and what a
- * refused one would have written holds nothing up.
+ * Of two values that write one place differently, the later is refused whole, so a value is written in all its places or
+ * in none.
  */
 export const placeClashes = (writes: ReadonlyMap<string, Write>): Map<string, Place> => {
 	const byPlace = new Map<string, string>();
@@ -96,25 +86,21 @@ export const placeClashes = (writes: ReadonlyMap<string, Write>): Map<string, Pl
 };
 
 export class ValueSources {
-	/** Each value's places, once found, by the story file, the property, its instances and the part drawn, for the commit drawn (`locatedFor`). */
 	private readonly located = new Map<string, Promise<Located>>();
 	private locatedFor: string | null = null;
 	private readonly newest = newestAnswer<Worked>((error) => ({ state: 'failed', error }));
 
 	constructor(private readonly deps: ValueSourcesDeps) {}
 
-	/** Where `tried`, values tried on the instances in story file `file`, are written: `building` while it is found. */
 	async of(file: string, tried: TriedValue[]): Promise<Answer> {
 		const { files: _files, ...answer } = await this.worked(file, tried);
 		return answer;
 	}
 
-	/** The files writing `tried` changes, path to text, when every one was found and read back; else why not, in words. */
 	async files(file: string, tried: TriedValue[]): Promise<Map<string, string>> {
 		const worked = await this.worked(file, tried);
 		if (worked.state === 'building') throw new Error('Where the values are written is still being found; save once it is.');
 		if (worked.state === 'failed') throw new Error(worked.error);
-		// Nothing tried writes none of the library's files: its branch, saved so, is the library's own again.
 		if (worked.state === 'none') return new Map();
 		const refused = worked.values.find((v): v is Extract<ValueSource, { state: 'refused' }> => v.state === 'refused');
 		if (refused) throw new Error(refused.why);
@@ -136,10 +122,8 @@ export class ValueSources {
 		// Held against the library as it is, drawn as a change is (`asIs`), so only the change differs.
 		const drawing = (await this.deps.tokens.asIs(index)).get(file)?.light;
 		const before = drawing?.instances;
-		// A rem written in the library is of the page's root size, as it was drawn.
 		const perRem = drawing?.rootPx ?? PX_PER_REM;
 		if (!before) return { state: 'failed', error: 'Its stories did not draw, so where its values are written cannot be found.' };
-		// Each value: the places it is found written in, what the agent wrote for it, being written, or why it cannot be saved.
 		const writes = new Map<string, Write>();
 		const sources = new Map<string, ValueSource>();
 		for (const t of tried) {
@@ -164,9 +148,8 @@ export class ValueSources {
 				why: `It is written in the same place as another value tried (${place.file}, line ${place.line}), so they cannot be saved apart.`,
 			});
 		}
-		// Read back: each value written must draw as asked on its instances. One that does not, or that the agent wrote in the
-		// same lines as another, is refused, and the rest are written and read back again, until every one written draws as asked:
-		// what is saved is what was read back.
+		// A value that does not draw as asked, or that the agent wrote in the same lines as another, is refused and the rest
+		// are read back again, so what is saved is what was read back.
 		let done: { files: Map<string, string>; reach: ChangeReach };
 		for (;;) {
 			const { files, reach, after, clashed } = await this.written(index, writes);
@@ -208,11 +191,7 @@ export class ValueSources {
 		return { state: 'ready', values, reach, files };
 	}
 
-	/**
-	 * The library drawn with `writes`: the files they change, what they reach, and what each component drew with them. The
-	 * places found are written in the commit's text; what the agent wrote is put together with them as git puts two changes
-	 * together, and one that changes the same lines as another is not written (`clashed`).
-	 */
+	/** The agent's files are merged as git merges two changes; one that changes the same lines as another is `clashed`. */
 	private async written(index: DrawnIndex, writes: Map<string, Write>) {
 		const clashed = new Set<string>();
 		if (writes.size === 0) return { files: new Map<string, string>(), reach: { state: 'none' } as ChangeReach, after: new Map(), clashed };
@@ -248,7 +227,6 @@ export class ValueSources {
 		return { files, reach, after, clashed };
 	}
 
-	/** What writing one tried value takes: the places to write and what, or why it cannot be saved. */
 	private async writesOf(
 		indexKey: string,
 		file: string,
@@ -262,7 +240,6 @@ export class ValueSources {
 		if (!drawn || !t.targets.every((k) => drawnBy.get(k)?.join(' ') === drawn.join(' ')))
 			return { why: 'Its instances were not found in its stories as drawn, so where it is written cannot be found.' };
 		const asked = allParts(t.value, partsIn(t.property));
-		// The parts tried apart from what is drawn, by the part drawn there: each is written where that part is.
 		const changed = drawn.map((_, i) => i).filter((i) => !same(t.property, drawn[i], asked[i]));
 		const writes: { place: Place; literal: string }[] = [];
 		for (const part of new Set(changed.map((i) => drawn[i] as string))) {
@@ -302,7 +279,6 @@ export class ValueSources {
 		return { writes };
 	}
 
-	/** The places drawn part `part` of `t`'s instances is written, found once per commit and kept. */
 	private locate(indexKey: string, file: string, t: TriedValue, part: string, perRem: number): Promise<Located> {
 		// Kept for the commit drawn: once the library moves, what was found on the one before is let go.
 		if (this.locatedFor !== indexKey) {
@@ -348,9 +324,8 @@ export class ValueSources {
 				};
 			const probe = probeFor(t.property, part);
 			/**
-			 * Which instances tried, and which of their parts, read the probe with `group` written with it; null when an instance tried
-			 * no longer draws. A probe is written in the place's own form, so a build that fails fails for another reason, which no
-			 * halving finds a place in: it ends the search, said in the build's words.
+			 * The probe is written in the place's own form, so a build that fails fails for another reason, which no halving
+			 * finds a place in: it ends the search.
 			 */
 			const tried = async (group: Place[]): Promise<Set<string> | null> => {
 				const files = new Map<string, string>();

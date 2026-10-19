@@ -1,18 +1,13 @@
-/**
- * What every agent task says about the design system's voice and tone: the file's own words, read each time a task is
- * made and put into the task, not named as a file the agent may never open. With no file, or nothing written in it yet,
- * the task says nothing about it: the file is not required.
- */
+/** The file's words are put into the task rather than named, since the agent may never open it; the file is optional. */
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { voiceIsWritten, voiceWithoutComments } from './voice';
 import { designSystemCheckout } from '../projects/descriptor';
 import { VOICE_FILE } from './voiceAndTone';
 import { errorText } from '../../../shared/result';
-/** The task's heading for the section, whichever way it is made. */
 const HEADING = '## Voice and tone';
 
-/** The file's headings one level down, under the task's own, and its title left out, since the task's heading names it. */
+/** Headings one level down, under the task's own, and the title dropped since the task's heading names it. */
 const underTheTask = (text: string): string => {
 	const lines = text.split('\n');
 	if (/^#\s/.test(lines[0] ?? '')) lines.shift();
@@ -26,7 +21,6 @@ const underTheTask = (text: string): string => {
 		.trim();
 };
 
-/** The voice and tone section of a task, from the file's text: empty when there is no file or nothing written in it. */
 export const voiceBrief = (text: string | null): string => {
 	if (text === null || !voiceIsWritten(text)) return '';
 	return [
@@ -38,7 +32,6 @@ export const voiceBrief = (text: string | null): string => {
 	].join('\n');
 };
 
-/** A file of the design system's, read from its own folder for the product at `root` (`designSystemCheckout`); null when it is not there. */
 export const designSystemFile =
 	(root: string) =>
 	async (path: string): Promise<string | null> => {
@@ -46,10 +39,7 @@ export const designSystemFile =
 		return existsSync(file) ? readFileSync(file, 'utf8') : null;
 	};
 
-/**
- * The voice and tone section of a task, made the one way every task makes it: the design system's file, through `read`.
- * A file that cannot be read is said to be so, and the task goes ahead, since it is not required.
- */
+/** A file that cannot be read is said to be so, and the task goes ahead, since the file is optional. */
 export const taskVoice = async (read: (path: string) => Promise<string | null>): Promise<string> => {
 	try {
 		return voiceBrief(await read(VOICE_FILE));

@@ -3,15 +3,11 @@ import { join } from 'node:path';
 import type { CatalogReads } from './componentCatalog';
 import { GENERATED_FOLDERS } from '../../../shared/generatedFolders';
 
-/** Folders a design system's files are never in: what is installed or built, and git's own. */
 const SKIPPED = new Set<string>([...GENERATED_FOLDERS, '.git']);
 /** More files than any design system has: a folder past this is not read whole. */
 const MOST = 20_000;
 
-/**
- * A folder's files as the catalog and token readers read a library (`CatalogReads`), from disk as it is now, not at a
- * commit: what a folder open in an editor is. Paths are the folder's own, with `/`.
- */
+/** Reads the folder from disk as it is now, not at a commit; paths are relative to it, with `/`. */
 export const folderReads = (root: string): CatalogReads => {
 	let files: string[] | null = null;
 	const all = (): string[] => {

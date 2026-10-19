@@ -1,13 +1,9 @@
-/**
- * The component library's catalog, with Storybook as the source of truth: a component is a story file, wherever it is,
- * named and grouped by its Storybook title. Nothing here knows one library's layout, and nothing is run or compiled.
- * The reads are passed in (the library's branch through git, `designLibrary.ts`; a fixture in tests).
- */
+/** Nothing here knows one library's layout, and nothing of the library's is run or compiled. */
 import { dirname } from 'node:path';
 import type { DesignSystem } from '../../../shared/catalog';
 import type { CatalogComponent } from '../../../shared/contract';
 import { treeUrl } from '../../../shared/hostUrls';
-/** How the catalog reads the library: every file under a folder (`''` for all of it, paths from the root), and one file's text. */
+/** `listFiles('')` lists every file; paths are from the library's root. */
 export interface CatalogReads {
 	listFiles(dir: string): Promise<string[]>;
 	readFile(path: string): Promise<string>;
@@ -15,11 +11,9 @@ export interface CatalogReads {
 
 export const UNGROUPED = 'Ungrouped';
 
-/** The script extensions Storybook reads stories and its set-up from. */
 export const SCRIPT_EXTENSIONS = ['tsx', 'ts', 'jsx', 'js', 'mjs', 'cjs', 'mts', 'cts'];
 const STORY_FILE = new RegExp(`\\.stories\\.(${SCRIPT_EXTENSIONS.join('|')})$`);
 
-/** A Storybook story file, by Storybook's own convention: `*.stories.` and a script extension. Docs pages (`.mdx`) are not components. */
 export const isStoryFile = (path: string): boolean => STORY_FILE.test(path);
 
 /** Storybook's own id rule (`sanitize` in `storybook/internal/csf`): lowercased, punctuation and spaces as one `-`. */
@@ -31,13 +25,9 @@ export const storybookId = (part: string): string =>
 		.replace(/^-+/, '')
 		.replace(/-+$/, '');
 
-/** The docs page for a story title on a hosted Storybook at `base`. */
 export const storybookUrl = (base: string, title: string): string => `${base}?path=/docs/${storybookId(title)}--docs`;
 
-/**
- * The first value of `key` in a file's text, only when it is a plain string literal. A template with `${}` in it, a
- * variable or a call is "not given": the catalog never guesses.
- */
+/** Only a plain string literal counts: a template with `${}`, a variable or a call is null, since the catalog never guesses. */
 export const literalField = (text: string, key: string): string | null => {
 	const m = new RegExp(`\\b${key}\\s*:\\s*(?:'((?:[^'\\\\\\n]|\\\\.)*)'|"((?:[^"\\\\\\n]|\\\\.)*)"|\`((?:[^\`\\\\$]|\\\\.)*)\`)`).exec(text);
 	if (!m) return null;
@@ -54,13 +44,9 @@ const read = async (reads: CatalogReads, path: string): Promise<string> => {
 	}
 };
 
-/** One word before another, without regard to case, and numbers by their value: `FSTab2` before `FSTab10`. */
 const alphabetical = (a: string, b: string): number => a.localeCompare(b, undefined, { sensitivity: 'base', numeric: true });
 
-/**
- * Every component in the library, alphabetically: groups, then components within a group, with `Ungrouped` last, the group
- * of those with no title to put them in one. The order is ours, not the library's own sidebar order.
- */
+/** Alphabetical by group then name, `Ungrouped` last: our order, not the library's own sidebar order. */
 export const readCatalog = async (reads: CatalogReads, library: DesignSystem): Promise<CatalogComponent[]> => {
 	const files = await reads.listFiles('');
 	const components = await Promise.all(

@@ -1,7 +1,6 @@
 /**
- * Tokens kept as a JavaScript or TypeScript theme, as MUI libraries keep them, found by shape: a tone family is an object
- * of numbered hex steps, a palette an object with a `mode`. Only files whose path says colors, tokens, themes, palettes
- * or tones are read. A change is written as the library writes it (`pineGreen[60]`, a quoted hex, a number of pixels).
+ * Found by shape (a tone family is an object of numbered hex steps, a palette an object with a `mode`), and only in files
+ * whose path says colors, tokens, themes, palettes or tones.
  */
 import type { DesignToken, TokenProblem } from '../../../../shared/contract';
 import { type Entry, arrayItems, entryAt, exportedObjects, lineAt, literal, parseObject, replaced } from './objectLiteral';
@@ -14,7 +13,7 @@ const SCRIPT = /\.(ts|tsx|js|jsx|mjs)$/;
 const THEME_PATH = /(^|\/)(colou?rs?|tokens?|themes?|palettes?|tones?)(\/|\.|$)/i;
 const HEX = /^#(?:[0-9a-f]{6}|[0-9a-f]{8})$/i;
 
-/** A color as a palette writes it: a tone step (`pineGreen[50]`), the same with an opacity after it, or a hex. */
+/** A string is the reason it is not read. */
 const colorOf = (text: string, tones: Map<string, Map<string, string>>): { value: string; ref?: DesignToken['ref'] } | string => {
 	const hex = literal(text);
 	if (hex !== null && HEX.test(hex)) return { value: hex.toUpperCase() };
@@ -27,13 +26,11 @@ const colorOf = (text: string, tones: Map<string, Map<string, string>>): { value
 	return { value: alpha ? `${value}${alpha.toUpperCase()}` : value, ref: alpha ? { path, alpha } : { path } };
 };
 
-/** An object of numbered steps, at least one of them a hex color: a tone family. */
 const isTones = (entries: Entry[]): boolean =>
 	entries.length > 0 &&
 	entries.every((e) => e.key !== null && /^\d+$/.test(e.key)) &&
 	entries.some((e) => e.value.kind === 'value' && HEX.test(literal(e.value.text) ?? ''));
 
-/** An object's `mode` (`mode: 'light' as PaletteMode`), which makes it a palette. */
 const modeOf = (entries: Entry[]): string | null => {
 	const mode = entries.find((e) => e.key === 'mode')?.value;
 	return mode?.kind === 'value' ? (/^(['"])(\w+)\1/.exec(mode.text)?.[2] ?? null) : null;
@@ -48,16 +45,12 @@ const themePart = (name: string, open: '{' | '['): RegExp =>
 	new RegExp(`(?:\\b(?:const|let|var)\\s+${name}\\b[^=;\\n]*=|(?<![.\\w])${name}\\s*:)\\s*(?:\\([^()]*\\)\\s*=>\\s*\\(?\\s*)?\\${open}`);
 const PALETTE = themePart('palette', '{');
 
-/**
- * The theme's numbers the panel shows, by token path: the key a theme sets each with, and the object it is set in. The
- * shape is where the theme sets it, as every part is (`themePart`), never a style that reads it (`theme.shape.borderRadius`).
- */
+/** `shape` is matched where the theme sets it (`themePart`), never a style that reads it (`theme.shape.borderRadius`). */
 const THEME_NUMBERS: { path: string; key: string; inside: RegExp }[] = [
 	{ path: 'spacing', key: 'spacing', inside: /createTheme\(\s*\{/ },
 	{ path: 'radius', key: 'borderRadius', inside: themePart('shape', '{') },
 ];
 
-/** The palette `createTheme` is given in place (`palette: { primary: { main: '#1976D2' } }`), when there is one. */
 const paletteIn = (text: string): Entry[] | null => {
 	const open = PALETTE.exec(text);
 	const node = open ? parseObject(text, open.index + open[0].length - 1).node : null;
@@ -65,17 +58,12 @@ const paletteIn = (text: string): Entry[] | null => {
 };
 const TYPOGRAPHY = themePart('typography', '{');
 
-/** A value as a theme writes it: a string, or a number with `unit` after it (a size in pixels, a duration in milliseconds). */
 const themeValue = (written: string, unit = ''): string | null => {
 	const number = /^-?\d+(\.\d+)?$/.exec(written)?.[0];
 	return literal(written) ?? (number === undefined ? null : `${number}${unit}`);
 };
 
-/**
- * A theme's typography as tokens: its family, its base size, its weights (`fontWeightBold`), and each style's family,
- * size, weight and line height (`h1: { … }`). A size written as a number is in pixels, as MUI reads it. A value that is not
- * written as one (`pxToRem(60)`) is named, never guessed.
- */
+/** A size written as a number is in pixels, as MUI reads it. A value that is not a literal (`pxToRem(60)`) is named, never guessed. */
 const typographyOf = (file: string, text: string): { tokens: DesignToken[]; problems: TokenProblem[] } => {
 	const tokens: DesignToken[] = [];
 	const problems: TokenProblem[] = [];
@@ -101,13 +89,9 @@ const typographyOf = (file: string, text: string): { tokens: DesignToken[]; prob
 	return { tokens, problems };
 };
 
-/** Where a theme sets its shadows: `shadows: [` in `createTheme`, or a `const shadows = [` of its own. */
 const SHADOWS_AT = themePart('shadows', '[');
 
-/**
- * A theme's shadows as tokens: MUI's list of elevations, each by its level, the first (`'none'`, the flat surface) left
- * out. A level that is not written as a string (`createShadow(1, 2)`) is named, never guessed.
- */
+/** MUI's first level (`'none'`) is left out. A level that is not a string (`createShadow(1, 2)`) is named, never guessed. */
 const shadowsOf = (file: string, text: string): { tokens: DesignToken[]; problems: TokenProblem[] } => {
 	const tokens: DesignToken[] = [];
 	const problems: TokenProblem[] = [];
@@ -134,11 +118,7 @@ const shadowsOf = (file: string, text: string): { tokens: DesignToken[]; problem
 const BREAKPOINTS = themePart('breakpoints', '{');
 const TRANSITIONS = themePart('transitions', '{');
 
-/**
- * A theme's breakpoints and transitions as tokens: each breakpoint in `breakpoints.values`, in pixels, MUI's and the
- * theme's own alike; each duration in `transitions.duration`, in milliseconds, and each easing in `transitions.easing`. A
- * value that is not written as one (`theme.duration`) is named, never guessed.
- */
+/** Breakpoints are in pixels and durations in milliseconds, as MUI reads them. A value that is not a literal is named, never guessed. */
 const layoutAndMotionOf = (file: string, text: string): { tokens: DesignToken[]; problems: TokenProblem[] } => {
 	const tokens: DesignToken[] = [];
 	const problems: TokenProblem[] = [];
@@ -174,10 +154,6 @@ const layoutAndMotionOf = (file: string, text: string): { tokens: DesignToken[];
 	return { tokens, problems };
 };
 
-/**
- * A whole number a theme sets: `const spacing = 8;`, or `spacing: 8` in `createTheme({ … })`; with its line, and where
- * the number is written.
- */
 const themeNumber = (
 	text: string,
 	{ key, inside }: (typeof THEME_NUMBERS)[number],
@@ -209,7 +185,6 @@ export const themeFiles: TokenSource = {
 		const objects = new Map<string, { file: string; entries: Entry[] }>();
 		for (const [file, text] of texts) for (const [name, entries] of exportedObjects(text)) objects.set(name, { file, entries });
 
-		// The tone families, each step with its color, in the file's order.
 		const tones = new Map<string, Map<string, string>>();
 		for (const [name, { file, entries }] of objects) {
 			if (!isTones(entries)) continue;
@@ -269,7 +244,6 @@ export const themeFiles: TokenSource = {
 			resolved.set(name, roles);
 			return roles;
 		};
-		// A palette is an object with a mode; light first, as a person reads them.
 		const palettes = [...objects]
 			.map(([name, { entries }]) => ({ name, mode: modeOf(entries) }))
 			.filter((p): p is { name: string; mode: string } => p.mode !== null)
@@ -291,7 +265,6 @@ export const themeFiles: TokenSource = {
 		// A theme is tones, a palette, or a call to MUI's `createTheme`; a file with none of them is not one.
 		if (tones.size === 0 && palettes.length === 0 && ![...texts.values()].some((t) => /\bcreateTheme\s*\(/.test(t))) return null;
 
-		// The theme's base spacing and radius, in pixels, from the first file that sets them.
 		for (const number of THEME_NUMBERS) {
 			const name = number.path;
 			for (const [file, text] of texts) {
@@ -310,7 +283,6 @@ export const themeFiles: TokenSource = {
 				break;
 			}
 		}
-		// The theme's typography, its shadows, and its breakpoints and transitions, each from the first file that sets them.
 		for (const read of [typographyOf, shadowsOf, layoutAndMotionOf]) {
 			for (const [file, text] of texts) {
 				const found = read(file, text);

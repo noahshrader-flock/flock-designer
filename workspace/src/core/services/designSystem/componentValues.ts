@@ -1,6 +1,5 @@
 /**
- * A component's drawn values, one row per property, from its instances drawn as the library has it and with every token
- * tagged: a token's when its tag shows through, its own when the tags leave it, worked out when they change it into no tag.
+ * A value is a token's when its tag shows through, its own when the tags leave it, derived when they change it into no tag.
  * A height is never a token: it sums what is inside it, so it moves with any token that does.
  */
 import {
@@ -18,17 +17,13 @@ import { NO_COLOR, shortValue } from '../../../shared/valueParts';
 import type { Drawn, Instance } from './componentTokens';
 import { type Tags, asTag, inMode, isNothing, sizeToken } from './tokenTags';
 
-/** What no token is tagged for, so is never said to be a token or not. */
 const UNTAGGED: ReadonlySet<ValueProperty> = new Set(['fontSize']);
 
-/** One instance's value of one property, read: the value as it is said (`shown`), and what it is. */
 type Read = { shown: string; kind: ValueKind; tokens: string[] };
 
-/** A value as it is said: written short (`shortValue`), and a colour that draws nothing as none. */
 export const shown = (property: ValueProperty, value: string): string =>
 	COLOR_VALUES.has(property) ? (isNothing(value) ? NO_COLOR : value) : shortValue(property, value);
 
-/** What reads values in one mode: the tags, and the tokens, whose twins in dark a tag given to a shared role names. */
 type Reading = { tags: Tags; tokens: DesignToken[]; mode: Theme };
 
 const colorRead = (plain: string, tagged: string, { tags, tokens, mode }: Reading): Pick<Read, 'kind' | 'tokens'> => {
@@ -38,7 +33,7 @@ const colorRead = (plain: string, tagged: string, { tags, tokens, mode }: Readin
 	return { kind: tagged === plain ? 'own' : 'derived', tokens: [] };
 };
 
-/** A length, part by part: a part the tags left alone is the component's own (a zero says nothing), one that became a tag's multiple is that token. */
+/** A zero part says nothing, so it does not count as the component's own. */
 const lengthRead = (plain: string, tagged: string, { tags, tokens: all, mode }: Reading): Pick<Read, 'kind' | 'tokens'> => {
 	const was = plain.split(' ');
 	const now = tagged.split(' ');
@@ -60,10 +55,6 @@ const lengthRead = (plain: string, tagged: string, { tags, tokens: all, mode }: 
 	return { kind: tokens.size === 0 ? 'own' : own > 0 ? 'mixed' : 'token', tokens: [...tokens] };
 };
 
-/**
- * What one value is, given its tagged twin: null when the two drawings do not pair up; and whether there were any tags to
- * draw with (`marked`), without which every value the component draws is its own.
- */
 const readOne = (property: ValueProperty, plain: string, tagged: string | null, reading: Reading, marked: boolean): Read => {
 	const said = shown(property, plain);
 	const as = (r: Pick<Read, 'kind' | 'tokens'>): Read => ({ shown: said, ...r });
@@ -78,10 +69,7 @@ const readOne = (property: ValueProperty, plain: string, tagged: string | null, 
 
 const keyOf = (r: Read): string => `${r.shown}|${r.kind}|${r.tokens.join(',')}`;
 
-/**
- * The props a row may be told apart by: those the stories name as controls that the instances were drawn with; when there
- * are none, any that is not an id (a prop with a different value on every instance in the file names the instance).
- */
+/** Controls first; else any prop but an id (one with a different value on every instance names the instance, not a variant). */
 const candidatesOf = (instances: Instance[], controls: string[]): string[] => {
 	const keys = [...new Set(instances.flatMap((i) => Object.keys(i.props)))];
 	const named = keys.filter((k) => controls.includes(k));
@@ -90,10 +78,9 @@ const candidatesOf = (instances: Instance[], controls: string[]): string[] => {
 };
 
 type Entry = { instance: Instance; read: Read };
-/** A cell before its variant is said: the value of each prop it is told apart by, a prop it was drawn without as null, and the instances that draw it. */
 type Found = { parts: (string | null)[]; read: Read; targets: string[] };
 
-/** The cells for `keys`, when every instance with one set of their values draws the same; null when they do not. In the order first drawn. */
+/** Null unless every instance with one set of `keys`' values draws the same, and there are two cells or more. */
 const explainedBy = (entries: Entry[], keys: string[]): Found[] | null => {
 	const cells = new Map<string, Found>();
 	for (const { instance, read } of entries) {
@@ -117,7 +104,6 @@ const cellOf = (variant: string | null, read: Read, targets: string[], of?: Reco
 	...(of ? { of } : {}),
 });
 
-/** What a cell is drawn with, prop by prop: the value of each of `keys`, null for one drawn without it. */
 const caseOf = (f: Found, keys: string[]): Record<string, string | null> => Object.fromEntries(keys.map((k, i) => [k, f.parts[i] ?? null]));
 
 /**
@@ -178,19 +164,18 @@ const rowOf = (property: ValueProperty, entries: Entry[], candidates: string[]):
 	return { property, by: null, cells: values.sort((a, b) => b.targets.length - a.targets.length).map((v) => cellOf(null, v.read, v.targets)) };
 };
 
-/** Whether two drawings of a file drew the same instances, story by story and prop by prop: only then is one the other's twin. */
+/** Only drawings of the same instances, story by story and prop by prop, can be compared value by value. */
 const pairs = (plain: Instance[], tagged: Instance[] | undefined): tagged is Instance[] =>
 	tagged !== undefined &&
 	tagged.length === plain.length &&
 	tagged.every((t, i) => t.story === plain[i]?.story && JSON.stringify(t.props) === JSON.stringify(plain[i]?.props));
 
-/** One mode's drawings of a story file: as the library has it, and with the tags (null when that did not draw, or there were none). */
+/** `tagged` is null when the tagged drawing did not draw, or there were no tags. */
 interface ModeDrawings {
 	plain: Drawn;
 	tagged: Drawn | null;
 }
 
-/** One mode's rows, from its drawings; null when its stories drew no instance of the component. */
 const rowsIn = (drawings: ModeDrawings | undefined, reading: Reading): ValueRow[] | null => {
 	const instances = drawings?.plain.instances ?? [];
 	if (drawings === undefined || instances.length === 0) return null;
@@ -204,7 +189,6 @@ const rowsIn = (drawings: ModeDrawings | undefined, reading: Reading): ValueRow[
 			instance,
 			read: readOne(property, instance.values[property] ?? '', paired ? (twins?.[i]?.values[property] ?? '') : null, reading, marked),
 		}));
-		// A property no instance draws anything of (no gap, no border, no background) is no row.
 		if (entries.every((e) => isNothing(e.read.shown) || e.read.shown === NO_COLOR)) continue;
 		rows.push(rowOf(property, entries, candidates));
 	}
@@ -212,9 +196,8 @@ const rowsIn = (drawings: ModeDrawings | undefined, reading: Reading): ValueRow[
 };
 
 /**
- * The values a story file's instances draw, in light and in dark. What is said of the file (no component, none drawn,
- * only wrapping, threw) is from its light drawing: dark is the same stories. With no tag every value is the component's
- * own; when two drawings do not pair up, no value is said to be a token or not.
+ * What is said of the file (no component, none drawn, threw) is from its light drawing, since dark is the same stories.
+ * When two drawings do not pair up, no value is said to be a token or not.
  */
 export const readValues = (light: ModeDrawings, dark: ModeDrawings | undefined, tags: Tags, tokens: DesignToken[]): ComponentValues => {
 	const plain = light.plain;

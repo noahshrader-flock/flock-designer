@@ -1,8 +1,3 @@
-/**
- * What DSNR keeps of each change it has a branch for, in one file, by the design system and the change's scope (a component's
- * story file, or none for a change of the whole design system, its tokens): read, kept, forgotten, and listed for the design
- * system shown. Every kind of branch DSNR keeps is kept by it (`KeptBranches`).
- */
 import type { ConnectedDesignSystem } from '../../../shared/contract';
 import { type JsonFile, jsonFile } from '../platform/jsonFile';
 
@@ -18,14 +13,12 @@ export class ScopedRecords<T> {
 		this.file = jsonFile(path, { parse, fallback: {} });
 	}
 
-	/** The design system shown, or why there is none. */
 	system(): ConnectedDesignSystem {
 		const system = this.shown();
 		if (system === null) throw new Error('There is no design system connected.');
 		return system;
 	}
 
-	/** The record for `scope` on the design system shown, with it; or null. */
 	read(scope: string): { system: ConnectedDesignSystem; kept: T } | null {
 		const system = this.shown();
 		if (!system) return null;
@@ -37,7 +30,7 @@ export class ScopedRecords<T> {
 		this.file.update((all) => ({ ...all, [keyOf(system, scope)]: kept }));
 	}
 
-	/** Forgets the record for `scope` on the design system shown; its branch, and any pull request, stay. */
+	/** Its branch, and any pull request, stay. */
 	forget(scope: string): void {
 		const system = this.shown();
 		if (!system) return;
@@ -45,7 +38,7 @@ export class ScopedRecords<T> {
 		this.file.update((all) => Object.fromEntries(Object.entries(all).filter(([k]) => k !== key)));
 	}
 
-	/** The scopes with a record on the design system shown, the one kept without a scope as an empty one. */
+	/** The whole-design-system record's scope is `''`. */
 	scopes(): string[] {
 		const system = this.shown();
 		if (!system) return [];
@@ -56,5 +49,4 @@ export class ScopedRecords<T> {
 	}
 }
 
-/** What a record is kept by: its design system, and its scope (empty for the design system whole). */
 const keyOf = (system: ConnectedDesignSystem, scope: string): string => `${system.id}\u0000${scope}`;

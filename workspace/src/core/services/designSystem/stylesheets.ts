@@ -1,7 +1,6 @@
 /**
- * The library's stylesheets as its own Storybook makes them: Sass for a `.scss`, then its own PostCSS configuration.
- * Each is kept until a file it read changes, by its tools' own account (Sass's loaded files, PostCSS's dependency
- * messages), since a kept-open build asks for every stylesheet again on each rebuild.
+ * Each stylesheet is kept until a file it read changes (by Sass's loaded files and PostCSS's dependency messages), since a
+ * kept-open build asks for every stylesheet again on each rebuild.
  */
 import { readFileSync, realpathSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
@@ -10,13 +9,9 @@ import type { Loader, OnLoadResult, PluginBuild } from 'esbuild';
 import { postcssConfigIn, postcssRun } from './postcssProcess';
 import { errorText } from '../../../shared/result';
 
-/**
- * How esbuild reads a stylesheet, as it does one it loads itself: a CSS module (`.module.css`, `.module.scss`) with its class
- * names its own (`local-css`), which the component's code names them by; any other as is.
- */
+/** A CSS module needs `local-css`, so its class names are the ones the component's code imports. */
 const cssLoaderOf = (path: string): Loader => (/\.module\.s?css$/.test(path) ? 'local-css' : 'css');
 
-/** A stylesheet made, and the files and folders reading it took. */
 interface Made {
 	result: OnLoadResult;
 	files: Set<string>;
@@ -24,14 +19,12 @@ interface Made {
 }
 
 export interface Stylesheets {
-	/** Loads the build's stylesheets as the library's Storybook makes them. */
 	setup(b: PluginBuild): void;
-	/** The files (absolute) a change wrote or put back since the last build: what read one is made again. */
+	/** Absolute paths. */
 	changed(paths: string[]): void;
 	close(): void;
 }
 
-/** The stylesheets of the copy of the library at `library`, its design system's package at `folder`. */
 export const stylesheetsFor = (library: string, folder: string, sass: typeof import('sass')): Stylesheets => {
 	const nodeModules = join(library, 'node_modules');
 	const config = postcssConfigIn(library, folder);
@@ -40,7 +33,7 @@ export const stylesheetsFor = (library: string, folder: string, sass: typeof imp
 	const real = realpathSync(library);
 	const configPaths = config === null ? [] : [config, realpathSync(config)];
 	const made = new Map<string, Promise<Made>>();
-	/** What each stylesheet made read, once it is made: one still being made is made again on any change. */
+	/** Set once a stylesheet is made: one still being made has no entry, so it is made again on any change. */
 	const read = new Map<string, Omit<Made, 'result'>>();
 
 	const make = async (path: string): Promise<Made> => {
@@ -57,7 +50,6 @@ export const stylesheetsFor = (library: string, folder: string, sass: typeof imp
 	return {
 		setup(b) {
 			b.onLoad({ filter: /\.s?css$/, namespace: 'file' }, async (a) => {
-				// A plain stylesheet with no PostCSS to run is read by esbuild as it is.
 				if (!/\.scss$/.test(a.path) && postcss === null) return undefined;
 				let making = made.get(a.path);
 				if (making === undefined) {
@@ -69,7 +61,6 @@ export const stylesheetsFor = (library: string, folder: string, sass: typeof imp
 					);
 					making = started;
 				}
-				// Said as the stylesheet's, by its path in the library, in the tool's own words.
 				return making.then(
 					(m) => m.result,
 					(err: unknown) => ({ errors: [{ text: errorText(err), location: { file: relative(real, a.path) } }] }),

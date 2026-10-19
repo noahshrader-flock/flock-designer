@@ -29,16 +29,12 @@ const CONFIG_NAMES = [
 /** How long one stylesheet may take: a plugin that never answers is said, not waited on. */
 const STYLESHEET_MS = 60_000;
 
-/**
- * The library's PostCSS configuration, as PostCSS's loader finds it: from the design system's package (`folder`) up to the
- * repository's root, the first of its names there (a `package.json` only with a `postcss` entry). Null for a library with none.
- */
+/** As PostCSS's loader finds it: from the package (`folder`) up to the repository's root; a `package.json` only with a `postcss` entry. */
 export const postcssConfigIn = (library: string, folder: string): string | null => {
 	const inManifest = (path: string): boolean => {
 		try {
 			return (JSON.parse(readFileSync(path, 'utf8')) as { postcss?: unknown }).postcss !== undefined;
 		} catch {
-			// None there, or one that is not JSON: no configuration in it.
 			return false;
 		}
 	};
@@ -52,8 +48,7 @@ export const postcssConfigIn = (library: string, folder: string): string | null 
 };
 
 /**
- * What the process runs: the configuration loaded as PostCSS's loader loads it, its plugins required from where it is,
- * then one line of JSON in and out per stylesheet: its CSS, and the files and folders it read (PostCSS's dependency
+ * One line of JSON in and out per stylesheet; each answer carries the files and folders it read (PostCSS's dependency
  * messages), so a stylesheet that read a file a change writes is made again.
  */
 const RUNNER = String.raw`
@@ -140,7 +135,6 @@ readline.createInterface({ input: process.stdin }).on('line', async (line) => {
 });
 `;
 
-/** A stylesheet as the library's PostCSS makes it, and what it read to make it. */
 export interface Processed {
 	css: string;
 	files: string[];
@@ -152,17 +146,13 @@ export interface PostcssRun {
 	close(): void;
 }
 
-/** This app's own PostCSS, which the process is given (the library's plugins run on it, as on any PostCSS 8), and its package's folder. */
+/** Ours, not the library's: its plugins run on any PostCSS 8. */
 const ownPostcss = (): { entry: string; folder: string } => {
 	const require = createRequire(__filename);
 	return { entry: require.resolve('postcss'), folder: dirname(require.resolve('postcss/package.json')) };
 };
 
-/**
- * The library's PostCSS (`config`), in a process locked to `library` (the build's copy, its design system's package at
- * `folder`) and the clone its packages are linked from. Started on the first stylesheet; a process that ends says so to
- * every stylesheet still asked.
- */
+/** Started on the first stylesheet; a process that ends says so to every stylesheet still asked. */
 export const postcssRun = (library: string, folder: string, config: string): PostcssRun => {
 	let child: ChildProcess | null = null;
 	let next = 0;
@@ -203,7 +193,7 @@ export const postcssRun = (library: string, folder: string, config: string): Pos
 		);
 		let stderr = '';
 		started.stderr?.on('data', (d: Buffer) => (stderr = (stderr + d.toString()).slice(-8000)));
-		/** Why it stopped: its error's own line (never the runtime's trace around it, nor what its plugins logged), else how it ended. */
+		/** Its error's own line, never the runtime's trace around it nor what its plugins logged. */
 		const stopped = (code: number) => /^\w*Error\b.*$/m.exec(stderr)?.[0] ?? `exit ${code}`;
 		let buffered = '';
 		started.stdout?.on('data', (d: Buffer) => {

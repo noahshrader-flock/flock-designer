@@ -1,8 +1,4 @@
-/**
- * The tags every story is drawn with: each token that can be changed given a value nothing else has, a color
- * by its number and a length by a prime number of pixels; and how a drawn value is read back as the token it is. Used by
- * which tokens a component draws with (`componentTokens.ts`) and by its drawn values (`componentValues.ts`).
- */
+/** Each changeable token is given a value nothing else has, so a drawn value can be read back as the token it is. */
 import type { DesignToken, TokenEdit } from '../../../shared/contract';
 import type { Theme } from '../../../shared/prototypeTheme';
 import { isEditable } from '../../../shared/primitives';
@@ -33,18 +29,13 @@ const HALF_STEPS = 2 * MOST_MULTIPLE;
 
 export interface Tags {
 	edits: TokenEdit[];
-	/** How many of the tokens that could be changed are lengths no tag can be given (in `em` or `%`): what they draw reads as no token. */
+	/** Lengths no tag can be given (in `em` or `%`): what they draw reads as no token. */
 	unmarked: number;
-	/** A color tag (`#00015A`), and a size tag in pixels, to the token it was given to. */
 	colors: Map<string, string>;
 	sizes: { px: number; path: string }[];
 }
 
-/**
- * A tag for every token: one edit for each place a token is written (a role both modes share is one place), a color by
- * its number, a length by a prime number of pixels (of a rem's sixteenths for one written in rem). A length in `em`, whose
- * pixels depend on where it is used, is left untagged.
- */
+/** One edit per place a token is written (a role both modes share is one place); `em`, whose pixels depend on use, is left untagged. */
 export const tagsFor = (tokens: DesignToken[]): Tags => {
 	const edits: TokenEdit[] = [];
 	const colors = new Map<string, string>();
@@ -84,14 +75,14 @@ export const inMode = (tokens: DesignToken[], path: string, mode: Theme): string
 	return dark?.path ?? path;
 };
 
-/** A computed color (`rgb(0, 1, 90)`, `rgba(0, 1, 90, 0.4)`) as the tag it would be, whatever its opacity. */
+/** Whatever its opacity. */
 export const asTag = (color: string): string | null => {
 	const m = /^rgba?\((\d+), (\d+), (\d+)/.exec(color);
 	if (!m || Number(m[3]) !== TAG_BLUE) return null;
 	return `#${[m[1], m[2], m[3]].map((c) => Number(c).toString(16).padStart(2, '0')).join('')}`.toUpperCase();
 };
 
-/** The size tag a computed size (`26px`, `19.5px`) is a whole or half multiple of, if any. */
+/** Matches a whole or half multiple of a tag (`26px`, `19.5px`). */
 export const sizeToken = (value: string, sizes: Tags['sizes']): string | null => {
 	const px = Math.abs(pxOf(value) ?? NaN);
 	if (!Number.isFinite(px) || px === 0) return null;
@@ -111,5 +102,4 @@ export const sizeTokens = (value: string, sizes: Tags['sizes']): string[] => [
 	...new Set(value.split(/\s+/).flatMap((part) => sizeToken(part, sizes) ?? [])),
 ];
 
-/** Nothing worth saying: no color, no size, or a gap left as CSS has it (`normal`). */
 export const isNothing = (value: string): boolean => ['rgba(0, 0, 0, 0)', 'transparent', '0px', 'normal', 'auto', ''].includes(value);

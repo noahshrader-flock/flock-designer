@@ -1,8 +1,3 @@
-/**
- * A component drawn in every case its declared props allow (`componentProps.ts`), not only those its stories show: one
- * story drawn with each value, in light, as it is and with the tags, read as its values are, so a size no story shows is
- * still said to be a token's or its own. Worked out in the background, the newest asked alone, kept for the commit.
- */
 import type { ComponentVariants as Answer, DeclaredProp } from '../../../shared/contract';
 import type { ComponentTokens, Drawn, DrawnIndex } from './componentTokens';
 import type { Measure } from '../../ports';
@@ -16,16 +11,12 @@ export interface ComponentVariantsDeps {
 	tokens: Pick<ComponentTokens, 'drawn' | 'asIs'>;
 	previews: { copy(): Promise<string | Exclude<StoryPreview, { state: 'ready' }>>; preview(): Promise<StoryPreview> };
 	measure: Measure;
-	/** Where the compiler's own type libraries are (the language's and the DOM's), beside the app as it ships; null when not. */
 	typeLibs: string | null;
 	/** The design system's package in its repository, in a monorepo; '' for the repository itself. */
 	folder: () => string;
 }
 
-/**
- * The props its story was given but did not draw with: its story sets them itself, so each value draws the same. Read off the
- * props each instance was drawn with; a prop never read off an instance (`NOT_VARIANT`) is never said to be.
- */
+/** Props its story was given but did not draw with, because the story sets them itself, so each value draws the same. */
 const fixedIn = (drawn: Drawn, props: DeclaredProp[]): string[] =>
 	props
 		.filter(({ name, values }) => {
@@ -40,20 +31,17 @@ const fixedIn = (drawn: Drawn, props: DeclaredProp[]): string[] =>
 const MOST_STORIES_TRIED = 3;
 
 export class ComponentVariants {
-	/** The program for the commit drawn: every story file's types, made once. */
 	private program: { key: string; made: ReturnType<typeof programFor> } | null = null;
 	private readonly newest = newestAnswer<Answer>((error) => ({ state: 'failed', error }));
 
 	constructor(private readonly deps: ComponentVariantsDeps) {}
 
-	/** The component story file `file` is of, drawn in every case its props declare: building while it is drawn. */
 	async of(file: string): Promise<Answer> {
 		const index = await this.deps.tokens.drawn();
 		if (index.state !== 'ready') return index;
 		return this.newest(`${index.key}\u0000${file}`, () => this.work(index, file)) ?? { state: 'building' };
 	}
 
-	/** Its declared props, from the program for the commit; null when its story file names no component they can be read for. */
 	private async declared(index: DrawnIndex, file: string): Promise<ComponentProps | null> {
 		const libs = this.deps.typeLibs;
 		if (libs === null) throw new Error("The compiler's type libraries are not with the app, so its props cannot be read.");
@@ -69,10 +57,7 @@ export class ComponentVariants {
 		return propsOf(ts, program, copy, file);
 	}
 
-	/**
-	 * The stories its variants may be drawn on: those that draw it once, as the library has it, so each section is one
-	 * instance with one prop changed, not a story that draws every case itself. The page takes the first drawn from its args.
-	 */
+	/** Only stories that draw it once, so each section is one instance with one prop changed, not a story that draws every case. */
 	private async storiesFor(index: DrawnIndex, file: string): Promise<string[]> {
 		const instances = (await this.deps.tokens.asIs(index)).get(file)?.light?.instances ?? [];
 		const counts = new Map<string, number>();
@@ -81,9 +66,8 @@ export class ComponentVariants {
 	}
 
 	/**
-	 * Of the stories that draw it once, the one drawn with the props it is given, by drawing them: a story written as a
-	 * function may pass its args on or not, and only drawing it says which. The first that takes every prop, else the one
-	 * that takes most, of the first few, with its drawing; none when there are none, for the page's own pick.
+	 * Found by drawing, since a story written as a function may pass its args on or not and only drawing it says which.
+	 * Null when there are no stories, for the page's own pick.
 	 */
 	private async storyTaking(
 		base: string,

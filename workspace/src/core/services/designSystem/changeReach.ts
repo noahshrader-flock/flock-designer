@@ -1,7 +1,6 @@
 /**
- * What a token change being tried reaches: every component drawn with the change against itself as the library has it,
- * in light and dark. Compared by its values (instance by key) and by everything its stories draw, so a change in a part
- * its values do not read (an input's outline) is still said to move.
+ * Compared by values and by everything the stories draw, so a change in a part the values do not read (an input's
+ * outline) is still said to move.
  */
 import type { ChangeReach, ComponentReach, ComponentValues, ValueChange, ValueProperty } from '../../../shared/contract';
 import { VALUE_PROPERTIES } from '../../../shared/contract';
@@ -9,26 +8,22 @@ import type { Theme } from '../../../shared/prototypeTheme';
 import type { Drawn } from './componentTokens';
 import { shown } from './componentValues';
 
-/** A component's two drawings, light and dark; null for one that did not draw. */
 export interface Drawings {
 	light: Drawn | null;
 	dark: Drawn | null;
 }
 
-/** Everything a drawing's stories draw, counted by value, as one text: equal when they draw the same. */
 const counted = (d: Drawn): string => {
 	const sorted = (m: Record<string, number>) => Object.entries(m).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
 	return JSON.stringify([sorted(d.colors), sorted(d.radii), sorted(d.spacing)]);
 };
 
-/** The variant an instance is in a property's row, as the Values say it; null when the row has none, or no such row. */
 const variantOf = (values: ComponentValues | undefined, mode: Theme, property: ValueProperty, key: string): string | null => {
 	if (values?.state !== 'read') return null;
 	const row = values.rows[mode]?.find((r) => r.property === property);
 	return row?.cells.find((c) => c.targets.includes(key))?.variant ?? null;
 };
 
-/** What changed of a component's values in one mode, grouped by property, variant and from and to, in the order drawn. */
 const changesIn = (mode: Theme, before: Drawn, after: Drawn, values: ComponentValues | undefined): ValueChange[] => {
 	const was = new Map((before.instances ?? []).map((i) => [i.key, i]));
 	const changes = new Map<string, ValueChange>();
@@ -48,11 +43,7 @@ const changesIn = (mode: Theme, before: Drawn, after: Drawn, values: ComponentVa
 	return [...changes.values()];
 };
 
-/**
- * What a change reaches, from each listed component's drawings as the library has them (`before`) and with the change
- * (`after`), with what its values were read as (`values`, which variant each instance is). A component that did not draw
- * in light either way has nothing to say of it and is listed apart; dark is compared where both drew.
- */
+/** A component that did not draw in light either way is listed apart (`notDrawn`); dark is compared only where both drew. */
 export const reachOf = (
 	files: string[],
 	before: ReadonlyMap<string, Drawings>,

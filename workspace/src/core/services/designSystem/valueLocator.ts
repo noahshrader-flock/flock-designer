@@ -1,42 +1,35 @@
 /**
- * Where a component's own value is written, found by its effect, since the browser cannot say (hashed classes, no source
- * maps): each candidate place is changed alone to a probe and the instances drawn again. A text search alone misleads
- * (FUI's `8px` is in 19 places, none FSButton's radius). What draws and measures is `valueSources.ts`.
+ * Places are found by their effect, since the browser cannot say (hashed classes, no source maps): a text search alone
+ * misleads (FUI's `8px` is in 19 places, none FSButton's radius).
  */
 import type { ValueProperty } from '../../../shared/contract';
 import { COLOR_VALUES } from '../../../shared/contract';
 import { PX_PER_REM, hexOf } from '../../../shared/tokens';
 import { inGeneratedFolder } from '../../../shared/generatedFolders';
 
-/** The files a value may be written in: scripts and stylesheets. */
 const SEARCHED = /\.(?:[cm]?[jt]sx?|css|scss|sass|less)$/;
-/** What is not the design system's code: its stories, tests and docs, its Storybook set-up, and what is built or generated. */
 const SKIPPED = /(?:^|\/)(?:\.storybook|__tests__|__snapshots__|__mocks__|e2e)\/|\.(?:stories|test|spec|figma|docs)\.[^/]+$|\.d\.ts$/;
 const skipped = (path: string): boolean => inGeneratedFolder(path) || SKIPPED.test(path);
 
-/** Of the design system's files, those a value of a component's own may be written in. */
 export const searchedFiles = (files: string[]): string[] => files.filter((f) => SEARCHED.test(f) && !skipped(f));
 
-/** How a value is written in a place: a length in px or rem, a bare number (a style object's px), a percent, a colour. */
+/** `number` is a bare number, which a style object reads as px. */
 export type Form = 'px' | 'rem' | 'number' | 'percent' | 'hex' | 'rgb' | 'name';
 
-/** A place in the design system's files where a drawn value is written, as it is written there. */
 export interface Place {
 	file: string;
-	/** Where it starts in the file's text, and its line, from 1. */
+	/** `at` is an offset into the file's text; `line` counts from 1. */
 	at: number;
 	line: number;
 	written: string;
 	form: Form;
-	/** What a rem is in px where it is drawn: the page's root font size. */
+	/** Px per rem where it is drawn: the page's root font size. */
 	perRem: number;
 }
 
 const escaped = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-/** A number as CSS writes it, shortest: `1.75`, `0.625`, `28`. */
 const numeral = (n: number): string => String(Number(n.toFixed(4)));
 
-/** A drawn colour as its channels and alpha, from the browser's `rgb()` or `rgba()`, or a hex. */
 const channels = (color: string): { r: number; g: number; b: number; a: number } | null => {
 	const hex = hexOf(color);
 	if (hex === null) return null;
@@ -44,7 +37,6 @@ const channels = (color: string): { r: number; g: number; b: number; a: number }
 	return { r: byte(1), g: byte(3), b: byte(5), a: hex.length === 9 ? byte(7) / 255 : 1 };
 };
 
-/** The ways a drawn part (`28px`, `50%`, `rgb(16, 128, 98)`) may be written in a script or a stylesheet. */
 const formsOf = (property: ValueProperty, part: string, script: boolean, perRem: number): { form: Form; pattern: RegExp }[] => {
 	if (COLOR_VALUES.has(property)) {
 		const c = channels(part);
@@ -81,10 +73,8 @@ const formsOf = (property: ValueProperty, part: string, script: boolean, perRem:
 	return forms;
 };
 
-/** Whether a drawn part is in a form a place can be looked for in (a px, a percent, a colour the browser writes as rgb). */
 export const searchable = (property: ValueProperty, part: string): boolean => formsOf(property, part, true, 16).length > 0;
 
-/** Every place a drawn part is written in a file, in any of its ways, in the order they come; a rem of `perRem` px. */
 export const placesIn = (file: string, text: string, property: ValueProperty, part: string, perRem = PX_PER_REM): Place[] => {
 	const script = /\.[cm]?[jt]sx?$/.test(file);
 	const found: Place[] = [];
@@ -97,11 +87,7 @@ export const placesIn = (file: string, text: string, property: ValueProperty, pa
 	return found.sort((a, b) => a.at - b.at);
 };
 
-/**
- * A part's new value (as CSS writes it: `32px`, `#C80000`, `rgb(200, 0, 0)`) written the way the place writes its value:
- * a px as px, a rem as rem, a style object's number as a number, a colour as hex or `rgb()` as it was, and a named colour
- * as hex. Null when it cannot be written so: a length given as a colour, or a rem that is not a whole px.
- */
+/** A named colour is written as hex. Null when it cannot be written in the place's form, such as a length given as a colour. */
 export const writtenAs = (place: Place, value: string): string | null => {
 	if (place.form === 'hex' || place.form === 'rgb' || place.form === 'name') {
 		const c = channels(value);
@@ -121,10 +107,7 @@ export const writtenAs = (place: Place, value: string): string | null => {
 	return `${numeral(n / place.perRem)}rem`;
 };
 
-/**
- * A value written the way `written` is (a token's own value: `0.5rem`, `8px`, `#108062`), as a change to it is given:
- * a length in its unit, a colour in its form. Null when it cannot be written so.
- */
+/** Null when `value` cannot be written in `written`'s form. */
 export const writtenLike = (written: string, value: string, perRem = PX_PER_REM): string | null => {
 	const form: Form = /^#/.test(written)
 		? 'hex'
@@ -140,13 +123,13 @@ export const writtenLike = (written: string, value: string, perRem = PX_PER_REM)
 	return writtenAs({ file: '', at: 0, line: 0, written, form, perRem }, value);
 };
 
-/** A file's text with `places` given new text (`literal` for each), each in its place: from the end, so none moves another. */
+/** Written from the end, so no write moves another's offset. */
 export const withWrites = (text: string, writes: { place: Place; literal: string }[]): string =>
 	[...writes]
 		.sort((a, b) => b.place.at - a.place.at)
 		.reduce((t, { place, literal }) => t.slice(0, place.at) + literal + t.slice(place.at + place.written.length), text);
 
-/** A value of DSNR's own a place is changed to, to see whether it moves the component: never the value drawn. */
+/** Never the value drawn, or the probe would not move the component. */
 export const probeFor = (property: ValueProperty, part: string): string => {
 	if (COLOR_VALUES.has(property)) return hexOf(part)?.slice(0, 7) === '#123457' ? '#654321' : '#123457';
 	const m = /^(-?[\d.]+)(px|%)$/.exec(part);

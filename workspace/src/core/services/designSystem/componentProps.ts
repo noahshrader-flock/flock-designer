@@ -1,7 +1,6 @@
 /**
- * A component's declared props: the cases it can draw, where its stories show only the ones someone wrote. Read by our
- * TypeScript compiler as data, with the library's `tsconfig.json` only for how imports resolve; nothing of the library's is
- * run. A design prop is a finite choice (literals, a boolean), never an HTML/ARIA attribute or CSS's own types.
+ * Read by our TypeScript compiler as data, with the library's `tsconfig.json` only for how imports resolve; nothing of the
+ * library's is run.
  */
 import { existsSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -17,13 +16,9 @@ export interface ComponentProps {
 /** The most values a choice may have to be varied through, one drawing each: more is a list, not a choice. */
 const MOST_VALUES = 24;
 
-/** What declares props that are not a component's design: the DOM's and ARIA's attributes, and CSS's own types. */
 const NOT_DESIGN = /[\\/]node_modules[\\/](?:@types[\\/]react|csstype)[\\/]/;
 
-/**
- * Where the compiler's own type libraries are, resolved as the bundler resolves (`esbuildEntry`): the packaged extension
- * carries them beside it with nothing else of the package. Null when they are not there.
- */
+/** Resolved as the bundler resolves (`esbuildEntry`): the packaged extension carries them beside it with nothing else of the package. */
 export const typeLibs = (): string | null => {
 	try {
 		return join(dirname(createRequire(__filename).resolve('typescript/package.json')), 'lib');
@@ -32,13 +27,10 @@ export const typeLibs = (): string | null => {
 	}
 };
 
-/** The type libraries the compiler is given: the language as browsers have it, and the DOM, which React's types name. */
+/** The DOM's, because React's types name it. */
 const LIBS = ['lib.es2020.d.ts', 'lib.dom.d.ts'];
 
-/**
- * A program over every story file of a library at one commit, from its copy at `root` (the design system's package at
- * `folder`), with the type libraries in `libs`. Made once for a commit: its types are read by `propsOf` for any file.
- */
+/** Made once for a commit and shared by `propsOf` for every file, since making it is the slow part. */
 export const programFor = async (root: string, folder: string, files: string[], libs: string): Promise<{ ts: typeof TS; program: TS.Program }> => {
 	const ts = (await import('typescript')).default;
 	const base = join(root, folder);
@@ -65,7 +57,6 @@ export const programFor = async (root: string, folder: string, files: string[], 
 	return { ts, program: ts.createProgram({ rootNames: files.map((f) => join(root, f)), options, host }) };
 };
 
-/** The expression a story file's default export names its component with (`component: Button`), or null. */
 const componentIn = (ts: typeof TS, source: TS.SourceFile, checker: TS.TypeChecker): TS.Expression | null => {
 	const objectOf = (e: TS.Expression | undefined): TS.ObjectLiteralExpression | null => {
 		if (e === undefined) return null;
@@ -88,7 +79,6 @@ const componentIn = (ts: typeof TS, source: TS.SourceFile, checker: TS.TypeCheck
 	return null;
 };
 
-/** What a prop's type lets it be: its values when a finite choice; else why it cannot be varied; null when it is not a prop to say. */
 const kindOf = (ts: typeof TS, checker: TS.TypeChecker, type: TS.Type): DeclaredProp['values'] | Unvaried => {
 	const t = checker.getNonNullableType(type);
 	const parts = t.isUnion() ? t.types : [t];
@@ -112,10 +102,6 @@ const kindOf = (ts: typeof TS, checker: TS.TypeChecker, type: TS.Type): Declared
 	return 'object';
 };
 
-/**
- * The declared props of the component story file `file` names, from `program`: its design props, each with every value,
- * and those that cannot be varied, with why. Null when the file names no component the compiler can read.
- */
 export const propsOf = (ts: typeof TS, program: TS.Program, root: string, file: string): ComponentProps | null => {
 	const source = program.getSourceFile(join(root, file));
 	if (!source) return null;

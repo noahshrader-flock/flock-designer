@@ -1,7 +1,6 @@
 /**
- * A change to the library's tokens, written into its files: one writer for trying a change in the previews and for
- * committing it. Each edit is checked, written by the source that read the token, then read back by the same reader and
- * must read exactly as the change says (`withEdits`), nothing else moved; else it is refused in words.
+ * One writer for trying a change in the previews and for committing it. Each edit is read back by the same reader and must
+ * read exactly as the change says (`withEdits`), nothing else moved, or it is refused.
  */
 import type { DesignToken, TokenEdit } from '../../../shared/contract';
 import { isEditable } from '../../../shared/primitives';
@@ -10,7 +9,6 @@ import type { CatalogReads } from './componentCatalog';
 import { readTokens, sourceNamed } from './designTokens';
 import { asRecord } from '../../../shared/json';
 
-/** The edits the window sent, as edits, or an error: only what the contract says an edit is. */
 export const tokenEditsOf = (sent: unknown): TokenEdit[] => {
 	if (sent === undefined) return [];
 	const isText = (v: unknown): v is string => typeof v === 'string' && v.length > 0 && v.length <= 200;
@@ -23,7 +21,6 @@ export const tokenEditsOf = (sent: unknown): TokenEdit[] => {
 	});
 };
 
-/** The reason an edit cannot be made to these tokens, or null when it can. */
 export const editProblem = (edit: TokenEdit, byPath: Map<string, DesignToken>): string | null => {
 	const token = byPath.get(edit.path);
 	if (!token) return `The library has no token ${edit.path}.`;
@@ -38,13 +35,11 @@ export const editProblem = (edit: TokenEdit, byPath: Map<string, DesignToken>): 
 	return null;
 };
 
-/** The same reads, with some files as `texts` has them. */
 const withTexts = (reads: CatalogReads, texts: Map<string, string>): CatalogReads => ({
 	listFiles: (dir) => reads.listFiles(dir),
 	readFile: async (path) => texts.get(path) ?? reads.readFile(path),
 });
 
-/** The first token that does not read back as the change says it will, in words; null when every one does. */
 const mismatch = (read: DesignToken[], expected: DesignToken[]): string | null => {
 	const got = new Map(read.map((t) => [t.path, t]));
 	if (got.size !== expected.length) return 'the library would have a different list of tokens';
@@ -58,10 +53,7 @@ const mismatch = (read: DesignToken[], expected: DesignToken[]): string | null =
 	return null;
 };
 
-/**
- * The library's files with `edits` made, by path from the library's root: only the files that change. Throws, in words,
- * for an edit that cannot be made or a change that would not read back as it says.
- */
+/** Only the files that change, by path from the library's root. Throws, in words, for an edit that cannot be made. */
 export const editedFiles = async (reads: CatalogReads, edits: TokenEdit[]): Promise<Map<string, string>> => {
 	const tokens = await readTokens(reads);
 	const source = sourceNamed(tokens.source);

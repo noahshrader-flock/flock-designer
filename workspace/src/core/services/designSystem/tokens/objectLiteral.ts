@@ -1,23 +1,20 @@
 /**
- * A reader for the object literals design libraries keep their tokens in, as text, never run. Strings, templates and
- * comments are stepped over whole, so a brace or comma inside them counts for nothing. Each value has where it is
- * written (`span`), so a change replaces exactly the text that was read.
+ * Read as text, never run. Strings, templates and comments are stepped over whole, so a brace or comma inside them counts
+ * for nothing.
  */
 
 export type Node = { kind: 'object'; entries: Entry[] } | { kind: 'value'; text: string };
 export interface Entry {
 	key: string | null;
-	/** `...name`: the entries of another object, spread in. */
 	spread?: string;
 	value: Node;
 	line: number;
-	/** Where its value is written: from its first character to just past its last, comments and white space left out. */
+	/** End-exclusive, comments and white space left out, so a change replaces exactly the text that was read. */
 	span: [number, number];
 }
 
 export const lineAt = (text: string, i: number): number => text.slice(0, i).split('\n').length;
 
-/** Just past a string, template or comment starting at `i`, or `i` when none does. */
 const skipNonCode = (text: string, i: number): number => {
 	const c = text[i];
 	if (c === '/' && text[i + 1] === '/') {
@@ -52,7 +49,6 @@ const skipNonCode = (text: string, i: number): number => {
 	return i;
 };
 
-/** Where the code of a stretch of text starts, past white space and comments. */
 const codeStart = (text: string, from: number, to: number): number => {
 	let i = from;
 	while (i < to) {
@@ -66,7 +62,7 @@ const codeStart = (text: string, from: number, to: number): number => {
 	return to;
 };
 
-/** Just past the last character of code in a stretch of text: a string counts, a comment or white space after it does not. */
+/** A string counts as code; a comment or white space after it does not. */
 const codeEnd = (text: string, from: number, to: number): number => {
 	let end = from;
 	let i = from;
@@ -83,10 +79,7 @@ const codeEnd = (text: string, from: number, to: number): number => {
 	return Math.min(end, to);
 };
 
-/**
- * The items of the array literal whose `[` is at `open`: each one's code as written, its line, and where it is. A string's
- * commas, and those inside a call or a nested literal, do not end an item.
- */
+/** Commas in a string, a call or a nested literal do not end an item. */
 export const arrayItems = (text: string, open: number): { text: string; line: number; span: [number, number] }[] => {
 	const items: { text: string; line: number; span: [number, number] }[] = [];
 	const item = (from: number, to: number) => {
@@ -127,7 +120,6 @@ export const arrayItems = (text: string, open: number): { text: string; line: nu
 	return items;
 };
 
-/** The object literal whose `{` is at `open`, and where it ends. */
 export const parseObject = (text: string, open: number): { node: Node; end: number } => {
 	const entries: Entry[] = [];
 	let start = open + 1;
@@ -140,7 +132,6 @@ export const parseObject = (text: string, open: number): { node: Node; end: numb
 			entries.push({ key: null, spread: text.slice(at + 3, to).trim(), value: { kind: 'value', text: '' }, line, span: [at, to] });
 			return;
 		}
-		// The key ends at the first colon of the entry's own code.
 		let i = at;
 		while (i < to && text[i] !== ':') i = Math.max(skipNonCode(text, i), i + 1);
 		const key = text
@@ -190,7 +181,6 @@ export const parseObject = (text: string, open: number): { node: Node; end: numb
 	return { node: { kind: 'object', entries }, end: text.length };
 };
 
-/** Every `export const name = { … }` in a file, by name. */
 export const exportedObjects = (text: string): Map<string, Entry[]> => {
 	const found = new Map<string, Entry[]>();
 	for (const m of text.matchAll(/export\s+const\s+(\w+)\s*(?::[^=]+)?=\s*\{/g)) {
@@ -200,10 +190,7 @@ export const exportedObjects = (text: string): Map<string, Entry[]> => {
 	return found;
 };
 
-/**
- * The entry written as `key` on `line`, anywhere in a file's exported objects, however deep: where a token read from
- * there is written. Null unless exactly one is, so a change is never written to a guess.
- */
+/** Null unless exactly one entry matches, so a change is never written to a guess. */
 export const entryAt = (text: string, key: string, line: number, also: Entry[] = []): Entry | null => {
 	const found = new Map<number, Entry>();
 	const walk = (entries: Entry[]) => {
@@ -216,8 +203,6 @@ export const entryAt = (text: string, key: string, line: number, also: Entry[] =
 	return found.size === 1 ? ([...found.values()][0] as Entry) : null;
 };
 
-/** `text` with `span` replaced by `written`. */
 export const replaced = (text: string, [from, to]: [number, number], written: string): string => `${text.slice(0, from)}${written}${text.slice(to)}`;
 
-/** A plain string literal's text (`'#108062'`), or null for anything else. */
 export const literal = (text: string): string | null => /^(['"])(.*)\1$/.exec(text)?.[2] ?? null;

@@ -1,7 +1,6 @@
 /**
- * A component's own value written by the agent where there is no literal to swap (MUI's default, a size worked out), or
- * made to follow a token. Only on the person's press, in a copy of the library at the commit previewed, never their
- * clone. Checked by drawing, as any write is; one that does not read back gets one retry, else it is refused in words.
+ * The agent runs only on the person's press, in a copy of the library at the commit previewed, never their clone. A write
+ * that does not read back as asked gets one retry, else it is refused.
  */
 import { packagesOf } from './storybookSetup';
 import { PX_PER_REM } from '../../../shared/tokens';
@@ -24,18 +23,15 @@ import { exportCommit, git } from '../platform/git';
 import { drawsOtherwise } from './valueReadBack';
 import { probeFor, searchedFiles, writtenLike } from './valueLocator';
 
-/** The standard every run is given, as the app's tasks are given theirs (`readSkillText`). */
 export const DESIGN_SYSTEM_CODE = 'standards/design-system-code.md';
 
-/** What the agent wrote for a value: the files and the lines it changed, and what it said of why; or why it cannot be saved. */
 export type Written =
 	{ state: 'writing' } | { state: 'written'; files: Map<string, string>; places: ValuePlace[]; said: string } | { state: 'refused'; why: string };
 
 export interface ValueAgentDeps {
-	/** The design system shown, or null when none is connected or its clone is gone. */
 	system: () => ConnectedDesignSystem | null;
 	tokens: Pick<ComponentTokens, 'drawn' | 'asIs' | 'reachWith'>;
-	/** The agent, run to its end in a folder (`runToEnd`), with folders it may read and never change. */
+	/** `readOnly`: folders the agent may read and never change. */
 	run: (cwd: string, task: string, readOnly: string[]) => Promise<RunEnded>;
 	readStandard: (path: string) => Promise<string>;
 }
@@ -69,10 +65,7 @@ const scratchCopyAt = async (root: string, commit: string): Promise<string> => {
 	}
 };
 
-/**
- * What the agent changed in the copy, from the commit: each file it changed or added, with its text, and the line each
- * change starts at; and any it deleted, which is never a value's change.
- */
+/** Deleted files are returned apart, since a deletion is never a value's change. */
 const changedIn = async (dir: string): Promise<{ files: Map<string, string>; places: ValuePlace[]; deleted: string[] }> => {
 	await scratch(dir, ['add', '-A']);
 	const changed = (await scratch(dir, ['diff', '--cached', '--name-status', '--no-renames', 'HEAD'])).split('\n').filter(Boolean);
@@ -90,30 +83,23 @@ const changedIn = async (dir: string): Promise<{ files: Map<string, string>; pla
 	return { files, places, deleted };
 };
 
-/** What the agent said of why, from its last lines (`Why: …`), else all it said, short. */
 const whyOf = (said: string): string => /^Why:\s*(.+)$/m.exec(said)?.[1]?.trim() ?? said.slice(-300).trim();
 
 export class ValueAgent {
-	/** Each value's writing, by the index, the story file, the value and what it is to follow. */
 	private readonly runs = new Map<string, Written>();
 	private runsFor: string | null = null;
 
 	constructor(private readonly deps: ValueAgentDeps) {}
 
-	/** What a value is kept by: the commit drawn, the component, its instances, the value asked, the token it follows. */
 	private keyOf(index: DrawnIndex, file: string, t: TriedValue): string {
 		return [index.key, file, triedId(t), t.value, t.follows ?? ''].join('\u0000');
 	}
 
-	/** What the agent has written for `t`, being written, or refused; null when it has not been asked. */
 	of(index: DrawnIndex, file: string, t: TriedValue): Written | null {
 		return this.runs.get(this.keyOf(index, file, t)) ?? null;
 	}
 
-	/**
-	 * Has the agent write `t` on `file`'s instances (or make them follow `t.follows`), once: asked again while it writes, or
-	 * once written, it is not run again. One that was refused is run again when asked again.
-	 */
+	/** Runs once per value: asked again while writing or once written, it is not run again; a refused one is. */
 	async write(file: string, t: TriedValue): Promise<void> {
 		const index = await this.deps.tokens.drawn();
 		if (index.state !== 'ready') throw new Error('Its stories are still being drawn; try again once they are.');
@@ -169,10 +155,7 @@ export class ValueAgent {
 		}
 	}
 
-	/**
-	 * What the agent may change: the design system's own code (its package's scripts and stylesheets, not its stories, tests
-	 * or set-up), and the files its tokens are read from (a theme, a token JSON). One rule, whatever the library.
-	 */
+	/** The design system's own code (not its stories, tests or set-up) and the files its tokens are read from. */
 	private async ownFiles(index: DrawnIndex): Promise<(path: string) => boolean> {
 		const reads = await this.readsAt(index);
 		const [listed, tokens] = await Promise.all([reads.listFiles(''), readTokens(reads)]);
@@ -180,7 +163,6 @@ export class ValueAgent {
 		return (path) => own.has(path);
 	}
 
-	/** What a run is told, as the stories draw it: the cell's variant and value, and the stories and props that draw it. */
 	private async factsOf(index: DrawnIndex, file: string, t: TriedValue): Promise<Facts | { why: string }> {
 		const values = index.built.values.get(file);
 		const cell = values?.state === 'read' ? cellFor(values.rows.light, t) : undefined;
@@ -211,7 +193,6 @@ export class ValueAgent {
 		return { variant: cell.variant, from: cell.value, stories, token, perRem: drawing?.rootPx ?? PX_PER_REM };
 	}
 
-	/** The design system's files at the commit drawn, read from its clone. */
 	private readsAt(index: DrawnIndex): Promise<CatalogReads> {
 		const system = this.deps.system();
 		if (system === null) throw new Error('There is no design system connected.');
@@ -219,8 +200,8 @@ export class ValueAgent {
 	}
 
 	/**
-	 * Null when what the agent wrote draws as asked; else what it drew, in words. To follow a token: it draws as it did, and
-	 * with the token changed (to a value of DSNR's own) it draws the token.
+	 * Null when it draws as asked. Following a token is proven by drawing it again with the token changed to a probe value:
+	 * drawing as before is not enough.
 	 */
 	private async readBack(index: DrawnIndex, file: string, t: TriedValue, files: Map<string, string>, facts: Facts): Promise<string | null> {
 		const { from } = facts;
@@ -231,7 +212,6 @@ export class ValueAgent {
 		if (t.follows === undefined) return null;
 		const base = await this.readsAt(index);
 		const reads: CatalogReads = { listFiles: base.listFiles, readFile: async (p) => files.get(p) ?? base.readFile(p) };
-		// The token changed to a value of DSNR's own, as a place is probed (`probeFor`), written in the token's own unit.
 		const probe = probeFor(t.property, allParts(from, partsIn(t.property))[0] as string);
 		const asToken = facts.token ? (writtenLike(facts.token.value, probe, facts.perRem) ?? probe) : probe;
 		const moved = await editedFiles(reads, [{ path: t.follows, value: asToken }]).catch((err: Error) => err);
@@ -248,11 +228,10 @@ interface Facts {
 	from: string;
 	stories: string[];
 	token: DesignToken | undefined;
-	/** The page's root font size: what a rem is, where it is drawn. */
+	/** Px per rem: the page's root font size. */
 	perRem: number;
 }
 
-/** What the agent is asked: the facts, as the tab has them, and the standard it works under. */
 export const taskFor = (file: string, t: TriedValue, facts: Facts, standard: string, packages: string[] = []): string => {
 	const name = storyComponent(file);
 	const what = `${name}'s ${VALUE_NAMES[t.property].toLowerCase()}${facts.variant !== null ? ` for its "${facts.variant}" instances` : ''}`;

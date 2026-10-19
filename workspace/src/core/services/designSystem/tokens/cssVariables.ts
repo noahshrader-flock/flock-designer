@@ -1,7 +1,6 @@
 /**
- * Tokens kept as CSS variables, as shadcn and Tailwind keep them (`:root`, `.dark`, `@theme`). A variable is a token only
- * when its value or name says which primitive it is; any other (a z-index) is left out, not guessed. Imports are followed
- * into packages; a package's variable is changed by declaring it again in the library's stylesheet that imports it.
+ * A variable is a token only when its value or name says which primitive it is; any other (a z-index) is left out, not
+ * guessed. A package's variable is changed by declaring it again in the library's stylesheet that imports it.
  */
 import type { DesignToken } from '../../../../shared/contract';
 import { DIMENSION, DURATION } from '../../../../shared/tokens';
@@ -13,14 +12,9 @@ import { type CatalogReads, SCRIPT_EXTENSIONS } from '../componentCatalog';
 import { posix } from 'node:path';
 
 const STYLESHEET = /\.(css|scss|less|pcss)$/;
-/** An easing (`cubic-bezier(…)`, `ease-out`, `linear`): motion, by its value, as a duration is (`DURATION`). */
 const EASING = /^(cubic-bezier\(.*\)|steps\(.*\)|linear(\(.*\))?|ease(-in|-out|-in-out)?)$/;
 
-/**
- * Which part of typography a variable is, by its name as Tailwind's theme names it (and the plain names others use): its
- * group, the style it belongs to, and its own name; null for one that is not typography. A color is never typography,
- * however it is named (`--text-muted: #666`), so this is asked only of a value that is not one.
- */
+/** By Tailwind's theme names. Ask only of a value that is not a color: `--text-muted: #666` is a color, not typography. */
 const typography = (name: string, value: string): { group: string; set: string; name: string } | null => {
 	const m = (re: RegExp) => re.exec(name);
 	let found: RegExpExecArray | null;
@@ -45,7 +39,6 @@ const hex2 = (n: number): string =>
 		.padStart(2, '0')
 		.toUpperCase();
 
-/** The hex a color's channels draw, the opacity as two more digits when it has one. */
 export const hexOfChannels = (channels: string): string | null => {
 	const m = CHANNELS.exec(channels);
 	if (!m) return null;
@@ -76,24 +69,16 @@ interface Variable {
 	value: string;
 	file: string;
 	line: number;
-	/** Where a package declares it, for one a library's stylesheet imports. */
 	from?: NonNullable<DesignToken['source']['from']>;
 }
 
-/**
- * A stylesheet's variables, each with the rules it is nested in (outermost first); its imports, in the order written; and
- * its rules at the top, with where each closes.
- */
 interface Read {
 	vars: { name: string; value: string; at: number; rules: string[] }[];
 	imports: { spec: string; at: number }[];
 	top: { rule: string; close: number }[];
 }
 
-/**
- * A stylesheet read with its nesting (`@layer theme { @theme { … } }`), its comments already blanked. Quoted text is
- * skipped, so a `;` or a brace in a font's name is not taken for one.
- */
+/** Expects comments already blanked. Quoted text is skipped, so a `;` or a brace in a font's name is not taken for one. */
 const readStylesheet = (text: string): Read => {
 	const read: Read = { vars: [], imports: [], top: [] };
 	const rules: string[] = [];
@@ -126,7 +111,6 @@ const readStylesheet = (text: string): Read => {
 	return read;
 };
 
-/** A selector a design system's light tokens are declared in: the page's own root (`:root`, `html`, `:host`, `body`), or that alone in its light mode (`.light`, `[data-theme="light"]`). */
 const LIGHT = /^(?::root|html|:host|body|\*)$|^(?::root|html)?(?:\.light|\[[\w-]+=(["']?)light\1\])$/i;
 
 /**
@@ -140,13 +124,11 @@ const modeDeclaredIn = (rules: string[]): 'light' | 'dark' | null => {
 	return selectors.every((one) => LIGHT.test(one)) ? 'light' : null;
 };
 
-/** The rule a variable is declared again in: the innermost of its rules that is a selector, not an at-rule; `:root` with none. */
 const ruleOf = (rules: string[]): string => [...rules].reverse().find((r) => !r.startsWith('@')) ?? ':root';
 
 /**
- * The file a stylesheet's `@import` names, as the library's tools find it: a path beside it (`./theme.css`, or a bare
- * `theme.css` that is there), else a package as installed, from its folder up to the repository's root: its own stylesheet
- * (`exports`' `style`, else `style`) or the file named in it (`tailwindcss/theme.css`). Null for one not found.
+ * As the library's tools find it: a path beside it (a bare `theme.css` too, when it is there), else a package as installed,
+ * from the folder up to the repository's root, by its `exports`' `style`, else `style`.
  */
 const importedFile = async (reads: CatalogReads, from: string, spec: string): Promise<string | null> => {
 	const exists = (path: string) =>
@@ -175,13 +157,11 @@ const importedFile = async (reads: CatalogReads, from: string, spec: string): Pr
 };
 
 const PREVIEW = new RegExp(`(^|/)\\.storybook/preview\\.(${SCRIPT_EXTENSIONS.join('|')})$`);
-/** A stylesheet a script imports for its effect: `import './theme.css';`, not one that is bound to a name. */
 const STYLE_IMPORT = /^\s*import\s+(['"])([^'"]+)\1/gm;
 
 /**
- * The stylesheets the library's Storybook preview imports, in order: what its stories load, so where their variables
- * come from (Primer's `.storybook/primitives-v8.css`). Found by the preview's text, not a folder's name, so a unit-test
- * set-up stylesheet importing the same packages is not taken for them.
+ * Found by the preview's text, not a folder's name, so a unit-test set-up stylesheet importing the same packages is not
+ * taken for them.
  */
 const previewStylesheets = async (reads: CatalogReads): Promise<string[]> => {
 	const sheets: string[] = [];
@@ -195,10 +175,7 @@ const previewStylesheets = async (reads: CatalogReads): Promise<string[]> => {
 	return sheets;
 };
 
-/**
- * A stylesheet with `--name` declared again in its last rule `rule` at its top, or in one added at its end: what changes a
- * variable a package declares (`:root`), over the package's.
- */
+/** Declared in the last top-level `rule`, or one added at the end, so it wins over the package's declaration. */
 const declaredAgain = (text: string, rule: string, name: string, value: string): string => {
 	const indent = /\n([ \t]+)\S/.exec(text)?.[1] ?? '\t';
 	const at = readStylesheet(withoutComments(text))
@@ -209,16 +186,13 @@ const declaredAgain = (text: string, rule: string, name: string, value: string):
 	return `${body}\n${indent}--${name}: ${value};\n${text.slice(at.close)}`;
 };
 
-/** Where a token is read: the library's file and line, and for one a package declares, where the package does. */
 const sourceOf = (v: Variable): DesignToken['source'] => ({ file: v.file, line: v.line, ...(v.from ? { from: v.from } : {}) });
 
 /** Comments as spaces, so what is left keeps every offset, and so every line number. */
 const withoutComments = (css: string): string => css.replace(/\/\*[\s\S]*?\*\//g, (c) => c.replace(/[^\n]/g, ' '));
 
-/** A value that is only a pointer to another variable: `var(--ring)`, with or without a fallback. */
 const POINTER = /^var\(\s*--([\w-]+)\s*(?:,[^)]*)?\)$/;
 
-/** A token's variable name: `css.dark.primary` is `--primary`. */
 const variableOf = (path: string): string => path.split('.').slice(2).join('.');
 
 export const cssVariables: TokenSource = {
@@ -227,7 +201,6 @@ export const cssVariables: TokenSource = {
 		// Each mode's variables, the last one written winning, as in the browser.
 		const modes = new Map<string, Map<string, Variable>>([['light', new Map()]]);
 		const followed = new Set<string>();
-		/** A stylesheet's variables, its imports' where they are; one a library file imports is said as that file's. */
 		const take = async (file: string, imported: { file: string; line: number } | null): Promise<void> => {
 			const css = await reads.readFile(file).catch(() => null);
 			if (css === null) return;
@@ -265,10 +238,8 @@ export const cssVariables: TokenSource = {
 			followed.add(file);
 			await take(file, null);
 		}
-		/** The mode a variable a pointer names is found in: its own mode first, then the light one. */
 		const modeOf = (name: string, mode: string): string | null =>
 			modes.get(mode)?.has(name) ? mode : modes.get('light')?.has(name) ? 'light' : null;
-		/** A value with any `var(--name)` followed. */
 		const resolve = (value: string, mode: string, depth = 0): string => {
 			const m = POINTER.exec(value);
 			const at = m ? modeOf(m[1] as string, mode) : null;
@@ -313,7 +284,6 @@ export const cssVariables: TokenSource = {
 								: null;
 				const category = kind === null ? null : primitiveOf(kind, name);
 				if (kind === null || category === null) continue;
-				// A scale's steps are one set: `--color-red-500` is step 500 of `color-red`.
 				const step = /^(.*)-(\d+)$/.exec(name);
 				tokens.push({
 					path: `css.${mode}.${name}`,

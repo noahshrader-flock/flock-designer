@@ -1,7 +1,6 @@
 /**
- * Tokens kept in design token files: the standard JSON format (`$value`, `$type`), or Tokens Studio's and Style
- * Dictionary's `value` and `type`. Kinds no primitive reads (a gradient) are left out. Each line is exact: the file is read
- * again with the theme files' reader (JSON is an object literal too), so a change is written in the shape it had.
+ * Each file is read again with the theme files' reader (JSON is an object literal too), so lines are exact and a change is
+ * written in the shape it had.
  */
 import type { DesignToken, TokenProblem } from '../../../../shared/contract';
 import { DIMENSION, DURATION, lengthParts } from '../../../../shared/tokens';
@@ -38,7 +37,6 @@ const TYPE_NAMES: Record<string, { type: string; named?: string }> = {
 	boxShadow: { type: 'shadow' },
 };
 
-/** Every object entry of a token file, however deep, by its path joined with dots: where each thing in it is written. */
 const entriesOf = (text: string): Map<string, Entry> => {
 	const at = new Map<string, Entry>();
 	const open = text.indexOf('{');
@@ -54,13 +52,11 @@ const entriesOf = (text: string): Map<string, Entry> => {
 	return at;
 };
 
-/** A value that names another token: `{color.red.500}` names `color.red.500`. */
 const POINTER = /^\{([^{}]+)\}$/;
 
 /** A number with no unit, as Tokens Studio writes a length in pixels: `"8"`, or `8`. */
 const BARE = /^-?\d*\.?\d+$/;
 
-/** A length as written: `"4px"`, `{ "value": 4, "unit": "px" }`, or a number with no unit, which is in pixels. */
 const lengthOf = (value: unknown): string | null => {
 	if (typeof value === 'number' || (typeof value === 'string' && BARE.test(value))) return `${value}px`;
 	if (typeof value === 'string') return DIMENSION.test(value) ? value : null;
@@ -68,13 +64,10 @@ const lengthOf = (value: unknown): string | null => {
 	return typeof v?.value === 'number' && typeof v.unit === 'string' && DIMENSION.test(`${v.value}${v.unit}`) ? `${v.value}${v.unit}` : null;
 };
 
-/** A family as written: a name, or a list of them, which a stylesheet writes with commas. */
 const familyOf = (value: unknown): string | null =>
 	typeof value === 'string' ? value : Array.isArray(value) && value.every((v) => typeof v === 'string') ? value.join(', ') : null;
-/** A weight or a line height as written: a number, or a word (`bold`), or a length for a line height. */
 const plainOf = (value: unknown): string | null => (typeof value === 'number' ? String(value) : typeof value === 'string' ? value : null);
 
-/** How each part of typography is read from a token file: a family as a name or a list, a size as a length, the rest as written. */
 const READ_PART: Record<string, (v: unknown) => string | null> = {
 	[TYPE_PARTS.family]: familyOf,
 	[TYPE_PARTS.size]: (v) => lengthOf(v),
@@ -82,14 +75,9 @@ const READ_PART: Record<string, (v: unknown) => string | null> = {
 	[TYPE_PARTS.lineHeight]: plainOf,
 };
 
-/** The token types that are one part of typography, and which. */
 const TYPE_PART_OF: Record<string, string> = { fontFamily: TYPE_PARTS.family, fontWeight: TYPE_PARTS.weight, lineHeight: TYPE_PARTS.lineHeight };
 
-/**
- * A shadow as the box shadow it draws, from the standard's parts (a color, two offsets, a blur, a spread, and `inset`) or
- * Tokens Studio's (`x`, `y`, lengths with no unit, which are pixels, and `innerShadow`), or several of them on one token;
- * null when a part it needs is missing or is not one. `color` is followed to what it names.
- */
+/** Takes the standard's parts or Tokens Studio's (`x`, `y`, `innerShadow`); null when a part it needs is missing. */
 const boxShadowOf = (value: unknown, resolve: (v: unknown) => unknown): string | null => {
 	const one = (s: unknown): string | null => {
 		const o = s !== null && typeof s === 'object' ? (s as Record<string, unknown>) : {};
@@ -102,13 +90,11 @@ const boxShadowOf = (value: unknown, resolve: (v: unknown) => unknown): string |
 	return all.length > 0 && all.every((s) => s !== null) ? all.join(', ') : null;
 };
 
-/** A duration as written (`100ms`), or as the standard's newer form (`{ value: 100, unit: 'ms' }`). */
 const durationOf = (value: unknown): string | null => {
 	if (typeof value === 'string') return DURATION.test(value) ? value : null;
 	const v = value as { value?: unknown; unit?: unknown } | null;
 	return typeof v?.value === 'number' && (v.unit === 'ms' || v.unit === 's') ? `${v.value}${v.unit}` : null;
 };
-/** A cubic Bézier, four numbers, as CSS writes it. */
 const easingOf = (value: unknown): string | null =>
 	Array.isArray(value) && value.length === 4 && value.every((n) => typeof n === 'number') ? `cubic-bezier(${value.join(', ')})` : null;
 
@@ -145,7 +131,6 @@ export const tokenFiles: TokenSource = {
 			};
 			walk(json, [], undefined);
 		}
-		/** A value that names another token (`{color.red.500}`), followed to what it names. */
 		const resolve = (value: unknown, depth = 0): unknown => {
 			const m = typeof value === 'string' ? POINTER.exec(value) : null;
 			const next = m ? raws.get(m[1] as string) : undefined;
@@ -155,7 +140,6 @@ export const tokenFiles: TokenSource = {
 		const tokens: DesignToken[] = [];
 		for (const [path, raw] of raws) {
 			const value = resolve(raw.value);
-			// Typography: a family, a weight, a size named as one, or a typography token as each of its parts.
 			const typeToken = (at: string, group: string, set: string, name: string, written: string | null) => {
 				if (written !== null)
 					tokens.push({
@@ -181,8 +165,6 @@ export const tokenFiles: TokenSource = {
 				typeToken(path, TYPE_PARTS.size, set, last, lengthOf(value));
 				continue;
 			}
-			// Motion: a duration, an easing as a cubic Bézier, and a transition as its duration and its easing; one that
-			// cannot be read is named.
 			const motion = (at: string, kind: 'duration' | 'easing', motionSet: string, name: string, written: string | null) => {
 				if (written === null) problems.push({ file: raw.file, line: raw.line, reason: `${at} is not a duration or an easing that can be read` });
 				else
@@ -207,7 +189,6 @@ export const tokenFiles: TokenSource = {
 				motion(`${path}.timingFunction`, 'easing', path, 'timingFunction', easingOf(resolve(o.timingFunction)));
 				continue;
 			}
-			// A shadow, as the box shadow it draws; one that cannot be drawn is named.
 			if (raw.type === 'shadow') {
 				const shadow = boxShadowOf(value, resolve);
 				if (shadow === null)

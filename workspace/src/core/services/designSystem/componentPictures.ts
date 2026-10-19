@@ -1,7 +1,6 @@
 /**
- * The grid view's picture of each component, taken in the drawing pass (`ComponentTokens`). Replaced in place, never
- * blanked: a component the pass did not picture keeps its last. Kept outside the previews' build folder, which is removed
- * when the library moves; each file is named by its content, so a newer picture is never shown stale from a cache.
+ * Replaced in place, never blanked: a component the pass did not picture keeps its last. Kept outside the previews' build
+ * folder, which is removed when the library moves; named by content, so a cache never shows a stale picture.
  */
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
@@ -11,11 +10,9 @@ import { writeAtomic } from '../platform/jsonFile';
 
 const RECORD = 'pictures.json';
 const hash = (s: string | Buffer, n: number) => createHash('sha256').update(s).digest('hex').slice(0, n);
-/** What a design system's pictures are served as, on the local server. */
 const servedAs = (system: string) => `component-pictures-${hash(system, 12)}`;
 
 export interface ComponentPicturesDeps {
-	/** The app's own folder for pictures. */
 	folder: string;
 	server: PrototypeServer;
 	/** A fingerprint of the code that takes pictures: one taken another way (another shape, crop) is no picture, not a wrong one. */
@@ -25,12 +22,10 @@ export interface ComponentPicturesDeps {
 export class ComponentPictures {
 	constructor(private readonly deps: ComponentPicturesDeps) {}
 
-	/** Where a design system's pictures are kept. */
 	folderOf(system: string): string {
 		return join(this.deps.folder, hash(system, 12));
 	}
 
-	/** A pass's pictures for a design system's `listed` components, each replacing that component's last. */
 	keep(system: string, listed: string[], taken: Map<string, Buffer>): void {
 		const dir = this.folderOf(system);
 		mkdirSync(dir, { recursive: true });
@@ -52,7 +47,6 @@ export class ComponentPictures {
 		for (const f of readdirSync(dir)) if (f.endsWith('.jpg') && !named.has(f)) rmSync(join(dir, f), { force: true });
 	}
 
-	/** Each component's picture, by its story file, as an address on the local server; none for one with no picture. */
 	async of(system: string): Promise<Record<string, string>> {
 		const record = this.record(system);
 		if (Object.keys(record).length === 0) return {};
@@ -60,13 +54,11 @@ export class ComponentPictures {
 		return Object.fromEntries(Object.entries(record).map(([file, name]) => [file, `${base}${name}`]));
 	}
 
-	/** Removes a design system's pictures, when it is removed from the app: nothing of it is left behind. */
 	forget(system: string): void {
 		this.deps.server.stopServing(servedAs(system));
 		rmSync(this.folderOf(system), { recursive: true, force: true });
 	}
 
-	/** Which picture is whose; none when it is missing, cannot be read, or was taken by another `recipe`. */
 	private record(system: string): Record<string, string> {
 		try {
 			const kept = JSON.parse(readFileSync(join(this.folderOf(system), RECORD), 'utf8')) as { recipe?: unknown; pictures?: unknown };

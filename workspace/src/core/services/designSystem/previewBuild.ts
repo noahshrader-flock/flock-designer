@@ -10,13 +10,6 @@ import { type Stylesheets, stylesheetsFor } from './stylesheets';
 import { withPageTheme } from '../browser/pageTheme';
 import { INK } from '../../../shared/pageInk';
 
-/**
- * How a design system's previews are built: the page, the entry generated for the library, esbuild configured as its own
- * Storybook builds it, a copy at a commit with its packages linked in, and a build kept open to try a change on. Which
- * builds are kept, served and cleared is `storyPreviews.ts`.
- */
-
-/** The page every preview frame loads. Plain styles of its own: the stories bring the library's. */
 export const PAGE = `<!doctype html>
 <html>
 	<head>
@@ -38,9 +31,8 @@ export const PAGE = `<!doctype html>
 `;
 
 /**
- * The page's entry: only what must be the library's own (React, Storybook, its preview set-up and story files), handed to
- * the page's code (`page/preview.ts`). It tells the frame's owner its height and nothing else, and hears from it only the
- * values to try on the component's instances.
+ * It tells the frame's owner its height and nothing else, and hears from it only the values to try on the component's
+ * instances.
  */
 export const previewEntry = (
 	library: string,
@@ -78,17 +70,14 @@ __fdPage.startPreview({
 `;
 };
 
-/** Whether the clone has the packages a preview is built from: React, and Storybook's portable stories. */
 export const hasPackages = (root: string, exists: (p: string) => boolean = existsSync): boolean =>
 	['react', 'react-dom', join('@storybook', 'react')].every((p) => exists(join(root, 'node_modules', p, 'package.json')));
 
-/** What a build step that is not installed here says when a story uses it, in the story's own card. */
 export const notInstalled = (what: string): string => `Not installed here: ${what}. Run npm install in the library, then sync.`;
 
 /**
- * What the library's own Storybook set-up gives its build: its stylesheets as it makes them, a package's stylesheet by
- * path even when unlisted, and nothing for `.mdx`. `missing` (not installed, or generated at install time) become stand-ins
- * that throw only when a story reaches for them, so the stories that do not need them still build.
+ * `missing` (not installed, or generated at install time) become stand-ins that throw only when a story reaches for them,
+ * so the stories that do not need them still build.
  */
 const libraryBuild = (packages: string[], stylesheets: Stylesheets, missing: ReadonlySet<string>): Plugin => ({
 	name: 'library',
@@ -122,13 +111,10 @@ module.exports = new Proxy({}, { getPrototypeOf: () => say, get: (_, k) => say[k
 
 type BuildErrors = { errors: { text: string; location?: { file: string } | null }[] };
 
-/** A build's failure as its errors, as a build that worked has none. */
 const asErrors = (err: Partial<BuildErrors>): BuildErrors => ({ errors: err.errors ?? [{ text: String(err) }] });
 
 const ENTRY = 'preview-entry.tsx';
-/** The packages a copy's design system builds with that are installed, its package's first: what a stylesheet is found in. */
 const installedPackages = (library: string, folder: string): string[] => packagesOf(library, folder).filter((p) => existsSync(p));
-/** What the preview page is built with, with the globals the library's own Storybook build defines and React's production build. */
 const optionsFor = (library: string, folder: string, site: string, plugin: Plugin, defines: Record<string, string>): BuildOptions => ({
 	// In the design system's package, so its imports resolve from its own packages first, hoisted to the root or not.
 	entryPoints: { entry: join(library, folder, ENTRY) },
@@ -165,14 +151,9 @@ const settled = async (attempt: (missing: ReadonlySet<string>) => Promise<BuildE
 	}
 };
 
-/** The specifiers a build could not resolve, from its errors: what `libraryBuild` makes stand-ins for. */
 export const unresolved = (errors: { text: string }[]): Set<string> =>
 	new Set(errors.map((e) => /Could not resolve "(.+?)"/.exec(e.text)?.[1]).filter((m): m is string => m !== undefined));
 
-/**
- * Builds every story file into `site`, from the copy of the library at `library`, with the Storybook set-up of the design
- * system's package (`folder`, in a monorepo) or else the repository's. Throws with the build's own words.
- */
 export const buildPreviews = async (library: string, storyFiles: string[], site: string, folder = ''): Promise<void> => {
 	const [{ build }, sass] = await Promise.all([import('esbuild'), import('sass')]);
 	const packages = installedPackages(library, folder);
@@ -191,16 +172,14 @@ export const buildPreviews = async (library: string, storyFiles: string[], site:
 	writeFileSync(join(site, 'index.html'), withPageTheme(PAGE));
 };
 
-/** The previews built again with a change: built with a change's files, as often as the change changes; closed when done. */
 export interface TrialBuild {
 	build(files: Map<string, string>): Promise<void>;
 	dispose(): Promise<void>;
 }
 
 /**
- * The previews built again with a change in `work`, a copy of `copy` of its own, so the change's files are on disk where
- * every tool reads (Tailwind's scan, Sass's partials) and no other build sees them. Kept open between changes, so each is
- * esbuild's incremental rebuild (about a second); each build puts back the files the last one wrote.
+ * In a copy of its own, so the change's files are on disk where every tool reads (Tailwind's scan, Sass's partials) and no
+ * other build sees them. Kept open so each change is esbuild's incremental rebuild (about a second).
  */
 export const trialBuild = async (copy: string, work: string, site: string, folder = ''): Promise<TrialBuild> => {
 	const [{ context }, sass] = await Promise.all([import('esbuild'), import('sass')]);
@@ -249,10 +228,7 @@ export const trialBuild = async (copy: string, work: string, site: string, folde
 	};
 };
 
-/**
- * A copy of the library at `commit`, taken out of git (its files as committed, which is small: no packages), with the
- * clone's packages linked in: the repository's, and in a monorepo the design system package's own when it has them.
- */
+/** Taken out of git (small, since packages are not committed), with the clone's packages linked in. */
 export const copyWithPackages = async (root: string, commit: string, library: string, folder: string): Promise<void> => {
 	await exportCommit(root, commit, library);
 	// A junction on Windows, a symbolic link elsewhere: the packages are read where the clone has them, by their real path, so
@@ -263,5 +239,5 @@ export const copyWithPackages = async (root: string, commit: string, library: st
 	}
 };
 
-/** How this file builds a preview, as one fingerprint of its own code: part of what a kept build is kept for (`storyPreviews.ts`). */
+/** Part of what a kept build is keyed by (`storyPreviews.ts`). */
 export const BUILD_RECIPE = createHash('sha256').update(readFileSync(__filename)).digest('hex');

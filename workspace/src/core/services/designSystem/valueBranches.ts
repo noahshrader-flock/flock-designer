@@ -1,8 +1,3 @@
-/**
- * The values tried on a component's instances, saved where they are found, on a `dsnr/values-…` branch per component
- * (`changeBranches.ts`). What is written is what was found and read back (`ValueSources`) on the library's current
- * commit, so a change first saved on an older one is not saved on top of it.
- */
 import type { TriedValue, ValuePlace } from '../../../shared/contract';
 import { VALUE_NAMES, storyComponent } from '../../../shared/valueNames';
 import { type ChangeBranchesDeps, ChangeBranches, type SavedKindRules } from './changeBranches';
@@ -22,9 +17,7 @@ const VALUES = (sources: Pick<ValueSources, 'of' | 'files'>): SavedKindRules<Tri
 			);
 		return sources.files(file, tried);
 	},
-	// Each place written, as the tab says it: the component, the value, what it was and is, and where.
 	lines: async (_system, _base, tried, file) => {
-		// Nothing tried says nothing: the save is the library's own again.
 		if (tried.length === 0) return [];
 		const found = await sources.of(file, tried);
 		if (found.state !== 'ready') throw new Error('Where the values are written is still being found; save once it is.');
@@ -46,7 +39,6 @@ const VALUES = (sources: Pick<ValueSources, 'of' | 'files'>): SavedKindRules<Tri
 	saving: 'save component values',
 });
 
-/** Each component's values, kept on its own branch, by the component's story file (`scope`). */
 export class ValueBranches extends ChangeBranches<TriedValue[]> {
 	constructor(deps: ChangeBranchesDeps & { sources: Pick<ValueSources, 'of' | 'files'> }) {
 		super(deps, VALUES(deps.sources));
