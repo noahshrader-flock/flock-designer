@@ -140,9 +140,8 @@ export const pictureOf = async (page: PageLike): Promise<Buffer | undefined> => 
 	try {
 		const scale = Math.min(1, PICTURE_MOST_ACROSS / place.width);
 		const clip = { x: region.x + dx, y: region.y + dy, width: region.width, height: region.height, scale };
-		// A region wider or taller than the window is taken past it, where the page is white too: the slower capture, only then.
-		const past = clip.x + clip.width > WINDOW.width || clip.y + clip.height > WINDOW.height;
-		return Buffer.from(await page.screenshot({ type: 'jpeg', quality: PICTURE_QUALITY, optimizeForSpeed: true, captureBeyondViewport: past, clip }));
+		// A region wider or taller than the window is taken past it, where the page is white too.
+		return Buffer.from(await page.screenshot({ type: 'jpeg', quality: PICTURE_QUALITY, optimizeForSpeed: true, captureBeyondViewport: true, clip }));
 	} finally {
 		await page.evaluate(pictured);
 	}
