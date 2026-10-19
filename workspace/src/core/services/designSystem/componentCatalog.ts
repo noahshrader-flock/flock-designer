@@ -25,7 +25,7 @@ export const storybookId = (part: string): string =>
 		.replace(/^-+/, '')
 		.replace(/-+$/, '');
 
-export const storybookUrl = (base: string, title: string): string => `${base}?path=/docs/${storybookId(title)}--docs`;
+export const storybookPath = (title: string): string => `?path=/docs/${storybookId(title)}--docs`;
 
 /** Only a plain string literal counts: a template with `${}`, a variable or a call is null, since the catalog never guesses. */
 export const literalField = (text: string, key: string): string | null => {
@@ -64,7 +64,8 @@ export const readCatalog = async (reads: CatalogReads, library: DesignSystem): P
 						.replace(/\.stories\.\w+$/, ''),
 				group: parts.length > 1 ? parts[0]! : UNGROUPED,
 				subtitle: literalField(text, 'componentSubtitle'),
-				storybook: title !== null && library.storybook !== null ? storybookUrl(library.storybook, title) : null,
+				storybookPath: title === null ? null : storybookPath(title),
+				storybook: title !== null && library.storybook !== null ? `${library.storybook}${storybookPath(title)}` : null,
 				source: treeUrl(library.repository, library.branch, dirname(file)),
 			};
 		}),

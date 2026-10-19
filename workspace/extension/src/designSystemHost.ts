@@ -7,7 +7,7 @@ import type { Tell } from './agentWork';
 import { type AskHandlers, readComponentArg } from './asks';
 import { type Panels, receivePage } from './bridge';
 import { CatalogShare } from './catalogShare';
-import { componentLink, componentOf, editsAfterRead, keepMode, keptMode, libraryFileIn } from './designSystem';
+import { askStorybook, componentOf, editsAfterRead, keepMode, keptMode, libraryFileIn, openComponentLink } from './designSystem';
 import { DesignTabs } from './designTabs';
 import { type AskName, type ComponentLink, SHARED_START, withTrial } from './messages';
 import { dsnrPage } from './panel';
@@ -35,7 +35,7 @@ export const designSystemHost = ({
 	api: Pick<WorkspaceApi, 'designSystemCatalog' | 'designSystems' | 'onLibraryShown'>;
 	panels: Panels;
 	asks: () => ReadonlyMap<AskName, Route>;
-	systems: Pick<DesignSystemsMemory, 'current'>;
+	systems: Pick<DesignSystemsMemory, 'current' | 'setStorybook'>;
 	local: () => Promise<LocalAddresses>;
 	openVoiceAndTone: () => Promise<void>;
 	openChanges: () => Promise<void>;
@@ -73,7 +73,13 @@ export const designSystemHost = ({
 			const component = componentOf(shownCatalog.current().catalog, id);
 			await tabs.open({ kind: 'component', id: component.id, name: component.name });
 		},
-		componentLink: (id: string, link: ComponentLink) => openExternal(componentLink(componentOf(shownCatalog.current().catalog, id), link)),
+		componentLink: (id: string, link: ComponentLink) =>
+			openComponentLink(componentOf(shownCatalog.current().catalog, id), link, systems.current(), {
+				ask: (name) => askStorybook(vscode.window, name),
+				keep: (system, address) => systems.setStorybook(system, address),
+				reread: () => catalog.again(),
+				open: openExternal,
+			}),
 		openPrimitives: () => tabs.open({ kind: 'primitives' }),
 		openVoiceAndTone,
 		openLibrarySource: async (file: string, line: number) => {

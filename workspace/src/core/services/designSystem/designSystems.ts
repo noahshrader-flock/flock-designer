@@ -2,6 +2,7 @@
 import { dirname, isAbsolute, relative, resolve, sep } from 'node:path';
 import type { ConnectedDesignSystem, ConnectedDesignSystems, FoundDesignSystem } from '../../../shared/contract';
 import { asArray, asRecord } from '../../../shared/json';
+import { storybookAddress } from '../../../shared/catalog';
 import { SCRIPT_EXTENSIONS, isStoryFile, type CatalogReads } from './componentCatalog';
 import { packageFirst } from './storybookSetup';
 import { readTokens } from './designTokens';
@@ -95,22 +96,13 @@ export const systemAt = async (root: string): Promise<ConnectedDesignSystem> => 
 	return { id: designSystemId(repository, folder), name, repository, root: top, folder, branch };
 };
 
-/**
- * A file kept by an earlier version (one connected folder, `{ "folder": … }`) is read as that one design system: that
- * version took only FUI, whose branch is `develop`.
- */
 const parseConnected = (raw: unknown): ConnectedDesignSystems => {
 	const kept = asRecord(raw);
-	if (typeof kept.folder === 'string' && isAbsolute(kept.folder) && kept.systems === undefined) {
-		const repository = repositoryAt(kept.folder);
-		if (repository === null) return { systems: [], current: null };
-		const id = designSystemId(repository, '');
-		return { systems: [{ id, name: repoName(repository), repository, root: kept.folder, folder: '', branch: 'develop' }], current: id };
-	}
 	const systems = asArray(kept.systems).filter((s): s is ConnectedDesignSystem => {
 		const r = asRecord(s);
 		const strings = [r.id, r.name, r.root, r.folder, r.branch].every((v) => typeof v === 'string');
-		return strings && asRepositoryPath(r.repository) !== null && isAbsolute(r.root as string);
+		const storybook = r.storybook === undefined || (typeof r.storybook === 'string' && storybookAddress(r.storybook) === r.storybook);
+		return strings && storybook && asRepositoryPath(r.repository) !== null && isAbsolute(r.root as string);
 	});
 	const current = typeof kept.current === 'string' && systems.some((s) => s.id === kept.current) ? kept.current : (systems[0]?.id ?? null);
 	return { systems, current };
@@ -138,8 +130,19 @@ export class DesignSystemsMemory {
 		return systems.find((s) => s.id === current) ?? null;
 	}
 
+	/** A Storybook address given for it before is kept: its files, read again, do not say it. */
 	add(system: ConnectedDesignSystem): void {
 		const { systems } = this.read();
-		this.write([...systems.filter((s) => s.id !== system.id), system], system.id);
+		const storybook = system.storybook ?? systems.find((s) => s.id === system.id)?.storybook;
+		this.write([...systems.filter((s) => s.id !== system.id), { ...system, ...(storybook ? { storybook } : {}) }], system.id);
+	}
+
+	/** `address` is a web address (`storybookAddress`'s): kept with the design system, as its files do not say it. */
+	setStorybook(id: string, address: string): void {
+		const { systems, current } = this.read();
+		this.write(
+			systems.map((s) => (s.id === id ? { ...s, storybook: address } : s)),
+			current,
+		);
 	}
 }

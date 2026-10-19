@@ -1,5 +1,16 @@
 import { describe, expect, it, vi } from 'vitest';
-import { componentLink, componentOf, editsAfterRead, keepMode, keptMode, libraryFileIn, showFound, shownFrom } from '../extension/src/designSystem';
+import {
+	askStorybook,
+	componentLink,
+	componentOf,
+	editsAfterRead,
+	keepMode,
+	keptMode,
+	libraryFileIn,
+	openComponentLink,
+	showFound,
+	shownFrom,
+} from '../extension/src/designSystem';
 import { SAMPLE_CATALOG } from './extensionSamples';
 import { withTrial } from '../extension/src/messages';
 import { Shared } from '../extension/src/sharedValues';
@@ -132,6 +143,7 @@ const button: CatalogComponent = {
 	name: 'FSButton',
 	group: 'Buttons',
 	subtitle: null,
+	storybookPath: '?path=/docs/buttons-fsbutton--docs',
 	storybook: 'https://storybook.example/?path=/docs/buttons-fsbutton--docs',
 	source: 'https://github.com/flocksafety/flock-react-component-lib/tree/develop/src/components/FSButton',
 };
@@ -145,10 +157,53 @@ describe('a component the page names', () => {
 		expect(() => componentOf(null, button.id)).toThrow('The design system shown has no component');
 	});
 
-	it('has its links from the catalog: its source always, its Storybook only when a hosted one is known', () => {
+	it('has its links from the catalog: its source always, its Storybook page once the address is known', () => {
 		expect(componentLink(button, 'source')).toBe(button.source);
 		expect(componentLink(button, 'storybook')).toBe(button.storybook);
-		expect(() => componentLink({ ...button, storybook: null }, 'storybook')).toThrow(/FSButton has no Storybook page DSNR knows/);
+		expect(() => componentLink({ ...button, storybook: null, storybookPath: null }, 'storybook')).toThrow(/its story file's title could not be read/);
+	});
+});
+
+describe('a component opened in Storybook', () => {
+	const system = { id: 'acme/ui', name: 'Acme' };
+	const world = (answer: string | null) => ({
+		ask: vi.fn(async () => answer),
+		keep: vi.fn(),
+		reread: vi.fn(async () => undefined),
+		open: vi.fn(async () => undefined),
+	});
+	const unknown = { ...button, storybook: null };
+
+	it('asks for its Storybook’s address once, keeps it with the design system, reads every page again, and opens the page', async () => {
+		const d = world('https://sb.acme.test/');
+		await openComponentLink(unknown, 'storybook', system, d);
+		expect(d.ask).toHaveBeenCalledWith('Acme');
+		expect(d.keep).toHaveBeenCalledWith('acme/ui', 'https://sb.acme.test/');
+		expect(d.reread).toHaveBeenCalled();
+		expect(d.open).toHaveBeenCalledWith('https://sb.acme.test/?path=/docs/buttons-fsbutton--docs');
+	});
+
+	it('asks nothing when the address is known, and keeps nothing when the person does not give one', async () => {
+		const known = world('never asked');
+		await openComponentLink(button, 'storybook', system, known);
+		expect(known.ask).not.toHaveBeenCalled();
+		expect(known.open).toHaveBeenCalledWith(button.storybook);
+		const declined = world(null);
+		await openComponentLink(unknown, 'storybook', system, declined);
+		expect([declined.keep, declined.reread, declined.open].map((f) => f.mock.calls.length)).toEqual([0, 0, 0]);
+	});
+
+	it('takes only a web address, kept as its root with a closing /', async () => {
+		const asked = (typed: string | undefined) => {
+			const box = vi.fn(async (o: { validateInput?: (v: string) => string | null }) =>
+				typed !== undefined && o.validateInput?.(typed) === null ? typed : undefined,
+			);
+			return { window: { showInputBox: box } as never, box };
+		};
+		expect(await askStorybook(asked('https://sb.acme.test/docs?x=1#y').window, 'Acme')).toBe('https://sb.acme.test/docs/');
+		expect(await askStorybook(asked('ftp://sb.acme.test').window, 'Acme')).toBeNull();
+		expect(await askStorybook(asked('not an address').window, 'Acme')).toBeNull();
+		expect(await askStorybook(asked(undefined).window, 'Acme')).toBeNull();
 	});
 });
 

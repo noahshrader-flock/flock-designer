@@ -5,11 +5,13 @@ import { type DesignSystemsMemory, systemAt } from '../../src/core/services/desi
 import type { Catalog, CatalogComponent, ConnectedDesignSystem, TokenEdit } from '../../src/shared/contract';
 import { editsKept } from '../../src/shared/tokens';
 import { errorText } from '../../src/shared/result';
+import { storybookAddress } from '../../src/shared/catalog';
 import { DEFAULT_THEME, type Theme, isTheme } from '../../src/shared/prototypeTheme';
 import type { ComponentLink } from './messages';
 
-const same = (a: ConnectedDesignSystem, b: ConnectedDesignSystem): boolean =>
-	(Object.keys(a) as (keyof ConnectedDesignSystem)[]).every((k) => a[k] === b[k]);
+/** By what a read of its folder says: an address given for it is the memory's to keep, not a change. */
+const same = (kept: ConnectedDesignSystem, read: ConnectedDesignSystem): boolean =>
+	(Object.keys(read) as (keyof ConnectedDesignSystem)[]).every((k) => kept[k] === read[k]);
 
 /** Why the folder found cannot be read as a design system, or null (also when none was found). */
 export const showFound = async (
@@ -50,8 +52,42 @@ export const componentOf = (catalog: Catalog | null, id: string): CatalogCompone
 export const componentLink = (component: CatalogComponent, link: ComponentLink): string => {
 	if (link === 'source') return component.source;
 	if (component.storybook === null)
-		throw new Error(`${component.name} has no Storybook page DSNR knows: only a design system whose hosted Storybook it knows has one.`);
+		throw new Error(`${component.name} has no Storybook page DSNR can name: its story file's title could not be read.`);
 	return component.storybook;
+};
+
+/** A component's page, opened; its Storybook's address asked for when it is not known, then kept and every page read again. */
+export const openComponentLink = async (
+	component: CatalogComponent,
+	link: ComponentLink,
+	system: Pick<ConnectedDesignSystem, 'id' | 'name'> | null,
+	d: {
+		ask: (name: string) => Promise<string | null>;
+		keep: (id: string, address: string) => void;
+		reread: () => Promise<void>;
+		open: (url: string) => Promise<void>;
+	},
+): Promise<void> => {
+	if (link === 'storybook' && component.storybook === null && component.storybookPath !== null && system !== null) {
+		const address = await d.ask(system.name);
+		if (address === null) return;
+		d.keep(system.id, address);
+		await d.reread();
+		return d.open(`${address}${component.storybookPath}`);
+	}
+	return d.open(componentLink(component, link));
+};
+
+/** Asked once, the first time a component is opened in Storybook: a library's files do not say where its Storybook is. */
+export const askStorybook = async (window: Pick<typeof VsCode.window, 'showInputBox'>, name: string): Promise<string | null> => {
+	const given = await window.showInputBox({
+		title: `${name}'s Storybook`,
+		prompt: 'Where its Storybook is published. DSNR keeps it with the design system, so it is asked only once.',
+		placeHolder: 'https://storybook.example.com/',
+		ignoreFocusOut: true,
+		validateInput: (value) => (storybookAddress(value) === null ? 'A web address, starting with https://' : null),
+	});
+	return given === undefined ? null : storybookAddress(given);
 };
 
 /** `file` is from the repository's root; null when it resolves outside the clone. */

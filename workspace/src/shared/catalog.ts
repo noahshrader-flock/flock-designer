@@ -10,11 +10,24 @@ export interface DesignSystem {
 	storybook: string | null;
 }
 
-export const designSystemOf = ({ repository, branch }: { repository: string; branch: string }): DesignSystem => ({
+export const designSystemOf = ({ repository, branch, storybook }: { repository: string; branch: string; storybook?: string }): DesignSystem => ({
 	repository,
 	branch,
-	storybook: HOSTED_STORYBOOKS[repository.toLowerCase()] ?? null,
+	storybook: storybook ?? HOSTED_STORYBOOKS[repository.toLowerCase()] ?? null,
 });
+
+/** A Storybook's address as a person may give it, ending in `/`; null for one that is not a web address. */
+export const storybookAddress = (given: string): string | null => {
+	try {
+		const url = new URL(given.trim());
+		if (url.protocol !== 'https:' && url.protocol !== 'http:') return null;
+		url.search = '';
+		url.hash = '';
+		return url.href.endsWith('/') ? url.href : `${url.href}/`;
+	} catch {
+		return null;
+	}
+};
 
 /** Token pages are left out of the components: the tokens panel shows the same from the source. */
 export const isTokenGroup = (group: string): boolean => /\btokens?\b/i.test(group);

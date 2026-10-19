@@ -19,7 +19,7 @@ export const PAGES_SIGN_IN = {
 	exchange: env.DSNR_PAGES_EXCHANGE ?? 'https://dsnr-auth.vercel.app/api/exchange',
 };
 
-/** A hint, since a library does not say it in its files; any other has no Storybook links. */
+/** Flock's library's, a default for that repository only: any other design system's is asked for once, and kept with it. */
 export const HOSTED_STORYBOOKS: Readonly<Record<string, string>> = {
 	'flocksafety/flock-react-component-lib': 'https://develop--6617f3c579abb5c5e780fddc.chromatic.com/',
 };

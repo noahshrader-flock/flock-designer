@@ -29,6 +29,11 @@ export class CatalogShare {
 		if (first?.state === 'ready' && first.update === 'updating') await this.sync();
 	}
 
+	/** Read again from the clone, for what changed in the connection (a Storybook address given). */
+	async again(): Promise<void> {
+		await this.read(false);
+	}
+
 	/** What is shown stays, marked syncing, until GitHub answers. */
 	async sync(): Promise<void> {
 		this.deps.shared.set({ ...this.deps.shared.current(), syncing: true });

@@ -158,25 +158,22 @@ describe('the ones connected', () => {
 		expect(new DesignSystemsMemory(file).current()?.id).toBe('acme/acme:packages/ui');
 	});
 
-	it('reads what an earlier version kept, one connected folder, as that design system: FUI, which it took alone, on develop', () => {
-		const clone = join(dir, 'fui');
-		mkdirSync(clone);
-		execFileSync('git', ['-C', clone, 'init', '-q']);
-		execFileSync('git', ['-C', clone, 'remote', 'add', 'origin', 'git@github.com:flocksafety/flock-react-component-lib.git']);
-		writeFileSync(file, JSON.stringify({ folder: clone }));
-		expect(new DesignSystemsMemory(file).read()).toEqual({
-			systems: [
-				{
-					id: 'flocksafety/flock-react-component-lib',
-					name: 'flock-react-component-lib',
-					repository: 'flocksafety/flock-react-component-lib',
-					root: clone,
-					folder: '',
-					branch: 'develop',
-				},
-			],
-			current: 'flocksafety/flock-react-component-lib',
-		});
+	it('reads a file of another shape as no design system, rather than guess one or its branch', () => {
+		writeFileSync(file, JSON.stringify({ folder: dir }));
+		expect(new DesignSystemsMemory(file).read()).toEqual({ systems: [], current: null });
+	});
+
+	it('keeps a Storybook address given for a design system, through its folder being read again', () => {
+		const memory = new DesignSystemsMemory(file);
+		memory.add(system('acme/ui'));
+		memory.setStorybook('acme/ui', 'https://sb.acme.test/');
+		memory.add(system('acme/ui'));
+		expect(new DesignSystemsMemory(file).current()?.storybook).toBe('https://sb.acme.test/');
+	});
+
+	it('refuses a kept Storybook address that is not a web address', () => {
+		writeFileSync(file, JSON.stringify({ systems: [{ ...system('acme/ui'), storybook: 'javascript:alert(1)' }], current: 'acme/ui' }));
+		expect(new DesignSystemsMemory(file).read().systems).toEqual([]);
 	});
 
 	it('read nothing from a file that is not theirs, and keep nothing that is not a design system', () => {

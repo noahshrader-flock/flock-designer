@@ -79,7 +79,7 @@ export const ComponentTab = ({ id }: { id: string }) => {
 						<Button variant="ghost" disabled={count === 0 && !kept} onPress={() => setChangesOpen(true)}>
 							{count === 0 ? 'No changes' : plural(count, 'change')}
 						</Button>
-						{component.storybook !== null && (
+						{component.storybookPath !== null && (
 							<Button variant="secondary" external onPress={() => link('storybook')}>
 								Storybook
 							</Button>

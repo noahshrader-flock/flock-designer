@@ -1296,9 +1296,10 @@ describe('Design System', () => {
 		expect(allByRole('menuitem', undefined, card).map((i) => i.textContent)).toEqual(['Open in Storybook', 'View on GitHub']);
 		await press(allByRole('menuitem', undefined, card).find((i) => i.textContent === 'Open in Storybook')!);
 		expect(lastAsk()).toEqual(['componentLink', ['src/components/FSButton/FSButton.stories.tsx', 'storybook']]);
+		// Its Storybook's address not known yet, it is offered all the same: opening it asks for the address, once.
 		const other = [...body().querySelectorAll<HTMLElement>('.card-item')].find((c) => c.textContent?.includes('FSSelect')) as HTMLElement;
 		await press(other.querySelector('.menu-button') as HTMLElement);
-		expect(allByRole('menuitem', undefined, other).map((i) => i.textContent)).toEqual(['View on GitHub']);
+		expect(allByRole('menuitem', undefined, other).map((i) => i.textContent)).toEqual(['Open in Storybook', 'View on GitHub']);
 	});
 
 	it('keeps the Components and Tokens toggle and the search bar together, as siblings, which the stylesheet stacks at the top', async () => {

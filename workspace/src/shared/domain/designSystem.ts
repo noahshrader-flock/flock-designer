@@ -12,6 +12,8 @@ export interface ConnectedDesignSystem {
 	root: string;
 	folder: string;
 	branch: string;
+	/** Its hosted Storybook's address, ending in `/`, as the person gave it: a library's files do not say it. */
+	storybook?: string;
 }
 
 /** `current` is the shown one's `id`, or null when none is. */
@@ -328,6 +330,9 @@ export interface CatalogComponent {
 	/** The first part of its Storybook title; `Ungrouped` when there is none. */
 	group: string;
 	subtitle: string | null;
+	/** Its page in a Storybook (`?path=…`), from its title; null when the title cannot be read. */
+	storybookPath: string | null;
+	/** That page in the design system's hosted Storybook; null while its address is not known. */
 	storybook: string | null;
 	source: string;
 }

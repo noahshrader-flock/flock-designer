@@ -27,6 +27,7 @@ const component = (group: string, name: string, storybook: string | null = null)
 	name,
 	group,
 	subtitle: null,
+	storybookPath: `?path=/docs/${group.toLowerCase()}-${name.toLowerCase()}--docs`,
 	storybook,
 	source: `https://github.com/flocksafety/flock-react-component-lib/tree/develop/src/components/${name}`,
 });

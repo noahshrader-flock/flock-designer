@@ -5,7 +5,7 @@ import {
 	literalField,
 	readCatalog,
 	storybookId,
-	storybookUrl,
+	storybookPath,
 	UNGROUPED,
 	type CatalogReads,
 } from '../src/core/services/designSystem/componentCatalog';
@@ -44,6 +44,14 @@ describe('what is a component', () => {
 		expect(['a.stories.mdx', 'a.story.tsx', 'stories.tsx'].some(isStoryFile)).toBe(false);
 	});
 
+	it('links to the Storybook address kept for a design system, before any default', () => {
+		expect(designSystemOf({ repository: 'acme/ui', branch: 'main' }).storybook).toBeNull();
+		expect(designSystemOf({ repository: 'acme/ui', branch: 'main', storybook: 'https://sb.acme.test/' }).storybook).toBe('https://sb.acme.test/');
+		expect(
+			designSystemOf({ repository: 'flocksafety/flock-react-component-lib', branch: 'develop', storybook: 'https://sb.flock.test/' }).storybook,
+		).toBe('https://sb.flock.test/');
+	});
+
 	it('names and groups a component by its Storybook title, and links it to the library’s own Storybook and source', async () => {
 		const [c] = await readCatalog(
 			library({
@@ -56,6 +64,7 @@ describe('what is a component', () => {
 			name: 'FSButton',
 			group: 'Buttons',
 			subtitle: 'Buttons allow users to take actions.',
+			storybookPath: '?path=/docs/buttons-fsbutton--docs',
 			storybook: 'https://develop--6617f3c579abb5c5e780fddc.chromatic.com/?path=/docs/buttons-fsbutton--docs',
 			source: 'https://github.com/flocksafety/flock-react-component-lib/tree/develop/src/components/FSButton',
 		});
@@ -143,6 +152,6 @@ describe("Storybook's id rule", () => {
 		['Design Tokens/Spacing & Shape', 'design-tokens-spacing-shape'],
 	])('%s is %s', (title, id) => {
 		expect(storybookId(title)).toBe(id);
-		expect(storybookUrl('https://sb.example/', title)).toBe(`https://sb.example/?path=/docs/${id}--docs`);
+		expect(storybookPath(title)).toBe(`?path=/docs/${id}--docs`);
 	});
 });
