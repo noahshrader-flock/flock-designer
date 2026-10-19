@@ -3,10 +3,10 @@ import tseslint from 'typescript-eslint';
 
 /** Only rules that find real bugs the type checker does not; layout is Prettier's. */
 export default tseslint.config(
-	{ ignores: ['out/', 'extension/dist/', 'src/viewer/ui/'] },
+	{ ignores: ['out/', 'extension/dist/'] },
 	{ linterOptions: { reportUnusedDisableDirectives: 'error' } },
 	{
-		files: ['src/**/*.{ts,tsx}', 'extension/**/*.{ts,tsx}', '__tests__/**/*.ts'],
+		files: ['src/**/*.{ts,tsx}', 'extension/**/*.{ts,tsx}', '__tests__/**/*.ts', '**/*.{mjs,cjs}'],
 		languageOptions: { parser: tseslint.parser, parserOptions: { projectService: true, tsconfigRootDir: import.meta.dirname } },
 		plugins: { '@typescript-eslint': tseslint.plugin, 'react-hooks': reactHooks },
 		rules: {

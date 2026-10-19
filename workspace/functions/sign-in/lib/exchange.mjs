@@ -51,6 +51,7 @@ export const handleExchange = async ({ method, origin, body }, env, fetchImpl = 
 	const sent = parse(body);
 	if (sent === null) return json(400, { error: 'shape' }, cors);
 	if (!env.GITHUB_CLIENT_ID || !env.REDIRECT_URI) return json(500, { error: 'misconfigured' }, cors);
+	/** @type {{ access_token?: unknown, expires_in?: unknown } | null} */
 	let reply;
 	try {
 		const response = await fetchImpl(GITHUB_TOKEN_URL, {
@@ -66,7 +67,7 @@ export const handleExchange = async ({ method, origin, body }, env, fetchImpl = 
 			}),
 			signal: AbortSignal.timeout(8000),
 		});
-		reply = await response.json();
+		reply = /** @type {typeof reply} */ (await response.json());
 	} catch {
 		return json(502, { error: 'unreachable' }, cors);
 	}

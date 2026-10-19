@@ -5,7 +5,8 @@
 		{ "path": "./tsconfig.web.json" },
 		{ "path": "./tsconfig.viewer.json" },
 		{ "path": "./tsconfig.extension.json" },
-		{ "path": "./tsconfig.test.json" }
+		{ "path": "./tsconfig.test.json" },
+		{ "path": "./tsconfig.scripts.json" }
 	],
 	"extends": "./tsconfig.base.json"
 }

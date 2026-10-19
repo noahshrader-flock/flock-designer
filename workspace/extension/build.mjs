@@ -21,6 +21,7 @@ const report = (name) => ({
 		}),
 });
 
+/** @type {import('esbuild').BuildOptions[]} */
 const builds = [
 	{
 		entryPoints: [join(here, 'src/extension.ts')],

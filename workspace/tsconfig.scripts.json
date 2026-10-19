@@ -1,0 +1,13 @@
+{
+	"extends": "./tsconfig.base.json",
+	"compilerOptions": {
+		"lib": ["ES2022"],
+		"types": ["node"],
+		"allowJs": true,
+		"checkJs": true,
+		"noEmit": true,
+		"composite": false,
+		"noImplicitAny": false
+	},
+	"include": ["*.mjs", "bin/**/*.mjs", "extension/*.mjs", "extension/test/*.mjs", "extension/test/*.cjs", "functions/**/*.mjs", "__tests__/*.mjs"]
+}

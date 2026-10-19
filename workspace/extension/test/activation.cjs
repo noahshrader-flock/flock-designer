@@ -42,15 +42,17 @@ exports.run = async () => {
 	await vscode.commands.executeCommand('dsnr.newPrototype', { title: 'Made here', task: 'Show a heading.', folder: null });
 	let command = '';
 	await until('the build being handed over', async () => /claude/.test((command = await vscode.env.clipboard.readText())), 60000);
-	const task = /(\S+made-here\/v1-build\.md)/.exec(command);
-	assert.ok(task && fs.existsSync(task[1]), 'its task is written beside the prototype');
-	assert.ok(fs.readFileSync(task[1], 'utf8').includes('Show a heading.'), 'its task has what it should explore');
+	const task = /(\S+made-here\/v1-build\.md)/.exec(command)?.[1];
+	assert.ok(task && fs.existsSync(task), 'its task is written beside the prototype');
+	assert.ok(fs.readFileSync(task, 'utf8').includes('Show a heading.'), 'its task has what it should explore');
 	fs.writeFileSync(
-		path.join(path.dirname(task[1]), 'v1.tsx'),
+		path.join(path.dirname(task), 'v1.tsx'),
 		'export default function Page() { return <main><h1 style={{ background: "#123", color: "#fff", padding: 160 }}>Made here</h1></main>; }\n',
 	);
 	// Nobody opens it: DSNR must see by itself that the build is done, and save it.
-	const covers = path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, '../flock-designer/projects/made-here/covers');
+	const [folder] = vscode.workspace.workspaceFolders ?? [];
+	assert.ok(folder, 'the product is open');
+	const covers = path.join(folder.uri.fsPath, '../flock-designer/projects/made-here/covers');
 	await until(
 		'its picture being drawn, with nobody opening it',
 		() => fs.existsSync(covers) && fs.readdirSync(covers).some((f) => f.endsWith('.jpg')),
@@ -70,7 +72,7 @@ exports.run = async () => {
 		await until('FSButton opening in its own tab', () => tabs().includes('FSButton'), 30000);
 		await vscode.commands.executeCommand('dsnr.openPrimitives');
 		await until('Primitives opening in its own tab', () => tabs().includes('Primitives'));
-		const pictures = path.join(process.env.DSNR_TEST_PROFILE, 'User/globalStorage/flocksafety.dsnr/component-pictures');
+		const pictures = path.join(String(process.env.DSNR_TEST_PROFILE), 'User/globalStorage/flocksafety.dsnr/component-pictures');
 		const drawn = () => (fs.existsSync(pictures) ? fs.readdirSync(pictures, { recursive: true }).filter((f) => String(f).endsWith('.jpg')) : []);
 		await until('its components being pictured', () => drawn().length >= 10, 150000);
 		designSystem = `; FUI was read, FSButton and Primitives opened in their tabs, and ${drawn().length} components pictured`;

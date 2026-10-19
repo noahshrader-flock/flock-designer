@@ -106,6 +106,7 @@ export const review = (file, text) => {
 const run = (areas) => {
 	const failures = [];
 	// Lines of comment and lines of everything else, for each: a reading, held to nothing, so growth shows.
+	/** @type {Record<'shipping' | 'tests', [number, number]>} */
 	const counts = { shipping: [0, 0], tests: [0, 0] };
 	for (const path of files()) {
 		const file = relative(root, path);

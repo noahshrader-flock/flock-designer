@@ -20,6 +20,7 @@ export const vscodeCli = () => {
 
 /** Editors are Electron apps and may export `ELECTRON_RUN_AS_NODE`, which would start VS Code as plain Node. */
 export const vscodeEnv = (more = {}) => {
+	/** @type {NodeJS.ProcessEnv} */
 	const env = { ...process.env, ...more };
 	delete env.ELECTRON_RUN_AS_NODE;
 	return env;
