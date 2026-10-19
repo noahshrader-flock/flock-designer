@@ -106,7 +106,10 @@ describe('a dialog', () => {
 
 	it('closes on Escape only once what opened over it has: a menu in it closes first, then the dialog', async () => {
 		const onClose = vi.fn();
-		await open(createElement(Menu, { label: 'Account actions', sections: [{ items: [{ label: 'Sign out', onSelect: () => undefined }] }] }), onClose);
+		await open(
+			createElement(Menu, { label: 'Account actions', sections: [{ items: [{ label: 'Sign out', icon: 'sign-out', onSelect: () => undefined }] }] }),
+			onClose,
+		);
 		const opener = document.querySelector('[aria-label="Account actions"]') as HTMLElement;
 		await press(opener);
 		expect(document.querySelector('[role="menu"]')).not.toBeNull();

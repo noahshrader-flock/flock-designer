@@ -1,14 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { TOOLTIP_DELAY_MS, TOOLTIP_SKIP_MS } from '../../../src/shared/tooltipTiming';
 
-/**
- * How long a pointer stays on something before it is told what it is: **one delay for every tooltip in DSNR's pages**. The
- * browser's own wait for a `title` is its to set and long (seconds), and no page can change it, so the pages' tooltips are
- * told here (`TooltipHost`) and nothing sets a delay of its own.
- */
-export const TOOLTIP_DELAY_MS = 1000;
-
-/** Once one has been told, the next opens at once for this long: moving along a row of buttons is not a wait for each. */
-export const TOOLTIP_SKIP_MS = 300;
+// The browser's own wait for a `title` is its to set and long (seconds), and no page can change it, so the pages' tooltips
+// are told here (`TooltipHost`), after DSNR's one wait.
 
 /** What a tooltip keeps from the edge of the page, and from what it is about. */
 const EDGE = 8;

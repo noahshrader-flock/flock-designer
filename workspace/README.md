@@ -305,6 +305,14 @@ focused, so it pushes with their own git credentials.
 It is drawn in VS Code's own design language, with none of the app's shadcn components or Tailwind and no colour of its
 own (a test fails if one creeps in), so it follows every theme.
 
+**Two kits, on purpose.** DSNR's pages in VS Code (the panel and its tabs) are drawn with their own kit
+(`extension/webview/ui`), on VS Code's theme. The review bar (`src/viewer`) keeps the app's kit, shadcn on Tailwind and
+Radix (`src/viewer/ui`): it is the page reviewers open in their browser on the published site, where there is no VS Code
+theme to follow, and DSNR's review tab shows that same page, so it looks the same to everyone. Neither kit borrows from
+the other. What is not a look is shared, so the two do not drift apart: a tooltip's wait (`src/shared/tooltipTiming.ts`).
+The review bar's own code (its comments, read again every few seconds) is the site's, and keeps its own ways; the
+panel's rules (one Message, one heading, reads through `hooks/ask.ts`, the spacing scale in `styles.css`) are the kit's.
+
 ```bash
 npm run extension:dev            # build it as you edit, in a VS Code window of its own
 npm run extension:build          # build it once, into extension/dist/

@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../src/viewer/ui/tooltip';
 import { render, unmountAll } from './reviewHarness';
 import { offenders } from './windowSources';
+import { TOOLTIP_DELAY_MS, TOOLTIP_SKIP_MS } from '../src/shared/tooltipTiming';
 
 /**
  * How long a tooltip waits: one delay for the whole app, set on the provider the window and the published page are built
@@ -53,33 +54,31 @@ const wait = (ms: number) => act(async () => void vi.advanceTimersByTime(ms));
 const open = () => [...document.querySelectorAll('[role="tooltip"]')].map((t) => t.textContent);
 
 describe('a tooltip', () => {
-	it('waits most of a second before it opens on hover, so passing over it opens nothing', async () => {
+	it('waits DSNR’s one wait before it opens on hover, as the pages in VS Code do, so passing over it opens nothing', async () => {
 		await show();
 		await hover('a');
-		await wait(300);
+		await wait(TOOLTIP_DELAY_MS - 1);
 		expect(open()).toEqual([]);
-		await wait(400);
-		expect(open()).toEqual([]);
-		await wait(150);
+		await wait(1);
 		expect(open()).toEqual(['Says A']);
 	});
 
 	it('never opens for a pointer that has gone by before the wait is over', async () => {
 		await show();
 		await hover('a');
-		await wait(500);
+		await wait(TOOLTIP_DELAY_MS / 2);
 		await leave('a');
-		await wait(1000);
+		await wait(TOOLTIP_DELAY_MS);
 		expect(open()).toEqual([]);
 	});
 
 	it('opens the next at once once one is open, so moving along a toolbar is not a wait for each', async () => {
 		await show();
 		await hover('a');
-		await wait(900);
+		await wait(TOOLTIP_DELAY_MS);
 		await leave('a');
 		await hover('b');
-		await wait(50);
+		await wait(TOOLTIP_SKIP_MS / 6);
 		expect(open()).toEqual(['Says B']);
 	});
 
@@ -92,7 +91,7 @@ describe('a tooltip', () => {
 	it('is not hovered into: the pointer leaving its trigger closes it, so it never stands over what is under it', async () => {
 		await show();
 		await hover('a');
-		await wait(900);
+		await wait(TOOLTIP_DELAY_MS);
 		expect(open()).toEqual(['Says A']);
 		await leave('a');
 		await wait(50);

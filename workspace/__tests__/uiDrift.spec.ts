@@ -23,7 +23,11 @@ const PINNED: [file: string, what: string, why: string][] = [
 	['badge.tsx', 'success:', 'a success badge'],
 	['toggle-group.tsx', 'fullWidth', 'a toggle group that fills its row'],
 	['field.tsx', 'function FieldSet', 'the stock field, with its whole set'],
-	['tooltip.tsx', 'delayDuration = 800', 'a tooltip waits, so a pointer passing over a toolbar opens none'],
+	[
+		'tooltip.tsx',
+		'delayDuration = TOOLTIP_DELAY_MS',
+		'a tooltip waits, as long as the pages’ in VS Code, so a pointer passing over a toolbar opens none',
+	],
 	['tooltip.tsx', 'disableHoverableContent = true', 'a tooltip is never hovered into or in the way'],
 	['dialog.tsx', 'dark:bg-black/50', 'a dialog’s scrim that can be seen in dark'],
 ];

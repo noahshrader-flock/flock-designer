@@ -1,6 +1,7 @@
 import { act, createElement } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { TOOLTIP_DELAY_MS, TOOLTIP_SKIP_MS, TooltipHost } from '../extension/webview/ui/Tooltip';
+import { TOOLTIP_DELAY_MS, TOOLTIP_SKIP_MS } from '../src/shared/tooltipTiming';
+import { TooltipHost } from '../extension/webview/ui/Tooltip';
 import { mount, unmount } from './webviewHarness';
 
 /**

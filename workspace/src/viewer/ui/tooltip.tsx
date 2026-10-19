@@ -1,15 +1,16 @@
 import * as React from "react"
 import { cn } from "@/lib/utils"
 import { Tooltip as TooltipPrimitive } from "radix-ui"
+import { TOOLTIP_DELAY_MS, TOOLTIP_SKIP_MS } from "../../shared/tooltipTiming"
 
 // Changed from stock, which opens a tooltip the instant a pointer touches its trigger, so a quick sweep across a toolbar
-// opens a tooltip on everything it passes, over what is next. The wait is most of a second, as tooltips usually wait; once
-// one is open, the next opens at once for 300ms (Radix's skip), so moving along a row of them is not a wait for each; and
+// opens a tooltip on everything it passes, over what is next. The wait is DSNR's one (`shared/tooltipTiming.ts`), as its
+// pages in VS Code wait; once one is open, the next opens at once for a moment (Radix's skip), so moving along a row of them is not a wait for each; and
 // the pointer leaving a trigger closes it, so a tooltip is never something to hover into and is never in the way. Keyboard
 // focus opens it at once, whatever this says. Set here, once: no tooltip sets a delay of its own.
 function TooltipProvider({
-  delayDuration = 800,
-  skipDelayDuration = 300,
+  delayDuration = TOOLTIP_DELAY_MS,
+  skipDelayDuration = TOOLTIP_SKIP_MS,
   disableHoverableContent = true,
   ...props
 }: React.ComponentProps<typeof TooltipPrimitive.Provider>) {
