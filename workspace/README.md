@@ -10,7 +10,7 @@ installs this app — that is the constraint the design is built around, not a n
 
 ```bash
 npm ci
-npm run check            # format, lint, typecheck, then every test but the slow ones and the real libraries' (about 2 minutes)
+npm run check            # format, lint, typecheck, then every test but the slow ones and the real libraries' (about 3 minutes)
 npm run check:full       # the same, then the slow accessibility suites and the real libraries on this machine
 npm run extension:dev    # build the extension and open it in a development window
 npm run extension:test   # the extension's tests, in a real VS Code
@@ -360,7 +360,8 @@ Claude Code is signed in.
 
 **Automatically.** `npm run extension:test` runs DSNR from its source in the VS Code installed here, and
 `npm run extension:test:packaged` runs it installed from its package, in VS Code's production mode, which is what proves
-it works outside development. Each takes about a minute and opens a VS Code window of its own, on a throwaway profile and
+it works outside development. Each takes about a minute (about six when the design system is on this machine, read
+cold) and opens a VS Code window of its own, on a throwaway profile and
 a throwaway world: a product and a design repository made for the run, with no remotes, so nothing is pushed, and a
 stand-in for Claude Code, so no agent runs. It checks that DSNR starts and has every command its manifest declares, opens a saved
 prototype's review, then starts a new prototype, builds it, checks it and pictures it with the real browser, saves it and

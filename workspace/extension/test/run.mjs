@@ -138,10 +138,10 @@ run.stdout.on('data', (d) => (said += d));
 run.stderr.on('data', (d) => (said += d));
 let timedOut = false;
 const cap = setTimeout(() => {
-	console.error('dsnr-test: VS Code did not finish within 300 s');
+	console.error('dsnr-test: VS Code did not finish within 900 s');
 	timedOut = true;
 	run.kill('SIGKILL');
-}, 300_000);
+}, 900_000);
 run.on('exit', (status) => {
 	clearTimeout(cap);
 	// Retried: VS Code's extension host can still be finishing a write here a moment after its window has gone.

@@ -1,4 +1,5 @@
 const assert = require('node:assert/strict');
+const { execSync } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
 const vscode = require('vscode');
@@ -44,11 +45,16 @@ exports.run = async () => {
 	await until('the build being handed over', async () => /claude/.test((command = await vscode.env.clipboard.readText())), 60000);
 	const task = /(\S+made-here\/v1-build\.md)/.exec(command)?.[1];
 	assert.ok(task && fs.existsSync(task), 'its task is written beside the prototype');
-	assert.ok(fs.readFileSync(task, 'utf8').includes('Show a heading.'), 'its task has what it should explore');
+	const said = fs.readFileSync(task, 'utf8');
+	assert.ok(said.includes('Show a heading.'), 'its task has what it should explore');
+	// As the agent does: the page, then the build the task names, which is what DSNR saves from.
 	fs.writeFileSync(
 		path.join(path.dirname(task), 'v1.tsx'),
 		'export default function Page() { return <main><h1 style={{ background: "#123", color: "#fff", padding: 160 }}>Made here</h1></main>; }\n',
 	);
+	const build = /with exactly: `([^`]+)`/.exec(said)?.[1];
+	assert.ok(build, 'its task says how to build it');
+	execSync(build, { env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' }, stdio: 'ignore' });
 	// Nobody opens it: DSNR must see by itself that the build is done, and save it.
 	const [folder] = vscode.workspace.workspaceFolders ?? [];
 	assert.ok(folder, 'the product is open');
@@ -74,8 +80,12 @@ exports.run = async () => {
 		await until('Primitives opening in its own tab', () => tabs().includes('Primitives'));
 		const pictures = path.join(String(process.env.DSNR_TEST_PROFILE), 'User/globalStorage/flocksafety.dsnr/component-pictures');
 		const drawn = () => (fs.existsSync(pictures) ? fs.readdirSync(pictures, { recursive: true }).filter((f) => String(f).endsWith('.jpg')) : []);
-		await until('its components being pictured', () => drawn().length >= 10, 150000);
-		designSystem = `; FUI was read, FSButton and Primitives opened in their tabs, and ${drawn().length} components pictured`;
+		// Read cold, the library is built and each story checked for accessibility as it is pictured (FUI took 347 s here):
+		// about twice that, as a busy machine has not failed, and the time is said, so a slower read shows.
+		const started = Date.now();
+		await until('its components being pictured', () => drawn().length >= 10, 700000);
+		const took = Math.round((Date.now() - started) / 1000);
+		designSystem = `; FUI was read, FSButton and Primitives opened in their tabs, and ${drawn().length} components pictured (${took} s)`;
 	}
 
 	console.log(
