@@ -79,9 +79,23 @@ interface BrowserLike {
 	on?(event: 'disconnected', listener: () => void): unknown;
 }
 
+/**
+ * Pages are drawn several at once, so most are never in front. A page that is not may be given no frames, and a screenshot
+ * of it then waits for ever (seen on Linux, where it stalled a run now and then): each is kept as awake as the one in front.
+ */
+export const NO_BACKGROUNDING = [
+	'--disable-renderer-backgrounding',
+	'--disable-backgrounding-occluded-windows',
+	'--disable-background-timer-throttling',
+];
+
 const launchChrome = async (path: string): Promise<BrowserLike> => {
 	const { default: puppeteer } = await import('puppeteer-core');
-	return (await puppeteer.launch({ executablePath: path, headless: true, args: ['--hide-scrollbars', '--mute-audio'] })) as unknown as BrowserLike;
+	return (await puppeteer.launch({
+		executablePath: path,
+		headless: true,
+		args: ['--hide-scrollbars', '--mute-audio', ...NO_BACKGROUNDING],
+	})) as unknown as BrowserLike;
 };
 
 /** `PICTURE` is `page/picture.ts`, bundled to text when DSNR is built. */

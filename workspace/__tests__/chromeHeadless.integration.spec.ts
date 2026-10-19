@@ -140,10 +140,15 @@ describe.skipIf(NO_CHROME)('with the browser on this machine', () => {
 	}, 60_000);
 
 	it('pictures a story as the composition does, in one capture taken by the browser: moved into view, cut, wide, beside a dialog, fixed', async () => {
-		await inChrome(async (browser) => {
+		// A browser that stalls would only be timed out, saying nothing of where: so a stall names the step it is in.
+		let step = 'starting';
+		const watchdog = new Promise<never>((_, stalled) => setTimeout(() => stalled(new Error(`stalled at: ${step}`)), 45_000).unref());
+		const body = inChrome(async (browser) => {
 			const page = await browser.newPage();
 			await page.setViewport({ width: 1200, height: 900, deviceScaleFactor: 2 });
+			step = 'opening the pictures page';
 			await page.goto(`${base}/pictures/`, { waitUntil: 'load' });
+			step = 'opening the page that compares';
 			const compare = await browser.newPage();
 			/**
 			 * Compared as a person sees it (size, painted box ignoring near-white JPEG noise, mean pixel distance out of 255), so
@@ -177,14 +182,21 @@ describe.skipIf(NO_CHROME)('with the browser on this machine', () => {
 					b.toString('base64'),
 				);
 			for (const file of Object.keys(STORIES)) {
+				step = `${file}: drawing it`;
 				await page.evaluate(readDrawn(file, true));
-				const { fast, composed, apart } = await seen((await pictureOf(page as never)) as Buffer, (await composedPicture(page as never)) as Buffer);
+				step = `${file}: the fast picture`;
+				const fastPicture = (await pictureOf(page as never)) as Buffer;
+				step = `${file}: the composed picture`;
+				const composedOne = (await composedPicture(page as never)) as Buffer;
+				step = `${file}: comparing them`;
+				const { fast, composed, apart } = await seen(fastPicture, composedOne);
 				// To within the pixel or two the half-size capture finds an edge to.
 				fast.size.forEach((n, i) => expect(Math.abs(n - (composed.size[i] as number)), `${file} size`).toBeLessThanOrEqual(2));
 				fast.painted.forEach((n, i) => expect(Math.abs(n - (composed.painted[i] as number)), `${file} painted`).toBeLessThanOrEqual(2));
 				if (fast.size.join() === composed.size.join()) expect(apart, `${file} pixels`).toBeLessThan(3);
 			}
 		});
+		await Promise.race([body, watchdog]);
 	}, 60_000);
 
 	it('checks a page with axe, finding what is wrong with it, and on which element, with what to change', async () => {
