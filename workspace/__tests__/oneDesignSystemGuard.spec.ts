@@ -7,12 +7,12 @@ import { sourceFiles } from './fixtures';
 const root = join(__dirname, '..');
 
 /**
- * What would make DSNR work for one design system only: a library's name or repository, its components' prefix, the
+ * What would make DSNR work for one design system only: a library's or a product's name or repository, its components' prefix, the
  * address of its hosted Storybook, or its branch. Comments may name one, as the case that explains a choice.
  */
 const NAMED = [
 	/flock-react-component-lib|\bFUI\b/i,
-	/\bprimer\b|\btremor\b/i,
+	/\bprimer\b|\btremor\b|paradome|\bcheq\b/i,
 	/\bFS[A-Z][a-z]\w*/,
 	/chromatic\.com/i,
 	/^(?:develop|origin\/develop|refs\/(?:heads|remotes\/origin)\/develop)$/,
@@ -49,7 +49,7 @@ const named = () =>
 		);
 
 describe('DSNR’s code', () => {
-	it('names no design system: no library, component prefix, hosted Storybook or branch of one, but Flock’s default address', () => {
+	it('names no design system: no library or product, component prefix, hosted Storybook or branch of one, but Flock’s default address', () => {
 		expect(named()).toEqual([]);
 	});
 });

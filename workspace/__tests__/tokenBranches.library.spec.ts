@@ -9,7 +9,7 @@ import type { ConnectedDesignSystem } from '../src/shared/contract';
 import { g, gitFile } from './fixtures';
 import { editedFiles } from '../src/core/services/designSystem/tokenEdits';
 import { aColorAndALength } from './tokenFixtures';
-import { EVERY_LIBRARY, describeWith, readsOf } from './realCheckouts';
+import { EVERY_LIBRARY, describeWith, libraryRow, readsOf } from './realCheckouts';
 
 let home: string;
 beforeEach(() => void (home = mkdtempSync(join(tmpdir(), 'dsnr-token-branches-'))));
@@ -73,10 +73,10 @@ for (const { key, system, missing, tokens } of EVERY_LIBRARY)
 		);
 	});
 
-const [fui] = EVERY_LIBRARY;
-describeWith(fui?.missing ?? null, 'saving a change to FUI’s tokens', () => {
+const fui = libraryRow('FUI');
+describeWith(fui.missing, 'saving a change to FUI’s tokens', () => {
 	it('commits a tone, a role pointed at another step and the spacing, each in its own file, and says the tone in the message', async () => {
-		const { clone, tip, branches } = throwawayOf(fui!.system);
+		const { clone, tip, branches } = throwawayOf(fui.system);
 		const b = await branches.save([
 			{ path: 'tone.pineGreen.50', value: '#0A6B52' },
 			{ path: 'palette.dark.primary.main', ref: 'tone.pineGreen.60' },

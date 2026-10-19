@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { expect, it } from 'vitest';
 import { designSystemOf } from '../src/shared/catalog';
 import { isStoryFile, literalField, readCatalog } from '../src/core/services/designSystem/componentCatalog';
-import { EVERY_LIBRARY, describeWith, readsOf } from './realCheckouts';
+import { EVERY_LIBRARY, describeWith, libraryRow, readsOf } from './realCheckouts';
 import { g } from './fixtures';
 
 /** Storybook's own id rule, from the library's own Storybook; null for a Storybook that has none to give. */
@@ -49,10 +49,10 @@ for (const { key, system, missing } of EVERY_LIBRARY)
 		);
 	});
 
-const [fui] = EVERY_LIBRARY;
-describeWith(fui?.missing ?? null, 'FUI’s own components', () => {
+const fui = libraryRow('FUI');
+describeWith(fui.missing, 'FUI’s own components', () => {
 	it('are many, and grouped as its titles say: Data Display before Inputs, which its own sidebar orders the other way', async () => {
-		const read = await readCatalog(await readsOf(fui!.system), designSystemOf(fui!.system));
+		const read = await readCatalog(await readsOf(fui.system), designSystemOf(fui.system));
 		expect(read.length).toBeGreaterThan(70);
 		const groups = [...new Set(read.map((c) => c.group))];
 		expect(groups.indexOf('Data Display')).toBeLessThan(groups.indexOf('Inputs'));

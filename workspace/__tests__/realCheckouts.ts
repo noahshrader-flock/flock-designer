@@ -101,6 +101,13 @@ export const EVERY_LIBRARY: { key: string; system: ConnectedDesignSystem; missin
 	{ key: 'Paradome', system: REAL_PARADOME_SYSTEM, missing: paradomeMissing, unbuilt: paradomeUnbuilt, tokens: true },
 ];
 
+/** A library's row, by its key, for the facts that are its own. */
+export const libraryRow = (key: string): (typeof EVERY_LIBRARY)[number] => {
+	const row = EVERY_LIBRARY.find((l) => l.key === key);
+	if (!row) throw new Error(`no library ${key} in EVERY_LIBRARY`);
+	return row;
+};
+
 /** The library's files at the tip of its branch, as DSNR reads them. */
 export const readsOf = async (system: ConnectedDesignSystem): Promise<CatalogReads> => {
 	const commit = await libraryCommit(system.root, system.branch);
