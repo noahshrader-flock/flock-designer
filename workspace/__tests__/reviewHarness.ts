@@ -17,7 +17,6 @@ type Impl = { [K in keyof WorkspaceApi]?: (...args: Parameters<WorkspaceApi[K]>)
 export const fakeApp = (overrides: Impl = {}) => {
 	const calls: Record<string, unknown[][]> = {};
 	const impl: Impl = {
-		agentStatus: async () => ok({ state: 'idle' }),
 		signInState: async () => ok({ state: 'signedIn', user: { login: 'noah', name: 'Noah', avatarUrl: null } }),
 		openPrototype: async () => ok({ url: 'http://127.0.0.1:9/demo/v1', states: [] }),
 		readComments: async () => ok([]),

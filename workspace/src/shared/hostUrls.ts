@@ -7,8 +7,10 @@ export const CLI_INSTALL_URL = 'https://cli.github.com';
 /** The authorization-code flow, with PKCE. */
 export const SIGN_IN_AUTHORIZE_URL = `${WEB}/login/oauth/authorize`;
 
+/** The folder the host reads a repository's own files from: its workflows, which run with the repository's permissions, and templates. */
+export const HOST_DIR = '.github/';
 /** As the host reads them: one found is used; none, or several, none is. */
-export const CHANGE_REQUEST_TEMPLATES = ['.github/', '', 'docs/'].flatMap((folder) =>
+export const CHANGE_REQUEST_TEMPLATES = [HOST_DIR, '', 'docs/'].flatMap((folder) =>
 	['pull_request_template.md', 'PULL_REQUEST_TEMPLATE.md'].map((name) => `${folder}${name}`),
 );
 

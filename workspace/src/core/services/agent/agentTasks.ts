@@ -45,7 +45,9 @@ const lightCheckLine = (lightCheck: string | null): string =>
 const routeLine = (recordFile: string): string =>
 	`Record the work's route on the \`codebase\` entry of \`${recordFile}\`, as the route skill above says.`;
 
+/** Every run in a checkout commits its work, which an agent's sandbox may refuse. */
 const checkoutEnding = ({ lightCheck, shared, accessibility, voice }: CheckoutParts): string[] => [
+	'If a sandbox refuses a git command (`git add`, `git commit`), ask the person to let it run outside the sandbox: never leave the work uncommitted. Never push.',
 	lightCheckLine(lightCheck),
 	...(shared ? ['', shared] : []),
 	'',
@@ -85,7 +87,6 @@ export const handoffTask = (
 			? `This product's gate is \`${gate}\`. Run it first, and last, once HANDOFF.md is committed.`
 			: "This product's workspace file names no handoff gate. Say so first in your summary, then follow its guidance for what a handoff checks.",
 		`HANDOFF.md's first line is the verdict, alone: \`${READY_LINE}\` or \`${NOT_READY_LINE}\`. DSNR reads it from the committed file once nothing is left uncommitted, so commit all of the work before you finish, and end by saying the same, then why.`,
-		'If a sandbox refuses a git command (`git add`, `git commit`), ask the person to let it run outside the sandbox: never leave the work uncommitted. Never push.',
 		'',
 		...checkoutEnding(parts),
 	].join('\n');

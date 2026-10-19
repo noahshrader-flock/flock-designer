@@ -1078,6 +1078,12 @@ describe('prototypes', () => {
 	describe('Build in the codebase, handed to Claude Code', () => {
 		const saved = () => savedPrototype();
 
+		it('says, as every task in a checkout does, to ask when a sandbox refuses git rather than leave the work uncommitted', async () => {
+			await saved();
+			await call(CHANNELS.buildInCodebase, product, 'demo', 'v1', 'develop');
+			expect(readFileSync(join(home, 'prototype', 'demo', 'v1-into-code.md'), 'utf8')).toMatch(/If a sandbox refuses a git command/);
+		});
+
 		it('carries what the prototype’s accessibility check left open into the task, to fix in the code (T7)', async () => {
 			await saved();
 			await call(CHANNELS.buildInCodebase, product, 'demo', 'v1', 'develop');
@@ -1460,7 +1466,7 @@ describe('one agent, one piece of work', () => {
 		writeFileSync(join(design, 'skills', 'record-the-route.md'), '# Record where the work is\n');
 		await codebaseWork();
 	};
-	const task = () => readFileSync(join(home, 'prototype', 'demo', 'handoff-task.md'), 'utf8');
+	const task = () => readFileSync(join(home, 'prototype', 'demo', 'codebase-handoff.md'), 'utf8');
 
 	it('stops the run when asked: Stop on a build, in a shell that shows one', async () => {
 		const r = await call(CHANNELS.stopAgent);
@@ -1525,7 +1531,7 @@ describe('Handoff', () => {
 		writeFileSync(join(design, 'skills', 'record-the-route.md'), '# Record where the work is\n');
 		await codebaseWork();
 	};
-	const taskFile = () => join(home, 'prototype', 'demo', 'handoff-task.md');
+	const taskFile = () => join(home, 'prototype', 'demo', 'codebase-handoff.md');
 	const commit = (file: string, text: string) => {
 		mkdirSync(dirname(join(product, file)), { recursive: true });
 		writeFileSync(join(product, file), text);

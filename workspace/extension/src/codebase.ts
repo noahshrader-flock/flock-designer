@@ -1,6 +1,7 @@
 import type { HandoffResult, Project, ProjectWork, ShareStatus, ShareStep, WorkspaceApi } from '../../src/shared/contract';
 import { buildError, outputLines, packagesHint } from '../../src/core/services/codebase/serverOutput';
 import { handedTo } from '../../src/shared/handedTo';
+import { handoffReady } from '../../src/shared/handoff';
 import { valueOf } from '../../src/shared/result';
 import { DESIGN_MODE_COMMAND, codeLink, workOf } from '../../src/shared/work';
 import type { AgentWorkDeps, Offer, Tell } from './agentWork';
@@ -33,23 +34,21 @@ const reportHandoff = async (
 	branch: string,
 	result: Extract<HandoffResult, { state: 'done' }>,
 ): Promise<void> => {
-	const { verdict, pushed, outside } = result;
-	const wrong = [
-		...(pushed ? [`the agent pushed ${branch}, which a handoff never does: look at what reached GitHub.`] : []),
-		...(outside.length ? [`${pushed ? 'It also' : 'The agent'} changed files a handoff leaves alone: ${outside.join(', ')}.`] : []),
+	const flags = [
+		...(result.pushed ? [`The agent pushed ${branch}, which a handoff never does: look at what reached GitHub.`] : []),
+		...(result.outside.length ? [`It changed files a handoff leaves alone: ${result.outside.join(', ')}.`] : []),
 	];
-	if (verdict === 'ready' && wrong.length === 0) {
-		const next = await deps.offer(`Ready for engineering: HANDOFF.md is on ${branch}, and nothing was pushed.`, [OPEN_PR]);
+	if (handoffReady(result)) {
+		const next = await deps.offer([`Ready for engineering: HANDOFF.md is on ${branch}, and nothing was pushed.`, ...flags].join(' '), [OPEN_PR]);
 		if (next === OPEN_PR) await shareCodebase(deps, project.id);
 		return;
 	}
-	const said =
-		verdict === 'ready'
-			? `HANDOFF.md says ${project.title} is ready, but`
-			: verdict === 'not ready'
-				? `${project.title} is not ready for engineering yet: HANDOFF.md says why.`
-				: `HANDOFF.md is committed on ${branch}, but its first line says neither Ready for engineering nor Not ready.`;
-	deps.tell(verdict === 'ready' ? `${said} ${wrong.join(' ')}` : [said, ...wrong.map((w) => w.charAt(0).toUpperCase() + w.slice(1))].join(' '));
+	const said = {
+		ready: `HANDOFF.md says ${project.title} is ready, but it is not recorded as ready.`,
+		'not ready': `${project.title} is not ready for engineering yet: HANDOFF.md says why.`,
+		neither: `HANDOFF.md is committed on ${branch}, but its first line says neither Ready for engineering nor Not ready.`,
+	}[result.verdict ?? 'neither'];
+	deps.tell([said, ...flags].join(' '));
 };
 
 /** Hands the task over; the person runs it in the agent's window, and the verdict is read from HANDOFF.md once committed. */

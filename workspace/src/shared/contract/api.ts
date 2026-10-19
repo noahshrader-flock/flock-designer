@@ -1,5 +1,5 @@
 import type { SignInState } from '../domain/account';
-import type { AgentReadiness, AgentStatus } from '../domain/agent';
+import type { AgentReadiness } from '../domain/agent';
 import type { Checkout, PreviewStatus, RunLogLine } from '../domain/checkout';
 import type { CommentAnchor, CommentRef, ReviewComment } from '../domain/comments';
 import type {
@@ -22,7 +22,7 @@ import type {
 	ValueSources,
 } from '../domain/designSystem';
 import type {
-	BuildInCodebase,
+	Handed,
 	Work,
 	MadeCover,
 	BuildInCodebasePlan,
@@ -125,7 +125,6 @@ export interface WorkspaceApi {
 	shareWork(root: string, projectId: string, name: string): Promise<Result<ShareStatus>>;
 	onShareStatus(listener: (status: ShareStatus) => void): () => void;
 
-	agentStatus(): Promise<Result<AgentStatus>>;
 	stopAgent(): Promise<Result<null>>;
 	/**
 	 * `from`: a repository on this machine and a branch to model the page on. `folder` applies to a new project only; one
@@ -139,7 +138,7 @@ export interface WorkspaceApi {
 		folder?: string | null,
 	): Promise<Result<Work>>;
 	/** Nothing is saved or checked here: the prototype is saved when opened. */
-	handPrototypeBuild(root: string, projectId: string, name: string, request: string): Promise<Result<BuildInCodebase>>;
+	handPrototypeBuild(root: string, projectId: string, name: string, request: string): Promise<Result<Handed>>;
 	/** Hands one comment to the agent, as a build is handed. Nothing is recorded until its change is built: see `saveBuilt`. */
 	handPrototypeAddress(root: string, projectId: string, name: string, comment: CommentRef, newVersion: boolean): Promise<Result<HandedComment>>;
 	publishedPage(projectId: string, name: string): Promise<Result<PageStatus>>;
@@ -155,10 +154,10 @@ export interface WorkspaceApi {
 	buildInCodebasePlan(root: string, projectId: string, name: string): Promise<Result<BuildInCodebasePlan>>;
 	prototypeReadiness(root: string): Promise<Result<PrototypeReadiness>>;
 	/** Makes the project's codebase branch (from `from`) and its record, then hands the building to Claude Code. */
-	buildInCodebase(root: string, projectId: string, name: string, from?: string): Promise<Result<BuildInCodebase>>;
+	buildInCodebase(root: string, projectId: string, name: string, from?: string): Promise<Result<Handed>>;
 	agentReadiness(): Promise<Result<AgentReadiness>>;
 	/** Hands the handoff's task to the agent, as a build is handed; refused unless the checkout is on the work's branch. */
-	handOff(root: string, projectId: string): Promise<Result<BuildInCodebase>>;
+	handOff(root: string, projectId: string): Promise<Result<Handed>>;
 	/** Asked as often as one likes: `done` is said once, and the verdict recorded then. */
 	handoffResult(root: string, projectId: string): Promise<Result<HandoffResult>>;
 	/** `uncommitted`: the checkout had changes nobody committed, and no agent made them here. */
@@ -214,7 +213,6 @@ export const INVOKE = [
 	'cancelInstall',
 	'branchesWithSetup',
 	'stopCommand',
-	'agentStatus',
 	'stopAgent',
 	'agentReadiness',
 	'handOff',

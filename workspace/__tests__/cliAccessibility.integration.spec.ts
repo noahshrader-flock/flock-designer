@@ -4,7 +4,7 @@ import { type AddressInfo, createServer } from 'node:net';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { main } from '../src/cli/dsnr';
-import { deps, esbuild, run, setUpCliWorld, world } from './cliWorld';
+import { deps, run, setUpCliWorld, world } from './cliWorld';
 import { g, makeProduct } from './fixtures';
 import { NO_CHROME } from './realChrome';
 
@@ -287,18 +287,7 @@ describe.skipIf(process.env.DSNR_REAL_AGENT !== '1' || NO_CHROME)('the agent, wi
 			source,
 			"export default () => <main><h1>Cameras</h1><button onClick={() => undefined}><svg width='16' height='16'><path d='M2 2h12v12H2z' /></svg></button></main>;\n",
 		);
-		const { prototypeReadable } = await import('../src/core/services/prototypes/prototype');
-		const { prototypeWork } = await import('../src/core/services/prototypes/prototypeWork');
-		const { designStore } = await import('../src/core/services/publishing/designStore');
-		const store = designStore({ clone: () => world.design, files: null, onWrite: () => undefined });
-		const work = prototypeWork({
-			prototypesRoot: world.prototypes,
-			productRoot: () => world.product,
-			store: store.records,
-			readDesignFile: store.readFile,
-			esbuild: () => esbuild,
-		});
-		const ended = await runToEnd(join(world.prototypes, 'demo'), task, { readOnly: prototypeReadable(await work.sources('demo', 'v1')) });
+		const ended = await runToEnd(join(world.prototypes, 'demo'), task);
 		const fixed = readFileSync(source, 'utf8');
 		console.log(`The agent's last words: ${ended.said}\nIts source:\n${fixed}`);
 		expect(ended.ok, ended.said).toBe(true);

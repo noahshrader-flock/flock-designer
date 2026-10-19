@@ -40,7 +40,8 @@ export interface Work {
 export type WorkKind = 'prototype' | 'codebase';
 
 /** `command` is for a terminal, when Claude Code is not in VS Code. */
-export interface BuildInCodebase {
+/** What any hand-off to the agent did: opened in this window, or `command` for a terminal, on the clipboard. */
+export interface Handed {
 	editor: boolean;
 	command: string | null;
 }
@@ -165,7 +166,7 @@ export type PageStatus =
 	| { state: 'unavailable'; why: string }
 	| { state: 'published'; url: string };
 
-export interface HandedComment extends BuildInCodebase {
+export interface HandedComment extends Handed {
 	/** The one commented on, or a new version from it. */
 	target: string;
 	/** The version a new one starts from; null for a change in place. */

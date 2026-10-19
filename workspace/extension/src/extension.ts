@@ -18,7 +18,7 @@ import { type CodebaseAction, type HostMessage, NO_TABS_SHOWN, type Review, revi
 import { askRoutes } from './asks';
 import { commands } from './commands';
 import { type Given, newPrototype } from './newPrototype';
-import { watchBuild } from './watchBuild';
+import { watchFor } from './watch';
 import { coalesce } from './coalesce';
 import { PanelProvider } from './panel';
 import { PANEL_VIEW_OPTIONS } from './panelOptions';
@@ -124,18 +124,18 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 		// Each prototype's page on the pages' address, another origin from the bar's.
 		build: async (records) => buildReview(records, `${await core.prototypeServer.pagesOrigin()}/${REVIEW_KEY}/`),
 		serve: () => core.prototypeServer.serveFolder(REVIEW_KEY, site),
-		answer: (review, name, args, seen, from) =>
+		answer: (review, name, args, seen) =>
 			answerReview(
 				{
 					routes: served,
 					signIn: () => github.signIn(),
 					written: () => projectsChanged(),
-					address: (r, comment, _asked, newVersion): Promise<void> => {
+					address: (r, comment, newVersion): Promise<void> => {
 						const run = async () => {
 							const project = valueOf(await api.listProjects()).find((p) => p.id === r.projectId);
 							// Address changes the prototype's code, which is with the product it was made on: that one, open here.
 							const why = needsProduct(project ? productsOf(project) : [], found.product === null ? null : found.productRepository);
-							if (why !== null || found.product === null) throw new Error(why ?? 'No product is open.');
+							if (why !== null || found.product === null) throw new Error(why ?? productNow().why);
 							// Titled as the project's records title it: a browser's page may have moved to another of its versions.
 							const titled = (project && reviewsOf(project).find((x) => x.name === r.name)) || r;
 							return addressComment({ ...here, watch: watchPrototype }, found.product, titled, comment, newVersion);
@@ -148,7 +148,6 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 				name,
 				args,
 				seen,
-				from,
 			),
 		...(log ? { log } : {}),
 	});
@@ -189,35 +188,32 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 	/** Ends with the window: nothing is saved after it is gone. */
 	let watching = true;
 	context.subscriptions.push({ dispose: () => void (watching = false) });
-	const watchPrototype = (projectId: string, name: string, title: string, from: string | null = null) =>
-		void watchBuild({
-			saveBuilt: async () => valueOf(await api.saveBuilt(projectId, name, from)),
-			// No notification for each save: accessibility is the build's own check, in the agent's run.
-			onSaved: projectsChanged,
-			onGaveUp: (err) =>
-				failed(
-					new Error(
-						`DSNR could not save the build of ${title} (${name}): ${errorText(err, { firstLine: true }).replace(/\.?$/, '.')} Opening it for review saves it.`,
-					),
-				),
+	/** `couldNot` says what failed, before the error's own words; `after` what to do then, if anything. */
+	const watchUntil = (
+		isThere: () => Promise<boolean>,
+		{ couldNot, after = '', pollMs, giveUpMs, once = false }: { couldNot: string; after?: string; pollMs: number; giveUpMs: number; once?: boolean },
+	) =>
+		void watchFor({
+			found: isThere,
+			onFound: projectsChanged,
+			onGaveUp: (err) => failed(new Error(`${couldNot}: ${errorText(err, { firstLine: true }).replace(/\.?$/, '.')}${after}`)),
 			now: Date.now,
 			sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+			pollMs,
+			giveUpMs,
+			isLive: () => watching,
+			once,
+		});
+	// No notification for each save: accessibility is the build's own check, in the agent's run.
+	const watchPrototype = (projectId: string, name: string, title: string, from: string | null = null) =>
+		watchUntil(async () => valueOf(await api.saveBuilt(projectId, name, from)) === 'saved', {
+			couldNot: `DSNR could not save the build of ${title} (${name})`,
+			after: ' Opening it for review saves it.',
 			pollMs: 2000,
 			giveUpMs: 2 * 60 * 60 * 1000,
-			isLive: () => watching,
 		});
 	const watchHandoff = (check: () => Promise<boolean>) =>
-		void watchBuild({
-			saveBuilt: async () => ((await check()) ? 'saved' : 'waiting'),
-			onSaved: projectsChanged,
-			onGaveUp: (err) => failed(new Error(`DSNR could not read the handoff's result: ${errorText(err, { firstLine: true }).replace(/\.?$/, '.')}`)),
-			now: Date.now,
-			sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
-			pollMs: 5000,
-			giveUpMs: 4 * 60 * 60 * 1000,
-			isLive: () => watching,
-			once: true,
-		});
+		watchUntil(check, { couldNot: "DSNR could not read the handoff's result", pollMs: 5000, giveUpMs: 4 * 60 * 60 * 1000, once: true });
 	const startPrototype = (given: Given) =>
 		newPrototype({ ...here, given, product: productNow(), onChanged: projectsChanged, watchBuild: watchPrototype });
 	const localRun = (root: string): LocalRun => {

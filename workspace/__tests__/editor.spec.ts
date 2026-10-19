@@ -1,8 +1,8 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { SessionMemory, claudeLink, findEditor, handToClaude, startCommand } from '../src/core/services/agent/editor';
+import { SessionMemory, claudeLink, findEditor, handTask, handToClaude, startCommand } from '../src/core/services/agent/editor';
 
 const dirs: string[] = [];
 const temp = () => {
@@ -94,6 +94,20 @@ describe('work handed to Claude Code, as every hand-over is', () => {
 		expect(await handToClaude(at.ports, '/work/lib', 'Make the branch.')).toEqual({ editor: false, command });
 		expect(at.copied).toEqual([command]);
 		expect(at.opened).toEqual([]);
+	});
+
+	it('hands a task over as its file, written where it is asked for, and one line saying what it is for', async () => {
+		const at = ports('vscode');
+		const taskFile = join(temp(), 'demo', 'v1-build.md');
+		await handTask(at.ports, '/work/lib', { what: 'Build prototype Version 1 of demo.', taskFile, task: '# The task' });
+		expect(readFileSync(taskFile, 'utf8')).toBe('# The task');
+		expect(at.opened).toEqual([
+			[
+				'vscode',
+				'/work/lib',
+				`Build prototype Version 1 of demo. Your task is in ${taskFile}. It is complete: read all of it, then do what it says, in order.`,
+			],
+		]);
 	});
 });
 

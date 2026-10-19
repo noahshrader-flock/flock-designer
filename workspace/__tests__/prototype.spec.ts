@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { isPrototypeKey, prototypeKey, prototypePagePath } from '../src/shared/designPaths';
 import { nextVersionName } from '../src/shared/prototypeNames';
-import { cloneStore, buildInCodebasePrompt, prototypeReadable, recordPrototype, setCover } from '../src/core/services/prototypes/prototype';
+import { cloneStore, buildInCodebaseLead, recordPrototype, setCover } from '../src/core/services/prototypes/prototype';
 import { PrototypeServer } from '../src/core/services/prototypes/prototypeServer';
 import { memoryStore } from './fixtures';
 import { prototypeBuildTask } from '../src/core/services/agent/agentTasks';
@@ -176,11 +176,6 @@ describe('what the agent is told', () => {
 		expect(prototypeBuildTask({ guide: '', skill: 's', build, sources, accessibility: '', voice: '', request: 'r' })).toContain(
 			'The design system as installed:** not on this machine',
 		);
-	});
-
-	it('lets the agent read only the folders that exist', () => {
-		expect(prototypeReadable(sources)).toEqual(['/q/source/coke', '/c/coke/.dsnr', '/c/fui', '/d/standards', '/c/node_modules']);
-		expect(prototypeReadable(null)).toEqual([]);
 	});
 
 	it('lets the agent read the product but never change it', () => {
@@ -398,19 +393,15 @@ describe('PrototypeServer', () => {
 });
 
 describe('the first line of a Build conversation', () => {
-	const at = { label: 'Version 2', projectId: 'alert-history', taskFile: '/app/prototypes/alert-history/v2-into-code.md' };
+	const at = { label: 'Version 2', projectId: 'alert-history' };
 
-	it('says what to build and points at the task, for new work', () => {
-		expect(buildInCodebasePrompt({ ...at, continuing: null })).toBe(
-			"Build Version 2 of the alert-history prototype into this codebase. Your task, with the skill to follow and the prototype's files, is in /app/prototypes/alert-history/v2-into-code.md: read it and do what it says.",
-		);
+	it('says what to build, for new work', () => {
+		expect(buildInCodebaseLead({ ...at, continuing: null })).toBe('Build Version 2 of the alert-history prototype into this codebase.');
 	});
 
 	it('says to look at what is on the branch first, for work started before', () => {
-		const prompt = buildInCodebasePrompt({ ...at, continuing: 'feature/alert-history' });
-		expect(prompt).toMatch(
-			/^Continue building Version 2 of the alert-history prototype into this codebase, on feature\/alert-history\. Some of it may be done already, so look at the branch and the audit first\./,
+		expect(buildInCodebaseLead({ ...at, continuing: 'feature/alert-history' })).toBe(
+			'Continue building Version 2 of the alert-history prototype into this codebase, on feature/alert-history. Some of it may be done already, so look at the branch and the audit first.',
 		);
-		expect(prompt).toContain('is in /app/prototypes/alert-history/v2-into-code.md: read it and do what it says.');
 	});
 });

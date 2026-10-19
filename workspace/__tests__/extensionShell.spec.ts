@@ -272,18 +272,18 @@ describe('a review tab’s answers to its page', () => {
 		expect(await ask('resolveComment', [{ thread: 1, id: 2 }, true])).toMatchObject({ ok: true });
 		expect(await ask('signIn', [])).toEqual({ ok: true, value: { state: 'signedOut' } });
 		await ask('address', [{ thread: 1, id: 2 }]);
-		expect(d.address).toHaveBeenCalledWith(review, { thread: 1, id: 2 }, 'tab', false);
+		expect(d.address).toHaveBeenCalledWith(review, { thread: 1, id: 2 }, false);
 	});
 
-	it('Address the version the page is on, when it says which, and say who asked (BROWSER_COMMENTS_PLAN 3.1)', async () => {
+	it('Address the version the page is on, when it says which (BROWSER_COMMENTS_PLAN 3.1)', async () => {
 		const d = deps();
 		const seen = new Set<number>();
-		const ask = (args: unknown[]) => answerReview(d, review, 'address', args, seen, 'browser');
-		await answerReview(d, review, 'readComments', ['demo', 'prototype/demo/v3'], seen, 'browser');
+		const ask = (args: unknown[]) => answerReview(d, review, 'address', args, seen);
+		await answerReview(d, review, 'readComments', ['demo', 'prototype/demo/v3'], seen);
 		await ask([{ thread: 1, id: 2 }, 'prototype/demo/v3']);
-		expect(d.address).toHaveBeenCalledWith({ ...review, name: 'v3' }, { thread: 1, id: 2 }, 'browser', false);
+		expect(d.address).toHaveBeenCalledWith({ ...review, name: 'v3' }, { thread: 1, id: 2 }, false);
 		await ask([{ thread: 1, id: 2 }, 'prototype/demo/v3', true]);
-		expect(d.address).toHaveBeenLastCalledWith({ ...review, name: 'v3' }, { thread: 1, id: 2 }, 'browser', true);
+		expect(d.address).toHaveBeenLastCalledWith({ ...review, name: 'v3' }, { thread: 1, id: 2 }, true);
 		for (const branch of ['prototype/other/v1', 'prototype/demo/../other/v1', 'feature/demo'])
 			expect(await ask([{ thread: 1, id: 2 }, branch]), branch).toEqual({
 				ok: false,
@@ -342,8 +342,9 @@ describe('a review tab’s answers to its page', () => {
 		expect(d.written).toHaveBeenCalledTimes(2);
 		await ask('deleteComment', [{ thread: 1, id: 2 }]);
 		expect(d.written).toHaveBeenCalledTimes(2);
+		// Address writes nothing: the page's save is what is read again, when the agent has built it.
 		await ask('address', [{ thread: 1, id: 2 }]);
-		expect(d.written).toHaveBeenCalledTimes(3);
+		expect(d.written).toHaveBeenCalledTimes(2);
 	});
 });
 
@@ -441,13 +442,13 @@ describe('the review tabs', () => {
 	});
 
 	it('open in the browser with a key of their own, for that review alone, each with what it has been shown (BROWSER_COMMENTS_PLAN 1.2)', async () => {
-		const answered: { review: unknown; name: string; args: unknown[]; seen: Set<number>; from: unknown }[] = [];
+		const answered: { review: unknown; name: string; args: unknown[]; seen: Set<number> }[] = [];
 		const reviews = new Reviews({
 			vscode: fakeVsCode().api as never,
 			build: () => undefined,
 			serve: async () => 'http://127.0.0.1:5000/review/',
-			answer: async (review, name, args, seen, from) => {
-				answered.push({ review, name, args, seen, from });
+			answer: async (review, name, args, seen) => {
+				answered.push({ review, name, args, seen });
 				return { ok: true, value: [] };
 			},
 		});
@@ -467,7 +468,6 @@ describe('the review tabs', () => {
 			[demo, 'readComments', ['demo', 'prototype/demo/v3']],
 			[demo, 'readComments', ['demo', 'prototype/demo/v3']],
 		]);
-		expect(answered.map((x) => x.from)).toEqual(['browser', 'browser']);
 		// Each key has its own list of what it has been shown: what one browser tab saw, another may not change.
 		expect(answered[0]!.seen).not.toBe(answered[1]!.seen);
 		await reviews.answerBrowser(a as string, { ...ask, id: 4 });

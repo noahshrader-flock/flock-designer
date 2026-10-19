@@ -1,6 +1,6 @@
 import { type FormEvent, useEffect, useState } from 'react';
 import { useWorkspace } from './hooks/useWorkspace';
-import type { BuildInCodebase } from '../../src/shared/contract';
+import type { Handed } from '../../src/shared/contract';
 import type { Project } from '../../src/shared/domain/projects';
 import { buildStart, buildSteps, noSetupNote, startBranch } from '../../src/shared/work';
 import { Button } from '../../src/ui/Button';
@@ -105,7 +105,7 @@ export const BuildInCodebaseDialog = ({
 	const [from, setFrom] = useState<string | null>(null);
 	const [busy, setBusy] = useState(false);
 	const [error, setError] = useState<string | null>(null);
-	const [handed, setHanded] = useState<BuildInCodebase | null>(null);
+	const [handed, setHanded] = useState<Handed | null>(null);
 	useEffect(() => {
 		if (plan && listed) setFrom(startBranch(plan, listed));
 	}, [plan, listed]);

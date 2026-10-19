@@ -1,6 +1,7 @@
-import { existsSync, readdirSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
+import type { Handed } from '../../../shared/contract';
 import { asRecord } from '../../../shared/json';
 import { type JsonFile, jsonFile } from '../platform/jsonFile';
 import { runFile } from '../platform/process';
@@ -88,7 +89,7 @@ export const handToClaude = async (
 	},
 	root: string,
 	prompt: string,
-): Promise<{ editor: boolean; command: string | null }> => {
+): Promise<Handed> => {
 	const editor = ports.editor.find();
 	if (editor) {
 		await ports.editor.openPrompt(editor, root, prompt);
@@ -97,4 +98,15 @@ export const handToClaude = async (
 	const command = startCommand(ports.claude(), root, prompt);
 	await ports.copy(command);
 	return { editor: false, command };
+};
+
+/** Every task is handed over as a file and one line saying what it is for, so each agent is told the same way. */
+export const handTask = (
+	ports: Parameters<typeof handToClaude>[0],
+	root: string,
+	{ what, taskFile, task }: { what: string; taskFile: string; task: string },
+): Promise<Handed> => {
+	mkdirSync(dirname(taskFile), { recursive: true });
+	writeFileSync(taskFile, task);
+	return handToClaude(ports, root, `${what} Your task is in ${taskFile}. It is complete: read all of it, then do what it says, in order.`);
 };

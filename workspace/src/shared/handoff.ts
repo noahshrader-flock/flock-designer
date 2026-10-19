@@ -1,18 +1,15 @@
-/**
- * The task asks for one of these on a line of its own, and only the last one the run said counts, so a phrase earlier in
- * its log ("ready for engineering once…") never does.
- */
+/** The task asks for one of these as HANDOFF.md's first line, alone. */
 export const READY_LINE = 'Ready for engineering';
 export const NOT_READY_LINE = 'Not ready';
 
-export const lastVerdict = (lines: string[]): 'ready' | 'not ready' | null => {
-	const all = lines.flatMap((l) => l.split('\n'));
-	for (let i = all.length - 1; i >= 0; i--) {
-		const said = /^\s*[*`_]*(ready for engineering|not ready)\b/i.exec(all[i] ?? '')?.[1]?.toLowerCase();
-		if (said) return said === 'not ready' ? 'not ready' : 'ready';
-	}
-	return null;
+const VERDICT = /^\s*[*`_]*(ready for engineering|not ready)\b/i;
+
+/** HANDOFF.md's first line, however it is dressed; a verdict further down, or mid-sentence, is none. */
+export const handoffVerdict = (text: string): 'ready' | 'not ready' | null => {
+	const said = VERDICT.exec(text.split('\n').find((l) => l.trim() !== '') ?? '')?.[1]?.toLowerCase();
+	return said === undefined ? null : said === 'not ready' ? 'not ready' : 'ready';
 };
 
-/** HANDOFF.md's first line, alone: the task asks for the verdict there, where any agent can write it. */
-export const handoffVerdict = (text: string): 'ready' | 'not ready' | null => lastVerdict([text.split('\n').find((l) => l.trim() !== '') ?? '']);
+/** Recorded as ready, and offered to engineering, only when HANDOFF.md says so and nothing was pushed. */
+export const handoffReady = ({ verdict, pushed }: { verdict: 'ready' | 'not ready' | null; pushed: boolean }): boolean =>
+	verdict === 'ready' && !pushed;

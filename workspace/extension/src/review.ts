@@ -48,11 +48,9 @@ __fdPage.startReviewTab(${JSON.stringify(origin)});
 interface ReviewAnswers {
 	routes: () => ReadonlyMap<InvokeName, Route>;
 	signIn: () => Promise<SignInState>;
-	address: (review: Review, comment: CommentRef, from: AskedFrom, newVersion: boolean) => Promise<unknown>;
+	address: (review: Review, comment: CommentRef, newVersion: boolean) => Promise<unknown>;
 	written: () => void;
 }
-
-export type AskedFrom = 'tab' | 'browser';
 
 const isRef = (v: unknown): v is CommentRef =>
 	typeof v === 'object' && v !== null && Number.isSafeInteger((v as CommentRef).thread) && Number.isSafeInteger((v as CommentRef).id);
@@ -67,9 +65,8 @@ export const answerReview = async (
 	name: RelayCall,
 	args: unknown[],
 	seen: Set<number>,
-	from: AskedFrom = 'tab',
 ): Promise<Result<unknown>> => {
-	const result = await answered(answers, review, name, args, seen, from);
+	const result = await answered(answers, review, name, args, seen);
 	if (result.ok && WRITES.has(name)) answers.written();
 	if (result.ok && (name === 'readComments' || name === 'postComment'))
 		for (const c of Array.isArray(result.value) ? result.value : [result.value]) if (isRef(c)) seen.add(c.thread);
@@ -84,16 +81,9 @@ const isPrototypeOf = (projectId: string, branch: unknown): boolean => {
 const ON_A_COMMENT = new Set<RelayCall>(['moveComment', 'resolveComment', 'deleteComment', 'address']);
 
 /** After one, the counts are read again. */
-const WRITES = new Set<RelayCall>(['postComment', 'moveComment', 'resolveComment', 'deleteComment', 'address']);
+const WRITES = new Set<RelayCall>(['postComment', 'moveComment', 'resolveComment', 'deleteComment']);
 
-const answered = async (
-	answers: ReviewAnswers,
-	review: Review,
-	name: RelayCall,
-	args: unknown[],
-	seen: Set<number>,
-	from: AskedFrom,
-): Promise<Result<unknown>> => {
+const answered = async (answers: ReviewAnswers, review: Review, name: RelayCall, args: unknown[], seen: Set<number>): Promise<Result<unknown>> => {
 	if (name === 'signIn') return toResult(answers.signIn());
 	if (name === 'address' && !(args.length >= 1 && args.length <= 3 && isRef(args[0]) && (args[2] === undefined || typeof args[2] === 'boolean')))
 		return { ok: false, error: 'Address is given one comment, and may say the version it is on and whether to make a new one.' };
@@ -103,7 +93,7 @@ const answered = async (
 		return { ok: false, error: 'That comment is not one of this review’s.' };
 	if (name === 'address') {
 		const on = args.length >= 2 ? { ...review, name: (args[1] as string).slice(prototypeKey(review.projectId, '').length) } : review;
-		return toResult(answers.address(on, args[0] as CommentRef, from, args[2] === true));
+		return toResult(answers.address(on, args[0] as CommentRef, args[2] === true));
 	}
 	if ((name === 'readComments' || name === 'postComment') && !(args[0] === review.projectId && isPrototypeOf(review.projectId, args[1])))
 		return { ok: false, error: `This review is of ${review.projectId}, so it comments only on ${review.projectId}’s prototypes.` };
@@ -141,7 +131,7 @@ export class Reviews {
 			};
 			build: (records: string) => void | Promise<void>;
 			serve: () => Promise<string>;
-			answer: (review: Review, name: RelayCall, args: unknown[], seen: Set<number>, from: AskedFrom) => Promise<Result<unknown>>;
+			answer: (review: Review, name: RelayCall, args: unknown[], seen: Set<number>) => Promise<Result<unknown>>;
 			log?: Pick<VsCode.LogOutputChannel, 'info'>;
 			onShown?: () => void;
 		},
@@ -170,7 +160,7 @@ export class Reviews {
 		const ask = held ? readRelayAsk(raw) : null;
 		if (!held || ask === null) return null;
 		this.deps.log?.info(`The review of ${held.review.title}, in the browser, asked ${ask.name}.`);
-		return { dsnr: 'answer', id: ask.id, result: await this.deps.answer(held.review, ask.name, ask.args, held.seen, 'browser') };
+		return { dsnr: 'answer', id: ask.id, result: await this.deps.answer(held.review, ask.name, ask.args, held.seen) };
 	}
 
 	async open({ records, ...review }: Review & { records: string }): Promise<void> {
@@ -211,7 +201,7 @@ export class Reviews {
 			const ask = readRelayAsk(raw);
 			if (ask === null) return;
 			this.deps.log?.info(`The review of ${shown.review.title} asked ${ask.name}.`);
-			const result = await this.deps.answer(shown.review, ask.name, ask.args, seen, 'tab');
+			const result = await this.deps.answer(shown.review, ask.name, ask.args, seen);
 			await panel.webview.postMessage({ dsnr: 'answer', id: ask.id, result } satisfies RelayTell);
 		});
 		panel.onDidChangeViewState(() => this.deps.onShown?.());

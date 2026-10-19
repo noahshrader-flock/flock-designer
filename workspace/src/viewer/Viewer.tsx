@@ -233,7 +233,7 @@ const InDsnr = ({ config, slots, showing, relay }: { config: ViewerConfig; slots
 					? []
 					: [
 							{
-								label: addressing === comment.id ? 'Working…' : 'Address',
+								label: addressing === comment.id ? 'Opening…' : 'Address',
 								icon: 'sparkle',
 								disabled: addressing !== null,
 								onSelect: () => void address(commentRef(comment), false),

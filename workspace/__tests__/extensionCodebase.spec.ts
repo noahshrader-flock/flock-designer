@@ -103,15 +103,23 @@ describe('Handoff, from VS Code', () => {
 		}
 	});
 
-	it('says what a handoff should not have done: pushed, or changed files it leaves alone, and offers no pull request', async () => {
-		const { deps, told, offered, watching } = world({
-			handoffResult: done({ pushed: true, outside: ['.github/workflows/ci.yml', 'package-lock.json'] }),
-		});
-		await handOff(deps, 'zone-coverage');
-		await watching[0]!();
-		expect(offered).toEqual([]);
-		expect(told.slice(1)).toEqual([
-			'HANDOFF.md says Zone coverage is ready, but the agent pushed feature/zone-coverage, which a handoff never does: look at what reached GitHub. It also changed files a handoff leaves alone: .github/workflows/ci.yml, package-lock.json.',
+	it('says a push, which keeps the work from being offered, and names files a handoff leaves alone', async () => {
+		const pushed = world({ handoffResult: done({ pushed: true, outside: ['.github/workflows/ci.yml'] }) });
+		await handOff(pushed.deps, 'zone-coverage');
+		await pushed.watching[0]!();
+		expect(pushed.offered).toEqual([]);
+		expect(pushed.told.slice(1)).toEqual([
+			'HANDOFF.md says Zone coverage is ready, but it is not recorded as ready. The agent pushed feature/zone-coverage, which a handoff never does: look at what reached GitHub. It changed files a handoff leaves alone: .github/workflows/ci.yml.',
+		]);
+		// Files it should have left alone are said, not a reason to hold back work that is ready.
+		const outside = world({ handoffResult: done({ outside: ['package-lock.json'] }) });
+		await handOff(outside.deps, 'zone-coverage');
+		await outside.watching[0]!();
+		expect(outside.offered).toEqual([
+			[
+				'Ready for engineering: HANDOFF.md is on feature/zone-coverage, and nothing was pushed. It changed files a handoff leaves alone: package-lock.json.',
+				['Open a draft pull request'],
+			],
 		]);
 	});
 

@@ -1,6 +1,7 @@
 import type { Theme } from '../prototypeTheme';
 import type { DeclaredTarget } from '../wcag';
 import type { AccessibilityCounts, AccessibilityResult } from './accessibility';
+import type { Handed } from './projects';
 
 /** `folder` is `''` for the whole repository; `branch` is its default. */
 export interface ConnectedDesignSystem {
@@ -179,11 +180,8 @@ export type BranchReview =
 
 export type HandedChange = { edits: TokenEdit[] } | { tried: TriedValue[] };
 
-/** `command` is for a terminal, when Claude Code is not in this window. */
-export interface HandedOver {
+export interface HandedOver extends Handed {
 	branch: string;
-	editor: boolean;
-	command: string | null;
 }
 
 /** Far beyond any tab's, short of anything that could hurt. */

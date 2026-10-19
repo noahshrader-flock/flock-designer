@@ -183,49 +183,8 @@ export interface PrototypeSources {
 	nodeModules: string | null;
 }
 
-export const prototypeReadable = (s: PrototypeSources | null): string[] =>
-	s
-		? [s.code, s.productGuidance, s.designSystemGuidance, s.installedDesignSystem, s.sharedStandards, s.nodeModules].filter(
-				(d): d is string => d !== null,
-			)
-		: [];
-
 /** `continuing` is the branch, when the work was started before. */
-export const buildInCodebasePrompt = ({
-	label,
-	projectId,
-	taskFile,
-	continuing,
-}: {
-	label: string;
-	projectId: string;
-	taskFile: string;
-	continuing: string | null;
-}): string =>
-	[
-		continuing
-			? `Continue building ${label} of the ${projectId} prototype into this codebase, on ${continuing}. Some of it may be done already, so look at the branch and the audit first.`
-			: `Build ${label} of the ${projectId} prototype into this codebase.`,
-		`Your task, with the skill to follow and the prototype's files, is in ${taskFile}: read it and do what it says.`,
-	].join(' ');
-
-export const prototypeAddressPrompt = ({
-	number,
-	label,
-	projectId,
-	taskFile,
-}: {
-	number: number;
-	label: string;
-	projectId: string;
-	taskFile: string;
-}): string =>
-	[
-		`Address comment ${number} on prototype ${label} of ${projectId}.`,
-		`Your task is in ${taskFile}. It is complete: read all of it, then do what it says, in order.`,
-	].join(' ');
-
-export const prototypeBuildPrompt = ({ label, projectId, taskFile }: { label: string; projectId: string; taskFile: string }): string =>
-	[`Build prototype ${label} of ${projectId}.`, `Your task is in ${taskFile}. It is complete: read all of it, then do what it says, in order.`].join(
-		' ',
-	);
+export const buildInCodebaseLead = ({ label, projectId, continuing }: { label: string; projectId: string; continuing: string | null }): string =>
+	continuing
+		? `Continue building ${label} of the ${projectId} prototype into this codebase, on ${continuing}. Some of it may be done already, so look at the branch and the audit first.`
+		: `Build ${label} of the ${projectId} prototype into this codebase.`;

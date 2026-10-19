@@ -56,7 +56,7 @@ beforeAll(async () => {
 	writeFileSync(
 		join(design, 'projects', 'demo', 'work.json'),
 		JSON.stringify(
-			['v1', 'v2'].map((name, i) => ({
+			['v1'].map((name, i) => ({
 				projectId: 'demo',
 				name,
 				branch: `prototype/demo/${name}`,
@@ -67,7 +67,6 @@ beforeAll(async () => {
 		),
 	);
 	writeFileSync(join(design, 'projects', 'demo', 'prototypes', 'v1.html'), PAGE);
-	writeFileSync(join(design, 'projects', 'demo', 'prototypes', 'v2.html'), PAGE.replace('Alert history</h1>', 'Alert history, addressed</h1>'));
 	mkdirSync(join(design, 'projects', 'hostile', 'prototypes'), { recursive: true });
 	writeFileSync(join(design, 'projects', 'hostile', 'brief.md'), '# Hostile\n');
 	writeFileSync(
@@ -96,7 +95,7 @@ beforeAll(async () => {
 			signInState: () => ({ state: 'signedIn', user: { login: 'noah', name: 'Noah', avatarUrl: null } }),
 			readComments: () => threads.readComments(b),
 			postComment: () => threads.postComment(a, b, c, d, null),
-			address: () => (addressed.push(ask.args), 'v2'),
+			address: () => void addressed.push(ask.args),
 		};
 		const value = await (answers[ask.name] ?? (() => null))();
 		return { dsnr: 'answer', id: ask.id, result: { ok: true, value } };
@@ -155,13 +154,12 @@ describe.skipIf(NO_CHROME)('a review opened in the browser from DSNR, in the rea
 			expect(sizes.send).toBe(sizes.box);
 			expect(await tab.evaluate(() => (document.querySelector('#general-comment') as HTMLTextAreaElement).placeholder)).toBe('Post a comment…');
 			await pressNamed(tab, 'Comment actions');
+			// Address hands the comment to the agent's window, on this page's version; the page stays where it is.
 			await pressNamed(tab, 'Address');
-			await tab.waitForFunction(() => location.pathname.endsWith('/v2/'));
+			const handed = Date.now() + 20_000;
+			while (!addressed.length && Date.now() < handed) await new Promise((r) => setTimeout(r, 50));
 			expect(addressed[0]?.[1]).toBe('prototype/demo/v1');
-			const moved = await tab.waitForFrame((f) => f.url().endsWith('/v2/page.html'));
-			await moved.waitForFunction(() => document.querySelector('h1')?.textContent === 'Alert history, addressed');
-			await tab.waitForFunction(() => [...document.querySelectorAll('button')].some((b) => b.textContent?.trim() === 'Comment'));
-			expect(tab.url()).not.toContain('dsnr-key');
+			expect(tab.url()).toBe(`${base}demo/v1/`);
 
 			await tab.goto(`${base}demo/v1/`, { waitUntil: 'load' });
 			const again = tab.frames().find((f) => f.url().endsWith('page.html')) as Frame;

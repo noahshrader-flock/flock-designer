@@ -1,8 +1,8 @@
 import type { CallsDeps } from '../compose';
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { folderName } from '../../shared/brief';
-import type { BuildInCodebase, CommentRef, HandedComment, OpenedPrototype, PrototypeReadiness } from '../../shared/contract';
+import type { Handed, CommentRef, HandedComment, OpenedPrototype, PrototypeReadiness } from '../../shared/contract';
 import { coverPath, prototypeKey, prototypePagePath } from '../../shared/designPaths';
 import { statesOf } from '../../shared/prototypeStates';
 import { workLabel } from '../../shared/work';
@@ -10,19 +10,12 @@ import { ADDRESS_SKILL, chooseComment } from '../services/prototypes/address';
 import { guidePart, prototypeAddressTask, prototypeBuildTask } from '../services/agent/agentTasks';
 import { writeCommentsExport } from '../services/prototypes/commentsExport';
 import { readDescriptor } from '../services/projects/descriptor';
-import { handToClaude } from '../services/agent/editor';
+import { handTask } from '../services/agent/editor';
 import { ensureLocalBranch } from '../services/platform/git';
 import { INSTALL_COMMAND } from '../services/codebase/install';
 import { jpegDataUrl } from '../services/prototypes/picture';
 import { type CoverDeps, builtHere, ensureCovers } from '../services/prototypes/projectCovers';
-import {
-	BUILD_SKILL,
-	GUIDE,
-	type PrototypeSources,
-	assignFolder,
-	prototypeAddressPrompt,
-	prototypeBuildPrompt,
-} from '../services/prototypes/prototype';
+import { BUILD_SKILL, GUIDE, type PrototypeSources, assignFolder } from '../services/prototypes/prototype';
 import { localPrototypeFile, whereTheChangeGoes } from '../services/prototypes/prototypeWork';
 import { singleFlight } from '../services/platform/concurrency';
 
@@ -44,12 +37,16 @@ export const prototypesArea = (d: CallsDeps) => {
 		work.buildPlan(projectId, name, await once(`source:${projectId}`, () => work.sources(projectId, modeledOn)));
 	const guideFor = async (sources: PrototypeSources): Promise<string> =>
 		guidePart(await readSkillText(GUIDE), sources.sharedStandards === null ? null : dirname(sources.sharedStandards));
-	const buildTask = async (projectId: string, name: string, request: string): Promise<{ task: string; sources: PrototypeSources }> => {
-		const skill = await readSkillText(BUILD_SKILL);
-		const { build, sources } = await prototypeRun(projectId, name);
-		const accessibility = await work.accessibility(projectId, name);
-		const voice = await work.voice();
-		return { task: prototypeBuildTask({ guide: await guideFor(sources), skill, build, sources, accessibility, voice, request }), sources };
+	/** What every prototype task carries. `modeledOn` is the version whose sources and target apply: a new one has no record yet. */
+	const taskParts = async (projectId: string, name: string, modeledOn = name) => {
+		const { build, sources } = await prototypeRun(projectId, name, modeledOn);
+		return {
+			guide: await guideFor(sources),
+			build,
+			sources,
+			accessibility: await work.accessibility(projectId, modeledOn),
+			voice: await work.voice(),
+		};
 	};
 	/** What is at a picture's path never changes, so it is read once. */
 	const coversRead = new Map<string, string>();
@@ -69,13 +66,11 @@ export const prototypesArea = (d: CallsDeps) => {
 			await assignFolder(store.records(), projectId, folderName(folder));
 			return null;
 		},
-		handPrototypeBuild: async (root: string, projectId: string, name: string, request: string): Promise<BuildInCodebase> => {
+		handPrototypeBuild: async (root: string, projectId: string, name: string, request: string): Promise<Handed> => {
 			const canonical = opened.require(root);
-			const { task } = await buildTask(projectId, name, request);
+			const task = prototypeBuildTask({ ...(await taskParts(projectId, name)), skill: await readSkillText(BUILD_SKILL), request });
 			const taskFile = join(dirname(work.file(projectId, name)), `${name}-build.md`);
-			writeFileSync(taskFile, task);
-			const label = workLabel({ name });
-			return handToClaude(ports, canonical, prototypeBuildPrompt({ label, projectId, taskFile }));
+			return handTask(ports, canonical, { what: `Build prototype ${workLabel({ name })} of ${projectId}.`, taskFile, task });
 		},
 		handPrototypeAddress: async (root: string, projectId: string, name: string, comment: CommentRef, newVersion: boolean): Promise<HandedComment> => {
 			const canonical = opened.require(root);
@@ -92,24 +87,18 @@ export const prototypesArea = (d: CallsDeps) => {
 			});
 			const number = chooseComment(comments, comment);
 			const change = await work.startChange(projectId, name, { newVersion, comments, acting: comment });
-			// Modeled on what the version it comes from was: a new one has no record of its own yet.
-			const { build, sources } = await prototypeRun(projectId, change.target, change.from.name);
 			const task = prototypeAddressTask({
-				guide: await guideFor(sources),
+				...(await taskParts(projectId, change.target, change.from.name)),
 				addressSkill,
 				buildSkill,
-				build,
-				sources,
-				accessibility: await work.accessibility(projectId, change.from.name),
-				voice: await work.voice(),
 				commentsPath: exported.path,
 				number,
 				name,
 				where: whereTheChangeGoes(change),
 			});
 			const taskFile = join(dirname(work.file(projectId, change.target)), `${change.target}-address.md`);
-			writeFileSync(taskFile, task);
-			const handed = await handToClaude(ports, canonical, prototypeAddressPrompt({ number, label: workLabel({ name }), projectId, taskFile }));
+			const what = `Address comment ${number} on prototype ${workLabel({ name })} of ${projectId}.`;
+			const handed = await handTask(ports, canonical, { what, taskFile, task });
 			return { ...handed, target: change.target, from: change.fresh ? change.from.name : null, number };
 		},
 		saveBuilt: async (projectId: string, name: string, from: string | null): Promise<'saved' | 'waiting'> => {
