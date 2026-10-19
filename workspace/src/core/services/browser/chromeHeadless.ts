@@ -79,23 +79,9 @@ interface BrowserLike {
 	on?(event: 'disconnected', listener: () => void): unknown;
 }
 
-/**
- * Pages are drawn several at once, so most are never in front. A page that is not may be given no frames, and a screenshot
- * of it then waits for ever (seen on Linux, where it stalled a run now and then): each is kept as awake as the one in front.
- */
-export const NO_BACKGROUNDING = [
-	'--disable-renderer-backgrounding',
-	'--disable-backgrounding-occluded-windows',
-	'--disable-background-timer-throttling',
-];
-
 const launchChrome = async (path: string): Promise<BrowserLike> => {
 	const { default: puppeteer } = await import('puppeteer-core');
-	return (await puppeteer.launch({
-		executablePath: path,
-		headless: true,
-		args: ['--hide-scrollbars', '--mute-audio', ...NO_BACKGROUNDING],
-	})) as unknown as BrowserLike;
+	return (await puppeteer.launch({ executablePath: path, headless: true, args: ['--hide-scrollbars', '--mute-audio'] })) as unknown as BrowserLike;
 };
 
 /** `PICTURE` is `page/picture.ts`, bundled to text when DSNR is built. */
@@ -154,8 +140,9 @@ export const pictureOf = async (page: PageLike): Promise<Buffer | undefined> => 
 	try {
 		const scale = Math.min(1, PICTURE_MOST_ACROSS / place.width);
 		const clip = { x: region.x + dx, y: region.y + dy, width: region.width, height: region.height, scale };
-		// A region wider or taller than the window is taken past it, where the page is white too.
-		return Buffer.from(await page.screenshot({ type: 'jpeg', quality: PICTURE_QUALITY, optimizeForSpeed: true, captureBeyondViewport: true, clip }));
+		// A region wider or taller than the window is taken past it, where the page is white too: the slower capture, only then.
+		const past = clip.x + clip.width > WINDOW.width || clip.y + clip.height > WINDOW.height;
+		return Buffer.from(await page.screenshot({ type: 'jpeg', quality: PICTURE_QUALITY, optimizeForSpeed: true, captureBeyondViewport: past, clip }));
 	} finally {
 		await page.evaluate(pictured);
 	}
