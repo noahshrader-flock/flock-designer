@@ -9,10 +9,11 @@ import { type HandOverControls, useHandOver } from './hooks/useHandOver';
 import { HandOverActions } from './HandOverActions';
 import { useShowing } from './Showing';
 import { Button } from './ui/Button';
-import { ErrorLine } from './ui/Dialog';
 import { Icon } from './ui/Icon';
 import { ChangeRow, ValueList, ValueItem } from './ui/ValueItem';
 import { Swatch } from './ui/Swatch';
+import { LinkButton } from './ui/LinkButton';
+import { Message } from './ui/Message';
 
 /**
  * What can be done with a change once it is tried (6.2, the app's T4 and T5; a component's values, Phase 4): its branch and
@@ -58,7 +59,7 @@ export const BranchActions = <C,>({
 					)}
 				</p>
 			)}
-			<ErrorLine error={error ?? handOver.error} />
+			<Message tone="error">{error ?? handOver.error}</Message>
 			<div className="branch-buttons">
 				{offered.save && (
 					<Button disabled={offered.save.disabled} onClick={save}>
@@ -97,14 +98,10 @@ export const TokenChanges = () => {
 				<span className="changed-title">
 					Tokens <span className="section-count">{edits.length}</span>
 				</span>
-				{edits.length > 0 && (
-					<button type="button" className="link" onClick={clear}>
-						Reset all
-					</button>
-				)}
+				{edits.length > 0 && <LinkButton onPress={clear}>Reset all</LinkButton>}
 			</div>
 			{edits.length === 0 ? (
-				<p className="quiet">Every token is as the design system has it.</p>
+				<Message>Every token is as the design system has it.</Message>
 			) : (
 				<ValueList>
 					{edits.map((e) => {
@@ -148,7 +145,7 @@ export const Changed = ({ id, controls }: { id: string | null; controls: BranchC
 	return (
 		<>
 			<TokenChanges />
-			{edits.length > 0 && <p className="quiet">Tried in the stories of every component open, and in Primitives.</p>}
+			{edits.length > 0 && <Message>Tried in the stories of every component open, and in Primitives.</Message>}
 			<BranchActions controls={controls} handOver={handOver} />
 		</>
 	);
@@ -156,4 +153,4 @@ export const Changed = ({ id, controls }: { id: string | null; controls: BranchC
 
 /** Said on a design system tab while a change is being tried in the panel: what it shows is as changed. */
 export const TryingNote = ({ count }: { count: number }) =>
-	count > 0 ? <p className="quiet">Showing the change being tried in the panel ({plural(count, 'token')}).</p> : null;
+	count > 0 ? <Message>Showing the change being tried in the panel ({plural(count, 'token')}).</Message> : null;

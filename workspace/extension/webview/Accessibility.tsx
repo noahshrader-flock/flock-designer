@@ -13,6 +13,8 @@ import { useState } from 'react';
 import { plural } from '../../src/shared/plural';
 import type { AccessibilityIssue, AccessibilityResult } from '../../src/shared/contract';
 import { Dialog } from './ui/Dialog';
+import { LinkButton } from './ui/LinkButton';
+import { Message } from './ui/Message';
 
 /**
  * One kind of issue: what it asks, where in WCAG, on how many elements and in which states, and axe's page on it; then the
@@ -65,12 +67,10 @@ export const AccessibilityFindings = ({ result }: { result: AccessibilityResult 
 			<p data-accessibility-summary className={counts.violations ? 'warning-text' : undefined}>
 				{summaryOf(counts)}
 			</p>
-			<p className="quiet">{checkedWith(result)}</p>
-			{notAutomatedLine(result) && <p className="quiet">{notAutomatedLine(result)}</p>}
+			<Message>{checkedWith(result)}</Message>
+			{notAutomatedLine(result) && <Message>{notAutomatedLine(result)}</Message>}
 			{(counts.violations > 0 || result.bestPractice.violations.length > 0) && (
-				<button type="button" className="link" onClick={() => setOpen(true)}>
-					Show the findings
-				</button>
+				<LinkButton onPress={() => setOpen(true)}>Show the findings</LinkButton>
 			)}
 			{open && (
 				<Dialog title="Accessibility findings" onClose={() => setOpen(false)}>

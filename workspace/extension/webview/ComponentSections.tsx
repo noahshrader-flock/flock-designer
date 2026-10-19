@@ -15,10 +15,10 @@ import { Grouped, type TokenActions } from './Tokens';
 import { AsidePart } from './ui/AsidePart';
 import { Dialog } from './ui/Dialog';
 import { InfoTip } from './ui/InfoTip';
-import { Notice } from './ui/Notice';
 import { ShortList } from './ui/ShortList';
 import { Swatch } from './ui/Swatch';
 import { ValueLine, ValueItem } from './ui/ValueItem';
+import { Message, tryAgain } from './ui/Message';
 
 type Ready = Extract<ComponentTokens, { state: 'ready' }>;
 
@@ -59,7 +59,7 @@ export const TokensUsed = ({
 }) => (
 	<AsidePart title="Tokens">
 		{tokens.length === 0 ? (
-			<p className="quiet">It draws with none of the design system’s tokens.</p>
+			<Message>It draws with none of the design system’s tokens.</Message>
 		) : (
 			inOrder(tokens, (t) => t.category).map(([category, inCategory]) => (
 				<div key={category} data-tokens-used={category} className="value-group">
@@ -130,7 +130,7 @@ export const ComponentSections = ({
 	const dialog = (values: ReactNode) =>
 		changes.open && (
 			<Dialog title="Changes" onClose={changes.onClose}>
-				{edits.length === 0 && trying.tried.size === 0 && <p className="quiet">Nothing is being tried.</p>}
+				{edits.length === 0 && trying.tried.size === 0 && <Message>Nothing is being tried.</Message>}
 				{edits.length > 0 && (
 					<>
 						<TokenChanges />
@@ -144,17 +144,19 @@ export const ComponentSections = ({
 	if (answer.state === 'none' || answer.state === 'building')
 		return (
 			<>
-				<p className="quiet">
+				<Message>
 					Finding the tokens {component.name} draws with. The first time for each version of the design system, every story is drawn with each token
 					marked, which takes a few seconds.
-				</p>
+				</Message>
 				{dialog(null)}
 			</>
 		);
 	if (answer.state === 'failed')
 		return (
 			<>
-				<Notice onRetry={retry}>{answer.error}</Notice>
+				<Message size="block" tone="warning" action={tryAgain(retry)}>
+					{answer.error}
+				</Message>
 				{dialog(null)}
 			</>
 		);
@@ -198,7 +200,7 @@ export const ComponentSections = ({
 			{/* What axe found is a line and a link, its findings in a dialog. */}
 			<AsidePart title="Accessibility">
 				{answer.accessibility === null ? (
-					<p className="quiet">Checked once its stories have drawn.</p>
+					<Message>Checked once its stories have drawn.</Message>
 				) : (
 					<AccessibilityFindings result={answer.accessibility} />
 				)}

@@ -1241,7 +1241,7 @@ describe('Projects', () => {
 
 	it('says, signed out, that the list is this machine’s', async () => {
 		await showOpen();
-		expect(body().querySelector('.note')?.textContent).toBe("These are the projects on this machine. Sign in to see your team's too.");
+		expect(body().querySelector('.message')?.textContent).toBe("These are the projects on this machine. Sign in to see your team's too.");
 	});
 
 	it('says why it could not read them', async () => {
@@ -1438,7 +1438,7 @@ describe('Design System', () => {
 		expect(under(section('Inputs')).firstElementChild?.className).toBe('list');
 		expect(under(section('Inputs')).querySelector('[data-part="meta"]')).toBeNull();
 		await type(search, 'nothing like it');
-		expect(body().querySelector('.note')?.textContent).toContain('No component matches “nothing like it”.');
+		expect(body().querySelector('.message')?.textContent).toContain('No component matches “nothing like it”.');
 	});
 
 	/** The tokens part, and the colors' Palette view when asked for. */
@@ -1545,7 +1545,7 @@ describe('Design System', () => {
 		const bubble = body().querySelector('.ds-actions [aria-label="1 value in its token files is not read"]') as HTMLElement;
 		expect(bubble.textContent).toBe('1');
 		expect(bubble.className).toBe('badge badge-warning badge-button');
-		expect(body().querySelector('.note .link')).toBeNull();
+		expect(body().querySelector('.message .link')).toBeNull();
 		// In the row the changes count comes first, then what is not read, then the menu.
 		await share('tokenEdits', [{ path: 'tone.pineGreen.60', value: '#000000' }]);
 		const order = [...body().querySelectorAll('.ds-actions > *')].map((e) => e.getAttribute('aria-label') ?? e.className);

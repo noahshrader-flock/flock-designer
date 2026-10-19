@@ -4,7 +4,6 @@ import { byPrimitive, drawnAs, inOrder, isEditable, listed } from '../../src/sha
 import { type ColorView, labelOf, pointsAt, rowContrast, tokensShown } from '../../src/shared/tokens';
 import { useTokenChanges } from './hooks/tokenChanges';
 import { NoMatches } from './ui/NoMatches';
-import { EmptyState } from './ui/EmptyState';
 import { SearchBox } from './ui/SearchBox';
 import { Section } from './ui/Section';
 import { Toggle } from './ui/Toggle';
@@ -12,6 +11,7 @@ import { SemanticColors } from './SemanticColors';
 import { ColorDot, tokenDot } from './ui/ColorDot';
 import { InfoTip } from './ui/InfoTip';
 import { ValueItem, ValueLine, ValueList } from './ui/ValueItem';
+import { Message } from './ui/Message';
 
 /** What a token row can do: open its control (a token that can be changed), and open its own file at its line. */
 export interface TokenActions {
@@ -153,9 +153,9 @@ export const TokensView = ({ tokens, ...actions }: { tokens: DesignTokens } & To
 	const [view, setView] = useState<ColorView>('semantic');
 	if (tokens.source === null || changes.shown.length === 0)
 		return (
-			<EmptyState icon="symbol-color" title="No tokens were found">
+			<Message size="page" icon="symbol-color" title="No tokens were found">
 				<p>Looked for {listed(tokens.looked)}.</p>
-			</EmptyState>
+			</Message>
 		);
 	const categories = byPrimitive(changes.shown).map(([category, all]) => ({
 		category,

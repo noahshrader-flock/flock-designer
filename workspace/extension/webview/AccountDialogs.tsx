@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import type { PublishStatus } from '../../src/shared/contract';
 import { syncWords } from '../src/publishing';
 import { Button } from './ui/Button';
-import { Dialog, DialogButtons, ErrorLine } from './ui/Dialog';
+import { Dialog, DialogButtons } from './ui/Dialog';
 import { workspace } from './host';
+import { Message } from './ui/Message';
 
 /**
  * The GitHub account, as a dialog in the panel (the title bar's account action opens it): who is signed in, and Sign out.
@@ -22,10 +23,10 @@ export const AccountDialog = ({ login, onClose }: { login: string; onClose: () =
 	};
 	return (
 		<Dialog title="GitHub account" onClose={onClose}>
-			<p className="dialog-about">
+			<Message>
 				Signed in to GitHub as <strong>{login}</strong>.
-			</p>
-			<ErrorLine error={error} />
+			</Message>
+			<Message tone="error">{error}</Message>
 			<DialogButtons>
 				<Button disabled={busy} onClick={() => void signOut()}>
 					{busy ? 'Signing out…' : 'Sign out of DSNR'}
@@ -58,10 +59,10 @@ export const SyncDialog = ({ onClose }: { onClose: () => void }) => {
 	return (
 		<Dialog title="Your work’s sync" onClose={onClose}>
 			{status === null ? (
-				error === null && <p className="dialog-about">Reading how your work is synced…</p>
+				error === null && <Message>Reading how your work is synced…</Message>
 			) : (
 				<>
-					<p className="dialog-about">{syncWords(status)}</p>
+					<Message>{syncWords(status)}</Message>
 					{status.state === 'held' && (
 						<ul className="problem-list">
 							{status.problems.map((p) => (
@@ -74,7 +75,7 @@ export const SyncDialog = ({ onClose }: { onClose: () => void }) => {
 					)}
 				</>
 			)}
-			<ErrorLine error={error} />
+			<Message tone="error">{error}</Message>
 			<DialogButtons>
 				{status !== null && status.state !== 'unavailable' ? (
 					<Button disabled={status.state === 'working'} onClick={() => void syncNow()}>

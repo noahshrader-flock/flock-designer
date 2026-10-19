@@ -8,6 +8,7 @@ import { AccountDialog, SyncDialog } from './AccountDialogs';
 import { Dialog } from './ui/Dialog';
 import { BuildInCodebaseDialog, HandoffDialog } from './CodebaseDialogs';
 import { AssignFolderDialog, NewPrototypeDialog, type NewPrototypeAnswers } from './ProjectDialogs';
+import { Message } from './ui/Message';
 
 /**
  * The dialog open over the panel, if one is, drawn for the project it is about as the list has it: none for a project
@@ -56,7 +57,7 @@ export const PanelDialogs = ({
 				<BuildInCodebaseDialog root={root} project={project} name={newest.name} onBuilt={onChanged} onClose={onClose} />
 			) : (
 				<Dialog title="Build in the codebase" onClose={onClose}>
-					<p className="dialog-about">{needsProduct(productsOf(project), null)} It is built in that product’s own code.</p>
+					<Message>{needsProduct(productsOf(project), null)} It is built in that product’s own code.</Message>
 				</Dialog>
 			);
 		case 'hand-off':

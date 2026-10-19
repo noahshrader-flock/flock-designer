@@ -5,21 +5,19 @@ import { plural } from '../../src/shared/plural';
 import { LARGE, flagged } from '../../src/shared/processChanges';
 import { CHANGE_REQUEST } from '../../src/shared/vocabulary';
 import { Button } from './ui/Button';
-import { ErrorLine } from './ui/Dialog';
 import { useShowing } from './Showing';
 import { Icon } from './ui/Icon';
+import { Message } from './ui/Message';
 
 /** What a hand-over's branch is, as DSNR read it from git: not made yet, made with nothing committed, made from the wrong base, or its size. */
 const ReviewLine = ({ review }: { review: BranchReview }) => {
 	switch (review.state) {
 		case 'missing':
 			return (
-				<p className="quiet">
-					Claude Code makes this branch, by the name its prompt gives, and commits its work there. DSNR reads it from git as it does.
-				</p>
+				<Message>Claude Code makes this branch, by the name its prompt gives, and commits its work there. DSNR reads it from git as it does.</Message>
 			);
 		case 'empty':
-			return <p className="quiet">The branch is made, and nothing is committed on it yet: Claude Code commits its work there.</p>;
+			return <Message>The branch is made, and nothing is committed on it yet: Claude Code commits its work there.</Message>;
 		case 'off-base':
 			return (
 				<p className="warning-text">
@@ -29,9 +27,9 @@ const ReviewLine = ({ review }: { review: BranchReview }) => {
 		case 'ready':
 			return (
 				<>
-					<p className="quiet">
+					<Message>
 						{plural(review.files.length, 'file')} changed, {plural(review.lines, 'line')}
-					</p>
+					</Message>
 					{review.large && (
 						<p className="warning-text">
 							More than {LARGE.files} files or {LARGE.lines} lines: more than one sitting’s review.
@@ -63,7 +61,7 @@ export const HandOverActions = ({ controls }: { controls: HandOverControls }) =>
 				<code>{branch.branch}</code>
 				{ready && ` · ${plural(ready.commits, 'commit')}`}
 			</p>
-			{handed && review.state === 'missing' && <p className="quiet">{handed}</p>}
+			{handed && review.state === 'missing' && <Message>{handed}</Message>}
 			<ReviewLine review={review} />
 			{ready && (
 				<ul data-hand-over-files className="branch-files">
@@ -83,7 +81,7 @@ export const HandOverActions = ({ controls }: { controls: HandOverControls }) =>
 					<a href={pullRequest.url}>{`Draft ${CHANGE_REQUEST} #${pullRequest.number}`}</a>
 				</p>
 			)}
-			<ErrorLine error={error} />
+			<Message tone="error">{error}</Message>
 			{confirming ? (
 				<>
 					<p className="warning-text">It changes what the rules keep out, or more than one sitting’s review. Its {CHANGE_REQUEST} says so.</p>

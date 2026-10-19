@@ -20,10 +20,8 @@ import {
 import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
-import { EmptyState } from './ui/EmptyState';
 import { Grid } from './ui/Grid';
 import { List } from './ui/List';
-import { Loading } from './ui/Loading';
 import { type MenuItem, type MenuSection, Menu } from './ui/Menu';
 import { ViewOptions } from './ui/ViewOptions';
 import { Row } from './ui/Row';
@@ -34,6 +32,7 @@ import { NoMatches } from './ui/NoMatches';
 import { layoutSection } from './layouts';
 import { useShared } from './shared';
 import type { View } from './vscode';
+import { Message } from './ui/Message';
 
 /**
  * What a project has, in a line: its versions (the ideas tried; work in the code is not a version), then what its section
@@ -248,18 +247,18 @@ export const Projects = ({
 	useEffect(() => setScope('here'), [productRepository]);
 	if (read.error !== null && read.value === null)
 		return (
-			<EmptyState icon="warning" title="The projects could not be read">
+			<Message size="page" icon="warning" title="The projects could not be read">
 				<p>{read.error}</p>
-			</EmptyState>
+			</Message>
 		);
-	if (read.value === null) return <Loading>Reading the projects…</Loading>;
+	if (read.value === null) return <Message size="page">Reading the projects…</Message>;
 	const projects = read.value;
 	// With nothing open but VS Code and no projects anywhere: there are none, whoever's they would be.
 	if (!product.open && projects.length === 0)
 		return (
-			<EmptyState icon="folder-library" title="No projects yet">
+			<Message size="page" icon="folder-library" title="No projects yet">
 				<p>Projects anyone on the team makes appear here.</p>
-			</EmptyState>
+			</Message>
 		);
 	// Each project's products, worked out once; and each product's name, the same wherever it is said.
 	const products = productsByProject(projects);
@@ -306,14 +305,11 @@ export const Projects = ({
 	const shown = (items: ReactNode[], label: string) => (view === 'grid' ? <Grid label={label}>{items}</Grid> : <List label={label}>{items}</List>);
 	return (
 		<>
-			{login === null && <p className="note">These are the projects on this machine. Sign in to see your team's too.</p>}
+			{login === null && <Message inset>These are the projects on this machine. Sign in to see your team's too.</Message>}
 			{!product.open && (
-				<div className="note no-product-note">
-					<p>No product is open, so these are everyone’s projects. Open a product to make a prototype, or to build or Address one.</p>
-					<Button variant="secondary" onClick={onGetStarted}>
-						Get started
-					</Button>
-				</div>
+				<Message size="block" inset action={{ label: 'Get started', onPress: onGetStarted }}>
+					No product is open, so these are everyone’s projects. Open a product to make a prototype, or to build or Address one.
+				</Message>
 			)}
 			{projects.length > 0 && (
 				<div className="view-bar">
@@ -322,26 +318,26 @@ export const Projects = ({
 				</div>
 			)}
 			{projects.length === 0 ? (
-				<EmptyState icon="folder-library" title="No projects yet">
+				<Message size="page" icon="folder-library" title="No projects yet">
 					<p>A prototype you start appears here, with its versions and its open comments.</p>
 					<Button onClick={onNew}>New prototype</Button>
-				</EmptyState>
+				</Message>
 			) : matching.length === 0 || (here.length === 0 && search.trim() !== '') ? (
 				<NoMatches thing="project" search={search} onClear={() => setSearch('')} />
 			) : here.length === 0 && shownScope === 'mine' ? (
-				<EmptyState icon="person" title="No projects of yours yet">
+				<Message size="page" icon="person" title="No projects of yours yet">
 					<p>None of these projects has your work in it yet. All projects shows what is being made.</p>
 					<Button variant="secondary" onClick={() => setScope('everyone')}>
 						Show all projects
 					</Button>
-				</EmptyState>
+				</Message>
 			) : here.length === 0 ? (
-				<EmptyState icon="repo" title={`No projects in ${nameOf(productRepository ?? '')} yet`}>
+				<Message size="page" icon="repo" title={`No projects in ${nameOf(productRepository ?? '')} yet`}>
 					<p>Prototypes made on it appear here. All projects shows what is being made on other products.</p>
 					<Button variant="secondary" onClick={() => setScope('everyone')}>
 						Show all projects
 					</Button>
-				</EmptyState>
+				</Message>
 			) : focused ? (
 				<ByFolder projects={here}>
 					{(group, label) =>

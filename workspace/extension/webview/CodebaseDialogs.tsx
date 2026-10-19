@@ -4,9 +4,10 @@ import type { BuildInCodebase } from '../../src/shared/contract';
 import type { Project } from '../../src/shared/domain/projects';
 import { buildStart, buildSteps, noSetupNote, startBranch } from '../../src/shared/work';
 import { Button } from './ui/Button';
-import { Dialog, DialogButtons, ErrorLine } from './ui/Dialog';
+import { Dialog, DialogButtons } from './ui/Dialog';
 import { Field, Select } from './ui/Field';
 import { workspace } from './host';
+import { Message } from './ui/Message';
 
 /** Said when the agent is at other work: it does one thing at a time. */
 const BUSY = 'The agent is busy with other work. It does one thing at a time: open this again when that work has finished.';
@@ -59,15 +60,15 @@ export const HandoffDialog = ({
 		<Dialog title="Hand off to engineering" onClose={onClose}>
 			<form onSubmit={(e) => void start(e)}>
 				{readyAt !== null ? (
-					<p className="dialog-about">
+					<Message>
 						A handoff found <strong>{project.title}</strong>’s codebase work ready for engineering, and nothing has changed on <code>{branch}</code>{' '}
 						since. {pullRequest ? 'Its draft pull request is open.' : 'Open a draft pull request for an engineer to take it.'}
-					</p>
+					</Message>
 				) : (
 					<>
-						<p className="dialog-about">
+						<Message>
 							This checks <strong>{project.title}</strong>’s codebase work on <code>{branch}</code>, and gets it ready for an engineer.
-						</p>
+						</Message>
 						<p className="field-label">What happens</p>
 						<ol className="dialog-steps">
 							<li>The product’s handoff gate runs: every test, accessibility, the app bundling, the standards.</li>
@@ -77,7 +78,7 @@ export const HandoffDialog = ({
 						</ol>
 					</>
 				)}
-				<ErrorLine error={busy ? BUSY : null} />
+				<Message tone="warning">{busy ? BUSY : null}</Message>
 				<DialogButtons>
 					{readyAt !== null ? (
 						<>
@@ -148,13 +149,13 @@ export const BuildInCodebaseDialog = ({
 		return (
 			<Dialog title="Build in the codebase" onClose={onClose}>
 				{handed.editor ? (
-					<p className="dialog-about">
+					<Message>
 						It is in Claude Code in this window now, on <code>{plan.branch}</code>: a new conversation there has the task typed in. Press Enter there
 						to start it, then watch the agent write the audit and then the code, and step in when you like.
-					</p>
+					</Message>
 				) : (
 					<>
-						<p className="dialog-about">Claude Code is not in this VS Code, so the command that starts it in a terminal is on your clipboard:</p>
+						<Message>Claude Code is not in this VS Code, so the command that starts it in a terminal is on your clipboard:</Message>
 						<pre className="dialog-command">{handed.command}</pre>
 					</>
 				)}
@@ -163,17 +164,17 @@ export const BuildInCodebaseDialog = ({
 	return (
 		<Dialog title="Build in the codebase" onClose={onClose}>
 			<form onSubmit={(e) => void start(e)}>
-				<p className="dialog-about">
+				<Message>
 					This moves <strong>{project.title}</strong> into the product as real work, built by Claude Code in the repository. It needs the full setup:
 					packages, environment variables, and the app able to run.
-				</p>
-				{plan === null && planned.error === null && <p className="note">Reading what it would do…</p>}
-				<ErrorLine error={plan && !plan.setup ? noSetupNote(plan.branch) : null} />
-				<ErrorLine error={plan && uncommitted ? `There are uncommitted changes in ${plan.repository}. ${uncommitted}` : null} />
+				</Message>
+				{plan === null && planned.error === null && <Message>Reading what it would do…</Message>}
+				<Message tone="warning">{plan && !plan.setup ? noSetupNote(plan.branch) : null}</Message>
+				<Message tone="warning">{plan && uncommitted ? `There are uncommitted changes in ${plan.repository}. ${uncommitted}` : null}</Message>
 				{plan?.basedOn && plan.basedOn.repository !== plan.repository && (
-					<p className="dialog-about">
+					<Message>
 						The prototype was modeled on {plan.basedOn.repository}, and this is {plan.repository}.
-					</p>
+					</Message>
 				)}
 				{plan &&
 					(continuing ? (
@@ -203,7 +204,14 @@ export const BuildInCodebaseDialog = ({
 						</ol>
 					</>
 				)}
-				{[error, planned.error, setup.error].map((e) => e && <ErrorLine key={e} error={e} />)}
+				{[error, planned.error, setup.error].map(
+					(e) =>
+						e && (
+							<Message key={e} tone="error">
+								{e}
+							</Message>
+						),
+				)}
 				<DialogButtons>
 					<Button type="submit" disabled={!canStart}>
 						{busy ? 'Opening…' : continuing ? 'Continue in Claude Code' : 'Build in Claude Code'}

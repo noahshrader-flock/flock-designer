@@ -42,7 +42,7 @@ describe('the extension’s sources', () => {
 		expect(css).not.toMatch(/gitDecoration/);
 		const rules = css.split('}').map((b) => b.split('{').map((x) => x.trim()));
 		const amber = rules.filter(([, body]) => /editorWarning-foreground/.test(body ?? '')).map(([selector]) => selector);
-		expect(amber).toEqual(['.badge-warning', '.note-warning .codicon', '.token-contrast-low,\n.warning-text']);
+		expect(amber).toEqual(['.badge-warning', '.token-contrast-low,\n.warning-text', '.message-warning .codicon']);
 		// A change's mark is the brand.
 		const mark = rules.find(([selector]) => selector?.startsWith('.token-changed'));
 		expect(mark?.[1]).toMatch(/background:\s*var\(--dsnr-brand\)/);

@@ -8,10 +8,10 @@ import { StoryFrame } from './StoryFrame';
 import { ShowingNote } from './Showing';
 import { useTabCatalog } from './useCatalog';
 import { useTokenEdits } from './shared';
-import { TabNote } from './ui/Notice';
 import { TryingNote } from './Changed';
 import { Swatch } from './ui/Swatch';
 import { type SpecimenPreview, useSpecimenPreview } from './hooks/useSpecimenPreview';
+import { Message, tryAgain } from './ui/Message';
 
 /** The design system's preview build, which a type specimen is drawn in, so its fonts are its own; asked for once. */
 
@@ -115,9 +115,9 @@ const Specimens = ({ tokens, byPath, preview }: Drawing) => (
 				<StoryFrame src={specimenAddress(preview.base, typeSpecimens(tokens))} title="Type specimen" />
 			</div>
 		) : preview.state === 'asking' ? (
-			<p className="quiet">Drawing the type specimen…</p>
+			<Message>Drawing the type specimen…</Message>
 		) : (
-			<p className="quiet">The specimen is drawn in the design system’s preview, which cannot be built here{notBuilt(preview)}.</p>
+			<Message>The specimen is drawn in the design system’s preview, which cannot be built here{notBuilt(preview)}.</Message>
 		)}
 		<Table tokens={tokens} byPath={byPath} preview={preview} />
 	</div>
@@ -162,7 +162,12 @@ export const PrimitivesTab = () => {
 	const [tried] = useTokenEdits();
 	const sections = useRef(new Map<string, HTMLElement | null>());
 	const preview = useSpecimenPreview(ready, true);
-	if (note || !ready) return <TabNote note={note?.says ?? ''} onRetry={note?.onRetry ?? null} />;
+	if (note || !ready)
+		return (
+			<Message size="page" action={tryAgain(note?.onRetry ?? null)}>
+				{note?.says ?? ''}
+			</Message>
+		);
 
 	const read = ready.tokens;
 	// A branch handed to Claude Code is shown as it was committed: what is tried waits for the library's own branch.
@@ -208,7 +213,7 @@ export const PrimitivesTab = () => {
 			{missing.length > 0 && (
 				<section ref={(el) => void sections.current.set('not-defined', el)} data-not-defined aria-label="Not defined" className="primitive">
 					<h2 className="primitive-title">Not defined</h2>
-					{read.source === null && <p className="quiet">No tokens were found. Looked for {listed(read.looked)}.</p>}
+					{read.source === null && <Message>No tokens were found. Looked for {listed(read.looked)}.</Message>}
 					<ul className="not-defined">
 						{missing.map((m) => (
 							<li key={m.key}>

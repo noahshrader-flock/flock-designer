@@ -10,10 +10,10 @@ import { asks, onHost, workspace } from './host';
 import { useShared, useTokenEdits } from './shared';
 import { Projects, type ProjectsRead } from './Projects';
 import type { CodebaseAction, PanelDialog, Review } from '../src/messages';
-import { Loading } from './ui/Loading';
 import { Toggle } from './ui/Toggle';
 import { type CatalogRead, useCatalog } from './useCatalog';
 import { type Part, type Tab, type View, vscode } from './vscode';
+import { Message } from './ui/Message';
 
 const TABS = [
 	{ value: 'projects', label: 'Projects', icon: 'folder-library' },
@@ -90,7 +90,7 @@ export const PanelView = ({
 		</div>
 		<section data-tab-body={tab} className="tab-body">
 			{context === null ? (
-				<Loading>Looking at what is open…</Loading>
+				<Message size="page">Looking at what is open…</Message>
 			) : tab === 'projects' ? (
 				<Projects
 					read={projects}

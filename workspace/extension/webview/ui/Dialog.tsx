@@ -56,14 +56,6 @@ export const Dialog = ({
 	);
 };
 
-/** What went wrong, said where it happened, as every dialog and panel part says it; nothing when nothing did. */
-export const ErrorLine = ({ error }: { error: string | null | undefined }) =>
-	error ? (
-		<p role="alert" className="dialog-error">
-			{error}
-		</p>
-	) : null;
-
 /**
  * What a dialog does, as its buttons in a row across its width: one fills it, several share it. Closing is the X in the
  * dialog's title, so there is no Cancel or Close here; a dialog that does nothing has no row at all.

@@ -8,6 +8,8 @@ import { Dialog, DialogButtons } from './ui/Dialog';
 import { Field, Select } from './ui/Field';
 import { Swatch } from './ui/Swatch';
 import { ColorField, LengthField } from './ValueFields';
+import { LinkButton } from './ui/LinkButton';
+import { Message } from './ui/Message';
 
 /**
  * Changing a token (6.2, the app's T3, rebuilt in VS Code's language): what opens from a token's row, in a dialog over the
@@ -116,7 +118,7 @@ export const TokenEditor = ({
 						{now.source.file}:{now.source.line}
 					</code>
 				</p>
-				{declared && <p className="quiet">{declared}</p>}
+				{declared && <Message>{declared}</Message>}
 				{now.kind === 'dimension' ? (
 					<LengthField label={nameOf(asRead)} value={now.value} was={asRead.value} onCommit={(value) => change(now, { value })} />
 				) : target ? (
@@ -131,9 +133,9 @@ export const TokenEditor = ({
 							)}
 						</p>
 						<ColorScale token={now} target={target} />
-						<p className="quiet">
+						<Message>
 							Resolves to <code>{now.value}</code>
-						</p>
+						</Message>
 					</>
 				) : (
 					<ColorField value={now.value} onCommit={(value) => change(now, { value })} />
@@ -146,12 +148,10 @@ export const TokenEditor = ({
 					(custom ? (
 						<div className="field">
 							<ColorField value={now.value} onCommit={(value) => change(now, { value })} />
-							<p className="quiet">A custom color replaces the pointer: a later change to {target.set} will not reach it.</p>
+							<Message>A custom color replaces the pointer: a later change to {target.set} will not reach it.</Message>
 						</div>
 					) : (
-						<button type="button" className="link" onClick={() => setCustom(true)}>
-							Use a custom color
-						</button>
+						<LinkButton onPress={() => setCustom(true)}>Use a custom color</LinkButton>
 					))}
 			</div>
 			<DialogButtons>

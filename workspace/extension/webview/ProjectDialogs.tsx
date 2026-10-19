@@ -3,10 +3,11 @@ import { sameFolder } from '../../src/shared/brief';
 import type { Project } from '../../src/shared/domain/projects';
 import { slugify } from '../../src/shared/validate';
 import { Button } from './ui/Button';
-import { Dialog, DialogButtons, ErrorLine } from './ui/Dialog';
+import { Dialog, DialogButtons } from './ui/Dialog';
 import { Field, TextArea, TextInput } from './ui/Field';
 import { FolderField, type FolderPick, folderOf, isChosen, pickOf } from './ui/FolderField';
 import { workspace } from './host';
+import { Message } from './ui/Message';
 
 /** What a prototype is started from, as the extension takes it: its name, what it explores, and its folder. */
 export interface NewPrototypeAnswers {
@@ -100,11 +101,11 @@ export const AssignFolderDialog = ({
 	return (
 		<Dialog title="Assign folder" onClose={onClose}>
 			<form onSubmit={(e) => void assign(e)}>
-				<p className="dialog-about">
+				<Message>
 					Which folder <strong>{project.title}</strong> is in.
-				</p>
+				</Message>
 				<FolderField folders={folders} pick={pick} onPick={setPick} />
-				<ErrorLine error={error} />
+				<Message tone="error">{error}</Message>
 				<DialogButtons>
 					<Button type="submit" disabled={same || !isChosen(pick) || busy}>
 						Assign

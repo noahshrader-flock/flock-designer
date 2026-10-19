@@ -4,6 +4,7 @@ import { allParts, partsIn, shortParts } from '../../src/shared/valueParts';
 import { Popover } from './ui/Popover';
 import { ColorField, LengthField } from './ValueFields';
 import { VALUE_NAMES, valueTitle } from '../../src/shared/valueNames';
+import { LinkButton } from './ui/LinkButton';
 
 /**
  * One slider of a value: what it is called, which part of the value it changes (CSS writes a value's parts in an order of its
@@ -83,11 +84,7 @@ export const ValueEditor = ({
 			<div data-value-editor={property} className="popover-body">
 				<div className="popover-head">
 					<span className="popover-title">{title}</span>
-					{tried !== null && (
-						<button type="button" className="link" onClick={() => onTry(null)}>
-							Reset
-						</button>
-					)}
+					{tried !== null && <LinkButton onPress={() => onTry(null)}>Reset</LinkButton>}
 				</div>
 				{COLOR_VALUES.has(property) ? (
 					<ColorField live value={hexOf(tried ?? cell.value) ?? NONE_STARTS_AS} onCommit={onTry} />
@@ -111,16 +108,13 @@ export const ValueEditor = ({
 				)}
 				{following !== null ? (
 					<p className="popover-note" data-value-following>
-						Follows {following}: the agent writes it so the token moves it.{' '}
-						<button type="button" className="link" onClick={() => onTry(null)}>
-							Keep its own
-						</button>
+						Follows {following}: the agent writes it so the token moves it. <LinkButton onPress={() => onTry(null)}>Keep its own</LinkButton>
 					</p>
 				) : (
 					follows.map((t) => (
-						<button key={t.path} type="button" className="link" data-value-follow={t.path} onClick={() => onFollow(t.path)}>
+						<LinkButton key={t.path} marks={{ 'data-value-follow': t.path }} onPress={() => onFollow(t.path)}>
 							Follow {t.name}
-						</button>
+						</LinkButton>
 					))
 				)}
 				{cell.kind === 'derived' && (

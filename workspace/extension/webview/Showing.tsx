@@ -1,6 +1,6 @@
 import { createContext, useContext } from 'react';
-import { Icon } from './ui/Icon';
 import { workspace } from './host';
+import { Message } from './ui/Message';
 
 /**
  * The branch handed to Claude Code that the previews show in place of the library's (Preview this branch, PROCESS_CHANGES_PLAN
@@ -15,11 +15,14 @@ export const useShowing = (): string | null => useContext(ShowingContext);
  */
 export const ShowingNote = ({ showing, branch }: { showing: string | null; branch: string }) =>
 	showing === null ? null : (
-		<p data-showing className="note note-warning">
-			<Icon name="git-branch" /> Showing <code>{showing}</code>, Claude Code’s branch, not {branch}. Saving, proposing and processing changes wait
-			until {branch} is shown again, and what is tried is kept for it.{' '}
-			<button type="button" className="link" onClick={() => void workspace().showLibraryBranch()}>
-				Show {branch}
-			</button>
-		</p>
+		<Message
+			tone="warning"
+			icon="git-branch"
+			inset
+			marks={{ 'data-showing': '' }}
+			action={{ label: `Show ${branch}`, onPress: () => void workspace().showLibraryBranch() }}
+		>
+			Showing <code>{showing}</code>, Claude Code’s branch, not {branch}. Saving, proposing and processing changes wait until {branch} is shown again,
+			and what is tried is kept for it.
+		</Message>
 	);

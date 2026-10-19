@@ -20,13 +20,11 @@ import type { CatalogRead } from './useCatalog';
 import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
 import { Dialog } from './ui/Dialog';
-import { EmptyState } from './ui/EmptyState';
-import { Icon } from './ui/Icon';
-import { Loading } from './ui/Loading';
 import { Menu } from './ui/Menu';
 import { Toggle } from './ui/Toggle';
 import type { Part, View } from './vscode';
 import { workspace } from './host';
+import { Message } from './ui/Message';
 
 /** The design system's two parts in the panel: its components, which it starts on, and its tokens. */
 const PARTS = [
@@ -59,7 +57,7 @@ const folderName = (path: string): string => path.split(/[\\/]/).filter(Boolean)
 /** What the library has that is not read, said where it can be read: each with its file and line. */
 const Problems = ({ problems, onClose }: { problems: Extract<Catalog, { state: 'ready' }>['tokens']['problems']; onClose: () => void }) => (
 	<Dialog title="Not read" onClose={onClose}>
-		<p className="dialog-about">These values in its token files are not read, so they are not shown or changed here. The rest are.</p>
+		<Message>These values in its token files are not read, so they are not shown or changed here. The rest are.</Message>
 		<ul className="problem-list">
 			{problems.map((p) => (
 				<li key={`${p.file}:${p.line ?? ''}:${p.reason}`}>
@@ -173,16 +171,16 @@ const Ready = ({
 				</DesignSystemHeader>
 				<ShowingNote showing={catalog.showing} branch={catalog.branch} />
 				{typeof catalog.update === 'object' && (
-					<p data-update-failed className="note note-warning">
-						<Icon name="warning" /> Could not update from {HOST}: {catalog.update.failed} It is shown as this computer last had it.
-					</p>
+					<Message tone="warning" inset marks={{ 'data-update-failed': '' }}>
+						Could not update from {HOST}: {catalog.update.failed} It is shown as this computer last had it.
+					</Message>
 				)}
 				<div className="ds-part">
 					<Toggle label="Part" options={PARTS} value={part} onChange={onPart} />
 				</div>
 				{part === 'components' ? (
 					catalog.components.length === 0 ? (
-						<p className="note">Its Storybook has no stories on {catalog.branch}, so there are no components to list.</p>
+						<Message inset>Its Storybook has no stories on {catalog.branch}, so there are no components to list.</Message>
 					) : (
 						<ComponentsView
 							components={catalog.components}
@@ -260,46 +258,46 @@ export const DesignSystem = ({
 }) => {
 	if (!found)
 		return (
-			<EmptyState icon="symbol-color" title="No design system found">
+			<Message size="page" icon="symbol-color" title="No design system found">
 				<p>
 					DSNR looks in the folders open in this window for a design system: the one the product names in its <code>.dsnr/workspace.json</code>, or
 					any folder with stories or tokens.
 				</p>
 				<Button onClick={does.locate}>Locate design system…</Button>
-			</EmptyState>
+			</Message>
 		);
 	if (unreadable !== null)
 		return (
-			<EmptyState icon="warning" title="The design system cannot be read">
+			<Message size="page" icon="warning" title="The design system cannot be read">
 				<p>{unreadable}</p>
 				<Button onClick={does.locate}>Locate design system…</Button>
-			</EmptyState>
+			</Message>
 		);
 	const { catalog, error } = read;
 	if (catalog === null && error !== null)
 		return (
-			<EmptyState icon="warning" title="The design system could not be read">
+			<Message size="page" icon="warning" title="The design system could not be read">
 				<p>{error}</p>
 				<Button onClick={does.sync}>Try again</Button>
-			</EmptyState>
+			</Message>
 		);
-	if (catalog === null || catalog.state === 'none') return <Loading>Reading the design system…</Loading>;
+	if (catalog === null || catalog.state === 'none') return <Message size="page">Reading the design system…</Message>;
 	if (catalog.state === 'lost')
 		return (
-			<EmptyState icon="warning" title={`${catalog.name} is no longer on this computer`}>
+			<Message size="page" icon="warning" title={`${catalog.name} is no longer on this computer`}>
 				<p>Its copy was at {catalog.root}. Open its folder again, or locate it.</p>
 				<Button onClick={does.locate}>Locate design system…</Button>
-			</EmptyState>
+			</Message>
 		);
 	if (catalog.state === 'no-branch')
 		return (
-			<EmptyState icon="warning" title={`This clone has no ${catalog.branch} branch`}>
+			<Message size="page" icon="warning" title={`This clone has no ${catalog.branch} branch`}>
 				<p>
 					The clone at {catalog.root} has no {catalog.branch} branch from {HOST} to read, and no other branch is read in its place. Check it is a
 					clone of the design system, and that this computer can reach {HOST}.
 				</p>
 				<Button onClick={does.sync}>Try again</Button>
-			</EmptyState>
+			</Message>
 		);
 	return (
 		<Ready

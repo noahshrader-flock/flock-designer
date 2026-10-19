@@ -11,8 +11,8 @@ import { BranchActions } from './Changed';
 import { ReachView } from './ChangeReach';
 import type { Trying } from './ComponentValues';
 import { ChangeRow, ValueList } from './ui/ValueItem';
-import { ErrorLine } from './ui/Dialog';
-import { Notice } from './ui/Notice';
+import { LinkButton } from './ui/LinkButton';
+import { Message } from './ui/Message';
 
 /**
  * Where a value is written, each place a link to its line: by file, its lines after it (`src/utils/theme.ts, lines 58,
@@ -32,9 +32,7 @@ const Places = ({ places, by, onSource }: { places: ValuePlace[]; by?: 'agent'; 
 						{here.map((p, j) => (
 							<span key={p.line}>
 								{j > 0 && ', '}
-								<button type="button" className="link" onClick={() => onSource(p)}>
-									{p.line}
-								</button>
+								<LinkButton onPress={() => onSource(p)}>{p.line}</LinkButton>
 							</span>
 						))}
 					</span>
@@ -69,9 +67,9 @@ const Said = ({
 				</span>
 				{source.agent && (
 					<span className="value-place">
-						<button type="button" className="link" data-value-agent onClick={onWrite}>
+						<LinkButton marks={{ 'data-value-agent': '' }} onPress={onWrite}>
 							{source.agent === 'follow' ? 'Have the agent make it follow the token' : 'Have the agent write it'}
-						</button>
+						</LinkButton>
 					</span>
 				)}
 			</>
@@ -168,14 +166,10 @@ export const ChangedValues = ({
 					<span className="changed-title">
 						{name ?? 'Styles'} <span className="section-count">{tried.length}</span>
 					</span>
-					{tried.length > 0 && (
-						<button type="button" className="link" onClick={() => trying.onAll([])}>
-							Reset all
-						</button>
-					)}
+					{tried.length > 0 && <LinkButton onPress={() => trying.onAll([])}>Reset all</LinkButton>}
 				</div>
 				{tried.length === 0 ? (
-					<p className="quiet">Every value is as the library draws it.</p>
+					<Message>Every value is as the library draws it.</Message>
 				) : (
 					<ValueList>
 						{tried.map((t) => {
@@ -195,22 +189,26 @@ export const ChangedValues = ({
 					</ValueList>
 				)}
 				{tried.length > 0 && handOver.branch === null && (
-					<p className="quiet">
+					<Message>
 						{savable
 							? `Saving writes ${plural(tried.length, 'value')} where ${tried.length === 1 ? 'it is' : 'they are'} written, and nothing else.`
 							: 'Tried in its stories, on its own instances. A value is saved once where it is written is found, or the agent has written it.'}
-					</p>
+					</Message>
 				)}
-				<ErrorLine error={trying.writeError} />
+				<Message tone="error">{trying.writeError}</Message>
 				{onActions ? (
-					<button type="button" className="link" data-actions-elsewhere onClick={onActions}>
+					<LinkButton marks={{ 'data-actions-elsewhere': '' }} onPress={onActions}>
 						Save or process changes in the side panel
-					</button>
+					</LinkButton>
 				) : (
 					<BranchActions controls={controls} handOver={handOver} canSave={savable} />
 				)}
 			</section>
-			{sources.state === 'failed' && <Notice title="Where its values are written could not be found">{sources.error}</Notice>}
+			{sources.state === 'failed' && (
+				<Message size="block" tone="warning" title="Where its values are written could not be found">
+					{sources.error}
+				</Message>
+			)}
 			{sources.state === 'ready' && sources.reach.state !== 'none' && (
 				<ReachView reach={sources.reach} title="Moved by these values" component={component} components={components} onOpen={onOpen} />
 			)}

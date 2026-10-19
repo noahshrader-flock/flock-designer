@@ -28,6 +28,7 @@ import { InfoTip } from './ui/InfoTip';
 import { Switch } from './ui/Switch';
 import { useDismiss } from './ui/useDismiss';
 import { ValueItem, ValueList } from './ui/ValueItem';
+import { Message } from './ui/Message';
 
 type Ready = Extract<ComponentTokens, { state: 'ready' }>;
 
@@ -397,21 +398,19 @@ export const ComponentValues = ({
 	return (
 		<AsidePart title="Styles">
 			{values.state === 'failed' ? (
-				<p className="quiet">Its values could not be read: {values.error}</p>
+				<Message>Its values could not be read: {values.error}</Message>
 			) : values.state !== 'read' ? (
-				<p className="quiet">{WHY_NONE[values.state](name)}</p>
+				<Message>{WHY_NONE[values.state](name)}</Message>
 			) : (
 				<>
 					{values.unmarked > 0 && (
-						<p className="quiet" data-values-unmarked>
+						<Message marks={{ 'data-values-unmarked': '' }}>
 							{plural(values.unmarked, 'length')} in the design system {values.unmarked === 1 ? 'is' : 'are'} written in em or %, which cannot be
 							marked, so a length said to be its own may be one of them.
-						</p>
+						</Message>
 					)}
 					{values.rows[mode] === null ? (
-						<p className="quiet" data-values-none={mode}>
-							Its stories did not draw it in {mode}, so its values there cannot be read.
-						</p>
+						<Message marks={{ 'data-values-none': mode }}>Its stories did not draw it in {mode}, so its values there cannot be read.</Message>
 					) : (
 						<Inspector
 							rows={values.rows[mode] ?? []}

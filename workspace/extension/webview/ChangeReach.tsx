@@ -1,9 +1,10 @@
 import type { CatalogComponent, ChangeReach as ChangeReachAnswer, ComponentReach, TokenEdit, ValueChange } from '../../src/shared/contract';
 import { plural } from '../../src/shared/plural';
 import { useChangeReach } from './hooks/useChangeReach';
-import { Notice } from './ui/Notice';
 import { saidValue, valueTitle } from '../../src/shared/valueNames';
 import { ChangeRow, ValueList } from './ui/ValueItem';
+import { LinkButton } from './ui/LinkButton';
+import { Message } from './ui/Message';
 
 /** What changed of a value, named as the Styles name it, and dark when it is in dark. */
 const changeName = (c: ValueChange): string =>
@@ -13,13 +14,7 @@ const changeName = (c: ValueChange): string =>
 export const Moved = ({ reach, name, here, onOpen }: { reach: ComponentReach; name: string; here: boolean; onOpen: () => void }) => (
 	<div data-moved={reach.file} className="value-group">
 		<h3 className="value-group-name">
-			{here ? (
-				<span>{name}</span>
-			) : (
-				<button type="button" className="link" onClick={onOpen}>
-					{name}
-				</button>
-			)}
+			{here ? <span>{name}</span> : <LinkButton onPress={onOpen}>{name}</LinkButton>}
 			{here && <span className="value-group-note">This one</span>}
 		</h3>
 		<ValueList>
@@ -60,17 +55,19 @@ export const ReachView = ({
 		<section aria-label={title} className="aside-section">
 			<h2 className="aside-title">{title}</h2>
 			{reach.state === 'building' ? (
-				<p className="quiet">Drawing every component with the change, to see which follow it.</p>
+				<Message>Drawing every component with the change, to see which follow it.</Message>
 			) : reach.state === 'failed' ? (
-				<Notice title="What the change moves could not be drawn">{reach.error}</Notice>
+				<Message size="block" tone="warning" title="What the change moves could not be drawn">
+					{reach.error}
+				</Message>
 			) : (
 				<>
-					<p className="quiet" data-reach-summary>
+					<Message marks={{ 'data-reach-summary': '' }}>
 						{reach.moved.length === 0
 							? `It moves no component, in their stories drawn: ${plural(reach.unchanged, 'component')} unchanged.`
 							: `It moves ${plural(reach.moved.length, 'component')}; ${reach.unchanged} unchanged, in their stories drawn.`}
 						{reach.notDrawn.length > 0 && ` ${plural(reach.notDrawn.length, 'component')} did not draw, so cannot be said.`}
-					</p>
+					</Message>
 					{reach.moved.map((m) => (
 						<Moved key={m.file} reach={m} name={names.get(m.file) ?? m.file} here={m.file === component.id} onOpen={() => onOpen(m.file)} />
 					))}

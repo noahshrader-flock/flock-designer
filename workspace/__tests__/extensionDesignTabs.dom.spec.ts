@@ -1384,7 +1384,7 @@ describe('a component’s tab', () => {
 	it('says, when the design system cannot be read here, that the panel says why, and reads it again on Try again', async () => {
 		await mountPage(createElement(ComponentTab, { id: BUTTON }));
 		await shareCatalog({ state: 'no-branch', root: '/work/lib', branch: 'develop' });
-		expect(document.querySelector('.tab-note')?.textContent).toContain('The design system cannot be read here: the DSNR panel says why.');
+		expect(document.querySelector('.empty')?.textContent).toContain('The design system cannot be read here: the DSNR panel says why.');
 		await press(button('Try again'));
 		expect(lastAsk()).toEqual(['syncDesignSystem', []]);
 		await shareCatalog(SAMPLE_CATALOG);
@@ -1394,7 +1394,7 @@ describe('a component’s tab', () => {
 	it('says why it could not be read, with Try again', async () => {
 		await mountPage(createElement(PrimitivesTab));
 		await share('catalog', { system: null, catalog: null, error: 'git could not read it.', syncing: false });
-		expect(document.querySelector('.tab-note')?.textContent).toContain('git could not read it.');
+		expect(document.querySelector('.empty')?.textContent).toContain('git could not read it.');
 		await press(button('Try again'));
 		expect(lastAsk()).toEqual(['syncDesignSystem', []]);
 	});
@@ -1402,7 +1402,7 @@ describe('a component’s tab', () => {
 	it('says when the design system shown no longer has it', async () => {
 		await mountPage(createElement(ComponentTab, { id: 'src/Gone.stories.tsx' }));
 		await shareCatalog(SAMPLE_CATALOG);
-		expect(document.querySelector('.tab-note')?.textContent).toBe('The design system shown no longer has this component. Close this tab.');
+		expect(document.querySelector('.empty')?.textContent).toBe('The design system shown no longer has this component. Close this tab.');
 	});
 });
 

@@ -6,7 +6,7 @@ import { Icon } from '../extension/webview/ui/Icon';
 import { Button } from '../extension/webview/ui/Button';
 import { IconButton } from '../extension/webview/ui/IconButton';
 import { Menu } from '../extension/webview/ui/Menu';
-import { EmptyState } from '../extension/webview/ui/EmptyState';
+import { Message } from '../extension/webview/ui/Message';
 import { Dialog, DialogButtons } from '../extension/webview/ui/Dialog';
 import { button, mount, press } from './webviewHarness';
 
@@ -180,10 +180,11 @@ describe('the badge', () => {
 	});
 });
 
-describe('an empty state', () => {
+describe('a message as a page (an empty state)', () => {
 	it('is one thing everywhere: the icon, the heading, the words, then the button, in a column to be centered', async () => {
 		await mount(
-			createElement(EmptyState, {
+			createElement(Message, {
+				size: 'page',
 				icon: 'symbol-color',
 				title: 'No design system found',
 				children: [createElement('p', { key: 'p' }, 'Look here.'), createElement(Button, { key: 'b', children: 'Locate' })],

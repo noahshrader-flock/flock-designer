@@ -14,9 +14,9 @@ import { ShowingNote } from './Showing';
 import { useTabCatalog } from './useCatalog';
 import { useTrying } from './useTrying';
 import { Button } from './ui/Button';
-import { Notice, TabNote } from './ui/Notice';
 import { asks } from './host';
 import { useMode, useTokenEdits, useValueTrials } from './shared';
+import { Message, tryAgain } from './ui/Message';
 
 /** The target while the design system is not read yet: nothing is judged at it then. */
 const NOT_READ = undeclared('the design system is not read yet');
@@ -29,16 +29,20 @@ const Stories = ({ component, commit, edits, tried }: { component: CatalogCompon
 	const { preview, trying, refused, retry } = useStoryPreview(commit, edits);
 	// The stories are drawn in the mode chosen in the panel, as the values are; a frame follows it by loading again.
 	const [mode] = useMode();
-	if (preview.state === 'building') return <p className="quiet">Building its previews…</p>;
+	if (preview.state === 'building') return <Message>Building its previews…</Message>;
 	if (preview.state !== 'ready')
 		return (
-			<Notice title="Its previews could not be built" onRetry={retry}>
+			<Message size="block" tone="warning" title="Its previews could not be built" action={tryAgain(retry)}>
 				{previewProblem(preview)}
-			</Notice>
+			</Message>
 		);
 	return (
 		<>
-			{refused && <Notice title="This change could not be tried">{refused}</Notice>}
+			{refused && (
+				<Message size="block" tone="warning" title="This change could not be tried">
+					{refused}
+				</Message>
+			)}
 			<div className="stories" aria-busy={trying}>
 				<StoryFrame src={previewAddress(preview.base, component.id, mode)} title={component.name} tried={tried} />
 				{trying && <p className="stories-building">Building…</p>}
@@ -68,8 +72,13 @@ export const ComponentTab = ({ id }: { id: string }) => {
 	const trying = useTrying(useValueTrials(), id, ready?.commit ?? null);
 	const { tried } = trying;
 	const component = ready?.components.find((c) => c.id === id);
-	if (note) return <TabNote note={note.says} onRetry={note.onRetry} />;
-	if (!ready || !component) return <TabNote note="The design system shown no longer has this component. Close this tab." />;
+	if (note)
+		return (
+			<Message size="page" action={tryAgain(note.onRetry)}>
+				{note.says}
+			</Message>
+		);
+	if (!ready || !component) return <Message size="page">The design system shown no longer has this component. Close this tab.</Message>;
 	const actions: TokenActions = {
 		onEdit: setEditing,
 		onSource: ({ file, line }) => void asks().openLibrarySource(file, line),
@@ -84,7 +93,7 @@ export const ComponentTab = ({ id }: { id: string }) => {
 				<header className="tab-header">
 					<div className="tab-heading">
 						<h1 className="tab-title">{component.name}</h1>
-						<p className="quiet">{component.subtitle ?? component.group}</p>
+						<Message>{component.subtitle ?? component.group}</Message>
 					</div>
 					<div className="tab-actions">
 						{/* Always there, so nothing moves when the first value is tried; with nothing tried and no branch, it cannot be pressed. */}

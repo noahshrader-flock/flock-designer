@@ -706,13 +706,6 @@ body {
 	padding: 0 var(--dsnr-card-text-pad) var(--dsnr-card-text-pad);
 }
 
-/* A line that says what the list is, or what is happening: quiet, and in line with the rows. */
-.note {
-	margin: 4px 12px 8px;
-	color: var(--dsnr-muted);
-	line-height: 1.4;
-}
-
 .button:disabled,
 .menu-item:disabled {
 	opacity: 0.5;
@@ -759,16 +752,6 @@ body {
 	margin: 0;
 	font-size: 1.1em;
 	font-weight: 600;
-}
-
-.dialog-about {
-	margin: 0 0 8px;
-	color: var(--dsnr-muted);
-}
-
-.dialog-error {
-	margin: 8px 0 0;
-	color: var(--vscode-errorForeground);
 }
 
 /* What a dialog does, across its width: one button fills it, several share it. */
@@ -1113,11 +1096,6 @@ textarea.input {
 	top: calc(var(--dsnr-top-height) + var(--dsnr-ds-header-height) + var(--dsnr-part-height));
 }
 
-.note-warning .codicon {
-	color: var(--vscode-editorWarning-foreground);
-	vertical-align: text-bottom;
-}
-
 .icon-button:disabled {
 	opacity: 0.5;
 	cursor: default;
@@ -1353,11 +1331,6 @@ textarea.input {
 	color: var(--vscode-editor-foreground);
 }
 
-.tab-note {
-	padding: 16px 24px;
-	color: var(--dsnr-muted);
-}
-
 .tab-header {
 	display: flex;
 	align-items: flex-start;
@@ -1388,6 +1361,50 @@ textarea.input {
 	margin: 0;
 	color: var(--dsnr-muted);
 	line-height: 1.4;
+}
+
+/*
+ * What a view says (`ui/Message.tsx`), quiet unless it is a warning or an error: in the flow of what is around it, or in
+ * line with the rows of a panel's list (`message-inset`); in a dialog, with room under it before what comes next.
+ */
+.message {
+	margin: 0;
+	color: var(--dsnr-muted);
+	line-height: 1.4;
+}
+
+.message-inset {
+	margin: 4px 12px 8px;
+}
+
+.dialog .message {
+	margin: 0 0 8px;
+}
+
+.message .codicon {
+	vertical-align: text-bottom;
+}
+
+.message-warning .codicon {
+	color: var(--vscode-editorWarning-foreground);
+}
+
+/* What went wrong, said where it happened, under what it is about. */
+.message-error,
+.dialog .message-error {
+	margin: 8px 0 0;
+	color: var(--vscode-errorForeground);
+}
+
+/* A note with something to do about it: its words, then the button under them, the panel's width as a welcome view's is. */
+.message-block {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.message-block p {
+	margin: 0;
 }
 
 .notice {
