@@ -7,7 +7,30 @@ import { treeUrl } from '../../../shared/hostUrls';
 export interface CatalogReads {
 	listFiles(dir: string): Promise<string[]>;
 	readFile(path: string): Promise<string>;
+	/** Many at once, where that is cheaper (one git process for a commit's); a file not there is left out. */
+	readFiles?(paths: string[]): Promise<Map<string, string>>;
 }
+
+/** Many files, as one read where the reads can, else each in turn. */
+export const readMany = async (reads: CatalogReads, paths: string[]): Promise<Map<string, string>> => {
+	if (reads.readFiles) return reads.readFiles(paths);
+	const read = await Promise.all(paths.map(async (p) => [p, await reads.readFile(p).catch(() => null)] as const));
+	return new Map(read.filter((e): e is readonly [string, string] => e[1] !== null));
+};
+
+/** The library with some files as given (a change written, not committed): read the same way, many at once included. */
+export const overlaid = (reads: CatalogReads, texts: Map<string, string>): CatalogReads => ({
+	listFiles: (dir) => reads.listFiles(dir),
+	readFile: async (path) => texts.get(path) ?? reads.readFile(path),
+	readFiles: async (paths) => {
+		const read = await readMany(
+			reads,
+			paths.filter((p) => !texts.has(p)),
+		);
+		for (const p of paths) if (texts.has(p)) read.set(p, texts.get(p) as string);
+		return read;
+	},
+});
 
 export const UNGROUPED = 'Ungrouped';
 

@@ -8,7 +8,7 @@ import { lineAt, replaced } from './objectLiteral';
 import { MOTION_PARTS, SHADOWS, TYPE_PARTS, primitiveOf } from '../../../../shared/primitives';
 import { capitalize } from '../../../../shared/titleCase';
 import { type TokenSource, notWhereRead, semanticFirst } from './source';
-import { type CatalogReads, SCRIPT_EXTENSIONS } from '../componentCatalog';
+import { type CatalogReads, SCRIPT_EXTENSIONS, readMany } from '../componentCatalog';
 import { posix } from 'node:path';
 
 const STYLESHEET = /\.(css|scss|less|pcss)$/;
@@ -175,6 +175,34 @@ const previewStylesheets = async (reads: CatalogReads): Promise<string[]> => {
 	return sheets;
 };
 
+const SCRIPT = /\.(ts|tsx|js|jsx|mjs|cjs)$/;
+/** `import './a.css'`, `import styles from './a.module.css'`, `import('./a.css')` and `require('./a.css')`. */
+const SHEET_IMPORT = /(?:\bimport\s*(?:[\w$*{}\s,]+?\s*from\s*)?|\b(?:require|import)\s*\(\s*)(['"])([^'"\n]+\.(?:css|scss|less|pcss))\1/g;
+
+/**
+ * What the library itself loads: a stylesheet its own scripts import, or its package names as its style or main (a
+ * library that ships only CSS). One nothing loads is no token source: it is styling nobody sees.
+ */
+const loadedStylesheets = async (reads: CatalogReads, files: string[]): Promise<string[]> => {
+	const sheets = new Set<string>();
+	for (const [file, text] of await readMany(
+		reads,
+		files.filter((f) => SCRIPT.test(f)),
+	)) {
+		for (const [, , spec] of text.matchAll(SHEET_IMPORT)) {
+			const path = await importedFile(reads, file, spec as string);
+			if (path !== null) sheets.add(path);
+		}
+	}
+	for (const manifest of files.filter((f) => /(^|\/)package\.json$/.test(f))) {
+		const pkg = JSON.parse(await reads.readFile(manifest).catch(() => '{}')) as { style?: unknown; exports?: unknown; main?: unknown };
+		const dot = (pkg.exports as Record<string, unknown> | undefined)?.['.'];
+		for (const named of [(dot as Record<string, unknown> | undefined)?.style, pkg.style, pkg.main])
+			if (typeof named === 'string' && STYLESHEET.test(named)) sheets.add(posix.normalize(posix.join(posix.dirname(manifest), named)));
+	}
+	return [...sheets].sort();
+};
+
 /** Declared in the last top-level `rule`, or one added at the end, so it wins over the package's declaration. */
 const declaredAgain = (text: string, rule: string, name: string, value: string): string => {
 	const indent = /\n([ \t]+)\S/.exec(text)?.[1] ?? '\t';
@@ -225,7 +253,7 @@ export const cssVariables: TokenSource = {
 				);
 			}
 		};
-		for (const file of files.filter((f) => STYLESHEET.test(f)).sort()) {
+		for (const file of await loadedStylesheets(reads, files)) {
 			if (followed.has(file)) continue;
 			followed.add(file);
 			await take(file, null);

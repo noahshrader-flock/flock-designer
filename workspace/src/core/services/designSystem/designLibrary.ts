@@ -90,7 +90,7 @@ export const inLibrary = (path: string): string => {
  */
 export const libraryReads = (root: string, ref: string): CatalogReads => {
 	const read = new Map<string, Promise<Map<string, string>>>();
-	const readStories = async (paths: string[]): Promise<Map<string, string>> => {
+	const readBatch = async (paths: string[]): Promise<Map<string, string>> => {
 		// A header no story can contain, then the object as git stores it; `%(rest)` gives back the path asked for.
 		const mark = `@@dsnr-${Math.random().toString(36).slice(2)}@@`;
 		const out = await git(root, ['cat-file', `--batch=${mark} %(objecttype) %(rest)`], {
@@ -115,7 +115,7 @@ export const libraryReads = (root: string, ref: string): CatalogReads => {
 		if (stories.length > 0)
 			read.set(
 				dir,
-				readStories(stories).catch(() => new Map()),
+				readBatch(stories).catch(() => new Map()),
 			);
 		return files;
 	};
@@ -128,6 +128,15 @@ export const libraryReads = (root: string, ref: string): CatalogReads => {
 				if (text !== undefined) return text;
 			}
 			return git(root, ['show', `${ref}:${path}`], { trim: false });
+		},
+		readFiles: async (paths) => {
+			const installed = paths.filter((p) => /(^|\/)node_modules\//.test(p));
+			const committed = await readBatch(paths.filter((p) => !installed.includes(p)));
+			for (const p of installed) {
+				const text = await readFile(join(root, inLibrary(p)), 'utf8').catch(() => null);
+				if (text !== null) committed.set(p, text);
+			}
+			return committed;
 		},
 	};
 };

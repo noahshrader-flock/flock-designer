@@ -191,6 +191,16 @@ export const addStandards = (design: string) => {
 };
 
 /** A missing file throws, as a real read does. */
+/** A library whose entry loads each of its stylesheets, as a real one's code does: a stylesheet nothing loads is no token source. */
+export const styledLibrary = (files: Record<string, string>): CatalogReads =>
+	memoryReads({
+		...files,
+		'index.ts': Object.keys(files)
+			.filter((f) => /\.(css|scss|less|pcss)$/.test(f) && !f.includes('node_modules/'))
+			.map((f) => `import './${f}';`)
+			.join('\n'),
+	});
+
 export const memoryReads = (files: Record<string, string>): CatalogReads => ({
 	listFiles: async (dir) => Object.keys(files).filter((f) => dir === '' || f.startsWith(`${dir}/`)),
 	readFile: async (path) => {

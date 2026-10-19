@@ -14,7 +14,7 @@ import { cellFor, triedId } from '../../../shared/contract';
 import { allParts, partsIn } from '../../../shared/valueParts';
 import { VALUE_NAMES, storyComponent } from '../../../shared/valueNames';
 import type { RunEnded } from '../agent/agent';
-import type { CatalogReads } from './componentCatalog';
+import { type CatalogReads, overlaid } from './componentCatalog';
 import type { ComponentTokens, DrawnIndex } from './componentTokens';
 import { systemReads } from './designLibrary';
 import { readTokens } from './designTokens';
@@ -211,7 +211,7 @@ export class ValueAgent {
 		if (drew !== null) return `draws ${drew}, not ${asked}`;
 		if (t.follows === undefined) return null;
 		const base = await this.readsAt(index);
-		const reads: CatalogReads = { listFiles: base.listFiles, readFile: async (p) => files.get(p) ?? base.readFile(p) };
+		const reads = overlaid(base, files);
 		const probe = probeFor(t.property, allParts(from, partsIn(t.property))[0] as string);
 		const asToken = facts.token ? (writtenLike(facts.token.value, probe, facts.perRem) ?? probe) : probe;
 		const moved = await editedFiles(reads, [{ path: t.follows, value: asToken }]).catch((err: Error) => err);

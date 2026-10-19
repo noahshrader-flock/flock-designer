@@ -38,6 +38,7 @@ export const filesOf = (files: string[], folder: string): string[] => {
 export const within = (reads: CatalogReads, files: string[]): CatalogReads => ({
 	listFiles: async (dir) => files.filter((f) => dir === '' || f.startsWith(`${dir}/`)),
 	readFile: (path) => reads.readFile(path),
+	...(reads.readFiles ? { readFiles: reads.readFiles } : {}),
 });
 
 const packageName = async (reads: CatalogReads, folder: string): Promise<string | null> => {

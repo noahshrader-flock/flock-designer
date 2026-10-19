@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { readTokens } from '../src/core/services/designSystem/designTokens';
 import { editedFiles } from '../src/core/services/designSystem/tokenEdits';
 import { channelsOf, hexOfChannels } from '../src/core/services/designSystem/tokens/cssVariables';
-import { memoryReads } from './fixtures';
+import { memoryReads, styledLibrary } from './fixtures';
 
 const find = (list: Awaited<ReturnType<typeof readTokens>>, path: string) => list.tokens.find((t) => t.path === path);
 
@@ -31,12 +31,12 @@ describe('CSS variables', () => {
 
 	it('put the semantic variables before a Tailwind scale’s steps, which are the raw colors', async () => {
 		const css = ':root {\n  --color-red-500: #ff0000;\n  --primary: #00ff00;\n  --color-red-600: #cc0000;\n}\n';
-		const list = await readTokens(memoryReads({ 'src/styles/globals.css': css }));
+		const list = await readTokens(styledLibrary({ 'src/styles/globals.css': css }));
 		expect(list.tokens.map((t) => t.path)).toEqual(['css.light.primary', 'css.light.color-red-500', 'css.light.color-red-600']);
 	});
 
 	it('are read as tokens when the library has no theme files, each mode from its own block', async () => {
-		const list = await readTokens(memoryReads({ 'src/styles/globals.css': CSS }));
+		const list = await readTokens(styledLibrary({ 'src/styles/globals.css': CSS }));
 		expect(list.source).toBe('CSS variables');
 		expect(find(list, 'css.light.background')).toMatchObject({
 			kind: 'color',
@@ -51,12 +51,12 @@ describe('CSS variables', () => {
 	});
 
 	it('follow a variable to the color it points at', async () => {
-		const list = await readTokens(memoryReads({ 'src/styles/globals.css': CSS }));
+		const list = await readTokens(styledLibrary({ 'src/styles/globals.css': CSS }));
 		expect(find(list, 'css.dark.primary')?.value).toBe('#333333');
 	});
 
 	it('put a radius on Shape, spacing on Spacing, a font size on Typography, and leave out what is none of these', async () => {
-		const list = await readTokens(memoryReads({ 'src/styles/globals.css': CSS }));
+		const list = await readTokens(styledLibrary({ 'src/styles/globals.css': CSS }));
 		expect(find(list, 'css.light.radius')).toMatchObject({ kind: 'dimension', category: 'Shape', value: '0.625rem' });
 		expect(find(list, 'css.light.spacing')).toMatchObject({ kind: 'dimension', category: 'Spacing', value: '0.25rem' });
 		expect(find(list, 'css.light.font-size-sm')).toMatchObject({ kind: 'font', category: 'Typography', group: 'Size', set: 'sm', value: '14px' });
@@ -75,7 +75,7 @@ describe('CSS variables', () => {
   --font-color: #333333;
 }
 `;
-		const list = await readTokens(memoryReads({ 'src/app.css': css }));
+		const list = await readTokens(styledLibrary({ 'src/app.css': css }));
 		const typography = list.tokens
 			.filter((t) => t.category === 'Typography')
 			.map(({ path, kind, group, set, name, value }) => ({ path, kind, group, set, name, value }));
@@ -99,7 +99,7 @@ describe('CSS variables', () => {
   --shadow-color: #000000;
 }
 `;
-		const list = await readTokens(memoryReads({ 'src/app.css': css }));
+		const list = await readTokens(styledLibrary({ 'src/app.css': css }));
 		const shadows = list.tokens
 			.filter((t) => t.category === 'Elevation')
 			.map(({ path, kind, group, set, name, value }) => ({ path, kind, group, set, name, value }));
@@ -142,7 +142,7 @@ describe('CSS variables', () => {
   --border: #e5e5e5;
 }
 `;
-		const list = await readTokens(memoryReads({ 'src/app.css': css }));
+		const list = await readTokens(styledLibrary({ 'src/app.css': css }));
 		expect(find(list, 'css.light.breakpoint-md')).toMatchObject({ kind: 'dimension', category: 'Breakpoints', group: 'Breakpoints', value: '48rem' });
 		expect(find(list, 'css.light.border-thin')).toMatchObject({ kind: 'dimension', category: 'Borders', group: 'Borders', value: '1px' });
 		expect(find(list, 'css.light.duration-fast')).toMatchObject({ kind: 'duration', category: 'Motion', group: 'Duration', value: '150ms' });
@@ -163,7 +163,7 @@ describe('CSS variables', () => {
 
 	it('read shadcn’s colors written as bare HSL channels, as the color they draw, in each mode and through a pointer', async () => {
 		const css = ':root {\n  --primary: 222.2 47.4% 11.2%;\n  --ring: var(--primary);\n}\n.dark {\n  --primary: 210 40% 98%;\n}\n';
-		const list = await readTokens(memoryReads({ 'src/globals.css': css }));
+		const list = await readTokens(styledLibrary({ 'src/globals.css': css }));
 		expect(find(list, 'css.light.primary')).toMatchObject({ kind: 'color', category: 'Color', value: '#0F172A' });
 		expect(find(list, 'css.dark.primary')?.value).toBe('#F8FAFC');
 		expect(find(list, 'css.light.ring')).toMatchObject({ value: '#0F172A', ref: { path: 'css.light.primary' } });
@@ -178,13 +178,13 @@ describe('CSS variables', () => {
 	});
 
 	it('give a color written short (Tremor’s --color-black: #000) as its full hex, so it is matched where it is drawn', async () => {
-		const list = await readTokens(memoryReads({ 'src/globals.css': ':root {\n  --color-black: #000;\n  --color-tint: #f0a8;\n}\n' }));
+		const list = await readTokens(styledLibrary({ 'src/globals.css': ':root {\n  --color-black: #000;\n  --color-tint: #f0a8;\n}\n' }));
 		expect(find(list, 'css.light.color-black')?.value).toBe('#000000');
 		expect(find(list, 'css.light.color-tint')?.value).toBe('#FF00AA88');
 	});
 
 	it('group a scale of steps into one set: Tailwind’s --color-red-500 is step 500 of color-red', async () => {
-		const list = await readTokens(memoryReads({ 'src/styles/globals.css': CSS }));
+		const list = await readTokens(styledLibrary({ 'src/styles/globals.css': CSS }));
 		expect(find(list, 'css.light.color-red-500')).toMatchObject({ set: 'color-red', name: '500' });
 	});
 });
@@ -198,7 +198,7 @@ describe('which mode a variable is a token of', () => {
 [data-color-mode="light"][data-light-theme="high_contrast"] .x { --brand: #000000; }
 .darken { --surface: #222222; }
 `;
-		const list = await readTokens(memoryReads({ 'src/theme.css': css }));
+		const list = await readTokens(styledLibrary({ 'src/theme.css': css }));
 		expect(list.tokens.map((t) => [t.path, t.value])).toEqual([
 			['css.light.brand', '#108062'],
 			['css.light.surface', '#ffffff'],
@@ -227,7 +227,7 @@ describe('CSS variables a stylesheet imports (Phase 5.5)', () => {
 	const LIBRARY = { ...PACKAGE, 'src/globals.css': "@import 'theme-kit';\n\n:root {\n  --radius-lg: 12px;\n}\n" };
 
 	it('are the library’s, read where it imports them, with what it declares after them winning, as in the browser', async () => {
-		const list = await readTokens(memoryReads(LIBRARY));
+		const list = await readTokens(styledLibrary(LIBRARY));
 		expect(list.source).toBe('CSS variables');
 		const imported = { file: 'src/globals.css', line: 1 };
 		expect(find(list, 'css.light.radius-md')).toMatchObject({
@@ -245,7 +245,7 @@ describe('CSS variables a stylesheet imports (Phase 5.5)', () => {
 
 	it('read a stylesheet of the library’s own it imports as its own, and a package not installed as nothing', async () => {
 		const list = await readTokens(
-			memoryReads({ 'src/globals.css': "@import './theme.css';\n@import 'not-installed';\n", 'src/theme.css': ':root {\n  --radius: 4px;\n}\n' }),
+			styledLibrary({ 'src/globals.css': "@import './theme.css';\n@import 'not-installed';\n", 'src/theme.css': ':root {\n  --radius: 4px;\n}\n' }),
 		);
 		expect(list.tokens.map((t) => [t.path, t.source])).toEqual([['css.light.radius', { file: 'src/theme.css', line: 2 }]]);
 	});
@@ -269,10 +269,27 @@ describe('CSS variables the library’s stories load (its Storybook preview’s 
 		expect([...edited.keys()]).toEqual(['.storybook/primitives.css']);
 	});
 
-	it('are read from the library’s own stylesheets as before when its preview imports none', async () => {
-		const { ['.storybook/preview.tsx']: _, ...noPreview } = LIBRARY;
-		const list = await readTokens(memoryReads({ ...noPreview, '.storybook/preview.tsx': 'export default {};\n' }));
-		expect(find(list, 'css.light.radius-md')?.source).toMatchObject({ file: 'config/vitest/global.css' });
+	it('are not read from a stylesheet nothing loads: neither the stories nor the library’s own code', async () => {
+		const list = await readTokens(memoryReads({ ...LIBRARY, '.storybook/preview.tsx': 'export default {};\n' }));
+		expect(list.tokens).toEqual([]);
+	});
+
+	it('are read from a stylesheet the library’s own code imports, by any form of import', async () => {
+		for (const loads of [
+			"import '../config/vitest/global.css';",
+			"import styles from '../config/vitest/global.css';",
+			"require('../config/vitest/global.css');",
+		]) {
+			const list = await readTokens(memoryReads({ ...LIBRARY, '.storybook/preview.tsx': 'export default {};\n', 'src/index.ts': `${loads}\n` }));
+			expect(find(list, 'css.light.radius-md')?.source, loads).toMatchObject({ file: 'config/vitest/global.css' });
+		}
+	});
+
+	it('are read from the stylesheet a library that ships only CSS names in its package: its style, main or exports', async () => {
+		for (const named of [{ style: 'dist/theme.css' }, { main: 'dist/theme.css' }, { exports: { '.': { style: './dist/theme.css' } } }]) {
+			const list = await readTokens(memoryReads({ 'package.json': JSON.stringify(named), 'dist/theme.css': ':root {\n  --brand: #123456;\n}\n' }));
+			expect(find(list, 'css.light.brand')?.value, JSON.stringify(named)).toBe('#123456');
+		}
 	});
 });
 
@@ -293,7 +310,7 @@ describe('design token files', () => {
 	);
 
 	it('are read as tokens in the standard format, with the type each group says', async () => {
-		const list = await readTokens(memoryReads({ 'tokens/base.tokens.json': TOKENS }));
+		const list = await readTokens(styledLibrary({ 'tokens/base.tokens.json': TOKENS }));
 		expect(list.source).toBe('token files');
 		expect(find(list, 'color.red.500')).toMatchObject({
 			kind: 'color',
@@ -308,13 +325,13 @@ describe('design token files', () => {
 	});
 
 	it('put the tokens that name another before the raw ones they name', async () => {
-		const list = await readTokens(memoryReads({ 'tokens/base.tokens.json': TOKENS }));
+		const list = await readTokens(styledLibrary({ 'tokens/base.tokens.json': TOKENS }));
 		const colors = list.tokens.filter((t) => t.category === 'Color').map((t) => t.path);
 		expect(colors).toEqual(['color.brand', 'color.red.500']);
 	});
 
 	it('follow a reference to the token it names', async () => {
-		const list = await readTokens(memoryReads({ 'tokens/base.tokens.json': TOKENS }));
+		const list = await readTokens(styledLibrary({ 'tokens/base.tokens.json': TOKENS }));
 		expect(find(list, 'color.brand')?.value).toBe('#ff0000');
 	});
 
@@ -332,7 +349,7 @@ describe('design token files', () => {
 			null,
 			2,
 		);
-		const list = await readTokens(memoryReads({ 'tokens/type.tokens.json': type }));
+		const list = await readTokens(styledLibrary({ 'tokens/type.tokens.json': type }));
 		const typography = list.tokens
 			.filter((t) => t.category === 'Typography')
 			.map(({ path, kind, group, set, name, value }) => ({ path, kind, group, set, name, value }));
@@ -368,7 +385,7 @@ describe('design token files', () => {
 			null,
 			2,
 		);
-		const list = await readTokens(memoryReads({ 'tokens/shadow.tokens.json': shadows }));
+		const list = await readTokens(styledLibrary({ 'tokens/shadow.tokens.json': shadows }));
 		expect(find(list, 'shadow.sm')).toMatchObject({
 			kind: 'shadow',
 			category: 'Elevation',
@@ -404,7 +421,7 @@ describe('design token files', () => {
 			null,
 			2,
 		);
-		const list = await readTokens(memoryReads({ 'tokens/more.tokens.json': more }));
+		const list = await readTokens(styledLibrary({ 'tokens/more.tokens.json': more }));
 		expect(find(list, 'motion.fast')).toMatchObject({
 			kind: 'duration',
 			category: 'Motion',
@@ -431,7 +448,7 @@ describe('design token files', () => {
 			null,
 			2,
 		);
-		const list = await readTokens(memoryReads({ 'tokens/more.tokens.json': more }));
+		const list = await readTokens(styledLibrary({ 'tokens/more.tokens.json': more }));
 		expect(find(list, 'line.thin')).toMatchObject({ kind: 'dimension', category: 'Borders', value: '1px' });
 		expect(find(list, 'move.quick.duration')).toMatchObject({
 			kind: 'duration',
@@ -468,7 +485,7 @@ describe('design token files', () => {
 			null,
 			2,
 		);
-		const list = await readTokens(memoryReads({ 'tokens.json': studio }));
+		const list = await readTokens(styledLibrary({ 'tokens.json': studio }));
 		const of = (path: string) => {
 			const t = find(list, path);
 			return t && { kind: t.kind, category: t.category, value: t.value };
@@ -488,12 +505,12 @@ describe('design token files', () => {
 	});
 
 	it('read the one typography token in the shared fixture as its family', async () => {
-		const list = await readTokens(memoryReads({ 'tokens/base.tokens.json': TOKENS }));
+		const list = await readTokens(styledLibrary({ 'tokens/base.tokens.json': TOKENS }));
 		expect(find(list, 'font.body.fontFamily')).toMatchObject({ kind: 'font', category: 'Typography', group: 'Family', value: 'Inter' });
 	});
 
 	it('name a file that is not JSON, and read the others', async () => {
-		const list = await readTokens(memoryReads({ 'tokens/base.tokens.json': TOKENS, 'tokens/broken.tokens.json': '{ not json' }));
+		const list = await readTokens(styledLibrary({ 'tokens/base.tokens.json': TOKENS, 'tokens/broken.tokens.json': '{ not json' }));
 		expect(find(list, 'color.red.500')).toBeDefined();
 		expect(list.problems).toEqual([{ file: 'tokens/broken.tokens.json', reason: expect.stringContaining('not JSON') }]);
 	});
@@ -502,7 +519,7 @@ describe('design token files', () => {
 describe('the order they are tried in', () => {
 	it('takes the first way that finds tokens, theme files first, so one library is never read two ways at once', async () => {
 		const list = await readTokens(
-			memoryReads({
+			styledLibrary({
 				'src/colors/tones.ts': "export const blue = {\n  50: '#0000FF',\n  40: '#0000AA',\n};\n",
 				'src/styles/globals.css': ':root {\n  --primary: #ff0000;\n}\n',
 			}),

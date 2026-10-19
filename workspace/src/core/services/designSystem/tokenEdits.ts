@@ -5,7 +5,7 @@
 import type { DesignToken, TokenEdit } from '../../../shared/contract';
 import { isEditable } from '../../../shared/primitives';
 import { MOST_EDITS, fitsKind, placeOf, withEdits } from '../../../shared/tokens';
-import type { CatalogReads } from './componentCatalog';
+import { type CatalogReads, overlaid } from './componentCatalog';
 import { readTokens, sourceNamed } from './designTokens';
 import { asRecord } from '../../../shared/json';
 
@@ -34,11 +34,6 @@ export const editProblem = (edit: TokenEdit, byPath: Map<string, DesignToken>): 
 	if (!target || target.kind !== token.kind || target.path === token.path) return `${token.path} cannot point at ${edit.ref}.`;
 	return null;
 };
-
-const withTexts = (reads: CatalogReads, texts: Map<string, string>): CatalogReads => ({
-	listFiles: (dir) => reads.listFiles(dir),
-	readFile: async (path) => texts.get(path) ?? reads.readFile(path),
-});
 
 const mismatch = (read: DesignToken[], expected: DesignToken[]): string | null => {
 	const got = new Map(read.map((t) => [t.path, t]));
@@ -74,7 +69,7 @@ export const editedFiles = async (reads: CatalogReads, edits: TokenEdit[]): Prom
 		texts.set(file, source.edit(text, token, edit));
 	}
 
-	const after = await readTokens(withTexts(reads, texts));
+	const after = await readTokens(overlaid(reads, texts));
 	const wrong = after.source === tokens.source ? mismatch(after.tokens, withEdits(tokens.tokens, edits)) : 'the library would be read another way';
 	if (wrong) throw new Error(`The change was not made, because written into the library's files ${wrong}.`);
 	return texts;

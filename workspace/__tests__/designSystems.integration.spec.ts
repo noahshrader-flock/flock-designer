@@ -47,7 +47,7 @@ describe('finding the design systems in a repository', () => {
 			'package.json': '{ "name": "acme" }',
 			'packages/ui/package.json': '{ "name": "ui" }',
 			'packages/ui/Button.stories.tsx': story('Buttons/Button'),
-			'packages/brand/package.json': '{ "name": "brand" }',
+			'packages/brand/package.json': '{ "name": "brand", "style": "styles.css" }',
 			'packages/brand/styles.css': ':root {\n  --primary: #ff0000;\n}\n',
 		};
 		expect((await findDesignSystems(memoryReads(repo), 'acme/acme')).map((f) => [f.folder, f.components, f.tokens])).toEqual([
@@ -58,7 +58,9 @@ describe('finding the design systems in a repository', () => {
 
 	it('takes one with stories only, or tokens only, and finds none where there is neither', async () => {
 		expect(await findDesignSystems(memoryReads({ 'a.stories.tsx': story('A/A') }), 'x/a')).toHaveLength(1);
-		expect(await findDesignSystems(memoryReads({ 'styles.css': ':root { --primary: #ff0000; }\n' }), 'x/b')).toHaveLength(1);
+		expect(
+			await findDesignSystems(memoryReads({ 'package.json': '{ "style": "styles.css" }', 'styles.css': ':root { --primary: #ff0000; }\n' }), 'x/b'),
+		).toHaveLength(1);
 		expect(await findDesignSystems(memoryReads({ 'package.json': '{}', 'src/index.ts': 'export {};\n' }), 'x/c')).toEqual([]);
 	});
 });
