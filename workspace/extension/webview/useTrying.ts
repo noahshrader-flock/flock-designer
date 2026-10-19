@@ -6,10 +6,9 @@ import type { ValueTrials } from './shared';
 import { triedOn } from './valueTrials';
 
 /**
- * Trying a component's values (Phase 2 of adjusting a component), by its story file, on the library's commit: the same on
- * its tab and in the panel's Changes, since what is tried is the extension's (`trials`: the page's, `useValueTrials`). Having the agent write one
- * (Phase 4.5, 4.6) is asked of the core, which says what it wrote where its values are; a value that follows a token is
- * written by the agent as it is tried, since only the agent can write one, however it is asked.
+ * Trying a component's values, by its story file, on the library's commit: the same on its tab and in the panel's Changes,
+ * since what is tried is the extension's (`useValueTrials`). Having the agent write one is asked of the core; a value that
+ * follows a token is written by the agent as it is tried, since only the agent can write one.
  */
 export const useTrying = ({ trials, change }: ValueTrials, file: string, commit: string | null): Trying => {
 	const values = triedOn(trials, file, commit);

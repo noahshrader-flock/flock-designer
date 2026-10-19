@@ -10,11 +10,9 @@ import { ChangedValues } from './ValueChanges';
 import { useValueTrials } from './shared';
 
 /**
- * One component's changes in the panel's Changes dialog (the changes being tried, DESIGN_SYSTEM.md): the values tried on
- * it, from its tab, where each is written, what writing them moves, and its branch, with Save, Propose and Start over, or
- * its hand-over to Claude Code (Process changes), by its name, among the others'. Its values are named as its drawing
- * reads them (`useComponentTokens`, kept by the core for each commit); where each is written is found once by the core
- * however many ask. A branch kept with nothing tried puts its values back, as opening its tab does.
+ * One component's changes in the panel's Changes dialog, by its name: the values tried on its tab, where each is written,
+ * what writing them moves, and its branch or hand-over. Its values are named as its drawing reads them (`useComponentTokens`).
+ * A branch kept with nothing tried puts its values back, as opening its tab does.
  */
 export const ComponentChanges = ({
 	component,

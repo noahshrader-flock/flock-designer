@@ -1,8 +1,6 @@
 /**
- * A changed or tried value's mark, on its row, its cell or its color's dot: a dot in the brand, said by what it is (`says`:
- * Changed, Tried). A change is what a person is doing, not something wrong; amber is for what needs a look (a warning), and
- * is never used to say a change. Inside something that says it already (a color's dot), it is hidden from assistive
- * technology (`said`).
+ * A changed or tried value's mark: a dot in the brand, never amber, since a change is not something wrong. `said` hides it
+ * from assistive technology inside something that says it already (a color's dot).
  */
 export const ChangedMark = ({ says, said = false }: { says: 'Changed' | 'Tried'; said?: boolean }) =>
 	said ? (

@@ -3,8 +3,8 @@ import { workspace } from './host';
 import { Message } from '../../src/ui/Message';
 
 /**
- * The branch handed to Claude Code that the previews show in place of the library's (Preview this branch, PROCESS_CHANGES_PLAN
- * Phase 2), as the catalog says it; null when the library's own is shown. Given by the panel, for what is offered while it is.
+ * The branch handed to Claude Code that the previews show in place of the library's (Preview this branch), as the catalog
+ * says it; null when the library's own is shown. Given by the panel, for what is offered while it is.
  */
 export const ShowingContext = createContext<string | null>(null);
 export const useShowing = (): string | null => useContext(ShowingContext);

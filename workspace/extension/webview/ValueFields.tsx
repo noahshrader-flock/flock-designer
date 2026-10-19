@@ -3,8 +3,8 @@ import { lengthSpan } from '../../src/shared/tokens';
 import { useColorField } from './hooks/useColorField';
 
 /**
- * The fields a value is changed with, for a token (T3, `TokenEditor`) and a component's own value (Phase 2, `ValueEditor`)
- * alike, so each kind of value is changed one way wherever it is.
+ * The fields a value is changed with, for a token (`TokenEditor`) and a component's own value (`ValueEditor`) alike, so
+ * each kind of value is changed one way wherever it is.
  */
 
 /**

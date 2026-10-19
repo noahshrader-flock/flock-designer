@@ -45,7 +45,7 @@ const Places = ({ places, by }: { places: ValuePlace[]; by?: 'agent' }) => {
 
 /**
  * What is said under a value: where it is written (and, when the agent wrote it, why it wrote it so), that it is being found
- * or written, or why it cannot be saved, with the agent offered where it can write it (Phase 4.5, 4.6); nothing when
+ * or written, or why it cannot be saved, with the agent offered where it can write it; nothing when
  * finding failed.
  */
 const Said = ({ source, onWrite }: { source: ValueSource | null | undefined; onWrite: () => void }) => {
@@ -77,15 +77,9 @@ const Said = ({ source, onWrite }: { source: ValueSource | null | undefined; onW
 };
 
 /**
- * The values tried on a component's instances, and saving them (Phase 4 of adjusting a component): each, from what it is
- * drawn as to what it is tried as, with where it is written in the library's source (each place opens at its line), found
- * as it is tried, or why it cannot be saved; Reset for each and for all; then Save, Propose and Start over on a branch of
- * the component's own, or Process changes, as a change to the tokens has (`BranchActions`), in the panel's Changes
- * (`onActions` on its tab, which opens them there). Save waits until every value is found and read back.
- * Then what writing them reaches (`ReachView`): a size table two components share moves both. Nothing while nothing is
- * tried and no branch is kept or handed over. Where each is written and the branch are found while the tab is open (a
- * branch's values are put back when it opens), whether or not the Changes dialog is: what it draws is handed to the dialog
- * (`children`).
+ * The values tried on a component, and saving them: each from what it is drawn as to what it is tried as, where it is
+ * written (found as it is tried), Reset, `BranchActions`, then what writing them reaches (`ReachView`). Save waits until
+ * every value is found. Found while the tab is open, whether or not the dialog is: what it draws is handed to it (`children`).
  */
 export const ValueChanges = ({
 	children,
@@ -118,7 +112,7 @@ interface Shown {
 	/** A token's name, by its path: what a value made to follow one says it follows. */
 	tokenName: (path: string) => string;
 	/**
-	 * Where Save, Process changes, Propose and Start over are when not here (the changes being tried, DESIGN_SYSTEM.md): on
+	 * Where Save, Process changes, Propose and Start over are when not here: on
 	 * a component's tab they are in the panel's Changes, which this opens; in the panel, where every change is, they are
 	 * here (none given).
 	 */

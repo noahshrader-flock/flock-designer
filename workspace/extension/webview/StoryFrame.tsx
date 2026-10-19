@@ -4,14 +4,9 @@ import type { TriedValue } from '../../src/shared/contract';
 import { useFrameHeight } from './hooks/useFrameHeight';
 
 /**
- * A page of the design system's preview, live, in a frame of its own (a story file, or a type specimen), as the app's
- * `StoryFrame` frames one: the library's code runs there, served from this machine's own server, an origin that is not
- * the page's, so nothing in it can reach DSNR. The only thing taken from it is its height, and only from this frame: said as
- * `--frame-height`, which the stylesheet makes the frame's height, or overrides where the frame fills its pane instead.
- *
- * What it is told is the values being tried on the component's instances (`tried`, Phase 2 of adjusting a component), said
- * to the page at its own origin whenever they change and whenever it loads (a new build, a new address), so the page always
- * has them, and has none once there are none.
+ * A page of the design system's preview, live, in a frame of its own: the library's code runs there, on this machine's own
+ * server, an origin that is not the page's, so nothing in it can reach DSNR. Only its height is taken (`--frame-height`).
+ * It is told the values tried (`tried`) whenever they change and whenever it loads, so it always has them.
  */
 export const StoryFrame = ({ src, title, tried = [] }: { src: string; title: string; tried?: TriedValue[] }) => {
 	const frame = useRef<HTMLIFrameElement>(null);

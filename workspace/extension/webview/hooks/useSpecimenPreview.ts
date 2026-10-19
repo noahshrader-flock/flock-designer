@@ -8,9 +8,8 @@ import { askOnce } from './ask';
 export type SpecimenPreview = StoryPreview | { state: 'asking' };
 
 /**
- * The design system's preview build, which a drawing that needs its own CSS (a type specimen) is drawn in, in the app and
- * in VS Code: asked for only when the design system has such a primitive, once for each commit it is answered for, and only
- * while `shown`.
+ * The design system's preview build, which a drawing that needs its own CSS (a type specimen) is drawn in: asked for only
+ * when the design system has such a primitive, once for each commit it is answered for, and only while `shown`.
  */
 export const useSpecimenPreview = (catalog: Catalog | null, shown: boolean): SpecimenPreview => {
 	const [preview, setPreview] = useState<SpecimenPreview>({ state: 'asking' });

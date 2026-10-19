@@ -4,20 +4,7 @@ import { Icon } from './Icon';
 import { LinkButton } from './LinkButton';
 import type { Marks } from './marks';
 
-/**
- * What a view says, the one way everywhere: how much it matters (`tone`: quiet, a warning, or an error, which alone is
- * announced as an alert), and how much room it takes (`size`):
- *
- * - a `line`, in the flow of what is around it (`inset`, in line with the rows of a panel's list), its action a link, and
- *   its `icon` before it (a warning's, unless another is given);
- * - a `block`, with its action a button under it: something in the way, a warning, in a box of its own (a preview that
- *   could not be built); otherwise a note with something to do about it (no product open: Get started);
- * - a `page`, the whole of a view while it has nothing else to show, centered in the room it has: a large quiet icon,
- *   what is missing as its heading, what to know or do in plain text, its action a button. With neither icon nor title,
- *   it says what is happening, as a status (reading).
- *
- * With nothing to say (`children` none), it is not there.
- */
+/** What a view says, the one way everywhere: an `error` alone is announced as an alert. With no `children` it is not there. */
 export const Message = ({
 	tone = 'quiet',
 	size = 'line',
@@ -29,6 +16,10 @@ export const Message = ({
 	children,
 }: {
 	tone?: 'quiet' | 'warning' | 'error';
+	/**
+	 * `line`: in the flow, its action a link (`inset` lines it up with a list's rows). `block`: in a box of its own, its action
+	 * a button under it. `page`: the whole of a view while it has nothing else; with no icon nor title it is a status.
+	 */
 	size?: 'line' | 'block' | 'page';
 	title?: string;
 	icon?: string;

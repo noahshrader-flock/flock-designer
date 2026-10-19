@@ -2,10 +2,9 @@ import type { ReactNode } from 'react';
 import { ThumbWash } from './ThumbWash';
 
 /**
- * One thing in a list, as a row of VS Code's own lists: a picture at its start (which is washed while the row that opens is
- * hovered: `ThumbWash`), a name, a quieter line under it, and whatever belongs at its end (a badge). The name and the line are
- * cut with an ellipsis when the side bar is narrow, never wrapped. With `onOpen`, the whole row is a button. `context` is what
- * VS Code's right-click menu for the row is given (its `data-vscode-context`), which its `webview/context` items are chosen by.
+ * One thing in a list, as a row of VS Code's own lists: the name and its line are cut with an ellipsis, never wrapped. With
+ * `onOpen` the whole row is a button. `context` is its `data-vscode-context`, which VS Code's `webview/context` items are
+ * chosen by.
  */
 export const Row = ({
 	start,

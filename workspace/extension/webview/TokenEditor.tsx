@@ -12,11 +12,9 @@ import { LinkButton } from '../../src/ui/LinkButton';
 import { Message } from '../../src/ui/Message';
 
 /**
- * Changing a token (6.2, the app's T3, rebuilt in VS Code's language): what opens from a token's row, in a dialog over the
- * page, chosen by what the token is and whether it points at another (decision 20). **Not an editor** (decision 27): a
- * change is tried in the previews and kept nowhere until it is saved, and what it does is said where it is made, the
- * contrast it leaves and what else it moves. Each is applied when it is let go of (the picker closed, the slider
- * released, the hex entered): building again takes about a second.
+ * Changing a token, in a dialog chosen by what the token is and whether it points at another. **Not an editor**: a change is
+ * tried in the previews and kept nowhere until saved, and what it does is said where it is made. Each is applied when it is
+ * let go of (the picker closed, the slider released, the hex entered): building again takes about a second.
  */
 
 /**

@@ -38,10 +38,9 @@ export const Moved = ({ reach, name, here }: { reach: ComponentReach; name: stri
 );
 
 /**
- * What a change moves (Phase 3 of adjusting a component): every component drawn with it, and those it moves, each with what
- * changed, and how many it does not move, in their stories drawn (never a claim about every use), and those that did not
- * draw. A name opens that component's tab. For a token change being tried (`ChangeReach`), and for the values tried on a
- * component, written where they are found (Phase 4): `title` names which.
+ * What a change moves: every component drawn with it, those it moves with what changed, and how many it does not, in their
+ * stories drawn (never a claim about every use). For a token change being tried (`ChangeReach`) and for the values tried
+ * on a component, written where they are found: `title` names which.
  */
 export const ReachView = ({
 	reach,

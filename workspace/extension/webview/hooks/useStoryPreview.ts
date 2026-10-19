@@ -4,10 +4,9 @@ import { workspace } from '../host';
 import { askOnce } from './ask';
 
 /**
- * A component's stories, as its page shows them: built from the design system's branch once per commit, and built again
- * with the change to the tokens being tried (`edits`, T3). The stories shown stay while a change builds (`trying`); a
- * change that cannot be tried leaves them as they were and says why (`refused`). Only the answer to the newest ask is
- * kept (`askOnce`).
+ * A component's stories, built from the design system's branch once per commit, and again with the change to the tokens
+ * being tried (`edits`). The stories shown stay while a change builds (`trying`); one that cannot be tried leaves them and
+ * says why (`refused`). Only the answer to the newest ask is kept (`askOnce`).
  */
 export const useStoryPreview = (commit: string, edits: TokenEdit[]) => {
 	const [preview, setPreview] = useState<StoryPreview | { state: 'building' }>({ state: 'building' });

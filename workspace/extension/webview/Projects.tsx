@@ -61,12 +61,9 @@ const ProjectItem = ({
 	const inCode = workOf(project.work, 'codebase').length > 0;
 	const badge = open > 0 ? <Badge tone="brand" count={open} label={plural(open, 'open comment')} /> : undefined;
 	const id = project.id;
-	// What it offers, in groups: the link to copy; where it opens (the published page as reviewers see it, and the prototype in
-	// a browser here; pressing it opens it in VS Code, so no item says so); run in the product, and its next stage; the code on
-	// GitHub; its folder. The next stage is one item, named for what it opens: Build (Build in the codebase) for a prototype not yet
-	// there, Hand off once there is work there (a record of work is made when a build starts; the Hand off dialog says when
-	// its agent is still busy). Sharing code is not an item: once a handoff finds the work ready, the Hand off dialog offers
-	// its pull request.
+	// What it offers, in groups: the link to copy; where it opens (pressing it opens it in VS Code, so no item says so); run in
+	// the product, and its next stage, one item named for what it opens: Build, or Hand off once there is work there. Sharing
+	// code is not an item: once a handoff finds the work ready, the Hand off dialog offers its pull request.
 	const onCodebase = (action: CodebaseAction) => void asks().codebase(action, id);
 	// Copy link says when it is not published yet; Open locally opens it in the person's browser, outside VS Code.
 	const copy: MenuItem[] = newest ? [{ label: 'Copy link', icon: 'link', onSelect: () => void asks().copyReviewLink(newest) }] : [];
@@ -88,7 +85,7 @@ const ProjectItem = ({
 	const code: MenuItem[] = inCode ? [{ label: 'View on GitHub', icon: 'github', onSelect: () => onCodebase('open-code') }] : [];
 	const folder: MenuItem[] = [{ label: 'Assign folder…', icon: 'folder', onSelect: () => onDialog({ kind: 'assign', projectId: id }) }];
 	const sections = [copy, pages, runs, code, folder].filter((group) => group.length > 0).map((group) => ({ items: group }));
-	// Pressed, it opens its newest prototype for review; a project only in the code opens its work on GitHub, as the app's does.
+	// Pressed, it opens its newest prototype for review; a project only in the code opens its work on GitHub.
 	const press = newest ? () => void asks().openReview(newest) : inCode ? () => onCodebase('open-code') : undefined;
 	const shared = {
 		name: project.title,
@@ -168,12 +165,9 @@ interface ProjectsRead {
 }
 
 /**
- * The Projects tab: each project a row or a card (`ProjectItem`), as a list or a grid that the person chooses. **Focused on
- * the product open** (the workspace README's "Projects, by product"): its projects, and those with no product on record, by
- * folder; or everyone's, or mine (those I have worked on), by product (`ByProduct`), each with its folder. Either way every
- * project can be opened and commented on: the view chooses what is first, not what is allowed. Whose, and the layout, are one
- * menu (the cog beside the search). With no product open, everyone's, and what a product is for; with no projects either,
- * what to open. Signed out, a line saying the list is this machine's.
+ * The Projects tab, as a list or a grid. **Focused on the product open** (the workspace README's "Projects, by product"): its
+ * projects and those with no product, by folder; or everyone's, or mine, by product (`ByProduct`). The view chooses what is
+ * first, not what is allowed: every project can be opened and commented on.
  */
 export const Projects = ({
 	read,
@@ -197,7 +191,7 @@ export const Projects = ({
 	view: View;
 	onView: (view: View) => void;
 }) => {
-	// What is typed in the search: the projects are narrowed to what matches, as the app's are.
+	// What is typed in the search: the projects are narrowed to what matches.
 	const [search, setSearch] = useState('');
 	const [scope, setScope] = useState<Scope>('here');
 	const productRepository = product.open ? product.repository : null;

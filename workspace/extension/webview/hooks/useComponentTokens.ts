@@ -7,7 +7,7 @@ import { workspace } from '../host';
 const MOST_NAMED = 3;
 
 /**
- * Which tokens a component draws with (T6, decision 29), by its story file: asked as every answer worked out in the
+ * Which tokens a component draws with, by its story file: asked as every answer worked out in the
  * background is (`useTriedAnswer`), again every few seconds while every story is drawn the first time for a commit; none
  * until it is first asked, a failure said as its answer. `retry` asks again.
  */

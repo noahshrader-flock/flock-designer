@@ -6,7 +6,7 @@ const MAX_FRAME = 4000;
 
 /**
  * How tall a preview frame's page says it is (`PREVIEW_HEIGHT`), heard from that frame alone and kept within reason: the
- * only thing taken from a design system's page, in the app and in VS Code.
+ * only thing taken from a design system's page.
  */
 export const useFrameHeight = (frame: RefObject<HTMLIFrameElement | null>): number => {
 	const [height, setHeight] = useState(120);

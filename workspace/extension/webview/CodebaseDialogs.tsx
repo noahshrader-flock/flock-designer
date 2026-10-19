@@ -13,11 +13,9 @@ import { Message } from '../../src/ui/Message';
 const BUSY = 'The agent is busy with other work. It does one thing at a time: open this again when that work has finished.';
 
 /**
- * Hand off to engineering, said before it starts: what the run does, on the work's branch, and that nothing is pushed.
- * Start handoff asks the extension, which runs it as a build is run, with Stop and its log. It starts only once it is
- * known the agent is free, asked again when it is pressed. **When a handoff already found the work ready** and nothing has
- * changed on its branch since (`readyAt`), what is next is offered instead: its draft pull request (or the way to it,
- * once open), with Run again beside it, so a dismissed offer at the end of a run is never a dead end.
+ * Hand off to engineering, said before it starts: what the run does on the work's branch, and that nothing is pushed. It
+ * starts only once the agent is known to be free. When a handoff already found the work ready and its branch has not
+ * changed (`readyAt`), its draft pull request is offered instead, with Run again, so a dismissed offer is never a dead end.
  */
 export const HandoffDialog = ({
 	project,
@@ -105,7 +103,7 @@ export const HandoffDialog = ({
 /**
  * Build in the codebase, for a project's newest prototype, in the product open here: what it would do, read first (the
  * branch, where it starts from, a clean checkout), then handed to Claude Code in this window, which writes the audit and
- * builds it. The app's own plan, hand-over and rules (`buildInCodebasePlan`, `buildInCodebase`, `buildStart`).
+ * builds it. The core's plan, hand-over and rules (`buildInCodebasePlan`, `buildInCodebase`, `buildStart`).
  */
 export const BuildInCodebaseDialog = ({
 	root,

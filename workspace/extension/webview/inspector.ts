@@ -1,7 +1,6 @@
 /**
- * A component's values as an inspector reads them (each component's values, DESIGN_SYSTEM.md): the variant shown chosen
- * with a picker for each prop its rows are told apart by, and each row's value for that choice, in the groups a designer
- * knows. One way for every reader; no React, so it is tested alone.
+ * A component's values as an inspector reads them: the variant shown chosen with a picker for each prop its rows are told
+ * apart by, and each row's value for that choice, in the groups a designer knows. No React, so it is tested alone.
  */
 import type { ValueCell, ValueProperty, ValueRow } from '../../src/shared/contract';
 import { VALUE_NAMES } from '../../src/shared/valueNames';
@@ -63,10 +62,9 @@ const chosen = (picker: Picker | undefined, drawn: string | null, value: string 
 	picker?.switch ? (drawn === 'true') === (value === 'true') : drawn === value;
 
 /**
- * A row's value for the variant shown: the cell drawn with it, and for a row told apart by no prop, the value most instances
- * draw, with the others (`more`); `still` when it was drawn only from its props (its props' drawing, Phase 5), so it is
- * shown and never tried; or, when no case was drawn with it, none, with the nearest (the cell that has the most of it). Never
- * guessed.
+ * A row's value for the variant shown: the cell drawn with it, and for a row no prop tells apart, the value most instances
+ * draw, with the others (`more`); `still` when drawn only from its props, so shown and never tried; or, when no case was
+ * drawn with it, none, with the nearest (the cell with the most of it). Never guessed.
  */
 export type Shown = { cell: ValueCell; more: ValueCell[]; still: boolean } | { cell: null; nearest: ValueCell | null };
 
@@ -88,7 +86,7 @@ export const shownFor = (row: ValueRow, pickers: Picker[], selection: Selection)
 };
 
 /**
- * A row's value from its stories' drawing, else from its props' (`declared`, Phase 5: each declared value drawn on one
+ * A row's value from its stories' drawing, else from its props' (`declared`: each declared value drawn on one
  * story), shown as still; a property only the props' drawing has is shown from it alone.
  */
 const shownOf = (row: ValueRow | undefined, declared: ValueRow | undefined, pickers: Picker[], selection: Selection): Shown | null => {

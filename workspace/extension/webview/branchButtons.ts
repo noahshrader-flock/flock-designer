@@ -1,6 +1,6 @@
 import { CHANGE_REQUEST } from '../../src/shared/vocabulary';
 
-/** A change kept on a branch of DSNR's, as either kind of change has one: the tokens' (T4, T5) and the voice and tone's (T9). */
+/** A change kept on a branch of DSNR's, as either kind of change has one: the tokens' and the voice and tone's. */
 interface KeptBranch {
 	branch: string;
 	saves: number;
@@ -14,10 +14,9 @@ interface Offered {
 }
 
 /**
- * What can be done with a change kept on a branch, in the app and in VS Code alike: Save (to a branch, the first time),
- * offered only when the change is not the one last saved; Propose only once it is, until it is proposed; Start over
- * while there is a branch. While one is being done, it says so and nothing else can be pressed. Save also waits on what
- * must be settled first (`canSave`: the voice and tone, changed on GitHub meanwhile). Each shell draws what is offered.
+ * What can be done with a change kept on a branch: Save (to a branch, the first time) only when the change is not the one
+ * last saved; Propose once it is, until proposed; Start over while there is a branch. While one is being done, nothing else
+ * can be pressed. Save also waits on what must be settled first (`canSave`: the voice and tone, changed on GitHub meanwhile).
  */
 export const branchButtons = ({
 	branch,

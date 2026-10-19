@@ -25,12 +25,9 @@ export interface MenuSection {
 const ENTRIES = '[role^="menuitem"]';
 
 /**
- * A menu in a popover, from a button of its own, drawn under it on the page: the ellipsis by default, as VS Code's lists
- * have one, shown only on hover or focus; or another `icon` shown always (`always`, the cog of a view's options); or, in
- * place of an icon, what it is a menu of (`face`: a person's picture, for who is signed in). The
- * button is the default size, the search box's, or `small` for a row, a card or a header. Its
- * sections are separated by a divider. The button says whether it is open; Escape or a press elsewhere closes it, and the
- * arrow keys move through it.
+ * A menu in a popover under its button: the ellipsis by default, shown only on hover or focus as VS Code's lists have it;
+ * or another `icon` shown `always` (a view's options); or `face` in place of an icon (a person's picture, for who is signed
+ * in). The arrow keys move through it.
  */
 export const Menu = ({
 	label,

@@ -23,13 +23,9 @@ export interface TokenActions {
 }
 
 /**
- * A token (`TokenRow`): its name, what it points at, the contrast of its pair when it is the one read under the other
- * (flagged when it is below what the design system's target asks), and its value, all as changed, with a mark when it is, laid
- * out as a value is in the Styles: the name at the left, the value flush at the right. **The name is what opens the token's own
- * file at its line**, where it is written: it is a link, and the rest of the row is what opens its control. A color is its name
- * and only its dot (`ColorDot`), as a color is everywhere: its name, and what it points at is the dot's tooltip. Any other
- * token's value is the rest of its row, one button with what it points at; one that cannot be changed (a font, a shadow) has
- * nothing to press there. Its file and line are the row's tooltip.
+ * A token's row, laid out as a value is in the Styles, all as changed: **its name is a link to its file at its line**, and
+ * the rest of the row opens its control. A color is only its dot (`ColorDot`); its pair's contrast is flagged below the
+ * target. One that cannot be changed (a font, a shadow) has nothing to press.
  */
 const TokenRow = ({ token, info, onEdit }: { token: DesignToken; info?: string } & TokenActions) => {
 	const changes = useTokenChanges();
@@ -138,17 +134,16 @@ export const Grouped = ({ tokens, infoFor, ...actions }: { tokens: DesignToken[]
 	);
 };
 
-/** The two views of the colors, as the app switches them: the roles by theme, and the palette they are made from. */
+/** The two views of the colors: the roles by theme, and the palette they are made from. */
 const COLOR_VIEWS = [
 	{ value: 'semantic', label: 'Semantic', icon: 'tag' },
 	{ value: 'palette', label: 'Palette', icon: 'symbol-color' },
 ] as const satisfies { value: ColorView; label: string; icon: string }[];
 
 /**
- * The design system's tokens in the panel (T2, T3), by the same rule (`tokensShown`):
- * a search, then a section for each primitive in the vocabulary's order, as changed. **Colors have two views,** switched
- * at the left of the search: the roles by theme (`SemanticColors`, the default), a row for each and a column for Light
- * and Dark; and the palette behind them, each tone's steps with their values. With no tokens, what was looked for.
+ * The design system's tokens in the panel (`tokensShown`): a search, then a section for each primitive in the vocabulary's
+ * order, as changed. **Colors have two views,** the roles by theme (`SemanticColors`, the default) and the palette behind
+ * them. With no tokens, what was looked for.
  */
 export const TokensView = ({ tokens, ...actions }: { tokens: DesignTokens } & TokenActions) => {
 	const changes = useTokenChanges();

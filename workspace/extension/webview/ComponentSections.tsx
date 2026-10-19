@@ -38,13 +38,9 @@ const NotToken = ({ value }: { value: Ready['notTokens'][number] }) => (
 );
 
 /**
- * Tokens (adjusting a component, the inspector's Phase 2): what its stories draw with, read from all they draw, inner parts
- * too, where its Styles read each instance's top element alone. Open, laid out as the Styles are: each token under its
- * category, then its group and set as the Tokens tab lists them, a row with its name (which opens its file) at the left and its
- * value, or its dot, flush at the right (which opens its control), with how often it is used and which other components
- * share it behind an info icon beside its name; then what it sets itself, the first few of a kind and the rest kept closed, with
- * what that means (changed in the design system, not here, and how many uses are shades worked out from a token) behind an
- * info icon by its heading.
+ * Tokens: what its stories draw with, inner parts too (its Styles read each instance's top element alone), laid out as the
+ * Styles are, under the Tokens tab's categories, groups and sets. A name opens its file, a value its control; what it sets
+ * itself follows, with what that means behind an info icon by its heading.
  */
 // Exported for its layout test (`componentValuesLayout`), which draws it with the Styles beside it.
 export const TokensUsed = ({
@@ -96,10 +92,9 @@ export const TokensUsed = ({
 );
 
 /**
- * What the analysis of a component says, in three parts (T6, decision 29, T7): its values as an inspector, a variant chosen by
- * its pickers, a case only its props declare among them (Phases 1 and 5 of adjusting a component); the tokens it draws with,
- * open, with its own title (Tokens); and what axe found. Found by drawing every story with the tokens tagged, the first time for each
- * commit, said while that is done.
+ * What the analysis of a component says, in three parts: its values as an inspector, a variant chosen by its pickers; the
+ * tokens it draws with (Tokens); and what axe found. Found by drawing every story with the tokens tagged, the first time
+ * for each commit, said while that is done.
  */
 export const ComponentSections = ({
 	component,

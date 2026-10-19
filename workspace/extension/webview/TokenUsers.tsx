@@ -10,10 +10,9 @@ import { Message } from '../../src/ui/Message';
 import { asks } from './host';
 
 /**
- * The components that draw with a token, in its control: each by name, which opens its tab, with how many of its values the
- * token is ("inside" when its stories draw it only in parts its values do not read), most values first. While the token is
- * changed, each that moved with the change being tried is marked, from what the change reaches (the same answer as a
- * component's "Moved by the change", not drawn again). A kind of token that is never tagged (a font, a shadow) has none.
+ * The components that draw with a token, in its control, most values first ("inside" when only parts its values do not read
+ * draw it). While it is changed, each the change moved is marked, from the same answer as a component's "Moved by the
+ * change", not drawn again. A kind of token that is never tagged (a font, a shadow) has none.
  */
 export const TokenUsers = ({ token, components }: { token: DesignToken; components: CatalogComponent[] }) => {
 	const { edits, isChanged } = useTokenChanges();

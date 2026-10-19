@@ -39,10 +39,8 @@ interface ChangesDialog {
 	onClose: () => void;
 }
 
-/** Asks the extension to locate another design system. */
 const locate = { label: 'Locate design system…', onPress: () => void asks().locateDesignSystem() };
 
-/** A folder's own name, from its path. */
 const folderName = (path: string): string => path.split(/[\\/]/).filter(Boolean).at(-1) ?? path;
 
 /** What the library has that is not read, said where it can be read: each with its file and line. */
@@ -64,12 +62,9 @@ const Problems = ({ problems, onClose }: { problems: Extract<Catalog, { state: '
 );
 
 /**
- * The design system, read (6.1): its name, its branch under it, and beside the name the count of changes being tried and
- * the count of values not read (each a button that opens them, there only when there is one), then its menu (Sync, then
- * Primitives and the voice and tone); what else is wrong with it if anything (an update that failed), what has been
- * changed and its branch, then Components or Tokens. The change to the tokens being tried is the extension's (`edits`),
- * so its tabs see it too; every token row here shows the tokens as changed, and a token that can be changed opens its
- * control when pressed (6.2).
+ * The design system, read: its name and branch, the counts of changes being tried and of values not read (each a button that
+ * opens them), its menu, then Components or Tokens. The change to the tokens being tried is the extension's (`edits`), so
+ * its tabs see it too; every token row here shows the tokens as changed.
  */
 const Ready = ({
 	catalog,
@@ -96,7 +91,7 @@ const Ready = ({
 }) => {
 	const [edits, setEdits] = useTokenEdits();
 	const changes = useTokenChangesFor(catalog.tokens.tokens, edits, setEdits, catalog.accessibility);
-	// Where the change is kept once saved, and proposed (T4, T5): a change DSNR was closed with comes back in the panel.
+	// Where the change is kept once saved, and proposed: a change DSNR was closed with comes back in the panel.
 	const branch = useChangeBranch('tokens', { shown: id, scope: null, change: edits, setChange: setEdits });
 	const [problems, setProblems] = useState(false);
 	// The token whose control is open: the one whose row or swatch was pressed.
@@ -201,9 +196,8 @@ const Ready = ({
 };
 
 /**
- * The Design System tab (ELECTRON_MIGRATION_PLAN 6.1): the design system found (§1.6), read as the app reads the one
- * connected, from its branch on GitHub as its clone has it. With none found, what DSNR looked for and where, and Locate
- * design system; found but not readable, why; while it is read, a line saying so; then the design system itself.
+ * The Design System tab: the design system found, read from its branch on GitHub as its clone has it. With none found, what
+ * DSNR looked for and where, and Locate design system; found but not readable, why; while it is read, a line saying so.
  */
 export const DesignSystem = ({
 	found,

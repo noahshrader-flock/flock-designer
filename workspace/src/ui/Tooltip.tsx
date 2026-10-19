@@ -28,12 +28,9 @@ const titled = (el: Element | null, current: HTMLElement | null): HTMLElement | 
 };
 
 /**
- * Every tooltip in a DSNR page, told in one place, so they all wait the same and look the same. Mounted once on each page. A
- * pointer that stays on anything with a `title` for `TOOLTIP_DELAY_MS` is told it, in the theme's own hover colours, under it
- * (over it where there is no room), a line for each line of the title; one passing by is told nothing. Its title is taken for
- * as long as the pointer is on it, so the browser does not tell it as well, and given back when the pointer goes. The tooltip
- * is never something to hover into, and goes when the pointer leaves, presses, scrolls, or a key is pressed. Keyboard focus is
- * not told: what has a name for it has one in its label. Nothing but `title` is read, so a tooltip is written as it always was.
+ * Every tooltip in a DSNR page, mounted once on each, so they all wait and look the same; a tooltip is written as a `title`.
+ * The title is taken while the pointer is on it, so the browser does not tell it as well, and given back after. Keyboard
+ * focus is not told: what needs a name for it has one in its label.
  */
 export const TooltipHost = () => {
 	const [shown, setShown] = useState<{ text: string; rect: DOMRect } | null>(null);
@@ -79,7 +76,7 @@ export const TooltipHost = () => {
 			if (el === null) end();
 			else if (el !== current?.el) begin(el);
 		};
-		// An element taken away under a pointer that has not moved is no longer something to tell of.
+		// An element taken away under a pointer that has not moved is not something to tell of.
 		const gone = new MutationObserver(() => {
 			if (current !== null && !current.el.isConnected) end();
 		});

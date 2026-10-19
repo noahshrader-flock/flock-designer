@@ -2,11 +2,9 @@ import { type ReactNode, useEffect, useRef } from 'react';
 import { focusPanel } from './focusPanel';
 
 /**
- * A small panel drawn under what opened it, on the page, for a few fields that belong to one thing (a value's sliders): the
- * way a menu is, but holding controls, and not a dialog, which is for what is large (a token) and dims the panel. It is
- * placed by its parent, which is `position: relative` and holds the button that opened it; the parent closes it
- * (`useDismiss`: Escape, a press elsewhere). The focus goes into the panel itself (`focusPanel`), so the first field is one
- * Tab away and is not drawn as chosen the moment it opens; the panel scrolls to show it whole.
+ * A small panel under what opened it, for a few fields of one thing (a value's sliders); a dialog is for what is large. Its
+ * parent places it (`position: relative`, holding the button) and closes it (`useDismiss`). It focuses itself
+ * (`focusPanel`) and scrolls to show itself whole.
  */
 export const Popover = ({ label, children }: { label: string; children: ReactNode }) => {
 	const box = useRef<HTMLDivElement>(null);

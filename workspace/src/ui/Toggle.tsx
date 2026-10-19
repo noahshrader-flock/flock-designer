@@ -2,10 +2,9 @@ import { type KeyboardEvent, type ReactNode, useRef } from 'react';
 import { Icon } from './Icon';
 
 /**
- * A choice of a few views, side by side, one always chosen: VS Code has no control for this in a side bar, so it is drawn
- * as Claude Code's own side bar draws one, a soft track with the chosen view raised in it. A radio group to assistive
- * technology: only the chosen one is in the tab order, and the arrow keys, Home and End move the choice. `iconOnly` draws
- * each as its icon alone, still named (its label is the button's, and its tooltip), for a choice whose icons say it.
+ * A choice of a few views, one always chosen, drawn as Claude Code's side bar draws one since VS Code has no such control.
+ * A radio group: only the chosen one is in the tab order, and the arrow keys, Home and End move the choice. `iconOnly`
+ * keeps each named by its label and tooltip.
  */
 interface ToggleOption<Value extends string> {
 	value: Value;

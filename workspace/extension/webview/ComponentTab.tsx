@@ -24,8 +24,8 @@ import { TabNote } from './TabNote';
 const NOT_READ = undeclared('the design system is not read yet');
 
 /**
- * Its stories, live, built as the app's component page builds them (`useStoryPreview`): with the change to the tokens
- * being tried, the stories shown stay while it builds, said over them, and a change that cannot be tried says why.
+ * Its stories, live (`useStoryPreview`): with the change to the tokens being tried, the stories shown stay while it builds,
+ * said over them, and a change that cannot be tried says why.
  */
 const Stories = ({ component, commit, edits, tried }: { component: CatalogComponent; commit: string; edits: TokenEdit[]; tried: TriedValue[] }) => {
 	const { preview, trying, refused, retry } = useStoryPreview(commit, edits);
@@ -54,9 +54,9 @@ const Stories = ({ component, commit, edits, tried }: { component: CatalogCompon
 };
 
 /**
- * A component's tab (ELECTRON_MIGRATION_PLAN 6.1): its name and line, its links (Storybook when a hosted one is known, and
- * its source), its stories live, and beside them what its analysis says, in parts (`ComponentSections`). Read from the design system shown, as its catalog
- * lists it now; the change to the tokens being tried is the extension's, so a change made in the panel is seen here.
+ * A component's tab: its name and line, its links (Storybook when a hosted one is known, and its source), its stories live,
+ * and beside them what its analysis says (`ComponentSections`). The change to the tokens being tried is the extension's, so
+ * a change made in the panel is seen here.
  */
 export const ComponentTab = ({ id }: { id: string }) => {
 	const { ready, note } = useTabCatalog();
@@ -69,7 +69,7 @@ export const ComponentTab = ({ id }: { id: string }) => {
 	// Whether a branch of its values is kept: then the button can be pressed with nothing tried, to propose or leave it.
 	const [kept, setKept] = useState(false);
 	const changes = useTokenChangesFor(ready?.tokens.tokens ?? [], edits, setEdits, ready?.accessibility ?? NOT_READ);
-	// The values tried on its instances (Phase 2): the extension's, so the panel's Changes has them too, on the library's commit
+	// The values tried on its instances: the extension's, so the panel's Changes has them too, on the library's commit
 	// they were tried on (another version's instances are drawn anew), and forgotten when another mode is chosen.
 	const trying = useTrying(useValueTrials(), id, ready?.commit ?? null);
 	const { tried } = trying;

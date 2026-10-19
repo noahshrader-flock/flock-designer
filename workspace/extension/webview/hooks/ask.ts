@@ -10,10 +10,9 @@ export const ASK_FOR_MS = 30 * 60_000;
 export const askOnce = <T>(ask: () => Promise<T>, got: (answer: T) => void): (() => void) => askWhile(ask, () => false, got);
 
 /**
- * Asks once, gives the answer to `got`, and asks again `every` few seconds while `again` says it is still coming (every
- * story, the pictures, a change, a branch being made): one way for every panel that waits on something. It stops at the
- * first answer that is not, or once it has asked `for` long, so nothing is asked forever. Returns what stops it, for an
- * effect's clean-up, after which no answer is given.
+ * Asks once, gives the answer to `got`, and asks again `every` few seconds while `again` says it is still coming: one way
+ * for every panel that waits. It stops at the first answer that is not, or after `for`, so nothing is asked forever.
+ * Returns what stops it, for an effect's clean-up, after which no answer is given.
  */
 export const askWhile = <T>(
 	ask: () => Promise<T>,

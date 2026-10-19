@@ -6,10 +6,9 @@ import { askWhile } from './ask';
 type Worked = { state: 'none' } | { state: 'building' } | { state: 'failed'; error: string } | { state: string };
 
 /**
- * An answer worked out in the background while a change is tried (what a token change reaches, Phase 3; where the values
- * tried on a component are written, Phase 4): asked whenever the change changes, by what it is (`asked`, never which array
- * holds it), then again while it is drawn; none while nothing is tried. A failure is said as its answer. The same in the
- * app and in VS Code.
+ * An answer worked out in the background while a change is tried (what a token change reaches, where the values tried on a
+ * component are written): asked whenever the change changes, by what it is (`asked`, never which array holds it), then
+ * again while it is drawn; none while nothing is tried. A failure is said as its answer.
  */
 export const useTriedAnswer = <A extends Worked>(
 	asked: string,

@@ -15,8 +15,6 @@ import { Message } from '../../src/ui/Message';
 import { Heading } from '../../src/ui/Heading';
 import { TabNote } from './TabNote';
 
-/** The design system's preview build, which a type specimen is drawn in, so its fonts are its own; asked for once. */
-
 /** What every drawing is given: its tokens, every token by its path (to say what one points at), and the preview build. */
 interface Drawing {
 	tokens: DesignToken[];
@@ -154,10 +152,9 @@ const Drawn = ({ primitive, tokens, byPath, preview }: { primitive: Primitive | 
 };
 
 /**
- * The Primitives tab (ELECTRON_MIGRATION_PLAN 6.1, the app's R2): the design system seen whole, from the same list the
- * panel shows, as the change being tried there leaves it. A chip for each primitive at the top, how many tokens it has or
- * that it is not defined, each a way to its section; then each drawn as the vocabulary says; then what it does not define,
- * with where DSNR looked. For looking: nothing here changes a token.
+ * The Primitives tab: the design system seen whole, from the same list the panel shows, as the change tried there leaves it.
+ * A chip for each primitive, each a way to its section; then each drawn as the vocabulary says; then what it does not
+ * define, with where DSNR looked. For looking: nothing here changes a token.
  */
 export const PrimitivesTab = () => {
 	const { ready, note } = useTabCatalog();

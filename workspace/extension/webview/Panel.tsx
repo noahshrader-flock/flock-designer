@@ -24,10 +24,7 @@ const TABS = [
 /**
  * DSNR's panel: the toggle at its very top, and under it the view chosen. What is open is the extension's (`context`); the
  * account and the projects are the core's, read again when either changes or the extension says the projects did. Who is
- * signed in is VS Code's to show, in its own title bar beside the DSNR mark; the page reads it to say whose projects these
- * are, and for the account dialog. What is pressed is asked of the extension where it is pressed (`asks`). What is chosen
- * (the tab, the projects' view, the design system's part and its components' view) is kept in VS Code's state for the
- * panel, so a reload leaves it where it was.
+ * signed in is VS Code's to show, in its title bar; the page reads it to say whose projects these are.
  */
 export const Panel = () => {
 	const kept = vscode().getState();

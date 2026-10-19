@@ -1,10 +1,7 @@
 /**
- * A count beside a row, as VS Code draws one on a view or a tab, and what the number is, said: in the grey of the toggles
- * at rest. A `tone` for a count that means something of DSNR's: the brand's for comments and changes, which are what it is
- * for; the warning's for what is wrong. With `onPress` it is a button, named and with a tooltip, that opens what the
- * count is of. With no count it is the same badge extra small and blank, a mark that something is wrong where a number
- * would not fit (hung off a swatch), said by its label; or hidden from assistive technology inside what says it already
- * (`said`: a color's dot).
+ * A count beside a row, as VS Code draws one, said by `label`: `brand` for comments and changes, `warning` for what is wrong.
+ * With no count it is a small blank mark where a number would not fit (off a swatch); `said` hides it from assistive
+ * technology inside what says it already (a color's dot).
  */
 export const Badge = ({
 	count,

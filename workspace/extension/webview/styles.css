@@ -81,7 +81,6 @@
 	min-height: 100vh;
 }
 
-/* The bar the toggle sits in: kept at the top while the list under it scrolls. */
 /*
  * Bars kept at the top while a list scrolls under them, each under the one before: the toggle's, then the design system's own
  * row (its name is always shown), then its Components and Tokens toggle, then a tab's search and options.
@@ -131,11 +130,8 @@
 /* == A design system’s header and its parts (`DesignSystemHeader.tsx`, `DesignSystem.tsx`) == */
 
 /*
- * The Design System tab (6.1, 6.2): the design system's own row, its parts, and its tokens as rows, a name at the start and
- * the value (or a color's dot) at the end.
- *
- * The row's menu opens over the bars under it, which come after it and are at the bars' layer: a sticky row is a layer of its own,
- * so what is inside it (the menu) cannot rise above a bar outside it. The row itself is at the menu's layer, above them.
+ * The design system's own row: its menu opens over the bars that come after it, but a sticky row is a layer of its own, so
+ * nothing inside it can rise above a bar outside it. The row itself is at the menu's layer, above them.
  */
 .ds-header {
 	top: var(--dsnr-top-height);
@@ -318,10 +314,9 @@
 /* == A component’s values and pickers (`ComponentValues.tsx`) == */
 
 /*
- * A component's values, in the narrow side pane, as its tokens read: each property a group, its name in the weight and colour
- * of a token's set, each value a line with what it is called on the left and its value on the right, both at the token
- * rows' size. The Tokens part is laid out the same way. No heading sticks but a part's own (`.aside-heading`). What a group's
- * values all are is to the right of its name: quiet, and not bold.
+ * A component's values, in the narrow side pane, as its tokens read: each property a group headed as a token's set, each
+ * value a line, its name on the left and its value on the right. No heading sticks but a part's own (`.aside-heading`).
+ * What a group's values all are is to the right of its name: quiet, and not bold.
  */
 .value-group-note {
 	margin-left: auto;
@@ -386,7 +381,6 @@
 	}
 }
 
-/* A row of the inspector: its value, and the rest a row no prop explains draws, under it. */
 /*
  * The props the variant shown is chosen by, as property rows above the groups: the prop's name on the left, its dropdown or
  * its switch on the right, as a value is laid out under them.
@@ -418,10 +412,9 @@
 /* == Tokens (`Tokens.tsx`) == */
 
 /*
- * A line between one set and the next (a role's variants, a tone family's steps, a component's values of one property and of
- * the next, one group of a Changes dialog and the next), the same in the semantic colors, the palette, a component's values
- * and Changes. The panel's one border colour, the search box's. A component's group's heading has room of its own above
- * it, so the line is all that group adds.
+ * A line between one set and the next (a role's variants, a tone's steps, a property's values, a Changes group), the same
+ * everywhere, in the panel's one border colour. A component's group's heading has room of its own above it, so the line is
+ * all that group adds.
  */
 .theme-set + .theme-set,
 .token-set + .token-set,
@@ -826,7 +819,7 @@
 	font-size: inherit;
 }
 
-/* A token's control (6.2), in a dialog: a picker and its hex, a slider, a tone's steps as swatches to choose from. */
+/* A token's control, in a dialog: a picker and its hex, a slider, a tone's steps as swatches to choose from. */
 .token-editor {
 	display: flex;
 	flex-direction: column;
@@ -971,7 +964,7 @@
 }
 
 /*
- * A value changed (Phase 4): room on its right for its reset, as a token's row has, and under its name where it is
+ * A value changed: room on its right for its reset, as a token's row has, and under its name where it is
  * written, or why it cannot be saved, with a path broken anywhere rather than past the pane.
  */
 .changed .value-change {

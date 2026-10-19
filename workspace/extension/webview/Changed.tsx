@@ -19,13 +19,9 @@ import { Heading } from '../../src/ui/Heading';
 import type { Marks } from '../../src/ui/marks';
 
 /**
- * What can be done with a change once it is tried (6.2, the app's T4 and T5; a component's values, Phase 4): its branch and
- * how many saves, its draft pull request once proposed, with Chromatic's build when the design system's CI has linked one,
- * what went wrong, then Save (to a branch, the first time), Propose and Start over, as the app offers them
- * (`branchButtons`); Save also waits on what must be settled first (`canSave`). Start over forgets the branch, which stays
- * on GitHub with any pull request. With nothing kept yet, Process changes beside Save hands the change to Claude Code
- * instead (PROCESS_CHANGES_PLAN); a change has one branch in play, so once handed over its hand-over is shown in Save's
- * place (`HandOverActions`), and with a branch saved, Process changes is not offered, each until it is started over.
+ * What can be done with a change once tried (the tokens, a component's values): its branch, its draft pull request and
+ * Chromatic's build once CI links one, then Save, Propose and Start over (`branchButtons`). A change has one branch in play:
+ * with nothing kept, Process changes hands it to Claude Code, and its hand-over then takes Save's place (`HandOverActions`).
  */
 export const BranchActions = <C,>({
 	controls,
@@ -127,7 +123,7 @@ export const ChangesGroup = ({
 );
 
 /**
- * The token changes being tried (6.2), as the Tokens group of a Changes dialog, in the panel and in a component's tab: each
+ * The token changes being tried, as the Tokens group of a Changes dialog, in the panel and in a component's tab: each
  * change, from what the design system has to what it is now, with a reset for each and for all.
  */
 export const TokenChanges = () => {
@@ -143,7 +139,7 @@ export const TokenChanges = () => {
 			rows={edits.map((e) => {
 				const was = read.get(e.path);
 				const now = byPath.get(e.path);
-				// A token the library no longer has (it moved since the change was made): named, and why it is not tried.
+				// A token missing from the library (it moved after the change was made): named, and why it is not tried.
 				if (!was || !now)
 					return (
 						<ValueItem key={e.path} marks={{ 'data-change': e.path }}>
@@ -170,7 +166,7 @@ export const TokenChanges = () => {
 };
 
 /**
- * What has been changed (6.2), in the panel's Changes dialog: the token changes, where they are tried, then what can be done
+ * What has been changed, in the panel's Changes dialog: the token changes, where they are tried, then what can be done
  * with them on their branch. A branch kept with nothing changed is still here, so it can be proposed or left.
  */
 export const Changed = ({ id, controls }: { id: string | null; controls: BranchControls<TokenEdit[]> }) => {

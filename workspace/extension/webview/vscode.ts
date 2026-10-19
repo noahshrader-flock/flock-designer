@@ -24,7 +24,6 @@ interface PanelState {
 }
 
 export type Tab = 'projects' | 'design-system';
-/** The design system's two parts in the panel. */
 export type Part = 'components' | 'tokens';
 
 let api: VsCodeApi<PanelState> | undefined;

@@ -3,7 +3,7 @@ import { useTriedAnswer } from './useTriedAnswer';
 import { workspace } from '../host';
 
 /**
- * Where the values tried on a component's instances are written, and what writing them reaches (Phase 4), by its story
+ * Where the values tried on a component's instances are written, and what writing them reaches, by its story
  * file, as it is found (`useTriedAnswer`): asked again while one is still being found or the agent is writing one, and
  * whenever the person has the agent write one (`writes`, how many times).
  */

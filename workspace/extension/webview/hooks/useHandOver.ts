@@ -23,7 +23,7 @@ export interface HandOverControls {
 	propose: (confirmed: boolean) => void;
 	/** Forgets the hand-over, so it can be handed over again or saved. The branch and any pull request stay. */
 	startOver: () => void;
-	/** Shows its branch in the previews in place of the library's (`on`), or the library's again (Phase 2). */
+	/** Shows its branch in the previews in place of the library's (`on`), or the library's again. */
 	preview: (on: boolean) => void;
 }
 

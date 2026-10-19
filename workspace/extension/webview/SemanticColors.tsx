@@ -88,9 +88,8 @@ const Rows = ({ title, rows, themes, onEdit }: { title?: string; rows: SemanticR
 );
 
 /**
- * The semantic colors (the Color tokens plan): a row for each role's variant, a column for each theme
- * the design system has (Light, Dark, or more, headed by the sun and the moon), each value a dot that opens its own control. Roles are under their set;
- * a role whose name is its set is a plain row, with no heading to say it twice.
+ * The semantic colors: a row for each role's variant, a column for each theme the design system has (headed by the sun and
+ * the moon), each value a dot that opens its own control. A role whose name is its set is a plain row, not headed twice.
  */
 export const SemanticColors = ({ tokens, onEdit }: { tokens: DesignToken[]; onEdit: (token: DesignToken) => void }) => {
 	const table = semanticTable(tokens);

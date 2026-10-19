@@ -4,9 +4,8 @@ import { vscode } from './vscode';
 import { connectPage } from './workspace';
 
 /**
- * Whether a message is the extension's: VS Code's host frame posts it on this page's own origin (`vscode-webview:`), and
- * no page this one frames (a design system's story, its type specimen, which run the library's code), nor any frame
- * inside one, has that origin: theirs is this machine's server, or none. Not who sent it: VS Code makes `window.parent`
+ * Whether a message is the extension's: VS Code's host frame posts on this page's own origin (`vscode-webview:`), which no
+ * page framed here (a story, a type specimen, running the library's code) has. Not by sender: VS Code makes `window.parent`
  * this page itself.
  */
 const fromExtension = (e: MessageEvent): boolean => e.origin === location.origin;

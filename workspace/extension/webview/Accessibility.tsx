@@ -55,10 +55,9 @@ const Issues = ({ title, issues }: { title: string; issues: AccessibilityIssue[]
 	);
 
 /**
- * What a check found, in the order a person needs it: a line of what it found, what it was checked with and what is left to
- * check by hand (never a pass: what is left is said beside what was found), then, when there are findings, a link to
- * them, which opens them in a dialog and not in the side panel's narrow column. axe's pages are links, which VS Code opens in
- * the browser.
+ * What a check found, in the order a person needs it: what it found, what it was checked with and what is left to check by
+ * hand (never a pass: what is left is said beside what was found), then a link to the findings, which opens them in a
+ * dialog rather than the side panel's narrow column.
  */
 export const AccessibilityFindings = ({ result }: { result: AccessibilityResult }) => {
 	const counts = countsOf(result);

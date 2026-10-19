@@ -3,9 +3,8 @@ import type { Result } from '../../../src/shared/contract';
 import { askOnce } from './ask';
 
 /**
- * One way for a screen to read something from the app: what it read (`value`), why it could not (`error`, never thrown
- * away), whether it is reading (`loading`), and `reload`. Read again when `deps` change, when what it read before is
- * forgotten, since it was for something else; kept while the same is read again. An answer that comes back after the
+ * One way for a screen to read from the core: `value`, `error` (never thrown away), `loading` and `reload`. Read again when
+ * `deps` change, forgetting what it read before; kept while the same is read again. An answer that comes back after the
  * screen asked for something else, or left, is dropped. Nothing is read while `enabled` is false.
  */
 export const useWorkspace = <T>(read: () => Promise<Result<T>>, deps: unknown[], { enabled = true }: { enabled?: boolean } = {}) => {

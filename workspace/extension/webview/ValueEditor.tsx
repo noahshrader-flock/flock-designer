@@ -42,12 +42,9 @@ const PARTS: Partial<Record<ValueProperty, Record<number, Part[]>>> = {
 const ON_ONE_LINE: ReadonlySet<ValueProperty> = new Set(['padding']);
 
 /**
- * A component's own value, tried in its stories (Phase 2 of adjusting a component): a small popover under the value, since it
- * is a few fields for one thing, where a token's is a dialog. A length is a slider for each part it is written with short (a
- * side, a corner, a row or a column), a colour a picker and its hex, each tried as it moves, since nothing is built; what is
- * tried is every part in full, as the page sets it. **Nothing is saved**, which the tab says once, where what is tried is
- * counted; Reset puts the value back as the library draws it. A token's value opens the token's own control instead, since it
- * moves every component that draws with it.
+ * A component's own value, tried in its stories: a popover, a few fields for one thing (a token's is a dialog). A length is a
+ * slider for each part it is written with short, a colour a picker and its hex, each tried as it moves, since nothing is
+ * built; what is tried is every part in full. **Nothing is saved**; Reset puts the value back as the library draws it.
  */
 export const ValueEditor = ({
 	property,
@@ -63,7 +60,7 @@ export const ValueEditor = ({
 	/** The value being tried, in full, or null when it is as drawn. */
 	tried: string | null;
 	onTry: (value: string | null) => void;
-	/** The tokens whose value it is, which it could follow (Phase 4.6), by path and name. */
+	/** The tokens whose value it is, which it could follow, by path and name. */
 	follows?: { path: string; name: string }[];
 	/** The token it is to follow, by name, or null. */
 	following?: string | null;

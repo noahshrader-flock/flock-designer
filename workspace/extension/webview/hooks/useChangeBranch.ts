@@ -30,10 +30,9 @@ const TRIED: { [K in TriedKind]: { same: (a: ChangeKinds[K], b: ChangeKinds[K]) 
 };
 
 /**
- * The branch a change being tried is kept on (a change to the tokens, T4 and T5; a component's values, Phase 4), the same
- * for either kind, through the calls every kind of change has. Asked for whenever `shown` is another (a design system, a
- * component); `scope` is the component's story file, or null for the design system whole. A change the app was closed with
- * is put back when none is being tried. Once proposed, it looks for Chromatic's build until the library's CI has linked one.
+ * The branch a change being tried is kept on (the tokens', or a component's values), asked for whenever `shown` is another;
+ * `scope` is the component's story file, or null for the whole design system. A change DSNR was closed with is put back when
+ * none is tried. Once proposed, it looks for Chromatic's build until the library's CI has linked one.
  */
 export const useChangeBranch = <K extends TriedKind>(
 	kind: K,

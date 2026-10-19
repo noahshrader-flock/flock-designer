@@ -41,11 +41,9 @@ const ReviewLine = ({ review }: { review: BranchReview }) => {
 };
 
 /**
- * A unit handed to Claude Code (Process changes), in place of Save while it is in play: its branch, what DSNR read of it from
- * git (each file it changed, with what the rules keep out flagged), its draft pull request once proposed, then Propose, once
- * it is ready, and Start over. A flagged branch is proposed only when the person says so a second time; its pull request then
- * says what was flagged. Preview this branch shows what Claude Code committed in every page's previews, in place of the
- * library's branch, until it is stopped (Phase 2). Start over forgets the hand-over; the branch stays, with any pull request.
+ * A unit handed to Claude Code (Process changes), in place of Save: its branch as DSNR read it from git (each file, with what
+ * the rules keep out flagged), its draft pull request, then Propose once ready, and Start over. A flagged branch is proposed
+ * only when the person confirms; Preview this branch shows Claude Code's commits in every page's previews until stopped.
  */
 export const HandOverActions = ({ controls }: { controls: HandOverControls }) => {
 	const { branch, handed, busy, error, propose, startOver, preview } = controls;

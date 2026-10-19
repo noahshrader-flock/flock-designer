@@ -8,7 +8,6 @@ import type { Marks } from './marks';
  * rhythm.
  */
 
-/** A list of token or value rows. */
 export const ValueList = ({ label, children }: { label?: string; children: ReactNode }) => (
 	<ul className="tokens" aria-label={label}>
 		{children}

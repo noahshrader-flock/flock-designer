@@ -9,12 +9,9 @@ const FOCUSABLE = 'input:not(:disabled), textarea:not(:disabled), select:not(:di
 const FIRST = 'input:not(:disabled), textarea:not(:disabled), select:not(:disabled), button:not(:disabled):not(.dialog-close)';
 
 /**
- * A dialog over the page, as VS Code's own are: a title with its close X at the far right of the same row, what it asks,
- * and its buttons below, over a scrim that dims what is behind. A page cannot draw outside itself (a side bar's webview, a
- * framed bar), so it covers the page. The X, Escape (`useEscape`, unless something opened over it since) and a press on the scrim close it; Tab stays inside it; the focus goes to its first field (or what
- * it does), and back to what opened it once it is gone. A dialog that is a few controls for one thing, as a popover is
- * (`focus="panel"`: a token's), takes the focus on the dialog itself instead, as the popover does (`focusPanel`), so no
- * control is drawn as chosen the moment it opens.
+ * A dialog as VS Code's own are, over a scrim that covers the page, since a webview cannot draw outside itself. Tab stays
+ * inside; the focus goes to its first field and back to what opened it once it is gone. `focus="panel"` (a few controls for
+ * one thing, a token's) focuses the dialog itself, as a popover does, so no control is drawn as chosen as it opens.
  */
 export const Dialog = ({
 	title,

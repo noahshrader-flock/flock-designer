@@ -4,7 +4,7 @@ import type { DeclaredTarget } from '../../../src/shared/wcag';
 import { familyOf, paletteFamilies, placeOf, sameChange, withEdits } from '../../../src/shared/tokens';
 
 /**
- * The change to the tokens as the tokens panel holds it (T3 of the design system plan): the tokens as changed, and how to
+ * The change to the tokens as the tokens panel holds it: the tokens as changed, and how to
  * change one. Worked out once per change, here, so a row asks it and does not search the list itself. The panel makes
  * it (`useTokenChangesFor`); every row and control reads it (`useTokenChanges`).
  */
@@ -27,7 +27,7 @@ export interface TokenChanges {
 	change: (token: DesignToken, to: TokenChange | null) => void;
 	/** Every token back as the library has it. */
 	clear: () => void;
-	/** The accessibility target a pair's contrast is judged at (T7): the design system's, or the default. */
+	/** The accessibility target a pair's contrast is judged at: the design system's, or the default. */
 	accessibility: DeclaredTarget;
 }
 

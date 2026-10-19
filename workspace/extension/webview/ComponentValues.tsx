@@ -36,7 +36,7 @@ type Ready = Extract<ComponentTokens, { state: 'ready' }>;
 
 /**
  * The values being tried on the component's instances, by `triedId`; how one is tried or put back (null); every one at once;
- * and having the agent write one (Phase 4.5, 4.6), how many times it has been asked, and what went wrong asking.
+ * and having the agent write one, how many times it has been asked, and what went wrong asking.
  */
 export interface Trying {
 	tried: ReadonlyMap<string, TriedValue>;
@@ -79,12 +79,9 @@ const madeOf = (cell: ValueCell, name: (path: string) => string, others: (path: 
 };
 
 /**
- * One value, as a button that opens its control, as a token's row reads: what it is called on the left (`label`: its
- * property, Padding), its value on the right (marked when it is being tried): **a token's name where it is one**, else its
- * number, with what it is made of as a chip after its name ("From a token", "Partly" one; nothing for its own, or not
- * checked). **A colour is only its dot** (`ColorDot`), as it is everywhere: its tooltip is the token's name, and the dot is
- * what opens the control. The control of a value of its own is a popover under it (`editor`, shown while `open`), closed by
- * Escape, a press elsewhere or the button again; a token's opens elsewhere, so it has none.
+ * One value, as a button that opens its control, as a token's row reads: its property on the left, its value on the right:
+ * **a token's name where it is one**, else its number with a chip for what it is made of. **A colour is only its dot**. A
+ * value of its own opens a popover under it (`editor`); a token's control opens elsewhere, so it has none.
  */
 const Cell = ({
 	property,
@@ -106,7 +103,7 @@ const Cell = ({
 	editor: ReactNode;
 	onOpen: () => void;
 	onClose: () => void;
-	/** Shown and never tried: a value drawn only from its props, where nothing can be tried on it (its props' drawing, Phase 5). */
+	/** Shown and never tried: a value drawn only from its props, where nothing can be tried on it (its props' drawing). */
 	still?: boolean;
 	label: string;
 }) => {
@@ -229,10 +226,9 @@ const PickerRow = ({
 };
 
 /**
- * The values as an inspector (each component's values, DESIGN_SYSTEM.md): a picker for each prop its rows are told apart
- * by, then the groups, each a row a value for the variant chosen: its property's name, and its value (a token's name where it
- * is one; a colour is its dot), pressed to change it as any value is. A combination its stories never drew is said, with the nearest that was; a
- * row no prop explains shows the value most instances draw, and the rest under it.
+ * The values as an inspector: a picker for each prop its rows are told apart by, then the groups, a row for each value of
+ * the variant chosen. A combination its stories never drew is said, with the nearest that was; a row no prop explains shows
+ * the value most instances draw, and the rest under it.
  */
 const Inspector = ({
 	rows,
@@ -247,7 +243,7 @@ const Inspector = ({
 	onClose,
 }: {
 	rows: ValueRow[];
-	/** What its props declare, drawn on one of its stories (Phase 5): a case its stories never drew is shown from these. */
+	/** What its props declare, drawn on one of its stories: a case its stories never drew is shown from these. */
 	declared: ValueRow[];
 	/** The props its story sets itself: their pickers say so behind an info icon. */
 	fixed: string[];
@@ -332,16 +328,9 @@ const Inspector = ({
 };
 
 /**
- * Values (Phase 1 of adjusting a component): what each instance of the component its stories draw measures, by property and
- * by variant, and whether each is a token's (named), worked out from one, or its own, in the mode chosen (`shownMode`); and,
- * when the design system has lengths no tag can be given, that a length said to be its own may be one of them.
- *
- * Its variants are chosen by its pickers; a case only its props declare (`variants`, drawn on one of its stories, in light)
- * is shown from that drawing and never tried, and what its story sets itself is said behind an info icon by its picker.
- *
- * Each value opens its control (Phase 2): a token's opens the token's own (`onEditToken`), as the Tokens' rows do, since it
- * is the design system's and moves every component that draws with it; any other is tried on the instances that draw it,
- * in the stories beside this, as it moves (`ValueEditor`), and nothing is saved.
+ * Values: what each instance its stories draw measures, by property and variant, and whether each is a token's, worked out
+ * from one, or its own, in `shownMode`. A token's value opens the token's own control (`onEditToken`), since it moves every
+ * component that draws with it; any other is tried on the instances in the stories beside this (`ValueEditor`), never saved.
  */
 export const ComponentValues = ({
 	answer,
@@ -354,7 +343,7 @@ export const ComponentValues = ({
 	variants,
 }: {
 	answer: Ready;
-	/** Every case its props declare, drawn (Phase 5): what the pickers offer beyond what its stories drew. */
+	/** Every case its props declare, drawn: what the pickers offer beyond what its stories drew. */
 	variants: ComponentVariants;
 	name: string;
 	byPath: ReadonlyMap<string, DesignToken>;
@@ -387,7 +376,7 @@ export const ComponentValues = ({
 				cell={cell}
 				tried={following === null ? tried(property)(cell) : null}
 				onTry={(value) => trying.onTry(id, value === null ? null : { property, value, targets: cell.targets })}
-				// A value of its own the same as a token's can follow it (4.6): drawn as it is, written by the agent.
+				// A value of its own the same as a token's can follow it: drawn as it is, written by the agent.
 				follows={followsOf(property, cell, [...byPath.values()], values.state === 'read' ? values.rootPx : undefined).map((t) => ({
 					path: t.path,
 					name: labelOf(t),
