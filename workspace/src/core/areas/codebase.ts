@@ -1,12 +1,13 @@
-import type { CallsDeps } from '../compose';
-import type { CheckedCheckout } from '../compose';
+import type { CallsDeps, CheckedCheckout } from '../compose';
 import { randomUUID } from 'node:crypto';
 import { existsSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
-import type { BuildInCodebase, BuildInCodebasePlan } from '../../shared/contract';
+import type { AccessibilityResult, BuildInCodebase, BuildInCodebasePlan } from '../../shared/contract';
+import { statesOf } from '../../shared/prototypeStates';
 import { lastVerdict } from '../../shared/handoff';
 import { workLabel } from '../../shared/work';
 import { A11Y_COMMAND, productTarget, taskAccessibility } from '../services/accessibility/accessibilityBrief';
+import { accessibilityOf } from '../services/accessibility/accessibilityCheck';
 import { type AgentExtras, agentReadiness } from '../services/agent/agent';
 import { type CheckoutParts, codebaseTask, guidePart, handoffTask, buildInCodebaseTask } from '../services/agent/agentTasks';
 import { designSystemCheckout, readDescriptor } from '../services/projects/descriptor';
@@ -26,17 +27,34 @@ export const codebaseArea = (d: CallsDeps) => {
 		checkout,
 		codebase,
 		ports,
-		prototypeAccessibility,
 		prototypePage,
 		prototypesRoot,
 		publisher,
-		readDesignFile,
 		readSkillText,
 		refuseWhileBusy,
+		servePrototype,
 		sessions,
 		share,
+		store,
 		work,
 	} = d;
+	/**
+	 * A prototype's accessibility (T7): its saved page, served as it is opened, checked in each of its states at its
+	 * product's target, and kept beside it. Made again only when what it was made with changes.
+	 */
+	const prototypeAccessibility = async (projectId: string, name: string): Promise<AccessibilityResult> => {
+		const html = await prototypePage(projectId, name);
+		if (html === null) throw new Error('This prototype has no page yet.');
+		const url = await servePrototype(projectId, name, html);
+		return accessibilityOf({
+			file: work.checkFile(projectId, name),
+			html,
+			url,
+			states: statesOf(html),
+			target: await work.target(projectId, name),
+			check: ports.headless.scan,
+		});
+	};
 	/** The accessibility section of a codebase task (T7): the product's target from its own manifest, on the branch it is on. */
 	const codebaseAccessibility = (canonical: string, findings?: Parameters<typeof taskAccessibility>[2]): Promise<string> => {
 		const descriptor = readDescriptor(canonical);
@@ -141,7 +159,7 @@ export const codebaseArea = (d: CallsDeps) => {
 			const { canonical, descriptor } = workIn;
 			const branch = (await readCheckout(canonical)).branch;
 			// On the project's codebase branch, the shared rules for unattended codebase work, and this product's light check.
-			const unattended = branch === codebaseBranchFor(descriptor, projectId) ? await readDesignFile(CODEBASE_SKILL) : null;
+			const unattended = branch === codebaseBranchFor(descriptor, projectId) ? await store.readFile(CODEBASE_SKILL) : null;
 			// A prototype being moved into the code is read from the app's own copy of it.
 			const prototypeFolder = join(prototypesRoot, projectId);
 			const { parts, readOnly } = await checkoutParts(canonical, projectId);

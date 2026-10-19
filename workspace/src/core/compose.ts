@@ -1,13 +1,15 @@
-import { withPageTheme } from './services/browser/pageTheme';
-import { existsSync, readFileSync } from 'node:fs';
+/**
+ * The core, composed: every service it runs, made once for the window's session from what the shell gives (`CallsContext`),
+ * and what they share. The calls are answered by area (`areas/`), each made from this, and registered with their arguments
+ * checked (`calls.ts`, `calls/`).
+ */
+import { existsSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
-import type { AccessibilityResult, Checkout, Person, PublishStatus, TriedValue } from '../shared/contract';
+import type { Checkout, Person, PublishStatus, TriedValue } from '../shared/contract';
 import { reachLine, tokenChanges, valueChanges } from '../shared/processChanges';
 import { storyComponent } from '../shared/valueNames';
-import { statesOf } from '../shared/prototypeStates';
 import { type Check, type EventSink, arg } from './handle';
 import type { Ports } from './ports';
-import { accessibilityOf } from './services/accessibility/accessibilityCheck';
 import { AGENT_BUSY, AgentRunner, runToEnd } from './services/agent/agent';
 import { classify } from './services/projects/branchProjects';
 import { syncBranches } from './services/publishing/branchSync';
@@ -15,7 +17,6 @@ import type { CheckoutMemory } from './services/projects/checkoutMemory';
 import { codebaseWork } from './services/codebase/codebaseWork';
 import { ComponentPictures } from './services/designSystem/componentPictures';
 import { ComponentTokens } from './services/designSystem/componentTokens';
-import { singleFlight } from './services/platform/concurrency';
 import { DESCRIPTOR_PATH, readDescriptor, type WorkspaceDescriptor } from './services/projects/descriptor';
 import { DesignLibrary, libraryCommit, systemReads } from './services/designSystem/designLibrary';
 import { readTokens } from './services/designSystem/designTokens';
@@ -32,10 +33,9 @@ import type { GitHubAccount } from '../codeHost/github';
 import { Installer } from './services/codebase/install';
 import { recordedWork } from './services/projects/workRecords';
 import { readFolderProjects } from './services/projects/localProjects';
-import type { CoverDeps } from './services/prototypes/projectCovers';
 import { esbuildEntry } from './services/prototypes/prototypeBundle';
 import { PrototypeServer } from './services/prototypes/prototypeServer';
-import { localPrototypeFile, prototypeWork } from './services/prototypes/prototypeWork';
+import { prototypeWork } from './services/prototypes/prototypeWork';
 import { PublishManager, publishInOrder } from './services/publishing/publisher';
 import { RuntimeManager } from './services/codebase/runtime';
 import { OpenedCheckouts } from './services/projects/session';
@@ -43,6 +43,7 @@ import { type ShareRunner } from './services/codebase/share';
 import { siteDeploys } from './services/publishing/siteDeploys';
 import { StoryPreviews } from './services/designSystem/storyPreviews';
 import { windowFolder } from './services/platform/windowFolder';
+import { withPageTheme } from './services/browser/pageTheme';
 import { TokenBranches } from './services/designSystem/tokenBranches';
 import { ValueBranches } from './services/designSystem/valueBranches';
 import { ValueSources } from './services/designSystem/valueSources';
@@ -52,11 +53,10 @@ import { typeLibs } from './services/designSystem/componentProps';
 import { VOICE_NEEDS_CLI, VoiceAndToneFile } from './services/designSystem/voiceAndTone';
 import { repoRefOf } from '../shared/repoRef';
 
-/**
- * The core, composed: every service it runs, made once for the window's session from what the shell gives (`CallsContext`),
- * and what they share. The calls are answered by area (`areas/`), each made from this, and registered with their arguments
- * checked (`calls.ts`, `calls/`).
- */
+/** A product checkout as a call is given it, once its root has been checked: one this window opened, its descriptor and records read. */
+export type CheckedCheckout = { root: string; canonical: string; readonly descriptor: WorkspaceDescriptor; readonly recordsRoot: string };
+
+/** What the shell gives the core. */
 export interface CallsContext {
 	/** How the core tells the window that something happened: the shell's. */
 	emit: EventSink;
@@ -220,7 +220,7 @@ export const composeCore = ({
 							},
 						);
 						// Whatever is on GitHub and not yet on the site goes up too, however it got there.
-						void catchUpSite();
+						void deploys.catchUp();
 						return done;
 					},
 				};
@@ -317,11 +317,6 @@ export const composeCore = ({
 		return new VoiceAndToneFile({ repo: repoRefOf(system.repository), folder: system.folder, github: personGitHub, file: voiceBranchFile });
 	};
 
-	/**
-	 * What the handlers change and share: the repositories the person can see (read once, then kept), and the clone and
-	 * the install in progress, which Cancel stops.
-	 */
-	const state: { installing: AbortController | null } = { installing: null };
 	// Starting and picking up a project's codebase work, never under a running agent (`codebaseWork`).
 	const codebase = codebaseWork({
 		agentIn: (canonical) => agent.runningIn(canonical),
@@ -329,7 +324,6 @@ export const composeCore = ({
 		login: signedInLogin,
 		written,
 	});
-	const { assertAgentNotHere } = codebase;
 
 	/** Whether the one agent is working. Starting it is the runner's to refuse; this is for what must wait for it. */
 	const agentBusy = (): boolean => agent.status().state === 'running';
@@ -348,9 +342,6 @@ export const composeCore = ({
 	 * here when there is one, so the publisher sends it like every other record, and otherwise GitHub directly.
 	 */
 	const store = designStore({ clone: designClone, files: designRepo.files, onWrite: () => void publisher.publish(true) });
-	const recordStore = store.records;
-	const readDesignFile = store.readFile;
-	const readDesignBytes = store.readBytes;
 	/** A shared skill, which the agent's task is built from: read as the dsnr command reads it. */
 	const readSkillText = (path: string): Promise<string> => work.skill(path);
 	/**
@@ -363,8 +354,8 @@ export const composeCore = ({
 			const root = trustedRoot();
 			return root === null ? null : opened.require(root);
 		},
-		store: recordStore,
-		readDesignFile,
+		store: store.records,
+		readDesignFile: store.readFile,
 		esbuild: esbuildEntry,
 	});
 	/** A prototype's page on the local server, with the shared files it points at beside it: where it is opened and checked. */
@@ -372,51 +363,12 @@ export const composeCore = ({
 		prototypeServer.servePage(`${projectId}/${name}`, withPageTheme(html), work.sharedText);
 	/** The page: this machine's newest build first (built again when its source changed), then the saved one. */
 	const prototypePage = (projectId: string, name: string): Promise<string | null> => work.page(projectId, name, agentBusy());
-	/** Runs `run` once at a time per key: a second caller waits for the first and shares its answer. */
-	const inFlight = singleFlight<string, unknown>();
-	const once = <T>(key: string, run: () => Promise<T>): Promise<T> => inFlight.run(key, run) as Promise<T>;
 
 	/**
 	 * The site's deploys, run in the background, and whether a version's page is on the site (`siteDeploys`): asked of
 	 * GitHub as the person signed in to the app, and worked out again here, so the window never hands this an address to open.
 	 */
 	const deploys = siteDeploys({ github, designClone });
-	const publishedPage = deploys.status;
-	const publishInBackground = deploys.page;
-	const catchUpSite = deploys.catchUp;
-
-	/**
-	 * A prototype's accessibility (T7): its saved page, served as it is opened, checked in each of its states at its
-	 * product's target, and kept beside it. Made again only when what it was made with changes.
-	 */
-	const prototypeAccessibility = async (projectId: string, name: string): Promise<AccessibilityResult> => {
-		const html = await prototypePage(projectId, name);
-		if (html === null) throw new Error('This prototype has no page yet.');
-		const url = await servePrototype(projectId, name, html);
-		return accessibilityOf({
-			file: work.checkFile(projectId, name),
-			html,
-			url,
-			states: statesOf(html),
-			target: await work.target(projectId, name),
-			check: ports.headless.scan,
-		});
-	};
-	/**
-	 * The picture of each prototype on its project's card. Asked for by the list once it is on
-	 * screen: every page built on this machine whose record does not name its picture is drawn, one at a time, and kept.
-	 * Never while an agent works, as its page may be half written: the next time the list is opened does it.
-	 */
-	const coverDeps: CoverDeps = {
-		store: recordStore,
-		page: (projectId, name) => {
-			const file = localPrototypeFile(prototypesRoot, projectId, name, 'html');
-			return existsSync(file) ? readFileSync(file, 'utf8') : null;
-		},
-		serve: servePrototype,
-		draw: ports.headless.draw,
-		tried: new Set(),
-	};
 
 	return {
 		emit,
@@ -428,12 +380,10 @@ export const composeCore = ({
 		github,
 		designRepo,
 		prototypesRoot,
-		prototypeServer,
 		sessions,
 		installer,
 		designSystems,
 		componentTokens,
-		personGitHub,
 		openRepository,
 		checkout,
 		trustedRoot,
@@ -444,7 +394,6 @@ export const composeCore = ({
 		signedInLogin,
 		library,
 		previews,
-		componentPictures,
 		warm,
 		tokenBranches,
 		valueSources,
@@ -455,26 +404,15 @@ export const composeCore = ({
 		valueAgent,
 		componentVariants,
 		voiceFile,
-		state,
 		codebase,
-		assertAgentNotHere,
 		agentBusy,
 		refuseWhileBusy,
-		recordStore,
-		readDesignFile,
-		readDesignBytes,
 		readSkillText,
+		store,
 		work,
 		servePrototype,
 		prototypePage,
-		once,
-		publishedPage,
-		publishInBackground,
-		prototypeAccessibility,
-		coverDeps,
+		deploys,
 	};
 };
 export type CallsDeps = ReturnType<typeof composeCore>;
-
-/** A product checkout as a call is given it, once its root has been checked: one this window opened, its descriptor and records read. */
-export type CheckedCheckout = { root: string; canonical: string; readonly descriptor: WorkspaceDescriptor; readonly recordsRoot: string };

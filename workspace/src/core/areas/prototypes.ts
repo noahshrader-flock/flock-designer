@@ -1,5 +1,5 @@
 import type { CallsDeps } from '../compose';
-import { existsSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { folderName } from '../../shared/brief';
 import type { BuildInCodebase, CommentRef, OpenedPrototype, PrototypeAddressed, PrototypeReadiness } from '../../shared/contract';
@@ -14,31 +14,47 @@ import { handToClaude } from '../services/agent/editor';
 import { ensureLocalBranch } from '../services/platform/git';
 import { INSTALL_COMMAND } from '../services/codebase/install';
 import { jpegDataUrl } from '../services/prototypes/picture';
-import { builtHere, ensureCovers } from '../services/prototypes/projectCovers';
+import { type CoverDeps, builtHere, ensureCovers } from '../services/prototypes/projectCovers';
 import { BUILD_SKILL, GUIDE, type PrototypeSources, assignFolder, prototypeBuildPrompt, prototypeReadable } from '../services/prototypes/prototype';
-import { type PrototypeChange, whereTheChangeGoes } from '../services/prototypes/prototypeWork';
+import { type PrototypeChange, localPrototypeFile, whereTheChangeGoes } from '../services/prototypes/prototypeWork';
+import { singleFlight } from '../services/platform/concurrency';
 
 /** What the Prototypes calls do, each called by its handler once its arguments are checked (`calls/prototypes.ts`). */
 export const prototypesArea = (d: CallsDeps) => {
 	const {
 		agent,
 		agentBusy,
-		coverDeps,
 		designRepo,
 		me,
-		once,
 		opened,
 		ports,
 		prototypePage,
 		prototypesRoot,
-		publishInBackground,
-		readDesignBytes,
+		deploys,
 		readSkillText,
-		recordStore,
 		refuseWhileBusy,
 		servePrototype,
+		store,
 		work,
 	} = d;
+	/** Runs `run` once at a time per key: a second caller waits for the first and shares its answer. */
+	const inFlight = singleFlight<string, unknown>();
+	const once = <T>(key: string, run: () => Promise<T>): Promise<T> => inFlight.run(key, run) as Promise<T>;
+	/**
+	 * The picture of each prototype on its project's card. Asked for by the list once it is on screen: every page built on
+	 * this machine whose record does not name its picture is drawn, one at a time, and kept. Never while an agent works, as
+	 * its page may be half written: the next time the list is opened does it.
+	 */
+	const coverDeps: CoverDeps = {
+		store: store.records,
+		page: (projectId, name) => {
+			const file = localPrototypeFile(prototypesRoot, projectId, name, 'html');
+			return existsSync(file) ? readFileSync(file, 'utf8') : null;
+		},
+		serve: servePrototype,
+		draw: ports.headless.draw,
+		tried: new Set(),
+	};
 	/** What building a prototype and changing one share: what it is modeled on, read once, and how it is built. */
 	const prototypeRun = async (projectId: string, name: string, modeledOn = name) =>
 		work.buildPlan(projectId, name, await once(`source:${projectId}`, () => work.sources(projectId, modeledOn)));
@@ -82,7 +98,7 @@ export const prototypesArea = (d: CallsDeps) => {
 		const { version, made } = await work.finishChange(projectId, change, me(), `For a comment on ${workLabel(change.from)}`);
 		// Either way: a run that changed nothing clears the mark an earlier one left.
 		const marked = await designRepo.threads.setAddressed(comment, version, version === null ? null : change.target);
-		if (version !== null) publishInBackground(projectId, change.target);
+		if (version !== null) deploys.page(projectId, change.target);
 		return { changed: version !== null, version: change.target, made, comment: marked };
 	};
 	const finishPrototypeChanges = async (projectId: string): Promise<void> => {
@@ -115,7 +131,7 @@ export const prototypesArea = (d: CallsDeps) => {
 			return work.start(root, { projectId, title, note, branch: from.branch, me: me(), folder: folderName(folder) });
 		},
 		assignFolder: async (projectId: string, folder: unknown) => {
-			await assignFolder(recordStore(), projectId, folderName(folder));
+			await assignFolder(store.records(), projectId, folderName(folder));
 			return null;
 		},
 		handPrototypeBuild: async (root: string, projectId: string, name: string, request: string): Promise<BuildInCodebase> => {
@@ -172,7 +188,7 @@ export const prototypesArea = (d: CallsDeps) => {
 		finishPrototypeAddress: (comment: CommentRef): Promise<PrototypeAddressed> => finishPrototypeChange(comment),
 		savePrototype: async (projectId: string, name: string): Promise<null> => {
 			await work.save(projectId, name);
-			publishInBackground(projectId, name);
+			deploys.page(projectId, name);
 			return null;
 		},
 		prototypeProgress: (projectId: string, name: string) => {
@@ -187,8 +203,7 @@ export const prototypesArea = (d: CallsDeps) => {
 			// now: what this machine shows is what reviewers get, and no finished page is stranded on one machine.
 			const local = work.file(projectId, name);
 			const path = prototypePagePath(projectId, name);
-			if (existsSync(local) && agent.status().state !== 'running' && (await recordStore().read(path)) !== html)
-				await work.keep(projectId, name, html);
+			if (existsSync(local) && !agentBusy() && (await store.records().read(path)) !== html) await work.keep(projectId, name, html);
 			return { url: await servePrototype(projectId, name, html), states: statesOf(html) };
 		},
 		ensureCovers: () => once('covers', async () => (agentBusy() ? [] : ensureCovers(coverDeps, builtHere(prototypesRoot)))),
@@ -196,7 +211,7 @@ export const prototypesArea = (d: CallsDeps) => {
 			const path = coverPath(projectId, name, cover);
 			const kept = coversRead.get(path);
 			if (kept !== undefined) return kept;
-			const bytes = await readDesignBytes(path);
+			const bytes = await store.readBytes(path);
 			if (bytes === null) return null;
 			const url = jpegDataUrl(bytes);
 			coversRead.set(path, url);
