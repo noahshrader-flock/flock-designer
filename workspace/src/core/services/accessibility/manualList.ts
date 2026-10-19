@@ -1,7 +1,6 @@
 /**
- * The manual list: what is left for whoever tests by hand, generated from a measure's ledger into the product's
- * `HANDOFF.md`, so it is never written from memory and never says less than was measured. Written for someone who has
- * not seen the work; it never says the work conforms, or at what level.
+ * Generated from a measure's ledger, so it is never written from memory and never says less than was measured. It never
+ * says the work conforms, or at what level.
  */
 import { WORDS } from '../../../shared/accessibility';
 import { ASSISTIVE_SECTION } from './accessibilityBrief';
@@ -9,15 +8,10 @@ import { type Ledger, type LedgerRow, statusLine, withMarked } from './ledger';
 import { type CellId, cellOf } from './probe/cells';
 import { RETURNED_COLUMNS } from './returned';
 
-/** Where the manual list sits in `HANDOFF.md`. */
 const OPEN = '<!-- dsnr:manual-list -->';
 const CLOSE = '<!-- /dsnr:manual-list -->';
 
-/**
- * Whether a criterion that applies only when the work has a thing does, from what was measured: axe found it on the page,
- * or the work's files were read for it (a timer, a drag); else said that no measure tells, for the tester to find out.
- * Axe finding nothing says nothing of whether the thing is there (its rule has nothing to look at either way). Never unsaid.
- */
+/** Axe finding nothing says nothing of whether the thing is there: its rule has nothing to look at either way. */
 const applies = (r: LedgerRow, when: string): string => {
 	const byAxe = r.by.find((p) => p.layer === 'axe' && p.status === 'found');
 	if (byAxe) return `**applies**: axe found ${byAxe.what} on the page. Check it, with what a person judges here.`;
@@ -32,7 +26,6 @@ const applies = (r: LedgerRow, when: string): string => {
 
 const named = (r: LedgerRow) => `${r.sc} ${r.name}`;
 
-/** The manual list, from a ledger of a product's own app (`run` says how it was run), its evidence in `evidence`, findings returned to `returns`. */
 export const manualSection = (ledger: Ledger, ledgerFile: string, evidence: string, returns: string): string => {
 	const at = ledger.rows.filter((r) => r.atTarget);
 	const run = ledger.run;
@@ -107,11 +100,9 @@ export const manualSection = (ledger: Ledger, ledgerFile: string, evidence: stri
 	].join('\n');
 };
 
-/** `HANDOFF.md` with the manual list in place of its last one, or added at its end; nothing else in it changes. */
 export const withManualSection = (handoff: string | null, ...args: Parameters<typeof manualSection>): string =>
 	withMarked(handoff, OPEN, CLOSE, manualSection(...args));
 
-/** Whether `HANDOFF.md` carries the manual list this ledger writes; a gate refuses one that does not. */
 export const manualListFault = (handoff: string | null, ...args: Parameters<typeof manualSection>): string | null =>
 	handoff?.includes(manualSection(...args))
 		? null

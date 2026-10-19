@@ -29,11 +29,8 @@ export interface RuntimeEvents {
 }
 
 export interface RuntimeDeps {
-	/** Injected so the process lifecycle can be tested without a real dev server. */
 	spawnProcess: typeof spawn;
-	/** Returns true once the preview answers. Injected for the same reason. */
 	probe: (port: number) => Promise<boolean>;
-	/** How long to wait for a preview to answer before calling it failed. */
 	previewTimeoutMs: number;
 }
 
@@ -56,14 +53,12 @@ export const defaultDeps: RuntimeDeps = {
 interface Running {
 	child: ChildProcess;
 	status: PreviewStatus;
-	/** Which project this process is serving, for commands that serve one. */
 	projectId: string | null;
 }
 
 /**
- * A preview is shown inside DSNR, so the server behind it must not also open a browser tab, as most dev servers do by
- * default. The switch differs by tool: `CI` (rsbuild, and many that read it as "no interactive extras") and
- * `BROWSER=none` (Vite, webpack-dev-server, Create React App) cover the common ones. Only for commands that serve a preview.
+ * A preview is shown inside DSNR, so its server must not also open a browser tab, as most dev servers do by default:
+ * `CI` (rsbuild and others) and `BROWSER=none` (Vite, webpack-dev-server, Create React App) cover the common ones.
  */
 const QUIET_PREVIEW = { CI: 'true', BROWSER: 'none' } as const;
 

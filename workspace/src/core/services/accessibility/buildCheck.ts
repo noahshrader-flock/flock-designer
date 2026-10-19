@@ -1,8 +1,4 @@
-/**
- * A prototype build's own accessibility check, run by the agent after each build: axe at the product's target and the
- * probe's light subset, in each state, said as a build says an error. The agent fixes for at most two rounds; what is
- * left is kept with the page, so saving puts it on the record with why. A check that cannot run never stops a build.
- */
+// A check that cannot run never stops a build.
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import type { AccessibilityIssue, AccessibilityResult } from '../../../shared/contract';
@@ -15,27 +11,23 @@ import { jsonFile, writeAtomic } from '../platform/jsonFile';
 import { type CellResult, cellLines } from './probe/cells';
 import { type MeasureBrowser, measurePrototype, sharedIn } from './prototypeMeasure';
 
-/** How many rounds a build's check sends back to the agent before what is left is left. */
 export const MOST_ROUNDS = 2;
 
-/** What a build's check is given, by the task that asks for it: where the page and its shared files are, the target, and where its record goes. */
 export interface CheckConfig {
 	projectId: string;
 	name: string;
-	/** What it is, in words, for the record. */
 	of: string;
 	page: string;
 	source: string;
 	sharedDir: string;
 	target: DeclaredTarget;
-	/** Where the page's accessibility check is kept, beside the page, so the panel shows what the build found. */
+	/** Beside the page, so the panel shows what the build found. */
 	cache: string;
-	/** Where the check keeps its rounds and what it found, beside the page. */
 	record: string;
 }
 
-/** What a build's check found, kept beside the page: of which page (its hash), in how many rounds, and whether what is left was left. */
 export interface CheckRecord {
+	/** The page's hash. */
 	page: string;
 	rounds: number;
 	left: boolean;
@@ -46,7 +38,7 @@ export interface CheckRecord {
 
 const hashOf = (html: string) => createHash('sha256').update(html).digest('hex').slice(0, 16);
 
-/** What of a check the agent fixes: axe's findings but words, and the probe's at the target. What is above it, and words, are said, not sent back. */
+/** Findings above the target, and words, are said, not sent back to the agent. */
 const toFix = (result: AccessibilityResult, views: CheckRecord['views'], target: DeclaredTarget) => ({
 	axe: result.violations.filter((i) => !WORDS.has(i.rule)),
 	probe: views.flatMap((v) => v.results.filter((r) => r.status === 'found' && atTarget(r.sc, target.target)).map((r) => ({ r, state: v.state }))),
@@ -58,7 +50,6 @@ const toFix = (result: AccessibilityResult, views: CheckRecord['views'], target:
 const readRecord = (file: string): CheckRecord | null =>
 	jsonFile<CheckRecord | null>(file, { parse: (raw) => raw as CheckRecord, fallback: null }).read();
 
-/** What the agent is told: what to fix, round by round, then what is left; and what is for a person. */
 const checkText = (config: CheckConfig, fix: ReturnType<typeof toFix>, rounds: number, left: boolean): string => {
 	const count = fix.axe.length + fix.probe.length;
 	const where = (state: string, views: number) => (views > 1 ? `, in ${state}` : '');
@@ -78,7 +69,7 @@ const checkText = (config: CheckConfig, fix: ReturnType<typeof toFix>, rounds: n
 		? [`(${fix.readiness} probe finding${fix.readiness === 1 ? '' : 's'} above the target were left out: readiness, not this build's.)`]
 		: [];
 	const at = `at ${targetLine(config.target)}`;
-	// What did not run is said with why: none found is only of what was measured.
+	// None found is only of what was measured, so what did not run is said.
 	const unmeasured = fix.notRun.length
 		? ['', 'Not run, so not measured:', ...fix.notRun.flatMap(({ r, state }) => cellLines(r, where(state, 2)))]
 		: [];
@@ -103,10 +94,7 @@ const checkText = (config: CheckConfig, fix: ReturnType<typeof toFix>, rounds: n
 	].join('\n');
 };
 
-/**
- * Checks a built page as its task asks (`config`), counts the round, keeps what it found beside the page, and says what
- * to fix. Exits as a build does: 1 while there is something to fix and rounds are left, else 0.
- */
+/** Exits as a build does: 1 while there is something to fix and rounds are left, else 0. */
 export const checkBuild = async (config: CheckConfig, browser: MeasureBrowser): Promise<{ text: string; code: number }> => {
 	const html = readFileSync(config.page, 'utf8');
 	const measured = await measurePrototype({
@@ -129,13 +117,9 @@ export const checkBuild = async (config: CheckConfig, browser: MeasureBrowser): 
 	return { text: checkText(config, fix, rounds, left), code: needs && !left ? 1 : 0 };
 };
 
-/** Why what a build's check found was left, as the record says it. */
 export const LEFT = `the build's own check sent it back ${MOST_ROUNDS} times, and it was still there`;
 
-/**
- * What a saved page's build check puts on its record (`recordFiles`): the check of exactly this page, or null when it was
- * not checked as it is saved (it changed after, or was never checked), so nothing stale goes on the record.
- */
+/** Null when this exact page was not checked (it changed after, or was never checked), so nothing stale goes on the record. */
 export const checkedAsSaved = (config: Pick<CheckConfig, 'projectId' | 'name' | 'of' | 'record'>, html: string): MeasureRecord | null => {
 	const record = readRecord(config.record);
 	if (!record || record.page !== hashOf(html)) return null;

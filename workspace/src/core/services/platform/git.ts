@@ -21,9 +21,8 @@ const queues = new Map<string, Promise<unknown>>();
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /**
- * Why git did not do what it was asked: it ran and said no (`failed`, with its exit code), ran past its time, found the
- * repository held by another process past every retry, or is not on this machine. Kept on the error, so a caller tells
- * "not there" from "could not look" (`saidNo`), and never forgets what it could not check.
+ * Kept on the error, so a caller tells "not there" from "could not look" (`saidNo`), and never forgets what it could not
+ * check.
  */
 export type GitFailure = 'failed' | 'timeout' | 'locked' | 'notInstalled';
 export class GitError extends Error {
@@ -51,12 +50,10 @@ export interface GitOptions {
 	/** `runFile`'s limit when not given: a hung command would hold up every other one on its repository. */
 	timeoutMs?: number;
 	env?: Record<string, string>;
-	/** What the command reads from its input (`cat-file --batch-check`), given all at once. */
 	input?: string;
 	/**
-	 * Trimmed unless false: for a command that prints a value (a commit, a branch, a count). A file's contents are read
-	 * with `trim: false`, since their white space at either end is the file's own, and a file read trimmed and written
-	 * back would lose its last newline.
+	 * Trimmed unless false. Read a file's contents with `trim: false`: a file read trimmed and written back would lose its
+	 * last newline.
 	 */
 	trim?: boolean;
 }
@@ -107,7 +104,6 @@ const queued = (root: string, args: string[], options: GitOptions): Promise<stri
 	return result;
 };
 
-/** Runs git in `root`, on that repository's queue: what it printed, trimmed unless `trim: false`. */
 export const git = (root: string, args: string[], options: GitOptions = {}): Promise<string> =>
 	queued(root, args, options).then((out) => (options.trim === false ? out : out.trim()));
 
@@ -138,9 +134,8 @@ export const listBranches = async (root: string, prefix: string): Promise<string
 };
 
 /**
- * A read-only copy of `branch` at `dir`, for an agent to look at without the person's own checkout
- * being switched: a git worktree on a detached HEAD, made once and moved to the branch each time.
- * Nothing in the person's working tree, index or current branch changes.
+ * A git worktree on a detached HEAD, made once and moved to the branch each time: nothing in the person's working tree,
+ * index or current branch changes.
  */
 export const readTreeAt = async (root: string, dir: string, branch: string): Promise<string> => {
 	if (!(await branchExists(root, branch))) throw new Error(`There is no branch called ${branch} in ${basename(root)}.`);
@@ -158,13 +153,12 @@ export const readTreeAt = async (root: string, dir: string, branch: string): Pro
 	return git(dir, ['rev-parse', 'HEAD']);
 };
 
-/** How many branches are offered to start from: past this, the most recently committed to are enough. */
+/** Past this, the most recently committed to are enough. */
 const MAX_BASES = 300;
 
 /**
- * The branches work can start from, the one most recently committed to first: local ones, and ones only on GitHub
- * (`origin`), which a fresh clone has few of locally. Each by its name, with the ref it is read from: the local branch
- * when there is one, since that is what work starts from.
+ * Ones only on `origin` too, since a fresh clone has few locally. The ref is the local branch when there is one, since
+ * that is what work starts from.
  */
 const baseRefs = async (root: string): Promise<{ name: string; ref: string }[]> => {
 	const out = await git(root, ['for-each-ref', '--sort=-committerdate', '--format=%(refname)', 'refs/heads/', 'refs/remotes/origin/']);
@@ -182,10 +176,7 @@ const baseRefs = async (root: string): Promise<{ name: string; ref: string }[]> 
 	return bases;
 };
 
-/**
- * Which of the branches work can start from have `file`, asked of git once however many there are, in the same
- * order. How the ones that can be worked in (they carry the setup file) are told from the ones that cannot.
- */
+/** Asked of git once however many branches there are. */
 export const branchesWithFile = async (root: string, file: string): Promise<string[]> => {
 	const bases = await baseRefs(root);
 	if (bases.length === 0) return [];
@@ -270,18 +261,15 @@ export const createBranch = async (root: string, branch: string, from: string): 
 	await git(root, ['checkout', '-b', branch, from]);
 };
 
-/** `[bot]` accounts and automation are not people working on a design. */
 const isPerson = (name: string): boolean => name !== '' && !isBot(name);
 
 /** How long asking the remote for its default branch may take: a clone's own record is asked first, and almost always says. */
 const REMOTE_TIMEOUT_MS = 30_000;
-/** Each clone's default branch, once known: it is asked of the remote at most once a session. */
 const defaults = new Map<string, Promise<string | null>>();
 
 /**
- * The branch GitHub calls a clone's repository's default, the one answer every part of DSNR asks: git's own record of it
- * (`origin/HEAD`, which cloning sets), else asked of the remote, once a session for each clone; null if neither says.
- * Never guessed from a branch's name: a clone with a `develop` whose default is `main` is `main`'s.
+ * The one answer every part of DSNR asks; null if neither `origin/HEAD` nor the remote says. Never guessed from a branch's
+ * name: a clone with a `develop` whose default is `main` is `main`'s.
  */
 export const defaultBranch = (root: string): Promise<string | null> => {
 	const key = resolve(root);
@@ -297,10 +285,7 @@ export const defaultBranch = (root: string): Promise<string | null> => {
 	return asked;
 };
 
-/**
- * What a branch is measured against: the remote's copy of the default branch, else the clone's own; null when there is
- * no default, in which case nobody is credited rather than everybody.
- */
+/** Null when there is no default, in which case nobody is credited rather than everybody. */
 const trunk = async (root: string): Promise<string | null> => {
 	const name = await defaultBranch(root);
 	if (name === null) return null;
@@ -315,16 +300,14 @@ const trunk = async (root: string): Promise<string | null> => {
 	return null;
 };
 
-/** Someone who committed, as git has them. */
 export interface Author {
 	name: string;
 	email: string;
 }
 
 /**
- * Who has committed on a branch, beyond what is already on the trunk, in the order they first appear. The email is only
- * for telling who is who (`isSamePerson`); what is kept or shown of a person is their name (`peopleOn`), since a shared
- * repository is no place for anyone's email address.
+ * The email is only for telling who is who (`isSamePerson`); what is kept or shown of a person is their name, since a
+ * shared repository is no place for anyone's email address.
  */
 export const branchAuthors = async (root: string, branch: string): Promise<Author[]> => {
 	const base = await trunk(root);
@@ -338,11 +321,10 @@ export const branchAuthors = async (root: string, branch: string): Promise<Autho
 	return [...seen.values()];
 };
 
-/** Whether a commit's author is the person this machine commits as: the same email, or failing that the same name. */
 export const isSamePerson = (me: Author, other: Author): boolean =>
 	(me.email !== '' && other.email.toLowerCase() === me.email.toLowerCase()) || (me.name !== '' && other.name.toLowerCase() === me.name.toLowerCase());
 
-/** Who this machine commits as. Empty strings when git has no identity set. */
+/** Empty strings when git has no identity set. */
 export const localIdentity = async (root: string): Promise<Author> => {
 	const read = async (key: string) => {
 		try {
@@ -355,28 +337,25 @@ export const localIdentity = async (root: string): Promise<Author> => {
 };
 
 /**
- * Where `origin` points, as git resolves it (its `insteadOf` rules, a worktree's shared config), or null when there is
- * none. For one repository; a scan of many reads `.git/config` itself (`originOf`), sparing a process per folder.
+ * As git resolves it (its `insteadOf` rules, a worktree's shared config). For one repository; a scan of many reads
+ * `.git/config` itself (`originOf`), sparing a process per folder.
  */
 export const originUrl = async (root: string): Promise<string | null> => (await git(root, ['remote', 'get-url', 'origin']).catch(() => '')) || null;
 
-/** The repository a clone is of, on its host (`owner/repo`, from its `origin`), or null: the same on every machine. */
+/** `owner/repo`, the same on every machine. */
 export const repositoryOf = async (root: string): Promise<string | null> => {
 	const origin = await originUrl(root);
 	return origin === null ? null : parseRemote(origin);
 };
 
-/** Whether `path` is in `ref` (a commit, or a branch's full ref). */
+/** `ref`: a commit, or a branch's full ref. */
 export const hasFileAt = (root: string, ref: string, path: string): Promise<boolean> =>
 	git(root, ['cat-file', '-e', `${ref}:${path}`]).then(
 		() => true,
 		() => false,
 	);
 
-/**
- * A file as `ref` has it, whole, with its blob's sha; null when git says it is not there, and an error for anything that
- * stopped it looking.
- */
+/** Null when git says it is not there; an error for anything that stopped it looking. */
 export const fileAt = async (root: string, ref: string, path: string): Promise<{ text: string; sha: string } | null> => {
 	const sha = await git(root, ['rev-parse', '--verify', '--quiet', `${ref}:${path}`]).catch((err: unknown) =>
 		saidNo(err) ? null : Promise.reject(err),
@@ -385,15 +364,14 @@ export const fileAt = async (root: string, ref: string, path: string): Promise<{
 	return { text: await git(root, ['cat-file', 'blob', sha], { trim: false }), sha };
 };
 
-/** Whether a commit since `commit` changed `path`. */
 export const changedSince = async (root: string, commit: string, path: string): Promise<boolean> =>
 	(await git(root, ['diff', '--name-only', commit, 'HEAD', '--', path])) !== '';
 
-/** The commit `branch` is at, or null when git says there is no such branch; an error for anything that stopped it looking. */
+/** Null when git says there is no such branch; an error for anything that stopped it looking. */
 export const branchTip = (root: string, branch: string): Promise<string | null> =>
 	git(root, ['rev-parse', '--verify', '--quiet', `refs/heads/${branch}`]).catch((err: unknown) => (saidNo(err) ? null : Promise.reject(err)));
 
-/** Whether this clone has `commit` (one GitHub has may not be fetched yet): false only when git says it has not. */
+/** One GitHub has may not be fetched yet. False only when git says it has not. */
 const hasCommit = (root: string, commit: string): Promise<boolean> =>
 	git(root, ['rev-parse', '--verify', '--quiet', `${commit}^{commit}`]).then(
 		() => true,
@@ -444,8 +422,7 @@ export const pushBranch = async (root: string, branch: string): Promise<{ pushed
 };
 
 /**
- * When work on a branch began: the date of its first commit beyond the trunk, so a project an agent
- * built in a terminal, which has no record to say, still has an honest start. If the trunk is not
+ * The date of its first commit beyond the trunk, so work with no record still has an honest start. If the trunk is not
  * known, or the branch has nothing of its own, the newest commit stands in. Null if git cannot say.
  */
 export const branchStartedAt = async (root: string, branch: string): Promise<string | null> => {
@@ -458,10 +435,7 @@ export const branchStartedAt = async (root: string, branch: string): Promise<str
 	return (await git(root, ['log', '-1', '--format=%aI', branch]).catch(() => '')) || null;
 };
 
-/**
- * Two changes to one text put together, as git puts two branches' changes together (`git merge-file`): what `ours` and
- * `theirs` each changed of `base`, both kept. Null when they change the same lines, which is not guessed at.
- */
+/** Null when `ours` and `theirs` change the same lines, which is not guessed at. */
 export const mergeTexts = async (base: string, ours: string, theirs: string): Promise<string | null> => {
 	const dir = join(tmpdir(), `dsnr-merge-${randomBytes(6).toString('hex')}`);
 	const [o, b, t] = ['ours', 'base', 'theirs'].map((n) => join(dir, n)) as [string, string, string];
@@ -479,7 +453,6 @@ export const mergeTexts = async (base: string, ours: string, theirs: string): Pr
 	}
 };
 
-/** A commit's files, as committed, written out into `dir` (no history, no packages): `git archive`, then `tar`, on any system. */
 export const exportCommit = async (root: string, commit: string, dir: string): Promise<void> => {
 	mkdirSync(dir, { recursive: true });
 	const tar = `${dir}.tar`;

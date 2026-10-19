@@ -6,16 +6,14 @@ import { errorText } from '../../../shared/result';
 import { HOST } from '../../../shared/vocabulary';
 
 /**
- * Publishes the person's own codebase work branches, so the design repository never points at one only this machine has.
- * Only a `feature/<project>` branch they have commits on and with a project folder, as a team's tickets use the same
- * names. Pushes are plain: a branch that has moved on GitHub is reported, never overwritten.
+ * Only a `feature/<project>` branch the person has commits on and with a project folder, as a team's tickets use the
+ * same names. Pushes are plain: a branch that has moved on GitHub is reported, never overwritten.
  */
 
 const MAX_BRANCHES = 50;
 
-/** What a run found: which branches it published, which it could not, and every branch that is this person's to publish. */
 export interface BranchSyncResult extends SyncResult {
-	/** Every branch it considered the person's own work, whether or not it needed publishing. */
+	/** Whether or not each needed publishing. */
 	mine: string[];
 }
 
@@ -34,7 +32,6 @@ export const syncBranches = async ({ root, descriptor, projects }: BranchSyncInp
 
 	const me = await localIdentity(root);
 
-	// Which of them are this person's to publish.
 	const mine: string[] = [];
 	for (const { branch } of await codebaseBranches(root, descriptor, projects, MAX_BRANCHES)) {
 		const authors = await branchAuthors(root, branch).catch(() => []);
@@ -42,7 +39,6 @@ export const syncBranches = async ({ root, descriptor, projects }: BranchSyncInp
 	}
 	if (mine.length === 0) return { published, problems, mine };
 
-	// What GitHub has of them, in one round trip.
 	let remote: Map<string, string>;
 	try {
 		const out = await git(root, ['ls-remote', '--heads', 'origin', `refs/heads/${prefixOf(descriptor.branchPattern.codebase)}*`]);
@@ -73,7 +69,7 @@ export const syncBranches = async ({ root, descriptor, projects }: BranchSyncInp
 		const here = await branchTip(root, branch);
 		if (here === null) continue;
 		const there = remote.get(branch);
-		if (there === here) continue; // already published, exactly
+		if (there === here) continue;
 		if (there !== undefined) {
 			// Only a fast-forward goes. If GitHub has commits this machine lacks (or has never seen), it is a conversation, not a push.
 			const ahead = await isAncestor(root, there, here);

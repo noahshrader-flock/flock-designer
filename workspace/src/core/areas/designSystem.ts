@@ -5,7 +5,6 @@ import { type ChangeBranches, scopeOf } from '../services/designSystem/changeBra
 import { offBase } from '../services/designSystem/handOverBranches';
 import { readVoice } from '../services/designSystem/voiceAndTone';
 
-/** What the DesignSystem calls do, each called by its handler once its arguments are checked (`calls/designSystem.ts`). */
 export const designSystemArea = (d: CallsDeps) => {
 	const {
 		componentTokens,
@@ -24,9 +23,7 @@ export const designSystemArea = (d: CallsDeps) => {
 		valueSources,
 		warm,
 	} = d;
-	/** The kinds DSNR saves itself, each saving its own kind of change. */
 	const saved: { [K in SavedKind]: ChangeBranches<ChangeKinds[K]> } = { tokens: tokenBranches, values: valueBranches, voice: voiceBranches };
-	/** Each kind of change's branches (`ChangeKinds`): every branch call is one of these, by its kind. */
 	const branches = { ...saved, handOver: handOverBranches };
 	return {
 		componentPictures: () => componentTokens.pictures(),
@@ -43,7 +40,6 @@ export const designSystemArea = (d: CallsDeps) => {
 		changeReach: (edits: TokenEdit[]) => componentTokens.reach(edits),
 		// Each value is written only as the number or colour it reads as, where it was found.
 		valueSources: (file: string, tried: TriedValue[]) => valueSources.of(file, tried),
-		// Handed to Claude Code as every hand-over is, in the library's root, with the prompt typed in.
 		handOverChanges: async (file: string | null, change: HandedChange) => {
 			if ((file === null) !== 'edits' in change)
 				throw new Error('The token changes are handed over as the tokens, and a component’s values as that component.');
@@ -59,13 +55,13 @@ export const designSystemArea = (d: CallsDeps) => {
 		changeBranch: <K extends ChangeKind>(kind: K, scope: string | null) =>
 			branches[kind].current(scopeOf(branches[kind].rules, scope)) as Promise<ChangeBranchOf<K> | null>,
 		changeScopes: (kind: ChangeKind) => branches[kind].scopes(),
-		// Never while another branch is shown: a value's save writes the files the index drew. The change is checked as its kind's.
+		// Never while another branch is shown: a value's save writes the files the index drew.
 		saveChange: <K extends SavedKind>(kind: K, scope: string | null, change: unknown) => {
 			libraryShown.refuse(shownSystem(), 'save');
 			const kept = saved[kind];
 			return kept.save(kept.rules.check(change), scopeOf(kept.rules, scope)) as Promise<ChangeBranchOf<K>>;
 		},
-		// A hand-over at the commit the person looked at: what is pushed is what they saw. Never while another branch is shown.
+		// At the commit the person looked at, so what is pushed is what they saw.
 		proposeChange: <K extends ChangeKind>(kind: K, scope: string | null, seen: { tip: string; confirmed: boolean } | null) => {
 			libraryShown.refuse(shownSystem(), 'propose');
 			const at = scopeOf(branches[kind].rules, scope);
@@ -73,7 +69,6 @@ export const designSystemArea = (d: CallsDeps) => {
 			if (seen === null) throw new Error('A hand-over is proposed at the commit that was shown.');
 			return handOverBranches.propose(at, seen.tip, seen.confirmed) as Promise<ChangeBranchOf<K>>;
 		},
-		// A hand-over forgotten is no longer shown either.
 		forgetChange: (kind: ChangeKind, scope: string | null) => {
 			const at = scopeOf(branches[kind].rules, scope);
 			const system = shownSystem();
@@ -81,8 +76,7 @@ export const designSystemArea = (d: CallsDeps) => {
 			branches[kind].forget(at);
 			return null;
 		},
-		// Preview this branch: a unit's hand-over shown in the tab once its branch is read ready from git, and the
-		// library's own branch again. Only committed work is shown, read from git's objects.
+		// Only committed work is shown, read from git's objects.
 		showHandOver: async (file: string | null) => {
 			const system = shownSystem();
 			if (system === null) throw new Error('There is no design system connected.');
@@ -99,7 +93,6 @@ export const designSystemArea = (d: CallsDeps) => {
 			if (system !== null) libraryShown.stop(system);
 			return null;
 		},
-		// Only on the person's press: it runs the agent, in a copy of the library.
 		writeValue: async (file: string, value: TriedValue) => {
 			libraryShown.refuse(shownSystem(), 'have the agent write it');
 			await valueAgent.write(file, value);

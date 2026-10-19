@@ -36,7 +36,6 @@ const STALE_MS = 5_000;
 const WAIT_MS = 2_000;
 const pause = (ms: number) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
 
-/** `work`, holding `<path>.lock`, a file only one process can make; one left longer than `STALE_MS` is taken over. */
 const locked = (path: string, work: () => void): void => {
 	const lock = `${path}.lock`;
 	try {
@@ -64,7 +63,6 @@ const locked = (path: string, work: () => void): void => {
 	}
 };
 
-/** A file's text, or null when it is not there or cannot be read. */
 export const readText = (path: string): string | null => {
 	try {
 		return readFileSync(path, 'utf8');
@@ -73,7 +71,7 @@ export const readText = (path: string): string | null => {
 	}
 };
 
-/** Writes `data` whole: beside the file first, then renamed over it. Throws when it cannot, for a caller that must know. */
+/** Throws when it cannot, unlike `jsonFile`'s write, for a caller that must know. */
 export const writeAtomic = (path: string, data: string | Buffer, mode?: number): void => {
 	mkdirSync(dirname(path), { recursive: true });
 	const next = `${path}.${process.pid}.new`;

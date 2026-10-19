@@ -21,9 +21,8 @@ import { loginFromNoreply } from '../../../shared/hostUrls';
 import { WORK_FILE, workPath } from '../../../shared/designPaths';
 
 /**
- * Named attempts at the question, and their record: in the design repository, one folder per project, never the product
- * checkout. There, picking up work would need its branch first, per-project state would need keeping off `develop`, and
- * the dirty tree would block the next piece of work on its own bookkeeping.
+ * Records live in the design repository, never the product checkout: there, picking up work would need its branch first,
+ * per-project state would need keeping off `develop`, and the dirty tree would block the next piece of work.
  */
 
 /**
@@ -36,7 +35,6 @@ export const assertUsableProjectId = (projectId: string): void => {
 	}
 };
 
-/** A project's records file, `work.json`, inside the records folder. */
 export const recordPath = (recordsRoot: string, projectId: string): string => {
 	assertUsableProjectId(projectId);
 	return resolveInside(recordsRoot, join(projectId, WORK_FILE));
@@ -48,7 +46,7 @@ export const workInFolder = (dir: string): Work[] | null => {
 	return existsSync(path) ? parseWork(readFileSync(path, 'utf8')) : [];
 };
 
-/** A project's records, from the records folder: refused when its file cannot be read. */
+/** Throws when its file cannot be read, unlike `workInFolder`. */
 export const readWork = (recordsRoot: string, projectId: string): Work[] => {
 	const records = workInFolder(dirname(recordPath(recordsRoot, projectId)));
 	if (records === null) throw new Error(unreadableWork(workPath(projectId)));
@@ -60,14 +58,10 @@ const writeWork = (recordsRoot: string, projectId: string, records: Work[]): voi
 	writeAtomic(recordPath(recordsRoot, projectId), serializeWork(records));
 };
 
-/** The one `feature/<project-id>` branch for real-code work. */
 export const codebaseBranchFor = (descriptor: WorkspaceDescriptor, projectId: string): string =>
 	descriptor.branchPattern.codebase.replace('<project-id>', projectId);
 
-/**
- * Starts codebase work on a project: its branch, and a record reviewers can read. (A prototype has no branch: see
- * `recordPrototype`.) It is one branch per project, so one already started by hand is adopted and recorded, not refused.
- */
+/** One branch per project, so one already started by hand is adopted and recorded, not refused. */
 export const createCodebaseWork = async (
 	productRoot: string,
 	recordsRoot: string,
@@ -118,8 +112,7 @@ export const peopleOn = async (productRoot: string, branch: string, signedInLogi
 };
 
 /**
- * Saves where reviewers can open a piece of work. Only the record changes; publishing it is the
- * caller's step, so a person who is signed out still keeps the address.
+ * Only the record changes; publishing it is the caller's step, so a person who is signed out still keeps the address.
  */
 export const recordPreview = (
 	recordsRoot: string,
@@ -128,7 +121,6 @@ export const recordPreview = (
 	previewUrl: string,
 	/** The commit that was shared, so a reviewer's comment says what it was made against. */
 	commit?: string,
-	/** The pull request the preview was built from. */
 	pullRequest?: string,
 ): Work => {
 	const records = readWork(recordsRoot, projectId);
@@ -144,8 +136,7 @@ export const recordPreview = (
 };
 
 /**
- * Keeps a handoff's verdict on a project's codebase work: the commit it was found ready at, or none once it was found not
- * ready. Written only when it changes, so asking again writes nothing. Publishing it is the caller's step, as a preview's is.
+ * `readyAt` null means found not ready. Written only when it changes; publishing it is the caller's step.
  */
 export const recordHandoff = (recordsRoot: string, projectId: string, readyAt: string | null): void => {
 	const records = readWork(recordsRoot, projectId);
@@ -161,9 +152,8 @@ export const recordHandoff = (recordsRoot: string, projectId: string, readyAt: s
 };
 
 /**
- * Codebase work started outside the app (an agent in a terminal, or by hand) has a branch and no record. The branch is
- * the evidence, so the record is made from it rather than refusing the work: null only if the branch is not there. A
- * prototype is a page, never a branch, so it is never made this way.
+ * Work started outside the app has a branch and no record; the branch is the evidence, so the record is made from it
+ * rather than refusing the work. Null only if the branch is not there.
  */
 const adoptUnrecorded = async (productRoot: string, descriptor: WorkspaceDescriptor, projectId: string, name: string): Promise<Work | null> => {
 	const branch = name === 'codebase' ? codebaseBranchFor(descriptor, projectId) : null;
@@ -174,9 +164,8 @@ const adoptUnrecorded = async (productRoot: string, descriptor: WorkspaceDescrip
 };
 
 /**
- * A piece of work's record, written now if it has none. Everything that acts on one (sharing it,
- * addressing its comments, saying which commit a comment was made against) goes through this, so work an agent
- * built in a terminal behaves exactly like work made in the app, whether or not the app ever switched branches for it.
+ * Everything that acts on a record goes through this, so work an agent built in a terminal behaves exactly like work made
+ * in the app.
  */
 export const recordedWork = async (
 	productRoot: string,

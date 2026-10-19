@@ -1,7 +1,6 @@
 /**
- * The accessibility ledger: one record per `dsnr accessibility` run, a row for each WCAG A and AA criterion with the
- * layers that reached it, its status and the evidence that rests on. `review.md`'s section is written from it, so the
- * record people read and the one a gate checks are one. Never a pass: a criterion is at most measured, with none found.
+ * `review.md`'s section is written from the ledger, so the record people read and the one a gate checks are one. Never a
+ * pass: a criterion is at most measured, with none found.
  */
 import axe from 'axe-core';
 import { criterionOf, whereFound } from '../../../shared/accessibility';
@@ -12,17 +11,16 @@ import { plural } from '../../../shared/plural';
 import { CELLS, type CellResult } from './probe/cells';
 
 /**
- * A criterion's status, strongest first: `found` by a layer; `notRun`, a layer that could measure it did not (with why);
- * `measured` by every layer that reached it, with none found of what each measures; `notApplicable`, the page has nothing
- * a layer measures; `person`, no layer reaches it, and only a person can check it.
+ * Strongest first: `notRun`, a layer that could measure it did not; `measured`, none found of what each layer measures;
+ * `notApplicable`, the page has nothing a layer measures; `person`, no layer reaches it.
  */
 export type LedgerStatus = 'found' | 'notRun' | 'measured' | 'notApplicable' | 'person';
 
-/** One layer's measure of a criterion: axe (its rule, or `axe` when none of its rules found anything), or a probe cell where it ran. */
 export interface LedgerPart {
 	layer: 'axe' | 'probe';
+	/** Axe's rule, or `axe` when none of its rules found anything; or a probe cell. */
 	what: string;
-	/** Where: the states axe found it in, or a probe cell's view, or `the source`. */
+	/** The states axe found it in, or a probe cell's view, or `the source`. */
 	where: string;
 	status: Exclude<LedgerStatus, 'person'>;
 }
@@ -30,63 +28,53 @@ export interface LedgerPart {
 export interface LedgerRow {
 	sc: string;
 	name: string;
-	/** Whether the product's target asks for it; one it does not is readiness, never counted as the target's. */
+	/** One the target does not ask for is readiness, never counted as the target's. */
 	atTarget: boolean;
 	status: LedgerStatus;
-	/** What each layer measured of it, one apiece: axe's rules, or a probe cell in a view or the source, and what it found. */
 	by: LedgerPart[];
-	/** What was found, a line each: the rule or cell, where, and how much. */
 	found: string[];
-	/** The evidence files the status rests on, from the design repository's root. */
+	/** From the design repository's root. */
 	evidence: string[];
 	/** Why it was not run, or does not apply; or, found, why it was left as it is. */
 	why?: string;
-	/** What a person still judges of it, whatever a machine found. */
 	person: string | null;
-	/** When the manual list carries it (assistive technology, only if the work has something, the page around it). */
 	manual: ManualMark | null;
 }
 
-/** The layers that reached a criterion, as its parts say. */
 export const layersOf = (r: Pick<LedgerRow, 'by'>): ('axe' | 'probe')[] => [...new Set(r.by.map((p) => p.layer))];
 
-/** How the work was run for a measure of a product's own app: what a person runs, where, which pages, and on what data. */
 export interface LedgerRun {
 	command: string;
 	address: string;
 	pages: { name: string; path: string }[];
 	data: string;
-	/** The assistive technology the product's manifest says testers cover at least; null when it names none. */
 	assistiveTechnology: string[] | null;
 }
 
-/** How a ledger is written: raised when what it holds changes, so one an older DSNR wrote is measured again, never misread. */
+/** Raise when what a ledger holds changes, so one an older DSNR wrote is measured again, never misread. */
 export const LEDGER_VERSION = 2;
 
 export interface Ledger {
 	version: typeof LEDGER_VERSION;
-	/** Which measure of the project it is (a prototype's name, or `app`), and what that is, in words. */
+	/** A prototype's name, or `app`. */
 	key: string;
 	of: string;
 	at: string;
 	target: string;
 	axe: string;
 	depth: string;
-	/** How it was run, for a product's own app: what the manual list tells a tester. */
 	run?: LedgerRun;
-	/** What axe's best-practice rules found beside WCAG (a heading out of order), a line each: never a criterion's. */
+	/** Never a criterion's. */
 	bestPractice: { rule: string; line: string }[];
 	rows: LedgerRow[];
 }
 
-/** One view the probe measured: its name, what each cell found, and the file its results are in. */
 interface LedgerView {
 	state: string;
 	results: CellResult[];
 	evidence: string;
 }
 
-/** The criteria axe has a rule for, among the tags a run used. */
 const axeReaches = (tags: string[]): Set<string> =>
 	new Set(
 		axe
@@ -98,7 +86,6 @@ const axeReaches = (tags: string[]): Set<string> =>
 
 const STRONGEST: LedgerStatus[] = ['found', 'notRun', 'measured', 'notApplicable', 'person'];
 
-/** The ledger of one run: each criterion from what axe found (`result`) and what the probe found in each view and the source. */
 export const ledgerOf = ({
 	key,
 	of,
@@ -121,7 +108,7 @@ export const ledgerOf = ({
 	sourceFile: string;
 	target: DeclaredTarget;
 	depth: string;
-	/** Why what was found was left as it is (a build's two rounds of its own check used up): said on each found row. */
+	/** Said on each found row. */
 	left?: string;
 	run?: LedgerRun;
 }): Ledger => {
@@ -151,8 +138,7 @@ export const ledgerOf = ({
 			undecided.push(...result.incomplete.filter((i) => i.criteria.includes(c.sc)).map((i) => i.rule));
 		}
 		const own = cells.filter(({ r }) => r.sc === c.sc);
-		// A cell that measures this criterion and was not run in this measure (a light one, a build's): not run, said, never
-		// "a person's" or "measured" in its place.
+		// A cell not run in this measure (a light one) is said as not run, never "a person's" or "measured" in its place.
 		const missing = CELLS.filter((cell) => cell.sc === c.sc && !own.some(({ r }) => r.cell === cell.id));
 		for (const cell of missing) {
 			by.push({ layer: 'probe', what: cell.id, where: cell.kind === 'source' ? 'the source' : 'every page', status: 'notRun' });
@@ -201,9 +187,8 @@ export const ledgerOf = ({
 };
 
 /**
- * The standard's ten manual checks (a test holds the names to `standards/universal/accessibility.md`), each with the
- * criteria and best-practice rules machines measure toward it; one no measure reaches has none. Each stays a person's:
- * what machines measured is beside it, never in its place.
+ * A test holds the names to `standards/universal/accessibility.md`. Each stays a person's: what machines measured is
+ * beside it, never in its place.
  */
 export const TEN_CHECKS: { name: string; sc: string[]; bestPractice?: string[] }[] = [
 	{ name: 'Keyboard reachability', sc: ['2.1.1'] },
@@ -218,7 +203,7 @@ export const TEN_CHECKS: { name: string; sc: string[]; bestPractice?: string[] }
 	{ name: 'Reduced motion', sc: [] },
 ];
 
-/** A row's status in words, the same in the review record and wherever else it is said. A "not run" always says because. */
+/** A "not run" always says because. */
 export const statusLine = (r: LedgerRow): string => {
 	if (r.status === 'found') return `found (${r.found.join('; ')})${r.why ? `, left because ${r.why}` : ''}`;
 	if (r.status === 'notRun') return `not run, because ${r.why ?? 'it was not run'}`;
@@ -227,11 +212,10 @@ export const statusLine = (r: LedgerRow): string => {
 	return 'left to check by hand';
 };
 
-/** Where `dsnr` writes a run's section in `review.md`, between these, so nothing anyone else wrote there is touched. */
+/** Between these, so nothing anyone else wrote in `review.md` is touched. */
 const opening = (key: string) => `<!-- dsnr:accessibility ${key} -->`;
 const closing = (key: string) => `<!-- /dsnr:accessibility ${key} -->`;
 
-/** The accessibility section of `review.md`, written from the ledger: the ten checks, then what else was found, what was not run, and what is above the target. */
 export const reviewSection = (ledger: Ledger, ledgerFile: string): string => {
 	const at = ledger.rows.filter((r) => r.atTarget);
 	const sc = (n: string) => ledger.rows.find((r) => r.sc === n) as LedgerRow;
@@ -291,14 +275,10 @@ export const reviewSection = (ledger: Ledger, ledgerFile: string): string => {
 	].join('\n');
 };
 
-/** `review.md` with this run's section put in place of its last one, or added at its end; nothing else in it changes. */
 export const withReviewSection = (review: string | null, ledger: Ledger, ledgerFile: string): string =>
 	withMarked(review, opening(ledger.key), closing(ledger.key), reviewSection(ledger, ledgerFile));
 
-/**
- * A file with a section `dsnr` writes, between its `open` and `close` markers (the section starts and ends with them):
- * put in place of the last one, or added at the end. Nothing else in the file changes.
- */
+/** `section` must start and end with its markers. Nothing else in the file changes. */
 export const withMarked = (text: string | null, open: string, close: string, section: string): string => {
 	const was = text ?? '';
 	const [start, end] = [was.indexOf(open), was.indexOf(close)];
@@ -306,10 +286,6 @@ export const withMarked = (text: string | null, open: string, close: string, sec
 	return `${was.trimEnd()}${was.trim() ? '\n\n' : ''}${section}\n`;
 };
 
-/**
- * What a gate refuses in a ledger: a status resting on no evidence file, or on one that is not there; a "not run" or a
- * "does not apply" with no reason; and a review record whose section is not the one this ledger writes. Empty when none.
- */
 export const ledgerFaults = (ledger: Ledger, ledgerFile: string, exists: (path: string) => boolean, review: string | null): string[] => [
 	...ledger.rows.flatMap((r) => {
 		const faults: string[] = [];
@@ -325,11 +301,7 @@ export const ledgerFaults = (ledger: Ledger, ledgerFile: string, exists: (path: 
 			]),
 ];
 
-/**
- * How one run's ledger differs from the last: what is newly found; what was found and is now measured with none found
- * (fixed, by what found it); and every other change of status. A criterion found once and not measured now (a light run
- * after a full one, a page that did not open) has changed, and is not said to be fixed.
- */
+/** A criterion found once and not measured now (a light run after a full one) has changed, and is not said to be fixed. */
 export const ledgerChanges = (
 	before: Ledger,
 	after: Ledger,

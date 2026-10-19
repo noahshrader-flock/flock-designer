@@ -7,9 +7,8 @@ import { CHANGE_REQUEST } from '../../../shared/vocabulary';
 import type { ShareTools } from '../../ports';
 
 /**
- * Putting codebase work in front of someone not on this machine: push the branch, open a *draft* pull request (the
- * repository's CI builds pull requests), wait for the deploy workflow, and record the address the descriptor's pattern
- * makes with the pull request's number. A function over `ShareTools`, so its order and failures test with no network.
+ * A *draft* pull request because the repository's CI builds pull requests. A function over `ShareTools`, so its order and
+ * failures test with no network.
  */
 
 export interface ShareRequest {
@@ -22,11 +21,10 @@ export interface ShareRequest {
 }
 
 export interface ShareTimings {
-	/** How often the checks are looked at. */
 	pollMs: number;
 	/** How long to wait for the deploy workflow to show up at all. */
 	startupMs: number;
-	/** How long a build may take before this gives up waiting (it may still finish). */
+	/** Giving up waiting; the build may still finish. */
 	timeoutMs: number;
 	/** Allowance for this machine's clock and GitHub's differing. */
 	skewMs: number;
@@ -36,7 +34,6 @@ export const DEFAULT_TIMINGS: ShareTimings = { pollMs: 10_000, startupMs: 180_00
 
 export const previewUrlFor = (share: ShareDescriptor, pr: number): string => share.url.replace('<pr>', String(pr));
 
-/** What the pull request says about itself, so nobody mistakes it for work headed to the trunk. */
 export const pullRequestText = (projectId: string, name: string): { title: string; body: string } => ({
 	title: `Preview: ${projectId} ${name} (not for merge)`,
 	body: [
@@ -76,8 +73,7 @@ export const runShare = async (
 	const pr = (await tools.findPr(req.branch)) ?? (await tools.createDraftPr(req.branch, req.title, req.body));
 	if (!isLive()) throw new Error('Sharing was stopped.');
 
-	// What to wait for: the deploy workflow *for what was just pushed*. Checks left over from the
-	// previous push are not evidence about this one, so when something new went up, only checks
+	// Checks left over from the previous push are not evidence about this one, so when something new went up, only checks
 	// that started after it count. When nothing new went up, the existing ones are the answer.
 	const cutoff = pushed ? pushedAt - timings.skewMs : Number.NEGATIVE_INFINITY;
 	const waitStart = tools.now();
@@ -116,17 +112,12 @@ export const runShare = async (
 export interface ShareJob {
 	request: ShareRequest;
 	tools: ShareTools;
-	/** Saves the address, and the pull request it was built from, in the work's record and publishes it, so reviewers can open it. */
+	/** Also publishes the record, so reviewers can open the address. */
 	record(url: string, prUrl: string): Promise<void>;
 	timings?: ShareTimings;
 }
 
-/**
- * Holds the one share in progress and tells the window how it is going.
- *
- * One at a time, and it lives in the core, so leaving the screen does not lose it:
- * coming back finds it where it was. A build takes minutes.
- */
+/** Lives in the core, so leaving the screen does not lose a share that takes minutes. */
 export class ShareRunner {
 	private current: ShareStatus = { state: 'idle' };
 	private live = false;

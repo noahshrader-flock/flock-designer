@@ -1,7 +1,6 @@
 /**
- * `dsnr wcag-edition`: asks the W3C which edition of WCAG 2 is its latest published one and, when it is not the one
- * DSNR's numbers come from (`WCAG_EDITION`), opens an issue on the design repository saying so, once. Run weekly by
- * `.github/workflows/wcag-edition.yml`; what a new edition means is a person's to decide, and this makes sure one is asked.
+ * Run weekly by `.github/workflows/wcag-edition.yml`. What a new edition means is a person's to decide, so this only
+ * opens an issue, once.
  */
 
 import { WCAG_EDITION, WCAG_LATEST, editionOf } from '../shared/wcag';
@@ -12,13 +11,13 @@ import type { GitHubApi } from '../codeHost/github';
 import { readPages } from '../codeHost/paging';
 export interface WcagEditionDeps {
 	fetchText: (url: string) => Promise<string>;
-	/** GitHub, to open the issue on `repo`; null where it cannot be asked, and then the difference is only printed. */
+	/** Null where GitHub cannot be asked: the difference is then only printed. */
 	github: GitHubApi | null;
 	repo: RepoRef;
 	out: (text: string) => void;
 }
 
-/** The issue that says so: its title names what changed, so the same change is said once. */
+/** The title names what changed: it is what finds an issue already open, so the same change is said once. */
 const issueFor = (seen: { version: string; published: string } | null): { title: string; body: string } => {
 	const recorded = `WCAG ${WCAG_EDITION.version}, published ${WCAG_EDITION.published}`;
 	if (seen === null)

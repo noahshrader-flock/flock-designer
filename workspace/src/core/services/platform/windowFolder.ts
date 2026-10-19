@@ -24,7 +24,6 @@ const running = (pid: number): boolean => {
 const SLOT = /^w\d+$/;
 const TURN = /^owner-(\d+)$/;
 
-/** A folder's turns, oldest first. */
 const turnsOf = (dir: string): number[] =>
 	readdirSync(dir)
 		.flatMap((name) => {

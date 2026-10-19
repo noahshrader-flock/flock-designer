@@ -10,16 +10,11 @@ import type { GitHubApi } from './github';
 import { RepoFiles } from './repoFiles';
 import { ReviewThreads } from './reviewThreads';
 
-/**
- * The design repository, read through the API: its files (`RepoFiles`), its review threads (`ReviewThreads`), and what
- * needs both, the project list. This is what makes reviewer mode possible: a PM sees every project without cloning
- * anything or having git installed. Authors still use a real checkout: that is the only difference between the modes.
- */
+/** Read through the API so a reviewer sees every project without cloning anything or having git installed. */
 
-/** Who has committed to a project's folder, and when it last changed. */
 type Activity = { people: Person[]; updatedAt: string | null };
 
-/** A project folder's own files, as last read: everything `listProjects` shows of it but the review threads, read every time. */
+/** Everything `listProjects` shows of a folder but the review threads, which are read every time. */
 interface FolderReading {
 	records: string[];
 	work: Work[];
@@ -30,10 +25,7 @@ interface FolderReading {
 export class DesignRepo {
 	readonly files: RepoFiles;
 	readonly threads: ReviewThreads;
-	/**
-	 * Each project folder as last read, with its sha: a folder whose sha has not moved has not changed, so it is not read
-	 * again. A refresh with nothing changed asks for the folder list and the threads only, not four reads a project.
-	 */
+	/** A folder whose sha has not moved has not changed, so it is not read again. */
 	private readonly folders = new Map<string, FolderReading & { sha: string }>();
 
 	constructor(session: GitHubApi, ref: RepoRef) {
@@ -41,7 +33,6 @@ export class DesignRepo {
 		this.threads = new ReviewThreads(session, ref);
 	}
 
-	/** Every project folder, with its records, branches and open comment count. */
 	async listProjects(): Promise<Project[]> {
 		const dirs = (await this.files.list('projects')).filter((e) => e.type === 'dir' && !e.name.startsWith('_'));
 		const issues = await this.threads.byBranch();
@@ -68,7 +59,6 @@ export class DesignRepo {
 		);
 	}
 
-	/** A project folder, read again only when its sha has moved (`folders`), or the host gave none. */
 	private async readFolder(id: string, sha: string | null): Promise<FolderReading> {
 		const kept = sha === null ? undefined : this.folders.get(id);
 		if (kept && kept.sha === sha) return kept;
@@ -89,10 +79,7 @@ export class DesignRepo {
 		return reading;
 	}
 
-	/**
-	 * Who has committed to the project's own folder (brief, review, decisions), and when it last changed. Best effort:
-	 * a failure here must not hide the project list, and is null.
-	 */
+	/** Null on failure: it must not hide the project list. */
 	private async folderActivity(id: string): Promise<Activity | null> {
 		try {
 			// Newest first, as GitHub lists them.
@@ -109,27 +96,23 @@ export class DesignRepo {
 		}
 	}
 
-	/** One file from a project's folder, as text. */
 	async readRecord(id: string, name: string): Promise<string> {
 		const text = await this.files.readFile(projectPath(id, name));
 		if (text === null) throw new Error(`${name} could not be read from the design repository.`);
 		return text;
 	}
 
-	/** A project's title (its brief's heading, or its id) and its folder, from one read of its brief. */
 	private async readBrief(id: string, records: string[]): Promise<{ title: string; folder: string | null }> {
 		return fromBrief(id, records.includes('brief.md') ? await this.files.readFile(projectPath(id, 'brief.md')) : null);
 	}
 
 	/**
-	 * A project's work, from `projects/<id>/work.json`, not from branches: work branches live in the product repository,
-	 * which this is deliberately unable to see, so a PM stays out of the product's source. A missing or unreadable record
-	 * means no work recorded, never an error: a project folder exists before its first record does.
+	 * From `work.json`, not from branches: those live in the product repository, which this is deliberately unable to see.
+	 * A missing or unreadable record means no work, never an error: a project folder exists before its first record does.
 	 */
 	private async readWork(id: string, records: string[]): Promise<Work[]> {
 		if (!records.includes(WORK_FILE)) return [];
 		const text = await this.files.readFile(workPath(id));
-		// One that cannot be read is no work recorded, as a missing one is: the project is still listed.
 		return parseWork(text ?? '') ?? [];
 	}
 }

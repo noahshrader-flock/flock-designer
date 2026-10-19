@@ -1,8 +1,4 @@
-/**
- * The probe: a real browser driven over one view of a page, measuring what axe does not (the accessibility tree, a Tab
- * walk, hover, controls, fields and forms, zoom, text spacing, forced colors), with code deciding each cell (`cells.ts`).
- * Everything it measured is kept as evidence. The page's own measures are `page/probe.ts`; nothing here names a framework.
- */
+// Nothing here names a framework.
 import axe from 'axe-core';
 import PROBE from '../../../../page/probe?page';
 import {
@@ -24,14 +20,12 @@ import { decodePng } from '../../prototypes/png';
 import { within } from '../../platform/within';
 import { type CellId, type CellResult, type ProbeDepth, type ProbeFinding, cellsAt, notApplicable, notRun, resultFrom } from './cells';
 
-/** A node of the browser's accessibility tree, as puppeteer gives it. */
 export interface AxNode {
 	role: string;
 	name?: string;
 	children?: AxNode[];
 }
 
-/** The slice of puppeteer's page the probe drives, so it is said what it needs. */
 export interface ProbePage {
 	setViewport(v: { width: number; height: number; deviceScaleFactor: number }): Promise<void>;
 	emulateMediaFeatures(features: { name: string; value: string }[]): Promise<void>;
@@ -56,7 +50,6 @@ export interface ProbePage {
 	url(): string;
 }
 
-/** A file of evidence: its name in the view's folder, and what is in it. */
 export interface Evidence {
 	name: string;
 	data: string | Buffer;
@@ -64,11 +57,9 @@ export interface Evidence {
 
 export interface ProbeOptions {
 	depth: ProbeDepth;
-	/** Only these cells (a test's), else every cell of the depth. */
 	only?: CellId[];
-	/** Said as it goes: a long run is never silent. */
 	progress?: (line: string) => void;
-	/** The most a view may take: what is left when it is reached is not run, and says so. */
+	/** What is left when it is reached is not run, and says so. */
 	budgetMs?: number;
 }
 
@@ -78,45 +69,35 @@ export interface ViewProbed {
 	ms: number;
 }
 
-/** How long a view may take, at each depth: a build's light run is quick, Handoff's full run is let take longer. */
 export const BUDGET_MS: Record<ProbeDepth, number> = { light: 20_000, full: 120_000 };
-/** The most of each the probe goes through on a page, so a big page is still measured in time. */
 const MOST = { stops: 60, hovers: 25, controls: 10, buttons: 10, fields: 10, forms: 5 };
-/** How long a page is given to load, and to answer what it is asked. */
 const LOAD_MS = 20_000;
 const ASK_MS = 10_000;
 /** The longest a status message is taken to be: longer text that appears is new content, not a message. */
 const MOST_MESSAGE = 120;
-/** How long a hovered thing is watched to see that it stays (WCAG 1.4.13's "persistent"). */
+/** WCAG 1.4.13's "persistent". */
 const STAYS_MS = 1000;
 
-/** The probe's page code, put in the page before its own code runs: it watches from the start. */
 const INSTALL = `(() => { ${PROBE}; window.__dsnrProbe = __fdPage; __fdPage.watch(); })()`;
 
 const pause = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const quote = (v: unknown) => JSON.stringify(v);
 
-/**
- * A picture of the page, as a person sees it, down to a few screens long: at half size when it is wider than a phone, so
- * the evidence a run keeps in the design repository stays small.
- */
+/** At half size when wider than a phone, so the evidence kept in the design repository stays small. */
 const picture = async (page: ProbePage, width: number): Promise<Buffer> => {
 	const height = Math.min(2400, Math.max(1, Number(await page.evaluate('document.documentElement.scrollHeight'))));
 	const scale = width > 400 ? 0.5 : 1;
 	return Buffer.from(await page.screenshot({ type: 'jpeg', quality: 55, captureBeyondViewport: true, clip: { x: 0, y: 0, width, height, scale } }));
 };
 
-/** The region around a box on the page, a few pixels out so an outline round it is in it. */
+/** A few pixels out, so an outline round the box is in it. */
 const around = (b: Box) => {
 	const x = Math.max(0, b.x - 6);
 	const y = Math.max(0, b.y - 6);
 	return { x, y, width: Math.max(1, b.x + b.width + 6 - x), height: Math.max(1, b.y + b.height + 6 - y) };
 };
 
-/**
- * What focus changed in the picture of an element: how many pixels, and the strongest contrast between a pixel as it was
- * and as it is focused. No change is no focus shown; a change under 3:1 is a faint one (1.4.11).
- */
+/** No change is no focus shown; a change under 3:1 is a faint one (1.4.11). */
 export const focusChange = (plain: Buffer, focused: Buffer): { changed: number; strongest: number } => {
 	const [a, b] = [decodePng(plain), decodePng(focused)];
 	if (a.width !== b.width || a.height !== b.height) return { changed: a.width * a.height, strongest: 21 };
@@ -132,7 +113,6 @@ export const focusChange = (plain: Buffer, focused: Buffer): { changed: number; 
 	return { changed, strongest: Math.round(strongest * 100) / 100 };
 };
 
-/** A row of the contrast table: an element's text and what is behind it, in one state, and what its size asks. */
 export interface ContrastRow {
 	target: string;
 	state: string;
@@ -143,7 +123,6 @@ export interface ContrastRow {
 	below: boolean;
 }
 
-/** axe's own contrast rule, on the element at `path` (or the page), its answers and failures kept as rows of the table. */
 const contrastScript = (path: string | null, state: string) => `(async () => {
 	const at = ${path === null ? 'document' : `document.querySelector(${quote(path)})`};
 	if (!at) return [];
@@ -152,10 +131,8 @@ const contrastScript = (path: string | null, state: string) => `(async () => {
 	return [...r.violations.flatMap((v) => v.nodes.map(row(true))), ...r.passes.flatMap((v) => v.nodes.map(row(false)))];
 })()`;
 
-/** Whether two addresses are other pages: a change of the part after `#` is the same page. */
 const otherPage = (a: string, b: string) => a.split('#')[0] !== b.split('#')[0];
 
-/** A change of context within the page, as 3.2.1 and 3.2.2 mean it, in words; null when there was none. */
 const contextChange = (watched: Watched, another: { dialog: boolean; replaced: boolean }): string | null => {
 	if (watched.opened.length) return `opened a window (${watched.opened[0] || 'a blank one'})`;
 	if (another.dialog) return 'opened a dialog';
@@ -163,11 +140,10 @@ const contextChange = (watched: Watched, another: { dialog: boolean; replaced: b
 	return null;
 };
 
-/** The roles a control may have, as the page code reads them too. */
 const CONTROLS = new Set(INTERACTIVE_ROLES);
 /**
- * 4.1.2 in the accessibility tree: each control with no name. (A control's missing state is axe's: the browser gives a
- * checkbox written with a role a state of its own, so the tree cannot show it missing.)
+ * Names only: a control's missing state is axe's, since the browser gives a checkbox written with a role a state of its
+ * own, so the tree cannot show it missing.
  */
 const treeFaults = (node: AxNode | null, under: string[] = []): ProbeFinding[] => {
 	if (!node) return [];
@@ -178,10 +154,7 @@ const treeFaults = (node: AxNode | null, under: string[] = []): ProbeFinding[] =
 	return [...own, ...(node.children ?? []).flatMap((c) => treeFaults(c, [...under, label]))];
 };
 
-/**
- * Probes one view of a page (`url`, as it opens) at `depth`: each cell measured, decided, and its evidence kept. A measure
- * that fails is not run, with why; one reached after the view's time is up is not run, and says so.
- */
+/** A measure that fails, or is reached after the view's time is up, is not run, with why. */
 export const probeView = async (page: ProbePage, url: string, options: ProbeOptions): Promise<ViewProbed> => {
 	const started = Date.now();
 	const budget = options.budgetMs ?? BUDGET_MS[options.depth];
@@ -223,7 +196,6 @@ export const probeView = async (page: ProbePage, url: string, options: ProbeOpti
 		return rows;
 	};
 
-	/** Until what an action set off is done: the page has stopped changing for a moment. */
 	const settle = async () => {
 		try {
 			await ask('quiet()');
@@ -232,20 +204,15 @@ export const probeView = async (page: ProbePage, url: string, options: ProbeOpti
 			await pause(500);
 		}
 	};
-	/**
-	 * Whether the page changed context since `before` (its address then), as 3.2.1 and 3.2.2 mean it: another address, a
-	 * window or a dialog opened, or most of it replaced; null when it did not.
-	 */
 	const changeSince = async (before: string): Promise<string | null> =>
 		otherPage(before, page.url())
 			? `went to another address (${page.url()})`
 			: contextChange(await ask<Watched>('watched()'), await ask<{ dialog: boolean; replaced: boolean }>('becameAnother()'));
-	/** A cell that found none of only part of what it measures says so: not run, with what was measured, never "none found". */
+	/** A cell that found none in only part of what it measures is not run, never "none found". */
 	const onlyPart = (cells: CellId[], why: string) => {
 		for (const [i, r] of results.entries()) if (cells.includes(r.cell) && r.status === 'none') results[i] = notRun(r.cell, why);
 	};
 
-	/** Runs one measure for its cells, when any is wanted: not run when the time is up, or when it fails. */
 	const step = async (cells: CellId[], what: string, measure: () => Promise<CellResult[]>) => {
 		const want = cells.filter((c) => wanted.has(c));
 		if (want.length === 0) return;
@@ -272,7 +239,6 @@ export const probeView = async (page: ProbePage, url: string, options: ProbeOpti
 	}
 	const contrastRows: ContrastRow[] = [];
 
-	// The accessibility tree, and the structure drawn against what the markup says.
 	let tree: AxNode | null = null;
 	await step(['structure', 'name-role-value'], 'the accessibility tree', async () => {
 		tree = await page.accessibility.snapshot({ interestingOnly: true });
@@ -286,7 +252,6 @@ export const probeView = async (page: ProbePage, url: string, options: ProbeOpti
 		];
 	});
 
-	// The Tab walk: every stop, its picture focused and not, what covers it, and whether focus alone changed the page.
 	const walkCells: CellId[] = [
 		'keyboard-reach',
 		'keyboard-trap',
@@ -517,7 +482,6 @@ export const probeView = async (page: ProbePage, url: string, options: ProbeOpti
 			];
 		});
 
-		// Hover: what appears, and whether it can be dismissed, hovered and kept; and text contrast as hovered.
 		await step(['hover-content', 'contrast-states'], 'hover', async () => {
 			const found: ProbeFinding[] = [];
 			let shown = 0;
@@ -566,7 +530,6 @@ export const probeView = async (page: ProbePage, url: string, options: ProbeOpti
 			);
 		}
 
-		// Using each control: a key against a click, and what each says as it is used.
 		await step(['keyboard-operate'], 'operating each control by key', async () => {
 			await load();
 			const controls = (await ask<Spot[]>('customControls()')).slice(0, MOST.controls);
@@ -622,7 +585,6 @@ export const probeView = async (page: ProbePage, url: string, options: ProbeOpti
 			return [resultFrom('status-messages', found)];
 		});
 
-		// Changing each field, and sending each form.
 		await step(['on-input'], 'changing each field', async () => {
 			await load();
 			const fields = (await ask<Field[]>('inputs()')).slice(0, MOST.fields);
@@ -677,7 +639,6 @@ export const probeView = async (page: ProbePage, url: string, options: ProbeOpti
 		});
 	}
 
-	// A page with more than the probe reads: what found none found none of what it read.
 	const read = await ask<Read>('howMuch()').catch(() => null);
 	if (read?.capped) onlyPart([...wanted], `the page has more elements than the probe reads (${read.elements}): what it read had none of these`);
 	return { results, evidence, ms: Date.now() - started };

@@ -1,17 +1,11 @@
-/**
- * What testers send back: the findings a person makes by hand, a row each in the project's `accessibility/returned.md`,
- * read without anyone retyping them. One a machine measured and found nothing in is an **escape**, logged once in the
- * product's `agent-gaps.md` so a fixture and a probe change catch it next time; the count of escapes should fall to none.
- */
+// A finding a machine measured and found nothing in is an **escape**, logged once in the product's `agent-gaps.md`.
 import { createHash } from 'node:crypto';
 import { join } from 'node:path';
 import { CRITERIA } from '../../../shared/wcagCriteria';
 import { type Ledger, type LedgerRow, layersOf } from './ledger';
 
-/** A product's agent gap log, in its context folder: what DSNR got wrong there, which the product keeps. */
 export const agentGapsFile = (contextDir: string): string => join(contextDir, 'knowledge', 'agent-gaps.md');
 
-/** The table the manual list asks findings to be returned in: its header, as the file starts. */
 export const RETURNED_COLUMNS = [
 	'Criterion',
 	'Page or state',
@@ -22,7 +16,6 @@ export const RETURNED_COLUMNS = [
 	'In this work',
 ] as const;
 
-/** The file testers return findings in, as it starts: what it is for, and the table's header. */
 export const returnedTemplate = (project: string): string =>
 	[
 		`# Accessibility findings returned for ${project}`,
@@ -35,7 +28,6 @@ export const returnedTemplate = (project: string): string =>
 	].join('\n');
 
 export interface Returned {
-	/** Its line in the file, to find it by. */
 	line: number;
 	sc: string;
 	where: string;
@@ -44,17 +36,15 @@ export interface Returned {
 	severity: string;
 	evidence: string;
 	inWork: string;
-	/** What it is: its criterion, where and how it was found, so the same finding is read once however often the file is read, or a cell of it corrected. */
+	/** From its criterion, where and how it was found, so the same finding is read once even when another cell is corrected. */
 	id: string;
 }
 
-/** The rows of the returned table, and the lines that are rows but not readable as findings (no known criterion, too few cells). */
 export const parseReturned = (markdown: string): { findings: Returned[]; unreadable: { line: number; why: string }[] } => {
 	const findings: Returned[] = [];
 	const unreadable: { line: number; why: string }[] = [];
 	markdown.split('\n').forEach((text, i) => {
 		if (!/^\s*\|/.test(text) || /^\s*\|\s*-/.test(text) || /^\s*\|\s*Criterion\s*\|/.test(text)) return;
-		// Cells split where a `|` is not written `\|`: one in a cell's words stays in it.
 		const cells = text
 			.trim()
 			.replace(/^\||(?<!\\)\|$/g, '')
@@ -77,14 +67,8 @@ export const parseReturned = (markdown: string): { findings: Returned[]; unreada
 	return { findings, unreadable };
 };
 
-/** How a returned finding stands against what was measured of its criterion. */
 export type ReturnedKind = 'escape' | 'confirmed' | 'unmeasured' | 'person';
 
-/**
- * Each finding sorted by its criterion's row in the ledger: found by a machine too (confirmed); not measured that time;
- * reached by no machine (a person's); else an escape, a machine measured it (found none, or found nothing there to
- * measure) and a person found it.
- */
 export const sortReturned = (findings: Returned[], ledger: Ledger): { finding: Returned; kind: ReturnedKind; row: LedgerRow }[] =>
 	findings.map((finding) => {
 		const row = ledger.rows.find((r) => r.sc === finding.sc) as LedgerRow;
@@ -93,7 +77,6 @@ export const sortReturned = (findings: Returned[], ledger: Ledger): { finding: R
 		return { finding, kind, row };
 	});
 
-/** An escape, as a row of the product's agent gap log: what DSNR missed, and what would make it catch it next time. */
 const gapRow = ({ finding, row }: { finding: Returned; row: LedgerRow }, date: string): string => {
 	const cell = (s: string) => s.replace(/\|/g, '\\|').replace(/\s+/g, ' ').trim();
 	const measured =
@@ -102,14 +85,10 @@ const gapRow = ({ finding, row }: { finding: Returned; row: LedgerRow }, date: s
 	return `| ${date} | **Accessibility: WCAG ${row.sc} ${row.name}, found by a tester in ${cell(finding.where)} and not by DSNR** (${measured}). ${cell(finding.steps)}; expected: ${cell(finding.expected)}. Severity ${cell(finding.severity)}; evidence: ${cell(finding.evidence)}. <!-- returned ${finding.id} --> | missing runtime support | A fixture of this fault, and a change to what measures ${row.sc} in DSNR, so it is caught next time (accessibility plan A9) |`;
 };
 
-/** The agent gap log as it starts, when a product has none yet. */
 const GAPS_TEMPLATE = (product: string) =>
 	`# Agent gap log: ${product}\n\nWhat DSNR got wrong in ${product}, one row each.\n\n## Log\n\n| Date | What it got wrong | Category | Would fix it |\n|---|---|---|---|\n`;
 
-/**
- * The agent gap log with each escape not logged before added to its Log table (each carries the finding's id, so one is
- * logged once however often the file is read); a log that does not exist yet is started.
- */
+/** Each row carries the finding's id, so one is logged once however often the file is read. */
 export const withGaps = (
 	log: string | null,
 	product: string,

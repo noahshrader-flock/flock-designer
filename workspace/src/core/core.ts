@@ -15,9 +15,7 @@ import { RuntimeManager } from './services/codebase/runtime';
 import { OpenedCheckouts } from './services/projects/session';
 import { ShareRunner } from './services/codebase/share';
 
-/** What a shell gives the core: where its files go, how it tells the window, and what only it can do. */
 export interface Shell {
-	/** The shell's own folder for the app's files (the extension's global storage). */
 	paths: AppPaths;
 	emit: EventSink;
 	ports: Ports;
@@ -26,11 +24,7 @@ export interface Shell {
 	pictureRecipe: string;
 }
 
-/**
- * The core's services, made in one place from what a shell gives (`Shell`): the composition root every shell shares.
- * Everything a handler reaches is made here, so `registerCalls` takes every one of them and defaults to nothing real; a
- * test builds its own from a temporary folder and fakes.
- */
+/** Everything a handler reaches is made here, so `registerCalls` defaults to nothing real; a test builds its own with fakes. */
 export const createCore = ({ paths, emit, ports, github, pictureRecipe }: Shell): CallsContext => ({
 	emit,
 	ports,

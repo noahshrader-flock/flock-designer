@@ -1,43 +1,32 @@
-/**
- * Keeping it fixed: a fault one run found and the next does not was fixed, and gets a guard. Where the product's own
- * lint has a rule for the same fault, that rule is proposed; where it has none DSNR knows of, its own accessibility
- * command keeps it. Proposed, never written into the product's configuration: that is the product's to take.
- */
+// A guard is proposed, never written into the product's configuration: that is the product's to take.
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { LedgerPart } from './ledger';
 
-/** A product's lint, as far as DSNR knows one with accessibility rules. */
 export type LintStack = 'biome' | 'eslint-jsx-a11y';
 
-/** The lint stacks DSNR proposes rules for, and how each is seen in a product. */
 const STACKS: { stack: LintStack; says: (deps: Set<string>) => string; is: (deps: Set<string>, has: (file: string) => boolean) => boolean }[] = [
 	{ stack: 'biome', says: () => 'Biome (its a11y rules)', is: (deps, has) => deps.has('@biomejs/biome') || has('biome.json') || has('biome.jsonc') },
 	{
 		stack: 'eslint-jsx-a11y',
-		// What it read: whether the plugin is there yet, or would be added with the rule.
 		says: (deps) =>
 			deps.has('eslint-plugin-jsx-a11y') ? 'ESLint with eslint-plugin-jsx-a11y' : 'ESLint, adding eslint-plugin-jsx-a11y, which it does not have yet',
 		is: (deps) => deps.has('eslint') && deps.has('react'),
 	},
 ];
 
-/** The lint stacks a product's checkout has, from its package.json and its files. */
 export const stacksOf = (root: string): { stack: LintStack; says: string }[] => {
 	let deps = new Set<string>();
 	try {
 		const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')) as Record<string, Record<string, string> | undefined>;
 		deps = new Set([...Object.keys(pkg.dependencies ?? {}), ...Object.keys(pkg.devDependencies ?? {})]);
 	} catch {
-		// No package.json, or not one that can be read: no stack is known.
+		// No readable package.json: no stack is known.
 	}
 	return STACKS.filter((s) => s.is(deps, (f) => existsSync(join(root, f)))).map(({ stack, says }) => ({ stack, says: says(deps) }));
 };
 
-/**
- * Each measure (an axe rule, or a probe cell) and the lint rules that catch the same fault in source, where one does. Only
- * rules that look at what a measure finds are here; a fault a lint cannot see (contrast, focus drawn) has none.
- */
+/** Only rules that look at what a measure finds are here; a fault a lint cannot see (contrast, focus drawn) has none. */
 const RULES: Record<string, Partial<Record<LintStack, string[]>>> = {
 	'image-alt': { biome: ['a11y/useAltText'], 'eslint-jsx-a11y': ['jsx-a11y/alt-text'] },
 	'button-name': { 'eslint-jsx-a11y': ['jsx-a11y/control-has-associated-label'] },
@@ -60,7 +49,6 @@ const RULES: Record<string, Partial<Record<LintStack, string[]>>> = {
 	'name-role-value': { biome: ['a11y/useFocusableInteractive'], 'eslint-jsx-a11y': ['jsx-a11y/interactive-supports-focus'] },
 };
 
-/** A guard for one fixed fault: what found it, and the rule each of the product's stacks would keep it with, or why there is none. */
 export interface Guard {
 	sc: string;
 	what: string;
@@ -68,7 +56,6 @@ export interface Guard {
 	none: string | null;
 }
 
-/** The guards for what was fixed (each measure that found it), in the product's stacks. */
 export const guardsFor = (fixed: { sc: string; by: LedgerPart[] }[], stacks: { stack: LintStack; says: string }[]): Guard[] =>
 	fixed.flatMap(({ sc, by }) =>
 		by
@@ -87,7 +74,6 @@ export const guardsFor = (fixed: { sc: string; by: LedgerPart[] }[], stacks: { s
 			}),
 	);
 
-/** The guards as the record and the agent read them: one line each, proposed, never applied. */
 export const guardLines = (guards: Guard[]): string[] =>
 	guards.map((g) =>
 		g.none === null

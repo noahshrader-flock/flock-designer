@@ -17,18 +17,14 @@ import { reviewArea } from './areas/review';
 import { type CallsContext, composeCore } from './compose';
 
 /**
- * Every operation the window can reach, and nothing else, registered by area (`calls/`). There is no generic invoke and no
- * passthrough: each handler is named, its arguments checked (`handle.ts`), its root resolved against what the person
- * actually opened, and its answer returned as a Result.
+ * Every operation the window can reach, and nothing else. There is no generic invoke and no passthrough: each handler is
+ * named, its arguments checked, and its root resolved against what the person actually opened.
  */
 export const registerCalls = (
 	context: CallsContext,
 ): {
 	publish: (force?: boolean) => Promise<void>;
-	/**
-	 * Opens and trusts a product checkout: the shell's own way, for the folder the person opened in it (an editor's trusted
-	 * workspace folder). Never reachable from a page: no call opens a checkout.
-	 */
+	/** Opens and trusts a product checkout, for the shell alone: no call from a page opens a checkout. */
 	open: (root: string) => Promise<Checkout>;
 } => {
 	clearRoutes();

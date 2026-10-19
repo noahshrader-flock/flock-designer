@@ -32,30 +32,26 @@ import { CLI, HOST, needsCli } from '../shared/vocabulary';
 import { DESIGN_REPO, PAGES_SIGN_IN } from '../shared/config';
 
 /**
- * `dsnr`: the service the extension calls, given this machine's paths. It shares the extension's prototype folder
- * (`commandLinePrototypes`), so a prototype made here is one the panel shows, and the reverse. It writes to the
- * design repository's clone only; the extension publishes it the next time it is open, as it does every record.
+ * It shares the extension's prototype folder (`commandLinePrototypes`), so a prototype made here is one the panel shows.
+ * It writes to the design repository's clone only; the extension publishes it the next time it is open.
  */
 export interface CliDeps {
 	cwd: string;
 	out: (text: string) => void;
 	err: (text: string) => void;
-	/** The extension's prototype folder on this machine. */
 	prototypesRoot: string;
-	/** The bundler's entry point, or null when it is not installed here. */
 	esbuild: string | null;
 	/** How to run this command again, for the step the agent is told to take next. */
 	self: string[];
-	/** GitHub, as its own command line is signed in to it, or null: comments, the site and publishing go through it. */
+	/** As GitHub's own command line is signed in to it. */
 	github: GitHubApi | null;
-	/** Asks for a page with no credentials: whether a published page opens for anyone. */
 	fetchAnonymously?: (url: string) => Promise<{ status: number }>;
-	/** Reads a page's text: the W3C's, for `wcag-edition`. The network's own when absent. */
+	/** The network's own when absent. */
 	fetchText?: (url: string) => Promise<string>;
 	sleep?: (ms: number) => Promise<void>;
-	/** Opens an address in the person's browser. Absent where there is none to open (a test, a machine with no display). */
+	/** Absent where there is no browser to open (a test, a machine with no display). */
 	open?: (url: string) => void;
-	/** Builds the comments viewer the site's pages carry, and says where it is. Absent where it cannot be built. */
+	/** Resolves to the built viewer's folder. Absent where it cannot be built. */
 	buildViewer?: () => Promise<string>;
 }
 
@@ -94,7 +90,7 @@ machine missed is logged in the product's agent gap log.`;
 
 class UsageError extends Error {}
 
-/** The product checkout: the one named, or the repository the agent is working in. `doing` is what needs its workspace file. */
+/** `doing` is what needs its workspace file, for the message when it has none. */
 const productOf = async (cwd: string, named: string | undefined, doing: string): Promise<string> => {
 	let root: string;
 	try {
@@ -106,10 +102,7 @@ const productOf = async (cwd: string, named: string | undefined, doing: string):
 	return root;
 };
 
-/**
- * Who is making it, as git knows them in the design repository, where the record is written. Their GitHub login, which
- * comments are known by, from a noreply address, else from GitHub's command line; records join people by name either way.
- */
+/** The login, which comments are known by, is from a noreply address, else from GitHub's command line. */
 const meOf = async (designRoot: string, github: GitHubApi | null): Promise<Person | null> => {
 	const read = async (key: string) => (await git(designRoot, ['config', key]).catch(() => '')).trim();
 	const name = await read('user.name');
@@ -134,7 +127,6 @@ const OPTIONS = {
 	'new-version': { type: 'boolean' },
 } as const;
 
-/** The options, or a usage error that says which one was wrong. */
 const optionsOf = (args: string[]) => {
 	try {
 		return parseArgs({ args, options: OPTIONS, strict: true }).values;
@@ -143,14 +135,12 @@ const optionsOf = (args: string[]) => {
 	}
 };
 
-/** The design repository beside a product's checkout: the one way it is found from one. */
 const designBeside = (root: string): string => {
 	const records = recordsRootFor(root);
 	if (records === null) throw new Error(`There is no design repository beside ${root}. Clone flock-designer into the same folder.`);
 	return dirname(records);
 };
 
-/** The design repository: the one being worked in, or the one beside the product repository being worked in. */
 const designOf = async (cwd: string): Promise<string> => {
 	let root: string;
 	try {
@@ -162,7 +152,6 @@ const designOf = async (cwd: string): Promise<string> => {
 	return designBeside(root);
 };
 
-/** Builds the site from the design repository, with each version's comment count when GitHub can be asked. */
 const site = async (deps: CliDeps, values: { out?: string; serve?: boolean }): Promise<number> => {
 	const designRoot = await designOf(deps.cwd);
 	const outDir = values.out ? resolve(deps.cwd, values.out) : join(deps.prototypesRoot, '_site');
@@ -196,10 +185,7 @@ const site = async (deps: CliDeps, values: { out?: string; serve?: boolean }): P
 	return 0;
 };
 
-/**
- * A saved version a page command is for, and GitHub to ask: its names checked before any path is made of them, its
- * page saved in the design repository, and GitHub's command line signed in. `doing` says which, for the messages.
- */
+/** The names are checked before any path is made of them. */
 const savedPage = async (deps: CliDeps, values: { project?: string; name?: string }, doing: 'Publishing' | 'Unpublishing') => {
 	const projectId = values.project;
 	const name = values.name;
@@ -229,7 +215,6 @@ const savedPage = async (deps: CliDeps, values: { project?: string; name?: strin
 	};
 };
 
-/** Publishes one saved version to its page, and prints the link. */
 const publishPage = async (deps: CliDeps, values: { project?: string; name?: string; 'no-open'?: boolean }): Promise<number> => {
 	const published = await publish(await savedPage(deps, values, 'Publishing'));
 	deps.out(published.url);
@@ -238,7 +223,6 @@ const publishPage = async (deps: CliDeps, values: { project?: string; name?: str
 	return 0;
 };
 
-/** Takes one version off the site. */
 const unpublishPage = async (deps: CliDeps, values: { project?: string; name?: string }): Promise<number> => {
 	const page = await savedPage(deps, values, 'Unpublishing');
 	const { projectId, name, designRoot } = page;
@@ -253,11 +237,7 @@ const unpublishPage = async (deps: CliDeps, values: { project?: string; name?: s
 	return 0;
 };
 
-/**
- * What the agent is told: the skill and this run, then how to finish: save, publish, and end with the link the command
- * printed. Only the command's word on a link counts, so the agent never gives one it made up, or leaves the person not
- * knowing whether there is one.
- */
+/** Only the command's word on a link counts, so the agent never gives one it made up. */
 const taskText = (lead: string, task: string, save: string, publishLine: string): string =>
 	[
 		lead,
@@ -364,7 +344,6 @@ export const main = async (argv: string[], deps: CliDeps): Promise<number> => {
 				root,
 			]);
 		const publishCommand = (name: string) => shellLine([...deps.self, 'publish', '--project', projectId, '--name', name]);
-		/** The build skill and this run: where to write, and how to check it builds. */
 		const buildTask = async (skill: string, name: string, modeledOn: string, request: string): Promise<string> => {
 			const { build, sources } = await work.buildPlan(projectId, name, await work.sources(projectId, modeledOn));
 			return prototypeBuildTask({
@@ -408,7 +387,7 @@ export const main = async (argv: string[], deps: CliDeps): Promise<number> => {
 		if (command === 'change-prototype') {
 			const name = values.name;
 			if (!name) throw new UsageError('Say which prototype, with --name.');
-			// Who has commented, read through GitHub's command line; not known (null) when it is missing or signed out.
+			// Null when GitHub's command line is missing or signed out.
 			const threads = deps.github ? new ReviewThreads(deps.github, DESIGN_REPO) : null;
 			const comments = threads ? await threads.readComments(prototypeKey(projectId, name)).catch(() => null) : null;
 			const change = await work.startChange(projectId, name, { newVersion: values['new-version'] === true, comments });
@@ -416,7 +395,6 @@ export const main = async (argv: string[], deps: CliDeps): Promise<number> => {
 			const where = whereTheChangeGoes(change) ?? `The change is made in ${change.target}: change it, rather than starting again.`;
 			const unsaved = change.fresh ? ` ${change.target} is recorded when it is saved.` : '';
 			const signIn = change.others === null ? ` (${HOST}'s command line, ${CLI}, is missing or not signed in.)` : '';
-			// What people have said about it so far, for the agent to read before it changes anything, and to tell the person.
 			const open = openComments(comments ?? []);
 			let said = '';
 			if (open.length > 0) {

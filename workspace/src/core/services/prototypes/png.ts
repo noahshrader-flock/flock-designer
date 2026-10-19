@@ -2,18 +2,13 @@ import { inflateSync } from 'node:zlib';
 
 const SIGNATURE = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
 
-/** Paeth's predictor, as the PNG format defines it for its fourth filter. */
 const paeth = (a: number, b: number, c: number): number => {
 	const p = a + b - c;
 	const [pa, pb, pc] = [Math.abs(p - a), Math.abs(p - b), Math.abs(p - c)];
 	return pa <= pb && pa <= pc ? a : pb <= pc ? b : c;
 };
 
-/**
- * A PNG's pixels, four bytes each (red, green, blue, alpha), for what needs to look at them (`isBlank`) where there is no
- * image library: a headless browser's screenshot. Only what a browser writes: 8 bits a channel, RGB or RGBA, not
- * interlaced; anything else throws.
- */
+/** RGBA, four bytes a pixel. Only what a browser writes: 8 bits a channel, RGB or RGBA, not interlaced; anything else throws. */
 export const decodePng = (png: Buffer): { width: number; height: number; rgba: Uint8Array } => {
 	if (png.length < 8 || !png.subarray(0, 8).equals(SIGNATURE)) throw new Error('That is not a PNG.');
 	let width = 0;

@@ -9,31 +9,28 @@ import { HOST } from '../../../shared/vocabulary';
 import { workPath } from '../../../shared/designPaths';
 
 /**
- * Publishes the project records from this clone, their one writer. The commit is built on GitHub's tip in a temporary
- * index and pushed plainly, so the person's branch, index and files are never rebased or stashed. Runs at once need no
- * lock: a refused push builds again on what GitHub has, and finds nothing left to do.
+ * The commit is built on GitHub's tip in a temporary index and pushed plainly, so the person's branch, index and files
+ * are never rebased or stashed. Runs at once need no lock: a refused push builds again on what GitHub has.
  */
 
 export type Problem = PublishProblem;
 
 export interface SyncResult {
-	/** Project ids whose changes reached GitHub in this run. */
+	/** Project ids. */
 	published: string[];
 	problems: Problem[];
 }
 
 const RECORDS = 'Project records';
-/** A project's records file, as `workPath` names it: the one file a sync merges by meaning. */
 const isRecordFile = (f: string): boolean => f === workPath(f.split('/')[1] ?? '');
 const lines = (out: string): string[] => out.split('\n').filter(Boolean);
-/** The first line of what git said: enough to act on, without a wall of its output. */
 const message = (err: unknown): string => errorText(err, { firstLine: true });
 
 export const syncRecords = async (designRoot: string): Promise<SyncResult> => {
 	const g = (...args: string[]) => git(designRoot, args, { timeoutMs: 120_000 });
 	const held = (why: string, files?: string[]): SyncResult => ({ published: [], problems: [{ what: RECORDS, why, files }] });
 
-	// Where this is going. Without a branch that tracks the same-named branch on GitHub there is nowhere safe to put records.
+	// Without a branch that tracks the same-named branch on GitHub there is nowhere safe to put records.
 	const branch = await g('rev-parse', '--abbrev-ref', 'HEAD').catch(() => 'HEAD');
 	if (branch === 'HEAD') return held('The design repository is not on a branch, so records have nowhere to go.');
 	let upstream: string;
@@ -85,9 +82,8 @@ export const syncRecords = async (designRoot: string): Promise<SyncResult> => {
 };
 
 /**
- * This machine's `projects/` changes since its branch and GitHub's met, as a commit on GitHub's. A `work.json` changed on
- * both sides is ordinary and merged by meaning; any other file changed on both is for people to settle. A string says
- * what to tell the person.
+ * A `work.json` changed on both sides is ordinary and merged by meaning; any other file changed on both is for people to
+ * settle. A string says what to tell the person.
  */
 const recordsOnTopOf = async (
 	designRoot: string,
@@ -104,7 +100,7 @@ const recordsOnTopOf = async (
 			...lines(await g(['ls-files', '--others', '--exclude-standard', '--', 'projects'])),
 		]),
 	].sort();
-	// What is published for each file: its blob, or null when it is deleted.
+	// Null when the file is deleted.
 	const changes = new Map<string, string | null>();
 	const hopeless: string[] = [];
 	const read = new Map<string, string | null>();
@@ -152,9 +148,8 @@ const recordsOnTopOf = async (
 };
 
 /**
- * Fast-forwards the person's branch to `target` when it has nothing of its own. A merged record is written here first only
- * if unchanged since `read` (a newer one waits for the next run), then staged so git can move over it; git itself refuses
- * when anything else of the person's would be overwritten.
+ * A merged record is written here first only if unchanged since `read` (a newer one waits for the next run), then staged
+ * so git can move over it; git itself refuses when anything else of the person's would be overwritten.
  */
 const catchUp = async (designRoot: string, target: string, paths: string[], read: Map<string, string | null>): Promise<void> => {
 	const g = (...args: string[]) => git(designRoot, args);

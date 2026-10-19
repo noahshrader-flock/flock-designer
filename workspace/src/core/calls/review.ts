@@ -1,9 +1,6 @@
 import { arg, handle } from '../handle';
 import type { ReviewArea } from '../areas/review';
 
-/**
- * The project list, its records, and the review comments kept as GitHub issues.
- */
 export const registerReview = (area: ReviewArea): void => {
 	handle('listProjects', [], area.listProjects);
 	handle('readComments', [arg.projectId, arg.branch], area.readComments);

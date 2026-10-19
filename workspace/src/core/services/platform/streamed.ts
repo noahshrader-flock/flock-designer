@@ -1,18 +1,12 @@
 import { spawn } from 'node:child_process';
 
-/**
- * A program run to its end with its output passed on as it comes, for the long jobs the window shows progress of
- * (a clone, an install). From an argv, never a shell. Only the end of its output is kept, which is where a failure says
- * what went wrong.
- */
-
 export interface Streamed {
 	code: number | null;
-	/** The last of what it printed, both streams together. */
+	/** Only the end of both streams together, which is where a failure says what went wrong. */
 	output: string;
 }
 
-/** It could not be started: `missing` when there is no such program. */
+/** `missing` when there is no such program. */
 export class NotStarted extends Error {
 	constructor(
 		readonly missing: boolean,
@@ -23,7 +17,6 @@ export class NotStarted extends Error {
 	}
 }
 
-/** It was stopped through its signal. */
 export class Stopped extends Error {
 	constructor() {
 		super('Stopped.');

@@ -4,42 +4,30 @@ import { errorText } from '../shared/result';
 import { HostError } from './hostError';
 import { HOST } from '../shared/vocabulary';
 
-/**
- * The slice of GitHub's REST API DSNR uses, and a read cache for it. The person signs in through their shell (VS Code's
- * own GitHub sign-in); nothing here holds a token or asks for one.
- */
+/** The person signs in through their shell (VS Code's own GitHub sign-in); nothing here holds a token or asks for one. */
 
 const API = 'https://api.github.com';
 
-/**
- * All DSNR needs of the host's API: a signed-in call to its API. The extension's account is one; so is `gh` on the command
- * line, and a token in a browser on the published site.
- */
 export interface GitHubApi {
 	api(path: string, init?: { method?: string; body?: unknown }): Promise<unknown>;
 }
 
-/** The person's GitHub account as the core uses it, whichever shell signs them in (the extension: VS Code's own sign-in). */
 export interface GitHubAccount extends GitHubApi {
 	restore(): Promise<SignInState>;
 	state(): SignInState;
 	signOut(): void;
 }
 
-/** A person as the host's `/user` says it. */
 const userFrom = (me: Record<string, unknown>): GitHubUser => ({
 	login: String(me.login ?? ''),
 	name: typeof me.name === 'string' ? me.name : null,
 	avatarUrl: typeof me.avatar_url === 'string' ? me.avatar_url : null,
 });
 
-/** Who `api` is signed in as. Throws when it cannot be asked. */
 export const userOf = async (api: GitHubApi): Promise<GitHubUser> => userFrom(asRecord(await api.api('/user')));
 
-/** Who `api` is signed in as, by their login, or null when it does not say. Throws when it cannot be asked. */
 export const loginOf = async (api: GitHubApi): Promise<string | null> => (await userOf(api)).login || null;
 
-/** Raised when the person must sign in again -- the refresh token is spent or revoked. */
 export class ReauthRequired extends HostError {
 	constructor(message = `Sign in to ${HOST} again.`) {
 		super(message, undefined, 'reauth');
@@ -60,7 +48,7 @@ export interface Fetcher {
 	}>;
 }
 
-/** The real fetch, as the session uses it: every call to GitHub given up on after 30 seconds rather than left to hang. */
+/** Given up on after 30 seconds rather than left to hang. */
 export const networkFetch: Fetcher = (url, init) => fetch(url, { ...init, signal: AbortSignal.timeout(30_000) }) as ReturnType<Fetcher>;
 
 export interface ApiCall {
@@ -70,9 +58,8 @@ export interface ApiCall {
 }
 
 /**
- * Reads kept with the tag GitHub gave them (`ETag`), so the same read asked again sends the tag and, when nothing changed,
- * gets "not modified" back, which GitHub does not count against the hourly limit. Kept per token, so one person's reads
- * never answer another's; bounded, the oldest dropped first. Writes are never kept.
+ * A "not modified" answer to a read sent with its `ETag` is not counted against GitHub's hourly limit. Kept per token, so
+ * one person's reads never answer another's.
  */
 export class ReadCache {
 	private readonly reads = new Map<string, { etag: string; body: unknown }>();
@@ -89,7 +76,6 @@ export class ReadCache {
 	}
 }
 
-/** When GitHub says to come back, in words: a time of day for the hourly limit, a short while for a slowdown. */
 const rateLimited = (status: number, message: string, headers?: { get(name: string): string | null }): HostError | null => {
 	const remaining = headers?.get('x-ratelimit-remaining');
 	const retryAfter = Number(headers?.get('retry-after'));
@@ -132,7 +118,6 @@ export const callApi = async (token: string, call: ApiCall, fetcher: Fetcher, ca
 	if (res.status === 401) {
 		throw new ReauthRequired();
 	}
-	// Not modified: what was read before, unchanged, and free.
 	if (res.status === 304 && kept) return kept.body;
 	if (res.status >= 400) {
 		// Read once as text: a body is read a single time, and when it is not JSON (a bare 500, a proxy's page) what

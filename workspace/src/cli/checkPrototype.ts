@@ -1,7 +1,6 @@
 /**
- * The script a prototype build's own accessibility check runs as: written beside the build script (`writeCheckScript`)
- * and bundled whole, so it needs nothing installed beside it. It says what to fix as a build says an error, and exits as
- * a build does; a check that cannot run says so, and never stops the build.
+ * Bundled whole and written beside a prototype's build script (`writeCheckScript`), so it needs nothing installed beside
+ * it. A check that cannot run says so and never stops the build.
  */
 import { readFileSync } from 'node:fs';
 import { type CheckConfig, checkBuild } from '../core/services/accessibility/buildCheck';

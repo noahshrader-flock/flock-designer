@@ -9,22 +9,15 @@ import { readWork } from '../services/projects/workRecords';
 import { listProjects } from '../services/projects/listProjects';
 import { ProfileNames } from '../services/publishing/profileNames';
 
-/** What the Review calls do, each called by its handler once its arguments are checked (`calls/review.ts`). */
 export const reviewArea = (d: CallsDeps) => {
 	const { designRepo, github, opened, publisher, signedInLogin, trustedRecords, trustedRoot } = d;
-	/** Names people by their GitHub profile, once each, so a person is the same name wherever they appear. */
 	const profiles = new ProfileNames((path) => github.api(path));
-	/**
-	 * Rewrites `comments.md` for what was just read, on a machine that has the design repository
-	 * beside the product checkout. Best effort: reading comments never fails because a file
-	 * could not be written; the Address button, which depends on the file, is strict.
-	 */
+	/** Best effort: reading comments never fails because a file could not be written; the Address button, which depends on it, is strict. */
 	const exportComments = (projectId: string, branch: string, comments: ReviewComment[]): void => {
 		try {
 			const trusted = trustedRecords();
 			if (trusted === null) return;
 			const { root, recordsRoot } = trusted;
-			// The record's name for it, or the one the branch's own name gives it (work with no record yet).
 			const name = readWork(recordsRoot, projectId).find((i) => i.branch === branch)?.name ?? classify(readDescriptor(root), branch)?.name;
 			if (!name) return;
 			writeCommentsExport(recordsRoot, {
@@ -35,19 +28,16 @@ export const reviewArea = (d: CallsDeps) => {
 				generatedAt: new Date(),
 			});
 		} catch {
-			// Nothing to do: the comments themselves were read fine.
+			// The comments themselves were read fine.
 		}
 	};
 	return {
-		// Reviewer mode: read through the API, never a checkout. Everything on GitHub merged with everything built on this
-		// machine, so work made here appears here, shared or not; if GitHub cannot be reached, what is local still shows.
 		listProjects: async (): Promise<Project[]> => {
-			// The gate, not the discovery list: nothing is read or run in a repository this window has not opened. One remembered
-			// from an earlier window is not one: with no product open here, the list is the design repository's alone.
+			// The gate, not the discovery list: nothing is read or run in a repository this window has not opened, and one
+			// remembered from an earlier window does not count.
 			const remembered = trustedRoot();
 			const root = remembered !== null && opened.has(remembered) ? remembered : null;
 			const projects = await listProjects({ root, login: signedInLogin(), remote: () => designRepo.listProjects() });
-			// Reading the list is a good moment to make sure what it shows is published.
 			void publisher.publish();
 			return profiles.nameEveryone(projects);
 		},

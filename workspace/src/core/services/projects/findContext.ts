@@ -6,27 +6,19 @@ import { recordsRootFor } from './discovery';
 import { folderReads } from '../designSystem/folderReads';
 import { repositoryOf } from '../platform/git';
 
-/** How the design system was found, in the order it is looked for. */
 export type FoundHow = 'named' | 'open' | 'located';
 
-/** What a shell works on, found from what is open in it, and what is missing, said. */
 export interface Context {
-	/** The product repository: the open folder with a `.dsnr/workspace.json`. */
 	product: string | null;
 	designSystem: { root: string; how: FoundHow } | null;
-	/** Where the projects' records are: the design repository beside the product, as the core finds it everywhere. */
 	designRepository: string | null;
-	/**
-	 * Which repository the product is, on its host (`owner/repo`, from its `origin`), the same on every machine whatever its
-	 * folder is called: what the Projects panel focuses on (the workspace README's "Projects, by product"). Null with no product, or one with no remote.
-	 */
+	/** `owner/repo` from the product's `origin`, the same on every machine; null with no product, or one with no remote. */
 	productRepository: string | null;
 	missing: string[];
 }
 
 const isFolder = (p: string): boolean => existsSync(p) && statSync(p).isDirectory();
 
-/** The design system in `dir`: the folder itself, or the package in it with stories or tokens. */
 const designSystemIn = async (dir: string): Promise<string | null> => {
 	if (!isFolder(dir)) return null;
 	const found = await findDesignSystems(folderReads(dir), basename(dir)).catch(() => []);
@@ -34,7 +26,6 @@ const designSystemIn = async (dir: string): Promise<string | null> => {
 	return first === undefined ? null : first.folder === '' ? dir : join(dir, first.folder);
 };
 
-/** What the product names as its design system: a folder of it, or the checkout beside it named as its package. */
 const namedBy = async (product: string): Promise<string | null> => {
 	try {
 		const named = designSystemCheckout(product, readDescriptor(product).designSystem);
@@ -44,11 +35,6 @@ const namedBy = async (product: string): Promise<string | null> => {
 	}
 };
 
-/**
- * Finds the product, its design system and the design repository from the `folders` open in the editor and, when nothing
- * open holds a design system, the one the person `located`. The design system is looked for in order: where the product
- * names it, then any other open folder holding one, then the located one; each only when it does hold one.
- */
 export const findContext = async ({ folders, located = null }: { folders: string[]; located?: string | null }): Promise<Context> => {
 	const product = folders.find((f) => existsSync(join(f, DESCRIPTOR_PATH))) ?? null;
 	let designSystem: Context['designSystem'] = null;

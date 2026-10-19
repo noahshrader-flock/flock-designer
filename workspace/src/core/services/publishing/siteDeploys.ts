@@ -8,18 +8,13 @@ import type { GitHubAccount } from '../../../codeHost/github';
 import { pageStatus, publish, recordsFrom, redeploySite, siteBehind } from './pages';
 import { HOST } from '../../../shared/vocabulary';
 
-/**
- * The site's deploys, run by the app in the background: a page it just made (a prototype built, a change Address made),
- * as the agent publishes from Claude Code with the same code; and the site itself when what it is built from changed.
- * What stopped a page is kept, so its screen can say why it is not published.
- */
+/** What stopped a page's deploy is kept, so its screen can say why it is not published. */
 export const siteDeploys = ({ github, designClone }: { github: Pick<GitHubAccount, 'state' | 'api'>; designClone: () => string | null }) => {
 	// One deploy of a page at a time, and once more if asked again meanwhile: what changed since may have missed its push.
 	const running = coalescingByKey<string>();
 	const stopped = new Map<string, string>();
 	const signedIn = () => github.state().state === 'signedIn';
 
-	/** Runs a deploy in the background under `key`. */
 	const inBackground = (key: string, deploy: () => Promise<unknown>): void => {
 		if (!signedIn()) return;
 		void running.run(key, () =>
@@ -32,13 +27,11 @@ export const siteDeploys = ({ github, designClone }: { github: Pick<GitHubAccoun
 		inBackground(prototypeKey(projectId, name), async () =>
 			publish({ github, ref: DESIGN_REPO, ...(await recordsFrom(designClone())), projectId, name }),
 		);
-	/** The site, when what it is built from changed and no page did: it has no page of its own to key on. */
 	const site = (): void => inBackground('the site', async () => redeploySite({ github, ref: DESIGN_REPO, ...(await recordsFrom(designClone())) }));
 
 	/**
-	 * Starts a deploy for anything GitHub has that no deploy does (an edit outside a save, a failed deploy, a push from
-	 * elsewhere), which nothing else would notice. At most once a minute, and once every ten after a failure, so a missing
-	 * permission is not retried on every focus.
+	 * For what GitHub has that no deploy does (an edit outside a save, a failed deploy, a push from elsewhere), which nothing
+	 * else would notice. Once every ten minutes after a failure, so a missing permission is not retried on every focus.
 	 */
 	let lastCatchUp = 0;
 	const catchUp = async (): Promise<void> => {
@@ -54,7 +47,6 @@ export const siteDeploys = ({ github, designClone }: { github: Pick<GitHubAccoun
 		}
 	};
 
-	/** Whether a prototype's page is on the site, publishing, or not, and why when a deploy of it stopped. */
 	const status = async (projectId: string, name: string): Promise<PageStatus> => {
 		if (!signedIn()) return { state: 'none' };
 		const key = prototypeKey(projectId, name);

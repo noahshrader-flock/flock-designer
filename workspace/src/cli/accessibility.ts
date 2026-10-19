@@ -1,7 +1,6 @@
 /**
- * `dsnr accessibility`: measures a project's work in a real browser, the same way for any product, and writes what it
- * found into the project's folder in the design repository as evidence. DSNR calls the product, never the reverse: a
- * prototype's page is served here; a product's own app is started as its `.dsnr/workspace.json` says.
+ * DSNR calls the product, never the reverse: a prototype's page is served here; a product's own app is started as its
+ * `.dsnr/workspace.json` says.
  */
 import { existsSync, rmSync } from 'node:fs';
 import { basename, join } from 'node:path';
@@ -54,25 +53,24 @@ import { type ReturnedKind, agentGapsFile, parseReturned, returnedTemplate, sort
 
 export interface MeasureDeps {
 	projectId: string;
-	/** A prototype's name, to measure its page; null for the product's own app. */
+	/** Null for the product's own app. */
 	name: string | null;
-	/** How deep the probe goes: all of it at Handoff, the light subset at a build. */
+	/** All of it at Handoff, the light subset at a build. */
 	depth: ProbeDepth;
-	/** The product checkout, and the design repository beside it. */
 	root: string;
 	designRoot: string;
 	work: ReturnType<typeof prototypeWork>;
 	out: (text: string) => void;
-	/** Where progress is said, so a long run is never silent. */
+	/** Progress, so a long run is never silent. */
 	err: (text: string) => void;
 }
 
 type Browser = ReturnType<typeof chromeHeadless>;
 
-/** One view measured: its name (a state, or a page), and what the probe made of it. */
+/** `state` is a state, or an app's page. */
 type MeasuredView = ViewProbed & { state: string };
 
-/** What was measured, in words, what axe found, and what the probe did; `pages` and `note` for an app, which pages and how they were chosen. */
+/** `pages`, `note` and `run` are for a product's own app. */
 interface Measured {
 	what: string;
 	target: DeclaredTarget;
@@ -82,17 +80,12 @@ interface Measured {
 	source: CellResult[];
 	pages?: AppPage[];
 	note?: string;
-	/** How a product's own app was run, for the manual list. */
 	run?: LedgerRun;
 }
 
-/** Files the probe does not read for source: words, data and pictures. */
 const NOT_SOURCE = /\.(md|mdx|txt|json|lock|ya?ml|toml|svg|png|jpe?g|gif|webp|ico|woff2?|ttf|map|snap)$/i;
 
-/**
- * The work's own files, for the source cells: what this checkout's branch changed from its remote's default branch,
- * committed or not. Null, with why, when they cannot be told from the rest.
- */
+/** What this checkout's branch changed from its remote's default branch, committed or not. */
 const changedSources = async (root: string): Promise<{ files: SourceFile[] | null; why: string }> => {
 	const base = (await git(root, ['rev-parse', '--abbrev-ref', 'origin/HEAD']).catch(() => '')).trim();
 	if (!base || base === 'origin/HEAD')
@@ -116,7 +109,7 @@ const sourceCells = (depth: ProbeDepth) =>
 		.filter((c) => c.kind === 'source')
 		.map((c) => c.id);
 
-/** A prototype's page, measured as its build's check measures it (`measurePrototype`), and its source read. */
+/** Measured as its build's check measures it (`measurePrototype`). */
 const prototypePage = async (
 	{ projectId, name, work, depth }: MeasureDeps & { name: string },
 	browser: Browser,
@@ -147,7 +140,6 @@ const prototypePage = async (
 	return { what, target, result, notOpened: [], views, source };
 };
 
-/** The product's own app in design mode, at the pages its manifest names, else as it opens; at the manifest's target; each page that opened probed. */
 const productApp = async ({ projectId, root, depth }: MeasureDeps, browser: Browser, progress: (line: string) => void): Promise<Measured> => {
 	const descriptor = readDescriptor(root);
 	const manifest = readManifest(join(root, descriptor.contextDir));
@@ -192,7 +184,6 @@ const productApp = async ({ projectId, root, depth }: MeasureDeps, browser: Brow
 	};
 };
 
-/** What the probe found, as the agent reads it: at the target first, then above it (readiness), then what was not run. */
 const probeLines = ({ views, source, target }: Measured, depth: ProbeDepth): string[] => {
 	const all = [
 		...views.flatMap((v) => v.results.map((r) => ({ r, where: views.length > 1 ? `, in ${v.state}` : '' }))),
@@ -215,7 +206,6 @@ const probeLines = ({ views, source, target }: Measured, depth: ProbeDepth): str
 	];
 };
 
-/** The probe's own evidence (pictures, the tree, the Tab walk), written fresh in each view's folder: nothing of an earlier run is left. */
 const writeEvidence = (projectId: string, name: string | null, designRoot: string, views: MeasuredView[]): void => {
 	rmSync(join(designRoot, accessibilityEvidenceDir(projectId, name)), { recursive: true, force: true });
 	const dirs = accessibilityViewDirs(
@@ -226,7 +216,6 @@ const writeEvidence = (projectId: string, name: string | null, designRoot: strin
 	for (const view of views) for (const e of view.evidence) writeAtomic(join(designRoot, dirs.get(view.state) as string, e.name), e.data);
 };
 
-/** A day, as the record says when something happened. */
 const dayOf = (iso: string): string => iso.slice(0, 10);
 
 export const measureAccessibility = async (deps: MeasureDeps): Promise<number> => {
@@ -248,7 +237,6 @@ export const measureAccessibility = async (deps: MeasureDeps): Promise<number> =
 		deps.out([`Nothing of ${what} opened, so nothing was measured or written.`, ...unopened].join('\n'));
 		return 1;
 	}
-	// The probe's pictures and the rest of its evidence; then the record, its ledger and review.md's section, made one way.
 	writeEvidence(projectId, name, designRoot, views);
 	const ledgerFile = accessibilityLedgerPath(projectId, name);
 	const last = readLedger(join(designRoot, ledgerFile));
@@ -269,11 +257,9 @@ export const measureAccessibility = async (deps: MeasureDeps): Promise<number> =
 		readText(join(designRoot, projectPath(projectId, 'review.md'))),
 	);
 	for (const f of files) writeAtomic(join(designRoot, f.path), f.text);
-	// A product's own app: the manual list, from the ledger, into the work's HANDOFF.md, for whoever tests it by hand.
 	const handoff = join(deps.root, HANDOFF_FILE);
 	if (name === null) writeAtomic(handoff, withManualSection(readText(handoff), ...manualArgs(ledger, ledgerFile, projectId, designRoot)));
 	const since = last ? ledgerChanges(last, ledger) : null;
-	// A product's own app: what testers sent back since, sorted and its escapes logged; and a guard for what was fixed.
 	const kept =
 		name === null
 			? [
@@ -306,14 +292,10 @@ export const measureAccessibility = async (deps: MeasureDeps): Promise<number> =
 	return 0;
 };
 
-/** How each returned finding was sorted, kept so each is sorted once: against the measure it was tested against. */
+/** Kept so each finding is sorted once, against the measure it was tested against. */
 type Sorted = { id: string; sc: string; where: string; kind: ReturnedKind; against: string };
 
-/**
- * What testers sent back: the project's `returned.md` read, each finding sorted against the ledger it was tested
- * against, each escape logged once in the product's agent gap log, and the sort kept as the record's. A file that is not
- * there yet is started, with its table, so a tester only adds rows. What it did, in lines.
- */
+/** A `returned.md` that is not there yet is started, with its table, so a tester only adds rows. */
 const readReturned = ({
 	designRoot,
 	root,
@@ -366,10 +348,6 @@ const readReturned = ({
 	];
 };
 
-/**
- * A guard for what this run fixed: each fault the last run found, by what found it, with the product's own lint rule
- * that keeps it fixed where its stack has one, proposed in the record and said. What it did, in lines.
- */
 const keepFixed = ({
 	designRoot,
 	root,
@@ -401,7 +379,7 @@ const keepFixed = ({
 	return ['', `Fixed since the last run, and kept fixed by (proposed, in ${accessibilityGuardsPath(projectId)}):`, ...lines];
 };
 
-/** What the manual list is made from: the ledger, and where its evidence and the testers' findings are, as the product's checkout sees them. */
+/** Paths as the product's checkout sees them. */
 const manualArgs = (ledger: Ledger, ledgerFile: string, projectId: string, designRoot: string): [Ledger, string, string, string] => {
 	const design = basename(designRoot);
 	return [
@@ -412,7 +390,7 @@ const manualArgs = (ledger: Ledger, ledgerFile: string, projectId: string, desig
 	];
 };
 
-/** A ledger as this DSNR writes it, or null when there is none, or it is not one (or an older DSNR's): then it is measured again. */
+/** Null also for an older DSNR's ledger: then it is measured again. */
 const readLedger = (file: string): Ledger | null =>
 	jsonFile<Ledger | null>(file, {
 		parse: (raw) => {
@@ -422,11 +400,7 @@ const readLedger = (file: string): Ledger | null =>
 		fallback: null,
 	}).read();
 
-/**
- * `dsnr check-accessibility`: what a gate asks of a measure's record. Every status rests on an evidence file that is
- * there, every "not run" says why, and `review.md`'s section (and, from the product's checkout, HANDOFF.md's manual list)
- * is the one the ledger writes. Exits 1 on any fault, so a product's own gate can call it.
- */
+/** Returns 1 on any fault, so a product's own gate can call it. */
 export const checkAccessibility = ({
 	designRoot,
 	productRoot,
@@ -435,7 +409,7 @@ export const checkAccessibility = ({
 	out,
 }: {
 	designRoot: string;
-	/** The product's checkout, whose HANDOFF.md carries the manual list of its own app's measure; null when this is not run in one. */
+	/** Null when this is not run in one: HANDOFF.md is then not checked. */
 	productRoot: string | null;
 	projectId: string;
 	name: string | null;
@@ -467,7 +441,6 @@ export const checkAccessibility = ({
 	return faults.length ? 1 : 0;
 };
 
-/** `dsnr read-returned`: what testers sent back read now, against the project's last measure of its app, rather than at its next. */
 export const readReturnedNow = ({
 	designRoot,
 	root,

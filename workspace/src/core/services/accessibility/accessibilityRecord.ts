@@ -1,8 +1,4 @@
-/**
- * A measure's record in the design repository: what axe and the probe found, the ledger made from them, and
- * `review.md`'s section written from it. Made here, one way, for `dsnr accessibility` and a saved prototype's build
- * check alike, so the two never differ in shape; each caller writes the files as it writes (to disk, or the design store).
- */
+// Made here, one way, for `dsnr accessibility` and a saved prototype's build check alike, so the two never differ in shape.
 import type { AccessibilityResult } from '../../../shared/contract';
 import {
 	accessibilityEvidenceDir,
@@ -21,23 +17,21 @@ export interface MeasureRecord {
 	projectId: string;
 	/** A prototype's name, or null for the product's own app. */
 	name: string | null;
-	/** What was measured, in words. */
 	of: string;
 	result: AccessibilityResult;
 	target: DeclaredTarget;
 	depth: string;
-	/** Each view: its results, and the names of the evidence files its caller writes into its folder (pictures, the tree). */
+	/** `files`: the evidence files its caller writes into the view's folder. */
 	views: { state: string; ms?: number; results: CellResult[]; files?: string[] }[];
 	source: CellResult[];
 	pages?: AppPage[];
 	notOpened?: PageNotOpened[];
-	/** Why what was found was left as it is, when it was (a build's two rounds used up). */
+	/** Why what was found was left as it is (a build's rounds used up). */
 	left?: string;
-	/** How a product's own app was run, for the manual list. */
 	run?: LedgerRun;
 }
 
-/** The record's files, by their paths in the design repository, and the ledger they hold. `review` is review.md as it is now. */
+/** `review` is review.md as it is now. */
 export const recordFiles = (
 	m: MeasureRecord,
 	review: string | null,
@@ -102,5 +96,4 @@ export const recordFiles = (
 	};
 };
 
-/** What a prototype's measure is called, in words: the heading of its record, the same wherever it is made. */
 export const prototypeMeasureName = (projectId: string, name: string): string => `${projectId} ${name}'s page`;

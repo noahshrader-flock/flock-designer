@@ -5,8 +5,8 @@ import { isInside } from '../core/services/platform/paths';
 import { MIME_TYPES } from '../shared/mime';
 
 /**
- * Serves a built site on this machine only, to look at it as it will be published. A browser will not load a page's
- * fonts or frame from files opened directly, so it has to be served. Nothing outside the site is ever read.
+ * A browser will not load a page's fonts or frame from files opened directly, so it has to be served. Nothing outside
+ * the site is ever read.
  */
 export const serveSite = (siteDir: string, port = 0): Promise<{ server: Server; url: string }> =>
 	new Promise((ready, fail) => {

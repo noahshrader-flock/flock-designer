@@ -37,10 +37,7 @@ export const resolveInside = (root: string, candidate: string): string => {
 	return resolve(realOrLexical(resolve(root)), candidate);
 };
 
-/**
- * An executable on the PATH, or null. An app opened from the Dock has none of a terminal's
- * PATH, so callers also check the usual install places themselves.
- */
+/** An app opened from the Dock has none of a terminal's PATH, so callers also check the usual install places themselves. */
 export const findOnPath = (name: string, env: NodeJS.ProcessEnv = process.env, exists: (p: string) => boolean = existsSync): string | null => {
 	for (const dir of (env.PATH ?? '').split(delimiter).filter(Boolean)) {
 		if (exists(join(dir, name))) return join(dir, name);

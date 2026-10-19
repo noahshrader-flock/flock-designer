@@ -1,7 +1,6 @@
 /**
- * Each prototype's card picture, drawn only by the machine that built its page (`builtHere`), so each has one writer. It is
- * current when the record's `cover` is the page's hash; the picture is written before the record, so a record never names
- * a missing one. A page that fails to draw is not tried again until the app next opens.
+ * Drawn only by the machine that built the page (`builtHere`), so each picture has one writer. The picture is written
+ * before the record, so a record never names a missing one.
  */
 import { existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
@@ -12,9 +11,8 @@ import { PROJECT_ID } from '../../../shared/validate';
 import { type RecordStore, contentHashOf, readRecords, setCover } from './prototype';
 import type { DrawCover } from '../../ports';
 
-/** The window a picture is drawn in: the shape of a card's cover, twice as wide as tall. */
 export const COVER_WINDOW = { width: 1440, height: 720 } as const;
-/** The most a picture may be, and the steps (a width and a quality) tried to get it there: measured on real prototypes. */
+/** In bytes; it and the steps were measured on real prototypes. */
 export const COVER_BUDGET = 48_000;
 export const COVER_STEPS = [
 	[960, 80],
@@ -22,13 +20,11 @@ export const COVER_STEPS = [
 	[720, 70],
 	[640, 60],
 ] as const;
-/** How long a page must be unchanged to be ready for its picture, and the most it is waited for. */
 const COVER_QUIET_MS = 500;
 const COVER_CAP_MS = 8000;
 
 /**
- * Resolves when a page is ready for its picture: fonts ready, no finite animation running (a looping one is part of the
- * page), and nothing changed for `quietMs`. After `capMs` it resolves `capped`, and that picture is not kept: a page that
+ * A looping animation does not hold it up: it is part of the page. A `capped` result's picture is not kept: a page that
  * never settles has no picture rather than a wrong one.
  */
 export const settleScript = (quietMs = COVER_QUIET_MS, capMs = COVER_CAP_MS): string => `new Promise((resolve) => {
@@ -49,9 +45,8 @@ export const settleScript = (quietMs = COVER_QUIET_MS, capMs = COVER_CAP_MS): st
 })`;
 
 /**
- * Whether a capture is of one color: a page that painted nothing, whatever its background. Pixels are 4 bytes each, as
- * a browser's screenshot decodes; a pixel a step off (a JPEG's or a gradient's edge) counts as the same, and so does one in a
- * hundred of something else (a cursor, a stray line). An empty capture is blank.
+ * Of one color, whatever the background. A pixel a step off (a JPEG's or a gradient's edge) counts as the same, and so
+ * does one in a hundred of something else (a cursor, a stray line).
  */
 export const isBlank = (data: Uint8Array): boolean => {
 	const pixels = Math.floor(data.length / 4);
@@ -68,7 +63,6 @@ export const isBlank = (data: Uint8Array): boolean => {
 	return other <= seen / 100;
 };
 
-/** Every prototype page built on this machine: those in the app's own prototype folder, by project. */
 export const builtHere = (prototypesRoot: string): { projectId: string; name: string }[] => {
 	if (!existsSync(prototypesRoot)) return [];
 	return readdirSync(prototypesRoot, { withFileTypes: true })
@@ -82,22 +76,17 @@ export const builtHere = (prototypesRoot: string): { projectId: string; name: st
 };
 
 export interface CoverDeps {
-	/** Where records and pictures are kept: the design repository's clone, or GitHub. */
 	store: () => RecordStore;
-	/** A prototype's page as it was built on this machine, or null when it was not built here. */
+	/** Null when it was not built here. */
 	page: (projectId: string, name: string) => string | null;
-	/** The page on the local server, with what it needs beside it: the address it is drawn from. */
+	/** Resolves to the address it is drawn from. */
 	serve: (projectId: string, name: string, html: string) => Promise<string>;
 	draw: DrawCover;
-	/** The pages tried this session, by project, prototype and hash, so one that gave no picture is not tried again. */
+	/** So a page that gave no picture is not tried again this session. */
 	tried: Set<string>;
 }
 
-/**
- * Makes sure each of `built` has a current picture, one at a time and in order: draws each whose record does not name its
- * page's picture, keeps the picture, then names it on the record. Says which it made. A project whose records cannot be
- * read is passed over, and the rest go on.
- */
+/** A project whose records cannot be read is passed over, and the rest go on. */
 export const ensureCovers = async (deps: CoverDeps, built: { projectId: string; name: string }[]): Promise<MadeCover[]> => {
 	const made: MadeCover[] = [];
 	const projects = [...new Set(built.map((b) => b.projectId))];

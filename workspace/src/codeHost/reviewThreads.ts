@@ -21,19 +21,17 @@ import { repoApiPath } from './repoFiles';
 import { ISSUE } from '../shared/vocabulary';
 
 /**
- * The review threads of a repository: comments are its issue comments, one issue per piece of work (a version of a
- * prototype, or codebase work), found by the key on the branch line in its body. That keeps a server out of the design:
- * the host already stores them, notifies people, and lets someone with only read access comment.
+ * Comments are issue comments, one issue per piece of work, found by the branch line in its body. That keeps a server out
+ * of the design: the host already stores them, notifies people, and lets someone with only read access comment.
  */
 
 const REVIEW_LABEL = 'flock-designer:review';
 
-/** What the app knows of a piece of work's review thread (or threads: a key can have more than one). */
+/** A key can have more than one thread: `number` is the oldest, the one written to. */
 export interface ReviewThread {
 	number: number;
 	numbers: number[];
 	openComments: number;
-	/** When it last had a comment, by GitHub's account of it. */
 	updatedAt: string | null;
 }
 
@@ -54,7 +52,6 @@ export class ReviewThreads {
 	 */
 	private readonly known = new Map<string, Set<number>>();
 
-	/** The review threads, by the branch they carry comments for. */
 	async byBranch(): Promise<Map<string, ReviewThread>> {
 		const issues = (
 			await readPages(this.session, `${this.apiPath}/issues?state=all&labels=${encodeURIComponent(REVIEW_LABEL)}`, { maxPages: 10 })
@@ -84,12 +81,9 @@ export class ReviewThreads {
 		return byBranch;
 	}
 
-	/** The issue carrying a piece of work's comments, created on first use. */
 	async ensureIssue(projectId: string, branch: string): Promise<number> {
 		const existing = (await this.byBranch()).get(branch);
 		if (existing) return existing.number;
-		// Listings lag, so a thread made seconds ago may not be in `existing`.
-
 		const created = asRecord(
 			await this.session.api(`${this.apiPath}/issues`, {
 				method: 'POST',
@@ -112,7 +106,6 @@ export class ReviewThreads {
 		return created.number;
 	}
 
-	/** One GitHub comment as the app knows it. The one place a comment's body is taken apart. */
 	private toComment(raw: Record<string, unknown>, thread: number): ReviewComment {
 		const body = String(raw.body ?? '');
 		const user = asRecord(raw.user);
@@ -131,7 +124,6 @@ export class ReviewThreads {
 		};
 	}
 
-	/** How many comments each piece of work's thread has, by its key: what the published site shows of each version. */
 	async commentCounts(): Promise<Map<string, number>> {
 		return new Map([...(await this.byBranch())].map(([branch, thread]) => [branch, thread.openComments]));
 	}
@@ -148,11 +140,7 @@ export class ReviewThreads {
 		return threads.flat().sort((a, b) => a.createdAt.localeCompare(b.createdAt));
 	}
 
-	/**
-	 * Moves a comment's pin by rewriting the anchor inside its body. GitHub lets
-	 * a person edit their own comment and refuses anyone else, which is exactly
-	 * the rule wanted: you can move your own pins, not someone else's.
-	 */
+	/** GitHub lets a person edit only their own comment, which is exactly the rule wanted for moving pins. */
 	async moveComment(comment: CommentRef, anchor: CommentAnchor): Promise<ReviewComment> {
 		const path = `${this.apiPath}/issues/comments/${comment.id}`;
 		const current = asRecord(await this.session.api(path));
@@ -169,9 +157,8 @@ export class ReviewThreads {
 	}
 
 	/**
-	 * Marks a comment resolved, or open again. GitHub decides who may (the comment's author, or anyone who can write to the
-	 * repository), so nothing is enforced here. Reopening also clears the agent's mark: its change was not what was meant,
-	 * so it is open as any other, with its pin, and Address can be run on it again.
+	 * GitHub decides who may, so nothing is enforced here. Reopening also clears the agent's mark: its change was not what
+	 * was meant, so Address can be run on it again.
 	 */
 	async setResolved(comment: CommentRef, resolved: boolean): Promise<ReviewComment> {
 		const path = `${this.apiPath}/issues/comments/${comment.id}`;
@@ -184,9 +171,8 @@ export class ReviewThreads {
 	}
 
 	/**
-	 * Records that the agent acted on a comment, with the commit it made (on a prototype, its source's hash and version),
-	 * and resolves it in the same write, so its pin does not point at what the agent just changed. A null commit (a
-	 * re-address that changed nothing) clears the mark and leaves the comment open or resolved as the person had it.
+	 * Resolves it in the same write, so its pin does not point at what the agent just changed. A null commit (a re-address
+	 * that changed nothing) clears the mark and leaves the comment open or resolved as the person had it.
 	 */
 	async setAddressed(comment: CommentRef, commit: string | null, version: string | null = null): Promise<ReviewComment> {
 		const path = `${this.apiPath}/issues/comments/${comment.id}`;
@@ -202,11 +188,7 @@ export class ReviewThreads {
 		return this.toComment(asRecord(updated), comment.thread);
 	}
 
-	/**
-	 * Deletes a comment for good: GitHub keeps no copy. GitHub decides who may (the comment's author, or
-	 * anyone who can write to the repository), and its refusal is put in words a person can act on.
-	 * A comment that is already gone counts as deleted: someone else got there first.
-	 */
+	/** For good: GitHub keeps no copy. A comment that is already gone counts as deleted. */
 	async deleteComment(comment: CommentRef): Promise<void> {
 		try {
 			await this.session.api(`${this.apiPath}/issues/comments/${comment.id}`, { method: 'DELETE' });

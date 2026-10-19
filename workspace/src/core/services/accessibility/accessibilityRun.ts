@@ -1,8 +1,4 @@
-/**
- * Measuring a product's own app, the same way whatever it is built with: DSNR starts it as its `.dsnr/workspace.json`
- * says, opens each page its manifest names in a real browser, and runs the one check every page gets (`CheckPage`).
- * Nothing here names a product or a framework: what it is told is all it knows, and what it could not open, it says.
- */
+// Nothing here names a product or a framework: what it is told is all it knows, and what it could not open, it says.
 import type { AxeRun } from '../../../shared/accessibility';
 import type { AccessibilityResult } from '../../../shared/contract';
 import { errorText } from '../../../shared/result';
@@ -17,28 +13,23 @@ import { INSTALL_COMMAND } from '../codebase/install';
 import { RuntimeManager, type RuntimeDeps, defaultDeps } from '../codebase/runtime';
 import { buildError, outputLines, packagesHint } from '../codebase/serverOutput';
 
-/** What is checked when a manifest names no pages: the app as it opens, at its root. */
+/** Checked when a manifest names no pages. */
 export const FIRST_PAGE: AppPage = { name: 'default', path: '/' };
 
-/** A page that would not open, and why, in the browser's words or the check's. */
 export interface PageNotOpened extends AppPage {
 	why: string;
 }
 
-/** What a run of an app's pages found: one result across the pages that opened (null when none did), and those that did not. */
 interface PagesChecked {
+	/** Null when no page opened. */
 	result: AccessibilityResult | null;
 	notOpened: PageNotOpened[];
 }
 
-/** Whether a page of the app really opened: null when it did, else why not (its build, its own error, or nothing drawn). */
+/** Null when the page really opened, else why not. */
 export type Opens = (url: string) => Promise<string | null>;
 
-/**
- * Checks each page of the app at `origin`, one at a time: first that it really opens (`opens`), then as it opens, each a
- * state of one result, by its name. A page that will not open or check is said, with why, and the rest go on; with no
- * browser, nothing can be, and that is said.
- */
+/** A page that will not open or check is said, with why, and the rest go on; with no browser, the whole throws. */
 export const checkPages = async ({
 	origin,
 	pages,
@@ -76,14 +67,10 @@ export const checkPages = async ({
 	return { result: runs.length > 0 ? resultOf(runs, target, now()) : null, notOpened };
 };
 
-/** How much of a command's output is said when it would not start: its last lines, where a dev server says why. */
+/** Lines of output said when it would not start: the last, where a dev server says why. */
 const LOG_TAIL = 15;
 
-/**
- * Runs `work` on the product's app on mock data: its design-mode command, started in `root` and stopped after, whatever
- * happens. `work` is given how to tell that a page really opened, as Run locally tells it (`loads`, and no build error in
- * the server's output). A product with no such command, a port already taken, or an app that will not start is said.
- */
+/** The design-mode command is stopped after `work`, whatever happens; a port already taken refuses, as it may be another checkout's. */
 export const onDesignMode = async <T>(
 	{
 		root,
@@ -116,7 +103,6 @@ export const onDesignMode = async <T>(
 	}
 	const install = descriptor.commands.find((c) => c.id === INSTALL_COMMAND)?.argv.join(' ') ?? null;
 	const withHint = (why: string) => `${why}${packagesHint(why, install)}`;
-	/** Its output, and why it failed when it says, for when it does not start. */
 	const said: { log: string[]; failed: string | null } = { log: [], failed: null };
 	const runtime = new RuntimeManager(
 		{
@@ -135,8 +121,8 @@ export const onDesignMode = async <T>(
 			const why = withHint(buildError(said.log) ?? said.failed ?? 'it stopped');
 			throw new Error(`${descriptor.product}'s app did not start (${why}), so nothing was measured.${tail ? ` Its last output:\n${tail}` : ''}`);
 		}
-		// The page itself says whether it opened; the server's output says why when it did not (a build error it printed,
-		// which a page that drew well has outlived: a first compile that failed and was fixed).
+		// Only a page that did not open is given the server's build error: a page that drew well has outlived one (a first
+		// compile that failed and was fixed).
 		const opens: Opens = async (url) => {
 			const refused = await loads(url);
 			return refused === null ? null : withHint(buildError(said.log) ?? refused);

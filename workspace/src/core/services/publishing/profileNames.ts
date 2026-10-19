@@ -2,16 +2,14 @@ import { isBot, mergePeople } from '../../../shared/people';
 import type { Person, Project } from '../../../shared/contract';
 
 /**
- * One name for a person, everywhere: their GitHub profile name, else their login, else their git name. Git names are
- * whatever each tool was set to, so one person can arrive under two. Looked up once per login while the app runs; a
- * lookup that fails changes nothing.
+ * One name for a person: their GitHub profile name, else their login, else their git name. Git names are whatever each
+ * tool was set to, so one person can arrive under two.
  */
 export class ProfileNames {
 	private readonly names = new Map<string, Promise<string>>();
 
 	constructor(private readonly api: (path: string) => Promise<unknown>) {}
 
-	/** The profile name of `login`, else the login itself. A failed lookup is not remembered, so the next list tries again. */
 	private nameOf(login: string): Promise<string> {
 		const known = this.names.get(login.toLowerCase());
 		if (known) return known;
@@ -25,7 +23,6 @@ export class ProfileNames {
 		return looking;
 	}
 
-	/** The people with their profile names, and anyone who is now the same person joined. */
 	private async named(people: Person[]): Promise<Person[]> {
 		const resolved = await Promise.all(
 			people.map(async (p): Promise<Person> => {
@@ -36,7 +33,6 @@ export class ProfileNames {
 		return mergePeople(resolved);
 	}
 
-	/** Every project's people, and each piece of work's contributors, named the same way. */
 	async nameEveryone(projects: Project[]): Promise<Project[]> {
 		// All at once, so a person who is in several places is looked up once for the list, not once each.
 		return Promise.all(

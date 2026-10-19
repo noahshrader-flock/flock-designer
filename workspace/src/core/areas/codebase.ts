@@ -19,7 +19,6 @@ import { continueWork, recordHandoff, recordPath, recordPreview, recordedWork } 
 import { GUIDE, MOVE_SKILL, ROUTE_SKILL, buildInCodebasePrompt } from '../services/prototypes/prototype';
 import { pullRequestText } from '../services/codebase/share';
 
-/** What the Codebase calls do, each called by its handler once its arguments are checked (`calls/codebase.ts`). */
 export const codebaseArea = (d: CallsDeps) => {
 	const {
 		agent,
@@ -38,10 +37,6 @@ export const codebaseArea = (d: CallsDeps) => {
 		work,
 		written,
 	} = d;
-	/**
-	 * A prototype's accessibility: its saved page, served as it is opened, checked in each of its states at its
-	 * product's target, and kept beside it. Made again only when what it was made with changes.
-	 */
 	const prototypeAccessibility = async (projectId: string, name: string): Promise<AccessibilityResult> => {
 		const html = await prototypePage(projectId, name);
 		if (html === null) throw new Error('This prototype has no page yet.');
@@ -55,23 +50,16 @@ export const codebaseArea = (d: CallsDeps) => {
 			check: ports.headless.scan,
 		});
 	};
-	/** The accessibility section of a codebase task: the product's target from its own manifest, on the branch it is on. */
 	const codebaseAccessibility = (canonical: string, findings?: Parameters<typeof taskAccessibility>[2]): Promise<string> => {
 		const descriptor = readDescriptor(canonical);
-		// The product's own check, where its setup declares one (Coke's `a11y`), run as the work goes; its gate runs it at handoff.
 		const check = commandLine(descriptor.commands, A11Y_COMMAND, '');
 		return taskAccessibility(readSkillText, productTarget(join(canonical, descriptor.contextDir), descriptor.product), findings, check);
 	};
-	/** The design repository's own folder beside this product (the one holding `agents/`, `skills/`, `standards/`), if found. */
 	const sharedRoot = (canonical: string): string | null => {
 		const records = recordsRootFor(canonical);
 		return records === null ? null : dirname(records);
 	};
-	/**
-	 * What a codebase run may read besides the checkout: the shared skills and standards the product's guidance
-	 * points at, and the design system's own guidance (`designSystemCheckout`). Read only, and named in the task, since a folder
-	 * the agent has not been told about is one it never opens.
-	 */
+	/** Named in the task, since a folder the agent has not been told about is one it never opens. */
 	const sharedGuidance = (canonical: string): { dirs: string[]; note: string } => {
 		const root = sharedRoot(canonical);
 		const designSystem = readDescriptor(canonical).designSystem;
@@ -89,10 +77,7 @@ export const codebaseArea = (d: CallsDeps) => {
 			note: ['## Also yours to read (never change)', '', ...found.map(([what, dir]) => `- ${what}: \`${dir}\``)].join('\n'),
 		};
 	};
-	/**
-	 * What every run in a product checkout is given besides its own task (`CheckoutParts`, put in place by `agentTasks`),
-	 * and the folders it may read for them. `findings`: what a prototype's own accessibility check left open, to fix.
-	 */
+	/** `findings`: what a prototype's own accessibility check left open, to fix. */
 	const checkoutParts = async (
 		canonical: string,
 		projectId: string,
@@ -106,16 +91,11 @@ export const codebaseArea = (d: CallsDeps) => {
 				lightCheck: commandLine(readDescriptor(canonical).commands, 'check-iteration', projectId),
 				shared: shared.note,
 				accessibility: await codebaseAccessibility(canonical, findings),
-				// The voice and tone, from the design system beside this product; nothing while it is blank.
 				voice: await work.voice(canonical),
 			},
 		};
 	};
-	/**
-	 * Runs the agent where the person can come back to it, and resolves at its end: tagged with its branch, its conversation
-	 * kept to continue in VS Code. A run already going for the same branch (a screen opened again) is waited on, not started
-	 * twice, which `joined` says. Every run in a product checkout is this one, with its whole task (`agentTasks`).
-	 */
+	/** A run already going for the same branch (a screen opened again) is waited on, not started twice, which `joined` says. */
 	const runTracked = (
 		canonical: string,
 		projectId: string,
@@ -127,7 +107,6 @@ export const codebaseArea = (d: CallsDeps) => {
 		refuseWhileBusy();
 		const session = randomUUID();
 		const ended = agent.run(canonical, projectId, task, {
-			// The project's records live in the design repository, beside the product checkout.
 			addDirs,
 			readOnly,
 			work: branch,
@@ -138,10 +117,7 @@ export const codebaseArea = (d: CallsDeps) => {
 		if (agent.status().state === 'running') sessions.write(canonical, branch, session);
 		return { end: ended, joined: false };
 	};
-	/**
-	 * A run that says it finished but left changes it never committed did not finish: what it was doing is not on the
-	 * branch, and anything shown from it would be half of it.
-	 */
+	/** A run that says it finished but left changes uncommitted did not finish: anything shown from it would be half of it. */
 	const committedAll = async (canonical: string): Promise<void> => {
 		if (!(await readCheckout(canonical)).clean)
 			throw new Error(
@@ -149,17 +125,14 @@ export const codebaseArea = (d: CallsDeps) => {
 			);
 	};
 	return {
-		/** The check a root the window names goes through: one this window opened, read whole (`calls.ts`). */
 		checkout,
 		agentStatus: () => agent.status(),
-		// Answered once the run, and every tool it started, has ended.
 		stopAgent: async () => {
 			await agent.stop();
 			return null;
 		},
 		agentReadiness: () => agentReadiness(),
-		// Sharing. The branch comes from this person's own record, never from the window, and
-		// the repository's descriptor says what a share is. Starts and returns: it takes minutes.
+		// The branch comes from this person's own record, never from the window. Starts and returns: it takes minutes.
 		shareWork: async (workIn: CheckedCheckout, projectId: string, name: string) => {
 			const { canonical, descriptor, recordsRoot } = workIn;
 			const { share: how } = descriptor;
@@ -167,14 +140,12 @@ export const codebaseArea = (d: CallsDeps) => {
 				throw new Error(`${descriptor.product} does not say how a shared preview is built, so it cannot be shared from here.`);
 			}
 			const codebaseRecord = await recordedWork(canonical, recordsRoot, descriptor, projectId, name);
-			// Only what is committed goes up. Sharing a branch with unsaved edits would show reviewers less than the designer sees.
 			const here = await readCheckout(canonical);
 			if (here.branch === codebaseRecord.branch && !here.clean) {
 				throw new Error(
 					`There are uncommitted changes on ${codebaseRecord.branch}, and only committed work is shared. Commit them, then share again.`,
 				);
 			}
-			// The commit that goes up now, which is what reviewers will be looking at.
 			const shared = (await branchTip(canonical, codebaseRecord.branch)) ?? undefined;
 			return share.start({
 				request: {
@@ -185,7 +156,7 @@ export const codebaseArea = (d: CallsDeps) => {
 					...pullRequestText(projectId, name),
 				},
 				tools: ports.shareTools(canonical),
-				// Saved, then published, and only then is the link called ready: a reviewer cannot open what is not up yet.
+				// Published before the link is called ready: a reviewer cannot open what is not up yet.
 				record: async (url, prUrl) => {
 					recordPreview(recordsRoot, projectId, name, url, shared, prUrl);
 					await publisher.publish(true);
@@ -210,9 +181,8 @@ export const codebaseArea = (d: CallsDeps) => {
 			};
 		},
 		/**
-		 * Handoff, on the work's branch: the product's gate, both reviews, their fixes and HANDOFF.md, run to its end (or a run
-		 * already going, waited on). Ready when its last verdict says so and HANDOFF.md was committed since it started; kept on
-		 * the work's record with that commit (`recordHandoff`). Null when it cannot be told: a run from before this app started.
+		 * Ready when its last verdict says so and HANDOFF.md was committed since it started. Null when it cannot be told: a run
+		 * joined, not started here.
 		 */
 		handOff: async (workIn: CheckedCheckout, projectId: string): Promise<JobEnd<{ ready: boolean | null }>> => {
 			const { canonical, recordsRoot, descriptor } = workIn;
@@ -232,11 +202,7 @@ export const codebaseArea = (d: CallsDeps) => {
 			recordHandoff(recordsRoot, projectId, ready ? await headCommit(canonical) : null);
 			return { state: 'done', value: { ready } };
 		},
-		/**
-		 * Run locally: the checkout moved to the work's branch (never one with work uncommitted) once its agent's run has ended,
-		 * then its preview (the product's design mode) started at the work's own route. `uncommitted`: the checkout had changes
-		 * nobody committed, and no agent made them here.
-		 */
+		/** `uncommitted`: the checkout had changes nobody committed, and no agent made them here. */
 		runLocally: async (workIn: CheckedCheckout, projectId: string, name: string): Promise<{ url: string; uncommitted: boolean }> => {
 			const { canonical, recordsRoot, descriptor } = workIn;
 			const record = await recordedWork(canonical, recordsRoot, descriptor, projectId, name);
@@ -254,15 +220,9 @@ export const codebaseArea = (d: CallsDeps) => {
 			// `stopped` here means the process ended before it ever answered; its output is what was said.
 			throw new Error(result.state === 'failed' ? result.detail : 'The preview stopped before it was ready. Its output is above.');
 		},
-		/**
-		 * Build, from a prototype: its branch and record made (or picked up where they are), and the building handed to Claude
-		 * Code in the product repository, where the person can step in. The task is written beside the prototype's own copy, and
-		 * the conversation starts pointing at it; without Claude Code in VS Code, the command for a terminal is copied instead.
-		 */
 		buildInCodebase: async (workIn: CheckedCheckout, projectId: string, name: string, from: string | null): Promise<BuildInCodebase> => {
 			const { canonical, recordsRoot } = workIn;
 			const skill = await readSkillText(MOVE_SKILL);
-			// The page and its source are copied where the agent can read them, so it works from the version saved.
 			const html = await prototypePage(projectId, name);
 			if (html === null) throw new Error('This prototype has no page yet.');
 			const pageFile = work.file(projectId, name);
@@ -270,7 +230,6 @@ export const codebaseArea = (d: CallsDeps) => {
 			const source = await work.sourceText(projectId, name);
 			const label = workLabel({ name });
 			// The branch first: nothing is written for the agent if the work cannot start (a dirty tree, work not found).
-			// Work already started, here or recorded, is continued where it is; it is not started a second time.
 			const { branch, started: continuing } = await codebase.of(workIn, projectId);
 			if (continuing) await codebase.resume(workIn, projectId, branch);
 			else await codebase.start(workIn, projectId, `From ${label} of the prototype`, from ?? undefined);
@@ -290,8 +249,7 @@ export const codebaseArea = (d: CallsDeps) => {
 						name,
 						basedOn: (await work.record(projectId, name))?.basedOn,
 					},
-					// Built toward the product's target from the start, with what the prototype's check left open: its page
-					// checked now when it was not already. A check that cannot run leaves the findings out, never the move.
+					// A check that cannot run leaves the findings out, never the move.
 					(await checkoutParts(canonical, projectId, await prototypeAccessibility(projectId, name).catch(() => null))).parts,
 				),
 			);

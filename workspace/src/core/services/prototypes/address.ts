@@ -1,13 +1,10 @@
 import type { CommentRef, ReviewComment } from '../../../shared/contract';
 import { numberComments, openComments } from '../../../shared/comments';
 
-/** The skill, relative to the design repository. Shared by every product. */
+/** Relative to the design repository. */
 export const ADDRESS_SKILL = 'skills/address-comments.md';
 
-/**
- * The number of the one comment to act on, from a read made just now. The fresh read is what catches a comment
- * someone resolved or deleted a moment ago, rather than the agent being sent after one that is no longer there.
- */
+/** `comments` must be a read made just now: that is what catches a comment resolved or deleted a moment ago. */
 export const chooseComment = (comments: ReviewComment[], comment: CommentRef): number => {
 	if (openComments(comments).length === 0) throw new Error('There are no open comments to address.');
 	const chosen = comments.find((c) => c.thread === comment.thread && c.id === comment.id);

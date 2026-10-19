@@ -5,9 +5,7 @@ import { NotStarted, Stopped, runStreamed } from '../platform/streamed';
 import { HOST } from '../../../shared/vocabulary';
 
 /**
- * Installing a repository's packages from the New modal, with **only the command it declares** (`install` in its
- * `.dsnr/workspace.json`), as with every command DSNR runs. It runs with the person's own registry sign-in, as their
- * terminal would; when the private registry refuses, it says how to sign in.
+ * Runs only the command the repository declares (`install` in its `.dsnr/workspace.json`), as with every command DSNR runs.
  */
 
 export const INSTALL_COMMAND = 'install';
@@ -26,7 +24,7 @@ const refusal = (output: string): { registry: string | null } | null => {
 	return { registry: /https:\/\/[^/\s]+/.exec(line)?.[0] ?? null };
 };
 
-/** What went wrong, in words a person can act on. `node` is the version the repository asks for, when it says. */
+/** `node` is the version the repository asks for, when it says. */
 export const installProblem = (output: string, node: string | null): string => {
 	const refused = refusal(output);
 	if (refused?.registry?.includes('npm.pkg.github.com')) {
@@ -42,16 +40,11 @@ export const installProblem = (output: string, node: string | null): string => {
 	return `The packages did not install: ${last || 'it stopped without saying why.'}`;
 };
 
-/** The Node version a repository asks for in `.nvmrc`, for the messages. */
 const nodeVersionOf = (root: string): string | null => {
 	const file = join(root, '.nvmrc');
 	return existsSync(file) ? readFileSync(file, 'utf8').trim() || null : null;
 };
 
-/**
- * One install at a time, as one clone and one agent run at a time. `onLine` is given each line of its output, for the
- * window to show how far it has got; `signal` stops it.
- */
 export class Installer {
 	private running: string | null = null;
 

@@ -1,21 +1,13 @@
 import { wcagCriterion } from '../../../../shared/wcagCriteria';
 
-/**
- * The probe's cells: each a measure that code decides, of one WCAG criterion, said once here. Every result is one of
- * found, none found, does not apply, not run (with why). None is a pass: a measure that finds nothing has measured only
- * what it says it measures.
- */
+// None is a pass: a measure that finds nothing has measured only what it says it measures.
 
-/** Where a cell's measure is made: in the page, in the browser, or in the work's source. */
 export type CellKind = 'page' | 'source';
 
 export interface Cell {
 	id: string;
-	/** The WCAG criterion it measures (`wcagCriteria.ts`). */
 	sc: string;
-	/** What it measures, as a person reads it. */
 	measures: string;
-	/** In the light subset, run at every build: axe, the accessibility tree and the Tab walk. */
 	light: boolean;
 	kind: CellKind;
 }
@@ -70,18 +62,14 @@ export type CellId = (typeof CELLS)[number]['id'];
 
 export const cellOf = (id: CellId): Cell => CELLS.find((c) => c.id === id) as Cell;
 
-/** Which cells a run measures: the light subset at a build, all of them at Handoff and in a remediation run. */
+/** The light subset at a build, all of them at Handoff and in a remediation run. */
 export type ProbeDepth = 'light' | 'full';
 export const cellsAt = (depth: ProbeDepth): Cell[] => CELLS.filter((c) => depth === 'full' || c.light);
 
-/**
- * What a cell measured: `found`, with each finding; `none` found, by what it measures; `notApplicable`, as the page has
- * nothing it measures (no form, no field), said; `notRun`, with why (the run's time cap, no source to read).
- */
 export type CellStatus = 'found' | 'none' | 'notApplicable' | 'notRun';
 
-/** One finding: where (a selector, or a file and line), and what was measured there. */
 export interface ProbeFinding {
+	/** A selector, or a file and line. */
 	target: string;
 	detail: string;
 }
@@ -91,14 +79,12 @@ export interface CellResult {
 	sc: string;
 	status: CellStatus;
 	findings: ProbeFinding[];
-	/** Why it does not apply, or was not run. */
 	why?: string;
 }
 
-/** The most findings a cell keeps: the rest are counted in the last. */
+/** The rest are counted in the last. */
 export const MOST_FINDINGS = 20;
 
-/** A cell's result from what it found: `none` when nothing, else its first findings, the rest counted. */
 export const resultFrom = (cell: CellId, findings: ProbeFinding[]): CellResult => {
 	const sc = cellOf(cell).sc;
 	if (findings.length === 0) return { cell, sc, status: 'none', findings: [] };
@@ -110,10 +96,9 @@ export const resultFrom = (cell: CellId, findings: ProbeFinding[]): CellResult =
 export const notApplicable = (cell: CellId, why: string): CellResult => ({ cell, sc: cellOf(cell).sc, status: 'notApplicable', findings: [], why });
 export const notRun = (cell: CellId, why: string): CellResult => ({ cell, sc: cellOf(cell).sc, status: 'notRun', findings: [], why });
 
-/** How many findings of a cell are printed: all of them are in the evidence. */
+/** All of them are in the evidence. */
 const MOST_PRINTED = 5;
 
-/** A cell's result as the agent reads it: what it is, by WCAG, where (`where`), and its first findings. */
 export const cellLines = (r: CellResult, where: string): string[] => {
 	const c = wcagCriterion(r.sc);
 	const head = `- **${r.cell}** (WCAG ${c.sc} ${c.name})${where}`;

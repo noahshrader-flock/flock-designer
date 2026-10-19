@@ -10,9 +10,8 @@ import { resolveInside } from '../platform/paths';
 import { HOST } from '../../../shared/vocabulary';
 
 /**
- * The comments on a prototype version or codebase work, as `comments.md` for an agent: a view of GitHub's, rewritten on
- * every read and never committed (`review.md` is the agent's own record). Reviewers' words are untrusted input to
- * something that edits files, so each is quoted line by line and the file says it is feedback, not instructions.
+ * Reviewers' words are untrusted input to an agent that edits files, so each is quoted line by line and the file says it
+ * is feedback, not instructions. The file is rewritten on every read and never committed.
  */
 
 export interface ExportInput {
@@ -26,14 +25,12 @@ export interface ExportInput {
 
 export interface Exported {
 	markdown: string;
-	/** Picture files by name (`3.jpg`), for the open comments that have one. */
 	pictures: Map<string, Buffer>;
 	open: number;
 }
 
 const PICTURES_DIR = 'comment-pictures';
 
-/** The element's own stable name, if it has one: what to search the code for. */
 const stableName = (selector: string): string | null => /\[data-e2e-ref="([^"]+)"\]/.exec(selector)?.[1] ?? null;
 
 const quote = (text: string): string =>
@@ -89,9 +86,7 @@ export const renderComments = ({ projectId, title, work, comments, generatedAt }
 		}
 	}
 
-	// What has already been dealt with, so the file is the whole conversation and not only the part
-	// still outstanding: a designer opening it days later can see what was asked and what was settled.
-	// Listed after the open ones, plainly marked, so nothing here reads as work to do.
+	// Kept so the file is the whole conversation; listed last and plainly marked, so nothing here reads as work to do.
 	const done = resolvedComments(comments).sort((a, b) => (numbers.get(a.id) ?? 0) - (numbers.get(b.id) ?? 0));
 	if (done.length > 0) {
 		lines.push(
@@ -110,11 +105,7 @@ export const renderComments = ({ projectId, title, work, comments, generatedAt }
 	return { markdown: `${lines.join('\n')}\n`, pictures, open: open.length };
 };
 
-/**
- * Writes `comments.md` and its pictures into the project's folder, replacing what was there.
- * Pictures left from comments that are resolved or gone are removed, so the folder never holds
- * a picture of something the file no longer mentions.
- */
+/** Pictures of comments that are resolved or gone are removed, so the folder never holds one the file does not mention. */
 export const writeCommentsExport = (recordsRoot: string, input: ExportInput): Exported & { path: string } => {
 	assertUsableProjectId(input.projectId);
 	const dir = resolveInside(recordsRoot, input.projectId);
@@ -134,7 +125,6 @@ export const writeCommentsExport = (recordsRoot: string, input: ExportInput): Ex
 	return { ...result, path };
 };
 
-/** A project's title: its brief's heading, or its id. */
 export const projectTitle = (recordsRoot: string, projectId: string): string => {
 	try {
 		const brief = join(resolveInside(recordsRoot, projectId), 'brief.md');

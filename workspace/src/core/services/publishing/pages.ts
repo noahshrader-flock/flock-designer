@@ -11,19 +11,17 @@ import { type RepoRef, formatRepo } from '../../../shared/repoRef';
 import { HOST } from '../../../shared/vocabulary';
 
 /**
- * Publishing a prototype to the design repository's GitHub Pages site: the one way it is done, for the agent's command and
- * anything else. The site is meant to be private; when it is not, publishing says so rather than stopping, and it checks
- * whether the page opens with no credentials.
+ * The site is meant to be private; when it is not, publishing says so rather than stopping, and it checks whether the
+ * page opens with no credentials.
  */
 
-/** The workflow that builds the site from the repository and deploys it. It runs only when asked. */
+/** It runs only when asked. */
 export const PUBLISH_WORKFLOW = 'publish-prototypes.yml';
 
 export interface SiteVisibility {
 	repoPrivate: boolean;
 	/** The branch the site is deployed from. */
 	defaultBranch: string;
-	/** The Pages site, or null when the repository has none. */
 	site: { url: string; public: boolean } | null;
 }
 
@@ -38,11 +36,10 @@ export const readVisibility = async (github: GitHubApi, ref: RepoRef): Promise<S
 	} catch (err) {
 		if (hostErrorKind(err) !== 'notFound') throw err;
 	}
-	// Unknown counts as public here too.
 	return { repoPrivate: repo.private === true, defaultBranch: String(repo.default_branch ?? ''), site };
 };
 
-/** Why anyone could open the site, or null when GitHub says it is private. Unknown counts as public. */
+/** Null only when GitHub says it is private. */
 export const whyPublic = (v: SiteVisibility): string | null =>
 	!v.repoPrivate ? 'the repository is public' : v.site?.public ? 'its Pages site is public' : null;
 
@@ -53,7 +50,7 @@ interface Run {
 	html_url: string;
 }
 
-/** The commit the newest finished deploy of the site was built from, or null when none has. One still running may yet fail. */
+/** The newest finished one: one still running may yet fail. */
 const deployedSha = async (github: GitHubApi, base: string): Promise<string | null> => {
 	for (const d of ((await github.api(`${base}/deployments?environment=github-pages&per_page=5`)) as { id: number; sha: string }[] | null) ?? []) {
 		const [latest] = ((await github.api(`${base}/deployments/${d.id}/statuses?per_page=1`)) as { state: string }[] | null) ?? [];
@@ -62,10 +59,7 @@ const deployedSha = async (github: GitHubApi, base: string): Promise<string | nu
 	return null;
 };
 
-/**
- * Whether a version is on its page: the site's last finished deploy includes the last change to the page. The link
- * carries the deploy it is from, so a page opened after a new one never shows an old copy.
- */
+/** The link carries the deploy it is from, so a page opened after a new one never shows an old copy. */
 export const pageStatus = async (github: GitHubApi, ref: RepoRef, projectId: string, name: string): Promise<PageStatus> => {
 	const path = sitePath(projectId, name);
 	if (path === null) return { state: 'none' };
@@ -97,16 +91,13 @@ const SITE_SOURCES = [
 	/^\.github\/workflows\/publish-prototypes\.yml$/,
 ];
 
-/** Whether a change to `file` (a path in the design repository) changes how the site is built. */
 export const isSiteSource = (file: string): boolean => SITE_SOURCES.some((s) => s.test(file));
 
-/** What GitHub has that the site does not: a prototype page, or a change to how the site is built (`code`). */
 export type SiteBehind = { kind: 'page'; projectId: string; name: string } | { kind: 'code' };
 
 /**
- * Whether the site is behind GitHub, from one compare against the last deploy: one changed page is enough to name, as a
- * deploy builds the whole site. Null when it is current, when a deploy is already on its way (it will take what is
- * there), or when there is nothing to compare with yet.
+ * One changed page is enough to name, as a deploy builds the whole site. Null when it is current, when a deploy is
+ * already on its way (it will take what is there), or when there is nothing to compare with yet.
  */
 export const siteBehind = async (github: GitHubApi, ref: RepoRef): Promise<SiteBehind | null> => {
 	const vis = await readVisibility(github, ref);
@@ -131,10 +122,7 @@ export const fetchAnonymously = async (url: string): Promise<{ status: number }>
 	status: (await fetch(url, { redirect: 'manual', signal: AbortSignal.timeout(15_000) })).status,
 });
 
-/**
- * How the records reach GitHub from where publishing runs: from a clone, by its records sync (only `projects/`), on the
- * branch it is on; with no clone they were written to GitHub directly, and nothing waits.
- */
+/** With no clone the records were written to GitHub directly, and nothing waits. */
 export const recordsFrom = async (clone: string | null): Promise<Pick<PublishInput, 'recordsBranch' | 'pushRecords'>> => {
 	if (clone === null) return { pushRecords: async () => ({ published: [], problems: [] }) };
 	// '' when it is on no branch: refused by publish, after the gate has had its say.
@@ -145,31 +133,21 @@ export const recordsFrom = async (clone: string | null): Promise<Pick<PublishInp
 interface DeployInput {
 	github: GitHubApi;
 	ref: RepoRef;
-	/**
-	 * The branch the records are pushed to, when they are pushed from a clone. The site is deployed from the repository's
-	 * default branch, so records anywhere else would never reach it: that is refused.
-	 */
+	/** The site is deployed from the default branch, so records pushed to any other would never reach it: that is refused. */
 	recordsBranch?: string;
-	/** Commits and pushes the records (only `projects/`), as the app's publisher does. */
 	pushRecords: () => Promise<SyncResult>;
 	sleep?: (ms: number) => Promise<void>;
 	log?: (line: string) => void;
-	/** How long the deploy may take, all told. */
 	timeoutMs?: number;
 }
 
 export interface PublishInput extends DeployInput {
 	projectId: string;
 	name: string;
-	/** Asks for a page with no credentials at all. Given for tests; otherwise `fetchAnonymously`. */
 	fetchAnonymously?: (url: string) => Promise<{ status: number }>;
 }
 
-/**
- * Takes a version off the site: `removePage` removes its saved files, which the records push carries to GitHub, and
- * the site is deployed again without it. Its record and its comments are kept. If it must be gone at once and for
- * everyone, a GitHub admin can switch Pages off for the repository; this is the ordinary way.
- */
+/** Its record and its comments are kept. */
 export const unpublish = async (input: PublishInput & { removePage: () => Promise<void> }): Promise<{ url: string; gone: boolean }> => {
 	const { projectId, name, fetchAnonymously: anonymous = fetchAnonymously, log = () => undefined } = input;
 	const path = sitePath(projectId, name);
@@ -188,9 +166,9 @@ export const unpublish = async (input: PublishInput & { removePage: () => Promis
 
 export interface Published {
 	url: string;
-	/** The page opened with no credentials. */
+	/** The page opened with no credentials (not what GitHub says of the site). */
 	public: boolean;
-	/** This page was not on the site before: its first time. False when it was, and when that could not be told. */
+	/** False also when that could not be told. */
 	first: boolean;
 }
 
@@ -209,11 +187,7 @@ const isFirstTime = async (github: GitHubApi, ref: RepoRef, projectId: string, n
 	}
 };
 
-/**
- * What a publish and an unpublish share: where the site is, checked before anything leaves this machine; then `change`
- * (an unpublish's removal), the records pushed, and the site's deploy waited on until it is done. `done` is what
- * happened, for the messages: "published", "unpublished". Returns where the site is, ending in a slash.
- */
+/** Where the site is, is checked before anything leaves this machine. `site` ends in a slash. */
 const deploy = async (
 	{
 		github,
@@ -231,7 +205,6 @@ const deploy = async (
 	const nothing = `Nothing was ${done}`;
 	const noLink = done === 'published' ? ' No link was made.' : '';
 
-	// 1. Where it is going, before anything leaves this machine.
 	const visibility = await readVisibility(github, ref);
 	const site = visibility.site?.url;
 	if (!site) throw new Error(`${nothing}: the design repository has no ${HOST} Pages site.${noLink}`);
@@ -243,7 +216,6 @@ const deploy = async (
 		);
 	}
 
-	// 2. The records, and only the records.
 	await change();
 	const pushed = await pushRecords();
 	if (pushed.problems.length > 0) {
@@ -251,7 +223,7 @@ const deploy = async (
 		throw new Error(`${held}: ${pushed.problems.map((p) => p.why).join(' ')}`);
 	}
 
-	// 3. The deploy: the site is built from what GitHub now has. Runs that were there before are not this one.
+	// Runs that were there before are not this one.
 	const runs = async (): Promise<Run[]> =>
 		(asRecord(
 			await github.api(`${base}/actions/workflows/${PUBLISH_WORKFLOW}/runs?event=workflow_dispatch&branch=${encodeURIComponent(branch)}&per_page=20`),
@@ -290,7 +262,6 @@ const deploy = async (
 	return { visibility, site: site.replace(/\/?$/, '/') };
 };
 
-/** Deploys the site as GitHub has it, with no page to name or link to: the records pushed, the deploy waited on. */
 export const redeploySite = async (input: DeployInput): Promise<void> => {
 	await deploy(input, 'published');
 };
@@ -303,7 +274,6 @@ export const publish = async (input: PublishInput): Promise<Published> => {
 	const first = await isFirstTime(input.github, ref, projectId, name);
 	const { visibility, site } = await deploy(input, 'published');
 
-	// 4. The link, and whether it opens for someone who is not signed in.
 	const url = `${site}${path}`;
 	const opened = (await anonymous(url)).status === 200;
 	const why = whyPublic(visibility);

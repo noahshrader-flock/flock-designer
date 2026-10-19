@@ -1,13 +1,7 @@
-/**
- * Whether the design system's clone can be handed to Claude Code for Process changes: Claude Code
- * works in the person's own checkout, on a branch DSNR names, so it is started only on a checkout with no unfinished work of
- * theirs to mix with its edits. Said in words, with what to do, when it cannot be.
- */
 import { existsSync } from 'node:fs';
 import { isAbsolute, join } from 'node:path';
 import { git } from '../platform/git';
 
-/** What git leaves in its folder while an operation is unfinished, and what the person is in the middle of. */
 const IN_PROGRESS: [string, string][] = [
 	['MERGE_HEAD', 'a merge'],
 	['rebase-merge', 'a rebase'],

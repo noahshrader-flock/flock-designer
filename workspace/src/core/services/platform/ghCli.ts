@@ -13,10 +13,6 @@ const CALL_TIMEOUT_MS = 60_000;
 export const locateGh = (env: NodeJS.ProcessEnv = process.env, exists: (p: string) => boolean = existsSync): string =>
 	findOnPath('gh', env, exists) ?? ['/opt/homebrew/bin/gh', '/usr/local/bin/gh', '/usr/bin/gh'].find((p) => exists(p)) ?? 'gh';
 
-/**
- * A failed `gh` run as the host error it is: its status read from what it printed (`gh: Not Found (HTTP 404)`), else
- * missing, signed out, or out of time, as `gh` says each.
- */
 export const ghError = (err: unknown): HostError => {
 	if (err instanceof NotInstalled) return new HostError(err.message, undefined, 'missingCli');
 	if (!(err instanceof ProcessFailed)) return new HostError(errorText(err), undefined, 'failed');
@@ -27,9 +23,8 @@ export const ghError = (err: unknown): HostError => {
 };
 
 /**
- * GitHub's API through `gh`, signed in as the person, so it reaches every repository their account can, which a GitHub
- * App sign-in (installed repositories only) cannot, and pull requests and saves are their own. Fails as GitHub would when
- * `gh` is missing or signed out, and after a minute rather than hanging.
+ * Through `gh`, signed in as the person, so it reaches every repository their account can, which a GitHub App sign-in
+ * (installed repositories only) cannot.
  */
 export const ghApi = (bin: string = locateGh()): GitHubApi => ({
 	api: async (path, init = {}) => {

@@ -1,9 +1,6 @@
 import { arg, handle } from '../handle';
 import type { PrototypesArea } from '../areas/prototypes';
 
-/**
- * Prototypes: making one, building it, changing it for a comment, saving, opening, checking and picturing it.
- */
 export const registerPrototypes = (area: PrototypesArea): void => {
 	handle('prototypeReadiness', [arg.root], area.prototypeReadiness);
 	handle('createPrototype', [arg.projectId, arg.name, arg.words, arg.startingPoint, arg.unknown], area.createPrototype);

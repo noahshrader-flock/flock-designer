@@ -5,13 +5,11 @@ import { HOST } from '../../../shared/vocabulary';
 import { MOST_ROUNDS } from '../accessibility/buildCheck';
 
 /**
- * Every task an agent is given, one function per kind of run, so each gets the same parts in the same order and none is
- * missed. Each begins with the builder's guide (`guidePart`), so no run depends on an agent choosing to open it. The
- * caller reads what goes into a part; this only says where it goes.
+ * Each task begins with the builder's guide (`guidePart`), so no run depends on an agent choosing to open it. The caller
+ * reads what goes into a part; this only says where it goes.
  */
 
 /**
- * The builder's guide (`agents/ui-guide.md`) as a task's first section, the run's own skill winning where more specific.
  * Its links (`../standards/…`) are pointed at `sharedRoot` (the folder holding `agents/`) so they name real files
  * wherever the task is read; with none known they are left as written.
  */
@@ -28,17 +26,14 @@ export const guidePart = (guide: string, sharedRoot: string | null): string =>
 		'',
 	].join('\n');
 
-/** What every run in a product checkout is given besides its own task. */
 export interface CheckoutParts {
-	/** The builder's guide, as `guidePart` makes it: the first thing in every task. */
 	guide: string;
-	/** The product's light check (its workspace file's `check-iteration`), or null when it names none. */
+	/** Null when the workspace file names no `check-iteration`. */
 	lightCheck: string | null;
-	/** What else it may read, read only (`sharedGuidance().note`): opened in the editor, it is given no other folders. */
+	/** Opened in the editor, the agent is given no other folders, so this says what else it may read. */
 	shared: string;
-	/** The accessibility section (`taskAccessibility`): the rules, and the product's target. */
 	accessibility: string;
-	/** The voice and tone section (`taskVoice`): empty when the design system has none written. */
+	/** Empty when the design system has none written. */
 	voice: string;
 }
 
@@ -47,14 +42,9 @@ const lightCheckLine = (lightCheck: string | null): string =>
 		? `This product's light check is \`${lightCheck}\`.`
 		: "This product's workspace file names no light check (`check-iteration`): run its type check, lint and the tests for what you changed.";
 
-/**
- * Where the route goes, said the same way in every task that carries the route skill: the record's path is the one thing
- * the skill cannot know. When to leave it out is the skill's to say.
- */
 const routeLine = (recordFile: string): string =>
 	`Record the work's route on the \`codebase\` entry of \`${recordFile}\`, as the route skill above says.`;
 
-/** How every run in a product checkout ends, the same way for each. */
 const checkoutEnding = ({ lightCheck, shared, accessibility, voice }: CheckoutParts): string[] => [
 	lightCheckLine(lightCheck),
 	...(shared ? ['', shared] : []),
@@ -75,7 +65,7 @@ export const handoffTask = (
 		projectId: string;
 		branch: string;
 		gate: string | null;
-		/** Given when the work's record has no route: the route skill's text, and the record to write it on. */
+		/** Given only when the work's record has no route. */
 		missingRoute?: { skill: string; recordFile: string } | null;
 	},
 	parts: CheckoutParts,
@@ -99,10 +89,6 @@ export const handoffTask = (
 		...checkoutEnding(parts),
 	].join('\n');
 
-/**
- * What the agent is told when a prototype moves into the codebase: audit first, then build, then record where the work is
- * (`routeSkill`, on the record in `recordFile`): a record with no route opens at the app's front door.
- */
 export const buildInCodebaseTask = (
 	{
 		skill,
@@ -117,10 +103,8 @@ export const buildInCodebaseTask = (
 		skill: string;
 		routeSkill: string;
 		pageFile: string;
-		/** The React source, when the prototype was written in React. */
 		sourceFile?: string | null;
 		auditFile: string;
-		/** The project's `work.json`, where the route goes. */
 		recordFile: string;
 		name: string;
 		basedOn?: Work['basedOn'];
@@ -151,8 +135,8 @@ export const buildInCodebaseTask = (
 	].join('\n');
 
 /**
- * How every address task begins, on a branch or on a prototype. `number` is the comment's number on its pin. The file
- * keeps every comment, since its pictures are kept in step with it, so which one to act on is said here.
+ * `number` is the comment's number on its pin. The file keeps every comment, since its pictures are kept in step with it,
+ * so which one to act on is said here.
  */
 const addressOpening = (number: number, commentsPath: string, subject: string): string[] => [
 	`Address comment ${number} on ${subject}, and only that one.`,
@@ -160,7 +144,6 @@ const addressOpening = (number: number, commentsPath: string, subject: string): 
 	`Act on comment ${number} alone. The others are listed for context: leave them, and do not mention them except to say you left them.`,
 ];
 
-/** What a prototype's agent may read, said the same way for building one and for changing one. */
 const readableLines = (sources: PrototypeSources): string[] => {
 	const line = (label: string, dir: string | null, missing: string) =>
 		dir ? `- **${label}:** \`${dir}\`` : `- **${label}:** not on this machine. ${missing}`;
@@ -180,19 +163,12 @@ const readableLines = (sources: PrototypeSources): string[] => {
 	];
 };
 
-/**
- * The build's own accessibility check, as both prototype tasks put it: run after it builds, its findings fixed as a
- * build error is, for at most `MOST_ROUNDS` rounds, after which what is left is recorded, not fixed.
- */
 const checkLines = (build: PrototypeBuild): string[] => [
 	`- When it builds, check its accessibility with exactly: \`${build.checkCommand}\``,
 	`  It measures the page in a real browser at the product's target and says what to fix, as the build says an error: fixing it is part of the work, whatever else was asked. Fix each in \`${build.source}\`, build, and check again. It says when its ${MOST_ROUNDS} rounds are used up: then finish, and what is left is recorded with the page. Never write words it says are a person's.`,
 ];
 
-/**
- * What the agent is told for a prototype. The skill says how; this says where everything is. The request is the
- * person's own words, and comes last, after everything that frames it.
- */
+/** The request is the person's own words, and comes last, after everything that frames it. */
 export const prototypeBuildTask = ({
 	guide,
 	skill,
@@ -202,14 +178,12 @@ export const prototypeBuildTask = ({
 	voice,
 	request,
 }: {
-	/** The builder's guide, as `guidePart` makes it: the first thing in the task. */
 	guide: string;
 	skill: string;
 	build: PrototypeBuild;
 	sources: PrototypeSources;
-	/** The accessibility section (`taskAccessibility`): the rules and the product's target. */
 	accessibility: string;
-	/** The voice and tone section (`taskVoice`): empty when the design repository has none written. */
+	/** Empty when the design repository has none written. */
 	voice: string;
 	request: string;
 }): string =>
@@ -234,11 +208,7 @@ export const prototypeBuildTask = ({
 		request.trim(),
 	].join('\n');
 
-/**
- * What the agent is told to act on one comment on a prototype. The same comments file and the same shared skill as
- * on a branch, plus how a prototype is made, since the change is made to one. Like the branch task, it carries none
- * of what the reviewer wrote: their words reach the agent only through the file.
- */
+/** It carries none of what the reviewer wrote: their words reach the agent only through the file. */
 export const prototypeAddressTask = ({
 	guide,
 	addressSkill,
@@ -252,18 +222,15 @@ export const prototypeAddressTask = ({
 	name,
 	where = null,
 }: {
-	/** The builder's guide, as `guidePart` makes it: the first thing in the task. */
 	guide: string;
 	addressSkill: string;
 	buildSkill: string;
 	build: PrototypeBuild;
 	sources: PrototypeSources;
-	/** The accessibility section (`taskAccessibility`). */
 	accessibility: string;
-	/** The voice and tone section (`taskVoice`): empty when the design repository has none written. */
+	/** Empty when the design repository has none written. */
 	voice: string;
 	commentsPath: string;
-	/** The comment's number, as on its pin. */
 	number: number;
 	/** The version the comment is on. */
 	name: string;

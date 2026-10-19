@@ -4,11 +4,6 @@ import { findEditor, openFolder, openPrompt, openSession } from './services/agen
 import { ghApi } from './services/platform/ghCli';
 import { realShareTools } from './services/codebase/shareTools';
 
-/**
- * What every shell's ports share: the person's own tools on this machine, reached the same way from any shell (an address
- * checked over the network, their editor, Claude Code, their own `gh`, and git for a pull request). A shell adds only what
- * is its own: its dialogs, links, clipboard and drawing out of sight.
- */
 export const toolPorts = (): Pick<Ports, 'httpStatus' | 'editor' | 'claude' | 'shareTools'> => {
 	// The person's own command line, which opens their pull requests.
 	const person = ghApi();

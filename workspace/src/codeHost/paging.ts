@@ -3,9 +3,8 @@ import type { GitHubApi } from './github';
 import { HOST } from '../shared/vocabulary';
 
 /**
- * Every item of a list the host pages, 100 at a time, read up to the first page that is not full. `together`: after a full
- * first page, the rest are asked for at once, where each call is slow (a process each, through the command line). `atMost`:
- * on reaching `maxPages` full pages, `fail` aloud (a list that must be whole) or `stop` with what was read (one that is a choice).
+ * Read up to the first page that is not full. `together`: after a full first page, ask for the rest at once, for where
+ * each call is slow (a process each). `atMost`: on reaching `maxPages` full pages, throw (`fail`) or return what was read (`stop`).
  */
 export const readPages = async (
 	github: GitHubApi,

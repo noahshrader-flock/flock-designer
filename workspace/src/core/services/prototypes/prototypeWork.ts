@@ -27,21 +27,14 @@ import { prototypeMeasureName, recordFiles } from '../accessibility/accessibilit
 import { designSystemFile, taskVoice } from '../designSystem/voiceBrief';
 import { HOST } from '../../../shared/vocabulary';
 
-/**
- * Making a prototype: starting it, what its agent may read, building its page, and saving page and source. The app and
- * the `dsnr` command an agent runs both call this, with everything passed in, so neither can make a prototype the other
- * would not recognize.
- */
+/** The app and the `dsnr` command both call this, so neither can make a prototype the other would not recognize. */
 export interface PrototypeWorkContext {
-	/** The folder prototypes are built in, on this machine: the app's own, which the command uses too. */
 	prototypesRoot: string;
-	/** The product checkout prototypes are modeled on and built against, as a real path, or null when there is none. */
+	/** A real path. */
 	productRoot: () => string | null;
-	/** Where records, pages and sources are written: the design repository's clone, or GitHub. */
 	store: () => RecordStore;
-	/** A file from the design repository: the store first, then GitHub when the store is a clone that lacks it. */
+	/** The store first, then GitHub when the store is a clone that lacks it. */
 	readDesignFile: (path: string) => Promise<string | null>;
-	/** The bundler's entry point, or null when it is not installed here. */
 	esbuild: () => string | null;
 }
 
@@ -58,11 +51,6 @@ export interface PrototypeChange {
 	others?: number | null;
 }
 
-/**
- * Where a change is made, as the agent making it is told, in the same words from the app and the command: in a new
- * version when one was asked for; else in place, saying so when others have commented, since their pins may then land on
- * the wrong element. Null when there is nothing to say.
- */
 export const whereTheChangeGoes = (change: PrototypeChange): string | null => {
 	if (change.fresh)
 		return `A new version was asked for: the change is made in ${change.target}, a new version from ${change.from.name}, which starts as a copy of it. Change that copy, rather than starting again; ${change.from.name} stays as it is.`;
@@ -73,23 +61,22 @@ export const whereTheChangeGoes = (change: PrototypeChange): string | null => {
 	return null;
 };
 
-/** What starting a prototype needs: the product branch it is modeled on, and the person's own words. */
 export interface PrototypeStart {
 	projectId: string;
-	/** The project's title, written into its brief when the project is new. */
+	/** Used only when the project is new. */
 	title: string;
 	note: string;
 	/** A branch of the product checkout that exists here. */
 	branch: string;
 	me: Person | null;
-	/** The folder a new project is put in, as `folderName` gives it; null for none. */
+	/** As `folderName` gives it. */
 	folder?: string | null;
 }
 
 const NO_PRODUCT =
 	'Prototypes are built from the real design system, so they need the product repository, with its packages installed, on this machine.';
 
-/** Where a prototype's page or source is on this machine, in the app's prototype folder. Saying so makes no folder. */
+/** Makes no folder. */
 export const localPrototypeFile = (prototypesRoot: string, projectId: string, name: string, ext: 'html' | 'tsx'): string => {
 	assertUsableProjectId(projectId);
 	assertPrototypeName(name);
@@ -100,7 +87,7 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 	const { prototypesRoot } = ctx;
 
 	const localFile = (projectId: string, name: string, ext: 'html' | 'tsx'): string => localPrototypeFile(prototypesRoot, projectId, name, ext);
-	/** The folder an agent builds a project's prototypes in, made when asked for, and the page and source inside it. */
+	/** Made when asked for, as are `file`'s and `sourceFile`'s. */
 	const dir = (projectId: string): string => {
 		assertUsableProjectId(projectId);
 		const d = join(prototypesRoot, projectId);
@@ -115,23 +102,18 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		dir(projectId);
 		return localFile(projectId, name, 'tsx');
 	};
-	/** Where a prototype's accessibility check is kept on this machine, beside its page (`accessibilityOf`). */
 	const checkFile = (projectId: string, name: string): string => {
 		assertPrototypeName(name);
 		return join(dir(projectId), `${name}.accessibility.json`);
 	};
-	/**
-	 * Large files pages share (the design system's fonts), each kept once by its content: here as builds make them,
-	 * and in the design repository beside the projects, where `_` keeps them off the list.
-	 */
+	/** `_` keeps it off the project list. */
 	const sharedDir = join(prototypesRoot, '_shared');
-	/** A shared file's content: this machine's copy, else the design repository's. */
 	const sharedText = async (n: string): Promise<string | null> => {
 		const local = join(sharedDir, `${n}.datauri`);
 		return existsSync(local) ? readFileSync(local, 'utf8') : ctx.readDesignFile(sharedFilePath(n));
 	};
 
-	/** A shared skill, which an agent's task is built from. Only an out-of-date design repository can lack one. */
+	/** Only an out-of-date design repository can lack one. */
 	const skill = async (path: string): Promise<string> => {
 		const text = await ctx.readDesignFile(path);
 		if (text === null)
@@ -139,23 +121,17 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		return text;
 	};
 
-	/** A project's records, from its work.json: none when it has none, and an error when the file is not readable. */
 	const records = (projectId: string): Promise<Work[]> => readRecords({ read: ctx.readDesignFile }, projectId);
-	/** A project's title, from its brief: what people know it by. Its id when the brief has none. */
 	const title = async (projectId: string): Promise<string> =>
 		fromBrief(projectId, await ctx.readDesignFile(projectPath(projectId, 'brief.md'))).title;
 	const record = async (projectId: string, name: string): Promise<Work | undefined> => (await records(projectId)).find((i) => i.name === name);
-	/** A prototype's React source: this machine's newest, else the saved one. Reading it makes no folder. */
+	/** This machine's newest, else the saved one. Makes no folder. */
 	const sourceText = async (projectId: string, name: string): Promise<string | null> => {
 		const local = localFile(projectId, name, 'tsx');
 		return existsSync(local) ? readFileSync(local, 'utf8') : ctx.readDesignFile(prototypeSourcePath(projectId, name));
 	};
 
-	/**
-	 * Whether a prototype can be built from this checkout here: its design system installed, and the bundler present.
-	 * The page is always React with the real components, so without them there is nothing to build, and the person is
-	 * told what to install before anything is made, never handed a lesser page.
-	 */
+	/** Without the real components there is nothing to build: the person is told what to install, never handed a lesser page. */
 	const readiness = (root: string): PrototypeReadiness => {
 		const designSystem = readDescriptor(root).designSystem.package;
 		const pkg = join(root, 'node_modules', ...designSystem.split('/'));
@@ -170,7 +146,6 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		}
 		return { ready: true, designSystem, version };
 	};
-	/** Why a prototype cannot be built here, in words that say what to do; null when it can. */
 	const notReady = (root: string | null): string | null => {
 		if (root === null) return NO_PRODUCT;
 		const ready = readiness(root);
@@ -180,11 +155,6 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 			: "Prototypes are built with DSNR's own bundler, which is not installed. Run npm ci in flock-designer/workspace, then try again.";
 	};
 
-	/**
-	 * Starts a prototype: the project's brief if it is new, the version's record and its name (the next version, so a
-	 * new prototype is a new idea). What it is modeled on is not optional: a prototype is built from a repository's
-	 * real design system, on a branch that exists here.
-	 */
 	const start = async (root: string, { projectId, title: name, note, branch, me, folder }: PrototypeStart): Promise<Work> => {
 		assertUsableProjectId(projectId);
 		const why = notReady(root);
@@ -202,11 +172,7 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		return recordPrototype(ctx.store(), { projectId, title: name.slice(0, 200), note: String(note).slice(0, 8000), me, basedOn, folder });
 	};
 
-	/**
-	 * The product code a prototype is modeled on, as a folder the agent may read: the checkout itself when it is on
-	 * that branch already, otherwise a read-only copy of the branch, so the person's checkout is never switched. Null
-	 * when there is nothing on this machine to read.
-	 */
+	/** Off its branch, the code is a read-only copy of the branch, so the person's checkout is never switched. */
 	const sources = async (projectId: string, name: string): Promise<PrototypeSources | null> => {
 		const basedOn = (await record(projectId, name))?.basedOn;
 		const root = ctx.productRoot();
@@ -228,8 +194,7 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 			// The guidance that goes with the code when the branch has it; otherwise the checkout's own, which always has
 			// it (develop has no DSNR files, and the page must still follow the product).
 			productGuidance: has(join(code, descriptor.contextDir)) ?? has(join(root, descriptor.contextDir)),
-			// The design system's own folder (`designSystemCheckout`): its guidance and, as important for a page that
-			// redraws its components, its source.
+			// Its source matters as much as its guidance, for a page that redraws its components.
 			designSystemGuidance: has(designSystemCheckout(root, descriptor.designSystem)),
 			installedDesignSystem,
 			sharedStandards: designRoot === null ? null : has(join(dirname(designRoot), 'standards')),
@@ -238,10 +203,7 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		};
 	};
 
-	/**
-	 * Where a run's build check keeps what it is given and what it found, beside the page. A new run starts its rounds
-	 * again: what an earlier run left is its own.
-	 */
+	/** A new run starts its rounds again: what an earlier run left is its own. */
 	const buildCheckFiles = (projectId: string, name: string) => ({
 		config: join(dir(projectId), `${name}.build-check.json`),
 		record: join(dir(projectId), `${name}.build-checked.json`),
@@ -265,7 +227,6 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		return shellLine(['node', await writeCheckScript(prototypesRoot), config]);
 	};
 
-	/** Where the agent writes the prototype, and the exact commands that check it builds, and check its accessibility. */
 	const buildPlan = async (
 		projectId: string,
 		name: string,
@@ -286,10 +247,7 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		};
 	};
 
-	/**
-	 * Builds a prototype's page from its source, against the product checkout's installed packages. Throws with what
-	 * the build said, so a page that does not compile says why rather than showing an old one.
-	 */
+	/** Throws with what the build said, so a page that does not compile says why rather than showing an old one. */
 	const buildPage = async (projectId: string, name: string): Promise<void> => {
 		const root = ctx.productRoot();
 		const why = notReady(root);
@@ -305,10 +263,7 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		if (!r.ok) throw new Error(`The prototype did not build:\n${r.output.slice(0, 2000)}`);
 	};
 
-	/**
-	 * Saves a page with what it needs: the shared files it points at that the design repository does not have yet
-	 * (first, so a page is never there without them), its React source, then the page.
-	 */
+	/** Shared files first, so a page is never there without them. */
 	const keep = async (projectId: string, name: string, html: string): Promise<void> => {
 		const store = ctx.store();
 		for (const n of sharedFilesOf(html)) {
@@ -320,7 +275,6 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		if (existsSync(source))
 			await store.write(prototypeSourcePath(projectId, name), readFileSync(source, 'utf8'), `${projectId}: prototype ${name} source`);
 		await store.write(prototypePagePath(projectId, name), html, `${projectId}: prototype ${name}`);
-		// What its build's own check found of exactly this page, on its record: what was left, and why.
 		const checked = checkedAsSaved({ projectId, name, ...buildCheckFiles(projectId, name) }, html);
 		if (checked) {
 			const { files } = recordFiles(checked, await ctx.readDesignFile(projectPath(projectId, 'review.md')));
@@ -328,7 +282,7 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		}
 	};
 
-	/** The page as it will be saved: built from its source when there is one, so it is what the source makes. */
+	/** Built from its source when there is one, so it is what the source makes. */
 	const built = async (projectId: string, name: string): Promise<string> => {
 		const pageFile = file(projectId, name);
 		if (existsSync(sourceFile(projectId, name))) await buildPage(projectId, name);
@@ -341,12 +295,10 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		}
 		return html;
 	};
-	/** Builds the page, then saves page and source. */
 	const save = async (projectId: string, name: string): Promise<void> => keep(projectId, name, await built(projectId, name));
 	/**
-	 * Saves a prototype someone else builds (Claude Code, in the person's editor) once it is built: its page written by a
-	 * build of its source as it is now (the build reads the source, then writes the page), and that source not the one saved
-	 * already. `waiting` otherwise: not built yet, or nothing new. Asked as often as a watcher likes, it saves each build once.
+	 * Saves only a page newer than its source, from a source not saved already: asked as often as a watcher likes, it
+	 * saves each build once.
 	 */
 	const saveBuilt = async (projectId: string, name: string): Promise<'saved' | 'waiting'> => {
 		const source = localFile(projectId, name, 'tsx');
@@ -357,11 +309,7 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		return 'saved';
 	};
 
-	/**
-	 * Where a change goes, with its source made ready there: in place, unless `newVersion`. `comments` (null when
-	 * unreadable) tell the person who else has commented, the one being acted on (`acting`) aside. Nothing is recorded
-	 * yet: see `finishChange`.
-	 */
+	/** `comments` is null when unreadable. Nothing is recorded yet: see `finishChange`. */
 	const startChange = async (
 		projectId: string,
 		name: string,
@@ -388,9 +336,8 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 	};
 
 	/**
-	 * What `startChange` said, worked out again for a later run of the dsnr command to save. Null for a change in place (no
-	 * `fromName`); otherwise `name` must be the next version, from `fromName`. A version someone else recorded meanwhile
-	 * under that name is refused rather than saved over.
+	 * Null for a change in place (no `fromName`); otherwise `name` must be the next version. A version someone else
+	 * recorded meanwhile under that name is refused rather than saved over.
 	 */
 	const resumeChange = async (projectId: string, name: string, fromName: string | null): Promise<PrototypeChange | null> => {
 		assertPrototypeName(name);
@@ -408,11 +355,7 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		return { from, target: name, fresh: true, before: source === null ? '' : contentHashOf(source) };
 	};
 
-	/**
-	 * After the agent: a changed source is built (one that does not build is neither recorded nor saved), recorded as a new
-	 * version if asked, and saved; an unchanged new version's copy is removed. Returns the source's hash (null when
-	 * unchanged) and the new version's record.
-	 */
+	/** A source that does not build is neither recorded nor saved. `version` is the source's hash, null when unchanged. */
 	const finishChange = async (
 		projectId: string,
 		change: PrototypeChange,
@@ -431,10 +374,7 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		return { version, made };
 	};
 
-	/**
-	 * The page: this machine's newest build first, then the saved one. A source changed since its page was last built
-	 * (or never built) is built first, unless an agent is still writing it.
-	 */
+	/** A source changed since its page was last built is built first, unless an agent is still writing it. */
 	const page = async (projectId: string, name: string, agentBusy: boolean): Promise<string | null> => {
 		const local = file(projectId, name);
 		const source = sourceFile(projectId, name);
@@ -444,10 +384,7 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		return ctx.readDesignFile(prototypePagePath(projectId, name));
 	};
 
-	/**
-	 * A prototype's accessibility target: what its product's manifest declares on the branch the prototype is modeled
-	 * on, else in the checkout, as its guidance is found (develop has no DSNR files); read from git, so nothing is copied.
-	 */
+	/** The manifest on the branch the prototype is modeled on, else the checkout's (develop has no DSNR files). */
 	const target = async (projectId: string, name: string): Promise<DeclaredTarget> => {
 		const root = ctx.productRoot();
 		if (root === null) return undeclared('No product repository is open');
@@ -460,10 +397,8 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		return onBranch !== null ? declaredTarget(onBranch, descriptor.product) : productTarget(join(root, descriptor.contextDir), descriptor.product);
 	};
 
-	/** The accessibility section of a prototype's task, at its target. */
 	const accessibility = async (projectId: string, name: string): Promise<string> => taskAccessibility(skill, await target(projectId, name));
 
-	/** The voice and tone section of a task: the design system's file, read fresh from its folder for `root`'s product. */
 	const voice = (root: string | null = ctx.productRoot()): Promise<string> => taskVoice(root === null ? async () => null : designSystemFile(root));
 
 	return {

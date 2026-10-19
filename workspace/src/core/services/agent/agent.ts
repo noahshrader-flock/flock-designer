@@ -7,12 +7,10 @@ import type { AgentReadiness, AgentStatus, RunLogLine } from '../../../shared/co
 import { GROUP, ProcessFailed, endGroup, runFile } from '../platform/process';
 
 /**
- * Hands a task to the agent the designer already has installed: no bundled credentials, prompts or restated standards,
- * since the repository holds its own instructions. That keeps the workflow usable without DSNR, and the adapter
- * replaceable when a second harness turns up.
+ * No bundled credentials, prompts or restated standards, since the repository holds its own instructions: that keeps the
+ * workflow usable without DSNR.
  */
 
-/** Said wherever a second run is refused: the app runs one agent at a time. */
 export const AGENT_BUSY = 'The agent is already working on something else. Wait for it to finish, then try again.';
 
 export interface AgentExtras {
@@ -24,30 +22,28 @@ export interface AgentExtras {
 	 * and an edit rule denies it outright as well.
 	 */
 	readOnly?: string[];
-	/** Which piece of work this run is for (a prototype's key), carried on its status. */
+	/** A prototype's key, carried on its status. */
 	work?: string;
 	/** A run that is a Handoff, so a screen opened again knows it ends in a report, not a preview. */
 	purpose?: 'handoff';
-	/** The task stands alone: it is not working in a repository, so there are no repository instructions to point at. */
+	/** Not working in a repository, so there are no repository instructions to point at. */
 	bare?: boolean;
-	/** The conversation's ID, chosen by the app, so the person can continue it in their editor afterwards. */
+	/** Chosen by the app, so the person can continue the conversation in their editor afterwards. */
 	session?: string;
-	/** What the conversation is called where it is listed, so it can be recognized there. */
 	name?: string;
 }
 
 export interface AgentAdapter {
-	/** What the designer would call it. */
 	readonly name: string;
-	/** Executable plus arguments. Never a shell string. */
+	/** Never a shell string. */
 	argvFor(task: string, extras?: AgentExtras): string[];
-	/** Turns what the tool prints into lines a person can read. Defaults to passing text through. */
+	/** Without one, text is passed through. */
 	formatter?(): (chunk: string) => string[];
 }
 
 /**
- * Where to find Claude Code: the PATH, then the usual install places, then the newest copy bundled with an editor
- * extension (many run it only there, with nothing on PATH). Falls back to the bare name, whose failure says what to do.
+ * Editor extensions are looked in too, as many run Claude Code only there, with nothing on PATH. Falls back to the bare
+ * name, whose failure says what to do.
  */
 export const locateClaude = (
 	env: NodeJS.ProcessEnv = process.env,
@@ -128,7 +124,7 @@ const settingsFor = (readOnly: string[]): string =>
 			: {}),
 	});
 
-/** Runs a command and resolves with what it printed, or rejects. Bounded, so a hung check never holds anything up. */
+/** Bounded, so a hung check never holds anything up. */
 type RunCommand = (file: string, args: string[]) => Promise<string>;
 const runCommand: RunCommand = (file, args) =>
 	runFile(file, args, { timeoutMs: 10_000 }).then(
@@ -141,9 +137,8 @@ const runCommand: RunCommand = (file, args) =>
 	);
 
 /**
- * Whether new work can be built here, asked before anyone types a request. Only `claude auth status`'s yes or no is
- * read, never the sign-in itself. No answer (an older Claude Code, a slow machine) does not stand in the way: the run
- * itself still reports a real failure.
+ * Only `claude auth status`'s yes or no is read, never the sign-in itself. No answer (an older Claude Code, a slow
+ * machine) does not stand in the way: the run itself still reports a real failure.
  */
 export const agentReadiness = async (locate: () => string = () => locateClaude(), run: RunCommand = runCommand): Promise<AgentReadiness> => {
 	const bin = locate();
@@ -165,10 +160,7 @@ export const agentReadiness = async (locate: () => string = () => locateClaude()
 	return { state: 'unknown' };
 };
 
-/**
- * Reads Claude Code's streamed JSON as what a person would want to see: what it says, and which file it touches. A chunk
- * can end mid-line, so the unfinished tail is kept for the next one.
- */
+/** A chunk can end mid-line, so the unfinished tail is kept for the next one. */
 export const claudeStreamFormatter = (): ((chunk: string) => string[]) => {
 	let tail = '';
 	// The run's closing event repeats the agent's last message verbatim, so it is said once.
@@ -207,7 +199,6 @@ export const claudeStreamFormatter = (): ((chunk: string) => string[]) => {
 	};
 };
 
-/** The confirmed first integration. Others slot in beside it. */
 export const claudeCodeAdapter: AgentAdapter = {
 	name: 'Claude Code',
 	argvFor: (task, extras) => [
@@ -236,16 +227,15 @@ export const claudeCodeAdapter: AgentAdapter = {
 /** How long a run to its end may take before it is stopped: a value's change takes under a minute. */
 const RUN_TO_END_MS = 5 * 60_000;
 
-/** What a run to its end said last (what it changed, or why not), and whether it ended as it should. */
+/** `said`: what it changed, or why not. */
 export interface RunEnded {
 	ok: boolean;
 	said: string;
 }
 
 /**
- * A task run to its end in `cwd`, unattended, with the adapter's own permissions, and what it said last: for work in a
- * scratch copy nobody watches (writing a component's value), so it is apart from the person's one run at a time
- * (`AgentRunner`), and neither waits on the other.
+ * For work in a scratch copy nobody watches, so it is apart from the person's one run at a time (`AgentRunner`), and
+ * neither waits on the other.
  */
 export const runToEnd = (cwd: string, task: string, extras: AgentExtras = {}, deps: AgentDeps = defaultAgentDeps): Promise<RunEnded> =>
 	new Promise((done) => {
@@ -295,10 +285,9 @@ export const defaultAgentDeps: AgentDeps = {
 	adapter: claudeCodeAdapter,
 };
 
-/** How a run ended, as everything that waits on one is told: finished with its exit code, stopped by the person, or it could not run. */
 export type AgentEnd = { state: 'finished'; exitCode: number } | { state: 'stopped' } | { state: 'unavailable'; detail: string };
 
-/** A run's end, as a job goes on from it: finished, stopped by the person, or why it did not finish, thrown in words. */
+/** Throws, in words, unless the run finished with code 0 or was stopped. */
 export const afterRun = (end: AgentEnd): 'finished' | 'stopped' => {
 	if (end.state === 'stopped') return 'stopped';
 	if (end.state === 'unavailable') throw new Error(end.detail);
@@ -308,21 +297,19 @@ export const afterRun = (end: AgentEnd): 'finished' | 'stopped' => {
 
 export class AgentRunner {
 	private child: ChildProcess | null = null;
-	/** The run going on's end, told once its process has exited (or could not start); whether the person stopped it. */
 	private ending: Promise<AgentEnd> | null = null;
 	private stopping = false;
 	private current: AgentStatus = { state: 'idle' };
 	private work: string | null = null;
-	/** Where the run is, and its conversation: a checkout must not change branch under it, and only its own conversation is taken over. */
+	/** A checkout must not change branch under the run, and only its own conversation is taken over. */
 	private root: string | null = null;
 	private session: string | null = null;
 	private purpose: 'handoff' | null = null;
 
-	/** What the status carries about the run, so a screen can tell its own run from another, and what kind it is. */
 	private tags(): { work: string | null; purpose: 'handoff' | null } {
 		return { work: this.work, purpose: this.purpose };
 	}
-	/** The run's recent lines, kept here so a screen that was left and opened again can pick up where it was. */
+	/** Kept here so a screen that was left and opened again can pick up where it was. */
 	private recent: string[] = [];
 
 	constructor(
@@ -344,24 +331,20 @@ export class AgentRunner {
 	}
 
 	/**
-	 * The task text the agent receives: the project and the task, nothing more. How to build lives in the repository's
-	 * own instructions, and restating it here would make a second source that drifts.
+	 * How to build lives in the repository's own instructions; restating it here would make a second source that drifts.
 	 */
 	taskFor(projectId: string, task: string): string {
 		return [`Project: ${projectId}`, "Read this repository's own agent instructions and follow them.", '', task].join('\n');
 	}
 
-	/**
-	 * Runs `task` and resolves when the run has ended, told by its process exiting, never guessed: what every job waits on.
-	 * The same work asked again while it runs joins that run and waits for its end; anything else is refused (`start`).
-	 */
+	/** Resolves when the run's process has exited, never guessed. */
 	run(root: string, projectId: string, task: string, extras?: AgentExtras): Promise<AgentEnd> {
 		const started = this.start(root, projectId, task, extras);
 		if (started.state === 'unavailable') return Promise.resolve({ state: 'unavailable', detail: started.detail });
 		return this.ending as Promise<AgentEnd>;
 	}
 
-	/** The end of the run going on for `work` (one a screen opened again finds still going); null when none is. */
+	/** Null when no run for `work` is going on. */
 	ended(work: string): Promise<AgentEnd> | null {
 		return this.current.state === 'running' && this.work === work ? this.ending : null;
 	}
@@ -439,17 +422,15 @@ export class AgentRunner {
 		return this.current;
 	}
 
-	/** Whether a run is going on in this folder. */
 	runningIn(root: string): boolean {
 		return this.current.state === 'running' && this.root === root;
 	}
 
-	/** The conversation of the run that is going, if the app named it. */
 	runningSession(): string | null {
 		return this.current.state === 'running' ? this.session : null;
 	}
 
-	/** Ends the run, and every tool it started. The status says finished once it has (the exit handler), not before. */
+	/** The status says finished once the run has ended (the exit handler), not before. */
 	stop(): Promise<void> {
 		if (!this.child) return Promise.resolve();
 		this.stopping = true;

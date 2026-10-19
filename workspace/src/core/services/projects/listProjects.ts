@@ -9,9 +9,7 @@ import { codebaseBranchFor } from './workRecords';
 import { readFolderProjects } from './localProjects';
 
 /**
- * The projects the Projects screen lists: GitHub's, and this checkout's (`root`, one the person opened; nothing is read
- * in a repository they have not), as one list. GitHub not answering is no failure while there is something here to
- * show.
+ * `root` must be one the person opened. GitHub not answering is no failure while there is something local to show.
  */
 export const listProjects = async ({
 	root,
@@ -19,13 +17,11 @@ export const listProjects = async ({
 	remote,
 }: {
 	root: string | null;
-	/** Who is signed in, whose branches are theirs. */
 	login: string | null;
 	remote: () => Promise<Project[]>;
 }): Promise<Project[]> => {
 	let local: Project[] = [];
-	// The checkout open: its repository on GitHub (for codebase work recorded before records named it, null when it has no
-	// remote), and each project's codebase branch in it.
+	// `repository` fills in codebase work recorded before records named it; null when the checkout has no remote.
 	let here: { root: string; repository: string | null; branchOf: (projectId: string) => string } | null = null;
 	if (root !== null) {
 		const recordsRoot = recordsRootFor(root);

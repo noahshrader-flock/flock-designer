@@ -10,21 +10,18 @@ import { resolveInside } from '../platform/paths';
 import { parseWork, serializeWork, unreadableWork } from '../../../shared/workRecords';
 
 /**
- * Prototypes: what is recorded, where the page is kept, and what the agent is told. One writer per machine: into the
- * design repository's clone for the publisher to send, or, without a clone, through GitHub's API; never both, or the
- * clone could not catch up.
+ * One writer per machine: the design repository's clone, or, without a clone, GitHub's API; never both, or the clone
+ * could not catch up.
  */
 export interface RecordStore {
-	/** A file in the design repository, by its path from the repository's root, or null. */
+	/** `path` is from the repository's root. */
 	read(path: string): Promise<string | null>;
-	/** A file as the bytes it is (a picture), or null. */
 	readBytes(path: string): Promise<Buffer | null>;
-	/** Whether a file is there, without fetching it: shared files run to megabytes. */
+	/** Without fetching it: shared files run to megabytes. */
 	has(path: string): Promise<boolean>;
 	write(path: string, content: string | Buffer, message: string): Promise<void>;
 }
 
-/** The design repository's clone on this machine. `published` runs after each write. */
 export const cloneStore = (designRoot: string, published: () => void): RecordStore => ({
 	read: async (path) => {
 		const file = resolveInside(designRoot, path);
@@ -43,7 +40,6 @@ export const cloneStore = (designRoot: string, published: () => void): RecordSto
 	},
 });
 
-/** How to build UI in a Flock product: the builder's guide, the first part of every task (`guidePart`). */
 export const GUIDE = 'agents/ui-guide.md';
 export const BUILD_SKILL = 'skills/build-prototype.md';
 export const MOVE_SKILL = 'skills/move-to-code.md';
@@ -55,19 +51,14 @@ export const ROUTE_SKILL = 'skills/record-the-route.md';
  */
 export const MAX_PAGE = 90_000_000;
 
-/** Where a prototype is written, and the exact command that checks it builds. React, always: see the skill. */
 export interface PrototypeBuild {
 	source: string;
 	page: string;
 	buildCommand: string;
-	/** The build's own accessibility check, run after it builds. */
 	checkCommand: string;
 }
 
-/**
- * A project's records, through anything that reads a file of the design repository. A file that cannot be read is
- * refused rather than written over, or guessed at.
- */
+/** A file that cannot be read is refused rather than written over, or guessed at. */
 export const readRecords = async (store: Pick<RecordStore, 'read'>, projectId: string): Promise<Work[]> => {
 	const raw = await store.read(workPath(projectId));
 	if (raw === null) return [];
@@ -76,7 +67,6 @@ export const readRecords = async (store: Pick<RecordStore, 'read'>, projectId: s
 	return records;
 };
 
-/** Adds one prototype's record to its project's. */
 const addRecord = async (
 	store: RecordStore,
 	existing: Work[],
@@ -96,8 +86,7 @@ const addRecord = async (
 		branch: prototypeKey(projectId, name),
 		commit: null,
 		createdAt: now.toISOString(),
-		// The record carries the gist; the brief carries the whole request, which is what reviewers and the
-		// move into the code read.
+		// The record carries the gist; the brief carries the whole request.
 		note: note.trim().split('\n')[0] ?? '',
 		...(me ? { contributors: [me] } : {}),
 		...(basedOn ? { basedOn } : {}),
@@ -108,9 +97,8 @@ const addRecord = async (
 };
 
 /**
- * Records the next version of a prototype, and the project itself (a brief with its title, in the folder it is started
- * in) when this is its first work. A project with a brief stays in its folder, wherever the new version is started from.
- * The page comes later, once the agent has made it.
+ * Also starts the project (a brief with its title, in `folder`) when this is its first work. A project with a brief stays
+ * in its folder, wherever the new version is started from.
  */
 export const recordPrototype = async (
 	store: RecordStore,
@@ -136,11 +124,7 @@ export const recordPrototype = async (
 	return addRecord(store, existing, { projectId, name, note, me, basedOn, now });
 };
 
-/**
- * Puts a project in a folder, or in none for null: its brief, read just before, with only its folder
- * changed, written once with a message that says so. Nothing is written when it is in that folder already. The brief is
- * where the folder is kept, so a project with none is refused rather than given one.
- */
+/** The brief is where the folder is kept, so a project with none is refused rather than given one. */
 export const assignFolder = async (store: RecordStore, projectId: string, folder: string | null): Promise<void> => {
 	const path = projectPath(projectId, 'brief.md');
 	const brief = await store.read(path);
@@ -155,9 +139,8 @@ export const assignFolder = async (store: RecordStore, projectId: string, folder
 };
 
 /**
- * Names a prototype's picture on its record (`Work.cover`), changing nothing else in it or in any other record.
- * Written after the picture itself, so a record never names a picture that is not there. False when there is no record
- * of the prototype, as for a page that was never recorded: nothing is written then.
+ * Call it after writing the picture itself, so a record never names a picture that is not there. False, writing nothing,
+ * when there is no record of the prototype.
  */
 export const setCover = async (store: RecordStore, projectId: string, name: string, cover: string): Promise<boolean> => {
 	assertCover(cover);
@@ -168,10 +151,7 @@ export const setCover = async (store: RecordStore, projectId: string, name: stri
 	return true;
 };
 
-/**
- * Records a new version started from another, named before it was made (its files are already under that name), modeled
- * on what the version it came from was, and saying which that was. Refused when that name is taken.
- */
+/** Named by the caller because its files are already under that name; refused when that name is taken. */
 export const recordVersionFrom = async (
 	store: RecordStore,
 	{ projectId, name, from, note, me, now = new Date() }: { projectId: string; name: string; from: Work; note: string; me: Person | null; now?: Date },
@@ -187,29 +167,19 @@ export const assertPrototypeName = (name: string): void => {
 	if (!isPrototypeName(name)) throw new Error(`"${name}" is not a prototype.`);
 };
 
-/**
- * A short hash of a prototype's source or page: what tells the screen whether an agent changed it,
- * and what a comment it changed records. A prototype has no commits, so this stands in for one.
- */
+/** A prototype has no commits, so this stands in for one. */
 export const contentHashOf = (source: string): string => createHash('sha1').update(source).digest('hex').slice(0, 12);
 
-/**
- * What a prototype's agent may read, each a folder: the product's code (on the branch it is modeled
- * on), and the guidance the code is built to, in its three layers. Every one is optional: whatever this
- * machine does not have is left out, and the task says so rather than letting the agent guess.
- */
+/** Folders. Whatever this machine does not have is null, and the task says so rather than letting the agent guess. */
 export interface PrototypeSources {
-	/** The product's code, on the branch the prototype is modeled on. */
+	/** On the branch the prototype is modeled on. */
 	code: string;
-	/** The product's own DSNR guidance: how its app is put together, its patterns, its rules. */
 	productGuidance: string | null;
-	/** The design system's checkout: its guidance (in its context folder) and its components' source. */
+	/** The design system's checkout. */
 	designSystemGuidance: string | null;
-	/** The design system as installed in the product: the version it really renders with. */
+	/** As installed in the product: the version it really renders with. */
 	installedDesignSystem: string | null;
-	/** The standards every product shares. */
 	sharedStandards: string | null;
-	/** The product's installed packages, which a React prototype is built against. */
 	nodeModules: string | null;
 }
 
@@ -220,11 +190,7 @@ export const prototypeReadable = (s: PrototypeSources | null): string[] =>
 			)
 		: [];
 
-/**
- * The first line of the Claude Code conversation that builds a prototype into the code: short, pointing at the task
- * written beside the prototype. `continuing` is the branch, when the work was started before: then it says to look at
- * what is there first.
- */
+/** `continuing` is the branch, when the work was started before. */
 export const buildInCodebasePrompt = ({
 	label,
 	projectId,
@@ -243,7 +209,6 @@ export const buildInCodebasePrompt = ({
 		`Your task, with the skill to follow and the prototype's files, is in ${taskFile}: read it and do what it says.`,
 	].join(' ');
 
-/** The first line of the conversation that builds a new prototype, in Claude Code: short, pointing at the task written beside it, which is complete. */
 export const prototypeBuildPrompt = ({ label, projectId, taskFile }: { label: string; projectId: string; taskFile: string }): string =>
 	[`Build prototype ${label} of ${projectId}.`, `Your task is in ${taskFile}. It is complete: read all of it, then do what it says, in order.`].join(
 		' ',

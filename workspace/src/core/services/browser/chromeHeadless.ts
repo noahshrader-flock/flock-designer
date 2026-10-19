@@ -31,11 +31,10 @@ import { type ProbeOptions, type ProbePage, type ViewProbed, probeView } from '.
 import { within } from '../platform/within';
 import PICTURE from '../../../page/picture?page';
 
-/** Said when there is no browser to draw or check with: what to install, or where to point. */
 export const NO_BROWSER =
 	'Drawing pictures and checking accessibility need Chrome, Edge or Chromium on this machine. Install one, or set CHROME_BIN to one, then open DSNR again.';
 
-/** Where each installs, on each system, in the order they are looked for. */
+/** Looked for in this order. */
 const PLACES: Record<string, string[]> = {
 	darwin: [
 		'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
@@ -49,7 +48,6 @@ const PLACES: Record<string, string[]> = {
 	],
 };
 
-/** The browser to draw and check with: `CHROME_BIN` when it is set, else Chrome, Edge or Chromium where each installs. */
 export const findChrome = (
 	env: NodeJS.ProcessEnv = process.env,
 	exists: (p: string) => boolean = existsSync,
@@ -72,36 +70,29 @@ interface PageLike {
 		captureBeyondViewport?: boolean;
 		clip: { x: number; y: number; width: number; height: number; scale?: number };
 	}): Promise<Uint8Array>;
-	/** Told of an error the page's own code throws (puppeteer's `pageerror`). */
 	on?(event: 'pageerror', listener: (err: unknown) => void): void;
 	close(): Promise<void>;
 }
 interface BrowserLike {
 	newPage(): Promise<PageLike>;
 	close(): Promise<void>;
-	/** Told when the browser is gone (it crashed, or was ended outside DSNR), as puppeteer's is. */
 	on?(event: 'disconnected', listener: () => void): unknown;
 }
 
-/** Starts the browser at `path`, headless, through puppeteer: loaded when first needed. */
 const launchChrome = async (path: string): Promise<BrowserLike> => {
 	const { default: puppeteer } = await import('puppeteer-core');
 	return (await puppeteer.launch({ executablePath: path, headless: true, args: ['--hide-scrollbars', '--mute-audio'] })) as unknown as BrowserLike;
 };
 
-/** A call to the picture's page code (`page/picture.ts`, bundled to text when DSNR is built), given what it needs as one object. */
+/** `PICTURE` is `page/picture.ts`, bundled to text when DSNR is built. */
 const inPage = (name: 'encodeJpeg' | 'readyToPicture' | 'pictured', args: unknown = {}): string =>
 	`(async () => {\n${PICTURE}\nreturn await __fdPage.${name}(${JSON.stringify(args)});\n})()`;
 
-/**
- * A story's picture, from a PNG of the top of its page (`PICTURE_TOP` down, at `PICTURE_SCALE`): what it painted, placed
- * on white (`placeOnWhite`), then drawn by the page's own canvas at most `PICTURE_MOST_ACROSS` across, as
- * JPEG. Only the PNG and where it goes are handed to the page, never the pixels; nothing when it painted nothing.
- */
+/** Only the PNG and where it goes are handed to the page, never the pixels. */
 const encodeInPage = (png: Buffer, place: NonNullable<ReturnType<typeof placeOnWhite>>): string =>
 	inPage('encodeJpeg', { png: png.toString('base64'), place, most: PICTURE_MOST_ACROSS, quality: PICTURE_QUALITY / 100 });
 
-/** A story's picture as the composition makes it, from a full capture: exact for any story, and the slower way. Exported for its test. */
+/** Exact for any story, and the slower way. */
 export const composedPicture = async (page: PageLike): Promise<Buffer | undefined> => {
 	const png = Buffer.from(await page.screenshot({ type: 'png', clip: { x: 0, y: 0, width: WINDOW.width, height: PICTURE_TOP } }));
 	const { width, height, rgba } = decodePng(png);
@@ -111,14 +102,12 @@ export const composedPicture = async (page: PageLike): Promise<Buffer | undefine
 	return typeof jpeg === 'string' && jpeg !== '' ? Buffer.from(jpeg, 'base64') : undefined;
 };
 
-/** Readies the page for the picture's one region (`readyToPicture`), and undoes it (`pictured`). */
 const readyToPicture = (cut: boolean, dx: number, dy: number) => inPage('readyToPicture', { cut, dx, dy, width: WINDOW.width, height: PICTURE_TOP });
 const pictured = inPage('pictured');
 
 /**
- * A story's picture, the same as `composedPicture` and about twice as fast: what it painted is found from a half-size
- * capture, placed as the composition places it (`placeAround`), and the browser takes that one region as the JPEG itself.
- * Where that cannot hold (something drawn outside the stories, such as an open dialog), the composition makes it.
+ * The same as `composedPicture` and about twice as fast. Where that cannot hold (something drawn outside the stories, such
+ * as an open dialog), the composition makes it.
  */
 export const pictureOf = async (page: PageLike): Promise<Buffer | undefined> => {
 	const small = Buffer.from(
@@ -139,7 +128,6 @@ export const pictureOf = async (page: PageLike): Promise<Buffer | undefined> => 
 		width: (right - left) * PICTURE_SCALE,
 		height: (bottom - top) * PICTURE_SCALE,
 	});
-	// The region, in the page's own pixels, and how far the story moves so the region starts on the page.
 	// On whole pixels of the page, so the picture is exactly its size, not a pixel more where a half pixel is rounded up.
 	const region = {
 		x: Math.round(left - place.left / PICTURE_SCALE),
@@ -159,7 +147,7 @@ export const pictureOf = async (page: PageLike): Promise<Buffer | undefined> => 
 	}
 };
 
-/** How pictures are taken here, as a fingerprint of the code that takes them. */
+/** A fingerprint of the code that takes pictures, so it changes whenever that code does. */
 export const HEADLESS_PICTURE_RECIPE = createHash('sha256')
 	.update(
 		`headless${readDrawn('', true)}${PICTURE}${composedPicture}${pictureOf}${COMPOSITION}${[WINDOW.width, PICTURE_TOP, PICTURE_SCALE, PICTURE_MOST_ACROSS, PICTURE_QUALITY]}`,
@@ -167,16 +155,11 @@ export const HEADLESS_PICTURE_RECIPE = createHash('sha256')
 	.digest('hex')
 	.slice(0, 12);
 
-/** The most loading the page, and then its getting ready, may take. */
 const LOAD_MS = 15_000;
 const READY_MS = 12_000;
 const STATE_MS = 20_000;
 
-/**
- * Drawing out of sight with the browser already on the machine (`Headless`): prototype pictures, accessibility checks and
- * the Design System tab's stories (`measure`). The browser is started when first needed and kept, as starting it takes a
- * second; `close` ends it. With no browser here, each says what to install.
- */
+/** The browser is started when first needed and kept, as starting it takes a second; `close` ends it. */
 export const chromeHeadless = ({
 	find = () => findChrome(),
 	launch = launchChrome,
@@ -206,7 +189,6 @@ export const chromeHeadless = ({
 		}
 		return browser;
 	};
-	/** A page of its own for `work`, closed after, whatever happens. */
 	const onPage = async <T>(work: (page: PageLike) => Promise<T>): Promise<T> => {
 		const page = await (await started()).newPage();
 		try {
@@ -219,7 +201,6 @@ export const chromeHeadless = ({
 	const draw: DrawCover = (url) =>
 		onPage(async (page) => {
 			await page.setViewport({ ...COVER_WINDOW, deviceScaleFactor: 1 });
-			// Always in light, whatever the machine's theme.
 			await page.emulateMediaFeatures([{ name: 'prefers-color-scheme', value: 'light' }]);
 			if ((await within(LOAD_MS, page.goto(url, { waitUntil: 'load', timeout: LOAD_MS }))) === null) return null;
 			const ready = (await within(READY_MS, page.evaluate(settleScript()))) as { capped?: unknown } | null;
@@ -256,9 +237,7 @@ export const chromeHeadless = ({
 		});
 
 	/**
-	 * One page's share of a run: loaded once, in the run's mode, at twice
-	 * the size for pictures, with axe in it when the run checks accessibility, then each file drawn in turn. A story that
-	 * does not draw in time is null, and the rest go on; a page that does not load is null for all of its share.
+	 * A story that does not draw in time is null, and the rest go on; a page that does not load is null for all of its share.
 	 */
 	const drawShare = (share: Share): Promise<(Drawn | null)[]> =>
 		onPage(async (page) => {
@@ -280,18 +259,16 @@ export const chromeHeadless = ({
 		});
 
 	/**
-	 * The probe on one view of a page, in a page of its own. It drives more of the page than
-	 * the rest (keys, the pointer, the accessibility tree), which puppeteer's page has: the narrow `PageLike` is what the
-	 * rest is tested against without a browser.
+	 * The probe drives more of the page than `PageLike` has (keys, the pointer, the accessibility tree), which puppeteer's
+	 * page has: the narrow `PageLike` is what the rest is tested against without a browser.
 	 */
 	const probe = (url: string, options: ProbeOptions): Promise<ViewProbed> => onPage((page) => probeView(page as unknown as ProbePage, url, options));
 
-	/** A few runs at once, each in a few pages at once (`measureWith`). */
 	const measure: Measure = measureWith(drawShare);
 
 	/**
-	 * Whether a page really loads (Run locally): a server can answer while the app on it fails, so the page is opened here,
-	 * given a moment, and judged. Null when it drew something; else its own error, or that it drew nothing.
+	 * A server can answer while the app on it fails, so the page is opened and judged. Null when it drew something; else its
+	 * own error, or that it drew nothing.
 	 */
 	const loads = (url: string): Promise<string | null> =>
 		onPage(async (page) => {

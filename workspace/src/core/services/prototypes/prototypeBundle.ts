@@ -5,9 +5,8 @@ import { STATE_NAME, STATES_META } from '../../../shared/prototypeStates';
 import { ProcessFailed, runFile } from '../platform/process';
 
 /**
- * Turns a React prototype, built against the product's own installed design system, into one self-contained HTML file.
  * The app runs the same script on save as the agent runs to check its work compiles, so "it built for the agent" and "it
- * builds when saved" are the same fact. It runs as plain Node.
+ * builds when saved" are the same fact.
  */
 
 const SCRIPT = String.raw`
@@ -86,7 +85,7 @@ try {
 }
 `;
 
-/** Where the bundler lives, resolved from this app, so neither caller needs it installed anywhere else. */
+/** Resolved from this app, so neither caller needs it installed anywhere else. */
 export const esbuildEntry = (): string | null => {
 	try {
 		return createRequire(__filename).resolve('esbuild');
@@ -95,7 +94,6 @@ export const esbuildEntry = (): string | null => {
 	}
 };
 
-/** Writes the build script into the app's prototype folder and says where it is. */
 export const writeBundleScript = (prototypesRoot: string): string => {
 	mkdirSync(prototypesRoot, { recursive: true });
 	const path = join(prototypesRoot, 'build-prototype.mjs');
@@ -103,10 +101,7 @@ export const writeBundleScript = (prototypesRoot: string): string => {
 	return path;
 };
 
-/**
- * Writes the build's own accessibility check beside the build script: one bundled module, run with Node as the
- * build is, and loaded only when it is wanted, as it carries a browser's driver. Where it is.
- */
+/** Loaded only when it is wanted, as it carries a browser's driver. */
 export const writeCheckScript = async (prototypesRoot: string): Promise<string> => {
 	const { default: script } = await import('../../../cli/checkPrototype?script');
 	mkdirSync(prototypesRoot, { recursive: true });
@@ -115,17 +110,12 @@ export const writeCheckScript = async (prototypesRoot: string): Promise<string> 
 	return path;
 };
 
-/** A command as one line an agent can run, each argument quoted only when it needs to be. */
 export const shellLine = (args: string[]): string => args.map((a) => (/^[\w./-]+$/.test(a) ? a : JSON.stringify(a))).join(' ');
 
-/** The exact command the agent runs to check its prototype builds. */
 export const bundleCommand = (script: string, esbuild: string, entry: string, out: string, nodeModules: string, shared: string): string =>
 	shellLine(['node', script, esbuild, entry, out, nodeModules, shared]);
 
-/**
- * Builds `entry` into `out`. Resolves with what the build said, and whether it worked; never throws for a
- * prototype that does not compile, since that is the person's or agent's to fix, not the app's.
- */
+/** Never throws for a prototype that does not compile: that is the person's or agent's to fix, not the app's. */
 export const runBundle = (
 	script: string,
 	esbuild: string,

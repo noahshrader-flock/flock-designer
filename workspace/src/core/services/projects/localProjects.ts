@@ -7,11 +7,7 @@ import { workOrder } from '../../../shared/projectList';
 import { toProjectWork } from '../../../shared/workRecords';
 import { workInFolder } from './workRecords';
 
-/**
- * Every project folder in the local design repository, with whatever work it records: the folder is the project, and
- * what vouches for a `feature/<id>` branch (a name the whole team uses for tickets), as the agent makes it before any
- * code. Unreadable pieces are skipped, so a half-written record cannot hide every other project.
- */
+/** Unreadable pieces are skipped, so a half-written record cannot hide every other project. */
 export const readFolderProjects = (recordsRoot: string): Project[] => {
 	if (!existsSync(recordsRoot)) return [];
 	return readdirSync(recordsRoot, { withFileTypes: true })
@@ -23,7 +19,6 @@ export const readFolderProjects = (recordsRoot: string): Project[] => {
 				.map((f) => f.name)
 				.sort();
 			const brief = records.includes('brief.md') ? readFileSync(join(dir, 'brief.md'), 'utf8') : null;
-			// A record that cannot be read lists the project with nothing built, as a folder with no record does.
 			const work = (workInFolder(dir) ?? []).map((it) => toProjectWork(it)).sort(workOrder);
 			return {
 				id: e.name,

@@ -16,41 +16,31 @@ import { SIGN_IN_AUTHORIZE_URL, pagesSiteUrl } from '../shared/hostUrls';
 import type { SignInConfig } from '../shared/signInConfig';
 
 /**
- * The published site (`/`, `/<project>/`, `/<project>/v2/` under the review bar, `/<project>/latest/`), rebuilt in full
- * from the design repository every time, so two publishers never overwrite each other and what is gone there is gone
- * here. Every link is relative, as GitHub Pages serves a site under the repository's name.
+ * Rebuilt in full every time, so two publishers never overwrite each other and what is gone there is gone here. Every
+ * link is relative, as GitHub Pages serves a site under the repository's name.
  */
 export interface SiteInput {
-	/** The design repository: its `projects/` folder is what is published. */
 	designRoot: string;
-	/** Where the site is written. Cleared first, but only if it is a site this made, or empty. */
+	/** Cleared first, but only if it is a site this made, or empty. */
 	outDir: string;
-	/** How many comments each version has, by its key (`prototype/<project>/<name>`), when they could be read. */
+	/** By version key (`prototype/<project>/<name>`). */
 	comments?: Map<string, number>;
-	/**
-	 * Comments on each version's page: the built viewer (`viewer.js`, `viewer.css`, its icons' `viewer.ttf`), and the
-	 * repository whose review threads they are. Without it a page has nothing to comment with.
-	 */
+	/** The built viewer and the repository whose review threads it shows. Without it a page has nothing to comment with. */
 	viewer?: { dir: string; ref: RepoRef };
 	/**
-	 * Where the site's pages are served when that is not beside the bar (the README's Review isolation): the address its root
-	 * is at on the pages' own origin, ending in `/`. The bar's frame then loads each page from there, sandboxed, so the page
-	 * is another origin than the bar. Without it, as on the published site, each page is beside its bar.
+	 * The pages' root on their own origin, ending in `/`, so each page is another origin than the bar (the README's Review
+	 * isolation). Without it, as on the published site, each page is beside its bar.
 	 */
 	pagesAt?: string;
-	/**
-	 * Signing in to comment: the GitHub App's client ID and the sign-in function's address. With it and a viewer, every
-	 * page can sign a person in, and the front page, which GitHub sends them back to, finishes it. An empty client ID is none.
-	 */
+	/** `exchange` is the sign-in function's address. An empty client ID is no sign-in. */
 	signIn?: { clientId: string; exchange: string };
 }
 
-/** A page on another origin than its bar (VS Code): its own scripts, origin (cookies, storage), forms, pop-ups and alerts; never the window above. */
+/** For a page on another origin than its bar (VS Code). */
 export const SANDBOX_APART = 'allow-scripts allow-same-origin allow-forms allow-popups allow-modals';
 /**
- * A page beside its bar (the published site): the same, but **no origin of its own**. On the bar's address its own origin
- * would be the bar's, and it could take the sandbox off through the bar and read the bar's storage, where the person's token
- * is. The browser then refuses its storage and cookies; the page agent gives it stand-ins.
+ * For a page beside its bar (the published site): **no origin of its own**, or it would be the bar's, and it could take
+ * the sandbox off and read the bar's storage, where the person's token is. The page agent gives it storage stand-ins.
  */
 export const SANDBOX_BESIDE = 'allow-scripts allow-forms allow-popups allow-modals';
 
@@ -63,15 +53,15 @@ const MARK = '.flock-designer-site';
 
 interface Page {
 	record: Work;
-	/** Where it is from its project's folder: `v2/`. */
+	/** From its project's folder: `v2/`. */
 	path: string;
 }
 interface SiteProject {
 	id: string;
 	title: string;
-	/** Newest version first. */
+	/** Newest first. */
 	versions: Page[];
-	/** Where its codebase work is on GitHub (`codeLink`): its pull request, else its branch. */
+	/** Its pull request, else its branch. */
 	builtInCode: string | null;
 }
 
@@ -81,7 +71,6 @@ const dateOf = (iso: string | undefined): string | null => {
 	return d && !Number.isNaN(d.getTime()) ? d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }) : null;
 };
 
-/** Every project with at least one saved page, from the repository as it is. */
 const readProjects = (designRoot: string): SiteProject[] => {
 	const projectsDir = join(designRoot, 'projects');
 	const ids = existsSync(projectsDir)
@@ -113,7 +102,6 @@ const readProjects = (designRoot: string): SiteProject[] => {
 	});
 };
 
-/** The design system's large files, written as the files they are, by name. */
 const writeShared = (designRoot: string, outDir: string): Map<string, string> => {
 	const names = new Map<string, string>();
 	const dir = join(designRoot, SHARED_DIR);
@@ -162,14 +150,10 @@ const shell = (title: string, body: string, head = ''): string =>
 const redirect = (title: string, to: string): string =>
 	shell(title, `<main><p><a href="${to}">${escapeHtml(title)}</a></p></main>`, `<meta http-equiv="refresh" content="0; url=${to}">\n`);
 
-/** What a page is told, as JSON in a script element of its own, safe there: no `<` in it can close the element. */
+/** No `<` in it can close the element. */
 const jsonScript = (id: string, value: unknown): string =>
 	`<script type="application/json" id="${id}">${JSON.stringify(value).replace(/</g, '\\u003c')}</script>\n`;
 
-/**
- * What a page is told about signing in: the App, the function, GitHub's sign-in page, and the site's own address, which
- * GitHub sends the person back to. Nothing when there is no viewer or no sign-in.
- */
 const signInScript = (viewer: SiteInput['viewer'], signIn: SiteInput['signIn']): string => {
 	if (!viewer || !signIn?.clientId) return '';
 	const config: SignInConfig = {
@@ -213,10 +197,7 @@ const projectPage = (p: SiteProject, comments: Map<string, number> | undefined):
 			.join('\n')}\n</ul>\n</main>`,
 	);
 
-/**
- * What the page's bar and comments are told: which version this is, where the others are, the states the page has, and its
- * fingerprint, which a comment placed on it carries.
- */
+/** `page` is the page's fingerprint, which a comment placed on it carries. */
 const viewerConfig = (ref: RepoRef, p: SiteProject, current: Page, states: string[], page: string): string =>
 	jsonScript('dsnr-config', {
 		owner: ref.owner,
@@ -230,16 +211,14 @@ const viewerConfig = (ref: RepoRef, p: SiteProject, current: Page, states: strin
 		page,
 	});
 
-/** Where the bar's frame loads its page, sandboxed either way: from the pages' address with its own origin, or beside it with none. */
 const frameAt = (p: SiteProject, page: Page, pagesAt: string | undefined): string =>
 	pagesAt
 		? `src="${escapeHtml(`${pagesAt}${p.id}/${page.path}page.html`)}" sandbox="${SANDBOX_APART}"`
 		: `src="page.html" sandbox="${SANDBOX_BESIDE}"`;
 
 /**
- * One version: its page in a frame, so the page's own styles never reach the bar, under the bar. The bar is DSNR's
- * review bar, drawn by the viewer with DSNR's kit (the switcher, comments); until it takes over, and where it never does, the bar is a
- * link back to the project, and nothing about it is styled here.
+ * The page is in a frame, so its own styles never reach the bar. Until the viewer takes the bar over, and where it never
+ * does, the bar is a link back to the project.
  */
 const viewerPage = (
 	p: SiteProject,
@@ -260,10 +239,8 @@ const viewerPage = (
 	);
 };
 
-/** The page agent's file, built with the viewer and copied beside it. */
 const PAGE_AGENT = 'page-agent.js';
 
-/** Clears `outDir` for a fresh build, refusing anything that is not a site this wrote, or empty. */
 const clearOut = (outDir: string): void => {
 	if (existsSync(outDir) && readdirSync(outDir).length > 0) {
 		if (!existsSync(join(outDir, MARK))) throw new Error(`${outDir} is not a site DSNR built, so it is left alone. Choose an empty folder.`);
@@ -289,10 +266,7 @@ export const buildSite = ({ designRoot, outDir, comments, viewer, pagesAt, signI
 	// A page sits two folders down (<project>/v2/), and finds the shared files from there.
 	const relink = (html: string): string =>
 		withAgent(html.replace(SHARED_REF, (whole, hash: string) => (shared.has(hash) ? `../../_shared/${shared.get(hash)}` : whole)));
-	/**
-	 * With the viewer, the page agent first in the page's head (the README's Review isolation), before the prototype's own code,
-	 * so the review bar asks it for the page's pins rather than reaching into the page.
-	 */
+	/** First in the head, before the prototype's own code, so the bar asks it for the pins rather than reaching into the page. */
 	const withAgent = (html: string): string => {
 		if (!viewer) return html;
 		return firstInHead(html, `<script src="../../_viewer/${PAGE_AGENT}"></script>`);

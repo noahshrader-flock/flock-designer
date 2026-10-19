@@ -1,8 +1,8 @@
 import { type ChildProcess, execFile } from 'node:child_process';
 
 /**
- * Runs a program and waits for it: argv only, never a shell, always within a time limit, so one that hangs (a credential
- * helper, a question nobody sees) fails with a reason instead of holding up what waits on it. Streamed output: `streamed.ts`.
+ * Argv only, never a shell, always within a time limit, so one that hangs (a credential helper, a question nobody sees)
+ * fails with a reason instead of holding up what waits on it.
  */
 
 export const DEFAULT_TIMEOUT_MS = 60_000;
@@ -12,7 +12,6 @@ export interface RunOptions {
 	/** Added to this process's environment. */
 	env?: Record<string, string | undefined>;
 	timeoutMs?: number;
-	/** Written to its input, all at once. */
 	input?: string;
 	maxBuffer?: number;
 }
@@ -22,7 +21,6 @@ export interface RunResult {
 	stderr: string;
 }
 
-/** A program that is not on this machine (or not where it was looked for). */
 export class NotInstalled extends Error {
 	readonly code = 'ENOENT';
 	constructor(readonly program: string) {
@@ -31,7 +29,7 @@ export class NotInstalled extends Error {
 	}
 }
 
-/** A program that ran and failed, or ran past its time: what it printed is kept, since some failures still answer. */
+/** What it printed is kept, since some failures still answer. */
 export class ProcessFailed extends Error {
 	constructor(
 		message: string,
@@ -78,7 +76,6 @@ export const runFile = (
  */
 export const GROUP = { detached: process.platform !== 'win32' } as const;
 
-/** Sends `signal` to the program's whole group, or to the program alone where there is no group (or it was never started). */
 const signalGroup = (child: ChildProcess, signal: NodeJS.Signals): void => {
 	try {
 		if (GROUP.detached && child.pid !== undefined) process.kill(-child.pid, signal);
@@ -88,7 +85,6 @@ const signalGroup = (child: ChildProcess, signal: NodeJS.Signals): void => {
 	}
 };
 
-/** Whether any of the program's group is still running (where there is no group, the program itself). */
 const stillRunning = (child: ChildProcess): boolean => {
 	if (!GROUP.detached || child.pid === undefined) return child.exitCode === null && child.signalCode === null;
 	try {

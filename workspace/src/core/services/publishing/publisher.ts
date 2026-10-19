@@ -4,9 +4,8 @@ import { coalescing } from '../platform/concurrency';
 import { errorText } from '../../../shared/result';
 
 /**
- * Keeps the person's work published, by itself, asking nothing: what protects them is how narrow publishing is (see
- * `branchSync` and `designSync`), not a permission step. A failure is shown with its reason and retried on the next
- * trigger, never silent.
+ * Publishes without asking: what protects the person is how narrow publishing is (see `branchSync` and `designSync`),
+ * not a permission step.
  */
 
 /**
@@ -15,7 +14,6 @@ import { errorText } from '../../../shared/result';
  */
 export const publishInOrder = async <B extends SyncResult>(
 	branches: () => Promise<B>,
-	/** Given what the branches step found, so records can be made for the work that is there. */
 	records: (branches: B) => Promise<SyncResult>,
 ): Promise<{ branches: SyncResult; records: SyncResult }> => {
 	const b = await branches();
@@ -23,7 +21,6 @@ export const publishInOrder = async <B extends SyncResult>(
 };
 
 export interface PublishContext {
-	/** Publishes branches, then records: what each sync did. */
 	run(): Promise<{ branches: SyncResult; records: SyncResult }>;
 }
 
@@ -31,7 +28,7 @@ export interface PublishDeps {
 	/** Null when this machine has no product repository, or no design repository beside it. */
 	context(): Promise<PublishContext | null>;
 	now?: () => Date;
-	/** Triggers closer together than this are ignored, so focusing the window repeatedly is cheap. */
+	/** So focusing the window repeatedly is cheap. */
 	minGapMs?: number;
 }
 
@@ -62,17 +59,12 @@ export class PublishManager {
 		return (this.deps.now ?? (() => new Date()))();
 	}
 
-	/**
-	 * Publishes now, or notes that it should, and resolves when the run that covers this request is done.
-	 * `force` skips the spacing between runs (a person asked, or something was just written).
-	 */
+	/** `force` skips the spacing between runs. Without it, a trigger too soon resolves at once and a later run covers it. */
 	publish(force = false): Promise<void> {
 		if (this.runs.running) return this.runs();
 		const wait = this.lastFinished + (this.deps.minGapMs ?? 15_000) - Date.now();
 		if (!force && wait > 0) {
-			// Too soon after the last run to start another, but not too soon to forget: one run is made for
-			// however many triggers arrive meanwhile, as soon as the spacing allows. Dropping them would leave
-			// work made just after a run waiting for some later trigger that might not come.
+			// Not dropped: work made just after a run would wait for a later trigger that might not come.
 			this.timer ??= setTimeout(() => {
 				this.timer = null;
 				void this.publish(true);

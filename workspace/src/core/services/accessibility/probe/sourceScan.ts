@@ -1,7 +1,6 @@
 /**
- * The probe's source cells: what a page cannot show, found in the work's own source by the web platform's own names (DOM
- * events and APIs, CSS), so it reads the same in any framework's files. A finding here is something to look at, not a
- * fault: whether a shortcut can be turned off, or a drag has another way, is a person's to judge.
+ * Matched by the web platform's own names, so it reads the same in any framework's files. A finding here is something to
+ * look at, not a fault: whether a shortcut can be turned off, or a drag has another way, is a person's to judge.
  */
 import { type CellId, type CellResult, type ProbeFinding, notRun, resultFrom } from './cells';
 
@@ -10,23 +9,20 @@ export interface SourceFile {
 	text: string;
 }
 
-/** How far either side of a line is read for what goes with it (a modifier key checked beside a key). */
+/** Lines either side read for what goes with it (a modifier key checked beside a key). */
 const AROUND = 6;
 
-/** A delay in milliseconds written on a line, as a number or a product of numbers (`20_000`, `60 * 1000`). */
+/** As a number or a product of numbers (`20_000`, `60 * 1000`). */
 const delays = (line: string): number[] =>
 	[...line.matchAll(/\d[\d_]*(?:\s*\*\s*\d[\d_]*)*/g)].map((m) => m[0].split('*').reduce((n, part) => n * Number(part.replace(/_/g, '').trim()), 1));
 
-/** A CSS time in milliseconds (`0.2s`, `150ms`). */
+/** In milliseconds. */
 const times = (line: string): number[] => [...line.matchAll(/(\d*\.?\d+)(ms|s)\b/g)].map((m) => Number(m[1]) * (m[2] === 's' ? 1000 : 1));
 
-/**
- * An event's own name, as any framework binds it, in any case: after something not a letter (`@`, `:`, `(`, a quote, a
- * space), with `on` before it or not (`mousedown`, `onMouseDown`, `@mousedown`, `on:mousedown`), and not inside a longer word.
- */
+/** As any framework binds it (`mousedown`, `onMouseDown`, `@mousedown`, `on:mousedown`), and not inside a longer word. */
 const event = (names: string) => new RegExp(`(?:^|[^a-z0-9])(?:on-?)?(?:${names})(?![a-z0-9])`, 'i');
 
-/** What each source cell looks for, by line, with the lines around it. Every source cell has one (a test holds it). */
+/** Every source cell has one (a test holds it). */
 export const PATTERNS: Partial<Record<CellId, (line: string, around: string) => boolean>> = {
 	'key-shortcuts': (line, around) =>
 		(/\b(key|code)\s*===?\s*['"](?:Key)?[A-Za-z0-9?/.,;]['"]/.test(line) ||
@@ -43,13 +39,9 @@ export const PATTERNS: Partial<Record<CellId, (line: string, around: string) => 
 	dragging: (line) => /\bdraggable\b/i.test(line) || event('drag(?:start|end|over|enter|leave)?').test(line),
 };
 
-/** The most characters of a line a finding keeps. */
 const MOST_LINE = 160;
 
-/**
- * The source cells over `files`: each line that matches, by file and line. With none to read (null, or none at all),
- * each is not run, and `why` says why: reading nothing is never "none found".
- */
+/** With nothing to read, each is not run: reading nothing is never "none found". */
 export const scanSources = (cells: CellId[], files: SourceFile[] | null, why = 'no source was given to read'): CellResult[] =>
 	cells.flatMap((cell) => {
 		const test = PATTERNS[cell];
