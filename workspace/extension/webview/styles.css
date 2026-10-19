@@ -7,6 +7,11 @@
  * look is changed in one place, as shadcn's tokens are. A theme variable that already names one part's colour (the
  * badge's, the button's, a section header's) is used by that part directly: a token for it would only rename it.
  */
+
+/* ==== The kit (`ui/`): what every part of the panel is drawn with, first, so a part can say otherwise. ==== */
+
+/* == The theme’s names, the focus, and text helpers == */
+
 :root {
 	--dsnr-track: color-mix(in srgb, var(--vscode-foreground) 8%, transparent);
 	--dsnr-raised: var(--vscode-editor-background);
@@ -148,35 +153,63 @@ body {
 	font-weight: var(--vscode-font-weight);
 }
 
-.panel {
+.token-contrast-low,
+.warning-text {
+	color: var(--vscode-editorWarning-foreground);
+}
+
+.quiet {
+	margin: 0;
+	color: var(--dsnr-muted);
+	line-height: 1.4;
+}
+
+/* == Headings (`ui/Heading.tsx`) == */
+
+/* Every heading (`ui/Heading.tsx`), by where it stands: bold, at the text's size unless it heads a tab or a part of one. */
+.heading {
+	margin: 0;
+	font-size: 1em;
+	font-weight: 600;
+}
+
+.heading-page {
+	font-size: 1.6em;
+}
+
+.heading-part {
+	font-size: 1.1em;
+}
+
+/* A group's name, with what its values all are to its right (`.value-group-note`). */
+.heading-group {
 	display: flex;
-	flex-direction: column;
-	/* Fills the window, so a tab with nothing to show can center it (`.empty`, below). */
-	min-height: 100vh;
+	flex-wrap: wrap;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 0 var(--dsnr-space-4);
+	padding: var(--dsnr-space-4) 0 var(--dsnr-space-2);
 }
 
-/* The bar the toggle sits in: kept at the top while the list under it scrolls. */
+.heading-label {
+	margin: var(--dsnr-space-4) 0 var(--dsnr-space-1);
+	color: var(--dsnr-muted);
+	font-size: 0.92em;
+}
+
 /*
- * Bars kept at the top while a list scrolls under them, each under the one before: the toggle's, then the design system's own
- * row (its name is always shown), then its Components and Tokens toggle, then a tab's search and options.
+ * A set's heading (the palette's family, the grid's role) is a row of the same height as every row under it, in both views of
+ * the colors, so flipping between them moves nothing: a row of a set, and the heading over it, are `--dsnr-row-height`.
  */
-.panel-top,
-.ds-header,
-.ds-part,
-.tab-body .view-bar {
-	position: sticky;
-	z-index: var(--dsnr-layer-top);
-	background: var(--vscode-sideBar-background);
+.heading-set,
+.theme-headings {
+	display: flex;
+	align-items: center;
+	min-height: var(--dsnr-row-height);
+	font-weight: 600;
 }
 
-.panel-top {
-	top: 0;
-	padding: var(--dsnr-top-pad) var(--dsnr-space-5);
-}
-
-.tab-body .view-bar {
-	top: var(--dsnr-top-height);
-}
+/* == The toggle (`ui/Toggle.tsx`) == */
 
 /*
  * The toggle: a soft track with the chosen view raised in it as a pill, as Claude Code's own side bar draws its Local and
@@ -227,14 +260,11 @@ body {
 	background: var(--dsnr-raised);
 }
 
-/* The choice of list or grid, at the right, above the projects: just its icons, so it takes little of the side bar. */
-.view-bar {
-	display: flex;
-	align-items: center;
-	gap: var(--dsnr-space-4);
-	/* The room below is the room at its sides, so the bar sits evenly in its container. */
-	padding: var(--dsnr-space-1) var(--dsnr-space-5) var(--dsnr-space-5);
+.toggle-icons {
+	grid-auto-columns: auto;
 }
+
+/* == The search box (`ui/SearchBox.tsx`) == */
 
 /* VS Code's search box: its icon at the start, filling what the toggle beside it leaves; the box itself is `.input`. */
 .search {
@@ -256,6 +286,8 @@ body {
 	padding-left: var(--dsnr-indent);
 }
 
+/* == Links (`ui/LinkButton.tsx`) == */
+
 /* An action in a line of text, as VS Code's links are. */
 .link {
 	padding: 0;
@@ -270,14 +302,293 @@ body {
 	text-decoration: underline;
 }
 
-/* In one of the side panel's parts, which stack their children across their width: as wide as its words, not the part. */
-.aside-section > .link {
+/* == Buttons (`ui/Button.tsx`) == */
+
+/*
+ * DSNR's buttons (`ui/Button.tsx`), laid out as a welcome view's (the width of the side bar, unless in a row) and drawn
+ * as Claude Code's: primary in the brand, secondary outlined, ghost only its words. Each has a border, transparent where
+ * it draws none, so the three are the same size side by side; high contrast draws them all (above).
+ */
+.button {
+	display: block;
+	width: 100%;
+	max-width: 300px;
+	margin: var(--dsnr-space-2) 0 var(--dsnr-space-4);
+	/* The default control's height, from its padding and line when it is one line; a longer one grows. */
+	box-sizing: border-box;
+	min-height: var(--dsnr-control);
+	padding: var(--dsnr-space-3) var(--dsnr-space-5);
+	border: 1px solid transparent;
+	border-radius: var(--dsnr-radius-inner);
+	font: inherit;
+	font-weight: 500;
+	line-height: 18px;
+	text-align: center;
+	cursor: pointer;
+}
+
+/* A button that goes out of VS Code: its words, then the external link icon, centred together. */
+.button-external {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: var(--dsnr-space-3);
+}
+
+.button-primary {
+	border-color: var(--vscode-contrastBorder, transparent);
+	color: var(--dsnr-on-brand);
+	background: var(--dsnr-brand);
+}
+
+.button-primary:hover:not(:disabled) {
+	background: var(--dsnr-brand-hover);
+}
+
+.button-secondary {
+	border-color: var(--dsnr-outline);
+	color: var(--vscode-foreground);
+	background: transparent;
+}
+
+.button-ghost {
+	border-color: var(--vscode-contrastBorder, transparent);
+	color: var(--dsnr-muted);
+	background: transparent;
+}
+
+.button-secondary:hover:not(:disabled),
+.button-ghost:hover:not(:disabled) {
+	color: var(--vscode-foreground);
+	background: var(--dsnr-track);
+}
+
+.button:disabled,
+.menu-item:disabled {
+	opacity: 0.5;
+	cursor: default;
+}
+
+/* == Icon buttons and menu buttons (`ui/IconButton.tsx`, `ui/Menu.tsx`) == */
+
+/*
+ * A button that is an icon alone, as VS Code's toolbars draw one: a row's menu button (shown on hover, below) and any
+ * other (Sync, a token's file, a reset).
+ */
+.icon-button,
+.menu-button {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: var(--dsnr-control);
+	height: var(--dsnr-control);
+	padding: 0;
+	border: 1px solid transparent;
+	border-radius: var(--dsnr-radius);
+	color: var(--vscode-foreground);
+	background: transparent;
+	cursor: pointer;
+}
+
+/* The small size: what sits in a row, a card or a header. */
+.icon-button-small,
+.menu-button-small {
+	width: var(--dsnr-control-small);
+	height: var(--dsnr-control-small);
+	border-radius: var(--dsnr-radius-inner);
+}
+
+.menu-button {
+	opacity: 0;
+}
+
+/* A menu that is a view's own (its options), not a row's: always there. */
+.menu-button-shown {
+	opacity: 1;
+}
+
+.menu-button:hover,
+.icon-button:hover:not(:disabled) {
+	background: var(--vscode-toolbar-hoverBackground);
+}
+
+.icon-button:disabled {
+	opacity: 0.5;
+	cursor: default;
+}
+
+/* == Count bubbles (`ui/Badge.tsx`) == */
+
+/*
+ * VS Code's badge: the count on a view or a tab. A box of its own wherever it is (a plain inline span ignores a height and
+ * a minimum width, which made a card's smaller than a row's), the one size, a circle for a digit and a pill for more.
+ */
+.badge {
+	display: inline-flex;
+	flex-shrink: 0;
+	align-items: center;
+	justify-content: center;
+	height: var(--dsnr-badge);
+	min-width: var(--dsnr-badge);
+	padding: 0 var(--dsnr-space-2);
+	border: 1px solid var(--dsnr-contrast-border);
+	border-radius: calc(var(--dsnr-badge) / 2);
+	/* At rest, the toggle's own grey (`--dsnr-track`), not VS Code's blue: a count that is none, or not yet anything of DSNR's. */
+	color: var(--vscode-foreground);
+	background: var(--dsnr-track);
+	font-size: 11px;
+	font-weight: 600;
+	line-height: 1;
+	box-sizing: border-box;
+}
+
+/* A count of comments: in the brand. In high contrast the brand is the theme's own button (above). */
+.badge-brand {
+	color: var(--dsnr-on-brand);
+	background: var(--dsnr-brand);
+}
+
+/* A count of what is wrong: the warning's colour, with the editor's behind its number. */
+.badge-warning {
+	color: var(--vscode-editor-background);
+	background: var(--vscode-editorWarning-foreground);
+}
+
+/* No count: extra small and blank, a circle. */
+.badge-xs {
+	height: var(--dsnr-badge-xs);
+	min-width: var(--dsnr-badge-xs);
+	padding: 0;
+	border-radius: 50%;
+}
+
+/* A count that opens what it counts. */
+.badge-button {
+	font-family: inherit;
+	cursor: pointer;
+}
+
+.badge-button:hover {
+	filter: brightness(1.1);
+}
+
+/* == Messages (`ui/Message.tsx`) == */
+
+.empty {
+	display: flex;
+	flex: 1;
+	align-items: center;
+	justify-content: center;
+	padding: var(--dsnr-space-7) var(--dsnr-space-5);
+	color: var(--dsnr-muted);
+	text-align: center;
+}
+
+.empty-content {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	width: 100%;
+	max-width: 320px;
+}
+
+/* Large, and quieter than the words. */
+.empty-icon .codicon {
+	font-size: 40px;
+	opacity: 0.5;
+}
+
+.empty-title {
+	margin: var(--dsnr-space-5) 0 var(--dsnr-space-2);
+	color: var(--vscode-foreground);
+	font-weight: 600;
+}
+
+.empty-body {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	width: 100%;
+}
+
+.empty-body p {
+	margin: 0 0 var(--dsnr-space-4);
+	line-height: 1.4;
+}
+
+.empty code {
+	font-family: var(--vscode-editor-font-family);
+	font-size: 0.92em;
+}
+
+/*
+ * What a view says (`ui/Message.tsx`), quiet unless it is a warning or an error: in the flow of what is around it, or in
+ * line with the rows of a panel's list (`message-inset`); in a dialog, with room under it before what comes next.
+ */
+.message {
+	margin: 0;
+	color: var(--dsnr-muted);
+	line-height: 1.4;
+}
+
+.message-inset {
+	margin: var(--dsnr-space-2) var(--dsnr-space-5) var(--dsnr-space-4);
+}
+
+.dialog .message {
+	margin: 0 0 var(--dsnr-space-4);
+}
+
+.message .codicon {
+	vertical-align: text-bottom;
+}
+
+.message-warning .codicon {
+	color: var(--vscode-editorWarning-foreground);
+}
+
+/* What went wrong, said where it happened, under what it is about. */
+.message-error,
+.dialog .message-error {
+	margin: var(--dsnr-space-4) 0 0;
+	color: var(--vscode-errorForeground);
+}
+
+/* A note with something to do about it: its words, then the button under them, the panel's width as a welcome view's is. */
+.message-block {
+	display: flex;
+	flex-direction: column;
+	gap: var(--dsnr-space-4);
+}
+
+.message-block p {
+	margin: 0;
+}
+
+.notice {
+	display: flex;
+	flex-direction: column;
+	gap: var(--dsnr-space-4);
+	padding: var(--dsnr-space-4) var(--dsnr-space-5);
+	border: 1px solid var(--vscode-inputValidation-warningBorder, var(--dsnr-contrast-border));
+	border-radius: var(--dsnr-radius);
+	background: var(--vscode-inputValidation-warningBackground, transparent);
+}
+
+.notice p {
+	margin: 0;
+}
+
+.notice .button {
+	width: auto;
 	align-self: flex-start;
 }
 
-.toggle-icons {
-	grid-auto-columns: auto;
+.notice-title {
+	font-weight: 600;
 }
+
+/* == Collections: rows, cards and their pictures (`ui/Collection.tsx`, `ui/Row.tsx`, `ui/Card.tsx`) == */
 
 /* A list, as VS Code's: rows edge to edge, the text indented as the toggle is. */
 .list {
@@ -377,232 +688,9 @@ body {
 	}
 }
 
-/*
- * VS Code's badge: the count on a view or a tab. A box of its own wherever it is (a plain inline span ignores a height and
- * a minimum width, which made a card's smaller than a row's), the one size, a circle for a digit and a pill for more.
- */
-.badge {
-	display: inline-flex;
-	flex-shrink: 0;
-	align-items: center;
-	justify-content: center;
-	height: var(--dsnr-badge);
-	min-width: var(--dsnr-badge);
-	padding: 0 var(--dsnr-space-2);
-	border: 1px solid var(--dsnr-contrast-border);
-	border-radius: calc(var(--dsnr-badge) / 2);
-	/* At rest, the toggle's own grey (`--dsnr-track`), not VS Code's blue: a count that is none, or not yet anything of DSNR's. */
-	color: var(--vscode-foreground);
-	background: var(--dsnr-track);
-	font-size: 11px;
-	font-weight: 600;
-	line-height: 1;
-	box-sizing: border-box;
-}
-
-/* A count of comments: in the brand. In high contrast the brand is the theme's own button (above). */
-.badge-brand {
-	color: var(--dsnr-on-brand);
-	background: var(--dsnr-brand);
-}
-
-/* A count of what is wrong: the warning's colour, with the editor's behind its number. */
-.badge-warning {
-	color: var(--vscode-editor-background);
-	background: var(--vscode-editorWarning-foreground);
-}
-
-/* No count: extra small and blank, a circle. */
-.badge-xs {
-	height: var(--dsnr-badge-xs);
-	min-width: var(--dsnr-badge-xs);
-	padding: 0;
-	border-radius: 50%;
-}
-
-/* A count that opens what it counts. */
-.badge-button {
-	font-family: inherit;
-	cursor: pointer;
-}
-
-.badge-button:hover {
-	filter: brightness(1.1);
-}
-
-/* A section's header, as VS Code's side bar draws one: a chevron, the title in small capitals, how many it holds. */
-.section-header {
-	list-style: none;
-	display: flex;
-	align-items: center;
-	gap: var(--dsnr-space-2);
-	width: 100%;
-	height: 22px;
-	padding: 0 var(--dsnr-space-5) 0 var(--dsnr-space-4);
-	border: none;
-	border-top: 1px solid var(--vscode-sideBarSectionHeader-border, transparent);
-	color: var(--vscode-sideBarSectionHeader-foreground, var(--vscode-foreground));
-	background: var(--vscode-sideBarSectionHeader-background, transparent);
-	font: inherit;
-	font-size: 11px;
-	font-weight: 700;
-	text-align: start;
-	cursor: pointer;
-}
-
-/* Whatever opens and closes (`ui/Section.tsx`) is the browser's own disclosure, its marker a chevron that points at what it
-   holds once it is open. */
-.section-header::-webkit-details-marker,
-.disclosure-summary::-webkit-details-marker {
-	display: none;
-}
-
-.collapse-chevron {
-	transition: transform 120ms;
-}
-
-details[open] > summary > .collapse-chevron {
-	transform: rotate(90deg);
-}
-
-@media (prefers-reduced-motion: reduce) {
-	.collapse-chevron {
-		transition: none;
-	}
-}
-
-.section-title {
-	flex: 1;
-	min-width: 0;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	text-transform: uppercase;
-	white-space: nowrap;
-}
-
-.section-count {
-	color: var(--dsnr-muted);
-	font-weight: 400;
-}
-
-/*
- * A view with nothing to show (`ui/EmptyState.tsx`): centered across and down the room the tab has, which fills the
- * window's height.
- */
-.tab-body {
-	display: flex;
-	flex: 1;
-	flex-direction: column;
-}
-
-.empty {
-	display: flex;
-	flex: 1;
-	align-items: center;
-	justify-content: center;
-	padding: var(--dsnr-space-7) var(--dsnr-space-5);
-	color: var(--dsnr-muted);
-	text-align: center;
-}
-
-.empty-content {
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	width: 100%;
-	max-width: 320px;
-}
-
-/* Large, and quieter than the words. */
-.empty-icon .codicon {
-	font-size: 40px;
-	opacity: 0.5;
-}
-
-.empty-title {
-	margin: var(--dsnr-space-5) 0 var(--dsnr-space-2);
-	color: var(--vscode-foreground);
-	font-weight: 600;
-}
-
-.empty-body {
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	width: 100%;
-}
-
-.empty-body p {
-	margin: 0 0 var(--dsnr-space-4);
-	line-height: 1.4;
-}
-
-.empty code {
-	font-family: var(--vscode-editor-font-family);
-	font-size: 0.92em;
-}
-
-/*
- * DSNR's buttons (`ui/Button.tsx`), laid out as a welcome view's (the width of the side bar, unless in a row) and drawn
- * as Claude Code's: primary in the brand, secondary outlined, ghost only its words. Each has a border, transparent where
- * it draws none, so the three are the same size side by side; high contrast draws them all (above).
- */
-.button {
-	display: block;
-	width: 100%;
-	max-width: 300px;
-	margin: var(--dsnr-space-2) 0 var(--dsnr-space-4);
-	/* The default control's height, from its padding and line when it is one line; a longer one grows. */
-	box-sizing: border-box;
-	min-height: var(--dsnr-control);
-	padding: var(--dsnr-space-3) var(--dsnr-space-5);
-	border: 1px solid transparent;
-	border-radius: var(--dsnr-radius-inner);
-	font: inherit;
-	font-weight: 500;
-	line-height: 18px;
-	text-align: center;
-	cursor: pointer;
-}
-
-/* A button that goes out of VS Code: its words, then the external link icon, centred together. */
-.button-external {
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	gap: var(--dsnr-space-3);
-}
-
-.button-primary {
-	border-color: var(--vscode-contrastBorder, transparent);
-	color: var(--dsnr-on-brand);
-	background: var(--dsnr-brand);
-}
-
-.button-primary:hover:not(:disabled) {
-	background: var(--dsnr-brand-hover);
-}
-
-.button-secondary {
-	border-color: var(--dsnr-outline);
-	color: var(--vscode-foreground);
-	background: transparent;
-}
-
-.button-ghost {
-	border-color: var(--vscode-contrastBorder, transparent);
-	color: var(--dsnr-muted);
-	background: transparent;
-}
-
-.button-secondary:hover:not(:disabled),
-.button-ghost:hover:not(:disabled) {
-	color: var(--vscode-foreground);
-	background: var(--dsnr-track);
-}
-
 /* A row that opens something: the whole row is the button, drawn as the row, with VS Code's list hover. */
 .row-item {
+	position: relative;
 	list-style: none;
 }
 
@@ -643,6 +731,7 @@ details[open] > summary > .collapse-chevron {
 }
 
 .card-item {
+	position: relative;
 	min-width: 0;
 	list-style: none;
 }
@@ -729,146 +818,11 @@ details[open] > summary > .collapse-chevron {
 	padding: 0 var(--dsnr-card-text-pad) var(--dsnr-card-text-pad);
 }
 
-.button:disabled,
-.menu-item:disabled {
-	opacity: 0.5;
-	cursor: default;
-}
-
-/*
- * A dialog over the panel, as VS Code's own are: a box from the top of the panel, in the widget colours, over a scrim of
- * the side bar's own colour so what is behind is dimmed, not hidden. A webview cannot draw outside itself.
- */
-.scrim {
-	position: fixed;
-	inset: 0;
-	z-index: var(--dsnr-layer-dialog);
-	display: flex;
-	align-items: flex-start;
-	justify-content: center;
-	padding: var(--dsnr-space-5);
-	overflow-y: auto;
-	background: color-mix(in srgb, var(--vscode-sideBar-background) 70%, transparent);
-}
-
-.dialog {
-	width: 100%;
-	max-width: 420px;
-	padding: var(--dsnr-space-5);
-	border: 1px solid var(--vscode-editorWidget-border, var(--dsnr-contrast-border));
-	border-radius: var(--dsnr-radius);
-	color: var(--vscode-editorWidget-foreground, var(--vscode-foreground));
-	background: var(--vscode-editorWidget-background);
-	box-shadow: 0 4px 16px var(--vscode-widget-shadow);
-}
-
-/* The title and its close X, in one row: the X at the far right. */
-.dialog-head {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	gap: var(--dsnr-space-4);
-	margin: 0 0 var(--dsnr-space-4);
-}
-
-.dialog-title {
-	margin: 0;
-	font-size: 1.1em;
-	font-weight: 600;
-}
-
-/* What a dialog does, across its width: one button fills it, several share it. */
-.dialog-buttons {
-	display: flex;
-	gap: var(--dsnr-space-4);
-	margin-top: var(--dsnr-space-5);
-}
-
-.dialog-buttons .button {
-	flex: 1;
-	/* A button is capped at a welcome view's width; in a dialog it fills the row. */
-	max-width: none;
-}
-
-/* A labelled field, as VS Code's settings draw one: the label above its control. */
-.field {
-	display: flex;
-	flex-direction: column;
-	gap: var(--dsnr-space-2);
-	margin-bottom: var(--dsnr-space-5);
-}
-
-.field-label {
-	font-weight: 600;
-}
-
-.field-hint {
-	color: var(--dsnr-muted);
-	font-size: 0.92em;
-}
-
-/* VS Code's input box and dropdown, drawn as the search box is: one height, one corner, one inset, wherever it is. */
-.input {
-	box-sizing: border-box;
-	width: 100%;
-	height: var(--dsnr-control);
-	padding: 0 var(--dsnr-space-4);
-	border: 1px solid var(--dsnr-border);
-	border-radius: var(--dsnr-radius);
-	color: var(--vscode-input-foreground);
-	background: var(--vscode-input-background);
-	font: inherit;
-}
-
-/* A dropdown's own chevron is hidden for one drawn 8px in from the border, as the search box's icon is. */
-.select {
-	position: relative;
-	display: flex;
-	align-items: center;
-}
-
-.select .codicon {
-	position: absolute;
-	right: 8px;
-	color: var(--vscode-dropdown-foreground);
-	pointer-events: none;
-}
-
-select.input {
-	appearance: none;
-	padding-right: var(--dsnr-indent);
-	color: var(--vscode-dropdown-foreground);
-	border-color: var(--vscode-dropdown-border, var(--dsnr-contrast-border));
-	background: var(--vscode-dropdown-background);
-}
-
-textarea.input {
-	height: auto;
-	min-height: 96px;
-	padding: var(--dsnr-space-3) var(--dsnr-space-4);
-	resize: vertical;
-}
-
-.input::placeholder {
-	color: var(--vscode-input-placeholderForeground);
-}
-
-/* A field is drawn as focused however the focus came to it, as VS Code's are. */
-.input:focus {
-	outline: var(--dsnr-focus);
-	outline-offset: var(--dsnr-focus-offset);
-}
-
 /*
  * What more can be done with a project: its ellipsis button, at the end of a row and at a card's corner, which shows on
  * hover or focus (as VS Code's list actions do) and while its menu is open. The row or card is the button that opens it,
- * so this sits beside it, not in it.
+ * so this sits beside it, not in it: placed in the row or the card (`.row-item`, `.card-item`).
  */
-.row-item,
-.card-item {
-	position: relative;
-}
-
 .item-actions {
 	position: absolute;
 	top: 50%;
@@ -881,42 +835,6 @@ textarea.input {
 	top: 4px;
 	right: 4px;
 	transform: none;
-}
-
-/*
- * A button that is an icon alone, as VS Code's toolbars draw one: a row's menu button (shown on hover, below) and any
- * other (Sync, a token's file, a reset).
- */
-.icon-button,
-.menu-button {
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	width: var(--dsnr-control);
-	height: var(--dsnr-control);
-	padding: 0;
-	border: 1px solid transparent;
-	border-radius: var(--dsnr-radius);
-	color: var(--vscode-foreground);
-	background: transparent;
-	cursor: pointer;
-}
-
-/* The small size: what sits in a row, a card or a header. */
-.icon-button-small,
-.menu-button-small {
-	width: var(--dsnr-control-small);
-	height: var(--dsnr-control-small);
-	border-radius: var(--dsnr-radius-inner);
-}
-
-.menu-button {
-	opacity: 0;
-}
-
-/* A menu that is a view's own (its options), not a row's: always there. */
-.menu-button-shown {
-	opacity: 1;
 }
 
 .row-item:hover .menu-button,
@@ -932,11 +850,6 @@ textarea.input {
 	border-color: var(--vscode-editorWidget-border, transparent);
 }
 
-.menu-button:hover,
-.icon-button:hover:not(:disabled) {
-	background: var(--vscode-toolbar-hoverBackground);
-}
-
 /* The hover tint is see-through, so over a picture it is laid on the widget's solid colour, not on the picture. */
 .card-item .menu-button:hover {
 	background: linear-gradient(var(--vscode-toolbar-hoverBackground), var(--vscode-toolbar-hoverBackground)), var(--vscode-editorWidget-background);
@@ -948,6 +861,76 @@ textarea.input {
 .row-item:has(.item-actions:focus-within) .badge {
 	visibility: hidden;
 }
+
+/* == Sections and disclosures (`ui/Section.tsx`) == */
+
+/* A section's header, as VS Code's side bar draws one: a chevron, the title in small capitals, how many it holds. */
+.section-header {
+	list-style: none;
+	display: flex;
+	align-items: center;
+	gap: var(--dsnr-space-2);
+	width: 100%;
+	height: 22px;
+	padding: 0 var(--dsnr-space-5) 0 var(--dsnr-space-4);
+	border: none;
+	border-top: 1px solid var(--vscode-sideBarSectionHeader-border, transparent);
+	color: var(--vscode-sideBarSectionHeader-foreground, var(--vscode-foreground));
+	background: var(--vscode-sideBarSectionHeader-background, transparent);
+	font: inherit;
+	font-size: 11px;
+	font-weight: 700;
+	text-align: start;
+	cursor: pointer;
+}
+
+/* Whatever opens and closes (`ui/Section.tsx`) is the browser's own disclosure, its marker a chevron that points at what it
+   holds once it is open. */
+.section-header::-webkit-details-marker,
+.disclosure-summary::-webkit-details-marker {
+	display: none;
+}
+
+.collapse-chevron {
+	transition: transform 120ms;
+}
+
+details[open] > summary > .collapse-chevron {
+	transform: rotate(90deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.collapse-chevron {
+		transition: none;
+	}
+}
+
+.section-title {
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	text-transform: uppercase;
+	white-space: nowrap;
+}
+
+.section-count {
+	color: var(--dsnr-muted);
+	font-weight: 400;
+}
+
+/* More of something, closed until it is asked for (`ui/Section.tsx`). */
+.disclosure-summary {
+	display: flex;
+	align-items: center;
+	gap: var(--dsnr-space-2);
+	padding: var(--dsnr-space-2) 0;
+	color: var(--dsnr-muted);
+	cursor: pointer;
+	list-style: none;
+}
+
+/* == Menus (`ui/Menu.tsx`) == */
 
 .menu {
 	position: relative;
@@ -1018,6 +1001,537 @@ textarea.input {
 	outline: none;
 }
 
+/* == Dialogs (`ui/Dialog.tsx`) == */
+
+/*
+ * A dialog over the panel, as VS Code's own are: a box from the top of the panel, in the widget colours, over a scrim of
+ * the side bar's own colour so what is behind is dimmed, not hidden. A webview cannot draw outside itself.
+ */
+.scrim {
+	position: fixed;
+	inset: 0;
+	z-index: var(--dsnr-layer-dialog);
+	display: flex;
+	align-items: flex-start;
+	justify-content: center;
+	padding: var(--dsnr-space-5);
+	overflow-y: auto;
+	background: color-mix(in srgb, var(--vscode-sideBar-background) 70%, transparent);
+}
+
+.dialog {
+	width: 100%;
+	max-width: 420px;
+	padding: var(--dsnr-space-5);
+	border: 1px solid var(--vscode-editorWidget-border, var(--dsnr-contrast-border));
+	border-radius: var(--dsnr-radius);
+	color: var(--vscode-editorWidget-foreground, var(--vscode-foreground));
+	background: var(--vscode-editorWidget-background);
+	box-shadow: 0 4px 16px var(--vscode-widget-shadow);
+}
+
+/* The title and its close X, in one row: the X at the far right. */
+.dialog-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--dsnr-space-4);
+	margin: 0 0 var(--dsnr-space-4);
+}
+
+.dialog-title {
+	margin: 0;
+	font-size: 1.1em;
+	font-weight: 600;
+}
+
+/* What a dialog does, across its width: one button fills it, several share it. */
+.dialog-buttons {
+	display: flex;
+	gap: var(--dsnr-space-4);
+	margin-top: var(--dsnr-space-5);
+}
+
+.dialog-buttons .button {
+	flex: 1;
+	/* A button is capped at a welcome view's width; in a dialog it fills the row. */
+	max-width: none;
+}
+
+/* It takes the focus when it opens, so the keyboard is in it; nothing is drawn around it for that (`focusPanel`). */
+.popover:focus,
+.dialog:focus {
+	outline: none;
+}
+
+/* == Fields (`ui/Field.tsx`) == */
+
+/* A labelled field, as VS Code's settings draw one: the label above its control. */
+.field {
+	display: flex;
+	flex-direction: column;
+	gap: var(--dsnr-space-2);
+	margin-bottom: var(--dsnr-space-5);
+}
+
+.field-label {
+	font-weight: 600;
+}
+
+.field-hint {
+	color: var(--dsnr-muted);
+	font-size: 0.92em;
+}
+
+/* VS Code's input box and dropdown, drawn as the search box is: one height, one corner, one inset, wherever it is. */
+.input {
+	box-sizing: border-box;
+	width: 100%;
+	height: var(--dsnr-control);
+	padding: 0 var(--dsnr-space-4);
+	border: 1px solid var(--dsnr-border);
+	border-radius: var(--dsnr-radius);
+	color: var(--vscode-input-foreground);
+	background: var(--vscode-input-background);
+	font: inherit;
+}
+
+/* A dropdown's own chevron is hidden for one drawn 8px in from the border, as the search box's icon is. */
+.select {
+	position: relative;
+	display: flex;
+	align-items: center;
+}
+
+.select .codicon {
+	position: absolute;
+	right: 8px;
+	color: var(--vscode-dropdown-foreground);
+	pointer-events: none;
+}
+
+select.input {
+	appearance: none;
+	padding-right: var(--dsnr-indent);
+	color: var(--vscode-dropdown-foreground);
+	border-color: var(--vscode-dropdown-border, var(--dsnr-contrast-border));
+	background: var(--vscode-dropdown-background);
+}
+
+textarea.input {
+	height: auto;
+	min-height: 96px;
+	padding: var(--dsnr-space-3) var(--dsnr-space-4);
+	resize: vertical;
+}
+
+.input::placeholder {
+	color: var(--vscode-input-placeholderForeground);
+}
+
+/* A field is drawn as focused however the focus came to it, as VS Code's are. */
+.input:focus {
+	outline: var(--dsnr-focus);
+	outline-offset: var(--dsnr-focus-offset);
+}
+
+/* == Popovers (`ui/Popover.tsx`) == */
+
+/*
+ * A small panel under what opened it, for a few fields that belong to one thing (a value's sliders): placed against the
+ * button's own line, across its width, over what is below it, as a menu is.
+ */
+.popover {
+	position: absolute;
+	top: 100%;
+	left: 0;
+	right: 0;
+	z-index: var(--dsnr-layer-menu);
+	margin-top: var(--dsnr-space-1);
+	padding: var(--dsnr-space-4) var(--dsnr-space-5);
+	border: 1px solid var(--vscode-menu-border, var(--dsnr-contrast-border));
+	border-radius: var(--dsnr-radius);
+	color: var(--vscode-menu-foreground);
+	background: var(--vscode-menu-background);
+	box-shadow: 0 2px 8px var(--vscode-widget-shadow);
+}
+
+.popover-body {
+	display: flex;
+	flex-direction: column;
+	gap: var(--dsnr-space-4);
+}
+
+.popover-head {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: var(--dsnr-space-4);
+}
+
+.popover-title {
+	font-weight: 600;
+	overflow-wrap: anywhere;
+}
+
+.popover-field {
+	display: flex;
+	flex-direction: column;
+	gap: var(--dsnr-space-1);
+}
+
+/* A part with a short name (X, Y, Top): its name, its slider and its number on one line, the names in a column of their own. */
+.popover-field-line {
+	flex-direction: row;
+	align-items: center;
+	gap: var(--dsnr-space-4);
+}
+
+.popover-field-line .popover-label {
+	flex: 0 0 3.5em;
+}
+
+.popover-field-line .dimension-field {
+	flex: 1;
+	min-width: 0;
+}
+
+/* A range has a width of its own it will not go under, which would push its number out of the popover beside a name. */
+.popover-field-line input[type='range'] {
+	min-width: 0;
+}
+
+/* At the panel's own text size: a few fields, read at a glance. */
+.popover-label,
+.popover-note {
+	margin: 0;
+	color: var(--dsnr-muted);
+}
+
+.popover .token-value {
+	font-size: inherit;
+}
+
+/* == Tooltips (`ui/Tooltip.tsx`, `ui/InfoTip.tsx`) == */
+
+/*
+ * A tooltip (`TooltipHost`), in the theme's own hover colours, over everything, never something to hover into. It is drawn
+ * hidden and placed once its size is known, so it is never seen where it was not put.
+ */
+.tooltip {
+	position: fixed;
+	top: 0;
+	left: 0;
+	z-index: var(--dsnr-layer-tip);
+	visibility: hidden;
+	max-width: min(320px, calc(100vw - 16px));
+	padding: var(--dsnr-space-2) var(--dsnr-space-4);
+	border: 1px solid var(--vscode-editorHoverWidget-border, var(--dsnr-contrast-border));
+	border-radius: var(--dsnr-radius-inner);
+	color: var(--vscode-editorHoverWidget-foreground, var(--vscode-foreground));
+	background: var(--vscode-editorHoverWidget-background, var(--vscode-editorWidget-background));
+	box-shadow: 0 2px 8px var(--vscode-widget-shadow);
+	font-size: 0.92em;
+	overflow-wrap: anywhere;
+	white-space: pre-line;
+	pointer-events: none;
+}
+
+/* What would be small print, behind an icon beside what it is about: told on hover (`InfoTip`), never in the way. */
+.info-tip {
+	display: inline-flex;
+	flex-shrink: 0;
+	align-items: center;
+	color: var(--dsnr-muted);
+	cursor: help;
+}
+
+/* == Switches (`ui/Switch.tsx`) == */
+
+/* A switch: a small track, its knob at the start when off and at the end when on, in the brand when on. */
+.switch {
+	justify-self: end;
+	position: relative;
+	width: 32px;
+	height: 18px;
+	padding: 0;
+	border: 1px solid var(--dsnr-border);
+	border-radius: 9px;
+	background: var(--dsnr-track);
+	cursor: pointer;
+}
+
+.switch-knob {
+	position: absolute;
+	top: 2px;
+	left: 2px;
+	width: 12px;
+	height: 12px;
+	border-radius: 50%;
+	background: var(--vscode-foreground);
+	transition: left 120ms;
+}
+
+.switch[aria-checked='true'] {
+	border-color: var(--dsnr-brand);
+	background: var(--dsnr-brand);
+}
+
+.switch[aria-checked='true'] .switch-knob {
+	left: 16px;
+	background: var(--dsnr-on-brand);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.switch-knob {
+		transition: none;
+	}
+}
+
+/* == Swatches and color dots (`ui/Swatch.tsx`, `ui/ColorDot.tsx`) == */
+
+/* A color is a circle, wherever it is drawn: the token's row, a step, a palette. */
+.swatch {
+	display: block;
+	flex-shrink: 0;
+	width: 14px;
+	height: 14px;
+	border: 1px solid var(--dsnr-border);
+	border-radius: 50%;
+	box-sizing: border-box;
+}
+
+.swatch-large {
+	width: 40px;
+	height: 40px;
+}
+
+/*
+ * A color a person can look at and press, as only its dot (`ColorDot`): a little larger than a swatch beside text, with a
+ * button's hover. Where it sits beside a name in a row it hangs out of the row's height a little, so its row is no taller
+ * than one without a color, and flush right with the values beside it.
+ */
+.color-dot {
+	position: relative;
+	display: inline-flex;
+	flex-shrink: 0;
+	align-items: center;
+	justify-content: center;
+	width: var(--dsnr-dot);
+	height: var(--dsnr-dot);
+	padding: 0;
+	border: 1px solid transparent;
+	border-radius: var(--dsnr-radius-inner);
+	background: transparent;
+}
+
+button.color-dot {
+	cursor: pointer;
+}
+
+.color-dot .swatch {
+	width: var(--dsnr-dot-swatch);
+	height: var(--dsnr-dot-swatch);
+}
+
+button.color-dot:hover {
+	background: var(--vscode-toolbar-hoverBackground);
+}
+
+.color-dot-flag {
+	position: absolute;
+	/* On the circle's edge at its top right, 45 degrees round (the circle, `--dsnr-dot-swatch`, is centred in the button, `--dsnr-dot`), the badge's middle a little below it. */
+	top: 1px;
+	right: 2px;
+}
+
+.color-dot-mark {
+	position: absolute;
+	top: 0;
+	right: 0;
+}
+
+/* == Values and tokens in a list (`ui/ValueItem.tsx`) == */
+
+/*
+ * A line between one set and the next (a role's variants, a tone family's steps, a component's values of one property and of
+ * the next, one group of a Changes dialog and the next), the same in the semantic colors, the palette, a component's values
+ * and Changes. The panel's one border colour, the search box's. A component's group's heading has room of its own above
+ * it, so the line is all that group adds.
+ */
+.theme-set + .theme-set,
+.token-set + .token-set,
+.value-group + .value-group,
+.dialog .changed ~ .changed {
+	margin-top: var(--dsnr-space-3);
+	border-top: 1px solid var(--dsnr-border);
+}
+
+.theme-set + .theme-set,
+.token-set + .token-set,
+.dialog .changed ~ .changed {
+	padding-top: var(--dsnr-space-3);
+}
+
+.tokens {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.token {
+	position: relative;
+}
+
+.token-line {
+	display: flex;
+	align-items: center;
+	gap: var(--dsnr-space-3);
+	width: 100%;
+	min-height: var(--dsnr-row-height);
+	/* No indent of its own: a row's name starts where its set's and its part's titles do. At the right, room for a row's reset (`.item-actions`, in the Changes); a token's row has none (`.token-line-flush`). */
+	padding: 0 var(--dsnr-actions-room) 0 0;
+	box-sizing: border-box;
+	color: inherit;
+	font: inherit;
+	text-align: start;
+}
+
+.token-button {
+	border: none;
+	border-radius: var(--dsnr-radius-inner);
+	background: transparent;
+	cursor: pointer;
+}
+
+.token-button:hover {
+	background: var(--vscode-list-hoverBackground);
+}
+
+/* A pressed row's text is flush with its titles', so its highlight reaches out to the left of it, not the text into the highlight. */
+.value-cell.token-button:hover {
+	box-shadow: -4px 0 0 var(--vscode-list-hoverBackground);
+}
+
+/* A token's row in the Styles' own rhythm: its value, or its dot, flush at the right as a value's is. */
+.token-line-flush {
+	padding-right: var(--dsnr-row-edge);
+}
+
+.token .item-actions {
+	top: 11px;
+	right: 4px;
+	opacity: 0;
+}
+
+.token:hover .item-actions,
+.token .item-actions:focus-within {
+	opacity: 1;
+}
+
+/*
+ * A value: its name on the left, its value on the right, and under its name what it is made of. The value's column is as wide
+ * as the value, so it is flush right and never breaks; it is the name's that gives way, wrapping.
+ */
+.value-cell {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
+	align-items: center;
+	column-gap: var(--dsnr-space-5);
+	width: 100%;
+	min-height: var(--dsnr-row-height);
+	/* Its width is the pane's, so a token's name beside its label can be held to a share of it (`.value-token`). */
+	container-type: inline-size;
+	padding: var(--dsnr-row-inset) var(--dsnr-row-edge) var(--dsnr-row-inset) 0;
+	box-sizing: border-box;
+	color: inherit;
+	font: inherit;
+	text-align: start;
+}
+
+.value-label {
+	overflow-wrap: anywhere;
+}
+
+.value-drawn {
+	display: flex;
+	align-items: center;
+	gap: var(--dsnr-space-3);
+	color: var(--dsnr-muted);
+	font-family: var(--vscode-editor-font-family);
+	font-size: 0.92em;
+}
+
+/*
+ * What a change did to a value, from and to, which is twice as long as a value: beside its name while both fit, else on the
+ * line under it, still flush right, so the name is never squeezed by it; and broken at its arrow when it is wider than the
+ * line (a padding by side, both ways), each side inside only when it alone is.
+ */
+.value-change {
+	display: flex;
+	flex-wrap: wrap;
+}
+
+.value-change .value-drawn {
+	flex-wrap: wrap;
+	justify-content: flex-end;
+	margin-left: auto;
+}
+
+.token-line .color-dot,
+.value-cell .color-dot {
+	margin-block: calc(-1 * var(--dsnr-space-2));
+	margin-right: calc(-1 * var(--dsnr-space-2));
+}
+
+.token-line .color-dot {
+	margin-left: auto;
+}
+
+/* == A side pane’s parts (`ui/AsidePart.tsx`) == */
+
+/* In one of the side panel's parts, which stack their children across their width: as wide as its words, not the part. */
+.aside-section > .link {
+	align-self: flex-start;
+}
+
+.aside-section {
+	display: flex;
+	flex-direction: column;
+	gap: var(--dsnr-space-2);
+	padding: var(--dsnr-space-5);
+	border: 1px solid var(--dsnr-border);
+	border-radius: var(--dsnr-radius-large);
+}
+
+/* A part's title, with a choice beside it. */
+.aside-heading {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--dsnr-space-4);
+}
+
+/*
+ * Where the side pane scrolls on its own (as the tab has room for two columns), a part's title stays at the top of it while
+ * the part is in view, and goes with the part, the next part's title taking its place. It covers what scrolls under it.
+ */
+@media (min-width: 900px) {
+	.aside-heading {
+		position: sticky;
+		top: 0;
+		z-index: var(--dsnr-layer-top);
+		margin: calc(-1 * var(--dsnr-space-5)) calc(-1 * var(--dsnr-space-5)) 0;
+		padding: var(--dsnr-space-5) var(--dsnr-space-5) var(--dsnr-space-3);
+		border-radius: var(--dsnr-radius-large) var(--dsnr-radius-large) 0 0;
+		background: var(--vscode-editor-background);
+	}
+}
+
+/* ==== The panel’s parts, each drawn with the kit. ==== */
+
+/* == What the panel’s dialogs hold, before what is drawn in one (`CodebaseDialogs.tsx`, `AccountDialogs.tsx`, `DesignSystem.tsx`) == */
+
 /* What a dialog says will happen, in steps. */
 .dialog-steps {
 	margin: var(--dsnr-space-2) 0 0;
@@ -1053,6 +1567,75 @@ textarea.input {
 	overflow-y: auto;
 	list-style: none;
 }
+
+/* What the sync holds back: what it is, and why under it. */
+.held {
+	display: flex;
+	flex-direction: column;
+}
+
+.held span {
+	color: var(--dsnr-muted);
+	overflow-wrap: anywhere;
+}
+
+/* == The panel: its bars, kept at the top while the list scrolls (`Panel.tsx`) == */
+
+.panel {
+	display: flex;
+	flex-direction: column;
+	/* Fills the window, so a tab with nothing to show can center it (`.empty`, below). */
+	min-height: 100vh;
+}
+
+/* The bar the toggle sits in: kept at the top while the list under it scrolls. */
+/*
+ * Bars kept at the top while a list scrolls under them, each under the one before: the toggle's, then the design system's own
+ * row (its name is always shown), then its Components and Tokens toggle, then a tab's search and options.
+ */
+.panel-top,
+.ds-header,
+.ds-part,
+.tab-body .view-bar {
+	position: sticky;
+	z-index: var(--dsnr-layer-top);
+	background: var(--vscode-sideBar-background);
+}
+
+.panel-top {
+	top: 0;
+	padding: var(--dsnr-top-pad) var(--dsnr-space-5);
+}
+
+.tab-body .view-bar {
+	top: var(--dsnr-top-height);
+}
+
+/* The choice of list or grid, at the right, above the projects: just its icons, so it takes little of the side bar. */
+.view-bar {
+	display: flex;
+	align-items: center;
+	gap: var(--dsnr-space-4);
+	/* The room below is the room at its sides, so the bar sits evenly in its container. */
+	padding: var(--dsnr-space-1) var(--dsnr-space-5) var(--dsnr-space-5);
+}
+
+/*
+ * A view with nothing to show (`ui/EmptyState.tsx`): centered across and down the room the tab has, which fills the
+ * window's height.
+ */
+.tab-body {
+	display: flex;
+	flex: 1;
+	flex-direction: column;
+}
+
+/* With the toggle above it, the search bar is kept under that too, under the top bar and the design system's row. */
+.tab-body .ds-part ~ .view-bar {
+	top: calc(var(--dsnr-top-height) + var(--dsnr-ds-header-height) + var(--dsnr-part-height));
+}
+
+/* == A design system’s header and its parts (`DesignSystemHeader.tsx`, `DesignSystem.tsx`) == */
 
 /*
  * The Design System tab (6.1, 6.2): the design system's own row, its parts, and its tokens as rows, a name at the start and
@@ -1109,245 +1692,7 @@ textarea.input {
 	padding: var(--dsnr-part-pad-top) var(--dsnr-space-5) var(--dsnr-part-pad-bottom);
 }
 
-/* With the toggle above it, the search bar is kept under that too, under the top bar and the design system's row. */
-.tab-body .ds-part ~ .view-bar {
-	top: calc(var(--dsnr-top-height) + var(--dsnr-ds-header-height) + var(--dsnr-part-height));
-}
-
-.icon-button:disabled {
-	opacity: 0.5;
-	cursor: default;
-}
-
-/* A color is a circle, wherever it is drawn: the token's row, a step, a palette. */
-.swatch {
-	display: block;
-	flex-shrink: 0;
-	width: 14px;
-	height: 14px;
-	border: 1px solid var(--dsnr-border);
-	border-radius: 50%;
-	box-sizing: border-box;
-}
-
-.swatch-large {
-	width: 40px;
-	height: 40px;
-}
-
-.token-body {
-	/* In from the right as the cards and the section headers are, not out to the panel's edge. */
-	padding: 0 var(--dsnr-space-5) var(--dsnr-space-2) var(--dsnr-indent);
-}
-
-/* Every heading (`ui/Heading.tsx`), by where it stands: bold, at the text's size unless it heads a tab or a part of one. */
-.heading {
-	margin: 0;
-	font-size: 1em;
-	font-weight: 600;
-}
-
-.heading-page {
-	font-size: 1.6em;
-}
-
-.heading-part {
-	font-size: 1.1em;
-}
-
-/* A group's name, with what its values all are to its right (`.value-group-note`). */
-.heading-group {
-	display: flex;
-	flex-wrap: wrap;
-	align-items: baseline;
-	justify-content: space-between;
-	gap: 0 var(--dsnr-space-4);
-	padding: var(--dsnr-space-4) 0 var(--dsnr-space-2);
-}
-
-.heading-label {
-	margin: var(--dsnr-space-4) 0 var(--dsnr-space-1);
-	color: var(--dsnr-muted);
-	font-size: 0.92em;
-}
-
-/*
- * A set's heading (the palette's family, the grid's role) is a row of the same height as every row under it, in both views of
- * the colors, so flipping between them moves nothing: a row of a set, and the heading over it, are `--dsnr-row-height`.
- */
-.heading-set,
-.theme-headings {
-	display: flex;
-	align-items: center;
-	min-height: var(--dsnr-row-height);
-	font-weight: 600;
-}
-
-/*
- * A line between one set and the next (a role's variants, a tone family's steps, a component's values of one property and of
- * the next, one group of a Changes dialog and the next), the same in the semantic colors, the palette, a component's values
- * and Changes. The panel's one border colour, the search box's.
- */
-.theme-set + .theme-set,
-.token-set + .token-set,
-.value-group + .value-group,
-.dialog .changed ~ .changed {
-	margin-top: var(--dsnr-space-3);
-	padding-top: var(--dsnr-space-3);
-	border-top: 1px solid var(--dsnr-border);
-}
-
-/* A group's heading has room of its own above it, so the line is all a group adds. */
-.value-group + .value-group {
-	padding-top: 0;
-}
-
-.tokens {
-	margin: 0;
-	padding: 0;
-	list-style: none;
-}
-
-.token {
-	position: relative;
-}
-
-.token-line {
-	display: flex;
-	align-items: center;
-	gap: var(--dsnr-space-3);
-	width: 100%;
-	min-height: var(--dsnr-row-height);
-	/* No indent of its own: a row's name starts where its set's and its part's titles do. At the right, room for a row's reset (`.item-actions`, in the Changes); a token's row has none (`.token-line-flush`). */
-	padding: 0 var(--dsnr-actions-room) 0 0;
-	box-sizing: border-box;
-	color: inherit;
-	font: inherit;
-	text-align: start;
-}
-
-.token-button {
-	border: none;
-	border-radius: var(--dsnr-radius-inner);
-	background: transparent;
-	cursor: pointer;
-}
-
-.token-button:hover {
-	background: var(--vscode-list-hoverBackground);
-}
-
-/* A pressed row's text is flush with its titles', so its highlight reaches out to the left of it, not the text into the highlight. */
-.value-cell.token-button:hover {
-	box-shadow: -4px 0 0 var(--vscode-list-hoverBackground);
-}
-
-.token-name {
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
-}
-
-/* A token's row in the Styles' own rhythm: its value, or its dot, flush at the right as a value's is. */
-.token-line-flush {
-	padding-right: var(--dsnr-row-edge);
-}
-
-/* A token's name is a link to the file it is written in: the row's text, underlined and in the link colour when pointed at. */
-.token-link {
-	padding: 0;
-	border: none;
-	border-radius: var(--dsnr-radius-inner);
-	color: inherit;
-	background: transparent;
-	font: inherit;
-	text-align: start;
-	cursor: pointer;
-}
-
-.token-link:hover {
-	color: var(--vscode-textLink-foreground);
-	text-decoration: underline;
-}
-
-/* What is at the right of a row that is not a colour: the rest of the row, so pressing it anywhere but the name is its control. */
-.token-fill {
-	display: flex;
-	flex: 1;
-	align-items: center;
-	align-self: stretch;
-	justify-content: flex-end;
-	gap: var(--dsnr-space-3);
-	min-width: 0;
-	padding: 0 0 0 var(--dsnr-space-2);
-	font: inherit;
-	color: inherit;
-}
-
-.token[data-changed] .token-name {
-	font-weight: 600;
-}
-
-.token-ref,
-.token-contrast,
-.token-uses {
-	flex-shrink: 0;
-	color: var(--dsnr-muted);
-	font-size: 0.92em;
-}
-
-.token-uses {
-	margin-left: var(--dsnr-space-4);
-}
-
-.token-ref {
-	flex-shrink: 1;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
-}
-
-.token-contrast-low,
-.warning-text {
-	color: var(--vscode-editorWarning-foreground);
-}
-
-/* A value as it is written: a token's on its row, and under each drawing on Primitives. */
-.token-value,
-.drawn-value {
-	color: var(--dsnr-muted);
-	font-family: var(--vscode-editor-font-family);
-	font-size: 0.92em;
-}
-
-.token-value {
-	flex-shrink: 0;
-	margin-left: auto;
-}
-
-/*
- * A changed or tried value's mark, on its row, its cell or its color's dot: a dot in the brand. A change is what a person
- * is doing, not something wrong; amber is for what needs a look (a warning), and is never used to say a change.
- */
-.token-changed,
-.color-dot-mark {
-	flex-shrink: 0;
-	width: 6px;
-	height: 6px;
-	border-radius: 50%;
-	background: var(--dsnr-brand);
-}
-
-.token .item-actions {
-	top: 11px;
-	right: 4px;
-	opacity: 0;
-}
-
-.token:hover .item-actions,
-.token .item-actions:focus-within {
-	opacity: 1;
-}
+/* == A tab: its header, and a component’s stories beside its side pane (`ComponentTab.tsx`, `Stories.tsx`) == */
 
 /*
  * A design system's tab in the editor (a component, Primitives): the editor's own colours, its content in a column with
@@ -1380,79 +1725,6 @@ textarea.input {
 
 .tab-actions .button {
 	width: auto;
-}
-
-.quiet {
-	margin: 0;
-	color: var(--dsnr-muted);
-	line-height: 1.4;
-}
-
-/*
- * What a view says (`ui/Message.tsx`), quiet unless it is a warning or an error: in the flow of what is around it, or in
- * line with the rows of a panel's list (`message-inset`); in a dialog, with room under it before what comes next.
- */
-.message {
-	margin: 0;
-	color: var(--dsnr-muted);
-	line-height: 1.4;
-}
-
-.message-inset {
-	margin: var(--dsnr-space-2) var(--dsnr-space-5) var(--dsnr-space-4);
-}
-
-.dialog .message {
-	margin: 0 0 var(--dsnr-space-4);
-}
-
-.message .codicon {
-	vertical-align: text-bottom;
-}
-
-.message-warning .codicon {
-	color: var(--vscode-editorWarning-foreground);
-}
-
-/* What went wrong, said where it happened, under what it is about. */
-.message-error,
-.dialog .message-error {
-	margin: var(--dsnr-space-4) 0 0;
-	color: var(--vscode-errorForeground);
-}
-
-/* A note with something to do about it: its words, then the button under them, the panel's width as a welcome view's is. */
-.message-block {
-	display: flex;
-	flex-direction: column;
-	gap: var(--dsnr-space-4);
-}
-
-.message-block p {
-	margin: 0;
-}
-
-.notice {
-	display: flex;
-	flex-direction: column;
-	gap: var(--dsnr-space-4);
-	padding: var(--dsnr-space-4) var(--dsnr-space-5);
-	border: 1px solid var(--vscode-inputValidation-warningBorder, var(--dsnr-contrast-border));
-	border-radius: var(--dsnr-radius);
-	background: var(--vscode-inputValidation-warningBackground, transparent);
-}
-
-.notice p {
-	margin: 0;
-}
-
-.notice .button {
-	width: auto;
-	align-self: flex-start;
-}
-
-.notice-title {
-	font-weight: 600;
 }
 
 /* A component's stories beside what it is made from, when there is room for both; one under the other when not. */
@@ -1555,38 +1827,11 @@ textarea.input {
 	min-width: 0;
 }
 
-.aside-section {
-	display: flex;
-	flex-direction: column;
-	gap: var(--dsnr-space-2);
-	padding: var(--dsnr-space-5);
-	border: 1px solid var(--dsnr-border);
-	border-radius: var(--dsnr-radius-large);
+.tab a {
+	color: var(--vscode-textLink-foreground);
 }
 
-/* A part's title, with a choice beside it. */
-.aside-heading {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	gap: var(--dsnr-space-4);
-}
-
-/*
- * Where the side pane scrolls on its own (as the tab has room for two columns), a part's title stays at the top of it while
- * the part is in view, and goes with the part, the next part's title taking its place. It covers what scrolls under it.
- */
-@media (min-width: 900px) {
-	.aside-heading {
-		position: sticky;
-		top: 0;
-		z-index: var(--dsnr-layer-top);
-		margin: calc(-1 * var(--dsnr-space-5)) calc(-1 * var(--dsnr-space-5)) 0;
-		padding: var(--dsnr-space-5) var(--dsnr-space-5) var(--dsnr-space-3);
-		border-radius: var(--dsnr-radius-large) var(--dsnr-radius-large) 0 0;
-		background: var(--vscode-editor-background);
-	}
-}
+/* == A component’s values and pickers (`ComponentValues.tsx`) == */
 
 /*
  * A component's values, in the narrow side pane, as its tokens read: each property a group, its name in the weight and colour
@@ -1603,39 +1848,6 @@ textarea.input {
 	overflow-wrap: anywhere;
 }
 
-/*
- * A value: its name on the left, its value on the right, and under its name what it is made of. The value's column is as wide
- * as the value, so it is flush right and never breaks; it is the name's that gives way, wrapping.
- */
-.value-cell {
-	display: grid;
-	grid-template-columns: minmax(0, 1fr) auto;
-	align-items: center;
-	column-gap: var(--dsnr-space-5);
-	width: 100%;
-	min-height: var(--dsnr-row-height);
-	/* Its width is the pane's, so a token's name beside its label can be held to a share of it (`.value-token`). */
-	container-type: inline-size;
-	padding: var(--dsnr-row-inset) var(--dsnr-row-edge) var(--dsnr-row-inset) 0;
-	box-sizing: border-box;
-	color: inherit;
-	font: inherit;
-	text-align: start;
-}
-
-.value-label {
-	overflow-wrap: anywhere;
-}
-
-.value-drawn {
-	display: flex;
-	align-items: center;
-	gap: var(--dsnr-space-3);
-	color: var(--dsnr-muted);
-	font-family: var(--vscode-editor-font-family);
-	font-size: 0.92em;
-}
-
 /* A token's name where its number would be: in the panel's own face, at most half its cell, cut with an ellipsis, so its label keeps the rest. */
 .value-token {
 	overflow: hidden;
@@ -1643,22 +1855,6 @@ textarea.input {
 	font-family: var(--vscode-font-family);
 	text-overflow: ellipsis;
 	white-space: nowrap;
-}
-
-/*
- * What a change did to a value, from and to, which is twice as long as a value: beside its name while both fit, else on the
- * line under it, still flush right, so the name is never squeezed by it; and broken at its arrow when it is wider than the
- * line (a padding by side, both ways), each side inside only when it alone is.
- */
-.value-change {
-	display: flex;
-	flex-wrap: wrap;
-}
-
-.value-change .value-drawn {
-	flex-wrap: wrap;
-	justify-content: flex-end;
-	margin-left: auto;
 }
 
 /*
@@ -1739,160 +1935,154 @@ textarea.input {
 	min-width: 0;
 }
 
-/* A switch: a small track, its knob at the start when off and at the end when on, in the brand when on. */
-.switch {
-	justify-self: end;
-	position: relative;
-	width: 32px;
-	height: 18px;
+/* == Tokens (`Tokens.tsx`) == */
+
+.token-body {
+	/* In from the right as the cards and the section headers are, not out to the panel's edge. */
+	padding: 0 var(--dsnr-space-5) var(--dsnr-space-2) var(--dsnr-indent);
+}
+
+.token-name {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+/* A token's name is a link to the file it is written in: the row's text, underlined and in the link colour when pointed at. */
+.token-link {
 	padding: 0;
-	border: 1px solid var(--dsnr-border);
-	border-radius: 9px;
-	background: var(--dsnr-track);
+	border: none;
+	border-radius: var(--dsnr-radius-inner);
+	color: inherit;
+	background: transparent;
+	font: inherit;
+	text-align: start;
 	cursor: pointer;
 }
 
-.switch-knob {
-	position: absolute;
-	top: 2px;
-	left: 2px;
-	width: 12px;
-	height: 12px;
-	border-radius: 50%;
-	background: var(--vscode-foreground);
-	transition: left 120ms;
+.token-link:hover {
+	color: var(--vscode-textLink-foreground);
+	text-decoration: underline;
 }
 
-.switch[aria-checked='true'] {
-	border-color: var(--dsnr-brand);
+/* What is at the right of a row that is not a colour: the rest of the row, so pressing it anywhere but the name is its control. */
+.token-fill {
+	display: flex;
+	flex: 1;
+	align-items: center;
+	align-self: stretch;
+	justify-content: flex-end;
+	gap: var(--dsnr-space-3);
+	min-width: 0;
+	padding: 0 0 0 var(--dsnr-space-2);
+	font: inherit;
+	color: inherit;
+}
+
+.token[data-changed] .token-name {
+	font-weight: 600;
+}
+
+.token-ref,
+.token-contrast,
+.token-uses {
+	color: var(--dsnr-muted);
+	font-size: 0.92em;
+}
+
+.token-contrast,
+.token-uses {
+	flex-shrink: 0;
+}
+
+.token-uses {
+	margin-left: var(--dsnr-space-4);
+}
+
+.token-ref {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+/* A value as it is written: a token's on its row, and under each drawing on Primitives. */
+.token-value,
+.drawn-value {
+	color: var(--dsnr-muted);
+	font-family: var(--vscode-editor-font-family);
+	font-size: 0.92em;
+}
+
+.token-value {
+	flex-shrink: 0;
+	margin-left: auto;
+}
+
+/*
+ * A changed or tried value's mark, on its row, its cell or its color's dot: a dot in the brand. A change is what a person
+ * is doing, not something wrong; amber is for what needs a look (a warning), and is never used to say a change.
+ */
+.token-changed,
+.color-dot-mark {
+	flex-shrink: 0;
+	width: 6px;
+	height: 6px;
+	border-radius: 50%;
 	background: var(--dsnr-brand);
 }
 
-.switch[aria-checked='true'] .switch-knob {
-	left: 16px;
-	background: var(--dsnr-on-brand);
-}
-
-@media (prefers-reduced-motion: reduce) {
-	.switch-knob {
-		transition: none;
-	}
-}
+/* == The semantic colors’ grid (`SemanticColors.tsx`) == */
 
 /*
- * A tooltip (`TooltipHost`), in the theme's own hover colours, over everything, never something to hover into. It is drawn
- * hidden and placed once its size is known, so it is never seen where it was not put.
+ * The semantic colors as laid out here: a row for each role's variant, its name taking the room there is, and a
+ * column for each theme, as wide as a dot, the same on every row and its heading so they line up.
  */
-.tooltip {
-	position: fixed;
-	top: 0;
-	left: 0;
-	z-index: var(--dsnr-layer-tip);
-	visibility: hidden;
-	max-width: min(320px, calc(100vw - 16px));
-	padding: var(--dsnr-space-2) var(--dsnr-space-4);
-	border: 1px solid var(--vscode-editorHoverWidget-border, var(--dsnr-contrast-border));
-	border-radius: var(--dsnr-radius-inner);
-	color: var(--vscode-editorHoverWidget-foreground, var(--vscode-foreground));
-	background: var(--vscode-editorHoverWidget-background, var(--vscode-editorWidget-background));
-	box-shadow: 0 2px 8px var(--vscode-widget-shadow);
-	font-size: 0.92em;
-	overflow-wrap: anywhere;
-	white-space: pre-line;
-	pointer-events: none;
-}
-
-/*
- * A small panel under what opened it, for a few fields that belong to one thing (a value's sliders): placed against the
- * button's own line, across its width, over what is below it, as a menu is.
- */
-.popover {
-	position: absolute;
-	top: 100%;
-	left: 0;
-	right: 0;
-	z-index: var(--dsnr-layer-menu);
-	margin-top: var(--dsnr-space-1);
-	padding: var(--dsnr-space-4) var(--dsnr-space-5);
-	border: 1px solid var(--vscode-menu-border, var(--dsnr-contrast-border));
-	border-radius: var(--dsnr-radius);
-	color: var(--vscode-menu-foreground);
-	background: var(--vscode-menu-background);
-	box-shadow: 0 2px 8px var(--vscode-widget-shadow);
-}
-
-/* It takes the focus when it opens, so the keyboard is in it; nothing is drawn around it for that (`focusPanel`). */
-.popover:focus,
-.dialog:focus {
-	outline: none;
-}
-
-.popover-body {
-	display: flex;
-	flex-direction: column;
-	gap: var(--dsnr-space-4);
-}
-
-.popover-head {
-	display: flex;
-	align-items: baseline;
-	justify-content: space-between;
-	gap: var(--dsnr-space-4);
-}
-
-.popover-title {
-	font-weight: 600;
-	overflow-wrap: anywhere;
-}
-
-.popover-field {
-	display: flex;
-	flex-direction: column;
-	gap: var(--dsnr-space-1);
-}
-
-/* A part with a short name (X, Y, Top): its name, its slider and its number on one line, the names in a column of their own. */
-.popover-field-line {
-	flex-direction: row;
-	align-items: center;
-	gap: var(--dsnr-space-4);
-}
-
-.popover-field-line .popover-label {
-	flex: 0 0 3.5em;
-}
-
-.popover-field-line .dimension-field {
-	flex: 1;
-	min-width: 0;
-}
-
-/* A range has a width of its own it will not go under, which would push its number out of the popover beside a name. */
-.popover-field-line input[type='range'] {
-	min-width: 0;
-}
-
-/* At the panel's own text size: a few fields, read at a glance. */
-.popover-label,
-.popover-note {
-	margin: 0;
-	color: var(--dsnr-muted);
-}
-
-.popover .token-value {
-	font-size: inherit;
-}
-
-/* More of something, closed until it is asked for (`ui/Section.tsx`). */
-.disclosure-summary {
+.theme-row {
 	display: flex;
 	align-items: center;
 	gap: var(--dsnr-space-2);
-	padding: var(--dsnr-space-2) 0;
-	color: var(--dsnr-muted);
-	cursor: pointer;
-	list-style: none;
+	min-height: var(--dsnr-row-height);
+	padding-right: var(--dsnr-space-2);
 }
+
+.theme-name {
+	/* A block, not the flex a set's heading is (`.heading-set`): an ellipsis needs one. */
+	display: block;
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.theme-headings .theme-name {
+	color: var(--vscode-foreground);
+}
+
+/* The set's name is the text's colour; the icons over the columns are quiet. */
+.theme-headings .theme-cell {
+	color: var(--dsnr-muted);
+}
+
+/*
+ * A theme's column: as wide as a dot, so the last column's dots end where a palette's do (flush right, the same 8px from the
+ * edge), and a heading over them is centred on them. A heading with no icon (a theme that is not Light or Dark) is cut short.
+ */
+.theme-cell {
+	display: flex;
+	flex-shrink: 0;
+	justify-content: center;
+	width: var(--dsnr-dot);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.theme-none {
+	color: var(--dsnr-muted);
+}
+
+/* == What axe found (`Accessibility.tsx`) == */
 
 .issue-list {
 	margin: 0;
@@ -1933,9 +2123,7 @@ textarea.input {
 	font-size: inherit;
 }
 
-.tab a {
-	color: var(--vscode-textLink-foreground);
-}
+/* == Primitives (`PrimitivesTab.tsx`) == */
 
 /* Primitives: a chip for each at the top, then each drawn as the vocabulary says. */
 .chips {
@@ -2088,6 +2276,8 @@ textarea.input {
 	list-style: none;
 }
 
+/* == A token’s control and a value’s (`TokenEditor.tsx`, `ValueFields.tsx`) == */
+
 /* A token's control (6.2), in a dialog: a picker and its hex, a slider, a tone's steps as swatches to choose from. */
 .token-editor {
 	display: flex;
@@ -2200,6 +2390,12 @@ textarea.input {
 	border-color: var(--vscode-focusBorder);
 }
 
+.token-editor .link {
+	align-self: flex-start;
+}
+
+/* == Changes and their branches (`Changed.tsx`, `ValueChanges.tsx`, `HandOverActions.tsx`) == */
+
 /* What has been changed, at the top of the tab, and what can be done with it. */
 .changed {
 	display: flex;
@@ -2284,131 +2480,4 @@ textarea.input {
 
 .branch-buttons .button {
 	width: auto;
-}
-
-.token-editor .link {
-	align-self: flex-start;
-}
-
-/*
- * The semantic colors as laid out here: a row for each role's variant, its name taking the room there is, and a
- * column for each theme, as wide as a dot, the same on every row and its heading so they line up.
- */
-.theme-row {
-	display: flex;
-	align-items: center;
-	gap: var(--dsnr-space-2);
-	min-height: var(--dsnr-row-height);
-	padding-right: var(--dsnr-space-2);
-}
-
-.theme-name {
-	/* A block, not the flex a set's heading is (`.heading-set`): an ellipsis needs one. */
-	display: block;
-	flex: 1;
-	min-width: 0;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
-}
-
-.theme-headings .theme-name {
-	color: var(--vscode-foreground);
-}
-
-/* The set's name is the text's colour; the icons over the columns are quiet. */
-.theme-headings .theme-cell {
-	color: var(--dsnr-muted);
-}
-
-/*
- * A theme's column: as wide as a dot, so the last column's dots end where a palette's do (flush right, the same 8px from the
- * edge), and a heading over them is centred on them. A heading with no icon (a theme that is not Light or Dark) is cut short.
- */
-.theme-cell {
-	display: flex;
-	flex-shrink: 0;
-	justify-content: center;
-	width: var(--dsnr-dot);
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
-}
-
-.theme-none {
-	color: var(--dsnr-muted);
-}
-
-/* What would be small print, behind an icon beside what it is about: told on hover (`InfoTip`), never in the way. */
-.info-tip {
-	display: inline-flex;
-	flex-shrink: 0;
-	align-items: center;
-	color: var(--dsnr-muted);
-	cursor: help;
-}
-
-/*
- * A color a person can look at and press, as only its dot (`ColorDot`): a little larger than a swatch beside text, with a
- * button's hover. Where it sits beside a name in a row it hangs out of the row's height a little, so its row is no taller
- * than one without a color, and flush right with the values beside it.
- */
-.color-dot {
-	position: relative;
-	display: inline-flex;
-	flex-shrink: 0;
-	align-items: center;
-	justify-content: center;
-	width: var(--dsnr-dot);
-	height: var(--dsnr-dot);
-	padding: 0;
-	border: 1px solid transparent;
-	border-radius: var(--dsnr-radius-inner);
-	background: transparent;
-}
-
-button.color-dot {
-	cursor: pointer;
-}
-
-.color-dot .swatch {
-	width: var(--dsnr-dot-swatch);
-	height: var(--dsnr-dot-swatch);
-}
-
-button.color-dot:hover {
-	background: var(--vscode-toolbar-hoverBackground);
-}
-
-.token-line .color-dot,
-.value-cell .color-dot {
-	margin: calc(-1 * var(--dsnr-space-2)) calc(-1 * var(--dsnr-space-2)) calc(-1 * var(--dsnr-space-2)) 0;
-}
-
-.token-line .color-dot {
-	margin-left: auto;
-}
-
-.color-dot-flag {
-	position: absolute;
-	/* On the circle's edge at its top right, 45 degrees round (the circle, `--dsnr-dot-swatch`, is centred in the button, `--dsnr-dot`), the badge's middle a little below it. */
-	top: 1px;
-	right: 2px;
-}
-
-.color-dot-mark {
-	position: absolute;
-	top: 0;
-	right: 0;
-}
-
-/* What the sync holds back: what it is, and why under it. */
-.held {
-	display: flex;
-	flex-direction: column;
-}
-
-.held span {
-	color: var(--dsnr-muted);
-	overflow-wrap: anywhere;
 }
