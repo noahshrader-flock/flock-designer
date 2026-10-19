@@ -1,9 +1,8 @@
-# On every push to the default branch: the format, the linter, the typecheck and the unit tests, so a change that breaks
-# one is seen on the commit that did it, with nobody having to remember to run them. Every commit lands on
-# noah/flock-designer directly, so it runs on push rather than on pull requests, which would never fire.
-#
-# The integration tests (real git, esbuild and the real library) run on the machine with the clones, as part of
-# npm run check; here the library is not checked out, and they have not yet been run on Linux.
+# On every push to the default branch, so a change that breaks something is seen on the commit that did it, with nobody
+# having to remember to run anything. Every commit lands on noah/flock-designer directly, so it runs on push rather than on
+# pull requests, which would never fire. Three jobs, side by side: the static checks and unit tests; every integration
+# test (real git, esbuild and Chrome); and the extension run in a real VS Code. Only the real-library tests are left to
+# the machine with the design systems' clones (npm run check:full).
 name: CI
 
 on:
@@ -33,3 +32,45 @@ jobs:
         run: npm run check:static
       - name: Unit tests
         run: npm run test:unit
+
+  integration:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: workspace
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: workspace/.nvmrc
+          cache: npm
+          cache-dependency-path: workspace/package-lock.json
+      - name: Install
+        run: npm ci
+      # Ubuntu's runners keep unprivileged user namespaces from apps, which Chrome's sandbox needs.
+      - name: Let Chrome sandbox itself
+        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+      - name: Integration tests, the slow ones included
+        run: npm run test:integration && npm run test:slow
+
+  extension:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: workspace
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: workspace/.nvmrc
+          cache: npm
+          cache-dependency-path: workspace/package-lock.json
+      - name: Install
+        run: npm ci
+      - name: Let VS Code sandbox itself
+        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+      - name: Get VS Code
+        run: curl -fsSL https://update.code.visualstudio.com/latest/linux-x64/stable | tar -xz -C "$RUNNER_TEMP"
+      # On a screen of its own (xvfb), as VS Code needs one.
+      - name: The extension in VS Code
+        run: CODE_BIN="$RUNNER_TEMP/VSCode-linux-x64/code" xvfb-run -a npm run extension:test

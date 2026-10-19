@@ -6,12 +6,12 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { main } from '../src/cli/dsnr';
-import { findChrome } from '../src/core/services/browser/chromeHeadless';
 import { g, installDesignSystem, makeProduct, addStandards } from './fixtures';
 import type { GitHubApi } from '../src/codeHost/github';
 
 import { type Answer, fakeGitHub, refusal } from './fakes/github';
 import { DESIGN_REPO } from '../src/shared/config';
+import { NO_CHROME } from './realChrome';
 
 let home: string;
 let product: string;
@@ -538,7 +538,7 @@ describe('the command', () => {
 });
 
 /** On a product that is not Coke and names nothing DSNR knows. */
-describe.skipIf(findChrome() === null)('accessibility', () => {
+describe.skipIf(NO_CHROME)('accessibility', () => {
 	const freePort = () =>
 		new Promise<number>((resolve) => {
 			const s = createServer().listen(0, () => {
@@ -796,7 +796,7 @@ describe.skipIf(findChrome() === null)('accessibility', () => {
 });
 
 /** Run only when asked for (`DSNR_REAL_AGENT=1`), since it runs Claude Code on the person's account and costs a little. */
-describe.skipIf(process.env.DSNR_REAL_AGENT !== '1' || findChrome() === null)('the agent, with its build’s own check', () => {
+describe.skipIf(process.env.DSNR_REAL_AGENT !== '1' || NO_CHROME)('the agent, with its build’s own check', () => {
 	it('fixes a fault the check finds while it does what it was asked', async () => {
 		const { runToEnd } = await import('../src/core/services/agent/agent');
 		const request = 'The prototype already exists. Change its heading to say "Camera list".';

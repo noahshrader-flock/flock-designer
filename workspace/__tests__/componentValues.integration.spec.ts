@@ -5,7 +5,8 @@ import { build } from 'esbuild';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { PREVIEW_COMPONENT, PREVIEW_SHOW, PREVIEW_TRY } from '../src/shared/catalog';
 import { FIND_INSTANCES, TRY_VALUES } from './pageInstances';
-import { chromeHeadless, findChrome } from '../src/core/services/browser/chromeHeadless';
+import { chromeHeadless } from '../src/core/services/browser/chromeHeadless';
+import { NO_CHROME } from './realChrome';
 
 /** The preview page is minified as the previews are, so the component is found by identity and not by name. */
 
@@ -96,7 +97,7 @@ afterAll(async () => {
 	await new Promise((r) => server.close(r));
 });
 
-describe.skipIf(findChrome() === null)('a component’s instances, in the browser on this machine', () => {
+describe.skipIf(NO_CHROME)('a component’s instances, in the browser on this machine', () => {
 	type Read = NonNullable<Awaited<ReturnType<typeof headless.measure>>[number][number]>;
 	const FILES = [
 		'button.stories.tsx',
@@ -161,7 +162,7 @@ describe.skipIf(findChrome() === null)('a component’s instances, in the browse
 	}, 60_000);
 });
 
-describe.skipIf(findChrome() === null)('values tried on a component’s instances, in the browser on this machine', () => {
+describe.skipIf(NO_CHROME)('values tried on a component’s instances, in the browser on this machine', () => {
 	it('reads a border from its first side that has one, as an underline is drawn', async () => {
 		const [[field]] = (await headless.measure([{ base, mode: 'light', files: ['field.stories.tsx'] }])) as [
 			[NonNullable<Awaited<ReturnType<typeof headless.measure>>[number][number]>],

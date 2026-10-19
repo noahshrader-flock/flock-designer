@@ -1,14 +1,14 @@
 import { type Server, createServer } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { chromeHeadless, composedPicture, findChrome, pictureOf } from '../src/core/services/browser/chromeHeadless';
+import { chromeHeadless, composedPicture, pictureOf } from '../src/core/services/browser/chromeHeadless';
 import { COVER_BUDGET } from '../src/core/services/prototypes/projectCovers';
 import { readDrawn } from '../src/core/services/designSystem/storyDrawing';
 import { resultOf } from '../src/core/services/accessibility/accessibilityCheck';
 import { countsOf } from '../src/shared/accessibility';
 import { undeclared } from '../src/shared/wcag';
 import { withPageTheme } from '../src/core/services/browser/pageTheme';
-import { inChrome } from './realChrome';
+import { inChrome, NO_CHROME } from './realChrome';
 
 /**
  * One story file of each kind a picture has to get right: small at the top left (its region starts off the page, so it is
@@ -94,7 +94,7 @@ afterAll(async () => {
 	await new Promise((r) => server.close(r));
 });
 
-describe.skipIf(findChrome() === null)('with the browser on this machine', () => {
+describe.skipIf(NO_CHROME)('with the browser on this machine', () => {
 	it('draws a page as a JPEG within the cover’s budget, and gives a blank page none', async () => {
 		const picture = await headless.draw(`${base}/page.html`);
 		expect(picture?.subarray(0, 2)).toEqual(Buffer.from([0xff, 0xd8]));

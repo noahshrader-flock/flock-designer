@@ -4,6 +4,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { chromeHeadless, findChrome } from '../src/core/services/browser/chromeHeadless';
 import { CELLS, type CellId } from '../src/core/services/accessibility/probe/cells';
 import { PROBE_FIXTURES } from './fixtures/probeFixtures';
+import { NO_CHROME } from './realChrome';
 
 /** Long enough that Tab scrolls it: buttons below the fold. */
 const WHOLE = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Cameras</title></head><body>
@@ -54,7 +55,7 @@ afterAll(async () => {
 
 const pageCells = CELLS.filter((c) => c.kind === 'page').map((c) => c.id as CellId);
 
-describe.skipIf(findChrome() === null)('the probe, in a real browser', () => {
+describe.skipIf(NO_CHROME)('the probe, in a real browser', () => {
 	it('has a fixture, a planted defect and its clean twin, for every cell it measures in the page', () => {
 		expect(pageCells.filter((c) => !PROBE_FIXTURES[c]?.length)).toEqual([]);
 	});
@@ -77,7 +78,7 @@ describe.skipIf(findChrome() === null)('the probe, in a real browser', () => {
 	);
 });
 
-describe.skipIf(findChrome() === null)('on a machine set to dark', () => {
+describe.skipIf(NO_CHROME)('on a machine set to dark', () => {
 	it('is a machine whose pages prefer dark, as this test needs', async () => {
 		const { default: puppeteer } = await import('puppeteer-core');
 		const browser = await puppeteer.launch({ executablePath: findChrome() as string, headless: true, args: ['--force-dark-mode'] });
@@ -103,7 +104,7 @@ describe.skipIf(findChrome() === null)('on a machine set to dark', () => {
 	}, 60_000);
 });
 
-describe.skipIf(findChrome() === null)('a view probed whole', () => {
+describe.skipIf(NO_CHROME)('a view probed whole', () => {
 	it('measures every cell, keeps each kind of evidence, and draws each Tab stop where it is, below the fold too', async () => {
 		const said: string[] = [];
 		const { results, evidence } = await headless.probe(`${base}/whole`, { depth: 'full', progress: (l) => said.push(l) });

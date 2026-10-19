@@ -4,9 +4,9 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { type CheckConfig, LEFT, MOST_ROUNDS, checkedAsSaved } from '../src/core/services/accessibility/buildCheck';
-import { findChrome } from '../src/core/services/browser/chromeHeadless';
 import { writeCheckScript } from '../src/core/services/prototypes/prototypeBundle';
 import { axeTagsFor } from '../src/shared/wcag';
+import { NO_CHROME } from './realChrome';
 
 let dir: string;
 beforeEach(() => {
@@ -42,7 +42,7 @@ const configFor = (body: string): CheckConfig => {
 	return config;
 };
 
-describe.skipIf(findChrome() === null)('a build’s own check, run as the agent runs it', () => {
+describe.skipIf(NO_CHROME)('a build’s own check, run as the agent runs it', () => {
 	let script: string;
 	beforeEach(async () => {
 		script = await writeCheckScript(dir);
