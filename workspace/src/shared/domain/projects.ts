@@ -26,17 +26,15 @@ export interface Work {
 	/** Codebase work's repository on GitHub (`owner/repo`), from the checkout it was started in, so it can be linked to. */
 	repository?: string;
 	/**
-	 * Where this work is in the running app, as a path within it (`/roles/compare`).
-	 * Written by whoever built the work, so opening the work lands on what was changed rather
-	 * than at the app's front door. Checked with `asRoute` wherever it is read back: it comes from a
-	 * file an agent wrote, and it is joined onto the preview's own address.
+	 * Where this work is in the running app (`/roles/compare`), written by whoever built it so opening it lands on what
+	 * changed. Checked with `asRoute` wherever it is read back: it comes from a file an agent wrote, and it is joined onto
+	 * the preview's own address.
 	 */
 	route?: string;
 	/**
-	 * For a prototype: the product code it was modeled on, so building it in the codebase later knows
-	 * what it was looking at. Absent when it was made without a repository on the machine. `repository` is the clone's
-	 * folder name, as this machine has it; `product` is the repository itself on its host (`owner/repo`, from the clone's
-	 * remote), the same on every machine, and absent for a prototype recorded before 2026-10-14 or made in a clone with none.
+	 * For a prototype: the product code it was modeled on, so building it in the codebase knows what it was looking at;
+	 * absent when made without a repository here. `repository` is the clone's folder name; `product` is the repository on
+	 * its host (`owner/repo`, from the clone's remote), the same on every machine, absent when the record or remote has none.
 	 */
 	basedOn?: { repository: string; branch: string; commit: string | null; product?: string };
 	/**
@@ -104,11 +102,8 @@ export type PrototypeReadiness =
 	  };
 
 /**
- * A project, read from the design repository through the API.
- *
- * Reviewers never clone anything: this is assembled from the repo's contents,
- * not from a checkout. Authors still work from a real checkout -- that is the
- * difference between the two modes.
+ * A project, read from the design repository through the API: reviewers never clone anything, so it is assembled from the
+ * repo's contents, not a checkout. Authors work from a real checkout; that is the difference between the two modes.
  */
 export interface Project {
 	/** Directory name under `projects/`, which is also the project id. */
@@ -157,7 +152,7 @@ export interface ProjectWork {
 	route: string | null;
 	/**
 	 * For a prototype: the product it was made on, as its repository on its host (`owner/repo`, the record's
-	 * `basedOn.product`); null for one recorded before that was kept, or found only as a branch. Codebase work's product is
+	 * `basedOn.product`); null when its record has none, or for one found only as a branch. Codebase work's product is
 	 * its `repository`. Both are read by `productsOf`.
 	 */
 	product: string | null;

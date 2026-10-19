@@ -1,4 +1,4 @@
-/** What the published site tells a page about signing in to comment (PUBLISHED_COMMENTS_PLAN, Phase 3): built by the site, read by the viewer. */
+/** What the published site tells a page about signing in to comment: built by the site, read by the viewer. */
 export interface SignInConfig {
 	clientId: string;
 	/** The sign-in function's address: `POST`, `{ code, verifier }`. */

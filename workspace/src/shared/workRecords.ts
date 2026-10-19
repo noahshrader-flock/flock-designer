@@ -8,20 +8,14 @@ import { isCommit } from './sha';
 import { isPrototypeName } from './prototypeNames';
 
 /**
- * Two copies of one project's `work.json`, made on different machines, as one.
- *
- * Git can merge text but not meaning: two people recording different versions of the same project
- * both rewrite the same short file, and a line-based merge calls that a conflict. This is the merge
- * that understands it. The records are a list keyed by name; where both copies have a
- * record, the fields are combined and nothing either side knew is lost.
- *
- * Returns null if either side is not a list of records, so the caller can say so rather than
- * write something guessed.
+ * Two copies of one project's `work.json`, made on different machines, as one: git's line merge calls two people recording
+ * versions a conflict, so records are joined by name and their fields combined, losing nothing either side knew. Null if
+ * either side is not a list of records, so the caller can say so rather than write something guessed.
  */
 
 type Rec = Record<string, unknown>;
 
-/** A record's name: a version of the prototype, `v2`, or `codebase`. A file with any other (an old `v1-i1`) is refused whole. */
+/** A record's name: a version of the prototype, `v2`, or `codebase`. A file with any other (`v1-i1`) is refused whole. */
 const isWorkName = (v: unknown): boolean => typeof v === 'string' && (v === 'codebase' || isPrototypeName(v));
 
 /**

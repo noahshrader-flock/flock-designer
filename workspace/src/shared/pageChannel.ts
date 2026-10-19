@@ -1,13 +1,9 @@
 import { hasExactly } from './validate';
 
 /**
- * How the review bar and a prototype's page talk (the README's Review isolation), on the published site and in VS Code:
- * by messages, so the bar never reaches into the page, and the page can be served from another address than the bar
- * (as in VS Code) and still have its pins. The bar asks (`PageAsk`); the page's agent (`src/page/agent.ts`) answers by the
- * ask's id and reports what happens on the page (`PageTell`), each with the secret the bar gave it when it said hello.
- *
- * Each side reads the other's messages only in exactly their shape: a page is code the bar does not trust, and what it
- * says is data, read again by the readers it has always gone through (`readPick`, `readMarkers`, `readPinMessage`).
+ * How the review bar and a prototype's page talk (the README's Review isolation): by messages, so the bar never reaches
+ * into the page, which can be served from another address. The bar asks (`PageAsk`); the page's agent (`src/page/agent.ts`)
+ * answers by id and tells (`PageTell`) with the bar's hello secret. A page is untrusted: each side reads only exact shapes.
  */
 
 /** What the bar asks: say hello (with its secret), pick a spot, cancel the pick, draw the pins, focus one, say the route. */

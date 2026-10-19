@@ -1,5 +1,5 @@
 /**
- * Process changes (PROCESS_CHANGES_PLAN Phase 1): what is tried on one unit of review (the tokens, or one component's values)
+ * Process changes: what is tried on one unit of review (the tokens, or one component's values)
  * handed to Claude Code in this window, set up to put it on a branch DSNR names, which DSNR then checks and proposes. One unit
  * a hand-over, never more, so a pull request is one a reviewer can read. No `vscode` and no `node:`, so it is tested alone.
  */
@@ -42,10 +42,9 @@ export const changeLine = (c: HandOverChange): string => `${c.said} (${c.where ?
 const unitOf = (group: HandOverGroup): string => (group.kind === 'tokens' ? 'its design tokens' : `the ${group.name} component alone`);
 
 /**
- * The prompt typed into Claude Code (not sent: the person adds their own words and presses Enter): what this is, the branch to
- * make and from where, what not to do (push, open a pull request, touch another branch: DSNR checks and proposes), the changes,
- * the rules for changing a design system's code (carried, since the library does not have them; its own docs win), with the one
- * the hand-over turns round (commit, on the branch, since that is what DSNR reads), and a last line left open. Throws, in words, with nothing to hand over or more than one hand-over carries.
+ * The prompt typed into Claude Code, not sent (the person adds their words and presses Enter): the branch to make, what not
+ * to do (push, open a pull request: DSNR checks and proposes), the changes, and the design-system rules, with commit turned
+ * round since the branch is what DSNR reads. Throws, in words, with nothing to hand over or more than one hand-over carries.
  */
 export const handOverPrompt = ({
 	group,

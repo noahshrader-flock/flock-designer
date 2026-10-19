@@ -13,13 +13,7 @@ export const firstHeading = (markdown: string): string | null => {
 };
 
 /**
- * A project's **folder** (the folders plan): a label, kept in its brief's front matter, a `---` block at the very top:
- *
- *     ---
- *     folder: Admin
- *     ---
- *     # Alert history
- *
+ * A project's **folder**: a label kept in its brief's front matter, a `---` block at the very top (`folder: Admin`).
  * Read and written only here, so where the folder is kept can change in one place. A project id never holds its folder.
  */
 const FRONT_MATTER = /^---\r?\n((?:.*\r?\n)*?)---\r?\n/;

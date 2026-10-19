@@ -1,13 +1,7 @@
 /**
- * The colors of the things this app draws *inside someone else's page*.
- *
- * Written as literals on purpose, and the only place in the app where that is right: these live in the previewed
- * product's document, which has its own stylesheet and cannot see this app's theme. They are Tailwind's own values
- * rather than anything chosen by hand (violet-600, DSNR's brand, for a pin and the outline that shows what it will attach
- * to, amber-500 for one not yet saved) so they match the app around them. White and a plain shadow keep a pin legible on
- * whatever it lands on. The brand is also in the extension's stylesheet (`--dsnr-brand`), which a guard test says agrees.
- *
- * Shared, with nothing of a page in it, so the app's own checks (the page smoke test) read the same colours the page draws.
+ * The colors DSNR draws *inside someone else's page*: literals on purpose, and the only place that is right, since the
+ * previewed product's document cannot see DSNR's theme. Tailwind's values, so they match around them; the brand agrees
+ * with `--dsnr-brand` (a guard test says so), and the page smoke test reads these same colours.
  */
 const PIN = '#7c3aed';
 

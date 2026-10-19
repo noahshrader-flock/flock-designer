@@ -17,24 +17,21 @@ export interface ReviewComment extends CommentRef {
 	createdAt: string;
 	resolved: boolean;
 	/**
-	 * The commit the agent made when it acted on this comment, or null. Not the same as resolved: it
-	 * says a change is waiting for the person's verdict, which only they can give.
+	 * The commit the agent made when it acted on this comment, or null. Acting on it resolves it too, but the two are kept
+	 * apart: a person can open it again, and the mark stays.
 	 */
 	addressedAt: string | null;
 	/** On a prototype, the version that change is in: a new one from this, when others had commented on this one. */
 	addressedIn: string | null;
 	/** Where on the page it was placed; null for a comment on the page as a whole. */
 	anchor: CommentAnchor | null;
-	/** A small picture of the spot, as a JPEG data URL, taken when the comment was placed. Null on older comments. */
+	/** A small picture of the spot, as a JPEG data URL, taken when the comment was placed. Null when it has none. */
 	picture: string | null;
 }
 
 /**
- * Where a comment points.
- *
- * Recorded as several independent clues on purpose: a selector alone breaks the
- * moment the markup changes, and a comment that cannot be placed must degrade to
- * a page-level comment rather than vanish.
+ * Where a comment points, as several independent clues on purpose: a selector alone breaks the moment the markup changes,
+ * and a comment that cannot be placed must degrade to a page-level comment rather than vanish.
  */
 export interface CommentAnchor {
 	route: string;
@@ -53,18 +50,18 @@ export interface CommentAnchor {
 	inside?: string[];
 	/**
 	 * The page's query string when the comment was made (`?state=error`), which is what tells one state of a
-	 * prototype from another. Empty for the default state. Absent on comments made before this was recorded,
+	 * prototype from another. Empty for the default state. Absent on comments that do not record it,
 	 * which are shown wherever their element is.
 	 */
 	state?: string;
 	/**
 	 * The theme the page was seen in when the comment was made, so it can be opened in it again.
-	 * Absent on comments made before this was recorded.
+	 * Absent on comments that do not record it.
 	 */
 	theme?: 'light' | 'dark';
 	/**
 	 * On a prototype, the page it was placed on, as its fingerprint (the short hash a page's picture is named by too), so a
-	 * comment can say when the page has changed since. Absent on comments made before this was recorded, which say nothing.
+	 * comment can say when the page has changed since. Absent on comments that do not record it, which say nothing.
 	 */
 	page?: string;
 }

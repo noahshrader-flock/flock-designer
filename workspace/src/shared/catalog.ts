@@ -5,8 +5,8 @@ import { type Theme, withTheme } from './prototypeTheme';
 
 /**
  * The design system the Design System tab reads, as the catalog needs it: the repository, the branch that is its source
- * of truth (the repository's default, decision 24), and where its Storybook is hosted, if anywhere. Made from what was
- * connected (`ConnectedDesignSystem`); nothing here decides what may be connected (decision 23).
+ * of truth (the repository's default), and where its Storybook is hosted, if anywhere. Made from what was connected
+ * (`ConnectedDesignSystem`); nothing here decides what may be connected.
  */
 export interface DesignSystem {
 	/** `owner/repo` on GitHub. */
@@ -26,11 +26,11 @@ export const designSystemOf = ({ repository, branch }: { repository: string; bra
 
 /**
  * Whether a Storybook group holds the library's token pages (`Design Tokens`, `Tokens`): they are documentation of the
- * tokens, not components, so they leave the list once the tokens panel shows the same from the source (decision 22).
+ * tokens, not components, so they are left out of the list: the tokens panel shows the same from the source.
  */
 export const isTokenGroup = (group: string): boolean => /\btokens?\b/i.test(group);
 
-/** Whether a component is one the Components tab's search finds (T9): by its name or its group, as `matchesWords` finds. */
+/** Whether a component is one the Components tab's search finds: by its name or its group, as `matchesWords` finds. */
 const matchesComponent = (component: { name: string; group: string }, search: string): boolean =>
 	matchesWords(`${component.name}\n${component.group}`, search);
 
@@ -38,14 +38,14 @@ const matchesComponent = (component: { name: string; group: string }, search: st
 export const PREVIEW_HEIGHT = 'flockPreviewHeight';
 /** Which story file a preview page draws, by this address parameter. */
 export const PREVIEW_FILE = 'file';
-/** What the preview page is told to draw another story file in place of the last with, without loading again (T6). */
+/** What the preview page is told to draw another story file in place of the last with, without loading again. */
 export const PREVIEW_SHOW = '__dsnrShow';
 /**
  * Where the preview page keeps the component the story file it draws is of (its default export's `component`), with the
  * props it names as controls (its `args` and `argTypes`), or null when it names none.
  */
 export const PREVIEW_COMPONENT = '__dsnrComponent';
-/** What a tab says to the preview page it frames to try values on the component's instances (Phase 2 of adjusting a component). */
+/** What a tab says to the preview page it frames to try values on the component's instances. */
 export const PREVIEW_TRY = 'dsnrTryValues';
 /**
  * A story file's preview page, in the build served at `base`, in `theme` (`page/theme.ts` puts it there, whatever the machine
@@ -55,7 +55,7 @@ export const previewAddress = (base: string, file: string, theme: Theme | null =
 	withTheme(`${base}?${PREVIEW_FILE}=${encodeURIComponent(file)}`, theme);
 
 /**
- * One line of a type specimen (R3 of the design system plan): what it is called, and the font it is drawn in, each part
+ * One line of a type specimen: what it is called, and the font it is drawn in, each part
  * only when the design system says it. Drawn by the preview page, so the design system's own CSS loads its fonts.
  */
 export interface SpecimenLine {

@@ -4,12 +4,9 @@ import { isTheme } from './prototypeTheme';
 import { COMMIT_PATTERN, isCommit } from './sha';
 
 /**
- * Where a comment points, carried inside the comment itself.
- *
- * The comment is a GitHub issue comment, so the anchor rides in a hidden HTML
- * comment: invisible when someone reads the thread on GitHub, which instead
- * shows a plain "On /route · selector" line, and recoverable by the app. No
- * second store, no schema to migrate.
+ * Where a comment points, carried inside the comment itself: a GitHub issue comment, so the anchor rides in a hidden HTML
+ * comment, invisible on GitHub (which shows a plain "On /route · selector" line instead) and read back here. No second
+ * store, no schema to migrate.
  */
 
 const MARK = /<!--\s*fd-anchor:\s*(\{[\s\S]*?\})\s*-->/;
@@ -93,15 +90,9 @@ export const withResolved = (body: string, resolved: boolean): string => {
 };
 
 /**
- * Marks a comment the agent has acted on, with the commit it made. The app resolves the comment with it (see
- * `setAddressed`), so its pin leaves the page; the mark is what is left to say what was done, and where.
- *
- * Before 2026-10-08 the two were kept apart, so a comment could be addressed and still open, waiting for the person's
- * verdict. Those still read correctly: an addressed comment that is open is shown as it was.
- *
- * Kept in the body like the resolved mark, so it survives the app restarting and is visible to
- * anyone else reading the thread on GitHub. On a prototype it also says which version the change is in, since the person
- * may have had it made in a new version from the one commented on.
+ * Marks a comment the agent has acted on, with the commit it made. The comment is resolved with it (`setAddressed`), so
+ * the mark is what says what was done, and where; one addressed but still open is shown as it is. Kept in the body like
+ * the resolved mark; on a prototype it also names the version the change is in, which may not be the one commented on.
  */
 const ADDRESSED = new RegExp(`<!-- fd-addressed: (${COMMIT_PATTERN})(?: in ([\\w-]{1,20}))? -->`);
 

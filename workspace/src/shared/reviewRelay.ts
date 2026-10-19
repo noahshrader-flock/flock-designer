@@ -2,11 +2,9 @@ import type { InvokeName, Result } from './contract';
 import { hasExactly } from './validate';
 
 /**
- * A prototype's review page, framed in DSNR's review tab in VS Code, comments through the extension's sign-in rather than
- * a token of its own (ELECTRON_MIGRATION_PLAN 2A, 4.2): the page asks the tab, the tab asks the extension, and the answer
- * comes back the same way. The calls are the core's own, by their names in the contract, with their arguments, which the
- * core checks where it answers them; and the extension's own two, signing in and Address. Nothing else can be asked, and
- * each side reads what the other sends in exactly its shape.
+ * A prototype's review page, framed in DSNR's review tab in VS Code, comments through the extension's sign-in, not a token
+ * of its own: page asks tab, tab asks extension. Only the core's calls by their contract names (checked where the core
+ * answers) and the extension's two, signing in and Address, can be asked; each side reads the other in exactly its shape.
  */
 /** The core's calls a review page makes, checked against the contract: one renamed or removed there fails the build here. */
 const REVIEW_CALLS = [
@@ -101,7 +99,7 @@ export const readRelayTell = (raw: unknown): RelayTell | null => {
 };
 
 /**
- * A review opened in the browser from VS Code asks the same way, through this machine's server (BROWSER_COMMENTS_PLAN):
+ * A review opened in the browser from VS Code asks the same way, through this machine's server:
  * a `POST` at `ASK_PATH` on the bar's own address, with the key its link carried (after `KEY_FRAGMENT` in its fragment)
  * in `KEY_HEADER`. A key is base64url, 128 bits or more: only characters no link is ever re-encoded in.
  */

@@ -29,9 +29,8 @@ export const newestVersionFirst = (a: string, b: string): number => (parseVersio
 export const nextVersionName = (names: string[]): string => prototypeName(names.reduce((max, n) => Math.max(max, parseVersion(n) ?? 0), 0) + 1);
 
 /**
- * How many open comments on a version are by anyone but its makers, leaving out the one being acted on (`acting`): the
- * pins a change in place can leave on the wrong element, so the person is told before it is made. A resolved comment has
- * no pin. Makers are known by their GitHub login, as comment authors are; a maker with none is not anyone's, so a version
+ * How many open comments on a version are by anyone but its makers, leaving out `acting`: a change in place can leave their
+ * pins on the wrong element, so the person is told first. Makers are known by GitHub login, as authors are, so a version
  * whose makers are unknown counts every comment as someone else's. A bot is not someone who saw it.
  */
 export const commentsFromOthers = (

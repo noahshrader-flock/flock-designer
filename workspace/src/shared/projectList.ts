@@ -55,17 +55,9 @@ export const matchesProject = (project: Project, search: string): boolean =>
 export const newestProjectFirst = byNewest(startedAt, byName);
 
 /**
- * One list from two sources: what is in the design repository on GitHub, and
- * what is on this machine.
- *
- * Work built here has to show up here, whether it was made from the app or by
- * an agent in a terminal, and whether or not it has been shared yet. So the
- * local records are read directly and merged in, and anything that exists only
- * on this machine is marked as such rather than hidden.
- *
- * Where both sides know a project, GitHub's copy leads (it is what everyone
- * else sees) and local facts only fill gaps: a piece of work GitHub has not heard
- * of, a title it does not have yet, a name it does not list.
+ * One list from the design repository on GitHub and this machine. Work built here shows here, however it was made and
+ * whether or not it is shared, so local records are merged in and what is only here is marked, not hidden. Where both know
+ * a project, GitHub's copy leads (it is what everyone sees) and local facts only fill its gaps.
  */
 export const mergeProjects = (remote: Project[], local: Project[]): Project[] => {
 	const byId = new Map<string, Project>();

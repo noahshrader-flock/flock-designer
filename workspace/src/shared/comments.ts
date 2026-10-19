@@ -1,11 +1,9 @@
 import type { CommentAnchor, CommentRef, MarkerRequest, ReviewComment } from './contract';
 
 /**
- * What is read back from GitHub, plus what was just posted from this window.
- *
- * GitHub's listings can trail a new comment, so a comment this window posted is kept and shown
- * until the read includes it. What GitHub returned always wins for a comment it returned: a
- * newer read (someone resolved it, or edited it) is not undone by an older local copy.
+ * What is read back from GitHub, plus what this window just posted. GitHub's listings can trail a new comment, so one
+ * posted here is shown until the read includes it; for a comment GitHub returned, its copy always wins, so a newer read
+ * (someone resolved or edited it) is not undone by an older local copy.
  */
 export const mergeComments = (fetched: ReviewComment[], posted: Iterable<ReviewComment>): ReviewComment[] => {
 	const have = new Set(fetched.map((c) => c.id));
@@ -22,11 +20,9 @@ export const forgetPosted = (posted: Map<number, ReviewComment>, fetched: Review
 };
 
 /**
- * Still to be dealt with, and already dealt with.
- *
- * One definition, because this same question decides the count on the screen, whether a comment has a
- * pin, what the file an agent reads lists as outstanding, and whether the agent may be started at
- * all. Those must never disagree about what "open" means.
+ * Still to be dealt with, and already dealt with. One definition, because it decides the count on screen, whether a
+ * comment has a pin, what the agent's file lists as outstanding and whether the agent may start: those must never
+ * disagree about what "open" means.
  */
 export const openComments = (comments: ReviewComment[]): ReviewComment[] => comments.filter((c) => !c.resolved);
 export const resolvedComments = (comments: ReviewComment[]): ReviewComment[] => comments.filter((c) => c.resolved);
@@ -38,15 +34,9 @@ export const resolvedComments = (comments: ReviewComment[]): ReviewComment[] => 
 export const commentRef = ({ thread, id }: CommentRef): CommentRef => ({ thread, id });
 
 /**
- * What number each comment carries: the digit drawn in its pin, and the heading it is filed under
- * in the file an agent reads.
- *
- * One definition, used by both ends. Address names one comment to the agent as "comment 3", and the agent
- * reads "Comment 3" out of a file written somewhere else entirely; if the two ever counted differently,
- * that sentence would quietly point at the wrong thing. Nobody sees a number on screen (a pin and a card
- * show the person), so this is the agent's way of naming a comment alone. Comments that point at the
- * page are numbered first, in the order they were made; page-level ones follow. A comment keeps its
- * number when others are resolved.
+ * What number each comment carries for the agent (no number is shown on screen): Address names "comment 3", and the
+ * agent reads "Comment 3" in a file written elsewhere, so both ends use this one count. Comments that point at the page
+ * come first, in the order made, then page-level ones; a comment keeps its number when others are resolved.
  */
 export const numberComments = (comments: ReviewComment[]): Map<number, number> => {
 	const ordered = [...comments].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
@@ -69,12 +59,9 @@ export const sameComments = (a: ReviewComment[] | null, b: ReviewComment[]): boo
 	});
 
 /**
- * The pins to draw: one per open comment that points at the page, plus the one being placed.
- *
- * **The draft pin exists only while its comment is being written.** A pin with no box to type in
- * cannot be finished and cannot be dismissed, so it sits on the page looking like a comment that is
- * not one -- which is what happened when backing out between placing the pin and the box opening.
- * Drawing both from this one condition is what stops them disagreeing.
+ * The pins to draw: one per open comment that points at the page, plus the one being placed. **The draft pin exists
+ * only while its comment is being written:** a pin with no box to type in can be neither finished nor dismissed, and
+ * drawing both from this one condition keeps them from disagreeing.
  */
 export const markersFor = (
 	comments: ReviewComment[],

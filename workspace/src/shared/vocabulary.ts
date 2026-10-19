@@ -6,7 +6,6 @@
 
 import { CLI_INSTALL_URL } from './hostUrls';
 
-/** The host, by its name. */
 export const HOST = 'GitHub';
 /** What the host calls a change proposed from a branch. */
 export const CHANGE_REQUEST = 'pull request';

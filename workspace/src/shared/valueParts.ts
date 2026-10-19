@@ -2,7 +2,7 @@ import { COLOR_VALUES, type ValueProperty } from './domain/designSystem';
 import { hexOf } from './tokens';
 
 /**
- * How a component's drawn value is written (adjusting a component, DESIGN_SYSTEM.md), one way for every reader: the
+ * How a component's drawn value is written (adjusting a component), one way for every reader: the
  * page that reads it and tries it (`page/instances.ts`), the analysis that says it (`componentValues.ts`), and the control
  * that changes it (`ValueEditor.tsx`).
  */
@@ -13,15 +13,15 @@ export const NO_COLOR = 'none';
 /**
  * The props an instance is never told apart by, so never read off it: its content, handlers, styling, identity, and what it
  * is for assistive technology. Shared by the page that reads an instance's props (`page/instances.ts`) and what reads them
- * back (Phase 5), so a prop not read is never taken as not given.
+ * back, so a prop not read is never taken as not given.
  */
 export const NOT_VARIANT =
 	/^(children|className|style|sx|css|id|key|ref|role|tabIndex|href|src|alt|title|name|value|defaultValue|placeholder|label|as|component|slot|form|htmlFor|type)$|^(on[A-Z]|aria-|data-)/;
 
 /**
  * The CSS longhands each property is read from and tried on, and how many parts its value is written with: a padding's four
- * sides, a radius's four corners and a gap's row and column each a part, in this order; a font size and a colour one, which a
- * border's colour is set on every side with (and read from its first side that has a border, `borderColor`). A height is the element's box, read and set apart.
+ * sides, a radius's four corners and a gap's row and column each a part, in this order; a font size and a colour one (a
+ * border's colour set on every side, read from its first with a border). A height is the element's box, read and set apart.
  */
 export const CSS_OF: Record<Exclude<ValueProperty, 'height'>, { names: string[]; parts: 1 | 2 | 4 }> = {
 	padding: { names: ['padding-top', 'padding-right', 'padding-bottom', 'padding-left'], parts: 4 },
@@ -44,7 +44,7 @@ export const allParts = (value: string, n: 1 | 2 | 4): string[] => {
 };
 
 /**
- * A value as a control writes it when it is tried (Phase 2), or null for one that is not that: a colour as its hex, a length as
+ * A value as a control writes it when it is tried, or null for one that is not that: a colour as its hex, a length as
  * every one of its parts in pixels, which is what the page draws and what the writer writes (`writtenAs`).
  */
 export const asTried = (property: ValueProperty, value: string): string | null => {
@@ -73,7 +73,7 @@ const FULL = 'full';
 
 /**
  * Whether a radius's corner is one that makes its end round, whatever the element's size, as drawn or as said ("full"): given
- * no control, since no length of it is one a person picks (Phase 5.5).
+ * no control, since no length of it is one a person picks.
  */
 export const isFull = (part: string): boolean => part === FULL || (pxOf(part) ?? 0) >= FULL_PX;
 

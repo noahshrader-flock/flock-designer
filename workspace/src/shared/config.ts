@@ -16,10 +16,9 @@ export const DESIGN_REPO: RepoRef = {
 };
 
 /**
- * Signing in to comment on the published site (PUBLISHED_COMMENTS_PLAN, Phase 3): the GitHub App the page signs people in
- * through, and the function that trades the one-time code it gets for a token (`functions/sign-in`). Neither is a secret: the
- * client ID is in every sign-in address, and the function answers only the site's own origin. An empty client ID turns
- * signing in on the site off. The App's redirect address is the site's own (`pagesSiteUrl`).
+ * Signing in to comment on the published site: the GitHub App it signs people in through (redirecting to `pagesSiteUrl`),
+ * and the function that trades its one-time code for a token (`functions/sign-in`). Neither is a secret: the client ID is
+ * in every sign-in address, and the function answers only the site's origin. An empty client ID turns signing in off.
  */
 export const PAGES_SIGN_IN = {
 	clientId: env.DSNR_PAGES_CLIENT_ID ?? 'Iv23liexeTaJVsGleROl',

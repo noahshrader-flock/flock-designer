@@ -36,20 +36,15 @@ import type { PublishStatus, ShareStatus } from '../domain/publishing';
 import type { VoiceAndTone } from '../domain/voice';
 
 /**
- * The only vocabulary a page has.
- *
- * Everything the window can ask for is a named operation on this contract. There
- * is no generic `invoke(channel, args)` and no shell: a capability a page
- * does not have a method for is a capability it does not have. Adding one is a
+ * The only vocabulary a page has: everything the window can ask for is a named operation on this contract, with no generic
+ * `invoke(channel, args)` and no shell, so a capability a page has no method for is one it does not have. Adding one is a
  * deliberate edit to this file, which is the point.
  */
 
 /**
- * A result that carries its failure instead of throwing across the bridge.
- *
- * An exception crossing to a page arrives as a string with no shape. Every operation
- * that can fail for an ordinary reason -- no descriptor, dirty tree, command not
- * allowed -- returns this, so a page can say what happened.
+ * A result that carries its failure instead of throwing across the bridge, where an exception arrives as a string with no
+ * shape. Every operation that can fail for an ordinary reason (no descriptor, dirty tree, command not allowed) returns
+ * this, so a page can say what happened.
  */
 export type Result<T> = { ok: true; value: T } | { ok: false; error: string };
 
@@ -65,22 +60,22 @@ export interface WorkspaceApi {
 	 * outcome. Nothing in the clone's branches or files is changed.
 	 */
 	designSystemCatalog(refresh: boolean): Promise<Result<Catalog>>;
-	/** The design systems connected, and which is shown (P4). */
+	/** The design systems connected, and which is shown. */
 	designSystems(): Promise<Result<ConnectedDesignSystems>>;
 	/**
 	 * The previews of the library's stories, built from its branch once per commit; waits for the build. With `edits`, the
-	 * same stories built with those tokens changed (T3), written nowhere; with none, as the branch has them.
+	 * same stories built with those tokens changed, written nowhere; with none, as the branch has them.
 	 */
 	storyPreview(edits: TokenEdit[]): Promise<Result<StoryPreview>>;
-	/** Which tokens a component draws with, by its story file (T6); `building` while every story is drawn, the first time. */
+	/** Which tokens a component draws with, by its story file; `building` while every story is drawn, the first time. */
 	componentTokens(file: string): Promise<Result<ComponentTokens>>;
 	/** The components that draw with a token, by its path, and how many of their values it is; `building` while every story is drawn. */
 	tokenUsers(path: string): Promise<Result<TokenUsers>>;
-	/** What a token change being tried reaches: each component it moves, and how (Phase 3); `building` while it is drawn. */
+	/** What a token change being tried reaches: each component it moves, and how; `building` while it is drawn. */
 	changeReach(edits: TokenEdit[]): Promise<Result<ChangeReach>>;
-	/** A component drawn in every case its declared props give, by its story file (Phase 5); `building` while it is drawn. */
+	/** A component drawn in every case its declared props give, by its story file; `building` while it is drawn. */
 	componentVariants(file: string): Promise<Result<ComponentVariants>>;
-	/** Where the values tried on a component's instances are written, by its story file, and what writing them reaches (Phase 4). */
+	/** Where the values tried on a component's instances are written, by its story file, and what writing them reaches. */
 	valueSources(file: string, tried: TriedValue[]): Promise<Result<ValueSources>>;
 	/**
 	 * Process changes: one unit (the tokens, `null`; or a component's values, by its story file) handed to Claude Code, on a branch
@@ -97,14 +92,14 @@ export interface WorkspaceApi {
 	showLibraryBranch(): Promise<Result<null>>;
 	/** Told the branch shown in place of the library's (null: the library's own) whenever it changes. */
 	onLibraryShown(listener: (showing: string | null) => void): () => void;
-	/** Has the agent write a value tried on a component, or make it follow a token (Phase 4.5, 4.6); what it wrote is in `valueSources`. */
+	/** Has the agent write a value tried on a component, or make it follow a token; what it wrote is in `valueSources`. */
 	writeValue(file: string, value: TriedValue): Promise<Result<null>>;
-	/** The pictures of the shown design system's components, for the grid view (P5). */
+	/** The pictures of the shown design system's components, for the grid view. */
 	componentPictures(): Promise<Result<ComponentPictures>>;
 	/**
 	 * A change's branch, of any kind (`ChangeKinds`), by its scope: a component's story file, or null for the design system
 	 * whole (its tokens, its voice and tone). Null when none is kept, or its branch is gone, or its pull request was merged or
-	 * closed (then it is forgotten). A hand-over's is read from git now.
+	 * closed (then it is forgotten). A hand-over's is read from git.
 	 */
 	changeBranch<K extends ChangeKind>(kind: K, scope: string | null): Promise<Result<ChangeBranchOf<K> | null>>;
 	/** The scopes with a branch of `kind` kept on the design system shown (the design system whole as an empty one): what the panel's Changes lists. */
@@ -112,7 +107,7 @@ export interface WorkspaceApi {
 	/**
 	 * Saves a change as one commit on its branch, made from the library's branch on the first save, nothing checked out;
 	 * pushed when it is proposed, and on every save after. Refused while another branch is shown. A voice and tone save is
-	 * refused when the file on the library's branch is no longer the one it was opened at.
+	 * refused when the file on the library's branch is not the one it was opened at.
 	 */
 	saveChange<K extends SavedKind>(kind: K, scope: string | null, change: ChangeKinds[K]): Promise<Result<ChangeBranchOf<K>>>;
 	/**
@@ -127,11 +122,10 @@ export interface WorkspaceApi {
 	): Promise<Result<ChangeBranchOf<K>>>;
 	/** Forgets a change's branch, to start a new one; the branch and any pull request stay. */
 	forgetChange(kind: ChangeKind, scope: string | null): Promise<Result<null>>;
-	/** The voice and tone file as the library's branch has it, read after bringing the branch up to date (T9). */
+	/** The voice and tone file as the library's branch has it, read after bringing the branch up to date. */
 	voiceAndTone(): Promise<Result<VoiceAndTone>>;
 	/** Runs the install command the repository declares (`install`), and nothing else. Its output arrives through `onInstallLine`. */
 	installPackages(root: string): Promise<Result<null>>;
-	/** Stops an install that is running. */
 	cancelInstall(): Promise<Result<null>>;
 	onInstallLine(listener: (line: string) => void): () => void;
 	stopCommand(root: string, commandId: string): Promise<Result<PreviewStatus>>;
@@ -160,7 +154,7 @@ export interface WorkspaceApi {
 	// preview from this machine.
 	/**
 	 * `from`: the repository on this machine and a branch in it to model the page on. `folder`: the folder a new project is
-	 * put in (the folders plan); a project that has a brief already stays where it is.
+	 * put in; a project that has a brief already stays where it is.
 	 */
 	createPrototype(
 		projectId: string,
@@ -171,17 +165,14 @@ export interface WorkspaceApi {
 	): Promise<Result<Work>>;
 	/**
 	 * The same build, handed to Claude Code in the repository `root` instead of run here, as Build in the codebase is: its
-	 * whole task is written beside the prototype, and a conversation starts with a line pointing at it: in VS Code's panel
-	 * when it is here (`editor`), or the command that starts it in a terminal, put on the clipboard (`command`). Nothing is
-	 * saved or checked from here: the prototype is saved when it is opened.
+	 * task is written beside the prototype, and a conversation pointing at it starts in VS Code's panel (`editor`) or as a
+	 * terminal command on the clipboard (`command`). Nothing is saved or checked here: the prototype is saved when opened.
 	 */
 	handPrototypeBuild(root: string, projectId: string, name: string, request: string): Promise<Result<BuildInCodebase>>;
 	/**
-	 * Address on one comment on a prototype, run here to its end: the agent makes the change in the version commented on,
-	 * in place, or in a new version from it when `newVersion` asks for one; then a changed prototype is built, recorded when
-	 * it is a new version, and saved, and the comment is marked with where the change is. There is no batch. Says whether
-	 * anything changed, in which version, the new version's record when one was made, and the comment as it is marked now;
-	 * or that the person stopped it, when the change is finished the next time the prototype is opened.
+	 * Address on one comment on a prototype, run here to its end, never in a batch: the change is made in the version
+	 * commented on, or a new one from it (`newVersion`), then built, recorded if new, saved, and the comment marked. Says what
+	 * changed and where; or that the person stopped it, the change then finished the next time the prototype is opened.
 	 */
 	addressPrototype(projectId: string, name: string, comment: CommentRef, newVersion: boolean): Promise<Result<JobEnd<PrototypeAddressed>>>;
 	/** Whether the version is on its published page, asked of GitHub. */
@@ -212,9 +203,8 @@ export interface WorkspaceApi {
 	agentReadiness(): Promise<Result<AgentReadiness>>;
 	/**
 	 * Handoff on a project's codebase work, run here to its end: the product's gate, both reviews, their fixes, and
-	 * HANDOFF.md. Refused unless the checkout is on the work's branch and the agent is free (a Handoff of it already going
-	 * is waited on). Says whether it found the work ready (its verdict, and HANDOFF.md committed since; null when that
-	 * cannot be told), or that the person stopped it.
+	 * HANDOFF.md. Refused unless the checkout is on the work's branch and the agent is free (a Handoff already going is
+	 * waited on). Says whether it found the work ready (null when that cannot be told), or that the person stopped it.
 	 */
 	handOff(root: string, projectId: string): Promise<Result<JobEnd<{ ready: boolean | null }>>>;
 	/**
@@ -239,7 +229,7 @@ export interface WorkspaceApi {
 	projectCover(projectId: string, name: string, cover: string): Promise<Result<string | null>>;
 	/** A review thread's comments. `branch`: the work's branch, which its thread is filed under (a prototype's is its key). */
 	readComments(projectId: string, branch: string): Promise<Result<ReviewComment[]>>;
-	/** Puts a project in a folder, or in none for null, in its brief in the design repository (the folders plan). */
+	/** Puts a project in a folder, or in none for null, in its brief in the design repository. */
 	assignFolder(projectId: string, folder: string | null): Promise<Result<null>>;
 	postComment(projectId: string, branch: string, body: string, anchor: CommentAnchor | null, picture?: string | null): Promise<Result<ReviewComment>>;
 
@@ -252,10 +242,9 @@ export interface WorkspaceApi {
 }
 
 /**
- * The window's whole reach, as one table: every call it can make (`INVOKE`, each on the channel `workspace:<name>`) and
- * every event it can hear (`EVENTS`, each on the channel `workspace:event:<name>`, its method's name without `on`). The
- * pages build their API from it (`workspaceApi.ts`), the core registers and sends by it, and the check below fails the typecheck when
- * a method of `WorkspaceApi` is in neither, so the three cannot drift.
+ * The window's whole reach, as one table: every call (`INVOKE`, on `workspace:<name>`) and event (`EVENTS`, on
+ * `workspace:event:<name>`, its method's name without `on`). The pages build their API from it, the core registers and
+ * sends by it, and the check below fails the typecheck when a method of `WorkspaceApi` is in neither.
  */
 export const INVOKE = [
 	'readCheckout',
@@ -342,5 +331,4 @@ export const invokeChannel = (name: InvokeName): string => `workspace:${name}`;
 
 export const eventChannel = (name: EventName): string => `workspace:event:${EVENTS[name]}`;
 
-/** Each call's channel, by name. */
 export const CHANNELS = Object.fromEntries(INVOKE.map((name) => [name, invokeChannel(name)])) as { readonly [K in InvokeName]: `workspace:${K}` };

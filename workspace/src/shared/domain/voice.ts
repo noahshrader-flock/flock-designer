@@ -1,6 +1,6 @@
 /** Voice and tone: the design system's file. A change to it is kept on a branch as every change is (`ChangeKinds.voice`). */
 
-/** The company's voice and tone (T9): one file in the connected design system's agent files, as the library's branch has it. */
+/** The company's voice and tone: one file in the connected design system's agent files, as the library's branch has it. */
 export interface VoiceAndTone {
 	/** The design system's repository (`owner/repo`), and where the file is in it. */
 	repository: string;

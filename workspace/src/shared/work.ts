@@ -40,9 +40,9 @@ export const workOf = (work: ProjectWork[], kind: WorkKind): ProjectWork[] =>
 	work.filter((i) => workKind(i) === kind).sort((a, b) => newestVersionFirst(a.name, b.name));
 
 /**
- * The products a project has work in (the workspace README's "Projects, by product"), each once, its newest work's first: a prototype's the
- * product it was made on, codebase work's its repository, both `owner/repo` on the host. None for work recorded before
- * products were kept: a clone's folder name is never taken for one, since it differs from machine to machine.
+ * The products a project has work in, each once, its newest work's first: a prototype's the product it was made on,
+ * codebase work's its repository, both `owner/repo`. None for work whose record names no product: a clone's folder name is
+ * never taken for one, since it differs from machine to machine.
  */
 export const productsOf = (project: Pick<Project, 'work'>): string[] => {
 	const found: string[] = [];
@@ -72,7 +72,7 @@ export const noSetupNote = (branch: string): string =>
 
 /**
  * What Build in the codebase does once Claude Code has the task, after the step that is each screen's own (where Claude
- * Code opens): said the same in the app and in VS Code, since the work is the same. Ends with the check it makes of its
+ * Code opens): said the same on every screen, since the work is the same. Ends with the check it makes of its
  * own work, and what is left to Handoff.
  */
 export const buildSteps = (continuing: boolean, branch: string): string[] => [
@@ -88,7 +88,7 @@ export const startBranch = (plan: Pick<BuildInCodebasePlan, 'basedOn' | 'current
 	[plan.basedOn?.branch, plan.current].find((b): b is string => typeof b === 'string' && startable.includes(b)) ?? startable[0] ?? null;
 
 /**
- * Whether Build in the codebase can start, as both its dialogs (the app's, VS Code's) read its plan. Work already started
+ * Whether Build in the codebase can start, as its dialogs read its plan. Work already started
  * is continued where it is. A new branch, or moving to the branch from another, needs a clean checkout; already on it,
  * what is uncommitted is the work in progress, and is left alone. `uncommitted` says what to do, when it stands in the way.
  */
@@ -108,12 +108,9 @@ export const buildStart = (
 };
 
 /**
- * Where codebase work's preview opens: the work's own route within the running app when its record says one, and otherwise
- * wherever the preview starts by itself. Codebase work runs the whole product, so without this it opens at the product's
- * front door and the designer has to find the change themselves -- which is how a comment meant for work at
- * `/roles/compare` was made on the Organizations list instead. The route is already checked where it is read from the
- * record; this joins it on, keeping whatever the preview's address carries (its port, any base path), and refuses
- * anything that would move the origin rather than quietly following it.
+ * Where codebase work's preview opens: the work's own route when its record says one, else wherever the preview starts, so
+ * a comment is not made on the product's front door by mistake. Joined on keeping the preview's port and base path; anything
+ * that would move the origin is refused, not followed. The route is checked where it is read from the record.
  */
 export const routeIn = (previewUrl: string, route: string | null | undefined): string => {
 	if (!route) return previewUrl;

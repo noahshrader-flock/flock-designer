@@ -22,14 +22,9 @@ export const slugify = (name: string): string =>
 export const asDate = (v: unknown): string | null => (typeof v === 'string' && v !== '' && !Number.isNaN(Date.parse(v)) ? v : null);
 
 /**
- * Where in the running app a piece of work actually is, as a path within it -- `/roles/compare`,
- * or `roles/compare?state=error`. Null when the record does not say, and the preview opens at the
- * app's own front door as before.
- *
- * **This comes out of a file an agent wrote, so it is checked, not trusted.** It is joined onto
- * `http://localhost:<port>` to make the address the preview loads, so anything that could leave that
- * origin is refused rather than corrected: a scheme (`javascript:`, `http:`), a host (`//evil.test`),
- * or a backslash, which some parsers read as a slash. What is left is a path on the preview itself.
+ * Where in the running app a piece of work is, as a path (`/roles/compare`, `roles/compare?state=error`); null when the
+ * record does not say. **It comes from a file an agent wrote, so it is checked, not trusted:** it is joined onto
+ * `http://localhost:<port>`, so anything that could leave that origin (a scheme, a host, a backslash) is refused.
  */
 export const asRoute = (v: unknown): string | null => {
 	if (typeof v !== 'string') return null;
@@ -42,10 +37,9 @@ export const asRoute = (v: unknown): string | null => {
 	const path = raw.startsWith('/') ? raw : `/${raw}`;
 	// `..` cannot escape the origin, but a route that climbs is a mistake in the record, not a landing place.
 	if (path.split(/[/?#]/).includes('..')) return null;
-	// A route pattern is not a route. `/organization/:id/roles` and `/org/{id}/roles` are what a router
-	// matches against; as an address they are taken literally and match nothing, so the preview would
-	// open on an error page that looks like the work failed. Refusing it here means the work opens
-	// where it always did instead, and the skill says to record the form with no parameters in it.
+	// A route pattern (`/organization/:id/roles`, `/org/{id}/roles`) as an address matches nothing, and the preview would
+	// open on an error page that looks like the work failed. Refused, the work opens where the preview starts; the skill
+	// says to record the form with no parameters in it.
 	if (/\/:[^/]|[{}*]/.test(path)) return null;
 	return path;
 };

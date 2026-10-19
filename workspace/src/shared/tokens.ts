@@ -1,8 +1,7 @@
 /**
- * What a change does to the library's tokens, worked out once (T3 of the design system plan, decisions 19, 26 and 27):
- * the list as it reads with a change made, which tokens point at one, and how two colors contrast. The panel shows what
- * this says, and the writer checks what it wrote against it (`tokenEdits.ts`), so what is seen and what is built cannot
- * disagree.
+ * What a change does to the library's tokens, worked out once: the list as it reads with a change made, which tokens point
+ * at one, and how two colors contrast. The panel shows what this says, and the writer checks what it wrote against it
+ * (`tokenEdits.ts`), so what is seen and what is built cannot disagree.
  */
 import type { Catalog, DesignToken, TokenEdit } from './contract';
 import { plural } from './plural';
@@ -43,10 +42,9 @@ export const pixelsOf = (value: string, perRem = PX_PER_REM): number | null => {
 };
 
 /**
- * A token as a person names it, **as its library writes it**: its set and name joined the way its path joins them. A
- * family and a step the library keeps apart (`tone.pineGreen.50`, `palette.light.primary.main`) read with a space
- * (`pineGreen 50`, `primary main`); one it writes as a single name (`--pine-green-50`, `--pine_green_50`, `--pineGreen50`)
- * reads as that name, so what is shown is what is in the file. A set that is its own name is said once (`background`).
+ * A token as a person names it, **as its library writes it**: a family and step kept apart (`tone.pineGreen.50`) read with a
+ * space (`pineGreen 50`); one written as a single name (`--pine-green-50`, `--pineGreen50`) reads as that name, so what is
+ * shown is what is in the file. A set that is its own name is said once (`background`).
  */
 export const nameOf = (t: DesignToken): string => {
 	if (t.set === t.name) return t.name;
@@ -80,9 +78,8 @@ export const PALETTE_GROUP = 'Tones';
 
 /**
  * The color families that are the palette: those the reader puts in the palette group (an unused one too), and any whose
- * steps a role points at, which finds the scales of a library that does not say (CSS variables, a token file). A step a
- * role points at is a palette's only if it has nothing it points at itself: a role that is an alias of another is a role.
- * From the tokens as the library has them, so a change that points a role elsewhere does not move a family.
+ * steps a role points at, unless the step itself points at something (a role aliasing another is a role). From the tokens as the
+ * library has them, so a change that points a role elsewhere does not move a family.
  */
 export const paletteFamilies = (library: DesignToken[]): Set<string> => {
 	const byPath = new Map(library.map((t) => [t.path, t]));
@@ -181,7 +178,7 @@ export const writtenWith = (tokens: DesignToken[], token: DesignToken): DesignTo
 
 /**
  * The tokens as they read with `edits` made: each one edited (and any written in the same place), and every one that
- * points at one, however far. A token given a value of its own no longer points at anything; one pointed elsewhere keeps
+ * points at one, however far. A token given a value of its own points at nothing; one pointed elsewhere keeps
  * the opacity written after its pointer.
  */
 export const withEdits = (tokens: DesignToken[], edits: TokenEdit[]): DesignToken[] => {
@@ -232,7 +229,6 @@ export const contrastPartner = (token: DesignToken, tokens: DesignToken[]): Desi
 /** Whether a token is the one read on top in its pair (`contrastText`, `--x-foreground`): its pair's row says the ratio. */
 export const isForeground = (token: DesignToken): boolean => token.name === 'contrastText' || token.name.endsWith('-foreground');
 
-/** A hex color's red, green and blue. */
 const rgbOf = (hex: string): Rgb => [parseInt(hex.slice(1, 3), 16), parseInt(hex.slice(3, 5), 16), parseInt(hex.slice(5, 7), 16)];
 
 /** A color with nothing seen through it: six hex digits, or eight ending in full opacity. */
@@ -258,7 +254,7 @@ const searchText = (t: DesignToken, target?: DesignToken): string =>
 const roleKey = (t: DesignToken): string => `${t.set}\u0000${t.name}`;
 
 /**
- * A category's tokens as the tokens panel shows them, in the app and in VS Code. For colors (`colors`): the roles, or the
+ * A category's tokens as the tokens panel shows them. For colors (`colors`): the roles, or the
  * palette they point into (`isPalette`), as `view` asks when it has both (`choose`), else the one it has; null for any
  * other category. Then what `query` finds, by `searchText`; in the roles, one found in a theme is kept in every theme.
  */
@@ -301,8 +297,8 @@ export const isHex = (typed: string): boolean => HEX6.test(typed);
 
 /**
  * A length's slider: its number and unit now, and its range, from nothing to twice what it was (`was`), at least a useful
- * span, and never short of what it is now; whole pixels, or eighths of a rem. For a token (T3, from what the design system has) and a component's own value
- * (Phase 2, from what it draws) alike.
+ * span, and never short of what it is now; whole pixels, or eighths of a rem. For a token (from what the design system has)
+ * and a component's own value (from what it draws) alike.
  */
 export const lengthSpan = (value: string, was: string): { number: number; unit: 'px' | 'rem' | 'em'; max: number; step: number } => {
 	const { number, unit } = lengthParts(value) ?? { number: 0, unit: 'px' };
@@ -376,7 +372,7 @@ export interface PairContrast {
 /**
  * The contrast a color leaves with the one it is read with (its pair: `main` and `contrastText`), among the tokens as
  * changed (`shown`), and whether that is enough for text at the design system's target (`textContrast`); null when it has
- * no pair. What a token's control says, in the app and in VS Code.
+ * no pair. What a token's control says.
  */
 export const pairContrast = (
 	token: DesignToken,
@@ -407,7 +403,7 @@ export const declaredBy = ({ source: { from } }: Pick<DesignToken, 'source'>): s
 };
 
 /**
- * What changing a token reaches, as its control says it, in the app and in VS Code: the roles that point at it, by name
+ * What changing a token reaches, as its control says it: the roles that point at it, by name
  * (or that none does, for a step of a family roles point into: it can be changed freely), and the tokens written in the
  * same place, which change with it. Null when it reaches neither.
  */

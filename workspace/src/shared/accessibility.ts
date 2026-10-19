@@ -1,9 +1,7 @@
 /**
- * What an accessibility check found (T7 of the design system plan, part B), as the app keeps and says it: axe-core's
- * results for each state of a page, merged by rule, with the WCAG success criteria each rule checks, and said in the same
- * words wherever they are shown. Said as what was checked and what is left to do, never as a pass and never as what a check
- * could not do: issues are *to fix*, what axe flagged for a person's eye is *to review*, and what no check reaches is *to check
- * by hand*.
+ * What an accessibility check found: axe-core's results for each state of a page, merged by rule, with the WCAG criteria
+ * each rule checks, said in the same words wherever they are shown. Never said as a pass: issues are *to fix*, what axe
+ * flagged for a person's eye is *to review*, and what no check reaches is *to check by hand*.
  */
 import type { AccessibilityCounts, AccessibilityElement, AccessibilityFindings, AccessibilityIssue, AccessibilityResult } from './contract';
 import { plural } from './plural';
@@ -159,7 +157,7 @@ export const elementLine = (e: AccessibilityElement): string =>
 /** How many of an issue's elements are not listed: counted, never dropped silently. */
 export const unlisted = (i: AccessibilityIssue): number => i.nodes - i.elements.length;
 
-/** axe's rules whose fix is words a person writes (an image's text alternative): said, never written by an agent (A6, A8). */
+/** axe's rules whose fix is words a person writes (an image's text alternative): said, never written by an agent. */
 export const WORDS = new Set(['image-alt', 'role-img-alt', 'svg-img-alt', 'input-image-alt', 'object-alt', 'area-alt']);
 
 /** How the best-practice rules' findings are titled, wherever they are said: beside WCAG, never counted as it. */

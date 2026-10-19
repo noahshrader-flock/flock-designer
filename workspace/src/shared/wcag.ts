@@ -1,9 +1,7 @@
 /**
- * WCAG, as the app uses it (T7 of the design system plan, decision 30): one definition, read by the Design System's
- * contrast display and by the accessibility check alike. The rules themselves are in `standards/universal/accessibility.md`;
- * a product's target is declared once, in its `.dsnr/manifest.md`, and never here. What is here is what the W3C says
- * (each threshold with its success criterion and link) and how a target becomes axe-core's tags, each held to its
- * source by a test, so none of it drifts unseen.
+ * WCAG, one definition for the Design System's contrast display and the accessibility check. The rules are in
+ * `standards/universal/accessibility.md`; a product's target is declared in its `.dsnr/manifest.md`, never here. What is
+ * here is what the W3C says and how a target becomes axe-core's tags, each held to its source by a test.
  */
 
 /**
@@ -16,7 +14,7 @@ export const WCAG_LATEST = 'https://www.w3.org/TR/WCAG2/';
 
 /**
  * Which edition a W3C page of WCAG is: the version its title names and the date it says it was published, the same two
- * fields `WCAG_EDITION` records. Null when it says either no longer, which the check says too, rather than passing.
+ * fields `WCAG_EDITION` records. Null when it does not say either, which the check says too, rather than passing.
  */
 export const editionOf = (html: string): { version: string; published: string } | null => {
 	const version = /<title>[^<]*\(WCAG\)\s*(\d+(?:\.\d+)*)/.exec(html)?.[1];
@@ -37,8 +35,7 @@ export interface WcagTarget {
 
 /**
  * Where a product declares none: WCAG 2.1 AA, the usual industry target, checked at this and said to be informational,
- * never a claim (the accessibility plan's decision 1, in place of decision 30's 2.2 AA). Every criterion it includes has an
- * axe tag, so none is left as "no automated check covers" at the default.
+ * never a claim. Every criterion it includes has an axe tag, so none is left as "no automated check covers" at the default.
  */
 export const DEFAULT_TARGET: WcagTarget = { version: '2.1', level: 'AA' };
 

@@ -4,7 +4,6 @@
  * split and joined only here.
  */
 
-/** A repository, by its owner and its name. */
 export interface RepoRef {
 	owner: string;
 	repo: string;
@@ -29,5 +28,4 @@ export const repoRefOf = (path: string): RepoRef => {
 /** A repository's own name, without its owner: `flock-coke`. */
 export const repoName = (path: string): string => repoRefOf(path).repo;
 
-/** A reference's path, `owner/repo`. */
 export const formatRepo = (ref: RepoRef): string => `${ref.owner}/${ref.repo}`;

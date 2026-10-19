@@ -7,7 +7,6 @@ import { allParts, shortValue } from './valueParts';
  * what a change moves, and what a save of it says in its commit and its pull request.
  */
 
-/** How each property is named. */
 export const VALUE_NAMES: Record<ValueProperty, string> = {
 	height: 'Height',
 	padding: 'Padding',
@@ -34,7 +33,7 @@ export const saidValue = (property: ValueProperty, value: string): string =>
 const MOST_FOLLOWED = 3;
 
 /**
- * The tokens a component's own value is the value of, which it could follow (Phase 4.6): a radius drawn the same on every
+ * The tokens a component's own value is the value of, which it could follow: a radius drawn the same on every
  * corner, as a radius token is; a colour, as a colour token is, in light (what the Values are read in), never a Dark one.
  */
 export const tokensItCouldFollow = (property: ValueProperty, value: string, tokens: DesignToken[], perRem = PX_PER_REM): DesignToken[] => {

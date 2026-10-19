@@ -1,10 +1,9 @@
 import type { DesignToken, TokenKind } from './contract';
 
 /**
- * The vocabulary of primitives (the Primitives plan, R1): the kinds of primitive DSNR knows, in one place, as data. The tokens
- * panel's tabs, the readers' sorting of what they find and the Primitives page all read it, so there is no second list of
- * categories anywhere. **A primitive is in the list only once a reader can read it,** so the page saying a design system
- * does not define one is always something DSNR looked for. Adding one is adding a row here, with its reader.
+ * The kinds of primitive DSNR knows, as data: the tokens panel's tabs, the readers' sorting and the Primitives page all read
+ * it, so there is no second list. **A primitive is in the list only once a reader can read it,** so the page saying a
+ * design system does not define one is always something DSNR looked for.
  */
 export interface Primitive {
 	/** Its name, as a tab and a section say it. */
@@ -117,10 +116,9 @@ export const missingParts = (primitive: Primitive, tokens: DesignToken[]): strin
 export const listed = (words: string[]): string => (words.length < 2 ? (words[0] ?? '') : `${words.slice(0, -1).join(', ')} and ${words.at(-1)}`);
 
 /**
- * What a design system has of the vocabulary, as the Primitives tab says it at its top and its end, in the app and in
- * VS Code: a chip for each primitive in the vocabulary's order (how many tokens it has, the part it has of one made of
- * parts, or that it is not defined), then one for each category the vocabulary does not know; and what it leaves out, each
- * primitive or part of one. `found` is its tokens by primitive (`byPrimitive`).
+ * What a design system has of the vocabulary, as the Primitives tab says it at its top and its end: a chip for each
+ * primitive in order (its token count, the parts it has, or that it is not defined), then one for each category the
+ * vocabulary does not know; and each primitive or part it leaves out. `found` is its tokens by primitive (`byPrimitive`).
  */
 export const coverageOf = (
 	found: [string, DesignToken[]][],

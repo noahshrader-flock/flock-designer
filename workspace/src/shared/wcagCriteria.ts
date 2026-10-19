@@ -1,11 +1,9 @@
 import { type Criterion, requiredAt, understanding, type WcagLevel, type WcagTarget, type WcagVersion } from './wcag';
 
 /**
- * WCAG 2.2's Level A and AA success criteria: the accessibility plan's matrix, its 55 rows, held here once. Each one's
- * number, name, level and the version it came in, so what is measured of one can be said to be at a product's target or
- * above it (`requiredAt`); what only a person can judge of it (`person`: no machine makes that call); and when the manual
- * list must carry it (`manual`: **AT**, assistive technology is the only real answer; **if**, only when the work has that
- * feature; **host**, decided by the page around the work). 4.1.1 Parsing is not here: WCAG 2.2 took it out.
+ * WCAG 2.2's Level A and AA success criteria as a matrix, held here once: each one's number, name, level and version, so a
+ * measure of it can be said to be at a product's target or above (`requiredAt`); what only a person can judge (`person`);
+ * and when the manual list must carry it (`manual`). 4.1.1 Parsing is not here: WCAG 2.2 took it out.
  */
 /** When the manual list must carry a criterion, as the matrix's last column says it. */
 export interface ManualMark {

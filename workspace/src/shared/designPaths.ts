@@ -4,10 +4,9 @@ import { assertCover } from './validate';
 /** Where things are in the design repository, and the keys prototypes are known by. */
 
 /**
- * A prototype: one self-contained page, made without running the product, saved in the design repository beside
- * the project's other records. It has no git branch. Its key, in the place a branch name goes (its record, the review
- * thread), is `prototype/<project-id>/<name>`, which no repository's branch pattern makes, so it can never be mistaken
- * for one.
+ * A prototype: one self-contained page, made without running the product, saved in the design repository beside the
+ * project's other records, with no git branch. Its key where a branch name goes (its record, the review thread) is
+ * `prototype/<project-id>/<name>`, which no repository's branch pattern makes, so it is never mistaken for one.
  */
 const PROTOTYPE_PREFIX = 'prototype/';
 
@@ -15,7 +14,7 @@ export const isPrototypeKey = (branch: string): boolean => branch.startsWith(PRO
 
 export const prototypeKey = (projectId: string, name: string): string => `${PROTOTYPE_PREFIX}${projectId}/${name}`;
 
-/** A project's folder in the design repository: the one place a project's path is built (the folders plan's rule 3). */
+/** A project's folder in the design repository: the one place a project's path is built. */
 export const projectDir = (projectId: string): string => `projects/${projectId}`;
 
 /** A file in a project's folder in the design repository, by its path from the repository's root. */
@@ -33,14 +32,14 @@ export const prototypeSourcePath = (projectId: string, name: string): string => 
 
 /**
  * Where a project's accessibility measure is kept in the design repository, as evidence: of a prototype's page, by its
- * name, or, with none, of the product's own app (`dsnr accessibility`, decision 2 of the accessibility plan).
+ * name, or, with none, of the product's own app (`dsnr accessibility`).
  */
 export const accessibilityPath = (projectId: string, name: string | null): string => `${accessibilityEvidenceDir(projectId, name)}.json`;
 
-/** The run's ledger beside it (A5): a row for each criterion, its status and the evidence it rests on. */
+/** The run's ledger beside it: a row for each criterion, its status and the evidence it rests on. */
 export const accessibilityLedgerPath = (projectId: string, name: string | null): string => `${accessibilityEvidenceDir(projectId, name)}.ledger.json`;
 
-/** The probe's evidence beside it (A3): a folder of the same name, a folder in it per view. */
+/** The probe's evidence beside it: a folder of the same name, a folder in it per view. */
 export const accessibilityEvidenceDir = (projectId: string, name: string | null): string => projectPath(projectId, `accessibility/${name ?? 'app'}`);
 
 /**
@@ -64,7 +63,7 @@ export const accessibilityViewDirs = (projectId: string, name: string | null, vi
 	);
 };
 
-/** Where testers return what they find by hand (A9), the record of how each was sorted, and the guards proposed for what was fixed. */
+/** Where testers return what they find by hand, the record of how each was sorted, and the guards proposed for what was fixed. */
 export const accessibilityReturnedPath = (projectId: string): string => projectPath(projectId, 'accessibility/returned.md');
 export const accessibilityReturnedRecordPath = (projectId: string): string => projectPath(projectId, 'accessibility/returned.json');
 export const accessibilityGuardsPath = (projectId: string): string => projectPath(projectId, 'accessibility/guards.md');
