@@ -1,25 +1,20 @@
-/**
- * The review tab's own script, in VS Code (`extension/src/review.ts`, which bundles this into its page): it frames a
- * prototype's review page and carries messages between it and the extension, and tells it VS Code's theme.
- * Nothing from anywhere else (the prototype's page in the bar, a frame it makes) goes anywhere.
- */
+// Nothing from anywhere but the bar and VS Code (not the prototype's page, not a frame it makes) is passed on.
 import { type EditorTheme, THEME_KINDS, isThemeColor } from '../shared/reviewRelay';
 
 declare const acquireVsCodeApi: () => { postMessage(message: unknown): void };
 
-/** Started once the tab's frame is on the page, for the review page served at `page` (its origin). */
+/** `page` is the review page's origin; call once the tab's frame is on the page. */
 export const startReviewTab = (page: string): void => {
 	const vscode = acquireVsCodeApi();
 	const frame = document.querySelector('iframe') as HTMLIFrameElement;
 	const toPage = (message: unknown) => frame.contentWindow?.postMessage(message, page);
-	// VS Code's theme: its kind (the body's class; high contrast light is also high contrast, so it is looked for first) and
-	// its colour variables. Told to the page on hello and on every change, since the bar's frame is on another origin,
-	// which VS Code's variables do not reach.
+	// High contrast light also has the high contrast class, so it is looked for first. The theme is posted because VS Code's
+	// variables do not reach the bar's frame, which is on another origin.
 	const theme = (): EditorTheme => {
 		const c = document.body.classList;
 		const kind = [...THEME_KINDS].reverse().find((k) => c.contains(k)) ?? 'vscode-light';
 		const style = document.documentElement.style;
-		// Only what the page takes (`isThemeColor`): one it would refuse would lose it the whole theme.
+		// The page refuses a whole theme with one colour it would not take (`isThemeColor`).
 		const colors = Object.fromEntries(
 			[...Array(style.length).keys()]
 				.map((i) => style.item(i))
@@ -33,13 +28,11 @@ export const startReviewTab = (page: string): void => {
 		toPage({ dsnr: 'hello' });
 		tellScheme();
 	});
-	// VS Code changes the body's class and the page's variables for another theme.
 	const watch = new MutationObserver(tellScheme);
 	watch.observe(document.body, { attributes: true, attributeFilter: ['class'] });
 	watch.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
-	// Only the bar may ask the extension, and only VS Code answers it: its host frame posts on this tab's own origin, which no
-	// frame inside it has (the bar and the prototype's page are this machine's, any frame they make theirs or none). VS Code
-	// makes window.parent this window itself, so the origin is what says who sent it.
+	// Only the bar may ask the extension, and only VS Code answers it: VS Code posts on this tab's own origin, which no frame
+	// inside it has. VS Code makes window.parent this window itself, so the origin, not the source, says who sent it.
 	window.addEventListener('message', (e) => {
 		if (e.source === frame.contentWindow && e.origin === page) vscode.postMessage(e.data);
 		else if (e.origin === location.origin) toPage(e.data);

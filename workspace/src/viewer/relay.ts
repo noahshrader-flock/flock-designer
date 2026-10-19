@@ -4,7 +4,6 @@ import type { CommentStore } from './comments/surfaces';
 import { isPrototypeName } from '../shared/prototypeNames';
 import { isThisMachine } from '../shared/thisMachine';
 
-/** DSNR's review tab in VS Code, as the page asks it: a call by name, answered with its Result. */
 export interface Relay {
 	ask(name: RelayCall, args: unknown[]): Promise<Result<unknown>>;
 }
@@ -13,15 +12,13 @@ type PageWindow = Pick<Window, 'addEventListener' | 'removeEventListener' | 'loc
 	parent: { postMessage(message: unknown, origin: string): void };
 };
 
-/** A VS Code webview's origin: where DSNR's review tab is. */
 const WEBVIEW = 'vscode-webview://';
-/** Served from this machine: only such a page is a review DSNR frames or opens; a published page never is. */
+/** Only a page served from this machine is a review DSNR frames or opens. */
 export const isServedHere = (location: Pick<Location, 'hostname'>): boolean => isThisMachine(location.hostname);
 
 /**
- * Listens for DSNR's review tab, when this page is served from this machine and framed, and gives `onRelay` the way to ask
- * it. The tab is the VS Code parent that said hello first: from then on only it is asked, and only its well-formed answers
- * (and its word of VS Code's theme) are taken. Returns how to stop listening.
+ * The tab is the VS Code parent that said hello first: from then on only it is asked, and only its well-formed answers
+ * (and its word of VS Code's theme) are taken.
  */
 export const listenForDsnr = (win: PageWindow, onRelay: (relay: Relay) => void, onTheme?: (theme: EditorTheme) => void): (() => void) => {
 	if ((win.parent as unknown) === win || !isThisMachine(win.location.hostname)) return () => undefined;
@@ -44,7 +41,6 @@ export const listenForDsnr = (win: PageWindow, onRelay: (relay: Relay) => void, 
 			onRelay({ ask });
 			return;
 		}
-		// VS Code's theme: only from the tab that said hello.
 		if (tell.dsnr === 'scheme') {
 			if (tab !== null) onTheme?.(tell.theme);
 			return;
@@ -56,7 +52,7 @@ export const listenForDsnr = (win: PageWindow, onRelay: (relay: Relay) => void, 
 	return () => win.removeEventListener('message', heard);
 };
 
-/** Where a page opened in the browser keeps its key: this tab only, on the bar's own address, which no prototype's page is on. */
+// This tab only, on the bar's own address, which no prototype's page is on.
 const KEPT = 'dsnr.review-key';
 
 type OpenedWindow = {
@@ -66,9 +62,8 @@ type OpenedWindow = {
 };
 
 /**
- * The key a review opened in the browser from DSNR carries, or null: in its link's fragment
- * the first time, then kept for this tab, since moving to another version loses the fragment. Taken out of the address
- * once kept, so it is in no address that is copied or kept. Only on a page served from this machine.
+ * In the link's fragment the first time, then kept for this tab, since moving to another version loses the fragment. Taken
+ * out of the address once kept, so it is in no address that is copied or kept.
  */
 export const keyFromAddress = (win: OpenedWindow): string | null => {
 	if (!isServedHere(win.location)) return null;
@@ -91,18 +86,13 @@ export const keyFromAddress = (win: OpenedWindow): string | null => {
 	return isKey(kept) ? kept : null;
 };
 
-/** What a page opened in the browser says when DSNR did not answer it, by why. */
 const NOT_ANSWERED = {
 	refused: 'DSNR in VS Code no longer knows this page: VS Code was reloaded since it was opened. Use Open in browser on the prototype again.',
 	closed: 'DSNR in VS Code is not answering: it may have been closed. Open VS Code, then use Open in browser on the prototype again.',
 	garbled: 'DSNR in VS Code answered with something this page cannot read.',
 };
 
-/**
- * DSNR, asked through this machine's server by a page opened in the browser from it, with the same asks as a review tab:
- * answered with VS Code's sign-in, so no token is ever here. Each answer is taken only if it is exactly the answer to that
- * ask; anything else is said, in words.
- */
+/** Answered with VS Code's sign-in, so no token is ever here. Each answer is taken only if it is exactly the answer to that ask. */
 export const serverRelay = (key: string, fetcher: typeof fetch = fetch): Relay => {
 	let next = 0;
 	return {
@@ -126,24 +116,16 @@ export const serverRelay = (key: string, fetcher: typeof fetch = fetch): Relay =
 	};
 };
 
-/**
- * Where a page in the browser goes after Address: the version it showed its change in, as the
- * site lays them out under the project (`projectHref`, from this page, `here`); this page again when the change is in it;
- * null for what is not a version's name.
- */
+/** Null for what is not a version's name. */
 export const versionAddress = (projectHref: string, name: string, here: string): string | null =>
 	isPrototypeName(name) ? new URL(`${projectHref}${name}/`, here).href : null;
 
-/** Who a sign-in answer says is signed in: their login, or null. */
 export const loginIn = (answer: Result<unknown>): string | null => {
 	const state = answer.ok ? (answer.value as SignInState) : null;
 	return state?.state === 'signedIn' ? state.user.login : null;
 };
 
-/**
- * One version's comments through DSNR (`CommentStore`): the core's own comment calls, made with the extension's
- * sign-in, so a comment is found, made and written exactly as there. `branch` is the version's key.
- */
+/** `branch` is the version's key. */
 export const relayComments = (
 	relay: Relay,
 	{ projectId, branch, page }: { projectId: string; branch: string; page?: string | undefined },

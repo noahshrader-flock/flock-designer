@@ -7,17 +7,10 @@ import type { CommentStore, PageSurface } from './surfaces';
 
 type Mode = 'browse' | 'picking' | 'composing';
 
-/**
- * A spot as it is placed on the page, with the page's fingerprint when the store knows it, else the one it carried
- * (`page`), so a pin dragged where no fingerprint is known keeps the one it had.
- */
+// A pin dragged where the store knows no fingerprint keeps the one it had (`page`).
 const stamped = (anchor: CommentAnchor, page: string | undefined): CommentAnchor => ({ ...anchor, ...(page ? { page } : {}) });
 
-/**
- * The comments on one version, and leaving one: everything but how they are drawn, against a `CommentStore` and a
- * `PageSurface`. `opened` says the page is up, so pins can be drawn and a click waited for; the pins are drawn again
- * when `route` moves. Errors go to `setError`, which the screen around this shows.
- */
+/** `opened` says the page is up, so pins can be drawn and a click waited for. */
 export const useComments = ({
 	store,
 	page,
@@ -31,7 +24,6 @@ export const useComments = ({
 	opened: boolean;
 	route: string | null;
 	setError: (message: string | null) => void;
-	/** A pin was clicked: its comment is selected here, and the screen shows where it is. */
 	onPinClick?: (id: number) => void;
 }) => {
 	const [comments, setComments] = useState<ReviewComment[] | null>(null);
@@ -41,18 +33,15 @@ export const useComments = ({
 	const [redraw, setRedraw] = useState(0);
 	const cards = useRef(new Map<number, HTMLElement>());
 
-	// Leaving a comment: comment mode, the pin being placed, and the box beside it.
 	const [mode, setMode] = useState<Mode>('browse');
-	/** Whether a comment is being written. The draft pin and the box both hang off this one value. */
+	// The draft pin and the box both hang off this one value.
 	const composing = mode === 'composing';
 	const [commentMode, setCommentMode] = useState(false);
 	const [pending, setPending] = useState<CommentAnchor | null>(null);
 	const [pendingAt, setPendingAt] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
-	// The picture of the spot, taken at the click, that goes with the comment being written.
 	const [pendingPicture, setPendingPicture] = useState<string | null>(null);
 	const [draft, setDraft] = useState('');
 	const [posting, setPosting] = useState(false);
-	// A comment on the whole page is being sent: the box at the panel's foot waits.
 	const [saying, setSaying] = useState(false);
 	const pickActive = useRef(false);
 	/** Set when the person backs out while a pick is still being read, so its result is dropped. */
@@ -66,13 +55,12 @@ export const useComments = ({
 	// kept here and merged into whatever is read back.
 	const posted = useRef(new Map<number, ReviewComment>());
 
-	// Reading the comments: one read at a time, and never a lost one (`latest`), as opening a version reads on arrival
-	// and again once the preview is up.
+	// Never a lost read (`latest`), as opening a version reads on arrival and again once the preview is up.
 	/** True when someone asked for this read, so a failure is worth saying. Background reads are silent. */
 	const asked = useRef(false);
 	/**
-	 * Counts the changes made from this window. GitHub answers a read as things stood *when it began*, so a read that
-	 * lands after a change here would undo it (a comment reopens, a pin jumps back); such a read is dropped.
+	 * GitHub answers a read as things stood when it began, so a read that lands after a change here would undo it (a
+	 * comment reopens, a pin jumps back); such a read is dropped.
 	 */
 	const changes = useRef(0);
 	const read = useCallback(async () => {
@@ -84,9 +72,7 @@ export const useComments = ({
 			if (loud) setError(result.error);
 			return;
 		}
-		// Something was changed here while this was in flight, so this answer predates it.
 		if (changes.current !== at) return;
-		// A read that worked clears a complaint from one that did not.
 		if (loud) setError(null);
 		// A comment GitHub has returned no longer needs its local copy; keeping one would hold back a later change to it there.
 		forgetPosted(posted.current, result.value);
@@ -95,7 +81,7 @@ export const useComments = ({
 		setComments((prev) => (sameComments(prev, next) ? prev : next));
 	}, [store, setError]);
 	const runRead = useMemo(() => latest(read), [read]);
-	/** Reads the comments again. `quiet` is for the background refresh: a failed check nobody asked for says nothing. */
+	/** `quiet`: a failed check nobody asked for says nothing. */
 	const load = useCallback(
 		(quiet = false) => {
 			if (!quiet) asked.current = true;
@@ -106,8 +92,6 @@ export const useComments = ({
 
 	useEffect(() => void load(), [load]);
 
-	// A reviewer's comment made after this was opened should appear without anyone reopening it: when the window comes
-	// back into focus, and about once a minute while it is in front and in use (every few minutes once nobody is: `dueForCheck`).
 	useEffect(() => {
 		let lastActive = Date.now();
 		let lastChecked = Date.now();
@@ -136,13 +120,9 @@ export const useComments = ({
 		};
 	}, [load]);
 
-	// What is still to be dealt with. Resolved comments stay listed, but are not the count.
 	const total = openComments(comments ?? []).length;
 
-	/**
-	 * A comment as it now is, after this window changed it (posted, resolved, reopened, moved, addressed): shown at once,
-	 * so its pin comes or goes without waiting for the next read, and kept until a read includes the change.
-	 */
+	/** Shown at once, so its pin comes or goes without waiting for the next read, and kept until a read includes the change. */
 	const showChanged = useCallback((comment: ReviewComment) => {
 		changes.current++;
 		posted.current.set(comment.id, comment);
@@ -154,18 +134,15 @@ export const useComments = ({
 
 	const drawRun = useRef(0);
 	const drawMarkers = useCallback(async () => {
-		// Only your own pins can be dragged; GitHub would refuse anyone else's edit anyway.
-		// The pin being placed shows at once, before it is saved (id -1, amber).
+		// Only your own pins can be dragged, as GitHub would refuse anyone else's edit. The pin being placed has id -1.
 		const items = markersFor(comments ?? [], me, pending ? { anchor: pending, composing } : null);
 		// Several of the things this depends on can change inside one round trip to the page, so an older draw must not
-		// report its results over a newer one's: what is on the page would then be described by a list that is no longer
-		// what was drawn.
+		// report its results over a newer one's.
 		const mine = ++drawRun.current;
 		const r = await page.showMarkers(items);
 		if (mine !== drawRun.current) return;
 		if (!r.ok) {
-			// Said, not swallowed. The pins on the page are now whatever was there before, which may be a different set from
-			// the comments listed beside them; silence would leave that looking deliberate.
+			// Said, not swallowed: the pins on the page may now differ from the comments listed, and silence would look deliberate.
 			setPlaced(new Map());
 			setError(r.error);
 			return;
@@ -173,16 +150,14 @@ export const useComments = ({
 		setPlaced(new Map(r.value.map((m: MarkerResult) => [m.id, m.state])));
 	}, [comments, pending, composing, me, page, setError]);
 
-	// ...and again whenever the comments, the page, or the route change.
 	useEffect(() => {
 		if (opened) void drawMarkers();
 	}, [opened, drawMarkers, route, redraw]);
 
-	// A pin on the page was clicked or dropped somewhere new. The screen's callback is held in a ref, since it is a new
-	// function each render; everything else here changes only with the version, which listens afresh.
+	// Held in a ref, since it is a new function each render; everything else here changes only with the version.
 	const pinClick = useRef(onPinClick);
 	pinClick.current = onPinClick;
-	// The comments as last read, for a pin that was dragged: its thread, which the host finds it by, is on the comment.
+	// For a dragged pin: its thread, which the host finds it by, is on the comment.
 	const shown = useRef(comments);
 	shown.current = comments;
 	useEffect(
@@ -196,7 +171,6 @@ export const useComments = ({
 					// The card may only now be drawn, in a sidebar that has just opened.
 					setTimeout(() => cards.current.get(e.id)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 250);
 				} else if (e.id < 0) {
-					// The unsaved pin: just remember where it now is.
 					setPending((p) => (p ? stamped(e.anchor, store.page ?? p.page) : p));
 				} else {
 					const moved = shown.current?.find((c) => c.id === e.id);
@@ -216,7 +190,6 @@ export const useComments = ({
 		[page, store, showChanged, load, setError],
 	);
 
-	/** Waits for one click on the page. */
 	const pick = useCallback(async () => {
 		// Only one at a time: React runs every effect twice in development, and a second pick would cancel the first,
 		// which reads as someone pressing Escape.
@@ -244,13 +217,11 @@ export const useComments = ({
 			setPendingPicture(r.value.picture);
 			setMode('composing');
 		} else {
-			// Canceled: Escape on the page, or comment mode switched off.
 			setMode('browse');
 			setCommentMode(false);
 		}
 	}, [page, store, setError]);
 
-	// Comment mode stays on: as soon as one comment is done, the next click is waited for.
 	useEffect(() => {
 		if (commentMode && opened && mode === 'browse') void pick();
 	}, [commentMode, opened, mode, pick]);
@@ -265,7 +236,7 @@ export const useComments = ({
 	}, [page]);
 	const toggleCommentMode = useCallback(() => (commentMode ? exitCommentMode() : setCommentMode(true)), [commentMode, exitCommentMode]);
 
-	/** Abandons the comment being written, and the pin with it. Comment mode carries on. */
+	/** Comment mode carries on. */
 	const cancelCompose = useCallback(() => {
 		if (pickActive.current) pickCanceled.current = true;
 		setPending(null);
@@ -275,7 +246,6 @@ export const useComments = ({
 		setMode('browse');
 	}, [setError]);
 
-	// C turns comment mode on and off; Escape backs out of whatever is happening.
 	useEffect(() => {
 		const onKey = (e: KeyboardEvent) => {
 			const t = e.target as HTMLElement | null;
@@ -292,7 +262,7 @@ export const useComments = ({
 		return () => window.removeEventListener('keydown', onKey);
 	}, [opened, mode, commentMode, cancelCompose, exitCommentMode, toggleCommentMode]);
 
-	/** Puts a comment on the thread and shows it. Says whether it went; when it did not, why is the panel's error. */
+	/** When it did not go, why is the panel's error. */
 	const send = async (body: string, anchor: CommentAnchor | null, picture: string | null): Promise<boolean> => {
 		const r = await store.post(body, anchor, picture);
 		if (!r.ok) setError(r.error);
@@ -300,7 +270,6 @@ export const useComments = ({
 		return r.ok;
 	};
 
-	/** Saves the comment being written. */
 	const post = async () => {
 		if (!draft.trim() || !pending) return;
 		setPosting(true);
@@ -314,7 +283,6 @@ export const useComments = ({
 		await load();
 	};
 
-	/** A comment on the page as a whole, from the box at the foot of the panel: no pin, but the same thread, so it has its number. */
 	const postGeneral = async (body: string): Promise<boolean> => {
 		if (!body.trim() || saying) return false;
 		setSaying(true);
@@ -325,7 +293,6 @@ export const useComments = ({
 		return went;
 	};
 
-	/** Deletes a comment for good. Says whether it went. */
 	const remove = async (comment: ReviewComment): Promise<boolean> => {
 		setError(null);
 		const r = await store.remove(comment);
@@ -352,12 +319,10 @@ export const useComments = ({
 		void load(true);
 	};
 
-	/** A card was chosen: it is the selected one, and its pin is shown on the page. */
 	const select = (comment: ReviewComment) => {
 		setSelected(comment.id);
 		if (comment.anchor) void page.focusMarker(comment.id);
 	};
-	/** Where each card is, so a clicked pin can bring its card into view. */
 	const registerCard = (id: number, el: HTMLElement | null) => {
 		if (el) cards.current.set(id, el);
 		else cards.current.delete(id);
@@ -375,7 +340,6 @@ export const useComments = ({
 		resolve,
 		remove,
 		drawMarkers,
-		// Leaving one.
 		commentMode,
 		toggleCommentMode,
 		composing,

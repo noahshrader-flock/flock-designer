@@ -9,7 +9,6 @@ import { Menu, type MenuItem } from '../../ui/Menu';
 import { Message } from '../../ui/Message';
 import type { Comments } from './useComments';
 
-/** What a card says about where its pin is, when that is worth saying. */
 const NOTE: Record<MarkerState, string | null> = {
 	found: null,
 	moved: 'The element changed, so this follows its text.',
@@ -18,11 +17,7 @@ const NOTE: Record<MarkerState, string | null> = {
 	otherState: 'Made in a different state of this page, so it is not pinned here.',
 };
 
-/**
- * Every comment on the version, as cards. `actions` puts more at the top of a card's menu (Address, in DSNR) and
- * `addressed` says what the agent did, both left to the screen around. `onShowState` and `shownTheme` let a comment made
- * in another state or theme show the page in it; `page` is the fingerprint of the page shown, to say it has changed.
- */
+/** `page` is the fingerprint of the page shown, to say it has changed since a comment was written. */
 export const CommentList = ({
 	comments,
 	actions,
@@ -40,34 +35,28 @@ export const CommentList = ({
 	shownTheme?: ShownTheme;
 	page?: string | undefined;
 }) => {
-	// Deleting cannot be undone, so it asks first, on the card itself (a dialog would have to take the preview's place).
+	// Asked on the card itself: a dialog would have to take the preview's place.
 	const [confirmingDelete, setConfirmingDelete] = useState<number | null>(null);
-	// The newest at the top, as a conversation reads; each keeps its number (`numberComments`), which is the order made.
+	// Each keeps its number (`numberComments`), which is the order made.
 	const list = comments.comments && [...comments.comments].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 	if (list?.length === 0) return <Message>No comments yet. Choose Comment and click on the page, or write one below for the whole page.</Message>;
 	return (
 		<>
 			{list?.map((comment) => {
-				// A resolved comment has no pin, so what was last said about placing it is about nothing. One the agent
-				// addressed is resolved with it, so this covers that too.
+				// A resolved comment has no pin (one the agent addressed is resolved too), so its last placing is about nothing.
 				const state = comment.resolved ? undefined : comments.placed.get(comment.id);
-				// Choosing a card shows its pin, so only one with a pin on the page can be chosen: not a resolved one, which has none,
-				// nor one with nothing to point at here (page-level, gone, on another page or in another state).
+				// Choosing a card shows its pin, so only one with a pin on the page can be chosen.
 				const choosable = state === 'found' || state === 'moved';
 				const note = comment.addressedAt !== null ? addressed?.(comment) : null;
 				const madeIn = comment.anchor?.state === undefined ? null : stateOfQuery(comment.anchor.state, states);
-				// Made in another of the prototype's states, which it still has: the page can be shown in it.
 				const target = madeIn ?? states[0];
 				const showIn = state === 'otherState' && onShowState && target !== undefined && states.includes(target) ? target : null;
-				// Seen in the other theme: the page can be shown in it, so a problem seen only in dark is seen again.
 				const seenIn = comment.anchor?.theme;
 				const showTheme = shownTheme && seenIn && seenIn !== shownTheme.theme ? seenIn : null;
 				return (
 					<div
 						key={comment.id}
 						ref={(el: HTMLDivElement | null) => comments.registerCard(comment.id, el)}
-						// The selected one stands out as the pin on the page does; a resolved one recedes. A choosable card is chosen by
-						// pressing anywhere on it but the buttons and menu on it.
 						className="comment-card"
 						{...(choosable ? { 'data-choosable': '' } : {})}
 						{...(comments.selected === comment.id ? { 'data-selected': '' } : {})}
@@ -115,7 +104,7 @@ export const CommentList = ({
 								</ButtonRow>
 							</>
 						)}
-						{/* Choosing a comment shows its pin: anywhere on its card with a pointer, and by its own text, a button, for the keyboard. */}
+						{/* The card is clickable with a pointer; this button is the keyboard's way to choose it. */}
 						{choosable ? (
 							<button
 								type="button"

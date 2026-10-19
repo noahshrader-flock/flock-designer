@@ -1,17 +1,12 @@
-/**
- * A component's instances in a preview page, found one way for the drawing that measures them and the preview that tries
- * a value on them, so an instance measured is the instance a value is tried on. Page code, bundled by `drawing.ts` and
- * `preview.ts`. React's fibers are its own: only the parts read here are typed.
- */
+// Instances are found one way for the drawing that measures them and the preview that tries a value on them, so an instance
+// measured is the instance a value is tried on.
 import { PREVIEW_COMPONENT, PREVIEW_TRY } from '../shared/catalog';
 import { CSS_OF, NOT_VARIANT } from '../shared/valueParts';
 
-/** One of React's fibers, its record of one thing it drew: only the parts read here, as React keeps them. */
 interface Fiber {
 	type: unknown;
 	elementType: unknown;
 	memoizedProps: Record<string, unknown> | null;
-	/** Its parent; null at the root. */
 	return: Fiber | null;
 	/** The other of the two copies React keeps of it, if any. */
 	alternate: Fiber | null;
@@ -19,14 +14,12 @@ interface Fiber {
 	stateNode: { current?: unknown } | null;
 }
 
-/** A React element, as a component is given one to draw. */
 interface GivenElement {
 	$$typeof: symbol;
 	type: unknown;
 	props: unknown;
 }
 
-/** One instance as the readers know it: its story, the props that say its variant, the key that names it, its top element. */
 export interface Found {
 	story: string;
 	key: string;
@@ -40,21 +33,18 @@ const fiberOf = (el: Element): Fiber | null => {
 };
 
 /**
- * The instances of `component` the stories draw, matched by identity (a build's names are minified) walking up from each
- * element, as a copy's children can be stale. `key` names the same one in any drawing of the file; one that only wraps
- * what it was given is counted apart (`wrapping`); `reached` is whether any element had a `__reactFiber` key.
+ * Matched by identity (a build's names are minified), walking up from each element, as a copy's children can be stale.
+ * `key` names the same one in any drawing of the file; one that only wraps what it was given is counted in `wrapping`;
+ * `reached` is whether any element had a React fiber.
  */
 export const findInstances = (component: unknown): { instances: Found[]; wrapping: number; reached: boolean } => {
 	const isIt = (f: Fiber) => f.type === component || f.elementType === component;
-	// Of the two copies React keeps of what it drew, the one its root holds now: an element can be reached through the other,
-	// whose props are what it drew before (a tab no longer selected). A copy is the root's when its way up ends at the root
-	// fiber its root says is current.
+	// An element can be reached through React's stale copy, whose props are what it drew before (a tab no longer selected).
 	const current = (f: Fiber): Fiber => {
 		let top = f;
 		while (top.return) top = top.return;
 		return top.stateNode?.current === top || !f.alternate ? f : f.alternate;
 	};
-	// What an instance was given to draw, as React elements: its children, however nested.
 	const given = (f: Fiber): GivenElement[] => {
 		const out: GivenElement[] = [];
 		const walk = (c: unknown): void => {
@@ -64,8 +54,7 @@ export const findInstances = (component: unknown): { instances: Found[]; wrappin
 		walk(f.memoizedProps?.children);
 		return out;
 	};
-	// Whether an element is part of what the instance was given: on the way up to it, one of the given elements (by its
-	// props, or by its component when it was copied with more props, as a tooltip does with what it wraps).
+	// Matched by component too, for an element copied with more props, as a tooltip does with what it wraps.
 	const isGiven = (el: Element, f: Fiber): boolean => {
 		const elements = given(f);
 		if (elements.length === 0) return false;
@@ -90,8 +79,8 @@ export const findInstances = (component: unknown): { instances: Found[]; wrappin
 				// Above an instance already met, every other instance is one met before it, in the page's order.
 				if (seen.has(f)) break;
 				if (!isIt(f)) continue;
-				// An element with no room (a hidden input, a wrapper drawn as its contents) is not where the instance draws: the
-				// instance is met again at its next element, and its first that takes up room is its top.
+				// An element with no room (a hidden input, a wrapper drawn as its contents) is skipped: the instance's first
+				// element that takes up room is its top.
 				const box = el.getBoundingClientRect();
 				if (box.width === 0 || box.height === 0) continue;
 				seen.add(f);
@@ -115,19 +104,12 @@ export const findInstances = (component: unknown): { instances: Found[]; wrappin
 	return { instances, wrapping, reached };
 };
 
-/**
- * An element's border colour, from its computed style, as the page reads it: the first side that has a border (an
- * underline is a border at the bottom only); null for one with none. One rule for every script that reads a border.
- */
+// The first side that has a border, as an underline is a border at the bottom only. One rule for every script that reads a border.
 export const borderColor = (s: CSSStyleDeclaration): string | null => {
 	const side = ['top', 'right', 'bottom', 'left'].find((at) => parseFloat(s.getPropertyValue(`border-${at}-width`)) > 0);
 	return side ? s.getPropertyValue(`border-${side}-color`) : null;
 };
 
-/**
- * An instance's values, from its top element, as the browser computes them: its height, the box it takes up, and
- * each other property from its longhands (`CSS_OF`), its parts in full, a border's colour only where it has a border.
- */
 export const readValues = (el: Element): Record<string, string> => {
 	const s = getComputedStyle(el);
 	const values: Record<string, string> = { height: `${+el.getBoundingClientRect().height.toFixed(2)}px` };
@@ -145,9 +127,8 @@ export const readValues = (el: Element): Record<string, string> => {
 type Tried = { property: string; value: string; targets: string[] };
 
 /**
- * Values tried on a component's instances in the preview page, sent by the tab that frames it (its parent alone). Each
- * try is undone before the next is set, so the page is never the last try's leftovers, and set again whenever the stories
- * redraw, since the elements may be new. A height is set as what the element must be given to take up the height tried.
+ * Each try is undone before the next is set, and set again whenever the stories redraw, since the elements may be new. A
+ * height tried is the box the element takes up, not its CSS height.
  */
 export const tryValues = (): void => {
 	const root = () => document.getElementById('root');
@@ -170,8 +151,7 @@ export const tryValues = (): void => {
 		if (parts && parts.length !== of.names.length) return;
 		of.names.forEach((name, i) => set(el, name, parts ? (parts[i] as string) : value));
 	};
-	// Once a frame however many changes come at once: what the stories draw (an element added, or its class changed, as a tab
-	// selected changes which variant an instance is), never the styles set here, which are inline.
+	// Classes, as a tab selected changes which variant an instance is; never style, as the values set here are inline.
 	const WATCHED = { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] };
 	let pending = false;
 	const observer = new MutationObserver(() => {

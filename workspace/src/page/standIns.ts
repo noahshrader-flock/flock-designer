@@ -1,8 +1,4 @@
-/**
- * In-memory stand-ins for the `localStorage`, `sessionStorage` and `document.cookie` a page framed with **no origin of its
- * own** is refused, which a design system's code may read as it loads; installed only where the real one is refused. A
- * prototype that needs more (IndexedDB, a service worker) needs the pages' own address, not more stand-ins.
- */
+// A page framed with no origin of its own is refused storage and cookies, which a design system's code may read as it loads.
 
 const memoryStorage = (): Storage => {
 	const kept = new Map<string, string>();
@@ -18,7 +14,7 @@ const memoryStorage = (): Storage => {
 	};
 };
 
-/** Whether the browser refuses `read`: in a frame with no origin of its own it throws, rather than answering. */
+// In a frame with no origin of its own the browser throws on these reads, rather than answering.
 const refused = (read: () => unknown): boolean => {
 	try {
 		read();
@@ -28,7 +24,6 @@ const refused = (read: () => unknown): boolean => {
 	}
 };
 
-/** A cookie jar as `document.cookie` is one: each write sets, replaces or (expired) removes one cookie; a read is all of them. */
 const cookieJar = (): PropertyDescriptor => {
 	const jar = new Map<string, string>();
 	return {

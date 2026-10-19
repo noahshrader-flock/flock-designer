@@ -1,10 +1,6 @@
 import { Button } from '../../ui/Button';
 import type { Comments } from './useComments';
 
-/**
- * Two buttons, side by side in the bar's row: comment mode, then the list of comments. Each is pressed while it is on, so
- * which is on is readable at a glance.
- */
 export const CommentControl = ({
 	comments,
 	listOpen,
@@ -14,10 +10,9 @@ export const CommentControl = ({
 	comments: Comments;
 	listOpen: boolean;
 	onToggleList: () => void;
-	/** Nothing to comment on yet: the page is not up. */
 	disabled: boolean;
 }) => (
-	// Each title is a hint for when the button can be pressed: a disabled button never shows one.
+	// A disabled button never shows its title.
 	<>
 		<Button
 			icon="location"

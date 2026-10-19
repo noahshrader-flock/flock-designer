@@ -3,10 +3,7 @@ import type { CommentAnchor } from '../shared/contract';
 import { STATES_META } from '../shared/prototypeStates';
 import { INK } from '../shared/pageInk';
 
-/**
- * How an element of the page is found and described, shared by placing a pin (`pick.ts`) and drawing them (`pins.ts`).
- * Read afresh each run: every script is the whole bundle, run once.
- */
+// Module-level reads are afresh each run: every script is the whole bundle, run once.
 
 export const collapse = (t: unknown): string =>
 	String(t || '')
@@ -21,8 +18,7 @@ const unique = (sel: string): boolean => {
 	}
 };
 
-// A prototype is one page wherever it is served, so only what follows its # says where in it a comment is; the agent's
-// bundle says when it is one (`singlePage.ts`). Anything else is a real app, where the path is the place.
+// A prototype is one page wherever it is served, so only what follows its # places a comment; in a real app the path does.
 const single = !!window.__fdSinglePage;
 export const place = (r: string): string => {
 	if (!single) return r;
@@ -31,17 +27,13 @@ export const place = (r: string): string => {
 };
 export const route = (): string => place(location.pathname + location.hash);
 
-// Which state of the page a prototype is showing, recorded with a comment and compared when it is placed again, so one
-// definition serves both. The first state in a prototype's tag is the page as it opens, so asking for it by name is the
-// same as no query (as `stateOfQuery` in shared/prototypeStates has it). A page with no tag is compared as it is.
+// The first state in a prototype's tag is the page as it opens, so asking for it by name is the same as no query (as
+// `stateOfQuery` has it).
 const statesTag = document.querySelector(`meta[name="${STATES_META}"]`);
 const firstState = statesTag ? String(statesTag.getAttribute('content') || '').split(',')[0] : null;
 export const asState = (q: string): string => (firstState && q === '?state=' + firstState ? '' : q);
 export const pageState = (): string => asState(withoutTheme(location.search).slice(0, 200));
-/**
- * The theme the page was seen in: the one a prototype was put in (`page/theme.ts` says it on the page), else, on a page DSNR
- * did not theme (codebase work: the real app), the system's, which is what that page follows.
- */
+// A page DSNR did not theme (the real app, in codebase work) follows the system's theme.
 export const pageTheme = (): Theme => {
 	const themed = document.documentElement.getAttribute('data-dsnr-theme');
 	if (isTheme(themed)) return themed;
@@ -61,7 +53,6 @@ const segment = (el: Element): string => {
 	return tag + ':nth-of-type(' + n + ')';
 };
 
-/** The nearest ancestor with a stable name, which is the part of the page least likely to be rearranged. */
 const namedScope = (el: Element): Element | null => {
 	let cur = el.parentElement;
 	while (cur && cur !== document.body && cur !== document.documentElement) {
@@ -72,9 +63,8 @@ const namedScope = (el: Element): Element | null => {
 };
 
 /**
- * How an element is found again after the code has changed. A path of direct children breaks when restyling adds one
- * wrapper div, so an element with no stable name is described as a *descendant* of the nearest one that has one ("the p
- * inside billing-card"). The full path is kept for a page with no stable names anywhere.
+ * A path of direct children breaks when restyling adds one wrapper div, so an element with no stable name is described as
+ * a descendant of the nearest one that has one. The full path is kept for a page with no stable names anywhere.
  */
 const selectorFor = (el: Element): string => {
 	const own = segment(el);
@@ -104,13 +94,11 @@ const selectorFor = (el: Element): string => {
 	return parts.join(' > ') || 'html';
 };
 
-/** The page's own element at a point, ignoring DSNR's pins. */
 export const underlying = (x: number, y: number): Element | null => {
 	const stack = document.elementsFromPoint ? document.elementsFromPoint(x, y) : [];
 	return stack.find((el) => !el.closest('[data-fd-layer]')) ?? null;
 };
 
-/** The text of the heading a container leads with, if it has one. */
 const headingOf = (container: Element): string => {
 	for (const c of container.children) {
 		if (/^(H[1-6]|LEGEND)$/.test(c.tagName)) return collapse(c.textContent);
@@ -121,11 +109,7 @@ const headingOf = (container: Element): string => {
 	return '';
 };
 
-/**
- * The named containers an element sits inside, outermost first (at most three): what a person would call the section.
- * A container is named by its aria-label, its own heading, or its stable name. This is text a person or an agent can
- * search for, which a path of nth-of-type cannot be.
- */
+// Outermost first: text a person or an agent can search for, which a path of nth-of-type cannot be.
 const containers = (el: Element): string[] => {
 	const found: string[] = [];
 	const own = collapse(el.textContent).slice(0, 60);
@@ -138,7 +122,6 @@ const containers = (el: Element): string[] => {
 	return found.reverse();
 };
 
-/** Where a click landed: the element, and the position inside it. */
 export const describe = (el: Element, x: number, y: number): CommentAnchor => {
 	const rect = el.getBoundingClientRect();
 	return {
@@ -149,19 +132,14 @@ export const describe = (el: Element, x: number, y: number): CommentAnchor => {
 		nearbyText: collapse((el as HTMLElement).innerText || el.textContent).slice(0, 80),
 		viewport: { width: window.innerWidth, height: window.innerHeight },
 		commit: '',
-		// Which state of the page: a prototype's switch lives in the query string, so a comment made on Error is not
-		// mistaken for one made on Loaded.
+		// A prototype's state switch lives in the query string, so a comment made on Error is not mistaken for one on Loaded.
 		state: pageState(),
-		// Which theme it was seen in, so a problem seen only in dark is opened in dark again.
+		// So a problem seen only in dark is opened in dark again.
 		theme: pageTheme(),
 		offset: rect.width > 0 && rect.height > 0 ? { x: (x - rect.left) / rect.width, y: (y - rect.top) / rect.height } : { x: 0, y: 0 },
 	};
 };
 
-/**
- * The outline and its label, in the pin's colour, which show what a pin will attach to: drawn only through `shiftOutline`.
- * Returns what the caller drives it with; remove() takes it off the page again.
- */
 const hoverOutline = () => {
 	const outline = document.createElement('div');
 	outline.setAttribute('data-fd-layer', 'hover');
@@ -176,7 +154,6 @@ const hoverOutline = () => {
 		chip.style.display = 'none';
 	};
 	return {
-		/** Draws it around el, with its tag and text; hint is appended to the label when given. */
 		show: (el: Element | null, hint: string) => {
 			if (!el || el.nodeType !== 1) return hide();
 			const r = el.getBoundingClientRect();
@@ -199,11 +176,7 @@ const hoverOutline = () => {
 	};
 };
 
-/**
- * The outline, shown only while Shift is held, so the page is not lit up under every move. Placing a pin and dragging one
- * share it, as a dropped pin re-attaches to whatever is under it. Pressing or letting go of Shift shows or hides it where
- * it is, without the pointer moving.
- */
+// Shown only while Shift is held, so the page is not lit up under every move.
 export const shiftOutline = () => {
 	const hover = hoverOutline();
 	let held = false;
@@ -228,7 +201,6 @@ export const shiftOutline = () => {
 			if (shift !== undefined) held = shift;
 			paint();
 		},
-		/** Whether Shift is held: the arrow keys climb to a container only then, as only then is there an outline to climb. */
 		held: () => held,
 		remove: () => {
 			hover.remove();

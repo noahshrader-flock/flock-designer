@@ -17,11 +17,7 @@ interface Placed {
 	marker?: HTMLElement;
 }
 
-/**
- * What a pin carries, upright inside its turned shape: the person's picture over their first letter, which shows until
- * it loads or if it fails. A draft pin carries nothing. The picture is drawn only from the host's own address
- * (`isAvatarUrl`), whoever asked, and never sends where the page is.
- */
+// The picture is drawn only from the host's own address (`isAvatarUrl`), whoever asked, and never sends where the page is.
 const faceOf = (p: Placed): HTMLElement | null => {
 	if (p.draft) return null;
 	const size = AVATAR_XS_PX;
@@ -44,16 +40,14 @@ const faceOf = (p: Placed): HTMLElement | null => {
 };
 
 /**
- * Draws a pin on each comment's element and returns how each was placed: `moved` when only its text was found again,
- * `missing` when neither selector nor text was (it stays as a page-level comment), `otherState` for another state of this
- * page, where the element may be a different thing. Calling it again replaces the pins; with nothing, clears them.
+ * `moved` when only its text was found again, `missing` when neither selector nor text was, `otherState` for another state
+ * of this page, where the element may be a different thing. Calling it again replaces the pins; with nothing, clears them.
  */
 export const drawPins = (items: MarkerRequest[], nonce: string): MarkerResult[] => {
 	window.__fdMarkers?.stop();
-	// The pins' own layer, not the first of DSNR's layers: comment mode keeps an outline on the page too, and taking that
-	// one would leave the old pins behind.
+	// The pins' own layer, not the first of DSNR's: comment mode keeps an outline layer too, and removing that would leave the
+	// old pins behind.
 	document.querySelector('[data-fd-layer="pins"]')?.remove();
-	// To the page agent when there is one (the published site, VS Code), else the console.
 	const say = (msg: Record<string, unknown>) => {
 		const text = MESSAGE_PREFIX + JSON.stringify({ ...msg, n: nonce });
 		if (window.__fdReport) window.__fdReport(text);
@@ -81,9 +75,8 @@ export const drawPins = (items: MarkerRequest[], nonce: string): MarkerResult[] 
 		} catch {
 			// A selector the page cannot read is one that matches nothing.
 		}
-		// Else follow the text. The stored text is cut at 80 characters and the page may have changed a little, so this takes
-		// the smallest element whose text *begins like* it: a pin roughly in the right place beats one that disappears
-		// whenever a single character moves.
+		// The stored text is cut at 80 characters and the page may have changed a little: a pin roughly in the right place
+		// beats one that disappears whenever a single character moves.
 		if (!el && a.nearbyText.length >= 3) {
 			const want = a.nearbyText;
 			// Enough to identify the element, short enough to survive an edit further along the line.
@@ -93,8 +86,8 @@ export const drawPins = (items: MarkerRequest[], nonce: string): MarkerResult[] 
 			for (const candidate of document.body ? document.body.querySelectorAll('*') : []) {
 				const t = collapse(candidate.textContent);
 				if (t.length === 0) continue;
-				// Either side may be the longer: the stored text is a prefix of the live text, or the element's text was
-				// shortened since. The shortest element that still matches is the innermost one.
+				// Either side may be the longer, as the element's text may have been shortened since. The shortest match is the
+				// innermost one.
 				const hit = t.indexOf(want) === 0 || want.indexOf(t) === 0 || t.indexOf(head) === 0;
 				if (hit && t.length < bestLen) {
 					best = candidate;
@@ -150,8 +143,7 @@ export const drawPins = (items: MarkerRequest[], nonce: string): MarkerResult[] 
 		}
 	};
 
-	// A teardrop pin whose tip is the point that was clicked. The wrapper has no size and sits exactly on that point; the
-	// pin hangs above it.
+	// The wrapper has no size and sits exactly on the clicked point; the pin's tip hangs from it.
 	for (const p of placed) {
 		const m = document.createElement('div');
 		m.style.cssText = 'position:fixed;width:0;height:0;pointer-events:none';
@@ -164,7 +156,7 @@ export const drawPins = (items: MarkerRequest[], nonce: string): MarkerResult[] 
 		p.marker = m;
 		layer.appendChild(m);
 
-		// Click selects; dragging (only for the viewer's own pins) moves. Nothing here reaches the page's own handlers.
+		// Nothing here may reach the page's own handlers.
 		pin.addEventListener('pointerdown', (e) => {
 			if (e.button !== 0) return;
 			e.preventDefault();
@@ -188,7 +180,6 @@ export const drawPins = (items: MarkerRequest[], nonce: string): MarkerResult[] 
 				p.pos = { x: ev.clientX, y: ev.clientY };
 				pin.style.cursor = 'grabbing';
 				positionPins();
-				// Dropping re-attaches the pin to whatever is under it, which holding Shift outlines for the length of the drag.
 				hover ??= shiftOutline();
 				hover.show(underlying(ev.clientX, ev.clientY), '', ev.shiftKey);
 			};
@@ -245,11 +236,7 @@ export const drawPins = (items: MarkerRequest[], nonce: string): MarkerResult[] 
 	return results;
 };
 
-/**
- * Hides or shows the app's own layers (the pins, and the outline while one is being placed), and resolves once the page
- * has painted that. A picture of the spot is taken with them hidden, so it shows the thing that was clicked and not an
- * earlier pin.
- */
+/** Resolves once the page has painted the change, so a picture taken after it shows no pin. */
 export const setLayersVisible = (visible: boolean): Promise<true> => {
 	for (const layer of document.querySelectorAll<HTMLElement>('[data-fd-layer]')) layer.style.visibility = visible ? 'visible' : 'hidden';
 	return new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => r(true))));

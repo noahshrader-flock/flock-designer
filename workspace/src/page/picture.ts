@@ -1,10 +1,6 @@
 import { INK } from '../shared/pageInk';
-/**
- * A story's picture, made in its preview page, as the headless browser asks for it (`core/services/browser/chromeHeadless.ts`,
- * which bundles this into the scripts it runs). Page code, typed like the rest.
- */
 
-/** Where a story's paint goes on the white picture: the box it painted, the picture's size, and where the box is put. */
+/** `box` is the region painted in the capture; `left`, `top` are where it goes on the white picture of `width` by `height`. */
 export interface Placed {
 	box: { x: number; y: number; width: number; height: number };
 	width: number;
@@ -13,10 +9,7 @@ export interface Placed {
 	top: number;
 }
 
-/**
- * The picture as JPEG, base64: the PNG captured (`png`, base64), what it painted put on white where `place` says, drawn by
- * the page's own canvas at most `most` pixels across. Only the PNG and where it goes come in, never the pixels.
- */
+/** `png` and the result are base64; the result is at most `most` pixels across. */
 export const encodeJpeg = async ({
 	png,
 	place: p,
@@ -45,17 +38,15 @@ export const encodeJpeg = async ({
 };
 
 /**
- * Readies the page for the picture's one region: the stories clipped to what was captured (so what runs past is white, as
- * in the composition) and moved by `dx`, `dy`. False, with nothing changed, when something draws outside the stories (a
- * dialog in its own layer) or something fixed would move. Undone by `pictured`.
+ * False, with nothing changed, when something draws outside the stories (a dialog in its own layer) or something fixed would
+ * move. Undone by `pictured`.
  */
 export const readyToPicture = ({ cut, dx, dy, width, height }: { cut: boolean; dx: number; dy: number; width: number; height: number }): boolean => {
 	const root = document.getElementById('root') as HTMLElement;
 	const drawsOutside = (e: Element) =>
 		e !== root && e.tagName !== 'SCRIPT' && getComputedStyle(e).visibility !== 'hidden' && e.getBoundingClientRect().width > 0;
 	if (Array.from(document.body.children).some(drawsOutside)) return false;
-	// Everything that moves is the stories' root's: a file whose stories could not be drawn at all has no story in it, only
-	// what it says instead, and is pictured all the same.
+	// Only the root's descendants move; a file whose stories could not be drawn holds only its error and is pictured all the same.
 	if ((dx > 0 || dy > 0) && Array.from(root.querySelectorAll('*')).some((e) => getComputedStyle(e).position === 'fixed')) return false;
 	if (cut) {
 		const r = root.getBoundingClientRect();
@@ -72,7 +63,6 @@ export const readyToPicture = ({ cut, dx, dy, width, height }: { cut: boolean; d
 	return true;
 };
 
-/** The stories as they were before `readyToPicture`. */
 export const pictured = (): void => {
 	const root = document.getElementById('root') as HTMLElement;
 	root.style.clipPath = '';

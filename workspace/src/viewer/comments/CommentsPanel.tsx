@@ -7,10 +7,6 @@ import { CommentsHeading } from './CommentsHeading';
 import { GeneralComment } from './GeneralComment';
 import type { Comments } from './useComments';
 
-/**
- * The comments, docked beside a prototype's page and resizable: the heading, what went wrong, and the list, newest first;
- * and at its foot, a box for a comment on the whole page.
- */
 export const CommentsPanel = ({
 	comments,
 	error,

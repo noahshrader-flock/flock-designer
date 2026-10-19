@@ -1,14 +1,9 @@
 import type { CommentAnchor } from '../shared/contract';
 import { describe, shiftOutline, underlying } from './helpers';
 
-/** Where the click landed, as `readPick` takes it. */
 type Picked = CommentAnchor & { at: { x: number; y: number }; box: { x: number; y: number; width: number; height: number } };
 
-/**
- * Pin mode. Resolves with where the next click landed, or null on Escape or a cancel. The click is swallowed, so placing a
- * pin never also follows a link. The element and the click's position in it are recorded so the pin stays put through a
- * reflow and an agent can find it; a Shift-click takes exactly what is outlined.
- */
+/** Resolves null on Escape or a cancel. The click is swallowed, so placing a pin never also follows a link. */
 export const pick = (): Promise<Picked | null> =>
 	new Promise((resolve) => {
 		const style = document.createElement('style');
@@ -16,8 +11,6 @@ export const pick = (): Promise<Picked | null> =>
 		style.textContent = 'html, html * { cursor: crosshair !important }';
 		document.head.appendChild(style);
 
-		// With Shift held, Up and Down climb to the outlined element's container and back, for a comment about a section and
-		// not a line.
 		const hover = shiftOutline();
 		let stack: Element[] = [];
 		const chosen = (): Element | null => stack[stack.length - 1] ?? null;
@@ -57,8 +50,7 @@ export const pick = (): Promise<Picked | null> =>
 			// What is under it is found past DSNR's own layers, so a click on one lands on the page beneath it.
 			if (!el || !el.isConnected) el = underlying(e.clientX, e.clientY) ?? (e.target as Element | null);
 			if (!el || el.nodeType !== 1) return done(null);
-			// Where the click landed in the page, so the app can put the comment box beside the pin; and the element's own
-			// box, so the picture can frame the element and not a fixed square around the click.
+			// The element's box lets the picture frame the element, not a fixed square around the click.
 			const r = el.getBoundingClientRect();
 			done({
 				...describe(el, e.clientX, e.clientY),

@@ -10,28 +10,17 @@ import { saveToken } from './browserAdapter';
 import { type SignInConfig, finishSignIn, takeNote } from './signIn';
 import { applyBrand } from '../ui/brand';
 
-/**
- * Started by a prototype's page, which says what it is in `#dsnr-config`; a page without it is left as it is. In DSNR's
- * review tab the viewer comments through the tab once it says hello; opened in the browser from DSNR, the page has a key
- * and comments through this machine's server with it.
- */
-
-/**
- * Signing in, when the site offers it (`#dsnr-sign-in`): on the site's front page, where GitHub sends a person back, the
- * sign-in is finished, and they go back to the page they started on; that page then says how it went, if it did not go.
- */
 const signInAt = document.getElementById('dsnr-sign-in');
 const signIn = signInAt ? (JSON.parse(signInAt.textContent ?? 'null') as SignInConfig | null) : null;
 if (signIn) void finishSignIn(signIn, window, saveToken);
 const note = signIn ? takeNote(window) : null;
 
-/** The key, if this page was opened from DSNR: read once, as the page starts, so it is out of the address at once. */
+// Read once, as the page starts, so the key is out of the address at once.
 const key = keyFromAddress(window);
 const framed = window.parent !== window;
 
 const InPage = ({ config, slots }: { config: ViewerConfig; slots: ViewerSlots }) => {
 	const [relay, setRelay] = useState<Relay | null>(() => (key === null ? null : serverRelay(key)));
-	// VS Code's theme when its review tab frames this page and says; else light or dark as the computer is, as it changes.
 	const [system, setSystem] = useState(() => systemIsDark(window));
 	const [editor, setEditor] = useState<EditorTheme | null>(null);
 	useEffect(() => (key === null ? listenForDsnr(window, setRelay, setEditor) : undefined), []);
@@ -40,13 +29,13 @@ const InPage = ({ config, slots }: { config: ViewerConfig; slots: ViewerSlots })
 		applyScheme(document, editor ? isDarkTheme(editor.kind) : system, editor !== null);
 		applyEditorTheme(document, editor);
 	}, [editor, system]);
-	// Opened from DSNR in the browser: after Address, to the version it showed its change in (the tab shows it in VS Code).
+	// Only with a key: in VS Code the tab shows the addressed version itself.
 	const onAddressed = (name: string) => {
 		const to = versionAddress(config.projectHref, name, location.href.split('#')[0] as string);
 		if (to === location.href.split('#')[0]) location.reload();
 		else if (to !== null) location.assign(to);
 	};
-	// From this machine, not in DSNR's tab, and with no key: opened some other way than Open in browser.
+	// `openedHere`: from this machine, not in DSNR's tab, and with no key: opened some other way than Open in browser.
 	return (
 		<Viewer
 			config={config}

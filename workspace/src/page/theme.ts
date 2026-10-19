@@ -1,21 +1,19 @@
 import { DEFAULT_THEME, themeOfQuery, type Theme } from '../shared/prototypeTheme';
 
 /**
- * A prototype's page in the theme its address asks for (`?theme=dark`, else light), run before its own code. `matchMedia`
- * and `prefers-color-scheme` rules are both answered with it, so every reviewer sees the same page whatever their machine
- * is set to. Story previews use it too; codebase work does not, as the real app follows its own code.
+ * Runs before the prototype's own code. `matchMedia` and `prefers-color-scheme` rules are answered with the address's
+ * theme, so every reviewer sees the same page whatever their machine is set to.
  */
 
 const SCHEME = /\(\s*prefers-color-scheme\s*:\s*(light|dark)\s*\)/gi;
-/** Media queries a browser always, and never, matches: what a light-or-dark part becomes. */
+/** Media queries a browser always, and never, matches. */
 const ALWAYS = '(min-width: 0px)';
 const NEVER = '(max-width: -1px)';
 
-/** A media query with its light-or-dark part answered for `theme`; the rest of it is left to the browser. */
 export const themedQuery = (query: string, theme: Theme): string =>
 	query.replace(SCHEME, (_whole, scheme: string) => (scheme.toLowerCase() === theme ? ALWAYS : NEVER));
 
-/** A stylesheet's light-or-dark rules answered for `theme`, in nested rules too. One that cannot be read is left alone. */
+// A cross-origin sheet's rules cannot be read, so it is left alone.
 const themeSheet = (sheet: CSSStyleSheet | CSSGroupingRule, theme: Theme): void => {
 	let rules: CSSRuleList;
 	try {
@@ -30,23 +28,20 @@ const themeSheet = (sheet: CSSStyleSheet | CSSGroupingRule, theme: Theme): void 
 	}
 };
 
-/** Where the page says the theme it was put in, for what records a comment (`page/helpers.ts`). */
 export const THEMED = 'data-dsnr-theme';
 
-/** Puts the page in its theme: before the prototype runs, and as its styles arrive. */
 export const applyTheme = (win: Window): void => {
 	const theme = themeOfQuery(win.location.search) ?? DEFAULT_THEME;
-	// Every browser a page is seen in has it; a page without it has nothing that reads it to answer.
 	if (typeof win.matchMedia === 'function') {
 		const real = win.matchMedia.bind(win);
 		win.matchMedia = (query: string) => real(themedQuery(String(query), theme));
 	}
 	const doc = win.document;
 	const all = () => Array.from(doc.styleSheets).forEach((sheet) => themeSheet(sheet, theme));
-	// Whenever the page changes: a sheet as it arrives, and a rule a script puts in one as a story draws (a CSS-in-JS library's).
+	// Also catches rules a CSS-in-JS library inserts as a story draws.
 	new MutationObserver(all).observe(doc, { childList: true, subtree: true });
 	doc.addEventListener('DOMContentLoaded', all);
-	// The browser's own controls (scroll bars, form fields) in it too.
+	// For the browser's own controls (scroll bars, form fields).
 	doc.documentElement.style.colorScheme = theme;
 	doc.documentElement.setAttribute(THEMED, theme);
 };

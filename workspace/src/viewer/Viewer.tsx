@@ -27,47 +27,34 @@ import { type Relay, loginIn, relayComments } from './relay';
 import { CommentsPanel } from './comments/CommentsPanel';
 import { useOpenOnError } from './comments/useOpenOnError';
 
-/**
- * A prototype's published page: its bar, comments panel and comment box, all from the kit (`src/ui`). Drawn into the page
- * the site built, which works without it. In DSNR's review tab (`relay`) it comments through the extension; on the
- * published site it signs the person in with GitHub (`signIn`) and comments with their token, kept in the browser.
- */
-
-/** What the site writes into each version's page for this. */
 export interface ViewerConfig {
 	owner: string;
 	repo: string;
 	projectId: string;
 	name: string;
 	title: string;
-	/** Where the project's own page is, from this one. */
+	/** Relative to this page. */
 	projectHref: string;
-	/** Every version of the project that has a page, where each is from this one, and the version it was started from. */
+	/** `href` is relative to this page. */
 	versions: { name: string; href: string; from?: string }[];
-	/** The states the page has (`shared/prototypeStates`); not there on a page built before pages said. */
+	/** Not there on a page built before pages said. */
 	states?: string[];
-	/** The page's fingerprint, which a comment placed on it carries; not there on a page built before pages said. */
+	/** The page's fingerprint; not there on a page built before pages said. */
 	page?: string;
 }
 
-/** What is drawn where: the bar, the comments' panel, and the prototype's frame. */
 export interface ViewerSlots {
 	bar: HTMLElement;
 	panel: HTMLElement;
 	frame: HTMLIFrameElement;
 }
 
-/**
- * The page's states, the one the frame shows, and choosing another; kept above the bar, which is drawn again on signing
- * in or out.
- */
+// Kept above the bar, which is drawn again on signing in or out.
 type Showing = { states: string[]; state: string | null; onState: (state: string | null) => void; theme: ShownTheme };
 
-/** How long a loaded page is given to say it is up before the bar says it has no pins. */
 const NO_AGENT_MS = 8000;
 const NO_AGENT = 'This page cannot show its comments’ pins: it was built without DSNR’s page agent. Build the site again.';
 
-/** The page's bar. `children` is what comes last: the Comment control, or signing in. */
 const PageBar = ({ config, slots, showing, children }: { config: ViewerConfig; slots: ViewerSlots; showing: Showing; children: ReactNode }) => {
 	const versions = useMemo(
 		() => config.versions.map((v) => ({ ...v, branch: prototypeKey(config.projectId, v.name) })),
@@ -105,23 +92,18 @@ export const Viewer = ({
 	config: ViewerConfig;
 	slots: ViewerSlots;
 	relay?: Relay | null;
-	/** Signing in with GitHub, on the published site; none where the site was built without it. */
+	/** None where the site was built without signing in. */
 	signIn?: SignInConfig | null;
-	/** What the last sign-in left to say, when it did not go. */
 	note?: SignInNote | null;
 	/** Served from this machine with no way to ask DSNR: opened some other way than DSNR's Open in browser. */
 	openedHere?: boolean;
-	/** Told the version Address showed its change in: a page in the browser goes to it. */
 	onAddressed?: (name: string) => void;
 }) => {
-	// The token kept in this browser, on the bar's own origin, which a prototype framed with no origin of its own cannot reach.
 	const [token, setToken] = useState<string | null>(savedToken);
 	const [askedHere, setAskedHere] = useState(false);
 	const [said, setSaid] = useState<SignInNote | null>(note);
 	const [user, setUser] = useState<GitHubUser | null>(null);
-	// The frame opens in the page's first state; another is the same page, asked for in it.
 	const [shownState, setShownState] = useState<string | null>(null);
-	// The theme it is shown in: light, the page's own address, until dark is chosen, which the page is then asked for.
 	const shownTheme = useShownTheme((theme) => {
 		slots.frame.src = withTheme(slots.frame.getAttribute('src') ?? 'page.html', theme);
 	});
@@ -176,8 +158,7 @@ export const Viewer = ({
 				/>
 			) : (
 				<PageBar config={config} slots={slots} showing={showing}>
-					{/* Not on a phone: commenting needs a computer, and the bar's room goes to the title and the switcher. A site
-					    built without signing in has no way to: no button. */}
+					{/* Hidden on a phone (`.viewer-sign-in`): commenting needs a computer, and the bar's room goes to the title. */}
 					{(signIn || openedHere) && (
 						<span className="viewer-sign-in">
 							<Button variant="secondary" onPress={() => (openedHere ? setAskedHere(true) : signIn && void startSignIn(signIn, window))}>
@@ -187,7 +168,6 @@ export const Viewer = ({
 					)}
 				</PageBar>
 			)}
-			{/* A page from this machine comments once it is opened from DSNR, which gives it the way to ask: said so. */}
 			<Said
 				title="Open this page from DSNR to comment"
 				words={
@@ -204,10 +184,6 @@ export const Viewer = ({
 	);
 };
 
-/**
- * Through DSNR, in its review tab or a page opened from it in the browser: signing in is VS Code's own, the comments are
- * the core's, and Address on an open one is run by the extension as it runs a build.
- */
 const InDsnr = ({
 	config,
 	slots,
@@ -230,7 +206,6 @@ const InDsnr = ({
 		() => relayComments(relay, { projectId: config.projectId, branch: prototypeKey(config.projectId, config.name), page: config.page }),
 		[relay, config],
 	);
-	// Signing in is VS Code's own, in its window: while it is open there, the page says so and waits.
 	const [signingIn, setSigningIn] = useState(false);
 	const signIn = async () => {
 		setSigningIn(true);
@@ -238,7 +213,6 @@ const InDsnr = ({
 		setSigningIn(false);
 		if (signedIn !== null) setLogin(signedIn);
 	};
-	/** Address in this version, or in a new version from it (`newVersion`), which the person chose. */
 	const address = async (comment: CommentRef, newVersion: boolean) => {
 		setAddressing(comment.id);
 		// On this page's own version: in the browser, the page may have moved to another since it was opened.
@@ -295,9 +269,7 @@ const Commenting = ({
 	slots: ViewerSlots;
 	showing: Showing;
 	store: CommentStore;
-	/** Who is signed in, at the end of the bar, for a token kept in the browser. */
 	account?: ReactNode;
-	/** More at the top of an open comment's menu: Address, in DSNR. */
 	actions?: (comment: ReviewComment) => MenuItem[];
 }) => {
 	const page = useMemo(() => framePage(slots.frame), [slots.frame]);
@@ -306,9 +278,8 @@ const Commenting = ({
 	const [route, setRoute] = useState<string | null>(null);
 	const [listOpen, setListOpen] = useState(false);
 
-	// The prototype is up once its page's agent says so, after every load, and its pins are drawn then; and again when its
-	// route moves. A page that never says so, from when the bar starts (it may have loaded first, as in VS Code) or from
-	// its next load, has no agent (a site built before it): said, not left without pins, until it does say so.
+	// A page that never says it is up, from when the bar starts (it may have loaded first, as in VS Code) or from its next
+	// load, has no agent (a site built before it): said, not left silently without pins.
 	useEffect(() => {
 		const frame = slots.frame;
 		let waitingFor: ReturnType<typeof setTimeout> | undefined;
@@ -347,7 +318,6 @@ const Commenting = ({
 			</PageBar>
 			{listOpen &&
 				createPortal(
-					// The page's panel slot holds the panel: its divider, then the panel, side by side.
 					<div className="viewer-panel">
 						<CommentsPanel
 							comments={comments}
@@ -367,7 +337,6 @@ const Commenting = ({
 	);
 };
 
-/** A short word in a dialog, closed by its X: how a sign-in went, or how to comment from a page that cannot. */
 const Said = ({ title, words, onClose }: { title: string; words: string | null; onClose: () => void }) =>
 	words === null ? null : (
 		<Dialog title={title} onClose={onClose}>

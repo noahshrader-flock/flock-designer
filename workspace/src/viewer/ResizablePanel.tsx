@@ -1,21 +1,9 @@
 import { type ReactNode, useEffect, useRef, useState } from 'react';
 import { PANEL_MIN, PANEL_STEP, type PanelWidths, clampPanelWidth, loadPanelWidth, panelMax, savePanelWidth } from './panelWidth';
 
-/**
- * A side panel at the right of a screen, resized by dragging its divider or with the arrow keys; its width is remembered
- * and kept within the window. It holds the pointer while dragging: the prototype's frame beside it never passes the
- * pointer back, so a drag that crossed it would be lost.
- */
-export const ResizablePanel = ({
-	panel,
-	label,
-	children,
-}: {
-	panel: PanelWidths;
-	/** The divider's name for assistive technology: "Resize the comments sidebar". */
-	label: string;
-	children: ReactNode;
-}) => {
+// It holds the pointer while dragging: the prototype's frame beside it never passes the pointer back, so a drag that
+// crossed it would be lost.
+export const ResizablePanel = ({ panel, label, children }: { panel: PanelWidths; label: string; children: ReactNode }) => {
 	const [width, setWidth] = useState(() => loadPanelWidth(window.innerWidth, panel));
 	const [resizing, setResizing] = useState(false);
 	const dragging = useRef(false);
@@ -30,7 +18,6 @@ export const ResizablePanel = ({
 	const start = (e: React.PointerEvent<HTMLElement>) => {
 		e.preventDefault();
 		try {
-			// Keeps the drag attached to the divider if the pointer strays off it.
 			e.currentTarget.setPointerCapture(e.pointerId);
 		} catch {
 			// Resizing still works without capture; it just follows the pointer less tightly.

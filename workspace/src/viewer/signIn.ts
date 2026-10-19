@@ -1,21 +1,16 @@
 /**
- * Signing in to comment on a published prototype with GitHub's own page, one redirect each way (PKCE). The `state` and
- * verifier are kept in this tab, on the bar's own origin, which a prototype framed with no origin cannot reach. GitHub
- * comes back to the App's one redirect address, the site's front page, which sends the person on to where they started.
+ * The `state` and verifier are kept in this tab, on the bar's own origin, which a prototype framed with no origin cannot
+ * reach. GitHub comes back to the App's one redirect address, the site's front page, which sends the person on.
  */
 
 import type { SignInConfig } from '../shared/signInConfig';
 
 export type { SignInConfig };
 
-/** What a finished sign-in says, kept for the page the person comes back to. */
 export type SignInNote = 'cancelled' | 'refused' | 'failed' | 'ended';
 
-/** What is kept in the tab between leaving for GitHub and coming back. */
 const PENDING = 'dsnr.sign-in';
-/** What the page the person comes back to says about how it went, when it did not go. */
 const NOTE = 'dsnr.sign-in-note';
-/** When the last sign-in finished: an ended token goes through GitHub again only when that was not just now. */
 const AT = 'dsnr.signed-in-at';
 
 export const NOTE_WORDS: Record<SignInNote, string> = {
@@ -25,7 +20,6 @@ export const NOTE_WORDS: Record<SignInNote, string> = {
 	ended: 'Your sign-in has ended. Sign in again to comment.',
 };
 
-/** What signing in uses of the page's window: its address, its tab's storage, and how to leave. */
 export interface SignInWindow {
 	location: { href: string; assign(url: string): void; replace(url: string): void };
 	history: { replaceState(data: unknown, unused: string, url: string): void };
@@ -41,11 +35,9 @@ const base64url = (bytes: Uint8Array): string =>
 
 const random = (win: SignInWindow, length: number): string => base64url(win.crypto.getRandomValues(new Uint8Array(length)));
 
-/** The verifier's hash, as GitHub is told it (`S256`). */
 export const challengeOf = async (win: SignInWindow, verifier: string): Promise<string> =>
 	base64url(new Uint8Array(await win.crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier))));
 
-/** Sends the person to GitHub to sign in, to come back to the page they are on. */
 export const startSignIn = async (config: SignInConfig, win: SignInWindow): Promise<void> => {
 	const state = random(win, 24);
 	// 48 bytes is 64 characters: inside PKCE's 43 to 128.
@@ -71,7 +63,7 @@ const readPending = (win: SignInWindow): { state: string; verifier: string; back
 	}
 };
 
-/** Only a page of this site is gone back to: a kept address on any other is not followed. */
+// A kept address on any other site is not followed.
 const sameSite = (back: string, config: SignInConfig): boolean => {
 	try {
 		const at = new URL(back);
@@ -82,10 +74,7 @@ const sameSite = (back: string, config: SignInConfig): boolean => {
 	}
 };
 
-/**
- * Finishes a sign-in GitHub has sent the person back from, if it has: the token, kept by `keep`, then back to the page they
- * started on; or, when it did not go, a note for that page. Null when the address is not GitHub coming back.
- */
+/** Null when the address is not GitHub coming back. */
 export const finishSignIn = async (
 	config: SignInConfig,
 	win: SignInWindow,
@@ -125,16 +114,15 @@ export const finishSignIn = async (
 	return outcome;
 };
 
-/** What the last sign-in left to say, said once. */
+/** Cleared once read. */
 export const takeNote = (win: Pick<SignInWindow, 'sessionStorage'>): SignInNote | null => {
 	const note = win.sessionStorage.getItem(NOTE);
 	win.sessionStorage.removeItem(NOTE);
 	return note === 'cancelled' || note === 'refused' || note === 'failed' || note === 'ended' ? note : null;
 };
 
-/** How long after a sign-in an ended token is said rather than sent through GitHub again, so a token GitHub keeps refusing never loops. */
+// An ended token within this of a sign-in is said rather than sent through GitHub again, so a refused token never loops.
 const JUST_NOW_MS = 60_000;
 
-/** Whether the last sign-in was just now, so a token that ends at once is not sent through GitHub again and again. */
 export const signedInJustNow = (win: Pick<SignInWindow, 'sessionStorage'>, now = Date.now()): boolean =>
 	now - Number(win.sessionStorage.getItem(AT) ?? 0) < JUST_NOW_MS;

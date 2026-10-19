@@ -8,13 +8,9 @@ import type { RepoRef } from '../shared/repoRef';
 import { ReviewThreads } from '../codeHost/reviewThreads';
 import { hostErrorKind } from '../codeHost/hostError';
 
-/**
- * Comments on a prototype's published page, in the browser. GitHub is reached with DSNR's own code (`ReviewThreads`,
- * `callApi`) given the person's token, so a thread is found, made and written exactly as in VS Code. The page is the
- * prototype's frame, whose agent runs the pick and pin code there when asked.
- */
+// GitHub is reached with DSNR's own code (`ReviewThreads`, `callApi`), so a thread is found, made and written exactly as in VS Code.
 
-/** GitHub's API, as the person whose token this is; `onEnded` is told when GitHub says the token has ended. */
+/** `onEnded` is told when GitHub says the token has ended. */
 export const tokenApi = (token: string, fetcher: Fetcher = fetch as unknown as Fetcher, onEnded?: () => void): GitHubApi => ({
 	api: (path, init = {}) =>
 		callApi(token, { path, ...init }, fetcher).catch((err: unknown) => {
@@ -23,14 +19,13 @@ export const tokenApi = (token: string, fetcher: Fetcher = fetch as unknown as F
 		}),
 });
 
-/** One version's comments, on GitHub. `branch` is its key, `prototype/<project>/<name>`, which names its thread. */
+/** `branch` is the version's key, `prototype/<project>/<name>`, which names its thread. */
 export const browserComments = (
 	github: GitHubApi,
 	ref: RepoRef,
 	{ projectId, branch, page }: { projectId: string; branch: string; page?: string | undefined },
 ): CommentStore => {
 	const threads = new ReviewThreads(github, ref);
-	/** A person GitHub will not show the design repository: who they are signed in as, and that it is theirs to change. */
 	const notAllowed = async (err: unknown): Promise<never> => {
 		const kind = hostErrorKind(err);
 		if (kind !== 'notFound' && kind !== 'forbidden') throw err;
@@ -54,36 +49,30 @@ export const browserComments = (
 	};
 };
 
-/** How long the page is given to answer an ask (all but a pick, which waits for the person): a page that does not answer has none. */
+// Not for a pick, which waits for the person.
 const ANSWER_MS = 10_000;
 
-/** What the review bar knows of the page in its frame: what it can be asked (`PageSurface`), and when it is up or moved. */
 export type FramePage = PageSurface & {
-	/** Told each time the page is up (each load), with its route, and at once when it is up already: its pins are drawn then. */
+	/** Told on each load, and at once when the page is up already. */
 	onReady(listener: (route: string) => void): () => void;
-	/** Told when the page's route moves within it: the pins are drawn again. */
 	onRoute(listener: (route: string) => void): () => void;
-	/** Stops listening, for a frame that is gone. */
 	stop(): void;
 };
 
 /**
- * The prototype's frame, as the page the comments are left on (the README's Review isolation): **asked, by message**, as
- * the page's agent answers (`src/page/agent.ts`), never reached into. The bar says hello with a secret each time the frame
- * loads, and the page answers with it. Only the frame's own window and address are heard, read through `pageReaders`.
+ * The frame is asked by message (`src/page/agent.ts`), never reached into. Only the frame's own window and address, with
+ * the nonce said in each load's hello, are heard.
  */
 export const framePage = (frame: HTMLIFrameElement, win: Window = window): FramePage => {
 	const nonce = crypto.randomUUID();
 	/**
-	 * Whether the frame gives its page no origin of its own (the published site: sandboxed without `allow-same-origin`). Read
-	 * off the frame itself, so there is no setting: such a page's messages come from the origin `null`, and the only address
-	 * a message to it can name is `*`. Its frame's own window and the secret still say it is the page.
+	 * Such a page's messages come from the origin `null`, and the only address a message to it can name is `*`; its frame's
+	 * own window and the nonce still say it is the page.
 	 */
 	const opaque = (): boolean => {
 		const sandbox = frame.getAttribute('sandbox');
 		return sandbox !== null && !sandbox.split(/\s+/).includes('allow-same-origin');
 	};
-	/** The page's address: where its frame's `src` points, or this page's own for a frame with none. */
 	const address = (): string => {
 		const src = frame.getAttribute('src');
 		try {
@@ -99,7 +88,6 @@ export const framePage = (frame: HTMLIFrameElement, win: Window = window): Frame
 	const routes = new Set<(route: string) => void>();
 	const waiting = new Map<number, (value: unknown) => void>();
 	let ready = false;
-	/** The route the page said when it was last up: told to a listener that comes after it said so. */
 	let readyAt = '';
 	let next = 1;
 
@@ -173,8 +161,8 @@ export const framePage = (frame: HTMLIFrameElement, win: Window = window): Frame
 };
 
 /**
- * Where the token is kept: this browser only, in the bar's own storage. A prototype's page cannot read it: on the published
- * site it is framed with no origin of its own (`SANDBOX_BESIDE`), and in VS Code it is on another address.
+ * A prototype's page cannot read the bar's storage: on the published site it is framed with no origin of its own
+ * (`SANDBOX_BESIDE`), and in VS Code it is on another address.
  */
 const TOKEN_KEY = 'dsnr.github-token';
 export const savedToken = (): string | null => {

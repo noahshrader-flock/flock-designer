@@ -1,7 +1,6 @@
 /**
- * A type specimen, drawn in the preview page, not the panel's, because that page has the design system's own CSS and so
- * its fonts. **A family that is not there is said to be not there,** so a fallback is never taken for the real one: a
- * family is there when text in it is not the width of text in a fallback.
+ * Drawn in the preview page, not the panel's, because only that page has the design system's fonts. A family that is
+ * missing is said to be, so a fallback is never taken for the real one.
  */
 import type { SpecimenLine } from '../shared/catalog';
 
@@ -47,7 +46,6 @@ const element = (tag: string, className: string, text?: string): HTMLElement => 
 	return e;
 };
 
-/** Draws `lines` into `into` (a new part of the page when none is given), in place of what it held, once the fonts are in. */
 export const drawSpecimens = async (lines: SpecimenLine[], into?: HTMLElement): Promise<void> => {
 	const page = into ?? document.body.appendChild(document.createElement('div'));
 	page.replaceChildren();

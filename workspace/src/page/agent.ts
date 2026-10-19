@@ -1,22 +1,20 @@
 import { type PageAsk, readPageAsk } from '../shared/pageChannel';
 import type { MarkerRequest } from '../shared/contract';
 
-/** What the agent uses of the page's window: its parent, its address, its events, and the page code's hooks. */
 export type AgentWindow = Pick<Window, 'addEventListener' | '__fdCancelPick' | '__fdMarkers' | '__fdReport'> & {
 	parent: { postMessage(message: unknown, targetOrigin: string): void };
 	location: { pathname: string; hash: string };
 };
 
-/** The page code the agent runs (`src/page`): given, so a test can stand in for it. */
+// Passed in so a test can stand in for it.
 interface PageCode {
 	pick: () => Promise<unknown>;
 	drawPins: (items: MarkerRequest[], nonce: string) => unknown;
 }
 
 /**
- * A prototype's page agent (the README's Review isolation), added to every page the site builds: it does in the page what
- * the review bar asks (`shared/pageChannel.ts`). It hears only its parent, and only the first address to say hello; until
- * then it says nothing, and after, it reports page events (pins too, via `__fdReport`) to that address alone, with its secret.
+ * Hears only its parent, and only the first origin to say hello; until then it says nothing, and after, it tells that
+ * origin alone, with its nonce.
  */
 export const installAgent = (win: AgentWindow, page: PageCode): void => {
 	let bar: { origin: string; nonce: string } | null = null;

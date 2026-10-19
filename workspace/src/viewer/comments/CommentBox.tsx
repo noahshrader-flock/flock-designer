@@ -3,27 +3,19 @@ import { Field, TextArea } from '../../ui/Field';
 import { Message } from '../../ui/Message';
 import type { Comments } from './useComments';
 
-/**
- * Where the box sits relative to the pin's tip: past the right of its body (drawn 14px either side of the tip, `page/pins.ts`)
- * with a gap, and level with its middle (its 28px body is drawn 33px above the tip).
- */
+// From the pin's tip: past the right of its body (14px either side of the tip, `page/pins.ts`) and level with its middle.
 const BOX_OFFSET = { x: 22, y: -19 } as const;
 
-/**
- * The box a comment is written in, beside the pin that was just placed. `origin` is where the page's top left corner
- * is in the window: the pin is placed in the page, the box in the window, so the box is put at window coordinates rather
- * than anchored to an element.
- */
+/** `origin` is where the page's top left corner is in the window: the pin is placed in the page, the box in the window. */
 export const CommentBox = ({ comments, origin, error }: { comments: Comments; origin: { top: number; left: number }; error: string | null }) => (
 	<>
-		{/* Clicking away is the same as canceling. */}
 		<div className="comment-shade" onClick={comments.cancelCompose} />
 		<div
 			role="dialog"
 			aria-label="New comment"
 			className="dialog comment-box"
 			onKeyDown={(e: React.KeyboardEvent) => {
-				// Cmd or Ctrl and Enter saves, as in the tools people already use. Escape is the screen's, as everywhere.
+				// Escape is left to the screen, which handles it everywhere.
 				if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') void comments.post();
 			}}
 			// Inline on purpose: measured from the pin.
