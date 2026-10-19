@@ -31,7 +31,7 @@ export interface TokenActions {
  * token's value is the rest of its row, one button with what it points at; one that cannot be changed (a font, a shadow) has
  * nothing to press there. Its file and line are the row's tooltip.
  */
-export const TokenRow = ({ token, info, onEdit }: { token: DesignToken; info?: string } & TokenActions) => {
+const TokenRow = ({ token, info, onEdit }: { token: DesignToken; info?: string } & TokenActions) => {
 	const changes = useTokenChanges();
 	const target = changes.target(token);
 	const contrast = rowContrast(token, changes);

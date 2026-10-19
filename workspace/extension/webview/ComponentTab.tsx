@@ -18,6 +18,7 @@ import { asks } from './host';
 import { useMode, useTokenEdits, useValueTrials } from './shared';
 import { Message, tryAgain } from '../../src/ui/Message';
 import { Heading } from '../../src/ui/Heading';
+import { TabNote } from './TabNote';
 
 /** The target while the design system is not read yet: nothing is judged at it then. */
 const NOT_READ = undeclared('the design system is not read yet');
@@ -73,13 +74,8 @@ export const ComponentTab = ({ id }: { id: string }) => {
 	const trying = useTrying(useValueTrials(), id, ready?.commit ?? null);
 	const { tried } = trying;
 	const component = ready?.components.find((c) => c.id === id);
-	if (note)
-		return (
-			<Message size="page" action={tryAgain(note.onRetry)}>
-				{note.says}
-			</Message>
-		);
-	if (!ready || !component) return <Message size="page">The design system shown no longer has this component. Close this tab.</Message>;
+	if (note) return <TabNote {...note} />;
+	if (!component) return <Message size="page">The design system shown no longer has this component. Close this tab.</Message>;
 	const actions: TokenActions = { onEdit: setEditing };
 	// What its Changes button counts: the values tried on it and the token changes being tried, which move its stories too.
 	const count = tried.size + edits.length;

@@ -3,7 +3,7 @@ import { Disclosure } from './Section';
 import { ValueList } from './ValueItem';
 
 /** How many of a long list are shown before the rest, which wait behind "Show N more". */
-export const MOST_LISTED = 8;
+const MOST_LISTED = 8;
 
 /** A list of rows: the first few, then the rest kept closed until asked for. `row` gives each its own key. */
 export const ShortList = <T,>({ items, row }: { items: T[]; row: (item: T) => ReactNode }) => (

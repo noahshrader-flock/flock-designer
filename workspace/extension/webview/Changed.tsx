@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { plural } from '../../src/shared/plural';
 import { labelOf, readsAs } from '../../src/shared/tokens';
 import { CHANGE_REQUEST } from '../../src/shared/vocabulary';
@@ -15,6 +16,7 @@ import { Swatch } from '../../src/ui/Swatch';
 import { LinkButton } from '../../src/ui/LinkButton';
 import { Message } from '../../src/ui/Message';
 import { Heading } from '../../src/ui/Heading';
+import type { Marks } from '../../src/ui/marks';
 
 /**
  * What can be done with a change once it is tried (6.2, the app's T4 and T5; a component's values, Phase 4): its branch and
@@ -88,51 +90,82 @@ export const BranchActions = <C,>({
 };
 
 /**
+ * One group of a Changes dialog, the same for the tokens and for a component's values: its name and how many it holds,
+ * Reset all while it holds any, then its changes (`rows`), or what it says with none (`empty`), then what it adds after
+ * them (`children`: what saving does, its branch's actions).
+ */
+export const ChangesGroup = ({
+	label,
+	title,
+	count,
+	onResetAll,
+	empty,
+	rows,
+	marks,
+	children,
+}: {
+	/** Its name to assistive technology. */
+	label: string;
+	title: string;
+	count: number;
+	onResetAll: () => void;
+	empty: string;
+	rows: ReactNode;
+	marks: Marks;
+	children?: ReactNode;
+}) => (
+	<section aria-label={label} className="changed" {...marks}>
+		<div className="changed-header">
+			<Heading size="set">
+				{title} <span className="section-count">{count}</span>
+			</Heading>
+			{count > 0 && <LinkButton onPress={onResetAll}>Reset all</LinkButton>}
+		</div>
+		{count === 0 ? <Message>{empty}</Message> : <ValueList>{rows}</ValueList>}
+		{children}
+	</section>
+);
+
+/**
  * The token changes being tried (6.2), as the Tokens group of a Changes dialog, in the panel and in a component's tab: each
  * change, from what the design system has to what it is now, with a reset for each and for all.
  */
 export const TokenChanges = () => {
 	const { edits, read, byPath, change, clear } = useTokenChanges();
 	return (
-		<section aria-label="Token changes" data-changed-tokens className="changed">
-			<div className="changed-header">
-				<Heading size="set">
-					Tokens <span className="section-count">{edits.length}</span>
-				</Heading>
-				{edits.length > 0 && <LinkButton onPress={clear}>Reset all</LinkButton>}
-			</div>
-			{edits.length === 0 ? (
-				<Message>Every token is as the design system has it.</Message>
-			) : (
-				<ValueList>
-					{edits.map((e) => {
-						const was = read.get(e.path);
-						const now = byPath.get(e.path);
-						// A token the library no longer has (it moved since the change was made): named, and why it is not tried.
-						if (!was || !now)
-							return (
-								<ValueItem key={e.path} marks={{ 'data-change': e.path }}>
-									<span className="value-cell">
-										<span className="value-label">{e.path}</span>
-									</span>
-									<span className="value-place quiet">No longer in the design system, so it is not tried.</span>
-								</ValueItem>
-							);
-						return (
-							<ChangeRow
-								key={e.path}
-								marks={{ 'data-change': e.path }}
-								name={labelOf(was)}
-								start={now.kind === 'color' && <Swatch value={now.value} />}
-								from={readsAs(was, read)}
-								to={readsAs(now, byPath)}
-								onReset={() => change(was, null)}
-							/>
-						);
-					})}
-				</ValueList>
-			)}
-		</section>
+		<ChangesGroup
+			label="Token changes"
+			title="Tokens"
+			count={edits.length}
+			onResetAll={clear}
+			empty="Every token is as the design system has it."
+			marks={{ 'data-changed-tokens': '' }}
+			rows={edits.map((e) => {
+				const was = read.get(e.path);
+				const now = byPath.get(e.path);
+				// A token the library no longer has (it moved since the change was made): named, and why it is not tried.
+				if (!was || !now)
+					return (
+						<ValueItem key={e.path} marks={{ 'data-change': e.path }}>
+							<span className="value-cell">
+								<span className="value-label">{e.path}</span>
+							</span>
+							<span className="value-place quiet">No longer in the design system, so it is not tried.</span>
+						</ValueItem>
+					);
+				return (
+					<ChangeRow
+						key={e.path}
+						marks={{ 'data-change': e.path }}
+						name={labelOf(was)}
+						start={now.kind === 'color' && <Swatch value={now.value} />}
+						from={readsAs(was, read)}
+						to={readsAs(now, byPath)}
+						onReset={() => change(was, null)}
+					/>
+				);
+			})}
+		/>
 	);
 };
 

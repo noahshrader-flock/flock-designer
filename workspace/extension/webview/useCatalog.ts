@@ -27,29 +27,22 @@ export const useCatalog = (): CatalogRead => {
 
 /**
  * The design system shown, as a design system's tab shows it: the same read as every page's, so it follows a Sync made in
- * the panel. `ready` once it is read and can be shown; else `note`, what the tab says instead: that it is being read,
- * what went wrong (and Try again, which reads it again), or that it cannot be read (the panel says why).
+ * the panel: `ready` once it is read and can be shown, or else `note`, what the tab says instead (`TabNote`): what went wrong
+ * (and Try again, which reads it again), that it is being read, or that it cannot be read (the panel says why).
  */
-export const useTabCatalog = (): {
-	ready: Extract<Catalog, { state: 'ready' }> | null;
-	note: TabNoteOf | null;
-} => {
+export const useTabCatalog = (): { ready: Extract<Catalog, { state: 'ready' }>; note: null } | { ready: null; note: TabNoteOf } => {
 	const { catalog, error } = useShared('catalog');
 	const ready = catalog?.state === 'ready' ? catalog : null;
 	const retry = syncDesignSystem;
-	const note =
-		error !== null
-			? { says: error, onRetry: retry }
-			: catalog === null
-				? { says: 'Reading the design system…', onRetry: null }
-				: ready === null
-					? { says: 'The design system cannot be read here: the DSNR panel says why.', onRetry: retry }
-					: null;
-	return { ready, note };
+	if (error !== null) return { ready: null, note: { says: error, onRetry: retry } };
+	if (ready !== null) return { ready, note: null };
+	return catalog === null
+		? { ready: null, note: { says: 'Reading the design system…', onRetry: null } }
+		: { ready: null, note: { says: 'The design system cannot be read here: the DSNR panel says why.', onRetry: retry } };
 };
 
-/** What a tab says instead of its design system, and how to read it again when that can help. */
-export interface TabNoteOf {
+/** What a tab says instead of its design system (`TabNote`), and how to read it again when that can help. */
+interface TabNoteOf {
 	says: string;
 	onRetry: (() => void) | null;
 }

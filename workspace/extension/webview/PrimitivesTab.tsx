@@ -11,8 +11,9 @@ import { useTokenEdits } from './shared';
 import { TryingNote } from './Changed';
 import { Swatch } from '../../src/ui/Swatch';
 import { type SpecimenPreview, useSpecimenPreview } from './hooks/useSpecimenPreview';
-import { Message, tryAgain } from '../../src/ui/Message';
+import { Message } from '../../src/ui/Message';
 import { Heading } from '../../src/ui/Heading';
+import { TabNote } from './TabNote';
 
 /** The design system's preview build, which a type specimen is drawn in, so its fonts are its own; asked for once. */
 
@@ -163,12 +164,7 @@ export const PrimitivesTab = () => {
 	const [tried] = useTokenEdits();
 	const sections = useRef(new Map<string, HTMLElement | null>());
 	const preview = useSpecimenPreview(ready, true);
-	if (note || !ready)
-		return (
-			<Message size="page" action={tryAgain(note?.onRetry ?? null)}>
-				{note?.says ?? ''}
-			</Message>
-		);
+	if (note) return <TabNote {...note} />;
 
 	const read = ready.tokens;
 	// A branch handed to Claude Code is shown as it was committed: what is tried waits for the library's own branch.

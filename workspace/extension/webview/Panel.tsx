@@ -41,22 +41,8 @@ export const Panel = () => {
 	// What is open, and why its design system cannot be read when it cannot: the extension's, as every page's.
 	const { context, unreadable } = useShared('placed');
 	const [account, setAccount] = useState<SignInState>({ state: 'signedOut' });
-	// Counts the times the extension said the projects changed: each reads them again.
-	const [changes, setChanges] = useState(0);
 	// The dialog over the panel, if one is open: opened by what is pressed here or by the extension (its title bar's +).
 	const [dialog, setDialog] = useState<PanelDialog | null>(null);
-	useEffect(
-		() =>
-			onHost((m) => {
-				if (m.type === 'projects-changed') setChanges((n) => n + 1);
-				if (m.type === 'open-dialog') {
-					setDialog(m.dialog);
-					// Every change being tried is the Design System tab's: asked for from a component's tab, it is shown there.
-					if (m.dialog.kind === 'changes') setTab('design-system');
-				}
-			}),
-		[],
-	);
 	useEffect(() => {
 		const stop = askOnce(
 			() => workspace().signInState(),
@@ -71,12 +57,21 @@ export const Panel = () => {
 	const login = account.state === 'signedIn' ? account.user.login : null;
 	// Read once what is open is known, a product or none (with none, everyone's projects are listed: the workspace README's "Projects, by product").
 	const read = useWorkspace(() => workspace().listProjects(), [context?.product ?? null, login], { enabled: context !== null });
-	// Told the projects changed: read again, keeping what is shown until the new is there (a comment made in a review
-	// is a number on its project, without the list giving way to a line saying it is reading).
+	// Told the projects changed, they are read again, keeping what is shown until the new is there (a comment made in a
+	// review is a number on its project, without the list giving way to a line saying it is reading).
 	const { reload } = read;
-	useEffect(() => {
-		if (changes > 0) reload();
-	}, [changes, reload]);
+	useEffect(
+		() =>
+			onHost((m) => {
+				if (m.type === 'projects-changed') reload();
+				if (m.type === 'open-dialog') {
+					setDialog(m.dialog);
+					// Every change being tried is the Design System tab's: asked for from a component's tab, it is shown there.
+					if (m.dialog.kind === 'changes') setTab('design-system');
+				}
+			}),
+		[reload],
+	);
 	// With the list read: pictures for the prototypes built here that have none current, taken in once made;
 	// the newest first, so a picture drawn again is the one shown.
 	const [made, setMade] = useState<MadeCover[]>([]);
@@ -165,7 +160,7 @@ export const Panel = () => {
 				projects={projects}
 				root={context?.product ?? null}
 				account={account}
-				onChanged={() => setChanges((n) => n + 1)}
+				onChanged={reload}
 				onClose={() => setDialog(null)}
 			/>
 		</>

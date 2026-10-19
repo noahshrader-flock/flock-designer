@@ -7,13 +7,12 @@ import { saidValue, valueTitle } from '../../src/shared/valueNames';
 import { type HandOverControls, useHandOver } from './hooks/useHandOver';
 import { useChangeBranch } from './hooks/useChangeBranch';
 import { useValueSources } from './hooks/useValueSources';
-import { BranchActions } from './Changed';
+import { BranchActions, ChangesGroup } from './Changed';
 import { ReachView } from './ChangeReach';
 import type { Trying } from './ComponentValues';
-import { ChangeRow, ValueList } from '../../src/ui/ValueItem';
+import { ChangeRow } from '../../src/ui/ValueItem';
 import { LinkButton } from '../../src/ui/LinkButton';
 import { Message } from '../../src/ui/Message';
-import { Heading } from '../../src/ui/Heading';
 import { asks } from './host';
 
 /**
@@ -151,33 +150,28 @@ export const ChangedValues = ({
 	const savable = tried.length === 0 ? controls.branch !== null : sources.state === 'ready' && sources.values.every((v) => v.state === 'found');
 	return (
 		<>
-			<section aria-label={name ? `Value changes · ${name}` : 'Value changes'} data-value-changes className="changed">
-				<div className="changed-header">
-					<Heading size="set">
-						{name ?? 'Styles'} <span className="section-count">{tried.length}</span>
-					</Heading>
-					{tried.length > 0 && <LinkButton onPress={() => trying.onAll([])}>Reset all</LinkButton>}
-				</div>
-				{tried.length === 0 ? (
-					<Message>Every value is as the library draws it.</Message>
-				) : (
-					<ValueList>
-						{tried.map((t) => {
-							const cell = cellFor(rows, t);
-							return (
-								<ChangeRow
-									key={triedId(t)}
-									marks={{ 'data-value-change': triedId(t) }}
-									name={valueTitle(t.property, cell?.variant ?? null)}
-									from={cell ? saidValue(t.property, cell.value) : ''}
-									to={t.follows === undefined ? saidValue(t.property, t.value) : `follows ${tokenName(t.follows)}`}
-									under={<Said source={sources.state === 'failed' ? undefined : sourceOf(t)} onWrite={() => trying.onWrite(t)} />}
-									onReset={() => trying.onTry(triedId(t), null)}
-								/>
-							);
-						})}
-					</ValueList>
-				)}
+			<ChangesGroup
+				label={name ? `Value changes · ${name}` : 'Value changes'}
+				title={name ?? 'Styles'}
+				count={tried.length}
+				onResetAll={() => trying.onAll([])}
+				empty="Every value is as the library draws it."
+				marks={{ 'data-value-changes': '' }}
+				rows={tried.map((t) => {
+					const cell = cellFor(rows, t);
+					return (
+						<ChangeRow
+							key={triedId(t)}
+							marks={{ 'data-value-change': triedId(t) }}
+							name={valueTitle(t.property, cell?.variant ?? null)}
+							from={cell ? saidValue(t.property, cell.value) : ''}
+							to={t.follows === undefined ? saidValue(t.property, t.value) : `follows ${tokenName(t.follows)}`}
+							under={<Said source={sources.state === 'failed' ? undefined : sourceOf(t)} onWrite={() => trying.onWrite(t)} />}
+							onReset={() => trying.onTry(triedId(t), null)}
+						/>
+					);
+				})}
+			>
 				{tried.length > 0 && handOver.branch === null && (
 					<Message>
 						{savable
@@ -193,7 +187,7 @@ export const ChangedValues = ({
 				) : (
 					<BranchActions controls={controls} handOver={handOver} canSave={savable} />
 				)}
-			</section>
+			</ChangesGroup>
 			{sources.state === 'failed' && (
 				<Message size="block" tone="warning" title="Where its values are written could not be found">
 					{sources.error}
