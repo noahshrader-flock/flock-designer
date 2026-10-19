@@ -8,20 +8,15 @@ import { isCommit } from './sha';
 import { isPrototypeName } from './prototypeNames';
 
 /**
- * Two copies of one project's `work.json`, made on different machines, as one: git's line merge calls two people recording
- * versions a conflict, so records are joined by name and their fields combined, losing nothing either side knew. Null if
- * either side is not a list of records, so the caller can say so rather than write something guessed.
+ * git's line merge calls two people recording versions a conflict, so `work.json` records are joined by name and their
+ * fields combined; null if either side is unreadable, so the caller can say so rather than write something guessed.
  */
 
 type Rec = Record<string, unknown>;
 
-/** A record's name: a version of the prototype, `v2`, or `codebase`. A file with any other (`v1-i1`) is refused whole. */
+/** A file with any other name (`v1-i1`) is refused whole. */
 const isWorkName = (v: unknown): boolean => typeof v === 'string' && (v === 'codebase' || isPrototypeName(v));
 
-/**
- * A project's `work.json` as written: a list of records, each with a name (`isWorkName`) and a branch, or null when it is
- * anything else. The one place the file is judged, so everything that reads it agrees on what a readable one is.
- */
 const rawRecords = (text: string): Rec[] | null => {
 	try {
 		const value: unknown = JSON.parse(text);
@@ -42,9 +37,8 @@ const basedOnOf = (v: unknown): Work['basedOn'] | undefined => {
 };
 
 /**
- * One record, checked: each field the app knows is what it should be, or left out (an address a page will be sent to, a
- * picture's name, a link), never trusted because a file said so. What it does not know is kept, so a list read and
- * written back never loses what a newer version wrote.
+ * Each known field is checked or left out, never trusted because a file said so; unknown fields are kept, so a list read
+ * and written back never loses what a newer version wrote.
  */
 const KNOWN = [
 	'projectId',
@@ -93,13 +87,10 @@ const checked = (r: Rec): Work => {
 
 export const parseWork = (text: string): Work[] | null => rawRecords(text)?.map(checked) ?? null;
 
-/** What is said of a records file that cannot be read: it is refused, never written over or guessed at. */
 export const unreadableWork = (path: string): string => `${path} is not a readable list of records, so it was left as it is.`;
 
-/** The file as written, the one way: two-space JSON, ending in a newline. */
 export const serializeWork = (records: readonly unknown[]): string => `${JSON.stringify(records, null, 2)}\n`;
 
-/** A record as the window shows it, with its review thread when it has one. */
 export const toProjectWork = (r: Work, thread?: { number: number; openComments: number }): ProjectWork => ({
 	name: r.name,
 	branch: r.branch,

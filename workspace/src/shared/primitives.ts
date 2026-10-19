@@ -1,45 +1,26 @@
 import type { DesignToken, TokenKind } from './contract';
 
 /**
- * The kinds of primitive DSNR knows, as data: the tokens panel's tabs, the readers' sorting and the Primitives page all read
- * it, so there is no second list. **A primitive is in the list only once a reader can read it,** so the page saying a
- * design system does not define one is always something DSNR looked for.
+ * A primitive is in the list only once a reader can read it, so the page saying a design system does not define one is
+ * always something DSNR looked for.
  */
 export interface Primitive {
-	/** Its name, as a tab and a section say it. */
 	category: string;
-	/** The kinds of value its tokens have: motion has two, a duration and an easing. */
 	kinds: readonly TokenKind[];
-	/**
-	 * For a kind several primitives share (a length is spacing, a radius, a border or a breakpoint), the words in a token's
-	 * name that say which.
-	 */
+	/** For a kind several primitives share (a length), the words in a token's name that say which. */
 	named?: RegExp;
-	/**
-	 * How the Primitives page draws it: colors as swatches, spacing as bars as long as each step, a radius as a corner of its
-	 * size, a shadow on a box it raises, typography as a specimen, and the rest (or a category the vocabulary does not know)
-	 * as a plain table of names and values.
-	 */
 	drawn: 'swatches' | 'bars' | 'corners' | 'specimens' | 'shadows' | 'table';
-	/**
-	 * Whether a token of it can be changed in the app (`isEditable`): the colors and lengths the side panel's controls, the
-	 * writers and the tagging pass are made for. A breakpoint is a length too, and is only shown.
-	 */
+	/** A breakpoint is a length too, and is only shown. */
 	editable?: true;
-	/**
-	 * For a primitive made of parts (typography: a family, a size, a weight, a line height; motion: a duration, an easing), each
-	 * part's name, as its tokens' group says it: a design system that defines some is shown to lack the rest (`missingParts`).
-	 */
+	/** As its tokens' group says each: a design system that defines some is shown to lack the rest. */
 	parts?: readonly string[];
 }
 
-/** Typography's parts, as a typography token's group names them: the one spelling the readers and the page share. */
+/** The one spelling the readers and the page share. */
 export const TYPE_PARTS = { family: 'Family', size: 'Size', weight: 'Weight', lineHeight: 'Line height' } as const;
-/** Motion's parts, as a motion token's group names them. */
 export const MOTION_PARTS = { duration: 'Duration', easing: 'Easing' } as const;
-/** The group every shadow is in: elevation has no parts, so its readers share this one name. */
 export const SHADOWS = 'Shadows';
-/** Each part by the key MUI's theme and the design token standard both write it under. */
+/** The keys MUI's theme and the design token standard both write each part under. */
 export const TYPE_KEYS: Record<string, string> = {
 	fontFamily: TYPE_PARTS.family,
 	fontSize: TYPE_PARTS.size,
@@ -47,7 +28,7 @@ export const TYPE_KEYS: Record<string, string> = {
 	lineHeight: TYPE_PARTS.lineHeight,
 };
 
-/** In the order they are shown, which is also the order a token is matched in: the first that fits is the one. */
+/** Also the order a token is matched in: the first that fits is the one. */
 export const PRIMITIVES: readonly Primitive[] = [
 	{ category: 'Color', kinds: ['color'], drawn: 'swatches', editable: true },
 	{ category: 'Typography', kinds: ['font'], drawn: 'specimens', parts: Object.values(TYPE_PARTS) },
@@ -60,14 +41,10 @@ export const PRIMITIVES: readonly Primitive[] = [
 	{ category: 'Motion', kinds: ['duration', 'easing'], drawn: 'table', parts: Object.values(MOTION_PARTS) },
 ];
 
-/**
- * Which primitive a token is, from its kind and its name; `null` for one the vocabulary has no place for (a width, a kind no
- * primitive is), which is left out rather than placed by guess.
- */
+/** `null` for one the vocabulary has no place for (a width), which is left out rather than placed by guess. */
 export const primitiveOf = (kind: TokenKind, name: string): string | null =>
 	PRIMITIVES.find((p) => p.kinds.includes(kind) && (p.named === undefined || p.named.test(name)))?.category ?? null;
 
-/** Things (tokens, mostly) in the order they came, by `key`, keeping the first-seen order of the keys. */
 export const inOrder = <K extends string, T = DesignToken>(items: T[], key: (item: T) => K): [K, T[]][] => {
 	const by = new Map<K, T[]>();
 	for (const item of items) {
@@ -78,48 +55,32 @@ export const inOrder = <K extends string, T = DesignToken>(items: T[], key: (ite
 	return [...by];
 };
 
-/**
- * Tokens by primitive, in the vocabulary's order: what a screen that shows them by category draws. A category the vocabulary
- * does not know comes after, in the order it first came.
- */
+/** A category the vocabulary does not know comes after, in the order it first came. */
 export const byPrimitive = (tokens: DesignToken[]): [string, DesignToken[]][] => {
 	const rank = (category: string) => {
 		const i = PRIMITIVES.findIndex((p) => p.category === category);
 		return i === -1 ? PRIMITIVES.length : i;
 	};
-	// A stable sort: categories of one rank (those the vocabulary does not know) keep the order they came in.
 	return inOrder(tokens, (t) => t.category).sort(([a], [b]) => rank(a) - rank(b));
 };
 
-/** The primitive a category is, if it is one of the vocabulary's. */
 export const primitiveNamed = (category: string): Primitive | undefined => PRIMITIVES.find((p) => p.category === category);
 
-/** How the vocabulary draws a category (`swatches` for Color), or undefined for one it does not know. */
 export const drawnAs = (category: string): Primitive['drawn'] | undefined => primitiveNamed(category)?.drawn;
 
-/** Whether some tokens have a primitive drawn in the design system's own preview (a type specimen): only then is it built. */
+/** A specimen is drawn in the design system's own preview, which is built only then. */
 export const drawsSpecimens = (tokens: DesignToken[]): boolean => tokens.some((t) => drawnAs(t.category) === 'specimens');
 
-/**
- * Whether a token can be changed in the app: a color or a length of a primitive the vocabulary says is changed here (Color,
- * Spacing, Shape), which the controls, the writers and the tagging pass are made for. Every other token is shown and never
- * edited, written or tagged: a font, a shadow, a breakpoint (a length that is only shown), one of a category it does not know.
- */
+/** Every other token is shown and never edited, written or tagged. */
 export const isEditable = (token: Pick<DesignToken, 'kind' | 'category'>): boolean =>
 	(token.kind === 'color' || token.kind === 'dimension') && PRIMITIVES.find((p) => p.category === token.category)?.editable === true;
 
-/** The parts of a primitive its tokens leave out, in the vocabulary's order: none for one that is not made of parts. */
 export const missingParts = (primitive: Primitive, tokens: DesignToken[]): string[] =>
 	(primitive.parts ?? []).filter((part) => !tokens.some((t) => t.group === part));
 
-/** Words as a list a person reads: "theme files, CSS variables and design token files". */
 export const listed = (words: string[]): string => (words.length < 2 ? (words[0] ?? '') : `${words.slice(0, -1).join(', ')} and ${words.at(-1)}`);
 
-/**
- * What a design system has of the vocabulary, as the Primitives tab says it at its top and its end: a chip for each
- * primitive in order (its token count, the parts it has, or that it is not defined), then one for each category the
- * vocabulary does not know; and each primitive or part it leaves out. `found` is its tokens by primitive (`byPrimitive`).
- */
+/** `found` is the tokens by primitive (`byPrimitive`). */
 export const coverageOf = (
 	found: [string, DesignToken[]][],
 ): { chips: { key: string; defined: boolean; words: string }[]; missing: { key: string; said: string }[] } => {

@@ -1,13 +1,8 @@
 import { type Criterion, requiredAt, understanding, type WcagLevel, type WcagTarget, type WcagVersion } from './wcag';
 
-/**
- * WCAG 2.2's Level A and AA success criteria as a matrix, held here once: each one's number, name, level and version, so a
- * measure of it can be said to be at a product's target or above (`requiredAt`); what only a person can judge (`person`);
- * and when the manual list must carry it (`manual`). 4.1.1 Parsing is not here: WCAG 2.2 took it out.
- */
-/** When the manual list must carry a criterion, as the matrix's last column says it. */
+/** 4.1.1 Parsing is not in the matrix: WCAG 2.2 took it out. */
 export interface ManualMark {
-	/** Assistive technology is the only real answer (with what, when it says: "voice control"). */
+	/** Only assistive technology can tell; `with` names which ("voice control") when the matrix says. */
 	at: boolean;
 	with: string | null;
 	/** Only when the work has this ("video", "a time limit exists"). */
@@ -138,12 +133,11 @@ export const CRITERIA: MatrixRow[] = [
 	row('4.1.3', 'Status Messages', 'AA', '2.1', 'status-messages', 'message is worth announcing', 'AT'),
 ];
 
-/** A criterion by its number; throws for one that is not in the matrix, so a cell can never name one that does not exist. */
+/** Throws for one not in the matrix, so a cell can never name one that does not exist. */
 export const wcagCriterion = (sc: string): MatrixRow => {
 	const found = CRITERIA.find((c) => c.sc === sc);
 	if (!found) throw new Error(`WCAG ${sc} is not a Level A or AA criterion of WCAG 2.2.`);
 	return found;
 };
 
-/** Whether a product's target asks for a criterion, by its number. */
 export const atTarget = (sc: string, target: WcagTarget): boolean => requiredAt(wcagCriterion(sc), target);

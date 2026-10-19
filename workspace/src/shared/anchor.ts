@@ -3,30 +3,20 @@ import { isPrototypeName } from './prototypeNames';
 import { isTheme } from './prototypeTheme';
 import { COMMIT_PATTERN, isCommit } from './sha';
 
-/**
- * Where a comment points, carried inside the comment itself: a GitHub issue comment, so the anchor rides in a hidden HTML
- * comment, invisible on GitHub (which shows a plain "On /route · selector" line instead) and read back here. No second
- * store, no schema to migrate.
- */
+/** The anchor rides in a hidden HTML comment inside the GitHub comment itself: no second store, no schema to migrate. */
 
 const MARK = /<!--\s*fd-anchor:\s*(\{[\s\S]*?\})\s*-->/;
 const PICTURE_MARK = /<!--\s*fd-picture:\s*(\S+)\s*-->/;
-/** A page's fingerprint, as a comment carries it: twelve lower-case hex digits, nothing else. */
 const PAGE = /^[0-9a-f]{12}$/;
-/** A small JPEG as a data URL. The size cap is generous for what is made (about 12 KB), and bounds what a hand-written comment can carry. */
+/** The cap is generous for what is made (about 12 KB), and bounds what a hand-written comment can carry. */
 const PICTURE = /^data:image\/jpeg;base64,[A-Za-z0-9+/]{1,24000}={0,2}$/;
 
-/** A picture from anywhere that did not come from this code, or null. Only a small JPEG data URL passes. */
 export const sanitizePicture = (v: unknown): string | null => (typeof v === 'string' && PICTURE.test(v) ? v : null);
 const clip = (v: unknown, max: number): string => (typeof v === 'string' ? v.slice(0, max) : '');
 const int = (v: unknown): number => (Number.isFinite(v) ? Math.max(0, Math.min(100_000, Math.round(v as number))) : 0);
 const unit = (v: unknown): number => (Number.isFinite(v) ? Math.max(0, Math.min(1, v as number)) : 0);
 
-/**
- * Validates an anchor from anywhere it did not come from this code: a preview
- * page's reply, or a comment someone else wrote. Lengths are capped and shapes
- * forced, so a page cannot smuggle an arbitrary payload into a shared repo.
- */
+/** Lengths are capped and shapes forced, so a page or a hand-written comment cannot smuggle a payload into a shared repo. */
 export const sanitizeAnchor = (v: unknown): CommentAnchor | null => {
 	if (typeof v !== 'object' || v === null) return null;
 	const r = v as Record<string, unknown>;
@@ -66,7 +56,6 @@ export const sanitizeAnchor = (v: unknown): CommentAnchor | null => {
 	};
 };
 
-/** Comment text, then a readable line, the hidden anchor and, if there is one, the hidden picture. */
 export const composeBody = (text: string, anchor: CommentAnchor | null, picture: string | null = null): string => {
 	if (!anchor) return text;
 	// `<` and `>` are escaped so the JSON can never close its own comment.
@@ -78,32 +67,28 @@ export const composeBody = (text: string, anchor: CommentAnchor | null, picture:
 
 export const parsePicture = (body: string): string | null => sanitizePicture(PICTURE_MARK.exec(body)?.[1]);
 
-/** Marks the body of a resolved comment. Simple, and visible to someone reading on GitHub. */
 export const RESOLVED_MARK = '<!-- resolved -->';
 
 export const isResolved = (body: string): boolean => body.includes(RESOLVED_MARK);
 
-/** The body with the resolved marker set or cleared, and nothing else touched. */
 export const withResolved = (body: string, resolved: boolean): string => {
 	const bare = body.replace(RESOLVED_MARK, '').trimEnd();
 	return resolved ? `${bare}\n${RESOLVED_MARK}` : bare;
 };
 
 /**
- * Marks a comment the agent has acted on, with the commit it made. The comment is resolved with it (`setAddressed`), so
- * the mark is what says what was done, and where; one addressed but still open is shown as it is. Kept in the body like
- * the resolved mark; on a prototype it also names the version the change is in, which may not be the one commented on.
+ * The comment is resolved with it too, so this mark is what says what was done and where. On a prototype it names the
+ * version the change is in, which may not be the one commented on.
  */
 const ADDRESSED = new RegExp(`<!-- fd-addressed: (${COMMIT_PATTERN})(?: in ([\\w-]{1,20}))? -->`);
 
 export const addressedAt = (body: string): string | null => ADDRESSED.exec(body)?.[1] ?? null;
-/** The prototype version the change was made in, when the mark names one. */
 export const addressedIn = (body: string): string | null => {
 	const name = ADDRESSED.exec(body)?.[2] ?? null;
 	return name !== null && isPrototypeName(name) ? name : null;
 };
 
-/** The body marked as addressed at `commit` (and, on a prototype, in `version`), or with the mark cleared when it is null. */
+/** A null `commit` clears the mark. */
 export const withAddressed = (body: string, commit: string | null, version: string | null = null): string => {
 	const bare = body.replace(ADDRESSED, '').trimEnd();
 	// Only ever a real commit, and a real version's name: these are read back out and shown on the card.
@@ -121,7 +106,7 @@ export const parseAnchor = (body: string): CommentAnchor | null => {
 	}
 };
 
-/** The comment as a person wrote it: without the anchor, and without the "On /route" line that goes with it. */
+/** Also drops the "On /route" line that goes with the anchor. */
 export const stripAnchor = (body: string): string =>
 	MARK.test(body)
 		? body

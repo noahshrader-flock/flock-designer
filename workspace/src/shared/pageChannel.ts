@@ -1,12 +1,10 @@
 import { hasExactly } from './validate';
 
 /**
- * How the review bar and a prototype's page talk (the README's Review isolation): by messages, so the bar never reaches
- * into the page, which can be served from another address. The bar asks (`PageAsk`); the page's agent (`src/page/agent.ts`)
- * answers by id and tells (`PageTell`) with the bar's hello secret. A page is untrusted: each side reads only exact shapes.
+ * The bar never reaches into the page, which can be served from another address. A page is untrusted: each side reads
+ * only exact shapes, and the page tells only with the bar's hello secret.
  */
 
-/** What the bar asks: say hello (with its secret), pick a spot, cancel the pick, draw the pins, focus one, say the route. */
 export const PAGE_CALLS = ['hello', 'pick', 'cancel-pick', 'draw-pins', 'focus'] as const;
 export type PageCall = (typeof PAGE_CALLS)[number];
 
@@ -18,20 +16,18 @@ export interface PageAsk {
 	args: unknown[];
 }
 
-/** What the page says: it is ready (and its route), its route moved, an answer to an ask, a pin's report. */
 export type PageTell =
 	| { dsnr: 'page-ready'; n: string; route: string }
 	| { dsnr: 'page-route'; n: string; route: string }
 	| { dsnr: 'page-answer'; n: string; id: number; value: unknown }
 	| { dsnr: 'page-pin'; n: string; text: string };
 
-/** The longest a secret, a route and a pin's report may be: more is not what the bar or the page code would send. */
+/** More is not what the bar or the page code would send. */
 const MOST = { nonce: 200, route: 2000, pin: 20_000 };
 const CALLS = new Set<string>(PAGE_CALLS);
 
 const text = (v: unknown, most: number): v is string => typeof v === 'string' && v.length <= most;
 
-/** An ask, read as the page's agent takes it, or null. A hello carries the bar's secret. */
 export const readPageAsk = (raw: unknown): PageAsk | null => {
 	if (typeof raw !== 'object' || raw === null) return null;
 	const m = raw as Record<string, unknown>;
@@ -41,7 +37,6 @@ export const readPageAsk = (raw: unknown): PageAsk | null => {
 	return { dsnr: 'page-ask', id: m.id as number, call: m.call as PageCall, args: m.args };
 };
 
-/** What the page said, read as the bar takes it: only with the secret it was given (`nonce`), or null. */
 export const readPageTell = (raw: unknown, nonce: string): PageTell | null => {
 	if (typeof raw !== 'object' || raw === null) return null;
 	const m = raw as Record<string, unknown>;

@@ -1,14 +1,9 @@
-/** A repository the person opened, and a command running in it. */
-
-/** A repository the designer has opened. */
 export interface Checkout {
-	/** Absolute path to the repository root. */
+	/** Absolute. */
 	root: string;
-	/** Directory name, for display. */
 	name: string;
 	/** Current branch, or null on a detached HEAD. */
 	branch: string | null;
-	/** True when the working tree has no uncommitted changes. */
 	clean: boolean;
 }
 
@@ -19,7 +14,6 @@ export type PreviewStatus =
 	| { state: 'running'; commandId: string; url: string; projectId: string | null }
 	| { state: 'failed'; commandId: string; detail: string };
 
-/** A line of output from a running command, for the log surface. */
 export interface RunLogLine {
 	commandId: string;
 	stream: 'stdout' | 'stderr';

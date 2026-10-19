@@ -1,9 +1,4 @@
-/** What an accessibility check found. */
-
-/**
- * An element an issue was found on, as axe names it: its selector, its HTML (cut short), what
- * axe says to change, and the state it was found in. What lets an agent, or anyone, find it and fix it.
- */
+/** As axe names it: `html` is cut short, `fix` is what axe says to change. */
 export interface AccessibilityElement {
 	target: string;
 	html: string;
@@ -11,11 +6,7 @@ export interface AccessibilityElement {
 	state: string;
 }
 
-/**
- * One kind of problem an accessibility check found: the axe rule, what it asks, how serious axe says it is, the WCAG
- * success criteria it checks (as "1.4.3"), on how many elements, where to read about it, in which of a page's states, and
- * the first few of its elements (`MOST_ELEMENTS`), each with what to change.
- */
+/** `criteria` are WCAG success criteria as "1.4.3"; `nodes` counts every element, `elements` holds only the first few. */
 export interface AccessibilityIssue {
 	rule: string;
 	help: string;
@@ -28,9 +19,8 @@ export interface AccessibilityIssue {
 }
 
 /**
- * What an accessibility check found, and what it was made with. `violations` are to fix; `incomplete`, flagged for a closer
- * look, is for the agent's task and the ledger, not the panel; `notAutomated` is left to check by hand; `bestPractice` is
- * axe's best-practice findings, said apart and never counted as WCAG. Never a pass: what is left is said beside it.
+ * `incomplete` is for the agent's task and the ledger, not the panel; `bestPractice` is never counted as WCAG. Never a
+ * pass: what is left to check by hand is said beside it.
  */
 export interface AccessibilityResult {
 	ran: { axe: string; tags: string[]; target: string; declared: boolean; at: string; states: string[] };
@@ -40,13 +30,11 @@ export interface AccessibilityResult {
 	notAutomated: string[];
 }
 
-/** What a check found: the issues axe found, and the ones it flagged for a closer look. */
 export interface AccessibilityFindings {
 	violations: AccessibilityIssue[];
 	incomplete: AccessibilityIssue[];
 }
 
-/** How many of each a check found, as a card says it. */
 export interface AccessibilityCounts {
 	violations: number;
 	incomplete: number;

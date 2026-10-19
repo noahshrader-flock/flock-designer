@@ -1,7 +1,4 @@
-/**
- * Where work handed to Claude Code went, said the same way for any hand-over, in the extension and in its pages: `what` is
- * what was handed, as a sentence starts it ("Alert history").
- */
+/** `what` is what was handed, as a sentence starts it ("Alert history"). */
 export const handedTo = ({ editor }: { editor: boolean }, what: string): string =>
 	editor
 		? `${what} is in Claude Code in this window now: a new conversation there has the task typed in. Press Enter there to start it.`

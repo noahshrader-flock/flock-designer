@@ -2,32 +2,24 @@ import type { Theme } from '../prototypeTheme';
 import type { DeclaredTarget } from '../wcag';
 import type { AccessibilityCounts, AccessibilityResult } from './accessibility';
 
-/** A design system: the ones connected, their components, their tokens and a change to them. */
-
-/**
- * A design system the person connected: a repository, the folder in it the design system
- * is (`''` for the whole repository), and the branch read, its default.
- */
+/** `folder` is `''` for the whole repository; `branch` is its default. */
 export interface ConnectedDesignSystem {
-	/** Its repository, and in a monorepo `:folder`: what the switcher and Remove name it by. */
+	/** Its repository, and in a monorepo `:folder`. */
 	id: string;
-	/** What it is called: its Storybook's brand title, else its package's name, else the repository's. */
+	/** Its Storybook's brand title, else its package's name, else the repository's. */
 	name: string;
-	/** `owner/repo` on GitHub. */
 	repository: string;
-	/** Its clone on this computer. */
 	root: string;
 	folder: string;
 	branch: string;
 }
 
-/** The design systems connected, and the one shown (its `id`, or null when none is). */
+/** `current` is the shown one's `id`, or null when none is. */
 export interface ConnectedDesignSystems {
 	systems: ConnectedDesignSystem[];
 	current: string | null;
 }
 
-/** A place in a repository a design system is: its folder, what it has, and what it is called. */
 export interface FoundDesignSystem {
 	folder: string;
 	components: number;
@@ -35,57 +27,37 @@ export interface FoundDesignSystem {
 	name: string;
 }
 
-/**
- * What a token's value is, which says how it is drawn: a color, a length, a font, a shadow, a duration, an easing curve, or a
- * plain number. Only the colors and lengths of Color, Spacing and Shape can be changed in the app (`isEditable`); the rest
- * are shown.
- */
 export type TokenKind = 'color' | 'dimension' | 'font' | 'shadow' | 'duration' | 'easing' | 'number';
 
-/**
- * A design token the library has, as read from its own files: what the Design System tab
- * shows, and what a change names (by `path`).
- */
+/** A change names it by `path`. */
 export interface DesignToken {
-	/** Its identity: `tone.pineGreen.50`, `palette.light.primary.main`, `spacing`, `radius`. */
 	path: string;
 	kind: TokenKind;
-	/** Its tab in the tokens panel: `Color`, `Spacing`, `Shape`. A category the reader adds is a tab with no other change. */
+	/** A category the reader adds is a tab with no other change. */
 	category: string;
-	/** Where it is shown within its tab: `Tones`, `Light`, `Dark`, `Spacing`, `Radius`. */
 	group: string;
-	/** Its family or role (`pineGreen`, `primary`), and its step or variant (`50`, `main`). */
 	set: string;
 	name: string;
-	/** A color as a hex (eight digits when it has an opacity), a dimension with its unit (`8px`). */
+	/** A color as a hex (eight digits when it has an opacity), a dimension with its unit. */
 	value: string;
-	/**
-	 * The token it points at, when it is written as a pointer (a palette role's `pineGreen[50]`, a CSS `var(--ring)`, a
-	 * token file's `{color.red.500}`), by that token's `path`, and the opacity written after it. Its `value` is then the
-	 * pointed-at token's, with the opacity.
-	 */
+	/** When written as a pointer, its `value` is then the pointed-at token's, with the opacity written after it. */
 	ref?: { path: string; alpha?: string };
 	/**
-	 * The library's file and line it is read from. One a package declares, which a library's stylesheet imports,
-	 * is read from that `@import`, and `from` says where the package declares it and in which rule (`:root`): a change to
-	 * it is declared again in the library's stylesheet, in a rule of that kind.
+	 * For a token a package declares, this is the library's `@import` and `from` is where the package declares it; a
+	 * change is declared again in the library's stylesheet, in a rule of `from.rule`'s kind.
 	 */
 	source: { file: string; line: number; from?: { file: string; line: number; rule: string } };
 }
 
-/**
- * What a token is changed to: pointed at another token (`ref`, its path, which keeps the link), or given
- * a value of its own (`value`: a color as a hex, a dimension with its unit), which replaces any pointer.
- */
+/** `ref` keeps the link to another token by its path; `value` replaces any pointer. */
 export type TokenChange = { ref: string } | { value: string };
 
-/** One token changed. A change is a list of these, one per token, and nothing else. */
+/** A change is a list of these, one per token, and nothing else. */
 export type TokenEdit = { path: string } & TokenChange;
 
 /**
- * Which tokens a component draws with, found by drawing every story with every token tagged: each token and how often,
- * the values it sets itself, how many colors are worked out from a token (a hover's darker shade), and the other story
- * files using each token (`sharedWith`). `building` the first time for a commit, while every story is drawn.
+ * Found by drawing every story with every token tagged; `building` the first time for a commit. `derived` counts colors
+ * worked out from a token (a hover's darker shade).
  */
 export type ComponentTokens =
 	| { state: 'building' }
@@ -96,17 +68,12 @@ export type ComponentTokens =
 			sharedWith: Record<string, string[]>;
 			notTokens: { kind: 'color' | 'radius' | 'spacing'; value: string; uses: number }[];
 			derived: number;
-			/** What axe found in its stories, at the design system's target; null when it could not be checked. */
+			/** Null when it could not be checked. */
 			accessibility: AccessibilityResult | null;
-			/** Its drawn values, by variant. */
 			values: ComponentValues;
 	  };
 
-/**
- * The components that draw with one token, from the same drawings as each component's tokens: each by its story file, how
- * often its stories draw the token (inner parts too), and how many of its values are that token (its Values name it), most
- * values first. `building` while every story is drawn, the first time for a commit.
- */
+/** `uses` counts inner parts too; `values` is how many of its Values are that token. Most values first. */
 export interface TokenUser {
 	file: string;
 	uses: number;
@@ -114,44 +81,34 @@ export interface TokenUser {
 }
 export type TokenUsers = { state: 'building' } | { state: 'failed'; error: string } | { state: 'ready'; users: TokenUser[] };
 
-/** What is read of each instance a component's stories draw, in this order. */
+/** In this order. */
 export const VALUE_PROPERTIES = ['height', 'padding', 'radius', 'gap', 'fontSize', 'background', 'text', 'border'] as const;
 export type ValueProperty = (typeof VALUE_PROPERTIES)[number];
-/** The properties that are colours: read against the color tags, and shown with a swatch. */
 export const COLOR_VALUES: ReadonlySet<ValueProperty> = new Set(['background', 'text', 'border']);
 
 /**
- * What a drawn value is: a token's (`tokens` names it, or them for a value of several parts), the component's own,
- * worked out from a token (a hover's shade, a height that grows with a token's padding), partly a token (`tokens` names it)
- * and partly its own or worked out, or not checked (a kind of value no token is tagged for, such as a font size, or drawings that did not pair up).
+ * `derived`: worked out from a token (a hover's shade). `unchecked`: no token is tagged for its kind (a font size), or the
+ * drawings did not pair up.
  */
 export type ValueKind = 'token' | 'own' | 'derived' | 'mixed' | 'unchecked';
 
-/**
- * One value of a row: for one variant (`variant`, null when the row has one value for all), and how many instances draw it.
- * A colour that draws nothing (clear, or no border) is `none`.
- */
+/** `variant` is null when the row has one value for all. Clear, or no border, is `none`. */
 export interface ValueCell {
 	variant: string | null;
 	value: string;
 	kind: ValueKind;
 	tokens: string[];
 	instances: number;
-	/** The instances that draw it, by their keys: what a value tried in the preview is set on. */
+	/** Instance keys: what a value tried in the preview is set on. */
 	targets: string[];
 	/**
-	 * What it is drawn with, for each prop its row is told apart by (`by`): the prop's value, or null when it was drawn without
-	 * it; one for each case it stands for (a cell drawn alike with a prop false and without it stands for both). None for a row
-	 * told apart by no prop. What a picker of the variant shown is matched against (the inspector), beside the sentence.
+	 * One entry per case it stands for, each prop of the row's `by` to its value or null when drawn without it (a cell drawn
+	 * alike with a prop false and without it stands for both). None for a row told apart by no prop.
 	 */
 	of?: Record<string, string | null>[];
 }
 
-/**
- * What a token change being tried does to one component: each value of its instances it
- * changes, in a mode, said as the Values are ("Radius · sm 8px → 12px", with how many instances), and whether its stories
- * draw differently where its values do not reach (`inside`: an inner part, such as an input's outline).
- */
+/** `inside`: its stories draw differently where its values do not reach (an inner part, such as an input's outline). */
 export interface ValueChange {
 	mode: Theme;
 	property: ValueProperty;
@@ -167,9 +124,8 @@ export interface ComponentReach {
 }
 
 /**
- * What a token change being tried reaches, drawn on a build with the change, every story, light and dark, each
- * component against itself as the library has it: those that move, how many do not (in the stories drawn, never as a claim
- * about every use), and those that did not draw, of which nothing can be said. None while no token change is tried.
+ * Each component drawn against itself as the library has it, light and dark. `unchanged` is in the stories drawn, never a
+ * claim about every use; of `notDrawn` nothing can be said.
  */
 export type ChangeReach =
 	| { state: 'none' }
@@ -177,31 +133,26 @@ export type ChangeReach =
 	| { state: 'failed'; error: string }
 	| { state: 'ready'; moved: ComponentReach[]; unchanged: number; notDrawn: string[] };
 
-/**
- * A value tried on a component's instances in its stories: a property, the value as CSS
- * writes it, and the instances it is set on (a cell's `targets`). Tried in the preview alone: nothing is written or kept.
- */
+/** Tried in the preview alone: nothing is written or kept. `targets` are a cell's. */
 export interface TriedValue {
 	property: ValueProperty;
 	value: string;
 	targets: string[];
-	/** A token this value is to follow, by its path, drawn as it is now: written by the agent, never tried as another. */
+	/** A token's path, drawn as it is now: written by the agent, never tried as another. */
 	follows?: string;
 }
 
-/** A design prop a component declares: its name, and every value it can take, in the order its type lists them. */
+/** `values` in the order its type lists them. */
 export interface DeclaredProp {
 	name: string;
 	values: (string | number | boolean)[];
 }
 
-/** Why a declared prop cannot be varied: it takes an object, a callback, content, or free text or a number. */
 export type Unvaried = 'object' | 'callback' | 'content' | 'text' | 'number';
 
 /**
- * A component drawn in every case its props declare: its design props and values, its first story drawn once with each
- * (`values`); the props its story sets itself, so another value changes nothing (`fixed`); and those that cannot be
- * varied, with why. None when its stories name no component whose props can be read; building while it is drawn.
+ * `fixed`: props its story sets itself, so another value changes nothing. `none` when its stories name no component whose
+ * props can be read.
  */
 export type ComponentVariants =
 	| { state: 'building' }
@@ -209,11 +160,7 @@ export type ComponentVariants =
 	| { state: 'none' }
 	| { state: 'ready'; props: DeclaredProp[]; fixed: string[]; unvaried: { name: string; why: Unvaried }[]; values: ComponentValues };
 
-/**
- * A hand-over branch as DSNR reads it from git, against the base it was handed over on, for Propose to check: not there;
- * with nothing committed; made from another base (without the one recorded); or ready, with its commits, each file changed
- * (lines added and removed, and why it is out of bounds, if it is), the lines in all, and whether it is large.
- */
+/** Read from git against the base it was handed over on. `off-base`: made from another base. `out`: why a file is out of bounds. */
 export type BranchReview =
 	| { state: 'missing' }
 	| { state: 'empty' }
@@ -228,40 +175,34 @@ export type BranchReview =
 			large: boolean;
 	  };
 
-/** What one unit's change is when it is handed to Claude Code: the token edits being tried, or one component's values tried. */
 export type HandedChange = { edits: TokenEdit[] } | { tried: TriedValue[] };
 
-/** Where a unit was handed over: its branch, and Claude Code in this window (`editor`), or the command that starts it in a terminal. */
+/** `command` is for a terminal, when Claude Code is not in this window. */
 export interface HandedOver {
 	branch: string;
 	editor: boolean;
 	command: string | null;
 }
 
-/**
- * How many values a component's instances can be tried with at once, as the core takes them and the extension keeps them:
- * far beyond any tab's, short of anything that could hurt.
- */
+/** Far beyond any tab's, short of anything that could hurt. */
 export const MOST_TRIED = 50;
 
-/** What names a value tried: its property and the instances it is for, the same in light and in dark, in the tab and the core. */
+/** The same in light and in dark, in the tab and the core. */
 export const triedId = ({ property, targets }: { property: ValueProperty; targets: string[] }): string =>
 	`${property}\u0000${targets.join('\u0001')}`;
 
-/** The cell of a component's values a value tried is of: its property's, on the same instances, in whatever order. */
+/** The same instances, in whatever order. */
 export const cellFor = (rows: ValueRow[] | null | undefined, t: Pick<TriedValue, 'property' | 'targets'>): ValueCell | undefined => {
 	const targets = new Set(t.targets);
 	return rows?.find((r) => r.property === t.property)?.cells.find((c) => c.targets.length === targets.size && c.targets.every((k) => targets.has(k)));
 };
 
-/** Each value a component's rows draw, by what names it (`triedId`): how one mode's values are told from another's. */
 const drawnValues = (rows: ValueRow[]): Map<string, string> =>
 	new Map(rows.flatMap((r) => r.cells.map((c) => [triedId({ property: r.property, targets: c.targets }), c.value] as const)));
 
 /**
- * The mode a component's values are shown in: the one chosen, but dark only when its stories drew it and
- * it is not the same as light. A library DSNR cannot turn dark draws its light twice, so it is shown in light, and nothing
- * offers a dark that changes nothing.
+ * Dark only when its stories drew it and it is not the same as light: a library DSNR cannot turn dark draws its light
+ * twice, and nothing should offer a dark that changes nothing.
  */
 export const shownMode = (rows: Record<Theme, ValueRow[] | null>, chosen: Theme): Theme => {
 	if (chosen !== 'dark' || rows.dark === null) return 'light';
@@ -271,16 +212,13 @@ export const shownMode = (rows: Record<Theme, ValueRow[] | null>, chosen: Theme)
 	return dark.size !== light.size || [...dark].some(([id, value]) => light.get(id) !== value) ? 'dark' : 'light';
 };
 
-/** Whether two sets of values tried are the same change, whatever their order: each value, on the same instances. */
+/** Whatever their order. */
 export const sameTried = (a: TriedValue[], b: TriedValue[]): boolean => {
 	const by = (tried: TriedValue[]) => JSON.stringify(tried.map((t) => [triedId(t), t.value, t.follows ?? '']).sort());
 	return by(a) === by(b);
 };
 
-/**
- * A place in the library's source where a tried value is written, found by its effect:
- * the file and line, what is written there, and what saving it writes in its place.
- */
+/** Found by its effect. `writes` is what saving it writes in place of `written`. */
 export interface ValuePlace {
 	file: string;
 	line: number;
@@ -288,28 +226,19 @@ export interface ValuePlace {
 	writes: string;
 }
 
-/**
- * Where one tried value (`id`, `triedId`) is written: found where it is (`places`), or written by the agent (`by`, with what
- * it said of why); being written by the agent; or why it cannot be saved, in words, and, when the agent can write it, that
- * it can (`agent`: write it; follow the token).
- */
+/** `id` is a `triedId`. `said` is the agent's why; `agent` on a refusal says the agent can write it or follow the token. */
 export type ValueSource =
 	| { id: string; state: 'found'; places: ValuePlace[]; by?: 'agent'; said?: string }
 	| { id: string; state: 'writing' }
 	| { id: string; state: 'refused'; why: string; agent?: 'write' | 'follow' };
 
-/**
- * Where the values tried on a component's instances are written, found in the background as they are tried, newest only:
- * each value's places, or why it cannot be saved, and what writing every one found reaches, drawn as a change to the tokens
- * is, which is also how each is read back. None while nothing is tried.
- */
+/** Found in the background as values are tried, newest only. `reach` is drawn as a token change is. */
 export type ValueSources =
 	{ state: 'none' } | { state: 'building' } | { state: 'failed'; error: string } | { state: 'ready'; values: ValueSource[]; reach: ChangeReach };
 
 /**
- * One property's values across the instances drawn. `by` is the prop, or two props, that tell its values apart ("size"),
- * so each cell is one of its values; null when the row has one value, or when no prop explains the difference, in which
- * case each cell is one distinct value.
+ * `by` is the prop, or two props, that tell its values apart ("size"); null when the row has one value, or when no prop
+ * explains the difference, in which case each cell is one distinct value.
  */
 export interface ValueRow {
 	property: ValueProperty;
@@ -318,9 +247,8 @@ export interface ValueRow {
 }
 
 /**
- * A component's drawn values, on the top element of each instance of its stories' `component`. Or why none: no component
- * named; none on the page (`none-drawn`: a dialog opens elsewhere); each instance only `wraps` what it is given (a tooltip);
- * the stories did not draw; or reading failed. `rows` are null for a mode its stories did not draw.
+ * Read on the top element of each instance. `none-drawn`: a dialog opens elsewhere; `wraps`: each instance only wraps what
+ * it is given (a tooltip). `rows` are null for a mode its stories did not draw.
  */
 export type ComponentValues =
 	| { state: 'no-component' }
@@ -332,28 +260,20 @@ export type ComponentValues =
 			state: 'read';
 			instances: number;
 			rows: Record<Theme, ValueRow[] | null>;
-			/** How many of the design system's lengths no tag can be given (`em`, `%`): a length said to be its own may be one. */
+			/** Lengths no tag can be given (`em`, `%`): a length said to be its own may be one. */
 			unmarked: number;
-			/** How many pixels a rem is on the page drawn (16 unless the library sets another): what a token in rem is compared in. */
+			/** Pixels per rem on the page drawn: what a token in rem is compared in. */
 			rootPx?: number;
 	  };
 
-/**
- * The pictures of the shown design system's components, for the grid view: each component's picture by its story
- * file, an address on the app's local server, none for one without; and whether a pass that may replace them is drawing.
- */
+/** `pictures` by story file, as addresses on the app's local server; `drawing`: a pass that may replace them is running. */
 export interface ComponentPictures {
 	drawing: boolean;
 	pictures: Record<string, string>;
-	/** What each card says of its component's accessibility: how many issues to fix, and how many to review. */
 	issues: Record<string, AccessibilityCounts>;
 }
 
-/**
- * The kinds of change DSNR keeps on a branch of the library: a change to the tokens, a component's values written where
- * they are found, the voice and tone, and a unit handed to Claude Code, whose branch Claude Code makes. One model for all
- * of them (`changeBranches.ts`).
- */
+/** One model for all of them (`changeBranches.ts`); a hand-over's branch is made by Claude Code. */
 export interface ChangeKinds {
 	tokens: TokenEdit[];
 	values: TriedValue[];
@@ -361,21 +281,17 @@ export interface ChangeKinds {
 	handOver: HandedChange;
 }
 export type ChangeKind = keyof ChangeKinds;
-/** The kinds DSNR saves itself, a commit for each save; a hand-over's commits are Claude Code's. */
+/** A hand-over's commits are Claude Code's. */
 export type SavedKind = Exclude<ChangeKind, 'handOver'>;
 export const CHANGE_KINDS: readonly ChangeKind[] = ['tokens', 'values', 'voice', 'handOver'];
 
-/** The voice and tone as a save takes it: the text, and the file's blob it was opened at (null: there was none). */
+/** `against`: the file's blob it was opened at (null: there was none). */
 export interface VoiceText {
 	text: string;
 	against: string | null;
 }
 
-/**
- * A change kept on a branch of DSNR's: the branch, the change as last saved and in words (what its commits and pull request
- * say, a line for each part), how many saves, and its draft pull request, with Chromatic's build of it once the library's
- * CI has linked one.
- */
+/** `lines`: the change in words, as its commits and pull request say it. `chromatic` once the library's CI has linked one. */
 export interface ChangeBranch<C> {
 	branch: string;
 	saved: C;
@@ -384,19 +300,18 @@ export interface ChangeBranch<C> {
 	pullRequest: { number: number; url: string; chromatic: string | null } | null;
 }
 
-/** Each kind's branch as the window has it: a hand-over's with its branch as DSNR read it from git now. */
+/** A hand-over's carries its branch as DSNR read it from git now. */
 export type ChangeBranchOf<K extends ChangeKind> = K extends 'handOver'
 	? ChangeBranch<HandedChange> & { review: BranchReview }
 	: ChangeBranch<ChangeKinds[K]>;
 
-/** Something in the library's token files that is not read, with where it is. */
 export interface TokenProblem {
 	file: string;
 	line?: number;
 	reason: string;
 }
 
-/** The library's tokens, how they were found (`null`: no way found them), what was not read, and where it looked. */
+/** `source` null: no way found them. */
 export interface DesignTokens {
 	source: string | null;
 	tokens: DesignToken[];
@@ -404,54 +319,41 @@ export interface DesignTokens {
 	looked: string[];
 }
 
-/**
- * A component as the library's Storybook has it: one story file, named and grouped by its Storybook title. Storybook is
- * the source of truth for what is a component, so a component with no stories is not one here either.
- */
+/** Storybook is the source of truth for what is a component, so a component with no stories is not one here either. */
 export interface CatalogComponent {
-	/** The story file, from the library's root (`src/components/FSButton/FSButton.stories.tsx`): its identity. */
+	/** The story file's path from the library's root. */
 	id: string;
-	/** The last part of its Storybook title (`FSButton`), or the file's name when the title cannot be read. */
+	/** The last part of its Storybook title, or the file's name when the title cannot be read. */
 	name: string;
-	/** The first part of its Storybook title (`Buttons`); `Ungrouped` when there is none. */
+	/** The first part of its Storybook title; `Ungrouped` when there is none. */
 	group: string;
 	subtitle: string | null;
-	/** Its docs page on the hosted Storybook, or null without a title or a hosted Storybook. */
 	storybook: string | null;
-	/** Its folder on GitHub, on the branch the tab reads. */
 	source: string;
 }
 
-/** The previews of the library's stories, built from its branch. */
 export type StoryPreview =
-	/** Built: a story file's page is `base` with `?file=<its path>`. */
-	| { state: 'ready'; base: string }
-	/** The clone has no packages installed to build from. */
-	| { state: 'no-packages'; root: string }
-	| { state: 'failed'; error: string }
-	/** No library connected or found. */
-	| { state: 'no-library' };
+	/** A story file's page is `base` with `?file=<its path>`. */
+	{ state: 'ready'; base: string } | { state: 'no-packages'; root: string } | { state: 'failed'; error: string } | { state: 'no-library' };
 
-/** How the library's branch was brought up to date for this read. */
 export type CatalogUpdate =
-	/** A fetch is running; ask again with `refresh` for its outcome. */
+	/** Ask again with `refresh` for its outcome. */
 	| 'updating'
 	| 'updated'
 	| 'unchanged'
-	/** The fetch did not work, said in words; the list is what was already here. */
+	/** The list is what was already here. */
 	| { failed: string };
 
-/** The Design System tab's list: the component library as its branch has it on GitHub, or why there is none. */
 export type Catalog =
 	/**
-	 * `tokens`: the library's, read on the same commit (`DesignTokens`). `accessibility`: the target the design system
-	 * declares in its own `.dsnr/manifest.md`, on the same commit, or the default, informational.
+	 * `tokens` and `accessibility` (from the design system's own `.dsnr/manifest.md`, or the default) are read on the same
+	 * commit.
 	 */
 	| {
 			state: 'ready';
 			branch: string;
 			commit: string;
-			/** The branch handed to Claude Code whose tip `commit` is, shown in place of `branch` (Preview this branch); else null. */
+			/** The hand-over branch whose tip `commit` is, shown in place of `branch`; else null. */
 			showing: string | null;
 			committedAt: string;
 			update: CatalogUpdate;
@@ -459,9 +361,8 @@ export type Catalog =
 			tokens: DesignTokens;
 			accessibility: DeclaredTarget;
 	  }
-	/** No design system is connected. */
 	| { state: 'none' }
 	/** The one shown is connected, but its clone is not at `root`. */
 	| { state: 'lost'; name: string; root: string }
-	/** A clone with no copy of its design system's branch from GitHub to read. Another branch is never read instead. */
+	/** Another branch is never read instead. */
 	| { state: 'no-branch'; root: string; branch: string };

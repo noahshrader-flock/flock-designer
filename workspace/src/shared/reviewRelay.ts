@@ -2,11 +2,9 @@ import type { InvokeName, Result } from './contract';
 import { hasExactly } from './validate';
 
 /**
- * A prototype's review page, framed in DSNR's review tab in VS Code, comments through the extension's sign-in, not a token
- * of its own: page asks tab, tab asks extension. Only the core's calls by their contract names (checked where the core
- * answers) and the extension's two, signing in and Address, can be asked; each side reads the other in exactly its shape.
+ * A review page framed in VS Code comments through the extension's sign-in, not a token of its own. Only these calls can be
+ * asked, and each side reads the other in exactly its shape; one renamed or removed in the contract fails the build here.
  */
-/** The core's calls a review page makes, checked against the contract: one renamed or removed there fails the build here. */
 const REVIEW_CALLS = [
 	'signInState',
 	'readComments',
@@ -15,12 +13,10 @@ const REVIEW_CALLS = [
 	'resolveComment',
 	'deleteComment',
 ] as const satisfies readonly InvokeName[];
-/** The extension's own: signing in, and Address, which the extension runs as it runs one from its panel. */
 const EXTENSION_CALLS = ['signIn', 'address'] as const;
 export const RELAY_CALLS = [...REVIEW_CALLS, ...EXTENSION_CALLS] as const;
 export type RelayCall = (typeof RELAY_CALLS)[number];
 
-/** What the page asks: a call by its name, with its arguments, answered by its id. */
 export interface RelayAsk {
 	dsnr: 'ask';
 	id: number;
@@ -28,23 +24,19 @@ export interface RelayAsk {
 	args: unknown[];
 }
 
-/** The kinds of theme VS Code has, by the class it puts on a page's body. */
+/** By the class VS Code puts on a page's body. */
 export const THEME_KINDS = ['vscode-light', 'vscode-dark', 'vscode-high-contrast', 'vscode-high-contrast-light'] as const;
 export type ThemeKind = (typeof THEME_KINDS)[number];
 
-/** VS Code's theme, as a page in it has it: its kind, and its colours by their variables' names (`--vscode-foreground`). */
+/** Colours by their variables' names (`--vscode-foreground`). */
 export interface EditorTheme {
 	kind: ThemeKind;
 	colors: Record<string, string>;
 }
 
-/** Whether a theme of that kind is dark. */
 export const isDarkTheme = (kind: ThemeKind): boolean => kind === 'vscode-dark' || kind === 'vscode-high-contrast';
 
-/**
- * What the tab tells the page: that it is there (`hello`, so the page knows it is framed by DSNR), VS Code's theme
- * (`scheme`, once it is there and whenever the theme changes, so the page's bar is drawn in it), or an answer.
- */
+/** `hello` tells the page it is framed by DSNR; `scheme` comes then and whenever the theme changes. */
 export type RelayTell = { dsnr: 'hello' } | { dsnr: 'scheme'; theme: EditorTheme } | { dsnr: 'answer'; id: number; result: Result<unknown> };
 
 const CALLS = new Set<string>(RELAY_CALLS);
@@ -54,7 +46,6 @@ const isResult = (v: unknown): v is Result<unknown> =>
 	v !== null &&
 	((v as { ok?: unknown }).ok === true ? 'value' in v : (v as { ok?: unknown }).ok === false && typeof (v as { error?: unknown }).error === 'string');
 
-/** What the page asked, or null for anything that is not exactly one of its calls. */
 export const readRelayAsk = (raw: unknown): RelayAsk | null => {
 	if (typeof raw !== 'object' || raw === null) return null;
 	const m = raw as Record<string, unknown>;
@@ -68,11 +59,10 @@ export const readRelayAsk = (raw: unknown): RelayAsk | null => {
 		: null;
 };
 
-/** One of a theme's colours: one of VS Code's variables, its value words of a reasonable length. The tab sends only these. */
+/** The tab sends only these. */
 export const isThemeColor = (name: string, value: unknown): value is string =>
 	/^--vscode-[\w-]+$/.test(name) && typeof value === 'string' && value.length <= 400;
 
-/** A theme's colours: its colours (`isThemeColor`) and nothing else, and not without end. */
 const isColors = (v: unknown): v is Record<string, string> =>
 	typeof v === 'object' &&
 	v !== null &&
@@ -87,7 +77,6 @@ const isTheme = (v: unknown): v is EditorTheme =>
 	(THEME_KINDS as readonly unknown[]).includes((v as { kind?: unknown }).kind) &&
 	isColors((v as { colors?: unknown }).colors);
 
-/** What the tab told the page, or null for anything that is not exactly a hello, a scheme or an answer. */
 export const readRelayTell = (raw: unknown): RelayTell | null => {
 	if (typeof raw !== 'object' || raw === null) return null;
 	const m = raw as Record<string, unknown>;
@@ -99,9 +88,8 @@ export const readRelayTell = (raw: unknown): RelayTell | null => {
 };
 
 /**
- * A review opened in the browser from VS Code asks the same way, through this machine's server:
- * a `POST` at `ASK_PATH` on the bar's own address, with the key its link carried (after `KEY_FRAGMENT` in its fragment)
- * in `KEY_HEADER`. A key is base64url, 128 bits or more: only characters no link is ever re-encoded in.
+ * A review opened in the browser asks through this machine's server: a `POST` at `ASK_PATH` with the key its link's
+ * fragment carried in `KEY_HEADER`. A key is base64url, 128 bits or more: only characters no link is ever re-encoded in.
  */
 export const ASK_PATH = '/_dsnr/ask';
 export const KEY_HEADER = 'x-dsnr-key';

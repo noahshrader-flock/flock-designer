@@ -7,57 +7,39 @@ import { newestVersionFirst } from './prototypeNames';
 import { byNewest } from './sort';
 import { HOST } from './vocabulary';
 
-/** The list of projects as screens show it: dated, ordered, searched, merged from GitHub and this machine, with covers. */
-
-/** The first of some dates in `order` (1, earliest; -1, latest), ignoring anything that is not one; null when none is. */
+/** `order` 1 is the earliest, -1 the latest; anything that is not a date is ignored. */
 const firstDate = (dates: unknown[], order: 1 | -1): string | null =>
 	dates
 		.map(asDate)
 		.filter((d): d is string => d !== null)
 		.sort((a, b) => order * (Date.parse(a) - Date.parse(b)))[0] ?? null;
 
-/** The latest of some dates, ignoring anything that is not one; null when none is. */
 export const latestDate = (dates: unknown[]): string | null => firstDate(dates, -1);
 
-/** When a project was started: its earliest work's date, or null if none has one. */
 export const startedAt = (p: Pick<Project, 'work'>): string | null =>
 	firstDate(
 		p.work.map((i) => i.createdAt),
 		1,
 	);
 
-/**
- * When anything last happened in a project: the latest of the activity GitHub reported (`updatedAt`) and when each of
- * its pieces of work was made. Null when nothing is dated.
- */
 export const lastUpdated = (p: Pick<Project, 'work'> & { updatedAt?: string | null }): string | null =>
 	latestDate([p.updatedAt, ...p.work.map((i) => i.createdAt)]);
 
-/** Alphabetical by name without regard to case, and by id when two share a name, so an order never shuffles. */
 const byName = (a: Project, b: Project): number => a.title.localeCompare(b.title, undefined, { sensitivity: 'base' }) || a.id.localeCompare(b.id);
 
-/** How the Projects screen orders its cards: the most recent activity first, or by name. */
 export type ProjectOrder = 'updated' | 'alphabetical';
 
-/** The projects in an order, as a new list. Those with nothing dated come last when ordered by activity. */
 export const sortProjects = (projects: Project[], order: ProjectOrder): Project[] =>
 	[...projects].sort(order === 'alphabetical' ? byName : byNewest(lastUpdated, byName));
 
-/**
- * Whether a project is what a search is for: every word typed is somewhere in its name, its id, its folder, or the name or
- * GitHub login of someone who worked on it, without regard to case. Plain text, never a pattern; an empty search is
- * every project.
- */
 export const matchesProject = (project: Project, search: string): boolean =>
 	matchesWords([project.title, project.id, project.folder ?? '', ...project.people.flatMap((p) => [p.name, p.login ?? ''])].join('\n'), search);
 
-/** Newest project first. A project with no known date goes last, and ties fall back to the title so the order never shuffles. */
 export const newestProjectFirst = byNewest(startedAt, byName);
 
 /**
- * One list from the design repository on GitHub and this machine. Work built here shows here, however it was made and
- * whether or not it is shared, so local records are merged in and what is only here is marked, not hidden. Where both know
- * a project, GitHub's copy leads (it is what everyone sees) and local facts only fill its gaps.
+ * Work built here shows here whether or not it is shared, so what is only here is marked, not hidden. Where both know a
+ * project, GitHub's copy leads (it is what everyone sees) and local facts only fill its gaps.
  */
 export const mergeProjects = (remote: Project[], local: Project[]): Project[] => {
 	const byId = new Map<string, Project>();
@@ -102,9 +84,8 @@ export const mergeProjects = (remote: Project[], local: Project[]): Project[] =>
 };
 
 /**
- * Two lists of the same machine's work -- records on disk, and branches in git --
- * as one. Records lead, because they carry what a branch cannot (a preview
- * address); a branch with no record is still work, and is added.
+ * Records lead, because they carry what a branch cannot (a preview address); a branch with no record is still work, and is
+ * added.
  */
 export const unionLocal = (records: Project[], branches: Project[]): Project[] => {
 	const byId = new Map<string, Project>(records.map((p) => [p.id, p]));
@@ -135,26 +116,18 @@ export const unionLocal = (records: Project[], branches: Project[]): Project[] =
 	return [...byId.values()];
 };
 
-/** The order a project's records are kept in: its versions, the newest first, then its codebase work. */
 export const workOrder = (a: ProjectWork, b: ProjectWork): number => {
 	const codebase = (x: ProjectWork) => (workKind(x) === 'codebase' ? 1 : 0);
 	return codebase(a) - codebase(b) || newestVersionFirst(a.name, b.name);
 };
 
-/**
- * The picture a project's card shows: its newest prototype's, else the newest earlier one that has a picture, so a card
- * never goes empty while a picture exists. None for a project with no picture, or with only codebase work.
- */
+/** Falls back to the newest earlier version that has one, so a card never goes empty while a picture exists. */
 export const coverToShow = (project: Pick<Project, 'work'>): { name: string; cover: string } | null => {
 	const pictured = workOf(project.work, 'prototype').find((i) => asCover(i.cover) !== null);
 	return pictured ? { name: pictured.name, cover: pictured.cover as string } : null;
 };
 
-/**
- * What pressing a project does, the same for its card and its row: into its newest prototype in the app; or, for a project
- * with only codebase work, out to that work on GitHub, in the browser; or nothing, for a project with neither (nothing made
- * yet, or codebase work whose record does not say where it is). `label` names it, for a screen reader.
- */
+/** `label` names it, for a screen reader. */
 export type ProjectOpening = { kind: 'app'; label: string; work: ProjectWork } | { kind: 'link'; label: string; url: string };
 
 export const projectOpening = (project: Pick<Project, 'title' | 'work'>): ProjectOpening | null => {
@@ -164,7 +137,7 @@ export const projectOpening = (project: Pick<Project, 'title' | 'work'>): Projec
 	return url === null ? null : { kind: 'link', label: `Open ${project.title} on ${HOST}`, url };
 };
 
-/** The list with pictures just made taken in, and nothing else changed: the same list when there are none. */
+/** The same list, not a copy, when none were made. */
 export const withCovers = (projects: Project[], made: MadeCover[]): Project[] => {
 	if (made.length === 0) return projects;
 	const cover = (projectId: string, name: string) => made.find((m) => m.projectId === projectId && m.name === name)?.cover;
@@ -173,5 +146,4 @@ export const withCovers = (projects: Project[], made: MadeCover[]): Project[] =>
 	);
 };
 
-/** How many open comments a project's prototypes have, all together: what its card and row say on its badge. */
 export const openCommentsOf = (work: Pick<ProjectWork, 'openComments'>[]): number => work.reduce((n, i) => n + i.openComments, 0);

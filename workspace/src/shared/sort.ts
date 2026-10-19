@@ -1,4 +1,4 @@
-/** The one "newest first" rule: by `dateOf`, the undated last, and `then` between two of one date, so an order never shuffles. */
+/** Newest first by `dateOf`, the undated last, and `then` between two of one date, so an order never shuffles. */
 export const byNewest =
 	<T>(dateOf: (t: T) => string | null, then: (a: T, b: T) => number) =>
 	(a: T, b: T): number => {

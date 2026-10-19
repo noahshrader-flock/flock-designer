@@ -1,4 +1,3 @@
-/** What each kind of file is served as, by extension: one table for every server the app runs. */
 export const MIME_TYPES: Readonly<Record<string, string>> = {
 	'.html': 'text/html; charset=utf-8',
 	// A browser runs a script, or applies a stylesheet, only when it is served as one.
@@ -14,7 +13,7 @@ export const MIME_TYPES: Readonly<Record<string, string>> = {
 	'.gif': 'image/gif',
 };
 
-/** The extension a file of `type` is written with, without its dot, or null for a type not in the table. */
+/** Without its dot, or null for a type not in the table. */
 export const extensionOf = (type: string): string | null =>
 	Object.entries(MIME_TYPES)
 		.find(([, t]) => t === type)?.[0]

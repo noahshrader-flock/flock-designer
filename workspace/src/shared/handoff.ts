@@ -1,6 +1,6 @@
 /**
- * The words a Handoff run ends on. The task asks for one of these on a line of its own, and the screen reads
- * the last one the run said, so a phrase earlier in its log ("ready for engineering once…") never counts.
+ * The task asks for one of these on a line of its own, and only the last one the run said counts, so a phrase earlier in
+ * its log ("ready for engineering once…") never does.
  */
 export const READY_LINE = 'Ready for engineering';
 export const NOT_READY_LINE = 'Not ready';

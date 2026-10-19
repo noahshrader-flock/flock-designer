@@ -1,9 +1,9 @@
 import type { Person } from './contract';
 
-/** An automated GitHub account (`github-actions[bot]`): not a person, so never a contributor or a reviewer. */
+/** Never a contributor or a reviewer. */
 export const isBot = (login: string): boolean => /\[bot\]$/i.test(login);
 
-/** A record may hold bare names or people; both shapes are read. Anything else is dropped. */
+/** A record may hold bare names or people; anything else is dropped. */
 export const asPeople = (value: unknown): Person[] =>
 	(Array.isArray(value) ? value : []).flatMap((v): Person[] => {
 		if (typeof v === 'string') return v.trim() ? [{ name: v.trim(), login: null }] : [];
@@ -17,9 +17,8 @@ export const asPeople = (value: unknown): Person[] =>
 	});
 
 /**
- * Combines lists of people into one without duplicates. The same person turns up as a git name in one place and a GitHub
- * login in another, so entries are joined by name first and by login second, keeping a login learned anywhere; the first
- * spelling of a name wins.
+ * The same person turns up as a git name in one place and a GitHub login in another, so entries are joined by name first
+ * and by login second, keeping a login learned anywhere; the first spelling of a name wins.
  */
 export const mergePeople = (...lists: Person[][]): Person[] => {
 	const byName = new Map<string, Person>();

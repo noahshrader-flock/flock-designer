@@ -1,8 +1,3 @@
-/**
- * The contract between DSNR's pages and its core, gathered: import from here, or from the file that holds a
- * thing. The API itself, and its one table, are in `contract/api.ts`; what it speaks of is in `domain/`, by area.
- */
-
 export * from './contract/api';
 export * from './domain/accessibility';
 export * from './domain/account';

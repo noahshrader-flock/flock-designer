@@ -1,9 +1,5 @@
-/**
- * What the probe's page code (`page/probe.ts`) gives back from a page, as the probe outside the page reads it
- * (`services/accessibility/probe`): plain data, as it crosses from the page to the probe.
- */
+/** Plain data only: it crosses from the page (`page/probe.ts`) to the probe outside it. */
 
-/** The roles a control may have: what is operated, and named, as a control (WAI-ARIA's widget roles a person acts on). */
 export const INTERACTIVE_ROLES = [
 	'button',
 	'link',
@@ -29,7 +25,7 @@ export interface Box {
 	height: number;
 }
 
-/** An element as the probe reports it: a selector that finds it again, its HTML cut short, its box and its text. */
+/** `path` is a selector that finds it again; `html` is cut short. */
 export interface Spot {
 	path: string;
 	html: string;
@@ -37,7 +33,7 @@ export interface Spot {
 	text: string;
 }
 
-/** The element Tab is on: its box on the page (not the window), its tabindex, whether it is native or has a role, and what is drawn wholly over it. */
+/** `at` is its box on the page, not the window; `covered` is what is drawn wholly over it. */
 export interface Stop extends Spot {
 	at: Box;
 	tabindex: number;
@@ -50,9 +46,8 @@ export interface Stop extends Spot {
 	opaque: boolean;
 }
 
-/** Something added to the page while it was watched: its text, and whether a live region announced it. */
 export interface Added {
-	/** Its first words, and how long it is in all. */
+	/** Its first words; `length` is all of it. */
 	text: string;
 	length: number;
 	live: boolean;
@@ -64,39 +59,37 @@ export interface Added {
 	inPlace: boolean;
 }
 
-/** What the page did while it was watched: windows it opened, what was added, and how many changes there were. */
 export interface Watched {
 	opened: string[];
 	added: Added[];
 	changes: number;
 }
 
-/** A part drawn under 3:1 against what is behind it: a field's edge, or a control's icon. */
+/** Drawn under 3:1 against what is behind it. */
 export interface FaintPart extends Spot {
 	part: 'edge' | 'icon';
 	ratio: number;
 	colors: [string, string];
 }
 
-/** After a form was sent: messages that appeared, whether a field names each, fields marked invalid with none, and whether the browser checked it. */
+/** `tied`: a field names the message; `unnamed`: fields marked invalid with none; `native`: the browser checked it. */
 export interface FormErrors {
 	messages: (Spot & { tied: boolean })[];
 	unnamed: Spot[];
 	native: boolean;
 }
 
-/** A button, and whether it opens or closes something it names (`aria-expanded`, `aria-controls`): what it shows is a disclosure, not a message. */
+/** `discloses` (`aria-expanded`, `aria-controls`): what it shows is a disclosure, not a message. */
 export interface Button extends Spot {
 	discloses: boolean;
 }
 
-/** How much of the page the probe read: what it read, and whether there was more than it reads (then a "none found" is only of what it read). */
+/** `capped`: there was more than it reads, so a "none found" is only of what it read. */
 export interface Read {
 	elements: number;
 	capped: boolean;
 }
 
-/** A control whose value a person changes: a list, a box to tick, a field to type in. */
 export interface Field {
 	spot: Spot;
 	kind: 'select' | 'toggle' | 'text';
