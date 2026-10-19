@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { BranchReview } from '../../src/shared/contract';
-import type { HandoffControls } from './hooks/useHandoff';
+import type { HandOverControls } from './hooks/useHandOver';
 import { plural } from '../../src/shared/plural';
 import { LARGE, flagged } from '../../src/shared/processChanges';
 import { CHANGE_REQUEST } from '../../src/shared/vocabulary';
@@ -49,24 +49,24 @@ const ReviewLine = ({ review }: { review: BranchReview }) => {
  * says what was flagged. Preview this branch shows what Claude Code committed in every page's previews, in place of the
  * library's branch, until it is stopped (Phase 2). Start over forgets the hand-over; the branch stays, with any pull request.
  */
-export const HandoffActions = ({ controls }: { controls: HandoffControls }) => {
-	const { handoff, handed, busy, error, propose, startOver, preview } = controls;
+export const HandOverActions = ({ controls }: { controls: HandOverControls }) => {
+	const { branch, handed, busy, error, propose, startOver, preview } = controls;
 	const [confirming, setConfirming] = useState(false);
 	const showing = useShowing();
-	if (handoff === null) return null;
-	const { review, pullRequest } = handoff;
+	if (branch === null) return null;
+	const { review, pullRequest } = branch;
 	const ready = review.state === 'ready' ? review : null;
 	return (
-		<div data-handoff className="branch-actions">
+		<div data-hand-over className="branch-actions">
 			<p className="quiet branch-line">
 				<Icon name="git-branch" />
-				<code>{handoff.branch}</code>
+				<code>{branch.branch}</code>
 				{ready && ` · ${plural(ready.commits, 'commit')}`}
 			</p>
 			{handed && review.state === 'missing' && <p className="quiet">{handed}</p>}
 			<ReviewLine review={review} />
 			{ready && (
-				<ul data-handoff-files className="branch-files">
+				<ul data-hand-over-files className="branch-files">
 					{ready.files.map((f) => (
 						<li key={f.path} data-out={f.out ?? undefined}>
 							<code>{f.path}</code>{' '}
@@ -110,8 +110,8 @@ export const HandoffActions = ({ controls }: { controls: HandoffControls }) => {
 						</Button>
 					)}
 					{ready && (
-						<Button variant="secondary" disabled={busy !== null} onClick={() => preview(showing !== handoff.branch)}>
-							{busy === 'showing' ? 'Switching the previews…' : showing === handoff.branch ? 'Stop previewing' : 'Preview this branch'}
+						<Button variant="secondary" disabled={busy !== null} onClick={() => preview(showing !== branch.branch)}>
+							{busy === 'showing' ? 'Switching the previews…' : showing === branch.branch ? 'Stop previewing' : 'Preview this branch'}
 						</Button>
 					)}
 					<Button variant="ghost" disabled={busy !== null} onClick={startOver}>

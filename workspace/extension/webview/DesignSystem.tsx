@@ -5,7 +5,7 @@ import { plural } from '../../src/shared/plural';
 import { isDark } from '../../src/shared/tokens';
 import { HOST } from '../../src/shared/vocabulary';
 import { TokenChangesProvider, useTokenChangesFor } from './hooks/tokenChanges';
-import { useTokenBranch } from './hooks/useTokenBranch';
+import { useChangeBranch } from './hooks/useChangeBranch';
 import { Changed } from './Changed';
 import { DesignSystemHeader } from './DesignSystemHeader';
 import { ComponentChanges } from './ComponentChanges';
@@ -110,7 +110,7 @@ const Ready = ({
 }) => {
 	const changes = useTokenChangesFor(catalog.tokens.tokens, edits, does.setEdits, catalog.accessibility);
 	// Where the change is kept once saved, and proposed (T4, T5): a change DSNR was closed with comes back in the panel.
-	const branch = useTokenBranch(id, edits, does.setEdits);
+	const branch = useChangeBranch('tokens', { shown: id, scope: null, change: edits, setChange: does.setEdits });
 	const [problems, setProblems] = useState(false);
 	// The token whose control is open: the one whose row or swatch was pressed.
 	const [editing, setEditing] = useState<DesignToken | null>(null);
@@ -123,7 +123,7 @@ const Ready = ({
 	const tried = [edits.length > 0, ...Object.keys(trials).sort()].join('\n');
 	useEffect(() => {
 		let live = true;
-		void Promise.all([workspace().valueBranchFiles(), workspace().handoffFiles()]).then(
+		void Promise.all([workspace().changeScopes('values'), workspace().changeScopes('handOver')]).then(
 			([saved, handed]) => live && setKeptFiles([...(saved.ok ? saved.value : []), ...(handed.ok ? handed.value : [])]),
 		);
 		return () => {

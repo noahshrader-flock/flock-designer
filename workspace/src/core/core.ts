@@ -51,9 +51,7 @@ export const createCore = ({ paths, emit, ports, github, pictureRecipe }: Shell)
 	installer: new Installer(),
 	designSystems: new DesignSystemsMemory(paths.designSystems),
 	storyPreviewsRoot: paths.storyPreviews,
-	tokenBranchesFile: paths.tokenBranches,
-	valueBranchesFile: paths.valueBranches,
-	voiceBranchFile: paths.voiceBranch,
+	changeBranchFiles: paths.changeBranches,
 	componentPicturesRoot: paths.componentPictures,
 	componentPictureRecipe: pictureRecipe,
 	// A little after the window is up, so opening it is not slowed by getting the design system ready.

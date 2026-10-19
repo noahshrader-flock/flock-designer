@@ -19,7 +19,6 @@ describe('readFile and writeFile', () => {
 		// Every transport says "not there" one way (`HostError`); the command line's own is checked in ghCli.spec.
 		const repo = new RepoFiles(fakeGitHub({ '*': notFound }).github, REF);
 		expect(await repo.readFile('skills/none.md')).toBeNull();
-		expect(await repo.readFileAt('skills/none.md', 'some-branch')).toBeNull();
 		expect(await repo.hasFile('skills/none.md')).toBe(false);
 		const failing = new RepoFiles(fakeGitHub({ '*': refusing(500, 'Server Error') }).github, REF);
 		await expect(failing.readFile('skills/a.md')).rejects.toThrow('Server Error');
@@ -35,14 +34,6 @@ describe('readFile and writeFile', () => {
 		});
 		const repo = new RepoFiles(session, REF);
 		expect(await repo.readFile('standards/flock/voice-and-tone.md')).toBe('');
-		expect(await repo.readFileAt('standards/flock/voice-and-tone.md')).toEqual({ text: '', sha: 'e69de29bb2d1d6434b8b29ae775ad8c2e48c5391' });
-	});
-
-	it('reads a file on a branch with its sha, which a write to it is made against', async () => {
-		const { github: session } = fakeGitHub({
-			'/repos/acme/design/contents/skills/a.md?ref=dsnr%2Fvoice-20261010-ab12*': { content: b64('# A'), sha: 'a1' },
-		});
-		expect(await new RepoFiles(session, REF).readFileAt('skills/a.md', 'dsnr/voice-20261010-ab12')).toEqual({ text: '# A', sha: 'a1' });
 	});
 
 	it('reads a file over 1 MB through its blob, as GitHub leaves its content out', async () => {
@@ -108,30 +99,7 @@ describe('readFile and writeFile', () => {
 	});
 });
 
-describe('branches and history', () => {
-	it('writes one commit on the branch it is given, against the blob it names, and makes and drops a branch at a commit', async () => {
-		const { github, writes } = fakeGitHub({
-			'PUT /repos/acme/design/contents/*': {},
-			'GET /repos/acme/design/git/ref/heads/*': ({ path }) => ({ object: { sha: `${path.split('/heads/')[1]}@1` } }),
-			'POST /repos/acme/design/git/refs': {},
-			'DELETE /repos/acme/design/git/refs/heads/*': null,
-		});
-		const repo = new RepoFiles(github, REF);
-		await repo.putFile('skills/a.md', 'a', 'm', { branch: 'dsnr/voice-1', sha: 's1' });
-		expect(await repo.branchHead('noah/main')).toBe('noah%2Fmain@1');
-		await repo.createBranch('dsnr/voice-2', 'c1');
-		await repo.deleteBranch('dsnr/voice-2');
-		expect(writes).toEqual([
-			{
-				method: 'PUT',
-				path: '/repos/acme/design/contents/skills/a.md',
-				body: { message: 'm', branch: 'dsnr/voice-1', content: b64('a'), sha: 's1' },
-			},
-			{ method: 'POST', path: '/repos/acme/design/git/refs', body: { ref: 'refs/heads/dsnr/voice-2', sha: 'c1' } },
-			{ method: 'DELETE', path: '/repos/acme/design/git/refs/heads/dsnr%2Fvoice-2' },
-		]);
-	});
-
+describe('history', () => {
 	it('asks for the commits that changed a path, on a branch or commit when one is named, as many as are wanted', async () => {
 		const { github, calls } = fakeGitHub({ '/repos/acme/design/commits?*': [{ sha: 'c1' }] });
 		const repo = new RepoFiles(github, REF);

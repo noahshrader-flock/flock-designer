@@ -13,8 +13,7 @@ export const repoApiPath = (ref: RepoRef): string => `/repos/${ref.owner}/${ref.
 
 /**
  * A repository's files through the host's API, whoever is asking (the app's session, the person's command line, a page on
- * the published site): read, written, listed and dated, and the branches a change is kept on. Nothing here knows what
- * the files are for.
+ * the published site): read, written, listed and dated. Nothing here knows what the files are for.
  */
 export class RepoFiles {
 	constructor(
@@ -52,31 +51,17 @@ export class RepoFiles {
 
 	/** Any file, as text, or null when there is none. */
 	async readFile(path: string): Promise<string | null> {
-		return (await this.readFileAt(path))?.text ?? null;
-	}
-
-	/**
-	 * A file on a branch (the default one when none is named), with its blob's sha, which a write to it is made against;
-	 * null when the branch or the file is not there.
-	 */
-	async readFileAt(path: string, ref?: string): Promise<{ text: string; sha: string } | null> {
-		const file = await this.readBytesAt(path, ref);
-		return file === null ? null : { text: file.bytes.toString('utf8'), sha: file.sha };
+		return (await this.readBytes(path))?.toString('utf8') ?? null;
 	}
 
 	/** Any file as the bytes it is (a picture), or null when there is none. */
 	async readBytes(path: string): Promise<Buffer | null> {
-		return (await this.readBytesAt(path))?.bytes ?? null;
-	}
-
-	/** A file's bytes and its sha, or null when it is not there. Every read goes through here, a file of any size included. */
-	private async readBytesAt(path: string, ref?: string): Promise<{ bytes: Buffer; sha: string } | null> {
 		try {
-			const file = asRecord(await this.session.api(`${this.apiPath}/contents/${path}${ref ? `?ref=${encodeURIComponent(ref)}` : ''}`));
+			const file = asRecord(await this.session.api(`${this.apiPath}/contents/${path}`));
 			if (typeof file.sha !== 'string') return null;
 			// Over 1 MB, the contents API leaves the content out; the blob it names carries it, up to 100 MB.
 			const content = file.encoding === 'none' ? asRecord(await this.session.api(`${this.apiPath}/git/blobs/${file.sha}`)).content : file.content;
-			return typeof content === 'string' ? { bytes: Buffer.from(content, 'base64'), sha: file.sha } : null;
+			return typeof content === 'string' ? Buffer.from(content, 'base64') : null;
 		} catch (err) {
 			if (hostErrorKind(err) === 'notFound') return null;
 			throw err;
@@ -100,20 +85,14 @@ export class RepoFiles {
 	}
 
 	/**
-	 * One commit of `path` as `content`: on `branch` (the default one when none is named), replacing the blob `sha` (none
-	 * for a new file). A file that is not that one any more is refused by the host, as a conflict.
+	 * One commit of `path` as `content` on the default branch, replacing the blob `sha` (none for a new file). A file that
+	 * is not that one any more is refused by the host, as a conflict.
 	 */
-	async putFile(
-		path: string,
-		content: string | Buffer,
-		message: string,
-		{ branch, sha }: { branch?: string; sha?: string | null } = {},
-	): Promise<void> {
+	private async putFile(path: string, content: string | Buffer, message: string, sha: string | null): Promise<void> {
 		await this.session.api(`${this.apiPath}/contents/${path}`, {
 			method: 'PUT',
 			body: {
 				message,
-				...(branch ? { branch } : {}),
 				content: (typeof content === 'string' ? Buffer.from(content, 'utf8') : content).toString('base64'),
 				...(sha ? { sha } : {}),
 			},
@@ -125,7 +104,7 @@ export class RepoFiles {
 	 * picture. Used only where there is no clone on this machine to write into: one writer per machine.
 	 */
 	async writeFile(path: string, content: string | Buffer, message: string): Promise<void> {
-		const put = async () => this.putFile(path, content, message, { sha: await this.shaAt(path) });
+		const put = async () => this.putFile(path, content, message, await this.shaAt(path));
 		try {
 			await put();
 		} catch (err) {
@@ -134,21 +113,5 @@ export class RepoFiles {
 			if (hostErrorKind(err) === 'forbidden' || hostErrorKind(err) === 'notFound') throw noWriteAccess(this.ref);
 			throw err;
 		}
-	}
-
-	/** The commit a branch is at. */
-	async branchHead(branch: string): Promise<string> {
-		const sha = asRecord(asRecord(await this.session.api(`${this.apiPath}/git/ref/heads/${encodeURIComponent(branch)}`)).object).sha;
-		if (typeof sha !== 'string') throw new Error(`${HOST} did not say where ${branch} is.`);
-		return sha;
-	}
-
-	/** A new branch, at `sha`. */
-	async createBranch(branch: string, sha: string): Promise<void> {
-		await this.session.api(`${this.apiPath}/git/refs`, { method: 'POST', body: { ref: `refs/heads/${branch}`, sha } });
-	}
-
-	async deleteBranch(branch: string): Promise<void> {
-		await this.session.api(`${this.apiPath}/git/refs/heads/${encodeURIComponent(branch)}`, { method: 'DELETE' });
 	}
 }

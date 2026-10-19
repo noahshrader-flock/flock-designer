@@ -4,8 +4,8 @@ import type { BranchControls } from './hooks/useChangeBranch';
 import { cellFor, triedId } from '../../src/shared/contract';
 import { plural } from '../../src/shared/plural';
 import { saidValue, valueTitle } from '../../src/shared/valueNames';
-import { type HandoffControls, useHandoff } from './hooks/useHandoff';
-import { useValueBranch } from './hooks/useValueBranch';
+import { type HandOverControls, useHandOver } from './hooks/useHandOver';
+import { useChangeBranch } from './hooks/useChangeBranch';
 import { useValueSources } from './hooks/useValueSources';
 import { BranchActions } from './Changed';
 import { ReachView } from './ChangeReach';
@@ -110,12 +110,12 @@ export const ValueChanges = ({
 }) => {
 	const tried = [...shown.trying.tried.values()];
 	const sources = useValueSources(shown.component.id, tried, shown.trying.writes);
-	const controls = useValueBranch(shown.component.id, tried, shown.trying.onAll);
+	const controls = useChangeBranch('values', { shown: shown.component.id, scope: shown.component.id, change: tried, setChange: shown.trying.onAll });
 	// Read once, not watched: what is done with a hand-over is in the panel's Changes.
-	const handoff = useHandoff({ shown: shown.component.id, file: shown.component.id, change: { tried }, watch: false });
-	const kept = controls.branch !== null || handoff.handoff !== null;
+	const handOver = useHandOver({ shown: shown.component.id, file: shown.component.id, change: { tried }, watch: false });
+	const kept = controls.branch !== null || handOver.branch !== null;
 	useEffect(() => onKept(kept), [kept, onKept]);
-	return children(<ChangedValues {...shown} sources={sources} controls={controls} handoff={handoff} />);
+	return children(<ChangedValues {...shown} sources={sources} controls={controls} handOver={handOver} />);
 };
 
 interface Shown {
@@ -152,10 +152,10 @@ export const ChangedValues = ({
 	name,
 	sources,
 	controls,
-	handoff,
-}: Shown & { name?: string; sources: ValueSourcesAnswer; controls: BranchControls<TriedValue[]>; handoff: HandoffControls }) => {
+	handOver,
+}: Shown & { name?: string; sources: ValueSourcesAnswer; controls: BranchControls<TriedValue[]>; handOver: HandOverControls }) => {
 	const tried = [...trying.tried.values()];
-	if (tried.length === 0 && controls.branch === null && handoff.handoff === null) return null;
+	if (tried.length === 0 && controls.branch === null && handOver.branch === null) return null;
 	const sourceOf = (t: TriedValue): ValueSource | null =>
 		sources.state === 'ready' ? (sources.values.find((v) => v.id === triedId(t)) ?? null) : null;
 
@@ -199,7 +199,7 @@ export const ChangedValues = ({
 						})}
 					</ul>
 				)}
-				{tried.length > 0 && handoff.handoff === null && (
+				{tried.length > 0 && handOver.branch === null && (
 					<p className="quiet">
 						{savable
 							? `Saving writes ${plural(tried.length, 'value')} where ${tried.length === 1 ? 'it is' : 'they are'} written, and nothing else.`
@@ -212,7 +212,7 @@ export const ChangedValues = ({
 						Save or process changes in the side panel
 					</button>
 				) : (
-					<BranchActions controls={controls} handoff={handoff} canSave={savable} />
+					<BranchActions controls={controls} handOver={handOver} canSave={savable} />
 				)}
 			</section>
 			{sources.state === 'failed' && <Notice title="Where its values are written could not be found">{sources.error}</Notice>}

@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { VOICE_NEEDS_CLI } from '../src/core/services/designSystem/voiceAndTone';
 import { SHARE_NEEDS_CLI } from '../src/core/services/codebase/shareTools';
 import { needsCli } from '../src/shared/vocabulary';
 
@@ -12,7 +11,6 @@ describe("the host's words", () => {
 	});
 
 	it('are what every message about it says', () => {
-		for (const said of [VOICE_NEEDS_CLI, SHARE_NEEDS_CLI])
-			expect(said).toContain("goes through GitHub's command line, gh, which is missing or not signed in here.");
+		for (const said of [SHARE_NEEDS_CLI]) expect(said).toContain("goes through GitHub's command line, gh, which is missing or not signed in here.");
 	});
 });

@@ -24,6 +24,7 @@ const harness = (over: Partial<ShareTools> & { checkSequence?: Check[][] } = {})
 		push: async () => (calls.push('push'), { pushed: true }),
 		findPr: async () => (calls.push('findPr'), null),
 		createDraftPr: async () => (calls.push('createDraftPr'), { number: 42, url: 'https://github.test/o/r/pull/42' }),
+		isOpen: async () => true,
 		checks: async () => {
 			calls.push('checks');
 			const seq = over.checkSequence ?? [[check('pass')]];

@@ -5,7 +5,7 @@
  */
 import type { TokenEdit } from '../../../shared/contract';
 import { describeChange } from '../../../shared/tokens';
-import { type ChangeBranchesDeps, ChangeBranches, type ChangeKind } from './changeBranches';
+import { type ChangeBranchesDeps, ChangeBranches, type SavedKindRules } from './changeBranches';
 import { systemReads } from './designLibrary';
 import { dsnrBranchPattern } from './dsnrBranch';
 import { readTokens } from './designTokens';
@@ -15,8 +15,10 @@ import { editedFiles, tokenEditsOf } from './tokenEdits';
 export const TOKEN_BRANCH = dsnrBranchPattern('tokens');
 
 /** A change to the tokens: its files written by the token writers, and said as the panel says it. */
-export const TOKENS: ChangeKind<TokenEdit[]> = {
+export const TOKENS: SavedKindRules<TokenEdit[]> = {
 	kind: 'tokens',
+	branchWord: 'tokens',
+	scope: 'whole',
 	check: tokenEditsOf,
 	empty: (edits) => edits.length === 0,
 	files: async (system, base, edits) => editedFiles(await systemReads(system, base), edits),

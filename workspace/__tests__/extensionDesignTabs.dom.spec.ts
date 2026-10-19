@@ -5,7 +5,7 @@ import { PrimitivesTab } from '../extension/webview/PrimitivesTab';
 import { readTab } from '../extension/webview/tab';
 import { PREVIEW_HEIGHT, PREVIEW_TRY, previewAddress } from '../src/shared/catalog';
 import { SAMPLE_CATALOG } from './extensionSamples';
-import { answer, button, calls, mount, press, say, sent, type, unmount } from './webviewHarness';
+import { answer, answerOf, button, calls, callsOf, mount, press, say, sent, type, unmount } from './webviewHarness';
 import { ASK_EVERY_MS } from '../extension/webview/hooks/askWhile';
 
 /**
@@ -760,7 +760,7 @@ describe('a component’s tab', () => {
 			await analysed();
 			expect(changed()).toBeNull();
 			expect(calls('valueSources')).toHaveLength(0);
-			expect(calls('valueBranch').at(-1)?.args).toEqual([BUTTON]);
+			expect(callsOf('changeBranch', 'values').at(-1)?.args).toEqual(['values', BUTTON]);
 		});
 
 		it('offers Save only once every value is found where it is written, each place opening the library at its line', async () => {
@@ -891,7 +891,7 @@ describe('a component’s tab', () => {
 		it('puts back the values a branch saved when the tab opens with none tried', async () => {
 			await analysed();
 			await answer('storyPreview', { state: 'ready', base: BASE });
-			await answer('valueBranch', { branch: 'dsnr/values-20261016-ab12', saved: [SMALL], saves: 1, pullRequest: null });
+			await answerOf('changeBranch', 'values', { branch: 'dsnr/values-20261016-ab12', saved: [SMALL], saves: 1, pullRequest: null });
 			await openChanges();
 			expect(changed().querySelector('[data-value-change] .value-cell')?.textContent).toBe('Height · sm28px → 32px');
 			expect(calls('valueSources').at(-1)?.args).toEqual([BUTTON, [SMALL]]);

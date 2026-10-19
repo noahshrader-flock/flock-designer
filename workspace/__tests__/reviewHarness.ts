@@ -28,8 +28,8 @@ export const fakeApp = (overrides: Impl = {}) => {
 		readComments: async () => ok([]),
 		// No design system connected, unless a test says otherwise.
 		designSystems: async () => ok({ systems: [], current: null }),
-		// No change to the tokens saved, unless a test says otherwise.
-		tokenBranch: async () => ok(null),
+		// No change of any kind kept on a branch, unless a test says otherwise.
+		changeBranch: async () => ok(null),
 		// No voice and tone file in the design repository, unless a test says otherwise.
 		voiceAndTone: async () =>
 			ok({
@@ -38,7 +38,6 @@ export const fakeApp = (overrides: Impl = {}) => {
 				base: 'develop',
 				text: null,
 				sha: null,
-				branch: null,
 			}),
 		// Every story still being drawn, unless a test says otherwise.
 		componentTokens: async () => ok({ state: 'building' }),

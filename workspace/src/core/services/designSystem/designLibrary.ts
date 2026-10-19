@@ -63,7 +63,7 @@ export const libraryCommit = async (root: string, branch: string): Promise<strin
 	}
 };
 
-/** The commit to read the library at, and the hand-off branch it is the tip of (null: the library's own branch, `LibraryShown`). */
+/** The commit to read the library at, and the hand-over branch it is the tip of (null: the library's own branch, `LibraryShown`). */
 export type LibraryAt = (system: ConnectedDesignSystem) => Promise<{ commit: string; showing: string | null } | null>;
 
 /** The library's own branch, as GitHub has it: what is read when no other is shown, and by anyone who must not follow one. */
@@ -231,6 +231,11 @@ export class DesignLibrary {
 		const now = await read(system, last ?? 'updating', at);
 		if (last === undefined) void this.fetch(system.root, system.branch);
 		return now;
+	}
+
+	/** Brings the design system's branch up to date in its clone, sharing a fetch that is running: what a read that must be current waits for. */
+	update(system: ConnectedDesignSystem): Promise<Exclude<CatalogUpdate, 'updating'>> {
+		return this.fetch(system.root, system.branch);
 	}
 
 	private fetch(root: string, branch: string): Promise<Exclude<CatalogUpdate, 'updating'>> {

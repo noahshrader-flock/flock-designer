@@ -4,9 +4,9 @@ import { CHANGE_REQUEST } from '../../src/shared/vocabulary';
 import { branchButtons } from './branchButtons';
 import { useTokenChanges } from './hooks/tokenChanges';
 import type { BranchControls } from './hooks/useChangeBranch';
-import type { TokenBranchControls } from './hooks/useTokenBranch';
-import { type HandoffControls, useHandoff } from './hooks/useHandoff';
-import { HandoffActions } from './HandoffActions';
+import type { TokenEdit } from '../../src/shared/contract';
+import { type HandOverControls, useHandOver } from './hooks/useHandOver';
+import { HandOverActions } from './HandOverActions';
 import { useShowing } from './Showing';
 import { Button } from './ui/Button';
 import { ErrorLine } from './ui/Dialog';
@@ -20,24 +20,24 @@ import { Swatch } from './ui/Swatch';
  * what went wrong, then Save (to a branch, the first time), Propose and Start over, as the app offers them
  * (`branchButtons`); Save also waits on what must be settled first (`canSave`). Start over forgets the branch, which stays
  * on GitHub with any pull request. With nothing kept yet, Process changes beside Save hands the change to Claude Code
- * instead (PROCESS_CHANGES_PLAN); a change has one branch in play, so once handed over its hand-off is shown in Save's
- * place (`HandoffActions`), and with a branch saved, Process changes is not offered, each until it is started over.
+ * instead (PROCESS_CHANGES_PLAN); a change has one branch in play, so once handed over its hand-over is shown in Save's
+ * place (`HandOverActions`), and with a branch saved, Process changes is not offered, each until it is started over.
  */
 export const BranchActions = <C,>({
 	controls,
-	handoff,
+	handOver,
 	canSave = true,
 }: {
 	controls: BranchControls<C>;
-	handoff: HandoffControls;
+	handOver: HandOverControls;
 	canSave?: boolean;
 }) => {
 	const { branch, unsaved, busy, error, save, propose, startOver } = controls;
 	const chromatic = branch?.pullRequest?.chromatic;
 	// While a hand-over's branch is shown, nothing is saved or handed over (the core refuses): the note at the top says so.
 	const showing = useShowing();
-	const offered = branchButtons({ branch, unsaved, busy, canSave: canSave && handoff.busy === null && showing === null });
-	if (handoff.handoff !== null) return <HandoffActions controls={handoff} />;
+	const offered = branchButtons({ branch, unsaved, busy, canSave: canSave && handOver.busy === null && showing === null });
+	if (handOver.branch !== null) return <HandOverActions controls={handOver} />;
 	// Nothing kept, and something changed: what Save would be offered for.
 	const processable = branch === null && unsaved;
 	return (
@@ -58,7 +58,7 @@ export const BranchActions = <C,>({
 					)}
 				</p>
 			)}
-			<ErrorLine error={error ?? handoff.error} />
+			<ErrorLine error={error ?? handOver.error} />
 			<div className="branch-buttons">
 				{offered.save && (
 					<Button disabled={offered.save.disabled} onClick={save}>
@@ -66,8 +66,8 @@ export const BranchActions = <C,>({
 					</Button>
 				)}
 				{processable && (
-					<Button variant="secondary" disabled={busy !== null || handoff.busy !== null || showing !== null} onClick={handoff.processChanges}>
-						{handoff.busy === 'handing' ? 'Handing to Claude Code…' : 'Process changes'}
+					<Button variant="secondary" disabled={busy !== null || handOver.busy !== null || showing !== null} onClick={handOver.processChanges}>
+						{handOver.busy === 'handing' ? 'Handing to Claude Code…' : 'Process changes'}
 					</Button>
 				)}
 				{offered.propose && (
@@ -144,14 +144,14 @@ export const TokenChanges = () => {
  * What has been changed (6.2), in the panel's Changes dialog: the token changes, where they are tried, then what can be done
  * with them on their branch. A branch kept with nothing changed is still here, so it can be proposed or left.
  */
-export const Changed = ({ id, controls }: { id: string | null; controls: TokenBranchControls }) => {
+export const Changed = ({ id, controls }: { id: string | null; controls: BranchControls<TokenEdit[]> }) => {
 	const { edits } = useTokenChanges();
-	const handoff = useHandoff({ shown: id, file: null, change: { edits }, watch: true });
+	const handOver = useHandOver({ shown: id, file: null, change: { edits }, watch: true });
 	return (
 		<>
 			<TokenChanges />
 			{edits.length > 0 && <p className="quiet">Tried in the stories of every component open, and in Primitives.</p>}
-			<BranchActions controls={controls} handoff={handoff} />
+			<BranchActions controls={controls} handOver={handOver} />
 		</>
 	);
 };

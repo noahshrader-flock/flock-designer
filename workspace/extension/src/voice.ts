@@ -1,5 +1,6 @@
 import type * as VsCode from 'vscode';
-import type { VoiceAndTone, WorkspaceApi } from '../../src/shared/contract';
+import type { ChangeBranchOf, VoiceAndTone, WorkspaceApi } from '../../src/shared/contract';
+import { compareUrl } from '../../src/shared/hostUrls';
 import { plural } from '../../src/shared/plural';
 import { errorText, valueOf } from '../../src/shared/result';
 import type { Offer } from './agentWork';
@@ -18,58 +19,66 @@ const PROPOSE = 'Propose';
 const OPEN_IT = `Open the ${CHANGE_REQUEST}`;
 
 export interface VoiceDeps {
-	api: Pick<WorkspaceApi, 'voiceAndTone' | 'saveVoiceAndTone' | 'proposeVoiceAndTone' | 'forgetVoiceBranch'>;
+	api: Pick<WorkspaceApi, 'voiceAndTone' | 'changeBranch' | 'saveChange' | 'proposeChange' | 'forgetChange'>;
 	offer: Offer;
 	/** A warning, with what can be done about it: a proposal that failed, a save refused. */
 	choose: Offer;
 	openExternal: (url: string) => Promise<void>;
 }
 
-/** The text a person opens: the change as last saved, else the default branch's file, else nothing yet. */
-const textOf = (voice: VoiceAndTone): string => voice.branch?.text ?? voice.text ?? '';
-
 /**
  * The design system's voice and tone as a document in VS Code's editor (ELECTRON_MIGRATION_PLAN 6.3, the app's T9): read
- * from GitHub when opened and when reverted, so a commit made there shows; saved, as VS Code saves (⌘S), to a branch of
- * DSNR's, each save one commit; proposed as a draft pull request. **A save is made against the file it was opened at**, so
- * a change made on GitHub meanwhile is never overwritten: the save is refused, and the person compares, keeps theirs as a
- * change to it, or takes GitHub's, as the app's tab offers.
+ * from the library's branch when opened and when reverted, so a commit made on GitHub shows; saved, as VS Code saves (⌘S),
+ * to a branch of DSNR's, each save one commit, as every change to the library is; proposed as a draft pull request. **A
+ * save is made against the file it was opened at**, so a change made on GitHub meanwhile is never overwritten: the save is
+ * refused, and the person compares, keeps theirs as a change to it, or takes GitHub's.
  */
 export class VoiceDocument {
-	private voice: VoiceAndTone | null = null;
-	/** The default branch's file the text was opened at, which a save is made against (null: there was none). */
+	/** The file as the library's branch had it when it was last read, and the change kept on its branch. */
+	private file: VoiceAndTone | null = null;
+	private branch: ChangeBranchOf<'voice'> | null = null;
+	/** The library's file the text was opened at, which a save is made against (null: there was none). */
 	private against: string | null = null;
-	/** The file as GitHub has it now, when a save found it changed since it was opened. */
+	/** The file as the library's branch has it now, when a save found it changed since it was opened. */
 	private theirs: VoiceAndTone | null = null;
 
 	constructor(private readonly deps: VoiceDeps) {}
 
-	/** The text to open, read from GitHub: what it is saved against from now on. */
+	/** The text to open: the change as last saved, else the library's file, else nothing yet. What it is saved against from now on. */
 	async read(): Promise<string> {
-		const voice = valueOf(await this.deps.api.voiceAndTone());
-		this.voice = voice;
-		this.against = voice.sha;
+		const file = valueOf(await this.deps.api.voiceAndTone());
+		this.branch = valueOf(await this.deps.api.changeBranch('voice', null));
+		this.file = file;
+		this.against = file.sha;
 		this.theirs = null;
-		return textOf(voice);
+		return this.branch?.saved.text ?? file.text ?? '';
 	}
 
-	/** The file on the default branch as a refused save found it, to compare the person's text with. */
+	/** The library's file as a refused save found it, to compare the person's text with. */
 	theirsText(): string {
 		return this.theirs?.text ?? '';
 	}
 
-	/** Saves `text` against the file it was opened at: `saved`, or `changed` when GitHub's changed meanwhile (nothing saved). */
+	/**
+	 * Saves `text` against the file it was opened at: `saved`, or `changed` when the library's file changed meanwhile
+	 * (nothing saved), as the file read again says. Text that is the library's own, with nothing kept, is saved already.
+	 */
 	async save(text: string): Promise<'saved' | 'changed'> {
-		const saved = valueOf(await this.deps.api.saveVoiceAndTone(text, this.against));
-		this.voice = saved.voice;
-		if (saved.state === 'changed') {
-			this.theirs = saved.voice;
+		if (this.branch === null && text === (this.file?.text ?? '')) return 'saved';
+		const saved = await this.deps.api.saveChange('voice', null, { text, against: this.against });
+		if (saved.ok) {
+			this.branch = saved.value;
+			return 'saved';
+		}
+		const now = await this.deps.api.voiceAndTone();
+		if (now.ok && now.value.sha !== this.against) {
+			this.theirs = now.value;
 			return 'changed';
 		}
-		return 'saved';
+		throw new Error(saved.error);
 	}
 
-	/** The person keeps their text, as a change to GitHub's file as it is now: the next save is made against that. */
+	/** The person keeps their text, as a change to the library's file as it is now: the next save is made against that. */
 	keepMine(): void {
 		if (this.theirs) this.against = this.theirs.sha;
 		this.theirs = null;
@@ -77,7 +86,7 @@ export class VoiceDocument {
 
 	/** Says a save, with what comes next: Propose, or the pull request once it is proposed. */
 	async afterSave(): Promise<void> {
-		const branch = this.voice?.branch;
+		const branch = this.branch;
 		if (!branch) return;
 		const next = await this.deps.offer(
 			`Saved on ${branch.branch} (${plural(branch.saves, 'save')}). Every agent task carries it once it is merged.`,
@@ -92,23 +101,23 @@ export class VoiceDocument {
 	 * command line not signed in), GitHub's own page can open it: offered, and the change stays saved.
 	 */
 	async propose(): Promise<void> {
-		const r = await this.deps.api.proposeVoiceAndTone();
+		const r = await this.deps.api.proposeChange('voice', null, null);
 		if (!r.ok) {
-			const compare = this.voice?.branch?.compare;
+			const compare = this.branch && this.file ? compareUrl(this.file.repository, this.file.base, this.branch.branch) : null;
 			const next = await this.deps.choose(`The voice and tone was not proposed: ${r.error}`, compare ? [`View on ${HOST}`] : []);
 			if (next && compare) await this.deps.openExternal(compare);
 			return;
 		}
-		this.voice = r.value;
-		const pr = r.value.branch?.pullRequest;
+		this.branch = r.value;
+		const pr = r.value.pullRequest;
 		if (!pr) return;
 		if ((await this.deps.offer(`Proposed as draft ${CHANGE_REQUEST} #${pr.number}.`, [OPEN_IT])) === OPEN_IT) await this.deps.openExternal(pr.url);
 	}
 
 	/** Forgets the branch, to start a new change: the branch and any pull request stay on GitHub. */
 	async startOver(): Promise<void> {
-		valueOf(await this.deps.api.forgetVoiceBranch());
-		this.voice = this.voice ? { ...this.voice, branch: null } : null;
+		valueOf(await this.deps.api.forgetChange('voice', null));
+		this.branch = null;
 	}
 }
 

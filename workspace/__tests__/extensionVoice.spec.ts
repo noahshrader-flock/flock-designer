@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { THEIRS_PATH, VOICE_PATH, VoiceDocument, voiceFileSystem } from '../extension/src/voice';
-import type { VoiceAndTone } from '../src/shared/contract';
+import type { ChangeBranchOf, VoiceAndTone } from '../src/shared/contract';
 import { ok } from '../src/shared/result';
 
 /**
- * The voice and tone in VS Code (ELECTRON_MIGRATION_PLAN 6.3): a document in the editor, read from GitHub, saved as VS Code
- * saves (⌘S) to a branch of DSNR's, proposed as a draft pull request; a save made against the file it was opened at, so a
- * change on GitHub meanwhile is never overwritten.
+ * The voice and tone in VS Code (ELECTRON_MIGRATION_PLAN 6.3): a document in the editor, read from the library's branch,
+ * saved as VS Code saves (⌘S) to a branch of DSNR's, as every change to the library is, proposed as a draft pull request;
+ * a save made against the file it was opened at, so a change on GitHub meanwhile is never overwritten.
  */
 
 const voice = (more: Partial<VoiceAndTone> = {}): VoiceAndTone => ({
@@ -15,17 +15,17 @@ const voice = (more: Partial<VoiceAndTone> = {}): VoiceAndTone => ({
 	base: 'develop',
 	text: '# Voice\n',
 	sha: 'a'.repeat(40),
-	branch: null,
 	...more,
 });
-const kept = (more: Partial<NonNullable<VoiceAndTone['branch']>> = {}) => ({
+const kept = (more: Partial<ChangeBranchOf<'voice'>> = {}): ChangeBranchOf<'voice'> => ({
 	branch: 'dsnr/voice-1012-abc123',
-	text: '# Voice, mine\n',
+	saved: { text: '# Voice, mine\n', against: 'a'.repeat(40) },
+	lines: ['.dsnr/voice-and-tone.md: as written in DSNR'],
 	saves: 1,
 	pullRequest: null,
-	compare: 'https://github.com/flocksafety/flock-react-component-lib/compare/develop...dsnr/voice-1012-abc123',
 	...more,
 });
+const COMPARE = 'https://github.com/flocksafety/flock-react-component-lib/compare/develop...dsnr/voice-1012-abc123?expand=1';
 const world = (api: Record<string, unknown> = {}) => {
 	const offered: [string, string[]][] = [];
 	// What the person presses, in turn: nothing, once these are used.
@@ -33,9 +33,10 @@ const world = (api: Record<string, unknown> = {}) => {
 	const deps = {
 		api: {
 			voiceAndTone: vi.fn(async () => ok(voice())),
-			saveVoiceAndTone: vi.fn(async () => ok({ state: 'saved' as const, voice: voice({ branch: kept() }) })),
-			proposeVoiceAndTone: vi.fn(async () => ok(voice({ branch: kept({ pullRequest: { number: 7, url: 'https://github.com/x/y/pull/7' } }) }))),
-			forgetVoiceBranch: vi.fn(async () => ok(null)),
+			changeBranch: vi.fn(async () => ok(null as ChangeBranchOf<'voice'> | null)),
+			saveChange: vi.fn(async () => ok(kept())),
+			proposeChange: vi.fn(async () => ok(kept({ pullRequest: { number: 7, url: 'https://github.com/x/y/pull/7', chromatic: null } }))),
+			forgetChange: vi.fn(async () => ok(null)),
 			...api,
 		},
 		offer: vi.fn(async (message: string, actions: string[]) => (offered.push([message, actions]), presses.shift())),
@@ -45,11 +46,19 @@ const world = (api: Record<string, unknown> = {}) => {
 	};
 	return { doc: new VoiceDocument(deps as never), deps, offered, presses };
 };
+/** A save refused: the core says why, and the file read again is not the one it was opened at. */
+const refusedAs = (now: VoiceAndTone) => ({
+	saveChange: vi.fn(async () => ({
+		ok: false as const,
+		error: 'The voice and tone changed on the library’s branch since it was opened, so nothing was saved.',
+	})),
+	voiceAndTone: vi.fn().mockResolvedValueOnce(ok(voice())).mockResolvedValue(ok(now)),
+});
 
 describe('the voice and tone, as a document', () => {
-	it('opens as the change last saved, else the default branch’s file, else nothing yet', async () => {
+	it('opens as the change last saved, else the library’s file, else nothing yet', async () => {
 		expect(await world().doc.read()).toBe('# Voice\n');
-		expect(await world({ voiceAndTone: vi.fn(async () => ok(voice({ branch: kept() }))) }).doc.read()).toBe('# Voice, mine\n');
+		expect(await world({ changeBranch: vi.fn(async () => ok(kept())) }).doc.read()).toBe('# Voice, mine\n');
 		expect(await world({ voiceAndTone: vi.fn(async () => ok(voice({ text: null, sha: null }))) }).doc.read()).toBe('');
 	});
 
@@ -57,21 +66,34 @@ describe('the voice and tone, as a document', () => {
 		const { doc, deps, offered } = world();
 		await doc.read();
 		expect(await doc.save('# Voice, better\n')).toBe('saved');
-		expect(deps.api.saveVoiceAndTone).toHaveBeenCalledWith('# Voice, better\n', 'a'.repeat(40));
+		expect(deps.api.saveChange).toHaveBeenCalledWith('voice', null, { text: '# Voice, better\n', against: 'a'.repeat(40) });
 		await doc.afterSave();
 		expect(offered).toEqual([['Saved on dsnr/voice-1012-abc123 (1 save). Every agent task carries it once it is merged.', ['Propose']]]);
 	});
 
-	it('is refused when GitHub’s file changed since it was opened; kept as mine, the next save is made against GitHub’s now', async () => {
+	it('saves nothing for the library’s own text, with nothing kept: it is saved already', async () => {
+		const { doc, deps } = world();
+		await doc.read();
+		expect(await doc.save('# Voice\n')).toBe('saved');
+		expect(deps.api.saveChange).not.toHaveBeenCalled();
+	});
+
+	it('is refused when the library’s file changed since it was opened; kept as mine, the next save is made against it as it is now', async () => {
 		const now = voice({ text: '# Voice, theirs\n', sha: 'b'.repeat(40) });
-		const { doc, deps } = world({ saveVoiceAndTone: vi.fn(async () => ok({ state: 'changed' as const, voice: now })) });
+		const { doc, deps } = world(refusedAs(now));
 		await doc.read();
 		expect(await doc.save('# Mine\n')).toBe('changed');
 		expect(doc.theirsText()).toBe('# Voice, theirs\n');
 		doc.keepMine();
-		deps.api.saveVoiceAndTone.mockResolvedValue(ok({ state: 'saved', voice: voice({ branch: kept() }) }) as never);
+		deps.api.saveChange.mockResolvedValue(ok(kept()) as never);
 		await doc.save('# Mine\n');
-		expect(deps.api.saveVoiceAndTone).toHaveBeenLastCalledWith('# Mine\n', 'b'.repeat(40));
+		expect(deps.api.saveChange).toHaveBeenLastCalledWith('voice', null, { text: '# Mine\n', against: 'b'.repeat(40) });
+	});
+
+	it('says why a save failed for any other reason, as the file is as it was opened', async () => {
+		const { doc } = world({ saveChange: vi.fn(async () => ({ ok: false as const, error: 'The library has moved.' })) });
+		await doc.read();
+		await expect(doc.save('# Mine\n')).rejects.toThrow('The library has moved.');
 	});
 
 	it('is proposed as a draft pull request, which can be opened; or GitHub’s own page is offered when it cannot be', async () => {
@@ -81,28 +103,28 @@ describe('the voice and tone, as a document', () => {
 		expect(offered.at(-1)).toEqual(['Proposed as draft pull request #7.', ['Open the pull request']]);
 		expect(deps.openExternal).toHaveBeenCalledWith('https://github.com/x/y/pull/7');
 		const refused = world({
-			voiceAndTone: vi.fn(async () => ok(voice({ branch: kept() }))),
-			proposeVoiceAndTone: vi.fn(async () => ({ ok: false, error: 'gh is not signed in.' })),
+			changeBranch: vi.fn(async () => ok(kept())),
+			proposeChange: vi.fn(async () => ({ ok: false, error: 'gh is not signed in.' })),
 		});
 		await refused.doc.read();
 		refused.presses.push('View on GitHub');
 		await refused.doc.propose();
 		expect(refused.offered.at(-1)).toEqual(['warning: The voice and tone was not proposed: gh is not signed in.', ['View on GitHub']]);
-		expect(refused.deps.openExternal).toHaveBeenCalledWith(kept().compare);
+		expect(refused.deps.openExternal).toHaveBeenCalledWith(COMPARE);
 	});
 
 	it('starts over by forgetting its branch, which stays on GitHub; once forgotten, a save starts a new one', async () => {
-		const { doc, deps, offered } = world({ voiceAndTone: vi.fn(async () => ok(voice({ branch: kept() }))) });
+		const { doc, deps, offered } = world({ changeBranch: vi.fn(async () => ok(kept())) });
 		await doc.read();
 		await doc.startOver();
-		expect(deps.api.forgetVoiceBranch).toHaveBeenCalled();
+		expect(deps.api.forgetChange).toHaveBeenCalledWith('voice', null);
 		// Said after a save, with no branch kept: nothing about the old one.
 		await doc.afterSave();
 		expect(offered).toEqual([]);
 	});
 
 	it('does not start over when its branch could not be forgotten, and says why', async () => {
-		const { doc } = world({ forgetVoiceBranch: vi.fn(async () => ({ ok: false, error: 'Could not forget it.' })) });
+		const { doc } = world({ forgetChange: vi.fn(async () => ({ ok: false, error: 'Could not forget it.' })) });
 		await expect(doc.startOver()).rejects.toThrow('Could not forget it.');
 	});
 });
@@ -130,7 +152,7 @@ const fake = {
 const uri = (path: string): never => ({ path, with: ({ path: to }: { path: string }) => uri(to) }) as never;
 
 describe('the voice and tone’s files in VS Code', () => {
-	it('reads the document from GitHub, and GitHub’s file as a refused save found it, read only', async () => {
+	it('reads the document from the library, and its file as a refused save found it, read only', async () => {
 		const { doc } = world();
 		const fs = voiceFileSystem(fake as never, doc, () => undefined);
 		expect(new TextDecoder().decode((await fs.readFile(uri(VOICE_PATH))) as Uint8Array)).toBe('# Voice\n');
@@ -147,13 +169,12 @@ describe('the voice and tone’s files in VS Code', () => {
 		const fs = voiceFileSystem(fake as never, doc, () => undefined);
 		await fs.readFile(uri(VOICE_PATH));
 		await fs.writeFile(uri(VOICE_PATH), new TextEncoder().encode('# New\n'), { create: false, overwrite: true });
-		expect(deps.api.saveVoiceAndTone).toHaveBeenCalledWith('# New\n', 'a'.repeat(40));
+		expect(deps.api.saveChange).toHaveBeenCalledWith('voice', null, { text: '# New\n', against: 'a'.repeat(40) });
 		await vi.waitFor(() => expect(offered).toHaveLength(1));
 	});
 
 	it('leaves the document unsaved when the save is refused, saying why, so nothing typed is lost', async () => {
-		const now = voice({ text: '# Theirs\n', sha: 'b'.repeat(40) });
-		const { doc } = world({ saveVoiceAndTone: vi.fn(async () => ok({ state: 'changed' as const, voice: now })) });
+		const { doc } = world(refusedAs(voice({ text: '# Theirs\n', sha: 'b'.repeat(40) })));
 		const refused = vi.fn();
 		const fs = voiceFileSystem(fake as never, doc, refused);
 		await fs.readFile(uri(VOICE_PATH));

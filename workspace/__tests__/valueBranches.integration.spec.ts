@@ -45,6 +45,7 @@ const tools = (): ShareTools => ({
 		openPr = { number: 7, url: 'https://github.com/acme/ui/pull/7' };
 		return openPr;
 	},
+	isOpen: async () => true,
 	checks: async () => [],
 	sleep: async () => undefined,
 	now: () => 0,
@@ -100,7 +101,13 @@ describe('saving the values tried on a component (Phase 4.4)', () => {
 	it('makes a branch of its own for the component, one commit on develop changing only where the value was found', async () => {
 		const status = g(clone, 'status', '--porcelain').trim();
 		const saved = await branches().save([SMALL], BUTTON);
-		expect(saved).toEqual({ branch: expect.stringMatching(/^dsnr\/values-20261016-[0-9a-f]{4}$/), saved: [SMALL], saves: 1, pullRequest: null });
+		expect(saved).toEqual({
+			branch: expect.stringMatching(/^dsnr\/values-20261016-[0-9a-f]{4}$/),
+			saved: [SMALL],
+			lines: ['FSButton · Height: 28px → 32px (src/utils/theme.ts, line 2)'],
+			saves: 1,
+			pullRequest: null,
+		});
 		expect(g(clone, 'diff', '--name-only', 'origin/develop', saved.branch).trim()).toBe('src/utils/theme.ts');
 		expect(g(clone, 'show', `${saved.branch}:src/utils/theme.ts`)).toContain("sm: { height: '32px' }");
 		expect(g(clone, 'log', '-1', '--format=%B', saved.branch).trim()).toBe(

@@ -1,7 +1,6 @@
 import type { Check, PullRequest } from '../codeHost/changeRequests';
 import type { AxeRun } from '../shared/accessibility';
 import type { Drawn, Mode, Vary } from './services/designSystem/componentTokens';
-import type { GitHubApi } from '../codeHost/github';
 import type { AgentSession } from './services/agent/editor';
 
 /**
@@ -39,6 +38,8 @@ export interface ShareTools {
 	 * else the repository's default.
 	 */
 	createDraftPr(branch: string, title: string, body: string, base?: string): Promise<PullRequest>;
+	/** Whether a pull request is still open: not merged, not closed. */
+	isOpen(pr: number): Promise<boolean>;
 	checks(pr: number): Promise<Check[]>;
 	sleep(ms: number): Promise<void>;
 	now(): number;
@@ -83,8 +84,6 @@ export interface Ports {
 	};
 	/** Where Claude Code is, for a command the person runs themselves. */
 	claude(): string;
-	/** GitHub's API as the person, through their own command line (`gh`); null when it is not here. */
-	personGitHub: GitHubApi | null;
 	/** The person's own git and GitHub command line, for a pull request from `root`. */
 	shareTools(root: string): ShareTools;
 	/** Drawing out of sight. */

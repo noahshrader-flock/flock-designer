@@ -54,19 +54,9 @@ export class ChangeRequests {
 	}
 
 	/** The one open from `head` (a branch of this repository), or null. */
-	/** The change requests from `head`, a branch of this repository, in `state`. */
-	private async from(head: string, state: 'open' | 'all'): Promise<unknown[]> {
-		return asArray(await this.session.api(`${this.apiPath}/pulls?head=${encodeURIComponent(`${this.ref.owner}:${head}`)}&state=${state}`));
-	}
-
 	async findOpen(head: string): Promise<PullRequest | null> {
-		const open = await this.from(head, 'open');
+		const open = asArray(await this.session.api(`${this.apiPath}/pulls?head=${encodeURIComponent(`${this.ref.owner}:${head}`)}&state=open`));
 		return asPullRequest(open[0]);
-	}
-
-	/** Whether any was ever opened from `head`, open or not. */
-	async anyFrom(head: string): Promise<boolean> {
-		return (await this.from(head, 'all')).length > 0;
 	}
 
 	/** Always a draft. Nothing here can open one that is ready for review. */

@@ -8,7 +8,7 @@ import { Grouped } from '../extension/webview/Tokens';
 import { AccessibilityFindings } from '../extension/webview/Accessibility';
 import { TokensUsed } from '../extension/webview/ComponentSections';
 import { AsidePart } from '../extension/webview/ui/AsidePart';
-import { HandoffActions } from '../extension/webview/HandoffActions';
+import { HandOverActions } from '../extension/webview/HandOverActions';
 import { ChangedValues } from '../extension/webview/ValueChanges';
 import { ComponentValues } from '../extension/webview/ComponentValues';
 import { ValueEditor } from '../extension/webview/ValueEditor';
@@ -500,7 +500,7 @@ describe.skipIf(NO_CHROME)('a component’s Values, in the side pane, in the bro
 				reach: { state: 'none' },
 			},
 			controls: {
-				branch: { branch: 'dsnr/values-20261016-ab12', saved: [], saves: 1, pullRequest: null },
+				branch: { branch: 'dsnr/values-20261016-ab12', saved: [], lines: [], saves: 1, pullRequest: null },
 				unsaved: true,
 				busy: null,
 				error: null,
@@ -508,8 +508,8 @@ describe.skipIf(NO_CHROME)('a component’s Values, in the side pane, in the bro
 				propose: () => undefined,
 				startOver: () => undefined,
 			},
-			handoff: {
-				handoff: null,
+			handOver: {
+				branch: null,
 				handed: null,
 				busy: null,
 				error: null,
@@ -570,11 +570,13 @@ describe.skipIf(NO_CHROME)('a component’s Values, in the side pane, in the bro
 
 	// A hand-over's branch as DSNR read it: a long name, deep paths, a file the rules keep out, and too large for one sitting.
 	const handedOver = renderToStaticMarkup(
-		createElement(HandoffActions, {
+		createElement(HandOverActions, {
 			controls: {
-				handoff: {
+				branch: {
 					branch: 'dsnr/handoff-20261017-ab12',
+					saved: { tried: [] },
 					lines: [],
+					saves: 0,
 					review: {
 						state: 'ready',
 						tip: 'c'.repeat(40),
@@ -613,7 +615,7 @@ describe.skipIf(NO_CHROME)('a component’s Values, in the side pane, in the bro
 					const root = document.documentElement;
 					if (root.scrollWidth > root.clientWidth) found.push(`the page is ${root.scrollWidth}px in a ${root.clientWidth}px pane`);
 					const pane = (document.querySelector('.component-aside') as Element).getBoundingClientRect();
-					for (const el of document.querySelectorAll('[data-handoff] *')) {
+					for (const el of document.querySelectorAll('[data-hand-over] *')) {
 						const b = el.getBoundingClientRect();
 						if (b.width === 0) continue;
 						const name = `${el.className || el.tagName}: ${el.textContent?.slice(0, 30)}`;

@@ -54,6 +54,15 @@ export const answer = async (name: string, value: unknown) => {
 	await say({ type: 'answer', id: call.id, result: { ok: true, value } });
 };
 
+/** The page's calls to `name` for one kind of change (`ChangeKinds`), its first argument, in order. */
+export const callsOf = (name: string, kind: string) => calls(name).filter((c) => c.args?.[0] === kind);
+/** Answers the page's latest call to `name` for one kind of change with `value`. */
+export const answerOf = async (name: string, kind: string, value: unknown) => {
+	const call = callsOf(name, kind).at(-1);
+	if (!call) throw new Error(`the page made no ${name} call for ${kind}: ${JSON.stringify(sent)}`);
+	await say({ type: 'answer', id: call.id, result: { ok: true, value } });
+};
+
 /** A button by what it says, as a person finds it. */
 export const button = (name: string) => [...document.querySelectorAll('button')].find((b) => b.textContent === name) as HTMLButtonElement;
 export const press = async (el: Element) => act(async () => (el as HTMLElement).click());

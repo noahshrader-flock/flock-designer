@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { HandoffBranches } from '../src/core/services/designSystem/handoffBranches';
+import { HandOverBranches } from '../src/core/services/designSystem/handOverBranches';
 import type { ShareTools } from '../src/core/ports';
 import type { ConnectedDesignSystem } from '../src/shared/contract';
 
@@ -18,6 +18,8 @@ let system: ConnectedDesignSystem;
 let pushed: string[];
 let opened: { branch: string; title: string; body: string; base: string | undefined }[];
 let saved: boolean;
+/** Whether its pull request is still open, as GitHub says. */
+let stillOpen: boolean;
 const BUTTON = 'src/components/FSButton/FSButton.stories.tsx';
 const g = (cwd: string, ...args: string[]) => execFileSync('git', args, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
 
@@ -28,12 +30,13 @@ const tools = (): ShareTools => ({
 		opened.push({ branch, title, body, base }),
 		{ number: 7, url: 'https://github.com/o/ui/pull/7' }
 	),
+	isOpen: async () => stillOpen,
 	checks: async () => [],
 	sleep: async () => undefined,
 	now: () => 0,
 });
-const handoffs = () =>
-	new HandoffBranches({
+const handOvers = () =>
+	new HandOverBranches({
 		system: () => system,
 		file: join(home, 'app', 'handoffs.json'),
 		tools,
@@ -79,47 +82,50 @@ beforeEach(() => {
 	pushed = [];
 	opened = [];
 	saved = false;
+	stillOpen = true;
 });
 afterEach(() => rmSync(home, { recursive: true, force: true }));
 
 describe('a unit handed to Claude Code', () => {
 	it('names its branch, keeps it, and gives the prompt to open Claude Code with in the library’s root', async () => {
-		const started = await handoffs().start(BUTTON, TRIED);
+		const started = await handOvers().start(BUTTON, TRIED);
 		expect(started.root).toBe(clone);
 		expect(started.branch).toMatch(/^dsnr\/handoff-20261017-[0-9a-f]{4}$/);
 		expect(started.prompt).toContain(`git switch -c ${started.branch} origin/develop`);
 		expect(started.prompt).toContain('for the FSButton component alone.');
 		expect(started.prompt).toContain('- FSButton · Height · sm: 28px → 32px (theme.ts, line 1)');
 		// Kept, and read from git: not made yet.
-		expect(await handoffs().current(BUTTON)).toEqual({
+		expect(await handOvers().current(BUTTON)).toEqual({
 			branch: started.branch,
+			saved: TRIED,
 			lines: ['FSButton · Height · sm: 28px → 32px (theme.ts, line 1)'],
+			saves: 0,
 			review: { state: 'missing' },
 			pullRequest: null,
 		});
-		expect(handoffs().scopes()).toEqual([BUTTON]);
+		expect(await handOvers().scopes()).toEqual([BUTTON]);
 	});
 
 	it('is refused on a checkout with unfinished work, with a branch DSNR saved, and when it is handed over already', async () => {
 		writeFileSync(join(clone, 'notes.md'), 'mine\n');
-		await expect(handoffs().start(BUTTON, TRIED)).rejects.toThrow('changed or new and not committed');
+		await expect(handOvers().start(BUTTON, TRIED)).rejects.toThrow('changed or new and not committed');
 		rmSync(join(clone, 'notes.md'));
 		saved = true;
-		await expect(handoffs().start(BUTTON, TRIED)).rejects.toThrow('This has a branch DSNR saved it to.');
+		await expect(handOvers().start(BUTTON, TRIED)).rejects.toThrow('This has a branch DSNR saved it to.');
 		saved = false;
-		await handoffs().start(BUTTON, TRIED);
-		await expect(handoffs().start(BUTTON, TRIED)).rejects.toThrow('This is handed to Claude Code already.');
+		await handOvers().start(BUTTON, TRIED);
+		await expect(handOvers().start(BUTTON, TRIED)).rejects.toThrow('This is handed to Claude Code already.');
 		// Another unit is its own: the tokens can be handed over beside it.
-		expect((await handoffs().start('', { edits: [] })).prompt).toContain('for its design tokens.');
+		expect((await handOvers().start('', { edits: [] })).prompt).toContain('for its design tokens.');
 	});
 
 	it('is proposed once Claude Code has committed on its branch: pushed, a draft with the lines, the reach, what was checked and the template', async () => {
-		const { branch } = await handoffs().start(BUTTON, TRIED);
-		await expect(handoffs().propose(BUTTON, SEEN, false)).rejects.toThrow(`There is no branch ${branch} yet`);
+		const { branch } = await handOvers().start(BUTTON, TRIED);
+		await expect(handOvers().propose(BUTTON, SEEN, false)).rejects.toThrow(`There is no branch ${branch} yet`);
 		claudeCommits(branch, { 'theme.ts': 'export const height = 32;\n' });
-		const proposed = await handoffs().propose(BUTTON, tipOf(branch), false);
+		const proposed = await handOvers().propose(BUTTON, tipOf(branch), false);
 		expect(pushed).toEqual([branch]);
-		expect(proposed.pullRequest).toEqual({ number: 7, url: 'https://github.com/o/ui/pull/7' });
+		expect(proposed.pullRequest).toEqual({ number: 7, url: 'https://github.com/o/ui/pull/7', chromatic: null });
 		const [pr] = opened;
 		// Onto the branch it was made from, never the repository's default by chance.
 		expect(pr?.base).toBe('develop');
@@ -128,20 +134,20 @@ describe('a unit handed to Claude Code', () => {
 		expect(pr?.body).toContain('It moves 1 component (FSButton)');
 		expect(pr?.body).toContain('made from develop; 1 commit; 1 file, 2 lines changed.');
 		expect(pr?.body).toContain('## Testing\n\n- [ ] Checked in Storybook');
-		expect((await handoffs().current(BUTTON))?.pullRequest?.number).toBe(7);
+		expect((await handOvers().current(BUTTON))?.pullRequest?.number).toBe(7);
 	});
 
 	it('proposes a flagged branch only when it is sent on purpose, and says so in its description', async () => {
-		const { branch } = await handoffs().start(BUTTON, TRIED);
+		const { branch } = await handOvers().start(BUTTON, TRIED);
 		claudeCommits(branch, { 'theme.ts': 'export const height = 32;\n', 'Button.stories.tsx': 'export default {};\n' });
-		await expect(handoffs().propose(BUTTON, tipOf(branch), false)).rejects.toThrow('send it on purpose');
+		await expect(handOvers().propose(BUTTON, tipOf(branch), false)).rejects.toThrow('send it on purpose');
 		expect(pushed).toEqual([]);
-		await handoffs().propose(BUTTON, tipOf(branch), true);
+		await handOvers().propose(BUTTON, tipOf(branch), true);
 		expect(opened[0]?.body).toContain('on purpose: Button.stories.tsx (a story).');
 	});
 
 	it('proposes only the commit the person looked at: one Claude Code committed since is refused, and nothing is pushed', async () => {
-		const { branch } = await handoffs().start(BUTTON, TRIED);
+		const { branch } = await handOvers().start(BUTTON, TRIED);
 		claudeCommits(branch, { 'theme.ts': 'export const height = 32;\n' });
 		const seen = tipOf(branch);
 		g(clone, 'switch', '-q', branch);
@@ -149,16 +155,25 @@ describe('a unit handed to Claude Code', () => {
 		g(clone, 'add', '-A');
 		g(clone, 'commit', '-q', '-m', 'Claude Code: one more');
 		g(clone, 'switch', '-q', 'develop');
-		await expect(handoffs().propose(BUTTON, seen, true)).rejects.toThrow(`has committed on ${branch} since it was shown here`);
+		await expect(handOvers().propose(BUTTON, seen, true)).rejects.toThrow(`has committed on ${branch} since it was shown here`);
 		expect(pushed).toEqual([]);
 	});
 
-	it('is forgotten on start over, leaving its branch, so it can be handed over again', async () => {
-		const { branch } = await handoffs().start(BUTTON, TRIED);
+	it('is forgotten once its pull request is merged or closed, as every change is', async () => {
+		const { branch } = await handOvers().start(BUTTON, TRIED);
 		claudeCommits(branch, { 'theme.ts': 'export const height = 32;\n' });
-		handoffs().forget(BUTTON);
-		expect(await handoffs().current(BUTTON)).toBeNull();
+		await handOvers().propose(BUTTON, tipOf(branch), false);
+		stillOpen = false;
+		expect(await handOvers().current(BUTTON)).toBeNull();
+		expect(await handOvers().scopes()).toEqual([]);
+	});
+
+	it('is forgotten on start over, leaving its branch, so it can be handed over again', async () => {
+		const { branch } = await handOvers().start(BUTTON, TRIED);
+		claudeCommits(branch, { 'theme.ts': 'export const height = 32;\n' });
+		handOvers().forget(BUTTON);
+		expect(await handOvers().current(BUTTON)).toBeNull();
 		expect(g(clone, 'branch', '--list', branch)).toContain(branch);
-		await handoffs().start(BUTTON, TRIED);
+		await handOvers().start(BUTTON, TRIED);
 	});
 });

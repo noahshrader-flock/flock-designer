@@ -1,7 +1,9 @@
 /**
- * Where a change to the library is kept, and how it is proposed: a change to its tokens (T4 and T5 of the design system
- * plan), and the values of a component's own written where they are found (Phase 4 of adjusting a component). One way
- * for both; what differs is what a change writes, and how it is said (`ChangeKind`).
+ * Where a change to the library is kept, and how it is proposed: one model for every kind (`ChangeKinds`), the tokens (T4
+ * and T5 of the design system plan), a component's values written where they are found (Phase 4 of adjusting a
+ * component), the voice and tone (T9), and a unit handed to Claude Code (Process changes, `handOverBranches.ts`). What
+ * differs is who commits on the branch (DSNR, a save at a time, or Claude Code), and what a change writes and how it is
+ * said (`SavedKindRules`).
  *
  * **Saving** writes the change as one commit on a branch of the library that DSNR makes for it (`dsnr/<kind>-…`), and on
  * no other. The commit is made by git's own plumbing: the edited files are written as objects, put into a tree made from
@@ -14,10 +16,11 @@
  * and GitHub command line), and finds Chromatic's build among the pull request's checks once the library's CI has made
  * one. A save after that is pushed, so the pull request always has the last save.
  *
- * Which branch each change is on is remembered on disk, by the design system and, for a kind kept per component, the
- * component (`scope`), so the app can be closed and the change carried on.
+ * Which branch each change is on is remembered on disk, one record shape for every kind, by the design system and, for a
+ * kind kept per component, the component (`scope`), so the app can be closed and the change carried on. A change is
+ * forgotten once its pull request is merged or closed, or (for one DSNR saves) its branch is gone from the clone.
  */
-import type { ChangeBranch, ConnectedDesignSystem } from '../../../shared/contract';
+import type { ChangeBranch, ChangeKind, ConnectedDesignSystem } from '../../../shared/contract';
 import { asRecord } from '../../../shared/json';
 import { libraryCommit } from './designLibrary';
 import { dsnrBranchPattern, newDsnrBranch } from './dsnrBranch';
@@ -27,12 +30,19 @@ import type { ShareTools } from '../../ports';
 import { errorText } from '../../../shared/result';
 import { HOST } from '../../../shared/vocabulary';
 
-/** What one kind of change is: what its branches are named, what it writes, and how it is said. */
-export interface ChangeKind<C> {
-	/** Its branches are `dsnr/<kind>-<day>-<hex>`. */
-	kind: string;
-	/** A change as the file of kept branches has it, checked as the window's is; throws for anything else. */
+/** What every kind of change is: its name, what its branches are named, what it is kept by, and how a kept one is checked. */
+export interface KindRules<C> {
+	kind: ChangeKind;
+	/** Its branches are `dsnr/<branchWord>-<day>-<hex>`. */
+	branchWord: string;
+	/** What a change of it is kept by: the design system whole, a component by its story file, or either. */
+	scope: 'whole' | 'component' | 'either';
+	/** A change as the file of kept branches has it, or as the window sends it; throws, in words, for anything else. */
 	check: (saved: unknown) => C;
+}
+
+/** A kind DSNR saves itself, a commit for each save: what it writes, and how it is said. */
+export interface SavedKindRules<C> extends KindRules<C> {
 	empty: (change: C) => boolean;
 	/** The files the change writes, path to text, made from the library at `base`. Throws, in words, for one that cannot be. */
 	files: (system: ConnectedDesignSystem, base: string, change: C, scope: string) => Promise<Map<string, string>>;
@@ -48,7 +58,15 @@ export interface ChangeKind<C> {
 	saving: string;
 }
 
-type Said = Pick<ChangeKind<unknown>, 'subject' | 'asItWas' | 'about' | 'checked'>;
+/** What a change of a kind is kept by, as the window names it (a story file, or null for the design system whole), checked against the kind's. */
+export const scopeOf = (rules: Pick<KindRules<unknown>, 'kind' | 'scope'>, scope: string | null): string => {
+	if (rules.scope === 'whole' && scope !== null)
+		throw new Error(`A change of the ${rules.kind} is kept for the design system whole, not one component.`);
+	if (rules.scope === 'component' && scope === null) throw new Error(`A change of the ${rules.kind} is kept for one component, by its story file.`);
+	return scope ?? '';
+};
+
+type Said = Pick<SavedKindRules<unknown>, 'subject' | 'asItWas' | 'about' | 'checked'>;
 
 /** What a save's commit says: what it is, a line for each part of it, and that it was saved from DSNR. One way for every kind. */
 export const commitText = (of: Said, lines: string[]): string =>
@@ -71,10 +89,145 @@ export interface ChangeBranchesDeps {
 }
 
 /**
- * What DSNR keeps of a branch beyond what is shown: the library's commit the change is made on (`base`), the commit the
- * branch was last saved at (`tip`), to move it only from there, and what that save said (`said`), which its pull request says.
+ * What DSNR keeps of a change's branch, the same for every kind: the branch, the library's commit and branch it was made
+ * on (`base`, `baseBranch`), the commit DSNR last saved it at (`tip`, to move it only from there; null for one Claude Code
+ * commits on), the change and its lines as last saved, how many saves, and its pull request.
  */
-type Kept<C> = ChangeBranch<C> & { base: string; tip: string; said?: string[] };
+export interface Kept<C> {
+	branch: string;
+	base: string;
+	baseBranch: string;
+	tip: string | null;
+	saved: C;
+	lines: string[];
+	saves: number;
+	pullRequest: ChangeBranch<C>['pullRequest'];
+}
+
+/** A branch as the window sees it: without the commits DSNR keeps to make its saves from. */
+export const shownBranch = <C>({ branch, saved, lines, saves, pullRequest }: Kept<C>): ChangeBranch<C> => ({
+	branch,
+	saved,
+	lines,
+	saves,
+	pullRequest,
+});
+
+/** What every kind's branches share: the records, a change forgotten once it is done with, the scopes kept, and proposing. */
+export abstract class KeptBranches<C> {
+	/** Each change's branch, by its design system and scope. Only a branch DSNR names as its own is ever written to, whatever the file says. */
+	protected readonly records: ScopedRecords<Kept<C>>;
+	readonly pattern: RegExp;
+
+	constructor(
+		protected readonly deps: ChangeBranchesDeps,
+		readonly rules: KindRules<C>,
+	) {
+		this.pattern = dsnrBranchPattern(rules.branchWord);
+		this.records = new ScopedRecords(deps.system, deps.file, (raw) => this.whole(raw));
+	}
+
+	/** Whether a kept branch still stands in the clone: one DSNR saves to is gone when git says so; one Claude Code makes may not be there yet. */
+	protected abstract stands(system: ConnectedDesignSystem, kept: Kept<C>): Promise<boolean>;
+
+	/**
+	 * The change kept for `scope`, when it is still being worked on: forgotten once its branch no longer stands, or its pull
+	 * request was merged or closed. A host that cannot say now (the command line signed out) keeps it.
+	 */
+	protected async kept(scope: string): Promise<{ system: ConnectedDesignSystem; kept: Kept<C> } | null> {
+		const at = this.records.read(scope);
+		if (at === null) return null;
+		const { system, kept } = at;
+		const pr = kept.pullRequest;
+		const done =
+			!(await this.stands(system, kept)) ||
+			(pr !== null &&
+				!(await this.deps
+					.tools(system.root)
+					.isOpen(pr.number)
+					.catch(() => true)));
+		if (done) {
+			this.forget(scope);
+			return null;
+		}
+		return at;
+	}
+
+	/** The scopes with a change kept on the design system shown (the design system whole as an empty one): what the panel's Changes lists. */
+	async scopes(): Promise<string[]> {
+		const scopes = this.records.scopes();
+		const there = await Promise.all(scopes.map(async (scope) => (await this.kept(scope)) !== null));
+		return scopes.filter((_, i) => there[i]);
+	}
+
+	/** Forgets the change's branch, so the next change makes a new one. The branch and its pull request stay. */
+	forget(scope = ''): void {
+		this.records.forget(scope);
+	}
+
+	/** Pushes a kept branch and opens a draft pull request onto the branch it was made from; the one open already, if there is one. */
+	protected async open(
+		system: ConnectedDesignSystem,
+		scope: string,
+		kept: Kept<C>,
+		proposal: () => Promise<{ title: string; body: string }>,
+	): Promise<Kept<C>> {
+		const tools = this.deps.tools(system.root);
+		await tools.push(kept.branch);
+		const open = await tools.findPr(kept.branch);
+		const pr =
+			open ??
+			(await (async () => {
+				const { title, body } = await proposal();
+				return tools.createDraftPr(kept.branch, title, body, kept.baseBranch);
+			})());
+		const next: Kept<C> = { ...kept, pullRequest: { number: pr.number, url: pr.url, chromatic: kept.pullRequest?.chromatic ?? null } };
+		this.records.keep(system, scope, next);
+		return next;
+	}
+
+	/** The kept branches that are DSNR's own and whole; anything else in the file is left out. */
+	private whole(raw: unknown): Record<string, Kept<C>> {
+		return Object.fromEntries(
+			Object.entries(asRecord(raw)).flatMap(([key, value]) => {
+				const k = asRecord(value);
+				const saved = (() => {
+					try {
+						return this.rules.check(k.saved);
+					} catch {
+						return null;
+					}
+				})();
+				const pr = asRecord(k.pullRequest);
+				const kept: Kept<C> | null =
+					typeof k.branch === 'string' &&
+					this.pattern.test(k.branch) &&
+					typeof k.base === 'string' &&
+					typeof k.baseBranch === 'string' &&
+					(k.tip === null || typeof k.tip === 'string') &&
+					Array.isArray(k.lines) &&
+					k.lines.every((l) => typeof l === 'string') &&
+					typeof k.saves === 'number' &&
+					saved !== null
+						? {
+								branch: k.branch,
+								base: k.base,
+								baseBranch: k.baseBranch,
+								tip: k.tip as string | null,
+								saved,
+								lines: k.lines as string[],
+								saves: k.saves,
+								pullRequest:
+									typeof pr.number === 'number' && typeof pr.url === 'string'
+										? { number: pr.number, url: pr.url, chromatic: typeof pr.chromatic === 'string' ? pr.chromatic : null }
+										: null,
+							}
+						: null;
+				return kept ? [[key, kept]] : [];
+			}),
+		);
+	}
+}
 
 /** A commit of `base`'s tree with `files` (path to text) as given, whose parent is `parent`; null when nothing would change. */
 const commitFiles = async (root: string, base: string, parent: string, files: Map<string, string>, message: string): Promise<string | null> => {
@@ -83,23 +236,21 @@ const commitFiles = async (root: string, base: string, parent: string, files: Ma
 	return commitOnto(root, base, parent, blobs, message);
 };
 
-/** A branch as the window sees it: without the commits DSNR keeps to make its saves from. */
-const shown = <C>({ tip: _tip, base: _base, said: _said, ...branch }: Kept<C>): ChangeBranch<C> => branch;
-
-export class ChangeBranches<C> {
-	/** Each change's branch, by its design system and scope. Only a branch DSNR names as its own is ever written to, whatever the file says. */
-	private readonly records: ScopedRecords<Kept<C>>;
-	private readonly pattern: RegExp;
-
+/** The branches of a kind DSNR saves itself: the tokens, a component's values, the voice and tone. */
+export class ChangeBranches<C> extends KeptBranches<C> {
 	constructor(
-		private readonly deps: ChangeBranchesDeps,
-		private readonly of: ChangeKind<C>,
+		deps: ChangeBranchesDeps,
+		private readonly of: SavedKindRules<C>,
 	) {
-		this.pattern = dsnrBranchPattern(of.kind);
-		this.records = new ScopedRecords(deps.system, deps.file, (raw) => this.ownBranches(raw));
+		super(deps, of);
 	}
 
-	/** The change's branch, or null: none was saved, or the branch is gone from the clone. */
+	protected stands(system: ConnectedDesignSystem, kept: Kept<C>): Promise<boolean> {
+		// Gone only when git says so: a clone it cannot read now (moved, or git timing out) is said, and keeps it.
+		return branchExists(system.root, kept.branch);
+	}
+
+	/** The change's branch, or null: none was saved, or it is done with. */
 	async current(scope = ''): Promise<ChangeBranch<C> | null> {
 		const at = await this.kept(scope);
 		if (at === null) return null;
@@ -111,20 +262,11 @@ export class ChangeBranches<C> {
 				.checks(kept.pullRequest.number)
 				.catch(() => []);
 			const chromatic = checks.find((c) => /chromatic/i.test(`${c.name} ${c.link}`) && /^https:\/\//.test(c.link))?.link ?? null;
-			if (chromatic) this.records.keep(system, scope, { ...kept, pullRequest: { ...kept.pullRequest, chromatic } });
-			return shown({ ...kept, pullRequest: { ...kept.pullRequest, chromatic } });
+			const now = { ...kept, pullRequest: { ...kept.pullRequest, chromatic } };
+			if (chromatic) this.records.keep(system, scope, now);
+			return shownBranch(now);
 		}
-		return shown(kept);
-	}
-
-	/**
-	 * The scopes that have a branch kept on the design system shown, whose branch is still in its clone (for a component's
-	 * values, the story files with a branch of their own); none for a change kept without a scope.
-	 */
-	async scopes(): Promise<string[]> {
-		const scopes = this.records.scopes();
-		const there = await Promise.all(scopes.map(async (scope) => (await this.kept(scope)) !== null));
-		return scopes.filter((_, i) => there[i]);
+		return shownBranch(kept);
 	}
 
 	/** Saves `change` as one commit on the branch, made from the library's current commit on the first save. */
@@ -137,16 +279,17 @@ export class ChangeBranches<C> {
 		if (kept === null && this.of.empty(change)) throw new Error('There is no change to save.');
 
 		const files = await this.of.files(system, base, change, scope);
-		const said = await this.of.lines(system, base, change, scope);
-		const message = commitText(this.of, said);
+		const lines = await this.of.lines(system, base, change, scope);
+		const message = commitText(this.of, lines);
 
-		const branch = kept?.branch ?? newDsnrBranch(this.of.kind, this.deps.now?.() ?? new Date());
+		const branch = kept?.branch ?? newDsnrBranch(this.of.branchWord, this.deps.now?.() ?? new Date());
 		const parent = kept?.tip ?? base;
 		const commit = await commitFiles(system.root, base, parent, files, message);
 		// The same files as the last save: no commit, but the change as asked is the one saved.
 		if (commit === null && kept !== null) {
-			this.records.keep(system, scope, { ...kept, saved: change, said });
-			return shown({ ...kept, saved: change });
+			const same = { ...kept, saved: change, lines };
+			this.records.keep(system, scope, same);
+			return shownBranch(same);
 		}
 		if (commit === null) throw new Error('This change leaves the library as it is, so there is nothing to save.');
 		// From where DSNR left it, or for a new branch only if there is none of that name: never over a commit it did not make.
@@ -154,69 +297,23 @@ export class ChangeBranches<C> {
 			throw new Error(`${branch} has moved since DSNR last saved to it, so nothing was saved. ${errorText(err)}`);
 		});
 		const next: Kept<C> = {
-			...(kept ?? { branch, base, tip: base, saved: change, saves: 0, pullRequest: null }),
+			...(kept ?? { branch, base, baseBranch: system.branch, saves: 0, pullRequest: null }),
 			tip: commit,
 			saved: change,
-			said,
+			lines,
 			saves: (kept?.saves ?? 0) + 1,
 		};
 		this.records.keep(system, scope, next);
 		// Once proposed, the pull request has every save.
 		if (next.pullRequest) await this.deps.tools(system.root).push(branch);
-		return shown(next);
+		return shownBranch(next);
 	}
 
-	/** Pushes the branch and opens a draft pull request for it; the one open already, if there is one. */
+	/** Pushes the branch and opens a draft pull request for it, as its last save says it; the one open already, if there is one. */
 	async propose(scope = ''): Promise<ChangeBranch<C>> {
 		const at = await this.kept(scope);
 		if (at === null) throw new Error('Save the change to a branch first; then it can be proposed.');
 		const { system, kept } = at;
-		const tools = this.deps.tools(system.root);
-		await tools.push(kept.branch);
-		const open = await tools.findPr(kept.branch);
-		// As the last save says it; a branch kept before saves said it is said again from its change.
-		const { title, body } = proposalText(this.of, kept.said ?? (await this.of.lines(system, kept.base, kept.saved, scope)));
-		// Onto the library's branch, which the branch was made from.
-		const pr = open ?? (await tools.createDraftPr(kept.branch, title, body, system.branch));
-		const next: Kept<C> = { ...kept, pullRequest: { number: pr.number, url: pr.url, chromatic: kept.pullRequest?.chromatic ?? null } };
-		this.records.keep(system, scope, next);
-		return shown(next);
-	}
-
-	/** Forgets the change's branch, so the next save makes a new one. The branch and its pull request stay. */
-	forget(scope = ''): void {
-		this.records.forget(scope);
-	}
-
-	/** The change's branch as kept, when it is still in the clone where DSNR left it. */
-	private async kept(scope: string): Promise<{ system: ConnectedDesignSystem; kept: Kept<C> } | null> {
-		const at = this.records.read(scope);
-		if (at === null) return null;
-		// Forgotten only when git says the branch is gone: a clone it cannot read now (moved, or git timing out) keeps it.
-		if (!(await branchExists(at.system.root, at.kept.branch))) {
-			this.forget(scope);
-			return null;
-		}
-		return at;
-	}
-
-	/** The kept branches that are DSNR's own and whole; anything else in the file is left out. */
-	private ownBranches(raw: unknown): Record<string, Kept<C>> {
-		return Object.fromEntries(
-			Object.entries(asRecord(raw)).flatMap(([key, value]) => {
-				const k = asRecord(value);
-				const saved = (() => {
-					try {
-						return this.of.check(k.saved);
-					} catch {
-						return null;
-					}
-				})();
-				const whole =
-					typeof k.branch === 'string' && this.pattern.test(k.branch) && typeof k.tip === 'string' && typeof k.base === 'string' && saved !== null;
-				const said = Array.isArray(k.said) && k.said.every((l) => typeof l === 'string') ? (k.said as string[]) : undefined;
-				return whole ? [[key, { ...(k as unknown as Kept<C>), saved, said }]] : [];
-			}),
-		);
+		return shownBranch(await this.open(system, scope, kept, async () => proposalText(this.of, kept.lines)));
 	}
 }

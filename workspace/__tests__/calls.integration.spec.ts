@@ -4,6 +4,7 @@ import { realpathSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CallsContext } from '../src/core/compose';
+import { appPaths } from '../src/core/appPaths';
 import { CHANNELS, invokeChannel } from '../src/shared/contract';
 import type { Ports } from '../src/core/ports';
 import { type Answer, fakeGitHub } from './fakes/github';
@@ -52,12 +53,6 @@ const fakePorts = () =>
 		// Never another application from a test: VS Code is treated as not installed.
 		editor: { find: (): string | null => null, openFolder: vi.fn(), openPrompt: vi.fn(), openSession: vi.fn() },
 		claude: () => 'claude',
-		// The person's own GitHub (its command line): never the real one here.
-		personGitHub: fakeGitHub({
-			'/user': () => ({ login: personLogin }),
-			'/user/repos*': () => personRepos.map((full_name) => ({ full_name })),
-			'*': [],
-		}).github,
 		shareTools: vi.fn(() => {
 			throw new Error('Sharing is not faked in this test.');
 		}),
@@ -71,10 +66,6 @@ const fakePorts = () =>
 		},
 	}) satisfies Ports;
 let ports: ReturnType<typeof fakePorts>;
-/** What the person's own GitHub account lists, beyond what the app's GitHub App can see. */
-let personRepos: string[] = [];
-/** Who the person's own GitHub command line is signed in as: the app's own sign-in is `noah`. */
-let personLogin = 'noah';
 
 /** The app's own GitHub answers from `routes` (`fakes/github.ts`); `githubApi` still has every call it was asked. */
 const answer = (routes: Record<string, Answer>) => githubApi.mockImplementation(fakeGitHub(routes).api);
@@ -203,8 +194,6 @@ beforeEach(async () => {
 	setAddressed = vi.fn(async (id: number, commit: string | null, version: string | null) => ({ id, addressedAt: commit, addressedIn: version }));
 	githubState = { state: 'signedOut' };
 	githubApi = vi.fn(fakeGitHub().api);
-	personRepos = [];
-	personLogin = 'noah';
 	designRepoProjects = [];
 	prototypeServer = new (await import('../src/core/services/prototypes/prototypeServer')).PrototypeServer();
 
@@ -267,9 +256,7 @@ beforeEach(async () => {
 			designSystems: new DesignSystemsMemory(join(home, 'design-system.json')),
 			// Every file the app keeps is in this test's own folder: none is shared with another run or worker.
 			sessions: new SessionMemory(join(home, 'agent-sessions.json')),
-			tokenBranchesFile: join(home, 'token-branches.json'),
-			valueBranchesFile: join(home, 'value-branches.json'),
-			voiceBranchFile: join(home, 'voice-branch.json'),
+			changeBranchFiles: appPaths(home).changeBranches,
 			storyPreviewsRoot: join(home, 'story-previews'),
 			componentPicturesRoot: join(home, 'component-pictures'),
 			// What is got ready in the background is only counted here, never drawn.
@@ -356,17 +343,20 @@ describe('the Design System tab', () => {
 			ok: false,
 			error: expect.stringContaining('by its story file'),
 		});
-		expect(await call(CHANNELS.valueBranch, 'src/components/A/A.stories.tsx')).toEqual({ ok: true, value: null });
-		expect(await call(CHANNELS.saveValues, 'src/components/A/A.stories.tsx', tried)).toMatchObject({
+		expect(await call(CHANNELS.changeBranch, 'values', 'src/components/A/A.stories.tsx')).toEqual({ ok: true, value: null });
+		expect(await call(CHANNELS.saveChange, 'values', 'src/components/A/A.stories.tsx', tried)).toMatchObject({
 			ok: false,
 			error: 'There is no design system connected.',
 		});
-		expect(await call(CHANNELS.saveValues, 'src/components/A/A.stories.tsx', [{ property: 'height' }])).toMatchObject({
+		expect(await call(CHANNELS.saveChange, 'values', 'src/components/A/A.stories.tsx', [{ property: 'height' }])).toMatchObject({
 			ok: false,
 			error: expect.stringContaining('A value tried names'),
 		});
-		expect(await call(CHANNELS.proposeValues, 'src/components/A/A.stories.tsx')).toMatchObject({ ok: false });
-		expect(await call(CHANNELS.forgetValueBranch, 'src/components/A/A.stories.tsx')).toEqual({ ok: true, value: null });
+		// A component's values are kept by its story file, never for the design system whole.
+		expect(await call(CHANNELS.changeBranch, 'values', null)).toMatchObject({ ok: false, error: expect.stringContaining('by its story file') });
+		expect(await call(CHANNELS.proposeChange, 'values', 'src/components/A/A.stories.tsx', null)).toMatchObject({ ok: false });
+		expect(await call(CHANNELS.forgetChange, 'values', 'src/components/A/A.stories.tsx')).toEqual({ ok: true, value: null });
+		expect(await call(CHANNELS.changeScopes, 'values')).toEqual({ ok: true, value: [] });
 		// The agent is asked only for a value tried, checked as the contract says one is; with no design system, nothing runs.
 		expect(await call(CHANNELS.writeValue, 'src/components/A/A.stories.tsx', { property: 'height' })).toMatchObject({
 			ok: false,
@@ -380,14 +370,35 @@ describe('the Design System tab', () => {
 	});
 
 	it('has no branch for a change to the tokens when there is no design system, saves and proposes nothing, and takes only edits', async () => {
-		expect(await call(CHANNELS.tokenBranch)).toEqual({ ok: true, value: null });
-		expect(await call(CHANNELS.saveTokens, [{ path: 'spacing', value: '6px' }])).toMatchObject({
+		expect(await call(CHANNELS.changeBranch, 'tokens', null)).toEqual({ ok: true, value: null });
+		expect(await call(CHANNELS.saveChange, 'tokens', null, [{ path: 'spacing', value: '6px' }])).toMatchObject({
 			ok: false,
 			error: expect.stringContaining('no design system connected'),
 		});
-		expect(await call(CHANNELS.saveTokens, '/etc')).toMatchObject({ ok: false, error: expect.stringContaining('list of token edits') });
-		expect(await call(CHANNELS.proposeTokens)).toMatchObject({ ok: false, error: expect.stringContaining('Save the change to a branch first') });
-		expect(await call(CHANNELS.forgetTokenBranch)).toEqual({ ok: true, value: null });
+		expect(await call(CHANNELS.saveChange, 'tokens', null, '/etc')).toMatchObject({
+			ok: false,
+			error: expect.stringContaining('list of token edits'),
+		});
+		expect(await call(CHANNELS.proposeChange, 'tokens', null, null)).toMatchObject({
+			ok: false,
+			error: expect.stringContaining('Save the change to a branch first'),
+		});
+		expect(await call(CHANNELS.forgetChange, 'tokens', null)).toEqual({ ok: true, value: null });
+		// The tokens are kept for the design system whole, never for one component.
+		expect(await call(CHANNELS.saveChange, 'tokens', 'src/components/A/A.stories.tsx', [])).toMatchObject({
+			ok: false,
+			error: expect.stringContaining('design system whole'),
+		});
+	});
+
+	it('takes only a kind of change it keeps, and saves only the kinds it saves itself', async () => {
+		for (const kind of ['nonsense', 42, null, '__proto__'])
+			expect(await call(CHANNELS.changeBranch, kind, null)).toMatchObject({ ok: false, error: expect.stringContaining('not a kind of change') });
+		// A hand-over's commits are Claude Code's: it is handed over, never saved.
+		expect(await call(CHANNELS.saveChange, 'handOver', null, { edits: [] })).toMatchObject({
+			ok: false,
+			error: expect.stringContaining('not a kind of change DSNR saves'),
+		});
 	});
 
 	it('hands over only a change as its unit is (the tokens as the tokens, a component’s values as it), proposes only at a commit, and needs a design system', async () => {
@@ -407,35 +418,33 @@ describe('the Design System tab', () => {
 			error: expect.stringContaining('A hand-over is'),
 		});
 		expect(await call(CHANNELS.handOverChanges, null, edits)).toMatchObject({ ok: false, error: 'There is no design system connected.' });
-		expect(await call(CHANNELS.proposeHandoff, null, 'main', true)).toMatchObject({
+		expect(await call(CHANNELS.proposeChange, 'handOver', null, { tip: 'main', confirmed: true })).toMatchObject({
 			ok: false,
 			error: expect.stringContaining('at the commit that was shown'),
 		});
-		expect(await call(CHANNELS.handoffBranch, null)).toEqual({ ok: true, value: null });
-		expect(await call(CHANNELS.handoffFiles)).toEqual({ ok: true, value: [] });
-		expect(await call(CHANNELS.showHandoff, null)).toMatchObject({ ok: false, error: 'There is no design system connected.' });
+		expect(await call(CHANNELS.proposeChange, 'handOver', null, null)).toMatchObject({
+			ok: false,
+			error: expect.stringContaining('at the commit that was shown'),
+		});
+		expect(await call(CHANNELS.changeBranch, 'handOver', null)).toEqual({ ok: true, value: null });
+		expect(await call(CHANNELS.changeScopes, 'handOver')).toEqual({ ok: true, value: [] });
+		expect(await call(CHANNELS.showHandOver, null)).toMatchObject({ ok: false, error: 'There is no design system connected.' });
 		expect(await call(CHANNELS.showLibraryBranch)).toEqual({ ok: true, value: null });
 		expect(ports.copy).not.toHaveBeenCalled();
 	});
 
-	it('takes only text, and the sha of the file it was opened at, to save the voice and tone, asking GitHub nothing otherwise (T9)', async () => {
-		const asked = githubApi.mock.calls.length;
-		expect(await call(CHANNELS.saveVoiceAndTone, { text: 'x' }, null)).toMatchObject({ ok: false, error: expect.stringContaining('saved as text') });
-		expect(await call(CHANNELS.saveVoiceAndTone, 'x'.repeat(200_001), null)).toMatchObject({ ok: false, error: expect.stringContaining('200,000') });
-		expect(await call(CHANNELS.saveVoiceAndTone, 'x', '../../etc/passwd')).toMatchObject({ ok: false, error: expect.stringContaining('sha') });
-		expect(await call(CHANNELS.saveVoiceAndTone, 'x', 42)).toMatchObject({ ok: false, error: expect.stringContaining('sha') });
-		expect(githubApi.mock.calls.length).toBe(asked);
+	it('takes only text, and the sha of the file it was opened at, to save the voice and tone (T9)', async () => {
+		const save = (change: unknown) => call(CHANNELS.saveChange, 'voice', null, change);
+		expect(await save({ text: { x: 1 }, against: null })).toMatchObject({ ok: false, error: expect.stringContaining('saved as text') });
+		expect(await save({ text: 'x'.repeat(200_001), against: null })).toMatchObject({ ok: false, error: expect.stringContaining('200,000') });
+		expect(await save({ text: 'x', against: '../../etc/passwd' })).toMatchObject({ ok: false, error: expect.stringContaining('sha') });
+		expect(await save({ text: 'x', against: 42 })).toMatchObject({ ok: false, error: expect.stringContaining('sha') });
 		// A blob's sha in either of git's kinds is taken, and the save goes on: here, to say none is connected.
-		for (const sha of ['a'.repeat(40), 'b'.repeat(64)]) {
-			expect(await call(CHANNELS.saveVoiceAndTone, 'x', sha)).toMatchObject({
-				ok: false,
-				error: expect.stringContaining('No design system is connected'),
-			});
-		}
-		// The voice and tone is the connected design system's: with none, every channel says so, and none asks GitHub.
+		for (const sha of ['a'.repeat(40), 'b'.repeat(64)])
+			expect(await save({ text: 'x', against: sha })).toMatchObject({ ok: false, error: 'There is no design system connected.' });
+		// The voice and tone is the connected design system's: with none, it says so.
 		expect(await call(CHANNELS.voiceAndTone)).toMatchObject({ ok: false, error: expect.stringContaining('No design system is connected') });
-		expect(await call(CHANNELS.proposeVoiceAndTone)).toMatchObject({ ok: false, error: expect.stringContaining('No design system is connected') });
-		expect(githubApi.mock.calls.length).toBe(asked);
+		expect(await call(CHANNELS.proposeChange, 'voice', null, null)).toMatchObject({ ok: false, error: expect.stringContaining('Save the change') });
 	});
 });
 

@@ -9,8 +9,8 @@ import { realShareTools } from './services/codebase/shareTools';
  * checked over the network, their editor, Claude Code, their own `gh`, and git for a pull request). A shell adds only what
  * is its own: its dialogs, links, clipboard and drawing out of sight.
  */
-export const toolPorts = (): Pick<Ports, 'httpStatus' | 'editor' | 'claude' | 'personGitHub' | 'shareTools'> => {
-	// One for both: the person's own command line, which lists their repositories and opens their pull requests.
+export const toolPorts = (): Pick<Ports, 'httpStatus' | 'editor' | 'claude' | 'shareTools'> => {
+	// The person's own command line, which opens their pull requests.
 	const person = ghApi();
 	return {
 		httpStatus: async (url) => {
@@ -20,7 +20,6 @@ export const toolPorts = (): Pick<Ports, 'httpStatus' | 'editor' | 'claude' | 'p
 		},
 		editor: { find: () => findEditor(), openFolder, openPrompt, openSession },
 		claude: () => locateClaude(),
-		personGitHub: person,
 		shareTools: (root) => realShareTools(root, person),
 	};
 };

@@ -1,8 +1,9 @@
 import type { CallsDeps } from '../compose';
-import type { TokenEdit, TriedValue } from '../../shared/contract';
-import type { HandedChange } from '../../shared/contract';
+import type { ChangeBranchOf, ChangeKind, ChangeKinds, HandedChange, SavedKind, TokenEdit, TriedValue } from '../../shared/contract';
 import { handToClaude } from '../services/agent/editor';
-import { offBase } from '../services/designSystem/handoffBranches';
+import { type ChangeBranches, type KindRules, scopeOf } from '../services/designSystem/changeBranches';
+import { offBase } from '../services/designSystem/handOverBranches';
+import { readVoice } from '../services/designSystem/voiceAndTone';
 
 /** What the DesignSystem calls do, each called by its handler once its arguments are checked (`calls/designSystem.ts`). */
 export const designSystemArea = (d: CallsDeps) => {
@@ -15,14 +16,21 @@ export const designSystemArea = (d: CallsDeps) => {
 		tokenBranches,
 		valueAgent,
 		valueBranches,
-		handoffBranches,
+		voiceBranches,
+		handOverBranches,
 		libraryShown,
 		ports,
 		shownSystem,
 		valueSources,
-		voiceFile,
 		warm,
 	} = d;
+	/** Each kind of change's branches (`ChangeKinds`): every branch call is one of these, by its kind. */
+	const branches = { tokens: tokenBranches, values: valueBranches, voice: voiceBranches, handOver: handOverBranches } satisfies Record<
+		ChangeKind,
+		{ rules: KindRules<unknown>; forget(scope: string): void; scopes(): Promise<string[]>; current(scope: string): Promise<unknown> }
+	>;
+	/** The kinds DSNR saves itself, each saving its own kind of change. */
+	const saved: { [K in SavedKind]: ChangeBranches<ChangeKinds[K]> } = { tokens: tokenBranches, values: valueBranches, voice: voiceBranches };
 	return {
 		componentPictures: () => componentTokens.pictures(),
 		designSystemCatalog: async (refresh: boolean) => {
@@ -38,41 +46,50 @@ export const designSystemArea = (d: CallsDeps) => {
 		changeReach: (edits: TokenEdit[]) => componentTokens.reach(edits),
 		// Each value is written only as the number or colour it reads as, where it was found (Phase 4).
 		valueSources: (file: string, tried: TriedValue[]) => valueSources.of(file, tried),
-		valueBranch: (file: string) => valueBranches.current(file),
-		valueBranchFiles: () => valueBranches.scopes(),
 		// Handed to Claude Code as every hand-over is, in the library's root, with the prompt typed in.
 		handOverChanges: async (file: string | null, change: HandedChange) => {
 			if ((file === null) !== 'edits' in change)
 				throw new Error('The token changes are handed over as the tokens, and a component’s values as that component.');
 			libraryShown.refuse(shownSystem(), 'process changes');
-			const { root, branch, prompt } = await handoffBranches.start(file ?? '', change);
+			const { root, branch, prompt } = await handOverBranches.start(file ?? '', change);
 			// Not opened, it is not handed over: forgotten, so it can be pressed again.
 			const handed = await handToClaude(ports, root, prompt).catch((err: unknown) => {
-				handoffBranches.forget(file ?? '');
+				handOverBranches.forget(file ?? '');
 				throw err;
 			});
 			return { branch, ...handed };
 		},
-		handoffBranch: (file: string | null) => handoffBranches.current(file ?? ''),
-		handoffFiles: () => handoffBranches.scopes(),
-		// At the commit the person looked at: what is pushed is what they saw. Never while another branch is shown, as no proposal is.
-		proposeHandoff: (file: string | null, tip: string, confirmed: boolean) => {
-			libraryShown.refuse(shownSystem(), 'propose');
-			return handoffBranches.propose(file ?? '', tip, confirmed);
+		changeBranch: <K extends ChangeKind>(kind: K, scope: string | null) =>
+			branches[kind].current(scopeOf(branches[kind].rules, scope)) as Promise<ChangeBranchOf<K> | null>,
+		changeScopes: (kind: ChangeKind) => branches[kind].scopes(),
+		// Never while another branch is shown: a value's save writes the files the index drew. The change is checked as its kind's.
+		saveChange: <K extends SavedKind>(kind: K, scope: string | null, change: unknown) => {
+			libraryShown.refuse(shownSystem(), 'save');
+			const kept = saved[kind];
+			return kept.save(kept.rules.check(change), scopeOf(kept.rules, scope)) as Promise<ChangeBranchOf<K>>;
 		},
-		// Forgotten, its branch is no longer shown either.
-		forgetHandoff: (file: string | null) => {
+		// A hand-over at the commit the person looked at: what is pushed is what they saw. Never while another branch is shown.
+		proposeChange: <K extends ChangeKind>(kind: K, scope: string | null, seen: { tip: string; confirmed: boolean } | null) => {
+			libraryShown.refuse(shownSystem(), 'propose');
+			const at = scopeOf(branches[kind].rules, scope);
+			if (kind !== 'handOver') return saved[kind as SavedKind].propose(at) as Promise<ChangeBranchOf<K>>;
+			if (seen === null) throw new Error('A hand-over is proposed at the commit that was shown.');
+			return handOverBranches.propose(at, seen.tip, seen.confirmed) as Promise<ChangeBranchOf<K>>;
+		},
+		// A hand-over forgotten is no longer shown either.
+		forgetChange: (kind: ChangeKind, scope: string | null) => {
+			const at = scopeOf(branches[kind].rules, scope);
 			const system = shownSystem();
-			if (system !== null && libraryShown.scope(system) === (file ?? '')) libraryShown.stop(system);
-			handoffBranches.forget(file ?? '');
+			if (kind === 'handOver' && system !== null && libraryShown.scope(system) === at) libraryShown.stop(system);
+			branches[kind].forget(at);
 			return null;
 		},
 		// Preview this branch (Phase 2): a unit's hand-over shown in the tab once its branch is read ready from git, and the
 		// library's own branch again. Only committed work is shown, read from git's objects.
-		showHandoff: async (file: string | null) => {
+		showHandOver: async (file: string | null) => {
 			const system = shownSystem();
 			if (system === null) throw new Error('There is no design system connected.');
-			const handed = await handoffBranches.current(file ?? '');
+			const handed = await handOverBranches.current(file ?? '');
 			if (handed === null) throw new Error('Nothing is handed to Claude Code for this.');
 			if (handed.review.state === 'off-base') throw new Error(offBase(handed.branch, system.branch));
 			if (handed.review.state !== 'ready')
@@ -91,18 +108,13 @@ export const designSystemArea = (d: CallsDeps) => {
 			await valueAgent.write(file, value);
 			return null;
 		},
-		// Never while another branch is shown: a value's save writes the files the index drew.
-		saveValues: (file: string, tried: TriedValue[]) => (libraryShown.refuse(shownSystem(), 'save'), valueBranches.save(tried, file)),
-		proposeValues: (file: string) => (libraryShown.refuse(shownSystem(), 'propose'), valueBranches.propose(file)),
-		forgetValueBranch: (file: string) => (valueBranches.forget(file), null),
-		tokenBranch: () => tokenBranches.current(),
-		saveTokens: (edits: TokenEdit[]) => (libraryShown.refuse(shownSystem(), 'save'), tokenBranches.save(edits)),
-		proposeTokens: () => (libraryShown.refuse(shownSystem(), 'propose'), tokenBranches.propose()),
-		forgetTokenBranch: () => (tokenBranches.forget(), null),
-		voiceAndTone: () => voiceFile().current(),
-		saveVoiceAndTone: (text: string, against: string | null) => voiceFile().save(text, against),
-		proposeVoiceAndTone: () => voiceFile().propose(),
-		forgetVoiceBranch: () => (voiceFile().forget(), null),
+		// Read from the library's branch once it is brought up to date, so a commit made on GitHub shows.
+		voiceAndTone: async () => {
+			const system = shownSystem();
+			if (system === null) throw new Error('No design system is connected. Connect one in Components: its voice and tone is in its agent files.');
+			await library.update(system);
+			return readVoice(system);
+		},
 		designSystems: () => designSystems.read(),
 	};
 };

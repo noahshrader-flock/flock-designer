@@ -1,42 +1,48 @@
 /**
  * Process changes (PROCESS_CHANGES_PLAN Phase 1), in the core: one unit of review (the tokens, `scope` none; or one
- * component's values, by its story file) handed to Claude Code, on a branch DSNR names and keeps a record of, then read from git
- * and proposed as a draft pull request when the person asks. DSNR verifies and does not trust: it starts only on a clean
- * checkout, never with another branch of the unit's in play, never pushes a branch it did not name, never by force, and a branch
- * the rules would flag is proposed only when the person says so.
+ * component's values, by its story file) handed over to Claude Code, on a branch DSNR names and keeps a record of as it
+ * keeps every change's (`changeBranches.ts`), then read from git and proposed as a draft pull request when the person
+ * asks. Claude Code commits on the branch, not DSNR. DSNR verifies and does not trust: it starts only on a clean checkout,
+ * never with another branch of the unit's in play, never pushes a branch it did not name, never by force, and a branch the
+ * rules would flag is proposed only when the person says so.
+ *
+ * A hand-over, not Handoff: that is codebase work's hand-off to engineering (`engineeringHandoff.ts`).
  */
-import type { ConnectedDesignSystem, HandedChange, HandoffBranch } from '../../../shared/contract';
+import type { ChangeBranchOf, HandedChange } from '../../../shared/contract';
 import { CHANGE_REQUEST_TEMPLATES } from '../../../shared/hostUrls';
 import { asRecord } from '../../../shared/json';
 import { type HandoffChange, type HandoffGroup, changeLine, flagged, handoffPrompt, proposalOf } from '../../../shared/processChanges';
 import { storyComponent } from '../../../shared/valueNames';
+import { tokenEditsOf } from './tokenEdits';
+import { triedValuesOf } from './valueSources';
 import { reviewBranch } from './branchReview';
 import { unfinishedWork } from '../codebase/checkoutClean';
 import { libraryCommit } from './designLibrary';
 import { dsnrBranchPattern, newDsnrBranch } from './dsnrBranch';
 import { git } from '../platform/git';
-import { ScopedRecords } from './scopedRecords';
-import type { ShareTools } from '../../ports';
+import { type ChangeBranchesDeps, type Kept, type KindRules, KeptBranches, shownBranch } from './changeBranches';
 
-/** A hand-over as it is kept: its branch, the base it was handed over on (its branch and that commit), what was sent, its pull request. */
-interface Kept {
-	branch: string;
-	baseBranch: string;
-	base: string;
-	lines: string[];
-	change: HandedChange;
-	pullRequest: { number: number; url: string } | null;
-}
+/**
+ * What one unit hands over: its token edits, or a component's values tried, each checked as those always are. Its branches
+ * are named `dsnr/handoff-…`, as every prompt since Process changes was built has told Claude Code to name them.
+ */
+export const HAND_OVER: KindRules<HandedChange> = {
+	kind: 'handOver',
+	branchWord: 'handoff',
+	scope: 'either',
+	check: (v) => {
+		const r = asRecord(v);
+		const keys = Object.keys(r);
+		if (keys.length === 1 && keys[0] === 'edits') return { edits: tokenEditsOf(r.edits) };
+		if (keys.length === 1 && keys[0] === 'tried') return { tried: triedValuesOf(r.tried) };
+		throw new Error('A hand-over is the token edits being tried, or a component’s values tried.');
+	},
+};
 
-const KIND = 'handoff';
 /** A hand-over's branch, as DSNR names it: the only kind it pushes for a hand-over, or shows in place of the library's. */
-export const HANDOFF_BRANCH = dsnrBranchPattern(KIND);
+export const HAND_OVER_BRANCH = dsnrBranchPattern(HAND_OVER.branchWord);
 
-export interface HandoffBranchesDeps {
-	system: () => ConnectedDesignSystem | null;
-	/** Where each unit's hand-over is kept, by its design system and scope. */
-	file: string;
-	tools: (root: string) => ShareTools;
+export interface HandOverBranchesDeps extends ChangeBranchesDeps {
 	/** The rules for changing a design system's code (`standards/design-system-code.md`), as text. */
 	rules: () => Promise<string>;
 	/** Each change of a unit as it is handed over: the lines DSNR says it in, and where it is written. */
@@ -45,18 +51,20 @@ export interface HandoffBranchesDeps {
 	reach: (scope: string, change: HandedChange) => Promise<string>;
 	/** Whether the unit has a branch DSNR's Save made: then no hand-over is offered until it is started over. */
 	saved: (scope: string) => Promise<boolean>;
-	now?: () => Date;
 }
 
 /** A unit as its prompt names it: the tokens, or a component by its story file's name. */
 const groupOf = (scope: string): HandoffGroup =>
 	scope === '' ? { kind: 'tokens' } : { kind: 'component', name: storyComponent(scope), file: scope };
 
-export class HandoffBranches {
-	private readonly records: ScopedRecords<Kept>;
+export class HandOverBranches extends KeptBranches<HandedChange> {
+	constructor(private readonly handOver: HandOverBranchesDeps) {
+		super(handOver, HAND_OVER);
+	}
 
-	constructor(private readonly deps: HandoffBranchesDeps) {
-		this.records = new ScopedRecords(deps.system, deps.file, ownHandoffs);
+	/** Claude Code makes the branch, so one not there yet is still being made. */
+	protected stands(): Promise<boolean> {
+		return Promise.resolve(true);
 	}
 
 	/**
@@ -67,29 +75,34 @@ export class HandoffBranches {
 		const system = this.records.system();
 		const unfinished = await unfinishedWork(system.root);
 		if (unfinished !== null) throw new Error(unfinished);
-		if (await this.deps.saved(scope))
+		if (await this.handOver.saved(scope))
 			throw new Error('This has a branch DSNR saved it to. Propose it, or start over, before processing the changes.');
-		if (this.records.read(scope) !== null) throw new Error('This is handed to Claude Code already. Propose its branch, or start over.');
+		if ((await this.kept(scope)) !== null) throw new Error('This is handed to Claude Code already. Propose its branch, or start over.');
 		const base = await libraryCommit(system.root, system.branch);
 		if (base === null) throw new Error(`The library has no ${system.branch} branch from GitHub to make a branch from.`);
-		const changes = await this.deps.changes(scope, change);
-		const branch = newDsnrBranch(KIND, this.deps.now?.() ?? new Date());
-		const prompt = handoffPrompt({ group: groupOf(scope), changes, branch, base: system.branch, rules: await this.deps.rules() });
-		this.records.keep(system, scope, { branch, baseBranch: system.branch, base, lines: changes.map(changeLine), change, pullRequest: null });
+		const changes = await this.handOver.changes(scope, change);
+		const branch = newDsnrBranch(HAND_OVER.branchWord, this.deps.now?.() ?? new Date());
+		const prompt = handoffPrompt({ group: groupOf(scope), changes, branch, base: system.branch, rules: await this.handOver.rules() });
+		const kept: Kept<HandedChange> = {
+			branch,
+			base,
+			baseBranch: system.branch,
+			tip: null,
+			saved: change,
+			lines: changes.map(changeLine),
+			saves: 0,
+			pullRequest: null,
+		};
+		this.records.keep(system, scope, kept);
 		return { root: system.root, branch, prompt };
 	}
 
-	/** A unit's hand-over as the panel shows it, its branch read from git now; or null when there is none. */
-	async current(scope: string): Promise<HandoffBranch | null> {
-		const at = this.records.read(scope);
+	/** A unit's hand-over as the panel shows it, its branch read from git now; or null when there is none, or it is done with. */
+	async current(scope: string): Promise<ChangeBranchOf<'handOver'> | null> {
+		const at = await this.kept(scope);
 		if (at === null) return null;
 		const { system, kept } = at;
-		return {
-			branch: kept.branch,
-			lines: kept.lines,
-			review: await reviewBranch(system.root, kept.branch, kept.base, kept.baseBranch),
-			pullRequest: kept.pullRequest,
-		};
+		return { ...shownBranch(kept), review: await reviewBranch(system.root, kept.branch, kept.base, kept.baseBranch) };
 	}
 
 	/**
@@ -97,11 +110,10 @@ export class HandoffBranches {
 	 * and kept, only once it is read ready from git (made from its base, something committed), only at the commit the person
 	 * looked at (`tip`), and a flagged one only when `confirmed`.
 	 */
-	async propose(scope: string, tip: string, confirmed: boolean): Promise<HandoffBranch> {
-		const at = this.records.read(scope);
+	async propose(scope: string, tip: string, confirmed: boolean): Promise<ChangeBranchOf<'handOver'>> {
+		const at = await this.kept(scope);
 		if (at === null) throw new Error('Nothing is handed to Claude Code for this.');
 		const { system, kept } = at;
-		if (!HANDOFF_BRANCH.test(kept.branch)) throw new Error(`${kept.branch} is not a branch DSNR named, so it is not pushed.`);
 		const review = await reviewBranch(system.root, kept.branch, kept.base, kept.baseBranch);
 		if (review.state === 'missing') throw new Error(`There is no branch ${kept.branch} yet: Claude Code makes it with the name its prompt gave.`);
 		if (review.state === 'empty') throw new Error(`Nothing is committed on ${kept.branch} yet: Claude Code commits its work there.`);
@@ -110,54 +122,23 @@ export class HandoffBranches {
 			throw new Error(`Claude Code has committed on ${kept.branch} since it was shown here: look at it again, then propose it.`);
 		if (flagged(review) && !confirmed)
 			throw new Error('This branch changes what the rules keep out, or more than one sitting’s review: send it on purpose, or start over.');
-		const tools = this.deps.tools(system.root);
-		await tools.push(kept.branch);
-		const open = await tools.findPr(kept.branch);
-		const { title, body } = proposalOf({
-			group: groupOf(scope),
-			lines: kept.lines,
-			reach: await this.deps.reach(scope, kept.change),
-			review,
-			base: kept.baseBranch,
-			template: await templateIn(system.root, kept.baseBranch),
-		});
-		const pr = open ?? (await tools.createDraftPr(kept.branch, title, body, kept.baseBranch));
-		this.records.keep(system, scope, { ...kept, pullRequest: { number: pr.number, url: pr.url } });
-		return { branch: kept.branch, lines: kept.lines, review, pullRequest: { number: pr.number, url: pr.url } };
-	}
-
-	/** Forgets a unit's hand-over, so it can be handed over again or saved. The branch and any pull request stay. */
-	forget(scope: string): void {
-		this.records.forget(scope);
-	}
-
-	/** The scopes with a hand-over kept on the design system shown (the tokens' as none): what the panel's Changes lists. */
-	scopes(): string[] {
-		return [...(this.records.read('') !== null ? [''] : []), ...this.records.scopes()];
+		const next = await this.open(system, scope, kept, async () =>
+			proposalOf({
+				group: groupOf(scope),
+				lines: kept.lines,
+				reach: await this.handOver.reach(scope, kept.saved),
+				review,
+				base: kept.baseBranch,
+				template: await templateIn(system.root, kept.baseBranch),
+			}),
+		);
+		return { ...shownBranch(next), review };
 	}
 }
 
 /** A branch not made from its base, said the same wherever it is: what is wrong, and what to do. */
 export const offBase = (branch: string, base: string): string =>
 	`${branch} was not made from ${base}, so it is not proposed or shown. Start over, and process the changes again.`;
-
-/** The hand-overs kept that are whole and on a branch DSNR named; anything else in the file is left out. */
-const ownHandoffs = (raw: unknown): Record<string, Kept> =>
-	Object.fromEntries(
-		Object.entries(asRecord(raw)).flatMap(([key, value]) => {
-			const k = asRecord(value);
-			const whole =
-				typeof k.branch === 'string' &&
-				HANDOFF_BRANCH.test(k.branch) &&
-				typeof k.base === 'string' &&
-				typeof k.baseBranch === 'string' &&
-				Array.isArray(k.lines) &&
-				k.lines.every((l) => typeof l === 'string') &&
-				typeof k.change === 'object' &&
-				k.change !== null;
-			return whole ? [[key, k as unknown as Kept]] : [];
-		}),
-	);
 
 /** The repository's pull request template, as GitHub has its base: one found, else none. */
 const templateIn = async (root: string, baseBranch: string): Promise<string | null> => {

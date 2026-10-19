@@ -10,14 +10,15 @@ import type {
 	TokenUsers,
 	ConnectedDesignSystems,
 	StoryPreview,
-	TokenBranch,
 	TokenEdit,
 	TriedValue,
 	ComponentVariants,
-	ValueBranch,
+	ChangeBranchOf,
+	ChangeKind,
+	ChangeKinds,
 	HandedChange,
+	SavedKind,
 	HandedOver,
-	HandoffBranch,
 	ValueSources,
 } from '../domain/designSystem';
 import type {
@@ -32,7 +33,7 @@ import type {
 	PrototypeReadiness,
 } from '../domain/projects';
 import type { PublishStatus, ShareStatus } from '../domain/publishing';
-import type { VoiceAndTone, VoiceSave } from '../domain/voice';
+import type { VoiceAndTone } from '../domain/voice';
 
 /**
  * The only vocabulary a page has.
@@ -86,65 +87,53 @@ export interface WorkspaceApi {
 	componentVariants(file: string): Promise<Result<ComponentVariants>>;
 	/** Where the values tried on a component's instances are written, by its story file, and what writing them reaches (Phase 4). */
 	valueSources(file: string, tried: TriedValue[]): Promise<Result<ValueSources>>;
-	/** The branch a component's values are kept on, or null when none has been saved (Phase 4). */
-	valueBranch(file: string): Promise<Result<ValueBranch | null>>;
 	/**
 	 * Process changes: one unit (the tokens, `null`; or a component's values, by its story file) handed to Claude Code, on a branch
 	 * DSNR names: refused, in words, on a checkout with unfinished work or with a branch of the unit's in play; else Claude Code
 	 * opened in the library's root with the prompt typed in, as every hand-over is (`handToClaude`), and its branch.
 	 */
 	handOverChanges(file: string | null, change: HandedChange): Promise<Result<HandedOver>>;
-	/** A unit's hand-over, its branch read from git now, or null when there is none. */
-	handoffBranch(file: string | null): Promise<Result<HandoffBranch | null>>;
-	/** The components, by story file, handed to Claude Code (the tokens' as an empty one): what the panel's Changes lists. */
-	handoffFiles(): Promise<Result<string[]>>;
-	/**
-	 * Pushes a unit's hand-over branch and opens its draft pull request, only at `tip`, the commit the person looked at; one the
-	 * rules flag only when `confirmed`. Refused while another branch is shown.
-	 */
-	proposeHandoff(file: string | null, tip: string, confirmed: boolean): Promise<Result<HandoffBranch>>;
-	/** Forgets a unit's hand-over, so it can be handed over again or saved; its branch and any pull request stay. */
-	forgetHandoff(file: string | null): Promise<Result<null>>;
 	/**
 	 * Preview this branch: the tab reads a unit's hand-over branch, at its tip, in place of the library's branch, once it is read
 	 * ready from git. Every page is told (`onLibraryShown`). While it is shown, nothing is saved or handed over.
 	 */
-	showHandoff(file: string | null): Promise<Result<null>>;
+	showHandOver(file: string | null): Promise<Result<null>>;
 	/** The library's own branch shown again. */
 	showLibraryBranch(): Promise<Result<null>>;
 	/** Told the branch shown in place of the library's (null: the library's own) whenever it changes. */
 	onLibraryShown(listener: (showing: string | null) => void): () => void;
-	/** The components, by story file, that have a branch of their values kept: what the panel's Changes lists with nothing tried. */
-	valueBranchFiles(): Promise<Result<string[]>>;
 	/** Has the agent write a value tried on a component, or make it follow a token (Phase 4.5, 4.6); what it wrote is in `valueSources`. */
 	writeValue(file: string, value: TriedValue): Promise<Result<null>>;
-	/** Saves the values tried on a component where they were found, as one commit on its branch, made the first time. */
-	saveValues(file: string, tried: TriedValue[]): Promise<Result<ValueBranch>>;
-	/** Pushes a component's values branch and opens a draft pull request for it. */
-	proposeValues(file: string): Promise<Result<ValueBranch>>;
-	/** Forgets a component's values branch, to start a new one; the branch and any pull request stay. */
-	forgetValueBranch(file: string): Promise<Result<null>>;
 	/** The pictures of the shown design system's components, for the grid view (P5). */
 	componentPictures(): Promise<Result<ComponentPictures>>;
-	/** The branch a change to the shown design system's tokens is kept on, or null when none has been saved (T4). */
-	tokenBranch(): Promise<Result<TokenBranch | null>>;
-	/** Saves the change as one commit on its branch, made on the first save; pushed when it is proposed (T4). */
-	saveTokens(edits: TokenEdit[]): Promise<Result<TokenBranch>>;
-	/** Pushes the branch and opens a draft pull request for it, or says the one already open (T5). */
-	proposeTokens(): Promise<Result<TokenBranch>>;
-	/** Forgets the branch, to start a new change: the branch and any pull request stay where they are. */
-	forgetTokenBranch(): Promise<Result<null>>;
-	/** The voice and tone file as GitHub has it now, and the change kept on a branch, if one is (T9). */
-	voiceAndTone(): Promise<Result<VoiceAndTone>>;
 	/**
-	 * Saves the text as one commit on its branch, made from the default branch on the first save; refused when the file
-	 * there is no longer the one at `against`, the sha the text was opened at (null: there was no file).
+	 * A change's branch, of any kind (`ChangeKinds`), by its scope: a component's story file, or null for the design system
+	 * whole (its tokens, its voice and tone). Null when none is kept, or its branch is gone, or its pull request was merged or
+	 * closed (then it is forgotten). A hand-over's is read from git now.
 	 */
-	saveVoiceAndTone(text: string, against: string | null): Promise<Result<VoiceSave>>;
-	/** Opens a draft pull request for the branch, with the person's own GitHub command line, or says the one already open. */
-	proposeVoiceAndTone(): Promise<Result<VoiceAndTone>>;
-	/** Forgets the branch, to start again from the default branch's file: the branch and any pull request stay. */
-	forgetVoiceBranch(): Promise<Result<null>>;
+	changeBranch<K extends ChangeKind>(kind: K, scope: string | null): Promise<Result<ChangeBranchOf<K> | null>>;
+	/** The scopes with a branch of `kind` kept on the design system shown (the design system whole as an empty one): what the panel's Changes lists. */
+	changeScopes(kind: ChangeKind): Promise<Result<string[]>>;
+	/**
+	 * Saves a change as one commit on its branch, made from the library's branch on the first save, nothing checked out;
+	 * pushed when it is proposed, and on every save after. Refused while another branch is shown. A voice and tone save is
+	 * refused when the file on the library's branch is no longer the one it was opened at.
+	 */
+	saveChange<K extends SavedKind>(kind: K, scope: string | null, change: ChangeKinds[K]): Promise<Result<ChangeBranchOf<K>>>;
+	/**
+	 * Pushes a change's branch and opens its draft pull request, or says the one open. A hand-over's only at `seen.tip`, the
+	 * commit the person looked at, and one the rules flag only when `seen.confirmed`; the others take null. Refused while
+	 * another branch is shown.
+	 */
+	proposeChange<K extends ChangeKind>(
+		kind: K,
+		scope: string | null,
+		seen: { tip: string; confirmed: boolean } | null,
+	): Promise<Result<ChangeBranchOf<K>>>;
+	/** Forgets a change's branch, to start a new one; the branch and any pull request stay. */
+	forgetChange(kind: ChangeKind, scope: string | null): Promise<Result<null>>;
+	/** The voice and tone file as the library's branch has it, read after bringing the branch up to date (T9). */
+	voiceAndTone(): Promise<Result<VoiceAndTone>>;
 	/** Runs the install command the repository declares (`install`), and nothing else. Its output arrives through `onInstallLine`. */
 	installPackages(root: string): Promise<Result<null>>;
 	/** Stops an install that is running. */
@@ -285,28 +274,17 @@ export const INVOKE = [
 	'changeReach',
 	'componentVariants',
 	'valueSources',
-	'valueBranch',
-	'valueBranchFiles',
 	'handOverChanges',
-	'handoffBranch',
-	'handoffFiles',
-	'proposeHandoff',
-	'forgetHandoff',
-	'showHandoff',
+	'showHandOver',
 	'showLibraryBranch',
 	'writeValue',
-	'saveValues',
-	'proposeValues',
-	'forgetValueBranch',
 	'componentPictures',
-	'tokenBranch',
-	'saveTokens',
-	'proposeTokens',
-	'forgetTokenBranch',
+	'changeBranch',
+	'changeScopes',
+	'saveChange',
+	'proposeChange',
+	'forgetChange',
 	'voiceAndTone',
-	'saveVoiceAndTone',
-	'proposeVoiceAndTone',
-	'forgetVoiceBranch',
 	'installPackages',
 	'cancelInstall',
 	'branchesWithSetup',

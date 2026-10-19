@@ -11,10 +11,10 @@
 import type { ConnectedDesignSystem } from '../../../shared/contract';
 import { type LibraryAt, baseAt } from './designLibrary';
 import { branchTip } from '../platform/git';
-import { HANDOFF_BRANCH } from './handoffBranches';
+import { HAND_OVER_BRANCH } from './handOverBranches';
 
 export class LibraryShown {
-	/** The hand-off branch shown, by the design system's id, and the unit it was handed over for. */
+	/** The hand-over branch shown, by the design system's id, and the unit it was handed over for. */
 	private readonly shown = new Map<string, { scope: string; branch: string }>();
 
 	/** `changed` is told the branch shown (null: the library's own) whenever it changes, so every page reads the library again. */
@@ -33,7 +33,7 @@ export class LibraryShown {
 
 	/** Shows `branch`, the one DSNR named for the unit `scope`. */
 	show(system: ConnectedDesignSystem, scope: string, branch: string): void {
-		if (!HANDOFF_BRANCH.test(branch)) throw new Error(`${branch} is not a branch DSNR named, so it is not shown.`);
+		if (!HAND_OVER_BRANCH.test(branch)) throw new Error(`${branch} is not a branch DSNR named, so it is not shown.`);
 		this.shown.set(system.id, { scope, branch });
 		this.changed(branch);
 	}

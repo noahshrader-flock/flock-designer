@@ -234,17 +234,6 @@ export type BranchReview =
 /** What one unit's change is when it is handed to Claude Code: the token edits being tried, or one component's values tried. */
 export type HandedChange = { edits: TokenEdit[] } | { tried: TriedValue[] };
 
-/**
- * A unit of review handed to Claude Code (Process changes), as the panel shows it: the branch DSNR named for it, what was handed
- * over (each change as a line), the branch as DSNR read it from git, and its draft pull request once it is proposed.
- */
-export interface HandoffBranch {
-	branch: string;
-	lines: string[];
-	review: BranchReview;
-	pullRequest: { number: number; url: string } | null;
-}
-
 /** Where a unit was handed over: its branch, and Claude Code in this window (`editor`), or the command that starts it in a terminal. */
 export interface HandedOver {
 	branch: string;
@@ -367,22 +356,44 @@ export interface ComponentPictures {
 }
 
 /**
- * Where a change to the tokens is kept (T4 and T5): a branch of the library DSNR made for it, each save one commit on it,
- * and the draft pull request it is proposed in once it is.
+ * The kinds of change DSNR keeps on a branch of the library, and what each is: a change to the tokens (T4, T5), a
+ * component's values written where they are found (Phase 4), the voice and tone (T9), and a unit handed to Claude Code
+ * (Process changes), whose branch Claude Code makes. One model for all of them (`changeBranches.ts`).
  */
-/** A change kept on a branch of DSNR's: the branch, the change as last saved and how many saves, its draft pull request and Chromatic's build of it once the library's CI has linked one. */
+export interface ChangeKinds {
+	tokens: TokenEdit[];
+	values: TriedValue[];
+	voice: VoiceText;
+	handOver: HandedChange;
+}
+export type ChangeKind = keyof ChangeKinds;
+/** The kinds DSNR saves itself, a commit for each save; a hand-over's commits are Claude Code's. */
+export type SavedKind = Exclude<ChangeKind, 'handOver'>;
+export const CHANGE_KINDS: readonly ChangeKind[] = ['tokens', 'values', 'voice', 'handOver'];
+
+/** The voice and tone as a save takes it: the text, and the file's blob it was opened at (null: there was none). */
+export interface VoiceText {
+	text: string;
+	against: string | null;
+}
+
+/**
+ * A change kept on a branch of DSNR's: the branch, the change as last saved and in words (what its commits and pull request
+ * say, a line for each part), how many saves, and its draft pull request, with Chromatic's build of it once the library's
+ * CI has linked one.
+ */
 export interface ChangeBranch<C> {
 	branch: string;
 	saved: C;
+	lines: string[];
 	saves: number;
 	pullRequest: { number: number; url: string; chromatic: string | null } | null;
 }
 
-/** A change to the tokens on its branch, always `dsnr/tokens-…`: DSNR writes to no other. */
-export type TokenBranch = ChangeBranch<TokenEdit[]>;
-
-/** The values tried on a component's instances, written where they are found, on their branch, always `dsnr/values-…` (Phase 4). */
-export type ValueBranch = ChangeBranch<TriedValue[]>;
+/** Each kind's branch as the window has it: a hand-over's with its branch as DSNR read it from git now. */
+export type ChangeBranchOf<K extends ChangeKind> = K extends 'handOver'
+	? ChangeBranch<HandedChange> & { review: BranchReview }
+	: ChangeBranch<ChangeKinds[K]>;
 
 /** Something in the library's token files that is not read, with where it is. */
 export interface TokenProblem {

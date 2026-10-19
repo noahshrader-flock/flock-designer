@@ -5,7 +5,7 @@
  */
 import { existsSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
-import type { Checkout, Person, PublishStatus, TriedValue } from '../shared/contract';
+import type { ChangeKind, Checkout, Person, PublishStatus, TriedValue } from '../shared/contract';
 import { reachLine, tokenChanges, valueChanges } from '../shared/processChanges';
 import { storyComponent } from '../shared/valueNames';
 import { type Check, type EventSink, arg } from './handle';
@@ -20,7 +20,7 @@ import { ComponentTokens } from './services/designSystem/componentTokens';
 import { DESCRIPTOR_PATH, readDescriptor, type WorkspaceDescriptor } from './services/projects/descriptor';
 import { DesignLibrary, libraryCommit, systemReads } from './services/designSystem/designLibrary';
 import { readTokens } from './services/designSystem/designTokens';
-import { HandoffBranches } from './services/designSystem/handoffBranches';
+import { HandOverBranches } from './services/designSystem/handOverBranches';
 import { LibraryShown } from './services/designSystem/libraryShown';
 import { DesignRepo } from '../codeHost/designRepo';
 import { designStore } from './services/publishing/designStore';
@@ -50,8 +50,7 @@ import { ValueSources } from './services/designSystem/valueSources';
 import { DESIGN_SYSTEM_CODE, ValueAgent } from './services/designSystem/valueAgent';
 import { ComponentVariants } from './services/designSystem/componentVariants';
 import { typeLibs } from './services/designSystem/componentProps';
-import { VOICE_NEEDS_CLI, VoiceAndToneFile } from './services/designSystem/voiceAndTone';
-import { repoRefOf } from '../shared/repoRef';
+import { VoiceBranches } from './services/designSystem/voiceAndTone';
 
 /** A product checkout as a call is given it, once its root has been checked: one this window opened, its descriptor and records read. */
 export type CheckedCheckout = { root: string; canonical: string; readonly descriptor: WorkspaceDescriptor; readonly recordsRoot: string };
@@ -83,12 +82,8 @@ export interface CallsContext {
 	designSystems: DesignSystemsMemory;
 	/** Where the previews of the library's stories are built: the app's own folder, never the library's. */
 	storyPreviewsRoot: string;
-	/** Which branch each design system's change to its tokens is kept on (T4). */
-	tokenBranchesFile: string;
-	/** Which branch each component's values are kept on (Phase 4). */
-	valueBranchesFile: string;
-	/** Which branch a change to the voice and tone is kept on (T9). */
-	voiceBranchFile: string;
+	/** Which branch each change to the library is kept on, a file for each kind (T4, Phase 4, T9, Process changes). */
+	changeBranchFiles: Record<ChangeKind, string>;
 	/**
 	 * Which tokens each component draws with (T6), what a change reaches (Phase 3) and what writing a value does (Phase 4),
 	 * and so what is got ready in the background: given for tests.
@@ -121,15 +116,12 @@ export const composeCore = ({
 	designLibrary,
 	designSystems,
 	storyPreviewsRoot,
-	tokenBranchesFile,
-	valueBranchesFile,
-	voiceBranchFile,
+	changeBranchFiles,
 	componentTokens: injectedComponentTokens,
 	componentPicturesRoot,
 	componentPictureRecipe,
 	warmAfterMs,
 }: CallsContext) => {
-	const { personGitHub } = ports;
 	const openRepository = async (root: string): Promise<Checkout> => {
 		if (!isRepository(root)) {
 			throw new Error(`${root} is not a git repository.`);
@@ -260,7 +252,8 @@ export const composeCore = ({
 	// opens, and whenever the library has been read (it may have moved). For a commit already ready it is nothing.
 	const warm = () => void componentTokens.warm();
 	if (warmAfterMs !== undefined) setTimeout(warm, warmAfterMs).unref();
-	const tokenBranches = new TokenBranches({ system: shownSystem, file: tokenBranchesFile, tools: ports.shareTools });
+	const branchDeps = (kind: ChangeKind) => ({ system: shownSystem, file: changeBranchFiles[kind], tools: ports.shareTools });
+	const tokenBranches = new TokenBranches(branchDeps('tokens'));
 	// What the agent writes for a value where there is no literal, or to follow a token (4.5, 4.6): in a copy of the library,
 	// under the standard every run is given, as the app's tasks are given theirs.
 	const valueAgent = new ValueAgent({
@@ -279,17 +272,15 @@ export const composeCore = ({
 	});
 	// Where the values tried on a component are written, found as they are tried, and the branch each component's are saved on (Phase 4).
 	const valueSources = new ValueSources({ tokens: componentTokens, previews, measure: ports.headless.measure, agent: valueAgent });
-	const valueBranches = new ValueBranches({ system: shownSystem, file: valueBranchesFile, tools: ports.shareTools, sources: valueSources });
+	const valueBranches = new ValueBranches({ ...branchDeps('values'), sources: valueSources });
 	// Process changes: one unit (the tokens, or one component's values) handed to Claude Code on a branch DSNR names, then read from
 	// git and proposed. Its lines are said as a Save's are, with where each is written; what it reaches, as the Values' reach is.
 	const valuesFound = async (file: string, tried: TriedValue[]) => {
 		const found = await valueSources.of(file, tried);
 		return found.state === 'ready' ? found : null;
 	};
-	const handoffBranches = new HandoffBranches({
-		system: shownSystem,
-		file: join(dirname(valueBranchesFile), 'handoff-branches.json'),
-		tools: ports.shareTools,
+	const handOverBranches = new HandOverBranches({
+		...branchDeps('handOver'),
 		rules: () => readSkillText(DESIGN_SYSTEM_CODE),
 		changes: async (scope, change) => {
 			const system = shownSystem();
@@ -309,13 +300,8 @@ export const composeCore = ({
 			reachLine('edits' in change ? await componentTokens.reach(change.edits) : ((await valuesFound(scope, change.tried))?.reach ?? null)),
 		saved: async (scope) => (scope === '' ? (await tokenBranches.current()) !== null : (await valueBranches.current(scope)) !== null),
 	});
-	// The voice and tone (T9): the connected design system's, read, saved and proposed with the person's own command line.
-	const voiceFile = (): VoiceAndToneFile => {
-		const system = shownSystem();
-		if (system === null) throw new Error('No design system is connected. Connect one in Components: its voice and tone is in its agent files.');
-		if (personGitHub === null) throw new Error(VOICE_NEEDS_CLI);
-		return new VoiceAndToneFile({ repo: repoRefOf(system.repository), folder: system.folder, github: personGitHub, file: voiceBranchFile });
-	};
+	// The voice and tone (T9): the connected design system's, kept on a branch as every change to it is.
+	const voiceBranches = new VoiceBranches(branchDeps('voice'));
 
 	// Starting and picking up a project's codebase work, never under a running agent (`codebaseWork`).
 	const codebase = codebaseWork({
@@ -398,12 +384,12 @@ export const composeCore = ({
 		tokenBranches,
 		valueSources,
 		valueBranches,
-		handoffBranches,
+		handOverBranches,
 		libraryShown,
 		shownSystem,
 		valueAgent,
 		componentVariants,
-		voiceFile,
+		voiceBranches,
 		codebase,
 		agentBusy,
 		refuseWhileBusy,

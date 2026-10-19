@@ -19,6 +19,7 @@ const NOTHING_SHARED: ShareTools = {
 	push: refused,
 	findPr: refused,
 	createDraftPr: refused,
+	isOpen: refused,
 	checks: refused,
 	sleep: async () => undefined,
 	now: () => 0,

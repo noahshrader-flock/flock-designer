@@ -18,15 +18,6 @@ describe('change requests, over the API', () => {
 		expect(calls.every((c) => c.method === 'GET')).toBe(true);
 	});
 
-	it('says whether any was ever opened from a branch, open or closed', async () => {
-		const { github } = fakeGitHub({
-			[`${BASE}/pulls?head=o%3Adsnr%2Fvoice-1&state=all`]: [{ number: 3, state: 'closed' }],
-			[`${BASE}/pulls?head=o%3Adsnr%2Fvoice-2&state=all`]: [],
-		});
-		const crs = new ChangeRequests(github, REF);
-		expect([await crs.anyFrom('dsnr/voice-1'), await crs.anyFrom('dsnr/voice-2')]).toEqual([true, false]);
-	});
-
 	it('opens one only as a draft, onto the base it is given', async () => {
 		const { github, writes } = fakeGitHub({ [`POST ${BASE}/pulls`]: { number: 42, html_url: 'https://github.com/o/r/pull/42' } });
 		expect(await new ChangeRequests(github, REF).openDraft({ head: 'prototype/demo/v1', base: 'develop', title: 'T', body: 'B' })).toEqual({

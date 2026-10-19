@@ -1,7 +1,7 @@
 /**
  * What DSNR keeps of each change it has a branch for, in one file, by the design system and the change's scope (a component's
  * story file, or none for a change of the whole design system, its tokens): read, kept, forgotten, and listed for the design
- * system shown. Every kind of branch DSNR keeps is kept by it: a Save's (`ChangeBranches`) and a hand-over's (`HandoffBranches`).
+ * system shown. Every kind of branch DSNR keeps is kept by it (`KeptBranches`).
  */
 import type { ConnectedDesignSystem } from '../../../shared/contract';
 import { type JsonFile, jsonFile } from '../platform/jsonFile';
@@ -45,7 +45,7 @@ export class ScopedRecords<T> {
 		this.file.update((all) => Object.fromEntries(Object.entries(all).filter(([k]) => k !== key)));
 	}
 
-	/** The scopes with a record on the design system shown; none for the one kept without a scope. */
+	/** The scopes with a record on the design system shown, the one kept without a scope as an empty one. */
 	scopes(): string[] {
 		const system = this.shown();
 		if (!system) return [];
@@ -56,5 +56,5 @@ export class ScopedRecords<T> {
 	}
 }
 
-/** What a record is kept by: its design system, and its scope when it has one. */
-const keyOf = (system: ConnectedDesignSystem, scope: string): string => (scope === '' ? system.id : `${system.id}\u0000${scope}`);
+/** What a record is kept by: its design system, and its scope (empty for the design system whole). */
+const keyOf = (system: ConnectedDesignSystem, scope: string): string => `${system.id}\u0000${scope}`;

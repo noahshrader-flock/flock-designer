@@ -1,8 +1,8 @@
 import type { CatalogComponent, ValuePlace } from '../../src/shared/contract';
 import { useTokenChanges } from './hooks/tokenChanges';
 import { useComponentTokens } from './hooks/useComponentTokens';
-import { useHandoff } from './hooks/useHandoff';
-import { useValueBranch } from './hooks/useValueBranch';
+import { useHandOver } from './hooks/useHandOver';
+import { useChangeBranch } from './hooks/useChangeBranch';
 import { useValueSources } from './hooks/useValueSources';
 import { labelOf } from '../../src/shared/tokens';
 import { useTrying } from './useTrying';
@@ -34,8 +34,8 @@ export const ComponentChanges = ({
 	const tried = [...trying.tried.values()];
 	const { answer } = useComponentTokens(component.id);
 	const sources = useValueSources(component.id, tried, trying.writes);
-	const controls = useValueBranch(component.id, tried, trying.onAll);
-	const handoff = useHandoff({ shown: component.id, file: component.id, change: { tried }, watch: true });
+	const controls = useChangeBranch('values', { shown: component.id, scope: component.id, change: tried, setChange: trying.onAll });
+	const handOver = useHandOver({ shown: component.id, file: component.id, change: { tried }, watch: true });
 	const { byPath } = useTokenChanges();
 	const tokenName = (path: string) => {
 		const t = byPath.get(path);
@@ -53,7 +53,7 @@ export const ComponentChanges = ({
 			onOpen={onOpen}
 			sources={sources}
 			controls={controls}
-			handoff={handoff}
+			handOver={handOver}
 		/>
 	);
 };

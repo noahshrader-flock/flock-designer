@@ -384,6 +384,18 @@ export const hasFileAt = (root: string, ref: string, path: string): Promise<bool
 		() => false,
 	);
 
+/**
+ * A file as `ref` has it, whole, with its blob's sha; null when git says it is not there, and an error for anything that
+ * stopped it looking.
+ */
+export const fileAt = async (root: string, ref: string, path: string): Promise<{ text: string; sha: string } | null> => {
+	const sha = await git(root, ['rev-parse', '--verify', '--quiet', `${ref}:${path}`]).catch((err: unknown) =>
+		saidNo(err) ? null : Promise.reject(err),
+	);
+	if (!sha) return null;
+	return { text: await git(root, ['cat-file', 'blob', sha], { trim: false }), sha };
+};
+
 /** Whether a commit since `commit` changed `path`. */
 export const changedSince = async (root: string, commit: string, path: string): Promise<boolean> =>
 	(await git(root, ['diff', '--name-only', commit, 'HEAD', '--', path])) !== '';

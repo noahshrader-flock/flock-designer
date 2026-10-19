@@ -6,12 +6,14 @@
  */
 import type { TriedValue, ValuePlace } from '../../../shared/contract';
 import { VALUE_NAMES, storyComponent } from '../../../shared/valueNames';
-import { type ChangeBranchesDeps, ChangeBranches, type ChangeKind } from './changeBranches';
+import { type ChangeBranchesDeps, ChangeBranches, type SavedKindRules } from './changeBranches';
 import { libraryCommit } from './designLibrary';
 import { type ValueSources, triedValuesOf } from './valueSources';
 
-const VALUES = (sources: Pick<ValueSources, 'of' | 'files'>): ChangeKind<TriedValue[]> => ({
+const VALUES = (sources: Pick<ValueSources, 'of' | 'files'>): SavedKindRules<TriedValue[]> => ({
 	kind: 'values',
+	branchWord: 'values',
+	scope: 'component',
 	check: triedValuesOf,
 	empty: (tried) => tried.length === 0,
 	files: async (system, base, tried, file) => {

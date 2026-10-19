@@ -29,6 +29,8 @@ let file: string;
 let asked: string[];
 let checks: Check[];
 let openPr: PullRequest | null;
+/** Whether each pull request is still open, as GitHub says: `undefined` when it cannot say. */
+let stillOpen: boolean | undefined;
 
 const write = (root: string, files: Record<string, string>) => {
 	for (const [path, text] of Object.entries(files)) {
@@ -49,6 +51,10 @@ const tools = (): ShareTools => ({
 		openPr = { number: 42, url: 'https://github.com/acme/ui/pull/42' };
 		asked.push(body);
 		return openPr;
+	},
+	isOpen: async () => {
+		if (stillOpen === undefined) throw new Error('gh is signed out');
+		return stillOpen;
 	},
 	checks: async () => checks,
 	sleep: async () => undefined,
@@ -84,6 +90,7 @@ beforeEach(() => {
 	asked = [];
 	checks = [];
 	openPr = null;
+	stillOpen = true;
 });
 afterEach(() => rmSync(home, { recursive: true, force: true }));
 
@@ -95,7 +102,7 @@ describe('saving a change (T4)', () => {
 		expect(b).toMatchObject({ saves: 1, saved: [{ path: 'tone.brand.50', value: '#0A6B52' }], pullRequest: null });
 		const develop = g(clone, 'rev-parse', 'origin/develop').trim();
 		// The window is told the branch and the change, not the commits DSNR keeps to make its saves from.
-		expect(Object.keys(b).sort()).toEqual(['branch', 'pullRequest', 'saved', 'saves']);
+		expect(Object.keys(b).sort()).toEqual(['branch', 'lines', 'pullRequest', 'saved', 'saves']);
 		expect(g(clone, 'rev-parse', `${b.branch}^`).trim()).toBe(develop);
 		expect(at(b.branch, 'src/colors/tones/brand.ts')).toContain("50: '#0A6B52'");
 		// Only the token's file: everything else as develop has it.
@@ -235,6 +242,18 @@ describe('proposing it (T5)', () => {
 		expect((await branches().current())?.pullRequest?.chromatic).toBe('https://www.chromatic.com/build?appId=a&number=3');
 		checks = [];
 		expect((await branches().current())?.pullRequest?.chromatic).toBe('https://www.chromatic.com/build?appId=a&number=3');
+	});
+
+	it('is forgotten once its pull request is merged or closed, and kept while GitHub cannot say', async () => {
+		await branches().save([{ path: 'tone.brand.50', value: '#0A6B52' }]);
+		await branches().propose();
+		stillOpen = undefined;
+		expect(await branches().current()).not.toBeNull();
+		stillOpen = false;
+		expect(await branches().current()).toBeNull();
+		// Forgotten, the next save starts a new change.
+		stillOpen = true;
+		expect(await branches().scopes()).toEqual([]);
 	});
 
 	it('asks for a save first', async () => {

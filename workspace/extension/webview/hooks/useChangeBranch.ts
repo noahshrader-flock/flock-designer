@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { ChangeBranch, Result } from '../../../src/shared/contract';
+import type { ChangeBranch, ChangeKinds, Result } from '../../../src/shared/contract';
+import { sameTried } from '../../../src/shared/contract';
+import { sameChange } from '../../../src/shared/tokens';
+import { workspace } from '../host';
 
 /** How often a proposed change looks for Chromatic's build, and for how long, after which it is left to the pull request. */
 const CHROMATIC_EVERY_MS = 20_000;
@@ -18,35 +21,41 @@ export interface BranchControls<C> {
 	startOver: () => void;
 }
 
-/** What one kind of change's branch is asked with: the window's calls for it. */
-export interface BranchCalls<C> {
-	current: () => Promise<Result<ChangeBranch<C> | null>>;
-	save: (change: C) => Promise<Result<ChangeBranch<C>>>;
-	propose: () => Promise<Result<ChangeBranch<C>>>;
-	forget: () => Promise<Result<null>>;
-}
+/** The kinds a panel tries before it saves them: when two of a kind are the same change, whatever their order, and none of it. */
+type TriedKind = 'tokens' | 'values';
+const TRIED: { [K in TriedKind]: { same: (a: ChangeKinds[K], b: ChangeKinds[K]) => boolean; empty: ChangeKinds[K] } } = {
+	tokens: { same: sameChange, empty: [] },
+	values: { same: sameTried, empty: [] },
+};
 
 /**
- * The branch a change is kept on (a change to the tokens, T4 and T5; a component's values, Phase 4), the same for either
- * kind. Asked for whenever `shown` is another (a design system, a component); a change the app was closed with is put back
- * when none is being tried. Once proposed, it looks for Chromatic's build until the library's CI has linked one.
+ * The branch a change being tried is kept on (a change to the tokens, T4 and T5; a component's values, Phase 4), the same
+ * for either kind, through the calls every kind of change has. Asked for whenever `shown` is another (a design system, a
+ * component); `scope` is the component's story file, or null for the design system whole. A change the app was closed with
+ * is put back when none is being tried. Once proposed, it looks for Chromatic's build until the library's CI has linked one.
  */
-export const useChangeBranch = <C>({
-	shown,
-	change,
-	setChange,
-	same,
-	empty,
-	calls,
-}: {
-	shown: string | null;
-	change: C;
-	setChange: (change: C) => void;
-	/** Whether two changes are the same change, whatever their order. */
-	same: (a: C, b: C) => boolean;
-	empty: C;
-	calls: BranchCalls<C>;
-}): BranchControls<C> => {
+export const useChangeBranch = <K extends TriedKind>(
+	kind: K,
+	{
+		shown,
+		scope,
+		change,
+		setChange,
+	}: {
+		shown: string | null;
+		scope: string | null;
+		change: ChangeKinds[K];
+		setChange: (change: ChangeKinds[K]) => void;
+	},
+): BranchControls<ChangeKinds[K]> => {
+	type C = ChangeKinds[K];
+	const { same, empty } = TRIED[kind];
+	const calls = {
+		current: () => workspace().changeBranch(kind, scope) as Promise<Result<ChangeBranch<C> | null>>,
+		save: (c: C) => workspace().saveChange(kind, scope, c) as Promise<Result<ChangeBranch<C>>>,
+		propose: () => workspace().proposeChange(kind, scope, null) as Promise<Result<ChangeBranch<C>>>,
+		forget: () => workspace().forgetChange(kind, scope),
+	};
 	const [branch, setBranch] = useState<ChangeBranch<C> | null>(null);
 	// The calls for what is shown now, and which that is: an answer for one shown before (another component) is not this one's.
 	const now = useRef({ calls, shown });
