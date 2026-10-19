@@ -433,9 +433,25 @@ describe('the extension’s sources', () => {
 		// Each takes its size from the token, never a number of its own.
 		expect(rule('.input {')).toMatch(/height:\s*var\(--dsnr-control\)/);
 		expect(rule('.button {')).toMatch(/min-height:\s*var\(--dsnr-control\)/);
-		expect(rule('.icon-button,')).toMatch(/width:\s*var\(--dsnr-control\)[\s\S]*height:\s*var\(--dsnr-control\)/);
-		expect(rule('.toggle-option')).toMatch(/height:\s*calc\(var\(--dsnr-control\)/);
-		expect(rule('.icon-button-small,')).toMatch(/width:\s*var\(--dsnr-control-small\)[\s\S]*height:\s*var\(--dsnr-control-small\)/);
+		expect(rule('.toggle-option')).toMatch(/height:\s*var\(--dsnr-toggle-option\)/);
+		expect(css).toMatch(/--dsnr-toggle-option:\s*calc\(var\(--dsnr-control\)/);
+		// An icon alone is a square from one rule, whichever draws it: its side is `--square`, the control's or the small one's.
+		const square = rule('.icon-button,\n.menu-button,\n.button-icon,');
+		expect(square).toMatch(/--square:\s*var\(--dsnr-control\)/);
+		expect(square).toMatch(/width:\s*var\(--square\)[\s\S]*height:\s*var\(--square\)/);
+		expect(square).toMatch(/box-sizing:\s*border-box/);
+		expect(rule('.icon-button-small,')).toMatch(/--square:\s*var\(--dsnr-control-small\)/);
+		expect(rule('.toggle-icons .toggle-option')).toMatch(/--square:\s*var\(--dsnr-toggle-option\)/);
+		// No other rule gives an icon control a width or a height of its own.
+		const own = css
+			.split('}')
+			.filter(
+				(b) =>
+					/^\s*\.(icon-button|menu-button|button-icon)[\w-]*\s*\{/m.test(b.split('{')[0]!.split(',').pop() ?? '') || /^\.toggle-icons/.test(b.trim()),
+			)
+			.filter((b) => !b.trim().startsWith('.icon-button,\n.menu-button,\n.button-icon,'))
+			.filter((b) => /(^|[\s;])(width|height)\s*:/.test(b));
+		expect(own.map((b) => b.split('{')[0]!.trim())).toEqual([]);
 	});
 
 	it('hide a row’s badge only when the ellipsis button takes its place, not whenever the row has focus', () => {

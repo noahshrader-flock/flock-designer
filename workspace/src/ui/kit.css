@@ -52,6 +52,8 @@
 	 */
 	--dsnr-control: 32px;
 	--dsnr-control-small: 22px;
+	/* A toggle's option: the control's height less the track's padding and border, so the toggle is as tall as a control. */
+	--dsnr-toggle-option: calc(var(--dsnr-control) - 6px);
 	/*
 	 * A color's dot (a button) and the swatch in it: one size, so what lines up with a dot (a theme's column of them, its heading
 	 * above) is as wide as it is, and every list of colors ends at the same place.
@@ -237,8 +239,7 @@ body {
 	justify-content: center;
 	gap: var(--dsnr-space-3);
 	min-width: 0;
-	/* The track's height less its padding and border: the toggle is the default control's height. */
-	height: calc(var(--dsnr-control) - 6px);
+	height: var(--dsnr-toggle-option);
 	padding: 0 var(--dsnr-space-4);
 	border: 1px solid transparent;
 	border-radius: var(--dsnr-radius-inner);
@@ -377,6 +378,35 @@ body {
 /* == Icon buttons and menu buttons (`ui/IconButton.tsx`, `ui/Menu.tsx`) == */
 
 /*
+ * **An icon alone is a square**, whatever draws it (an icon button, a menu's button, a button with only an icon, an icon
+ * toggle's option): the same on both sides, never made wider by text padding or narrower by a row it is squeezed in. Each
+ * takes its size from `--square`, the default control's, or the small one's for what sits in a row, a card or a header
+ * (`-small`); a new kind of icon alone joins this list, and takes no size of its own.
+ */
+.icon-button,
+.menu-button,
+.button-icon,
+.toggle-icons .toggle-option {
+	--square: var(--dsnr-control);
+	box-sizing: border-box;
+	flex: none;
+	width: var(--square);
+	min-width: 0;
+	height: var(--square);
+	margin: 0;
+	padding: 0;
+}
+
+.icon-button-small,
+.menu-button-small {
+	--square: var(--dsnr-control-small);
+}
+
+.toggle-icons .toggle-option {
+	--square: var(--dsnr-toggle-option);
+}
+
+/*
  * A button that is an icon alone, as VS Code's toolbars draw one: a row's menu button (shown on hover, below) and any
  * other (Sync, a token's file, a reset), or a link drawn as one (the way back to a page), with no underline of its own.
  */
@@ -385,9 +415,6 @@ body {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	width: var(--dsnr-control);
-	height: var(--dsnr-control);
-	padding: 0;
 	border: 1px solid transparent;
 	border-radius: var(--dsnr-radius);
 	color: var(--vscode-foreground);
@@ -396,11 +423,9 @@ body {
 	cursor: pointer;
 }
 
-/* The small size: what sits in a row, a card or a header. */
+/* The small size: what sits in a row, a card or a header (its side is the square's, above). */
 .icon-button-small,
 .menu-button-small {
-	width: var(--dsnr-control-small);
-	height: var(--dsnr-control-small);
 	border-radius: var(--dsnr-radius-inner);
 }
 

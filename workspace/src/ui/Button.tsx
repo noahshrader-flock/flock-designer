@@ -39,24 +39,28 @@ export const Button = ({
 	/** What it does, said as its tooltip. */
 	title?: string;
 	children?: ReactNode;
-}) => (
-	<button
-		type={type}
-		className={`button button-${pressed === undefined ? variant : pressed ? 'primary' : 'secondary'}${external || icon ? ' button-with-icon' : ''}`}
-		disabled={disabled}
-		{...(onClick ? { onClick } : {})}
-		{...(pressed === undefined ? {} : { 'aria-pressed': pressed })}
-		{...(label ? { 'aria-label': label } : {})}
-		{...(title ? { title } : {})}
-	>
-		{icon && <Icon name={icon} />}
-		{external ? (
-			<>
-				<span>{children}</span>
-				<Icon name="link-external" size="small" />
-			</>
-		) : (
-			children
-		)}
-	</button>
-);
+}) => {
+	// An icon with no words is a square (`.button-icon`), like every icon alone.
+	const hasWords = children !== undefined && children !== null && children !== false && children !== '';
+	return (
+		<button
+			type={type}
+			className={`button button-${pressed === undefined ? variant : pressed ? 'primary' : 'secondary'}${external || icon ? ' button-with-icon' : ''}${icon && !hasWords ? ' button-icon' : ''}`}
+			disabled={disabled}
+			{...(onClick ? { onClick } : {})}
+			{...(pressed === undefined ? {} : { 'aria-pressed': pressed })}
+			{...(label ? { 'aria-label': label } : {})}
+			{...(title ? { title } : {})}
+		>
+			{icon && <Icon name={icon} />}
+			{external ? (
+				<>
+					<span>{children}</span>
+					<Icon name="link-external" size="small" />
+				</>
+			) : (
+				children
+			)}
+		</button>
+	);
+};

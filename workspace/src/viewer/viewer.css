@@ -45,9 +45,9 @@ body {
 	gap: var(--dsnr-space-3);
 }
 
-/* In a row, a button is as wide as its words, and a dropdown or a toggle as what it shows. */
-.viewer-bar .button,
-.viewer-panel .button {
+/* In a row, a button is as wide as its words (an icon alone is a square, the kit's), and a dropdown or a toggle as what it shows. */
+.viewer-bar .button:not(.button-icon),
+.viewer-panel .button:not(.button-icon) {
 	width: auto;
 	margin: 0;
 	white-space: nowrap;
