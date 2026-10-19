@@ -1,5 +1,5 @@
 import type { CommentAnchor, CommentRef, Result, ReviewComment, SignInState } from '../shared/contract';
-import { ASK_PATH, KEY_FRAGMENT, KEY_HEADER, type RelayAsk, type RelayCall, isKey, readRelayTell } from '../shared/reviewRelay';
+import { ASK_PATH, type EditorTheme, KEY_FRAGMENT, KEY_HEADER, type RelayAsk, type RelayCall, isKey, readRelayTell } from '../shared/reviewRelay';
 import type { CommentStore } from './comments/surfaces';
 import { isPrototypeName } from '../shared/prototypeNames';
 import { isThisMachine } from '../shared/thisMachine';
@@ -21,10 +21,10 @@ export const isServedHere = (location: Pick<Location, 'hostname'>): boolean => i
 /**
  * Listens for DSNR's review tab, when this page is served from this machine and in a frame, and gives `onRelay` the way
  * to ask it once it says hello. The tab is the parent, from VS Code, that said hello first: from then on only it is
- * asked, and only its answers, in their shape, are taken; so is its word of whether VS Code is dark, to `onScheme`. Returns how
+ * asked, and only its answers, in their shape, are taken; so is its word of VS Code's theme, to `onTheme`. Returns how
  * to stop listening.
  */
-export const listenForDsnr = (win: PageWindow, onRelay: (relay: Relay) => void, onScheme?: (dark: boolean) => void): (() => void) => {
+export const listenForDsnr = (win: PageWindow, onRelay: (relay: Relay) => void, onTheme?: (theme: EditorTheme) => void): (() => void) => {
 	if ((win.parent as unknown) === win || !isThisMachine(win.location.hostname)) return () => undefined;
 	let tab: string | null = null;
 	let next = 0;
@@ -45,9 +45,9 @@ export const listenForDsnr = (win: PageWindow, onRelay: (relay: Relay) => void, 
 			onRelay({ ask });
 			return;
 		}
-		// Whether VS Code is dark: only from the tab that said hello.
+		// VS Code's theme: only from the tab that said hello.
 		if (tell.dsnr === 'scheme') {
-			if (tab !== null) onScheme?.(tell.dark);
+			if (tab !== null) onTheme?.(tell.theme);
 			return;
 		}
 		waiting.get(tell.id)?.(tell.result);

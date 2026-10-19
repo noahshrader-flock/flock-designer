@@ -62,21 +62,23 @@ describe('listening for DSNR', () => {
 	});
 });
 
-describe('the tab’s light or dark', () => {
+describe('the tab’s theme', () => {
 	it('is taken from the tab that said hello, as it changes, and from no other', () => {
 		const page = pageAt('127.0.0.1');
-		const scheme = vi.fn();
-		listenForDsnr(page.win, () => undefined, scheme);
+		const theme = vi.fn();
+		listenForDsnr(page.win, () => undefined, theme);
+		const dark = { kind: 'vscode-dark', colors: { '--vscode-foreground': '#cccccc' } };
+		const light = { kind: 'vscode-light', colors: {} };
 		// Before hello, or from anywhere else, it is not taken: the tab is whoever said hello.
-		page.say({ dsnr: 'scheme', dark: true });
+		page.say({ dsnr: 'scheme', theme: dark });
 		page.say({ dsnr: 'hello' });
-		page.say({ dsnr: 'scheme', dark: true }, { origin: 'vscode-webview://other' });
-		page.say({ dsnr: 'scheme', dark: true }, { source: {} });
-		page.say({ dsnr: 'scheme', dark: 'yes' });
-		expect(scheme).not.toHaveBeenCalled();
+		page.say({ dsnr: 'scheme', theme: dark }, { origin: 'vscode-webview://other' });
+		page.say({ dsnr: 'scheme', theme: dark }, { source: {} });
 		page.say({ dsnr: 'scheme', dark: true });
-		page.say({ dsnr: 'scheme', dark: false });
-		expect(scheme.mock.calls).toEqual([[true], [false]]);
+		expect(theme).not.toHaveBeenCalled();
+		page.say({ dsnr: 'scheme', theme: dark });
+		page.say({ dsnr: 'scheme', theme: light });
+		expect(theme.mock.calls).toEqual([[dark], [light]]);
 	});
 });
 

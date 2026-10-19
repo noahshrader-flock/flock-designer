@@ -45,8 +45,8 @@ describe('what the page may ask', () => {
 describe('what the tab may tell the page', () => {
 	it.each([
 		[{ dsnr: 'hello' }],
-		[{ dsnr: 'scheme', dark: true }],
-		[{ dsnr: 'scheme', dark: false }],
+		[{ dsnr: 'scheme', theme: { kind: 'vscode-dark', colors: { '--vscode-foreground': '#cccccc' } } }],
+		[{ dsnr: 'scheme', theme: { kind: 'vscode-high-contrast-light', colors: {} } }],
 		[{ dsnr: 'answer', id: 3, result: { ok: true, value: [] } }],
 		[{ dsnr: 'answer', id: 3, result: { ok: false, error: 'No.' } }],
 	])('%o is read', (m) => {
@@ -56,8 +56,15 @@ describe('what the tab may tell the page', () => {
 	it.each([
 		[{ dsnr: 'hello', more: 1 }],
 		[{ dsnr: 'scheme' }],
-		[{ dsnr: 'scheme', dark: 'yes' }],
-		[{ dsnr: 'scheme', dark: true, more: 1 }],
+		[{ dsnr: 'scheme', dark: true }],
+		[{ dsnr: 'scheme', theme: { kind: 'vscode-sepia', colors: {} } }],
+		[{ dsnr: 'scheme', theme: { kind: 'vscode-dark', colors: [] } }],
+		// Only VS Code's variables, and only words: nothing that would set the page's own names or more than a value.
+		[{ dsnr: 'scheme', theme: { kind: 'vscode-dark', colors: { '--dsnr-brand': 'red' } } }],
+		[{ dsnr: 'scheme', theme: { kind: 'vscode-dark', colors: { '--vscode-foreground': 1 } } }],
+		[{ dsnr: 'scheme', theme: { kind: 'vscode-dark', colors: { '--vscode-foreground': 'x'.repeat(401) } } }],
+		[{ dsnr: 'scheme', theme: { kind: 'vscode-dark', colors: {}, more: 1 } }],
+		[{ dsnr: 'scheme', theme: { kind: 'vscode-dark', colors: {} }, more: 1 }],
 		[{ dsnr: 'answer', id: 3 }],
 		[{ dsnr: 'answer', id: 3, result: { ok: false } }],
 		[{ dsnr: 'answer', id: -1, result: { ok: true, value: 1 } }],

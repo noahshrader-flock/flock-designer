@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it } from 'vitest';
-import { applyScheme, systemIsDark, watchSystemScheme } from '../src/viewer/scheme';
+import { applyEditorTheme, applyScheme, systemIsDark, watchSystemScheme } from '../src/viewer/scheme';
 
 /**
  * The published page's bar follows light or dark (src/viewer/scheme.ts): the computer's setting in a browser, VS Code's
@@ -11,6 +11,26 @@ afterEach(() => {
 	document.documentElement.className = '';
 	document.documentElement.removeAttribute('style');
 	document.body.removeAttribute('style');
+	document.body.className = '';
+});
+
+describe('VS Code’s theme, passed on by the review tab', () => {
+	it('sets its colours on the page and its kind on the body, high contrast light as high contrast too, and takes them off for another', () => {
+		applyEditorTheme(document, {
+			kind: 'vscode-high-contrast-light',
+			colors: { '--vscode-foreground': '#292929', '--vscode-contrastBorder': '#0f4a85' },
+		});
+		expect(document.documentElement.style.getPropertyValue('--vscode-contrastBorder')).toBe('#0f4a85');
+		expect([...document.body.classList].sort()).toEqual(['vscode-high-contrast', 'vscode-high-contrast-light']);
+		applyEditorTheme(document, { kind: 'vscode-dark', colors: { '--vscode-foreground': '#cccccc' } });
+		expect(document.documentElement.style.getPropertyValue('--vscode-foreground')).toBe('#cccccc');
+		// What the last theme set and this one does not is gone, so nothing of high contrast is left over.
+		expect(document.documentElement.style.getPropertyValue('--vscode-contrastBorder')).toBe('');
+		expect([...document.body.classList]).toEqual(['vscode-dark']);
+		applyEditorTheme(document, null);
+		expect(document.documentElement.style.getPropertyValue('--vscode-foreground')).toBe('');
+		expect([...document.body.classList]).toEqual([]);
+	});
 });
 
 describe('light or dark', () => {

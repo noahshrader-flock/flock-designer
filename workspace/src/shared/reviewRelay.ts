@@ -30,11 +30,24 @@ export interface RelayAsk {
 	args: unknown[];
 }
 
+/** The kinds of theme VS Code has, by the class it puts on a page's body. */
+export const THEME_KINDS = ['vscode-light', 'vscode-dark', 'vscode-high-contrast', 'vscode-high-contrast-light'] as const;
+export type ThemeKind = (typeof THEME_KINDS)[number];
+
+/** VS Code's theme, as a page in it has it: its kind, and its colours by their variables' names (`--vscode-foreground`). */
+export interface EditorTheme {
+	kind: ThemeKind;
+	colors: Record<string, string>;
+}
+
+/** Whether a theme of that kind is dark. */
+export const isDarkTheme = (kind: ThemeKind): boolean => kind === 'vscode-dark' || kind === 'vscode-high-contrast';
+
 /**
- * What the tab tells the page: that it is there (`hello`, so the page knows it is framed by DSNR), whether VS Code is dark
- * (`scheme`, once it is there and whenever the theme changes, so the page's bar follows it), or an answer.
+ * What the tab tells the page: that it is there (`hello`, so the page knows it is framed by DSNR), VS Code's theme
+ * (`scheme`, once it is there and whenever the theme changes, so the page's bar is drawn in it), or an answer.
  */
-export type RelayTell = { dsnr: 'hello' } | { dsnr: 'scheme'; dark: boolean } | { dsnr: 'answer'; id: number; result: Result<unknown> };
+export type RelayTell = { dsnr: 'hello' } | { dsnr: 'scheme'; theme: EditorTheme } | { dsnr: 'answer'; id: number; result: Result<unknown> };
 
 const CALLS = new Set<string>(RELAY_CALLS);
 const isId = (v: unknown): v is number => typeof v === 'number' && Number.isSafeInteger(v) && v > 0;
@@ -57,12 +70,27 @@ export const readRelayAsk = (raw: unknown): RelayAsk | null => {
 		: null;
 };
 
+/** A theme's colours: VS Code's variables and nothing else, each a value of a reasonable length, and not without end. */
+const isColors = (v: unknown): v is Record<string, string> =>
+	typeof v === 'object' &&
+	v !== null &&
+	!Array.isArray(v) &&
+	Object.keys(v).length <= 2000 &&
+	Object.entries(v).every(([name, value]) => /^--vscode-[\w-]+$/.test(name) && typeof value === 'string' && value.length <= 400);
+
+const isTheme = (v: unknown): v is EditorTheme =>
+	typeof v === 'object' &&
+	v !== null &&
+	hasExactly(v as Record<string, unknown>, ['kind', 'colors']) &&
+	(THEME_KINDS as readonly unknown[]).includes((v as { kind?: unknown }).kind) &&
+	isColors((v as { colors?: unknown }).colors);
+
 /** What the tab told the page, or null for anything that is not exactly a hello, a scheme or an answer. */
 export const readRelayTell = (raw: unknown): RelayTell | null => {
 	if (typeof raw !== 'object' || raw === null) return null;
 	const m = raw as Record<string, unknown>;
 	if (m.dsnr === 'hello') return hasExactly(m, ['dsnr']) ? { dsnr: 'hello' } : null;
-	if (m.dsnr === 'scheme') return hasExactly(m, ['dsnr', 'dark']) && typeof m.dark === 'boolean' ? { dsnr: 'scheme', dark: m.dark } : null;
+	if (m.dsnr === 'scheme') return hasExactly(m, ['dsnr', 'theme']) && isTheme(m.theme) ? { dsnr: 'scheme', theme: m.theme } : null;
 	return m.dsnr === 'answer' && hasExactly(m, ['dsnr', 'id', 'result']) && isId(m.id) && isResult(m.result)
 		? { dsnr: 'answer', id: m.id, result: m.result }
 		: null;

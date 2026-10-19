@@ -3,7 +3,8 @@ import { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { TooltipProvider } from './ui/tooltip';
 import { type Relay, isServedHere, versionAddress, keyFromAddress, listenForDsnr, serverRelay } from './relay';
-import { applyScheme, systemIsDark, watchSystemScheme } from './scheme';
+import { applyEditorTheme, applyScheme, systemIsDark, watchSystemScheme } from './scheme';
+import { type EditorTheme, isDarkTheme } from '../shared/reviewRelay';
 import { Viewer, type ViewerConfig, type ViewerSlots } from './Viewer';
 import { saveToken } from './browserAdapter';
 import { type SignInConfig, finishSignIn, takeNote } from './signIn';
@@ -30,12 +31,15 @@ const framed = window.parent !== window;
 
 const InPage = ({ config, slots }: { config: ViewerConfig; slots: ViewerSlots }) => {
 	const [relay, setRelay] = useState<Relay | null>(() => (key === null ? null : serverRelay(key)));
-	// Light or dark: VS Code's when its review tab frames this page and says, else the computer's, as it changes.
+	// VS Code's theme when its review tab frames this page and says; else light or dark as the computer is, as it changes.
 	const [system, setSystem] = useState(() => systemIsDark(window));
-	const [editor, setEditor] = useState<boolean | null>(null);
+	const [editor, setEditor] = useState<EditorTheme | null>(null);
 	useEffect(() => (key === null ? listenForDsnr(window, setRelay, setEditor) : undefined), []);
 	useEffect(() => watchSystemScheme(window, setSystem), []);
-	useEffect(() => applyScheme(document, editor ?? system, editor !== null), [editor, system]);
+	useEffect(() => {
+		applyScheme(document, editor ? isDarkTheme(editor.kind) : system, editor !== null);
+		applyEditorTheme(document, editor);
+	}, [editor, system]);
 	// Opened from DSNR in the browser: after Address, to the version it showed its change in (the tab shows it in VS Code).
 	const onAddressed = (name: string) => {
 		const to = versionAddress(config.projectHref, name, location.href.split('#')[0] as string);

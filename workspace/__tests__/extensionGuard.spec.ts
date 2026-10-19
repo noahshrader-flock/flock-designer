@@ -51,8 +51,9 @@ describe('the extension’s sources', () => {
 
 	it('write one colour of their own, DSNR’s brand: every other is one of VS Code’s theme variables, and high contrast gives way to the theme’s button', () => {
 		const colour = /#[0-9a-fA-F]{3,8}\b|\brgba?\(|\bhsla?\(|\boklch\(/;
+		// VS Code's own theme, written once for where VS Code gives none (below), is not a colour of DSNR's.
 		const said = files()
-			.filter(({ path }) => /\.(tsx|css)$/.test(path))
+			.filter(({ path }) => /\.(tsx|css)$/.test(path) && !path.endsWith('ui/theme.css'))
 			.flatMap(({ path, text }) =>
 				text
 					.split('\n')
@@ -129,6 +130,23 @@ describe('the extension’s sources', () => {
 			.filter((block) => /\.swatch[^{]*\{/.test(block))
 			.flatMap((block) => [...block.matchAll(/border-radius:\s*([^;]+);/g)].map((m) => m[1]));
 		expect(rounded.filter((value) => value !== '50%')).toEqual([]);
+	});
+
+	it('give every theme name the kit reads a value where VS Code gives none, from VS Code’s own themes, light and dark', () => {
+		const kit = files().filter(({ path }) => path.startsWith('src/ui/') && !path.endsWith('theme.css'));
+		const read = new Set(kit.flatMap(({ text }) => [...text.matchAll(/var\((--vscode-[\w-]+)/g)].map((m) => m[1]!)));
+		const theme = files().find(({ path }) => path.endsWith('ui/theme.css'))!.text;
+		const block = (selector: string) => theme.slice(theme.indexOf(`${selector} {`), theme.indexOf('}', theme.indexOf(`${selector} {`)));
+		const given = (selector: string) => new Set([...block(selector).matchAll(/(--vscode-[\w-]+):/g)].map((m) => m[1]!));
+		// High contrast's own are set by VS Code only in a high contrast theme, and the kit draws nothing where they are not.
+		const ownedByHighContrast = new Set(['--vscode-contrastBorder', '--vscode-contrastActiveBorder']);
+		const wanted = [...read].filter((name) => !ownedByHighContrast.has(name)).sort();
+		expect(wanted.filter((name) => !given(':root').has(name))).toEqual([]);
+		// Dark gives a value for every colour light does; the fonts are the same in both.
+		const colours = [...given(':root')].filter((name) => !/font/.test(name)).sort();
+		expect([...given(':root.dark')].sort()).toEqual(colours);
+		// It holds VS Code's names and nothing else.
+		expect([...theme.matchAll(/^\s*(--[\w-]+):/gm)].map((m) => m[1]!).filter((name) => !name.startsWith('--vscode-'))).toEqual([]);
 	});
 
 	it('space everything by the one scale: no padding, margin or gap is a number of pixels of its own', () => {
