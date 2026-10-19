@@ -2,12 +2,6 @@ import { describe, expect, it } from 'vitest';
 import { type AskHandlers, askRoutes, readComponentArg, readReview } from '../extension/src/asks';
 import { ASKS, type AskName, readMessage, readProjectArg } from '../extension/src/messages';
 
-/**
- * What a DSNR page may send the extension: that it listens, or a call by its name, the core's or one of the extension's
- * own asks (`PageAsks`), each ask's arguments checked as the core checks a call's, before anything is done. Anything else
- * is dropped, or refused, in words.
- */
-
 describe('a message from a page', () => {
 	it.each([
 		[{ type: 'call', id: 1, name: 'listProjects', args: [] }],
@@ -39,7 +33,6 @@ describe('a message from a page', () => {
 	});
 });
 
-/** Every ask answered by a stand-in that says what it was given. */
 const handled = () => {
 	const given: [string, unknown[]][] = [];
 	const handlers = Object.fromEntries(ASKS.map((name) => [name, (...args: unknown[]) => void given.push([name, args])])) as unknown as AskHandlers;
@@ -52,7 +45,6 @@ describe('an ask from a page', () => {
 		['getStarted', []],
 		['askNewPrototype', []],
 		['codebase', ['hand-off', 'zone-coverage']],
-		// The draft pull request, from the Hand off dialog once a handoff found the work ready.
 		['codebase', ['share', 'zone-coverage']],
 		['codebase', ['open-code', 'zone-coverage']],
 		['codebase', ['run-locally', 'zone-coverage']],
@@ -62,7 +54,6 @@ describe('an ask from a page', () => {
 		['openReviewInBrowser', [{ projectId: 'alert-history', name: 'v2', title: 'Alert history · Version 2' }]],
 		['copyReviewLink', [{ projectId: 'alert-history', name: 'v2', title: 'Alert history · Version 2' }]],
 		['openReviewPublished', [{ projectId: 'alert-history', name: 'v2', title: 'Alert history · Version 2' }]],
-		// The Design System tab's (6.1 to 6.3): a component's tab, its links, Primitives, the voice and tone, a token's file, the change tried.
 		['openComponent', ['src/components/FSButton/FSButton.stories.tsx']],
 		['componentLink', ['src/components/FSButton/FSButton.stories.tsx', 'storybook']],
 		['componentLink', ['src/components/FSButton/FSButton.stories.tsx', 'source']],

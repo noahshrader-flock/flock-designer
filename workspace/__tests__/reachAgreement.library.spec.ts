@@ -19,10 +19,8 @@ import {
 import { describeLibrary, onRealLibrary } from './realLibrary';
 
 /**
- * A token's two measurements, held against each other on real libraries: the components whose Values name it (tagging),
- * against the components that move when it is changed (`reachWith`). **Every component a token's Values name moves when it
- * changes, and is listed in the token's control** (`users`), or the test fails. The other way is said, not failed: a component moves in a part its Values do not read, or
- * its Values move and name no token (a height), or it moves with no tag of the token drawn.
+ * Every component a token's Values name (tagging) must move when it changes (`reachWith`) and be listed in its control
+ * (`users`). The other way is only said, not failed: a component may move in a part its Values do not read.
  *
  * Long (a build and every component drawn twice, per token), so run only when asked: `DSNR_REACH=1`, with `REACH_TOKENS` (how
  * many tokens Values name, most named first), `REACH_UNNAMED` (how many no Values name), `REACH_LIBS` and `REACH_OUT`.
@@ -32,7 +30,7 @@ const NAMED = Number(process.env.REACH_TOKENS ?? 6);
 const UNNAMED = Number(process.env.REACH_UNNAMED ?? 2);
 const say = (line: string) => (process.env.REACH_OUT ? appendFileSync(process.env.REACH_OUT, `${line}\n`) : console.log(line));
 
-/** A value the token does not have, of its kind: what it is changed to. */
+/** A value of its kind the token does not have, or null for a kind that cannot be changed here. */
 const changedValue = (t: DesignToken): string | null => {
 	if (t.kind === 'color') return t.value.toUpperCase() === '#E01E5A' ? '#1EE05A' : '#E01E5A';
 	const parts = lengthParts(t.value);
@@ -41,7 +39,6 @@ const changedValue = (t: DesignToken): string | null => {
 	return null;
 };
 
-/** The components whose Values name `path`, in either mode. */
 const namedBy = (index: DrawnIndex, path: string): Set<string> => {
 	const named = new Set<string>();
 	for (const [file, values] of index.built.values) {
@@ -89,13 +86,11 @@ const check = (system: ConnectedDesignSystem) => async () => {
 			const moved = new Map(reach.moved.map((m) => [m.file, m]));
 			const movedOnly = [...moved.keys()].filter((f) => !named.has(f));
 			const drawsTag = (f: string) => files.get(f)?.uses.has(token.path) === true;
-			// What is known of each that moved and is not named: inside, in a part its Values do not read (the limit the tab says);
-			// its Values moved and name no token; or its stories draw no tag of the token at all.
+			// Moved and not named: in a part its Values do not read (the limit the tab says), its Values name no token, or no tag drawn.
 			const inParts = movedOnly.filter((f) => moved.get(f)?.inside && drawsTag(f));
 			const valuesUnnamed = movedOnly.filter((f) => !moved.get(f)?.inside);
 			const noTag = movedOnly.filter((f) => moved.get(f)?.inside && !drawsTag(f));
 			const missed = [...named].filter((f) => !moved.has(f));
-			// What a token's control lists (`users`, the components whose stories draw its tag): every one its Values name is too.
 			const users = await tokens.users(token.path);
 			const listed = new Set(users.state === 'ready' ? users.users.map((u) => u.file) : []);
 			notListed.push(...[...named].filter((f) => !listed.has(f)).map((f) => `${token.path}: ${f}`));

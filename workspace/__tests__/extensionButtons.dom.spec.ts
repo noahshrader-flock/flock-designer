@@ -10,7 +10,6 @@ import { Message } from '../src/ui/Message';
 import { Dialog, DialogButtons } from '../src/ui/Dialog';
 import { button, mount, press } from './webviewHarness';
 
-/** DSNR's three buttons in VS Code: the primary in its brand, the secondary outlined, and the ghost for a way out. */
 describe('the panel’s buttons', () => {
 	it('are primary unless said otherwise, and draw each kind by its own class', async () => {
 		await mount(
@@ -90,15 +89,12 @@ describe('a dialog', () => {
 		opener.focus();
 		await press(opener);
 		const box = document.querySelector('[role="dialog"]') as HTMLElement;
-		// On the dialog: the keyboard is in it, and no slider is drawn as chosen the moment it opens.
 		expect(document.activeElement).toBe(box);
 		expect(box.getAttribute('tabindex')).toBe('-1');
-		// Tab and Shift+Tab stay inside it, back from the dialog itself going to its last control.
 		const key = (name: string, shiftKey = false) =>
 			act(async () => void box.dispatchEvent(new KeyboardEvent('keydown', { key: name, shiftKey, bubbles: true, cancelable: true })));
 		await key('Tab', true);
 		expect(document.activeElement?.textContent).toBe('Reset');
-		// Closed with Escape, the focus goes back to what opened it, as every dialog's does.
 		await key('Escape');
 		expect(document.querySelector('[role="dialog"]')).toBeNull();
 		expect(document.activeElement).toBe(opener);
@@ -138,7 +134,6 @@ describe('a dialog', () => {
 				async () =>
 					void document.activeElement?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', shiftKey, bubbles: true, cancelable: true })),
 			);
-		// It opens on the X (the first thing in it); Shift+Tab from it is the last link, not out of the dialog.
 		expect(document.activeElement).toBe(close());
 		await key(true);
 		expect(document.activeElement?.textContent).toBe('Second');
@@ -227,7 +222,6 @@ describe('the blank badge', () => {
 	});
 });
 
-/** A color is only its dot, wherever it is something to press: the one piece the grid of roles, Values and a token's row share. */
 describe('the color dot', () => {
 	const dot = () => document.querySelector('.color-dot') as HTMLElement;
 
@@ -240,11 +234,9 @@ describe('the color dot', () => {
 		// Its tooltip is its name, so it is not said a second time as its description.
 		expect(dot().hasAttribute('aria-description')).toBe(false);
 		expect((dot().querySelector('[data-swatch]') as HTMLElement).style.backgroundColor).toBe('rgb(16, 128, 98)');
-		// Nothing else of the color is written: no name, no hex.
 		expect(dot().textContent).toBe('');
 		await press(dot());
 		expect(onPress).toHaveBeenCalledTimes(1);
-		// A tooltip that says more than its name (the token a value is) is its description.
 		document.body.innerHTML = '';
 		await mount(createElement(ColorDot, { value: '#108062', says: 'primary.main', name: 'Background', onPress }));
 		expect(dot().getAttribute('aria-description')).toBe('primary.main');

@@ -17,7 +17,6 @@ const github = {
 	api: vi.fn(),
 } as unknown as Pick<GitHubAccount, 'state' | 'api'>;
 const deploys = () => siteDeploys({ github, designClone: () => null });
-/** Lets a deploy started in the background settle. */
 const settle = () => new Promise((r) => setImmediate(r));
 const MINUTE = 60_000;
 /** A moment long after the app opened, as any real one is. */

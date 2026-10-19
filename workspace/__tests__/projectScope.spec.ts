@@ -12,8 +12,6 @@ import {
 import { productsOf } from '../src/shared/work';
 import { aProject, projectWork } from './fixtures';
 
-/** What the Projects panel focuses on and groups by (the workspace README's "Projects, by product"), as rules a test can read. */
-
 const COKE = 'flocksafety/flock-coke';
 const PEPSI = 'flocksafety/flock-pepsi';
 const on = (id: string, ...made: [string | null, string][]) =>

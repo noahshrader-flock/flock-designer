@@ -25,13 +25,6 @@ import {
 	unmount,
 } from './webviewHarness';
 
-/**
- * DSNR's panel: the Projects and Design System toggle at its very top, the projects the core reads
- * under their folders with their pictures, opening one for review, and the design system found. Played against as the extension
- * plays it: what is open is said once the page is ready, the core's calls are answered by their ids, and its events
- * arrive by name.
- */
-
 const OPEN: Context = {
 	product: '/work/flock-coke',
 	designSystem: { root: '/work/flock-react-component-lib', how: 'named' },
@@ -39,9 +32,7 @@ const OPEN: Context = {
 	productRepository: 'flocksafety/flock-coke',
 	missing: [],
 };
-/** The panel as the extension starts it. */
 const show = () => mountPage(createElement(Panel));
-/** The panel open on a product, its projects read. */
 const showOpen = async (context: Context = OPEN, projects = SAMPLE_PROJECTS) => {
 	await show();
 	await share('placed', { context, unreadable: null });
@@ -52,23 +43,18 @@ const toggle = () => document.querySelector('[role="radiogroup"]') as HTMLElemen
 const options = () => [...toggle().querySelectorAll<HTMLElement>('[role="radio"]')];
 const chosen = () => options().find((o) => o.getAttribute('aria-checked') === 'true')?.textContent;
 const body = () => document.querySelector('[data-tab-body]') as HTMLElement;
-/** The Projects tab's View options menu: one button for whose projects and the layout, drawn as the row menus are. */
 const viewMenu = () => body().querySelector('button[aria-label="View options"]') as HTMLButtonElement | null;
-/** Its choices, the menu opened if it is not: each a radio in its group, named for what it says. */
 const viewChoices = async () => {
 	if (viewMenu()?.getAttribute('aria-expanded') !== 'true') await press(viewMenu()!);
 	return [...document.querySelectorAll<HTMLElement>('[role="menuitemradio"]')];
 };
 const viewChoice = async (label: string) => press((await viewChoices()).find((o) => o.textContent === label)!);
-/** Whether a choice is the one chosen in its group, as the menu says it. */
 const checked = async (label: string) => (await viewChoices()).find((o) => o.textContent === label)?.getAttribute('aria-checked');
-/** Whose projects can be chosen: the choices in the menu's Projects group. */
 const scopeChoices = async () => (await viewChoices()).filter((o) => o.closest('[role="group"]')?.getAttribute('aria-label') === 'Projects');
 
 describe('the toggle at the top', () => {
 	it('is first in the panel, Projects and Design System, with Projects chosen', async () => {
 		await show();
-		// First in the panel, in the bar that stays at the top while the list under it scrolls.
 		const bar = document.querySelector('main')?.firstElementChild;
 		expect(bar?.className).toBe('panel-top');
 		expect(bar?.firstElementChild).toBe(toggle());
@@ -92,7 +78,7 @@ describe('the toggle at the top', () => {
 		expect(chosen()).toBe('Design System');
 		expect(document.activeElement).toBe(options()[1]);
 		await key(options()[1]!, 'ArrowRight');
-		expect(chosen()).toBe('Projects'); // it wraps
+		expect(chosen()).toBe('Projects');
 		await key(options()[0]!, 'End');
 		expect(chosen()).toBe('Design System');
 		await key(options()[1]!, 'Home');
@@ -134,13 +120,11 @@ describe('what is open', () => {
 		await showOpen(NONE);
 		expect(sent.some((m) => m.name === 'listProjects')).toBe(true);
 		expect([...body().querySelectorAll('[role="listitem"] [data-part="name"]')].map((n) => n.textContent)).toEqual([
-			// One group (none has a product yet), in the list's own order; a project's folder is on its line.
 			'Alert history',
 			'Admin usage',
 			'Role comparison',
 			'Zone coverage',
 		]);
-		// Only everyone's is there to be chosen, signed out with no product: no group for a choice of one.
 		expect(await scopeChoices()).toEqual([]);
 		expect(body().textContent).toContain('No product is open, so these are everyone’s projects');
 	});
@@ -179,7 +163,6 @@ describe('the account, and reading the projects again', () => {
 		const badge = () => body().querySelector('[data-part="name"]')?.closest('li')?.querySelector('.badge')?.getAttribute('aria-label') ?? null;
 		expect(badge()).toBe('2 open comments');
 		await say({ type: 'projects-changed' });
-		// Still there while it is read: the list does not give way to a line saying it is reading.
 		expect(body().querySelectorAll('[role="listitem"]')).toHaveLength(4);
 		expect(badge()).toBe('2 open comments');
 		await answer(
@@ -204,7 +187,6 @@ describe('the account and the sync, in the panel, not as a box at the top (their
 	const signedIn = { state: 'signedIn', user: { login: 'noah', name: 'Noah', avatarUrl: 'https://avatars.githubusercontent.com/u/1' } };
 	const dialog = () => document.querySelector('[role="dialog"]') as HTMLElement | null;
 	const inDialog = (name: string) => [...dialog()!.querySelectorAll('button')].find((b) => b.textContent === name) as HTMLButtonElement;
-	/** The X in a dialog's title row: how every dialog is closed that has nothing to cancel. */
 	const closeX = () => dialog()!.querySelector('[aria-label="Close"]') as HTMLButtonElement;
 	const heard = (name: string) => sent.filter((m) => m.type === 'call' && m.name === name);
 
@@ -283,9 +265,7 @@ describe('the account and the sync, in the panel, not as a box at the top (their
 
 describe('dialogs and menus, in the panel', () => {
 	const dialog = () => document.querySelector('[role="dialog"]') as HTMLElement | null;
-	/** A field by its label, as a person finds it. */
 	const field = (name: string) => [...dialog()!.querySelectorAll('label')].find((l) => l.textContent === name)!.control as HTMLInputElement;
-	/** The option of a select that says `label`, chosen, as a person chooses it. */
 	const choose = async (select: HTMLElement, label: string) => {
 		const option = [...(select as HTMLSelectElement).options].find((o) => o.textContent === label);
 		if (!option) throw new Error(`no option ${label}`);
@@ -296,7 +276,6 @@ describe('dialogs and menus, in the panel', () => {
 	const closeX = () => dialog()!.querySelector('[aria-label="Close"]') as HTMLButtonElement;
 	const menuFor = (n: number) => [...body().querySelectorAll<HTMLElement>('[aria-label="Project actions"]')][n] as HTMLElement;
 	const items = () => [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')];
-	/** A menu item by what it says, as a person finds it. */
 	const item = (label: string) => items().find((i) => i.textContent === label)!;
 
 	describe('New prototype', () => {
@@ -304,7 +283,7 @@ describe('dialogs and menus, in the panel', () => {
 			await showOpen(OPEN, []);
 			await say({ type: 'open-dialog', dialog: { kind: 'new' } });
 			expect(dialog()?.getAttribute('aria-label')).toBe('New prototype');
-			// Its one button is what it does; the way out is the X, not a Cancel beside it.
+			// The way out is the X, not a Cancel beside it.
 			expect([...dialog()!.querySelectorAll('.dialog-buttons button')].map((b) => b.textContent)).toEqual(['Create prototype']);
 			await press(closeX());
 			expect(dialog()).toBeNull();
@@ -457,13 +436,11 @@ describe('dialogs and menus, in the panel', () => {
 		};
 
 		it('has the folder it is in chosen however it was spelled, as the list spells it', async () => {
-			// Two projects, one folder, spelled two ways: the list has the one spelling, and both show it chosen.
 			await showOpen(
 				OPEN,
 				SAMPLE_PROJECTS.map((p) => (p.id === 'role-comparison' ? { ...p, folder: 'maps' } : p)),
 			);
 			await say({ type: 'open-dialog', dialog: { kind: 'assign', projectId: 'zone-coverage' } });
-			// The list has `maps`, the first spelling it met; this project's own `Maps` is not an option, and is shown as it.
 			expect([...field('Folder').querySelectorAll('option')].map((o) => o.textContent)).toEqual(['No folder', 'Admin', 'maps', 'New folder…']);
 			expect(selected(field('Folder'))).toBe('maps');
 			expect(submit().disabled).toBe(true);
@@ -527,7 +504,6 @@ describe('dialogs and menus, in the panel', () => {
 describe('codebase work, in the panel', () => {
 	const codebase = (branch: string, more: Partial<ProjectWork> = {}): ProjectWork =>
 		projectWork({ name: 'codebase', branch, createdAt: '2026-10-12T10:00:00Z', repository: 'flocksafety/flock-coke', ...more });
-	/** Zone coverage built in the code too, and a project that is only in the code. */
 	const WITH_CODE = [
 		...SAMPLE_PROJECTS.map((p) => (p.id === 'zone-coverage' ? { ...p, work: [...p.work, codebase('feature/zone-coverage')] } : p)),
 		{ id: 'roles-in-code', title: 'Roles in code', folder: null, records: [], people: [], work: [codebase('feature/roles-in-code')] },
@@ -538,7 +514,6 @@ describe('codebase work, in the panel', () => {
 	const menuOf = (title: string) => named(title).querySelector<HTMLElement>('[aria-label="Project actions"]')!;
 	const items = () => [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')].map((i) => i.textContent);
 	const item = (label: string) => [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')].find((i) => i.textContent === label)!;
-	/** A press elsewhere, as a person's click on another button is first: it closes a menu that is open. */
 	const elsewhere = async () => act(async () => void document.body.dispatchEvent(new MouseEvent('mousedown', { bubbles: true })));
 	const inDialog = (name: string) => [...dialog()!.querySelectorAll('button')].find((b) => b.textContent === name) as HTMLButtonElement;
 	const closeX = () => dialog()!.querySelector('[aria-label="Close"]') as HTMLButtonElement;
@@ -547,20 +522,17 @@ describe('codebase work, in the panel', () => {
 		await showOpen(OPEN, WITH_CODE);
 		const dividers = () => document.querySelectorAll('[role="separator"]').length;
 		await press(menuOf('Zone coverage'));
-		// A prototype that is in code too: it is built, so Handoff, not Build.
 		expect(items()).toEqual(['Copy link', 'Open published page', 'Open locally', 'Run locally', 'Hand off', 'View on GitHub', 'Assign folder…']);
 		expect(dividers()).toBe(4);
 		await elsewhere();
 		await press(menuOf('Alert history'));
-		// A prototype only: not built yet, so Build, and no GitHub to open.
 		expect(items()).toEqual(['Copy link', 'Open published page', 'Open locally', 'Build', 'Assign folder…']);
 		expect(dividers()).toBe(3);
 		await elsewhere();
 		await press(menuOf('Roles in code'));
-		// Code only: nothing of a prototype to open or link, and Handoff.
 		expect(items()).toEqual(['Run locally', 'Hand off', 'View on GitHub', 'Assign folder…']);
 		expect(dividers()).toBe(2);
-		// No item opens it in VS Code: pressing it does, and nothing is said twice.
+		// No item opens it in VS Code: pressing the project does, so nothing is offered twice.
 		expect(items().some((label) => /open for review|preview|comments|share/i.test(label))).toBe(false);
 	});
 
@@ -595,11 +567,9 @@ describe('codebase work, in the panel', () => {
 		expect(dialog()!.textContent).toContain('feature/zone-coverage');
 		expect(dialog()!.textContent).toContain('Nothing is pushed');
 		expect(panelSaid().some((m) => m.type === 'codebase')).toBe(false);
-		// Not until it is known the agent is free.
 		expect(inDialog('Start handoff').disabled).toBe(true);
 		await answer('agentStatus', { state: 'idle' });
 		await press(inDialog('Start handoff'));
-		// Asked again as it is pressed: free still, so it starts.
 		await answer('agentStatus', { state: 'idle' });
 		expect(lastAsk()).toEqual(['codebase', ['hand-off', 'zone-coverage']]);
 		expect(dialog()).toBeNull();
@@ -706,7 +676,6 @@ describe('codebase work, in the panel', () => {
 			expect(sent.filter((m) => m.name === 'buildInCodebasePlan').at(-1)?.args).toEqual(['/work/flock-coke', 'alert-history', 'v3']);
 			expect(sent.filter((m) => m.name === 'branchesWithSetup').at(-1)?.args).toEqual(['/work/flock-coke']);
 			expect(dialog()!.textContent).toContain('Creates feature/alert-history from this branch and moves your checkout to it.');
-			// What happens ends with the check it makes of its own work, and says what is left to Handoff.
 			expect(dialog()!.textContent).toContain('Before it reports, the implementation reviewer checks the work once');
 			expect(dialog()!.textContent).toContain('the full reviews and the gate are Handoff’s');
 		});
@@ -720,7 +689,6 @@ describe('codebase work, in the panel', () => {
 			const reads = sent.filter((m) => m.name === 'listProjects').length;
 			await answer('buildInCodebase', { editor: true, command: null });
 			expect(dialog()!.textContent).toContain('It is in Claude Code in this window now, on feature/alert-history');
-			// The project's codebase work is recorded: the list is read again.
 			expect(sent.filter((m) => m.name === 'listProjects').length).toBe(reads + 1);
 			await press(closeX());
 			expect(dialog()).toBeNull();
@@ -866,7 +834,6 @@ describe('the projects as a list or a grid', () => {
 		expect(cards()[0]!.querySelector('.badge')?.classList.contains('badge-brand')).toBe(true);
 		expect(cards()[1]!.querySelector('.badge')).toBeNull();
 		expect(cards()[0]!.querySelector('[data-part="picture"]')).not.toBeNull();
-		// What opens says so on its picture: a brand wash, shown on hover (the stylesheet's part), with nothing in it.
 		const wash = cards()[0]!.querySelector('.card-media > .thumb-wash');
 		expect(wash).not.toBeNull();
 		expect(wash!.children).toHaveLength(0);
@@ -885,7 +852,7 @@ describe('the projects as a list or a grid', () => {
 		]);
 		expect(body().querySelector('.row [data-part="picture"]')?.className).toBe('picture');
 		expect(body().querySelector('.card-picture')).toBeNull();
-		// The row's picture and its wash are one box, so the wash is the picture's size and not the row's.
+		// The wash is the picture's size, not the row's.
 		expect(body().querySelector('.row .thumb > [data-part="picture"] + .thumb-wash')).not.toBeNull();
 	});
 
@@ -906,7 +873,7 @@ describe('the projects as a list or a grid', () => {
 
 	it('draws the pictures in either', async () => {
 		await showOpen();
-		// A name of its own: a picture read is kept by its name, as the app keeps it, across the tests of this file.
+		// A cover name of its own: pictures are cached by name across the tests of this file.
 		await answer('ensureCovers', [{ projectId: 'alert-history', name: 'v3', cover: 'fedcba654321' }]);
 		await answer('projectCover', 'data:image/jpeg;base64,BBBB');
 		expect(cards()[0]!.querySelector('[data-part="picture"]')?.getAttribute('src')).toBe('data:image/jpeg;base64,BBBB');
@@ -994,7 +961,6 @@ describe('Projects, focused on the product open', () => {
 		await showOpen(OPEN, [project, inCode]);
 		await choose('All projects');
 		expect(meta('Many')).toBe('3 versions');
-		// Nothing to count, so nothing is said of it: the line is its folder and where else it is, when it has them.
 		expect(meta('Only code')).toBeUndefined();
 	});
 
@@ -1003,7 +969,7 @@ describe('Projects, focused on the product open', () => {
 		await choose('All projects');
 		expect(sections()).toEqual(['flock-coke', 'flock-pepsi', 'No product']);
 		expect(names()).toEqual(['Alerts', 'Maps', 'Both', 'Old']);
-		// Both's newest work is Pepsi's, so it is under Pepsi, once, and says it is in Coke too.
+		// Both's newest work is Pepsi's, so it is listed under Pepsi.
 		expect(rows()[2]!.closest('[role="list"]')?.getAttribute('aria-label')).toBe('flock-pepsi');
 		expect(meta('Both')).toBe('2 versions · Admin · Also in flock-coke');
 		expect(meta('Alerts')).toBe('1 version · Admin');
@@ -1060,11 +1026,9 @@ describe('Projects, focused on the product open', () => {
 		expect(menu.querySelectorAll('[role="separator"]')).toHaveLength(1);
 		const choices = [...menu.querySelectorAll<HTMLElement>('[role="menuitemradio"]')];
 		expect(choices.map((c) => c.textContent)).toEqual(['This product', 'All projects', 'Grid', 'List']);
-		// An icon at the start of each; a check at the end of the one chosen in its group only.
 		expect(choices.every((c) => c.firstElementChild?.classList.contains('codicon'))).toBe(true);
 		expect(choices.map((c) => c.lastElementChild?.classList.contains('menu-check'))).toEqual([true, false, true, false]);
 		expect(choices.map((c) => c.getAttribute('aria-checked'))).toEqual(['true', 'false', 'true', 'false']);
-		// And no radio toggles in the tab.
 		expect(body().querySelector('[role="radiogroup"]')).toBeNull();
 	});
 
@@ -1085,7 +1049,6 @@ describe('Projects, focused on the product open', () => {
 
 	describe('mine', () => {
 		const signedIn = { state: 'signedIn', user: { login: 'noah', name: 'Noah', avatarUrl: null } };
-		/** Signing in or out reads the projects again, as it always has: the same ones, answered. */
 		const become = async (payload: unknown, projects: unknown[]) => {
 			await say({ type: 'event', name: 'onSignInChanged', payload });
 			await answer('listProjects', projects);
@@ -1151,7 +1114,6 @@ describe('Projects', () => {
 
 	it('lists each project with a picture, its name, what it has, and its open comments as a badge', async () => {
 		await showOpen();
-		// Each list is named for its folder, as its section is.
 		expect([...body().querySelectorAll('[role="list"]')].map((l) => l.getAttribute('aria-label'))).toEqual(['Admin', 'Maps', 'No folder']);
 		expect(rows().map((r) => part(r, 'name'))).toEqual(['Alert history', 'Zone coverage', 'Admin usage', 'Role comparison']);
 		expect(rows()[0]!.querySelector('[data-part="picture"]')).not.toBeNull();
@@ -1168,7 +1130,6 @@ describe('Projects', () => {
 		expect(body().querySelector('[aria-current="true"] [data-part="name"]')?.textContent).toBe('Zone coverage');
 		await viewChoice('List');
 		expect(current()).toEqual(['Zone coverage']);
-		// Covered or closed, it is marked no more.
 		await share('tabs', { projects: [], components: [] });
 		expect(current()).toEqual([]);
 	});
@@ -1194,7 +1155,6 @@ describe('Projects', () => {
 		expect(asked?.args).toEqual(['alert-history', 'v3', 'abc123def456']);
 		await answer('projectCover', 'data:image/jpeg;base64,AAAA');
 		expect(rows()[0]!.querySelector('[data-part="picture"]')?.getAttribute('src')).toBe('data:image/jpeg;base64,AAAA');
-		// A project with no picture keeps its place for one.
 		expect(rows()[1]!.querySelector('[data-part="picture"]')?.tagName).toBe('SPAN');
 	});
 
@@ -1202,7 +1162,6 @@ describe('Projects', () => {
 		await showOpen();
 		await answer('ensureCovers', [{ projectId: 'alert-history', name: 'v3', cover: 'aaaaaaaaaaaa' }]);
 		await say({ type: 'projects-changed' });
-		// Read again, so a list of its own, as every read is.
 		await answer(
 			'listProjects',
 			SAMPLE_PROJECTS.map((p) => ({ ...p })),
@@ -1262,14 +1221,12 @@ describe('Projects', () => {
 });
 
 describe('Design System', () => {
-	/** The panel open on the Design System tab, with what the extension said is open. */
 	const open = async (context: Context = OPEN, unreadable?: string) => {
 		await show();
 		await share('placed', { context, unreadable: unreadable ?? null });
 		if (context.product) await answer('listProjects', SAMPLE_PROJECTS);
 		await press(options()[1]!);
 	};
-	/** …and the design system read: its name, its catalog, and its components' pictures. */
 	const read = async (catalog: Catalog = SAMPLE_CATALOG, pictures: Partial<ComponentPictures> = {}) => {
 		await open();
 		await shareCatalog(catalog);
@@ -1308,7 +1265,6 @@ describe('Design System', () => {
 	it('names the design system, the icon of its branch directly after it with the branch as its tooltip, with Sync and its menu, and starts on its components', async () => {
 		await read();
 		expect(body().querySelector('.ds-name')?.textContent).toBe('FUI');
-		// The branch is not written: it is the tooltip of its icon, which is the name's next sibling in the one line.
 		const branch = body().querySelector('.ds-branch') as HTMLElement;
 		expect(branch.textContent).toBe('');
 		expect(branch.title).toBe('develop');
@@ -1319,10 +1275,7 @@ describe('Design System', () => {
 			['Components', 'true'],
 			['Tokens', 'false'],
 		]);
-		// Words alone: no icon before Components or Tokens.
 		expect(parts().querySelector('.codicon')).toBeNull();
-		// Its menu: Sync first, then a divider, then what needs the editor's room: Primitives, and the voice and tone, a
-		// document of its own. Always there, small, not only on hover as a row's is; and no button of Sync's own beside it.
 		expect(body().querySelector('.ds-actions [aria-label="Sync with GitHub"]')).toBeNull();
 		expect(body().querySelector('[aria-label="Design system actions"]')?.className).toBe('menu-button menu-button-small menu-button-shown');
 		await press(body().querySelector('[aria-label="Design system actions"]') as HTMLElement);
@@ -1351,9 +1304,7 @@ describe('Design System', () => {
 		expect(namesUnder(section('Buttons'))).toEqual(['FSButton', 'FSIconButton', 'FSSplitButton']);
 		expect(under(section('Buttons')).firstElementChild?.className).toBe('grid');
 		expect(under(section('Buttons')).querySelector('img')?.getAttribute('src')).toBe(picture);
-		// A card is its picture and its name, and no description under it, nor has a row.
 		expect(under(section('Buttons')).querySelector('[data-part="meta"]')).toBeNull();
-		// What axe found is read, but not drawn on the card: nothing counts on a component for now.
 		expect(under(section('Buttons')).querySelector('.badge')).toBeNull();
 	});
 
@@ -1366,7 +1317,6 @@ describe('Design System', () => {
 		expect([...card.querySelectorAll('[role="menuitem"]')].map((i) => i.textContent)).toEqual(['Open in Storybook', 'View on GitHub']);
 		await press([...card.querySelectorAll<HTMLElement>('[role="menuitem"]')].find((i) => i.textContent === 'Open in Storybook')!);
 		expect(lastAsk()).toEqual(['componentLink', ['src/components/FSButton/FSButton.stories.tsx', 'storybook']]);
-		// One with no hosted Storybook offers none.
 		const other = [...body().querySelectorAll<HTMLElement>('.card-item')].find((c) => c.textContent?.includes('FSSelect')) as HTMLElement;
 		await press(other.querySelector('.menu-button') as HTMLElement);
 		expect([...other.querySelectorAll('[role="menuitem"]')].map((i) => i.textContent)).toEqual(['View on GitHub']);
@@ -1411,7 +1361,6 @@ describe('Design System', () => {
 			['Light', 'true'],
 			['Dark', 'false'],
 		]);
-		// A sun at the start of Light (a circle and its rays), a moon at the start of Dark (one crescent).
 		const [light, dark] = await mode();
 		expect(light!.querySelector('svg circle')).not.toBeNull();
 		expect(dark!.querySelector('svg circle')).toBeNull();
@@ -1419,11 +1368,9 @@ describe('Design System', () => {
 		await viewChoice('Dark');
 		expect(lastAsk()).toEqual(['setMode', ['dark']]);
 		expect((await mode()).map((o) => o.getAttribute('aria-checked'))).toEqual(['false', 'true']);
-		// The extension's choice, told to every page, is what it shows.
 		await share('mode', 'light');
 		expect((await mode()).map((o) => o.getAttribute('aria-checked'))).toEqual(['true', 'false']);
 		await unmount();
-		// A library with no dark: no section.
 		await read({ ...SAMPLE_CATALOG, tokens: { ...SAMPLE_CATALOG.tokens, tokens: SAMPLE_CATALOG.tokens.tokens.filter((t) => t.group !== 'Dark') } });
 		expect((await mode()).length).toBe(0);
 		expect(document.querySelector('[role="group"][aria-label="Layout"]')).not.toBeNull();
@@ -1441,7 +1388,6 @@ describe('Design System', () => {
 		expect(body().querySelector('.message')?.textContent).toContain('No component matches “nothing like it”.');
 	});
 
-	/** The tokens part, and the colors' Palette view when asked for. */
 	const tokens = async (palette = false) => {
 		await read();
 		await press([...parts().querySelectorAll<HTMLElement>('[role="radio"]')][1]!);
@@ -1457,8 +1403,6 @@ describe('Design System', () => {
 			['Shape', '1'],
 		]);
 		const set = body().querySelector('[data-token-set="primary"]') as HTMLElement;
-		// The themes are headed by the icons of the mode switch, the sun and the moon, not by their names: named for assistive
-		// technology and on hover.
 		const headings = [...set.querySelectorAll<HTMLElement>('[data-theme-heading]')];
 		expect(headings.map((h) => [h.getAttribute('aria-label'), h.title, h.textContent])).toEqual([
 			['Light', 'Light', ''],
@@ -1467,13 +1411,11 @@ describe('Design System', () => {
 		expect(headings.map((h) => h.querySelector('svg')?.querySelector('circle') !== null)).toEqual([true, false]);
 		const rows = [...set.querySelectorAll<HTMLElement>('[data-token-row]')];
 		expect(rows.map((r) => r.dataset.tokenRow)).toEqual(['main', 'contrastText']);
-		// Each theme's value is a dot of its own, saying which token it is and what it points at; a theme without the role is a dash.
 		const light = rows[0]!.querySelector('[data-token="palette.light.primary.main"] button') as HTMLElement;
 		expect(light.getAttribute('title')).toBe('Light primary main');
 		expect(light.className).toBe('color-dot');
 		expect(rows[0]!.querySelector('[data-token="palette.dark.primary.main"] button')?.getAttribute('title')).toBe('Dark primary main');
 		expect(rows[1]!.querySelector('.theme-none')?.textContent).toBe('—');
-		// Pressed, one theme's value opens its own control.
 		await press(light);
 		expect(document.querySelector('[role="dialog"]')?.getAttribute('aria-label')).toBe('Light · primary.main');
 	});
@@ -1484,7 +1426,6 @@ describe('Design System', () => {
 			await tokens(palette);
 			const dots = [...body().querySelectorAll<HTMLElement>('.color-dot')];
 			expect(dots.length).toBeGreaterThan(0);
-			// The token's name, as the row is named, and nothing after it.
 			for (const d of dots) expect(d.title).toBe(d.getAttribute('aria-label')?.replace(/^Change /, ''));
 		}
 	});
@@ -1493,19 +1434,16 @@ describe('Design System', () => {
 		await tokens(true);
 		expect(titles()[0]).toEqual(['Color', '2']);
 		const step = body().querySelector('[data-token="tone.pineGreen.50"]') as HTMLElement;
-		// The color is the dot and nothing else of it is written in the row: no swatch beside its hex, no hex.
 		expect(step.querySelectorAll('[data-swatch]')).toHaveLength(1);
 		expect(step.querySelector('[data-part="value"]')).toBeNull();
 		expect(step.querySelector('[data-part="name"]')?.textContent).toBe('50');
 		expect(step.querySelector('.color-dot')?.getAttribute('title')).toBe('Tones pineGreen 50');
 		expect(step.title).toBe('src/colors/tones.ts:3');
-		// Its name is the link to its file, at its line; there is no icon beside it to press for that.
 		const link = step.querySelector('button[data-part="name"]') as HTMLElement;
 		expect(link.getAttribute('aria-label')).toBe('50: open src/colors/tones.ts:3');
 		expect(step.querySelector('.item-actions, .codicon-go-to-file')).toBeNull();
 		await press(link);
 		expect(lastAsk()).toEqual(['openLibrarySource', ['src/colors/tones.ts', 3]]);
-		// And the dot, not the name, is what opens its control.
 		await press(step.querySelector('button.color-dot') as HTMLElement);
 		expect(document.querySelector('[role="dialog"]')).not.toBeNull();
 	});
@@ -1525,9 +1463,7 @@ describe('Design System', () => {
 		const step = body().querySelector('[data-token="tone.pineGreen.50"]') as HTMLElement;
 		expect(step.dataset.changed).toBe('true');
 		expect((step.querySelector('.color-dot [data-swatch]') as HTMLElement).style.backgroundColor).toBe('rgb(0, 0, 0)');
-		// Marked on the dot, where its color is.
 		expect(step.querySelector('.color-dot [data-changed-mark]')?.getAttribute('data-changed-mark')).toBe('Changed');
-		// The role pointing at it shows the change too.
 		await press(body().querySelector('[aria-label="Color view"] [aria-label="Semantic"]') as HTMLElement);
 		expect((body().querySelector('[data-token="palette.light.primary.main"] [data-swatch]') as HTMLElement).style.backgroundColor).toBe(
 			'rgb(0, 0, 0)',
@@ -1541,12 +1477,10 @@ describe('Design System', () => {
 			tokens: { ...SAMPLE_CATALOG.tokens, problems: [{ file: 'src/colors/tones.ts', line: 9, reason: 'A value worked out as it runs.' }] },
 		});
 		expect(body().querySelector('[data-update-failed]')?.textContent).toContain('Could not update from GitHub: Could not reach GitHub.');
-		// What is not read is a count beside Sync, the bubble a button that says it, not a line of its own.
 		const bubble = body().querySelector('.ds-actions [aria-label="1 value in its token files is not read"]') as HTMLElement;
 		expect(bubble.textContent).toBe('1');
 		expect(bubble.className).toBe('badge badge-warning badge-button');
 		expect(body().querySelector('.message .link')).toBeNull();
-		// In the row the changes count comes first, then what is not read, then the menu.
 		await share('tokenEdits', [{ path: 'tone.pineGreen.60', value: '#000000' }]);
 		const order = [...body().querySelectorAll('.ds-actions > *')].map((e) => e.getAttribute('aria-label') ?? e.className);
 		expect(order.slice(0, 2)).toEqual(['1 change being tried', '1 value in its token files is not read']);
@@ -1592,7 +1526,6 @@ describe('every change being tried, in the panel’s Changes: the tokens and eac
 		values: [{ id: ID, state: 'found', places: [{ file: 'src/utils/theme.ts', line: 158, written: '28px', writes: '32px' }] }],
 		reach: { state: 'none' },
 	};
-	/** The panel on the Design System tab, the design system read and its tokens' branch none. */
 	const designOpen = async () => {
 		await show();
 		await share('placed', { context: OPEN, unreadable: null });
@@ -1608,7 +1541,6 @@ describe('every change being tried, in the panel’s Changes: the tokens and eac
 
 	it('counts every component’s values tried on this commit, and lists each by its name, with its Save, Propose and Reset', async () => {
 		await designOpen();
-		// A value tried on another commit is that commit's: not counted, not listed.
 		await share('valueTrials', {
 			[BUTTON]: { commit: 'abc123', values: [SMALL] },
 			'src/components/FSIconButton/FSIconButton.stories.tsx': { commit: 'def456', values: [SMALL] },
@@ -1622,21 +1554,18 @@ describe('every change being tried, in the panel’s Changes: the tokens and eac
 		expect(calls('valueSources').at(-1)?.args).toEqual([BUTTON, [SMALL]]);
 		expect(group()?.querySelector('.heading-set')?.textContent).toBe('FSButton 1');
 		expect(document.querySelector('[aria-label="Value changes · FSIconButton"]')).toBeNull();
-		// Its actions are here, where every change is.
 		await press(button('Save to a branch'));
 		expect(callsOf('saveChange', 'values').at(-1)?.args).toEqual(['values', BUTTON, [SMALL]]);
 		await answerOf('saveChange', 'values', { branch: 'dsnr/values-20261016-ab12', saved: [SMALL], saves: 1, pullRequest: null });
 		expect(group()?.querySelector('.branch-line')?.textContent).toBe('dsnr/values-20261016-ab12 · 1 save');
 		await press(button('Propose'));
 		expect(callsOf('proposeChange', 'values').at(-1)?.args).toEqual(['values', BUTTON, null]);
-		// Reset here is the extension's too: every page is told, its tab with it.
 		await press(group()!.querySelector('button.link') as HTMLElement);
 		expect(trialsSaid().at(-1)).toEqual([BUTTON, 'abc123', []]);
 	});
 
 	it('lists a component with a branch of its values kept and nothing tried, and puts its values back, as opening its tab does', async () => {
 		await designOpen();
-		// Asked as the panel opens, so the count is there for it: a branch kept with nothing tried is a change in the Changes.
 		await answerOf('changeScopes', 'values', [BUTTON]);
 		await answerOf('changeScopes', 'handOver', []);
 		await press(count());
@@ -1656,7 +1585,6 @@ describe('every change being tried, in the panel’s Changes: the tokens and eac
 		const asked = callsOf('changeScopes', 'values').length;
 		await share('valueTrials', { [BUTTON]: { commit: 'abc123', values: [{ ...SMALL, value: '36px' }] } });
 		expect(callsOf('changeScopes', 'values')).toHaveLength(asked);
-		// Its values kept as a branch: the trial ends, what is kept is asked again, and the branch is the one change.
 		await share('valueTrials', {});
 		expect(callsOf('changeScopes', 'values')).toHaveLength(asked + 1);
 		await answerOf('changeScopes', 'values', [BUTTON]);
@@ -1682,7 +1610,7 @@ describe('every change being tried, in the panel’s Changes: the tokens and eac
 		const EDITS = [{ path: 'tone.pineGreen.60', value: '#000000' }];
 		const BRANCH = 'dsnr/handoff-20261017-ab12';
 		const handOver = () => document.querySelector('[data-hand-over]') as HTMLElement | null;
-		/** Answers the page's latest ask for the hand-over of `file` (the tokens' none, or a component's story file). */
+		/** `file` null is the tokens' hand-over; otherwise a component's story file. */
 		const answerHandOver = async (file: string | null, value: unknown) => {
 			const call = callsOf('changeBranch', 'handOver')
 				.filter((c) => c.args?.[1] === file)
@@ -1690,7 +1618,6 @@ describe('every change being tried, in the panel’s Changes: the tokens and eac
 			if (!call) throw new Error(`the page asked for no hand-over of ${String(file)}`);
 			await say({ type: 'answer', id: call.id, result: { ok: true, value } });
 		};
-		/** The Changes dialog open on the token changes, nothing kept for any group. */
 		const tokensChanged = async () => {
 			await designOpen();
 			await share('tokenEdits', EDITS);
@@ -1722,7 +1649,6 @@ describe('every change being tried, in the panel’s Changes: the tokens and eac
 			expect(handOver()?.querySelector('.branch-line')?.textContent).toBe(BRANCH);
 			expect(handOver()?.textContent).toContain('This hand-over is in Claude Code in this window now');
 			expect(handOver()?.textContent).toContain('Claude Code makes this branch, by the name its prompt gives');
-			// One branch in play: neither Save nor Process changes again, and nothing proposed before it is made.
 			expect(button('Save to a branch')).toBeUndefined();
 			expect(button('Process changes')).toBeUndefined();
 			expect(button('Propose')).toBeUndefined();
@@ -1759,7 +1685,6 @@ describe('every change being tried, in the panel’s Changes: the tokens and eac
 			await answerOf('proposeChange', 'handOver', { branch: BRANCH, lines: [], review: READY, pullRequest: { number: 7, url } });
 			expect([...document.querySelectorAll('a')].find((a) => a.textContent === 'Draft pull request #7')?.getAttribute('href')).toBe(url);
 			expect(button('Propose')).toBeUndefined();
-			// Start over forgets the hand-over, and the change can be handed over or saved again.
 			await press(button('Start over'));
 			expect(callsOf('forgetChange', 'handOver').at(-1)?.args).toEqual(['handOver', null]);
 			await answerOf('forgetChange', 'handOver', null);
@@ -1799,12 +1724,10 @@ describe('every change being tried, in the panel’s Changes: the tokens and eac
 			await press(button('Preview this branch'));
 			expect(calls('showHandOver').at(-1)?.args).toEqual([null]);
 			await answer('showHandOver', null);
-			// The extension reads the library again for every page: here, the branch's tip.
 			await shareCatalog({ ...SAMPLE_CATALOG, commit: 'f00d42', showing: BRANCH } as Catalog);
 			const note = document.querySelector('[data-showing]') as HTMLElement;
 			expect(note.textContent).toContain(`Showing ${BRANCH}, Claude Code’s branch, not develop.`);
 			expect(button('Stop previewing')).toBeDefined();
-			// Nothing is proposed while it is shown.
 			expect(button('Propose')).toBeUndefined();
 			await press(button('Show develop'));
 			expect(calls('showLibraryBranch')).toHaveLength(1);
@@ -1856,7 +1779,6 @@ describe('trying a change to the tokens, saving it to a branch, and proposing it
 		await press([...document.querySelectorAll<HTMLElement>('[aria-label="Part"] [role="radio"]')][1]!);
 	};
 	const dialog = () => document.querySelector('[role="dialog"]') as HTMLElement;
-	/** The Changes dialog, from the count beside the not-read one: what is changed is there, not above the list. */
 	const openChanges = async () => {
 		if (!document.querySelector('[role="dialog"][aria-label="Changes"]'))
 			await press(document.querySelector('.ds-actions [aria-label$="being tried"]') as HTMLElement);
@@ -1882,7 +1804,6 @@ describe('trying a change to the tokens, saving it to a branch, and proposing it
 			['50', 'true'],
 			['60', 'false'],
 		]);
-		// A step's hover is its name, as every colour's is: not its hex.
 		expect(steps.map((step) => step.title)).toEqual(['pineGreen 50', 'pineGreen 60']);
 		expect(dialog().querySelector('[data-editor-contrast]')?.textContent).toMatch(/^Contrast with contrastText: \d/);
 		await press(steps[1]!);
@@ -1894,13 +1815,12 @@ describe('trying a change to the tokens, saving it to a branch, and proposing it
 		await press(document.querySelector('[aria-label="Color view"] [aria-label="Palette"]') as HTMLElement);
 		await press(document.querySelector('[aria-label="Change Tones pineGreen 60"]') as HTMLElement);
 		const hex = dialog().querySelector('input[aria-label="Hex"]') as HTMLInputElement;
-		// A token's control opens with the focus on the dialog, as a value's popover does: no field is drawn as chosen.
+		// Focus starts on the dialog, so no field is drawn as chosen.
 		expect(document.activeElement).toBe(dialog());
 		expect(document.activeElement).not.toBe(hex);
 		await type(hex, '#00aa00');
 		await act(async () => void hex.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })));
 		expect(edited()).toEqual([{ path: 'tone.pineGreen.60', value: '#00AA00' }]);
-		// Closed by its X: there is no Done to press, so a change is a change when it is made.
 		expect([...dialog().querySelectorAll('button')].map((b) => b.textContent)).not.toContain('Done');
 		await press(dialog().querySelector('[aria-label="Close"]') as HTMLElement);
 		expect(document.querySelector('[role="dialog"]')).toBeNull();
@@ -1910,7 +1830,6 @@ describe('trying a change to the tokens, saving it to a branch, and proposing it
 		expect(document.activeElement).not.toBe(slider);
 		await type(slider, '12');
 		await act(async () => void slider.dispatchEvent(new Event('pointerup', { bubbles: true })));
-		// A change is every token changed: this one joins the first.
 		expect(edited()).toEqual([
 			{ path: 'tone.pineGreen.60', value: '#00AA00' },
 			{ path: 'spacing', value: '12px' },
@@ -1937,7 +1856,6 @@ describe('trying a change to the tokens, saving it to a branch, and proposing it
 	it('lists what has been changed, from what it was to what it is, with a reset for each and for all', async () => {
 		await tokensOpen();
 		await share('tokenEdits', [{ path: 'tone.pineGreen.60', value: '#000000' }]);
-		// Nothing opens above the list: the count says it, in the brand.
 		expect(document.querySelector('[data-changed-tokens]')).toBeNull();
 		expect(document.querySelector('.ds-actions [aria-label="1 change being tried"]')?.classList.contains('badge-brand')).toBe(true);
 		await openChanges();

@@ -6,10 +6,7 @@ import { handoffTask, buildInCodebaseTask, prototypeAddressTask, prototypeBuildT
 const SKILLS = join(__dirname, '../../skills');
 const skill = (name: string): string => readFileSync(join(SKILLS, name), 'utf8');
 
-/**
- * The task each skill is given in, built from the real skill. A skill that says another file is "in your task" is
- * believed by the agent; when it is not there, the agent works without it and never knows.
- */
+/** The agent believes a skill that says another file is "in your task"; when it is not there, it works without it and never knows. */
 const parts = { guide: '', lightCheck: null, shared: '', accessibility: '', voice: '' };
 const prototypeBuild = { source: '/p/v1.tsx', page: '/p/v1.html', buildCommand: 'node build', checkCommand: 'node check' };
 const sources = {
@@ -51,7 +48,6 @@ const TASKS: Record<string, (text: string) => string> = {
 		}),
 };
 
-/** Every `file.md` a skill says is in the task, in the same sentence. */
 const claimed = (text: string): string[] => [...text.matchAll(/`([\w./-]+\.md)`[^`.\n]{0,40}\bin (?:your|the) task\b/g)].map((m) => m[1] as string);
 
 describe('what a skill says is in its task', () => {

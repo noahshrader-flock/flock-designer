@@ -4,11 +4,7 @@ import { readValues } from '../src/core/services/designSystem/componentValues';
 import type { Tags } from '../src/core/services/designSystem/tokenTags';
 import type { DesignToken, ValueRow } from '../src/shared/contract';
 
-/**
- * A component's drawn values: each instance its stories draw, read into rows by property, each told apart by the prop
- * that explains it, and each value said to be a token's, the component's own, or worked out from one. Against fixtures,
- * as the page reads them (each side and corner as it is); the page itself runs in `componentValues.integration.spec.ts`.
- */
+/** Against fixtures, as the page reads them; the page itself runs in `componentValues.integration.spec.ts`. */
 
 const BASE = {
 	height: '36px',
@@ -45,24 +41,22 @@ const TAGS: Tags = {
 	],
 	unmarked: 0,
 };
-/** A library with no token that could be tagged. */
 const NO_TAGS: Tags = { edits: [], colors: new Map(), sizes: [], unmarked: 0 };
 const SIZES = ['sm', 'md', 'lg', 'xl'];
 const HEIGHTS = ['28px', '36px', '48px', '56px'];
-/** Each size drawn in two stories, each instance with an id of its own: a prop with a value for every instance. */
+/** Each instance has an id of its own: a prop with a value for every instance. */
 const sized = (more: (i: number) => Partial<Instance['values']> = () => ({})) =>
 	['AllSizes', 'Combinations'].flatMap((story, s) =>
 		SIZES.map((size, i) => instance({ size, testId: `b${s}${i}` }, { height: HEIGHTS[i], ...more(i) }, story)),
 	);
-/** A property's row, its cells without the instances each is for (pinned on their own, below). */
+/** Without the instances each cell is for, which are pinned on their own. */
 const rowOf = (rows: ValueRow[], property: ValueRow['property']) => {
 	const row = rows.find((r) => r.property === property);
 	return row && { ...row, cells: row.cells.map(({ targets: _, of: __, ...c }) => c) };
 };
 const targetsOf = (rows: ValueRow[], property: ValueRow['property']) => rows.find((r) => r.property === property)?.cells.map((c) => c.targets);
-/** What each cell is drawn with, prop by prop (`of`): what a picker of the variant shown matches. */
 const casesOf = (rows: ValueRow[], property: ValueRow['property']) => rows.find((r) => r.property === property)?.cells.map((c) => [c.variant, c.of]);
-/** The tokens: primary in light and dark, written in two places, with the colour tag given to the light one. */
+/** The colour tag is given to the light one only. */
 const TOKENS = [
 	{
 		path: 'palette.light.primary.main',
@@ -85,7 +79,6 @@ const TOKENS = [
 		source: { file: 'light.ts', line: 1 },
 	},
 ] as unknown as DesignToken[];
-/** Read in light, from a drawing as the library has it and one with the tags; dark too, when its drawings are given. */
 const readIn = (
 	light: [Instance[], Instance[] | null],
 	dark?: [Instance[], Instance[] | null],
@@ -276,7 +269,6 @@ describe('a component’s drawn values', () => {
 			[keys[3], twice[5]?.key],
 			[keys[4]],
 		]);
-		// Told apart by nothing: each distinct value's instances, most first.
 		const loose = [instance({}, { height: '40px' }, 'A'), instance({}, { height: '44px' }, 'B'), instance({}, { height: '40px' }, 'C')];
 		expect(targetsOf(read(loose, loose, NO_TAGS).rows, 'height')).toEqual([[loose[0]?.key, loose[2]?.key], [loose[1]?.key]]);
 	});
@@ -382,7 +374,6 @@ describe('a component’s drawn values', () => {
 			['ghost · disabled', [{ variant: 'ghost', disabled: 'true' }]],
 			['ghost', [{ variant: 'ghost', disabled: null }]],
 		]);
-		// A row told apart by no prop says nothing of what it is drawn with.
 		const loose = [instance({}, { height: '40px' }), instance({}, { height: '44px' })];
 		expect(casesOf(read(loose, loose, NO_TAGS).rows, 'height')?.every(([, of]) => of === undefined)).toBe(true);
 	});

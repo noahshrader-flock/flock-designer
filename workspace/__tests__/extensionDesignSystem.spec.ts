@@ -5,10 +5,7 @@ import { withTrial } from '../extension/src/messages';
 import { Shared } from '../extension/src/sharedValues';
 import type { Catalog, CatalogComponent, ConnectedDesignSystem } from '../src/shared/contract';
 
-/**
- * The design system VS Code found is the one the core shows: the core reads, previews, pictures and changes the design
- * system it is told is shown, so the folder found is told to it, and only when it is a different one. When it cannot be read, why is said instead.
- */
+/** The core acts on the design system it is told is shown, so the folder VS Code found is told to it when it differs. */
 
 const fui: ConnectedDesignSystem = {
 	id: 'flocksafety/flock-react-component-lib',
@@ -33,7 +30,6 @@ describe('the design system found, shown', () => {
 		const m = memory(fui);
 		expect(await showFound(m, { root: fui.root, how: 'named' }, async () => ({ ...fui }))).toBeNull();
 		expect(m.add).not.toHaveBeenCalled();
-		// Its default branch changed: told again.
 		await showFound(m, { root: fui.root, how: 'named' }, async () => ({ ...fui, branch: 'main' }));
 		expect(m.add).toHaveBeenCalledWith({ ...fui, branch: 'main' });
 	});
@@ -94,7 +90,6 @@ describe('the values tried on every component (the changes being tried, DESIGN_S
 		set('Badge.stories.tsx', 'def456', [SMALL]);
 		set('Button.stories.tsx', 'def456', []);
 		expect(values.current()).toEqual({ 'Badge.stories.tsx': { commit: 'def456', values: [SMALL] } });
-		// None tried on one that has none is no change.
 		set('Card.stories.tsx', 'def456', []);
 		expect(post).toHaveBeenCalledTimes(4);
 	});
@@ -147,7 +142,6 @@ describe('a component the page names', () => {
 	it('is found in the catalog every page shows, by its story file, and nothing else is', () => {
 		expect(componentOf(catalog([button]), button.id)).toEqual(button);
 		expect(() => componentOf(catalog([button]), 'src/Other.stories.tsx')).toThrow('The design system shown has no component src/Other.stories.tsx.');
-		// Not read yet: no component of it can be named.
 		expect(() => componentOf(null, button.id)).toThrow('The design system shown has no component');
 	});
 

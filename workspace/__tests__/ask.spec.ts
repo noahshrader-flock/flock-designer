@@ -5,7 +5,6 @@ describe('asking again while an answer is drawn', () => {
 	beforeEach(() => void vi.useFakeTimers());
 	afterEach(() => void vi.useRealTimers());
 
-	/** Answers in turn, each a promise that has settled. */
 	const answering = (...answers: string[]) => {
 		let n = 0;
 		return vi.fn(async () => answers[Math.min(n++, answers.length - 1)] as string);

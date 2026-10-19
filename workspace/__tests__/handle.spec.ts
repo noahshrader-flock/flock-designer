@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { arg } from '../src/core/handle';
 
-/** What the window sent, through the check `check`: its value, or the sentence it was refused with. */
 const through = <T>(check: (v: unknown) => T, sent: unknown): T | string => {
 	try {
 		return check(sent);

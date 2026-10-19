@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { layoutSection } from '../extension/webview/layouts';
 
-/** Grid and List, as every view with a list of things with pictures offers them: one section, which each tab's menu takes. */
 describe('the layout section of a view’s options', () => {
 	it('is Layout, with Grid and List, each with its icon, the one in use checked', () => {
 		const section = layoutSection('grid', () => undefined);

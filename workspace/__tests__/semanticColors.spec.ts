@@ -2,10 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { DesignToken } from '../src/shared/contract';
 import { colorAsRead, hexOf, labelOf, lengthSpan, nameOf, paletteFamilies, semanticTable, tokenTitle } from '../src/shared/tokens';
 
-/**
- * Which colors are the design system's palette and which are semantic, and the semantic ones lined up by theme: worked out
- * from the tokens as any library gives them, never from the names of one library's.
- */
+/** Worked out from the tokens as any library gives them, never from the names of one library's. */
 
 const color = (path: string, group: string, set: string, name: string, value: string, ref?: string): DesignToken => ({
 	path,
@@ -19,7 +16,6 @@ const color = (path: string, group: string, set: string, name: string, value: st
 	source: { file: 'src/theme.ts', line: 1 },
 });
 
-/** A theme as MUI-style libraries keep one: tone families, and roles in each mode pointing into them. */
 const MUI = [
 	color('tone.pine.50', 'Tones', 'pine', '50', '#108062'),
 	color('tone.pine.20', 'Tones', 'pine', '20', '#18372F'),
@@ -105,7 +101,6 @@ describe('the semantic colors by theme', () => {
 });
 
 describe('a token’s name', () => {
-	/** A token as a reader gives it: where it is written is its path, which says how its set and name were joined. */
 	const named = (path: string, set: string, name: string) => nameOf(color(path, 'Light', set, name, '#000000'));
 
 	it('is its set and its step as a person says them, when the library writes them as separate things', () => {

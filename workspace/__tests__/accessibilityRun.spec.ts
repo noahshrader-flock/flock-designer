@@ -10,11 +10,6 @@ import type { WorkspaceCommand, WorkspaceDescriptor } from '../src/core/services
 import type { RuntimeDeps } from '../src/core/services/codebase/runtime';
 import { undeclared } from '../src/shared/wcag';
 
-/**
- * Measuring a product's own app: its pages checked one at a time, each a state of one
- * result, and the app started as its workspace file says, and stopped after.
- */
-
 const rule = (id: string) => ({ id, help: id, impact: 'serious', tags: ['wcag2a'], helpUrl: '', nodes: 1, elements: [] });
 const target = undeclared('Test has no .dsnr/manifest.md');
 
@@ -103,7 +98,6 @@ describe('the app, in design mode', () => {
 	const serving = (argv: string[]): WorkspaceCommand => ({ id: 'design-mode', label: 'Design mode', argv, servesPreviewOn: 4987 });
 	const install: WorkspaceCommand = { id: 'install', label: 'Install packages', argv: ['npm', 'ci'] };
 	const loads = async () => null;
-	/** Spawns as the app does, and keeps each child, to see it stopped; the probe answers once `up` says. */
 	const deps = (up: () => boolean): RuntimeDeps => ({
 		spawnProcess: ((...a: Parameters<typeof spawn>) => {
 			const child = spawn(...a);

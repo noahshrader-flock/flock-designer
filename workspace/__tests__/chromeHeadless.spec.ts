@@ -4,12 +4,6 @@ import { HEADLESS_PICTURE_RECIPE, NO_BROWSER, chromeHeadless, findChrome } from 
 import { fitJpegBy } from '../src/core/services/prototypes/picture';
 import { decodePng } from '../src/core/services/prototypes/png';
 
-/**
- * Drawing out of sight: the browser already on the machine (Chrome, Edge or Chromium), driven headless, draws a
- * prototype's picture and checks its page, and a machine with none says so.
- */
-
-/** A PNG of `rows` (each a list of [r, g, b, a]), each row with its own filter, as an encoder may choose. */
 const png = (rows: number[][][], filters: number[]): Buffer => {
 	const chunk = (type: string, data: Buffer) => {
 		const len = Buffer.alloc(4);
@@ -108,7 +102,6 @@ describe('finding the browser', () => {
 	});
 });
 
-/** A browser that answers as puppeteer's does, its page doing what it is told. */
 const fakeBrowser = (page: {
 	evaluate?: (code: string) => unknown;
 	screenshot?: (o: { type: string; quality?: number }) => Buffer;
@@ -234,7 +227,6 @@ describe('a machine with no browser', () => {
 });
 
 describe('drawing stories, headless (6.1, the Design System tab’s pictures and its index of tokens)', () => {
-	/** A page that draws what it is told: each story file read as `drawn`, axe when it is in the page. */
 	const storyBrowser = ({ fails = [] as string[], axe = false, painted = lit, loadMs = 0 } = {}) => {
 		const done = {
 			pages: 0,
@@ -246,7 +238,6 @@ describe('drawing stories, headless (6.1, the Design System tab’s pictures and
 			axeLoaded: 0,
 			encoded: 0,
 			jpegs: 0,
-			/** What each drawing was asked to vary, as the page's script was given it. */
 			varied: [] as unknown[],
 		};
 		const browser = {
@@ -262,7 +253,6 @@ describe('drawing stories, headless (6.1, the Design System tab’s pictures and
 					},
 					evaluate: async (code: string) => {
 						if (code.includes('__fdPage.encodeJpeg(')) return (done.encoded++, Buffer.from('jpeg').toString('base64'));
-						// The drawing's script asks the page code for one story file, as one object (`readDrawn`).
 						const asked = /__fdPage\.readDrawn\((\{.*\})\);\n\}\)\(\)$/.exec(code);
 						if (!asked) return (done.axeLoaded++, true);
 						const { file: name, vary } = JSON.parse(asked[1] as string) as { file: string; vary: unknown };
@@ -315,7 +305,6 @@ describe('drawing stories, headless (6.1, the Design System tab’s pictures and
 		const runs = ['a', 'b', 'c', 'd'].map((f) => ({ base: 'http://x/', mode: 'light' as const, files: [`${f}.stories.tsx`] }));
 		const drawn = await headless.measure(runs);
 		expect(drawn.map((run) => Object.keys(run[0]?.colors ?? {})[0])).toEqual(['a.stories.tsx', 'b.stories.tsx', 'c.stories.tsx', 'd.stories.tsx']);
-		// One page a run, as each has one file: never more than two open, and they are started in the order given.
 		expect(done.most).toBe(2);
 		expect(done.visited).toEqual([
 			'http://x/?file=a.stories.tsx',
@@ -343,7 +332,6 @@ describe('drawing stories, headless (6.1, the Design System tab’s pictures and
 		const [drawn] = await headless.measure([{ base: 'http://x/', mode: 'light', files: files.slice(0, 2), pictures: true }]);
 		expect(drawn?.map((d) => d?.picture?.toString())).toEqual(['jpeg', 'jpeg']);
 		expect(done.scale).toEqual([2, 2]);
-		// Taken by the browser as the JPEG, not drawn again in the page.
 		expect([done.jpegs, done.encoded]).toEqual([2, 0]);
 		const none = storyBrowser({ painted: blank });
 		const [unpainted] = await none.headless.measure([{ base: 'http://x/', mode: 'light', files: files.slice(0, 1), pictures: true }]);

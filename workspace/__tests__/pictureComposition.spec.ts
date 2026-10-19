@@ -1,13 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { COMPOSITION, composeOnWhite } from '../src/core/services/prototypes/pictureComposition';
 
-/**
- * A component's picture from a capture of its page: what was painted, found from the
- * pixels and centered on white, twice as wide as it is tall. Against bitmaps made here, pixel by pixel.
- */
-
 const GREEN = [0x62, 0x80, 0x10, 0xff];
-/** A white capture of `width` by `height` with `paint` boxes of one color in it. */
 const capture = (width: number, height: number, boxes: { x: number; y: number; w: number; h: number; color?: number[] }[]) => {
 	const data = Buffer.alloc(width * height * 4, 0xff);
 	for (const { x, y, w, h, color = GREEN } of boxes) {
@@ -18,7 +12,6 @@ const capture = (width: number, height: number, boxes: { x: number; y: number; w
 const pixel = ({ data, width }: { data: Buffer; width: number }, x: number, y: number) => [
 	...data.subarray((y * width + x) * 4, (y * width + x) * 4 + 4),
 ];
-/** Where, in the picture, the paint is: its left, top, right and bottom edges. */
 const paintedEdges = (picture: { data: Buffer; width: number; height: number }): [number, number, number, number] => {
 	let [l, t, r, b] = [picture.width, picture.height, -1, -1];
 	for (let y = 0; y < picture.height; y++)
@@ -29,11 +22,9 @@ const paintedEdges = (picture: { data: Buffer; width: number; height: number }):
 
 describe('a picture', () => {
 	it('is what the story painted, centered on white, twice as wide as it is tall', () => {
-		// A 200 by 100 box, off at the top left of a bigger page, as a story is.
 		const picture = composeOnWhite(capture(1200, 800, [{ x: 40, y: 30, w: 200, h: 100 }]));
 		expect(picture).not.toBeNull();
 		expect(picture!.width).toBe(picture!.height * 2);
-		// Room on every side the same: centered, to the pixel.
 		const [l, t, r, b] = paintedEdges(picture!);
 		expect([r - l, b - t]).toEqual([200, 100]);
 		expect([l, picture!.width - r]).toEqual([(picture!.width - 200) / 2, (picture!.width - 200) / 2]);

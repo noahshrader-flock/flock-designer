@@ -6,11 +6,6 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { RuntimeManager } from '../src/core/services/codebase/runtime';
 import type { WorkspaceDescriptor } from '../src/core/services/projects/descriptor';
 
-/**
- * A dev server started the way npm starts one (a parent that runs it as a child of its own), where neither takes SIGTERM:
- * stopped, nothing of it is left running, the child included.
- */
-
 let root: string;
 let left: number | null = null;
 beforeEach(() => void (root = mkdtempSync(join(tmpdir(), 'dsnr-runtime-stop-'))));
@@ -35,7 +30,6 @@ const alive = (pid: number): boolean => {
 };
 
 it('leaves no child of a stopped dev server running, though neither it nor its parent takes SIGTERM', async () => {
-	// The server: ignores SIGTERM, says its pid, and keeps running. Its parent, as npm is: starts it, ignores SIGTERM too.
 	writeFileSync(
 		join(root, 'server.js'),
 		`process.on('SIGTERM', () => {}); require('fs').writeFileSync(${JSON.stringify(join(root, 'pid'))}, String(process.pid)); setInterval(() => {}, 1000);`,

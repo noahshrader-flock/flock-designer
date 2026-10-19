@@ -14,16 +14,12 @@ const settled = (v: ComponentVariants, file: string): Promise<Answer> =>
 		{ within: 240_000 },
 	);
 
-/**
- * On the real libraries on this machine: what their stories do not show, drawn from their props, as Values read it. FSBadge's
- * page also draws its stories as it opens, and what it is asked to draw after must be what is drawn.
- */
+/** FSBadge's page draws its stories as it opens, and what it is asked to draw after must be what is drawn. */
 const onReal = (system: ConnectedDesignSystem, check: (of: (file: string) => Promise<Answer>) => Promise<void>) =>
 	onRealLibrary(system, (real) => {
 		const v = new ComponentVariants({ ...real, typeLibs: typeLibs(), folder: () => system.folder });
 		return check((file) => settled(v, file));
 	});
-/** A row of a component's variants, by property: each cell's variant and value. */
 const rowOf = (a: Answer, property: string) => {
 	const rows = a.state === 'ready' && a.values.state === 'read' ? (a.values.rows.light ?? []) : [];
 	return Object.fromEntries((rows.find((r) => r.property === property)?.cells ?? []).map((c) => [c.variant, c.value]));

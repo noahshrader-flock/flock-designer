@@ -4,11 +4,6 @@ import { editedFiles } from '../src/core/services/designSystem/tokenEdits';
 import { channelsOf, hexOfChannels } from '../src/core/services/designSystem/tokens/cssVariables';
 import { memoryReads } from './fixtures';
 
-/**
- * The other ways a library keeps its tokens (decision 18), behind the same list as FUI's theme files: CSS variables (a
- * shadcn or Tailwind design system), and design token files in the standard JSON format. Against fixtures.
- */
-
 const find = (list: Awaited<ReturnType<typeof readTokens>>, path: string) => list.tokens.find((t) => t.path === path);
 
 describe('CSS variables', () => {
@@ -134,7 +129,6 @@ describe('CSS variables', () => {
 				value: '0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)',
 			},
 		]);
-		// A color named for a shadow is a color.
 		expect(find(list, 'css.light.shadow-color')).toMatchObject({ kind: 'color', category: 'Color' });
 	});
 
@@ -164,7 +158,6 @@ describe('CSS variables', () => {
 			group: 'Easing',
 			value: 'cubic-bezier(0, 0, 0.2, 1)',
 		});
-		// A color named for a border is a color.
 		expect(find(list, 'css.light.border')).toMatchObject({ kind: 'color', category: 'Color' });
 	});
 
@@ -209,7 +202,6 @@ describe('which mode a variable is a token of', () => {
 });
 
 describe('CSS variables a stylesheet imports (Phase 5.5)', () => {
-	/** A package of variables, as Tailwind 4's theme is one: its stylesheet named by its exports, its theme nested in layers. */
 	const PACKAGE = {
 		'node_modules/theme-kit/package.json': JSON.stringify({ name: 'theme-kit', exports: { '.': { style: './index.css' } } }),
 		'node_modules/theme-kit/index.css': `@layer theme {
@@ -347,7 +339,6 @@ describe('design token files', () => {
 			{ path: 'heading.h1.fontWeight', kind: 'font', group: 'Weight', set: 'heading.h1', name: 'fontWeight', value: '700' },
 			{ path: 'heading.h1.lineHeight', kind: 'font', group: 'Line height', set: 'heading.h1', name: 'lineHeight', value: '1.2' },
 		]);
-		// A kind no primitive reads yet is still left out.
 		expect(list.tokens.map((t) => t.path)).not.toContain('gradient.sky');
 	});
 
@@ -381,7 +372,6 @@ describe('design token files', () => {
 			value: '0px 1px 2px 0px #000000',
 		});
 		expect(find(list, 'shadow.md')?.value).toBe('0px 4px 6px -1px #00000033, inset 0px 2px 4px -2px #0000001a');
-		// One it cannot draw is named, not guessed.
 		expect(find(list, 'shadow.broken')).toBeUndefined();
 		expect(list.problems.map((p) => p.reason)).toContain(
 			'shadow.broken is not a shadow that can be read: it needs a color, offsets, a blur and a spread',

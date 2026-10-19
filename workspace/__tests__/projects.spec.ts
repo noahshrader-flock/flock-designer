@@ -212,7 +212,7 @@ describe('reading projects from their folders', () => {
 		write('_template', { 'brief.md': '# t' });
 		expect(readFolderProjects(root).map((p) => p.id)).toEqual(['new-view']);
 		expect(readFolderProjects(root)[0]).toMatchObject({ title: 'A new view', records: ['brief.md'], work: [] });
-		expect(inProgress(root)).toEqual([]); // not work in progress until something is recorded
+		expect(inProgress(root)).toEqual([]);
 	});
 });
 
@@ -247,17 +247,14 @@ describe('asRoute', () => {
 		// Control characters and whitespace can split a header or hide the rest of a line.
 		expect(asRoute('/roles\nHost: evil.test')).toBeNull();
 		expect(asRoute('/roles compare')).toBeNull();
-		// A route that climbs is a mistake in the record.
 		expect(asRoute('/../../etc/passwd')).toBeNull();
 		expect(asRoute('..')).toBeNull();
-		// And nothing absurdly long.
 		expect(asRoute(`/${'a'.repeat(400)}`)).toBeNull();
 	});
 
 	it('refuses a route pattern, which is what a router matches and not an address', () => {
-		// The likeliest mistake: a product's route table says `/organization/:id/roles/compare`, and
-		// that is copied into the record. As an address the `:id` is literal and matches nothing, so
-		// the preview would open an error page looking like the work itself had failed.
+		// Copied from a route table, the `:id` is literal and matches nothing, so the preview would open an error page
+		// looking like the work itself had failed.
 		expect(asRoute('/organization/:id/roles/compare')).toBeNull();
 		expect(asRoute('/org/{id}/roles')).toBeNull();
 		expect(asRoute('/org/*/roles')).toBeNull();
@@ -311,7 +308,7 @@ describe("a prototype's name: its version", () => {
 		expect(isPrototypeName(name)).toBe(true);
 	});
 
-	// The old shapes are not read at all: a version and its iteration, a name from before versions, and an old branch's.
+	// The old shapes (a version and its iteration, a name from before versions, an old branch's) are not read at all.
 	it.each(['v1-i1', 'v2-i3', 'i1', 'i7', 'fd/demo/i1', 'codebase', 'v', 'v0', 'v01', 'v10000', 'V1', 'Version 1', 'v1x', 'v-1', '../v1', ''])(
 		'refuses %s',
 		(name) => {
@@ -330,7 +327,6 @@ describe("a prototype's name: its version", () => {
 		expect(nextVersionName(['codebase'])).toBe('v1');
 		expect(nextVersionName(['v1'])).toBe('v2');
 		expect(nextVersionName(['v1', 'v3', 'codebase'])).toBe('v4');
-		// What is not a version's name is not counted.
 		expect(nextVersionName(['v1-i7', 'i9'])).toBe('v1');
 	});
 

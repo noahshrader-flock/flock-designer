@@ -18,7 +18,6 @@ const files = (dir: string): string[] =>
 		return statSync(path).isDirectory() ? files(path) : /\.(tsx?|mjs)$/.test(name) && !name.endsWith('.d.ts') ? [path] : [];
 	});
 
-/** What reaches GitHub itself, by kind. */
 const GITHUB: Record<string, RegExp> = {
 	address: /api\.github\.com|\bgithub\.com\b|githubusercontent|github\.io|\.github\//,
 	'REST path': /repoApiPath\(|\.api\(\s*[`'"]\//,
@@ -26,7 +25,7 @@ const GITHUB: Record<string, RegExp> = {
 	'command line': /['"]gh['"]|\bgh (?:api|pr|auth|repo)\b/,
 };
 
-/** A file's code, without its comments: a comment may name GitHub, as this one does. */
+/** Without its comments: a comment may name GitHub, as this one does. */
 const code = (text: string): string =>
 	text
 		.replace(/\/\*[\s\S]*?\*\//g, '')
@@ -42,7 +41,6 @@ const reaching = (text: string): string[] =>
 const isHome = (path: string): boolean =>
 	path.startsWith('src/codeHost/') || path === 'src/shared/hostUrls.ts' || path === 'src/shared/vocabulary.ts';
 
-/** Still to move behind the host, or to have a GitLab twin, with what each holds. */
 const TO_MOVE: Record<string, string> = {
 	'src/core/services/publishing/pages.ts': 'GitHub Pages: visibility, deployments, workflow runs and dispatch, compare (Phase 5)',
 	'src/core/services/publishing/profileNames.ts': 'a person’s profile, `/users/<login>` (2.3)',

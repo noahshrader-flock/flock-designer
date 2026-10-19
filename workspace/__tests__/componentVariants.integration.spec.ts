@@ -9,11 +9,7 @@ import { ComponentVariants } from '../src/core/services/designSystem/componentVa
 import type { ComponentVariants as Answer } from '../src/shared/contract';
 import { settledAnswer } from './fixtures';
 
-/**
- * A component drawn in every case its props declare, against a small library written here, its props read by the
- * real compiler; drawn by a stand-in that draws as this test says: `Default` takes its args, `Fixed` sets its size itself,
- * `AllSizes` draws every size at once.
- */
+/** The stand-in draws as this test says: `Default` takes its args, `Fixed` sets its size itself, `AllSizes` draws every size. */
 const BUTTON = 'src/Button.stories.tsx';
 const LIBRARY: Record<string, string> = {
 	'tsconfig.json': JSON.stringify({ compilerOptions: { jsx: 'react-jsx', strict: true } }),
@@ -25,11 +21,9 @@ const LIBRARY: Record<string, string> = {
 const HEIGHTS: Record<string, string> = { sm: '28px', md: '36px', lg: '48px' };
 
 let root: string;
-/** The stories the library's stories draw as it is, each with how many instances of the component. */
 let asIsStories: [string, number][];
 let asked: { story: string[]; props: string[] }[];
 
-/** How the stand-in draws: each section of a story its instance, with the size it was given, unless the story is `Fixed`. */
 const measure: Measure = async (runs) =>
 	runs.map((run) =>
 		run.files.map((): Drawn => {
@@ -113,7 +107,7 @@ describe('a component drawn in every case its props declare (Phase 5)', () => {
 		const a = await settled(variants(), BUTTON);
 		// Of the stories that draw it once, Fixed did not take its size; Default did, and is what it is drawn on.
 		expect(asked.slice(0, 2).map((r) => r.story)).toEqual([['Fixed'], ['Default']]);
-		// Drawn once each to find it, and not again: the drawing that found it is the one read (this library has no tags drawn).
+		// The drawing that found it is the one read, not drawn again.
 		expect(asked).toHaveLength(2);
 		expect(a).toMatchObject({
 			state: 'ready',

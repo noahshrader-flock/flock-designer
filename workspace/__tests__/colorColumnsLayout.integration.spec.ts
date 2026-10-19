@@ -9,16 +9,11 @@ import { undeclared } from '../src/shared/wcag';
 import { NO_CHROME, inChrome } from './realChrome';
 import { panelCss } from './panelStyles';
 
-/**
- * The colors in the Tokens tab, in the browser on this machine, with the real components and the real stylesheet: the grid of
- * roles (a column for each theme, headed by the sun and the moon) and the palette (a row for each step) are two views of the same
- * colors, so their dots end at the same place, flush right, and a heading is centred over its column of dots.
- */
+/** The grid of roles and the palette are two views of the same colors, so their dots must line up flush right. */
 
 const css = panelCss();
 const token = (path: string, group: string, set: string, name: string, value: string): DesignToken =>
 	({ path, group, set, name, kind: 'color', category: 'Color', value, source: { file: 'src/colors.ts', line: 1 } }) as unknown as DesignToken;
-/** A role set whose name cannot fit its row beside the icons: it is cut with an ellipsis, as the palette's family name is. */
 const LONG_SET = 'primaryContainerOnSurfaceVariantWithAVeryLongName';
 const ROLES = [
 	token('palette.light.primary.main', 'Light', 'primary', 'main', '#108062'),
@@ -40,7 +35,6 @@ const Both = () => {
 	return createElement(
 		TokenChangesProvider,
 		{ value: changes },
-		// As the Tokens tab draws them: both in the token body, one under the other.
 		createElement(
 			'div',
 			{ className: 'token-body' },
@@ -72,7 +66,6 @@ describe.skipIf(NO_CHROME)('the colors of the Tokens tab, in the browser on this
 					const grid = [...document.querySelectorAll<HTMLElement>('[data-token-row="main"] .theme-cell .swatch')];
 					const palette = [...document.querySelectorAll<HTMLElement>('li.token .color-dot .swatch')];
 					const tall = (e: Element) => Math.round(r(e).height * 10) / 10;
-					// A row and a heading are the same height in both views, and a set is the same distance from the one before.
 					const gridSets = [...document.querySelectorAll<HTMLElement>('.theme-set')];
 					const paletteSets = [...document.querySelectorAll<HTMLElement>('.token-set')];
 					const between = (sets: HTMLElement[], row: string, heading: string) =>
@@ -86,10 +79,8 @@ describe.skipIf(NO_CHROME)('the colors of the Tokens tab, in the browser on this
 					return {
 						headings: headings.map((h) => [h.getAttribute('aria-label'), h.textContent]),
 						icons: icons.length,
-						// The last column's dot, against every palette dot: the same distance from the right edge.
 						gridRight: grid.map((s) => Math.round(r(s).right * 10) / 10),
 						paletteRight: palette.map((s) => Math.round(r(s).right * 10) / 10),
-						// Each heading's icon over its column's dot.
 						overColumn: icons.map((icon, i) => Math.round(Math.abs(mid(icon) - mid(grid[i] as Element)) * 10) / 10),
 						page: document.documentElement.scrollWidth <= document.documentElement.clientWidth,
 						gridRows: [...document.querySelectorAll('[data-token-row]')].map(tall),
@@ -100,7 +91,7 @@ describe.skipIf(NO_CHROME)('the colors of the Tokens tab, in the browser on this
 						paletteSets: paletteSets.length,
 						gridBetween: between(gridSets, '[data-token-row]', '[data-theme-headings]'),
 						paletteBetween: between(paletteSets, 'li.token', 'h4.heading-set'),
-						// A set's name too long for its row is cut with an ellipsis: a block with the ellipsis, not a flex it would not work on.
+						// An ellipsis needs a block: it does not work on a flex.
 						setNames: [...document.querySelectorAll<HTMLElement>('[data-theme-headings] .theme-name')].map((e) => ({
 							display: getComputedStyle(e).display,
 							ellipsis: getComputedStyle(e).textOverflow === 'ellipsis',
@@ -108,7 +99,6 @@ describe.skipIf(NO_CHROME)('the colors of the Tokens tab, in the browser on this
 							text: e.textContent,
 						})),
 						iconSizes: icons.map((i) => [Math.round(r(i).width), Math.round(r(i).height)]),
-						// Where each begins, in both views: a set's name, and the names of its rows under it; and what colour the rows' are.
 						lefts: {
 							'a role’s set': [...document.querySelectorAll('[data-theme-headings] .theme-name')].map(textLeft),
 							'a role’s row': [...document.querySelectorAll('[data-token-row] .theme-name')].map(textLeft),
@@ -121,7 +111,6 @@ describe.skipIf(NO_CHROME)('the colors of the Tokens tab, in the browser on this
 					};
 				});
 			});
-			// Over each of the two sets' columns: Light then Dark, as icons, with no word.
 			expect(found.headings).toEqual([
 				['Light', ''],
 				['Dark', ''],
@@ -129,13 +118,10 @@ describe.skipIf(NO_CHROME)('the colors of the Tokens tab, in the browser on this
 				['Dark', ''],
 			]);
 			expect(found.icons).toBe(4);
-			// Flush right, the same for both views: the Dark column's dot is where each palette dot is.
 			expect(found.paletteRight.length).toBe(4);
 			for (const right of found.paletteRight) expect(found.gridRight.at(-1)).toBeCloseTo(right, 0);
-			// And a heading is centred over its column of dots.
 			for (const off of found.overColumn) expect(off).toBeLessThanOrEqual(1);
 			expect(found.page).toBe(true);
-			// One row height, whichever view: a role's row is a palette step's, and a set's heading is a family's.
 			expect(found.gridSets).toBe(2);
 			expect(found.paletteSets).toBe(2);
 			const rows = [...found.gridRows, ...found.paletteRows];
@@ -144,18 +130,13 @@ describe.skipIf(NO_CHROME)('the colors of the Tokens tab, in the browser on this
 			const headings = [...found.gridHeadings, ...found.paletteHeadings];
 			expect(new Set(headings).size, headings.join(', ')).toBe(1);
 			expect(headings[0]).toBe(rows[0]);
-			// And a set is the same distance from the one above it in both.
 			expect(found.gridBetween).toBe(found.paletteBetween);
-			// Every name starts at one left edge, a set's and a row's, in both views: no row indented under its set's name.
 			const starts = Object.values(found.lefts).flat();
 			expect(Object.values(found.lefts).every((l) => l.length > 0)).toBe(true);
 			expect(new Set(starts).size, JSON.stringify(found.lefts)).toBe(1);
-			// And a row's name is one colour, whichever view: a role's and a step's.
 			expect(found.rowNameColors, 'one colour for a row’s name').toHaveLength(1);
-			// A long set's name is cut with an ellipsis, in its row beside the icons, which stay whole.
 			for (const n of found.setNames) expect([n.display === 'flex', n.ellipsis], n.text ?? '').toEqual([false, true]);
 			expect(found.setNames.some((n) => n.text === LONG_SET && n.cut)).toBe(true);
-			// The icons over the columns are small: the extra small size, not a codicon's 16.
 			for (const [w, hh] of found.iconSizes as number[][]) expect([w, hh]).toEqual([12, 12]);
 		},
 		60_000,

@@ -2,11 +2,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { applyEditorTheme, applyScheme, systemIsDark, watchSystemScheme } from '../src/viewer/scheme';
 
-/**
- * The published page's bar follows light or dark (src/viewer/scheme.ts): the computer's setting in a browser, VS Code's
- * in DSNR's review tab. Dark is the app's `dark` class on the page, and its colour-scheme says so to the browser, so a page
- * framed by VS Code is see-through over the editor.
- */
+/** The colour-scheme is told to the browser too, so a page framed by VS Code is see-through over the editor. */
 afterEach(() => {
 	document.documentElement.className = '';
 	document.documentElement.removeAttribute('style');

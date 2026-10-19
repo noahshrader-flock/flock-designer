@@ -6,8 +6,6 @@ import { RepoFiles } from '../src/codeHost/repoFiles';
 import { ghApi } from '../src/core/services/platform/ghCli';
 import { hostErrorKind } from '../src/codeHost/hostError';
 
-/** GitHub's command line, as the app runs it. */
-
 describe('ghApi', () => {
 	let dir: string;
 	beforeEach(() => {

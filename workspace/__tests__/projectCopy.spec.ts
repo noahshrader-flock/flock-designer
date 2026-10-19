@@ -5,11 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { copyProject } from '../src/core/services/prototypes/projectCopy';
 import { buildReviewSite } from '../extension/src/review';
 
-/**
- * One project, read from the design repository through GitHub into a folder of the extension's own, so its review can be
- * built with no checkout on the machine (the workspace README's "Projects, by product"): its brief, its records, the pages they name, and only
- * the shared files those pages use.
- */
+/** Read through GitHub, so a project's review can be built with no checkout on the machine. */
 
 const FONT = 'abcdef0123456789';
 const records = JSON.stringify([
@@ -18,7 +14,6 @@ const records = JSON.stringify([
 	// Codebase work has no page: nothing is read or written for it.
 	{ projectId: 'demo', name: 'codebase', branch: 'feature/demo', createdAt: '2026-10-03T10:00:00Z' },
 ]);
-/** The design repository's files, as GitHub would give them, by path. */
 const repo = (files: Record<string, string>) => {
 	const read: string[] = [];
 	return {
@@ -51,7 +46,6 @@ describe('copying one project for its review', () => {
 		expect(readFileSync(join(at, 'demo', 'brief.md'), 'utf8')).toBe('# Demo\n');
 		expect(readFileSync(join(at, 'demo', 'prototypes', 'v1.html'), 'utf8')).toContain('One');
 		expect(readdirSync(join(at, 'demo', 'prototypes')).sort()).toEqual(['v1.html', 'v2.html']);
-		// Only the shared file a page uses, not every one the repository has.
 		expect(readdirSync(join(at, '_shared'))).toEqual([`${FONT}.datauri`]);
 		expect(read.some((p) => p.includes('codebase'))).toBe(false);
 	});
@@ -110,7 +104,6 @@ describe('a review built from the copy, with no checkout on the machine', () => 
 		expect(readFileSync(join(site, 'demo', 'v1', 'index.html'), 'utf8')).toContain('dsnr-config');
 		const page = readFileSync(join(site, 'demo', 'v1', 'page.html'), 'utf8');
 		expect(page).toContain('<h1>One</h1>');
-		// The shared file, written beside the site, and the page pointed at it.
 		expect(page).toMatch(new RegExp(`\\.\\./\\.\\./_shared/${FONT}\\.woff2`));
 		expect(existsSync(join(site, '_shared', `${FONT}.woff2`))).toBe(true);
 	});

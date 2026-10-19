@@ -1,14 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 import { MAX_BODY, handleExchange } from '../functions/sign-in/lib/exchange.mjs';
 
-/** The function that trades a page's one-time code for a person's token. */
-
 const SITE = 'https://noahshrader-flock.github.io';
 const ENV = { GITHUB_CLIENT_ID: 'Iv1.abc', ALLOWED_ORIGIN: SITE, REDIRECT_URI: `${SITE}/flock-designer/` };
 const VERIFIER = 'a'.repeat(43);
 const GOOD = JSON.stringify({ code: 'abcdef0123456789abcd', verifier: VERIFIER });
 
-/** A stand-in GitHub that records what it was asked and answers as given. */
 const github = (reply: unknown) => vi.fn(async () => ({ json: async () => reply }) as Response);
 const post = (body: string, over: Partial<{ method: string; origin: string | undefined }> = {}) => ({ method: 'POST', origin: SITE, body, ...over });
 

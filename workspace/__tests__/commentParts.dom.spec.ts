@@ -10,16 +10,11 @@ import type { CommentAnchor, MarkerRequest, PinEvent, ReviewComment } from '../s
 import { button, cards, comment, fieldNamed, menuItem, ok, openMenu, press, render, settle, typeInto, unmountAll } from './reviewHarness';
 import { anAnchor } from './fixtures';
 
-/**
- * The comments experience on its own, through a store and a page that are not the app's: what a prototype's own page
- * will give it. Nothing here goes near `window.workspace`, which is not there.
- */
+/** Through a store and a page that are not the app's; nothing here goes near `window.workspace`, which is not there. */
 
-/** A key pressed in `el`, as a person presses it. */
 const key = (el: Element, init: KeyboardEventInit) =>
 	act(async () => void el.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, cancelable: true, ...init })));
 
-/** The card that says `text`. */
 const card = (text: string) => cards().find((c) => c.textContent?.includes(text)) as HTMLElement;
 
 const fakes = (initial: ReviewComment[]) => {
@@ -31,7 +26,6 @@ const fakes = (initial: ReviewComment[]) => {
 	const store: CommentStore = {
 		read: async () => ok(saved),
 		post: async (body, anchor) => {
-			// Made now: after anything the store already had.
 			const made = { ...comment(50 + saved.length, body, { author: 'reviewer', createdAt: '2026-10-09T00:00:00Z' }), anchor };
 			saved = [...saved, made];
 			return ok(made);
@@ -79,7 +73,6 @@ const fakes = (initial: ReviewComment[]) => {
 	};
 };
 
-/** The smallest host there is: a page, the parts, and nothing of the app. */
 const Host = ({ store, page }: { store: CommentStore; page: PageSurface }) => {
 	const [error, setError] = useState<string | null>(null);
 	const [listOpen, setListOpen] = useState(true);
@@ -150,15 +143,13 @@ describe('the comments experience, through another store and page', () => {
 	it('is chosen by pressing anywhere on its card, which shows its pin; but not by its menu', async () => {
 		const f = fakes([comment(1, 'First', { author: 'noah' }), comment(2, 'Second', { author: 'pat' })]);
 		await mount(f);
-		// Its author's name, at the top of the card.
 		await press(card('Second').querySelector('.comment-author') as HTMLElement);
 		expect(card('Second').hasAttribute('data-selected')).toBe(true);
 		expect(f.focused).toEqual([2]);
-		// Its menu opens without choosing the card it is on.
 		await press(button('Comment actions', card('First')));
 		expect(f.focused).toEqual([2]);
 		expect(card('First').hasAttribute('data-selected')).toBe(false);
-		// It answers the pointer: it is marked as one that can be chosen, which the stylesheet tints on hover.
+		// The stylesheet tints this on hover.
 		expect(card('First').hasAttribute('data-choosable')).toBe(true);
 	});
 
@@ -184,10 +175,8 @@ describe('the comments experience, through another store and page', () => {
 		const f = fakes([comment(1, 'On the button')]);
 		await mount(f);
 		const box = document.querySelector('#general-comment') as HTMLTextAreaElement;
-		// Nothing to send yet.
 		expect(button('Send').hasAttribute('disabled')).toBe(true);
 		await typeInto(box, 'The spacing feels tight overall');
-		// Shift+Enter is a new line, not a send.
 		await key(box, { key: 'Enter', shiftKey: true });
 		expect(((await f.store.read()) as { value: ReviewComment[] }).value).toHaveLength(1);
 		await key(box, { key: 'Enter' });
@@ -196,7 +185,6 @@ describe('the comments experience, through another store and page', () => {
 		expect(saved.at(-1)).toMatchObject({ body: 'The spacing feels tight overall', anchor: null });
 		expect(cards()[0]?.textContent).toContain('The spacing feels tight overall');
 		expect(box.value).toBe('');
-		// No pin for it: only the comment on the button is drawn.
 		expect(f.drawn.at(-1)?.map((p) => p.id)).toEqual([1]);
 	});
 

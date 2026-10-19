@@ -22,7 +22,6 @@ const git = (cwd: string, ...args: string[]) => execFileSync('git', ['-C', cwd, 
 const remoteBranches = () => git(remote, 'for-each-ref', '--format=%(refname:short)', 'refs/heads').split('\n').filter(Boolean).sort();
 const remoteSha = (branch: string) => git(remote, 'rev-parse', `refs/heads/${branch}`);
 
-/** A commit on `branch`, by me or by a teammate. */
 const commit = (cwd: string, branch: string, file: string, by: 'me' | 'teammate' = 'me') => {
 	git(cwd, 'checkout', '-q', branch);
 	writeFileSync(join(cwd, file), `${file}\n${Math.random()}`);
@@ -32,7 +31,6 @@ const commit = (cwd: string, branch: string, file: string, by: 'me' | 'teammate'
 };
 const branchFrom = (cwd: string, name: string, from = 'develop') => git(cwd, 'checkout', '-q', '-b', name, from);
 
-// The remote and this machine's clone of it, on develop with one commit, as every test starts.
 madeOnce((d) => {
 	dir = d;
 	remote = join(dir, 'remote.git');
@@ -124,7 +122,6 @@ describe('when GitHub has something this machine does not', () => {
 		branchFrom(root, 'feature/role-comparison');
 		commit(root, 'feature/role-comparison', 'one.tsx');
 		await sync(['role-comparison']);
-		// A teammate pushes to it from another clone.
 		const other = join(dir, 'other');
 		execFileSync('git', ['clone', '-q', '-b', 'feature/role-comparison', remote, other], { stdio: 'ignore' });
 		git(other, 'config', 'user.email', 't@example.test');
@@ -134,14 +131,13 @@ describe('when GitHub has something this machine does not', () => {
 		git(other, 'commit', '-q', '-m', 'theirs');
 		git(other, 'push', '-q', 'origin', 'feature/role-comparison');
 		const theirs = remoteSha('feature/role-comparison');
-		// Meanwhile I commit locally, so the two have diverged.
 		commit(root, 'feature/role-comparison', 'two.tsx');
 
 		const r = await sync(['role-comparison']);
 		expect(r.published).toEqual([]);
 		expect(r.problems[0]).toMatchObject({ what: 'feature/role-comparison' });
 		expect(r.problems[0]?.why).toMatch(/changes on GitHub that this machine does not have/);
-		expect(remoteSha('feature/role-comparison')).toBe(theirs); // untouched
+		expect(remoteSha('feature/role-comparison')).toBe(theirs);
 	});
 
 	it('still publishes my other branches when one of them has a problem', async () => {

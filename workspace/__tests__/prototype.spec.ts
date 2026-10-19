@@ -165,7 +165,6 @@ describe('what the agent is told', () => {
 		expect(task.startsWith('# Skill')).toBe(true);
 		expect(task).toContain('Write `/q/users/v1.tsx`');
 		expect(task).toContain(`\`${build.buildCommand}\``);
-		// Its accessibility checked after it builds, as the build is, for two rounds, and no words written that are a person's.
 		expect(task).toContain(`check its accessibility with exactly: \`${build.checkCommand}\``);
 		expect(task).toMatch(/2 rounds are used up: then finish, and what is left is recorded with the page\. Never write words it says are a person's/);
 		expect(task).toContain('Read only: never change anything');
@@ -189,7 +188,6 @@ describe('what the agent is told', () => {
 		const settings = JSON.parse(argv[argv.indexOf('--settings') + 1] as string);
 		expect(settings.permissions).toEqual({ allow: ['Read(//c/coke/**)'], deny: ['Edit(//c/coke/**)', 'Write(//c/coke/**)'] });
 		expect(argv).not.toContain('--add-dir');
-		// No product, no permissions block: nothing extra is granted.
 		const plain = JSON.parse(claudeCodeAdapter.argvFor('t')[claudeCodeAdapter.argvFor('t').indexOf('--settings') + 1] as string);
 		expect(plain.permissions).toBeUndefined();
 	});
@@ -216,28 +214,22 @@ describe('PrototypeServer', () => {
 			expect(await server.serveFolder('review', site)).toBe(`${app}/review/`);
 			expect(await server.serveFolder('previews-x', previews, { code: true })).toBe(`${pages}/previews-x/`);
 			const status = async (url: string) => (await fetch(url)).status;
-			// The bar and its own files on the app's address.
 			expect(await status(`${app}/review/a/v1/`)).toBe(200);
 			expect(await status(`${app}/review/_viewer/viewer.js`)).toBe(200);
 			expect(await status(`${app}/review/_shared/font.woff2`)).toBe(200);
-			// Nothing a repository wrote that opens as a page: the prototype, however it is spelled (a Mac's disk ignores
-			// case), and a picture that can carry a script.
+			// However it is spelled, as a Mac's disk ignores case; and an SVG can carry a script.
 			for (const named of ['page.html', 'Page.html', 'PAGE.HTML']) expect(await status(`${app}/review/a/v1/${named}`)).toBe(404);
 			expect(await status(`${app}/review/_shared/logo.svg`)).toBe(404);
-			// All of it on the pages' address.
 			expect(await (await fetch(`${pages}/review/a/v1/page.html`)).text()).toBe('<p>the prototype</p>');
 			expect(await status(`${pages}/review/_shared/logo.svg`)).toBe(200);
-			// Story previews, a library's code, on the pages' address only.
 			expect(await status(`${app}/previews-x/`)).toBe(404);
 			expect(await status(`${pages}/previews-x/`)).toBe(200);
-			// A prototype given whole (the app's preview, a cover, a check) and what it shares, on the pages' address only.
 			const own = await server.serve('p/v1', '<h1>Hi</h1>');
 			server.share('0123456789abcdef', 'data:text/html,<script>bar()</script>');
 			expect(own).toBe(`${pages}/p/v1/`);
 			expect(await status(`${app}/p/v1/`)).toBe(404);
 			expect(await status(`${app}/_shared/0123456789abcdef`)).toBe(404);
 			expect(await status(`${pages}/_shared/0123456789abcdef`)).toBe(200);
-			// No browser takes a file for something else than it is said to be.
 			expect((await fetch(`${app}/review/a/v1/`)).headers.get('x-content-type-options')).toBe('nosniff');
 			expect((await fetch(own)).headers.get('x-content-type-options')).toBe('nosniff');
 		} finally {
@@ -263,7 +255,6 @@ describe('PrototypeServer', () => {
 			expect(await ask(port, `attacker.example:${port}`)).toBe(403);
 			expect(await ask(port, `localhost:${port}`)).toBe(403);
 			expect(await ask(port, `127.0.0.1:${appPort}`)).toBe(403);
-			// The app's address answers only to its own name too.
 			expect(await ask(appPort, `attacker.example:${appPort}`)).toBe(403);
 			expect(await ask(appPort, `127.0.0.1:${port}`)).toBe(403);
 		} finally {
@@ -288,7 +279,6 @@ describe('PrototypeServer', () => {
 	describe('a browser’s ask (BROWSER_COMMENTS_PLAN 1.1)', () => {
 		const KEY = 'k'.repeat(22);
 		const ASK = { dsnr: 'ask', id: 1, name: 'readComments', args: [] };
-		/** A request as a browser, or anything else on this machine, could make it: every part of it named. */
 		const post = (
 			port: string,
 			{
@@ -360,7 +350,6 @@ describe('PrototypeServer', () => {
 					await post(pagesPort, { headers: { ...right, host: `127.0.0.1:${pagesPort}`, origin: pages } }),
 				];
 				expect(refused.map((r) => r.status >= 400)).toEqual(refused.map(() => true));
-				// No other origin is ever told it may read an answer.
 				expect(refused.filter((r) => Object.keys(r.headers).some((h) => h.startsWith('access-control-')))).toEqual([]);
 				// Only a request with every part right reaches the handler, which is how a key is found to be no key.
 				expect(asked.map((a) => a.key)).toEqual(['x'.repeat(22)]);
@@ -392,17 +381,14 @@ describe('PrototypeServer', () => {
 			expect(res.headers.get('content-type')).toContain('text/html');
 			expect(await res.text()).toBe('<h1>Hi</h1>');
 			expect((await fetch(url.replace('/users/v1/', '/users/v2/'))).status).toBe(404);
-			// A shared file, served beside every page by its name, as the data it was embedded as.
 			server.share('0123456789abcdef', `data:font/woff2;base64,${Buffer.from('font bytes').toString('base64')}`);
 			const font = await fetch(url.replace('/users/v1/', '/_shared/0123456789abcdef'));
 			expect(font.headers.get('content-type')).toBe('font/woff2');
 			expect(await font.text()).toBe('font bytes');
-			// A page that points at shared files is served with each it lacks, read once: one it has is not read again.
 			const read = vi.fn(async (n: string) => (n === 'fedcba9876543210' ? 'data:font/woff,abc' : null));
 			const page = await server.servePage('users/v3', '<link href="/_shared/0123456789abcdef"><link href="/_shared/fedcba9876543210">', read);
 			expect(read.mock.calls).toEqual([['fedcba9876543210']]);
 			expect(await (await fetch(page.replace('/users/v3/', '/_shared/fedcba9876543210'))).text()).toBe('abc');
-			// Serving again replaces it.
 			await server.serve('users/v1', '<h1>Again</h1>');
 			expect(await (await fetch(url)).text()).toBe('<h1>Again</h1>');
 		} finally {

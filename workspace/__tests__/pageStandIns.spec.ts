@@ -1,13 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { installStandIns } from '../src/page/standIns';
 
-/**
- * A prototype on the published site is framed with no origin of its own, where the browser
- * refuses its storage and cookies outright. The page agent gives it stand-ins, in memory, before its own code runs, so a
- * design system that reads them still loads. Only those three, and only where the browser refuses them.
- */
-
-/** A window and document whose storage and cookie the browser refuses, as in a frame with no origin of its own. */
 const refusing = () => {
 	const refuse = () => {
 		throw new DOMException('The document is sandboxed and lacks the "allow-same-origin" flag.', 'SecurityError');

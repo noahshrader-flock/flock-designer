@@ -5,7 +5,6 @@ import { readTokens } from '../src/core/services/designSystem/designTokens';
 import { editedFiles } from '../src/core/services/designSystem/tokenEdits';
 import { REAL_LIBRARY, describeWith, libraryMissing } from './realCheckouts';
 
-/** The reader against the real library's `develop`, as the app reads it. */
 const DEVELOP = 'refs/remotes/origin/develop';
 const find = (list: Awaited<ReturnType<typeof readTokens>>, path: string) => list.tokens.find((t) => t.path === path);
 

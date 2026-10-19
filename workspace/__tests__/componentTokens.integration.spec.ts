@@ -12,11 +12,7 @@ import { libraryCommit, systemReads } from '../src/core/services/designSystem/de
 import type { TokenEdit } from '../src/shared/contract';
 import { g, settledAnswer } from './fixtures';
 
-/**
- * Which tokens each component draws with: every token tagged with a value
- * nothing else has, every story drawn, and what it drew read back. Against fixtures; the previews and the drawing are
- * stand-ins, and the real drawing is headless Chrome's (`chromeHeadless.ts`, `measure`).
- */
+/** The previews and the drawing are stand-ins; the real drawing is headless Chrome's (`chromeHeadless.ts`, `measure`). */
 
 const TOKENS = [
 	token('palette.light.primary.main', 'color', '#108062'),
@@ -146,7 +142,6 @@ describe('the index', () => {
 	let clone: string;
 	let asked: Parameters<Measure>[0][];
 	let builds: Map<string, string>[];
-	/** The builds made to see what a change reaches, by the brand tone each was given. */
 	let reaches: (string | undefined)[];
 	const LIB = {
 		'src/colors/tones/brand.ts': "export const brand = {\n  50: '#108062',\n};\n",
@@ -157,12 +152,8 @@ describe('the index', () => {
 		// The library's own token page, which the list leaves out while the panel shows the tokens (decision 22).
 		'src/uxDocs/Palette.stories.tsx': "export default { title: 'Design Tokens/Palette' };\nexport const Default = () => null;\n",
 	};
-	/**
-	 * A drawn A with primary's tag, B with the tone's and a hardcoded gray: what each page is, by its address. B's stories
-	 * draw one instance of the component they name, its background the brand green, the tone's tag when tagged.
-	 */
 	const instanceOfB = (background: string) => ({ component: true, instances: [{ story: 'Default', key: 'B#1', props: {}, values: { background } }] });
-	/** How many more times A draws otherwise with a change: as a story still settling once in a while does. */
+	/** How many more times A draws otherwise with a change, as a story still settling once in a while does. */
 	let flaky = 0;
 	const measure: Measure = async (runs) => {
 		asked.push(runs);
@@ -171,16 +162,13 @@ describe('the index', () => {
 				const b = f.includes('B.stories');
 				if (run.base.includes('reach') && !b && flaky > 0) return (flaky--, drawn({ 'rgb(1, 1, 1)': 1 }));
 				if (run.base.includes('plain')) return { ...drawn({ 'rgb(107, 114, 128)': 1 }), ...(b ? instanceOfB('rgb(16, 128, 98)') : {}) };
-				// With a change to see what it reaches: B's background is the change's red; A draws as it is.
 				if (run.base.includes('reach')) return { ...drawn({ 'rgb(107, 114, 128)': 1 }), ...(b ? instanceOfB('rgb(200, 0, 0)') : {}) };
 				return b ? { ...drawn({ 'rgb(0, 2, 90)': 1, 'rgb(107, 114, 128)': 1 }), ...instanceOfB('rgb(0, 2, 90)') } : drawn({ 'rgb(0, 1, 90)': 3 });
 			}),
 		);
 	};
-	/** What a build is given: the files a change writes, made from the library's develop. */
 	type Files = (reads: CatalogReads) => Promise<Map<string, string>>;
 	const written = async (files: Files) => files(await systemReads(system(), (await libraryCommit(clone, 'develop')) as string));
-	/** The brand tone's 50, as the files a build was given have it. */
 	const tone = (files: Map<string, string>) => /50: '(#\w+)'/.exec(files.get('src/colors/tones/brand.ts') ?? '')?.[1];
 	const previews = {
 		preview: async () => ({ state: 'ready' as const, base: 'http://127.0.0.1:1/plain/' }),
@@ -192,7 +180,6 @@ describe('the index', () => {
 		},
 	};
 	const system = () => ({ id: 'acme/ui', name: 'Acme', repository: 'acme/ui', root: clone, folder: '', branch: 'develop' });
-	/** The pictures kept, as the pass gave them: a stand-in for the store, which has tests of its own. */
 	let kept: { system: string; listed: string[]; taken: Map<string, Buffer> }[];
 	const pictures = {
 		keep: (id: string, listed: string[], taken: Map<string, Buffer>) => void kept.push({ system: id, listed, taken }),
@@ -251,8 +238,7 @@ describe('the index', () => {
 			await i.warm();
 			const r = await reached(i, RED);
 			expect(reaches).toEqual(['#C80000']);
-			// Asked of the build with the change, in both modes, for every listed component; then the one that differs drawn again,
-			// as it is and with the change, before it is said to move.
+			// The one that differs is drawn again, as it is and with the change, before it is said to move.
 			const files = ['src/components/A/A.stories.tsx', 'src/components/B/B.stories.tsx'];
 			expect(asked.at(-3)).toEqual([
 				{ base: 'http://127.0.0.1:1/reach-1/', mode: 'light', files },
@@ -321,7 +307,6 @@ describe('the index', () => {
 			const first = i.reachWith(indexed, async () => new Map(), 'written');
 			const second = i.reachWith(indexed, async () => new Map(), 'written');
 			await new Promise((r) => setTimeout(r, 20));
-			// The second waits for the first to be built and drawn.
 			expect(built).toEqual(['written']);
 			release();
 			await Promise.all([first, second]);
@@ -346,7 +331,6 @@ describe('the index', () => {
 			for (const c of changes) await i.reach(c);
 			release();
 			await reached(i, changes[2] as TokenEdit[]);
-			// The first, already started, and then the newest: never the one in between.
 			expect(reaches).toEqual(['#110000', '#330000']);
 		});
 
@@ -372,8 +356,7 @@ describe('the index', () => {
 		await ready(i, 'src/components/A/A.stories.tsx');
 		// Not the token page: it is not a component, and would be said to share every token.
 		const files = ['src/components/A/A.stories.tsx', 'src/components/B/B.stories.tsx'];
-		// Asked twice: as it is, at once, while the tags are built (pictured and checked for accessibility at the library's
-		// target, none declared, so the default; the longest, so first), and in dark; then with the tags, in each mode.
+		// Light plain is pictured and checked at the default target (none declared): the longest run, so first.
 		expect(asked).toEqual([
 			[
 				{
@@ -404,8 +387,7 @@ describe('the index', () => {
 			notTokens: [{ kind: 'color', value: 'rgb(107, 114, 128)', uses: 1 }],
 			derived: 0,
 			accessibility: null,
-			// Its values, from the same drawings paired: the green its instance draws is the tone, as its tag says, in light and in
-			// dark (which has no twin of this tone, so names it too).
+			// Dark has no twin of this tone, so names it too.
 			values: {
 				state: 'read',
 				instances: 1,
@@ -449,7 +431,6 @@ describe('the index', () => {
 		const i = index();
 		await ready(i, 'src/components/A/A.stories.tsx');
 		await i.of('src/components/B/B.stories.tsx');
-		// One pass: its drawings as it is, and with the tags.
 		expect(builds).toHaveLength(1);
 		expect(asked).toHaveLength(2);
 		expect(await i.of('src/colors/theme/light.ts')).toEqual({
@@ -486,7 +467,6 @@ describe('the index', () => {
 		await i.warm();
 		expect(asked).toHaveLength(2);
 		expect(await i.of('src/components/A/A.stories.tsx')).toMatchObject({ state: 'ready' });
-		// Warmed again, or asked for, for the same commit: nothing is drawn twice.
 		await i.warm();
 		await i.of('src/components/B/B.stories.tsx');
 		expect(asked).toHaveLength(2);
@@ -523,7 +503,6 @@ describe('the index', () => {
 	});
 
 	it('gives the pictures there are, and says while a pass that may replace them is drawing', async () => {
-		// Every drawing asked for waits until the test lets them all finish.
 		const waiting: (() => void)[] = [];
 		const finish = () => waiting.splice(0).forEach((go) => go());
 		let drawingStarted = false;
@@ -537,7 +516,7 @@ describe('the index', () => {
 		void i.warm();
 		await vi.waitFor(() => expect(drawingStarted).toBe(true));
 		expect(await i.pictures()).toEqual({ drawing: true, pictures: {}, issues: {} });
-		// The tagged drawings are asked for once the tags are built, after the first are: let each go as it comes.
+		// The tagged drawings are asked for only after the first finish, so let each go as it comes.
 		const letting = setInterval(finish, 5);
 		await i.warm();
 		clearInterval(letting);
@@ -546,7 +525,6 @@ describe('the index', () => {
 	});
 
 	it('still draws and pictures a library with no tokens it can tag, as it is, once, and says it draws with none', async () => {
-		// The theme files hold no tone and no palette, so nothing can be tagged: a Storybook library with no tokens read.
 		g(clone, 'rm', '-q', 'src/colors/tones/brand.ts', 'src/colors/theme/light.ts');
 		g(clone, 'commit', '-q', '-m', 'no tokens');
 		g(clone, 'update-ref', 'refs/remotes/origin/develop', 'HEAD');
@@ -559,8 +537,7 @@ describe('the index', () => {
 		});
 		await i.warm();
 		expect(builds).toHaveLength(0);
-		// With no tokens read, the library's own token page is a component like the others (decision 22), and is drawn too.
-		// In the catalog's order, by group: Buttons, Design Tokens, Inputs.
+		// With no tokens read, the token page is a component like the others (decision 22), in the catalog's group order.
 		const files = ['src/components/A/A.stories.tsx', 'src/uxDocs/Palette.stories.tsx', 'src/components/B/B.stories.tsx'];
 		expect(asked).toEqual([
 			[
@@ -587,7 +564,6 @@ describe('the index', () => {
 	});
 
 	it('checks each component’s accessibility in the same pass, at the library’s own target, and says it to the panel and the cards (T7)', async () => {
-		// The library declares its target in its own manifest.
 		mkdirSync(join(clone, '.dsnr'), { recursive: true });
 		writeFileSync(
 			join(clone, '.dsnr', 'manifest.md'),
@@ -648,7 +624,7 @@ describe('the index', () => {
 			),
 		});
 		await i.warm();
-		// As it is, in light and in dark: the tagged build did not come, so there are no tagged drawings.
+		// Only the plain run: the tagged build did not come.
 		expect(asked[0]).toHaveLength(2);
 		expect(kept[0]?.taken.size).toBe(2);
 		expect(await i.of('src/components/A/A.stories.tsx')).toEqual({ state: 'failed', error: 'tags did not build' });

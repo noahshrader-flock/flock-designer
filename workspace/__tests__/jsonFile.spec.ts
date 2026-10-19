@@ -8,7 +8,6 @@ let dir: string;
 beforeEach(() => (dir = mkdtempSync(join(tmpdir(), 'fd-json-'))));
 afterEach(() => rmSync(dir, { recursive: true, force: true }));
 
-/** A count kept in a file: anything else read is no count. */
 const counter = (path: string) =>
 	jsonFile(path, {
 		parse: (u) => (typeof u === 'object' && u !== null && typeof (u as { n?: unknown }).n === 'number' ? (u as { n: number }) : { n: 0 }),

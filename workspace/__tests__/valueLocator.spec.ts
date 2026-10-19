@@ -64,7 +64,6 @@ describe('where a value of a component’s own may be written (Phase 4)', () => 
 			[1, '#fff', 'hex'],
 			[1, 'white', 'name'],
 		]);
-		// With its opacity: as rgba, as a percent, and as eight digits.
 		const faint = `x: 'rgba(84, 174, 255, 0.4)', y: 'rgb(84 174 255 / 40%)', z: '#54aeff66', w: 'rgba(84, 174, 255, 0.5)'`;
 		expect(found('src/t.ts', faint, 'border', 'rgba(84, 174, 255, 0.4)').map(([, w]) => w)).toEqual([
 			'rgba(84, 174, 255, 0.4)',
@@ -83,7 +82,6 @@ describe('where a value of a component’s own may be written (Phase 4)', () => 
 		expect(writtenAs(place('#ABCDEF', 'hex'), 'rgb(200, 0, 0)')).toBe('#C80000');
 		expect(writtenAs(place('rgb(16, 128, 98)', 'rgb'), '#C8000080')).toBe('rgba(200, 0, 0, 0.502)');
 		expect(writtenAs(place('white', 'name'), '#FAFAFA')).toBe('#fafafa');
-		// Not a length's way of writing a colour, nor a colour's of a length.
 		expect(writtenAs(place('28px', 'px'), '#C80000')).toBeNull();
 		expect(writtenAs(place('#108062', 'hex'), '32px')).toBeNull();
 

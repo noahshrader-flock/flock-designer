@@ -22,7 +22,6 @@ describe('bundling a React prototype into one page', () => {
 			"const React = require('react');\nexports.DSButton = (p) => React.createElement('button', { className: 'ds-button' }, p.children);",
 		);
 		writeFileSync(join(modules, '@acme', 'ds', 'style.css'), '.ds-button { color: teal; }');
-		// The product's own React, as an installed product has it.
 		for (const pkg of ['react', 'react-dom', 'scheduler']) symlinkSync(join(appModules, pkg), join(modules, pkg));
 	});
 	afterEach(() => rmSync(dir, { recursive: true, force: true }));

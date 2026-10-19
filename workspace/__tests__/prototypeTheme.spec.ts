@@ -2,10 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_THEME, isTheme, themeOfQuery, withTheme, withoutTheme } from '../src/shared/prototypeTheme';
 import { withState } from '../src/shared/prototypeStates';
 
-/**
- * A prototype seen in light or dark, whatever the machine is set to: the theme rides in the page's
- * address as `?theme=`, beside its state, and is never part of what tells one state from another.
- */
+/** The theme rides in the address beside the state, and is never part of what tells one state from another. */
 
 describe('the theme an address asks for', () => {
 	it('is light or dark, and nothing else; with none, the system’s', () => {

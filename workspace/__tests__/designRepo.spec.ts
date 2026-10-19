@@ -172,7 +172,6 @@ describe('listProjects', () => {
 		const [alpha] = await new DesignRepo(session, REF).listProjects();
 		expect(alpha?.work.find((i) => i.branch === 'prototype/alpha/v2')?.issueNumber).toBe(7);
 		expect(alpha?.work.find((i) => i.branch === 'prototype/alpha/v1')?.issueNumber).toBeNull();
-		// Each version carries its own count: the one with the thread has the thread's comments, the other none.
 		expect(alpha?.work.find((i) => i.branch === 'prototype/alpha/v2')?.openComments).toBe(3);
 		expect(alpha?.work.find((i) => i.branch === 'prototype/alpha/v1')?.openComments).toBe(0);
 		expect(alpha).not.toHaveProperty('openComments');
@@ -186,7 +185,6 @@ describe('listProjects', () => {
 	});
 
 	describe('read again', () => {
-		/** The design repository with alpha's folder at `tree` (its fingerprint), and its threads as `threads` says. */
 		const repo = (state: { tree: string; brief: string; comments: number }) =>
 			fakeGitHub({
 				...routes,

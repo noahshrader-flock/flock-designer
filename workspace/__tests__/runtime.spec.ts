@@ -60,7 +60,6 @@ describe('the allowlist', () => {
 	});
 
 	it('cannot be given a shell string, because there is no shell', async () => {
-		// spawn with shell:false means `;` and `&&` are arguments, not syntax.
 		const marker = join(root, 'pwned');
 		const sneaky: WorkspaceDescriptor = {
 			...descriptor,
@@ -191,7 +190,6 @@ describe('one port, many prototypes', () => {
 		await manager.start(root, proto, 'preview', 'users-inactivity-signal');
 		const second = await manager.start(root, proto, 'preview', 'alert-notification-prefs');
 
-		// Not the first project's running status, or every piece of work opened shows the same prototype.
 		expect(spawnSpy).toHaveBeenCalledTimes(2);
 		expect(second).toMatchObject({ state: 'running', projectId: 'alert-notification-prefs' });
 		expect(manager.status('preview')).toMatchObject({ projectId: 'alert-notification-prefs' });

@@ -7,11 +7,7 @@ import { PREVIEW_COMPONENT, PREVIEW_SHOW, PREVIEW_TRY } from '../src/shared/cata
 import { FIND_INSTANCES, TRY_VALUES } from './pageInstances';
 import { chromeHeadless, findChrome } from '../src/core/services/browser/chromeHeadless';
 
-/**
- * Each instance of a component its stories draw, read in the real browser by the
- * script the Design System tab draws with: a preview page built here with React, minified as the previews are, so the
- * component is found by identity and not by name. Skipped where there is no Chrome, Edge or Chromium.
- */
+/** The preview page is minified as the previews are, so the component is found by identity and not by name. */
 
 const PAGE_SCRIPT = `
 import { cloneElement, createElement as h, forwardRef, useState } from 'react';
@@ -134,7 +130,6 @@ describe.skipIf(findChrome() === null)('a component’s instances, in the browse
 		});
 		expect(drawn.instances?.[1]?.values.height).toBe('36px');
 		expect(drawn.instances?.[2]?.values.background).toBe('rgba(0, 0, 0, 0)');
-		// A story file that names no component has none to find.
 		expect(loose.component).toBe(false);
 		expect(loose.instances).toEqual([]);
 	}, 60_000);
@@ -149,10 +144,8 @@ describe.skipIf(findChrome() === null)('a component’s instances, in the browse
 			[{ tone: 'outer' }, '16px 16px 16px 16px'],
 			[{ tone: 'inner' }, '4px 4px 4px 4px'],
 		]);
-		// Reading its instances failed, and said why; what it draws is read all the same.
 		expect(broken.instancesFailed).toBe('No component here');
 		expect(Object.keys(broken.colors)).toContain('rgb(16, 128, 98)');
-		// Stories that threw are counted, so what they did not draw is said for that reason.
 		expect([throws.instances, throws.storiesFailed]).toEqual([[], 1]);
 		// A React whose record of what it drew cannot be read: said as that, never as stories that draw none.
 		expect(unrecorded.instancesFailed).toBe("React's record of what it drew could not be read, so its instances cannot be found.");
@@ -213,14 +206,12 @@ describe.skipIf(findChrome() === null)('values tried on a component’s instance
 		const { inChrome } = await import('./realChrome');
 		await inChrome(async (browser) => {
 			const tab = await browser.newPage();
-			// The tab, framing the preview page as the component's tab does.
 			await tab.setContent(`<iframe src="${base}" style="width:800px;height:600px"></iframe>`);
 			const frame = await tab.waitForFrame((f) => f.url() === base);
 			const show = (file: string) =>
 				frame.evaluate((name, f) => (window as unknown as Record<string, (x: string) => Promise<void>>)[name]?.(f), PREVIEW_SHOW, file);
 			await frame.waitForFunction((name) => typeof (window as unknown as Record<string, unknown>)[name] === 'function', {}, PREVIEW_SHOW);
 			await show('button.stories.tsx');
-			// What each instance draws, by its key, found as every reader finds them.
 			const drawn = () =>
 				frame.evaluate(
 					(find, component) => {
@@ -257,11 +248,9 @@ describe.skipIf(findChrome() === null)('values tried on a component’s instance
 			await settled();
 			const tried = await drawn();
 			const of = (key: string) => tried.find((i) => i.key === key);
-			// The small one is 40px high, whatever its own style says; the medium one has the radius and the background; the ghost nothing.
 			expect([of(small)?.height, of(small)?.radius]).toEqual([40, '8px']);
 			expect([of(medium)?.height, of(medium)?.radius, of(medium)?.background]).toEqual([36, '14px', 'rgb(200, 30, 30)']);
 			expect(tried.find((i) => i.variant === 'ghost')).toMatchObject({ radius: '8px', background: 'rgba(0, 0, 0, 0)' });
-			// Drawn anew (another file, then this one again: new elements): what is tried is set on them too.
 			await show('box.stories.tsx');
 			await show('button.stories.tsx');
 			await settled();
@@ -270,7 +259,6 @@ describe.skipIf(findChrome() === null)('values tried on a component’s instance
 			await frame.evaluate((key) => window.postMessage({ [key]: [] }, '*'), PREVIEW_TRY);
 			await settled();
 			expect((await drawn()).find((i) => i.key === small)?.height).toBe(40);
-			// Nothing tried, on the same elements: each is as the library has it again, nothing left over.
 			await tryValues([]);
 			await settled();
 			expect((await drawn()).find((i) => i.key === small)?.height).toBe(28);
@@ -283,7 +271,6 @@ describe.skipIf(findChrome() === null)('values tried on a component’s instance
 			await settled();
 			expect((await drawn())[0]?.height).toBe(100);
 			await show('button.stories.tsx');
-			// Nothing tried: the library's own again.
 			await tryValues([]);
 			await settled();
 			expect((await drawn()).map(({ key, height, radius, background }) => ({ key, height, radius, background }))).toEqual(
@@ -292,8 +279,3 @@ describe.skipIf(findChrome() === null)('values tried on a component’s instance
 		});
 	}, 60_000);
 });
-
-/**
- * The real library on this machine, through the whole pass the tab's analysis makes: every story drawn as the library
- * has it and with every token tagged. What was measured on it by hand is what the tab says.
- */

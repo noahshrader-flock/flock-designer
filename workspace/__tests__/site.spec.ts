@@ -6,12 +6,6 @@ import { buildSite } from '../src/site/buildSite';
 import { serveSite } from '../src/site/serveSite';
 import { contentHashOf } from '../src/core/services/prototypes/prototype';
 
-/**
- * The site prototypes are published as, built from a design repository: every project with a
- * saved page, every version of it, a `latest` link, and an index. Against a fixture repository with two projects, one
- * with three versions, and one project with nothing to show.
- */
-
 let root: string;
 let design: string;
 let out: string;
@@ -278,13 +272,11 @@ describe('comments on the page', () => {
 			name: 'v3',
 			title: 'Alerts <history>',
 			projectHref: '../',
-			// Every version is a step away, from this page, the newest first, with the one each was started from.
 			versions: [
 				{ name: 'v3', href: '../v3/', from: 'v1' },
 				{ name: 'v2', href: '../v2/' },
 				{ name: 'v1', href: '../v1/' },
 			],
-			// This page says it has none.
 			states: [],
 			// The saved page's fingerprint, which a comment placed on it carries: the hash its picture is named by too.
 			page: contentHashOf(page('Alpha three')),
@@ -312,7 +304,6 @@ describe('comments on the page', () => {
 		build({ viewer: { dir: viewer, ref: { owner: 'acme', repo: 'design' } } });
 		const agent = '<script src="../../_viewer/page-agent.js"></script>';
 		const saved = read('alpha/v3/page.html');
-		// First in its head, before the prototype's own code, and once.
 		expect(saved.indexOf(agent)).toBeGreaterThan(-1);
 		expect(saved.indexOf(agent)).toBeLessThan(saved.indexOf('Alpha three'));
 		expect(saved.split(agent)).toHaveLength(2);
@@ -330,7 +321,6 @@ describe('comments on the page', () => {
 			);
 		// The review page: nothing selects a bare heading, which would reach the bar's title.
 		expect(rules(read('alpha/v3/index.html')).filter((r) => /^h[1-6]\b/.test(r))).toEqual([]);
-		// The lists' own headings are still sized, inside their own page.
 		expect(rules(read('index.html'))).toContain('main h1');
 	});
 
@@ -345,7 +335,6 @@ describe('comments on the page', () => {
 		build({ pagesAt: 'http://127.0.0.1:4100/review/' });
 		const frame = /<iframe id="dsnr-frame"[^>]*>/.exec(read('alpha/v3/index.html'))?.[0] ?? '';
 		expect(frame).toContain('src="http://127.0.0.1:4100/review/alpha/v3/page.html"');
-		// Its own scripts, its own origin (its cookies and storage), forms, pop-ups and alerts; never the window above it.
 		expect(frame).toContain('sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"');
 		expect(frame).not.toContain('allow-top-navigation');
 	});
@@ -354,8 +343,8 @@ describe('comments on the page', () => {
 		build();
 		const frame = /<iframe id="dsnr-frame"[^>]*>/.exec(read('alpha/v3/index.html'))?.[0] ?? '';
 		expect(frame).toContain('src="page.html"');
-		// Its own scripts, forms, pop-ups and alerts. Not its own origin: on the bar's address that would let it take the
-		// sandbox off through the bar, and read the bar's storage, where the sign-in's token is.
+		// Not its own origin: on the bar's address that would let it take the sandbox off through the bar, and read the
+		// bar's storage, where the sign-in's token is.
 		expect(frame).toContain('sandbox="allow-scripts allow-forms allow-popups allow-modals"');
 		expect(frame).not.toContain('allow-same-origin');
 		expect(frame).not.toContain('allow-top-navigation');

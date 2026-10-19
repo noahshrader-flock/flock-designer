@@ -5,13 +5,7 @@ import { findCommand, readDescriptor } from '../src/core/services/projects/descr
 import { recordsRootFor } from '../src/core/services/projects/discovery';
 import { REAL_COKE as COKE, cokeMissing, describeWith } from './realCheckouts';
 
-/**
- * The services against a real checkout, not a fixture.
- *
- * Unit tests prove each piece behaves. This proves the pieces agree with an
- * actual product repository -- that the descriptor Coke ships parses, and that
- * the records root lands where the repository's own handoff gate already looks.
- */
+/** Unit tests prove each piece behaves; this proves the pieces agree with an actual product repository. */
 describeWith(cokeMissing, 'against the real Coke checkout', () => {
 	it('parses the descriptor Coke ships', () => {
 		const descriptor = readDescriptor(COKE);
@@ -36,10 +30,7 @@ describeWith(cokeMissing, 'against the real Coke checkout', () => {
 	});
 });
 
-/**
- * How every agent reaches the shared rules (09, "any agent"): the product's entry points, read from the checkout, and that
- * what they point at is there. A pointer that names a file that is not there sends an agent to nothing, silently.
- */
+/** A pointer that names a file that is not there sends an agent to nothing, silently. */
 describeWith(cokeMissing, 'the entry points of the real Coke checkout', () => {
 	const text = (path: string) => readFileSync(join(COKE, path), 'utf8');
 	const entries = ['AGENTS.md', 'CLAUDE.md'];

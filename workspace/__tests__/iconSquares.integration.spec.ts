@@ -12,12 +12,7 @@ import { Toggle } from '../src/ui/Toggle';
 import { NO_CHROME, inChrome } from './realChrome';
 import { panelCss } from './panelStyles';
 
-/**
- * An icon alone is a square, in the browser on this machine with the real stylesheets: every kind the kit draws (an icon
- * button and its small size, a menu's button, a button with only an icon, an icon toggle's options), on the panel's page and on
- * the review bar's, in a row too narrow for them, which must not squeeze them. The default ones are the search box's height, so a
- * row of them and a search box line up.
- */
+/** Measured in a row too narrow for them, which must not squeeze them out of square. */
 
 const viewer = readFileSync(join(__dirname, '..', 'src/viewer/viewer.css'), 'utf8').replace(/@import[^;]+;/g, '');
 const noop = () => undefined;
@@ -78,7 +73,6 @@ describe.skipIf(NO_CHROME)('an icon alone, in the browser on this machine', () =
 			});
 		});
 		expect(sizes.alone.length).toBe(9);
-		// Square: the same on both sides, each.
 		expect(sizes.alone.filter((a) => a.w !== a.h)).toEqual([]);
 		for (const a of sizes.alone) {
 			const small = /-small/.test(a.what);

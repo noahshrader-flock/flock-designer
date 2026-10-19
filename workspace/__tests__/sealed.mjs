@@ -1,11 +1,10 @@
 /**
- * The world every test and every hand check from this repository runs in, so none can reach the person's settings or
- * remotes, whoever writes it: a home of its own (the CLI's data folder, `gh`'s and any tool's settings are in it), no GitHub
- * token, a `gh` first on the PATH that refuses whatever it is asked, and git's own configuration (`gitconfig`), which also
- * sends every push to GitHub to a path that is not a repository. A test that needs `gh` puts its own stand-in first.
+ * So no test or hand check can reach the person's settings or remotes: a home of its own, no GitHub token, a `gh` first on
+ * the PATH that refuses everything, and `gitconfig`, which sends every push to GitHub to a path that is not a repository.
+ * A test that needs `gh` puts its own stand-in first.
  *
- * One exception, asked for by name: a run of the real agent (`DSNR_REAL_AGENT=1`, which costs money and is never run by
- * `check`) keeps the person's home, where Claude Code is signed in. `gh` and pushes are refused all the same.
+ * One exception: `DSNR_REAL_AGENT=1` (costs money, never run by `check`) keeps the person's home, where Claude Code is
+ * signed in. `gh` and pushes are refused all the same.
  */
 import { chmodSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -17,10 +16,7 @@ export const NOT_FAKED = 'not faked';
 
 const GITCONFIG = fileURLToPath(new URL('./gitconfig', import.meta.url));
 
-/**
- * The environment, made in `base` (a new temporary folder unless one is given, as the dev window keeps its own): what to
- * set over the person's, `GH_TOKEN` and `GITHUB_TOKEN` emptied, which `gh` and every library read as none.
- */
+/** What to set over the person's environment. `GH_TOKEN` and `GITHUB_TOKEN` are emptied, which `gh` and every library read as none. */
 export const sealedEnv = ({ base = mkdtempSync(join(tmpdir(), 'dsnr-sealed-')), path = process.env.PATH ?? '' } = {}) => {
 	const home = join(base, 'home');
 	const bin = join(base, 'bin');

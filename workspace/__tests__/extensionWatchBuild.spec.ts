@@ -1,12 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { watchBuild } from '../extension/src/watchBuild';
 
-/**
- * A prototype that Claude Code builds is saved by DSNR once it is built: the core is asked each time (`saveBuilt`, which
- * knows from its source and page whether there is a build to save), and the list is told when it saved, so the picture on
- * its card is drawn without anyone opening it. Time is the test's own.
- */
-
 const world = (answers: ('saved' | 'waiting' | Error)[] = []) => {
 	let now = 1_000_000;
 	const saveBuilt = vi.fn(async () => {

@@ -3,10 +3,7 @@ import { join, relative } from 'node:path';
 
 const workspace = join(__dirname, '..');
 
-/**
- * The published page's viewer's own components, as text, for the guards that hold a rule across every screen: every `.tsx`
- * in it, by its path from the workspace. `except` leaves out the files that are the one place a thing is made.
- */
+/** `except` leaves out the files that are the one place a thing is made. */
 export const windowSources = (...except: string[]): { path: string; text: string }[] => {
 	const files = (dir: string): string[] =>
 		readdirSync(dir).flatMap((n) => (statSync(join(dir, n)).isDirectory() ? files(join(dir, n)) : n.endsWith('.tsx') ? [join(dir, n)] : []));

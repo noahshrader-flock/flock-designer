@@ -3,8 +3,6 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { AVATAR_XS_PX, initialOf, isAvatarUrl } from '../src/shared/avatar';
 
-/** A person, drawn as their picture (the comments' cards and pins). */
-
 describe('the letter that stands in for a picture', () => {
 	it('is the first letter of the name, in capitals, whatever the name begins with', () => {
 		expect(initialOf('noah')).toBe('N');

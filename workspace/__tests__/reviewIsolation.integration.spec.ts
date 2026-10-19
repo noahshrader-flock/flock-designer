@@ -12,13 +12,8 @@ import { buildSite } from '../src/site/buildSite';
 import { serveSite } from '../src/site/serveSite';
 
 /**
- * A hostile prototype in a review, in the real browser (the README's Review isolation), nested as VS Code nests it: DSNR's
- * review tab (its own page, with a stand-in for VS Code's API), the review bar's page built by the site builder and served
- * by this machine's server, and the prototype's page in it. The prototype tries to read and rewrite the bar, read its
- * storage, ask the extension to Address a comment, answer the bar as if it were VS Code (from ten frames down too), open its
- * own copy on the bar's address, and take the whole window away.
- * On the pages' own address, none of it works and the prototype still works as itself. The published site, where the page is
- * beside its bar with no origin of its own, is proved below.
+ * The README's Review isolation, nested as VS Code nests it: DSNR's review tab (with a stand-in for VS Code's API), the
+ * review bar's page built by the site builder, and the hostile prototype's page in it.
  */
 
 const HOSTILE = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Hostile</title></head><body><main><h1>Alerts</h1></main><script>
@@ -57,7 +52,7 @@ if (location.search.includes('copy')) {
 }
 </script></body></html>`;
 
-/** The bar's page, standing in: it notes what its parent (the review tab) passes it, which should be VS Code's alone. */
+/** Notes what its parent (the review tab) passes it, which should be VS Code's alone. */
 const VIEWER = `window.heard = []; addEventListener('message', (e) => { if (e.source === parent) heard.push(e.data); });`;
 
 let root: string;
@@ -68,7 +63,6 @@ const record = (id: string) => [
 	{ projectId: id, name: 'v1', branch: `prototype/${id}/v1`, commit: null, note: '', createdAt: '2026-10-01T10:00:00Z' },
 ];
 
-/** A design repository with two hostile prototypes, built as a review site, its pages on the pages' address or not. */
 const site = async (separate: boolean): Promise<string> => {
 	const design = join(root, separate ? 'apart' : 'together', 'flock-designer');
 	const viewer = join(root, separate ? 'apart' : 'together', 'viewer');
@@ -101,8 +95,7 @@ const open: Server[] = [];
 beforeAll(async () => {
 	root = mkdtempSync(join(tmpdir(), 'dsnr-isolation-'));
 	server = new PrototypeServer();
-	// The review tab's page, as VS Code shows it: served from an address of its own, framing the bar, and framed by VS
-	// Code's host frame on that same address (`/host`), which posts the extension's messages into it.
+	// As VS Code shows the tab: framed by a host frame on the same address (`/host`), which posts the extension's messages into it.
 	tabs = createServer((req, res) => {
 		const at = new URL(req.url ?? '/', 'http://x');
 		if (at.pathname === '/favicon.ico') return void res.writeHead(404).end();
@@ -123,10 +116,6 @@ afterAll(async () => {
 	rmSync(root, { recursive: true, force: true });
 });
 
-/**
- * A review tab open on `bar`, once the hostile page has made each of its `steps`: what it managed, what reached VS Code,
- * what reached the bar, and where the tab ended.
- */
 const review = (bar: string, steps: string[]) =>
 	inChrome(async (browser) => {
 		const tab = await browser.newPage();
@@ -136,8 +125,7 @@ const review = (bar: string, steps: string[]) =>
 			if (m.text().startsWith('HOSTILE ')) tried = JSON.parse(m.text().slice('HOSTILE '.length));
 			if (m.text().startsWith('DONE ')) made.add(m.text().slice('DONE '.length));
 		});
-		// VS Code's API in the tab, standing in: what the tab passes up to the extension. And, as VS Code's own script does,
-		// the tab's `parent` and `top` are the tab itself.
+		// As VS Code's own script does, the tab's `parent` and `top` are the tab itself.
 		await tab.evaluateOnNewDocument((tabsOrigin: string) => {
 			if (location.origin !== tabsOrigin || location.pathname !== '/') return;
 			const w = window as unknown as { toExtension: unknown[]; acquireVsCodeApi: () => unknown; parent: unknown; top: unknown };
@@ -152,7 +140,6 @@ const review = (bar: string, steps: string[]) =>
 			if (Date.now() > until) throw new Error(`the hostile page made only ${[...made].join(', ') || 'nothing'} of ${steps.join(', ')}`);
 			await new Promise((r) => setTimeout(r, 50));
 		}
-		// VS Code answers, as its host frame does: into the tab, on its own origin.
 		await tab.evaluate(() =>
 			(document.getElementById('tab') as HTMLIFrameElement).contentWindow?.postMessage(
 				{ dsnr: 'answer', id: 1, result: { ok: true, value: 'from VS Code' } },
@@ -178,7 +165,6 @@ const review = (bar: string, steps: string[]) =>
 		return { tried, toExtension: ended, heard, owned, copied, made, hijacked: at.includes('hijacked'), pageAt };
 	});
 
-/** What the hostile page does in every review, before what is asked of it is read. */
 const STEPS = ['deep', 'copy loaded'];
 
 describe.skipIf(NO_CHROME)('a hostile prototype in a review, in the real browser', () => {
@@ -190,9 +176,8 @@ describe.skipIf(NO_CHROME)('a hostile prototype in a review, in the real browser
 		expect(r.tried['its own cookie']).toBe('allowed: mine=1');
 		expect(r.tried['its own storage']).toBe('allowed: v');
 		expect(r.owned).toBeNull();
-		// Nothing it sent the tab went up to the extension, or down to the bar as if VS Code had said it, however deep.
 		expect(r.toExtension).toEqual([]);
-		// What the bar heard from the tab is its own, and only its: hello, VS Code's theme (none set outside VS Code), and the one answer.
+		// Only the tab's own messages: no theme colours are set outside VS Code.
 		expect(r.heard).toEqual([
 			{ dsnr: 'hello' },
 			{ dsnr: 'scheme', theme: { kind: 'vscode-light', colors: {} } },
@@ -201,17 +186,12 @@ describe.skipIf(NO_CHROME)('a hostile prototype in a review, in the real browser
 		// Its copy on the bar's address is not served there, so never runs.
 		expect(r.made.has('copy ran')).toBe(false);
 		expect(r.copied).toBeNull();
-		// Nor can it take the whole window away.
 		const beta = await review(`${base}beta/v1/`, [...STEPS, 'hijack']);
 		expect(beta.hijacked).toBe(false);
 	}, 90_000);
 });
 
-/**
- * The published site: the bar's page opened in the browser as a reviewer opens a link, the
- * prototype beside it on the same address, framed with no origin of its own. The bar keeps the person's token in its own
- * storage; the hostile page must reach none of it, and still have its own storage and cookie (the agent's stand-ins).
- */
+/** The bar keeps the person's token in its own storage; the hostile page beside it must reach none of it. */
 const published = (bar: string, steps: string[]) =>
 	inChrome(async (browser) => {
 		const tab = await browser.newPage();
@@ -221,7 +201,6 @@ const published = (bar: string, steps: string[]) =>
 			if (m.text().startsWith('HOSTILE ')) tried = JSON.parse(m.text().slice('HOSTILE '.length));
 			if (m.text().startsWith('DONE ')) made.add(m.text().slice('DONE '.length));
 		});
-		// The token, kept where the bar keeps it, before the page is opened.
 		await tab.evaluateOnNewDocument(() => {
 			if (window === top) localStorage.setItem('dsnr.github-token', 'the-token');
 		});

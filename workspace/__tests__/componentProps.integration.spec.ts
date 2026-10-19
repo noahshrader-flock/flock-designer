@@ -4,10 +4,6 @@ import { dirname, join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { programFor, propsOf, typeLibs } from '../src/core/services/designSystem/componentProps';
 
-/**
- * A component's declared props, read by the TypeScript compiler from a small library written here, with React's own
- * types: the cases its props declare, whatever the component is made with, and why the rest cannot be varied.
- */
 const LIBRARY: Record<string, string> = {
 	'tsconfig.json': JSON.stringify({ compilerOptions: { baseUrl: '.', paths: { '@/*': ['src/*'] }, jsx: 'react-jsx', strict: true } }),
 	'src/Button.tsx': `import * as React from 'react';
@@ -50,7 +46,6 @@ beforeAll(async () => {
 		mkdirSync(dirname(join(root, path)), { recursive: true });
 		writeFileSync(join(root, path), text);
 	}
-	// React and its types, as a library has them installed.
 	mkdirSync(join(root, 'node_modules', '@types'), { recursive: true });
 	for (const p of ['react', '@types/react', 'csstype'])
 		symlinkSync(join(__dirname, '..', 'node_modules', p), join(root, 'node_modules', p), 'junction');

@@ -5,10 +5,7 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { unfinishedWork } from '../src/core/services/codebase/checkoutClean';
 
-/**
- * Process changes starts Claude Code only on a design system checkout with no unfinished work, so
- * its edits never mix with the person's: each case against a real repository.
- */
+/** Claude Code starts only on a checkout with no unfinished work, so its edits never mix with the person's. */
 
 let root: string;
 const g = (...args: string[]) => execFileSync('git', args, { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });

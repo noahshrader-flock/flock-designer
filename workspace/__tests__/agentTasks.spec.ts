@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { guidePart, handoffTask, buildInCodebaseTask, prototypeAddressTask, prototypeBuildTask } from '../src/core/services/agent/agentTasks';
 
-/** The builder's guide, as every task carries it (`guidePart`). */
 const GUIDE = guidePart('# Building UI in a Flock product\n\n1. **Hard rules:** `../standards/non-negotiables.md`.', '/d');
 
 const parts = {
@@ -12,7 +11,6 @@ const parts = {
 	voice: '## Voice and tone\n\nCalm.',
 };
 
-/** Where each part is in a task, in the order every run in a checkout is meant to have them. */
 const order = (task: string) =>
 	["This product's light check", '## Also yours to read', '## Accessibility', '## Voice and tone'].map((part) => task.indexOf(part));
 

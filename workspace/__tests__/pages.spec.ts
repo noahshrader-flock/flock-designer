@@ -15,18 +15,12 @@ import {
 	whyPublic,
 } from '../src/core/services/publishing/pages';
 
-/**
- * Publishing a prototype to its page, against a fake GitHub. What matters most is what it will
- * not do: hand out a link to a site anyone can open, unless the person said in so many words that this is a test.
- */
+/** What matters most is what it will not do: hand out a link to a site anyone can open, unless told this is a test. */
 
 const REF = { owner: 'acme', repo: 'design' };
 const SITE = 'https://acme.github.io/design/';
 
-/**
- * GitHub as its API answers. Runs appear one poll after the dispatch, and finish on the next. `more` replaces any of its
- * routes, for a test of one refusal.
- */
+/** Runs appear one poll after the dispatch, and finish on the next. */
 const fakeSite = (
 	{ repoPrivate = true, sitePublic = false, pages = true, conclusion = 'success', workflow = true, onSite = true as boolean | 'no-deploy' } = {},
 	more: Record<string, Answer> = {},
@@ -38,7 +32,6 @@ const fakeSite = (
 	return fakeGitHub({
 		'/repos/acme/design': { private: repoPrivate, visibility: repoPrivate ? 'private' : 'public', default_branch: 'main' },
 		'/repos/acme/design/pages': pages ? { html_url: SITE, public: sitePublic, build_type: 'workflow' } : notFound,
-		// What the site was last built from, and whether this page was in it.
 		'/repos/acme/design/deployments?*': onSite === 'no-deploy' ? [] : [{ id: 6, sha: 'd'.repeat(40) }],
 		'/repos/acme/design/deployments/6/statuses?per_page=1': [{ state: 'success' }],
 		'/repos/acme/design/commits?*': onSite === true ? [{ sha: 'c'.repeat(40) }] : [],
@@ -104,7 +97,6 @@ describe('publishing', () => {
 		expect(await run(fakeSite()).done).toMatchObject({ first: false });
 		expect(await run(fakeSite({ onSite: false })).done).toMatchObject({ first: true });
 		expect(await run(fakeSite({ onSite: 'no-deploy' })).done).toMatchObject({ first: true });
-		// Asked of the last deploy, with the commits that touched this page.
 		const gh = fakeSite({ onSite: false });
 		await run(gh).done;
 		const asked = new URLSearchParams(gh.calls.find((c) => c.path.startsWith('/repos/acme/design/commits?'))?.path.split('?')[1]);
@@ -204,7 +196,6 @@ describe('the workflow that deploys the site', () => {
 });
 
 describe('whether a version is on its page', () => {
-	/** GitHub with a site deployed from `deployed`, and the page last changed in `changed`. */
 	const site = ({
 		deployed = 'd'.repeat(40),
 		changed = 'c'.repeat(40) as string | null,
@@ -234,7 +225,6 @@ describe('whether a version is on its page', () => {
 
 	it('is published when the last deploy includes the last change to its page, with a link that names that deploy', async () => {
 		expect(await status(site())).toEqual({ state: 'published', url: `${SITE}demo/v1/?v=ddddddd` });
-		// The one still deploying is not counted: it may yet fail.
 	});
 
 	it('is not published yet when its page changed after the last deploy, or was never pushed', async () => {

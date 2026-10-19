@@ -5,10 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { syncRecords } from '../src/core/services/publishing/designSync';
 import { madeOnce } from './fixtures';
 
-/**
- * The real thing, against real repositories: a bare "GitHub", this machine's clone, and a teammate's
- * clone. Mocking git here would test the mock; what matters is what git actually does.
- */
+/** Real repositories, not a mocked git: mocking git here would test the mock. */
 
 let dir: string;
 let remote: string;
@@ -42,7 +39,6 @@ const commitAll = (root: string, msg: string) => {
 	git(root, 'commit', '-q', '-m', msg);
 };
 
-// The three repositories every test starts with: a bare remote, this machine's clone and a teammate's.
 madeOnce((d) => {
 	dir = d;
 	remote = join(dir, 'remote.git');
@@ -211,9 +207,9 @@ describe('when someone else has published too', () => {
 		expect(r.published).toEqual([]);
 		expect(r.problems[0]?.why).toMatch(/projects\/p\/brief\.md changed both here and on GitHub/);
 		expect(r.problems[0]?.why).toMatch(/Nothing was lost/);
-		expect(onRemote('projects/p/brief.md')).toBe('# P, teammate version'); // GitHub untouched
-		expect(readFileSync(join(mine, 'projects/p/brief.md'), 'utf8')).toBe('# P, my version\n'); // mine intact, no markers
-		expect(existsSync(join(mine, '.git', 'rebase-merge'))).toBe(false); // not left half-done
+		expect(onRemote('projects/p/brief.md')).toBe('# P, teammate version');
+		expect(readFileSync(join(mine, 'projects/p/brief.md'), 'utf8')).toBe('# P, my version\n');
+		expect(existsSync(join(mine, '.git', 'rebase-merge'))).toBe(false);
 		expect(git(mine, 'diff', '--name-only', '--diff-filter=U')).toBe('');
 	});
 });
@@ -231,9 +227,9 @@ describe('what it refuses to publish', () => {
 		expect(r.problems[0]?.why).not.toMatch(/workspace\/app\.ts/);
 		expect(r.problems[0]?.why).toMatch(/Records are held back/);
 		expect(remoteHas('workspace/app.ts')).toBe(false);
-		expect(onRemote('projects/p/brief.md')).toBe('# P'); // not even the record went
-		expect(git(mine, 'log', '-1', '--format=%s')).toBe('app change, not for auto-publishing'); // nothing added to their branch
-		expect(readFileSync(join(mine, 'projects/p/brief.md'), 'utf8')).toBe('# P, edited\n'); // the record kept, ready
+		expect(onRemote('projects/p/brief.md')).toBe('# P');
+		expect(git(mine, 'log', '-1', '--format=%s')).toBe('app change, not for auto-publishing');
+		expect(readFileSync(join(mine, 'projects/p/brief.md'), 'utf8')).toBe('# P, edited\n');
 	});
 
 	it("never rewrites the person's own commits, even when a teammate has published since", async () => {
@@ -254,7 +250,7 @@ describe('what it refuses to publish', () => {
 		commitAll(mine, 'app change');
 		write(mine, 'projects/p/brief.md', '# P, edited\n');
 		await syncRecords(mine);
-		git(mine, 'push', '-q', 'origin', 'HEAD:main'); // the person pushes their own work
+		git(mine, 'push', '-q', 'origin', 'HEAD:main');
 		write(mine, 'projects/p/brief.md', '# P, edited again\n');
 		expect((await syncRecords(mine)).problems).toEqual([]);
 		expect(onRemote('projects/p/brief.md')).toBe('# P, edited again');
@@ -287,7 +283,7 @@ describe('a record that is not valid', () => {
 		const r = await syncRecords(mine);
 		expect(r.published).toEqual([]);
 		expect(r.problems[0]?.why).toMatch(/projects\/p\/work\.json is not a valid record/);
-		expect(JSON.parse(onRemote('projects/p/work.json'))[0].name).toBe('v1'); // GitHub's copy is still the good one
+		expect(JSON.parse(onRemote('projects/p/work.json'))[0].name).toBe('v1');
 	});
 
 	it('does not hold up a good project because another one is broken', async () => {

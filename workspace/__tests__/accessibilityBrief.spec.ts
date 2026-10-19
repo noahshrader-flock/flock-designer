@@ -4,11 +4,6 @@ import { describe, expect, it } from 'vitest';
 import { BRIEF_SECTIONS, accessibilityBrief, appPages, declaredTarget } from '../src/core/services/accessibility/accessibilityBrief';
 import type { AccessibilityIssue } from '../src/shared/contract';
 
-/**
- * What every agent task says about accessibility: the product's target, read from
- * its manifest, and the rules, read from the one standard. Against Coke's own manifest section and the real standard.
- */
-
 const COKE = readFileSync(join(__dirname, 'fixtures/coke-manifest.md'), 'utf8');
 const STANDARD = readFileSync(join(__dirname, '../../standards/universal/accessibility.md'), 'utf8');
 
@@ -84,7 +79,6 @@ describe('the accessibility section of a task', () => {
 		for (const heading of BRIEF_SECTIONS) expect(STANDARD, `the standard has no "## ${heading}"`).toContain(`\n## ${heading}\n`);
 		const brief = accessibilityBrief({ standard: STANDARD, target: declaredTarget(COKE, 'Coke') });
 		for (const heading of BRIEF_SECTIONS) expect(brief).toContain(`\n### ${heading}\n`);
-		// One level down throughout, under the task's own heading.
 		expect(brief).toContain('\n#### Names\n');
 		expect(brief).toContain('A bypass is never a pass');
 		expect(brief).not.toContain('## Conformance target');
@@ -151,11 +145,10 @@ describe('the accessibility section of a task', () => {
 		});
 		expect(brief).toContain("### What the prototype's check left open");
 		expect(brief).toContain('Fix each in the code, or say in the audit why not. None is dropped by the move.');
-		// Each element it lists, by its selector and what to change, so the agent finds it; the rest counted.
+		// Each element by its selector, so the agent finds it.
 		expect(brief).toContain(
 			'- **image-alt** (WCAG 1.1.1): Images must have alternate text. 2 elements.\n  - `img.hero`: Fix any of the following: Element does not have an alt attribute\n  - and 1 more element',
 		);
-		// Best practice, said apart: never counted as WCAG.
 		expect(brief).toContain('Best practice, beyond WCAG:\n- **heading-order**: Heading levels should only increase by one. 1 element.');
 		expect(brief).toContain(
 			'To review:\n- **color-contrast** (WCAG 1.4.3): Elements must meet minimum color contrast. 1 element, in default, empty.',

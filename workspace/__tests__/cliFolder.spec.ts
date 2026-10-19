@@ -4,11 +4,6 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { cliDataFolder, commandLinePrototypes, tellCommandLine } from '../src/core/services/platform/cliFolder';
 
-/**
- * One set of prototypes for the panel and the `dsnr` command: the extension says in the command's
- * folder where it builds them, and the command builds them there too.
- */
-
 let dir: string;
 beforeEach(() => void (dir = mkdtempSync(join(tmpdir(), 'dsnr-cli-folder-'))));
 afterEach(() => rmSync(dir, { recursive: true, force: true }));

@@ -9,12 +9,6 @@ import { SAMPLE_CATALOG } from './extensionSamples';
 import { answer, answerOf, button, calls, callsOf, lastAsk, mountPage, press, say, sent, share, shareCatalog, type, unmount } from './webviewHarness';
 import { ASK_EVERY_MS } from '../extension/webview/hooks/ask';
 
-/**
- * The design system's tabs in the editor: a component's, its stories live and what it is
- * made from, and Primitives, the design system drawn whole. Each reads the design system shown through the bridge, as the
- * panel does, and is told the change being tried by the extension.
- */
-
 const BUTTON = 'src/components/FSButton/FSButton.stories.tsx';
 const BASE = 'http://127.0.0.1:4321/previews-abc/';
 
@@ -62,7 +56,6 @@ describe('a component’s tab', () => {
 		const [header, layout] = [page.querySelector('.tab-header'), page.querySelector('.component-layout')];
 		expect(header?.parentElement).toBe(page);
 		expect(layout?.parentElement).toBe(page);
-		// Two panes, each its own scroll in the stylesheet, and the header outside both.
 		expect([...layout!.children].map((c) => c.className)).toEqual(['component-stories', 'component-aside']);
 		expect(layout!.contains(header!)).toBe(false);
 	});
@@ -106,7 +99,6 @@ describe('a component’s tab', () => {
 		const branch = 'dsnr/handoff-20261017-ab12';
 		await shareCatalog({ ...SAMPLE_CATALOG, commit: 'f00d42', showing: branch } as Catalog);
 		expect(document.querySelector('[data-showing]')?.textContent).toContain(`Showing ${branch}, Claude Code’s branch, not develop.`);
-		// Its stories are built, and what its column says is asked, on the commit shown.
 		expect(document.querySelector('.stories')).toBeNull();
 		expect(calls('componentTokens').length).toBeGreaterThan(tokensAsked);
 		await press(button('Show develop'));
@@ -148,7 +140,6 @@ describe('a component’s tab', () => {
 		await say(forged, { source: inner?.contentWindow ?? null, origin: 'null' });
 		outer.remove();
 		expect(calls('storyPreview')).toHaveLength(1);
-		// What the extension says is still heard.
 		await say(forged);
 		expect(calls('storyPreview')).toHaveLength(2);
 	});
@@ -163,9 +154,7 @@ describe('a component’s tab', () => {
 		expect(calls('storyPreview')).toHaveLength(2);
 	});
 
-	/** What the analysis of FSButton found: the tokens it draws with and how often, the values it sets itself, and what axe found. */
 	const STORY = (name: string) => `src/components/${name}/${name}.stories.tsx`;
-	/** Each value's instances, by key, as the analysis gives them: one key per instance, named by its row and variant. */
 	const targeted = (values: {
 		state: string;
 		rows?: Record<string, { property: string; by?: string | null; cells: { variant: string | null; instances: number; of?: unknown }[] }[] | null>;
@@ -179,7 +168,7 @@ describe('a component’s tab', () => {
 							mode,
 							rows?.map((row) => ({
 								...row,
-								// And what each is drawn with, as the reader says it, for a row told apart by one prop: its variant is that prop's value.
+								// For a row told apart by one prop, each cell's variant is that prop's value, as the reader says it.
 								cells: row.cells.map((c) => ({
 									...c,
 									targets: Array.from({ length: c.instances }, (_, i) => `${row.property}:${c.variant}:${i}`),
@@ -286,7 +275,6 @@ describe('a component’s tab', () => {
 						},
 						{ property: 'fontSize', by: null, cells: [{ variant: null, value: '16px', kind: 'unchecked', tokens: [], instances: 12 }] },
 					],
-					// Dark: the same stories, a background that is the Dark token, and a height that does not change with the theme.
 					dark: [
 						{
 							property: 'height',
@@ -321,7 +309,6 @@ describe('a component’s tab', () => {
 		await answer('componentTokens', analysis(over));
 	};
 	const section = (label: string) => document.querySelector(`[aria-label="${label}"]`) as HTMLElement | null;
-	/** Its Changes dialog, opened from the button in its header: what is tried is there, not in the column. */
 	const openChanges = async () => {
 		if (!document.querySelector('[role="dialog"][aria-label="Changes"]'))
 			await press(document.querySelector('.tab-header .button-row button') as HTMLElement);
@@ -334,20 +321,16 @@ describe('a component’s tab', () => {
 			'Tokens',
 			'Accessibility',
 		]);
-		// Each part's title is what names it, and what stays at the top of the pane while the part is in view.
 		expect([...document.querySelectorAll('.component-aside > section > .aside-heading > h2')].map((h) => h.textContent)).toEqual([
 			'Styles',
 			'Tokens',
 			'Accessibility',
 		]);
-		// Open, with no accordion to open: the tokens are there.
 		expect(document.querySelector('.component-aside details.aside-disclosure')).toBeNull();
 		expect(section('Tokens')?.querySelector('[data-token]')).not.toBeNull();
-		// The sixth, its name and links, is the header above.
 		expect(document.querySelector('.heading-page')?.textContent).toBe('FSButton');
 	});
 
-	/** Chooses the variant shown with a prop's picker: a value from its dropdown, or its switch pressed. */
 	const pick = async (prop: string, value: string) => {
 		const select = document.querySelector(`[data-picker="${prop}"] select`) as HTMLSelectElement;
 		await act(async () => {
@@ -363,9 +346,7 @@ describe('a component’s tab', () => {
 	it('lays its values out as an inspector: a picker for each prop they are told apart by, then a row a value in its group', async () => {
 		await analysed();
 		const values = section('Styles')!;
-		// What the stories drew, on which version, is not said above the values: the rows are the answer.
 		expect(values.querySelector('[data-values-from]')).toBeNull();
-		// Light until dark is chosen, and chosen in the panel: the tab has no switch of its own.
 		expect(values.querySelector('[role="radio"]')).toBeNull();
 		expect([...values.querySelectorAll('[data-picker]')].map((p) => p.getAttribute('data-picker'))).toEqual(['size', 'variant']);
 		expect([...values.querySelectorAll('[data-picker] label')].map((l) => l.textContent)).toEqual(['Size', 'Variant']);
@@ -381,37 +362,30 @@ describe('a component’s tab', () => {
 			'radius',
 			'background',
 		]);
-		// One value a row, for the variant it opens on (each prop's first drawn): its property's name on the left, its value on the right.
 		expect(shownIn('height').map((c) => c.textContent)).toEqual(['Height28px']);
 		await pick('size', 'lg');
 		expect(shownIn('height').map((c) => c.textContent)).toEqual(['Height48px']);
-		// The component's own is the default: nothing is said of it.
 		expect(shownIn('height')[0]?.querySelector('[data-value-kind]')).toBeNull();
 	});
 
-	/** A colour's dot in a row of the inspector: the only thing said of the colour in the row, and what opens its control. */
 	const dotOf = (cell: Element | undefined) => cell?.querySelector('.color-dot') as HTMLElement;
 
 	it('says nothing on a colour’s dot but the token’s name, in Values and in Tokens used: no hex, no line more, and nothing at all for a colour that is no token', async () => {
 		await analysed();
 		const dots = [...document.querySelectorAll<HTMLElement>('.color-dot')];
-		// Values' colours, and Tokens used's, so both are held to it.
 		expect(dots.some((d) => d.closest('[aria-label="Styles"]'))).toBe(true);
 		expect(dots.some((d) => d.closest('[aria-label="Tokens"]'))).toBe(true);
-		// One line each, and a name: never a hex, nor where else it is used, nor what it points at.
 		for (const d of dots) expect(d.title, d.getAttribute('aria-label') ?? '').toMatch(/^(|(Light|Dark) [A-Za-z ]+)$/);
 	});
 
 	it('says which token a value is by its name where its number would be, with where else it is used on hover; a colour is only its dot, whose hover is the token’s name; or its number, its own or not checked', async () => {
 		await analysed();
 		const radius = shownIn('radius')[0]?.querySelector('button') as HTMLElement;
-		// A token is its name on the right, not its number, and no chip after the label.
 		expect(radius.textContent).toBe('RadiusRadius');
 		expect(radius.querySelector('.value-drawn')?.textContent).toBe('Radius');
 		expect(radius.querySelector('.value-token')?.textContent).toBe('Radius');
 		expect(radius.querySelector('.value-chip')).toBeNull();
 		expect(radius.title).toContain('Radius · also FSIconButton, FSSplitButton');
-		// A colour is its label and its dot: no chip, no swatch beside text, no hex. The dot's hover is the token's name, and only that.
 		const [fill] = shownIn('background');
 		expect(fill?.textContent).toBe('Background');
 		expect(fill?.querySelector('.value-chip')).toBeNull();
@@ -421,7 +395,6 @@ describe('a component’s tab', () => {
 		expect(dotOf(fill).title).toBe('Light primary main');
 		expect(dotOf(fill).getAttribute('aria-description')).toBe(dotOf(fill).title);
 		expect((dotOf(fill).querySelector('[data-swatch]') as HTMLElement).style.backgroundColor).toBe('rgb(16, 128, 98)');
-		// A colour that draws nothing is said as none, with no dot and no chip.
 		await pick('variant', 'ghost');
 		expect(shownIn('background').map((c) => c.textContent)).toEqual(['Backgroundnone']);
 		const size = shownIn('fontSize')[0] as HTMLElement;
@@ -445,9 +418,7 @@ describe('a component’s tab', () => {
 		expect(dotOf(shownIn('text')[0]).title).toBe('Light primary main');
 		await pick('variant', 'hover');
 		expect(shownIn('text').map((c) => c.textContent)).toEqual(['Text color']);
-		// Not a token, so no name to say: nothing, and its hex is for its control.
 		expect(dotOf(shownIn('text')[0]).hasAttribute('title')).toBe(false);
-		// The background was never drawn hovered: said, never guessed.
 		const background = section('Styles')?.querySelector('[data-value-row="background"]') as HTMLElement;
 		expect(background.hasAttribute('data-not-drawn')).toBe(true);
 		expect(background.textContent).toBe('BackgroundNot drawn with this');
@@ -501,7 +472,6 @@ describe('a component’s tab', () => {
 			property: 'radius',
 			by: 'shape',
 			cells: [
-				// As Values reads them: written short, a corner that makes its end round said as full.
 				{ variant: 'pill', value: 'full', kind: 'own', tokens: [], instances: 1 },
 				{ variant: 'square', value: '6px', kind: 'own', tokens: [], instances: 1 },
 			],
@@ -590,7 +560,6 @@ describe('a component’s tab', () => {
 		await analysed();
 		const used = section('Tokens')!;
 		expect(used.querySelector('details')).toBeNull();
-		// Every token Made from and Color tokens listed, colours with the rest: one list.
 		expect([...used.querySelectorAll('[data-token]')].map((t) => t.getAttribute('data-token'))).toEqual([
 			'palette.light.primary.main',
 			'palette.light.primary.contrastText',
@@ -599,10 +568,8 @@ describe('a component’s tab', () => {
 			'spacing',
 		]);
 		expect([...used.querySelectorAll('[data-tokens-used]')].map((c) => c.getAttribute('data-tokens-used'))).toEqual(['Color', 'Shape', 'Spacing']);
-		// A colour by its theme, then its role, as the Tokens tab lists it.
 		const color = used.querySelector('[data-tokens-used="Color"]') as HTMLElement;
 		expect([...color.querySelectorAll('[data-token-group]')].map((g) => g.getAttribute('data-token-group'))).toEqual(['Light', 'Dark']);
-		// A colour token is its name and only its dot: what it is, is the dot's hover, and no hex or reference is written beside it.
 		const primary = used.querySelector('[data-token="palette.light.primary.main"]') as HTMLElement;
 		expect(primary.querySelector('[data-part="name"]')?.textContent).toBe('main');
 		expect(primary.querySelector('[data-part="value"], [data-part="ref"]')).toBeNull();
@@ -616,7 +583,6 @@ describe('a component’s tab', () => {
 		expect(radius.querySelector('.info-tip')?.hasAttribute('tabindex')).toBe(false);
 		expect(radius.querySelector('[data-part="name"]')?.textContent).toBe('radius');
 		expect(radius.querySelector('[data-part="value"]')?.textContent).toBe('4px');
-		// How often it is used and by whom is behind an info icon beside its name, not a line under it.
 		expect(radius.querySelector('.info-tip')?.getAttribute('title')).toBe('5 uses · also FSIconButton, FSSplitButton');
 		expect(radius.querySelector('.info-tip')?.getAttribute('aria-label')).toBe('5 uses · also FSIconButton, FSSplitButton');
 		expect(used.querySelector('[data-token="spacing"] .info-tip')?.getAttribute('title')).toBe('4 uses · no other component');
@@ -626,7 +592,6 @@ describe('a component’s tab', () => {
 	it('opens a token’s own control from Tokens used, a colour’s as any other’s, as the panel’s row does, and closes it with its X', async () => {
 		await analysed();
 		for (const path of ['radius', 'palette.light.primary.main']) {
-			// A colour's control opens from its dot, any other's from its row.
 			await press(
 				section('Tokens')!.querySelector(`[data-token="${path}"] button.token-button, [data-token="${path}"] button.color-dot`) as HTMLElement,
 			);
@@ -654,14 +619,12 @@ describe('a component’s tab', () => {
 		expect(shown('color')).toHaveLength(8);
 		expect(shown('color')[0]).toContain('rgb(0, 0, 0)');
 		expect(shown('spacing')).toEqual(['13px1 use']);
-		// The other two are inside one that is closed until it is opened, said by how many.
 		const more = values.querySelector('[data-not-token-kind="color"] details') as HTMLDetailsElement;
 		expect(more.open).toBe(false);
 		expect(more.querySelector('summary')?.textContent).toBe('Show 2 more');
 		expect([...more.querySelectorAll('[data-not-token]')]).toHaveLength(2);
 		await press(more.querySelector('summary') as HTMLElement);
 		expect(more.open).toBe(true);
-		// What they are, and what is worked out from a token, is said once, behind the info icon by the heading, not in lines.
 		expect(values.querySelector('h3 .info-tip')?.getAttribute('title')).toBe(
 			'Not tokens, so they are changed in the design system, not here. 1 use is a shade worked out from a token, such as a hover’s darker color.',
 		);
@@ -681,7 +644,6 @@ describe('a component’s tab', () => {
 		expect(a11y.textContent).toContain('Left to check by hand: 2.4.7');
 		// What was checked and what is left to do: never what a check could not do, nor a pass.
 		expect(a11y.textContent).not.toMatch(/could not|cannot|unable|not a pass|a person|automated/i);
-		// A link, not a list that opens in the narrow column: the findings are not in the page until it is pressed.
 		expect(a11y.querySelector('details')).toBeNull();
 		const link = a11y.querySelector('button.link') as HTMLElement;
 		expect(link.textContent).toBe('Show the findings');
@@ -696,7 +658,6 @@ describe('a component’s tab', () => {
 		expect(details.textContent).not.toContain('Check this attribute');
 		expect(details.textContent).not.toMatch(/To review/);
 		expect(details.textContent).toContain('WCAG 1.4.3');
-		// Which element, and what to change on it; the rest counted.
 		const elements = details.querySelector('[data-issue-elements="color-contrast"]') as HTMLElement;
 		expect([...elements.querySelectorAll('li')].map((l) => l.textContent)).toEqual([
 			'button.ghost > span: Fix any of the following: Element has insufficient color contrast of 3.1',
@@ -706,7 +667,6 @@ describe('a component’s tab', () => {
 		const best = details.querySelector('[aria-label="Best practice, beyond WCAG"]') as HTMLElement;
 		expect(best.textContent).toContain('Heading levels should only increase by one');
 		expect(best.querySelector('[data-issue-elements="heading-order"] code')?.textContent).toBe('h4');
-		// Closed by its X, and the page is as it was.
 		await press(details.querySelector('[aria-label="Close"]') as HTMLElement);
 		expect(document.querySelector('[role="dialog"]')).toBeNull();
 		expect(a11y.querySelector('button.link')).not.toBeNull();
@@ -716,7 +676,6 @@ describe('a component’s tab', () => {
 		afterEach(() => void vi.useRealTimers());
 		const SMALL = { property: 'height' as const, value: '32px', targets: ['height:sm:0', 'height:sm:1', 'height:sm:2'] };
 		const ID = 'height\u0000height:sm:0\u0001height:sm:1\u0001height:sm:2';
-		/** The tab with Small's height tried at 32px. */
 		const tryingSmall = async () => {
 			await analysed();
 			await answer('storyPreview', { state: 'ready', base: BASE });
@@ -751,7 +710,6 @@ describe('a component’s tab', () => {
 			await type(slider, '12');
 			// Let go: a token's change is built, so it is made then, not as it moves.
 			await act(async () => void slider.dispatchEvent(new Event('pointerup', { bubbles: true })));
-			// Told to the extension, which keeps the change for every page: the panel's Changed, and its Save, have it.
 			expect(calls('setTokenEdits').at(-1)?.args).toEqual([[{ path: 'radius', value: '12px' }]]);
 			expect(changed()).toBeNull();
 		});
@@ -770,7 +728,6 @@ describe('a component’s tab', () => {
 			await press(changed().querySelector('[data-value-places] button') as HTMLElement);
 			expect(lastAsk()).toEqual(['openLibrarySource', ['src/utils/theme.ts', 158]]);
 			expect(changed().textContent).toContain('Saving writes 1 value where it is written, and nothing else.');
-			// And what writing it moves, as a token change's is said.
 			expect(section('Moved by these values')?.querySelector('[data-reach-summary]')?.textContent).toBe(
 				'It moves 1 component; 12 unchanged, in their stories drawn.',
 			);
@@ -816,10 +773,8 @@ describe('a component’s tab', () => {
 			expect(changed().querySelector('[data-value-agent]')?.textContent).toBe('Have the agent write it');
 			expect(calls('writeValue').at(-1)?.args).toEqual([BUTTON, SMALL]);
 			await answer('writeValue', null);
-			// Asked again once it is: being written, and asked again until it is.
 			await answer('valueSources', { state: 'ready', values: [{ id: ID, state: 'writing' }], reach: { state: 'none' } });
 			expect(changed().textContent).toContain('The agent is writing it…');
-			// Asked again while it writes.
 			const asks = calls('valueSources').length;
 			await act(async () => void (await vi.advanceTimersByTimeAsync(ASK_EVERY_MS)));
 			expect(calls('valueSources').length).toBe(asks + 1);
@@ -895,10 +850,8 @@ describe('a component’s tab', () => {
 			await openChanges();
 			expect(changed().querySelector('[data-value-change] .value-cell')?.textContent).toBe('Height · sm28px → 32px');
 			expect(calls('valueSources').at(-1)?.args).toEqual([BUTTON, [SMALL]]);
-			// Every value put back: the branch can be saved so, back as the library draws them, in the panel's Changes.
 			await press(button('Reset all'));
 			expect(changed().textContent).toContain('Every value is as the library draws it.');
-			// With nothing tried, the branch can still be reached: the button says so and can be pressed.
 			await press(document.querySelector('[role="dialog"][aria-label="Changes"] [aria-label="Close"]') as HTMLElement);
 			const count = document.querySelector('.tab-header .button-row button') as HTMLButtonElement;
 			expect(count.textContent).toBe('No changes');
@@ -939,14 +892,12 @@ describe('a component’s tab', () => {
 				},
 			},
 		};
-		/** The small print a Values section could carry about its variants: none is ever written there. */
 		const printed = () => section('Styles')?.textContent ?? '';
 
 		it('is asked for by the story file, and says nothing while it is being drawn', async () => {
 			await analysed();
 			expect(calls('componentVariants').at(-1)?.args).toEqual([BUTTON]);
 			expect(printed()).not.toMatch(/Reading its props|drawing it with each/);
-			// No section of its own: the pickers are where a variant is chosen.
 			expect(section('Every variant')).toBeNull();
 		});
 
@@ -955,7 +906,6 @@ describe('a component’s tab', () => {
 			await answer('componentVariants', READY);
 			const size = section('Styles')?.querySelector('[data-picker="size"] select') as HTMLSelectElement;
 			expect([...size.options].map((o) => o.textContent)).toEqual(['sm', 'md', 'lg', 'xl', '2xl']);
-			// Where its stories drew it, theirs, which can be tried.
 			expect(shownIn('height')[0]?.querySelector('button')).not.toBeNull();
 			await pick('size', '2xl');
 			const height = shownIn('height')[0] as HTMLElement;
@@ -963,8 +913,7 @@ describe('a component’s tab', () => {
 			expect(height.hasAttribute('data-still')).toBe(true);
 			expect(height.querySelector('button')).toBeNull();
 			expect(height.querySelector('[title]')?.getAttribute('title')).toContain('Drawn from its props');
-			// What cannot be varied (children, sx, a callback) is not said: no one chooses between those. What its story sets itself is an
-			// info icon on that picker's name, not a line under the pickers.
+			// What cannot be varied (children, sx, a callback) is not said: no one chooses between those.
 			expect(printed()).not.toMatch(/Not varied|sets variant itself/);
 			expect(section('Styles')?.querySelector('[data-picker="variant"] .info-tip')?.getAttribute('title')).toBe(
 				'Its story sets this itself: drawn with another value, it draws as the story has it.',
@@ -1036,7 +985,6 @@ describe('a component’s tab', () => {
 			expect(reach.querySelector('[data-reach-summary]')?.textContent).toBe(
 				'It moves 3 components; 40 unchanged, in their stories drawn. 1 component did not draw, so cannot be said.',
 			);
-			// This component first, as itself; the others by name, each opening its own tab.
 			const here = reach.querySelector(`[data-moved="${BUTTON}"]`) as HTMLElement;
 			expect(here.querySelector('h3')?.textContent).toBe('FSButtonThis one');
 			expect(here.querySelector('.value-cell')?.textContent).toBe('Background · primary#108062 → #C80000');
@@ -1044,7 +992,6 @@ describe('a component’s tab', () => {
 			expect(icon.querySelector('.value-cell')?.textContent).toBe('Radius · sm · dark8px → 12px');
 			await press(icon.querySelector('h3 button') as HTMLElement);
 			expect(lastAsk()).toEqual(['openComponent', [STORY('FSIconButton')]]);
-			// Moved in a part its values do not read: said as that.
 			expect(reach.querySelector(`[data-moved="${STORY('FSTextField')}"]`)?.textContent).toContain('in a part its values do not read');
 		});
 
@@ -1063,7 +1010,6 @@ describe('a component’s tab', () => {
 	});
 
 	describe('trying its values in its stories (Phase 2)', () => {
-		/** The tab with its stories drawn and its values read, and what its stories' frame is told. */
 		const tryingOpen = async (over: Record<string, unknown> = {}) => {
 			await analysed(over);
 			await answer('storyPreview', { state: 'ready', base: BASE });
@@ -1074,7 +1020,6 @@ describe('a component’s tab', () => {
 		};
 		const values = () => section('Styles') as HTMLElement;
 		const change = (label: string) => values().querySelector(`[aria-label="Change ${label}"]`) as HTMLElement;
-		/** A value of its own's control: a popover inside its cell, not a dialog over the panel. */
 		const popover = () => values().querySelector('[data-value-cell] [role="dialog"]') as HTMLElement | null;
 		const editor = () => (popover()?.querySelector('[data-value-editor]') as HTMLElement | null | undefined) ?? null;
 		const slider = (label: string) => popover()?.querySelector(`input[type="range"][aria-label="${label}"]`) as HTMLInputElement;
@@ -1088,7 +1033,6 @@ describe('a component’s tab', () => {
 			const count = document.querySelector('.tab-header .button-row button') as HTMLButtonElement;
 			expect(count.textContent).toBe('No changes');
 			expect(count.disabled).toBe(true);
-			// What is after it stays, the same element.
 			const after = count.nextElementSibling;
 			expect(after).not.toBeNull();
 			await press(change('Height · sm'));
@@ -1112,7 +1056,6 @@ describe('a component’s tab', () => {
 			const { tried } = await tryingOpen();
 			await press(change('Height · sm'));
 			expect(popover()?.getAttribute('aria-label')).toBe('Height · sm');
-			// Small: its title and its slider with its value, nothing else to read; what is tried and not saved is said once, on the tab.
 			expect(editor()?.textContent).toBe('Height · sm28px');
 			await type(slider('Height'), '30');
 			// Told at once, without letting go: nothing is built for a value of its own.
@@ -1120,7 +1063,6 @@ describe('a component’s tab', () => {
 			const cell = values().querySelector('[data-value-row="height"] [data-tried]') as HTMLElement;
 			expect(cell.querySelector('.value-cell')?.textContent).toBe('Height30px');
 			expect(cell.querySelector('[data-changed-mark]')).not.toBeNull();
-			// Said once, in its Changes dialog: changed, and where it is written is being found.
 			await openChanges();
 			const changed = section('Value changes') as HTMLElement;
 			expect(changed.querySelector('[data-value-change] .value-cell')?.textContent).toBe('Height · sm28px → 30px');
@@ -1135,7 +1077,6 @@ describe('a component’s tab', () => {
 			expect(popover()).toBeNull();
 			await press(opener);
 			expect(opener.getAttribute('aria-expanded')).toBe('true');
-			// Inside the cell it is opened from, and not modal: nothing is dimmed, and the panel behind stays reachable.
 			expect(opener.closest('[data-value-cell]')?.contains(popover())).toBe(true);
 			expect(popover()?.getAttribute('aria-modal')).toBeNull();
 			expect(document.querySelector('.scrim')).toBeNull();
@@ -1197,7 +1138,6 @@ describe('a component’s tab', () => {
 			expect(tried()).toEqual([]);
 			expect(values().querySelector('[data-tried]')).toBeNull();
 			await type(slider('Height'), '31');
-			// Another value opened (md, chosen with the Size picker): this one's popover is shut, and what was tried stays tried.
 			await pick('size', 'md');
 			await press(change('Height · md'));
 			expect(values().querySelectorAll('[data-value-cell] [role="dialog"]')).toHaveLength(1);
@@ -1258,7 +1198,6 @@ describe('a component’s tab', () => {
 			expect(summary()).toBe('Drawn by 2 components');
 			await press(users()[1]?.querySelector('button') as HTMLElement);
 			expect(lastAsk()).toEqual(['openComponent', [STORY('FSIconButton')]]);
-			// Changed: what the change reaches, as "Moved by the change" has it, marks the ones that moved.
 			await share('tokenEdits', [{ path: 'radius', value: '12px' }]);
 			expect(calls('changeReach').at(-1)?.args).toEqual([[{ path: 'radius', value: '12px' }]]);
 			expect(summary()).toBe('Drawn by 2 components; drawing the change to see which move');
@@ -1288,18 +1227,15 @@ describe('a component’s tab', () => {
 				return tried;
 			};
 			const shown = () => [...(popover()?.querySelectorAll('.popover-label') ?? [])].map((l) => l.textContent);
-			// Three: top, the sides as X, bottom. Moving X changes the sides, not the top.
 			const three = await openPadding('1px 2px 3px');
 			expect(shown()).toEqual(['Top', 'X', 'Bottom']);
 			await type(slider('X (left and right)'), '9');
 			expect((three() as { value: string }[])[0]?.value).toBe('1px 9px 3px 9px');
 			await unmount();
-			// Four: each side by its own name, as CSS writes them, clockwise from the top.
 			const four = await openPadding('1px 2px 3px 4px');
 			expect(shown()).toEqual(['Top', 'Right', 'Bottom', 'Left']);
 			await type(slider('Left'), '8');
 			expect((four() as { value: string }[])[0]?.value).toBe('1px 2px 3px 8px');
-			// One: all sides, with no name to say beside its one slider.
 			await unmount();
 			await openPadding('4px');
 			expect(shown()).toEqual([]);
@@ -1311,7 +1247,7 @@ describe('a component’s tab', () => {
 			const padding = { property: 'padding', by: null, cells: [{ variant: null, value: '0px 10px', kind: 'own', tokens: [], instances: 12 }] };
 			const { tried } = await tryingOpen({ values: { state: 'read', instances: 12, unmarked: 0, rows: { light: [...rows, padding], dark: null } } });
 			await press(change('Padding'));
-			// Said as engineers say it, X first: X is left and right, Y top and bottom, each on one line with its slider and number.
+			// X first, as engineers say it.
 			expect([...(popover()?.querySelectorAll('input[type="range"]') ?? [])].map((r) => r.getAttribute('aria-label'))).toEqual([
 				'X (left and right)',
 				'Y (top and bottom)',
@@ -1323,7 +1259,6 @@ describe('a component’s tab', () => {
 			]);
 			expect([...(popover()?.querySelectorAll('.popover-field') ?? [])].every((f) => f.classList.contains('popover-field-line'))).toBe(true);
 			await type(slider('X (left and right)'), '12');
-			// Every part in full, as the page sets it; said short on its cell.
 			expect(tried()).toEqual([
 				{ property: 'padding', value: '0px 12px 0px 12px', targets: Array.from({ length: 12 }, (_, i) => `padding:null:${i}`) },
 			]);

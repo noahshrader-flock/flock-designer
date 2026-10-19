@@ -3,12 +3,6 @@ import { undeclared } from '../src/shared/wcag';
 import type { Project, ProjectWork } from '../src/shared/domain/projects';
 import { aVersion } from './fixtures';
 
-/**
- * Sample data for DSNR's panel in tests: a few projects and a design system's catalog, in the app's own shapes, so the
- * panel is tested with the data it is given.
- */
-
-/** A version of the sample project, with its open comments, made on day `day` of the month. */
 const version = (name: string, openComments = 0, day = 1): ProjectWork =>
 	aVersion('sample', name, { openComments, createdAt: `2026-10-${String(day).padStart(2, '0')}T10:00:00Z` });
 
@@ -43,7 +37,6 @@ const token = (t: Partial<DesignToken> & Pick<DesignToken, 'path' | 'category' |
 	...t,
 });
 
-/** A design system's tokens, as its readers give them: a tone, a role pointing at it with its pair, a spacing and a radius. */
 export const SAMPLE_TOKENS: DesignToken[] = [
 	token({
 		path: 'palette.light.primary.main',
@@ -115,7 +108,6 @@ export const SAMPLE_TOKENS: DesignToken[] = [
 	}),
 ];
 
-/** A design system's catalog as the core reads it: its components in groups, its tokens, on develop. */
 export const SAMPLE_CATALOG: Extract<Catalog, { state: 'ready' }> = {
 	state: 'ready',
 	branch: 'develop',

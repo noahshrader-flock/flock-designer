@@ -4,10 +4,7 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { Installer, installProblem } from '../src/core/services/codebase/install';
 
-/**
- * Installing a repository's packages: the command it declares, run in it, its output passed on
- * line by line, and its failures said in words a person can act on. A small node script stands in for npm.
- */
+/** A small node script stands in for npm. */
 
 let root: string;
 const node = (script: string) => ({ id: 'install', label: 'Install', argv: [process.execPath, '-e', script] });

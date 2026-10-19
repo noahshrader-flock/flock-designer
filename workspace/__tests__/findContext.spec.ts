@@ -7,9 +7,8 @@ import { findContext } from '../src/core/services/projects/findContext';
 import { makeProductFiles } from './fixtures';
 
 /**
- * What a shell works on, found from the folders open in it instead of chosen and cloned:
- * the product, its design system, and the design repository its projects are kept in. In order: what the product says,
- * then any open folder that holds a design system, then the one the person located; and for each, what is missing, said.
+ * The design system is found in order: what the product says, then any open folder that holds one, then the one the
+ * person located.
  */
 
 let base: string;
@@ -18,7 +17,6 @@ beforeEach(() => {
 });
 afterEach(() => rmSync(base, { recursive: true, force: true }));
 
-/** A product repository at `dir`, its design system named as `pkg`, in `folder` of it when it is a monorepo. */
 const product = (dir: string, pkg: string, folder?: string) => {
 	mkdirSync(dir, { recursive: true });
 	makeProductFiles(dir);
@@ -27,14 +25,12 @@ const product = (dir: string, pkg: string, folder?: string) => {
 	writeFileSync(file, JSON.stringify({ ...descriptor, designSystem: folder ? { package: pkg, folder } : { package: pkg } }));
 	return dir;
 };
-/** A design system at `dir`: a package with one story. */
 const designSystem = (dir: string, name = '@acme/ui') => {
 	mkdirSync(join(dir, 'src'), { recursive: true });
 	writeFileSync(join(dir, 'package.json'), JSON.stringify({ name }));
 	writeFileSync(join(dir, 'src', 'Button.stories.tsx'), "export default { title: 'Inputs/Button' };\n");
 	return dir;
 };
-/** The design repository at `dir`: a checkout, with its projects. */
 const designRepository = (dir: string) => {
 	mkdirSync(join(dir, '.git'), { recursive: true });
 	mkdirSync(join(dir, 'projects'), { recursive: true });
@@ -51,7 +47,6 @@ describe('the context, from the open folders', () => {
 			product: coke,
 			designSystem: { root: at('GitHub', 'ui'), how: 'named' },
 			designRepository: at('GitHub', 'flock-designer', 'projects'),
-			// No remote: which repository it is is not known.
 			productRepository: null,
 			missing: [],
 		});

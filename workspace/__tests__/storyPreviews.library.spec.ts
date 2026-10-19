@@ -31,10 +31,6 @@ vi.mock('sass', async (original) => {
 	};
 });
 
-/**
- * The real library on this machine, not a fixture: every one of develop's story files builds into the page, built with
- * the clone's own packages and nothing fetched.
- */
 describeWith(libraryUnbuilt, 'against the real library on origin/develop', () => {
 	it('builds every story file with the clone’s own packages, and serves it', async () => {
 		const real = new PrototypeServer();
@@ -64,7 +60,7 @@ describeWith(libraryUnbuilt, 'against the real library on origin/develop', () =>
 				after.push({ ...counted });
 				expect(r.state).toBe('ready');
 			}
-			// How long, for whoever reads the output; not asserted, since a busy machine's clock says nothing of the code.
+			// Not asserted: a busy machine's clock says nothing of the code.
 			console.log(`trying a change on the real library: ${times.join(' ms, ')} ms`);
 			// The first change opens the build (and opens it again if it has to set aside what is not installed); each
 			// after is one rebuild of it, and a change to a tone touches no Sass, so none is compiled again.

@@ -20,11 +20,7 @@ import {
 import { declaredTarget } from '../src/core/services/accessibility/accessibilityBrief';
 import { undeclared } from '../src/shared/wcag';
 
-/**
- * Measuring a page's accessibility: axe's runs, one per state, merged and said
- * the same way everywhere, never as a pass; and each result kept with what it was made with, made again when any of
- * that changes. The real browser is not run here; a stand-in gives what axe would.
- */
+/** The real browser is not run here; a stand-in gives what axe would. */
 
 const rule = (id: string, more: Partial<AxeRule> = {}): AxeRule => ({
 	id,
@@ -78,7 +74,6 @@ describe('a result', () => {
 		expect(issue.elements).toHaveLength(MOST_ELEMENTS);
 		expect(issue.elements.map((e) => e.state)).toEqual([...Array(8).fill('default'), 'empty', 'empty']);
 		expect(unlisted(issue)).toBe(6);
-		// Said as the agent and the tab say it: the selector, its state when that says something, and what to change.
 		expect(elementLine(issue.elements[0]!)).toBe('`li:nth-child(0)`: Fix all of the following: Add a name');
 		expect(elementLine(issue.elements[9]!)).toBe('`li:nth-child(1)` (in empty): Fix all of the following: Add a name');
 	});

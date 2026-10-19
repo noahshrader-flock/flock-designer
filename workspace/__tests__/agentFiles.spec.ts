@@ -2,13 +2,6 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-/**
- * The shared agent files, and what they say to any agent (09, "any agent"). `agents/ui-guide.md` is how to build UI in a
- * Flock product, true in whatever tool it is done; `agents/dsnr.md` is DSNR's own workflow on top of it. Each rule is in
- * one of the two, and the guide never speaks of DSNR's workflow or one tool's mechanics, so an agent that is not DSNR's
- * can read it whole.
- */
-
 const agents = join(__dirname, '../../agents');
 const read = (name: string) => (existsSync(join(agents, name)) ? readFileSync(join(agents, name), 'utf8') : '');
 const headings = (text: string) => [...text.matchAll(/^#{2,3} (.+)$/gm)].map((m) => (m[1] ?? '').trim());

@@ -3,9 +3,8 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 /**
- * What DSNR is called, and what is kept under the old name on purpose. DSNR is the VS Code extension and the `dsnr` command;
- * its package says so. The folder where the command keeps its working copies of prototypes is still named `flock-designer`,
- * named by one field, because renaming must not start every person's copy from nothing: it moves only by a migration, never by the name changing.
+ * The working-copies folder is still named `flock-designer` on purpose: renaming must not start every person's copy from
+ * nothing, so it moves only by a migration, never by the name changing.
  */
 
 const root = join(__dirname, '..');

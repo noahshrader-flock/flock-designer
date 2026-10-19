@@ -7,13 +7,6 @@ import { Menu } from '../src/ui/Menu';
 import { NO_CHROME, inChrome } from './realChrome';
 import { panelCss } from './panelStyles';
 
-/**
- * The design system's own row in the side panel, in the browser on this machine, with the real component and the real stylesheet:
- * one line, its name, the icon of its branch directly after it, its buttons at the right; a long name cut with an ellipsis, the
- * icon after it a gap from the buttons that is the gap between the buttons themselves; and the row kept at the top, under the
- * top bar, with the Components and Tokens toggle under it, so its name is always shown while the list scrolls.
- */
-
 const css = panelCss();
 const NAMES = ['FUI', 'Flock’s React component library, the design system every product of its team is built from'];
 
@@ -35,7 +28,6 @@ const page = (name: string) => {
 			],
 		}),
 	);
-	// The bars above and under it, as the panel has them, and a list long enough to scroll under all of them.
 	return `<!doctype html><html><head><meta charset="utf-8"><style>${css}</style></head><body><div class="panel-top"><div style="height: var(--dsnr-control)"></div></div>${header}<div class="ds-part"><div style="height: var(--dsnr-control)"></div></div><div style="height: 2000px">list</div></body></html>`;
 };
 
@@ -92,19 +84,16 @@ describe.skipIf(NO_CHROME)('the design system’s row, in the side panel, in the
 				>;
 			});
 			const [short, long] = [found[NAMES[0] as string]!, found[NAMES[1] as string]!];
-			// A short name is whole, with its icon right after it: the one gap, named, and the row one line, the control's own height.
 			expect(short.cut).toBe(false);
 			expect(short.nameToIcon).toBeCloseTo(short.wantGap, 0);
 			expect(short.oneLine).toBe(true);
 			expect(short.height).toBe(short.wantHeight);
-			// A long name is cut with an ellipsis and the icon stays, after it, a gap from the buttons: the gap between the buttons.
 			expect(long.cut).toBe(true);
 			expect(long.ellipsis).toBe(true);
 			expect(long.betweenBubbles).toBeCloseTo(long.wantGap, 0);
 			expect(long.iconToButtons).toBeCloseTo(long.betweenBubbles, 0);
 			expect(long.nameToIcon).toBeCloseTo(long.wantGap, 0);
 			expect(long.height).toBe(long.wantHeight);
-			// And they are the numbers it is meant to have: one small control and its padding, and a small gap.
 			expect([long.wantHeight, long.wantGap]).toEqual([30, 4]);
 			for (const f of [short, long]) expect([f.iconInside, f.page]).toEqual([true, true]);
 		},
@@ -161,8 +150,6 @@ describe.skipIf(NO_CHROME)('the design system’s row, in the side panel, in the
 				};
 			});
 		});
-		// Not scrolled: under the top bar. Scrolled far: still there, the top bar at the very top, the row right under it, the
-		// toggle right under that.
 		expect(found.startHeader).toBeCloseTo(found.startBarBottom, 0);
 		expect(found.farBar[0]).toBeCloseTo(0, 0);
 		expect(found.farHeader[0]).toBeCloseTo(found.farBar[1] as number, 0);

@@ -5,11 +5,6 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { branchesWithFile, ensureLocalBranch } from '../src/core/services/platform/git';
 import { g, makeProduct } from './fixtures';
 
-/**
- * What work starts from, in a fresh clone: most of its branches are only on GitHub, and only
- * some carry the DSNR setup.
- */
-
 let root: string;
 let clone: string;
 const commit = (dir: string, file: string, message: string) => {
@@ -47,7 +42,6 @@ describe('starting from a branch only on GitHub', () => {
 		await ensureLocalBranch(clone, 'noah/work');
 		expect(g(clone, 'branch', '--show-current').trim()).toBe('develop');
 		expect(g(clone, 'rev-parse', '--abbrev-ref', 'noah/work@{u}').trim()).toBe('origin/noah/work');
-		// Already local: nothing more.
 		await ensureLocalBranch(clone, 'noah/work');
 	});
 

@@ -7,18 +7,12 @@ import { HandOverBranches } from '../src/core/services/designSystem/handOverBran
 import type { ShareTools } from '../src/core/ports';
 import type { ConnectedDesignSystem } from '../src/shared/contract';
 
-/**
- * Process changes in the core: a unit handed to Claude Code on a branch DSNR names, found and
- * read from git, and proposed as a draft pull request only as the rules allow. Against a real clone; GitHub is the tools'.
- */
-
 let home: string;
 let clone: string;
 let system: ConnectedDesignSystem;
 let pushed: string[];
 let opened: { branch: string; title: string; body: string; base: string | undefined }[];
 let saved: boolean;
-/** Whether its pull request is still open, as GitHub says. */
 let stillOpen: boolean;
 const BUTTON = 'src/components/FSButton/FSButton.stories.tsx';
 const g = (cwd: string, ...args: string[]) => execFileSync('git', args, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
@@ -46,11 +40,9 @@ const handOvers = () =>
 		saved: async () => saved,
 		now: () => new Date('2026-10-17T12:00:00Z'),
 	});
-/** A branch's tip, as the panel was shown it; and one never shown, for a branch not made yet. */
 const tipOf = (branch: string) => g(clone, 'rev-parse', branch);
 const SEEN = 'a'.repeat(40);
 const TRIED = { tried: [{ property: 'height' as const, value: '32px', targets: ['a'] }] };
-/** What Claude Code does with the prompt: the branch it names, from the base, a commit on it. */
 const claudeCommits = (branch: string, files: Record<string, string>) => {
 	g(clone, 'switch', '-q', '-c', branch, 'origin/develop');
 	for (const [file, text] of Object.entries(files)) writeFileSync(join(clone, file), text);
@@ -94,7 +86,6 @@ describe('a unit handed to Claude Code', () => {
 		expect(started.prompt).toContain(`git switch -c ${started.branch} origin/develop`);
 		expect(started.prompt).toContain('for the FSButton component alone.');
 		expect(started.prompt).toContain('- FSButton · Height · sm: 28px → 32px (theme.ts, line 1)');
-		// Kept, and read from git: not made yet.
 		expect(await handOvers().current(BUTTON)).toEqual({
 			branch: started.branch,
 			saved: TRIED,

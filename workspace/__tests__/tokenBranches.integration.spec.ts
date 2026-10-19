@@ -8,10 +8,7 @@ import { TOKENS, TOKEN_BRANCH, TokenBranches } from '../src/core/services/design
 import { proposalText } from '../src/core/services/designSystem/changeBranches';
 import { g } from './fixtures';
 
-/**
- * Keeping a change to the tokens on a branch, and proposing it, against a real
- * clone of a small library. GitHub is a stand-in: nothing here is pushed anywhere or opened as a pull request.
- */
+/** GitHub is a stand-in: nothing here is pushed anywhere or opened as a pull request. */
 
 const REPOSITORY = 'acme/ui';
 const THEME = {
@@ -25,11 +22,10 @@ const THEME = {
 let home: string;
 let clone: string;
 let file: string;
-/** What the stand-in for GitHub was asked to do. */
 let asked: string[];
 let checks: Check[];
 let openPr: PullRequest | null;
-/** Whether each pull request is still open, as GitHub says: `undefined` when it cannot say. */
+/** `undefined` when GitHub cannot say. */
 let stillOpen: boolean | undefined;
 
 const write = (root: string, files: Record<string, string>) => {
@@ -63,7 +59,6 @@ const tools = (): ShareTools => ({
 const system = () => ({ id: REPOSITORY, name: 'Acme UI', repository: REPOSITORY, root: clone, folder: '', branch: 'develop' });
 const branches = () => new TokenBranches({ system, file, tools, now: () => new Date('2026-10-09T12:00:00Z') });
 const at = (ref: string, path: string) => g(clone, 'show', `${ref}:${path}`);
-/** What a person's clone is, which saving must leave exactly as it was. */
 const snapshot = () => ({
 	head: g(clone, 'rev-parse', 'HEAD'),
 	branch: g(clone, 'branch', '--show-current'),
@@ -84,7 +79,6 @@ beforeEach(() => {
 	g(home, 'clone', '-q', join(home, 'remote.git'), clone);
 	g(clone, 'config', 'user.name', 'Noah');
 	g(clone, 'config', 'user.email', 'noah@example.com');
-	// The person is on a branch of their own, with work they have not committed.
 	g(clone, 'checkout', '-q', '-b', 'noah/work');
 	write(clone, { 'README.md': 'Unsaved notes.\n' });
 	asked = [];
@@ -105,7 +99,6 @@ describe('saving a change (T4)', () => {
 		expect(Object.keys(b).sort()).toEqual(['branch', 'lines', 'pullRequest', 'saved', 'saves']);
 		expect(g(clone, 'rev-parse', `${b.branch}^`).trim()).toBe(develop);
 		expect(at(b.branch, 'src/colors/tones/brand.ts')).toContain("50: '#0A6B52'");
-		// Only the token's file: everything else as develop has it.
 		expect(g(clone, 'diff', '--name-only', develop, b.branch).trim()).toBe('src/colors/tones/brand.ts');
 		const message = g(clone, 'log', '-1', '--format=%B', b.branch);
 		expect(message).toContain('Tones brand 50: #108062 → #0A6B52');
@@ -150,7 +143,6 @@ describe('saving a change (T4)', () => {
 
 	it('never moves the branch from a commit it did not make: someone else’s work on it is kept', async () => {
 		const b = await branches().save([{ path: 'tone.brand.50', value: '#0A6B52' }]);
-		// Someone commits on the branch outside DSNR.
 		g(clone, 'update-ref', `refs/heads/${b.branch}`, g(clone, 'commit-tree', `${b.branch}^{tree}`, '-p', b.branch, '-m', 'by hand').trim());
 		const theirs = g(clone, 'rev-parse', b.branch);
 		await expect(branches().save([{ path: 'tone.brand.50', value: '#000000' }])).rejects.toThrow('has moved since DSNR last saved to it');
@@ -177,7 +169,6 @@ describe('saving a change (T4)', () => {
 		await expect(branches().current()).rejects.toThrow();
 		renameSync(`${clone}-away`, clone);
 		expect(await branches().current()).toMatchObject({ branch: b.branch });
-		// A second save goes on the same branch, not a new one.
 		expect((await branches().save([{ path: 'spacing', value: '6px' }])).branch).toBe(b.branch);
 	});
 
@@ -251,7 +242,6 @@ describe('proposing it (T5)', () => {
 		expect(await branches().current()).not.toBeNull();
 		stillOpen = false;
 		expect(await branches().current()).toBeNull();
-		// Forgotten, the next save starts a new change.
 		stillOpen = true;
 		expect(await branches().scopes()).toEqual([]);
 	});

@@ -11,12 +11,6 @@ import { PrototypeServer } from '../src/core/services/prototypes/prototypeServer
 import type { InvokeName } from '../src/shared/contract';
 import type { ProjectWork } from '../src/shared/domain/projects';
 
-/**
- * DSNR's shell in VS Code: the person's GitHub account through VS Code's own sign-in,
- * VS Code's ports, where a prototype's review is, and the bridge that answers the panel's calls from the core's table.
- * Each takes what it uses of VS Code, so it is tested without one.
- */
-
 const user = { login: 'noah', name: 'Noah', avatar_url: 'https://avatars.githubusercontent.com/u/1' };
 const fetcher = vi.fn(async (url: string) => ({
 	ok: true,
@@ -73,7 +67,6 @@ describe('the person’s GitHub account, through VS Code', () => {
 	});
 });
 
-/** The person's settings, as the fake VS Code reads them, by section and key. */
 let settings: Record<string, unknown> = {};
 
 describe('VS Code’s ports', () => {
@@ -133,11 +126,10 @@ describe('VS Code’s ports', () => {
 		expect(v.env.openExternal).toHaveBeenCalledTimes(1);
 	});
 
-	/** Claude Code's own commands: show its side panel (which it then remembers as where it is kept), and open a conversation. */
 	const SIDEBAR = 'claude-vscode.sidebar.open';
 	const OPEN = 'claude-vscode.editor.open';
 	const WHERE = { programmatic: 'honor-preferred-location' };
-	/** Claude Code's sidebar command, as it is: it saves its own setting as the sidebar a moment later, without waiting. */
+	/** Claude Code's sidebar command saves its own setting a moment later, without waiting. */
 	const savesLater = (v: ReturnType<typeof fake>) =>
 		v.commands.executeCommand.mockImplementation(async (id: string) => {
 			if (id === SIDEBAR) setTimeout(() => (settings['claudeCode.preferredLocation'] = 'sidebar'), 30);
@@ -181,7 +173,6 @@ describe('VS Code’s ports', () => {
 		settings['dsnr.claudeCode.location'] = 'editor';
 		const { editor } = vscodePorts(v as never, none);
 		await editor.openPrompt('vscode', '/work/coke', 'Build it.');
-		// No side panel is shown, and Claude Code is not asked to honour a place: an editor tab, as its own command opens one.
 		expect(v.commands.executeCommand.mock.calls).toEqual([[OPEN, undefined, 'Build it.']]);
 	});
 
@@ -245,8 +236,7 @@ describe('a prototype’s review', () => {
 		const page = reviewPage({ src: 'http://127.0.0.1:5000/a/v1/', title: 'Fish & <chips> "now"', nonce: 'n1' });
 		expect(page).toContain("default-src 'none'; frame-src http://127.0.0.1:5000; style-src 'nonce-n1'; script-src 'nonce-n1'");
 		expect([...page.matchAll(/<script\b[^>]*>/g)].map((m) => m[0])).toEqual(['<script nonce="n1">']);
-		// Its one script is the review tab's (`page/reviewTab.ts`, whose behaviour a real browser checks in
-		// `reviewIsolation.integration.spec.ts`), started for that page's address alone.
+		// A real browser checks this script's behaviour in `reviewIsolation.integration.spec.ts`.
 		expect(page).toContain(`__fdPage.startReviewTab("http://127.0.0.1:5000");`);
 		expect(page).toContain('<title>Fish &amp; &lt;chips&gt; &quot;now&quot;</title>');
 		expect(page).toContain('<iframe src="http://127.0.0.1:5000/a/v1/" title="Fish &amp; &lt;chips&gt; &quot;now&quot;">');
@@ -270,7 +260,6 @@ describe('a review tab’s answers to its page', () => {
 			written: vi.fn(),
 		};
 	};
-	/** A tab's answers, as the tab gives them: the comments it has been shown are its own. */
 	const tab = () => {
 		const d = deps();
 		const seen = new Set<number>();
@@ -293,10 +282,8 @@ describe('a review tab’s answers to its page', () => {
 		await answerReview(d, review, 'readComments', ['demo', 'prototype/demo/v3'], seen, 'browser');
 		await ask([{ thread: 1, id: 2 }, 'prototype/demo/v3']);
 		expect(d.address).toHaveBeenCalledWith({ ...review, name: 'v3' }, { thread: 1, id: 2 }, 'browser', false);
-		// And in a new version from it, when the person chose that.
 		await ask([{ thread: 1, id: 2 }, 'prototype/demo/v3', true]);
 		expect(d.address).toHaveBeenLastCalledWith({ ...review, name: 'v3' }, { thread: 1, id: 2 }, 'browser', true);
-		// Only one of this review's project's prototypes, and only one comment.
 		for (const branch of ['prototype/other/v1', 'prototype/demo/../other/v1', 'feature/demo'])
 			expect(await ask([{ thread: 1, id: 2 }, branch]), branch).toEqual({
 				ok: false,
@@ -318,7 +305,6 @@ describe('a review tab’s answers to its page', () => {
 		expect(await ask('readComments', ['demo', 'prototype/demo/v2'])).toMatchObject({ ok: true });
 		for (const args of [
 			['other', 'prototype/other/v1'],
-			// Its own id, with another project's branch: refused too.
 			['demo', 'prototype/other/v1'],
 			['demo', 'prototype/demo/../other/v1'],
 			['demo', 'feature/demo'],
@@ -333,14 +319,12 @@ describe('a review tab’s answers to its page', () => {
 	it('change, and Address, only a comment the review has been shown or made: none of another thread', async () => {
 		const { d, ask } = tab();
 		const refused = { ok: false, error: 'That comment is not one of this review’s.' };
-		// Nothing read yet: no comment is this review's.
 		expect(await ask('resolveComment', [{ thread: 1, id: 2 }, true])).toEqual(refused);
 		expect(await ask('address', [{ thread: 1, id: 2 }])).toEqual(refused);
 		expect(d.address).not.toHaveBeenCalled();
 		await ask('readComments', ['demo', 'prototype/demo/v1']);
 		expect(await ask('resolveComment', [{ thread: 1, id: 2 }, true])).toMatchObject({ ok: true });
 		expect(await ask('deleteComment', [{ thread: 9, id: 2 }])).toEqual(refused);
-		// One it made is its own too.
 		await ask('postComment', ['demo', 'prototype/demo/v1', 'Bigger', null, null]);
 		expect(await ask('address', [{ thread: 1, id: 3 }])).toMatchObject({ ok: true });
 		expect(await ask('address', ['not a comment'])).toEqual({
@@ -356,7 +340,6 @@ describe('a review tab’s answers to its page', () => {
 		await ask('postComment', ['demo', 'prototype/demo/v1', 'Bigger', null, null]);
 		await ask('resolveComment', [{ thread: 1, id: 2 }, true]);
 		expect(d.written).toHaveBeenCalledTimes(2);
-		// One that failed wrote nothing.
 		await ask('deleteComment', [{ thread: 1, id: 2 }]);
 		expect(d.written).toHaveBeenCalledTimes(2);
 		await ask('address', [{ thread: 1, id: 2 }]);
@@ -471,13 +454,12 @@ describe('the review tabs', () => {
 		const demo = { projectId: 'demo', name: 'v3', title: 'Demo · Version 3' };
 		const first = await reviews.inBrowser({ records: '/d/projects', ...demo });
 		const second = await reviews.inBrowser({ records: '/d/projects', ...demo });
-		// The page's address, its key in the fragment (never sent to a server), new each time.
+		// The key is in the fragment, which is never sent to a server.
 		const keyOf = (url: string) => /^http:\/\/127\.0\.0\.1:5000\/review\/demo\/v3\/#dsnr-key-([A-Za-z0-9_-]{22,})$/.exec(url)?.[1];
 		const [a, b] = [keyOf(first), keyOf(second)];
 		expect(a).toBeDefined();
 		expect(b).toBeDefined();
 		expect(a).not.toBe(b);
-		// An ask with a key is answered as the review's tab is, as that review, in the answer's shape.
 		const ask = { dsnr: 'ask', id: 3, name: 'readComments', args: ['demo', 'prototype/demo/v3'] };
 		expect(await reviews.answerBrowser(a as string, ask)).toEqual({ dsnr: 'answer', id: 3, result: { ok: true, value: [] } });
 		await reviews.answerBrowser(b as string, ask);
@@ -485,7 +467,6 @@ describe('the review tabs', () => {
 			[demo, 'readComments', ['demo', 'prototype/demo/v3']],
 			[demo, 'readComments', ['demo', 'prototype/demo/v3']],
 		]);
-		// Asked from the browser, as the answer says, for what Address shows.
 		expect(answered.map((x) => x.from)).toEqual(['browser', 'browser']);
 		// Each key has its own list of what it has been shown: what one browser tab saw, another may not change.
 		expect(answered[0]!.seen).not.toBe(answered[1]!.seen);
@@ -513,7 +494,6 @@ describe('the review tabs', () => {
 		expect(await reviews.answerBrowser(key, { ...ask, extra: true })).toBeNull();
 		expect(await reviews.answerBrowser(key, 'readComments')).toBeNull();
 		expect(answers).toBe(0);
-		// Opening it in a tab makes no key.
 		expect(await reviews.address({ records: '/d/projects', projectId: 'demo', name: 'v1', title: 'Demo · Version 1' })).not.toContain('#');
 	});
 
@@ -553,7 +533,7 @@ describe('the review tabs', () => {
 			serve: async () => 'http://127.0.0.1:5000/review/',
 			answer: async () => ({ ok: true, value: null }),
 		});
-		// None open: nothing opened, but the site is built, so the browser has the page to go to.
+		// None open: the site is still built, so the browser has the page to go to.
 		await reviews.showIfOpen({ records: '/d/projects', projectId: 'demo', name: 'v3', title: 'Demo · Version 3' });
 		expect(vs.panels).toHaveLength(0);
 		expect(built).toEqual(['/d/projects']);
@@ -563,7 +543,6 @@ describe('the review tabs', () => {
 		expect(vs.panels[0]!.title).toBe('Demo · Version 3');
 		expect(vs.panels[0]!.html).toContain('http://127.0.0.1:5000/review/demo/v3/');
 		expect(vs.panels[0]!.revealed).toBe(0);
-		// Another project's tab is not this one's.
 		await reviews.showIfOpen({ records: '/d/projects', projectId: 'other', name: 'v1', title: 'Other · Version 1' });
 		expect(vs.panels).toHaveLength(1);
 	});
@@ -602,7 +581,6 @@ describe('the review tabs', () => {
 });
 
 describe('the review tabs in front', () => {
-	// The tabs the panel marks: told when one opens, is covered or brought forward again, or is closed.
 	it('are the projects whose tab is visible, and are said again each time one opens, changes or closes', async () => {
 		const panels = new Map<string, { visible: boolean; changed: () => void; disposed: () => void }>();
 		const told: string[][] = [];
@@ -635,7 +613,6 @@ describe('the review tabs in front', () => {
 		await reviews.open({ records: '/d', projectId: 'demo', name: 'v1', title: 'demo' });
 		await reviews.open({ records: '/d', projectId: 'other', name: 'v1', title: 'other' });
 		expect(told.at(-1)).toEqual(['demo', 'other']);
-		// One covered by another tab in its group is not in front.
 		panels.get('demo')!.visible = false;
 		panels.get('demo')!.changed();
 		expect(told.at(-1)).toEqual(['other']);
@@ -660,10 +637,8 @@ describe('what the extension asks the panel to show', () => {
 		const front = { projects: ['demo'], components: ['src/FSButton.stories.tsx'] };
 		tabs.set(front);
 		expect(a.posted.at(-1)).toEqual({ type: 'shared', name: 'tabs', value: front });
-		// The same again tells nobody.
 		tabs.set({ projects: ['demo'], components: ['src/FSButton.stories.tsx'] });
 		expect(a.posted).toHaveLength(2);
-		// A page that starts later is told what is in front now.
 		const b = webview();
 		panels.add(b.webview);
 		await panels.ready(b.webview);
@@ -692,7 +667,6 @@ describe('what the extension asks the panel to show', () => {
 		expect(a.posted).toEqual([{ type: 'open-dialog', dialog: { kind: 'new' } }]);
 	});
 
-	/** A panel view as VS Code gives one: its page, and what it says when it is hidden, shown or thrown away. */
 	const view = (page: ReturnType<typeof webview>) => {
 		const visibility: (() => void)[] = [];
 		const disposed: (() => void)[] = [];
@@ -721,7 +695,6 @@ describe('what the extension asks the panel to show', () => {
 		v.showAgain();
 		panels.show({ type: 'open-dialog', dialog: { kind: 'new' } });
 		expect(a.posted).toEqual([{ type: 'open-dialog', dialog: { kind: 'new' } }]);
-		// Asked for while it is hidden, it is sent all the same, and is there when the panel is shown.
 		v.hide();
 		panels.show({ type: 'open-dialog', dialog: { kind: 'sync' } });
 		expect(a.posted).toHaveLength(2);
@@ -800,7 +773,6 @@ describe('the bridge', () => {
 		panels.sink('onAgentLog', line('one'));
 		stop();
 		panels.sink('onAgentLog', line('two'));
-		// The extension hears it once, until it stops; the panels hear every one.
 		expect(heard).toEqual([line('one')]);
 		expect(posted).toEqual([
 			{ type: 'event', name: 'onAgentLog', payload: line('one') },

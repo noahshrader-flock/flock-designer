@@ -4,7 +4,6 @@ import { branchButtons } from '../extension/webview/branchButtons';
 const kept = { branch: 'dsnr/tokens-1', saves: 2, pullRequest: null };
 const proposed = { ...kept, pullRequest: { number: 7, url: 'https://github.com/a/b/pull/7' } };
 
-/** What can be done with a change kept on a branch: one rule, which every page that shows the branch draws. */
 describe('branchButtons', () => {
 	it('offers Save to a branch for a change not yet saved, and nothing else', () => {
 		expect(branchButtons({ branch: null, unsaved: true, busy: null })).toEqual({

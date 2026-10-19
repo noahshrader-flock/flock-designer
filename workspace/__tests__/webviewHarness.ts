@@ -5,15 +5,9 @@ import { act, createElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach } from 'vitest';
 
-/**
- * DSNR's pages (the panel, a design system's tab) as the extension plays them, for their tests: VS Code's webview API
- * standing in (`acquireVsCodeApi`: what the page sends, and the state it keeps), what the extension says arriving as its
- * messages do, and a person's presses and typing. Imported, it starts each test afresh and clears the page after.
- */
+/** Imported, it stands in `acquireVsCodeApi`, starts each test afresh and clears the page after. */
 
-/** What the page sent the extension, in order: its calls to the core, and its own requests. */
 export const sent: { type: string; id?: number; name?: string; args?: unknown[]; [key: string]: unknown }[] = [];
-/** What the page keeps in VS Code's state for it (`setState`), as a reload would give it back. */
 export const kept: { state: unknown } = { state: undefined };
 
 let root: Root | null = null;
@@ -26,7 +20,7 @@ beforeEach(() => {
 		postMessage: (message: never) => void sent.push(message),
 	});
 });
-/** The page gone, as VS Code drops a hidden panel's: what it kept in VS Code's state stays, for the next to read. */
+/** As VS Code drops a hidden panel: what it kept in VS Code's state stays, for the next to read. */
 export const unmount = async () => {
 	await act(async () => root?.unmount());
 	root = null;
@@ -39,55 +33,47 @@ export const mount = async (element: ReturnType<typeof createElement>) => {
 	await act(async () => root?.render(element));
 };
 
-/** A DSNR page mounted as `main.tsx` mounts it: inside the one provider of what every page shares, which says it is ready. */
+/** As `main.tsx` mounts it, inside the shared provider, which tells the extension it is ready. */
 export const mountPage = (page: ReturnType<typeof createElement>) => mount(createElement(SharedProvider, null, page));
 
 /**
- * A message to the page, as it is posted: by default the extension's, which VS Code posts on the page's own origin, from
- * its host frame, which the page cannot name (VS Code's own script makes `window.parent` the page itself). A test of what
- * the page refuses names another sender.
+ * By default the extension's: VS Code posts it on the page's own origin from a host frame the page cannot name (its own
+ * script makes `window.parent` the page itself). A test of what the page refuses names another sender.
  */
 export const say = async (data: unknown, from: { source?: MessageEventSource | null; origin?: string } = {}) =>
 	act(async () => void window.dispatchEvent(new MessageEvent('message', { data, source: null, origin: location.origin, ...from })));
-/** The page's calls to the core by `name`, in order. */
 export const calls = (name: string) => sent.filter((m) => m.type === 'call' && m.name === name);
 /** What the page asked of the extension itself, not the core. */
 export const panelSaid = () => sent.filter((m) => m.type !== 'call');
-/** Answers the page's latest call to `name` with `value`. */
 export const answer = async (name: string, value: unknown) => {
 	const call = calls(name).at(-1);
 	if (!call) throw new Error(`the page made no ${name} call: ${JSON.stringify(sent)}`);
 	await say({ type: 'answer', id: call.id, result: { ok: true, value } });
 };
 
-/** The last ask of the extension's the page made (`PageAsks`): its name and what it carried. */
 export const lastAsk = (): [string, unknown[]] | undefined => {
 	const asked = sent.filter((m) => m.type === 'call' && isAsk(String(m.name))).at(-1);
 	return asked && [String(asked.name), asked.args as unknown[]];
 };
 
-/** The design system as the extension reads it for every page, told to the page: FUI, read as `catalog`. */
 export const shareCatalog = async (catalog: Catalog, more: Partial<SharedValues['catalog']> = {}) =>
 	share('catalog', { system: { id: 'flocksafety/flock-react-component-lib', name: 'FUI' }, catalog, error: null, syncing: false, ...more });
 
-/** A value every page shares, told as the extension tells it (`Shared`). */
 export const share = async <K extends SharedName>(name: K, value: SharedValues[K]) => say({ type: 'shared', name, value });
 
-/** The page's calls to `name` for one kind of change (`ChangeKinds`), its first argument, in order. */
+/** The kind of change (`ChangeKinds`) is the call's first argument. */
 export const callsOf = (name: string, kind: string) => calls(name).filter((c) => c.args?.[0] === kind);
-/** Answers the page's latest call to `name` for one kind of change with `value`. */
 export const answerOf = async (name: string, kind: string, value: unknown) => {
 	const call = callsOf(name, kind).at(-1);
 	if (!call) throw new Error(`the page made no ${name} call for ${kind}: ${JSON.stringify(sent)}`);
 	await say({ type: 'answer', id: call.id, result: { ok: true, value } });
 };
 
-/** A button by what it says, as a person finds it. */
 export const button = (name: string) => [...document.querySelectorAll('button')].find((b) => b.textContent === name) as HTMLButtonElement;
 export const press = async (el: Element) => act(async () => (el as HTMLElement).click());
 export const key = async (el: HTMLElement, name: string) =>
 	act(async () => void el.dispatchEvent(new KeyboardEvent('keydown', { key: name, bubbles: true })));
-/** Types into a field as a person does: the value set, and React told it changed. */
+/** Through the prototype's value setter, so React sees the change. */
 export const type = async (el: Element, text: string) =>
 	act(async () => {
 		const field = el as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;

@@ -4,12 +4,7 @@ import { PATTERNS, scanSources } from '../src/core/services/accessibility/probe/
 import { CRITERIA, atTarget, wcagCriterion } from '../src/shared/wcagCriteria';
 import { SOURCE_FIXTURES } from './fixtures/probeFixtures';
 
-/**
- * The probe's cells: one for each criterion its matrix says the probe measures, held to
- * WCAG's own list, and the source cells, each against its planted defect and clean twin.
- */
-
-/** The matrix's "Probe measures" column: the criteria a probe cell measures. */
+/** The matrix's "Probe measures" column. */
 const PROBE_COLUMN = [
 	'1.3.1',
 	'1.3.2',
@@ -95,7 +90,6 @@ describe('the source cells', () => {
 	it.each(lines)('$cell: in “$text”, found: $found', ({ cell, text, found }) => {
 		const [result] = scanSources([cell], [{ path: 'src/View.tsx', text: `// before\n${text}` }]);
 		if (!found) return expect(result).toEqual({ cell, sc: expect.any(String), status: 'none', findings: [] });
-		// By file and line: the line it is on, after the one before it.
 		expect(result).toMatchObject({ cell, status: 'found', findings: [{ target: expect.stringMatching(/^src\/View\.tsx:\d+$/) }] });
 		// The line it names is the line it quotes, counted from the file's first (a line is put before the fixture).
 		const at = text.split('\n').findIndex((l) => l.trim() === result?.findings[0]?.detail);

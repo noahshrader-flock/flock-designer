@@ -10,7 +10,7 @@ import {
 	type CatalogReads,
 } from '../src/core/services/designSystem/componentCatalog';
 
-/** A library made of files in memory. A file whose text is null cannot be read. */
+/** A file whose text is null cannot be read. */
 const library = (files: Record<string, string | null>): CatalogReads => ({
 	listFiles: async (dir) => Object.keys(files).filter((f) => dir === '' || f.startsWith(`${dir}/`)),
 	readFile: async (path) => {

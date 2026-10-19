@@ -61,7 +61,7 @@ describe('comment threads and GitHub listing lag', () => {
 		const created: Array<{ number: number }> = [];
 		const comments = new Map<number, Array<Record<string, unknown>>>();
 		const { github } = fakeGitHub({
-			'/repos/acme/design/issues?state=all*': [], // the listing has not caught up
+			'/repos/acme/design/issues?state=all*': [],
 			'POST /repos/acme/design/issues': () => {
 				const number = created.length + 10;
 				created.push({ number });

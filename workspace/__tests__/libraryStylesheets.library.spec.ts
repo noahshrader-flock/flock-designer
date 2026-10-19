@@ -7,13 +7,7 @@ import { settledAnswer } from './fixtures';
 import { REAL_PRIMER_SYSTEM, REAL_TREMOR3_SYSTEM, REAL_TREMOR4_SYSTEM, primerMissing, tremor3Missing, tremor4Missing } from './realCheckouts';
 import { describeLibrary, onRealLibrary } from './realLibrary';
 
-/**
- * A library's stylesheets as its own Storybook makes them, on two real libraries whose values are in classes:
- * Tremor's, on Tailwind 3 (its theme a JavaScript configuration, run locked down) and on Tailwind 4 (its theme in CSS, which
- * the tokens are read from). Nothing here or in what it tests names Tailwind: each library's own PostCSS configuration does.
- * What each reads is what its classes say: `rounded-md border px-3 py-2 text-sm` is a 6px radius, 8 by 12 padding, 14px.
- */
-/** A component's values once its library is read: by property, in light or in dark, every value its stories draw. */
+/** Nothing here or in what it tests names Tailwind: each library's own PostCSS configuration does. */
 const valuesOf = async (tokens: ComponentTokens, file: string) => {
 	const a = await settledAnswer(
 		() => tokens.of(file),
@@ -42,7 +36,6 @@ describeLibrary(primerMissing, REAL_PRIMER_SYSTEM, 'Primer React, which goes dar
 						{ base: built.base, mode: 'light', files: [file] },
 						{ base: built.base, mode: 'dark', files: [file] },
 					]);
-					// The colors it draws in light are other ones in dark: its page is dark, so its text and its fills are too.
 					const [light, dark] = [0, 1].map((run) => Object.keys(drawn[run]?.[0]?.colors ?? {}).sort());
 					expect(light?.length, file).toBeGreaterThan(0);
 					expect(dark, file).not.toEqual(light);
@@ -72,7 +65,6 @@ describeLibrary(tremor3Missing, REAL_TREMOR3_SYSTEM, 'Tremor on Tailwind 3', () 
 	);
 });
 
-/** The story files a change moved, once what it reaches is drawn. */
 const movedBy = (reach: ChangeReach) => (reach.state === 'ready' ? reach.moved.map((m) => m.file) : []);
 
 describeLibrary(tremor3Missing, REAL_TREMOR3_SYSTEM, 'Tremor on Tailwind 3, where a value is', () => {
@@ -131,7 +123,6 @@ describeLibrary(tremor4Missing, REAL_TREMOR4_SYSTEM, 'Tremor on Tailwind 4, a to
 			);
 			expect(reach.state).toBe('ready');
 			expect(movedBy(reach)).toContain('src/components/Button/button.stories.tsx');
-			// A component drawn with no radius of Tailwind's own is not one it moves.
 			expect(movedBy(reach)).not.toContain('src/components/Divider/divider.stories.tsx');
 		});
 	});

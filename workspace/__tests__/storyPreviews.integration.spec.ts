@@ -15,10 +15,7 @@ import type { TokenEdit } from '../src/shared/contract';
 import { eventually, g } from './fixtures';
 import { NO_CHROME, inChrome } from './realChrome';
 
-/**
- * What the builds do, counted on the real esbuild and Sass, so a test can say how a change is built (one build kept
- * open, rebuilt each time, the Sass compiled once) rather than how long it took on a busy machine.
- */
+/** Counted on the real esbuild and Sass, so a test says how a change is built, not how long it took on a busy machine. */
 const counted = vi.hoisted(() => ({ contexts: 0, rebuilds: 0, sass: 0 }));
 vi.mock('esbuild', async (original) => {
 	const real = await original<typeof import('esbuild')>();
@@ -42,18 +39,10 @@ vi.mock('sass', async (original) => {
 	};
 });
 
-/** The library as connected (P4): the whole repository, on develop, at `root`. */
 const REPOSITORY = 'flocksafety/flock-react-component-lib';
 const connected = (root: string) => () => ({ id: REPOSITORY, name: 'FUI', repository: REPOSITORY, root, folder: '', branch: 'develop' });
 
-/**
- * The previews of the library's stories, against a small library made here: a bare
- * `develop` cloned, with the packages a build needs linked in. A stand-in for Storybook's portable stories is the only
- * fake; the real ones are built and rendered against the real library when it is on this machine.
- */
-
-// esbuild, which builds the previews, refuses to start where `TextEncoder` and `Uint8Array` come from different places,
-// as they do in this DOM window; the page is rendered here, so they are given the same ones esbuild runs with in Node.
+// esbuild refuses to start where `TextEncoder` and `Uint8Array` come from different places, as they do in this DOM window.
 globalThis.TextEncoder = NodeTextEncoder as typeof TextEncoder;
 globalThis.Uint8Array = Object.getPrototypeOf(Buffer.prototype).constructor as typeof Uint8Array;
 
@@ -85,7 +74,6 @@ const commit = (root: string, message: string) => {
 	g(root, 'commit', '-q', '-m', message);
 };
 const story = (title: string, body: string) => `const meta = { title: '${title}' };\nexport default meta;\n${body}\n`;
-/** Library files: two components, one of them with Sass; and the library's own preview set-up. */
 const LIBRARY = {
 	'.storybook/preview.tsx': 'export default {};\n',
 	'src/components/FSOne/FSOne.stories.tsx': story(
@@ -95,11 +83,8 @@ const LIBRARY = {
 	'src/components/FSOne/one.scss': '$c: red;\n.one { color: $c; }\n',
 	'src/components/FSTwo/FSTwo.stories.tsx': story('Inputs/FSTwo', `export const Default = () => <p>Two</p>;`),
 };
-/** What Storybook's `composeStories` does for plain components, and nothing more. */
 const FAKE_STORYBOOK = {
 	'node_modules/@storybook/react/package.json': '{"name":"@storybook/react","version":"0.0.0","main":"index.js"}',
-	// A component as is, or a story object drawn from its render and args, with the id and args Storybook gives a story.
-	// What the page gives the library's set-up is kept where a test can see it.
 	'node_modules/@storybook/react/index.js': `exports.setProjectAnnotations = (a) => { globalThis.projectAnnotations = a; };
 const { createElement } = require('react');
 exports.composeStories = (m) => Object.fromEntries(Object.entries(m).filter(([k]) => k !== 'default').map(([k, v]) => {
@@ -112,14 +97,10 @@ exports.composeStories = (m) => Object.fromEntries(Object.entries(m).filter(([k]
 `,
 };
 
-/**
- * Storybook's channel as its preview has it, at its public path (Storybook 9 on) and its internal one (8 on): what a story's
- * `useArgs` sends `updateStoryArgs` on, and what Storybook says a story was drawn on. What is sent on it is kept.
- */
+/** Storybook's channel at its public path (Storybook 9 on) and its internal one (8 on). */
 const FAKE_STORYBOOK_CHANNEL = {
 	'node_modules/storybook/package.json':
 		'{"name":"storybook","version":"0.0.0","type":"module","exports":{"./preview-api":"./preview-api.js","./internal/preview-api":"./preview-api.js","./internal/core-events":"./core-events.js"}}',
-	// ES modules, as the real package ships them.
 	'node_modules/storybook/preview-api.js': `const listeners = {};
 globalThis.sent = [];
 const channel = { on: (e, f) => (listeners[e] ??= []).push(f), emit: (e, ...a) => (globalThis.sent.push([e, ...a]), (listeners[e] ?? []).forEach((f) => f(...a))) };
@@ -129,7 +110,6 @@ export const addons = { getChannel: () => channel };
 		"export const UPDATE_STORY_ARGS = 'updateStoryArgs';\nexport const RESET_STORY_ARGS = 'resetStoryArgs';\nexport const STORY_RENDERED = 'storyRendered';\n",
 };
 
-/** A clone of a library whose `develop` has `files`, with packages installed (React from the app, Storybook faked). */
 const makeLibrary = (files: Record<string, string>, packages = true) => {
 	write(upstream, files);
 	commit(upstream, 'library');
@@ -151,11 +131,6 @@ const ready = async (p: StoryPreviews) => {
 	if (r.state !== 'ready') throw new Error(`not ready: ${JSON.stringify(r)}`);
 	return r.base;
 };
-/**
- * Renders the page served at `base` for one story file in this DOM window, as the preview frame does: what it drew. In
- * light, or in dark (`dark`), as the browser's color scheme says, which a DOM window does not have on its own.
- */
-/** The built page run in this DOM window at `address` (its path and query), in light or in dark (`dark`). */
 const runPage = async (address: string, { dark = false } = {}): Promise<void> => {
 	window.matchMedia = ((query: string) => ({ matches: dark && /prefers-color-scheme:\s*dark/.test(query) })) as unknown as typeof window.matchMedia;
 	document.body.innerHTML = '<div id="root"></div>';
@@ -267,7 +242,6 @@ export default { globalTypes: ${JSON.stringify({ mode: { toolbar: { items: ['lig
 		Object.defineProperty(document, 'fonts', { configurable: true, value: { ready: Promise.resolve() } });
 		await runPage(specimenAddress('/', [{ key: 'h1', label: 'h1', size: '20px' }]));
 		await eventually(() => expect(document.querySelector('[data-specimen="h1"] .fd-name')?.textContent).toBe('h1 · 20px'));
-		// No story file was drawn: the stories' root is left alone.
 		expect(document.querySelector('#root')!.children).toHaveLength(0);
 	});
 
@@ -276,7 +250,6 @@ export default { globalTypes: ${JSON.stringify({ mode: { toolbar: { items: ['lig
 		makeLibrary(noPreview);
 		const root = await render(await ready(previews()), 'src/components/FSTwo/FSTwo.stories.tsx');
 		expect(root.textContent).toContain('Two');
-		// Nothing was looked for that is not there: no preview set-up is imported, so none had to be set aside.
 		const site = join(folder, readdirSync(folder)[0]!, 'site');
 		expect(
 			readdirSync(site)
@@ -287,7 +260,6 @@ export default { globalTypes: ${JSON.stringify({ mode: { toolbar: { items: ['lig
 
 	it('builds a design system kept in a package of a monorepo with that package’s own Storybook set-up, and the globals it defines', async () => {
 		makeLibrary({
-			// The repository's own set-up, which is not the design system's.
 			'.storybook/preview.tsx': "document.body.dataset.preview = 'repository';\nexport default {};\n",
 			'packages/ui/package.json': '{"name":"@acme/ui"}',
 			'packages/ui/.storybook/preview.tsx': "document.body.dataset.preview = 'package';\nexport default {};\n",
@@ -363,7 +335,6 @@ export const Default = { args: { size: 'md' } };`;
 			{ name: 'size', values: ['sm', 'lg'] },
 			{ name: 'tone', values: ['loud'] },
 		];
-		// On the story asked for, each value given to it; the stories' own sections are not drawn.
 		await show('src/components/Chip/Chip.stories.tsx', { stories: ['Default'], props });
 		expect(sections()).toEqual([
 			['Default · size=sm', 'sm plain'],
@@ -458,16 +429,13 @@ export const Status = { args: { label: 'Network', value: 'Connected' } };`,
 		});
 		const root = await render(await ready(previews()), 'src/components/FSTwo/FSTwo.stories.tsx');
 		const box = (name: string) => root.querySelector(`[data-story="${name}"] input`) as HTMLInputElement;
-		// Only checked: it starts checked, and a click unchecks it.
 		expect(box('Checked').checked).toBe(true);
 		box('Checked').click();
 		expect(box('Checked').checked).toBe(false);
-		// A story that draws itself holds its own value, as in Storybook: it starts as it says, and stays.
 		expect(box('Drawn').checked).toBe(true);
 		box('Drawn').click();
 		expect(box('Drawn').checked).toBe(true);
 		expect(root.querySelector('[data-story="Shown"]')?.textContent).toContain('shows Connected');
-		// A value is what the component is given, never turned into a starting value: the display still shows it.
 		const line = await render(await ready(previews()), 'src/components/FSLine/FSLine.stories.tsx');
 		expect(line.querySelector('[data-story="Status"]')?.textContent).toContain('Network: Connected');
 	});
@@ -589,9 +557,7 @@ describe('keeping them', () => {
 });
 
 describe('trying a change to the tokens (T3)', () => {
-	/** The files a token change writes, as a build with it is given them. */
 	const withTokens = (edits: TokenEdit[]) => (reads: CatalogReads) => editedFiles(reads, edits);
-	/** A library whose story draws with its theme: a tone, a palette role pointing at it, and the story using the role. */
 	const THEMED = {
 		...LIBRARY,
 		'src/colors/tones/brand.ts': "export const brand = {\n  50: '#108062',\n  20: '#18372F',\n};\n",
@@ -602,7 +568,6 @@ describe('trying a change to the tokens (T3)', () => {
 			"import { lightPalette } from '../../colors/theme/light';\nexport const Default = () => <p style={{ color: lightPalette.primary.main }}>Two</p>;",
 		),
 	};
-	/** Every script a build at `base` wrote, as one text: where a color the stories use ends up. */
 	const scripts = (base: string) => {
 		const key = new URL(base).pathname.split('/')[1] as string;
 		// Served as `<what it is for>-<n>-<commit>`, from the folder of that name; the commit's own build from its site.
@@ -625,7 +590,6 @@ describe('trying a change to the tokens (T3)', () => {
 		expect((await fetch(r.base)).status).toBe(200);
 		expect(scripts(r.base)).toContain('#0A6B52');
 		expect(scripts(base)).not.toContain('#0A6B52');
-		// Written nowhere: not the copy the build is made from, and not the clone.
 		const copy = join(folder, readdirSync(folder)[0]!, 'library', 'src/colors/tones/brand.ts');
 		expect(readFileSync(copy, 'utf8')).toContain("50: '#108062'");
 		expect(readFileSync(join(clone, 'src/colors/tones/brand.ts'), 'utf8')).toContain("50: '#108062'");
@@ -681,11 +645,9 @@ describe('trying a change to the tokens (T3)', () => {
 				.map((f) => readFileSync(join(dir, site, f), 'utf8'))
 				.join('\n');
 		expect(read('tagged')).toContain('#00015A');
-		// The person's change is still what their frames show.
 		expect((await fetch(trying.base)).status).toBe(200);
 		expect(read('trial')).toContain('#0A6B52');
 		expect(read('trial')).not.toContain('#00015A');
-		// What a change reaches is built apart from both, at an address of its own each time: the tags stay served.
 		const reach = await p.builtWith('reach', withTokens([{ path: 'tone.brand.50', value: '#C80000' }]));
 		const again = await p.builtWith('reach', withTokens([{ path: 'tone.brand.50', value: '#C90000' }]));
 		if (reach.state !== 'ready' || again.state !== 'ready') throw new Error('not ready');
@@ -706,7 +668,6 @@ describe('trying a change to the tokens (T3)', () => {
 		const stories = 'src/components/FSOne/FSOne.stories.tsx';
 		const sass = 'src/components/FSOne/one.scss';
 		try {
-			// A component's own file and its stylesheet, neither of them a token's.
 			const first = await opened.build(new Map([[stories, (await opened.reads.readFile(stories)).replace('One</button>', 'Uno</button>')]]));
 			expect(scripts(first)).toContain('Uno');
 			// The next is built with only what it gives: the story is the library's own again.
@@ -735,7 +696,6 @@ describe('trying a change to the tokens (T3)', () => {
 		});
 		const p = previews();
 		const base = await ready(p);
-		/** What the drawn element is styled with: each class it is given, by the rule its build's stylesheet has for it. */
 		const styled = async (at: string) => {
 			const css = await (await fetch(`${at}entry.css`)).text();
 			const root = await render(at, 'src/components/FSThree/FSThree.stories.tsx');
@@ -765,7 +725,6 @@ describe('trying a change to the tokens (T3)', () => {
 		g(clone, 'fetch', '-q', 'origin', 'develop');
 		const forget = vi.spyOn(server, 'stopServing');
 		await ready(p);
-		// Forgotten by the server, not only emptied on disk.
 		const key = (base: string) => new URL(base).pathname.split('/')[1];
 		expect(forget).toHaveBeenCalledWith(key(tagged.base));
 		expect(forget).toHaveBeenCalledWith(key(reach.base));
@@ -827,11 +786,7 @@ describe('leaving the library alone', () => {
 	});
 });
 
-/**
- * A PostCSS plugin as a utility framework is one, written here so nothing of any framework's is tested: it scans the
- * library's sources for the classes they use (`x-…`) and draws each, saying the folder it read as Tailwind does; and it
- * says what the process it runs in let it reach, and how many times it has been asked.
- */
+/** A PostCSS plugin shaped like a utility framework, written here so nothing of any real framework's is tested. */
 const UTILITIES = `const { readFileSync, readdirSync, writeFileSync } = require('node:fs');
 const { homedir } = require('node:os');
 const { join } = require('node:path');
@@ -869,7 +824,6 @@ module.exports = (options = {}) => ({
 });
 module.exports.postcss = true;
 `;
-/** A library with its own PostCSS configuration, naming that plugin, and a stylesheet its preview set-up loads. */
 const WITH_POSTCSS = {
 	...LIBRARY,
 	'postcss.config.cjs': "module.exports = { plugins: { utilities: { color: 'rgb(1, 2, 3)' } } };\n",
@@ -879,7 +833,6 @@ const WITH_POSTCSS = {
 };
 const withUtilities = () =>
 	write(clone, { 'node_modules/utilities/package.json': '{"name":"utilities","main":"index.js"}', 'node_modules/utilities/index.js': UTILITIES });
-/** A rule of a build's stylesheet, by its selector, without its spaces; null when it has none. */
 const ruleIn = (css: string, selector: string): string | null =>
 	new RegExp(`${selector.replace(/[.[\]]/g, '\\$&')}\\s*\\{([^}]*)\\}`).exec(css)?.[1]?.replace(/\s/g, '') ?? null;
 
@@ -887,7 +840,6 @@ describe('the library’s stylesheets, as its Storybook makes them (Phase 5.5)',
 	it('runs its own PostCSS configuration on them, locked to the library: no writing, no home folder, none of the app’s environment', async () => {
 		makeLibrary(WITH_POSTCSS);
 		withUtilities();
-		// What the app's environment has (a token, say) is not the library's to read.
 		vi.stubEnv('DSNR_TEST_TOKEN', 'secret');
 		const css = await (await fetch(`${await ready(previews())}entry.css`)).text();
 		expect(ruleIn(css, '.x-two')).toBe('color:#010203');
@@ -915,7 +867,6 @@ describe('the library’s stylesheets, as its Storybook makes them (Phase 5.5)',
 		} finally {
 			await opened.close();
 		}
-		// The commit's own build and its copy are never written.
 		expect(ruleIn(await (await fetch(`${base}entry.css`)).text(), '.x-added')).toBeNull();
 		expect(readFileSync(join(folder, readdirSync(folder)[0]!, 'library', file), 'utf8')).toContain('x-two');
 	}, 60_000);
@@ -991,7 +942,6 @@ describe('the page', () => {
 		expect(entry).toContain('import("./src/a/A.stories.tsx")');
 		expect(entry).toContain('"./.storybook/preview.tsx"');
 		expect(entry).not.toContain('/lib/');
-		// No preview set-up, no Storybook channel: neither is looked for.
 		expect(previewEntry('/lib', [], { preview: null, channel: false })).not.toMatch(
 			/import \* as preview|setProjectAnnotations\(preview|storybook\/preview-api/,
 		);

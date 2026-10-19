@@ -1,8 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { review } from '../commentCheck.mjs';
 
-/** The comment rule `npm run check` holds: three lines at most in shipping code, and no history in any comment. */
-
 const lines = (n: number) => Array.from({ length: n }, (_, i) => ` * Line ${i + 1}.`).join('\n');
 const doc = (n: number) => `/**\n${lines(n)}\n */\nexport const a = 1;\n`;
 

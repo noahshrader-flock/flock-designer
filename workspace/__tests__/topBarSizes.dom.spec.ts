@@ -4,10 +4,7 @@ import { Viewer } from '../src/viewer/Viewer';
 import { PAGE_CONFIG, PAGE_SIGN_IN, sitePage } from './pageHarness';
 import { render, settle, stateMenu, unmountAll } from './reviewHarness';
 
-/**
- * The controls in a prototype's page bar are all one size, the kit's default (the panel's top bar's): a control of another
- * size is what makes a row look uneven.
- */
+/** A control of another size than the kit's default is what makes a row look uneven. */
 
 let current: Awaited<ReturnType<typeof render>> | null = null;
 afterEach(async () => {
@@ -18,7 +15,6 @@ afterEach(async () => {
 describe('the top bar', () => {
 	it('has controls of the kit’s one default size on a published page: none of them small', async () => {
 		const page = sitePage();
-		// As the published site builds it: with signing in, so the bar has Sign in to comment.
 		current = await render(
 			createElement(Viewer, { config: { ...PAGE_CONFIG, states: ['default', 'panel'] }, slots: page.slots, signIn: PAGE_SIGN_IN }),
 		);

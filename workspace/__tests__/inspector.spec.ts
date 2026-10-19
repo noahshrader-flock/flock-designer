@@ -2,13 +2,6 @@ import { describe, expect, it } from 'vitest';
 import { VALUE_PROPERTIES, type ValueCell, type ValueRow } from '../src/shared/contract';
 import { GROUPS, firstSelection, inspect, offOf, optionLabel, pickersOf, propLabel, rowName, shownFor } from '../extension/webview/inspector';
 
-/**
- * A component's values as an inspector reads them (each component's values, DESIGN_SYSTEM.md): the variant shown chosen by
- * a picker for each prop its rows are told apart by, and each row's value for it, in groups. Cases as the real library
- * draws them: one prop (Height by size, with a size drawn without), two (Background by variant and disabled, not set and
- * false alike), and none.
- */
-
 const cell = (variant: string | null, value: string, of?: Record<string, string | null>[]): ValueCell => ({
 	variant,
 	value,
@@ -36,7 +29,6 @@ const BACKGROUND: ValueRow = {
 	],
 };
 const RADIUS: ValueRow = { property: 'radius', by: null, cells: [cell(null, '8px')] };
-// Told apart by no prop: the value most instances draw first, as the rows are.
 const CHIP: ValueRow = { property: 'border', by: null, cells: [cell(null, '#111111'), cell(null, '#222222'), cell(null, '#333333')] };
 const ROWS = [HEIGHT, RADIUS, BACKGROUND, CHIP];
 
@@ -59,12 +51,9 @@ describe('the inspector of a component’s values', () => {
 		// A switch's off is false when it was drawn so, else drawn without it.
 		expect(offOf(pickers[2]!)).toBe('false');
 		expect(offOf({ prop: 'loading', options: ['true', null], switch: true })).toBe(null);
-		// It opens on each prop's first value, and a switch off.
 		expect(firstSelection(pickers)).toEqual({ size: 'sm', variant: 'primary', disabled: 'false' });
 		expect([optionLabel(null), optionLabel('lg'), propLabel('size')]).toEqual(['default', 'lg', 'Size']);
-		// A row is named as the Values name it, but Text's color, in a group called Text.
 		expect([rowName('padding'), rowName('text')]).toEqual(['Padding', 'Text color']);
-		// A component whose values are the same for every instance has none.
 		expect(pickersOf([RADIUS, CHIP])).toEqual([]);
 	});
 
@@ -75,7 +64,6 @@ describe('the inspector of a component’s values', () => {
 		expect(shownFor(BACKGROUND, pickers, { variant: 'primary', disabled: 'false' })).toEqual({ cell: BACKGROUND.cells[0], more: [], still: false });
 		expect(shownFor(BACKGROUND, pickers, { variant: 'primary', disabled: null })).toEqual({ cell: BACKGROUND.cells[0], more: [], still: false });
 		expect(shownFor(BACKGROUND, pickers, { variant: 'primary', disabled: 'true' })).toEqual({ cell: BACKGROUND.cells[1], more: [], still: false });
-		// The same for every instance: its one value, whatever is chosen.
 		expect(shownFor(RADIUS, pickers, { size: 'lg' })).toEqual({ cell: RADIUS.cells[0], more: [], still: false });
 	});
 
@@ -90,7 +78,6 @@ describe('the inspector of a component’s values', () => {
 	});
 
 	it('takes a case only the props declare from their drawing, shown and never tried: its stories drew no xl, its props did', () => {
-		// Every variant's drawing: each declared size drawn on one story.
 		const DECLARED: ValueRow[] = [
 			{
 				property: 'height',
@@ -102,7 +89,6 @@ describe('the inspector of a component’s values', () => {
 		const pickers = pickersOf([...ROWS, ...DECLARED]);
 		expect(pickers[0]).toEqual({ prop: 'size', options: ['sm', 'lg', null, 'xl'], switch: false });
 		const shown = (size: string | null) => inspect(ROWS, pickers, { ...firstSelection(pickers), size }, DECLARED)[0]?.rows;
-		// Where its stories drew it, theirs, which can be tried; xl only from its props, still.
 		expect(shown('sm')?.map((r) => [r.row.property, r.shown])).toEqual([
 			['height', { cell: HEIGHT.cells[0], more: [], still: false }],
 			['gap', { cell: DECLARED[1]?.cells[0], more: [], still: true }],

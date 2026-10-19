@@ -7,11 +7,6 @@ import { readLibrary } from '../src/core/services/designSystem/designLibrary';
 import { LibraryShown } from '../src/core/services/designSystem/libraryShown';
 import type { Catalog, ConnectedDesignSystem } from '../src/shared/contract';
 
-/**
- * Preview this branch: the commit the tab reads is one choice, the library's own branch or a
- * branch handed to Claude Code, read from git's objects at its tip. Against a real clone.
- */
-
 let home: string;
 let clone: string;
 let system: ConnectedDesignSystem;
@@ -29,7 +24,6 @@ const ready = (c: Catalog) => {
 	if (c.state !== 'ready') throw new Error(`not ready: ${c.state}`);
 	return c;
 };
-/** What Claude Code does: its branch from the base, committed, and the checkout back on develop. */
 const claudeCommits = (files: Record<string, string>) => {
 	g(clone, 'switch', '-q', '-c', BRANCH, 'origin/develop');
 	write(clone, files);
@@ -108,7 +102,6 @@ describe('the commit the tab reads', () => {
 		expect(() => shown.refuse(system, 'save')).not.toThrow();
 		shown.show(system, '', BRANCH);
 		expect(() => shown.refuse(system, 'save')).toThrow(`The previews show ${BRANCH}, not develop: show develop again to save.`);
-		// Another design system shown is not this one's choice.
 		expect(() => shown.refuse({ ...system, id: 'o/other' }, 'save')).not.toThrow();
 	});
 });

@@ -9,8 +9,7 @@ import type { TriedValue, ValueSources as Answer } from '../src/shared/contract'
 import { g } from './fixtures';
 
 /**
- * Keeping the values tried on a component on a branch, and proposing them, against a real clone of a small
- * library, as a change to the tokens is kept. Where each value is written is a stand-in, said as `ValueSources` says it;
+ * Against a real clone of a small library. Where each value is written is a stand-in, said as `ValueSources` says it;
  * GitHub is a stand-in too: nothing is pushed anywhere or opened as a pull request.
  */
 const BUTTON = 'src/components/FSButton/FSButton.stories.tsx';
@@ -28,7 +27,7 @@ let upstream: string;
 let file: string;
 let asked: string[];
 let openPr: PullRequest | null;
-/** Where the stand-in says each component's values are written, and the files that writes, or why it cannot be. */
+/** An Error for `files` is why the values cannot be written. */
 let found: Map<string, { answer: Answer; files: Map<string, string> | Error }>;
 
 const write = (root: string, files: Record<string, string>) => {
@@ -116,7 +115,6 @@ describe('saving the values tried on a component (Phase 4.4)', () => {
 		// The person's checkout is as it was: their branch, their unsaved work.
 		expect(g(clone, 'branch', '--show-current').trim()).toBe('noah/work');
 		expect(g(clone, 'status', '--porcelain').trim()).toBe(status);
-		// Kept for that component alone: another has none.
 		expect(await branches().current(BUTTON)).toEqual(saved);
 		expect(await branches().current(BADGE)).toBeNull();
 	});
@@ -166,7 +164,6 @@ describe('saving the values tried on a component (Phase 4.4)', () => {
 		expect(back).toMatchObject({ branch: first.branch, saved: [], saves: 2 });
 		expect(g(clone, 'diff', '--name-only', 'origin/develop', back.branch).trim()).toBe('');
 		expect(g(clone, 'log', '-1', '--format=%B', back.branch).trim()).toBe('Component values: back as the library draws them\n\n\nSaved from DSNR.');
-		// With none kept, nothing tried is no change to save.
 		await expect(branches().save([], BADGE)).rejects.toThrow('There is no change to save.');
 	});
 

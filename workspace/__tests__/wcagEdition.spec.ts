@@ -5,11 +5,6 @@ import { checkWcagEdition } from '../src/cli/wcagEdition';
 import { WCAG_LATEST } from '../src/shared/wcag';
 import { fakeGitHub } from './fakes/github';
 
-/**
- * The weekly check of WCAG's edition: the W3C's page against the one recorded, an issue
- * opened once when they differ. Against the W3C's own page as it was served, and a stand-in GitHub.
- */
-
 const PAGE = readFileSync(join(__dirname, 'fixtures/w3c-wcag2-latest.html'), 'utf8');
 const NEWER = PAGE.replace('(WCAG) 2.2', '(WCAG) 2.3').replace('datetime="2024-12-12"', 'datetime="2027-03-01"');
 

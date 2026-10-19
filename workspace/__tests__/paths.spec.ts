@@ -20,7 +20,6 @@ beforeAll(() => {
 	symlinkSync(join(outside, 'secret.txt'), join(root, 'src', 'linked.txt'));
 });
 
-// The whole folder: the outside one beside the repository too.
 afterAll(() => rmSync(base, { recursive: true, force: true }));
 
 describe('isInside', () => {

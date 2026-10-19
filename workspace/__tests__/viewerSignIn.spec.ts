@@ -2,8 +2,6 @@ import { webcrypto } from 'node:crypto';
 import { describe, expect, it, vi } from 'vitest';
 import { type SignInWindow, challengeOf, finishSignIn, signedInJustNow, startSignIn, takeNote } from '../src/viewer/signIn';
 
-/** Signing in on the published page: to GitHub with PKCE, and back with a one-time code. */
-
 const SITE = 'https://noahshrader-flock.github.io/flock-designer/';
 const CONFIG = {
 	clientId: 'Iv-test',
@@ -12,7 +10,6 @@ const CONFIG = {
 	authorize: 'https://github.com/login/oauth/authorize',
 };
 
-/** A tab: its address, its storage, where it was sent, and what its address became. */
 const tab = (href: string, kept: Record<string, string> = {}) => {
 	const store = new Map(Object.entries(kept));
 	const win = {
@@ -28,7 +25,6 @@ const tab = (href: string, kept: Record<string, string> = {}) => {
 	return { win: win as SignInWindow & typeof win, store };
 };
 
-/** A tab that has started a sign-in from `back`, as `startSignIn` leaves it. */
 const started = async (back = `${SITE}alert-history/v2/`) => {
 	const before = tab(back);
 	await startSignIn(CONFIG, before.win);
@@ -71,7 +67,6 @@ describe('signing in on the published page', () => {
 		expect(JSON.parse(init.body as string)).toEqual({ code: 'abc123', verifier: pending.verifier });
 		expect(back.win.location.href).toBe(SITE);
 		expect(back.win.location.replace).toHaveBeenCalledWith(`${SITE}alert-history/v2/`);
-		// Used once: nothing is left to finish again, and nothing to say.
 		expect(back.store.has('dsnr.sign-in')).toBe(false);
 		expect(takeNote(back.win)).toBeNull();
 		expect(signedInJustNow(back.win)).toBe(true);
@@ -102,7 +97,6 @@ describe('signing in on the published page', () => {
 		expect(back.win.location.href).toBe(SITE);
 		expect(back.win.location.replace).toHaveBeenCalledWith(pending.back);
 		expect(takeNote(back.win)).toBe('cancelled');
-		// Said once.
 		expect(takeNote(back.win)).toBeNull();
 	});
 

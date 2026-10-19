@@ -25,7 +25,7 @@ const NOTHING_SHARED: ShareTools = {
 	now: () => 0,
 };
 
-/** The real library, read where it is and saved to in a throwaway clone of it: the person's clone is never written to. */
+/** Saved to a throwaway clone: the person's clone is never written to. */
 
 describeWith(libraryMissing, 'saving a change to the real library', () => {
 	it('commits a tone, a role pointed at another step and the spacing on its develop, each file as the library writes it', async () => {
@@ -48,11 +48,8 @@ describeWith(libraryMissing, 'saving a change to the real library', () => {
 		const changed = g(throwaway, 'diff', '--numstat', realDevelop as string, b.branch)
 			.trim()
 			.split('\n');
-		// Three files, one line each, nothing else.
 		expect(changed.map((l) => l.split('\t').slice(0, 2).join(' '))).toEqual(['1 1', '1 1', '1 1']);
-		// From whatever the library has today, to the value saved.
 		expect(g(throwaway, 'log', '-1', '--format=%B', b.branch)).toMatch(/Tones pineGreen 50: #[0-9A-F]{6} → #0A6B52/i);
-		// The person's clone has no such branch: nothing was written there.
 		expect(g(REAL, 'branch', '--list', b.branch).trim()).toBe('');
 	}, 60_000);
 });

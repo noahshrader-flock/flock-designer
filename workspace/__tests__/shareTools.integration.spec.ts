@@ -12,11 +12,7 @@ import { fakeGitHub } from './fakes/github';
 import { realShareTools } from '../src/core/services/codebase/shareTools';
 import { g } from './fixtures';
 
-/**
- * The real git push and the real way of running `gh`, against a throwaway bare repository as
- * the remote and a stand-in `gh` that plays GitHub. Nothing here reaches the network, a real
- * repository or anyone's pull request list.
- */
+/** Nothing here reaches the network, a real repository or anyone's pull request list. */
 
 let dir: string;
 let work: string;
@@ -77,7 +73,7 @@ describe('pushBranch', () => {
 		g(work, 'commit', '-q', '-am', 'mine');
 		const before = g(remote, 'rev-parse', 'refs/heads/feature/demo');
 		await expect(pushBranch(work, 'feature/demo')).rejects.toThrow(/changes on the remote that this machine does not have/);
-		expect(g(remote, 'rev-parse', 'refs/heads/feature/demo')).toBe(before); // nothing was overwritten
+		expect(g(remote, 'rev-parse', 'refs/heads/feature/demo')).toBe(before);
 	});
 
 	it('refuses a branch that is not on this machine', async () => {
@@ -101,10 +97,6 @@ describe('sharing through the real tools', () => {
 	};
 	const REPO = { owner: 'o', repo: 'r' };
 	const SHA = 'c'.repeat(40);
-	/**
-	 * GitHub, as the person's command line reaches it: `open` pull requests for the branch (none by default), a new one
-	 * numbered 42, and the deploy's check run reading `buckets` one look at a time, the last one repeating.
-	 */
 	const github = ({ open = [] as unknown[], conclusions = ['success'] as (string | null)[] } = {}) => {
 		let looks = 0;
 		return fakeGitHub({

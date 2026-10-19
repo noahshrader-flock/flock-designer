@@ -8,12 +8,7 @@ import { VOICE_CHANGED, VOICE_FILE, VoiceBranches, readVoice } from '../src/core
 import type { ConnectedDesignSystem } from '../src/shared/contract';
 import { g } from './fixtures';
 
-/**
- * The voice and tone: a file in the design system's agent files, read from the library's
- * branch in its clone, a change kept on DSNR's own branch as every change to the library is (one commit each save, nothing
- * checked out) and proposed as a draft pull request. Against a real clone of a small library; GitHub is a stand-in, and
- * nothing is pushed anywhere.
- */
+/** Against a real clone of a small library; GitHub is a stand-in, and nothing is pushed anywhere. */
 
 let home: string;
 let upstream: string;
@@ -46,7 +41,6 @@ const system = (): ConnectedDesignSystem => ({
 });
 const voice = () => new VoiceBranches({ system, file, tools, now: () => new Date('2026-10-18T12:00:00Z') });
 const path = () => (folder ? `${folder}/${VOICE_FILE}` : VOICE_FILE);
-/** Someone commits the file on GitHub, and the clone brings its branch up to date, as reading it does first. */
 const committed = (text: string) => {
 	mkdirSync(dirname(join(upstream, path())), { recursive: true });
 	writeFileSync(join(upstream, path()), text);
@@ -55,7 +49,6 @@ const committed = (text: string) => {
 	g(upstream, 'push', '-q', 'origin', 'develop');
 	g(clone, 'fetch', '-q', 'origin');
 };
-/** Opened now: the text as the library has it, and the sha a save is made against. */
 const opened = () => readVoice(system());
 
 beforeEach(() => {
@@ -153,7 +146,6 @@ describe('saving a change', () => {
 		committed('someone else’s');
 		await expect(voice().save({ text: 'mine', against })).rejects.toThrow(VOICE_CHANGED);
 		expect(await voice().current()).toBeNull();
-		// Kept as a change to the file as it is now, it is saved.
 		expect((await voice().save({ text: 'mine', against: (await opened()).sha })).saves).toBe(1);
 	});
 

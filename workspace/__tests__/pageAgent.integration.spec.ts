@@ -7,11 +7,7 @@ import PAGE_AGENT from '../src/page/agentMain?page';
 import { NO_CHROME, inChrome } from './realChrome';
 import { SANDBOX_APART, SANDBOX_BESIDE } from '../src/site/buildSite';
 
-/**
- * The review bar and a prototype's page, talking by message in the real browser (the README's Review isolation): the bar's
- * own driver (`framePage`) and the page's own agent, as the site builds them, served from this machine. A pick made by a
- * click, its pin drawn, the pin clicked, and the page's route moving, all without the bar reaching into the page.
- */
+/** The README's Review isolation: the bar's driver (`framePage`) and the page's agent talk only by message. */
 
 const PAGE = `<!doctype html><html lang="en"><head><script src="/agent.js"></script><meta charset="utf-8"><title>Alert history</title></head>
 <body style="margin:0;font:16px sans-serif"><script>
@@ -20,10 +16,7 @@ localStorage.setItem('seen', '1'); sessionStorage.setItem('tab', '2'); document.
 document.body.dataset.kept = localStorage.getItem('seen') + sessionStorage.getItem('tab') + document.cookie;
 </script><main><h1>Alert history</h1>
 <button data-e2e-ref="clear-filter-button" style="margin:40px;padding:12px">Clear Filter</button></main></body></html>`;
-/**
- * The bar's page, framing the prototype from beside it with no origin of its own (the published site), or (`pagesAt`) from
- * the pages' own address with its own (VS Code), each sandboxed as the site builds it.
- */
+/** With no `pagesAt`, the prototype is beside it with no origin of its own (the published site); with one, apart (VS Code). */
 const BAR = (pagesAt = '') => `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Bar</title></head>
 <body style="margin:0"><iframe id="dsnr-frame" src="${pagesAt}/review/alpha/v1/page.html" sandbox="${pagesAt ? SANDBOX_APART : SANDBOX_BESIDE}" style="width:800px;height:600px;border:0"></iframe>
 <script src="/bar.js"></script></body></html>`;
@@ -34,7 +27,6 @@ let base: string;
 let pagesAt: string;
 let bar: string;
 beforeAll(async () => {
-	// The bar's driver, as the viewer carries it.
 	const built = await build({
 		stdin: {
 			contents: `import { framePage } from './src/viewer/browserAdapter'; window.framePage = framePage;`,
@@ -66,7 +58,7 @@ beforeAll(async () => {
 	});
 	await new Promise<void>((r) => server.listen(0, '127.0.0.1', r));
 	base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
-	// The pages' own address: the same page and agent, on another origin than the bar.
+	// The same page and agent, on another origin than the bar.
 	pages = createServer((req, res) => {
 		const path = (req.url ?? '/').split('?')[0] as string;
 		const [type, body] =
@@ -91,7 +83,6 @@ describe.skipIf(NO_CHROME)('the bar and the page, by message, in the real browse
 			await inChrome(async (browser) => {
 				const tab = await browser.newPage();
 				await tab.goto(`${base}${at}`, { waitUntil: 'load' });
-				// The bar's driver on its frame, and what it hears.
 				const route = await tab.evaluate(
 					() =>
 						new Promise<string>((resolve) => {
@@ -104,11 +95,9 @@ describe.skipIf(NO_CHROME)('the bar and the page, by message, in the real browse
 						}),
 				);
 				expect(route).toBe('/review/alpha/v1/page.html');
-				// Its storage and cookie kept what it set, real or stand-in.
 				const page = tab.frames().find((f) => f.url().endsWith('page.html'));
 				expect(await page?.evaluate(() => document.body.dataset.kept)).toBe('12c=3');
 
-				// A pick, made by a click on the page.
 				await tab.evaluate(() => void ((window as any).picking = (window as any).page.pick()));
 				const frame = tab.frames().find((f) => f.url().endsWith('page.html'));
 				if (!frame) throw new Error('the prototype’s frame is not on the tab');
@@ -119,17 +108,14 @@ describe.skipIf(NO_CHROME)('the bar and the page, by message, in the real browse
 				expect(picked.ok).toBe(true);
 				expect(picked.value.anchor).toMatchObject({ route: '/', selector: '[data-e2e-ref="clear-filter-button"]', nearbyText: 'Clear Filter' });
 
-				// Its pin drawn on the page, where the click was, and heard when it is clicked.
 				const drawn = await tab.evaluate(
 					(anchor) => (window as any).page.showMarkers([{ id: 7, author: 'noah', avatarUrl: null, anchor, movable: false }]),
 					picked.value.anchor,
 				);
 				expect(drawn).toEqual({ ok: true, value: [{ id: 7, state: 'found' }] });
-				// The pin: a teardrop on its own layer, over the page (`pins.ts`), carrying who made it.
 				const pin = '[data-fd-layer="pins"] > div > div';
 				expect(await frame.$eval(pin, (el) => el.textContent)).toBe('N');
 				await frame.click(pin);
-				// The page's route moving within it.
 				await frame.evaluate(() => void (location.hash = '#/other'));
 				await tab.waitForFunction(() => (window as any).heard.some((h: { route?: string }) => h.route?.endsWith('#/other')));
 				const heard = await tab.evaluate(() => (window as any).heard);

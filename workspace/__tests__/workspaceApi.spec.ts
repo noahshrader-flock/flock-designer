@@ -2,11 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { EVENTS, INVOKE } from '../src/shared/contract';
 import { createApi } from '../src/shared/workspaceApi';
 
-/**
- * The window's API, built one way from the contract's table, whatever carries it:
- * a webview's messages in VS Code, a relay's on the published page. A method is a call or an event by its name, and
- * nothing else: no generic invoke, no channel passed in.
- */
+/** A method is a call or an event by its name, and nothing else: no generic invoke, no channel passed in. */
 
 describe('the window’s API', () => {
 	const make = () => {

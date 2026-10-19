@@ -3,18 +3,14 @@ import { createRoot, type Root } from 'react-dom/client';
 import type { ReviewComment, WorkspaceApi } from '../src/shared/contract';
 import { anAnchor, eventually, reviewComment } from './fixtures';
 
-/**
- * The review screen, rendered for real in jsdom against a fake app: every call the window can make answers, the ones
- * a test cares about are given, and all are recorded. What the screen does is then read off the page as a person
- * would see it, so these tests hold whatever the screen is made of inside.
- */
+/** What the screen does is read off the page as a person sees it, so these tests hold whatever it is made of inside. */
 
 export const ok = <T>(value: T) => ({ ok: true as const, value });
 export const fail = (error: string) => ({ ok: false as const, error });
 
 /**
- * Any of the window's calls, by its real name and with its real arguments, so renaming or changing one breaks the tests
- * that fake it. What a fake answers is left open: tests give partial and malformed answers on purpose.
+ * Typed by the real names and arguments, so renaming one breaks the tests that fake it; answers are left open, as tests
+ * give partial and malformed ones on purpose.
  */
 type Impl = { [K in keyof WorkspaceApi]?: (...args: Parameters<WorkspaceApi[K]>) => unknown };
 
@@ -25,11 +21,8 @@ export const fakeApp = (overrides: Impl = {}) => {
 		signInState: async () => ok({ state: 'signedIn', user: { login: 'noah', name: 'Noah', avatarUrl: null } }),
 		openPrototype: async () => ok({ url: 'http://127.0.0.1:9/demo/v1', states: [] }),
 		readComments: async () => ok([]),
-		// No design system connected, unless a test says otherwise.
 		designSystems: async () => ok({ systems: [], current: null }),
-		// No change of any kind kept on a branch, unless a test says otherwise.
 		changeBranch: async () => ok(null),
-		// No voice and tone file in the design repository, unless a test says otherwise.
 		voiceAndTone: async () =>
 			ok({
 				repository: 'flocksafety/flock-react-component-lib',
@@ -38,11 +31,8 @@ export const fakeApp = (overrides: Impl = {}) => {
 				text: null,
 				sha: null,
 			}),
-		// Every story still being drawn, unless a test says otherwise.
 		componentTokens: async () => ok({ state: 'building' }),
-		// No pictures of the components yet, and none being drawn, unless a test says otherwise.
 		componentPictures: async () => ok({ drawing: false, pictures: {}, issues: {} }),
-		// No picture of any prototype, and none made, unless a test says otherwise.
 		projectCover: async () => ok(null),
 		ensureCovers: async () => ok([]),
 		publishedPage: async () => ok({ state: 'none' }),
@@ -57,7 +47,6 @@ export const fakeApp = (overrides: Impl = {}) => {
 					(calls[name] ??= []).push(args);
 					const f = impl[name as keyof WorkspaceApi] as ((...a: unknown[]) => unknown) | undefined;
 					if (f) return f(...args);
-					// Subscriptions give back a way to stop; everything else answers that it worked.
 					return name.startsWith('on') ? () => undefined : Promise.resolve(ok(null));
 				},
 		},
@@ -78,12 +67,10 @@ export const comment = (id: number, body: string, more: Partial<ReviewComment> =
 		...more,
 	});
 
-/** Lets every pending promise and effect run, as many times as it takes to settle. */
 export const settle = async (rounds = 12) => {
 	for (let i = 0; i < rounds; i++) await act(async () => void (await new Promise((r) => setTimeout(r, 0))));
 };
 
-/** What the browser has that jsdom lacks, and the screen's parts reach for. */
 const polyfill = () => {
 	const w = window as unknown as Record<string, unknown>;
 	w.ResizeObserver ??= class {
@@ -125,28 +112,19 @@ export const unmountAll = async (root: Root) => {
 	document.body.innerHTML = '';
 };
 
-// ---- Reading and using the page as a person would ----------------------------------------------------------------
-
 const named = (el: Element): string => (el.getAttribute('aria-label') ?? el.textContent ?? '').trim();
 
-/** The one button with this name, by its label or its text. */
 export const button = (name: string | RegExp, scope: ParentNode = document): HTMLButtonElement => {
 	const all = [...scope.querySelectorAll('button')].filter((b) => (typeof name === 'string' ? named(b) === name : name.test(named(b))));
 	if (all.length !== 1) throw new Error(`${all.length} buttons named ${name}: ${[...scope.querySelectorAll('button')].map(named).join(' | ')}`);
 	return all[0] as HTMLButtonElement;
 };
-/** One of the bar's dropdowns, by what it switches (`version`, `state`): named it and the one shown, null when there is none. */
 export const switchMenu = (what: 'version' | 'state'): HTMLSelectElement | null =>
 	[...document.querySelectorAll('select')].find((s) => new RegExp(`: switch ${what}$`).test(named(s))) ?? null;
-/** A prototype's states, as the bar shows them: a dropdown named State and the one shown, null when there is none. */
 export const stateMenu = (): HTMLSelectElement | null => switchMenu('state');
-/** The one a dropdown shows: the words of its chosen option. */
 export const shownIn = (menu: HTMLSelectElement | null): string | undefined => menu?.selectedOptions[0]?.textContent?.trim();
-/** The state shown. */
 export const shownState = (): string | undefined => shownIn(stateMenu());
-/** The choices a dropdown offers, as their words, in order. */
 export const choicesIn = (menu: HTMLSelectElement | null): string[] => [...(menu?.options ?? [])].map((o) => o.textContent?.trim() ?? '');
-/** Choosing from a dropdown by the words of a choice, as a person does. */
 export const choose = async (menu: HTMLSelectElement | null, name: string): Promise<void> => {
 	if (!menu) throw new Error('no dropdown');
 	const option = [...menu.options].find((o) => o.textContent?.trim() === name);
@@ -157,11 +135,9 @@ export const choose = async (menu: HTMLSelectElement | null, name: string): Prom
 		menu.dispatchEvent(new Event('change', { bubbles: true }));
 	});
 };
-/** Choosing a state from its dropdown, as a person does. */
 export const chooseState = (name: string): Promise<void> => choose(stateMenu(), name);
 export const press = (el: Element) => act(async () => void el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })));
 
-/** A hook rendered on its own, and what it gave the last time it ran (`now`), for a test to drive it and read it. */
 export const probeHook = async <T>(use: () => T) => {
 	let seen: { value: T } | null = null;
 	const Probe = () => {
@@ -171,10 +147,8 @@ export const probeHook = async <T>(use: () => T) => {
 	const rendered = await render(createElement(Probe));
 	return { ...rendered, now: (): T => (seen as { value: T } | null)!.value };
 };
-/** The dialog that is open, or null. */
 export const dialog = () => document.querySelector<HTMLElement>('[role="dialog"]');
 
-/** Opens a menu as a press does, and returns its items. */
 export const openMenu = async (trigger: Element): Promise<HTMLElement[]> => {
 	await press(trigger);
 	await settle(2);
@@ -186,7 +160,6 @@ export const menuItem = (items: HTMLElement[], name: string): HTMLElement => {
 	return hit;
 };
 
-/** The card of the comment that says this. */
 export const cardFor = (text: string): HTMLElement => {
 	const c = cards().find((el) => el.textContent?.includes(text));
 	if (!c)
@@ -198,19 +171,14 @@ export const cardFor = (text: string): HTMLElement => {
 	return c;
 };
 
-/**
- * Once the agent has been asked how it is getting on (the screens ask once a second) and `check` holds: as soon as it is
- * so, not after a guess at how long that takes.
- */
+/** The screens ask the agent once a second: this waits until `check` holds, not for a guessed time. */
 export const afterAgentCheck = (check: () => void) =>
 	eventually(async () => {
 		await settle();
 		check();
 	});
 
-/** The cards in the comments sidebar, as their text. */
 export const cards = (): HTMLElement[] => [...document.querySelectorAll<HTMLElement>('.comment-card')];
-/** The field a label names, as a person finds it: the control its label is for. */
 export const fieldNamed = <T extends HTMLElement = HTMLTextAreaElement>(label: string): T => {
 	const found = [...document.querySelectorAll('label')].find((l) => l.textContent?.trim() === label);
 	const control = found ? document.getElementById(found.htmlFor) : null;
@@ -227,7 +195,6 @@ export const typeInto = (el: HTMLTextAreaElement | HTMLInputElement, text: strin
 export const key = (k: string, more: KeyboardEventInit = {}) =>
 	act(async () => void window.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true, ...more })));
 
-/** The page's Light / Dark switch, its two buttons, and the one shown. */
 export const themeGroup = (): HTMLElement | null => document.querySelector<HTMLElement>('[role="radiogroup"][aria-label="Theme"]');
 export const themeButton = (name: 'Light' | 'Dark'): HTMLElement => {
 	const b = themeGroup()?.querySelector<HTMLElement>(`[aria-label="${name}"]`);

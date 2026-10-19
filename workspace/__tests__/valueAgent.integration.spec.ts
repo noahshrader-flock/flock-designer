@@ -9,12 +9,7 @@ import { DESIGN_SYSTEM_CODE, ValueAgent, type Written } from '../src/core/servic
 import type { ComponentValues, TriedValue } from '../src/shared/contract';
 import { g, settledAnswer } from './fixtures';
 
-/**
- * The agent writing a value where there is nothing to swap, and making one follow a token, against a real
- * clone of a small library, so the copy it works in and what it changed are git's. The agent is a stand-in that writes as
- * a run would; the library is drawn by a rule this test knows: the Badge's radius is its stylesheet's, or the theme's
- * shape when the stylesheet reads it.
- */
+/** A real clone, so the copy the agent works in and what it changed are git's; the agent is a stand-in that writes as a run would. */
 const BADGE = 'src/Badge/Badge.stories.tsx';
 const CSS = 'src/Badge/Badge.module.css';
 const THEME = 'src/utils/theme.ts';
@@ -27,10 +22,8 @@ const LIBRARY = {
 let home: string;
 let clone: string;
 let tasks: string[];
-/** What each run was given to read and never change. */
 let readable: string[][];
 let copies: { hasPackages: boolean }[];
-/** What each run of the stand-in agent writes into the copy it is run in, in turn, and what it says. */
 let runs: { files: Record<string, string>; said: string; held?: Promise<void>; remove?: string[] }[];
 
 const write = (root: string, files: Record<string, string>) => {
@@ -39,7 +32,6 @@ const write = (root: string, files: Record<string, string>) => {
 		writeFileSync(join(root, path), text);
 	}
 };
-/** How the library draws: the Badge's radius from its stylesheet, or the theme's shape where the stylesheet reads it. */
 const draw = (files: Record<string, string>): Drawn => {
 	const css = files[CSS] ?? '';
 	const shape = /borderRadius: (\d+)/.exec(files[THEME] ?? '')?.[1];
@@ -107,7 +99,6 @@ const agent = () =>
 		},
 		readStandard: async (path) => (path === DESIGN_SYSTEM_CODE ? '# Changing a design system’s code\n\nIts own source only.' : ''),
 	});
-/** What `a` has written for `t` once it is no longer writing it. */
 const settled = async (a: ValueAgent, t: TriedValue): Promise<Written | null> => {
 	const drawn = { ...index, key: `${await libraryCommit(clone, 'develop')}:` };
 	return settledAnswer(
@@ -115,7 +106,6 @@ const settled = async (a: ValueAgent, t: TriedValue): Promise<Written | null> =>
 		(w) => w?.state === 'writing',
 	);
 };
-/** Has `a` write `t`, and waits until it has. */
 const written = async (a: ValueAgent, t: TriedValue): Promise<Written | null> => {
 	await a.write(BADGE, t);
 	return settled(a, t);
@@ -165,7 +155,6 @@ describe('the agent writing a value where there is nothing to swap (4.5)', () =>
 		expect(readable).toEqual([[join(clone, 'node_modules')]]);
 		expect(copies[0]?.hasPackages).toBe(false);
 		expect(tasks[0]).toContain(`The packages it installs are in ${join(clone, 'node_modules')}, to read and never to change.`);
-		// The person's clone is as it was.
 		expect(g(clone, 'status', '--porcelain').trim()).toBe('');
 	});
 

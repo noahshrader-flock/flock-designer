@@ -105,7 +105,6 @@ describe('markersFor', () => {
 		const list = [pinned(1)];
 		const items = markersFor(list, 'a', { anchor: at(), composing: true });
 		expect(items.map((m) => m.id)).toEqual([1, -1]);
-		// Nobody's yet: no name, no picture, until it is written.
 		expect(items.at(-1)).toMatchObject({ author: '', avatarUrl: null, movable: true });
 	});
 

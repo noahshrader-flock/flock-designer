@@ -1,14 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import { versionAddress, keyFromAddress, listenForDsnr, relayComments, serverRelay } from '../src/viewer/relay';
 
-/**
- * The review page's side of commenting through DSNR: it listens only when it is served from this machine and in a
- * frame, takes DSNR's review tab as the one that said hello from VS Code, and from then on asks only it.
- */
-
 const TAB = 'vscode-webview://0a1b2c';
 
-/** A page at `host`, framed (or not), whose parent keeps what is posted to it. */
 const pageAt = (host: string, framed = true) => {
 	const posted: { message: unknown; origin: string }[] = [];
 	let heard: ((e: { source: unknown; origin: string; data: unknown }) => void) | null = null;
@@ -69,7 +63,6 @@ describe('the tab’s theme', () => {
 		listenForDsnr(page.win, () => undefined, theme);
 		const dark = { kind: 'vscode-dark', colors: { '--vscode-foreground': '#cccccc' } };
 		const light = { kind: 'vscode-light', colors: {} };
-		// Before hello, or from anywhere else, it is not taken: the tab is whoever said hello.
 		page.say({ dsnr: 'scheme', theme: dark });
 		page.say({ dsnr: 'hello' });
 		page.say({ dsnr: 'scheme', theme: dark }, { origin: 'vscode-webview://other' });
@@ -107,7 +100,6 @@ describe('the comments, through DSNR', () => {
 	});
 });
 
-/** A page opened in the browser from VS Code: its key in its fragment, then in its tab's keeping. */
 const opened = (host: string, hash: string, kept: string | null = null) => {
 	const store = new Map<string, string>(kept === null ? [] : [['dsnr.review-key', kept]]);
 	const replaced: string[] = [];

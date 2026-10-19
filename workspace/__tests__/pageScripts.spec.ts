@@ -136,7 +136,6 @@ const req = (id: number, anchor: Partial<CommentAnchor>): MarkerRequest => ({
 describe('a prototype, which is one page wherever it is served', () => {
 	const invite = '[data-e2e-ref="users-invite"]';
 	it('places a comment made where the app served it, on the published site, and the other way round', () => {
-		// Made in the app, at its own server's address; shown on the site, at the site's.
 		const site = page(CARD, 'https://acme.github.io/design/demo/v1/page.html');
 		site.eval(SINGLE_PAGE);
 		const out = site.eval(resolveScript([req(1, { route: '/demo/v1/', selector: invite })], 'nonce')) as Array<{ state: string }>;
@@ -373,11 +372,11 @@ describe('pins that can be clicked and dragged', () => {
 	it('outlines what the pin would attach to while it is being dragged with Shift held, and only then', () => {
 		const { w, fire } = setup(true);
 		const seen = () => Array.from(w.document.querySelectorAll('[data-fd-layer="hover"]')) as HTMLElement[];
-		expect(seen()).toHaveLength(0); // nothing before the drag
+		expect(seen()).toHaveLength(0);
 
 		fire('pointerdown', 10, 10);
 		fire('pointermove', 200, 120);
-		expect(seen()[0]?.style.display).toBe('none'); // dragged without Shift: nothing outlined
+		expect(seen()[0]?.style.display).toBe('none');
 		fire('pointermove', 201, 120, true);
 		const [outline, chip] = seen();
 		expect(outline?.style.display).toBe('block');
@@ -386,7 +385,7 @@ describe('pins that can be clicked and dragged', () => {
 		expect(chip?.textContent).toContain('Invite users');
 
 		fire('pointerup', 200, 120);
-		expect(seen()).toHaveLength(0); // and gone again afterwards
+		expect(seen()).toHaveLength(0);
 	});
 
 	it('shows no outline for a wobble, or for a pin that cannot be moved', () => {
@@ -437,10 +436,8 @@ describe('redrawing the pins', () => {
 		void (w.eval(PICK_SCRIPT) as Promise<unknown>);
 		draw([req(1, { selector: '[data-e2e-ref="users-invite"]' })]);
 		expect(pins(w)).toHaveLength(1);
-		// The comment was deleted: nothing is left to draw, and nothing may be left on the page.
 		draw([]);
 		expect(pins(w)).toHaveLength(0);
-		// ...and the outline belongs to comment mode, which is still on.
 		expect(w.document.querySelectorAll('[data-fd-layer="hover"]').length).toBeGreaterThan(0);
 	});
 
@@ -452,7 +449,6 @@ describe('redrawing the pins', () => {
 			({ left, top: 50, width: 40, height: 20, right: left + 40, bottom: 70, x: left, y: 50, toJSON: () => ({}) }) as DOMRect;
 		w.eval(resolveScript([req(1, { selector: '[data-e2e-ref="users-invite"]' })], 'nonce'));
 		const marker = w.document.querySelector('[data-fd-layer] > div') as HTMLElement;
-		// Where on the element the pin sits, which moving the element keeps.
 		const offset = Number.parseFloat(marker.style.left) - left;
 		left = 300;
 		w.dispatchEvent(new w.Event('resize'));

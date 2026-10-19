@@ -3,10 +3,8 @@ import { dirname, join, relative, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 /**
- * Which shell the code is in. The core (the services, the handlers, the host, the shared domain, the viewer's parts) runs in
- * whichever shell starts it, so nothing in it may reach `vscode`, directly or through what it imports; only the VS Code
- * extension's own files, in `extension/`, may, and nothing loads `electron`. Followed through every import that loads
- * code; an `import type` loads nothing, so it is not followed.
+ * The core runs in whichever shell starts it, so nothing in it may reach `vscode`, directly or through what it imports;
+ * only `extension/` may, and nothing loads `electron`. An `import type` loads nothing, so it is not followed.
  */
 
 const workspace = join(__dirname, '..');
@@ -18,7 +16,6 @@ const files = (dir: string): string[] =>
 		return statSync(path).isDirectory() ? files(path) : /\.tsx?$/.test(name) && !name.endsWith('.d.ts') ? [path] : [];
 	});
 
-/** What a file loads when it runs: its imports and re-exports that are not type-only, and its dynamic imports. */
 const loads = (text: string): string[] => {
 	const found: string[] = [];
 	for (const m of text.matchAll(/^\s*import\s+(type\s+)?([\s\S]*?)\s*from\s+['"]([^'"]+)['"]/gm)) if (!m[1]) found.push(m[3] as string);
@@ -28,7 +25,6 @@ const loads = (text: string): string[] => {
 	return found;
 };
 
-/** A relative or `@/` import as the file it names, or null for a package. */
 const fileOf = (from: string, spec: string): string | null => {
 	const bare = spec.replace(/\?.*$/, '');
 	const base = bare.startsWith('@/') ? join(src, 'viewer', bare.slice(2)) : bare.startsWith('.') ? resolve(dirname(from), bare) : null;
@@ -38,7 +34,6 @@ const fileOf = (from: string, spec: string): string | null => {
 
 const SHELL_PACKAGES = /^(electron|vscode)(\/|$)/;
 
-/** The chain from `start` to a shell's package, or null when it reaches none. */
 const reachesShell = (start: string, stopAt: Set<string>): string[] | null => {
 	const seen = new Set<string>();
 	const walk = (file: string, path: string[]): string[] | null => {

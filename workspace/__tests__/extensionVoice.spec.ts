@@ -3,11 +3,7 @@ import { THEIRS_PATH, VOICE_PATH, VoiceDocument, voiceFileSystem } from '../exte
 import type { ChangeBranchOf, VoiceAndTone } from '../src/shared/contract';
 import { ok } from '../src/shared/result';
 
-/**
- * The voice and tone in VS Code: a document in the editor, read from the library's branch,
- * saved as VS Code saves (⌘S) to a branch of DSNR's, as every change to the library is, proposed as a draft pull request;
- * a save made against the file it was opened at, so a change on GitHub meanwhile is never overwritten.
- */
+/** A save is made against the file it was opened at, so a change on GitHub meanwhile is never overwritten. */
 
 const voice = (more: Partial<VoiceAndTone> = {}): VoiceAndTone => ({
 	repository: 'flocksafety/flock-react-component-lib',
@@ -28,7 +24,6 @@ const kept = (more: Partial<ChangeBranchOf<'voice'>> = {}): ChangeBranchOf<'voic
 const COMPARE = 'https://github.com/flocksafety/flock-react-component-lib/compare/develop...dsnr/voice-1012-abc123?expand=1';
 const world = (api: Record<string, unknown> = {}) => {
 	const offered: [string, string[]][] = [];
-	// What the person presses, in turn: nothing, once these are used.
 	const presses: string[] = [];
 	const deps = {
 		api: {
@@ -40,13 +35,11 @@ const world = (api: Record<string, unknown> = {}) => {
 			...api,
 		},
 		offer: vi.fn(async (message: string, actions: string[]) => (offered.push([message, actions]), presses.shift())),
-		// A warning, with what can be done about it: said beside the rest, marked as one.
 		choose: vi.fn(async (message: string, actions: string[]) => (offered.push([`warning: ${message}`, actions]), presses.shift())),
 		openExternal: vi.fn(async () => undefined),
 	};
 	return { doc: new VoiceDocument(deps as never), deps, offered, presses };
 };
-/** A save refused: the core says why, and the file read again is not the one it was opened at. */
 const refusedAs = (now: VoiceAndTone) => ({
 	saveChange: vi.fn(async () => ({
 		ok: false as const,
@@ -118,7 +111,6 @@ describe('the voice and tone, as a document', () => {
 		await doc.read();
 		await doc.startOver();
 		expect(deps.api.forgetChange).toHaveBeenCalledWith('voice', null);
-		// Said after a save, with no branch kept: nothing about the old one.
 		await doc.afterSave();
 		expect(offered).toEqual([]);
 	});
@@ -129,7 +121,6 @@ describe('the voice and tone, as a document', () => {
 	});
 });
 
-/** VS Code's file system pieces, standing in. */
 const fired: unknown[] = [];
 beforeEach(() => void (fired.length = 0));
 const fake = {
@@ -182,7 +173,6 @@ describe('the voice and tone’s files in VS Code', () => {
 			Promise.resolve(fs.writeFile(uri(VOICE_PATH), new TextEncoder().encode('# Mine\n'), { create: false, overwrite: true })),
 		).rejects.toThrow('The voice and tone changed on GitHub since it was opened, so nothing was saved.');
 		expect(refused).toHaveBeenCalled();
-		// An open copy of GitHub's file, from a refusal before, is told to read it again.
 		expect(fired.at(-1)).toEqual([{ type: 1, uri: expect.objectContaining({ path: THEIRS_PATH }) }]);
 		expect(new TextDecoder().decode((await fs.readFile(uri(THEIRS_PATH))) as Uint8Array)).toBe('# Theirs\n');
 	});

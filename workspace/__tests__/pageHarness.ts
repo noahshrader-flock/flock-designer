@@ -2,19 +2,14 @@ import PAGE_AGENT from '../src/page/agentMain?page';
 import { vi } from 'vitest';
 import { button, fieldNamed, press, settle, typeInto } from './reviewHarness';
 
-/**
- * The published page, for tests: GitHub as its API answers for comments, and the page the site builds, as far as the
- * viewer is concerned. Shared by the viewer's tests and the round trip, so both run against the same GitHub.
- */
+/** Shared by the viewer's tests and the round trip, so both run against the same GitHub. */
 
-/** Signing in, as the published site tells every page (`#dsnr-sign-in`). */
 export const PAGE_SIGN_IN = {
 	clientId: 'Iv-test',
 	exchange: 'https://dsnr-auth.vercel.app/api/exchange',
 	redirect: 'https://acme.github.io/design/',
 	authorize: 'https://github.com/login/oauth/authorize',
 };
-/** Which version the page is, and the project's others, as the site writes them into the page. */
 export const PAGE_CONFIG = {
 	owner: 'acme',
 	repo: 'design',
@@ -30,12 +25,8 @@ export const PAGE_CONFIG = {
 	page: 'aaaaaaaaaaaa',
 };
 
-/**
- * GitHub's API, as far as comments go: review threads found by label and branch line, and their comments. Each token
- * is someone: the page's tester, and the app's own sign-in, so a round trip has two people in it.
- */
+/** Each token is someone: the page's tester, and the app's own sign-in, so a round trip has two people in it. */
 export const TOKENS: Record<string, string> = { 'good-token': 'pat', 'app-token': 'noah' };
-/** What `/user` says of those who have a name and a picture. */
 const PEOPLE: Record<string, { name: string; avatar_url: string }> = {
 	pat: { name: 'Pat Brennan', avatar_url: 'https://avatars.githubusercontent.com/u/1?v=4' },
 };
@@ -103,29 +94,24 @@ export const fakeGitHub = () => {
 	return { fetch, issues, calls };
 };
 
-/** A prototype in a frame, as the page and the app's preview both show one: a heading, and a named button. */
 export const prototypeIn = (frame: HTMLIFrameElement, { agent = true }: { agent?: boolean } = {}): Document => {
 	const doc = frame.contentDocument as Document;
 	doc.body.innerHTML = '<main><h1>Alert history</h1><button data-e2e-ref="clear-filter-button">Clear Filter</button></main>';
-	// What the pin scripts reach for that jsdom does not have.
 	const fw = frame.contentWindow as unknown as Window & { Element: { prototype: Record<string, unknown> }; eval(code: string): unknown };
 	fw.Element.prototype.scrollIntoView = () => undefined;
 	fw.Element.prototype.animate = () => undefined;
 	wireMessages(fw);
-	// The page agent, as the site adds it to every page it builds: the real one, the page code with it. A page built
-	// before there was one has none.
+	// A page built before there was a page agent has none.
 	if (agent) fw.eval(PAGE_AGENT);
 	return doc;
 };
 
 /**
- * Messages between this window and a frame's, as a browser delivers them: jsdom's `postMessage` says neither who sent a
- * message nor from where, which the bar and the page's agent both check (the README's Review isolation). Here each says
- * its sender and this page's address; the real browser does the same, and the real-Chrome test proves it.
+ * jsdom's `postMessage` says neither who sent a message nor from where, which the bar and the page's agent both check;
+ * here each says it, as a real browser does (the real-Chrome test proves it).
  */
 const wireMessages = (fw: Window) => {
 	const origin = window.location.origin;
-	/** A message event as a browser fires one: what was sent, who sent it, from where. */
 	const fire = (to: Window, data: unknown, source: unknown) =>
 		void setTimeout(() => to.dispatchEvent(Object.assign(new Event('message'), { data, source, origin })), 0);
 	// jsdom's frame has one parent object for every frame, so each frame is given its own: what it sends goes to this
@@ -135,7 +121,6 @@ const wireMessages = (fw: Window) => {
 	fw.postMessage = ((data: unknown) => fire(fw, data, parent)) as Window['postMessage'];
 };
 
-/** The page the site builds, as far as the viewer is concerned: the bar's slot, the panel, and the prototype's frame. */
 export const sitePage = (built: { agent?: boolean } = {}) => {
 	document.body.innerHTML = '<header id="dsnr-bar"></header><div><iframe id="dsnr-frame"></iframe><aside id="dsnr-panel"></aside></div>';
 	const frame = document.getElementById('dsnr-frame') as HTMLIFrameElement;
@@ -147,7 +132,6 @@ export const sitePage = (built: { agent?: boolean } = {}) => {
 	};
 };
 
-/** A comment made on the page, as a reviewer makes one: Comment, a click on the prototype, the words, Save, and done. */
 export const commentOnPage = async (doc: Document, selector: string, words: string) => {
 	await press(button('Comment'));
 	await settle();

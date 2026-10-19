@@ -6,7 +6,6 @@ import type { SyncResult } from '../src/core/services/publishing/designSync';
 const ok: SyncResult = { published: [], problems: [] };
 const bad = (what: string, why: string): SyncResult => ({ published: [], problems: [{ what, why }] });
 
-/** A context whose run we control. */
 const make = (run: PublishContext['run'] = async () => ({ branches: ok, records: ok }), opts: { gap?: number; none?: boolean } = {}) => {
 	const statuses: PublishStatus[] = [];
 	const runSpy = vi.fn(run);

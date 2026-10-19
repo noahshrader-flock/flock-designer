@@ -3,11 +3,6 @@ import { reachOf } from '../src/core/services/designSystem/changeReach';
 import type { Drawn, Instance } from '../src/core/services/designSystem/componentTokens';
 import type { ComponentValues } from '../src/shared/contract';
 
-/**
- * What a token change reaches: each component's drawing with the change against its
- * drawing as the library has it, by its values (instance by instance, by key) and by everything its stories draw.
- */
-
 const BASE = {
 	height: '36px',
 	padding: '0px 10px 0px 10px',
@@ -25,7 +20,6 @@ const drawn = (instances: Instance[], radii: Record<string, number> = { '8px': i
 	component: true,
 	instances,
 });
-/** As the analysis read it: which variant each instance is in the radius's row, by key. */
 const read = (cells: [string | null, string[]][]): ComponentValues => ({
 	state: 'read',
 	instances: 2,

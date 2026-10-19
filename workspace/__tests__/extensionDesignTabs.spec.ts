@@ -2,12 +2,6 @@ import { describe, expect, it, vi } from 'vitest';
 import { DesignTabs } from '../extension/src/designTabs';
 import type { DesignTab } from '../extension/src/messages';
 
-/**
- * The design system's tabs in VS Code's editor: a component's (its stories, live, and what
- * it is made from) and Primitives, where there is room that the side bar does not have. Each is DSNR's own page, told the
- * core's events as the panel is, its asks answered as the panel's are; one tab each, brought forward when open again.
- */
-
 const world = () => {
 	const made: {
 		title: string;

@@ -3,11 +3,6 @@ import { type AddressDeps, addressComment } from '../extension/src/address';
 import type { Project } from '../src/shared/contract';
 import { ok } from '../src/shared/result';
 
-/**
- * Address on a prototype's comment, from its review in VS Code: the core's Address (`runPrototypeAddress`), shown as a build is, with Stop and its log; then the review shows where the change went, and
- * says so, or says the agent changed nothing. Before a version others have commented on is changed, the person chooses.
- */
-
 const review = { projectId: 'demo', name: 'v1', title: 'Demo · Version 1' };
 const comment = { thread: 4, id: 40 };
 const noah = { name: 'Noah', login: 'noah' };
@@ -28,16 +23,14 @@ const demo = {
 
 const world = (
 	addressed: { changed: boolean; version: string } = { changed: true, version: 'v1' },
-	/** Who has commented on the version: its maker alone, unless said; null when that cannot be read. */
+	/** Null when who has commented cannot be read. */
 	commenters: string[] | null = ['noah'],
-	/** What the person chooses when asked, or undefined for neither. */
 	chooses?: (actions: string[]) => string | undefined,
 ) => {
 	const said: string[] = [];
 	const told: string[] = [];
 	const api = {
 		agentReadiness: vi.fn(async () => ok({ state: 'ready' })),
-		// The core's Address, run to its end: where the change went.
 		addressPrototype: vi.fn(async () => ok({ state: 'done', value: { ...addressed, made: null, comment } })),
 		listProjects: vi.fn(async () => ok([demo])),
 		readComments: vi.fn(async () =>
@@ -65,9 +58,8 @@ const world = (
 describe('addressing a comment from a review', () => {
 	it('runs the agent on the one comment, said as it goes, shows the changed page, and says which it is', async () => {
 		const { deps, api, said, told } = world();
-		// It says which version it showed, for whoever asked to go to it (a browser).
+		// The version shown is returned for whoever asked to go to it (a browser).
 		expect(await addressComment(deps, review, comment)).toBe('v1');
-		// Only its maker has commented: no question, and the change is made in place.
 		expect(deps.offer).not.toHaveBeenCalled();
 		expect(api.addressPrototype).toHaveBeenCalledWith('demo', 'v1', comment, false);
 		expect(said).toEqual(['Addressing a comment on Demo · Version 1', 'The agent is working on the comment. This takes a few minutes.']);

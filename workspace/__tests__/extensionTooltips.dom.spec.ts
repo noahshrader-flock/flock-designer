@@ -3,13 +3,9 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { TOOLTIP_DELAY_MS, TOOLTIP_SKIP_MS, TooltipHost } from '../src/ui/Tooltip';
 import { mount, unmount } from './webviewHarness';
 
-/**
- * Every tooltip in a DSNR page (the VS Code panel and its tabs), told by one host. The browser's own wait for a `title` is
- * seconds and not the page's to set, so a pointer that stays on anything with a `title` is told it here, after one wait; one
- * passing by is told nothing; and the title is the browser's again once the pointer is gone.
- */
+/** The browser's own wait for a `title` is seconds and not the page's to set, so the host tells titles itself. */
 
-// A pointer event, as a browser has one; the test window has none of its own.
+// The test window has no PointerEvent of its own.
 (window as unknown as Record<string, unknown>).PointerEvent ??= class extends MouseEvent {
 	pointerType: string;
 	constructor(type: string, init: PointerEventInit = {}) {
@@ -92,7 +88,6 @@ describe('a tooltip', () => {
 		await over('b');
 		await wait(0);
 		expect(told()).toEqual(['Says B']);
-		// Then apart for longer than that: the wait again.
 		await over('plain');
 		await wait(TOOLTIP_SKIP_MS + 50);
 		await over('a');
@@ -107,7 +102,6 @@ describe('a tooltip', () => {
 		await over('outer');
 		await wait(TOOLTIP_DELAY_MS);
 		expect(told()).toEqual(['The outer']);
-		// Into a child with nothing to say: still the outer's, not whatever is above it.
 		await over('inner');
 		await wait(TOOLTIP_DELAY_MS);
 		expect(told()).toEqual(['The outer']);
@@ -181,7 +175,6 @@ describe('a tooltip', () => {
 		expect(outside.getAttribute('title')).toBe('Outside the page’s root');
 	});
 
-	/** Where each thing is, as the browser would measure it: the thing being told of, and the tooltip once it is drawn. */
 	const measured = (about: { left: number; top: number; bottom: number }, tip = { width: 100, height: 30 }) =>
 		vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (this: Element) {
 			const r =

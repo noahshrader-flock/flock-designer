@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { routeIn } from '../src/shared/work';
 
-/** Where codebase work's preview opens: at the work's own route, never anywhere but the preview. */
 describe('routeIn', () => {
 	it("joins the work's route onto the preview, keeping its port", () => {
 		expect(routeIn('http://localhost:3100/', '/roles/compare')).toBe('http://localhost:3100/roles/compare');

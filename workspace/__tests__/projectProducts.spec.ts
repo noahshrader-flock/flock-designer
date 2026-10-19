@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import { productsOf } from '../src/shared/work';
 import { aProject, projectWork } from './fixtures';
 
-/** Which products a project has work in (the workspace README's "Projects, by product"): what the panel will focus and group by. */
 describe('productsOf', () => {
 	const prototype = (name: string, product: string | null, createdAt: string) =>
 		projectWork({ name, branch: `prototype/demo/${name}`, product, createdAt });

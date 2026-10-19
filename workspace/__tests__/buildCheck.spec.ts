@@ -9,10 +9,7 @@ import type { MeasureBrowser } from '../src/core/services/accessibility/prototyp
 import { axeTagsFor } from '../src/shared/wcag';
 import { cell } from './fixtures/accessibilityFixtures';
 
-/**
- * A prototype build's own check, with a stand-in browser: what is sent back and what is not,
- * the rounds and what is left, and that a check that cannot run says so. The real browser is the integration spec's.
- */
+/** With a stand-in browser; the real browser is the integration spec's. */
 
 let dir: string;
 beforeEach(() => {
@@ -43,7 +40,6 @@ const config = (html = '<!doctype html><title>Cameras</title><h1>Cameras</h1>'):
 		record: join(dir, 'v1.build-checked.json'),
 	};
 };
-/** A browser whose axe finds `violations`, and whose probe gives `cells`, in every state. */
 const browser = (violations: string[], cells: CellResult[]): MeasureBrowser => ({
 	scan: vi.fn(async () => [{ state: 'default', violations: violations.map(rule), incomplete: [] }]),
 	probe: vi.fn(async () => ({ results: cells, evidence: [], ms: 1 })),

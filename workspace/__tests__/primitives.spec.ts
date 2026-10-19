@@ -4,11 +4,6 @@ import { PREVIEW_SPECIMEN, specimenAddress } from '../src/shared/catalog';
 import { MOTION_PARTS, PRIMITIVES, TYPE_PARTS, byPrimitive, isEditable, missingParts, primitiveOf } from '../src/shared/primitives';
 import { typeSpecimens } from '../extension/webview/specimens';
 
-/**
- * The vocabulary of primitives: the kinds of primitive DSNR knows, in one place, as data.
- * The tokens panel's tabs, the readers' categories, and later the Primitives page all read it, so there is no second list.
- */
-
 const token = (category: string, path = category.toLowerCase()): DesignToken => ({
 	path,
 	kind: category === 'Color' ? 'color' : 'dimension',

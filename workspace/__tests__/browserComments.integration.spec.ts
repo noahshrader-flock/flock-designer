@@ -13,21 +13,14 @@ import { fakeGitHub } from './pageHarness';
 import { NO_CHROME, inChrome } from './realChrome';
 
 /**
- * A review opened in the browser from DSNR, in the real browser: the real viewer, built as the extension carries it, on
- * this machine's server as VS Code serves it, opened with a key; it asks DSNR (the core's comment calls over a stand-in
- * GitHub) through the server, shows the comments, posts one, and keeps its key when the page loads again.
- * A hostile prototype in such a review can neither learn the key nor ask without it. The server will not serve a
- * prototype on the bar's address, so the failing case is a mutation: with that refusal taken out and the page framed
- * from there, the same page reads the key.
+ * The server will not serve a prototype on the bar's address, so the hostile case's failing case is a mutation: with that
+ * refusal taken out and the page framed from there, the same page reads the key.
  */
 
 const KEY = 'AbC-_x9yZAbC-_x9yZAbCd';
 const OTHER_KEY = 'ZzY-_k3wXZzY-_k3wXZzYw';
 const GUESSED = 'GuE-_s5sSGuE-_s5sSGuEs';
-/**
- * A prototype that tries to learn the bar's key (its storage, its address, the referrer) and to ask DSNR without it: with
- * no key, with a guessed one (which makes the browser ask the server first), and with a request it cannot read the answer of.
- */
+/** A guessed key makes the browser ask the server first; a `no-cors` request is sent, but its answer cannot be read. */
 const HOSTILE = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Hostile</title></head><body><main><h1>Alerts</h1></main><script>
 const tried = {};
 const attempt = async (name, f) => { try { tried[name] = 'allowed: ' + String(await f()); } catch { tried[name] = 'blocked'; } };
@@ -50,13 +43,11 @@ let server: PrototypeServer;
 let base: string;
 let gh: ReturnType<typeof fakeGitHub>;
 const asked: string[] = [];
-/** Every key an ask reached DSNR with. */
 const keys: string[] = [];
 const addressed: unknown[][] = [];
 
 beforeAll(async () => {
 	root = mkdtempSync(join(tmpdir(), 'dsnr-browser-'));
-	// The viewer, built as the extension's is.
 	const viewer = join(root, 'viewer');
 	await build({ configFile: resolve(__dirname, '../viewer.vite.config.ts'), build: { outDir: viewer, emptyOutDir: true }, logLevel: 'silent' });
 	const design = join(root, 'flock-designer');
@@ -93,7 +84,6 @@ beforeAll(async () => {
 		pagesAt: `${await server.pagesOrigin()}/review/`,
 	});
 	base = await server.serveFolder('review', out);
-	// DSNR, standing in: the asks a key may make, answered as the extension answers them.
 	gh = fakeGitHub();
 	const threads = new ReviewThreads(tokenApi('good-token', gh.fetch), { owner: 'acme', repo: 'design' });
 	server.answerAsks(async (key, raw) => {
@@ -106,7 +96,6 @@ beforeAll(async () => {
 			signInState: () => ({ state: 'signedIn', user: { login: 'noah', name: 'Noah', avatarUrl: null } }),
 			readComments: () => threads.readComments(b),
 			postComment: () => threads.postComment(a, b, c, d, null),
-			// Address, as the extension answers it: the change made in a new version, which it names.
 			address: () => (addressed.push(ask.args), 'v2'),
 		};
 		const value = await (answers[ask.name] ?? (() => null))();
@@ -118,7 +107,6 @@ afterAll(() => {
 	rmSync(root, { recursive: true, force: true });
 });
 
-/** Presses what is named `label` (an icon's button, a menu's item) in `at`, once there is one. */
 const pressNamed = async (at: Page, label: string) => {
 	const found = await at.waitForFunction(
 		(l) =>
@@ -131,7 +119,6 @@ const pressNamed = async (at: Page, label: string) => {
 	await (found.asElement() as Awaited<ReturnType<Page['$']>>)?.click();
 };
 
-/** Presses the button that says `text` in `at`, once there is one. */
 const press = async (at: Page | Frame, text: string) => {
 	const found = await at.waitForFunction((t) => [...document.querySelectorAll('button')].find((b) => b.textContent?.trim() === t), {}, text);
 	await (found.asElement() as Awaited<ReturnType<Page['$']>>)?.click();
@@ -142,13 +129,11 @@ describe.skipIf(NO_CHROME)('a review opened in the browser from DSNR, in the rea
 		await inChrome(async (browser) => {
 			const tab = await browser.newPage();
 			await tab.goto(`${base}demo/v1/#dsnr-key-${KEY}`, { waitUntil: 'load' });
-			// Signed in as DSNR in VS Code is: the bar offers Comment, and the key is out of the address, kept for this tab.
 			await tab.waitForFunction(() => [...document.querySelectorAll('button')].some((b) => b.textContent?.trim() === 'Comment'));
 			expect(tab.url()).toBe(`${base}demo/v1/`);
 			expect(await tab.evaluate(() => sessionStorage.getItem('dsnr.review-key'))).toBe(KEY);
 			expect(await tab.evaluate(() => Object.keys(localStorage))).toEqual([]);
 
-			// A comment, made as a reviewer makes one: Comment, a click on the prototype, the words, Save.
 			await press(tab, 'Comment');
 			const page = tab.frames().find((f) => f.url().endsWith('page.html')) as Frame;
 			await page.waitForSelector('style[data-fd="pick"]');
@@ -161,9 +146,7 @@ describe.skipIf(NO_CHROME)('a review opened in the browser from DSNR, in the rea
 			expect(gh.issues[0]?.comments.map((c) => c.body).join('\n')).toContain('Bigger, please');
 			expect(asked).toContain('postComment');
 
-			// Address, from the browser: asked of this page's own version, then the page goes to the one that has the change.
 			await pressNamed(tab, 'Show all comments');
-			// The box for a comment on the whole page, at the panel's foot, and its Send button: one height, as measured.
 			const sizes = await tab.evaluate(() => {
 				const high = (el: Element | null) => Math.round(el?.getBoundingClientRect().height ?? -1);
 				return { box: high(document.querySelector('#general-comment')), send: high(document.querySelector('button[aria-label="Send"]')) };
@@ -177,18 +160,15 @@ describe.skipIf(NO_CHROME)('a review opened in the browser from DSNR, in the rea
 			expect(addressed[0]?.[1]).toBe('prototype/demo/v1');
 			const moved = await tab.waitForFrame((f) => f.url().endsWith('/v2/page.html'));
 			await moved.waitForFunction(() => document.querySelector('h1')?.textContent === 'Alert history, addressed');
-			// Still DSNR's there: the key kept for the tab, not in its address.
 			await tab.waitForFunction(() => [...document.querySelectorAll('button')].some((b) => b.textContent?.trim() === 'Comment'));
 			expect(tab.url()).not.toContain('dsnr-key');
 
-			// Loaded again, with no key in its address (as moving to another version is): still DSNR's, the comment there.
 			await tab.goto(`${base}demo/v1/`, { waitUntil: 'load' });
 			const again = tab.frames().find((f) => f.url().endsWith('page.html')) as Frame;
 			await again.waitForFunction(() => document.querySelector('[data-fd-layer="pins"]')?.textContent === 'P');
 		});
 	}, 120_000);
 
-	/** The hostile prototype's review, opened with its key: what the page managed, once it has tried it all. */
 	const hostile = () =>
 		inChrome(async (browser) => {
 			const tab = await browser.newPage();
@@ -196,13 +176,11 @@ describe.skipIf(NO_CHROME)('a review opened in the browser from DSNR, in the rea
 			tab.on('console', (m) => {
 				if (m.text().startsWith('HOSTILE ')) tried = JSON.parse(m.text().slice('HOSTILE '.length));
 			});
-			// A second tab, opened with its own key, beside it.
 			const other = await browser.newPage();
 			await other.goto(`${base}demo/v1/#dsnr-key-${OTHER_KEY}`, { waitUntil: 'load' });
 			await tab.goto(`${base}hostile/v1/#dsnr-key-${KEY}`, { waitUntil: 'load' });
 			const until = Date.now() + 20_000;
 			while (tried === null && Date.now() < until) await new Promise((r) => setTimeout(r, 50));
-			// The bar beside it still asks DSNR with its key, and is answered.
 			for (const t of [tab, other])
 				await t.waitForFunction(() => [...document.querySelectorAll('button')].some((b) => b.textContent?.trim() === 'Comment'));
 			const kept = await Promise.all([tab, other].map((t) => t.evaluate(() => sessionStorage.getItem('dsnr.review-key'))));
@@ -221,7 +199,6 @@ describe.skipIf(NO_CHROME)('a review opened in the browser from DSNR, in the rea
 			'ask unread': 'allowed: opaque',
 		});
 		expect(r.tried?.referrer).not.toContain(KEY);
-		// Each tab keeps its own key, and only those two keys reached DSNR: none the page made, and no Address.
 		expect(r.kept).toEqual([KEY, OTHER_KEY]);
 		const reached = keys.slice(before.keys);
 		expect(reached).toContain(KEY);

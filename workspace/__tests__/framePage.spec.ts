@@ -1,11 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { framePage } from '../src/viewer/browserAdapter';
 
-/**
- * The review bar's side (the README's Review isolation): it hears its frame's page only from that frame's own window and
- * address, and only with the secret it said hello with; it asks nothing of a page that has not said it is up.
- */
-
 const world = (src = 'http://127.0.0.1:4100/review/a/v1/page.html', sandbox: string | null = null) => {
 	const listeners: ((e: unknown) => void)[] = [];
 	const pageWindow = { postMessage: vi.fn() };
@@ -41,7 +36,6 @@ describe('the bar, with its page framed with no origin of its own (the published
 		const { page, nonce, hear } = published();
 		const ready = vi.fn();
 		page.onReady(ready);
-		// From the bar's own address (a page that had one), from another window, or without the secret: not the page.
 		hear({ dsnr: 'page-ready', n: nonce, route: '/x' }, { origin: 'http://127.0.0.1:4000' });
 		hear({ dsnr: 'page-ready', n: nonce, route: '/x' }, { origin: 'null', source: {} });
 		hear({ dsnr: 'page-ready', n: 'guessed', route: '/x' }, { origin: 'null' });

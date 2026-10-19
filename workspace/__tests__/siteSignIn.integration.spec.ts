@@ -12,11 +12,7 @@ import { serveSite } from '../src/site/serveSite';
 import { fakeGitHub } from './pageHarness';
 import { NO_CHROME, inChrome } from './realChrome';
 
-/**
- * Signing in to comment on the published site, in the real browser: the real viewer on the real site build, the prototype
- * sandboxed with no origin of its own. GitHub's sign-in page, the sign-in function and GitHub's API are stand-ins; the
- * function trades the one-time code only for the verifier whose hash the page sent.
- */
+/** GitHub's sign-in page, the sign-in function and GitHub's API are stand-ins; the viewer and site build are real. */
 
 const PAGE = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Alert history</title></head>
 <body><main><h1>Alert history</h1><button data-e2e-ref="clear-filter-button">Clear Filter</button></main></body></html>`;
@@ -27,7 +23,7 @@ let base: string;
 let fake: Server;
 let fakeAt: string;
 let gh: ReturnType<typeof fakeGitHub>;
-/** Who the stand-in sign-in page signs the next person in as: a token GitHub knows, or one it will show nothing to. */
+/** `outsider-token` is one GitHub will show nothing to. */
 let next: 'good-token' | 'outsider-token' = 'good-token';
 const challenges = new Map<string, string>();
 const exchanged: unknown[] = [];
@@ -49,7 +45,6 @@ beforeAll(async () => {
 	);
 	writeFileSync(join(design, 'projects', 'demo', 'prototypes', 'v1.html'), PAGE);
 
-	// GitHub's sign-in page and the sign-in function, standing in.
 	fake = createServer((req, res) => {
 		const at = new URL(req.url ?? '/', 'http://x');
 		if (at.pathname === '/authorize') {
@@ -92,7 +87,6 @@ beforeAll(async () => {
 	site = served.server;
 	// Not on this machine's own name: a page served from this machine is one DSNR opened, which signs in through DSNR.
 	base = served.url.replace('127.0.0.1', 'site.test');
-	// The site is served here, not at acme.github.io: its own address, and GitHub's sign-in page standing in.
 	for (const file of htmlFiles(out))
 		writeFileSync(
 			file,
@@ -108,7 +102,6 @@ afterAll(async () => {
 	rmSync(root, { recursive: true, force: true });
 });
 
-/** GitHub's API, as the page calls it, answered by the stand-in; a person it will show nothing has a name and no repository. */
 const answerGitHub = async (tab: Page) => {
 	await tab.setRequestInterception(true);
 	tab.on('request', (req: HTTPRequest) => {
@@ -137,7 +130,7 @@ const answerGitHub = async (tab: Page) => {
 	});
 };
 
-/** Chrome, told the stand-ins' names are this machine, and that they are secure, as GitHub Pages and GitHub are (Web Crypto needs it). */
+/** The stand-ins treated as secure origins, as GitHub Pages and GitHub are: Web Crypto needs it. */
 const chrome = () => [
 	'--host-resolver-rules=MAP site.test 127.0.0.1, MAP auth.test 127.0.0.1',
 	`--unsafely-treat-insecure-origin-as-secure=${base.replace(/\/$/, '')},${fakeAt}`,
@@ -168,7 +161,6 @@ describe.skipIf(NO_CHROME)('signing in to comment on the published site, in the 
 			const page = `${base}demo/v1/`;
 			await tab.goto(page, { waitUntil: 'load' });
 			await press(tab, 'Sign in to comment');
-			// Through GitHub's sign-in page and the site's front page, and back to the page it started on, signed in.
 			await tab.waitForFunction(() => [...document.querySelectorAll('button')].some((b) => b.textContent?.trim() === 'Comment'), { timeout: 20_000 });
 			expect(tab.url()).toBe(page);
 			expect(await tab.evaluate(() => localStorage.getItem('dsnr.github-token'))).toBe('good-token');
@@ -176,7 +168,6 @@ describe.skipIf(NO_CHROME)('signing in to comment on the published site, in the 
 			// The function was sent the code and the verifier, and nothing else.
 			expect(exchanged.at(-1)).toEqual(['code', 'verifier']);
 
-			// A comment, as a reviewer makes one.
 			await press(tab, 'Comment');
 			const frame = tab.frames().find((f) => f.url().endsWith('page.html')) as Frame;
 			await frame.waitForSelector('style[data-fd="pick"]');
@@ -189,7 +180,6 @@ describe.skipIf(NO_CHROME)('signing in to comment on the published site, in the 
 			expect(gh.issues[0]?.comments[0]).toMatchObject({ user: { login: 'pat' } });
 			expect(gh.issues[0]?.comments[0]?.body).toContain('Bigger, please');
 
-			// Who, as their picture at the end of the bar; and Sign out in its menu, which forgets the token.
 			await pressNamed(tab, 'Signed in as pat');
 			await tab.waitForFunction(() => document.querySelector('.menu-heading')?.textContent === 'Pat Brennan · pat');
 			await pressNamed(tab, 'Sign out');

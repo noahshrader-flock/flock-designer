@@ -10,7 +10,6 @@ import { g } from './fixtures';
 
 const LIBRARY = 'flocksafety/flock-react-component-lib';
 const GITHUB_URL = `https://github.com/${LIBRARY}.git`;
-/** The library as connected: the whole repository, on develop, at `root`. */
 const at = (root: string, more: Partial<ConnectedDesignSystem> = {}): ConnectedDesignSystem => ({
 	id: LIBRARY,
 	name: 'FUI',
@@ -25,7 +24,6 @@ const story = (title: string) => `const meta = {\n  title: '${title}',\n};\nexpo
 let home: string;
 /** Stands in for GitHub: the library's clone fetches from here, through git's own transport. */
 let remote: string;
-/** Where commits to `develop` are made before they are pushed to the remote. */
 let upstream: string;
 /** The person's clone. Its origin says GitHub; git is told to reach it here. */
 let clone: string;
@@ -292,7 +290,6 @@ describe('what the tab is told', () => {
 		// A later ask without refresh says how the last fetch went, and starts none.
 		expect(await library.catalog(false)).toMatchObject({ update: 'updated' });
 		expect(fetches).toBe(1);
-		// Refresh again is a new fetch.
 		const again = library.catalog(true);
 		finish('updated');
 		await again;

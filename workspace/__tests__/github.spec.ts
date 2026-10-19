@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import { type Fetcher, ReadCache, ReauthRequired, callApi } from '../src/codeHost/github';
 import { HostError } from '../src/codeHost/hostError';
 
-/** A fetch stub that replays queued responses and records what was sent. */
 const stub = (responses: Array<{ status?: number; body: unknown }>) => {
 	const calls: Array<{ url: string; init?: { method?: string; headers?: Record<string, string>; body?: string } }> = [];
 	const fetcher: Fetcher = async (url, init) => {
@@ -76,7 +75,6 @@ describe('callApi', () => {
 	});
 });
 
-/** A fetch stub whose responses carry headers, as GitHub's do. */
 const withHeaders = (responses: Array<{ status?: number; body?: unknown; headers?: Record<string, string> }>) => {
 	const calls: Array<{ url: string; init?: { method?: string; headers?: Record<string, string>; body?: string } }> = [];
 	const fetcher: Fetcher = async (url, init) => {

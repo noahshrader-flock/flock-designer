@@ -15,10 +15,6 @@ import {
 	valueChanges,
 } from '../src/shared/processChanges';
 
-/**
- * Process changes: the prompt typed into Claude Code for one unit of review, set up to put its changes on the branch DSNR names, and to leave pushing and the pull request to DSNR.
- */
-
 const RULES = '# Changing a design system’s code\n\n1. Its own source only.\n';
 const BRANCH = 'dsnr/handoff-20261017-ab12';
 const button = { kind: 'component' as const, name: 'FSButton', file: 'src/components/FSButton/FSButton.stories.tsx' };

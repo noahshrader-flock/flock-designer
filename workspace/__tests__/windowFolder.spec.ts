@@ -4,13 +4,10 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, expect, it } from 'vitest';
 import { windowFolder } from '../src/core/services/platform/windowFolder';
 
-/** A folder for each window's DSNR, so two windows never build into, or prune, the same one. */
-
 let root: string;
 beforeEach(() => void (root = mkdtempSync(join(tmpdir(), 'dsnr-window-folder-'))));
 afterEach(() => rmSync(root, { recursive: true, force: true }));
 
-/** The holder files a folder has. */
 const holders = (dir: string) => readdirSync(dir).filter((f) => f.startsWith('owner-'));
 
 it('gives two running windows two folders, and one window the same folder each time it asks', () => {

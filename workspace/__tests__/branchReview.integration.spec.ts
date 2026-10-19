@@ -5,9 +5,7 @@ import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { reviewBranch } from '../src/core/services/designSystem/branchReview';
 
-/**
- * A hand-over branch read from git, never from what Claude Code says: each case against a real clone, with GitHub's copy of its base as `origin/develop`.
- */
+/** A hand-over branch is read from git, never from what Claude Code says. */
 
 let home: string;
 let clone: string;

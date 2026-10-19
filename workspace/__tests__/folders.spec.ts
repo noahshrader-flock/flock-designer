@@ -12,11 +12,6 @@ import { mergeProjects } from '../src/shared/projectList';
 import { b64, fakeGitHub } from './fakes/github';
 import { memoryStore } from './fixtures';
 
-/**
- * A project's folder: a label, kept in its brief's front matter in the design repository, read
- * with the brief wherever the brief is read, and left out of what a person is shown of the brief.
- */
-
 const BRIEF = '# Alert history\n\nWhat an admin sees of past alerts.\n';
 const FILED = `---\nfolder: Admin\n---\n${BRIEF}`;
 
@@ -149,7 +144,6 @@ describe('a project’s folder, when this machine and GitHub both know the proje
 });
 
 describe('assigning a project a folder', () => {
-	/** A store that keeps what each write said, as the records' commit messages. */
 	const said = (files: Record<string, string>) => {
 		const { store, writes } = memoryStore(files);
 		const messages: string[] = [];

@@ -2,11 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-/**
- * DSNR, the VS Code extension: what VS Code reads from its manifest to put it in the
- * activity bar. The manifest is the extension's own (`extension/package.json`): VS Code takes the icon, the views and
- * the commands from it, not from the workspace's `package.json`.
- */
+/** VS Code takes the icon, the views and the commands from `extension/package.json`, not from the workspace's `package.json`. */
 
 const root = join(__dirname, '../extension');
 interface Manifest {
@@ -138,7 +134,6 @@ describe('the extension’s manifest', () => {
 			{ command: 'dsnr.account', when: 'view == dsnr.panel && dsnr.signedIn', group: 'navigation@9' },
 		]);
 		expect([icon('dsnr.newPrototype'), icon('dsnr.signIn'), icon('dsnr.account')]).toEqual(['$(add)', '$(sign-in)', '$(account)']);
-		// The same two in the command palette, each only when it means something.
 		expect(menus.commandPalette?.filter((m) => m.command.startsWith('dsnr.signIn') || m.command === 'dsnr.account')).toEqual([
 			{ command: 'dsnr.signIn', when: '!dsnr.signedIn' },
 			{ command: 'dsnr.account', when: 'dsnr.signedIn' },

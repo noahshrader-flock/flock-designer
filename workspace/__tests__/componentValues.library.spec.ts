@@ -7,8 +7,6 @@ import { REAL_FUI, libraryUnbuilt } from './realCheckouts';
 import { describeLibrary, onRealLibrary } from './realLibrary';
 import { settledAnswer } from './fixtures';
 
-/** A component's values on Flock's FUI, drawn in real Chrome: read by size, as tokens, tried live, and what a token moves. */
-
 describeLibrary(libraryUnbuilt, REAL_FUI, 'against the real library on origin/develop', () => {
 	it.skipIf(findChrome() === null)(
 		'reads FSButton’s heights by size, its radius and colors as tokens, and FSIconButton’s radius as its own',
@@ -33,12 +31,10 @@ describeLibrary(libraryUnbuilt, REAL_FUI, 'against the real library on origin/de
 				expect(bySize).toEqual({ sm: ['28px', 'own'], md: ['36px', 'own'], lg: ['48px', 'own'], xl: ['56px', 'own'], 'not set': ['48px', 'own'] });
 				const radius = row(button, 'radius')?.cells ?? [];
 				expect(radius.map((c) => [c.value, c.kind])).toEqual([['8px', 'token']]);
-				// Its colors by variant: the primary's background is the primary token, the secondary draws none.
 				const background = Object.fromEntries((row(button, 'background')?.cells ?? []).map((c) => [c.variant, [c.kind, c.tokens]]));
 				expect(background.primary).toEqual(['token', ['palette.light.primary.main']]);
 				expect(background.secondary).toEqual(['own', []]);
-				// In dark, the same variant is the Dark token written where the light one is, and a value that does not change
-				// with the theme (a height) reads as it does in light.
+				// In dark, the Dark token written where the light one is; a height does not change with the theme.
 				const dark = await valuesIn('FSButton', 'dark');
 				const darkBackground = Object.fromEntries((row(dark, 'background')?.cells ?? []).map((c) => [c.variant, [c.kind, c.tokens]]));
 				expect(darkBackground.primary).toEqual(['token', ['palette.dark.primary.main']]);
@@ -46,8 +42,7 @@ describeLibrary(libraryUnbuilt, REAL_FUI, 'against the real library on origin/de
 				// FSIconButton draws the same 8px, but its own: changing the shared radius would not move it.
 				expect(row(await valuesOf('FSIconButton'), 'radius')?.cells.map((c) => [c.value, c.kind])).toEqual([['8px', 'own']]);
 
-				// Tried in the live page, as the tab frames it, narrower than the page it was measured on: the Small cell's instances,
-				// found by their keys, are 40px high, every one of them; no other instance moves.
+				// Framed narrower than the page it was measured on, so the instances must be found by their keys.
 				const small = height?.cells.find((c) => c.variant === 'sm');
 				const preview = await previews.preview();
 				if (!small || preview.state !== 'ready') throw new Error('no Small cell, or no previews');
@@ -88,7 +83,6 @@ describeLibrary(libraryUnbuilt, REAL_FUI, 'against the real library on origin/de
 				const file = (name: string) => `src/components/${name}/${name}.stories.tsx`;
 				const button = await tokens.of(file('FSButton'));
 				if (button.state !== 'ready' || button.values.state !== 'read') throw new Error(JSON.stringify(button));
-				// The radius FSButton draws with, as its Values name it.
 				const path = button.values.rows.light?.find((r) => r.property === 'radius')?.cells[0]?.tokens[0];
 				if (path === undefined) throw new Error('FSButton draws no radius token');
 				const edits = [{ path, value: '12px' }];

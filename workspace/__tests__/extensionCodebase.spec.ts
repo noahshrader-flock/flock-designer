@@ -3,12 +3,6 @@ import { type CodebaseDeps, type LocalRun, handOff, openCode, shareCodebase, run
 import type { Project, RunLogLine, ShareStatus } from '../src/shared/contract';
 import { ok } from '../src/shared/result';
 
-/**
- * A project's codebase work in VS Code: Handoff (the product's gate, both reviews,
- * HANDOFF.md, a verdict) as a build is shown, with Stop and its log; a draft pull request with a preview (Share); the
- * branch's own preview in the person's browser; and the work on GitHub. No pins: comments on it go on its pull request.
- */
-
 const codebase = {
 	name: 'codebase',
 	branch: 'feature/zone-coverage',
@@ -36,7 +30,6 @@ const world = (more: Record<string, unknown> = {}) => {
 	const api = {
 		agentReadiness: vi.fn(async () => ok({ state: 'ready' })),
 		listProjects: vi.fn(async () => ok([zone, prototypeOnly])),
-		// The core's Handoff and Run locally, each run to its end.
 		handOff: vi.fn(async () => ok({ state: 'done', value: { ready: true as boolean | null } })),
 		runLocally: vi.fn(async () => ok({ url: 'http://localhost:5173/zones', uncommitted: false })),
 		stopCommand: vi.fn(async () => ok({ state: 'stopped' })),
@@ -200,7 +193,6 @@ describe('codebase work on GitHub', () => {
 });
 
 describe('Run locally: codebase work run on this machine, in the browser', () => {
-	/** The product's own way of running, and this machine, as `extension.ts` gives them; each test changes what it is about. */
 	const local = (over: Partial<LocalRun> = {}): LocalRun => ({
 		port: () => 3000,
 		installCommand: () => 'npm ci',
@@ -224,7 +216,7 @@ describe('Run locally: codebase work run on this machine, in the browser', () =>
 	it('runs the product’s own design mode on the work’s branch, checks the page loads, and opens it at its route, with Stop', async () => {
 		const { deps, api, said, offered, local: l } = run();
 		await runLocally(deps, l, 'zone-coverage');
-		// Its own earlier run first, so there is only ever one; then the port is checked as free; then it starts.
+		// Its own earlier run is stopped first, so there is only ever one.
 		expect(api.stopCommand).toHaveBeenCalledWith('/p', 'design-mode');
 		expect(l.answers).toHaveBeenCalledWith(3000);
 		expect(api.runLocally).toHaveBeenCalledWith('/p', 'zone-coverage', 'codebase');

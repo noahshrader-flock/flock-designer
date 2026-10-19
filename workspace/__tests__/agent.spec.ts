@@ -36,7 +36,6 @@ describe('the adapter boundary', () => {
 	it('produces argv, not a shell string', () => {
 		const argv = claudeCodeAdapter.argvFor('a task with ; and && in it');
 		expect(argv[0]).toMatch(/claude$/);
-		// The task is one argument, however it is punctuated.
 		expect(argv[argv.indexOf('-p') + 1]).toBe('a task with ; and && in it');
 	});
 
@@ -119,7 +118,6 @@ describe('a run to its end', () => {
 		await going.stop();
 		expect(await first).toEqual({ state: 'stopped' });
 		expect(await again).toEqual({ state: 'stopped' });
-		// Ended, there is nothing to wait for.
 		expect(going.ended('prototype/demo/v1')).toBeNull();
 	});
 });
@@ -212,8 +210,6 @@ describe('reading the stream', () => {
 	});
 
 	it('keeps what the agent said at the end, which is where it explains why it changed nothing', () => {
-		// From a real run: the agent found the text outside this version's boundary and said so without committing.
-		// Reporting only "Finished." would throw that away and send the designer looking for a change never made.
 		const said = 'No changes were made. Comment 1 refers to text outside this iteration’s boundary.';
 		const lines = claudeStreamFormatter()(`${JSON.stringify({ type: 'result', subtype: 'success', is_error: false, result: said })}\n`);
 		expect(lines).toEqual([said, 'Finished.']);

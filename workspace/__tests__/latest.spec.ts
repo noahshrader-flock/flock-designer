@@ -12,7 +12,6 @@ const controllable = () => {
 	return {
 		run,
 		runs: () => runs,
-		/** Lets the run in progress finish. */
 		release: () => releases.shift()?.(),
 		pending: () => releases.length,
 	};
@@ -38,7 +37,6 @@ describe('latest', () => {
 		expect(c.runs()).toBe(1);
 		c.release();
 		await settle();
-		// The request made mid-run is answered by exactly one more run.
 		expect(c.runs()).toBe(2);
 		c.release();
 	});
@@ -57,20 +55,20 @@ describe('latest', () => {
 		expect(c.runs()).toBe(2);
 		c.release();
 		await settle();
-		expect(c.runs()).toBe(2); // and no more
+		expect(c.runs()).toBe(2);
 	});
 
 	it('never loses a request, which is the whole point', async () => {
 		// Opening a version reads on arrival and again when the preview is up. With the second dropped, the comments
 		// would stay as the first read left them.
 		const c = controllable();
-		void c.run(); // on arrival
+		void c.run();
 		await settle();
-		const afterPreview = c.run(); // once the preview is up, while the first is still going
+		const afterPreview = c.run();
 		await settle();
-		c.release(); // the first finishes
+		c.release();
 		await settle();
-		c.release(); // the second finishes
+		c.release();
 		await afterPreview; // resolves only once a run that began after it asked has finished
 		expect(c.runs()).toBe(2);
 	});

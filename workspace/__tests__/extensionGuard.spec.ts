@@ -6,13 +6,6 @@ import { INK } from '../src/shared/pageInk';
 import { BRAND, ON_BRAND } from '../src/shared/brand';
 import { panelCss } from './panelStyles';
 
-/**
- * DSNR is drawn in VS Code's own design language, with one kit of its own
- * (`src/ui`), on its pages in VS Code and the published page alike: no colour of its own, only VS Code's theme variables,
- * so it follows every theme, high contrast included.
- */
-
-// The extension's sources, the kit's its pages are drawn with, and the published page's, drawn with it too.
 const root = join(__dirname, '..');
 const sources = (dir: string): string[] =>
 	readdirSync(dir).flatMap((name) => {
@@ -47,7 +40,6 @@ describe('the extension’s sources', () => {
 		const rules = css.split('}').map((b) => b.split('{').map((x) => x.trim()));
 		const amber = rules.filter(([, body]) => /editorWarning-foreground/.test(body ?? '')).map(([selector]) => selector);
 		expect(amber.sort()).toEqual(['.badge-warning', '.message-warning .codicon', '.warning-text']);
-		// A change's mark is the brand.
 		const mark = rules.find(([selector]) => selector?.startsWith('.changed-mark'));
 		expect(mark?.[1]).toMatch(/background:\s*var\(--dsnr-brand\)/);
 	});
@@ -64,15 +56,12 @@ describe('the extension’s sources', () => {
 					.map((line) => `${path.split('/').at(-1)}: ${line.trim()}`),
 			);
 		expect(said).toEqual([]);
-		// The brand's value is in one file of all DSNR's code, so changing it there changes it everywhere (the pins too).
 		const everywhere = ['src', 'extension']
 			.flatMap((dir) => sources(join(root, dir)))
 			.filter((path) => readFileSync(path, 'utf8').toLowerCase().includes(BRAND.toLowerCase()));
 		expect(everywhere.map((path) => relative(root, path))).toEqual(['src/shared/brand.ts']);
-		// Each page DSNR draws with the kit is given it as it starts.
 		for (const entry of ['extension/webview/main.tsx', 'src/viewer/main.tsx'])
 			expect(readFileSync(join(root, entry), 'utf8')).toMatch(/applyBrand\(document\)/);
-		// The words on the brand are readable: WCAG AA's 4.5:1 for text, on the fill and on its darker hover.
 		const css0 = panelCss();
 		const hover = /--dsnr-brand-hover:\s*color-mix\(in srgb,\s*var\(--dsnr-brand\)\s*(\d+)%,\s*black\)/.exec(css0);
 		expect(contrastRatio(ON_BRAND, BRAND)).toBeGreaterThanOrEqual(4.5);
@@ -107,7 +96,6 @@ describe('the extension’s sources', () => {
 		const css = panelCss().replace(/\/\*[\s\S]*?\*\//g, '');
 		const rule = (selector: string) => css.split('}').find((block) => block.trim().startsWith(selector)) ?? '';
 		const wash = rule('.thumb-wash');
-		// The brand at 25%, out of the way until asked for, and nothing else: no icon, no text.
 		expect(wash).toMatch(/background:\s*color-mix\(in srgb,\s*var\(--dsnr-brand\)\s*25%,\s*transparent\)/);
 		expect(wash).toMatch(/opacity:\s*0/);
 		expect(rule('.row-button:hover .thumb-wash')).toMatch(/opacity:\s*1/);
@@ -115,7 +103,6 @@ describe('the extension’s sources', () => {
 		// What has a picture to wash does not also turn the whole row or card grey: only one with none is.
 		expect(rule('.row-button:not(:has(.thumb-wash)):hover')).toMatch(/background:\s*var\(--vscode-list-hoverBackground\)/);
 		expect(css).not.toMatch(/\.row-button:hover\s*\{/);
-		// Its corners are its picture's.
 		expect(rule('.card-media .thumb-wash')).toMatch(/border-radius:\s*var\(--dsnr-radius-thumb-card\)/);
 		expect(rule('.thumb .thumb-wash')).toMatch(/border-radius:\s*var\(--dsnr-radius-thumb\)/);
 	});
@@ -135,7 +122,6 @@ describe('the extension’s sources', () => {
 		const rule = (selector: string) => css.split('}').find((b) => b.trim().startsWith(selector)) ?? '';
 		expect(rule('.swatch {')).toMatch(/border-radius:\s*50%/);
 		expect(rule('.swatch-large {')).not.toMatch(/border-radius/);
-		// No other rule rounds a swatch to anything but a circle.
 		const rounded = css
 			.split('}')
 			.filter((block) => /\.swatch[^{]*\{/.test(block))
@@ -153,15 +139,12 @@ describe('the extension’s sources', () => {
 		const ownedByHighContrast = new Set(['--vscode-contrastBorder', '--vscode-contrastActiveBorder']);
 		const wanted = [...read].filter((name) => !ownedByHighContrast.has(name)).sort();
 		expect(wanted.filter((name) => !given(':root').has(name))).toEqual([]);
-		// Dark gives a value for every colour light does; the fonts are the same in both.
 		const colours = [...given(':root')].filter((name) => !/font/.test(name)).sort();
 		expect([...given(':root.dark')].sort()).toEqual(colours);
-		// It holds VS Code's names and nothing else.
 		expect([...theme.matchAll(/^\s*(--[\w-]+):/gm)].map((m) => m[1]!).filter((name) => !name.startsWith('--vscode-'))).toEqual([]);
 	});
 
 	it('space everything by the one scale: no padding, margin or gap is a number of pixels of its own', () => {
-		// The panel's and the published page's, which are drawn with the same kit.
 		const viewer = files().find((f) => f.path.endsWith('viewer/viewer.css'))!.text;
 		const css = `${panelCss()}\n${viewer}`.replace(/\/\*[\s\S]*?\*\//g, '');
 		// Outside the variables, where the scale and the sizes made from it are written.
@@ -182,7 +165,6 @@ describe('the extension’s sources', () => {
 
 	it('draw every outline and line in the panel in one border colour, the search box’s, from one name', () => {
 		const css = panelCss().replace(/\/\*[\s\S]*?\*\//g, '');
-		// The theme's input border, then its widget border, then the contrast border: written once.
 		expect(css).toMatch(/--dsnr-border:\s*var\(--vscode-input-border,\s*var\(--vscode-widget-border,\s*var\(--dsnr-contrast-border\)\)\);/);
 		const rule = (selector: string) => css.split('}').find((b) => b.trim().startsWith(selector)) ?? '';
 		expect(rule('.input {')).toMatch(/border:\s*1px solid var\(--dsnr-border\)/);
@@ -211,7 +193,6 @@ describe('the extension’s sources', () => {
 		const css = panelCss().replace(/\/\*[\s\S]*?\*\//g, '');
 		const body = css.split('}').find((b) => b.trim().startsWith('.token-body')) ?? '';
 		expect(body).toMatch(/padding:\s*0 var\(--dsnr-space-5\) var\(--dsnr-space-2\) var\(--dsnr-indent\);/);
-		// 12px is the grid's own inset on the right.
 		expect(css.split('}').find((b) => b.trim().startsWith('.grid {'))).toMatch(
 			/padding:\s*var\(--dsnr-space-2\) var\(--dsnr-space-5\) var\(--dsnr-space-4\);/,
 		);
@@ -242,7 +223,6 @@ describe('the extension’s sources', () => {
 	});
 
 	it('draw the pins on a prototype’s page in the brand: the page cannot read the theme, so its palette takes it from where it is written', () => {
-		// Its wash is made from it, so it follows for both.
 		expect(INK.pin).toBe(BRAND);
 	});
 
@@ -250,7 +230,6 @@ describe('the extension’s sources', () => {
 		const css = panelCss().replace(/\/\*[\s\S]*?\*\//g, '');
 		expect(css).toMatch(/--dsnr-card-text-pad:\s*var\(--dsnr-space-4\)/);
 		const rule = (selector: string) => css.split('}').find((b) => b.trim().startsWith(selector)) ?? '';
-		// No padding above: the name sits close under its picture, by the card's gap alone.
 		expect(rule('.card-text {')).toMatch(/padding:\s*0 var\(--dsnr-card-text-pad\) var\(--dsnr-card-text-pad\);/);
 		expect(rule('.card {')).toMatch(/gap:\s*var\(--dsnr-space-4\);/);
 	});
@@ -260,7 +239,6 @@ describe('the extension’s sources', () => {
 		const rule = css.split('}').find((b) => /\.theme-set \+ \.theme-set/.test(b)) ?? '';
 		// One rule for both, so a set is never divided in one view and not in the other.
 		expect(rule).toMatch(/\.token-set \+ \.token-set/);
-		// The panel's one border colour, the search box's (`--dsnr-border`).
 		expect(rule).toMatch(/border-top:\s*1px solid var\(--dsnr-border\)/);
 	});
 
@@ -277,7 +255,6 @@ describe('the extension’s sources', () => {
 		expect(badge).toMatch(/box-sizing:\s*border-box/);
 		// Little enough padding that one digit never makes it wider than it is tall.
 		expect(badge).toMatch(/padding:\s*0 var\(--dsnr-space-2\);/);
-		// No other rule sizes a bubble, but the blank one: extra small, a circle, from its own name.
 		expect(css).toMatch(/--dsnr-badge-xs:\s*9px/);
 		const xs = css.split('}').find((b) => b.trim().startsWith('.badge-xs {')) ?? '';
 		expect(xs).toMatch(/\sheight:\s*var\(--dsnr-badge-xs\);/);
@@ -308,7 +285,6 @@ describe('the extension’s sources', () => {
 		const css = panelCss().replace(/\/\*[\s\S]*?\*\//g, '');
 		const wide = /@media \(min-width: 900px\) \{([\s\S]*?)\n\}/.exec(css.slice(css.indexOf('.tab-split')))?.[1] ?? '';
 		const within = (selector: string) => new RegExp(`${selector.replace('.', '\\.')} \\{([^}]*)\\}`).exec(wide)?.[1] ?? '';
-		// Room for two columns: the page is the window's height, and each pane scrolls inside it.
 		expect(within('.tab-split')).toMatch(/height:\s*100vh/);
 		expect(within('.tab-split')).toMatch(/overflow:\s*hidden/);
 		expect(within('.component-layout')).toMatch(/flex:\s*1/);
@@ -316,16 +292,12 @@ describe('the extension’s sources', () => {
 		const panes = /\.component-stories,\s*\.tab-split \.component-aside \{([^}]*)\}/.exec(wide)?.[1] ?? '';
 		expect(panes).toMatch(/overflow-y:\s*auto/);
 		expect(panes).toMatch(/min-height:\s*0/);
-		// Both end on one line: no room left under either inside its scroll, the page's own below both.
 		expect(panes).not.toMatch(/padding-bottom/);
 		expect(within('.tab-split')).toMatch(/padding-bottom:\s*var\(--dsnr-space-6\)/);
-		// The stories' box fills its pane, and its page scrolls inside it, so its bottom is the analysis's bottom.
 		expect(within('.stories')).toMatch(/flex:\s*1/);
 		expect(within('.stories')).toMatch(/min-height:\s*0/);
 		expect(within('.story-frame')).toMatch(/height:\s*100%/);
-		// Anywhere else a frame is as tall as its page says.
 		expect(css.split('}').find((b) => b.trim().startsWith('.story-frame {'))).toMatch(/height:\s*var\(--frame-height\)/);
-		// Without it, the page scrolls as a whole and the header stays at the top of it.
 		const header = css.split('}').find((b) => b.trim().startsWith('.tab-split .tab-header')) ?? '';
 		expect(header).toMatch(/position:\s*sticky/);
 		expect(header).toMatch(/top:\s*0/);
@@ -342,7 +314,6 @@ describe('the extension’s sources', () => {
 		const css = panelCss().replace(/\/\*[\s\S]*?\*\//g, '');
 		expect(css).toMatch(/--dsnr-grid-gap:\s*var\(--dsnr-space-4\)/);
 		const grid = css.split('}').find((b) => b.trim().startsWith('.grid {')) ?? '';
-		// One value for both directions: `gap` alone, never a row and a column of their own.
 		expect(grid).toMatch(/\sgap:\s*var\(--dsnr-grid-gap\);/);
 		expect(grid).not.toMatch(/row-gap|column-gap/);
 	});
@@ -351,15 +322,12 @@ describe('the extension’s sources', () => {
 		const css = panelCss().replace(/\/\*[\s\S]*?\*\//g, '');
 		const rule = (selector: string) => css.split('}').find((b) => b.trim().startsWith(selector)) ?? '';
 		expect(rule('.ds-header')).toMatch(/display:\s*grid/);
-		// The name and its icon are one flex line, the name giving way (an ellipsis) and the icon not.
 		expect(rule('.ds-title')).toMatch(/display:\s*flex/);
 		expect(rule('.ds-name')).toMatch(/text-overflow:\s*ellipsis/);
 		expect(rule('.ds-branch')).toMatch(/flex-shrink:\s*0/);
 		expect(rule('.ds-branch')).not.toMatch(/grid-row/);
-		// One gap, named: between the buttons, between the name and its icon, and between the icon and the buttons.
 		expect(css).toMatch(/--dsnr-ds-gap:\s*var\(--dsnr-space-2\)/);
 		for (const selector of ['.ds-header', '.ds-title', '.ds-actions {']) expect(rule(selector), selector).toMatch(/gap:\s*var\(--dsnr-ds-gap\)/);
-		// Its icon is the extra small size, a name for it, set over the icon font's own size.
 		expect(css).toMatch(/--dsnr-icon-xs:\s*12px/);
 		expect(rule('.codicon.icon-xs')).toMatch(/font-size:\s*var\(--dsnr-icon-xs\)/);
 	});
@@ -370,10 +338,8 @@ describe('the extension’s sources', () => {
 		expect(layer('actions')).toBeLessThan(layer('top'));
 		expect(layer('top')).toBeLessThan(layer('dialog'));
 		expect(layer('dialog')).toBeLessThan(layer('tip'));
-		// No layer is a number of its own: each rule says which, by name.
 		expect([...css.matchAll(/z-index:\s*([^;]+);/g)].map((m) => m[1]).filter((v) => !v!.startsWith('var(--dsnr-layer-'))).toEqual([]);
 		const rule = (selector: string) => css.split('}').find((b) => b.trim().startsWith(selector)) ?? '';
-		// The bars share one rule: sticky, above the actions, with the sidebar behind them.
 		const bars = css.split('}').find((b) => b.includes('.panel-top,') && b.includes('.ds-part,') && b.includes('.tab-body .view-bar')) ?? '';
 		expect(bars).toMatch(/position:\s*sticky/);
 		expect(bars).toMatch(/z-index:\s*var\(--dsnr-layer-top\)/);
@@ -382,7 +348,6 @@ describe('the extension’s sources', () => {
 		// The design system's row holds a menu, and a sticky row is a layer of its own: it is at the menu's, above the bars under it
 		// (the toggle, the search bar), or its menu would open behind them.
 		expect(rule('.ds-header {')).toMatch(/z-index:\s*var\(--dsnr-layer-menu\)/);
-		// The tab's bar is kept under the toggle's: its top is the toggle's bar's height.
 		expect(rule('.tab-body .view-bar')).toMatch(/top:\s*var\(--dsnr-top-height\)/);
 	});
 
@@ -399,7 +364,6 @@ describe('the extension’s sources', () => {
 		const rule = css.split('}').find((b) => b.includes('.popover:focus')) ?? '';
 		expect(rule).toContain('.dialog:focus');
 		expect(rule).toMatch(/outline:\s*none/);
-		// Both take the focus by the one function, never by a call of their own.
 		const sourceOf = (name: string) => files().find((f) => f.path.endsWith(name))!.text;
 		expect(sourceOf('ui/Popover.tsx')).toContain('focusPanel(');
 		expect(sourceOf('ui/Dialog.tsx')).toContain('focusPanel(');
@@ -409,7 +373,6 @@ describe('the extension’s sources', () => {
 	it('tell every page’s tooltips from one host, mounted in the page’s own root, which is the only thing that waits to tell them', () => {
 		const main = files().find((f) => f.path.endsWith('webview/main.tsx'))!.text;
 		expect(main).toMatch(/<TooltipHost \/>/);
-		// The one wait is named once; nothing else in the pages sets a delay for a tooltip.
 		const delays = files().filter(({ path, text }) => /\.tsx?$/.test(path) && /TOOLTIP_DELAY_MS|delayDuration/.test(text));
 		expect(delays.map((f) => f.path)).toEqual(['src/ui/Tooltip.tsx']);
 	});
@@ -417,13 +380,11 @@ describe('the extension’s sources', () => {
 	it('keep the design system’s Components and Tokens toggle at the top too, with the search bar stacked under it', () => {
 		const css = panelCss().replace(/\/\*[\s\S]*?\*\//g, '');
 		const rule = (selector: string) => css.split('}').find((b) => b.trim().startsWith(selector)) ?? '';
-		// The design system's own row is kept under the top bar, so its name is always shown, and the toggle under that.
 		expect(rule('.ds-header')).toMatch(/top:\s*var\(--dsnr-top-height\)/);
 		expect(css).toMatch(/--dsnr-ds-header-height:\s*calc\(var\(--dsnr-control-small\)\s*\+\s*2\s*\*\s*var\(--dsnr-ds-pad\)\)/);
 		expect(rule('.ds-header')).toMatch(/padding:\s*var\(--dsnr-ds-pad\)/);
 		expect(rule('.ds-header')).toMatch(/height:\s*var\(--dsnr-ds-header-height\)/);
 		expect(rule('.ds-part {')).toMatch(/top:\s*calc\(var\(--dsnr-top-height\)\s*\+\s*var\(--dsnr-ds-header-height\)\)/);
-		// Its height is its own padding and the control's, named, so the bar under it starts where it ends.
 		expect(css).toMatch(/--dsnr-part-height:\s*calc\(var\(--dsnr-control\)\s*\+\s*var\(--dsnr-part-pad-top\)\s*\+\s*var\(--dsnr-part-pad-bottom\)\)/);
 		expect(rule('.ds-part {')).toMatch(/padding:\s*var\(--dsnr-part-pad-top\)[^;]*var\(--dsnr-part-pad-bottom\)/);
 		expect(rule('.tab-body .ds-part ~ .view-bar')).toMatch(
@@ -437,19 +398,16 @@ describe('the extension’s sources', () => {
 		expect(token('control')).toBe('32');
 		expect(token('control-small')).toBe('22');
 		const rule = (selector: string) => css.split('}').find((b) => b.trim().startsWith(selector)) ?? '';
-		// Each takes its size from the token, never a number of its own.
 		expect(rule('.input {')).toMatch(/height:\s*var\(--dsnr-control\)/);
 		expect(rule('.button {')).toMatch(/min-height:\s*var\(--dsnr-control\)/);
 		expect(rule('.toggle-option')).toMatch(/height:\s*var\(--dsnr-toggle-option\)/);
 		expect(css).toMatch(/--dsnr-toggle-option:\s*calc\(var\(--dsnr-control\)/);
-		// An icon alone is a square from one rule, whichever draws it: its side is `--square`, the control's or the small one's.
 		const square = rule('.icon-button,\n.menu-button,\n.button-icon,');
 		expect(square).toMatch(/--square:\s*var\(--dsnr-control\)/);
 		expect(square).toMatch(/width:\s*var\(--square\)[\s\S]*height:\s*var\(--square\)/);
 		expect(square).toMatch(/box-sizing:\s*border-box/);
 		expect(rule('.icon-button-small,')).toMatch(/--square:\s*var\(--dsnr-control-small\)/);
 		expect(rule('.toggle-icons .toggle-option')).toMatch(/--square:\s*var\(--dsnr-toggle-option\)/);
-		// No other rule gives an icon control a width or a height of its own.
 		const own = css
 			.split('}')
 			.filter(

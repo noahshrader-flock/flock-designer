@@ -3,8 +3,6 @@ import { describe, expect, it } from 'vitest';
 import { applyTheme, themedQuery } from '../src/page/theme';
 import { pageState, pageTheme } from '../src/page/helpers';
 
-/** The page's own part (`src/page/theme.ts`): run first in a page, it answers the page's light-or-dark question from `?theme=`. */
-
 describe('a media query in a chosen theme', () => {
 	it('answers its light-or-dark part with the chosen theme, leaving the rest of it to the browser', () => {
 		expect(themedQuery('(prefers-color-scheme: dark)', 'dark')).toBe('(min-width: 0px)');
@@ -64,7 +62,7 @@ describe('what a comment records of the page', () => {
 		history.replaceState(null, '', '/demo/v1/');
 		applyTheme(window);
 		expect(pageTheme()).toBe('light');
-		// The real app's preview: no theme put on it, so what it follows is what it was seen in (light, where nothing says dark).
+		// The real app's preview has no theme put on it, so it follows what it was seen in.
 		document.documentElement.removeAttribute('data-dsnr-theme');
 		expect(pageTheme()).toBe('light');
 	});

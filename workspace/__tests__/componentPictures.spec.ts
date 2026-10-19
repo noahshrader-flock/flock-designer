@@ -5,11 +5,6 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { ComponentPictures } from '../src/core/services/designSystem/componentPictures';
 import { PrototypeServer } from '../src/core/services/prototypes/prototypeServer';
 
-/**
- * Where the pictures of the components are kept: one for each component of a
- * design system, replaced in place by a newer one, kept across restarts, and served to the window. Against a folder here.
- */
-
 const A = 'src/components/A/A.stories.tsx';
 const B = 'src/components/B/B.stories.tsx';
 const picture = (text: string) => Buffer.from(`jpeg ${text}`);

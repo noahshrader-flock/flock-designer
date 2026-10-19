@@ -6,10 +6,7 @@ import { afterEach, expect, it } from 'vitest';
 import { locateGh } from '../src/core/services/platform/ghCli';
 import { NOT_FAKED } from './sealed.mjs';
 
-/**
- * The world every test runs in (`sealed.mjs`), proved from inside a test: none can reach the person's settings, GitHub
- * sign-in or remotes, whoever writes it, because a test that tried fails, saying it was not faked.
- */
+/** `sealed.mjs`, proved from inside a test: a test that reaches the person's settings or remotes fails, saying it was not faked. */
 
 let dir: string | null = null;
 afterEach(() => {

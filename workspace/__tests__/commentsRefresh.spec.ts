@@ -1,10 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { IDLE_MS, REFRESH_MS, dueForCheck } from '../src/viewer/comments/refresh';
 
-/**
- * How often an open version looks for new comments: about once a minute while someone is there, and only every few
- * minutes once nobody has touched it for a while (each check is a call to GitHub). Coming back checks at once, as before.
- */
+/** Each check is a call to GitHub, so an idle version checks less often. */
 describe('looking for new comments', () => {
 	const at = 1_000_000_000;
 

@@ -6,13 +6,6 @@ import { contrastPartner, contrastRatio, fitsKind, pointingAt, sameChange, withE
 import { CONTRAST_TEXT } from '../src/shared/wcag';
 import { memoryReads } from './fixtures';
 
-/**
- * A change to the library's tokens: what it does to the list,
- * worked out once; and how it is written into the library's files, by each source in its own way, read back and checked
- * against that. Against fixtures of each way a library keeps its tokens.
- */
-
-/** A theme as FUI keeps one: tone files, a palette pointing at them (one role with an opacity), the spacing and radius. */
 const THEME = {
 	'src/colors/tones/pineGreen.ts': "export const pineGreen = {\n  100: '#FFFFFF',\n  50: '#108062',\n  20: '#18372F',\n};\n",
 	'src/colors/theme/light.ts': `import { pineGreen } from '../tones';
@@ -31,7 +24,6 @@ export const lightPalette = {
 	'src/utils/theme.ts': 'const spacing = 8;\nexport const theme = createTheme({\n  shape: { borderRadius: 4 },\n});\n',
 };
 
-/** The files a change writes, and the tokens as the library would then read. */
 const change = async (files: Record<string, string>, edits: TokenEdit[]) => {
 	const written = await editedFiles(memoryReads(files), edits);
 	const after = await readTokens(memoryReads({ ...files, ...Object.fromEntries(written) }));
@@ -121,7 +113,6 @@ describe('contrast', () => {
 			)
 		).tokens;
 		expect(contrastPartner(css.find((t) => t.path === 'css.light.primary') as DesignToken, css)?.path).toBe('css.light.primary-foreground');
-		// A color with no pair says nothing.
 		expect(contrastPartner(theme.find((t) => t.path === 'palette.light.surface.main') as DesignToken, theme)).toBeUndefined();
 	});
 });
@@ -204,7 +195,6 @@ describe('writing a change into CSS variables', () => {
 	it('writes a variable’s new value in its own declaration, past a commented-out one on the same line', async () => {
 		const { written, find } = await change(CSS, [{ path: 'css.light.primary', value: '#222222' }]);
 		expect(written.get('src/globals.css')).toContain('  /* --primary: #000000; */ --primary: #222222;\n');
-		// The variable that points at it follows.
 		expect(find('css.light.ring')).toMatchObject({ value: '#222222', ref: { path: 'css.light.primary' } });
 	});
 
@@ -236,7 +226,6 @@ describe('writing a change into a variable a package declares (Phase 5.5)', () =
 		expect(written.get('src/globals.css')).toBe(
 			"@import 'theme-kit';\n\n:root {\n  --brand: #108062;\n  --radius-md: 9px;\n  --spacing: 0.3rem;\n}\n\n.dark {\n  --radius-md: 10px;\n}\n",
 		);
-		// Read back as the library's own from then on, and as the change says.
 		expect(find('css.light.radius-md')).toMatchObject({ value: '9px', source: { file: 'src/globals.css', line: 5 } });
 		expect(find('css.light.radius-md').source.from).toBeUndefined();
 		expect(find('css.dark.radius-md').value).toBe('10px');

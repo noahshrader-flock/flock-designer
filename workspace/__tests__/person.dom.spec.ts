@@ -3,8 +3,6 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { Avatar } from '../src/ui/Avatar';
 import { render, unmountAll } from './reviewHarness';
 
-/** A person as their picture (the kit's `Avatar`, on a card in the comments and at the end of the bar). */
-
 let current: Awaited<ReturnType<typeof render>> | null = null;
 afterEach(async () => {
 	if (current) await unmountAll(current.root);

@@ -82,7 +82,6 @@ describe('the mode a component’s values are shown in', () => {
 		// Not drawn in dark, or drawn the same (a library DSNR cannot turn dark): light.
 		expect(shownMode({ light: rows('#fff'), dark: null }, 'dark')).toBe('light');
 		expect(shownMode({ light: rows('#fff'), dark: rows('#fff') }, 'dark')).toBe('light');
-		// One value of many that differs is enough; drawn only in dark is dark.
 		expect(shownMode({ light: [...rows('#fff'), ...rows('#111', 'b')], dark: [...rows('#fff'), ...rows('#222', 'b')] }, 'dark')).toBe('dark');
 		expect(shownMode({ light: null, dark: rows('#000') }, 'dark')).toBe('dark');
 	});

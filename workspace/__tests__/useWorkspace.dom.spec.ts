@@ -4,11 +4,6 @@ import { useWorkspace } from '../extension/webview/hooks/useWorkspace';
 import type { Result } from '../src/shared/contract';
 import { fail, ok, render, settle, unmountAll } from './reviewHarness';
 
-/**
- * One way for a screen to read something from the app: what it read, why it could not, whether it is still reading, and
- * a way to read it again; an answer that comes back after the screen asked for something else is dropped.
- */
-
 type Seen = ReturnType<typeof useWorkspace<string>>;
 let current: Awaited<ReturnType<typeof render>> | null = null;
 let seen: Seen | null = null;

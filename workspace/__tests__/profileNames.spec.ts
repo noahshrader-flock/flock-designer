@@ -3,10 +3,6 @@ import { ProfileNames } from '../src/core/services/publishing/profileNames';
 import type { Person, Project, ProjectWork } from '../src/shared/contract';
 import { aProject, projectWork } from './fixtures';
 
-/**
- * One name for a person, everywhere: their GitHub profile name. Against a fake GitHub.
- */
-
 const PROFILES: Record<string, unknown> = {
 	noahshrader: { login: 'noahshrader', name: 'Noah Shrader' },
 	'noahshrader-flock': { login: 'noahshrader-flock', name: 'Noah Shrader' },

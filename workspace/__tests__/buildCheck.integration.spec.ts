@@ -8,22 +8,15 @@ import { findChrome } from '../src/core/services/browser/chromeHeadless';
 import { writeCheckScript } from '../src/core/services/prototypes/prototypeBundle';
 import { axeTagsFor } from '../src/shared/wcag';
 
-/**
- * A prototype build's own accessibility check, as the agent runs it: the bundled script,
- * written beside the build script, run with Node from that folder on a built page in a real browser.
- */
-
 let dir: string;
 beforeEach(() => {
 	dir = mkdtempSync(join(tmpdir(), 'fdw-check-'));
 });
 afterEach(() => rmSync(dir, { recursive: true, force: true }));
 
-/** A built page as a prototype's build writes one, here plain HTML, with `body` in it. */
 const PAGE = (body: string) =>
 	`<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Cameras</title></head><body><main><h1>Cameras</h1>${body}</main></body></html>`;
 const ICON = '<svg width="16" height="16" viewBox="0 0 16 16"><path d="M2 2h12v12H2z"/></svg>';
-/** Level A, as Coke declares: what the build asks for, and nothing above it. */
 const levelA = {
 	declared: true as const,
 	target: { version: '2.0' as const, level: 'A' as const },
@@ -61,7 +54,6 @@ describe.skipIf(findChrome() === null)('a build’s own check, run as the agent 
 
 	it('is one script, written beside the build script, that needs nothing installed beside it', () => {
 		expect(script).toBe(join(dir, 'check-prototype.mjs'));
-		// Bundled whole: what it runs with (the browser's driver, axe) is in it, not imported from beside it.
 		expect(readFileSync(script, 'utf8')).not.toMatch(/(?:from|import\()\s*['"](?:puppeteer-core|axe-core)['"]/);
 	});
 
@@ -84,7 +76,7 @@ describe.skipIf(findChrome() === null)('a build’s own check, run as the agent 
 		const third = check();
 		expect(third.code).toBe(0);
 		expect(third.said).toMatch(new RegExp(`left after ${MOST_ROUNDS} rounds of this check.*Finish now: what is left is kept with the page`));
-		// Kept with the page: what was left, of exactly this page, goes on its record when it is saved, and why.
+		// What was left, of exactly this page, goes on its record when it is saved, and why.
 		const config = JSON.parse(readFileSync(join(dir, 'v1.build-check.json'), 'utf8')) as CheckConfig;
 		const saved = checkedAsSaved(config, readFileSync(config.page, 'utf8'));
 		expect(saved).toMatchObject({ name: 'v1', left: LEFT, depth: 'light, at build' });

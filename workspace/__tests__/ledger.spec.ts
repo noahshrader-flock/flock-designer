@@ -21,11 +21,6 @@ import type { CellResult } from '../src/core/services/accessibility/probe/cells'
 import { CRITERIA } from '../src/shared/wcagCriteria';
 import { axeTagsFor } from '../src/shared/wcag';
 
-/**
- * The accessibility ledger: each criterion's status from what axe and the probe found, the
- * evidence each rests on, review.md's section written from it, what a gate refuses, and how two runs compare.
- */
-
 const target = AA;
 const ledger = (views: CellResult[], violations: AccessibilityIssue[] = [], incomplete: AccessibilityIssue[] = []): Ledger =>
 	ledgerOf({
@@ -121,9 +116,7 @@ describe('a light measure', () => {
 	it('says what it did not measure is not run, and why, never a person’s or measured in its place', () => {
 		expect(row(light, '1.4.10')).toMatchObject({ status: 'notRun', why: 'reflow was not run in this measure (at full depth)' });
 		expect(row(light, '2.1.1')).toMatchObject({ status: 'notRun', why: expect.stringContaining('keyboard-operate was not run in this measure') });
-		// Measured by axe and by a cell that did run: still not run, as another cell that measures it did not.
 		expect(row(light, '2.4.7')?.status).toBe('measured');
-		// What no machine measures stays a person's.
 		expect(row(light, '1.3.3')?.status).toBe('person');
 	});
 

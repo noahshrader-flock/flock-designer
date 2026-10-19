@@ -57,7 +57,6 @@ describe('what a repository says', () => {
 });
 
 describe('how git is run', () => {
-	/** What git's own environment holds for `name`, as a command it runs sees it. */
 	const seen = (name: string) => git(root, ['-c', `alias.seen=!printenv ${name}`, 'seen']);
 
 	it('never asks for a password or lets ssh ask one, since there is no terminal to answer', async () => {
@@ -116,7 +115,6 @@ describe('createBranch', () => {
 	it('refuses while the tree is dirty, rather than carrying the edits over', async () => {
 		writeFileSync(join(root, 'README.md'), 'work in progress\n');
 		await expect(createBranch(root, 'prototype/demo/v1', 'develop')).rejects.toThrow(/uncommitted changes/);
-		// and the edit is still there, on the branch it was made on
 		expect((await readCheckout(root)).branch).toBe('develop');
 	});
 

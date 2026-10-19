@@ -37,13 +37,11 @@ beforeEach(() => {
 	g('commit', '-q', '-m', 'first');
 });
 
-/** The project's codebase work, on its branch and recorded, with the checkout back on develop. */
 const codebase = async () => {
 	const made = await createCodebaseWork(root, records, descriptor, 'demo', 'real change', 'develop');
 	g('checkout', '-q', 'develop');
 	return made;
 };
-/** A version of the project's prototype, recorded beside whatever is there: a page, with no branch. */
 const version = (name: string) =>
 	writeFileSync(
 		join(records, 'demo', 'work.json'),
@@ -92,8 +90,7 @@ describe('createCodebaseWork', () => {
 
 	it('records the work in the design repository, not in the product checkout', async () => {
 		await createCodebaseWork(root, records, descriptor, 'demo', 'first try', 'develop');
-		// The record lives with the design record, NOT in the product checkout --
-		// putting it there dirties the tree and blocks the next piece of work.
+		// In the product checkout it would dirty the tree and block the next piece of work.
 		expect(existsSync(join(records, 'demo/work.json'))).toBe(true);
 		expect(existsSync(join(root, '.dsnr/projects/demo/work.json'))).toBe(false);
 		expect((await readCheckout(root)).clean).toBe(true);
@@ -218,7 +215,7 @@ describe('recordedWork: work started outside the app', () => {
 		const found = await recordedWork(root, records, descriptor, 'new-view', 'codebase');
 		expect(found).toMatchObject({ projectId: 'new-view', name: 'codebase', branch: 'feature/new-view' });
 		expect(readWork(records, 'new-view')).toHaveLength(1);
-		expect((await readCheckout(root)).branch).toBe('feature/new-view'); // nothing was switched
+		expect((await readCheckout(root)).branch).toBe('feature/new-view');
 	});
 
 	it('dates adopted work from the work itself, not from when the app first needed a record', async () => {

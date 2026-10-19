@@ -11,23 +11,15 @@ import { withPageTheme } from '../src/core/services/browser/pageTheme';
 import { inChrome } from './realChrome';
 
 /**
- * The headless port with the browser on this machine: a real picture and a real check of real pages, served from
- * this machine as prototypes are. Skipped where there is no Chrome, Edge or Chromium.
- */
-
-/**
- * A preview page as the builds' is (white, padded, the stories in `#root`, each with its name), drawing one story file of
- * each kind a picture has to get right: small at the top left (its picture's region starts off the page, so it is moved),
- * taller than what is captured (cut), wider than the window, with a dialog open outside the stories, and with something
- * fixed to the window that moving would move; and a file that could not be drawn at all, which has no story in it, only the
- * page's word of why.
+ * One story file of each kind a picture has to get right: small at the top left (its region starts off the page, so it is
+ * moved), taller than the capture (cut), wider than the window, beside a dialog, with something fixed to the window, and
+ * one that could not be drawn at all.
  */
 const STORIES: Record<string, string> = {
 	small: '<button style="width:100px;height:40px;background:#108062;color:#fff;border:0;border-radius:8px">Save</button>',
 	tall: '<div style="width:300px;height:800px;background:linear-gradient(#123,#c84)"></div>',
 	wide: '<div style="width:1190px;height:60px;background:#246;border-radius:12px"></div>',
 	dialog: '<span style="color:#333">Open</span>',
-	// A file that could not be drawn at all: no story, only the page's word of why in its place.
 	unread: '',
 	fixed:
 		'<div><span style="display:inline-block;width:60px;height:30px;background:#a33"></span><b style="position:fixed;left:140px;top:60px;background:#3a3;width:40px;height:40px"></b></div>',
@@ -51,10 +43,9 @@ const PAGES: Record<string, string> = {
 <body style="margin:0;font:16px sans-serif"><main><h1 style="background:#123;color:#fff;padding:40px">Alert history</h1>
 <p style="padding:40px">Every alert from the last day, by camera.</p><img src="data:image/gif;base64,R0lGODlhAQABAAAAACw="></main></body></html>`,
 	'/blank.html': '<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Blank</title></head><body></body></html>',
-	// Planted: a heading that skips three levels, and one with nothing in it, which only axe's best-practice rules find.
+	// Planted faults only axe's best-practice rules find.
 	'/headings.html': `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Headings</title></head>
 <body><main><h1>Alerts</h1><h4 id="skipped">Today</h4><h2 id="empty"></h2><p>Every alert from the last day.</p></main></body></html>`,
-	// A story that moves: one padding animating for ever (a spinner's way), one animating in over two seconds.
 	'/moving/': `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Previews</title>
 <style>@keyframes pulse { from { padding-top: 4px } to { padding-top: 40px } } @keyframes enter { from { padding-left: 0 } to { padding-left: 24px } }</style></head>
 <body style="margin:0;background:#fff"><div id="root"></div><script>
@@ -64,9 +55,7 @@ window.__dsnrShow = async () => {
 		+ '<b style="display:block;width:20px;height:20px;padding-left:24px;animation:enter 2s linear both"></b></section>';
 };
 </script></body></html>`,
-	// A preview build's page, as the Design System tab's are: it draws the story file it is told, in place of the last.
-	// Its styles put in by script when a story draws, into a sheet already on the page, as a CSS-in-JS library puts them
-	// (Emotion, built for production): the page theme answers them as the story's elements go in.
+	// Styles inserted into a sheet already on the page when a story draws, as Emotion does in production.
 	'/inserted/': withPageTheme(`<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Previews</title></head>
 <body style="margin:0;background:#fff"><div id="root"></div><script>
 const sheet = document.head.appendChild(document.createElement('style')).sheet;
@@ -77,7 +66,6 @@ window.__dsnrShow = async () => {
 	document.getElementById('root').innerHTML = '<section data-story><button class="save" style="color:#fff;padding:12px 20px;border:0">Save</button></section>';
 };
 </script></body></html>`),
-	// With the page theme first in its head, as the build's page has it: its address says the mode.
 	'/previews/': withPageTheme(`<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Previews</title></head>
 <body style="margin:0;background:#fff"><div id="root"></div><script>
 window.__dsnrShow = async (file) => {
@@ -119,7 +107,7 @@ describe.skipIf(findChrome() === null)('with the browser on this machine', () =>
 		const first = await drawn();
 		await new Promise((r) => setTimeout(r, 350));
 		expect(await drawn()).toEqual(first);
-		// At rest, its padding as written, not a moment of its turn; and the one that animates in, as it ends.
+		// The endless one at its padding as written; the one that animates in, as it ends.
 		expect(first).toHaveProperty(['3px']);
 		expect(first).toHaveProperty(['24px']);
 	}, 60_000);
@@ -136,7 +124,6 @@ describe.skipIf(findChrome() === null)('with the browser on this machine', () =>
 		expect(light?.[0]?.rootPx).toBe(16);
 		expect(Object.keys(dark?.[0]?.colors ?? {})).toContain('rgb(101, 67, 33)');
 		expect(dark?.[0]?.picture).toBeUndefined();
-		// The picture: a JPEG of the first story alone, on white, twice as wide as it is tall.
 		const picture = light?.[0]?.picture;
 		expect(picture?.subarray(0, 2)).toEqual(Buffer.from([0xff, 0xd8]));
 		expect(light?.[0]?.accessibility?.violations.map((v) => v.id)).toContain('image-alt');
@@ -159,9 +146,8 @@ describe.skipIf(findChrome() === null)('with the browser on this machine', () =>
 			await page.goto(`${base}/pictures/`, { waitUntil: 'load' });
 			const compare = await browser.newPage();
 			/**
-			 * A JPEG as a person sees it: its size, the box around what is painted (not near-white, so JPEG's own noise is not
-			 * counted), and how far its pixels are from another's, on average, out of 255. What a picture must keep, said without
-			 * depending on how one version of the browser smooths an edge.
+			 * Compared as a person sees it (size, painted box ignoring near-white JPEG noise, mean pixel distance out of 255), so
+			 * the test does not depend on how one version of the browser smooths an edge.
 			 */
 			const seen = (a: Buffer, b: Buffer) =>
 				compare.evaluate(
@@ -193,12 +179,9 @@ describe.skipIf(findChrome() === null)('with the browser on this machine', () =>
 			for (const file of Object.keys(STORIES)) {
 				await page.evaluate(readDrawn(file, true));
 				const { fast, composed, apart } = await seen((await pictureOf(page as never)) as Buffer, (await composedPicture(page as never)) as Buffer);
-				// The same size, and what is painted in the same place, each to within the pixel or two the half-size capture finds
-				// an edge to: a story moved into view, cut where the capture cuts it (nothing past the cut shows), wider than the
-				// window, beside a dialog, or with something fixed to the window, all as the composition makes it.
+				// To within the pixel or two the half-size capture finds an edge to.
 				fast.size.forEach((n, i) => expect(Math.abs(n - (composed.size[i] as number)), `${file} size`).toBeLessThanOrEqual(2));
 				fast.painted.forEach((n, i) => expect(Math.abs(n - (composed.painted[i] as number)), `${file} painted`).toBeLessThanOrEqual(2));
-				// And the same to the eye where the two are one size: what differs is an edge smoothed another way.
 				if (fast.size.join() === composed.size.join()) expect(apart, `${file} pixels`).toBeLessThan(3);
 			}
 		});

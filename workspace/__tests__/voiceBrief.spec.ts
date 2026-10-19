@@ -3,11 +3,6 @@ import { VOICE_FILE } from '../src/core/services/designSystem/voiceAndTone';
 import { taskVoice, voiceBrief } from '../src/core/services/designSystem/voiceBrief';
 import { voiceIsWritten } from '../src/core/services/designSystem/voice';
 
-/**
- * What every agent task carries of the company's voice and tone: the file's own words, read each time a task is made,
- * as the accessibility standard is.
- */
-
 const WRITTEN = `# Voice and tone
 
 ## Voice

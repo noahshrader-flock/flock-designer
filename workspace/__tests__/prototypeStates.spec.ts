@@ -1,8 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { stateLabel, stateOfQuery, statesOf, withState } from '../src/shared/prototypeStates';
 
-/** A prototype's states, as its built page lists them, and the address of each. */
-
 describe('statesOf', () => {
 	it('reads the list the build wrote into the page, in order', () => {
 		expect(statesOf('<head>\n<meta name="dsnr-states" content="default,filtered,failed">\n</head>')).toEqual(['default', 'filtered', 'failed']);

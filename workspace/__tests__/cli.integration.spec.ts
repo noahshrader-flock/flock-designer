@@ -13,11 +13,6 @@ import type { GitHubApi } from '../src/codeHost/github';
 import { type Answer, fakeGitHub, refusal } from './fakes/github';
 import { DESIGN_REPO } from '../src/shared/config';
 
-/**
- * `dsnr`, the command an agent runs from Claude Code in VS Code to make a prototype with no app running. Against a
- * temporary product checkout and design repository side by side, and the real bundler, as on a designer's machine.
- */
-
 let home: string;
 let product: string;
 let design: string;
@@ -25,7 +20,6 @@ let prototypes: string;
 let out: string[];
 let err: string[];
 let github: GitHubApi | null;
-/** The design repository's address in GitHub's API, as the command names it. */
 const REPO = `/repos/${DESIGN_REPO.owner}/${DESIGN_REPO.repo}`;
 
 const esbuild = createRequire(__filename).resolve('esbuild');
@@ -54,7 +48,7 @@ beforeEach(() => {
 	makeProduct(product);
 	installDesignSystem(product);
 
-	// The design repository: who is making the prototype is read from its git identity, the record being written there.
+	// Who is making the prototype is read from the design repository's git identity, the record being written there.
 	mkdirSync(join(design, 'skills'), { recursive: true });
 	g(design, 'init', '-q');
 	g(design, 'config', 'user.name', 'Test Person');
@@ -85,7 +79,6 @@ describe('new-prototype', () => {
 		expect(task).toContain(join(prototypes, 'build-prototype.mjs'));
 		expect(task).toContain('A list of cameras');
 		expect(task).toContain(`dsnr save-prototype --project demo --name v1 --product ${product}`);
-		// It finishes by publishing, and with the link the command printed, or why there is none.
 		expect(task).toContain('dsnr publish --project demo --name v1');
 		expect(task).toMatch(/Never give a link the command did not print/);
 	});
@@ -185,7 +178,6 @@ describe('save-prototype', () => {
 describe('change-prototype', () => {
 	const local = (name: string) => join(prototypes, 'demo', `${name}.tsx`);
 	const page = (text: string) => `import { Hello } from 'x';\nexport default () => <><Hello /><p>${text}</p></>;\n`;
-	/** GitHub as its API answers: who the person is, and each version's review thread with its commenters. */
 	const signedIn = (threads: Record<string, string[]>) => {
 		const names = Object.keys(threads);
 		github = fakeGitHub({
@@ -225,7 +217,6 @@ describe('change-prototype', () => {
 		expect(out.join('\n')).toContain(
 			'1 comment from others is on v1. The change is made in it, in place, so their pins may land on the wrong element',
 		);
-		// What they said is read first, from a file, and the person is told how much there is.
 		const said = /2 open comments on v1, in (\S+?): read them first/.exec(out.join('\n'));
 		expect(said).not.toBeNull();
 		expect(readFileSync(said?.[1] as string, 'utf8')).toContain('feedback');
@@ -245,7 +236,6 @@ describe('change-prototype', () => {
 		expect(out.join('\n')).not.toContain('from others');
 		expect(out.join('\n')).toContain(`Write \`${local('v2')}\``);
 		expect(out.join('\n')).toContain('dsnr publish --project demo --name v2');
-		// The command it is given says which version the new one was started from, so saving it records that.
 		expect(out.join('\n')).toContain('dsnr save-prototype --project demo --name v2 --from-version v1');
 		expect(readFileSync(local('v2'), 'utf8')).toBe(page('first'));
 		expect(recorded().map((i) => i.name)).toEqual(['v1']);
@@ -364,7 +354,6 @@ describe('publish opens the page the first time', () => {
 		writeFileSync(join(prototypes, 'demo', 'v1.tsx'), "import { Hello } from 'x';\nexport default () => <Hello />;\n");
 		await run('save-prototype', '--project', 'demo', '--name', 'v1');
 		out = [];
-		// GitHub: a bare repository to push to, and an API whose site deploys at once.
 		const remote = join(home, 'remote.git');
 		g(home, 'init', '-q', '--bare', remote);
 		g(design, 'add', '-A');
@@ -374,7 +363,6 @@ describe('publish opens the page the first time', () => {
 		g(design, 'push', '-q', '-u', 'origin', branch);
 		return branch;
 	};
-	/** A GitHub whose site is deployed at once, and either already has the page or does not. */
 	const site = (branch: string, onSite: boolean, more: Record<string, Answer> = {}) => {
 		let dispatched = false;
 		return fakeGitHub({
@@ -463,7 +451,6 @@ describe('unpublish', () => {
 
 	it('removes the page and source, here and in the design repository, pushes, and keeps the record', async () => {
 		await saved();
-		// GitHub: a bare repository to push to, and an API whose site deploys at once.
 		const remote = join(home, 'remote.git');
 		g(home, 'init', '-q', '--bare', remote);
 		g(design, 'add', '-A');
@@ -497,7 +484,6 @@ describe('the command', () => {
 		const skills = join(__dirname, '..', '..', 'skills');
 		// The build skill is in the task of every agent the app starts too, which must never start another prototype.
 		expect(readFileSync(join(skills, 'build-prototype.md'), 'utf8')).not.toMatch(/new-prototype|dsnr\.mjs/);
-		// The starting skill names the launcher as it sits beside a product repository.
 		expect(readFileSync(join(skills, 'start-prototype.md'), 'utf8')).toContain('node ../flock-designer/workspace/bin/dsnr.mjs new-prototype');
 		expect(existsSync(join(__dirname, '..', 'bin', 'dsnr.mjs'))).toBe(true);
 	});
@@ -551,13 +537,8 @@ describe('the command', () => {
 	});
 });
 
-/**
- * `dsnr accessibility`: the one harness, in a real browser, on a product that is not Coke
- * and names nothing DSNR knows, a plain page with a known fault served by its own design-mode command, and on a
- * prototype's page. It needs the browser on this machine, as DSNR does.
- */
+/** On a product that is not Coke and names nothing DSNR knows. */
 describe.skipIf(findChrome() === null)('accessibility', () => {
-	/** A port nothing answers on now, for the plain product to serve on. */
 	const freePort = () =>
 		new Promise<number>((resolve) => {
 			const s = createServer().listen(0, () => {
@@ -573,7 +554,6 @@ describe.skipIf(findChrome() === null)('accessibility', () => {
 		const port = await freePort();
 		mkdirSync(shop);
 		makeProduct(shop, [{ id: 'design-mode', label: 'Design mode', argv: ['node', 'serve.cjs', String(port)], servesPreviewOn: port }]);
-		// A plain server and plain pages: one with an image with no text and faint text, one that throws, one that never answers.
 		writeFileSync(
 			join(shop, 'serve.cjs'),
 			`require('node:http').createServer((req, res) => {
@@ -633,7 +613,6 @@ describe.skipIf(findChrome() === null)('accessibility', () => {
 		expect(kept.notOpened.map((p) => p.name)).toEqual(['Broken', 'Gone']);
 		expect(kept.result.ran.states).toEqual(['Home', 'Devices']);
 		expect(kept.result.violations.map((v) => v.rule)).toEqual(expect.arrayContaining(['image-alt', 'color-contrast']));
-		// Each page that opened, probed at full depth, its evidence in a folder of its own; the source not read, and why.
 		expect(said).toMatch(/Probed at full depth \(30 of the 30 cells\), in Home \(\d+\.\d s\), Devices \(\d+\.\d s\)\./);
 		expect(said).toMatch(
 			/Not run:\n- \*\*key-shortcuts\*\* \(WCAG 2\.1\.4 Character Key Shortcuts\): this checkout's remote names no default branch/,
@@ -647,10 +626,8 @@ describe.skipIf(findChrome() === null)('accessibility', () => {
 			['Home', 'projects/shop/accessibility/app/home'],
 			['Devices', 'projects/shop/accessibility/app/devices'],
 		]);
-		// Stopped after: nothing answers on its port.
 		await expect(fetch(`http://localhost:${port}/`)).rejects.toThrow();
 
-		// The ledger, and review.md's section written from it; a gate's check finds nothing to refuse.
 		const ledger = JSON.parse(readFileSync(join(design, 'projects', 'shop', 'accessibility', 'app.ledger.json'), 'utf8')) as {
 			rows: { sc: string; status: string }[];
 		};
@@ -659,7 +636,6 @@ describe.skipIf(findChrome() === null)('accessibility', () => {
 		expect(review).toContain("## Accessibility: Test Product's app in design mode");
 		expect(review).toContain('| 5 | Accessible names | 4.1.2 Name, Role, Value:');
 		expect(said).toContain('This is the first run of this measure: there is no ledger to compare with.');
-		// The manual list, in the work's HANDOFF.md, for whoever tests it by hand.
 		const handoff = readFileSync(join(shop, 'HANDOFF.md'), 'utf8');
 		expect(handoff).toContain('## Accessibility: what is left for a person');
 		expect(handoff).toMatch(
@@ -671,27 +647,24 @@ describe.skipIf(findChrome() === null)('accessibility', () => {
 		out = [];
 		expect(await main(['check-accessibility', '--project', 'shop'], deps(shop))).toBe(0);
 		expect(out.join('\n')).toMatch(/every status rests on its evidence, and review\.md and HANDOFF\.md say what the ledger says/);
-		// Edited by hand, and the gate refuses it.
 		writeFileSync(join(shop, 'HANDOFF.md'), handoff.replace('Cover at least', 'Maybe cover'));
 		out = [];
 		expect(await main(['check-accessibility', '--project', 'shop'], deps(shop))).toBe(1);
 		expect(out.join('\n')).toMatch(/HANDOFF\.md does not carry the manual list its ledger writes/);
 		writeFileSync(join(shop, 'HANDOFF.md'), handoff);
-		// An evidence file gone, and the gate refuses what rested on it.
 		rmSync(join(evidence, 'home', 'cells.json'));
 		out = [];
 		expect(await main(['check-accessibility', '--project', 'shop'], deps(shop))).toBe(1);
 		expect(out.join('\n')).toMatch(/rests on projects\/shop\/accessibility\/app\/home\/cells\.json, which is not there/);
-		// Measured again: compared with the last, the record made whole, and what the agent wrote in review.md kept.
 		writeFileSync(join(design, 'projects', 'shop', 'review.md'), `# Review\n\n## Product parity\n\nFine.\n\n${review}`);
-		// What testers send back, in the file the first run started for them: one a machine missed, one it had found.
+		// One a machine missed, one it had found.
 		const returned = join(design, 'projects', 'shop', 'accessibility', 'returned.md');
 		expect(readFileSync(returned, 'utf8')).toContain('| Criterion | Page or state | Steps to reproduce |');
 		writeFileSync(
 			returned,
 			`${readFileSync(returned, 'utf8')}| 2.4.7 | Home | Tab to the first link | A visible focus ring | serious | ring.png | yes |\n| 1.1.1 | Devices | Read the picture | Its text | minor | | yes |\n`,
 		);
-		// And the product fixes its picture, and lints with Biome, so a guard can be proposed in its stack.
+		// It lints with Biome, so a guard can be proposed in its stack.
 		writeFileSync(join(shop, 'serve.cjs'), readFileSync(join(shop, 'serve.cjs'), 'utf8').replace('<img src=', '<img alt=\\"Camera 4\\" src='));
 		writeFileSync(join(shop, 'package.json'), JSON.stringify({ name: 'plain-shop', devDependencies: { '@biomejs/biome': '1.9.4' } }));
 		out = [];
@@ -709,7 +682,6 @@ describe.skipIf(findChrome() === null)('accessibility', () => {
 			"- WCAG 1.1.1, image-alt: add `a11y/useAltText` (Biome (its a11y rules)) to the product's lint, so it is caught as code is written.",
 		);
 		expect(readFileSync(join(design, 'projects', 'shop', 'accessibility', 'guards.md'), 'utf8')).toContain('a11y/useAltText');
-		// Read again, between runs: nothing logged twice.
 		out = [];
 		expect(await main(['read-returned', '--project', 'shop'], deps(shop))).toBe(0);
 		expect(out.join('\n')).not.toMatch(/newly logged/);
@@ -725,7 +697,6 @@ describe.skipIf(findChrome() === null)('accessibility', () => {
 		const checkLine = /check its accessibility with exactly: `([^`]+)`/.exec(task)?.[1] as string;
 		const build = /Check it builds.*with exactly: `([^`]+)`/.exec(task)?.[1] as string;
 		expect(checkLine).toMatch(/^node .*check-prototype\.mjs .*v1\.build-check\.json$/);
-		// A button drawn as an icon alone, with no name: built, then checked as the agent checks it, three times.
 		writeFileSync(
 			join(prototypes, 'demo', 'v1.tsx'),
 			"export default () => <main><h1>Cameras</h1><button><svg width='16' height='16'><path d='M2 2h12v12H2z' /></svg></button></main>;\n",
@@ -802,19 +773,16 @@ describe.skipIf(findChrome() === null)('accessibility', () => {
 		expect(said).toMatch(/^Measured demo v1's page: (?:No issues found|\d+ issues? to fix)\./);
 		expect(said).toMatch(/- \*\*image-alt\*\*[^\n]*\n {2}- `img`: /);
 		const kept = JSON.parse(readFileSync(join(design, 'projects', 'demo', 'accessibility', 'v1.json'), 'utf8')) as { result: unknown };
-		// The same result the app keeps beside the page, so the app shows what was measured here.
 		expect((JSON.parse(readFileSync(join(prototypes, 'demo', 'v1.accessibility.json'), 'utf8')) as { result: unknown }).result).toEqual(kept.result);
-		// Probed in its one state, its source read for what the page cannot show.
 		expect(existsSync(join(design, 'projects', 'demo', 'accessibility', 'v1', 'default', 'tab.json'))).toBe(true);
 		expect(JSON.parse(readFileSync(join(design, 'projects', 'demo', 'accessibility', 'v1', 'source.json'), 'utf8'))).toEqual(
 			expect.arrayContaining([{ cell: 'dragging', sc: '2.5.7', status: 'none', findings: [] }]),
 		);
-		// The light subset, as a build runs it: the tree and the Tab walk alone, and a run leaves none of the last one's evidence.
+		// A run leaves none of the last one's evidence.
 		out = [];
 		expect(await run('accessibility', '--project', 'demo', '--name', 'v1', '--light')).toBe(0);
 		expect(out.join('\n')).toMatch(/Probed at light depth \(8 of the 30 cells\)/);
 		expect(existsSync(join(design, 'projects', 'demo', 'accessibility', 'v1', 'default', 'reflow-320.jpg'))).toBe(false);
-		// And as the agent runs it, through its launcher's bundle, which starts the browser too.
 		const env = { ...process.env, HOME: home, XDG_CONFIG_HOME: join(home, '.config'), APPDATA: join(home, 'AppData') };
 		const launcher = join(__dirname, '..', 'bin', 'dsnr.mjs');
 		const ran = spawnSync(process.execPath, [launcher, 'accessibility', '--project', 'demo', '--name', 'v1'], {
@@ -827,12 +795,7 @@ describe.skipIf(findChrome() === null)('accessibility', () => {
 	}, 120_000);
 });
 
-/**
- * The agent fixing what its build's own check found, with the real agent: run only where it is asked for
- * (`DSNR_REAL_AGENT=1`), since it runs Claude Code on the person's account and costs a little. A prototype with a fault
- * planted in it is changed for something else; the agent builds, runs the check it is given, and fixes the fault in its
- * own source, so the check finds nothing at the end: fixed, not reported.
- */
+/** Run only when asked for (`DSNR_REAL_AGENT=1`), since it runs Claude Code on the person's account and costs a little. */
 describe.skipIf(process.env.DSNR_REAL_AGENT !== '1' || findChrome() === null)('the agent, with its build’s own check', () => {
 	it('fixes a fault the check finds while it does what it was asked', async () => {
 		const { runToEnd } = await import('../src/core/services/agent/agent');
@@ -841,12 +804,10 @@ describe.skipIf(process.env.DSNR_REAL_AGENT !== '1' || findChrome() === null)('t
 		const task = out.join('\n');
 		const checkLine = /check its accessibility with exactly: `([^`]+)`/.exec(task)?.[1] as string;
 		const source = join(prototypes, 'demo', 'v1.tsx');
-		// The planted fault: a button drawn as an icon alone, with no name.
 		writeFileSync(
 			source,
 			"export default () => <main><h1>Cameras</h1><button onClick={() => undefined}><svg width='16' height='16'><path d='M2 2h12v12H2z' /></svg></button></main>;\n",
 		);
-		// As DSNR starts a prototype's run: in its folder, reading what its task says it may read, and nothing else.
 		const { prototypeReadable } = await import('../src/core/services/prototypes/prototype');
 		const { prototypeWork } = await import('../src/core/services/prototypes/prototypeWork');
 		const { designStore } = await import('../src/core/services/publishing/designStore');
@@ -863,7 +824,6 @@ describe.skipIf(process.env.DSNR_REAL_AGENT !== '1' || findChrome() === null)('t
 		console.log(`The agent's last words: ${ended.said}\nIts source:\n${fixed}`);
 		expect(ended.ok, ended.said).toBe(true);
 		expect(fixed).toContain('Camera list');
-		// The check sent it back at least once, and finds nothing now: the agent fixed it, in its own source.
 		const record = JSON.parse(readFileSync(join(prototypes, 'demo', 'v1.build-checked.json'), 'utf8')) as { rounds: number; left: boolean };
 		expect(record.rounds).toBeGreaterThanOrEqual(1);
 		expect(record.left).toBe(false);

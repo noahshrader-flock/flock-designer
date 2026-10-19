@@ -121,7 +121,6 @@ describe('addressed marker', () => {
 	it('never shows in the comment as a person reads it', () => {
 		const marked = withAddressed(anchored(), 'abc1234');
 		expect(stripAnchor(marked)).toBe('Remove this text');
-		// And on a comment with no anchor at all.
 		expect(stripAnchor(withAddressed('Just a note', 'abc1234'))).toBe('Just a note');
 	});
 

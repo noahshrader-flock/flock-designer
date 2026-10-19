@@ -5,12 +5,6 @@ import { Shared } from '../extension/src/sharedValues';
 import type { Catalog, Result } from '../src/shared/contract';
 import { ok } from '../src/shared/result';
 
-/**
- * The design system shown, read by the extension once for every page, so the panel and every tab
- * show the same commit and follow a Sync: what its clone has, then what GitHub has; again on Sync and on another branch
- * shown; and only the latest read shown.
- */
-
 const ready = (commit: string, update: 'updating' | 'unchanged' = 'unchanged') =>
 	({ state: 'ready', commit, update, showing: null }) as unknown as Catalog;
 const FUI = { id: 'acme/ui', name: 'Acme UI' };
@@ -31,7 +25,6 @@ const world = () => {
 	const shared = new Shared('catalog', SHARED_START.catalog, post);
 	const read = vi.fn();
 	const share = new CatalogShare({ api: api as never, shared, onRead: read });
-	/** The answer to the read asked `n`th, from the first. */
 	const answer = async (n: number, r: Result<Catalog>) => {
 		answers[n]?.(r);
 		await new Promise((r2) => setTimeout(r2, 0));
@@ -58,7 +51,6 @@ describe('the design system, read once for every page', () => {
 		const w = world();
 		void w.share.start();
 		await new Promise((r) => setTimeout(r, 0));
-		// Synced while the first read is still out.
 		void w.share.sync();
 		await w.answer(1, ok(ready('new')));
 		await w.answer(0, ok(ready('old')));

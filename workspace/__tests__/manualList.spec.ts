@@ -7,11 +7,6 @@ import type { CellResult } from '../src/core/services/accessibility/probe/cells'
 import type { AccessibilityIssue } from '../src/shared/contract';
 import { AA, cell, issue, result } from './fixtures/accessibilityFixtures';
 
-/**
- * The manual list: what is left for whoever tests by hand, from the ledger, in HANDOFF.md.
- * Nothing in it is left unsaid, and nothing in it says the work conforms.
- */
-
 const target = AA;
 const RUN = {
 	command: 'npm run start:design',
@@ -64,7 +59,6 @@ describe('the manual list', () => {
 		expect(text).toMatch(/Found by a machine, at the target: 1\.1\.1 Non-text Content; 2\.2\.1 Timing Adjustable; 4\.1\.2 Name, Role, Value\./);
 		expect(text).toContain('  - 1.4.10 Reflow: not run, because reflow, in Home: the time was used up');
 		expect(text).toContain('`flock-designer/projects/shop/accessibility/app/`');
-		// Every line that says something was not run says why, as a gate asks; none says the work conforms.
 		for (const line of text.split('\n').filter((x) => /not run/i.test(x))) expect(line).toMatch(/\bbecause\b/);
 		expect(text).not.toMatch(/\b(conforms to|compliant|passes)\b/i);
 	});

@@ -24,18 +24,14 @@ import {
 } from './fixtures';
 
 /**
- * The call layer itself: which handlers demand that a repository was actually opened, and which arguments they refuse.
  * A repository's own `.dsnr/workspace.json` is the list of commands DSNR will run in it, so admitting one nobody chose
- * is the risk, and unit tests of each service cannot see the wiring. These tests assert the gate, not the services.
+ * is the risk; these tests assert the gate, not the services.
  */
 
 const handlers = new Map<string, (...args: unknown[]) => unknown>();
 
 let copied = '';
-/**
- * Everything outside the app, faked: no dialog, no other application, no real gh, no push. Checked against `Ports`, so a
- * port added there and not here fails to compile.
- */
+/** Checked against `Ports`, so a port added there and not here fails to compile. */
 const fakePorts = () =>
 	({
 		chooseFolder: vi.fn(async (): Promise<string | null> => null),
@@ -60,10 +56,9 @@ const fakePorts = () =>
 	}) satisfies Ports;
 let ports: ReturnType<typeof fakePorts>;
 
-/** The app's own GitHub answers from `routes` (`fakes/github.ts`); `githubApi` still has every call it was asked. */
 const answer = (routes: Record<string, Answer>) => githubApi.mockImplementation(fakeGitHub(routes).api);
 
-/** The real runner, so its one-run rule is what is tested, over a stand-in agent that runs until the test ends. */
+/** The real runner, so its one-run rule is what is tested. */
 const realRunner = async () => {
 	const { EventEmitter } = await import('node:events');
 	const { AgentRunner } = await import('../src/core/services/agent/agent');
@@ -77,12 +72,10 @@ const realRunner = async () => {
 			return child;
 		}) as never,
 	});
-	/** The run going on ends, as its process exiting tells it. */
 	const exit = (code = 0) => children.at(-1)?.emit('exit', code);
 	return { runner, sessionsSpawned, exit };
 };
 
-/** Trusting a folder as a shell does, with the core's own `open`: as the answer to a call, ok or not. */
 const trustFolder = async (root: string): Promise<{ ok: boolean; error?: string; value?: unknown }> => {
 	try {
 		return { ok: true, value: await calls.open(root) };
@@ -101,7 +94,6 @@ let product: string;
 let design: string;
 let home: string;
 
-/** A saved prototype, v1 of demo, in `root`, with the skill Build needs: what Build moves into the code. */
 const savedPrototype = async (root = product) => {
 	await trustFolder(root);
 	mkdirSync(join(design, 'skills'), { recursive: true });
@@ -113,9 +105,7 @@ const savedPrototype = async (root = product) => {
 	expect((await call(CHANNELS.openPrototype, 'demo', 'v1')).ok).toBe(true);
 };
 const JPEG = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 7, 7, 7]);
-/** Build on that prototype, from `from`: how codebase work is started from the window. */
 const build = (root: string, from?: string) => call(CHANNELS.buildInCodebase, root, 'demo', 'v1', from);
-/** Codebase work for demo, recorded and checked out, as Build or an agent in a terminal would leave it. */
 const codebaseWork = async () => {
 	const { createCodebaseWork } = await import('../src/core/services/projects/workRecords');
 	const { readDescriptor } = await import('../src/core/services/projects/descriptor');
@@ -123,7 +113,6 @@ const codebaseWork = async () => {
 };
 
 let registerCalls: (typeof import('../src/core/calls'))['registerCalls'];
-/** What the core hands a shell once registered: the extension trusts a folder with its `open`. */
 let calls: ReturnType<typeof registerCalls>;
 let coreRoutes: (typeof import('../src/core/handle'))['served'];
 let OpenedCheckouts: (typeof import('../src/core/services/projects/session'))['OpenedCheckouts'];
@@ -134,10 +123,9 @@ let agentStop: Fn;
 let agentRunningIn: Fn;
 let runningSession: string | null;
 let recent: { work: string | null; lines: string[] };
-/** What the stand-in agent does while it runs (the change it makes), and how its run ends. */
 let agentDoes: () => void;
 let agentEnds: AgentEnd;
-/** The end of a run of the work asked about that is already going (a screen opened again), or none. */
+/** The end of a run of the work asked about that is already going (a screen opened again), or null for none. */
 let agentGoing: Promise<AgentEnd> | null;
 let runtimeStart: Fn;
 let memoryValue: string | null;
@@ -146,20 +134,15 @@ let readComments: Fn;
 let setAddressed: Fn;
 let githubState: unknown;
 let githubApi: Fn;
-/** What the design repository's project list says, for the tests of the list. */
 let designRepoProjects: unknown[] = [];
 let warm: Fn;
 let ask: Fn;
-/** What a page's accessibility check finds: axe in headless Chrome in use, a stand-in here, finding an image with no text. */
 let checkPage: Fn;
-/** How a prototype's picture is drawn: headless Chrome in use, a stand-in here that gives the same few bytes. */
 let drawCover: Fn;
-/** A file read from GitHub as bytes: none, unless a test says otherwise. */
 let readBytes: Fn;
 let register: (more?: Partial<CallsContext>) => ReturnType<typeof registerCalls>;
 let prototypeServer: InstanceType<(typeof import('../src/core/services/prototypes/prototypeServer'))['PrototypeServer']>;
 
-// The home every test starts with: a product repository and the design repository beside it, under GitHub/.
 const world = madeOnce((d) => {
 	makeProduct(join(d, 'GitHub', 'flock-coke'), [
 		{ id: 'preview', label: 'Run', argv: ['node', '-e', 'setTimeout(()=>{},1e4)'], servesPreviewOn: 3999 },
@@ -237,7 +220,6 @@ beforeEach(async () => {
 			runtime: { start: runtimeStart, stop: vi.fn(), status: vi.fn(() => ({ state: 'stopped' })) } as never,
 			agent: {
 				start: agentStart,
-				// Run as the real runner runs it: started (or refused), then what the agent does, then its end.
 				run: async (...a: unknown[]) => {
 					const started = agentStart(...a) as { state: string; detail?: string } | undefined;
 					if (started?.state === 'unavailable') return { state: 'unavailable', detail: started.detail };
@@ -257,7 +239,6 @@ beforeEach(async () => {
 				threads: { deleteComment, readComments, setAddressed },
 				files: { readFile: vi.fn(async () => null), readBytes: (...a: unknown[]) => readBytes(...a) },
 			} as never,
-			// No test here shares a preview; sharing is runShare's, tested on its own.
 			share: { start: vi.fn(), status: vi.fn(() => ({ state: 'idle' })) } as never,
 			memory: {
 				read: () => memoryValue,
@@ -275,13 +256,11 @@ beforeEach(async () => {
 			changeBranchFiles: appPaths(home).changeBranches,
 			storyPreviewsRoot: join(home, 'story-previews'),
 			componentPicturesRoot: join(home, 'component-pictures'),
-			// What is got ready in the background is only counted here, never drawn.
 			componentTokens: { of: ask, warm, pictures: async () => ({ drawing: false, pictures: {}, issues: {} }) } as never,
 			installer: new Installer(),
 			componentPictureRecipe: 'for tests',
 			...more,
 		});
-		// The core's table answered as a shell's transport answers it: each route on its channel.
 		for (const [name, route] of coreRoutes()) handlers.set(invokeChannel(name), (_event, ...sent) => route(...sent));
 		calls = publishing;
 		return publishing;
@@ -304,7 +283,6 @@ describe('the Design System tab', () => {
 	it('has no previews to build when there is no design system, and takes only a list of token edits from the window', async () => {
 		expect(await call(CHANNELS.storyPreview)).toEqual({ ok: true, value: { state: 'no-library' } });
 		expect(await call(CHANNELS.storyPreview, [{ path: 'spacing', value: '6px' }])).toEqual({ ok: true, value: { state: 'no-library' } });
-		// A path, or code where a value goes, is not a change.
 		expect(await call(CHANNELS.storyPreview, '/etc', 'x')).toMatchObject({ ok: false });
 		expect(await call(CHANNELS.storyPreview, [{ path: 'spacing', value: 6 }])).toMatchObject({ ok: false });
 	});
@@ -368,12 +346,10 @@ describe('the Design System tab', () => {
 			ok: false,
 			error: expect.stringContaining('A value tried names'),
 		});
-		// A component's values are kept by its story file, never for the design system whole.
 		expect(await call(CHANNELS.changeBranch, 'values', null)).toMatchObject({ ok: false, error: expect.stringContaining('by its story file') });
 		expect(await call(CHANNELS.proposeChange, 'values', 'src/components/A/A.stories.tsx', null)).toMatchObject({ ok: false });
 		expect(await call(CHANNELS.forgetChange, 'values', 'src/components/A/A.stories.tsx')).toEqual({ ok: true, value: null });
 		expect(await call(CHANNELS.changeScopes, 'values')).toEqual({ ok: true, value: [] });
-		// The agent is asked only for a value tried, checked as the contract says one is; with no design system, nothing runs.
 		expect(await call(CHANNELS.writeValue, 'src/components/A/A.stories.tsx', { property: 'height' })).toMatchObject({
 			ok: false,
 			error: expect.stringContaining('A value tried names'),
@@ -400,7 +376,6 @@ describe('the Design System tab', () => {
 			error: expect.stringContaining('Save the change to a branch first'),
 		});
 		expect(await call(CHANNELS.forgetChange, 'tokens', null)).toEqual({ ok: true, value: null });
-		// The tokens are kept for the design system whole, never for one component.
 		expect(await call(CHANNELS.saveChange, 'tokens', 'src/components/A/A.stories.tsx', [])).toMatchObject({
 			ok: false,
 			error: expect.stringContaining('design system whole'),
@@ -455,10 +430,9 @@ describe('the Design System tab', () => {
 		expect(await save({ text: 'x'.repeat(200_001), against: null })).toMatchObject({ ok: false, error: expect.stringContaining('200,000') });
 		expect(await save({ text: 'x', against: '../../etc/passwd' })).toMatchObject({ ok: false, error: expect.stringContaining('sha') });
 		expect(await save({ text: 'x', against: 42 })).toMatchObject({ ok: false, error: expect.stringContaining('sha') });
-		// A blob's sha in either of git's kinds is taken, and the save goes on: here, to say none is connected.
+		// A sha of either git hash kind passes the check, so the save goes on to say none is connected.
 		for (const sha of ['a'.repeat(40), 'b'.repeat(64)])
 			expect(await save({ text: 'x', against: sha })).toMatchObject({ ok: false, error: 'There is no design system connected.' });
-		// The voice and tone is the connected design system's: with none, it says so.
 		expect(await call(CHANNELS.voiceAndTone)).toMatchObject({ ok: false, error: expect.stringContaining('No design system is connected') });
 		expect(await call(CHANNELS.proposeChange, 'voice', null, null)).toMatchObject({ ok: false, error: expect.stringContaining('Save the change') });
 	});
@@ -614,12 +588,10 @@ describe('prototypes', () => {
 		writeSkill();
 		await trustFolder(product);
 		await call(CHANNELS.createPrototype, 'demo', 'Demo', 'A list', { root: product, branch: 'develop' });
-		// No manifest: the default, and said so.
 		await call(CHANNELS.handPrototypeBuild, product, 'demo', 'v1', 'A list');
 		let task = taskFileText();
 		expect(task).toContain('## Accessibility');
 		expect(task).toContain('Test Product has no .dsnr/manifest.md, so it declares no target. Build to **WCAG 2.1 Level AA**');
-		// The product's own target, once its manifest declares one; and the rules, ahead of what the person asked for.
 		writeFileSync(join(product, '.dsnr', 'manifest.md'), readFileSync(join(__dirname, 'fixtures/coke-manifest.md'), 'utf8'));
 		await call(CHANNELS.handPrototypeBuild, product, 'demo', 'v1', 'A list');
 		task = taskFileText();
@@ -640,7 +612,7 @@ describe('prototypes', () => {
 			const source = join(home, 'prototype', 'demo', 'v1.tsx');
 			const built = join(home, 'prototype', 'demo', 'v1.html');
 			const saveBuilt = async () => (await call(CHANNELS.saveBuilt, 'demo', 'v1')).value;
-			/** Written `at` seconds from now, as the agent writes a source and its build writes the page, each after the last. */
+			/** Explicit mtimes, so each write is seen as after the last. */
 			const start = Math.floor(Date.now() / 1000);
 			const write = (file: string, text: string, at: number) => {
 				writeFileSync(file, text);
@@ -653,7 +625,6 @@ describe('prototypes', () => {
 			write(built, '<html>built</html>', 101);
 			expect(await saveBuilt()).toBe('saved');
 			expect(sourceSaved()).toContain('<Hello />');
-			// Built and saved: nothing new until the agent changes it, and nothing while that change is not built yet.
 			expect(await saveBuilt()).toBe('waiting');
 			write(source, "import { Hello } from 'x';\nexport default () => <><Hello /><p>more</p></>;\n", 200);
 			expect(await saveBuilt()).toBe('waiting');
@@ -678,17 +649,14 @@ describe('prototypes', () => {
 			expect(r.ok).toBe(true);
 			const taskFile = join(home, 'prototype', 'demo', 'v1-build.md');
 			const task = readFileSync(taskFile, 'utf8');
-			// The builder's guide first, always, its links pointed at this machine's shared folder.
 			expect(task.startsWith('## How to build UI here: always, before anything else')).toBe(true);
 			expect(task).toContain('# Building UI in a Flock product');
 			expect(task).toContain(`\`${realpathSync(design)}/standards/non-negotiables.md\``);
 			expect(task.indexOf('# Building UI in a Flock product')).toBeLessThan(task.indexOf('# Build\n'));
-			// What the headless build is told, since the work is the same: the skill, where to write, the check, the request last.
 			expect(task).toContain('# Build');
 			expect(task).toContain('## Accessibility');
 			expect(task.indexOf('## Accessibility')).toBeLessThan(task.indexOf('## What the person asked for'));
 			expect(task.trim().endsWith('A list of alerts')).toBe(true);
-			// No VS Code in a test: the command, on the clipboard, pointing at the task; its prompt names the prototype.
 			const { value } = r as { value: { editor: boolean; command: string } };
 			expect(value.editor).toBe(false);
 			expect(copied).toBe(value.command);
@@ -709,8 +677,6 @@ describe('prototypes', () => {
 		const list = JSON.parse(readFileSync(records, 'utf8')) as { basedOn: { branch: string } }[];
 		list[0]!.basedOn.branch = `--output=${written}`;
 		writeFileSync(records, JSON.stringify(list));
-		// The build is refused as a branch that does not exist, and git is never handed the option, whichever check
-		// reaches it first.
 		const built = await call(CHANNELS.handPrototypeBuild, product, 'demo', 'v1', 'A list');
 		expect(built.error).toMatch(/There is no branch called --output=/);
 		expect(existsSync(written)).toBe(false);
@@ -721,19 +687,15 @@ describe('prototypes', () => {
 		await trustFolder(product);
 		await call(CHANNELS.createPrototype, 'demo', 'Demo', 'A list', { root: product, branch: 'develop' });
 		const voiceFile = join(dirname(product), 'x', '.dsnr', 'voice-and-tone.md');
-		// No file: nothing said of it.
 		await call(CHANNELS.handPrototypeBuild, product, 'demo', 'v1', 'A list');
 		expect(taskFileText()).not.toContain('## Voice and tone');
-		// An empty file, as the repository has it until it is written: still nothing, and the task goes ahead.
 		mkdirSync(dirname(voiceFile), { recursive: true });
 		writeFileSync(voiceFile, '');
 		expect((await call(CHANNELS.handPrototypeBuild, product, 'demo', 'v1', 'A list')).ok).toBe(true);
 		expect(taskFileText()).not.toContain('## Voice and tone');
-		// A file with nothing written under its headings: still nothing.
 		writeFileSync(voiceFile, '# Voice and tone\n\n## Voice\n\n<!-- how Flock sounds -->\n');
 		await call(CHANNELS.handPrototypeBuild, product, 'demo', 'v1', 'A list');
 		expect(taskFileText()).not.toContain('## Voice and tone');
-		// Written: its words, after the accessibility rules and before what the person asked for.
 		writeFileSync(voiceFile, '# Voice and tone\n\n## Voice\n\nCalm and exact.\n');
 		await call(CHANNELS.handPrototypeBuild, product, 'demo', 'v1', 'A list');
 		let task = taskFileText();
@@ -741,7 +703,6 @@ describe('prototypes', () => {
 		expect(task).toContain('### Voice\n\nCalm and exact.');
 		expect(task.indexOf('## Accessibility')).toBeLessThan(task.indexOf('## Voice and tone'));
 		expect(task.indexOf('## Voice and tone')).toBeLessThan(task.indexOf('## What the person asked for'));
-		// Changed: the next task has the change, as nothing keeps a copy.
 		writeFileSync(voiceFile, '# Voice and tone\n\n## Voice\n\nWarm and exact.\n');
 		await call(CHANNELS.handPrototypeBuild, product, 'demo', 'v1', 'A list');
 		task = taskFileText();
@@ -795,7 +756,6 @@ describe('prototypes', () => {
 		expect(made).toMatchObject({ ok: true, value: { name: 'v1', branch: 'prototype/demo/v1' } });
 		expect(readFileSync(join(design, 'projects', 'demo', 'brief.md'), 'utf8')).toBe('# Demo\n\nA list\n');
 
-		// Nothing to open, or save, until the agent has written the page; opened, it is saved.
 		expect((await call(CHANNELS.openPrototype, 'demo', 'v1')).ok).toBe(false);
 		mkdirSync(join(home, 'prototype', 'demo'), { recursive: true });
 		writeFileSync(join(home, 'prototype', 'demo', 'v1.html'), '<h1>Demo</h1>');
@@ -804,11 +764,9 @@ describe('prototypes', () => {
 
 		const shown = await call(CHANNELS.openPrototype, 'demo', 'v1');
 		expect(shown).toMatchObject({ ok: true, value: { states: [] } });
-		// Served as saved, with the theme its address may ask for put first: the app's preview runs no page agent.
 		const served = await (await fetch((shown.value as { url: string }).url)).text();
 		expect(served).toMatch(/^<script>[\s\S]*prefers-color-scheme[\s\S]*<\/script><h1>Demo<\/h1>$/);
 
-		// With the states the page says it has, for the bar to offer; the page is the same in each, asked for in it.
 		writeFileSync(join(home, 'prototype', 'demo', 'v1.html'), '<meta name="dsnr-states" content="default,empty"><h1>Demo</h1>');
 		expect((await call(CHANNELS.openPrototype, 'demo', 'v1')).ok).toBe(true);
 		const again = (await call(CHANNELS.openPrototype, 'demo', 'v1')).value as { url: string; states: string[] };
@@ -822,7 +780,6 @@ describe('prototypes', () => {
 			answer({
 				'/repos/noahshrader-flock/flock-designer': { private: false, default_branch: 'main' },
 				'/repos/noahshrader-flock/flock-designer/pages': { html_url: 'https://x.github.io/flock-designer/', public: true },
-				// Never deployed, and the page not on GitHub yet.
 				'/repos/noahshrader-flock/flock-designer/deployments?*': [],
 				'/repos/noahshrader-flock/flock-designer/commits?*': [],
 			});
@@ -831,7 +788,6 @@ describe('prototypes', () => {
 			mkdirSync(join(home, 'prototype', 'demo'), { recursive: true });
 			writeFileSync(join(home, 'prototype', 'demo', 'v1.html'), '<h1>Demo</h1>');
 			expect((await call(CHANNELS.openPrototype, 'demo', 'v1')).ok).toBe(true);
-			// It runs on its own; the screen asks how it is going.
 			let status = (await call(CHANNELS.publishedPage, 'demo', 'v1')).value as { state: string; why?: string };
 			for (let i = 0; i < 50 && status.state === 'publishing'; i++) {
 				await new Promise((r) => setTimeout(r, 10));
@@ -839,7 +795,6 @@ describe('prototypes', () => {
 			}
 			// This clone is not on a branch, which is what stops it: said, not swallowed.
 			expect(status).toEqual({ state: 'unpublished', why: expect.stringMatching(/not on a branch/) });
-			// Nothing was pushed or deployed.
 			expect(githubApi.mock.calls.every(([, init]) => !(init as { method?: string } | undefined)?.method)).toBe(true);
 		});
 
@@ -855,7 +810,6 @@ describe('prototypes', () => {
 			mkdirSync(join(home, 'prototype', 'demo'), { recursive: true });
 			writeFileSync(join(home, 'prototype', 'demo', 'v1.html'), '<h1>Demo</h1>');
 			await call(CHANNELS.openPrototype, 'demo', 'v1');
-			// Saved again while the first publish runs.
 			await call(CHANNELS.openPrototype, 'demo', 'v1');
 			for (let i = 0; i < 50 && asked() < 2; i++) await new Promise((r) => setTimeout(r, 10));
 			expect(asked()).toBe(2);
@@ -883,7 +837,6 @@ describe('prototypes', () => {
 			for (let i = 0; i < 100 && !githubApi.mock.calls.some(([path]) => String(path) === `${base}/compare/${deployed}...main`); i++)
 				await new Promise((r) => setTimeout(r, 10));
 			expect(githubApi.mock.calls.map(([path]) => String(path))).toContain(`${base}/compare/${deployed}...main`);
-			// A publish was started for that page: this clone is on no branch, which is what stops it, said not swallowed.
 			let status = (await call(CHANNELS.publishedPage, 'demo', 'v1')).value as { state: string; why?: string };
 			for (let i = 0; i < 100 && status.state === 'publishing'; i++) {
 				await new Promise((r) => setTimeout(r, 10));
@@ -908,12 +861,11 @@ describe('prototypes', () => {
 				await trustFolder(product);
 				githubApi.mockClear();
 				await call(CHANNELS.publishNow);
-				// How many times it has asked where the site is: the deploy that follows runs on after Publish now returns.
+				// Counted, not awaited: the deploy that follows runs on after Publish now returns.
 				return () => githubApi.mock.calls.filter(([path]) => String(path) === base).length;
 			};
 
 			it('deploys the site by itself, with no page to name: it asks where the site is again, to deploy', async () => {
-				// Once to find it was behind, once more in the deploy it then starts (which stops there: no branch here).
 				const asked = await behindBy('workspace/src/viewer/Viewer.tsx');
 				await eventually(() => expect(asked()).toBe(2));
 			});
@@ -945,7 +897,6 @@ describe('prototypes', () => {
 				await new Promise((r) => setTimeout(r, 10));
 				status = (await call(CHANNELS.publishedPage, 'demo', 'v1')).value as typeof status;
 			}
-			// The same publish as the one that runs by itself, stopped the same way here: this clone is on no branch.
 			expect(status).toEqual({ state: 'unpublished', why: expect.stringMatching(/not on a branch/) });
 		});
 
@@ -972,10 +923,8 @@ describe('prototypes', () => {
 				basedOn?: unknown;
 			}[];
 		const page = (text: string) => `import { Hello } from 'x';\nexport default () => <><Hello /><p>${text}</p></>;\n`;
-		/** Comments by version: v1's thread, and any other's. */
 		const threads = (byName: Record<string, ReturnType<typeof comment>[]>) =>
 			readComments.mockImplementation(async (key: string) => byName[key.split('/').at(-1) as string] ?? []);
-		/** A v1 made by a signed-in person, with a source. */
 		const ready = async () => {
 			githubState = { state: 'signedIn', user: { login: 'noah', name: 'Noah' } };
 			await trustFolder(product);
@@ -1044,7 +993,6 @@ describe('prototypes', () => {
 		it('makes the change in a new version from it when one is asked for, and leaves the one commented on as it was', async () => {
 			await ready();
 			threads({ v1: [comment(7, 'x', 'pm')] });
-			// The agent finds the new version made from the one commented on, and changes it.
 			agentDoes = () => {
 				expect(readFileSync(local('v2'), 'utf8')).toBe(page('first'));
 				writeFileSync(local('v2'), page('changed'));
@@ -1119,7 +1067,6 @@ describe('prototypes', () => {
 			agentDoes = () => writeFileSync(local('v2'), page('second'));
 			agentEnds = { state: 'stopped' };
 			await call(CHANNELS.addressPrototype, 'demo', 'v1', { thread: 1, id: 7 }, true);
-			// The run was stopped; the next Address is on another comment: the first change is saved before it starts.
 			agentDoes = () => undefined;
 			agentEnds = { state: 'finished', exitCode: 0 };
 			await call(CHANNELS.addressPrototype, 'demo', 'v1', { thread: 1, id: 8 }, false);
@@ -1190,7 +1137,6 @@ describe('prototypes', () => {
 		const shown = await call(CHANNELS.openPrototype, 'demo', 'v2');
 		const font = await fetch((shown.value as { url: string }).url.replace('/demo/v2/', `/_shared/${kept[0]?.replace('.datauri', '')}`));
 		expect(font.headers.get('content-type')).toBe('font/woff2');
-		// Kept beside the projects, never listed as one.
 		const listed = await call(CHANNELS.listProjects);
 		expect((listed.value as { id: string }[]).map((p) => p.id)).not.toContain('_shared');
 	});
@@ -1203,7 +1149,6 @@ describe('prototypes', () => {
 			await call(CHANNELS.buildInCodebase, product, 'demo', 'v1', 'develop');
 			const task = readFileSync(join(home, 'prototype', 'demo', 'v1-into-code.md'), 'utf8');
 			expect(task).toContain("### What the prototype's check left open");
-			// Which element, and what to change on it, so the agent finds it in the code.
 			expect(task).toContain(
 				'- **image-alt** (WCAG 1.1.1): Images must have alternate text. 1 element.\n  - `img.hero`: Fix any of the following: Element does not have an alt attribute',
 			);
@@ -1237,7 +1182,6 @@ describe('prototypes', () => {
 
 		it('reads the voice and tone from the design system’s folder when it is a folder of the product’s own repository, not from a checkout beside it', async () => {
 			await saved();
-			// The product says its design system is `packages/ui` in this repository: its agent files are there.
 			const descriptor = join(product, '.dsnr', 'workspace.json');
 			writeFileSync(
 				descriptor,
@@ -1245,10 +1189,9 @@ describe('prototypes', () => {
 			);
 			mkdirSync(join(product, 'packages', 'ui', '.dsnr'), { recursive: true });
 			writeFileSync(join(product, 'packages', 'ui', '.dsnr', 'voice-and-tone.md'), '# Voice and tone\n\n## Voice\n\nFrom the folder.\n');
-			// Committed, as a repository's files are: an unfinished change would be said to be one, and stop the task.
+			// Committed, since an uncommitted change would stop the task.
 			g(product, 'add', '-A');
 			g(product, 'commit', '-q', '-m', 'the design system is a folder here');
-			// A checkout beside the product, which a package-style design system would have, is not what is read.
 			mkdirSync(join(dirname(product), 'x', '.dsnr'), { recursive: true });
 			writeFileSync(join(dirname(product), 'x', '.dsnr', 'voice-and-tone.md'), '# Voice and tone\n\n## Voice\n\nFrom beside it.\n');
 			expect((await call(CHANNELS.buildInCodebase, product, 'demo', 'v1', 'develop')).ok).toBe(true);
@@ -1261,31 +1204,24 @@ describe('prototypes', () => {
 			await saved();
 			const r = await call(CHANNELS.buildInCodebase, product, 'demo', 'v1', 'develop');
 			expect(r.ok).toBe(true);
-			// Codebase work, as any: its branch checked out, and its record.
 			expect(g(product, 'branch', '--show-current').trim()).toBe('feature/demo');
 			const records = JSON.parse(readFileSync(join(design, 'projects', 'demo', 'work.json'), 'utf8')) as { name: string; note: string }[];
 			expect(records.find((i) => i.name === 'codebase')?.note).toBe('From Version 1 of the prototype');
-			// The task: the skill, the page to start from, where the audit goes.
 			const taskFile = join(home, 'prototype', 'demo', 'v1-into-code.md');
 			const task = readFileSync(taskFile, 'utf8');
-			// The builder's guide first, as in every task.
 			expect(task.startsWith('## How to build UI here: always, before anything else')).toBe(true);
 			expect(task).toContain('Audit first.');
 			expect(task).toContain(join(home, 'prototype', 'demo', 'v1.html'));
 			expect(task).toContain(join(design, 'projects', 'demo', 'audit-v1.md'));
-			// Where the work is, on its record: a Build that leaves none opens at the app's front door.
 			expect(task).toContain('# Record where the work is');
 			expect(task).toMatch(/Record the work's route on the `codebase` entry of `[^`]*projects\/demo\/work\.json`/);
-			// Built toward the product's accessibility target from the start.
 			expect(task).toContain('## Accessibility');
 			expect(task).toContain('Build toward the target as you go, not at the end');
-			// No VS Code in a test: the command that starts it in a terminal, on the clipboard, pointing at the task.
 			const { value } = r as { value: { editor: boolean; command: string } };
 			expect(value.editor).toBe(false);
 			expect(copied).toBe(value.command);
 			expect(value.command).toMatch(new RegExp(`^cd .*${basename(product)} && .*claude `));
 			expect(value.command).toContain(taskFile);
-			// Nothing is run by DSNR itself.
 			expect(agentStart).not.toHaveBeenCalled();
 		});
 
@@ -1330,7 +1266,7 @@ describe('prototypes', () => {
 
 			it('picks up a branch that is only on GitHub when its record is here', async () => {
 				await started();
-				// As on another machine: the work is pushed, and this clone has no local branch for it.
+				// As on another machine: pushed, with no local branch here.
 				const remote = join(home, 'remote.git');
 				g(home, 'init', '-q', '--bare', remote);
 				g(product, 'remote', 'add', 'origin', remote);
@@ -1457,10 +1393,8 @@ describe('the picture of each prototype, on its project’s card', () => {
 		expect(drawCover).toHaveBeenCalledWith(expect.stringMatching(/^http:\/\/127\.0\.0\.1:\d+\/demo\/v1/));
 		expect(readFileSync(join(design, 'projects', 'demo', 'covers', `v1-${cover}.jpg`))).toEqual(JPEG);
 		expect(recordOf('v1')?.cover).toBe(cover);
-		// Current now: not drawn again.
 		expect(await call(CHANNELS.ensureCovers)).toEqual({ ok: true, value: [] });
 		expect(drawCover).toHaveBeenCalledTimes(1);
-		// The list says which picture, and the card reads it.
 		const listed = (await call(CHANNELS.listProjects)).value as Array<{ id: string; work: Array<{ name: string; cover?: string | null }> }>;
 		expect(listed.find((p) => p.id === 'demo')?.work.find((i) => i.name === 'v1')?.cover).toBe(cover);
 		expect(await call(CHANNELS.projectCover, 'demo', 'v1', cover)).toEqual({
@@ -1544,7 +1478,7 @@ describe('work an agent built in a terminal, with no record yet', () => {
 		expect(projects.map((p) => p.id)).toEqual(['new-view']);
 		expect(projects[0]).toMatchObject({ title: 'A new view', records: ['brief.md'] });
 		expect(projects[0]?.work).toEqual([expect.objectContaining({ name: 'codebase', branch: 'feature/new-view' })]);
-		// The work is recorded too, in the background: waited for, so it is not written into the next test's world.
+		// Waited for, so the background record is not written into the next test's world.
 		await eventually(() => expect(existsSync(join(design, 'projects', 'new-view', 'work.json'))).toBe(true));
 	});
 
@@ -1585,7 +1519,6 @@ describe('the table of calls', () => {
 });
 
 describe('one agent, one piece of work', () => {
-	/** Codebase work on its branch, with the shared Handoff skill: what a run in a checkout is asked on. */
 	const onItsBranch = async () => {
 		await trustFolder(product);
 		mkdirSync(join(design, 'skills'), { recursive: true });
@@ -1643,7 +1576,6 @@ describe('one agent, one piece of work', () => {
 		expect(task()).toContain('## Accessibility');
 		expect(task()).toContain('**WCAG 2.0 Level A**');
 		expect(task()).toContain('### Reporting rules');
-		// No a11y command declared: none named.
 		expect(task()).not.toContain('own accessibility check is');
 	});
 
@@ -1674,11 +1606,10 @@ describe('one agent, one piece of work', () => {
 		const first = call(CHANNELS.handOff, product, 'demo');
 		await vi.waitFor(() => expect(sessionsSpawned).toHaveLength(1));
 		const again = call(CHANNELS.handOff, product, 'demo');
-		// Asked again while it runs: the second finds the first's run, and waits for its end.
 		await vi.waitFor(() => expect(asked.mock.results.some((r) => r.value !== null)).toBe(true));
 		exit(0);
 		expect(await first).toMatchObject({ ok: true, value: { state: 'done' } });
-		// The one asked again waited on the same run's end: no verdict of its own, as it did not start it.
+		// No verdict of its own, as it did not start the run.
 		expect(await again).toEqual({ ok: true, value: { state: 'done', value: { ready: null } } });
 		expect(sessionsSpawned).toHaveLength(1);
 		expect(sessions.read(realpathSync(product), 'feature/demo')?.session).toBe(sessionsSpawned[0]);
@@ -1699,7 +1630,6 @@ describe('Handoff', () => {
 		g(product, 'add', 'HANDOFF.md');
 		g(product, 'commit', '-q', '-m', 'handoff');
 	};
-	/** The run commits HANDOFF.md and says `lines` last, as a Handoff does. */
 	const runs = (lines: string[], commits = true) =>
 		(agentDoes = () => {
 			if (commits) commitHandoff(`# Handoff, ${lines.join(' ')}\n`);
@@ -1760,12 +1690,11 @@ describe('Handoff', () => {
 		const head = g(product, 'rev-parse', 'HEAD').trim();
 		expect(codebase()?.readyAt).toBe(head);
 		expect(await listed()).toBe(head);
-		// A commit since: no longer what was found ready.
+		// A commit since means it is no longer what was found ready.
 		writeFileSync(join(product, 'more.txt'), 'more\n');
 		g(product, 'add', 'more.txt');
 		g(product, 'commit', '-q', '-m', 'more');
 		expect(await listed()).toBeNull();
-		// A verdict of not ready takes it off the record.
 		runs(['Not ready']);
 		expect((await call(CHANNELS.handOff, product, 'demo')).value).toEqual({ state: 'done', value: { ready: false } });
 		expect(codebase()?.readyAt).toBeUndefined();

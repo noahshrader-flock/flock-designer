@@ -3,13 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { VersionSwitcher, StateSwitcher } from '../src/viewer/VersionSwitcher';
 import { choicesIn, choose, chooseState, render, shownIn, shownState, stateMenu, switchMenu, unmountAll } from './reviewHarness';
 
-/**
- * Switching between a prototype's versions: a dropdown of them, the newest first, saying which is shown. Against the
- * component on its own.
- */
-
 const at = (name: string) => ({ name, branch: `prototype/demo/${name}` });
-// Newest first, as the screens hold them.
 const PROTOTYPES = ['v4', 'v3', 'v2', 'v1'].map(at);
 
 let current: Awaited<ReturnType<typeof render>> | null = null;

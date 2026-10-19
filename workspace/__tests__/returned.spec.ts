@@ -9,11 +9,6 @@ import { parseReturned, returnedTemplate, sortReturned, withGaps } from '../src/
 import type { AccessibilityIssue } from '../src/shared/contract';
 import { AA, cell, issue, result } from './fixtures/accessibilityFixtures';
 
-/**
- * Keeping it fixed: what testers send back, read without retyping and sorted by what was
- * measured, its escapes logged once in the product's agent gap log; and a guard proposed for what was fixed.
- */
-
 const target = AA;
 const ledger = (violations: AccessibilityIssue[], views: CellResult[]): Ledger =>
 	ledgerOf({
@@ -52,7 +47,6 @@ describe('what testers send back', () => {
 			{ line: 11, why: '"9.9.9" is not a WCAG A or AA criterion\'s number' },
 			{ line: 12, why: 'it has 3 cells, and a finding has 7' },
 		]);
-		// The template alone is no finding.
 		expect(parseReturned(returnedTemplate('shop'))).toEqual({ findings: [], unreadable: [] });
 	});
 
@@ -104,7 +98,6 @@ describe('the agent gap log', () => {
 		);
 		expect(lines[row]).toMatch(/\| missing runtime support \| A fixture of this fault, and a change to what measures 2\.4\.7 in DSNR/);
 		expect(text).toContain('## Component gaps');
-		// Read again: nothing logged twice.
 		expect(withGaps(text, 'Shop', escapes, '2026-10-18')).toEqual({ text, added: 0 });
 	});
 
@@ -148,7 +141,6 @@ describe('a guard for what was fixed', () => {
 				JSON.stringify({ dependencies: { react: '18' }, devDependencies: { eslint: '9', '@biomejs/biome': '1' } }),
 			);
 			expect(stacksOf(dir).map((s) => s.stack)).toEqual(['biome', 'eslint-jsx-a11y']);
-			// What it read, said: ESLint here has no jsx-a11y plugin yet, and the rule comes with adding it.
 			expect(stacksOf(dir).find((s) => s.stack === 'eslint-jsx-a11y')?.says).toBe(
 				'ESLint, adding eslint-plugin-jsx-a11y, which it does not have yet',
 			);

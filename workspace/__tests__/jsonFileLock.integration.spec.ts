@@ -5,11 +5,6 @@ import { join } from 'node:path';
 import { build } from 'esbuild';
 import { afterEach, beforeEach, expect, it } from 'vitest';
 
-/**
- * Two windows' DSNR changing one record file at once: each change is read, made and written under the file's lock, so
- * none is lost. Real processes, each running DSNR's own `jsonFile`.
- */
-
 let dir: string;
 beforeEach(() => void (dir = mkdtempSync(join(tmpdir(), 'dsnr-json-lock-'))));
 afterEach(() => rmSync(dir, { recursive: true, force: true }));

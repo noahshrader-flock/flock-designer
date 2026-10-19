@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { CSS_OF, allParts, asTried, isFull, partsIn, pxOf, shortParts, shortValue } from '../src/shared/valueParts';
 
-/** How a component's drawn value is written, one way for the page, the analysis and the control (adjusting a component). */
 describe('a value’s parts', () => {
 	it('are each longhand a property is read from and tried on: four sides, four corners, a row and a column, else one', () => {
 		expect([partsIn('padding'), partsIn('radius'), partsIn('gap'), partsIn('fontSize'), partsIn('height'), partsIn('border')]).toEqual([
@@ -37,7 +36,6 @@ describe('a radius that makes its ends round (Phase 5.5)', () => {
 		expect(shortValue('radius', '3.35544e+07px 3.35544e+07px 3.35544e+07px 3.35544e+07px')).toBe('full');
 		expect(shortValue('radius', '9999px 9999px 0px 0px')).toBe('full full 0px 0px');
 		expect(shortValue('radius', '8px 8px 8px 8px')).toBe('8px');
-		// As drawn, and as said: a value read is said short, a full corner as the word.
 		expect(['9999px', '3.35544e+07px', 'full', '9998px', '0.5rem'].map(isFull)).toEqual([true, true, true, false, false]);
 		// Only a radius: a padding as large is a size.
 		expect(shortValue('padding', '9999px')).toBe('9999px');

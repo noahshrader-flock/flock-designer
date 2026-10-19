@@ -19,12 +19,6 @@ import {
 	requiredAt,
 } from '../src/shared/wcag';
 
-/**
- * WCAG, as DSNR holds it: each number held to the W3C's, the tags to axe-core's own
- * rules and to the ladder in the standard, so a wrong number, an axe upgrade or an edit to the standard fails here
- * rather than drifting.
- */
-
 describe('the thresholds', () => {
 	it('are the W3C’s numbers, each with its success criterion, level, version and the W3C’s page for it', () => {
 		expect([CONTRAST_TEXT.sc, CONTRAST_TEXT.ratio, CONTRAST_TEXT.level, CONTRAST_TEXT.since]).toEqual(['1.4.3', 4.5, 'AA', '2.0']);
@@ -41,7 +35,6 @@ describe('the thresholds', () => {
 	it('are asked for only at a target that includes them: contrast is AA, so not at Level A; one from 2.1 not at 2.0', () => {
 		expect(requiredAt(CONTRAST_TEXT, { version: '2.0', level: 'A' })).toBe(false);
 		expect(requiredAt(CONTRAST_TEXT, { version: '2.0', level: 'AA' })).toBe(true);
-		// A criterion that came in with 2.1 (1.4.11, non-text contrast) is not asked for at 2.0.
 		const later = { sc: '1.4.11', name: 'Non-text Contrast', level: 'AA', since: '2.1', url: '' } as const;
 		expect(requiredAt(later, { version: '2.0', level: 'AA' })).toBe(false);
 		expect(requiredAt(later, { version: '2.1', level: 'AA' })).toBe(true);
@@ -62,7 +55,6 @@ describe('a target', () => {
 	it('becomes every axe tag at or below it, levels and versions both, since they are cumulative', () => {
 		expect(axeTagsFor({ version: '2.0', level: 'A' })).toEqual(['wcag2a']);
 		expect(axeTagsFor({ version: '2.2', level: 'AA' })).toEqual(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']);
-		// The default, where a product declares none: WCAG 2.1 AA, the usual industry target.
 		expect(DEFAULT_TARGET).toEqual({ version: '2.1', level: 'AA' });
 		expect(axeTagsFor(DEFAULT_TARGET)).toEqual(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']);
 	});
@@ -70,13 +62,11 @@ describe('a target', () => {
 	it('says which of its parts no automated check covers, so they are left to a person and not skipped', () => {
 		expect(notAutomated({ version: '2.0', level: 'AA' })).toEqual([]);
 		expect(notAutomated({ version: '2.2', level: 'AA' })).toEqual(['WCAG 2.2 Level A']);
-		// At the default, every criterion has an automated check.
 		expect(notAutomated(DEFAULT_TARGET)).toEqual([]);
 	});
 });
 
 describe('the tags', () => {
-	// What axe-core has rules for, by WCAG tag: read from the axe-core DSNR ships.
 	const ruled = new Set(axe.getRules().flatMap((r) => r.tags.filter((t) => /^wcag\d+a+$/.test(t))));
 
 	it('are each one axe-core has rules for, and every WCAG tag axe-core has rules for is one of them', () => {

@@ -2,14 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { readTokens } from '../src/core/services/designSystem/designTokens';
 import { memoryReads } from './fixtures';
 
-/**
- * The library's tokens as one list, found and not listed. Read from the library's own theme
- * files as text, never by running them: the tone families its index exports, the palette roles of each mode (each
- * pointing at a tone, sometimes with an opacity), and the theme's spacing and radius. Against fixtures, then the real
- * library.
- */
+/** Read from the library's own theme files as text, never by running them. */
 
-/** A tone file, its steps in the order given (an object would sort its number keys). */
+/** Steps as pairs, since an object would sort its number keys. */
 const tone = (name: string, steps: [string, string][]) =>
 	`/** ${name} primitives. */\nexport const ${name} = {\n${steps.map(([k, v]) => `  ${k}: '${v}',`).join('\n')}\n};\n`;
 
@@ -331,7 +326,7 @@ describe('the categories', () => {
 	it('say which tab a token belongs on: every color is Color, spacing is Spacing, and radius is Shape', async () => {
 		const list = await readTokens(memoryReads(LIBRARY));
 		const categories = new Map(list.tokens.map((t) => [t.group, t.category]));
-		// The semantic ones first (what a color is for, in each mode), the raw tones they point at last.
+		// The semantic ones first, the raw tones they point at last.
 		expect([...categories]).toEqual([
 			['Light', 'Color'],
 			['Dark', 'Color'],

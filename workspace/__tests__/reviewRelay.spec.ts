@@ -1,11 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { RELAY_CALLS, readRelayAsk, readRelayTell } from '../src/shared/reviewRelay';
 
-/**
- * A prototype's review page, framed in DSNR's review tab in VS Code, comments through the extension rather than with a
- * token of its own. What the page may ask the tab, and what the tab may tell the page,
- * are read in exactly their shapes on each side, so a page that went wrong can ask for nothing more.
- */
+/** Both directions are read in exactly their shapes, so a page that went wrong can ask for nothing more. */
 
 describe('what the page may ask', () => {
 	it('is the comment calls, who is signed in, signing in, and Address: nothing else', () => {

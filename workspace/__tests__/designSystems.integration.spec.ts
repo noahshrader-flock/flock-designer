@@ -16,11 +16,6 @@ import {
 import type { ConnectedDesignSystem } from '../src/shared/contract';
 import { memoryReads } from './fixtures';
 
-/**
- * Connecting any repository: what a design system is (stories or tokens), where it is in a
- * monorepo, what it is called, its default branch, and the ones connected, remembered.
- */
-
 const story = (title: string) => `export default { title: '${title}' };\n`;
 const tones = "export const blue = {\n  50: '#0000FF',\n};\n";
 
@@ -204,7 +199,6 @@ describe('a design system found in a folder on this machine (VS Code, ELECTRON_M
 	beforeEach(() => (home = mkdtempSync(join(tmpdir(), 'dsnr-found-'))));
 	afterEach(() => rmSync(home, { recursive: true, force: true }));
 	const git = (root: string, ...args: string[]) => execFileSync('git', ['-C', root, ...args], { encoding: 'utf8' });
-	/** A clone of `repository`, its default branch recorded as git records one, with `files` committed. */
 	const cloneOf = (repository: string, files: Record<string, string>, branch = 'develop') => {
 		const root = join(home, repository.split('/')[1] as string);
 		mkdirSync(root, { recursive: true });

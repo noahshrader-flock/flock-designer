@@ -1,15 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { settleScript } from '../src/core/services/prototypes/projectCovers';
 
-/**
- * When a prototype's page is ready for its picture: fonts ready, no animation that ends still running, and the page
- * unchanged for a while, or the cap. Run here in a page of its own, as the hidden
- * window runs it, with small numbers so the test is quick.
- */
+/** Run as the hidden window runs it, with small numbers so the test is quick. */
 
-const run = (quiet: number, cap: number): Promise<{ capped: boolean }> =>
-	// The same text the window is given, run as the window runs it.
-	(0, eval)(settleScript(quiet, cap)) as Promise<{ capped: boolean }>;
+const run = (quiet: number, cap: number): Promise<{ capped: boolean }> => (0, eval)(settleScript(quiet, cap)) as Promise<{ capped: boolean }>;
 
 let animations: Array<{ playState: string; effect: { getTiming: () => { iterations: number } } }>;
 let timers: ReturnType<typeof setInterval>[];
@@ -39,7 +33,6 @@ describe('settleScript', () => {
 		timers.push(t);
 		const started = Date.now();
 		expect(await run(80, 3000)).toEqual({ capped: false });
-		// Not before the last change and its quiet time.
 		expect(Date.now() - started).toBeGreaterThanOrEqual(150);
 	});
 

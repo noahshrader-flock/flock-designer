@@ -4,12 +4,6 @@ import { describe, expect, it, vi } from 'vitest';
 import { receivePage } from '../extension/src/bridge';
 import { agentWork } from '../extension/src/agentWork';
 
-/**
- * What any DSNR page sends (`receivePage`), the panel or a design system's tab: that it listens, a call to the core, or an
- * ask of the extension's, each answered by its id, and a failed ask said. Then the agent at work, as every flow has it,
- * and the manifest and the code agreeing on the commands.
- */
-
 const page = () => {
 	const webview = { postMessage: vi.fn(async () => true) };
 	const panels = { ready: vi.fn(async () => undefined) };
@@ -110,7 +104,6 @@ describe('the commands', () => {
 		const manifest = JSON.parse(readFileSync(join(__dirname, '../extension/package.json'), 'utf8')) as {
 			contributes: { commands: { command: string }[] };
 		};
-		// `dsnr.open` and `dsnr.getStarted` too: every one a person can run is the manifest's, and nothing else is registered.
 		expect([...registered].sort()).toEqual(manifest.contributes.commands.map((c) => c.command).sort());
 	});
 });

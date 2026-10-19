@@ -11,15 +11,10 @@ import { REAL_PRIMER_SYSTEM, libraryUnbuilt, primerMissing, REAL_FUI } from './r
 import { settledAnswer } from './fixtures';
 import { describeLibrary, onRealLibrary } from './realLibrary';
 
-/**
- * Where a value of a component's own is written, found by its effect on the real libraries on this machine: Flock's FUI,
- * a TypeScript theme; and Primer React, a monorepo of CSS
- * modules whose tokens come from a package, so the locator is not proved on Flock's alone.
- */
+/** Primer React, a monorepo of CSS modules, beside FUI's TypeScript theme, so the locator is not proved on Flock's alone. */
 const withLibrary = (system: ConnectedDesignSystem, check: (tokens: ComponentTokens, sources: ValueSources) => Promise<void>) =>
 	onRealLibrary(system, ({ previews, tokens, measure }) => check(tokens, new ValueSources({ tokens, previews, measure, agent: { of: () => null } })));
 
-/** Where `value` tried on the instances of a component's cell (its property, its variant) is written, once it is found. */
 const sourcesOf = async (
 	tokens: ComponentTokens,
 	sources: ValueSources,
@@ -47,7 +42,6 @@ describeLibrary(libraryUnbuilt, REAL_FUI, 'on Flock’s FUI, on origin/develop',
 		'finds FSButton’s Small height in the one place of the seven it is written, and FSIconButton’s radius in its own seven; a change that writes nothing moves nothing',
 		async () => {
 			await withLibrary(REAL_FUI, async (tokens, sources) => {
-				// The library as it is, drawn as a change is: held still, nothing differs (it was sixteen components, drawn otherwise).
 				const index = await tokens.drawn();
 				if (index.state !== 'ready') throw new Error(JSON.stringify(index));
 				const { reach } = await tokens.reachWith(index, async () => new Map(), 'written');
@@ -66,7 +60,6 @@ describeLibrary(libraryUnbuilt, REAL_FUI, 'on Flock’s FUI, on origin/develop',
 					'src/utils/theme.ts',
 				]);
 
-				// FSIconButton's 8px is its own, written for each of its variants in the theme's overrides: every one is where.
 				const icon = 'src/components/FSIconButton/FSIconButton.stories.tsx';
 				const radius = await sourcesOf(tokens, sources, icon, 'radius', null, '12px 12px 12px 12px');
 				expect(radius.found).toMatchObject({ state: 'ready', values: [{ state: 'found' }] });
@@ -102,10 +95,7 @@ describeLibrary(primerMissing, REAL_PRIMER_SYSTEM, 'on Primer React, the second 
 	);
 });
 
-/**
- * The agent writing what the locator cannot, on FUI: run only where it is asked for
- * (`DSNR_REAL_AGENT=1`), since it runs Claude Code on the person's account and costs a little.
- */
+/** Run only with `DSNR_REAL_AGENT=1`, since it runs Claude Code on the person's account and costs a little. */
 const agentMissing = process.env.DSNR_REAL_AGENT === '1' ? libraryUnbuilt : 'the agent is run only with DSNR_REAL_AGENT=1 (it costs a little)';
 describeLibrary(agentMissing, REAL_FUI, 'the agent on Flock’s FUI', () => {
 	it.skipIf(findChrome() === null)(

@@ -7,12 +7,6 @@ import { memoryStore, type Fn } from './fixtures';
 import { type CoverDeps, builtHere, ensureCovers, isBlank } from '../src/core/services/prototypes/projectCovers';
 import { coverPath } from '../src/shared/designPaths';
 
-/**
- * The picture of each prototype on its project's card: one reconcile step that makes sure every prototype built on this
- * machine has a current picture. A picture is a file in the design repository, and the prototype's record says which
- * (`cover`, the hash of the page it was drawn from). File first, record second, so a record never points at nothing.
- */
-
 const record = (name: string, more: Record<string, unknown> = {}) => ({
 	projectId: 'demo',
 	name,
@@ -103,7 +97,6 @@ describe('ensureCovers', () => {
 		expect(coverOf(mem.files, 'v1')).toBeUndefined();
 		expect(await ensureCovers(deps, built('v1'))).toEqual([]);
 		expect(deps.draw).toHaveBeenCalledTimes(1);
-		// A failure that throws is no picture either, for a page not tried yet.
 		pages['demo/v1'] = '<h1>Changed</h1>';
 		expect(await ensureCovers(deps, built('v1'))).toEqual([]);
 		expect(mem.writes).toEqual([]);
@@ -164,7 +157,6 @@ describe('builtHere', () => {
 });
 
 describe('isBlank', () => {
-	/** A bitmap of `n` pixels, 4 bytes each, of one color, with `odd` of them another. */
 	const bitmap = (n: number, odd = 0, color = [0xff, 0xff, 0xff, 0xff], other = [0x20, 0x30, 0x40, 0xff]) => {
 		const data = Buffer.alloc(n * 4);
 		for (let i = 0; i < n; i++) data.set(i < odd ? other : color, i * 4);

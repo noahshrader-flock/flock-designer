@@ -6,12 +6,10 @@ import { isStoryFile, literalField, readCatalog, UNGROUPED } from '../src/core/s
 import { libraryReads } from '../src/core/services/designSystem/designLibrary';
 import { REAL_LIBRARY as REAL, describeWith, libraryMissing } from './realCheckouts';
 
-/** The reader against the real library's branch, not a fixture. */
 const FUI = designSystemOf({ repository: 'flocksafety/flock-react-component-lib', branch: 'develop' });
 const git = (...args: string[]) => execFileSync('git', ['-C', REAL, ...args], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
 
 describeWith(libraryMissing, 'against the real library', () => {
-	// The app's own reads (one `cat-file --batch` for the stories), so this checks them on the real library too.
 	const reads = libraryReads(REAL, `refs/remotes/origin/${FUI.branch}`);
 
 	it('lists every story file Storybook has, and nothing else', async () => {

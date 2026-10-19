@@ -15,7 +15,6 @@ const request: ShareRequest = {
 };
 const timings = { pollMs: 10, startupMs: 100, timeoutMs: 1000, skewMs: 50 };
 
-/** A clock that only moves when the flow sleeps, so waiting costs no real time. */
 const harness = (over: Partial<ShareTools> & { checkSequence?: Check[][] } = {}) => {
 	let clock = 1_000_000;
 	const calls: string[] = [];
@@ -79,12 +78,11 @@ describe('runShare', () => {
 	});
 
 	it('does not take the previous push’s passing checks as evidence about this one', async () => {
-		// A check that finished before this push began, which is what is left from last time.
 		const old = check('pass', { startedAt: new Date(1_000_000 - 10_000).toISOString() });
 		const h = harness({ checkSequence: [[old], [old], [check('pending')], [check('pass', { startedAt: new Date(1_000_100).toISOString() })]] });
 		let waited = 0;
 		await runShare(request, h.tools, (s) => s === 'building' && waited++, { ...timings, startupMs: 1000 });
-		expect(waited).toBeGreaterThanOrEqual(3); // it kept waiting rather than returning on the stale pass
+		expect(waited).toBeGreaterThanOrEqual(3);
 	});
 
 	it('accepts existing checks when nothing new was pushed', async () => {

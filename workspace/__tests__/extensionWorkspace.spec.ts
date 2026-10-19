@@ -1,11 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { connectPage } from '../extension/webview/workspace';
 
-/**
- * The window's API in DSNR's panel: the shared `createApi`, carried by webview messages. A call goes out
- * with an id and comes back by it; an event comes to whoever listens for it by name.
- */
-
 const wire = () => {
 	const sent: unknown[] = [];
 	let deliver: (m: unknown) => void = () => undefined;

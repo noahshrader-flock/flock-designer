@@ -2,11 +2,6 @@ import { describe, expect, it, vi } from 'vitest';
 import { publishedLink, syncItem } from '../extension/src/publishing';
 import { ok } from '../src/shared/result';
 
-/**
- * Publish and share in VS Code: whether the person's work is synced, in VS Code's status
- * bar, with what is held back and why; and a review's published page, to open or to share its link, or why it has none.
- */
-
 describe('the sync, in the status bar', () => {
 	it('says where it is, and is not there when there is nothing to sync from here', () => {
 		expect(syncItem({ state: 'unavailable' })).toBeNull();

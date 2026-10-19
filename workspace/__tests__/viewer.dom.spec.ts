@@ -33,10 +33,7 @@ import {
 } from './reviewHarness';
 import { anAnchor } from './fixtures';
 
-/**
- * Commenting on a prototype's published page: the viewer, drawn into the page the site builds,
- * against a GitHub that answers as its API does, with the real pick and pin scripts running in the prototype's frame.
- */
+/** Against a GitHub that answers as its API does, with the real pick and pin scripts running in the prototype's frame. */
 
 let gh: ReturnType<typeof fakeGitHub>;
 let current: Awaited<ReturnType<typeof render>> | null = null;
@@ -186,7 +183,6 @@ describe("the page's bar", () => {
 		await open();
 		expect(document.querySelector('a[href="../"]')).not.toBeNull();
 		expect(document.body.textContent).toContain('Alert history');
-		// Every version in one dropdown, the newest first, with this one chosen.
 		expect(choicesIn(switchMenu('version'))).toEqual(['Version 3', 'Version 2', 'Version 1']);
 		expect(shownIn(switchMenu('version'))).toBe('Version 1');
 	});
@@ -218,7 +214,6 @@ describe('the states of the page', () => {
 	it('are a dropdown between the version and the theme, and choosing one opens the page in it', async () => {
 		const { frame } = await withStates(['default', 'filtered', 'panel']);
 		expect(shownState()).toBe('Default');
-		// In the bar's order: the version, the states, then the theme.
 		const before = (a: Element, b: Element) => !!(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
 		expect(before(switchMenu('version') as Element, stateMenu() as Element)).toBe(true);
 		expect(before(stateMenu() as Element, themeGroup() as Element)).toBe(true);
@@ -226,7 +221,6 @@ describe('the states of the page', () => {
 		await settle();
 		expect(frame.getAttribute('src')).toBe('page.html?state=panel');
 		expect(shownState()).toBe('Panel');
-		// Back to the first is the page as it opens.
 		await chooseState('Default');
 		await settle();
 		expect(frame.getAttribute('src')).toBe('page.html');
@@ -260,7 +254,7 @@ describe('the states of the page', () => {
 
 	it('can be seen in light or dark, whatever the machine is set to, and keep their theme between states', async () => {
 		const { frame } = await withStates(['default', 'panel']);
-		// With nothing chosen, the system's (light, here), and the page as it is.
+		// With nothing chosen, the system's: light, here.
 		expect(shownTheme()).toBe('Light');
 		await press(themeButton('Dark'));
 		await settle();
@@ -269,7 +263,6 @@ describe('the states of the page', () => {
 		await chooseState('Panel');
 		await settle();
 		expect(frame.getAttribute('src')).toBe('page.html?state=panel&theme=dark');
-		// Back to light, the default: the address says nothing.
 		await press(themeButton('Light'));
 		await settle();
 		expect(frame.getAttribute('src')).toBe('page.html?state=panel');
@@ -299,7 +292,6 @@ describe('the states of the page', () => {
 		await settle();
 		expect(frame.getAttribute('src')).toBe('page.html?theme=dark');
 		expect(shownTheme()).toBe('Dark');
-		// Shown in it now: no button to show it there again.
 		expect([...card.querySelectorAll('button')].map((b) => b.textContent)).not.toContain('Show in Dark');
 	});
 
@@ -343,17 +335,15 @@ describe('commenting on the page', () => {
 		await press(button('Save'));
 		await settle();
 
-		// The thread is the version's, found and made as the app does it.
 		expect(gh.issues).toHaveLength(1);
 		expect(gh.issues[0]?.body).toContain('branch: `prototype/demo/v1`');
 		expect(gh.issues[0]?.labels).toEqual(['flock-designer:review']);
 		expect(gh.issues[0]?.comments[0]?.body).toContain('Make this primary');
 		expect(gh.issues[0]?.comments[0]?.body).toContain('clear-filter-button');
-		// It says which page it was placed on, by the page's fingerprint, so it can say later when the page has changed.
+		// The page's fingerprint, so it can say later when the page has changed.
 		expect(gh.issues[0]?.comments[0]?.body).toContain('"page":"aaaaaaaaaaaa"');
 
-		// The numbered pin in the prototype, and the card in the side panel.
-		// The pin carries who made it (here with no picture, so their first letter), and the card too, as the person, not a number.
+		// No picture here, so the pin shows their first letter.
 		expect(doc.querySelector('[data-fd-layer="pins"]')?.textContent).toContain('P');
 		expect(button(/^Show all comments/).textContent).toBe('1');
 		await press(button(/^Show all comments/));
@@ -419,23 +409,20 @@ describe('commenting on the page', () => {
 		void made;
 		const { doc } = await open();
 		await settle();
-		// Pinned where it was made, carrying the person: their picture from the host, over their first letter.
 		const pin = doc.querySelector('[data-fd-layer="pins"]');
 		expect(pin?.querySelector('img')?.getAttribute('src')).toBe('https://avatars.githubusercontent.com/u/9?v=4');
 		expect(pin?.textContent).toContain('N');
-		// And its card in the panel starts with them, not a number.
 		await press(button(/^Show all comments/));
 		await settle();
 		const avatar = cards()[0]?.querySelector('.avatar');
 		expect(avatar?.getAttribute('title')).toBe('noah');
-		// The extra small, the size of the picture on its pin.
+		// The size of the picture on its pin.
 		expect(avatar?.className).toBe('avatar avatar-xs');
 		expect(avatar?.querySelector('img')?.getAttribute('src')).toBe('https://avatars.githubusercontent.com/u/9?v=4');
 	});
 });
 
 describe('in DSNR’s review tab, in VS Code', () => {
-	/** DSNR's tab, answering as the extension does: the core's comment calls over the same GitHub, and its own two. */
 	const tab = (signedIn = true) => {
 		const threads = new ReviewThreads(tokenApi('good-token'), { owner: CONFIG.owner, repo: CONFIG.repo });
 		let account = signedIn ? { state: 'signedIn', user: { login: 'noah', name: 'Noah', avatarUrl: null } } : { state: 'signedOut' };
@@ -516,7 +503,6 @@ describe('in DSNR’s review tab, in VS Code', () => {
 		await settle();
 		const comment = gh.issues[0]!.comments[0]!;
 		expect(asked.at(-1)).toEqual(['address', [{ thread: gh.issues[0]!.number, id: comment.id }, 'prototype/demo/v1', false]]);
-		// Or in a new version from this one, whoever has commented: the person chooses it here.
 		await press(menuItem(await openMenu(button('Comment actions')), 'Address in a new version'));
 		await settle();
 		expect(asked.at(-1)).toEqual(['address', [{ thread: gh.issues[0]!.number, id: comment.id }, 'prototype/demo/v1', true]]);

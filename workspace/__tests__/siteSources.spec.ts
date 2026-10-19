@@ -6,11 +6,7 @@ import { isSiteSource } from '../src/core/services/publishing/pages';
 const workspace = resolve(__dirname, '..');
 const repository = resolve(workspace, '..');
 
-/**
- * Every file the published viewer is built from, found from its folder by following imports (and its stylesheet's
- * `@import`s), relative ones; an import with a query (`../page/pick?page`, the page code) is its file. A file is what a deploy is marked behind for, so a move that takes one out of
- * `SITE_SOURCES` must fail here, not leave the site quietly stale.
- */
+/** A deploy is marked behind by these files, so a move that takes one out of `SITE_SOURCES` must fail here, not leave the site quietly stale. */
 const viewerFiles = (): string[] => {
 	const seen = new Set<string>();
 	const stack = readdirSync(join(workspace, 'src/viewer')).map((f) => join(workspace, 'src/viewer', f));
@@ -37,7 +33,6 @@ describe('what the site is built from', () => {
 	it('counts the generator and its workflow, and not the rest of the app', () => {
 		expect(isSiteSource('workspace/src/site/buildSite.ts')).toBe(true);
 		expect(isSiteSource('.github/workflows/publish-prototypes.yml')).toBe(true);
-		// The code the viewer runs inside the page, and what turns it into the strings it runs.
 		expect(isSiteSource('workspace/src/page/pins.ts')).toBe(true);
 		expect(isSiteSource('workspace/pageCode.vite.ts')).toBe(true);
 		expect(isSiteSource('workspace/src/core/services/agent/agent.ts')).toBe(false);

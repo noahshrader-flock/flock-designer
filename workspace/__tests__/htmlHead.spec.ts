@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { firstInHead } from '../src/shared/html';
 
-/** Markup put first in a page's head, before anything of the page's own: how DSNR's own scripts go into a prototype's page. */
 describe('firstInHead', () => {
 	it('goes right after the head’s opening tag, whatever its attributes', () => {
 		expect(firstInHead('<html><head><title>x</title></head></html>', '<script></script>')).toBe(

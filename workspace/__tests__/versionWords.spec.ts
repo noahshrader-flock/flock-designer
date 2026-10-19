@@ -2,10 +2,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-/**
- * What a person reads never says "iteration", nor names work like one (`I3`): a prototype has versions. Read from the text in the code that draws the screens and writes their messages, its comments
- * aside; what is inside `${…}` is code, not words, so it is left out too.
- */
+/** A prototype has versions: what a person reads never says "iteration" nor names work like one (`I3`). */
 const root = join(__dirname, '..');
 const DIRS = ['src/viewer', 'src/site', 'src/cli', 'src/core', 'src/shared', 'src/codeHost', 'src/page', 'extension/src', 'extension/webview'];
 /** Where the word means something else: the product's own command, which it names so. */
@@ -16,7 +13,6 @@ const files = (dir: string): string[] =>
 		e.isDirectory() ? files(join(dir, e.name)) : /\.tsx?$/.test(e.name) ? [join(dir, e.name)] : [],
 	);
 
-/** A line with what is inside each `${…}` taken out, nested ones and their own quotes with them: that is code, not words. */
 const withoutCode = (line: string): string => {
 	let out = '';
 	for (let i = 0, depth = 0; i < line.length; i++) {
@@ -30,14 +26,12 @@ const withoutCode = (line: string): string => {
 	return out;
 };
 
-/** Each quoted text in a line of code, and in a component, the text written between its tags. */
 const words = (line: string, tsx: boolean): string[] => {
 	const code = withoutCode(line);
 	const quoted = [...code.matchAll(/'([^'\n]*)'|"([^"\n]*)"|`([^`\n]*)`/g)].map((m) => m[1] ?? m[2] ?? m[3] ?? '');
 	return tsx ? [...quoted, ...[...code.matchAll(/>([^<>{}]+)</g)].map((m) => m[1] as string)] : quoted;
 };
 
-/** What in some words a person would read as an iteration: the word, or a label of one (`I3`), or the label of old (`V3`). */
 const oldWords = (text: string): boolean => /\biterations?\b/i.test(text) || /\bI\d+\b/.test(text) || /\bV\d+\b/.test(text);
 
 describe('the words a person reads', () => {
