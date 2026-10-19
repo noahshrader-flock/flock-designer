@@ -90,7 +90,7 @@ export const pageStatus = async (github: GitHubApi, ref: RepoRef, projectId: str
 };
 
 /**
- * What the site is built from, besides the pages: the viewer on every page (and the app's own parts it is made of), the
+ * What the site is built from, besides the pages: the viewer on every page (and DSNR's kit it is drawn with, `src/ui`), the
  * generator, the workflow that runs it, and the packages it installs. The page code (`src/page`) is in the viewer too,
  * bundled into the scripts it runs in a page (`pageCode.vite.ts`). A change to any of these changes how the pages
  * look and work, so the site needs a deploy as much as it does for a new page. The viewer's folder is all of it, not
@@ -100,9 +100,9 @@ export const pageStatus = async (github: GitHubApi, ref: RepoRef, projectId: str
  * than leaving the site stale without a word.
  */
 const SITE_SOURCES = [
-	/^workspace\/src\/(site|viewer|shared|codeHost|page)\//,
+	/^workspace\/src\/(site|viewer|ui|shared|codeHost|page)\//,
 	/^workspace\/src\/cli\/dsnr\.ts$/,
-	/^workspace\/(bin\/|viewer\.vite\.config\.ts$|pageCode\.vite\.ts$|package-lock\.json$)/,
+	/^workspace\/(bin\/|viewer\.vite\.config\.ts$|viewerBuild\.mjs$|pageCode\.vite\.ts$|package-lock\.json$)/,
 	/^\.github\/workflows\/publish-prototypes\.yml$/,
 ];
 

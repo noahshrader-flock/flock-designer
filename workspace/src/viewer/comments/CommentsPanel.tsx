@@ -1,5 +1,5 @@
 import type { ComponentProps, ReactNode } from 'react';
-import { ErrorAlert } from '../ErrorAlert';
+import { Message } from '../../ui/Message';
 import { COMMENTS_PANEL } from '../panelWidth';
 import { ResizablePanel } from '../ResizablePanel';
 import { CommentList } from './CommentList';
@@ -26,10 +26,12 @@ export const CommentsPanel = ({
 	children?: ReactNode;
 } & Omit<ComponentProps<typeof CommentList>, 'comments'>) => (
 	<ResizablePanel panel={COMMENTS_PANEL} label="Resize the comments sidebar" onResizing={onResizing}>
-		<div className="flex min-h-0 flex-1 flex-col">
-			<div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4">
+		<div className="comments-panel">
+			<div className="comments-list">
 				<CommentsHeading comments={comments} />
-				{error && !comments.composing && <ErrorAlert error={error} />}
+				<Message tone="error" size="block">
+					{comments.composing ? null : error}
+				</Message>
 				{children}
 				<CommentList comments={comments} {...list} />
 			</div>

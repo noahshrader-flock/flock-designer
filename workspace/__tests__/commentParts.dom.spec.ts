@@ -7,7 +7,7 @@ import { GeneralComment } from '../src/viewer/comments/GeneralComment';
 import type { CommentStore, PageSurface } from '../src/viewer/comments/surfaces';
 import { useComments } from '../src/viewer/comments/useComments';
 import type { CommentAnchor, MarkerRequest, PinEvent, ReviewComment } from '../src/shared/contract';
-import { button, cards, comment, menuItem, ok, openMenu, press, render, settle, typeInto, unmountAll } from './reviewHarness';
+import { button, cards, comment, fieldNamed, menuItem, ok, openMenu, press, render, settle, typeInto, unmountAll } from './reviewHarness';
 import { anAnchor } from './fixtures';
 
 /**
@@ -120,7 +120,7 @@ describe('the comments experience, through another store and page', () => {
 		await settle();
 		f.click({ selector: '#cta' });
 		await settle();
-		await typeInto(document.querySelector('#comment-draft') as HTMLTextAreaElement, 'Bigger');
+		await typeInto(fieldNamed('Comment'), 'Bigger');
 		await press(button('Save'));
 		await settle();
 		const made = cards().map((c) => c.textContent);
@@ -143,39 +143,35 @@ describe('the comments experience, through another store and page', () => {
 		await mount(f);
 		f.pin({ kind: 'click', id: 2 });
 		await settle();
-		// The same one-pixel border, in the text's own colour: not a thicker one.
-		expect(card('Second').className).toContain('border-foreground');
-		expect(card('Second').className).not.toMatch(/\bborder-2\b/);
-		expect(card('First').className).not.toContain('border-foreground');
+		expect(card('Second').hasAttribute('data-selected')).toBe(true);
+		expect(card('First').hasAttribute('data-selected')).toBe(false);
 	});
 
 	it('is chosen by pressing anywhere on its card, which shows its pin; but not by its menu', async () => {
 		const f = fakes([comment(1, 'First', { author: 'noah' }), comment(2, 'Second', { author: 'pat' })]);
 		await mount(f);
 		// Its author's name, at the top of the card, which was not pressable before.
-		await press(card('Second').querySelector('span.truncate') as HTMLElement);
-		expect(card('Second').className).toContain('border-foreground');
+		await press(card('Second').querySelector('.comment-author') as HTMLElement);
+		expect(card('Second').hasAttribute('data-selected')).toBe(true);
 		expect(f.focused).toEqual([2]);
 		// Its menu opens without choosing the card it is on.
 		await press(button('Comment actions', card('First')));
 		expect(f.focused).toEqual([2]);
-		expect(card('First').className).not.toContain('border-foreground');
-		// It answers the pointer: a hover tint, lighter than the chosen one's.
-		expect(card('First').className).toContain('hover:bg-accent/50');
-		expect(card('First').className).toContain('cursor-pointer');
+		expect(card('First').hasAttribute('data-selected')).toBe(false);
+		// It answers the pointer: it is marked as one that can be chosen, which the stylesheet tints on hover.
+		expect(card('First').hasAttribute('data-choosable')).toBe(true);
 	});
 
 	it('cannot be chosen once it is resolved, has no pin on the page, or the page has no place for it', async () => {
 		const f = fakes([comment(1, 'Done', { resolved: true }), comment(2, 'Page-wide', { anchor: null })]);
 		await mount(f);
 		for (const each of cards()) {
-			expect(each.className).not.toContain('cursor-pointer');
-			expect(each.className).not.toContain('hover:bg-accent');
-			expect(each.querySelector('button.text-left')).toBeNull();
-			await press(each.querySelector('span.truncate') as HTMLElement);
+			expect(each.hasAttribute('data-choosable')).toBe(false);
+			expect(each.querySelector('button.comment-body')).toBeNull();
+			await press(each.querySelector('.comment-author') as HTMLElement);
 		}
 		expect(f.focused).toEqual([]);
-		expect(cards().every((c) => !c.className.includes('border-foreground'))).toBe(true);
+		expect(cards().every((c) => !c.hasAttribute('data-selected'))).toBe(true);
 	});
 
 	it('lists the newest at the top, each keeping the number it was made with', async () => {

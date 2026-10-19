@@ -82,6 +82,7 @@ const site = async (separate: boolean): Promise<string> => {
 	mkdirSync(viewer, { recursive: true });
 	writeFileSync(join(viewer, 'viewer.js'), VIEWER);
 	writeFileSync(join(viewer, 'viewer.css'), '');
+	writeFileSync(join(viewer, 'viewer.ttf'), '');
 	writeFileSync(join(viewer, 'page-agent.js'), PAGE_AGENT);
 	buildSite({
 		designRoot: design,

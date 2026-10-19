@@ -1,5 +1,4 @@
 import { rmSync } from 'node:fs';
-import { alias } from './alias.config';
 import { sealedEnv } from './__tests__/sealed.mjs';
 import { pageCode } from './pageCode.vite';
 import { defineConfig } from 'vitest/config';
@@ -9,8 +8,6 @@ const sealed = sealedEnv();
 process.once('exit', () => rmSync(sealed.base, { recursive: true, force: true }));
 
 export default defineConfig({
-	// The same `@/` alias the viewer's build uses, so a component can be imported by a test as it is by the app.
-	resolve: { alias },
 	// The page code as the builds have it: the scripts run in a page are its bundle (`pageCode.vite.ts`).
 	plugins: [pageCode()],
 	// React's own JSX transform for every file, the page's viewer (src/viewer) included, as the builds use.

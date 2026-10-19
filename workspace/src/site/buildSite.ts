@@ -290,10 +290,10 @@ export const buildSite = ({ designRoot, outDir, comments, viewer, pagesAt, signI
 	const shared = writeShared(designRoot, outDir);
 	if (viewer) {
 		mkdirSync(join(outDir, '_viewer'), { recursive: true });
-		// The page agent with them: every prototype's page carries it, so the bar asks it for the page's pins.
-		for (const f of ['viewer.js', 'viewer.css', PAGE_AGENT]) {
-			if (!existsSync(join(viewer.dir, f)))
-				throw new Error(`The viewer at ${viewer.dir} has no ${f}: build it again (its pages would have no pins).`);
+		// Its icons' font, which its stylesheet names, and the page agent with them: every prototype's page carries it, so the
+		// bar asks it for the page's pins. A viewer without one of them is one built before it was made of them.
+		for (const f of ['viewer.js', 'viewer.css', 'viewer.ttf', PAGE_AGENT]) {
+			if (!existsSync(join(viewer.dir, f))) throw new Error(`The viewer at ${viewer.dir} has no ${f}: build it again.`);
 			copyFileSync(join(viewer.dir, f), join(outDir, '_viewer', f));
 		}
 	}

@@ -1,6 +1,6 @@
 import PAGE_AGENT from '../src/page/agentMain?page';
 import { vi } from 'vitest';
-import { button, press, settle, typeInto } from './reviewHarness';
+import { button, fieldNamed, press, settle, typeInto } from './reviewHarness';
 
 /**
  * The published page, for tests: GitHub as its API answers for comments, and the page the site builds, as far as the
@@ -153,7 +153,7 @@ export const commentOnPage = async (doc: Document, selector: string, words: stri
 	await settle();
 	await press(doc.querySelector(selector) as Element);
 	await settle();
-	await typeInto(document.querySelector('#comment-draft') as HTMLTextAreaElement, words);
+	await typeInto(fieldNamed('Comment'), words);
 	await press(button('Save'));
 	await settle();
 	// Comment mode carries on, waiting for the next click: the reviewer is done.

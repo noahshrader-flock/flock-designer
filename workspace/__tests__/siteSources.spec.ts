@@ -7,8 +7,8 @@ const workspace = resolve(__dirname, '..');
 const repository = resolve(workspace, '..');
 
 /**
- * Every file the published viewer is built from, found from its folder by following imports: relative ones, and `@/`,
- * the window's code (`alias.config.ts`); an import with a query (`../page/pick?page`, the page code) is its file. A file is what a deploy is marked behind for, so a move that takes one out of
+ * Every file the published viewer is built from, found from its folder by following imports (and its stylesheet's
+ * `@import`s), relative ones; an import with a query (`../page/pick?page`, the page code) is its file. A file is what a deploy is marked behind for, so a move that takes one out of
  * `SITE_SOURCES` must fail here, not leave the site quietly stale.
  */
 const viewerFiles = (): string[] => {
@@ -18,9 +18,8 @@ const viewerFiles = (): string[] => {
 		const file = stack.pop() as string;
 		if (seen.has(file) || !/\.(tsx?|css)$/.test(file)) continue;
 		seen.add(file);
-		for (const [, spec] of readFileSync(file, 'utf8').matchAll(/(?:from|import)\s*\(?\s*['"]((?:\.|@\/)[^'"]+)['"]/g)) {
-			const bare = (spec as string).replace(/\?.*$/, '');
-			const path = bare.startsWith('@/') ? join(workspace, 'src/viewer', bare.slice(2)) : join(dirname(file), bare);
+		for (const [, spec] of readFileSync(file, 'utf8').matchAll(/(?:from|import)\s*\(?\s*['"](\.[^'"]+)['"]/g)) {
+			const path = join(dirname(file), (spec as string).replace(/\?.*$/, ''));
 			const found = [path, `${path}.ts`, `${path}.tsx`, join(path, 'index.ts')].find((p) => existsSync(p) && /\.(tsx?|css)$/.test(p));
 			if (found) stack.push(found);
 		}

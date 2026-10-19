@@ -1,17 +1,13 @@
-import { CircleCheckIcon, RotateCcwIcon, Trash2Icon } from 'lucide-react';
 import { type MouseEvent as ClickEvent, type ReactNode, useState } from 'react';
 import type { MarkerState, ReviewComment } from '../../shared/contract';
 import { stateLabel, stateOfQuery } from '../../shared/prototypeStates';
 import type { ShownTheme } from '../useShownTheme';
 import { themeLabel } from '../../shared/prototypeTheme';
-import { Badge } from '../ui/badge';
-import { Button } from '../ui/button';
-import { DropdownMenuItem, DropdownMenuSeparator } from '../ui/dropdown-menu';
+import { Avatar } from '../../ui/Avatar';
+import { Button } from '../../ui/Button';
+import { Menu, type MenuItem } from '../../ui/Menu';
+import { Message } from '../../ui/Message';
 import type { Comments } from './useComments';
-import { cn } from '@/lib/utils';
-import { Item } from '../ui/item';
-import { MoreMenu } from '../MoreMenu';
-import { Person } from '../Person';
 
 /** What a card says about where its pin is, when that is worth saying. */
 const NOTE: Record<MarkerState, string | null> = {
@@ -24,7 +20,7 @@ const NOTE: Record<MarkerState, string | null> = {
 
 /**
  * Every comment on the version, as cards: who wrote it, what it says, the spot it was made on, and a menu to resolve
- * or delete it. `actions` puts more at the top of a card's menu (the app's Address), and `addressed` says on a card
+ * or delete it. `actions` puts more at the top of a card's menu (Address, in DSNR), and `addressed` says on a card
  * what the agent did with it, both left to the screen this sits in. `states` are the prototype's, so a card can name
  * the state it was made in; `onShowState` opens the page in it (`null` is the first), from a comment made in another.
  * `shownTheme` is the theme the page is shown in: a comment seen in the other one has a button to show the page in that.
@@ -40,7 +36,7 @@ export const CommentList = ({
 	page,
 }: {
 	comments: Comments;
-	actions?: (comment: ReviewComment) => ReactNode;
+	actions?: (comment: ReviewComment) => MenuItem[];
 	addressed?: (comment: ReviewComment) => ReactNode;
 	states?: string[];
 	onShowState?: (state: string | null) => void;
@@ -51,10 +47,7 @@ export const CommentList = ({
 	const [confirmingDelete, setConfirmingDelete] = useState<number | null>(null);
 	// The newest at the top, as a conversation reads; each keeps its number (`numberComments`), which is the order made.
 	const list = comments.comments && [...comments.comments].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-	if (list?.length === 0)
-		return (
-			<p className="text-muted-foreground text-sm">No comments yet. Choose Comment and click on the page, or write one below for the whole page.</p>
-		);
+	if (list?.length === 0) return <Message>No comments yet. Choose Comment and click on the page, or write one below for the whole page.</Message>;
 	return (
 		<>
 			{list?.map((comment) => {
@@ -74,18 +67,15 @@ export const CommentList = ({
 				const seenIn = comment.anchor?.theme;
 				const showTheme = shownTheme && seenIn && seenIn !== shownTheme.theme ? seenIn : null;
 				return (
-					<Item
+					<div
 						key={comment.id}
-						variant="outline"
 						ref={(el: HTMLDivElement | null) => comments.registerCard(comment.id, el)}
-						// The selected one stands out as the pin on the page does (the same one-pixel border, in the text's own colour); a
-						// resolved one recedes. A choosable card is chosen by pressing anywhere on it but the buttons and menu on it.
-						className={cn(
-							'block p-3',
-							choosable && 'hover:bg-accent/50 cursor-pointer transition-colors',
-							comments.selected === comment.id && 'border-foreground bg-accent',
-							comment.resolved && 'opacity-65',
-						)}
+						// The selected one stands out as the pin on the page does; a resolved one recedes. A choosable card is chosen by
+						// pressing anywhere on it but the buttons and menu on it.
+						className="comment-card"
+						{...(choosable ? { 'data-choosable': '' } : {})}
+						{...(comments.selected === comment.id ? { 'data-selected': '' } : {})}
+						{...(comment.resolved ? { 'data-resolved': '' } : {})}
 						{...(choosable
 							? {
 									onClick: (e: ClickEvent) => {
@@ -94,72 +84,68 @@ export const CommentList = ({
 								}
 							: {})}
 					>
-						<div className="flex flex-col gap-1.5">
-							<div className="flex flex-row items-center gap-2">
-								<Person name={comment.author} src={comment.authorAvatarUrl} size="xs" />
-								<span className="min-w-0 truncate text-sm font-medium">{comment.author}</span>
-								{comment.resolved && <Badge variant="success">Resolved</Badge>}
-								<MoreMenu label="Comment actions" size="icon-sm" className="-my-1 -mr-1.5 ml-auto">
-									{actions?.(comment)}
-									<DropdownMenuItem onSelect={() => void comments.resolve(comment, !comment.resolved)}>
-										{comment.resolved ? <RotateCcwIcon /> : <CircleCheckIcon />}
-										{comment.resolved ? 'Reopen' : 'Resolve'}
-									</DropdownMenuItem>
-									<DropdownMenuSeparator />
-									<DropdownMenuItem variant="destructive" onSelect={() => setConfirmingDelete(comment.id)}>
-										<Trash2Icon />
-										Delete
-									</DropdownMenuItem>
-								</MoreMenu>
-							</div>
-							{note && <p className="text-muted-foreground text-xs">{note}</p>}
-							{confirmingDelete === comment.id && (
-								<div className="flex flex-row items-center gap-2">
-									<span className="text-destructive grow text-xs">Delete this comment for good? It cannot be brought back.</span>
-									<Button size="sm" variant="ghost" onClick={() => setConfirmingDelete(null)}>
-										Keep
-									</Button>
-									<Button
-										size="sm"
-										variant="destructive"
-										onClick={() => void comments.remove(comment).then((gone) => gone && setConfirmingDelete(null))}
-									>
-										Delete
-									</Button>
-								</div>
-							)}
-							{/* Choosing a comment shows its pin: anywhere on its card with a pointer, and by its own text, a button, for the keyboard. */}
-							{choosable ? (
-								<button
-									type="button"
-									aria-current={comments.selected === comment.id ? 'true' : undefined}
-									className="focus-visible:ring-ring/50 cursor-pointer rounded-sm text-left text-sm outline-none focus-visible:ring-[3px]"
-									onClick={() => comments.select(comment)}
-								>
-									{comment.body}
-								</button>
-							) : (
-								<p className="text-sm">{comment.body}</p>
-							)}
-							{comment.picture && <img className="max-w-60 rounded border" src={comment.picture} alt={`The spot ${comment.author} commented on`} />}
-							{madeIn && <span className="text-muted-foreground text-xs">State: {stateLabel(madeIn)}</span>}
-							{comment.anchor && state === 'elsewhere' && <span className="text-muted-foreground text-xs">On {comment.anchor.route}</span>}
-							{state && NOTE[state] && <span className="text-warning text-xs">{NOTE[state]}</span>}
-							{state && page && comment.anchor?.page && comment.anchor.page !== page && (
-								<span className="text-muted-foreground text-xs">The page has changed since this was written.</span>
-							)}
-							{showIn && (
-								<Button size="sm" variant="outline" className="self-start" onClick={() => onShowState?.(madeIn)}>
-									Show in {stateLabel(showIn)}
-								</Button>
-							)}
-							{showTheme && (
-								<Button size="sm" variant="outline" className="self-start" onClick={() => shownTheme?.onTheme(showTheme)}>
-									Show in {themeLabel(showTheme)}
-								</Button>
-							)}
+						<div className="comment-head">
+							<Avatar name={comment.author} src={comment.authorAvatarUrl} size="xs" />
+							<span className="comment-author">{comment.author}</span>
+							{comment.resolved && <Message icon="pass">Resolved</Message>}
+							<Menu
+								label="Comment actions"
+								size="small"
+								always
+								sections={[
+									...(actions ? [{ items: actions(comment) }] : []),
+									{
+										items: [
+											{
+												label: comment.resolved ? 'Reopen' : 'Resolve',
+												icon: comment.resolved ? 'discard' : 'pass',
+												onSelect: () => void comments.resolve(comment, !comment.resolved),
+											},
+										],
+									},
+									{ items: [{ label: 'Delete', icon: 'trash', onSelect: () => setConfirmingDelete(comment.id) }] },
+								].filter((s) => s.items.length > 0)}
+							/>
 						</div>
-					</Item>
+						{note && <Message>{note}</Message>}
+						{confirmingDelete === comment.id && (
+							<div className="comment-delete">
+								<Message tone="warning">Delete this comment for good? It cannot be brought back.</Message>
+								<Button variant="ghost" onClick={() => setConfirmingDelete(null)}>
+									Keep
+								</Button>
+								<Button onClick={() => void comments.remove(comment).then((gone) => gone && setConfirmingDelete(null))}>Delete</Button>
+							</div>
+						)}
+						{/* Choosing a comment shows its pin: anywhere on its card with a pointer, and by its own text, a button, for the keyboard. */}
+						{choosable ? (
+							<button
+								type="button"
+								aria-current={comments.selected === comment.id ? 'true' : undefined}
+								className="comment-body"
+								onClick={() => comments.select(comment)}
+							>
+								{comment.body}
+							</button>
+						) : (
+							<p className="comment-body">{comment.body}</p>
+						)}
+						{comment.picture && <img className="comment-picture" src={comment.picture} alt={`The spot ${comment.author} commented on`} />}
+						{madeIn && <Message>State: {stateLabel(madeIn)}</Message>}
+						{comment.anchor && state === 'elsewhere' && <Message>On {comment.anchor.route}</Message>}
+						{state && NOTE[state] && <Message tone="warning">{NOTE[state]}</Message>}
+						{state && page && comment.anchor?.page && comment.anchor.page !== page && <Message>The page has changed since this was written.</Message>}
+						{showIn && (
+							<Button variant="secondary" onClick={() => onShowState?.(madeIn)}>
+								Show in {stateLabel(showIn)}
+							</Button>
+						)}
+						{showTheme && (
+							<Button variant="secondary" onClick={() => shownTheme?.onTheme(showTheme)}>
+								Show in {themeLabel(showTheme)}
+							</Button>
+						)}
+					</div>
 				);
 			})}
 		</>

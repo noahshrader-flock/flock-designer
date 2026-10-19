@@ -1,2 +1,264 @@
-/* The app's own look, so the comments on a published page are the app's: the same theme, the same parts. */
-@import './index.css';
+/*
+ * A prototype's published page, drawn with DSNR's kit as its pages in VS Code are: the theme where VS Code gives none (or
+ * the editor's own, which the review tab passes on), the kit, VS Code's icons, then the page's own parts below, on the
+ * kit's names and its spacing scale.
+ */
+@import '../ui/theme.css';
+@import '../ui/kit.css';
+@import '@vscode/codicons/dist/codicon.css';
+
+/* The page is a window: its bar, then the prototype, and beside it the comments when they are open. It never scrolls whole. */
+body {
+	overflow: hidden;
+	background: var(--vscode-editor-background);
+}
+
+/* == The bar == */
+
+/*
+ * The bar over the prototype: the way back and the title at the start, what it shows and commenting at the end, the height
+ * of the panel's top bar. No background of its own, so it is not part of the prototype it is over.
+ */
+.viewer-bar {
+	display: flex;
+	align-items: center;
+	gap: var(--dsnr-space-4);
+	box-sizing: border-box;
+	height: var(--dsnr-top-height);
+	padding: 0 var(--dsnr-space-5) 0 var(--dsnr-space-2);
+}
+
+/* The page's title, at the text's size: a long one is cut short, so the bar never wraps. */
+.viewer-bar .heading-page {
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	font-size: 1em;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.viewer-bar-end,
+.comment-control {
+	display: flex;
+	align-items: center;
+	gap: var(--dsnr-space-3);
+}
+
+/* In a row, a button is as wide as its words, and a dropdown or a toggle as what it shows. */
+.viewer-bar .button,
+.viewer-panel .button {
+	width: auto;
+	margin: 0;
+	white-space: nowrap;
+}
+
+.viewer-bar .select,
+.viewer-bar .toggle {
+	width: auto;
+}
+
+/* Commenting needs a computer: on a phone the bar's room goes to the title and what it shows. */
+@media (max-width: 640px) {
+	.viewer-sign-in {
+		display: none;
+	}
+}
+
+/* == The comments' panel (`ResizablePanel`, `comments/`) == */
+
+.viewer-panel {
+	display: flex;
+	height: 100%;
+}
+
+/* The divider: one line to look at, and a wider strip to grab that reaches over the panel only (the frame keeps the pointer). */
+.panel-divider {
+	position: relative;
+	flex-shrink: 0;
+	width: 1px;
+	background: var(--dsnr-border);
+	touch-action: none;
+}
+
+.panel-divider::after {
+	content: '';
+	position: absolute;
+	inset: 0 auto 0 0;
+	width: 7px;
+	cursor: col-resize;
+}
+
+/* Held, hovered or focused, it is the focus colour, the whole of its line, which is its ring. */
+.panel-divider:hover,
+.panel-divider:focus-visible,
+.panel-divider[data-resizing] {
+	outline: none;
+	background: var(--vscode-focusBorder);
+}
+
+.side-panel {
+	display: flex;
+	flex-direction: column;
+	flex-shrink: 0;
+	min-height: 0;
+	background: var(--vscode-sideBar-background);
+}
+
+.comments-panel {
+	display: flex;
+	flex: 1;
+	flex-direction: column;
+	min-height: 0;
+}
+
+.comments-list {
+	display: flex;
+	flex: 1;
+	flex-direction: column;
+	gap: var(--dsnr-space-5);
+	min-height: 0;
+	overflow-y: auto;
+	padding: var(--dsnr-space-5);
+}
+
+/*
+ * A comment, as a card: one that can be chosen (its pin is on the page) shows it can on hover, the chosen one is outlined in
+ * the focus colour as its pin is on the page, and a resolved one recedes: all of it but its menu, which opens over it as
+ * clear as any other.
+ */
+.comment-card {
+	display: flex;
+	flex-direction: column;
+	gap: var(--dsnr-space-2);
+	padding: var(--dsnr-space-5);
+	border: 1px solid var(--dsnr-border);
+	border-radius: var(--dsnr-radius);
+}
+
+.comment-card[data-choosable] {
+	cursor: pointer;
+}
+
+.comment-card[data-choosable]:hover,
+.comment-card[data-selected] {
+	background: var(--vscode-list-hoverBackground);
+}
+
+.comment-card[data-selected] {
+	border-color: var(--vscode-focusBorder);
+}
+
+.comment-card[data-resolved] > :not(.comment-head),
+.comment-card[data-resolved] .comment-head > :not(.menu) {
+	opacity: 0.65;
+}
+
+.comment-card .button {
+	align-self: flex-start;
+}
+
+.comment-head {
+	display: flex;
+	align-items: center;
+	gap: var(--dsnr-space-3);
+}
+
+.comment-author {
+	min-width: 0;
+	overflow: hidden;
+	font-weight: 600;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.comment-head .menu {
+	margin-left: auto;
+}
+
+/* What it says: a button for the keyboard when choosing it shows its pin, read as its words either way. */
+.comment-body {
+	margin: 0;
+	padding: 0;
+	border: none;
+	color: inherit;
+	background: none;
+	font: inherit;
+	text-align: start;
+	overflow-wrap: anywhere;
+}
+
+button.comment-body {
+	cursor: pointer;
+}
+
+.comment-picture {
+	max-width: 240px;
+	border: 1px solid var(--dsnr-border);
+	border-radius: var(--dsnr-radius-inner);
+}
+
+.comment-delete {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--dsnr-space-3);
+}
+
+.comment-delete .message {
+	flex: 1 1 100%;
+}
+
+/* A comment on the whole page, at the panel's foot: the box grows with what is written, up to a few lines, its button beside it. */
+.general-comment {
+	display: flex;
+	align-items: flex-end;
+	gap: var(--dsnr-space-3);
+	padding: var(--dsnr-space-4);
+	border-top: 1px solid var(--dsnr-border);
+}
+
+.general-comment textarea {
+	flex: 1;
+	min-height: var(--dsnr-control);
+	max-height: 160px;
+	resize: none;
+	field-sizing: content;
+}
+
+/* == The comment box, beside its pin (`comments/CommentBox.tsx`) == */
+
+/* What is behind it, which a press closes it from, and the box above it, over the prototype's page. */
+.comment-shade {
+	position: fixed;
+	inset: 0;
+	z-index: var(--dsnr-layer-dialog);
+}
+
+.comment-box {
+	position: fixed;
+	z-index: var(--dsnr-layer-dialog);
+	display: flex;
+	flex-direction: column;
+	gap: var(--dsnr-space-4);
+	box-sizing: border-box;
+	width: 300px;
+	max-width: calc(100vw - var(--dsnr-space-6));
+	padding: var(--dsnr-space-5);
+	border: 1px solid var(--vscode-editorWidget-border);
+	border-radius: var(--dsnr-radius);
+	color: var(--vscode-editorWidget-foreground);
+	background: var(--vscode-editorWidget-background);
+	box-shadow: 0 2px 8px var(--vscode-widget-shadow);
+}
+
+.comment-box-buttons {
+	display: flex;
+	justify-content: flex-end;
+	gap: var(--dsnr-space-3);
+}
+
+.comment-box-buttons .button {
+	width: auto;
+	margin: 0;
+}

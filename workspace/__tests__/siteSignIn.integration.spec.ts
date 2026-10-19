@@ -183,8 +183,8 @@ describe.skipIf(NO_CHROME)('signing in to comment on the published site, in the 
 			const frame = tab.frames().find((f) => f.url().endsWith('page.html')) as Frame;
 			await frame.waitForSelector('style[data-fd="pick"]');
 			await frame.click('h1');
-			await tab.waitForSelector('#comment-draft');
-			await tab.type('#comment-draft', 'Bigger, please');
+			await tab.waitForSelector('.comment-box textarea');
+			await tab.type('.comment-box textarea', 'Bigger, please');
 			await press(tab, 'Save');
 			const until = Date.now() + 20_000;
 			while (!gh.issues[0]?.comments.length && Date.now() < until) await new Promise((r) => setTimeout(r, 50));
@@ -193,7 +193,7 @@ describe.skipIf(NO_CHROME)('signing in to comment on the published site, in the 
 
 			// Who, as their picture at the end of the bar; and Sign out in its menu, which forgets the token.
 			await pressNamed(tab, 'Signed in as pat');
-			await tab.waitForFunction(() => document.querySelector('[data-signed-in-as]')?.textContent === 'Pat Brennanpat');
+			await tab.waitForFunction(() => document.querySelector('.menu-heading')?.textContent === 'Pat Brennan · pat');
 			await pressNamed(tab, 'Sign out');
 			await tab.waitForFunction(() => [...document.querySelectorAll('button')].some((b) => b.textContent?.trim() === 'Sign in to comment'));
 			expect(await tab.evaluate(() => localStorage.getItem('dsnr.github-token'))).toBeNull();

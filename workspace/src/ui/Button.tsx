@@ -9,7 +9,11 @@ import { Icon } from './Icon';
  * - `ghost`, nothing but its words: the way out, beside what is done (Cancel), or leaving a change (Start over).
  *
  * The width of the side bar, unless it is in a row of them. `type="submit"` is a form's own. One that goes out of VS Code (to
- * a browser: Storybook, GitHub) says so with the external link icon after its words (`external`).
+ * a browser: Storybook, GitHub) says so with the external link icon after its words (`external`). `icon` is a codicon before
+ * its words, or all of it, when it is named by `label` (beside a number, or alone).
+ *
+ * One that turns a mode on and off (`pressed`: Comment, the comments' list) says whether it is on, to assistive technology
+ * and to the eye: filled as the primary when it is, outlined as the secondary when it is not.
  */
 export const Button = ({
 	onClick,
@@ -17,6 +21,10 @@ export const Button = ({
 	variant = 'primary',
 	disabled = false,
 	external = false,
+	icon,
+	label,
+	pressed,
+	title,
 	children,
 }: {
 	onClick?: () => void;
@@ -24,14 +32,24 @@ export const Button = ({
 	variant?: 'primary' | 'secondary' | 'ghost';
 	disabled?: boolean;
 	external?: boolean;
-	children: ReactNode;
+	icon?: string;
+	/** Its name, when its words do not say it (an icon and a number). */
+	label?: string;
+	pressed?: boolean;
+	/** What it does, said as its tooltip. */
+	title?: string;
+	children?: ReactNode;
 }) => (
 	<button
 		type={type}
-		className={`button button-${variant}${external ? ' button-external' : ''}`}
+		className={`button button-${pressed === undefined ? variant : pressed ? 'primary' : 'secondary'}${external || icon ? ' button-with-icon' : ''}`}
 		disabled={disabled}
 		{...(onClick ? { onClick } : {})}
+		{...(pressed === undefined ? {} : { 'aria-pressed': pressed })}
+		{...(label ? { 'aria-label': label } : {})}
+		{...(title ? { title } : {})}
 	>
+		{icon && <Icon name={icon} />}
 		{external ? (
 			<>
 				<span>{children}</span>

@@ -104,7 +104,7 @@ describe('a review built from the copy, with no checkout on the machine', () => 
 		const at = await copyProject(files, 'demo', into);
 		const viewer = join(into, 'viewer');
 		mkdirSync(viewer);
-		for (const f of ['viewer.js', 'viewer.css', 'page-agent.js']) writeFileSync(join(viewer, f), '');
+		for (const f of ['viewer.js', 'viewer.css', 'viewer.ttf', 'page-agent.js']) writeFileSync(join(viewer, f), '');
 		const site = join(into, 'site');
 		buildReviewSite(site, viewer)(at, 'http://127.0.0.1:5001/review/');
 		expect(readFileSync(join(site, 'demo', 'v1', 'index.html'), 'utf8')).toContain('dsnr-config');

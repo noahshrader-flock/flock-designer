@@ -302,16 +302,15 @@ or copies its link; when it is not there yet, it says why and offers Publish.
 Like the app, it publishes the person's work branches and records when the project list is read and when VS Code is
 focused, so it pushes with their own git credentials.
 
-It is drawn in VS Code's own design language, with none of the app's shadcn components or Tailwind and no colour of its
-own (a test fails if one creeps in), so it follows every theme.
+It is drawn in VS Code's own design language, with no colour of its own (a test fails if one creeps in), so it follows
+every theme.
 
-**Two kits, on purpose.** DSNR's pages in VS Code (the panel and its tabs) are drawn with their own kit
-(`src/ui`), on VS Code's theme. The review bar (`src/viewer`) keeps the app's kit, shadcn on Tailwind and
-Radix (`src/viewer/ui`): it is the page reviewers open in their browser on the published site, where there is no VS Code
-theme to follow, and DSNR's review tab shows that same page, so it looks the same to everyone. Neither kit borrows from
-the other. What is not a look is shared, so the two do not drift apart: a tooltip's wait (`src/shared/tooltipTiming.ts`).
-The review bar's own code (its comments, read again every few seconds) is the site's, and keeps its own ways; the
-panel's rules (one Message, one heading, reads through `hooks/ask.ts`, the spacing scale in `styles.css`) are the kit's.
+**One kit.** Everything DSNR draws is drawn with its own kit (`src/ui`: the components, and `kit.css`, with one spacing
+scale and one focus ring): the panel and its tabs, and the review bar on a prototype's page (`src/viewer`), the page
+reviewers open on the published site and DSNR's review tab shows. The kit reads VS Code's theme. Where VS Code gives none
+(the published site, and the review bar's frame inside the review tab), `src/ui/theme.css` gives VS Code's own default
+light and dark; in the review tab, the tab passes its real theme to the bar, so the bar is in whatever theme the person
+chose. A test fails if shadcn, Radix, Tailwind or lucide comes back.
 
 ```bash
 npm run extension:dev            # build it as you edit, in a VS Code window of its own
@@ -403,4 +402,4 @@ Flock's CodeArtifact mirror, whose token expires and needs a browser login to re
 that mirror; this app does not.
 
 It used to need a GitHub Packages token as well, for Flock's component library. That went when the
-interface moved to shadcn/ui, so a fresh clone now installs with **no Flock credentials at all**.
+interface stopped using it (it is DSNR's own kit now, `src/ui`), so a fresh clone installs with **no Flock credentials at all**.

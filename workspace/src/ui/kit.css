@@ -58,6 +58,8 @@
 	 */
 	--dsnr-dot: 26px;
 	--dsnr-dot-swatch: 18px;
+	/* A person's picture beside their name, as a pin carries it on the page (`AVATAR_XS_PX`). */
+	--dsnr-avatar-xs: 20px;
 	/* A slider's track and its thumb, which is centred on it. */
 	--dsnr-slider-track: 4px;
 	--dsnr-slider-thumb: 14px;
@@ -330,8 +332,8 @@ body {
 	cursor: pointer;
 }
 
-/* A button that goes out of VS Code: its words, then the external link icon, centred together. */
-.button-external {
+/* A button with an icon: before its words, or the external link icon after them (one that goes out of VS Code), centred together. */
+.button-with-icon {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
@@ -376,7 +378,7 @@ body {
 
 /*
  * A button that is an icon alone, as VS Code's toolbars draw one: a row's menu button (shown on hover, below) and any
- * other (Sync, a token's file, a reset).
+ * other (Sync, a token's file, a reset), or a link drawn as one (the way back to a page), with no underline of its own.
  */
 .icon-button,
 .menu-button {
@@ -390,6 +392,7 @@ body {
 	border-radius: var(--dsnr-radius);
 	color: var(--vscode-foreground);
 	background: transparent;
+	text-decoration: none;
 	cursor: pointer;
 }
 
@@ -408,6 +411,11 @@ body {
 /* A menu that is a view's own (its options), not a row's: always there. */
 .menu-button-shown {
 	opacity: 1;
+}
+
+/* A menu of a person, as their picture: round, as the picture is. */
+.menu-button-face {
+	border-radius: 50%;
 }
 
 .menu-button:hover,
@@ -473,6 +481,37 @@ body {
 
 .badge-button:hover {
 	filter: brightness(1.1);
+}
+
+/* == People (`ui/Avatar.tsx`) == */
+
+/* A person's picture, or their initial in the quiet track's grey until it loads: round, the size of a small control. */
+.avatar {
+	display: inline-flex;
+	flex-shrink: 0;
+	align-items: center;
+	justify-content: center;
+	overflow: hidden;
+	width: var(--dsnr-control-small);
+	height: var(--dsnr-control-small);
+	border-radius: 50%;
+	color: var(--vscode-foreground);
+	background: var(--dsnr-track);
+	font-size: 11px;
+	font-weight: 600;
+}
+
+/* Beside a name: the size a pin's picture is drawn at on the page (`AVATAR_XS_PX`). */
+.avatar-xs {
+	width: var(--dsnr-avatar-xs);
+	height: var(--dsnr-avatar-xs);
+	font-size: 10px;
+}
+
+.avatar img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
 }
 
 /* == Messages (`ui/Message.tsx`) == */

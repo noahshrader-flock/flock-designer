@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { createElement } from 'react';
 import { act } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -11,12 +13,16 @@ import { PAGE_CONFIG as CONFIG, PAGE_SIGN_IN as SIGN_IN, commentOnPage, fakeGitH
 import {
 	button,
 	cards,
+	choicesIn,
+	fieldNamed,
 	menuItem,
 	openMenu,
 	press,
 	render,
 	settle,
+	shownIn,
 	shownState,
+	switchMenu,
 	chooseState,
 	stateMenu,
 	typeInto,
@@ -104,15 +110,15 @@ describe('signing in on the published site (PUBLISHED_COMMENTS_PLAN, Phase 3)', 
 		await openSigning();
 		await settle();
 		const account = document.querySelector('[aria-label="Signed in as pat"]') as HTMLElement;
-		expect(account.querySelector('[data-slot="avatar"]')?.getAttribute('data-size')).toBe('sm');
+		expect(account.querySelector('.avatar')?.className).toBe('avatar');
 		const items = await openMenu(account);
-		expect(document.querySelector('[data-signed-in-as]')?.textContent).toBe('Pat Brennanpat');
+		expect(document.querySelector('.menu-heading')?.textContent).toBe('Pat Brennan · pat');
 		expect(items.map((i) => i.textContent)).toEqual(['Sign out']);
 		// Not in the comments' drawer, where it was: that is the comments'.
 		await press(button(/^Show all comments/));
 		await settle();
 		expect(cards()).toHaveLength(0);
-		expect([...document.querySelectorAll('button')].some((b) => b.textContent === 'Sign out')).toBe(false);
+		expect([...(document.querySelector('.viewer-panel')?.querySelectorAll('button') ?? [])].some((b) => b.textContent === 'Sign out')).toBe(false);
 	});
 
 	it('tells a person GitHub will not show the design repository who they are signed in as, and to sign out', async () => {
@@ -159,7 +165,7 @@ describe('signing in on the published site (PUBLISHED_COMMENTS_PLAN, Phase 3)', 
 		await openSigning({ note: 'cancelled' });
 		await settle();
 		expect(document.querySelector('[role="dialog"]')?.textContent).toContain('Signing in was cancelled.');
-		await press(button('OK'));
+		await press(button('Close'));
 		await settle();
 		expect(document.querySelector('[role="dialog"]')).toBeNull();
 	});
@@ -180,17 +186,15 @@ describe("the page's bar", () => {
 		await open();
 		expect(document.querySelector('a[href="../"]')).not.toBeNull();
 		expect(document.body.textContent).toContain('Alert history');
-		// Every version in one menu, the newest first, with this one chosen.
-		await openMenu(button('Version 1: switch version'));
-		const versions = [...document.querySelectorAll<HTMLElement>('[role="menuitemradio"]')];
-		expect(versions.map((i) => i.textContent?.trim())).toEqual(['Version 3', 'Version 2', 'Version 1']);
-		expect(versions.map((o) => o.getAttribute('aria-checked'))).toEqual(['false', 'false', 'true']);
+		// Every version in one dropdown, the newest first, with this one chosen.
+		expect(choicesIn(switchMenu('version'))).toEqual(['Version 3', 'Version 2', 'Version 1']);
+		expect(shownIn(switchMenu('version'))).toBe('Version 1');
 	});
 
 	it('is there before anyone signs in, beside the way to', async () => {
 		await open();
 		expect(button('Sign in to comment')).toBeTruthy();
-		expect(button('Version 1: switch version')).toBeTruthy();
+		expect(switchMenu('version')?.getAttribute('aria-label')).toBe('Version 1: switch version');
 	});
 });
 
@@ -204,10 +208,11 @@ describe('the states of the page', () => {
 
 	it('has a quiet bar: no background and no line under it, so it does not look like part of the page it is over', async () => {
 		await withStates(['default', 'panel']);
-		const bar = document.querySelector('[data-toolbar]') as HTMLElement;
-		expect(bar.className.split(' ')).toContain('bg-transparent');
-		expect(bar.className.split(' ')).not.toContain('bg-card');
-		expect(bar.className.split(' ')).not.toContain('border-b');
+		expect(document.querySelector('.viewer-bar')).not.toBeNull();
+		const css = readFileSync(join(__dirname, '../src/viewer/viewer.css'), 'utf8');
+		const rule = /^\.viewer-bar \{([^}]*)\}/m.exec(css)?.[1] ?? '';
+		expect(rule).toMatch(/display:\s*flex/);
+		expect(rule).not.toMatch(/background|\bborder(-[a-z]+)?\s*:/);
 	});
 
 	it('are a dropdown between the version and the theme, and choosing one opens the page in it', async () => {
@@ -215,7 +220,7 @@ describe('the states of the page', () => {
 		expect(shownState()).toBe('Default');
 		// In the bar's order: the version, the states, then the theme.
 		const before = (a: Element, b: Element) => !!(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
-		expect(before(button('Version 1: switch version'), stateMenu() as Element)).toBe(true);
+		expect(before(switchMenu('version') as Element, stateMenu() as Element)).toBe(true);
 		expect(before(stateMenu() as Element, themeGroup() as Element)).toBe(true);
 		await chooseState('Panel');
 		await settle();
@@ -304,7 +309,7 @@ describe('the states of the page', () => {
 		await unmountAll(current!.root);
 		current = await render(createElement(Viewer, { config: CONFIG, slots: sitePage().slots }));
 		expect(document.querySelector('[aria-label^="State"]')).toBeNull();
-		expect(button('Version 1: switch version')).toBeTruthy();
+		expect(switchMenu('version')).not.toBeNull();
 	});
 });
 
@@ -334,7 +339,7 @@ describe('commenting on the page', () => {
 		await settle();
 		await press(doc.querySelector('[data-e2e-ref="clear-filter-button"]') as Element);
 		await settle();
-		await typeInto(document.querySelector('#comment-draft') as HTMLTextAreaElement, 'Make this primary');
+		await typeInto(fieldNamed('Comment'), 'Make this primary');
 		await press(button('Save'));
 		await settle();
 
@@ -421,10 +426,11 @@ describe('commenting on the page', () => {
 		// And its card in the panel starts with them, not a number.
 		await press(button(/^Show all comments/));
 		await settle();
-		expect(cards()[0]?.querySelector('[data-slot="avatar"]')?.getAttribute('title')).toBe('noah');
+		const avatar = cards()[0]?.querySelector('.avatar');
+		expect(avatar?.getAttribute('title')).toBe('noah');
 		// The extra small, the size of the picture on its pin.
-		expect(cards()[0]?.querySelector('[data-slot="avatar"]')?.getAttribute('data-size')).toBe('xs');
-		expect(cards()[0]?.querySelector('[data-slot="avatar-fallback"]')?.textContent).toBe('N');
+		expect(avatar?.className).toBe('avatar avatar-xs');
+		expect(avatar?.querySelector('img')?.getAttribute('src')).toBe('https://avatars.githubusercontent.com/u/9?v=4');
 	});
 });
 

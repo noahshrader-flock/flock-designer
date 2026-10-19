@@ -10,7 +10,6 @@
 		"src/shared/**/*",
 		"viewer.vite.config.ts",
 		"vitest.config.ts",
-		"alias.config.ts",
 		"pageCode.vite.ts"
 	]
 }

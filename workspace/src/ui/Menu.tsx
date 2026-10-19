@@ -26,7 +26,8 @@ const ENTRIES = '[role^="menuitem"]';
 
 /**
  * A menu in a popover, from a button of its own, drawn under it in the panel: the ellipsis by default, as VS Code's lists
- * have one, shown only on hover or focus; or another `icon` shown always (`always`, the cog of a view's options). The
+ * have one, shown only on hover or focus; or another `icon` shown always (`always`, the cog of a view's options); or, in
+ * place of an icon, what it is a menu of (`face`: a person's picture, for who is signed in). The
  * button is the default size, the search box's, or `small` for a row, a card or a header. Its
  * sections are separated by a divider. The button says whether it is open; Escape or a press elsewhere closes it, and the
  * arrow keys move through it.
@@ -35,12 +36,14 @@ export const Menu = ({
 	label,
 	sections,
 	icon = 'ellipsis',
+	face,
 	always = false,
 	size = 'default',
 }: {
 	label: string;
 	sections: MenuSection[];
 	icon?: string;
+	face?: ReactNode;
 	always?: boolean;
 	size?: 'default' | 'small';
 }) => {
@@ -86,7 +89,12 @@ export const Menu = ({
 			<button
 				ref={button}
 				type="button"
-				className={['menu-button', ...(size === 'small' ? ['menu-button-small'] : []), ...(always ? ['menu-button-shown'] : [])].join(' ')}
+				className={[
+					'menu-button',
+					...(size === 'small' ? ['menu-button-small'] : []),
+					...(always || face ? ['menu-button-shown'] : []),
+					...(face ? ['menu-button-face'] : []),
+				].join(' ')}
 				aria-label={label}
 				title={label}
 				aria-haspopup="menu"
@@ -94,7 +102,7 @@ export const Menu = ({
 				{...(open ? { 'aria-controls': list } : {})}
 				onClick={() => setOpen(!open)}
 			>
-				<Icon name={icon} />
+				{face ?? <Icon name={icon} />}
 			</button>
 			{open && (
 				<div id={list} role="menu" aria-label={label} className="menu-list">

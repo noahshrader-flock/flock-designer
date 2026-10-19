@@ -1,10 +1,14 @@
-import { type ChangeEvent, type ReactNode, useId } from 'react';
+import { type ChangeEvent, type KeyboardEvent, type ReactNode, useId } from 'react';
 import { Icon } from './Icon';
 
-/** What a control is given to be named and described by its field: its id, and the hint that describes it, if it has one. */
+/**
+ * What a control is given to be named and described by its field: its id, and the hint that describes it, if it has one.
+ * One with no field around it is named by its own label (`aria-label`): a box whose place says what it is for.
+ */
 interface FieldControl {
 	id: string;
 	'aria-describedby'?: string;
+	'aria-label'?: string;
 }
 
 /**
@@ -59,17 +63,28 @@ export const TextArea = ({
 	placeholder,
 	rows = 4,
 	control,
+	disabled = false,
+	focused = false,
+	onKeyDown,
 }: {
 	value: string;
 	onChange: (value: string) => void;
 	placeholder?: string;
 	rows?: number;
 	control: FieldControl;
+	disabled?: boolean;
+	/** Has the focus as it is drawn: what was opened to write in it (a comment's box beside its pin). */
+	focused?: boolean;
+	/** A key pressed in it, for what it does on one (Enter sends a message). */
+	onKeyDown?: (e: KeyboardEvent<HTMLTextAreaElement>) => void;
 }) => (
 	<textarea
 		{...control}
 		className="input"
 		rows={rows}
+		disabled={disabled}
+		autoFocus={focused}
+		{...(onKeyDown ? { onKeyDown } : {})}
 		value={value}
 		onChange={(e: ChangeEvent<HTMLTextAreaElement>) => onChange(e.target.value)}
 		{...(placeholder ? { placeholder } : {})}

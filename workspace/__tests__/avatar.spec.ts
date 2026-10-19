@@ -38,19 +38,15 @@ describe('where a picture may come from', () => {
 });
 
 describe('the avatar sizes', () => {
-	const ui = (file: string) => readFileSync(join(__dirname, '..', 'src/viewer/ui', file), 'utf8');
+	const kit = readFileSync(join(__dirname, '..', 'src/ui/kit.css'), 'utf8');
 
-	it('have an extra small one that is a card’s and a pin’s alike: the component’s class and the page’s pixels are one size', () => {
-		const rem = /data-\[size=xs\]:size-(\d+)/.exec(ui('avatar.tsx'))?.[1];
-		// Tailwind's size-N is N quarters of a rem, a rem being 16px: size-5 is 20px.
-		expect(Number(rem) * 4).toBe(AVATAR_XS_PX);
+	it('have an extra small one that is a card’s and a pin’s alike: the kit’s size and the page’s pixels are one', () => {
+		expect(/--dsnr-avatar-xs:\s*(\d+)px;/.exec(kit)?.[1]).toBe(String(AVATAR_XS_PX));
 	});
 
-	it('are the buttons’: a small avatar is the small icon button’s width and height, a medium one the icon button’s', () => {
-		const buttons = ui('button.tsx');
-		const avatar = ui('avatar.tsx');
-		const sizeOf = (text: string, pattern: RegExp) => pattern.exec(text)?.[1];
-		expect(sizeOf(avatar, /data-\[size=sm\]:(size-\d+)/)).toBe(sizeOf(buttons, /"icon-sm":\s*"(size-\d+)/));
-		expect(sizeOf(avatar, /relative flex (size-\d+)/)).toBe(sizeOf(buttons, /\bicon: "(size-\d+)"/));
+	it('are a small control’s otherwise, as the small buttons are', () => {
+		const avatar = /^\.avatar \{([^}]*)\}/m.exec(kit)?.[1] ?? '';
+		expect(avatar).toMatch(/width:\s*var\(--dsnr-control-small\)/);
+		expect(avatar).toMatch(/height:\s*var\(--dsnr-control-small\)/);
 	});
 });

@@ -1,7 +1,6 @@
 import { act, createElement } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { useWorkspace } from '../extension/webview/hooks/useWorkspace';
-import { TooltipProvider } from '../src/viewer/ui/tooltip';
 import type { Result } from '../src/shared/contract';
 import { fail, ok, render, settle, unmountAll } from './reviewHarness';
 
@@ -19,7 +18,7 @@ const Probe = ({ read, dep, enabled }: { read: () => Promise<Result<string>>; de
 };
 const show = async (read: () => Promise<Result<string>>, dep = 'a', enabled = true) => {
 	// Inside the same wrapper the harness renders in, so it is the same component that is told, not a new one.
-	if (current) await act(async () => current!.root.render(createElement(TooltipProvider, null, createElement(Probe, { read, dep, enabled }))));
+	if (current) await act(async () => current!.root.render(createElement(Probe, { read, dep, enabled })));
 	else current = await render(createElement(Probe, { read, dep, enabled }));
 	await settle();
 };

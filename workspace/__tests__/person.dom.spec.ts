@@ -1,9 +1,9 @@
-import { createElement } from 'react';
+import { act, createElement } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
-import { Person } from '../src/viewer/Person';
+import { Avatar } from '../src/ui/Avatar';
 import { render, unmountAll } from './reviewHarness';
 
-/** A person as their picture, on a card in the comments: small by default, the first letter until there is a picture. */
+/** A person as their picture (the kit's `Avatar`, on a card in the comments and at the end of the bar). */
 
 let current: Awaited<ReturnType<typeof render>> | null = null;
 afterEach(async () => {
@@ -11,28 +11,27 @@ afterEach(async () => {
 	current = null;
 });
 
-const avatar = () => document.querySelector('[data-slot="avatar"]') as HTMLElement;
+const avatar = () => document.querySelector('.avatar') as HTMLElement;
 
 describe('a person', () => {
-	it('is the small avatar unless asked for another, named for them, with the first letter of their name until a picture loads', async () => {
-		current = await render(createElement(Person, { name: 'noah', src: 'https://avatars.githubusercontent.com/u/1?v=4' }));
-		expect(avatar().getAttribute('data-size')).toBe('sm');
+	it('is their picture, named for them as its tooltip, small unless asked for the extra small', async () => {
+		current = await render(createElement(Avatar, { name: 'noah', src: 'https://avatars.githubusercontent.com/u/1?v=4' }));
 		expect(avatar().getAttribute('title')).toBe('noah');
-		expect(document.querySelector('[data-slot="avatar-fallback"]')?.textContent).toBe('N');
+		expect(avatar().className).toBe('avatar');
+		expect(avatar().querySelector('img')?.getAttribute('src')).toBe('https://avatars.githubusercontent.com/u/1?v=4');
+		await unmountAll(current.root);
+		current = await render(createElement(Avatar, { name: 'noah', src: null, size: 'xs' }));
+		expect(avatar().className).toBe('avatar avatar-xs');
 	});
 
-	it('has the design system’s four sizes', async () => {
-		for (const size of ['xs', 'sm', 'md', 'lg'] as const) {
-			current = await render(createElement(Person, { name: 'pat', src: null, size }));
-			expect(avatar().getAttribute('data-size')).toBe(size);
-			await unmountAll(current.root);
-			current = null;
-		}
-	});
-
-	it('is only the letter with no picture', async () => {
-		current = await render(createElement(Person, { name: 'pat', src: null }));
-		expect(document.querySelector('[data-slot="avatar-image"]')).toBeNull();
-		expect(document.querySelector('[data-slot="avatar-fallback"]')?.textContent).toBe('P');
+	it('is the first letter of their name with no picture, or when it does not load', async () => {
+		current = await render(createElement(Avatar, { name: 'pat', src: null }));
+		expect(avatar().querySelector('img')).toBeNull();
+		expect(avatar().textContent).toBe('P');
+		await unmountAll(current.root);
+		current = await render(createElement(Avatar, { name: 'pat', src: 'https://avatars.githubusercontent.com/u/2' }));
+		await act(async () => void avatar().querySelector('img')!.dispatchEvent(new Event('error')));
+		expect(avatar().querySelector('img')).toBeNull();
+		expect(avatar().textContent).toBe('P');
 	});
 });

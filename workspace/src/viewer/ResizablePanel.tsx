@@ -1,18 +1,16 @@
 import { type ReactNode, useEffect, useRef, useState } from 'react';
 import { PANEL_MIN, PANEL_STEP, type PanelWidths, clampPanelWidth, loadPanelWidth, panelMax, savePanelWidth } from './panelWidth';
-import { cn } from '@/lib/utils';
 
 /**
  * A side panel at the right of a screen, with a divider to resize it: drag it, or focus it and use the arrow keys. Its
- * width is the panel's own (`PanelWidths`), remembered, and kept within the window as it is resized. One component, so
- * the review screen's comments and the Design System tab's tokens resize the same way.
+ * width is the panel's own (`PanelWidths`), remembered, and kept within the window as it is resized: the comments' panel
+ * beside a prototype's page.
  *
  * `onResizing` is told when a drag starts and ends, for a screen with something that must step aside meanwhile (a
  * framed page, which does not pass the pointer on).
  *
- * **Not shadcn's Resizable, on purpose.** That one resizes panes in proportion and follows the pointer across both of
- * them; the review screen's preview is a native view, which never passes the pointer back to the window, so a drag that
- * crosses it is lost. This one keeps a width in pixels, grabs only over its own side, and holds the pointer while dragging.
+ * It keeps a width in pixels, grabs only over its own side, and holds the pointer while dragging: the prototype's frame
+ * beside it never passes the pointer back to the page, so a drag that crossed it would be lost.
  */
 export const ResizablePanel = ({
 	panel,
@@ -87,13 +85,11 @@ export const ResizablePanel = ({
 					setWidth(next);
 					savePanelWidth(next, panel);
 				}}
-				className={cn(
-					"relative w-px shrink-0 touch-none outline-none transition-colors after:absolute after:inset-y-0 after:left-0 after:w-1.75 after:cursor-col-resize after:content-[''] hover:bg-primary focus-visible:bg-primary",
-					resizing ? 'bg-primary' : 'bg-border',
-				)}
+				className="panel-divider"
+				{...(resizing ? { 'data-resizing': '' } : {})}
 			/>
 			{/* Inline on purpose: the width is wherever the person dragged the divider, a runtime value. */}
-			<div className="bg-card flex min-h-0 shrink-0 flex-col" style={{ width }}>
+			<div className="side-panel" style={{ width }}>
 				{children}
 			</div>
 		</>

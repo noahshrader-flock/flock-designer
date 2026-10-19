@@ -1,9 +1,7 @@
-import { CancelButton } from '../CancelButton';
-import { Button } from '../ui/button';
-import { Textarea } from '../ui/textarea';
+import { Button } from '../../ui/Button';
+import { Field, TextArea } from '../../ui/Field';
+import { Message } from '../../ui/Message';
 import type { Comments } from './useComments';
-import { ErrorAlert } from '../ErrorAlert';
-import { Field, FieldLabel } from '../ui/field';
 
 /** Where the box sits relative to the pin, whose body is drawn above its tip. */
 const BOX_OFFSET = { x: 22, y: -19 } as const;
@@ -16,28 +14,29 @@ const BOX_OFFSET = { x: 22, y: -19 } as const;
 export const CommentBox = ({ comments, origin, error }: { comments: Comments; origin: { top: number; left: number }; error: string | null }) => (
 	<>
 		{/* Clicking away is the same as canceling, as it was when this was a popover. */}
-		<div className="fixed inset-0 z-(--layer-comment-shade)" onClick={comments.cancelCompose} />
+		<div className="comment-shade" onClick={comments.cancelCompose} />
 		<div
+			className="comment-box"
 			onKeyDown={(e: React.KeyboardEvent) => {
 				// Cmd or Ctrl and Enter saves, as in the tools people already use. Escape is the screen's, as everywhere.
 				if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') void comments.post();
 			}}
-			className="bg-popover fixed z-(--layer-comment-box) w-75 max-w-[calc(100vw-16px)] rounded-lg border p-4 shadow-lg"
 			// Inline on purpose: measured from the pin.
 			style={{ top: origin.top + comments.pendingAt.y + BOX_OFFSET.y, left: origin.left + comments.pendingAt.x + BOX_OFFSET.x }}
 		>
-			<div className="flex flex-col gap-3">
-				{error && <ErrorAlert error={error} />}
-				<Field>
-					<FieldLabel htmlFor="comment-draft">Comment</FieldLabel>
-					<Textarea id="comment-draft" rows={3} value={comments.draft} onChange={(e) => comments.setDraft(e.target.value)} autoFocus />
-				</Field>
-				<div className="flex flex-row justify-end gap-2">
-					<CancelButton onClick={comments.cancelCompose} disabled={comments.posting} />
-					<Button onClick={() => void comments.post()} disabled={comments.posting || !comments.draft.trim()}>
-						{comments.posting ? 'Saving…' : 'Save'}
-					</Button>
-				</div>
+			<Message tone="error" size="block">
+				{error}
+			</Message>
+			<Field label="Comment">
+				{(control) => <TextArea control={control} rows={3} value={comments.draft} onChange={comments.setDraft} focused />}
+			</Field>
+			<div className="comment-box-buttons">
+				<Button variant="ghost" onClick={comments.cancelCompose} disabled={comments.posting}>
+					Cancel
+				</Button>
+				<Button onClick={() => void comments.post()} disabled={comments.posting || !comments.draft.trim()}>
+					{comments.posting ? 'Saving…' : 'Save'}
+				</Button>
 			</div>
 		</div>
 	</>

@@ -1,14 +1,13 @@
-import { MoonIcon, SunIcon } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { type ReactNode, useId } from 'react';
 import { newestVersionFirst } from '../shared/prototypeNames';
 import { workLabel } from '../shared/work';
 import { stateLabel } from '../shared/prototypeStates';
-import { THEMES, isTheme, themeLabel } from '../shared/prototypeTheme';
+import { THEMES, themeLabel } from '../shared/prototypeTheme';
 import type { ShownTheme } from './useShownTheme';
-import { ToggleGroup, ToggleGroupItem } from './ui/toggle-group';
 import { capitalize } from '../shared/titleCase';
-import { ChoiceMenu } from './ChoiceMenu';
-import type { BarSize } from './Toolbar';
+import { Select } from '../ui/Field';
+import { ModeIcon } from '../ui/ModeIcon';
+import { Toggle } from '../ui/Toggle';
 
 /** What the switcher needs to know of a version: how it is named, which it is, and the version it was started from. */
 export interface Switchable {
@@ -18,59 +17,51 @@ export interface Switchable {
 }
 
 /**
- * One of the switcher's dropdowns: the app's menu of a few choices, named for what it switches ("Version 2: switch
- * version"), opening from its right, as the switcher sits at the toolbar's right.
+ * One of the switcher's dropdowns: VS Code's own (`Select`), saying the one shown, named for what it switches ("Version 2:
+ * switch version"). Choosing the one shown does nothing.
  */
 const SwitchMenu = ({
 	what,
 	label,
-	...choice
+	value,
+	choices,
+	onChange,
 }: {
-	/** The bar's size, when it is a bar's. */
-	size?: BarSize;
 	/** What it picks, for its name for assistive technology: "version", "state". */
 	what: 'version' | 'state';
-	/** The button's own words: `Version 2`, `default`. */
+	/** What it says it shows: `Version 2`, `Default`. */
 	label: string;
 	value: string;
 	choices: { value: string; label: string }[];
 	onChange: (value: string) => void;
-}) => (
-	<ChoiceMenu
-		name={capitalize(what)}
-		// Named once: a version's label says it is one ("Version 2: switch version"), a state's does not ("State Default").
-		ariaLabel={`${label.startsWith(capitalize(what)) ? label : `${capitalize(what)} ${label}`}: switch ${what}`}
-		label={label}
-		align="end"
-		{...choice}
-	/>
-);
+}) => {
+	const id = useId();
+	// Named once: a version's label says it is one ("Version 2: switch version"), a state's does not ("State Default").
+	const name = `${label.startsWith(capitalize(what)) ? label : `${capitalize(what)} ${label}`}: switch ${what}`;
+	return <Select value={value} options={choices} onChange={(next) => next !== value && onChange(next)} control={{ id, 'aria-label': name }} />;
+};
 
 /**
  * Switching between a prototype's versions, on its published page (and its review in VS Code, which frames that page): a
- * dropdown saying which version is shown, its menu the newest first, and after it the page's states.
+ * dropdown saying which version is shown, its list the newest first, and after it the page's states.
  */
 export const VersionSwitcher = <T extends Switchable>({
 	current,
 	siblings,
 	onSelect,
 	children,
-	size = 'default',
 }: {
 	current: Switchable;
 	siblings: T[];
 	onSelect: (next: T) => void;
 	/** A prototype's states, after the version, where they read left to right. */
 	children?: ReactNode;
-	/** The bar's size, for the dropdowns. */
-	size?: BarSize;
 }) => {
 	// Newest first, whatever order they were given in: the app and the published page then always agree.
 	const newestFirst = [...siblings].sort((a, b) => newestVersionFirst(a.name, b.name));
 	return (
 		<>
 			<SwitchMenu
-				size={size}
 				what="version"
 				label={workLabel(current)}
 				value={current.branch}
@@ -94,19 +85,16 @@ export const StateSwitcher = ({
 	states,
 	current,
 	onSelect,
-	size = 'default',
 }: {
 	states: string[];
 	current: string | null;
 	onSelect: (state: string | null) => void;
-	size?: BarSize;
 }) => {
 	if (states.length < 2) return null;
 	// One it no longer has (it was built again without it) shows as the page does: in the first.
 	const here = current !== null && states.includes(current) ? current : (states[0] as string);
 	return (
 		<SwitchMenu
-			size={size}
 			what="state"
 			label={stateLabel(here)}
 			value={here}
@@ -117,23 +105,15 @@ export const StateSwitcher = ({
 };
 
 /**
- * Light and Dark, after the states: the prototype in either theme, whatever the machine is set to.
- * The one shown is pressed: light, the default, until the other is chosen.
+ * Light and Dark, after the states: the prototype in either theme, whatever the machine is set to, as the kit's toggle of
+ * the sun and the moon. The one shown is chosen: light, the default, until the other is.
  */
-export const ThemeSwitcher = ({ shown, size = 'default' }: { shown: ShownTheme; size?: BarSize }) => (
-	<ToggleGroup
-		type="single"
-		variant="outline"
-		size={size}
-		spacing={0}
-		aria-label="Theme"
+export const ThemeSwitcher = ({ shown }: { shown: ShownTheme }) => (
+	<Toggle
+		label="Theme"
+		iconOnly
+		options={THEMES.map((theme) => ({ value: theme, label: themeLabel(theme), icon: <ModeIcon mode={theme} /> }))}
 		value={shown.theme}
-		onValueChange={(next) => isTheme(next) && next !== shown.theme && shown.onTheme(next)}
-	>
-		{THEMES.map((theme) => (
-			<ToggleGroupItem key={theme} value={theme} aria-label={themeLabel(theme)} title={themeLabel(theme)}>
-				{theme === 'dark' ? <MoonIcon /> : <SunIcon />}
-			</ToggleGroupItem>
-		))}
-	</ToggleGroup>
+		onChange={(next) => next !== shown.theme && shown.onTheme(next)}
+	/>
 );

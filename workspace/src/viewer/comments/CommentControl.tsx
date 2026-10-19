@@ -1,52 +1,42 @@
-import { MapPinIcon, MessageSquareIcon } from 'lucide-react';
-import type { BarSize } from '../Toolbar';
-import { Button } from '../ui/button';
+import { Button } from '../../ui/Button';
 import type { Comments } from './useComments';
-import { ButtonGroup } from '../ui/button-group';
 
 /**
- * One control, two halves: comment mode on the left, the list of comments on the right. A pressed half is filled rather
- * than outlined, so which mode is on is readable at a glance.
+ * Two buttons side by side: comment mode, then the list of comments. Each is pressed while it is on, so which is on is
+ * readable at a glance.
  */
 export const CommentControl = ({
 	comments,
 	listOpen,
 	onToggleList,
 	disabled,
-	size = 'default',
 }: {
 	comments: Comments;
 	listOpen: boolean;
 	onToggleList: () => void;
 	/** Nothing to comment on yet: the page is not up. */
 	disabled: boolean;
-	/** The bar's size, when it is a bar's: small over a page. */
-	size?: BarSize;
 }) => (
 	// Each title is a hint for when the button can be pressed: a disabled button never shows one.
-	<ButtonGroup>
+	<span className="comment-control">
 		<Button
-			size={size}
-			variant={comments.commentMode ? 'default' : 'outline'}
-			aria-pressed={comments.commentMode}
+			icon="location"
+			pressed={comments.commentMode}
 			disabled={disabled}
-			title={disabled ? undefined : 'Comment: click anywhere on the page to leave one; hold Shift to see what it attaches to (C)'}
+			{...(disabled ? {} : { title: 'Comment: click anywhere on the page to leave one; hold Shift to see what it attaches to (C)' })}
 			onClick={comments.toggleCommentMode}
 		>
-			<MapPinIcon />
 			Comment
 		</Button>
 		<Button
-			size={size}
-			variant={listOpen ? 'default' : 'outline'}
-			aria-pressed={listOpen}
-			aria-label={comments.total > 0 ? `Show all comments (${comments.total})` : 'Show all comments'}
+			icon="comment-discussion"
+			pressed={listOpen}
+			label={comments.total > 0 ? `Show all comments (${comments.total})` : 'Show all comments'}
 			disabled={disabled}
-			title={disabled ? undefined : comments.total > 0 ? `All comments (${comments.total})` : 'All comments'}
+			{...(disabled ? {} : { title: comments.total > 0 ? `All comments (${comments.total})` : 'All comments' })}
 			onClick={onToggleList}
 		>
-			<MessageSquareIcon />
 			{comments.total > 0 ? comments.total : null}
 		</Button>
-	</ButtonGroup>
+	</span>
 );

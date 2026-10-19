@@ -154,8 +154,8 @@ describe.skipIf(NO_CHROME)('a review opened in the browser from DSNR, in the rea
 			const page = tab.frames().find((f) => f.url().endsWith('page.html')) as Frame;
 			await page.waitForSelector('style[data-fd="pick"]');
 			await page.click('h1');
-			await tab.waitForSelector('#comment-draft');
-			await tab.type('#comment-draft', 'Bigger, please');
+			await tab.waitForSelector('.comment-box textarea');
+			await tab.type('.comment-box textarea', 'Bigger, please');
 			await press(tab, 'Save');
 			const until = Date.now() + 20_000;
 			while (!gh.issues[0]?.comments.length && Date.now() < until) await new Promise((r) => setTimeout(r, 50));

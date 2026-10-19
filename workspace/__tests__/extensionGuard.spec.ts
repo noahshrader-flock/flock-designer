@@ -6,12 +6,12 @@ import { INK } from '../src/shared/pageInk';
 import { panelCss } from './panelStyles';
 
 /**
- * DSNR is drawn in VS Code's own design language (ELECTRON_MIGRATION_PLAN, §1.4, decision 6): none of the app's shadcn
- * components or Tailwind, and no colour of its own, only VS Code's theme variables, so it follows every theme, high
- * contrast included.
+ * DSNR is drawn in VS Code's own design language (ELECTRON_MIGRATION_PLAN, §1.4, decision 6), with one kit of its own
+ * (`src/ui`), on its pages in VS Code and the published page alike: no colour of its own, only VS Code's theme variables,
+ * so it follows every theme, high contrast included.
  */
 
-// The extension's sources and the kit's, which its pages are drawn with.
+// The extension's sources, the kit's its pages are drawn with, and the published page's, drawn with it too.
 const root = join(__dirname, '..');
 const sources = (dir: string): string[] =>
 	readdirSync(dir).flatMap((name) => {
@@ -20,16 +20,18 @@ const sources = (dir: string): string[] =>
 		return statSync(path).isDirectory() ? sources(path) : /\.(tsx?|css|mjs)$/.test(name) ? [path] : [];
 	});
 const files = () =>
-	[join(root, 'extension'), join(root, 'src/ui')].flatMap(sources).map((path) => ({ path: relative(root, path), text: readFileSync(path, 'utf8') }));
+	[join(root, 'extension'), join(root, 'src/ui'), join(root, 'src/viewer')]
+		.flatMap(sources)
+		.map((path) => ({ path: relative(root, path), text: readFileSync(path, 'utf8') }));
 
 describe('the extension’s sources', () => {
 	it('are there to check', () => {
 		expect(files().length).toBeGreaterThan(0);
 	});
 
-	it('import none of the app’s shadcn components, their parts, or Tailwind', () => {
+	it('import none of shadcn’s components, Radix, lucide’s icons or Tailwind: one kit, DSNR’s own', () => {
 		const forbidden =
-			/from ['"](?:[./]*src\/viewer\/ui\/|@\/|radix-ui|lucide-react|class-variance-authority|tailwind-merge|tailwindcss|@tailwindcss\/)|@import ['"]tailwindcss/;
+			/from ['"](?:@\/|radix-ui|@radix-ui\/|lucide-react|class-variance-authority|tailwind-merge|clsx|tailwindcss|@tailwindcss\/)|@import ['"]tailwindcss/;
 		expect(
 			files()
 				.filter(({ text }) => forbidden.test(text))
@@ -150,7 +152,9 @@ describe('the extension’s sources', () => {
 	});
 
 	it('space everything by the one scale: no padding, margin or gap is a number of pixels of its own', () => {
-		const css = panelCss().replace(/\/\*[\s\S]*?\*\//g, '');
+		// The panel's and the published page's, which are drawn with the same kit.
+		const viewer = files().find((f) => f.path.endsWith('viewer/viewer.css'))!.text;
+		const css = `${panelCss()}\n${viewer}`.replace(/\/\*[\s\S]*?\*\//g, '');
 		// Outside the variables, where the scale and the sizes made from it are written.
 		const rules = css.slice(css.indexOf('}', css.indexOf(':root')) + 1);
 		const spacing = [...rules.matchAll(/^\s*((?:padding|margin|gap|row-gap|column-gap)[a-z-]*):\s*([^;]+);/gm)];

@@ -1,13 +1,12 @@
-import { SendIcon } from 'lucide-react';
 import { useState } from 'react';
-import { Button } from '../ui/button';
-import { Textarea } from '../ui/textarea';
+import { Button } from '../../ui/Button';
+import { TextArea } from '../../ui/Field';
 import type { Comments } from './useComments';
 
 /**
- * A comment on the page as a whole, written as a message is: at the foot of the panel (the box and its button one height,
- * 36px, for one line; the button stays at the foot as the box grows), sent with Enter (Shift+Enter for a new
- * line) or Send. It has no pin, and goes on the same thread as the rest, so it has its number as they do.
+ * A comment on the page as a whole, written as a message is: at the foot of the panel (the box one line high, growing as it
+ * is written in, its button at the foot beside it), sent with Enter (Shift+Enter for a new line) or Send. It has no pin, and
+ * goes on the same thread as the rest, so it has its number as they do.
  */
 export const GeneralComment = ({ comments }: { comments: Comments }) => {
 	const [text, setText] = useState('');
@@ -16,21 +15,19 @@ export const GeneralComment = ({ comments }: { comments: Comments }) => {
 	};
 	return (
 		<form
-			className="flex items-end gap-2 border-t p-3"
+			className="general-comment"
 			onSubmit={(e) => {
 				e.preventDefault();
 				void send();
 			}}
 		>
-			<Textarea
-				id="general-comment"
-				aria-label="Comment on the whole page"
+			<TextArea
+				control={{ id: 'general-comment', 'aria-label': 'Comment on the whole page' }}
 				placeholder="Post a comment…"
-				className="max-h-40 min-h-9 resize-none py-1.5 text-sm leading-5"
 				rows={1}
 				value={text}
 				disabled={comments.saying}
-				onChange={(e) => setText(e.target.value)}
+				onChange={setText}
 				onKeyDown={(e) => {
 					if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
 						e.preventDefault();
@@ -38,9 +35,7 @@ export const GeneralComment = ({ comments }: { comments: Comments }) => {
 					}
 				}}
 			/>
-			<Button type="submit" size="icon-lg" aria-label="Send" disabled={!text.trim() || comments.saying}>
-				<SendIcon />
-			</Button>
+			<Button type="submit" icon="send" label="Send" disabled={!text.trim() || comments.saying} />
 		</form>
 	);
 };

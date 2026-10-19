@@ -1,7 +1,6 @@
 import { act, createElement, type ReactElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import type { ReviewComment, WorkspaceApi } from '../src/shared/contract';
-import { TooltipProvider } from '../src/viewer/ui/tooltip';
 import { anAnchor, eventually, reviewComment } from './fixtures';
 
 /**
@@ -116,7 +115,7 @@ export const render = async (element: ReactElement): Promise<{ root: Root; host:
 	const host = document.createElement('div');
 	document.body.append(host);
 	const root = createRoot(host);
-	await act(async () => root.render(createElement(TooltipProvider, null, element)));
+	await act(async () => root.render(element));
 	await settle();
 	return { root, host };
 };
@@ -136,35 +135,32 @@ export const button = (name: string | RegExp, scope: ParentNode = document): HTM
 	if (all.length !== 1) throw new Error(`${all.length} buttons named ${name}: ${[...scope.querySelectorAll('button')].map(named).join(' | ')}`);
 	return all[0] as HTMLButtonElement;
 };
+/** One of the bar's dropdowns, by what it switches (`version`, `state`): named it and the one shown, null when there is none. */
+export const switchMenu = (what: 'version' | 'state'): HTMLSelectElement | null =>
+	[...document.querySelectorAll('select')].find((s) => new RegExp(`: switch ${what}$`).test(named(s))) ?? null;
 /** A prototype's states, as the bar shows them: a dropdown named State and the one shown, null when there is none. */
-export const stateMenu = (): HTMLButtonElement | null =>
-	[...document.querySelectorAll('button')].find((b) => /^State .+: switch state$/.test(named(b))) ?? null;
-/** The state shown: the words on the dropdown's button. */
-export const shownState = (): string | undefined => stateMenu()?.textContent?.trim();
-/** Choosing a state from its dropdown, as a person does. */
-export const chooseState = async (name: string): Promise<void> => {
-	const menu = stateMenu();
-	if (!menu) throw new Error('no state dropdown');
-	const items = await openMenu(menu);
-	const item = items.find((i) => i.textContent?.trim() === name);
-	if (!item) throw new Error(`no state ${name}: ${items.map((i) => i.textContent).join(' | ')}`);
-	await press(item);
+export const stateMenu = (): HTMLSelectElement | null => switchMenu('state');
+/** The one a dropdown shows: the words of its chosen option. */
+export const shownIn = (menu: HTMLSelectElement | null): string | undefined => menu?.selectedOptions[0]?.textContent?.trim();
+/** The state shown. */
+export const shownState = (): string | undefined => shownIn(stateMenu());
+/** The choices a dropdown offers, as their words, in order. */
+export const choicesIn = (menu: HTMLSelectElement | null): string[] => [...(menu?.options ?? [])].map((o) => o.textContent?.trim() ?? '');
+/** Choosing from a dropdown by the words of a choice, as a person does. */
+export const choose = async (menu: HTMLSelectElement | null, name: string): Promise<void> => {
+	if (!menu) throw new Error('no dropdown');
+	const option = [...menu.options].find((o) => o.textContent?.trim() === name);
+	if (!option) throw new Error(`no choice ${name}: ${choicesIn(menu).join(' | ')}`);
+	await act(async () => {
+		// The value as React sees it chosen: through the select's own setter, then the change it hears.
+		Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value')?.set?.call(menu, option.value);
+		menu.dispatchEvent(new Event('change', { bubbles: true }));
+	});
 };
+/** Choosing a state from its dropdown, as a person does. */
+export const chooseState = (name: string): Promise<void> => choose(stateMenu(), name);
 export const press = (el: Element) => act(async () => void el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })));
 
-/** The tabs on the page, one by name, and choosing one as a press does: Radix switches as the pointer goes down. */
-export const tabs = () => [...document.querySelectorAll<HTMLElement>('[role="tab"]')];
-export const tab = (name: string) => tabs().find((t) => t.textContent === name) as HTMLElement;
-export const chooseTab = (which: string | HTMLElement) =>
-	act(
-		async () =>
-			void (typeof which === 'string' ? tab(which) : which).dispatchEvent(
-				new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 0 }),
-			),
-	);
-/** An alert's parts, in order, and what each is: an icon, then its slots (`alert-title`, `alert-description`, `alert-action`). */
-export const alertParts = (alert: Element): string[] =>
-	[...alert.children].map((c) => (c.tagName === 'svg' ? 'icon' : (c.getAttribute('data-slot') ?? c.tagName)));
 /** A hook rendered on its own, and what it gave the last time it ran (`now`), for a test to drive it and read it. */
 export const probeHook = async <T>(use: () => T) => {
 	let seen: { value: T } | null = null;
@@ -178,11 +174,9 @@ export const probeHook = async <T>(use: () => T) => {
 /** The dialog that is open, or null. */
 export const dialog = () => document.querySelector<HTMLElement>('[role="dialog"]');
 
-/** Opens a menu as a pointer does, and returns its items: its actions, and the choices of one that picks one of a few. */
+/** Opens a menu as a press does, and returns its items. */
 export const openMenu = async (trigger: Element): Promise<HTMLElement[]> => {
-	await act(async () => {
-		trigger.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, button: 0, pointerType: 'mouse' }));
-	});
+	await press(trigger);
 	await settle(2);
 	return [...document.querySelectorAll<HTMLElement>('[role^="menuitem"]')];
 };
@@ -215,8 +209,14 @@ export const afterAgentCheck = (check: () => void) =>
 	});
 
 /** The cards in the comments sidebar, as their text. */
-export const cards = (): HTMLElement[] =>
-	[...document.querySelectorAll<HTMLElement>('button[aria-label="Comment actions"]')].map((b) => b.closest('.rounded-lg') as HTMLElement);
+export const cards = (): HTMLElement[] => [...document.querySelectorAll<HTMLElement>('.comment-card')];
+/** The field a label names, as a person finds it: the control its label is for. */
+export const fieldNamed = <T extends HTMLElement = HTMLTextAreaElement>(label: string): T => {
+	const found = [...document.querySelectorAll('label')].find((l) => l.textContent?.trim() === label);
+	const control = found ? document.getElementById(found.htmlFor) : null;
+	if (!control) throw new Error(`no field labelled ${label}`);
+	return control as T;
+};
 export const typeInto = (el: HTMLTextAreaElement | HTMLInputElement, text: string) =>
 	act(async () => {
 		// The value as React sees it typed: through the element's own kind's setter, not the one React wraps.
@@ -228,14 +228,13 @@ export const key = (k: string, more: KeyboardEventInit = {}) =>
 	act(async () => void window.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true, ...more })));
 
 /** The page's Light / Dark switch, its two buttons, and the one shown. */
-export const themeGroup = (): HTMLElement | null =>
-	document.querySelector<HTMLElement>('[role="group"][aria-label="Theme"], [data-slot="toggle-group"][aria-label="Theme"]');
+export const themeGroup = (): HTMLElement | null => document.querySelector<HTMLElement>('[role="radiogroup"][aria-label="Theme"]');
 export const themeButton = (name: 'Light' | 'Dark'): HTMLElement => {
 	const b = themeGroup()?.querySelector<HTMLElement>(`[aria-label="${name}"]`);
 	if (!b) throw new Error(`no ${name} in the theme switch`);
 	return b;
 };
 export const shownTheme = (): string | undefined =>
-	[...(themeGroup()?.querySelectorAll<HTMLElement>('[data-slot="toggle-group-item"]') ?? [])]
+	[...(themeGroup()?.querySelectorAll<HTMLElement>('[role="radio"]') ?? [])]
 		.find((b) => b.getAttribute('aria-checked') === 'true')
 		?.getAttribute('aria-label') ?? undefined;

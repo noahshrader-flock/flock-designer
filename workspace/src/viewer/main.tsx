@@ -1,7 +1,7 @@
 import './viewer.css';
 import { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { TooltipProvider } from './ui/tooltip';
+import { TooltipHost } from '../ui/Tooltip';
 import { type Relay, isServedHere, versionAddress, keyFromAddress, listenForDsnr, serverRelay } from './relay';
 import { applyEditorTheme, applyScheme, systemIsDark, watchSystemScheme } from './scheme';
 import { type EditorTheme, isDarkTheme } from '../shared/reviewRelay';
@@ -70,8 +70,9 @@ if (config && bar && panel && frame) {
 	const root = document.createElement('div');
 	document.body.append(root);
 	createRoot(root).render(
-		<TooltipProvider>
+		<>
 			<InPage config={JSON.parse(config.textContent ?? '{}') as ViewerConfig} slots={{ bar, panel, frame }} />
-		</TooltipProvider>,
+			<TooltipHost />
+		</>,
 	);
 }

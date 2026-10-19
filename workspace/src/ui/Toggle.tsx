@@ -1,4 +1,4 @@
-import { type KeyboardEvent, useRef } from 'react';
+import { type KeyboardEvent, type ReactNode, useRef } from 'react';
 import { Icon } from './Icon';
 
 /**
@@ -10,8 +10,11 @@ import { Icon } from './Icon';
 interface ToggleOption<Value extends string> {
 	value: Value;
 	label: string;
-	/** A codicon's name: `folder-library` for `codicon-folder-library`. Without one, the option is its words alone. */
-	icon?: string;
+	/**
+	 * A codicon's name (`folder-library` for `codicon-folder-library`), or one the kit draws where the font has none (the sun
+	 * and the moon, `ModeIcon`). Without one, the option is its words alone.
+	 */
+	icon?: string | ReactNode;
 }
 
 export const Toggle = <Value extends string>({
@@ -58,7 +61,7 @@ export const Toggle = <Value extends string>({
 					onClick={() => onChange(o.value)}
 					{...(iconOnly ? { 'aria-label': o.label, title: o.label } : {})}
 				>
-					{o.icon !== undefined && <Icon name={o.icon} />}
+					{typeof o.icon === 'string' ? <Icon name={o.icon} /> : o.icon}
 					{!iconOnly && <span className="toggle-label">{o.label}</span>}
 				</button>
 			))}

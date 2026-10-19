@@ -225,7 +225,7 @@ describe('signing in to comment', () => {
 	const withViewer = (signIn?: { clientId: string; exchange: string }) => {
 		const viewer = join(root, 'viewer');
 		mkdirSync(viewer, { recursive: true });
-		for (const f of ['viewer.js', 'viewer.css', 'page-agent.js']) writeFileSync(join(viewer, f), '');
+		for (const f of ['viewer.js', 'viewer.css', 'viewer.ttf', 'page-agent.js']) writeFileSync(join(viewer, f), '');
 		build({ viewer: { dir: viewer, ref: { owner: 'Acme', repo: 'design' } }, ...(signIn ? { signIn } : {}) });
 	};
 	const said = (html: string) => JSON.parse(/<script type="application\/json" id="dsnr-sign-in">([^<]*)<\/script>/.exec(html)?.[1] ?? 'null');
@@ -262,6 +262,7 @@ describe('comments on the page', () => {
 		mkdirSync(viewer);
 		writeFileSync(join(viewer, 'viewer.js'), 'console.log(1)');
 		writeFileSync(join(viewer, 'viewer.css'), 'a{}');
+		writeFileSync(join(viewer, 'viewer.ttf'), 'font');
 		writeFileSync(join(viewer, 'page-agent.js'), 'agent()');
 		build({ viewer: { dir: viewer, ref: { owner: 'acme', repo: 'design' } } });
 		expect(readFileSync(join(out, '_viewer', 'viewer.js'), 'utf8')).toBe('console.log(1)');
@@ -294,7 +295,7 @@ describe('comments on the page', () => {
 	it('tells it the states the page has, for its bar to offer', () => {
 		const viewer = join(root, 'viewer');
 		mkdirSync(viewer);
-		for (const f of ['viewer.js', 'viewer.css', 'page-agent.js']) writeFileSync(join(viewer, f), '');
+		for (const f of ['viewer.js', 'viewer.css', 'viewer.ttf', 'page-agent.js']) writeFileSync(join(viewer, f), '');
 		writeFileSync(
 			join(design, 'projects', 'alpha', 'prototypes', 'v2.html'),
 			page('Alpha two').replace('<head>', '<head><meta name="dsnr-states" content="default,filtered,panel">'),
@@ -307,7 +308,7 @@ describe('comments on the page', () => {
 	it('puts the page agent first in every prototype’s page, so the bar can ask it for its pins', () => {
 		const viewer = join(root, 'viewer');
 		mkdirSync(viewer);
-		for (const f of ['viewer.js', 'viewer.css', 'page-agent.js']) writeFileSync(join(viewer, f), '');
+		for (const f of ['viewer.js', 'viewer.css', 'viewer.ttf', 'page-agent.js']) writeFileSync(join(viewer, f), '');
 		build({ viewer: { dir: viewer, ref: { owner: 'acme', repo: 'design' } } });
 		const agent = '<script src="../../_viewer/page-agent.js"></script>';
 		const saved = read('alpha/v3/page.html');
@@ -321,7 +322,7 @@ describe('comments on the page', () => {
 	it('sets no heading’s size for the whole page: the review bar’s title is the app’s own, and a rule outside its styles’ layer would override it', () => {
 		const viewer = join(root, 'viewer');
 		mkdirSync(viewer);
-		for (const f of ['viewer.js', 'viewer.css', 'page-agent.js']) writeFileSync(join(viewer, f), '');
+		for (const f of ['viewer.js', 'viewer.css', 'viewer.ttf', 'page-agent.js']) writeFileSync(join(viewer, f), '');
 		build({ viewer: { dir: viewer, ref: { owner: 'acme', repo: 'design' } } });
 		const rules = (html: string) =>
 			[...(/<style>([\s\S]*?)<\/style>/.exec(html)?.[1] ?? '').replace(/\/\*[\s\S]*?\*\//g, '').matchAll(/(^|\})\s*([^{}@]+)\{/g)].map((m) =>
@@ -336,7 +337,7 @@ describe('comments on the page', () => {
 	it('cannot be built with a viewer that has no page agent: its pages would have no pins', () => {
 		const viewer = join(root, 'viewer');
 		mkdirSync(viewer);
-		for (const f of ['viewer.js', 'viewer.css']) writeFileSync(join(viewer, f), '');
+		for (const f of ['viewer.js', 'viewer.css', 'viewer.ttf']) writeFileSync(join(viewer, f), '');
 		expect(() => build({ viewer: { dir: viewer, ref: { owner: 'acme', repo: 'design' } } })).toThrow(/page-agent\.js/);
 	});
 

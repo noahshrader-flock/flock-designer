@@ -1,4 +1,3 @@
-import { ChevronLeftIcon, CopyPlusIcon, WandSparklesIcon } from 'lucide-react';
 import { type ReactNode, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { commentRef } from '../shared/comments';
@@ -13,25 +12,25 @@ import { CommentBox } from './comments/CommentBox';
 import { CommentControl } from './comments/CommentControl';
 import { useComments } from './comments/useComments';
 import { VersionSwitcher, StateSwitcher, ThemeSwitcher } from './VersionSwitcher';
-import { type BarSize, Toolbar, barButtonSize } from './Toolbar';
-import { Button } from './ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
-import { DropdownMenuItem } from './ui/dropdown-menu';
-import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
+import { Button } from '../ui/Button';
+import { Dialog } from '../ui/Dialog';
+import { Heading } from '../ui/Heading';
+import { IconButton } from '../ui/IconButton';
+import type { MenuItem } from '../ui/Menu';
+import { Message } from '../ui/Message';
 import { browserComments, framePage, saveToken, savedToken, tokenApi } from './browserAdapter';
 import { NOTE_WORDS, type SignInConfig, type SignInNote, signedInJustNow, startSignIn } from './signIn';
 import { userOf } from '../codeHost/github';
 import type { GitHubUser } from '../shared/domain/account';
 import { AccountMenu } from './AccountMenu';
 import { type Relay, loginIn, relayComments } from './relay';
-import { closeUnlessBusy } from './dialogClose';
 import { CommentsPanel } from './comments/CommentsPanel';
 import { useOpenOnError } from './comments/useOpenOnError';
 
 /**
- * A prototype's published page, as the app shows one: its bar (the app's own toolbar, back button, title, version and
- * version switcher, and the page's states when it has more than one), the Comment control and its count, the side
- * panel from the right, the box beside the pin. All of it the app's own parts. Drawn into the page the site built, which
+ * A prototype's published page: its bar (the way back, its title, the version and the page's states when it has more than
+ * one, light and dark), the Comment control and its count, the comments' panel from the right, the box beside the pin. All
+ * of it the kit's (`src/ui`), as DSNR's pages in VS Code are. Drawn into the page the site built, which
  * holds only a link back to the project until this takes over, so the page still works without it.
  *
  * In DSNR's review tab in VS Code (`relay`, ELECTRON_MIGRATION_PLAN 4.2) it comments through the extension: signing in
@@ -73,42 +72,29 @@ type Showing = { states: string[]; state: string | null; onState: (state: string
 const NO_AGENT_MS = 8000;
 const NO_AGENT = 'This page cannot show its comments’ pins: it was built without DSNR’s page agent. Build the site again.';
 
-/** The page's bar is small: it is over a prototype, and takes little room. */
-const BAR: BarSize = 'sm';
-
 /** The page's bar. `children` is what comes last: the Comment control, or signing in. */
 const PageBar = ({ config, slots, showing, children }: { config: ViewerConfig; slots: ViewerSlots; showing: Showing; children: ReactNode }) => {
 	const versions = useMemo(
 		() => config.versions.map((v) => ({ ...v, branch: prototypeKey(config.projectId, v.name) })),
 		[config.versions, config.projectId],
 	);
+	// No background of its own and no line under it, so it does not look like part of the prototype it is over.
 	return createPortal(
-		<Toolbar quiet>
-			<Tooltip>
-				<TooltipTrigger asChild>
-					<Button size={barButtonSize(BAR, true)} variant="ghost" aria-label="Back to the project" className="-mr-2 -ml-2" asChild>
-						<a href={config.projectHref}>
-							<ChevronLeftIcon />
-						</a>
-					</Button>
-				</TooltipTrigger>
-				<TooltipContent side="bottom">Back to the project</TooltipContent>
-			</Tooltip>
-			<h1 className="truncate text-sm font-semibold">{config.title}</h1>
-			<div className="grow" />
-			<div className="flex items-center gap-2">
+		<div className="viewer-bar">
+			<IconButton icon="chevron-left" label="Back to the project" href={config.projectHref} />
+			<Heading size="page">{config.title}</Heading>
+			<div className="viewer-bar-end">
 				<VersionSwitcher
 					current={{ name: config.name, branch: prototypeKey(config.projectId, config.name) }}
 					siblings={versions}
-					size={BAR}
 					onSelect={(next) => void (location.href = next.href)}
 				>
-					<StateSwitcher states={showing.states} current={showing.state} onSelect={showing.onState} size={BAR} />
+					<StateSwitcher states={showing.states} current={showing.state} onSelect={showing.onState} />
 				</VersionSwitcher>
-				<ThemeSwitcher shown={showing.theme} size={BAR} />
+				<ThemeSwitcher shown={showing.theme} />
 				{children}
 			</div>
-		</Toolbar>,
+		</div>,
 		slots.bar,
 	);
 };
@@ -199,14 +185,11 @@ export const Viewer = ({
 					{/* Not on a phone: commenting needs a computer, and the bar's room goes to the title and the switcher. A site
 					    built without signing in has no way to: no button. */}
 					{(signIn || openedHere) && (
-						<Button
-							size={BAR}
-							variant="outline"
-							className="max-sm:hidden"
-							onClick={() => (openedHere ? setAskedHere(true) : signIn && void startSignIn(signIn, window))}
-						>
-							Sign in to comment
-						</Button>
+						<span className="viewer-sign-in">
+							<Button variant="secondary" onClick={() => (openedHere ? setAskedHere(true) : signIn && void startSignIn(signIn, window))}>
+								Sign in to comment
+							</Button>
+						</span>
 					)}
 				</PageBar>
 			)}
@@ -273,7 +256,7 @@ const InDsnr = ({
 	if (login === null)
 		return (
 			<PageBar config={config} slots={slots} showing={showing}>
-				<Button size={BAR} variant="outline" disabled={signingIn} onClick={() => void signIn()}>
+				<Button variant="secondary" disabled={signingIn} onClick={() => void signIn()}>
 					{signingIn ? 'Continue in VS Code…' : 'Sign in to comment'}
 				</Button>
 			</PageBar>
@@ -284,19 +267,23 @@ const InDsnr = ({
 			slots={slots}
 			showing={showing}
 			store={store}
-			actions={(comment: ReviewComment) =>
-				comment.resolved ? null : (
-					<>
-						<DropdownMenuItem disabled={addressing !== null} onSelect={() => void address(commentRef(comment), false)}>
-							<WandSparklesIcon />
-							{addressing === comment.id ? 'Working…' : 'Address'}
-						</DropdownMenuItem>
-						<DropdownMenuItem disabled={addressing !== null} onSelect={() => void address(commentRef(comment), true)}>
-							<CopyPlusIcon />
-							Address in a new version
-						</DropdownMenuItem>
-					</>
-				)
+			actions={(comment: ReviewComment): MenuItem[] =>
+				comment.resolved
+					? []
+					: [
+							{
+								label: addressing === comment.id ? 'Working…' : 'Address',
+								icon: 'sparkle',
+								disabled: addressing !== null,
+								onSelect: () => void address(commentRef(comment), false),
+							},
+							{
+								label: 'Address in a new version',
+								icon: 'copy',
+								disabled: addressing !== null,
+								onSelect: () => void address(commentRef(comment), true),
+							},
+						]
 			}
 		/>
 	);
@@ -317,7 +304,7 @@ const Commenting = ({
 	/** Who is signed in, at the end of the bar, for a token kept in the browser. */
 	account?: ReactNode;
 	/** More at the top of an open comment's menu: Address, in DSNR. */
-	actions?: (comment: ReviewComment) => ReactNode;
+	actions?: (comment: ReviewComment) => MenuItem[];
 }) => {
 	const page = useMemo(() => framePage(slots.frame), [slots.frame]);
 	const [error, setError] = useState<string | null>(null);
@@ -361,13 +348,13 @@ const Commenting = ({
 	return (
 		<>
 			<PageBar config={config} slots={slots} showing={showing}>
-				<CommentControl comments={comments} listOpen={listOpen} onToggleList={() => setListOpen((o) => !o)} disabled={!opened} size={BAR} />
+				<CommentControl comments={comments} listOpen={listOpen} onToggleList={() => setListOpen((o) => !o)} disabled={!opened} />
 				{account}
 			</PageBar>
 			{listOpen &&
 				createPortal(
-					// The page's panel slot holds the same panel as the app's: its divider, then the panel, side by side.
-					<div className="flex h-full">
+					// The page's panel slot holds the panel: its divider, then the panel, side by side.
+					<div className="viewer-panel">
 						<CommentsPanel
 							comments={comments}
 							error={error}
@@ -386,17 +373,10 @@ const Commenting = ({
 	);
 };
 
-/** A short word in a dialog, with OK: how a sign-in went, or how to comment from a page that cannot. */
-const Said = ({ title, words, onClose }: { title: string; words: string | null; onClose: () => void }) => (
-	<Dialog open={words !== null} onOpenChange={closeUnlessBusy(onClose)}>
-		<DialogContent className="sm:max-w-md">
-			<DialogHeader>
-				<DialogTitle>{title}</DialogTitle>
-				<DialogDescription>{words}</DialogDescription>
-			</DialogHeader>
-			<DialogFooter>
-				<Button onClick={onClose}>OK</Button>
-			</DialogFooter>
-		</DialogContent>
-	</Dialog>
-);
+/** A short word in a dialog, closed by its X: how a sign-in went, or how to comment from a page that cannot. */
+const Said = ({ title, words, onClose }: { title: string; words: string | null; onClose: () => void }) =>
+	words === null ? null : (
+		<Dialog title={title} onClose={onClose}>
+			<Message>{words}</Message>
+		</Dialog>
+	);
