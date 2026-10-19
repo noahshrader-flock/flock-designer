@@ -2,12 +2,10 @@ import type { Catalog, WorkspaceApi } from '../../src/shared/contract';
 import type { Shared } from './sharedValues';
 
 /**
- * The design system shown, read once for every page (`CatalogState`) so the panel and each tab show the same commit:
- * from its clone, then from GitHub (`start`), on Sync (`sync`), and whenever another commit is shown. Only the latest
- * read is shown, so a slow answer never puts an older commit back. `onRead` is told each one, for the change being tried.
+ * Read once for every page so the panel and each tab show the same commit. Only the latest read is shown, so a slow
+ * answer never puts an older commit back.
  */
 export class CatalogShare {
-	/** Each read's turn: only the latest asked is shown. */
 	private turn = 0;
 
 	constructor(
@@ -20,7 +18,6 @@ export class CatalogShare {
 		deps.api.onLibraryShown(() => void this.read(false));
 	}
 
-	/** Read afresh for the design system shown now, the first or another found: what its clone has, then what GitHub has. */
 	async start(): Promise<void> {
 		const turn = ++this.turn;
 		const systems = await this.deps.api.designSystems();
@@ -32,7 +29,7 @@ export class CatalogShare {
 		if (first?.state === 'ready' && first.update === 'updating') await this.sync();
 	}
 
-	/** Read again, asking GitHub for changes first: what is shown stays until the answer, said to be syncing. */
+	/** What is shown stays, marked syncing, until GitHub answers. */
 	async sync(): Promise<void> {
 		this.deps.shared.set({ ...this.deps.shared.current(), syncing: true });
 		await this.read(true);

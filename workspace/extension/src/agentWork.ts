@@ -1,21 +1,17 @@
 import type { WorkspaceApi } from '../../src/shared/contract';
 import { valueOf } from '../../src/shared/result';
 
-/**
- * Work that takes a while, in VS Code's notification: `title`, then what `task` says as it goes; `onStop` when the person
- * presses its Stop, which it has only when it can be stopped.
- */
+/** The notification has a Stop button only when `onStop` is given. */
 export type Progress = (title: string, task: (say: (message: string) => void) => Promise<void>, onStop?: () => void) => Promise<void>;
 
-/** Where the agent's log is: started afresh, and shown, for a piece of work, then a line at a time. */
+/** `start` clears the log and shows it. */
 export interface AgentLogLike {
 	start: (title: string) => void;
 	line: (text: string) => void;
 }
 
-/** Says how something went, in VS Code's notification, without waiting on anyone. */
 export type Tell = (message: string) => void;
-/** Says how something went (or, as a warning, what stands in the way) with what can be done next: the action pressed, or undefined. */
+/** Resolves to the action pressed, or undefined when dismissed. */
 export type Offer = (message: string, actions: string[]) => Promise<string | undefined>;
 
 export interface AgentWorkDeps {
@@ -24,7 +20,6 @@ export interface AgentWorkDeps {
 	log: AgentLogLike;
 }
 
-/** Claude Code does the work: said when it is not here, or not signed in, before anything is started. */
 export const agentReady = async (api: Pick<WorkspaceApi, 'agentReadiness'>): Promise<void> => {
 	const { state } = valueOf(await api.agentReadiness());
 	if (state === 'missing')
@@ -35,11 +30,7 @@ export const agentReady = async (api: Pick<WorkspaceApi, 'agentReadiness'>): Pro
 		throw new Error('Claude Code is not signed in. Sign in in the Claude Code panel, or by running claude in a terminal, then start again.');
 };
 
-/**
- * The agent at work, as VS Code shows it, the same for a build and for Address: its log started (`logTitle`) and fed as
- * it runs, a notification (`title`) saying how it is going, and Stop, which stops the agent, which ends the core's job
- * too. Says whether it was stopped.
- */
+/** Stop stops the agent, which ends the core's job too. */
 export const agentWork = async (
 	{ api, progress, log }: AgentWorkDeps,
 	{ title, logTitle }: { title: string; logTitle: string },

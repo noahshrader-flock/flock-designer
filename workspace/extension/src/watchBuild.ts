@@ -1,8 +1,4 @@
-/**
- * Watching a prototype Claude Code builds, since DSNR does not run that agent and is not told when it is done: every
- * `pollMs` the core saves it if it is built (`saveBuilt` knows from its source and page, and saves each build once).
- * Three failed saves running end the watching, as do `giveUpMs` and `isLive`: opening the prototype saves it too.
- */
+/** Polls, because DSNR does not run Claude Code and is not told when its build is done. `saveBuilt` saves each build once. */
 export const watchBuild = async ({
 	saveBuilt,
 	onSaved,

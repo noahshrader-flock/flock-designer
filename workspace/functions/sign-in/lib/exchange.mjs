@@ -1,7 +1,6 @@
 /**
- * Signing in to comment on a published prototype: GitHub's token endpoint takes no calls from a web page, so the page
- * sends its one-time `code` and PKCE `verifier` here to trade for the person's access token (never the refresh token).
- * Stores and logs nothing; plain functions over plain values, so it runs on any host and in a test.
+ * GitHub's token endpoint takes no calls from a web page, so the page sends its one-time `code` and PKCE `verifier` here
+ * to trade for the person's access token (never the refresh token). Stores and logs nothing.
  */
 
 const GITHUB_TOKEN_URL = 'https://github.com/login/oauth/access_token';
@@ -16,7 +15,6 @@ const VERIFIER = /^[A-Za-z0-9\-._~]{43,128}$/;
 
 const json = (status, body, headers = {}) => ({ status, headers: { 'content-type': 'application/json', ...headers }, body: JSON.stringify(body) });
 
-/** The one body shape: exactly `{ code, verifier }`, each valid. Null for anything else. */
 const parse = (text) => {
 	let value;
 	try {
@@ -32,9 +30,8 @@ const parse = (text) => {
 };
 
 /**
- * `request`: `{ method, origin, body }`, `body` already cut at `MAX_BODY + 1` by the caller so its length says whether it
- * was too long. `env`: `GITHUB_CLIENT_ID`, `ALLOWED_ORIGIN`, `REDIRECT_URI`, and `GITHUB_CLIENT_SECRET` if PKCE alone is
- * not enough for GitHub. Returns `{ status, headers, body }`.
+ * The caller cuts `body` just past `MAX_BODY`, so its length says whether it was too long. `GITHUB_CLIENT_SECRET` is
+ * needed only if PKCE alone is not enough for GitHub.
  */
 export const handleExchange = async ({ method, origin, body }, env, fetchImpl = fetch) => {
 	const allowed = env.ALLOWED_ORIGIN;

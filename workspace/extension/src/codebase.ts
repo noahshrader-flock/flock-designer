@@ -7,7 +7,6 @@ import { type AgentWorkDeps, type Offer, type Tell, agentReady, agentWork } from
 export interface CodebaseDeps extends AgentWorkDeps {
 	api: AgentWorkDeps['api'] &
 		Pick<WorkspaceApi, 'listProjects' | 'handOff' | 'runLocally' | 'shareWork' | 'onShareStatus' | 'stopCommand' | 'onRunLog'>;
-	/** The product folder that is open: where the codebase work is. */
 	root: string;
 	tell: Tell;
 	offer: Offer;
@@ -15,7 +14,6 @@ export interface CodebaseDeps extends AgentWorkDeps {
 	copy: (text: string) => Promise<void>;
 }
 
-/** A project's codebase work, read as the list has it: the project, and its work in the code. */
 const codebaseOf = async (api: CodebaseDeps['api'], projectId: string): Promise<{ project: Project; work: ProjectWork }> => {
 	const project = valueOf(await api.listProjects()).find((p) => p.id === projectId);
 	if (!project) throw new Error(`There is no project ${projectId} here.`);
@@ -26,11 +24,7 @@ const codebaseOf = async (api: CodebaseDeps['api'], projectId: string): Promise<
 
 const OPEN_PR = 'Open a draft pull request';
 
-/**
- * Handoff, from VS Code: the core's (`handOff`) on the project's codebase work, on its
- * branch: the product's gate, both reviews, the fixes, HANDOFF.md committed, nothing pushed. Said and stoppable as a build
- * is, its log beside the editor; then the verdict, and when it is ready, a draft pull request.
- */
+/** Commits HANDOFF.md on the work's branch and pushes nothing; a draft pull request is offered only when it is ready. */
 export const handOff = async (deps: CodebaseDeps, projectId: string): Promise<void> => {
 	const { api, root } = deps;
 	await agentReady(api);
@@ -58,23 +52,15 @@ export const handOff = async (deps: CodebaseDeps, projectId: string): Promise<vo
 
 const STOP = 'Stop';
 
-/** What Run locally needs of the product and this machine: how the product runs, and what is already here. */
 export interface LocalRun {
-	/** The port the product says its command serves on (its `.dsnr/workspace.json`), or null when it declares none. */
+	/** Null when the product declares none. */
 	port: (commandId: string) => number | null;
-	/** The product's own install command, as words, for a message that its packages may be out of date; null when none. */
 	installCommand: () => string | null;
-	/** Whether something already answers on a port. */
 	answers: (port: number) => Promise<boolean>;
-	/** The page loaded out of sight for a moment: null when it drew, else what went wrong (its error, or that it drew nothing). */
+	/** Null when the page drew, else what went wrong (its error, or that it drew nothing). */
 	loads: (url: string) => Promise<string | null>;
 }
 
-/**
- * Run locally: codebase work run on this machine the way the product says it runs (its design mode, on mock data), and
- * opened in the person's browser at its route. Its earlier run is stopped first, a port in use is refused, and a checkout
- * with uncommitted changes is not moved. "Up" is checked: a build error, or a page that errors or draws nothing, stops it.
- */
 export const runLocally = async (deps: CodebaseDeps, local: LocalRun, projectId: string): Promise<void> => {
 	const { api, root } = deps;
 	const { project, work } = await codebaseOf(api, projectId);
@@ -141,22 +127,16 @@ export const runLocally = async (deps: CodebaseDeps, local: LocalRun, projectId:
 		valueOf(await api.stopCommand(root, DESIGN_MODE_COMMAND));
 };
 
-/** What sharing says at each step: it is a push, a pull request and a build. */
 const SHARE_WORDS: Record<ShareStep, string> = {
 	pushing: 'Pushing the branch…',
 	opening: 'Opening a draft pull request…',
 	building: 'Building the preview…',
 };
-/** How sharing ended: ready, with its pull request and preview, or failed, with why. */
 type Shared = Extract<ShareStatus, { state: 'ready' | 'failed' }>;
 const OPEN_IT = 'Open the pull request';
 const COPY_IT = 'Copy the preview link';
 
-/**
- * Codebase work shared for review: the core's share, a draft pull request whose preview
- * is built from it (`shareWork`), said step by step as the core moves it; then the pull request and the preview's
- * link, or why it was not shared. It cannot be stopped: a push and a pull request are not taken back halfway.
- */
+/** It cannot be stopped: a push and a pull request are not taken back halfway. */
 export const shareCodebase = async (deps: CodebaseDeps, projectId: string): Promise<void> => {
 	const { api, root } = deps;
 	const { project, work } = await codebaseOf(api, projectId);
@@ -189,7 +169,6 @@ export const shareCodebase = async (deps: CodebaseDeps, projectId: string): Prom
 	if (next === COPY_IT) await deps.copy(shared.url);
 };
 
-/** Codebase work on GitHub: its pull request when it has one, else its branch, in the person's browser. */
 export const openCode = async (deps: CodebaseDeps, projectId: string): Promise<void> => {
 	const { project, work } = await codebaseOf(deps.api, projectId);
 	const link = codeLink(work);

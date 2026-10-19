@@ -10,35 +10,26 @@ export interface NewPrototypeDeps extends Pick<AgentWorkDeps, 'progress'> {
 		WorkspaceApi,
 		'prototypeReadiness' | 'installPackages' | 'cancelInstall' | 'onInstallLine' | 'readCheckout' | 'createPrototype' | 'handPrototypeBuild'
 	>;
-	/** The product folder that is open, or why there is none (from the context). */
+	/** `why` says why `root` is null. */
 	product: { root: string | null; why: string };
-	/** A warning with what can be done about it. */
 	choose: Offer;
-	/** Says where the build went, in VS Code's notification, without waiting on anyone. */
 	tell: Tell;
-	/** Told when the projects changed: once it is made, so the list shows it while it is built. */
+	/** Told once it is made, so the list shows it while it is built. */
 	onChanged: () => void;
-	/** Starts watching for its build to be done, to save it and have the list read again (`watchBuild`); not waited for. */
+	/** Not waited for. */
 	watchBuild: (projectId: string, name: string) => void;
-	/** What to make: its name, what it explores and its folder, from the panel's dialog or from code (`readGiven`). */
 	given: Given;
 }
 
-/** What a prototype is made from: its name, what it explores, and its folder (none: null). */
 export interface Given {
 	title: string;
 	task: string;
 	folder: string | null;
 }
 
-/** Text of at most `most` characters, or not. */
 const within = (v: unknown, most: number): v is string => typeof v === 'string' && v.length <= most;
 
-/**
- * What DSNR: New prototype was given by code (a keybinding, another extension, a test): its name and what it explores,
- * and its folder if it has one, each as text within the limits the panel's message has (`LIMITS`); null when it lacks
- * either, or any is over, and anything more is ignored. The panel's dialog sends the same.
- */
+/** Null when the title or task is missing or any field is over its limit; anything more is ignored. */
 export const readGiven = (raw: unknown): Given | null => {
 	if (typeof raw !== 'object' || raw === null) return null;
 	const r = raw as Record<string, unknown>;
@@ -47,9 +38,8 @@ export const readGiven = (raw: unknown): Given | null => {
 };
 
 /**
- * What DSNR: New prototype was called with: the dialog to ask (`'ask'`), the answers code gave (`Given`), or null when
- * code meant to give answers and they are wrong. Anything else is a request to ask: VS Code hands a command run from a
- * title bar or a menu an argument of its own, which must never be taken for a badly made request.
+ * Anything without a title or task is a request to ask: VS Code hands a command run from a title bar or a menu an
+ * argument of its own, which must never be taken for a badly made request.
  */
 export const readAsked = (raw: unknown): 'ask' | Given | null => {
 	const meant = typeof raw === 'object' && raw !== null && !Array.isArray(raw) && ('title' in raw || 'task' in raw);
@@ -58,7 +48,6 @@ export const readAsked = (raw: unknown): 'ask' | Given | null => {
 
 const INSTALL = 'Install packages';
 
-/** The product's packages, with its design system, installed: installed here when the person asks and the product says how. */
 const packagesReady = async ({ api, choose, progress }: NewPrototypeDeps, root: string): Promise<boolean> => {
 	const readiness = valueOf(await api.prototypeReadiness(root));
 	if (readiness.ready) return true;
@@ -96,19 +85,13 @@ const packagesReady = async ({ api, choose, progress }: NewPrototypeDeps, root: 
 };
 
 /**
- * What stands in the way of starting at all, said before the person is asked anything: no product open. (The product's
- * packages come after, as they can be installed from here. Claude Code is not asked after: with none in this VS Code, the
- * command that starts it in a terminal is what the person is given.)
+ * Said before the person is asked anything. Claude Code is not checked: without it, the person is given the command that
+ * starts it in a terminal.
  */
 export const readyToStart = async ({ product }: Pick<NewPrototypeDeps, 'product'>): Promise<void> => {
 	if (product.root === null) throw new Error(product.why);
 };
 
-/**
- * Starting a prototype in VS Code, from what the panel's dialog asked (`given`): what stands in the way is said first,
- * then it is made on the product's branch and its building handed to Claude Code in this window, a conversation for the
- * person to start and watch. DSNR builds nothing itself; it saves the build when it is done (`watchBuild`).
- */
 export const newPrototype = async (deps: NewPrototypeDeps): Promise<void> => {
 	const { api, product, given } = deps;
 	await readyToStart(deps);

@@ -1,8 +1,4 @@
-/**
- * `npm run extension:test` (`:packaged`: against DSNR packaged and installed as it is handed out): DSNR in this machine's
- * VS Code, checked as a person meets it (`activation.cjs`), on a throwaway world made here and removed after. Not part of
- * `npm run check`: it opens a VS Code window for a minute.
- */
+/** Not part of `npm run check`: it opens a VS Code window for a minute. */
 import { execFileSync, spawn } from 'node:child_process';
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -26,7 +22,7 @@ const repo = (dir, files) => {
 	git(dir, 'add', '.');
 	git(dir, '-c', 'user.email=test@example.test', '-c', 'user.name=Test', 'commit', '-q', '-m', 'test');
 };
-// A product with DSNR's setup and the design repository beside it, neither with a remote, so nothing can be pushed.
+// Neither repository has a remote, so nothing can be pushed.
 const product = join(world, 'product');
 repo(product, {
 	'.dsnr/workspace.json': JSON.stringify({
@@ -39,13 +35,11 @@ repo(product, {
 		designSystem: { package: 'x' },
 	}),
 });
-// Its design system installed, and what a page is built with, from this workspace.
 writeFileSync(join(product, '.gitignore'), 'node_modules\n');
 mkdirSync(join(product, 'node_modules/x'), { recursive: true });
 writeFileSync(join(product, 'node_modules/x/package.json'), JSON.stringify({ name: 'x', version: '1.0.0' }));
 for (const m of ['react', 'react-dom', 'scheduler']) symlinkSync(join(extension, '../node_modules', m), join(product, 'node_modules', m));
-// Claude Code, standing in: signed in, and a run writes the page it was asked for where it runs (with enough on it to
-// be pictured), then says it is done.
+// The stand-in Claude Code's page has enough on it to be pictured.
 const bin = join(base, 'bin');
 mkdirSync(bin);
 writeFileSync(
@@ -66,11 +60,10 @@ const record = {
 	note: 'A test.',
 };
 repo(join(world, 'flock-designer'), {
-	// What a build gives the agent, standing in: a real design repository has them, so they are not read from GitHub.
+	// A real design repository has these, so they are not read from GitHub.
 	'skills/build-prototype.md': '# Build a prototype\n',
-	// The builder's guide, which every task begins with: a run without it is refused.
+	// A run without it is refused.
 	'agents/ui-guide.md': '# Building UI in a Flock product\n',
-	// Given to a Build in the codebase, and to a Handoff whose record has no route.
 	'skills/record-the-route.md': '# Record where the work is\n',
 	'standards/universal/accessibility.md': '# Accessibility\n',
 	'projects/fixture/brief.md': '# Fixture\n',
@@ -79,8 +72,7 @@ repo(join(world, 'flock-designer'), {
 		'<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Fixture</title></head><body><main><h1>Fixture</h1></main></body></html>\n',
 });
 
-// The design system, when it is here (beside this repository, or `FUI_ROOT`): a copy of FUI at `x`, the package the
-// product names, its develop as the clone last fetched it, and fetches pointed back at that clone, never at GitHub.
+// Fetches are pointed back at the local clone, never at GitHub.
 const FUI_URL = 'https://github.com/flocksafety/flock-react-component-lib.git';
 const fui = process.env.FUI_ROOT ?? join(extension, '../../../flock-react-component-lib');
 const hasFui = (() => {
@@ -106,8 +98,7 @@ if (hasFui) {
 
 // The profile is throwaway too, its path short: VS Code keeps a socket in it.
 const profile = { user: join(base, 'u'), extensions: join(base, 'e') };
-// Packaged: DSNR installed from its package, and the tests run from a runner of their own, which is all VS Code's test
-// runner needs to be given. Otherwise: DSNR from its source here.
+// Packaged: the tests run from a bare runner of their own, which is all VS Code's test runner needs to be given.
 let runner = extension;
 if (packaged) {
 	installVsix(packageVsix(), profile);
@@ -132,7 +123,7 @@ const run = spawn(
 		'--new-window',
 	],
 	{
-		// In the sealed world every test runs in (`sealed.mjs`), with the stand-in Claude Code first.
+		// Sealed (`sealed.mjs`), with the stand-in Claude Code first on the PATH.
 		env: vscodeEnv({
 			...sealedEnv({ base: join(base, 'sealed'), path: `${bin}:${process.env.PATH}` }).env,
 			DSNR_TEST_PROFILE: profile.user,

@@ -9,16 +9,13 @@ import { type Review, reviewsOf } from './messages';
 export interface AddressDeps extends AgentWorkDeps {
 	api: AgentWorkDeps['api'] & Pick<WorkspaceApi, 'addressPrototype' | 'listProjects' | 'readComments'>;
 	tell: Tell;
-	/** Asks the person to choose, before a version others have commented on is changed. */
 	offer: Offer;
-	/** Shows the version the change is in, as whoever asked shows it: a review tab, or a page in the browser (and an open tab). */
 	show: (review: Review) => Promise<void>;
 }
 
 /**
- * Whether the change is to go in a new version: false, in place, unless others have open comments on the version besides
- * the one acted on (`commentsFromOthers`), or who has cannot be read, and the person chooses a new one. Null when they
- * choose neither.
+ * False (in place) unless others have open comments besides the one acted on, or who has cannot be read, and the person
+ * chooses a new version. Null when they choose neither.
  */
 const asksForNewVersion = async (deps: AddressDeps, project: Project | undefined, review: Review, comment: CommentRef): Promise<boolean | null> => {
 	const made = project?.work.find((w) => w.name === review.name);
@@ -26,7 +23,6 @@ const asksForNewVersion = async (deps: AddressDeps, project: Project | undefined
 	const others = read.ok ? commentsFromOthers(made?.contributors, read.value, comment) : null;
 	if (others === 0) return false;
 	const here = workLabel({ name: review.name });
-	// Named when the project's versions are known, which is when the next one's number is.
 	const next = project ? workLabel({ name: nextVersionName(project.work.map((w) => w.name)) }) : 'a new version';
 	const fresh = `Start ${next} from it`;
 	const said =
@@ -37,11 +33,7 @@ const asksForNewVersion = async (deps: AddressDeps, project: Project | undefined
 	return chosen === undefined ? null : chosen === fresh;
 };
 
-/**
- * Address on one of a prototype's comments, from its review: the core's `addressPrototype`, run to its end, stoppable as
- * a build is, after asking about a new version (`asksForNewVersion`) unless `newVersion` chose one outright. Returns the
- * version with the change, so a page in the browser can go to it, or null when nothing was changed.
- */
+/** Returns the version with the change, so a page in the browser can go to it, or null when nothing was changed. */
 export const addressComment = async (deps: AddressDeps, review: Review, comment: CommentRef, newVersion = false): Promise<string | null> => {
 	const { api } = deps;
 	await agentReady(api);
@@ -57,7 +49,7 @@ export const addressComment = async (deps: AddressDeps, review: Review, comment:
 			ended = await api.addressPrototype(review.projectId, review.name, comment, inNew);
 		},
 	);
-	// Set as the run ended: read as what it is, not as it was before the run began.
+	// Set inside the callback, so TypeScript's narrowing to null from before the run does not hold.
 	const outcome = ended as Result<JobEnd<PrototypeAddressed>> | null;
 	if (stopped || outcome === null) return null;
 	if (!outcome.ok) throw new Error(`The comment was not addressed: ${outcome.error}`);

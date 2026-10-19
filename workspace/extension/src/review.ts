@@ -16,7 +16,6 @@ import { callRoute } from './bridge';
 import { newNonce } from './html';
 import { type Review, reviewsOf } from './messages';
 
-/** Where a prototype's review is on the site, as the site lays it out (`sitePath`): `<project>/v2/`. */
 export const reviewPath = (projectId: string, name: string): string => {
 	const at = sitePath(projectId, name);
 	if (at === null) throw new Error(`${name} is not a prototype, so it has no review page.`);
@@ -24,9 +23,8 @@ export const reviewPath = (projectId: string, name: string): string => {
 };
 
 /**
- * The tab's page: only the review, framed from this machine, and one script that tells the page DSNR frames it and
- * VS Code's theme, and relays what the page asks to the extension and back, to the page's own address alone
- * (`shared/reviewRelay`). A message from anywhere else (the prototype in the bar, a frame it makes) goes nowhere.
+ * Relays only to the page's own address (`shared/reviewRelay`): a message from anywhere else (the prototype in the bar, a
+ * frame it makes) goes nowhere.
  */
 export const reviewPage = ({ src, title, nonce }: { src: string; title: string; nonce: string }): string => {
 	const origin = new URL(src).origin;
@@ -47,29 +45,21 @@ __fdPage.startReviewTab(${JSON.stringify(origin)});
 </html>`;
 };
 
-/** How the extension answers a review page: the core's table, VS Code's sign-in, and Address. */
 interface ReviewAnswers {
 	routes: () => ReadonlyMap<InvokeName, Route>;
 	signIn: () => Promise<SignInState>;
-	/**
-	 * Address, on the version the page is on, in it or in a new version from it (`newVersion`), shown where it was asked
-	 * from.
-	 */
 	address: (review: Review, comment: CommentRef, from: AskedFrom, newVersion: boolean) => Promise<unknown>;
-	/** Told once a comment was written (made, moved, resolved, deleted, addressed), so what counts them is read again. */
 	written: () => void;
 }
 
-/** Where a review's page asked from: its tab in VS Code, or the browser, by a key (`Reviews.inBrowser`). */
 export type AskedFrom = 'tab' | 'browser';
 
 const isRef = (v: unknown): v is CommentRef =>
 	typeof v === 'object' && v !== null && Number.isSafeInteger((v as CommentRef).thread) && Number.isSafeInteger((v as CommentRef).id);
 
 /**
- * What a review page asked (`RelayCall`), answered: a comment call by the core, signing in by VS Code, Address by the
- * extension. Only on this review's own comments: read and made only on its project's prototypes, and changed or
- * Addressed only when this tab has been shown or made it (`seen`), so a page gone wrong reaches no other project's.
+ * Only on this review's own comments: read and made only on its project's prototypes, and changed or Addressed only when
+ * this tab has been shown or made it (`seen`), so a page gone wrong reaches no other project's.
  */
 export const answerReview = async (
 	answers: ReviewAnswers,
@@ -86,16 +76,14 @@ export const answerReview = async (
 	return result;
 };
 
-/** Whether a branch is one of a project's prototypes (`prototype/<project>/<name>`): its own, by its name. */
 const isPrototypeOf = (projectId: string, branch: unknown): boolean => {
 	const prefix = prototypeKey(projectId, '');
 	return typeof branch === 'string' && branch.startsWith(prefix) && isPrototypeName(branch.slice(prefix.length));
 };
 
-/** The calls that act on one comment, by its reference, first. */
 const ON_A_COMMENT = new Set<RelayCall>(['moveComment', 'resolveComment', 'deleteComment', 'address']);
 
-/** The calls that change a comment, or what a comment says of itself (Address): after one, the counts are read again. */
+/** After one, the counts are read again. */
 const WRITES = new Set<RelayCall>(['postComment', 'moveComment', 'resolveComment', 'deleteComment', 'address']);
 
 const answered = async (
@@ -107,8 +95,6 @@ const answered = async (
 	from: AskedFrom,
 ): Promise<Result<unknown>> => {
 	if (name === 'signIn') return toResult(answers.signIn());
-	// Address is given one comment, and may say which of the review's prototypes the page is on (a browser's moves) and
-	// that the change is to go in a new version.
 	if (name === 'address' && !(args.length >= 1 && args.length <= 3 && isRef(args[0]) && (args[2] === undefined || typeof args[2] === 'boolean')))
 		return { ok: false, error: 'Address is given one comment, and may say the version it is on and whether to make a new one.' };
 	if (name === 'address' && args.length >= 2 && !isPrototypeOf(review.projectId, args[1]))
@@ -129,15 +115,14 @@ type Panel = Pick<VsCode.WebviewPanel, 'title' | 'active' | 'visible' | 'reveal'
 };
 
 /**
- * Prototypes' reviews in VS Code: each its page on the site with its review bar, built from the design repository on
- * this machine (`build`) afresh each time so it is the records as they are, served from here (`serve`), and framed in
- * one editor tab per project, so another of its prototypes (or the one Address made) shows there.
+ * The site is built afresh each time so it is the records as they are. One tab per project, so another of its prototypes
+ * (or the one Address made) shows there.
  */
 export class Reviews {
 	private readonly tabs = new Map<string, { panel: Panel; review: Review }>();
 	/**
-	 * The keys made for the browser (`inBrowser`), each for one review with what it has been shown, by the key's hash: found
-	 * without comparing, so how long a wrong one takes says nothing of a right one. Kept until VS Code reloads.
+	 * By the key's hash: found without comparing, so how long a wrong one takes says nothing of a right one. Kept until
+	 * VS Code reloads.
 	 */
 	private readonly keys = new Map<string, { review: Review; seen: Set<number> }>();
 
@@ -154,23 +139,14 @@ export class Reviews {
 				};
 				ViewColumn: typeof VsCode.ViewColumn;
 			};
-			/** Builds the site from the design repository's records, into the folder `serve` serves. */
 			build: (records: string) => void | Promise<void>;
-			/** Serves the built site from this machine, and says its address. */
 			serve: () => Promise<string>;
-			/** What a review's page asked, answered with what it has been shown (`seen`), and where it asked from. */
 			answer: (review: Review, name: RelayCall, args: unknown[], seen: Set<number>, from: AskedFrom) => Promise<Result<unknown>>;
-			/** Where a run from source says what each page asked: View › Output › DSNR. */
 			log?: Pick<VsCode.LogOutputChannel, 'info'>;
-			/** Told when a tab opens, closes, or is brought in front or covered (`shown`). */
 			onShown?: () => void;
 		},
 	) {}
 
-	/**
-	 * Where a review's page is: built again from the records, so it is as they are, and served from this machine. For a
-	 * tab, and for a browser, which opens the same page outside VS Code (where it has no DSNR to comment through).
-	 */
 	async address({ records, projectId, name }: Review & { records: string }): Promise<string> {
 		const path = reviewPath(projectId, name);
 		await this.deps.build(records);
@@ -178,9 +154,8 @@ export class Reviews {
 	}
 
 	/**
-	 * Where a review's page is for the browser, with a new key for this review alone in the fragment (`#dsnr-key-<key>`,
-	 * in characters no opener re-encodes), which a browser never sends to a server: the bar asks DSNR through this machine's
-	 * server with it (`answerBrowser`), as a tab asks through VS Code.
+	 * A new key for this review alone, in the fragment, which a browser never sends to a server, and in characters no
+	 * opener re-encodes.
 	 */
 	async inBrowser({ records, ...review }: Review & { records: string }): Promise<string> {
 		const url = await this.address({ records, ...review });
@@ -189,10 +164,7 @@ export class Reviews {
 		return `${url}#${KEY_FRAGMENT}${key}`;
 	}
 
-	/**
-	 * A browser's ask, with its key, answered as that review's tab is answered (`answer`, with what this key has been
-	 * shown); null when the key is none made here, or what was asked is not exactly an ask, which the server refuses.
-	 */
+	/** Null when the key is none made here, or what was asked is not exactly an ask, which the server refuses. */
 	async answerBrowser(key: string, raw: unknown): Promise<RelayTell | null> {
 		const held = this.keys.get(hashOf(key));
 		const ask = held ? readRelayAsk(raw) : null;
@@ -205,14 +177,10 @@ export class Reviews {
 		const src = await this.address({ records, ...review });
 		const open = this.tabs.get(review.projectId);
 		this.shows(open ?? this.make(review), review, src);
-		// A tab already open is brought forward; a new one opens in front.
 		if (open) open.panel.reveal();
 	}
 
-	/**
-	 * A review shown in its project's tab if one is open, so Address from the browser keeps VS Code in step: not brought in
-	 * front of the browser, and none opened. The site is built either way, so the browser has the page.
-	 */
+	/** Never brought in front of the browser, and none opened. The site is built either way, so the browser has the page. */
 	async showIfOpen({ records, ...review }: Review & { records: string }): Promise<void> {
 		const src = await this.address({ records, ...review });
 		const open = this.tabs.get(review.projectId);
@@ -225,17 +193,15 @@ export class Reviews {
 		tab.panel.webview.html = reviewPage({ src, title: review.title, nonce: newNonce() });
 	}
 
-	/** The projects a review is open on, in a tab or by a browser's key: what is built for them must stay. */
+	/** In a tab or by a browser's key: what is built for them must stay. */
 	inUse(): string[] {
 		return [...new Set([...this.tabs.keys(), ...[...this.keys.values()].map((k) => k.review.projectId)])];
 	}
 
-	/** The review in front, if one is: what its title bar's actions act on. */
 	active(): Review | undefined {
 		return [...this.tabs.values()].find((t) => t.panel.active)?.review;
 	}
 
-	/** The projects whose review tab is in front, as the panel marks them. */
 	shown(): string[] {
 		return [...this.tabs].filter(([, t]) => t.panel.visible).map(([id]) => id);
 	}
@@ -246,7 +212,7 @@ export class Reviews {
 		});
 		const shown = { panel, review };
 		this.tabs.set(review.projectId, shown);
-		// The comments this tab has been shown or has made, by thread: the only ones its page may change.
+		// By thread: the only comments its page may change.
 		const seen = new Set<number>();
 		panel.webview.onDidReceiveMessage(async (raw: unknown) => {
 			const ask = readRelayAsk(raw);
@@ -265,13 +231,10 @@ export class Reviews {
 	}
 }
 
-/** A key as it is kept: its hash, so the key itself is never kept or compared. */
+/** So the key itself is never kept or compared. */
 const hashOf = (key: string): string => createHash('sha256').update(key).digest('hex');
 
-/**
- * Builds the site for reviews from the design repository's records, with the viewer the extension carries; its pages are
- * served from `pagesAt`, the pages' own address (the README's Review isolation), not beside their bar.
- */
+/** Pages are served from `pagesAt`, their own address (the README's Review isolation), not beside their bar. */
 export const buildReviewSite = (siteDir: string, viewerDir: string) => (records: string, pagesAt: string) => {
 	mkdirSync(dirname(siteDir), { recursive: true });
 	buildSite({
@@ -283,16 +246,10 @@ export const buildReviewSite = (siteDir: string, viewerDir: string) => (records:
 	});
 };
 
-/** Where the review site is served, under this machine's server, on both its addresses. */
 export const REVIEW_KEY = 'review';
 
-/** Where the extension keeps the site it builds for reviews. */
 export const siteIn = (storage: string): string => join(storage, 'review-site');
 
-/**
- * A prototype to review, chosen in VS Code's quick pick (the natural form for one of many): each project's prototypes,
- * newest first (`reviewsOf`), as the panel's rows open them. Said when there is none.
- */
 export const pickReview = async (
 	window: Pick<typeof VsCode.window, 'showQuickPick'>,
 	api: Pick<WorkspaceApi, 'listProjects'>,

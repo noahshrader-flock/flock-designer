@@ -3,9 +3,8 @@ import type { Plugin } from 'vite';
 import { CARRIED, bundlePage, kindOf, pageModuleOf } from './pageBundle.mjs';
 
 /**
- * The page code (`src/page`) as text: `import PAGE from '../page/theme?page'` is that module bundled by esbuild into a
- * script defining `__fdPage`, since a script run inside a previewed page is run, never imported, so it has to be text.
- * `'…?script'` is the same for a script an agent runs with Node (`bundleScript`).
+ * `'…?page'` imports the module bundled to text (a script defining `__fdPage`): a script inside a previewed page is run,
+ * never imported. `'…?script'` is the same for a script an agent runs with Node.
  */
 export const pageCode = (): Plugin => ({
 	name: 'dsnr-page-code',
@@ -23,10 +22,6 @@ export const pageCode = (): Plugin => ({
 	},
 });
 
-/**
- * The page agent (`src/page/agentMain.ts`; the README's Review isolation), emitted beside the viewer as `page-agent.js`: the
- * site copies it with the viewer and adds it to every prototype's page, so the bar asks the page for its pins.
- */
 export const pageAgent = (): Plugin => ({
 	name: 'dsnr-page-agent',
 	async generateBundle() {

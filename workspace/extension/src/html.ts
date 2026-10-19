@@ -2,16 +2,15 @@ import { randomBytes } from 'node:crypto';
 import { escapeHtml } from '../../src/shared/html';
 import type { DesignTab } from './messages';
 
-/** This machine's server's two addresses, as DSNR's pages name them: pictures from its own, frames (a repository's code) from the pages'. */
+/** Two origins of this machine's server: pictures from one, frames (a repository's code) from the other. */
 export interface LocalAddresses {
 	images: string;
 	frames: string;
 }
 
 /**
- * The page DSNR's panel, or a design system's tab (`tab`), loads, as tight as VS Code's webview guidance asks: nothing
- * loads but what the policy names, each local address an exact origin, and the one script by a nonce. No `vscode`
- * import, so it is tested as plain text.
+ * As tight as VS Code's webview guidance asks: nothing loads but what the policy names, each local address an exact
+ * origin, and the one script by a nonce. No `vscode` import, so it is tested as plain text.
  */
 export const panelHtml = ({
 	cspSource,
@@ -55,5 +54,5 @@ export const panelHtml = ({
 </html>`;
 };
 
-/** A nonce for one page: random, and new every time the page is made. */
+/** New every time a page is made. */
 export const newNonce = (): string => randomBytes(24).toString('base64url');

@@ -7,10 +7,6 @@ import { type LocalAddresses, newNonce, panelHtml } from './html';
 import type { AskName, DesignTab } from './messages';
 import { failed } from './ui';
 
-/**
- * A DSNR page in `webview`: the panel, or a design system's tab (`tab`), from the extension's own build in `dist`,
- * framing and showing pictures from this machine's server (`local`) alone.
- */
 export const dsnrPage = (webview: vscode.Webview, dist: vscode.Uri, local: LocalAddresses, tab?: DesignTab): string => {
 	const asset = (name: string) => webview.asWebviewUri(vscode.Uri.joinPath(dist, name)).toString();
 	return panelHtml({
@@ -28,7 +24,6 @@ interface PanelDeps {
 	extensionUri: vscode.Uri;
 	panels: Panels;
 	local: () => Promise<LocalAddresses>;
-	/** The extension's asks, which the panel makes as every page does (`receivePage`). */
 	asks: () => ReadonlyMap<AskName, Route>;
 	development: boolean;
 	log?: vscode.LogOutputChannel;
@@ -40,7 +35,6 @@ export class PanelProvider implements vscode.WebviewViewProvider {
 
 	constructor(private readonly deps: PanelDeps) {}
 
-	/** Who is signed in, beside the DSNR mark; nothing when no one is. Kept until the panel is shown, if it is not yet. */
 	showAccount(login: string | undefined): void {
 		this.login = login;
 		if (this.view) this.view.description = login;
@@ -55,7 +49,7 @@ export class PanelProvider implements vscode.WebviewViewProvider {
 		void this.load(view.webview).catch(failed);
 		this.view = view;
 		view.description = this.login;
-		// Kept while hidden, so it listens until VS Code throws it away: never taken for gone because it is out of sight.
+		// Kept while hidden, so it listens until VS Code throws it away, not only while it is in sight.
 		this.deps.panels.attach(view);
 		view.onDidDispose(() => {
 			this.view = undefined;
@@ -83,7 +77,6 @@ export class PanelProvider implements vscode.WebviewViewProvider {
 		this.deps.log?.info(`Following the build in ${this.dist.fsPath}.`);
 	}
 
-	/** The page, once this machine's server says where it is. */
 	private async load(webview: vscode.Webview): Promise<void> {
 		webview.html = dsnrPage(webview, this.dist, await this.deps.local());
 	}

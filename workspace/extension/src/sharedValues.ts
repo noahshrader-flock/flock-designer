@@ -1,9 +1,8 @@
 import { type HostMessage, type SharedName, type SharedValues, sameShared } from './messages';
 
 /**
- * A value every DSNR page shows the same (`SharedValues`), kept by the extension rather than any one page, so a page
- * loaded again finds it as it was: told to every page when it changes (unless `sameShared`), and to a page once it
- * listens. `kept` is told each change, for a value kept beyond the session (the mode).
+ * Kept by the extension rather than any one page, so a page loaded again finds it as it was. `kept` is told each change,
+ * for a value kept beyond the session.
  */
 export class Shared<K extends SharedName> {
 	constructor(
@@ -24,7 +23,6 @@ export class Shared<K extends SharedName> {
 		this.post(this.message());
 	}
 
-	/** What a page is told of it. */
 	message(): HostMessage {
 		return { type: 'shared', name: this.name, value: this.value } as HostMessage;
 	}

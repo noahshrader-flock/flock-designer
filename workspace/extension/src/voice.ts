@@ -6,12 +6,10 @@ import { errorText, valueOf } from '../../src/shared/result';
 import type { Offer } from './agentWork';
 import { CHANGE_REQUEST, HOST } from '../../src/shared/vocabulary';
 
-/** Where the voice and tone is in VS Code: a document of DSNR's own, and the file as GitHub has it, to compare with. */
 const VOICE_SCHEME = 'dsnr-voice';
 export const VOICE_PATH = '/Voice and tone.md';
 export const THEIRS_PATH = `/On ${HOST}/Voice and tone.md`;
 
-/** What a refused save offers: the two side by side, the person's text kept as a change to GitHub's, or GitHub's taken. */
 const COMPARE = 'Compare';
 const KEEP_MINE = 'Keep mine';
 const USE_THEIRS = 'Use theirs';
@@ -21,28 +19,22 @@ const OPEN_IT = `Open the ${CHANGE_REQUEST}`;
 export interface VoiceDeps {
 	api: Pick<WorkspaceApi, 'voiceAndTone' | 'changeBranch' | 'saveChange' | 'proposeChange' | 'forgetChange'>;
 	offer: Offer;
-	/** A warning, with what can be done about it: a proposal that failed, a save refused. */
 	choose: Offer;
 	openExternal: (url: string) => Promise<void>;
 }
 
-/**
- * The design system's voice and tone as a document in VS Code's editor: read from the library's branch when opened and
- * reverted, saved (⌘S) to a branch of DSNR's, one commit a save, and proposed as a draft pull request. A save is made
- * against the file it was opened at, so a change made on GitHub meanwhile is refused rather than overwritten.
- */
+/** A save is made against the file it was opened at, so a change made on GitHub meanwhile is refused rather than overwritten. */
 export class VoiceDocument {
-	/** The file as the library's branch had it when it was last read, and the change kept on its branch. */
 	private file: VoiceAndTone | null = null;
 	private branch: ChangeBranchOf<'voice'> | null = null;
-	/** The library's file the text was opened at, which a save is made against (null: there was none). */
+	/** Null when the library had no file. */
 	private against: string | null = null;
-	/** The file as the library's branch has it now, when a save found it changed since it was opened. */
+	/** Set only when a save found the library's file changed since it was opened. */
 	private theirs: VoiceAndTone | null = null;
 
 	constructor(private readonly deps: VoiceDeps) {}
 
-	/** The text to open: the change as last saved, else the library's file, else nothing yet. What it is saved against from now on. */
+	/** Also resets what a save is made against. */
 	async read(): Promise<string> {
 		const file = valueOf(await this.deps.api.voiceAndTone());
 		this.branch = valueOf(await this.deps.api.changeBranch('voice', null));
@@ -52,15 +44,11 @@ export class VoiceDocument {
 		return this.branch?.saved.text ?? file.text ?? '';
 	}
 
-	/** The library's file as a refused save found it, to compare the person's text with. */
 	theirsText(): string {
 		return this.theirs?.text ?? '';
 	}
 
-	/**
-	 * Saves `text` against the file it was opened at: `saved`, or `changed` when the library's file changed meanwhile
-	 * (nothing saved), as the file read again says. Text that is the library's own, with nothing kept, is saved already.
-	 */
+	/** `changed`, with nothing saved, when the library's file changed since it was opened. */
 	async save(text: string): Promise<'saved' | 'changed'> {
 		if (this.branch === null && text === (this.file?.text ?? '')) return 'saved';
 		const saved = await this.deps.api.saveChange('voice', null, { text, against: this.against });
@@ -76,13 +64,12 @@ export class VoiceDocument {
 		throw new Error(saved.error);
 	}
 
-	/** The person keeps their text, as a change to the library's file as it is now: the next save is made against that. */
+	/** The next save is made against the library's file as it is now. */
 	keepMine(): void {
 		if (this.theirs) this.against = this.theirs.sha;
 		this.theirs = null;
 	}
 
-	/** Says a save, with what comes next: Propose, or the pull request once it is proposed. */
 	async afterSave(): Promise<void> {
 		const branch = this.branch;
 		if (!branch) return;
@@ -94,10 +81,7 @@ export class VoiceDocument {
 		if (next === OPEN_IT && branch.pullRequest) await this.deps.openExternal(branch.pullRequest.url);
 	}
 
-	/**
-	 * Proposes what is saved as a draft pull request, and says where it is. When it cannot be opened from here (the person's
-	 * command line not signed in), GitHub's own page can open it: offered, and the change stays saved.
-	 */
+	/** When it cannot be opened from here (the command line not signed in), GitHub's own page is offered; the change stays saved. */
 	async propose(): Promise<void> {
 		const r = await this.deps.api.proposeChange('voice', null, null);
 		if (!r.ok) {
@@ -112,7 +96,7 @@ export class VoiceDocument {
 		if ((await this.deps.offer(`Proposed as draft ${CHANGE_REQUEST} #${pr.number}.`, [OPEN_IT])) === OPEN_IT) await this.deps.openExternal(pr.url);
 	}
 
-	/** Forgets the branch, to start a new change: the branch and any pull request stay on GitHub. */
+	/** The branch and any pull request stay on GitHub. */
 	async startOver(): Promise<void> {
 		valueOf(await this.deps.api.forgetChange('voice', null));
 		this.branch = null;
@@ -121,11 +105,7 @@ export class VoiceDocument {
 
 type VsCodeFs = Pick<typeof VsCode, 'EventEmitter' | 'FileType' | 'FileChangeType' | 'FileSystemError' | 'FilePermission' | 'Disposable'>;
 
-/**
- * The voice and tone as files VS Code opens, edits and saves: the document (`VOICE_PATH`), read and saved through
- * `VoiceDocument`, and GitHub's file as a refused save found it (`THEIRS_PATH`), read only. A refused save leaves the
- * document unsaved and says why (`onRefused`), so what was typed is never lost.
- */
+/** A refused save leaves the document unsaved, so what was typed is never lost. */
 export const voiceFileSystem = (
 	vscode: VsCodeFs,
 	voice: VoiceDocument,
@@ -171,7 +151,7 @@ export const voiceFileSystem = (
 				throw vscode.FileSystemError.Unavailable(errorText(err));
 			}
 			if (outcome === 'changed') {
-				// GitHub's file as this save found it: an open copy of it, from a refusal before, is read again.
+				// An open copy of GitHub's file, from an earlier refusal, is read again.
 				changed.fire([{ type: vscode.FileChangeType.Changed, uri: uri.with({ path: THEIRS_PATH }) }]);
 				onRefused();
 				throw vscode.FileSystemError.Unavailable(REFUSED);
@@ -187,14 +167,8 @@ export const voiceFileSystem = (
 	};
 };
 
-/** What a save refused because GitHub's file changed meanwhile says: the file system's failure, and the offer after it. */
 const REFUSED = `The voice and tone changed on ${HOST} since it was opened, so nothing was saved.`;
 
-/**
- * The voice and tone in VS Code, wired: its file system, the document VS Code opens from it, and its commands. A refused
- * save offers to compare, keep the person's text, or take GitHub's; Start over reads the document again only once the
- * branch is forgotten. Returns how to open it, and what to dispose of.
- */
 export const registerVoice = (
 	vscode: typeof VsCode,
 	deps: VoiceDeps & { failed: (err: unknown) => void },
@@ -203,7 +177,7 @@ export const registerVoice = (
 	const theirsUri = vscode.Uri.from({ scheme: VOICE_SCHEME, path: THEIRS_PATH });
 	const voice = new VoiceDocument(deps);
 	const opened = () => vscode.workspace.textDocuments.find((d) => d.uri.toString() === voiceUri.toString());
-	/** The document read again from GitHub, as VS Code's Revert does: what is unsaved in it is dropped. */
+	/** Through VS Code's Revert: what is unsaved in it is dropped. */
 	const readAgain = async () => {
 		if (!opened()) return;
 		await vscode.window.showTextDocument(voiceUri);

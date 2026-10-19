@@ -12,11 +12,6 @@ import type { Panels } from './bridge';
 import { VsCodeGitHub } from './github';
 import { vscodePorts } from './vscodePorts';
 
-/**
- * The core in VS Code (`createCore`), given VS Code's shell: its files in the extension's own storage, events to DSNR's
- * panels, sign-in through VS Code (told to the panels and `onSignInChanged`), and pictures, the stories' tokens and
- * accessibility checks drawn by the browser on this machine, headless.
- */
 export const startCore = (context: vscode.ExtensionContext, panels: Panels, onSignInChanged: (state: SignInState) => void) => {
 	const storage = context.globalStorageUri.fsPath;
 	mkdirSync(storage, { recursive: true });
@@ -27,8 +22,7 @@ export const startCore = (context: vscode.ExtensionContext, panels: Panels, onSi
 	} catch {
 		// A folder that cannot be written leaves the command its own: nothing in the panel depends on it.
 	}
-	// The browser on this machine, headless: for pictures, stories and accessibility checks. Closed, and waited for, when
-	// DSNR stops (`deactivate`), so none is left running after VS Code quits.
+	// Closed, and waited for, in `deactivate`, so no browser is left running after VS Code quits.
 	const headless = chromeHeadless();
 	const github = new VsCodeGitHub(vscode.authentication, networkFetch, context.globalState, (state) => {
 		panels.sink('onSignInChanged', state);
@@ -39,7 +33,6 @@ export const startCore = (context: vscode.ExtensionContext, panels: Panels, onSi
 		emit: panels.sink,
 		ports: vscodePorts(vscode, headless),
 		github,
-		// Components' pictures are drawn by the browser here, and fingerprinted as drawn that way.
 		pictureRecipe: HEADLESS_PICTURE_RECIPE,
 	});
 	const shell = registerCalls(core);

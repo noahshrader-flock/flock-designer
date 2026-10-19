@@ -3,9 +3,8 @@ import { type Fetcher, ReauthRequired, ReadCache, callApi, readUser } from '../.
 import type { GitHubAccount } from '../../src/codeHost/github';
 import type { SignInState } from '../../src/shared/contract';
 
-/** What DSNR asks of GitHub: the person's private repositories, and the organizations they are in. */
 const SCOPES = ['repo', 'read:org'];
-/** Kept by the extension: the person signed out of DSNR, so a session VS Code keeps is not used until they sign in. */
+/** VS Code keeps its session after the person signs out of DSNR, so this says not to use it until they sign in again. */
 const SIGNED_OUT = 'dsnr.signedOut';
 
 type Auth = Pick<typeof VsCode.authentication, 'getSession' | 'onDidChangeSessions'>;
@@ -14,11 +13,7 @@ interface Memento {
 	update(key: string, value: unknown): Thenable<void> | Promise<void>;
 }
 
-/**
- * The person's GitHub account in VS Code (`GitHubAccount`), through VS Code's own sign-in: no device flow and no token of
- * DSNR's own, so VS Code keeps the session and its Accounts menu shows it. Signing out of DSNR stops using the session,
- * and is remembered, since VS Code keeps it for its own use; signing out of GitHub in VS Code signs DSNR out too.
- */
+/** Through VS Code's own sign-in, with no token of DSNR's own, so VS Code keeps the session and its Accounts menu shows it. */
 export class VsCodeGitHub implements GitHubAccount {
 	private token: string | null = null;
 	private current: SignInState = { state: 'signedOut' };
@@ -30,14 +25,12 @@ export class VsCodeGitHub implements GitHubAccount {
 		private readonly onChange: (state: SignInState) => void,
 	) {}
 
-	/** Follows VS Code's own sign-in: a GitHub session added or removed there is read again here. */
 	watch(): VsCode.Disposable {
 		return this.auth.onDidChangeSessions((e) => {
 			if (e.provider.id === 'github') void this.restore();
 		});
 	}
 
-	/** Uses a session VS Code already has, without asking; signed out when there is none, or the person signed out. */
 	async restore(): Promise<SignInState> {
 		if (this.memento.get<boolean>(SIGNED_OUT)) return this.state();
 		const session = await this.auth.getSession('github', SCOPES, { silent: true });
@@ -46,7 +39,6 @@ export class VsCodeGitHub implements GitHubAccount {
 		return this.state();
 	}
 
-	/** Signs in through VS Code: its own prompt, the browser, and back. */
 	async signIn(): Promise<SignInState> {
 		const session = await this.auth.getSession('github', SCOPES, { createIfNone: true });
 		await this.memento.update(SIGNED_OUT, false);
@@ -63,7 +55,7 @@ export class VsCodeGitHub implements GitHubAccount {
 		this.forget();
 	}
 
-	/** Reads asked again are asked with their tag, and an unchanged one is free (`ReadCache`). */
+	/** Reads asked again send their tag, and an unchanged one is free. */
 
 	private readonly reads = new ReadCache();
 

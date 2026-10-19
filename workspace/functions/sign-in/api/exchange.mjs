@@ -1,6 +1,6 @@
 import { MAX_BODY, handleExchange } from '../lib/exchange.mjs';
 
-/** Vercel's Node entry: reads the request's body (cut short, so a huge one is not held), and sends what `handleExchange` says. */
+/** Vercel's Node entry. The body is cut short past `MAX_BODY` so a huge one is not held. */
 export default async function handler(req, res) {
 	let body = '';
 	for await (const chunk of req) {

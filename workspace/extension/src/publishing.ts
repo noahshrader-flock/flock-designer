@@ -3,7 +3,6 @@ import { valueOf } from '../../src/shared/result';
 import type { Offer, Tell } from './agentWork';
 import type { Review } from './messages';
 
-/** Whether the person's work is synced, in a sentence: said by the status bar's tooltip and by the sync dialog in the panel. */
 export const syncWords = (status: PublishStatus): string => {
 	switch (status.state) {
 		case 'unavailable':
@@ -17,10 +16,6 @@ export const syncWords = (status: PublishStatus): string => {
 	}
 };
 
-/**
- * Whether the person's work is synced, as VS Code's status bar says it: it syncs by
- * itself, so this only reports; pressed, it opens the sync dialog in the panel. Nothing when there is nothing to sync from here.
- */
 export const syncItem = (status: PublishStatus): { text: string; tooltip: string } | null => {
 	switch (status.state) {
 		case 'unavailable':
@@ -36,10 +31,7 @@ export const syncItem = (status: PublishStatus): { text: string; tooltip: string
 
 const PUBLISH = 'Publish';
 
-/**
- * A review's page on the published site: its link once it is there, to open or to share. Otherwise said: on its way;
- * saved but not there (with why, and Publish); or why it cannot be told. Null when there is no link yet.
- */
+/** The review's published link, or null after telling the person why there is none yet. */
 export const publishedLink = async (
 	{
 		api,

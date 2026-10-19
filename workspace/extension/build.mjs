@@ -1,8 +1,3 @@
-/**
- * Builds DSNR into `dist/`: the extension (Node, with `vscode` left to VS Code), its panel's page, the codicons, the
- * viewer a prototype's review page carries (`dist/viewer`, built once), and esbuild itself, which builds a prototype's
- * page when it is saved. `--watch` rebuilds on every change and says when it has.
- */
 import { copyFileSync, cpSync, mkdirSync, readFileSync, readdirSync, rmSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -14,10 +9,9 @@ const here = dirname(fileURLToPath(import.meta.url));
 const dist = join(here, 'dist');
 const watch = process.argv.includes('--watch');
 
-/** The builds not yet finished once: when none is left, watching is said, so what waits for that can open the build. */
+/** When none is left, watching is said, so what waits for that (`dev.mjs`) can open the window. */
 const waiting = new Set(['extension', 'panel', 'viewer']);
 
-/** Says when a build has finished, and what went wrong if it did not. */
 const report = (name) => ({
 	name: 'report',
 	setup: (build) =>
@@ -36,7 +30,6 @@ const builds = [
 		target: 'node20',
 		// VS Code gives `vscode`; esbuild finds its own native binary when it runs, so it cannot be bundled: it is copied in.
 		external: ['vscode', 'esbuild'],
-		// Page code carried as text (`import X from '…?page'`), as every build carries it.
 		plugins: [pageCodeEsbuild(), report('extension')],
 	},
 	{
@@ -53,7 +46,6 @@ const builds = [
 // A build made once starts from nothing, so what is packaged is what was just built (a watch build leaves source maps).
 if (!watch) rmSync(dist, { recursive: true, force: true });
 mkdirSync(dist, { recursive: true });
-// The codicons, from the package, beside the page that loads them.
 const codicons = join(here, '../node_modules/@vscode/codicons/dist');
 for (const file of ['codicon.css', 'codicon.ttf']) copyFileSync(join(codicons, file), join(dist, file));
 // The compiler's type libraries, where the extension looks for them (`typeLibs`): the compiler itself is in `extension.js`.
@@ -72,7 +64,6 @@ cpSync(join(modules, 'esbuild'), join(dist, 'node_modules/esbuild'), { recursive
 for (const binary of readdirSync(join(modules, '@esbuild')))
 	cpSync(join(modules, '@esbuild', binary), join(dist, 'node_modules/@esbuild', binary), { recursive: true });
 
-/** A prototype's review page carries DSNR's own viewer (its review bar and comments), built as every build builds it. */
 const viewer = async () => {
 	await buildViewer(join(dist, 'viewer'));
 	console.log('dsnr: viewer built');

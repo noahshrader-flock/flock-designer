@@ -1,8 +1,4 @@
-/**
- * `npm run extension:dev`: DSNR from its source in an Extension Development Host, rebuilt as it is edited, on a throwaway
- * profile kept between runs so the panel stays where it was put. The profile's path is short on purpose: VS Code keeps
- * a socket in it, and a socket's path may be no longer than 103 characters.
- */
+/** The profile's path is short on purpose: VS Code keeps a socket in it, and a socket's path may be at most 103 characters. */
 import { spawn } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -27,8 +23,7 @@ build.stdout.on('data', (chunk) => {
 			'--skip-release-notes',
 			'--new-window',
 		],
-		// In the sealed world the tests run in (`sealed.mjs`), kept with the profile: a hand check here reaches none of the
-		// person's settings, GitHub sign-in or remotes. A check that needs them is made in the installed extension.
+		// Sealed like the tests (`sealed.mjs`): a hand check here reaches none of the person's settings, GitHub sign-in or remotes.
 		{ stdio: 'ignore', env: vscodeEnv(sealedEnv({ base: join(profile, 'world') }).env) },
 	);
 	window.on('error', (err) => {
@@ -36,7 +31,7 @@ build.stdout.on('data', (chunk) => {
 		build.kill();
 		process.exit(1);
 	});
-	// Quitting it (⌘Q: on a Mac, closing its last window leaves it running).
+	// Only on quit: on a Mac, closing its last window leaves it running.
 	window.on('exit', () => {
 		console.log('dsnr: the window closed; stopping the build');
 		build.kill();

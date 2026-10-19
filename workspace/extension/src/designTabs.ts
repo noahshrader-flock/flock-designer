@@ -6,22 +6,16 @@ type TabPanel = Pick<VsCode.WebviewPanel, 'visible' | 'reveal' | 'onDidChangeVie
 	webview: Pick<VsCode.Webview, 'html' | 'onDidReceiveMessage' | 'postMessage'>;
 };
 
-/** What a tab is called: its component's name, or Primitives. */
 const titleOf = (tab: DesignTab): string => (tab.kind === 'component' ? tab.name : 'Primitives');
 const COMPONENT = 'component:';
 const keyOf = (tab: DesignTab): string => (tab.kind === 'component' ? `${COMPONENT}${tab.id}` : 'primitives');
 
-/**
- * The design system's tabs in VS Code's editor, for what needs more room than the side bar: a component's (its stories
- * live, and what it is made from) and Primitives. Each is DSNR's own page, told the core's events and answered as the
- * panel is. One tab each, brought forward when it is opened again.
- */
 export class DesignTabs {
 	private readonly tabs = new Map<string, TabPanel>();
 
 	constructor(
 		private readonly deps: {
-			/** A new editor tab with this title, its page allowed to run its script and load from the extension's build. */
+			/** Its page must be allowed to run its script and load from the extension's build. */
 			create: (title: string) => TabPanel;
 			page: (webview: TabPanel['webview'], tab: DesignTab) => Promise<string>;
 			panels: Pick<Panels, 'add'>;
@@ -49,12 +43,11 @@ export class DesignTabs {
 		panel.webview.html = await this.deps.page(panel.webview, tab);
 	}
 
-	/** The components whose tab is in front, by their id, as the panel marks them. */
 	shownComponents(): string[] {
 		return [...this.tabs].filter(([key, panel]) => key.startsWith(COMPONENT) && panel.visible).map(([key]) => key.slice(COMPONENT.length));
 	}
 
-	/** Closes every component's tab: another design system is shown, and they are of the last one's. */
+	/** For when another design system is shown: these tabs are of the last one. */
 	closeComponents(): void {
 		for (const [key, panel] of this.tabs) if (key.startsWith(COMPONENT)) panel.dispose();
 	}

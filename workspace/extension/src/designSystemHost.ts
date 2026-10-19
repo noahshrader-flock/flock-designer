@@ -13,11 +13,6 @@ import { type AskName, type ComponentLink, SHARED_START, withTrial } from './mes
 import { dsnrPage } from './panel';
 import type { LocalAddresses } from './html';
 
-/**
- * The design system in VS Code, wired: what its pages share (`Shared`: the tokens and values being tried, the mode, and
- * its catalog, read once for all in `CatalogShare`), its tabs, each answered as the panel is (`receivePage`), what its
- * pages ask (`handlers`), and its commands Open a component and Open Primitives. What goes wrong is said (`failed`).
- */
 export const designSystemHost = ({
 	vscode,
 	dist,
@@ -36,36 +31,28 @@ export const designSystemHost = ({
 	kept,
 }: {
 	vscode: typeof VsCode;
-	/** The extension's build, which its pages load from. */
 	dist: VsCode.Uri;
 	api: Pick<WorkspaceApi, 'designSystemCatalog' | 'designSystems' | 'onLibraryShown'>;
 	panels: Panels;
-	/** The extension's asks, which its tabs make as the panel does. */
 	asks: () => ReadonlyMap<AskName, Route>;
-	/** The design system the core shows, whose clone a token's file is in. */
 	systems: Pick<DesignSystemsMemory, 'current'>;
 	local: () => Promise<LocalAddresses>;
 	openVoiceAndTone: () => Promise<void>;
-	/** Shows the panel and its Changes dialog. */
 	openChanges: () => Promise<void>;
 	openExternal: (url: string) => Promise<void>;
 	tell: Tell;
 	failed: (err: unknown) => void;
 	failedFor: (fromCode: boolean) => (err: unknown) => void;
-	/** Told when a component's tab opens, closes, or is brought in front or covered. */
 	onShown: () => void;
-	/** VS Code's state for the extension, where the mode chosen is kept. */
 	kept: Pick<VsCode.Memento, 'get' | 'update'>;
 }) => {
 	const edits = panels.share('tokenEdits', []);
 	const mode = panels.share('mode', keptMode(kept), (next) => keepMode(kept, next));
 	const values = panels.share('valueTrials', {});
-	// The catalog every page shows, as the extension read it.
 	const shownCatalog = panels.share('catalog', SHARED_START.catalog);
 	const catalog = new CatalogShare({
 		api,
 		shared: shownCatalog,
-		// What is tried is kept only on tokens the library still has (`editsAfterRead`).
 		onRead: (read) => edits.set(editsAfterRead(edits.current(), read)),
 	});
 	const tabs = new DesignTabs({
@@ -89,7 +76,6 @@ export const designSystemHost = ({
 		componentLink: (id: string, link: ComponentLink) => openExternal(componentLink(componentOf(shownCatalog.current().catalog, id), link)),
 		openPrimitives: () => tabs.open({ kind: 'primitives' }),
 		openVoiceAndTone,
-		// A file of the design system, as the person's clone has it, at its line: a token's, or where a value is written.
 		openLibrarySource: async (file: string, line: number) => {
 			const system = systems.current();
 			const path = system === null ? null : libraryFileIn(system, file);
@@ -107,7 +93,6 @@ export const designSystemHost = ({
 		openChanges,
 		syncDesignSystem: () => catalog.sync(),
 	} satisfies Partial<AskHandlers>;
-	/** A component of the design system shown, chosen from its catalog (the one every page shows) in VS Code's quick pick, by its story file. */
 	const pickComponent = async (): Promise<string | undefined> => {
 		const shown = shownCatalog.current().catalog;
 		if (shown?.state !== 'ready') return void tell('There is no design system shown here: the Design System tab says why.');
@@ -116,14 +101,8 @@ export const designSystemHost = ({
 	};
 	return {
 		handlers,
-		/** The components whose tab is in front. */
 		shownComponents: () => tabs.shownComponents(),
-		/** The design system shown is read for every page: the first found, once VS Code has found it. */
 		read: () => catalog.start(),
-		/**
-		 * Another design system is shown: no change is being tried on it, the last one's components' tabs are closed, and it
-		 * is read for every page.
-		 */
 		anotherShown: () => {
 			edits.set([]);
 			values.set({});
@@ -131,7 +110,6 @@ export const designSystemHost = ({
 			void catalog.start();
 		},
 		disposables: [
-			// A component in its own tab: given one by its story file, by code, or chosen from the design system shown.
 			vscode.commands.registerCommand('dsnr.openComponent', async (raw: unknown) => {
 				if (raw !== undefined) {
 					const id = readComponentArg(raw);

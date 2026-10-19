@@ -1,7 +1,5 @@
 #!/usr/bin/env node
 /**
- * Runs `dsnr` (src/cli/dsnr.ts): making a prototype from Claude Code in VS Code.
- *
  * Built from this source each time it runs, with the workspace's own esbuild, so it can never be a different version
  * from the extension beside it and there is no built copy to fall out of date.
  */
@@ -22,13 +20,11 @@ try {
 	process.exit(1);
 }
 
-/** The command's data folder, in the person's application-data directory, named by the package's `settingsFolder`. */
 const pkg = JSON.parse(readFileSync(join(workspace, 'package.json'), 'utf8'));
 
 const out = mkdtempSync(join(tmpdir(), 'dsnr-'));
 try {
 	const { build } = await import(pathToFileURL(esbuild).href);
-	// What runs inside a measured page (`src/page`) is carried as text, built the way every build carries it.
 	const { pageCodeEsbuild, REQUIRE_BANNER } = await import(pathToFileURL(join(workspace, 'pageBundle.mjs')).href);
 	const file = join(out, 'dsnr.mjs');
 	await build({
@@ -37,7 +33,6 @@ try {
 		bundle: true,
 		platform: 'node',
 		format: 'esm',
-		// A package written for require (the browser's driver, which measuring accessibility starts) still has it here.
 		banner: { js: REQUIRE_BANNER },
 		plugins: [pageCodeEsbuild()],
 		logLevel: 'error',
@@ -47,14 +42,13 @@ try {
 		cwd: process.cwd(),
 		out: (text) => console.log(text),
 		err: (text) => console.error(text),
-		// The extension's prototypes, where it said they are, so the panel and the command keep one set.
+		// Where the extension said its prototypes are, so the panel and the command keep one set.
 		prototypesRoot: commandLinePrototypes(cliDataFolder(pkg.settingsFolder)),
 		esbuild,
 		// As it would be typed where it is run, so the commands it prints match what a repository's settings allow.
 		self: ['node', relative(process.cwd(), fileURLToPath(import.meta.url))],
 		github: ghApi(),
 		open: openInBrowser,
-		// The comments on the site's pages: built as every build builds the viewer, from this source.
 		buildViewer: async () => (await import(pathToFileURL(join(workspace, 'viewerBuild.mjs')).href)).buildViewer(join(workspace, 'out', 'viewer')),
 	});
 } finally {
