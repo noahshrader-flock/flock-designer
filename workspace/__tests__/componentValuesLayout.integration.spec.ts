@@ -345,18 +345,18 @@ describe.skipIf(NO_CHROME)('a component’s Values, in the side pane, in the bro
 						return Math.round(at.left * 10) / 10;
 					};
 					const lefts = (selector: string) => [...document.querySelectorAll(selector)].map(left);
-					const edge = left(document.querySelector('.aside-section .aside-title') as Element);
+					const edge = left(document.querySelector('.aside-section .heading-part') as Element);
 					return {
 						edge,
 						// What starts at it: the parts' titles, the groups' names, the pickers' names, the values' labels, the sets' names
 						// and the sub-groups' (Light, Dark), the tokens' names, and what an own value starts with.
 						kinds: {
-							'a part’s title': lefts('.aside-title'),
-							'a group’s name': lefts('.value-group-name'),
+							'a part’s title': lefts('.aside-section .heading-part'),
+							'a group’s name': lefts('.heading-group'),
 							'a picker’s name': lefts('.picker-name'),
 							'a value’s label': lefts('.value-label'),
-							'a set’s name': lefts('.token-set-name'),
-							'a sub-group’s name': lefts('.token-group-name'),
+							'a set’s name': lefts('.heading-set'),
+							'a sub-group’s name': lefts('.heading-label'),
 							'a token’s name': lefts('.token-link'),
 							'what an own value starts with': [...document.querySelectorAll('[data-not-token] .token-line > :first-child')].map(left),
 						} as Record<string, number[]>,
@@ -756,7 +756,7 @@ describe.skipIf(NO_CHROME)('a component’s Values, in the side pane, in the bro
 			const page = await browser.newPage();
 			await page.setViewport({ width: 1100, height: 300 });
 			await page.setContent(
-				`<!doctype html><html><head><meta charset="utf-8"><style>:root{--vscode-editor-background:#1e1e1e;--vscode-editor-foreground:#ddd}${css}</style></head><body><main class="tab tab-split"><header class="tab-header"><h1 class="tab-title">FSButton</h1></header><div class="component-layout"><div class="component-stories"></div><aside class="component-aside">${tall}</aside></div></main></body></html>`,
+				`<!doctype html><html><head><meta charset="utf-8"><style>:root{--vscode-editor-background:#1e1e1e;--vscode-editor-foreground:#ddd}${css}</style></head><body><main class="tab tab-split"><header class="tab-header"><h1 class="heading heading-page">FSButton</h1></header><div class="component-layout"><div class="component-stories"></div><aside class="component-aside">${tall}</aside></div></main></body></html>`,
 			);
 			return page.evaluate(async () => {
 				const aside = document.querySelector('.component-aside') as HTMLElement;
@@ -775,7 +775,7 @@ describe.skipIf(NO_CHROME)('a component’s Values, in the side pane, in the bro
 				aside.scrollTop = 0;
 				const covers = headings.map((h) => getComputedStyle(h).backgroundColor !== 'rgba(0, 0, 0, 0)' && Number(getComputedStyle(h).zIndex) >= 1);
 				// And no group's own heading sticks, nor stays at the top of the pane at any stop.
-				const groups = [...document.querySelectorAll<HTMLElement>('.value-group-name')].map((g) => getComputedStyle(g).position);
+				const groups = [...document.querySelectorAll<HTMLElement>('.heading-group')].map((g) => getComputedStyle(g).position);
 				return {
 					width: Math.round(aside.getBoundingClientRect().width),
 					scrolls: aside.scrollHeight > aside.clientHeight,

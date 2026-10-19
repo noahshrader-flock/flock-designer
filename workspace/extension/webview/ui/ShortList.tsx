@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Disclosure } from './Disclosure';
+import { Disclosure } from './Section';
 import { ValueList } from './ValueItem';
 
 /** How many of a long list are shown before the rest, which wait behind "Show N more". */

@@ -13,6 +13,7 @@ import type { Trying } from './ComponentValues';
 import { ChangeRow, ValueList } from './ui/ValueItem';
 import { LinkButton } from './ui/LinkButton';
 import { Message } from './ui/Message';
+import { Heading } from './ui/Heading';
 
 /**
  * Where a value is written, each place a link to its line: by file, its lines after it (`src/utils/theme.ts, lines 58,
@@ -163,9 +164,9 @@ export const ChangedValues = ({
 		<>
 			<section aria-label={name ? `Value changes · ${name}` : 'Value changes'} data-value-changes className="changed">
 				<div className="changed-header">
-					<span className="changed-title">
+					<Heading size="set">
 						{name ?? 'Styles'} <span className="section-count">{tried.length}</span>
-					</span>
+					</Heading>
 					{tried.length > 0 && <LinkButton onPress={() => trying.onAll([])}>Reset all</LinkButton>}
 				</div>
 				{tried.length === 0 ? (

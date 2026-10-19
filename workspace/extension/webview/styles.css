@@ -411,6 +411,7 @@ body {
 
 /* A section's header, as VS Code's side bar draws one: a chevron, the title in small capitals, how many it holds. */
 .section-header {
+	list-style: none;
 	display: flex;
 	align-items: center;
 	gap: 4px;
@@ -426,6 +427,27 @@ body {
 	font-weight: 700;
 	text-align: start;
 	cursor: pointer;
+}
+
+/* Whatever opens and closes (`ui/Section.tsx`) is the browser's own disclosure, its marker a chevron that points at what it
+   holds once it is open. */
+.section-header::-webkit-details-marker,
+.disclosure-summary::-webkit-details-marker {
+	display: none;
+}
+
+.collapse-chevron {
+	transition: transform 120ms;
+}
+
+details[open] > summary > .collapse-chevron {
+	transform: rotate(90deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.collapse-chevron {
+		transition: none;
+	}
 }
 
 .section-header:focus-visible {
@@ -1122,24 +1144,46 @@ textarea.input {
 	padding: 0 12px 4px 28px;
 }
 
-.token-group-name {
-	margin: 8px 0 2px;
-	color: var(--dsnr-muted);
-	font-size: 0.92em;
+/* Every heading (`ui/Heading.tsx`), by where it stands: bold, at the text's size unless it heads a tab or a part of one. */
+.heading {
+	margin: 0;
+	font-size: 1em;
 	font-weight: 600;
 }
 
+.heading-page {
+	font-size: 1.6em;
+}
+
+.heading-part {
+	font-size: 1.1em;
+}
+
+/* A group's name, with what its values all are to its right (`.value-group-note`). */
+.heading-group {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 0 8px;
+	padding: 8px 0 4px;
+}
+
+.heading-label {
+	margin: 8px 0 2px;
+	color: var(--dsnr-muted);
+	font-size: 0.92em;
+}
+
 /*
- * A set of colors' heading (the palette's family, the grid's role) is a row of the same height as every row under it, in both
- * views of the colors, so flipping between them moves nothing: a row of a set, and the heading over it, are `--dsnr-row-height`.
+ * A set's heading (the palette's family, the grid's role) is a row of the same height as every row under it, in both views of
+ * the colors, so flipping between them moves nothing: a row of a set, and the heading over it, are `--dsnr-row-height`.
  */
-.token-set-name,
+.heading-set,
 .theme-headings {
 	display: flex;
 	align-items: center;
 	min-height: var(--dsnr-row-height);
-	margin: 0;
-	font-size: 1em;
 	font-weight: 600;
 }
 
@@ -1340,12 +1384,6 @@ textarea.input {
 .tab-heading {
 	flex: 1;
 	min-width: 0;
-}
-
-.tab-title {
-	margin: 0;
-	font-size: 1.6em;
-	font-weight: 600;
 }
 
 .tab-actions {
@@ -1563,30 +1601,12 @@ textarea.input {
 	}
 }
 
-.aside-title {
-	margin: 0;
-	font-size: 1.1em;
-	font-weight: 600;
-}
-
 /*
  * A component's values, in the narrow side pane, as its tokens read: each property a group, its name in the weight and colour
  * of a token's set, each value a line with what it is called on the left and its value on the right, both at the token
- * rows' size. The Tokens part is laid out the same way. No heading sticks but a part's own (`.aside-heading`).
+ * rows' size. The Tokens part is laid out the same way. No heading sticks but a part's own (`.aside-heading`). What a group's
+ * values all are is to the right of its name: quiet, and not bold.
  */
-.value-group-name {
-	display: flex;
-	flex-wrap: wrap;
-	align-items: baseline;
-	justify-content: space-between;
-	gap: 0 8px;
-	margin: 0;
-	padding: 8px 0 4px;
-	font-size: 1em;
-	font-weight: 600;
-}
-
-/* What a group's values all are, to its right: quiet, and not bold. */
 .value-group-note {
 	margin-left: auto;
 	color: var(--dsnr-muted);
@@ -1881,8 +1901,7 @@ textarea.input {
 	font-size: inherit;
 }
 
-/* How far a component's tokens reach, in two numbers side by side. */
-/* More of something, closed until it is asked for: a browser's own disclosure, with its own marker replaced by a chevron. */
+/* More of something, closed until it is asked for (`ui/Section.tsx`). */
 .disclosure-summary {
 	display: flex;
 	align-items: center;
@@ -1893,32 +1912,9 @@ textarea.input {
 	list-style: none;
 }
 
-.disclosure-summary::-webkit-details-marker {
-	display: none;
-}
-
 .disclosure-summary:focus-visible {
 	outline: var(--dsnr-focus);
 	outline-offset: 1px;
-}
-
-.disclosure-chevron {
-	transition: transform 120ms;
-}
-
-.disclosure[open] > .disclosure-summary .disclosure-chevron {
-	transform: rotate(90deg);
-}
-
-@media (prefers-reduced-motion: reduce) {
-	.disclosure-chevron {
-		transition: none;
-	}
-}
-
-.issues-title {
-	margin: 8px 0 2px;
-	font-weight: 600;
 }
 
 .issue-list {
@@ -1998,12 +1994,6 @@ textarea.input {
 	padding-top: 20px;
 	border-top: 1px solid var(--dsnr-border);
 	scroll-margin-top: 16px;
-}
-
-.primitive-title {
-	margin: 0;
-	font-size: 1.2em;
-	font-weight: 600;
 }
 
 .drawn-sets,
@@ -2268,10 +2258,6 @@ textarea.input {
 	justify-content: space-between;
 }
 
-.changed-title {
-	font-weight: 600;
-}
-
 .changed .token .item-actions {
 	opacity: 1;
 }
@@ -2349,7 +2335,7 @@ textarea.input {
 }
 
 .theme-name {
-	/* A block, not the flex a set's heading is (`.token-set-name`): an ellipsis needs one. */
+	/* A block, not the flex a set's heading is (`.heading-set`): an ellipsis needs one. */
 	display: block;
 	flex: 1;
 	min-width: 0;

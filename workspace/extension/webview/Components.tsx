@@ -2,20 +2,16 @@ import { useState } from 'react';
 import { groupsFound } from '../../src/shared/catalog';
 import type { CatalogComponent, ComponentPictures } from '../../src/shared/contract';
 import type { ComponentLink } from '../src/messages';
-import { Card } from './ui/Card';
-import { Grid } from './ui/Grid';
-import { List } from './ui/List';
 import { type MenuItem, Menu } from './ui/Menu';
-import { Row } from './ui/Row';
 import { SearchBox } from './ui/SearchBox';
 import { Section } from './ui/Section';
-import { Thumbnail } from './ui/Thumbnail';
 import { ViewOptions } from './ui/ViewOptions';
 import { NoMatches } from './ui/NoMatches';
 import { layoutSection } from './layouts';
 import { modeSection } from './mode';
 import { useMode, useShared } from './shared';
 import type { View } from './vscode';
+import { Collection, CollectionItem } from './ui/Collection';
 
 /**
  * The design system's components (6.1): a search and Grid or List, as the projects have, then a section for each group in
@@ -55,12 +51,7 @@ export const ComponentsView = ({
 			current: open.includes(c.id),
 			actions: <Menu label={`${c.name} actions`} size="small" sections={[{ items }]} />,
 		};
-		const picture = pictures.pictures[c.id];
-		return view === 'grid' ? (
-			<Card key={c.id} {...shared} picture={<Thumbnail src={picture} loading={pictures.drawing} className="card-picture" />} />
-		) : (
-			<Row key={c.id} {...shared} start={<Thumbnail src={picture} loading={pictures.drawing} className="picture" />} />
-		);
+		return <CollectionItem key={c.id} {...shared} picture={{ src: pictures.pictures[c.id], loading: pictures.drawing }} />;
 	};
 	return (
 		<>
@@ -73,7 +64,9 @@ export const ComponentsView = ({
 			) : (
 				groups.map(({ group, components: inGroup }) => (
 					<Section key={group} title={group} count={inGroup.length}>
-						{view === 'grid' ? <Grid label={group}>{inGroup.map(item)}</Grid> : <List label={group}>{inGroup.map(item)}</List>}
+						<Collection view={view} label={group}>
+							{inGroup.map(item)}
+						</Collection>
 					</Section>
 				))
 			)}

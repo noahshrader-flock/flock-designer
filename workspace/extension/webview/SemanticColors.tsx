@@ -73,7 +73,7 @@ const ThemeHeading = ({ theme }: { theme: string }) => {
 const Rows = ({ title, rows, themes, onEdit }: { title?: string; rows: SemanticRow[]; themes: string[]; onEdit: (token: DesignToken) => void }) => (
 	<div className="theme-set" {...(title ? { 'data-token-set': title } : {})}>
 		<div data-theme-headings className="theme-row theme-headings">
-			<span className="theme-name token-set-name">{title}</span>
+			<span className="theme-name">{title}</span>
 			{themes.map((theme) => (
 				<ThemeHeading key={theme} theme={theme} />
 			))}

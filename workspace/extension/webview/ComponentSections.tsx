@@ -19,6 +19,7 @@ import { ShortList } from './ui/ShortList';
 import { Swatch } from './ui/Swatch';
 import { ValueLine, ValueItem } from './ui/ValueItem';
 import { Message, tryAgain } from './ui/Message';
+import { Heading } from './ui/Heading';
 
 type Ready = Extract<ComponentTokens, { state: 'ready' }>;
 
@@ -63,14 +64,14 @@ export const TokensUsed = ({
 		) : (
 			inOrder(tokens, (t) => t.category).map(([category, inCategory]) => (
 				<div key={category} data-tokens-used={category} className="value-group">
-					<h3 className="value-group-name">{category}</h3>
+					<Heading size="group">{category}</Heading>
 					<Grouped tokens={inCategory} infoFor={info} {...actions} />
 				</div>
 			))
 		)}
 		{(answer.notTokens.length > 0 || answer.derived > 0) && (
 			<div data-own-values className="value-group">
-				<h3 className="value-group-name">
+				<Heading size="group">
 					{/* Together, so the icon is beside the words and not at the far end of the heading. */}
 					<span>
 						Set in the component itself{' '}
@@ -82,10 +83,10 @@ export const TokensUsed = ({
 							}`}
 						/>
 					</span>
-				</h3>
+				</Heading>
 				{inOrder(answer.notTokens, (n) => n.kind).map(([kind, values]) => (
 					<div key={kind} data-not-token-kind={kind}>
-						<h4 className="token-set-name">{KINDS[kind]}</h4>
+						<Heading size="set">{KINDS[kind]}</Heading>
 						<ShortList items={values} row={(n) => <NotToken key={n.value} value={n} />} />
 					</div>
 				))}

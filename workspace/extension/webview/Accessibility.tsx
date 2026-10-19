@@ -15,6 +15,7 @@ import type { AccessibilityIssue, AccessibilityResult } from '../../src/shared/c
 import { Dialog } from './ui/Dialog';
 import { LinkButton } from './ui/LinkButton';
 import { Message } from './ui/Message';
+import { Heading } from './ui/Heading';
 
 /**
  * One kind of issue: what it asks, where in WCAG, on how many elements and in which states, and axe's page on it; then the
@@ -44,7 +45,7 @@ const Issue = ({ issue }: { issue: AccessibilityIssue }) => (
 const Issues = ({ title, issues }: { title: string; issues: AccessibilityIssue[] }) =>
 	issues.length === 0 ? null : (
 		<section className="issues" aria-label={title}>
-			<h4 className="issues-title">{title}</h4>
+			<Heading size="group">{title}</Heading>
 			<ul className="issue-list">
 				{issues.map((i) => (
 					<Issue key={i.rule} issue={i} />

@@ -1620,7 +1620,7 @@ describe('every change being tried, in the panel’s Changes: the tokens and eac
 		await answerOf('changeBranch', 'values', null);
 		await answer('valueSources', FOUND);
 		expect(calls('valueSources').at(-1)?.args).toEqual([BUTTON, [SMALL]]);
-		expect(group()?.querySelector('.changed-title')?.textContent).toBe('FSButton 1');
+		expect(group()?.querySelector('.heading-set')?.textContent).toBe('FSButton 1');
 		expect(document.querySelector('[aria-label="Value changes · FSIconButton"]')).toBeNull();
 		// Its actions are here, where every change is.
 		await press(button('Save to a branch'));
@@ -1942,7 +1942,7 @@ describe('trying a change to the tokens, saving it to a branch, and proposing it
 		expect(document.querySelector('.ds-actions [aria-label="1 change being tried"]')?.classList.contains('badge-brand')).toBe(true);
 		await openChanges();
 		const changed = document.querySelector('[data-changed-tokens]') as HTMLElement;
-		expect(changed.querySelector('.changed-title')?.textContent).toBe('Tokens 1');
+		expect(changed.querySelector('.heading-set')?.textContent).toBe('Tokens 1');
 		expect(changed.querySelector('[data-change="tone.pineGreen.60"] .value-drawn')?.textContent).toBe('#15584A → #000000');
 		await press(changed.querySelector('[aria-label="Reset Tones pineGreen 60"]') as HTMLElement);
 		expect(edited()).toEqual([]);
@@ -1986,7 +1986,7 @@ describe('trying a change to the tokens, saving it to a branch, and proposing it
 		const call = sent.filter((m) => m.name === 'saveChange' && m.args?.[0] === 'tokens').at(-1);
 		await say({ type: 'answer', id: call?.id, result: { ok: false, error: 'git is not signed in to GitHub.' } });
 		expect(document.querySelector('[data-branch-actions] [role="alert"]')?.textContent).toBe('git is not signed in to GitHub.');
-		expect(document.querySelector('[data-changed-tokens] .changed-title')?.textContent).toBe('Tokens 1');
+		expect(document.querySelector('[data-changed-tokens] .heading-set')?.textContent).toBe('Tokens 1');
 	});
 
 	it('puts back a change saved before DSNR was last closed, when none is being tried', async () => {

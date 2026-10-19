@@ -37,7 +37,7 @@ describe('a component’s tab', () => {
 	it('says it is ready, shows the design system as the extension read it for every page, and is titled for its component, with its links', async () => {
 		await open();
 		expect(sent[0]).toEqual({ type: 'ready' });
-		expect(document.querySelector('.tab-title')?.textContent).toBe('FSButton');
+		expect(document.querySelector('.heading-page')?.textContent).toBe('FSButton');
 		await press(button('Storybook'));
 		expect(lastAsk()).toEqual(['componentLink', [BUTTON, 'storybook']]);
 		await press(button('GitHub'));
@@ -341,7 +341,7 @@ describe('a component’s tab', () => {
 		expect(document.querySelector('.component-aside details.aside-disclosure')).toBeNull();
 		expect(section('Tokens')?.querySelector('[data-token]')).not.toBeNull();
 		// The sixth, its name and links, is the header above.
-		expect(document.querySelector('.tab-title')?.textContent).toBe('FSButton');
+		expect(document.querySelector('.heading-page')?.textContent).toBe('FSButton');
 	});
 
 	/** Chooses the variant shown with a prop's picker: a value from its dropdown, or its switch pressed. */
@@ -687,7 +687,7 @@ describe('a component’s tab', () => {
 		await press(link);
 		const details = document.querySelector('[role="dialog"][aria-label="Accessibility findings"]') as HTMLElement;
 		expect(details.getAttribute('aria-modal')).toBe('true');
-		expect([...details.querySelectorAll('h4')].map((h) => h.textContent)).toEqual(['To fix', 'Best practice, beyond WCAG']);
+		expect([...details.querySelectorAll('h3')].map((h) => h.textContent)).toEqual(['To fix', 'Best practice, beyond WCAG']);
 		expect(details.textContent).toContain('Text needs more contrast');
 		// What axe flagged for a closer look is not listed there: nothing is said in its place.
 		expect(details.textContent).not.toContain('Check this attribute');
@@ -1388,7 +1388,7 @@ describe('a component’s tab', () => {
 		await press(button('Try again'));
 		expect(lastAsk()).toEqual(['syncDesignSystem', []]);
 		await shareCatalog(SAMPLE_CATALOG);
-		expect(document.querySelector('.tab-title')?.textContent).toBe('FSButton');
+		expect(document.querySelector('.heading-page')?.textContent).toBe('FSButton');
 	});
 
 	it('says why it could not be read, with Try again', async () => {

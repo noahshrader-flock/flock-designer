@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { Heading } from './Heading';
 
 /**
  * One part of what is said of a component, in a bordered box under a title (Styles, Tokens, Accessibility): named for assistive
@@ -8,7 +9,7 @@ import type { ReactNode } from 'react';
 export const AsidePart = ({ title, children }: { title: string; children: ReactNode }) => (
 	<section aria-label={title} className="aside-section">
 		<div className="aside-heading">
-			<h2 className="aside-title">{title}</h2>
+			<Heading size="part">{title}</Heading>
 		</div>
 		{children}
 	</section>

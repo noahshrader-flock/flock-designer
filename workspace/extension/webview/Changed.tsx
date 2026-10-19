@@ -14,6 +14,7 @@ import { ChangeRow, ValueList, ValueItem } from './ui/ValueItem';
 import { Swatch } from './ui/Swatch';
 import { LinkButton } from './ui/LinkButton';
 import { Message } from './ui/Message';
+import { Heading } from './ui/Heading';
 
 /**
  * What can be done with a change once it is tried (6.2, the app's T4 and T5; a component's values, Phase 4): its branch and
@@ -95,9 +96,9 @@ export const TokenChanges = () => {
 	return (
 		<section aria-label="Token changes" data-changed-tokens className="changed">
 			<div className="changed-header">
-				<span className="changed-title">
+				<Heading size="set">
 					Tokens <span className="section-count">{edits.length}</span>
-				</span>
+				</Heading>
 				{edits.length > 0 && <LinkButton onPress={clear}>Reset all</LinkButton>}
 			</div>
 			{edits.length === 0 ? (

@@ -19,20 +19,16 @@ import {
 } from '../../src/shared/projectScope';
 import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
-import { Card } from './ui/Card';
-import { Grid } from './ui/Grid';
-import { List } from './ui/List';
 import { type MenuItem, type MenuSection, Menu } from './ui/Menu';
 import { ViewOptions } from './ui/ViewOptions';
-import { Row } from './ui/Row';
 import { SearchBox } from './ui/SearchBox';
 import { Section } from './ui/Section';
-import { Thumbnail } from './ui/Thumbnail';
 import { NoMatches } from './ui/NoMatches';
 import { layoutSection } from './layouts';
 import { useShared } from './shared';
 import type { View } from './vscode';
 import { Message } from './ui/Message';
+import { Collection, CollectionItem } from './ui/Collection';
 
 /**
  * What a project has, in a line: its versions (the ideas tried; work in the code is not a version), then what its section
@@ -43,20 +39,13 @@ const meta = (p: Project, labels: string[]) => {
 	return [...(versions > 0 ? [plural(versions, 'version')] : []), ...labels].join(' · ');
 };
 
-/** A project's picture, its newest prototype's (`useCover`); its place kept for one until there is one. */
-const Picture = ({ project, className }: { project: Project; className: string }) => {
-	const { picture, waiting } = useCover(project);
-	return <Thumbnail src={picture} loading={waiting} className={className} />;
-};
-
 /**
- * A project: its picture, its name, what it has, its open comments, opening its newest prototype for review. As a row in a
- * list, or a card in a grid (`view`): the same things, in each one's shape.
+ * A project: its picture (its newest prototype's, `useCover`), its name, what it has, its open comments, opening its newest
+ * prototype for review.
  */
 const ProjectItem = ({
 	project,
 	labels,
-	view,
 	onOpen,
 	onOpenInBrowser,
 	onCopyLink,
@@ -67,7 +56,6 @@ const ProjectItem = ({
 	project: Project;
 	/** What its line says beside its versions: what its section does not. */
 	labels: string[];
-	view: View;
 	onOpen: (review: Review) => void;
 	onOpenInBrowser: (review: Review) => void;
 	onCopyLink: (review: Review) => void;
@@ -76,6 +64,7 @@ const ProjectItem = ({
 	onCodebase: (action: CodebaseAction, projectId: string) => void;
 }) => {
 	const shown = useShared('tabs');
+	const cover = useCover(project);
 	const open = openCommentsOf(project.work);
 	const newest = reviewsOf(project)[0];
 	const inCode = workOf(project.work, 'codebase').length > 0;
@@ -117,11 +106,7 @@ const ProjectItem = ({
 		current: shown.projects.includes(id),
 		actions: <Menu label="Project actions" size="small" sections={sections} />,
 	};
-	return view === 'grid' ? (
-		<Card {...shared} picture={<Picture project={project} className="card-picture" />} badge={badge} />
-	) : (
-		<Row {...shared} start={<Picture project={project} className="picture" />} end={badge} />
-	);
+	return <CollectionItem {...shared} picture={{ src: cover.picture, loading: cover.waiting }} badge={badge} />;
 };
 
 /**
@@ -293,7 +278,6 @@ export const Projects = ({
 			key={p.id}
 			project={p}
 			labels={labels}
-			view={view}
 			onOpen={onOpen}
 			onOpenInBrowser={onOpenInBrowser}
 			onCopyLink={onCopyLink}
@@ -302,7 +286,11 @@ export const Projects = ({
 			onCodebase={onCodebase}
 		/>
 	);
-	const shown = (items: ReactNode[], label: string) => (view === 'grid' ? <Grid label={label}>{items}</Grid> : <List label={label}>{items}</List>);
+	const shown = (items: ReactNode[], label: string) => (
+		<Collection view={view} label={label}>
+			{items}
+		</Collection>
+	);
 	return (
 		<>
 			{login === null && <Message inset>These are the projects on this machine. Sign in to see your team's too.</Message>}

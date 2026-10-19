@@ -17,6 +17,7 @@ import { Button } from './ui/Button';
 import { asks } from './host';
 import { useMode, useTokenEdits, useValueTrials } from './shared';
 import { Message, tryAgain } from './ui/Message';
+import { Heading } from './ui/Heading';
 
 /** The target while the design system is not read yet: nothing is judged at it then. */
 const NOT_READ = undeclared('the design system is not read yet');
@@ -92,7 +93,7 @@ export const ComponentTab = ({ id }: { id: string }) => {
 			<main className="tab tab-split">
 				<header className="tab-header">
 					<div className="tab-heading">
-						<h1 className="tab-title">{component.name}</h1>
+						<Heading size="page">{component.name}</Heading>
 						<Message>{component.subtitle ?? component.group}</Message>
 					</div>
 					<div className="tab-actions">

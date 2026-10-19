@@ -20,7 +20,7 @@ import { followsOf, saidValue, valueTitle } from '../../src/shared/valueNames';
 import { sharedWith } from './hooks/useComponentTokens';
 import { useMode } from './shared';
 import { ValueEditor } from './ValueEditor';
-import { Disclosure } from './ui/Disclosure';
+import { Disclosure } from './ui/Section';
 import { Select } from './ui/Field';
 import { AsidePart } from './ui/AsidePart';
 import { ColorDot } from './ui/ColorDot';
@@ -29,6 +29,7 @@ import { Switch } from './ui/Switch';
 import { useDismiss } from './ui/useDismiss';
 import { ValueItem, ValueList } from './ui/ValueItem';
 import { Message } from './ui/Message';
+import { Heading } from './ui/Heading';
 
 type Ready = Extract<ComponentTokens, { state: 'ready' }>;
 
@@ -294,7 +295,7 @@ const Inspector = ({
 			)}
 			{inspect(rows, pickers, selection, declared).map((group) => (
 				<div key={group.name} data-value-group={group.name} className="value-group">
-					<h3 className="value-group-name">{group.name}</h3>
+					<Heading size="group">{group.name}</Heading>
 					<ValueList>
 						{group.rows.map(({ row, shown }) =>
 							shown.cell === null ? (

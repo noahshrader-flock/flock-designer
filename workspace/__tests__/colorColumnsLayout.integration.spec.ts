@@ -96,11 +96,11 @@ describe.skipIf(NO_CHROME)('the colors of the Tokens tab, in the browser on this
 						gridRows: [...document.querySelectorAll('[data-token-row]')].map(tall),
 						paletteRows: [...document.querySelectorAll('li.token')].map(tall),
 						gridHeadings: [...document.querySelectorAll('[data-theme-headings]')].map(tall),
-						paletteHeadings: [...document.querySelectorAll('h4.token-set-name')].map(tall),
+						paletteHeadings: [...document.querySelectorAll('h4.heading-set')].map(tall),
 						gridSets: gridSets.length,
 						paletteSets: paletteSets.length,
 						gridBetween: between(gridSets, '[data-token-row]', '[data-theme-headings]'),
-						paletteBetween: between(paletteSets, 'li.token', 'h4.token-set-name'),
+						paletteBetween: between(paletteSets, 'li.token', 'h4.heading-set'),
 						// A set's name too long for its row is cut with an ellipsis: a block with the ellipsis, not a flex it would not work on.
 						setNames: [...document.querySelectorAll<HTMLElement>('[data-theme-headings] .theme-name')].map((e) => ({
 							display: getComputedStyle(e).display,
@@ -113,7 +113,7 @@ describe.skipIf(NO_CHROME)('the colors of the Tokens tab, in the browser on this
 						lefts: {
 							'a role’s set': [...document.querySelectorAll('[data-theme-headings] .theme-name')].map(textLeft),
 							'a role’s row': [...document.querySelectorAll('[data-token-row] .theme-name')].map(textLeft),
-							'a family': [...document.querySelectorAll('h4.token-set-name')].map(textLeft),
+							'a family': [...document.querySelectorAll('h4.heading-set')].map(textLeft),
 							'a step’s row': [...document.querySelectorAll('li.token .token-link')].map(textLeft),
 						} as Record<string, number[]>,
 						rowNameColors: [

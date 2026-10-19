@@ -12,6 +12,7 @@ import { TryingNote } from './Changed';
 import { Swatch } from './ui/Swatch';
 import { type SpecimenPreview, useSpecimenPreview } from './hooks/useSpecimenPreview';
 import { Message, tryAgain } from './ui/Message';
+import { Heading } from './ui/Heading';
 
 /** The design system's preview build, which a type specimen is drawn in, so its fonts are its own; asked for once. */
 
@@ -143,7 +144,7 @@ const Drawn = ({ primitive, tokens, byPath, preview }: { primitive: Primitive | 
 		<div className="drawn-sets">
 			{groups.map(([group, inGroup]) => (
 				<div key={group} className="drawn-group">
-					<h3 className="token-group-name">{group}</h3>
+					<Heading size="label">{group}</Heading>
 					{draw(inGroup)}
 				</div>
 			))}
@@ -180,7 +181,7 @@ export const PrimitivesTab = () => {
 	return (
 		<main className="tab">
 			<header className="tab-header">
-				<h1 className="tab-title">Primitives</h1>
+				<Heading size="page">Primitives</Heading>
 			</header>
 			<ShowingNote showing={ready.showing} branch={ready.branch} />
 			<div data-coverage className="chips">
@@ -206,13 +207,13 @@ export const PrimitivesTab = () => {
 					aria-label={category}
 					className="primitive"
 				>
-					<h2 className="primitive-title">{category}</h2>
+					<Heading size="part">{category}</Heading>
 					<Drawn primitive={primitiveNamed(category)} tokens={list} byPath={byPath} preview={preview} />
 				</section>
 			))}
 			{missing.length > 0 && (
 				<section ref={(el) => void sections.current.set('not-defined', el)} data-not-defined aria-label="Not defined" className="primitive">
-					<h2 className="primitive-title">Not defined</h2>
+					<Heading size="part">Not defined</Heading>
 					{read.source === null && <Message>No tokens were found. Looked for {listed(read.looked)}.</Message>}
 					<ul className="not-defined">
 						{missing.map((m) => (

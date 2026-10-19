@@ -12,6 +12,7 @@ import { ColorDot, tokenDot } from './ui/ColorDot';
 import { InfoTip } from './ui/InfoTip';
 import { ValueItem, ValueLine, ValueList } from './ui/ValueItem';
 import { Message } from './ui/Message';
+import { Heading } from './ui/Heading';
 
 /** What a token row can do: open its control (a token that can be changed), and open its own file at its line. */
 export interface TokenActions {
@@ -103,7 +104,7 @@ export const Sets = ({ tokens, infoFor, ...actions }: { tokens: DesignToken[]; i
 	<>
 		{inOrder(tokens, (t) => `${t.group}/${t.set}`).map(([key, inSet]) => (
 			<div key={key} data-token-set={key} className="token-set">
-				<h4 className="token-set-name">{(inSet[0] as DesignToken).set}</h4>
+				<Heading size="set">{(inSet[0] as DesignToken).set}</Heading>
 				<ValueList label={(inSet[0] as DesignToken).set}>
 					{inSet.map((t) => (
 						<TokenRow key={t.path} token={t} {...(infoFor ? { info: infoFor(t) } : {})} {...actions} />
@@ -127,7 +128,7 @@ export const Grouped = ({ tokens, infoFor, ...actions }: { tokens: DesignToken[]
 		<>
 			{groups.map(([group, inGroup]) => (
 				<div key={group} data-token-group={group} className="token-group">
-					<h3 className="token-group-name">{group}</h3>
+					<Heading size="label">{group}</Heading>
 					<Sets tokens={inGroup} {...infos} {...actions} />
 				</div>
 			))}

@@ -5,6 +5,7 @@ import { saidValue, valueTitle } from '../../src/shared/valueNames';
 import { ChangeRow, ValueList } from './ui/ValueItem';
 import { LinkButton } from './ui/LinkButton';
 import { Message } from './ui/Message';
+import { Heading } from './ui/Heading';
 
 /** What changed of a value, named as the Styles name it, and dark when it is in dark. */
 const changeName = (c: ValueChange): string =>
@@ -13,10 +14,10 @@ const changeName = (c: ValueChange): string =>
 /** One component the change moves: its name, which opens its tab, then what changed of its values, or that it moved inside. */
 export const Moved = ({ reach, name, here, onOpen }: { reach: ComponentReach; name: string; here: boolean; onOpen: () => void }) => (
 	<div data-moved={reach.file} className="value-group">
-		<h3 className="value-group-name">
+		<Heading size="group">
 			{here ? <span>{name}</span> : <LinkButton onPress={onOpen}>{name}</LinkButton>}
 			{here && <span className="value-group-note">This one</span>}
-		</h3>
+		</Heading>
 		<ValueList>
 			{reach.changes.map((c) => (
 				<ChangeRow
@@ -53,7 +54,7 @@ export const ReachView = ({
 	const names = new Map(components.map((c) => [c.id, c.name]));
 	return (
 		<section aria-label={title} className="aside-section">
-			<h2 className="aside-title">{title}</h2>
+			<Heading size="part">{title}</Heading>
 			{reach.state === 'building' ? (
 				<Message>Drawing every component with the change, to see which follow it.</Message>
 			) : reach.state === 'failed' ? (
