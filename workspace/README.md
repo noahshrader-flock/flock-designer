@@ -24,7 +24,7 @@ use it. `node bin/dsnr.mjs build-site --serve` builds the site prototypes are pu
 the full usage.
 
 **CI** (`.github/workflows/ci.yml`) runs on every push, so nothing depends on someone remembering: the static checks and
-the unit tests; every integration test, the slow accessibility suites (`cli`, `buildCheck`, `probe`) included; and the
+the unit tests; every integration test, the slow accessibility suites (`cliAccessibility`, `buildCheck`, `probe`) included; and the
 extension in a real VS Code. Only the real-library tests need the design systems' clones, and are left to `check:full`.
 
 ## Building a prototype

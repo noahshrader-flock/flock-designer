@@ -9,7 +9,7 @@ process.once('exit', () => rmSync(sealed.base, { recursive: true, force: true })
 
 // Real Chrome measuring real builds' accessibility: over a minute of the integration tests' three. CI runs them on
 // every push, so `check` leaves them to it (and to `check:full`).
-const SLOW = ['__tests__/cli.integration.spec.ts', '__tests__/buildCheck.integration.spec.ts', '__tests__/probe.integration.spec.ts'];
+const SLOW = ['__tests__/cliAccessibility.integration.spec.ts', '__tests__/buildCheck.integration.spec.ts', '__tests__/probe.integration.spec.ts'];
 const integration = { maxWorkers: '50%', testTimeout: 30_000, sequence: { groupOrder: 1 } };
 
 export default defineConfig({
