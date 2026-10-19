@@ -1,8 +1,8 @@
 # On every push to the default branch, so a change that breaks something is seen on the commit that did it, with nobody
 # having to remember to run anything. Every commit lands on noah/flock-designer directly, so it runs on push rather than on
-# pull requests, which would never fire. Three jobs, side by side: the static checks and unit tests; every integration
-# test (real git, esbuild and Chrome); and the extension run in a real VS Code. Only the real-library tests are left to
-# the machine with the design systems' clones (npm run check:full).
+# pull requests, which would never fire. Four jobs, side by side: the static checks and unit tests; the integration
+# tests (real git, esbuild and Chrome); the slow ones; and the extension in a real VS Code. Only the real-library tests
+# are left to the machine with the design systems' clones (npm run check:full).
 name: CI
 
 on:
@@ -35,10 +35,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
-      - name: Integration tests, the slow ones included
-        run: npm run test:integration && npm run test:slow
+      - name: Integration tests
+        run: npm run test:integration
 
-  extension:
+  # Beside the rest, not after them: the real-Chrome accessibility suites are the longest part.
+  slow:
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -46,8 +47,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
+      - name: The slow integration tests
+        run: npm run test:slow
+
+  extension:
+    runs-on: ubuntu-latest
+    # The version the extension last passed on, raised on purpose: a VS Code release alone never turns a commit red.
+    env:
+      VSCODE_VERSION: 1.140.0
+    defaults:
+      run:
+        working-directory: workspace
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
       - name: Get VS Code
-        run: curl -fsSL https://update.code.visualstudio.com/latest/linux-x64/stable | tar -xz -C "$RUNNER_TEMP"
+        run: curl -fsSL "https://update.code.visualstudio.com/$VSCODE_VERSION/linux-x64/stable" | tar -xz -C "$RUNNER_TEMP"
       # On a screen of its own (xvfb), as VS Code needs one.
       - name: The extension in VS Code
         run: CODE_BIN="$RUNNER_TEMP/VSCode-linux-x64/code" xvfb-run -a npm run extension:test
