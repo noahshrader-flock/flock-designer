@@ -22,131 +22,100 @@ const demo = {
 } as unknown as Project;
 
 const world = (
-	addressed: { changed: boolean; version: string } = { changed: true, version: 'v1' },
 	/** Null when who has commented cannot be read. */
 	commenters: string[] | null = ['noah'],
 	chooses?: (actions: string[]) => string | undefined,
 ) => {
-	const said: string[] = [];
 	const told: string[] = [];
 	const api = {
-		agentReadiness: vi.fn(async () => ok({ state: 'ready' })),
-		addressPrototype: vi.fn(async () => ok({ state: 'done', value: { ...addressed, made: null, comment } })),
+		handPrototypeAddress: vi.fn(async (_root: string, _projectId: string, _name: string, _comment: unknown, newVersion: boolean) =>
+			ok({ editor: true, command: null, target: newVersion ? 'v4' : 'v1', from: newVersion ? 'v1' : null, number: 2 }),
+		),
 		listProjects: vi.fn(async () => ok([demo])),
 		readComments: vi.fn(async () =>
 			commenters === null
 				? { ok: false, error: 'GitHub could not be reached.' }
 				: ok(commenters.map((author, i) => ({ author, resolved: false, thread: 4, id: i + 1 }))),
 		),
-		stopAgent: vi.fn(async () => ok(null)),
-		onAgentLog: vi.fn(() => () => undefined),
 	};
 	const deps: AddressDeps = {
 		api: api as unknown as AddressDeps['api'],
-		progress: vi.fn(async (title, task) => {
-			said.push(title);
-			await task((m: string) => void said.push(m));
-		}),
-		log: { start: vi.fn(), line: vi.fn() },
 		tell: (m) => void told.push(m),
 		offer: vi.fn(async (_m: string, actions: string[]) => chooses?.(actions)),
-		show: vi.fn(async () => undefined),
+		watch: vi.fn(),
 	};
-	return { deps, api, said, told };
+	return { deps, api, told };
 };
 
 describe('addressing a comment from a review', () => {
-	it('runs the agent on the one comment, said as it goes, shows the changed page, and says which it is', async () => {
-		const { deps, api, said, told } = world();
-		// The version shown is returned for whoever asked to go to it (a browser).
-		expect(await addressComment(deps, review, comment)).toBe('v1');
+	it('hands the one comment to the agent, watches for its build, and says the person resolves it', async () => {
+		const { deps, api, told } = world();
+		await addressComment(deps, '/product', review, comment);
 		expect(deps.offer).not.toHaveBeenCalled();
-		expect(api.addressPrototype).toHaveBeenCalledWith('demo', 'v1', comment, false);
-		expect(said).toEqual(['Addressing a comment on Demo · Version 1', 'The agent is working on the comment. This takes a few minutes.']);
-		expect(deps.log.start).toHaveBeenCalledWith('Demo · Version 1: addressing a comment');
-		expect(told).toEqual(['The agent has finished. Look at the page, then resolve what is done.']);
-		expect(deps.show).toHaveBeenCalledWith(review);
+		expect(api.handPrototypeAddress).toHaveBeenCalledWith('/product', 'demo', 'v1', comment, false);
+		expect(deps.watch).toHaveBeenCalledWith('demo', 'v1', 'Demo · Version 1', null);
+		expect(told).toHaveLength(1);
+		expect(told[0]).toMatch(/^Comment 2 on Demo · Version 1 is in Claude Code in this window now/);
+		expect(told[0]).toMatch(/DSNR saves the page when it is built\. Resolve the comment once you have looked at it\.$/);
 	});
 
 	it('asks first when others have commented, and changes it in place when the person says update', async () => {
-		const { deps, api } = world(undefined, ['noah', 'pm', 'pm'], (actions) => actions[0]);
-		expect(await addressComment(deps, review, comment)).toBe('v1');
+		const { deps, api } = world(['noah', 'pm', 'pm'], (actions) => actions[0]);
+		await addressComment(deps, '/product', review, comment);
 		expect(deps.offer).toHaveBeenCalledWith(
 			'2 comments from others are on Version 1. Changing it in place can leave their pins on the wrong element.',
 			['Update Version 1', 'Start Version 4 from it'],
 		);
-		expect(api.addressPrototype).toHaveBeenCalledWith('demo', 'v1', comment, false);
+		expect(api.handPrototypeAddress).toHaveBeenCalledWith('/product', 'demo', 'v1', comment, false);
 	});
 
-	it('makes the change in a new version when the person chooses one, shows it, and says so', async () => {
-		const { deps, api, told } = world({ changed: true, version: 'v4' }, ['pm'], (actions) => actions[1]);
-		expect(await addressComment(deps, review, comment)).toBe('v4');
-		expect(api.addressPrototype).toHaveBeenCalledWith('demo', 'v1', comment, true);
-		expect(told).toEqual(['The change is in Version 4, a new version from Version 1, which stays as it was.']);
+	it('makes the change in a new version when the person chooses one, watches that one, and says so', async () => {
+		const { deps, api, told } = world(['pm'], (actions) => actions[1]);
+		await addressComment(deps, '/product', review, comment);
+		expect(api.handPrototypeAddress).toHaveBeenCalledWith('/product', 'demo', 'v1', comment, true);
+		expect(deps.watch).toHaveBeenCalledWith('demo', 'v4', 'Demo · Version 1', 'v1');
+		expect(told[0]).toContain('The change is made in Version 4, a new version from Version 1, which stays as it was.');
 	});
 
 	it('asks nothing for the comment being addressed alone, or for resolved ones: they have no other pin to move', async () => {
-		const { deps, api } = world(undefined, ['noah']);
+		const { deps, api } = world(['noah']);
 		api.readComments.mockResolvedValue(
 			ok([
 				{ author: 'pm', resolved: false, ...comment },
 				{ author: 'qa', resolved: true, thread: 4, id: 41 },
 			]) as never,
 		);
-		expect(await addressComment(deps, review, comment)).toBe('v1');
+		await addressComment(deps, '/product', review, comment);
 		expect(deps.offer).not.toHaveBeenCalled();
-		expect(api.addressPrototype).toHaveBeenCalledWith('demo', 'v1', comment, false);
+		expect(api.handPrototypeAddress).toHaveBeenCalledWith('/product', 'demo', 'v1', comment, false);
 	});
 
 	it('makes the change in a new version with no question when one was asked for outright', async () => {
-		const { deps, api } = world({ changed: true, version: 'v4' }, ['pm']);
-		expect(await addressComment(deps, review, comment, true)).toBe('v4');
+		const { deps, api } = world(['pm']);
+		await addressComment(deps, '/product', review, comment, true);
 		expect(deps.offer).not.toHaveBeenCalled();
 		expect(api.readComments).not.toHaveBeenCalled();
-		expect(api.addressPrototype).toHaveBeenCalledWith('demo', 'v1', comment, true);
+		expect(api.handPrototypeAddress).toHaveBeenCalledWith('/product', 'demo', 'v1', comment, true);
 	});
 
-	it('does nothing when the person chooses neither, and asks the same when who has commented cannot be read', async () => {
-		const neither = world(undefined, ['pm']);
-		expect(await addressComment(neither.deps, review, comment)).toBeNull();
+	it('hands nothing over when the person chooses neither, and asks the same when who has commented cannot be read', async () => {
+		const neither = world(['pm']);
+		await addressComment(neither.deps, '/product', review, comment);
 		expect(neither.deps.offer).toHaveBeenCalled();
-		expect(neither.api.addressPrototype).not.toHaveBeenCalled();
-		const unread = world(undefined, null, (actions) => actions[0]);
-		expect(await addressComment(unread.deps, review, comment)).toBe('v1');
+		expect(neither.api.handPrototypeAddress).not.toHaveBeenCalled();
+		expect(neither.deps.watch).not.toHaveBeenCalled();
+		const unread = world(null, (actions) => actions[0]);
+		await addressComment(unread.deps, '/product', review, comment);
 		expect(unread.deps.offer).toHaveBeenCalledWith('Who has commented on Version 1 could not be read.', [
 			'Update Version 1',
 			'Start Version 4 from it',
 		]);
 	});
 
-	it('says when the agent changed nothing, and leaves the review as it is', async () => {
-		const { deps, told } = world({ changed: false, version: 'v1' });
-		expect(await addressComment(deps, review, comment)).toBeNull();
-		expect(told[0]).toMatch(/^The agent finished without changing anything\. Its log says why/);
-		expect(deps.show).not.toHaveBeenCalled();
-	});
-
-	it('stops when Stop is pressed, and finishes nothing', async () => {
-		const { deps, api, told } = world();
-		// Stopped, the core's Address ends as stopped: the change is finished the next time the prototype is opened.
-		api.addressPrototype.mockResolvedValue(ok({ state: 'stopped' }) as never);
-		deps.progress = vi.fn(async (_title, task, onStop) => {
-			onStop();
-			await task(() => undefined);
-		});
-		expect(await addressComment(deps, review, comment)).toBeNull();
-		expect(api.stopAgent).toHaveBeenCalled();
-		expect(deps.show).not.toHaveBeenCalled();
-		expect(told).toEqual([]);
-	});
-
-	it('fails saying why, and before anything when Claude Code is not here', async () => {
-		const failing = world();
-		failing.api.addressPrototype.mockResolvedValue({ ok: false, error: 'The comment is resolved.' } as never);
-		await expect(addressComment(failing.deps, review, comment)).rejects.toThrow('The comment was not addressed: The comment is resolved.');
-		const missing = world();
-		missing.api.agentReadiness.mockResolvedValue(ok({ state: 'missing' }) as never);
-		await expect(addressComment(missing.deps, review, comment)).rejects.toThrow(/Claude Code is not installed/);
-		expect(missing.api.addressPrototype).not.toHaveBeenCalled();
+	it('fails saying why, watching nothing, when the comment cannot be handed over', async () => {
+		const { deps, api } = world();
+		api.handPrototypeAddress.mockResolvedValue({ ok: false, error: 'There are no open comments to address.' } as never);
+		await expect(addressComment(deps, '/product', review, comment)).rejects.toThrow('There are no open comments to address.');
+		expect(deps.watch).not.toHaveBeenCalled();
 	});
 });

@@ -2,7 +2,7 @@ import './viewer.css';
 import { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { TooltipHost } from '../ui/Tooltip';
-import { type Relay, isServedHere, versionAddress, keyFromAddress, listenForDsnr, serverRelay } from './relay';
+import { type Relay, isServedHere, keyFromAddress, listenForDsnr, serverRelay } from './relay';
 import { applyEditorTheme, applyScheme, systemIsDark, watchSystemScheme } from './scheme';
 import { type EditorTheme, isDarkTheme } from '../shared/reviewRelay';
 import { Viewer, type ViewerConfig, type ViewerSlots, readConfig } from './Viewer';
@@ -29,23 +29,9 @@ const InPage = ({ config, slots }: { config: ViewerConfig; slots: ViewerSlots })
 		applyScheme(document, editor ? isDarkTheme(editor.kind) : system, editor !== null);
 		applyEditorTheme(document, editor);
 	}, [editor, system]);
-	// Only with a key: in VS Code the tab shows the addressed version itself.
-	const onAddressed = (name: string) => {
-		const to = versionAddress(config.projectHref, name, location.href.split('#')[0] as string);
-		if (to === location.href.split('#')[0]) location.reload();
-		else if (to !== null) location.assign(to);
-	};
 	// `openedHere`: from this machine, not in DSNR's tab, and with no key: opened some other way than Open in browser.
 	return (
-		<Viewer
-			config={config}
-			slots={slots}
-			relay={relay}
-			openedHere={key === null && !framed && isServedHere(location)}
-			signIn={signIn}
-			note={note}
-			{...(key === null ? {} : { onAddressed })}
-		/>
+		<Viewer config={config} slots={slots} relay={relay} openedHere={key === null && !framed && isServedHere(location)} signIn={signIn} note={note} />
 	);
 };
 

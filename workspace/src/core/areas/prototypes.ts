@@ -2,12 +2,11 @@ import type { CallsDeps } from '../compose';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { folderName } from '../../shared/brief';
-import type { BuildInCodebase, CommentRef, JobEnd, OpenedPrototype, PrototypeAddressed, PrototypeReadiness } from '../../shared/contract';
+import type { BuildInCodebase, CommentRef, HandedComment, OpenedPrototype, PrototypeReadiness } from '../../shared/contract';
 import { coverPath, prototypeKey, prototypePagePath } from '../../shared/designPaths';
 import { statesOf } from '../../shared/prototypeStates';
 import { workLabel } from '../../shared/work';
 import { ADDRESS_SKILL, chooseComment } from '../services/prototypes/address';
-import { afterRun } from '../services/agent/agent';
 import { guidePart, prototypeAddressTask, prototypeBuildTask } from '../services/agent/agentTasks';
 import { writeCommentsExport } from '../services/prototypes/commentsExport';
 import { readDescriptor } from '../services/projects/descriptor';
@@ -16,27 +15,19 @@ import { ensureLocalBranch } from '../services/platform/git';
 import { INSTALL_COMMAND } from '../services/codebase/install';
 import { jpegDataUrl } from '../services/prototypes/picture';
 import { type CoverDeps, builtHere, ensureCovers } from '../services/prototypes/projectCovers';
-import { BUILD_SKILL, GUIDE, type PrototypeSources, assignFolder, prototypeBuildPrompt, prototypeReadable } from '../services/prototypes/prototype';
-import { type PrototypeChange, localPrototypeFile, whereTheChangeGoes } from '../services/prototypes/prototypeWork';
+import {
+	BUILD_SKILL,
+	GUIDE,
+	type PrototypeSources,
+	assignFolder,
+	prototypeAddressPrompt,
+	prototypeBuildPrompt,
+} from '../services/prototypes/prototype';
+import { localPrototypeFile, whereTheChangeGoes } from '../services/prototypes/prototypeWork';
 import { singleFlight } from '../services/platform/concurrency';
 
 export const prototypesArea = (d: CallsDeps) => {
-	const {
-		agent,
-		agentBusy,
-		designRepo,
-		me,
-		opened,
-		ports,
-		prototypePage,
-		prototypesRoot,
-		deploys,
-		readSkillText,
-		refuseWhileBusy,
-		servePrototype,
-		store,
-		work,
-	} = d;
+	const { agentBusy, designRepo, me, opened, ports, prototypePage, prototypesRoot, deploys, readSkillText, servePrototype, store, work } = d;
 	const inFlight = singleFlight<string, unknown>();
 	const once = <T>(key: string, run: () => Promise<T>): Promise<T> => inFlight.run(key, run) as Promise<T>;
 	const coverDeps: CoverDeps = {
@@ -59,31 +50,6 @@ export const prototypesArea = (d: CallsDeps) => {
 		const accessibility = await work.accessibility(projectId, name);
 		const voice = await work.voice();
 		return { task: prototypeBuildTask({ guide: await guideFor(sources), skill, build, sources, accessibility, voice, request }), sources };
-	};
-	const runPrototypeAgent = (projectId: string, name: string, sources: PrototypeSources, task: string) =>
-		agent.run(work.dir(projectId), projectId, task, { bare: true, readOnly: prototypeReadable(sources), work: prototypeKey(projectId, name) });
-	const prototypeChanges = new Map<string, { comment: CommentRef; projectId: string; change: PrototypeChange }>();
-	const keyOf = (comment: CommentRef) => `${comment.thread}/${comment.id}`;
-	/** Run when the agent ends, and when the prototype is opened again, so a change whose run was stopped is never stranded. */
-	const finishPrototypeChange = async (comment: CommentRef): Promise<PrototypeAddressed> => {
-		const pending = prototypeChanges.get(keyOf(comment));
-		if (!pending) throw new Error('There is no change to this comment waiting to be saved.');
-		refuseWhileBusy();
-		prototypeChanges.delete(keyOf(comment));
-		const { projectId, change } = pending;
-		const { version, made } = await work.finishChange(projectId, change, me(), `For a comment on ${workLabel(change.from)}`);
-		// Either way: a run that changed nothing clears the mark an earlier one left.
-		const marked = await designRepo.threads.setAddressed(comment, version, version === null ? null : change.target);
-		if (version !== null) deploys.page(projectId, change.target);
-		return { changed: version !== null, version: change.target, made, comment: marked };
-	};
-	const finishPrototypeChanges = async (projectId: string): Promise<void> => {
-		if (agentBusy()) return;
-		for (const pending of [...prototypeChanges.values()]) {
-			// One that does not build is left as it is on this machine, unrecorded: nobody is watching to be told why, and
-			// the next Address on it starts again from what people saw.
-			if (pending.projectId === projectId) await finishPrototypeChange(pending.comment).catch(() => undefined);
-		}
 	};
 	/** What is at a picture's path never changes, so it is read once. */
 	const coversRead = new Map<string, string>();
@@ -111,10 +77,8 @@ export const prototypesArea = (d: CallsDeps) => {
 			const label = workLabel({ name });
 			return handToClaude(ports, canonical, prototypeBuildPrompt({ label, projectId, taskFile }));
 		},
-		addressPrototype: async (projectId: string, name: string, comment: CommentRef, newVersion: boolean): Promise<JobEnd<PrototypeAddressed>> => {
-			refuseWhileBusy();
-			// One left from a run whose screen was closed is finished first, or this run would start from the same copy.
-			await finishPrototypeChanges(projectId);
+		handPrototypeAddress: async (root: string, projectId: string, name: string, comment: CommentRef, newVersion: boolean): Promise<HandedComment> => {
+			const canonical = opened.require(root);
 			const addressSkill = await readSkillText(ADDRESS_SKILL);
 			const buildSkill = await readSkillText(BUILD_SKILL);
 			// Read now, not earlier: this is what makes the file current.
@@ -130,39 +94,31 @@ export const prototypesArea = (d: CallsDeps) => {
 			const change = await work.startChange(projectId, name, { newVersion, comments, acting: comment });
 			// Modeled on what the version it comes from was: a new one has no record of its own yet.
 			const { build, sources } = await prototypeRun(projectId, change.target, change.from.name);
-			prototypeChanges.set(keyOf(comment), { comment, projectId, change });
-			const where = whereTheChangeGoes(change);
-			const accessibility = await work.accessibility(projectId, change.from.name);
-			const voice = await work.voice();
-			const end = await runPrototypeAgent(
-				projectId,
-				name,
+			const task = prototypeAddressTask({
+				guide: await guideFor(sources),
+				addressSkill,
+				buildSkill,
+				build,
 				sources,
-				prototypeAddressTask({
-					guide: await guideFor(sources),
-					addressSkill,
-					buildSkill,
-					build,
-					sources,
-					accessibility,
-					voice,
-					commentsPath: exported.path,
-					number,
-					name,
-					where,
-				}),
-			);
-			// Stopped, the change is finished the next time the prototype is opened, from what the agent left.
-			if (afterRun(end) === 'stopped') return { state: 'stopped' };
-			return { state: 'done', value: await finishPrototypeChange(comment) };
+				accessibility: await work.accessibility(projectId, change.from.name),
+				voice: await work.voice(),
+				commentsPath: exported.path,
+				number,
+				name,
+				where: whereTheChangeGoes(change),
+			});
+			const taskFile = join(dirname(work.file(projectId, change.target)), `${change.target}-address.md`);
+			writeFileSync(taskFile, task);
+			const handed = await handToClaude(ports, canonical, prototypeAddressPrompt({ number, label: workLabel({ name }), projectId, taskFile }));
+			return { ...handed, target: change.target, from: change.fresh ? change.from.name : null, number };
 		},
-		saveBuilt: async (projectId: string, name: string): Promise<'saved' | 'waiting'> => {
-			const saved = await work.saveBuilt(projectId, name);
+		saveBuilt: async (projectId: string, name: string, from: string | null): Promise<'saved' | 'waiting'> => {
+			const fresh = from === null ? null : { from, me: me(), note: `For a comment on ${workLabel({ name: from })}` };
+			const saved = await work.saveBuilt(projectId, name, fresh);
 			if (saved === 'saved') deploys.page(projectId, name);
 			return saved;
 		},
 		openPrototype: async (projectId: string, name: string): Promise<OpenedPrototype> => {
-			await finishPrototypeChanges(projectId);
 			const html = await prototypePage(projectId, name);
 			if (html === null) throw new Error('This prototype has no page yet.');
 			// A page built here but never saved (the screen was left while the agent finished) is saved now, so no

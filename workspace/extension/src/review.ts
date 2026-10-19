@@ -116,7 +116,7 @@ type Panel = Pick<VsCode.WebviewPanel, 'title' | 'active' | 'visible' | 'reveal'
 
 /**
  * The site is built afresh each time so it is the records as they are. One tab per project, so another of its prototypes
- * (or the one Address made) shows there.
+ * shows there.
  */
 export class Reviews {
 	private readonly tabs = new Map<string, { panel: Panel; review: Review }>();
@@ -178,13 +178,6 @@ export class Reviews {
 		const open = this.tabs.get(review.projectId);
 		this.shows(open ?? this.make(review), review, src);
 		if (open) open.panel.reveal();
-	}
-
-	/** Never brought in front of the browser, and none opened. The site is built either way, so the browser has the page. */
-	async showIfOpen({ records, ...review }: Review & { records: string }): Promise<void> {
-		const src = await this.address({ records, ...review });
-		const open = this.tabs.get(review.projectId);
-		if (open) this.shows(open, review, src);
 	}
 
 	private shows(tab: { panel: Panel; review: Review }, review: Review, src: string): void {

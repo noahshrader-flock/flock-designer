@@ -504,19 +504,4 @@ describe('in DSNR’s review tab, in VS Code', () => {
 		await settle();
 		expect(asked.at(-1)).toEqual(['address', [{ thread: gh.issues[0]!.number, id: comment.id }, 'prototype/demo/v1', true]]);
 	});
-
-	it('is told which version Address shows its change in, for a page in the browser to go to (BROWSER_COMMENTS_PLAN 3.2)', async () => {
-		const { relay } = tab();
-		const addressed = vi.fn();
-		const answering: Relay = { ask: (name, args) => (name === 'address' ? Promise.resolve({ ok: true, value: 'v4' }) : relay.ask(name, args)) };
-		const page = sitePage();
-		current = await render(createElement(Viewer, { config: CONFIG, slots: page.slots, relay: answering, onAddressed: addressed }));
-		await settle();
-		await commentOnPage(page.doc, 'h1', 'Bigger');
-		await press(button(/^Show all comments/));
-		await settle();
-		await press(menuItem(await openMenu(button('Comment actions')), 'Address'));
-		await settle();
-		expect(addressed).toHaveBeenCalledWith('v4');
-	});
 });

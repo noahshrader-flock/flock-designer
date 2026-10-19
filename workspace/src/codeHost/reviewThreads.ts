@@ -153,8 +153,8 @@ export class ReviewThreads {
 	}
 
 	/**
-	 * GitHub decides who may, so nothing is enforced here. Reopening also clears the agent's mark: its change was not what
-	 * was meant, so Address can be run on it again.
+	 * GitHub decides who may, so nothing is enforced here. Reopening also clears an agent's mark left by an older DSNR: its
+	 * change was not what was meant.
 	 */
 	async setResolved(comment: CommentRef, resolved: boolean): Promise<ReviewComment> {
 		const path = `${this.apiPath}/issues/comments/${comment.id}`;
@@ -163,24 +163,6 @@ export class ReviewThreads {
 		const next = resolved ? withResolved(body, true) : withAddressed(withResolved(body, false), null);
 		if (isResolved(next) === isResolved(body) && addressedAt(next) === addressedAt(body)) return this.toComment(current, comment.thread);
 		const updated = await this.session.api(path, { method: 'PATCH', body: { body: next } });
-		return this.toComment(asRecord(updated), comment.thread);
-	}
-
-	/**
-	 * Resolves it in the same write, so its pin does not point at what the agent just changed. A null commit (a re-address
-	 * that changed nothing) clears the mark and leaves the comment open or resolved as the person had it.
-	 */
-	async setAddressed(comment: CommentRef, commit: string | null, version: string | null = null): Promise<ReviewComment> {
-		const path = `${this.apiPath}/issues/comments/${comment.id}`;
-		const current = asRecord(await this.session.api(path));
-		const body = String(current.body ?? '');
-		const addressed = withAddressed(body, commit, version);
-		// Resolved only when a change was recorded: `withAddressed` writes only a real commit.
-		const marked = addressedAt(addressed) === null ? addressed : withResolved(addressed, true);
-		// Judged by what the marks say, not by the text: rewriting them can reorder a body that already says it.
-		const same = addressedAt(marked) === addressedAt(body) && addressedIn(marked) === addressedIn(body) && isResolved(marked) === isResolved(body);
-		if (same) return this.toComment(current, comment.thread);
-		const updated = await this.session.api(path, { method: 'PATCH', body: { body: marked } });
 		return this.toComment(asRecord(updated), comment.thread);
 	}
 

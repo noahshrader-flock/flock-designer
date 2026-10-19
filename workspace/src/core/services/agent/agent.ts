@@ -26,8 +26,6 @@ export interface AgentExtras {
 	work?: string;
 	/** A run that is a Handoff, so a screen opened again knows it ends in a report, not a preview. */
 	purpose?: 'handoff';
-	/** Not working in a repository, so there are no repository instructions to point at. */
-	bare?: boolean;
 	/** Chosen by the app, so the person can continue the conversation in their editor afterwards. */
 	session?: string;
 	name?: string;
@@ -359,7 +357,7 @@ export class AgentRunner {
 			if (extras?.work !== undefined && extras.work === this.work) return this.current;
 			throw new Error(AGENT_BUSY);
 		}
-		const argv = this.deps.adapter.argvFor(extras?.bare ? task : this.taskFor(projectId, task), extras);
+		const argv = this.deps.adapter.argvFor(this.taskFor(projectId, task), extras);
 		const [file, ...args] = argv;
 		if (file === undefined) {
 			this.current = { state: 'unavailable', detail: 'The agent adapter produced no command.' };

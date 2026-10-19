@@ -29,7 +29,7 @@ import type {
 	OpenedPrototype,
 	PageStatus,
 	Project,
-	PrototypeAddressed,
+	HandedComment,
 	PrototypeReadiness,
 } from '../domain/projects';
 import type { PublishStatus, ShareStatus } from '../domain/publishing';
@@ -139,19 +139,17 @@ export interface WorkspaceApi {
 	): Promise<Result<Work>>;
 	/** Nothing is saved or checked here: the prototype is saved when opened. */
 	handPrototypeBuild(root: string, projectId: string, name: string, request: string): Promise<Result<BuildInCodebase>>;
-	/**
-	 * One comment, never a batch. If the person stops it, the change is finished the next time the prototype is
-	 * opened.
-	 */
-	addressPrototype(projectId: string, name: string, comment: CommentRef, newVersion: boolean): Promise<Result<JobEnd<PrototypeAddressed>>>;
+	/** Hands one comment to the agent, as a build is handed. Nothing is recorded until its change is built: see `saveBuilt`. */
+	handPrototypeAddress(root: string, projectId: string, name: string, comment: CommentRef, newVersion: boolean): Promise<Result<HandedComment>>;
 	publishedPage(projectId: string, name: string): Promise<Result<PageStatus>>;
 	/** The same publish that runs by itself when it is saved, for after one stopped or before it would. */
 	publishPage(projectId: string, name: string): Promise<Result<PageStatus>>;
 	/**
 	 * Saves only when the page is a build of its source as it is now, and that source is not the one saved already. Safe to
-	 * ask as often as one likes: each build is saved once.
+	 * ask as often as one likes: each build is saved once. `from` names the version a new one was started from: it is
+	 * recorded only once its source differs from that one's.
 	 */
-	saveBuilt(projectId: string, name: string): Promise<Result<'saved' | 'waiting'>>;
+	saveBuilt(projectId: string, name: string, from: string | null): Promise<Result<'saved' | 'waiting'>>;
 	openPrototype(projectId: string, name: string): Promise<Result<OpenedPrototype>>;
 	buildInCodebasePlan(root: string, projectId: string, name: string): Promise<Result<BuildInCodebasePlan>>;
 	prototypeReadiness(root: string): Promise<Result<PrototypeReadiness>>;
@@ -224,7 +222,7 @@ export const INVOKE = [
 	'createPrototype',
 	'assignFolder',
 	'handPrototypeBuild',
-	'addressPrototype',
+	'handPrototypeAddress',
 	'publishedPage',
 	'publishPage',
 	'saveBuilt',

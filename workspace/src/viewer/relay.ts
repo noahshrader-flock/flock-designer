@@ -1,7 +1,6 @@
 import type { CommentAnchor, CommentRef, Result, ReviewComment, SignInState } from '../shared/contract';
 import { ASK_PATH, type EditorTheme, KEY_FRAGMENT, KEY_HEADER, type RelayAsk, type RelayCall, isKey, readRelayTell } from '../shared/reviewRelay';
 import type { CommentStore } from './comments/surfaces';
-import { isPrototypeName } from '../shared/prototypeNames';
 import { isThisMachine } from '../shared/thisMachine';
 
 export interface Relay {
@@ -115,10 +114,6 @@ export const serverRelay = (key: string, fetcher: typeof fetch = fetch): Relay =
 		},
 	};
 };
-
-/** Null for what is not a version's name. */
-export const versionAddress = (projectHref: string, name: string, here: string): string | null =>
-	isPrototypeName(name) ? new URL(`${projectHref}${name}/`, here).href : null;
 
 export const loginIn = (answer: Result<unknown>): string | null => {
 	const state = answer.ok ? (answer.value as SignInState) : null;

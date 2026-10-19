@@ -298,7 +298,7 @@ describe.skipIf(process.env.DSNR_REAL_AGENT !== '1' || NO_CHROME)('the agent, wi
 			readDesignFile: store.readFile,
 			esbuild: () => esbuild,
 		});
-		const ended = await runToEnd(join(world.prototypes, 'demo'), task, { bare: true, readOnly: prototypeReadable(await work.sources('demo', 'v1')) });
+		const ended = await runToEnd(join(world.prototypes, 'demo'), task, { readOnly: prototypeReadable(await work.sources('demo', 'v1')) });
 		const fixed = readFileSync(source, 'utf8');
 		console.log(`The agent's last words: ${ended.said}\nIts source:\n${fixed}`);
 		expect(ended.ok, ended.said).toBe(true);

@@ -300,10 +300,21 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 	 * Saves only a page newer than its source, from a source not saved already: asked as often as a watcher likes, it
 	 * saves each build once.
 	 */
-	const saveBuilt = async (projectId: string, name: string): Promise<'saved' | 'waiting'> => {
+	const saveBuilt = async (
+		projectId: string,
+		name: string,
+		fresh: { from: string; me: Person | null; note: string } | null = null,
+	): Promise<'saved' | 'waiting'> => {
 		const source = localFile(projectId, name, 'tsx');
 		const page = file(projectId, name);
 		if (!existsSync(source) || !existsSync(page) || statSync(page).mtimeMs < statSync(source).mtimeMs) return 'waiting';
+		if (fresh !== null && !(await records(projectId)).some((i) => i.name === name)) {
+			const change = await resumeChange(projectId, name, fresh.from);
+			// Checked here, as `finishChange` removes an unchanged new version, which the agent may still be working in.
+			if (change === null || contentHashOf(readFileSync(source, 'utf8')) === change.before) return 'waiting';
+			await finishChange(projectId, change, fresh.me, fresh.note);
+			return 'saved';
+		}
 		if (readFileSync(source, 'utf8') === (await ctx.readDesignFile(prototypeSourcePath(projectId, name)))) return 'waiting';
 		await save(projectId, name);
 		return 'saved';

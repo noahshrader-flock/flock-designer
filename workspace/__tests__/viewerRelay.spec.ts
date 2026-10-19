@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { versionAddress, keyFromAddress, listenForDsnr, relayComments, serverRelay } from '../src/viewer/relay';
+import { keyFromAddress, listenForDsnr, relayComments, serverRelay } from '../src/viewer/relay';
 
 const TAB = 'vscode-webview://0a1b2c';
 
@@ -166,19 +166,5 @@ describe('asking DSNR through this machine’s server', () => {
 		expect(await wrong.relay.ask('readComments', [])).toEqual({ ok: false, error: expect.any(String) });
 		const garbled = answering(async () => new Response('<html>', { status: 200 }));
 		expect(await garbled.relay.ask('readComments', [])).toEqual({ ok: false, error: expect.any(String) });
-	});
-});
-
-describe('where a page in the browser goes after Address (BROWSER_COMMENTS_PLAN 3.2)', () => {
-	const here = 'http://127.0.0.1:5000/review/demo/v1/';
-	it('is the version it showed, under the same project, as the site lays them out', () => {
-		expect(versionAddress('../', 'v3', here)).toBe('http://127.0.0.1:5000/review/demo/v3/');
-		expect(versionAddress('../', 'v2', here)).toBe('http://127.0.0.1:5000/review/demo/v2/');
-	});
-
-	it('is this page again when the change is in it, and nowhere for what is not a version', () => {
-		expect(versionAddress('../', 'v1', here)).toBe(here);
-		expect(versionAddress('../', '../../etc', here)).toBeNull();
-		expect(versionAddress('../', 'v1-i2', here)).toBeNull();
 	});
 });

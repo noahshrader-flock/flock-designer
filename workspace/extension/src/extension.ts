@@ -130,18 +130,15 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 					routes: served,
 					signIn: () => github.signIn(),
 					written: () => projectsChanged(),
-					address: (r, comment, asked, newVersion): Promise<string | null | void> => {
-						const show: (shown: Review) => Promise<void> =
-							asked === 'browser'
-								? async (shown: Review) => reviews.showIfOpen({ records: await recordsFor(shown.projectId), ...shown })
-								: openReview;
+					address: (r, comment, _asked, newVersion): Promise<void> => {
 						const run = async () => {
 							const project = valueOf(await api.listProjects()).find((p) => p.id === r.projectId);
 							// Address changes the prototype's code, which is with the product it was made on: that one, open here.
 							const why = needsProduct(project ? productsOf(project) : [], found.product === null ? null : found.productRepository);
-							if (why !== null) throw new Error(why);
+							if (why !== null || found.product === null) throw new Error(why ?? 'No product is open.');
 							// Titled as the project's records title it: a browser's page may have moved to another of its versions.
-							return addressComment({ ...here, show }, (project && reviewsOf(project).find((x) => x.name === r.name)) || r, comment, newVersion);
+							const titled = (project && reviewsOf(project).find((x) => x.name === r.name)) || r;
+							return addressComment({ ...here, watch: watchPrototype }, found.product, titled, comment, newVersion);
 						};
 						// One place says what went wrong, a refusal included, and the caller is told too.
 						return run().catch(failedFor(true));
@@ -192,9 +189,9 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 	/** Ends with the window: nothing is saved after it is gone. */
 	let watching = true;
 	context.subscriptions.push({ dispose: () => void (watching = false) });
-	const watchPrototype = (projectId: string, name: string, title: string) =>
+	const watchPrototype = (projectId: string, name: string, title: string, from: string | null = null) =>
 		void watchBuild({
-			saveBuilt: async () => valueOf(await api.saveBuilt(projectId, name)),
+			saveBuilt: async () => valueOf(await api.saveBuilt(projectId, name, from)),
 			// No notification for each save: accessibility is the build's own check, in the agent's run.
 			onSaved: projectsChanged,
 			onGaveUp: (err) =>

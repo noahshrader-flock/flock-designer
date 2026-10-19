@@ -199,8 +199,8 @@ builds a prototype's page, for the machine it was packaged on.
 
 **Commenting in a review:** the page's own review bar comments through DSNR rather than with a token of its own. The
 page asks DSNR's review tab, and the tab asks the extension (`shared/reviewRelay.ts`): the core's comment calls, only on
-that review's project's prototypes and only on comments the tab has been shown or made; signing in, which is VS Code's; and **Address**, on an open comment's menu, which runs the agent
-as a build does (a notification with Stop, its log beside the editor) and then shows the changed page in the same tab.
+that review's project's prototypes and only on comments the tab has been shown or made; signing in, which is VS Code's; and **Address**, on an open comment's menu, which hands the comment to the agent's window
+as a build is handed, and saves the page when the agent has built it.
 The bar listens for DSNR only when it is served from this machine and framed, and takes only a VS Code webview that
 says hello; on the published site it comments with GitHub itself, as the person who signs in there (below). Each project's reviews share
 one tab.
@@ -264,7 +264,7 @@ drawn by the browser already on the machine (Chrome, Edge or Chromium, or `CHROM
 `puppeteer-core`, which downloads no browser of its own (`chromeHeadless.ts`); a machine with none is told what to
 install. The panel's rows show the pictures, made once the list is read, as the app makes them.
 
-**The numbers keep up without reloading VS Code:** a comment made, moved, resolved or deleted in a review, or addressed,
+**The numbers keep up without reloading VS Code:** a comment made, moved, resolved or deleted in a review,
 reads the projects again at once, and so does coming back to VS Code after a minute away (for comments made in the app
 or on GitHub); the list stays on screen while it is read, and the badge on each project changes when the new count is
 there.
@@ -388,8 +388,8 @@ Claude Code, so do it on a test project you can delete:
 3. In the review: **Sign in to comment** if it asks, then **Comment**, click something on the page, write a comment, and
    save it. Check the comment is on the design repository's GitHub issues, and in the app.
 4. On the comment's menu: **Resolve**, then **Reopen**.
-5. On the comment's menu: **Address**. When the agent has finished, the review shows the changed page, or says why
-   nothing changed.
+5. On the comment's menu: **Address**. The agent's window opens with the task typed in: press Enter there. When it has
+   built the change, DSNR saves it; look at the page, then resolve the comment.
 6. The review's title bar: **Open the published page** (once it is published) and **Copy the published page's link**.
    The status bar says whether your work is synced.
 7. In the panel: the project's **⋯** menu (or right-click it) › **Assign folder…**, and check it moves under its folder.

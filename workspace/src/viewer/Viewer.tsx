@@ -93,7 +93,6 @@ export const Viewer = ({
 	slots,
 	relay = null,
 	openedHere = false,
-	onAddressed,
 	signIn = null,
 	note = null,
 }: {
@@ -105,7 +104,6 @@ export const Viewer = ({
 	note?: SignInNote | null;
 	/** Served from this machine with no way to ask DSNR: opened some other way than DSNR's Open in browser. */
 	openedHere?: boolean;
-	onAddressed?: (name: string) => void;
 }) => {
 	const [token, setToken] = useState<string | null>(savedToken);
 	const [askedHere, setAskedHere] = useState(false);
@@ -148,7 +146,7 @@ export const Viewer = ({
 		setUser(null);
 		if (github) void userOf(github).then(setUser, () => setUser(null));
 	}, [github]);
-	if (relay) return <InDsnr config={config} slots={slots} showing={showing} relay={relay} {...(onAddressed ? { onAddressed } : {})} />;
+	if (relay) return <InDsnr config={config} slots={slots} showing={showing} relay={relay} />;
 	const signOut = () => {
 		saveToken(null);
 		setToken(null);
@@ -192,19 +190,7 @@ export const Viewer = ({
 	);
 };
 
-const InDsnr = ({
-	config,
-	slots,
-	showing,
-	relay,
-	onAddressed,
-}: {
-	config: ViewerConfig;
-	slots: ViewerSlots;
-	showing: Showing;
-	relay: Relay;
-	onAddressed?: (name: string) => void;
-}) => {
+const InDsnr = ({ config, slots, showing, relay }: { config: ViewerConfig; slots: ViewerSlots; showing: Showing; relay: Relay }) => {
 	const [login, setLogin] = useState<string | null | undefined>(undefined);
 	const [addressing, setAddressing] = useState<number | null>(null);
 	useEffect(() => {
@@ -224,9 +210,8 @@ const InDsnr = ({
 	const address = async (comment: CommentRef, newVersion: boolean) => {
 		setAddressing(comment.id);
 		// On this page's own version: in the browser, the page may have moved to another since it was opened.
-		const r = await relay.ask('address', [comment, prototypeKey(config.projectId, config.name), newVersion]);
+		await relay.ask('address', [comment, prototypeKey(config.projectId, config.name), newVersion]);
 		setAddressing(null);
-		if (r.ok && typeof r.value === 'string') onAddressed?.(r.value);
 	};
 	if (login === undefined) return null;
 	if (login === null)

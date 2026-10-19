@@ -230,50 +230,6 @@ describe('setResolved', () => {
 	});
 });
 
-describe('setAddressed', () => {
-	const COMMENT = '/repos/acme/design/issues/comments/70';
-	const SHA = 'abc1234def56';
-	const comment = (body: string) => ({ [`${COMMENT}*`]: { id: 70, user: { login: 'pm' }, created_at: 't', body } });
-	const sentBody = (writes: Array<{ body?: unknown }>) => (writes[0]?.body as { body: string }).body;
-
-	it('resolves the comment in the same write that records the change, so its pin leaves the page at once', async () => {
-		const { isResolved, addressedAt, addressedIn } = await import('../src/shared/anchor');
-		const { github: session, writes } = fakeGitHub(comment('Remove this'));
-		await new ReviewThreads(session, REF).setAddressed({ thread: 1, id: 70 }, SHA, 'v10');
-		expect(writes).toHaveLength(1);
-		expect(isResolved(sentBody(writes))).toBe(true);
-		expect(addressedAt(sentBody(writes))).toBe(SHA);
-		expect(addressedIn(sentBody(writes))).toBe('v10');
-	});
-
-	it('resolves a comment on a branch too, which has a commit and no version', async () => {
-		const { isResolved, addressedAt } = await import('../src/shared/anchor');
-		const { github: session, writes } = fakeGitHub(comment('Remove this'));
-		await new ReviewThreads(session, REF).setAddressed({ thread: 1, id: 70 }, SHA);
-		expect(isResolved(sentBody(writes))).toBe(true);
-		expect(addressedAt(sentBody(writes))).toBe(SHA);
-	});
-
-	it('writes nothing when it is already recorded and resolved', async () => {
-		const { withAddressed, withResolved } = await import('../src/shared/anchor');
-		const { github: session, writes } = fakeGitHub(comment(withResolved(withAddressed('Remove this', SHA, 'v10'), true)));
-		await new ReviewThreads(session, REF).setAddressed({ thread: 1, id: 70 }, SHA, 'v10');
-		expect(writes).toEqual([]);
-	});
-
-	it('when a run changed nothing, clears the mark and leaves open or resolved as the person had it', async () => {
-		const { isResolved, addressedAt, withAddressed } = await import('../src/shared/anchor');
-		const open = fakeGitHub(comment(withAddressed('Remove this', SHA)));
-		await new ReviewThreads(open.github, REF).setAddressed({ thread: 1, id: 70 }, null);
-		expect(addressedAt(sentBody(open.writes))).toBeNull();
-		expect(isResolved(sentBody(open.writes))).toBe(false);
-		// Reopened by the person since: nothing here closes it again.
-		const reopened = fakeGitHub(comment('Remove this'));
-		await new ReviewThreads(reopened.github, REF).setAddressed({ thread: 1, id: 70 }, null);
-		expect(reopened.writes).toEqual([]);
-	});
-});
-
 describe('pictures on comments', () => {
 	const picture = `data:image/jpeg;base64,${Buffer.from('a small picture').toString('base64')}`;
 	const anchor = anAnchor({ route: '/users', nearbyText: 'x' });

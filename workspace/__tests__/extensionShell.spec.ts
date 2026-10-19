@@ -524,29 +524,6 @@ describe('the review tabs', () => {
 		}
 	});
 
-	it('show a review in its project’s tab if one is open, without bringing it in front, and open none (BROWSER_COMMENTS_PLAN 3.3)', async () => {
-		const vs = fakeVsCode();
-		const built: string[] = [];
-		const reviews = new Reviews({
-			vscode: vs.api as never,
-			build: (records) => void built.push(records),
-			serve: async () => 'http://127.0.0.1:5000/review/',
-			answer: async () => ({ ok: true, value: null }),
-		});
-		// None open: the site is still built, so the browser has the page to go to.
-		await reviews.showIfOpen({ records: '/d/projects', projectId: 'demo', name: 'v3', title: 'Demo · Version 3' });
-		expect(vs.panels).toHaveLength(0);
-		expect(built).toEqual(['/d/projects']);
-		await reviews.open({ records: '/d/projects', projectId: 'demo', name: 'v1', title: 'Demo · Version 1' });
-		await reviews.showIfOpen({ records: '/d/projects', projectId: 'demo', name: 'v3', title: 'Demo · Version 3' });
-		expect(vs.panels).toHaveLength(1);
-		expect(vs.panels[0]!.title).toBe('Demo · Version 3');
-		expect(vs.panels[0]!.html).toContain('http://127.0.0.1:5000/review/demo/v3/');
-		expect(vs.panels[0]!.revealed).toBe(0);
-		await reviews.showIfOpen({ records: '/d/projects', projectId: 'other', name: 'v1', title: 'Other · Version 1' });
-		expect(vs.panels).toHaveLength(1);
-	});
-
 	it('say which projects are in use, by a tab or a browser’s key, so nothing they show is removed under them', async () => {
 		const vs = fakeVsCode();
 		const reviews = new Reviews({

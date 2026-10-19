@@ -209,6 +209,22 @@ export const buildInCodebasePrompt = ({
 		`Your task, with the skill to follow and the prototype's files, is in ${taskFile}: read it and do what it says.`,
 	].join(' ');
 
+export const prototypeAddressPrompt = ({
+	number,
+	label,
+	projectId,
+	taskFile,
+}: {
+	number: number;
+	label: string;
+	projectId: string;
+	taskFile: string;
+}): string =>
+	[
+		`Address comment ${number} on prototype ${label} of ${projectId}.`,
+		`Your task is in ${taskFile}. It is complete: read all of it, then do what it says, in order.`,
+	].join(' ');
+
 export const prototypeBuildPrompt = ({ label, projectId, taskFile }: { label: string; projectId: string; taskFile: string }): string =>
 	[`Build prototype ${label} of ${projectId}.`, `Your task is in ${taskFile}. It is complete: read all of it, then do what it says, in order.`].join(
 		' ',

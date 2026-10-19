@@ -1,5 +1,3 @@
-import type { ReviewComment } from './comments';
-
 export interface Work {
 	projectId: string;
 	/** `v2`, or `codebase`. */
@@ -153,10 +151,11 @@ export type PageStatus =
 	| { state: 'unavailable'; why: string }
 	| { state: 'published'; url: string };
 
-export interface PrototypeAddressed {
-	changed: boolean;
+export interface HandedComment extends BuildInCodebase {
 	/** The one commented on, or a new version from it. */
-	version: string;
-	made: Work | null;
-	comment: ReviewComment;
+	target: string;
+	/** The version a new one starts from; null for a change in place. */
+	from: string | null;
+	/** The comment's number on its pin. */
+	number: number;
 }
