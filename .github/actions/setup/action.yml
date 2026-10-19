@@ -20,4 +20,5 @@ runs:
     # What the tests run on, said as `npm run test:linux` says it, so the two are compared, not assumed alike.
     - name: Versions
       shell: bash
-      run: echo "linux: node $(node --version), $(google-chrome --version), $(nproc) CPUs"
+      run: |
+        echo "linux: node $(node --version), $(google-chrome --version), $(nproc) CPUs"
