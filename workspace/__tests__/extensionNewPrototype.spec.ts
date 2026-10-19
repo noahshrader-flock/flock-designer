@@ -76,7 +76,7 @@ describe('starting a prototype from VS Code', () => {
 	it('starts watching for the build once it is handed over, by the prototype’s name, and not before', async () => {
 		const { deps, api } = world();
 		await newPrototype(deps);
-		expect(deps.watchBuild).toHaveBeenCalledWith('alert-history', 'v1');
+		expect(deps.watchBuild).toHaveBeenCalledWith('alert-history', 'v1', 'Alert history');
 		const failed = world({ api: { handPrototypeBuild: vi.fn(async () => ({ ok: false, error: 'No.' })) } });
 		await expect(newPrototype(failed.deps)).rejects.toThrow('No.');
 		expect(failed.deps.watchBuild).not.toHaveBeenCalled();

@@ -192,7 +192,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 	/** Ends with the window: nothing is saved after it is gone. */
 	let watching = true;
 	context.subscriptions.push({ dispose: () => void (watching = false) });
-	const watchPrototype = (projectId: string, name: string) =>
+	const watchPrototype = (projectId: string, name: string, title: string) =>
 		void watchBuild({
 			saveBuilt: async () => valueOf(await api.saveBuilt(projectId, name)),
 			// No notification for each save: accessibility is the build's own check, in the agent's run.
@@ -200,7 +200,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 			onGaveUp: (err) =>
 				failed(
 					new Error(
-						`DSNR could not save the build of ${projectId} ${name}: ${errorText(err, { firstLine: true }).replace(/\.?$/, '.')} Opening it for review saves it.`,
+						`DSNR could not save the build of ${title} (${name}): ${errorText(err, { firstLine: true }).replace(/\.?$/, '.')} Opening it for review saves it.`,
 					),
 				),
 			now: Date.now,

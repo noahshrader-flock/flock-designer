@@ -17,7 +17,7 @@ export interface NewPrototypeDeps extends Pick<AgentWorkDeps, 'progress'> {
 	/** Told once it is made, so the list shows it while it is built. */
 	onChanged: () => void;
 	/** Not waited for. */
-	watchBuild: (projectId: string, name: string) => void;
+	watchBuild: (projectId: string, name: string, title: string) => void;
 	given: Given;
 }
 
@@ -107,6 +107,6 @@ export const newPrototype = async (deps: NewPrototypeDeps): Promise<void> => {
 	const made = valueOf(await api.createPrototype(slugify(title), title, task, { root: checkout.root, branch: checkout.branch }, given.folder));
 	deps.onChanged();
 	const handed = valueOf(await api.handPrototypeBuild(root, made.projectId, made.name, task));
-	deps.watchBuild(made.projectId, made.name);
+	deps.watchBuild(made.projectId, made.name, title);
 	deps.tell(`${handedTo(handed, title)} DSNR saves it when it is built, and its picture appears in the list.`);
 };
