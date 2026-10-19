@@ -261,15 +261,14 @@ describe('build-site', () => {
 		expect(await run('build-site')).toBe(0);
 		expect(readFileSync(join(world.prototypes, '_site', 'demo', 'v1', 'page.html'), 'utf8')).toContain('Real component');
 		expect(readFileSync(join(world.prototypes, '_site', 'index.html'), 'utf8')).toContain('Demo');
-		expect(world.out.join('\n')).toMatch(/Built 1 page in 1 project[\s\S]*Comment counts are left out/);
+		expect(world.out.join('\n')).toMatch(/^Built 1 page in 1 project at /);
 	});
 
-	it("counts each version's comments when GitHub can be asked, and builds from the design repository itself too", async () => {
+	it('builds from the design repository itself too', async () => {
 		await saved();
-		world.github = fakeGitHub({ [`${REPO}/issues?*`]: [{ number: 1, body: 'branch: `prototype/demo/v1`', comments: 2 }], '*': [] }).github;
 		const site = join(world.home, 'elsewhere-site');
 		expect(await main(['build-site', '--out', site], deps(world.design))).toBe(0);
-		expect(readFileSync(join(site, 'demo', 'index.html'), 'utf8')).toContain('2 comments');
+		expect(readFileSync(join(site, 'index.html'), 'utf8')).toContain('href="demo/v1/"');
 	});
 });
 

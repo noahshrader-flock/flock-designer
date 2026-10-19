@@ -31,6 +31,11 @@ body {
 	gap: var(--dsnr-space-3);
 }
 
+/* With no back button the title takes the button's place: the same room from the edge. */
+.viewer-bar > .heading-page:first-child {
+	margin-left: calc(var(--dsnr-space-5) - var(--dsnr-space-2));
+}
+
 /* Commenting needs a computer: on a phone the bar's room goes to the title. */
 @media (max-width: 640px) {
 	.viewer-sign-in {

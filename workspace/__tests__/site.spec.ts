@@ -65,8 +65,9 @@ describe('the index', () => {
 	it('lists every project with a page, by its brief title, and none without', () => {
 		build();
 		const index = read('index.html');
-		expect(index).toContain('href="alpha/"');
-		expect(index).toContain('href="beta/"');
+		// Each goes to its newest version: a project has no page of its own.
+		expect(index).toContain('href="alpha/v3/"');
+		expect(index).toContain('href="beta/v1/"');
 		expect(index).not.toContain('gamma');
 		expect(index).not.toContain('_template');
 		// Titles are text, never markup.
@@ -76,12 +77,12 @@ describe('the index', () => {
 });
 
 describe('a version', () => {
-	it("is its saved page under a bar that is a link back to the project, which the viewer replaces with the app's own", () => {
+	it("is its saved page under a bar that is a link back to all the prototypes, which the viewer replaces with the app's own", () => {
 		build();
 		const viewer = read('alpha/v3/index.html');
 		expect(viewer).toContain('<iframe');
 		expect(viewer).toContain('src="page.html"');
-		expect(viewer).toContain('<header id="dsnr-bar"><a href="../">Alerts &lt;history&gt;</a></header>');
+		expect(viewer).toContain('<header id="dsnr-bar"><a href="../../">All prototypes</a></header>');
 		// Nothing of the bar is styled or built here: no select of its own, no styles for one.
 		expect(viewer).not.toMatch(/<select|class="bar"|\.bar\b/);
 		expect(read('alpha/v3/page.html')).toContain('Alpha three');
@@ -104,16 +105,20 @@ describe('a version', () => {
 });
 
 describe('a project', () => {
-	it('lists its versions, the newest first, with date, author and comments', () => {
-		build({ comments: new Map([['prototype/alpha/v3', 3]]) });
-		const html = read('alpha/index.html');
-		expect(html.indexOf('>Version 3<')).toBeGreaterThan(-1);
-		expect(html.indexOf('href="v3/"')).toBeLessThan(html.indexOf('href="v2/"'));
-		expect(html.indexOf('href="v2/"')).toBeLessThan(html.indexOf('href="v1/"'));
-		expect(html).toContain('Oct 3, 2026');
-		expect(html).toContain('Pat');
-		expect(html).toContain('3 comments');
-		expect(html).toContain('href="../"');
+	it('has no page of its own: its address, which a link may have, leads to its newest version', () => {
+		build();
+		expect(read('alpha/index.html')).toContain('url=v3/');
+		expect(read('alpha/index.html')).not.toContain('Version 2');
+		expect(read('beta/index.html')).toContain('url=v1/');
+	});
+
+	it('is given to the viewer with the page of all prototypes to go back to', () => {
+		const viewer = join(root, 'viewer');
+		mkdirSync(viewer, { recursive: true });
+		for (const f of ['viewer.js', 'viewer.css', 'viewer.ttf', 'page-agent.js']) writeFileSync(join(viewer, f), '');
+		build({ viewer: { dir: viewer, ref: { owner: 'o', repo: 'r' } } });
+		const config = JSON.parse(/<script type="application\/json" id="dsnr-config">(.*?)<\/script>/s.exec(read('alpha/v3/index.html'))?.[1] ?? 'null');
+		expect(config).toMatchObject({ projectHref: '../', prototypesHref: '../../' });
 	});
 });
 
@@ -137,50 +142,11 @@ describe('latest', () => {
 });
 
 describe('there is no selected version', () => {
-	it('so latest is always the newest version, and nothing is marked, even by a file left from before', () => {
+	it('so latest is always the newest version, even with a file left from before', () => {
 		writeFileSync(join(design, 'projects', 'alpha', 'selected.json'), '{ "version": 1 }\n');
 		build();
-		expect(read('alpha/index.html')).not.toContain('Selected');
-		expect(read('alpha/index.html')).not.toContain('class="version selected"');
 		expect(read('alpha/latest/index.html')).toContain('url=../v3/');
-	});
-});
-
-describe('built in code', () => {
-	const withCodebase = (pullRequest: string) =>
-		project('alpha', '# Alpha\n', [record('v1'), { name: 'codebase', branch: 'feature/alpha', commit: null, note: '', pullRequest }], {
-			v1: page('Alpha'),
-		});
-
-	it("links the project page to its codebase work's pull request, once it has been shared", () => {
-		withCodebase('https://github.com/o/r/pull/5');
-		build();
-		expect(read('alpha/index.html')).toContain('<a href="https://github.com/o/r/pull/5">Built in code</a>');
-	});
-
-	it('says nothing without codebase work, and links nowhere but a pull request', () => {
-		build();
-		expect(read('alpha/index.html')).not.toContain('Built in code');
-		withCodebase('javascript:alert(1)');
-		build();
-		expect(read('alpha/index.html')).not.toContain('Built in code');
-	});
-
-	it('links to the branch when the record names its repository but has no pull request', () => {
-		project(
-			'alpha',
-			'# Alpha\n',
-			[record('v1'), { name: 'codebase', branch: 'feature/alpha', commit: null, note: '', repository: 'flocksafety/flock-coke' }],
-			{ v1: page('Alpha') },
-		);
-		build();
-		expect(read('alpha/index.html')).toContain('<a href="https://github.com/flocksafety/flock-coke/tree/feature/alpha">Built in code</a>');
-	});
-
-	it("does not take a prototype's pull request for codebase work", () => {
-		project('alpha', '# Alpha\n', [record('v1', { pullRequest: 'https://github.com/o/r/pull/5' })], { v1: page('Alpha') });
-		build();
-		expect(read('alpha/index.html')).not.toContain('Built in code');
+		expect(read('alpha/index.html')).toContain('url=v3/');
 	});
 });
 
@@ -272,6 +238,7 @@ describe('comments on the page', () => {
 			name: 'v3',
 			title: 'Alerts <history>',
 			projectHref: '../',
+			prototypesHref: '../../',
 			versions: [
 				{ name: 'v3', href: '../v3/', from: 'v1' },
 				{ name: 'v2', href: '../v2/' },

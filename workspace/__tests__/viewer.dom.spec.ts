@@ -4,7 +4,7 @@ import { createElement } from 'react';
 import { act } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { composeBody } from '../src/shared/anchor';
-import { Viewer } from '../src/viewer/Viewer';
+import { Viewer, readConfig } from '../src/viewer/Viewer';
 import { saveToken, savedToken, tokenApi } from '../src/viewer/browserAdapter';
 import type { Relay } from '../src/viewer/relay';
 import type { Result } from '../src/shared/contract';
@@ -62,6 +62,22 @@ describe('a page built without the page agent', () => {
 		} finally {
 			vi.useRealTimers();
 		}
+	});
+});
+
+describe('the way back', () => {
+	const bar = async (config: typeof CONFIG | ReturnType<typeof readConfig>) => {
+		current = await render(createElement(Viewer, { config, slots: sitePage().slots, relay: null }));
+		return document.querySelector('[aria-label="Back to all prototypes"]');
+	};
+
+	it('is a link to all the prototypes in a browser, where the page is its own', async () => {
+		expect((await bar(readConfig(JSON.stringify(CONFIG), false)))?.getAttribute('href')).toBe('../../');
+	});
+
+	it('is not there in VS Code’s tab, where the version’s dropdown is the way to another and there is no page of prototypes', async () => {
+		expect(await bar(readConfig(JSON.stringify(CONFIG), true))).toBeNull();
+		expect(switchMenu('version')).not.toBeNull();
 	});
 });
 
@@ -160,9 +176,9 @@ describe('a page from this machine with no key of DSNR’s (BROWSER_COMMENTS_PLA
 });
 
 describe("the page's bar", () => {
-	it("is the app's own: the way back, the project, and a dropdown for the version", async () => {
+	it("is the app's own: the way back to all prototypes, the project, and a dropdown for the version", async () => {
 		await open();
-		expect(document.querySelector('a[href="../"]')).not.toBeNull();
+		expect(document.querySelector('a[href="../../"]')).not.toBeNull();
 		expect(document.body.textContent).toContain('Alert history');
 		expect(choicesIn(switchMenu('version'))).toEqual(['Version 3', 'Version 2', 'Version 1']);
 		expect(shownIn(switchMenu('version'))).toBe('Version 1');

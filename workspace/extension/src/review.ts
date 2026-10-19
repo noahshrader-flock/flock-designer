@@ -240,7 +240,6 @@ export const buildReviewSite = (siteDir: string, viewerDir: string) => (records:
 	buildSite({
 		designRoot: dirname(records),
 		outDir: siteDir,
-		comments: undefined,
 		viewer: { dir: viewerDir, ref: DESIGN_REPO },
 		pagesAt,
 	});

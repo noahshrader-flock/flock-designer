@@ -17,6 +17,7 @@ export const PAGE_CONFIG = {
 	name: 'v1',
 	title: 'Alert history',
 	projectHref: '../',
+	prototypesHref: '../../',
 	versions: [
 		{ name: 'v3', href: '../v3/' },
 		{ name: 'v1', href: '../v1/' },

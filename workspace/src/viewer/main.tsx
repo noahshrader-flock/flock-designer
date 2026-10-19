@@ -5,7 +5,7 @@ import { TooltipHost } from '../ui/Tooltip';
 import { type Relay, isServedHere, versionAddress, keyFromAddress, listenForDsnr, serverRelay } from './relay';
 import { applyEditorTheme, applyScheme, systemIsDark, watchSystemScheme } from './scheme';
 import { type EditorTheme, isDarkTheme } from '../shared/reviewRelay';
-import { Viewer, type ViewerConfig, type ViewerSlots } from './Viewer';
+import { Viewer, type ViewerConfig, type ViewerSlots, readConfig } from './Viewer';
 import { saveToken } from './browserAdapter';
 import { type SignInConfig, finishSignIn, takeNote } from './signIn';
 import { applyTokens } from '../ui/applyTokens';
@@ -61,7 +61,7 @@ if (config && bar && panel && frame) {
 	applyTokens(document);
 	createRoot(root).render(
 		<>
-			<InPage config={JSON.parse(config.textContent ?? '{}') as ViewerConfig} slots={{ bar, panel, frame }} />
+			<InPage config={readConfig(config.textContent, framed)} slots={{ bar, panel, frame }} />
 			<TooltipHost />
 		</>,
 	);

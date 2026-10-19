@@ -5,7 +5,7 @@ import { escapeHtml, firstInHead } from '../shared/html';
 import { fromBrief } from '../shared/brief';
 import { SHARED_DIR, SHARED_REF, sitePath } from '../shared/designPaths';
 import { newestVersionFirst } from '../shared/prototypeNames';
-import { workLabel, projectCodeLink } from '../shared/work';
+import { workLabel } from '../shared/work';
 import { statesOf } from '../shared/prototypeStates';
 import { workInFolder } from '../core/services/projects/workRecords';
 import { contentHashOf } from '../core/services/prototypes/prototype';
@@ -24,8 +24,6 @@ export interface SiteInput {
 	designRoot: string;
 	/** Cleared first, but only if it is a site this made, or empty. */
 	outDir: string;
-	/** By version key (`prototype/<project>/<name>`). */
-	comments?: Map<string, number>;
 	/** The built viewer and the repository whose review threads it shows. Without it a page has nothing to comment with. */
 	viewer?: { dir: string; ref: RepoRef };
 	/**
@@ -62,8 +60,6 @@ interface SiteProject {
 	title: string;
 	/** Newest first. */
 	versions: Page[];
-	/** Its pull request, else its branch. */
-	builtInCode: string | null;
 }
 
 const labelOf = (p: Page): string => workLabel(p.record);
@@ -97,7 +93,6 @@ const readProjects = (designRoot: string): SiteProject[] => {
 				id,
 				title: fromBrief(id, brief).title,
 				versions: pages.sort((a, b) => newestVersionFirst(a.record.name, b.record.name)),
-				builtInCode: projectCodeLink({ work: records }),
 			},
 		];
 	});
@@ -172,30 +167,16 @@ const indexPage = (projects: SiteProject[], head = ''): string =>
 		`<main>\n<h1>Prototypes</h1>\n<ul class="list">\n${projects
 			.map((p) => {
 				const n = p.versions.length;
-				const newest = dateOf(
+				const updated = dateOf(
 					p.versions
 						.map((pg) => pg.record.createdAt ?? '')
 						.sort()
 						.at(-1),
 				);
-				return `<li><a href="${p.id}/"><strong>${escapeHtml(p.title)}</strong><br><span class="muted">${plural(n, 'version')}${newest ? ` · ${newest}` : ''}</span></a></li>`;
+				return `<li><a href="${p.id}/${(p.versions[0] as Page).path}"><strong>${escapeHtml(p.title)}</strong><br><span class="muted">${plural(n, 'version')}${updated ? ` · ${updated}` : ''}</span></a></li>`;
 			})
 			.join('\n')}\n</ul>\n</main>`,
 		head,
-	);
-
-const projectPage = (p: SiteProject, comments: Map<string, number> | undefined): string =>
-	shell(
-		p.title,
-		`<main>\n<p class="muted"><a href="../">All prototypes</a></p>\n<h1>${escapeHtml(p.title)}</h1>\n${p.builtInCode ? `<p><a href="${escapeHtml(p.builtInCode)}">Built in code</a></p>\n` : ''}<ul class="list">\n${p.versions
-			.map((pg) => {
-				const date = dateOf(pg.record.createdAt);
-				const author = pg.record.contributors?.[0]?.name;
-				const count = comments?.get(pg.record.branch);
-				const facts = [date, author, count === undefined ? null : plural(count, 'comment')].filter(Boolean);
-				return `<li><a href="${pg.path}"><strong>${labelOf(pg)}</strong>${facts.length ? `<br><span class="muted">${facts.map((f) => escapeHtml(String(f))).join(' · ')}</span>` : ''}</a></li>`;
-			})
-			.join('\n')}\n</ul>\n</main>`,
 	);
 
 /** `page` is the page's fingerprint, which a comment placed on it carries. */
@@ -207,6 +188,7 @@ const viewerConfig = (ref: RepoRef, p: SiteProject, current: Page, states: strin
 		name: current.record.name,
 		title: p.title,
 		projectHref: '../',
+		prototypesHref: '../../',
 		versions: p.versions.map((pg) => ({ name: pg.record.name, href: `../${pg.path}`, ...(pg.record.from ? { from: pg.record.from } : {}) })),
 		states,
 		page,
@@ -219,7 +201,7 @@ const frameAt = (p: SiteProject, page: Page, pagesAt: string | undefined): strin
 
 /**
  * The page is in a frame, so its own styles never reach the bar. Until the viewer takes the bar over, and where it never
- * does, the bar is a link back to the project.
+ * does, the bar is a link back to all the prototypes.
  */
 const viewerPage = (
 	p: SiteProject,
@@ -235,7 +217,7 @@ const viewerPage = (
 		: '';
 	return shell(
 		`${p.title} · ${labelOf(current)}`,
-		`<div class="viewer">\n<header id="dsnr-bar"><a href="../">${escapeHtml(p.title)}</a></header>\n<p class="small-screen">Best on a computer: this prototype is made for a wider screen. Scroll across to see all of it.</p>\n<div class="stage">\n<iframe id="dsnr-frame" ${frameAt(p, current, pagesAt)} title="${escapeHtml(`${p.title}, ${labelOf(current)}`)}"></iframe>\n<aside id="dsnr-panel"></aside>\n</div>\n</div>`,
+		`<div class="viewer">\n<header id="dsnr-bar"><a href="../../">All prototypes</a></header>\n<p class="small-screen">Best on a computer: this prototype is made for a wider screen. Scroll across to see all of it.</p>\n<div class="stage">\n<iframe id="dsnr-frame" ${frameAt(p, current, pagesAt)} title="${escapeHtml(`${p.title}, ${labelOf(current)}`)}"></iframe>\n<aside id="dsnr-panel"></aside>\n</div>\n</div>`,
 		head,
 	);
 };
@@ -251,7 +233,7 @@ const clearOut = (outDir: string): void => {
 	writeFileSync(join(outDir, MARK), 'Built by DSNR. This folder is cleared and rebuilt each time.\n');
 };
 
-export const buildSite = ({ designRoot, outDir, comments, viewer, pagesAt, signIn: signingIn }: SiteInput): SiteSummary => {
+export const buildSite = ({ designRoot, outDir, viewer, pagesAt, signIn: signingIn }: SiteInput): SiteSummary => {
 	const projects = readProjects(designRoot);
 	clearOut(outDir);
 	const shared = writeShared(designRoot, outDir);
@@ -279,7 +261,6 @@ export const buildSite = ({ designRoot, outDir, comments, viewer, pagesAt, signI
 	for (const p of projects) {
 		const dir = join(outDir, p.id);
 		mkdirSync(dir, { recursive: true });
-		writeFileSync(join(dir, 'index.html'), projectPage(p, comments));
 		for (const pg of p.versions) {
 			const at = join(dir, pg.path);
 			mkdirSync(at, { recursive: true });
@@ -287,8 +268,10 @@ export const buildSite = ({ designRoot, outDir, comments, viewer, pagesAt, signI
 			writeFileSync(join(at, 'index.html'), viewerPage(p, pg, viewer, statesOf(html), contentHashOf(html), pagesAt, signIn));
 			writeFileSync(join(at, 'page.html'), relink(html));
 		}
+		// A project has no page of its own, so its address, which a link may have, and `latest/` both lead to its newest version.
 		const newest = p.versions[0] as Page;
 		mkdirSync(join(dir, 'latest'), { recursive: true });
+		writeFileSync(join(dir, 'index.html'), redirect(`${p.title} · ${labelOf(newest)}`, newest.path));
 		writeFileSync(join(dir, 'latest', 'index.html'), redirect(`${p.title} · ${labelOf(newest)}`, `../${newest.path}`));
 	}
 	return { projects: projects.map((p) => ({ id: p.id, title: p.title, pages: p.versions.length })) };

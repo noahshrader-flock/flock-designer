@@ -155,7 +155,6 @@ const designOf = async (cwd: string): Promise<string> => {
 const site = async (deps: CliDeps, values: { out?: string; serve?: boolean }): Promise<number> => {
 	const designRoot = await designOf(deps.cwd);
 	const outDir = values.out ? resolve(deps.cwd, values.out) : join(deps.prototypesRoot, '_site');
-	const comments = deps.github ? await new ReviewThreads(deps.github, DESIGN_REPO).commentCounts().catch(() => undefined) : undefined;
 	// The pages work without it, and say nothing is missing: so it is said here when it could not be built.
 	let viewerDir: string | null = null;
 	let noViewer = ' Its pages have no comments: the viewer was not built here.';
@@ -170,14 +169,11 @@ const site = async (deps: CliDeps, values: { out?: string; serve?: boolean }): P
 	const built = buildSite({
 		designRoot,
 		outDir,
-		comments,
 		viewer: viewerDir ? { dir: viewerDir, ref: DESIGN_REPO } : undefined,
 		signIn: PAGES_SIGN_IN,
 	});
 	const pages = built.projects.reduce((n, p) => n + p.pages, 0);
-	deps.out(
-		`Built ${plural(pages, 'page')} in ${plural(built.projects.length, 'project')} at ${outDir}.${noViewer}${comments ? '' : ` Comment counts are left out: ${HOST} could not be asked (is ${CLI} signed in?).`}`,
-	);
+	deps.out(`Built ${plural(pages, 'page')} in ${plural(built.projects.length, 'project')} at ${outDir}.${noViewer}`);
 	if (values.serve) {
 		const { url } = await serveSite(outDir);
 		deps.out(`Serving it at ${url} on this machine only. Stop with Ctrl-C.`);

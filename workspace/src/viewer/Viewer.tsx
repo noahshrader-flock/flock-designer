@@ -33,8 +33,10 @@ export interface ViewerConfig {
 	projectId: string;
 	name: string;
 	title: string;
-	/** Relative to this page. */
+	/** The project's folder, relative to this page: a version is `${projectHref}${name}/`. */
 	projectHref: string;
+	/** The page of all prototypes, relative to this page; null in VS Code's tab, where the version's dropdown is the way about. */
+	prototypesHref: string | null;
 	/** `href` is relative to this page. */
 	versions: { name: string; href: string; from?: string }[];
 	/** Not there on a page built before pages said. */
@@ -42,6 +44,12 @@ export interface ViewerConfig {
 	/** The page's fingerprint; not there on a page built before pages said. */
 	page?: string;
 }
+
+/** What the page says, as it is given to the bar: in a frame (VS Code's tab) there is no page of prototypes to go back to. */
+export const readConfig = (text: string | null, framed: boolean): ViewerConfig => {
+	const given = JSON.parse(text ?? '{}') as ViewerConfig;
+	return framed ? { ...given, prototypesHref: null } : given;
+};
 
 export interface ViewerSlots {
 	bar: HTMLElement;
@@ -63,7 +71,7 @@ const PageBar = ({ config, slots, showing, children }: { config: ViewerConfig; s
 	// No background of its own and no line under it, so it does not look like part of the prototype it is over.
 	return createPortal(
 		<div className="viewer-bar">
-			<IconButton icon="chevron-left" label="Back to the project" href={config.projectHref} />
+			{config.prototypesHref !== null && <IconButton icon="chevron-left" label="Back to all prototypes" href={config.prototypesHref} />}
 			<Heading size="page">{config.title}</Heading>
 			<ButtonRow>
 				<VersionSwitcher
