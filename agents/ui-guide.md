@@ -76,7 +76,8 @@ nothing fits, and **say so explicitly**.
 ### Real components, fake data
 
 Real design system components, real tokens, real product patterns. Mock data typed with the product's real types where
-they exist: real types, fake values, believable for the product.
+they exist: real types, fake values, believable for the product, and **fixed**: written in the file, never random or relative
+to today's date. A comment is pinned to the text near it, and a value that changes on every load cannot be found again.
 
 **Use a component as it ships.** An override of its size, spacing, type or look needs a source: the person asked for it, the
 product's own views do it, or the default fails accessibility. Name the source in what you say when you finish. A default
