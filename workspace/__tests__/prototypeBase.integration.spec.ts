@@ -4,6 +4,8 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { declaredTarget } from '../src/core/services/accessibility/accessibilityBrief';
 import { workPath } from '../src/shared/designPaths';
+import { dropPending } from '../src/core/services/prototypes/pendingPrototypes';
+import { recordStarted } from '../src/core/services/prototypes/prototype';
 import { prototypeWork } from '../src/core/services/prototypes/prototypeWork';
 import { freshTip } from '../src/core/services/platform/fetch';
 import { g, installDesignSystem, makeProduct, memoryStore } from './fixtures';
@@ -35,7 +37,7 @@ const workIn = (root: string) =>
 		readDesignFile: shared.store.read,
 		esbuild: () => 'esbuild',
 		designSystemOf: async () => null,
-		recordsRootOf: () => null,
+		recordsRootOf: () => join(home, 'design', 'projects'),
 	});
 
 const start = (root: string) => workIn(root).start(root, { projectId: 'demo', title: 'Demo', note: 'A list', branch: 'develop', me: null });
@@ -192,8 +194,20 @@ describe('what a prototype is modeled on is what is read', () => {
 		);
 	});
 
+	it('has a project when it has a records file, even an empty one, or a version started here and not saved', async () => {
+		const work = workIn(mine);
+		expect(await work.hasProject('demo')).toBe(false);
+		shared.files[workPath('shop')] = '[]\n';
+		expect(await work.hasProject('shop')).toBe(true);
+		await start(mine);
+		expect(await work.hasProject('demo')).toBe(true);
+	});
+
 	it('refuses a record whose commit or branch could be read as something else', async () => {
 		const made = await start(mine);
+		// Shared, as its first save makes it: what anyone with write access could then change.
+		await recordStarted(shared.store, made, async () => undefined);
+		dropPending(join(home, 'prototypes'), 'demo', made.name);
 		const path = workPath('demo');
 		const recorded = String(shared.files[path]);
 		// What a shared record could say, written by anyone: an option where a commit or a branch goes.

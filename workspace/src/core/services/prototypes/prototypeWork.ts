@@ -3,7 +3,7 @@ import { basename, dirname, join } from 'node:path';
 import type { BaseBehind, CommentRef, Work, Person, PrototypeReadiness, ReviewComment, StartedPrototype } from '../../../shared/contract';
 import { type DeclaredTarget, undeclared } from '../../../shared/wcag';
 import { fromBrief } from '../../../shared/brief';
-import { projectPath, prototypePagePath, prototypeSourcePath, sharedFilePath, sharedFilesOf } from '../../../shared/designPaths';
+import { projectPath, prototypePagePath, prototypeSourcePath, sharedFilePath, sharedFilesOf, workPath } from '../../../shared/designPaths';
 import { commentsFromOthers, nextVersionName, othersHaveCommented } from '../../../shared/prototypeNames';
 import { MANIFEST_FILE, declaredTarget, productTarget, taskAccessibility } from '../accessibility/accessibilityBrief';
 import { readDescriptor } from '../projects/descriptor';
@@ -139,6 +139,9 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		const shared = await readRecords({ read: ctx.readDesignFile }, projectId);
 		return [...shared, ...pendingOf(prototypesRoot, projectId).filter((p) => !shared.some((i) => i.name === p.name))];
 	};
+	/** It has a records file, even an empty one, or a version started here and not saved yet. */
+	const hasProject = async (projectId: string): Promise<boolean> =>
+		(await ctx.readDesignFile(workPath(projectId))) !== null || pendingOf(prototypesRoot, projectId).length > 0;
 	const title = async (projectId: string): Promise<string> =>
 		fromBrief(projectId, await ctx.readDesignFile(projectPath(projectId, 'brief.md'))).title;
 	const record = async (projectId: string, name: string): Promise<Work | undefined> => (await records(projectId)).find((i) => i.name === name);
@@ -529,6 +532,7 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		voice,
 		title,
 		records,
+		hasProject,
 		record,
 		sourceText,
 		readiness,

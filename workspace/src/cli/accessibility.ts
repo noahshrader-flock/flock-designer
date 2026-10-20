@@ -16,7 +16,6 @@ import {
 	accessibilityViewDirs,
 	projectPath,
 	prototypeSourcePath,
-	workPath,
 } from '../shared/designPaths';
 import { plural } from '../shared/plural';
 import { errorText } from '../shared/result';
@@ -219,10 +218,10 @@ const writeEvidence = (projectId: string, name: string | null, designRoot: strin
 const dayOf = (iso: string): string => iso.slice(0, 10);
 
 export const measureAccessibility = async (deps: MeasureDeps): Promise<number> => {
-	const { projectId, name, designRoot, depth } = deps;
+	const { projectId, name, designRoot, depth, work } = deps;
 	assertUsableProjectId(projectId);
-	if (!existsSync(join(designRoot, workPath(projectId))))
-		throw new Error(`There is no project ${projectId} in the design repository at ${designRoot}.`);
+	// A version started here and not saved yet counts: its first build is measured before it is saved.
+	if (!(await work.hasProject(projectId))) throw new Error(`There is no project ${projectId} in the design repository at ${designRoot}.`);
 	const progress = (line: string) => deps.err(`${line}…`);
 	const browser = chromeHeadless();
 	let measured: Measured;
