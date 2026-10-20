@@ -28,6 +28,8 @@ is kept.
   color and size.
 - **Mock data only, and believable** for this product: real-looking names, counts and dates. Never real
   customer data, credentials, license keys or anything copied from production, and no network requests.
+  **Fixed values, written in the file:** never random, and never relative to today's date. A comment is pinned
+  to the text near it, and a value that changes on every load cannot be found again.
 - **Check it builds** with the command the task gives, after every change. Do not finish while it reports
   an error: a prototype that does not build cannot be saved.
 - **If you look at the page yourself** (a screenshot of the built file, say), its icons show as their names

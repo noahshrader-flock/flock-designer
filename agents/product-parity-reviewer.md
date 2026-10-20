@@ -34,6 +34,7 @@ Each is pass or fail, every instance with its `file:line`:
 | Icons, and the base library over the design system | The design system's own rules (its README and `component-usage.md`) |
 | Off-scale spacing | Pixel values where the spacing scale should be used |
 | Invalid props | The product's typecheck is the authority |
+| Overridden defaults | `sx`, `style` or a prop that changes a design system component's size, spacing, type or look, with no source named (the person asked, the product's views do it, or the default fails accessibility) |
 
 ### Product parity: judgment
 
@@ -64,7 +65,9 @@ implementation half (semantics, keyboard, names, announcement) is the implementa
 | **Proposed** | Your judgment. Nobody has decided it |
 
 An unlabeled opinion presented as a product fact is the failure mode. If you cannot cite a source for an "observed"
-claim, it is inferred or proposed: say so.
+claim, it is inferred or proposed: say so. **A claim about how it looks** (density, alignment, hierarchy) is observed only
+from the rendered page, never from the code alone; and one about spacing or alignment is measured there (the element's
+computed style and box), never read off a picture.
 
 ## Output
 

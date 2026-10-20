@@ -85,7 +85,9 @@ Check `flock-designer/projects/` for this project. **It exists:** read it; its h
 does not:** create `projects/<project-id>/`. Then write `projects/<project-id>/brief.md` from whatever context arrived, in whatever form, as
 `request-guide.md` beside this file describes. Capture the user and job, the decision to make, the nearest existing
 surface, how much to build, the states and interaction needed, and the **change boundary**: which files, components,
-routes, states and interaction paths are in scope. Ask only for what is missing and would change what you build.
+routes, states and interaction paths are in scope. When it arrived as notes or a transcript, say **who each point comes
+from**: the people who use the product, or internal direction, never the one passed off as the other. And say what is
+**not this round**: a later round leaves it alone unless the person moves it in. Ask only for what is missing and would change what you build.
 
 **A brief may start with a `---` block** (`folder: Admin`): that is the project's folder, set in the app. Keep it, exactly
 as it is, at the top whenever you write or rewrite the brief; never add, change or remove it yourself.

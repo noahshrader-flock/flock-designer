@@ -65,6 +65,7 @@ fails to run at all, say that rather than omitting it.
 ## Mock data quality
 
 - Typed with the product's real types where they exist?
+- Fixed: written in the file, never random or relative to today's date, so a page reads the same every time?
 - Realistic: long strings, missing values, mixed states, enough rows to show pagination?
 - Are the states the brief asked for reachable? On the codebase path that is every state the feature has.
 

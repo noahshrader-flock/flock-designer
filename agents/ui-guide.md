@@ -78,6 +78,10 @@ nothing fits, and **say so explicitly**.
 Real design system components, real tokens, real product patterns. Mock data typed with the product's real types where
 they exist: real types, fake values, believable for the product.
 
+**Use a component as it ships.** An override of its size, spacing, type or look needs a source: the person asked for it, the
+product's own views do it, or the default fails accessibility. Name the source in what you say when you finish. A default
+that is wrong everywhere is the design system's to fix, not each view's.
+
 ### When a reference disagrees with the product
 
 A reference (a Figma frame, a screenshot, a sketch) is what the person means, drawn somewhere else. **Sizes, spacing, colours,
