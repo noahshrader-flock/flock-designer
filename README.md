@@ -9,8 +9,8 @@ stand" block. **[`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md)** is what is 
 **`projects/`** — one folder per project. Drop in whatever context you have.
 
 **`agents/`** — how to build UI in a Flock product, for any agent (`ui-guide.md`); the builder (`dsnr.md`, DSNR's
-workflow on top of that) and its two read-only reviewers, the same in every product. A product carries only a
-three-line shim for each, so Claude Code finds them.
+workflow on top of that) and its two read-only reviewers, the same in every product. A product carries only a short
+pointer for each, where each agent looks for one, which `dsnr agent-files` writes.
 
 **`skills/`** — workflows the agent follows that are the same in every product, such as acting on a
 reviewer's comments. The app puts the right one in the agent's task, so nobody has to find or install
@@ -71,9 +71,14 @@ repository, nothing beside it: `designSystem.folder` says which folder), and pro
 | `.dsnr/skills/` | Its part of a shared skill (what its gate checks, what its engineers pick up), and any path only it has |
 | `.dsnr/knowledge/` | Its gap and setup-friction logs, rows only (`knowledge/README.md` here says how) |
 | Its patterns | Whatever folders it needs (Coke: `composition/`, `product-patterns/`), listed in its README |
-| `AGENTS.md` | A short section sending product UI work to `ui-guide.md` and building to the `dsnr` agent (below). Read by Claude Code, Copilot and any other agent that reads `AGENTS.md` |
-| `CLAUDE.md` | Claude Code's: it imports `AGENTS.md`, so the section is said once |
-| `.claude/agents/<name>.md` | Claude Code's: one shim per shared agent: frontmatter, then one line naming `../flock-designer/agents/<name>.md` |
+| `AGENTS.md` | A short section, between `<!-- dsnr:agents -->` lines, sending product UI work to `ui-guide.md` and building to the `dsnr` agent (below). Read by Codex, Copilot and any agent that reads `AGENTS.md` |
+| `CLAUDE.md` | Claude Code's, which it reads in place of `AGENTS.md`: `@AGENTS.md`, so the section is said once |
+| `.claude/agents/<name>.md` | Claude Code's agents (Copilot's command line reads them too): one pointer per shared agent, frontmatter then the line naming `../flock-designer/agents/<name>.md` |
+| `.agents/skills/<name>/SKILL.md` | Codex's skills (Copilot's command line reads them too): the same pointer per shared agent |
+
+**These are written, not made by hand:** `dsnr agent-files`, run in the product, writes them as a change to review and
+commit, and leaves a file that is the product's own (a `CLAUDE.md` with its own rules), saying why. A product's own
+`.github/copilot-instructions.md` is not DSNR's; Copilot reads it beside `AGENTS.md`.
 | `dsnr.code-workspace` | Opens the product with `flock-designer` and the design system beside it, which every pointer above assumes. An agent that cannot read them says so and does not guess |
 
 **The commands** in `workspace.json`, by id: `preview` (an older prototype branch) and `design-mode` (the real product

@@ -486,3 +486,32 @@ describe('the command', () => {
 		expect(readFileSync(join(world.design, 'projects', 'demo', 'prototypes', 'v1.html'), 'utf8')).toContain('Real component');
 	});
 });
+
+describe('agent-files', () => {
+	it('writes what every agent needs into the product, commits nothing, and says what it wrote and what it left', async () => {
+		writeFileSync(join(world.product, 'CLAUDE.md'), '# Our own rules\n');
+		const head = g(world.product, 'rev-parse', 'HEAD').trim();
+		expect(await run('agent-files')).toBe(0);
+		const said = world.out.join('\n');
+		expect(said).toContain('Written in');
+		expect(said).toContain('.agents/skills/dsnr/SKILL.md');
+		expect(said).toMatch(/Left as it is: CLAUDE\.md, since it has instructions of its own/);
+		expect(said).toContain('Nothing was committed.');
+		expect(g(world.product, 'rev-parse', 'HEAD').trim()).toBe(head);
+		expect(readFileSync(join(world.product, '.claude/agents/dsnr.md'), 'utf8')).toContain('../flock-designer/agents/dsnr.md');
+		world.out.length = 0;
+		expect(await run('agent-files')).toBe(0);
+		expect(world.out.join('\n')).toMatch(/^Nothing to write in .*: every agent file is as DSNR writes it\./);
+	});
+
+	it('with --check, writes nothing, says what has drifted from what DSNR writes, and fails until it is written', async () => {
+		expect(await run('agent-files', '--check')).toBe(1);
+		expect(world.out.join('\n')).toMatch(/^Not as DSNR writes them in [\s\S]*AGENTS\.md[\s\S]*Run dsnr agent-files in it to write them\.$/);
+		expect(existsSync(join(world.product, '.agents'))).toBe(false);
+		await run('agent-files');
+		world.out.length = 0;
+		expect(await run('agent-files', '--check')).toBe(0);
+		writeFileSync(join(world.product, '.claude/agents/dsnr.md'), 'Read ../flock-designer/agents/dsnr.md, by hand.\n');
+		expect(await run('agent-files', '--check')).toBe(1);
+	});
+});

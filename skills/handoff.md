@@ -35,7 +35,7 @@ into the review record as it said it; a finding above the product's target is re
 
 Two reviews, because *does this read as the product* and *is it built correctly* are different questions
 with different evidence. The reviewers are shared, `../agents/product-parity-reviewer.md` and
-`../agents/implementation-reviewer.md`, and, in Claude Code, the product's shims make them subagents.
+`../agents/implementation-reviewer.md`, and, where the agent runs subagents, the product's agent files make them subagents.
 
 - **Where the agent runs subagents, run them as subagents, in the foreground,** one after the other or together, and wait for both. Never
   in the background, and never with a reminder to check later: this run ends when you stop, and a review

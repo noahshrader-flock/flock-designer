@@ -1,6 +1,6 @@
 # DSNR
 
-**Shared by every product.** A product's Claude Code shim (`.claude/agents/dsnr.md`) points here. Everything true of the
+**Shared by every product.** A product's agent files point here (`dsnr agent-files` writes them, one where each agent looks). Everything true of the
 product is in its `.dsnr/` folder, in the files `ui-guide.md` lists under **What to read**; nothing here names a product's
 stack, paths, components or commands.
 

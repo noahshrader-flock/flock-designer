@@ -19,6 +19,7 @@ import { designStore } from '../core/services/publishing/designStore';
 import { BUILD_SKILL, GUIDE, assertPrototypeName } from '../core/services/prototypes/prototype';
 import { shellLine } from '../core/services/prototypes/prototypeBundle';
 import { localPrototypeFile, prototypeWork, whereTheChangeGoes } from '../core/services/prototypes/prototypeWork';
+import { writeEntryFiles } from '../core/services/projects/entryFiles';
 import { publish, recordsFrom, unpublish } from '../core/services/publishing/pages';
 import { buildSite } from '../site/buildSite';
 import { serveSite } from '../site/serveSite';
@@ -69,6 +70,7 @@ const USAGE = `Usage:
   dsnr accessibility --project <id> [--name <v1>] [--light] [--product <dir>]
   dsnr check-accessibility --project <id> [--name <v1>]
   dsnr read-returned --project <id> [--product <dir>]
+  dsnr agent-files [--check] [--product <dir>]
 
 new-prototype records the next version (v1 for a new project, then v2, v3) and prints the task: where to write the
 prototype and how to check it builds. change-prototype does the same for a change to one: in that version, in place, or,
@@ -86,7 +88,10 @@ alone). It writes what it found, the evidence and its ledger into the project's 
 review.md's accessibility section from the ledger, and prints it. check-accessibility checks that record, for a gate:
 each status rests on its evidence, each "not run" says why, and review.md says what the ledger says. read-returned reads
 what testers sent back in the project's accessibility/returned.md now, rather than at the next measure: each one a
-machine missed is logged in the product's agent gap log.`;
+machine missed is logged in the product's agent gap log. agent-files writes what lets every agent find DSNR's guidance
+in the product: its section of AGENTS.md, CLAUDE.md as @AGENTS.md, and a pointer for each agent that finds agents or
+skills by file. It never commits, and leaves a file that is the product's own, saying why. With --check it writes
+nothing, says what it would change, and fails if anything would: a product's own check that they have not drifted.`;
 
 class UsageError extends Error {}
 
@@ -125,6 +130,7 @@ const OPTIONS = {
 	'no-open': { type: 'boolean' },
 	light: { type: 'boolean' },
 	'new-version': { type: 'boolean' },
+	check: { type: 'boolean' },
 } as const;
 
 const optionsOf = (args: string[]) => {
@@ -265,6 +271,7 @@ export const main = async (argv: string[], deps: CliDeps): Promise<number> => {
 				'accessibility',
 				'check-accessibility',
 				'read-returned',
+				'agent-files',
 			].includes(command ?? '')
 		) {
 			throw new UsageError(command ? `There is no command called ${command}.` : 'Say which command.');
@@ -279,6 +286,24 @@ export const main = async (argv: string[], deps: CliDeps): Promise<number> => {
 				out: deps.out,
 			});
 		if (command === 'publish') return await publishPage(deps, values);
+		if (command === 'agent-files') {
+			const check = values.check === true;
+			const root = await productOf(deps.cwd, values.product, check ? 'check its agent files' : 'write its agent files');
+			const { written, unchanged, left } = writeEntryFiles(root, designBeside(root), { write: !check });
+			const list = (paths: string[]) => paths.map((p) => `  ${p}`).join('\n');
+			deps.out(
+				[
+					written.length
+						? `${check ? 'Not as DSNR writes them' : 'Written'} in ${root}:\n${list(written)}`
+						: `Nothing to write in ${root}: every agent file is as DSNR writes it.`,
+					...(unchanged.length && written.length ? [`Already as DSNR writes them:\n${list(unchanged)}`] : []),
+					...left.map(({ path, why }) => `Left as it is: ${path}, since ${why}.`),
+					...(written.length && !check ? ['They are the product’s files: look at them, then commit them. Nothing was committed.'] : []),
+					...(written.length && check ? ['Run dsnr agent-files in it to write them.'] : []),
+				].join('\n\n'),
+			);
+			return check && (written.length > 0 || left.length > 0) ? 1 : 0;
+		}
 		if (command === 'read-returned') {
 			if (!values.project) throw new UsageError('Say which project, with --project.');
 			const root = await productOf(deps.cwd, values.product, 'log what testers found');

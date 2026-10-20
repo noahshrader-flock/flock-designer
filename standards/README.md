@@ -39,7 +39,7 @@ judgment is overridable by product convention; conformance is not.
 ## How a product reaches these
 
 A sibling checkout, the same arrangement the design system's guidance uses: `flock-designer/` beside the product. The
-product's agent shims point at `../agents/`, and the shared agents read the product's `.dsnr/` by the file names in
+product's agent files point at `../agents/`, and the shared agents read the product's `.dsnr/` by the file names in
 `../README.md` ("What a product repository provides"). The app also puts the accessibility rules and the voice and tone in
 every task it makes, so a run from the app has them without reading anything. Becoming a package follows when the content
 stops moving and a second product adopts it.

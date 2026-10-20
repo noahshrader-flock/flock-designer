@@ -34,7 +34,7 @@ describeWith(cokeMissing, 'against the real Coke checkout', () => {
 describeWith(cokeMissing, 'the entry points of the real Coke checkout', () => {
 	const text = (path: string) => readFileSync(join(COKE, path), 'utf8');
 	const entries = ['AGENTS.md', 'CLAUDE.md'];
-	const shims = readdirSync(join(COKE, '.claude', 'agents')).map((f) => `.claude/agents/${f}`);
+	const pointers = readdirSync(join(COKE, '.claude', 'agents')).map((f) => `.claude/agents/${f}`);
 
 	it('sends every agent that reads AGENTS.md to the guide and to the dsnr agent', () => {
 		const agents = text('AGENTS.md');
@@ -55,7 +55,7 @@ describeWith(cokeMissing, 'the entry points of the real Coke checkout', () => {
 	});
 
 	it('names only files that are there', () => {
-		const missing = [...entries, ...shims].flatMap((file) =>
+		const missing = [...entries, ...pointers].flatMap((file) =>
 			[...text(file).matchAll(/\.\.\/flock-designer\/([\w./-]+\.md)/g)]
 				.map((m) => m[1] as string)
 				.filter((path) => !existsSync(join(dirname(COKE), 'flock-designer', path)))

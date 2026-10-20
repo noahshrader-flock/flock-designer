@@ -1,7 +1,7 @@
 # Start or change a prototype from an agent
 
-**Shared by every product.** For an agent in a product repository (Claude Code reaches this through its `dsnr` shim; any
-other agent reads this file), asked for a prototype or for a change to one. The app is not needed: this uses the same code the app runs, so the work appears in DSNR like
+**Shared by every product.** For an agent in a product repository (one reaches this through the product's `dsnr` agent file, any
+other reads this file), asked for a prototype or for a change to one. The app is not needed: this uses the same code the app runs, so the work appears in DSNR like
 any other. Started from the app, a prototype never needs this file.
 
 ## Start it
