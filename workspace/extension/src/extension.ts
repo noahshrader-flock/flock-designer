@@ -1,5 +1,5 @@
 import { readDescriptor } from '../../src/core/services/projects/descriptor';
-import { INSTALL_COMMAND } from '../../src/core/services/codebase/install';
+import { installLine } from '../../src/core/services/codebase/install';
 import { httpProbe } from '../../src/core/services/codebase/runtime';
 import { join } from 'node:path';
 import * as vscode from 'vscode';
@@ -233,10 +233,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 		const declared = () => readDescriptor(root).commands;
 		return {
 			port: (id) => declared().find((c) => c.id === id)?.servesPreviewOn ?? null,
-			installCommand: () =>
-				declared()
-					.find((c) => c.id === INSTALL_COMMAND)
-					?.argv.join(' ') ?? null,
+			installCommand: () => installLine(readDescriptor(root)),
 			answers: httpProbe,
 			loads: (url) => headless.loads(url),
 		};

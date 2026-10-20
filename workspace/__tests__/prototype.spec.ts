@@ -149,6 +149,7 @@ describe('what the agent is told', () => {
 		productGuidance: '/c/coke/.dsnr',
 		designSystemGuidance: '/c/fui',
 		installedDesignSystem: null,
+		installedAgainstBase: null,
 		sharedStandards: '/d/standards',
 		nodeModules: '/c/node_modules',
 	};

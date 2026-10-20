@@ -162,6 +162,7 @@ const readableLines = (sources: PrototypeSources): string[] => {
 			"Use the installed design system and the product's own code for tokens and components.",
 		),
 		line('The design system as installed', sources.installedDesignSystem, 'Its version cannot be confirmed; say so.'),
+		...(sources.installedAgainstBase ? [`  ${sources.installedAgainstBase} Say so in your summary.`] : []),
 		line('Shared standards', sources.sharedStandards, ''),
 		line("The product's installed packages", sources.nodeModules, ''),
 	];

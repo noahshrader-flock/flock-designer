@@ -14,6 +14,7 @@ const sources = {
 	productGuidance: null,
 	designSystemGuidance: null,
 	installedDesignSystem: null,
+	installedAgainstBase: null,
 	sharedStandards: null,
 	nodeModules: null,
 };

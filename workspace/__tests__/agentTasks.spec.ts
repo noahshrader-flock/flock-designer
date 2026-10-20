@@ -116,6 +116,7 @@ describe('the builder’s guide, in every task (so no run depends on an agent ch
 		productGuidance: null,
 		designSystemGuidance: null,
 		installedDesignSystem: null,
+		installedAgainstBase: null,
 		sharedStandards: null,
 		nodeModules: null,
 	};
@@ -144,6 +145,23 @@ describe('the builder’s guide, in every task (so no run depends on an agent ch
 	it.each(Object.entries(tasks))('comes first, before anything else: %s', (_kind, task) => {
 		expect(task.startsWith(GUIDE)).toBe(true);
 		expect(task.indexOf('# Building UI in a Flock product')).toBeLessThan(task.indexOf('#', GUIDE.length));
+	});
+
+	it('tells the agent, in what it may read, when the design system installed may not be what the base pins: building and changing alike', () => {
+		const said = 'develop pins x 1.3.0, and 1.2.3 is installed here, so the prototype may not match develop: it is built against 1.2.3.';
+		const told = { ...sources, installedDesignSystem: '/n/x', installedAgainstBase: said };
+		const building = prototypeBuildTask({ guide: GUIDE, skill: '# Build', build, sources: told, accessibility: '', voice: '', request: 'A list' });
+		const changing = prototypeAddressTask({
+			...{ guide: GUIDE, addressSkill: '# A', buildSkill: '# B', build, accessibility: '', voice: '' },
+			sources: told,
+			commentsPath: '/c.md',
+			number: 1,
+			name: 'v1',
+			where: null,
+		});
+		for (const task of [building, changing])
+			expect(task).toContain(`- **The design system as installed:** \`/n/x\`\n  ${said} Say so in your summary.`);
+		expect(tasks['building a prototype']).not.toContain('pins x');
 	});
 
 	it('says it is always followed, that the run’s own skill wins where it is more specific, and what to do with nobody to ask', () => {

@@ -191,6 +191,8 @@ export interface PrototypeSources {
 	designSystemGuidance: string | null;
 	/** As installed in the product: the version it really renders with. */
 	installedDesignSystem: string | null;
+	/** Said when what is installed may not be what the base's lockfile pins, or that cannot be told: `installedAgainstBase`. */
+	installedAgainstBase: string | null;
 	sharedStandards: string | null;
 	nodeModules: string | null;
 }

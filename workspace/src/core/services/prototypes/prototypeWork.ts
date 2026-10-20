@@ -10,6 +10,8 @@ import { designSystemCheckout, readDescriptor } from '../projects/descriptor';
 import { recordsRootFor } from '../projects/discovery';
 import { branchTip, commitsAfter, git, hasCommit, headCommit, isSafeBranchName, readTreeAt, repositoryOf } from '../platform/git';
 import { fetchBranch, freshTip } from '../platform/fetch';
+import { installLine } from '../codebase/install';
+import { installedAgainstBase, installedVersion } from './installedVersion';
 import { isObjectId } from '../../../shared/sha';
 import { errorText } from '../../../shared/result';
 import { assertUsableProjectId } from '../projects/workRecords';
@@ -141,13 +143,21 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		if (!existsSync(join(pkg, 'package.json')))
 			return { ready: false, why: 'not-installed', designSystem, repository: basename(root), canInstall: false };
 		if (ctx.esbuild() === null) return { ready: false, why: 'no-bundler', designSystem, repository: basename(root), canInstall: false };
-		let version: string | null = null;
-		try {
-			version = (JSON.parse(readFileSync(join(pkg, 'package.json'), 'utf8')) as { version?: string }).version ?? null;
-		} catch {
-			// A package.json that cannot be read still means it is installed.
-		}
-		return { ready: true, designSystem, version };
+		// A package.json that cannot be read still means it is installed.
+		return { ready: true, designSystem, version: installedVersion(join(root, 'node_modules'), designSystem) };
+	};
+	/** `installedAgainstBase`, for the open product's design system at `commit` of `branch`. */
+	const versionAgainst = (root: string, commit: string, branch: string): Promise<string | null> => {
+		const descriptor = readDescriptor(root);
+		const pkg = descriptor.designSystem.package;
+		return installedAgainstBase({
+			root,
+			commit,
+			branch,
+			pkg,
+			installed: installedVersion(join(root, 'node_modules'), pkg),
+			install: installLine(descriptor),
+		});
 	};
 	const notReady = (root: string | null): string | null => {
 		if (root === null) return NO_PRODUCT;
@@ -165,11 +175,13 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		if (why !== null) throw new Error(why);
 		if (typeof name !== 'string' || !name.trim()) throw new Error('A prototype needs a name.');
 		const tip = await freshTip(root, branch);
+		// Everything read before the record is written, so a read that fails leaves nothing recorded.
+		const said = [tip.said, await versionAgainst(root, tip.commit, branch)].filter((x): x is string => x !== null);
 		// The clone's folder, as this machine names it, and the repository it is a clone of, as every machine does.
 		const product = await repositoryOf(root);
 		const basedOn = { repository: basename(root), branch, commit: tip.commit, ...(product ? { product } : {}) };
 		const made = await recordPrototype(ctx.store(), { projectId, title: name.slice(0, 200), note: String(note).slice(0, 8000), me, basedOn, folder });
-		return { ...made, modeledOn: `Modeled on ${branch} at ${tip.commit.slice(0, 7)}.${tip.said ? ` ${tip.said}` : ''}` };
+		return { ...made, modeledOn: [`Modeled on ${branch} at ${tip.commit.slice(0, 7)}.`, ...said].join(' ') };
 	};
 
 	/**
@@ -249,6 +261,7 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 			// Its source matters as much as its guidance, for a page that redraws its components.
 			designSystemGuidance: has(designSystemCheckout(root, descriptor.designSystem)),
 			installedDesignSystem,
+			installedAgainstBase: installedDesignSystem ? await versionAgainst(root, commit, basedOn.branch) : null,
 			sharedStandards: designRoot === null ? null : has(join(dirname(designRoot), 'standards')),
 			// Only worth building against when the design system itself is installed in them.
 			nodeModules: installedDesignSystem ? join(root, 'node_modules') : null,

@@ -9,7 +9,7 @@ import type { CheckPage } from '../../ports';
 import type { AppPage } from './accessibilityBrief';
 import { NO_BROWSER } from '../browser/chromeHeadless';
 import { DESCRIPTOR_PATH, type WorkspaceDescriptor } from '../projects/descriptor';
-import { INSTALL_COMMAND } from '../codebase/install';
+import { installLine } from '../codebase/install';
 import { RuntimeManager, type RuntimeDeps, defaultDeps } from '../codebase/runtime';
 import { buildError, outputLines, packagesHint } from '../codebase/serverOutput';
 
@@ -101,7 +101,7 @@ export const onDesignMode = async <T>(
 			`Something else is already answering on port ${port}, where ${descriptor.product}'s app is served, so it may not be this checkout's, and nothing was measured. Stop it, then try again.`,
 		);
 	}
-	const install = descriptor.commands.find((c) => c.id === INSTALL_COMMAND)?.argv.join(' ') ?? null;
+	const install = installLine(descriptor);
 	const withHint = (why: string) => `${why}${packagesHint(why, install)}`;
 	const said: { log: string[]; failed: string | null } = { log: [], failed: null };
 	const runtime = new RuntimeManager(

@@ -15,6 +15,8 @@ let mine: string;
 let theirs: string;
 let shared: ReturnType<typeof memoryStore>;
 
+const lock = (version: string) => JSON.stringify({ lockfileVersion: 3, packages: { 'node_modules/x': { version } } });
+
 const manifest = (target: string) => `# Manifest\n\n## Accessibility conformance target\n\n| | |\n|---|---|\n| **Target** | ${target} |\n`;
 
 const commitIn = (dir: string, file: string, text: string) => {
@@ -40,6 +42,8 @@ beforeEach(() => {
 	home = mkdtempSync(join(tmpdir(), 'fdw-base-'));
 	mine = join(home, 'a', 'product');
 	makeProduct(mine);
+	// Pinning what `installDesignSystem` installs, as a real product's lockfile does.
+	commitIn(mine, 'package-lock.json', lock('1.2.3'));
 	commitIn(mine, 'view.tsx', 'first view');
 	origin = join(home, 'origin.git');
 	g(home, 'clone', '-q', '--bare', mine, origin);
@@ -73,6 +77,15 @@ describe('a new prototype is modeled on the latest of its branch', () => {
 		expect(made.basedOn?.commit).toBe(newer);
 		expect(made.modeledOn).toBe(`Modeled on develop at ${newer.slice(0, 7)}. Your local develop is 1 commit behind origin; origin's is used.`);
 		expect(checkout()).toEqual(before);
+	});
+
+	it('says, at the start, when the design system installed is not the one the branch pins', async () => {
+		commitIn(mine, 'package-lock.json', lock('1.3.0'));
+		g(mine, 'push', '-q', 'origin', 'develop');
+		const made = await start(mine);
+		expect(made.modeledOn).toMatch(/^Modeled on develop at [0-9a-f]{7}\. develop pins x 1\.3\.0, and 1\.2\.3 is installed here/);
+		// And the agent is told the same, in what it may read.
+		expect((await workIn(mine).sources('demo', made.name))?.installedAgainstBase).toMatch(/^develop pins x 1\.3\.0, and 1\.2\.3 is installed here/);
 	});
 
 	it('is the local branch, said, when origin cannot be reached', async () => {

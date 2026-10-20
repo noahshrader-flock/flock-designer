@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import type { WorkspaceCommand } from '../projects/descriptor';
+import type { WorkspaceCommand, WorkspaceDescriptor } from '../projects/descriptor';
 import { NotStarted, Stopped, runStreamed } from '../platform/streamed';
 import { HOST } from '../../../shared/vocabulary';
 
@@ -9,6 +9,10 @@ import { HOST } from '../../../shared/vocabulary';
  */
 
 export const INSTALL_COMMAND = 'install';
+
+/** The repository's own install command, as a line a person can run; null when it declares none. */
+export const installLine = (descriptor: Pick<WorkspaceDescriptor, 'commands'>): string | null =>
+	descriptor.commands.find((c) => c.id === INSTALL_COMMAND)?.argv.join(' ') ?? null;
 
 export class InstallProblem extends Error {
 	constructor(message: string) {
