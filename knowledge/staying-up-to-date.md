@@ -60,5 +60,5 @@ commits behind origin; origin's is used". So you know what a prototype or a chec
   with yours."* Commit or stash your own changes first.
 - *"How … stands against the product's default branch cannot be told here."* DSNR could not reach GitHub, or the product
   does not say which branch is its main one. Check your connection, and try again.
-- *The product holds its own design system* (like Paradome): a component change and codebase work share one checkout, so
-  DSNR will not start one while the other has uncommitted work, and says so.
+- *The product holds its own design system* (like Paradome): a component change and codebase work share one checkout,
+  and DSNR says so when it refuses. See [The shapes a product can take](product-shapes.md).

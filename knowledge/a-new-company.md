@@ -23,8 +23,10 @@ start one.
   `standards/universal/`), and where they give Coke as an example, use your own product. This is renaming, not
   rewriting.
 - *The published pages' sign-in.* People sign in to comment on a published page through a GitHub sign-in app that belongs
-  to the company. Flock's is built in; another company sets up its own and gives DSNR its details
-  (`DSNR_PAGES_CLIENT_ID` and `DSNR_PAGES_EXCHANGE`).
+  to the company. Flock's is built in. Another company sets up its own, and today gives DSNR its details through two
+  settings in the environment VS Code and the `dsnr` command run in (`DSNR_PAGES_CLIENT_ID` and `DSNR_PAGES_EXCHANGE`).
+  This is the one company setting with no simpler way yet; until it is set, comments on another company's published
+  pages cannot be signed in to.
 - *Flock's own Storybook address*, which DSNR knows for Flock's design system. Yours is asked for once, the first time you
   open a component in Storybook.
 

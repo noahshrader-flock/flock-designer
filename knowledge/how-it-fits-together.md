@@ -57,6 +57,19 @@ guidance it must follow, and hands it over. You watch the agent work in its own 
 Which agent is your choice. With one signed in, DSNR uses it; with several, it asks you once and keeps your answer. You can
 change it with **DSNR: Choose the agent**.
 
+## Words you will see
+
+- *Repository*: a project's files and their whole history, kept on GitHub. The product, the design system and the design
+  repository are each one.
+- *Clone*: your copy of a repository, on your computer.
+- *Branch*: a separate line of work in a repository, so changes can be made without touching the main one until they are
+  ready. The main branch (often `develop` or `main`) is what everyone builds on.
+- *Checkout*: the files of a clone as they are on your computer right now, on whichever branch you have open.
+- *Commit*: a saved point in a repository's history. *Push*: sending your commits to GitHub.
+- *Pull request*: a request, on GitHub, to bring a branch into the main one, where others review it first. A *draft* one
+  is not yet asking for review.
+- *Behind*, and a *conflict*: see [Staying up to date](staying-up-to-date.md).
+
 ## Why it is built this way
 
 - *The real thing, not a picture of it.* A prototype made from the product's own components can be handed to

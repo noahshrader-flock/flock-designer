@@ -89,12 +89,9 @@ To take a version off the site, use `dsnr unpublish`. Its record and comments ar
 ## Keep it current
 
 The product keeps moving after a prototype is made. When the branch it was modeled on has newer commits, the review bar
-shows how far behind it is, for example "3 behind develop". Press it, then **Refresh to latest**: the agent rebuilds the
-prototype on the latest code, in place, and its comments stay where they were.
-
-If you have the design system's clone on this computer, the bar can also switch which design system a version is built
-from: the installed package, or your clone with its changes. This is how you see a component change you are working on
-inside a real prototype. [The design system](the-design-system.md) explains it.
+says how far behind it is, and **Refresh to latest** rebuilds it on the latest code: see
+[Staying up to date](staying-up-to-date.md). To see a design system change you are working on inside a prototype, the bar
+can build it from your clone of the design system: see [The design system](the-design-system.md).
 
 ## Where it all lives
 
@@ -105,8 +102,7 @@ In the design repository, under `projects/` and the project's id:
 - `prototypes/`: each version's source (`v1.tsx`) and page (`v1.html`).
 - `covers/`: the pictures in the project list.
 
-DSNR pushes these to GitHub for you, with your own git sign-in, whenever they change. The panel's sync status shows
-**Synced** when everything has reached GitHub. Nothing outside `projects/` is pushed this way.
+DSNR commits and pushes these to GitHub for you, whenever they change: see [Committing](committing.md).
 
 ## If something goes wrong
 
@@ -115,5 +111,5 @@ DSNR pushes these to GitHub for you, with your own git sign-in, whenever they ch
 - *"No agent is signed in here."* Sign in to Claude Code, Codex or GitHub Copilot, then start again.
 - *"The product is not on a branch."* Check out a branch in the product first.
 - *"The prototype did not build."* The agent sees the error and fixes it. If it stopped, ask it to try again.
-- *The records are not syncing.* Changes outside `projects/` that are waiting to be pushed hold the records back. Push
-  those yourself, and the records follow.
+- *The records are not syncing.* See [Committing](committing.md): other changes of yours waiting to be pushed hold them
+  back.

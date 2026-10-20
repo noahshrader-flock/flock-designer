@@ -9,8 +9,7 @@ import { describe, expect, it } from 'vitest';
  */
 const REPO = join(__dirname, '..', '..');
 const KNOWLEDGE = join(REPO, 'knowledge');
-/** The gap logs page is written for agents, in the older style, and names a product's files, not this repository's. */
-const PAGES = readdirSync(KNOWLEDGE).filter((f) => f.endsWith('.md') && f !== 'gap-logs.md');
+const PAGES = readdirSync(KNOWLEDGE).filter((f) => f.endsWith('.md'));
 
 const filesUnder = (dir: string, ext: RegExp): string[] =>
 	readdirSync(dir).flatMap((name) => {
@@ -62,7 +61,6 @@ describe('the knowledge base names only what is real', () => {
 		const front = readFileSync(join(KNOWLEDGE, 'README.md'), 'utf8');
 		expect(PAGES.length).toBeGreaterThan(10);
 		for (const page of PAGES.filter((p) => p !== 'README.md')) expect(front, page).toContain(`(${page})`);
-		expect(front).toContain('(gap-logs.md)');
 	});
 
 	for (const page of PAGES) {
