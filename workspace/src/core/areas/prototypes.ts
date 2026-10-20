@@ -7,13 +7,12 @@ import { coverPath, prototypeKey, prototypePagePath } from '../../shared/designP
 import { statesOf } from '../../shared/prototypeStates';
 import { workLabel } from '../../shared/work';
 import { ADDRESS_SKILL, chooseComment } from '../services/prototypes/address';
-import { guidePart, prototypeAddressTask, prototypeBuildTask } from '../services/agent/agentTasks';
+import { guidePart, prototypeAddressTask, prototypeBuildTask, refreshRequest } from '../services/agent/agentTasks';
 import { writeCommentsExport } from '../services/prototypes/commentsExport';
 import { readDescriptor } from '../services/projects/descriptor';
 import { handTask } from '../services/agent/handOver';
-import { ensureLocalBranch, readCheckout } from '../services/platform/git';
+import { readCheckout } from '../services/platform/git';
 import { warmTip } from '../services/platform/fetch';
-import { plural } from '../../shared/plural';
 import { INSTALL_COMMAND } from '../services/codebase/install';
 import { jpegDataUrl } from '../services/prototypes/picture';
 import { type CoverDeps, builtHere, ensureCovers } from '../services/prototypes/projectCovers';
@@ -60,8 +59,8 @@ export const prototypesArea = (d: CallsDeps) => {
 		},
 		createPrototype: async (projectId: string, title: string, note: string, from: { root: string; branch: string } | null, folder: unknown) => {
 			if (!from) throw new Error('A prototype is modeled on a branch of a repository on this machine. Choose one.');
+			// Nothing is made local: a branch only on origin is modeled on from there, as `freshTip` reads it.
 			const root = opened.require(from.root);
-			await ensureLocalBranch(root, from.branch);
 			return work.start(root, { projectId, title, note, branch: from.branch, me: me(), folder: folderName(folder) });
 		},
 		warmPrototypeBase: async (root: string): Promise<null> => {
@@ -94,7 +93,14 @@ export const prototypesArea = (d: CallsDeps) => {
 						task: prototypeBuildTask({
 							...(await taskParts(projectId, name)),
 							skill: await readSkillText(BUILD_SKILL),
-							request: `Rebuild ${label} on the latest product code, in place. It was built on ${now.branch} at ${now.commit.slice(0, 7)}, and is now modeled on ${now.latest.slice(0, 7)}, ${plural(now.behind, 'commit')} newer. Its source is ${work.sourceFile(projectId, name)}: change it there, rather than starting again. Keep the design as it is, and change only what the newer code needs (components, props, imports or types that moved or changed). Say what you changed and why, or that nothing needed changing.`,
+							request: refreshRequest({
+								label,
+								branch: now.branch,
+								was: now.commit,
+								now: now.latest,
+								newer: now.behind,
+								source: work.sourceFile(projectId, name),
+							}),
 						}),
 					};
 				});

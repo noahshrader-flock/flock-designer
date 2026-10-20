@@ -2,6 +2,7 @@ import type { Work } from '../../../shared/contract';
 import { NOT_READY_LINE, READY_LINE } from '../../../shared/handoff';
 import { type PrototypeBuild, type PrototypeSources, WORKFLOW } from '../prototypes/prototype';
 import { HOST } from '../../../shared/vocabulary';
+import { plural } from '../../../shared/plural';
 import { MOST_ROUNDS } from '../accessibility/buildCheck';
 
 /**
@@ -210,6 +211,24 @@ export const prototypeBuildTask = ({
 		'',
 		request.trim(),
 	].join('\n');
+
+/** What Refresh to latest asks of a build, as the person's request: they pressed it. Short commits, as people read them. */
+export const refreshRequest = ({
+	label,
+	branch,
+	was,
+	now,
+	newer,
+	source,
+}: {
+	label: string;
+	branch: string;
+	was: string;
+	now: string;
+	newer: number;
+	source: string;
+}): string =>
+	`Rebuild ${label} on the latest product code, in place. It was built on ${branch} at ${was.slice(0, 7)}, and is now modeled on ${now.slice(0, 7)}, ${plural(newer, 'commit')} newer. Its source is ${source}: change it there, rather than starting again. Keep the design as it is, and change only what the newer code needs (components, props, imports or types that moved or changed). Say what you changed and why, or that nothing needed changing.`;
 
 /** It carries none of what the reviewer wrote: their words reach the agent only through the file. */
 export const prototypeAddressTask = ({

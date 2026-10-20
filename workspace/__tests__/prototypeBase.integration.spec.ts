@@ -82,6 +82,17 @@ describe('a new prototype is modeled on the latest of its branch', () => {
 		expect(made.modeledOn).toMatch(/^Modeled on develop at [0-9a-f]{7}\. Git could not update product: .+ Your local develop is used\.$/);
 	});
 
+	it('is a branch only on origin, from there, making nothing local and calling nothing behind', async () => {
+		g(theirs, 'checkout', '-q', '-b', 'feature/zone');
+		const zone = commitIn(theirs, 'view.tsx', 'zone view');
+		g(theirs, 'push', '-q', 'origin', 'feature/zone');
+		g(mine, 'fetch', '-q', 'origin');
+		const made = await workIn(mine).start(mine, { projectId: 'demo', title: 'Demo', note: 'A list', branch: 'feature/zone', me: null });
+		expect(made.basedOn?.commit).toBe(zone);
+		expect(made.modeledOn).toBe(`Modeled on feature/zone at ${zone.slice(0, 7)}.`);
+		expect(g(mine, 'branch', '--list', 'feature/zone')).toBe('');
+	});
+
 	it('says how far a version is behind once its branch moves on, and nothing it cannot tell', async () => {
 		// Made on their machine; read on this one, whose first fetch is the one that finds the newer commits.
 		const made = await start(theirs);
@@ -98,6 +109,11 @@ describe('a new prototype is modeled on the latest of its branch', () => {
 		});
 		// Another product open: nothing is said of it.
 		expect(await workIn(join(home, 'b')).behind('demo', made.name)).toBeNull();
+		// Its branch gone, here and from origin: nothing to be behind.
+		g(mine, 'branch', '-q', '-m', 'develop', 'renamed');
+		g(origin, 'branch', '-q', '-m', 'develop', 'renamed');
+		g(mine, 'update-ref', '-d', 'refs/remotes/origin/develop');
+		expect(await workIn(mine).behind('demo', made.name)).toBeNull();
 	});
 });
 

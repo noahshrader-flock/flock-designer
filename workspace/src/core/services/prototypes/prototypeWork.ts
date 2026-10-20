@@ -217,8 +217,10 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		if (!basedOn || basedOn.commit === null || root === null || basename(root) !== basedOn.repository) return null;
 		const base = await knownBase(root, name, basedOn).catch(() => null);
 		if (base === null) return null;
-		const { commit: latest } = await freshTip(root, basedOn.branch);
-		return { branch: basedOn.branch, commit: base, latest, behind: await commitsAfter(root, base, latest) };
+		// Its branch gone from here and from origin: there is nothing to be behind.
+		const tip = await freshTip(root, basedOn.branch).catch(() => null);
+		if (tip === null) return null;
+		return { branch: basedOn.branch, commit: base, latest: tip.commit, behind: await commitsAfter(root, base, tip.commit) };
 	};
 
 	/** The code at the commit the version was modeled on: the checkout itself when it is at that commit, else a read-only copy. */

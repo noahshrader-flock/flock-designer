@@ -660,6 +660,18 @@ describe('prototypes', () => {
 			expect((await call(CHANNELS.prototypeBehind, 'demo', 'v1')).value).toMatchObject({ behind: 0 });
 		});
 
+		it('models a prototype on a branch only on origin from there, making no local branch', async () => {
+			await made();
+			const origin = join(home, 'origin.git');
+			g(home, 'clone', '-q', '--bare', product, origin);
+			g(product, 'remote', 'add', 'origin', origin);
+			g(product, 'push', '-q', 'origin', 'develop:feature/zone');
+			g(product, 'fetch', '-q', 'origin');
+			const r = await call(CHANNELS.createPrototype, 'demo', 'Demo', 'Another', { root: product, branch: 'feature/zone' });
+			expect(r).toMatchObject({ ok: true, value: { basedOn: { branch: 'feature/zone', commit: g(product, 'rev-parse', 'develop') } } });
+			expect(g(product, 'branch', '--list', 'feature/zone')).toBe('');
+		});
+
 		it('starts fetching the branch the product is on for New, and only for a product it trusts', async () => {
 			await made();
 			expect(await call(CHANNELS.warmPrototypeBase, product)).toEqual({ ok: true, value: null });
