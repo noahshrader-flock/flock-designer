@@ -21,7 +21,7 @@ import { localPrototypeFile, whereTheChangeGoes } from '../services/prototypes/p
 import { singleFlight } from '../services/platform/concurrency';
 
 export const prototypesArea = (d: CallsDeps) => {
-	const { agent, designRepo, me, opened, ports, prototypePage, prototypesRoot, deploys, readSkillText, servePrototype, store, work } = d;
+	const { agent, designRepos, me, opened, ports, prototypePage, prototypesRoot, deploys, readSkillText, servePrototype, store, work } = d;
 	const inFlight = singleFlight<string, unknown>();
 	const once = <T>(key: string, run: () => Promise<T>): Promise<T> => inFlight.run(key, run) as Promise<T>;
 	const coverDeps: CoverDeps = {
@@ -155,7 +155,7 @@ export const prototypesArea = (d: CallsDeps) => {
 				const addressSkill = await readSkillText(ADDRESS_SKILL);
 				const buildSkill = await readSkillText(BUILD_SKILL);
 				// Read now, not earlier: this is what makes the file current.
-				const comments = await designRepo.threads.readComments(prototypeKey(projectId, name));
+				const comments = await designRepos.now().threads.readComments(prototypeKey(projectId, name));
 				const exported = writeCommentsExport(prototypesRoot, {
 					projectId,
 					title: await work.title(projectId),

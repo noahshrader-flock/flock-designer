@@ -1,3 +1,4 @@
+import type { DesignRepo } from '../codeHost/designRepo';
 import type { Checkout } from '../shared/contract';
 import { clearRoutes } from './handle';
 import { registerAccount } from './calls/account';
@@ -26,6 +27,8 @@ export const registerCalls = (
 	publish: (force?: boolean) => Promise<void>;
 	/** Opens and trusts a product checkout, for the shell alone: no call from a page opens a checkout. */
 	open: (root: string) => Promise<Checkout>;
+	/** The design repository the open product belongs to, for the shell's own reads (a review copy, the viewer's address). */
+	designRepo: () => DesignRepo;
 } => {
 	clearRoutes();
 	const d = composeCore(context);
@@ -36,5 +39,5 @@ export const registerCalls = (
 	registerReview(reviewArea(d));
 	registerPublishing(publishingArea(d));
 	registerAccount(accountArea(d));
-	return { publish: (force = false) => d.publisher.publish(force), open: (root) => d.openRepository(root) };
+	return { publish: (force = false) => d.publisher.publish(force), open: (root) => d.openRepository(root), designRepo: () => d.designRepos.now() };
 };

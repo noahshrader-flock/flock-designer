@@ -143,7 +143,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 		if (why !== null || found.product === null) throw new Error(why ?? productNow().why);
 		return { root: found.product, titled: (project && reviewsOf(project).find((x) => x.name === r.name)) || r };
 	};
-	const buildReview = buildReviewSite(site, join(context.extensionUri.fsPath, 'dist', 'viewer'));
+	const buildReview = buildReviewSite(site, join(context.extensionUri.fsPath, 'dist', 'viewer'), () => shell.designRepo().ref);
 	const reviews = new Reviews({
 		vscode,
 		onShown: () => tabsShown(),
@@ -186,7 +186,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 	const recordsFor = (projectId: string): Promise<string> =>
 		found.designRepository !== null
 			? Promise.resolve(found.designRepository)
-			: copyProject(core.designRepo.files, projectId, join(storage, 'review-copy'), reviews.inUse());
+			: copyProject(shell.designRepo().files, projectId, join(storage, 'review-copy'), reviews.inUse());
 	/**
 	 * Saved when it is opened (`openPrototype`), so the review shows what reviewers get; the list is read again for the
 	 * picture a built page now has.

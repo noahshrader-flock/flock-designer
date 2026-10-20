@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { copyProject } from '../src/core/services/prototypes/projectCopy';
 import { buildReviewSite } from '../extension/src/review';
+import { DESIGN_REPO } from '../src/shared/config';
 
 /** Read through GitHub, so a project's review can be built with no checkout on the machine. */
 
@@ -100,7 +101,7 @@ describe('a review built from the copy, with no checkout on the machine', () => 
 		mkdirSync(viewer);
 		for (const f of ['viewer.js', 'viewer.css', 'viewer.ttf', 'page-agent.js']) writeFileSync(join(viewer, f), '');
 		const site = join(into, 'site');
-		buildReviewSite(site, viewer)(at, 'http://127.0.0.1:5001/review/');
+		buildReviewSite(site, viewer, () => DESIGN_REPO)(at, 'http://127.0.0.1:5001/review/');
 		expect(readFileSync(join(site, 'demo', 'v1', 'index.html'), 'utf8')).toContain('dsnr-config');
 		const page = readFileSync(join(site, 'demo', 'v1', 'page.html'), 'utf8');
 		expect(page).toContain('<h1>One</h1>');

@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { GitHubAccount } from '../src/codeHost/github';
+import { DESIGN_REPO } from '../src/shared/config';
 
 const pages = vi.hoisted(() => ({
 	siteBehind: vi.fn(),
@@ -16,7 +17,7 @@ const github = {
 	state: () => (signedIn ? { state: 'signedIn', user: { login: 'noah', name: 'Noah' } } : { state: 'signedOut' }),
 	api: vi.fn(),
 } as unknown as Pick<GitHubAccount, 'state' | 'api'>;
-const deploys = () => siteDeploys({ github, designClone: () => null });
+const deploys = () => siteDeploys({ github, designClone: () => null, ref: () => DESIGN_REPO });
 const settle = () => new Promise((r) => setImmediate(r));
 const MINUTE = 60_000;
 /** A moment long after the app opened, as any real one is. */

@@ -22,7 +22,7 @@ const github = () => ({
 describe('the design repository, read and written', () => {
 	it('reads the clone here, and from GitHub only what the clone does not have yet', async () => {
 		const repo = github();
-		const store = designStore({ clone: () => clone, files: repo, onWrite: () => undefined });
+		const store = designStore({ clone: () => clone, files: () => repo, onWrite: () => undefined });
 		expect(await store.readFile('projects/p/brief.md')).toBe('# Here');
 		expect(repo.readFile).not.toHaveBeenCalled();
 		expect(await store.readFile('projects/p/notes.md')).toBe('# From GitHub');
@@ -30,13 +30,13 @@ describe('the design repository, read and written', () => {
 
 	it('is GitHub when there is no clone, asked once for a file', async () => {
 		const repo = github();
-		const store = designStore({ clone: () => null, files: repo, onWrite: () => undefined });
+		const store = designStore({ clone: () => null, files: () => repo, onWrite: () => undefined });
 		expect(await store.readFile('projects/p/missing.md')).toBeNull();
 		expect(repo.readFile).toHaveBeenCalledOnce();
 	});
 
 	it('is the clone alone where there is no GitHub to ask, as for the command line', async () => {
-		const store = designStore({ clone: () => clone, files: null, onWrite: () => undefined });
+		const store = designStore({ clone: () => clone, files: () => null, onWrite: () => undefined });
 		expect(await store.readFile('projects/p/notes.md')).toBeNull();
 		expect(await store.readFile('projects/p/brief.md')).toBe('# Here');
 	});

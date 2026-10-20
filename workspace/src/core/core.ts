@@ -1,5 +1,3 @@
-import { DESIGN_REPO } from '../shared/config';
-import { DesignRepo } from '../codeHost/designRepo';
 import type { AppPaths } from './appPaths';
 import type { EventSink } from './handle';
 import type { CallsContext } from './compose';
@@ -37,7 +35,6 @@ export const createCore = ({ paths, emit, ports, github, pictureRecipe }: Shell)
 	agents: agentsHere(),
 	share: new ShareRunner((status) => emit('onShareStatus', status)),
 	github,
-	designRepo: new DesignRepo(github, DESIGN_REPO),
 	memory: new CheckoutMemory(paths.checkout),
 	onPublishStatus: (status) => emit('onPublishStatus', status),
 	prototypesRoot: paths.prototypes,

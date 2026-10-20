@@ -4,7 +4,7 @@ import { dirname, join } from 'node:path';
 import type * as VsCode from 'vscode';
 import type { Route } from '../../src/core/handle';
 import type { BaseBehind, CommentRef, DesignSystemBuild, InvokeName, Result, SignInState, WorkspaceApi } from '../../src/shared/contract';
-import { DESIGN_REPO } from '../../src/shared/config';
+import type { RepoRef } from '../../src/shared/repoRef';
 import { escapeHtml } from '../../src/shared/html';
 import REVIEW_TAB from '../../src/page/reviewTab?page';
 import { prototypeKey, sitePath } from '../../src/shared/designPaths';
@@ -235,13 +235,16 @@ export class Reviews {
 /** So the key itself is never kept or compared. */
 const hashOf = (key: string): string => createHash('sha256').update(key).digest('hex');
 
-/** Pages are served from `pagesAt`, their own address (the README's Review isolation), not beside their bar. */
-export const buildReviewSite = (siteDir: string, viewerDir: string) => (records: string, pagesAt: string) => {
+/**
+ * Pages are served from `pagesAt`, their own address (the README's Review isolation), not beside their bar. `ref`: the design
+ * repository the records are of, which the viewer's comments go to.
+ */
+export const buildReviewSite = (siteDir: string, viewerDir: string, ref: () => RepoRef) => (records: string, pagesAt: string) => {
 	mkdirSync(dirname(siteDir), { recursive: true });
 	buildSite({
 		designRoot: dirname(records),
 		outDir: siteDir,
-		viewer: { dir: viewerDir, ref: DESIGN_REPO },
+		viewer: { dir: viewerDir, ref: ref() },
 		pagesAt,
 	});
 };

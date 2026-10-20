@@ -2,14 +2,23 @@ import type { PageStatus } from '../../../shared/contract';
 import { prototypeKey } from '../../../shared/designPaths';
 import { errorText } from '../../../shared/result';
 import { coalescingByKey } from '../platform/concurrency';
-import { DESIGN_REPO } from '../../../shared/config';
+import type { RepoRef } from '../../../shared/repoRef';
 
 import type { GitHubAccount } from '../../../codeHost/github';
 import { pageStatus, publish, recordsFrom, redeploySite, siteBehind } from './pages';
 import { HOST } from '../../../shared/vocabulary';
 
 /** What stopped a page's deploy is kept, so its screen can say why it is not published. */
-export const siteDeploys = ({ github, designClone }: { github: Pick<GitHubAccount, 'state' | 'api'>; designClone: () => string | null }) => {
+/** `ref`: the design repository the open product belongs to, asked at each deploy, so a page goes to its own company's site. */
+export const siteDeploys = ({
+	github,
+	designClone,
+	ref,
+}: {
+	github: Pick<GitHubAccount, 'state' | 'api'>;
+	designClone: () => string | null;
+	ref: () => RepoRef;
+}) => {
 	// One deploy of a page at a time, and once more if asked again meanwhile: what changed since may have missed its push.
 	const running = coalescingByKey<string>();
 	const stopped = new Map<string, string>();
@@ -24,10 +33,8 @@ export const siteDeploys = ({ github, designClone }: { github: Pick<GitHubAccoun
 		);
 	};
 	const page = (projectId: string, name: string): void =>
-		inBackground(prototypeKey(projectId, name), async () =>
-			publish({ github, ref: DESIGN_REPO, ...(await recordsFrom(designClone())), projectId, name }),
-		);
-	const site = (): void => inBackground('the site', async () => redeploySite({ github, ref: DESIGN_REPO, ...(await recordsFrom(designClone())) }));
+		inBackground(prototypeKey(projectId, name), async () => publish({ github, ref: ref(), ...(await recordsFrom(designClone())), projectId, name }));
+	const site = (): void => inBackground('the site', async () => redeploySite({ github, ref: ref(), ...(await recordsFrom(designClone())) }));
 
 	/**
 	 * For what GitHub has that no deploy does (an edit outside a save, a failed deploy, a push from elsewhere), which nothing
@@ -39,7 +46,7 @@ export const siteDeploys = ({ github, designClone }: { github: Pick<GitHubAccoun
 		if (!signedIn() || running.size > 0 || Date.now() - lastCatchUp < gap) return;
 		lastCatchUp = Date.now();
 		try {
-			const behind = await siteBehind(github, DESIGN_REPO);
+			const behind = await siteBehind(github, ref());
 			if (behind?.kind === 'page') page(behind.projectId, behind.name);
 			else if (behind?.kind === 'code') site();
 		} catch {
@@ -53,7 +60,7 @@ export const siteDeploys = ({ github, designClone }: { github: Pick<GitHubAccoun
 		if (running.has(key)) return { state: 'publishing' };
 		let found: PageStatus;
 		try {
-			found = await pageStatus(github, DESIGN_REPO, projectId, name);
+			found = await pageStatus(github, ref(), projectId, name);
 		} catch (err) {
 			// Most often the app's GitHub permission: reading the site and its deploys needs Pages and Deployments.
 			return { state: 'unavailable', why: `${HOST} would not say whether this is published: ${errorText(err)}` };

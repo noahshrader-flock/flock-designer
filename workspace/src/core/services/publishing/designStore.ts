@@ -11,23 +11,28 @@ export const designStore = ({
 	onWrite,
 }: {
 	clone: () => string | null;
-	files: Pick<RepoFiles, 'readFile' | 'readBytes' | 'hasFile' | 'writeFile'> | null;
+	/** The design repository's files over the API, asked each time: the one the open product belongs to. */
+	files: () => Pick<RepoFiles, 'readFile' | 'readBytes' | 'hasFile' | 'writeFile'> | null;
 	onWrite: () => void;
 }) => {
 	const records = (): RecordStore => {
 		const here = clone();
 		if (here !== null) return cloneStore(here, onWrite);
-		if (files === null) throw new Error('There is no design repository here to read or write.');
+		const api = files();
+		if (api === null) throw new Error('There is no design repository here to read or write.');
 		return {
-			read: (path) => files.readFile(path),
-			readBytes: (path) => files.readBytes(path),
-			has: (path) => files.hasFile(path),
-			write: (path, content, message) => files.writeFile(path, content, message),
+			read: (path) => api.readFile(path),
+			readBytes: (path) => api.readBytes(path),
+			has: (path) => api.hasFile(path),
+			write: (path, content, message) => api.writeFile(path, content, message),
 		};
 	};
 	/** Without a clone the store already is GitHub, so it is asked once. */
-	const orFromGitHub = async <T>(here: T | null, there: (repo: NonNullable<typeof files>) => Promise<T | null>): Promise<T | null> =>
-		here !== null || clone() === null || files === null ? here : there(files);
+	const orFromGitHub = async <T>(here: T | null, there: (repo: NonNullable<ReturnType<typeof files>>) => Promise<T | null>): Promise<T | null> => {
+		if (here !== null || clone() === null) return here;
+		const api = files();
+		return api === null ? here : there(api);
+	};
 	return {
 		records,
 		readFile: async (path: string): Promise<string | null> => orFromGitHub(await records().read(path), (repo) => repo.readFile(path)),

@@ -94,7 +94,11 @@ descriptor can be opened, but nothing can be run in it.
 standards) is named by `"designRepository": "owner/repo"`; without it, a product belongs to Flock's (`flock-designer`), as
 every product did before a product could say. DSNR finds that repository's clone beside the product, under its name, or where
 the person pointed it with **DSNR: Locate the design repository** (kept on this machine, per repository, since clone paths
-are each person's); with neither, it says which repository to clone (`recordsRootFor`, `designRepositoryMissing`).
+are each person's); with neither, it says which repository to clone (`recordsRootFor`, `designRepositoryMissing`). What
+is read and written over the API (the projects listed, the comments, the pages published and the viewer's threads) goes to
+the same repository: `DesignRepos.now()` is the open product's, asked each time, so a window never reaches another
+company's. The `dsnr` command does the same from where it is run: the product's named repository, or the design
+repository's own origin.
 
 ### Sharing, and what it needs
 

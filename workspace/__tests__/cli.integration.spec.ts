@@ -263,6 +263,25 @@ describe('build-site', () => {
 		expect(world.out.join('\n')).toMatch(/^Built 1 page in 1 project at /);
 	});
 
+	it('points the viewer at the design repository the product names, and at its own origin when built from it', async () => {
+		await saved();
+		const viewer = join(world.home, 'viewer');
+		mkdirSync(viewer);
+		for (const f of ['viewer.js', 'viewer.css', 'viewer.ttf', 'page-agent.js']) writeFileSync(join(viewer, f), '');
+		const file = join(world.product, '.dsnr', 'workspace.json');
+		writeFileSync(file, JSON.stringify({ ...(JSON.parse(readFileSync(file, 'utf8')) as object), designRepository: 'acme/flock-designer' }));
+		const repoIn = (cwd: string, out: string) =>
+			main(['build-site', '--out', out], { ...deps(cwd), buildViewer: async () => viewer }).then(() =>
+				/"owner":"(\w+)","repo":"([\w-]+)"/
+					.exec(readFileSync(join(out, 'demo', 'v1', 'index.html'), 'utf8'))
+					?.slice(1)
+					.join('/'),
+			);
+		expect(await repoIn(world.product, join(world.home, 'from-product'))).toBe('acme/flock-designer');
+		g(world.design, 'remote', 'add', 'origin', 'git@github.com:cheq/cheq-designer.git');
+		expect(await repoIn(world.design, join(world.home, 'from-design'))).toBe('cheq/cheq-designer');
+	});
+
 	it('builds from the design repository itself too', async () => {
 		await saved();
 		const site = join(world.home, 'elsewhere-site');

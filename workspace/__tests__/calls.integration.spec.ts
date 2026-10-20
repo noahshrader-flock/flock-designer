@@ -8,6 +8,8 @@ import { CHANNELS, invokeChannel } from '../src/shared/contract';
 import { prototypePagePath } from '../src/shared/designPaths';
 import type { Ports } from '../src/core/ports';
 import type { AgentId } from '../src/core/services/agent/agent';
+import { type RepoRef, formatRepo } from '../src/shared/repoRef';
+import { DESIGN_REPO } from '../src/shared/config';
 import { claudeCode } from '../src/core/services/agent/claudeCode';
 import { codex } from '../src/core/services/agent/codex';
 import { copilot } from '../src/core/services/agent/copilot';
@@ -116,6 +118,8 @@ let readComments: Fn;
 let githubState: unknown;
 let githubApi: Fn;
 let designRepoProjects: unknown[] = [];
+/** Each design repository the core reached over the API, by `owner/repo`, in order. */
+let reposAsked: string[] = [];
 let warm: Fn;
 let ask: Fn;
 let checkPage: Fn;
@@ -159,6 +163,7 @@ beforeEach(async () => {
 	githubState = { state: 'signedOut' };
 	githubApi = vi.fn(fakeGitHub().api);
 	designRepoProjects = [];
+	reposAsked = [];
 	prototypeServer = new (await import('../src/core/services/prototypes/prototypeServer')).PrototypeServer();
 
 	warm = vi.fn(async () => undefined);
@@ -204,11 +209,16 @@ beforeEach(async () => {
 				copilot: copilot({ locate: () => 'copilot' }),
 			},
 			github: { state: () => githubState, api: (...a: unknown[]) => githubApi(...a) } as never,
-			designRepo: {
-				listProjects: vi.fn(async () => designRepoProjects),
-				threads: { deleteComment, readComments },
-				files: { readFile: vi.fn(async () => null), readBytes: (...a: unknown[]) => readBytes(...a) },
-			} as never,
+			// Which design repository each read goes to is what is asked of it here, by name.
+			designRepoOf: (ref: RepoRef) => {
+				reposAsked.push(formatRepo(ref));
+				return {
+					ref,
+					listProjects: vi.fn(async () => designRepoProjects),
+					threads: { deleteComment, readComments },
+					files: { readFile: vi.fn(async () => null), readBytes: (...a: unknown[]) => readBytes(...a) },
+				} as never;
+			},
 			share: { start: vi.fn(), status: vi.fn(() => ({ state: 'idle' })) } as never,
 			memory: {
 				read: () => memoryValue,
@@ -506,6 +516,28 @@ describe('listProjects', () => {
 		const r = await call(CHANNELS.listProjects);
 		expect(r.error).toBeUndefined();
 		expect((r.value as { id: string }[]).map((p) => p.id)).toEqual(['alpha']);
+	});
+});
+
+describe('the design repository a product names', () => {
+	it('is where its projects and comments are read, and Flock’s is never reached for it', async () => {
+		const cheq = join(home, 'GitHub', 'cheq-app');
+		makeProduct(cheq, []);
+		const file = join(cheq, '.dsnr', 'workspace.json');
+		writeFileSync(file, JSON.stringify({ ...(JSON.parse(readFileSync(file, 'utf8')) as object), designRepository: 'cheq/cheq-designer' }));
+		expect((await trustFolder(cheq)).ok).toBe(true);
+		designRepoProjects = [{ id: 'alpha', title: 'Alpha', records: [], work: [], people: [] }];
+		expect((await call(CHANNELS.listProjects)).ok).toBe(true);
+		await call(CHANNELS.readComments, 'alpha', 'prototype/alpha/v1');
+		expect(readComments).toHaveBeenCalledWith('prototype/alpha/v1');
+		expect(new Set(reposAsked)).toEqual(new Set(['cheq/cheq-designer']));
+		rmSync(cheq, { recursive: true, force: true });
+	});
+
+	it('is Flock’s for a product that names none', async () => {
+		await trustFolder(product);
+		await call(CHANNELS.listProjects);
+		expect(new Set(reposAsked)).toEqual(new Set([formatRepo(DESIGN_REPO)]));
 	});
 });
 

@@ -18,12 +18,14 @@ import { DesignLibrary, libraryCommit, systemReads } from './services/designSyst
 import { readTokens } from './services/designSystem/designTokens';
 import { HandOverBranches } from './services/designSystem/handOverBranches';
 import { LibraryShown } from './services/designSystem/libraryShown';
-import { DesignRepo } from '../codeHost/designRepo';
+import { DesignRepo, DesignRepos } from '../codeHost/designRepo';
+import { DESIGN_REPO } from '../shared/config';
+import type { RepoRef } from '../shared/repoRef';
 import { designStore } from './services/publishing/designStore';
 import { syncRecords } from './services/publishing/designSync';
 import { DesignSystemsMemory } from './services/designSystem/designSystems';
 import { type SourceAnswers, usableDesignSystem } from './services/projects/productDesignSystem';
-import { type DesignRepositoryClones, designRepositoryMissing, recordsRootFor } from './services/projects/discovery';
+import { type DesignRepositoryClones, designRepositoryMissing, designRepositoryOf, recordsRootFor } from './services/projects/discovery';
 import { isRepository, readCheckout } from './services/platform/git';
 import type { GitHubAccount } from '../codeHost/github';
 import { Installer } from './services/codebase/install';
@@ -59,7 +61,6 @@ export interface CallsContext {
 	agents: Record<AgentId, Agent>;
 	share: ShareRunner;
 	github: GitHubAccount;
-	designRepo: DesignRepo;
 	memory: CheckoutMemory;
 	onPublishStatus: (status: PublishStatus) => void;
 	/** The app's own folder, never a repository. */
@@ -72,6 +73,8 @@ export interface CallsContext {
 	sourceAnswers: SourceAnswers;
 	/** Where the person keeps a design repository's clone, when it is not beside the product. */
 	designRepositories: DesignRepositoryClones;
+	/** How a design repository is reached over the API; absent, a `DesignRepo` over `github`. */
+	designRepoOf?: (ref: RepoRef) => DesignRepo;
 	/** The app's own folder, never the library's. */
 	storyPreviewsRoot: string;
 	changeBranchFiles: Record<ChangeKind, string>;
@@ -92,7 +95,6 @@ export const composeCore = ({
 	agents,
 	share,
 	github,
-	designRepo,
 	memory,
 	onPublishStatus,
 	prototypesRoot,
@@ -102,6 +104,7 @@ export const composeCore = ({
 	designSystems,
 	sourceAnswers,
 	designRepositories,
+	designRepoOf,
 	storyPreviewsRoot,
 	changeBranchFiles,
 	componentTokens: injectedComponentTokens,
@@ -174,6 +177,14 @@ export const composeCore = ({
 		if (found === null) throw new Error(designRepositoryMissing(productRoot));
 		return found;
 	};
+	/**
+	 * The design repository records, comments and pages go to: the one the trusted product belongs to (`designRepositoryOf`,
+	 * kept as the window's product), else Flock's, the default with no product at all. Asked each time.
+	 */
+	const designRepos = new DesignRepos(designRepoOf ?? ((ref) => new DesignRepo(github, ref)), () => {
+		const root = trustedRoot();
+		return root === null ? DESIGN_REPO : designRepositoryOf(root);
+	});
 	const trustedRecords = (): { root: string; recordsRoot: string } | null => {
 		const root = trustedRoot();
 		const recordsRoot = root === null ? null : recordsRootOf(root);
@@ -294,7 +305,7 @@ export const composeCore = ({
 	};
 	// Everything prototypes write goes to the clone here when there is one, so the publisher sends it like every other
 	// record, and otherwise to GitHub directly.
-	const store = designStore({ clone: designClone, files: designRepo.files, onWrite: () => void publisher.publish(true) });
+	const store = designStore({ clone: designClone, files: () => designRepos.now().files, onWrite: () => void publisher.publish(true) });
 	const readSkillText = (path: string): Promise<string> => work.skill(path);
 	/** The product's design system, where it may be read: only once it is shown to be its package's source, or said to be. */
 	const designSystemOf = (productRoot: string): Promise<string | null> => usableDesignSystem(productRoot, sourceAnswers);
@@ -316,7 +327,7 @@ export const composeCore = ({
 	const prototypePage = (projectId: string, name: string): Promise<string | null> => work.page(projectId, name);
 
 	// Whether a version's page is on the site is worked out here, so the window never hands this an address to open.
-	const deploys = siteDeploys({ github, designClone });
+	const deploys = siteDeploys({ github, designClone, ref: () => designRepos.now().ref });
 
 	return {
 		emit,
@@ -335,7 +346,7 @@ export const composeCore = ({
 		},
 		share,
 		github,
-		designRepo,
+		designRepos,
 		prototypesRoot,
 		installer,
 		designSystems,

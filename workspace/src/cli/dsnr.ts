@@ -11,9 +11,16 @@ import { DESCRIPTOR_PATH } from '../core/services/projects/descriptor';
 import type { GitHubApi } from '../codeHost/github';
 import { loginOf } from '../codeHost/github';
 
-import { DesignRepositoryClones, designRepositoryMissing, isDesignRepository, recordsRootFor } from '../core/services/projects/discovery';
+import {
+	DesignRepositoryClones,
+	designRepositoryMissing,
+	designRepositoryOf,
+	isDesignRepository,
+	recordsRootFor,
+} from '../core/services/projects/discovery';
 import { assertUsableProjectId } from '../core/services/projects/workRecords';
-import { readCheckout, git } from '../core/services/platform/git';
+import { claimedRepository, readCheckout, git } from '../core/services/platform/git';
+import { type RepoRef, repoRefOf } from '../shared/repoRef';
 import { guidePart, prototypeBuildTask } from '../core/services/agent/agentTasks';
 import { SourceAnswers, usableDesignSystem } from '../core/services/projects/productDesignSystem';
 import { appPaths } from '../core/appPaths';
@@ -153,13 +160,28 @@ const designBeside = (root: string, clones: DesignRepositoryClones): string => {
 	return dirname(records);
 };
 
-const designOf = async (deps: { cwd: string; prototypesRoot: string }): Promise<string> => {
-	let root: string;
+/** The repository the command was run in. */
+const repositoryHere = async (cwd: string): Promise<string> => {
 	try {
-		root = realpathSync((await git(deps.cwd, ['rev-parse', '--show-toplevel'])).trim());
+		return realpathSync((await git(cwd, ['rev-parse', '--show-toplevel'])).trim());
 	} catch {
 		throw new Error('This is not inside a repository. Run it from the design repository, or a product repository beside it.');
 	}
+};
+
+/**
+ * The design repository a command reads and writes over the API: the one the product here belongs to, or, run inside a
+ * design repository, the one its clone says it is; Flock's only when neither says.
+ */
+const designRefOf = async (deps: { cwd: string }): Promise<RepoRef> => {
+	const root = await repositoryHere(deps.cwd);
+	if (existsSync(join(root, DESCRIPTOR_PATH))) return designRepositoryOf(root);
+	const claimed = await claimedRepository(root);
+	return claimed === null ? DESIGN_REPO : repoRefOf(claimed);
+};
+
+const designOf = async (deps: { cwd: string; prototypesRoot: string }): Promise<string> => {
+	const root = await repositoryHere(deps.cwd);
 	// Run inside the design repository itself: it is the one, as DSNR recognizes a picked one.
 	if (isDesignRepository(root)) return root;
 	return designBeside(root, clonesOf(deps));
@@ -182,7 +204,7 @@ const site = async (deps: CliDeps, values: { out?: string; serve?: boolean }): P
 	const built = buildSite({
 		designRoot,
 		outDir,
-		viewer: viewerDir ? { dir: viewerDir, ref: DESIGN_REPO } : undefined,
+		viewer: viewerDir ? { dir: viewerDir, ref: await designRefOf(deps) } : undefined,
 		signIn: PAGES_SIGN_IN,
 	});
 	const pages = built.projects.reduce((n, p) => n + p.pages, 0);
@@ -213,7 +235,7 @@ const savedPage = async (deps: CliDeps, values: { project?: string; name?: strin
 	if (!deps.github) throw new Error(needsCli(doing));
 	return {
 		github: deps.github,
-		ref: DESIGN_REPO,
+		ref: await designRefOf(deps),
 		...(await recordsFrom(designRoot)),
 		projectId,
 		name,
@@ -289,7 +311,7 @@ export const main = async (argv: string[], deps: CliDeps): Promise<number> => {
 			return await checkWcagEdition({
 				fetchText: deps.fetchText ?? (async (url) => (await fetch(url, { signal: AbortSignal.timeout(15_000) })).text()),
 				github: deps.github,
-				repo: DESIGN_REPO,
+				repo: await designRefOf(deps),
 				out: deps.out,
 			});
 		if (command === 'publish') return await publishPage(deps, values);
@@ -343,7 +365,7 @@ export const main = async (argv: string[], deps: CliDeps): Promise<number> => {
 		);
 		const designRoot = designBeside(root, clonesOf(deps));
 		// The clone alone: publishing is its own command here, and there is no extension sign-in to read GitHub with.
-		const store = designStore({ clone: () => designRoot, files: null, onWrite: () => undefined });
+		const store = designStore({ clone: () => designRoot, files: () => null, onWrite: () => undefined });
 		// The window's own answers, beside the prototypes it told this command of, so a design system asked about once is not asked again.
 		const answers = new SourceAnswers(appPaths(dirname(deps.prototypesRoot)).designSystemSources);
 		const work = prototypeWork({
@@ -424,7 +446,7 @@ export const main = async (argv: string[], deps: CliDeps): Promise<number> => {
 			const name = values.name;
 			if (!name) throw new UsageError('Say which prototype, with --name.');
 			// Null when GitHub's command line is missing or signed out.
-			const threads = deps.github ? new ReviewThreads(deps.github, DESIGN_REPO) : null;
+			const threads = deps.github ? new ReviewThreads(deps.github, await designRefOf(deps)) : null;
 			const comments = threads ? await threads.readComments(prototypeKey(projectId, name)).catch(() => null) : null;
 			const change = await work.startChange(projectId, name, { newVersion: values['new-version'] === true, comments });
 			const text = await buildTask(skill, change.target, change.from.name, note);

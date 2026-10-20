@@ -5,7 +5,7 @@ import { isBot, mergePeople } from '../shared/people';
 import { workOrder, latestDate } from '../shared/projectList';
 import { asRecord } from '../shared/json';
 import { parseWork, toProjectWork } from '../shared/workRecords';
-import type { RepoRef } from '../shared/repoRef';
+import { type RepoRef, formatRepo } from '../shared/repoRef';
 import type { GitHubApi } from './github';
 import { RepoFiles } from './repoFiles';
 import { ReviewThreads } from './reviewThreads';
@@ -28,7 +28,10 @@ export class DesignRepo {
 	/** A folder whose sha has not moved has not changed, so it is not read again. */
 	private readonly folders = new Map<string, FolderReading & { sha: string }>();
 
-	constructor(session: GitHubApi, ref: RepoRef) {
+	constructor(
+		session: GitHubApi,
+		readonly ref: RepoRef,
+	) {
 		this.files = new RepoFiles(session, ref);
 		this.threads = new ReviewThreads(session, ref);
 	}
@@ -114,5 +117,32 @@ export class DesignRepo {
 		if (!records.includes(WORK_FILE)) return [];
 		const text = await this.files.readFile(workPath(id));
 		return parseWork(text ?? '') ?? [];
+	}
+}
+
+/**
+ * One `DesignRepo` for each design repository, made when first asked for, so each keeps its own caches and threads; `now` is
+ * the one the open product belongs to, asked each time, so nothing outlives a change of product.
+ */
+export class DesignRepos {
+	private readonly made = new Map<string, DesignRepo>();
+
+	/** `make`: how one is made for a repository (a `DesignRepo` over the account's API, unless a test gives its own). */
+	constructor(
+		private readonly make: (ref: RepoRef) => DesignRepo,
+		private readonly current: () => RepoRef,
+	) {}
+
+	of(ref: RepoRef): DesignRepo {
+		const key = formatRepo(ref).toLowerCase();
+		const known = this.made.get(key);
+		if (known) return known;
+		const made = this.make(ref);
+		this.made.set(key, made);
+		return made;
+	}
+
+	now(): DesignRepo {
+		return this.of(this.current());
 	}
 }
