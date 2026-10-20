@@ -37,6 +37,8 @@
 	/* One size for a dot and its swatch, so what lines up with a dot is as wide as it is and every list of colors ends at the same place. */
 	--dsnr-dot: 26px;
 	--dsnr-dot-swatch: 18px;
+	/* How far a dot's box reaches past its circle on each side. */
+	--dsnr-dot-pad: calc((var(--dsnr-dot) - var(--dsnr-dot-swatch)) / 2);
 	--dsnr-row-height: 28px;
 	--dsnr-row-edge: var(--dsnr-space-4);
 	--dsnr-row-inset: calc((var(--dsnr-row-height) - var(--dsnr-control-small)) / 2);
@@ -1270,7 +1272,7 @@ button.color-dot:hover {
 .token-line .color-dot,
 .value-cell .color-dot {
 	margin-block: calc(-1 * var(--dsnr-space-2));
-	margin-right: calc(-1 * var(--dsnr-space-2));
+	margin-right: calc(-1 * var(--dsnr-dot-pad));
 }
 
 .token-line .color-dot {

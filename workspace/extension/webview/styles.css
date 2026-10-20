@@ -443,7 +443,13 @@
 	align-items: center;
 	gap: var(--dsnr-space-2);
 	min-height: var(--dsnr-row-height);
-	padding-right: var(--dsnr-space-2);
+	/* A dot's box is wider than its circle, so the row runs that much past the edge of the content, and the circles end on it. */
+	margin-right: calc(-1 * var(--dsnr-dot-pad));
+}
+
+/* A palette's rows end their circles there too, where the section's count and its dividers end. */
+.token-body .token-line-flush {
+	padding-right: 0;
 }
 
 .theme-name {

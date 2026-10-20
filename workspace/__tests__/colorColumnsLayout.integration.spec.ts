@@ -79,6 +79,12 @@ describe.skipIf(NO_CHROME)('the colors of the Tokens tab, in the browser on this
 					return {
 						headings: headings.map((h) => [h.getAttribute('aria-label'), h.textContent]),
 						icons: icons.length,
+						// Where the section's count and its dividers end: the body's content edge.
+						edge: (() => {
+							const body = document.querySelector('.token-body') as HTMLElement;
+							return Math.round((r(body).right - parseFloat(getComputedStyle(body).paddingRight)) * 10) / 10;
+						})(),
+						dividerRight: Math.round(r(document.querySelector('.theme-set + .theme-set') as Element).right * 10) / 10,
 						gridRight: grid.map((s) => Math.round(r(s).right * 10) / 10),
 						paletteRight: palette.map((s) => Math.round(r(s).right * 10) / 10),
 						overColumn: icons.map((icon, i) => Math.round(Math.abs(mid(icon) - mid(grid[i] as Element)) * 10) / 10),
@@ -120,6 +126,11 @@ describe.skipIf(NO_CHROME)('the colors of the Tokens tab, in the browser on this
 			expect(found.icons).toBe(4);
 			expect(found.paletteRight.length).toBe(4);
 			for (const right of found.paletteRight) expect(found.gridRight.at(-1)).toBeCloseTo(right, 0);
+			// The last dots end where the section's count and its dividers do.
+			expect(found.dividerRight).toBe(found.edge);
+			// The grid's last column (the furthest right of its dots), and every palette dot.
+			expect(Math.max(...found.gridRight), 'the grid’s last dots end on the content edge').toBeCloseTo(found.edge, 0);
+			for (const right of found.paletteRight) expect(right, 'a palette’s dots end on the content edge').toBeCloseTo(found.edge, 0);
 			for (const off of found.overColumn) expect(off).toBeLessThanOrEqual(1);
 			expect(found.page).toBe(true);
 			expect(found.gridSets).toBe(2);
