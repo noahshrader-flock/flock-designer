@@ -357,7 +357,7 @@ describe('dialogs and menus, in the panel', () => {
 			await showOpen();
 			await press(menuFor(0));
 			await press(item('Copy link'));
-			expect(lastAsk()).toEqual(['copyReviewLink', [{ projectId: 'alert-history', name: 'v3', title: 'Alert history · Version 3' }]]);
+			expect(lastAsk()).toEqual(['copyReviewLink', ['alert-history']]);
 			expect(items()).toHaveLength(0);
 		});
 
@@ -365,7 +365,7 @@ describe('dialogs and menus, in the panel', () => {
 			await showOpen();
 			await press(menuFor(0));
 			await press(item('Open published page'));
-			expect(lastAsk()).toEqual(['openReviewPublished', [{ projectId: 'alert-history', name: 'v3', title: 'Alert history · Version 3' }]]);
+			expect(lastAsk()).toEqual(['openReviewPublished', ['alert-history']]);
 			expect(items()).toHaveLength(0);
 		});
 
@@ -380,7 +380,7 @@ describe('dialogs and menus, in the panel', () => {
 			await showOpen();
 			await press(menuFor(0));
 			await press(item('Open locally'));
-			expect(lastAsk()).toEqual(['openReviewInBrowser', [{ projectId: 'alert-history', name: 'v3', title: 'Alert history · Version 3' }]]);
+			expect(lastAsk()).toEqual(['openReviewInBrowser', ['alert-history']]);
 			expect(items()).toHaveLength(0);
 		});
 
@@ -894,7 +894,7 @@ describe('the projects as a list or a grid', () => {
 			'No folder',
 		]);
 		await press(cards()[0]!);
-		expect(lastAsk()).toEqual(['openReview', [{ projectId: 'alert-history', name: 'v3', title: 'Alert history · Version 3' }]]);
+		expect(lastAsk()).toEqual(['openReview', ['alert-history']]);
 		expect(JSON.parse(cards()[0]!.closest('li')!.dataset.vscodeContext ?? '{}')).toMatchObject({
 			webviewSection: 'project',
 			projectId: 'alert-history',
@@ -1013,7 +1013,7 @@ describe('Projects, focused on the product open', () => {
 				.find((r) => r.querySelector('[data-part="name"]')?.textContent === 'Maps')!
 				.querySelector('button')!,
 		);
-		expect(lastAsk()).toEqual(['openReview', [expect.objectContaining({ projectId: 'maps' })]]);
+		expect(lastAsk()).toEqual(['openReview', ['maps']]);
 	});
 
 	it('says when the open product has none of its own yet, and how to see everyone’s', async () => {
@@ -1171,10 +1171,10 @@ describe('Projects', () => {
 		expect(badges[0]?.getAttribute('aria-label')).toBe('2 open comments');
 	});
 
-	it('opens a project’s newest prototype for review when its row is pressed', async () => {
+	it('opens a project’s newest prototype for review when its row is pressed: it names the project, and the extension finds the newest as it is then', async () => {
 		await showOpen();
 		await press(rows()[0]!.querySelector('button') as HTMLElement);
-		expect(lastAsk()).toEqual(['openReview', [{ projectId: 'alert-history', name: 'v3', title: 'Alert history · Version 3' }]]);
+		expect(lastAsk()).toEqual(['openReview', ['alert-history']]);
 	});
 
 	it('draws each project’s picture: those built here are made once the list is read, then each is read by its name', async () => {

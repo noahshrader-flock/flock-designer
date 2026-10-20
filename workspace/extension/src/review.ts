@@ -245,6 +245,17 @@ export const REVIEW_KEY = 'review';
 
 export const siteIn = (storage: string): string => join(storage, 'review-site');
 
+/**
+ * A project's newest version as the project stands now. The panel's list can be older than the project (a version an agent
+ * made in a terminal is not in it until it is read again), so what opens "the latest" asks, as it is pressed.
+ */
+export const latestReview = async (api: Pick<WorkspaceApi, 'listProjects'>, projectId: string): Promise<Review> => {
+	const project = valueOf(await api.listProjects()).find((p) => p.id === projectId);
+	const latest = project === undefined ? undefined : reviewsOf(project)[0];
+	if (latest === undefined) throw new Error(`${projectId} has no prototype to open.`);
+	return latest;
+};
+
 export const pickReview = async (
 	window: Pick<typeof VsCode.window, 'showQuickPick'>,
 	api: Pick<WorkspaceApi, 'listProjects'>,

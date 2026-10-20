@@ -21,10 +21,11 @@ export interface PageAsks {
 	askNewPrototype(): Promise<Result<null>>;
 	newPrototype(title: string, task: string, folder: string | null): Promise<Result<null>>;
 	codebase(action: CodebaseAction, projectId: string): Promise<Result<null>>;
-	openReview(review: Review): Promise<Result<null>>;
-	openReviewInBrowser(review: Review): Promise<Result<null>>;
-	copyReviewLink(review: Review): Promise<Result<null>>;
-	openReviewPublished(review: Review): Promise<Result<null>>;
+	/** The four that follow name the project only: its newest version is found as it is when this is asked, not as the list shows it. */
+	openReview(projectId: string): Promise<Result<null>>;
+	openReviewInBrowser(projectId: string): Promise<Result<null>>;
+	copyReviewLink(projectId: string): Promise<Result<null>>;
+	openReviewPublished(projectId: string): Promise<Result<null>>;
 	openComponent(id: string): Promise<Result<null>>;
 	componentLink(id: string, link: ComponentLink): Promise<Result<null>>;
 	openPrimitives(): Promise<Result<null>>;

@@ -8,7 +8,7 @@ import { codex } from '../src/core/services/agent/codex';
 import { copilot } from '../src/core/services/agent/copilot';
 import { openableLink, vscodePorts } from '../extension/src/vscodePorts';
 import { NO_TABS_SHOWN, reviewsOf } from '../extension/src/messages';
-import { Reviews, answerReview, reviewPage, reviewPath } from '../extension/src/review';
+import { Reviews, answerReview, latestReview, reviewPage, reviewPath } from '../extension/src/review';
 import { Panels, answerCall, hostApi } from '../extension/src/bridge';
 import type { Route } from '../src/core/handle';
 import { PrototypeServer } from '../src/core/services/prototypes/prototypeServer';
@@ -408,6 +408,37 @@ describe('a prototype’s review', () => {
 		expect(page).toContain(`__fdPage.startReviewTab("http://127.0.0.1:5000");`);
 		expect(page).toContain('<title>Fish &amp; &lt;chips&gt; &quot;now&quot;</title>');
 		expect(page).toContain('<iframe src="http://127.0.0.1:5000/a/v1/" title="Fish &amp; &lt;chips&gt; &quot;now&quot;">');
+	});
+});
+
+describe('the latest version of a project, as it is when it is asked', () => {
+	const project = (...names: string[]) => ({
+		id: 'alert-history',
+		title: 'Alert history',
+		work: names.map((name) => ({ name, branch: `prototype/alert-history/${name}`, createdAt: '2026-10-01' }) as ProjectWork),
+	});
+	const listing = (...reads: ReturnType<typeof project>[][]) => {
+		const listProjects = vi.fn();
+		for (const read of reads) listProjects.mockResolvedValueOnce({ ok: true, value: read });
+		return { listProjects };
+	};
+
+	it('is the newest version the project has now, not the one a list shown earlier had', async () => {
+		const api = listing([project('v1', 'v2')], [project('v1', 'v2', 'v3')]);
+		expect(await latestReview(api, 'alert-history')).toEqual({ projectId: 'alert-history', name: 'v2', title: 'Alert history · Version 2' });
+		// A version made in a terminal meanwhile: asked again, it is there.
+		expect((await latestReview(api, 'alert-history')).name).toBe('v3');
+		expect(api.listProjects).toHaveBeenCalledTimes(2);
+	});
+
+	it('is the highest number, not the last written: Version 10 comes after Version 9', async () => {
+		const api = listing([project('v9', 'v10', 'v2')]);
+		expect((await latestReview(api, 'alert-history')).name).toBe('v10');
+	});
+
+	it('says so, opening nothing, when the project has no prototype or is not there', async () => {
+		await expect(latestReview(listing([project()]), 'alert-history')).rejects.toThrow('alert-history has no prototype to open.');
+		await expect(latestReview(listing([project('v1')]), 'maps')).rejects.toThrow('maps has no prototype to open.');
 	});
 });
 

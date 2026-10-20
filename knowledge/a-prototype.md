@@ -32,7 +32,8 @@ through `dsnr new-prototype`.
 
 ## Review it
 
-Press the project in the panel to open its newest prototype in a tab. The bar along the top has:
+Press the project in the panel to open its newest prototype in a tab. It is always the newest as the project is when you
+press, including a version an agent made in a terminal a moment ago. The bar along the top has:
 
 - the version menu, to switch between versions;
 - the states menu, when the prototype has more than one state (empty, loading, filtered…), to see each;

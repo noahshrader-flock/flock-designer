@@ -47,13 +47,13 @@ const ProjectItem = ({ project, labels, onDialog }: { project: Project; labels: 
 	const id = project.id;
 	// Sharing code is not an item: once a handoff finds the work ready, the Hand off dialog offers its pull request.
 	const onCodebase = (action: CodebaseAction) => void asks().codebase(action, id);
-	const copy: MenuItem[] = newest ? [{ label: 'Copy link', icon: 'link', onSelect: () => void asks().copyReviewLink(newest) }] : [];
+	const copy: MenuItem[] = newest ? [{ label: 'Copy link', icon: 'link', onSelect: () => void asks().copyReviewLink(id) }] : [];
 	const pages: MenuItem[] = newest
 		? [
 				// Not known to be there without asking GitHub, which a menu does not do for every project: pressed, it opens the
 				// page, or says why there is none and offers to publish it, as Copy link does.
-				{ label: 'Open published page', icon: 'globe', onSelect: () => void asks().openReviewPublished(newest) },
-				{ label: 'Open locally', icon: 'link-external', onSelect: () => void asks().openReviewInBrowser(newest) },
+				{ label: 'Open published page', icon: 'globe', onSelect: () => void asks().openReviewPublished(id) },
+				{ label: 'Open locally', icon: 'link-external', onSelect: () => void asks().openReviewInBrowser(id) },
 			]
 		: [];
 	const stage: { label: string; dialog: PanelDialog } | null = inCode
@@ -74,7 +74,7 @@ const ProjectItem = ({ project, labels, onDialog }: { project: Project; labels: 
 	const code: MenuItem[] = inCode ? [{ label: 'View on GitHub', icon: 'github', onSelect: () => onCodebase('open-code') }] : [];
 	const folder: MenuItem[] = [{ label: 'Assign folder…', icon: 'folder', onSelect: () => onDialog({ kind: 'assign', projectId: id }) }];
 	const sections = [copy, pages, runs, code, folder].filter((group) => group.length > 0).map((group) => ({ items: group }));
-	const press = newest ? () => void asks().openReview(newest) : inCode ? () => onCodebase('open-code') : undefined;
+	const press = newest ? () => void asks().openReview(id) : inCode ? () => onCodebase('open-code') : undefined;
 	const shared = {
 		name: project.title,
 		meta: meta(project, labels),

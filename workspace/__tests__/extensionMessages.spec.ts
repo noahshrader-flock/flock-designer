@@ -50,10 +50,10 @@ describe('an ask from a page', () => {
 		['codebase', ['run-locally', 'zone-coverage']],
 		['newPrototype', ['Alert history', 'A history of alerts.', null]],
 		['newPrototype', ['Alert history', 'A history of alerts.', 'Maps']],
-		['openReview', [{ projectId: 'alert-history', name: 'v2', title: 'Alert history · Version 2' }]],
-		['openReviewInBrowser', [{ projectId: 'alert-history', name: 'v2', title: 'Alert history · Version 2' }]],
-		['copyReviewLink', [{ projectId: 'alert-history', name: 'v2', title: 'Alert history · Version 2' }]],
-		['openReviewPublished', [{ projectId: 'alert-history', name: 'v2', title: 'Alert history · Version 2' }]],
+		['openReview', ['alert-history']],
+		['openReviewInBrowser', ['alert-history']],
+		['copyReviewLink', ['alert-history']],
+		['openReviewPublished', ['alert-history']],
 		['openComponent', ['src/components/FSButton/FSButton.stories.tsx']],
 		['componentLink', ['src/components/FSButton/FSButton.stories.tsx', 'storybook']],
 		['componentLink', ['src/components/FSButton/FSButton.stories.tsx', 'source']],
@@ -75,16 +75,12 @@ describe('an ask from a page', () => {
 	});
 
 	it.each([
-		['openReview', [{ projectId: 'a', name: 'v1' }]],
-		['openReviewInBrowser', [{ projectId: 'a', name: 'v1' }]],
-		['copyReviewLink', [{ projectId: '../a', name: 'v1', title: 'x' }]],
-		['openReviewPublished', [{ projectId: '../a', name: 'v1', title: 'x' }]],
-		['openReviewInBrowser', [{ projectId: 'a', name: 'v1', title: 'x'.repeat(301) }]],
-		['openReview', [{ projectId: 1, name: 'v1', title: 't' }]],
-		// A review is of a project, by its id, and a prototype, by its name: nothing that would be a path to something else.
-		['openReview', [{ projectId: 'a/../../previews-x', name: 'v1', title: 't' }]],
-		['openReview', [{ projectId: 'a', name: '../../x', title: 't' }]],
-		['openReview', [{ projectId: 'a', name: 'v1', title: 't', more: 1 }]],
+		// A project, by its id alone: the version is found by the extension, and nothing that would be a path to something else.
+		['openReview', []],
+		['openReview', [{ projectId: 'a', name: 'v1', title: 't' }]],
+		['openReviewInBrowser', [1]],
+		['copyReviewLink', ['../a']],
+		['openReviewPublished', ['a/../../previews-x']],
 		['newPrototype', [1, 'B', null]],
 		['newPrototype', ['A', 'x'.repeat(4001), null]],
 		['newPrototype', ['x'.repeat(301), 'B', null]],

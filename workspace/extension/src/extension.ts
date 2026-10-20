@@ -33,7 +33,7 @@ import { publishedLink } from './publishing';
 import { copyProject } from '../../src/core/services/prototypes/projectCopy';
 import { needsProduct } from '../../src/shared/projectScope';
 import { productsOf } from '../../src/shared/work';
-import { REVIEW_KEY, Reviews, answerReview, buildReviewSite, pickReview, siteIn } from './review';
+import { REVIEW_KEY, Reviews, answerReview, buildReviewSite, latestReview, pickReview, siteIn } from './review';
 import { RunOutput, SyncStatus, failed, failedFor, vscodeChoose, vscodeCopy, vscodeOffer, vscodeOpen, vscodeProgress, vscodeTell } from './ui';
 
 /** Coming back to VS Code rereads the projects only this long after the last read: each read asks GitHub. */
@@ -344,10 +344,10 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 		askNewPrototype: () => vscode.commands.executeCommand('dsnr.newPrototype'),
 		newPrototype: (title, task, folder) => startPrototype({ title, task, folder }),
 		codebase: (action, projectId) => codebaseWork(action, projectId),
-		openReview,
-		openReviewInBrowser,
-		copyReviewLink: copyPublishedLink,
-		openReviewPublished: openPublishedPage,
+		openReview: (id) => latestReview(api, id).then(openReview),
+		openReviewInBrowser: (id) => latestReview(api, id).then(openReviewInBrowser),
+		copyReviewLink: (id) => latestReview(api, id).then(copyPublishedLink),
+		openReviewPublished: (id) => latestReview(api, id).then(openPublishedPage),
 		chooseAgent,
 	});
 	const sync = new SyncStatus();

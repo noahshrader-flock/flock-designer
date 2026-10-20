@@ -65,10 +65,10 @@ export const askRoutes = (handlers: AskHandlers): ReadonlyMap<AskName, Route> =>
 	handle('askNewPrototype', [], done(handlers.askNewPrototype));
 	handle('newPrototype', [check.title, check.task, check.folder], done(handlers.newPrototype));
 	handle('codebase', [check.action, arg.projectId], done(handlers.codebase));
-	handle('openReview', [check.review], done(handlers.openReview));
-	handle('openReviewInBrowser', [check.review], done(handlers.openReviewInBrowser));
-	handle('copyReviewLink', [check.review], done(handlers.copyReviewLink));
-	handle('openReviewPublished', [check.review], done(handlers.openReviewPublished));
+	handle('openReview', [arg.projectId], done(handlers.openReview));
+	handle('openReviewInBrowser', [arg.projectId], done(handlers.openReviewInBrowser));
+	handle('copyReviewLink', [arg.projectId], done(handlers.copyReviewLink));
+	handle('openReviewPublished', [arg.projectId], done(handlers.openReviewPublished));
 	handle('openComponent', [check.path], done(handlers.openComponent));
 	handle('componentLink', [check.path, check.link], done(handlers.componentLink));
 	handle('openPrimitives', [], done(handlers.openPrimitives));
