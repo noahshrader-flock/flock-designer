@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import type { Work, Person } from '../../../shared/contract';
-import type { WorkspaceDescriptor } from './descriptor';
+import { PROJECT_ID_SLOT, type WorkspaceDescriptor } from './descriptor';
 import {
 	branchAuthors,
 	branchExists,
@@ -60,7 +60,7 @@ const writeWork = (recordsRoot: string, projectId: string, records: Work[]): voi
 };
 
 export const codebaseBranchFor = (descriptor: WorkspaceDescriptor, projectId: string): string =>
-	descriptor.branchPattern.codebase.replace('<project-id>', projectId);
+	descriptor.branchPattern.codebase.replace(PROJECT_ID_SLOT, projectId);
 
 /** One branch per project, so one already started by hand is adopted and recorded, not refused. */
 export const createCodebaseWork = async (

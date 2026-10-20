@@ -54,6 +54,18 @@ describe('parseDescriptor', () => {
 	it('refuses a missing branch pattern for codebase work', () => {
 		expect(() => parse({ ...valid, branchPattern: {} })).toThrow(/branchPattern\.codebase/);
 		expect(() => parse({ ...valid, branchPattern: { prototype: 'x' } })).toThrow(/branchPattern\.codebase/);
+		// Only the project's id is filled in: a branch would be named with any other placeholder as written.
+		for (const codebase of [
+			'PAR-<ticket>/<project-id>',
+			'feature/x',
+			'feature/<project-id>/<project-id>',
+			'feature/<project-id> new',
+			'../<project-id>',
+		])
+			expect(() => parse({ ...valid, branchPattern: { codebase } }), codebase).toThrow(
+				/must be a branch name with <project-id> once, and nothing else in <>/,
+			);
+		expect(parse({ ...valid, branchPattern: { codebase: 'PAR/<project-id>' } }).branchPattern.codebase).toBe('PAR/<project-id>');
 	});
 
 	it('is not refused for the prototype pattern of old, and does not read it: prototypes are pages, not branches', () => {

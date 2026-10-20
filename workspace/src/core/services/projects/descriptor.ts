@@ -5,10 +5,14 @@ import { resolveInside } from '../platform/paths';
 import { asRecord } from '../../../shared/json';
 import { errorText } from '../../../shared/result';
 import { asRepositoryPath } from '../../../shared/repoRef';
+import { isSafeBranchName } from '../platform/git';
 
 /** The descriptor's commands are the complete list of what may run in a repository; nothing else can be run. */
 
 export const DESCRIPTOR_PATH = '.dsnr/workspace.json';
+
+/** Where the project's id goes in a branch pattern, and the only thing filled in. */
+export const PROJECT_ID_SLOT = '<project-id>';
 
 const isStringArray = (v: unknown): v is string[] => Array.isArray(v) && v.every((x) => typeof x === 'string');
 
@@ -104,6 +108,13 @@ export const parseDescriptor = (text: string): WorkspaceDescriptor => {
 	const branch = d.branchPattern as Record<string, unknown> | undefined;
 	if (!branch || typeof branch.codebase !== 'string') {
 		throw new Error(`${DESCRIPTOR_PATH} is missing branchPattern.codebase`);
+	}
+	// Only the project's id is filled in: any other placeholder would be in the branch's name as written.
+	const named = branch.codebase.split(PROJECT_ID_SLOT);
+	if (named.length !== 2 || /[<>]/.test(named.join('')) || !isSafeBranchName(named.join('x'))) {
+		throw new Error(
+			`${DESCRIPTOR_PATH} branchPattern.codebase must be a branch name with ${PROJECT_ID_SLOT} once, and nothing else in <>, as feature/${PROJECT_ID_SLOT}`,
+		);
 	}
 	if (!Array.isArray(d.commands)) {
 		throw new Error(`${DESCRIPTOR_PATH} is missing commands`);
