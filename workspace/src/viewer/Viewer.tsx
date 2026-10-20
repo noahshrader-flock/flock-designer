@@ -64,7 +64,20 @@ type Showing = { states: string[]; state: string | null; onState: (state: string
 const NO_AGENT_MS = 8000;
 const NO_AGENT = 'This page cannot show its comments’ pins: it was built without DSNR’s page agent. Build the site again.';
 
-const PageBar = ({ config, slots, showing, children }: { config: ViewerConfig; slots: ViewerSlots; showing: Showing; children: ReactNode }) => {
+const PageBar = ({
+	config,
+	slots,
+	showing,
+	before,
+	children,
+}: {
+	config: ViewerConfig;
+	slots: ViewerSlots;
+	showing: Showing;
+	/** Beside the switchers, first: what is said of the version they switch. */
+	before?: ReactNode;
+	children: ReactNode;
+}) => {
 	const versions = useMemo(
 		() => config.versions.map((v) => ({ ...v, branch: prototypeKey(config.projectId, v.name) })),
 		[config.versions, config.projectId],
@@ -75,6 +88,7 @@ const PageBar = ({ config, slots, showing, children }: { config: ViewerConfig; s
 			{config.prototypesHref !== null && <IconButton icon="chevron-left" label="Back to all prototypes" href={config.prototypesHref} />}
 			<Heading size="page">{config.title}</Heading>
 			<ButtonRow>
+				{before}
 				<VersionSwitcher
 					current={{ name: config.name, branch: prototypeKey(config.projectId, config.name) }}
 					siblings={versions}
@@ -220,8 +234,7 @@ const InDsnr = ({ config, slots, showing, relay }: { config: ViewerConfig; slots
 	const builtOn = <BehindLatest relay={relay} branch={version} />;
 	if (login === null)
 		return (
-			<PageBar config={config} slots={slots} showing={showing}>
-				{builtOn}
+			<PageBar config={config} slots={slots} showing={showing} before={builtOn}>
 				<Button variant="secondary" disabled={signingIn} onPress={() => void signIn()}>
 					{signingIn ? 'Continue in VS Code…' : 'Sign in to comment'}
 				</Button>
@@ -269,7 +282,7 @@ const Commenting = ({
 	slots: ViewerSlots;
 	showing: Showing;
 	store: CommentStore;
-	/** In the bar after the switchers, before the comments. */
+	/** In the bar, before the switchers. */
 	before?: ReactNode;
 	account?: ReactNode;
 	actions?: (comment: ReviewComment) => MenuItem[];
@@ -314,8 +327,7 @@ const Commenting = ({
 	const frameBox = slots.frame.getBoundingClientRect();
 	return (
 		<>
-			<PageBar config={config} slots={slots} showing={showing}>
-				{before}
+			<PageBar config={config} slots={slots} showing={showing} before={before}>
 				<CommentControl comments={comments} listOpen={listOpen} onToggleList={() => setListOpen((o) => !o)} disabled={!opened} />
 				{account}
 			</PageBar>

@@ -26,6 +26,12 @@ body {
 	white-space: nowrap;
 }
 
+/* A step below the buttons beside it: said in passing, not something to do. */
+.viewer-bar .behind-latest {
+	font-size: var(--dsnr-text-small);
+	white-space: nowrap;
+}
+
 .viewer-bar .button-row {
 	flex-wrap: nowrap;
 	gap: var(--dsnr-space-3);

@@ -297,7 +297,7 @@ when the checkout has nothing of its own and the person's when it is ahead or ha
 them, including when origin could not be reached. New starts the fetch when it opens. The record keeps that commit
 (`basedOn.commit`), and that commit is what the agent reads (a read-only copy at it, unless the checkout is there), kept by a
 private ref (`refs/dsnr/base/<project>/<version>`). A change or an Address keeps its version's base. In VS Code's review tab, a
-version whose branch has moved on says so in the bar ("3 behind develop", nothing while it is current); **Refresh to latest**
+version whose branch has moved on says so in the bar, beside its version ("Behind latest", nothing while it is current; the dialog it opens says the branch and how far); **Refresh to latest**
 moves its base to the latest and hands its rebuild, in place, to the agent.
 
 **Codebase work behind the product's main branch.** DSNR never merges into a checkout. Codebase work's branch is read
