@@ -31,10 +31,10 @@ export const changeLine = (c: HandOverChange): string => `${c.said} (${c.where ?
 const unitOf = (group: HandOverGroup): string => (group.kind === 'tokens' ? 'its design tokens' : `the ${group.name} component alone`);
 
 /**
- * Typed into the agent, not sent: the person adds their words and presses Enter. Throws, in words, with nothing to hand
- * over or more than one hand-over carries.
+ * Handed over as every task is, a file and `what`, its one line. Throws, in words, with nothing to hand over or more than
+ * one hand-over carries.
  */
-export const handOverPrompt = ({
+export const handOverTask = ({
 	group,
 	changes,
 	branch,
@@ -46,14 +46,15 @@ export const handOverPrompt = ({
 	branch: string;
 	base: string;
 	rules: string;
-}): string => {
+}): { what: string; task: string } => {
 	if (changes.length === 0) throw new Error('There is nothing tried to hand over.');
 	if (changes.length > MOST_HANDED)
 		throw new Error(
 			`This is ${changes.length} changes; one hand-over carries at most ${MOST_HANDED}, so its pull request is one a reviewer can read. Reset some, and hand them over in another.`,
 		);
-	return [
-		`Change this design system's own code, as tried in DSNR, for ${unitOf(group)}.`,
+	const what = `Change this design system's own code, as tried in DSNR, for ${unitOf(group)}.`;
+	const task = [
+		what,
 		'',
 		`First make a branch for it, from the library's ${base} as GitHub has it:`,
 		'',
@@ -74,9 +75,8 @@ export const handOverPrompt = ({
 		'',
 		COMMIT_HERE,
 		'',
-		'Anything else, in my own words:',
-		'',
 	].join('\n');
+	return { what, task };
 };
 
 /** The rules for changing a design system's code allow its own source only; null for one of those files. */

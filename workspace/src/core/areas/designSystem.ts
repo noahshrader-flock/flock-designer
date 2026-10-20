@@ -1,6 +1,6 @@
 import type { CallsDeps } from '../compose';
 import type { ChangeBranchOf, ChangeKind, ChangeKinds, HandedChange, SavedKind, TokenEdit, TriedValue } from '../../shared/contract';
-import { handOver } from '../services/agent/handOver';
+import { handTask } from '../services/agent/handOver';
 import { type ChangeBranches, scopeOf } from '../services/designSystem/changeBranches';
 import { offBase } from '../services/designSystem/handOverBranches';
 import { readVoice } from '../services/designSystem/voiceAndTone';
@@ -46,7 +46,7 @@ export const designSystemArea = (d: CallsDeps) => {
 				throw new Error('The token changes are handed over as the tokens, and a component’s values as that component.');
 			libraryShown.refuse(shownSystem(), 'process changes');
 			// Not opened, it is not handed over: forgotten, so it can be pressed again.
-			const { handed, prepared } = await handOver(
+			const { handed, prepared } = await handTask(
 				ports,
 				await agent(),
 				() => handOverBranches.start(file ?? '', change),

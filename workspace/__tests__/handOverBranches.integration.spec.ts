@@ -34,6 +34,7 @@ const handOvers = () =>
 		file: join(home, 'app', 'handoffs.json'),
 		tools,
 		rules: async () => '1. Its own source only.',
+		tasks: join(home, 'app', 'hand-over'),
 		changes: async () => [{ said: 'FSButton · Height · sm: 28px → 32px', where: 'theme.ts, line 1' }],
 		reach: async () => 'It moves 1 component (FSButton); 40 unchanged, in their stories drawn.',
 		saved: async () => saved,
@@ -78,13 +79,14 @@ beforeEach(() => {
 afterEach(() => rmSync(home, { recursive: true, force: true }));
 
 describe('a unit handed to Claude Code', () => {
-	it('names its branch, keeps it, and gives the prompt to open Claude Code with in the library’s root', async () => {
+	it('names its branch, keeps it, and gives the task, its file outside the library, to open the agent with in its root', async () => {
 		const started = await handOvers().start(BUTTON, TRIED);
 		expect(started.root).toBe(clone);
 		expect(started.branch).toMatch(/^dsnr\/handoff-20261017-[0-9a-f]{4}$/);
-		expect(started.prompt).toContain(`git switch -c ${started.branch} origin/develop`);
-		expect(started.prompt).toContain('for the FSButton component alone.');
-		expect(started.prompt).toContain('- FSButton · Height · sm: 28px → 32px (theme.ts, line 1)');
+		expect(started.taskFile).toBe(join(home, 'app', 'hand-over', `${started.branch.replace('dsnr/', '')}.md`));
+		expect(started.what).toContain('for the FSButton component alone.');
+		expect(started.task).toContain(`git switch -c ${started.branch} origin/develop`);
+		expect(started.task).toContain('- FSButton · Height · sm: 28px → 32px (theme.ts, line 1)');
 		expect(await handOvers().current(BUTTON)).toEqual({
 			branch: started.branch,
 			saved: TRIED,
@@ -106,7 +108,7 @@ describe('a unit handed to Claude Code', () => {
 		await handOvers().start(BUTTON, TRIED);
 		await expect(handOvers().start(BUTTON, TRIED)).rejects.toThrow('This is handed to an agent already.');
 		// Another unit is its own: the tokens can be handed over beside it.
-		expect((await handOvers().start('', { edits: [] })).prompt).toContain('for its design tokens.');
+		expect((await handOvers().start('', { edits: [] })).what).toContain('for its design tokens.');
 	});
 
 	it('is proposed once Claude Code has committed on its branch: pushed, a draft with the lines, the reach, what was checked and the template', async () => {

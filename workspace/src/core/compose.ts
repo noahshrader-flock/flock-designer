@@ -275,6 +275,7 @@ export const composeCore = ({
 	const handOverBranches = new HandOverBranches({
 		...branchDeps('handOver'),
 		rules: () => readSkillText(DESIGN_SYSTEM_CODE),
+		tasks: join(prototypesRoot, '_hand-over'),
 		changes: async (scope, change) => {
 			const system = shownSystem();
 			if (system === null) throw new Error('There is no design system connected.');

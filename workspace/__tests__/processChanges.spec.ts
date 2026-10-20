@@ -8,7 +8,7 @@ import {
 	changeLine,
 	classifyPath,
 	flagged,
-	handOverPrompt,
+	handOverTask,
 	proposalOf,
 	reachLine,
 	tokenChanges,
@@ -18,71 +18,71 @@ import {
 const RULES = '# Changing a design system’s code\n\n1. Its own source only.\n';
 const BRANCH = 'dsnr/handoff-20261017-ab12';
 const button = { kind: 'component' as const, name: 'FSButton', file: 'src/components/FSButton/FSButton.stories.tsx' };
+const taskOf = (given: Parameters<typeof handOverTask>[0]): string => handOverTask(given).task;
 
-describe('the prompt a group of changes is handed over with', () => {
+describe('the task a group of changes is handed over with', () => {
 	it('says what it is, for one component alone, the branch exactly, and what is DSNR’s to do', () => {
-		const prompt = handOverPrompt({
+		const { what, task } = handOverTask({
 			group: button,
 			changes: [{ said: 'FSButton · Height · sm: 28px → 32px', where: 'src/utils/theme.ts, line 158' }],
 			branch: BRANCH,
 			base: 'develop',
 			rules: RULES,
 		});
-		expect(prompt).toContain("Change this design system's own code, as tried in DSNR, for the FSButton component alone.");
-		expect(prompt).toContain(`    git fetch origin develop\n    git switch -c ${BRANCH} origin/develop\n`);
-		expect(prompt).toContain('Do not push it, do not open a pull request, and do not change any other branch');
-		expect(prompt).toContain('- FSButton · Height · sm: 28px → 32px (src/utils/theme.ts, line 158)');
+		// Its one line, said again at the top of its file, so the file stands alone.
+		expect(what).toBe("Change this design system's own code, as tried in DSNR, for the FSButton component alone.");
+		expect(task.startsWith(`${what}\n`)).toBe(true);
+		expect(task).toContain(`    git fetch origin develop\n    git switch -c ${BRANCH} origin/develop\n`);
+		expect(task).toContain('Do not push it, do not open a pull request, and do not change any other branch');
+		expect(task).toContain('- FSButton · Height · sm: 28px → 32px (src/utils/theme.ts, line 158)');
 		// The rules are carried, since the library does not have them; the repository's own docs win.
-		expect(prompt).toContain("this repository's own contributing docs win where they differ");
-		expect(prompt).toContain('1. Its own source only.');
-		// Left open for the person's own words, the cursor after it.
-		expect(prompt.endsWith('Anything else, in my own words:\n')).toBe(true);
+		expect(task).toContain("this repository's own contributing docs win where they differ");
+		expect(task).toContain('1. Its own source only.');
+		expect(task.endsWith(`${COMMIT_HERE}\n`)).toBe(true);
 	});
 
 	it('carries the real rules, and turns round, after them, the one that would leave the branch empty: commit there', () => {
 		const rules = readFileSync(join(__dirname, '..', '..', 'standards', 'design-system-code.md'), 'utf8');
 		expect(rules).toContain('commit nothing');
-		const prompt = handOverPrompt({
+		const task = taskOf({
 			group: button,
 			changes: [{ said: 'FSButton · Height · sm: 28px → 32px', where: null }],
 			branch: BRANCH,
 			base: 'develop',
 			rules,
 		});
-		expect(prompt.indexOf(COMMIT_HERE)).toBeGreaterThan(prompt.indexOf('commit nothing'));
+		expect(task.indexOf(COMMIT_HERE)).toBeGreaterThan(task.indexOf('commit nothing'));
 	});
 
 	it('hands over the tokens as their own unit', () => {
-		const prompt = handOverPrompt({
+		const task = taskOf({
 			group: { kind: 'tokens' },
 			changes: [{ said: 'Tones pineGreen 60: #15584A → #000000', where: 'src/colors/tones.ts, line 12' }],
 			branch: BRANCH,
 			base: 'develop',
 			rules: RULES,
 		});
-		expect(prompt).toContain('for its design tokens.');
-		expect(prompt).toContain('- Tones pineGreen 60: #15584A → #000000 (src/colors/tones.ts, line 12)');
+		expect(task).toContain('for its design tokens.');
+		expect(task).toContain('- Tones pineGreen 60: #15584A → #000000 (src/colors/tones.ts, line 12)');
 	});
 
-	it('says of a value DSNR could not place that it was not placed, and asks Claude Code once to find where it is written', () => {
+	it('says of a value DSNR could not place that it was not placed, and asks the agent once to find where it is written', () => {
 		const unplaced = { said: 'FSButton · Padding · lg: 0px 16px → 0px 20px', where: null };
 		// The line is the pull request's too, so it says only what is so.
 		expect(changeLine(unplaced)).toBe('FSButton · Padding · lg: 0px 16px → 0px 20px (not placed by DSNR)');
 		const ask = "Where a change says not placed by DSNR, find where it is written in the design system's own source.";
-		const prompt = (changes: { said: string; where: string | null }[]) =>
-			handOverPrompt({ group: button, changes, branch: BRANCH, base: 'develop', rules: RULES });
-		expect(prompt([unplaced]).split(ask)).toHaveLength(2);
-		expect(prompt([{ ...unplaced, where: 'theme.ts, line 1' }])).not.toContain(ask);
+		const task = (changes: { said: string; where: string | null }[]) =>
+			taskOf({ group: button, changes, branch: BRANCH, base: 'develop', rules: RULES });
+		expect(task([unplaced]).split(ask)).toHaveLength(2);
+		expect(task([{ ...unplaced, where: 'theme.ts, line 1' }])).not.toContain(ask);
 	});
 
 	it('refuses with nothing to hand over, and more than one hand-over carries, rather than leave changes out', () => {
 		const one = { group: button, branch: BRANCH, base: 'develop', rules: RULES };
-		expect(() => handOverPrompt({ ...one, changes: [] })).toThrow('There is nothing tried to hand over.');
+		expect(() => taskOf({ ...one, changes: [] })).toThrow('There is nothing tried to hand over.');
 		const many = Array.from({ length: MOST_HANDED + 1 }, (_, i) => ({ said: `FSButton · Height · v${i}: 1px → 2px`, where: null }));
-		expect(() => handOverPrompt({ ...one, changes: many })).toThrow(
-			`This is ${MOST_HANDED + 1} changes; one hand-over carries at most ${MOST_HANDED}`,
-		);
-		expect(handOverPrompt({ ...one, changes: many.slice(0, MOST_HANDED) }).split('\n- ')).toHaveLength(MOST_HANDED + 1);
+		expect(() => taskOf({ ...one, changes: many })).toThrow(`This is ${MOST_HANDED + 1} changes; one hand-over carries at most ${MOST_HANDED}`);
+		expect(taskOf({ ...one, changes: many.slice(0, MOST_HANDED) }).split('\n- ')).toHaveLength(MOST_HANDED + 1);
 	});
 });
 
@@ -122,7 +122,7 @@ describe('which files a hand-over may change, by the rules for changing a design
 	});
 });
 
-describe('what each change is said as, for the prompt and the pull request', () => {
+describe('what each change is said as, for the task and the pull request', () => {
 	it('says a token change as a Save’s commit does, with the file and line it is written in', () => {
 		const token = {
 			path: 'tone.pineGreen.60',

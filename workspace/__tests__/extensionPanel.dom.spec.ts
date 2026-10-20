@@ -1892,7 +1892,7 @@ describe('every change being tried, in the panel’s Changes: the tokens and eac
 			await answerHandOver(null, { branch: BRANCH, lines: ['primary: #000000'], review: { state: 'missing' }, pullRequest: null });
 			expect(handOver()?.querySelector('.branch-line')?.textContent).toBe(BRANCH);
 			expect(handOver()?.textContent).toContain('This hand-over is in Claude Code in this window now');
-			expect(handOver()?.textContent).toContain('The agent makes this branch, by the name its prompt gives');
+			expect(handOver()?.textContent).toContain('The agent makes this branch, by the name its task gives');
 			expect(allByRole('button', 'Save to a branch')).toEqual([]);
 			expect(allByRole('button', 'Process changes')).toEqual([]);
 			expect(allByRole('button', 'Propose')).toEqual([]);

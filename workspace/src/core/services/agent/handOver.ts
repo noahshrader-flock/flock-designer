@@ -46,11 +46,17 @@ export const handTask = <T extends { root: string; what: string; taskFile: strin
 	ports: HandPorts,
 	agent: Agent,
 	prepare: () => Promise<T>,
+	undo?: (prepared: T) => void,
 ): Promise<{ handed: Handed; prepared: T }> =>
-	handOver(ports, agent, async () => {
-		const prepared = await prepare();
-		const { what, taskFile, task } = prepared;
-		mkdirSync(dirname(taskFile), { recursive: true });
-		writeFileSync(taskFile, task);
-		return { ...prepared, prompt: `${what} Your task is in ${taskFile}. It is complete: read all of it, then do what it says, in order.` };
-	});
+	handOver(
+		ports,
+		agent,
+		async () => {
+			const prepared = await prepare();
+			const { what, taskFile, task } = prepared;
+			mkdirSync(dirname(taskFile), { recursive: true });
+			writeFileSync(taskFile, task);
+			return { ...prepared, prompt: `${what} Your task is in ${taskFile}. It is complete: read all of it, then do what it says, in order.` };
+		},
+		undo,
+	);

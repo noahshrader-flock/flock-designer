@@ -2,10 +2,11 @@
  * DSNR verifies, never trusts: a clean checkout only, never pushes a branch it did not name, never by force. Not Handoff,
  * which is codebase work's hand-off to engineering (`engineeringHandoff.ts`).
  */
+import { basename, join } from 'node:path';
 import type { ChangeBranchOf, HandedChange } from '../../../shared/contract';
 import { CHANGE_REQUEST_TEMPLATES } from '../../../shared/hostUrls';
 import { asRecord } from '../../../shared/json';
-import { type HandOverChange, type HandOverGroup, changeLine, flagged, handOverPrompt, proposalOf } from '../../../shared/processChanges';
+import { type HandOverChange, type HandOverGroup, changeLine, flagged, handOverTask, proposalOf } from '../../../shared/processChanges';
 import { storyComponent } from '../../../shared/valueNames';
 import { tokenEditsOf } from './tokenEdits';
 import { triedValuesOf } from './valueSources';
@@ -16,7 +17,7 @@ import { dsnrBranchPattern, newDsnrBranch } from './dsnrBranch';
 import { git } from '../platform/git';
 import { type ChangeBranchesDeps, type Kept, type KindRules, KeptBranches, shownBranch } from './changeBranches';
 
-/** Branches are named `dsnr/handoff-…`, as the prompt tells the agent to name them. */
+/** Branches are named `dsnr/handoff-…`, as the task tells the agent to name them. */
 export const HAND_OVER: KindRules<HandedChange> = {
 	kind: 'handOver',
 	branchWord: 'handoff',
@@ -35,6 +36,8 @@ export const HAND_OVER_BRANCH = dsnrBranchPattern(HAND_OVER.branchWord);
 
 export interface HandOverBranchesDeps extends ChangeBranchesDeps {
 	rules: () => Promise<string>;
+	/** The app's own folder each hand-over's task file is written in, named by its branch: never the design system's checkout. */
+	tasks: string;
 	changes: (scope: string, change: HandedChange) => Promise<HandOverChange[]>;
 	reach: (scope: string, change: HandedChange) => Promise<string>;
 	/** True blocks a hand-over until the saved branch is started over. */
@@ -54,7 +57,7 @@ export class HandOverBranches extends KeptBranches<HandedChange> {
 		return Promise.resolve(true);
 	}
 
-	async start(scope: string, change: HandedChange): Promise<{ root: string; branch: string; prompt: string }> {
+	async start(scope: string, change: HandedChange): Promise<{ root: string; branch: string; what: string; taskFile: string; task: string }> {
 		const system = this.records.system();
 		const unfinished = await unfinishedWork(system.root, 'the design system’s checkout');
 		if (unfinished !== null) throw new Error(unfinished);
@@ -65,7 +68,7 @@ export class HandOverBranches extends KeptBranches<HandedChange> {
 		if (base === null) throw new Error(`The library has no ${system.branch} branch from GitHub to make a branch from.`);
 		const changes = await this.handOver.changes(scope, change);
 		const branch = newDsnrBranch(HAND_OVER.branchWord, this.deps.now?.() ?? new Date());
-		const prompt = handOverPrompt({ group: groupOf(scope), changes, branch, base: system.branch, rules: await this.handOver.rules() });
+		const { what, task } = handOverTask({ group: groupOf(scope), changes, branch, base: system.branch, rules: await this.handOver.rules() });
 		const kept: Kept<HandedChange> = {
 			branch,
 			base,
@@ -77,7 +80,7 @@ export class HandOverBranches extends KeptBranches<HandedChange> {
 			pullRequest: null,
 		};
 		this.records.keep(system, scope, kept);
-		return { root: system.root, branch, prompt };
+		return { root: system.root, branch, what, taskFile: join(this.handOver.tasks, `${basename(branch)}.md`), task };
 	}
 
 	async current(scope: string): Promise<ChangeBranchOf<'handOver'> | null> {
@@ -92,7 +95,7 @@ export class HandOverBranches extends KeptBranches<HandedChange> {
 		if (at === null) throw new Error('Nothing is handed to an agent for this.');
 		const { system, kept } = at;
 		const review = await reviewBranch(system.root, kept.branch, kept.base, kept.baseBranch);
-		if (review.state === 'missing') throw new Error(`There is no branch ${kept.branch} yet: the agent makes it with the name its prompt gave.`);
+		if (review.state === 'missing') throw new Error(`There is no branch ${kept.branch} yet: the agent makes it with the name its task gave.`);
 		if (review.state === 'empty') throw new Error(`Nothing is committed on ${kept.branch} yet: the agent commits its work there.`);
 		if (review.state === 'off-base') throw new Error(offBase(kept.branch, kept.baseBranch));
 		if (review.tip !== tip) throw new Error(`The agent has committed on ${kept.branch} since it was shown here: look at it again, then propose it.`);
