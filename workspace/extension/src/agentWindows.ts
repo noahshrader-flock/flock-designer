@@ -79,9 +79,9 @@ const CODEX_NEW_CHAT = 'chatgpt.newChat';
 const CODEX_ATTACH = 'chatgpt.addFileToThread';
 
 /**
- * In its panel, a new conversation with the task file attached and the prompt on the clipboard, when its extension is here
- * and this window's first folder is `root`, where it starts; in a terminal otherwise, or when its commands fail (they are
- * its own, not a published interface).
+ * In its panel, a new conversation with the task file attached and the prompt to paste, when its extension is here and this
+ * window's first folder is `root`, where it starts; in a terminal otherwise, or when its commands fail (they are its own,
+ * not a published interface).
  */
 const codexWindow = (vscode: VsCodeApi, terminal: AgentWindow): AgentWindow => ({
 	here: () => true,
@@ -94,8 +94,7 @@ const codexWindow = (vscode: VsCodeApi, terminal: AgentWindow): AgentWindow => (
 		} catch {
 			return terminal.open(agent, root, prompt, taskFile);
 		}
-		await vscode.env.clipboard.writeText(prompt);
-		return 'pasted';
+		return 'copied';
 	},
 });
 

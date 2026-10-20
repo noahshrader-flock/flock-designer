@@ -321,22 +321,23 @@ there.
 
 **Search:** a box at the left of the grid and list icons narrows the projects as you type, as the app's does (every word, in any case, in the name, id, folder or people); Escape clears it.
 
-**Folders:** the panel lists the projects under a section for each folder, those in none last, as a grid of cards, which it
-starts in, or a list of rows (the icons at the right above them, remembered with the tab). **Assign folder…**, from a
+**Folders:** the panel lists the projects under a section for each folder, those in none last, as a grid of cards, which
+it starts in, or a list of rows (the icons at the right above them, remembered with the tab). **Assign folder…**, from a
 project's menu, its right-click menu or a review tab's menu, opens a dialog in the panel to put it in a folder, a new
 one, or none, with the same folder choice New prototype has. It opens at once with the projects the panel has, and, as
-every project's dialog does, has the list read again behind it, so it acts on the project as it is. **Rename…**, beside it,
-changes the name people see, the first heading of its `brief.md` (`renameProject`), and builds the published site again;
-the project's id, which its folder, links, branches and comments are named by, stays as it was. The app's one setting, its theme, is VS Code's here. DSNR's settings are which agent it hands work to (`dsnr.agent.use`: Claude Code, in its panel; Codex, in its panel, a new
-conversation with the task's file attached and its line on the clipboard to paste, or a terminal, which starts at once with the task, when its
-extension is not here or this window's first folder is not where the work is; or GitHub Copilot, in VS Code's Chat, with the task typed in, or its command line in
-a terminal when there is no Chat), and where an agent with a panel opens it (`dsnr.agent.location`, below; it was
-`dsnr.claudeCode.location`, and a value set there is moved to it once). **Which agent:** until one is kept, the one you
-are signed in to is used with no question; signed in to several, you are asked once, in VS Code's own list, and the
-choice is kept (the pin, on until pressed; unpinned, you are asked each time). A kept one you are no longer signed in to is asked about again, saying why:
-never another in silence. Change it from the agent named in a dialog that hands work over, from your GitHub account
-dialog, with **DSNR: Choose the agent**, or in Settings. Changing a value in words runs unattended, which only Claude Code
-does.
+every project's dialog does, has the list read again behind it, so it acts on the project as it is. **Rename…**, beside
+it, changes the name people see, the first heading of its `brief.md` (`renameProject`), and builds the published site
+again; the project's id, which its folder, links, branches and comments are named by, stays as it was. The app's one
+setting, its theme, is VS Code's here. DSNR's settings are which agent it hands work to (`dsnr.agent.use`: Claude Code,
+in its panel; Codex, in its panel, with the task's file attached and its line on the clipboard to paste, or in a
+terminal, where it starts at once, when its extension is not here or the work is not in this window's first folder; or
+GitHub Copilot, in VS Code's Chat, with the task typed in, or its command line in a terminal when there is no Chat), and
+where an agent with a panel opens it (`dsnr.agent.location`, below; it was `dsnr.claudeCode.location`, and a value set
+there is moved to it once). **Which agent:** until one is kept, the one you are signed in to is used with no question;
+signed in to several, you are asked once, in VS Code's own list, and the choice is kept (the pin, on until pressed;
+unpinned, you are asked each time). A kept one you are no longer signed in to is asked about again, saying why: never
+another in silence. Change it from the agent named in a dialog that hands work over, from your GitHub account dialog,
+with **DSNR: Choose the agent**, or in Settings. Changing a value in words runs unattended, which only Claude Code does.
 
 **Moving into the code (Phase 5):** a prototype's menu has **Build in the codebase…** (and a review tab's menu does,
 for the prototype in front): a dialog says what it would do in the product open here (the branch, where it starts

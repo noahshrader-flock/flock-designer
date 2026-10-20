@@ -67,14 +67,14 @@ export interface BranchAgainstBase {
 export type WorkKind = 'prototype' | 'codebase';
 
 /**
- * What any hand-off to the agent did. `opened`: in the agent's own window with the task typed in (`typed`), or a new
- * conversation there with the task on the clipboard to paste (`pasted`), or already at work in a terminal (`started`); null
- * when it is not in this editor, and `command`, for a terminal, is on the clipboard.
+ * What any hand-off to the agent did. `opened`: in the agent's own window with the task typed in (`typed`), or with the task
+ * on the clipboard to paste there (`copied`), or already at work in a terminal (`started`); null when it is not in this
+ * editor, and `command`, for a terminal, is on the clipboard.
  */
 export interface Handed {
 	/** The agent's name, as its adapter says it. */
 	agent: string;
-	opened: 'typed' | 'pasted' | 'started' | null;
+	opened: 'typed' | 'copied' | 'started' | null;
 	command: string | null;
 }
 

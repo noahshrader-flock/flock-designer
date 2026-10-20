@@ -9,6 +9,7 @@ import { codex } from '../src/core/services/agent/codex';
 import { copilot } from '../src/core/services/agent/copilot';
 import { startCommand } from '../src/core/services/agent/terminal';
 import { handOver } from '../src/core/services/agent/handOver';
+import type { Handed } from '../src/shared/contract';
 
 /**
  * What any agent behind the seam must do, run against a stand-in program for each that answers as that agent does. A
@@ -124,7 +125,7 @@ describe.each(ROWS)('$name, behind the seam', (row) => {
 	it('is handed work in its own window when the editor has one, and given as a terminal command when not', async () => {
 		const copied: string[] = [];
 		const opened: unknown[][] = [];
-		const ports = (how: 'typed' | 'pasted' | 'started' | null) => ({
+		const ports = (how: Handed['opened']) => ({
 			agentWindow: { open: async (...a: unknown[]) => (opened.push(a), how) },
 			copy: async (t: string) => void copied.push(t),
 		});
@@ -136,6 +137,9 @@ describe.each(ROWS)('$name, behind the seam', (row) => {
 			[a, '/work', 'Go.', null],
 		]);
 		expect(copied).toEqual([]);
+		expect(await hand(ports('copied'), a)).toEqual({ agent: row.name, opened: 'copied', command: null });
+		expect(copied).toEqual(['Go.']);
+		copied.length = 0;
 		const given = await hand(ports(null), a);
 		expect(given).toEqual({ agent: row.name, opened: null, command: startCommand(a.program(), '/work', a.startArgs('Go.')) });
 		expect(copied).toEqual([given.command]);

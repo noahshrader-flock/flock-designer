@@ -12,8 +12,9 @@ design repository, so making one changes nothing engineering owns.
 3. Pick a folder for it if you like, so related projects sit together.
 4. Press **Create prototype**.
 
-The agent opens with the task typed in. In Claude Code and Copilot, press Enter there to start it; Codex starts at once in
-a terminal. DSNR tells you where it went, and which code it is modeled on.
+The agent opens with the task typed in. In Claude Code and Copilot, press Enter there to start it. Codex opens with the
+task's file attached and its line on your clipboard: paste it and press Enter. DSNR tells you where it went, and which code
+it is modeled on.
 
 If the product's packages are not installed on your computer, DSNR says so first and offers **Install packages**.
 

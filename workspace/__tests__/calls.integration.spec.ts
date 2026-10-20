@@ -4,7 +4,7 @@ import { basename, dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 import type { CallsContext } from '../src/core/compose';
 import { appPaths } from '../src/core/appPaths';
-import { CHANNELS, invokeChannel } from '../src/shared/contract';
+import { CHANNELS, type Handed, invokeChannel } from '../src/shared/contract';
 import type { Ports } from '../src/core/ports';
 import type { AgentId } from '../src/core/services/agent/agent';
 import { type RepoRef, formatRepo } from '../src/shared/repoRef';
@@ -49,7 +49,7 @@ const fakePorts = () =>
 		httpStatus: vi.fn(async () => 200),
 		// Never another application from a test: VS Code is treated as not installed.
 		agentWindow: {
-			open: vi.fn(async (): Promise<'typed' | 'pasted' | 'started' | null> => null),
+			open: vi.fn(async (): Promise<Handed['opened']> => null),
 			signedIn: vi.fn(async (): Promise<boolean | null> => null),
 		},
 		agentChoice: vi.fn((): AgentId | 'ask' => 'claude-code'),

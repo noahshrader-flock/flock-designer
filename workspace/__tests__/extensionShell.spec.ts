@@ -249,13 +249,12 @@ describe('VS Code’s ports', () => {
 		expect(v.commands.executeCommand).not.toHaveBeenCalled();
 	});
 
-	it('hand Codex its task in a new conversation in its panel, its file attached and its line on the clipboard, when its extension is here', async () => {
+	it('hand Codex its task in a new conversation in its panel, its file attached and its line to paste, when its extension is here', async () => {
 		const v = fake();
 		v.extensions.getExtension.mockImplementation((id: string) => (id === 'openai.chatgpt' ? { id } : undefined) as never);
 		const agent = codex({ locate: () => '/bin/codex', run: async () => ({ stdout: '', stderr: '' }) });
-		expect(await vscodePorts(v as never, none).agentWindow.open(agent, '/work/coke', 'Build it.', '/work/coke/.dsnr/task.md')).toBe('pasted');
+		expect(await vscodePorts(v as never, none).agentWindow.open(agent, '/work/coke', 'Build it.', '/work/coke/.dsnr/task.md')).toBe('copied');
 		expect(v.commands.executeCommand.mock.calls).toEqual([['chatgpt.newChat'], ['chatgpt.addFileToThread', { fsPath: '/work/coke/.dsnr/task.md' }]]);
-		expect(v.env.clipboard.writeText).toHaveBeenCalledWith('Build it.');
 		expect(v.window.createTerminal).not.toHaveBeenCalled();
 	});
 
@@ -267,7 +266,6 @@ describe('VS Code’s ports', () => {
 		v.commands.executeCommand.mockRejectedValueOnce(new Error('command chatgpt.newChat not found'));
 		expect(await vscodePorts(v as never, none).agentWindow.open(agent, '/work/coke', 'Build it.', null)).toBe('started');
 		expect(v.window.createTerminal).toHaveBeenCalledTimes(2);
-		expect(v.env.clipboard.writeText).not.toHaveBeenCalled();
 	});
 
 	it('start Codex in a terminal of its own in the folder without its extension, with the prompt as its argument, no shell between to quote it', async () => {
