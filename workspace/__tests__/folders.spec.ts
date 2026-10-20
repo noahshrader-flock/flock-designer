@@ -223,7 +223,7 @@ describe('renaming a project', () => {
 		await renameProject(store, 'alert-history', '  Alerts  over time ');
 		expect(files['projects/alert-history/brief.md']).toBe(FILED.replace('# Alert history', '# Alerts over time'));
 		expect(writes).toEqual(['projects/alert-history/brief.md']);
-		expect(messages).toEqual(['alert-history: renamed Alerts over time']);
+		expect(messages).toEqual(['alert-history: renamed to Alerts over time']);
 	});
 
 	it('writes nothing when the name is the one it has', async () => {

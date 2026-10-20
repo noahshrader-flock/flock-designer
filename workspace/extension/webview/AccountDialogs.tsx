@@ -7,19 +7,12 @@ import { workspace } from './host';
 import { Message } from '../../src/ui/Message';
 import { askOnce } from './hooks/ask';
 import { AgentInUse } from './AgentInUse';
+import { useAction } from './hooks/useAction';
 
 /** Sign out ends only DSNR's use of the account: VS Code keeps the account itself in its Accounts menu. */
 export const AccountDialog = ({ login, onClose }: { login: string; onClose: () => void }) => {
-	const [error, setError] = useState<string | null>(null);
-	const [busy, setBusy] = useState(false);
-	const signOut = async () => {
-		setBusy(true);
-		setError(null);
-		const r = await workspace().signOut();
-		setBusy(false);
-		if (r.ok) onClose();
-		else setError(r.error);
-	};
+	const { busy, error, run } = useAction();
+	const signOut = () => run(() => workspace().signOut(), onClose);
 	return (
 		<Dialog title="GitHub account" onClose={onClose}>
 			<Message>

@@ -9,6 +9,7 @@ import { FolderField, type FolderPick, folderOf, isChosen, pickOf } from './Fold
 import { workspace } from './host';
 import { Message } from '../../src/ui/Message';
 import { AgentInUse } from './AgentInUse';
+import { useAction } from './hooks/useAction';
 
 interface NewPrototypeAnswers {
 	title: string;
@@ -77,18 +78,18 @@ export const AssignFolderDialog = ({
 	const [pick, setPick] = useState<FolderPick>(
 		pickOf(project.folder === null ? null : (folders.find((f) => sameFolder(f, project.folder as string)) ?? project.folder)),
 	);
-	const [busy, setBusy] = useState(false);
-	const [error, setError] = useState<string | null>(null);
+	const { busy, error, run } = useAction();
 	const same = project.folder === null ? pick.kind === 'none' : pick.kind !== 'none' && sameFolder(folderOf(pick) ?? '', project.folder);
 	const assign = async (e: FormEvent) => {
 		e.preventDefault();
-		if (same || !isChosen(pick) || busy) return;
-		setBusy(true);
-		const done = await workspace().assignFolder(project.id, folderOf(pick));
-		setBusy(false);
-		if (!done.ok) return setError(done.error);
-		onAssigned();
-		onClose();
+		if (same || !isChosen(pick)) return;
+		await run(
+			() => workspace().assignFolder(project.id, folderOf(pick)),
+			() => {
+				onAssigned();
+				onClose();
+			},
+		);
 	};
 	return (
 		<Dialog title="Assign folder" onClose={onClose}>
@@ -111,19 +112,19 @@ export const AssignFolderDialog = ({
 /** Only the name people see: the project's id, which its links, branches and comments are named by, stays as it was. */
 export const RenameDialog = ({ project, onRenamed, onClose }: { project: Project; onRenamed: () => void; onClose: () => void }) => {
 	const [title, setTitle] = useState(project.title);
-	const [busy, setBusy] = useState(false);
-	const [error, setError] = useState<string | null>(null);
+	const { busy, error, run } = useAction();
 	const name = projectTitle(title);
 	const ready = name !== null && name !== project.title && !busy;
 	const rename = async (e: FormEvent) => {
 		e.preventDefault();
 		if (!ready) return;
-		setBusy(true);
-		const done = await workspace().renameProject(project.id, name);
-		setBusy(false);
-		if (!done.ok) return setError(done.error);
-		onRenamed();
-		onClose();
+		await run(
+			() => workspace().renameProject(project.id, name),
+			() => {
+				onRenamed();
+				onClose();
+			},
+		);
 	};
 	return (
 		<Dialog title="Rename" onClose={onClose}>

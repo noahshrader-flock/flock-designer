@@ -145,7 +145,7 @@ export const renameProject = async (store: RecordStore, projectId: string, title
 	const name = projectTitle(title);
 	if (name === null) throw new Error('Give it a name.');
 	if (firstHeading(brief) === name) return;
-	await store.write(path, withTitle(brief, name), `${projectId}: renamed ${name}`);
+	await store.write(path, withTitle(brief, name), `${projectId}: renamed to ${name}`);
 };
 
 /** The brief is where the folder is kept, so a project with none is refused rather than given one. */

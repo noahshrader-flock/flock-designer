@@ -1,4 +1,5 @@
 import { type FormEvent, useEffect, useState } from 'react';
+import { useAction } from './hooks/useAction';
 import { useWorkspace } from './hooks/useWorkspace';
 import type { Handed } from '../../src/shared/contract';
 import { handedTo } from '../../src/shared/handedTo';
@@ -140,8 +141,7 @@ export const BuildInCodebaseDialog = ({
 	const plan = planned.value;
 	const listed = setup.value;
 	const [from, setFrom] = useState<string | null>(null);
-	const [busy, setBusy] = useState(false);
-	const [error, setError] = useState<string | null>(null);
+	const { busy, error, run } = useAction();
 	const [handed, setHanded] = useState<Handed | null>(null);
 	const agent = useAgentName();
 	const inAgent = useInAgent();
@@ -153,13 +153,13 @@ export const BuildInCodebaseDialog = ({
 	const start = async (e: FormEvent) => {
 		e.preventDefault();
 		if (!canStart) return;
-		setBusy(true);
-		setError(null);
-		const r = await workspace().buildInCodebase(root, project.id, name, ...(continuing || from === null ? [] : [from]));
-		setBusy(false);
-		if (!r.ok) return setError(r.error);
-		setHanded(r.value);
-		onBuilt();
+		await run(
+			() => workspace().buildInCodebase(root, project.id, name, ...(continuing || from === null ? [] : [from])),
+			(value) => {
+				setHanded(value);
+				onBuilt();
+			},
+		);
 	};
 	if (handed && plan)
 		return (
