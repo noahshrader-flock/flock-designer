@@ -172,8 +172,9 @@ export interface WorkspaceDescriptor {
 	/** Every command Workspace may run. Nothing else is runnable. */
 	commands: WorkspaceCommand[];
 	/**
-	 * `folder` when the design system is in this repository (a monorepo); without it, it is a repository of its own,
-	 * checked out beside this one and named as its package is.
+	 * `package`: the design system's package name. It is in this repository when `folder` says where, or when a package
+	 * in it has that name (a monorepo's, or the repository's own); otherwise it is a repository of its own, checked out
+	 * beside this one and named as its package is.
 	 */
 	designSystem: { package: string; folder?: string };
 	/**

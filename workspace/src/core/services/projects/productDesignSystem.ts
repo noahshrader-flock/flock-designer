@@ -1,4 +1,4 @@
-import { existsSync, statSync } from 'node:fs';
+import { type Dirent, existsSync, readdirSync, statSync } from 'node:fs';
 import { basename, join, relative } from 'node:path';
 import { asRepositoryPath, parseRemote } from '../../../shared/repoRef';
 import { findDesignSystems } from '../designSystem/designSystems';
@@ -6,7 +6,8 @@ import { folderReads } from '../designSystem/folderReads';
 import { type JsonFile, jsonFile, readJsonObject } from '../platform/jsonFile';
 import { installedPackage } from '../prototypes/installedVersion';
 import { claimedRepository, isSafeBranchName, refTip } from '../platform/git';
-import { designSystemCheckout, readDescriptor } from './descriptor';
+import { GENERATED_FOLDERS } from '../../../shared/generatedFolders';
+import { type WorkspaceDescriptor, designSystemCheckout, readDescriptor } from './descriptor';
 
 const isFolder = (p: string): boolean => existsSync(p) && statSync(p).isDirectory();
 
@@ -16,6 +17,57 @@ export const designSystemIn = async (dir: string): Promise<string | null> => {
 	const found = await findDesignSystems(folderReads(dir), basename(dir)).catch(() => []);
 	const first = found[0];
 	return first === undefined ? null : first.folder === '' ? dir : join(dir, first.folder);
+};
+
+/** Every package of the repositories measured (Primer's monorepo among them) is within 4 folders of its root. */
+const PACKAGE_DEPTH = 4;
+const NOT_PACKAGES = new Set<string>(GENERATED_FOLDERS);
+
+/**
+ * The folder of the package named `pkg` in the repository at `root` (`''` for the root's own), the shallowest first; null
+ * for none. Only package.json names decide it, never what a folder holds; generated and hidden folders are not looked in, so
+ * an installed copy in `node_modules` is never taken for the source.
+ */
+export const packageFolderNamed = (root: string, pkg: string): string | null => {
+	let level = [''];
+	for (let depth = 0; depth <= PACKAGE_DEPTH && level.length > 0; depth++) {
+		const next: string[] = [];
+		for (const folder of level) {
+			let entries: Dirent[];
+			try {
+				entries = readdirSync(join(root, folder), { withFileTypes: true });
+			} catch {
+				continue;
+			}
+			if (entries.some((e) => e.isFile() && e.name === 'package.json') && readJsonObject(join(root, folder, 'package.json'))?.name === pkg)
+				return folder;
+			for (const e of entries)
+				if (e.isDirectory() && !e.name.startsWith('.') && !NOT_PACKAGES.has(e.name)) next.push(folder === '' ? e.name : `${folder}/${e.name}`);
+		}
+		level = next.sort();
+	}
+	return null;
+};
+
+/**
+ * Where the product's design system is: in its own repository, as the workspace file's folder says or as the package of the
+ * name it gives; else its own repository, beside the product.
+ */
+const placeOf = (productRoot: string, designSystem: WorkspaceDescriptor['designSystem']): { dir: string; inProduct: boolean } => {
+	const folder = designSystem.folder ?? packageFolderNamed(productRoot, designSystem.package);
+	return folder === null
+		? { dir: designSystemCheckout(productRoot, designSystem), inProduct: false }
+		: { dir: designSystemCheckout(productRoot, { ...designSystem, folder }), inProduct: true };
+};
+
+/** The folder of the product's design system when it is in the product's own repository; null when it is not, or cannot be told. */
+export const designSystemInProduct = (productRoot: string): string | null => {
+	try {
+		const place = placeOf(productRoot, readDescriptor(productRoot).designSystem);
+		return place.inProduct ? place.dir : null;
+	} catch {
+		return null;
+	}
 };
 
 /** `owner/repo` from a package.json's `repository`, in any of the forms npm takes; null for none, or another host. */
@@ -97,8 +149,8 @@ export class SourceAnswers {
 }
 
 /**
- * The product's design system: found where it names it (a folder of its own, or beside it named as its package), then
- * proven to be that package's source, or the person's own answer when it cannot be. `usable` is what may be read and
+ * The product's design system: found where it names it (`placeOf`: in its own repository, or beside it named as its
+ * package); beside it, then proven to be that package's source, or the person's own answer when it cannot be. `usable` is what may be read and
  * shown; `refused` and `ask` say why not yet; `none`, that nothing is there.
  */
 export type ProductDesignSystem =
@@ -114,13 +166,15 @@ export const productDesignSystem = async (productRoot: string, answers: Pick<Sou
 	try {
 		const { designSystem } = readDescriptor(productRoot);
 		pkg = designSystem.package;
-		inProduct = designSystem.folder !== undefined;
-		dir = await designSystemIn(designSystemCheckout(productRoot, designSystem));
+		const place = placeOf(productRoot, designSystem);
+		inProduct = place.inProduct;
+		dir = await designSystemIn(place.dir);
 	} catch {
 		return { state: 'none' };
 	}
 	if (dir === null) return { state: 'none' };
-	// A folder of the product's own repository is the product's code: only that it is the package named is checked.
+	// A folder of the product's own repository is the product's code: only that it is the package named is checked, and
+	// nothing is asked (a product that is its own design system has nothing installed to be the source of).
 	const check = inProduct ? checkName(productRoot, pkg, dir) : await checkSource(productRoot, pkg, dir);
 	if (check.state === 'confirmed' || check.state === 'uninstalled') return { state: 'usable', root: dir };
 	if (check.state === 'mismatch') return { state: 'refused', root: dir, why: check.why };

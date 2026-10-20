@@ -255,15 +255,16 @@ export const ensureLocalBranch = async (root: string, branch: string): Promise<v
  * Refuses to move HEAD while the tree is dirty: uncommitted edits are told about, never carried onto another branch or
  * quietly stashed. The only guard between switching branches and losing that work.
  */
-const requireCleanTree = async (root: string, action: string): Promise<void> => {
+const requireCleanTree = async (root: string, action: string, note: string): Promise<void> => {
 	const { clean } = await readCheckout(root);
 	if (!clean) {
-		throw new Error(`There are uncommitted changes in ${basename(root)}. Commit or put them aside before ${action}.`);
+		throw new Error(`There are uncommitted changes in ${basename(root)}. Commit or put them aside before ${action}.${note}`);
 	}
 };
 
-export const createBranch = async (root: string, branch: string, from: string): Promise<void> => {
-	await requireCleanTree(root, 'starting a new branch');
+/** `note`: said after the refusal when the tree is not clean (`sharedCheckoutNote`). */
+export const createBranch = async (root: string, branch: string, from: string, note = ''): Promise<void> => {
+	await requireCleanTree(root, 'starting a new branch', note);
 	if (await branchExists(root, branch)) {
 		throw new Error(`Branch ${branch} already exists.`);
 	}
@@ -434,8 +435,9 @@ export const mergeConflicts = async (root: string, ours: string, theirs: string)
 export const commitsAfter = async (root: string, older: string, newer: string): Promise<number> =>
 	Number(await git(root, ['rev-list', '--count', `${older}..${newer}`]));
 
-export const checkoutBranch = async (root: string, branch: string): Promise<void> => {
-	await requireCleanTree(root, 'switching branches');
+/** `note`: said after the refusal when the tree is not clean (`sharedCheckoutNote`). */
+export const checkoutBranch = async (root: string, branch: string, note = ''): Promise<void> => {
+	await requireCleanTree(root, 'switching branches', note);
 	if (!(await branchExists(root, branch))) {
 		throw new Error(`Branch ${branch} does not exist.`);
 	}

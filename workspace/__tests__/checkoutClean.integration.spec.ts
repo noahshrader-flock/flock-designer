@@ -1,9 +1,11 @@
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { basename, dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { unfinishedWork } from '../src/core/services/codebase/checkoutClean';
-import { g } from './fixtures';
+import { readDescriptor } from '../src/core/services/projects/descriptor';
+import { continueWork, createCodebaseWork } from '../src/core/services/projects/workRecords';
+import { g, makeProductFiles } from './fixtures';
 
 /** Claude Code starts only on a checkout with no unfinished work, so its edits never mix with the person's. */
 
@@ -64,5 +66,51 @@ describe('a design system checkout handed to Claude Code', () => {
 		expect(await unfinishedWork(root, 'the design system’s checkout')).toBe(
 			'The design system’s checkout is not on a branch (a detached HEAD). Switch to a branch first.',
 		);
+	});
+});
+
+describe('a product that holds its own design system: component changes and codebase work share its one checkout', () => {
+	const SHARED = 'holds its own design system, so its component changes and its codebase work share this one checkout.';
+	let records: string;
+	/** The product's own package is the design system it names, as Paradome's is. */
+	const holdsItsOwn = (name = 'paradome-client') => {
+		makeProductFiles(root);
+		const file = join(root, '.dsnr', 'workspace.json');
+		writeFileSync(file, JSON.stringify({ ...(JSON.parse(readFileSync(file, 'utf8')) as object), designSystem: { package: 'paradome-client' } }));
+		write('package.json', JSON.stringify({ name }));
+		g(root, 'add', '-A');
+		g(root, 'commit', '-q', '-m', 'product');
+	};
+	const startCodebase = () => createCodebaseWork(root, records, readDescriptor(root), 'zones', 'x', 'develop');
+	beforeEach(() => {
+		records = join(mkdtempSync(join(tmpdir(), 'dsnr-shared-records-')), 'projects');
+		mkdirSync(records);
+	});
+	afterEach(() => rmSync(dirname(records), { recursive: true, force: true }));
+
+	it('refuses a component change over codebase work left uncommitted, saying they share the checkout', async () => {
+		holdsItsOwn();
+		await startCodebase();
+		write('zones.ts', 'export const zones = [];\n');
+		expect(await unfinishedWork(root, 'the design system’s checkout')).toMatch(new RegExp(`not committed\\..* ${basename(root)} ${SHARED}`));
+	});
+
+	it('refuses codebase work, started or continued, over a component change left uncommitted, saying the same', async () => {
+		holdsItsOwn();
+		await startCodebase();
+		g(root, 'switch', '-q', '-c', 'dsnr/handoff-1', 'develop');
+		write('theme.ts', 'export const radius = 4;\n');
+		await expect(continueWork(root, records, 'zones', 'codebase', null, readDescriptor(root))).rejects.toThrow(
+			`There are uncommitted changes in ${basename(root)}. Commit or put them aside before switching branches. ${basename(root)} ${SHARED}`,
+		);
+		rmSync(join(records, 'zones'), { recursive: true, force: true });
+		await expect(startCodebase()).rejects.toThrow(SHARED);
+	});
+
+	it('says nothing of sharing for a product whose design system is a repository of its own', async () => {
+		holdsItsOwn('a-product');
+		write('theme.ts', 'export const radius = 4;\n');
+		expect(await unfinishedWork(root, 'the design system’s checkout')).not.toContain('holds its own');
+		await expect(startCodebase()).rejects.toThrow(/before starting a new branch\.$/);
 	});
 });

@@ -3,7 +3,14 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { findContext } from '../src/core/services/projects/findContext';
-import { SourceAnswers, packageRepository, productDesignSystem, usableDesignSystem } from '../src/core/services/projects/productDesignSystem';
+import {
+	SourceAnswers,
+	designSystemInProduct,
+	packageFolderNamed,
+	packageRepository,
+	productDesignSystem,
+	usableDesignSystem,
+} from '../src/core/services/projects/productDesignSystem';
 import { g, makeProductFiles } from './fixtures';
 
 let base: string;
@@ -11,12 +18,18 @@ let coke: string;
 let ui: string;
 let answers: SourceAnswers;
 
-/** The product names @acme/ui, so the design system is looked for beside it, as `ui`. */
-const product = () => {
+/** The product names `designSystem` (@acme/ui), so the design system is looked for in it by that name, then beside it, as `ui`. */
+const product = (designSystem: { package: string; folder?: string } = { package: '@acme/ui' }) => {
 	mkdirSync(coke, { recursive: true });
 	makeProductFiles(coke);
 	const file = join(coke, '.dsnr', 'workspace.json');
-	writeFileSync(file, JSON.stringify({ ...(JSON.parse(readFileSync(file, 'utf8')) as object), designSystem: { package: '@acme/ui' } }));
+	writeFileSync(file, JSON.stringify({ ...(JSON.parse(readFileSync(file, 'utf8')) as object), designSystem }));
+};
+/** A package in the product at `folder` (`''`, the product's own), with a story, so it reads as a design system. */
+const packageIn = (folder: string, name: string) => {
+	mkdirSync(join(coke, folder, 'src'), { recursive: true });
+	writeFileSync(join(coke, folder, 'package.json'), JSON.stringify({ name }));
+	writeFileSync(join(coke, folder, 'src', 'Button.stories.tsx'), "export default { title: 'Inputs/Button' };\n");
 };
 const install = (pkg: Record<string, unknown>) => {
 	mkdirSync(join(coke, 'node_modules', '@acme', 'ui'), { recursive: true });
@@ -130,5 +143,52 @@ describe('the product’s design system, proven to be its package’s source', (
 			expect(packageRepository(field), JSON.stringify(field)).toBe('acme/ui');
 		for (const field of ['gitlab:acme/ui', 'https://gitlab.com/acme/ui.git', 42, null, {}])
 			expect(packageRepository(field), JSON.stringify(field)).toBeNull();
+	});
+});
+
+describe('a design system in the product’s own repository, found by the package it names', () => {
+	it('is the monorepo’s package of that name, over a clone beside it, and asks nothing', async () => {
+		packageIn('packages/charts', '@acme/charts');
+		packageIn('packages/ui', '@acme/ui');
+		// What would be asked of a clone beside it (no release tag) is not asked: the product's own code is its source.
+		library({ tag: null });
+		install({ repository: 'github:acme/ui' });
+		const named = join(coke, 'packages', 'ui');
+		expect(await productDesignSystem(coke, answers)).toEqual({ state: 'usable', root: named });
+		expect((await findContext({ folders: [coke], answers })).designSystem).toEqual({ root: named, how: 'named' });
+		expect(designSystemInProduct(coke)).toBe(named);
+	});
+
+	it('is the product itself when its own package has the name, as a product that is its own design system', async () => {
+		packageIn('', '@acme/ui');
+		expect(await productDesignSystem(coke, answers)).toEqual({ state: 'usable', root: coke });
+		expect(designSystemInProduct(coke)).toBe(coke);
+	});
+
+	it('is not a package of another name, stories of the product’s own or the installed copy: the clone beside it stays', async () => {
+		packageIn('', 'coke');
+		packageIn('packages/charts', '@acme/charts');
+		library();
+		install({ repository: 'github:acme/ui' });
+		expect(await productDesignSystem(coke, answers)).toEqual({ state: 'usable', root: ui });
+		expect(designSystemInProduct(coke)).toBeNull();
+	});
+
+	it('is where the workspace file’s folder says, over a package found by the name', async () => {
+		product({ package: '@acme/ui', folder: 'libs/ui' });
+		packageIn('packages/ui', '@acme/ui');
+		packageIn('libs/ui', '@acme/ui');
+		expect(await productDesignSystem(coke, answers)).toEqual({ state: 'usable', root: join(coke, 'libs', 'ui') });
+	});
+
+	it('is looked for by name alone, the shallowest first, four folders down at most, never in hidden or generated folders', () => {
+		packageIn('a/b/c/d/ui', '@acme/ui');
+		packageIn('.cache/ui', '@acme/ui');
+		packageIn('dist/ui', '@acme/ui');
+		expect(packageFolderNamed(coke, '@acme/ui')).toBeNull();
+		packageIn('a/b/c/ui', '@acme/ui');
+		expect(packageFolderNamed(coke, '@acme/ui')).toBe('a/b/c/ui');
+		packageIn('z/ui', '@acme/ui');
+		expect(packageFolderNamed(coke, '@acme/ui')).toBe('z/ui');
 	});
 });

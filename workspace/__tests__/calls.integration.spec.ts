@@ -713,6 +713,27 @@ describe('prototypes', () => {
 			expect(g(product, 'branch', '--list', 'feature/zone')).toBe('');
 		});
 
+		it('offers no clone to build from when the design system is in the product’s own repository, as its installed package is', async () => {
+			await made();
+			const beside = designSystemBeside(product, {
+				'package.json': JSON.stringify({ name: 'x' }),
+				'src/index.tsx': 'export const Hello = () => null;\n',
+			});
+			const inRepo = join(product, 'packages', 'x');
+			onTestFinished(() => {
+				rmSync(join(product, 'packages'), { recursive: true, force: true });
+				rmSync(beside, { recursive: true, force: true });
+			});
+			mkdirSync(join(inRepo, 'src'), { recursive: true });
+			writeFileSync(join(inRepo, 'package.json'), JSON.stringify({ name: 'x' }));
+			writeFileSync(join(inRepo, 'src', 'Hello.stories.tsx'), "export default { title: 'Hello' };\n");
+			// The package in the product is the design system, over the clone beside it, and is not a clone to choose.
+			expect((await call(CHANNELS.prototypeDesignSystem, 'demo', 'v1')).value).toMatchObject({ from: 'installed', clone: null });
+			expect((await call(CHANNELS.setPrototypeDesignSystem, product, 'demo', 'v1', 'clone')).error).toBe(
+				'No clone of x shown to be its source is here, so Version 1 cannot be built from one.',
+			);
+		});
+
 		it('builds a version from the design system’s clone when the person chooses it, saved as so built, and back again', async () => {
 			await made();
 			mkdirSync(join(home, 'prototype', 'demo'), { recursive: true });

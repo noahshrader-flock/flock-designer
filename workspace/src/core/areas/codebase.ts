@@ -9,7 +9,7 @@ import { A11Y_COMMAND, productTarget, taskAccessibility } from '../services/acce
 import { accessibilityOf } from '../services/accessibility/accessibilityCheck';
 import { type CheckoutParts, guidePart, handoffTask, buildInCodebaseTask, updateBranchTask } from '../services/agent/agentTasks';
 import { againstBase } from '../services/codebase/againstBase';
-import { unfinishedWork } from '../services/codebase/checkoutClean';
+import { sharedCheckoutNote, unfinishedWork } from '../services/codebase/checkoutClean';
 import { readDescriptor } from '../services/projects/descriptor';
 import { assertReady, handTask } from '../services/agent/handOver';
 import { HANDOFF_FILE, HANDOFF_SKILL, commandLine, leftAlone } from '../services/codebase/engineeringHandoff';
@@ -20,7 +20,7 @@ import { pullRequestText } from '../services/codebase/share';
 
 /** What acts on codebase work in the checkout itself is refused off its branch, saying `why`. */
 const onTheBranch = async (canonical: string, branch: string, why: string): Promise<void> => {
-	if ((await readCheckout(canonical)).branch !== branch) throw new Error(`Open ${branch} first: ${why}.`);
+	if ((await readCheckout(canonical)).branch !== branch) throw new Error(`Open ${branch} first: ${why}.${await sharedCheckoutNote(canonical)}`);
 };
 
 export const codebaseArea = (d: CallsDeps) => {

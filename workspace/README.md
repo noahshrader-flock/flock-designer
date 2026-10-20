@@ -177,9 +177,13 @@ sign-in, no native preview, and its files in the extension's own storage, never 
 
 There is nothing to clone or connect: it works on the folders open in VS Code (`findContext`). The product is the open
 folder with `.dsnr/workspace.json`, which DSNR trusts as VS Code does; its design system is where the product names it
-(a folder of its own, or a clone beside it named as its package), once it is shown to be that package's source
+(`placeOf`: the workspace file's folder; else the package in the product's own repository with the name it gives, a
+monorepo's or the repository's own, found by `package.json` names alone, four folders down at most, generated and hidden
+folders skipped; else a clone beside it named as its package), once it is shown to be that package's source
 (`productDesignSystem`: the same name, the installed package's repository the clone's configured `origin`, and a release tag
-for the installed version; a folder of the product's own repository is checked by name only). A mismatch, such as a fork,
+for the installed version; one in the product's own repository is its own code, checked by name only and never asked
+about, and offers no clone to build a prototype from). A product holding its own design system has one checkout for its
+component changes and its codebase work: the clean-tree and on-the-branch refusals say so (`sharedCheckoutNote`). A mismatch, such as a fork,
 is refused and said; one that cannot be confirmed (no tag, no repository named) is asked about once, and the answer kept
 until the clone or the installed version changes. Only a design system shown to be the source is read for prototypes'
 guidance, the voice and tone, and codebase work. Else another open folder that holds one is shown, else one the person

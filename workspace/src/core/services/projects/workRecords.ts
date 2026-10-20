@@ -14,6 +14,7 @@ import {
 	repositoryOf,
 } from '../platform/git';
 import { resolveInside } from '../platform/paths';
+import { sharedCheckoutNote } from '../codebase/checkoutClean';
 import { PROJECT_ID } from '../../../shared/validate';
 import { parseWork, serializeWork, unreadableWork } from '../../../shared/workRecords';
 import { writeAtomic } from '../platform/jsonFile';
@@ -78,10 +79,11 @@ export const createCodebaseWork = async (
 	}
 	// Either way nothing is recorded unless the checkout succeeds, so the
 	// record cannot claim work that is not there.
+	const shared = await sharedCheckoutNote(productRoot);
 	if (await branchExists(productRoot, branch)) {
-		await checkoutBranch(productRoot, branch);
+		await checkoutBranch(productRoot, branch, shared);
 	} else {
-		await createBranch(productRoot, branch, from);
+		await createBranch(productRoot, branch, from, shared);
 	}
 
 	// Where it is on GitHub, so the project links to it for people without the repository.
@@ -203,7 +205,7 @@ export const continueWork = async (
 	if (!record) {
 		throw new Error(`${projectId} has no ${name}.`);
 	}
-	await checkoutBranch(productRoot, record.branch);
+	await checkoutBranch(productRoot, record.branch, await sharedCheckoutNote(productRoot));
 
 	// Recorded on return, so the record tracks where the branch actually is
 	// rather than where it started.

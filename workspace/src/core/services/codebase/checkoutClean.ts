@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs';
-import { isAbsolute, join } from 'node:path';
+import { basename, isAbsolute, join } from 'node:path';
 import { git } from '../platform/git';
+import { designSystemInProduct } from '../projects/productDesignSystem';
 import { capitalize } from '../../../shared/titleCase';
 
 const IN_PROGRESS: [string, string][] = [
@@ -19,6 +20,11 @@ const IN_PROGRESS: [string, string][] = [
  * checkout").
  */
 export const unfinishedWork = async (root: string, where: string): Promise<string | null> => {
+	const why = await unfinishedWhy(root, where);
+	return why === null ? null : why + (await sharedCheckoutNote(root));
+};
+
+const unfinishedWhy = async (root: string, where: string): Promise<string | null> => {
 	// What the person is in the middle of first: it says more than the files it leaves changed.
 	for (const [name, what] of IN_PROGRESS) {
 		const path = await git(root, ['rev-parse', '--git-path', name]);
@@ -37,4 +43,14 @@ export const unfinishedWork = async (root: string, where: string): Promise<strin
 		return `${capitalize(where)} is not on a branch (a detached HEAD). Switch to a branch first.`;
 	}
 	return null;
+};
+
+/**
+ * Said after a refusal about the checkout at `dir` when its repository is a product holding its own design system, whose
+ * component changes and codebase work share that one checkout, so the person sees why it is not as they left it; else ''.
+ */
+export const sharedCheckoutNote = async (dir: string): Promise<string> => {
+	const top = await git(dir, ['rev-parse', '--show-toplevel']).catch(() => null);
+	if (top === null || designSystemInProduct(top) === null) return '';
+	return ` ${basename(top)} holds its own design system, so its component changes and its codebase work share this one checkout.`;
 };
