@@ -7,7 +7,7 @@ import type { Checkout } from '../../../shared/contract';
 import { NotInstalled, ProcessFailed, runFile } from './process';
 import { errorText } from '../../../shared/result';
 import { isBot } from '../../../shared/people';
-import { OBJECT_ID_PATTERN } from '../../../shared/sha';
+import { OBJECT_ID_PATTERN, isObjectId } from '../../../shared/sha';
 
 /**
  * Git, through argv only, so a branch name with `;` or backticks is a bad name, not a command. These helpers never rewrite
@@ -142,23 +142,22 @@ export const listBranches = async (root: string, prefix: string): Promise<string
 };
 
 /**
- * A git worktree on a detached HEAD, made once and moved to the branch each time: nothing in the person's working tree,
- * index or current branch changes.
+ * A git worktree on a detached HEAD at `commit` (a full object id), made once and moved each time: nothing in the person's
+ * working tree, index or current branch changes.
  */
-export const readTreeAt = async (root: string, dir: string, branch: string): Promise<string> => {
-	if (!(await branchExists(root, branch))) throw new Error(`There is no branch called ${branch} in ${basename(root)}.`);
+export const readTreeAt = async (root: string, dir: string, commit: string): Promise<void> => {
+	if (!isObjectId(commit)) throw new Error(`${commit} is not a commit DSNR can read.`);
 	if (existsSync(dir) && !existsSync(join(dir, '.git'))) {
 		// Left half-made by an earlier attempt: it is the app's own copy, so it is cleared and made again.
 		rmSync(dir, { recursive: true, force: true });
 	}
 	if (existsSync(join(dir, '.git'))) {
 		// Its own copy, never edited, so anything left in it is discarded.
-		await git(dir, ['checkout', '--detach', '--force', `refs/heads/${branch}`]);
+		await git(dir, ['checkout', '--detach', '--force', commit]);
 	} else {
 		await git(root, ['worktree', 'prune']);
-		await git(root, ['worktree', 'add', '--detach', '--force', dir, `refs/heads/${branch}`]);
+		await git(root, ['worktree', 'add', '--detach', '--force', dir, commit]);
 	}
-	return git(dir, ['rev-parse', 'HEAD']);
 };
 
 /** Past this, the most recently committed to are enough. */
@@ -388,7 +387,7 @@ export const changedFiles = async (root: string, commit: string): Promise<string
 	(await git(root, ['diff', '--name-only', commit, 'HEAD'])).split('\n').filter((f) => f !== '');
 
 /** One GitHub has may not be fetched yet. False only when git says it has not. */
-const hasCommit = (root: string, commit: string): Promise<boolean> =>
+export const hasCommit = (root: string, commit: string): Promise<boolean> =>
 	git(root, ['rev-parse', '--verify', '--quiet', `${commit}^{commit}`]).then(
 		() => true,
 		(err: unknown) => (saidNo(err) ? false : Promise.reject(err)),

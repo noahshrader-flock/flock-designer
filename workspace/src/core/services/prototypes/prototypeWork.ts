@@ -8,7 +8,9 @@ import { commentsFromOthers, nextVersionName, othersHaveCommented } from '../../
 import { MANIFEST_FILE, declaredTarget, productTarget, taskAccessibility } from '../accessibility/accessibilityBrief';
 import { designSystemCheckout, readDescriptor } from '../projects/descriptor';
 import { recordsRootFor } from '../projects/discovery';
-import { branchTip, branchExists, git, isSafeBranchName, readCheckout, readTreeAt, repositoryOf } from '../platform/git';
+import { branchTip, branchExists, git, hasCommit, headCommit, isSafeBranchName, readTreeAt, repositoryOf } from '../platform/git';
+import { freshTip } from '../platform/fetch';
+import { isObjectId } from '../../../shared/sha';
 import { assertUsableProjectId } from '../projects/workRecords';
 import {
 	MAX_PAGE,
@@ -82,6 +84,9 @@ export const localPrototypeFile = (prototypesRoot: string, projectId: string, na
 	assertPrototypeName(name);
 	return join(prototypesRoot, projectId, `${name}.${ext}`);
 };
+
+/** How long reading a version's base waits to fetch a commit this clone lacks. */
+const FETCH_WAIT_MS = 20_000;
 
 export const prototypeWork = (ctx: PrototypeWorkContext) => {
 	const { prototypesRoot } = ctx;
@@ -172,17 +177,46 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		return recordPrototype(ctx.store(), { projectId, title: name.slice(0, 200), note: String(note).slice(0, 8000), me, basedOn, folder });
 	};
 
-	/** Off its branch, the code is a read-only copy of the branch, so the person's checkout is never switched. */
+	/**
+	 * The commit a version was modeled on, in this clone: what its record says, fetched with its branch when this clone lacks
+	 * it, and kept by a private ref (`refs/dsnr/base/<project>/<version>`, no branch the person uses) so a rebase, an amend
+	 * or git's cleanup cannot take it away. Said, never replaced, when it cannot be had. A record from before commits were
+	 * kept has its branch's tip, as it always had.
+	 */
+	const baseCommit = async (root: string, projectId: string, name: string, basedOn: NonNullable<Work['basedOn']>): Promise<string> => {
+		// From the shared records, so checked before git reads it as the start of an argument: one that fails is not there.
+		if (!isSafeBranchName(basedOn.branch)) throw new Error(`There is no branch called ${basedOn.branch} in ${basename(root)}.`);
+		if (basedOn.commit === null) {
+			const tip = await branchTip(root, basedOn.branch);
+			if (tip === null) throw new Error(`There is no branch called ${basedOn.branch} in ${basename(root)}.`);
+			return tip;
+		}
+		const commit = basedOn.commit;
+		if (!isObjectId(commit)) throw new Error(`${name}'s record names a commit DSNR cannot read: ${commit}.`);
+		if (!(await hasCommit(root, commit))) {
+			// Its branch's copy from the remote; one that cannot be fetched leaves it to be said below.
+			await freshTip(root, basedOn.branch, { waitMs: FETCH_WAIT_MS }).catch(() => undefined);
+			if (!(await hasCommit(root, commit)))
+				throw new Error(
+					`${name} was modeled on ${basedOn.branch} at ${commit.slice(0, 7)}, which ${basename(root)} here does not have and could not fetch: it may be on a branch that was never pushed, or one rewritten since. Fetch it, or start a new version, which is modeled on the code as it is now.`,
+				);
+		}
+		await git(root, ['update-ref', `refs/dsnr/base/${projectId}/${name}`, commit]);
+		return commit;
+	};
+
+	/** The code at the commit the version was modeled on: the checkout itself when it is at that commit, else a read-only copy. */
 	const sources = async (projectId: string, name: string): Promise<PrototypeSources | null> => {
 		const basedOn = (await record(projectId, name))?.basedOn;
 		const root = ctx.productRoot();
 		// Only the repository being worked in, and only the one the prototype was based on.
 		if (!basedOn || root === null || basename(root) !== basedOn.repository) return null;
+		const commit = await baseCommit(root, projectId, name, basedOn);
 		let code = root;
-		if ((await readCheckout(root)).branch !== basedOn.branch) {
+		if ((await headCommit(root)) !== commit) {
 			// `_`, as no project id can begin, so the copy never shares a folder with a project's prototypes.
 			code = join(prototypesRoot, '_source', basename(root));
-			await readTreeAt(root, code, basedOn.branch);
+			await readTreeAt(root, code, commit);
 		}
 		const has = (p: string): string | null => (existsSync(p) ? p : null);
 		const descriptor = readDescriptor(root);
@@ -395,17 +429,16 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		return ctx.readDesignFile(prototypePagePath(projectId, name));
 	};
 
-	/** The manifest on the branch the prototype is modeled on, else the checkout's (develop has no DSNR files). */
+	/** The manifest at the commit the prototype is modeled on, else the checkout's (develop has no DSNR files). */
 	const target = async (projectId: string, name: string): Promise<DeclaredTarget> => {
 		const root = ctx.productRoot();
 		if (root === null) return undeclared('No product repository is open');
 		const descriptor = readDescriptor(root);
 		const path = `${descriptor.contextDir}/${MANIFEST_FILE}`;
 		const basedOn = (await record(projectId, name))?.basedOn;
-		// The branch comes from the shared records, so it is checked before git reads it as the start of an argument.
-		const fromBranch = basedOn && basename(root) === basedOn.repository && isSafeBranchName(basedOn.branch);
-		const onBranch = fromBranch ? await git(root, ['show', `${basedOn.branch}:${path}`], { trim: false }).catch(() => null) : null;
-		return onBranch !== null ? declaredTarget(onBranch, descriptor.product) : productTarget(join(root, descriptor.contextDir), descriptor.product);
+		const commit = basedOn && basename(root) === basedOn.repository ? await baseCommit(root, projectId, name, basedOn).catch(() => null) : null;
+		const atBase = commit !== null ? await git(root, ['show', `${commit}:${path}`], { trim: false }).catch(() => null) : null;
+		return atBase !== null ? declaredTarget(atBase, descriptor.product) : productTarget(join(root, descriptor.contextDir), descriptor.product);
 	};
 
 	const accessibility = async (projectId: string, name: string): Promise<string> => taskAccessibility(skill, await target(projectId, name));
