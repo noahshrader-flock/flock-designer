@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useComponentPictures } from './hooks/useComponentPictures';
 import { useWorkspace } from './hooks/useWorkspace';
 import type { MadeCover, SignInState } from '../../src/shared/contract';
@@ -47,17 +47,25 @@ export const Panel = () => {
 	const read = useWorkspace(() => workspace().listProjects(), [context?.product ?? null, login], { enabled: context !== null });
 	// Keeps what is shown until the new list is there, so a reload never gives way to a line saying it is reading.
 	const { reload } = read;
+	/** A project's dialog acts on the project as it is: the list on screen may be older than a version an agent just made. */
+	const openDialog = useCallback(
+		(next: PanelDialog) => {
+			setDialog(next);
+			if ('projectId' in next) reload();
+		},
+		[reload],
+	);
 	useEffect(
 		() =>
 			onHost((m) => {
 				if (m.type === 'projects-changed') reload();
 				if (m.type === 'open-dialog') {
-					setDialog(m.dialog);
+					openDialog(m.dialog);
 					// Every change being tried is the Design System tab's: asked for from a component's tab, it is shown there.
 					if (m.dialog.kind === 'changes') setTab('design-system');
 				}
 			}),
-		[reload],
+		[reload, openDialog],
 	);
 	// The newest first, so a picture drawn again is the one shown.
 	const [made, setMade] = useState<MadeCover[]>([]);
@@ -108,7 +116,7 @@ export const Panel = () => {
 							}
 							setup={setup}
 							login={login}
-							onDialog={setDialog}
+							onDialog={openDialog}
 							view={view}
 							onView={(next) => {
 								setView(next);

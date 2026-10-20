@@ -700,6 +700,17 @@ describe('codebase work, in the panel', () => {
 		};
 		const select = () => dialog()!.querySelector('select') as HTMLSelectElement;
 
+		it('acts on the newest version as the project is when the dialog opens, not as the list showed it: the list is read again', async () => {
+			await open();
+			expect(sent.filter((m) => m.name === 'buildInCodebasePlan').at(-1)?.args).toEqual(['/work/flock-coke', 'alert-history', 'v3']);
+			// A Version 4 an agent made in a terminal meanwhile: the list read again has it, and the dialog follows.
+			const withV4 = WITH_CODE.map((p) =>
+				p.id === 'alert-history' ? { ...p, work: [...p.work, { ...p.work[0]!, name: 'v4', branch: 'prototype/alert-history/v4' }] } : p,
+			);
+			await answer('listProjects', withV4);
+			expect(sent.filter((m) => m.name === 'buildInCodebasePlan').at(-1)?.args).toEqual(['/work/flock-coke', 'alert-history', 'v4']);
+		});
+
 		it('reads what it would do in the product open here, for the project’s newest prototype', async () => {
 			await open();
 			expect(dialog()?.getAttribute('aria-label')).toBe('Build in the codebase');
