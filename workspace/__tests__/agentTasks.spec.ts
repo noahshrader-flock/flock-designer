@@ -117,7 +117,6 @@ describe('the builder’s guide, in every task (so no run depends on an agent ch
 		page: '/p/v1.html',
 		buildCommand: 'node build.mjs',
 		checkCommand: 'node check-prototype.mjs /p/v1.build-check.json',
-		fromClone: null,
 	};
 	const sources = {
 		code: '/c',

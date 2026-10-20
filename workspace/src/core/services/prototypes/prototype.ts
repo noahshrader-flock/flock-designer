@@ -58,8 +58,6 @@ export interface PrototypeBuild {
 	page: string;
 	buildCommand: string;
 	checkCommand: string;
-	/** The design system's clone it is built from, in place of the installed package; null for the installed one. */
-	fromClone: string | null;
 }
 
 /** A file that cannot be read is refused rather than written over, or guessed at. */
@@ -81,7 +79,6 @@ const addRecord = async (
 		me,
 		basedOn,
 		from,
-		designSystemFrom,
 		now,
 	}: {
 		projectId: string;
@@ -90,8 +87,6 @@ const addRecord = async (
 		me: Person | null;
 		basedOn?: Work['basedOn'];
 		from?: string;
-		/** A version made from another builds as it does, being the same idea further on. */
-		designSystemFrom?: Work['designSystemFrom'];
 		now: Date;
 	},
 ): Promise<Work> => {
@@ -106,7 +101,6 @@ const addRecord = async (
 		...(me ? { contributors: [me] } : {}),
 		...(basedOn ? { basedOn } : {}),
 		...(from ? { from } : {}),
-		...(designSystemFrom ? { designSystemFrom } : {}),
 	};
 	await store.write(workPath(projectId), serializeWork([...existing, record]), `${projectId}: record prototype ${name}`);
 	return record;
@@ -167,23 +161,6 @@ export const setCover = async (store: RecordStore, projectId: string, name: stri
 	return true;
 };
 
-/** Which design system a version builds from: the clone's, or (removing the field) the product's installed package. */
-export const setDesignSystemFrom = async (store: RecordStore, projectId: string, name: string, from: 'installed' | 'clone'): Promise<boolean> => {
-	const existing = await readRecords(store, projectId);
-	if (!existing.some((i) => i.name === name)) return false;
-	const updated = existing.map((i) => {
-		if (i.name !== name) return i;
-		const { designSystemFrom: _was, ...rest } = i;
-		return from === 'clone' ? { ...rest, designSystemFrom: 'clone' as const } : rest;
-	});
-	await store.write(
-		workPath(projectId),
-		serializeWork(updated),
-		`${projectId}: prototype ${name} built from the design system's ${from === 'clone' ? 'clone' : 'installed package'}`,
-	);
-	return true;
-};
-
 /** A version's base moved to `commit`, as Refresh to latest does: false, writing nothing, when there is no record of it. */
 export const setBaseCommit = async (store: RecordStore, projectId: string, name: string, commit: string): Promise<boolean> => {
 	const existing = await readRecords(store, projectId);
@@ -210,7 +187,6 @@ export const recordVersionFrom = async (
 		me,
 		basedOn: from.basedOn,
 		from: from.name,
-		designSystemFrom: from.designSystemFrom,
 		now,
 	});
 };

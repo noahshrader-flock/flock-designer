@@ -1,28 +1,17 @@
 import { existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
-import type {
-	BaseBehind,
-	CommentRef,
-	DesignSystemBuild,
-	Work,
-	Person,
-	PrototypeReadiness,
-	ReviewComment,
-	StartedPrototype,
-} from '../../../shared/contract';
+import type { BaseBehind, CommentRef, Work, Person, PrototypeReadiness, ReviewComment, StartedPrototype } from '../../../shared/contract';
 import { type DeclaredTarget, undeclared } from '../../../shared/wcag';
 import { fromBrief } from '../../../shared/brief';
 import { projectPath, prototypePagePath, prototypeSourcePath, sharedFilePath, sharedFilesOf } from '../../../shared/designPaths';
 import { commentsFromOthers, nextVersionName, othersHaveCommented } from '../../../shared/prototypeNames';
 import { MANIFEST_FILE, declaredTarget, productTarget, taskAccessibility } from '../accessibility/accessibilityBrief';
 import { readDescriptor } from '../projects/descriptor';
-import { holdsItsDesignSystem } from '../projects/productDesignSystem';
-import { branchTip, commitsAfter, git, hasCommit, headCommit, isSafeBranchName, readCheckout, readTreeAt, repositoryOf } from '../platform/git';
+import { branchTip, commitsAfter, git, hasCommit, headCommit, isSafeBranchName, readTreeAt, repositoryOf } from '../platform/git';
 import { fetchBranch, freshTip } from '../platform/fetch';
 import { installLine } from '../codebase/install';
 import { installedAgainstBase, installedVersion } from './installedVersion';
 import { isObjectId } from '../../../shared/sha';
-import { workLabel } from '../../../shared/work';
 import { errorText } from '../../../shared/result';
 import { assertUsableProjectId } from '../projects/workRecords';
 import {
@@ -36,7 +25,7 @@ import {
 	recordPrototype,
 	readRecords,
 } from './prototype';
-import { type FromSource, bundleCommand, runBundle, sassEntry, shellLine, writeBundleScript, writeCheckScript } from './prototypeBundle';
+import { bundleCommand, runBundle, shellLine, writeBundleScript, writeCheckScript } from './prototypeBundle';
 import { type CheckConfig, checkedAsSaved } from '../accessibility/buildCheck';
 import { prototypeMeasureName, recordFiles } from '../accessibility/accessibilityRecord';
 import { designSystemFile, taskVoice } from '../designSystem/voiceBrief';
@@ -308,71 +297,21 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		return shellLine(['node', await writeCheckScript(prototypesRoot), config]);
 	};
 
-	/**
-	 * The design system's own checkout, to build from in place of the installed package: none when it is in the product's
-	 * repository, as a monorepo's is, where the installed package is that same code.
-	 */
-	const separateClone = async (root: string): Promise<string | null> => ((await holdsItsDesignSystem(root)) ? null : ctx.designSystemOf(root));
-
-	/**
-	 * What a version's design system is built from: null for the product's installed package, as every version is unless
-	 * the person chooses otherwise; the clone (Phase 6's, shown to be the package's source) when its record says so.
-	 * Throws, saying what to do, when it says so and no such clone is here: never built from the installed one in its place.
-	 */
-	const fromSourceOf = async (projectId: string, name: string): Promise<FromSource | null> => {
-		if ((await record(projectId, name))?.designSystemFrom !== 'clone') return null;
-		const root = ctx.productRoot();
-		if (root === null) throw new Error(NO_PRODUCT);
-		const pkg = readDescriptor(root).designSystem.package;
-		const designSystem = await separateClone(root);
-		if (designSystem === null)
-			throw new Error(
-				`${workLabel({ name })} is built from ${pkg}'s clone, and no clone shown to be its source is here. Open it beside the product, or build this version from the installed package.`,
-			);
-		const sass = sassEntry();
-		if (sass === null)
-			throw new Error(
-				"A version built from the design system's clone needs DSNR's Sass, which is not installed. Run npm ci in flock-designer/workspace.",
-			);
-		return { designSystem, pkg, sass };
-	};
-
-	/** What the version's design system is built from, and what it could be; null with no such version, or no product open. */
-	const designSystemBuild = async (projectId: string, name: string): Promise<DesignSystemBuild | null> => {
-		const r = await record(projectId, name);
-		const root = ctx.productRoot();
-		if (!r || root === null) return null;
-		const pkg = readDescriptor(root).designSystem.package;
-		const clonedAt = await separateClone(root);
-		const clone =
-			clonedAt === null
-				? null
-				: {
-						branch: (await readCheckout(clonedAt)).branch,
-						changed: (await git(clonedAt, ['status', '--porcelain'])).split('\n').filter(Boolean).length,
-					};
-		return { from: r.designSystemFrom ?? 'installed', pkg, installed: installedVersion(join(root, 'node_modules'), pkg), clone };
-	};
-
-	/** `modeledOn`: the version whose record says what the design system is built from, for a new one not recorded yet. */
 	const buildPlan = async (
 		projectId: string,
 		name: string,
 		found: PrototypeSources | null,
-		modeledOn = name,
 	): Promise<{ build: PrototypeBuild; sources: PrototypeSources }> => {
 		const why = notReady(ctx.productRoot());
 		if (why !== null || !found?.nodeModules) throw new Error(why ?? NO_PRODUCT);
 		const source = sourceFile(projectId, name);
 		const page = file(projectId, name);
-		const from = await fromSourceOf(projectId, modeledOn);
 		return {
 			build: {
 				source,
 				page,
-				buildCommand: bundleCommand(writeBundleScript(prototypesRoot), ctx.esbuild() as string, source, page, found.nodeModules, sharedDir, from),
+				buildCommand: bundleCommand(writeBundleScript(prototypesRoot), ctx.esbuild() as string, source, page, found.nodeModules, sharedDir),
 				checkCommand: await checkCommandFor(projectId, name),
-				fromClone: from?.designSystem ?? null,
 			},
 			sources: found,
 		};
@@ -390,7 +329,6 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 			file(projectId, name),
 			join(root, 'node_modules'),
 			sharedDir,
-			{ from: await fromSourceOf(projectId, name) },
 		);
 		if (!r.ok) throw new Error(`The prototype did not build:\n${r.output.slice(0, 2000)}`);
 	};
@@ -573,7 +511,6 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		sources,
 		behind,
 		buildPlan,
-		designSystemBuild,
 		buildPage,
 		keep,
 		save,

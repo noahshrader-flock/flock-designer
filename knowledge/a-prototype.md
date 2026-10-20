@@ -90,8 +90,7 @@ To take a version off the site, use `dsnr unpublish`. Its record and comments ar
 
 The product keeps moving after a prototype is made. When the branch it was modeled on has newer commits, the review bar
 says how far behind it is, and **Refresh to latest** rebuilds it on the latest code: see
-[Staying up to date](staying-up-to-date.md). To see a design system change you are working on inside a prototype, the bar
-can build it from your clone of the design system: see [The design system](the-design-system.md).
+[Staying up to date](staying-up-to-date.md).
 
 ## Where it all lives
 

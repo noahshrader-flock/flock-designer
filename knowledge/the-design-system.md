@@ -82,11 +82,11 @@ The design system's checkout must be clean for this, because the agent works in 
 Edit it like any document and save: it is saved to a branch of its own, and proposed from the editor's title bar. If it
 changed on GitHub while you were editing, DSNR asks before overwriting.
 
-## See a change inside a prototype
+## Your changes and prototypes
 
-When the design system's clone is on this computer, a prototype's review bar can switch the version between the installed
-package and your clone with its changes. So you can see a component change in a real screen before you propose it. The
-choice is kept with the version, and switching rebuilds it.
+Prototypes are always built from the design system the product has installed, never from a clone with changes in it. So a
+change you are trying shows in the components' own stories here, and reaches prototypes once it is merged and the product
+installs the new version. That way a published prototype never shows something that has not been agreed.
 
 ## Why it works this way
 

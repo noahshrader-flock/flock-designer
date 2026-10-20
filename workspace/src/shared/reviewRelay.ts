@@ -13,11 +13,8 @@ const REVIEW_CALLS = [
 	'resolveComment',
 	'deleteComment',
 ] as const satisfies readonly InvokeName[];
-/**
- * `baseBehind` and `refresh`: how far the version's base is behind its branch, and Refresh to latest. `designSystemBuild`
- * and `buildDesignSystemFrom`: what its design system is built from, and the switch.
- */
-const EXTENSION_CALLS = ['signIn', 'address', 'baseBehind', 'refresh', 'designSystemBuild', 'buildDesignSystemFrom'] as const;
+/** `baseBehind` and `refresh`: how far the version's base is behind its branch, and Refresh to latest. */
+const EXTENSION_CALLS = ['signIn', 'address', 'baseBehind', 'refresh'] as const;
 export const RELAY_CALLS = [...REVIEW_CALLS, ...EXTENSION_CALLS] as const;
 export type RelayCall = (typeof RELAY_CALLS)[number];
 

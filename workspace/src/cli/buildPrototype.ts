@@ -3,16 +3,15 @@
  * same script, and "it built for the agent" and "it builds when saved" are the same fact. esbuild and Sass are given by
  * path: they are the app's own, never bundled into this.
  *
- * `node build-prototype.mjs <esbuild> <entry> <out> <node_modules> <shared> [--from <design system> <package> <sass>]`
+ * `node build-prototype.mjs <esbuild> <entry> <out> <node_modules> <shared>`
  */
 import { createHash } from 'node:crypto';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { STATE_NAME, STATES_META } from '../shared/prototypeStates';
-import { fromSource } from '../core/services/prototypes/fromSource';
 
-const [, , esbuildPath = '', entry = '', out = '', nodeModules = '', shared = '', flag, designSystem, pkg, sassPath] = process.argv;
+const [, , esbuildPath = '', entry = '', out = '', nodeModules = '', shared = ''] = process.argv;
 const { build } = (await import(pathToFileURL(esbuildPath).href)) as typeof import('esbuild');
 const source = readFileSync(entry, 'utf8');
 // The comment the page opens with (what it shows, where it sits, its gaps) travels into the HTML for reviewers.
@@ -44,16 +43,6 @@ const fileLoaders = Object.fromEntries(
 	['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.woff', '.woff2', '.ttf', '.eot'].map((e) => [e, 'dataurl' as const]),
 );
 
-/** Imported by path, a CommonJS package's functions may be under `default`. */
-const sassAt = async (path: string): Promise<typeof import('sass')> => {
-	const loaded = (await import(pathToFileURL(path).href)) as typeof import('sass') & { default?: typeof import('sass') };
-	return typeof loaded.compile === 'function' ? loaded : (loaded.default as typeof import('sass'));
-};
-
-// Built from the design system's clone, as it stands, when the version says so; else from the product's installed packages.
-const clone =
-	flag === '--from' && designSystem && pkg && sassPath ? fromSource({ designSystem, pkg, nodeModules, sass: await sassAt(sassPath) }) : null;
-
 try {
 	const result = await build({
 		stdin: {
@@ -75,14 +64,7 @@ try {
 		loader: { ...fileLoaders, '.js': 'jsx' },
 		define: { 'process.env.NODE_ENV': '"production"', global: 'globalThis' },
 		logLevel: 'silent',
-		metafile: true,
-		plugins: clone ? [clone.plugin] : [],
 	});
-	const refused = clone?.check(result.metafile.inputs) ?? null;
-	if (refused !== null) {
-		console.error(refused);
-		process.exit(1);
-	}
 	const js = result.outputFiles
 		.filter((f) => f.path.endsWith('.js'))
 		.map((f) => f.text)

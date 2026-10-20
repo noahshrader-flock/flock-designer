@@ -23,7 +23,6 @@ import type {
 import type {
 	BaseBehind,
 	BranchAgainstBase,
-	DesignSystemBuild,
 	Handed,
 	StartedPrototype,
 	MadeCover,
@@ -142,10 +141,6 @@ export interface WorkspaceApi {
 	warmPrototypeBase(root: string): Promise<Result<null>>;
 	/** How far the version's base is behind the latest of its branch; null when that cannot be told here. */
 	prototypeBehind(projectId: string, name: string): Promise<Result<BaseBehind | null>>;
-	/** What the version's design system is built from, and what it could be; null when there is no such version. */
-	prototypeDesignSystem(projectId: string, name: string): Promise<Result<DesignSystemBuild | null>>;
-	/** Builds the version from the design system's clone or the installed package, kept in its record, and saves the page so built. */
-	setPrototypeDesignSystem(root: string, projectId: string, name: string, from: 'installed' | 'clone'): Promise<Result<DesignSystemBuild>>;
 	/** Moves the version's base to the latest of its branch and hands its rebuild on it to the agent, in place. */
 	handPrototypeRefresh(root: string, projectId: string, name: string): Promise<Result<Handed>>;
 	/** Nothing is saved or checked here: the prototype is saved when opened. */
@@ -244,8 +239,6 @@ export const INVOKE = [
 	'warmPrototypeBase',
 	'prototypeBehind',
 	'handPrototypeRefresh',
-	'prototypeDesignSystem',
-	'setPrototypeDesignSystem',
 	'assignFolder',
 	'handPrototypeBuild',
 	'handPrototypeAddress',

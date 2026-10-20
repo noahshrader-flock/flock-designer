@@ -35,11 +35,6 @@ export interface Work {
 	cover?: string;
 	/** Absent when it was a new idea of its own. */
 	from?: string;
-	/**
-	 * `clone`: built from the design system's clone as it stands, with the person's change, in place of the product's
-	 * installed package. Absent: from the installed package, as every version is unless the person chooses otherwise.
-	 */
-	designSystemFrom?: 'clone';
 }
 
 /** A prototype just recorded, with what it is modeled on in words: the branch, its commit, and how that was chosen. */
@@ -67,18 +62,6 @@ export interface BranchAgainstBase {
 	latest: string;
 	behind: number;
 	conflicts: string[];
-}
-
-/**
- * What a version's design system is built from, and what it could be: the product's installed package (its version), or
- * the design system's clone as it stands (its branch, and how many files are changed in it), when one here is shown to be
- * the package's source.
- */
-export interface DesignSystemBuild {
-	from: 'installed' | 'clone';
-	pkg: string;
-	installed: string | null;
-	clone: { branch: string | null; changed: number } | null;
 }
 
 export type WorkKind = 'prototype' | 'codebase';

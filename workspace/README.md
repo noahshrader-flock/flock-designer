@@ -194,12 +194,12 @@ monorepo's or the repository's own, found by `package.json` names alone, four fo
 folders skipped; else a clone beside it named as its package), once it is shown to be that package's source
 (`productDesignSystem`: the same name, the installed package's repository the clone's configured `origin`, and a release tag
 for the installed version; one in the product's own repository is its own code, checked by name only and never asked
-about, and offers no clone to build a prototype from). A product holding its own design system has one checkout for its
+about). A product holding its own design system has one checkout for its
 component changes and its codebase work: the clean-tree and on-the-branch refusals say so (`sharedCheckoutNote`). A mismatch, such as a fork,
 is refused and said; one that cannot be confirmed (no tag, no repository named) is asked about once, and the answer kept
 until the clone or the installed version changes. Only that one design system (`productDesignSystem`), chosen or shown
-to be the source, is read for prototypes' guidance, the voice and tone, a version built from the clone, and codebase
-work. With none of the product's own, another open folder that holds one is shown; the design repository is beside the product, as
+to be the source, is read for prototypes' guidance, the voice and tone, and codebase
+work. A prototype is built from the product's installed package, never from a clone. With none of the product's own, another open folder that holds one is shown; the design repository is beside the product, as
 the app finds it. Its panel, in the activity bar, lists the projects (opening one opens its newest prototype for
 review) and shows the design system it found. Sign in is at the far right of VS Code's own DSNR title bar, which shows
 the username beside the mark once signed in. A prototype's review is its page on the site, built from the design
@@ -299,18 +299,6 @@ them, including when origin could not be reached. New starts the fetch when it o
 private ref (`refs/dsnr/base/<project>/<version>`). A change or an Address keeps its version's base. In VS Code's review tab, a
 version whose branch has moved on says so in the bar ("3 behind develop", nothing while it is current); **Refresh to latest**
 moves its base to the latest and hands its rebuild, in place, to the agent.
-
-**A version built from the design system's clone.** In VS Code's review tab, a version can be built from the design system's
-clone as it stands, with the person's change to a component, in place of the product's installed package: a switch after the
-bar's other switches ("Installed @flock/ui 5.5.4" or "Your clone: develop + 2 changed files"), shown only when a clone shown
-to be the package's source is here, or the version is built from one. The choice is kept in the version's record
-(`designSystemFrom`), followed by DSNR's save and by the agent's build command alike (`fromSourceOf`), and kept by a new
-version made from it; switching builds the page again and saves it, and a build that fails leaves the choice as it was.
-Built from the clone (`fromSource`, in the bundler, `cli/buildPrototype.ts`): the package as the product imports it is the
-clone's source entry (its package.json's `source`, else `src/index`), a stylesheet of the built package is nothing (the
-source's components import their own), every peer dependency the library declares is the product's copy, so there is one
-React, and its stylesheets are made as the Design System tab's previews make them. A page that would load a second React is
-refused, with how to fix it, rather than shown empty.
 
 **Codebase work behind the product's main branch.** DSNR never merges into a checkout. Codebase work's branch is read
 against the latest of the product's default branch (`againstBase`, the branch engineering merges into): how far behind, and

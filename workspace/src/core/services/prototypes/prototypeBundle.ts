@@ -20,16 +20,6 @@ const resolvedHere = (pkg: string): string | null => {
 /** Resolved from this app, so neither caller needs it installed anywhere else. */
 export const esbuildEntry = (): string | null => resolvedHere('esbuild');
 
-/** The app's own Sass, for a prototype built from the design system's clone, whose stylesheets are Sass. */
-export const sassEntry = (): string | null => resolvedHere('sass');
-
-/** Built from the design system's clone as it stands (`fromSource`), in place of the product's installed package. */
-export interface FromSource {
-	designSystem: string;
-	pkg: string;
-	sass: string;
-}
-
 export const writeBundleScript = (prototypesRoot: string): string => {
 	mkdirSync(prototypesRoot, { recursive: true });
 	const path = join(prototypesRoot, 'build-prototype.mjs');
@@ -48,25 +38,8 @@ export const writeCheckScript = async (prototypesRoot: string): Promise<string> 
 
 export const shellLine = (args: string[]): string => args.map((a) => (/^[\w./-]+$/.test(a) ? a : JSON.stringify(a))).join(' ');
 
-const bundleArgs = (script: string, esbuild: string, entry: string, out: string, nodeModules: string, shared: string, from: FromSource | null) => [
-	script,
-	esbuild,
-	entry,
-	out,
-	nodeModules,
-	shared,
-	...(from ? ['--from', from.designSystem, from.pkg, from.sass] : []),
-];
-
-export const bundleCommand = (
-	script: string,
-	esbuild: string,
-	entry: string,
-	out: string,
-	nodeModules: string,
-	shared: string,
-	from: FromSource | null = null,
-): string => shellLine(['node', ...bundleArgs(script, esbuild, entry, out, nodeModules, shared, from)]);
+export const bundleCommand = (script: string, esbuild: string, entry: string, out: string, nodeModules: string, shared: string): string =>
+	shellLine(['node', script, esbuild, entry, out, nodeModules, shared]);
 
 /** Never throws for a prototype that does not compile: that is the person's or agent's to fix, not the app's. */
 export const runBundle = (
@@ -76,11 +49,11 @@ export const runBundle = (
 	out: string,
 	nodeModules: string,
 	shared: string,
-	{ from = null, node = process.execPath }: { from?: FromSource | null; node?: string } = {},
+	node: string = process.execPath,
 ): Promise<{ ok: boolean; output: string }> => {
 	mkdirSync(dirname(out), { recursive: true });
 	// VS Code's extension host is Electron, which runs a script as Node only when told to; plain Node ignores the variable.
-	return runFile(node, bundleArgs(script, esbuild, entry, out, nodeModules, shared, from), {
+	return runFile(node, [script, esbuild, entry, out, nodeModules, shared], {
 		timeoutMs: 120_000,
 		env: { ELECTRON_RUN_AS_NODE: '1' },
 	}).then(

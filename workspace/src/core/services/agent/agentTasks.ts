@@ -233,11 +233,6 @@ export const prototypeBuildTask = ({
 		'## This run',
 		'',
 		`- Write \`${build.source}\`. That file is the whole prototype: nothing else you write is kept.`,
-		...(build.fromClone
-			? [
-					`- This version is built from the design system's clone as it stands, \`${build.fromClone}\`, with the person's change to it, in place of the installed package: read its components there. Never change them: the change is the person's.`,
-				]
-			: []),
 		`- Check it builds, and build it again after every change, with exactly: \`${build.buildCommand}\``,
 		`  It writes the page to \`${build.page}\`. Do not finish while it reports an error.`,
 		...checkLines(build),

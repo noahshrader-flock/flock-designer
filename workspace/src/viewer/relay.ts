@@ -1,4 +1,4 @@
-import type { BaseBehind, CommentAnchor, CommentRef, DesignSystemBuild, Result, ReviewComment, SignInState } from '../shared/contract';
+import type { BaseBehind, CommentAnchor, CommentRef, Result, ReviewComment, SignInState } from '../shared/contract';
 import { isObjectId } from '../shared/sha';
 import { ASK_PATH, type EditorTheme, KEY_FRAGMENT, KEY_HEADER, type RelayAsk, type RelayCall, isKey, readRelayTell } from '../shared/reviewRelay';
 import type { CommentStore } from './comments/surfaces';
@@ -134,19 +134,6 @@ export const behindIn = (answer: Result<unknown>): BaseBehind | null => {
 		v.behind > 0
 		? { branch: v.branch, commit: v.commit, latest: v.latest, behind: v.behind }
 		: null;
-};
-
-/** Taken only in exactly its shape: anything else shows no switch. */
-export const designSystemBuildIn = (answer: Result<unknown>): DesignSystemBuild | null => {
-	const v = (answer.ok ? answer.value : null) as Partial<DesignSystemBuild> | null;
-	if (v === null || typeof v !== 'object' || (v.from !== 'installed' && v.from !== 'clone') || typeof v.pkg !== 'string') return null;
-	const installed = typeof v.installed === 'string' ? v.installed : null;
-	const c = v.clone as Partial<NonNullable<DesignSystemBuild['clone']>> | null | undefined;
-	const clone =
-		c && typeof c === 'object' && (typeof c.branch === 'string' || c.branch === null) && Number.isSafeInteger(c.changed)
-			? { branch: c.branch ?? null, changed: c.changed as number }
-			: null;
-	return { from: v.from, pkg: v.pkg, installed, clone };
 };
 
 /** `branch` is the version's key. */

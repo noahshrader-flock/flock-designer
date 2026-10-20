@@ -26,7 +26,6 @@ import { AccountMenu } from './AccountMenu';
 import { type Relay, loginIn, relayComments } from './relay';
 import { CommentsPanel } from './comments/CommentsPanel';
 import { BehindLatest } from './BehindLatest';
-import { DesignSystemSwitch } from './DesignSystemSwitch';
 import { useOpenOnError } from './comments/useOpenOnError';
 
 export interface ViewerConfig {
@@ -217,18 +216,8 @@ const InDsnr = ({ config, slots, showing, relay }: { config: ViewerConfig; slots
 	};
 	if (login === undefined) return null;
 	const version = prototypeKey(config.projectId, config.name);
-	/** The bar's controls for what this version is built on: its design system, and how far its base is behind. */
-	const builtOn = (
-		<>
-			<DesignSystemSwitch
-				relay={relay}
-				branch={version}
-				// As the theme and state switches load it: its own address, else the page's.
-				onBuilt={() => void (slots.frame.src = slots.frame.getAttribute('src') ?? 'page.html')}
-			/>
-			<BehindLatest relay={relay} branch={version} />
-		</>
-	);
+	/** How far the version's base is behind the latest of its branch. */
+	const builtOn = <BehindLatest relay={relay} branch={version} />;
 	if (login === null)
 		return (
 			<PageBar config={config} slots={slots} showing={showing}>

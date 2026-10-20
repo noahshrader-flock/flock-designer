@@ -1,9 +1,8 @@
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { JSDOM } from 'jsdom';
-import { bundleCommand, esbuildEntry, runBundle, sassEntry, writeBundleScript } from '../src/core/services/prototypes/prototypeBundle';
+import { bundleCommand, esbuildEntry, runBundle, writeBundleScript } from '../src/core/services/prototypes/prototypeBundle';
 import { sharedFilesOf } from '../src/shared/designPaths';
 import { statesOf } from '../src/shared/prototypeStates';
 
@@ -38,7 +37,7 @@ describe('bundling a React prototype into one page', () => {
 			"/*\n * Usage tab, modeled on the Organization page.\n */\nimport '@acme/ds/style.css';\nimport { DSButton } from '@acme/ds';\nexport default function Prototype() { return <DSButton>Archive roles</DSButton>; }\n",
 		);
 		const out = join(dir, 'prototype', 'demo', 'v1.html');
-		const r = await runBundle(script, esbuild as string, entry, out, modules, join(dir, 'shared'), { node: process.execPath });
+		const r = await runBundle(script, esbuild as string, entry, out, modules, join(dir, 'shared'), process.execPath);
 		expect(r).toMatchObject({ ok: true });
 		expect(r.output).toMatch(/^Built v1\.html \(\d+ KB\)\.$/);
 		const html = readFileSync(out, 'utf8');
@@ -61,7 +60,7 @@ describe('bundling a React prototype into one page', () => {
 		mkdirSync(join(dir, 'prototype'), { recursive: true });
 		writeFileSync(entry, "import '@acme/ds/style.css';\nexport default () => null;\n");
 		const shared = join(dir, 'shared');
-		const r = await runBundle(script, esbuild, entry, join(dir, 'prototype', 'v1.html'), modules, shared, { node: process.execPath });
+		const r = await runBundle(script, esbuild, entry, join(dir, 'prototype', 'v1.html'), modules, shared, process.execPath);
 		expect(r.ok).toBe(true);
 		const html = readFileSync(join(dir, 'prototype', 'v1.html'), 'utf8');
 		const names = sharedFilesOf(html);
@@ -76,7 +75,7 @@ describe('bundling a React prototype into one page', () => {
 		const script = writeBundleScript(join(dir, 'prototype'));
 		const entry = join(dir, 'prototype', 'v1.tsx');
 		writeFileSync(entry, "import { Missing } from '@acme/nothing';\nexport default () => <Missing />;\n");
-		const r = await runBundle(script, esbuild, entry, join(dir, 'prototype', 'v1.html'), modules, join(dir, 'shared'), { node: process.execPath });
+		const r = await runBundle(script, esbuild, entry, join(dir, 'prototype', 'v1.html'), modules, join(dir, 'shared'), process.execPath);
 		expect(r.ok).toBe(false);
 		expect(r.output).toContain('@acme/nothing');
 		expect(existsSync(join(dir, 'prototype', 'v1.html'))).toBe(false);
@@ -89,7 +88,7 @@ describe('bundling a React prototype into one page', () => {
 			const out = join(dir, 'prototype', 'v1.html');
 			mkdirSync(join(dir, 'prototype'), { recursive: true });
 			writeFileSync(entry, source);
-			const r = await runBundle(script, esbuildEntry() as string, entry, out, modules, join(dir, 'shared'), { node: process.execPath });
+			const r = await runBundle(script, esbuildEntry() as string, entry, out, modules, join(dir, 'shared'), process.execPath);
 			return { ...r, html: existsSync(out) ? readFileSync(out, 'utf8') : null };
 		};
 		const page = 'export default function Prototype() { return null; }\n';
@@ -131,91 +130,6 @@ describe('bundling a React prototype into one page', () => {
 				expect(r.output).toContain('one-word names');
 				expect(r.html).toBeNull();
 			}
-		});
-	});
-
-	describe('built from the design system’s clone, in place of the installed package', () => {
-		/** The clone: its source, a Sass stylesheet its component imports, and a React of its own, as a clone has installed. */
-		const clone = ({ color = 'teal', peers = true, index = true } = {}) => {
-			const lib = join(dir, 'ds');
-			mkdirSync(join(lib, 'src'), { recursive: true });
-			writeFileSync(
-				join(lib, 'package.json'),
-				JSON.stringify({ name: '@acme/ds', main: 'build/index.js', ...(peers ? { peerDependencies: { react: '*', 'react-dom': '*' } } : {}) }),
-			);
-			if (index) writeFileSync(join(lib, 'src', 'index.ts'), "export { DSButton } from './Button';\n");
-			writeFileSync(
-				join(lib, 'src', 'Button.tsx'),
-				'import \'./button.scss\';\nexport const DSButton = (p: { children: string }) => <button className="ds-button">{p.children}</button>;\n',
-			);
-			writeFileSync(join(lib, 'src', 'button.scss'), `$c: ${color};\n.ds-button { color: $c; --from: source; }\n`);
-			mkdirSync(join(lib, 'node_modules'), { recursive: true });
-			cpSync(join(appModules, 'react'), join(lib, 'node_modules', 'react'), { recursive: true, dereference: true });
-			return lib;
-		};
-		const page = async (designSystem: string | null) => {
-			writeFileSync(join(modules, '@acme', 'ds', 'style.css'), '.ds-button { color: teal; --from: installed; }');
-			const entry = join(dir, 'prototype', 'demo', 'v1.tsx');
-			mkdirSync(dirname(entry), { recursive: true });
-			writeFileSync(
-				entry,
-				"import '@acme/ds/style.css';\nimport { DSButton } from '@acme/ds';\nexport default function Prototype() { return <DSButton>Archive roles</DSButton>; }\n",
-			);
-			const out = join(dir, 'prototype', 'demo', 'v1.html');
-			rmSync(out, { force: true });
-			const from = designSystem === null ? null : { designSystem, pkg: '@acme/ds', sass: sassEntry() as string };
-			const r = await runBundle(writeBundleScript(join(dir, 'prototype')), esbuildEntry() as string, entry, out, modules, join(dir, 'shared'), {
-				from,
-				node: process.execPath,
-			});
-			return { r, html: existsSync(out) ? readFileSync(out, 'utf8') : null };
-		};
-		/** What the page draws, run as a browser would: the button, and the colour its stylesheet gives it. */
-		const drawn = async (html: string) => {
-			const dom = new JSDOM(html, { runScripts: 'dangerously', pretendToBeVisual: true });
-			await new Promise((r) => setTimeout(r, 50));
-			const button = dom.window.document.querySelector('button.ds-button');
-			const style = dom.window.document.querySelector('style')?.textContent ?? '';
-			return { text: button?.textContent ?? null, color: /\.ds-button\s*\{[^}]*color:\s*([a-z]+)/.exec(style)?.[1] ?? null, style };
-		};
-
-		it('draws the same component, the same way, from an unchanged clone as from the installed package, without the built stylesheet', async () => {
-			const installed = await page(null);
-			const fromClone = await page(clone());
-			expect(fromClone.r).toMatchObject({ ok: true });
-			const [a, b] = [await drawn(installed.html as string), await drawn(fromClone.html as string)];
-			expect(b.text).toBe('Archive roles');
-			expect({ text: b.text, color: b.color }).toEqual({ text: a.text, color: a.color });
-			expect(a.style).toMatch(/--from:\s*installed/);
-			expect(b.style).toMatch(/--from:\s*source/);
-			expect(b.style).not.toMatch(/--from:\s*installed/);
-		});
-
-		it('draws the change made in the clone', async () => {
-			const fromClone = await page(clone({ color: 'red' }));
-			expect((await drawn(fromClone.html as string)).color).toBe('red');
-		});
-
-		it('takes React from the product, so the clone’s own copy is not loaded: the two-copies check passes it', async () => {
-			// The clone has a React of its own installed; declared a peer, the product's is the only one in the page.
-			const fromClone = await page(clone());
-			expect(fromClone.r).toMatchObject({ ok: true });
-			expect(fromClone.r.output).not.toContain('two copies of React');
-		});
-
-		it('refuses a page that would load a second copy of React, saying how to fix it, rather than show it empty', async () => {
-			const fromClone = await page(clone({ peers: false }));
-			expect(fromClone.r.ok).toBe(false);
-			expect(fromClone.r.output).toMatch(
-				/would load two copies of React .+ and draw nothing, so it was not built\. @acme\/ds's clone must take React from the product/,
-			);
-			expect(fromClone.html).toBeNull();
-		});
-
-		it('says so when the clone’s source cannot be found, and guesses at none', async () => {
-			const fromClone = await page(clone({ index: false }));
-			expect(fromClone.r.ok).toBe(false);
-			expect(fromClone.r.output).toContain("@acme/ds's source cannot be found in");
 		});
 	});
 
