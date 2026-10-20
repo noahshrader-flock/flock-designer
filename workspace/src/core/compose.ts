@@ -22,6 +22,7 @@ import { DesignRepo } from '../codeHost/designRepo';
 import { designStore } from './services/publishing/designStore';
 import { syncRecords } from './services/publishing/designSync';
 import { DesignSystemsMemory } from './services/designSystem/designSystems';
+import { type SourceAnswers, usableDesignSystem } from './services/projects/productDesignSystem';
 import { recordsRootFor } from './services/projects/discovery';
 import { isRepository, readCheckout } from './services/platform/git';
 import type { GitHubAccount } from '../codeHost/github';
@@ -67,6 +68,8 @@ export interface CallsContext {
 	installer: Installer;
 	designLibrary?: DesignLibrary;
 	designSystems: DesignSystemsMemory;
+	/** The person's answers for a product's design system that could not be confirmed as its source. */
+	sourceAnswers: SourceAnswers;
 	/** The app's own folder, never the library's. */
 	storyPreviewsRoot: string;
 	changeBranchFiles: Record<ChangeKind, string>;
@@ -95,6 +98,7 @@ export const composeCore = ({
 	installer,
 	designLibrary,
 	designSystems,
+	sourceAnswers,
 	storyPreviewsRoot,
 	changeBranchFiles,
 	componentTokens: injectedComponentTokens,
@@ -291,8 +295,11 @@ export const composeCore = ({
 	// record, and otherwise to GitHub directly.
 	const store = designStore({ clone: designClone, files: designRepo.files, onWrite: () => void publisher.publish(true) });
 	const readSkillText = (path: string): Promise<string> => work.skill(path);
+	/** The product's design system, where it may be read: only once it is shown to be its package's source, or said to be. */
+	const designSystemOf = (productRoot: string): Promise<string | null> => usableDesignSystem(productRoot, sourceAnswers);
 	const work = prototypeWork({
 		prototypesRoot,
+		designSystemOf,
 		productRoot: () => {
 			const root = trustedRoot();
 			return root === null ? null : opened.require(root);
@@ -330,6 +337,7 @@ export const composeCore = ({
 		prototypesRoot,
 		installer,
 		designSystems,
+		designSystemOf,
 		componentTokens,
 		openRepository,
 		checkout,

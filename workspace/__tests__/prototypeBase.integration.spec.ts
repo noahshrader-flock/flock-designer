@@ -34,6 +34,7 @@ const workIn = (root: string) =>
 		store: () => shared.store,
 		readDesignFile: shared.store.read,
 		esbuild: () => 'esbuild',
+		designSystemOf: async () => null,
 	});
 
 const start = (root: string) => workIn(root).start(root, { projectId: 'demo', title: 'Demo', note: 'A list', branch: 'develop', me: null });

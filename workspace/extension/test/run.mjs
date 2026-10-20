@@ -22,6 +22,8 @@ const repo = (dir, files) => {
 	git(dir, 'add', '.');
 	git(dir, '-c', 'user.email=test@example.test', '-c', 'user.name=Test', 'commit', '-q', '-m', 'test');
 };
+// The design system the product names: a real product's, so DSNR shows it to be its source as it would one in use.
+const DS_PACKAGE = '@flocksafety/flock-react-component-lib';
 // Neither repository has a remote, so nothing can be pushed.
 const product = join(world, 'product');
 repo(product, {
@@ -32,12 +34,11 @@ repo(product, {
 		prototypeRoot: 'src/prototypes',
 		branchPattern: { codebase: 'feature/<project-id>' },
 		commands: [],
-		designSystem: { package: 'x' },
+		designSystem: { package: DS_PACKAGE },
 	}),
 });
 writeFileSync(join(product, '.gitignore'), 'node_modules\n');
-mkdirSync(join(product, 'node_modules/x'), { recursive: true });
-writeFileSync(join(product, 'node_modules/x/package.json'), JSON.stringify({ name: 'x', version: '1.0.0' }));
+mkdirSync(join(product, 'node_modules'));
 for (const m of ['react', 'react-dom', 'scheduler']) symlinkSync(join(extension, '../node_modules', m), join(product, 'node_modules', m));
 // The stand-in Claude Code's page has enough on it to be pictured.
 const bin = join(base, 'bin');
@@ -83,10 +84,28 @@ const hasFui = (() => {
 		return false;
 	}
 })();
+/** The newest release on develop: what the product has installed, and the tag that shows the copy to be its source. */
+const release = hasFui
+	? execFileSync('git', ['-C', fui, 'describe', '--tags', '--abbrev=0', 'refs/remotes/origin/develop'], { encoding: 'utf8' }).trim()
+	: 'v1.0.0';
+mkdirSync(join(product, 'node_modules', DS_PACKAGE), { recursive: true });
+writeFileSync(
+	join(product, 'node_modules', DS_PACKAGE, 'package.json'),
+	JSON.stringify({ name: DS_PACKAGE, version: release.replace(/^v/, ''), repository: { type: 'git', url: `git+${FUI_URL}` } }),
+);
 if (hasFui) {
-	const copy = join(world, 'x');
+	// Beside the product, under its package's name, as a product names its design system.
+	const copy = join(world, 'flock-react-component-lib');
 	execFileSync('git', ['init', '-q', copy]);
-	git(copy, 'fetch', '-q', '--no-tags', fui, '+refs/remotes/origin/develop:refs/remotes/origin/develop');
+	git(
+		copy,
+		'fetch',
+		'-q',
+		'--no-tags',
+		fui,
+		'+refs/remotes/origin/develop:refs/remotes/origin/develop',
+		`+refs/tags/${release}:refs/tags/${release}`,
+	);
 	git(copy, 'remote', 'add', 'origin', FUI_URL);
 	git(copy, 'config', `url.${fui}.insteadOf`, FUI_URL);
 	// Fetched from the clone here, never pushed to it, nor to GitHub: insteadOf would send a push there too.

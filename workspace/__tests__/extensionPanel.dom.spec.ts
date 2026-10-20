@@ -13,6 +13,7 @@ const OPEN: Context = {
 	designSystem: { root: '/work/flock-react-component-lib', how: 'named' },
 	designRepository: '/work/flock-designer/projects',
 	productRepository: 'flocksafety/flock-coke',
+	source: { state: 'usable', root: '/work/flock-react-component-lib' },
 	missing: [],
 };
 const show = () => mountPage(createElement(Panel));

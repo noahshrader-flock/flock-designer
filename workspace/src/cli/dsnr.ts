@@ -15,6 +15,8 @@ import { recordsRootFor } from '../core/services/projects/discovery';
 import { assertUsableProjectId } from '../core/services/projects/workRecords';
 import { readCheckout, git } from '../core/services/platform/git';
 import { guidePart, prototypeBuildTask } from '../core/services/agent/agentTasks';
+import { SourceAnswers, usableDesignSystem } from '../core/services/projects/productDesignSystem';
+import { appPaths } from '../core/appPaths';
 import { designStore } from '../core/services/publishing/designStore';
 import { BUILD_SKILL, GUIDE, assertPrototypeName } from '../core/services/prototypes/prototype';
 import { shellLine } from '../core/services/prototypes/prototypeBundle';
@@ -337,8 +339,11 @@ export const main = async (argv: string[], deps: CliDeps): Promise<number> => {
 		const designRoot = designBeside(root);
 		// The clone alone: publishing is its own command here, and there is no extension sign-in to read GitHub with.
 		const store = designStore({ clone: () => designRoot, files: null, onWrite: () => undefined });
+		// The window's own answers, beside the prototypes it told this command of, so a design system asked about once is not asked again.
+		const answers = new SourceAnswers(appPaths(dirname(deps.prototypesRoot)).designSystemSources);
 		const work = prototypeWork({
 			prototypesRoot: deps.prototypesRoot,
+			designSystemOf: (productRoot) => usableDesignSystem(productRoot, answers),
 			productRoot: () => root,
 			store: store.records,
 			readDesignFile: store.readFile,

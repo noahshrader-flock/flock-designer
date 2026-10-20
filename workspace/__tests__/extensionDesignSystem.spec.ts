@@ -1,5 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
+	NOT_THIS_ONE,
+	USE_IT,
+	askSource,
 	askStorybook,
 	componentLink,
 	componentOf,
@@ -241,5 +244,55 @@ describe('the design system shown, when the one found cannot be read', () => {
 		const open = { root: '/w/ui', how: 'open' as const };
 		expect(await shownFrom(open, located.root, { show: readable(['/w/ui']), at })).toEqual({ designSystem: open, unreadable: null });
 		expect(at).not.toHaveBeenCalled();
+	});
+});
+
+describe('a design system beside the product that could not be confirmed as its source', () => {
+	const unconfirmed = {
+		state: 'ask' as const,
+		root: '/work/ui',
+		why: '../ui has no release tag for 5.5.4, the version installed',
+		key: 'k',
+		name: '@flock/ui',
+	};
+	const asking = (answer: string | undefined) => {
+		const offer = vi.fn(async (_message: string, _actions: string[]) => answer);
+		const answers = { set: vi.fn() };
+		return { offer, answers, asked: new Set<string>() };
+	};
+
+	it('is asked about once, saying why, and the answer is kept either way', async () => {
+		const using = asking(USE_IT);
+		expect(await askSource(using, unconfirmed)).toBe(true);
+		expect(using.offer).toHaveBeenCalledWith(
+			"The design system beside this product could not be confirmed as @flock/ui's source: ../ui has no release tag for 5.5.4, the version installed. Use it for prototypes and their guidance?",
+			[USE_IT, NOT_THIS_ONE],
+		);
+		expect(using.answers.set).toHaveBeenCalledWith('k', 'use');
+		expect(await askSource(using, unconfirmed)).toBe(false);
+		expect(using.offer).toHaveBeenCalledTimes(1);
+		const refusing = asking(NOT_THIS_ONE);
+		await askSource(refusing, unconfirmed);
+		expect(refusing.answers.set).toHaveBeenCalledWith('k', 'refuse');
+	});
+
+	it('keeps nothing when dismissed, and is not asked again in this window', async () => {
+		const dismissed = asking(undefined);
+		expect(await askSource(dismissed, unconfirmed)).toBe(false);
+		expect(dismissed.answers.set).not.toHaveBeenCalled();
+		await askSource(dismissed, unconfirmed);
+		expect(dismissed.offer).toHaveBeenCalledTimes(1);
+	});
+
+	it('asks nothing of one that is usable, refused, or not there', async () => {
+		const quiet = asking(USE_IT);
+		for (const source of [
+			{ state: 'usable' as const, root: '/u' },
+			{ state: 'refused' as const, root: '/u', why: 'no' },
+			{ state: 'none' as const },
+			null,
+		])
+			expect(await askSource(quiet, source)).toBe(false);
+		expect(quiet.offer).not.toHaveBeenCalled();
 	});
 });

@@ -168,10 +168,30 @@ export const installDesignSystem = (product: string) => {
 	// Ignored, as a real repository ignores it, so switching branches never takes it away.
 	writeFileSync(join(product, '.git', 'info', 'exclude'), 'node_modules\n');
 	mkdirSync(join(modules, 'x'), { recursive: true });
-	writeFileSync(join(modules, 'x', 'package.json'), JSON.stringify({ name: 'x', version: '1.2.3', main: 'index.js' }));
+	writeFileSync(join(modules, 'x', 'package.json'), JSON.stringify({ name: 'x', version: '1.2.3', main: 'index.js', repository: 'github:acme/x' }));
 	writeFileSync(join(modules, 'x', 'index.js'), "exports.Hello = () => require('react').createElement('h1', null, 'Real component');");
 	const appModules = join(__dirname, '..', 'node_modules');
 	for (const pkg of ['react', 'react-dom', 'scheduler']) if (!existsSync(join(modules, pkg))) symlinkSync(join(appModules, pkg), join(modules, pkg));
+};
+
+/** A design system as DSNR finds one: its package.json, named, and a component's story; `files` beside them. */
+export const makeDesignSystem = (dir: string, name = 'x', files: Record<string, string> = {}): string => {
+	writeFiles(dir, { 'package.json': JSON.stringify({ name }), 'src/Button.stories.tsx': "export default { title: 'Inputs/Button' };\n", ...files });
+	return dir;
+};
+
+/**
+ * The product's design system checked out beside it, shown to be its source: a clone of acme/x, tagged for the version
+ * `installDesignSystem` installs, which names acme/x as its repository.
+ */
+export const designSystemBeside = (product: string, files: Record<string, string> = {}): string => {
+	const dir = makeDesignSystem(join(dirname(product), 'x'), 'x', files);
+	g(dir, 'init', '-q', '-b', 'main');
+	g(dir, 'add', '-A');
+	g(dir, 'commit', '-q', '-m', 'the design system');
+	g(dir, 'remote', 'add', 'origin', 'git@github.com:acme/x.git');
+	g(dir, 'tag', 'v1.2.3');
+	return dir;
 };
 
 /** The real standards and guide, so a task is built from what it is built from in use. */

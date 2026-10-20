@@ -166,8 +166,14 @@ DSNR is moving into VS Code as an extension, which lives in `extension/` with it
 sign-in, no native preview, and its files in the extension's own storage, never the app's settings folder.
 
 There is nothing to clone or connect: it works on the folders open in VS Code (`findContext`). The product is the open
-folder with `.dsnr/workspace.json`, which DSNR trusts as VS Code does; its design system is where the product names it,
-else another open folder that holds one, else one the person locates; the design repository is beside the product, as
+folder with `.dsnr/workspace.json`, which DSNR trusts as VS Code does; its design system is where the product names it
+(a folder of its own, or a clone beside it named as its package), once it is shown to be that package's source
+(`productDesignSystem`: the same name, the installed package's repository the clone's configured `origin`, and a release tag
+for the installed version; a folder of the product's own repository is checked by name only). A mismatch, such as a fork,
+is refused and said; one that cannot be confirmed (no tag, no repository named) is asked about once, and the answer kept
+until the clone or the installed version changes. Only a design system shown to be the source is read for prototypes'
+guidance, the voice and tone, and codebase work. Else another open folder that holds one is shown, else one the person
+locates; the design repository is beside the product, as
 the app finds it. Its panel, in the activity bar, lists the projects (opening one opens its newest prototype for
 review) and shows the design system it found. Sign in is at the far right of VS Code's own DSNR title bar, which shows
 the username beside the mark once signed in. A prototype's review is its page on the site, built from the design

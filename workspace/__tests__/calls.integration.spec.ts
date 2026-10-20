@@ -13,6 +13,8 @@ import { copilot } from '../src/core/services/agent/copilot';
 import { type Answer, fakeGitHub } from './fakes/github';
 import {
 	addStandards,
+	designSystemBeside,
+	makeDesignSystem,
 	eventually,
 	g,
 	installDesignSystem,
@@ -181,6 +183,7 @@ beforeEach(async () => {
 	readBytes = vi.fn(async () => null);
 	const { Installer } = await import('../src/core/services/codebase/install');
 	const { DesignSystemsMemory } = await import('../src/core/services/designSystem/designSystems');
+	const { SourceAnswers } = await import('../src/core/services/projects/productDesignSystem');
 	register = (more: Partial<CallsContext> = {}) => {
 		const publishing = registerCalls({
 			emit: vi.fn(),
@@ -216,6 +219,7 @@ beforeEach(async () => {
 			prototypesRoot: join(home, 'prototype'),
 			prototypeServer,
 			designSystems: new DesignSystemsMemory(join(home, 'design-system.json')),
+			sourceAnswers: new SourceAnswers(join(home, 'design-system-sources.json')),
 			// Every file the app keeps is in this test's own folder: none is shared with another run or worker.
 			changeBranchFiles: appPaths(home).changeBranches,
 			storyPreviewsRoot: join(home, 'story-previews'),
@@ -757,7 +761,7 @@ describe('prototypes', () => {
 		writeSkill();
 		await trustFolder(product);
 		await call(CHANNELS.createPrototype, 'demo', 'Demo', 'A list', { root: product, branch: 'develop' });
-		const voiceFile = join(dirname(product), 'x', '.dsnr', 'voice-and-tone.md');
+		const voiceFile = join(designSystemBeside(product), '.dsnr', 'voice-and-tone.md');
 		await call(CHANNELS.handPrototypeBuild, product, 'demo', 'v1', 'A list');
 		expect(taskFileText()).not.toContain('## Voice and tone');
 		mkdirSync(dirname(voiceFile), { recursive: true });
@@ -1039,8 +1043,7 @@ describe('prototypes', () => {
 
 		it('carries the design system’s voice and tone, as every task does (T9)', async () => {
 			await ready();
-			mkdirSync(join(dirname(product), 'x', '.dsnr'), { recursive: true });
-			writeFileSync(join(dirname(product), 'x', '.dsnr', 'voice-and-tone.md'), '# Voice and tone\n\n## Voice\n\nCalm and exact.\n');
+			designSystemBeside(product, { '.dsnr/voice-and-tone.md': '# Voice and tone\n\n## Voice\n\nCalm and exact.\n' });
 			threads({ v1: [comment(7, 'Make this primary', 'noah')] });
 			expect((await address(7)).ok).toBe(true);
 			expect(taskOf('v1')).toContain('## Voice and tone');
@@ -1203,12 +1206,21 @@ describe('prototypes', () => {
 
 		it('writes the design system’s voice and tone into the task beside the prototype, after the accessibility rules (T9)', async () => {
 			await saved();
-			mkdirSync(join(dirname(product), 'x', '.dsnr'), { recursive: true });
-			writeFileSync(join(dirname(product), 'x', '.dsnr', 'voice-and-tone.md'), '# Voice and tone\n\n## Voice\n\nCalm and exact.\n');
+			designSystemBeside(product, { '.dsnr/voice-and-tone.md': '# Voice and tone\n\n## Voice\n\nCalm and exact.\n' });
 			expect((await call(CHANNELS.buildInCodebase, product, 'demo', 'v1', 'develop')).ok).toBe(true);
 			const task = readFileSync(join(home, 'prototype', 'demo', 'v1-into-code.md'), 'utf8');
 			expect(task).toContain('Calm and exact.');
 			expect(task.indexOf('## Accessibility')).toBeLessThan(task.indexOf('## Voice and tone'));
+		});
+
+		it('gives the agent nothing of a design system beside the product that is not its package’s source: a fork', async () => {
+			await saved();
+			const fork = designSystemBeside(product, { '.dsnr/voice-and-tone.md': '# Voice and tone\n\n## Voice\n\nThe fork’s.\n' });
+			g(fork, 'remote', 'set-url', 'origin', 'git@github.com:someone/x.git');
+			expect((await call(CHANNELS.buildInCodebase, product, 'demo', 'v1', 'develop')).ok).toBe(true);
+			const task = readFileSync(join(home, 'prototype', 'demo', 'v1-into-code.md'), 'utf8');
+			expect(task).not.toContain('The fork’s.');
+			expect(task).not.toContain(fork);
 		});
 
 		it('reads the voice and tone from the design system’s folder when it is a folder of the product’s own repository, not from a checkout beside it', async () => {
@@ -1218,13 +1230,11 @@ describe('prototypes', () => {
 				descriptor,
 				JSON.stringify({ ...JSON.parse(readFileSync(descriptor, 'utf8')), designSystem: { package: 'x', folder: 'packages/ui' } }),
 			);
-			mkdirSync(join(product, 'packages', 'ui', '.dsnr'), { recursive: true });
-			writeFileSync(join(product, 'packages', 'ui', '.dsnr', 'voice-and-tone.md'), '# Voice and tone\n\n## Voice\n\nFrom the folder.\n');
+			makeDesignSystem(join(product, 'packages', 'ui'), 'x', { '.dsnr/voice-and-tone.md': '# Voice and tone\n\n## Voice\n\nFrom the folder.\n' });
 			// Committed, since an uncommitted change would stop the task.
 			g(product, 'add', '-A');
 			g(product, 'commit', '-q', '-m', 'the design system is a folder here');
-			mkdirSync(join(dirname(product), 'x', '.dsnr'), { recursive: true });
-			writeFileSync(join(dirname(product), 'x', '.dsnr', 'voice-and-tone.md'), '# Voice and tone\n\n## Voice\n\nFrom beside it.\n');
+			designSystemBeside(product, { '.dsnr/voice-and-tone.md': '# Voice and tone\n\n## Voice\n\nFrom beside it.\n' });
 			expect((await call(CHANNELS.buildInCodebase, product, 'demo', 'v1', 'develop')).ok).toBe(true);
 			const task = readFileSync(join(home, 'prototype', 'demo', 'v1-into-code.md'), 'utf8');
 			expect(task).toContain('From the folder.');
@@ -1605,8 +1615,7 @@ describe('one agent, one piece of work', () => {
 		await onItsBranch();
 		await call(CHANNELS.handOff, product, 'demo');
 		expect(task()).not.toContain('## Voice and tone');
-		mkdirSync(join(dirname(product), 'x', '.dsnr'), { recursive: true });
-		writeFileSync(join(dirname(product), 'x', '.dsnr', 'voice-and-tone.md'), '# Voice and tone\n\n## Voice\n\nCalm and exact.\n');
+		designSystemBeside(product, { '.dsnr/voice-and-tone.md': '# Voice and tone\n\n## Voice\n\nCalm and exact.\n' });
 		await call(CHANNELS.handOff, product, 'demo');
 		expect(task()).toContain("Where this product's own conventions say otherwise, the product's win.");
 		expect(task()).toContain('Calm and exact.');

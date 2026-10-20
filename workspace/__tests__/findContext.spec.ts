@@ -48,6 +48,7 @@ describe('the context, from the open folders', () => {
 			designSystem: { root: at('GitHub', 'ui'), how: 'named' },
 			designRepository: at('GitHub', 'flock-designer', 'projects'),
 			productRepository: null,
+			source: { state: 'usable', root: at('GitHub', 'ui') },
 			missing: [],
 		});
 	});
@@ -105,6 +106,7 @@ describe('the context, from the open folders', () => {
 			designSystem: null,
 			designRepository: null,
 			productRepository: null,
+			source: null,
 			missing: [
 				expect.stringMatching(/^No product is open/),
 				expect.stringMatching(/^No design system/),

@@ -1,10 +1,9 @@
-import { existsSync, statSync } from 'node:fs';
-import { basename, join } from 'node:path';
-import { DESCRIPTOR_PATH, designSystemCheckout, readDescriptor } from './descriptor';
-import { findDesignSystems } from '../designSystem/designSystems';
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
+import { DESCRIPTOR_PATH } from './descriptor';
 import { recordsRootFor } from './discovery';
-import { folderReads } from '../designSystem/folderReads';
 import { repositoryOf } from '../platform/git';
+import { type ProductDesignSystem, type SourceAnswers, designSystemIn, productDesignSystem } from './productDesignSystem';
 
 export type FoundHow = 'named' | 'open' | 'located';
 
@@ -14,32 +13,28 @@ export interface Context {
 	designRepository: string | null;
 	/** `owner/repo` from the product's `origin`, the same on every machine; null with no product, or one with no remote. */
 	productRepository: string | null;
+	/** The product's own design system, found and checked (`productDesignSystem`); null with no product. */
+	source: ProductDesignSystem | null;
 	missing: string[];
 }
 
-const isFolder = (p: string): boolean => existsSync(p) && statSync(p).isDirectory();
+/** Nothing answered yet: a design system that cannot be confirmed is asked about. */
+const NO_ANSWERS: Pick<SourceAnswers, 'of'> = { of: () => undefined };
 
-const designSystemIn = async (dir: string): Promise<string | null> => {
-	if (!isFolder(dir)) return null;
-	const found = await findDesignSystems(folderReads(dir), basename(dir)).catch(() => []);
-	const first = found[0];
-	return first === undefined ? null : first.folder === '' ? dir : join(dir, first.folder);
-};
-
-const namedBy = async (product: string): Promise<string | null> => {
-	try {
-		const named = designSystemCheckout(product, readDescriptor(product).designSystem);
-		return (await designSystemIn(named)) === null ? null : named;
-	} catch {
-		return null;
-	}
-};
-
-export const findContext = async ({ folders, located = null }: { folders: string[]; located?: string | null }): Promise<Context> => {
+export const findContext = async ({
+	folders,
+	located = null,
+	answers = NO_ANSWERS,
+}: {
+	folders: string[];
+	located?: string | null;
+	answers?: Pick<SourceAnswers, 'of'>;
+}): Promise<Context> => {
 	const product = folders.find((f) => existsSync(join(f, DESCRIPTOR_PATH))) ?? null;
 	let designSystem: Context['designSystem'] = null;
-	const named = product === null ? null : await namedBy(product);
-	if (named !== null) designSystem = { root: named, how: 'named' };
+	// The product's own, only once it is shown to be its package's source (or the person said to use it).
+	const source = product === null ? null : await productDesignSystem(product, answers);
+	if (source?.state === 'usable') designSystem = { root: source.root, how: 'named' };
 	for (const folder of folders) {
 		if (designSystem !== null) break;
 		if (folder === product) continue;
@@ -52,6 +47,7 @@ export const findContext = async ({ folders, located = null }: { folders: string
 	}
 	const designRepository = product === null ? null : recordsRootFor(product);
 	const missing = [
+		...(source?.state === 'refused' ? [source.why] : []),
 		...(product === null ? [`No product is open: open a product's folder, one with ${DESCRIPTOR_PATH}, to see its prototypes.`] : []),
 		...(designSystem === null ? ['No design system was found in the open folders: open its folder beside the product, or locate it.'] : []),
 		...(designRepository === null
@@ -59,5 +55,5 @@ export const findContext = async ({ folders, located = null }: { folders: string
 			: []),
 	];
 	const productRepository = product === null ? null : await repositoryOf(product);
-	return { product, designSystem, designRepository, productRepository, missing };
+	return { product, designSystem, designRepository, productRepository, source, missing };
 };

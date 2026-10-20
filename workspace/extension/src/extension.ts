@@ -12,7 +12,7 @@ import { Panels, hostApi } from './bridge';
 import { type LocalRun, handOff, openCode, shareCodebase, runLocally, updateBranch } from './codebase';
 import { startCore } from './core';
 import { moveLocationSetting } from './agentWindows';
-import { showFound, shownFrom } from './designSystem';
+import { showFound, shownFrom, askSource } from './designSystem';
 import { designSystemHost } from './designSystemHost';
 import { registerVoice } from './voice';
 import { errorText, valueOf } from '../../src/shared/result';
@@ -71,7 +71,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 
 	const designSystemAt = async (root: string) => (await findContext({ folders: [], located: root })).designSystem;
 	const findHere = async (): Promise<{ found: Context; unreadable: string | null }> => {
-		const at = await findContext({ folders: folders(), located: located() });
+		const at = await findContext({ folders: folders(), located: located(), answers: core.sourceAnswers });
 		const shown = await shownFrom(at.designSystem, located(), { show: (f) => showFound(core.designSystems, f), at: designSystemAt });
 		return { found: { ...at, designSystem: shown.designSystem }, unreadable: shown.unreadable };
 	};
@@ -87,7 +87,14 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 		if (core.designSystems.current()?.id !== before) design.anotherShown();
 		await trust();
 		placed.set({ context: found, unreadable });
+		void askAboutSource().catch(failed);
 	};
+	/** A design system beside the product that could not be confirmed: asked once, and what is found read again on an answer. */
+	const askedSources = new Set<string>();
+	const askAboutSource = async () => {
+		if (await askSource({ offer: vscodeOffer, answers: core.sourceAnswers, asked: askedSources }, found.source)) await refresh();
+	};
+	void askAboutSource().catch(failed);
 	await trust();
 	void github.restore().catch(failed);
 

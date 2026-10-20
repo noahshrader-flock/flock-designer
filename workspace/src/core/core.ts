@@ -7,6 +7,7 @@ import type { Ports } from './ports';
 import { agentsHere } from './services/agent/agents';
 import { CheckoutMemory } from './services/projects/checkoutMemory';
 import { DesignSystemsMemory } from './services/designSystem/designSystems';
+import { SourceAnswers } from './services/projects/productDesignSystem';
 import type { GitHubAccount } from '../codeHost/github';
 import { Installer } from './services/codebase/install';
 import { PrototypeServer } from './services/prototypes/prototypeServer';
@@ -42,6 +43,7 @@ export const createCore = ({ paths, emit, ports, github, pictureRecipe }: Shell)
 	prototypeServer: new PrototypeServer(),
 	installer: new Installer(),
 	designSystems: new DesignSystemsMemory(paths.designSystems),
+	sourceAnswers: new SourceAnswers(paths.designSystemSources),
 	storyPreviewsRoot: paths.storyPreviews,
 	changeBranchFiles: paths.changeBranches,
 	componentPicturesRoot: paths.componentPictures,

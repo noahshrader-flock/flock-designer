@@ -5,6 +5,8 @@ import type { ChangeKind } from '../shared/contract';
 export const appPaths = (userData: string) => ({
 	checkout: join(userData, 'checkout.json'),
 	designSystems: join(userData, 'design-system.json'),
+	/** What the person said of a design system that could not be confirmed as its package's source. */
+	designSystemSources: join(userData, 'design-system-sources.json'),
 	changeBranches: {
 		tokens: join(userData, 'token-branches.json'),
 		values: join(userData, 'value-branches.json'),

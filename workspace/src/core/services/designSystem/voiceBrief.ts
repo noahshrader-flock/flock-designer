@@ -2,7 +2,6 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { voiceIsWritten, voiceWithoutComments } from './voice';
-import { designSystemCheckout } from '../projects/descriptor';
 import { VOICE_FILE } from './voiceAndTone';
 import { errorText } from '../../../shared/result';
 const HEADING = '## Voice and tone';
@@ -32,10 +31,11 @@ export const voiceBrief = (text: string | null): string => {
 	].join('\n');
 };
 
+/** `designSystem`: the design system's own folder, as `usableDesignSystem` gives it. */
 export const designSystemFile =
-	(root: string) =>
+	(designSystem: string) =>
 	async (path: string): Promise<string | null> => {
-		const file = join(designSystemCheckout(root), path);
+		const file = join(designSystem, path);
 		return existsSync(file) ? readFileSync(file, 'utf8') : null;
 	};
 

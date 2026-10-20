@@ -1,6 +1,7 @@
 import { resolve, sep } from 'node:path';
 import type * as VsCode from 'vscode';
 import type { Context } from '../../src/core/services/projects/findContext';
+import type { SourceAnswers } from '../../src/core/services/projects/productDesignSystem';
 import { type DesignSystemsMemory, systemAt } from '../../src/core/services/designSystem/designSystems';
 import type { Catalog, CatalogComponent, ConnectedDesignSystem, TokenEdit } from '../../src/shared/contract';
 import { editsKept } from '../../src/shared/tokens';
@@ -29,6 +30,32 @@ export const showFound = async (
 	const shown = memory.current();
 	if (shown === null || !same(shown, system)) memory.add(system);
 	return null;
+};
+
+export const USE_IT = 'Use it';
+export const NOT_THIS_ONE = 'Not this one';
+
+/**
+ * Asks once whether to use a design system that could not be confirmed as its package's source, and keeps the answer;
+ * dismissed, it is not asked again in this window. True when an answer was kept, so what is found is read again.
+ */
+export const askSource = async (
+	{
+		offer,
+		answers,
+		asked,
+	}: { offer: (message: string, actions: string[]) => Promise<string | undefined>; answers: Pick<SourceAnswers, 'set'>; asked: Set<string> },
+	source: Context['source'],
+): Promise<boolean> => {
+	if (source?.state !== 'ask' || asked.has(source.key)) return false;
+	asked.add(source.key);
+	const chosen = await offer(
+		`The design system beside this product could not be confirmed as ${source.name}'s source: ${source.why}. Use it for prototypes and their guidance?`,
+		[USE_IT, NOT_THIS_ONE],
+	);
+	if (chosen !== USE_IT && chosen !== NOT_THIS_ONE) return false;
+	answers.set(source.key, chosen === USE_IT ? 'use' : 'refuse');
+	return true;
 };
 
 /** A branch handed to an agent, shown in the library's place, is not the library, so nothing tried is let go for it. */

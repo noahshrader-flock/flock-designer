@@ -6,7 +6,7 @@ import { fromBrief } from '../../../shared/brief';
 import { projectPath, prototypePagePath, prototypeSourcePath, sharedFilePath, sharedFilesOf } from '../../../shared/designPaths';
 import { commentsFromOthers, nextVersionName, othersHaveCommented } from '../../../shared/prototypeNames';
 import { MANIFEST_FILE, declaredTarget, productTarget, taskAccessibility } from '../accessibility/accessibilityBrief';
-import { designSystemCheckout, readDescriptor } from '../projects/descriptor';
+import { readDescriptor } from '../projects/descriptor';
 import { recordsRootFor } from '../projects/discovery';
 import { branchTip, commitsAfter, git, hasCommit, headCommit, isSafeBranchName, readTreeAt, repositoryOf } from '../platform/git';
 import { fetchBranch, freshTip } from '../platform/fetch';
@@ -41,6 +41,8 @@ export interface PrototypeWorkContext {
 	/** The store first, then GitHub when the store is a clone that lacks it. */
 	readDesignFile: (path: string) => Promise<string | null>;
 	esbuild: () => string | null;
+	/** The product's design system's folder, where its guidance and source may be read; null when none may be (`usableDesignSystem`). */
+	designSystemOf: (productRoot: string) => Promise<string | null>;
 }
 
 /**
@@ -259,7 +261,7 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 			// it (develop has no DSNR files, and the page must still follow the product).
 			productGuidance: has(join(code, descriptor.contextDir)) ?? has(join(root, descriptor.contextDir)),
 			// Its source matters as much as its guidance, for a page that redraws its components.
-			designSystemGuidance: has(designSystemCheckout(root, descriptor.designSystem)),
+			designSystemGuidance: await ctx.designSystemOf(root),
 			installedDesignSystem,
 			installedAgainstBase: await versionAgainst(root, commit, basedOn.branch),
 			sharedStandards: designRoot === null ? null : has(join(dirname(designRoot), 'standards')),
@@ -475,7 +477,10 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 
 	const accessibility = async (projectId: string, name: string): Promise<string> => taskAccessibility(skill, await target(projectId, name));
 
-	const voice = (root: string | null = ctx.productRoot()): Promise<string> => taskVoice(root === null ? async () => null : designSystemFile(root));
+	const voice = async (root: string | null = ctx.productRoot()): Promise<string> => {
+		const designSystem = root === null ? null : await ctx.designSystemOf(root);
+		return taskVoice(designSystem === null ? async () => null : designSystemFile(designSystem));
+	};
 
 	return {
 		dir,

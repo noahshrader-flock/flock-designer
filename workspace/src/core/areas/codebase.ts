@@ -10,7 +10,7 @@ import { accessibilityOf } from '../services/accessibility/accessibilityCheck';
 import { type CheckoutParts, guidePart, handoffTask, buildInCodebaseTask, updateBranchTask } from '../services/agent/agentTasks';
 import { againstBase } from '../services/codebase/againstBase';
 import { unfinishedWork } from '../services/codebase/checkoutClean';
-import { designSystemCheckout, readDescriptor } from '../services/projects/descriptor';
+import { readDescriptor } from '../services/projects/descriptor';
 import { recordsRootFor } from '../services/projects/discovery';
 import { assertReady, handTask } from '../services/agent/handOver';
 import { HANDOFF_FILE, HANDOFF_SKILL, commandLine, leftAlone } from '../services/codebase/engineeringHandoff';
@@ -29,6 +29,7 @@ export const codebaseArea = (d: CallsDeps) => {
 		agent,
 		agentShown,
 		chooseAgentNow,
+		designSystemOf,
 		checkout,
 		codebase,
 		ports,
@@ -65,15 +66,15 @@ export const codebaseArea = (d: CallsDeps) => {
 		return records === null ? null : dirname(records);
 	};
 	/** Named in the task, since a folder the agent has not been told about is one it never opens. */
-	const sharedGuidance = (canonical: string): string => {
+	const sharedGuidance = async (canonical: string): Promise<string> => {
 		const root = sharedRoot(canonical);
-		const designSystem = readDescriptor(canonical).designSystem;
+		const designSystem = await designSystemOf(canonical);
 		const named: Array<[string, string | null]> = [
 			["Shared agents (the product's shims point here)", root === null ? null : join(root, 'agents')],
 			['Shared skills (a `skills/…` path in any guidance is here)', root === null ? null : join(root, 'skills')],
 			['Shared standards', root === null ? null : join(root, 'standards')],
 			['Shared logging (how the product logs what went wrong)', root === null ? null : join(root, 'knowledge')],
-			["The design system's checkout (its guidance and source)", designSystemCheckout(canonical, designSystem)],
+			["The design system's checkout (its guidance and source)", designSystem],
 		];
 		const found = named.filter((n): n is [string, string] => n[1] !== null && existsSync(n[1]));
 		return found.length ? ['## Also yours to read (never change)', '', ...found.map(([what, dir]) => `- ${what}: \`${dir}\``)].join('\n') : '';
@@ -82,7 +83,7 @@ export const codebaseArea = (d: CallsDeps) => {
 	const checkoutParts = async (canonical: string, projectId: string, findings?: Parameters<typeof taskAccessibility>[2]): Promise<CheckoutParts> => ({
 		guide: guidePart(await readSkillText(GUIDE), sharedRoot(canonical)),
 		lightCheck: commandLine(readDescriptor(canonical).commands, 'check-iteration', projectId),
-		shared: sharedGuidance(canonical),
+		shared: await sharedGuidance(canonical),
 		accessibility: await codebaseAccessibility(canonical, findings),
 		voice: await work.voice(canonical),
 	});

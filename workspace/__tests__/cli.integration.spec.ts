@@ -1,12 +1,12 @@
 import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { main } from '../src/cli/dsnr';
 import { REPO, deps, recorded, run, setUpCliWorld, world } from './cliWorld';
 import { type Answer, fakeGitHub, refusal } from './fakes/github';
-import { g, installDesignSystem, makeProduct } from './fixtures';
+import { g, installDesignSystem, makeProduct, designSystemBeside } from './fixtures';
 
 setUpCliWorld();
 
@@ -37,8 +37,7 @@ describe('new-prototype', () => {
 	it('carries the design system’s voice and tone in the task when the design repository has it written, and nothing when it has none (T9)', async () => {
 		expect(await run('new-prototype', '--project', 'demo', '--title', 'Demo', '--note', 'A list')).toBe(0);
 		expect(world.out.join('\n')).not.toContain('## Voice and tone');
-		mkdirSync(join(dirname(world.product), 'x', '.dsnr'), { recursive: true });
-		writeFileSync(join(dirname(world.product), 'x', '.dsnr', 'voice-and-tone.md'), '# Voice and tone\n\n## Voice\n\nCalm and exact.\n');
+		designSystemBeside(world.product, { '.dsnr/voice-and-tone.md': '# Voice and tone\n\n## Voice\n\nCalm and exact.\n' });
 		world.out = [];
 		expect(await run('new-prototype', '--project', 'demo', '--note', 'Another idea')).toBe(0);
 		const task = world.out.join('\n');

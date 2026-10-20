@@ -351,6 +351,15 @@ export const localIdentity = async (root: string): Promise<Author> => {
  */
 export const originUrl = async (root: string): Promise<string | null> => (await git(root, ['remote', 'get-url', 'origin']).catch(() => '')) || null;
 
+/**
+ * `owner/repo` as the clone's own config names its origin, before any `insteadOf` rule rewrites where fetches go: what it
+ * says it is a clone of, which is what proving its identity compares.
+ */
+export const claimedRepository = async (root: string): Promise<string | null> => {
+	const url = await git(root, ['config', '--get', 'remote.origin.url']).catch(() => '');
+	return url ? parseRemote(url) : null;
+};
+
 /** `owner/repo`, the same on every machine. */
 export const repositoryOf = async (root: string): Promise<string | null> => {
 	const origin = await originUrl(root);

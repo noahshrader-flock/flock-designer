@@ -1,0 +1,134 @@
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { findContext } from '../src/core/services/projects/findContext';
+import { SourceAnswers, packageRepository, productDesignSystem, usableDesignSystem } from '../src/core/services/projects/productDesignSystem';
+import { g, makeProductFiles } from './fixtures';
+
+let base: string;
+let coke: string;
+let ui: string;
+let answers: SourceAnswers;
+
+/** The product names @acme/ui, so the design system is looked for beside it, as `ui`. */
+const product = () => {
+	mkdirSync(coke, { recursive: true });
+	makeProductFiles(coke);
+	const file = join(coke, '.dsnr', 'workspace.json');
+	writeFileSync(file, JSON.stringify({ ...(JSON.parse(readFileSync(file, 'utf8')) as object), designSystem: { package: '@acme/ui' } }));
+};
+const install = (pkg: Record<string, unknown>) => {
+	mkdirSync(join(coke, 'node_modules', '@acme', 'ui'), { recursive: true });
+	writeFileSync(join(coke, 'node_modules', '@acme', 'ui', 'package.json'), JSON.stringify({ name: '@acme/ui', version: '1.2.3', ...pkg }));
+};
+/** A clone of `origin`, with a release tag when given. */
+const library = ({
+	name = '@acme/ui',
+	origin = 'git@github.com:acme/ui.git',
+	tag = 'v1.2.3',
+}: { name?: string; origin?: string | null; tag?: string | null } = {}) => {
+	mkdirSync(join(ui, 'src'), { recursive: true });
+	writeFileSync(join(ui, 'package.json'), JSON.stringify({ name }));
+	writeFileSync(join(ui, 'src', 'Button.stories.tsx'), "export default { title: 'Inputs/Button' };\n");
+	g(ui, 'init', '-q', '-b', 'main');
+	g(ui, 'add', '.');
+	g(ui, 'commit', '-q', '-m', 'library');
+	if (origin) g(ui, 'remote', 'add', 'origin', origin);
+	if (tag) g(ui, 'tag', tag);
+};
+
+beforeEach(() => {
+	base = mkdtempSync(join(tmpdir(), 'fdw-source-'));
+	coke = join(base, 'coke');
+	ui = join(base, 'ui');
+	answers = new SourceAnswers(join(base, 'answers.json'));
+	product();
+});
+afterEach(() => rmSync(base, { recursive: true, force: true }));
+
+describe('the product’s design system, proven to be its package’s source', () => {
+	it('is used when its name, its origin and a release tag for the installed version all say so', async () => {
+		library();
+		install({ repository: { type: 'git', url: 'git+https://github.com/acme/ui.git' } });
+		expect(await productDesignSystem(coke, answers)).toEqual({ state: 'usable', root: ui });
+		expect((await findContext({ folders: [coke], answers })).designSystem).toEqual({ root: ui, how: 'named' });
+	});
+
+	it('is judged by the origin the clone names, not where a git insteadOf rule sends its fetches', async () => {
+		library();
+		g(ui, 'config', `url.${join(base, 'mirror.git')}.insteadOf`, 'git@github.com:acme/ui.git');
+		install({ repository: 'github:acme/ui' });
+		expect(await productDesignSystem(coke, answers)).toEqual({ state: 'usable', root: ui });
+	});
+
+	it('is refused, in words, when it is another package, and nothing beside the product is shown in its place', async () => {
+		library({ name: '@other/ui' });
+		install({ repository: 'github:acme/ui' });
+		expect(await productDesignSystem(coke, answers)).toEqual({
+			state: 'refused',
+			root: ui,
+			why: "../ui is not @acme/ui's source: its package is @other/ui.",
+		});
+		const found = await findContext({ folders: [coke], answers });
+		expect(found.designSystem).toBeNull();
+		expect(found.missing[0]).toBe("../ui is not @acme/ui's source: its package is @other/ui.");
+		expect(await usableDesignSystem(coke, answers)).toBeNull();
+	});
+
+	it('is refused when it is a fork: the same name, another repository', async () => {
+		library({ origin: 'git@github.com:someone/ui.git' });
+		install({ repository: 'github:acme/ui' });
+		expect(await productDesignSystem(coke, answers)).toEqual({
+			state: 'refused',
+			root: ui,
+			why: "../ui is not @acme/ui's source: it is a clone of someone/ui, and the installed @acme/ui comes from acme/ui.",
+		});
+	});
+
+	it('asks when it cannot be confirmed, keeps the answer either way, and asks again once the installed version changes', async () => {
+		library({ tag: null });
+		install({ repository: 'acme/ui' });
+		const asked = await productDesignSystem(coke, answers);
+		expect(asked).toMatchObject({ state: 'ask', root: ui, name: '@acme/ui', why: '../ui has no release tag for 1.2.3, the version installed' });
+		const key = asked.state === 'ask' ? asked.key : '';
+		answers.set(key, 'use');
+		expect(await productDesignSystem(coke, answers)).toEqual({ state: 'usable', root: ui });
+		answers.set(key, 'refuse');
+		expect(await productDesignSystem(coke, answers)).toEqual({ state: 'refused', root: ui, why: "You chose not to use ../ui as @acme/ui's source." });
+		install({ repository: 'acme/ui', version: '1.3.0' });
+		expect(await productDesignSystem(coke, answers)).toMatchObject({
+			state: 'ask',
+			why: '../ui has no release tag for 1.3.0, the version installed',
+		});
+	});
+
+	it('asks, saying why, when the installed package names no repository or the clone has no origin', async () => {
+		library();
+		install({});
+		expect(await productDesignSystem(coke, answers)).toMatchObject({ state: 'ask', why: 'the installed @acme/ui names no repository' });
+	});
+
+	it('is used as named when nothing is installed: there is nothing yet to be the source of', async () => {
+		library({ tag: null, origin: null });
+		expect(await productDesignSystem(coke, answers)).toEqual({ state: 'usable', root: ui });
+	});
+
+	it('is none when nothing is beside the product', async () => {
+		expect(await productDesignSystem(coke, answers)).toEqual({ state: 'none' });
+	});
+
+	it('reads a package’s repository in each form npm takes, and no other host', () => {
+		for (const field of [
+			'acme/ui',
+			'github:acme/ui',
+			'git+https://github.com/acme/ui.git',
+			'git+ssh://git@github.com/acme/ui.git',
+			'https://github.com/acme/ui',
+			{ url: 'git@github.com:acme/ui.git' },
+		])
+			expect(packageRepository(field), JSON.stringify(field)).toBe('acme/ui');
+		for (const field of ['gitlab:acme/ui', 'https://gitlab.com/acme/ui.git', 42, null, {}])
+			expect(packageRepository(field), JSON.stringify(field)).toBeNull();
+	});
+});
