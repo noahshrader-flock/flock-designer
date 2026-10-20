@@ -1581,7 +1581,9 @@ describe('one agent, one piece of work', () => {
 		const updating = readFileSync(join(home, 'prototype', 'demo', 'codebase-update.md'), 'utf8');
 		expect(updating).toContain(`${branch} is 1 commit behind develop. Merging develop into it conflicts in README.md.`);
 		expect(updating).toContain(`git merge --no-ff ${latest}`);
-		expect(updating).toContain('never rebase, reset or rewrite its history, and never push');
+		expect(updating).toContain('Merge only: never rebase it or rewrite its history.');
+		// Said once, in the ending every checkout task has.
+		expect(updating.split('Never push.').length).toBe(2);
 		expect(updating).toContain('git merge --abort');
 		expect(updating).toContain('git reset --hard refs/dsnr/checkpoint/demo');
 		await call(CHANNELS.handOff, product, 'demo');

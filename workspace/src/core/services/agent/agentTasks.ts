@@ -114,7 +114,7 @@ export const updateBranchTask = ({ against, checkpoint }: { against: BranchAgain
 		'## This run',
 		'',
 		`- The checkout is on \`${against.branch}\`, with nothing uncommitted. Stay on it.`,
-		`- ${againstBaseWords(against)} Merge \`${against.latest}\` into it with \`git merge --no-ff ${against.latest}\`. Merge only: never rebase, reset or rewrite its history, and never push.`,
+		`- ${againstBaseWords(against)} Merge \`${against.latest}\` into it with \`git merge --no-ff ${against.latest}\`. Merge only: never rebase it or rewrite its history.`,
 		...(against.conflicts.length > 0
 			? [
 					`- Resolve each conflict so both sides' intent survives: the work's, and what ${against.base} changed. Never take one side whole to be done with it. For each file, say what you decided and why.`,

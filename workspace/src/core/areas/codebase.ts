@@ -19,6 +19,11 @@ import { continueWork, recordHandoff, recordPath, recordPreview, recordedWork } 
 import { GUIDE, MOVE_SKILL, ROUTE_SKILL, buildInCodebaseLead } from '../services/prototypes/prototype';
 import { pullRequestText } from '../services/codebase/share';
 
+/** What acts on codebase work in the checkout itself is refused off its branch, saying `why`. */
+const onTheBranch = async (canonical: string, branch: string, why: string): Promise<void> => {
+	if ((await readCheckout(canonical)).branch !== branch) throw new Error(`Open ${branch} first: ${why}.`);
+};
+
 export const codebaseArea = (d: CallsDeps) => {
 	const {
 		agent,
@@ -144,7 +149,7 @@ export const codebaseArea = (d: CallsDeps) => {
 			const { canonical, recordsRoot, descriptor } = workIn;
 			const codebaseRecord = await recordedWork(canonical, recordsRoot, descriptor, projectId, 'codebase');
 			const { branch } = codebaseRecord;
-			if ((await readCheckout(canonical)).branch !== branch) throw new Error(`Open ${branch} first: a handoff checks the work where it is.`);
+			await onTheBranch(canonical, branch, 'a handoff checks the work where it is');
 			const skill = await readSkillText(HANDOFF_SKILL);
 			const parts = await checkoutParts(canonical, projectId);
 			const missingRoute = codebaseRecord.route ? null : { skill: await readSkillText(ROUTE_SKILL), recordFile: recordPath(recordsRoot, projectId) };
@@ -185,7 +190,7 @@ export const codebaseArea = (d: CallsDeps) => {
 		handCodebaseUpdate: async (workIn: CheckedCheckout, projectId: string): Promise<Handed> => {
 			const { canonical, recordsRoot, descriptor } = workIn;
 			const { branch } = await recordedWork(canonical, recordsRoot, descriptor, projectId, 'codebase');
-			if ((await readCheckout(canonical)).branch !== branch) throw new Error(`Open ${branch} first: it is brought up to date where it is.`);
+			await onTheBranch(canonical, branch, 'it is brought up to date where it is');
 			const unfinished = await unfinishedWork(canonical, basename(canonical));
 			if (unfinished !== null) throw new Error(unfinished);
 			const against = await againstBase(canonical, branch);
