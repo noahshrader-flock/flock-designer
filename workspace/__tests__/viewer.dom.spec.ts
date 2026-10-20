@@ -510,7 +510,7 @@ describe('in DSNR’s review tab, in VS Code', () => {
 		await open({ ask: (name, args) => (seen.push([name, args]), answering.ask(name, args)) });
 		await settle();
 		expect(seen).toContainEqual(['baseBehind', ['prototype/demo/v1']]);
-		await press(button('Behind latest'));
+		await press(button('3 behind latest'));
 		expect(document.body.textContent).toContain('Modeled on develop at aaaaaaa');
 		expect(document.body.textContent).toContain('develop has 3 newer commits since this version was made.');
 		await press(button('Refresh to latest'));

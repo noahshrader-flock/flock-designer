@@ -9,8 +9,8 @@ import { type Relay, behindIn } from './relay';
 
 /**
  * In VS Code's review tab only, and only when the version's base is behind its branch: nothing at all while it is current.
- * Said the same whatever the branch or the count, which the dialog it opens gives, with Refresh to latest, which hands the
- * rebuild to the agent. `branch` is the version's key.
+ * Said the same whatever the branch, which the dialog it opens gives, with Refresh to latest, which hands the rebuild to
+ * the agent. `branch` is the version's key.
  */
 export const BehindLatest = ({ relay, branch }: { relay: Relay; branch: string }) => {
 	const [behind, setBehind] = useState<BaseBehind | null>(null);
@@ -33,7 +33,7 @@ export const BehindLatest = ({ relay, branch }: { relay: Relay; branch: string }
 	return (
 		<>
 			<span className="behind-latest">
-				<LinkButton onPress={() => setOpen(true)}>Behind latest</LinkButton>
+				<LinkButton onPress={() => setOpen(true)}>{`${behind.behind} behind latest`}</LinkButton>
 			</span>
 			{open && (
 				<Dialog title={`Modeled on ${behind.branch} at ${behind.commit.slice(0, 7)}`} onClose={() => setOpen(false)}>

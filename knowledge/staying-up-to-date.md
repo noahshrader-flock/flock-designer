@@ -39,9 +39,10 @@ DSNR never merges anything itself. It tells you, and the agent does it in front 
 
 ## Keep a prototype current
 
-A prototype is modeled on a commit of the product. When that branch has moved on, the review bar, beside the version, says
-**Behind latest**. Press it to see which branch and how many commits, then **Refresh to latest**: the agent rebuilds the prototype on
-the latest code, in place. Its comments stay where they were. A prototype never conflicts: it is rebuilt, not merged.
+A prototype is modeled on a commit of the product. When that branch has moved on, the review bar, beside the version,
+says how many commits it is behind, for example "3 behind latest". Press it to see which branch, then **Refresh to
+latest**: the agent rebuilds the prototype on the latest code, in place. Its comments stay where they were. A prototype
+never conflicts: it is rebuilt, not merged.
 
 ## What DSNR never does to your checkout
 
