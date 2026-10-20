@@ -1,6 +1,6 @@
 import type { Work } from '../../../shared/contract';
 import { NOT_READY_LINE, READY_LINE } from '../../../shared/handoff';
-import type { PrototypeBuild, PrototypeSources } from '../prototypes/prototype';
+import { type PrototypeBuild, type PrototypeSources, WORKFLOW } from '../prototypes/prototype';
 import { HOST } from '../../../shared/vocabulary';
 import { MOST_ROUNDS } from '../accessibility/buildCheck';
 
@@ -18,6 +18,7 @@ export const guidePart = (guide: string, sharedRoot: string | null): string =>
 		'## How to build UI here: always, before anything else',
 		'',
 		'This is part of every task, so it is never skipped. Follow it in full. Where the skill below says something more specific for this run, the skill below wins.',
+		`Then read \`${sharedRoot === null ? WORKFLOW : `${sharedRoot}/${WORKFLOW}`}\` in full: DSNR's workflow on top of this guide (the project folder, the brief, the context receipt, the reviews). It holds for this task too, and the skill below wins where it is more specific.`,
 		'If nobody is there to answer a question, do not stop to ask: make the call, and list it under the product questions you had to guess at when you finish.',
 		'',
 		(sharedRoot === null ? guide : guide.replaceAll('`../', `\`${sharedRoot}/`)).trim(),

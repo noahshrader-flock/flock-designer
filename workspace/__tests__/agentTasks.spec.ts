@@ -152,6 +152,11 @@ describe('the builder’s guide, in every task (so no run depends on an agent ch
 		expect(GUIDE).toContain('If nobody is there to answer a question');
 	});
 
+	it('sends the agent to DSNR’s workflow definition too, by a path that names a real file, so no step depends on it being found', () => {
+		expect(GUIDE).toContain('`/d/agents/dsnr.md`');
+		expect(guidePart('A.', null)).toContain('`agents/dsnr.md`');
+	});
+
 	it('points its links at the shared folder on this machine, so a task copied anywhere still names real files', () => {
 		expect(GUIDE).toContain('`/d/standards/non-negotiables.md`');
 		expect(GUIDE).not.toContain('`../');
