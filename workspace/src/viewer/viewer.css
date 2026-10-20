@@ -28,7 +28,7 @@ body {
 
 /* A step below the buttons beside it: said in passing, not something to do. Plain words need more room from a button's edge than buttons do from each other. */
 .viewer-bar .behind-latest {
-	margin-inline-end: var(--dsnr-space-2);
+	margin-inline-end: var(--dsnr-space-5);
 	font-size: var(--dsnr-text-small);
 	white-space: nowrap;
 }
