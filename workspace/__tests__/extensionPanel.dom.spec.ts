@@ -994,6 +994,55 @@ describe('the projects as a list or a grid', () => {
 		expect(viewMenu()).toBeNull();
 	});
 
+	describe('a prototype started here and not saved yet', () => {
+		const STARTED = {
+			id: 'widgets',
+			title: 'Widget explorer',
+			folder: null,
+			records: [],
+			people: [],
+			localOnly: true,
+			work: [projectWork({ name: 'v1', branch: 'prototype/widgets/v1', createdAt: '2026-10-20T10:00:00Z', building: true })],
+		};
+		const started = () =>
+			cards()
+				.find((c) => c.querySelector('[data-part="meta"]')?.textContent === 'Widget explorer')!
+				.closest('li') as HTMLElement;
+
+		it('says Building… where its name goes, shimmers, its name below, with only Delete… in its menu, and opens nothing', async () => {
+			await showOpen(OPEN, [STARTED, ...SAMPLE_PROJECTS]);
+			expect(started().querySelector('[data-part="name"]')?.textContent).toBe('Building…');
+			expect(started().querySelector('[data-part="picture"]')?.getAttribute('data-loading')).toBe('true');
+			await press(started().querySelector('[aria-label="Project actions"]') as HTMLElement);
+			expect(allByRole('menuitem').map((i) => i.textContent)).toEqual(['Delete…']);
+			await key('Escape');
+			await press(started().querySelector('[data-part="name"]') as HTMLElement);
+			expect(lastAsk()?.[0]).not.toBe('openReview');
+		});
+
+		it('is deleted saying nothing of it was shared, once its name is typed', async () => {
+			await showOpen(OPEN, [STARTED, ...SAMPLE_PROJECTS]);
+			await press(started().querySelector('[aria-label="Project actions"]') as HTMLElement);
+			await press(menuItem(allByRole('menuitem'), 'Delete…'));
+			expect(dialog()?.textContent).toContain('This deletes Widget explorer. It was started here and not saved yet, so nothing of it was shared.');
+			expect(dialog()?.textContent).not.toContain('Its comments stay on GitHub');
+			await type(fieldNamed<HTMLInputElement>('Type Widget explorer to delete it', dialog()!), 'Widget explorer');
+			await press(dialog()!.querySelector('button[type="submit"]') as HTMLButtonElement);
+			expect(sent.filter((m) => m.name === 'deleteProject').at(-1)?.args).toEqual(['widgets', 'Widget explorer']);
+		});
+
+		it('is not counted, nor opened, beside a version already saved: the project opens at its newest saved one', async () => {
+			const more = SAMPLE_PROJECTS.map((p, at) =>
+				at === 0 ? { ...p, work: [...p.work, projectWork({ name: 'v4', branch: 'prototype/alert-history/v4', building: true })] } : p,
+			);
+			await showOpen(OPEN, more);
+			const card = cards().find((c) => c.querySelector('[data-part="name"]')?.textContent === 'Alert history') as HTMLElement;
+			expect(card.querySelector('[data-part="meta"]')?.textContent).toBe('3 versions');
+			await press(card.querySelector('[data-part="name"]') as HTMLElement);
+			expect(lastAsk()).toEqual(['openReview', ['alert-history']]);
+		});
+	});
+
 	it('shows each project as a card in a grid: its picture, its name and what it has, with its comments as a badge', async () => {
 		await showOpen();
 		expect(cards().map((c) => c.querySelector('[data-part="name"]')?.textContent)).toEqual([

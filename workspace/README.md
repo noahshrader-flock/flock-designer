@@ -223,8 +223,10 @@ review**.
 anything is asked, what stands in the way (no product open, Claude Code missing or signed out), then opens a dialog in
 the panel for the name, what it should explore (as many lines as it takes) and its folder, then says if the product's
 packages are not installed (with Install packages when it says how), and hands its build to Claude Code in this window,
-from the branch the product is on, with the task typed in: press Enter there. DSNR saves it when it is built, and its
-picture appears in the list. The command can also be given its answers
+from the branch the product is on, with the task typed in: press Enter there. Until its first page is saved it is this
+machine's alone: its card says Building… where the name goes and shimmers, with only Delete… in its menu; its record
+waits beside its built files (`pendingPrototypes`), and the records sync holds its folder back. The first save records
+it as it was started and shares it, and its picture appears in the list. The command can also be given its answers
 (`{ title, task, folder }`), as **DSNR: Open a prototype for review** can be given its review, so a keybinding or another
 extension can run them; called that way, a failure is also returned to the caller. The `.vsix` carries esbuild, which
 builds a prototype's page, for the machine it was packaged on.

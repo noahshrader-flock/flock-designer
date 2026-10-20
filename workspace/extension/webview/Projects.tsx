@@ -7,7 +7,7 @@ import { plural } from '../../src/shared/plural';
 import { useCover } from './hooks/useCover';
 import { matchesProject, openCommentsOf } from '../../src/shared/projectList';
 import { type CodebaseAction, type PanelDialog, reviewsOf } from '../src/messages';
-import { workOf } from '../../src/shared/work';
+import { onlyBuilding, savedVersions, workOf } from '../../src/shared/work';
 import {
 	type ProductGroup,
 	type Scope,
@@ -33,7 +33,7 @@ import { Collection, CollectionItem } from '../../src/ui/Collection';
 import { asks } from './host';
 
 const meta = (p: Project, labels: string[]) => {
-	const versions = workOf(p.work, 'prototype').length;
+	const versions = savedVersions(p.work).length;
 	return [...(versions > 0 ? [plural(versions, 'version')] : []), ...labels].join(' · ');
 };
 
@@ -72,22 +72,25 @@ const ProjectItem = ({ project, labels, onDialog }: { project: Project; labels: 
 		...next,
 	];
 	const code: MenuItem[] = inCode ? [{ label: 'View on GitHub', icon: 'github', onSelect: () => onCodebase('open-code') }] : [];
+	const remove: MenuItem = { label: 'Delete…', icon: 'trash', onSelect: () => onDialog({ kind: 'delete', projectId: id }) };
 	const folder: MenuItem[] = [
 		{ label: 'Rename…', icon: 'edit', onSelect: () => onDialog({ kind: 'rename', projectId: id }) },
 		{ label: 'Assign folder…', icon: 'folder', onSelect: () => onDialog({ kind: 'assign', projectId: id }) },
-		{ label: 'Delete…', icon: 'trash', onSelect: () => onDialog({ kind: 'delete', projectId: id }) },
+		remove,
 	];
-	const sections = [copy, pages, runs, code, folder].filter((group) => group.length > 0).map((group) => ({ items: group }));
+	// Started here and not saved yet: it says so where its name goes, shimmers, and can only be deleted.
+	const building = onlyBuilding(project);
+	const sections = (building ? [[remove]] : [copy, pages, runs, code, folder]).filter((group) => group.length > 0).map((group) => ({ items: group }));
 	const press = newest ? () => void asks().openReview(id) : inCode ? () => onCodebase('open-code') : undefined;
 	const shared = {
-		name: project.title,
-		meta: meta(project, labels),
+		name: building ? 'Building…' : project.title,
+		meta: building ? project.title : meta(project, labels),
 		context: { webviewSection: 'project', projectId: id, preventDefaultContextMenuItems: true },
 		...(press ? { onOpen: press } : {}),
 		current: shown.projects.includes(id),
 		actions: <Menu label="Project actions" size="small" sections={sections} />,
 	};
-	return <CollectionItem {...shared} picture={{ src: cover.picture, loading: cover.waiting }} badge={badge} />;
+	return <CollectionItem {...shared} picture={{ src: cover.picture, loading: building || cover.waiting }} badge={badge} />;
 };
 
 const ByFolder = ({ projects, children }: { projects: Project[]; children: (group: Project[], label: string) => ReactNode }) => {

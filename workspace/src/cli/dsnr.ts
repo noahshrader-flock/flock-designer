@@ -7,6 +7,7 @@ import { firstHeading } from '../shared/brief';
 import { projectPath, prototypePagePath, prototypeSourcePath, prototypeKey } from '../shared/designPaths';
 import { commandShown, workLabel } from '../shared/work';
 import { writeCommentsExport } from '../core/services/prototypes/commentsExport';
+import { startedHere } from '../core/services/prototypes/pendingPrototypes';
 import { DESCRIPTOR_PATH } from '../core/services/projects/descriptor';
 import type { GitHubApi } from '../codeHost/github';
 import { loginOf } from '../codeHost/github';
@@ -243,7 +244,7 @@ const savedPage = async (deps: CliDeps, values: { project?: string; name?: strin
 	return {
 		github: deps.github,
 		ref: await designRefOf(deps),
-		...(await recordsFrom(designRoot)),
+		...(await recordsFrom(designRoot, startedHere(deps.prototypesRoot))),
 		projectId,
 		name,
 		designRoot,
@@ -505,7 +506,12 @@ export const main = async (argv: string[], deps: CliDeps): Promise<number> => {
 		const made = await work.start(root, { projectId, title, note, branch, me: await meOf(designRoot, deps.github) });
 		const text = await buildTask(skill, made.name, made.name, note);
 		deps.out(
-			taskText(`Recorded ${projectId} ${made.name}. ${made.modeledOn} Your task follows.`, text, saveCommand(made.name), publishCommand(made.name)),
+			taskText(
+				`Started ${projectId} ${made.name}: it is recorded when it is saved. ${made.modeledOn} Your task follows.`,
+				text,
+				saveCommand(made.name),
+				publishCommand(made.name),
+			),
 		);
 		return 0;
 	} catch (err) {

@@ -7,10 +7,11 @@ import { projectTitle, writeCommentsExport } from '../services/prototypes/commen
 import { readDescriptor } from '../services/projects/descriptor';
 import { readWork } from '../services/projects/workRecords';
 import { listProjects } from '../services/projects/listProjects';
+import { pendingHere } from '../services/prototypes/pendingPrototypes';
 import { ProfileNames } from '../services/publishing/profileNames';
 
 export const reviewArea = (d: CallsDeps) => {
-	const { designRepos, github, opened, publisher, recordsRootOf, signedInLogin, trustedRecords, trustedRoot } = d;
+	const { designRepos, github, opened, prototypesRoot, publisher, recordsRootOf, saveBuilt, signedInLogin, trustedRecords, trustedRoot } = d;
 	const profiles = new ProfileNames((path) => github.api(path));
 	/** Best effort: reading comments never fails because a file could not be written; the Address button, which depends on it, is strict. */
 	const exportComments = (projectId: string, branch: string, comments: ReviewComment[]): void => {
@@ -37,7 +38,15 @@ export const reviewArea = (d: CallsDeps) => {
 			// remembered from an earlier window does not count.
 			const remembered = trustedRoot();
 			const root = remembered !== null && opened.has(remembered) ? remembered : null;
-			const projects = await listProjects({ root, login: signedInLogin(), remote: () => designRepos.now().listProjects(), recordsRootOf });
+			// A start built here and never saved (its watcher gone with its window) is saved now, as opening a page saves it.
+			if (root !== null) for (const r of pendingHere(prototypesRoot)) await saveBuilt(r.projectId, r.name, null).catch(() => 'waiting');
+			const projects = await listProjects({
+				root,
+				login: signedInLogin(),
+				remote: () => designRepos.now().listProjects(),
+				recordsRootOf,
+				prototypesRoot,
+			});
 			void publisher.publish();
 			return profiles.nameEveryone(projects);
 		},

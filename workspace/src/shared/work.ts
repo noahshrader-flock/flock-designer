@@ -35,6 +35,12 @@ export const projectCodeLink = (project: {
 	return codebase ? codeLink(codebase) : null;
 };
 
+/** The versions with a page, newest first: one still building has none, and nothing of it is shared. */
+export const savedVersions = (work: ProjectWork[]): ProjectWork[] => workOf(work, 'prototype').filter((i) => !i.building);
+
+/** Started here and nothing of it saved yet: it has no page to open and nothing of it is shared. */
+export const onlyBuilding = (project: Pick<Project, 'work'>): boolean => project.work.length > 0 && project.work.every((i) => i.building === true);
+
 export const workKind = (i: Pick<ProjectWork, 'name'>): WorkKind => (i.name === 'codebase' ? 'codebase' : 'prototype');
 
 /** Newest first, so the first is what "View prototype" and "View codebase" open. */

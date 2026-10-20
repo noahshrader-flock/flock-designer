@@ -22,9 +22,12 @@ import {
 	assertPrototypeName,
 	contentHashOf,
 	recordVersionFrom,
-	recordPrototype,
+	recordStarted,
+	startPrototype,
 	readRecords,
 } from './prototype';
+import { dropPending, keepPending, pendingOf } from './pendingPrototypes';
+import { designRepositoryMissing } from '../projects/discovery';
 import { bundleCommand, runBundle, shellLine, writeBundleScript, writeCheckScript } from './prototypeBundle';
 import { type CheckConfig, checkedAsSaved } from '../accessibility/buildCheck';
 import { prototypeMeasureName, recordFiles } from '../accessibility/accessibilityRecord';
@@ -131,7 +134,11 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		return text;
 	};
 
-	const records = (projectId: string): Promise<Work[]> => readRecords({ read: ctx.readDesignFile }, projectId);
+	/** The shared records and this machine's starts not saved yet, so every reader sees a started version as it will be. */
+	const records = async (projectId: string): Promise<Work[]> => {
+		const shared = await readRecords({ read: ctx.readDesignFile }, projectId);
+		return [...shared, ...pendingOf(prototypesRoot, projectId).filter((p) => !shared.some((i) => i.name === p.name))];
+	};
 	const title = async (projectId: string): Promise<string> =>
 		fromBrief(projectId, await ctx.readDesignFile(projectPath(projectId, 'brief.md'))).title;
 	const record = async (projectId: string, name: string): Promise<Work | undefined> => (await records(projectId)).find((i) => i.name === name);
@@ -178,6 +185,8 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		assertUsableProjectId(projectId);
 		const why = notReady(root);
 		if (why !== null) throw new Error(why);
+		// The agent saves into the design repository's clone, so without one a start could never be saved.
+		if (ctx.recordsRootOf(root) === null) throw new Error(designRepositoryMissing(root));
 		if (typeof name !== 'string' || !name.trim()) throw new Error('A prototype needs a name.');
 		const tip = await freshTip(root, branch);
 		// Everything read before the record is written, so a read that fails leaves nothing recorded.
@@ -185,7 +194,16 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		// The clone's folder, as this machine names it, and the repository it is a clone of, as every machine does.
 		const product = await repositoryOf(root);
 		const basedOn = { repository: basename(root), branch, commit: tip.commit, ...(product ? { product } : {}) };
-		const made = await recordPrototype(ctx.store(), { projectId, title: name.slice(0, 200), note: String(note).slice(0, 8000), me, basedOn, folder });
+		const made = await startPrototype(ctx.store(), {
+			projectId,
+			title: name.slice(0, 200),
+			note: String(note).slice(0, 8000),
+			me,
+			basedOn,
+			folder,
+			pending: pendingOf(prototypesRoot, projectId).map((p) => p.name),
+		});
+		keepPending(prototypesRoot, made);
 		return { ...made, modeledOn: [`Modeled on ${branch} at ${tip.commit.slice(0, 7)}.`, ...said].join(' ') };
 	};
 
@@ -334,7 +352,7 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 	};
 
 	/** Shared files first, so a page is never there without them. */
-	const keep = async (projectId: string, name: string, html: string): Promise<void> => {
+	const writePage = async (projectId: string, name: string, html: string): Promise<void> => {
 		const store = ctx.store();
 		for (const n of sharedFilesOf(html)) {
 			const local = join(sharedDir, `${n}.datauri`);
@@ -350,6 +368,13 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 			const { files } = recordFiles(checked, await ctx.readDesignFile(projectPath(projectId, 'review.md')));
 			for (const f of files) await store.write(f.path, f.text, `${projectId}: accessibility of prototype ${name}`);
 		}
+	};
+	/** A version started here is recorded with its first page, and its start cleared once it is. */
+	const keep = async (projectId: string, name: string, html: string): Promise<void> => {
+		const started = pendingOf(prototypesRoot, projectId).find((p) => p.name === name);
+		if (!started) return writePage(projectId, name, html);
+		await recordStarted(ctx.store(), started, () => writePage(projectId, name, html));
+		dropPending(prototypesRoot, projectId, name);
 	};
 
 	/** Built from its source when there is one, so it is what the source makes. */

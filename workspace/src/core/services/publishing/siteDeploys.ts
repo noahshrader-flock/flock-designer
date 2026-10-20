@@ -16,10 +16,13 @@ export const siteDeploys = ({
 	github,
 	designClone,
 	ref,
+	started,
 }: {
 	github: Pick<GitHubAccount, 'state' | 'api'>;
 	designClone: () => string | null;
 	ref: () => RepoRef;
+	/** As `syncRecords` takes it. */
+	started: (projectId: string) => boolean;
 }) => {
 	// One deploy of a page at a time, and once more if asked again meanwhile: what changed since may have missed its push.
 	const running = coalescingByKey<string>();
@@ -35,8 +38,10 @@ export const siteDeploys = ({
 		);
 	};
 	const page = (projectId: string, name: string): void =>
-		inBackground(prototypeKey(projectId, name), async () => publish({ github, ref: ref(), ...(await recordsFrom(designClone())), projectId, name }));
-	const site = (): void => inBackground('the site', async () => redeploySite({ github, ref: ref(), ...(await recordsFrom(designClone())) }));
+		inBackground(prototypeKey(projectId, name), async () =>
+			publish({ github, ref: ref(), ...(await recordsFrom(designClone(), started)), projectId, name }),
+		);
+	const site = (): void => inBackground('the site', async () => redeploySite({ github, ref: ref(), ...(await recordsFrom(designClone(), started)) }));
 
 	/**
 	 * For what GitHub has that no deploy does (an edit outside a save, a failed deploy, a push from elsewhere), which nothing

@@ -33,6 +33,8 @@ import type { GitHubAccount } from '../codeHost/github';
 import { Installer } from './services/codebase/install';
 import { recordedWork } from './services/projects/workRecords';
 import { readFolderProjects } from './services/projects/localProjects';
+import { startedHere } from './services/prototypes/pendingPrototypes';
+import { workLabel } from '../shared/work';
 import { esbuildEntry } from './services/prototypes/prototypeBundle';
 import { PrototypeServer } from './services/prototypes/prototypeServer';
 import { prototypeWork } from './services/prototypes/prototypeWork';
@@ -212,7 +214,7 @@ export const composeCore = ({
 									const work = classify(descriptor, branch);
 									if (work) await recordedWork(root, recordsRoot, descriptor, work.projectId, work.name).catch(() => undefined);
 								}
-								return syncRecords(dirname(recordsRoot));
+								return syncRecords(dirname(recordsRoot), startedHere(prototypesRoot));
 							},
 						);
 						// Whatever is on GitHub and not yet on the site goes up too, however it got there.
@@ -330,7 +332,14 @@ export const composeCore = ({
 	const prototypePage = (projectId: string, name: string): Promise<string | null> => work.page(projectId, name);
 
 	// Whether a version's page is on the site is worked out here, so the window never hands this an address to open.
-	const deploys = siteDeploys({ github, designClone, ref: () => designRepos.now().ref });
+	const deploys = siteDeploys({ github, designClone, ref: () => designRepos.now().ref, started: startedHere(prototypesRoot) });
+	/** A build saved (`from`: the version a new one was started from) is published, as each save is. */
+	const saveBuilt = async (projectId: string, name: string, from: string | null): Promise<'saved' | 'waiting'> => {
+		const fresh = from === null ? null : { from, me: me(), note: `For a comment on ${workLabel({ name: from })}` };
+		const saved = await work.saveBuilt(projectId, name, fresh);
+		if (saved === 'saved') deploys.page(projectId, name);
+		return saved;
+	};
 
 	return {
 		emit,
@@ -392,6 +401,7 @@ export const composeCore = ({
 		servePrototype,
 		prototypePage,
 		deploys,
+		saveBuilt,
 	};
 };
 export type CallsDeps = ReturnType<typeof composeCore>;

@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { Project } from '../src/shared/contract';
 import { recordsRootFor } from '../src/core/services/projects/discovery';
 import { listProjects } from '../src/core/services/projects/listProjects';
+import { keepPending } from '../src/core/services/prototypes/pendingPrototypes';
 import { makeProduct, projectWork } from './fixtures';
 
 let dir: string;
@@ -22,11 +23,19 @@ describe('the project list', () => {
 
 	it("is GitHub's when there is no checkout, and GitHub's failure when it cannot be reached", async () => {
 		expect(
-			(await listProjects({ root: null, login: null, recordsRootOf: (r) => recordsRootFor(r), remote: async () => [fromGitHub] })).map((p) => p.id),
+			(
+				await listProjects({
+					root: null,
+					login: null,
+					recordsRootOf: (r) => recordsRootFor(r),
+					prototypesRoot: join(dir, 'prototypes'),
+					remote: async () => [fromGitHub],
+				})
+			).map((p) => p.id),
 		).toEqual(['remote']);
-		await expect(listProjects({ root: null, login: null, recordsRootOf: (r) => recordsRootFor(r), remote: offline })).rejects.toThrow(
-			'GitHub is out of reach.',
-		);
+		await expect(
+			listProjects({ root: null, login: null, recordsRootOf: (r) => recordsRootFor(r), prototypesRoot: join(dir, 'prototypes'), remote: offline }),
+		).rejects.toThrow('GitHub is out of reach.');
 	});
 
 	it('never says codebase work is ready for engineering with no checkout, where it cannot be checked against the branch', async () => {
@@ -34,8 +43,39 @@ describe('the project list', () => {
 			...fromGitHub,
 			work: [projectWork({ name: 'codebase', branch: 'feature/remote', readyAt: 'a1b2c3d' })],
 		};
-		const [listed] = await listProjects({ root: null, login: null, recordsRootOf: (r) => recordsRootFor(r), remote: async () => [ready] });
+		const [listed] = await listProjects({
+			root: null,
+			login: null,
+			recordsRootOf: (r) => recordsRootFor(r),
+			prototypesRoot: join(dir, 'prototypes'),
+			remote: async () => [ready],
+		});
 		expect(listed?.work[0]?.readyAt).toBeNull();
+	});
+
+	it('shows a version started here and not saved as building, under its brief’s name, and as built once it is recorded', async () => {
+		const design = join(dir, 'flock-designer');
+		const prototypes = join(dir, 'prototypes');
+		mkdirSync(join(design, '.git'), { recursive: true });
+		mkdirSync(join(design, 'projects', 'widgets'), { recursive: true });
+		writeFileSync(join(design, 'projects', 'widgets', 'brief.md'), '# Widget explorer\n');
+		const record = {
+			projectId: 'widgets',
+			name: 'v1',
+			branch: 'prototype/widgets/v1',
+			commit: null,
+			createdAt: '2026-10-20T10:00:00.000Z',
+			note: 'n',
+		};
+		keepPending(prototypes, record);
+		const list = () =>
+			listProjects({ root: product, login: null, recordsRootOf: (r) => recordsRootFor(r), prototypesRoot: prototypes, remote: offline });
+		const [started] = await list();
+		expect(started).toMatchObject({ id: 'widgets', title: 'Widget explorer', localOnly: true });
+		expect(started!.work.map((i) => [i.name, i.building])).toEqual([['v1', true]]);
+		writeFileSync(join(design, 'projects', 'widgets', 'work.json'), JSON.stringify([record]));
+		const [recorded] = await list();
+		expect(recorded!.work.map((i) => [i.name, i.building])).toEqual([['v1', undefined]]);
 	});
 
 	it("still shows this machine's work when GitHub cannot be reached", async () => {
@@ -45,7 +85,13 @@ describe('the project list', () => {
 		writeFileSync(join(design, 'projects', 'demo', 'brief.md'), '# Demo\n');
 		const record = { projectId: 'demo', name: 'v1', branch: 'prototype/demo/v1', commit: null, createdAt: '2026-10-01T00:00:00Z' };
 		writeFileSync(join(design, 'projects', 'demo', 'work.json'), JSON.stringify([record]));
-		const listed = await listProjects({ root: product, login: null, recordsRootOf: (r) => recordsRootFor(r), remote: offline });
+		const listed = await listProjects({
+			root: product,
+			login: null,
+			recordsRootOf: (r) => recordsRootFor(r),
+			prototypesRoot: join(dir, 'prototypes'),
+			remote: offline,
+		});
 		expect(listed.map((p) => [p.id, p.work.map((i) => i.name)])).toEqual([['demo', ['v1']]]);
 	});
 });

@@ -57,14 +57,14 @@ describe('starting a prototype from VS Code', () => {
 		expect(api.handPrototypeBuild).toHaveBeenCalledWith('/p', 'alert-history', 'v1', 'Explore it.');
 	});
 
-	it('says it is in Claude Code, with its task typed in for Enter, and that it is opened for review from the list once built', async () => {
+	it('says it is in Claude Code, with its task typed in for Enter, and that it shows as building, shared only once saved', async () => {
 		const { deps, toldDone } = world();
 		await newPrototype(deps);
 		expect(toldDone).toHaveLength(1);
 		expect(toldDone[0]).toContain('Alert history is in Claude Code in this window');
 		expect(toldDone[0]).toContain('Press Enter there to start it');
 		expect(toldDone[0]).toContain('Modeled on main at a1b2c3d.');
-		expect(toldDone[0]).toContain('saves it when it is built, and its picture appears in the list');
+		expect(toldDone[0]).toContain('It shows as Building… here until its first page is saved, and nothing of it is shared before then.');
 		// No accessibility notification for a prototype: it is checked when the work moves into the code, and at Handoff.
 		expect(toldDone[0]).not.toMatch(/accessib|checks it/i);
 	});

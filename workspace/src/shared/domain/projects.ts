@@ -170,6 +170,8 @@ export interface ProjectWork {
 	 */
 	readyAt: string | null;
 	localOnly?: boolean;
+	/** Started here, its first page not saved yet: nothing of it is shared. */
+	building?: boolean;
 	repository: string | null;
 	pullRequest: string | null;
 	cover: string | null;

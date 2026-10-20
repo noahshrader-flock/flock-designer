@@ -22,7 +22,7 @@ export interface NewPrototypeDeps {
 	product: { root: string | null; why: string };
 	choose: Offer;
 	tell: Tell;
-	/** Told once it is made, so the list shows it while it is built. */
+	/** Told once it is started, so the list shows it, building, while it is built. */
 	onChanged: () => void;
 	/** Not waited for. */
 	watchBuild: (projectId: string, name: string, title: string) => void;
@@ -120,5 +120,7 @@ export const newPrototype = async (deps: NewPrototypeDeps): Promise<void> => {
 	deps.onChanged();
 	const handed = valueOf(await api.handPrototypeBuild(root, made.projectId, made.name, task));
 	deps.watchBuild(made.projectId, made.name, title);
-	deps.tell(`${handedTo(handed, title)} ${made.modeledOn} DSNR saves it when it is built, and its picture appears in the list.`);
+	deps.tell(
+		`${handedTo(handed, title)} ${made.modeledOn} It shows as Building… here until its first page is saved, and nothing of it is shared before then.`,
+	);
 };

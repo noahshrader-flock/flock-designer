@@ -6,7 +6,7 @@ import type { TokenEdit, TriedValue } from '../../src/shared/domain/designSystem
 import type { Project } from '../../src/shared/domain/projects';
 import { DEFAULT_THEME, type Theme } from '../../src/shared/prototypeTheme';
 import { PROJECT_ID, hasExactly } from '../../src/shared/validate';
-import { workLabel, workOf } from '../../src/shared/work';
+import { savedVersions, workLabel } from '../../src/shared/work';
 
 /**
  * Signing in is VS Code's, from its title bar, so a page cannot ask for it. The page is the extension's own, but what it
@@ -90,7 +90,7 @@ export interface Review {
 
 /** Newest first: the panel's row opens the first. */
 export const reviewsOf = (project: Pick<Project, 'id' | 'title' | 'work'>): Review[] =>
-	workOf(project.work, 'prototype').map((i) => ({ projectId: project.id, name: i.name, title: `${project.title} · ${workLabel(i)}` }));
+	savedVersions(project.work).map((i) => ({ projectId: project.id, name: i.name, title: `${project.title} · ${workLabel(i)}` }));
 
 /**
  * Kept with the library's commit they were tried on: instances are named by that commit's drawing, so a page on another

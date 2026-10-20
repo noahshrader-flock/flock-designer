@@ -23,7 +23,9 @@ through `dsnr new-prototype`.
 
 ## What happens while it builds
 
-- DSNR records the project and its first version, *Version 1*, in the design repository, with your words as its brief.
+- DSNR starts the project, with your words as its brief, and your list shows it as *Building…* while the agent works.
+  Nothing of it is shared yet: it is recorded as *Version 1*, and reaches everyone, once its first page is saved. If you
+  never start the agent, nothing is made for anyone else; delete it from its menu.
 - The prototype is *modeled on* the branch the product is on: DSNR notes exactly which commit, fetching the latest of it
   first. The agent reads the product's code as it was at that moment, so the prototype matches it.
 - The agent writes one React file and builds it into a page. It uses the product's own components and design system, and

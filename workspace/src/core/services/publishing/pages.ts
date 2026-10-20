@@ -123,11 +123,15 @@ export const fetchAnonymously = async (url: string): Promise<{ status: number }>
 });
 
 /** With no clone the records were written to GitHub directly, and nothing waits. */
-export const recordsFrom = async (clone: string | null): Promise<Pick<PublishInput, 'recordsBranch' | 'pushRecords'>> => {
+/** `started`: as `syncRecords` takes it. */
+export const recordsFrom = async (
+	clone: string | null,
+	started: (projectId: string) => boolean,
+): Promise<Pick<PublishInput, 'recordsBranch' | 'pushRecords'>> => {
 	if (clone === null) return { pushRecords: async () => ({ published: [], problems: [] }) };
 	// '' when it is on no branch: refused by publish, after the gate has had its say.
 	const recordsBranch = (await git(clone, ['symbolic-ref', '--short', 'HEAD']).catch(() => '')).trim();
-	return { recordsBranch, pushRecords: () => syncRecords(clone) };
+	return { recordsBranch, pushRecords: () => syncRecords(clone, started) };
 };
 
 interface DeployInput {

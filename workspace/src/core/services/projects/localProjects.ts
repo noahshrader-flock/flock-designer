@@ -6,6 +6,7 @@ import { fromBrief } from '../../../shared/brief';
 import { workOrder } from '../../../shared/projectList';
 import { toProjectWork } from '../../../shared/workRecords';
 import { workInFolder } from './workRecords';
+import { pendingHere } from '../prototypes/pendingPrototypes';
 
 /** Unreadable pieces are skipped, so a half-written record cannot hide every other project. */
 export const readFolderProjects = (recordsRoot: string): Project[] => {
@@ -28,4 +29,16 @@ export const readFolderProjects = (recordsRoot: string): Project[] => {
 				people: mergePeople(...work.map((i) => i.contributors)),
 			};
 		});
+};
+
+/** With each version started here and not saved yet, marked, as what it will be once it is. */
+export const withStartedHere = (folders: Project[], prototypesRoot: string): Project[] => {
+	const byId = new Map(folders.map((p) => [p.id, p]));
+	for (const r of pendingHere(prototypesRoot)) {
+		const p = byId.get(r.projectId) ?? { id: r.projectId, title: r.projectId, folder: null, records: [], work: [], people: [] };
+		if (p.work.some((w) => w.name === r.name)) continue;
+		const started = { ...toProjectWork(r), building: true };
+		byId.set(p.id, { ...p, work: [...p.work, started].sort(workOrder), people: mergePeople(p.people, started.contributors) });
+	}
+	return [...byId.values()];
 };

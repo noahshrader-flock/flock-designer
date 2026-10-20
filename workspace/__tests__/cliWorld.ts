@@ -1,10 +1,11 @@
-import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach } from 'vitest';
 import { main } from '../src/cli/dsnr';
 import type { GitHubApi } from '../src/codeHost/github';
+import { pendingOf } from '../src/core/services/prototypes/pendingPrototypes';
 import { DESIGN_REPO } from '../src/shared/config';
 import { addStandards, g, installDesignSystem, makeProduct } from './fixtures';
 
@@ -33,6 +34,11 @@ export const deps = (cwd: string) => ({
 });
 export const run = (...argv: string[]) => main(argv, deps(world.product));
 export const recorded = () => JSON.parse(readFileSync(join(world.design, 'projects', 'demo', 'work.json'), 'utf8')) as { name: string }[];
+/** As DSNR reads a project's versions: those recorded, then those started here, recorded once saved. */
+export const versions = () => [
+	...(existsSync(join(world.design, 'projects', 'demo', 'work.json')) ? recorded() : []),
+	...pendingOf(world.prototypes, 'demo'),
+];
 
 /** Called once at the top of a test file. */
 export const setUpCliWorld = () => {

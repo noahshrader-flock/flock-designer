@@ -75,48 +75,47 @@ export const readRecords = async (store: Pick<RecordStore, 'read'>, projectId: s
 	return records;
 };
 
-const addRecord = async (
-	store: RecordStore,
-	existing: Work[],
-	{
-		projectId,
-		name,
-		note,
-		me,
-		basedOn,
-		from,
-		now,
-	}: {
-		projectId: string;
-		name: string;
-		note: string;
-		me: Person | null;
-		basedOn?: Work['basedOn'];
-		from?: string;
-		now: Date;
-	},
-): Promise<Work> => {
-	const record: Work = {
-		projectId,
-		name,
-		branch: prototypeKey(projectId, name),
-		commit: null,
-		createdAt: now.toISOString(),
-		// The record carries the gist; the brief carries the whole request.
-		note: note.trim().split('\n')[0] ?? '',
-		...(me ? { contributors: [me] } : {}),
-		...(basedOn ? { basedOn } : {}),
-		...(from ? { from } : {}),
-	};
-	await store.write(workPath(projectId), serializeWork([...existing, record]), `${projectId}: record prototype ${name}`);
+/** What a version's record says when it is made: the same shape whether it is written now or once its first page is saved. */
+const prototypeRecord = ({
+	projectId,
+	name,
+	note,
+	me,
+	basedOn,
+	from,
+	now,
+}: {
+	projectId: string;
+	name: string;
+	note: string;
+	me: Person | null;
+	basedOn?: Work['basedOn'];
+	from?: string;
+	now: Date;
+}): Work => ({
+	projectId,
+	name,
+	branch: prototypeKey(projectId, name),
+	commit: null,
+	createdAt: now.toISOString(),
+	// The record carries the gist; the brief carries the whole request.
+	note: note.trim().split('\n')[0] ?? '',
+	...(me ? { contributors: [me] } : {}),
+	...(basedOn ? { basedOn } : {}),
+	...(from ? { from } : {}),
+});
+
+const appendRecord = async (store: RecordStore, existing: Work[], record: Work): Promise<Work> => {
+	await store.write(workPath(record.projectId), serializeWork([...existing, record]), `${record.projectId}: record prototype ${record.name}`);
 	return record;
 };
 
 /**
- * Also starts the project (a brief with its title, in `folder`) when this is its first work. A project with a brief stays
- * in its folder, wherever the new version is started from.
+ * Starts the project (a brief with its title, in `folder`) when this is its first work, and says what the version's record
+ * will be, writing none: it is recorded once its first page is saved (`recordStarted`). `pending`: names already started
+ * here and not saved, which the next number counts. A project with a brief stays in its folder.
  */
-export const recordPrototype = async (
+export const startPrototype = async (
 	store: RecordStore,
 	{
 		projectId,
@@ -125,11 +124,21 @@ export const recordPrototype = async (
 		me,
 		basedOn,
 		folder = null,
+		pending = [],
 		now = new Date(),
-	}: { projectId: string; title: string; note: string; me: Person | null; basedOn?: Work['basedOn']; folder?: string | null; now?: Date },
+	}: {
+		projectId: string;
+		title: string;
+		note: string;
+		me: Person | null;
+		basedOn?: Work['basedOn'];
+		folder?: string | null;
+		pending?: string[];
+		now?: Date;
+	},
 ): Promise<Work> => {
 	const existing = await readRecords(store, projectId);
-	const name = nextVersionName(existing.map((i) => i.name));
+	const name = nextVersionName([...existing.map((i) => i.name), ...pending]);
 	const brief = projectPath(projectId, 'brief.md');
 	const haveBrief = await store.read(brief);
 	if (haveBrief === null || firstHeading(haveBrief) === null) {
@@ -137,7 +146,20 @@ export const recordPrototype = async (
 		const written = `# ${projectTitle(title) ?? projectId}\n\n${note.trim()}\n`;
 		await store.write(brief, withFolder(written, haveBrief === null ? folder : briefFolder(haveBrief)), `${projectId}: start the project`);
 	}
-	return addRecord(store, existing, { projectId, name, note, me, basedOn, now });
+	return prototypeRecord({ projectId, name, note, me, basedOn, now });
+};
+
+/**
+ * Written as it was started, after `save` (its page), so no record names a page that is not there. Already there (recorded,
+ * then stopped before the start was cleared) it is not written twice; another of that name made meanwhile is never saved over.
+ */
+export const recordStarted = async (store: RecordStore, started: Work, save: () => Promise<void>): Promise<void> => {
+	const existing = await readRecords(store, started.projectId);
+	const there = existing.find((i) => i.name === started.name);
+	if (there && there.createdAt !== started.createdAt)
+		throw new Error(`${started.projectId} ${started.name} was made meanwhile, so this one is not saved over it: start it again.`);
+	await save();
+	if (!there) await appendRecord(store, existing, started);
 };
 
 /**
@@ -212,15 +234,19 @@ export const recordVersionFrom = async (
 	const existing = await readRecords(store, projectId);
 	if (existing.some((i) => i.name === name))
 		throw new Error(`${projectId} already has a ${name}. Try again: the change will go in the next version.`);
-	return addRecord(store, existing, {
-		projectId,
-		name,
-		note,
-		me,
-		basedOn: from.basedOn,
-		from: from.name,
-		now,
-	});
+	return appendRecord(
+		store,
+		existing,
+		prototypeRecord({
+			projectId,
+			name,
+			note,
+			me,
+			basedOn: from.basedOn,
+			from: from.name,
+			now,
+		}),
+	);
 };
 
 export const assertPrototypeName = (name: string): void => {

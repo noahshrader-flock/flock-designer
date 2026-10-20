@@ -5,7 +5,7 @@ import { readBranchProjects } from './branchProjects';
 import { readDescriptor } from './descriptor';
 import { branchTip, repositoryOf } from '../platform/git';
 import { codebaseBranchFor } from './workRecords';
-import { readFolderProjects } from './localProjects';
+import { readFolderProjects, withStartedHere } from './localProjects';
 
 /**
  * `root` must be one the person opened. GitHub not answering is no failure while there is something local to show.
@@ -15,12 +15,15 @@ export const listProjects = async ({
 	login,
 	remote,
 	recordsRootOf,
+	prototypesRoot,
 }: {
 	root: string | null;
 	login: string | null;
 	remote: () => Promise<Project[]>;
 	/** The product's design repository's records, as `recordsRootFor` finds them. */
 	recordsRootOf: (productRoot: string) => string | null;
+	/** Where this machine keeps what it builds, and its starts not saved yet. */
+	prototypesRoot: string;
 }): Promise<Project[]> => {
 	let local: Project[] = [];
 	// `repository` fills in codebase work recorded before records named it; null when the checkout has no remote.
@@ -29,7 +32,7 @@ export const listProjects = async ({
 		const recordsRoot = recordsRootOf(root);
 		// Every project folder, not only those that record a piece of work: the folder is what an agent makes
 		// first, and it is what vouches for a `feature/<id>` branch (see readBranchProjects).
-		const folders = recordsRoot ? readFolderProjects(recordsRoot) : [];
+		const folders = withStartedHere(recordsRoot ? readFolderProjects(recordsRoot) : [], prototypesRoot);
 		const descriptor = readDescriptor(root);
 		// The branches are the evidence: work made without the app still shows.
 		const branches = await readBranchProjects(root, descriptor, login, new Set(folders.map((p) => p.id))).catch(() => []);

@@ -6,6 +6,7 @@ import type { CallsContext } from '../src/core/compose';
 import { appPaths } from '../src/core/appPaths';
 import { CHANNELS, type Handed, invokeChannel } from '../src/shared/contract';
 import type { Ports } from '../src/core/ports';
+import type { Project } from '../src/shared/contract';
 import type { AgentId } from '../src/core/services/agent/agent';
 import { type RepoRef, formatRepo } from '../src/shared/repoRef';
 import { chooseDesignSystem } from '../src/core/services/projects/productDesignSystem';
@@ -88,15 +89,20 @@ let product: string;
 let design: string;
 let home: string;
 
+/** A started prototype's first build, saved (opening it saves it), which is when it is recorded: from its source when it has one. */
+const firstSaved = async () => {
+	const dir = join(home, 'prototype', 'demo');
+	mkdirSync(dir, { recursive: true });
+	if (!existsSync(join(dir, 'v1.tsx'))) writeFileSync(join(dir, 'v1.html'), '<h1>Demo</h1>');
+	expect((await call(CHANNELS.openPrototype, 'demo', 'v1')).ok).toBe(true);
+};
 const savedPrototype = async (root = product) => {
 	await trustFolder(root);
 	mkdirSync(join(design, 'skills'), { recursive: true });
 	writeFileSync(join(design, 'skills', 'move-to-code.md'), '# Move a prototype into the code\n\nAudit first.');
 	writeFileSync(join(design, 'skills', 'record-the-route.md'), '# Record where the work is\n\nThe plainest form.');
 	await call(CHANNELS.createPrototype, 'demo', 'Demo', 'A list', { root, branch: 'develop' });
-	mkdirSync(join(home, 'prototype', 'demo'), { recursive: true });
-	writeFileSync(join(home, 'prototype', 'demo', 'v1.html'), '<h1>Demo</h1>');
-	expect((await call(CHANNELS.openPrototype, 'demo', 'v1')).ok).toBe(true);
+	await firstSaved();
 };
 const JPEG = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 7, 7, 7]);
 const build = (root: string, from?: string) => call(CHANNELS.buildInCodebase, root, 'demo', 'v1', from);
@@ -676,6 +682,7 @@ describe('prototypes', () => {
 			await made();
 			mkdirSync(join(home, 'prototype', 'demo'), { recursive: true });
 			writeFileSync(join(home, 'prototype', 'demo', 'v1.tsx'), 'export default () => null;\n');
+			await firstSaved();
 			const recorded = () =>
 				(JSON.parse(readFileSync(join(design, 'projects', 'demo', 'work.json'), 'utf8')) as { basedOn: { commit: string } }[])[0]?.basedOn.commit;
 			const was = g(product, 'rev-parse', 'develop');
@@ -805,6 +812,7 @@ describe('prototypes', () => {
 		writeSkill();
 		await trustFolder(product);
 		await call(CHANNELS.createPrototype, 'demo', 'Demo', 'A list', { root: product, branch: 'develop' });
+		await firstSaved();
 		// Someone with write access to the design repository puts an option where the branch belongs.
 		const written = join(home, 'written-by-git');
 		const records = join(design, 'projects', 'demo', 'work.json');
@@ -887,6 +895,7 @@ describe('prototypes', () => {
 	it('are renamed in the brief in the clone, only the name people see, and a project that is not one is refused', async () => {
 		await trustFolder(product);
 		await call(CHANNELS.createPrototype, 'demo', 'Demo', 'A list', { root: product, branch: 'develop' }, 'Admin');
+		await firstSaved();
 		expect((await call(CHANNELS.renameProject, 'demo', 'Demo, again')).ok).toBe(true);
 		expect(readFileSync(join(design, 'projects', 'demo', 'brief.md'), 'utf8')).toBe('---\nfolder: Admin\n---\n# Demo, again\n\nA list\n');
 		// Its id is what its folder, links and comments are named by: it stays.
@@ -900,6 +909,7 @@ describe('prototypes', () => {
 		register({ emit });
 		await trustFolder(product);
 		await call(CHANNELS.createPrototype, 'demo', 'Demo', 'A list', { root: product, branch: 'develop' });
+		await firstSaved();
 		expect((await call(CHANNELS.deleteProject, 'demo', 'demo')).error).toBe('Type Demo to delete it.');
 		expect(existsSync(join(design, 'projects', 'demo', 'work.json'))).toBe(true);
 		expect(emit).not.toHaveBeenCalledWith('onProjectDeleted', expect.anything());
@@ -907,6 +917,54 @@ describe('prototypes', () => {
 		expect(existsSync(join(design, 'projects', 'demo'))).toBe(false);
 		expect(emit).toHaveBeenCalledWith('onProjectDeleted', 'demo');
 		expect((await call(CHANNELS.deleteProject, '../etc', 'etc')).ok).toBe(false);
+	});
+
+	it('are started with their brief and nothing recorded, shown as building, recorded once their first page is saved, and deleted with their start', async () => {
+		await trustFolder(product);
+		const started = await call(CHANNELS.createPrototype, 'demo', 'Demo', 'A list', { root: product, branch: 'develop' });
+		expect(started).toMatchObject({ ok: true, value: { name: 'v1', branch: 'prototype/demo/v1' } });
+		expect(readFileSync(join(design, 'projects', 'demo', 'brief.md'), 'utf8')).toBe('# Demo\n\nA list\n');
+		expect(existsSync(join(design, 'projects', 'demo', 'work.json'))).toBe(false);
+		const listed = async () => ((await call(CHANNELS.listProjects)).value as Project[]).find((p) => p.id === 'demo');
+		expect((await listed())?.work.map((i) => [i.name, i.building])).toEqual([['v1', true]]);
+		// A second start in the same project counts the first, though neither is recorded.
+		expect((await call(CHANNELS.createPrototype, 'demo', 'Demo', 'Again', { root: product, branch: 'develop' })).value).toMatchObject({ name: 'v2' });
+
+		await firstSaved();
+		const recorded = JSON.parse(readFileSync(join(design, 'projects', 'demo', 'work.json'), 'utf8')) as { name: string; createdAt: string }[];
+		expect(recorded.map((r) => r.name)).toEqual(['v1']);
+		expect(recorded[0]!.createdAt).toBe((started.value as { createdAt: string }).createdAt);
+		expect((await listed())?.work.map((i) => [i.name, i.building ?? false])).toEqual([
+			['v2', true],
+			['v1', false],
+		]);
+
+		expect((await call(CHANNELS.deleteProject, 'demo', 'Demo')).ok).toBe(true);
+		expect(existsSync(join(design, 'projects', 'demo'))).toBe(false);
+		expect(await listed()).toBeUndefined();
+	});
+
+	it('save a start built here and never saved, when the list is read, as opening a page saves it', async () => {
+		await trustFolder(product);
+		await call(CHANNELS.createPrototype, 'demo', 'Demo', 'A list', { root: product, branch: 'develop' });
+		// What the agent leaves: its source, and the page built from it after.
+		const dir = join(home, 'prototype', 'demo');
+		mkdirSync(dir, { recursive: true });
+		writeFileSync(join(dir, 'v1.tsx'), 'export default () => null;\n');
+		writeFileSync(join(dir, 'v1.html'), '<html>built</html>');
+		const later = Math.floor(Date.now() / 1000) + 100;
+		utimesSync(join(dir, 'v1.html'), later, later);
+		const listed = ((await call(CHANNELS.listProjects)).value as Project[]).find((p) => p.id === 'demo');
+		expect(listed?.work.map((i) => [i.name, i.building ?? false])).toEqual([['v1', false]]);
+		expect(existsSync(join(design, 'projects', 'demo', 'prototypes', 'v1.tsx'))).toBe(true);
+		expect(existsSync(join(design, 'projects', 'demo', 'work.json'))).toBe(true);
+	});
+
+	it('are not started where the design repository is not on this machine, as nothing could ever be saved', async () => {
+		await trustFolder(product);
+		rmSync(design, { recursive: true, force: true });
+		const r = await call(CHANNELS.createPrototype, 'demo', 'Demo', 'A list', { root: product, branch: 'develop' });
+		expect(r.error).toMatch(/^DSNR could not find .*, the design repository .* belongs to\./);
 	});
 
 	it('are recorded, saved and served through the clone on this machine', async () => {
@@ -1094,6 +1152,8 @@ describe('prototypes', () => {
 			await call(CHANNELS.createPrototype, 'demo', 'Demo', 'A list', { root: product, branch: 'develop' });
 			mkdirSync(dirname(local('v1')), { recursive: true });
 			writeFileSync(local('v1'), page('first'));
+			// Commented on, so shared: saved, which records it.
+			await firstSaved();
 		};
 		const address = (id: number, newVersion = false) => call(CHANNELS.handPrototypeAddress, product, 'demo', 'v1', { thread: 1, id }, newVersion);
 		const taskOf = (name: string) => readFileSync(join(home, 'prototype', 'demo', `${name}-address.md`), 'utf8');
@@ -1207,7 +1267,9 @@ describe('prototypes', () => {
 
 		it('refuses a comment that has gone, and a prototype with no source, before handing anything over', async () => {
 			await ready();
+			// Neither here nor saved: a page kept from before sources were.
 			rmSync(local('v1'));
+			rmSync(saved('v1.tsx'));
 			threads({ v1: [comment(7, 'x')] });
 			expect((await address(7)).error).toMatch(/no React source/);
 			writeFileSync(local('v1'), page('first'));

@@ -4,7 +4,7 @@ import type { Project } from '../../src/shared/domain/projects';
 import { plural } from '../../src/shared/plural';
 import { openCommentsOf } from '../../src/shared/projectList';
 import { slugify } from '../../src/shared/validate';
-import { workOf } from '../../src/shared/work';
+import { onlyBuilding, savedVersions, workOf } from '../../src/shared/work';
 import { Button } from '../../src/ui/Button';
 import { Dialog, DialogButtons } from '../../src/ui/Dialog';
 import { Field, TextArea, TextInput } from '../../src/ui/Field';
@@ -149,9 +149,10 @@ export const DeleteProjectDialog = ({ project, onDeleted, onClose }: { project: 
 	const [typed, setTyped] = useState('');
 	const { busy, error, run } = useAction();
 	const ready = namesProject(typed, project.title) && !busy;
-	const versions = workOf(project.work, 'prototype').length;
+	const versions = savedVersions(project.work).length;
 	const open = openCommentsOf(project.work);
 	const codebase = workOf(project.work, 'codebase')[0];
+	const building = onlyBuilding(project);
 	const goes = `This deletes ${project.title}${versions > 0 ? ` and its ${plural(versions, 'version')}` : ''} for everyone, with every page, picture and record of it, and takes it off the published site.`;
 	const comments = open > 0 ? ` ${plural(open, 'open comment')} ${open === 1 ? 'is' : 'are'} on it.` : '';
 	const code = codebase ? `, and its codebase branch ${codebase.branch}${codebase.pullRequest ? ' and pull request stay' : ' stays'}` : '';
@@ -169,8 +170,14 @@ export const DeleteProjectDialog = ({ project, onDeleted, onClose }: { project: 
 	return (
 		<Dialog title="Delete project" onClose={onClose}>
 			<form onSubmit={(e) => void remove(e)}>
-				<Message tone="warning">{`${goes}${comments}`}</Message>
-				<Message>{`Its comments stay on GitHub${code}. What it was stays in the design repository’s history.`}</Message>
+				{building ? (
+					<Message tone="warning">{`This deletes ${project.title}. It was started here and not saved yet, so nothing of it was shared.`}</Message>
+				) : (
+					<>
+						<Message tone="warning">{`${goes}${comments}`}</Message>
+						<Message>{`Its comments stay on GitHub${code}. What it was stays in the design repository’s history.`}</Message>
+					</>
+				)}
 				<Field label={`Type ${project.title} to delete it`}>{(control) => <TextInput control={control} value={typed} onChange={setTyped} />}</Field>
 				<Message tone="error">{error}</Message>
 				<DialogButtons>

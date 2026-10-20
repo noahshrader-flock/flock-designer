@@ -4,17 +4,19 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { main } from '../src/cli/dsnr';
-import { REPO, deps, recorded, run, setUpCliWorld, world } from './cliWorld';
+import { REPO, deps, recorded, run, setUpCliWorld, versions, world } from './cliWorld';
 import { type Answer, fakeGitHub, refusal } from './fakes/github';
 import { g, installDesignSystem, makeProduct, designSystemBeside, writeFiles } from './fixtures';
 
 setUpCliWorld();
 
 describe('new-prototype', () => {
-	it('records v1 for a new project, with its brief, and prints the task', async () => {
+	it('starts v1 for a new project, with its brief, recorded only once it is saved, and prints the task', async () => {
 		expect(await run('new-prototype', '--project', 'demo', '--title', 'Demo', '--note', 'A list of cameras')).toBe(0);
 
-		expect(recorded()).toMatchObject([
+		expect(existsSync(join(world.design, 'projects', 'demo', 'work.json'))).toBe(false);
+		expect(world.out.join('\n')).toContain('Started demo v1: it is recorded when it is saved.');
+		expect(versions()).toMatchObject([
 			{
 				name: 'v1',
 				branch: 'prototype/demo/v1',
@@ -50,14 +52,14 @@ describe('new-prototype', () => {
 		await run('new-prototype', '--project', 'demo', '--title', 'Demo', '--note', 'A list');
 		const brief = readFileSync(join(world.design, 'projects', 'demo', 'brief.md'), 'utf8');
 		expect(await run('new-prototype', '--project', 'demo', '--note', 'Another idea: a map')).toBe(0);
-		expect(recorded().map((i) => i.name)).toEqual(['v1', 'v2']);
+		expect(versions().map((i) => i.name)).toEqual(['v1', 'v2']);
 		expect(readFileSync(join(world.design, 'projects', 'demo', 'brief.md'), 'utf8')).toBe(brief);
 	});
 
-	it('records the product it was made on as its repository, whatever the clone is called', async () => {
+	it('keeps the product it was made on as its repository, whatever the clone is called', async () => {
 		// No remote: the folder's name is all there is, and no product is claimed.
 		expect(await run('new-prototype', '--project', 'demo', '--title', 'Demo', '--note', 'A list')).toBe(0);
-		expect((recorded()[0] as { basedOn?: { product?: string } }).basedOn?.product).toBeUndefined();
+		expect((versions()[0] as { basedOn?: { product?: string } }).basedOn?.product).toBeUndefined();
 		// Its remote says which repository it is, so one clone or another, named anything, is the same product.
 		g(world.product, 'remote', 'add', 'origin', 'git@github.com:flocksafety/flock-coke.git');
 		expect(await run('new-prototype', '--project', 'demo', '--note', 'Another idea')).toBe(0);
@@ -67,7 +69,7 @@ describe('new-prototype', () => {
 		installDesignSystem(other);
 		g(other, 'remote', 'add', 'origin', 'https://github.com/flocksafety/flock-coke.git');
 		expect(await main(['new-prototype', '--project', 'demo', '--note', 'A third'], deps(other))).toBe(0);
-		expect(recorded().map((i) => (i as { basedOn?: unknown }).basedOn)).toMatchObject([
+		expect(versions().map((i) => (i as { basedOn?: unknown }).basedOn)).toMatchObject([
 			{ repository: 'flock-coke' },
 			{ repository: 'flock-coke', product: 'flocksafety/flock-coke' },
 			{ repository: 'coke', product: 'flocksafety/flock-coke' },
@@ -77,7 +79,7 @@ describe('new-prototype', () => {
 	it('is modeled on the branch named, when there is one', async () => {
 		g(world.product, 'branch', 'noah/baseline');
 		expect(await run('new-prototype', '--project', 'demo', '--title', 'Demo', '--note', 'A list', '--from', 'noah/baseline')).toBe(0);
-		expect(recorded()[0]).toMatchObject({ basedOn: { branch: 'noah/baseline' } });
+		expect(versions()[0]).toMatchObject({ basedOn: { branch: 'noah/baseline' } });
 		expect(await run('new-prototype', '--project', 'demo', '--note', 'A list', '--from', 'nope')).toBe(1);
 		expect(world.err.join('\n')).toMatch(/no branch called nope/);
 	});
@@ -149,6 +151,16 @@ describe('change-prototype', () => {
 		world.out = [];
 	};
 
+	it('records a version started here as it was started, once it is saved, and clears its start', async () => {
+		await run('new-prototype', '--project', 'demo', '--title', 'Demo', '--note', 'A list');
+		const started = versions();
+		writeFileSync(local('v1'), page('first'));
+		expect(await run('save-prototype', '--project', 'demo', '--name', 'v1')).toBe(0);
+		expect(recorded()).toEqual(started);
+		expect(versions()).toEqual(started);
+		expect(existsSync(join(world.prototypes, 'demo', 'v1.pending.json'))).toBe(false);
+	});
+
 	it('changes the version in place when only its maker has commented', async () => {
 		signedIn({ v1: ['test-person'] });
 		await made();
@@ -211,9 +223,9 @@ describe('change-prototype', () => {
 		await made();
 		await run('change-prototype', '--project', 'demo', '--name', 'v1', '--note', 'Try cards', '--new-version');
 		writeFileSync(local('v2'), page('cards'));
-		// Someone else's new idea is recorded as v2 first, on another machine or in another run.
+		// Another idea is started as v2 first, in another run, so the change cannot take its name.
 		await run('new-prototype', '--project', 'demo', '--note', 'Another idea');
-		expect(recorded().map((i) => i.name)).toEqual(['v1', 'v2']);
+		expect(versions().map((i) => i.name)).toEqual(['v1', 'v2']);
 		expect(await run('save-prototype', '--project', 'demo', '--name', 'v2', '--from-version', 'v1')).toBe(1);
 		expect(world.err.join('\n')).toMatch(/demo v2 was made meanwhile, so this new version is not saved over it/);
 		expect(existsSync(join(world.design, 'projects', 'demo', 'prototypes', 'v2.html'))).toBe(false);
@@ -243,7 +255,7 @@ describe('change-prototype', () => {
 		await made();
 		await run('new-prototype', '--project', 'demo', '--note', 'Another idea');
 		await run('new-prototype', '--project', 'demo', '--note', 'A third');
-		expect(recorded().map((i) => i.name)).toEqual(['v1', 'v2', 'v3']);
+		expect(versions().map((i) => i.name)).toEqual(['v1', 'v2', 'v3']);
 	});
 });
 
@@ -501,7 +513,7 @@ describe('the command', () => {
 			expect(await main(argv, deps(elsewhere))).toBe(1);
 			expect(world.err.join('\n')).toMatch(/not inside a product repository/);
 			expect(await main([...argv, '--product', world.product], deps(elsewhere))).toBe(0);
-			expect(recorded().map((i) => i.name)).toEqual(['v1']);
+			expect(versions().map((i) => i.name)).toEqual(['v1']);
 		} finally {
 			rmSync(elsewhere, { recursive: true, force: true });
 		}

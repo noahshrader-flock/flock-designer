@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { Project } from '../src/shared/contract';
 import { DesignRepo } from '../src/codeHost/designRepo';
 import { readFolderProjects } from '../src/core/services/projects/localProjects';
-import { assignFolder, deleteProject, recordPrototype, renameProject, type RecordStore } from '../src/core/services/prototypes/prototype';
+import { assignFolder, deleteProject, renameProject, startPrototype, type RecordStore } from '../src/core/services/prototypes/prototype';
 import {
 	briefFolder,
 	firstHeading,
@@ -185,19 +185,19 @@ describe('assigning a project a folder', () => {
 
 	it('keeps the folder when a prototype is started on a project whose brief has a folder and no heading', async () => {
 		const { store, files } = said({ 'projects/alert-history/brief.md': '---\nfolder: Admin\n---\n' });
-		await recordPrototype(store, { projectId: 'alert-history', title: 'Alert history', note: 'Past alerts', me: null });
+		await startPrototype(store, { projectId: 'alert-history', title: 'Alert history', note: 'Past alerts', me: null });
 		expect(files['projects/alert-history/brief.md']).toBe('---\nfolder: Admin\n---\n# Alert history\n\nPast alerts\n');
 	});
 
 	it('puts a new project in the folder it is started in', async () => {
 		const { store, files } = said({});
-		await recordPrototype(store, { projectId: 'alert-history', title: 'Alert history', note: 'Past alerts', me: null, folder: 'Admin' });
+		await startPrototype(store, { projectId: 'alert-history', title: 'Alert history', note: 'Past alerts', me: null, folder: 'Admin' });
 		expect(files['projects/alert-history/brief.md']).toBe('---\nfolder: Admin\n---\n# Alert history\n\nPast alerts\n');
 	});
 
 	it('leaves a project that already has a brief where it is, when a new version is started in another folder', async () => {
 		const { store, files } = said({ 'projects/alert-history/brief.md': FILED });
-		await recordPrototype(store, { projectId: 'alert-history', title: 'Alert history', note: 'Again', me: null, folder: 'Roles' });
+		await startPrototype(store, { projectId: 'alert-history', title: 'Alert history', note: 'Again', me: null, folder: 'Roles' });
 		expect(files['projects/alert-history/brief.md']).toBe(FILED);
 	});
 

@@ -26,7 +26,11 @@ const isRecordFile = (f: string): boolean => f === workPath(f.split('/')[1] ?? '
 const lines = (out: string): string[] => out.split('\n').filter(Boolean);
 const message = (err: unknown): string => errorText(err, { firstLine: true });
 
-export const syncRecords = async (designRoot: string): Promise<SyncResult> => {
+/**
+ * `started`: whether a project has a version started on this machine and not saved yet. Such a project with no records
+ * here is held back whole (its brief, what the agent writes), so nothing of it is shared until its first page is.
+ */
+export const syncRecords = async (designRoot: string, started: (projectId: string) => boolean): Promise<SyncResult> => {
 	const g = (...args: string[]) => git(designRoot, args, { timeoutMs: 120_000 });
 	const held = (why: string, files?: string[]): SyncResult => ({ published: [], problems: [{ what: RECORDS, why, files }] });
 
@@ -61,7 +65,7 @@ export const syncRecords = async (designRoot: string): Promise<SyncResult> => {
 			);
 		}
 
-		const made = await recordsOnTopOf(designRoot, theirs);
+		const made = await recordsOnTopOf(designRoot, theirs, started);
 		if (typeof made === 'string') return held(made);
 		const { commit, ids, paths, read } = made;
 		if (commit === null) {
@@ -88,18 +92,27 @@ export const syncRecords = async (designRoot: string): Promise<SyncResult> => {
 const recordsOnTopOf = async (
 	designRoot: string,
 	theirs: string,
+	started: (projectId: string) => boolean,
 ): Promise<string | { commit: string | null; ids: string[]; paths: string[]; read: Map<string, string | null> }> => {
 	const g = (args: string[], input?: string) => git(designRoot, args, { input });
 	const blobAt = (rev: string, path: string) => g(['rev-parse', '-q', '--verify', `${rev}:${path}`]).catch(() => null);
 	const base = await g(['merge-base', 'HEAD', theirs]).catch(() => null);
 	if (base === null) return `The design repository here and on ${HOST} share no history, so records are not published into it.`;
 
+	const held = new Map<string, boolean>();
+	const unrecorded = (path: string): boolean => {
+		const id = path.split('/')[1] ?? '';
+		if (!held.has(id)) held.set(id, started(id) && !existsSync(join(designRoot, workPath(id))));
+		return held.get(id) === true;
+	};
 	const paths = [
 		...new Set([
 			...lines(await g(['diff', '--name-only', '--no-renames', base, '--', 'projects'])),
 			...lines(await g(['ls-files', '--others', '--exclude-standard', '--', 'projects'])),
 		]),
-	].sort();
+	]
+		.filter((p) => !unrecorded(p))
+		.sort();
 	// Null when the file is deleted.
 	const changes = new Map<string, string | null>();
 	const hopeless: string[] = [];

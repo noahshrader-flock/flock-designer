@@ -3,7 +3,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { folderName } from '../../shared/brief';
 import type { Handed, CommentRef, HandedComment, OpenedPrototype, PrototypeReadiness } from '../../shared/contract';
-import { coverPath, prototypeKey, prototypePagePath } from '../../shared/designPaths';
+import { coverPath, prototypeKey, prototypePagePath, workPath } from '../../shared/designPaths';
 import { statesOf } from '../../shared/prototypeStates';
 import { workLabel } from '../../shared/work';
 import { ADDRESS_SKILL, chooseComment } from '../services/prototypes/address';
@@ -26,6 +26,7 @@ import {
 	setBaseCommit,
 } from '../services/prototypes/prototype';
 import { localPrototypeFile, whereTheChangeGoes } from '../services/prototypes/prototypeWork';
+import { dropAllPending } from '../services/prototypes/pendingPrototypes';
 import { singleFlight } from '../services/platform/concurrency';
 
 export const prototypesArea = (d: CallsDeps) => {
@@ -128,10 +129,12 @@ export const prototypesArea = (d: CallsDeps) => {
 			deploys.site();
 			return null;
 		},
-		/** Built again, the site has none of its pages. */
+		/** Built again, the site has none of its pages; one only started here was never on it, and goes with its start. */
 		deleteProject: async (projectId: string, typed: string) => {
+			const shared = await store.records().has(workPath(projectId));
 			await deleteProject(store.records(), projectId, typed);
-			deploys.site();
+			dropAllPending(prototypesRoot, projectId);
+			if (shared) deploys.site();
 			emit('onProjectDeleted', projectId);
 			return null;
 		},
@@ -182,12 +185,7 @@ export const prototypesArea = (d: CallsDeps) => {
 			const { change, number } = prepared;
 			return { ...handed, target: change.target, from: change.fresh ? change.from.name : null, number };
 		},
-		saveBuilt: async (projectId: string, name: string, from: string | null): Promise<'saved' | 'waiting'> => {
-			const fresh = from === null ? null : { from, me: me(), note: `For a comment on ${workLabel({ name: from })}` };
-			const saved = await work.saveBuilt(projectId, name, fresh);
-			if (saved === 'saved') deploys.page(projectId, name);
-			return saved;
-		},
+		saveBuilt: d.saveBuilt,
 		openPrototype: async (projectId: string, name: string): Promise<OpenedPrototype> => {
 			const html = await prototypePage(projectId, name);
 			if (html === null) throw new Error('This prototype has no page yet.');
