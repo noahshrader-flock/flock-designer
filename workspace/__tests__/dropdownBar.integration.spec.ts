@@ -76,4 +76,37 @@ describe.skipIf(NO_CHROME)('a dropdown in the top bar, in the browser on this ma
 		expect(list.scrolls).toBe(true);
 		expect(list.fits).toBe(true);
 	});
+
+	it('marks what is chosen in the link purple, its icon and its check, giving way to the text colour on the theme’s selection', async () => {
+		const colours = await inChrome(async (browser) => {
+			const tab = await browser.newPage(OWN_WINDOW);
+			await tab.setViewport({ width: 600, height: 400 });
+			const item = (checked: boolean, icon: string) =>
+				`<button role="menuitemradio" aria-checked="${checked}" class="menu-item">${icon}<span>x</span>${checked ? '<span class="codicon codicon-check menu-check"></span>' : ''}</button>`;
+			const glyph = '<span class="codicon codicon-layout"></span>';
+			const drawn = '<svg class="mode-icon" width="16" height="16" stroke="currentColor"></svg>';
+			await tab.setContent(
+				barPage(
+					`<div role="menu" class="menu-list" style="position:static">${item(true, glyph)}${item(false, glyph)}${item(true, drawn)}</div><i id="link" style="color:var(--dsnr-link)"></i>`,
+				),
+			);
+			return tab.evaluate(() => {
+				const of = (el: Element | null) => (el ? getComputedStyle(el).color : null);
+				const [chosen, other, chosenDrawn] = [...document.querySelectorAll('.menu-item')];
+				return {
+					link: of(document.getElementById('link')),
+					glyph: of(chosen!.querySelector('.codicon:not(.menu-check)')),
+					check: of(chosen!.querySelector('.menu-check')),
+					drawn: of(chosenDrawn!.querySelector('.mode-icon')),
+					other: of(other!.querySelector('.codicon')),
+					text: of(other!),
+				};
+			});
+		});
+		expect(colours.glyph).toBe(colours.link);
+		expect(colours.check).toBe(colours.link);
+		expect(colours.drawn).toBe(colours.link);
+		expect(colours.other).toBe(colours.text);
+		expect(colours.link).not.toBe(colours.text);
+	});
 });

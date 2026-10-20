@@ -953,6 +953,12 @@ details[open] > summary > .collapse-chevron {
 	padding-left: var(--dsnr-space-5);
 }
 
+/* What is chosen is marked in the brand's purple: its icon, and its check. */
+.menu-item[aria-checked='true'] .codicon,
+.menu-item[aria-checked='true'] .mode-icon {
+	color: var(--dsnr-link);
+}
+
 .menu-heading {
 	padding: var(--dsnr-space-2) var(--dsnr-space-4) var(--dsnr-space-3);
 	color: var(--dsnr-muted);
@@ -976,6 +982,12 @@ details[open] > summary > .collapse-chevron {
 	color: var(--vscode-menu-selectionForeground);
 	background: var(--vscode-menu-selectionBackground);
 	outline: none;
+}
+
+/* On the theme's own selection colour the purple would not read, so they take the item's text. */
+.menu-item[aria-checked='true']:hover:not(:disabled) :is(.codicon, .mode-icon),
+.menu-item[aria-checked='true']:focus-visible:not(:disabled) :is(.codicon, .mode-icon) {
+	color: inherit;
 }
 
 .scrim {

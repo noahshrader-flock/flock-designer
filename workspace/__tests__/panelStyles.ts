@@ -6,7 +6,11 @@ import { tokenCss } from '../src/ui/applyTokens';
 export const panelCss = (): string =>
 	[tokenCss(), ...['src/ui/kit.css', 'extension/webview/styles.css'].map((file) => readFileSync(join(__dirname, '..', file), 'utf8'))].join('\n');
 
-const viewerCss = readFileSync(join(__dirname, '..', 'src/viewer/viewer.css'), 'utf8').replace(/@import[^;]+;/g, '');
+/** As the viewer's own page has it: its imports are the theme and the kit, which `panelCss` already holds. */
+const viewerCss = [
+	readFileSync(join(__dirname, '..', 'src/ui/theme.css'), 'utf8'),
+	readFileSync(join(__dirname, '..', 'src/viewer/viewer.css'), 'utf8').replace(/@import[^;]+;/g, ''),
+].join('\n');
 
 /** A page with the kit's and the review bar's styles around `body`, to measure in a real browser. */
 export const barPage = (body: string): string =>
