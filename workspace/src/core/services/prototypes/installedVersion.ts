@@ -1,15 +1,15 @@
-import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileAt, hasFileAt } from '../platform/git';
+import { readJsonObject } from '../platform/jsonFile';
 
-/** A package's version as installed in `nodeModules`; null when it is not there, or its package.json cannot be read. */
+/** A package's package.json as installed in `nodeModules`; null when it is not there, or cannot be read. */
+export const installedPackage = (nodeModules: string, pkg: string): Record<string, unknown> | null =>
+	readJsonObject(join(nodeModules, ...pkg.split('/'), 'package.json'));
+
+/** A package's version as installed in `nodeModules`; null when it is not there, or its package.json says none. */
 export const installedVersion = (nodeModules: string, pkg: string): string | null => {
-	try {
-		const { version } = JSON.parse(readFileSync(join(nodeModules, ...pkg.split('/'), 'package.json'), 'utf8')) as { version?: unknown };
-		return typeof version === 'string' ? version : null;
-	} catch {
-		return null;
-	}
+	const version = installedPackage(nodeModules, pkg)?.version;
+	return typeof version === 'string' ? version : null;
 };
 
 /** npm's, the one form read; the others are named, so they are said rather than guessed at. */

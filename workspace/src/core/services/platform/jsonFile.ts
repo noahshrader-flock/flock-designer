@@ -1,6 +1,16 @@
 import { mkdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 
+/** A JSON file's object, read once; null when it is not there, cannot be read, or is not an object. */
+export const readJsonObject = (path: string): Record<string, unknown> | null => {
+	try {
+		const v = JSON.parse(readFileSync(path, 'utf8')) as unknown;
+		return typeof v === 'object' && v !== null && !Array.isArray(v) ? (v as Record<string, unknown>) : null;
+	} catch {
+		return null;
+	}
+};
+
 /**
  * A small kept JSON file (a choice, a memory, a cache). One edited, damaged or from another version reads as `fallback`;
  * it is written whole, so no reader sees part of one; and a failed write is ignored, as forgetting a choice is no failure.

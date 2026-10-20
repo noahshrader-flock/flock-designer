@@ -1,11 +1,11 @@
-import { existsSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, statSync } from 'node:fs';
 import { basename, join, relative } from 'node:path';
 import { asRepositoryPath, parseRemote } from '../../../shared/repoRef';
 import { findDesignSystems } from '../designSystem/designSystems';
 import { folderReads } from '../designSystem/folderReads';
-import { type JsonFile, jsonFile } from '../platform/jsonFile';
-import { claimedRepository, git, isSafeBranchName } from '../platform/git';
-import { installedVersion } from '../prototypes/installedVersion';
+import { type JsonFile, jsonFile, readJsonObject } from '../platform/jsonFile';
+import { installedPackage } from '../prototypes/installedVersion';
+import { claimedRepository, isSafeBranchName, refTip } from '../platform/git';
 import { designSystemCheckout, readDescriptor } from './descriptor';
 
 const isFolder = (p: string): boolean => existsSync(p) && statSync(p).isDirectory();
@@ -16,15 +16,6 @@ export const designSystemIn = async (dir: string): Promise<string | null> => {
 	const found = await findDesignSystems(folderReads(dir), basename(dir)).catch(() => []);
 	const first = found[0];
 	return first === undefined ? null : first.folder === '' ? dir : join(dir, first.folder);
-};
-
-const readJson = (file: string): Record<string, unknown> | null => {
-	try {
-		const v = JSON.parse(readFileSync(file, 'utf8')) as unknown;
-		return typeof v === 'object' && v !== null ? (v as Record<string, unknown>) : null;
-	} catch {
-		return null;
-	}
 };
 
 /** `owner/repo` from a package.json's `repository`, in any of the forms npm takes; null for none, or another host. */
@@ -45,23 +36,26 @@ export const packageRepository = (field: unknown): string | null => {
 export type SourceCheck =
 	{ state: 'confirmed' } | { state: 'uninstalled' } | { state: 'unconfirmed'; why: string; key: string } | { state: 'mismatch'; why: string };
 
+/** The folder as the person reads it, from the product: `../ui`. */
+const labelOf = (productRoot: string, dir: string): string => relative(productRoot, dir) || dir;
+
 /** Its package.json names `pkg`; else a mismatch, in words. */
 const checkName = (productRoot: string, pkg: string, dir: string): SourceCheck => {
-	const name = readJson(join(dir, 'package.json'))?.name;
+	const name = readJsonObject(join(dir, 'package.json'))?.name;
 	return name === pkg
 		? { state: 'confirmed' }
 		: {
 				state: 'mismatch',
-				why: `${relative(productRoot, dir) || dir} is not ${pkg}'s source: its package is ${typeof name === 'string' ? name : 'unnamed'}.`,
+				why: `${labelOf(productRoot, dir)} is not ${pkg}'s source: its package is ${typeof name === 'string' ? name : 'unnamed'}.`,
 			};
 };
 
 export const checkSource = async (productRoot: string, pkg: string, dir: string): Promise<SourceCheck> => {
-	const label = relative(productRoot, dir) || dir;
+	const label = labelOf(productRoot, dir);
 	const named = checkName(productRoot, pkg, dir);
 	if (named.state === 'mismatch') return named;
-	const installed = readJson(join(productRoot, 'node_modules', ...pkg.split('/'), 'package.json'));
-	const version = installedVersion(join(productRoot, 'node_modules'), pkg);
+	const installed = installedPackage(join(productRoot, 'node_modules'), pkg);
+	const version = typeof installed?.version === 'string' ? installed.version : null;
 	if (installed === null || version === null) return { state: 'uninstalled' };
 	const from = packageRepository(installed.repository);
 	const origin = await claimedRepository(dir);
@@ -71,9 +65,9 @@ export const checkSource = async (productRoot: string, pkg: string, dir: string)
 	const key = [productRoot, dir, origin ?? '', version].join('\0');
 	if (from === null) return { state: 'unconfirmed', why: `the installed ${pkg} names no repository`, key };
 	if (origin === null) return { state: 'unconfirmed', why: `${label} has no origin to compare with`, key };
-	const tags = [`v${version}`, version, `${pkg}@${version}`].filter(isSafeBranchName);
-	for (const tag of tags)
-		if (await git(dir, ['rev-parse', '--verify', '--quiet', `refs/tags/${tag}^{commit}`]).catch(() => null)) return { state: 'confirmed' };
+	// A release is tagged as its version, with a v, or as the package at it; a tag is a ref, so a ref name's rule holds.
+	for (const tag of [`v${version}`, version, `${pkg}@${version}`].filter(isSafeBranchName))
+		if ((await refTip(dir, `refs/tags/${tag}`)) !== null) return { state: 'confirmed' };
 	return { state: 'unconfirmed', why: `${label} has no release tag for ${version}, the version installed`, key };
 };
 
@@ -132,8 +126,7 @@ export const productDesignSystem = async (productRoot: string, answers: Pick<Sou
 	if (check.state === 'mismatch') return { state: 'refused', root: dir, why: check.why };
 	const answer = answers.of(check.key);
 	if (answer === 'use') return { state: 'usable', root: dir };
-	if (answer === 'refuse')
-		return { state: 'refused', root: dir, why: `You chose not to use ${relative(productRoot, dir) || dir} as ${pkg}'s source.` };
+	if (answer === 'refuse') return { state: 'refused', root: dir, why: `You chose not to use ${labelOf(productRoot, dir)} as ${pkg}'s source.` };
 	return { state: 'ask', root: dir, why: check.why, key: check.key, name: pkg };
 };
 
