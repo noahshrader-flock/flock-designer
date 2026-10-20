@@ -132,8 +132,8 @@ export const codebaseArea = (d: CallsDeps) => {
 				setup,
 			};
 		},
-		chooseAgent: () => chooseAgentNow(),
-		agentShown: () => agentShown(),
+		chooseAgent: chooseAgentNow,
+		agentShown,
 		agentReady: async (): Promise<null> => {
 			await assertReady(await agent());
 			return null;

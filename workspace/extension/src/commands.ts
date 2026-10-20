@@ -20,7 +20,7 @@ export interface CommandDeps {
 	signedIn: () => boolean;
 	failed: (err: unknown) => void;
 	failedFor: (fromCode: boolean) => (err: unknown) => void;
-	chooseAgent: () => Promise<void>;
+	chooseAgent: () => Promise<unknown>;
 }
 
 /** DSNR's commands but the design system's and voice and tone's, by id; `raw` is what a caller passed, unchecked. */

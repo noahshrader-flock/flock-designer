@@ -631,8 +631,9 @@ describe('prototypes', () => {
 		it('asks whatever is kept when the person changes it, and says which is used now without asking', async () => {
 			await made();
 			ports.pickAgent.mockResolvedValue({ id: 'codex', keep: true });
-			expect((await call(CHANNELS.chooseAgent)).value).toBe('Codex');
+			expect(await call(CHANNELS.chooseAgent)).toEqual({ ok: true, value: null });
 			expect(ports.pickAgent).toHaveBeenCalledTimes(1);
+			expect(ports.keepAgent).toHaveBeenCalledWith('codex');
 			expect((await call(CHANNELS.agentShown)).value).toBe('Claude Code');
 			ports.agentChoice.mockReturnValue('ask');
 			// Two are signed in, so it is still to be asked: nothing is said in its place.

@@ -155,8 +155,8 @@ export interface WorkspaceApi {
 	buildInCodebase(root: string, projectId: string, name: string, from?: string): Promise<Result<Handed>>;
 	/** Refused, in the agent's own words, when it is missing or signed out: asked before anything is made for it. */
 	agentReady(): Promise<Result<null>>;
-	/** The person chooses, whatever is kept (Change); the name of the one chosen, or null when they dismissed it. */
-	chooseAgent(): Promise<Result<string | null>>;
+	/** The person chooses, whatever is kept (Change), and it is kept as they say. */
+	chooseAgent(): Promise<Result<null>>;
 	/** The name of the agent work goes to now, said without asking; null while it is still to be asked. */
 	agentShown(): Promise<Result<string | null>>;
 	/** Hands the handoff's task to the agent, as a build is handed; refused unless the checkout is on the work's branch. */

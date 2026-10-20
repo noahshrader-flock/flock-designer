@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { AgentId, AgentReadiness } from '../src/core/services/agent/agent';
-import { type Choice, type Offered, chooseAgent } from '../src/core/services/agent/choose';
+import { type Choice, type Offered, chooseAgent, settled } from '../src/core/services/agent/choose';
 
 const ready: AgentReadiness = { state: 'ready' };
 const signedOut = (name: string): AgentReadiness => ({ state: 'signedOut', said: `${name} is not signed in.` });
@@ -52,6 +52,21 @@ describe('which agent work goes to', () => {
 		const { deps, pick } = world('codex');
 		expect(await chooseAgent([claude(), codex()], deps, { always: true })).toBeNull();
 		expect(pick).toHaveBeenCalledWith([claude(), codex()], null, 'codex');
+	});
+
+	it('is asked each time once the person unpins it in changing it, and keeps nothing it already kept', async () => {
+		const unpinned = world('codex', { id: 'claude-code', keep: false });
+		expect(await chooseAgent([claude(), codex()], unpinned.deps, { always: true })).toBe('claude-code');
+		expect(unpinned.keep).toHaveBeenCalledWith('ask');
+		const same = world('codex', { id: 'codex', keep: true });
+		await chooseAgent([claude(), codex()], same.deps, { always: true });
+		expect(same.keep).not.toHaveBeenCalled();
+	});
+
+	it('says without asking who it goes to, or that the person is to be asked', () => {
+		expect(settled([claude(), codex()], 'codex')).toEqual({ id: 'codex' });
+		expect(settled([claude(), codex()], 'ask')).toEqual({ why: null });
+		expect(settled([claude(), codex(signedOut('Codex'))], 'codex')).toEqual({ why: 'Codex is not signed in.' });
 	});
 
 	it('names every agent to sign in to when none can be used, and asks nothing', async () => {

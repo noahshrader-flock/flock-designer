@@ -6,7 +6,7 @@ import { storyComponent } from '../shared/valueNames';
 import { type Check, type EventSink, arg } from './handle';
 import type { Ports } from './ports';
 import { type Agent, type AgentId, runByChosen } from './services/agent/agent';
-import { type Offered, chooseAgent } from './services/agent/choose';
+import { type Offered, chooseAgent, settled } from './services/agent/choose';
 import { classify } from './services/projects/branchProjects';
 import { syncBranches } from './services/publishing/branchSync';
 import type { CheckoutMemory } from './services/projects/checkoutMemory';
@@ -315,13 +315,14 @@ export const composeCore = ({
 		opened,
 		runtime,
 		agent,
-		chooseAgentNow: async (): Promise<string | null> => (await choose(true))?.name ?? null,
+		chooseAgentNow: async (): Promise<null> => {
+			await choose(true);
+			return null;
+		},
 		/** The agent work goes to now, said without asking: null when it is still to be asked, or none is signed in. */
 		agentShown: async (): Promise<string | null> => {
-			const id = await chooseAgent(await offered(), { choice: () => ports.agentChoice(), pick: async () => null, keep: async () => undefined }).catch(
-				() => null,
-			);
-			return id === null ? null : agents[id].name;
+			const now = settled(await offered(), ports.agentChoice());
+			return 'id' in now ? agents[now.id].name : null;
 		},
 		share,
 		github,

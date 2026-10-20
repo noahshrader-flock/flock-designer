@@ -280,7 +280,7 @@ which starts at once with the task; or GitHub Copilot, in VS Code's Chat, with t
 a terminal when there is no Chat), and where an agent with a panel opens it (`dsnr.agent.location`, below; it was
 `dsnr.claudeCode.location`, and a value set there is moved to it once). **Which agent:** until one is kept, the one you
 are signed in to is used with no question; signed in to several, you are asked once, in VS Code's own list, and the
-choice is kept (the pin, on until pressed). A kept one you are no longer signed in to is asked about again, saying why:
+choice is kept (the pin, on until pressed; unpinned, you are asked each time). A kept one you are no longer signed in to is asked about again, saying why:
 never another in silence. Change it from the agent named in a dialog that hands work over, from your GitHub account
 dialog, with **DSNR: Choose the agent**, or in Settings. Changing a value in words runs unattended, which only Claude Code
 does.
