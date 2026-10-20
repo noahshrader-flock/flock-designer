@@ -40,25 +40,26 @@ export const setupState = async (
 export const setupMoved = (root: string): Promise<string> => git(root, ['status', '--porcelain', '--untracked-files=normal']).catch(() => '');
 
 /**
- * The design repository a product is set up with: Flock's clone where the person keeps it, or beside the product under its
- * name; else the folder the person picks, kept for its repository as Phase 1's are. Null when they pick none.
+ * The design repository a product is set up with: always the person's pick, as it decides where all the product's work goes,
+ * starting at Flock's clone when one is here (where the person keeps it, or beside the product under its name). A picked
+ * folder is named by its origin, never taken for Flock's, and kept for its repository unless it is beside the product
+ * under that name, where it is found anyway. Null when they pick none.
  */
 export const designRepositoryForSetup = async (
 	root: string,
-	{ clones, choose }: { clones: Pick<DesignRepositoryClones, 'at' | 'set'>; choose: () => Promise<string | null> },
+	{ clones, choose }: { clones: Pick<DesignRepositoryClones, 'at' | 'set'>; choose: (startAt: string | null) => Promise<string | null> },
 ): Promise<{ design: string; repository: string } | null> => {
 	const flock = formatRepo(DESIGN_REPO);
-	const known = [clones.at(flock), join(dirname(root), DESIGN_REPO.repo)].find((d): d is string => d !== null && isDesignRepository(d));
-	const design = known ?? (await choose());
+	const known = [clones.at(flock), join(dirname(root), DESIGN_REPO.repo)].find((d): d is string => d !== null && isDesignRepository(d)) ?? null;
+	const design = await choose(known);
 	if (design === null) return null;
 	if (!isDesignRepository(design)) throw new Error(notADesignRepository(design));
 	const claimed = await claimedRepository(design);
-	// One found as Flock's is Flock's; one picked is named by its origin, never guessed to be Flock's.
-	if (claimed === null && known === undefined)
+	// Flock's clone, as found, is Flock's; any other is known only by its origin.
+	if (claimed === null && design !== known)
 		throw new Error(`${design} has no GitHub origin, so which design repository it is cannot be told: clone it from GitHub, then set up again.`);
 	const repository = claimed ?? flock;
-	// Found again once the workspace file names it: beside the product under its name, or kept as a clone picked for it.
-	if (known === undefined && design !== join(dirname(root), repoRefOf(repository).repo)) clones.set(repository, design);
+	if (design !== join(dirname(root), repoRefOf(repository).repo)) clones.set(repository, design);
 	return { design, repository };
 };
 
@@ -111,7 +112,7 @@ export const handSetUp = async ({
 	root: string;
 	clones: Pick<DesignRepositoryClones, 'at' | 'set'>;
 	prototypesRoot: string;
-	choose: () => Promise<string | null>;
+	choose: (startAt: string | null) => Promise<string | null>;
 	hand: (prepare: () => Promise<{ root: string; what: string; taskFile: string; task: string }>) => Promise<Handed>;
 }): Promise<Handed | null> => {
 	if (existsSync(join(root, DESCRIPTOR_PATH))) throw new Error(`${basename(root)} is set up already: it has ${DESCRIPTOR_PATH}.`);

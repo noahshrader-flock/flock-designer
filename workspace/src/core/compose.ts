@@ -355,7 +355,7 @@ export const composeCore = ({
 				root,
 				clones: designRepositories,
 				prototypesRoot,
-				choose: () => ports.chooseFolder({ title: 'Choose the design repository' }),
+				choose: (startAt) => ports.chooseFolder({ title: 'Choose the design repository', ...(startAt === null ? {} : { defaultPath: startAt }) }),
 				hand: async (prepare) => (await handTask(ports, await agent(), prepare)).handed,
 			}),
 		prototypesRoot,

@@ -72,17 +72,29 @@ describe('where setting the open repository up stands', () => {
 describe('the design repository a product is set up with', () => {
 	const choose = vi.fn(async (): Promise<string | null> => null);
 
-	it('is Flock’s, beside the product under its name, or where the person keeps it, without asking', async () => {
+	it('is always the person’s pick, offered first at Flock’s clone, beside the product or where the person keeps it', async () => {
+		// The pick decides where every project, comment and page of the product goes, so it is never made for them.
+		const accept = vi.fn(async (startAt: string | null) => startAt);
 		const beside = designRepository(join(home, DESIGN_REPO.repo));
-		expect(await designRepositoryForSetup(product, { clones, choose })).toEqual({
+		expect(await designRepositoryForSetup(product, { clones, choose: accept })).toEqual({
 			design: beside,
 			repository: `${DESIGN_REPO.owner}/${DESIGN_REPO.repo}`,
 		});
+		expect(accept).toHaveBeenLastCalledWith(beside);
 		rmSync(beside, { recursive: true });
 		const kept = designRepository(join(home, 'elsewhere', 'designs'));
 		clones.set(`${DESIGN_REPO.owner}/${DESIGN_REPO.repo}`, kept);
-		expect((await designRepositoryForSetup(product, { clones, choose }))?.design).toBe(kept);
-		expect(choose).not.toHaveBeenCalled();
+		expect((await designRepositoryForSetup(product, { clones, choose: accept }))?.design).toBe(kept);
+		expect(accept).toHaveBeenLastCalledWith(kept);
+	});
+
+	it('is another company’s when the person picks it over Flock’s clone beside the product', async () => {
+		designRepository(join(home, DESIGN_REPO.repo));
+		const theirs = designRepository(join(home, 'cheq-designer'), 'git@github.com:cheq/cheq-designer.git');
+		expect(await designRepositoryForSetup(product, { clones, choose: async () => theirs })).toEqual({
+			design: theirs,
+			repository: 'cheq/cheq-designer',
+		});
 	});
 
 	it('is the folder the person picks otherwise, named by its origin and kept for that repository, so the product finds it again', async () => {
@@ -136,7 +148,7 @@ describe('the setup handed to the agent', () => {
 			expect(prepared.task).toContain('The note.');
 			return { agent: 'Claude Code', opened: 'typed' as const, command: null };
 		});
-		expect(await handSetUp({ root: product, clones, prototypesRoot: join(home, 'prototypes'), choose: async () => null, hand })).toMatchObject({
+		expect(await handSetUp({ root: product, clones, prototypesRoot: join(home, 'prototypes'), choose: async (at) => at, hand })).toMatchObject({
 			agent: 'Claude Code',
 		});
 		expect(hand).toHaveBeenCalledOnce();
@@ -145,7 +157,7 @@ describe('the setup handed to the agent', () => {
 	it('refuses a product set up already, and hands nothing over when the dsnr command cannot be built', async () => {
 		designRepository(join(home, DESIGN_REPO.repo));
 		const hand = vi.fn();
-		const set = { root: product, clones, prototypesRoot: join(home, 'prototypes'), choose: async () => null, hand };
+		const set = { root: product, clones, prototypesRoot: join(home, 'prototypes'), choose: async (at: string | null) => at, hand };
 		await expect(handSetUp(set)).rejects.toThrow(/run npm ci there first\.$/);
 		writeFiles(product, { '.dsnr/workspace.json': '{}' });
 		await expect(handSetUp(set)).rejects.toThrow('paradome is set up already: it has .dsnr/workspace.json.');
