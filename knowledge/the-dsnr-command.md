@@ -1,0 +1,52 @@
+# The dsnr command
+
+Everything DSNR does with prototypes can also be done from a terminal, with the `dsnr` command. Agents use it when you ask
+them for a prototype directly, outside the panel, and you can too.
+
+## How to run it
+
+It is run from inside a product's repository, with the design repository's clone beside it:
+
+```
+node ../flock-designer/workspace/bin/dsnr.mjs <command>
+```
+
+It builds itself from the design repository's own code each time, so it is always the same version as the extension. The
+first time, install that code's packages: run `npm ci` in the design repository's `workspace` folder. Most commands take
+`--product <folder>` to work on a product other than the one you are in.
+
+## The commands
+
+### Prototypes
+
+- `dsnr new-prototype`: records the next version of a project (Version 1 of a new one), and prints the task for the agent.
+  A new project needs `--title`; `--from` models it on another branch.
+- `dsnr change-prototype`: a change to a version, in place, or in a new version with `--new-version`.
+- `dsnr save-prototype`: builds the version's page and saves its page and source to the design repository.
+
+### Publishing
+
+- `dsnr publish`: pushes the project's records, deploys the site, and prints the version's link and who can open it.
+- `dsnr unpublish`: takes a version off the site. Its record and comments are kept.
+- `dsnr build-site`: builds the published site on your computer, and with `--serve` shows it there.
+
+### Accessibility
+
+- `dsnr accessibility`: measures a prototype, or the product itself on made-up data, in a real browser, and records what it
+  found with its evidence.
+- `dsnr check-accessibility`: checks that record is complete, for a handoff.
+- `dsnr read-returned`: reads what testers sent back, and logs each issue a machine missed in the product's gap log.
+
+### Setup
+
+- `dsnr agent-files`: writes the files that send every agent to DSNR's guidance. With `--check`, it changes nothing and
+  says whether they are current.
+- `dsnr check-setup`: says how far the product is set up, the same check the panel shows.
+
+Publishing needs GitHub's own command line, `gh`, signed in (`gh auth login`).
+
+## Why there is a command at all
+
+The panel is one way in; an agent working in the product is another. Both should do exactly the same thing, so both use the
+same code: a prototype started from the command is recorded, built and saved exactly as one started from the panel, and
+appears in the panel the next time it is open.

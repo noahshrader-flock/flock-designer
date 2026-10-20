@@ -101,8 +101,8 @@ company's. The `dsnr` command does the same from where it is run: the product's 
 repository's own origin.
 
 **Setting a product up.** A repository open with no workspace file is offered **Set up**, once signed in (`setupState`). It
-is handed to the person's agent as every task is: the design repository found (Flock's beside it or kept, else the folder the
-person picks, named by its origin), and the shared note, `skills/set-up-a-product.md`, read from it with the paths and the
+is handed to the person's agent as every task is: the design repository picked by the person, always (offered first at Flock's clone, beside it or
+kept, when there is one), named by its origin, and the shared note, `skills/set-up-a-product.md`, read from it with the paths and the
 exact `dsnr` commands. The agent writes the workspace file, what every agent reads first (`.dsnr/README.md`, `manifest.md`,
 `standards/non-negotiables.md`) and the agent files, then runs `dsnr check-setup` until it has nothing to fix. That check
 (`setupCheck`) is the one the panel shows: until the workspace file is committed, **Review** lists what to fix, what DSNR

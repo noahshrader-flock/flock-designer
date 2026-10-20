@@ -120,5 +120,5 @@ the whole suite.
 
 ## When something goes wrong
 
-Log it in the product's `.dsnr/knowledge/agent-gaps.md`, as `../knowledge/README.md` says. That log decides what gets
+Log it in the product's `.dsnr/knowledge/agent-gaps.md`, as `../knowledge/gap-logs.md` says. That log decides what gets
 written next, not speculation.

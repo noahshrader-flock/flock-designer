@@ -22,7 +22,8 @@ patterns and boundaries stay in the product repository; these are the ones that 
 speaks (its UI conventions, its voice and tone) is the design system's, in its own `.dsnr/`: **a design system's agent files are
 in its own folder, wherever it is**, whether that is a repository of its own or a folder of the product's.
 
-**`knowledge/`** — how the gap and setup-friction logs are written, the baselines and the pilot's questions. Each
+**`knowledge/`** — the knowledge base: how DSNR works, in plain words, for anyone using it (start at
+`knowledge/README.md`), and how a product's gap and setup-friction logs are written (`knowledge/gap-logs.md`). Each
 product keeps its own rows.
 
 ## The words
@@ -69,15 +70,15 @@ repository, nothing beside it: `designSystem.folder` says which folder), and pro
 | `.dsnr/standards/product.md` | Its measured conventions (casing, vocabulary) where they differ from Flock's |
 | `.dsnr/implementation/` | What a prototype must never import, with the check that finds it, and what it may |
 | `.dsnr/skills/` | Its part of a shared skill (what its gate checks, what its engineers pick up), and any path only it has |
-| `.dsnr/knowledge/` | Its gap and setup-friction logs, rows only (`knowledge/README.md` here says how) |
+| `.dsnr/knowledge/` | Its gap and setup-friction logs, rows only (`knowledge/gap-logs.md` here says how) |
 | Its patterns | Whatever folders it needs (Coke: `composition/`, `product-patterns/`), listed in its README |
 | `AGENTS.md` | A short section, between `<!-- dsnr:agents -->` lines, sending product UI work to `ui-guide.md` and building to the `dsnr` agent (below). Read by Codex, Copilot and any agent that reads `AGENTS.md` |
 | `CLAUDE.md` | Claude Code's, which it reads in place of `AGENTS.md`: `@AGENTS.md`, so the section is said once |
 | `.claude/agents/<name>.md` | Claude Code's agents (Copilot's command line reads them too): one pointer per shared agent, frontmatter then the line naming `../flock-designer/agents/<name>.md` |
 | `.agents/skills/<name>/SKILL.md` | Codex's skills (Copilot's command line reads them too): the same pointer per shared agent |
-| `dsnr.code-workspace` | Opens the product with `flock-designer` and the design system beside it, which every pointer above assumes. An agent that cannot read them says so and does not guess |
+| `dsnr.code-workspace` | Made by hand, not by `dsnr agent-files`: opens the product with `flock-designer` and the design system beside it, which every pointer above assumes. An agent that cannot read them says so and does not guess |
 
-**These are written, not made by hand:** `dsnr agent-files`, run in the product, writes them as a change to review and
+**These are written, not made by hand** (all but `dsnr.code-workspace`): `dsnr agent-files`, run in the product, writes them as a change to review and
 commit, and leaves a file that is the product's own (a `CLAUDE.md` with its own rules), saying why. A product's own
 `.github/copilot-instructions.md` is not DSNR's; Copilot reads it beside `AGENTS.md`.
 

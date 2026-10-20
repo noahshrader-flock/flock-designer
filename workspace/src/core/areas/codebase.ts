@@ -73,7 +73,7 @@ export const codebaseArea = (d: CallsDeps) => {
 			["Shared agents (the product's shims point here)", root === null ? null : join(root, 'agents')],
 			['Shared skills (a `skills/…` path in any guidance is here)', root === null ? null : join(root, 'skills')],
 			['Shared standards', root === null ? null : join(root, 'standards')],
-			['Shared logging (how the product logs what went wrong)', root === null ? null : join(root, 'knowledge')],
+			['The knowledge base (how DSNR works, and how a product logs what went wrong)', root === null ? null : join(root, 'knowledge')],
 			["The design system's checkout (its guidance and source)", designSystem],
 		];
 		const found = named.filter((n): n is [string, string] => n[1] !== null && existsSync(n[1]));
