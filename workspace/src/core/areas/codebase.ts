@@ -4,7 +4,7 @@ import { basename, dirname, join } from 'node:path';
 import type { AccessibilityResult, BranchAgainstBase, Handed, BuildInCodebasePlan, HandoffResult } from '../../shared/contract';
 import { statesOf } from '../../shared/prototypeStates';
 import { handoffReady, handoffVerdict } from '../../shared/handoff';
-import { DESIGN_MODE_COMMAND, againstBaseWords, routeIn, workLabel } from '../../shared/work';
+import { DESIGN_MODE_COMMAND, HANDOFF_COMMAND, LIGHT_CHECK_COMMAND, againstBaseWords, routeIn, workLabel } from '../../shared/work';
 import { A11Y_COMMAND, productTarget, taskAccessibility } from '../services/accessibility/accessibilityBrief';
 import { accessibilityOf } from '../services/accessibility/accessibilityCheck';
 import { type CheckoutParts, guidePart, handoffTask, buildInCodebaseTask, updateBranchTask } from '../services/agent/agentTasks';
@@ -82,7 +82,7 @@ export const codebaseArea = (d: CallsDeps) => {
 	/** `findings`: what a prototype's own accessibility check left open, to fix. */
 	const checkoutParts = async (canonical: string, projectId: string, findings?: Parameters<typeof taskAccessibility>[2]): Promise<CheckoutParts> => ({
 		guide: guidePart(await readSkillText(GUIDE), sharedRoot(canonical)),
-		lightCheck: commandLine(readDescriptor(canonical).commands, 'check-iteration', projectId),
+		lightCheck: commandLine(readDescriptor(canonical).commands, LIGHT_CHECK_COMMAND, projectId),
 		shared: await sharedGuidance(canonical),
 		accessibility: await codebaseAccessibility(canonical, findings),
 		voice: await work.voice(canonical),
@@ -160,7 +160,7 @@ export const codebaseArea = (d: CallsDeps) => {
 					skill,
 					projectId,
 					branch,
-					gate: commandLine(descriptor.commands, 'handoff', projectId),
+					gate: commandLine(descriptor.commands, HANDOFF_COMMAND, projectId),
 					missingRoute,
 					mergeState: against && againstBaseWords(against),
 				},

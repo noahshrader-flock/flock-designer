@@ -23,6 +23,7 @@ import { claimedRepository, readCheckout, git } from '../core/services/platform/
 import { type RepoRef, repoRefOf } from '../shared/repoRef';
 import { guidePart, prototypeBuildTask } from '../core/services/agent/agentTasks';
 import { SourceAnswers, usableDesignSystem } from '../core/services/projects/productDesignSystem';
+import { setupCheck } from '../core/services/projects/setupCheck';
 import { appPaths } from '../core/appPaths';
 import { designStore } from '../core/services/publishing/designStore';
 import { BUILD_SKILL, GUIDE, assertPrototypeName } from '../core/services/prototypes/prototype';
@@ -80,6 +81,7 @@ const USAGE = `Usage:
   dsnr check-accessibility --project <id> [--name <v1>]
   dsnr read-returned --project <id> [--product <dir>]
   dsnr agent-files [--check] [--product <dir>]
+  dsnr check-setup [--product <dir>]
 
 new-prototype records the next version (v1 for a new project, then v2, v3) and prints the task: where to write the
 prototype and how to check it builds. change-prototype does the same for a change to one: in that version, in place, or,
@@ -100,7 +102,9 @@ what testers sent back in the project's accessibility/returned.md now, rather th
 machine missed is logged in the product's agent gap log. agent-files writes what lets every agent find DSNR's guidance
 in the product: its section of AGENTS.md, CLAUDE.md as @AGENTS.md, and a pointer for each agent that finds agents or
 skills by file. It never commits, and leaves a file that is the product's own, saying why. With --check it writes
-nothing, says what it would change, and fails if anything would: a product's own check that they have not drifted.`;
+nothing, says what it would change, and fails if anything would: a product's own check that they have not drifted.
+check-setup says how far the product is set up, as the app reads it: what in its workspace file must be fixed (and
+fails on that), what DSNR would use that it does not have, and the commands it lets DSNR run.`;
 
 class UsageError extends Error {}
 
@@ -301,6 +305,7 @@ export const main = async (argv: string[], deps: CliDeps): Promise<number> => {
 				'check-accessibility',
 				'read-returned',
 				'agent-files',
+				'check-setup',
 			].includes(command ?? '')
 		) {
 			throw new UsageError(command ? `There is no command called ${command}.` : 'Say which command.');
@@ -315,6 +320,20 @@ export const main = async (argv: string[], deps: CliDeps): Promise<number> => {
 				out: deps.out,
 			});
 		if (command === 'publish') return await publishPage(deps, values);
+		if (command === 'check-setup') {
+			const root = await productOf(deps.cwd, values.product, 'check its setup');
+			const answers = new SourceAnswers(appPaths(dirname(deps.prototypesRoot)).designSystemSources);
+			const { problems, missing, commands } = await setupCheck(root, { answers, clones: clonesOf(deps) });
+			const list = (lines: string[]) => lines.map((l) => `  ${l}`).join('\n');
+			deps.out(
+				[
+					problems.length ? `To fix in ${root}:\n${list(problems)}` : `${root} is set up as DSNR reads it.`,
+					...(missing.length ? [`What it does not have, which DSNR would use:\n${list(missing)}`] : []),
+					`The commands it lets DSNR run:\n${list(commands.map((c) => `${c.id}: ${c.argv.join(' ')}`))}`,
+				].join('\n\n'),
+			);
+			return problems.length ? 1 : 0;
+		}
 		if (command === 'agent-files') {
 			const check = values.check === true;
 			const root = await productOf(deps.cwd, values.product, check ? 'check its agent files' : 'write its agent files');

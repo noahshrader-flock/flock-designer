@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { main } from '../src/cli/dsnr';
 import { REPO, deps, recorded, run, setUpCliWorld, world } from './cliWorld';
 import { type Answer, fakeGitHub, refusal } from './fakes/github';
-import { g, installDesignSystem, makeProduct, designSystemBeside } from './fixtures';
+import { g, installDesignSystem, makeProduct, designSystemBeside, writeFiles } from './fixtures';
 
 setUpCliWorld();
 
@@ -244,6 +244,20 @@ describe('change-prototype', () => {
 		await run('new-prototype', '--project', 'demo', '--note', 'Another idea');
 		await run('new-prototype', '--project', 'demo', '--note', 'A third');
 		expect(recorded().map((i) => i.name)).toEqual(['v1', 'v2', 'v3']);
+	});
+});
+
+describe('check-setup', () => {
+	it('says what to fix, and fails, then what the product does not have and what it lets DSNR run once there is nothing to fix', async () => {
+		expect(await run('check-setup')).toBe(1);
+		const said = world.out.join('\n');
+		expect(said).toMatch(/^To fix in .*flock-coke:\n {2}There is no \.dsnr\/README\.md, which every agent reads before building\./);
+		expect(said).toContain('The commands it lets DSNR run:');
+		for (const file of ['README.md', 'manifest.md', 'standards/non-negotiables.md']) writeFiles(join(world.product, '.dsnr'), { [file]: '# Here\n' });
+		expect(await run('agent-files')).toBe(0);
+		world.out = [];
+		expect(await run('check-setup')).toBe(0);
+		expect(world.out.join('\n')).toMatch(/is set up as DSNR reads it\.\n\nWhat it does not have, which DSNR would use:\n {2}No install command/);
 	});
 });
 

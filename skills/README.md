@@ -11,6 +11,7 @@ read because it happens to be nearby, and nothing about one kind of work leaks i
 | **Hand off** | Hand off, on codebase work | The product repository, on `feature/<id>` | `skills/handoff.md` (this repo), then the product's gate and reviewers | The gate passing, `projects/<id>/review.md`, fixes committed, and `HANDOFF.md` on the branch |
 | **Address a comment** | Address, on one comment | Codebase work: its branch in the product repository. A prototype: the app's own folder, where it was built | `skills/address-comments.md` (this repo); on a prototype, `skills/build-prototype.md` too | Codebase work: one commit for that comment. A prototype: its page changed and saved, no commit, in the version commented on, or in a new version from it when the person chose that |
 | **Record where the work is** | Part of any codebase work | The design repository's records | `skills/record-the-route.md` (this repo) | A `route` on the codebase work's record |
+| **Set up a product** | Set up, in the panel, on a repository open with no `.dsnr/workspace.json` | The product repository, writing only its DSNR files | `skills/set-up-a-product.md` (this repo), with the paths and `dsnr` commands the task gives | `.dsnr/workspace.json`, `.dsnr/README.md`, `manifest.md` and `standards/non-negotiables.md`, and the agent files (`dsnr agent-files`), until `dsnr check-setup` has nothing to fix; nothing committed |
 
 ## The three layers, always in this order
 

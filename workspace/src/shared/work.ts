@@ -13,6 +13,10 @@ export const againstBaseWords = ({ branch, base, behind, conflicts }: BranchAgai
 
 /** Declared in `.dsnr/workspace.json` to serve the product's own app on mock data. */
 export const DESIGN_MODE_COMMAND = 'design-mode';
+/** Declared to run the light check, fast, after every step of codebase work. */
+export const LIGHT_CHECK_COMMAND = 'check-iteration';
+/** Declared to run the gate that says codebase work is fit for engineering. */
+export const HANDOFF_COMMAND = 'handoff';
 
 /** Its pull request when one is recorded, else its branch; null when the record says neither. */
 export const codeLink = (it: { branch: string; repository?: string | null; pullRequest?: string | null }): string | null => {
