@@ -1552,6 +1552,7 @@ describe('Design System', () => {
 	it('says when the design system is no longer on this computer, and offers to choose another', async () => {
 		await read({ state: 'lost', name: 'FUI', root: '/work/flock-react-component-lib' });
 		expect(body().querySelector('.empty [data-part="title"]')?.textContent).toBe('FUI is no longer on this computer');
+		expect(body().textContent).toContain('Open its folder again, or choose another.');
 		await press(button('Choose design system…'));
 		expect(lastAsk()).toEqual(['chooseDesignSystem', []]);
 	});

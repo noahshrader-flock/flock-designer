@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { findContext } from '../src/core/services/projects/findContext';
 import { chooseDesignSystem } from '../src/core/services/projects/productDesignSystem';
-import { makeProductFiles } from './fixtures';
+import { makeDesignSystem, makeProductFiles } from './fixtures';
 
 /**
  * The design system is found in order: the folder the person chose for the product, then what the product says, then any
@@ -26,12 +26,7 @@ const product = (dir: string, pkg: string, folder?: string) => {
 	writeFileSync(file, JSON.stringify({ ...descriptor, designSystem: folder ? { package: pkg, folder } : { package: pkg } }));
 	return dir;
 };
-const designSystem = (dir: string, name = '@acme/ui') => {
-	mkdirSync(join(dir, 'src'), { recursive: true });
-	writeFileSync(join(dir, 'package.json'), JSON.stringify({ name }));
-	writeFileSync(join(dir, 'src', 'Button.stories.tsx'), "export default { title: 'Inputs/Button' };\n");
-	return dir;
-};
+const designSystem = (dir: string, name = '@acme/ui') => makeDesignSystem(dir, name);
 const designRepository = (dir: string) => {
 	mkdirSync(join(dir, '.git'), { recursive: true });
 	mkdirSync(join(dir, 'projects'), { recursive: true });

@@ -243,7 +243,9 @@ export const DesignSystem = ({
 	if (catalog.state === 'lost')
 		return (
 			<Message size="page" icon="warning" title={`${catalog.name} is no longer on this computer`} action={action}>
-				<p>Its copy was at {catalog.root}. Open its folder again, or choose another.</p>
+				<p>
+					Its copy was at {catalog.root}. Open its folder again{action ? ', or choose another' : ''}.
+				</p>
 			</Message>
 		);
 	if (catalog.state === 'no-branch')

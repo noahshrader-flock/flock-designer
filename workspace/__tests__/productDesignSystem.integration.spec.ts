@@ -13,7 +13,7 @@ import {
 	productDesignSystem,
 	usableDesignSystem,
 } from '../src/core/services/projects/productDesignSystem';
-import { g, makeProductFiles } from './fixtures';
+import { g, makeDesignSystem, makeProductFiles } from './fixtures';
 
 let base: string;
 let coke: string;
@@ -28,11 +28,7 @@ const product = (designSystem: { package: string; folder?: string } = { package:
 	writeFileSync(file, JSON.stringify({ ...(JSON.parse(readFileSync(file, 'utf8')) as object), designSystem }));
 };
 /** A package in the product at `folder` (`''`, the product's own), with a story, so it reads as a design system. */
-const packageIn = (folder: string, name: string) => {
-	mkdirSync(join(coke, folder, 'src'), { recursive: true });
-	writeFileSync(join(coke, folder, 'package.json'), JSON.stringify({ name }));
-	writeFileSync(join(coke, folder, 'src', 'Button.stories.tsx'), "export default { title: 'Inputs/Button' };\n");
-};
+const packageIn = (folder: string, name: string) => makeDesignSystem(join(coke, folder), name);
 const install = (pkg: Record<string, unknown>) => {
 	mkdirSync(join(coke, 'node_modules', '@acme', 'ui'), { recursive: true });
 	writeFileSync(join(coke, 'node_modules', '@acme', 'ui', 'package.json'), JSON.stringify({ name: '@acme/ui', version: '1.2.3', ...pkg }));
@@ -43,9 +39,7 @@ const library = ({
 	origin = 'git@github.com:acme/ui.git',
 	tag = 'v1.2.3',
 }: { name?: string; origin?: string | null; tag?: string | null } = {}) => {
-	mkdirSync(join(ui, 'src'), { recursive: true });
-	writeFileSync(join(ui, 'package.json'), JSON.stringify({ name }));
-	writeFileSync(join(ui, 'src', 'Button.stories.tsx'), "export default { title: 'Inputs/Button' };\n");
+	makeDesignSystem(ui, name);
 	g(ui, 'init', '-q', '-b', 'main');
 	g(ui, 'add', '.');
 	g(ui, 'commit', '-q', '-m', 'library');
@@ -204,14 +198,8 @@ describe('a design system in the product’s own repository, found by the packag
 describe('a design system the person chose for the product', () => {
 	/** Choices are kept in the product clone's own git config, so the product is a clone here. */
 	beforeEach(() => g(coke, 'init', '-q'));
-	/** A design system in a folder of its own, with a story so it reads as one. */
-	const elsewhere = (name: string) => {
-		const dir = join(base, name);
-		mkdirSync(join(dir, 'src'), { recursive: true });
-		writeFileSync(join(dir, 'package.json'), JSON.stringify({ name: '@acme/ui' }));
-		writeFileSync(join(dir, 'src', 'Button.stories.tsx'), "export default { title: 'Inputs/Button' };\n");
-		return dir;
-	};
+	/** A design system in a folder of its own. */
+	const elsewhere = (name: string) => makeDesignSystem(join(base, name), '@acme/ui');
 
 	it('outranks the one the product names, is read as a design system and nothing more, and is undone back to it', async () => {
 		library();
