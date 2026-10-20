@@ -20,7 +20,7 @@ import { designSystemHost } from './designSystemHost';
 import { registerVoice } from './voice';
 import { errorText, valueOf } from '../../src/shared/result';
 import { type CodebaseAction, type HostMessage, NO_TABS_SHOWN, type Placed, type Review, reviewsOf } from './messages';
-import { setupState } from '../../src/core/services/projects/setUp';
+import { setupMoved, setupState } from '../../src/core/services/projects/setUp';
 import { handedTo } from '../../src/shared/handedTo';
 import { askRoutes } from './asks';
 import { commands } from './commands';
@@ -273,12 +273,15 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 	 */
 	let watchingSetUp = false;
 	const watchSetUp = () => {
-		if (watchingSetUp) return;
+		if (watchingSetUp || setup === null) return;
 		watchingSetUp = true;
+		const root = setup.root;
+		let last: string | null = null;
 		watchUntil(
 			async () => {
-				const now = await setupState(folders(), found.product, { answers: core.sourceAnswers, clones: core.designRepositories });
-				if (JSON.stringify(now) !== JSON.stringify(setup)) await refresh();
+				const now = await setupMoved(root);
+				if (last !== null && now !== last) await refresh();
+				last = now;
 				if (setup === null) watchingSetUp = false;
 				return setup === null;
 			},

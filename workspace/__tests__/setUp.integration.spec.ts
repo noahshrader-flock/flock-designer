@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DesignRepositoryClones, NO_CLONES } from '../src/core/services/projects/discovery';
-import { designRepositoryForSetup, handSetUp, setUpTask, setupState } from '../src/core/services/projects/setUp';
+import { designRepositoryForSetup, handSetUp, setUpTask, setupMoved, setupState } from '../src/core/services/projects/setUp';
 import { DESIGN_REPO } from '../src/shared/config';
 import { g, writeFiles } from './fixtures';
 
@@ -56,6 +56,16 @@ describe('where setting the open repository up stands', () => {
 		});
 		commit(product);
 		expect(await state([product], product)).toBeNull();
+	});
+
+	it('moves, for the watch to read it again, as files are written and when they are committed, and not otherwise', async () => {
+		const before = await setupMoved(product);
+		expect(await setupMoved(product)).toBe(before);
+		writeFiles(product, { '.dsnr/manifest.md': '# Paradome\n' });
+		const written = await setupMoved(product);
+		expect(written).not.toBe(before);
+		commit(product);
+		expect(await setupMoved(product)).not.toBe(written);
 	});
 });
 
@@ -114,7 +124,8 @@ describe('the setup handed to the agent', () => {
 
 	it('writes the task from the design repository’s own note, beside the prototypes, and hands it over', async () => {
 		const design = designRepository(join(home, DESIGN_REPO.repo));
-		mkdirSync(join(design, 'workspace', 'node_modules', 'esbuild'), { recursive: true });
+		// Installed as npm leaves it: a package the dsnr command can resolve.
+		writeFiles(join(design, 'workspace', 'node_modules', 'esbuild'), { 'package.json': '{ "name": "esbuild", "main": "index.js" }', 'index.js': '' });
 		const hand = vi.fn(async (prepare: () => Promise<{ task: string; taskFile: string; root: string; what: string }>) => {
 			const prepared = await prepare();
 			expect(prepared).toMatchObject({

@@ -17,6 +17,8 @@ export const DESIGN_MODE_COMMAND = 'design-mode';
 export const LIGHT_CHECK_COMMAND = 'check-iteration';
 /** Declared to run the gate that says codebase work is fit for engineering. */
 export const HANDOFF_COMMAND = 'handoff';
+/** A declared command as it is shown to the person: its id, then what it runs. */
+export const commandShown = ({ id, argv }: { id: string; argv: string[] }): string => `${id}: ${argv.join(' ')}`;
 
 /** Its pull request when one is recorded, else its branch; null when the record says neither. */
 export const codeLink = (it: { branch: string; repository?: string | null; pullRequest?: string | null }): string | null => {

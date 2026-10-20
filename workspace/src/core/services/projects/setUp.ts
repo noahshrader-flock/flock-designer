@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { basename, dirname, join } from 'node:path';
 import type { Handed } from '../../../shared/contract';
 import { DESIGN_REPO } from '../../../shared/config';
@@ -31,6 +32,12 @@ export const setupState = async (
 	const uncommitted = await git(product, ['status', '--porcelain', '--untracked-files=normal', '--', DESCRIPTOR_PATH]).catch(() => '');
 	return uncommitted === '' ? null : { state: 'review', root: product, check: await setupCheck(product, deps) };
 };
+
+/**
+ * What changes as a setup moves on (the agent writing its files, the person committing them): the repository's status, one
+ * git call, so a setup waiting hours for its review is read again only when it moved.
+ */
+export const setupMoved = (root: string): Promise<string> => git(root, ['status', '--porcelain', '--untracked-files=normal']).catch(() => '');
 
 /**
  * The design repository a product is set up with: Flock's clone where the person keeps it, or beside the product under its
@@ -81,8 +88,13 @@ export const setUpTaskFile = (prototypesRoot: string, root: string): string => j
 
 /** The `dsnr` command the task runs is built from the design repository's own workspace, so it must be installed there. */
 export const assertCommandLineReady = (design: string): void => {
-	if (!existsSync(join(design, 'workspace', 'node_modules', 'esbuild')))
-		throw new Error(`The dsnr command the setup runs is built from ${join(design, 'workspace')}: run npm ci there first.`);
+	const workspace = join(design, 'workspace');
+	try {
+		// As `bin/dsnr.mjs` finds it, so this says no exactly when that would.
+		createRequire(join(workspace, 'package.json')).resolve('esbuild');
+	} catch {
+		throw new Error(`The dsnr command the setup runs is built from ${workspace}: run npm ci there first.`);
+	}
 };
 
 /**

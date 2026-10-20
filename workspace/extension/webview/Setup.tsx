@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { baseName } from '../../src/shared/baseName';
+import { commandShown } from '../../src/shared/work';
 import type { SetupState } from '../../src/core/services/projects/setUp';
 import { Dialog } from '../../src/ui/Dialog';
 import { Message } from '../../src/ui/Message';
@@ -54,7 +55,7 @@ export const Setup = ({ setup, signedIn }: { setup: SetupState; signedIn: boolea
 				<Dialog title={`${name}'s setup`} onClose={() => setOpen(false)}>
 					<Listed title="To fix" items={problems} />
 					<Listed title="What it does not have, which DSNR would use" items={missing} />
-					<Listed title="The commands it lets DSNR run" items={commands.map((c) => `${c.id}: ${c.argv.join(' ')}`)} code />
+					<Listed title="The commands it lets DSNR run" items={commands.map(commandShown)} code />
 				</Dialog>
 			)}
 		</>

@@ -5,7 +5,7 @@ import type { Person } from '../shared/contract';
 import { openComments } from '../shared/comments';
 import { firstHeading } from '../shared/brief';
 import { projectPath, prototypePagePath, prototypeSourcePath, prototypeKey } from '../shared/designPaths';
-import { workLabel } from '../shared/work';
+import { commandShown, workLabel } from '../shared/work';
 import { writeCommentsExport } from '../core/services/prototypes/commentsExport';
 import { DESCRIPTOR_PATH } from '../core/services/projects/descriptor';
 import type { GitHubApi } from '../codeHost/github';
@@ -107,6 +107,9 @@ check-setup says how far the product is set up, as the app reads it: what in its
 fails on that), what DSNR would use that it does not have, and the commands it lets DSNR run.`;
 
 class UsageError extends Error {}
+
+/** Lines listed under what they are, two spaces in. */
+const indented = (lines: string[]): string => lines.map((l) => `  ${l}`).join('\n');
 
 /** `doing` is what needs its workspace file, for the message when it has none. */
 const productOf = async (cwd: string, named: string | undefined, doing: string): Promise<string> => {
@@ -324,12 +327,11 @@ export const main = async (argv: string[], deps: CliDeps): Promise<number> => {
 			const root = await productOf(deps.cwd, values.product, 'check its setup');
 			const answers = new SourceAnswers(appPaths(dirname(deps.prototypesRoot)).designSystemSources);
 			const { problems, missing, commands } = await setupCheck(root, { answers, clones: clonesOf(deps) });
-			const list = (lines: string[]) => lines.map((l) => `  ${l}`).join('\n');
 			deps.out(
 				[
-					problems.length ? `To fix in ${root}:\n${list(problems)}` : `${root} is set up as DSNR reads it.`,
-					...(missing.length ? [`What it does not have, which DSNR would use:\n${list(missing)}`] : []),
-					`The commands it lets DSNR run:\n${list(commands.map((c) => `${c.id}: ${c.argv.join(' ')}`))}`,
+					problems.length ? `To fix in ${root}:\n${indented(problems)}` : `${root} is set up as DSNR reads it.`,
+					...(missing.length ? [`What it does not have, which DSNR would use:\n${indented(missing)}`] : []),
+					`The commands it lets DSNR run:\n${indented(commands.map(commandShown))}`,
 				].join('\n\n'),
 			);
 			return problems.length ? 1 : 0;
@@ -338,14 +340,13 @@ export const main = async (argv: string[], deps: CliDeps): Promise<number> => {
 			const check = values.check === true;
 			const root = await productOf(deps.cwd, values.product, check ? 'check its agent files' : 'write its agent files');
 			const { written, unchanged, left } = writeEntryFiles(root, designBeside(root, clonesOf(deps)), { write: !check });
-			const list = (paths: string[]) => paths.map((p) => `  ${p}`).join('\n');
 			const changed = written.length > 0;
 			deps.out(
 				[
 					changed
-						? `${check ? 'Not as DSNR writes them' : 'Written'} in ${root}:\n${list(written)}`
+						? `${check ? 'Not as DSNR writes them' : 'Written'} in ${root}:\n${indented(written)}`
 						: `Nothing to write in ${root}: every agent file is as DSNR writes it.`,
-					...(changed && unchanged.length ? [`Already as DSNR writes them:\n${list(unchanged)}`] : []),
+					...(changed && unchanged.length ? [`Already as DSNR writes them:\n${indented(unchanged)}`] : []),
 					...left.map(({ path, why }) => `Left as it is: ${path}, since ${why}.`),
 					...(!changed
 						? []
