@@ -37,7 +37,17 @@ const meta = (p: Project, labels: string[]) => {
 	return [...(versions > 0 ? [plural(versions, 'version')] : []), ...labels].join(' · ');
 };
 
-const ProjectItem = ({ project, labels, onDialog }: { project: Project; labels: string[]; onDialog: (dialog: PanelDialog) => void }) => {
+const ProjectItem = ({
+	project,
+	labels,
+	deleting,
+	onDialog,
+}: {
+	project: Project;
+	labels: string[];
+	deleting: boolean;
+	onDialog: (dialog: PanelDialog) => void;
+}) => {
 	const shown = useShared('tabs');
 	const cover = useCover(project);
 	const open = openCommentsOf(project.work);
@@ -78,19 +88,25 @@ const ProjectItem = ({ project, labels, onDialog }: { project: Project; labels: 
 		{ label: 'Assign folder…', icon: 'folder', onSelect: () => onDialog({ kind: 'assign', projectId: id }) },
 		remove,
 	];
-	// Started here and not saved yet: it says so where its name goes, shimmers, and can only be deleted.
+	// Started here and not saved yet, or going: it says so under its name and shimmers. One building can only be deleted;
+	// one being deleted, nothing more.
 	const building = onlyBuilding(project);
+	const doing = deleting ? 'Deleting…' : building ? 'Building…' : null;
 	const sections = (building ? [[remove]] : [copy, pages, runs, code, folder]).filter((group) => group.length > 0).map((group) => ({ items: group }));
 	const press = newest ? () => void asks().openReview(id) : inCode ? () => onCodebase('open-code') : undefined;
 	const shared = {
-		name: building ? 'Building…' : project.title,
-		meta: building ? project.title : meta(project, labels),
-		context: { webviewSection: 'project', projectId: id, preventDefaultContextMenuItems: true },
-		...(press ? { onOpen: press } : {}),
+		name: project.title,
+		meta: doing ?? meta(project, labels),
 		current: shown.projects.includes(id),
-		actions: <Menu label="Project actions" size="small" sections={sections} />,
+		...(deleting
+			? {}
+			: {
+					context: { webviewSection: 'project', projectId: id, preventDefaultContextMenuItems: true },
+					...(press ? { onOpen: press } : {}),
+					actions: <Menu label="Project actions" size="small" sections={sections} />,
+				}),
 	};
-	return <CollectionItem {...shared} picture={{ src: cover.picture, loading: building || cover.waiting }} badge={badge} />;
+	return <CollectionItem {...shared} picture={{ src: cover.picture, loading: doing !== null || cover.waiting }} badge={badge} />;
 };
 
 const ByFolder = ({ projects, children }: { projects: Project[]; children: (group: Project[], label: string) => ReactNode }) => {
@@ -154,6 +170,7 @@ export const Projects = ({
 	setup,
 	login,
 	onDialog,
+	deleting,
 	view,
 	onView,
 }: {
@@ -164,6 +181,8 @@ export const Projects = ({
 	setup: SetupState;
 	login: string | null;
 	onDialog: (dialog: PanelDialog) => void;
+	/** The projects being deleted. */
+	deleting: string[];
 	view: View;
 	onView: (view: View) => void;
 }) => {
@@ -212,7 +231,9 @@ export const Projects = ({
 	];
 	// "No product" says something only once some projects have one: before, it would be on every project.
 	const anyProduct = [...products.values()].some((ps) => ps.length > 0);
-	const item = (p: Project, labels: string[]) => <ProjectItem key={p.id} project={p} labels={labels} onDialog={onDialog} />;
+	const item = (p: Project, labels: string[]) => (
+		<ProjectItem key={p.id} project={p} labels={labels} deleting={deleting.includes(p.id)} onDialog={onDialog} />
+	);
 	const showAll = { label: 'Show all projects', onPress: () => setScope('everyone') };
 	const shown = (items: ReactNode[], label: string) => (
 		<Collection view={view} label={label}>

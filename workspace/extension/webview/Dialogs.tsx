@@ -17,6 +17,7 @@ export const PanelDialogs = ({
 	root,
 	account,
 	onChanged,
+	onDelete,
 	onClose,
 }: {
 	dialog: PanelDialog | null;
@@ -24,6 +25,8 @@ export const PanelDialogs = ({
 	root: string | null;
 	account: SignInState;
 	onChanged: () => void;
+	/** Starts deleting a project, its name as typed. */
+	onDelete: (projectId: string, typed: string) => void;
 	onClose: () => void;
 }) => {
 	const folders = projects ? foldersOf(projects) : [];
@@ -47,7 +50,9 @@ export const PanelDialogs = ({
 		case 'rename':
 			return <RenameDialog project={project} onRenamed={onChanged} onClose={onClose} />;
 		case 'delete':
-			return <DeleteProjectDialog project={project} onDeleted={onChanged} onClose={onClose} />;
+			return (
+				<DeleteProjectDialog project={project} error={dialog.error ?? null} onDelete={(typed) => onDelete(project.id, typed)} onClose={onClose} />
+			);
 		case 'build':
 			if (!newest) return null;
 			return root ? (

@@ -28,6 +28,7 @@ const toggle = () => document.querySelector('[role="radiogroup"]') as HTMLElemen
 const options = () => [...toggle().querySelectorAll<HTMLElement>('[role="radio"]')];
 const chosen = () => options().find((o) => o.getAttribute('aria-checked') === 'true')?.textContent;
 const body = () => document.querySelector('[data-tab-body]') as HTMLElement;
+const cards = () => [...body().querySelectorAll<HTMLElement>('.card')];
 const viewMenu = () => body().querySelector('button[aria-label="View options"]') as HTMLButtonElement | null;
 const viewChoices = async () => {
 	if (viewMenu()?.getAttribute('aria-expanded') !== 'true') await press(viewMenu()!);
@@ -494,24 +495,41 @@ describe('dialogs and menus, in the panel', () => {
 			expect(submit().disabled).toBe(false);
 		});
 
-		it('deletes it through the core, by its id with the name typed, closing, and the projects are read again', async () => {
+		const alertHistory = () =>
+			cards()
+				.find((c) => c.querySelector('[data-part="name"]')?.textContent === 'Alert history')!
+				.closest('li') as HTMLElement;
+
+		it('deletes it through the core, by its id with the name typed, closing at once, its card saying Deleting… until it is gone', async () => {
 			await open();
 			const reads = sent.filter((m) => m.name === 'listProjects').length;
 			await type(field('Type Alert history to delete it'), 'Alert history');
 			await press(submit());
 			expect(sent.filter((m) => m.name === 'deleteProject').at(-1)?.args).toEqual(['alert-history', 'Alert history']);
-			await answer('deleteProject', null);
 			expect(dialog()).toBeNull();
+			// Its name stays; what it is doing is said under it, and it shimmers, with nothing to press.
+			expect(alertHistory().querySelector('[data-part="meta"]')?.textContent).toBe('Deleting…');
+			expect(alertHistory().querySelector('[data-part="picture"]')?.getAttribute('data-loading')).toBe('true');
+			expect(alertHistory().querySelector('[aria-label="Project actions"]')).toBeNull();
+			await answer('deleteProject', null);
 			expect(sent.filter((m) => m.name === 'listProjects').length).toBe(reads + 1);
+			// Still in the list read until it is gone, it still says so.
+			expect(alertHistory().querySelector('[data-part="meta"]')?.textContent).toBe('Deleting…');
 		});
 
-		it('says why it could not, in the dialog, which stays open', async () => {
+		it('says why it could not in its dialog, opened again, and the card is as it was', async () => {
 			await open();
 			await type(field('Type Alert history to delete it'), 'Alert history');
 			await press(submit());
 			const call = sent.filter((m) => m.name === 'deleteProject').at(-1);
 			await say({ type: 'answer', id: call!.id, result: { ok: false, error: 'Saving needs write access to flocksafety/flock-designer.' } });
 			expect(dialog()?.textContent).toContain('Saving needs write access to flocksafety/flock-designer.');
+			expect(alertHistory().querySelector('[data-part="meta"]')?.textContent).not.toBe('Deleting…');
+			// Said for that try only: opened again from the menu, it starts afresh.
+			await press(closeX());
+			await press(menuFor(0));
+			await press(item('Delete…'));
+			expect(dialog()?.textContent).not.toContain('Saving needs write access');
 		});
 
 		it('names no versions for a project with only codebase work', async () => {
@@ -981,8 +999,6 @@ describe('searching the projects', () => {
 });
 
 describe('the projects as a list or a grid', () => {
-	const cards = () => [...body().querySelectorAll<HTMLElement>('.card')];
-
 	it('starts as a grid, Grid and List to choose between in the view options, once there are projects to show', async () => {
 		await showOpen();
 		expect(await checked('Grid')).toBe('true');
@@ -1006,12 +1022,12 @@ describe('the projects as a list or a grid', () => {
 		};
 		const started = () =>
 			cards()
-				.find((c) => c.querySelector('[data-part="meta"]')?.textContent === 'Widget explorer')!
+				.find((c) => c.querySelector('[data-part="name"]')?.textContent === 'Widget explorer')!
 				.closest('li') as HTMLElement;
 
-		it('says Building… where its name goes, shimmers, its name below, with only Delete… in its menu, and opens nothing', async () => {
+		it('keeps its name, says Building… under it, shimmers, with only Delete… in its menu, and opens nothing', async () => {
 			await showOpen(OPEN, [STARTED, ...SAMPLE_PROJECTS]);
-			expect(started().querySelector('[data-part="name"]')?.textContent).toBe('Building…');
+			expect(started().querySelector('[data-part="meta"]')?.textContent).toBe('Building…');
 			expect(started().querySelector('[data-part="picture"]')?.getAttribute('data-loading')).toBe('true');
 			await press(started().querySelector('[aria-label="Project actions"]') as HTMLElement);
 			expect(allByRole('menuitem').map((i) => i.textContent)).toEqual(['Delete…']);

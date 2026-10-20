@@ -224,7 +224,7 @@ anything is asked, what stands in the way (no product open, Claude Code missing 
 the panel for the name, what it should explore (as many lines as it takes) and its folder, then says if the product's
 packages are not installed (with Install packages when it says how), and hands its build to Claude Code in this window,
 from the branch the product is on, with the task typed in: press Enter there. Until its first page is saved it is this
-machine's alone: its card says Building… where the name goes and shimmers, with only Delete… in its menu; its record
+machine's alone: its card keeps its name, says Building… under it and shimmers, with only Delete… in its menu; its record
 waits beside its built files (`pendingPrototypes`), and the records sync holds its folder back. The first save records
 it as it was started and shares it, and its picture appears in the list. The command can also be given its answers
 (`{ title, task, folder }`), as **DSNR: Open a prototype for review** can be given its review, so a keybinding or another
@@ -332,8 +332,10 @@ it, changes the name people see, the first heading of its `brief.md` (`renamePro
 again; the project's id, which its folder, links, branches and comments are named by, stays as it was. **Delete…**,
 last, deletes the whole project, every version with it, for everyone (`deleteProject`): its dialog says what goes and
 what stays, and deletes only once the project's name is typed as the list shows it (`namesProject`, which the core checks
-again). Its folder goes as one change (with a clone, the next push of the records; without, one commit over the API), the
-published site is built again without it, and its review tab closes. Its comments stay on GitHub, its codebase branch and
+again). Its folder goes as one change (with a clone, the push of the records it waits for; without, one commit over the API), the
+published site is built again without it, and its review tab closes. The dialog closes as it starts, and the card says
+Deleting… under its name and shimmers, with nothing to press, until the list no longer has it; refused, the dialog opens
+again to say why. Its comments stay on GitHub, its codebase branch and
 pull request stay, and what it was stays in the design repository's history. The app's one
 setting, its theme, is VS Code's here. DSNR's settings are which agent it hands work to (`dsnr.agent.use`: Claude Code,
 in its panel; Codex, in its panel, with the task's file attached and its line on the clipboard to paste, or in a

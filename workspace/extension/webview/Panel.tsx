@@ -15,6 +15,7 @@ import type { View } from '../../src/ui/Collection';
 import { type Part, type Tab, vscode } from './vscode';
 import { Message } from '../../src/ui/Message';
 import { askOnce } from './hooks/ask';
+import { useDeleting } from './hooks/useDeleting';
 
 const TABS = [
 	{ value: 'projects', label: 'Projects', icon: 'folder-library' },
@@ -80,6 +81,8 @@ export const Panel = () => {
 		);
 	}, [read.value]);
 	const projects = useMemo(() => (read.value === null ? null : withCovers(read.value, made)), [read.value, made]);
+	// Refused, its dialog opens again to say why.
+	const deletion = useDeleting(projects, reload, (projectId, error) => setDialog({ kind: 'delete', projectId, error }));
 	const about = dialog !== null && 'projectId' in dialog ? dialog.projectId : null;
 	useEffect(() => {
 		if (about !== null && projects !== null && !projects.some((p) => p.id === about)) setDialog(null);
@@ -117,6 +120,7 @@ export const Panel = () => {
 							setup={setup}
 							login={login}
 							onDialog={openDialog}
+							deleting={deletion.deleting}
 							view={view}
 							onView={(next) => {
 								setView(next);
@@ -153,6 +157,7 @@ export const Panel = () => {
 				root={context?.product ?? null}
 				account={account}
 				onChanged={reload}
+				onDelete={(projectId, typed) => void deletion.remove(projectId, typed)}
 				onClose={() => setDialog(null)}
 			/>
 		</>

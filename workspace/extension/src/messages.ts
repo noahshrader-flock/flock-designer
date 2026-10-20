@@ -173,7 +173,8 @@ export type PanelDialog =
 	| { kind: 'new' }
 	| { kind: 'assign'; projectId: string }
 	| { kind: 'rename'; projectId: string }
-	| { kind: 'delete'; projectId: string }
+	/** `error`: why the last try was refused, when it is opened again to say so. */
+	| { kind: 'delete'; projectId: string; error?: string }
 	| { kind: 'build'; projectId: string }
 	| { kind: 'hand-off'; projectId: string }
 	| { kind: 'update'; projectId: string }

@@ -23,7 +23,7 @@ through `dsnr new-prototype`.
 
 ## What happens while it builds
 
-- DSNR starts the project, with your words as its brief, and your list shows it as *Building…* while the agent works.
+- DSNR starts the project, with your words as its brief, and your list shows it under its name as *Building…* while the agent works.
   Nothing of it is shared yet: it is recorded as *Version 1*, and reaches everyone, once its first page is saved. If you
   never start the agent, nothing is made for anyone else; delete it from its menu.
 - The prototype is *modeled on* the branch the product is on: DSNR notes exactly which commit, fetching the latest of it

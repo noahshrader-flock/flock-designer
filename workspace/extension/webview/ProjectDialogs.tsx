@@ -144,11 +144,23 @@ export const RenameDialog = ({ project, onRenamed, onClose }: { project: Project
 	);
 };
 
-/** For everyone, with every version, so its name is typed first; the core checks the name again. */
-export const DeleteProjectDialog = ({ project, onDeleted, onClose }: { project: Project; onDeleted: () => void; onClose: () => void }) => {
+/**
+ * For everyone, with every version, so its name is typed first; the core checks the name again. Closed as it starts, since
+ * its card says Deleting… until it is gone; one refused opens this again, with `error`.
+ */
+export const DeleteProjectDialog = ({
+	project,
+	error,
+	onDelete,
+	onClose,
+}: {
+	project: Project;
+	error: string | null;
+	onDelete: (typed: string) => void;
+	onClose: () => void;
+}) => {
 	const [typed, setTyped] = useState('');
-	const { busy, error, run } = useAction();
-	const ready = namesProject(typed, project.title) && !busy;
+	const ready = namesProject(typed, project.title);
 	const versions = savedVersions(project.work).length;
 	const open = openCommentsOf(project.work);
 	const codebase = workOf(project.work, 'codebase')[0];
@@ -156,20 +168,15 @@ export const DeleteProjectDialog = ({ project, onDeleted, onClose }: { project: 
 	const goes = `This deletes ${project.title}${versions > 0 ? ` and its ${plural(versions, 'version')}` : ''} for everyone, with every page, picture and record of it, and takes it off the published site.`;
 	const comments = open > 0 ? ` ${plural(open, 'open comment')} ${open === 1 ? 'is' : 'are'} on it.` : '';
 	const code = codebase ? `, and its codebase branch ${codebase.branch}${codebase.pullRequest ? ' and pull request stay' : ' stays'}` : '';
-	const remove = async (e: FormEvent) => {
+	const remove = (e: FormEvent) => {
 		e.preventDefault();
 		if (!ready) return;
-		await run(
-			() => workspace().deleteProject(project.id, typed),
-			() => {
-				onDeleted();
-				onClose();
-			},
-		);
+		onDelete(typed);
+		onClose();
 	};
 	return (
 		<Dialog title="Delete project" onClose={onClose}>
-			<form onSubmit={(e) => void remove(e)}>
+			<form onSubmit={remove}>
 				{building ? (
 					<Message tone="warning">{`This deletes ${project.title}. It was started here and not saved yet, so nothing of it was shared.`}</Message>
 				) : (
