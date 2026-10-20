@@ -143,7 +143,7 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		if (!existsSync(join(pkg, 'package.json')))
 			return { ready: false, why: 'not-installed', designSystem, repository: basename(root), canInstall: false };
 		if (ctx.esbuild() === null) return { ready: false, why: 'no-bundler', designSystem, repository: basename(root), canInstall: false };
-		// A package.json that cannot be read still means it is installed.
+		// Ready even when its package.json gives no version: it is installed.
 		return { ready: true, designSystem, version: installedVersion(join(root, 'node_modules'), designSystem) };
 	};
 	/** `installedAgainstBase`, for the open product's design system at `commit` of `branch`. */
@@ -261,7 +261,7 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 			// Its source matters as much as its guidance, for a page that redraws its components.
 			designSystemGuidance: has(designSystemCheckout(root, descriptor.designSystem)),
 			installedDesignSystem,
-			installedAgainstBase: installedDesignSystem ? await versionAgainst(root, commit, basedOn.branch) : null,
+			installedAgainstBase: await versionAgainst(root, commit, basedOn.branch),
 			sharedStandards: designRoot === null ? null : has(join(dirname(designRoot), 'standards')),
 			// Only worth building against when the design system itself is installed in them.
 			nodeModules: installedDesignSystem ? join(root, 'node_modules') : null,

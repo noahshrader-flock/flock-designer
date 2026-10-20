@@ -899,8 +899,9 @@ describe('prototypes', () => {
 				[`${base}/compare/*`]: { status: 'behind' },
 			});
 			await trustFolder(product);
-			await call(CHANNELS.createPrototype, 'demo', 'Demo', 'A list', { root: product, branch: 'develop' });
+			// Cleared first: recording the prototype wakes the publisher too, and whichever run gets there first counts.
 			githubApi.mockClear();
+			await call(CHANNELS.createPrototype, 'demo', 'Demo', 'A list', { root: product, branch: 'develop' });
 			// Nothing was saved, and nobody asked after the page: the publisher's own cycle is what starts it.
 			await call(CHANNELS.publishNow);
 			for (let i = 0; i < 100 && !githubApi.mock.calls.some(([path]) => String(path) === `${base}/compare/${deployed}...main`); i++)
