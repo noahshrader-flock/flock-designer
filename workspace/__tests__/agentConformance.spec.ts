@@ -124,7 +124,7 @@ describe.each(ROWS)('$name, behind the seam', (row) => {
 	it('is handed work in its own window when the editor has one, and given as a terminal command when not', async () => {
 		const copied: string[] = [];
 		const opened: unknown[][] = [];
-		const ports = (how: 'typed' | 'started' | null) => ({
+		const ports = (how: 'typed' | 'pasted' | 'started' | null) => ({
 			agentWindow: { open: async (...a: unknown[]) => (opened.push(a), how) },
 			copy: async (t: string) => void copied.push(t),
 		});
@@ -132,8 +132,8 @@ describe.each(ROWS)('$name, behind the seam', (row) => {
 		expect(await hand(ports('typed'), a)).toEqual({ agent: row.name, opened: 'typed', command: null });
 		expect(await hand(ports('started'), a)).toEqual({ agent: row.name, opened: 'started', command: null });
 		expect(opened).toEqual([
-			[a, '/work', 'Go.'],
-			[a, '/work', 'Go.'],
+			[a, '/work', 'Go.', null],
+			[a, '/work', 'Go.', null],
 		]);
 		expect(copied).toEqual([]);
 		const given = await hand(ports(null), a);

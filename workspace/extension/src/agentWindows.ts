@@ -7,7 +7,7 @@ import type { VsCodeApi } from './vscodePorts';
 /** Where an agent is opened in VS Code: whether this VS Code has it, and opening it in `root` with `prompt`. */
 interface AgentWindow {
 	here(): boolean;
-	open(agent: Agent, root: string, prompt: string): Promise<NonNullable<Handed['opened']>>;
+	open(agent: Agent, root: string, prompt: string, taskFile: string | null): Promise<NonNullable<Handed['opened']>>;
 	/** For an agent that cannot say itself whether it is signed in, what VS Code can tell. */
 	signedIn?(): Promise<boolean | null>;
 }
@@ -71,22 +71,28 @@ const terminalWindow = (vscode: VsCodeApi): AgentWindow => ({
 });
 
 const CODEX = 'openai.chatgpt';
-/** Shows its panel with a new conversation. Its commands take no prompt, and its links open a page of its panel only. */
+/**
+ * Shows its panel with a new conversation, and attaches a file to it (held until the panel is ready). Its commands take no
+ * prompt, and its links open a page of its panel only.
+ */
 const CODEX_NEW_CHAT = 'chatgpt.newChat';
+const CODEX_ATTACH = 'chatgpt.addFileToThread';
 
 /**
- * In its panel, with the task on the clipboard, when its extension is here and this window's first folder is `root`, where
- * it starts; in a terminal otherwise, or when its command fails (they are its own, not a published interface).
+ * In its panel, a new conversation with the task file attached and the prompt on the clipboard, when its extension is here
+ * and this window's first folder is `root`, where it starts; in a terminal otherwise, or when its commands fail (they are
+ * its own, not a published interface).
  */
 const codexWindow = (vscode: VsCodeApi, terminal: AgentWindow): AgentWindow => ({
 	here: () => true,
-	open: async (agent, root, prompt) => {
+	open: async (agent, root, prompt, taskFile) => {
 		if (vscode.extensions.getExtension(CODEX) === undefined || vscode.workspace.workspaceFolders?.[0]?.uri.fsPath !== root)
-			return terminal.open(agent, root, prompt);
+			return terminal.open(agent, root, prompt, taskFile);
 		try {
 			await vscode.commands.executeCommand(CODEX_NEW_CHAT);
+			if (taskFile !== null) await vscode.commands.executeCommand(CODEX_ATTACH, vscode.Uri.file(taskFile));
 		} catch {
-			return terminal.open(agent, root, prompt);
+			return terminal.open(agent, root, prompt, taskFile);
 		}
 		await vscode.env.clipboard.writeText(prompt);
 		return 'pasted';
@@ -102,7 +108,7 @@ const copilotWindow = (vscode: VsCodeApi, terminal: AgentWindow): AgentWindow =>
 	// Its models are offered only to someone signed in; listing them asks nothing of the person, using one would.
 	signedIn: async () => ((await vscode.lm.selectChatModels({ vendor: 'copilot' })).length > 0 ? true : null),
 	open: async (agent, root, prompt) => {
-		if (!(await vscode.commands.getCommands(true)).includes(CHAT_OPEN)) return terminal.open(agent, root, prompt);
+		if (!(await vscode.commands.getCommands(true)).includes(CHAT_OPEN)) return terminal.open(agent, root, prompt, null);
 		await openFolder(vscode, root);
 		await vscode.commands.executeCommand(CHAT_OPEN, { query: prompt, mode: 'agent', isPartialQuery: true });
 		return 'typed';
@@ -123,9 +129,9 @@ const windowsOf = (vscode: VsCodeApi): Record<AgentId, AgentWindow | null> => {
 export const agentWindows = (vscode: VsCodeApi): Ports['agentWindow'] => {
 	const windows = windowsOf(vscode);
 	return {
-		open: async (agent, root, prompt) => {
+		open: async (agent, root, prompt, taskFile) => {
 			const window = windows[agent.id];
-			return window?.here() ? window.open(agent, root, prompt) : null;
+			return window?.here() ? window.open(agent, root, prompt, taskFile) : null;
 		},
 		signedIn: async (agent) => (await windows[agent.id]?.signedIn?.()) ?? null,
 	};

@@ -48,7 +48,10 @@ const fakePorts = () =>
 		copy: vi.fn(async (t: string) => void (copied = t)),
 		httpStatus: vi.fn(async () => 200),
 		// Never another application from a test: VS Code is treated as not installed.
-		agentWindow: { open: vi.fn(async (): Promise<'typed' | 'started' | null> => null), signedIn: vi.fn(async (): Promise<boolean | null> => null) },
+		agentWindow: {
+			open: vi.fn(async (): Promise<'typed' | 'pasted' | 'started' | null> => null),
+			signedIn: vi.fn(async (): Promise<boolean | null> => null),
+		},
 		agentChoice: vi.fn((): AgentId | 'ask' => 'claude-code'),
 		pickAgent: vi.fn(async (..._a: unknown[]): Promise<{ id: AgentId; keep: boolean } | null> => null),
 		keepAgent: vi.fn(async () => undefined),
@@ -754,7 +757,12 @@ describe('prototypes', () => {
 			const r = await call(CHANNELS.handPrototypeBuild, product, 'demo', 'v1', 'A list');
 			expect(r).toMatchObject({ ok: true, value: { agent: 'Codex', opened: null } });
 			expect(copied).toMatch(/&& codex --no-daemon 'Build prototype Version 1 of demo\. Your task is in /);
-			expect(ports.agentWindow.open).toHaveBeenCalledWith(expect.objectContaining({ id: 'codex' }), expect.any(String), expect.any(String));
+			expect(ports.agentWindow.open).toHaveBeenCalledWith(
+				expect.objectContaining({ id: 'codex' }),
+				expect.any(String),
+				expect.any(String),
+				expect.stringMatching(/\.md$/),
+			);
 		});
 
 		it('asks, in the kept agent’s words, when it is signed out, never handing to another in silence, and makes nothing until then', async () => {

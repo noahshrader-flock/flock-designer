@@ -18,7 +18,7 @@ type HandPorts = { agentWindow: Pick<Ports['agentWindow'], 'open'> } & Pick<Port
  * refused leaves nothing behind; `undo` is for what it made, when it could not then be opened. When the agent's window is
  * not in this editor, the command that starts it in a terminal is put on the clipboard and returned as `command`.
  */
-export const handOver = async <T extends { root: string; prompt: string }>(
+export const handOver = async <T extends { root: string; prompt: string; taskFile?: string }>(
 	ports: HandPorts,
 	agent: Agent,
 	prepare: () => Promise<T>,
@@ -28,7 +28,7 @@ export const handOver = async <T extends { root: string; prompt: string }>(
 	const prepared = await prepare();
 	const { root, prompt } = prepared;
 	try {
-		const opened = await ports.agentWindow.open(agent, root, prompt);
+		const opened = await ports.agentWindow.open(agent, root, prompt, prepared.taskFile ?? null);
 		if (opened !== null) return { handed: { agent: agent.name, opened, command: null }, prepared };
 		const command = startCommand(agent.program(), root, agent.startArgs(prompt));
 		await ports.copy(command);

@@ -203,7 +203,7 @@ describe('VS Code’s ports', () => {
 			return opened(id, ...args);
 		});
 		const { agentWindow } = vscodePorts(v as never, none);
-		expect(await agentWindow.open(claude, '/work/coke', 'Build it.')).toBe('typed');
+		expect(await agentWindow.open(claude, '/work/coke', 'Build it.', null)).toBe('typed');
 		expect(v.commands.executeCommand.mock.calls).toEqual([[SIDEBAR], [OPEN, undefined, 'Build it.', undefined, undefined, undefined, WHERE]]);
 		// Opened only once Claude Code has saved the sidebar as its place; sooner, it reads its last place, an editor tab.
 		expect(placeWhenOpened).toBe('sidebar');
@@ -213,14 +213,14 @@ describe('VS Code’s ports', () => {
 	it('open it there at once when Claude Code already keeps its conversations in its side panel', async () => {
 		const v = fake();
 		settings['claudeCode.preferredLocation'] = 'sidebar';
-		await vscodePorts(v as never, none).agentWindow.open(claude, '/work/coke', 'Build it.');
+		await vscodePorts(v as never, none).agentWindow.open(claude, '/work/coke', 'Build it.', null);
 		expect(v.commands.executeCommand.mock.calls).toEqual([[OPEN, undefined, 'Build it.', undefined, undefined, undefined, WHERE]]);
 	});
 
 	it('hand it to an editor tab instead, when that is the person’s setting', async () => {
 		const v = fake();
 		settings['dsnr.agent.location'] = 'editor';
-		await vscodePorts(v as never, none).agentWindow.open(claude, '/work/coke', 'Build it.');
+		await vscodePorts(v as never, none).agentWindow.open(claude, '/work/coke', 'Build it.', null);
 		expect(v.commands.executeCommand.mock.calls).toEqual([[OPEN, undefined, 'Build it.']]);
 	});
 
@@ -235,26 +235,26 @@ describe('VS Code’s ports', () => {
 		v.commands.executeCommand.mockImplementation(async (id: string) => {
 			if (id.startsWith('claude-vscode.')) throw new Error(`command '${id}' not found`);
 		});
-		await vscodePorts(v as never, none).agentWindow.open(claude, '/work/coke', 'Build it.');
+		await vscodePorts(v as never, none).agentWindow.open(claude, '/work/coke', 'Build it.', null);
 		expect(String(v.env.openExternal.mock.calls.at(-1)?.[0])).toBe('vscode://anthropic.claude-code/open?prompt=Build+it.');
 	});
 
 	it('open a folder that is not in this window in a window of its own, and say there is no window without Claude Code', async () => {
 		const v = fake();
-		await vscodePorts(v as never, none).agentWindow.open(claude, '/work/other', 'Build it.');
+		await vscodePorts(v as never, none).agentWindow.open(claude, '/work/other', 'Build it.', null);
 		expect(v.commands.executeCommand).toHaveBeenCalledWith('vscode.openFolder', { fsPath: '/work/other' }, { forceNewWindow: true });
 		v.extensions.getExtension.mockReturnValue(undefined as never);
 		v.commands.executeCommand.mockClear();
-		expect(await vscodePorts(v as never, none).agentWindow.open(claude, '/work/coke', 'Build it.')).toBeNull();
+		expect(await vscodePorts(v as never, none).agentWindow.open(claude, '/work/coke', 'Build it.', null)).toBeNull();
 		expect(v.commands.executeCommand).not.toHaveBeenCalled();
 	});
 
-	it('hand Codex its task in a new conversation in its panel, on the clipboard to paste, when its extension is here', async () => {
+	it('hand Codex its task in a new conversation in its panel, its file attached and its line on the clipboard, when its extension is here', async () => {
 		const v = fake();
 		v.extensions.getExtension.mockImplementation((id: string) => (id === 'openai.chatgpt' ? { id } : undefined) as never);
 		const agent = codex({ locate: () => '/bin/codex', run: async () => ({ stdout: '', stderr: '' }) });
-		expect(await vscodePorts(v as never, none).agentWindow.open(agent, '/work/coke', 'Build it.')).toBe('pasted');
-		expect(v.commands.executeCommand.mock.calls).toEqual([['chatgpt.newChat']]);
+		expect(await vscodePorts(v as never, none).agentWindow.open(agent, '/work/coke', 'Build it.', '/work/coke/.dsnr/task.md')).toBe('pasted');
+		expect(v.commands.executeCommand.mock.calls).toEqual([['chatgpt.newChat'], ['chatgpt.addFileToThread', { fsPath: '/work/coke/.dsnr/task.md' }]]);
 		expect(v.env.clipboard.writeText).toHaveBeenCalledWith('Build it.');
 		expect(v.window.createTerminal).not.toHaveBeenCalled();
 	});
@@ -263,9 +263,9 @@ describe('VS Code’s ports', () => {
 		const v = fake();
 		v.extensions.getExtension.mockImplementation((id: string) => (id === 'openai.chatgpt' ? { id } : undefined) as never);
 		const agent = codex({ locate: () => '/bin/codex', run: async () => ({ stdout: '', stderr: '' }) });
-		expect(await vscodePorts(v as never, none).agentWindow.open(agent, '/work/other', 'Build it.')).toBe('started');
+		expect(await vscodePorts(v as never, none).agentWindow.open(agent, '/work/other', 'Build it.', null)).toBe('started');
 		v.commands.executeCommand.mockRejectedValueOnce(new Error('command chatgpt.newChat not found'));
-		expect(await vscodePorts(v as never, none).agentWindow.open(agent, '/work/coke', 'Build it.')).toBe('started');
+		expect(await vscodePorts(v as never, none).agentWindow.open(agent, '/work/coke', 'Build it.', null)).toBe('started');
 		expect(v.window.createTerminal).toHaveBeenCalledTimes(2);
 		expect(v.env.clipboard.writeText).not.toHaveBeenCalled();
 	});
@@ -273,7 +273,7 @@ describe('VS Code’s ports', () => {
 	it('start Codex in a terminal of its own in the folder without its extension, with the prompt as its argument, no shell between to quote it', async () => {
 		const v = fake();
 		const agent = codex({ locate: () => '/bin/codex', run: async () => ({ stdout: '', stderr: '' }) });
-		expect(await vscodePorts(v as never, none).agentWindow.open(agent, '/work/coke', 'Build it, "now".')).toBe('started');
+		expect(await vscodePorts(v as never, none).agentWindow.open(agent, '/work/coke', 'Build it, "now".', null)).toBe('started');
 		expect(v.window.createTerminal).toHaveBeenCalledWith({
 			name: 'Codex',
 			cwd: '/work/coke',
@@ -287,7 +287,7 @@ describe('VS Code’s ports', () => {
 	it('hand Copilot its task in VS Code’s Chat, in agent mode, typed in and not sent, in the folder’s window', async () => {
 		const v = fake();
 		const agent = copilot({ locate: () => '/bin/copilot' });
-		expect(await vscodePorts(v as never, none).agentWindow.open(agent, '/work/coke', 'Build it.')).toBe('typed');
+		expect(await vscodePorts(v as never, none).agentWindow.open(agent, '/work/coke', 'Build it.', null)).toBe('typed');
 		expect(v.commands.executeCommand.mock.calls).toEqual([
 			['workbench.action.chat.open', { query: 'Build it.', mode: 'agent', isPartialQuery: true }],
 		]);
@@ -298,7 +298,7 @@ describe('VS Code’s ports', () => {
 		const v = fake();
 		v.commands.getCommands.mockResolvedValue([]);
 		const agent = copilot({ locate: () => '/bin/copilot' });
-		expect(await vscodePorts(v as never, none).agentWindow.open(agent, '/work/coke', 'Build it.')).toBe('started');
+		expect(await vscodePorts(v as never, none).agentWindow.open(agent, '/work/coke', 'Build it.', null)).toBe('started');
 		expect(v.window.createTerminal).toHaveBeenCalledWith({
 			name: 'GitHub Copilot',
 			cwd: '/work/coke',

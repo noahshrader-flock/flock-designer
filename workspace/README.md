@@ -328,7 +328,7 @@ one, or none, with the same folder choice New prototype has. It opens at once wi
 every project's dialog does, has the list read again behind it, so it acts on the project as it is. **Rename…**, beside it,
 changes the name people see, the first heading of its `brief.md` (`renameProject`), and builds the published site again;
 the project's id, which its folder, links, branches and comments are named by, stays as it was. The app's one setting, its theme, is VS Code's here. DSNR's settings are which agent it hands work to (`dsnr.agent.use`: Claude Code, in its panel; Codex, in its panel, a new
-conversation with the task on the clipboard to paste, or a terminal, which starts at once with the task, when its
+conversation with the task's file attached and its line on the clipboard to paste, or a terminal, which starts at once with the task, when its
 extension is not here or this window's first folder is not where the work is; or GitHub Copilot, in VS Code's Chat, with the task typed in, or its command line in
 a terminal when there is no Chat), and where an agent with a panel opens it (`dsnr.agent.location`, below; it was
 `dsnr.claudeCode.location`, and a value set there is moved to it once). **Which agent:** until one is kept, the one you
