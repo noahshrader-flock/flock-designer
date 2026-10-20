@@ -9,6 +9,12 @@ export const BRAND = '#7c3aed';
 /** What is written on the brand: white, readable on it and on its hover (a guard holds it to WCAG AA). */
 export const ON_BRAND = '#ffffff';
 
+/**
+ * How much of a link is the brand, in percent; the rest is the text's own colour. It is purple on a light surface and on a
+ * dark one, and readable on both, which the brand alone is not on dark (a guard holds it to WCAG AA on each).
+ */
+export const LINK_SHARE = 55;
+
 /** The spacing scale, in pixels, by step (`--dsnr-space-1`…): every padding, margin and gap is one of them. */
 export const SPACE = { 1: 2, 2: 4, 3: 6, 4: 8, 5: 12, 6: 16, 7: 24, 8: 32 } as const;
 

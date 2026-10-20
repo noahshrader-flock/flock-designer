@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, 
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { INK } from '../src/shared/pageTokens';
 import { buildSite } from '../src/site/buildSite';
 import { serveSite } from '../src/site/serveSite';
 import { contentHashOf } from '../src/core/services/prototypes/prototype';
@@ -73,6 +74,14 @@ describe('the index', () => {
 		// Titles are text, never markup.
 		expect(index).toContain('Alerts &lt;history&gt;');
 		expect(existsSync(join(out, 'gamma'))).toBe(false);
+	});
+
+	it('links in the brand’s purple, the one the app’s links are, and in no colour of its own', () => {
+		build();
+		const index = read('index.html');
+		expect(index).toContain(`a { color: ${INK.link}; }`);
+		expect(INK.link).toMatch(/^color-mix\(in srgb, #[0-9a-f]{6} \d+%, CanvasText\)$/i);
+		expect(index).not.toMatch(/a \{ color: inherit/);
 	});
 });
 

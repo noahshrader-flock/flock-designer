@@ -118,7 +118,7 @@ const writeShared = (designRoot: string, outDir: string): Map<string, string> =>
 const STYLE = `
 :root { color-scheme: light dark; font-family: ${FONT.ui}; }
 body { margin: 0; }
-a { color: inherit; }
+a { color: ${INK.link}; }
 main { max-width: 1080px; margin: 0 auto; padding: ${space(8)} ${space(7)}; }
 /* The lists' own headings, in their <main>: never a bare heading, which would also size the review bar's title. */
 main h1 { font-size: ${px(SIZE.title)}; font-weight: ${WEIGHT.semibold}; margin: 0 0 ${space(7)}; }
@@ -126,6 +126,7 @@ main h1 { font-size: ${px(SIZE.title)}; font-weight: ${WEIGHT.semibold}; margin:
 .list { list-style: none; padding: 0; margin: 0; display: grid; gap: ${space(4)}; }
 .list a { display: block; padding: ${space(5)} ${space(6)}; border: 1px solid ${INK.line}; border-radius: ${px(RADIUS.large)}; text-decoration: none; }
 .list a:hover { border-color: ${INK.lineStrong}; }
+.list .muted { color: CanvasText; }
 /* A version fills the window: DSNR's review bar, then the prototype, and beside it the comments' panel when it is open. */
 .viewer { display: flex; flex-direction: column; height: 100vh; height: 100dvh; }
 .stage { display: flex; flex: 1; min-height: 0; }

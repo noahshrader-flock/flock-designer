@@ -68,6 +68,7 @@
 
 /* Made from the brand on the body, where high contrast sets it, so they take high contrast's. */
 body {
+	--dsnr-link: color-mix(in srgb, var(--dsnr-brand) var(--dsnr-link-share), var(--vscode-foreground));
 	--dsnr-brand-hover: color-mix(in srgb, var(--dsnr-brand) 86%, black);
 	--dsnr-ring-current: 0 0 0 1px var(--dsnr-brand);
 }
@@ -75,6 +76,7 @@ body {
 body.vscode-high-contrast,
 body.vscode-high-contrast-light {
 	--dsnr-brand: var(--vscode-button-background);
+	--dsnr-link: var(--vscode-textLink-foreground);
 	--dsnr-brand-hover: var(--vscode-button-hoverBackground, var(--vscode-button-background));
 	--dsnr-on-brand: var(--vscode-button-foreground);
 	--dsnr-outline: var(--vscode-contrastBorder);
@@ -229,10 +231,15 @@ body {
 .link {
 	padding: 0;
 	border: none;
-	color: var(--vscode-textLink-foreground);
 	background: transparent;
 	font: inherit;
 	cursor: pointer;
+}
+
+/* Every link is in the brand's purple, whatever draws it; an icon button drawn as an anchor is not one. */
+.link,
+a:not(.icon-button) {
+	color: var(--dsnr-link);
 }
 
 .link:hover {

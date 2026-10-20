@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
-import { BRAND, ON_BRAND } from '../src/shared/dsnrTokens';
+import { BRAND, LINK_SHARE, ON_BRAND } from '../src/shared/dsnrTokens';
 import { contrastRatio } from '../src/shared/tokens';
 import { tokenProperties } from '../src/ui/applyTokens';
 import { panelCss } from './panelStyles';
@@ -109,5 +109,51 @@ describe('the base tokens', () => {
 		const highContrast = css.split('}').find((b) => b.includes('body.vscode-high-contrast')) ?? '';
 		expect(highContrast).toMatch(/--dsnr-brand:\s*var\(--vscode-button-background\)/);
 		expect(highContrast).toMatch(/--dsnr-on-brand:\s*var\(--vscode-button-foreground\)/);
+	});
+});
+
+describe('links', () => {
+	const hex = (css: string, theme: ':root' | ':root.dark', name: string): string => {
+		const block = new RegExp(`(?:^|\\})\\s*(?:/\\*[\\s\\S]*?\\*/\\s*)?${theme.replace('.', '\\.')}\\s*\\{([^}]*)\\}`).exec(css)?.[1] ?? '';
+		const found = new RegExp(`${name}:\\s*(#[0-9a-f]{6})`, 'i').exec(block)?.[1];
+		if (!found) throw new Error(`theme.css gives ${theme} no ${name}`);
+		return found;
+	};
+	/** `color-mix(in srgb, a share%, b)`, as the browser mixes it. */
+	const mixed = (a: string, share: number, b: string): string => {
+		const channel = (c: string, at: number) => Number.parseInt(c.slice(1 + at * 2, 3 + at * 2), 16);
+		return `#${[0, 1, 2]
+			.map((i) =>
+				Math.round((channel(a, i) * share) / 100 + (channel(b, i) * (100 - share)) / 100)
+					.toString(16)
+					.padStart(2, '0'),
+			)
+			.join('')}`;
+	};
+
+	it('are the brand’s, one colour made once from it, on a light surface and on a dark one, readable on both', () => {
+		const theme = readFileSync(join(root, 'src/ui/theme.css'), 'utf8');
+		const surfaces = ['--vscode-editor-background', '--vscode-sideBar-background', '--vscode-editorWidget-background'];
+		for (const name of [':root', ':root.dark'] as const) {
+			const link = mixed(BRAND, LINK_SHARE, hex(theme, name, '--vscode-foreground'));
+			for (const surface of surfaces) expect(contrastRatio(link, hex(theme, name, surface)), `${name} ${surface}`).toBeGreaterThanOrEqual(4.5);
+		}
+		const kit = readFileSync(join(root, 'src/ui/kit.css'), 'utf8');
+		expect(kit).toMatch(/--dsnr-link:\s*color-mix\(in srgb,\s*var\(--dsnr-brand\)\s*var\(--dsnr-link-share\),\s*var\(--vscode-foreground\)\)/);
+		expect(kit).toMatch(/\.link,\s*a:not\(\.icon-button\)\s*\{\s*color:\s*var\(--dsnr-link\)/);
+	});
+
+	it('are never given another colour: only the theme’s own link colour is read, and only to give way in high contrast', () => {
+		const reads = ['src', 'extension']
+			.flatMap((dir) => sourceFiles(join(root, dir)))
+			.filter((path) => path.endsWith('.css') && !path.endsWith('theme.css'))
+			.filter((path) => readFileSync(path, 'utf8').includes('--vscode-textLink-foreground'))
+			.map((path) => relative(root, path));
+		expect(reads).toEqual(['src/ui/kit.css']);
+		const highContrast =
+			readFileSync(join(root, 'src/ui/kit.css'), 'utf8')
+				.split('}')
+				.find((b) => b.includes('body.vscode-high-contrast')) ?? '';
+		expect(highContrast).toMatch(/--dsnr-link:\s*var\(--vscode-textLink-foreground\)/);
 	});
 });

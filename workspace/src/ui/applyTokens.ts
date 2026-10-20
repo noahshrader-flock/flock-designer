@@ -1,4 +1,4 @@
-import { AVATAR_XS, BRAND, LEADING, ON_BRAND, OPACITY, RADIUS, SPACE, TEXT, WEIGHT } from '../shared/dsnrTokens';
+import { AVATAR_XS, BRAND, LEADING, LINK_SHARE, ON_BRAND, OPACITY, RADIUS, SPACE, TEXT, WEIGHT } from '../shared/dsnrTokens';
 
 const kebab = (name: string) => name.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`);
 
@@ -11,6 +11,7 @@ export const tokenProperties = (): Record<string, string> =>
 	Object.fromEntries([
 		['--dsnr-brand', BRAND],
 		['--dsnr-on-brand', ON_BRAND],
+		['--dsnr-link-share', `${LINK_SHARE}%`],
 		...family('space', SPACE, 'px'),
 		...family('radius', RADIUS, 'px'),
 		...family('weight', WEIGHT),

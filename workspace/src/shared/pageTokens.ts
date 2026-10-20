@@ -1,4 +1,4 @@
-import { BRAND, SPACE, TEXT } from './dsnrTokens';
+import { BRAND, LINK_SHARE, SPACE, TEXT } from './dsnrTokens';
 
 /**
  * Tokens for what DSNR draws where the kit cannot reach (a prototype's page, a story's preview, the published site's
@@ -13,6 +13,8 @@ export const space = (step: keyof typeof SPACE): string => px(SPACE[step]);
 export const INK = {
 	pin: BRAND,
 	pinWash: `color-mix(in srgb, ${BRAND} 8%, transparent)`,
+	/** A link on a page that is light or dark as its reader's system is: the brand mixed into the page's own text. */
+	link: `color-mix(in srgb, ${BRAND} ${LINK_SHARE}%, CanvasText)`,
 	/** A pin being placed, not yet saved. */
 	draft: '#f59e0b',
 	on: '#fff',
