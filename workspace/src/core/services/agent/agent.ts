@@ -12,6 +12,8 @@ import { ProcessFailed, runFile } from '../platform/process';
 export const AGENT_IDS = ['claude-code', 'codex'] as const;
 export type AgentId = (typeof AGENT_IDS)[number];
 export const isAgentId = (v: unknown): v is AgentId => AGENT_IDS.includes(v as AgentId);
+/** Used until the person chooses. */
+export const DEFAULT_AGENT: AgentId = 'claude-code';
 
 /** `unknown`: it could not be told, which blocks nothing. */
 export type AgentReadiness = { state: 'ready' } | { state: 'missing' } | { state: 'signedOut' } | { state: 'unknown' };
@@ -41,6 +43,17 @@ export interface Agent {
 	runUnattended?(cwd: string, task: string, options: { readOnly: string[] }): Promise<RunEnded>;
 }
 
+/** By the chosen agent; refused, naming the ones that can, when it does not run unattended. */
+export const runByChosen = (chosen: Agent, all: readonly Agent[], cwd: string, task: string, options: { readOnly: string[] }): Promise<RunEnded> => {
+	if (!chosen.runUnattended) {
+		const can = all.filter((a) => a.runUnattended).map((a) => a.name);
+		return Promise.reject(
+			new Error(`Changing a value in words runs on its own, which ${chosen.name} does not do here. Choose ${can.join(' or ')} for it.`),
+		);
+	}
+	return chosen.runUnattended(cwd, task, options);
+};
+
 /** What a command said, on each stream: agents differ in which they answer on. */
 export interface Said {
 	stdout: string;
@@ -59,8 +72,19 @@ export const runCommand: RunCommand = (file, args) =>
 		},
 	);
 
-/** The bare name is what locating falls back to when it found nothing anywhere. */
-export const isMissing = (err: unknown): boolean => (err as NodeJS.ErrnoException).code === 'ENOENT';
+/**
+ * From what `run`'s status command said, read by `read` (null when it says neither); missing when there is no program to run
+ * (the bare name, as locating falls back to), and unknown when it could not be asked or did not say.
+ */
+export const readinessOf = async (run: () => Promise<Said>, read: (said: Said) => 'ready' | 'signedOut' | null): Promise<AgentReadiness> => {
+	let said: Said;
+	try {
+		said = await run();
+	} catch (err) {
+		return { state: (err as NodeJS.ErrnoException).code === 'ENOENT' ? 'missing' : 'unknown' };
+	}
+	return { state: read(said) ?? 'unknown' };
+};
 
 export interface Lookup {
 	env: NodeJS.ProcessEnv;

@@ -1,7 +1,7 @@
 import { type ChildProcess, spawn } from 'node:child_process';
 import { join } from 'node:path';
 import { GROUP, endGroup } from '../platform/process';
-import { type Agent, type Lookup, type RunCommand, isMissing, locate, lookupHere, runCommand } from './agent';
+import { type Agent, type Lookup, type RunCommand, locate, lookupHere, readinessOf, runCommand } from './agent';
 
 /** Where its own installers put it come before an editor's copy. */
 export const locateClaude = (lookup: Lookup = lookupHere()): string =>
@@ -106,23 +106,19 @@ export const claudeCode = (deps: ClaudeDeps = defaultClaudeDeps): Agent => ({
 	 * Only `claude auth status`'s yes or no is read. No answer (an older Claude Code, a slow machine) does not stand in the
 	 * way: what it is handed still says a real failure.
 	 */
-	readiness: async () => {
-		let out: string;
-		try {
-			out = (await deps.run(deps.locate(), ['auth', 'status', '--json'])).stdout;
-		} catch (err) {
-			if (isMissing(err)) return { state: 'missing' };
-			return { state: 'unknown' };
-		}
-		try {
-			const status = JSON.parse(out) as { loggedIn?: unknown };
-			if (status.loggedIn === true) return { state: 'ready' };
-			if (status.loggedIn === false) return { state: 'signedOut' };
-		} catch {
-			// Not the JSON this was asked for.
-		}
-		return { state: 'unknown' };
-	},
+	readiness: () =>
+		readinessOf(
+			() => deps.run(deps.locate(), ['auth', 'status', '--json']),
+			({ stdout }) => {
+				try {
+					const { loggedIn } = JSON.parse(stdout) as { loggedIn?: unknown };
+					return loggedIn === true ? 'ready' : loggedIn === false ? 'signedOut' : null;
+				} catch {
+					// Not the JSON this was asked for.
+					return null;
+				}
+			},
+		),
 	notReady: {
 		missing: 'Claude Code is not installed. Install it from claude.com/claude-code, sign in, then start again.',
 		signedOut: 'Claude Code is not signed in. Sign in in the Claude Code panel, or by running claude in a terminal, then start again.',

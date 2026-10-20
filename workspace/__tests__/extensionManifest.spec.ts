@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { AGENT_IDS, DEFAULT_AGENT } from '../src/core/services/agent/agent';
 
 /** VS Code takes the icon, the views and the commands from `extension/package.json`, not from the workspace's `package.json`. */
 
@@ -82,7 +83,8 @@ describe('the extension’s manifest', () => {
 		expect(Object.keys(properties)).toEqual(['dsnr.agent.use', 'dsnr.agent.location', 'dsnr.claudeCode.location']);
 		// Never `dsnr.agent` itself: VS Code ignores the settings under a section that is also a value.
 		expect(properties['dsnr.agent']).toBeUndefined();
-		expect(properties['dsnr.agent.use']).toMatchObject({ type: 'string', enum: ['claude-code', 'codex'], default: 'claude-code' });
+		// Every agent the code knows, and its default: a new agent cannot be left out of the setting.
+		expect(properties['dsnr.agent.use']).toMatchObject({ type: 'string', enum: [...AGENT_IDS], default: DEFAULT_AGENT });
 		expect(properties['dsnr.agent.location']).toMatchObject({ type: 'string', enum: ['sidebar', 'editor'], default: 'sidebar' });
 		expect(properties['dsnr.agent.location']!.description).toMatch(/Claude Code/);
 		// The old name is kept, marked, so a settings file not yet moved is still understood.

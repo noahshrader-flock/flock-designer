@@ -1,5 +1,5 @@
 import { join } from 'node:path';
-import { type Agent, type Lookup, type RunCommand, isMissing, locate, lookupHere, runCommand } from './agent';
+import { type Agent, type Lookup, type RunCommand, locate, lookupHere, readinessOf, runCommand } from './agent';
 
 /** On the PATH, or the one OpenAI's VS Code extension bundles for this machine (`bin/<platform>/codex`). */
 export const locateCodex = (lookup: Lookup = lookupHere()): string =>
@@ -27,19 +27,15 @@ const defaultCodexDeps: CodexDeps = { locate: () => locateCodex(), run: runComma
 export const codex = (deps: CodexDeps = defaultCodexDeps): Agent => ({
 	id: 'codex',
 	name: 'Codex',
-	/** `codex login status` says, on stderr, "Logged in using …", or "Not logged in" and exits 1. */
-	readiness: async () => {
-		let out: string;
-		try {
-			out = (await deps.run(deps.locate(), ['login', 'status'])).stderr;
-		} catch (err) {
-			if (isMissing(err)) return { state: 'missing' };
-			return { state: 'unknown' };
-		}
-		if (/^\s*Logged in\b/i.test(out)) return { state: 'ready' };
-		if (/^\s*Not logged in\b/i.test(out)) return { state: 'signedOut' };
-		return { state: 'unknown' };
-	},
+	/** `codex login status` says "Logged in using …", or "Not logged in" and exits 1; on stderr today, either is read. */
+	readiness: () =>
+		readinessOf(
+			() => deps.run(deps.locate(), ['login', 'status']),
+			({ stdout, stderr }) => {
+				const said = `${stderr}\n${stdout}`;
+				return /^\s*Logged in\b/im.test(said) ? 'ready' : /^\s*Not logged in\b/im.test(said) ? 'signedOut' : null;
+			},
+		),
 	notReady: {
 		missing: 'Codex is not installed. Install the Codex extension for VS Code, or its command line, sign in, then start again.',
 		signedOut: 'Codex is not signed in. Run codex login in a terminal, or sign in in the Codex panel, then start again.',

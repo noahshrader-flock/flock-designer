@@ -1,6 +1,7 @@
-import { describe, expect, it } from 'vitest';
-import { claudeArgv, locateClaude } from '../src/core/services/agent/claudeCode';
-import { locateCodex } from '../src/core/services/agent/codex';
+import { describe, expect, it, vi } from 'vitest';
+import { claudeArgv, claudeCode, locateClaude } from '../src/core/services/agent/claudeCode';
+import { codex, locateCodex } from '../src/core/services/agent/codex';
+import { runByChosen } from '../src/core/services/agent/agent';
 
 describe('running unattended', () => {
 	const argv = claudeArgv('/bin/claude', 'change it', []);
@@ -77,5 +78,26 @@ describe('finding Codex', () => {
 
 	it('falls back to the bare name, whose failure says what to install', () => {
 		expect(locateCodex({ env: { PATH: '' }, home: '/h', exists: () => false, list: () => [] })).toBe('codex');
+	});
+});
+
+describe('a run nobody watches, by the chosen agent', () => {
+	const said = async () => ({ stdout: '', stderr: '' });
+	const claude = claudeCode({ locate: () => 'claude', run: said, spawnProcess: (() => null) as never });
+	const both = [claude, codex({ locate: () => 'codex', run: said })];
+
+	it('is refused for an agent that does not run unattended, naming the ones that do', async () => {
+		await expect(runByChosen(both[1]!, both, '/scratch', 'Make it 6.', { readOnly: [] })).rejects.toThrow(
+			'Changing a value in words runs on its own, which Codex does not do here. Choose Claude Code for it.',
+		);
+	});
+
+	it('is the chosen agent’s own run when it has one', async () => {
+		const run = vi.fn(async () => ({ ok: true, said: 'Done.' }));
+		expect(await runByChosen({ ...claude, runUnattended: run }, both, '/scratch', 'Make it 6.', { readOnly: ['/lib'] })).toEqual({
+			ok: true,
+			said: 'Done.',
+		});
+		expect(run).toHaveBeenCalledWith('/scratch', 'Make it 6.', { readOnly: ['/lib'] });
 	});
 });

@@ -5,7 +5,7 @@ import { reachLine, tokenChanges, valueChanges } from '../shared/processChanges'
 import { storyComponent } from '../shared/valueNames';
 import { type Check, type EventSink, arg } from './handle';
 import type { Ports } from './ports';
-import type { Agent, AgentId } from './services/agent/agent';
+import { type Agent, type AgentId, runByChosen } from './services/agent/agent';
 import { classify } from './services/projects/branchProjects';
 import { syncBranches } from './services/publishing/branchSync';
 import type { CheckoutMemory } from './services/projects/checkoutMemory';
@@ -216,12 +216,7 @@ export const composeCore = ({
 	const valueAgent = new ValueAgent({
 		system: shownSystem,
 		tokens: componentTokens,
-		run: (cwd, task, readOnly) => {
-			const chosen = agent();
-			if (!chosen.runUnattended)
-				throw new Error(`Changing a value in words runs on its own, which ${chosen.name} does not do here. Choose Claude Code for it.`);
-			return chosen.runUnattended(cwd, task, { readOnly });
-		},
+		run: (cwd, task, readOnly) => runByChosen(agent(), Object.values(agents), cwd, task, { readOnly }),
 		readStandard: (path) => readSkillText(path),
 	});
 	const componentVariants = new ComponentVariants({

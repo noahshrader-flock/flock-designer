@@ -1,5 +1,5 @@
 import type { Ports } from '../../src/core/ports';
-import { type Agent, type AgentId, isAgentId } from '../../src/core/services/agent/agent';
+import { type Agent, type AgentId, DEFAULT_AGENT, isAgentId } from '../../src/core/services/agent/agent';
 import type { Handed } from '../../src/shared/contract';
 import type { VsCodeApi } from './vscodePorts';
 
@@ -85,12 +85,12 @@ export const agentWindows = (vscode: VsCodeApi): Ports['agentWindow'] => {
 };
 
 /**
- * The person's own choice, `dsnr.agent.use`; Claude Code until they choose. Not `dsnr.agent` itself: VS Code drops every
+ * The person's own choice, `dsnr.agent.use`; the default until they choose. Not `dsnr.agent` itself: VS Code drops every
  * setting under a section that is also a value, `dsnr.agent.location` with it.
  */
 export const agentChoice = (vscode: Pick<VsCodeApi, 'workspace'>): AgentId => {
 	const chosen = vscode.workspace.getConfiguration('dsnr.agent').get<unknown>('use');
-	return isAgentId(chosen) ? chosen : 'claude-code';
+	return isAgentId(chosen) ? chosen : DEFAULT_AGENT;
 };
 
 /**
