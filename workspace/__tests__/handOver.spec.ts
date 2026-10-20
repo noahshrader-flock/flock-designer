@@ -19,7 +19,7 @@ const ready: Agent = claudeCode({
 });
 
 describe('a task handed over', () => {
-	it('is its file, written where it is asked for, and one line saying what it is for', async () => {
+	it('is its file, written where it is asked for, and one line saying what it is for, with the file for an agent that attaches it', async () => {
 		const opened: unknown[][] = [];
 		const taskFile = join(mkdtempSync(join(tmpdir(), 'dsnr-hand-')), 'demo', 'v1-build.md');
 		dirs.push(join(taskFile, '..', '..'));
@@ -31,6 +31,7 @@ describe('a task handed over', () => {
 				ready,
 				'/work/lib',
 				`Build prototype Version 1 of demo. Your task is in ${taskFile}. It is complete: read all of it, then do what it says, in order.`,
+				taskFile,
 			],
 		]);
 	});
