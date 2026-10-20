@@ -308,6 +308,17 @@ body {
 	background: transparent;
 }
 
+/* Drawn in the error colour, not filled with it: VS Code's error red under white text is too faint to read. */
+.button-danger {
+	border-color: var(--vscode-errorForeground);
+	color: var(--vscode-errorForeground);
+	background: transparent;
+}
+
+.button-danger:hover:not(:disabled) {
+	background: var(--dsnr-track);
+}
+
 .button-secondary:hover:not(:disabled),
 .button-ghost:hover:not(:disabled) {
 	color: var(--vscode-foreground);

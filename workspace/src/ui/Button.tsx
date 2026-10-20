@@ -17,9 +17,9 @@ export const Button = ({
 	type?: 'button' | 'submit';
 	/**
 	 * `primary`: what a place is for, one to a place. `secondary`: another thing to do there (Reset), or a dialog's one way
-	 * out (Close). `ghost`: the way out beside what is done (Cancel).
+	 * out (Close). `ghost`: the way out beside what is done (Cancel). `danger`: what cannot be undone from here (Delete).
 	 */
-	variant?: 'primary' | 'secondary' | 'ghost';
+	variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
 	disabled?: boolean;
 	external?: boolean;
 	icon?: string;
