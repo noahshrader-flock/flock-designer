@@ -72,12 +72,12 @@ describe('a design system checkout handed to Claude Code', () => {
 describe('a product that holds its own design system: component changes and codebase work share its one checkout', () => {
 	const SHARED = 'holds its own design system, so its component changes and its codebase work share this one checkout.';
 	let records: string;
-	/** The product's own package is the design system it names, as Paradome's is. */
-	const holdsItsOwn = (name = 'paradome-client') => {
+	/** The product names paradome-client as its design system; its own package is it, as Paradome's is, unless named otherwise. */
+	const holdsItsOwn = (rootPackage = 'paradome-client') => {
 		makeProductFiles(root);
 		const file = join(root, '.dsnr', 'workspace.json');
 		writeFileSync(file, JSON.stringify({ ...(JSON.parse(readFileSync(file, 'utf8')) as object), designSystem: { package: 'paradome-client' } }));
-		write('package.json', JSON.stringify({ name }));
+		write('package.json', JSON.stringify({ name: rootPackage }));
 		g(root, 'add', '-A');
 		g(root, 'commit', '-q', '-m', 'product');
 	};

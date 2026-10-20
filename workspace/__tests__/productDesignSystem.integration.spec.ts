@@ -174,6 +174,12 @@ describe('a design system in the product’s own repository, found by the packag
 		expect(designSystemInProduct(coke)).toBeNull();
 	});
 
+	it('is the package found, never another inside it: a product named as its design system with none of its own is none', async () => {
+		writeFileSync(join(coke, 'package.json'), JSON.stringify({ name: '@acme/ui' }));
+		packageIn('packages/charts', '@acme/charts');
+		expect(await productDesignSystem(coke, answers)).toEqual({ state: 'none' });
+	});
+
 	it('is where the workspace file’s folder says, over a package found by the name', async () => {
 		product({ package: '@acme/ui', folder: 'libs/ui' });
 		packageIn('packages/ui', '@acme/ui');

@@ -16,7 +16,7 @@ import { projectPath, prototypePagePath, prototypeSourcePath, sharedFilePath, sh
 import { commentsFromOthers, nextVersionName, othersHaveCommented } from '../../../shared/prototypeNames';
 import { MANIFEST_FILE, declaredTarget, productTarget, taskAccessibility } from '../accessibility/accessibilityBrief';
 import { readDescriptor } from '../projects/descriptor';
-import { isInside } from '../platform/paths';
+import { designSystemInProduct } from '../projects/productDesignSystem';
 import { branchTip, commitsAfter, git, hasCommit, headCommit, isSafeBranchName, readCheckout, readTreeAt, repositoryOf } from '../platform/git';
 import { fetchBranch, freshTip } from '../platform/fetch';
 import { installLine } from '../codebase/install';
@@ -312,10 +312,7 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 	 * The design system's own checkout, to build from in place of the installed package: none when it is in the product's
 	 * repository, as a monorepo's is, where the installed package is that same code.
 	 */
-	const separateClone = async (root: string): Promise<string | null> => {
-		const at = await ctx.designSystemOf(root);
-		return at !== null && !isInside(root, at) ? at : null;
-	};
+	const separateClone = async (root: string): Promise<string | null> => (designSystemInProduct(root) === null ? ctx.designSystemOf(root) : null);
 
 	/**
 	 * What a version's design system is built from: null for the product's installed package, as every version is unless

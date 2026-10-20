@@ -11,11 +11,14 @@ import { type WorkspaceDescriptor, designSystemCheckout, readDescriptor } from '
 
 const isFolder = (p: string): boolean => existsSync(p) && statSync(p).isDirectory();
 
-/** The design system in `dir`, as the Design System tab would read it (the folder itself, or one inside a monorepo). */
-export const designSystemIn = async (dir: string): Promise<string | null> => {
+/**
+ * The design system in `dir`, as the Design System tab would read it: the folder itself, or one inside a monorepo; with
+ * `exactly`, the folder itself only, as a package already found where it is.
+ */
+export const designSystemIn = async (dir: string, { exactly = false }: { exactly?: boolean } = {}): Promise<string | null> => {
 	if (!isFolder(dir)) return null;
 	const found = await findDesignSystems(folderReads(dir), basename(dir)).catch(() => []);
-	const first = found[0];
+	const first = exactly ? found.find((f) => f.folder === '') : found[0];
 	return first === undefined ? null : first.folder === '' ? dir : join(dir, first.folder);
 };
 
@@ -149,9 +152,9 @@ export class SourceAnswers {
 }
 
 /**
- * The product's design system: found where it names it (`placeOf`: in its own repository, or beside it named as its
- * package); beside it, then proven to be that package's source, or the person's own answer when it cannot be. `usable` is what may be read and
- * shown; `refused` and `ask` say why not yet; `none`, that nothing is there.
+ * The product's design system: found where it names it (`placeOf`), then, when it is beside the product, proven to be that
+ * package's source, or the person's own answer when it cannot be. `usable` is what may be read and shown; `refused` and
+ * `ask` say why not yet; `none`, that nothing is there.
  */
 export type ProductDesignSystem =
 	| { state: 'none' }
@@ -168,7 +171,8 @@ export const productDesignSystem = async (productRoot: string, answers: Pick<Sou
 		pkg = designSystem.package;
 		const place = placeOf(productRoot, designSystem);
 		inProduct = place.inProduct;
-		dir = await designSystemIn(place.dir);
+		// In the product's repository it is known where it is; beside it, it may be a monorepo of its own.
+		dir = await designSystemIn(place.dir, { exactly: inProduct });
 	} catch {
 		return { state: 'none' };
 	}

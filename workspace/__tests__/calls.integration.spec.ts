@@ -713,7 +713,7 @@ describe('prototypes', () => {
 			expect(g(product, 'branch', '--list', 'feature/zone')).toBe('');
 		});
 
-		it('offers no clone to build from when the design system is in the product’s own repository, as its installed package is', async () => {
+		it('offers no clone to build from when the design system is in the product’s own repository', async () => {
 			await made();
 			const beside = designSystemBeside(product, {
 				'package.json': JSON.stringify({ name: 'x' }),
