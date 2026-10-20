@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { declaredTarget } from '../src/core/services/accessibility/accessibilityBrief';
 import { workPath } from '../src/shared/designPaths';
 import { prototypeWork } from '../src/core/services/prototypes/prototypeWork';
+import { freshTip } from '../src/core/services/platform/fetch';
 import { g, installDesignSystem, makeProduct, memoryStore } from './fixtures';
 
 let home: string;
@@ -53,10 +54,7 @@ beforeEach(() => {
 	shared = memoryStore();
 });
 
-afterEach(() => {
-	g(mine, 'worktree', 'prune');
-	rmSync(home, { recursive: true, force: true });
-});
+afterEach(() => rmSync(home, { recursive: true, force: true }));
 
 /** What the person's checkout is: its HEAD, branch and files, edits included. */
 const checkout = () => ({
@@ -109,6 +107,15 @@ describe('what a prototype is modeled on is what is read', () => {
 		expect(g(mine, 'rev-parse', 'develop')).not.toBe(theirView);
 	});
 
+	it('fetches again for a commit pushed moments after this clone last fetched', async () => {
+		await freshTip(mine, 'develop');
+		commitIn(theirs, 'view.tsx', 'pushed just now');
+		g(theirs, 'push', '-q', 'origin', 'develop');
+		const made = await start(theirs);
+		const read = await workIn(mine).sources('demo', made.name);
+		expect(readFileSync(join(read?.code as string, 'view.tsx'), 'utf8')).toBe('pushed just now');
+	});
+
 	it('says so, and reads nothing else, when the commit was never pushed', async () => {
 		commitIn(theirs, 'view.tsx', 'only on their machine');
 		const made = await start(theirs);
@@ -134,5 +141,7 @@ describe('what a prototype is modeled on is what is read', () => {
 		const made = await start(mine);
 		commitIn(mine, '.dsnr/manifest.md', manifest('WCAG 2.2 AA'));
 		expect(await workIn(mine).target('demo', made.name)).toEqual(declaredTarget(manifest('WCAG 2.1 AA'), 'Test Product'));
+		// Reading the target only reads: keeping the base is the hand-off's.
+		expect(g(mine, 'for-each-ref', 'refs/dsnr/')).toBe('');
 	});
 });

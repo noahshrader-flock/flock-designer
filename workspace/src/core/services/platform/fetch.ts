@@ -106,17 +106,22 @@ const FRESH_FOR_MS = 60_000;
 /** How long starting work waits for a fetch before going ahead on what this clone already has, and saying so. */
 const WAIT_MS = 3_000;
 
-const fetches = new Map<string, { at: number; done: Promise<string | null> }>();
+const fetches = new Map<string, { at: number; settled: boolean; done: Promise<string | null> }>();
 
-/** `fetchRemoteCopy`, shared by everyone who asks within `FRESH_FOR_MS`; a failure is not kept, so the next asks again. */
-const fetchOnce = (root: string, branch: string, copy: RemoteCopy): Promise<string | null> => {
+/**
+ * `fetchRemoteCopy`, shared with any fetch of the same copy still running, or one that worked within `maxAgeMs`; a failure
+ * is not kept, so the next asks again.
+ */
+const fetchOnce = (root: string, branch: string, copy: RemoteCopy, maxAgeMs: number): Promise<string | null> => {
 	const key = `${resolve(root)}\0${copy.trackingRef}`;
 	const known = fetches.get(key);
-	if (known && Date.now() - known.at < FRESH_FOR_MS) return known.done;
+	if (known && (!known.settled || Date.now() - known.at < maxAgeMs)) return known.done;
 	const done = fetchRemoteCopy(root, copy, { timeoutMs: FETCH_TIMEOUT_MS, what: basename(root), branch });
-	fetches.set(key, { at: Date.now(), done });
+	const entry = { at: Date.now(), settled: false, done };
+	fetches.set(key, entry);
 	void done.then((failed) => {
-		if (failed !== null && fetches.get(key)?.done === done) fetches.delete(key);
+		entry.settled = true;
+		if (failed !== null && fetches.get(key) === entry) fetches.delete(key);
 	});
 	return done;
 };
@@ -170,7 +175,7 @@ export const freshTip = async (root: string, branch: string, { waitMs = WAIT_MS 
 	// Wrapped, since a fetch that worked answers null too.
 	const fetched = await within(
 		waitMs,
-		fetchOnce(root, branch, upstream).then((failed) => ({ failed })),
+		fetchOnce(root, branch, upstream, FRESH_FOR_MS).then((failed) => ({ failed })),
 	);
 	const failed = fetched === null ? `${upstream.remote} did not answer within ${Math.max(1, Math.round(waitMs / 1000))} seconds.` : fetched.failed;
 	const remote = await refTip(root, upstream.trackingRef);
@@ -227,9 +232,16 @@ export const freshTip = async (root: string, branch: string, { waitMs = WAIT_MS 
 	};
 };
 
+/**
+ * Fetches `branch`'s remote copy now, and waits for it: for a commit this clone lacks, so an earlier fetch is not enough,
+ * though one still running is shared. Null when it fetched, or the branch tracks nothing; else why not, in words.
+ */
+export const fetchBranch = async (root: string, branch: string): Promise<string | null> => {
+	const where = await whereIs(root, branch);
+	return where.untracked ? null : fetchOnce(root, branch, where.upstream, 0);
+};
+
 /** Starts the fetch `freshTip` will use, when the branch is picked: never throws, and nothing waits on it. */
 export const warmTip = (root: string, branch: string): void => {
-	void whereIs(root, branch)
-		.then((where) => (where.untracked ? null : fetchOnce(root, branch, where.upstream)))
-		.catch(() => undefined);
+	void fetchBranch(root, branch).catch(() => undefined);
 };

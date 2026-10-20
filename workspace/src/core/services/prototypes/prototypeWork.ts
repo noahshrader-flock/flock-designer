@@ -9,8 +9,9 @@ import { MANIFEST_FILE, declaredTarget, productTarget, taskAccessibility } from 
 import { designSystemCheckout, readDescriptor } from '../projects/descriptor';
 import { recordsRootFor } from '../projects/discovery';
 import { branchTip, branchExists, git, hasCommit, headCommit, isSafeBranchName, readTreeAt, repositoryOf } from '../platform/git';
-import { freshTip } from '../platform/fetch';
+import { fetchBranch } from '../platform/fetch';
 import { isObjectId } from '../../../shared/sha';
+import { errorText } from '../../../shared/result';
 import { assertUsableProjectId } from '../projects/workRecords';
 import {
 	MAX_PAGE,
@@ -84,9 +85,6 @@ export const localPrototypeFile = (prototypesRoot: string, projectId: string, na
 	assertPrototypeName(name);
 	return join(prototypesRoot, projectId, `${name}.${ext}`);
 };
-
-/** How long reading a version's base waits to fetch a commit this clone lacks. */
-const FETCH_WAIT_MS = 20_000;
 
 export const prototypeWork = (ctx: PrototypeWorkContext) => {
 	const { prototypesRoot } = ctx;
@@ -178,30 +176,37 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 	};
 
 	/**
-	 * The commit a version was modeled on, in this clone: what its record says, fetched with its branch when this clone lacks
-	 * it, and kept by a private ref (`refs/dsnr/base/<project>/<version>`, no branch the person uses) so a rebase, an amend
-	 * or git's cleanup cannot take it away. Said, never replaced, when it cannot be had. A record from before commits were
-	 * kept has its branch's tip, as it always had.
+	 * The commit a version was modeled on, when this clone has it, reading only: what its record says or, for a record from
+	 * before commits were kept, its branch's tip, as it always had. The record is shared, so what it names is checked before
+	 * git reads it as the start of an argument: a branch that fails is not there.
+	 */
+	const knownBase = async (root: string, name: string, basedOn: NonNullable<Work['basedOn']>): Promise<string | null> => {
+		if (!isSafeBranchName(basedOn.branch)) throw new Error(`There is no branch called ${basedOn.branch} in ${basename(root)}.`);
+		if (basedOn.commit === null) return branchTip(root, basedOn.branch);
+		if (!isObjectId(basedOn.commit)) throw new Error(`${name}'s record names a commit DSNR cannot read: ${basedOn.commit}.`);
+		return (await hasCommit(root, basedOn.commit)) ? basedOn.commit : null;
+	};
+
+	/**
+	 * `knownBase`, fetched with its branch when this clone lacks it, and kept by a private ref
+	 * (`refs/dsnr/base/<project>/<version>`, no branch the person uses) so a rebase, an amend or git's cleanup cannot take
+	 * it away. Said, never replaced, when it cannot be had.
 	 */
 	const baseCommit = async (root: string, projectId: string, name: string, basedOn: NonNullable<Work['basedOn']>): Promise<string> => {
-		// From the shared records, so checked before git reads it as the start of an argument: one that fails is not there.
-		if (!isSafeBranchName(basedOn.branch)) throw new Error(`There is no branch called ${basedOn.branch} in ${basename(root)}.`);
-		if (basedOn.commit === null) {
-			const tip = await branchTip(root, basedOn.branch);
-			if (tip === null) throw new Error(`There is no branch called ${basedOn.branch} in ${basename(root)}.`);
-			return tip;
+		let commit = await knownBase(root, name, basedOn);
+		let failed: string | null = null;
+		if (commit === null) {
+			failed = await fetchBranch(root, basedOn.branch).catch((err: unknown) => errorText(err));
+			commit = await knownBase(root, name, basedOn);
 		}
-		const commit = basedOn.commit;
-		if (!isObjectId(commit)) throw new Error(`${name}'s record names a commit DSNR cannot read: ${commit}.`);
-		if (!(await hasCommit(root, commit))) {
-			// Its branch's copy from the remote; one that cannot be fetched leaves it to be said below.
-			await freshTip(root, basedOn.branch, { waitMs: FETCH_WAIT_MS }).catch(() => undefined);
-			if (!(await hasCommit(root, commit)))
-				throw new Error(
-					`${name} was modeled on ${basedOn.branch} at ${commit.slice(0, 7)}, which ${basename(root)} here does not have and could not fetch: it may be on a branch that was never pushed, or one rewritten since. Fetch it, or start a new version, which is modeled on the code as it is now.`,
-				);
+		if (commit === null) {
+			if (basedOn.commit === null) throw new Error(`There is no branch called ${basedOn.branch} in ${basename(root)}.`);
+			throw new Error(
+				`${name} was modeled on ${basedOn.branch} at ${basedOn.commit.slice(0, 7)}, which ${basename(root)} here does not have and could not fetch${failed ? ` (${failed})` : ''}: it may be on a branch that was never pushed, or one rewritten since. Fetch it, or start a new version, which is modeled on the code as it is now.`,
+			);
 		}
-		await git(root, ['update-ref', `refs/dsnr/base/${projectId}/${name}`, commit]);
+		// Only a recorded commit: a branch's tip, for an old record, moves, so pinning it would keep the wrong one.
+		if (basedOn.commit !== null) await git(root, ['update-ref', `refs/dsnr/base/${projectId}/${name}`, commit]);
 		return commit;
 	};
 
@@ -436,7 +441,8 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		const descriptor = readDescriptor(root);
 		const path = `${descriptor.contextDir}/${MANIFEST_FILE}`;
 		const basedOn = (await record(projectId, name))?.basedOn;
-		const commit = basedOn && basename(root) === basedOn.repository ? await baseCommit(root, projectId, name, basedOn).catch(() => null) : null;
+		// Read only: the hand-off's `sources` is what fetches a base this clone lacks, and says so when it cannot.
+		const commit = basedOn && basename(root) === basedOn.repository ? await knownBase(root, name, basedOn).catch(() => null) : null;
 		const atBase = commit !== null ? await git(root, ['show', `${commit}:${path}`], { trim: false }).catch(() => null) : null;
 		return atBase !== null ? declaredTarget(atBase, descriptor.product) : productTarget(join(root, descriptor.contextDir), descriptor.product);
 	};
