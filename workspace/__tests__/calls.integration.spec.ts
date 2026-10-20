@@ -965,6 +965,29 @@ describe('prototypes', () => {
 		expect(existsSync(join(design, 'projects', 'demo', 'work.json'))).toBe(true);
 	});
 
+	it('are read from the clone alone while signed out, never asking GitHub for the records a start has not made yet', async () => {
+		const { ReauthRequired } = await import('../src/codeHost/github');
+		register({
+			designRepoOf: (ref: RepoRef) =>
+				({
+					ref,
+					listProjects: vi.fn(async () => []),
+					threads: { deleteComment, readComments },
+					files: {
+						readFile: vi.fn(async () => {
+							throw new ReauthRequired();
+						}),
+						readBytes: vi.fn(async () => {
+							throw new ReauthRequired();
+						}),
+					},
+				}) as never,
+		});
+		await trustFolder(product);
+		expect((await call(CHANNELS.createPrototype, 'demo', 'Demo', 'A list', { root: product, branch: 'develop' })).ok).toBe(true);
+		expect((await call(CHANNELS.prototypeBehind, 'demo', 'v1')).ok).toBe(true);
+	});
+
 	it('are not started where the design repository is not on this machine, as nothing could ever be saved', async () => {
 		await trustFolder(product);
 		rmSync(design, { recursive: true, force: true });
@@ -1619,6 +1642,8 @@ describe('the picture of each prototype, on its project’s card', () => {
 
 	it('is read from GitHub when this machine’s clone does not have it yet, and is nothing when neither has it', async () => {
 		await savedPrototype();
+		// Signed in: signed out there is no GitHub to ask, which the clone alone then answers.
+		githubState = { state: 'signedIn', user: { login: 'noah', name: 'Noah' } };
 		readBytes.mockResolvedValueOnce(JPEG);
 		expect(await call(CHANNELS.projectCover, 'demo', 'v2', 'aaaaaaaaaaaa')).toEqual({
 			ok: true,

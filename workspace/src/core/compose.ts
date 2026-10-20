@@ -309,8 +309,12 @@ export const composeCore = ({
 		return trusted === null ? null : dirname(trusted.recordsRoot);
 	};
 	// Everything prototypes write goes to the clone here when there is one, so the publisher sends it like every other
-	// record, and otherwise to GitHub directly.
-	const store = designStore({ clone: designClone, files: () => designRepos.now().files, onWrite: () => void publisher.publish(true) });
+	// record, and otherwise to GitHub directly. Signed out there is none to ask: the clone is all there is.
+	const store = designStore({
+		clone: designClone,
+		files: () => (me() === null ? null : designRepos.now().files),
+		onWrite: () => void publisher.publish(true),
+	});
 	const readSkillText = (path: string): Promise<string> => work.skill(path);
 	/** The product's design system, where it may be read: only once it is shown to be its package's source, or said to be. */
 	const designSystemOf = (productRoot: string): Promise<string | null> => usableDesignSystem(productRoot, sourceAnswers);
