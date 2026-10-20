@@ -3,17 +3,12 @@ import { join } from 'node:path';
 import { GROUP, endGroup } from '../platform/process';
 import { type Agent, type Lookup, type RunCommand, locate, lookupHere, readinessOf, runCommand } from './agent';
 
-/** Where its own installers put it come before an editor's copy. */
+/** Its own installer's place comes before an editor's copy. */
 export const locateClaude = (lookup: Lookup = lookupHere()): string =>
 	locate(
 		'claude',
 		{
-			others: [
-				join(lookup.home, '.claude', 'local', 'claude'),
-				join(lookup.home, '.local', 'bin', 'claude'),
-				'/opt/homebrew/bin/claude',
-				'/usr/local/bin/claude',
-			],
+			others: [join(lookup.home, '.claude', 'local', 'claude')],
 			bundled: { prefix: 'anthropic.claude-code-', inside: (extension) => [join(extension, 'resources', 'native-binary', 'claude')] },
 		},
 		lookup,

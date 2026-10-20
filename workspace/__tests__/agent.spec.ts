@@ -52,6 +52,12 @@ describe('finding Claude Code', () => {
 		expect(found).toBe(bin('2.1.289-darwin-arm64'));
 	});
 
+	it('finds the one its own installer put in its own place', () => {
+		expect(locateClaude({ env: { PATH: '' }, home: '/h', exists: (p) => p === '/h/.claude/local/claude', list: () => [] })).toBe(
+			'/h/.claude/local/claude',
+		);
+	});
+
 	it('falls back to the bare name, whose failure says what to install', () => {
 		expect(locateClaude({ env: { PATH: '' }, home: '/h', exists: none, list: () => [] })).toBe('claude');
 	});
@@ -75,6 +81,12 @@ describe('finding Codex', () => {
 					: ['macos-aarch64'],
 		});
 		expect(found).toBe(bin('26.1007.21434-darwin-arm64'));
+	});
+
+	it('finds one Homebrew installed, which VS Code started from the Dock has no PATH to', () => {
+		expect(locateCodex({ env: { PATH: '' }, home: '/h', exists: (p) => p === '/opt/homebrew/bin/codex', list: () => [] })).toBe(
+			'/opt/homebrew/bin/codex',
+		);
 	});
 
 	it('falls back to the bare name, whose failure says what to install', () => {

@@ -105,8 +105,9 @@ export const lookupHere = (): Lookup => ({
 });
 
 /**
- * On the PATH, then in `others`, then in the newest copy an editor's own extension bundles (`prefix` its folder's name,
- * `inside` where in it the program is), as many people have it only there. Else the bare name, whose failure says what to do.
+ * On the PATH, then in `others`, then where installers put programs (VS Code started from the Dock has no Homebrew on its
+ * PATH), then in the newest copy an editor's own extension bundles (`prefix` its folder's name, `inside` where in it the
+ * program is), as many people have it only there. Else the bare name, whose failure says what to do.
  */
 export const locate = (
 	name: string,
@@ -115,8 +116,8 @@ export const locate = (
 ): string => {
 	const onPath = findOnPath(name, env, exists);
 	if (onPath) return onPath;
-	const other = others.find(exists);
-	if (other) return other;
+	const installed = [...others, ...[join(home, '.local', 'bin'), '/opt/homebrew/bin', '/usr/local/bin'].map((dir) => join(dir, name))].find(exists);
+	if (installed) return installed;
 	if (!bundled) return name;
 	const { prefix, inside } = bundled;
 	for (const editor of ['.vscode', '.vscode-insiders', '.cursor']) {

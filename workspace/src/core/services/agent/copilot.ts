@@ -1,9 +1,7 @@
-import { join } from 'node:path';
 import { type Agent, type Lookup, locate, lookupHere } from './agent';
 
 /** Its command line is installed on its own (Homebrew, npm), never inside the Copilot extension. */
-export const locateCopilot = (lookup: Lookup = lookupHere()): string =>
-	locate('copilot', { others: [join(lookup.home, '.local', 'bin', 'copilot'), '/opt/homebrew/bin/copilot', '/usr/local/bin/copilot'] }, lookup);
+export const locateCopilot = (lookup: Lookup = lookupHere()): string => locate('copilot', {}, lookup);
 
 /**
  * Handed work in VS Code's own Chat, which is built in and asks for its own sign-in; its command line, for a terminal,
