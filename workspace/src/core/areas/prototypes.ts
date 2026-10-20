@@ -30,7 +30,22 @@ import { dropAllPending } from '../services/prototypes/pendingPrototypes';
 import { singleFlight } from '../services/platform/concurrency';
 
 export const prototypesArea = (d: CallsDeps) => {
-	const { agent, designRepos, emit, me, opened, ports, prototypePage, prototypesRoot, deploys, readSkillText, servePrototype, store, work } = d;
+	const {
+		agent,
+		designRepos,
+		emit,
+		me,
+		opened,
+		ports,
+		prototypePage,
+		prototypesRoot,
+		publisher,
+		deploys,
+		readSkillText,
+		servePrototype,
+		store,
+		work,
+	} = d;
 	const inFlight = singleFlight<string, unknown>();
 	const once = <T>(key: string, run: () => Promise<T>): Promise<T> => inFlight.run(key, run) as Promise<T>;
 	const coverDeps: CoverDeps = {
@@ -129,10 +144,14 @@ export const prototypesArea = (d: CallsDeps) => {
 			deploys.site();
 			return null;
 		},
-		/** Built again, the site has none of its pages; one only started here was never on it, and goes with its start. */
+		/**
+		 * Built again, the site has none of its pages; one only started here was never on it, and goes with its start. Answered
+		 * once the deletion is published, so the list read next no longer has it.
+		 */
 		deleteProject: async (projectId: string, typed: string) => {
 			const shared = await store.records().has(workPath(projectId));
 			await deleteProject(store.records(), projectId, typed);
+			await publisher.publish(true);
 			dropAllPending(prototypesRoot, projectId);
 			if (shared) deploys.site();
 			emit('onProjectDeleted', projectId);

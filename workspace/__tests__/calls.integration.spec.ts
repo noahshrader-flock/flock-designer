@@ -906,16 +906,21 @@ describe('prototypes', () => {
 
 	it('are deleted from the clone, every version with them, only when their name is typed, saying so to what shows them', async () => {
 		const emit = vi.fn();
-		register({ emit });
+		const onPublishStatus = vi.fn();
+		register({ emit, onPublishStatus });
 		await trustFolder(product);
 		await call(CHANNELS.createPrototype, 'demo', 'Demo', 'A list', { root: product, branch: 'develop' });
 		await firstSaved();
 		expect((await call(CHANNELS.deleteProject, 'demo', 'demo')).error).toBe('Type Demo to delete it.');
 		expect(existsSync(join(design, 'projects', 'demo', 'work.json'))).toBe(true);
 		expect(emit).not.toHaveBeenCalledWith('onProjectDeleted', expect.anything());
+		const before = onPublishStatus.mock.calls.length;
 		expect((await call(CHANNELS.deleteProject, 'demo', ' Demo ')).ok).toBe(true);
 		expect(existsSync(join(design, 'projects', 'demo'))).toBe(false);
 		expect(emit).toHaveBeenCalledWith('onProjectDeleted', 'demo');
+		// Answered once its publishing has run, so the list read next is without it.
+		expect(onPublishStatus.mock.calls.length).toBeGreaterThan(before);
+		expect(onPublishStatus.mock.calls.at(-1)?.[0].state).not.toBe('working');
 		expect((await call(CHANNELS.deleteProject, '../etc', 'etc')).ok).toBe(false);
 	});
 
