@@ -5,6 +5,7 @@ import { dirname, join, relative, sep } from 'node:path';
  * Pointers, never copies, where each agent looks, as measured: Claude Code reads `.claude/agents` and prefers `CLAUDE.md`
  * to `AGENTS.md`; Codex reads `.agents/skills`; Copilot's command line reads both; VS Code's Chat reads `AGENTS.md`.
  */
+
 /** The definitions in the design repository's `agents/` an agent can run as one of its own. */
 export const DEFINITIONS = [
 	{
@@ -41,6 +42,11 @@ const sectionIn = (text: string): { start: number; end: number; marked: boolean 
 	const next = text.slice(heading + SECTION_HEADING.length).search(/^## /m);
 	return { start: heading, end: next === -1 ? text.length : heading + SECTION_HEADING.length + next, marked: false };
 };
+
+const withFields = (fields: Record<string, string>, body: string) =>
+	`---\n${Object.entries(fields)
+		.map(([key, value]) => `${key}: ${value}`)
+		.join('\n')}\n---\n\n${body}`;
 
 const pointer = (design: string, name: string) =>
 	`Read **\`${design}/agents/${name}.md\`** in full, then follow it as your operating instructions. What is true of this repository is in \`.dsnr/\`, which it says how to read.\n\nThat file is the definition; this one is only where this agent looks for it. Do not act before reading it.\n`;
@@ -97,13 +103,16 @@ export const entryFiles = (design: string): EntryFile[] => [
 			{
 				path: `.claude/agents/${name}.md`,
 				text: () =>
-					`---\nname: ${name}\ndescription: ${description}\ntools: ${readOnly ? 'Read, Grep, Glob, Bash' : 'Read, Grep, Glob, Write, Edit, Bash'}\n---\n\n${pointer(design, name)}`,
+					withFields(
+						{ name, description, tools: readOnly ? 'Read, Grep, Glob, Bash' : 'Read, Grep, Glob, Write, Edit, Bash' },
+						pointer(design, name),
+					),
 				ours: isPointer,
 				why,
 			},
 			{
 				path: `.agents/skills/${name}/SKILL.md`,
-				text: () => `---\nname: ${name}\ndescription: ${description}\n---\n\n${pointer(design, name)}`,
+				text: () => withFields({ name, description }, pointer(design, name)),
 				ours: isPointer,
 				why,
 			},

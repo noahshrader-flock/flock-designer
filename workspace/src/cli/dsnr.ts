@@ -291,15 +291,19 @@ export const main = async (argv: string[], deps: CliDeps): Promise<number> => {
 			const root = await productOf(deps.cwd, values.product, check ? 'check its agent files' : 'write its agent files');
 			const { written, unchanged, left } = writeEntryFiles(root, designBeside(root), { write: !check });
 			const list = (paths: string[]) => paths.map((p) => `  ${p}`).join('\n');
+			const changed = written.length > 0;
 			deps.out(
 				[
-					written.length
+					changed
 						? `${check ? 'Not as DSNR writes them' : 'Written'} in ${root}:\n${list(written)}`
 						: `Nothing to write in ${root}: every agent file is as DSNR writes it.`,
-					...(unchanged.length && written.length ? [`Already as DSNR writes them:\n${list(unchanged)}`] : []),
+					...(changed && unchanged.length ? [`Already as DSNR writes them:\n${list(unchanged)}`] : []),
 					...left.map(({ path, why }) => `Left as it is: ${path}, since ${why}.`),
-					...(written.length && !check ? ['They are the product’s files: look at them, then commit them. Nothing was committed.'] : []),
-					...(written.length && check ? ['Run dsnr agent-files in it to write them.'] : []),
+					...(!changed
+						? []
+						: check
+							? ['Run dsnr agent-files in it to write them.']
+							: ['They are the product’s files: look at them, then commit them. Nothing was committed.']),
 				].join('\n\n'),
 			);
 			return check && (written.length > 0 || left.length > 0) ? 1 : 0;
