@@ -7,7 +7,7 @@ import type { VsCodeApi } from './vscodePorts';
 /** Where an agent is opened in VS Code: whether this VS Code has it, and opening it in `root` with `prompt`. */
 interface AgentWindow {
 	here(): boolean;
-	open(agent: Agent, root: string, prompt: string, taskFile: string | null): Promise<NonNullable<Handed['opened']>>;
+	open(agent: Agent, root: string, prompt: string, taskFile: string): Promise<NonNullable<Handed['opened']>>;
 	/** For an agent that cannot say itself whether it is signed in, what VS Code can tell. */
 	signedIn?(): Promise<boolean | null>;
 }
@@ -90,7 +90,7 @@ const codexWindow = (vscode: VsCodeApi, terminal: AgentWindow): AgentWindow => (
 			return terminal.open(agent, root, prompt, taskFile);
 		try {
 			await vscode.commands.executeCommand(CODEX_NEW_CHAT);
-			if (taskFile !== null) await vscode.commands.executeCommand(CODEX_ATTACH, vscode.Uri.file(taskFile));
+			await vscode.commands.executeCommand(CODEX_ATTACH, vscode.Uri.file(taskFile));
 		} catch {
 			return terminal.open(agent, root, prompt, taskFile);
 		}
@@ -106,8 +106,8 @@ const copilotWindow = (vscode: VsCodeApi, terminal: AgentWindow): AgentWindow =>
 	here: () => true,
 	// Its models are offered only to someone signed in; listing them asks nothing of the person, using one would.
 	signedIn: async () => ((await vscode.lm.selectChatModels({ vendor: 'copilot' })).length > 0 ? true : null),
-	open: async (agent, root, prompt) => {
-		if (!(await vscode.commands.getCommands(true)).includes(CHAT_OPEN)) return terminal.open(agent, root, prompt, null);
+	open: async (agent, root, prompt, taskFile) => {
+		if (!(await vscode.commands.getCommands(true)).includes(CHAT_OPEN)) return terminal.open(agent, root, prompt, taskFile);
 		await openFolder(vscode, root);
 		await vscode.commands.executeCommand(CHAT_OPEN, { query: prompt, mode: 'agent', isPartialQuery: true });
 		return 'typed';

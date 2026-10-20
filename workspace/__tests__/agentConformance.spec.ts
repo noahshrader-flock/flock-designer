@@ -68,9 +68,12 @@ say({ type: 'result', is_error: task === 'refused', result: task === 'refused' ?
 	{ name: 'GitHub Copilot', make: (bin) => copilot({ locate: () => bin }) },
 ];
 
-/** Handed `Go.` in `/work`; `prepare` counts what would have been made for it. */
-const hand = (ports: Parameters<typeof handOver>[0], a: Agent, prepare = vi.fn(async () => ({ root: '/work', prompt: 'Go.' }))) =>
-	handOver(ports, a, prepare).then((r) => r.handed);
+/** Handed `Go.`, naming `/work/task.md`, in `/work`; `prepare` counts what would have been made for it. */
+const hand = (
+	ports: Parameters<typeof handOver>[0],
+	a: Agent,
+	prepare = vi.fn(async () => ({ root: '/work', prompt: 'Go.', taskFile: '/work/task.md' })),
+) => handOver(ports, a, prepare).then((r) => r.handed);
 
 const missing = (): Error => Object.assign(new Error('spawn ENOENT'), { code: 'ENOENT' });
 
@@ -95,7 +98,7 @@ describe.each(ROWS)('$name, behind the seam', (row) => {
 		it('is handed nothing, and nothing is made for it, when it is missing or signed out, and says why in its words', async () => {
 			const open = vi.fn(async () => 'typed' as const);
 			const ports = { agentWindow: { open }, copy: vi.fn(async () => undefined) };
-			const prepare = vi.fn(async () => ({ root: '/work', prompt: 'Go.' }));
+			const prepare = vi.fn(async () => ({ root: '/work', prompt: 'Go.', taskFile: '/work/task.md' }));
 			const said = async (answer: Answer) => {
 				const r = await agent(answer).readiness();
 				return 'said' in r ? r.said : '';
@@ -133,8 +136,8 @@ describe.each(ROWS)('$name, behind the seam', (row) => {
 		expect(await hand(ports('typed'), a)).toEqual({ agent: row.name, opened: 'typed', command: null });
 		expect(await hand(ports('started'), a)).toEqual({ agent: row.name, opened: 'started', command: null });
 		expect(opened).toEqual([
-			[a, '/work', 'Go.', null],
-			[a, '/work', 'Go.', null],
+			[a, '/work', 'Go.', '/work/task.md'],
+			[a, '/work', 'Go.', '/work/task.md'],
 		]);
 		expect(copied).toEqual([]);
 		expect(await hand(ports('copied'), a)).toEqual({ agent: row.name, opened: 'copied', command: null });
@@ -147,10 +150,10 @@ describe.each(ROWS)('$name, behind the seam', (row) => {
 
 	it('undoes what was made for a hand-off its window could not then open, and nothing for one it opened', async () => {
 		const undo = vi.fn();
-		const prepare = async () => ({ root: '/work', prompt: 'Go.', branch: 'dsnr/handoff-x' });
+		const prepare = async () => ({ root: '/work', prompt: 'Go.', taskFile: '/work/task.md', branch: 'dsnr/handoff-x' });
 		const broken = { agentWindow: { open: async () => Promise.reject(new Error('The window would not open.')) }, copy: async () => undefined };
 		await expect(handOver(broken, agent(), prepare, undo)).rejects.toThrow('The window would not open.');
-		expect(undo).toHaveBeenCalledExactlyOnceWith({ root: '/work', prompt: 'Go.', branch: 'dsnr/handoff-x' });
+		expect(undo).toHaveBeenCalledExactlyOnceWith({ root: '/work', prompt: 'Go.', taskFile: '/work/task.md', branch: 'dsnr/handoff-x' });
 		undo.mockClear();
 		await handOver({ agentWindow: { open: async () => 'typed' as const }, copy: async () => undefined }, agent(), prepare, undo);
 		expect(undo).not.toHaveBeenCalled();

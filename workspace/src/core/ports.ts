@@ -52,12 +52,12 @@ export interface Ports {
 	/** Follows redirects; throws when nothing answers within a few seconds. */
 	httpStatus(url: string): Promise<number>;
 	/**
-	 * Opens the agent in `root` with `prompt`, and `taskFile`, the file it names (null: it names none), saying how (`copied`:
-	 * the prompt is for the clipboard); null when this editor has nowhere for it. `signedIn`: whether the editor itself can tell, for an agent that cannot (null: it
+	 * Opens the agent in `root` with `prompt`, and `taskFile`, the file it names, saying how (`copied`: the prompt is for the
+	 * clipboard); null when this editor has nowhere for it. `signedIn`: whether the editor itself can tell, for an agent that cannot (null: it
 	 * cannot either).
 	 */
 	agentWindow: {
-		open(agent: Agent, root: string, prompt: string, taskFile: string | null): Promise<Handed['opened']>;
+		open(agent: Agent, root: string, prompt: string, taskFile: string): Promise<Handed['opened']>;
 		signedIn(agent: Agent): Promise<boolean | null>;
 	};
 	/** The agent the person keeps, or `ask`. */

@@ -19,7 +19,7 @@ type HandPorts = { agentWindow: Pick<Ports['agentWindow'], 'open'> } & Pick<Port
  * not in this editor, the command that starts it in a terminal is put on the clipboard and returned as `command`; when its
  * window takes no prompt (`copied`), the prompt is.
  */
-export const handOver = async <T extends { root: string; prompt: string; taskFile?: string }>(
+export const handOver = async <T extends { root: string; prompt: string; taskFile: string }>(
 	ports: HandPorts,
 	agent: Agent,
 	prepare: () => Promise<T>,
@@ -29,7 +29,7 @@ export const handOver = async <T extends { root: string; prompt: string; taskFil
 	const prepared = await prepare();
 	const { root, prompt } = prepared;
 	try {
-		const opened = await ports.agentWindow.open(agent, root, prompt, prepared.taskFile ?? null);
+		const opened = await ports.agentWindow.open(agent, root, prompt, prepared.taskFile);
 		if (opened === 'copied') await ports.copy(prompt);
 		if (opened !== null) return { handed: { agent: agent.name, opened, command: null }, prepared };
 		const command = startCommand(agent.program(), root, agent.startArgs(prompt));
