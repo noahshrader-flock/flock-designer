@@ -49,6 +49,8 @@ describe('what every agent is given, so none has guidance another lacks', () => 
 		expect(agentsMd).toContain('../flock-designer/agents/dsnr.md');
 		// An agent's own subagent left running ends with the work half done.
 		expect(agentsMd).toMatch(/Wait for whatever you hand to an agent of your own before you finish/);
+		// A follow-up made directly skips what each round records.
+		expect(agentsMd).toContain('A follow-up on that work ("change this", "apply the feedback") goes the same way, never made directly');
 		expect(files.find((f) => f.path === 'CLAUDE.md')!.text(null)).toBe('@AGENTS.md\n');
 	});
 

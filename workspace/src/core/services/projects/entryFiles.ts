@@ -11,7 +11,7 @@ export const DEFINITIONS = [
 	{
 		name: 'dsnr',
 		description:
-			'Builds Flock product prototypes and codebase work with the real design system, tokens and product patterns. Use to build, prototype, mock up, recreate, critique or polish a product view or UI, including from a screenshot, sketch or Figma reference.',
+			'Builds product prototypes and codebase work with the real design system, tokens and product patterns. Use to build, prototype, mock up, recreate, critique or polish a product view or UI, including from a screenshot, sketch or Figma reference, and for every follow-up on that work.',
 		readOnly: false,
 	},
 	{
@@ -57,7 +57,7 @@ const agentsSection = (design: string) =>
 		SECTION_START,
 		SECTION_HEADING,
 		'',
-		`For any product UI work, read \`${design}/agents/ui-guide.md\` in full first: what to read, the rules, and what to say when you finish. To build, prototype, mock up, recreate, or critique a product view or UI, use the **dsnr** agent where yours runs one of its own (\`${design}/agents/dsnr.md\`, deciding the path first as its "Which path" says, and naming it in what you hand over); otherwise read that definition and follow it directly, saying so. If you cannot read \`${design}\`, say so before building and ask for it to be opened: do not guess at its rules. Wait for whatever you hand to an agent of your own before you finish: never leave it running.`,
+		`For any product UI work, read \`${design}/agents/ui-guide.md\` in full first: what to read, the rules, and what to say when you finish. To build, prototype, mock up, recreate, or critique a product view or UI, use the **dsnr** agent where yours runs one of its own (\`${design}/agents/dsnr.md\`, deciding the path first as its "Which path" says, and naming it in what you hand over); otherwise read that definition and follow it directly, saying so. A follow-up on that work ("change this", "apply the feedback") goes the same way, never made directly: each round is recorded as the first was. If you cannot read \`${design}\`, say so before building and ask for it to be opened: do not guess at its rules. Wait for whatever you hand to an agent of your own before you finish: never leave it running.`,
 		SECTION_END,
 	].join('\n');
 

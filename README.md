@@ -75,11 +75,11 @@ repository, nothing beside it: `designSystem.folder` says which folder), and pro
 | `CLAUDE.md` | Claude Code's, which it reads in place of `AGENTS.md`: `@AGENTS.md`, so the section is said once |
 | `.claude/agents/<name>.md` | Claude Code's agents (Copilot's command line reads them too): one pointer per shared agent, frontmatter then the line naming `../flock-designer/agents/<name>.md` |
 | `.agents/skills/<name>/SKILL.md` | Codex's skills (Copilot's command line reads them too): the same pointer per shared agent |
+| `dsnr.code-workspace` | Opens the product with `flock-designer` and the design system beside it, which every pointer above assumes. An agent that cannot read them says so and does not guess |
 
 **These are written, not made by hand:** `dsnr agent-files`, run in the product, writes them as a change to review and
 commit, and leaves a file that is the product's own (a `CLAUDE.md` with its own rules), saying why. A product's own
 `.github/copilot-instructions.md` is not DSNR's; Copilot reads it beside `AGENTS.md`.
-| `dsnr.code-workspace` | Opens the product with `flock-designer` and the design system beside it, which every pointer above assumes. An agent that cannot read them says so and does not guess |
 
 **The commands** in `workspace.json`, by id: `preview` (an older prototype branch) and `design-mode` (the real product
 on mock data), each with `servesPreviewOn`; `check-iteration`, the **light check**, fast, run after every step;
@@ -87,18 +87,11 @@ on mock data), each with `servesPreviewOn`; `check-iteration`, the **light check
 `lint`, `a11y` and `boundary`, which the reviewers run; and `install` (`npm ci`), run from the New modal when packages
 are missing. Commands run through `npm`, `npx` or `node`.
 
-**The `AGENTS.md` section**, which every agent reads: Claude Code through `CLAUDE.md`, which imports it, and Copilot directly. It is said in one place; a Copilot instructions file would be a second copy, to be added only if Copilot is shown not to read `AGENTS.md`:
-
-```markdown
-## Product UI and prototype work
-
-For any product UI work, read `../flock-designer/agents/ui-guide.md` in full first: what to read, the rules, and what to
-say when you finish. To build, prototype, mock up, recreate, or critique a product view or UI, use the **dsnr** agent if
-you can run one (in Claude Code, a subagent), deciding the path first as its definition says
-(`../flock-designer/agents/dsnr.md`, "Which path") and naming it in the task you hand over; otherwise read that
-definition and follow it directly, saying so. If you cannot read `../flock-designer`, say so before building and ask for
-it to be opened: do not guess at its rules. Wait for whatever you hand to a subagent, in the foreground.
-```
+**The `AGENTS.md` section**, which every agent reads: Claude Code through `CLAUDE.md`, which imports it, and Copilot directly. It
+sends product UI work to `agents/ui-guide.md` first and to the **dsnr** agent (its follow-ups too), and says what to do when the
+design repository cannot be read. Its words are in one place, `agentsSection` in `workspace/src/core/services/projects/entryFiles.ts`,
+and `dsnr agent-files --check` shows whether a product's copy is current. A Copilot instructions file would be a second copy, to be
+added only if Copilot is shown not to read `AGENTS.md`.
 
 **Coke (`flock-coke`, branch `noah/dsnr`) is the worked example.** Copy the shape of its `.dsnr/`, its entry points and its
 check scripts, and replace what is Coke's. Nothing here, or in the design system, changes for a new product.
