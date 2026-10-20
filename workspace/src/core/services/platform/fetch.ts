@@ -1,10 +1,12 @@
 import { basename, resolve } from 'node:path';
 import { errorText } from '../../../shared/result';
 import { CLI, HOST } from '../../../shared/vocabulary';
-import { git, isSafeBranchName } from './git';
+import { plural } from '../../../shared/plural';
+import { branchTip, git, isSafeBranchName, refTip } from './git';
+import { within } from './within';
 
 /** A failed fetch in words, for `what` it was fetching (the library, a product). */
-export const fetchProblem = (stderr: string, branch: string, what = 'the library'): string => {
+export const fetchProblem = (stderr: string, branch: string, what: string): string => {
 	if (
 		/Authentication failed|could not read (Username|Password)|terminal prompts disabled|Repository not found|Permission denied \(publickey\)|403/i.test(
 			stderr,
@@ -52,46 +54,32 @@ export interface FreshTip {
 /** A person may set any name, but only one that cannot be read as an option or a path is given to git. */
 const isSafeRemoteName = (name: string): boolean => /^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(name);
 
-/** Its remote, the branch's name there and the ref git keeps it in, as the person's config says: never assumed `origin`. */
-interface Upstream {
+/** A remote, a branch's ref there, and the ref this clone keeps its copy in. */
+export interface RemoteCopy {
 	remote: string;
 	remoteRef: string;
 	trackingRef: string;
 }
 
 /** Null when it tracks nothing, or another local branch (`remote = .`). Read even when that copy was never fetched. */
-const upstreamOf = async (root: string, branch: string): Promise<Upstream | null> => {
+const upstreamOf = async (root: string, branch: string): Promise<RemoteCopy | null> => {
 	const out = await git(root, ['for-each-ref', '--format=%(upstream)%09%(upstream:remotename)%09%(upstream:remoteref)', `refs/heads/${branch}`]);
 	const [trackingRef = '', remote = '', remoteRef = ''] = out.split('\t');
 	return trackingRef.startsWith('refs/remotes/') && remoteRef.startsWith('refs/heads/') ? { remote, remoteRef, trackingRef } : null;
 };
 
-const tipOf = (root: string, ref: string): Promise<string | null> =>
-	git(root, ['rev-parse', '--verify', '--quiet', `${ref}^{commit}`]).catch(() => null);
-
 /**
- * How long a fetch may run before it is stopped. It runs beside DSNR's other git commands on the repository, not queued
- * behind them, so a remote that never answers holds up nothing else.
+ * Updates one remote copy and nothing else: an explicit refspec, no tags, no submodules, no `FETCH_HEAD`, no gc or
+ * maintenance started, no prompt and no credential window, so the person's branches, index and files are never touched.
+ * It runs beside DSNR's other git commands on the repository rather than queued behind them, since it takes none of their
+ * locks: a remote that never answers holds up nothing but itself. Null when it fetched; else why not, in words, for `what`.
  */
-const FETCH_TIMEOUT_MS = 20_000;
-/** A fetch this recent is used again, so one started when a branch was picked is the one used when work starts. */
-const FRESH_FOR_MS = 60_000;
-/** How long starting work waits for a fetch before going ahead on what this clone already has, and saying so. */
-const WAIT_MS = 3_000;
-
-/** Null when it fetched; else why not, in words. */
-type Fetched = Promise<string | null>;
-const fetches = new Map<string, { at: number; done: Fetched }>();
-
-/**
- * Only the one ref that keeps the remote's copy (an explicit refspec), no tags, no submodules, no `FETCH_HEAD`, no gc or
- * maintenance started, no prompt and no credential window: the person's branch, index and files are never touched.
- */
-const fetchOnce = (root: string, branch: string, { remote, remoteRef, trackingRef }: Upstream): Fetched => {
-	const key = `${resolve(root)}\0${trackingRef}`;
-	const known = fetches.get(key);
-	if (known && Date.now() - known.at < FRESH_FOR_MS) return known.done;
-	const done = git(
+export const fetchRemoteCopy = (
+	root: string,
+	{ remote, remoteRef, trackingRef }: RemoteCopy,
+	{ timeoutMs, what, branch }: { timeoutMs: number; what: string; branch: string },
+): Promise<string | null> =>
+	git(
 		root,
 		[
 			'fetch',
@@ -105,13 +93,28 @@ const fetchOnce = (root: string, branch: string, { remote, remoteRef, trackingRe
 			remote,
 			`+${remoteRef}:${trackingRef}`,
 		],
-		{ timeoutMs: FETCH_TIMEOUT_MS, env: { GCM_INTERACTIVE: 'never' }, queued: false },
+		{ timeoutMs, env: { GCM_INTERACTIVE: 'never' }, queued: false },
 	).then(
 		() => null,
-		(err: unknown) => fetchProblem(errorText(err), branch, basename(root)),
+		(err: unknown) => fetchProblem(errorText(err), branch, what),
 	);
+
+/** How long a fetch for work about to start may run before it is stopped. */
+const FETCH_TIMEOUT_MS = 20_000;
+/** A fetch this recent is used again, so one started when a branch was picked is the one used when work starts. */
+const FRESH_FOR_MS = 60_000;
+/** How long starting work waits for a fetch before going ahead on what this clone already has, and saying so. */
+const WAIT_MS = 3_000;
+
+const fetches = new Map<string, { at: number; done: Promise<string | null> }>();
+
+/** `fetchRemoteCopy`, shared by everyone who asks within `FRESH_FOR_MS`; a failure is not kept, so the next asks again. */
+const fetchOnce = (root: string, branch: string, copy: RemoteCopy): Promise<string | null> => {
+	const key = `${resolve(root)}\0${copy.trackingRef}`;
+	const known = fetches.get(key);
+	if (known && Date.now() - known.at < FRESH_FOR_MS) return known.done;
+	const done = fetchRemoteCopy(root, copy, { timeoutMs: FETCH_TIMEOUT_MS, what: basename(root), branch });
 	fetches.set(key, { at: Date.now(), done });
-	// A failure is not kept: the next start tries again.
 	void done.then((failed) => {
 		if (failed !== null && fetches.get(key)?.done === done) fetches.delete(key);
 	});
@@ -123,10 +126,8 @@ const counts = async (root: string, local: string, remote: string): Promise<{ ah
 	return { ahead, behind };
 };
 
-const plural = (n: number, one: string) => `${n} ${one}${n === 1 ? '' : 's'}`;
-
 /** For a branch only on a remote: the one remote that has it. */
-const remoteOnly = async (root: string, branch: string): Promise<Upstream | null> => {
+const remoteOnly = async (root: string, branch: string): Promise<RemoteCopy | null> => {
 	const refs = (await git(root, ['for-each-ref', '--format=%(refname)', `refs/remotes/*/${branch}`])).split('\n').filter(Boolean);
 	const [only] = refs;
 	if (refs.length !== 1 || only === undefined) return null;
@@ -135,22 +136,16 @@ const remoteOnly = async (root: string, branch: string): Promise<Upstream | null
 };
 
 /** The branch here and what it fetches from; `untracked`: it tracks nothing DSNR can fetch. Only on a remote: that remote's. */
-type Where = { untracked: true; local: string } | { untracked: false; local: string | null; upstream: Upstream };
+type Where = { untracked: true; local: string } | { untracked: false; local: string | null; upstream: RemoteCopy };
 
 const whereIs = async (root: string, branch: string): Promise<Where> => {
 	if (!isSafeBranchName(branch)) throw new Error(`${branch} is not a branch name DSNR can read.`);
-	const usable = (u: Upstream | null): Upstream | null => (u !== null && isSafeRemoteName(u.remote) ? u : null);
-	const local = await tipOf(root, `refs/heads/${branch}`);
+	const usable = (u: RemoteCopy | null): RemoteCopy | null => (u !== null && isSafeRemoteName(u.remote) ? u : null);
+	const local = await branchTip(root, branch);
 	const upstream = usable(local === null ? await remoteOnly(root, branch) : await upstreamOf(root, branch));
 	if (upstream !== null) return { untracked: false, local, upstream };
 	if (local === null) throw new Error(`There is no branch called ${branch} in ${basename(root)}.`);
 	return { untracked: true, local };
-};
-
-/** `waited` or, if it has not settled by then, `waiting`; the timer is cleared either way. */
-const within = <T>(waited: Promise<T>, ms: number): Promise<T | 'waiting'> => {
-	let timer: ReturnType<typeof setTimeout> | undefined;
-	return Promise.race([waited, new Promise<'waiting'>((r) => (timer = setTimeout(() => r('waiting'), ms)))]).finally(() => clearTimeout(timer));
 };
 
 /**
@@ -172,9 +167,13 @@ export const freshTip = async (root: string, branch: string, { waitMs = WAIT_MS 
 			said: `${branch} tracks no branch DSNR can fetch, so it is used as it is here.`,
 		};
 	const { local, upstream } = where;
-	const waited = await within(fetchOnce(root, branch, upstream), waitMs);
-	const failed = waited === 'waiting' ? `${upstream.remote} did not answer within ${Math.max(1, Math.round(waitMs / 1000))} seconds.` : waited;
-	const remote = await tipOf(root, upstream.trackingRef);
+	// Wrapped, since a fetch that worked answers null too.
+	const fetched = await within(
+		waitMs,
+		fetchOnce(root, branch, upstream).then((failed) => ({ failed })),
+	);
+	const failed = fetched === null ? `${upstream.remote} did not answer within ${Math.max(1, Math.round(waitMs / 1000))} seconds.` : fetched.failed;
+	const remote = await refTip(root, upstream.trackingRef);
 
 	if (local === null) {
 		// Nothing of the person's to fall back on: the remote's copy as this clone last had it, said.

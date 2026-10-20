@@ -218,7 +218,7 @@ describe('bringing develop up to date', () => {
 		["fatal: couldn't find remote ref refs/heads/develop", /GitHub has no develop branch/],
 		['fatal: something else', /Git could not update the library: something else/],
 	])('says %s in words', (stderr, words) => {
-		expect(fetchProblem(stderr, 'develop')).toMatch(words);
+		expect(fetchProblem(stderr, 'develop', 'the library')).toMatch(words);
 	});
 });
 

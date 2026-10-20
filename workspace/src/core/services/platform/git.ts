@@ -375,15 +375,14 @@ export const fileAt = async (root: string, ref: string, path: string): Promise<{
 export const changedSince = async (root: string, commit: string, path: string): Promise<boolean> =>
 	(await git(root, ['diff', '--name-only', commit, 'HEAD', '--', path])) !== '';
 
-/** Null when git says there is no such branch; an error for anything that stopped it looking. */
-export const branchTip = (root: string, branch: string): Promise<string | null> =>
-	git(root, ['rev-parse', '--verify', '--quiet', `refs/heads/${branch}`]).catch((err: unknown) => (saidNo(err) ? null : Promise.reject(err)));
+/** The commit a full ref (`refs/…`) points at. Null when git says there is no such ref; an error for anything that stopped it looking. */
+export const refTip = (root: string, ref: string): Promise<string | null> =>
+	git(root, ['rev-parse', '--verify', '--quiet', `${ref}^{commit}`]).catch((err: unknown) => (saidNo(err) ? null : Promise.reject(err)));
+
+export const branchTip = (root: string, branch: string): Promise<string | null> => refTip(root, `refs/heads/${branch}`);
 
 /** The branch as this clone last saw it on `origin`: a push moves it. Null when it has none there. */
-export const remoteTip = (root: string, branch: string): Promise<string | null> =>
-	git(root, ['rev-parse', '--verify', '--quiet', `refs/remotes/origin/${branch}`]).catch((err: unknown) =>
-		saidNo(err) ? null : Promise.reject(err),
-	);
+export const remoteTip = (root: string, branch: string): Promise<string | null> => refTip(root, `refs/remotes/origin/${branch}`);
 
 export const changedFiles = async (root: string, commit: string): Promise<string[]> =>
 	(await git(root, ['diff', '--name-only', commit, 'HEAD'])).split('\n').filter((f) => f !== '');

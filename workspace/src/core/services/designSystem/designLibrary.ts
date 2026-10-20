@@ -8,10 +8,9 @@ import { LIBRARY_MANIFEST, declaredTarget } from '../accessibility/accessibility
 import { isStoryFile, readCatalog, type CatalogReads } from './componentCatalog';
 import { readTokens } from './designTokens';
 import { type DesignSystemsMemory, filesOf, within } from './designSystems';
-import { git } from '../platform/git';
-import { fetchProblem } from '../platform/fetch';
+import { git, refTip } from '../platform/git';
+import { fetchRemoteCopy } from '../platform/fetch';
 import { singleFlight } from '../platform/concurrency';
-import { errorText } from '../../../shared/result';
 
 /**
  * Read from git's copy of the branch on GitHub (`origin/<branch>`), never the folder, so what the clone has checked out
@@ -22,13 +21,7 @@ const FETCH_TIMEOUT_MS = 120_000;
 
 const branchRef = (branch: string): string => `refs/remotes/origin/${branch}`;
 
-export const libraryCommit = async (root: string, branch: string): Promise<string | null> => {
-	try {
-		return (await git(root, ['rev-parse', '--verify', '--quiet', `${branchRef(branch)}^{commit}`])) || null;
-	} catch {
-		return null;
-	}
-};
+export const libraryCommit = (root: string, branch: string): Promise<string | null> => refTip(root, branchRef(branch)).catch(() => null);
 
 /** `showing` is the hand-over branch the commit is the tip of; null for the library's own branch. */
 export type LibraryAt = (system: ConnectedDesignSystem) => Promise<{ commit: string; showing: string | null } | null>;
@@ -39,16 +32,12 @@ export const baseAt: LibraryAt = async (system) => {
 	return commit === null ? null : { commit, showing: null };
 };
 
-/** An explicit refspec, so no other ref moves, no tags, no submodules. Never throws; a failure is said in words. */
+/** Only the library's copy of its branch moves (`fetchRemoteCopy`). Never throws; a failure is said in words. */
 export const updateLibrary = async (root: string, branch: string): Promise<Exclude<CatalogUpdate, 'updating'>> => {
 	const before = await libraryCommit(root, branch);
-	try {
-		await git(root, ['fetch', '--quiet', '--no-tags', '--no-recurse-submodules', 'origin', `+refs/heads/${branch}:${branchRef(branch)}`], {
-			timeoutMs: FETCH_TIMEOUT_MS,
-		});
-	} catch (err) {
-		return { failed: fetchProblem(errorText(err), branch) };
-	}
+	const copy = { remote: 'origin', remoteRef: `refs/heads/${branch}`, trackingRef: branchRef(branch) };
+	const failed = await fetchRemoteCopy(root, copy, { timeoutMs: FETCH_TIMEOUT_MS, what: 'the library', branch });
+	if (failed !== null) return { failed };
 	return (await libraryCommit(root, branch)) === before ? 'unchanged' : 'updated';
 };
 
