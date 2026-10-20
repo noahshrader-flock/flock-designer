@@ -249,7 +249,28 @@ describe('VS Code’s ports', () => {
 		expect(v.commands.executeCommand).not.toHaveBeenCalled();
 	});
 
-	it('start Codex in a terminal of its own in the folder, with the prompt as its argument, no shell between to quote it', async () => {
+	it('hand Codex its task in a new conversation in its panel, on the clipboard to paste, when its extension is here', async () => {
+		const v = fake();
+		v.extensions.getExtension.mockImplementation((id: string) => (id === 'openai.chatgpt' ? { id } : undefined) as never);
+		const agent = codex({ locate: () => '/bin/codex', run: async () => ({ stdout: '', stderr: '' }) });
+		expect(await vscodePorts(v as never, none).agentWindow.open(agent, '/work/coke', 'Build it.')).toBe('pasted');
+		expect(v.commands.executeCommand.mock.calls).toEqual([['chatgpt.newChat']]);
+		expect(v.env.clipboard.writeText).toHaveBeenCalledWith('Build it.');
+		expect(v.window.createTerminal).not.toHaveBeenCalled();
+	});
+
+	it('start Codex in a terminal instead when its panel would start in another folder, or its command fails', async () => {
+		const v = fake();
+		v.extensions.getExtension.mockImplementation((id: string) => (id === 'openai.chatgpt' ? { id } : undefined) as never);
+		const agent = codex({ locate: () => '/bin/codex', run: async () => ({ stdout: '', stderr: '' }) });
+		expect(await vscodePorts(v as never, none).agentWindow.open(agent, '/work/other', 'Build it.')).toBe('started');
+		v.commands.executeCommand.mockRejectedValueOnce(new Error('command chatgpt.newChat not found'));
+		expect(await vscodePorts(v as never, none).agentWindow.open(agent, '/work/coke', 'Build it.')).toBe('started');
+		expect(v.window.createTerminal).toHaveBeenCalledTimes(2);
+		expect(v.env.clipboard.writeText).not.toHaveBeenCalled();
+	});
+
+	it('start Codex in a terminal of its own in the folder without its extension, with the prompt as its argument, no shell between to quote it', async () => {
 		const v = fake();
 		const agent = codex({ locate: () => '/bin/codex', run: async () => ({ stdout: '', stderr: '' }) });
 		expect(await vscodePorts(v as never, none).agentWindow.open(agent, '/work/coke', 'Build it, "now".')).toBe('started');

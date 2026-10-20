@@ -70,6 +70,29 @@ const terminalWindow = (vscode: VsCodeApi): AgentWindow => ({
 	},
 });
 
+const CODEX = 'openai.chatgpt';
+/** Shows its panel with a new conversation. Its commands take no prompt, and its links open a page of its panel only. */
+const CODEX_NEW_CHAT = 'chatgpt.newChat';
+
+/**
+ * In its panel, with the task on the clipboard, when its extension is here and this window's first folder is `root`, where
+ * it starts; in a terminal otherwise, or when its command fails (they are its own, not a published interface).
+ */
+const codexWindow = (vscode: VsCodeApi, terminal: AgentWindow): AgentWindow => ({
+	here: () => true,
+	open: async (agent, root, prompt) => {
+		if (vscode.extensions.getExtension(CODEX) === undefined || vscode.workspace.workspaceFolders?.[0]?.uri.fsPath !== root)
+			return terminal.open(agent, root, prompt);
+		try {
+			await vscode.commands.executeCommand(CODEX_NEW_CHAT);
+		} catch {
+			return terminal.open(agent, root, prompt);
+		}
+		await vscode.env.clipboard.writeText(prompt);
+		return 'pasted';
+	},
+});
+
 /** VS Code's own Chat command, which its own commands open with a query in agent mode (`isPartialQuery`: typed, not sent). */
 const CHAT_OPEN = 'workbench.action.chat.open';
 
@@ -91,8 +114,7 @@ const windowsOf = (vscode: VsCodeApi): Record<AgentId, AgentWindow | null> => {
 	const terminal = terminalWindow(vscode);
 	return {
 		'claude-code': claudeWindow(vscode),
-		// Its VS Code extension's commands take no prompt and no folder.
-		codex: terminal,
+		codex: codexWindow(vscode, terminal),
 		copilot: copilotWindow(vscode, terminal),
 	};
 };

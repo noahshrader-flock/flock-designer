@@ -23,8 +23,8 @@ export interface CodexDeps {
 const defaultCodexDeps: CodexDeps = { locate: () => locateCodex(), run: runCommand };
 
 /**
- * Handed work in a terminal only: its VS Code extension takes no prompt, and it has no command allow-list, so it does not
- * run unattended here.
+ * Handed work in its VS Code extension's panel, or a terminal when that cannot (`extension/src/agentWindows.ts`); it has
+ * no command allow-list, so it does not run unattended here.
  */
 export const codex = (deps: CodexDeps = defaultCodexDeps): Agent => ({
 	id: 'codex',

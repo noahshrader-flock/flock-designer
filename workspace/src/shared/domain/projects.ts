@@ -66,16 +66,15 @@ export interface BranchAgainstBase {
 
 export type WorkKind = 'prototype' | 'codebase';
 
-/** `command` is for a terminal, when the agent is not in VS Code. */
-/** What any hand-off to the agent did: opened in this window, or `command` for a terminal, on the clipboard. */
 /**
- * `opened`: in the agent's own window with the task typed in (`typed`), or already at work in a terminal (`started`); null
- * when it is not in this editor, and `command` is on the clipboard.
+ * What any hand-off to the agent did. `opened`: in the agent's own window with the task typed in (`typed`), or a new
+ * conversation there with the task on the clipboard to paste (`pasted`), or already at work in a terminal (`started`); null
+ * when it is not in this editor, and `command`, for a terminal, is on the clipboard.
  */
 export interface Handed {
 	/** The agent's name, as its adapter says it. */
 	agent: string;
-	opened: 'typed' | 'started' | null;
+	opened: 'typed' | 'pasted' | 'started' | null;
 	command: string | null;
 }
 
