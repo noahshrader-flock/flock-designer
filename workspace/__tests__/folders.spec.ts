@@ -5,8 +5,8 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { Project } from '../src/shared/contract';
 import { DesignRepo } from '../src/codeHost/designRepo';
 import { readFolderProjects } from '../src/core/services/projects/localProjects';
-import { assignFolder, recordPrototype, type RecordStore } from '../src/core/services/prototypes/prototype';
-import { briefFolder, firstHeading, folderName, foldersOf, inFolder, sameFolder, withFolder } from '../src/shared/brief';
+import { assignFolder, recordPrototype, renameProject, type RecordStore } from '../src/core/services/prototypes/prototype';
+import { briefFolder, firstHeading, folderName, foldersOf, inFolder, projectTitle, sameFolder, withFolder, withTitle } from '../src/shared/brief';
 import { projectDir, projectPath } from '../src/shared/designPaths';
 import { mergeProjects } from '../src/shared/projectList';
 import { b64, fakeGitHub } from './fakes/github';
@@ -193,6 +193,50 @@ describe('assigning a project a folder', () => {
 	it('refuses a project with no brief, which is where the folder is kept', async () => {
 		const { store } = said({});
 		await expect(assignFolder(store, 'alert-history', 'Admin')).rejects.toThrow('alert-history has no brief, which is where its folder is kept.');
+	});
+});
+
+describe('a project’s name, the one people see', () => {
+	it('is kept on one line, its spaces single, and is nothing when nothing is left', () => {
+		expect(projectTitle('  Alert   history\n v2 ')).toBe('Alert history v2');
+		expect(projectTitle(' \n ')).toBeNull();
+	});
+
+	it('is its brief’s first heading, written in place, with the folder and the rest of the brief kept', () => {
+		expect(withTitle(FILED, 'Alerts over time')).toBe(FILED.replace('# Alert history', '# Alerts over time'));
+		// A heading in the brief's own text is the person's, not the name.
+		expect(withTitle('# Alert history\n\n# Notes\n', 'Alerts')).toBe('# Alerts\n\n# Notes\n');
+		expect(withTitle('---\nfolder: Admin\n---\nPast alerts\n', 'Alerts')).toBe('---\nfolder: Admin\n---\n# Alerts\n\nPast alerts\n');
+	});
+});
+
+describe('renaming a project', () => {
+	const said = (files: Record<string, string>) => {
+		const { store, writes } = memoryStore(files);
+		const messages: string[] = [];
+		const telling: RecordStore = { ...store, write: async (p, c, m) => (messages.push(m), store.write(p, c, m)) };
+		return { store: telling, files, writes, messages };
+	};
+
+	it('writes the new name into its brief, saying so, and nothing else: its id and folder stay', async () => {
+		const { store, files, writes, messages } = said({ 'projects/alert-history/brief.md': FILED });
+		await renameProject(store, 'alert-history', '  Alerts  over time ');
+		expect(files['projects/alert-history/brief.md']).toBe(FILED.replace('# Alert history', '# Alerts over time'));
+		expect(writes).toEqual(['projects/alert-history/brief.md']);
+		expect(messages).toEqual(['alert-history: renamed Alerts over time']);
+	});
+
+	it('writes nothing when the name is the one it has', async () => {
+		const { store, writes } = said({ 'projects/alert-history/brief.md': FILED });
+		await renameProject(store, 'alert-history', ' Alert history ');
+		expect(writes).toEqual([]);
+	});
+
+	it('refuses no name, and a project with no brief, which is where its name is kept', async () => {
+		await expect(renameProject(said({ 'projects/alert-history/brief.md': FILED }).store, 'alert-history', '  ')).rejects.toThrow('Give it a name.');
+		await expect(renameProject(said({}).store, 'alert-history', 'Alerts')).rejects.toThrow(
+			'alert-history has no brief, which is where its name is kept.',
+		);
 	});
 });
 

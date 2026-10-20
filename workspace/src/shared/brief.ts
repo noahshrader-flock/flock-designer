@@ -1,12 +1,31 @@
 import type { Project } from './contract';
 import { capitalize } from './titleCase';
 
+/** A project's title, the name people see, is its brief's first heading, read and written only here; never its id. */
+const HEADING = /^#\s+(.+?)\s*$/;
+
 export const firstHeading = (markdown: string): string | null => {
 	for (const line of markdown.split('\n')) {
-		const m = /^#\s+(.+?)\s*$/.exec(line);
+		const m = HEADING.exec(line);
 		if (m?.[1]) return m[1];
 	}
 	return null;
+};
+
+/** As a title is kept: on one line, its spaces single; null when nothing is left. */
+export const projectTitle = (v: string): string | null => {
+	const title = v.replace(/\s+/g, ' ').trim();
+	return title === '' ? null : title;
+};
+
+/** The brief with `title` as its first heading, in place of the one it had, or after its front matter when it had none. */
+export const withTitle = (markdown: string, title: string): string => {
+	const lines = markdown.split('\n');
+	const at = lines.findIndex((l) => HEADING.test(l));
+	if (at !== -1) return [...lines.slice(0, at), `# ${title}`, ...lines.slice(at + 1)].join('\n');
+	const m = FRONT_MATTER.exec(markdown);
+	const head = m ? m[0] : '';
+	return `${head}# ${title}\n\n${markdown.slice(head.length)}`;
 };
 
 /** A project's folder is kept in its brief's front matter (`folder: Admin`), read and written only here; never in its id. */

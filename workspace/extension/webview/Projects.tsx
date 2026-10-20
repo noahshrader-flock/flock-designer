@@ -72,7 +72,10 @@ const ProjectItem = ({ project, labels, onDialog }: { project: Project; labels: 
 		...next,
 	];
 	const code: MenuItem[] = inCode ? [{ label: 'View on GitHub', icon: 'github', onSelect: () => onCodebase('open-code') }] : [];
-	const folder: MenuItem[] = [{ label: 'Assign folder…', icon: 'folder', onSelect: () => onDialog({ kind: 'assign', projectId: id }) }];
+	const folder: MenuItem[] = [
+		{ label: 'Rename…', icon: 'edit', onSelect: () => onDialog({ kind: 'rename', projectId: id }) },
+		{ label: 'Assign folder…', icon: 'folder', onSelect: () => onDialog({ kind: 'assign', projectId: id }) },
+	];
 	const sections = [copy, pages, runs, code, folder].filter((group) => group.length > 0).map((group) => ({ items: group }));
 	const press = newest ? () => void asks().openReview(id) : inCode ? () => onCodebase('open-code') : undefined;
 	const shared = {

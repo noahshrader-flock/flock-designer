@@ -1,5 +1,5 @@
 import { type FormEvent, useState } from 'react';
-import { sameFolder } from '../../src/shared/brief';
+import { projectTitle, sameFolder } from '../../src/shared/brief';
 import type { Project } from '../../src/shared/domain/projects';
 import { slugify } from '../../src/shared/validate';
 import { Button } from '../../src/ui/Button';
@@ -101,6 +101,38 @@ export const AssignFolderDialog = ({
 				<DialogButtons>
 					<Button type="submit" disabled={same || !isChosen(pick) || busy}>
 						Assign
+					</Button>
+				</DialogButtons>
+			</form>
+		</Dialog>
+	);
+};
+
+/** Only the name people see: the project's id, which its links, branches and comments are named by, stays as it was. */
+export const RenameDialog = ({ project, onRenamed, onClose }: { project: Project; onRenamed: () => void; onClose: () => void }) => {
+	const [title, setTitle] = useState(project.title);
+	const [busy, setBusy] = useState(false);
+	const [error, setError] = useState<string | null>(null);
+	const name = projectTitle(title);
+	const ready = name !== null && name !== project.title && !busy;
+	const rename = async (e: FormEvent) => {
+		e.preventDefault();
+		if (!ready) return;
+		setBusy(true);
+		const done = await workspace().renameProject(project.id, name);
+		setBusy(false);
+		if (!done.ok) return setError(done.error);
+		onRenamed();
+		onClose();
+	};
+	return (
+		<Dialog title="Rename" onClose={onClose}>
+			<form onSubmit={(e) => void rename(e)}>
+				<Field label="Name">{(control) => <TextInput control={control} value={title} onChange={setTitle} />}</Field>
+				<Message tone="error">{error}</Message>
+				<DialogButtons>
+					<Button type="submit" disabled={!ready}>
+						Save
 					</Button>
 				</DialogButtons>
 			</form>

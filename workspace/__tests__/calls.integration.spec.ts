@@ -876,6 +876,17 @@ describe('prototypes', () => {
 		expect(readFileSync(join(design, 'etc', 'brief.md'), 'utf8')).toBe('# Not a project\n');
 	});
 
+	it('are renamed in the brief in the clone, only the name people see, and a project that is not one is refused', async () => {
+		await trustFolder(product);
+		await call(CHANNELS.createPrototype, 'demo', 'Demo', 'A list', { root: product, branch: 'develop' }, 'Admin');
+		expect((await call(CHANNELS.renameProject, 'demo', 'Demo, again')).ok).toBe(true);
+		expect(readFileSync(join(design, 'projects', 'demo', 'brief.md'), 'utf8')).toBe('---\nfolder: Admin\n---\n# Demo, again\n\nA list\n');
+		// Its id is what its folder, links and comments are named by: it stays.
+		expect(existsSync(join(design, 'projects', 'demo', 'work.json'))).toBe(true);
+		expect((await call(CHANNELS.renameProject, 'demo', '   ')).error).toBe('Give it a name.');
+		expect((await call(CHANNELS.renameProject, '../etc', 'Roles')).ok).toBe(false);
+	});
+
 	it('are recorded, saved and served through the clone on this machine', async () => {
 		await trustFolder(product);
 		const made = await call(CHANNELS.createPrototype, 'demo', 'Demo', 'A list', { root: product, branch: 'develop' });

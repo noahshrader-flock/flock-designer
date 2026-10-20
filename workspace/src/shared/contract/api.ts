@@ -191,6 +191,8 @@ export interface WorkspaceApi {
 	/** `branch`: what the thread is filed under (a prototype's is its key). */
 	readComments(projectId: string, branch: string): Promise<Result<ReviewComment[]>>;
 	assignFolder(projectId: string, folder: string | null): Promise<Result<null>>;
+	/** The name people see, its brief's heading; never its id. */
+	renameProject(projectId: string, title: string): Promise<Result<null>>;
 	postComment(projectId: string, branch: string, body: string, anchor: CommentAnchor | null, picture?: string | null): Promise<Result<ReviewComment>>;
 
 	/** Only the comment's author can. */
@@ -240,6 +242,7 @@ export const INVOKE = [
 	'prototypeBehind',
 	'handPrototypeRefresh',
 	'assignFolder',
+	'renameProject',
 	'handPrototypeBuild',
 	'handPrototypeAddress',
 	'publishedPage',

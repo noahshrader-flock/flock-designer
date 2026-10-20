@@ -43,6 +43,9 @@ press, including a version an agent made in a terminal a moment ago. The bar alo
 The project's menu in the panel has **Copy link** and **Open published page**, to share it, and **Open locally**, to open
 it in your browser from this computer.
 
+To change its name, choose **Rename…** from the project's menu, type the new name, and press **Save**. Only the name
+people see changes: its link, its comments and its folder in the design repository keep the name they were made with.
+
 ## Comments
 
 Anyone who can see the design repository on GitHub can comment, in VS Code or on the published page.

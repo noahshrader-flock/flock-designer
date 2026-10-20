@@ -324,8 +324,10 @@ there.
 **Folders:** the panel lists the projects under a section for each folder, those in none last, as a grid of cards, which it
 starts in, or a list of rows (the icons at the right above them, remembered with the tab). **Assign folder…**, from a
 project's menu, its right-click menu or a review tab's menu, opens a dialog in the panel to put it in a folder, a new
-one, or none, with the same folder choice New prototype has; it uses the projects the panel already has, so it opens at
-once. The app's one setting, its theme, is VS Code's here. DSNR's settings are which agent it hands work to (`dsnr.agent.use`: Claude Code, in its panel; Codex, in a terminal here,
+one, or none, with the same folder choice New prototype has. It opens at once with the projects the panel has, and, as
+every project's dialog does, has the list read again behind it, so it acts on the project as it is. **Rename…**, beside it,
+changes the name people see, the first heading of its `brief.md` (`renameProject`), and builds the published site again;
+the project's id, which its folder, links, branches and comments are named by, stays as it was. The app's one setting, its theme, is VS Code's here. DSNR's settings are which agent it hands work to (`dsnr.agent.use`: Claude Code, in its panel; Codex, in a terminal here,
 which starts at once with the task; or GitHub Copilot, in VS Code's Chat, with the task typed in, or its command line in
 a terminal when there is no Chat), and where an agent with a panel opens it (`dsnr.agent.location`, below; it was
 `dsnr.claudeCode.location`, and a value set there is moved to it once). **Which agent:** until one is kept, the one you

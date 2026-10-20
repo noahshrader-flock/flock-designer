@@ -172,6 +172,7 @@ export type HostMessage =
 export type PanelDialog =
 	| { kind: 'new' }
 	| { kind: 'assign'; projectId: string }
+	| { kind: 'rename'; projectId: string }
 	| { kind: 'build'; projectId: string }
 	| { kind: 'hand-off'; projectId: string }
 	| { kind: 'update'; projectId: string }

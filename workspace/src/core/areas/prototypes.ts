@@ -16,7 +16,7 @@ import { warmTip } from '../services/platform/fetch';
 import { INSTALL_COMMAND } from '../services/codebase/install';
 import { jpegDataUrl } from '../services/prototypes/picture';
 import { type CoverDeps, builtHere, ensureCovers } from '../services/prototypes/projectCovers';
-import { BUILD_SKILL, GUIDE, type PrototypeSources, assignFolder, setBaseCommit } from '../services/prototypes/prototype';
+import { BUILD_SKILL, GUIDE, type PrototypeSources, assignFolder, renameProject, setBaseCommit } from '../services/prototypes/prototype';
 import { localPrototypeFile, whereTheChangeGoes } from '../services/prototypes/prototypeWork';
 import { singleFlight } from '../services/platform/concurrency';
 
@@ -112,6 +112,12 @@ export const prototypesArea = (d: CallsDeps) => {
 		},
 		assignFolder: async (projectId: string, folder: unknown) => {
 			await assignFolder(store.records(), projectId, folderName(folder));
+			return null;
+		},
+		/** The published site is built again, as its pages and index show the name. */
+		renameProject: async (projectId: string, title: string) => {
+			await renameProject(store.records(), projectId, title);
+			deploys.site();
 			return null;
 		},
 		handPrototypeBuild: async (root: string, projectId: string, name: string, request: string): Promise<Handed> => {

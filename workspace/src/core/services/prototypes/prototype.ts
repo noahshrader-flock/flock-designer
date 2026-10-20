@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import type { Work, Person } from '../../../shared/contract';
-import { briefFolder, firstHeading, folderName, withFolder } from '../../../shared/brief';
+import { briefFolder, firstHeading, folderName, projectTitle, withFolder, withTitle } from '../../../shared/brief';
 import { projectPath, prototypeKey, workPath } from '../../../shared/designPaths';
 import { isPrototypeName, nextVersionName } from '../../../shared/prototypeNames';
 import { assertCover } from '../../../shared/validate';
@@ -128,10 +128,24 @@ export const recordPrototype = async (
 	const haveBrief = await store.read(brief);
 	if (haveBrief === null || firstHeading(haveBrief) === null) {
 		// A brief with no heading may still have a folder, which is kept.
-		const written = `# ${title.replace(/\s+/g, ' ').trim()}\n\n${note.trim()}\n`;
+		const written = `# ${projectTitle(title) ?? projectId}\n\n${note.trim()}\n`;
 		await store.write(brief, withFolder(written, haveBrief === null ? folder : briefFolder(haveBrief)), `${projectId}: start the project`);
 	}
 	return addRecord(store, existing, { projectId, name, note, me, basedOn, now });
+};
+
+/**
+ * The brief is where the title is kept, so a project with none is refused rather than given one. Only the name people see
+ * changes: the project's id, which its folder, links, branches and comments are named by, stays as it was.
+ */
+export const renameProject = async (store: RecordStore, projectId: string, title: string): Promise<void> => {
+	const path = projectPath(projectId, 'brief.md');
+	const brief = await store.read(path);
+	if (brief === null) throw new Error(`${projectId} has no brief, which is where its name is kept.`);
+	const name = projectTitle(title);
+	if (name === null) throw new Error('Give it a name.');
+	if (firstHeading(brief) === name) return;
+	await store.write(path, withTitle(brief, name), `${projectId}: renamed ${name}`);
 };
 
 /** The brief is where the folder is kept, so a project with none is refused rather than given one. */
