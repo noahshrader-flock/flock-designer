@@ -1,7 +1,7 @@
-import { act, createElement } from 'react';
+import { createElement } from 'react';
 import type { ReviewComment, WorkspaceApi } from '../src/shared/contract';
 import { anAnchor, eventually, reviewComment } from './fixtures';
-import { allByRole, byRole, named, render, settle } from './ui';
+import { allByRole, byRole, named, press, render, settle } from './ui';
 
 /** The review bar's page: the app it talks to, faked, and what only it has (its menus, its cards, its theme switch). */
 
@@ -66,21 +66,27 @@ export const comment = (id: number, body: string, more: Partial<ReviewComment> =
 		...more,
 	});
 
-export const switchMenu = (what: 'version' | 'state'): HTMLSelectElement | null =>
-	[...document.querySelectorAll('select')].find((s) => new RegExp(`: switch ${what}$`).test(named(s))) ?? null;
-export const stateMenu = (): HTMLSelectElement | null => switchMenu('state');
-export const shownIn = (menu: HTMLSelectElement | null): string | undefined => menu?.selectedOptions[0]?.textContent?.trim();
+export const switchMenu = (what: 'version' | 'state'): HTMLButtonElement | null =>
+	(allByRole('button', new RegExp(`: switch ${what}$`))[0] as HTMLButtonElement | undefined) ?? null;
+export const stateMenu = (): HTMLButtonElement | null => switchMenu('state');
+export const shownIn = (menu: HTMLElement | null): string | undefined => menu?.textContent?.trim();
 export const shownState = (): string | undefined => shownIn(stateMenu());
-export const choicesIn = (menu: HTMLSelectElement | null): string[] => [...(menu?.options ?? [])].map((o) => o.textContent?.trim() ?? '');
-export const choose = async (menu: HTMLSelectElement | null, name: string): Promise<void> => {
+/** The choices of a dropdown, opened as a person opens it (left open when it already is). */
+const openChoices = async (menu: HTMLElement | null): Promise<HTMLElement[]> => {
 	if (!menu) throw new Error('no dropdown');
-	const option = [...menu.options].find((o) => o.textContent?.trim() === name);
-	if (!option) throw new Error(`no choice ${name}: ${choicesIn(menu).join(' | ')}`);
-	await act(async () => {
-		// The value as React sees it chosen: through the select's own setter, then the change it hears.
-		Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value')?.set?.call(menu, option.value);
-		menu.dispatchEvent(new Event('change', { bubbles: true }));
-	});
+	if (menu.getAttribute('aria-expanded') !== 'true') await press(menu);
+	return allByRole('menuitem', undefined, menu.parentElement ?? document);
+};
+export const choicesIn = async (menu: HTMLElement | null): Promise<string[]> => (await openChoices(menu)).map(named);
+export const chosenIn = async (menu: HTMLElement | null): Promise<string | undefined> => {
+	const chosen = (await openChoices(menu)).find((c) => c.getAttribute('aria-checked') === 'true');
+	return chosen && named(chosen);
+};
+export const choose = async (menu: HTMLElement | null, name: string): Promise<void> => {
+	const choices = await openChoices(menu);
+	const choice = choices.find((c) => named(c) === name);
+	if (!choice) throw new Error(`no choice ${name}: ${choices.map(named).join(' | ')}`);
+	await press(choice);
 };
 export const chooseState = (name: string): Promise<void> => choose(stateMenu(), name);
 export const probeHook = async <T>(use: () => T) => {

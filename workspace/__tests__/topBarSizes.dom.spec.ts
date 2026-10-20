@@ -22,9 +22,9 @@ describe('the top bar', () => {
 		await settle();
 		const bar = document.querySelector('.viewer-bar') as HTMLElement;
 		// The way back, the version, the states, light and dark, and Sign in to comment.
-		const controls = [...bar.querySelectorAll<HTMLElement>('a.icon-button, .button, .select, .toggle')];
+		const controls = [...bar.querySelectorAll<HTMLElement>('a.icon-button, .button, .menu-field, .toggle')];
 		expect(controls.length).toBe(5);
-		expect(controls.includes(stateMenu()?.closest('.select') as HTMLElement)).toBe(true);
+		expect(controls.includes(stateMenu() as HTMLElement)).toBe(true);
 		expect(bar.querySelectorAll('.icon-button-small, .menu-button-small')).toHaveLength(0);
 	});
 });

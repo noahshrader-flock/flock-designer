@@ -1,11 +1,10 @@
-import { useId } from 'react';
 import { newestVersionFirst } from '../shared/prototypeNames';
 import { workLabel } from '../shared/work';
 import { stateLabel } from '../shared/prototypeStates';
 import { THEMES, themeLabel } from '../shared/prototypeTheme';
 import type { ShownTheme } from './useShownTheme';
 import { capitalize } from '../shared/titleCase';
-import { Select } from '../ui/Field';
+import { Dropdown } from '../ui/Dropdown';
 import { ModeIcon } from '../ui/ModeIcon';
 import { Toggle } from '../ui/Toggle';
 
@@ -28,10 +27,9 @@ const SwitchMenu = ({
 	choices: { value: string; label: string }[];
 	onChange: (value: string) => void;
 }) => {
-	const id = useId();
 	// A version's label already says it is one ("Version 2: switch version"); a state's does not ("State Default").
 	const name = `${label.startsWith(capitalize(what)) ? label : `${capitalize(what)} ${label}`}: switch ${what}`;
-	return <Select value={value} options={choices} onChange={(next) => next !== value && onChange(next)} control={{ id, 'aria-label': name }} />;
+	return <Dropdown label={name} value={value} options={choices} onChange={onChange} />;
 };
 
 /** What is chosen is given back as it was given (`T`: with where its page is). */

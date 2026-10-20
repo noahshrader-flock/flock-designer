@@ -1,7 +1,7 @@
 import { createElement } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { VersionSwitcher, StateSwitcher } from '../src/viewer/VersionSwitcher';
-import { choicesIn, choose, chooseState, shownIn, shownState, stateMenu, switchMenu } from './reviewHarness';
+import { choicesIn, choose, chooseState, chosenIn, shownIn, shownState, stateMenu, switchMenu } from './reviewHarness';
 import { render, unmountAll } from './ui';
 
 const at = (name: string) => ({ name, branch: `prototype/demo/${name}` });
@@ -21,23 +21,23 @@ afterEach(async () => {
 const versions = () => switchMenu('version');
 
 describe('for prototypes', () => {
-	it('is one dropdown, VS Code’s own, that says the version shown, with no second menu for versions', async () => {
+	it('is one dropdown, the kit’s, that says the version shown, with no second menu for versions', async () => {
 		await show('v2');
 		expect(versions()?.getAttribute('aria-label')).toBe('Version 2: switch version');
 		expect(shownIn(versions())).toBe('Version 2');
-		expect(document.querySelectorAll('select')).toHaveLength(1);
+		expect(document.querySelectorAll('[aria-haspopup="menu"]')).toHaveLength(1);
 		expect(document.querySelector('[aria-label*="iteration"]')).toBeNull();
 	});
 
 	it('lists every version, the newest first, with this one chosen', async () => {
 		await show('v2');
-		expect(choicesIn(versions())).toEqual(['Version 4', 'Version 3', 'Version 2', 'Version 1']);
-		expect(shownIn(versions())).toBe('Version 2');
+		expect(await choicesIn(versions())).toEqual(['Version 4', 'Version 3', 'Version 2', 'Version 1']);
+		expect(await chosenIn(versions())).toBe('Version 2');
 	});
 
 	it('lists them newest first, whatever order it was given them in, by number and not by spelling', async () => {
 		await show('v2', { siblings: ['v1', 'v10', 'v2', 'v9'].map(at) });
-		expect(choicesIn(versions())).toEqual(['Version 10', 'Version 9', 'Version 2', 'Version 1']);
+		expect(await choicesIn(versions())).toEqual(['Version 10', 'Version 9', 'Version 2', 'Version 1']);
 	});
 
 	it('goes to the version chosen', async () => {
@@ -54,12 +54,12 @@ describe('for prototypes', () => {
 
 	it('says which version one was started from, beside its name', async () => {
 		await show('v1', { siblings: [{ ...at('v3'), from: 'v1' }, at('v2'), at('v1')] });
-		expect(choicesIn(versions())).toEqual(['Version 3 · based on Version 1', 'Version 2', 'Version 1']);
+		expect(await choicesIn(versions())).toEqual(['Version 3 · based on Version 1', 'Version 2', 'Version 1']);
 	});
 
 	it('is there with one version, so where you are is always visible', async () => {
 		await show('v1', { siblings: [at('v1')] });
-		expect(choicesIn(versions())).toEqual(['Version 1']);
+		expect(await choicesIn(versions())).toEqual(['Version 1']);
 	});
 });
 
@@ -75,7 +75,7 @@ describe('a prototype’s states', () => {
 		await showStates();
 		expect(stateMenu()?.getAttribute('aria-label')).toBe('State Default: switch state');
 		expect(shownState()).toBe('Default');
-		expect(choicesIn(stateMenu())).toEqual(['Default', 'Filtered', 'Panel']);
+		expect(await choicesIn(stateMenu())).toEqual(['Default', 'Filtered', 'Panel']);
 	});
 
 	it('say the one you are on, the first until another is chosen', async () => {

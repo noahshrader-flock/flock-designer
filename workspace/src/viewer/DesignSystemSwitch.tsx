@@ -1,7 +1,7 @@
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { DesignSystemBuild } from '../shared/contract';
 import { plural } from '../shared/plural';
-import { Select } from '../ui/Field';
+import { Dropdown } from '../ui/Dropdown';
 import { type Relay, designSystemBuildIn } from './relay';
 
 const cloneLabel = ({ branch, changed }: NonNullable<DesignSystemBuild['clone']>): string =>
@@ -13,7 +13,6 @@ const cloneLabel = ({ branch, changed }: NonNullable<DesignSystemBuild['clone']>
  * (a clone shown to be the package's source is here), or when it is built from the clone. `branch` is the version's key.
  */
 export const DesignSystemSwitch = ({ relay, branch, onBuilt }: { relay: Relay; branch: string; onBuilt: () => void }) => {
-	const id = useId();
 	const [build, setBuild] = useState<DesignSystemBuild | null>(null);
 	const [building, setBuilding] = useState(false);
 	useEffect(() => {
@@ -39,11 +38,11 @@ export const DesignSystemSwitch = ({ relay, branch, onBuilt }: { relay: Relay; b
 		onBuilt();
 	};
 	return (
-		<Select
+		<Dropdown
+			label={`Design system: ${building ? 'building…' : shown}: switch what it is built from`}
 			value={build.from}
 			options={options}
 			onChange={(next) => void choose(next)}
-			control={{ id, 'aria-label': `Design system: ${building ? 'building…' : shown}: switch what it is built from` }}
 		/>
 	);
 };

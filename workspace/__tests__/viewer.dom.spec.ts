@@ -10,7 +10,20 @@ import type { Relay } from '../src/viewer/relay';
 import type { Result } from '../src/shared/contract';
 import { ReviewThreads } from '../src/codeHost/reviewThreads';
 import { PAGE_CONFIG as CONFIG, PAGE_SIGN_IN as SIGN_IN, commentOnPage, fakeGitHubFetch, sitePage } from './pageHarness';
-import { cards, choicesIn, shownIn, shownState, switchMenu, chooseState, stateMenu, shownTheme, themeButton, themeGroup } from './reviewHarness';
+import {
+	cards,
+	choicesIn,
+	choose,
+	chosenIn,
+	shownIn,
+	shownState,
+	switchMenu,
+	chooseState,
+	stateMenu,
+	shownTheme,
+	themeButton,
+	themeGroup,
+} from './reviewHarness';
 import { anAnchor } from './fixtures';
 import { allByRole, button, dialog, fieldNamed, menuItem, openMenu, press, render, settle, type, unmountAll } from './ui';
 
@@ -180,7 +193,7 @@ describe("the page's bar", () => {
 		await open();
 		expect(document.querySelector('a[href="../../"]')).not.toBeNull();
 		expect(document.body.textContent).toContain('Alert history');
-		expect(choicesIn(switchMenu('version'))).toEqual(['Version 3', 'Version 2', 'Version 1']);
+		expect(await choicesIn(switchMenu('version'))).toEqual(['Version 3', 'Version 2', 'Version 1']);
 		expect(shownIn(switchMenu('version'))).toBe('Version 1');
 	});
 
@@ -534,35 +547,32 @@ describe('in DSNR’s review tab, in VS Code', () => {
 			};
 			return { relay: wrapped, seen };
 		};
-		const choice = () => document.querySelector<HTMLSelectElement>('select[aria-label^="Design system:"]') ?? undefined;
+		const choice = () => allByRole('button', /^Design system:/)[0] ?? null;
 
 		it('offers nothing while there is no clone to build from, and the version is built from the installed package', async () => {
 			const { relay } = answering({ from: 'installed', pkg: 'x', installed: '5.5.4', clone: null });
 			await open(relay);
 			await settle();
-			expect(choice()).toBeUndefined();
+			expect(choice()).toBeNull();
 		});
 
 		it('offers the installed package or the clone with its change, and building from the clone asks DSNR, then shows the page again', async () => {
 			const { relay, seen } = answering({ from: 'installed', pkg: '@flock/ui', installed: '5.5.4', clone: { branch: 'develop', changed: 2 } });
 			const { slots } = await open(relay);
 			await settle();
-			const select = choice() as HTMLSelectElement;
-			expect([...select.options].map((o) => o.textContent)).toEqual(['Installed @flock/ui 5.5.4', 'Your clone: develop + 2 changed files']);
-			expect(select.getAttribute('aria-label')).toBe('Design system: Installed @flock/ui 5.5.4: switch what it is built from');
+			const menu = choice() as HTMLElement;
+			expect(await choicesIn(menu)).toEqual(['Installed @flock/ui 5.5.4', 'Your clone: develop + 2 changed files']);
+			expect(await chosenIn(menu)).toBe('Installed @flock/ui 5.5.4');
+			expect(menu.getAttribute('aria-label')).toBe('Design system: Installed @flock/ui 5.5.4: switch what it is built from');
 			const before = slots.frame.getAttribute('src');
 			const shown: string[] = [];
 			Object.defineProperty(slots.frame, 'src', { set: (v: string) => void shown.push(v), get: () => before, configurable: true });
-			await act(async () => {
-				select.value = 'clone';
-				select.dispatchEvent(new Event('change', { bubbles: true }));
-			});
+			await choose(menu, 'Your clone: develop + 2 changed files');
 			await settle();
 			expect(seen).toContainEqual(['buildDesignSystemFrom', ['prototype/demo/v1', 'clone']]);
 			expect(shown).toEqual([before ?? 'page.html']);
-			expect((choice() as HTMLSelectElement).getAttribute('aria-label')).toBe(
-				'Design system: Your clone: develop + 2 changed files: switch what it is built from',
-			);
+			expect(choice()?.getAttribute('aria-label')).toBe('Design system: Your clone: develop + 2 changed files: switch what it is built from');
+			expect(shownIn(choice())).toBe('Your clone: develop + 2 changed files');
 		});
 	});
 
