@@ -1,8 +1,6 @@
 /**
- * Bundled whole and written beside the prototypes (`writeBundleScript`), so the app's save and the agent's own build run the
- * same script, and "it built for the agent" and "it builds when saved" are the same fact. esbuild and Sass are given by
- * path: they are the app's own, never bundled into this.
- *
+ * Bundled whole and written beside the prototypes (`writeBundleScript`), so the app's save and the agent's build run the same
+ * script. esbuild and Sass are given by path: they are the app's own, never bundled into this.
  * `node build-prototype.mjs <esbuild> <entry> <out> <node_modules> <shared>`
  */
 import { createHash } from 'node:crypto';

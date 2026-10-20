@@ -36,10 +36,9 @@ export const pinnedAt = async (root: string, commit: string, pkg: string): Promi
 };
 
 /**
- * The design system as installed against what the base commit's lockfile pins, in words, before anything is built on it;
- * null when they are the same, or nothing is installed (which readiness says). Never a certainty: a lockfile can be read
- * wrongly (a workspace, an alias, a patched package), so a difference "may not match". DSNR never installs: `install` is
- * the product's own command, for the person to run.
+ * The design system as installed against what the base commit's lockfile pins, in words, before anything is built on it; null
+ * when they match or nothing is installed (readiness says). Never a certainty (a workspace, an alias or a patch can fool a
+ * lockfile read), so it says "may not match". DSNR never installs: `install` is the product's own command.
  */
 export const installedAgainstBase = async ({
 	root,

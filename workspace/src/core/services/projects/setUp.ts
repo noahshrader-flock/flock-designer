@@ -40,10 +40,9 @@ export const setupState = async (
 export const setupMoved = (root: string): Promise<string> => git(root, ['status', '--porcelain', '--untracked-files=normal']).catch(() => '');
 
 /**
- * The design repository a product is set up with: always the person's pick, as it decides where all the product's work goes,
- * starting at Flock's clone when one is here (where the person keeps it, or beside the product under its name). A picked
- * folder is named by its origin, never taken for Flock's, and kept for its repository unless it is beside the product
- * under that name, where it is found anyway. Null when they pick none.
+ * The design repository a product is set up with: always the person's pick, as it decides where all the work goes, starting at
+ * Flock's clone when one is here. A picked folder is named by its origin, never taken for Flock's, and kept unless it is
+ * beside the product under that name, where it is found anyway. Null when they pick none.
  */
 export const designRepositoryForSetup = async (
 	root: string,

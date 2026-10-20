@@ -14,10 +14,9 @@ const IN_PROGRESS: [string, string][] = [
 ];
 
 /**
- * Why the clone at `root` has unfinished work, in words, with what to do; or null when it has none: no change to a tracked file
- * and no new file (a new file would be swept into the agent's commit), no merge, rebase, cherry-pick, revert or bisect in
- * progress, and on a branch, not a detached HEAD. `where` names the clone as the words say it ("the design system’s
- * checkout").
+ * Why the clone at `root` has unfinished work, with what to do, or null: a changed tracked file, a new one (it would be swept
+ * into the agent's commit), a merge, rebase, cherry-pick, revert or bisect in progress, or a detached HEAD. `where` names the
+ * clone as the words say it ("the design system’s checkout").
  */
 export const unfinishedWork = async (root: string, where: string): Promise<string | null> => {
 	const why = await unfinishedWhy(root, where);

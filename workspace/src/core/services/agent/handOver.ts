@@ -14,10 +14,9 @@ export const assertReady = async (agent: Agent): Promise<void> => {
 type HandPorts = { agentWindow: Pick<Ports['agentWindow'], 'open'> } & Pick<Ports, 'copy'>;
 
 /**
- * `prepare` makes what is handed (a branch, a file) and runs only once the agent is known to be ready, so a hand-off that is
- * refused leaves nothing behind; `undo` is for what it made, when it could not then be opened. When the agent's window is
- * not in this editor, the command that starts it in a terminal is put on the clipboard and returned as `command`; when its
- * window takes no prompt (`copied`), the prompt is.
+ * `prepare` runs only once the agent is known to be ready, so a refused hand-off leaves nothing behind; `undo` removes what it
+ * made if it then could not be opened. A window outside this editor gets a terminal command on the clipboard, returned as
+ * `command`; one that takes no prompt (`copied`) gets the prompt there.
  */
 export const handOver = async <T extends { root: string; prompt: string; taskFile: string }>(
 	ports: HandPorts,

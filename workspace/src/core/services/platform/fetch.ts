@@ -69,10 +69,9 @@ const upstreamOf = async (root: string, branch: string): Promise<RemoteCopy | nu
 };
 
 /**
- * Updates one remote copy and nothing else: an explicit refspec, no tags, no submodules, no `FETCH_HEAD`, no gc or
- * maintenance started, no prompt and no credential window, so the person's branches, index and files are never touched.
- * It runs beside DSNR's other git commands on the repository rather than queued behind them, since it takes none of their
- * locks: a remote that never answers holds up nothing but itself. Null when it fetched; else why not, in words, for `what`.
+ * Updates one remote copy and nothing else (an explicit refspec; no tags, submodules, `FETCH_HEAD`, gc or prompt), so the
+ * person's branches, index and files are never touched. It does not queue behind DSNR's other git commands, taking none of
+ * their locks: a remote that never answers holds up only itself. Null when it fetched; else why not, for `what`.
  */
 export const fetchRemoteCopy = (
 	root: string,
@@ -154,11 +153,9 @@ const whereIs = async (root: string, branch: string): Promise<Where> => {
 };
 
 /**
- * Fetches `branch` from its remote, then says which commit to model work on and why: the remote's when the person's branch
- * has nothing of its own; the person's when it is ahead or has diverged (it is their working branch, and what their editor
- * shows), saying what the remote has that it does not; the local branch, said, when it tracks nothing or the fetch failed.
- * **Never moves anything**: only the remote's copy (`refs/remotes/…`) is written, by the fetch. `waitMs`: how long to wait
- * for the fetch before going ahead without it; it goes on in the background, and is used next time.
+ * Fetches `branch`, then says which commit to model work on: the remote's when the person's branch has nothing of its own;
+ * the person's when it is ahead or diverged (their working branch), saying what the remote has beyond it; the local branch
+ * when it tracks nothing or the fetch failed. **Moves nothing of theirs.** `waitMs`: how long to wait for the fetch, which goes on after.
  */
 export const freshTip = async (root: string, branch: string, { waitMs = WAIT_MS }: { waitMs?: number } = {}): Promise<FreshTip> => {
 	const where = await whereIs(root, branch);

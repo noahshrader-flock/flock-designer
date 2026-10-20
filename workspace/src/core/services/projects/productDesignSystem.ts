@@ -116,10 +116,9 @@ export const packageRepository = (field: unknown): string | null => {
 };
 
 /**
- * Whether the folder `dir` is the source of the package `pkg` the product has installed, read from package.json and git
- * only: the same name, the installed package's repository the clone's `origin`, and a release tag for the installed
- * version. Any one that differs is a mismatch; any one that cannot be read leaves it unconfirmed, saying which. With
- * nothing installed there is nothing to be the source of, so it is used as named.
+ * Whether `dir` is the source of the package `pkg` the product has installed, read from package.json and git only: the same
+ * name, the installed package's repository the clone's `origin`, and a release tag for the installed version. One that differs
+ * is a mismatch; one that cannot be read leaves it unconfirmed, saying which. With nothing installed it is used as named.
  */
 export type SourceCheck =
 	{ state: 'confirmed' } | { state: 'uninstalled' } | { state: 'unconfirmed'; why: string; key: string } | { state: 'mismatch'; why: string };
@@ -188,10 +187,9 @@ export class SourceAnswers {
 export type ProductHow = 'repository' | 'beside' | 'chosen';
 
 /**
- * The product's design system: the folder the person chose, read as a design system and nothing more; else found where
- * the product names it (`placeOf`), then, when it is beside the product, proven to be that package's source, or the
- * person's own answer when it cannot be. `usable` is what may be read and shown; `refused` and
- * `ask` say why not yet; `none`, that nothing is there.
+ * The product's design system: the folder the person chose (read as a design system, nothing more); else where the product
+ * names it (`placeOf`), proven to be that package's source when beside it, or the person's answer when it cannot be.
+ * `usable` may be read and shown; `refused` and `ask` say why not yet; `none`, that nothing is there.
  */
 export type ProductDesignSystem =
 	| { state: 'none' }
