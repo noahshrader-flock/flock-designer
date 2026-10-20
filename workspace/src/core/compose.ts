@@ -5,7 +5,7 @@ import { reachLine, tokenChanges, valueChanges } from '../shared/processChanges'
 import { storyComponent } from '../shared/valueNames';
 import { type Check, type EventSink, arg } from './handle';
 import type { Ports } from './ports';
-import type { Agent } from './services/agent/agent';
+import type { Agent, AgentId } from './services/agent/agent';
 import { classify } from './services/projects/branchProjects';
 import { syncBranches } from './services/publishing/branchSync';
 import type { CheckoutMemory } from './services/projects/checkoutMemory';
@@ -53,8 +53,8 @@ export interface CallsContext {
 	ports: Ports;
 	opened: OpenedCheckouts;
 	runtime: RuntimeManager;
-	/** The one work is handed to. */
-	agent: Agent;
+	/** Each agent work can be handed to; which one is the person's choice (`ports.agentChoice`). */
+	agents: Record<AgentId, Agent>;
 	share: ShareRunner;
 	github: GitHubAccount;
 	designRepo: DesignRepo;
@@ -83,7 +83,7 @@ export const composeCore = ({
 	ports,
 	opened,
 	runtime,
-	agent,
+	agents,
 	share,
 	github,
 	designRepo,
@@ -101,6 +101,8 @@ export const composeCore = ({
 	componentPictureRecipe,
 	warmAfterMs,
 }: CallsContext) => {
+	/** Asked at each hand-off, so a change of choice is used at once. */
+	const agent = (): Agent => agents[ports.agentChoice()];
 	const openRepository = async (root: string): Promise<Checkout> => {
 		if (!isRepository(root)) {
 			throw new Error(`${root} is not a git repository.`);
@@ -215,8 +217,10 @@ export const composeCore = ({
 		system: shownSystem,
 		tokens: componentTokens,
 		run: (cwd, task, readOnly) => {
-			if (!agent.runUnattended) throw new Error(`Changing a value in words runs on its own, which ${agent.name} does not do here.`);
-			return agent.runUnattended(cwd, task, { readOnly });
+			const chosen = agent();
+			if (!chosen.runUnattended)
+				throw new Error(`Changing a value in words runs on its own, which ${chosen.name} does not do here. Choose Claude Code for it.`);
+			return chosen.runUnattended(cwd, task, { readOnly });
 		},
 		readStandard: (path) => readSkillText(path),
 	});

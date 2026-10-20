@@ -640,8 +640,8 @@ describe('codebase work, in the panel', () => {
 			await press(inDialog('Build in Claude Code'));
 			expect(sent.filter((m) => m.name === 'buildInCodebase').at(-1)?.args).toEqual(['/work/flock-coke', 'alert-history', 'v3', 'develop']);
 			const reads = sent.filter((m) => m.name === 'listProjects').length;
-			await answer('buildInCodebase', { agent: 'Claude Code', editor: true, command: null });
-			expect(dialog()!.textContent).toContain('It is in Claude Code in this window now, on feature/alert-history');
+			await answer('buildInCodebase', { agent: 'Claude Code', opened: 'typed', command: null });
+			expect(dialog()!.textContent).toContain('The build, on feature/alert-history, is in Claude Code in this window now');
 			expect(sent.filter((m) => m.name === 'listProjects').length).toBe(reads + 1);
 			await press(closeX());
 			expect(dialog()).toBeNull();
@@ -650,7 +650,7 @@ describe('codebase work, in the panel', () => {
 		it('gives the command for a terminal when Claude Code is not in this VS Code', async () => {
 			await open();
 			await press(inDialog('Build in Claude Code'));
-			await answer('buildInCodebase', { agent: 'Claude Code', editor: false, command: "cd /work/flock-coke && claude 'Build it.'" });
+			await answer('buildInCodebase', { agent: 'Claude Code', opened: null, command: "cd /work/flock-coke && claude 'Build it.'" });
 			expect(dialog()!.textContent).toContain('on your clipboard');
 			expect(dialog()!.querySelector('pre')?.textContent).toBe("cd /work/flock-coke && claude 'Build it.'");
 		});
@@ -1597,7 +1597,7 @@ describe('every change being tried, in the panel’s Changes: the tokens and eac
 			expect(button('Save to a branch')).toBeDefined();
 			await press(button('Process changes'));
 			expect(calls('handOverChanges').at(-1)?.args).toEqual([null, { edits: EDITS }]);
-			await answer('handOverChanges', { branch: BRANCH, agent: 'Claude Code', editor: true, command: null });
+			await answer('handOverChanges', { branch: BRANCH, agent: 'Claude Code', opened: 'typed', command: null });
 			await answerHandOver(null, { branch: BRANCH, lines: ['primary: #000000'], review: { state: 'missing' }, pullRequest: null });
 			expect(handOver()?.querySelector('.branch-line')?.textContent).toBe(BRANCH);
 			expect(handOver()?.textContent).toContain('This hand-over is in Claude Code in this window now');

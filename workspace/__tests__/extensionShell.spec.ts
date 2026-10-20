@@ -3,6 +3,8 @@ import { join } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { VsCodeGitHub } from '../extension/src/github';
 import { claudeLink, moveLocationSetting } from '../extension/src/agentWindows';
+import { claudeCode } from '../src/core/services/agent/claudeCode';
+import { codex } from '../src/core/services/agent/codex';
 import { openableLink, vscodePorts } from '../extension/src/vscodePorts';
 import { NO_TABS_SHOWN, reviewsOf } from '../extension/src/messages';
 import { Reviews, answerReview, reviewPage, reviewPath } from '../extension/src/review';
@@ -69,13 +71,20 @@ describe('the person’s GitHub account, through VS Code', () => {
 });
 
 let settings: Record<string, unknown> = {};
+const terminalShown = vi.fn();
 
 describe('VS Code’s ports', () => {
 	beforeEach(() => {
 		settings = {};
+		terminalShown.mockClear();
 	});
+	const claude = claudeCode({ locate: () => '/bin/claude', run: async () => ({ stdout: '', stderr: '' }), spawnProcess: (() => null) as never });
 	const fake = () => ({
-		window: { showOpenDialog: vi.fn(async (_options: unknown) => [{ fsPath: '/picked' }]), showInformationMessage: vi.fn(async () => undefined) },
+		window: {
+			showOpenDialog: vi.fn(async (_options: unknown) => [{ fsPath: '/picked' }]),
+			showInformationMessage: vi.fn(async () => undefined),
+			createTerminal: vi.fn((_options: unknown) => ({ show: terminalShown })),
+		},
 		env: { openExternal: vi.fn(async (_uri: unknown) => true), clipboard: { writeText: vi.fn(async () => undefined) } },
 		commands: { executeCommand: vi.fn(async (_id: string, ..._args: unknown[]) => undefined) },
 		Uri: { file: (p: string) => ({ fsPath: p }), parse: (u: string) => ({ toString: () => u }) },
@@ -146,7 +155,7 @@ describe('VS Code’s ports', () => {
 			return opened(id, ...args);
 		});
 		const { agentWindow } = vscodePorts(v as never, none);
-		expect(await agentWindow.open('claude-code', '/work/coke', 'Build it.')).toBe(true);
+		expect(await agentWindow.open(claude, '/work/coke', 'Build it.')).toBe('typed');
 		expect(v.commands.executeCommand.mock.calls).toEqual([[SIDEBAR], [OPEN, undefined, 'Build it.', undefined, undefined, undefined, WHERE]]);
 		// Opened only once Claude Code has saved the sidebar as its place; sooner, it reads its last place, an editor tab.
 		expect(placeWhenOpened).toBe('sidebar');
@@ -156,14 +165,14 @@ describe('VS Code’s ports', () => {
 	it('open it there at once when Claude Code already keeps its conversations in its side panel', async () => {
 		const v = fake();
 		settings['claudeCode.preferredLocation'] = 'sidebar';
-		await vscodePorts(v as never, none).agentWindow.open('claude-code', '/work/coke', 'Build it.');
+		await vscodePorts(v as never, none).agentWindow.open(claude, '/work/coke', 'Build it.');
 		expect(v.commands.executeCommand.mock.calls).toEqual([[OPEN, undefined, 'Build it.', undefined, undefined, undefined, WHERE]]);
 	});
 
 	it('hand it to an editor tab instead, when that is the person’s setting', async () => {
 		const v = fake();
 		settings['dsnr.agent.location'] = 'editor';
-		await vscodePorts(v as never, none).agentWindow.open('claude-code', '/work/coke', 'Build it.');
+		await vscodePorts(v as never, none).agentWindow.open(claude, '/work/coke', 'Build it.');
 		expect(v.commands.executeCommand.mock.calls).toEqual([[OPEN, undefined, 'Build it.']]);
 	});
 
@@ -178,18 +187,43 @@ describe('VS Code’s ports', () => {
 		v.commands.executeCommand.mockImplementation(async (id: string) => {
 			if (id.startsWith('claude-vscode.')) throw new Error(`command '${id}' not found`);
 		});
-		await vscodePorts(v as never, none).agentWindow.open('claude-code', '/work/coke', 'Build it.');
+		await vscodePorts(v as never, none).agentWindow.open(claude, '/work/coke', 'Build it.');
 		expect(String(v.env.openExternal.mock.calls.at(-1)?.[0])).toBe('vscode://anthropic.claude-code/open?prompt=Build+it.');
 	});
 
 	it('open a folder that is not in this window in a window of its own, and say there is no window without Claude Code', async () => {
 		const v = fake();
-		await vscodePorts(v as never, none).agentWindow.open('claude-code', '/work/other', 'Build it.');
+		await vscodePorts(v as never, none).agentWindow.open(claude, '/work/other', 'Build it.');
 		expect(v.commands.executeCommand).toHaveBeenCalledWith('vscode.openFolder', { fsPath: '/work/other' }, { forceNewWindow: true });
 		v.extensions.getExtension.mockReturnValue(undefined as never);
 		v.commands.executeCommand.mockClear();
-		expect(await vscodePorts(v as never, none).agentWindow.open('claude-code', '/work/coke', 'Build it.')).toBe(false);
+		expect(await vscodePorts(v as never, none).agentWindow.open(claude, '/work/coke', 'Build it.')).toBeNull();
 		expect(v.commands.executeCommand).not.toHaveBeenCalled();
+	});
+
+	it('start Codex in a terminal of its own in the folder, with the prompt as its argument, no shell between to quote it', async () => {
+		const v = fake();
+		const agent = codex({ locate: () => '/bin/codex', run: async () => ({ stdout: '', stderr: '' }) });
+		expect(await vscodePorts(v as never, none).agentWindow.open(agent, '/work/coke', 'Build it, "now".')).toBe('started');
+		expect(v.window.createTerminal).toHaveBeenCalledWith({
+			name: 'Codex',
+			cwd: '/work/coke',
+			shellPath: '/bin/codex',
+			shellArgs: ['--no-daemon', 'Build it, "now".'],
+		});
+		expect(terminalShown).toHaveBeenCalled();
+		expect(v.commands.executeCommand).not.toHaveBeenCalled();
+	});
+
+	it('hand work to the agent the person chose, and to Claude Code until they choose, or for a choice it does not know', () => {
+		const choice = (value?: unknown) => {
+			settings = value === undefined ? {} : { 'dsnr.agent.use': value };
+			return vscodePorts(fake() as never, none).agentChoice();
+		};
+		expect(choice()).toBe('claude-code');
+		expect(choice('codex')).toBe('codex');
+		expect(choice('claude-code')).toBe('claude-code');
+		expect(choice('someone else')).toBe('claude-code');
 	});
 
 	it('move a location set under the setting’s old name to its new one, at each level it was set, once', async () => {

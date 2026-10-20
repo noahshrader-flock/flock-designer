@@ -3,7 +3,7 @@ import { findChrome } from '../src/core/services/browser/chromeHeadless';
 import type { ComponentTokens } from '../src/core/services/designSystem/componentTokens';
 import { ValueSources } from '../src/core/services/designSystem/valueSources';
 import { ValueAgent } from '../src/core/services/designSystem/valueAgent';
-import { claudeCode } from '../src/core/services/agent/agent';
+import { claudeCode } from '../src/core/services/agent/claudeCode';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type { ConnectedDesignSystem, ValueProperty, ValueSources as Answer } from '../src/shared/contract';

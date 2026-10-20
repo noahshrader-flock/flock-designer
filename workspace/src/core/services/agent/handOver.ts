@@ -3,6 +3,7 @@ import { dirname } from 'node:path';
 import type { Handed } from '../../../shared/contract';
 import type { Ports } from '../../ports';
 import type { Agent } from './agent';
+import { startCommand } from './terminal';
 
 /** Refused, in the agent's own words, when it is missing or signed out; one it cannot tell about is not held back. */
 export const assertReady = async (agent: Agent): Promise<void> => {
@@ -27,10 +28,11 @@ export const handOver = async <T extends { root: string; prompt: string }>(
 	const prepared = await prepare();
 	const { root, prompt } = prepared;
 	try {
-		if (await ports.agentWindow.open(agent.id, root, prompt)) return { handed: { agent: agent.name, editor: true, command: null }, prepared };
-		const command = agent.terminalCommand(root, prompt);
+		const opened = await ports.agentWindow.open(agent, root, prompt);
+		if (opened !== null) return { handed: { agent: agent.name, opened, command: null }, prepared };
+		const command = startCommand(agent.program(), root, agent.startArgs(prompt));
 		await ports.copy(command);
-		return { handed: { agent: agent.name, editor: false, command }, prepared };
+		return { handed: { agent: agent.name, opened: null, command }, prepared };
 	} catch (err) {
 		undo(prepared);
 		throw err;

@@ -6,7 +6,8 @@ import type { CallsContext } from '../src/core/compose';
 import { appPaths } from '../src/core/appPaths';
 import { CHANNELS, invokeChannel } from '../src/shared/contract';
 import type { Ports } from '../src/core/ports';
-import { claudeCode } from '../src/core/services/agent/agent';
+import { claudeCode } from '../src/core/services/agent/claudeCode';
+import { codex } from '../src/core/services/agent/codex';
 import { type Answer, fakeGitHub } from './fakes/github';
 import {
 	addStandards,
@@ -40,7 +41,8 @@ const fakePorts = () =>
 		copy: vi.fn(async (t: string) => void (copied = t)),
 		httpStatus: vi.fn(async () => 200),
 		// Never another application from a test: VS Code is treated as not installed.
-		agentWindow: { open: vi.fn(async () => false) },
+		agentWindow: { open: vi.fn(async (): Promise<'typed' | 'started' | null> => null) },
+		agentChoice: vi.fn((): 'claude-code' | 'codex' => 'claude-code'),
 		shareTools: vi.fn(() => {
 			throw new Error('Sharing is not faked in this test.');
 		}),
@@ -179,13 +181,16 @@ beforeEach(async () => {
 			ports,
 			opened,
 			runtime: { start: runtimeStart, stop: vi.fn(), status: vi.fn(() => ({ state: 'stopped' })) } as never,
-			agent: claudeCode({
-				locate: () => 'claude',
-				run: async () => signedIn,
-				spawnProcess: (() => {
-					throw new Error('No agent is run in these tests.');
-				}) as never,
-			}),
+			agents: {
+				'claude-code': claudeCode({
+					locate: () => 'claude',
+					run: async () => ({ stdout: signedIn, stderr: '' }),
+					spawnProcess: (() => {
+						throw new Error('No agent is run in these tests.');
+					}) as never,
+				}),
+				codex: codex({ locate: () => 'codex', run: async () => ({ stdout: '', stderr: 'Logged in using ChatGPT' }) }),
+			},
 			github: { state: () => githubState, api: (...a: unknown[]) => githubApi(...a) } as never,
 			designRepo: {
 				listProjects: vi.fn(async () => designRepoProjects),
@@ -589,6 +594,15 @@ describe('prototypes', () => {
 			expect(copied).toBe('');
 		});
 
+		it('hands it to the agent the person chose, with that agent’s own command: Codex, in a terminal', async () => {
+			await made();
+			ports.agentChoice.mockReturnValue('codex');
+			const r = await call(CHANNELS.handPrototypeBuild, product, 'demo', 'v1', 'A list');
+			expect(r).toMatchObject({ ok: true, value: { agent: 'Codex', opened: null } });
+			expect(copied).toMatch(/&& codex --no-daemon 'Build prototype Version 1 of demo\. Your task is in /);
+			expect(ports.agentWindow.open).toHaveBeenCalledWith(expect.objectContaining({ id: 'codex' }), expect.any(String), expect.any(String));
+		});
+
 		it('hands nothing over, and writes no task, when Claude Code is signed out or missing, and says what to do', async () => {
 			await made();
 			signedIn = '{"loggedIn":false}';
@@ -613,8 +627,8 @@ describe('prototypes', () => {
 			expect(task).toContain('## Accessibility');
 			expect(task.indexOf('## Accessibility')).toBeLessThan(task.indexOf('## What the person asked for'));
 			expect(task.trim().endsWith('A list of alerts')).toBe(true);
-			const { value } = r as { value: { editor: boolean; command: string } };
-			expect(value.editor).toBe(false);
+			const { value } = r as { value: { opened: null; command: string } };
+			expect(value.opened).toBeNull();
 			expect(copied).toBe(value.command);
 			expect(value.command).toMatch(new RegExp(`^cd .*${basename(product)} && .*claude `));
 			expect(value.command).toContain(taskFile);
@@ -906,7 +920,7 @@ describe('prototypes', () => {
 			threads({ v1: [comment(7, 'Make this primary', 'noah')] });
 
 			const r = await address(7);
-			expect(r).toMatchObject({ ok: true, value: { editor: false, target: 'v1', from: null, number: 1 } });
+			expect(r).toMatchObject({ ok: true, value: { opened: null, target: 'v1', from: null, number: 1 } });
 			expect(readComments).toHaveBeenCalledWith('prototype/demo/v1');
 			const text = taskOf('v1');
 			expect(text).toContain('Address comment 1 on prototype v1');
@@ -1131,8 +1145,8 @@ describe('prototypes', () => {
 			expect(task).toMatch(/Record the work's route on the `codebase` entry of `[^`]*projects\/demo\/work\.json`/);
 			expect(task).toContain('## Accessibility');
 			expect(task).toContain('Build toward the target as you go, not at the end');
-			const { value } = r as { value: { editor: boolean; command: string } };
-			expect(value.editor).toBe(false);
+			const { value } = r as { value: { opened: null; command: string } };
+			expect(value.opened).toBeNull();
 			expect(copied).toBe(value.command);
 			expect(value.command).toMatch(new RegExp(`^cd .*${basename(product)} && .*claude `));
 			expect(value.command).toContain(taskFile);
@@ -1494,7 +1508,7 @@ describe('Handoff', () => {
 	it("writes the shared skill's task for the work's own branch and hands it over, running no agent here", async () => {
 		await ready();
 		const r = await call(CHANNELS.handOff, product, 'demo');
-		expect(r).toMatchObject({ ok: true, value: { editor: false } });
+		expect(r).toMatchObject({ ok: true, value: { opened: null } });
 		expect(copied).toContain(taskFile());
 		const task = readFileSync(taskFile(), 'utf8');
 		expect(task).toContain('The shared steps.');

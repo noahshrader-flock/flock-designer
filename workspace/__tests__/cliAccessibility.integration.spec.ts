@@ -277,7 +277,7 @@ describe.skipIf(NO_CHROME)('accessibility', () => {
 /** Run only when asked for (`DSNR_REAL_AGENT=1`), since it runs Claude Code on the person's account and costs a little. */
 describe.skipIf(process.env.DSNR_REAL_AGENT !== '1' || NO_CHROME)('the agent, with its build’s own check', () => {
 	it('fixes a fault the check finds while it does what it was asked', async () => {
-		const { claudeCode } = await import('../src/core/services/agent/agent');
+		const { claudeCode } = await import('../src/core/services/agent/claudeCode');
 		const request = 'The prototype already exists. Change its heading to say "Camera list".';
 		expect(await run('new-prototype', '--project', 'demo', '--title', 'Demo', '--note', request)).toBe(0);
 		const task = world.out.join('\n');

@@ -1,7 +1,8 @@
 import type { Check, PullRequest } from '../codeHost/changeRequests';
 import type { AxeRun } from '../shared/accessibility';
 import type { Drawn, Mode, Vary } from './services/designSystem/componentTokens';
-import type { AgentId } from './services/agent/agent';
+import type { Agent, AgentId } from './services/agent/agent';
+import type { Handed } from '../shared/contract';
 
 /** What each story file drew, in the order given; null for one that would not draw. */
 export type Measure = (
@@ -49,8 +50,10 @@ export interface Ports {
 	copy(text: string): Promise<void>;
 	/** Follows redirects; throws when nothing answers within a few seconds. */
 	httpStatus(url: string): Promise<number>;
-	/** Opens the agent's own window in `root` with `prompt` typed in; false when this editor has none for it. */
-	agentWindow: { open(agent: AgentId, root: string, prompt: string): Promise<boolean> };
+	/** Opens the agent in `root` with `prompt`, saying how; null when this editor has nowhere for it. */
+	agentWindow: { open(agent: Agent, root: string, prompt: string): Promise<Handed['opened']> };
+	/** The agent the person hands work to. */
+	agentChoice(): AgentId;
 	shareTools(root: string): ShareTools;
 	headless: Headless;
 }

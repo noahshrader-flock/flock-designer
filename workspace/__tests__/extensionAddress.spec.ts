@@ -29,7 +29,7 @@ const world = (
 	const told: string[] = [];
 	const api = {
 		handPrototypeAddress: vi.fn(async (_root: string, _projectId: string, _name: string, _comment: unknown, newVersion: boolean) =>
-			ok({ agent: 'Claude Code', editor: true, command: null, target: newVersion ? 'v4' : 'v1', from: newVersion ? 'v1' : null, number: 2 }),
+			ok({ agent: 'Claude Code', opened: 'typed', command: null, target: newVersion ? 'v4' : 'v1', from: newVersion ? 'v1' : null, number: 2 }),
 		),
 		listProjects: vi.fn(async () => ok([demo])),
 		readComments: vi.fn(async () =>

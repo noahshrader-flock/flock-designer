@@ -79,7 +79,10 @@ describe('the extension’s manifest', () => {
 
 	it('lets the person choose where an agent with a panel opens what DSNR hands it, under the setting’s new name and its old', () => {
 		const { properties } = manifest().contributes.configuration;
-		expect(Object.keys(properties)).toEqual(['dsnr.agent.location', 'dsnr.claudeCode.location']);
+		expect(Object.keys(properties)).toEqual(['dsnr.agent.use', 'dsnr.agent.location', 'dsnr.claudeCode.location']);
+		// Never `dsnr.agent` itself: VS Code ignores the settings under a section that is also a value.
+		expect(properties['dsnr.agent']).toBeUndefined();
+		expect(properties['dsnr.agent.use']).toMatchObject({ type: 'string', enum: ['claude-code', 'codex'], default: 'claude-code' });
 		expect(properties['dsnr.agent.location']).toMatchObject({ type: 'string', enum: ['sidebar', 'editor'], default: 'sidebar' });
 		expect(properties['dsnr.agent.location']!.description).toMatch(/Claude Code/);
 		// The old name is kept, marked, so a settings file not yet moved is still understood.

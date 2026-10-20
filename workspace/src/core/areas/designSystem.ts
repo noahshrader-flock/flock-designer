@@ -48,7 +48,7 @@ export const designSystemArea = (d: CallsDeps) => {
 			// Not opened, it is not handed over: forgotten, so it can be pressed again.
 			const { handed, prepared } = await handOver(
 				ports,
-				agent,
+				agent(),
 				() => handOverBranches.start(file ?? '', change),
 				() => handOverBranches.forget(file ?? ''),
 			);

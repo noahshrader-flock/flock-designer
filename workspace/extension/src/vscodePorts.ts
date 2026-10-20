@@ -1,12 +1,12 @@
 import type * as VsCode from 'vscode';
 import type { Headless, Ports } from '../../src/core/ports';
 import { toolPorts } from '../../src/core/toolPorts';
-import { agentWindows } from './agentWindows';
+import { agentChoice, agentWindows } from './agentWindows';
 import { isThisMachine } from '../../src/shared/thisMachine';
 
 /** So the ports are tested without VS Code. */
 export interface VsCodeApi {
-	window: Pick<typeof VsCode.window, 'showOpenDialog' | 'showInformationMessage'>;
+	window: Pick<typeof VsCode.window, 'showOpenDialog' | 'showInformationMessage' | 'createTerminal'>;
 	env: Pick<typeof VsCode.env, 'openExternal' | 'clipboard'>;
 	commands: Pick<typeof VsCode.commands, 'executeCommand'>;
 	Uri: Pick<typeof VsCode.Uri, 'file' | 'parse'>;
@@ -52,5 +52,6 @@ export const vscodePorts = (vscode: VsCodeApi, headless: Headless): Ports => ({
 	copy: (text) => Promise.resolve(vscode.env.clipboard.writeText(text)),
 	...toolPorts(),
 	agentWindow: agentWindows(vscode),
+	agentChoice: () => agentChoice(vscode),
 	headless,
 });

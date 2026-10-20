@@ -25,7 +25,7 @@ const world = (more: { given?: Given; api?: Record<string, unknown>; choose?: (s
 		onInstallLine: vi.fn(() => () => undefined),
 		readCheckout: vi.fn(async () => ok({ root: '/p', name: 'p', branch: 'main', clean: true })),
 		createPrototype: vi.fn(async () => ok(created)),
-		handPrototypeBuild: vi.fn(async () => ok({ agent: 'Claude Code', editor: true, command: null })),
+		handPrototypeBuild: vi.fn(async () => ok({ agent: 'Claude Code', opened: 'typed', command: null })),
 		...more.api,
 	};
 	const deps: NewPrototypeDeps = {
@@ -69,7 +69,7 @@ describe('starting a prototype from VS Code', () => {
 
 	it('says, when Claude Code is not in this VS Code, that the command is on the clipboard', async () => {
 		const { deps, toldDone } = world({
-			api: { handPrototypeBuild: vi.fn(async () => ok({ agent: 'Claude Code', editor: false, command: 'cd /p && claude "x"' })) },
+			api: { handPrototypeBuild: vi.fn(async () => ok({ agent: 'Claude Code', opened: null, command: 'cd /p && claude "x"' })) },
 		});
 		await newPrototype(deps);
 		expect(toldDone[0]).toContain('Claude Code is not in this VS Code');

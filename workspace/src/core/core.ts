@@ -4,7 +4,7 @@ import type { AppPaths } from './appPaths';
 import type { EventSink } from './handle';
 import type { CallsContext } from './compose';
 import type { Ports } from './ports';
-import { claudeCode } from './services/agent/agent';
+import { agentsHere } from './services/agent/agents';
 import { CheckoutMemory } from './services/projects/checkoutMemory';
 import { DesignSystemsMemory } from './services/designSystem/designSystems';
 import type { GitHubAccount } from '../codeHost/github';
@@ -32,7 +32,7 @@ export const createCore = ({ paths, emit, ports, github, pictureRecipe }: Shell)
 		onLog: (line) => emit('onRunLog', line),
 		onStatus: (status) => emit('onPreviewStatus', status),
 	}),
-	agent: claudeCode(),
+	agents: agentsHere(),
 	share: new ShareRunner((status) => emit('onShareStatus', status)),
 	github,
 	designRepo: new DesignRepo(github, DESIGN_REPO),

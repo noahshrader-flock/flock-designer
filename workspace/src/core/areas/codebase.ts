@@ -118,7 +118,7 @@ export const codebaseArea = (d: CallsDeps) => {
 			};
 		},
 		agentReady: async (): Promise<null> => {
-			await assertReady(agent);
+			await assertReady(agent());
 			return null;
 		},
 		handOff: async (workIn: CheckedCheckout, projectId: string): Promise<Handed> => {
@@ -130,7 +130,7 @@ export const codebaseArea = (d: CallsDeps) => {
 			const parts = await checkoutParts(canonical, projectId);
 			const missingRoute = codebaseRecord.route ? null : { skill: await readSkillText(ROUTE_SKILL), recordFile: recordPath(recordsRoot, projectId) };
 			const task = handoffTask({ skill, projectId, branch, gate: commandLine(descriptor.commands, 'handoff', projectId), missingRoute }, parts);
-			const { handed } = await handTask(ports, agent, async () => {
+			const { handed } = await handTask(ports, agent(), async () => {
 				handoffs.set(handoffKey(canonical, projectId), { head: await headCommit(canonical), remote: await remoteTip(canonical, branch), branch });
 				return {
 					root: canonical,
@@ -177,7 +177,7 @@ export const codebaseArea = (d: CallsDeps) => {
 			const sourceFile = work.sourceFile(projectId, name);
 			const source = await work.sourceText(projectId, name);
 			const label = workLabel({ name });
-			const { handed } = await handTask(ports, agent, async () => {
+			const { handed } = await handTask(ports, agent(), async () => {
 				// The branch first: nothing is written for the agent if the work cannot start (a dirty tree, work not found).
 				const { branch, started: continuing } = await codebase.of(workIn, projectId);
 				if (continuing) await codebase.resume(workIn, projectId, branch);

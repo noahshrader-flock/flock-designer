@@ -1,6 +1,7 @@
 import { type FormEvent, useEffect, useState } from 'react';
 import { useWorkspace } from './hooks/useWorkspace';
 import type { Handed } from '../../src/shared/contract';
+import { handedTo } from '../../src/shared/handedTo';
 import type { Project } from '../../src/shared/domain/projects';
 import { buildStart, buildSteps, noSetupNote, startBranch } from '../../src/shared/work';
 import { Button } from '../../src/ui/Button';
@@ -125,17 +126,11 @@ export const BuildInCodebaseDialog = ({
 	if (handed && plan)
 		return (
 			<Dialog title="Build in the codebase" onClose={onClose}>
-				{handed.editor ? (
-					<Message>
-						It is in Claude Code in this window now, on <code>{plan.branch}</code>: a new conversation there has the task typed in. Press Enter there
-						to start it, then watch the agent write the audit and then the code, and step in when you like.
-					</Message>
-				) : (
-					<>
-						<Message>Claude Code is not in this VS Code, so the command that starts it in a terminal is on your clipboard:</Message>
-						<pre className="dialog-command">{handed.command}</pre>
-					</>
-				)}
+				<Message>
+					{handedTo(handed, `The build, on ${plan.branch},`)}
+					{handed.command === null ? ' Watch the agent write the audit and then the code, and step in when you like.' : null}
+				</Message>
+				{handed.command === null ? null : <pre className="dialog-command">{handed.command}</pre>}
 			</Dialog>
 		);
 	return (

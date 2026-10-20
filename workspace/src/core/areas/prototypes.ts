@@ -68,7 +68,7 @@ export const prototypesArea = (d: CallsDeps) => {
 		},
 		handPrototypeBuild: async (root: string, projectId: string, name: string, request: string): Promise<Handed> => {
 			const canonical = opened.require(root);
-			const { handed } = await handTask(ports, agent, async () => ({
+			const { handed } = await handTask(ports, agent(), async () => ({
 				root: canonical,
 				what: `Build prototype ${workLabel({ name })} of ${projectId}.`,
 				taskFile: join(dirname(work.file(projectId, name)), `${name}-build.md`),
@@ -78,7 +78,7 @@ export const prototypesArea = (d: CallsDeps) => {
 		},
 		handPrototypeAddress: async (root: string, projectId: string, name: string, comment: CommentRef, newVersion: boolean): Promise<HandedComment> => {
 			const canonical = opened.require(root);
-			const { handed, prepared } = await handTask(ports, agent, async () => {
+			const { handed, prepared } = await handTask(ports, agent(), async () => {
 				const addressSkill = await readSkillText(ADDRESS_SKILL);
 				const buildSkill = await readSkillText(BUILD_SKILL);
 				// Read now, not earlier: this is what makes the file current.
