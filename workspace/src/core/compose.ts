@@ -1,5 +1,5 @@
 import { existsSync } from 'node:fs';
-import { basename, dirname, join } from 'node:path';
+import { dirname, join } from 'node:path';
 import type { ChangeKind, Checkout, Person, PublishStatus, TriedValue } from '../shared/contract';
 import { reachLine, tokenChanges, valueChanges } from '../shared/processChanges';
 import { storyComponent } from '../shared/valueNames';
@@ -23,7 +23,7 @@ import { designStore } from './services/publishing/designStore';
 import { syncRecords } from './services/publishing/designSync';
 import { DesignSystemsMemory } from './services/designSystem/designSystems';
 import { type SourceAnswers, usableDesignSystem } from './services/projects/productDesignSystem';
-import { recordsRootFor } from './services/projects/discovery';
+import { type DesignRepositoryClones, designRepositoryMissing, recordsRootFor } from './services/projects/discovery';
 import { isRepository, readCheckout } from './services/platform/git';
 import type { GitHubAccount } from '../codeHost/github';
 import { Installer } from './services/codebase/install';
@@ -70,6 +70,8 @@ export interface CallsContext {
 	designSystems: DesignSystemsMemory;
 	/** The person's answers for a product's design system that could not be confirmed as its source. */
 	sourceAnswers: SourceAnswers;
+	/** Where the person keeps a design repository's clone, when it is not beside the product. */
+	designRepositories: DesignRepositoryClones;
 	/** The app's own folder, never the library's. */
 	storyPreviewsRoot: string;
 	changeBranchFiles: Record<ChangeKind, string>;
@@ -99,6 +101,7 @@ export const composeCore = ({
 	designLibrary,
 	designSystems,
 	sourceAnswers,
+	designRepositories,
 	storyPreviewsRoot,
 	changeBranchFiles,
 	componentTokens: injectedComponentTokens,
@@ -164,18 +167,16 @@ export const composeCore = ({
 		return saved !== null && isRepository(saved) && existsSync(join(saved, DESCRIPTOR_PATH)) ? saved : null;
 	};
 
+	/** The product's design repository's records, in the clone the person picked or beside the product (`recordsRootFor`). */
+	const recordsRootOf = (productRoot: string): string | null => recordsRootFor(productRoot, { clones: designRepositories });
 	const recordsFor = (productRoot: string): string => {
-		const found = recordsRootFor(productRoot);
-		if (found === null) {
-			throw new Error(
-				`DSNR could not find the design repository next to ${basename(productRoot)}. Clone flock-designer into the same folder, beside it.`,
-			);
-		}
+		const found = recordsRootOf(productRoot);
+		if (found === null) throw new Error(designRepositoryMissing(productRoot));
 		return found;
 	};
 	const trustedRecords = (): { root: string; recordsRoot: string } | null => {
 		const root = trustedRoot();
-		const recordsRoot = root === null ? null : recordsRootFor(root);
+		const recordsRoot = root === null ? null : recordsRootOf(root);
 		return root === null || recordsRoot === null ? null : { root, recordsRoot };
 	};
 
@@ -300,6 +301,7 @@ export const composeCore = ({
 	const work = prototypeWork({
 		prototypesRoot,
 		designSystemOf,
+		recordsRootOf,
 		productRoot: () => {
 			const root = trustedRoot();
 			return root === null ? null : opened.require(root);
@@ -338,6 +340,7 @@ export const composeCore = ({
 		installer,
 		designSystems,
 		designSystemOf,
+		recordsRootOf,
 		componentTokens,
 		openRepository,
 		checkout,

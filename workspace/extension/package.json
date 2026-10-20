@@ -137,6 +137,11 @@
 				"command": "dsnr.chooseAgent",
 				"category": "DSNR",
 				"title": "Choose the agent"
+			},
+			{
+				"command": "dsnr.locateDesignRepository",
+				"category": "DSNR",
+				"title": "Locate the design repository"
 			}
 		],
 		"menus": {

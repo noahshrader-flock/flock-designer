@@ -3,7 +3,6 @@ import { mergeProjects, unionLocal } from '../../../shared/projectList';
 import { workKind } from '../../../shared/work';
 import { readBranchProjects } from './branchProjects';
 import { readDescriptor } from './descriptor';
-import { recordsRootFor } from './discovery';
 import { branchTip, repositoryOf } from '../platform/git';
 import { codebaseBranchFor } from './workRecords';
 import { readFolderProjects } from './localProjects';
@@ -15,16 +14,19 @@ export const listProjects = async ({
 	root,
 	login,
 	remote,
+	recordsRootOf,
 }: {
 	root: string | null;
 	login: string | null;
 	remote: () => Promise<Project[]>;
+	/** The product's design repository's records, as `recordsRootFor` finds them. */
+	recordsRootOf: (productRoot: string) => string | null;
 }): Promise<Project[]> => {
 	let local: Project[] = [];
 	// `repository` fills in codebase work recorded before records named it; null when the checkout has no remote.
 	let here: { root: string; repository: string | null; branchOf: (projectId: string) => string } | null = null;
 	if (root !== null) {
-		const recordsRoot = recordsRootFor(root);
+		const recordsRoot = recordsRootOf(root);
 		// Every project folder, not only those that record a piece of work: the folder is what an agent makes
 		// first, and it is what vouches for a `feature/<id>` branch (see readBranchProjects).
 		const folders = recordsRoot ? readFolderProjects(recordsRoot) : [];

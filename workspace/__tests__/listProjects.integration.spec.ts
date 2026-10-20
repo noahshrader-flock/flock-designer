@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { Project } from '../src/shared/contract';
+import { recordsRootFor } from '../src/core/services/projects/discovery';
 import { listProjects } from '../src/core/services/projects/listProjects';
 import { makeProduct, projectWork } from './fixtures';
 
@@ -20,8 +21,12 @@ describe('the project list', () => {
 	const offline = () => Promise.reject(new Error('GitHub is out of reach.'));
 
 	it("is GitHub's when there is no checkout, and GitHub's failure when it cannot be reached", async () => {
-		expect((await listProjects({ root: null, login: null, remote: async () => [fromGitHub] })).map((p) => p.id)).toEqual(['remote']);
-		await expect(listProjects({ root: null, login: null, remote: offline })).rejects.toThrow('GitHub is out of reach.');
+		expect(
+			(await listProjects({ root: null, login: null, recordsRootOf: (r) => recordsRootFor(r), remote: async () => [fromGitHub] })).map((p) => p.id),
+		).toEqual(['remote']);
+		await expect(listProjects({ root: null, login: null, recordsRootOf: (r) => recordsRootFor(r), remote: offline })).rejects.toThrow(
+			'GitHub is out of reach.',
+		);
 	});
 
 	it('never says codebase work is ready for engineering with no checkout, where it cannot be checked against the branch', async () => {
@@ -29,7 +34,7 @@ describe('the project list', () => {
 			...fromGitHub,
 			work: [projectWork({ name: 'codebase', branch: 'feature/remote', readyAt: 'a1b2c3d' })],
 		};
-		const [listed] = await listProjects({ root: null, login: null, remote: async () => [ready] });
+		const [listed] = await listProjects({ root: null, login: null, recordsRootOf: (r) => recordsRootFor(r), remote: async () => [ready] });
 		expect(listed?.work[0]?.readyAt).toBeNull();
 	});
 
@@ -40,7 +45,7 @@ describe('the project list', () => {
 		writeFileSync(join(design, 'projects', 'demo', 'brief.md'), '# Demo\n');
 		const record = { projectId: 'demo', name: 'v1', branch: 'prototype/demo/v1', commit: null, createdAt: '2026-10-01T00:00:00Z' };
 		writeFileSync(join(design, 'projects', 'demo', 'work.json'), JSON.stringify([record]));
-		const listed = await listProjects({ root: product, login: null, remote: offline });
+		const listed = await listProjects({ root: product, login: null, recordsRootOf: (r) => recordsRootFor(r), remote: offline });
 		expect(listed.map((p) => [p.id, p.work.map((i) => i.name)])).toEqual([['demo', ['v1']]]);
 	});
 });

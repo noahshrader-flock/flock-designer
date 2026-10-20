@@ -16,7 +16,6 @@ import { projectPath, prototypePagePath, prototypeSourcePath, sharedFilePath, sh
 import { commentsFromOthers, nextVersionName, othersHaveCommented } from '../../../shared/prototypeNames';
 import { MANIFEST_FILE, declaredTarget, productTarget, taskAccessibility } from '../accessibility/accessibilityBrief';
 import { readDescriptor } from '../projects/descriptor';
-import { recordsRootFor } from '../projects/discovery';
 import { branchTip, commitsAfter, git, hasCommit, headCommit, isSafeBranchName, readCheckout, readTreeAt, repositoryOf } from '../platform/git';
 import { fetchBranch, freshTip } from '../platform/fetch';
 import { installLine } from '../codebase/install';
@@ -53,6 +52,8 @@ export interface PrototypeWorkContext {
 	esbuild: () => string | null;
 	/** The product's design system's folder, where its guidance and source may be read; null when none may be (`usableDesignSystem`). */
 	designSystemOf: (productRoot: string) => Promise<string | null>;
+	/** The product's design repository's records (`recordsRootFor`); null when it is not on this machine. */
+	recordsRootOf: (productRoot: string) => string | null;
 }
 
 /**
@@ -265,7 +266,7 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		const has = (p: string): string | null => (existsSync(p) ? p : null);
 		const descriptor = readDescriptor(root);
 		const pkg = descriptor.designSystem.package;
-		const designRoot = recordsRootFor(root);
+		const designRoot = ctx.recordsRootOf(root);
 		const installedDesignSystem = has(join(root, 'node_modules', ...pkg.split('/')));
 		return {
 			code,

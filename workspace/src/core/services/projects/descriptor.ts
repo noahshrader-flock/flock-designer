@@ -4,6 +4,7 @@ import type { WorkKind } from '../../../shared/contract';
 import { resolveInside } from '../platform/paths';
 import { asRecord } from '../../../shared/json';
 import { errorText } from '../../../shared/result';
+import { asRepositoryPath } from '../../../shared/repoRef';
 
 /** The descriptor's commands are the complete list of what may run in a repository; nothing else can be run. */
 
@@ -118,6 +119,8 @@ export const parseDescriptor = (text: string): WorkspaceDescriptor => {
 		throw new Error(`${DESCRIPTOR_PATH} is missing designSystem.package`);
 	}
 	const folder = ds.folder === undefined ? undefined : designSystemFolder(ds.folder);
+	const designRepository = d.designRepository === undefined ? undefined : asRepositoryPath(d.designRepository);
+	if (designRepository === null) throw new Error(`${DESCRIPTOR_PATH} has a designRepository that is not owner/repo`);
 
 	return {
 		version: 1,
@@ -126,6 +129,7 @@ export const parseDescriptor = (text: string): WorkspaceDescriptor => {
 		branchPattern: { codebase: branch.codebase },
 		commands,
 		designSystem: { package: ds.package, ...(folder !== undefined ? { folder } : {}) },
+		...(designRepository !== undefined ? { designRepository } : {}),
 		...(d.share !== undefined ? { share: parseShare(d.share) } : {}),
 	};
 };
@@ -172,6 +176,11 @@ export interface WorkspaceDescriptor {
 	 * checked out beside this one and named as its package is.
 	 */
 	designSystem: { package: string; folder?: string };
+	/**
+	 * The company's design repository this product belongs to (`owner/repo`): its projects, comments and shared guidance.
+	 * Absent: Flock's, as every product's was before a product could say.
+	 */
+	designRepository?: string;
 	/** Absent: it cannot be shared from here. */
 	share?: ShareDescriptor;
 }

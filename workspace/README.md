@@ -90,6 +90,12 @@ this app.
 shell string: there is no interpreter to hand a pipe or a semicolon to. A repository with no
 descriptor can be opened, but nothing can be run in it.
 
+**Its design repository.** A company's design repository (its projects, the comments on them, its shared agents, skills and
+standards) is named by `"designRepository": "owner/repo"`; without it, a product belongs to Flock's (`flock-designer`), as
+every product did before a product could say. DSNR finds that repository's clone beside the product, under its name, or where
+the person pointed it with **DSNR: Locate the design repository** (kept on this machine, per repository, since clone paths
+are each person's); with neither, it says which repository to clone (`recordsRootFor`, `designRepositoryMissing`).
+
 ### Sharing, and what it needs
 
 *Share for review* pushes a project's `feature/` branch to `origin`, opens a **draft** pull

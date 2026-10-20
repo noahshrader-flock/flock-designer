@@ -8,6 +8,7 @@ import { agentsHere } from './services/agent/agents';
 import { CheckoutMemory } from './services/projects/checkoutMemory';
 import { DesignSystemsMemory } from './services/designSystem/designSystems';
 import { SourceAnswers } from './services/projects/productDesignSystem';
+import { DesignRepositoryClones } from './services/projects/discovery';
 import type { GitHubAccount } from '../codeHost/github';
 import { Installer } from './services/codebase/install';
 import { PrototypeServer } from './services/prototypes/prototypeServer';
@@ -44,6 +45,7 @@ export const createCore = ({ paths, emit, ports, github, pictureRecipe }: Shell)
 	installer: new Installer(),
 	designSystems: new DesignSystemsMemory(paths.designSystems),
 	sourceAnswers: new SourceAnswers(paths.designSystemSources),
+	designRepositories: new DesignRepositoryClones(paths.designRepositories),
 	storyPreviewsRoot: paths.storyPreviews,
 	changeBranchFiles: paths.changeBranches,
 	componentPicturesRoot: paths.componentPictures,

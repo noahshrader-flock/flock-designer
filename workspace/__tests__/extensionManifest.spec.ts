@@ -76,6 +76,7 @@ describe('the extension’s manifest', () => {
 			'DSNR: Sign in to GitHub',
 			'DSNR: Your GitHub account',
 			'DSNR: Choose the agent',
+			'DSNR: Locate the design repository',
 		]);
 	});
 

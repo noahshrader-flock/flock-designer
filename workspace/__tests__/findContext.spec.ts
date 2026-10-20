@@ -110,7 +110,7 @@ describe('the context, from the open folders', () => {
 			missing: [
 				expect.stringMatching(/^No product is open/),
 				expect.stringMatching(/^No design system/),
-				expect.stringMatching(/^The design repository/),
+				// No product, so no design repository to name: the first line says what to open.
 			],
 		});
 	});

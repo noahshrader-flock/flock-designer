@@ -22,8 +22,10 @@ const descriptor: WorkspaceDescriptor = {
 
 describe('finding the design repository', () => {
 	it('finds the design repository beside the product, and says null rather than inventing a folder', () => {
-		expect(recordsRootFor('/h/GitHub/flock-coke', (p) => p === '/h/GitHub/flock-designer/.git')).toBe('/h/GitHub/flock-designer/projects');
-		expect(recordsRootFor('/h/GitHub/flock-coke', () => false)).toBeNull();
+		expect(recordsRootFor('/h/GitHub/flock-coke', { exists: (p) => p === '/h/GitHub/flock-designer/.git' })).toBe(
+			'/h/GitHub/flock-designer/projects',
+		);
+		expect(recordsRootFor('/h/GitHub/flock-coke', { exists: () => false })).toBeNull();
 	});
 });
 

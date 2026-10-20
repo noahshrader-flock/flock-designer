@@ -1,8 +1,9 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { DESCRIPTOR_PATH } from './descriptor';
-import { recordsRootFor } from './discovery';
+import { type DesignRepositoryClones, NO_CLONES, designRepositoryMissing, recordsRootFor } from './discovery';
 import { repositoryOf } from '../platform/git';
+import { HOST } from '../../../shared/vocabulary';
 import { type ProductDesignSystem, type SourceAnswers, designSystemIn, productDesignSystem } from './productDesignSystem';
 
 export type FoundHow = 'named' | 'open' | 'located';
@@ -25,10 +26,13 @@ export const findContext = async ({
 	folders,
 	located = null,
 	answers = NO_ANSWERS,
+	clones = NO_CLONES,
 }: {
 	folders: string[];
 	located?: string | null;
 	answers?: Pick<SourceAnswers, 'of'>;
+	/** Where the person keeps a design repository's clone, when not beside the product. */
+	clones?: Pick<DesignRepositoryClones, 'at'>;
 }): Promise<Context> => {
 	const product = folders.find((f) => existsSync(join(f, DESCRIPTOR_PATH))) ?? null;
 	let designSystem: Context['designSystem'] = null;
@@ -45,13 +49,13 @@ export const findContext = async ({
 		const root = await designSystemIn(located);
 		if (root !== null) designSystem = { root, how: 'located' };
 	}
-	const designRepository = product === null ? null : recordsRootFor(product);
+	const designRepository = product === null ? null : recordsRootFor(product, { clones });
 	const missing = [
 		...(source?.state === 'refused' ? [source.why] : []),
 		...(product === null ? [`No product is open: open a product's folder, one with ${DESCRIPTOR_PATH}, to see its prototypes.`] : []),
 		...(designSystem === null ? ['No design system was found in the open folders: open its folder beside the product, or locate it.'] : []),
-		...(designRepository === null
-			? ['The design repository (flock-designer) is not beside the product, so its projects are read from GitHub when you are signed in.']
+		...(product !== null && designRepository === null
+			? [`${designRepositoryMissing(product)} Until then its projects are read from ${HOST} when you are signed in.`]
 			: []),
 	];
 	const productRepository = product === null ? null : await repositoryOf(product);

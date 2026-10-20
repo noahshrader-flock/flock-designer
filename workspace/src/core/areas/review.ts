@@ -10,7 +10,7 @@ import { listProjects } from '../services/projects/listProjects';
 import { ProfileNames } from '../services/publishing/profileNames';
 
 export const reviewArea = (d: CallsDeps) => {
-	const { designRepo, github, opened, publisher, signedInLogin, trustedRecords, trustedRoot } = d;
+	const { designRepo, github, opened, publisher, recordsRootOf, signedInLogin, trustedRecords, trustedRoot } = d;
 	const profiles = new ProfileNames((path) => github.api(path));
 	/** Best effort: reading comments never fails because a file could not be written; the Address button, which depends on it, is strict. */
 	const exportComments = (projectId: string, branch: string, comments: ReviewComment[]): void => {
@@ -37,7 +37,7 @@ export const reviewArea = (d: CallsDeps) => {
 			// remembered from an earlier window does not count.
 			const remembered = trustedRoot();
 			const root = remembered !== null && opened.has(remembered) ? remembered : null;
-			const projects = await listProjects({ root, login: signedInLogin(), remote: () => designRepo.listProjects() });
+			const projects = await listProjects({ root, login: signedInLogin(), remote: () => designRepo.listProjects(), recordsRootOf });
 			void publisher.publish();
 			return profiles.nameEveryone(projects);
 		},

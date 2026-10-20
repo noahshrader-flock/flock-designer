@@ -11,7 +11,6 @@ import { type CheckoutParts, guidePart, handoffTask, buildInCodebaseTask, update
 import { againstBase } from '../services/codebase/againstBase';
 import { unfinishedWork } from '../services/codebase/checkoutClean';
 import { readDescriptor } from '../services/projects/descriptor';
-import { recordsRootFor } from '../services/projects/discovery';
 import { assertReady, handTask } from '../services/agent/handOver';
 import { HANDOFF_FILE, HANDOFF_SKILL, commandLine, leftAlone } from '../services/codebase/engineeringHandoff';
 import { branchTip, changedFiles, changedSince, fileAt, git, headCommit, readCheckout, remoteTip } from '../services/platform/git';
@@ -30,6 +29,7 @@ export const codebaseArea = (d: CallsDeps) => {
 		agentShown,
 		chooseAgentNow,
 		designSystemOf,
+		recordsRootOf,
 		checkout,
 		codebase,
 		ports,
@@ -62,7 +62,7 @@ export const codebaseArea = (d: CallsDeps) => {
 		return taskAccessibility(readSkillText, productTarget(join(canonical, descriptor.contextDir), descriptor.product), findings, check);
 	};
 	const sharedRoot = (canonical: string): string | null => {
-		const records = recordsRootFor(canonical);
+		const records = recordsRootOf(canonical);
 		return records === null ? null : dirname(records);
 	};
 	/** Named in the task, since a folder the agent has not been told about is one it never opens. */

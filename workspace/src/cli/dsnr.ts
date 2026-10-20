@@ -11,7 +11,7 @@ import { DESCRIPTOR_PATH } from '../core/services/projects/descriptor';
 import type { GitHubApi } from '../codeHost/github';
 import { loginOf } from '../codeHost/github';
 
-import { recordsRootFor } from '../core/services/projects/discovery';
+import { DesignRepositoryClones, designRepositoryMissing, recordsRootFor } from '../core/services/projects/discovery';
 import { assertUsableProjectId } from '../core/services/projects/workRecords';
 import { readCheckout, git } from '../core/services/platform/git';
 import { guidePart, prototypeBuildTask } from '../core/services/agent/agentTasks';
@@ -143,25 +143,29 @@ const optionsOf = (args: string[]) => {
 	}
 };
 
-const designBeside = (root: string): string => {
-	const records = recordsRootFor(root);
-	if (records === null) throw new Error(`There is no design repository beside ${root}. Clone flock-designer into the same folder.`);
+/** The window's own record of where the person keeps a design repository, beside the prototypes it told this command of. */
+const clonesOf = (deps: { prototypesRoot: string }): DesignRepositoryClones =>
+	new DesignRepositoryClones(appPaths(dirname(deps.prototypesRoot)).designRepositories);
+
+const designBeside = (root: string, clones: DesignRepositoryClones): string => {
+	const records = recordsRootFor(root, { clones });
+	if (records === null) throw new Error(designRepositoryMissing(root));
 	return dirname(records);
 };
 
-const designOf = async (cwd: string): Promise<string> => {
+const designOf = async (deps: { cwd: string; prototypesRoot: string }): Promise<string> => {
 	let root: string;
 	try {
-		root = realpathSync((await git(cwd, ['rev-parse', '--show-toplevel'])).trim());
+		root = realpathSync((await git(deps.cwd, ['rev-parse', '--show-toplevel'])).trim());
 	} catch {
 		throw new Error('This is not inside a repository. Run it from the design repository, or a product repository beside it.');
 	}
 	if (existsSync(join(root, 'projects')) && existsSync(join(root, 'skills'))) return root;
-	return designBeside(root);
+	return designBeside(root, clonesOf(deps));
 };
 
 const site = async (deps: CliDeps, values: { out?: string; serve?: boolean }): Promise<number> => {
-	const designRoot = await designOf(deps.cwd);
+	const designRoot = await designOf(deps);
 	const outDir = values.out ? resolve(deps.cwd, values.out) : join(deps.prototypesRoot, '_site');
 	// The pages work without it, and say nothing is missing: so it is said here when it could not be built.
 	let viewerDir: string | null = null;
@@ -197,7 +201,7 @@ const savedPage = async (deps: CliDeps, values: { project?: string; name?: strin
 	if (!name) throw new UsageError('Say which prototype, with --name.');
 	assertUsableProjectId(projectId);
 	assertPrototypeName(name);
-	const designRoot = await designOf(deps.cwd);
+	const designRoot = await designOf(deps);
 	if (!existsSync(join(designRoot, prototypePagePath(projectId, name)))) {
 		throw new Error(
 			doing === 'Publishing'
@@ -291,7 +295,7 @@ export const main = async (argv: string[], deps: CliDeps): Promise<number> => {
 		if (command === 'agent-files') {
 			const check = values.check === true;
 			const root = await productOf(deps.cwd, values.product, check ? 'check its agent files' : 'write its agent files');
-			const { written, unchanged, left } = writeEntryFiles(root, designBeside(root), { write: !check });
+			const { written, unchanged, left } = writeEntryFiles(root, designBeside(root, clonesOf(deps)), { write: !check });
 			const list = (paths: string[]) => paths.map((p) => `  ${p}`).join('\n');
 			const changed = written.length > 0;
 			deps.out(
@@ -313,14 +317,14 @@ export const main = async (argv: string[], deps: CliDeps): Promise<number> => {
 		if (command === 'read-returned') {
 			if (!values.project) throw new UsageError('Say which project, with --project.');
 			const root = await productOf(deps.cwd, values.product, 'log what testers found');
-			return readReturnedNow({ designRoot: designBeside(root), root, projectId: values.project, out: deps.out });
+			return readReturnedNow({ designRoot: designBeside(root, clonesOf(deps)), root, projectId: values.project, out: deps.out });
 		}
 		if (command === 'check-accessibility') {
 			if (!values.project) throw new UsageError('Say which project, with --project.');
 			// Run from the product's checkout (its gate), its HANDOFF.md is checked too; from the design repository, it is not.
 			const product = await productOf(deps.cwd, values.product, 'check its HANDOFF.md').catch(() => null);
 			return checkAccessibility({
-				designRoot: await designOf(deps.cwd),
+				designRoot: await designOf(deps),
 				productRoot: product,
 				projectId: values.project,
 				name: values.name ?? null,
@@ -336,7 +340,7 @@ export const main = async (argv: string[], deps: CliDeps): Promise<number> => {
 			values.product,
 			command === 'accessibility' ? 'open it, and nothing was measured' : 'build prototypes from it',
 		);
-		const designRoot = designBeside(root);
+		const designRoot = designBeside(root, clonesOf(deps));
 		// The clone alone: publishing is its own command here, and there is no extension sign-in to read GitHub with.
 		const store = designStore({ clone: () => designRoot, files: null, onWrite: () => undefined });
 		// The window's own answers, beside the prototypes it told this command of, so a design system asked about once is not asked again.
@@ -344,6 +348,7 @@ export const main = async (argv: string[], deps: CliDeps): Promise<number> => {
 		const work = prototypeWork({
 			prototypesRoot: deps.prototypesRoot,
 			designSystemOf: (productRoot) => usableDesignSystem(productRoot, answers),
+			recordsRootOf: (productRoot) => recordsRootFor(productRoot, { clones: clonesOf(deps) }),
 			productRoot: () => root,
 			store: store.records,
 			readDesignFile: store.readFile,

@@ -185,6 +185,7 @@ beforeEach(async () => {
 	const { Installer } = await import('../src/core/services/codebase/install');
 	const { DesignSystemsMemory } = await import('../src/core/services/designSystem/designSystems');
 	const { SourceAnswers } = await import('../src/core/services/projects/productDesignSystem');
+	const { DesignRepositoryClones } = await import('../src/core/services/projects/discovery');
 	register = (more: Partial<CallsContext> = {}) => {
 		const publishing = registerCalls({
 			emit: vi.fn(),
@@ -221,6 +222,7 @@ beforeEach(async () => {
 			prototypeServer,
 			designSystems: new DesignSystemsMemory(join(home, 'design-system.json')),
 			sourceAnswers: new SourceAnswers(join(home, 'design-system-sources.json')),
+			designRepositories: new DesignRepositoryClones(join(home, 'design-repositories.json')),
 			// Every file the app keeps is in this test's own folder: none is shared with another run or worker.
 			changeBranchFiles: appPaths(home).changeBranches,
 			storyPreviewsRoot: join(home, 'story-previews'),

@@ -4,6 +4,8 @@ import { httpProbe } from '../../src/core/services/codebase/runtime';
 import { join } from 'node:path';
 import * as vscode from 'vscode';
 import { served } from '../../src/core/handle';
+import { designRepositoryOf, isDesignRepository } from '../../src/core/services/projects/discovery';
+import { formatRepo } from '../../src/shared/repoRef';
 import { type Context, findContext } from '../../src/core/services/projects/findContext';
 import type { PublishStatus, SignInState } from '../../src/shared/contract';
 import { addressComment } from './address';
@@ -71,7 +73,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 
 	const designSystemAt = async (root: string) => (await findContext({ folders: [], located: root })).designSystem;
 	const findHere = async (): Promise<{ found: Context; unreadable: string | null }> => {
-		const at = await findContext({ folders: folders(), located: located(), answers: core.sourceAnswers });
+		const at = await findContext({ folders: folders(), located: located(), answers: core.sourceAnswers, clones: core.designRepositories });
 		const shown = await shownFrom(at.designSystem, located(), { show: (f) => showFound(core.designSystems, f), at: designSystemAt });
 		return { found: { ...at, designSystem: shown.designSystem }, unreadable: shown.unreadable };
 	};
@@ -212,6 +214,19 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 		await refresh();
 	};
 
+	/** The product's design repository, from a folder the person picks: kept for that repository on this machine. */
+	const locateDesignRepository = async () => {
+		if (found.product === null) throw new Error(productNow().why);
+		const repository = formatRepo(designRepositoryOf(found.product));
+		const chosen = await core.ports.chooseFolder({ title: `Locate ${repository}` });
+		if (chosen === null) return;
+		if (!isDesignRepository(chosen))
+			throw new Error(`${chosen} is not a design repository: it is not a git repository with an agents or a projects folder.`);
+		core.designRepositories.set(repository, chosen);
+		await refresh();
+		projectsChanged();
+	};
+
 	const productNow = () => ({ root: found.product, why: found.missing[0] ?? 'No product is open.' });
 	/** Ends with the window: nothing is saved after it is gone. */
 	let watching = true;
@@ -330,6 +345,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 				failed,
 				failedFor,
 				chooseAgent,
+				locateDesignRepository,
 			}),
 		).map(([id, handler]) => vscode.commands.registerCommand(id, handler)),
 		vscode.workspace.onDidChangeWorkspaceFolders(() => void refresh().catch(failed)),
