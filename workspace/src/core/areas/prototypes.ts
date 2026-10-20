@@ -85,7 +85,7 @@ export const prototypesArea = (d: CallsDeps) => {
 			await setDesignSystemFrom(store.records(), projectId, name, from);
 			try {
 				// Its saved source, here, is what is built.
-				await work.startChange(projectId, name, { newVersion: false, comments: null });
+				await work.sourceHere(projectId, name);
 				await work.buildPage(projectId, name);
 				await work.keep(projectId, name, readFileSync(work.file(projectId, name), 'utf8'));
 				deploys.page(projectId, name);

@@ -217,7 +217,8 @@ const InDsnr = ({ config, slots, showing, relay }: { config: ViewerConfig; slots
 	};
 	if (login === undefined) return null;
 	const version = prototypeKey(config.projectId, config.name);
-	const behind = (
+	/** The bar's controls for what this version is built on: its design system, and how far its base is behind. */
+	const builtOn = (
 		<>
 			<DesignSystemSwitch
 				relay={relay}
@@ -231,7 +232,7 @@ const InDsnr = ({ config, slots, showing, relay }: { config: ViewerConfig; slots
 	if (login === null)
 		return (
 			<PageBar config={config} slots={slots} showing={showing}>
-				{behind}
+				{builtOn}
 				<Button variant="secondary" disabled={signingIn} onPress={() => void signIn()}>
 					{signingIn ? 'Continue in VS Code…' : 'Sign in to comment'}
 				</Button>
@@ -243,7 +244,7 @@ const InDsnr = ({ config, slots, showing, relay }: { config: ViewerConfig; slots
 			slots={slots}
 			showing={showing}
 			store={store}
-			before={behind}
+			before={builtOn}
 			actions={(comment: ReviewComment): MenuItem[] =>
 				comment.resolved
 					? []

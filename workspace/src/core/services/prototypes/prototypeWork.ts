@@ -90,6 +90,8 @@ export interface PrototypeStart {
 	folder?: string | null;
 }
 
+const NO_SOURCE = 'This prototype has no React source saved, so there is nothing to build or change.';
+
 const NO_PRODUCT =
 	'Prototypes are built from the real design system, so they need the product repository, with its packages installed, on this machine.';
 
@@ -443,6 +445,15 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 	};
 
 	/** `comments` is null when unreadable. Nothing is recorded yet: see `finishChange`. */
+	/** The version's source, here: its saved one, written here when it was built on another machine. Its text. */
+	const sourceHere = async (projectId: string, name: string): Promise<string> => {
+		const source = await sourceText(projectId, name);
+		if (source === null) throw new Error(NO_SOURCE);
+		const local = sourceFile(projectId, name);
+		if (!existsSync(local)) writeFileSync(local, source);
+		return source;
+	};
+
 	const startChange = async (
 		projectId: string,
 		name: string,
@@ -452,18 +463,16 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		const all = await records(projectId);
 		const from = all.find((i) => i.name === name);
 		if (!from) throw new Error(`${projectId} has no prototype called ${name}.`);
-		const source = await sourceText(projectId, from.name);
-		if (source === null) throw new Error('This prototype has no React source saved, so there is nothing for the agent to change.');
 		const target = newVersion ? nextVersionName(all.map((i) => i.name)) : from.name;
-		const local = sourceFile(projectId, target);
+		let source: string;
 		if (newVersion) {
+			const saved = await sourceText(projectId, from.name);
+			if (saved === null) throw new Error(NO_SOURCE);
+			source = saved;
 			// A page left from an earlier run that changed nothing is not this version's.
 			rmSync(file(projectId, target), { force: true });
-			writeFileSync(local, source);
-		} else if (!existsSync(local)) {
-			// Built on another machine: its saved source is what is changed.
-			writeFileSync(local, source);
-		}
+			writeFileSync(sourceFile(projectId, target), source);
+		} else source = await sourceHere(projectId, from.name);
 		const others = comments === null ? null : commentsFromOthers(from.contributors, comments, acting);
 		return { from, target, fresh: newVersion, before: contentHashOf(source), others };
 	};
@@ -563,6 +572,7 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		saveBuilt,
 		page,
 		startChange,
+		sourceHere,
 		resumeChange,
 		finishChange,
 	};

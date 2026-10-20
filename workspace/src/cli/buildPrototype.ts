@@ -9,7 +9,6 @@ import { createHash } from 'node:crypto';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import type { Metafile, Plugin } from 'esbuild';
 import { STATE_NAME, STATES_META } from '../shared/prototypeStates';
 import { fromSource } from '../core/services/prototypes/fromSource';
 
@@ -45,17 +44,15 @@ const fileLoaders = Object.fromEntries(
 	['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.woff', '.woff2', '.ttf', '.eot'].map((e) => [e, 'dataurl' as const]),
 );
 
+/** Imported by path, a CommonJS package's functions may be under `default`. */
+const sassAt = async (path: string): Promise<typeof import('sass')> => {
+	const loaded = (await import(pathToFileURL(path).href)) as typeof import('sass') & { default?: typeof import('sass') };
+	return typeof loaded.compile === 'function' ? loaded : (loaded.default as typeof import('sass'));
+};
+
 // Built from the design system's clone, as it stands, when the version says so; else from the product's installed packages.
-const plugins: Plugin[] = [];
-let checkBuilt = (_inputs: Metafile['inputs']): string | null => null;
-if (flag === '--from' && designSystem && pkg && sassPath) {
-	// Imported by path, a CommonJS package's functions may be under `default`.
-	const loaded = (await import(pathToFileURL(sassPath).href)) as typeof import('sass') & { default?: typeof import('sass') };
-	const sass = typeof loaded.compile === 'function' ? loaded : (loaded.default as typeof import('sass'));
-	const made = fromSource({ designSystem, pkg, nodeModules, sass });
-	plugins.push(made.plugin);
-	checkBuilt = made.check;
-}
+const clone =
+	flag === '--from' && designSystem && pkg && sassPath ? fromSource({ designSystem, pkg, nodeModules, sass: await sassAt(sassPath) }) : null;
 
 try {
 	const result = await build({
@@ -79,9 +76,9 @@ try {
 		define: { 'process.env.NODE_ENV': '"production"', global: 'globalThis' },
 		logLevel: 'silent',
 		metafile: true,
-		plugins,
+		plugins: clone ? [clone.plugin] : [],
 	});
-	const refused = checkBuilt(result.metafile.inputs);
+	const refused = clone?.check(result.metafile.inputs) ?? null;
 	if (refused !== null) {
 		console.error(refused);
 		process.exit(1);
