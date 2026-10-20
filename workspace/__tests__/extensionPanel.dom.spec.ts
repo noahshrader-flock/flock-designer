@@ -19,6 +19,7 @@ const show = () => mountPage(createElement(Panel));
 const showOpen = async (context: Context = OPEN, projects = SAMPLE_PROJECTS) => {
 	await show();
 	await share('placed', { context, unreadable: null });
+	await share('agent', { name: 'Claude Code' });
 	await answer('listProjects', projects);
 };
 
@@ -550,6 +551,18 @@ describe('codebase work, in the panel', () => {
 		await press(inDialog('Start handoff'));
 		expect(lastAsk()).toEqual(['codebase', ['hand-off', 'zone-coverage']]);
 		expect(dialog()).toBeNull();
+	});
+
+	it('names the agent a handoff goes to, with Change, which asks which; and says it is chosen at the hand-over while it is not known', async () => {
+		await showOpen(OPEN, WITH_CODE);
+		await press(menuOf('Zone coverage'));
+		await press(item('Hand off'));
+		expect(dialog()!.textContent).toContain('With Claude Code. Change');
+		await press(inDialog('Change'));
+		expect(lastAsk()).toEqual(['chooseAgent', []]);
+		await share('agent', { name: null });
+		expect(dialog()!.textContent).toContain('You choose the agent when it is handed over. Choose now');
+		expect(dialog()!.textContent).toContain('The task opens in the agent in this window');
 	});
 
 	it('offers the draft pull request when a handoff found the work ready and nothing has changed since, with Run again', async () => {
@@ -1601,7 +1614,7 @@ describe('every change being tried, in the panel’s Changes: the tokens and eac
 			await answerHandOver(null, { branch: BRANCH, lines: ['primary: #000000'], review: { state: 'missing' }, pullRequest: null });
 			expect(handOver()?.querySelector('.branch-line')?.textContent).toBe(BRANCH);
 			expect(handOver()?.textContent).toContain('This hand-over is in Claude Code in this window now');
-			expect(handOver()?.textContent).toContain('Claude Code makes this branch, by the name its prompt gives');
+			expect(handOver()?.textContent).toContain('The agent makes this branch, by the name its prompt gives');
 			expect(allByRole('button', 'Save to a branch')).toEqual([]);
 			expect(allByRole('button', 'Process changes')).toEqual([]);
 			expect(allByRole('button', 'Propose')).toEqual([]);
@@ -1679,7 +1692,7 @@ describe('every change being tried, in the panel’s Changes: the tokens and eac
 			await answer('showHandOver', null);
 			await shareCatalog({ ...SAMPLE_CATALOG, commit: 'f00d42', showing: BRANCH } as Catalog);
 			const note = document.querySelector('[data-showing]') as HTMLElement;
-			expect(note.textContent).toContain(`Showing ${BRANCH}, Claude Code’s branch, not develop.`);
+			expect(note.textContent).toContain(`Showing ${BRANCH}, the agent’s branch, not develop.`);
 			expect(button('Stop previewing')).toBeDefined();
 			expect(allByRole('button', 'Propose')).toEqual([]);
 			await press(button('Show develop'));

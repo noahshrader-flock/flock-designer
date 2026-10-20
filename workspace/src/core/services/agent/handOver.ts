@@ -11,7 +11,7 @@ export const assertReady = async (agent: Agent): Promise<void> => {
 	if (ready.state === 'missing' || ready.state === 'signedOut') throw new Error(ready.said);
 };
 
-type HandPorts = Pick<Ports, 'agentWindow' | 'copy'>;
+type HandPorts = { agentWindow: Pick<Ports['agentWindow'], 'open'> } & Pick<Ports, 'copy'>;
 
 /**
  * `prepare` makes what is handed (a branch, a file) and runs only once the agent is known to be ready, so a hand-off that is

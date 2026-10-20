@@ -19,6 +19,7 @@ const given = (more: Partial<CommandDeps> = {}) => {
 		copyPublishedLink: vi.fn(async () => undefined),
 		signIn: vi.fn(async () => undefined),
 		signedIn: () => true,
+		chooseAgent: vi.fn(async () => undefined),
 		failed: vi.fn(),
 		failedFor: (fromCode: boolean) => (err: unknown) => {
 			if (fromCode) throw err;
@@ -86,6 +87,12 @@ describe('DSNR’s commands', () => {
 		const none = given();
 		await none.run('dsnr.assignFolder');
 		expect(none.d.tell).toHaveBeenCalledWith(expect.stringMatching(/to assign its folder/));
+	});
+
+	it('ask which agent work goes to, from the command palette too', async () => {
+		const g = given();
+		await g.run('dsnr.chooseAgent');
+		expect(g.d.chooseAgent).toHaveBeenCalled();
 	});
 
 	it('show the account only to someone signed in', async () => {

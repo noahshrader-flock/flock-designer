@@ -1,5 +1,5 @@
 /**
- * Only what is on the branch is read, never what Claude Code says it did. The diff is from where the branch left the base,
+ * Only what is on the branch is read, never what the agent says it did. The diff is from where the branch left the base,
  * so a base fetched since adds nothing of its own.
  */
 import type { BranchReview } from '../../../shared/contract';

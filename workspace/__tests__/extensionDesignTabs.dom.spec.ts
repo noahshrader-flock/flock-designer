@@ -99,7 +99,7 @@ describe('a component’s tab', () => {
 		const tokensAsked = calls('componentTokens').length;
 		const branch = 'dsnr/handoff-20261017-ab12';
 		await shareCatalog({ ...SAMPLE_CATALOG, commit: 'f00d42', showing: branch } as Catalog);
-		expect(document.querySelector('[data-showing]')?.textContent).toContain(`Showing ${branch}, Claude Code’s branch, not develop.`);
+		expect(document.querySelector('[data-showing]')?.textContent).toContain(`Showing ${branch}, the agent’s branch, not develop.`);
 		expect(document.querySelector('.stories')).toBeNull();
 		expect(calls('componentTokens').length).toBeGreaterThan(tokensAsked);
 		await press(button('Show develop'));

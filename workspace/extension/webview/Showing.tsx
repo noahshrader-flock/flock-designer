@@ -16,7 +16,7 @@ export const ShowingNote = ({ showing, branch }: { showing: string | null; branc
 			marks={{ 'data-showing': '' }}
 			action={{ label: `Show ${branch}`, onPress: () => void workspace().showLibraryBranch() }}
 		>
-			Showing <code>{showing}</code>, Claude Code’s branch, not {branch}. Saving, proposing and processing changes wait until {branch} is shown again,
+			Showing <code>{showing}</code>, the agent’s branch, not {branch}. Saving, proposing and processing changes wait until {branch} is shown again,
 			and what is tried is kept for it.
 		</Message>
 	);

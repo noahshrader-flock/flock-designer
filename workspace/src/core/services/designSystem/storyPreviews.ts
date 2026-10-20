@@ -92,7 +92,7 @@ export class StoryPreviews {
 	async preview(edits: TokenEdit[] = []): Promise<StoryPreview> {
 		const base = await this.base();
 		if (edits.length === 0 || base.state !== 'ready') return base;
-		// A branch handed to Claude Code is shown as it was committed: what is tried waits for the library's own branch.
+		// A branch handed to an agent is shown as it was committed: what is tried waits for the library's own branch.
 		if (await this.showing()) return base;
 		this.wanted = edits;
 		return this.trying.run('newest', () => this.tryNewest());

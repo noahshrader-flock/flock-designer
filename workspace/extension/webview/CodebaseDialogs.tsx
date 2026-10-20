@@ -2,6 +2,7 @@ import { type FormEvent, useEffect, useState } from 'react';
 import { useWorkspace } from './hooks/useWorkspace';
 import type { Handed } from '../../src/shared/contract';
 import { handedTo } from '../../src/shared/handedTo';
+import { AgentInUse, useAgentName, useInAgent } from './AgentInUse';
 import type { Project } from '../../src/shared/domain/projects';
 import { buildStart, buildSteps, noSetupNote, startBranch } from '../../src/shared/work';
 import { Button } from '../../src/ui/Button';
@@ -33,6 +34,7 @@ export const HandoffDialog = ({
 	onOpenCode: () => void;
 	onClose: () => void;
 }) => {
+	const agent = useAgentName();
 	const start = (e: FormEvent) => {
 		e.preventDefault();
 		onStart();
@@ -57,12 +59,13 @@ export const HandoffDialog = ({
 						</Message>
 						<p className="field-label">What happens</p>
 						<ol className="dialog-steps">
-							<li>The task opens in Claude Code in this window: press Enter there, and answer it as it goes.</li>
+							<li>The task opens in {agent} in this window: answer it there as it goes.</li>
 							<li>The product’s handoff gate runs: every test, accessibility, the app bundling, the standards.</li>
 							<li>Two independent reviews: does it read as the product, and is it built correctly.</li>
 							<li>What they block on is fixed and committed on {branch}, one fix at a time.</li>
 							<li>A note for the engineer, HANDOFF.md, is written on the branch, and says whether it is ready. Nothing is pushed.</li>
 						</ol>
+						<AgentInUse />
 					</>
 				)}
 				<DialogButtons>
@@ -107,6 +110,8 @@ export const BuildInCodebaseDialog = ({
 	const [busy, setBusy] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [handed, setHanded] = useState<Handed | null>(null);
+	const agent = useAgentName();
+	const inAgent = useInAgent();
 	useEffect(() => {
 		if (plan && listed) setFrom(startBranch(plan, listed));
 	}, [plan, listed]);
@@ -137,7 +142,7 @@ export const BuildInCodebaseDialog = ({
 		<Dialog title="Build in the codebase" onClose={onClose}>
 			<form onSubmit={(e) => void start(e)}>
 				<Message>
-					This moves <strong>{project.title}</strong> into the product as real work, built by Claude Code in the repository. It needs the full setup:
+					This moves <strong>{project.title}</strong> into the product as real work, built by {agent} in the repository. It needs the full setup:
 					packages, environment variables, and the app able to run.
 				</Message>
 				{plan === null && planned.error === null && <Message>Reading what it would do…</Message>}
@@ -154,7 +159,7 @@ export const BuildInCodebaseDialog = ({
 							<span className="field-label">Continues</span>
 							<code>{plan.branch}</code>
 							<span className="field-hint">
-								{plan.branch} already has this project’s codebase work, so Claude Code picks it up there.
+								{plan.branch} already has this project’s codebase work, so {agent} picks it up there.
 								{plan.current === plan.branch ? '' : ' Your checkout moves to it.'}
 							</span>
 						</div>
@@ -169,7 +174,9 @@ export const BuildInCodebaseDialog = ({
 					<>
 						<p className="field-label">What happens</p>
 						<ol className="dialog-steps">
-							<li>Claude Code opens in this window on {plan.branch}, with the task in a new conversation.</li>
+							<li>
+								{agent} opens in this window on {plan.branch}, with the task in a new conversation.
+							</li>
 							{buildSteps(continuing, plan.branch).map((step) => (
 								<li key={step}>{step}</li>
 							))}
@@ -184,9 +191,10 @@ export const BuildInCodebaseDialog = ({
 							</Message>
 						),
 				)}
+				<AgentInUse />
 				<DialogButtons>
 					<Button type="submit" disabled={!canStart}>
-						{busy ? 'Opening…' : continuing ? 'Continue in Claude Code' : 'Build in Claude Code'}
+						{busy ? 'Opening…' : inAgent(continuing ? 'Continue' : 'Build')}
 					</Button>
 				</DialogButtons>
 			</form>

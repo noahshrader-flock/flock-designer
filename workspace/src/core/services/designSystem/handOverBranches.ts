@@ -16,7 +16,7 @@ import { dsnrBranchPattern, newDsnrBranch } from './dsnrBranch';
 import { git } from '../platform/git';
 import { type ChangeBranchesDeps, type Kept, type KindRules, KeptBranches, shownBranch } from './changeBranches';
 
-/** Branches are named `dsnr/handoff-…`, as the prompt tells Claude Code to name them. */
+/** Branches are named `dsnr/handoff-…`, as the prompt tells the agent to name them. */
 export const HAND_OVER: KindRules<HandedChange> = {
 	kind: 'handOver',
 	branchWord: 'handoff',
@@ -49,7 +49,7 @@ export class HandOverBranches extends KeptBranches<HandedChange> {
 		super(handOver, HAND_OVER);
 	}
 
-	/** Claude Code makes the branch, so one not there yet is still being made. */
+	/** The agent makes the branch, so one not there yet is still being made. */
 	protected stands(): Promise<boolean> {
 		return Promise.resolve(true);
 	}
@@ -60,7 +60,7 @@ export class HandOverBranches extends KeptBranches<HandedChange> {
 		if (unfinished !== null) throw new Error(unfinished);
 		if (await this.handOver.saved(scope))
 			throw new Error('This has a branch DSNR saved it to. Propose it, or start over, before processing the changes.');
-		if ((await this.kept(scope)) !== null) throw new Error('This is handed to Claude Code already. Propose its branch, or start over.');
+		if ((await this.kept(scope)) !== null) throw new Error('This is handed to an agent already. Propose its branch, or start over.');
 		const base = await libraryCommit(system.root, system.branch);
 		if (base === null) throw new Error(`The library has no ${system.branch} branch from GitHub to make a branch from.`);
 		const changes = await this.handOver.changes(scope, change);
@@ -89,14 +89,13 @@ export class HandOverBranches extends KeptBranches<HandedChange> {
 
 	async propose(scope: string, tip: string, confirmed: boolean): Promise<ChangeBranchOf<'handOver'>> {
 		const at = await this.kept(scope);
-		if (at === null) throw new Error('Nothing is handed to Claude Code for this.');
+		if (at === null) throw new Error('Nothing is handed to an agent for this.');
 		const { system, kept } = at;
 		const review = await reviewBranch(system.root, kept.branch, kept.base, kept.baseBranch);
-		if (review.state === 'missing') throw new Error(`There is no branch ${kept.branch} yet: Claude Code makes it with the name its prompt gave.`);
-		if (review.state === 'empty') throw new Error(`Nothing is committed on ${kept.branch} yet: Claude Code commits its work there.`);
+		if (review.state === 'missing') throw new Error(`There is no branch ${kept.branch} yet: the agent makes it with the name its prompt gave.`);
+		if (review.state === 'empty') throw new Error(`Nothing is committed on ${kept.branch} yet: the agent commits its work there.`);
 		if (review.state === 'off-base') throw new Error(offBase(kept.branch, kept.baseBranch));
-		if (review.tip !== tip)
-			throw new Error(`Claude Code has committed on ${kept.branch} since it was shown here: look at it again, then propose it.`);
+		if (review.tip !== tip) throw new Error(`The agent has committed on ${kept.branch} since it was shown here: look at it again, then propose it.`);
 		if (flagged(review) && !confirmed)
 			throw new Error('This branch changes what the rules keep out, or more than one sitting’s review: send it on purpose, or start over.');
 		const next = await this.open(system, scope, kept, async () =>

@@ -16,7 +16,7 @@ export const startCore = (context: vscode.ExtensionContext, panels: Panels, onSi
 	const storage = context.globalStorageUri.fsPath;
 	mkdirSync(storage, { recursive: true });
 	const paths = appPaths(storage);
-	// The `dsnr` command builds its prototypes here too, so a page made from Claude Code is one the panel has.
+	// The `dsnr` command builds its prototypes here too, so a page made from an agent is one the panel has.
 	try {
 		tellCommandLine(cliDataFolder(settingsFolder), paths.prototypes);
 	} catch {

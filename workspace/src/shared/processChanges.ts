@@ -31,7 +31,7 @@ export const changeLine = (c: HandOverChange): string => `${c.said} (${c.where ?
 const unitOf = (group: HandOverGroup): string => (group.kind === 'tokens' ? 'its design tokens' : `the ${group.name} component alone`);
 
 /**
- * Typed into Claude Code, not sent: the person adds their words and presses Enter. Throws, in words, with nothing to hand
+ * Typed into the agent, not sent: the person adds their words and presses Enter. Throws, in words, with nothing to hand
  * over or more than one hand-over carries.
  */
 export const handOverPrompt = ({
@@ -167,7 +167,7 @@ export const proposalOf = ({
 	return {
 		title: `${unit}: ${plural(lines.length, 'change')} from DSNR`,
 		body: [
-			`A change to the design system's own code, tried in DSNR and made by Claude Code, for ${unitOf(group)}.`,
+			`A change to the design system's own code, tried in DSNR and made by an agent, for ${unitOf(group)}.`,
 			'',
 			...lines.map((l) => `- ${l}`),
 			'',

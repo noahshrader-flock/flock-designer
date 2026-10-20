@@ -151,7 +151,7 @@ export const PrimitivesTab = () => {
 	if (note) return <TabNote {...note} />;
 
 	const read = ready.tokens;
-	// A branch handed to Claude Code is shown as it was committed: what is tried waits for the library's own branch.
+	// A branch handed to an agent is shown as it was committed: what is tried waits for the library's own branch.
 	const edits = ready.showing === null ? tried : [];
 	const tokens = withEdits(read.tokens, edits);
 	const byPath = new Map(tokens.map((t) => [t.path, t]));

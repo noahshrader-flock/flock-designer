@@ -204,7 +204,7 @@ export class ComponentTokens {
 	/** Only the newest change asked for is drawn, in the background; one that failed is said once, and drawn again next ask. */
 	async reach(edits: TokenEdit[]): Promise<ChangeReach> {
 		if (edits.length === 0) return { state: 'none' };
-		// Not drawn on a branch handed to Claude Code, shown as it was committed: it is the library's own branch a change moves.
+		// Not drawn on a branch handed to an agent, shown as it was committed: it is the library's own branch a change moves.
 		const system = this.deps.system();
 		if (system !== null && (await (this.deps.at ?? baseAt)(system))?.showing) return { state: 'none' };
 		const index = await this.drawn();
@@ -342,7 +342,7 @@ export class ComponentTokens {
 		return { index: this.index };
 	}
 
-	/** `aside`: a branch handed to Claude Code, shown in place of the library's, whose pictures are not the grid's to keep. */
+	/** `aside`: a branch handed to an agent, shown in place of the library's, whose pictures are not the grid's to keep. */
 	private async build(system: ConnectedDesignSystem, commit: string, aside: boolean): Promise<Built> {
 		const reads = await systemReads(system, commit);
 		const [read, catalog, target] = await Promise.all([

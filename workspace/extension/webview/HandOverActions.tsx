@@ -13,10 +13,10 @@ const ReviewLine = ({ review }: { review: BranchReview }) => {
 	switch (review.state) {
 		case 'missing':
 			return (
-				<Message>Claude Code makes this branch, by the name its prompt gives, and commits its work there. DSNR reads it from git as it does.</Message>
+				<Message>The agent makes this branch, by the name its prompt gives, and commits its work there. DSNR reads it from git as it does.</Message>
 			);
 		case 'empty':
-			return <Message>The branch is made, and nothing is committed on it yet: Claude Code commits its work there.</Message>;
+			return <Message>The branch is made, and nothing is committed on it yet: the agent commits its work there.</Message>;
 		case 'off-base':
 			return (
 				<p className="warning-text">

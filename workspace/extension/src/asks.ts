@@ -78,6 +78,7 @@ export const askRoutes = (handlers: AskHandlers): ReadonlyMap<AskName, Route> =>
 	handle('setMode', [check.mode], done(handlers.setMode));
 	handle('setValueTrial', [check.path, check.commit, check.values], done(handlers.setValueTrial));
 	handle('syncDesignSystem', [], done(handlers.syncDesignSystem));
+	handle('chooseAgent', [], done(handlers.chooseAgent));
 	// Every ask in the table is answered: one left out would be refused as not answered, wherever it was asked.
 	const missing = ASKS.filter((name) => !served().has(name));
 	if (missing.length > 0) throw new Error(`The extension does not answer ${missing.join(', ')}.`);

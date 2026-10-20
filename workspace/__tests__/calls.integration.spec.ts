@@ -43,8 +43,10 @@ const fakePorts = () =>
 		copy: vi.fn(async (t: string) => void (copied = t)),
 		httpStatus: vi.fn(async () => 200),
 		// Never another application from a test: VS Code is treated as not installed.
-		agentWindow: { open: vi.fn(async (): Promise<'typed' | 'started' | null> => null) },
-		agentChoice: vi.fn((): AgentId => 'claude-code'),
+		agentWindow: { open: vi.fn(async (): Promise<'typed' | 'started' | null> => null), signedIn: vi.fn(async (): Promise<boolean | null> => null) },
+		agentChoice: vi.fn((): AgentId | 'ask' => 'claude-code'),
+		pickAgent: vi.fn(async (..._a: unknown[]): Promise<{ id: AgentId; keep: boolean } | null> => null),
+		keepAgent: vi.fn(async () => undefined),
 		shareTools: vi.fn(() => {
 			throw new Error('Sharing is not faked in this test.');
 		}),
@@ -103,6 +105,7 @@ let OpenedCheckouts: (typeof import('../src/core/services/projects/session'))['O
 let opened: InstanceType<typeof OpenedCheckouts>;
 /** What `claude auth status --json` answers: no agent is ever run here. */
 let signedIn: string;
+let claudeStatus: Fn;
 let runtimeStart: Fn;
 let memoryValue: string | null;
 let deleteComment: Fn;
@@ -145,6 +148,7 @@ beforeEach(async () => {
 	({ OpenedCheckouts } = await import('../src/core/services/projects/session'));
 	opened = new OpenedCheckouts();
 	signedIn = '{"loggedIn":true}';
+	claudeStatus = vi.fn(async () => ({ stdout: signedIn, stderr: '' }));
 	runtimeStart = vi.fn(async () => ({ state: 'stopped' }));
 	memoryValue = null;
 	deleteComment = vi.fn(async () => undefined);
@@ -186,7 +190,7 @@ beforeEach(async () => {
 			agents: {
 				'claude-code': claudeCode({
 					locate: () => 'claude',
-					run: async () => ({ stdout: signedIn, stderr: '' }),
+					run: (...a) => claudeStatus(...a),
 					spawnProcess: (() => {
 						throw new Error('No agent is run in these tests.');
 					}) as never,
@@ -597,6 +601,45 @@ describe('prototypes', () => {
 			expect(copied).toBe('');
 		});
 
+		it('asks once which agent when several are signed in, keeps the answer, and reads each one’s sign-in once', async () => {
+			await made();
+			ports.agentChoice.mockReturnValue('ask');
+			ports.pickAgent.mockResolvedValue({ id: 'codex', keep: true });
+			const r = await call(CHANNELS.handPrototypeBuild, product, 'demo', 'v1', 'A list');
+			expect(r).toMatchObject({ ok: true, value: { agent: 'Codex' } });
+			expect(ports.pickAgent).toHaveBeenCalledTimes(1);
+			expect(
+				(ports.pickAgent.mock.calls[0] as unknown as [{ name: string; readiness: { state: string } }[]])[0].map((o) => [o.name, o.readiness.state]),
+			).toEqual([
+				['Claude Code', 'ready'],
+				['Codex', 'ready'],
+				['GitHub Copilot', 'unknown'],
+			]);
+			expect(ports.keepAgent).toHaveBeenCalledWith('codex');
+			expect(claudeStatus).toHaveBeenCalledTimes(1);
+		});
+
+		it('hands nothing over, and writes no task, when the person dismisses the question', async () => {
+			await made();
+			ports.agentChoice.mockReturnValue('ask');
+			const r = await call(CHANNELS.handPrototypeBuild, product, 'demo', 'v1', 'A list');
+			expect(r.error).toBe('No agent was chosen, so nothing was handed over.');
+			expect(existsSync(join(home, 'prototype', 'demo', 'v1-build.md'))).toBe(false);
+			expect(copied).toBe('');
+		});
+
+		it('asks whatever is kept when the person changes it, and says which is used now without asking', async () => {
+			await made();
+			ports.pickAgent.mockResolvedValue({ id: 'codex', keep: true });
+			expect((await call(CHANNELS.chooseAgent)).value).toBe('Codex');
+			expect(ports.pickAgent).toHaveBeenCalledTimes(1);
+			expect((await call(CHANNELS.agentShown)).value).toBe('Claude Code');
+			ports.agentChoice.mockReturnValue('ask');
+			// Two are signed in, so it is still to be asked: nothing is said in its place.
+			expect((await call(CHANNELS.agentShown)).value).toBeNull();
+			expect(ports.pickAgent).toHaveBeenCalledTimes(1);
+		});
+
 		it('hands it to the agent the person chose, with that agent’s own command: Codex, in a terminal', async () => {
 			await made();
 			ports.agentChoice.mockReturnValue('codex');
@@ -606,10 +649,13 @@ describe('prototypes', () => {
 			expect(ports.agentWindow.open).toHaveBeenCalledWith(expect.objectContaining({ id: 'codex' }), expect.any(String), expect.any(String));
 		});
 
-		it('hands nothing over, and writes no task, when Claude Code is signed out or missing, and says what to do', async () => {
+		it('asks, in the kept agent’s words, when it is signed out, never handing to another in silence, and makes nothing until then', async () => {
 			await made();
 			signedIn = '{"loggedIn":false}';
-			expect((await call(CHANNELS.handPrototypeBuild, product, 'demo', 'v1', 'A list')).error).toMatch(/^Claude Code is not signed in\./);
+			expect((await call(CHANNELS.handPrototypeBuild, product, 'demo', 'v1', 'A list')).error).toBe(
+				'No agent was chosen, so nothing was handed over.',
+			);
+			expect(ports.pickAgent.mock.calls[0]?.[1]).toMatch(/^Claude Code is not signed in\./);
 			expect(existsSync(join(home, 'prototype', 'demo', 'v1-build.md'))).toBe(false);
 			expect(copied).toBe('');
 			signedIn = 'not the JSON asked for';

@@ -73,11 +73,49 @@ describe('the person’s GitHub account, through VS Code', () => {
 
 let settings: Record<string, unknown> = {};
 const terminalShown = vi.fn();
+interface FakeList {
+	items: { id: string; label: string; description: string }[];
+	activeItems: unknown[];
+	selectedItems: unknown[];
+	buttons: { iconPath: { id: string } }[];
+	title: string;
+	placeholder: string;
+	show: () => void;
+	hide: () => void;
+	dispose: () => void;
+	onDidAccept: (f: () => void) => void;
+	onDidHide: (f: () => void) => void;
+	onDidTriggerButton: (f: () => void) => void;
+	press: { accept: () => void; pin: () => void };
+}
+const lists: FakeList[] = [];
+/** VS Code's quick pick, as far as DSNR uses it: what it was given, and the person's presses. */
+const quickPick = (): FakeList => {
+	const on: Record<string, () => void> = {};
+	const list: FakeList = {
+		items: [] as { id: string; label: string; description: string }[],
+		activeItems: [] as unknown[],
+		selectedItems: [] as unknown[],
+		buttons: [] as { iconPath: { id: string } }[],
+		title: '',
+		placeholder: '',
+		show: vi.fn(),
+		hide: () => on.hide?.(),
+		dispose: vi.fn(),
+		onDidAccept: (f: () => void) => void (on.accept = f),
+		onDidHide: (f: () => void) => void (on.hide = f),
+		onDidTriggerButton: (f: () => void) => void (on.button = f),
+		press: { accept: () => on.accept?.(), pin: () => on.button?.() },
+	};
+	lists.push(list);
+	return list;
+};
 
 describe('VS Code’s ports', () => {
 	beforeEach(() => {
 		settings = {};
 		terminalShown.mockClear();
+		lists.length = 0;
 	});
 	const claude = claudeCode({ locate: () => '/bin/claude', run: async () => ({ stdout: '', stderr: '' }), spawnProcess: (() => null) as never });
 	const fake = () => ({
@@ -85,7 +123,13 @@ describe('VS Code’s ports', () => {
 			showOpenDialog: vi.fn(async (_options: unknown) => [{ fsPath: '/picked' }]),
 			showInformationMessage: vi.fn(async () => undefined),
 			createTerminal: vi.fn((_options: unknown) => ({ show: terminalShown })),
+			createQuickPick: vi.fn(() => quickPick()),
 		},
+		ThemeIcon: class {
+			constructor(readonly id: string) {}
+		},
+		lm: { selectChatModels: vi.fn(async (_selector: unknown): Promise<unknown[]> => []) },
+		ConfigurationTarget: { Global: 1, Workspace: 2, WorkspaceFolder: 3 },
 		env: { openExternal: vi.fn(async (_uri: unknown) => true), clipboard: { writeText: vi.fn(async () => undefined) } },
 		commands: {
 			executeCommand: vi.fn(async (_id: string, ..._args: unknown[]) => undefined),
@@ -243,16 +287,71 @@ describe('VS Code’s ports', () => {
 		expect(v.commands.executeCommand).not.toHaveBeenCalled();
 	});
 
-	it('hand work to the agent the person chose, and to Claude Code until they choose, or for a choice it does not know', () => {
+	it('hand work to the agent the person chose, and ask until they choose, or for a choice it does not know', () => {
 		const choice = (value?: unknown) => {
 			settings = value === undefined ? {} : { 'dsnr.agent.use': value };
 			return vscodePorts(fake() as never, none).agentChoice();
 		};
-		expect(choice()).toBe('claude-code');
+		expect(choice()).toBe('ask');
 		expect(choice('codex')).toBe('codex');
 		expect(choice('copilot')).toBe('copilot');
 		expect(choice('claude-code')).toBe('claude-code');
-		expect(choice('someone else')).toBe('claude-code');
+		expect(choice('someone else')).toBe('ask');
+	});
+
+	it('ask which agent in VS Code’s own list, saying which are signed in and which is used now, kept every time until the pin is pressed', async () => {
+		const v = fake();
+		const ports = vscodePorts(v as never, none);
+		const offered = [
+			{ id: 'claude-code' as const, name: 'Claude Code', readiness: { state: 'ready' as const } },
+			{ id: 'copilot' as const, name: 'GitHub Copilot', readiness: { state: 'unknown' as const } },
+		];
+		const picked = ports.pickAgent(offered, null, 'claude-code');
+		const list = lists[0]!;
+		expect(list.title).toBe('Which agent do you want to use?');
+		expect(list.placeholder).toMatch(/a conversation with one does not/);
+		expect(list.items.map((i) => [i.label, i.description])).toEqual([
+			['Claude Code', 'signed in · used now'],
+			['GitHub Copilot', 'not sure it is signed in'],
+		]);
+		expect(list.activeItems).toEqual([list.items[0]]);
+		expect(list.buttons[0]!.iconPath.id).toBe('pinned');
+		list.press.pin();
+		expect(list.buttons[0]!.iconPath.id).toBe('pin');
+		list.selectedItems = [list.items[1]];
+		list.press.accept();
+		expect(await picked).toEqual({ id: 'copilot', keep: false });
+		const dismissed = ports.pickAgent(offered, 'Codex is not signed in.', 'codex');
+		expect(lists[1]!.placeholder).toBe('Codex is not signed in.');
+		lists[1]!.hide();
+		expect(await dismissed).toBeNull();
+	});
+
+	it('keep the choice at the person’s level, and say ask until there is one', async () => {
+		const v = fake();
+		const update = vi.fn(async () => undefined);
+		v.workspace.getConfiguration = vi.fn((section: string) => ({
+			get: (key: string, fallback?: unknown) => settings[`${section}.${key}`] ?? fallback,
+			update,
+		})) as never;
+		const ports = vscodePorts(v as never, none);
+		expect(ports.agentChoice()).toBe('ask');
+		await ports.keepAgent('codex');
+		expect(update).toHaveBeenCalledWith('use', 'codex', 1);
+	});
+
+	it('say Copilot is signed in when VS Code offers its models, and that it cannot tell when it does not', async () => {
+		const v = fake();
+		const agent = copilot({ locate: () => '/bin/copilot' });
+		expect(await vscodePorts(v as never, none).agentWindow.signedIn(agent)).toBeNull();
+		v.lm.selectChatModels.mockResolvedValue([{ id: 'gpt' }]);
+		expect(await vscodePorts(v as never, none).agentWindow.signedIn(agent)).toBe(true);
+		expect(v.lm.selectChatModels).toHaveBeenCalledWith({ vendor: 'copilot' });
+		expect(
+			await vscodePorts(v as never, none).agentWindow.signedIn(
+				claudeCode({ locate: () => 'c', run: async () => ({ stdout: '', stderr: '' }), spawnProcess: (() => null) as never }),
+			),
+		).toBeNull();
 	});
 
 	it('move a location set under the setting’s old name to its new one, at each level it was set, once', async () => {

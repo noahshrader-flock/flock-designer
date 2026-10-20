@@ -261,6 +261,14 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 		panels.post({ type: 'projects-changed' });
 	}, 1500);
 	const tabs = panels.share('tabs', NO_TABS_SHOWN);
+	/** Said where work is handed over; read again whenever the choice, or who is signed in, may have changed. */
+	const agentShown = panels.share('agent', { name: null });
+	const showAgent = async () => agentShown.set({ name: valueOf(await api.agentShown()) });
+	const chooseAgent = async () => {
+		valueOf(await api.chooseAgent());
+		await showAgent();
+	};
+	void showAgent().catch(failed);
 	const tabsShown = () => tabs.set({ projects: reviews.shown(), components: design.shownComponents() });
 	const asks = askRoutes({
 		...design.handlers,
@@ -273,6 +281,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 		openReviewInBrowser,
 		copyReviewLink: copyPublishedLink,
 		openReviewPublished: openPublishedPage,
+		chooseAgent,
 	});
 	const sync = new SyncStatus();
 	void api.publishStatus().then((r) => r.ok && sync.show(r.value));
@@ -301,12 +310,18 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 				signedIn: () => github.state().state === 'signedIn',
 				failed,
 				failedFor,
+				chooseAgent,
 			}),
 		).map(([id, handler]) => vscode.commands.registerCommand(id, handler)),
 		vscode.workspace.onDidChangeWorkspaceFolders(() => void refresh().catch(failed)),
 		// Coming back to VS Code is a good moment to publish what was done meanwhile.
+		vscode.workspace.onDidChangeConfiguration((e) => {
+			if (e.affectsConfiguration('dsnr.agent.use')) void showAgent().catch(failed);
+		}),
 		vscode.window.onDidChangeWindowState((s) => {
 			if (!s.focused) return;
+			// Signed in or out of an agent meanwhile.
+			void showAgent().catch(failed);
 			void shell.publish().catch(failed);
 			// For comments made elsewhere while away, but not more than once in a while.
 			if (Date.now() - lastRead > REREAD_MS) projectsChanged();

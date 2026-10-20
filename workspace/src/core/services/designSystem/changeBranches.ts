@@ -59,7 +59,7 @@ export interface ChangeBranchesDeps {
 	now?: () => Date;
 }
 
-/** `tip` is the commit DSNR last saved, so it moves the branch only from there; null for a branch Claude Code commits on. */
+/** `tip` is the commit DSNR last saved, so it moves the branch only from there; null for a branch an agent commits on. */
 export interface Kept<C> {
 	branch: string;
 	base: string;
@@ -92,7 +92,7 @@ export abstract class KeptBranches<C, R extends KindRules<C> = KindRules<C>> {
 		this.records = new ScopedRecords(deps.system, deps.file, (raw) => this.whole(raw));
 	}
 
-	/** One Claude Code makes may not be there yet, so it can stand without existing. */
+	/** One an agent makes may not be there yet, so it can stand without existing. */
 	protected abstract stands(system: ConnectedDesignSystem, kept: Kept<C>): Promise<boolean>;
 
 	/**

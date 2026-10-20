@@ -31,7 +31,7 @@ export const showFound = async (
 	return null;
 };
 
-/** A branch handed to Claude Code, shown in the library's place, is not the library, so nothing tried is let go for it. */
+/** A branch handed to an agent, shown in the library's place, is not the library, so nothing tried is let go for it. */
 export const editsAfterRead = (edits: TokenEdit[], read: Catalog): TokenEdit[] =>
 	read.state === 'ready' && read.showing !== null ? edits : editsKept(edits, read);
 

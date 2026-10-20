@@ -275,11 +275,15 @@ there.
 starts in, or a list of rows (the icons at the right above them, remembered with the tab). **Assign folder…**, from a
 project's menu, its right-click menu or a review tab's menu, opens a dialog in the panel to put it in a folder, a new
 one, or none, with the same folder choice New prototype has; it uses the projects the panel already has, so it opens at
-once. The app's one setting, its theme, is VS Code's here. DSNR's settings are which agent it hands work to (`dsnr.agent.use`:
-Claude Code, in its panel; Codex, in a terminal here, which starts at once with the task; or GitHub Copilot, in VS Code's
-Chat, with the task typed in, or its command line in a terminal when there is no Chat), and where an agent with a
-panel opens it (`dsnr.agent.location`, below; it was `dsnr.claudeCode.location`, and a value set there is moved to it once).
-Changing a value in words runs unattended, which only Claude Code does.
+once. The app's one setting, its theme, is VS Code's here. DSNR's settings are which agent it hands work to (`dsnr.agent.use`: Claude Code, in its panel; Codex, in a terminal here,
+which starts at once with the task; or GitHub Copilot, in VS Code's Chat, with the task typed in, or its command line in
+a terminal when there is no Chat), and where an agent with a panel opens it (`dsnr.agent.location`, below; it was
+`dsnr.claudeCode.location`, and a value set there is moved to it once). **Which agent:** until one is kept, the one you
+are signed in to is used with no question; signed in to several, you are asked once, in VS Code's own list, and the
+choice is kept (the pin, on until pressed). A kept one you are no longer signed in to is asked about again, saying why:
+never another in silence. Change it from the agent named in a dialog that hands work over, from your GitHub account
+dialog, with **DSNR: Choose the agent**, or in Settings. Changing a value in words runs unattended, which only Claude Code
+does.
 
 **Moving into the code (Phase 5):** a prototype's menu has **Build in the codebase…** (and a review tab's menu does,
 for the prototype in front): a dialog says what it would do in the product open here (the branch, where it starts

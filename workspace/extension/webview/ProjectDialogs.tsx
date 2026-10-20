@@ -8,6 +8,7 @@ import { Field, TextArea, TextInput } from '../../src/ui/Field';
 import { FolderField, type FolderPick, folderOf, isChosen, pickOf } from './FolderField';
 import { workspace } from './host';
 import { Message } from '../../src/ui/Message';
+import { AgentInUse } from './AgentInUse';
 
 interface NewPrototypeAnswers {
 	title: string;
@@ -50,6 +51,7 @@ export const NewPrototypeDialog = ({
 					)}
 				</Field>
 				<FolderField folders={folders} pick={pick} onPick={setPick} />
+				<AgentInUse />
 				<DialogButtons>
 					<Button type="submit" disabled={!ready}>
 						Create prototype

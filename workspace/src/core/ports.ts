@@ -1,7 +1,8 @@
 import type { Check, PullRequest } from '../codeHost/changeRequests';
 import type { AxeRun } from '../shared/accessibility';
 import type { Drawn, Mode, Vary } from './services/designSystem/componentTokens';
-import type { Agent, AgentId } from './services/agent/agent';
+import type { Agent } from './services/agent/agent';
+import type { ChooseDeps, Choice } from './services/agent/choose';
 import type { Handed } from '../shared/contract';
 
 /** What each story file drew, in the order given; null for one that would not draw. */
@@ -50,10 +51,16 @@ export interface Ports {
 	copy(text: string): Promise<void>;
 	/** Follows redirects; throws when nothing answers within a few seconds. */
 	httpStatus(url: string): Promise<number>;
-	/** Opens the agent in `root` with `prompt`, saying how; null when this editor has nowhere for it. */
-	agentWindow: { open(agent: Agent, root: string, prompt: string): Promise<Handed['opened']> };
-	/** The agent the person hands work to. */
-	agentChoice(): AgentId;
+	/**
+	 * Opens the agent in `root` with `prompt`, saying how; null when this editor has nowhere for it. `signedIn`: whether the
+	 * editor itself can tell, for an agent that cannot (null: it cannot either).
+	 */
+	agentWindow: { open(agent: Agent, root: string, prompt: string): Promise<Handed['opened']>; signedIn(agent: Agent): Promise<boolean | null> };
+	/** The agent the person keeps, or `ask`. */
+	agentChoice(): Choice;
+	/** Which agent, asked of the person. */
+	pickAgent: ChooseDeps['pick'];
+	keepAgent: ChooseDeps['keep'];
 	shareTools(root: string): ShareTools;
 	headless: Headless;
 }

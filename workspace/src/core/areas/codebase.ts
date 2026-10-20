@@ -18,8 +18,23 @@ import { GUIDE, MOVE_SKILL, ROUTE_SKILL, buildInCodebaseLead } from '../services
 import { pullRequestText } from '../services/codebase/share';
 
 export const codebaseArea = (d: CallsDeps) => {
-	const { agent, checkout, codebase, ports, prototypePage, publisher, readSkillText, servePrototype, runtime, share, signedInLogin, work, written } =
-		d;
+	const {
+		agent,
+		agentShown,
+		chooseAgentNow,
+		checkout,
+		codebase,
+		ports,
+		prototypePage,
+		publisher,
+		readSkillText,
+		servePrototype,
+		runtime,
+		share,
+		signedInLogin,
+		work,
+		written,
+	} = d;
 	const prototypeAccessibility = async (projectId: string, name: string): Promise<AccessibilityResult> => {
 		const html = await prototypePage(projectId, name);
 		if (html === null) throw new Error('This prototype has no page yet.');
@@ -117,8 +132,10 @@ export const codebaseArea = (d: CallsDeps) => {
 				setup,
 			};
 		},
+		chooseAgent: () => chooseAgentNow(),
+		agentShown: () => agentShown(),
 		agentReady: async (): Promise<null> => {
-			await assertReady(agent());
+			await assertReady(await agent());
 			return null;
 		},
 		handOff: async (workIn: CheckedCheckout, projectId: string): Promise<Handed> => {
@@ -130,7 +147,7 @@ export const codebaseArea = (d: CallsDeps) => {
 			const parts = await checkoutParts(canonical, projectId);
 			const missingRoute = codebaseRecord.route ? null : { skill: await readSkillText(ROUTE_SKILL), recordFile: recordPath(recordsRoot, projectId) };
 			const task = handoffTask({ skill, projectId, branch, gate: commandLine(descriptor.commands, 'handoff', projectId), missingRoute }, parts);
-			const { handed } = await handTask(ports, agent(), async () => {
+			const { handed } = await handTask(ports, await agent(), async () => {
 				handoffs.set(handoffKey(canonical, projectId), { head: await headCommit(canonical), remote: await remoteTip(canonical, branch), branch });
 				return {
 					root: canonical,
@@ -177,7 +194,7 @@ export const codebaseArea = (d: CallsDeps) => {
 			const sourceFile = work.sourceFile(projectId, name);
 			const source = await work.sourceText(projectId, name);
 			const label = workLabel({ name });
-			const { handed } = await handTask(ports, agent(), async () => {
+			const { handed } = await handTask(ports, await agent(), async () => {
 				// The branch first: nothing is written for the agent if the work cannot start (a dirty tree, work not found).
 				const { branch, started: continuing } = await codebase.of(workIn, projectId);
 				if (continuing) await codebase.resume(workIn, projectId, branch);

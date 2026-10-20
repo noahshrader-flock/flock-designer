@@ -132,6 +132,11 @@
 				"category": "DSNR",
 				"title": "Your GitHub account",
 				"icon": "$(account)"
+			},
+			{
+				"command": "dsnr.chooseAgent",
+				"category": "DSNR",
+				"title": "Choose the agent"
 			}
 		],
 		"menus": {
@@ -231,12 +236,14 @@
 				"dsnr.agent.use": {
 					"type": "string",
 					"enum": [
+						"ask",
 						"claude-code",
 						"codex",
 						"copilot"
 					],
-					"default": "claude-code",
+					"default": "ask",
 					"enumDescriptions": [
+						"The one you are signed in to; asked once when you are signed in to several.",
 						"Claude Code, in its side panel.",
 						"Codex, in a terminal here.",
 						"GitHub Copilot, in VS Code's Chat."

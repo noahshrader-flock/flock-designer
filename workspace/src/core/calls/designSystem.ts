@@ -24,7 +24,7 @@ const ds = {
 		if (!CHANGE_KINDS.includes(v as ChangeKind)) throw new Error('That is not a kind of change DSNR keeps.');
 		return v;
 	}) as Check<ChangeKind>,
-	/** A hand-over's commits are Claude Code's, not DSNR's to save. */
+	/** A hand-over's commits are the agent's, not DSNR's to save. */
 	savedKind: ((v) => {
 		if (v === 'handOver' || !CHANGE_KINDS.includes(v as ChangeKind)) throw new Error('That is not a kind of change DSNR saves.');
 		return v;

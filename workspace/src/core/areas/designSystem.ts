@@ -48,7 +48,7 @@ export const designSystemArea = (d: CallsDeps) => {
 			// Not opened, it is not handed over: forgotten, so it can be pressed again.
 			const { handed, prepared } = await handOver(
 				ports,
-				agent(),
+				await agent(),
 				() => handOverBranches.start(file ?? '', change),
 				() => handOverBranches.forget(file ?? ''),
 			);
@@ -83,10 +83,10 @@ export const designSystemArea = (d: CallsDeps) => {
 			const system = shownSystem();
 			if (system === null) throw new Error('There is no design system connected.');
 			const handed = await handOverBranches.current(file ?? '');
-			if (handed === null) throw new Error('Nothing is handed to Claude Code for this.');
+			if (handed === null) throw new Error('Nothing is handed to an agent for this.');
 			if (handed.review.state === 'off-base') throw new Error(offBase(handed.branch, system.branch));
 			if (handed.review.state !== 'ready')
-				throw new Error(`Nothing is committed on ${handed.branch} yet, so there is nothing to show: Claude Code commits its work there.`);
+				throw new Error(`Nothing is committed on ${handed.branch} yet, so there is nothing to show: the agent commits its work there.`);
 			libraryShown.show(system, file ?? '', handed.branch);
 			return null;
 		},

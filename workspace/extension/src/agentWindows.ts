@@ -1,5 +1,6 @@
 import type { Ports } from '../../src/core/ports';
-import { type Agent, type AgentId, DEFAULT_AGENT, isAgentId } from '../../src/core/services/agent/agent';
+import { type Agent, type AgentId, isAgentId } from '../../src/core/services/agent/agent';
+import type { ChooseDeps, Choice } from '../../src/core/services/agent/choose';
 import type { Handed } from '../../src/shared/contract';
 import type { VsCodeApi } from './vscodePorts';
 
@@ -7,6 +8,8 @@ import type { VsCodeApi } from './vscodePorts';
 interface AgentWindow {
 	here(): boolean;
 	open(agent: Agent, root: string, prompt: string): Promise<NonNullable<Handed['opened']>>;
+	/** For an agent that cannot say itself whether it is signed in, what VS Code can tell. */
+	signedIn?(): Promise<boolean | null>;
 }
 
 const CLAUDE_CODE = 'anthropic.claude-code';
@@ -73,6 +76,8 @@ const CHAT_OPEN = 'workbench.action.chat.open';
 /** In VS Code's Chat, which has Copilot built in; in its command line, in a terminal, when this VS Code has no Chat. */
 const copilotWindow = (vscode: VsCodeApi, terminal: AgentWindow): AgentWindow => ({
 	here: () => true,
+	// Its models are offered only to someone signed in; listing them asks nothing of the person, using one would.
+	signedIn: async () => ((await vscode.lm.selectChatModels({ vendor: 'copilot' })).length > 0 ? true : null),
 	open: async (agent, root, prompt) => {
 		if (!(await vscode.commands.getCommands(true)).includes(CHAT_OPEN)) return terminal.open(agent, root, prompt);
 		await openFolder(vscode, root);
@@ -100,17 +105,61 @@ export const agentWindows = (vscode: VsCodeApi): Ports['agentWindow'] => {
 			const window = windows[agent.id];
 			return window?.here() ? window.open(agent, root, prompt) : null;
 		},
+		signedIn: async (agent) => (await windows[agent.id]?.signedIn?.()) ?? null,
 	};
 };
 
 /**
- * The person's own choice, `dsnr.agent.use`; the default until they choose. Not `dsnr.agent` itself: VS Code drops every
+ * The person's own choice, `dsnr.agent.use`, or `ask` until they keep one. Not `dsnr.agent` itself: VS Code drops every
  * setting under a section that is also a value, `dsnr.agent.location` with it.
  */
-export const agentChoice = (vscode: Pick<VsCodeApi, 'workspace'>): AgentId => {
+export const agentChoice = (vscode: Pick<VsCodeApi, 'workspace'>): Choice => {
 	const chosen = vscode.workspace.getConfiguration('dsnr.agent').get<unknown>('use');
-	return isAgentId(chosen) ? chosen : DEFAULT_AGENT;
+	return isAgentId(chosen) ? chosen : 'ask';
 };
+
+/** At the person's level, so it holds in every window, and with Settings Sync on every machine. */
+export const keepAgent =
+	(vscode: Pick<VsCodeApi, 'workspace' | 'ConfigurationTarget'>): ChooseDeps['keep'] =>
+	async (id) => {
+		await vscode.workspace.getConfiguration('dsnr.agent').update('use', id, vscode.ConfigurationTarget.Global);
+	};
+
+/** VS Code's own list, so it asks wherever the work started; the pin, on until pressed, keeps the choice. */
+export const pickAgent =
+	(vscode: Pick<VsCodeApi, 'window' | 'ThemeIcon'>): ChooseDeps['pick'] =>
+	(offered, why, kept) =>
+		new Promise((done) => {
+			const list = vscode.window.createQuickPick<{ id: AgentId; label: string; description: string }>();
+			let keep = true;
+			const pin = () => ({
+				iconPath: new vscode.ThemeIcon(keep ? 'pinned' : 'pin'),
+				tooltip: keep ? 'Used every time. Press to be asked each time.' : 'Asked each time. Press to use it every time.',
+			});
+			list.title = 'Which agent do you want to use?';
+			list.placeholder = why ?? 'The task, its files and branches carry over to another agent; a conversation with one does not.';
+			list.items = offered.map(({ id, name, readiness }) => ({
+				id,
+				label: name,
+				description: [readiness.state === 'ready' ? 'signed in' : 'not sure it is signed in', ...(id === kept ? ['used now'] : [])].join(' · '),
+			}));
+			list.activeItems = list.items.filter((i) => i.id === kept);
+			list.buttons = [pin()];
+			list.onDidTriggerButton(() => {
+				keep = !keep;
+				list.buttons = [pin()];
+			});
+			list.onDidAccept(() => {
+				const item = list.selectedItems[0];
+				done(item ? { id: item.id, keep } : null);
+				list.hide();
+			});
+			list.onDidHide(() => {
+				done(null);
+				list.dispose();
+			});
+			list.show();
+		});
 
 /**
  * `dsnr.claudeCode.location` became `dsnr.agent.location`: a value set under the old name, at any level, is moved to the new

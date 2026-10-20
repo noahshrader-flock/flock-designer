@@ -12,8 +12,6 @@ import { ProcessFailed, runFile } from '../platform/process';
 export const AGENT_IDS = ['claude-code', 'codex', 'copilot'] as const;
 export type AgentId = (typeof AGENT_IDS)[number];
 export const isAgentId = (v: unknown): v is AgentId => AGENT_IDS.includes(v as AgentId);
-/** Used until the person chooses. */
-export const DEFAULT_AGENT: AgentId = 'claude-code';
 
 /** `unknown`: it could not be told, which blocks nothing. */
 export type AgentReadiness = { state: 'ready' } | { state: 'missing'; said: string } | { state: 'signedOut'; said: string } | { state: 'unknown' };

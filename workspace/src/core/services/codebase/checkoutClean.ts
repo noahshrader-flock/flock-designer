@@ -13,7 +13,7 @@ const IN_PROGRESS: [string, string][] = [
 
 /**
  * Why the clone at `root` has unfinished work, in words, with what to do; or null when it has none: no change to a tracked file
- * and no new file (a new file would be swept into Claude Code's commit), no merge, rebase, cherry-pick, revert or bisect in
+ * and no new file (a new file would be swept into the agent's commit), no merge, rebase, cherry-pick, revert or bisect in
  * progress, and on a branch, not a detached HEAD.
  */
 export const unfinishedWork = async (root: string): Promise<string | null> => {
@@ -27,7 +27,7 @@ export const unfinishedWork = async (root: string): Promise<string | null> => {
 	const status = await git(root, ['status', '--porcelain', '--untracked-files=normal']);
 	if (status !== '') {
 		const files = status.split('\n').length;
-		return `In the design system’s checkout, ${files === 1 ? '1 file is' : `${files} files are`} changed or new and not committed. Commit or stash them first, so Claude Code’s changes are not mixed with yours.`;
+		return `In the design system’s checkout, ${files === 1 ? '1 file is' : `${files} files are`} changed or new and not committed. Commit or stash them first, so the agent’s changes are not mixed with yours.`;
 	}
 	try {
 		await git(root, ['symbolic-ref', '--quiet', 'HEAD']);

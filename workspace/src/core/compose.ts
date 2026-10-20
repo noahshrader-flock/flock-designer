@@ -6,6 +6,7 @@ import { storyComponent } from '../shared/valueNames';
 import { type Check, type EventSink, arg } from './handle';
 import type { Ports } from './ports';
 import { type Agent, type AgentId, runByChosen } from './services/agent/agent';
+import { type Offered, chooseAgent } from './services/agent/choose';
 import { classify } from './services/projects/branchProjects';
 import { syncBranches } from './services/publishing/branchSync';
 import type { CheckoutMemory } from './services/projects/checkoutMemory';
@@ -101,8 +102,29 @@ export const composeCore = ({
 	componentPictureRecipe,
 	warmAfterMs,
 }: CallsContext) => {
-	/** Asked at each hand-off, so a change of choice is used at once. */
-	const agent = (): Agent => agents[ports.agentChoice()];
+	/** An agent's readiness, with what the editor can tell of one that cannot say itself. */
+	const offered = (): Promise<Offered[]> =>
+		Promise.all(
+			Object.values(agents).map(async (a) => {
+				const own = await a.readiness();
+				const readiness = own.state === 'unknown' && (await ports.agentWindow.signedIn(a)) === true ? { state: 'ready' as const } : own;
+				return { id: a.id, name: a.name, readiness };
+			}),
+		);
+	const choose = async (always: boolean): Promise<Agent | null> => {
+		const all = await offered();
+		const id = await chooseAgent(all, { choice: () => ports.agentChoice(), pick: ports.pickAgent, keep: ports.keepAgent }, { always });
+		if (id === null) return null;
+		// Its readiness was read in choosing it: the hand-off asks again of this one, so it is not run twice.
+		const readiness = (all.find((o) => o.id === id) as Offered).readiness;
+		return { ...agents[id], readiness: async () => readiness };
+	};
+	/** Asked at each hand-off, so a change of choice is used at once; the person is asked only when it must be. */
+	const agent = async (): Promise<Agent> => {
+		const chosen = await choose(false);
+		if (chosen === null) throw new Error('No agent was chosen, so nothing was handed over.');
+		return chosen;
+	};
 	const openRepository = async (root: string): Promise<Checkout> => {
 		if (!isRepository(root)) {
 			throw new Error(`${root} is not a git repository.`);
@@ -216,7 +238,7 @@ export const composeCore = ({
 	const valueAgent = new ValueAgent({
 		system: shownSystem,
 		tokens: componentTokens,
-		run: (cwd, task, readOnly) => runByChosen(agent(), Object.values(agents), cwd, task, { readOnly }),
+		run: async (cwd, task, readOnly) => runByChosen(await agent(), Object.values(agents), cwd, task, { readOnly }),
 		readStandard: (path) => readSkillText(path),
 	});
 	const componentVariants = new ComponentVariants({
@@ -293,6 +315,14 @@ export const composeCore = ({
 		opened,
 		runtime,
 		agent,
+		chooseAgentNow: async (): Promise<string | null> => (await choose(true))?.name ?? null,
+		/** The agent work goes to now, said without asking: null when it is still to be asked, or none is signed in. */
+		agentShown: async (): Promise<string | null> => {
+			const id = await chooseAgent(await offered(), { choice: () => ports.agentChoice(), pick: async () => null, keep: async () => undefined }).catch(
+				() => null,
+			);
+			return id === null ? null : agents[id].name;
+		},
 		share,
 		github,
 		designRepo,

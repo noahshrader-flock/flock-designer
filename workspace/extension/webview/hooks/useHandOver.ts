@@ -4,7 +4,7 @@ import { handedTo } from '../../../src/shared/handedTo';
 import { workspace } from '../host';
 import { askOnce, askWhile } from './ask';
 
-/** As long as Claude Code may still be working on it; after that it is read again when Changes is opened again. */
+/** As long as the agent may still be working on it; after that it is read again when Changes is opened again. */
 const READ_EVERY_MS = 5_000;
 const READ_FOR_MS = 2 * 60 * 60_000;
 
@@ -21,7 +21,7 @@ export interface HandOverControls {
 	preview: (on: boolean) => void;
 }
 
-/** Its branch is DSNR's reading of git, never what Claude Code says: read again while `watch`, until it is proposed. */
+/** Its branch is DSNR's reading of git, never what the agent says: read again while `watch`, until it is proposed. */
 export const useHandOver = ({
 	shown,
 	file,
@@ -92,7 +92,7 @@ export const useHandOver = ({
 					setHandings((n) => n + 1);
 				},
 			),
-		// At the commit read here: one Claude Code committed since is refused, to be looked at first.
+		// At the commit read here: one the agent committed since is refused, to be looked at first.
 		propose: (confirmed) => {
 			const tip = branch?.review.state === 'ready' ? branch.review.tip : null;
 			if (tip !== null) void run('proposing', () => workspace().proposeChange('handOver', file, { tip, confirmed }), setBranch);

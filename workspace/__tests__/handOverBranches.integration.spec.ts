@@ -104,7 +104,7 @@ describe('a unit handed to Claude Code', () => {
 		await expect(handOvers().start(BUTTON, TRIED)).rejects.toThrow('This has a branch DSNR saved it to.');
 		saved = false;
 		await handOvers().start(BUTTON, TRIED);
-		await expect(handOvers().start(BUTTON, TRIED)).rejects.toThrow('This is handed to Claude Code already.');
+		await expect(handOvers().start(BUTTON, TRIED)).rejects.toThrow('This is handed to an agent already.');
 		// Another unit is its own: the tokens can be handed over beside it.
 		expect((await handOvers().start('', { edits: [] })).prompt).toContain('for its design tokens.');
 	});

@@ -9,6 +9,7 @@ import type { TokenEdit } from '../../src/shared/contract';
 import { type HandOverControls, useHandOver } from './hooks/useHandOver';
 import { HandOverActions } from './HandOverActions';
 import { useShowing } from './Showing';
+import { useAgentName } from './AgentInUse';
 import { Button, ButtonRow } from '../../src/ui/Button';
 import { Icon } from '../../src/ui/Icon';
 import { ChangeRow, ValueList, ValueItem } from '../../src/ui/ValueItem';
@@ -31,6 +32,7 @@ export const BranchActions = <C,>({
 	const chromatic = branch?.pullRequest?.chromatic;
 	// While a hand-over's branch is shown, nothing is saved or handed over (the core refuses): the note at the top says so.
 	const showing = useShowing();
+	const agent = useAgentName();
 	const offered = branchButtons({ branch, unsaved, busy, canSave: canSave && handOver.busy === null && showing === null });
 	if (handOver.branch !== null) return <HandOverActions controls={handOver} />;
 	const processable = branch === null && unsaved;
@@ -61,7 +63,7 @@ export const BranchActions = <C,>({
 				)}
 				{processable && (
 					<Button variant="secondary" disabled={busy !== null || handOver.busy !== null || showing !== null} onPress={handOver.processChanges}>
-						{handOver.busy === 'handing' ? 'Handing to Claude Code…' : 'Process changes'}
+						{handOver.busy === 'handing' ? `Handing to ${agent}…` : 'Process changes'}
 					</Button>
 				)}
 				{offered.propose && (

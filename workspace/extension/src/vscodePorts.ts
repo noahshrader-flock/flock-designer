@@ -1,18 +1,20 @@
 import type * as VsCode from 'vscode';
 import type { Headless, Ports } from '../../src/core/ports';
 import { toolPorts } from '../../src/core/toolPorts';
-import { agentChoice, agentWindows } from './agentWindows';
+import { agentChoice, agentWindows, keepAgent, pickAgent } from './agentWindows';
 import { isThisMachine } from '../../src/shared/thisMachine';
 
 /** So the ports are tested without VS Code. */
 export interface VsCodeApi {
-	window: Pick<typeof VsCode.window, 'showOpenDialog' | 'showInformationMessage' | 'createTerminal'>;
+	window: Pick<typeof VsCode.window, 'showOpenDialog' | 'showInformationMessage' | 'createTerminal' | 'createQuickPick'>;
 	env: Pick<typeof VsCode.env, 'openExternal' | 'clipboard'>;
 	commands: Pick<typeof VsCode.commands, 'executeCommand' | 'getCommands'>;
 	Uri: Pick<typeof VsCode.Uri, 'file' | 'parse'>;
 	extensions: Pick<typeof VsCode.extensions, 'getExtension'>;
 	workspace: Pick<typeof VsCode.workspace, 'workspaceFolders' | 'getConfiguration'>;
 	ConfigurationTarget: typeof VsCode.ConfigurationTarget;
+	ThemeIcon: typeof VsCode.ThemeIcon;
+	lm: Pick<typeof VsCode.lm, 'selectChatModels'>;
 }
 
 /** Anything but `https:` or `http:` on this machine (`file:`, `command:`, another scheme a page might hand it) is refused. */
@@ -53,5 +55,7 @@ export const vscodePorts = (vscode: VsCodeApi, headless: Headless): Ports => ({
 	...toolPorts(),
 	agentWindow: agentWindows(vscode),
 	agentChoice: () => agentChoice(vscode),
+	pickAgent: pickAgent(vscode),
+	keepAgent: keepAgent(vscode),
 	headless,
 });

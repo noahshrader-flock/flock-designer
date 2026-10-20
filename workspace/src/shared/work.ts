@@ -53,7 +53,7 @@ export const workLabel = (i: Pick<ProjectWork, 'name'>): string =>
 export const noSetupNote = (branch: string): string =>
 	`${branch} has no DSNR setup (.dsnr/workspace.json), so DSNR cannot work in it. Merge a branch that has the DSNR setup into it first.`;
 
-/** After the step that is each screen's own (where Claude Code opens). */
+/** After the step that is each screen's own (where the agent opens). */
 export const buildSteps = (continuing: boolean, branch: string): string[] => [
 	continuing
 		? 'The agent looks at what is already on the branch and its audit, then carries on from there.'

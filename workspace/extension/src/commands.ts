@@ -20,6 +20,7 @@ export interface CommandDeps {
 	signedIn: () => boolean;
 	failed: (err: unknown) => void;
 	failedFor: (fromCode: boolean) => (err: unknown) => void;
+	chooseAgent: () => Promise<void>;
 }
 
 /** DSNR's commands but the design system's and voice and tone's, by id; `raw` is what a caller passed, unchecked. */
@@ -63,5 +64,6 @@ export const commands = (d: CommandDeps): Record<string, (raw?: unknown) => unkn
 		'dsnr.account': () => {
 			if (d.signedIn()) return d.inPanel({ type: 'open-dialog', dialog: { kind: 'account' } });
 		},
+		'dsnr.chooseAgent': () => d.chooseAgent().catch(d.failed),
 	};
 };

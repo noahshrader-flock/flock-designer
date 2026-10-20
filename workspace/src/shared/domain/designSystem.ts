@@ -273,7 +273,7 @@ export interface ComponentPictures {
 	issues: Record<string, AccessibilityCounts>;
 }
 
-/** One model for all of them (`changeBranches.ts`); a hand-over's branch is made by Claude Code. */
+/** One model for all of them (`changeBranches.ts`); a hand-over's branch is made by the agent. */
 export interface ChangeKinds {
 	tokens: TokenEdit[];
 	values: TriedValue[];
@@ -281,7 +281,7 @@ export interface ChangeKinds {
 	handOver: HandedChange;
 }
 export type ChangeKind = keyof ChangeKinds;
-/** A hand-over's commits are Claude Code's. */
+/** A hand-over's commits are the agent's. */
 export type SavedKind = Exclude<ChangeKind, 'handOver'>;
 export const CHANGE_KINDS: readonly ChangeKind[] = ['tokens', 'values', 'voice', 'handOver'];
 

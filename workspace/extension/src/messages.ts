@@ -32,6 +32,8 @@ export interface PageAsks {
 	setMode(mode: Theme): Promise<Result<null>>;
 	setValueTrial(file: string, commit: string, values: TriedValue[]): Promise<Result<null>>;
 	syncDesignSystem(): Promise<Result<null>>;
+	/** The person chooses the agent work goes to, whatever is kept. */
+	chooseAgent(): Promise<Result<null>>;
 }
 
 export const ASKS = [
@@ -54,6 +56,7 @@ export const ASKS = [
 	'setMode',
 	'setValueTrial',
 	'syncDesignSystem',
+	'chooseAgent',
 ] as const satisfies readonly (keyof PageAsks)[];
 export type AskName = (typeof ASKS)[number];
 // Fails the typecheck when an ask of `PageAsks` is not in the table.
@@ -121,6 +124,8 @@ export interface SharedValues {
 	mode: Theme;
 	valueTrials: ValueTrials;
 	catalog: CatalogState;
+	/** The agent work goes to now; null while it is still to be asked. */
+	agent: { name: string | null };
 }
 export type SharedName = keyof SharedValues;
 
@@ -147,6 +152,7 @@ export const SHARED_START: SharedValues = {
 	mode: DEFAULT_THEME,
 	valueTrials: {},
 	catalog: { system: null, catalog: null, error: null, syncing: false },
+	agent: { name: null },
 };
 
 export type HostMessage =
