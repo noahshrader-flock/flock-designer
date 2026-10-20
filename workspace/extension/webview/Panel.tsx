@@ -29,7 +29,7 @@ export const Panel = () => {
 	const [componentsView, setComponentsView] = useState<View>(() => kept?.componentsView ?? 'grid');
 	const keep = (next: Partial<{ tab: Tab; view: View; part: Part; componentsView: View }>) =>
 		vscode().setState({ tab, view, part, componentsView, ...next });
-	const { context, unreadable } = useShared('placed');
+	const { context, unreadable, setup } = useShared('placed');
 	const [account, setAccount] = useState<SignInState>({ state: 'signedOut' });
 	const [dialog, setDialog] = useState<PanelDialog | null>(null);
 	useEffect(() => {
@@ -106,6 +106,7 @@ export const Panel = () => {
 									? { open: true, repository: context.productRepository }
 									: { open: false, why: context.missing[0] ?? 'No product is open.' }
 							}
+							setup={setup}
 							login={login}
 							onDialog={setDialog}
 							view={view}

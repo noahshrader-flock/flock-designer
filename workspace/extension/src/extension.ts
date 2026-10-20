@@ -1,11 +1,10 @@
 import { readDescriptor } from '../../src/core/services/projects/descriptor';
 import { installLine } from '../../src/core/services/codebase/install';
 import { httpProbe } from '../../src/core/services/codebase/runtime';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import * as vscode from 'vscode';
 import { served } from '../../src/core/handle';
-import { designRepositoryOf, isDesignRepository } from '../../src/core/services/projects/discovery';
-import { GUIDE } from '../../src/core/services/prototypes/prototype';
+import { designRepositoryOf, isDesignRepository, notADesignRepository } from '../../src/core/services/projects/discovery';
 import { formatRepo } from '../../src/shared/repoRef';
 import { type Context, findContext } from '../../src/core/services/projects/findContext';
 import type { PublishStatus, SignInState } from '../../src/shared/contract';
@@ -20,7 +19,9 @@ import { chooseDesignSystem, chosenDesignSystem } from '../../src/core/services/
 import { designSystemHost } from './designSystemHost';
 import { registerVoice } from './voice';
 import { errorText, valueOf } from '../../src/shared/result';
-import { type CodebaseAction, type HostMessage, NO_TABS_SHOWN, type Review, reviewsOf } from './messages';
+import { type CodebaseAction, type HostMessage, NO_TABS_SHOWN, type Placed, type Review, reviewsOf } from './messages';
+import { setupState } from '../../src/core/services/projects/setUp';
+import { handedTo } from '../../src/shared/handedTo';
 import { askRoutes } from './asks';
 import { commands } from './commands';
 import { type Given, newPrototype } from './newPrototype';
@@ -70,22 +71,28 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 	const localAddresses = async () => ({ images: await core.prototypeServer.origin(), frames: await core.prototypeServer.pagesOrigin() });
 	const folders = () => (vscode.workspace.workspaceFolders ?? []).map((f) => f.uri.fsPath);
 
-	const findHere = async (): Promise<{ found: Context; unreadable: string | null }> => {
-		const at = await findContext({ folders: folders(), answers: core.sourceAnswers, clones: core.designRepositories });
-		return { found: at, unreadable: await showFound(core.designSystems, at.designSystem) };
+	const findHere = async (): Promise<Placed & { context: Context }> => {
+		const deps = { answers: core.sourceAnswers, clones: core.designRepositories };
+		const at = await findContext({ folders: folders(), ...deps });
+		return {
+			context: at,
+			unreadable: await showFound(core.designSystems, at.designSystem),
+			setup: await setupState(folders(), at.product, deps),
+		};
 	};
-	let { found, unreadable } = await findHere();
-	const placed = panels.share('placed', { context: found, unreadable });
+	let { context: found, unreadable, setup } = await findHere();
+	const placed = panels.share('placed', { context: found, unreadable, setup });
 	/** VS Code trusts the product folder the person opened, so DSNR does. */
 	const trust = async () => {
 		if (found.product) await shell.open(found.product).catch(failed);
 	};
 	const refresh = async () => {
 		const before = core.designSystems.current()?.id;
-		({ found, unreadable } = await findHere());
+		({ context: found, unreadable, setup } = await findHere());
 		if (core.designSystems.current()?.id !== before) design.anotherShown();
 		await trust();
-		placed.set({ context: found, unreadable });
+		placed.set({ context: found, unreadable, setup });
+		if (setup !== null) watchSetUp();
 		void askAboutSource().catch(failed);
 	};
 	/** A design system beside the product that could not be confirmed: asked once, and what is found read again on an answer. */
@@ -224,8 +231,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 		const repository = formatRepo(designRepositoryOf(found.product));
 		const chosen = await core.ports.chooseFolder({ title: `Locate ${repository}` });
 		if (chosen === null) return;
-		if (!isDesignRepository(chosen))
-			throw new Error(`${chosen} is not a design repository: it is not a git repository with ${GUIDE}, which every design repository has.`);
+		if (!isDesignRepository(chosen)) throw new Error(notADesignRepository(chosen));
 		core.designRepositories.set(repository, chosen);
 		await refresh();
 		projectsChanged();
@@ -261,6 +267,33 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 		});
 	const watchHandoff = (check: () => Promise<boolean>) =>
 		watchUntil(check, { couldNot: "DSNR could not read the handoff's result", pollMs: 5000, giveUpMs: 4 * 60 * 60 * 1000, once: true });
+	/**
+	 * While a repository here is being set up, or its workspace file is not committed yet, what it has is read again as it
+	 * changes (the agent writing, the person committing), until it is committed. One watch at a time.
+	 */
+	let watchingSetUp = false;
+	const watchSetUp = () => {
+		if (watchingSetUp) return;
+		watchingSetUp = true;
+		watchUntil(
+			async () => {
+				const now = await setupState(folders(), found.product, { answers: core.sourceAnswers, clones: core.designRepositories });
+				if (JSON.stringify(now) !== JSON.stringify(setup)) await refresh();
+				if (setup === null) watchingSetUp = false;
+				return setup === null;
+			},
+			{ couldNot: 'DSNR could not read how the setup stands', pollMs: 5000, giveUpMs: 4 * 60 * 60 * 1000, once: true },
+		);
+	};
+	if (setup !== null) watchSetUp();
+	/** Set up: the agent the person chose sets the repository up; what it writes is read as it goes. */
+	const setUpHere = async () => {
+		if (setup?.state !== 'not-set-up') throw new Error('Nothing open here is waiting to be set up.');
+		const handed = await shell.setUp(setup.root);
+		if (handed === null) return;
+		vscodeTell(`${handedTo(handed, `Setting up ${basename(setup.root)}`)} Nothing is committed: review what it writes, here, then commit it.`);
+		watchSetUp();
+	};
 	const startPrototype = (given: Given) =>
 		newPrototype({ ...here, given, product: productNow(), onChanged: projectsChanged, watchBuild: watchPrototype });
 	const localRun = (root: string): LocalRun => {
@@ -312,6 +345,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 		...design.handlers,
 		chooseDesignSystem: () => chooseTheDesignSystem(),
 		getStarted: () => vscode.commands.executeCommand('dsnr.getStarted'),
+		setUp: () => setUpHere(),
 		askNewPrototype: () => vscode.commands.executeCommand('dsnr.newPrototype'),
 		newPrototype: (title, task, folder) => startPrototype({ title, task, folder }),
 		codebase: (action, projectId) => codebaseWork(action, projectId),

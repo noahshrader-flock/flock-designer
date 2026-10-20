@@ -1,4 +1,6 @@
 import type { Project } from '../../src/shared/domain/projects';
+import type { SetupState } from '../../src/core/services/projects/setUp';
+import { Setup } from './Setup';
 import { type ReactNode, useEffect, useState } from 'react';
 import { foldersOf, inFolder } from '../../src/shared/brief';
 import { plural } from '../../src/shared/plural';
@@ -142,6 +144,7 @@ interface ProjectsRead {
 export const Projects = ({
 	read,
 	product,
+	setup,
 	login,
 	onDialog,
 	view,
@@ -150,6 +153,8 @@ export const Projects = ({
 	read: ProjectsRead;
 	/** The open product's repository (`owner/repo`; null when it cannot be said), or, with none open, what to do. */
 	product: { open: true; repository: string | null } | { open: false; why: string };
+	/** Where setting the open repository up stands. */
+	setup: SetupState;
 	login: string | null;
 	onDialog: (dialog: PanelDialog) => void;
 	view: View;
@@ -210,7 +215,8 @@ export const Projects = ({
 	return (
 		<>
 			{login === null && <Message inset>These are the projects on this machine. Sign in to see your team's too.</Message>}
-			{!product.open && (
+			<Setup setup={setup} signedIn={login !== null} />
+			{!product.open && setup?.state !== 'not-set-up' && (
 				<Message size="block" inset action={{ label: 'Get started', onPress: () => void asks().getStarted() }}>
 					No product is open, so these are everyone’s projects. Open a product to make a prototype, or to build or Address one.
 				</Message>

@@ -19,6 +19,8 @@ import { readTokens } from './services/designSystem/designTokens';
 import { HandOverBranches } from './services/designSystem/handOverBranches';
 import { LibraryShown } from './services/designSystem/libraryShown';
 import { DesignRepo, DesignRepos } from '../codeHost/designRepo';
+import { handTask } from './services/agent/handOver';
+import { handSetUp } from './services/projects/setUp';
 import { DESIGN_REPO } from '../shared/config';
 import type { RepoRef } from '../shared/repoRef';
 import { designStore } from './services/publishing/designStore';
@@ -347,6 +349,15 @@ export const composeCore = ({
 		share,
 		github,
 		designRepos,
+		/** Hands a repository that is not set up yet to the person's agent, to set it up (`handSetUp`); null when no design repository was picked. */
+		setUp: (root: string) =>
+			handSetUp({
+				root,
+				clones: designRepositories,
+				prototypesRoot,
+				choose: () => ports.chooseFolder({ title: 'Choose the design repository' }),
+				hand: async (prepare) => (await handTask(ports, await agent(), prepare)).handed,
+			}),
 		prototypesRoot,
 		installer,
 		designSystems,

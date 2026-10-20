@@ -19,7 +19,7 @@ const OPEN: Context = {
 const show = () => mountPage(createElement(Panel));
 const showOpen = async (context: Context = OPEN, projects = SAMPLE_PROJECTS) => {
 	await show();
-	await share('placed', { context, unreadable: null });
+	await share('placed', { context, unreadable: null, setup: null });
 	await share('agent', { name: 'Claude Code' });
 	await answer('listProjects', projects);
 };
@@ -1042,7 +1042,7 @@ describe('Projects, focused on the product open', () => {
 	it('goes back to the product’s own when another product is opened', async () => {
 		await showOpen(OPEN, PROJECTS);
 		await choose('All projects');
-		await share('placed', { context: { ...OPEN, product: '/work/flock-pepsi', productRepository: PEPSI }, unreadable: null });
+		await share('placed', { context: { ...OPEN, product: '/work/flock-pepsi', productRepository: PEPSI }, unreadable: null, setup: null });
 		await answer('listProjects', PROJECTS);
 		expect((await scopeChoices()).map((o) => o.getAttribute('aria-checked'))).toEqual(['true', 'false']);
 	});
@@ -1233,9 +1233,61 @@ describe('Projects', () => {
 		expect(body().querySelector('.message')?.textContent).toBe("These are the projects on this machine. Sign in to see your team's too.");
 	});
 
+	describe('setting the open repository up', () => {
+		const signedIn = { state: 'signedIn', user: { login: 'noah', name: 'Noah', avatarUrl: null } };
+		const NONE: Context = { ...OPEN, product: null, productRepository: null, designSystem: null, source: null, missing: ['No product is open.'] };
+		const placed = async (context: Context, setup: unknown, signIn = true) => {
+			await show();
+			await share('placed', { context, unreadable: null, setup } as never);
+			if (signIn) await say({ type: 'event', name: 'onSignInChanged', payload: signedIn });
+			await answer('listProjects', SAMPLE_PROJECTS);
+		};
+		const setupMessage = () => [...body().querySelectorAll('.message-block')].find((m) => /set ?up/i.test(m.textContent ?? '')) as HTMLElement;
+
+		it('offers Set up, once signed in, for a repository that is not set up, in place of Get started', async () => {
+			await placed(NONE, { state: 'not-set-up', root: '/work/paradome' });
+			expect(setupMessage().querySelector('.message-title')?.textContent).toBe('paradome is not set up for DSNR');
+			expect(body().textContent).not.toContain('No product is open');
+			await press(button('Set up'));
+			expect(lastAsk()).toEqual(['setUp', []]);
+		});
+
+		it('says to sign in first, and offers nothing until then', async () => {
+			await placed(NONE, { state: 'not-set-up', root: '/work/paradome' }, false);
+			expect(setupMessage().textContent).toContain('Sign in, at the top of DSNR, to set it up.');
+			expect(setupMessage().querySelector('button')).toBeNull();
+		});
+
+		it('asks for a review before the workspace file is committed, showing what to fix, what it lacks and what DSNR may run', async () => {
+			const check = {
+				problems: ['test runs the script test, which package.json does not have.'],
+				missing: ['No design-mode command: it runs the real product on mock data, for codebase work and its accessibility check.'],
+				commands: [{ id: 'lint', label: 'Lint', argv: ['npm', 'run', 'lint'] }],
+			};
+			await placed(OPEN, { state: 'review', root: '/work/flock-coke', check });
+			expect(setupMessage().querySelector('.message-title')?.textContent).toBe("flock-coke's setup has something to fix");
+			await press(button('Review'));
+			const shown = dialog()!;
+			expect([...shown.querySelectorAll('[data-part="title"]')].map((t) => t.textContent)).toEqual([
+				'To fix',
+				'What it does not have, which DSNR would use',
+				'The commands it lets DSNR run',
+			]);
+			expect(shown.textContent).toContain('test runs the script test, which package.json does not have.');
+			expect(shown.querySelector('code')?.textContent).toBe('lint: npm run lint');
+		});
+
+		it('asks only for a review when there is nothing to fix, and says nothing once it is committed', async () => {
+			await placed(OPEN, { state: 'review', root: '/work/flock-coke', check: { problems: [], missing: [], commands: [] } });
+			expect(setupMessage().querySelector('.message-title')?.textContent).toBe("Review flock-coke's setup, then commit it");
+			await placed(OPEN, null);
+			expect(setupMessage()).toBeUndefined();
+		});
+	});
+
 	it('says why it could not read them', async () => {
 		await show();
-		await share('placed', { context: OPEN, unreadable: null });
+		await share('placed', { context: OPEN, unreadable: null, setup: null });
 		const call = sent.find((m) => m.name === 'listProjects');
 		await say({ type: 'answer', id: call?.id, result: { ok: false, error: 'GitHub could not be reached.' } });
 		expect(body().querySelector('.empty [data-part="title"]')?.textContent).toBe('The projects could not be read');
@@ -1253,7 +1305,7 @@ describe('Projects', () => {
 describe('Design System', () => {
 	const open = async (context: Context = OPEN, unreadable?: string) => {
 		await show();
-		await share('placed', { context, unreadable: unreadable ?? null });
+		await share('placed', { context, unreadable: unreadable ?? null, setup: null });
 		if (context.product) await answer('listProjects', SAMPLE_PROJECTS);
 		await press(options()[1]!);
 	};
@@ -1577,7 +1629,7 @@ describe('every change being tried, in the panel’s Changes: the tokens and eac
 	};
 	const designOpen = async () => {
 		await show();
-		await share('placed', { context: OPEN, unreadable: null });
+		await share('placed', { context: OPEN, unreadable: null, setup: null });
 		await answer('listProjects', SAMPLE_PROJECTS);
 		await press(options()[1]!);
 		await share('catalog', { system: { id: SYSTEM, name: 'FUI' }, catalog: SAMPLE_CATALOG, error: null, syncing: false });
@@ -1643,7 +1695,7 @@ describe('every change being tried, in the panel’s Changes: the tokens and eac
 
 	it('opens when a component’s tab asks for it, on the Design System tab', async () => {
 		await show();
-		await share('placed', { context: OPEN, unreadable: null });
+		await share('placed', { context: OPEN, unreadable: null, setup: null });
 		await answer('listProjects', SAMPLE_PROJECTS);
 		expect(chosen()).toBe('Projects');
 		await say({ type: 'open-dialog', dialog: { kind: 'changes' } });
@@ -1753,7 +1805,7 @@ describe('every change being tried, in the panel’s Changes: the tokens and eac
 
 		it('is not offered while the group has a branch DSNR saved', async () => {
 			await show();
-			await share('placed', { context: OPEN, unreadable: null });
+			await share('placed', { context: OPEN, unreadable: null, setup: null });
 			await answer('listProjects', SAMPLE_PROJECTS);
 			await press(options()[1]!);
 			await share('catalog', { system: { id: SYSTEM, name: 'FUI' }, catalog: SAMPLE_CATALOG, error: null, syncing: false });
@@ -1786,7 +1838,7 @@ describe('every change being tried, in the panel’s Changes: the tokens and eac
 
 		it('offers neither Save nor Process changes while another branch is shown', async () => {
 			await show();
-			await share('placed', { context: OPEN, unreadable: null });
+			await share('placed', { context: OPEN, unreadable: null, setup: null });
 			await answer('listProjects', SAMPLE_PROJECTS);
 			await press(options()[1]!);
 			await share('catalog', { system: { id: SYSTEM, name: 'FUI' }, catalog: { ...SAMPLE_CATALOG, showing: BRANCH }, error: null, syncing: false });
@@ -1820,7 +1872,7 @@ describe('trying a change to the tokens, saving it to a branch, and proposing it
 	const ID = 'flocksafety/flock-react-component-lib';
 	const tokensOpen = async () => {
 		await show();
-		await share('placed', { context: OPEN, unreadable: null });
+		await share('placed', { context: OPEN, unreadable: null, setup: null });
 		await answer('listProjects', SAMPLE_PROJECTS);
 		await press(options()[1]!);
 		await share('catalog', { system: { id: ID, name: 'FUI' }, catalog: SAMPLE_CATALOG, error: null, syncing: false });
@@ -1956,7 +2008,7 @@ describe('trying a change to the tokens, saving it to a branch, and proposing it
 
 	it('puts back a change saved before DSNR was last closed, when none is being tried', async () => {
 		await show();
-		await share('placed', { context: OPEN, unreadable: null });
+		await share('placed', { context: OPEN, unreadable: null, setup: null });
 		await answer('listProjects', SAMPLE_PROJECTS);
 		await press(options()[1]!);
 		await share('catalog', { system: { id: ID, name: 'FUI' }, catalog: SAMPLE_CATALOG, error: null, syncing: false });

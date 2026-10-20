@@ -1,5 +1,5 @@
 import type { DesignRepo } from '../codeHost/designRepo';
-import type { Checkout } from '../shared/contract';
+import type { Checkout, Handed } from '../shared/contract';
 import { clearRoutes } from './handle';
 import { registerAccount } from './calls/account';
 import { registerCheckout } from './calls/checkout';
@@ -29,6 +29,8 @@ export const registerCalls = (
 	open: (root: string) => Promise<Checkout>;
 	/** The design repository the open product belongs to, for the shell's own reads (a review copy, the viewer's address). */
 	designRepo: () => DesignRepo;
+	/** Sets up a repository open here that is not set up yet, by the person's agent: for the shell alone. */
+	setUp: (root: string) => Promise<Handed | null>;
 } => {
 	clearRoutes();
 	const d = composeCore(context);
@@ -39,5 +41,10 @@ export const registerCalls = (
 	registerReview(reviewArea(d));
 	registerPublishing(publishingArea(d));
 	registerAccount(accountArea(d));
-	return { publish: (force = false) => d.publisher.publish(force), open: (root) => d.openRepository(root), designRepo: () => d.designRepos.now() };
+	return {
+		publish: (force = false) => d.publisher.publish(force),
+		open: (root) => d.openRepository(root),
+		designRepo: () => d.designRepos.now(),
+		setUp: d.setUp,
+	};
 };

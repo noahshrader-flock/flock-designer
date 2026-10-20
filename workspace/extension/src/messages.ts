@@ -1,4 +1,5 @@
 import type { Context } from '../../src/core/services/projects/findContext';
+import type { SetupState } from '../../src/core/services/projects/setUp';
 import { type Catalog, INVOKE, type InvokeName, type Result, sameTried } from '../../src/shared/contract';
 import { sameChange } from '../../src/shared/tokens';
 import type { TokenEdit, TriedValue } from '../../src/shared/domain/designSystem';
@@ -14,6 +15,8 @@ import { workLabel, workOf } from '../../src/shared/work';
 export interface PageAsks {
 	chooseDesignSystem(): Promise<Result<null>>;
 	getStarted(): Promise<Result<null>>;
+	/** Hands the open repository that is not set up to the person's agent, to set it up. */
+	setUp(): Promise<Result<null>>;
 	/** Asked of the extension, which knows whether one can be started. */
 	askNewPrototype(): Promise<Result<null>>;
 	newPrototype(title: string, task: string, folder: string | null): Promise<Result<null>>;
@@ -39,6 +42,7 @@ export interface PageAsks {
 export const ASKS = [
 	'chooseDesignSystem',
 	'getStarted',
+	'setUp',
 	'askNewPrototype',
 	'newPrototype',
 	'codebase',
@@ -106,6 +110,8 @@ export const sameTabs = (a: TabsShown, b: TabsShown): boolean =>
 export interface Placed {
 	context: Context | null;
 	unreadable: string | null;
+	/** Where setting the open repository up stands (`setupState`). */
+	setup: SetupState;
 }
 
 /** `catalog` is null while it is first read. */
@@ -146,7 +152,7 @@ export const sameShared = <K extends SharedName>(name: K, a: SharedValues[K], b:
 	((SAME[name] as ((x: SharedValues[K], y: SharedValues[K]) => boolean) | undefined) ?? Object.is)(a, b);
 
 export const SHARED_START: SharedValues = {
-	placed: { context: null, unreadable: null },
+	placed: { context: null, unreadable: null, setup: null },
 	tabs: NO_TABS_SHOWN,
 	tokenEdits: [],
 	mode: DEFAULT_THEME,

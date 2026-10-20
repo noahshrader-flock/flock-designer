@@ -84,3 +84,7 @@ export const designRepositoryMissing = (productRoot: string): string => {
  * product does not have. A product's own `projects` folder (an Angular workspace's) is not one.
  */
 export const isDesignRepository = (dir: string): boolean => existsSync(join(dir, '.git')) && existsSync(join(dir, GUIDE));
+
+/** Said when a folder picked as a design repository is not one (`isDesignRepository`). */
+export const notADesignRepository = (dir: string): string =>
+	`${dir} is not a design repository: it is not a git repository with ${GUIDE}, which every design repository has.`;

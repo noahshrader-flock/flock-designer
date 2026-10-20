@@ -25,7 +25,7 @@ const OPEN: Context = {
 
 const shown = async () => {
 	await mountPage(createElement(Panel));
-	await share('placed', { context: OPEN, unreadable: null });
+	await share('placed', { context: OPEN, unreadable: null, setup: null });
 	await share('agent', { name: 'Claude Code' });
 	await answer('listProjects', SAMPLE_PROJECTS);
 };

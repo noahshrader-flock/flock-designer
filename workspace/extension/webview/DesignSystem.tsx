@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { baseName } from '../../src/shared/baseName';
 import type { Context } from '../../src/core/services/projects/findContext';
 import type { Catalog, ComponentPictures, DesignToken } from '../../src/shared/contract';
 import { plural } from '../../src/shared/plural';
@@ -40,8 +41,6 @@ interface ChangesDialog {
 
 const CHOOSE = 'Choose design system…';
 const choose = () => void asks().chooseDesignSystem();
-
-const folderName = (path: string): string => path.split(/[\\/]/).filter(Boolean).at(-1) ?? path;
 
 const Problems = ({ problems, onClose }: { problems: Extract<Catalog, { state: 'ready' }>['tokens']['problems']; onClose: () => void }) => (
 	<Dialog title="Not read" onClose={onClose}>
@@ -261,7 +260,7 @@ export const DesignSystem = ({
 		<Ready
 			catalog={catalog}
 			id={read.id}
-			name={read.name ?? folderName(found.root)}
+			name={read.name ?? baseName(found.root)}
 			syncing={read.syncing}
 			pictures={pictures}
 			part={part}
