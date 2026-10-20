@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import * as vscode from 'vscode';
 import { served } from '../../src/core/handle';
 import { designRepositoryOf, isDesignRepository } from '../../src/core/services/projects/discovery';
+import { GUIDE } from '../../src/core/services/prototypes/prototype';
 import { formatRepo } from '../../src/shared/repoRef';
 import { type Context, findContext } from '../../src/core/services/projects/findContext';
 import type { PublishStatus, SignInState } from '../../src/shared/contract';
@@ -221,7 +222,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 		const chosen = await core.ports.chooseFolder({ title: `Locate ${repository}` });
 		if (chosen === null) return;
 		if (!isDesignRepository(chosen))
-			throw new Error(`${chosen} is not a design repository: it is not a git repository with an agents or a projects folder.`);
+			throw new Error(`${chosen} is not a design repository: it is not a git repository with ${GUIDE}, which every design repository has.`);
 		core.designRepositories.set(repository, chosen);
 		await refresh();
 		projectsChanged();

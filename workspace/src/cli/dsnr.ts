@@ -11,7 +11,7 @@ import { DESCRIPTOR_PATH } from '../core/services/projects/descriptor';
 import type { GitHubApi } from '../codeHost/github';
 import { loginOf } from '../codeHost/github';
 
-import { DesignRepositoryClones, designRepositoryMissing, recordsRootFor } from '../core/services/projects/discovery';
+import { DesignRepositoryClones, designRepositoryMissing, isDesignRepository, recordsRootFor } from '../core/services/projects/discovery';
 import { assertUsableProjectId } from '../core/services/projects/workRecords';
 import { readCheckout, git } from '../core/services/platform/git';
 import { guidePart, prototypeBuildTask } from '../core/services/agent/agentTasks';
@@ -160,7 +160,8 @@ const designOf = async (deps: { cwd: string; prototypesRoot: string }): Promise<
 	} catch {
 		throw new Error('This is not inside a repository. Run it from the design repository, or a product repository beside it.');
 	}
-	if (existsSync(join(root, 'projects')) && existsSync(join(root, 'skills'))) return root;
+	// Run inside the design repository itself: it is the one, as DSNR recognizes a picked one.
+	if (isDesignRepository(root)) return root;
 	return designBeside(root, clonesOf(deps));
 };
 

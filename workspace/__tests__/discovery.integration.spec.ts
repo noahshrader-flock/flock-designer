@@ -6,7 +6,6 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { ProjectWork } from '../src/shared/contract';
 import type { WorkspaceDescriptor } from '../src/core/services/projects/descriptor';
 import { classify, patternToRegex, readBranchProjects } from '../src/core/services/projects/branchProjects';
-import { recordsRootFor } from '../src/core/services/projects/discovery';
 import { continueWork, readWork } from '../src/core/services/projects/workRecords';
 import { unionLocal } from '../src/shared/projectList';
 import { projectWork, recordDefault } from './fixtures';
@@ -19,15 +18,6 @@ const descriptor: WorkspaceDescriptor = {
 	commands: [],
 	designSystem: { package: 'x' },
 };
-
-describe('finding the design repository', () => {
-	it('finds the design repository beside the product, and says null rather than inventing a folder', () => {
-		expect(recordsRootFor('/h/GitHub/flock-coke', { exists: (p) => p === '/h/GitHub/flock-designer/.git' })).toBe(
-			'/h/GitHub/flock-designer/projects',
-		);
-		expect(recordsRootFor('/h/GitHub/flock-coke', { exists: () => false })).toBeNull();
-	});
-});
 
 describe('reading a branch as work', () => {
 	it("reads codebase work by the repository's own pattern", () => {

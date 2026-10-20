@@ -28,10 +28,11 @@ const productNaming = (designRepository?: string) => {
 		writeFileSync(file, JSON.stringify({ ...descriptor, designRepository }));
 	}
 };
-/** A clone of a design repository: a git repository with its agents and projects. */
+/** A clone of a design repository: a git repository with its agent guide and projects. */
 const designRepository = (dir: string) => {
 	mkdirSync(join(dir, '.git'), { recursive: true });
 	mkdirSync(join(dir, 'agents'), { recursive: true });
+	writeFileSync(join(dir, 'agents', 'ui-guide.md'), '# Building UI\n');
 	mkdirSync(join(dir, 'projects'), { recursive: true });
 	return dir;
 };
@@ -83,18 +84,26 @@ describe('the design repository a product belongs to', () => {
 		);
 	});
 
-	it('refuses a workspace file whose design repository is not owner/repo', () => {
+	it('refuses a workspace file whose design repository is not owner/repo, and guesses no repository for it', () => {
 		productNaming('../elsewhere');
 		expect(() => readDescriptor(product)).toThrow('designRepository that is not owner/repo');
-		// Unreadable: Flock's, as with none, rather than a guess.
-		expect(designRepositoryOf(product)).toEqual(DESIGN_REPO);
+		// Unreadable: no repository is guessed for it, Flock's included, and the file's own error is what is said.
+		designRepository(join(base, 'GitHub', DESIGN_REPO.repo));
+		expect(recordsRootFor(product)).toBeNull();
+		expect(designRepositoryMissing(product)).toMatch(
+			/^Which design repository cheq-console belongs to cannot be told: .*designRepository that is not owner\/repo/,
+		);
 	});
 
-	it('takes a picked folder only when it is a git repository with an agents or a projects folder', () => {
+	it('takes a picked folder only when it is a git repository with the agent guide, never a product with a projects folder', () => {
 		expect(isDesignRepository(designRepository(join(base, 'a')))).toBe(true);
+		// An Angular workspace keeps its apps in projects/: a product, not a design repository.
 		mkdirSync(join(base, 'b', '.git'), { recursive: true });
+		mkdirSync(join(base, 'b', 'projects'), { recursive: true });
 		expect(isDesignRepository(join(base, 'b'))).toBe(false);
+		// The guide alone, not a git repository.
 		mkdirSync(join(base, 'c', 'agents'), { recursive: true });
+		writeFileSync(join(base, 'c', 'agents', 'ui-guide.md'), '# Building UI\n');
 		expect(isDesignRepository(join(base, 'c'))).toBe(false);
 	});
 });

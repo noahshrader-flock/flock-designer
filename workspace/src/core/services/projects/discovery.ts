@@ -1,18 +1,19 @@
-import { existsSync, statSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { basename, isAbsolute, join } from 'node:path';
 import { DESIGN_REPO } from '../../../shared/config';
 import { type RepoRef, formatRepo, repoRefOf } from '../../../shared/repoRef';
 import { type JsonFile, jsonFile } from '../platform/jsonFile';
 import { readDescriptor } from './descriptor';
+import { GUIDE } from '../prototypes/prototype';
+import { errorText } from '../../../shared/result';
 
-/** The design repository a product belongs to: what its workspace file names, else Flock's, as every product's was. */
+/**
+ * The design repository a product belongs to: what its workspace file names, else Flock's, as every product's was. Throws
+ * the file's own error when it cannot be read: a product is never given another company's repository by a guess.
+ */
 export const designRepositoryOf = (productRoot: string): RepoRef => {
-	try {
-		const named = readDescriptor(productRoot).designRepository;
-		return named === undefined ? DESIGN_REPO : repoRefOf(named);
-	} catch {
-		return DESIGN_REPO;
-	}
+	const named = readDescriptor(productRoot).designRepository;
+	return named === undefined ? DESIGN_REPO : repoRefOf(named);
 };
 
 /**
@@ -55,7 +56,13 @@ export const recordsRootFor = (
 	productRoot: string,
 	{ clones = NO_CLONES, exists = existsSync }: { clones?: Pick<DesignRepositoryClones, 'at'>; exists?: (p: string) => boolean } = {},
 ): string | null => {
-	const repo = designRepositoryOf(productRoot);
+	let repo: RepoRef;
+	try {
+		repo = designRepositoryOf(productRoot);
+	} catch {
+		// Its workspace file cannot be read, so which repository it belongs to cannot be told: none is found.
+		return null;
+	}
 	const found = [clones.at(formatRepo(repo)), join(productRoot, '..', repo.repo)].find(
 		(dir): dir is string => dir !== null && exists(join(dir, '.git')),
 	);
@@ -63,11 +70,17 @@ export const recordsRootFor = (
 };
 
 /** Said when `recordsRootFor` finds nothing: which repository, and the two ways to give it. */
-export const designRepositoryMissing = (productRoot: string): string =>
-	`DSNR could not find ${formatRepo(designRepositoryOf(productRoot))}, the design repository ${basename(productRoot)} belongs to. Clone it beside ${basename(productRoot)}, or run DSNR: Locate the design repository.`;
+export const designRepositoryMissing = (productRoot: string): string => {
+	const product = basename(productRoot);
+	try {
+		return `DSNR could not find ${formatRepo(designRepositoryOf(productRoot))}, the design repository ${product} belongs to. Clone it beside ${product}, or run DSNR: Locate the design repository.`;
+	} catch (err) {
+		return `Which design repository ${product} belongs to cannot be told: ${errorText(err)}`;
+	}
+};
 
-const isFolder = (p: string): boolean => existsSync(p) && statSync(p).isDirectory();
-
-/** A folder the person picks as one: a git repository with a design repository's own folders. Trusted beyond that. */
-export const isDesignRepository = (dir: string): boolean =>
-	existsSync(join(dir, '.git')) && (isFolder(join(dir, 'agents')) || isFolder(join(dir, 'projects')));
+/**
+ * A folder that is a design repository: a git repository with the agent guide every task begins with (`GUIDE`), which a
+ * product does not have. A product's own `projects` folder (an Angular workspace's) is not one.
+ */
+export const isDesignRepository = (dir: string): boolean => existsSync(join(dir, '.git')) && existsSync(join(dir, GUIDE));
