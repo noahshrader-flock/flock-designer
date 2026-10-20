@@ -11,7 +11,7 @@ import { Field, TextArea, TextInput } from '../../src/ui/Field';
 import { FolderField, type FolderPick, folderOf, isChosen, pickOf } from './FolderField';
 import { workspace } from './host';
 import { Message } from '../../src/ui/Message';
-import { AgentInUse } from './AgentInUse';
+import { AgentInUse, useAgentPhrase } from './AgentInUse';
 import { useAction } from './hooks/useAction';
 
 interface NewPrototypeAnswers {
@@ -33,6 +33,7 @@ export const NewPrototypeDialog = ({
 	const [task, setTask] = useState('');
 	const [pick, setPick] = useState<FolderPick>({ kind: 'none' });
 	const ready = slugify(title) !== '' && task.trim() !== '' && isChosen(pick);
+	const phrase = useAgentPhrase();
 	const start = (e: FormEvent) => {
 		e.preventDefault();
 		if (!ready) return;
@@ -58,7 +59,7 @@ export const NewPrototypeDialog = ({
 				<AgentInUse />
 				<DialogButtons>
 					<Button type="submit" disabled={!ready}>
-						Create prototype
+						{phrase('Create', 'with', 'Create prototype')}
 					</Button>
 				</DialogButtons>
 			</form>

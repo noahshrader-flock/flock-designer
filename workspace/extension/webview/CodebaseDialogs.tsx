@@ -3,7 +3,7 @@ import { useAction } from './hooks/useAction';
 import { useWorkspace } from './hooks/useWorkspace';
 import type { Handed } from '../../src/shared/contract';
 import { handedTo } from '../../src/shared/handedTo';
-import { AgentInUse, useAgentName, useInAgent } from './AgentInUse';
+import { AgentInUse, useAgentName, useAgentPhrase } from './AgentInUse';
 import { AgainstBase } from './AgainstBase';
 import type { Project } from '../../src/shared/domain/projects';
 import { buildStart, buildSteps, noSetupNote, startBranch } from '../../src/shared/work';
@@ -144,7 +144,7 @@ export const BuildInCodebaseDialog = ({
 	const { busy, error, run } = useAction();
 	const [handed, setHanded] = useState<Handed | null>(null);
 	const agent = useAgentName();
-	const inAgent = useInAgent();
+	const phrase = useAgentPhrase();
 	useEffect(() => {
 		if (plan && listed) setFrom(startBranch(plan, listed));
 	}, [plan, listed]);
@@ -227,7 +227,7 @@ export const BuildInCodebaseDialog = ({
 				<AgentInUse />
 				<DialogButtons>
 					<Button type="submit" disabled={!canStart}>
-						{busy ? 'Opening…' : inAgent(continuing ? 'Continue' : 'Build')}
+						{busy ? 'Opening…' : phrase(continuing ? 'Continue' : 'Build')}
 					</Button>
 				</DialogButtons>
 			</form>

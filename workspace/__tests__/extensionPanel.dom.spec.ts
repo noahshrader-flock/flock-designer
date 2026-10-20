@@ -267,9 +267,21 @@ describe('dialogs and menus, in the panel', () => {
 			await say({ type: 'open-dialog', dialog: { kind: 'new' } });
 			expect(dialog()?.getAttribute('aria-label')).toBe('New prototype');
 			// The way out is the X, not a Cancel beside it.
-			expect([...dialog()!.querySelectorAll('.dialog-buttons button')].map((b) => b.textContent)).toEqual(['Create prototype']);
+			expect([...dialog()!.querySelectorAll('.dialog-buttons button')].map((b) => b.textContent)).toEqual(['Create with Claude Code']);
 			await press(closeX());
 			expect(dialog()).toBeNull();
+		});
+
+		it('names the agent it hands the prototype to on its button, whichever it is, and says Create prototype while it is still to be asked', async () => {
+			await showOpen(OPEN, []);
+			await say({ type: 'open-dialog', dialog: { kind: 'new' } });
+			const label = () => dialog()!.querySelector('button[type="submit"]')?.textContent;
+			for (const name of ['Codex', 'Copilot']) {
+				await share('agent', { name });
+				expect(label()).toBe(`Create with ${name}`);
+			}
+			await share('agent', { name: null });
+			expect(label()).toBe('Create prototype');
 		});
 
 		it('is asked of the extension by the empty list’s button, which says whether it can be started, and opens nothing itself', async () => {

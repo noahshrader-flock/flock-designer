@@ -10,7 +10,7 @@ design repository, so making one changes nothing engineering owns.
 2. Give it a name, and say what it should explore. Write it the way you would brief a colleague. A Figma link to one
    screen helps, and you can drag screenshots into the agent's conversation before you start it.
 3. Pick a folder for it if you like, so related projects sit together.
-4. Press **Create prototype**.
+4. Press the button at the bottom. It names your agent (Create with Claude Code, with Codex or with Copilot), and says **Create prototype** until you have chosen one.
 
 The agent opens with the task typed in. In Claude Code and Copilot, press Enter there to start it. Codex opens with the
 task's file attached and its line on your clipboard: paste it and press Enter. DSNR tells you where it went, and which code

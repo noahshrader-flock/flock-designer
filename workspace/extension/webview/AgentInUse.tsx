@@ -6,10 +6,10 @@ import { useShared } from './shared';
 /** The agent work goes to now, as the panel's words name it: "the agent" while it is still to be asked. */
 export const useAgentName = (): string => useShared('agent').name ?? 'the agent';
 
-/** "Build in Codex", or "Build" while the agent is still to be asked. */
-export const useInAgent = (): ((verb: string) => string) => {
+/** "Build in Codex", "Create with Codex", or `bare` (the verb, by default) while the agent is still to be asked. */
+export const useAgentPhrase = (): ((verb: string, preposition?: 'in' | 'with', bare?: string) => string) => {
 	const { name } = useShared('agent');
-	return (verb) => (name ? `${verb} in ${name}` : verb);
+	return (verb, preposition = 'in', bare = verb) => (name ? `${verb} ${preposition} ${name}` : bare);
 };
 
 /** Said where work is handed over, with Change, so the choice is never only in Settings. */
