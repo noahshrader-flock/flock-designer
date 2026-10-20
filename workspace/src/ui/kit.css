@@ -788,6 +788,7 @@ body {
 	display: flex;
 	align-items: center;
 	gap: var(--dsnr-space-2);
+	box-sizing: border-box;
 	width: 100%;
 	height: var(--dsnr-list-row);
 	padding: 0 var(--dsnr-space-5) 0 var(--dsnr-space-4);
