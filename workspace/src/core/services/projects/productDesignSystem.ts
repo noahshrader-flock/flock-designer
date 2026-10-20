@@ -1,11 +1,12 @@
 import { type Dirent, existsSync, readdirSync, statSync } from 'node:fs';
-import { basename, join, relative } from 'node:path';
+import { basename, isAbsolute, join, relative } from 'node:path';
 import { asRepositoryPath, parseRemote } from '../../../shared/repoRef';
 import { findDesignSystems } from '../designSystem/designSystems';
 import { folderReads } from '../designSystem/folderReads';
 import { type JsonFile, jsonFile, readJsonObject } from '../platform/jsonFile';
 import { installedPackage } from '../prototypes/installedVersion';
-import { claimedRepository, isSafeBranchName, refTip } from '../platform/git';
+import { claimedRepository, git, isSafeBranchName, refTip } from '../platform/git';
+import { isInside } from '../platform/paths';
 import { GENERATED_FOLDERS } from '../../../shared/generatedFolders';
 import { type WorkspaceDescriptor, designSystemCheckout, readDescriptor } from './descriptor';
 
@@ -63,13 +64,45 @@ const placeOf = (productRoot: string, designSystem: WorkspaceDescriptor['designS
 		: { dir: designSystemCheckout(productRoot, { ...designSystem, folder }), inProduct: true };
 };
 
-/** The folder of the product's design system when it is in the product's own repository; null when it is not, or cannot be told. */
-export const designSystemInProduct = (productRoot: string): string | null => {
+/**
+ * The design system the person chose for a product, in place of the one it names: kept in the product clone's own git
+ * config, so it is on this machine only, never committed, and read from the product's folder alone, by the app and the
+ * `dsnr` command alike.
+ */
+const CHOICE = 'dsnr.designSystem';
+
+/** The folder chosen for the product, or null when none is. */
+export const chosenDesignSystem = async (productRoot: string): Promise<string | null> => {
+	const at = await git(productRoot, ['config', '--local', '--get', CHOICE]).catch(() => '');
+	return isAbsolute(at) ? at : null;
+};
+
+/**
+ * Chooses `dir` as the product's design system, or, with null, goes back to the one it names. A folder that holds none
+ * is refused, and what was chosen before stays.
+ */
+export const chooseDesignSystem = async (productRoot: string, dir: string | null): Promise<void> => {
+	if (dir === null) {
+		// Nothing to unset is not a failure: the product's own is in use already.
+		await git(productRoot, ['config', '--local', '--unset', CHOICE]).catch(() => undefined);
+		return;
+	}
+	if (!isAbsolute(dir) || (await designSystemIn(dir)) === null)
+		throw new Error(`${dir} holds no design system: no Storybook stories and no tokens were found in it.`);
+	await git(productRoot, ['config', '--local', CHOICE, dir]);
+};
+
+/**
+ * Whether the design system in use for the product is in its own repository (the folder chosen, else where it names it),
+ * so its component changes and its codebase work share the one checkout. False when that cannot be told.
+ */
+export const holdsItsDesignSystem = async (productRoot: string): Promise<boolean> => {
+	const chosen = await chosenDesignSystem(productRoot);
+	if (chosen !== null) return isInside(productRoot, chosen);
 	try {
-		const place = placeOf(productRoot, readDescriptor(productRoot).designSystem);
-		return place.inProduct ? place.dir : null;
+		return placeOf(productRoot, readDescriptor(productRoot).designSystem).inProduct;
 	} catch {
-		return null;
+		return false;
 	}
 };
 
@@ -151,18 +184,33 @@ export class SourceAnswers {
 	}
 }
 
+/** Where the design system in use came from: the product's own repository, beside it, or the person's choice. */
+export type ProductHow = 'repository' | 'beside' | 'chosen';
+
 /**
- * The product's design system: found where it names it (`placeOf`), then, when it is beside the product, proven to be that
- * package's source, or the person's own answer when it cannot be. `usable` is what may be read and shown; `refused` and
+ * The product's design system: the folder the person chose, read as a design system and nothing more; else found where
+ * the product names it (`placeOf`), then, when it is beside the product, proven to be that package's source, or the
+ * person's own answer when it cannot be. `usable` is what may be read and shown; `refused` and
  * `ask` say why not yet; `none`, that nothing is there.
  */
 export type ProductDesignSystem =
 	| { state: 'none' }
-	| { state: 'usable'; root: string }
+	| { state: 'usable'; root: string; how: ProductHow }
 	| { state: 'refused'; root: string; why: string }
 	| { state: 'ask'; root: string; why: string; key: string; name: string };
 
 export const productDesignSystem = async (productRoot: string, answers: Pick<SourceAnswers, 'of'>): Promise<ProductDesignSystem> => {
+	const chosen = await chosenDesignSystem(productRoot);
+	if (chosen !== null) {
+		const at = await designSystemIn(chosen);
+		if (at !== null) return { state: 'usable', root: at, how: 'chosen' };
+		const gone = isFolder(chosen) ? 'holds no design system any more' : 'is not on this computer any more';
+		return {
+			state: 'refused',
+			root: chosen,
+			why: `${chosen}, the design system chosen for ${basename(productRoot)}, ${gone}. Choose another, or use the product's.`,
+		};
+	}
 	let pkg: string;
 	let dir: string | null;
 	let inProduct: boolean;
@@ -180,10 +228,11 @@ export const productDesignSystem = async (productRoot: string, answers: Pick<Sou
 	// A folder of the product's own repository is the product's code: only that it is the package named is checked, and
 	// nothing is asked (a product that is its own design system has nothing installed to be the source of).
 	const check = inProduct ? checkName(productRoot, pkg, dir) : await checkSource(productRoot, pkg, dir);
-	if (check.state === 'confirmed' || check.state === 'uninstalled') return { state: 'usable', root: dir };
+	const how = inProduct ? 'repository' : 'beside';
+	if (check.state === 'confirmed' || check.state === 'uninstalled') return { state: 'usable', root: dir, how };
 	if (check.state === 'mismatch') return { state: 'refused', root: dir, why: check.why };
 	const answer = answers.of(check.key);
-	if (answer === 'use') return { state: 'usable', root: dir };
+	if (answer === 'use') return { state: 'usable', root: dir, how };
 	if (answer === 'refuse') return { state: 'refused', root: dir, why: `You chose not to use ${labelOf(productRoot, dir)} as ${pkg}'s source.` };
 	return { state: 'ask', root: dir, why: check.why, key: check.key, name: pkg };
 };

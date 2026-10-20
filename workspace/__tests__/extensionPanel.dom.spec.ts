@@ -10,10 +10,10 @@ import { allByRole, button, dialog, fieldNamed, key, menuItem, press, type } fro
 
 const OPEN: Context = {
 	product: '/work/flock-coke',
-	designSystem: { root: '/work/flock-react-component-lib', how: 'named' },
+	designSystem: { root: '/work/flock-react-component-lib', how: 'beside' },
 	designRepository: '/work/flock-designer/projects',
 	productRepository: 'flocksafety/flock-coke',
-	source: { state: 'usable', root: '/work/flock-react-component-lib' },
+	source: { state: 'usable', root: '/work/flock-react-component-lib', how: 'beside' },
 	missing: [],
 };
 const show = () => mountPage(createElement(Panel));
@@ -1271,12 +1271,26 @@ describe('Design System', () => {
 	const namesUnder = (header: HTMLElement) => [...under(header).querySelectorAll('[data-part="name"]')].map((n) => n.textContent);
 	const parts = () => document.querySelector('[aria-label="Part"]') as HTMLElement;
 
-	it('says, when there is none, what DSNR looked for and where, and offers to locate it', async () => {
-		await open({ ...OPEN, designSystem: null });
+	it('says, when there is none, what DSNR looked for and where, and offers to choose one for the product', async () => {
+		await open({ ...OPEN, designSystem: null, source: { state: 'none' } });
 		expect(body().querySelector('.empty [data-part="title"]')?.textContent).toBe('No design system found');
 		expect(body().textContent).toContain('DSNR looks in the folders open in this window');
-		await press(button('Locate design system…'));
-		expect(lastAsk()).toEqual(['locateDesignSystem', []]);
+		await press(button('Choose design system…'));
+		expect(lastAsk()).toEqual(['chooseDesignSystem', []]);
+	});
+
+	it('says why the one chosen, or found, was refused, in place of what DSNR looks for', async () => {
+		const why = "/far/ui, the design system chosen for flock-coke, is not on this computer any more. Choose another, or use the product's.";
+		await open({ ...OPEN, designSystem: null, source: { state: 'refused', root: '/far/ui', why } });
+		expect(body().textContent).toContain(why);
+		expect(body().textContent).not.toContain('DSNR looks in the folders open in this window');
+		expect(button('Choose design system…')).toBeTruthy();
+	});
+
+	it('offers no choice with no product open: there is nothing to keep it for', async () => {
+		await open({ ...OPEN, product: null, designSystem: null, source: null });
+		expect(body().querySelector('.empty [data-part="title"]')?.textContent).toBe('No design system found');
+		expect(body().querySelector('.empty button')).toBeNull();
 	});
 
 	it('says why the one found cannot be read, reads nothing, and offers to locate another', async () => {
@@ -1310,11 +1324,15 @@ describe('Design System', () => {
 		expect(body().querySelector('[aria-label="Design system actions"]')?.className).toBe('menu-button menu-button-small menu-button-shown');
 		await press(body().querySelector('[aria-label="Design system actions"]') as HTMLElement);
 		const items = allByRole('menuitem', undefined, body().querySelector('.ds-actions')!);
-		expect(items.map((i) => i.textContent)).toEqual(['Sync with GitHub', 'Primitives', 'Voice and Tone']);
-		expect(body().querySelectorAll('.ds-actions [role="separator"]')).toHaveLength(1);
+		expect(items.map((i) => i.textContent)).toEqual(['Sync with GitHub', 'Primitives', 'Voice and Tone', 'Choose design system…']);
+		expect(body().querySelectorAll('.ds-actions [role="separator"]')).toHaveLength(2);
 		expect(items[0]!.nextElementSibling?.getAttribute('role')).toBe('separator');
+		expect(items[3]!.previousElementSibling?.getAttribute('role')).toBe('separator');
 		await press(items[2]!);
 		expect(lastAsk()).toEqual(['openVoiceAndTone', []]);
+		await press(body().querySelector('[aria-label="Design system actions"]') as HTMLElement);
+		await press(allByRole('menuitem', undefined, body().querySelector('.ds-actions')!)[3]!);
+		expect(lastAsk()).toEqual(['chooseDesignSystem', []]);
 		await press(body().querySelector('[aria-label="Design system actions"]') as HTMLElement);
 		await press(allByRole('menuitem', undefined, body().querySelector('.ds-actions')!)[0]!);
 		expect(lastAsk()).toEqual(['syncDesignSystem', []]);
@@ -1531,11 +1549,11 @@ describe('Design System', () => {
 		expect(body().querySelector('.ds-actions [aria-label$="being tried"]')).toBeNull();
 	});
 
-	it('says when the design system is no longer on this computer, and offers to locate it', async () => {
+	it('says when the design system is no longer on this computer, and offers to choose another', async () => {
 		await read({ state: 'lost', name: 'FUI', root: '/work/flock-react-component-lib' });
 		expect(body().querySelector('.empty [data-part="title"]')?.textContent).toBe('FUI is no longer on this computer');
-		await press(button('Locate design system…'));
-		expect(lastAsk()).toEqual(['locateDesignSystem', []]);
+		await press(button('Choose design system…'));
+		expect(lastAsk()).toEqual(['chooseDesignSystem', []]);
 	});
 
 	it('says why a clone with no copy of its branch cannot be read, with a way to try again', async () => {

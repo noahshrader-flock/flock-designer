@@ -12,7 +12,8 @@ import {
 	libraryFileIn,
 	openComponentLink,
 	showFound,
-	shownFrom,
+	pickDesignSystem,
+	FOUND_WORDS,
 } from '../extension/src/designSystem';
 import { SAMPLE_CATALOG } from './extensionSamples';
 import { withTrial } from '../extension/src/messages';
@@ -42,15 +43,15 @@ describe('the design system found, shown', () => {
 
 	it('is not told again when it is the one shown already, so nothing is written for nothing', async () => {
 		const m = memory(fui);
-		expect(await showFound(m, { root: fui.root, how: 'named' }, async () => ({ ...fui }))).toBeNull();
+		expect(await showFound(m, { root: fui.root, how: 'beside' }, async () => ({ ...fui }))).toBeNull();
 		expect(m.add).not.toHaveBeenCalled();
-		await showFound(m, { root: fui.root, how: 'named' }, async () => ({ ...fui, branch: 'main' }));
+		await showFound(m, { root: fui.root, how: 'beside' }, async () => ({ ...fui, branch: 'main' }));
 		expect(m.add).toHaveBeenCalledWith({ ...fui, branch: 'main' });
 	});
 
 	it('says why, and tells the core nothing, when the folder cannot be read', async () => {
 		const m = memory();
-		const why = await showFound(m, { root: '/w/plain', how: 'located' }, async () => {
+		const why = await showFound(m, { root: '/w/plain', how: 'chosen' }, async () => {
 			throw new Error('/w/plain is not a git repository.');
 		});
 		expect(why).toBe('/w/plain is not a git repository.');
@@ -220,30 +221,59 @@ describe('a token’s own file', () => {
 	});
 });
 
-describe('the design system shown, when the one found cannot be read', () => {
-	const named = { root: '/w/plain', how: 'named' as const };
-	const located = { root: '/w/flock-react-component-lib', how: 'located' as const };
-	const readable = (roots: string[]) =>
-		vi.fn(async (f: { root: string } | null) => (f === null || roots.includes(f.root) ? null : `${f.root} cannot be read.`));
+describe('choosing the product’s design system', () => {
+	const asked = (choose: (items: { label: string; pick: unknown }[]) => unknown) => {
+		const showQuickPick = vi.fn(async (items: readonly { label: string; description?: string; pick: unknown }[], _options: unknown) =>
+			choose([...items]),
+		);
+		return { window: { showQuickPick } as never, showQuickPick };
+	};
 
-	it('is the one the person located instead, when that can be read: locating it is how they said which', async () => {
-		const show = readable([located.root]);
-		expect(await shownFrom(named, located.root, { show, at: async () => located })).toEqual({ designSystem: located, unreadable: null });
-		expect(show).toHaveBeenLastCalledWith(located);
+	const system = (id: string, root: string, folder = '') => ({ id, name: id.toUpperCase(), repository: `acme/${id}`, root, folder, branch: 'main' });
+
+	it('names the one in use as the tab does and where it came from, says what choosing clears, and offers the others, a folder and the product’s', async () => {
+		const { window, showQuickPick } = asked((items) => items[0]);
+		const known = {
+			systems: [
+				system('fui', '/w/fui'),
+				system('acme', '/w/mono', 'packages/ui'),
+				system('again', '/w/mono', 'packages/ui'),
+				system('gone', '/w/gone'),
+			],
+			current: 'fui',
+		};
+		const exists = (dir: string) => dir !== '/w/gone';
+		expect(await pickDesignSystem(window, { inUse: { root: '/w/fui', how: 'chosen' }, known, chosen: true, exists })).toEqual({
+			kind: 'use',
+			dir: '/w/mono/packages/ui',
+		});
+		const [items, options] = showQuickPick.mock.calls[0]!;
+		// The one in use is not offered, one folder is offered once, and one no longer here not at all.
+		expect(items.map((i) => [i.label, i.description])).toEqual([
+			['ACME', '/w/mono/packages/ui'],
+			['Choose a folder…', undefined],
+			["Use the product's", 'the one its workspace file names'],
+		]);
+		expect(options).toMatchObject({
+			title: 'Design system: FUI, chosen',
+			placeHolder: expect.stringMatching(/^Choosing another clears what is being tried/),
+		});
 	});
 
-	it('is the one found, and why, when nothing was located or what was cannot be read either', async () => {
-		const why = { designSystem: named, unreadable: '/w/plain cannot be read.' };
-		expect(await shownFrom(named, null, { show: readable([]), at: async () => located })).toEqual(why);
-		expect(await shownFrom(named, located.root, { show: readable([]), at: async () => located })).toEqual(why);
-		expect(await shownFrom(named, '/w/empty', { show: readable([]), at: async () => null })).toEqual(why);
+	it('offers the product’s own only when another was chosen, and names one the tab does not show by its folder', async () => {
+		const { window, showQuickPick } = asked((items) => items.find((i) => i.label === 'Choose a folder…'));
+		const known = { systems: [], current: null };
+		expect(await pickDesignSystem(window, { inUse: { root: '/w/plain', how: 'beside' }, known, chosen: false })).toEqual({ kind: 'folder' });
+		const [items, options] = showQuickPick.mock.calls[0]!;
+		expect(items.map((i) => i.label)).toEqual(['Choose a folder…']);
+		expect(options).toMatchObject({ title: 'Design system: plain, beside the product' });
+		const none = asked(() => undefined);
+		expect(await pickDesignSystem(none.window, { inUse: null, known, chosen: true })).toBeNull();
+		expect(none.showQuickPick.mock.calls[0]![1]).toMatchObject({ title: 'Design system: none in use' });
 	});
 
-	it('is the one found when it can be read, whatever was located', async () => {
-		const at = vi.fn();
-		const open = { root: '/w/ui', how: 'open' as const };
-		expect(await shownFrom(open, located.root, { show: readable(['/w/ui']), at })).toEqual({ designSystem: open, unreadable: null });
-		expect(at).not.toHaveBeenCalled();
+	it('names each place a design system comes from in words', () => {
+		expect(FOUND_WORDS).toEqual({ repository: 'in this repository', beside: 'beside the product', chosen: 'chosen', open: 'open in this window' });
 	});
 });
 
@@ -287,7 +317,7 @@ describe('a design system beside the product that could not be confirmed as its 
 	it('asks nothing of one that is usable, refused, or not there', async () => {
 		const quiet = asking(USE_IT);
 		for (const source of [
-			{ state: 'usable' as const, root: '/u' },
+			{ state: 'usable' as const, root: '/u', how: 'beside' as const },
 			{ state: 'refused' as const, root: '/u', why: 'no' },
 			{ state: 'none' as const },
 			null,

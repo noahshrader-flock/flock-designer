@@ -116,7 +116,7 @@ export const Panel = () => {
 						/>
 					) : (
 						<DesignSystem
-							found={context.designSystem}
+							context={context}
 							unreadable={unreadable}
 							pictures={pictures}
 							part={part}

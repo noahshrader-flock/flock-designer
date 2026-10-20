@@ -41,7 +41,7 @@ const handled = () => {
 
 describe('an ask from a page', () => {
 	it.each([
-		['locateDesignSystem', []],
+		['chooseDesignSystem', []],
 		['getStarted', []],
 		['askNewPrototype', []],
 		['codebase', ['hand-off', 'zone-coverage']],

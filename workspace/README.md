@@ -176,8 +176,11 @@ DSNR is moving into VS Code as an extension, which lives in `extension/` with it
 sign-in, no native preview, and its files in the extension's own storage, never the app's settings folder.
 
 There is nothing to clone or connect: it works on the folders open in VS Code (`findContext`). The product is the open
-folder with `.dsnr/workspace.json`, which DSNR trusts as VS Code does; its design system is where the product names it
-(`placeOf`: the workspace file's folder; else the package in the product's own repository with the name it gives, a
+folder with `.dsnr/workspace.json`, which DSNR trusts as VS Code does; its design system is the folder the person chose
+for it with **Choose design system…** (the tab's menu, or **DSNR: Choose the design system**: one DSNR has seen, a
+folder, or the product's own again), kept in the product clone's own git config (`dsnr.designSystem`, on this machine
+only, never committed) and read as a design system, nothing more, so a fork can be chosen; a choice that is gone or holds
+none any more is said, and nothing is shown in its place. Else it is where the product names it (`placeOf`: the workspace file's folder; else the package in the product's own repository with the name it gives, a
 monorepo's or the repository's own, found by `package.json` names alone, four folders down at most, generated and hidden
 folders skipped; else a clone beside it named as its package), once it is shown to be that package's source
 (`productDesignSystem`: the same name, the installed package's repository the clone's configured `origin`, and a release tag
@@ -185,9 +188,9 @@ for the installed version; one in the product's own repository is its own code, 
 about, and offers no clone to build a prototype from). A product holding its own design system has one checkout for its
 component changes and its codebase work: the clean-tree and on-the-branch refusals say so (`sharedCheckoutNote`). A mismatch, such as a fork,
 is refused and said; one that cannot be confirmed (no tag, no repository named) is asked about once, and the answer kept
-until the clone or the installed version changes. Only a design system shown to be the source is read for prototypes'
-guidance, the voice and tone, and codebase work. Else another open folder that holds one is shown, else one the person
-locates; the design repository is beside the product, as
+until the clone or the installed version changes. Only that one design system (`productDesignSystem`), chosen or shown
+to be the source, is read for prototypes' guidance, the voice and tone, a version built from the clone, and codebase
+work. With none of the product's own, another open folder that holds one is shown; the design repository is beside the product, as
 the app finds it. Its panel, in the activity bar, lists the projects (opening one opens its newest prototype for
 review) and shows the design system it found. Sign in is at the far right of VS Code's own DSNR title bar, which shows
 the username beside the mark once signed in. A prototype's review is its page on the site, built from the design
@@ -349,8 +352,8 @@ product parity and the full gate stay at Handoff. VS Code is the editor here: wo
 default, or in an editor tab if you set `dsnr.agent.location` to `editor`; it uses Claude Code's own commands for
 this, and a Claude Code without them opens an editor tab through its link.
 
-**The Design System tab (Phase 6):** the design system found beside the product (the one it names, any open folder
-with stories or tokens, or **Locate design system…**), read from its branch on GitHub as its clone has it. **Components**,
+**The Design System tab (Phase 6):** the product's design system (the one chosen for it, the one it names, or any open
+folder with stories or tokens), read from its branch on GitHub as its clone has it. **Components**,
 as a grid or a list with a search, under their groups, with pictures drawn by the browser here and what axe found;
 pressed, a component opens in an editor tab with its stories live, what it is made from, what it sets itself and its
 accessibility, and its menu has Storybook and Source. **Tokens**, by primitive: colors as the app has them, **Semantic**

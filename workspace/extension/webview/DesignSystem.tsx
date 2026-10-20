@@ -38,7 +38,8 @@ interface ChangesDialog {
 	onClose: () => void;
 }
 
-const locate = { label: 'Locate design system…', onPress: () => void asks().locateDesignSystem() };
+const CHOOSE = 'Choose design system…';
+const choose = () => void asks().chooseDesignSystem();
 
 const folderName = (path: string): string => path.split(/[\\/]/).filter(Boolean).at(-1) ?? path;
 
@@ -71,6 +72,7 @@ const Ready = ({
 	view,
 	onView,
 	changesDialog,
+	canChoose,
 }: {
 	catalog: Extract<Catalog, { state: 'ready' }>;
 	id: string | null;
@@ -82,6 +84,8 @@ const Ready = ({
 	view: View;
 	onView: (view: View) => void;
 	changesDialog: ChangesDialog;
+	/** A product is open, so a design system can be chosen for it. */
+	canChoose: boolean;
 }) => {
 	const [edits, setEdits] = useTokenEdits();
 	const changes = useTokenChangesFor(catalog.tokens.tokens, edits, setEdits, catalog.accessibility);
@@ -143,6 +147,7 @@ const Ready = ({
 									{ label: 'Voice and Tone', icon: 'quote', onSelect: () => void asks().openVoiceAndTone() },
 								],
 							},
+							...(canChoose ? [{ items: [{ label: CHOOSE, icon: 'folder-opened', onSelect: choose }] }] : []),
 						]}
 					/>
 				</DesignSystemHeader>
@@ -186,7 +191,7 @@ const Ready = ({
 };
 
 export const DesignSystem = ({
-	found,
+	context,
 	unreadable,
 	pictures,
 	part,
@@ -195,7 +200,7 @@ export const DesignSystem = ({
 	onView,
 	changesDialog,
 }: {
-	found: Context['designSystem'];
+	context: Pick<Context, 'designSystem' | 'product' | 'source'>;
 	unreadable: string | null;
 	pictures: ComponentPictures;
 	part: Part;
@@ -205,18 +210,25 @@ export const DesignSystem = ({
 	changesDialog: ChangesDialog;
 }) => {
 	const read = useCatalog();
+	const found = context.designSystem;
+	// Choosing needs a product to keep the choice for; with none open, what is open is shown.
+	const action = context.product === null ? undefined : { label: CHOOSE, onPress: choose };
 	if (!found)
 		return (
-			<Message size="page" icon="symbol-color" title="No design system found" action={locate}>
-				<p>
-					DSNR looks in the folders open in this window for a design system: the one the product names in its <code>.dsnr/workspace.json</code>, or
-					any folder with stories or tokens.
-				</p>
+			<Message size="page" icon="symbol-color" title="No design system found" action={action}>
+				{context.source?.state === 'refused' ? (
+					<p>{context.source.why}</p>
+				) : (
+					<p>
+						DSNR looks in the folders open in this window for a design system: the one the product names in its <code>.dsnr/workspace.json</code>, or
+						any folder with stories or tokens.
+					</p>
+				)}
 			</Message>
 		);
 	if (unreadable !== null)
 		return (
-			<Message size="page" icon="warning" title="The design system cannot be read" action={locate}>
+			<Message size="page" icon="warning" title="The design system cannot be read" action={action}>
 				<p>{unreadable}</p>
 			</Message>
 		);
@@ -230,8 +242,8 @@ export const DesignSystem = ({
 	if (catalog === null || catalog.state === 'none') return <Message size="page">Reading the design system…</Message>;
 	if (catalog.state === 'lost')
 		return (
-			<Message size="page" icon="warning" title={`${catalog.name} is no longer on this computer`} action={locate}>
-				<p>Its copy was at {catalog.root}. Open its folder again, or locate it.</p>
+			<Message size="page" icon="warning" title={`${catalog.name} is no longer on this computer`} action={action}>
+				<p>Its copy was at {catalog.root}. Open its folder again, or choose another.</p>
 			</Message>
 		);
 	if (catalog.state === 'no-branch')
@@ -255,6 +267,7 @@ export const DesignSystem = ({
 			view={view}
 			onView={onView}
 			changesDialog={changesDialog}
+			canChoose={context.product !== null}
 		/>
 	);
 };

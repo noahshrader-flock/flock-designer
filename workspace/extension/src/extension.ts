@@ -15,7 +15,8 @@ import { Panels, hostApi } from './bridge';
 import { type LocalRun, handOff, openCode, shareCodebase, runLocally, updateBranch } from './codebase';
 import { startCore } from './core';
 import { moveLocationSetting } from './agentWindows';
-import { showFound, shownFrom, askSource } from './designSystem';
+import { showFound, askSource, pickDesignSystem } from './designSystem';
+import { chooseDesignSystem, chosenDesignSystem } from '../../src/core/services/projects/productDesignSystem';
 import { designSystemHost } from './designSystemHost';
 import { registerVoice } from './voice';
 import { errorText, valueOf } from '../../src/shared/result';
@@ -36,8 +37,6 @@ import { RunOutput, SyncStatus, failed, failedFor, vscodeChoose, vscodeCopy, vsc
 
 /** Coming back to VS Code rereads the projects only this long after the last read: each read asks GitHub. */
 const REREAD_MS = 60_000;
-
-const LOCATED = 'dsnr.located';
 
 /** Here, not in a disposable: VS Code waits for `deactivate`, and not for a disposable. */
 let closing: (() => Promise<void>) | null = null;
@@ -70,13 +69,10 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 	);
 	const localAddresses = async () => ({ images: await core.prototypeServer.origin(), frames: await core.prototypeServer.pagesOrigin() });
 	const folders = () => (vscode.workspace.workspaceFolders ?? []).map((f) => f.uri.fsPath);
-	const located = () => context.globalState.get<string>(LOCATED) ?? null;
 
-	const designSystemAt = async (root: string) => (await findContext({ folders: [], located: root })).designSystem;
 	const findHere = async (): Promise<{ found: Context; unreadable: string | null }> => {
-		const at = await findContext({ folders: folders(), located: located(), answers: core.sourceAnswers, clones: core.designRepositories });
-		const shown = await shownFrom(at.designSystem, located(), { show: (f) => showFound(core.designSystems, f), at: designSystemAt });
-		return { found: { ...at, designSystem: shown.designSystem }, unreadable: shown.unreadable };
+		const at = await findContext({ folders: folders(), answers: core.sourceAnswers, clones: core.designRepositories });
+		return { found: at, unreadable: await showFound(core.designSystems, at.designSystem) };
 	};
 	let { found, unreadable } = await findHere();
 	const placed = panels.share('placed', { context: found, unreadable });
@@ -206,12 +202,19 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 	const copyPublishedLink = withPublishedLink(vscodeCopy);
 	const openPublishedPage = withPublishedLink(vscodeOpen);
 	core.prototypeServer.answerAsks((key, ask) => reviews.answerBrowser(key, ask));
-	const locate = async () => {
-		const chosen = await core.ports.chooseFolder({ title: 'Locate design system' });
-		if (chosen === null) return;
-		if ((await designSystemAt(chosen)) === null)
-			throw new Error('That folder holds no design system: no Storybook stories and no tokens were found in it.');
-		await context.globalState.update(LOCATED, chosen);
+	/** The product's design system, chosen from those DSNR has seen, a folder, or the product's own: kept for that product here. */
+	const chooseTheDesignSystem = async () => {
+		const product = found.product;
+		if (product === null) throw new Error(productNow().why);
+		const pick = await pickDesignSystem(vscode.window, {
+			inUse: found.designSystem,
+			known: core.designSystems.read(),
+			chosen: (await chosenDesignSystem(product)) !== null,
+		});
+		if (pick === null) return;
+		const dir = pick.kind === 'use' ? pick.dir : pick.kind === 'folder' ? await core.ports.chooseFolder({ title: 'Choose design system' }) : null;
+		if (pick.kind === 'folder' && dir === null) return;
+		await chooseDesignSystem(product, dir);
 		await refresh();
 	};
 
@@ -307,7 +310,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 	const tabsShown = () => tabs.set({ projects: reviews.shown(), components: design.shownComponents() });
 	const asks = askRoutes({
 		...design.handlers,
-		locateDesignSystem: () => locate(),
+		chooseDesignSystem: () => chooseTheDesignSystem(),
 		getStarted: () => vscode.commands.executeCommand('dsnr.getStarted'),
 		askNewPrototype: () => vscode.commands.executeCommand('dsnr.newPrototype'),
 		newPrototype: (title, task, folder) => startPrototype({ title, task, folder }),
@@ -347,6 +350,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 				failedFor,
 				chooseAgent,
 				locateDesignRepository,
+				chooseDesignSystem: chooseTheDesignSystem,
 			}),
 		).map(([id, handler]) => vscode.commands.registerCommand(id, handler)),
 		vscode.workspace.onDidChangeWorkspaceFolders(() => void refresh().catch(failed)),

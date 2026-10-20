@@ -22,6 +22,7 @@ export interface CommandDeps {
 	failedFor: (fromCode: boolean) => (err: unknown) => void;
 	chooseAgent: () => Promise<unknown>;
 	locateDesignRepository: () => Promise<void>;
+	chooseDesignSystem: () => Promise<void>;
 }
 
 /** DSNR's commands but the design system's and voice and tone's, by id; `raw` is what a caller passed, unchecked. */
@@ -72,5 +73,6 @@ export const commands = (d: CommandDeps): Record<string, (raw?: unknown) => unkn
 		},
 		'dsnr.chooseAgent': () => d.chooseAgent().catch(d.failed),
 		'dsnr.locateDesignRepository': () => d.locateDesignRepository().catch(d.failed),
+		'dsnr.chooseDesignSystem': () => d.chooseDesignSystem().catch(d.failed),
 	};
 };

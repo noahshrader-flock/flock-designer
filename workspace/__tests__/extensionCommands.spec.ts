@@ -24,6 +24,7 @@ const given = (more: Partial<CommandDeps> = {}) => {
 		signedIn: () => true,
 		chooseAgent: vi.fn(async () => undefined),
 		locateDesignRepository: vi.fn(async () => undefined),
+		chooseDesignSystem: vi.fn(async () => undefined),
 		failed: vi.fn(),
 		failedFor: (fromCode: boolean) => (err: unknown) => {
 			if (fromCode) throw err;
@@ -107,6 +108,8 @@ describe('DSNR’s commands', () => {
 		expect(g.d.chooseAgent).toHaveBeenCalled();
 		await g.run('dsnr.locateDesignRepository');
 		expect(g.d.locateDesignRepository).toHaveBeenCalled();
+		await g.run('dsnr.chooseDesignSystem');
+		expect(g.d.chooseDesignSystem).toHaveBeenCalled();
 	});
 
 	it('show the account only to someone signed in', async () => {

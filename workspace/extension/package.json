@@ -142,6 +142,11 @@
 				"command": "dsnr.locateDesignRepository",
 				"category": "DSNR",
 				"title": "Locate the design repository"
+			},
+			{
+				"command": "dsnr.chooseDesignSystem",
+				"category": "DSNR",
+				"title": "Choose the design system"
 			}
 		],
 		"menus": {

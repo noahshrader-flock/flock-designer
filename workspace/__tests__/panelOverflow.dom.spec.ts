@@ -16,10 +16,10 @@ import { answer, mountPage, share, shareCatalog } from './webviewHarness';
 
 const OPEN: Context = {
 	product: '/work/flock-coke',
-	designSystem: { root: '/work/flock-react-component-lib', how: 'named' },
+	designSystem: { root: '/work/flock-react-component-lib', how: 'beside' },
 	designRepository: '/work/flock-designer/projects',
 	productRepository: 'flocksafety/flock-coke',
-	source: { state: 'usable', root: '/work/flock-react-component-lib' },
+	source: { state: 'usable', root: '/work/flock-react-component-lib', how: 'beside' },
 	missing: [],
 };
 

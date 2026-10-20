@@ -12,7 +12,7 @@ import { workLabel, workOf } from '../../src/shared/work';
  * sends is still checked.
  */
 export interface PageAsks {
-	locateDesignSystem(): Promise<Result<null>>;
+	chooseDesignSystem(): Promise<Result<null>>;
 	getStarted(): Promise<Result<null>>;
 	/** Asked of the extension, which knows whether one can be started. */
 	askNewPrototype(): Promise<Result<null>>;
@@ -37,7 +37,7 @@ export interface PageAsks {
 }
 
 export const ASKS = [
-	'locateDesignSystem',
+	'chooseDesignSystem',
 	'getStarted',
 	'askNewPrototype',
 	'newPrototype',

@@ -147,9 +147,9 @@ describe('VS Code’s ports', () => {
 	it('are VS Code’s own: its folder picker, its messages, its links, its clipboard, its reveal', async () => {
 		const v = fake();
 		const ports = vscodePorts(v as never, { draw: vi.fn(), scan: vi.fn(), measure: vi.fn() });
-		expect(await ports.chooseFolder({ title: 'Locate design system' })).toBe('/picked');
+		expect(await ports.chooseFolder({ title: 'Choose design system' })).toBe('/picked');
 		expect(v.window.showOpenDialog.mock.calls[0]?.[0]).toMatchObject({
-			title: 'Locate design system',
+			title: 'Choose design system',
 			canSelectFolders: true,
 			canSelectFiles: false,
 		});

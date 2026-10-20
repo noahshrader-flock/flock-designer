@@ -9,6 +9,7 @@ import { prototypePagePath } from '../src/shared/designPaths';
 import type { Ports } from '../src/core/ports';
 import type { AgentId } from '../src/core/services/agent/agent';
 import { type RepoRef, formatRepo } from '../src/shared/repoRef';
+import { chooseDesignSystem } from '../src/core/services/projects/productDesignSystem';
 import { DESIGN_REPO } from '../src/shared/config';
 import { claudeCode } from '../src/core/services/agent/claudeCode';
 import { codex } from '../src/core/services/agent/codex';
@@ -732,6 +733,29 @@ describe('prototypes', () => {
 			expect((await call(CHANNELS.setPrototypeDesignSystem, product, 'demo', 'v1', 'clone')).error).toBe(
 				'No clone of x shown to be its source is here, so Version 1 cannot be built from one.',
 			);
+		});
+
+		it('builds from the design system chosen for the product, over the clone beside it: everything reads the one chosen', async () => {
+			await made();
+			mkdirSync(join(home, 'prototype', 'demo'), { recursive: true });
+			writeFileSync(join(home, 'prototype', 'demo', 'v1.tsx'), "import { Hello } from 'x';\nexport default function Page() { return <Hello />; }\n");
+			const lib = (text: string) => ({
+				'package.json': JSON.stringify({ name: 'x', peerDependencies: { react: '*' } }),
+				'src/index.tsx': `export const Hello = () => <h1>${text}</h1>;\n`,
+			});
+			const beside = designSystemBeside(product, lib('From beside'));
+			const chosen = makeDesignSystem(join(home, 'chosen', 'x'), 'x', lib('From the one chosen'));
+			g(chosen, 'init', '-q', '-b', 'main');
+			g(chosen, 'add', '-A');
+			g(chosen, 'commit', '-q', '-m', 'a fork');
+			onTestFinished(async () => {
+				await chooseDesignSystem(product, null);
+				rmSync(beside, { recursive: true, force: true });
+				rmSync(join(home, 'chosen'), { recursive: true, force: true });
+			});
+			await chooseDesignSystem(product, chosen);
+			expect(await call(CHANNELS.setPrototypeDesignSystem, product, 'demo', 'v1', 'clone')).toMatchObject({ ok: true, value: { from: 'clone' } });
+			expect(readFileSync(join(design, prototypePagePath('demo', 'v1')), 'utf8')).toContain('From the one chosen');
 		});
 
 		it('builds a version from the design system’s clone when the person chooses it, saved as so built, and back again', async () => {

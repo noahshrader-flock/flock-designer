@@ -1,9 +1,10 @@
-import { resolve, sep } from 'node:path';
+import { existsSync } from 'node:fs';
+import { basename, join, resolve, sep } from 'node:path';
 import type * as VsCode from 'vscode';
-import type { Context } from '../../src/core/services/projects/findContext';
+import type { Context, FoundHow } from '../../src/core/services/projects/findContext';
 import type { SourceAnswers } from '../../src/core/services/projects/productDesignSystem';
 import { type DesignSystemsMemory, systemAt } from '../../src/core/services/designSystem/designSystems';
-import type { Catalog, CatalogComponent, ConnectedDesignSystem, TokenEdit } from '../../src/shared/contract';
+import type { Catalog, CatalogComponent, ConnectedDesignSystem, ConnectedDesignSystems, TokenEdit } from '../../src/shared/contract';
 import { editsKept } from '../../src/shared/tokens';
 import { errorText } from '../../src/shared/result';
 import { storybookAddress } from '../../src/shared/catalog';
@@ -123,15 +124,41 @@ export const libraryFileIn = (system: Pick<ConnectedDesignSystem, 'root'>, file:
 	return path.startsWith(system.root + sep) ? path : null;
 };
 
-/** When the one found cannot be read, the one the person located is shown instead: locating it is how they said which. */
-export const shownFrom = async (
-	found: Context['designSystem'],
-	located: string | null,
-	{ show, at }: { show: (found: Context['designSystem']) => Promise<string | null>; at: (root: string) => Promise<Context['designSystem']> },
-): Promise<{ designSystem: Context['designSystem']; unreadable: string | null }> => {
-	const why = await show(found);
-	if (why === null || located === null || found?.how === 'located') return { designSystem: found, unreadable: why };
-	const instead = await at(located);
-	if (instead === null || (await show(instead)) !== null) return { designSystem: found, unreadable: why };
-	return { designSystem: instead, unreadable: null };
+/** Where the design system in use came from, as the chooser names it. */
+export const FOUND_WORDS: Record<FoundHow, string> = {
+	repository: 'in this repository',
+	beside: 'beside the product',
+	chosen: 'chosen',
+	open: 'open in this window',
+};
+
+export type DesignSystemPick = { kind: 'use'; dir: string } | { kind: 'folder' } | { kind: 'product' };
+
+/**
+ * Which design system the product uses: another DSNR has seen (still on this computer), a folder, or, when another was
+ * chosen, the product's own. It names the one in use and where it came from, and says first what choosing another clears.
+ */
+export const pickDesignSystem = async (
+	window: Pick<typeof VsCode.window, 'showQuickPick'>,
+	{
+		inUse,
+		known,
+		chosen,
+		exists = existsSync,
+	}: { inUse: Context['designSystem']; known: ConnectedDesignSystems; chosen: boolean; exists?: (dir: string) => boolean },
+): Promise<DesignSystemPick | null> => {
+	const dirOf = (s: ConnectedDesignSystem) => join(s.root, s.folder);
+	const seen = known.systems.filter((s, i, all) => dirOf(s) !== inUse?.root && all.findIndex((o) => dirOf(o) === dirOf(s)) === i && exists(dirOf(s)));
+	// As the tab names it, when it is the one the tab shows.
+	const shown = known.systems.find((s) => s.id === known.current && dirOf(s) === inUse?.root);
+	const items: (VsCode.QuickPickItem & { pick: DesignSystemPick })[] = [
+		...seen.map((s) => ({ label: s.name, description: dirOf(s), pick: { kind: 'use' as const, dir: dirOf(s) } })),
+		{ label: 'Choose a folder…', pick: { kind: 'folder' } },
+		...(chosen ? [{ label: "Use the product's", description: 'the one its workspace file names', pick: { kind: 'product' as const } }] : []),
+	];
+	const picked = await window.showQuickPick(items, {
+		title: inUse === null ? 'Design system: none in use' : `Design system: ${shown?.name ?? basename(inUse.root)}, ${FOUND_WORDS[inUse.how]}`,
+		placeHolder: 'Choosing another clears what is being tried on this one: values tried, token edits not saved, and its open tabs.',
+	});
+	return picked?.pick ?? null;
 };

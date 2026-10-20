@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import { basename, isAbsolute, join } from 'node:path';
 import { git } from '../platform/git';
-import { designSystemInProduct } from '../projects/productDesignSystem';
+import { holdsItsDesignSystem } from '../projects/productDesignSystem';
 import { capitalize } from '../../../shared/titleCase';
 
 const IN_PROGRESS: [string, string][] = [
@@ -51,6 +51,6 @@ const unfinishedWhy = async (root: string, where: string): Promise<string | null
  */
 export const sharedCheckoutNote = async (dir: string): Promise<string> => {
 	const top = await git(dir, ['rev-parse', '--show-toplevel']).catch(() => null);
-	if (top === null || designSystemInProduct(top) === null) return '';
+	if (top === null || !(await holdsItsDesignSystem(top))) return '';
 	return ` ${basename(top)} holds its own design system, so its component changes and its codebase work share this one checkout.`;
 };

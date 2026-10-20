@@ -59,7 +59,7 @@ export const askRoutes = (handlers: AskHandlers): ReadonlyMap<AskName, Route> =>
 			await fn(...args);
 			return null;
 		};
-	handle('locateDesignSystem', [], done(handlers.locateDesignSystem));
+	handle('chooseDesignSystem', [], done(handlers.chooseDesignSystem));
 	handle('getStarted', [], done(handlers.getStarted));
 	handle('askNewPrototype', [], done(handlers.askNewPrototype));
 	handle('newPrototype', [check.title, check.task, check.folder], done(handlers.newPrototype));

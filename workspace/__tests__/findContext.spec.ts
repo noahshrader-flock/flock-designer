@@ -4,11 +4,12 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { findContext } from '../src/core/services/projects/findContext';
+import { chooseDesignSystem } from '../src/core/services/projects/productDesignSystem';
 import { makeProductFiles } from './fixtures';
 
 /**
- * The design system is found in order: what the product says, then any open folder that holds one, then the one the
- * person located.
+ * The design system is found in order: the folder the person chose for the product, then what the product says, then any
+ * open folder that holds one.
  */
 
 let base: string;
@@ -45,10 +46,10 @@ describe('the context, from the open folders', () => {
 		designRepository(at('GitHub', 'flock-designer'));
 		expect(await findContext({ folders: [coke] })).toEqual({
 			product: coke,
-			designSystem: { root: at('GitHub', 'ui'), how: 'named' },
+			designSystem: { root: at('GitHub', 'ui'), how: 'beside' },
 			designRepository: at('GitHub', 'flock-designer', 'projects'),
 			productRepository: null,
-			source: { state: 'usable', root: at('GitHub', 'ui') },
+			source: { state: 'usable', root: at('GitHub', 'ui'), how: 'beside' },
 			missing: [],
 		});
 	});
@@ -64,7 +65,7 @@ describe('the context, from the open folders', () => {
 	it('finds a design system that is a folder of the product, as its descriptor says (a monorepo)', async () => {
 		const mono = product(at('mono'), '@acme/ui', 'packages/ui');
 		designSystem(at('mono', 'packages', 'ui'));
-		expect((await findContext({ folders: [mono] })).designSystem).toEqual({ root: at('mono', 'packages', 'ui'), how: 'named' });
+		expect((await findContext({ folders: [mono] })).designSystem).toEqual({ root: at('mono', 'packages', 'ui'), how: 'repository' });
 	});
 
 	it('finds the design system in another open folder when it is not where the product names it', async () => {
@@ -81,23 +82,29 @@ describe('the context, from the open folders', () => {
 		expect(found.missing[0]).toMatch(/^No product is open/);
 	});
 
-	it('uses the folder the person located when nothing open holds one, and only if it does', async () => {
+	it('uses the folder chosen for the product over everything, and shows nothing in place of one gone, saying so', async () => {
 		const coke = product(at('work', 'coke'), '@acme/ui');
-		const located = designSystem(at('far', 'away', 'ui'));
-		expect((await findContext({ folders: [coke], located })).designSystem).toEqual({ root: located, how: 'located' });
-		mkdirSync(at('empty'), { recursive: true });
-		expect((await findContext({ folders: [coke], located: at('empty') })).designSystem).toBeNull();
+		execFileSync('git', ['init', '-q', coke]);
+		designSystem(at('work', 'ui'));
+		const open = designSystem(at('open', 'ui'));
+		const chosen = designSystem(at('far', 'away', 'ui'));
+		await chooseDesignSystem(coke, chosen);
+		expect((await findContext({ folders: [coke, open] })).designSystem).toEqual({ root: chosen, how: 'chosen' });
+		rmSync(chosen, { recursive: true });
+		const gone = await findContext({ folders: [coke, open] });
+		expect(gone.designSystem).toBeNull();
+		expect(gone.missing[0]).toBe(
+			`${chosen}, the design system chosen for coke, is not on this computer any more. Choose another, or use the product's.`,
+		);
 	});
 
-	it('prefers what the product names, then what is open, then what was located', async () => {
+	it('prefers what the product names, then what is open', async () => {
 		const coke = product(at('GitHub', 'coke'), '@acme/ui');
 		designSystem(at('GitHub', 'ui'));
 		const open = designSystem(at('open', 'ui'));
-		const located = designSystem(at('located', 'ui'));
-		expect((await findContext({ folders: [coke, open], located })).designSystem?.how).toBe('named');
+		expect((await findContext({ folders: [coke, open] })).designSystem?.how).toBe('beside');
 		rmSync(at('GitHub', 'ui'), { recursive: true });
-		expect((await findContext({ folders: [coke, open], located })).designSystem?.how).toBe('open');
-		expect((await findContext({ folders: [coke], located })).designSystem?.how).toBe('located');
+		expect((await findContext({ folders: [coke, open] })).designSystem?.how).toBe('open');
 	});
 
 	it('says each thing it could not find, and finds nothing in nothing', async () => {
