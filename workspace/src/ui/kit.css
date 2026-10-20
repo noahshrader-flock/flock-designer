@@ -53,6 +53,7 @@
 	--dsnr-grid-gap: var(--dsnr-space-4);
 	--dsnr-top-pad: var(--dsnr-space-4);
 	--dsnr-top-height: calc(var(--dsnr-control) + 2 * var(--dsnr-top-pad));
+	--dsnr-menu-height: 60vh;
 	/*
 	 * What is above what, from the back: a row's or card's actions, the bars kept at the top (which a list scrolls under, so
 	 * they are above the actions), an open menu, a dialog.
@@ -374,6 +375,39 @@ body {
 
 .menu-button-face {
 	border-radius: 50%;
+}
+
+/* What a dropdown is chosen from: VS Code's own dropdown colours, as the native select it replaces had. */
+.menu-field {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--dsnr-space-3);
+	box-sizing: border-box;
+	max-width: 100%;
+	height: var(--dsnr-control);
+	padding: 0 var(--dsnr-space-4);
+	border: 1px solid var(--vscode-dropdown-border, var(--dsnr-contrast-border));
+	border-radius: var(--dsnr-radius);
+	color: var(--vscode-dropdown-foreground);
+	background: var(--vscode-dropdown-background);
+	font: inherit;
+	cursor: pointer;
+}
+
+.menu-field:hover {
+	filter: var(--dsnr-filter-hover);
+}
+
+/* A flex row may shorten it, and its text is what gives. */
+.menu:has(> .menu-field) {
+	min-width: 0;
+}
+
+.menu-field-text {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
 .menu-button:hover,
@@ -870,8 +904,15 @@ details[open] > summary > .collapse-chevron {
 	display: flex;
 	flex-direction: column;
 	min-width: 170px;
+	max-height: var(--dsnr-menu-height);
 	margin-top: var(--dsnr-space-1);
 	padding: var(--dsnr-space-2);
+	overflow-y: auto;
+}
+
+.menu-start .menu-list {
+	right: auto;
+	left: 0;
 }
 
 .menu-item {

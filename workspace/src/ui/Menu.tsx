@@ -5,7 +5,7 @@ import { useDismiss } from './useDismiss';
 /** In a choice (`checked` given, true or false) it is a radio of its section. */
 export interface MenuItem {
 	label: string;
-	icon: string | ReactNode;
+	icon?: string | ReactNode;
 	onSelect: () => void;
 	checked?: boolean;
 	disabled?: boolean;
@@ -17,12 +17,15 @@ export interface MenuSection {
 }
 
 const ENTRIES = '[role^="menuitem"]';
+const CHOSEN = '[aria-checked="true"]';
 
 export const Menu = ({
 	label,
 	sections,
 	icon = 'ellipsis',
 	face,
+	field,
+	align = 'end',
 	always = false,
 	size = 'default',
 }: {
@@ -30,6 +33,10 @@ export const Menu = ({
 	sections: MenuSection[];
 	icon?: string;
 	face?: ReactNode;
+	/** The button says what is chosen, with a chevron, and is a control of the kit's default size rather than an icon alone. */
+	field?: string;
+	/** Which edge of the button the list lines up with. */
+	align?: 'start' | 'end';
 	always?: boolean;
 	size?: 'default' | 'small';
 }) => {
@@ -39,7 +46,7 @@ export const Menu = ({
 	const list = useId();
 	useDismiss(open, wrap, () => setOpen(false), button);
 	useEffect(() => {
-		if (open) wrap.current?.querySelector<HTMLElement>(ENTRIES)?.focus();
+		if (open) (wrap.current?.querySelector<HTMLElement>(CHOSEN) ?? wrap.current?.querySelector<HTMLElement>(ENTRIES))?.focus();
 	}, [open]);
 	const onKeyDown = (e: KeyEvent<HTMLElement>) => {
 		const all = [...(wrap.current?.querySelectorAll<HTMLElement>(ENTRIES) ?? [])];
@@ -69,17 +76,34 @@ export const Menu = ({
 			{item.checked === true && <Icon name="check" className="menu-check" />}
 		</button>
 	);
-	return (
-		<span ref={wrap} className={open ? 'menu menu-open' : 'menu'} onKeyDown={onKeyDown}>
-			<button
-				ref={button}
-				type="button"
-				className={[
+	const triggerClass =
+		field !== undefined
+			? 'menu-field'
+			: [
 					'menu-button',
 					...(size === 'small' ? ['menu-button-small'] : []),
 					...(always || face ? ['menu-button-shown'] : []),
 					...(face ? ['menu-button-face'] : []),
-				].join(' ')}
+				].join(' ');
+	const trigger =
+		field !== undefined ? (
+			<>
+				<span className="menu-field-text">{field}</span>
+				<Icon name="chevron-down" size="small" />
+			</>
+		) : (
+			(face ?? <Icon name={icon} />)
+		);
+	return (
+		<span
+			ref={wrap}
+			className={['menu', ...(open ? ['menu-open'] : []), ...(align === 'start' ? ['menu-start'] : [])].join(' ')}
+			onKeyDown={onKeyDown}
+		>
+			<button
+				ref={button}
+				type="button"
+				className={triggerClass}
 				aria-label={label}
 				title={label}
 				aria-haspopup="menu"
@@ -87,7 +111,7 @@ export const Menu = ({
 				{...(open ? { 'aria-controls': list } : {})}
 				onClick={() => setOpen(!open)}
 			>
-				{face ?? <Icon name={icon} />}
+				{trigger}
 			</button>
 			{open && (
 				<div id={list} role="menu" aria-label={label} className="menu-list">

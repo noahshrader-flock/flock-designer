@@ -1,5 +1,3 @@
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
@@ -10,11 +8,10 @@ import { ModeIcon } from '../src/ui/ModeIcon';
 import { SearchBox } from '../src/ui/SearchBox';
 import { Toggle } from '../src/ui/Toggle';
 import { inChrome, NO_CHROME, OWN_WINDOW } from './realChrome';
-import { panelCss } from './panelStyles';
+import { barPage } from './panelStyles';
 
 /** Measured in a row too narrow for them, which must not squeeze them out of square. */
 
-const viewer = readFileSync(join(__dirname, '..', 'src/viewer/viewer.css'), 'utf8').replace(/@import[^;]+;/g, '');
 const noop = () => undefined;
 const sections = [{ items: [{ label: 'List', icon: 'list-unordered', onSelect: noop }] }];
 
@@ -48,9 +45,7 @@ describe.skipIf(NO_CHROME)('an icon alone, in the browser on this machine', () =
 		const sizes = await inChrome(async (browser) => {
 			const tab = await browser.newPage(OWN_WINDOW);
 			await tab.setViewport({ width: 400, height: 300 });
-			await tab.setContent(
-				`<!doctype html><html><head><meta charset="utf-8"><style>${panelCss()}\n${viewer}</style></head><body>${row()}</body></html>`,
-			);
+			await tab.setContent(barPage(row()));
 			return tab.evaluate(() => {
 				const high = (el: Element) => el.getBoundingClientRect();
 				const px = (v: string) => {
