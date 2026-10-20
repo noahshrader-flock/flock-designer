@@ -47,7 +47,7 @@ const routeLine = (recordFile: string): string =>
 
 /** Every run in a checkout commits its work, which an agent's sandbox may refuse. */
 const checkoutEnding = ({ lightCheck, shared, accessibility, voice }: CheckoutParts): string[] => [
-	'If a sandbox refuses a git command (`git add`, `git commit`), ask the person to let it run outside the sandbox: never leave the work uncommitted. Never push.',
+	'If a sandbox refuses a git command (`git add`, `git commit`), ask the person to let it run outside the sandbox: never leave the work uncommitted. Never push. A commit has no `Co-authored-by` or other attribution line, which some agents add by themselves: the work is the person’s.',
 	lightCheckLine(lightCheck),
 	...(shared ? ['', shared] : []),
 	'',

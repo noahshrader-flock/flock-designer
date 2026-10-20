@@ -276,7 +276,8 @@ starts in, or a list of rows (the icons at the right above them, remembered with
 project's menu, its right-click menu or a review tab's menu, opens a dialog in the panel to put it in a folder, a new
 one, or none, with the same folder choice New prototype has; it uses the projects the panel already has, so it opens at
 once. The app's one setting, its theme, is VS Code's here. DSNR's settings are which agent it hands work to (`dsnr.agent.use`:
-Claude Code, in its panel, or Codex, in a terminal here, which starts at once with the task), and where an agent with a
+Claude Code, in its panel; Codex, in a terminal here, which starts at once with the task; or GitHub Copilot, in VS Code's
+Chat, with the task typed in, or its command line in a terminal when there is no Chat), and where an agent with a
 panel opens it (`dsnr.agent.location`, below; it was `dsnr.claudeCode.location`, and a value set there is moved to it once).
 Changing a value in words runs unattended, which only Claude Code does.
 

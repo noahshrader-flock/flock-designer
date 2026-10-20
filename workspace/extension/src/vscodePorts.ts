@@ -8,7 +8,7 @@ import { isThisMachine } from '../../src/shared/thisMachine';
 export interface VsCodeApi {
 	window: Pick<typeof VsCode.window, 'showOpenDialog' | 'showInformationMessage' | 'createTerminal'>;
 	env: Pick<typeof VsCode.env, 'openExternal' | 'clipboard'>;
-	commands: Pick<typeof VsCode.commands, 'executeCommand'>;
+	commands: Pick<typeof VsCode.commands, 'executeCommand' | 'getCommands'>;
 	Uri: Pick<typeof VsCode.Uri, 'file' | 'parse'>;
 	extensions: Pick<typeof VsCode.extensions, 'getExtension'>;
 	workspace: Pick<typeof VsCode.workspace, 'workspaceFolders' | 'getConfiguration'>;

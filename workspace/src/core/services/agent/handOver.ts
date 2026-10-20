@@ -7,8 +7,8 @@ import { startCommand } from './terminal';
 
 /** Refused, in the agent's own words, when it is missing or signed out; one it cannot tell about is not held back. */
 export const assertReady = async (agent: Agent): Promise<void> => {
-	const { state } = await agent.readiness();
-	if (state === 'missing' || state === 'signedOut') throw new Error(agent.notReady[state]);
+	const ready = await agent.readiness();
+	if (ready.state === 'missing' || ready.state === 'signedOut') throw new Error(ready.said);
 };
 
 type HandPorts = Pick<Ports, 'agentWindow' | 'copy'>;

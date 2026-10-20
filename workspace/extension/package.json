@@ -232,12 +232,14 @@
 					"type": "string",
 					"enum": [
 						"claude-code",
-						"codex"
+						"codex",
+						"copilot"
 					],
 					"default": "claude-code",
 					"enumDescriptions": [
 						"Claude Code, in its side panel.",
-						"Codex, in a terminal here."
+						"Codex, in a terminal here.",
+						"GitHub Copilot, in VS Code's Chat."
 					],
 					"description": "The agent DSNR hands work to: building a prototype, Address, Build in the codebase, Hand off. Changing a value in words runs unattended, which only Claude Code does."
 				},

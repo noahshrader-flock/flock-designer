@@ -9,14 +9,14 @@ import { ProcessFailed, runFile } from '../platform/process';
  * workflow usable without DSNR.
  */
 
-export const AGENT_IDS = ['claude-code', 'codex'] as const;
+export const AGENT_IDS = ['claude-code', 'codex', 'copilot'] as const;
 export type AgentId = (typeof AGENT_IDS)[number];
 export const isAgentId = (v: unknown): v is AgentId => AGENT_IDS.includes(v as AgentId);
 /** Used until the person chooses. */
 export const DEFAULT_AGENT: AgentId = 'claude-code';
 
 /** `unknown`: it could not be told, which blocks nothing. */
-export type AgentReadiness = { state: 'ready' } | { state: 'missing' } | { state: 'signedOut' } | { state: 'unknown' };
+export type AgentReadiness = { state: 'ready' } | { state: 'missing'; said: string } | { state: 'signedOut'; said: string } | { state: 'unknown' };
 
 /** `said`: what it changed, or why not. */
 export interface RunEnded {
@@ -26,15 +26,13 @@ export interface RunEnded {
 
 /**
  * An agent DSNR hands work to. What names one agent, its commands and its words, is in its adapter (`claudeCode.ts`,
- * `codex.ts`) and, for its own window in VS Code, in `extension/src/agentWindows.ts`, and nowhere else.
+ * `codex.ts`, `copilot.ts`) and, for its own window in VS Code, in `extension/src/agentWindows.ts`, and nowhere else.
  */
 export interface Agent {
 	readonly id: AgentId;
 	readonly name: string;
-	/** Read only: what it says of its sign-in, never the sign-in itself. */
+	/** Read only: what it says of its sign-in, never the sign-in itself; `said`, in its words, is what to do when it is not ready. */
 	readiness(): Promise<AgentReadiness>;
-	/** Said when it is not ready, and nothing is handed over. */
-	notReady: { missing: string; signedOut: string };
 	/** The bare name when it is found nowhere, whose failure says what to do. */
 	program(): string;
 	/** What starts it, in a terminal, with `prompt` as its first message. */
@@ -74,16 +72,22 @@ export const runCommand: RunCommand = (file, args) =>
 
 /**
  * From what `run`'s status command said, read by `read` (null when it says neither); missing when there is no program to run
- * (the bare name, as locating falls back to), and unknown when it could not be asked or did not say.
+ * (the bare name, as locating falls back to), and unknown when it could not be asked or did not say. `notReady` is what to
+ * do, in the agent's words.
  */
-export const readinessOf = async (run: () => Promise<Said>, read: (said: Said) => 'ready' | 'signedOut' | null): Promise<AgentReadiness> => {
+export const readinessOf = async (
+	run: () => Promise<Said>,
+	read: (said: Said) => 'ready' | 'signedOut' | null,
+	notReady: { missing: string; signedOut: string },
+): Promise<AgentReadiness> => {
 	let said: Said;
 	try {
 		said = await run();
 	} catch (err) {
-		return { state: (err as NodeJS.ErrnoException).code === 'ENOENT' ? 'missing' : 'unknown' };
+		return (err as NodeJS.ErrnoException).code === 'ENOENT' ? { state: 'missing', said: notReady.missing } : { state: 'unknown' };
 	}
-	return { state: read(said) ?? 'unknown' };
+	const state = read(said);
+	return state === 'ready' ? { state } : state === 'signedOut' ? { state, said: notReady.signedOut } : { state: 'unknown' };
 };
 
 export interface Lookup {
@@ -106,13 +110,15 @@ export const lookupHere = (): Lookup => ({
  */
 export const locate = (
 	name: string,
-	{ others = [], prefix, inside }: { others?: string[]; prefix: string; inside: (extension: string, list: Lookup['list']) => string[] },
+	{ others = [], bundled }: { others?: string[]; bundled?: { prefix: string; inside: (extension: string, list: Lookup['list']) => string[] } },
 	{ env, home, exists, list }: Lookup,
 ): string => {
 	const onPath = findOnPath(name, env, exists);
 	if (onPath) return onPath;
 	const other = others.find(exists);
 	if (other) return other;
+	if (!bundled) return name;
+	const { prefix, inside } = bundled;
 	for (const editor of ['.vscode', '.vscode-insiders', '.cursor']) {
 		const dir = join(home, editor, 'extensions');
 		const versions = list(dir)

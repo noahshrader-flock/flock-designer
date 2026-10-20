@@ -6,8 +6,10 @@ import type { CallsContext } from '../src/core/compose';
 import { appPaths } from '../src/core/appPaths';
 import { CHANNELS, invokeChannel } from '../src/shared/contract';
 import type { Ports } from '../src/core/ports';
+import type { AgentId } from '../src/core/services/agent/agent';
 import { claudeCode } from '../src/core/services/agent/claudeCode';
 import { codex } from '../src/core/services/agent/codex';
+import { copilot } from '../src/core/services/agent/copilot';
 import { type Answer, fakeGitHub } from './fakes/github';
 import {
 	addStandards,
@@ -42,7 +44,7 @@ const fakePorts = () =>
 		httpStatus: vi.fn(async () => 200),
 		// Never another application from a test: VS Code is treated as not installed.
 		agentWindow: { open: vi.fn(async (): Promise<'typed' | 'started' | null> => null) },
-		agentChoice: vi.fn((): 'claude-code' | 'codex' => 'claude-code'),
+		agentChoice: vi.fn((): AgentId => 'claude-code'),
 		shareTools: vi.fn(() => {
 			throw new Error('Sharing is not faked in this test.');
 		}),
@@ -190,6 +192,7 @@ beforeEach(async () => {
 					}) as never,
 				}),
 				codex: codex({ locate: () => 'codex', run: async () => ({ stdout: '', stderr: 'Logged in using ChatGPT' }) }),
+				copilot: copilot({ locate: () => 'copilot' }),
 			},
 			github: { state: () => githubState, api: (...a: unknown[]) => githubApi(...a) } as never,
 			designRepo: {

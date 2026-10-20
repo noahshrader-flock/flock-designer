@@ -5,6 +5,7 @@ import { VsCodeGitHub } from '../extension/src/github';
 import { claudeLink, moveLocationSetting } from '../extension/src/agentWindows';
 import { claudeCode } from '../src/core/services/agent/claudeCode';
 import { codex } from '../src/core/services/agent/codex';
+import { copilot } from '../src/core/services/agent/copilot';
 import { openableLink, vscodePorts } from '../extension/src/vscodePorts';
 import { NO_TABS_SHOWN, reviewsOf } from '../extension/src/messages';
 import { Reviews, answerReview, reviewPage, reviewPath } from '../extension/src/review';
@@ -86,7 +87,10 @@ describe('VS Code’s ports', () => {
 			createTerminal: vi.fn((_options: unknown) => ({ show: terminalShown })),
 		},
 		env: { openExternal: vi.fn(async (_uri: unknown) => true), clipboard: { writeText: vi.fn(async () => undefined) } },
-		commands: { executeCommand: vi.fn(async (_id: string, ..._args: unknown[]) => undefined) },
+		commands: {
+			executeCommand: vi.fn(async (_id: string, ..._args: unknown[]) => undefined),
+			getCommands: vi.fn(async (_internal?: boolean) => ['workbench.action.chat.open']),
+		},
 		Uri: { file: (p: string) => ({ fsPath: p }), parse: (u: string) => ({ toString: () => u }) },
 		extensions: { getExtension: vi.fn((id: string) => (id === 'anthropic.claude-code' ? { id } : undefined)) },
 		workspace: {
@@ -215,6 +219,30 @@ describe('VS Code’s ports', () => {
 		expect(v.commands.executeCommand).not.toHaveBeenCalled();
 	});
 
+	it('hand Copilot its task in VS Code’s Chat, in agent mode, typed in and not sent, in the folder’s window', async () => {
+		const v = fake();
+		const agent = copilot({ locate: () => '/bin/copilot' });
+		expect(await vscodePorts(v as never, none).agentWindow.open(agent, '/work/coke', 'Build it.')).toBe('typed');
+		expect(v.commands.executeCommand.mock.calls).toEqual([
+			['workbench.action.chat.open', { query: 'Build it.', mode: 'agent', isPartialQuery: true }],
+		]);
+		expect(v.window.createTerminal).not.toHaveBeenCalled();
+	});
+
+	it('start Copilot’s command line in a terminal instead, sending the task, when this VS Code has no Chat', async () => {
+		const v = fake();
+		v.commands.getCommands.mockResolvedValue([]);
+		const agent = copilot({ locate: () => '/bin/copilot' });
+		expect(await vscodePorts(v as never, none).agentWindow.open(agent, '/work/coke', 'Build it.')).toBe('started');
+		expect(v.window.createTerminal).toHaveBeenCalledWith({
+			name: 'GitHub Copilot',
+			cwd: '/work/coke',
+			shellPath: '/bin/copilot',
+			shellArgs: ['-i', 'Build it.'],
+		});
+		expect(v.commands.executeCommand).not.toHaveBeenCalled();
+	});
+
 	it('hand work to the agent the person chose, and to Claude Code until they choose, or for a choice it does not know', () => {
 		const choice = (value?: unknown) => {
 			settings = value === undefined ? {} : { 'dsnr.agent.use': value };
@@ -222,6 +250,7 @@ describe('VS Code’s ports', () => {
 		};
 		expect(choice()).toBe('claude-code');
 		expect(choice('codex')).toBe('codex');
+		expect(choice('copilot')).toBe('copilot');
 		expect(choice('claude-code')).toBe('claude-code');
 		expect(choice('someone else')).toBe('claude-code');
 	});

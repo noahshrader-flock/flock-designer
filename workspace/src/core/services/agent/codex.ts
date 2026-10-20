@@ -6,9 +6,11 @@ export const locateCodex = (lookup: Lookup = lookupHere()): string =>
 	locate(
 		'codex',
 		{
-			prefix: 'openai.chatgpt-',
-			inside: (extension, list) =>
-				list(join(extension, 'bin')).flatMap((platform) => ['codex', 'codex.exe'].map((n) => join(extension, 'bin', platform, n))),
+			bundled: {
+				prefix: 'openai.chatgpt-',
+				inside: (extension, list) =>
+					list(join(extension, 'bin')).flatMap((platform) => ['codex', 'codex.exe'].map((n) => join(extension, 'bin', platform, n))),
+			},
 		},
 		lookup,
 	);
@@ -35,11 +37,11 @@ export const codex = (deps: CodexDeps = defaultCodexDeps): Agent => ({
 				const said = `${stderr}\n${stdout}`;
 				return /^\s*Logged in\b/im.test(said) ? 'ready' : /^\s*Not logged in\b/im.test(said) ? 'signedOut' : null;
 			},
+			{
+				missing: 'Codex is not installed. Install the Codex extension for VS Code, or its command line, sign in, then start again.',
+				signedOut: 'Codex is not signed in. Run codex login in a terminal, or sign in in the Codex panel, then start again.',
+			},
 		),
-	notReady: {
-		missing: 'Codex is not installed. Install the Codex extension for VS Code, or its command line, sign in, then start again.',
-		signedOut: 'Codex is not signed in. Run codex login in a terminal, or sign in in the Codex panel, then start again.',
-	},
 	program: deps.locate,
 	// The copy OpenAI's extension bundles will not start its interactive screen with the shared background server.
 	startArgs: (prompt) => ['--no-daemon', prompt],

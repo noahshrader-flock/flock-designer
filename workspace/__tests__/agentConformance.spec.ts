@@ -6,6 +6,7 @@ import { afterAll, describe, expect, it, vi } from 'vitest';
 import type { Agent } from '../src/core/services/agent/agent';
 import { claudeCode } from '../src/core/services/agent/claudeCode';
 import { codex } from '../src/core/services/agent/codex';
+import { copilot } from '../src/core/services/agent/copilot';
 import { startCommand } from '../src/core/services/agent/terminal';
 import { handOver } from '../src/core/services/agent/handOver';
 
@@ -30,15 +31,17 @@ interface Row {
 	name: string;
 	/** `answer`: what its status command prints, or how it fails. */
 	make: (bin: string, answer: () => Promise<Answer>) => Agent;
-	answers: { ready: string; signedOut: string; unreadable: string };
-	/** The stream its status command answers on, as the real one does: an adapter that reads the other hears nothing. */
-	answersOn: 'stdout' | 'stderr';
+	/**
+	 * For an agent with a status command: what it prints, and on which stream, as the real one does (an adapter that reads the
+	 * other hears nothing). None for one that cannot tell who is signed in.
+	 */
+	status?: { answers: { ready: string; signedOut: string; unreadable: string }; on: 'stdout' | 'stderr' };
 	/** For an agent that runs unattended: prints as it does, the task saying how the run ends (`changed`, `refused`, `crashed`). */
 	stream?: string;
 }
 
 /** What a status command printed, on the stream that agent uses; an error, as the command failing. */
-const answering = (answer: () => Promise<Answer>, on: Row['answersOn']) => async () => {
+const answering = (answer: () => Promise<Answer>, on: 'stdout' | 'stderr') => async () => {
 	const a = await answer();
 	if (a instanceof Error) throw a;
 	return on === 'stdout' ? { stdout: a, stderr: '' } : { stdout: '', stderr: a };
@@ -48,8 +51,7 @@ const ROWS: Row[] = [
 	{
 		name: 'Claude Code',
 		make: (bin, answer) => claudeCode({ locate: () => bin, run: answering(answer, 'stdout'), spawnProcess: spawn }),
-		answersOn: 'stdout',
-		answers: { ready: '{"loggedIn":true}', signedOut: '{"loggedIn":false}', unreadable: 'Logged in as someone' },
+		status: { answers: { ready: '{"loggedIn":true}', signedOut: '{"loggedIn":false}', unreadable: 'Logged in as someone' }, on: 'stdout' },
 		stream: `const task = process.argv[process.argv.indexOf('-p') + 1];
 const say = (e) => process.stdout.write(JSON.stringify(e) + '\\n');
 say({ type: 'assistant', message: { content: [{ type: 'text', text: 'Looking.' }] } });
@@ -59,10 +61,10 @@ say({ type: 'result', is_error: task === 'refused', result: task === 'refused' ?
 	{
 		name: 'Codex',
 		make: (bin, answer) => codex({ locate: () => bin, run: answering(answer, 'stderr') }),
-		answersOn: 'stderr',
 		// As `codex login status` prints them, on stderr; "Not logged in" comes with exit 1, which is still an answer.
-		answers: { ready: 'Logged in using ChatGPT', signedOut: 'Not logged in', unreadable: 'Welcome to Codex' },
+		status: { answers: { ready: 'Logged in using ChatGPT', signedOut: 'Not logged in', unreadable: 'Welcome to Codex' }, on: 'stderr' },
 	},
+	{ name: 'GitHub Copilot', make: (bin) => copilot({ locate: () => bin }) },
 ];
 
 /** Handed `Go.` in `/work`; `prepare` counts what would have been made for it. */
@@ -73,22 +75,43 @@ const missing = (): Error => Object.assign(new Error('spawn ENOENT'), { code: 'E
 
 describe.each(ROWS)('$name, behind the seam', (row) => {
 	const bin = program(`${row.name.replace(/\W/g, '')}-stand-in`, row.stream ?? 'process.exit(0);');
-	const agent = (answer: Answer = row.answers.ready) => row.make(bin, async () => answer);
+	const agent = (answer: Answer = row.status?.answers.ready ?? '') => row.make(bin, async () => answer);
 
-	it('says whether it is ready from what it says of itself, and never stands in the way when it cannot tell', async () => {
-		expect(await agent(row.answers.ready).readiness()).toEqual({ state: 'ready' });
-		expect(await agent(row.answers.signedOut).readiness()).toEqual({ state: 'signedOut' });
-		expect(await agent(missing()).readiness()).toEqual({ state: 'missing' });
-		expect(await agent(row.answers.unreadable).readiness()).toEqual({ state: 'unknown' });
-		expect(await agent(new Error('timed out')).readiness()).toEqual({ state: 'unknown' });
+	it('names itself', () => {
+		expect(agent().name).toBe(row.name);
 	});
 
-	it('names itself, and says in its own words what to do when it is missing or signed out', () => {
-		const a = agent();
-		expect(a.name).toBe(row.name);
-		expect(a.notReady.missing).toContain(row.name);
-		expect(a.notReady.signedOut).toContain(row.name);
-	});
+	if (row.status) {
+		const { answers } = row.status;
+		it('says whether it is ready from what it says of itself, in its own words when it is not, and never stands in the way when it cannot tell', async () => {
+			expect(await agent(answers.ready).readiness()).toEqual({ state: 'ready' });
+			expect(await agent(answers.signedOut).readiness()).toEqual({ state: 'signedOut', said: expect.stringContaining(row.name) });
+			expect(await agent(missing()).readiness()).toEqual({ state: 'missing', said: expect.stringContaining(row.name) });
+			expect(await agent(answers.unreadable).readiness()).toEqual({ state: 'unknown' });
+			expect(await agent(new Error('timed out')).readiness()).toEqual({ state: 'unknown' });
+		});
+
+		it('is handed nothing, and nothing is made for it, when it is missing or signed out, and says why in its words', async () => {
+			const open = vi.fn(async () => 'typed' as const);
+			const ports = { agentWindow: { open }, copy: vi.fn(async () => undefined) };
+			const prepare = vi.fn(async () => ({ root: '/work', prompt: 'Go.' }));
+			const said = async (answer: Answer) => {
+				const r = await agent(answer).readiness();
+				return 'said' in r ? r.said : '';
+			};
+			await expect(hand(ports, agent(missing()), prepare)).rejects.toThrow(await said(missing()));
+			await expect(hand(ports, agent(answers.signedOut), prepare)).rejects.toThrow(await said(answers.signedOut));
+			expect(prepare).not.toHaveBeenCalled();
+			expect(open).not.toHaveBeenCalled();
+			expect(ports.copy).not.toHaveBeenCalled();
+			// One it cannot tell about is still handed the work: what it is handed says a real failure.
+			expect((await hand(ports, agent(answers.unreadable))).opened).toBe('typed');
+		});
+	} else
+		it('says it cannot tell who is signed in, which holds nothing back: never ready, never signed out', async () => {
+			expect(await agent().readiness()).toEqual({ state: 'unknown' });
+			expect((await hand({ agentWindow: { open: async () => 'typed' as const }, copy: async () => undefined }, agent())).opened).toBe('typed');
+		});
 
 	it('starts as its own program, with the prompt whole as its last argument, so a terminal can start it in any folder', () => {
 		const a = agent();
@@ -116,19 +139,6 @@ describe.each(ROWS)('$name, behind the seam', (row) => {
 		const given = await hand(ports(null), a);
 		expect(given).toEqual({ agent: row.name, opened: null, command: startCommand(a.program(), '/work', a.startArgs('Go.')) });
 		expect(copied).toEqual([given.command]);
-	});
-
-	it('is handed nothing, and nothing is made for it, when it is missing or signed out, and says why in its words', async () => {
-		const open = vi.fn(async () => 'typed' as const);
-		const ports = { agentWindow: { open }, copy: vi.fn(async () => undefined) };
-		const prepare = vi.fn(async () => ({ root: '/work', prompt: 'Go.' }));
-		await expect(hand(ports, agent(missing()), prepare)).rejects.toThrow(agent().notReady.missing);
-		await expect(hand(ports, agent(row.answers.signedOut), prepare)).rejects.toThrow(agent().notReady.signedOut);
-		expect(prepare).not.toHaveBeenCalled();
-		expect(open).not.toHaveBeenCalled();
-		expect(ports.copy).not.toHaveBeenCalled();
-		// One it cannot tell about is still handed the work: what it is handed says a real failure.
-		expect((await hand(ports, agent(row.answers.unreadable))).opened).toBe('typed');
 	});
 
 	it('undoes what was made for a hand-off its window could not then open, and nothing for one it opened', async () => {

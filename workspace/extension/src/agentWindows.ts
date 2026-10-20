@@ -20,12 +20,13 @@ const OPEN_CONVERSATION = 'claude-vscode.editor.open';
 
 export const claudeLink = (prompt: string): string => `vscode://anthropic.claude-code/open?${new URLSearchParams({ prompt }).toString()}`;
 
+/** A conversation starts in its window's own folder, so a folder that is not this window's opens in one of its own. */
+const openFolder = async (vscode: VsCodeApi, folder: string): Promise<void> => {
+	if (!(vscode.workspace.workspaceFolders ?? []).some((f) => f.uri.fsPath === folder))
+		await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(folder), { forceNewWindow: true });
+};
+
 const claudeWindow = (vscode: VsCodeApi): AgentWindow => {
-	// A conversation starts in its window's own folder, so a folder that is not this window's opens in one of its own.
-	const openFolder = async (folder: string) => {
-		if (!(vscode.workspace.workspaceFolders ?? []).some((f) => f.uri.fsPath === folder))
-			await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(folder), { forceNewWindow: true });
-	};
 	const place = () => vscode.workspace.getConfiguration('claudeCode').get<string>('preferredLocation');
 	/**
 	 * Waited for, since the sidebar command saves `preferredLocation` a moment later without waiting, and asked at once
@@ -39,7 +40,7 @@ const claudeWindow = (vscode: VsCodeApi): AgentWindow => {
 	return {
 		here: () => vscode.extensions.getExtension(CLAUDE_CODE) !== undefined,
 		open: async (_agent, root, prompt) => {
-			await openFolder(root);
+			await openFolder(vscode, root);
 			try {
 				if (vscode.workspace.getConfiguration('dsnr.agent').get<string>('location', 'sidebar') === 'editor')
 					await vscode.commands.executeCommand(OPEN_CONVERSATION, undefined, prompt);
@@ -66,12 +67,30 @@ const terminalWindow = (vscode: VsCodeApi): AgentWindow => ({
 	},
 });
 
-/** One for each agent, so a new one cannot be added without saying what its window in VS Code is (null: it has none). */
-const windowsOf = (vscode: VsCodeApi): Record<AgentId, AgentWindow | null> => ({
-	'claude-code': claudeWindow(vscode),
-	// Its VS Code extension's commands take no prompt and no folder.
-	codex: terminalWindow(vscode),
+/** VS Code's own Chat command, which its own commands open with a query in agent mode (`isPartialQuery`: typed, not sent). */
+const CHAT_OPEN = 'workbench.action.chat.open';
+
+/** In VS Code's Chat, which has Copilot built in; in its command line, in a terminal, when this VS Code has no Chat. */
+const copilotWindow = (vscode: VsCodeApi, terminal: AgentWindow): AgentWindow => ({
+	here: () => true,
+	open: async (agent, root, prompt) => {
+		if (!(await vscode.commands.getCommands(true)).includes(CHAT_OPEN)) return terminal.open(agent, root, prompt);
+		await openFolder(vscode, root);
+		await vscode.commands.executeCommand(CHAT_OPEN, { query: prompt, mode: 'agent', isPartialQuery: true });
+		return 'typed';
+	},
 });
+
+/** One for each agent, so a new one cannot be added without saying what its window in VS Code is (null: it has none). */
+const windowsOf = (vscode: VsCodeApi): Record<AgentId, AgentWindow | null> => {
+	const terminal = terminalWindow(vscode);
+	return {
+		'claude-code': claudeWindow(vscode),
+		// Its VS Code extension's commands take no prompt and no folder.
+		codex: terminal,
+		copilot: copilotWindow(vscode, terminal),
+	};
+};
 
 /** Null when this VS Code has nowhere for the agent: it is then given a terminal command to copy. */
 export const agentWindows = (vscode: VsCodeApi): Ports['agentWindow'] => {

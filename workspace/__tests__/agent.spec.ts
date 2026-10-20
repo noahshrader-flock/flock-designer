@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { claudeArgv, claudeCode, locateClaude } from '../src/core/services/agent/claudeCode';
 import { codex, locateCodex } from '../src/core/services/agent/codex';
+import { locateCopilot } from '../src/core/services/agent/copilot';
 import { runByChosen } from '../src/core/services/agent/agent';
 
 describe('running unattended', () => {
@@ -78,6 +79,17 @@ describe('finding Codex', () => {
 
 	it('falls back to the bare name, whose failure says what to install', () => {
 		expect(locateCodex({ env: { PATH: '' }, home: '/h', exists: () => false, list: () => [] })).toBe('codex');
+	});
+});
+
+describe('finding GitHub Copilot’s command line', () => {
+	it('is on the PATH, or where its own installers put it: never inside the Copilot extension', () => {
+		expect(locateCopilot({ env: { PATH: '/a' }, home: '/h', exists: (p) => p === '/a/copilot', list: () => [] })).toBe('/a/copilot');
+		// VS Code started from the Dock has no Homebrew on its PATH.
+		expect(locateCopilot({ env: { PATH: '' }, home: '/h', exists: (p) => p === '/opt/homebrew/bin/copilot', list: () => [] })).toBe(
+			'/opt/homebrew/bin/copilot',
+		);
+		expect(locateCopilot({ env: { PATH: '' }, home: '/h', exists: () => false, list: () => ['github.copilot-chat-1.0.0'] })).toBe('copilot');
 	});
 });
 

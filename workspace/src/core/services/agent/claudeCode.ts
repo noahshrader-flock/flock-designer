@@ -14,8 +14,7 @@ export const locateClaude = (lookup: Lookup = lookupHere()): string =>
 				'/opt/homebrew/bin/claude',
 				'/usr/local/bin/claude',
 			],
-			prefix: 'anthropic.claude-code-',
-			inside: (extension) => [join(extension, 'resources', 'native-binary', 'claude')],
+			bundled: { prefix: 'anthropic.claude-code-', inside: (extension) => [join(extension, 'resources', 'native-binary', 'claude')] },
 		},
 		lookup,
 	);
@@ -118,11 +117,11 @@ export const claudeCode = (deps: ClaudeDeps = defaultClaudeDeps): Agent => ({
 					return null;
 				}
 			},
+			{
+				missing: 'Claude Code is not installed. Install it from claude.com/claude-code, sign in, then start again.',
+				signedOut: 'Claude Code is not signed in. Sign in in the Claude Code panel, or by running claude in a terminal, then start again.',
+			},
 		),
-	notReady: {
-		missing: 'Claude Code is not installed. Install it from claude.com/claude-code, sign in, then start again.',
-		signedOut: 'Claude Code is not signed in. Sign in in the Claude Code panel, or by running claude in a terminal, then start again.',
-	},
 	program: deps.locate,
 	startArgs: (prompt) => [prompt],
 	runUnattended: (cwd, task, { readOnly }) =>
