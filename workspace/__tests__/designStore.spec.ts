@@ -17,6 +17,7 @@ const github = () => ({
 	readBytes: vi.fn(async () => null),
 	hasFile: vi.fn(async () => false),
 	writeFile: vi.fn(async () => undefined),
+	removeFolder: vi.fn(async () => undefined),
 });
 
 describe('the design repository, read and written', () => {
@@ -33,6 +34,14 @@ describe('the design repository, read and written', () => {
 		const store = designStore({ clone: () => null, files: () => repo, onWrite: () => undefined });
 		expect(await store.readFile('projects/p/missing.md')).toBeNull();
 		expect(repo.readFile).toHaveBeenCalledOnce();
+	});
+
+	it('removes a folder on GitHub when there is no clone, in one change', async () => {
+		const repo = github();
+		await designStore({ clone: () => null, files: () => repo, onWrite: () => undefined })
+			.records()
+			.remove('projects/p', 'p: deleted');
+		expect(repo.removeFolder).toHaveBeenCalledExactlyOnceWith('projects/p', 'p: deleted');
 	});
 
 	it('is the clone alone where there is no GitHub to ask, as for the command line', async () => {

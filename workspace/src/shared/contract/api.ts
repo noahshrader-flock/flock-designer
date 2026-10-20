@@ -193,6 +193,10 @@ export interface WorkspaceApi {
 	assignFolder(projectId: string, folder: string | null): Promise<Result<null>>;
 	/** The name people see, its brief's heading; never its id. */
 	renameProject(projectId: string, title: string): Promise<Result<null>>;
+	/** The whole project, every version with it; `typed` must be its name (`namesProject`). */
+	deleteProject(projectId: string, typed: string): Promise<Result<null>>;
+	/** So what shows a deleted project (its review tab) can close. */
+	onProjectDeleted(listener: (projectId: string) => void): () => void;
 	postComment(projectId: string, branch: string, body: string, anchor: CommentAnchor | null, picture?: string | null): Promise<Result<ReviewComment>>;
 
 	/** Only the comment's author can. */
@@ -243,6 +247,7 @@ export const INVOKE = [
 	'handPrototypeRefresh',
 	'assignFolder',
 	'renameProject',
+	'deleteProject',
 	'handPrototypeBuild',
 	'handPrototypeAddress',
 	'publishedPage',
@@ -275,6 +280,7 @@ export const EVENTS = {
 	onPreviewStatus: 'previewStatus',
 	onSignInChanged: 'signInChanged',
 	onLibraryShown: 'libraryShown',
+	onProjectDeleted: 'projectDeleted',
 } as const satisfies Partial<Record<keyof WorkspaceApi, string>>;
 
 export type InvokeName = (typeof INVOKE)[number];

@@ -629,6 +629,8 @@ describe('the review tabs', () => {
 								return { dispose: () => undefined };
 							},
 							reveal: () => void panel.revealed++,
+							// As VS Code's: closing it says so to whoever listens.
+							dispose: () => panel.disposed(),
 							onDidDispose: (l: () => void) => {
 								panel.disposed = l;
 								return { dispose: () => undefined };
@@ -659,6 +661,23 @@ describe('the review tabs', () => {
 		vs.panels[0]!.disposed();
 		await reviews.open({ records: '/d/projects', projectId: 'demo', name: 'v1', title: 'Demo · Version 1' });
 		expect(vs.panels).toHaveLength(2);
+	});
+
+	it('close a deleted project’s tab and its browser keys, leaving another project’s', async () => {
+		const vs = fakeVsCode();
+		const reviews = new Reviews({
+			vscode: vs.api as never,
+			build: () => undefined,
+			serve: async () => 'http://127.0.0.1:5000/review/',
+			answer: async () => ({ ok: true, value: [] }),
+		});
+		await reviews.open({ records: '/d/projects', projectId: 'demo', name: 'v1', title: 'Demo · Version 1' });
+		await reviews.open({ records: '/d/projects', projectId: 'other', name: 'v1', title: 'Other · Version 1' });
+		const url = await reviews.inBrowser({ records: '/d/projects', projectId: 'demo', name: 'v1', title: 'Demo · Version 1' });
+		const key = url.split('#dsnr-key-')[1] as string;
+		reviews.close('demo');
+		expect(reviews.inUse()).toEqual(['other']);
+		expect(await reviews.answerBrowser(key, { dsnr: 'ask', id: 1, name: 'readComments', args: ['demo', 'prototype/demo/v1'] })).toBeNull();
 	});
 
 	it('have an address for the browser: the same page, built from the records and served from this machine, with no tab made', async () => {

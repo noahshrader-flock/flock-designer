@@ -75,6 +75,7 @@ const ProjectItem = ({ project, labels, onDialog }: { project: Project; labels: 
 	const folder: MenuItem[] = [
 		{ label: 'Rename…', icon: 'edit', onSelect: () => onDialog({ kind: 'rename', projectId: id }) },
 		{ label: 'Assign folder…', icon: 'folder', onSelect: () => onDialog({ kind: 'assign', projectId: id }) },
+		{ label: 'Delete…', icon: 'trash', onSelect: () => onDialog({ kind: 'delete', projectId: id }) },
 	];
 	const sections = [copy, pages, runs, code, folder].filter((group) => group.length > 0).map((group) => ({ items: group }));
 	const press = newest ? () => void asks().openReview(id) : inCode ? () => onCodebase('open-code') : undefined;

@@ -8,7 +8,7 @@ import { asks } from './host';
 import { AccountDialog, SyncDialog } from './AccountDialogs';
 import { Dialog } from '../../src/ui/Dialog';
 import { BuildInCodebaseDialog, HandoffDialog, UpdateBranchDialog } from './CodebaseDialogs';
-import { AssignFolderDialog, NewPrototypeDialog, RenameDialog } from './ProjectDialogs';
+import { AssignFolderDialog, DeleteProjectDialog, NewPrototypeDialog, RenameDialog } from './ProjectDialogs';
 import { Message } from '../../src/ui/Message';
 
 export const PanelDialogs = ({
@@ -46,6 +46,8 @@ export const PanelDialogs = ({
 			return <AssignFolderDialog project={project} folders={folders} onAssigned={onChanged} onClose={onClose} />;
 		case 'rename':
 			return <RenameDialog project={project} onRenamed={onChanged} onClose={onClose} />;
+		case 'delete':
+			return <DeleteProjectDialog project={project} onDeleted={onChanged} onClose={onClose} />;
 		case 'build':
 			if (!newest) return null;
 			return root ? (

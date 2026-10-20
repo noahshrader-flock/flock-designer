@@ -895,6 +895,20 @@ describe('prototypes', () => {
 		expect((await call(CHANNELS.renameProject, '../etc', 'Roles')).ok).toBe(false);
 	});
 
+	it('are deleted from the clone, every version with them, only when their name is typed, saying so to what shows them', async () => {
+		const emit = vi.fn();
+		register({ emit });
+		await trustFolder(product);
+		await call(CHANNELS.createPrototype, 'demo', 'Demo', 'A list', { root: product, branch: 'develop' });
+		expect((await call(CHANNELS.deleteProject, 'demo', 'demo')).error).toBe('Type Demo to delete it.');
+		expect(existsSync(join(design, 'projects', 'demo', 'work.json'))).toBe(true);
+		expect(emit).not.toHaveBeenCalledWith('onProjectDeleted', expect.anything());
+		expect((await call(CHANNELS.deleteProject, 'demo', ' Demo ')).ok).toBe(true);
+		expect(existsSync(join(design, 'projects', 'demo'))).toBe(false);
+		expect(emit).toHaveBeenCalledWith('onProjectDeleted', 'demo');
+		expect((await call(CHANNELS.deleteProject, '../etc', 'etc')).ok).toBe(false);
+	});
+
 	it('are recorded, saved and served through the clone on this machine', async () => {
 		await trustFolder(product);
 		const made = await call(CHANNELS.createPrototype, 'demo', 'Demo', 'A list', { root: product, branch: 'develop' });

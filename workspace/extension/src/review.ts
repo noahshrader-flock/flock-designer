@@ -110,7 +110,7 @@ const answered = async (answers: ReviewAnswers, review: Review, name: RelayCall,
 	return callRoute(answers.routes(), name, args);
 };
 
-type Panel = Pick<VsCode.WebviewPanel, 'title' | 'active' | 'visible' | 'reveal' | 'onDidChangeViewState' | 'onDidDispose'> & {
+type Panel = Pick<VsCode.WebviewPanel, 'title' | 'active' | 'visible' | 'reveal' | 'dispose' | 'onDidChangeViewState' | 'onDidDispose'> & {
 	webview: Pick<VsCode.Webview, 'html' | 'onDidReceiveMessage' | 'postMessage'>;
 };
 
@@ -184,6 +184,12 @@ export class Reviews {
 		tab.review = review;
 		tab.panel.title = review.title;
 		tab.panel.webview.html = reviewPage({ src, title: review.title, nonce: newNonce() });
+	}
+
+	/** Its project is gone: its tab is closed, and a browser's key for it answers nothing more. */
+	close(projectId: string): void {
+		this.tabs.get(projectId)?.panel.dispose();
+		for (const [hash, held] of this.keys) if (held.review.projectId === projectId) this.keys.delete(hash);
 	}
 
 	/** In a tab or by a browser's key: what is built for them must stay. */

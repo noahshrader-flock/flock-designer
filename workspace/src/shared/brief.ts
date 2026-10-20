@@ -69,6 +69,9 @@ export const inFolder = (project: Project, choice: FolderChoice): boolean =>
 export const fromBrief = (projectId: string, brief: string | null): { title: string; folder: string | null } =>
 	brief === null ? { title: projectId, folder: null } : { title: firstHeading(brief) ?? projectId, folder: briefFolder(brief) };
 
+/** What deleting a project asks to be typed: its name as people see it (`fromBrief`), exactly, spaces at either end aside. */
+export const namesProject = (typed: string, title: string): boolean => typed.trim() === title;
+
 export const briefBody = (markdown: string): string => frontMatterOf(markdown).body;
 
 /** Anything else in the front matter is kept, and a brief left with nothing in it is as it was before it had a folder. */

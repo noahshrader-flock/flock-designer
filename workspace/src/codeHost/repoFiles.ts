@@ -82,6 +82,37 @@ export class RepoFiles {
 		});
 	}
 
+	/**
+	 * One commit on the default branch with every file under `dir` gone, not one per file, so no one ever reads half of it.
+	 * Moved on meanwhile (a teammate's save), it is made again on what is there now, once.
+	 */
+	async removeFolder(dir: string, message: string): Promise<void> {
+		const remove = async () => {
+			const branch = (await this.defaultBranch()).split('/').map(encodeURIComponent).join('/');
+			const head = String(asRecord(asRecord(await this.session.api(`${this.apiPath}/git/ref/heads/${branch}`)).object).sha);
+			const base = String(asRecord(asRecord(await this.session.api(`${this.apiPath}/git/commits/${head}`)).tree).sha);
+			const tree = asRecord(await this.session.api(`${this.apiPath}/git/trees/${base}?recursive=1`));
+			if (tree.truncated === true) throw new Error(`${HOST} would not list all of ${this.ref.repo}, so ${dir} was not deleted.`);
+			const gone = asArray(tree.tree)
+				.map(asRecord)
+				.filter((e) => e.type === 'blob' && String(e.path).startsWith(`${dir}/`))
+				.map((e) => ({ path: String(e.path), mode: String(e.mode), type: 'blob', sha: null }));
+			if (gone.length === 0) return;
+			const made = asRecord(await this.session.api(`${this.apiPath}/git/trees`, { method: 'POST', body: { base_tree: base, tree: gone } }));
+			const commit = asRecord(
+				await this.session.api(`${this.apiPath}/git/commits`, { method: 'POST', body: { message, tree: made.sha, parents: [head] } }),
+			);
+			await this.session.api(`${this.apiPath}/git/refs/heads/${branch}`, { method: 'PATCH', body: { sha: commit.sha, force: false } });
+		};
+		try {
+			await remove();
+		} catch (err) {
+			if (hostErrorKind(err) === 'conflict') return remove();
+			if (hostErrorKind(err) === 'forbidden' || hostErrorKind(err) === 'notFound') throw noWriteAccess(this.ref);
+			throw err;
+		}
+	}
+
 	/** Used only where there is no clone on this machine to write into, so there is one writer per machine. */
 	async writeFile(path: string, content: string | Buffer, message: string): Promise<void> {
 		const put = async () => this.putFile(path, content, message, await this.shaAt(path));

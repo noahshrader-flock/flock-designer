@@ -327,7 +327,12 @@ project's menu, its right-click menu or a review tab's menu, opens a dialog in t
 one, or none, with the same folder choice New prototype has. It opens at once with the projects the panel has, and, as
 every project's dialog does, has the list read again behind it, so it acts on the project as it is. **Rename…**, beside
 it, changes the name people see, the first heading of its `brief.md` (`renameProject`), and builds the published site
-again; the project's id, which its folder, links, branches and comments are named by, stays as it was. The app's one
+again; the project's id, which its folder, links, branches and comments are named by, stays as it was. **Delete…**,
+last, deletes the whole project, every version with it, for everyone (`deleteProject`): its dialog says what goes and
+what stays, and deletes only once the project's name is typed as the list shows it (`namesProject`, which the core checks
+again). Its folder goes as one change (with a clone, the next push of the records; without, one commit over the API), the
+published site is built again without it, and its review tab closes. Its comments stay on GitHub, its codebase branch and
+pull request stay, and what it was stays in the design repository's history. The app's one
 setting, its theme, is VS Code's here. DSNR's settings are which agent it hands work to (`dsnr.agent.use`: Claude Code,
 in its panel; Codex, in its panel, with the task's file attached and its line on the clipboard to paste, or in a
 terminal, where it starts at once, when its extension is not here or the work is not in this window's first folder; or

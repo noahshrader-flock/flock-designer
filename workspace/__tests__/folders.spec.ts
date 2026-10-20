@@ -5,8 +5,19 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { Project } from '../src/shared/contract';
 import { DesignRepo } from '../src/codeHost/designRepo';
 import { readFolderProjects } from '../src/core/services/projects/localProjects';
-import { assignFolder, recordPrototype, renameProject, type RecordStore } from '../src/core/services/prototypes/prototype';
-import { briefFolder, firstHeading, folderName, foldersOf, inFolder, projectTitle, sameFolder, withFolder, withTitle } from '../src/shared/brief';
+import { assignFolder, deleteProject, recordPrototype, renameProject, type RecordStore } from '../src/core/services/prototypes/prototype';
+import {
+	briefFolder,
+	firstHeading,
+	folderName,
+	foldersOf,
+	inFolder,
+	namesProject,
+	projectTitle,
+	sameFolder,
+	withFolder,
+	withTitle,
+} from '../src/shared/brief';
 import { projectDir, projectPath } from '../src/shared/designPaths';
 import { mergeProjects } from '../src/shared/projectList';
 import { b64, fakeGitHub } from './fakes/github';
@@ -237,6 +248,50 @@ describe('renaming a project', () => {
 		await expect(renameProject(said({}).store, 'alert-history', 'Alerts')).rejects.toThrow(
 			'alert-history has no brief, which is where its name is kept.',
 		);
+	});
+});
+
+describe('deleting a project', () => {
+	const said = (files: Record<string, string>) => {
+		const { store, removed } = memoryStore(files);
+		const messages: string[] = [];
+		const telling: RecordStore = { ...store, remove: async (d, m) => (messages.push(m), store.remove(d, m)) };
+		return { store: telling, files, removed, messages };
+	};
+	const PROJECT = {
+		'projects/alert-history/brief.md': FILED,
+		'projects/alert-history/work.json': '[]',
+		'projects/alert-history/prototypes/v1.html': '<p>',
+		'projects/alert-history-2/brief.md': '# Alert history two\n',
+	};
+
+	it('is asked for by its name as people see it, exactly, spaces at either end aside', () => {
+		expect(namesProject('  Alert history ', 'Alert history')).toBe(true);
+		expect(namesProject('alert history', 'Alert history')).toBe(false);
+		expect(namesProject('Alert  history', 'Alert history')).toBe(false);
+		expect(namesProject('', 'Alert history')).toBe(false);
+	});
+
+	it('removes its whole folder, every version with it, as one change saying so, and nothing of another project', async () => {
+		const { store, files, removed, messages } = said({ ...PROJECT });
+		await deleteProject(store, 'alert-history', 'Alert history');
+		expect(removed).toEqual(['projects/alert-history']);
+		expect(messages).toEqual(['alert-history: deleted']);
+		expect(Object.keys(files)).toEqual(['projects/alert-history-2/brief.md']);
+	});
+
+	it('refuses any other name, saying the one to type, and removes nothing', async () => {
+		const { store, removed } = said({ ...PROJECT });
+		await expect(deleteProject(store, 'alert-history', 'alert history')).rejects.toThrow('Type Alert history to delete it.');
+		await expect(deleteProject(store, 'alert-history', 'alert-history')).rejects.toThrow('Type Alert history to delete it.');
+		expect(removed).toEqual([]);
+	});
+
+	it('takes its id for its name when it has no brief, as the list shows it, and refuses a project that is not there', async () => {
+		const { store, removed } = said({ 'projects/zones/work.json': '[]' });
+		await deleteProject(store, 'zones', 'zones');
+		expect(removed).toEqual(['projects/zones']);
+		await expect(deleteProject(said({}).store, 'zones', 'zones')).rejects.toThrow('There is no project zones to delete.');
 	});
 });
 

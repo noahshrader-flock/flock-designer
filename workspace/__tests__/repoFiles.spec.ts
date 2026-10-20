@@ -111,3 +111,74 @@ describe('history', () => {
 		]);
 	});
 });
+
+describe('removeFolder', () => {
+	const TREE = {
+		truncated: false,
+		tree: [
+			{ path: 'projects/x', type: 'tree', mode: '040000' },
+			{ path: 'projects/x/brief.md', type: 'blob', mode: '100644' },
+			{ path: 'projects/x/prototypes/v1.html', type: 'blob', mode: '100644' },
+			{ path: 'projects/x-2/brief.md', type: 'blob', mode: '100644' },
+		],
+	};
+	const routes = (patch: () => unknown = () => ({})) => ({
+		'GET /repos/acme/design': { default_branch: 'main' },
+		'GET /repos/acme/design/git/ref/heads/main': { object: { sha: 'head1' } },
+		'GET /repos/acme/design/git/commits/head1': { tree: { sha: 'tree1' } },
+		'GET /repos/acme/design/git/trees/tree1?recursive=1': TREE,
+		'POST /repos/acme/design/git/trees': { sha: 'tree2' },
+		'POST /repos/acme/design/git/commits': { sha: 'commit2' },
+		'PATCH /repos/acme/design/git/refs/heads/main': patch,
+	});
+
+	it('is one commit on the default branch with every file under the folder gone, and nothing of a folder beside it', async () => {
+		const { github, writes } = fakeGitHub(routes());
+		await new RepoFiles(github, REF).removeFolder('projects/x', 'x: deleted');
+		expect(writes).toEqual([
+			{
+				method: 'POST',
+				path: '/repos/acme/design/git/trees',
+				body: {
+					base_tree: 'tree1',
+					tree: [
+						{ path: 'projects/x/brief.md', mode: '100644', type: 'blob', sha: null },
+						{ path: 'projects/x/prototypes/v1.html', mode: '100644', type: 'blob', sha: null },
+					],
+				},
+			},
+			{ method: 'POST', path: '/repos/acme/design/git/commits', body: { message: 'x: deleted', tree: 'tree2', parents: ['head1'] } },
+			{ method: 'PATCH', path: '/repos/acme/design/git/refs/heads/main', body: { sha: 'commit2', force: false } },
+		]);
+	});
+
+	it('makes nothing when the folder has no files', async () => {
+		const { github, writes } = fakeGitHub(routes());
+		await new RepoFiles(github, REF).removeFolder('projects/none', 'm');
+		expect(writes).toEqual([]);
+	});
+
+	it('is made again once on what is there now when the branch moved meanwhile, never forced', async () => {
+		let patches = 0;
+		const { github, writes } = fakeGitHub(
+			routes(() => {
+				if (patches++ === 0) throw refusal(422, 'Update is not a fast forward');
+				return {};
+			}),
+		);
+		await new RepoFiles(github, REF).removeFolder('projects/x', 'm');
+		expect(writes.filter((w) => w.method === 'PATCH')).toHaveLength(2);
+		expect(writes.every((w) => (w.body as { force?: boolean }).force !== true)).toBe(true);
+	});
+
+	it('says write access is needed when GitHub refuses it', async () => {
+		const { github } = fakeGitHub(routes(refusing(403)));
+		await expect(new RepoFiles(github, REF).removeFolder('projects/x', 'm')).rejects.toThrow('Saving needs write access to acme/design.');
+	});
+
+	it('deletes nothing when GitHub cannot list the whole repository', async () => {
+		const { github, writes } = fakeGitHub({ ...routes(), 'GET /repos/acme/design/git/trees/tree1?recursive=1': { ...TREE, truncated: true } });
+		await expect(new RepoFiles(github, REF).removeFolder('projects/x', 'm')).rejects.toThrow('so projects/x was not deleted');
+		expect(writes).toEqual([]);
+	});
+});

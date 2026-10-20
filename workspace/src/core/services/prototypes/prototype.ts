@@ -1,9 +1,9 @@
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import type { Work, Person } from '../../../shared/contract';
-import { briefFolder, firstHeading, folderName, projectTitle, withFolder, withTitle } from '../../../shared/brief';
-import { projectPath, prototypeKey, workPath } from '../../../shared/designPaths';
+import { briefFolder, firstHeading, folderName, fromBrief, namesProject, projectTitle, withFolder, withTitle } from '../../../shared/brief';
+import { projectDir, projectPath, prototypeKey, workPath } from '../../../shared/designPaths';
 import { isPrototypeName, nextVersionName } from '../../../shared/prototypeNames';
 import { assertCover } from '../../../shared/validate';
 import { resolveInside } from '../platform/paths';
@@ -20,6 +20,8 @@ export interface RecordStore {
 	/** Without fetching it: shared files run to megabytes. */
 	has(path: string): Promise<boolean>;
 	write(path: string, content: string | Buffer, message: string): Promise<void>;
+	/** A folder and everything in it, as one change. */
+	remove(dir: string, message: string): Promise<void>;
 }
 
 export const cloneStore = (designRoot: string, published: () => void): RecordStore => ({
@@ -36,6 +38,10 @@ export const cloneStore = (designRoot: string, published: () => void): RecordSto
 		const file = resolveInside(designRoot, path);
 		mkdirSync(dirname(file), { recursive: true });
 		writeFileSync(file, content);
+		published();
+	},
+	remove: async (dir) => {
+		rmSync(resolveInside(designRoot, dir), { recursive: true, force: true });
 		published();
 	},
 });
@@ -146,6 +152,18 @@ export const renameProject = async (store: RecordStore, projectId: string, title
 	if (name === null) throw new Error('Give it a name.');
 	if (firstHeading(brief) === name) return;
 	await store.write(path, withTitle(brief, name), `${projectId}: renamed to ${name}`);
+};
+
+/**
+ * Every version goes with it, for everyone; what it was stays in the design repository's history. Refused unless `typed` is
+ * its name as people see it, so nothing deletes a project its person did not name.
+ */
+export const deleteProject = async (store: RecordStore, projectId: string, typed: string): Promise<void> => {
+	const brief = await store.read(projectPath(projectId, 'brief.md'));
+	if (brief === null && !(await store.has(workPath(projectId)))) throw new Error(`There is no project ${projectId} to delete.`);
+	const { title } = fromBrief(projectId, brief);
+	if (!namesProject(typed, title)) throw new Error(`Type ${title} to delete it.`);
+	await store.remove(projectDir(projectId), `${projectId}: deleted`);
 };
 
 /** The brief is where the folder is kept, so a project with none is refused rather than given one. */

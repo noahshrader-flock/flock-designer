@@ -344,7 +344,15 @@ describe('dialogs and menus, in the panel', () => {
 		it('is on each project, a popover of what it offers, closed by Escape or a press elsewhere', async () => {
 			await showOpen();
 			await press(menuFor(0));
-			expect(items().map((i) => i.textContent)).toEqual(['Copy link', 'Open published page', 'Open locally', 'Build', 'Rename…', 'Assign folder…']);
+			expect(items().map((i) => i.textContent)).toEqual([
+				'Copy link',
+				'Open published page',
+				'Open locally',
+				'Build',
+				'Rename…',
+				'Assign folder…',
+				'Delete…',
+			]);
 			expect(menuFor(0).getAttribute('aria-expanded')).toBe('true');
 			await key('Escape');
 			expect(items()).toHaveLength(0);
@@ -373,7 +381,7 @@ describe('dialogs and menus, in the panel', () => {
 			await showOpen();
 			await press(menuFor(0));
 			const groups = [...document.querySelectorAll('[role="menu"] > *')].map((el) => (el.matches('[role="separator"], hr') ? '|' : el.textContent));
-			expect(groups.join(',')).toBe('Copy link,|,Open published page,Open locally,|,Build,|,Rename…,Assign folder…');
+			expect(groups.join(',')).toBe('Copy link,|,Open published page,Open locally,|,Build,|,Rename…,Assign folder…,Delete…');
 		});
 
 		it('opens a project’s review in the browser from it: the same review, asked of the extension to open outside VS Code', async () => {
@@ -406,7 +414,15 @@ describe('dialogs and menus, in the panel', () => {
 			await showOpen();
 			await viewChoice('List');
 			await press(menuFor(0));
-			expect(items().map((i) => i.textContent)).toEqual(['Copy link', 'Open published page', 'Open locally', 'Build', 'Rename…', 'Assign folder…']);
+			expect(items().map((i) => i.textContent)).toEqual([
+				'Copy link',
+				'Open published page',
+				'Open locally',
+				'Build',
+				'Rename…',
+				'Assign folder…',
+				'Delete…',
+			]);
 		});
 	});
 
@@ -445,6 +461,82 @@ describe('dialogs and menus, in the panel', () => {
 			const call = sent.filter((m) => m.name === 'renameProject').at(-1);
 			await say({ type: 'answer', id: call!.id, result: { ok: false, error: 'alert-history has no brief, which is where its name is kept.' } });
 			expect(dialog()?.textContent).toContain('alert-history has no brief, which is where its name is kept.');
+		});
+	});
+
+	describe('Delete', () => {
+		const open = async (projects = SAMPLE_PROJECTS) => {
+			await showOpen(OPEN, projects);
+			await press(menuFor(0));
+			await press(item('Delete…'));
+		};
+
+		it('is last in the menu, under Assign folder, and says what goes, for everyone, and what stays', async () => {
+			await open();
+			expect(dialog()?.getAttribute('aria-label')).toBe('Delete project');
+			expect(dialog()?.textContent).toContain(
+				'This deletes Alert history and its 3 versions for everyone, with every page, picture and record of it, and takes it off the published site. 2 open comments are on it.',
+			);
+			expect(dialog()?.textContent).toContain('Its comments stay on GitHub. What it was stays in the design repository’s history.');
+			expect(submit().textContent).toBe('Delete project');
+			expect(submit().className).toContain('button-danger');
+		});
+
+		it('deletes only once its name is typed as it is shown: not another case, nor a part of it', async () => {
+			await open();
+			expect(field('Type Alert history to delete it').value).toBe('');
+			expect(submit().disabled).toBe(true);
+			for (const wrong of ['alert history', 'Alert', 'Alert  history', 'alert-history']) {
+				await type(field('Type Alert history to delete it'), wrong);
+				expect(submit().disabled).toBe(true);
+			}
+			await type(field('Type Alert history to delete it'), ' Alert history ');
+			expect(submit().disabled).toBe(false);
+		});
+
+		it('deletes it through the core, by its id with the name typed, closing, and the projects are read again', async () => {
+			await open();
+			const reads = sent.filter((m) => m.name === 'listProjects').length;
+			await type(field('Type Alert history to delete it'), 'Alert history');
+			await press(submit());
+			expect(sent.filter((m) => m.name === 'deleteProject').at(-1)?.args).toEqual(['alert-history', 'Alert history']);
+			await answer('deleteProject', null);
+			expect(dialog()).toBeNull();
+			expect(sent.filter((m) => m.name === 'listProjects').length).toBe(reads + 1);
+		});
+
+		it('says why it could not, in the dialog, which stays open', async () => {
+			await open();
+			await type(field('Type Alert history to delete it'), 'Alert history');
+			await press(submit());
+			const call = sent.filter((m) => m.name === 'deleteProject').at(-1);
+			await say({ type: 'answer', id: call!.id, result: { ok: false, error: 'Saving needs write access to flocksafety/flock-designer.' } });
+			expect(dialog()?.textContent).toContain('Saving needs write access to flocksafety/flock-designer.');
+		});
+
+		it('names no versions for a project with only codebase work', async () => {
+			await open([
+				{ ...SAMPLE_PROJECTS[0]!, work: [projectWork({ name: 'codebase', branch: 'feature/alert-history' })] },
+				...SAMPLE_PROJECTS.slice(1),
+			]);
+			expect(dialog()?.textContent).toContain('This deletes Alert history for everyone, with every page');
+			expect(dialog()?.textContent).toContain('Its comments stay on GitHub, and its codebase branch feature/alert-history stays.');
+		});
+
+		it('says its codebase branch and pull request stay, when it has them', async () => {
+			const inCode = SAMPLE_PROJECTS.map((p, at) =>
+				at === 0
+					? {
+							...p,
+							work: [
+								...p.work,
+								projectWork({ name: 'codebase', branch: 'feature/alert-history', pullRequest: 'https://github.com/flocksafety/flock-coke/pull/9' }),
+							],
+						}
+					: p,
+			);
+			await open(inCode);
+			expect(dialog()?.textContent).toContain('Its comments stay on GitHub, and its codebase branch feature/alert-history and pull request stay.');
 		});
 	});
 
@@ -551,15 +643,16 @@ describe('codebase work, in the panel', () => {
 			'View on GitHub',
 			'Rename…',
 			'Assign folder…',
+			'Delete…',
 		]);
 		expect(dividers()).toBe(4);
 		await elsewhere();
 		await press(menuOf('Alert history'));
-		expect(items()).toEqual(['Copy link', 'Open published page', 'Open locally', 'Build', 'Rename…', 'Assign folder…']);
+		expect(items()).toEqual(['Copy link', 'Open published page', 'Open locally', 'Build', 'Rename…', 'Assign folder…', 'Delete…']);
 		expect(dividers()).toBe(3);
 		await elsewhere();
 		await press(menuOf('Roles in code'));
-		expect(items()).toEqual(['Run locally', 'Update this branch…', 'Hand off', 'View on GitHub', 'Rename…', 'Assign folder…']);
+		expect(items()).toEqual(['Run locally', 'Update this branch…', 'Hand off', 'View on GitHub', 'Rename…', 'Assign folder…', 'Delete…']);
 		expect(dividers()).toBe(2);
 		// No item opens it in VS Code: pressing the project does, so nothing is offered twice.
 		expect(items().some((label) => /open for review|preview|comments|share/i.test(label))).toBe(false);

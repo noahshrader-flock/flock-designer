@@ -1,7 +1,10 @@
 import { type FormEvent, useState } from 'react';
-import { projectTitle, sameFolder } from '../../src/shared/brief';
+import { namesProject, projectTitle, sameFolder } from '../../src/shared/brief';
 import type { Project } from '../../src/shared/domain/projects';
+import { plural } from '../../src/shared/plural';
+import { openCommentsOf } from '../../src/shared/projectList';
 import { slugify } from '../../src/shared/validate';
+import { workOf } from '../../src/shared/work';
 import { Button } from '../../src/ui/Button';
 import { Dialog, DialogButtons } from '../../src/ui/Dialog';
 import { Field, TextArea, TextInput } from '../../src/ui/Field';
@@ -134,6 +137,45 @@ export const RenameDialog = ({ project, onRenamed, onClose }: { project: Project
 				<DialogButtons>
 					<Button type="submit" disabled={!ready}>
 						Save
+					</Button>
+				</DialogButtons>
+			</form>
+		</Dialog>
+	);
+};
+
+/** For everyone, with every version, so its name is typed first; the core checks the name again. */
+export const DeleteProjectDialog = ({ project, onDeleted, onClose }: { project: Project; onDeleted: () => void; onClose: () => void }) => {
+	const [typed, setTyped] = useState('');
+	const { busy, error, run } = useAction();
+	const ready = namesProject(typed, project.title) && !busy;
+	const versions = workOf(project.work, 'prototype').length;
+	const open = openCommentsOf(project.work);
+	const codebase = workOf(project.work, 'codebase')[0];
+	const goes = `This deletes ${project.title}${versions > 0 ? ` and its ${plural(versions, 'version')}` : ''} for everyone, with every page, picture and record of it, and takes it off the published site.`;
+	const comments = open > 0 ? ` ${plural(open, 'open comment')} ${open === 1 ? 'is' : 'are'} on it.` : '';
+	const code = codebase ? `, and its codebase branch ${codebase.branch}${codebase.pullRequest ? ' and pull request stay' : ' stays'}` : '';
+	const remove = async (e: FormEvent) => {
+		e.preventDefault();
+		if (!ready) return;
+		await run(
+			() => workspace().deleteProject(project.id, typed),
+			() => {
+				onDeleted();
+				onClose();
+			},
+		);
+	};
+	return (
+		<Dialog title="Delete project" onClose={onClose}>
+			<form onSubmit={(e) => void remove(e)}>
+				<Message tone="warning">{`${goes}${comments}`}</Message>
+				<Message>{`Its comments stay on GitHub${code}. What it was stays in the design repository’s history.`}</Message>
+				<Field label={`Type ${project.title} to delete it`}>{(control) => <TextInput control={control} value={typed} onChange={setTyped} />}</Field>
+				<Message tone="error">{error}</Message>
+				<DialogButtons>
+					<Button type="submit" variant="danger" disabled={!ready}>
+						Delete project
 					</Button>
 				</DialogButtons>
 			</form>

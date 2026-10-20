@@ -356,6 +356,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 	context.subscriptions.push(
 		sync,
 		{ dispose: panels.listen('onPublishStatus', (status) => sync.show(status as PublishStatus)) },
+		{ dispose: panels.listen('onProjectDeleted', (projectId) => reviews.close(String(projectId))) },
 		runOutput,
 		...voice.disposables,
 		...design.disposables,

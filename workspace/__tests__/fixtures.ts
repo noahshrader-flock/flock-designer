@@ -224,6 +224,7 @@ export const memoryReads = (files: Record<string, string>): CatalogReads => ({
 
 export const memoryStore = (files: Record<string, string | Buffer> = {}) => {
 	const writes: string[] = [];
+	const removed: string[] = [];
 	const store: RecordStore = {
 		read: async (p) => (p in files ? String(files[p]) : null),
 		readBytes: async (p) => (p in files ? Buffer.from(files[p] as string | Buffer) : null),
@@ -232,6 +233,10 @@ export const memoryStore = (files: Record<string, string | Buffer> = {}) => {
 			files[p] = c;
 			writes.push(p);
 		},
+		remove: async (dir) => {
+			for (const p of Object.keys(files)) if (p.startsWith(`${dir}/`)) delete files[p];
+			removed.push(dir);
+		},
 	};
-	return { store, files, writes };
+	return { store, files, writes, removed };
 };

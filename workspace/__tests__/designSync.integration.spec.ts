@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { syncRecords } from '../src/core/services/publishing/designSync';
@@ -210,6 +210,33 @@ describe('when someone else has published too', () => {
 		expect(readFileSync(join(mine, 'projects/p/brief.md'), 'utf8')).toBe('# P, my version\n');
 		expect(existsSync(join(mine, '.git', 'rebase-merge'))).toBe(false);
 		expect(g(mine, 'diff', '--name-only', '--diff-filter=U')).toBe('');
+	});
+});
+
+describe('a deleted project', () => {
+	it('is deleted on GitHub too, and the tree is clean afterwards', async () => {
+		write(mine, 'projects/gone/brief.md', '# Gone\n');
+		write(mine, 'projects/gone/prototypes/v1.html', '<p>');
+		await syncRecords(mine);
+		expect(remoteHas('projects/gone/prototypes/v1.html')).toBe(true);
+		rmSync(join(mine, 'projects/gone'), { recursive: true });
+		expect(await syncRecords(mine)).toEqual({ published: ['gone'], problems: [] });
+		expect(remoteHas('projects/gone/brief.md')).toBe(false);
+		expect(remoteHas('projects/gone/prototypes/v1.html')).toBe(false);
+		expect(g(mine, 'status', '--porcelain')).toBe('');
+	});
+
+	it('holds, and loses nothing, when a teammate changed it on GitHub meanwhile', async () => {
+		write(mine, 'projects/kept/brief.md', '# Kept\n');
+		await syncRecords(mine);
+		g(theirs, 'pull', '-q', 'origin', 'main');
+		write(theirs, 'projects/kept/brief.md', '# Kept, and changed\n');
+		await syncRecords(theirs);
+		rmSync(join(mine, 'projects/kept'), { recursive: true });
+		const r = await syncRecords(mine);
+		expect(r.published).toEqual([]);
+		expect(r.problems[0]?.why).toContain('projects/kept/brief.md changed both here and on GitHub');
+		expect(onRemote('projects/kept/brief.md')).toBe('# Kept, and changed');
 	});
 });
 

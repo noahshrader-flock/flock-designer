@@ -136,6 +136,24 @@ describe('cloneStore', () => {
 		expect(await store.readBytes('projects/users/covers/none.jpg')).toBeNull();
 	});
 
+	it('removes a folder and all in it from the clone, leaving the rest, then has the change published', async () => {
+		dir = mkdtempSync(join(tmpdir(), 'fd-prototype-clone-'));
+		const published = vi.fn();
+		const store = cloneStore(dir, published);
+		await store.write('projects/users/prototypes/v1.html', '<p>', 'm');
+		await store.write('projects/users-2/brief.md', '# Users 2', 'm');
+		await store.remove('projects/users', 'm');
+		expect(existsSync(join(dir, 'projects/users'))).toBe(false);
+		expect(existsSync(join(dir, 'projects/users-2/brief.md'))).toBe(true);
+		expect(published).toHaveBeenCalledTimes(3);
+	});
+
+	it('never removes outside the clone', async () => {
+		dir = mkdtempSync(join(tmpdir(), 'fd-prototype-clone-'));
+		await expect(cloneStore(dir, vi.fn()).remove('..', 'm')).rejects.toThrow();
+		expect(existsSync(dir)).toBe(true);
+	});
+
 	it('never writes outside the clone', async () => {
 		dir = mkdtempSync(join(tmpdir(), 'fd-prototype-clone-'));
 		await expect(cloneStore(dir, vi.fn()).write('../outside.html', 'x', 'm')).rejects.toThrow();

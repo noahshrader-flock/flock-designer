@@ -16,12 +16,20 @@ import { warmTip } from '../services/platform/fetch';
 import { INSTALL_COMMAND } from '../services/codebase/install';
 import { jpegDataUrl } from '../services/prototypes/picture';
 import { type CoverDeps, builtHere, ensureCovers } from '../services/prototypes/projectCovers';
-import { BUILD_SKILL, GUIDE, type PrototypeSources, assignFolder, renameProject, setBaseCommit } from '../services/prototypes/prototype';
+import {
+	BUILD_SKILL,
+	GUIDE,
+	type PrototypeSources,
+	assignFolder,
+	deleteProject,
+	renameProject,
+	setBaseCommit,
+} from '../services/prototypes/prototype';
 import { localPrototypeFile, whereTheChangeGoes } from '../services/prototypes/prototypeWork';
 import { singleFlight } from '../services/platform/concurrency';
 
 export const prototypesArea = (d: CallsDeps) => {
-	const { agent, designRepos, me, opened, ports, prototypePage, prototypesRoot, deploys, readSkillText, servePrototype, store, work } = d;
+	const { agent, designRepos, emit, me, opened, ports, prototypePage, prototypesRoot, deploys, readSkillText, servePrototype, store, work } = d;
 	const inFlight = singleFlight<string, unknown>();
 	const once = <T>(key: string, run: () => Promise<T>): Promise<T> => inFlight.run(key, run) as Promise<T>;
 	const coverDeps: CoverDeps = {
@@ -118,6 +126,13 @@ export const prototypesArea = (d: CallsDeps) => {
 		renameProject: async (projectId: string, title: string) => {
 			await renameProject(store.records(), projectId, title);
 			deploys.site();
+			return null;
+		},
+		/** Built again, the site has none of its pages. */
+		deleteProject: async (projectId: string, typed: string) => {
+			await deleteProject(store.records(), projectId, typed);
+			deploys.site();
+			emit('onProjectDeleted', projectId);
 			return null;
 		},
 		handPrototypeBuild: async (root: string, projectId: string, name: string, request: string): Promise<Handed> => {
