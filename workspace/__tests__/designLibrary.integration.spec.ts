@@ -4,7 +4,8 @@ import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { Catalog, CatalogUpdate, ConnectedDesignSystem } from '../src/shared/contract';
 import { undeclared } from '../src/shared/wcag';
-import { DesignLibrary, fetchProblem, inLibrary, libraryReads, readLibrary, updateLibrary } from '../src/core/services/designSystem/designLibrary';
+import { DesignLibrary, inLibrary, libraryReads, readLibrary, updateLibrary } from '../src/core/services/designSystem/designLibrary';
+import { fetchProblem } from '../src/core/services/platform/fetch';
 import { DesignSystemsMemory } from '../src/core/services/designSystem/designSystems';
 import { g, writeFiles } from './fixtures';
 

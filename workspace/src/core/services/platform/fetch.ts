@@ -1,0 +1,236 @@
+import { basename, resolve } from 'node:path';
+import { errorText } from '../../../shared/result';
+import { CLI, HOST } from '../../../shared/vocabulary';
+import { git, isSafeBranchName } from './git';
+
+/** A failed fetch in words, for `what` it was fetching (the library, a product). */
+export const fetchProblem = (stderr: string, branch: string, what = 'the library'): string => {
+	if (
+		/Authentication failed|could not read (Username|Password)|terminal prompts disabled|Repository not found|Permission denied \(publickey\)|403/i.test(
+			stderr,
+		)
+	) {
+		return `${HOST} would not let git on this computer read ${what}: git is not signed in to ${HOST}, or this account cannot read it. Run \`${CLI} auth setup-git\` in a terminal (with ${HOST}'s command line signed in), or sign in to git.`;
+	}
+	if (
+		/Could not resolve host|Failed to connect|Connection (timed out|refused|reset)|Network is unreachable|unable to access|timed out|SIGTERM/i.test(
+			stderr,
+		)
+	) {
+		return `Could not reach ${HOST}. Check the internet connection.`;
+	}
+	if (/couldn't find remote ref|no such ref/i.test(stderr)) return `${HOST} has no ${branch} branch for ${what}.`;
+	const said =
+		stderr
+			.trim()
+			.split('\n')
+			.pop()
+			?.replace(/^fatal:\s*/, '') ?? '';
+	return `Git could not update ${what}: ${said || 'it stopped without saying why.'}`;
+};
+
+/**
+ * Where the person's branch stands against its copy on its remote. `onlyOnRemote`: there is no local branch, so the remote's
+ * is used and nothing is made local. `noUpstream`: it tracks nothing, so there is nothing to fetch, and that is no failure.
+ * `notFetched`: it has an upstream, but the fetch failed or did not finish in time.
+ */
+export type Standing = 'same' | 'behind' | 'ahead' | 'diverged' | 'onlyOnRemote' | 'noUpstream' | 'notFetched';
+
+export interface FreshTip {
+	/** The commit to model on. */
+	commit: string;
+	/** Whose tip it is: the remote's copy (fetched just now, unless `notFetched` said otherwise), or the person's branch. */
+	from: 'remote' | 'local';
+	standing: Standing;
+	/** Commits the remote has that the tip does not, and the person's that the remote does not: 0 where not known. */
+	behind: number;
+	ahead: number;
+	/** What the person is told, in words; null when the tip is simply the remote's latest. */
+	said: string | null;
+}
+
+/** A person may set any name, but only one that cannot be read as an option or a path is given to git. */
+const isSafeRemoteName = (name: string): boolean => /^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(name);
+
+/** Its remote, the branch's name there and the ref git keeps it in, as the person's config says: never assumed `origin`. */
+interface Upstream {
+	remote: string;
+	remoteRef: string;
+	trackingRef: string;
+}
+
+/** Null when it tracks nothing, or another local branch (`remote = .`). Read even when that copy was never fetched. */
+const upstreamOf = async (root: string, branch: string): Promise<Upstream | null> => {
+	const out = await git(root, ['for-each-ref', '--format=%(upstream)%09%(upstream:remotename)%09%(upstream:remoteref)', `refs/heads/${branch}`]);
+	const [trackingRef = '', remote = '', remoteRef = ''] = out.split('\t');
+	return trackingRef.startsWith('refs/remotes/') && remoteRef.startsWith('refs/heads/') ? { remote, remoteRef, trackingRef } : null;
+};
+
+const tipOf = (root: string, ref: string): Promise<string | null> =>
+	git(root, ['rev-parse', '--verify', '--quiet', `${ref}^{commit}`]).catch(() => null);
+
+/**
+ * How long a fetch may run before it is stopped. It runs beside DSNR's other git commands on the repository, not queued
+ * behind them, so a remote that never answers holds up nothing else.
+ */
+const FETCH_TIMEOUT_MS = 20_000;
+/** A fetch this recent is used again, so one started when a branch was picked is the one used when work starts. */
+const FRESH_FOR_MS = 60_000;
+/** How long starting work waits for a fetch before going ahead on what this clone already has, and saying so. */
+const WAIT_MS = 3_000;
+
+/** Null when it fetched; else why not, in words. */
+type Fetched = Promise<string | null>;
+const fetches = new Map<string, { at: number; done: Fetched }>();
+
+/**
+ * Only the one ref that keeps the remote's copy (an explicit refspec), no tags, no submodules, no `FETCH_HEAD`, no gc or
+ * maintenance started, no prompt and no credential window: the person's branch, index and files are never touched.
+ */
+const fetchOnce = (root: string, branch: string, { remote, remoteRef, trackingRef }: Upstream): Fetched => {
+	const key = `${resolve(root)}\0${trackingRef}`;
+	const known = fetches.get(key);
+	if (known && Date.now() - known.at < FRESH_FOR_MS) return known.done;
+	const done = git(
+		root,
+		[
+			'fetch',
+			'--quiet',
+			'--no-tags',
+			'--no-recurse-submodules',
+			'--no-write-fetch-head',
+			'--no-auto-gc',
+			'--no-auto-maintenance',
+			'--',
+			remote,
+			`+${remoteRef}:${trackingRef}`,
+		],
+		{ timeoutMs: FETCH_TIMEOUT_MS, env: { GCM_INTERACTIVE: 'never' }, queued: false },
+	).then(
+		() => null,
+		(err: unknown) => fetchProblem(errorText(err), branch, basename(root)),
+	);
+	fetches.set(key, { at: Date.now(), done });
+	// A failure is not kept: the next start tries again.
+	void done.then((failed) => {
+		if (failed !== null && fetches.get(key)?.done === done) fetches.delete(key);
+	});
+	return done;
+};
+
+const counts = async (root: string, local: string, remote: string): Promise<{ ahead: number; behind: number }> => {
+	const [ahead = 0, behind = 0] = (await git(root, ['rev-list', '--left-right', '--count', `${local}...${remote}`])).split(/\s+/).map(Number);
+	return { ahead, behind };
+};
+
+const plural = (n: number, one: string) => `${n} ${one}${n === 1 ? '' : 's'}`;
+
+/** For a branch only on a remote: the one remote that has it. */
+const remoteOnly = async (root: string, branch: string): Promise<Upstream | null> => {
+	const refs = (await git(root, ['for-each-ref', '--format=%(refname)', `refs/remotes/*/${branch}`])).split('\n').filter(Boolean);
+	const [only] = refs;
+	if (refs.length !== 1 || only === undefined) return null;
+	const remote = only.slice('refs/remotes/'.length, -(branch.length + 1));
+	return { remote, remoteRef: `refs/heads/${branch}`, trackingRef: only };
+};
+
+/** The branch here and what it fetches from; `untracked`: it tracks nothing DSNR can fetch. Only on a remote: that remote's. */
+type Where = { untracked: true; local: string } | { untracked: false; local: string | null; upstream: Upstream };
+
+const whereIs = async (root: string, branch: string): Promise<Where> => {
+	if (!isSafeBranchName(branch)) throw new Error(`${branch} is not a branch name DSNR can read.`);
+	const usable = (u: Upstream | null): Upstream | null => (u !== null && isSafeRemoteName(u.remote) ? u : null);
+	const local = await tipOf(root, `refs/heads/${branch}`);
+	const upstream = usable(local === null ? await remoteOnly(root, branch) : await upstreamOf(root, branch));
+	if (upstream !== null) return { untracked: false, local, upstream };
+	if (local === null) throw new Error(`There is no branch called ${branch} in ${basename(root)}.`);
+	return { untracked: true, local };
+};
+
+/** `waited` or, if it has not settled by then, `waiting`; the timer is cleared either way. */
+const within = <T>(waited: Promise<T>, ms: number): Promise<T | 'waiting'> => {
+	let timer: ReturnType<typeof setTimeout> | undefined;
+	return Promise.race([waited, new Promise<'waiting'>((r) => (timer = setTimeout(() => r('waiting'), ms)))]).finally(() => clearTimeout(timer));
+};
+
+/**
+ * Fetches `branch` from its remote, then says which commit to model work on and why: the remote's when the person's branch
+ * has nothing of its own; the person's when it is ahead or has diverged (it is their working branch, and what their editor
+ * shows), saying what the remote has that it does not; the local branch, said, when it tracks nothing or the fetch failed.
+ * **Never moves anything**: only the remote's copy (`refs/remotes/…`) is written, by the fetch. `waitMs`: how long to wait
+ * for the fetch before going ahead without it; it goes on in the background, and is used next time.
+ */
+export const freshTip = async (root: string, branch: string, { waitMs = WAIT_MS }: { waitMs?: number } = {}): Promise<FreshTip> => {
+	const where = await whereIs(root, branch);
+	if (where.untracked)
+		return {
+			commit: where.local,
+			from: 'local',
+			standing: 'noUpstream',
+			behind: 0,
+			ahead: 0,
+			said: `${branch} tracks no branch DSNR can fetch, so it is used as it is here.`,
+		};
+	const { local, upstream } = where;
+	const waited = await within(fetchOnce(root, branch, upstream), waitMs);
+	const failed = waited === 'waiting' ? `${upstream.remote} did not answer within ${Math.max(1, Math.round(waitMs / 1000))} seconds.` : waited;
+	const remote = await tipOf(root, upstream.trackingRef);
+
+	if (local === null) {
+		// Nothing of the person's to fall back on: the remote's copy as this clone last had it, said.
+		if (remote === null) throw new Error(failed ?? `There is no branch called ${branch} in ${basename(root)}.`);
+		return {
+			commit: remote,
+			from: 'remote',
+			standing: 'onlyOnRemote',
+			behind: 0,
+			ahead: 0,
+			said: failed && `${failed} ${branch} is used as this computer last fetched it.`,
+		};
+	}
+	if (failed !== null || remote === null)
+		return {
+			commit: local,
+			from: 'local',
+			standing: 'notFetched',
+			behind: 0,
+			ahead: 0,
+			said: `${failed ?? `${upstream.remote} has no ${branch}.`} Your local ${branch} is used.`,
+		};
+
+	const { ahead, behind } = await counts(root, local, remote);
+	if (ahead === 0 && behind === 0) return { commit: remote, from: 'remote', standing: 'same', behind, ahead, said: null };
+	if (ahead === 0)
+		return {
+			commit: remote,
+			from: 'remote',
+			standing: 'behind',
+			behind,
+			ahead,
+			said: `Your local ${branch} is ${plural(behind, 'commit')} behind ${upstream.remote}; ${upstream.remote}'s is used.`,
+		};
+	if (behind === 0)
+		return {
+			commit: local,
+			from: 'local',
+			standing: 'ahead',
+			behind,
+			ahead,
+			said: `Your ${branch} has ${plural(ahead, 'commit')} not on ${upstream.remote} yet; yours is used.`,
+		};
+	return {
+		commit: local,
+		from: 'local',
+		standing: 'diverged',
+		behind,
+		ahead,
+		said: `Your ${branch} and ${upstream.remote}'s have both moved; yours is used, and ${upstream.remote} has ${plural(behind, 'commit')} it does not include.`,
+	};
+};
+
+/** Starts the fetch `freshTip` will use, when the branch is picked: never throws, and nothing waits on it. */
+export const warmTip = (root: string, branch: string): void => {
+	void whereIs(root, branch)
+		.then((where) => (where.untracked ? null : fetchOnce(root, branch, where.upstream)))
+		.catch(() => undefined);
+};

@@ -9,9 +9,9 @@ import { isStoryFile, readCatalog, type CatalogReads } from './componentCatalog'
 import { readTokens } from './designTokens';
 import { type DesignSystemsMemory, filesOf, within } from './designSystems';
 import { git } from '../platform/git';
+import { fetchProblem } from '../platform/fetch';
 import { singleFlight } from '../platform/concurrency';
 import { errorText } from '../../../shared/result';
-import { CLI, HOST } from '../../../shared/vocabulary';
 
 /**
  * Read from git's copy of the branch on GitHub (`origin/<branch>`), never the folder, so what the clone has checked out
@@ -21,31 +21,6 @@ import { CLI, HOST } from '../../../shared/vocabulary';
 const FETCH_TIMEOUT_MS = 120_000;
 
 const branchRef = (branch: string): string => `refs/remotes/origin/${branch}`;
-
-export const fetchProblem = (stderr: string, branch: string): string => {
-	if (
-		/Authentication failed|could not read (Username|Password)|terminal prompts disabled|Repository not found|Permission denied \(publickey\)|403/i.test(
-			stderr,
-		)
-	) {
-		return `${HOST} would not let git on this computer read the library: git is not signed in to ${HOST}, or this account cannot read it. Run \`${CLI} auth setup-git\` in a terminal (with ${HOST}'s command line signed in), or sign in to git.`;
-	}
-	if (
-		/Could not resolve host|Failed to connect|Connection (timed out|refused|reset)|Network is unreachable|unable to access|timed out|SIGTERM/i.test(
-			stderr,
-		)
-	) {
-		return `Could not reach ${HOST}. Check the internet connection.`;
-	}
-	if (/couldn't find remote ref|no such ref/i.test(stderr)) return `${HOST} has no ${branch} branch for the library.`;
-	const said =
-		stderr
-			.trim()
-			.split('\n')
-			.pop()
-			?.replace(/^fatal:\s*/, '') ?? '';
-	return `Git could not update the library: ${said || 'it stopped without saying why.'}`;
-};
 
 export const libraryCommit = async (root: string, branch: string): Promise<string | null> => {
 	try {

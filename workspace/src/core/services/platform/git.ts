@@ -56,6 +56,11 @@ export interface GitOptions {
 	 * last newline.
 	 */
 	trim?: boolean;
+	/**
+	 * False only for a command that takes no lock another waits on and must not wait behind them: a fetch of one
+	 * remote-tracking ref, which never touches the index, HEAD or the working tree.
+	 */
+	queued?: boolean;
 }
 
 const attempt = async (root: string, args: string[], { timeoutMs, env, input }: GitOptions): Promise<string> => {
@@ -105,7 +110,10 @@ const queued = (root: string, args: string[], options: GitOptions): Promise<stri
 };
 
 export const git = (root: string, args: string[], options: GitOptions = {}): Promise<string> =>
-	queued(root, args, options).then((out) => (options.trim === false ? out : out.trim()));
+	(options.queued === false
+		? attempt(root, args, options).catch((err: unknown) => Promise.reject(gitError(err, errorText(err))))
+		: queued(root, args, options)
+	).then((out) => (options.trim === false ? out : out.trim()));
 
 export const isRepository = (root: string): boolean => existsSync(join(root, '.git'));
 
