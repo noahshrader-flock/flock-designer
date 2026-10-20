@@ -268,6 +268,15 @@ private ref (`refs/dsnr/base/<project>/<version>`). A change or an Address keeps
 version whose branch has moved on says so in the bar ("3 behind develop", nothing while it is current); **Refresh to latest**
 moves its base to the latest and hands its rebuild, in place, to the agent.
 
+**Codebase work behind the product's main branch.** DSNR never merges into a checkout. Codebase work's branch is read
+against the latest of the product's default branch (`againstBase`, the branch engineering merges into): how far behind, and
+what merging would conflict in, from `git merge-tree`, which writes no ref, index or file. The Hand off dialog says so when the
+work is behind (nothing while it is up to date), and the project's menu has **Update this branch…** for codebase work.
+**Update this branch** hands the merge to the agent in the person's window, only on the branch and with nothing unfinished:
+DSNR first keeps the tip it starts from (`refs/dsnr/checkpoint/<project>`), so the update is undone with one command, and the
+agent merges, never rebases, and resolves conflicts so both sides survive, or stops and says what needs a person. Handoff
+writes the same preview into HANDOFF.md, for the engineer who will merge it.
+
 **Pictures and the accessibility check:** with no hidden windows, a prototype's picture and its accessibility check are
 drawn by the browser already on the machine (Chrome, Edge or Chromium, or `CHROME_BIN`), headless, through
 `puppeteer-core`, which downloads no browser of its own (`chromeHeadless.ts`); a machine with none is told what to

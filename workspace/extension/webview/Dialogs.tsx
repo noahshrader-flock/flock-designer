@@ -7,7 +7,7 @@ import { type CodebaseAction, type PanelDialog, reviewsOf } from '../src/message
 import { asks } from './host';
 import { AccountDialog, SyncDialog } from './AccountDialogs';
 import { Dialog } from '../../src/ui/Dialog';
-import { BuildInCodebaseDialog, HandoffDialog } from './CodebaseDialogs';
+import { BuildInCodebaseDialog, HandoffDialog, UpdateBranchDialog } from './CodebaseDialogs';
 import { AssignFolderDialog, NewPrototypeDialog } from './ProjectDialogs';
 import { Message } from '../../src/ui/Message';
 
@@ -56,15 +56,26 @@ export const PanelDialogs = ({
 		case 'hand-off':
 			return codebase ? (
 				<HandoffDialog
+					root={root}
 					project={project}
 					branch={codebase.branch}
 					readyAt={codebase.readyAt}
 					pullRequest={codebase.pullRequest}
 					onStart={onCodebase('hand-off')}
+					onUpdate={onCodebase('update')}
 					onShare={onCodebase('share')}
 					onOpenCode={onCodebase('open-code')}
 					onClose={onClose}
 				/>
 			) : null;
+		case 'update':
+			if (!codebase) return null;
+			return root ? (
+				<UpdateBranchDialog root={root} project={project} onUpdate={onCodebase('update')} onClose={onClose} />
+			) : (
+				<Dialog title="Update this branch" onClose={onClose}>
+					<Message>{needsProduct(productsOf(project), null)} It is updated in that product’s own code.</Message>
+				</Dialog>
+			);
 	}
 };

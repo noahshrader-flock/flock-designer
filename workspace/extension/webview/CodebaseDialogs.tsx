@@ -3,6 +3,7 @@ import { useWorkspace } from './hooks/useWorkspace';
 import type { Handed } from '../../src/shared/contract';
 import { handedTo } from '../../src/shared/handedTo';
 import { AgentInUse, useAgentName, useInAgent } from './AgentInUse';
+import { AgainstBase } from './AgainstBase';
 import type { Project } from '../../src/shared/domain/projects';
 import { buildStart, buildSteps, noSetupNote, startBranch } from '../../src/shared/work';
 import { Button } from '../../src/ui/Button';
@@ -15,21 +16,26 @@ import { Message } from '../../src/ui/Message';
  * With the work found ready (`readyAt`), Run again sits beside its pull request, so a dismissed offer is never a dead end.
  */
 export const HandoffDialog = ({
+	root,
 	project,
 	branch,
 	readyAt,
 	pullRequest,
 	onStart,
+	onUpdate,
 	onShare,
 	onOpenCode,
 	onClose,
 }: {
+	/** The product open here; null when none is, and how the branch stands is not read. */
+	root: string | null;
 	project: Project;
 	branch: string;
 	/** The commit a handoff found the work ready at, while its branch is still there; null when it has to be run. */
 	readyAt: string | null;
 	pullRequest: string | null;
 	onStart: () => void;
+	onUpdate: () => void;
 	onShare: () => void;
 	onOpenCode: () => void;
 	onClose: () => void;
@@ -65,6 +71,7 @@ export const HandoffDialog = ({
 							<li>What they block on is fixed and committed on {branch}, one fix at a time.</li>
 							<li>A note for the engineer, HANDOFF.md, is written on the branch, and says whether it is ready. Nothing is pushed.</li>
 						</ol>
+						{root !== null && <AgainstBase root={root} projectId={project.id} quiet onUpdate={then(onUpdate)} />}
 						<AgentInUse />
 					</>
 				)}
@@ -88,6 +95,32 @@ export const HandoffDialog = ({
 		</Dialog>
 	);
 };
+
+/** Update this branch, from a project's menu: how it stands, and the update handed to the agent when it is behind. */
+export const UpdateBranchDialog = ({
+	root,
+	project,
+	onUpdate,
+	onClose,
+}: {
+	root: string;
+	project: Project;
+	onUpdate: () => void;
+	onClose: () => void;
+}) => (
+	<Dialog title="Update this branch" onClose={onClose}>
+		<AgainstBase
+			root={root}
+			projectId={project.id}
+			quiet={false}
+			onUpdate={() => {
+				onUpdate();
+				onClose();
+			}}
+		/>
+		<AgentInUse />
+	</Dialog>
+);
 
 export const BuildInCodebaseDialog = ({
 	root,

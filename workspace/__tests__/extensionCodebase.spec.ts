@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { type CodebaseDeps, type LocalRun, handOff, openCode, shareCodebase, runLocally } from '../extension/src/codebase';
+import { type CodebaseDeps, type LocalRun, handOff, openCode, shareCodebase, runLocally, updateBranch } from '../extension/src/codebase';
 import type { HandoffResult, Project, RunLogLine, ShareStatus } from '../src/shared/contract';
 import { ok } from '../src/shared/result';
 
@@ -33,6 +33,7 @@ const world = (more: Record<string, unknown> = {}) => {
 		listProjects: vi.fn(async () => ok([zone, prototypeOnly])),
 		handOff: vi.fn(async () => ok({ agent: 'Claude Code', opened: 'typed', command: null })),
 		handoffResult: vi.fn(async () => ok({ state: 'waiting' } as HandoffResult)),
+		handCodebaseUpdate: vi.fn(async () => ok({ agent: 'Claude Code', opened: 'typed', command: null })),
 		runLocally: vi.fn(async () => ok({ url: 'http://localhost:5173/zones', uncommitted: false })),
 		stopCommand: vi.fn(async () => ok({ state: 'stopped' })),
 		shareWork: vi.fn(async () => ok({ state: 'running', projectId: zone.id, name: 'codebase', step: 'pushing' })),
@@ -63,6 +64,24 @@ const world = (more: Record<string, unknown> = {}) => {
 	};
 	return { deps, api, told, said, offered, shareListeners, watching };
 };
+
+describe('Update this branch, from VS Code', () => {
+	it('hands the update to the agent, says nothing is merged until it does it, and watches for nothing', async () => {
+		const { deps, api, told, watching } = world();
+		await updateBranch(deps, 'zone-coverage');
+		expect(api.handCodebaseUpdate).toHaveBeenCalledWith('/p', 'zone-coverage');
+		expect(told).toEqual([
+			'Bringing feature/zone-coverage up to date is in Claude Code in this window now: a new conversation there has the task typed in. Press Enter there to start it. Nothing is merged until it does it there; DSNR kept where the branch was, so the update can be undone.',
+		]);
+		expect(watching).toEqual([]);
+	});
+
+	it('refuses a project with no codebase work, before asking anything', async () => {
+		const { deps, api } = world();
+		await expect(updateBranch(deps, 'alert-history')).rejects.toThrow('Alert history has no codebase work yet');
+		expect(api.handCodebaseUpdate).not.toHaveBeenCalled();
+	});
+});
 
 describe('Handoff, from VS Code', () => {
 	const done = (result: Partial<Extract<HandoffResult, { state: 'done' }>>) =>

@@ -1,4 +1,5 @@
-import type { Work } from '../../../shared/contract';
+import type { BranchAgainstBase, Work } from '../../../shared/contract';
+import { againstBaseWords } from '../../../shared/work';
 import { NOT_READY_LINE, READY_LINE } from '../../../shared/handoff';
 import { type PrototypeBuild, type PrototypeSources, WORKFLOW } from '../prototypes/prototype';
 import { HOST } from '../../../shared/vocabulary';
@@ -64,6 +65,7 @@ export const handoffTask = (
 		branch,
 		gate,
 		missingRoute,
+		mergeState,
 	}: {
 		skill: string;
 		projectId: string;
@@ -71,6 +73,8 @@ export const handoffTask = (
 		gate: string | null;
 		/** Given only when the work's record has no route. */
 		missingRoute?: { skill: string; recordFile: string } | null;
+		/** How the branch merges into the product's default branch, in `againstBaseWords`'s words; null when that cannot be told. */
+		mergeState?: string | null;
 	},
 	parts: CheckoutParts,
 ): string =>
@@ -89,6 +93,36 @@ export const handoffTask = (
 			? `This product's gate is \`${gate}\`. Run it first, and last, once HANDOFF.md is committed.`
 			: "This product's workspace file names no handoff gate. Say so first in your summary, then follow its guidance for what a handoff checks.",
 		`HANDOFF.md's first line is the verdict, alone: \`${READY_LINE}\` or \`${NOT_READY_LINE}\`. DSNR reads it from the committed file once nothing is left uncommitted, so commit all of the work before you finish, and end by saying the same, then why.`,
+		...(mergeState
+			? [
+					`For engineering, who will merge it, put this in HANDOFF.md, under the verdict, as DSNR read it before you started (nothing was merged): "${mergeState}" Do not merge or rebase to change it.`,
+				]
+			: []),
+		'',
+		...checkoutEnding(parts),
+	].join('\n');
+
+/**
+ * Update this branch: the agent merges the latest of the base into the work, in the person's window, never rebasing or
+ * rewriting history; DSNR has kept the tip it starts from (`checkpoint`), so undoing it is one command.
+ */
+export const updateBranchTask = ({ against, checkpoint }: { against: BranchAgainstBase; checkpoint: string }, parts: CheckoutParts): string =>
+	parts.guide +
+	[
+		`Bring \`${against.branch}\` up to date with the latest of \`${against.base}\`.`,
+		'',
+		'## This run',
+		'',
+		`- The checkout is on \`${against.branch}\`, with nothing uncommitted. Stay on it.`,
+		`- ${againstBaseWords(against)} Merge \`${against.latest}\` into it with \`git merge --no-ff ${against.latest}\`. Merge only: never rebase, reset or rewrite its history, and never push.`,
+		...(against.conflicts.length > 0
+			? [
+					`- Resolve each conflict so both sides' intent survives: the work's, and what ${against.base} changed. Never take one side whole to be done with it. For each file, say what you decided and why.`,
+					`- If one cannot be resolved without a decision only a person can make, stop, run \`git merge --abort\`, and say what the decision is.`,
+				]
+			: []),
+		`- DSNR kept where the branch was before: undo the whole update with \`git reset --hard ${checkpoint}\`, if the person asks for it.`,
+		'- When it is merged, check it still builds and its tests pass, then commit the merge.',
 		'',
 		...checkoutEnding(parts),
 	].join('\n');

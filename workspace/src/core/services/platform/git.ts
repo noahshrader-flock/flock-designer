@@ -30,6 +30,8 @@ export class GitError extends Error {
 		message: string,
 		readonly kind: GitFailure,
 		readonly exitCode: number | null,
+		/** What it wrote before it failed: a command that answers by its exit code (`merge-tree`) says the rest here. */
+		readonly stdout = '',
 	) {
 		super(message);
 		this.name = 'GitError';
@@ -39,7 +41,7 @@ const gitError = (err: unknown, message: string): GitError =>
 	err instanceof NotInstalled
 		? new GitError(message, 'notInstalled', null)
 		: err instanceof ProcessFailed
-			? new GitError(message, err.timedOut ? 'timeout' : 'failed', err.code)
+			? new GitError(message, err.timedOut ? 'timeout' : 'failed', err.code, err.stdout)
 			: new GitError(message, 'failed', null);
 /** Git ran and answered no, as a command that asks a question does by exiting 1 (`rev-parse --verify --quiet`, `--is-ancestor`). */
 const saidNo = (err: unknown): boolean => err instanceof GitError && err.kind === 'failed' && err.exitCode === 1;
@@ -403,6 +405,21 @@ export const isAncestor = async (root: string, older: string, newer: string): Pr
 		() => true,
 		(err: unknown) => (saidNo(err) ? false : Promise.reject(err)),
 	);
+
+/**
+ * The files merging `theirs` into `ours` would leave in conflict, without merging: git writes only objects, never a ref,
+ * the index or a file. Empty when it merges cleanly.
+ */
+export const mergeConflicts = async (root: string, ours: string, theirs: string): Promise<string[]> => {
+	try {
+		await git(root, ['merge-tree', '--write-tree', '--name-only', '--no-messages', ours, theirs]);
+		return [];
+	} catch (err) {
+		// It says a conflict by exiting 1, with the tree on its first line and each conflicted file after it.
+		if (!(err instanceof GitError && err.kind === 'failed' && err.exitCode === 1)) throw err;
+		return [...new Set(err.stdout.trim().split('\n').slice(1).filter(Boolean))];
+	}
+};
 
 /** How many commits `newer` has that `older` does not: 0 when it has none, as when they are the same. */
 export const commitsAfter = async (root: string, older: string, newer: string): Promise<number> =>

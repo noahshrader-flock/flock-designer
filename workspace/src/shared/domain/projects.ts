@@ -51,6 +51,19 @@ export interface BaseBehind {
 	behind: number;
 }
 
+/**
+ * Codebase work's branch against the latest of the product's default branch (`base`): how far behind, and what merging it
+ * would leave in conflict (empty: it merges cleanly). Read only: nothing is merged.
+ */
+export interface BranchAgainstBase {
+	branch: string;
+	base: string;
+	/** The base's commit it was read against: what an update merges. */
+	latest: string;
+	behind: number;
+	conflicts: string[];
+}
+
 export type WorkKind = 'prototype' | 'codebase';
 
 /** `command` is for a terminal, when the agent is not in VS Code. */

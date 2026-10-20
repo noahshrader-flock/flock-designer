@@ -22,6 +22,7 @@ import type {
 } from '../domain/designSystem';
 import type {
 	BaseBehind,
+	BranchAgainstBase,
 	Handed,
 	StartedPrototype,
 	MadeCover,
@@ -168,6 +169,10 @@ export interface WorkspaceApi {
 	agentShown(): Promise<Result<string | null>>;
 	/** Hands the handoff's task to the agent, as a build is handed; refused unless the checkout is on the work's branch. */
 	handOff(root: string, projectId: string): Promise<Result<Handed>>;
+	/** How the work's branch stands against the product's default branch, with what merging it would conflict in; null when that cannot be told. */
+	codebaseAgainstBase(root: string, projectId: string): Promise<Result<BranchAgainstBase | null>>;
+	/** Hands Update this branch to the agent, which merges the base into the work; refused unless the checkout is on it, with nothing unfinished. */
+	handCodebaseUpdate(root: string, projectId: string): Promise<Result<Handed>>;
 	/** Asked as often as one likes: `done` is said once, and the verdict recorded then. */
 	handoffResult(root: string, projectId: string): Promise<Result<HandoffResult>>;
 	/** `uncommitted`: the checkout had changes nobody committed, and no agent made them here. */
@@ -226,6 +231,8 @@ export const INVOKE = [
 	'chooseAgent',
 	'agentShown',
 	'handOff',
+	'codebaseAgainstBase',
+	'handCodebaseUpdate',
 	'handoffResult',
 	'runLocally',
 	'createPrototype',

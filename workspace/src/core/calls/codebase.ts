@@ -8,6 +8,8 @@ export const registerCodebase = (area: CodebaseArea): void => {
 	handle('chooseAgent', [], area.chooseAgent);
 	handle('agentShown', [], area.agentShown);
 	handle('handOff', [area.checkout, arg.projectId], area.handOff);
+	handle('codebaseAgainstBase', [area.checkout, arg.projectId], area.codebaseAgainstBase);
+	handle('handCodebaseUpdate', [area.checkout, arg.projectId], area.handCodebaseUpdate);
 	handle('handoffResult', [area.checkout, arg.projectId], area.handoffResult);
 	handle('runLocally', [area.checkout, arg.projectId, arg.codebaseName], area.runLocally);
 	handle('buildInCodebase', [area.checkout, arg.projectId, arg.prototypeName, arg.optional(arg.branch)], area.buildInCodebase);

@@ -60,7 +60,15 @@ const ProjectItem = ({ project, labels, onDialog }: { project: Project; labels: 
 			? { label: 'Build', dialog: { kind: 'build', projectId: id } }
 			: null;
 	const next: MenuItem[] = stage ? [{ label: stage.label, icon: 'package', onSelect: () => onDialog(stage.dialog) }] : [];
-	const runs: MenuItem[] = [...(inCode ? [{ label: 'Run locally', icon: 'gear', onSelect: () => onCodebase('run-locally') }] : []), ...next];
+	const runs: MenuItem[] = [
+		...(inCode
+			? [
+					{ label: 'Run locally', icon: 'gear', onSelect: () => onCodebase('run-locally') },
+					{ label: 'Update this branch…', icon: 'git-merge', onSelect: () => onDialog({ kind: 'update', projectId: id }) },
+				]
+			: []),
+		...next,
+	];
 	const code: MenuItem[] = inCode ? [{ label: 'View on GitHub', icon: 'github', onSelect: () => onCodebase('open-code') }] : [];
 	const folder: MenuItem[] = [{ label: 'Assign folder…', icon: 'folder', onSelect: () => onDialog({ kind: 'assign', projectId: id }) }];
 	const sections = [copy, pages, runs, code, folder].filter((group) => group.length > 0).map((group) => ({ items: group }));

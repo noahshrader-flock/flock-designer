@@ -56,7 +56,7 @@ export class HandOverBranches extends KeptBranches<HandedChange> {
 
 	async start(scope: string, change: HandedChange): Promise<{ root: string; branch: string; prompt: string }> {
 		const system = this.records.system();
-		const unfinished = await unfinishedWork(system.root);
+		const unfinished = await unfinishedWork(system.root, 'the design system’s checkout');
 		if (unfinished !== null) throw new Error(unfinished);
 		if (await this.handOver.saved(scope))
 			throw new Error('This has a branch DSNR saved it to. Propose it, or start over, before processing the changes.');

@@ -1,18 +1,20 @@
 import type { CallsDeps, CheckedCheckout } from '../compose';
 import { existsSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
-import type { AccessibilityResult, Handed, BuildInCodebasePlan, HandoffResult } from '../../shared/contract';
+import type { AccessibilityResult, BranchAgainstBase, Handed, BuildInCodebasePlan, HandoffResult } from '../../shared/contract';
 import { statesOf } from '../../shared/prototypeStates';
 import { handoffReady, handoffVerdict } from '../../shared/handoff';
-import { DESIGN_MODE_COMMAND, routeIn, workLabel } from '../../shared/work';
+import { DESIGN_MODE_COMMAND, againstBaseWords, routeIn, workLabel } from '../../shared/work';
 import { A11Y_COMMAND, productTarget, taskAccessibility } from '../services/accessibility/accessibilityBrief';
 import { accessibilityOf } from '../services/accessibility/accessibilityCheck';
-import { type CheckoutParts, guidePart, handoffTask, buildInCodebaseTask } from '../services/agent/agentTasks';
+import { type CheckoutParts, guidePart, handoffTask, buildInCodebaseTask, updateBranchTask } from '../services/agent/agentTasks';
+import { againstBase } from '../services/codebase/againstBase';
+import { unfinishedWork } from '../services/codebase/checkoutClean';
 import { designSystemCheckout, readDescriptor } from '../services/projects/descriptor';
 import { recordsRootFor } from '../services/projects/discovery';
 import { assertReady, handTask } from '../services/agent/handOver';
 import { HANDOFF_FILE, HANDOFF_SKILL, commandLine, leftAlone } from '../services/codebase/engineeringHandoff';
-import { branchTip, changedFiles, changedSince, fileAt, headCommit, readCheckout, remoteTip } from '../services/platform/git';
+import { branchTip, changedFiles, changedSince, fileAt, git, headCommit, readCheckout, remoteTip } from '../services/platform/git';
 import { continueWork, recordHandoff, recordPath, recordPreview, recordedWork } from '../services/projects/workRecords';
 import { GUIDE, MOVE_SKILL, ROUTE_SKILL, buildInCodebaseLead } from '../services/prototypes/prototype';
 import { pullRequestText } from '../services/codebase/share';
@@ -146,7 +148,18 @@ export const codebaseArea = (d: CallsDeps) => {
 			const skill = await readSkillText(HANDOFF_SKILL);
 			const parts = await checkoutParts(canonical, projectId);
 			const missingRoute = codebaseRecord.route ? null : { skill: await readSkillText(ROUTE_SKILL), recordFile: recordPath(recordsRoot, projectId) };
-			const task = handoffTask({ skill, projectId, branch, gate: commandLine(descriptor.commands, 'handoff', projectId), missingRoute }, parts);
+			const against = await againstBase(canonical, branch);
+			const task = handoffTask(
+				{
+					skill,
+					projectId,
+					branch,
+					gate: commandLine(descriptor.commands, 'handoff', projectId),
+					missingRoute,
+					mergeState: against && againstBaseWords(against),
+				},
+				parts,
+			);
 			const { handed } = await handTask(ports, await agent(), async () => {
 				handoffs.set(handoffKey(canonical, projectId), { head: await headCommit(canonical), remote: await remoteTip(canonical, branch), branch });
 				return {
@@ -154,6 +167,40 @@ export const codebaseArea = (d: CallsDeps) => {
 					what: `Hand ${projectId} to engineering, on ${branch}.`,
 					taskFile: join(work.dir(projectId), 'codebase-handoff.md'),
 					task,
+				};
+			});
+			return handed;
+		},
+		/** How the work's branch stands against the product's default branch; null when that cannot be told here. */
+		codebaseAgainstBase: async (workIn: CheckedCheckout, projectId: string): Promise<BranchAgainstBase | null> => {
+			const { canonical, recordsRoot, descriptor } = workIn;
+			const { branch } = await recordedWork(canonical, recordsRoot, descriptor, projectId, 'codebase');
+			return againstBase(canonical, branch);
+		},
+		/**
+		 * Update this branch: handed to the agent, which merges in the person's window, as every hand-off is. Only on the
+		 * branch, with nothing unfinished; DSNR never merges, and keeps the tip it starts from first, so undoing it is one
+		 * command.
+		 */
+		handCodebaseUpdate: async (workIn: CheckedCheckout, projectId: string): Promise<Handed> => {
+			const { canonical, recordsRoot, descriptor } = workIn;
+			const { branch } = await recordedWork(canonical, recordsRoot, descriptor, projectId, 'codebase');
+			if ((await readCheckout(canonical)).branch !== branch) throw new Error(`Open ${branch} first: it is brought up to date where it is.`);
+			const unfinished = await unfinishedWork(canonical, basename(canonical));
+			if (unfinished !== null) throw new Error(unfinished);
+			const against = await againstBase(canonical, branch);
+			if (against === null)
+				throw new Error(`How ${branch} stands against the product's default branch cannot be told here, so nothing was handed over.`);
+			if (against.behind === 0) throw new Error(`${branch} is already up to date with ${against.base}.`);
+			const checkpoint = `refs/dsnr/checkpoint/${projectId}`;
+			const parts = await checkoutParts(canonical, projectId);
+			const { handed } = await handTask(ports, await agent(), async () => {
+				await git(canonical, ['update-ref', checkpoint, await headCommit(canonical)]);
+				return {
+					root: canonical,
+					what: `Bring ${branch} up to date with ${against.base}.`,
+					taskFile: join(work.dir(projectId), 'codebase-update.md'),
+					task: updateBranchTask({ against, checkpoint }, parts),
 				};
 			});
 			return handed;

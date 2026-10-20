@@ -23,20 +23,22 @@ afterEach(() => rmSync(root, { recursive: true, force: true }));
 
 describe('a design system checkout handed to Claude Code', () => {
 	it('is ready with nothing unfinished, on a branch', async () => {
-		expect(await unfinishedWork(root)).toBeNull();
+		expect(await unfinishedWork(root, 'the design system’s checkout')).toBeNull();
 	});
 
 	it('is not with a change to a file, or a new one, which Claude Code’s commit would sweep in', async () => {
 		write('theme.ts', 'export const radius = 12;\n');
-		expect(await unfinishedWork(root)).toContain('1 file is changed or new and not committed. Commit or stash them first');
+		expect(await unfinishedWork(root, 'the design system’s checkout')).toContain(
+			'1 file is changed or new and not committed. Commit or stash them first',
+		);
 		write('notes.md', 'mine\n');
-		expect(await unfinishedWork(root)).toContain('2 files are changed or new');
+		expect(await unfinishedWork(root, 'the design system’s checkout')).toContain('2 files are changed or new');
 	});
 
 	it('counts a new file even when the clone is set to hide them from its status', async () => {
 		g(root, 'config', 'status.showUntrackedFiles', 'no');
 		write('notes.md', 'mine\n');
-		expect(await unfinishedWork(root)).toContain('1 file is changed or new');
+		expect(await unfinishedWork(root, 'the design system’s checkout')).toContain('1 file is changed or new');
 	});
 
 	it('is not in the middle of a merge', async () => {
@@ -52,11 +54,15 @@ describe('a design system checkout handed to Claude Code', () => {
 			// The conflict leaves the merge unfinished, as a person would have it.
 		}
 		// What it is in the middle of is said, not the conflicted file it leaves.
-		expect(await unfinishedWork(root)).toBe('The design system’s checkout is in the middle of a merge. Finish it or abort it first.');
+		expect(await unfinishedWork(root, 'the design system’s checkout')).toBe(
+			'The design system’s checkout is in the middle of a merge. Finish it or abort it first.',
+		);
 	});
 
 	it('is not on a detached HEAD', async () => {
 		g(root, 'checkout', '-q', '--detach');
-		expect(await unfinishedWork(root)).toBe('The design system’s checkout is not on a branch (a detached HEAD). Switch to a branch first.');
+		expect(await unfinishedWork(root, 'the design system’s checkout')).toBe(
+			'The design system’s checkout is not on a branch (a detached HEAD). Switch to a branch first.',
+		);
 	});
 });

@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, rmSync, unlinkSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, unlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -18,6 +18,7 @@ import {
 	git,
 	hasFileAt,
 	originUrl,
+	mergeConflicts,
 } from '../src/core/services/platform/git';
 import { g, recordDefault } from './fixtures';
 
@@ -313,5 +314,26 @@ describe('a branch name from data', () => {
 		const written = join(root, 'written-by-git');
 		expect(await branchStartedAt(root, `--output=${written}`)).toBeNull();
 		expect(existsSync(written)).toBe(false);
+	});
+});
+
+describe('what merging would leave in conflict, without merging', () => {
+	it('is nothing for a clean merge, and the files for one that conflicts, with no ref, index or file changed', async () => {
+		g(root, 'checkout', '-q', '-b', 'feature/x');
+		writeFileSync(join(root, 'README.md'), '# the work\n');
+		g(root, 'commit', '-q', '-am', 'work');
+		g(root, 'checkout', '-q', 'develop');
+		writeFileSync(join(root, 'other.md'), 'other\n');
+		g(root, 'add', 'other.md');
+		g(root, 'commit', '-q', '-m', 'clean');
+		const before = () => [g(root, 'for-each-ref'), g(root, 'status', '--porcelain'), readFileSync(join(root, '.git', 'index')).toString('hex')];
+		const was = before();
+		expect(await mergeConflicts(root, 'feature/x', 'develop')).toEqual([]);
+		writeFileSync(join(root, 'README.md'), '# develop\n');
+		g(root, 'commit', '-q', '-am', 'conflicting');
+		const now = before();
+		expect(await mergeConflicts(root, 'feature/x', 'develop')).toEqual(['README.md']);
+		expect(before()).toEqual(now);
+		expect(was[0]).not.toBe(now[0]);
 	});
 });

@@ -445,6 +445,8 @@ describe('codebase work recorded before records named its repository', () => {
 describe('a repository must be opened before anything acts on it', () => {
 	it.each([
 		[CHANNELS.handOff, () => [product, 'demo']],
+		[CHANNELS.handCodebaseUpdate, () => [product, 'demo']],
+		[CHANNELS.codebaseAgainstBase, () => [product, 'demo']],
 		[CHANNELS.runLocally, () => [product, 'demo', 'codebase']],
 		[CHANNELS.buildInCodebase, () => [product, 'demo', 'v1']],
 		[CHANNELS.handPrototypeBuild, () => [product, 'demo', 'v1', 'A list']],
@@ -1547,6 +1549,46 @@ describe('one agent, one piece of work', () => {
 		await codebaseWork();
 	};
 	const task = () => readFileSync(join(home, 'prototype', 'demo', 'codebase-handoff.md'), 'utf8');
+
+	it('brings codebase work up to date only by handing the merge to the agent, keeping where it was, and says at Handoff how it merges', async () => {
+		await onItsBranch();
+		const branch = g(product, 'rev-parse', '--abbrev-ref', 'HEAD');
+		const against = async () => (await call(CHANNELS.codebaseAgainstBase, product, 'demo')).value;
+		const update = () => call(CHANNELS.handCodebaseUpdate, product, 'demo');
+		expect(await against()).toMatchObject({ branch, base: 'develop', behind: 0, conflicts: [] });
+		expect((await update()).error).toBe(`${branch} is already up to date with develop.`);
+		// The work and develop both change the README: develop moves on, and merging it would conflict there.
+		writeFileSync(join(product, 'README.md'), '# the work\n');
+		g(product, 'commit', '-q', '-am', 'the work');
+		g(product, 'checkout', '-q', 'develop');
+		writeFileSync(join(product, 'README.md'), '# develop\n');
+		g(product, 'commit', '-q', '-am', 'develop moves on');
+		const latest = g(product, 'rev-parse', 'develop');
+		g(product, 'checkout', '-q', branch);
+		const tip = g(product, 'rev-parse', 'HEAD');
+		expect(await against()).toEqual({ branch, base: 'develop', latest, behind: 1, conflicts: ['README.md'] });
+		writeFileSync(join(product, 'scratch.txt'), 'mine\n');
+		expect((await update()).error).toMatch(/^In flock-coke, 1 file is changed or new and not committed\./);
+		rmSync(join(product, 'scratch.txt'));
+		g(product, 'checkout', '-q', 'develop');
+		expect((await update()).error).toBe(`Open ${branch} first: it is brought up to date where it is.`);
+		g(product, 'checkout', '-q', branch);
+		expect(await update()).toMatchObject({ ok: true, value: { agent: 'Claude Code' } });
+		// DSNR kept where it was, and merged nothing itself.
+		expect(g(product, 'rev-parse', 'refs/dsnr/checkpoint/demo')).toBe(tip);
+		expect(g(product, 'rev-parse', 'HEAD')).toBe(tip);
+		expect(g(product, 'status', '--porcelain')).toBe('');
+		const updating = readFileSync(join(home, 'prototype', 'demo', 'codebase-update.md'), 'utf8');
+		expect(updating).toContain(`${branch} is 1 commit behind develop. Merging develop into it conflicts in README.md.`);
+		expect(updating).toContain(`git merge --no-ff ${latest}`);
+		expect(updating).toContain('never rebase, reset or rewrite its history, and never push');
+		expect(updating).toContain('git merge --abort');
+		expect(updating).toContain('git reset --hard refs/dsnr/checkpoint/demo');
+		await call(CHANNELS.handOff, product, 'demo');
+		expect(task()).toContain(
+			`"${branch} is 1 commit behind develop. Merging develop into it conflicts in README.md." Do not merge or rebase to change it.`,
+		);
+	});
 
 	it('tells a handoff in a checkout where the shared agents, skills, standards and logging are, to read', async () => {
 		for (const dir of ['agents', 'skills', 'standards', 'knowledge']) mkdirSync(join(design, dir), { recursive: true });

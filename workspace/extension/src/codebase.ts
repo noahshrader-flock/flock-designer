@@ -9,7 +9,10 @@ import type { Offer, OutputLike, Progress, Tell } from './say';
 export interface CodebaseDeps {
 	progress: Progress;
 	log: OutputLike;
-	api: Pick<WorkspaceApi, 'listProjects' | 'handOff' | 'handoffResult' | 'runLocally' | 'shareWork' | 'onShareStatus' | 'stopCommand' | 'onRunLog'>;
+	api: Pick<
+		WorkspaceApi,
+		'listProjects' | 'handOff' | 'handoffResult' | 'handCodebaseUpdate' | 'runLocally' | 'shareWork' | 'onShareStatus' | 'stopCommand' | 'onRunLog'
+	>;
 	root: string;
 	tell: Tell;
 	offer: Offer;
@@ -64,6 +67,16 @@ export const handOff = async (deps: CodebaseDeps, projectId: string): Promise<vo
 		return true;
 	});
 	deps.tell(`${handedTo(handed, `The handoff of ${project.title}`)} When HANDOFF.md is committed on ${work.branch}, DSNR says whether it is ready.`);
+};
+
+/** Update this branch: the agent merges the base in, in this window; DSNR only kept where the branch was. */
+export const updateBranch = async (deps: CodebaseDeps, projectId: string): Promise<void> => {
+	const { api, root } = deps;
+	const { work } = await codebaseOf(api, projectId);
+	const handed = valueOf(await api.handCodebaseUpdate(root, projectId));
+	deps.tell(
+		`${handedTo(handed, `Bringing ${work.branch} up to date`)} Nothing is merged until it does it there; DSNR kept where the branch was, so the update can be undone.`,
+	);
 };
 
 const STOP = 'Stop';

@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { guidePart, handoffTask, buildInCodebaseTask, prototypeAddressTask, prototypeBuildTask } from '../src/core/services/agent/agentTasks';
+import {
+	guidePart,
+	handoffTask,
+	buildInCodebaseTask,
+	prototypeAddressTask,
+	prototypeBuildTask,
+	updateBranchTask,
+} from '../src/core/services/agent/agentTasks';
 
 const GUIDE = guidePart('# Building UI in a Flock product\n\n1. **Hard rules:** `../standards/non-negotiables.md`.', '/d');
 
@@ -162,6 +169,27 @@ describe('the builder’s guide, in every task (so no run depends on an agent ch
 		for (const task of [building, changing])
 			expect(task).toContain(`- **The design system as installed:** \`/n/x\`\n  ${said} Say so in your summary.`);
 		expect(tasks['building a prototype']).not.toContain('pins x');
+	});
+
+	it('asks Handoff to write how the branch merges only when DSNR could read it, and an update to merge only, with a way back', () => {
+		expect(tasks.Handoff).not.toContain('under the verdict');
+		const said = handoffTask(
+			{ skill: '# Hand off', projectId: 'p', branch: 'feature/p', gate: null, mergeState: 'feature/p is up to date with develop.' },
+			parts,
+		);
+		expect(said).toContain(
+			'put this in HANDOFF.md, under the verdict, as DSNR read it before you started (nothing was merged): "feature/p is up to date with develop."',
+		);
+		const against = { branch: 'feature/p', base: 'develop', latest: 'c'.repeat(40), behind: 2, conflicts: [] };
+		const clean = updateBranchTask({ against, checkpoint: 'refs/dsnr/checkpoint/p' }, parts);
+		expect(clean.startsWith(GUIDE)).toBe(true);
+		expect(clean).toContain('feature/p is 2 commits behind develop. It merges into develop cleanly.');
+		expect(clean).toContain(`git merge --no-ff ${'c'.repeat(40)}`);
+		expect(clean).toContain('git reset --hard refs/dsnr/checkpoint/p');
+		expect(clean).not.toContain('git merge --abort');
+		const conflicted = updateBranchTask({ against: { ...against, conflicts: ['a.ts'] }, checkpoint: 'refs/dsnr/checkpoint/p' }, parts);
+		expect(conflicted).toContain('Merging develop into it conflicts in a.ts.');
+		expect(conflicted).toContain('git merge --abort');
 	});
 
 	it('says it is always followed, that the run’s own skill wins where it is more specific, and what to do with nobody to ask', () => {

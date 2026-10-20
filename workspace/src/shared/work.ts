@@ -1,8 +1,15 @@
-import type { BuildInCodebasePlan, WorkKind, Project, ProjectWork } from './contract';
+import type { BranchAgainstBase, BuildInCodebasePlan, WorkKind, Project, ProjectWork } from './contract';
+import { plural } from './plural';
 import { newestVersionFirst, parseVersion } from './prototypeNames';
 import { byNewest } from './sort';
 import { asRepositoryPath } from './repoRef';
 import { asChangeRequestUrl, treeUrl } from './hostUrls';
+
+/** How codebase work's branch stands against its base, in the same words in the panel and in HANDOFF.md. */
+export const againstBaseWords = ({ branch, base, behind, conflicts }: BranchAgainstBase): string =>
+	behind === 0
+		? `${branch} is up to date with ${base}.`
+		: `${branch} is ${plural(behind, 'commit')} behind ${base}. ${conflicts.length === 0 ? `It merges into ${base} cleanly.` : `Merging ${base} into it conflicts in ${conflicts.join(', ')}.`}`;
 
 /** Declared in `.dsnr/workspace.json` to serve the product's own app on mock data. */
 export const DESIGN_MODE_COMMAND = 'design-mode';

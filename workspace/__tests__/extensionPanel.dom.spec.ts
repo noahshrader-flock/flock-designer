@@ -502,7 +502,16 @@ describe('codebase work, in the panel', () => {
 		await showOpen(OPEN, WITH_CODE);
 		const dividers = () => document.querySelectorAll('[role="separator"]').length;
 		await press(menuOf('Zone coverage'));
-		expect(items()).toEqual(['Copy link', 'Open published page', 'Open locally', 'Run locally', 'Hand off', 'View on GitHub', 'Assign folder…']);
+		expect(items()).toEqual([
+			'Copy link',
+			'Open published page',
+			'Open locally',
+			'Run locally',
+			'Update this branch…',
+			'Hand off',
+			'View on GitHub',
+			'Assign folder…',
+		]);
 		expect(dividers()).toBe(4);
 		await elsewhere();
 		await press(menuOf('Alert history'));
@@ -510,7 +519,7 @@ describe('codebase work, in the panel', () => {
 		expect(dividers()).toBe(3);
 		await elsewhere();
 		await press(menuOf('Roles in code'));
-		expect(items()).toEqual(['Run locally', 'Hand off', 'View on GitHub', 'Assign folder…']);
+		expect(items()).toEqual(['Run locally', 'Update this branch…', 'Hand off', 'View on GitHub', 'Assign folder…']);
 		expect(dividers()).toBe(2);
 		// No item opens it in VS Code: pressing the project does, so nothing is offered twice.
 		expect(items().some((label) => /open for review|preview|comments|share/i.test(label))).toBe(false);
@@ -551,6 +560,60 @@ describe('codebase work, in the panel', () => {
 		await press(inDialog('Start handoff'));
 		expect(lastAsk()).toEqual(['codebase', ['hand-off', 'zone-coverage']]);
 		expect(dialog()).toBeNull();
+	});
+
+	describe('codebase work behind the product’s main branch', () => {
+		const against = (more: Record<string, unknown> = {}) => ({
+			branch: 'feature/zone-coverage',
+			base: 'develop',
+			latest: 'b'.repeat(40),
+			behind: 0,
+			conflicts: [],
+			...more,
+		});
+
+		it('says nothing of it in Hand off while the work is up to date', async () => {
+			await showOpen(OPEN, WITH_CODE);
+			await press(menuOf('Zone coverage'));
+			await press(item('Hand off'));
+			expect(calls('codebaseAgainstBase').at(-1)?.args).toEqual(['/work/flock-coke', 'zone-coverage']);
+			await answer('codebaseAgainstBase', against());
+			expect(dialog()!.textContent).not.toMatch(/behind|up to date|Update this branch/);
+		});
+
+		it('says it in Hand off when the work has fallen behind, with what merging would conflict in, and Update this branch hands it over', async () => {
+			await showOpen(OPEN, WITH_CODE);
+			await press(menuOf('Zone coverage'));
+			await press(item('Hand off'));
+			await answer('codebaseAgainstBase', against({ behind: 5, conflicts: ['src/nav.tsx', 'src/routes.ts'] }));
+			expect(dialog()!.textContent).toContain(
+				'feature/zone-coverage is 5 commits behind develop. Merging develop into it conflicts in src/nav.tsx, src/routes.ts.',
+			);
+			await press(inDialog('Update this branch'));
+			expect(lastAsk()).toEqual(['codebase', ['update', 'zone-coverage']]);
+			expect(dialog()).toBeNull();
+		});
+
+		it('is in the project’s menu for codebase work, saying how it stands either way', async () => {
+			await showOpen(OPEN, WITH_CODE);
+			await press(menuOf('Alert history'));
+			expect(items()).not.toContain('Update this branch…');
+			await press(menuOf('Zone coverage'));
+			await press(item('Update this branch…'));
+			expect(dialog()?.getAttribute('aria-label')).toBe('Update this branch');
+			expect(dialog()!.textContent).toContain('Reading how it stands');
+			await answer('codebaseAgainstBase', against());
+			expect(dialog()!.textContent).toContain('feature/zone-coverage is up to date with develop.');
+			expect(allByRole('button', 'Update this branch')).toEqual([]);
+		});
+
+		it('says when how it stands cannot be told here, in the menu’s dialog', async () => {
+			await showOpen(OPEN, WITH_CODE);
+			await press(menuOf('Zone coverage'));
+			await press(item('Update this branch…'));
+			await answer('codebaseAgainstBase', null);
+			expect(dialog()!.textContent).toContain('cannot be told here');
+		});
 	});
 
 	it('names the agent a handoff goes to, with Change, which asks which; and says it is chosen at the hand-over while it is not known', async () => {

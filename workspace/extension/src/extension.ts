@@ -9,7 +9,7 @@ import type { PublishStatus, SignInState } from '../../src/shared/contract';
 import { addressComment } from './address';
 import { refreshPrototype } from './refresh';
 import { Panels, hostApi } from './bridge';
-import { type LocalRun, handOff, openCode, shareCodebase, runLocally } from './codebase';
+import { type LocalRun, handOff, openCode, shareCodebase, runLocally, updateBranch } from './codebase';
 import { startCore } from './core';
 import { moveLocationSetting } from './agentWindows';
 import { showFound, shownFrom } from './designSystem';
@@ -244,6 +244,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 		if (root === null) throw new Error(productNow().why);
 		const run = {
 			'hand-off': handOff,
+			update: updateBranch,
 			share: shareCodebase,
 			'open-code': openCode,
 			'run-locally': (deps: Parameters<typeof runLocally>[0], id: string) => runLocally(deps, localRun(root), id),

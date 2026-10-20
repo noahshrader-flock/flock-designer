@@ -74,7 +74,7 @@ export type ComponentLink = (typeof COMPONENT_LINKS)[number];
 export type DesignTab = { kind: 'component'; id: string; name: string } | { kind: 'primitives' };
 
 /** The page names the project only; the extension finds the work, and where it is, itself. */
-export const CODEBASE_ACTIONS = ['hand-off', 'share', 'open-code', 'run-locally'] as const;
+export const CODEBASE_ACTIONS = ['hand-off', 'update', 'share', 'open-code', 'run-locally'] as const;
 export type CodebaseAction = (typeof CODEBASE_ACTIONS)[number];
 
 export interface Review {
@@ -167,6 +167,7 @@ export type PanelDialog =
 	| { kind: 'assign'; projectId: string }
 	| { kind: 'build'; projectId: string }
 	| { kind: 'hand-off'; projectId: string }
+	| { kind: 'update'; projectId: string }
 	| { kind: 'account' }
 	| { kind: 'sync' }
 	| { kind: 'changes' };
