@@ -427,6 +427,8 @@ describe('a review tab’s answers to its page', () => {
 			address: vi.fn(async () => null),
 			baseBehind: vi.fn(async () => null),
 			refresh: vi.fn(async () => null),
+			designSystemBuild: vi.fn(async () => null),
+			buildDesignSystemFrom: vi.fn(async () => ({ from: 'clone' as const, pkg: 'x', installed: '1.0.0', clone: { branch: 'main', changed: 0 } })),
 			written: vi.fn(),
 		};
 	};
@@ -459,6 +461,26 @@ describe('a review tab’s answers to its page', () => {
 				});
 		expect(d.baseBehind).toHaveBeenCalledTimes(1);
 		expect(d.refresh).toHaveBeenCalledTimes(1);
+	});
+
+	it('say what the page’s version is built from, and switch it, only for this review’s prototypes and only to one of the two', async () => {
+		const { d, ask } = tab();
+		await ask('designSystemBuild', ['prototype/demo/v3']);
+		expect(d.designSystemBuild).toHaveBeenCalledWith({ ...review, name: 'v3' });
+		await ask('buildDesignSystemFrom', ['prototype/demo/v3', 'clone']);
+		expect(d.buildDesignSystemFrom).toHaveBeenCalledWith({ ...review, name: 'v3' }, 'clone');
+		// The page is built again and saved: the counts and the list are read again.
+		expect(d.written).toHaveBeenCalled();
+		expect(await ask('buildDesignSystemFrom', ['prototype/demo/v3', 'elsewhere'])).toEqual({
+			ok: false,
+			error: "A version is built from the design system's 'clone' or its 'installed' package.",
+		});
+		for (const args of [['prototype/other/v1', 'clone'], ['prototype/demo/v1'], ['prototype/demo/v1', 'clone', 'more']])
+			expect(await ask('buildDesignSystemFrom', args)).toEqual({
+				ok: false,
+				error: 'This review is of demo, so it asks only of one of demo’s prototypes.',
+			});
+		expect(d.buildDesignSystemFrom).toHaveBeenCalledTimes(1);
 	});
 
 	it('Address the version the page is on, when it says which (BROWSER_COMMENTS_PLAN 3.1)', async () => {

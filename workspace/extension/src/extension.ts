@@ -163,6 +163,14 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 						withItsProduct(r)
 							.then(({ root, titled }) => refreshPrototype({ ...here, watch: watchPrototype }, root, titled))
 							.catch(failedFor(true)),
+					designSystemBuild: async (r) => valueOf(await api.prototypeDesignSystem(r.projectId, r.name)),
+					buildDesignSystemFrom: (r, from) =>
+						withItsProduct(r)
+							.then(async ({ root }) => valueOf(await api.setPrototypeDesignSystem(root, r.projectId, r.name, from)))
+							.catch((err: unknown) => {
+								failedFor(true)(err);
+								throw err;
+							}),
 				},
 				review,
 				name,

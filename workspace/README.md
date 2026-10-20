@@ -274,6 +274,18 @@ private ref (`refs/dsnr/base/<project>/<version>`). A change or an Address keeps
 version whose branch has moved on says so in the bar ("3 behind develop", nothing while it is current); **Refresh to latest**
 moves its base to the latest and hands its rebuild, in place, to the agent.
 
+**A version built from the design system's clone.** In VS Code's review tab, a version can be built from the design system's
+clone as it stands, with the person's change to a component, in place of the product's installed package: a switch after the
+bar's other switches ("Installed @flock/ui 5.5.4" or "Your clone: develop + 2 changed files"), shown only when a clone shown
+to be the package's source is here, or the version is built from one. The choice is kept in the version's record
+(`designSystemFrom`), followed by DSNR's save and by the agent's build command alike (`fromSourceOf`), and kept by a new
+version made from it; switching builds the page again and saves it, and a build that fails leaves the choice as it was.
+Built from the clone (`fromSource`, in the bundler, `cli/buildPrototype.ts`): the package as the product imports it is the
+clone's source entry (its package.json's `source`, else `src/index`), a stylesheet of the built package is nothing (the
+source's components import their own), every peer dependency the library declares is the product's copy, so there is one
+React, and its stylesheets are made as the Design System tab's previews make them. A page that would load a second React is
+refused, with how to fix it, rather than shown empty.
+
 **Codebase work behind the product's main branch.** DSNR never merges into a checkout. Codebase work's branch is read
 against the latest of the product's default branch (`againstBase`, the branch engineering merges into): how far behind, and
 what merging would conflict in, from `git merge-tree`, which writes no ref, index or file. The Hand off dialog says so when the

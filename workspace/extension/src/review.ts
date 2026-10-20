@@ -3,7 +3,7 @@ import { mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import type * as VsCode from 'vscode';
 import type { Route } from '../../src/core/handle';
-import type { BaseBehind, CommentRef, InvokeName, Result, SignInState, WorkspaceApi } from '../../src/shared/contract';
+import type { BaseBehind, CommentRef, DesignSystemBuild, InvokeName, Result, SignInState, WorkspaceApi } from '../../src/shared/contract';
 import { DESIGN_REPO } from '../../src/shared/config';
 import { escapeHtml } from '../../src/shared/html';
 import REVIEW_TAB from '../../src/page/reviewTab?page';
@@ -51,6 +51,8 @@ interface ReviewAnswers {
 	address: (review: Review, comment: CommentRef, newVersion: boolean) => Promise<unknown>;
 	baseBehind: (review: Review) => Promise<BaseBehind | null>;
 	refresh: (review: Review) => Promise<unknown>;
+	designSystemBuild: (review: Review) => Promise<DesignSystemBuild | null>;
+	buildDesignSystemFrom: (review: Review, from: 'installed' | 'clone') => Promise<DesignSystemBuild>;
 	written: () => void;
 }
 
@@ -86,7 +88,7 @@ const isPrototypeOf = (projectId: string, branch: unknown): boolean => {
 const ON_A_COMMENT = new Set<RelayCall>(['moveComment', 'resolveComment', 'deleteComment', 'address']);
 
 /** After one, the counts are read again. */
-const WRITES = new Set<RelayCall>(['postComment', 'moveComment', 'resolveComment', 'deleteComment']);
+const WRITES = new Set<RelayCall>(['postComment', 'moveComment', 'resolveComment', 'deleteComment', 'buildDesignSystemFrom']);
 
 const answered = async (answers: ReviewAnswers, review: Review, name: RelayCall, args: unknown[], seen: Set<number>): Promise<Result<unknown>> => {
 	if (name === 'signIn') return toResult(answers.signIn());
@@ -98,12 +100,18 @@ const answered = async (answers: ReviewAnswers, review: Review, name: RelayCall,
 		return { ok: false, error: 'That comment is not one of this review’s.' };
 	if (name === 'address')
 		return toResult(answers.address(args.length >= 2 ? versionOf(review, args[1] as string) : review, args[0] as CommentRef, args[2] === true));
-	if (name === 'baseBehind' || name === 'refresh') {
+	if (name === 'baseBehind' || name === 'refresh' || name === 'designSystemBuild' || name === 'buildDesignSystemFrom') {
 		// The page's own version, as Address is given it: in a browser, the page may have moved to another.
-		if (!(args.length === 1 && isPrototypeOf(review.projectId, args[0])))
+		const given = name === 'buildDesignSystemFrom' ? 2 : 1;
+		if (!(args.length === given && isPrototypeOf(review.projectId, args[0])))
 			return { ok: false, error: `This review is of ${review.projectId}, so it asks only of one of ${review.projectId}’s prototypes.` };
 		const on = versionOf(review, args[0] as string);
-		return toResult(name === 'baseBehind' ? answers.baseBehind(on) : answers.refresh(on));
+		if (name === 'buildDesignSystemFrom') {
+			if (args[1] !== 'installed' && args[1] !== 'clone')
+				return { ok: false, error: "A version is built from the design system's 'clone' or its 'installed' package." };
+			return toResult(answers.buildDesignSystemFrom(on, args[1]));
+		}
+		return toResult(name === 'baseBehind' ? answers.baseBehind(on) : name === 'refresh' ? answers.refresh(on) : answers.designSystemBuild(on));
 	}
 	if ((name === 'readComments' || name === 'postComment') && !(args[0] === review.projectId && isPrototypeOf(review.projectId, args[1])))
 		return { ok: false, error: `This review is of ${review.projectId}, so it comments only on ${review.projectId}’s prototypes.` };

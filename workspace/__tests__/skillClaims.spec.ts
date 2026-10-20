@@ -8,7 +8,7 @@ const skill = (name: string): string => readFileSync(join(SKILLS, name), 'utf8')
 
 /** The agent believes a skill that says another file is "in your task"; when it is not there, it works without it and never knows. */
 const parts = { guide: '', lightCheck: null, shared: '', accessibility: '', voice: '' };
-const prototypeBuild = { source: '/p/v1.tsx', page: '/p/v1.html', buildCommand: 'node build', checkCommand: 'node check' };
+const prototypeBuild = { source: '/p/v1.tsx', page: '/p/v1.html', buildCommand: 'node build', checkCommand: 'node check', fromClone: null };
 const sources = {
 	code: '/p/code',
 	productGuidance: null,

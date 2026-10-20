@@ -158,6 +158,7 @@ describe('what the agent is told', () => {
 		page: '/q/users/v1.html',
 		buildCommand: 'node /q/build-prototype.mjs /e /q/users/v1.tsx /q/users/v1.html /c/node_modules /q/_shared',
 		checkCommand: 'node /q/check-prototype.mjs /q/users/v1.build-check.json',
+		fromClone: null,
 	};
 
 	it('names the source to write, the exact command that checks it builds, and every folder it may read, read-only', () => {

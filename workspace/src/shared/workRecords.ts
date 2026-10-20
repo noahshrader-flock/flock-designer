@@ -56,6 +56,7 @@ const KNOWN = [
 	'cover',
 	'readyAt',
 	'from',
+	'designSystemFrom',
 ];
 
 const checked = (r: Rec): Work => {
@@ -82,6 +83,7 @@ const checked = (r: Rec): Work => {
 		...(cover !== null ? { cover } : {}),
 		...(isCommit(r.readyAt) ? { readyAt: r.readyAt } : {}),
 		...(typeof r.from === 'string' && isPrototypeName(r.from) ? { from: r.from } : {}),
+		...(r.designSystemFrom === 'clone' ? { designSystemFrom: 'clone' as const } : {}),
 	};
 };
 

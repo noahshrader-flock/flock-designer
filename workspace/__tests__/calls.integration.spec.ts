@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CallsContext } from '../src/core/compose';
 import { appPaths } from '../src/core/appPaths';
 import { CHANNELS, invokeChannel } from '../src/shared/contract';
+import { prototypePagePath } from '../src/shared/designPaths';
 import type { Ports } from '../src/core/ports';
 import type { AgentId } from '../src/core/services/agent/agent';
 import { claudeCode } from '../src/core/services/agent/claudeCode';
@@ -676,6 +677,46 @@ describe('prototypes', () => {
 			const r = await call(CHANNELS.createPrototype, 'demo', 'Demo', 'Another', { root: product, branch: 'feature/zone' });
 			expect(r).toMatchObject({ ok: true, value: { basedOn: { branch: 'feature/zone', commit: g(product, 'rev-parse', 'develop') } } });
 			expect(g(product, 'branch', '--list', 'feature/zone')).toBe('');
+		});
+
+		it('builds a version from the design system’s clone when the person chooses it, saved as so built, and back again', async () => {
+			await made();
+			mkdirSync(join(home, 'prototype', 'demo'), { recursive: true });
+			writeFileSync(join(home, 'prototype', 'demo', 'v1.tsx'), "import { Hello } from 'x';\nexport default function Page() { return <Hello />; }\n");
+			const set = (from: string) => call(CHANNELS.setPrototypeDesignSystem, product, 'demo', 'v1', from);
+			const saved = () => readFileSync(join(design, prototypePagePath('demo', 'v1')), 'utf8');
+			const recorded = () => (JSON.parse(readFileSync(join(design, 'projects', 'demo', 'work.json'), 'utf8')) as { designSystemFrom?: string }[])[0];
+			expect((await call(CHANNELS.prototypeDesignSystem, 'demo', 'v1')).value).toEqual({
+				from: 'installed',
+				pkg: 'x',
+				installed: '1.2.3',
+				clone: null,
+			});
+			expect((await set('clone')).error).toBe('No clone of x shown to be its source is here, so Version 1 cannot be built from one.');
+			const clone = designSystemBeside(product, {
+				'package.json': JSON.stringify({ name: 'x', peerDependencies: { react: '*' } }),
+				'src/index.tsx': 'export const Hello = () => <h1>From the clone</h1>;\n',
+			});
+			expect((await call(CHANNELS.prototypeDesignSystem, 'demo', 'v1')).value).toMatchObject({
+				from: 'installed',
+				clone: { branch: 'main', changed: 0 },
+			});
+			expect(await set('clone')).toMatchObject({ ok: true, value: { from: 'clone' } });
+			expect(recorded()?.designSystemFrom).toBe('clone');
+			expect(saved()).toContain('From the clone');
+			// The agent's build is the same build: its command and its task say so.
+			await call(CHANNELS.handPrototypeBuild, product, 'demo', 'v1', 'A list');
+			const task = readFileSync(join(home, 'prototype', 'demo', 'v1-build.md'), 'utf8');
+			// As the product's real folder names it.
+			expect(task).toContain(`--from ${realpathSync(clone)} x`);
+			expect(task).toContain(`built from the design system's clone as it stands, \`${realpathSync(clone)}\``);
+			expect(await set('installed')).toMatchObject({ ok: true, value: { from: 'installed' } });
+			expect(recorded()?.designSystemFrom).toBeUndefined();
+			expect(saved()).toContain('Real component');
+			// A clone that does not build: said, and the choice left as it was.
+			writeFileSync(join(clone, 'src', 'index.tsx'), 'export const Hello = () => <h1>;\n');
+			expect((await set('clone')).error).toMatch(/^The prototype did not build:/);
+			expect(recorded()?.designSystemFrom).toBeUndefined();
 		});
 
 		it('starts fetching the branch the product is on for New, and only for a product it trusts', async () => {

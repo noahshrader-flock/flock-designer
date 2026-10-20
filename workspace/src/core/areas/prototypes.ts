@@ -2,7 +2,7 @@ import type { CallsDeps } from '../compose';
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { folderName } from '../../shared/brief';
-import type { Handed, CommentRef, HandedComment, OpenedPrototype, PrototypeReadiness } from '../../shared/contract';
+import type { DesignSystemBuild, Handed, CommentRef, HandedComment, OpenedPrototype, PrototypeReadiness } from '../../shared/contract';
 import { coverPath, prototypeKey, prototypePagePath } from '../../shared/designPaths';
 import { statesOf } from '../../shared/prototypeStates';
 import { workLabel } from '../../shared/work';
@@ -16,7 +16,7 @@ import { warmTip } from '../services/platform/fetch';
 import { INSTALL_COMMAND } from '../services/codebase/install';
 import { jpegDataUrl } from '../services/prototypes/picture';
 import { type CoverDeps, builtHere, ensureCovers } from '../services/prototypes/projectCovers';
-import { BUILD_SKILL, GUIDE, type PrototypeSources, assignFolder, setBaseCommit } from '../services/prototypes/prototype';
+import { BUILD_SKILL, GUIDE, type PrototypeSources, assignFolder, setBaseCommit, setDesignSystemFrom } from '../services/prototypes/prototype';
 import { localPrototypeFile, whereTheChangeGoes } from '../services/prototypes/prototypeWork';
 import { singleFlight } from '../services/platform/concurrency';
 
@@ -35,7 +35,7 @@ export const prototypesArea = (d: CallsDeps) => {
 		tried: new Set(),
 	};
 	const prototypeRun = async (projectId: string, name: string, modeledOn = name) =>
-		work.buildPlan(projectId, name, await once(`source:${projectId}`, () => work.sources(projectId, modeledOn)));
+		work.buildPlan(projectId, name, await once(`source:${projectId}`, () => work.sources(projectId, modeledOn)), modeledOn);
 	const guideFor = async (sources: PrototypeSources): Promise<string> =>
 		guidePart(await readSkillText(GUIDE), sources.sharedStandards === null ? null : dirname(sources.sharedStandards));
 	/** What every prototype task carries. `modeledOn` is the version whose sources and target apply: a new one has no record yet. */
@@ -70,6 +70,31 @@ export const prototypesArea = (d: CallsDeps) => {
 			return null;
 		},
 		prototypeBehind: (projectId: string, name: string) => work.behind(projectId, name),
+		prototypeDesignSystem: (projectId: string, name: string) => work.designSystemBuild(projectId, name),
+		/**
+		 * The choice is kept first and the page built from its saved source and saved, so the page is what it says it is built
+		 * from; a build that fails puts the choice back, and says what the build said.
+		 */
+		setPrototypeDesignSystem: async (root: string, projectId: string, name: string, from: 'installed' | 'clone'): Promise<DesignSystemBuild> => {
+			opened.require(root);
+			const now = await work.designSystemBuild(projectId, name);
+			if (now === null) throw new Error(`${projectId} has no ${workLabel({ name })} here to build.`);
+			if (from === 'clone' && now.clone === null)
+				throw new Error(`No clone of ${now.pkg} shown to be its source is here, so ${workLabel({ name })} cannot be built from one.`);
+			if (now.from === from) return now;
+			await setDesignSystemFrom(store.records(), projectId, name, from);
+			try {
+				// Its saved source, here, is what is built.
+				await work.startChange(projectId, name, { newVersion: false, comments: null });
+				await work.buildPage(projectId, name);
+				await work.keep(projectId, name, readFileSync(work.file(projectId, name), 'utf8'));
+				deploys.page(projectId, name);
+			} catch (err) {
+				await setDesignSystemFrom(store.records(), projectId, name, now.from).catch(() => undefined);
+				throw err;
+			}
+			return { ...now, from };
+		},
 		/**
 		 * In place: the base moves first, so the task is built from the latest code, and moves back if nothing is handed
 		 * over. Its comments stay on it, pinned where they were made.
