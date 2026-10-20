@@ -24,9 +24,9 @@ to see which.
 computer, **Choose a folder…** to pick any folder, and, once you have chosen one, **Use the product's** to go back. Use it
 to try a fork, or a branch a colleague is working on.
 
-The choice is kept on this computer, for this product only. Everything reads the one chosen: the tab, new prototypes, the
-voice and tone, and codebase work. Choosing another clears what you were trying on the old one, and closes its tabs. The
-picker says so first.
+The choice is kept on this computer, for this product only. Everything reads the one chosen: the tab, the guidance a
+prototype is built with, the voice and tone, and codebase work. Choosing another clears what you were trying on the old
+one, and closes its tabs. The picker says so first.
 
 ## Look around
 

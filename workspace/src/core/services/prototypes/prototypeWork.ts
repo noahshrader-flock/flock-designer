@@ -511,13 +511,11 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		sources,
 		behind,
 		buildPlan,
-		buildPage,
 		keep,
 		save,
 		saveBuilt,
 		page,
 		startChange,
-		sourceHere,
 		resumeChange,
 		finishChange,
 	};
