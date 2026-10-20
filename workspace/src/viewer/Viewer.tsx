@@ -25,6 +25,7 @@ import type { GitHubUser } from '../shared/domain/account';
 import { AccountMenu } from './AccountMenu';
 import { type Relay, loginIn, relayComments } from './relay';
 import { CommentsPanel } from './comments/CommentsPanel';
+import { BehindLatest } from './BehindLatest';
 import { useOpenOnError } from './comments/useOpenOnError';
 
 export interface ViewerConfig {
@@ -214,9 +215,11 @@ const InDsnr = ({ config, slots, showing, relay }: { config: ViewerConfig; slots
 		setAddressing(null);
 	};
 	if (login === undefined) return null;
+	const behind = <BehindLatest relay={relay} branch={prototypeKey(config.projectId, config.name)} />;
 	if (login === null)
 		return (
 			<PageBar config={config} slots={slots} showing={showing}>
+				{behind}
 				<Button variant="secondary" disabled={signingIn} onPress={() => void signIn()}>
 					{signingIn ? 'Continue in VS Code…' : 'Sign in to comment'}
 				</Button>
@@ -228,6 +231,7 @@ const InDsnr = ({ config, slots, showing, relay }: { config: ViewerConfig; slots
 			slots={slots}
 			showing={showing}
 			store={store}
+			before={behind}
 			actions={(comment: ReviewComment): MenuItem[] =>
 				comment.resolved
 					? []
@@ -255,6 +259,7 @@ const Commenting = ({
 	slots,
 	showing,
 	store,
+	before,
 	account,
 	actions,
 }: {
@@ -262,6 +267,8 @@ const Commenting = ({
 	slots: ViewerSlots;
 	showing: Showing;
 	store: CommentStore;
+	/** In the bar after the switchers, before the comments. */
+	before?: ReactNode;
 	account?: ReactNode;
 	actions?: (comment: ReviewComment) => MenuItem[];
 }) => {
@@ -306,6 +313,7 @@ const Commenting = ({
 	return (
 		<>
 			<PageBar config={config} slots={slots} showing={showing}>
+				{before}
 				<CommentControl comments={comments} listOpen={listOpen} onToggleList={() => setListOpen((o) => !o)} disabled={!opened} />
 				{account}
 			</PageBar>

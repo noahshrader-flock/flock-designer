@@ -21,8 +21,9 @@ import type {
 	ValueSources,
 } from '../domain/designSystem';
 import type {
+	BaseBehind,
 	Handed,
-	Work,
+	StartedPrototype,
 	MadeCover,
 	BuildInCodebasePlan,
 	OpenedPrototype,
@@ -134,7 +135,13 @@ export interface WorkspaceApi {
 		note: string,
 		from?: { root: string; branch: string },
 		folder?: string | null,
-	): Promise<Result<Work>>;
+	): Promise<Result<StartedPrototype>>;
+	/** Starts fetching the branch the checkout is on, for New: nothing waits on it, and it never fails. */
+	warmPrototypeBase(root: string): Promise<Result<null>>;
+	/** How far the version's base is behind the latest of its branch; null when that cannot be told here. */
+	prototypeBehind(projectId: string, name: string): Promise<Result<BaseBehind | null>>;
+	/** Moves the version's base to the latest of its branch and hands its rebuild on it to the agent, in place. */
+	handPrototypeRefresh(root: string, projectId: string, name: string): Promise<Result<Handed>>;
 	/** Nothing is saved or checked here: the prototype is saved when opened. */
 	handPrototypeBuild(root: string, projectId: string, name: string, request: string): Promise<Result<Handed>>;
 	/** Hands one comment to the agent, as a build is handed. Nothing is recorded until its change is built: see `saveBuilt`. */
@@ -222,6 +229,9 @@ export const INVOKE = [
 	'handoffResult',
 	'runLocally',
 	'createPrototype',
+	'warmPrototypeBase',
+	'prototypeBehind',
+	'handPrototypeRefresh',
 	'assignFolder',
 	'handPrototypeBuild',
 	'handPrototypeAddress',

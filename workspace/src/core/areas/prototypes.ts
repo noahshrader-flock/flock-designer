@@ -11,11 +11,13 @@ import { guidePart, prototypeAddressTask, prototypeBuildTask } from '../services
 import { writeCommentsExport } from '../services/prototypes/commentsExport';
 import { readDescriptor } from '../services/projects/descriptor';
 import { handTask } from '../services/agent/handOver';
-import { ensureLocalBranch } from '../services/platform/git';
+import { ensureLocalBranch, readCheckout } from '../services/platform/git';
+import { warmTip } from '../services/platform/fetch';
+import { plural } from '../../shared/plural';
 import { INSTALL_COMMAND } from '../services/codebase/install';
 import { jpegDataUrl } from '../services/prototypes/picture';
 import { type CoverDeps, builtHere, ensureCovers } from '../services/prototypes/projectCovers';
-import { BUILD_SKILL, GUIDE, type PrototypeSources, assignFolder } from '../services/prototypes/prototype';
+import { BUILD_SKILL, GUIDE, type PrototypeSources, assignFolder, setBaseCommit } from '../services/prototypes/prototype';
 import { localPrototypeFile, whereTheChangeGoes } from '../services/prototypes/prototypeWork';
 import { singleFlight } from '../services/platform/concurrency';
 
@@ -61,6 +63,46 @@ export const prototypesArea = (d: CallsDeps) => {
 			const root = opened.require(from.root);
 			await ensureLocalBranch(root, from.branch);
 			return work.start(root, { projectId, title, note, branch: from.branch, me: me(), folder: folderName(folder) });
+		},
+		warmPrototypeBase: async (root: string): Promise<null> => {
+			const canonical = opened.require(root);
+			const { branch } = await readCheckout(canonical);
+			if (branch !== null) warmTip(canonical, branch);
+			return null;
+		},
+		prototypeBehind: (projectId: string, name: string) => work.behind(projectId, name),
+		/**
+		 * In place: the base moves first, so the task is built from the latest code, and moves back if nothing is handed
+		 * over. Its comments stay on it, pinned where they were made.
+		 */
+		handPrototypeRefresh: async (root: string, projectId: string, name: string): Promise<Handed> => {
+			const canonical = opened.require(root);
+			const label = workLabel({ name });
+			const now = await work.behind(projectId, name);
+			if (now === null)
+				throw new Error(`${label} cannot be brought up to date here: it is modeled on another product, or on code this clone does not have.`);
+			if (now.behind === 0) throw new Error(`${label} is already modeled on the latest of ${now.branch}.`);
+			let moved = false;
+			try {
+				const { handed } = await handTask(ports, await agent(), async () => {
+					moved = await setBaseCommit(store.records(), projectId, name, now.latest);
+					await work.startChange(projectId, name, { newVersion: false, comments: null });
+					return {
+						root: canonical,
+						what: `Rebuild prototype ${label} of ${projectId} on the latest product code.`,
+						taskFile: join(dirname(work.file(projectId, name)), `${name}-refresh.md`),
+						task: prototypeBuildTask({
+							...(await taskParts(projectId, name)),
+							skill: await readSkillText(BUILD_SKILL),
+							request: `Rebuild ${label} on the latest product code, in place. It was built on ${now.branch} at ${now.commit.slice(0, 7)}, and is now modeled on ${now.latest.slice(0, 7)}, ${plural(now.behind, 'commit')} newer. Its source is ${work.sourceFile(projectId, name)}: change it there, rather than starting again. Keep the design as it is, and change only what the newer code needs (components, props, imports or types that moved or changed). Say what you changed and why, or that nothing needed changing.`,
+						}),
+					};
+				});
+				return handed;
+			} catch (err) {
+				if (moved) await setBaseCommit(store.records(), projectId, name, now.commit).catch(() => undefined);
+				throw err;
+			}
 		},
 		assignFolder: async (projectId: string, folder: unknown) => {
 			await assignFolder(store.records(), projectId, folderName(folder));

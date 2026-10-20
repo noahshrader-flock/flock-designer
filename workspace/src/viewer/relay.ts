@@ -1,4 +1,5 @@
-import type { CommentAnchor, CommentRef, Result, ReviewComment, SignInState } from '../shared/contract';
+import type { BaseBehind, CommentAnchor, CommentRef, Result, ReviewComment, SignInState } from '../shared/contract';
+import { isObjectId } from '../shared/sha';
 import { ASK_PATH, type EditorTheme, KEY_FRAGMENT, KEY_HEADER, type RelayAsk, type RelayCall, isKey, readRelayTell } from '../shared/reviewRelay';
 import type { CommentStore } from './comments/surfaces';
 import { isThisMachine } from '../shared/thisMachine';
@@ -118,6 +119,21 @@ export const serverRelay = (key: string, fetcher: typeof fetch = fetch): Relay =
 export const loginIn = (answer: Result<unknown>): string | null => {
 	const state = answer.ok ? (answer.value as SignInState) : null;
 	return state?.state === 'signedIn' ? state.user.login : null;
+};
+
+/** Taken only in exactly its shape, and only when it is behind: anything else shows nothing. */
+export const behindIn = (answer: Result<unknown>): BaseBehind | null => {
+	const v = (answer.ok ? answer.value : null) as Partial<BaseBehind> | null;
+	return v !== null &&
+		typeof v === 'object' &&
+		typeof v.branch === 'string' &&
+		isObjectId(v.commit) &&
+		isObjectId(v.latest) &&
+		typeof v.behind === 'number' &&
+		Number.isSafeInteger(v.behind) &&
+		v.behind > 0
+		? { branch: v.branch, commit: v.commit, latest: v.latest, behind: v.behind }
+		: null;
 };
 
 /** `branch` is the version's key. */

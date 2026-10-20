@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
-import type { CommentRef, Work, Person, PrototypeReadiness, ReviewComment } from '../../../shared/contract';
+import type { BaseBehind, CommentRef, Work, Person, PrototypeReadiness, ReviewComment, StartedPrototype } from '../../../shared/contract';
 import { type DeclaredTarget, undeclared } from '../../../shared/wcag';
 import { fromBrief } from '../../../shared/brief';
 import { projectPath, prototypePagePath, prototypeSourcePath, sharedFilePath, sharedFilesOf } from '../../../shared/designPaths';
@@ -8,8 +8,8 @@ import { commentsFromOthers, nextVersionName, othersHaveCommented } from '../../
 import { MANIFEST_FILE, declaredTarget, productTarget, taskAccessibility } from '../accessibility/accessibilityBrief';
 import { designSystemCheckout, readDescriptor } from '../projects/descriptor';
 import { recordsRootFor } from '../projects/discovery';
-import { branchTip, branchExists, git, hasCommit, headCommit, isSafeBranchName, readTreeAt, repositoryOf } from '../platform/git';
-import { fetchBranch } from '../platform/fetch';
+import { branchTip, commitsAfter, git, hasCommit, headCommit, isSafeBranchName, readTreeAt, repositoryOf } from '../platform/git';
+import { fetchBranch, freshTip } from '../platform/fetch';
 import { isObjectId } from '../../../shared/sha';
 import { errorText } from '../../../shared/result';
 import { assertUsableProjectId } from '../projects/workRecords';
@@ -158,21 +158,18 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 			: "Prototypes are built with DSNR's own bundler, which is not installed. Run npm ci in flock-designer/workspace, then try again.";
 	};
 
-	const start = async (root: string, { projectId, title: name, note, branch, me, folder }: PrototypeStart): Promise<Work> => {
+	/** A new prototype, or a new version from the brief, modeled on the latest of `branch` (`freshTip`), said in words. */
+	const start = async (root: string, { projectId, title: name, note, branch, me, folder }: PrototypeStart): Promise<StartedPrototype> => {
 		assertUsableProjectId(projectId);
 		const why = notReady(root);
 		if (why !== null) throw new Error(why);
 		if (typeof name !== 'string' || !name.trim()) throw new Error('A prototype needs a name.');
-		if (!(await branchExists(root, branch))) throw new Error(`There is no branch called ${branch} in ${basename(root)}.`);
+		const tip = await freshTip(root, branch);
 		// The clone's folder, as this machine names it, and the repository it is a clone of, as every machine does.
 		const product = await repositoryOf(root);
-		const basedOn = {
-			repository: basename(root),
-			branch,
-			commit: await branchTip(root, branch),
-			...(product ? { product } : {}),
-		};
-		return recordPrototype(ctx.store(), { projectId, title: name.slice(0, 200), note: String(note).slice(0, 8000), me, basedOn, folder });
+		const basedOn = { repository: basename(root), branch, commit: tip.commit, ...(product ? { product } : {}) };
+		const made = await recordPrototype(ctx.store(), { projectId, title: name.slice(0, 200), note: String(note).slice(0, 8000), me, basedOn, folder });
+		return { ...made, modeledOn: `Modeled on ${branch} at ${tip.commit.slice(0, 7)}.${tip.said ? ` ${tip.said}` : ''}` };
 	};
 
 	/**
@@ -208,6 +205,20 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		// Only a recorded commit: a branch's tip, for an old record, moves, so pinning it would keep the wrong one.
 		if (basedOn.commit !== null) await git(root, ['update-ref', `refs/dsnr/base/${projectId}/${name}`, commit]);
 		return commit;
+	};
+
+	/**
+	 * How far the version's base is behind the latest of its branch here; null when that cannot be told: another product
+	 * is open, the record names no commit, or this clone does not have it.
+	 */
+	const behind = async (projectId: string, name: string): Promise<BaseBehind | null> => {
+		const basedOn = (await record(projectId, name))?.basedOn;
+		const root = ctx.productRoot();
+		if (!basedOn || basedOn.commit === null || root === null || basename(root) !== basedOn.repository) return null;
+		const base = await knownBase(root, name, basedOn).catch(() => null);
+		if (base === null) return null;
+		const { commit: latest } = await freshTip(root, basedOn.branch);
+		return { branch: basedOn.branch, commit: base, latest, behind: await commitsAfter(root, base, latest) };
 	};
 
 	/** The code at the commit the version was modeled on: the checkout itself when it is at that commit, else a read-only copy. */
@@ -468,6 +479,7 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		readiness,
 		start,
 		sources,
+		behind,
 		buildPlan,
 		buildPage,
 		keep,

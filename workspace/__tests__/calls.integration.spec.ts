@@ -628,6 +628,44 @@ describe('prototypes', () => {
 			expect(copied).toBe('');
 		});
 
+		it('rebuilds a version on the latest of its branch, in place, moving its base only once it is handed over', async () => {
+			await made();
+			mkdirSync(join(home, 'prototype', 'demo'), { recursive: true });
+			writeFileSync(join(home, 'prototype', 'demo', 'v1.tsx'), 'export default () => null;\n');
+			const recorded = () =>
+				(JSON.parse(readFileSync(join(design, 'projects', 'demo', 'work.json'), 'utf8')) as { basedOn: { commit: string } }[])[0]?.basedOn.commit;
+			const was = g(product, 'rev-parse', 'develop');
+			expect((await call(CHANNELS.prototypeBehind, 'demo', 'v1')).value).toEqual({ branch: 'develop', commit: was, latest: was, behind: 0 });
+			const refresh = () => call(CHANNELS.handPrototypeRefresh, product, 'demo', 'v1');
+			expect((await refresh()).error).toBe('Version 1 is already modeled on the latest of develop.');
+			writeFileSync(join(product, 'later.txt'), 'newer\n');
+			g(product, 'add', 'later.txt');
+			g(product, 'commit', '-q', '-m', 'newer');
+			const latest = g(product, 'rev-parse', 'develop');
+			expect((await call(CHANNELS.prototypeBehind, 'demo', 'v1')).value).toEqual({ branch: 'develop', commit: was, latest, behind: 1 });
+			// Nobody chosen: nothing handed, and the base where it was.
+			ports.agentChoice.mockReturnValue('ask');
+			expect((await refresh()).error).toBe('No agent was chosen, so nothing was handed over.');
+			expect(recorded()).toBe(was);
+			// The window failing after the base moved: it moves back.
+			ports.agentChoice.mockReturnValue('claude-code');
+			ports.agentWindow.open.mockRejectedValueOnce(new Error('The window would not open.'));
+			expect((await refresh()).error).toBe('The window would not open.');
+			expect(recorded()).toBe(was);
+			expect(await refresh()).toMatchObject({ ok: true, value: { agent: 'Claude Code' } });
+			expect(recorded()).toBe(latest);
+			const task = readFileSync(join(home, 'prototype', 'demo', 'v1-refresh.md'), 'utf8');
+			expect(task).toContain(`It was built on develop at ${was.slice(0, 7)}, and is now modeled on ${latest.slice(0, 7)}, 1 commit newer.`);
+			expect(task).toContain('in place');
+			expect((await call(CHANNELS.prototypeBehind, 'demo', 'v1')).value).toMatchObject({ behind: 0 });
+		});
+
+		it('starts fetching the branch the product is on for New, and only for a product it trusts', async () => {
+			await made();
+			expect(await call(CHANNELS.warmPrototypeBase, product)).toEqual({ ok: true, value: null });
+			expect((await call(CHANNELS.warmPrototypeBase, join(home, 'elsewhere'))).ok).toBe(false);
+		});
+
 		it('asks whatever is kept when the person changes it, and says which is used now without asking', async () => {
 			await made();
 			ports.pickAgent.mockResolvedValue({ id: 'codex', keep: true });

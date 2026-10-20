@@ -3,7 +3,7 @@ import { mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import type * as VsCode from 'vscode';
 import type { Route } from '../../src/core/handle';
-import type { CommentRef, InvokeName, Result, SignInState, WorkspaceApi } from '../../src/shared/contract';
+import type { BaseBehind, CommentRef, InvokeName, Result, SignInState, WorkspaceApi } from '../../src/shared/contract';
 import { DESIGN_REPO } from '../../src/shared/config';
 import { escapeHtml } from '../../src/shared/html';
 import REVIEW_TAB from '../../src/page/reviewTab?page';
@@ -49,6 +49,8 @@ interface ReviewAnswers {
 	routes: () => ReadonlyMap<InvokeName, Route>;
 	signIn: () => Promise<SignInState>;
 	address: (review: Review, comment: CommentRef, newVersion: boolean) => Promise<unknown>;
+	baseBehind: (review: Review) => Promise<BaseBehind | null>;
+	refresh: (review: Review) => Promise<unknown>;
 	written: () => void;
 }
 
@@ -73,6 +75,9 @@ export const answerReview = async (
 	return result;
 };
 
+/** The review, of the version whose branch is `branch` (already checked to be one of its project's). */
+const versionOf = (review: Review, branch: string): Review => ({ ...review, name: branch.slice(prototypeKey(review.projectId, '').length) });
+
 const isPrototypeOf = (projectId: string, branch: unknown): boolean => {
 	const prefix = prototypeKey(projectId, '');
 	return typeof branch === 'string' && branch.startsWith(prefix) && isPrototypeName(branch.slice(prefix.length));
@@ -91,9 +96,14 @@ const answered = async (answers: ReviewAnswers, review: Review, name: RelayCall,
 		return { ok: false, error: `This review is of ${review.projectId}, so it comments only on ${review.projectId}’s prototypes.` };
 	if (ON_A_COMMENT.has(name) && !(isRef(args[0]) && seen.has(args[0].thread)))
 		return { ok: false, error: 'That comment is not one of this review’s.' };
-	if (name === 'address') {
-		const on = args.length >= 2 ? { ...review, name: (args[1] as string).slice(prototypeKey(review.projectId, '').length) } : review;
-		return toResult(answers.address(on, args[0] as CommentRef, args[2] === true));
+	if (name === 'address')
+		return toResult(answers.address(args.length >= 2 ? versionOf(review, args[1] as string) : review, args[0] as CommentRef, args[2] === true));
+	if (name === 'baseBehind' || name === 'refresh') {
+		// The page's own version, as Address is given it: in a browser, the page may have moved to another.
+		if (!(args.length === 1 && isPrototypeOf(review.projectId, args[0])))
+			return { ok: false, error: `This review is of ${review.projectId}, so it asks only of one of ${review.projectId}’s prototypes.` };
+		const on = versionOf(review, args[0] as string);
+		return toResult(name === 'baseBehind' ? answers.baseBehind(on) : answers.refresh(on));
 	}
 	if ((name === 'readComments' || name === 'postComment') && !(args[0] === review.projectId && isPrototypeOf(review.projectId, args[1])))
 		return { ok: false, error: `This review is of ${review.projectId}, so it comments only on ${review.projectId}’s prototypes.` };

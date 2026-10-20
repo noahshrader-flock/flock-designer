@@ -4,7 +4,7 @@ import { RELAY_CALLS, readRelayAsk, readRelayTell } from '../src/shared/reviewRe
 /** Both directions are read in exactly their shapes, so a page that went wrong can ask for nothing more. */
 
 describe('what the page may ask', () => {
-	it('is the comment calls, who is signed in, signing in, and Address: nothing else', () => {
+	it('is the comment calls, who is signed in, signing in, Address, and how far behind with Refresh: nothing else', () => {
 		expect([...RELAY_CALLS]).toEqual([
 			'signInState',
 			'readComments',
@@ -14,6 +14,8 @@ describe('what the page may ask', () => {
 			'deleteComment',
 			'signIn',
 			'address',
+			'baseBehind',
+			'refresh',
 		]);
 	});
 

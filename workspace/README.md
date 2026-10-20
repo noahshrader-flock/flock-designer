@@ -256,8 +256,17 @@ machine; `basedOn.repository` is still the clone's folder name, which this machi
 work its `repository`. A project with none on record (made before products were recorded) is never hidden: it is in This
 product, marked "No product" once any project has one. The rules are `shared/projectScope.ts`. **With no product open**, the
 tab lists everyone's, by product, and a review opens with no checkout: that project alone is read through GitHub into DSNR's
-storage (`copyProject`) and kept only while a review uses it. What changes a prototype's code (Build in the codebase, Address)
-says to open the product it was made on (`needsProduct`).
+storage (`copyProject`) and kept only while a review uses it. What changes a prototype's code (Build in the codebase, Address,
+Refresh to latest) says to open the product it was made on (`needsProduct`).
+
+**What a prototype is modeled on.** A new prototype, or a new version from its brief, is modeled on the latest of the branch:
+DSNR fetches it (`freshTip`, which writes only the remote's copy, never the person's branch, index or files), uses origin's tip
+when the checkout has nothing of its own and the person's when it is ahead or has diverged, and says which in what it tells
+them, including when origin could not be reached. New starts the fetch when it opens. The record keeps that commit
+(`basedOn.commit`), and that commit is what the agent reads (a read-only copy at it, unless the checkout is there), kept by a
+private ref (`refs/dsnr/base/<project>/<version>`). A change or an Address keeps its version's base. In VS Code's review tab, a
+version whose branch has moved on says so in the bar ("3 behind develop", nothing while it is current); **Refresh to latest**
+moves its base to the latest and hands its rebuild, in place, to the agent.
 
 **Pictures and the accessibility check:** with no hidden windows, a prototype's picture and its accessibility check are
 drawn by the browser already on the machine (Chrome, Edge or Chromium, or `CHROME_BIN`), headless, through

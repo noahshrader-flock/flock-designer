@@ -404,6 +404,10 @@ export const isAncestor = async (root: string, older: string, newer: string): Pr
 		(err: unknown) => (saidNo(err) ? false : Promise.reject(err)),
 	);
 
+/** How many commits `newer` has that `older` does not: 0 when it has none, as when they are the same. */
+export const commitsAfter = async (root: string, older: string, newer: string): Promise<number> =>
+	Number(await git(root, ['rev-list', '--count', `${older}..${newer}`]));
+
 export const checkoutBranch = async (root: string, branch: string): Promise<void> => {
 	await requireCleanTree(root, 'switching branches');
 	if (!(await branchExists(root, branch))) {

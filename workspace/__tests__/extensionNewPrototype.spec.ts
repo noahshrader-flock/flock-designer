@@ -1,15 +1,16 @@
 import { describe, expect, it, vi } from 'vitest';
 import { type Given, type NewPrototypeDeps, newPrototype, readAsked, readGiven, readyToStart } from '../extension/src/newPrototype';
-import type { Work } from '../src/shared/contract';
+import type { StartedPrototype } from '../src/shared/contract';
 import { ok } from '../src/shared/result';
 
-const created: Work = {
+const created: StartedPrototype = {
 	projectId: 'alert-history',
 	name: 'v1',
 	branch: 'prototype/alert-history/v1',
 	commit: null,
 	createdAt: '2026-10-13T10:00:00Z',
 	note: 'Explore it.',
+	modeledOn: 'Modeled on main at a1b2c3d.',
 };
 
 const world = (more: { given?: Given; api?: Record<string, unknown>; choose?: (string | undefined)[] } = {}) => {
@@ -62,6 +63,7 @@ describe('starting a prototype from VS Code', () => {
 		expect(toldDone).toHaveLength(1);
 		expect(toldDone[0]).toContain('Alert history is in Claude Code in this window');
 		expect(toldDone[0]).toContain('Press Enter there to start it');
+		expect(toldDone[0]).toContain('Modeled on main at a1b2c3d.');
 		expect(toldDone[0]).toContain('saves it when it is built, and its picture appears in the list');
 		// No accessibility notification for a prototype: it is checked when the work moves into the code, and at Handoff.
 		expect(toldDone[0]).not.toMatch(/accessib|checks it/i);

@@ -120,5 +120,5 @@ export const newPrototype = async (deps: NewPrototypeDeps): Promise<void> => {
 	deps.onChanged();
 	const handed = valueOf(await api.handPrototypeBuild(root, made.projectId, made.name, task));
 	deps.watchBuild(made.projectId, made.name, title);
-	deps.tell(`${handedTo(handed, title)} DSNR saves it when it is built, and its picture appears in the list.`);
+	deps.tell(`${handedTo(handed, title)} ${made.modeledOn} DSNR saves it when it is built, and its picture appears in the list.`);
 };

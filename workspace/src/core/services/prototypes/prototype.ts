@@ -153,6 +153,16 @@ export const setCover = async (store: RecordStore, projectId: string, name: stri
 	return true;
 };
 
+/** A version's base moved to `commit`, as Refresh to latest does: false, writing nothing, when there is no record of it. */
+export const setBaseCommit = async (store: RecordStore, projectId: string, name: string, commit: string): Promise<boolean> => {
+	const existing = await readRecords(store, projectId);
+	const was = existing.find((i) => i.name === name)?.basedOn;
+	if (!was) return false;
+	const updated = existing.map((i) => (i.name === name ? { ...i, basedOn: { ...was, commit } } : i));
+	await store.write(workPath(projectId), serializeWork(updated), `${projectId}: prototype ${name} modeled on ${commit.slice(0, 7)}`);
+	return true;
+};
+
 /** Named by the caller because its files are already under that name; refused when that name is taken. */
 export const recordVersionFrom = async (
 	store: RecordStore,

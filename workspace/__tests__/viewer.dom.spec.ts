@@ -489,6 +489,37 @@ describe('in DSNR’s review tab, in VS Code', () => {
 		expect(allByRole('button', 'Sign out')).toEqual([]);
 	});
 
+	it('says nothing of the base while the version is current, and nothing on the published site', async () => {
+		const { relay } = tab();
+		await open(relay);
+		await settle();
+		expect(allByRole('button', /behind/)).toEqual([]);
+		await open(null);
+		await settle();
+		expect(allByRole('button', /behind/)).toEqual([]);
+	});
+
+	it('says how far the version is behind its branch, and Refresh to latest asks DSNR to rebuild it, on this page’s version', async () => {
+		const { relay, asked } = tab();
+		const behind = { branch: 'develop', commit: 'a'.repeat(40), latest: 'b'.repeat(40), behind: 3 };
+		const answering: Relay = {
+			ask: async (name, args) =>
+				name === 'baseBehind' ? { ok: true, value: behind } : name === 'refresh' ? { ok: true, value: null } : relay.ask(name, args),
+		};
+		const seen: [string, unknown[]][] = [];
+		await open({ ask: (name, args) => (seen.push([name, args]), answering.ask(name, args)) });
+		await settle();
+		expect(seen).toContainEqual(['baseBehind', ['prototype/demo/v1']]);
+		await press(button('3 behind develop'));
+		expect(document.body.textContent).toContain('Modeled on develop at aaaaaaa');
+		expect(document.body.textContent).toContain('develop has 3 newer commits since this version was made.');
+		await press(button('Refresh to latest'));
+		await settle();
+		expect(seen.at(-1)).toEqual(['refresh', ['prototype/demo/v1']]);
+		expect(allByRole('button', /behind/)).toEqual([]);
+		expect(asked.map(([name]) => name)).not.toContain('refresh');
+	});
+
 	it('offers Address on an open comment, which asks DSNR to address it, on the version this page is', async () => {
 		const { relay, asked } = tab();
 		const { doc } = await open(relay);

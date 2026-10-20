@@ -64,6 +64,43 @@ const checkout = () => ({
 	view: readFileSync(join(mine, 'view.tsx'), 'utf8'),
 });
 
+describe('a new prototype is modeled on the latest of its branch', () => {
+	it('is origin’s newer commit when this clone is behind, said, with the checkout left as it is', async () => {
+		const newer = commitIn(theirs, 'view.tsx', 'their newer view');
+		g(theirs, 'push', '-q', 'origin', 'develop');
+		const before = checkout();
+		const made = await start(mine);
+		expect(made.basedOn?.commit).toBe(newer);
+		expect(made.modeledOn).toBe(`Modeled on develop at ${newer.slice(0, 7)}. Your local develop is 1 commit behind origin; origin's is used.`);
+		expect(checkout()).toEqual(before);
+	});
+
+	it('is the local branch, said, when origin cannot be reached', async () => {
+		g(mine, 'remote', 'set-url', 'origin', join(home, 'nowhere.git'));
+		const made = await start(mine);
+		expect(made.basedOn?.commit).toBe(g(mine, 'rev-parse', 'develop'));
+		expect(made.modeledOn).toMatch(/^Modeled on develop at [0-9a-f]{7}\. Git could not update product: .+ Your local develop is used\.$/);
+	});
+
+	it('says how far a version is behind once its branch moves on, and nothing it cannot tell', async () => {
+		// Made on their machine; read on this one, whose first fetch is the one that finds the newer commits.
+		const made = await start(theirs);
+		const base = made.basedOn?.commit as string;
+		expect(await workIn(theirs).behind('demo', made.name)).toEqual({ branch: 'develop', commit: base, latest: base, behind: 0 });
+		commitIn(theirs, 'b.txt', '2');
+		commitIn(theirs, 'c.txt', '3');
+		g(theirs, 'push', '-q', 'origin', 'develop');
+		expect(await workIn(mine).behind('demo', made.name)).toEqual({
+			branch: 'develop',
+			commit: base,
+			latest: g(origin, 'rev-parse', 'develop'),
+			behind: 2,
+		});
+		// Another product open: nothing is said of it.
+		expect(await workIn(join(home, 'b')).behind('demo', made.name)).toBeNull();
+	});
+});
+
 describe('what a prototype is modeled on is what is read', () => {
 	it('reads the recorded commit after the branch has moved on, from a copy, leaving the checkout as it is', async () => {
 		const made = await start(mine);

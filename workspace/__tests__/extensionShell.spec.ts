@@ -425,6 +425,8 @@ describe('a review tab’s answers to its page', () => {
 			routes: () => routes,
 			signIn: vi.fn(async () => ({ state: 'signedOut' as const })),
 			address: vi.fn(async () => null),
+			baseBehind: vi.fn(async () => null),
+			refresh: vi.fn(async () => null),
 			written: vi.fn(),
 		};
 	};
@@ -441,6 +443,22 @@ describe('a review tab’s answers to its page', () => {
 		expect(await ask('signIn', [])).toEqual({ ok: true, value: { state: 'signedOut' } });
 		await ask('address', [{ thread: 1, id: 2 }]);
 		expect(d.address).toHaveBeenCalledWith(review, { thread: 1, id: 2 }, false);
+	});
+
+	it('say how far the page’s version is behind, and Refresh it, only for one of this review’s prototypes', async () => {
+		const { d, ask } = tab();
+		await ask('baseBehind', ['prototype/demo/v3']);
+		expect(d.baseBehind).toHaveBeenCalledWith({ ...review, name: 'v3' });
+		await ask('refresh', ['prototype/demo/v3']);
+		expect(d.refresh).toHaveBeenCalledWith({ ...review, name: 'v3' });
+		for (const args of [['prototype/other/v1'], ['prototype/demo/../other/v1'], [], ['prototype/demo/v1', 'more']])
+			for (const name of ['baseBehind', 'refresh'] as const)
+				expect(await ask(name, args), `${name} ${args.join(' ')}`).toEqual({
+					ok: false,
+					error: 'This review is of demo, so it asks only of one of demo’s prototypes.',
+				});
+		expect(d.baseBehind).toHaveBeenCalledTimes(1);
+		expect(d.refresh).toHaveBeenCalledTimes(1);
 	});
 
 	it('Address the version the page is on, when it says which (BROWSER_COMMENTS_PLAN 3.1)', async () => {

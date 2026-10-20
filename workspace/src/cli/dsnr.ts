@@ -452,12 +452,7 @@ export const main = async (argv: string[], deps: CliDeps): Promise<number> => {
 		const made = await work.start(root, { projectId, title, note, branch, me: await meOf(designRoot, deps.github) });
 		const text = await buildTask(skill, made.name, made.name, note);
 		deps.out(
-			taskText(
-				`Recorded ${projectId} ${made.name}, modeled on ${branch}. Your task follows.`,
-				text,
-				saveCommand(made.name),
-				publishCommand(made.name),
-			),
+			taskText(`Recorded ${projectId} ${made.name}. ${made.modeledOn} Your task follows.`, text, saveCommand(made.name), publishCommand(made.name)),
 		);
 		return 0;
 	} catch (err) {

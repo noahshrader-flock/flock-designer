@@ -9,7 +9,7 @@ export interface CommandDeps {
 	tell: (message: string) => void;
 	inPanel: (message: HostMessage) => Promise<void>;
 	product: () => { root: string | null; why: string };
-	api: Pick<WorkspaceApi, 'agentReady'>;
+	api: Pick<WorkspaceApi, 'agentReady' | 'warmPrototypeBase'>;
 	startPrototype: (given: Given) => Promise<void>;
 	openReview: (review: Review) => Promise<void>;
 	pickReview: () => Promise<Review | null | undefined>;
@@ -35,7 +35,12 @@ export const commands = (d: CommandDeps): Record<string, (raw?: unknown) => unkn
 			const asked = readAsked(raw);
 			if (asked === 'ask')
 				return readyToStart({ product: d.product(), api: d.api })
-					.then(() => d.inPanel({ type: 'open-dialog', dialog: { kind: 'new' } }))
+					.then(() => {
+						// While the person writes what to explore, the branch it is modeled on is fetched.
+						const { root } = d.product();
+						if (root !== null) void d.api.warmPrototypeBase(root);
+						return d.inPanel({ type: 'open-dialog', dialog: { kind: 'new' } });
+					})
 					.catch(d.failed);
 			if (!asked) throw new Error('DSNR: New prototype was given something that is not a name and what it should explore.');
 			return d.startPrototype(asked).catch(d.failedFor(true));

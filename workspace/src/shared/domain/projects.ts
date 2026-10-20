@@ -37,6 +37,20 @@ export interface Work {
 	from?: string;
 }
 
+/** A prototype just recorded, with what it is modeled on in words: the branch, its commit, and how that was chosen. */
+export type StartedPrototype = Work & { modeledOn: string };
+
+/**
+ * A version's base against the latest of its branch here (`freshTip`'s commit): `behind` is how many commits that has which
+ * the base does not.
+ */
+export interface BaseBehind {
+	branch: string;
+	commit: string;
+	latest: string;
+	behind: number;
+}
+
 export type WorkKind = 'prototype' | 'codebase';
 
 /** `command` is for a terminal, when the agent is not in VS Code. */

@@ -7,6 +7,7 @@ import { served } from '../../src/core/handle';
 import { type Context, findContext } from '../../src/core/services/projects/findContext';
 import type { PublishStatus, SignInState } from '../../src/shared/contract';
 import { addressComment } from './address';
+import { refreshPrototype } from './refresh';
 import { Panels, hostApi } from './bridge';
 import { type LocalRun, handOff, openCode, shareCodebase, runLocally } from './codebase';
 import { startCore } from './core';
@@ -122,6 +123,16 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 	});
 	void design.read();
 	const site = siteIn(storage);
+	/**
+	 * A change to a prototype's code is made with the product it was made on: that one, open here. Titled as the project's
+	 * records title it, since a browser's page may have moved to another of its versions.
+	 */
+	const withItsProduct = async (r: Review): Promise<{ root: string; titled: Review }> => {
+		const project = valueOf(await api.listProjects()).find((p) => p.id === r.projectId);
+		const why = needsProduct(project ? productsOf(project) : [], found.product === null ? null : found.productRepository);
+		if (why !== null || found.product === null) throw new Error(why ?? productNow().why);
+		return { root: found.product, titled: (project && reviewsOf(project).find((x) => x.name === r.name)) || r };
+	};
 	const buildReview = buildReviewSite(site, join(context.extensionUri.fsPath, 'dist', 'viewer'));
 	const reviews = new Reviews({
 		vscode,
@@ -135,19 +146,16 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 					routes: served,
 					signIn: () => github.signIn(),
 					written: () => projectsChanged(),
-					address: (r, comment, newVersion): Promise<void> => {
-						const run = async () => {
-							const project = valueOf(await api.listProjects()).find((p) => p.id === r.projectId);
-							// Address changes the prototype's code, which is with the product it was made on: that one, open here.
-							const why = needsProduct(project ? productsOf(project) : [], found.product === null ? null : found.productRepository);
-							if (why !== null || found.product === null) throw new Error(why ?? productNow().why);
-							// Titled as the project's records title it: a browser's page may have moved to another of its versions.
-							const titled = (project && reviewsOf(project).find((x) => x.name === r.name)) || r;
-							return addressComment({ ...here, watch: watchPrototype }, found.product, titled, comment, newVersion);
-						};
-						// One place says what went wrong, a refusal included, and the caller is told too.
-						return run().catch(failedFor(true));
-					},
+					// One place says what went wrong, a refusal included, and the caller is told too.
+					address: (r, comment, newVersion) =>
+						withItsProduct(r)
+							.then(({ root, titled }) => addressComment({ ...here, watch: watchPrototype }, root, titled, comment, newVersion))
+							.catch(failedFor(true)),
+					baseBehind: async (r) => valueOf(await api.prototypeBehind(r.projectId, r.name)),
+					refresh: (r) =>
+						withItsProduct(r)
+							.then(({ root, titled }) => refreshPrototype({ ...here, watch: watchPrototype }, root, titled))
+							.catch(failedFor(true)),
 				},
 				review,
 				name,
