@@ -282,6 +282,24 @@ describe('build-site', () => {
 		expect(await repoIn(world.design, join(world.home, 'from-design'))).toBe('cheq/cheq-designer');
 	});
 
+	it('says the edition of WCAG to the design repository the product names, and to none when it cannot tell which', async () => {
+		const file = join(world.product, '.dsnr', 'workspace.json');
+		writeFileSync(file, JSON.stringify({ ...(JSON.parse(readFileSync(file, 'utf8')) as object), designRepository: 'acme/flock-designer' }));
+		world.github = fakeGitHub({
+			'GET /repos/acme/flock-designer/issues?*': [],
+			'POST /repos/acme/flock-designer/issues': { html_url: 'https://github.com/acme/flock-designer/issues/1' },
+		}).github;
+		const wcag = (cwd: string) => main(['wcag-edition'], { ...deps(cwd), fetchText: async () => '' });
+		expect(await wcag(world.product)).toBe(0);
+		expect(world.out.at(-1)).toBe('Opened https://github.com/acme/flock-designer/issues/1');
+		// A repository with no workspace file is no design repository's product: its own origin is never taken for one.
+		g(world.product, 'init', '-q');
+		g(world.product, 'remote', 'add', 'origin', 'git@github.com:flock-safety/flock-coke.git');
+		rmSync(file);
+		expect(await wcag(world.product)).toBe(1);
+		expect(world.err.at(-1)).toMatch(/has no \.dsnr\/workspace\.json/);
+	});
+
 	it('builds from the design repository itself too', async () => {
 		await saved();
 		const site = join(world.home, 'elsewhere-site');

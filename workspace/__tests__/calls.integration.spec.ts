@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { realpathSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 import type { CallsContext } from '../src/core/compose';
 import { appPaths } from '../src/core/appPaths';
 import { CHANNELS, invokeChannel } from '../src/shared/contract';
@@ -523,6 +523,7 @@ describe('the design repository a product names', () => {
 	it('is where its projects and comments are read, and Flock’s is never reached for it', async () => {
 		const cheq = join(home, 'GitHub', 'cheq-app');
 		makeProduct(cheq, []);
+		onTestFinished(() => rmSync(cheq, { recursive: true, force: true }));
 		const file = join(cheq, '.dsnr', 'workspace.json');
 		writeFileSync(file, JSON.stringify({ ...(JSON.parse(readFileSync(file, 'utf8')) as object), designRepository: 'cheq/cheq-designer' }));
 		expect((await trustFolder(cheq)).ok).toBe(true);
@@ -531,7 +532,6 @@ describe('the design repository a product names', () => {
 		await call(CHANNELS.readComments, 'alpha', 'prototype/alpha/v1');
 		expect(readComments).toHaveBeenCalledWith('prototype/alpha/v1');
 		expect(new Set(reposAsked)).toEqual(new Set(['cheq/cheq-designer']));
-		rmSync(cheq, { recursive: true, force: true });
 	});
 
 	it('is Flock’s for a product that names none', async () => {

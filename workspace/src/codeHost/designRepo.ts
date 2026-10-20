@@ -133,16 +133,13 @@ export class DesignRepos {
 		private readonly current: () => RepoRef,
 	) {}
 
-	of(ref: RepoRef): DesignRepo {
+	now(): DesignRepo {
+		const ref = this.current();
 		const key = formatRepo(ref).toLowerCase();
 		const known = this.made.get(key);
 		if (known) return known;
 		const made = this.make(ref);
 		this.made.set(key, made);
 		return made;
-	}
-
-	now(): DesignRepo {
-		return this.of(this.current());
 	}
 }

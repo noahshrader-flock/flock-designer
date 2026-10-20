@@ -1,6 +1,9 @@
 import type { RepoFiles } from '../../../codeHost/repoFiles';
 import { type RecordStore, cloneStore } from '../prototypes/prototype';
 
+/** The design repository's files over the API. */
+type ApiFiles = Pick<RepoFiles, 'readFile' | 'readBytes' | 'hasFile' | 'writeFile'>;
+
 /**
  * The clone when there is one, else GitHub. A file the clone does not have yet (a colleague's work not pulled) is read
  * from GitHub too, when there is one to ask (`files`); the command line has none.
@@ -12,7 +15,7 @@ export const designStore = ({
 }: {
 	clone: () => string | null;
 	/** The design repository's files over the API, asked each time: the one the open product belongs to. */
-	files: () => Pick<RepoFiles, 'readFile' | 'readBytes' | 'hasFile' | 'writeFile'> | null;
+	files: () => ApiFiles | null;
 	onWrite: () => void;
 }) => {
 	const records = (): RecordStore => {
@@ -28,7 +31,7 @@ export const designStore = ({
 		};
 	};
 	/** Without a clone the store already is GitHub, so it is asked once. */
-	const orFromGitHub = async <T>(here: T | null, there: (repo: NonNullable<ReturnType<typeof files>>) => Promise<T | null>): Promise<T | null> => {
+	const orFromGitHub = async <T>(here: T | null, there: (repo: ApiFiles) => Promise<T | null>): Promise<T | null> => {
 		if (here !== null || clone() === null) return here;
 		const api = files();
 		return api === null ? here : there(api);

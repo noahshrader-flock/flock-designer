@@ -8,8 +8,10 @@ import type { GitHubAccount } from '../../../codeHost/github';
 import { pageStatus, publish, recordsFrom, redeploySite, siteBehind } from './pages';
 import { HOST } from '../../../shared/vocabulary';
 
-/** What stopped a page's deploy is kept, so its screen can say why it is not published. */
-/** `ref`: the design repository the open product belongs to, asked at each deploy, so a page goes to its own company's site. */
+/**
+ * What stopped a page's deploy is kept, so its screen can say why it is not published. `ref`: the design repository the open
+ * product belongs to, asked at each deploy, so a page goes to its own company's site.
+ */
 export const siteDeploys = ({
 	github,
 	designClone,

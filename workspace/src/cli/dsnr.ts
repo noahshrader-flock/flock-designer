@@ -170,12 +170,12 @@ const repositoryHere = async (cwd: string): Promise<string> => {
 };
 
 /**
- * The design repository a command reads and writes over the API: the one the product here belongs to, or, run inside a
- * design repository, the one its clone says it is; Flock's only when neither says.
+ * The design repository a command reads and writes over the API, decided as `designOf` decides its clone: run inside a
+ * design repository, the one its clone says it is (Flock's when it names no origin); else the one the product here belongs to.
  */
 const designRefOf = async (deps: { cwd: string }): Promise<RepoRef> => {
 	const root = await repositoryHere(deps.cwd);
-	if (existsSync(join(root, DESCRIPTOR_PATH))) return designRepositoryOf(root);
+	if (!isDesignRepository(root)) return designRepositoryOf(root);
 	const claimed = await claimedRepository(root);
 	return claimed === null ? DESIGN_REPO : repoRefOf(claimed);
 };
