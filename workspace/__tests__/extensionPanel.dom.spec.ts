@@ -115,7 +115,8 @@ describe('what is open', () => {
 			'Zone coverage',
 		]);
 		expect(await scopeChoices()).toEqual([]);
-		expect(body().textContent).toContain('No product is open, so these are everyone’s projects');
+		expect(body().querySelector('.empty [data-part="title"]')?.textContent).toBe('No product is open');
+		expect(body().textContent).toContain('Open one to make a prototype.');
 	});
 
 	it('says there are no projects when no product is open and nobody has made one: no product is needed to see everyone’s', async () => {
@@ -131,9 +132,9 @@ describe('what is open', () => {
 		expect(sent.some((m) => m.name === 'buildInCodebasePlan')).toBe(false);
 	});
 
-	it('offers Get started beside everyone’s projects too', async () => {
+	it('offers to clone a repository beside everyone’s projects too', async () => {
 		await showOpen(NONE);
-		await press(button('Get started'));
+		await press(button('Clone a repository'));
 		expect(lastAsk()).toEqual(['getStarted', []]);
 	});
 });
@@ -1510,7 +1511,7 @@ describe('Projects', () => {
 		};
 		const setupMessage = () => [...body().querySelectorAll('.message-block')].find((m) => /set ?up/i.test(m.textContent ?? '')) as HTMLElement;
 
-		it('offers Set up, once signed in, for a repository that is not set up, in place of Get started', async () => {
+		it('offers Set up, once signed in, for a repository that is not set up, in place of cloning one', async () => {
 			await placed(NONE, { state: 'not-set-up', root: '/work/paradome' });
 			expect(setupMessage().querySelector('.message-title')?.textContent).toBe('paradome is not set up for DSNR');
 			expect(body().textContent).not.toContain('No product is open');
@@ -1609,6 +1610,7 @@ describe('Design System', () => {
 		await open({ ...OPEN, product: null, designSystem: null, source: null });
 		expect(body().querySelector('.empty [data-part="title"]')?.textContent).toBe('No design system found');
 		expect(body().querySelector('.empty button')).toBeNull();
+		expect(body().textContent).toContain('Open a product to choose a design system');
 	});
 
 	it('says why the one found cannot be read, reads nothing, and offers to locate another', async () => {
@@ -1871,7 +1873,7 @@ describe('Design System', () => {
 		expect(none().textContent).toBe('0');
 		expect(none().className).toBe('badge badge-button');
 		await press(none());
-		expect(dialog('Changes')?.textContent).toContain('You haven’t made any changes yet.');
+		expect(dialog('Changes')?.textContent).toContain('No changes yet');
 		await key('Escape');
 		await share('tokenEdits', [{ path: 'tone.pineGreen.60', value: '#000000' }]);
 		const changes = body().querySelector('.ds-actions [aria-label="1 change being tried"]') as HTMLElement;
@@ -2294,7 +2296,7 @@ describe('every change being tried, in the panel’s Changes: the tokens and eac
 			const box = changes()!;
 			expect(box.querySelector('[data-changed-tokens], [data-value-changes], [data-branch-actions]')).toBeNull();
 			expect(box.querySelector('.section-count')).toBeNull();
-			expect(box.textContent).toBe('ChangesYou haven’t made any changes yet.');
+			expect(box.textContent).toBe('ChangesNo changes yetChanges you try, or edit in your code, are listed here.');
 		});
 
 		it('shows a component with a branch kept and nothing tried by its name alone, with no count and no line that none are tried', async () => {
@@ -2646,7 +2648,7 @@ describe('trying a change to the tokens, saving it to a branch, and proposing it
 		await answerOf('forgetChange', 'tokens', null);
 		expect(edited()).toEqual([]);
 		expect(document.querySelector('[data-changed-tokens]')).toBeNull();
-		expect(dialog('Changes')?.textContent).toContain('You haven’t made any changes yet.');
+		expect(dialog('Changes')?.textContent).toContain('No changes yet');
 	});
 
 	it('says why a save failed, and keeps the change', async () => {

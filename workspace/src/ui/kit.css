@@ -585,8 +585,10 @@ a:not(.icon-button) {
 	width: 100%;
 }
 
+/* Balanced, so no line ends on a lone word. */
 .empty-body p {
 	margin: 0 0 var(--dsnr-space-4);
+	text-wrap: balance;
 	line-height: var(--dsnr-leading);
 }
 

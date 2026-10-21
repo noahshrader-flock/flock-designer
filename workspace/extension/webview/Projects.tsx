@@ -254,8 +254,14 @@ export const Projects = ({
 			{login === null && <Message inset>These are the projects on this machine. Sign in to see your team's too.</Message>}
 			<Setup setup={setup} signedIn={login !== null} />
 			{!product.open && setup?.state !== 'not-set-up' && (
-				<Message size="box" inset icon="folder-opened" action={{ label: 'Get started', onPress: () => void asks().getStarted() }}>
-					<p>No product is open, so these are everyone’s projects. Open a product to make a prototype, or to build or Address one.</p>
+				<Message
+					size="box"
+					inset
+					icon="folder-library"
+					title="No product is open"
+					action={{ label: 'Clone a repository', onPress: () => void asks().getStarted() }}
+				>
+					<p>Open one to make a prototype.</p>
 				</Message>
 			)}
 			{projects.length > 0 && (

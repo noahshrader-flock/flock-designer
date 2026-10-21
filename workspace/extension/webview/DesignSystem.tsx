@@ -191,8 +191,8 @@ const Ready = ({
 				{changesDialog.open && (
 					<Dialog title="Changes" onClose={changesDialog.onClose} actions={resetsAll && <LinkButton onPress={resetAll}>Reset all</LinkButton>}>
 						{count === 0 && (
-							<Message size="box" icon="diff">
-								<p>You haven’t made any changes yet.</p>
+							<Message size="box" icon="symbol-color" title="No changes yet">
+								<p>Changes you try, or edit in your code, are listed here.</p>
 							</Message>
 						)}
 						<Changed id={id} controls={branch} components={catalog.components} />
@@ -241,6 +241,8 @@ export const DesignSystem = ({
 			<Message size="page" icon="symbol-color" title="No design system found" action={action}>
 				{context.source?.state === 'refused' ? (
 					<p>{context.source.why}</p>
+				) : context.product === null ? (
+					<p>Open a product to choose a design system.</p>
 				) : (
 					<p>
 						DSNR looks in the folders open in this window for a design system: the one the product names in its <code>.dsnr/workspace.json</code>, or

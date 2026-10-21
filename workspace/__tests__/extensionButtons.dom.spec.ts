@@ -209,7 +209,7 @@ describe('a message as a page (an empty state)', () => {
 				size: 'box',
 				icon: 'diff',
 				inset: true,
-				action: { label: 'Get started', onPress: () => {} },
+				action: { label: 'Clone a repository', onPress: () => {} },
 				children: createElement('p', null, 'Nothing yet.'),
 			}),
 		);
