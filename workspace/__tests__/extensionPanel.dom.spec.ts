@@ -1896,7 +1896,7 @@ describe('every change being tried, in the panel’s Changes: the tokens and eac
 		expect(group()?.querySelector('.branch-line')?.textContent).toBe('dsnr/values-20261016-ab12 · 1 save');
 		await press(button('Propose'));
 		expect(callsOf('proposeChange', 'values').at(-1)?.args).toEqual(['values', BUTTON, null]);
-		await press(group()!.querySelector('button.link') as HTMLElement);
+		await press(group()!.querySelector('[aria-label^="Reset "]') as HTMLElement);
 		expect(trialsSaid().at(-1)).toEqual([BUTTON, 'abc123', []]);
 	});
 
@@ -2076,8 +2076,18 @@ describe('every change being tried, in the panel’s Changes: the tokens and eac
 			expect(group()!.querySelector('[data-value-change] .value-cell')?.textContent).toBe('Radius4px → follows Radius');
 		});
 
-		it('puts every value of a component back with its Reset', async () => {
+		const RADIUS = { property: 'radius' as const, value: '4px', targets: ['radius:0'] };
+
+		it('has no Reset of its own for one value, whose own undo is on its row', async () => {
 			await trying();
+			await answer('valueSources', found());
+			expect(allByRole('button', 'Reset', group()!)).toEqual([]);
+			expect(allByRole('button', /^Reset /, group()!)).toHaveLength(1);
+		});
+
+		it('puts every value of a component back with its Reset, once there are two', async () => {
+			await trying();
+			await share('valueTrials', { [BUTTON]: { commit: 'abc123', values: [SMALL, RADIUS] } });
 			await answer('valueSources', found());
 			await press(button('Reset', group()!));
 			expect(trialsSaid().at(-1)).toEqual([BUTTON, 'abc123', []]);
@@ -2183,7 +2193,7 @@ describe('every change being tried, in the panel’s Changes: the tokens and eac
 		it('is not there for one group, which has its own Reset', async () => {
 			await opened(false, [BUTTON]);
 			expect(resetAll()).toEqual([]);
-			expect(allByRole('button', 'Reset', changes()!).length).toBeGreaterThan(0);
+			expect(allByRole('button', 'Reset', changes()!)).toEqual([]);
 		});
 
 		it('is at the end of the title, before its close, once two components have values tried, and puts both back', async () => {
@@ -2556,8 +2566,14 @@ describe('trying a change to the tokens, saving it to a branch, and proposing it
 		expect(changed.querySelector('[data-change="tone.pineGreen.60"] .value-drawn')?.textContent).toBe('#15584A → #000000');
 		await press(changed.querySelector('[aria-label="Reset Tones pineGreen 60"]') as HTMLElement);
 		expect(edited()).toEqual([]);
+		// One change has its own undo on its row; Reset is for two or more.
 		await share('tokenEdits', [{ path: 'tone.pineGreen.60', value: '#000000' }]);
-		await press(button('Reset', changed));
+		expect(allByRole('button', 'Reset', changed)).toEqual([]);
+		await share('tokenEdits', [
+			{ path: 'tone.pineGreen.60', value: '#000000' },
+			{ path: 'tone.pineGreen.50', value: '#111111' },
+		]);
+		await press(button('Reset', document.querySelector('[data-changed-tokens]') as HTMLElement));
 		expect(edited()).toEqual([]);
 	});
 

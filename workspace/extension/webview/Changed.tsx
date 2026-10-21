@@ -110,7 +110,7 @@ export const ChangesGroup = ({
 				{title}
 				{count > 0 && <span className="section-count"> {count}</span>}
 			</Heading>
-			{count > 0 && <LinkButton onPress={onReset}>Reset</LinkButton>}
+			{count > 1 && <LinkButton onPress={onReset}>Reset</LinkButton>}
 		</div>
 		{count > 0 && <ValueList>{rows}</ValueList>}
 		{children}

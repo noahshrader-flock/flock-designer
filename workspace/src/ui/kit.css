@@ -1350,6 +1350,15 @@ button.color-dot:hover {
 	right: var(--dsnr-space-2);
 }
 
+/* A change's own line: its undo is level with the name and the values in it, however much is under it. */
+.change-line {
+	position: relative;
+}
+
+.change-line .item-actions {
+	top: 50%;
+}
+
 .value-cell {
 	display: grid;
 	grid-template-columns: minmax(0, 1fr) auto;

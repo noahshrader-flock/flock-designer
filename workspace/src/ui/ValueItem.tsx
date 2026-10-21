@@ -52,20 +52,23 @@ export const ChangeRow = ({
 	onReset?: () => void;
 }) => (
 	<ValueItem marks={marks}>
-		<span className="value-cell value-change">
-			<span className="value-label">
-				{start}
-				{name}
+		{/* What is under it is not in this line: its reset is level with the name and the values, not with the whole. */}
+		<div className="change-line">
+			<span className="value-cell value-change">
+				<span className="value-label">
+					{start}
+					{name}
+				</span>
+				<span className="value-drawn">
+					<span>{from}</span> <span>→ {to}</span>
+				</span>
 			</span>
-			<span className="value-drawn">
-				<span>{from}</span> <span>→ {to}</span>
-			</span>
-		</span>
+			{onReset && (
+				<span className="item-actions">
+					<IconButton size="small" icon="discard" label={`Reset ${name}`} onPress={onReset} />
+				</span>
+			)}
+		</div>
 		{under}
-		{onReset && (
-			<span className="item-actions">
-				<IconButton size="small" icon="discard" label={`Reset ${name}`} onPress={onReset} />
-			</span>
-		)}
 	</ValueItem>
 );
