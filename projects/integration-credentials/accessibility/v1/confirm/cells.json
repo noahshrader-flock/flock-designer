@@ -44,12 +44,7 @@
  {
   "cell": "name-role-value",
   "sc": "4.1.2",
-  "status": "found",
-  "findings": [
-   {
-    "target": "combobox in RootWebArea “Integrations: Show Credentials” › generic “Show credentials”",
-    "detail": "a control with no name"
-   }
-  ]
+  "status": "none",
+  "findings": []
  }
 ]

@@ -2,7 +2,7 @@
 	"version": 2,
 	"key": "v1",
 	"of": "integration-credentials v1's page",
-	"at": "2026-10-21T19:01:11.023Z",
+	"at": "2026-10-21T19:48:40.894Z",
 	"target": "WCAG 2.0 Level A",
 	"axe": "4.14.0",
 	"depth": "light, at build",
@@ -287,13 +287,13 @@
 			"sc": "1.4.1",
 			"name": "Use of Color",
 			"atTarget": true,
-			"status": "found",
+			"status": "notRun",
 			"by": [
 				{
 					"layer": "axe",
-					"what": "link-in-text-block",
+					"what": "axe",
 					"where": "default, confirm, loading, success, large, empty, error",
-					"status": "found"
+					"status": "measured"
 				},
 				{
 					"layer": "probe",
@@ -302,12 +302,11 @@
 					"status": "notRun"
 				}
 			],
-			"found": [
-				"axe link-in-text-block: 7 elements, in default, confirm, loading, success, large, empty, error"
-			],
+			"found": [],
 			"evidence": [
 				"projects/integration-credentials/accessibility/v1.json"
 			],
+			"why": "color-only was not run in this measure (at light, at build depth)",
 			"person": "state still readable",
 			"manual": null
 		},
@@ -501,13 +500,13 @@
 					"layer": "probe",
 					"what": "keyboard-reach",
 					"where": "success",
-					"status": "measured"
+					"status": "notRun"
 				},
 				{
 					"layer": "probe",
 					"what": "keyboard-reach",
 					"where": "large",
-					"status": "measured"
+					"status": "notRun"
 				},
 				{
 					"layer": "probe",
@@ -528,12 +527,10 @@
 				"projects/integration-credentials/accessibility/v1/default/cells.json",
 				"projects/integration-credentials/accessibility/v1/confirm/cells.json",
 				"projects/integration-credentials/accessibility/v1/loading/cells.json",
-				"projects/integration-credentials/accessibility/v1/success/cells.json",
-				"projects/integration-credentials/accessibility/v1/large/cells.json",
 				"projects/integration-credentials/accessibility/v1/empty/cells.json",
 				"projects/integration-credentials/accessibility/v1/error/cells.json"
 			],
-			"why": "keyboard-operate was not run in this measure (at light, at build depth)",
+			"why": "keyboard-reach, in success: the page has more than 60 Tab stops: the first 60 were measured, and none of these was found in them; keyboard-reach, in large: the page has more than 60 Tab stops: the first 60 were measured, and none of these was found in them; keyboard-operate was not run in this measure (at light, at build depth)",
 			"person": null,
 			"manual": null
 		},
@@ -541,7 +538,7 @@
 			"sc": "2.1.2",
 			"name": "No Keyboard Trap",
 			"atTarget": true,
-			"status": "found",
+			"status": "notRun",
 			"by": [
 				{
 					"layer": "probe",
@@ -559,49 +556,42 @@
 					"layer": "probe",
 					"what": "keyboard-trap",
 					"where": "loading",
-					"status": "found"
+					"status": "measured"
 				},
 				{
 					"layer": "probe",
 					"what": "keyboard-trap",
 					"where": "success",
-					"status": "found"
+					"status": "notRun"
 				},
 				{
 					"layer": "probe",
 					"what": "keyboard-trap",
 					"where": "large",
-					"status": "found"
+					"status": "notRun"
 				},
 				{
 					"layer": "probe",
 					"what": "keyboard-trap",
 					"where": "empty",
-					"status": "found"
+					"status": "measured"
 				},
 				{
 					"layer": "probe",
 					"what": "keyboard-trap",
 					"where": "error",
-					"status": "found"
+					"status": "measured"
 				}
 			],
-			"found": [
-				"probe keyboard-trap, in loading: 1 finding",
-				"probe keyboard-trap, in success: 1 finding",
-				"probe keyboard-trap, in large: 1 finding",
-				"probe keyboard-trap, in empty: 1 finding",
-				"probe keyboard-trap, in error: 1 finding"
-			],
+			"found": [],
 			"evidence": [
 				"projects/integration-credentials/accessibility/v1/default/cells.json",
 				"projects/integration-credentials/accessibility/v1/confirm/cells.json",
 				"projects/integration-credentials/accessibility/v1/loading/cells.json",
-				"projects/integration-credentials/accessibility/v1/success/cells.json",
-				"projects/integration-credentials/accessibility/v1/large/cells.json",
 				"projects/integration-credentials/accessibility/v1/empty/cells.json",
 				"projects/integration-credentials/accessibility/v1/error/cells.json"
 			],
+			"why": "keyboard-trap, in success: the page has more than 60 Tab stops: the first 60 were measured, and none of these was found in them; keyboard-trap, in large: the page has more than 60 Tab stops: the first 60 were measured, and none of these was found in them",
 			"person": null,
 			"manual": null
 		},
@@ -756,7 +746,7 @@
 			"sc": "2.4.3",
 			"name": "Focus Order",
 			"atTarget": true,
-			"status": "measured",
+			"status": "notRun",
 			"by": [
 				{
 					"layer": "probe",
@@ -780,13 +770,13 @@
 					"layer": "probe",
 					"what": "focus-order",
 					"where": "success",
-					"status": "measured"
+					"status": "notRun"
 				},
 				{
 					"layer": "probe",
 					"what": "focus-order",
 					"where": "large",
-					"status": "measured"
+					"status": "notRun"
 				},
 				{
 					"layer": "probe",
@@ -806,11 +796,10 @@
 				"projects/integration-credentials/accessibility/v1/default/cells.json",
 				"projects/integration-credentials/accessibility/v1/confirm/cells.json",
 				"projects/integration-credentials/accessibility/v1/loading/cells.json",
-				"projects/integration-credentials/accessibility/v1/success/cells.json",
-				"projects/integration-credentials/accessibility/v1/large/cells.json",
 				"projects/integration-credentials/accessibility/v1/empty/cells.json",
 				"projects/integration-credentials/accessibility/v1/error/cells.json"
 			],
+			"why": "focus-order, in success: the page has more than 60 Tab stops: the first 60 were measured, and none of these was found in them; focus-order, in large: the page has more than 60 Tab stops: the first 60 were measured, and none of these was found in them",
 			"person": "whether a mismatch matters",
 			"manual": {
 				"at": true,
@@ -899,13 +888,13 @@
 					"layer": "probe",
 					"what": "focus-visible",
 					"where": "success",
-					"status": "measured"
+					"status": "notRun"
 				},
 				{
 					"layer": "probe",
 					"what": "focus-visible",
 					"where": "large",
-					"status": "measured"
+					"status": "notRun"
 				},
 				{
 					"layer": "probe",
@@ -927,8 +916,6 @@
 				"projects/integration-credentials/accessibility/v1/default/cells.json",
 				"projects/integration-credentials/accessibility/v1/confirm/cells.json",
 				"projects/integration-credentials/accessibility/v1/loading/cells.json",
-				"projects/integration-credentials/accessibility/v1/success/cells.json",
-				"projects/integration-credentials/accessibility/v1/large/cells.json",
 				"projects/integration-credentials/accessibility/v1/empty/cells.json",
 				"projects/integration-credentials/accessibility/v1/error/cells.json"
 			],
@@ -939,7 +926,7 @@
 			"sc": "2.4.11",
 			"name": "Focus Not Obscured (Minimum)",
 			"atTarget": false,
-			"status": "measured",
+			"status": "notRun",
 			"by": [
 				{
 					"layer": "probe",
@@ -963,13 +950,13 @@
 					"layer": "probe",
 					"what": "focus-obscured",
 					"where": "success",
-					"status": "measured"
+					"status": "notRun"
 				},
 				{
 					"layer": "probe",
 					"what": "focus-obscured",
 					"where": "large",
-					"status": "measured"
+					"status": "notRun"
 				},
 				{
 					"layer": "probe",
@@ -989,11 +976,10 @@
 				"projects/integration-credentials/accessibility/v1/default/cells.json",
 				"projects/integration-credentials/accessibility/v1/confirm/cells.json",
 				"projects/integration-credentials/accessibility/v1/loading/cells.json",
-				"projects/integration-credentials/accessibility/v1/success/cells.json",
-				"projects/integration-credentials/accessibility/v1/large/cells.json",
 				"projects/integration-credentials/accessibility/v1/empty/cells.json",
 				"projects/integration-credentials/accessibility/v1/error/cells.json"
 			],
+			"why": "focus-obscured, in success: the page has more than 60 Tab stops: the first 60 were measured, and none of these was found in them; focus-obscured, in large: the page has more than 60 Tab stops: the first 60 were measured, and none of these was found in them",
 			"person": null,
 			"manual": null
 		},
@@ -1158,7 +1144,7 @@
 			"sc": "3.2.1",
 			"name": "On Focus",
 			"atTarget": true,
-			"status": "measured",
+			"status": "notRun",
 			"by": [
 				{
 					"layer": "probe",
@@ -1182,13 +1168,13 @@
 					"layer": "probe",
 					"what": "on-focus",
 					"where": "success",
-					"status": "measured"
+					"status": "notRun"
 				},
 				{
 					"layer": "probe",
 					"what": "on-focus",
 					"where": "large",
-					"status": "measured"
+					"status": "notRun"
 				},
 				{
 					"layer": "probe",
@@ -1208,11 +1194,10 @@
 				"projects/integration-credentials/accessibility/v1/default/cells.json",
 				"projects/integration-credentials/accessibility/v1/confirm/cells.json",
 				"projects/integration-credentials/accessibility/v1/loading/cells.json",
-				"projects/integration-credentials/accessibility/v1/success/cells.json",
-				"projects/integration-credentials/accessibility/v1/large/cells.json",
 				"projects/integration-credentials/accessibility/v1/empty/cells.json",
 				"projects/integration-credentials/accessibility/v1/error/cells.json"
 			],
+			"why": "on-focus, in success: the page has more than 60 Tab stops: the first 60 were measured, and none of these was found in them; on-focus, in large: the page has more than 60 Tab stops: the first 60 were measured, and none of these was found in them",
 			"person": null,
 			"manual": null
 		},
@@ -1390,13 +1375,13 @@
 			"sc": "4.1.2",
 			"name": "Name, Role, Value",
 			"atTarget": true,
-			"status": "found",
+			"status": "notRun",
 			"by": [
 				{
 					"layer": "axe",
-					"what": "aria-input-field-name",
-					"where": "confirm",
-					"status": "found"
+					"what": "axe",
+					"where": "default, confirm, loading, success, large, empty, error",
+					"status": "measured"
 				},
 				{
 					"layer": "probe",
@@ -1408,7 +1393,7 @@
 					"layer": "probe",
 					"what": "name-role-value",
 					"where": "confirm",
-					"status": "found"
+					"status": "measured"
 				},
 				{
 					"layer": "probe",
@@ -1420,13 +1405,13 @@
 					"layer": "probe",
 					"what": "name-role-value",
 					"where": "success",
-					"status": "measured"
+					"status": "notRun"
 				},
 				{
 					"layer": "probe",
 					"what": "name-role-value",
 					"where": "large",
-					"status": "measured"
+					"status": "notRun"
 				},
 				{
 					"layer": "probe",
@@ -1441,20 +1426,16 @@
 					"status": "measured"
 				}
 			],
-			"found": [
-				"axe aria-input-field-name: 1 element, in confirm",
-				"probe name-role-value, in confirm: 1 finding"
-			],
+			"found": [],
 			"evidence": [
 				"projects/integration-credentials/accessibility/v1.json",
 				"projects/integration-credentials/accessibility/v1/default/cells.json",
 				"projects/integration-credentials/accessibility/v1/confirm/cells.json",
 				"projects/integration-credentials/accessibility/v1/loading/cells.json",
-				"projects/integration-credentials/accessibility/v1/success/cells.json",
-				"projects/integration-credentials/accessibility/v1/large/cells.json",
 				"projects/integration-credentials/accessibility/v1/empty/cells.json",
 				"projects/integration-credentials/accessibility/v1/error/cells.json"
 			],
+			"why": "name-role-value, in success: the page has more than 60 Tab stops: the first 60 were measured, and none of these was found in them; name-role-value, in large: the page has more than 60 Tab stops: the first 60 were measured, and none of these was found in them",
 			"person": "names make sense; state is exposed; what axe flagged to review (aria-valid-attr-value, aria-hidden-focus)",
 			"manual": {
 				"at": true,

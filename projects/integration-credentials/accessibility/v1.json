@@ -9,7 +9,7 @@
 			],
 			"target": "WCAG 2.0 Level A",
 			"declared": true,
-			"at": "2026-10-21T19:01:11.023Z",
+			"at": "2026-10-21T19:48:40.894Z",
 			"states": [
 				"default",
 				"confirm",
@@ -20,92 +20,7 @@
 				"error"
 			]
 		},
-		"violations": [
-			{
-				"rule": "aria-input-field-name",
-				"help": "ARIA input fields must have an accessible name",
-				"impact": "serious",
-				"criteria": [
-					"4.1.2"
-				],
-				"nodes": 1,
-				"url": "https://dequeuniversity.com/rules/axe/4.14/aria-input-field-name?application=axeAPI",
-				"states": [
-					"confirm"
-				],
-				"elements": [
-					{
-						"target": ".MuiSelect-select",
-						"html": "<div tabindex=\"0\" role=\"combobox\" aria-controls=\":r3:\" aria-expanded=\"false\" aria-haspopup=\"listbox\" class=\"MuiSelect-select MuiSelect-outlined MuiInputBase-input MuiOutlinedInput-input css-18a5ecr\">365 days</div>",
-						"fix": "Fix any of the following:\n  aria-label attribute does not exist or is empty\n  aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty\n  Element has no title attribute",
-						"state": "confirm"
-					}
-				]
-			},
-			{
-				"rule": "link-in-text-block",
-				"help": "Links must be distinguishable without relying on color",
-				"impact": "serious",
-				"criteria": [
-					"1.4.1"
-				],
-				"nodes": 7,
-				"url": "https://dequeuniversity.com/rules/axe/4.14/link-in-text-block?application=axeAPI",
-				"states": [
-					"default",
-					"confirm",
-					"loading",
-					"success",
-					"large",
-					"empty",
-					"error"
-				],
-				"elements": [
-					{
-						"target": ".css-t8vbx8",
-						"html": "<a class=\"MuiTypography-root MuiTypography-inherit MuiLink-root MuiLink-underlineNone css-t8vbx8\" href=\"#\">Learn more</a>",
-						"fix": "Fix any of the following:\n  The link has insufficient color contrast of 2:1 with the surrounding text. (Minimum contrast is 3:1, link text: #4631d0, surrounding text: #212121)\n  The link has no styling (such as underline) to distinguish it from the surrounding text",
-						"state": "default"
-					},
-					{
-						"target": ".css-t8vbx8",
-						"html": "<a class=\"MuiTypography-root MuiTypography-inherit MuiLink-root MuiLink-underlineNone css-t8vbx8\" href=\"#\">Learn more</a>",
-						"fix": "Fix any of the following:\n  The link has insufficient color contrast of 2:1 with the surrounding text. (Minimum contrast is 3:1, link text: #4631d0, surrounding text: #212121)\n  The link has no styling (such as underline) to distinguish it from the surrounding text",
-						"state": "confirm"
-					},
-					{
-						"target": ".css-t8vbx8",
-						"html": "<a class=\"MuiTypography-root MuiTypography-inherit MuiLink-root MuiLink-underlineNone css-t8vbx8\" href=\"#\">Learn more</a>",
-						"fix": "Fix any of the following:\n  The link has insufficient color contrast of 2:1 with the surrounding text. (Minimum contrast is 3:1, link text: #4631d0, surrounding text: #212121)\n  The link has no styling (such as underline) to distinguish it from the surrounding text",
-						"state": "loading"
-					},
-					{
-						"target": ".css-t8vbx8",
-						"html": "<a class=\"MuiTypography-root MuiTypography-inherit MuiLink-root MuiLink-underlineNone css-t8vbx8\" href=\"#\">Learn more</a>",
-						"fix": "Fix any of the following:\n  The link has insufficient color contrast of 2:1 with the surrounding text. (Minimum contrast is 3:1, link text: #4631d0, surrounding text: #212121)\n  The link has no styling (such as underline) to distinguish it from the surrounding text",
-						"state": "success"
-					},
-					{
-						"target": ".css-t8vbx8",
-						"html": "<a class=\"MuiTypography-root MuiTypography-inherit MuiLink-root MuiLink-underlineNone css-t8vbx8\" href=\"#\">Learn more</a>",
-						"fix": "Fix any of the following:\n  The link has insufficient color contrast of 2:1 with the surrounding text. (Minimum contrast is 3:1, link text: #4631d0, surrounding text: #212121)\n  The link has no styling (such as underline) to distinguish it from the surrounding text",
-						"state": "large"
-					},
-					{
-						"target": ".css-t8vbx8",
-						"html": "<a class=\"MuiTypography-root MuiTypography-inherit MuiLink-root MuiLink-underlineNone css-t8vbx8\" href=\"#\">Learn more</a>",
-						"fix": "Fix any of the following:\n  The link has insufficient color contrast of 2:1 with the surrounding text. (Minimum contrast is 3:1, link text: #4631d0, surrounding text: #212121)\n  The link has no styling (such as underline) to distinguish it from the surrounding text",
-						"state": "empty"
-					},
-					{
-						"target": ".css-t8vbx8",
-						"html": "<a class=\"MuiTypography-root MuiTypography-inherit MuiLink-root MuiLink-underlineNone css-t8vbx8\" href=\"#\">Learn more</a>",
-						"fix": "Fix any of the following:\n  The link has insufficient color contrast of 2:1 with the surrounding text. (Minimum contrast is 3:1, link text: #4631d0, surrounding text: #212121)\n  The link has no styling (such as underline) to distinguish it from the surrounding text",
-						"state": "error"
-					}
-				]
-			}
-		],
+		"violations": [],
 		"incomplete": [
 			{
 				"rule": "aria-valid-attr-value",
@@ -114,17 +29,43 @@
 				"criteria": [
 					"4.1.2"
 				],
-				"nodes": 1,
+				"nodes": 5,
 				"url": "https://dequeuniversity.com/rules/axe/4.14/aria-valid-attr-value?application=axeAPI",
 				"states": [
-					"confirm"
+					"confirm",
+					"success",
+					"large"
 				],
 				"elements": [
 					{
-						"target": ".MuiSelect-select",
-						"html": "<div tabindex=\"0\" role=\"combobox\" aria-controls=\":r3:\" aria-expanded=\"false\" aria-haspopup=\"listbox\" class=\"MuiSelect-select MuiSelect-outlined MuiInputBase-input MuiOutlinedInput-input css-18a5ecr\">365 days</div>",
-						"fix": "Fix all of the following:\n  Unable to determine if aria-controls referenced ID exists on the page while using aria-haspopup: aria-controls=\":r3:\"",
+						"target": "#credential-expiration",
+						"html": "<div tabindex=\"0\" role=\"combobox\" aria-controls=\":r4:\" aria-expanded=\"false\" aria-haspopup=\"listbox\" aria-labelledby=\"credential-expiratio...\" aria-describedby=\"credential-expiratio...\" id=\"credential-expiratio...\" class=\"MuiSelect-select Mui...\">",
+						"fix": "Fix all of the following:\n  Unable to determine if aria-controls referenced ID exists on the page while using aria-haspopup: aria-controls=\":r4:\"",
 						"state": "confirm"
+					},
+					{
+						"target": "#credentials-type-filter",
+						"html": "<div tabindex=\"0\" role=\"combobox\" aria-controls=\":r9:\" aria-expanded=\"false\" aria-haspopup=\"listbox\" aria-labelledby=\"credentials-type-filter-label credentials-type-filter\" id=\"credentials-type-filter\" ...>",
+						"fix": "Fix all of the following:\n  Unable to determine if aria-controls referenced ID exists on the page while using aria-haspopup: aria-controls=\":r9:\"",
+						"state": "success"
+					},
+					{
+						"target": "#\\:r22\\:",
+						"html": "<div tabindex=\"0\" role=\"combobox\" aria-controls=\":r24:\" aria-expanded=\"false\" aria-haspopup=\"listbox\" aria-labelledby=\":r23: :r22:\" id=\":r22:\" class=\"MuiSelect-select MuiTablePagination-select MuiSelect-standard MuiInputBase-input css-1cccqvr\">25</div>",
+						"fix": "Fix all of the following:\n  Unable to determine if aria-controls referenced ID exists on the page while using aria-haspopup: aria-controls=\":r24:\"",
+						"state": "success"
+					},
+					{
+						"target": "#credentials-type-filter",
+						"html": "<div tabindex=\"0\" role=\"combobox\" aria-controls=\":r9:\" aria-expanded=\"false\" aria-haspopup=\"listbox\" aria-labelledby=\"credentials-type-filter-label credentials-type-filter\" id=\"credentials-type-filter\" ...>",
+						"fix": "Fix all of the following:\n  Unable to determine if aria-controls referenced ID exists on the page while using aria-haspopup: aria-controls=\":r9:\"",
+						"state": "large"
+					},
+					{
+						"target": "#\\:r3e\\:",
+						"html": "<div tabindex=\"0\" role=\"combobox\" aria-controls=\":r3g:\" aria-expanded=\"false\" aria-haspopup=\"listbox\" aria-labelledby=\":r3f: :r3e:\" id=\":r3e:\" class=\"MuiSelect-select MuiTablePagination-select MuiSelect-standard MuiInputBase-input css-1cccqvr\">25</div>",
+						"fix": "Fix all of the following:\n  Unable to determine if aria-controls referenced ID exists on the page while using aria-haspopup: aria-controls=\":r3g:\"",
+						"state": "large"
 					}
 				]
 			},
@@ -244,7 +185,7 @@
 						},
 						{
 							"target": ".css-19mcmqq",
-							"html": "<p class=\"MuiTypography-root MuiTypography-body1 css-19mcmqq\">Connect and manage third-party tools and services to enhance workflow efficiency across FlockOS. <a class=\"MuiTypography-root MuiTypography-inherit MuiLink-root MuiLink-underlineNone css-t8vbx8\" href=\"#\">Learn more</a></p>",
+							"html": "<p class=\"MuiTypography-root MuiTypography-body1 css-19mcmqq\">Connect and manage third-party tools and services to enhance workflow efficiency across FlockOS. <a class=\"MuiTypography-root MuiTypography-inherit MuiLink-root MuiLink-underlineAlways css-10rkygj\" href=\"#\">Learn more</a></p>",
 							"fix": "Fix any of the following:\n  Some page content is not contained by landmarks",
 							"state": "default"
 						},
@@ -416,13 +357,8 @@
 					{
 						"cell": "name-role-value",
 						"sc": "4.1.2",
-						"status": "found",
-						"findings": [
-							{
-								"target": "combobox in RootWebArea “Integrations: Show Credentials” › generic “Show credentials”",
-								"detail": "a control with no name"
-							}
-						]
+						"status": "none",
+						"findings": []
 					}
 				],
 				"evidence": "projects/integration-credentials/accessibility/v1/confirm",
@@ -448,13 +384,8 @@
 					{
 						"cell": "keyboard-trap",
 						"sc": "2.1.2",
-						"status": "found",
-						"findings": [
-							{
-								"target": "body > div:nth-of-type(2) > div:nth-of-type(3) > div > div:nth-of-type(1) > button",
-								"detail": "Tab goes round 2 stops and never leaves them, and Escape does not let it out"
-							}
-						]
+						"status": "none",
+						"findings": []
 					},
 					{
 						"cell": "focus-order",
@@ -504,49 +435,51 @@
 					{
 						"cell": "keyboard-reach",
 						"sc": "2.1.1",
-						"status": "none",
-						"findings": []
+						"status": "notRun",
+						"findings": [],
+						"why": "the page has more than 60 Tab stops: the first 60 were measured, and none of these was found in them"
 					},
 					{
 						"cell": "keyboard-trap",
 						"sc": "2.1.2",
-						"status": "found",
-						"findings": [
-							{
-								"target": "body > div:nth-of-type(2) > div:nth-of-type(3) > div > div:nth-of-type(1) > button",
-								"detail": "Tab goes round 2 stops and never leaves them, and Escape does not let it out"
-							}
-						]
+						"status": "notRun",
+						"findings": [],
+						"why": "the page has more than 60 Tab stops: the first 60 were measured, and none of these was found in them"
 					},
 					{
 						"cell": "focus-order",
 						"sc": "2.4.3",
-						"status": "none",
-						"findings": []
+						"status": "notRun",
+						"findings": [],
+						"why": "the page has more than 60 Tab stops: the first 60 were measured, and none of these was found in them"
 					},
 					{
 						"cell": "focus-visible",
 						"sc": "2.4.7",
-						"status": "none",
-						"findings": []
+						"status": "notRun",
+						"findings": [],
+						"why": "the page has more than 60 Tab stops: the first 60 were measured, and none of these was found in them"
 					},
 					{
 						"cell": "focus-obscured",
 						"sc": "2.4.11",
-						"status": "none",
-						"findings": []
+						"status": "notRun",
+						"findings": [],
+						"why": "the page has more than 60 Tab stops: the first 60 were measured, and none of these was found in them"
 					},
 					{
 						"cell": "on-focus",
 						"sc": "3.2.1",
-						"status": "none",
-						"findings": []
+						"status": "notRun",
+						"findings": [],
+						"why": "the page has more than 60 Tab stops: the first 60 were measured, and none of these was found in them"
 					},
 					{
 						"cell": "name-role-value",
 						"sc": "4.1.2",
-						"status": "none",
-						"findings": []
+						"status": "notRun",
+						"findings": [],
+						"why": "the page has more than 60 Tab stops: the first 60 were measured, and none of these was found in them"
 					}
 				],
 				"evidence": "projects/integration-credentials/accessibility/v1/success",
@@ -566,49 +499,51 @@
 					{
 						"cell": "keyboard-reach",
 						"sc": "2.1.1",
-						"status": "none",
-						"findings": []
+						"status": "notRun",
+						"findings": [],
+						"why": "the page has more than 60 Tab stops: the first 60 were measured, and none of these was found in them"
 					},
 					{
 						"cell": "keyboard-trap",
 						"sc": "2.1.2",
-						"status": "found",
-						"findings": [
-							{
-								"target": "body > div:nth-of-type(2) > div:nth-of-type(3) > div > div:nth-of-type(1) > button",
-								"detail": "Tab goes round 2 stops and never leaves them, and Escape does not let it out"
-							}
-						]
+						"status": "notRun",
+						"findings": [],
+						"why": "the page has more than 60 Tab stops: the first 60 were measured, and none of these was found in them"
 					},
 					{
 						"cell": "focus-order",
 						"sc": "2.4.3",
-						"status": "none",
-						"findings": []
+						"status": "notRun",
+						"findings": [],
+						"why": "the page has more than 60 Tab stops: the first 60 were measured, and none of these was found in them"
 					},
 					{
 						"cell": "focus-visible",
 						"sc": "2.4.7",
-						"status": "none",
-						"findings": []
+						"status": "notRun",
+						"findings": [],
+						"why": "the page has more than 60 Tab stops: the first 60 were measured, and none of these was found in them"
 					},
 					{
 						"cell": "focus-obscured",
 						"sc": "2.4.11",
-						"status": "none",
-						"findings": []
+						"status": "notRun",
+						"findings": [],
+						"why": "the page has more than 60 Tab stops: the first 60 were measured, and none of these was found in them"
 					},
 					{
 						"cell": "on-focus",
 						"sc": "3.2.1",
-						"status": "none",
-						"findings": []
+						"status": "notRun",
+						"findings": [],
+						"why": "the page has more than 60 Tab stops: the first 60 were measured, and none of these was found in them"
 					},
 					{
 						"cell": "name-role-value",
 						"sc": "4.1.2",
-						"status": "none",
-						"findings": []
+						"status": "notRun",
+						"findings": [],
+						"why": "the page has more than 60 Tab stops: the first 60 were measured, and none of these was found in them"
 					}
 				],
 				"evidence": "projects/integration-credentials/accessibility/v1/large",
@@ -634,13 +569,8 @@
 					{
 						"cell": "keyboard-trap",
 						"sc": "2.1.2",
-						"status": "found",
-						"findings": [
-							{
-								"target": "body > div:nth-of-type(2) > div:nth-of-type(3) > div > div:nth-of-type(1) > button",
-								"detail": "Tab goes round 2 stops and never leaves them, and Escape does not let it out"
-							}
-						]
+						"status": "none",
+						"findings": []
 					},
 					{
 						"cell": "focus-order",
@@ -696,13 +626,8 @@
 					{
 						"cell": "keyboard-trap",
 						"sc": "2.1.2",
-						"status": "found",
-						"findings": [
-							{
-								"target": "body > div:nth-of-type(2) > div:nth-of-type(3) > div > div:nth-of-type(1) > button",
-								"detail": "Tab goes round 2 stops and never leaves them, and Escape does not let it out"
-							}
-						]
+						"status": "none",
+						"findings": []
 					},
 					{
 						"cell": "focus-order",

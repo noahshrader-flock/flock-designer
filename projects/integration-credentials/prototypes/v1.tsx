@@ -8,10 +8,11 @@
  *     1. Confirm: Credential Expiration (30/45/60/90/180/365 days, default 365) and IP Allow List (required,
  *        comma-separated IPs or CIDRs), the date the credentials would expire, a note that earlier credentials stay
  *        valid, and one primary button, "Generate credentials". Nothing is issued until it is pressed.
- *     2. Results: a security notice, what was issued (expiry, allow list, device and camera counts), search and a
+ *     2. Results: a security notice, what was issued (issue date, expiry, allow list), search and a
  *        device-type filter, a table with one row per ROOT device (trailer, drone, camera), each row with host, port,
- *        username and password (hidden until revealed) and a copy button on each, "Copy all" for what is listed,
- *        and pagination. Cameras that share a root device's credentials are named under it, not repeated as rows.
+ *        username and password (hidden until revealed). Selecting a value copies it; "Copy all" copies what is
+ *        listed. Pagination. Cameras that share a root device's credentials are counted on it, not repeated as rows.
+ *        One dialog width for every step and state.
  *   Loading is a table-shaped skeleton, an error offers "Try again" (a click, never automatic), and an integration
  *   with no root devices says so. Credentials live in component state only: closing the dialog discards them.
  *
@@ -44,7 +45,7 @@
  *   @standin
  *     - The expiry date and IP Allow List are edited in the dialog's first step. Today they are fields in the
  *       configuration drawer (Edit/Manage), saved with the integration.
- *     - Password reveal, "Copy all", and the per-row copy buttons: no such feature exists today.
+ *     - Password reveal, "Copy all", and copying a value by selecting it: no such feature exists today.
  *     - Both selects are FSTextField select, not FSSelect: FSSelect cannot give its combobox a name.
  *     - FSTable is the design system's deprecated table, used for a plain, accessible, paginated table; FSDataGrid
  *       is the product's norm but needs a licence key and virtual rows.
@@ -101,7 +102,7 @@ import {
     FSUniversalNav,
     useSnackbar,
 } from '@flocksafety/flock-react-component-lib';
-import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 // ---------------------------------------------------------------------------------------------------------------
 // The seam: types and the one function that gets credentials
@@ -368,15 +369,21 @@ const visuallyHidden = {
 
 const monoSx = { fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace', fontSize: 13 } as const;
 
-// Same behaviour as the copy button in integrationDrawerFields.tsx: icon swaps to a check for 2 seconds.
-const CopyButton = ({
+// Helper text sits a line clear of its field's border.
+const HELPER_TEXT = { sx: { mt: 1 } } as const;
+
+// Pressing a value copies it, so a row carries no copy icon of its own. Feedback is the one in
+// integrationDrawerFields.tsx: "Copied" for 2 seconds.
+const CopyValue = ({
     label,
     value,
     onCopied,
+    children,
 }: {
     label: string;
     value: string;
     onCopied: (ok: boolean, label: string) => void;
+    children: ReactNode;
 }) => {
     const [copied, setCopied] = useState(false);
     const timer = useRef<ReturnType<typeof setTimeout>>();
@@ -394,48 +401,52 @@ const CopyButton = ({
 
     return (
         <FSTooltip title={copied ? 'Copied' : 'Copy'} placement="top">
-            <FSIconButton aria-label={`Copy ${label}`} size="sm" onClick={onClick}>
-                <FSSymbol name={copied ? 'check' : 'content_copy'} size={18} color={copied ? 'success' : undefined} />
-            </FSIconButton>
+            <FSBox
+                component="button"
+                type="button"
+                aria-label={`Copy ${label}`}
+                onClick={onClick}
+                sx={{
+                    ...monoSx,
+                    display: 'block',
+                    textAlign: 'left',
+                    background: 'none',
+                    border: 0,
+                    p: 0,
+                    color: copied ? 'success.main' : 'inherit',
+                    cursor: 'copy',
+                    '&:hover': { textDecoration: 'underline dotted' },
+                    '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: 2 },
+                }}
+            >
+                {children}
+            </FSBox>
         </FSTooltip>
     );
 };
 
-const SecretCell = ({
-    text,
-    mono = true,
-    children,
-}: {
-    text?: string;
-    mono?: boolean;
-    children?: ReactNode;
-}) => (
-    <FSTypography
-        component="span"
-        sx={{ ...(mono ? monoSx : { fontSize: 14 }), overflowWrap: 'anywhere', wordBreak: 'break-all', flexGrow: 1 }}
-    >
-        {text ?? children}
-    </FSTypography>
+// A hostname breaks only after a dot or a hyphen, never in the middle of a word.
+const HostName = ({ host }: { host: string }) => (
+    <>
+        {host.split('.').map((part, i, all) => (
+            <Fragment key={i}>
+                {part}
+                {i < all.length - 1 && (
+                    <>
+                        .<wbr />
+                    </>
+                )}
+            </Fragment>
+        ))}
+    </>
 );
 
 const SettingsSummary = ({ response, days, ipList }: { response: CredentialsResponse; days: number; ipList: string[] }) => {
-    const cameras = response.credentials.reduce((sum, c) => sum + c.cameras.length, 0);
     const shownIps = ipList.slice(0, 3).join(', ') + (ipList.length > 3 ? ` +${ipList.length - 3} more` : '');
     return (
-        <FSStack direction="row" flexWrap="wrap" gap={1} data-e2e-ref="credentials-summary" role="list">
-            <FSChip role="listitem" color="neutral" label={`Issued ${formatDateTime(response.issuedAt)}`} />
-            <FSChip
-                role="listitem"
-                color="neutral"
-                label={`Expires ${formatDate(response.expiresAt)} (${days} days)`}
-            />
-            <FSChip role="listitem" color="neutral" label={`Allowed IPs: ${shownIps}`} />
-            <FSChip
-                role="listitem"
-                color="neutral"
-                label={`${response.credentials.length} devices, ${cameras} cameras covered`}
-            />
-        </FSStack>
+        <FSTypography sx={{ fontSize: 13 }} color="outline.main" data-e2e-ref="credentials-summary">
+            {`Issued ${formatDateTime(response.issuedAt)} · Expires ${formatDate(response.expiresAt)} (${days} days) · Allowed IPs: ${shownIps}`}
+        </FSTypography>
     );
 };
 
@@ -459,8 +470,7 @@ const CredentialsLoading = () => (
 
 const SecurityNotice = () => (
     <FSAlert severity="warning">
-        These credentials give access to your devices through this integration. Treat them like passwords: paste them
-        straight into the system that needs them, and do not share them in email, chat or tickets.
+        Treat these like passwords. Paste them into the system that needs them; do not share them.
     </FSAlert>
 );
 
@@ -552,18 +562,13 @@ const CredentialsResults = ({
         <FSStack spacing={2} data-e2e-ref="credentials-results">
             <SecurityNotice />
             <SettingsSummary response={response} days={days} ipList={ipList} />
-            <FSTypography sx={{ fontSize: 13 }} color="outline.main">
-                Cameras on a trailer or drone share its credentials, so each device is listed once. Credentials issued
-                earlier stay valid until they expire.
-            </FSTypography>
-
-            <FSStack direction={{ xs: 'column', md: 'row' }} gap={1.5} alignItems={{ md: 'center' }}>
-                <FSBox sx={{ flexGrow: 1, maxWidth: { md: 520 } }}>
+            <FSStack direction="row" flexWrap="wrap" gap={1.5} alignItems="center">
+                <FSBox sx={{ flex: '1 1 180px', maxWidth: 420 }}>
                     <FSTextField
                         fullWidth
                         size="search"
                         variant="outlined"
-                        placeholder="Search device, camera, host or username"
+                        placeholder="Search credentials"
                         value={query}
                         onChange={(value: string) => {
                             setQuery(value);
@@ -580,7 +585,7 @@ const CredentialsResults = ({
                         }}
                     />
                 </FSBox>
-                <FSBox sx={{ width: { xs: '100%', md: 200 } }}>
+                <FSBox sx={{ width: 160 }}>
                     {/* FSTextField select, not FSSelect: FSSelect cannot pass the label to its combobox, which axe flags as unnamed. */}
                     <FSTextField
                         select
@@ -600,35 +605,41 @@ const CredentialsResults = ({
                         <FSMenuItem value="Camera">Cameras ({typeCounts('Camera')})</FSMenuItem>
                     </FSTextField>
                 </FSBox>
-                <FSBox sx={{ flexGrow: 1 }} />
-                <FSButton
-                    variant="secondary"
-                    size="md"
-                    startIcon={<FSSymbol name={revealAll ? 'visibility_off' : 'visibility'} aria-hidden="true" />}
-                    onClick={() => {
-                        setRevealAll((v) => !v);
-                        setExceptions(new Set());
-                    }}
-                    data-e2e-ref="toggle-reveal-all"
-                >
-                    {revealAll ? 'Hide passwords' : 'Show passwords'}
-                </FSButton>
-                <FSButton
-                    size="md"
-                    startIcon={<FSSymbol name="content_copy" aria-hidden="true" />}
-                    onClick={onCopyAll}
-                    disabled={filtered.length === 0}
-                    data-e2e-ref="copy-all-button"
-                >
-                    {isFiltered ? `Copy ${filtered.length} shown` : `Copy all ${filtered.length}`}
-                </FSButton>
+                <FSStack direction="row" gap={1.5} sx={{ ml: 'auto' }}>
+                    <FSButton
+                        variant="secondary"
+                        size="md"
+                        startIcon={<FSSymbol name={revealAll ? 'visibility_off' : 'visibility'} aria-hidden="true" />}
+                        onClick={() => {
+                            setRevealAll((v) => !v);
+                            setExceptions(new Set());
+                        }}
+                        data-e2e-ref="toggle-reveal-all"
+                    >
+                        {revealAll ? 'Hide passwords' : 'Show passwords'}
+                    </FSButton>
+                    <FSButton
+                        size="md"
+                        startIcon={<FSSymbol name="content_copy" aria-hidden="true" />}
+                        onClick={onCopyAll}
+                        disabled={filtered.length === 0}
+                        data-e2e-ref="copy-all-button"
+                    >
+                        {isFiltered ? `Copy ${filtered.length} shown` : `Copy all ${filtered.length}`}
+                    </FSButton>
+                </FSStack>
             </FSStack>
 
-            <FSTypography sx={{ fontSize: 14 }} aria-live="polite" role="status">
-                {isFiltered
-                    ? `${filtered.length} of ${credentials.length} devices`
-                    : `${credentials.length} ${credentials.length === 1 ? 'device' : 'devices'}`}
-            </FSTypography>
+            <FSStack direction="row" flexWrap="wrap" columnGap={1.5} alignItems="baseline">
+                <FSTypography sx={{ fontSize: 14 }} aria-live="polite" role="status">
+                    {isFiltered
+                        ? `${filtered.length} of ${credentials.length} devices`
+                        : `${credentials.length} ${credentials.length === 1 ? 'device' : 'devices'}`}
+                </FSTypography>
+                <FSTypography sx={{ fontSize: 13 }} color="outline.main">
+                    Select a value to copy it. Cameras on a trailer or drone share its credentials.
+                </FSTypography>
+            </FSStack>
 
             {filtered.length === 0 ? (
                 <FSStack alignItems="center" spacing={1} sx={{ py: 4 }} data-e2e-ref="no-matches">
@@ -646,14 +657,14 @@ const CredentialsResults = ({
                 </FSStack>
             ) : (
                 <FSBox sx={{ border: 1, borderColor: 'divider', borderRadius: 1, overflow: 'hidden' }}>
-                    <FSTableContainer sx={{ maxHeight: 440 }} tabIndex={0} aria-label="Credentials table" role="region">
+                    <FSTableContainer sx={{ maxHeight: 'max(260px, calc(100vh - 520px))' }} tabIndex={0} aria-label="Credentials table" role="region">
                         <FSTable stickyHeader size="small" data-e2e-ref="credentials-table">
                             <FSTableHead>
                                 <FSTableRow>
                                     {TABLE_COLUMNS.map((column) => (
                                         <FSTableCell
                                             key={column}
-                                            sx={{ fontWeight: 600, backgroundColor: 'surface1.main', whiteSpace: 'nowrap' }}
+                                            sx={{ fontWeight: 600, backgroundColor: 'surface1.main', whiteSpace: 'nowrap', px: 1 }}
                                         >
                                             {column}
                                         </FSTableCell>
@@ -667,7 +678,7 @@ const CredentialsResults = ({
                                     const matchedCamera = q ? c.cameras.find((cam) => cam.name.toLowerCase().includes(q)) : undefined;
                                     return (
                                         <FSTableRow key={c.id} hover>
-                                            <FSTableCell sx={{ minWidth: 220, maxWidth: 320, verticalAlign: 'top' }}>
+                                            <FSTableCell sx={{ minWidth: 150, maxWidth: 260, verticalAlign: 'top', px: 1 }}>
                                                 <FSStack spacing={0.5}>
                                                     <FSTypography sx={{ fontSize: 14, fontWeight: 600, overflowWrap: 'anywhere' }}>
                                                         {c.deviceName}
@@ -680,55 +691,45 @@ const CredentialsResults = ({
                                                                 : 'Standalone camera'}
                                                         </FSTypography>
                                                     </FSStack>
-                                                    {c.cameras.length > 0 && (
+                                                    {matchedCamera && (
                                                         <FSTypography sx={{ fontSize: 12, overflowWrap: 'anywhere' }} color="outline.main">
-                                                            {matchedCamera
-                                                                ? `Matches ${matchedCamera.name}`
-                                                                : `${c.cameras.slice(0, 2).map((cam) => cam.name).join(', ')}${c.cameras.length > 2 ? ` +${c.cameras.length - 2} more` : ''}`}
+                                                            {`Matches ${matchedCamera.name}`}
                                                         </FSTypography>
                                                     )}
                                                 </FSStack>
                                             </FSTableCell>
-                                            <FSTableCell sx={{ minWidth: 230, maxWidth: 300, verticalAlign: 'top' }}>
-                                                <FSStack direction="row" alignItems="flex-start" gap={0.5}>
-                                                    <FSStack sx={{ flexGrow: 1, minWidth: 0 }}>
-                                                        <SecretCell text={c.host} />
-                                                        <FSTypography sx={{ fontSize: 12 }} color="outline.main">
-                                                            Port {c.port}
-                                                        </FSTypography>
-                                                    </FSStack>
-                                                    <CopyButton label={`host for ${c.deviceName}`} value={c.host} onCopied={onCopied} />
+                                            <FSTableCell sx={{ minWidth: 190, maxWidth: 280, verticalAlign: 'top', px: 1 }}>
+                                                <FSStack>
+                                                    <CopyValue label={`host ${c.host}`} value={c.host} onCopied={onCopied}>
+                                                        <HostName host={c.host} />
+                                                    </CopyValue>
+                                                    <FSTypography sx={{ fontSize: 12 }} color="outline.main">
+                                                        Port {c.port}
+                                                    </FSTypography>
                                                 </FSStack>
                                             </FSTableCell>
-                                            <FSTableCell sx={{ minWidth: 200, maxWidth: 260, verticalAlign: 'top' }}>
-                                                <FSStack direction="row" alignItems="flex-start" gap={0.5}>
-                                                    <SecretCell text={c.username} />
-                                                    <CopyButton
-                                                        label={`username for ${c.deviceName}`}
-                                                        value={c.username}
-                                                        onCopied={onCopied}
-                                                    />
-                                                </FSStack>
+                                            <FSTableCell sx={{ verticalAlign: 'top', whiteSpace: 'nowrap', px: 1 }}>
+                                                <CopyValue label={`username ${c.username}`} value={c.username} onCopied={onCopied}>
+                                                    {c.username}
+                                                </CopyValue>
                                             </FSTableCell>
-                                            <FSTableCell sx={{ minWidth: 260, maxWidth: 340, verticalAlign: 'top' }}>
-                                                <FSStack direction="row" alignItems="flex-start" gap={0.5}>
+                                            <FSTableCell sx={{ minWidth: 130, verticalAlign: 'top', px: 1 }}>
+                                                <FSStack direction="row" alignItems="flex-start" gap={1}>
                                                     {/* The password is in the page only while shown; hidden, it is just dots. */}
-                                                    <SecretCell text={revealed ? c.password : '••••••••••••••••'} />
+                                                    <CopyValue label={`password for ${c.deviceName}`} value={c.password} onCopied={onCopied}>
+                                                        {revealed ? c.password : '••••••••'}
+                                                    </CopyValue>
                                                     <FSTooltip title={revealed ? 'Hide password' : 'Show password'} placement="top">
                                                         <FSIconButton
                                                             aria-label={`${revealed ? 'Hide' : 'Show'} password for ${c.deviceName}`}
                                                             aria-pressed={revealed}
                                                             size="sm"
+                                                            sx={{ mt: -0.75 }}
                                                             onClick={() => toggleRow(c.id)}
                                                         >
                                                             <FSSymbol name={revealed ? 'visibility_off' : 'visibility'} size={18} />
                                                         </FSIconButton>
                                                     </FSTooltip>
-                                                    <CopyButton
-                                                        label={`password for ${c.deviceName}`}
-                                                        value={c.password}
-                                                        onCopied={onCopied}
-                                                    />
                                                 </FSStack>
                                             </FSTableCell>
                                         </FSTableRow>
@@ -774,8 +775,7 @@ const CredentialsEmpty = () => (
 const CredentialsError = () => (
     <FSStack spacing={2} data-e2e-ref="credentials-error">
         <FSAlert severity="error">
-            We could not generate credentials. Try again; each attempt that succeeds issues a new set, and earlier
-            sets stay valid until they expire.
+            We could not generate credentials. Try again; each attempt that succeeds issues a new set.
         </FSAlert>
     </FSStack>
 );
@@ -818,15 +818,13 @@ const ShowCredentialsDialog = ({ integrationName, catalogEntryId, onClose, autoR
     };
 
     const expiresOn = formatDate(addDaysIso(PROTOTYPE_ISSUED_AT, days));
-    const isResults = state.status === 'success' && state.data.credentials.length > 0;
-    const isLoading = state.status === 'loading';
 
     return (
         <FSDialog
             open
             onClose={onClose}
             fullWidth
-            maxWidth={isResults ? 'lg' : 'sm'}
+            maxWidth="md"
             aria-labelledby="show-credentials-title"
         >
             <FSStack direction="row" alignItems="center">
@@ -834,7 +832,7 @@ const ShowCredentialsDialog = ({ integrationName, catalogEntryId, onClose, autoR
                     <FSSymbol name="key" aria-hidden="true" sx={{ marginRight: '8px' }} />
                     {state.status === 'idle' ? 'Show credentials' : `${integrationName} credentials`}
                 </FSDialogTitle>
-                <FSIconButton aria-label="Close credentials dialog" onClick={onClose}>
+                <FSIconButton aria-label="Close credentials dialog" onClick={onClose} sx={{ mr: 1.5 }}>
                     <FSSymbol name="close" aria-hidden="true" />
                 </FSIconButton>
             </FSStack>
@@ -854,6 +852,8 @@ const ShowCredentialsDialog = ({ integrationName, catalogEntryId, onClose, autoR
                             label="Credential Expiration"
                             value={String(days)}
                             onChange={(value: string) => setDays(Number(value))}
+                            helperText={`Credentials generated now expire on ${expiresOn}.`}
+                            FormHelperTextProps={HELPER_TEXT}
                             data-e2e-ref="expiration-select"
                         >
                             {EXPIRATION_OPTIONS.map((option) => (
@@ -862,9 +862,6 @@ const ShowCredentialsDialog = ({ integrationName, catalogEntryId, onClose, autoR
                                 </FSMenuItem>
                             ))}
                         </FSTextField>
-                        <FSTypography sx={{ fontSize: 13, mt: '-12px !important' }} color="outline.main">
-                            Credentials generated now expire on {expiresOn}.
-                        </FSTypography>
                         <FSTextField
                             fullWidth
                             required
@@ -878,6 +875,7 @@ const ShowCredentialsDialog = ({ integrationName, catalogEntryId, onClose, autoR
                             }}
                             error={Boolean(ipError)}
                             helperText={ipError ?? 'Comma-separated IP addresses or CIDR ranges allowed to use these credentials.'}
+                            FormHelperTextProps={HELPER_TEXT}
                             data-e2e-ref="ip-allow-list"
                         />
                         <FSAlert severity="warning">
@@ -900,7 +898,7 @@ const ShowCredentialsDialog = ({ integrationName, catalogEntryId, onClose, autoR
                     ))}
             </FSDialogContent>
 
-            <FSDialogActions>
+            <FSDialogActions sx={{ px: 3 }}>
                 {state.status === 'idle' && (
                     <>
                         <FSButton variant="secondary" onClick={onClose}>

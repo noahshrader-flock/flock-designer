@@ -8,48 +8,50 @@
  {
   "cell": "keyboard-reach",
   "sc": "2.1.1",
-  "status": "none",
-  "findings": []
+  "status": "notRun",
+  "findings": [],
+  "why": "the page has more than 60 Tab stops: the first 60 were measured, and none of these was found in them"
  },
  {
   "cell": "keyboard-trap",
   "sc": "2.1.2",
-  "status": "found",
-  "findings": [
-   {
-    "target": "body > div:nth-of-type(2) > div:nth-of-type(3) > div > div:nth-of-type(1) > button",
-    "detail": "Tab goes round 2 stops and never leaves them, and Escape does not let it out"
-   }
-  ]
+  "status": "notRun",
+  "findings": [],
+  "why": "the page has more than 60 Tab stops: the first 60 were measured, and none of these was found in them"
  },
  {
   "cell": "focus-order",
   "sc": "2.4.3",
-  "status": "none",
-  "findings": []
+  "status": "notRun",
+  "findings": [],
+  "why": "the page has more than 60 Tab stops: the first 60 were measured, and none of these was found in them"
  },
  {
   "cell": "focus-visible",
   "sc": "2.4.7",
-  "status": "none",
-  "findings": []
+  "status": "notRun",
+  "findings": [],
+  "why": "the page has more than 60 Tab stops: the first 60 were measured, and none of these was found in them"
  },
  {
   "cell": "focus-obscured",
   "sc": "2.4.11",
-  "status": "none",
-  "findings": []
+  "status": "notRun",
+  "findings": [],
+  "why": "the page has more than 60 Tab stops: the first 60 were measured, and none of these was found in them"
  },
  {
   "cell": "on-focus",
   "sc": "3.2.1",
-  "status": "none",
-  "findings": []
+  "status": "notRun",
+  "findings": [],
+  "why": "the page has more than 60 Tab stops: the first 60 were measured, and none of these was found in them"
  },
  {
   "cell": "name-role-value",
   "sc": "4.1.2",
-  "status": "none",
-  "findings": []
+  "status": "notRun",
+  "findings": [],
+  "why": "the page has more than 60 Tab stops: the first 60 were measured, and none of these was found in them"
  }
 ]
