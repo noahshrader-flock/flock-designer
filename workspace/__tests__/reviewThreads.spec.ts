@@ -323,21 +323,50 @@ describe('deleteComment', () => {
 });
 
 describe('the threads of a branch', () => {
-	it('are counted together, with the latest comment of any of them as when the branch last had one', async () => {
-		const { github } = fakeGitHub({
-			'/repos/acme/design/issues?state=all*': [
-				{ number: 3, comments: 2, updated_at: '2026-10-05T10:00:00Z', body: 'branch: `prototype/alpha/v1`' },
-				{ number: 2, comments: 1, updated_at: '2026-10-07T10:00:00Z', body: 'branch: `prototype/alpha/v1`' },
-				{ number: 4, comments: 5, body: 'branch: `prototype/beta/v1`' },
-			],
+	const resolved = ' <!-- resolved -->';
+	const comment = (id: number, body: string) => ({ id, user: { login: 'pm' }, body, created_at: `2026-10-05T10:00:0${id}Z` });
+	const listing = [
+		{ number: 3, state: 'open', comments: 2, updated_at: '2026-10-05T10:00:00Z', body: 'branch: `prototype/alpha/v1`' },
+		{ number: 2, state: 'open', comments: 1, updated_at: '2026-10-07T10:00:00Z', body: 'branch: `prototype/alpha/v1`' },
+		{ number: 4, state: 'open', comments: 5, body: 'branch: `prototype/beta/v1`' },
+		{ number: 5, state: 'closed', comments: 3, body: 'branch: `prototype/gamma/v1`' },
+	];
+	const threads = () =>
+		fakeGitHub({
+			'/repos/acme/design/issues?state=all*': listing,
+			'/repos/acme/design/issues/3/comments*': [comment(1, 'Bigger'), comment(2, `Done${resolved}`)],
+			'/repos/acme/design/issues/2/comments*': [comment(3, 'Bluer')],
+			'/repos/acme/design/issues/4/comments*': refusing(503),
 		});
-		const threads = new ReviewThreads(github, REF);
-		expect((await threads.byBranch()).get('prototype/alpha/v1')).toEqual({
+
+	it('are counted together, with the latest comment of any of them as when the branch last had one', async () => {
+		const { github } = threads();
+		expect((await new ReviewThreads(github, REF).byBranch()).get('prototype/alpha/v1')).toEqual({
 			number: 2,
 			numbers: [3, 2],
-			openComments: 3,
+			openComments: 0,
 			updatedAt: '2026-10-07T10:00:00Z',
 		});
+	});
+
+	it('count the comments not resolved, when asked: those of every thread of the branch, none for a closed issue', async () => {
+		const { github, calls } = threads();
+		const counted = await new ReviewThreads(github, REF).byBranch({ counting: true });
+		expect(counted.get('prototype/alpha/v1')?.openComments).toBe(2);
+		expect(counted.get('prototype/gamma/v1')?.openComments).toBe(0);
+		// A closed issue's comments are not read at all.
+		expect(calls.some((c) => c.path.includes('/issues/5/comments'))).toBe(false);
+	});
+
+	it('are not counted unless asked, as every change to a comment asks for the threads and none needs a count', async () => {
+		const { github, calls } = threads();
+		await new ReviewThreads(github, REF).byBranch();
+		expect(calls.filter((c) => c.path.includes('/comments'))).toEqual([]);
+	});
+
+	it('fall back to what the listing says for a thread whose comments cannot be read, rather than fail the list', async () => {
+		const { github } = threads();
+		expect((await new ReviewThreads(github, REF).byBranch({ counting: true })).get('prototype/beta/v1')?.openComments).toBe(5);
 	});
 });
 

@@ -32,7 +32,15 @@ describe('listProjects', () => {
 		],
 		'/repos/acme/design/contents/projects/alpha/brief.md*': { sha: 'f1', content: b64('# Inactive users\n') },
 		'/repos/acme/design/contents/projects/alpha/work.json*': { sha: 'f1', content: b64(JSON.stringify(ITERATIONS)) },
-		'/repos/acme/design/issues?state=all*': [{ number: 7, comments: 3, body: 'Review thread for alpha, branch: `prototype/alpha/v2`.' }],
+		// Three comments in the thread, one of them resolved: two are open.
+		'/repos/acme/design/issues?state=all*': [
+			{ number: 7, state: 'open', comments: 3, body: 'Review thread for alpha, branch: `prototype/alpha/v2`.' },
+		],
+		'/repos/acme/design/issues/7/comments*': [
+			{ id: 1, user: { login: 'pm' }, body: 'Bigger', created_at: '2026-10-05T10:00:00Z' },
+			{ id: 2, user: { login: 'pm' }, body: 'Bluer', created_at: '2026-10-05T10:01:00Z' },
+			{ id: 3, user: { login: 'noah' }, body: 'Done <!-- resolved -->', created_at: '2026-10-05T10:02:00Z' },
+		],
 	};
 
 	it('reads when each version was started from its record, and treats anything else as unknown', async () => {
@@ -167,12 +175,12 @@ describe('listProjects', () => {
 		expect((await new DesignRepo(session, REF).listProjects())[0]?.work).toEqual([]);
 	});
 
-	it('links a version to its review thread and counts open comments', async () => {
+	it('links a version to its review thread and counts its open comments: those not resolved, not all of them', async () => {
 		const { github: session } = fakeGitHub(routes);
 		const [alpha] = await new DesignRepo(session, REF).listProjects();
 		expect(alpha?.work.find((i) => i.branch === 'prototype/alpha/v2')?.issueNumber).toBe(7);
 		expect(alpha?.work.find((i) => i.branch === 'prototype/alpha/v1')?.issueNumber).toBeNull();
-		expect(alpha?.work.find((i) => i.branch === 'prototype/alpha/v2')?.openComments).toBe(3);
+		expect(alpha?.work.find((i) => i.branch === 'prototype/alpha/v2')?.openComments).toBe(2);
 		expect(alpha?.work.find((i) => i.branch === 'prototype/alpha/v1')?.openComments).toBe(0);
 		expect(alpha).not.toHaveProperty('openComments');
 	});
@@ -185,6 +193,7 @@ describe('listProjects', () => {
 	});
 
 	describe('read again', () => {
+		/** `comments`: the thread's comments, none resolved. */
 		const repo = (state: { tree: string; brief: string; comments: number }) =>
 			fakeGitHub({
 				...routes,
@@ -192,8 +201,10 @@ describe('listProjects', () => {
 				'/repos/acme/design/contents/projects/alpha/brief.md*': () => ({ sha: 'b', content: b64(state.brief) }),
 				'/repos/acme/design/commits?path=projects%2Falpha*': [],
 				'/repos/acme/design/issues?state=all*': () => [
-					{ number: 7, comments: state.comments, body: 'Review thread for alpha, branch: `prototype/alpha/v2`.' },
+					{ number: 7, state: 'open', comments: state.comments, body: 'Review thread for alpha, branch: `prototype/alpha/v2`.' },
 				],
+				'/repos/acme/design/issues/7/comments*': () =>
+					Array.from({ length: state.comments }, (_, i) => ({ id: i + 1, user: { login: 'pm' }, body: 'x', created_at: `2026-10-05T10:0${i}:00Z` })),
 			});
 		const perProject = (paths: string[]) => paths.filter((p) => p.includes('projects/alpha') || p.includes('projects%2Falpha'));
 
@@ -206,7 +217,8 @@ describe('listProjects', () => {
 			const again = await design.listProjects();
 			const paths = api.mock.calls.slice(asked).map(([path]) => path as string);
 			expect(perProject(paths)).toEqual([]);
-			expect(paths).toHaveLength(2);
+			// The folder list and the threads, and the open thread's comments, which say how many are not resolved.
+			expect(paths).toHaveLength(3);
 			expect(again).toEqual(first);
 		});
 
@@ -238,7 +250,8 @@ describe('listProjects', () => {
 			expect((await design.listProjects())[0]?.updatedAt).toBe('2026-10-06T12:00:00Z');
 			const asked = api.mock.calls.length;
 			await design.listProjects();
-			expect(api.mock.calls).toHaveLength(asked + 2);
+			// The folder list, the threads, and the open thread's comments, which say how many are not resolved: nothing of the project.
+			expect(api.mock.calls).toHaveLength(asked + 3);
 		});
 
 		it('reads every time a folder GitHub gives no fingerprint for', async () => {

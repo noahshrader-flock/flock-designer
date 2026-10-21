@@ -38,7 +38,7 @@ export class DesignRepo {
 
 	async listProjects(): Promise<Project[]> {
 		const dirs = (await this.files.list('projects')).filter((e) => e.type === 'dir' && !e.name.startsWith('_'));
-		const issues = await this.threads.byBranch();
+		const issues = await this.threads.byBranch({ counting: true });
 
 		return Promise.all(
 			dirs.map(async ({ name: id, sha }) => {

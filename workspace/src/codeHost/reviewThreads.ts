@@ -32,6 +32,7 @@ const REVIEW_LABEL = 'flock-designer:review';
 export interface ReviewThread {
 	number: number;
 	numbers: number[];
+	/** The comments not resolved: counted only when asked for (`counting`), else 0. */
 	openComments: number;
 	updatedAt: string | null;
 }
@@ -53,7 +54,11 @@ export class ReviewThreads {
 	 */
 	private readonly known = new Map<string, Set<number>>();
 
-	async byBranch(): Promise<Map<string, ReviewThread>> {
+	/**
+	 * `counting`: how many comments of each thread are not resolved, read from its open issues' comments (a closed issue has
+	 * none open), for the project list's badge. Not otherwise, as every comment written or changed asks for the threads.
+	 */
+	async byBranch({ counting = false }: { counting?: boolean } = {}): Promise<Map<string, ReviewThread>> {
 		const issues = (
 			await readPages(this.session, `${this.apiPath}/issues?state=all&labels=${encodeURIComponent(REVIEW_LABEL)}`, { maxPages: 10 })
 		).map(asRecord);
@@ -61,6 +66,10 @@ export class ReviewThreads {
 		// More than one thread can exist for a branch (the listing lag above can make some). All of them are read, the
 		// oldest is written to, and none is lost.
 		const byBranch = new Map<string, ReviewThread>();
+		// The issues whose comments say how many are open: open ones with comments, and a thread made this session, which the
+		// listing may not show yet. What the listing says each has stands in where its comments cannot be read.
+		const toRead = new Map<number, number>();
+		const inListing = new Set(issues.map((issue) => issue.number));
 		for (const issue of issues) {
 			const branch = /branch:\s*`([^`]+)`/.exec(String(issue.body ?? ''))?.[1];
 			if (branch && typeof issue.number === 'number') {
@@ -69,17 +78,28 @@ export class ReviewThreads {
 				byBranch.set(branch, {
 					number: Math.min(...numbers),
 					numbers,
-					openComments: (have?.openComments ?? 0) + Number(issue.comments ?? 0),
+					openComments: 0,
 					updatedAt: latestDate([have?.updatedAt, issue.updated_at]),
 				});
+				if (issue.state === 'open' && Number(issue.comments) > 0) toRead.set(issue.number, Number(issue.comments));
 			}
 		}
 		for (const [branch, known] of this.known) {
 			const have = byBranch.get(branch);
 			const numbers = [...new Set([...(have?.numbers ?? []), ...known])];
-			byBranch.set(branch, { number: Math.min(...numbers), numbers, openComments: have?.openComments ?? 0, updatedAt: have?.updatedAt ?? null });
+			byBranch.set(branch, { number: Math.min(...numbers), numbers, openComments: 0, updatedAt: have?.updatedAt ?? null });
+			for (const n of known) if (!inListing.has(n)) toRead.set(n, 0);
 		}
+		if (!counting) return byBranch;
+		const open = new Map(await Promise.all([...toRead].map(async ([n, listed]) => [n, await this.unresolvedIn(n).catch(() => listed)] as const)));
+		for (const [branch, thread] of byBranch)
+			byBranch.set(branch, { ...thread, openComments: thread.numbers.reduce((sum, n) => sum + (open.get(n) ?? 0), 0) });
 		return byBranch;
+	}
+
+	/** How many comments of a thread are not resolved. */
+	private async unresolvedIn(number: number): Promise<number> {
+		return (await this.rawComments(number)).filter((c) => !isResolved(String(c.body ?? ''))).length;
 	}
 
 	async ensureIssue(projectId: string, branch: string): Promise<number> {
@@ -146,7 +166,7 @@ export class ReviewThreads {
 	private async settle(number: number): Promise<void> {
 		const at = `${this.apiPath}/issues/${number}`;
 		try {
-			const open = (await this.rawComments(number)).some((c) => !isResolved(String(c.body ?? '')));
+			const open = (await this.unresolvedIn(number)) > 0;
 			const issue = asRecord(await this.session.api(at));
 			if (open === (issue.state === 'open')) return;
 			await this.session.api(at, {
