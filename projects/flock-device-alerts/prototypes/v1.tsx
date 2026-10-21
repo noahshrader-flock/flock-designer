@@ -2,8 +2,8 @@
  * Device Alerts page.
  *
  * WHAT IT SHOWS
- *   A Flock Admin page: the title "Device Alerts", a one-line description, a warning alert ("3 devices are
- *   offline") and one primary button, "Review Devices". The button is extra large (size="xl") with fully rounded,
+ *   A Flock Admin page: the title "Device Alerts and Updates", a one-line description, a warning alert ("3 devices
+ *   are offline"), an info alert ("Firmware update available") and one primary button, "Review Devices". The button is extra large (size="xl") with fully rounded,
  *   pill-shaped corners, both asked for.
  *
  * WHERE IT SITS
@@ -21,14 +21,14 @@
  *   organization.
  *
  * STATES  (?state=default)
- *   default             3 devices offline, the alert and the button as asked. One screen only.
+ *   default             3 devices offline, a firmware update available, the button as asked. One screen only.
  *
  * MARKS
  *   @standin
  *     - Review Devices goes nowhere. No destination was given. A Devices page filtered to offline devices does not
  *       exist.
  *   @mock
- *     - The count of offline devices (3).
+ *     - The count of offline devices (3) and the firmware update notice.
  *     - The top-bar app links and account menus (copied from the 2026-10-06 reference, not from the account).
  *     - The sub-nav for a Flock admin (the real one is computed from permissions, flags and org type).
  *   @remove
@@ -50,7 +50,7 @@ import {
 } from '@flocksafety/flock-react-component-lib';
 import { useCallback } from 'react';
 
-export const title = 'Device Alerts';
+export const title = 'Device Alerts and Updates';
 
 export const states = ['default'] as const;
 
@@ -138,6 +138,10 @@ const DeviceAlertsPage = () => {
                     </FSBox>
                     <FSBox sx={{ width: '100%' }} data-e2e-ref="offline-alert">
                         <FSAlert severity="warning">{`${OFFLINE_DEVICE_COUNT} devices are offline`}</FSAlert>
+                    </FSBox>
+                    {/* @mock: firmware update notice. On move: comes from the devices' firmware data. */}
+                    <FSBox sx={{ width: '100%' }} data-e2e-ref="firmware-alert">
+                        <FSAlert severity="info">Firmware update available</FSAlert>
                     </FSBox>
                     {/* @standin: Review Devices goes nowhere. On move: link to the Devices page; decide whether it opens
                         filtered to offline devices. */}
