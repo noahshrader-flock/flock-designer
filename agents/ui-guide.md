@@ -80,8 +80,9 @@ they exist: real types, fake values, believable for the product, and **fixed**: 
 to today's date. A comment is pinned to the text near it, and a value that changes on every load cannot be found again.
 
 **Use a component as it ships.** An override of its size, spacing, type or look needs a source: the person asked for it, the
-product's own views do it, or the default fails accessibility. Name the source in what you say when you finish. A default
-that is wrong everywhere is the design system's to fix, not each view's.
+product's own views do it, or the default fails accessibility. Name the source in what you say when you finish, and, only when
+no prop or size the component supports gives it, mark it in the code with `@override` (see the build skill). A default that is
+wrong everywhere is the design system's to fix, not each view's.
 
 ### When a reference disagrees with the product
 

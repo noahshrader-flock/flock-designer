@@ -95,7 +95,8 @@ A prototype is one React file built from the product's real components, with no 
 source is and gives the exact command that builds its page. Everything above applies, except:
 
 - **Change only the source file the task names.** Nothing else you write is kept. Follow how a prototype is
-  made (the task includes it): real components, and gaps marked `@standin`, `@mock` or `@remove`, never hidden.
+  made (the task includes it): real components, and gaps marked `@standin`, `@mock`, `@remove` or
+  `@override`, never hidden.
 - **The check is the build command**, run after every change, exactly as the task gives it. There is no light
   check and no test suite. Do not finish while it reports an error.
 - **Nothing is committed.** There is no branch to commit to. The app saves the page when you finish, and that

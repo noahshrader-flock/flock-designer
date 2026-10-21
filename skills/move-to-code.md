@@ -28,6 +28,9 @@ before it reports (**Before you report**). What follows is only what moving a pr
   - `@mock`: data standing in for something real. Each is a data task: where the real data comes from.
   - `@remove`: scaffolding that exists only so the prototype ran (a state switcher, a hand-made shell).
     Delete it.
+  - `@override`: a design-system component drawn differently from how it ships, because no prop gives
+    it. **Each is a decision**, and goes under **Needs a decision**: propose it to the design system, or
+    keep it here.
   - `data-e2e-ref`: the parts people commented on. Keep them where this product's code supports them.
   - The block comment at the top: where in the product it sits, what it was modeled on, which person
     the navigation shows, its states, and every mark, grouped by kind.
@@ -42,9 +45,9 @@ before it reports (**Before you report**). What follows is only what moving a pr
 Write the audit to the file the task names **before you change any code.** It is for a designer and
 an engineer to read together, so write it in plain words, not code.
 
-1. **Needs a decision.** First in the file. Every `@standin`, with its own "on move" note, and anything
-   else where the prototype and this product's patterns disagree. Say what you will build in the meantime
-   (the nearest thing the product already has) so the work is not blocked.
+1. **Needs a decision.** First in the file. Every `@standin` and `@override`, with its own "on move" note,
+   and anything else where the prototype and this product's patterns disagree. Say what you will build in
+   the meantime (the nearest thing the product already has) so the work is not blocked.
 2. **What the page shows.** The screens, states and interactions, in a few lines.
 3. **Where each part goes.** The prototype is one file; the product is not. For each part: the file it
    belongs in, and what it is wired to (routing, state, permissions, flags). Where the prototype's version
@@ -76,7 +79,8 @@ there: fix each in the code, or say in the audit why not.
 
 - **Move the unmarked code in as written,** split into the files where it belongs. Act on every mark as
   its note says: build the decision for each `@standin`, wire each `@mock` the way this repository mocks
-  data, and delete each `@remove`. A marked part with no note is a finding to report, not a guess to make.
+  data, delete each `@remove`, and carry each `@override` as its decision says. A marked part with no
+  note is a finding to report, not a guess to make.
 - Stay inside the change boundary. Mock data only. **Mock data reproduces the prototype's sample;** do
   not mix unrelated rows into a view people will review without saying so.
 - **Changing something other screens use** (a mock handler, a fixture, a shared component): show that

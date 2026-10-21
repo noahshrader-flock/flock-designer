@@ -21,7 +21,8 @@ instead.
 
 1. *An audit first.* Before changing any code, the agent writes `audit-v1.md` (named after the version) in the project's
    folder. The prototype marks every shortcut it took: a stand-in for a component that does not exist yet, made-up data,
-   and things that must be removed. The audit turns each into a decision, a data task or a deletion.
+   things that must be removed, and a component drawn differently from how it ships. The audit turns each into a decision,
+   a data task or a deletion.
 2. *The real code.* It builds the feature in the product the way the product builds things: real state, real routing,
    real data where the product has it.
 3. *A light check after every step.* The product's fast check (at Flock, `npm run check:iteration`) runs after each change,

@@ -79,6 +79,7 @@ when the prototype moves into the code:
 | `@standin` | Something the product cannot do today, approximated | `// @standin: 90-day line chart, inline SVG. No chart component exists. On move: decide a chart library, or drop it.` |
 | `@mock` | Data standing in for something real | `// @mock: role usage per day. No endpoint exists. On move: replace with the usage endpoint once defined.` |
 | `@remove` | Scaffolding that exists only so the prototype runs | `// @remove: picks the state from ?state=. On move: delete; the real page has real data.` |
+| `@override` | A design-system component drawn differently from how it ships (its size, spacing, type or look, set with `sx` or CSS) because no prop or size it supports gives that, and the person asked. Using a supported prop (`size="xl"`) is not an override: no mark | `// @override: FSUniversalNav height 48px → 52px, asked for; no prop sets it. On move: propose it to the design system if it should change everywhere, else keep it here.` |
 
 - **Name the replacement when the product's guidance names one** ("On move: use `FSSymbol`"); otherwise say
   what decision is needed. Never leave the "on move" part out.
