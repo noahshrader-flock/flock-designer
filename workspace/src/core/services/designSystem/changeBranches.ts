@@ -6,6 +6,7 @@ import { dsnrBranchPattern, newDsnrBranch } from './dsnrBranch';
 import { branchExists, commitOnto, git } from '../platform/git';
 import { ScopedRecords } from './scopedRecords';
 import type { ShareTools } from '../../ports';
+import type { PullRequest } from '../../../codeHost/changeRequests';
 import { errorText } from '../../../shared/result';
 import { HOST } from '../../../shared/vocabulary';
 
@@ -50,6 +51,23 @@ export const proposalText = (of: Said, lines: string[]): { title: string; body: 
 	title: `${of.subject}: ${lines[0]?.split(':')[0] ?? of.asItWas}${lines.length > 1 ? ` and ${lines.length - 1} more` : ''}`,
 	body: [of.about, '', ...lines.map((l) => `- ${l}`), '', of.checked, '', '_Opened by DSNR as a draft._'].join('\n'),
 });
+
+/**
+ * Pushed (never forced), then the draft already open for it, or a new one onto `base`: its words are asked for only when one
+ * is opened, as the one open already says what it says.
+ */
+export const openDraft = async (
+	tools: ShareTools,
+	branch: string,
+	base: string,
+	proposal: () => Promise<{ title: string; body: string }>,
+): Promise<PullRequest> => {
+	await tools.push(branch);
+	const open = await tools.findPr(branch);
+	if (open !== null) return open;
+	const { title, body } = await proposal();
+	return tools.createDraftPr(branch, title, body, base);
+};
 
 export interface ChangeBranchesDeps {
 	system: () => ConnectedDesignSystem | null;
@@ -135,14 +153,7 @@ export abstract class KeptBranches<C, R extends KindRules<C> = KindRules<C>> {
 		kept: Kept<C>,
 		proposal: () => Promise<{ title: string; body: string }>,
 	): Promise<Kept<C>> {
-		const tools = this.deps.tools(system.root);
-		await tools.push(kept.branch);
-		let pr = await tools.findPr(kept.branch);
-		// Said only when one is opened: the one open already says what it says.
-		if (pr === null) {
-			const { title, body } = await proposal();
-			pr = await tools.createDraftPr(kept.branch, title, body, kept.baseBranch);
-		}
+		const pr = await openDraft(this.deps.tools(system.root), kept.branch, kept.baseBranch, proposal);
 		const next: Kept<C> = { ...kept, pullRequest: { number: pr.number, url: pr.url, chromatic: kept.pullRequest?.chromatic ?? null } };
 		this.records.keep(system, scope, next);
 		return next;

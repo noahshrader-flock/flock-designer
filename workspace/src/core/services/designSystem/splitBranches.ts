@@ -15,6 +15,7 @@ import { fetchRemoteCopy } from '../platform/fetch';
 import { commitOnto, git, isAncestor, refTip } from '../platform/git';
 import { dsnrBranchPattern, newDsnrBranch } from './dsnrBranch';
 import { ScopedRecords } from './scopedRecords';
+import { openDraft } from './changeBranches';
 
 const WORD = 'split';
 const PATTERN = dsnrBranchPattern(WORD);
@@ -145,9 +146,8 @@ export class SplitBranches {
 		for (const [i, part] of parts.entries()) {
 			if (part.pullRequest !== null) continue;
 			try {
-				await tools.push(part.branch);
 				const base = part.on === null ? kept.baseBranch : parts[part.on]!.branch;
-				const pr = (await tools.findPr(part.branch)) ?? (await tools.createDraftPr(part.branch, part.title, part.body, base));
+				const pr = await openDraft(tools, part.branch, base, async () => part);
 				parts[i] = { ...part, pullRequest: { number: pr.number, url: pr.url } };
 				this.records.keep(system, '', { ...kept, parts });
 			} catch (err) {
