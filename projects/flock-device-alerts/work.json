@@ -19,5 +19,14 @@
       "product": "flocksafety/flock-coke"
     },
     "cover": "783f751f5ba3"
+  },
+  {
+    "projectId": "flock-device-alerts",
+    "name": "codebase",
+    "branch": "feature/flock-device-alerts",
+    "commit": null,
+    "createdAt": "2026-10-21T02:23:39.765Z",
+    "note": "From Version 1 of the prototype",
+    "repository": "flocksafety/flock-coke"
   }
 ]
