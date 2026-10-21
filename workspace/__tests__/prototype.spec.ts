@@ -35,6 +35,16 @@ describe('starting a prototype, and recording it once its first page is saved', 
 		expect(writes).toEqual(['projects/users/brief.md']);
 	});
 
+	it('keeps no secret, email address or phone number in the brief or the version’s note', async () => {
+		const { store, files } = memoryStore();
+		const said = 'Show jo@flocksafety.com, call 404-555-0123.\nUse ghp_abcdefghijklmnopqrstuvwxyz0123456789.';
+		const started = await startPrototype(store, { projectId: 'users', title: 'Users', note: said, me, now });
+		expect(started.note).toBe('Show [removed: an email address], call [removed: a phone number].');
+		expect(files['projects/users/brief.md']).toBe(
+			'# Users\n\nShow [removed: an email address], call [removed: a phone number].\nUse [removed: a GitHub token].\n',
+		);
+	});
+
 	it('records it as it was started, after its page, so no record names a page that is not there', async () => {
 		const { store, files, writes } = memoryStore();
 		const started = await startPrototype(store, { projectId: 'users', title: 'Users', note: 'n', me, now });

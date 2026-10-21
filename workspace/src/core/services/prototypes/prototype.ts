@@ -5,6 +5,7 @@ import type { Work, Person } from '../../../shared/contract';
 import { briefFolder, firstHeading, folderName, fromBrief, namesProject, projectTitle, withFolder, withTitle } from '../../../shared/brief';
 import { projectDir, projectPath, prototypeKey, workPath } from '../../../shared/designPaths';
 import { isPrototypeName, nextVersionName } from '../../../shared/prototypeNames';
+import { scrubbed } from '../../../shared/scrub';
 import { assertCover } from '../../../shared/validate';
 import { resolveInside } from '../platform/paths';
 import { parseWork, serializeWork, unreadableWork } from '../../../shared/workRecords';
@@ -99,7 +100,7 @@ const prototypeRecord = ({
 	commit: null,
 	createdAt: now.toISOString(),
 	// The record carries the gist; the brief carries the whole request.
-	note: note.trim().split('\n')[0] ?? '',
+	note: scrubbed(note.trim()).text.split('\n')[0] ?? '',
 	...(me ? { contributors: [me] } : {}),
 	...(basedOn ? { basedOn } : {}),
 	...(from ? { from } : {}),
@@ -143,7 +144,7 @@ export const startPrototype = async (
 	const haveBrief = await store.read(brief);
 	if (haveBrief === null || firstHeading(haveBrief) === null) {
 		// A brief with no heading may still have a folder, which is kept.
-		const written = `# ${projectTitle(title) ?? projectId}\n\n${note.trim()}\n`;
+		const written = `# ${projectTitle(title) ?? projectId}\n\n${scrubbed(note.trim()).text}\n`;
 		await store.write(brief, withFolder(written, haveBrief === null ? folder : briefFolder(haveBrief)), `${projectId}: start the project`);
 	}
 	return prototypeRecord({ projectId, name, note, me, basedOn, now });

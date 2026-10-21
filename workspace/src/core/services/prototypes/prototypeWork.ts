@@ -200,7 +200,7 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		const made = await startPrototype(ctx.store(), {
 			projectId,
 			title: name.slice(0, 200),
-			note: String(note).slice(0, 8000),
+			note: String(note),
 			me,
 			basedOn,
 			folder,
