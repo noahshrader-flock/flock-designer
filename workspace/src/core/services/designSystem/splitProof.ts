@@ -9,7 +9,7 @@ import { readFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import type { ConnectedDesignSystem, SplitCheck, SplitStack, SplitUnit } from '../../../shared/contract';
 import { errorText } from '../../../shared/result';
-import { findCommand, readDescriptor } from '../projects/descriptor';
+import { DESCRIPTOR_PATH, findCommand, readDescriptor } from '../projects/descriptor';
 import { exportCommit } from '../platform/git';
 import { ProcessFailed, runFile } from '../platform/process';
 import { inLibrary } from './designLibrary';
@@ -17,7 +17,7 @@ import { inLibrary } from './designLibrary';
 /** A check that takes longer is stopped, and said: Primer's typecheck, the largest measured, takes 15 s. */
 const CHECK_TIMEOUT_MS = 10 * 60_000;
 /** All of a split's checks together, past which it is stopped and said, never left running. */
-export const MOST_CHECKING_MS = 30 * 60_000;
+const MOST_CHECKING_MS = 30 * 60_000;
 
 /** Each error a check found, by its file and code (its line moves with any edit above it), with the first one's words. */
 type Errors = Map<string, string>;
@@ -25,6 +25,8 @@ type Errors = Map<string, string>;
 interface Checker {
 	by: string;
 	errors: (tree: string, signal: AbortSignal) => Promise<Errors>;
+	/** False for one that says only pass or fail: where the tip already fails it, a new error cannot be told from the old. */
+	apart: boolean;
 }
 
 const TSC_ERROR = /^(.+?)\(\d+,\d+\): error (TS\d+): (.*)$|^error (TS\d+): (.*)$/;
@@ -53,23 +55,29 @@ const ran = async (file: string, args: string[], cwd: string, signal: AbortSigna
  * TypeScript where the design system has a `tsconfig.json` and its packages are installed; else the `typecheck` its
  * repository declares in `.dsnr/workspace.json`; else none, which is said as why it cannot be checked.
  */
-export const checkerFor = (system: ConnectedDesignSystem, tip: string): Checker | { none: string } => {
+export const checkerFor = (system: ConnectedDesignSystem): Checker | { none: string } => {
 	const tsc = [join(system.root, system.folder, 'node_modules', '.bin', 'tsc'), join(system.root, 'node_modules', '.bin', 'tsc')].find(existsSync);
 	if (existsSync(join(system.root, system.folder, 'tsconfig.json')) && tsc !== undefined)
 		return {
 			by: 'TypeScript, against its tsconfig.json',
+			apart: true,
 			errors: async (tree, signal) => tscErrors((await ran(tsc, ['--noEmit', '-p', 'tsconfig.json'], join(tree, system.folder), signal)).out),
 		};
 	let declared: string[] | null = null;
-	try {
-		declared = findCommand(readDescriptor(system.root), 'typecheck').argv;
-	} catch {
-		// No workspace file, or no typecheck in it.
+	if (existsSync(join(system.root, DESCRIPTOR_PATH))) {
+		let descriptor;
+		try {
+			descriptor = readDescriptor(system.root);
+		} catch (err) {
+			return { none: `${errorText(err)} So whether each builds cannot be checked.` };
+		}
+		if (descriptor.commands.some((c) => c.id === 'typecheck')) declared = findCommand(descriptor, 'typecheck').argv;
 	}
 	if (declared !== null) {
 		const [file, ...args] = declared as [string, ...string[]];
 		return {
 			by: `its typecheck, ${declared.join(' ')}`,
+			apart: false,
 			errors: async (tree, signal) => {
 				const { ok, out } = await ran(file, args, tree, signal);
 				return ok ? new Map() : new Map([['', out.trim().split('\n')[0] ?? 'it failed']]);
@@ -80,7 +88,7 @@ export const checkerFor = (system: ConnectedDesignSystem, tip: string): Checker 
 		none:
 			tsc === undefined && existsSync(join(system.root, system.folder, 'tsconfig.json'))
 				? `Its packages are not installed in ${system.root}, so TypeScript is not there to check that each builds.`
-				: `It has no tsconfig.json, and its .dsnr/workspace.json declares no typecheck, so nothing here can check that each builds (at ${tip.slice(0, 7)}).`,
+				: 'It has no tsconfig.json, and its .dsnr/workspace.json declares no typecheck, so nothing here can check that each builds.',
 	};
 };
 
@@ -207,10 +215,12 @@ export class SplitProof {
 		const set = (check: SplitCheck) => this.run === run && (run.check = check);
 		const tree = join(this.deps.folder, `tree-${++this.runs}`);
 		void (async () => {
-			const checker = checkerFor(system, tip);
+			const checker = checkerFor(system);
 			if ('none' in checker) return set({ state: 'unproven', why: checker.none });
 			const put = await scratchTree(system, tip, tree);
 			const base = await checker.errors(tree, stop.signal);
+			if (!checker.apart && base.size > 0)
+				return set({ state: 'unproven', why: `${checker.by} already fails on ${system.branch}, so whether your change adds to it cannot be told.` });
 			let done = 0;
 			let first = '';
 			const builds = async (stack: number[], doing: string) => {
@@ -230,7 +240,11 @@ export class SplitProof {
 			.catch((err: unknown) =>
 				set(
 					stop.signal.aborted
-						? { state: 'stopped', why: now() - started >= MOST_CHECKING_MS ? 'It took longer than 30 minutes, so it was stopped.' : 'Stopped.' }
+						? {
+								state: 'stopped',
+								why:
+									now() - started >= MOST_CHECKING_MS ? `It took longer than ${MOST_CHECKING_MS / 60_000} minutes, so it was stopped.` : 'Stopped.',
+							}
 						: { state: 'fails', why: errorText(err) },
 				),
 			)

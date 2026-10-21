@@ -147,6 +147,57 @@ describe('the check that each builds, on what it stands on', () => {
 		expect((await ready()).units).toHaveLength(3);
 	});
 
+	describe('by the typecheck the repository declares, where it has no tsconfig.json', () => {
+		/** The branch with its tsconfig.json gone and a typecheck declared, which the person's branch then starts from. */
+		const declaring = (typecheck: string, written?: string) => {
+			const other = join(home, 'other');
+			g(home, 'clone', '-q', origin, other);
+			rmSync(join(other, 'tsconfig.json'));
+			writeFiles(other, {
+				'.dsnr/workspace.json':
+					written ??
+					JSON.stringify({
+						version: 1,
+						product: 'ds',
+						contextDir: '.dsnr',
+						branchPattern: { codebase: 'feature/<project-id>' },
+						designSystem: { package: 'ds' },
+						commands: [{ id: 'typecheck', label: 'Typecheck', argv: ['node', '-e', typecheck] }],
+					}),
+			});
+			commitAll(other, 'a declared typecheck');
+			g(other, 'push', '-q', 'origin', 'develop');
+			g(mine, 'fetch', '-q');
+			g(mine, 'merge', '-q', '--ff-only', 'origin/develop');
+		};
+
+		it('checks with it where it passes on the branch', async () => {
+			declaring("process.exit(require('fs').readFileSync('src/Chip/Chip.ts', 'utf8').includes('broken') ? 1 : 0)");
+			buttonOnTheme();
+			expect(await checked()).toMatchObject({ state: 'built', by: expect.stringMatching(/^its typecheck, node -e /) });
+			write({ 'src/Chip/Chip.ts': 'export const Chip = 2; // broken\n' });
+			expect((await checked()).state).toBe('fails');
+		});
+
+		it('says it cannot tell, where the branch already fails it: a new failure cannot be told from the old', async () => {
+			declaring('process.exit(1)');
+			buttonOnTheme();
+			expect(await checked()).toEqual({
+				state: 'unproven',
+				why: 'its typecheck, node -e process.exit(1) already fails on develop, so whether your change adds to it cannot be told.',
+			});
+		});
+
+		it('says its workspace file cannot be read, never that it declares nothing', async () => {
+			declaring('', '{ not json');
+			buttonOnTheme();
+			const check = await checked();
+			expect(check.state === 'unproven' && check.why).toMatch(
+				/^\.dsnr\/workspace\.json is not valid JSON: .* So whether each builds cannot be checked\.$/,
+			);
+		});
+	});
+
 	it('stops when asked, says so, and leaves none of its copy', async () => {
 		buttonOnTheme();
 		await checkSplit(proof, system);
