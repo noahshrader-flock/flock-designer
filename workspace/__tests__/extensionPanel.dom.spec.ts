@@ -2091,7 +2091,7 @@ describe('every change being tried, in the panel’s Changes: the tokens and eac
 			await tried();
 			await press(count());
 			expect(calls('changeReach').at(-1)?.args).toEqual([RED]);
-			expect(part()?.textContent).toContain('Drawing every component with the change');
+			expect(part()?.textContent).toContain('Loading… drawing every component with the change');
 		});
 
 		it('names each component the change moves, with what changed as the Values say it, and how many it does not move', async () => {
@@ -2531,7 +2531,7 @@ describe('what the person edited in the design system’s code, read from their 
 		await press(count()!);
 		expect(calls('editedReach')).toHaveLength(1);
 		await answer('editedReach', { state: 'building' });
-		expect(dialog('Changes')!.textContent).toContain('Drawing every component with the change');
+		expect(dialog('Changes')!.textContent).toContain('Loading… drawing every component with the change');
 		await act(async () => void (await vi.advanceTimersByTimeAsync(ASK_EVERY_MS)));
 		expect(calls('editedReach')).toHaveLength(2);
 		await answer('editedReach', { state: 'ready', moved: [{ file: BUTTON, changes: [], inside: true }], unchanged: 6, notDrawn: [] });

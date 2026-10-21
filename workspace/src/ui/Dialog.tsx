@@ -46,7 +46,7 @@ export const Dialog = ({
 					<h2 className="dialog-title">{title}</h2>
 					<IconButton size="small" icon="close" label="Close" onPress={onClose} className="dialog-close" />
 				</div>
-				{children}
+				<div className="dialog-body">{children}</div>
 			</div>
 		</div>
 	);

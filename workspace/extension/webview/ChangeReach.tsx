@@ -52,7 +52,7 @@ export const ReachView = ({
 		<section aria-label={title} className="aside-section">
 			<Heading size="part">{title}</Heading>
 			{reach.state === 'building' ? (
-				<Message>Drawing every component with the change, to see which follow it.</Message>
+				<Message>Loading… drawing every component with the change, to see which follow it.</Message>
 			) : reach.state === 'failed' ? (
 				<Message size="block" tone="warning" title="What the change moves could not be drawn">
 					{reach.error}

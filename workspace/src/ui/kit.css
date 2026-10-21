@@ -55,6 +55,7 @@
 	--dsnr-top-height: calc(var(--dsnr-control) + 2 * var(--dsnr-top-pad));
 	--dsnr-menu-height: 60vh;
 	--dsnr-list-height: 40vh;
+	--dsnr-dialog-height: 75vh;
 	/*
 	 * What is above what, from the back: a row's or card's actions, the bars kept at the top (which a list scrolls under, so
 	 * they are above the actions), an open menu, a dialog.
@@ -1008,8 +1009,12 @@ details[open] > summary > .collapse-chevron {
 }
 
 .dialog {
+	display: flex;
+	flex-direction: column;
 	width: 100%;
 	max-width: 420px;
+	/* The whole dialog stops at the height: its padding and its border are on top of what this limits. */
+	max-height: calc(var(--dsnr-dialog-height) - 2 * var(--dsnr-space-5) - 2px);
 	padding: var(--dsnr-space-5);
 	border: 1px solid var(--vscode-editorWidget-border, var(--dsnr-contrast-border));
 	border-radius: var(--dsnr-radius);
@@ -1019,11 +1024,20 @@ details[open] > summary > .collapse-chevron {
 }
 
 .dialog-head {
+	flex: none;
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
 	gap: var(--dsnr-space-4);
 	margin: 0 0 var(--dsnr-space-4);
+}
+
+/* Past the dialog's height its title and close stay, and this scrolls; the room round it is for a focus ring, which a scroller would cut. */
+.dialog-body {
+	min-height: 0;
+	margin: calc(-1 * var(--dsnr-space-1));
+	padding: var(--dsnr-space-1);
+	overflow-y: auto;
 }
 
 .dialog-title {
