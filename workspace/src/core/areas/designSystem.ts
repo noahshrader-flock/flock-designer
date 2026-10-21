@@ -48,9 +48,9 @@ export const designSystemArea = (d: CallsDeps) => {
 		// Read from the checkout again, so what is drawn is what it has now, on the commit the tab draws.
 		editedReach: async (): Promise<ChangeReach> => {
 			const system = shownSystem();
-			const edited = system === null ? null : await editedInCode(system);
-			const tip = system === null ? null : await libraryCommit(system.root, system.branch);
-			if (system === null || edited?.state !== 'ready' || tip === null) return { state: 'none' };
+			if (system === null) return { state: 'none' };
+			const [edited, tip] = await Promise.all([editedInCode(system), libraryCommit(system.root, system.branch)]);
+			if (edited.state !== 'ready' || tip === null) return { state: 'none' };
 			const onTip = await editedOnTip(system, edited, tip);
 			return 'not' in onTip ? { state: 'failed', error: onTip.not } : componentTokens.editedReach(onTip.files);
 		},

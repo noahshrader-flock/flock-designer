@@ -67,9 +67,9 @@ export const editedInCode = async (system: ConnectedDesignSystem): Promise<Edite
 	const unowned: EditedFile[] = [];
 	const outside: EditedFile[] = [];
 	const place = (file: EditedFile): void => {
-		const story = region.has(file.path) ? owner(file.path) : null;
-		if (!region.has(file.path)) outside.push(file);
-		else if (story === null) unowned.push(file);
+		if (!region.has(file.path)) return void outside.push(file);
+		const story = owner(file.path);
+		if (story === null) unowned.push(file);
 		else components.set(story, [...(components.get(story) ?? []), file]);
 	};
 	for (const e of edited) {
