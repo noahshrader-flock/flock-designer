@@ -46,6 +46,19 @@ node ../flock-designer/workspace/bin/dsnr.mjs change-prototype --project <id> --
   one on your own, whoever has commented.
 - **When others have commented on the version, the command says so:** changing it in place can leave their pins on the
   wrong element. Say that in your summary, with how many comments.
+- **"Process" or "address" the comments on a version** is a change to it, with the comments as the request. Run:
+
+  ```bash
+  node ../flock-designer/workspace/bin/dsnr.mjs change-prototype --project <id> --name <v1> --note "Address the open comments"
+  ```
+
+  It writes the version's open comments to a file and says where, and prints the task: the source to change, the command
+  that builds the page, and the one that saves it. Do not work from the comments alone: without that task there is no
+  build and no save, and the page the reviewers see does not change.
+- **Edit only the file the task names**, in the app's own folder. The version's source in the design repository
+  (`../flock-designer/projects/<id>/prototypes/`) is the saved copy: saving writes it from the working one, so an edit
+  made there is lost, and the page is not rebuilt. The product repository's own scripts (`scripts/smoke-prototype.mjs`)
+  are for code in the product, not for a prototype.
 - **Save each change before starting another:** a change not yet saved is only on this machine, and the next
   `change-prototype` would start again from what was saved.
 - A different idea, not started from this one, is a new version too: `new-prototype`, as above.

@@ -101,6 +101,8 @@ source is and gives the exact command that builds its page. Everything above app
   check and no test suite. Do not finish while it reports an error.
 - **Nothing is committed.** There is no branch to commit to. The app saves the page when you finish, and that
   saved page is what reviewers see.
+- **Changed means the page was built.** If the build command could not be run, or did not pass, say not changed, and
+  why: the source edited and the page not rebuilt is not a change anyone can see.
 - **Your last message is the one above** (changed, answered or not changed), not the summary the build skill
   asks for.
 

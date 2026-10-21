@@ -578,6 +578,40 @@ describe('agent-files', () => {
 	});
 });
 
+describe('processing the comments on a prototype, as its entry skill says', () => {
+	const local = (name: string) => join(world.prototypes, 'demo', `${name}.tsx`);
+	const skill = readFileSync(join(__dirname, '../../skills/start-prototype.md'), 'utf8');
+
+	it('is a command the skill gives that runs, and prints the task with the source, the build and the save', async () => {
+		await run('new-prototype', '--project', 'demo', '--title', 'Demo', '--note', 'A list');
+		writeFileSync(local('v1'), `import { Hello } from 'x';\nexport default () => <Hello />;\n`);
+		await run('save-prototype', '--project', 'demo', '--name', 'v1');
+		world.out = [];
+
+		// The command as the skill writes it, with its placeholders filled in: what it says is what runs.
+		const line = skill.split('\n').find((l) => l.includes('change-prototype') && l.includes('Address the open comments'));
+		expect(line).toBeDefined();
+		const args = [
+			...(line as string)
+				.replace('<id>', 'demo')
+				.replace('<v1>', 'v1')
+				.matchAll(/"([^"]*)"|(\S+)/g),
+		].map((m) => m[1] ?? (m[2] as string));
+		expect(args.slice(0, 2)).toEqual(['node', '../flock-designer/workspace/bin/dsnr.mjs']);
+		expect(await run(...args.slice(2))).toBe(0);
+
+		const task = world.out.join('\n');
+		expect(task).toContain(`Write \`${local('v1')}\``);
+		expect(task).toContain('dsnr save-prototype --project demo --name v1 --product');
+		expect(task).toContain('Address the open comments');
+	});
+
+	it('says to edit the working copy only, and that the product’s own scripts are not for a prototype', () => {
+		expect(skill).toMatch(/Edit only the file the task names/);
+		expect(skill).toContain('scripts/smoke-prototype.mjs');
+	});
+});
+
 describe('what was asked, kept with the version it was asked for', () => {
 	const asked = (name: string) => join(world.design, 'projects', 'demo', `requests-${name}.md`);
 	const local = (name: string) => join(world.prototypes, 'demo', `${name}.tsx`);
