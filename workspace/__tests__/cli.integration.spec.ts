@@ -577,3 +577,47 @@ describe('agent-files', () => {
 		expect(await run('agent-files', '--check')).toBe(1);
 	});
 });
+
+describe('what was asked, kept with the version it was asked for', () => {
+	const asked = (name: string) => join(world.design, 'projects', 'demo', `requests-${name}.md`);
+	const local = (name: string) => join(world.prototypes, 'demo', `${name}.tsx`);
+	const page = (text: string) => `import { Hello } from 'x';\nexport default () => <><Hello /><p>${text}</p></>;\n`;
+
+	it('keeps each request in its version’s file, in order, whole and as it was said, with who asked', async () => {
+		await run('new-prototype', '--project', 'demo', '--title', 'Demo', '--note', 'A list of cameras\n\n- with a filter');
+		writeFileSync(local('v1'), page('first'));
+		await run('save-prototype', '--project', 'demo', '--name', 'v1');
+		await run('change-prototype', '--project', 'demo', '--name', 'v1', '--note', 'Make the title bigger');
+		await run('change-prototype', '--project', 'demo', '--name', 'v1', '--note', 'Make it blue', '--new-version');
+
+		const v1 = readFileSync(asked('v1'), 'utf8');
+		expect(v1).toMatch(/^# Requests: demo v1\n/);
+		expect(v1).toMatch(/> A list of cameras\n>\n> - with a filter\n\n## .* · Test Person\n\n> Make the title bigger\n$/);
+		expect(readFileSync(asked('v2'), 'utf8')).toContain('> Make it blue\n');
+		expect(readFileSync(asked('v2'), 'utf8')).not.toContain('Make the title bigger');
+	});
+
+	it('keeps a request run again once', async () => {
+		await run('new-prototype', '--project', 'demo', '--title', 'Demo', '--note', 'A list');
+		writeFileSync(local('v1'), page('first'));
+		await run('save-prototype', '--project', 'demo', '--name', 'v1');
+		await run('change-prototype', '--project', 'demo', '--name', 'v1', '--note', 'Bigger');
+		await run('change-prototype', '--project', 'demo', '--name', 'v1', '--note', 'Bigger');
+		expect(readFileSync(asked('v1'), 'utf8').match(/> Bigger/g)).toHaveLength(1);
+	});
+
+	it('takes secrets, emails and phone numbers out of everything it saves: the request, the brief and the version’s note', async () => {
+		const said = 'A page for jo@flocksafety.com, call 404-555-0123. Use ghp_abcdefghijklmnopqrstuvwxyz0123456789 to read it.';
+		await run('new-prototype', '--project', 'demo', '--title', 'Demo', '--note', said);
+		writeFileSync(local('v1'), page('first'));
+		await run('save-prototype', '--project', 'demo', '--name', 'v1');
+		const kept = [asked('v1'), join(world.design, 'projects', 'demo', 'brief.md'), join(world.design, 'projects', 'demo', 'work.json')].map((f) =>
+			readFileSync(f, 'utf8'),
+		);
+		for (const text of kept) expect(text).not.toMatch(/jo@flocksafety|404-555-0123|ghp_/);
+		expect(kept[0]).toContain('[removed: an email address]');
+		expect(kept[0]).toContain('Taken out: a GitHub token, an email address, a phone number.');
+		// The agent is still given what was asked, whole: it cannot build from a request with holes in it.
+		expect(world.out.join('\n')).toContain('jo@flocksafety.com');
+	});
+});

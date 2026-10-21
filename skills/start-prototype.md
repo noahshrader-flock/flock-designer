@@ -19,9 +19,11 @@ node ../flock-designer/workspace/bin/dsnr.mjs new-prototype --project <id> --tit
   asked for, finishing each before starting the next. Another version of one that exists is `--new-version` (below).
 - **"Based on V1"** is not a new run of this: it is `change-prototype --name v1 --new-version` (below), which starts
   the new version from V1's source and records that it did. Without that, a new version starts from the brief.
-- **`--note`** is the idea, in the person's own words: it becomes the project's brief, which reviewers read. Leave
-  out instructions about how to make it ("mock data only", "a prototype, not codebase work"): the skills already
-  say those.
+- **`--note`** is the idea, in the person's own words: it becomes the project's brief, which reviewers read, and DSNR
+  keeps it in the version's `requests-<version>.md`. Leave out instructions about how to make it ("mock data only",
+  "a prototype, not codebase work"): the skills already say those. Pass what they asked, not what they pasted in:
+  never a secret, and no customer's or person's details. DSNR takes out secrets, email addresses and phone numbers from
+  what it keeps, but it cannot tell a name from any other word.
 - It is modeled on the branch the repository is on; `--from <branch>` names another.
 
 If you were sent here, the path is decided: it is a prototype. Do not ask whether to prototype or build it in the
@@ -37,7 +39,8 @@ When asked to change a prototype that exists, run:
 node ../flock-designer/workspace/bin/dsnr.mjs change-prototype --project <id> --name <v1> --note "<what they asked to change>"
 ```
 
-- **`--name`** is the version to change (`v1`, `v2`); the change is made in it, in place.
+- **`--name`** is the version to change (`v1`, `v2`); the change is made in it, in place. Your `--note` is kept, in
+  order, with what was asked of that version before.
 - **Add `--new-version` only when the person asks for a new version** ("make a new version", "try it as another
   version"). Then the change is made in a copy of it, the next version, and what they had stays as it was. Never start
   one on your own, whoever has commented.

@@ -99,7 +99,7 @@ const prototypeRecord = ({
 	branch: prototypeKey(projectId, name),
 	commit: null,
 	createdAt: now.toISOString(),
-	// The record carries the gist; the brief carries the whole request.
+	// The record carries the gist; the brief the first request, and `requests-<version>.md` each one, whole.
 	note: scrubbed(note.trim()).text.split('\n')[0] ?? '',
 	...(me ? { contributors: [me] } : {}),
 	...(basedOn ? { basedOn } : {}),

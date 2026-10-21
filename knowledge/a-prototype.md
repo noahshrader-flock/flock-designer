@@ -103,7 +103,10 @@ says how far behind it is, and **Refresh to latest** rebuilds it on the latest c
 
 In the design repository, under `projects/` and the project's id:
 
-- `brief.md`: what you asked for.
+- `brief.md`: what the project is, from the first request.
+- `requests-v1.md`, `requests-v2.md`: what you asked for each version, in your words and in order, the first request and every
+  change after it. Secrets, email addresses and phone numbers are taken out before anything is saved, here and in the brief
+  and the record; a name or a customer's details look like any other words, so leave them out of a request.
 - `work.json`: the record of every version, and what each was modeled on.
 - `prototypes/`: each version's source (`v1.tsx`) and page (`v1.html`).
 - `covers/`: the pictures in the project list.

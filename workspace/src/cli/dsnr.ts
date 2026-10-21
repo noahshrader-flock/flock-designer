@@ -469,7 +469,11 @@ export const main = async (argv: string[], deps: CliDeps): Promise<number> => {
 			// Null when GitHub's command line is missing or signed out.
 			const threads = deps.github ? new ReviewThreads(deps.github, await designRefOf(deps)) : null;
 			const comments = threads ? await threads.readComments(prototypeKey(projectId, name)).catch(() => null) : null;
-			const change = await work.startChange(projectId, name, { newVersion: values['new-version'] === true, comments });
+			const change = await work.startChange(projectId, name, {
+				newVersion: values['new-version'] === true,
+				comments,
+				request: { text: note, me: await meOf(designRoot, deps.github) },
+			});
 			const text = await buildTask(skill, change.target, change.from.name, note);
 			const where = whereTheChangeGoes(change) ?? `The change is made in ${change.target}: change it, rather than starting again.`;
 			const unsaved = change.fresh ? ` ${change.target} is recorded when it is saved.` : '';

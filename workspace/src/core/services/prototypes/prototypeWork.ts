@@ -27,6 +27,7 @@ import {
 	readRecords,
 } from './prototype';
 import { dropPending, keepPending, pendingOf } from './pendingPrototypes';
+import { keepRequest } from './requestLog';
 import { designRepositoryMissing } from '../projects/discovery';
 import { bundleCommand, runBundle, shellLine, writeBundleScript, writeCheckScript } from './prototypeBundle';
 import { type CheckConfig, checkedAsSaved } from '../accessibility/buildCheck';
@@ -206,6 +207,7 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 			folder,
 			pending: pendingOf(prototypesRoot, projectId).map((p) => p.name),
 		});
+		await keepRequest(ctx.store(), { projectId, name: made.name, text: String(note), me });
 		keepPending(prototypesRoot, made);
 		return { ...made, modeledOn: [`Modeled on ${branch} at ${tip.commit.slice(0, 7)}.`, ...said].join(' ') };
 	};
@@ -431,7 +433,12 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 	const startChange = async (
 		projectId: string,
 		name: string,
-		{ newVersion, comments, acting }: { newVersion: boolean; comments: ReviewComment[] | null; acting?: CommentRef },
+		{
+			newVersion,
+			comments,
+			acting,
+			request,
+		}: { newVersion: boolean; comments: ReviewComment[] | null; acting?: CommentRef; request?: { text: string; me: Person | null } },
 	): Promise<PrototypeChange> => {
 		assertPrototypeName(name);
 		const all = await records(projectId);
@@ -448,6 +455,8 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 			writeFileSync(sourceFile(projectId, target), source);
 		} else source = await sourceHere(projectId, from.name);
 		const others = comments === null ? null : commentsFromOthers(from.contributors, comments, acting);
+		// The person's own words, kept with the version they changed; a comment's or a refresh's are not theirs to keep here.
+		if (request) await keepRequest(ctx.store(), { projectId, name: target, ...request });
 		return { from, target, fresh: newVersion, before: contentHashOf(source), others };
 	};
 

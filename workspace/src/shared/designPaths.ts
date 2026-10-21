@@ -18,6 +18,9 @@ export const projectPath = (projectId: string, file: string): string => `${proje
 export const WORK_FILE = 'work.json';
 export const workPath = (projectId: string): string => projectPath(projectId, WORK_FILE);
 
+/** What was asked for a version, in order: one file for each, as a version's page is. */
+export const requestsPath = (projectId: string, name: string): string => projectPath(projectId, `requests-${name}.md`);
+
 export const prototypePagePath = (projectId: string, name: string): string => projectPath(projectId, `prototypes/${name}.html`);
 
 export const prototypeSourcePath = (projectId: string, name: string): string => projectPath(projectId, `prototypes/${name}.tsx`);
