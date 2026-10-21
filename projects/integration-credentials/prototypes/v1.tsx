@@ -45,6 +45,7 @@
  *     - The expiry date and IP Allow List are edited in the dialog's first step. Today they are fields in the
  *       configuration drawer (Edit/Manage), saved with the integration.
  *     - Password reveal, "Copy all", and the per-row copy buttons: no such feature exists today.
+ *     - Both selects are FSTextField select, not FSSelect: FSSelect cannot give its combobox a name.
  *     - FSTable is the design system's deprecated table, used for a plain, accessible, paginated table; FSDataGrid
  *       is the product's norm but needs a licence key and virtual rows.
  *   @mock
@@ -81,7 +82,6 @@ import {
     FSLoadingButton,
     FSMenu,
     FSMenuItem,
-    FSSelect,
     FSSkeleton,
     FSSnackbarProvider,
     FSStack,
@@ -581,11 +581,15 @@ const CredentialsResults = ({
                     />
                 </FSBox>
                 <FSBox sx={{ width: { xs: '100%', md: 200 } }}>
-                    <FSSelect
+                    {/* FSTextField select, not FSSelect: FSSelect cannot pass the label to its combobox, which axe flags as unnamed. */}
+                    <FSTextField
+                        select
+                        fullWidth
+                        id="credentials-type-filter"
                         label="Device type"
                         value={typeFilter}
-                        onChange={(ev) => {
-                            setTypeFilter(ev.target.value as TypeFilter);
+                        onChange={(value: string) => {
+                            setTypeFilter(value as TypeFilter);
                             setPage(0);
                         }}
                         data-e2e-ref="credentials-type-filter"
@@ -594,7 +598,7 @@ const CredentialsResults = ({
                         <FSMenuItem value="Trailer">Trailers ({typeCounts('Trailer')})</FSMenuItem>
                         <FSMenuItem value="Drone">Drones ({typeCounts('Drone')})</FSMenuItem>
                         <FSMenuItem value="Camera">Cameras ({typeCounts('Camera')})</FSMenuItem>
-                    </FSSelect>
+                    </FSTextField>
                 </FSBox>
                 <FSBox sx={{ flexGrow: 1 }} />
                 <FSButton
@@ -820,7 +824,7 @@ const ShowCredentialsDialog = ({ integrationName, catalogEntryId, onClose, autoR
     return (
         <FSDialog
             open
-            onClose={isLoading ? undefined : onClose}
+            onClose={onClose}
             fullWidth
             maxWidth={isResults ? 'lg' : 'sm'}
             aria-labelledby="show-credentials-title"
@@ -843,18 +847,21 @@ const ShowCredentialsDialog = ({ integrationName, catalogEntryId, onClose, autoR
                             camera connected to {integrationName}. They are shown here only, until you close this
                             window, and are not saved or downloaded.
                         </FSTypography>
-                        <FSSelect
+                        <FSTextField
+                            select
+                            fullWidth
+                            id="credential-expiration"
                             label="Credential Expiration"
-                            value={days}
-                            onChange={(ev) => setDays(Number(ev.target.value))}
+                            value={String(days)}
+                            onChange={(value: string) => setDays(Number(value))}
                             data-e2e-ref="expiration-select"
                         >
                             {EXPIRATION_OPTIONS.map((option) => (
-                                <FSMenuItem key={option} value={option}>
+                                <FSMenuItem key={option} value={String(option)}>
                                     {option} days
                                 </FSMenuItem>
                             ))}
-                        </FSSelect>
+                        </FSTextField>
                         <FSTypography sx={{ fontSize: 13, mt: '-12px !important' }} color="outline.main">
                             Credentials generated now expire on {expiresOn}.
                         </FSTypography>
@@ -1194,7 +1201,7 @@ const IntegrationsPage = () => {
                 </FSTypography>
                 <FSTypography sx={{ mt: 1 }}>
                     Connect and manage third-party tools and services to enhance workflow efficiency across FlockOS.{' '}
-                    <FSLink href="#" underline="none" color="tertiaryIndigo.main" onClick={(e) => e.preventDefault()}>
+                    <FSLink href="#" underline="always" color="tertiaryIndigo.main" onClick={(e) => e.preventDefault()}>
                         Learn more
                     </FSLink>
                 </FSTypography>
