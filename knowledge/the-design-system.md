@@ -85,6 +85,14 @@ is read from git every few seconds while the panel is open, against where your b
 others' work on it adds nothing. **Moved by these edits** draws every component with your edits, as a token change is
 drawn. Nothing in your checkout is changed: this only shows.
 
+**Prepare pull requests** shows what splitting it would make: one pull request for each component, and one for each
+changed file that is in no component's folder, with their files and lines. Files no one component's reviewer could
+review (a lockfile, `package.json`, the repository's CI) stay in your branch, and the preview says so. **Check that they
+build** then checks, in the background, that each builds on its own or on the ones it needs, in a copy DSNR makes of the
+design system's branch: never in your checkout. It uses the design system's own TypeScript, so its packages must be
+installed. What it finds is the order to merge them in, and what each stands on; where two need each other, or the whole
+change does not build, it says so and splits nothing. Making the pull requests is a later step.
+
 ## Voice and tone
 
 **Voice and Tone**, in the menu, opens the design system's guide to how the product speaks. Every agent task includes it.

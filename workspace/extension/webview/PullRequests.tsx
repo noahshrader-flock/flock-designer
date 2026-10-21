@@ -1,0 +1,142 @@
+import type { CatalogComponent, SplitCheck, SplitPreview, SplitUnit } from '../../src/shared/contract';
+import { plural } from '../../src/shared/plural';
+import { CHANGE_REQUEST } from '../../src/shared/vocabulary';
+import { storyComponent } from '../../src/shared/valueNames';
+import { Button, ButtonRow } from '../../src/ui/Button';
+import { Heading } from '../../src/ui/Heading';
+import { Message } from '../../src/ui/Message';
+import { ValueItem, ValueList } from '../../src/ui/ValueItem';
+import type { SplitControls } from './hooks/useSplitPreview';
+
+type Ready = Extract<SplitPreview, { state: 'ready' }>;
+
+const nameOf = (unit: SplitUnit, names: ReadonlyMap<string, string>): string =>
+	unit.file === null ? (unit.files[0]?.path.split('/').pop() ?? '') : (names.get(unit.file) ?? storyComponent(unit.file));
+
+/** In merge order once checked, each with what it stands on; before that, as they were found, and what each stands on unknown. */
+const ordered = (preview: Ready): { unit: SplitUnit; on?: SplitUnit | null }[] =>
+	preview.check.state === 'built'
+		? preview.check.stacks.map((s) => ({ unit: preview.units[s.unit]!, on: s.on === null ? null : preview.units[s.on]! }))
+		: preview.units.map((unit) => ({ unit }));
+
+const Checked = ({
+	check,
+	preview,
+	names,
+	controls,
+}: {
+	check: SplitCheck;
+	preview: Ready;
+	names: ReadonlyMap<string, string>;
+	controls: SplitControls;
+}) => {
+	switch (check.state) {
+		case 'not-checked':
+			return (
+				<ButtonRow>
+					<Button onPress={controls.check}>Check that they build</Button>
+				</ButtonRow>
+			);
+		case 'checking':
+			return (
+				<>
+					<Message marks={{ 'data-split-checking': '' }}>{`Checking ${check.doing}… (${plural(check.done, 'check')} done)`}</Message>
+					<ButtonRow>
+						<Button variant="ghost" onPress={controls.stop}>
+							Stop
+						</Button>
+					</ButtonRow>
+				</>
+			);
+		case 'built':
+			return (
+				<Message marks={{ 'data-split-built': '' }}>{`Each builds on what it stands on, checked by ${check.by} in ${check.seconds} s.`}</Message>
+			);
+		case 'cycle':
+			return (
+				<Message tone="warning" marks={{ 'data-split-refused': '' }}>
+					{`${check.units.map((i) => nameOf(preview.units[i]!, names)).join(' and ')} each need the other, so they are not split. Propose the whole change as one ${CHANGE_REQUEST} yourself, or split the work so one stands alone.`}
+				</Message>
+			);
+		case 'unproven':
+			return (
+				<Message tone="warning" marks={{ 'data-split-unproven': '' }}>
+					{`Not checked: ${check.why}`}
+				</Message>
+			);
+		default:
+			return (
+				<>
+					<Message tone={check.state === 'fails' ? 'error' : 'warning'} marks={{ 'data-split-said': check.state }}>
+						{check.why}
+					</Message>
+					<ButtonRow>
+						<Button variant="secondary" onPress={controls.check}>
+							Check again
+						</Button>
+					</ButtonRow>
+				</>
+			);
+	}
+};
+
+/** What a split would make, before anything is: nothing here writes to a repository. */
+export const PullRequests = ({ branch, components, controls }: { branch: string; components: CatalogComponent[]; controls: SplitControls }) => {
+	const { preview, error } = controls;
+	const names = new Map(components.map((c) => [c.id, c.name]));
+	if (error !== null && preview === null) return <Message tone="error">{error}</Message>;
+	if (preview === null) return <Message>Reading what a split would make…</Message>;
+	if (preview.state === 'none') return null;
+	if (preview.state === 'not-split')
+		return (
+			<Message tone="warning" marks={{ 'data-split-not-split': '' }}>
+				{`This would be ${preview.parts} ${CHANGE_REQUEST}s, one for each component and shared file it changes. DSNR splits a change into at most 10, as past that it cannot show it is one edit in each: propose it as one ${CHANGE_REQUEST} yourself.`}
+			</Message>
+		);
+	return (
+		<div className="value-group" data-split>
+			<Heading size="group">
+				<span>{plural(preview.units.length, CHANGE_REQUEST)}</span>
+				<span className="value-group-note">{`against ${branch}`}</span>
+			</Heading>
+			<ValueList>
+				{ordered(preview).map(({ unit, on }, i) => (
+					<ValueItem key={unit.file ?? unit.files[0]?.path} marks={{ 'data-split-unit': unit.file ?? unit.files[0]?.path ?? '' }}>
+						<span className="value-cell">
+							<span className="value-label">{`${i + 1}. ${nameOf(unit, names)}`}</span>
+						</span>
+						<span className="value-place quiet">
+							{[
+								`${plural(unit.files.length, 'file')}, ${plural(unit.lines, 'line')}`,
+								on === null && `on ${branch}`,
+								on && `on ${nameOf(on, names)}: it does not build without it`,
+								unit.large && 'more than is read in one sitting',
+							]
+								.filter(Boolean)
+								.join(' · ')}
+						</span>
+					</ValueItem>
+				))}
+			</ValueList>
+			{preview.stays.length > 0 && (
+				<>
+					<Message>Stays in your branch:</Message>
+					<ValueList>
+						{preview.stays.map(({ file, why }) => (
+							<ValueItem key={file.path} marks={{ 'data-split-stays': file.path }}>
+								<span className="value-cell">
+									<span className="value-label">
+										<code>{file.path}</code>
+									</span>
+								</span>
+								<span className="value-place quiet">{why}</span>
+							</ValueItem>
+						))}
+					</ValueList>
+				</>
+			)}
+			<Message tone="error">{error}</Message>
+			<Checked check={preview.check} preview={preview} names={names} controls={controls} />
+		</div>
+	);
+};

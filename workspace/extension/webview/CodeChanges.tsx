@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { type ReactNode, useState } from 'react';
 import type { CatalogComponent, EditedFile, EditedInCode } from '../../src/shared/contract';
 import { plural } from '../../src/shared/plural';
 import { storyComponent } from '../../src/shared/valueNames';
@@ -10,6 +10,9 @@ import type { Marks } from '../../src/ui/marks';
 import { asks, workspace } from './host';
 import { ReachView } from './ChangeReach';
 import { useTriedAnswer } from './hooks/useTriedAnswer';
+import { useSplitPreview } from './hooks/useSplitPreview';
+import { PullRequests } from './PullRequests';
+import { Button, ButtonRow } from '../../src/ui/Button';
 
 /** As the badge counts it: each component, and the files in none once. */
 export const editedCount = (edited: EditedInCode): number =>
@@ -58,6 +61,9 @@ export const CodeChanges = ({
 	const byId = new Map(components.map((c) => [c.id, c]));
 	// Asked again whenever what is edited is: a file saved again is drawn again.
 	const reach = useTriedAnswer(JSON.stringify(edited), false, () => workspace().editedReach());
+	// Nothing is read for it until asked: what a split would make is the next step, not the first thing shown.
+	const [preparing, setPreparing] = useState(false);
+	const split = useSplitPreview(JSON.stringify(edited), preparing);
 	return (
 		<>
 			<section aria-label="Edited in your code" className="changed" data-edited-in-code>
@@ -91,6 +97,13 @@ export const CodeChanges = ({
 					<Group name={<span>Outside the design system</span>} files={edited.outside} marks={{ 'data-edited-outside': '' }}>
 						<Message>These stay in your branch: they are not the design system’s.</Message>
 					</Group>
+				)}
+				{preparing ? (
+					<PullRequests branch={branch} components={components} controls={split} />
+				) : (
+					<ButtonRow>
+						<Button onPress={() => setPreparing(true)}>Prepare pull requests</Button>
+					</ButtonRow>
 				)}
 			</section>
 			{reach.state !== 'none' && <ReachView reach={reach} title="Moved by these edits" components={components} />}

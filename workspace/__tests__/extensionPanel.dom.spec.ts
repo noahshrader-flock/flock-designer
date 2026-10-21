@@ -2347,6 +2347,95 @@ describe('what the person edited in the design system’s code, read from their 
 		expect(dialog('Changes')!.textContent).toContain('src/components/FSButton/sizes.ts is moved, and the drawing can only change files.');
 	});
 
+	describe('the pull requests a split would make', () => {
+		const UNITS = [
+			{ file: null, files: [{ path: 'src/utils/theme.ts', edit: 'changed' }], lines: 3, large: false },
+			{ file: BUTTON, files: [{ path: 'src/components/FSButton/index.tsx', edit: 'changed' }], lines: 12, large: false },
+			{ file: 'src/components/FSTag/FSTag.stories.tsx', files: [{ path: 'src/components/FSTag/FSTag.tsx', edit: 'added' }], lines: 400, large: true },
+		];
+		const READY = {
+			state: 'ready',
+			tip: 'c'.repeat(40),
+			units: UNITS,
+			stays: [{ file: { path: 'package-lock.json', edit: 'changed' }, why: 'a lockfile' }],
+			check: { state: 'not-checked' },
+		};
+		const split = () => section()!.querySelector('[data-split]') as HTMLElement;
+		const units = () => [...split().querySelectorAll('[data-split-unit]')].map((u) => u.textContent);
+		const prepared = async (check: unknown = READY.check) => {
+			await designOpen();
+			await answer('editedInCode', EDITED);
+			await press(count()!);
+			expect(calls('splitPreview')).toHaveLength(0);
+			await press(button('Prepare pull requests', section()!)!);
+			await answer('splitPreview', { ...READY, check });
+		};
+
+		it('is asked for only once Prepare is pressed, and lists each with its files and lines, unchecked, and what stays', async () => {
+			await prepared();
+			expect(split().querySelector('h3')?.textContent).toBe('3 pull requestsagainst develop');
+			expect(units()).toEqual([
+				'1. theme.ts1 file, 3 lines',
+				'2. FSButton1 file, 12 lines',
+				'3. FSTag1 file, 400 lines · more than is read in one sitting',
+			]);
+			expect(split().querySelector('[data-split-stays]')?.textContent).toBe('package-lock.jsona lockfile');
+			expect(button('Check that they build', split())).not.toBeNull();
+		});
+
+		it('checks in the background, with a line of how far it is and Stop', async () => {
+			await prepared();
+			await press(button('Check that they build', split())!);
+			expect(calls('checkSplit')).toHaveLength(1);
+			await answer('checkSplit', null);
+			await answer('splitPreview', { ...READY, check: { state: 'checking', done: 2, doing: 'FSButton, alone' } });
+			expect(split().querySelector('[data-split-checking]')?.textContent).toBe('Checking FSButton, alone… (2 checks done)');
+			await press(button('Stop', split())!);
+			expect(calls('stopSplitCheck')).toHaveLength(1);
+		});
+
+		it('lists them in merge order once checked, each on what it stands on and why', async () => {
+			const stacks = [
+				{ unit: 0, on: null },
+				{ unit: 2, on: null },
+				{ unit: 1, on: 0 },
+			];
+			await prepared({ state: 'built', stacks, seconds: 7, by: 'TypeScript, against its tsconfig.json' });
+			expect(units()).toEqual([
+				'1. theme.ts1 file, 3 lines · on develop',
+				'2. FSTag1 file, 400 lines · on develop · more than is read in one sitting',
+				'3. FSButton1 file, 12 lines · on theme.ts: it does not build without it',
+			]);
+			expect(split().querySelector('[data-split-built]')?.textContent).toBe(
+				'Each builds on what it stands on, checked by TypeScript, against its tsconfig.json in 7 s.',
+			);
+		});
+
+		it('refuses, in words, units that need each other, and says what the person can do', async () => {
+			await prepared({ state: 'cycle', units: [1, 2] });
+			expect(split().querySelector('[data-split-refused]')?.textContent?.trim()).toBe(
+				'FSButton and FSTag each need the other, so they are not split. Propose the whole change as one pull request yourself, or split the work so one stands alone.',
+			);
+		});
+
+		it('says why it cannot be checked, and still lists them', async () => {
+			await prepared({ state: 'unproven', why: 'It has no tsconfig.json.' });
+			expect(split().querySelector('[data-split-unproven]')?.textContent?.trim()).toBe('Not checked: It has no tsconfig.json.');
+			expect(units()).toHaveLength(3);
+		});
+
+		it('says a change in too many parts is not split', async () => {
+			await designOpen();
+			await answer('editedInCode', EDITED);
+			await press(count()!);
+			await press(button('Prepare pull requests', section()!)!);
+			await answer('splitPreview', { state: 'not-split', parts: 14 });
+			expect(section()!.querySelector('[data-split-not-split]')?.textContent).toContain(
+				'This would be 14 pull requests, one for each component and shared file it changes.',
+			);
+		});
+	});
+
 	it('follows the checkout as it is edited, and asks nothing while the panel is hidden', async () => {
 		vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'], shouldAdvanceTime: true });
 		await designOpen();

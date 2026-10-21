@@ -378,7 +378,10 @@ Propose and Start over are in its title bar. **Edited in your code**, in Changes
 person's own checkout has changed in the design system since their branch left its branch (`editedInCode.ts`): read from
 git every five seconds while the panel shows, writing nothing; each component by its stories' folder (`componentOwners.ts`),
 then the files in none and those outside it; and what the edits move, drawn merged onto the commit the tab draws, never
-laid over it.
+laid over it. **Prepare pull requests** previews the split (`split.ts`, `splitUnits.ts`): one a component and one each file
+in none, what stays in the branch and why; **Check that they build** (`splitProof.ts`) typechecks each in one copy of the
+tip in DSNR's own folder, its files put in and taken out, "builds" meaning no new error against the tip, and finds the
+stacks from what builds, in the background with progress, Stop and a 30-minute cap. Nothing is written to a repository.
 
 **Sync and share:** whether the person's work is synced is in VS Code's status bar (Synced, Syncing, Not synced);
 pressing it opens a dialog in the panel with what is held back and why, and Sync now. A review tab's title bar opens its page on the published site,
