@@ -14,6 +14,8 @@ export interface RunOptions {
 	timeoutMs?: number;
 	input?: string;
 	maxBuffer?: number;
+	/** Ends it when aborted, as a person's Stop does; it then fails as stopped. */
+	signal?: AbortSignal;
 }
 
 export interface RunResult {
@@ -46,18 +48,22 @@ export class ProcessFailed extends Error {
 export const runFile = (
 	file: string,
 	args: string[],
-	{ cwd, env, timeoutMs = DEFAULT_TIMEOUT_MS, input, maxBuffer = 16 * 1024 * 1024 }: RunOptions = {},
+	{ cwd, env, timeoutMs = DEFAULT_TIMEOUT_MS, input, maxBuffer = 16 * 1024 * 1024, signal }: RunOptions = {},
 ) =>
 	new Promise<RunResult>((resolve, reject) => {
 		const child = execFile(
 			file,
 			args,
-			{ cwd, env: env ? { ...process.env, ...env } : process.env, timeout: timeoutMs, maxBuffer, encoding: 'utf8' },
+			{ cwd, env: env ? { ...process.env, ...env } : process.env, timeout: timeoutMs, maxBuffer, encoding: 'utf8', signal },
 			(err, stdout, stderr) => {
 				if (!err) return resolve({ stdout, stderr });
 				if ((err as NodeJS.ErrnoException).code === 'ENOENT') return reject(new NotInstalled(file));
-				const timedOut = err.killed === true && err.signal === 'SIGTERM';
-				const message = timedOut ? `${file} did not finish within ${timeoutMs / 1000} s, so it was stopped.` : stderr.trim() || err.message;
+				const timedOut = err.killed === true && err.signal === 'SIGTERM' && signal?.aborted !== true;
+				const message = signal?.aborted
+					? `${file} was stopped.`
+					: timedOut
+						? `${file} did not finish within ${timeoutMs / 1000} s, so it was stopped.`
+						: stderr.trim() || err.message;
 				reject(new ProcessFailed(message, stdout, stderr, typeof err.code === 'number' ? err.code : null, timedOut));
 			},
 		);
