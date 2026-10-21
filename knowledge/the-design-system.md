@@ -47,8 +47,8 @@ You can try a change before anyone else sees it:
 - *A component's own value*: in its tab, change a value in its styles (its padding, its gap, a color).
 
 The change is tried at once, in the stories of every component tab open and in **Primitives**, so you see everything it
-moves. A count of the changes being tried appears beside the design system's name; pressing it opens **Changes**, the list
-of everything you are trying, grouped by tokens and by component.
+moves. A count of the changes being tried, and of the components edited in your code (below), appears beside the design
+system's name; pressing it opens **Changes**, the list of everything you are trying, grouped by tokens and by component.
 
 Changes you are trying are kept only while VS Code is open, and nothing is written to the design system until you save.
 
@@ -75,6 +75,15 @@ top. Then **Propose** sends it. DSNR flags a branch that is large or touches fil
 settings, lockfiles), and asks before proposing it.
 
 The design system's checkout must be clean for this, because the agent works in it.
+
+## Edits in your own code
+
+When you change the design system's code yourself, by hand or with an agent of your own, **Changes** lists it under
+**Edited in your code**: each component you changed with its files, the files in no component's folder, and the files
+outside the design system, which stay in your branch. A file is a component's when it is in the folder of its stories. It
+is read from git every few seconds while the panel is open, against where your branch left the design system's, so
+others' work on it adds nothing. **Moved by these edits** draws every component with your edits, as a token change is
+drawn. Nothing in your checkout is changed: this only shows.
 
 ## Voice and tone
 

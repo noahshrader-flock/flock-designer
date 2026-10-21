@@ -10,6 +10,8 @@ import { useChangeBranch } from './hooks/useChangeBranch';
 import { Changed } from './Changed';
 import { DesignSystemHeader } from './DesignSystemHeader';
 import { ComponentChanges } from './ComponentChanges';
+import { EditedInCode, editedCount } from './EditedInCode';
+import { useEditedInCode } from './hooks/useEditedInCode';
 import { ShowingContext, ShowingNote } from './Showing';
 import { useTokenEdits, useValueTrials } from './shared';
 import { triedOn } from './valueTrials';
@@ -109,14 +111,20 @@ const Ready = ({
 	const changed = catalog.components.filter((c) => triedOnIt(c.id).length > 0 || keptFiles.includes(c.id));
 	// What the dialog lists, counted: each value tried, and the tokens (`''`) or a component with a branch kept or handed
 	// over and nothing tried, once.
-	const count = (edits.length || (keptFiles.includes('') ? 1 : 0)) + changed.reduce((n, c) => n + Math.max(triedOnIt(c.id).length, 1), 0);
+	const beingTried = (edits.length || (keptFiles.includes('') ? 1 : 0)) + changed.reduce((n, c) => n + Math.max(triedOnIt(c.id).length, 1), 0);
+	const edited = useEditedInCode(catalog.commit);
+	const inCode = editedCount(edited);
+	const count = beingTried + inCode;
+	const said = [beingTried > 0 && `${plural(beingTried, 'change')} being tried`, inCode > 0 && `${inCode} edited in your code`]
+		.filter(Boolean)
+		.join(', ');
 	const notRead = catalog.tokens.problems.length;
 	const hasDark = catalog.tokens.tokens.some(isDark);
 	return (
 		<TokenChangesProvider value={changes}>
 			<ShowingContext.Provider value={catalog.showing}>
 				<DesignSystemHeader name={name} branch={catalog.branch}>
-					{count > 0 && <Badge tone="brand" count={count} label={`${plural(count, 'change')} being tried`} onPress={changesDialog.onOpen} />}
+					{count > 0 && <Badge tone="brand" count={count} label={said} onPress={changesDialog.onOpen} />}
 					{notRead > 0 && (
 						<Badge
 							tone="warning"
@@ -182,6 +190,7 @@ const Ready = ({
 								commit={catalog.commit}
 							/>
 						))}
+						{edited.state === 'ready' && <EditedInCode edited={edited} branch={catalog.branch} components={catalog.components} />}
 					</Dialog>
 				)}
 			</ShowingContext.Provider>

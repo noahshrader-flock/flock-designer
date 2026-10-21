@@ -374,7 +374,11 @@ moves; the change is tried in every component tab open and in **Primitives** (th
 tab's menu, or **DSNR: Open Primitives**), then **Save to a branch**, **Propose** (a draft pull request) and **Start
 over**. **Voice and Tone** (the menu, or **DSNR: Open Voice and Tone**) is a Markdown document in the editor: ⌘S saves it
 to DSNR's branch; a save refused because the file changed on GitHub meanwhile offers Compare, Keep mine and Use theirs;
-Propose and Start over are in its title bar.
+Propose and Start over are in its title bar. **Edited in your code**, in Changes and counted beside the name, is what the
+person's own checkout has changed in the design system since their branch left its branch (`editedInCode.ts`): read from
+git every five seconds while the panel shows, writing nothing; each component by its stories' folder (`componentOwners.ts`),
+then the files in none and those outside it; and what the edits move, drawn merged onto the commit the tab draws, never
+laid over it.
 
 **Sync and share:** whether the person's work is synced is in VS Code's status bar (Synced, Syncing, Not synced);
 pressing it opens a dialog in the panel with what is held back and why, and Sync now. A review tab's title bar opens its page on the published site,

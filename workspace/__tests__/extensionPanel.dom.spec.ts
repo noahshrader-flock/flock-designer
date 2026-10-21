@@ -1,5 +1,5 @@
 import { act, createElement } from 'react';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Panel } from '../extension/webview/Panel';
 import type { Context } from '../src/core/services/projects/findContext';
 import type { Catalog, ComponentPictures, ProjectWork } from '../src/shared/contract';
@@ -7,6 +7,8 @@ import { SAMPLE_CATALOG, SAMPLE_PROJECTS } from './extensionSamples';
 import { projectWork } from './fixtures';
 import { answer, answerOf, calls, callsOf, kept, lastAsk, mountPage, panelSaid, say, sent, share, shareCatalog, unmount } from './webviewHarness';
 import { allByRole, button, dialog, fieldNamed, key, menuItem, press, type } from './ui';
+import { READ_EVERY_MS } from '../extension/webview/hooks/useEditedInCode';
+import { ASK_EVERY_MS } from '../extension/webview/hooks/ask';
 
 const OPEN: Context = {
 	product: '/work/flock-coke',
@@ -2243,5 +2245,120 @@ describe('trying a change to the tokens, saving it to a branch, and proposing it
 		const saved = [{ path: 'radius', value: '8px' }];
 		await answerOf('changeBranch', 'tokens', { branch: 'dsnr/tokens-1012-abc123', saved, saves: 2, pullRequest: null });
 		expect(edited()).toEqual(saved);
+	});
+});
+
+describe('what the person edited in the design system’s code, read from their checkout', () => {
+	const SYSTEM = 'flocksafety/flock-react-component-lib';
+	const BUTTON = 'src/components/FSButton/FSButton.stories.tsx';
+	const EDITED = {
+		state: 'ready',
+		base: 'b'.repeat(40),
+		components: [
+			{
+				file: BUTTON,
+				files: [
+					{ path: 'src/components/FSButton/index.tsx', edit: 'changed' },
+					{ path: 'src/components/FSButton/sizes.ts', edit: 'moved', to: 'src/components/FSChip/sizes.ts' },
+				],
+			},
+			{ file: 'src/components/FSTag/FSTag.stories.tsx', files: [{ path: 'src/components/FSTag/FSTag.tsx', edit: 'added' }] },
+		],
+		unowned: [{ path: 'src/utils/theme.ts', edit: 'changed' }],
+		outside: [{ path: 'cli/src/commands/cli.ts', edit: 'changed' }],
+	};
+	const designOpen = async () => {
+		await show();
+		await share('placed', { context: OPEN, unreadable: null, setup: null });
+		await answer('listProjects', SAMPLE_PROJECTS);
+		await press(options()[1]!);
+		await share('catalog', { system: { id: SYSTEM, name: 'FUI' }, catalog: SAMPLE_CATALOG, error: null, syncing: false });
+		await answerOf('changeBranch', 'tokens', null);
+	};
+	const count = () => document.querySelector('.ds-actions .badge-brand') as HTMLElement | null;
+	const section = () => dialog('Changes')?.querySelector('[data-edited-in-code]') as HTMLElement | null;
+	afterEach(() => void vi.useRealTimers());
+
+	it('is not counted, or shown, when nothing is edited', async () => {
+		await designOpen();
+		await answer('editedInCode', { state: 'none' });
+		expect(count()).toBeNull();
+	});
+
+	it('counts each component edited, and the files in none once, and says so apart from what is being tried', async () => {
+		await designOpen();
+		await answer('editedInCode', EDITED);
+		expect(count()?.getAttribute('aria-label')).toBe('3 edited in your code');
+		await share('valueTrials', { [BUTTON]: { commit: 'abc123', values: [{ property: 'height', value: '32px', targets: ['height:sm:0'] }] } });
+		expect(count()?.getAttribute('aria-label')).toBe('1 change being tried, 3 edited in your code');
+	});
+
+	it('lists, in Changes, each component by its name with its files, the files in none, and what is outside and stays in the branch', async () => {
+		await designOpen();
+		await answer('editedInCode', EDITED);
+		await press(count()!);
+		const groups = [...section()!.querySelectorAll<HTMLElement>('.value-group')];
+		expect(groups.map((g) => g.querySelector('h3')?.textContent)).toEqual([
+			'FSButton2 files',
+			'FSTag1 file',
+			'In no component’s folder1 file',
+			'Outside the design system1 file',
+		]);
+		expect([...groups[0]!.querySelectorAll('[data-edited-file]')].map((f) => f.textContent)).toEqual([
+			'src/components/FSButton/index.tsxchanged',
+			'src/components/FSButton/sizes.tsmoved to src/components/FSChip/sizes.ts',
+		]);
+		// A component the library does not list yet (a story the person added) is named by its story, not linked.
+		expect(groups[1]!.querySelector('button')).toBeNull();
+		expect(groups[3]!.textContent).toContain('These stay in your branch');
+		expect(section()!.textContent).toContain('since your branch left develop');
+	});
+
+	it('opens a component edited at its tab', async () => {
+		await designOpen();
+		await answer('editedInCode', EDITED);
+		await press(count()!);
+		await press(section()!.querySelector('[data-edited-component] button') as HTMLElement);
+		expect(calls('openComponent').at(-1)?.args).toEqual([BUTTON]);
+	});
+
+	it('draws what the edits move, in the background, as a token change is drawn', async () => {
+		vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'], shouldAdvanceTime: true });
+		await designOpen();
+		await answer('editedInCode', EDITED);
+		await press(count()!);
+		expect(calls('editedReach')).toHaveLength(1);
+		await answer('editedReach', { state: 'building' });
+		expect(section()!.textContent).toContain('Drawing every component with the change');
+		await act(async () => void (await vi.advanceTimersByTimeAsync(ASK_EVERY_MS)));
+		expect(calls('editedReach')).toHaveLength(2);
+		await answer('editedReach', { state: 'ready', moved: [{ file: BUTTON, changes: [], inside: true }], unchanged: 6, notDrawn: [] });
+		const reach = section()!.querySelector('[aria-label="Moved by these edits"]') as HTMLElement;
+		expect(reach.textContent).toContain('It moves 1 component; 6 unchanged');
+		expect(reach.querySelector('[data-moved]')?.textContent).toContain('FSButton');
+	});
+
+	it('says why what the edits move is not drawn, where it cannot be', async () => {
+		await designOpen();
+		await answer('editedInCode', EDITED);
+		await press(count()!);
+		await answer('editedReach', { state: 'failed', error: 'src/components/FSButton/sizes.ts is moved, and the drawing can only change files.' });
+		expect(section()!.textContent).toContain('src/components/FSButton/sizes.ts is moved, and the drawing can only change files.');
+	});
+
+	it('follows the checkout as it is edited, and asks nothing while the panel is hidden', async () => {
+		vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'], shouldAdvanceTime: true });
+		await designOpen();
+		await answer('editedInCode', { state: 'none' });
+		const asked = calls('editedInCode').length;
+		await act(async () => void (await vi.advanceTimersByTimeAsync(READ_EVERY_MS)));
+		expect(calls('editedInCode').length).toBe(asked + 1);
+		await answer('editedInCode', EDITED);
+		expect(count()?.getAttribute('aria-label')).toBe('3 edited in your code');
+		const hidden = vi.spyOn(document, 'hidden', 'get').mockReturnValue(true);
+		const now = calls('editedInCode').length;
+		await act(async () => void (await vi.advanceTimersByTimeAsync(READ_EVERY_MS * 3)));
+		expect(calls('editedInCode').length).toBe(now);
+		hidden.mockRestore();
 	});
 });

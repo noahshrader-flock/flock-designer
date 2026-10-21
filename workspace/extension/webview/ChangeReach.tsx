@@ -35,7 +35,7 @@ export const Moved = ({ reach, name, here }: { reach: ComponentReach; name: stri
 	</div>
 );
 
-/** Counted in the stories drawn, never a claim about every use; `title` names which change it is. */
+/** Counted in the stories drawn, never a claim about every use; `title` names which change it is, `component` whose tab it is in. */
 export const ReachView = ({
 	reach,
 	title,
@@ -44,7 +44,7 @@ export const ReachView = ({
 }: {
 	reach: Exclude<ChangeReachAnswer, { state: 'none' }>;
 	title: string;
-	component: CatalogComponent;
+	component?: CatalogComponent;
 	components: CatalogComponent[];
 }) => {
 	const names = new Map(components.map((c) => [c.id, c.name]));
@@ -66,7 +66,7 @@ export const ReachView = ({
 						{reach.notDrawn.length > 0 && ` ${plural(reach.notDrawn.length, 'component')} did not draw, so cannot be said.`}
 					</Message>
 					{reach.moved.map((m) => (
-						<Moved key={m.file} reach={m} name={names.get(m.file) ?? m.file} here={m.file === component.id} />
+						<Moved key={m.file} reach={m} name={names.get(m.file) ?? m.file} here={m.file === component?.id} />
 					))}
 				</>
 			)}
