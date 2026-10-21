@@ -15,9 +15,20 @@ export const VALUE_NAMES: Record<ValueProperty, string> = {
 
 export const storyComponent = (file: string): string => (file.split('/').pop() ?? file).replace(/\.stories\.[^.]+$/, '');
 
-/** A split's pull request by what it is: its component (by the library's name for it where `names` has one), or its one file. */
+/** What was done to a file the person edited, in words. */
+export const saidEdit = (f: { edit: 'added' | 'changed' | 'deleted' | 'moved'; from?: string; to?: string }): string =>
+	f.to !== undefined
+		? `moved to ${f.to}`
+		: f.from !== undefined
+			? `moved from ${f.from}`
+			: { added: 'new', changed: 'changed', deleted: 'deleted', moved: 'moved' }[f.edit];
+
+/**
+ * A split's pull request by what it is: its component (by the library's name for it where `names` has one), or its one
+ * file by its folder and name, since a name alone (`index.tsx`) says nothing of which.
+ */
 export const unitName = (unit: { file: string | null; files: { path: string }[] }, names?: ReadonlyMap<string, string>): string =>
-	unit.file === null ? (unit.files[0]?.path.split('/').pop() ?? '') : (names?.get(unit.file) ?? storyComponent(unit.file));
+	unit.file === null ? (unit.files[0]?.path.split('/').slice(-2).join('/') ?? '') : (names?.get(unit.file) ?? storyComponent(unit.file));
 
 export const valueTitle = (property: ValueProperty, variant: string | null): string =>
 	variant === null ? VALUE_NAMES[property] : `${VALUE_NAMES[property]} · ${variant}`;

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { type DesignToken, type ValueRow, cellFor, shownMode } from '../src/shared/contract';
-import { followsOf, tokensItCouldFollow } from '../src/shared/valueNames';
+import { followsOf, saidEdit, tokensItCouldFollow, unitName } from '../src/shared/valueNames';
 
 const token = (path: string, kind: DesignToken['kind'], category: string, group: string, value: string) =>
 	({ path, kind, category, group, set: group, name: path, value, source: { file: 'theme.ts', line: 1 } }) as DesignToken;
@@ -84,5 +84,23 @@ describe('the mode a component’s values are shown in', () => {
 		expect(shownMode({ light: rows('#fff'), dark: rows('#fff') }, 'dark')).toBe('light');
 		expect(shownMode({ light: [...rows('#fff'), ...rows('#111', 'b')], dark: [...rows('#fff'), ...rows('#222', 'b')] }, 'dark')).toBe('dark');
 		expect(shownMode({ light: null, dark: rows('#000') }, 'dark')).toBe('dark');
+	});
+});
+
+describe('a split’s pull request, and a file edited, in words', () => {
+	it('names a component by the library’s name for it, else its story’s; and a file in none by its folder and name', () => {
+		const button = { file: 'src/FSButton/FSButton.stories.tsx', files: [] };
+		expect(unitName(button, new Map([[button.file, 'Button']]))).toBe('Button');
+		expect(unitName(button)).toBe('FSButton');
+		expect(unitName({ file: null, files: [{ path: 'src/components/FSDrawerHeader/index.tsx' }] })).toBe('FSDrawerHeader/index.tsx');
+	});
+
+	it('says what was done to a file, a move by where it went or came from', () => {
+		expect([
+			saidEdit({ edit: 'added' }),
+			saidEdit({ edit: 'deleted' }),
+			saidEdit({ edit: 'moved', to: 'b.ts' }),
+			saidEdit({ edit: 'moved', from: 'a.ts' }),
+		]).toEqual(['new', 'deleted', 'moved to b.ts', 'moved from a.ts']);
 	});
 });

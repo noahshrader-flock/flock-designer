@@ -2375,7 +2375,7 @@ describe('what the person edited in the design system’s code, read from their 
 			await prepared();
 			expect(split().querySelector('h3')?.textContent).toBe('3 pull requestsagainst develop');
 			expect(units()).toEqual([
-				'1. theme.ts1 file, 3 lines',
+				'1. utils/theme.ts1 file, 3 lines',
 				'2. FSButton1 file, 12 lines',
 				'3. FSTag1 file, 400 lines · more than is read in one sitting',
 			]);
@@ -2402,9 +2402,9 @@ describe('what the person edited in the design system’s code, read from their 
 			];
 			await prepared({ state: 'built', stacks, seconds: 7, by: 'TypeScript, against its tsconfig.json' });
 			expect(units()).toEqual([
-				'1. theme.ts1 file, 3 lines · on develop',
+				'1. utils/theme.ts1 file, 3 lines · on develop',
 				'2. FSTag1 file, 400 lines · on develop · more than is read in one sitting',
-				'3. FSButton1 file, 12 lines · on theme.ts: it does not build without it',
+				'3. FSButton1 file, 12 lines · on utils/theme.ts: it does not build without it',
 			]);
 			expect(split().querySelector('[data-split-built]')?.textContent).toBe(
 				'Each builds on what it stands on, checked by TypeScript, against its tsconfig.json in 7 s.',

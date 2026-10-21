@@ -1,7 +1,7 @@
 import { type ReactNode, useState } from 'react';
 import type { CatalogComponent, EditedFile, EditedInCode } from '../../src/shared/contract';
 import { plural } from '../../src/shared/plural';
-import { storyComponent } from '../../src/shared/valueNames';
+import { saidEdit, storyComponent } from '../../src/shared/valueNames';
 import { ValueList } from '../../src/ui/ValueItem';
 import { FileRow } from './FileRow';
 import { LinkButton } from '../../src/ui/LinkButton';
@@ -19,13 +19,6 @@ import { Button, ButtonRow } from '../../src/ui/Button';
 export const editedCount = (edited: EditedInCode): number =>
 	edited.state === 'ready' ? edited.components.length + (edited.unowned.length > 0 ? 1 : 0) : 0;
 
-const said = (f: EditedFile): string =>
-	f.to !== undefined
-		? `moved to ${f.to}`
-		: f.from !== undefined
-			? `moved from ${f.from}`
-			: { added: 'new', changed: 'changed', deleted: 'deleted', moved: 'moved' }[f.edit];
-
 /** A component's files, or the files in none, or those outside: each under its name, with how many. */
 const Group = ({ name, files, marks, children }: { name: ReactNode; files: EditedFile[]; marks: Marks; children?: ReactNode }) => (
 	<div className="value-group" {...marks}>
@@ -36,7 +29,7 @@ const Group = ({ name, files, marks, children }: { name: ReactNode; files: Edite
 		{children}
 		<ValueList>
 			{files.map((f) => (
-				<FileRow key={`${f.path}\u0000${f.from ?? ''}${f.to ?? ''}`} path={f.path} said={said(f)} marks={{ 'data-edited-file': f.path }} />
+				<FileRow key={`${f.path}\u0000${f.from ?? ''}${f.to ?? ''}`} path={f.path} said={saidEdit(f)} marks={{ 'data-edited-file': f.path }} />
 			))}
 		</ValueList>
 	</div>
