@@ -26,13 +26,6 @@ body {
 	white-space: nowrap;
 }
 
-/* A step below the buttons beside it: said in passing, not something to do. Plain words need more room from a button's edge than buttons do from each other. */
-.viewer-bar .behind-latest {
-	margin-inline-end: var(--dsnr-space-5);
-	font-size: var(--dsnr-text-small);
-	white-space: nowrap;
-}
-
 .viewer-bar .button-row {
 	flex-wrap: nowrap;
 	gap: var(--dsnr-space-3);

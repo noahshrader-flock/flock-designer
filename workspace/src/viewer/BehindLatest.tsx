@@ -32,7 +32,7 @@ export const BehindLatest = ({ relay, branch }: { relay: Relay; branch: string }
 	};
 	return (
 		<>
-			<span className="behind-latest">
+			<span className="passing-link">
 				<LinkButton onPress={() => setOpen(true)}>{`${behind.behind} behind latest`}</LinkButton>
 			</span>
 			{open && (

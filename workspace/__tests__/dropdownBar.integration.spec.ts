@@ -109,4 +109,35 @@ describe.skipIf(NO_CHROME)('a dropdown in the top bar, in the browser on this ma
 		expect(colours.other).toBe(colours.text);
 		expect(colours.text).not.toBe(colours.link);
 	});
+
+	it('keeps a link said in passing a step below the buttons beside it, wherever it is: in the bar, and in a tab’s header', async () => {
+		const measured = await inChrome(async (browser) => {
+			const tab = await browser.newPage(OWN_WINDOW);
+			await tab.setViewport({ width: 600, height: 300 });
+			const passing = '<span class="passing-link"><button class="link">3 behind latest</button></span>';
+			await tab.setContent(
+				barPage(
+					`<div class="viewer-bar">${passing}<button class="button">Next</button></div><div class="tab-header">${passing}<button class="button">Next</button></div>`,
+				),
+			);
+			return tab.evaluate(() => {
+				const spot = (selector: string) => {
+					const link = document.querySelector(`${selector} .passing-link`)!;
+					const next = link.nextElementSibling!.getBoundingClientRect();
+					return {
+						gap: next.left - link.getBoundingClientRect().right,
+						size: getComputedStyle(link).fontSize,
+						wraps: link.getBoundingClientRect().height > 30,
+					};
+				};
+				const step = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--dsnr-space-5'));
+				return { bar: spot('.viewer-bar'), header: spot('.tab-header'), step, text: getComputedStyle(document.querySelector('.button')!).fontSize };
+			});
+		});
+		expect(measured.bar.size).toBe(measured.header.size);
+		expect(measured.bar.size).not.toBe(measured.text);
+		expect(measured.header.gap).toBeGreaterThanOrEqual(measured.step);
+		expect(measured.bar.gap).toBeGreaterThanOrEqual(measured.step);
+		expect(measured.header.wraps).toBe(false);
+	});
 });
