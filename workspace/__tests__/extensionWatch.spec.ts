@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
-import { watchFor } from '../extension/src/watch';
+import { savedOrStop, watchFor } from '../extension/src/watch';
 
-const world = (answers: (boolean | Error)[] = []) => {
+const world = (answers: (boolean | Error | { stop: string })[] = []) => {
 	let now = 1_000_000;
 	const found = vi.fn(async () => {
 		const next = answers.shift() ?? false;
@@ -10,10 +10,22 @@ const world = (answers: (boolean | Error)[] = []) => {
 	});
 	const saved = vi.fn();
 	const gaveUp = vi.fn();
+	const stopped = vi.fn();
 	const sleep = vi.fn(async (ms: number) => void (now += ms));
 	const run = (over: Partial<Parameters<typeof watchFor>[0]> = {}) =>
-		watchFor({ found, onFound: saved, onGaveUp: gaveUp, now: () => now, sleep, pollMs: 1000, giveUpMs: 10_000, isLive: () => true, ...over });
-	return { run, found, saved, gaveUp };
+		watchFor({
+			found,
+			onFound: saved,
+			onStopped: stopped,
+			onGaveUp: gaveUp,
+			now: () => now,
+			sleep,
+			pollMs: 1000,
+			giveUpMs: 10_000,
+			isLive: () => true,
+			...over,
+		});
+	return { run, found, saved, gaveUp, stopped };
 };
 
 describe('watching for what the agent did', () => {
@@ -28,6 +40,15 @@ describe('watching for what the agent did', () => {
 		await w.run({ once: true });
 		expect(w.found).toHaveBeenCalledTimes(2);
 		expect(w.saved).toHaveBeenCalledTimes(1);
+	});
+
+	it('ends at once when told to stop, and says why, once: asking again would be told the same, and it is not a failure', async () => {
+		const refused = world([false, { stop: 'Not saved: it was changed.' }, true]);
+		await refused.run();
+		expect(refused.found).toHaveBeenCalledTimes(2);
+		expect(refused.stopped).toHaveBeenCalledExactlyOnceWith('Not saved: it was changed.');
+		expect(refused.saved).not.toHaveBeenCalled();
+		expect(refused.gaveUp).not.toHaveBeenCalled();
 	});
 
 	it('asks until it gives up, and not after the window has gone', async () => {
@@ -67,5 +88,15 @@ describe('watching for what the agent did', () => {
 			},
 		});
 		expect(closing.gaveUp).not.toHaveBeenCalled();
+	});
+});
+
+describe('what a watch for a build’s save takes from the app’s answer', () => {
+	it('is found when saved, not yet when waiting, and told to stop, with why, when refused', () => {
+		expect(savedOrStop('saved', 'the build of Demo (v1)')).toBe(true);
+		expect(savedOrStop('waiting', 'the build of Demo (v1)')).toBe(false);
+		expect(savedOrStop({ refused: 'v1’s source was changed.' }, 'the build of Demo (v1)')).toEqual({
+			stop: 'DSNR did not save the build of Demo (v1). v1’s source was changed.',
+		});
 	});
 });

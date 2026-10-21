@@ -28,7 +28,7 @@ import {
 } from './prototype';
 import { dropPending, keepPending, pendingOf } from './pendingPrototypes';
 import { keepRequest } from './requestLog';
-import { markSaved, savedHash } from './savedSource';
+import { SavedSourceChanged, markSaved, savedHash } from './savedSource';
 import { designRepositoryMissing } from '../projects/discovery';
 import { bundleCommand, runBundle, shellLine, writeBundleScript, writeCheckScript } from './prototypeBundle';
 import { type CheckConfig, checkedAsSaved } from '../accessibility/buildCheck';
@@ -367,7 +367,7 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		if (replace || was === null || !existsSync(local)) return;
 		const there = await ctx.readDesignFile(prototypeSourcePath(projectId, name));
 		if (there === null || contentHashOf(there) === was || there === readFileSync(local, 'utf8')) return;
-		throw new Error(
+		throw new SavedSourceChanged(
 			`${name}'s source in the design repository (${prototypeSourcePath(projectId, name)}) has been changed since this machine saved it, by someone else or by an edit made there directly. Saving would replace it with the working copy, ${local}, so nothing was saved. Bring what you want to keep into the working copy and save again, or save with --replace to replace it as it is.`,
 		);
 	};

@@ -10,6 +10,9 @@ import { versionFile } from './versionFiles';
  */
 const savedFile = (prototypesRoot: string, projectId: string, name: string): string => versionFile(prototypesRoot, projectId, name, '.saved');
 
+/** A save refused for this: said as what it is, not as a failure to try again. */
+export class SavedSourceChanged extends Error {}
+
 /** Null for a version saved before this was kept, or never: nothing then says what the saved copy should be. */
 export const savedHash = (prototypesRoot: string, projectId: string, name: string): string | null => {
 	const file = savedFile(prototypesRoot, projectId, name);

@@ -31,6 +31,7 @@ import type {
 	MadeCover,
 	BuildInCodebasePlan,
 	OpenedPrototype,
+	SaveOutcome,
 	PageStatus,
 	Project,
 	HandedComment,
@@ -172,11 +173,11 @@ export interface WorkspaceApi {
 	/** The same publish that runs by itself when it is saved, for after one stopped or before it would. */
 	publishPage(projectId: string, name: string): Promise<Result<PageStatus>>;
 	/**
-	 * Saves only when the page is a build of its source as it is now, and that source is not the one saved already. Safe to
-	 * ask as often as one likes: each build is saved once. `from` names the version a new one was started from: it is
-	 * recorded only once its source differs from that one's.
+	 * Saves only when the page is a build of its source as it is now, and that source is not the one saved already: each
+	 * build once, however often asked. `from` is the version a new one started from, recorded once its source differs from
+	 * that one's. `refused`, and why: a saved source changed since it was saved; nothing is written.
 	 */
-	saveBuilt(projectId: string, name: string, from: string | null): Promise<Result<'saved' | 'waiting'>>;
+	saveBuilt(projectId: string, name: string, from: string | null): Promise<Result<SaveOutcome>>;
 	openPrototype(projectId: string, name: string): Promise<Result<OpenedPrototype>>;
 	buildInCodebasePlan(root: string, projectId: string, name: string): Promise<Result<BuildInCodebasePlan>>;
 	prototypeReadiness(root: string): Promise<Result<PrototypeReadiness>>;

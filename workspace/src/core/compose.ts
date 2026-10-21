@@ -1,6 +1,6 @@
 import { existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import type { ChangeKind, Checkout, Person, PublishStatus, TriedValue } from '../shared/contract';
+import type { ChangeKind, Checkout, Person, PublishStatus, SaveOutcome, TriedValue } from '../shared/contract';
 import { reachLine, tokenChanges, valueChanges } from '../shared/processChanges';
 import { storyComponent } from '../shared/valueNames';
 import { type Check, type EventSink, arg } from './handle';
@@ -38,6 +38,7 @@ import { workLabel } from '../shared/work';
 import { esbuildEntry } from './services/prototypes/prototypeBundle';
 import { PrototypeServer } from './services/prototypes/prototypeServer';
 import { prototypeWork } from './services/prototypes/prototypeWork';
+import { SavedSourceChanged } from './services/prototypes/savedSource';
 import { PublishManager, publishInOrder } from './services/publishing/publisher';
 import { RuntimeManager } from './services/codebase/runtime';
 import { OpenedCheckouts } from './services/projects/session';
@@ -348,11 +349,16 @@ export const composeCore = ({
 	// Whether a version's page is on the site is worked out here, so the window never hands this an address to open.
 	const deploys = siteDeploys({ github, designClone, ref: () => designRepos.now().ref, started: startedHere(prototypesRoot) });
 	/** A build saved (`from`: the version a new one was started from) is published, as each save is. */
-	const saveBuilt = async (projectId: string, name: string, from: string | null): Promise<'saved' | 'waiting'> => {
+	const saveBuilt = async (projectId: string, name: string, from: string | null): Promise<SaveOutcome> => {
 		const fresh = from === null ? null : { from, me: me(), note: `For a comment on ${workLabel({ name: from })}` };
-		const saved = await work.saveBuilt(projectId, name, fresh);
-		if (saved === 'saved') deploys.page(projectId, name);
-		return saved;
+		try {
+			const saved = await work.saveBuilt(projectId, name, fresh);
+			if (saved === 'saved') deploys.page(projectId, name);
+			return saved;
+		} catch (err) {
+			if (err instanceof SavedSourceChanged) return { refused: err.message };
+			throw err;
+		}
 	};
 
 	return {

@@ -644,6 +644,31 @@ describe('prototypes', () => {
 			expect((await call(CHANNELS.saveBuilt, '../x', 'v1')).ok).toBe(false);
 		});
 
+		it('answers a saved source changed since it was saved with why it was not saved, as an outcome, and saves nothing', async () => {
+			await made();
+			const source = join(home, 'prototype', 'demo', 'v1.tsx');
+			const built = join(home, 'prototype', 'demo', 'v1.html');
+			const savedSource = join(design, 'projects', 'demo', 'prototypes', 'v1.tsx');
+			const start = Math.floor(Date.now() / 1000);
+			const write = (file: string, text: string, at: number) => {
+				writeFileSync(file, text);
+				utimesSync(file, start + at, start + at);
+			};
+			write(source, "import { Hello } from 'x';\nexport default () => <Hello />;\n", 100);
+			write(built, '<html>built</html>', 101);
+			expect((await call(CHANNELS.saveBuilt, 'demo', 'v1')).value).toBe('saved');
+			// Changed in the design repository, as an agent that found it first, or a pull, would.
+			writeFileSync(savedSource, 'theirs\n');
+			write(source, "import { Hello } from 'x';\nexport default () => <><Hello /><p>mine</p></>;\n", 200);
+			write(built, '<html>built again</html>', 201);
+			const answered = (await call(CHANNELS.saveBuilt, 'demo', 'v1')).value as { refused: string };
+			expect(answered.refused).toContain('projects/demo/prototypes/v1.tsx');
+			expect(answered.refused).toContain('--replace');
+			expect(readFileSync(savedSource, 'utf8')).toBe('theirs\n');
+			// And it is told again, not saved, however often it is asked.
+			expect(((await call(CHANNELS.saveBuilt, 'demo', 'v1')).value as { refused: string }).refused).toBe(answered.refused);
+		});
+
 		it('refuses, starting nothing, when the design repository has no builder’s guide to put in the task', async () => {
 			await made();
 			rmSync(join(design, 'agents', 'ui-guide.md'));

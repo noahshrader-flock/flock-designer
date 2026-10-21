@@ -92,6 +92,9 @@ export type HandoffResult =
 			outside: string[];
 	  };
 
+/** `refused`: the build was not saved, and why: it is told once, and asking again would only be told again. */
+export type SaveOutcome = 'saved' | 'waiting' | { refused: string };
+
 export interface OpenedPrototype {
 	url: string;
 	states: string[];
