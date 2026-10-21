@@ -4,8 +4,8 @@ import { isEditable } from '../../src/shared/primitives';
 import { useChangeReach } from './hooks/useChangeReach';
 import { useTokenUsers } from './hooks/useComponentTokens';
 import { useTokenChanges } from './hooks/tokenChanges';
-import { ShortList } from '../../src/ui/ShortList';
-import { ValueLine, ValueItem } from '../../src/ui/ValueItem';
+import { ListDisclosure } from '../../src/ui/Section';
+import { ValueLine, ValueItem, ValueList } from '../../src/ui/ValueItem';
 import { Message } from '../../src/ui/Message';
 import { asks } from './host';
 
@@ -38,13 +38,19 @@ export const TokenUsers = ({ token, components }: { token: DesignToken; componen
 				<Message>No component’s stories draw with it.</Message>
 			) : (
 				<>
-					<Message marks={{ 'data-token-users-summary': '' }}>
-						{`Drawn by ${plural(answer.users.length, 'component')}`}
-						{moved && `; ${answer.users.filter((u) => moved.has(u.file)).length} moved with the change being tried`}
-						{reach.state === 'building' && '; drawing the change to see which move'}
-						{reach.state === 'failed' && '; which move could not be drawn'}
-					</Message>
-					<ShortList items={answer.users} row={row} />
+					<ListDisclosure
+						label={[
+							`Shared with ${plural(answer.users.length, 'component')}`,
+							moved && `${answer.users.filter((u) => moved.has(u.file)).length} moved with the change being tried`,
+							reach.state === 'building' && 'drawing the change to see which move',
+							reach.state === 'failed' && 'which move could not be drawn',
+						]
+							.filter(Boolean)
+							.join(' · ')}
+						marks={{ 'data-token-users-summary': '' }}
+					>
+						<ValueList>{answer.users.map(row)}</ValueList>
+					</ListDisclosure>
 				</>
 			)}
 		</section>

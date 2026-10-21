@@ -54,6 +54,7 @@
 	--dsnr-top-pad: var(--dsnr-space-4);
 	--dsnr-top-height: calc(var(--dsnr-control) + 2 * var(--dsnr-top-pad));
 	--dsnr-menu-height: 60vh;
+	--dsnr-list-height: 40vh;
 	/*
 	 * What is above what, from the back: a row's or card's actions, the bars kept at the top (which a list scrolls under, so
 	 * they are above the actions), an open menu, a dialog.
@@ -864,6 +865,15 @@ a:not(.icon-button) {
 
 .collapse-chevron {
 	transition: transform var(--dsnr-motion);
+}
+
+.collapse-chevron-end {
+	margin-left: auto;
+}
+
+.list-disclosure-body {
+	max-height: var(--dsnr-list-height);
+	overflow-y: auto;
 }
 
 details[open] > summary > .collapse-chevron {
