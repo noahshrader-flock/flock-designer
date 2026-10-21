@@ -82,7 +82,7 @@ When you change the design system's code yourself, by hand or with an agent of y
 **Edited in your code**: each component you changed with its files, the files in no component's folder, and the files
 outside the design system, which stay in your branch. A file is a component's when it is in the folder of its stories. It
 is read from git every few seconds while the panel is open, against where your branch left the design system's, so
-others' work on it adds nothing. **Moved by these edits** draws every component with your edits, as a token change is
+others' work on it adds nothing. **Components affected** draws every component with your edits, as a token change is
 drawn. Nothing in your checkout is changed: this only shows.
 
 **Prepare pull requests** shows what splitting it would make: one pull request for each component, and one for each

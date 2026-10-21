@@ -1954,9 +1954,9 @@ describe('every change being tried, in the panel’s Changes: the tokens and eac
 			expect(lastAsk()).toEqual(['openLibrarySource', ['src/utils/theme.ts', 158]]);
 			expect(group()!.textContent).toContain('Saving writes 1 value where it is written, and nothing else.');
 			expect(button('Save to a branch', group()!).disabled).toBe(false);
-			expect(changes()!.querySelector('[aria-label="Moved by these values"] [data-reach-summary]')?.textContent).toBe(
-				'It moves 1 component; 12 unchanged, in their stories drawn.',
-			);
+			const affected = changes()!.querySelector('[aria-label="Components affected"]') as HTMLElement;
+			expect(affected.querySelector('h2')?.textContent?.trim()).toBe('Components affected 1');
+			expect(affected.querySelector('[data-reach-note]')).toBeNull();
 		});
 
 		it('says why a value cannot be saved, in words, where it is, and offers no Save', async () => {
@@ -1970,7 +1970,7 @@ describe('every change being tried, in the panel’s Changes: the tokens and eac
 				'28px is written in 2 places that each draw it here, so which to change cannot be said.',
 			);
 			expect(button('Save to a branch', group()!).disabled).toBe(true);
-			expect(changes()!.querySelector('[aria-label="Moved by these values"]')).toBeNull();
+			expect(changes()!.querySelector('[aria-label="Components affected"]')).toBeNull();
 		});
 
 		it('offers the agent where a value cannot be found, asks it once pressed, and says what it wrote and why', async () => {
@@ -2074,7 +2074,7 @@ describe('every change being tried, in the panel’s Changes: the tokens and eac
 			notDrawn: [STORY('FSSelect')],
 			...over,
 		});
-		const part = () => changes()?.querySelector('[aria-label="Moved by the change"]') as HTMLElement | null;
+		const part = () => changes()?.querySelector('[aria-label="Components affected"]') as HTMLElement | null;
 		const tried = async () => {
 			await designOpen();
 			await share('tokenEdits', RED);
@@ -2091,7 +2091,8 @@ describe('every change being tried, in the panel’s Changes: the tokens and eac
 			await tried();
 			await press(count());
 			expect(calls('changeReach').at(-1)?.args).toEqual([RED]);
-			expect(part()?.textContent).toContain('Loading… drawing every component with the change');
+			expect(part()?.textContent).toContain('Thinking…');
+			expect(part()?.textContent).not.toMatch(/Loading|drawing every component/);
 		});
 
 		it('names each component the change moves, with what changed as the Values say it, and how many it does not move', async () => {
@@ -2099,9 +2100,10 @@ describe('every change being tried, in the panel’s Changes: the tokens and eac
 			await press(count());
 			await answer('changeReach', moved());
 			const reach = part()!;
-			expect(reach.querySelector('[data-reach-summary]')?.textContent).toBe(
-				'It moves 3 components; 40 unchanged, in their stories drawn. 1 component did not draw, so cannot be said.',
-			);
+			expect(reach.querySelector('h2')?.textContent?.trim()).toBe('Components affected 3');
+			// No line to count what the list says: only what it does not, the one that could not be drawn.
+			expect(reach.querySelector('[data-reach-note]')?.textContent).toBe('1 component did not draw, so cannot be said.');
+			expect(reach.textContent).not.toMatch(/It moves|unchanged/);
 			const here = reach.querySelector(`[data-moved="${BUTTON}"]`) as HTMLElement;
 			expect(here.querySelector('h3')?.textContent).toBe('FSButton');
 			expect(here.querySelector('.value-cell')?.textContent).toBe('Background · primary#108062 → #C80000');
@@ -2116,9 +2118,8 @@ describe('every change being tried, in the panel’s Changes: the tokens and eac
 			await tried();
 			await press(count());
 			await answer('changeReach', moved({ moved: [], unchanged: 44, notDrawn: [] }));
-			expect(part()?.querySelector('[data-reach-summary]')?.textContent).toBe(
-				'It moves no component, in their stories drawn: 44 components unchanged.',
-			);
+			expect(part()?.querySelector('[data-reach-note]')?.textContent).toBe('No component is affected, in their stories drawn.');
+			expect(part()?.querySelector('h2')?.textContent?.trim()).toBe('Components affected');
 			await share('tokenEdits', [{ path: 'tone.pineGreen.50', value: '#000000' }]);
 			await answer('changeReach', { state: 'failed', error: 'the change did not build' });
 			expect(part()?.textContent).toContain('the change did not build');
@@ -2531,13 +2532,13 @@ describe('what the person edited in the design system’s code, read from their 
 		await press(count()!);
 		expect(calls('editedReach')).toHaveLength(1);
 		await answer('editedReach', { state: 'building' });
-		expect(dialog('Changes')!.textContent).toContain('Loading… drawing every component with the change');
+		expect(dialog('Changes')!.textContent).toContain('Thinking…');
 		await act(async () => void (await vi.advanceTimersByTimeAsync(ASK_EVERY_MS)));
 		expect(calls('editedReach')).toHaveLength(2);
 		await answer('editedReach', { state: 'ready', moved: [{ file: BUTTON, changes: [], inside: true }], unchanged: 6, notDrawn: [] });
-		const reach = dialog('Changes')!.querySelector('[aria-label="Moved by these edits"]') as HTMLElement;
+		const reach = dialog('Changes')!.querySelector('[aria-label="Components affected"]') as HTMLElement;
 		expect(section()!.contains(reach)).toBe(false);
-		expect(reach.textContent).toContain('It moves 1 component; 6 unchanged');
+		expect(reach.querySelector('h2')?.textContent?.trim()).toBe('Components affected 1');
 		expect(reach.querySelector('[data-moved]')?.textContent).toContain('FSButton');
 	});
 

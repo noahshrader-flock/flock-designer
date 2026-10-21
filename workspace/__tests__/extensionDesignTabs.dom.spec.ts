@@ -853,9 +853,9 @@ describe('a component’s tab', () => {
 	describe('what a token change moves (Phase 3)', () => {
 		it('is not drawn here, even while a token change is tried: it is in the side panel’s Changes, and in the token’s own control', async () => {
 			await analysed();
-			expect(section('Moved by the change')).toBeNull();
+			expect(section('Components affected')).toBeNull();
 			await share('tokenEdits', [{ path: 'tone.pineGreen.50', value: '#C80000' }]);
-			expect(section('Moved by the change')).toBeNull();
+			expect(section('Components affected')).toBeNull();
 			expect(calls('changeReach')).toHaveLength(0);
 		});
 	});
@@ -888,9 +888,7 @@ describe('a component’s tab', () => {
 			await type(slider('Height'), '30');
 			expect(tried()).toHaveLength(1);
 			expect(column.firstElementChild).toBe(first);
-			expect(
-				column.querySelector('[aria-label="Value changes"], [aria-label="Moved by the change"], [aria-label="Moved by these values"]'),
-			).toBeNull();
+			expect(column.querySelector('[aria-label="Value changes"], [aria-label="Components affected"]')).toBeNull();
 			expect(count.textContent).toBe('1 change');
 			expect(count.querySelector('button')).not.toBeNull();
 			expect(count.nextElementSibling).toBe(after);

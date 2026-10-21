@@ -872,6 +872,16 @@
 	gap: var(--dsnr-space-3);
 }
 
+/* Across the column, as a dialog's own buttons are, so the room at both ends is the same. */
+.branch-actions .button-row .button {
+	flex: 1;
+}
+
+/* A part in a dialog is set apart from what is above it. */
+.dialog .aside-section {
+	margin-top: var(--dsnr-space-5);
+}
+
 .branch-line {
 	display: flex;
 	flex-wrap: wrap;

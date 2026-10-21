@@ -35,36 +35,44 @@ export const Moved = ({ reach, name, here }: { reach: ComponentReach; name: stri
 	</div>
 );
 
-/** Counted in the stories drawn, never a claim about every use; `title` names which change it is, `component` whose tab it is in. */
+const TITLE = 'Components affected';
+
+/** What a change moves is said in the stories drawn, never a claim about every use; `component` is whose tab it is in, if one. */
 export const ReachView = ({
 	reach,
-	title,
 	component,
 	components,
 }: {
 	reach: Exclude<ChangeReachAnswer, { state: 'none' }>;
-	title: string;
 	component?: CatalogComponent;
 	components: CatalogComponent[];
 }) => {
 	const names = new Map(components.map((c) => [c.id, c.name]));
+	// Said only where there is something the list does not: none moved, or some that could not be drawn.
+	const note =
+		reach.state === 'ready'
+			? [
+					reach.moved.length === 0 && 'No component is affected, in their stories drawn.',
+					reach.notDrawn.length > 0 && `${plural(reach.notDrawn.length, 'component')} did not draw, so cannot be said.`,
+				]
+					.filter(Boolean)
+					.join(' ')
+			: '';
 	return (
-		<section aria-label={title} className="aside-section">
-			<Heading size="part">{title}</Heading>
+		<section aria-label={TITLE} className="aside-section">
+			<Heading size="part">
+				{TITLE}
+				{reach.state === 'ready' && reach.moved.length > 0 && <span className="section-count"> {reach.moved.length}</span>}
+			</Heading>
 			{reach.state === 'building' ? (
-				<Message>Loading… drawing every component with the change, to see which follow it.</Message>
+				<Message>Thinking…</Message>
 			) : reach.state === 'failed' ? (
 				<Message size="block" tone="warning" title="What the change moves could not be drawn">
 					{reach.error}
 				</Message>
 			) : (
 				<>
-					<Message marks={{ 'data-reach-summary': '' }}>
-						{reach.moved.length === 0
-							? `It moves no component, in their stories drawn: ${plural(reach.unchanged, 'component')} unchanged.`
-							: `It moves ${plural(reach.moved.length, 'component')}; ${reach.unchanged} unchanged, in their stories drawn.`}
-						{reach.notDrawn.length > 0 && ` ${plural(reach.notDrawn.length, 'component')} did not draw, so cannot be said.`}
-					</Message>
+					{note !== '' && <Message marks={{ 'data-reach-note': '' }}>{note}</Message>}
 					{reach.moved.map((m) => (
 						<Moved key={m.file} reach={m} name={names.get(m.file) ?? m.file} here={m.file === component?.id} />
 					))}
@@ -76,5 +84,5 @@ export const ReachView = ({
 
 export const ChangeReach = ({ edits, ...shown }: { edits: TokenEdit[]; components: CatalogComponent[] }) => {
 	const reach = useChangeReach(edits);
-	return reach.state === 'none' ? null : <ReachView reach={reach} title="Moved by the change" {...shown} />;
+	return reach.state === 'none' ? null : <ReachView reach={reach} {...shown} />;
 };

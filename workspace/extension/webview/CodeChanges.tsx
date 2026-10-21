@@ -97,7 +97,7 @@ export const CodeChanges = ({
 					</ButtonRow>
 				)}
 			</section>
-			{reach.state !== 'none' && <ReachView reach={reach} title="Moved by these edits" components={components} />}
+			{reach.state !== 'none' && <ReachView reach={reach} components={components} />}
 		</>
 	);
 };

@@ -131,7 +131,7 @@ export const ChangedValues = ({
 				</Message>
 			)}
 			{sources.state === 'ready' && sources.reach.state !== 'none' && (
-				<ReachView reach={sources.reach} title="Moved by these values" component={component} components={components} />
+				<ReachView reach={sources.reach} component={component} components={components} />
 			)}
 		</>
 	);

@@ -9,7 +9,7 @@ import { ValueLine, ValueItem, ValueList } from '../../src/ui/ValueItem';
 import { Message } from '../../src/ui/Message';
 import { asks } from './host';
 
-/** Marked moved from the same answer as a component's "Moved by the change", not drawn again; a never-tagged kind (a font, a shadow) has none. */
+/** Marked moved from the same answer as the "Components affected" of the change, not drawn again; a never-tagged kind (a font, a shadow) has none. */
 export const TokenUsers = ({ token, components }: { token: DesignToken; components: CatalogComponent[] }) => {
 	const { edits, isChanged } = useTokenChanges();
 	const answer = useTokenUsers(token.path);

@@ -51,4 +51,42 @@ describe.skipIf(NO_CHROME)('a dialog, in the browser on this machine', () => {
 		expect(m.height).toBeLessThan(m.window * 0.4);
 		expect(m.scrolls).toBe(false);
 	});
+
+	it('spreads a branch’s buttons across the column, the same room at both ends, and sets a part below them apart from them', async () => {
+		const m = await inChrome(async (browser) => {
+			const tab = await browser.newPage(OWN_WINDOW);
+			await tab.setViewport({ width: 500, height: 800 });
+			const actions =
+				'<div class="branch-actions"><div class="button-row"><button class="button">Save to a branch</button><button class="button">Process changes</button></div></div>' +
+				'<section class="aside-section"><h2>Components affected</h2></section>';
+			await tab.setContent(
+				barPage(
+					renderToStaticMarkup(
+						createElement(Dialog, {
+							title: 'Changes',
+							onClose: noop,
+							children: createElement('div', { dangerouslySetInnerHTML: { __html: actions } }),
+						}),
+					),
+				),
+			);
+			return tab.evaluate(() => {
+				const rect = (s: string) => document.querySelector(s)!.getBoundingClientRect();
+				const [first, second] = [...document.querySelectorAll('.branch-actions .button')].map((b) => b.getBoundingClientRect());
+				const row = rect('.branch-actions .button-row');
+				return {
+					left: first!.left - row.left,
+					right: row.right - second!.right,
+					between: second!.left - first!.right,
+					below: rect('.aside-section').top - row.bottom,
+					step: parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--dsnr-space-4')),
+					room: parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--dsnr-space-5')),
+				};
+			});
+		});
+		expect(Math.abs(m.left - m.right)).toBeLessThan(1);
+		expect(m.left).toBeLessThan(1);
+		expect(m.between).toBeCloseTo(m.step, 0);
+		expect(m.below).toBeGreaterThanOrEqual(m.room - 1);
+	});
 });
