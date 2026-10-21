@@ -245,6 +245,7 @@ beforeEach(async () => {
 			// Every file the app keeps is in this test's own folder: none is shared with another run or worker.
 			changeBranchFiles: appPaths(home).changeBranches,
 			storyPreviewsRoot: join(home, 'story-previews'),
+			splitChecksRoot: join(home, 'split-checks'),
 			componentPicturesRoot: join(home, 'component-pictures'),
 			componentTokens: { of: ask, warm, pictures: async () => ({ drawing: false, pictures: {}, issues: {} }) } as never,
 			installer: new Installer(),

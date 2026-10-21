@@ -48,6 +48,9 @@ export const registerDesignSystem = (area: DesignSystemArea): void => {
 	handle('changeReach', [ds.edits], area.changeReach);
 	handle('editedInCode', [], area.editedInCode);
 	handle('editedReach', [], area.editedReach);
+	handle('splitPreview', [], area.splitPreview);
+	handle('checkSplit', [], area.checkSplit);
+	handle('stopSplitCheck', [], area.stopSplitCheck);
 	handle('valueSources', [ds.storyFile, ds.tried], area.valueSources);
 	handle('handOverChanges', [arg.optional(ds.storyFile), HAND_OVER.check], area.handOverChanges);
 	handle('changeBranch', [ds.kind, arg.optional(ds.storyFile)], area.changeBranch);

@@ -158,6 +158,40 @@ export interface EditedComponent {
 export type EditedInCode =
 	{ state: 'none' } | { state: 'ready'; base: string; components: EditedComponent[]; unowned: EditedFile[]; outside: EditedFile[] };
 
+/** One pull request a split would make: a component's (`file`, its story), or one file in none (`file` null). */
+export interface SplitUnit {
+	file: string | null;
+	files: EditedFile[];
+	lines: number;
+	/** Past what a reviewer reads in one sitting (`LARGE`), as a hand-over is flagged. */
+	large: boolean;
+}
+
+/** In the proof's order, each on the unit it stands on (an index into it), or on the design system's branch (null). */
+export interface SplitStack {
+	unit: number;
+	on: number | null;
+}
+
+/** Whether the units build, each on what it stands on, checked in a copy of the tip, never in a repository. */
+export type SplitCheck =
+	| { state: 'not-checked' }
+	| { state: 'checking'; done: number; doing: string }
+	| { state: 'stopped'; why: string }
+	| { state: 'unproven'; why: string }
+	| { state: 'fails'; why: string }
+	| { state: 'cycle'; units: number[] }
+	| { state: 'built'; stacks: SplitStack[]; seconds: number; by: string };
+
+/**
+ * The pull requests a split of what is edited would make, before anything is made. `stays` is what no unit carries (files
+ * outside the design system, a lockfile), each with why; `not-split` is a change in more parts than are split.
+ */
+export type SplitPreview =
+	| { state: 'none' }
+	| { state: 'not-split'; parts: number }
+	| { state: 'ready'; tip: string; units: SplitUnit[]; stays: { file: EditedFile; why: string }[]; check: SplitCheck };
+
 /** Tried in the preview alone: nothing is written or kept. `targets` are a cell's. */
 export interface TriedValue {
 	property: ValueProperty;

@@ -1,8 +1,19 @@
 import type { CallsDeps } from '../compose';
-import type { ChangeBranchOf, ChangeKind, ChangeReach, ChangeKinds, HandedChange, SavedKind, TokenEdit, TriedValue } from '../../shared/contract';
+import type {
+	ChangeBranchOf,
+	ChangeKind,
+	ChangeReach,
+	SplitPreview,
+	ChangeKinds,
+	HandedChange,
+	SavedKind,
+	TokenEdit,
+	TriedValue,
+} from '../../shared/contract';
 import { handTask } from '../services/agent/handOver';
 import { type ChangeBranches, scopeOf } from '../services/designSystem/changeBranches';
 import { editedInCode, editedOnTip } from '../services/designSystem/editedInCode';
+import { checkSplit, splitPreview } from '../services/designSystem/split';
 import { libraryCommit } from '../services/designSystem/designLibrary';
 import { offBase } from '../services/designSystem/handOverBranches';
 import { readVoice } from '../services/designSystem/voiceAndTone';
@@ -23,6 +34,7 @@ export const designSystemArea = (d: CallsDeps) => {
 		libraryShown,
 		ports,
 		shownSystem,
+		splitProof,
 		valueSources,
 		warm,
 	} = d;
@@ -53,6 +65,21 @@ export const designSystemArea = (d: CallsDeps) => {
 			if (edited.state !== 'ready' || tip === null) return { state: 'none' };
 			const onTip = await editedOnTip(system, edited, tip);
 			return 'not' in onTip ? { state: 'failed', error: onTip.not } : componentTokens.editedReach(onTip.files);
+		},
+		splitPreview: async (): Promise<SplitPreview> => {
+			const system = shownSystem();
+			return system === null ? { state: 'none' } : splitPreview(splitProof, system);
+		},
+		// In the background: asked again for how far it is (`splitPreview`), and stopped with `stopSplitCheck`.
+		checkSplit: async () => {
+			const system = shownSystem();
+			if (system === null) throw new Error('There is no design system connected.');
+			await checkSplit(splitProof, system);
+			return null;
+		},
+		stopSplitCheck: () => {
+			splitProof.stop();
+			return null;
 		},
 		// Each value is written only as the number or colour it reads as, where it was found.
 		valueSources: (file: string, tried: TriedValue[]) => valueSources.of(file, tried),

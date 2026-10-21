@@ -19,6 +19,7 @@ export const appPaths = (userData: string) => ({
 	githubToken: join(userData, 'github-token.enc'),
 	prototypes: join(userData, 'prototypes'),
 	storyPreviews: join(userData, 'story-previews'),
+	splitChecks: join(userData, 'split-checks'),
 	componentPictures: join(userData, 'component-pictures'),
 });
 

@@ -6,6 +6,7 @@ import type {
 	ComponentPictures,
 	ChangeReach,
 	EditedInCode,
+	SplitPreview,
 	ComponentTokens,
 	TokenUsers,
 	ConnectedDesignSystems,
@@ -70,6 +71,11 @@ export interface WorkspaceApi {
 	editedInCode(): Promise<Result<EditedInCode>>;
 	/** What those edits move, drawn as `changeReach` draws a token change; `building` while it is drawn. */
 	editedReach(): Promise<Result<ChangeReach>>;
+	/** The pull requests a split of those edits would make, and how far their check is; nothing is made. */
+	splitPreview(): Promise<Result<SplitPreview>>;
+	/** Starts checking, in the background, that each builds on what it stands on, in a copy: never in a repository. */
+	checkSplit(): Promise<Result<null>>;
+	stopSplitCheck(): Promise<Result<null>>;
 	/** Every case its declared props give; `building` while it is drawn. */
 	componentVariants(file: string): Promise<Result<ComponentVariants>>;
 	valueSources(file: string, tried: TriedValue[]): Promise<Result<ValueSources>>;
@@ -223,6 +229,9 @@ export const INVOKE = [
 	'changeReach',
 	'editedInCode',
 	'editedReach',
+	'splitPreview',
+	'checkSplit',
+	'stopSplitCheck',
 	'componentVariants',
 	'valueSources',
 	'handOverChanges',

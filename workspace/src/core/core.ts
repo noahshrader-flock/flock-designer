@@ -44,6 +44,7 @@ export const createCore = ({ paths, emit, ports, github, pictureRecipe }: Shell)
 	sourceAnswers: new SourceAnswers(paths.designSystemSources),
 	designRepositories: new DesignRepositoryClones(paths.designRepositories),
 	storyPreviewsRoot: paths.storyPreviews,
+	splitChecksRoot: paths.splitChecks,
 	changeBranchFiles: paths.changeBranches,
 	componentPicturesRoot: paths.componentPictures,
 	componentPictureRecipe: pictureRecipe,
