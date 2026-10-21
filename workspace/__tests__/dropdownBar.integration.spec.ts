@@ -77,7 +77,7 @@ describe.skipIf(NO_CHROME)('a dropdown in the top bar, in the browser on this ma
 		expect(list.fits).toBe(true);
 	});
 
-	it('marks what is chosen in the link purple, its icon and its check, giving way to the text colour on the theme’s selection', async () => {
+	it('draws what is chosen, its icon and its check, in the item’s own text colour, never the brand’s', async () => {
 		const colours = await inChrome(async (browser) => {
 			const tab = await browser.newPage(OWN_WINDOW);
 			await tab.setViewport({ width: 600, height: 400 });
@@ -99,14 +99,14 @@ describe.skipIf(NO_CHROME)('a dropdown in the top bar, in the browser on this ma
 					check: of(chosen!.querySelector('.menu-check')),
 					drawn: of(chosenDrawn!.querySelector('.mode-icon')),
 					other: of(other!.querySelector('.codicon')),
-					text: of(other!),
+					text: of(chosen!),
 				};
 			});
 		});
-		expect(colours.glyph).toBe(colours.link);
-		expect(colours.check).toBe(colours.link);
-		expect(colours.drawn).toBe(colours.link);
+		expect(colours.glyph).toBe(colours.text);
+		expect(colours.check).toBe(colours.text);
+		expect(colours.drawn).toBe(colours.text);
 		expect(colours.other).toBe(colours.text);
-		expect(colours.link).not.toBe(colours.text);
+		expect(colours.text).not.toBe(colours.link);
 	});
 });
