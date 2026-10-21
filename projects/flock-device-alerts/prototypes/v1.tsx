@@ -2,7 +2,7 @@
  * Device Alerts page.
  *
  * WHAT IT SHOWS
- *   A Flock Admin page: the title "Device Alerts and Updates", a one-line description, a warning alert ("3 devices
+ *   A Flock Admin page: the title "Device Alerts", a one-line description, a warning alert ("3 devices
  *   are offline"), an info alert ("Firmware update available") and one primary button, "Review Devices". The button is extra large (size="xl") with fully rounded,
  *   pill-shaped corners, both asked for.
  *
@@ -50,7 +50,7 @@ import {
 } from '@flocksafety/flock-react-component-lib';
 import { useCallback } from 'react';
 
-export const title = 'Device Alerts and Updates';
+export const title = 'Device Alerts';
 
 export const states = ['default'] as const;
 
