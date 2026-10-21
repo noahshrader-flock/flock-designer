@@ -35,7 +35,7 @@ describe.skipIf(NO_CHROME)('a long list under one line, in the browser on this m
 					rowRight: row.right,
 				};
 				details.open = true;
-				const body = details.querySelector('.list-disclosure-body') as HTMLElement;
+				const body = details.querySelector('.list-disclosure > div') as HTMLElement;
 				return {
 					closed,
 					bodyHeight: box(body).height,
@@ -58,7 +58,7 @@ describe.skipIf(NO_CHROME)('a long list under one line, in the browser on this m
 			await tab.setContent(barPage(`<div style="width:420px">${list(3)}</div>`));
 			return tab.evaluate(() => {
 				document.querySelector('details')!.open = true;
-				const body = document.querySelector('.list-disclosure-body') as HTMLElement;
+				const body = document.querySelector('.list-disclosure > div') as HTMLElement;
 				return body.scrollHeight > body.clientHeight;
 			});
 		});

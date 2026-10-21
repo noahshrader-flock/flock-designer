@@ -67,6 +67,6 @@ export const Disclosure = ({ label, children }: { label: string; children: React
 /** A long list under one line that says what it is and how many: closed until pressed, then scrolling in its own height. */
 export const ListDisclosure = ({ label, marks, children }: { label: string; marks?: Marks; children: ReactNode }) => (
 	<Collapsible className="list-disclosure" summaryClassName="disclosure-summary" open={false} summary={label} chevronEnd marks={marks}>
-		<div className="list-disclosure-body">{children}</div>
+		{children}
 	</Collapsible>
 );

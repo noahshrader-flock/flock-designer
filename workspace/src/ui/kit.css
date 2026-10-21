@@ -247,6 +247,13 @@ a:not(.icon-button) {
 	text-decoration: underline;
 }
 
+/* A step below the buttons beside it: said in passing, not something to do. Plain words need more room from a button's edge than buttons do from each other. */
+.passing-link {
+	margin-inline-end: var(--dsnr-space-5);
+	font-size: var(--dsnr-text-small);
+	white-space: nowrap;
+}
+
 /* Each has a border, transparent where it draws none, so the three are the same size side by side. */
 .button {
 	display: block;
@@ -871,7 +878,7 @@ a:not(.icon-button) {
 	margin-left: auto;
 }
 
-.list-disclosure-body {
+.list-disclosure > div {
 	max-height: var(--dsnr-list-height);
 	overflow-y: auto;
 }
@@ -908,13 +915,6 @@ details[open] > summary > .collapse-chevron {
 	color: var(--dsnr-muted);
 	cursor: pointer;
 	list-style: none;
-}
-
-/* A step below the buttons beside it: said in passing, not something to do. Plain words need more room from a button's edge than buttons do from each other. */
-.passing-link {
-	margin-inline-end: var(--dsnr-space-5);
-	font-size: var(--dsnr-text-small);
-	white-space: nowrap;
 }
 
 .menu {
