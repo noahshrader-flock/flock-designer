@@ -3,6 +3,8 @@
 :root {
 	/* The base tokens (brand, spacing, radii, weights, label sizes, leading, opacities, avatar) are set on the page from `shared/dsnrTokens.ts`. */
 	--dsnr-track: color-mix(in srgb, var(--vscode-foreground) 8%, transparent);
+	/* A shade or two off the surface it is on, whatever the theme: a wash of the text's own colour. */
+	--dsnr-neutral: color-mix(in srgb, var(--vscode-foreground) 12%, transparent);
 	--dsnr-raised: var(--vscode-editor-background);
 	--dsnr-muted: var(--vscode-descriptionForeground);
 	/* Drawn only in high contrast, where VS Code sets it: a border nothing else needs. */
@@ -450,7 +452,7 @@ a:not(.icon-button) {
 	background: var(--vscode-toolbar-hoverBackground);
 }
 
-/* A box of its own wherever it is: a plain inline span ignores a height and a minimum width. */
+/* A box of its own wherever it is: a plain inline span ignores a height and a minimum width. Gray unless it says a tone. */
 .badge {
 	display: inline-flex;
 	flex-shrink: 0;
@@ -462,7 +464,7 @@ a:not(.icon-button) {
 	border: 1px solid var(--dsnr-contrast-border);
 	border-radius: calc(var(--dsnr-badge) / 2);
 	color: var(--vscode-foreground);
-	background: var(--dsnr-track);
+	background: var(--dsnr-neutral);
 	font-size: var(--dsnr-text-label);
 	font-weight: var(--dsnr-weight-semibold);
 	line-height: 1;

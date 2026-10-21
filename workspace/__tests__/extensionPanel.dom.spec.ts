@@ -1864,15 +1864,20 @@ describe('Design System', () => {
 		expect(dialog()?.textContent).toContain('src/colors/tones.ts:9 A value worked out as it runs.');
 	});
 
-	it('has no not-read bubble when every value is read, and no changes count until something is being tried, then always the brand’s', async () => {
+	it('has no not-read bubble when every value is read, and a changes count that is always there: gray at none, the brand’s from one', async () => {
 		await read();
 		expect(body().querySelector('.ds-actions .badge-warning')).toBeNull();
-		expect(body().querySelector('.ds-actions [aria-label$="being tried"]')).toBeNull();
+		const none = () => body().querySelector('.ds-actions [aria-label="No changes yet"]') as HTMLElement;
+		expect(none().textContent).toBe('0');
+		expect(none().className).toBe('badge badge-button');
+		await press(none());
+		expect(dialog('Changes')?.textContent).toContain('You haven’t made any changes yet.');
+		await key('Escape');
 		await share('tokenEdits', [{ path: 'tone.pineGreen.60', value: '#000000' }]);
 		const changes = body().querySelector('.ds-actions [aria-label="1 change being tried"]') as HTMLElement;
 		expect(changes.classList.contains('badge-brand')).toBe(true);
 		await share('tokenEdits', []);
-		expect(body().querySelector('.ds-actions [aria-label$="being tried"]')).toBeNull();
+		expect(none().classList.contains('badge-brand')).toBe(false);
 	});
 
 	it('says when the design system is no longer on this computer, and offers to choose another', async () => {

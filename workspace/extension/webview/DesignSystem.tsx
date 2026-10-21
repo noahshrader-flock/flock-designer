@@ -124,16 +124,17 @@ const Ready = ({
 	const edited = useEditedInCode(catalog.commit);
 	const inCode = editedCount(edited);
 	const count = beingTried + inCode;
-	const said = [beingTried > 0 && `${plural(beingTried, 'change')} being tried`, inCode > 0 && `${inCode} edited in your code`]
-		.filter(Boolean)
-		.join(', ');
+	const said =
+		[beingTried > 0 && `${plural(beingTried, 'change')} being tried`, inCode > 0 && `${inCode} edited in your code`].filter(Boolean).join(', ') ||
+		'No changes yet';
 	const notRead = catalog.tokens.problems.length;
 	const hasDark = catalog.tokens.tokens.some(isDark);
 	return (
 		<TokenChangesProvider value={changes}>
 			<ShowingContext.Provider value={catalog.showing}>
 				<DesignSystemHeader name={name} branch={catalog.branch}>
-					{count > 0 && <Badge tone="brand" count={count} label={said} onPress={changesDialog.onOpen} />}
+					{/* Always there, gray at none and brand from one, so the changes can be opened before there are any. */}
+					<Badge tone={count > 0 ? 'brand' : 'neutral'} count={count} label={said} onPress={changesDialog.onOpen} />
 					{notRead > 0 && (
 						<Badge
 							tone="warning"
