@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { settleScript } from '../src/core/services/prototypes/projectCovers';
+import { settleScript, timerWatchScript } from '../src/core/services/browser/settle';
 
 /** Run as the hidden window runs it, with small numbers so the test is quick. */
 
@@ -14,8 +14,13 @@ beforeEach(() => {
 	document.getAnimations = () => animations as never;
 	document.body.innerHTML = '<div id="root"></div>';
 });
+const realSetTimeout = window.setTimeout;
+const realClearTimeout = window.clearTimeout;
 afterEach(() => {
 	for (const t of timers) clearInterval(t);
+	window.setTimeout = realSetTimeout;
+	window.clearTimeout = realClearTimeout;
+	delete (window as { __dsnrTimers?: unknown }).__dsnrTimers;
 });
 
 describe('settleScript', () => {
@@ -46,5 +51,27 @@ describe('settleScript', () => {
 		expect(await run(50, 2000)).toEqual({ capped: false });
 		animations = [{ playState: 'running', effect: { getTiming: () => ({ iterations: 1 }) } }];
 		expect(await run(50, 300)).toEqual({ capped: true });
+	});
+
+	it('waits for a timer set to fire soon, as a page waiting on a request does, and not for one set far off', async () => {
+		(0, eval)(timerWatchScript());
+		const root = document.getElementById('root')!;
+		window.setTimeout(() => (root.textContent = 'loaded'), 400);
+		// Quiet for far longer than the quiet time, and still not settled until the timer has run.
+		expect(await run(60, 3000)).toEqual({ capped: false });
+		expect(root.textContent).toBe('loaded');
+		const started = Date.now();
+		window.setTimeout(() => undefined, 60_000);
+		expect(await run(60, 2000)).toEqual({ capped: false });
+		expect(Date.now() - started).toBeLessThan(1000);
+	});
+
+	it('does not wait for a timer that was cleared', async () => {
+		(0, eval)(timerWatchScript());
+		const id = window.setTimeout(() => undefined, 2500);
+		window.clearTimeout(id);
+		const started = Date.now();
+		expect(await run(60, 4000)).toEqual({ capped: false });
+		expect(Date.now() - started).toBeLessThan(1000);
 	});
 });

@@ -17,6 +17,7 @@ import { contrastOf } from '../../../../shared/contrast';
 import { errorText } from '../../../../shared/result';
 import { CHECKED_IN, CHECK_WINDOW } from '../accessibilityCheck';
 import { decodePng } from '../../prototypes/png';
+import { settleScript, timerWatchScript } from '../../browser/settle';
 import { within } from '../../platform/within';
 import { type CellId, type CellResult, type ProbeDepth, type ProbeFinding, cellsAt, notApplicable, notRun, resultFrom } from './cells';
 
@@ -180,7 +181,8 @@ export const probeView = async (page: ProbePage, url: string, options: ProbeOpti
 		await sized(view.width, view.height);
 		await page.emulateMediaFeatures([CHECKED_IN]);
 		if ((await within(LOAD_MS, page.goto(url, { waitUntil: 'load', timeout: LOAD_MS }))) === null) throw new Error('the page did not load in time');
-		await page.evaluate('(async () => { await document.fonts.ready; await new Promise((r) => setTimeout(r, 300)); })()');
+		// Measured when the view has what it waits for (a simulated request, a transition), not a moment after it opens.
+		await within(LOAD_MS, page.evaluate(settleScript()));
 		await ask('watched()');
 		withAxe = false;
 	};
@@ -230,6 +232,7 @@ export const probeView = async (page: ProbePage, url: string, options: ProbeOpti
 	};
 
 	await page.evaluateOnNewDocument(INSTALL);
+	await page.evaluateOnNewDocument(timerWatchScript());
 	try {
 		await load();
 	} catch (err) {

@@ -13,7 +13,8 @@ import type { Measure } from '../../ports';
 import { fitJpegBy } from '../prototypes/picture';
 import { COMPOSITION, painted, placeAround, placeOnWhite } from '../prototypes/pictureComposition';
 import { decodePng } from '../prototypes/png';
-import { COVER_BUDGET, COVER_STEPS, COVER_WINDOW, isBlank, settleScript } from '../prototypes/projectCovers';
+import { COVER_BUDGET, COVER_STEPS, COVER_WINDOW, isBlank } from '../prototypes/projectCovers';
+import { settleScript, timerWatchScript } from './settle';
 import type { DrawCover } from '../../ports';
 import {
 	PICTURE_MOST_ACROSS,
@@ -63,6 +64,7 @@ interface PageLike {
 	emulateMediaFeatures(features: { name: string; value: string }[]): Promise<void>;
 	goto(url: string, o: { waitUntil: 'load'; timeout: number }): Promise<unknown>;
 	evaluate(code: string): Promise<unknown>;
+	evaluateOnNewDocument(code: string): Promise<unknown>;
 	screenshot(o: {
 		type: 'png' | 'jpeg';
 		quality?: number;
@@ -204,10 +206,25 @@ export const chromeHeadless = ({
 		}
 	};
 
+	/**
+	 * A state opened and settled, so it is read with what it waits for (a request, a transition), not before; its name is
+	 * returned. With no state, the page's own address as given, its query and all: a product's page may be one.
+	 */
+	const openState = async (page: PageLike, url: string, state: string | null, to: 'checked' | 'pictured'): Promise<string> => {
+		const said = state ?? 'default';
+		const at = state === null ? url : withState(url, state);
+		if ((await within(STATE_MS, page.goto(at, { waitUntil: 'load', timeout: STATE_MS }))) === null) {
+			throw new Error(`The page did not load in its ${said} state, so it could not be ${to}.`);
+		}
+		await within(READY_MS, page.evaluate(settleScript()));
+		return said;
+	};
+
 	const draw: DrawCover = (url) =>
 		onPage(async (page) => {
 			await page.setViewport({ ...COVER_WINDOW, deviceScaleFactor: 1 });
 			await page.emulateMediaFeatures([{ name: 'prefers-color-scheme', value: 'light' }]);
+			await page.evaluateOnNewDocument(timerWatchScript());
 			if ((await within(LOAD_MS, page.goto(url, { waitUntil: 'load', timeout: LOAD_MS }))) === null) return null;
 			const ready = (await within(READY_MS, page.evaluate(settleScript()))) as { capped?: unknown } | null;
 			if (ready === null || ready.capped !== false) return null;
@@ -228,13 +245,10 @@ export const chromeHeadless = ({
 		onPage(async (page) => {
 			await page.setViewport({ ...CHECK_WINDOW, deviceScaleFactor: 1 });
 			await page.emulateMediaFeatures([CHECKED_IN]);
+			await page.evaluateOnNewDocument(timerWatchScript());
 			const runs: AxeRun[] = [];
 			for (const state of states.length ? states : [null]) {
-				const said = state ?? 'default';
-				// With no state, the page's own address as given, its query and all: a product's page may be one.
-				const at = state === null ? url : withState(url, state);
-				const loaded = await within(STATE_MS, page.goto(at, { waitUntil: 'load', timeout: STATE_MS }));
-				if (loaded === null) throw new Error(`The page did not load in its ${said} state, so it could not be checked.`);
+				const said = await openState(page, url, state, 'checked');
 				const found: unknown = await within(STATE_MS, page.evaluate(axeInPage(tags)));
 				if (!axeFound(found)) throw new Error(`The accessibility check did not finish in the page's ${said} state.`);
 				runs.push({ state: said, ...found });

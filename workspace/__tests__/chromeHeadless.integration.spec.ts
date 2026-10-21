@@ -42,6 +42,13 @@ const PAGES: Record<string, string> = {
 	'/page.html': `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>A page</title></head>
 <body style="margin:0;font:16px sans-serif"><main><h1 style="background:#123;color:#fff;padding:40px">Alert history</h1>
 <p style="padding:40px">Every alert from the last day, by camera.</p><img src="data:image/gif;base64,R0lGODlhAQABAAAAACw="></main></body></html>`,
+	// What a state shows once a simulated request is done: nothing wrong at first, a faulty image after 1.2 seconds.
+	'/later.html': `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Later</title></head>
+<body style="margin:0"><main id="m"><h1 style="background:#a33;color:#fff;padding:24px">Loading</h1></main><script>
+setTimeout(() => {
+	document.getElementById('m').innerHTML = '<h1 style="background:#123456;color:#fff;padding:24px">Done</h1><img src="camera.png">';
+}, 1200);
+</script></body></html>`,
 	'/blank.html': '<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Blank</title></head><body></body></html>',
 	// Planted faults only axe's best-practice rules find.
 	'/headings.html': `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Headings</title></head>
@@ -218,6 +225,11 @@ describe.skipIf(NO_CHROME)('with the browser on this machine', () => {
 				expect.soft(worstTile, said).toBeLessThan(25);
 			}
 		});
+	}, 60_000);
+
+	it('checks a state once the request it waits on is done, not while it is still loading', async () => {
+		const [run] = await headless.scan(`${base}/later.html`, [], ['wcag2a']);
+		expect(run?.violations.map((v) => v.id)).toContain('image-alt');
 	}, 60_000);
 
 	it('checks a page with axe, finding what is wrong with it, and on which element, with what to change', async () => {

@@ -20,30 +20,6 @@ export const COVER_STEPS = [
 	[720, 70],
 	[640, 60],
 ] as const;
-const COVER_QUIET_MS = 500;
-const COVER_CAP_MS = 8000;
-
-/**
- * A looping animation does not hold it up: it is part of the page. A `capped` result's picture is not kept: a page that
- * never settles has no picture rather than a wrong one.
- */
-export const settleScript = (quietMs = COVER_QUIET_MS, capMs = COVER_CAP_MS): string => `new Promise((resolve) => {
-	const started = performance.now();
-	let changed = started;
-	const watching = new MutationObserver(() => { changed = performance.now(); });
-	watching.observe(document, { subtree: true, childList: true, attributes: true, characterData: true });
-	const ending = () => (document.getAnimations ? document.getAnimations() : []).some((a) => a.playState === 'running' && a.effect && a.effect.getTiming().iterations !== Infinity);
-	const look = () => {
-		const now = performance.now();
-		const capped = now - started >= ${Number(capMs)};
-		if (capped || (now - changed >= ${Number(quietMs)} && !ending())) {
-			watching.disconnect();
-			resolve({ capped });
-		} else setTimeout(look, 50);
-	};
-	(document.fonts ? document.fonts.ready : Promise.resolve()).then(look, look);
-})`;
-
 /**
  * Of one color, whatever the background. A pixel a step off (a JPEG's or a gradient's edge) counts as the same, and so
  * does one in a hundred of something else (a cursor, a stray line).

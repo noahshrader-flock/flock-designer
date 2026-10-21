@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { HEADLESS_PICTURE_RECIPE, NO_BROWSER, chromeHeadless, findChrome } from '../src/core/services/browser/chromeHeadless';
 import { fitJpegBy } from '../src/core/services/prototypes/picture';
 import { decodePng } from '../src/core/services/prototypes/png';
+import { timerWatchScript } from '../src/core/services/browser/settle';
 
 const png = (rows: number[][][], filters: number[]): Buffer => {
 	const chunk = (type: string, data: Buffer) => {
@@ -107,7 +108,7 @@ const fakeBrowser = (page: {
 	screenshot?: (o: { type: string; quality?: number }) => Buffer;
 	errors?: string[];
 }) => {
-	const done = { closed: 0, pages: 0, visited: [] as string[], scheme: [] as unknown[] };
+	const done = { closed: 0, pages: 0, visited: [] as string[], scheme: [] as unknown[], before: [] as string[] };
 	const browser = {
 		newPage: async () => {
 			done.pages++;
@@ -116,6 +117,7 @@ const fakeBrowser = (page: {
 				emulateMediaFeatures: async (f: unknown) => void done.scheme.push(f),
 				goto: async (url: string) => void done.visited.push(url),
 				evaluate: async (code: string) => page.evaluate?.(code),
+				evaluateOnNewDocument: async (code: string) => void done.before.push(code),
 				screenshot: async (o: { type: string; quality?: number }) => page.screenshot?.(o) ?? Buffer.alloc(0),
 				on: (event: string, listener: (err: Error) => void) => {
 					if (event === 'pageerror') for (const e of page.errors ?? []) listener(new Error(e));
@@ -200,6 +202,8 @@ describe('checking a page for accessibility, headless', () => {
 			{ state: 'empty', ...found },
 		]);
 		expect(done.visited).toEqual(['http://x/p.html?state=default', 'http://x/p.html?state=empty']);
+		// Its timers watched from before the page's own scripts, so a state is checked once what it waits for has come.
+		expect(done.before).toEqual([timerWatchScript()]);
 		expect(await headless.scan('http://x/p.html', [], ['wcag2a'])).toEqual([{ state: 'default', ...found }]);
 		// A page as it opens is its own address, query and all: a product's page may be one.
 		await headless.scan('http://x/devices?tab=list', [], ['wcag2a']);
