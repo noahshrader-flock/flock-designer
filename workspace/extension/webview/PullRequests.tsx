@@ -1,17 +1,16 @@
 import type { CatalogComponent, SplitCheck, SplitPreview, SplitUnit } from '../../src/shared/contract';
 import { plural } from '../../src/shared/plural';
 import { CHANGE_REQUEST } from '../../src/shared/vocabulary';
-import { storyComponent } from '../../src/shared/valueNames';
+import { unitName } from '../../src/shared/valueNames';
+import { MOST_SPLIT } from '../../src/shared/processChanges';
 import { Button, ButtonRow } from '../../src/ui/Button';
 import { Heading } from '../../src/ui/Heading';
 import { Message } from '../../src/ui/Message';
 import { ValueItem, ValueList } from '../../src/ui/ValueItem';
 import type { SplitControls } from './hooks/useSplitPreview';
+import { FileRow } from './FileRow';
 
 type Ready = Extract<SplitPreview, { state: 'ready' }>;
-
-const nameOf = (unit: SplitUnit, names: ReadonlyMap<string, string>): string =>
-	unit.file === null ? (unit.files[0]?.path.split('/').pop() ?? '') : (names.get(unit.file) ?? storyComponent(unit.file));
 
 /** In merge order once checked, each with what it stands on; before that, as they were found, and what each stands on unknown. */
 const ordered = (preview: Ready): { unit: SplitUnit; on?: SplitUnit | null }[] =>
@@ -55,7 +54,7 @@ const Checked = ({
 		case 'cycle':
 			return (
 				<Message tone="warning" marks={{ 'data-split-refused': '' }}>
-					{`${check.units.map((i) => nameOf(preview.units[i]!, names)).join(' and ')} each need the other, so they are not split. Propose the whole change as one ${CHANGE_REQUEST} yourself, or split the work so one stands alone.`}
+					{`${check.units.map((i) => unitName(preview.units[i]!, names)).join(' and ')} each need the other, so they are not split. Propose the whole change as one ${CHANGE_REQUEST} yourself, or split the work so one stands alone.`}
 				</Message>
 			);
 		case 'unproven':
@@ -90,7 +89,7 @@ export const PullRequests = ({ branch, components, controls }: { branch: string;
 	if (preview.state === 'not-split')
 		return (
 			<Message tone="warning" marks={{ 'data-split-not-split': '' }}>
-				{`This would be ${preview.parts} ${CHANGE_REQUEST}s, one for each component and shared file it changes. DSNR splits a change into at most 10, as past that it cannot show it is one edit in each: propose it as one ${CHANGE_REQUEST} yourself.`}
+				{`This would be ${preview.parts} ${CHANGE_REQUEST}s, one for each component and shared file it changes. DSNR splits a change into at most ${MOST_SPLIT}, as past that it cannot show it is one edit in each: propose it as one ${CHANGE_REQUEST} yourself.`}
 			</Message>
 		);
 	return (
@@ -103,13 +102,13 @@ export const PullRequests = ({ branch, components, controls }: { branch: string;
 				{ordered(preview).map(({ unit, on }, i) => (
 					<ValueItem key={unit.file ?? unit.files[0]?.path} marks={{ 'data-split-unit': unit.file ?? unit.files[0]?.path ?? '' }}>
 						<span className="value-cell">
-							<span className="value-label">{`${i + 1}. ${nameOf(unit, names)}`}</span>
+							<span className="value-label">{`${i + 1}. ${unitName(unit, names)}`}</span>
 						</span>
 						<span className="value-place quiet">
 							{[
 								`${plural(unit.files.length, 'file')}, ${plural(unit.lines, 'line')}`,
 								on === null && `on ${branch}`,
-								on && `on ${nameOf(on, names)}: it does not build without it`,
+								on && `on ${unitName(on, names)}: it does not build without it`,
 								unit.large && 'more than is read in one sitting',
 							]
 								.filter(Boolean)
@@ -123,14 +122,7 @@ export const PullRequests = ({ branch, components, controls }: { branch: string;
 					<Message>Stays in your branch:</Message>
 					<ValueList>
 						{preview.stays.map(({ file, why }) => (
-							<ValueItem key={file.path} marks={{ 'data-split-stays': file.path }}>
-								<span className="value-cell">
-									<span className="value-label">
-										<code>{file.path}</code>
-									</span>
-								</span>
-								<span className="value-place quiet">{why}</span>
-							</ValueItem>
+							<FileRow key={file.path} path={file.path} said={why} marks={{ 'data-split-stays': file.path }} />
 						))}
 					</ValueList>
 				</>

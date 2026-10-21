@@ -3,10 +3,7 @@
  * ones that need it stacked on it. Never one for all such files: two unrelated ones would then seem to need each other.
  */
 import type { EditedFile, EditedInCode, SplitUnit } from '../../../shared/contract';
-import { LARGE, classifyPath } from '../../../shared/processChanges';
-
-/** Past this many pull requests DSNR cannot show the change is one edit made in each, so a person proposes it whole. */
-export const MOST_SPLIT = 10;
+import { LARGE, MOST_SPLIT, classifyPath } from '../../../shared/processChanges';
 
 /** Made, or about the whole repository: no one component's reviewer could review it, so it stays in the branch. */
 const STAYS = new Set(['a lockfile', 'the packages it installs', 'the repository’s CI and settings', 'a generated file', 'the Storybook set-up']);

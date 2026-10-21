@@ -1,7 +1,6 @@
 /** The split of what the person has edited, previewed and checked: nothing here writes to any repository. */
-import { basename } from 'node:path';
 import type { ConnectedDesignSystem, SplitPreview } from '../../../shared/contract';
-import { storyComponent } from '../../../shared/valueNames';
+import { unitName } from '../../../shared/valueNames';
 import { libraryCommit } from './designLibrary';
 import { changesOnTip, editedInCode, editedLines } from './editedInCode';
 import { type SplitProof, splitKey } from './splitProof';
@@ -34,6 +33,5 @@ export const checkSplit = async (proof: SplitProof, system: ConnectedDesignSyste
 		if ('not' in on) return proof.said(key, { state: 'fails', why: on.not });
 		files.push(on.files);
 	}
-	const named = split.units.map((u) => (u.file === null ? basename(u.files[0]!.path) : storyComponent(u.file)));
-	proof.start(key, system, tip, files, (i) => named[i]!);
+	proof.start(key, system, tip, files, (i) => unitName(split.units[i]!));
 };

@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { EditedInCode } from '../src/shared/contract';
 import { proveStacks } from '../src/core/services/designSystem/splitProof';
-import { MOST_SPLIT, splitUnits } from '../src/core/services/designSystem/splitUnits';
+import { splitUnits } from '../src/core/services/designSystem/splitUnits';
+import { MOST_SPLIT } from '../src/shared/processChanges';
 
 /** Builds when every unit `needs` names is in the stack, as a typecheck sees all of a stack's files at once. */
 const needing = (needs: Record<number, number[]>, whole = true) => {

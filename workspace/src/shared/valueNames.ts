@@ -15,6 +15,10 @@ export const VALUE_NAMES: Record<ValueProperty, string> = {
 
 export const storyComponent = (file: string): string => (file.split('/').pop() ?? file).replace(/\.stories\.[^.]+$/, '');
 
+/** A split's pull request by what it is: its component (by the library's name for it where `names` has one), or its one file. */
+export const unitName = (unit: { file: string | null; files: { path: string }[] }, names?: ReadonlyMap<string, string>): string =>
+	unit.file === null ? (unit.files[0]?.path.split('/').pop() ?? '') : (names?.get(unit.file) ?? storyComponent(unit.file));
+
 export const valueTitle = (property: ValueProperty, variant: string | null): string =>
 	variant === null ? VALUE_NAMES[property] : `${VALUE_NAMES[property]} · ${variant}`;
 

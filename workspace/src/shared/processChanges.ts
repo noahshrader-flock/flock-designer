@@ -98,6 +98,9 @@ export const classifyPath = (path: string): string | null => {
 /** Past this, more than a reviewer reads in one sitting for one unit. */
 export const LARGE = { files: 10, lines: 300 } as const;
 
+/** Past this many pull requests DSNR cannot show a change is one edit made in each, so a person proposes it whole. */
+export const MOST_SPLIT = 10;
+
 /** Needs a deliberate yes before it is proposed. */
 export const flagged = (review: BranchReview): boolean => review.state === 'ready' && (review.large || review.files.some((f) => f.out !== null));
 

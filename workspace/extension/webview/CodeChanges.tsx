@@ -2,7 +2,8 @@ import { type ReactNode, useState } from 'react';
 import type { CatalogComponent, EditedFile, EditedInCode } from '../../src/shared/contract';
 import { plural } from '../../src/shared/plural';
 import { storyComponent } from '../../src/shared/valueNames';
-import { ValueItem, ValueList } from '../../src/ui/ValueItem';
+import { ValueList } from '../../src/ui/ValueItem';
+import { FileRow } from './FileRow';
 import { LinkButton } from '../../src/ui/LinkButton';
 import { Message } from '../../src/ui/Message';
 import { Heading } from '../../src/ui/Heading';
@@ -35,14 +36,7 @@ const Group = ({ name, files, marks, children }: { name: ReactNode; files: Edite
 		{children}
 		<ValueList>
 			{files.map((f) => (
-				<ValueItem key={`${f.path}\u0000${f.from ?? ''}${f.to ?? ''}`} marks={{ 'data-edited-file': f.path }}>
-					<span className="value-cell">
-						<span className="value-label">
-							<code>{f.path}</code>
-						</span>
-					</span>
-					<span className="value-place quiet">{said(f)}</span>
-				</ValueItem>
+				<FileRow key={`${f.path}\u0000${f.from ?? ''}${f.to ?? ''}`} path={f.path} said={said(f)} marks={{ 'data-edited-file': f.path }} />
 			))}
 		</ValueList>
 	</div>
