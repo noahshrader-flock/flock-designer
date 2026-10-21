@@ -10,7 +10,7 @@ import { useChangeBranch } from './hooks/useChangeBranch';
 import { Changed } from './Changed';
 import { DesignSystemHeader } from './DesignSystemHeader';
 import { ComponentChanges } from './ComponentChanges';
-import { EditedInCode, editedCount } from './EditedInCode';
+import { CodeChanges, editedCount } from './CodeChanges';
 import { useEditedInCode } from './hooks/useEditedInCode';
 import { ShowingContext, ShowingNote } from './Showing';
 import { useTokenEdits, useValueTrials } from './shared';
@@ -190,7 +190,7 @@ const Ready = ({
 								commit={catalog.commit}
 							/>
 						))}
-						{edited.state === 'ready' && <EditedInCode edited={edited} branch={catalog.branch} components={catalog.components} />}
+						{edited.state === 'ready' && <CodeChanges edited={edited} branch={catalog.branch} components={catalog.components} />}
 					</Dialog>
 				)}
 			</ShowingContext.Provider>

@@ -2329,11 +2329,12 @@ describe('what the person edited in the design system’s code, read from their 
 		await press(count()!);
 		expect(calls('editedReach')).toHaveLength(1);
 		await answer('editedReach', { state: 'building' });
-		expect(section()!.textContent).toContain('Drawing every component with the change');
+		expect(dialog('Changes')!.textContent).toContain('Drawing every component with the change');
 		await act(async () => void (await vi.advanceTimersByTimeAsync(ASK_EVERY_MS)));
 		expect(calls('editedReach')).toHaveLength(2);
 		await answer('editedReach', { state: 'ready', moved: [{ file: BUTTON, changes: [], inside: true }], unchanged: 6, notDrawn: [] });
-		const reach = section()!.querySelector('[aria-label="Moved by these edits"]') as HTMLElement;
+		const reach = dialog('Changes')!.querySelector('[aria-label="Moved by these edits"]') as HTMLElement;
+		expect(section()!.contains(reach)).toBe(false);
 		expect(reach.textContent).toContain('It moves 1 component; 6 unchanged');
 		expect(reach.querySelector('[data-moved]')?.textContent).toContain('FSButton');
 	});
@@ -2343,7 +2344,7 @@ describe('what the person edited in the design system’s code, read from their 
 		await answer('editedInCode', EDITED);
 		await press(count()!);
 		await answer('editedReach', { state: 'failed', error: 'src/components/FSButton/sizes.ts is moved, and the drawing can only change files.' });
-		expect(section()!.textContent).toContain('src/components/FSButton/sizes.ts is moved, and the drawing can only change files.');
+		expect(dialog('Changes')!.textContent).toContain('src/components/FSButton/sizes.ts is moved, and the drawing can only change files.');
 	});
 
 	it('follows the checkout as it is edited, and asks nothing while the panel is hidden', async () => {
