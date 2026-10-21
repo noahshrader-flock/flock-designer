@@ -340,15 +340,13 @@
 
 .theme-set + .theme-set,
 .token-set + .token-set,
-.value-group + .value-group,
-.dialog .changed ~ .changed {
+.value-group + .value-group {
 	margin-top: var(--dsnr-space-3);
 	border-top: 1px solid var(--dsnr-border);
 }
 
 .theme-set + .theme-set,
-.token-set + .token-set,
-.dialog .changed ~ .changed {
+.token-set + .token-set {
 	padding-top: var(--dsnr-space-3);
 }
 
@@ -835,19 +833,13 @@
 	display: flex;
 	flex-direction: column;
 	gap: var(--dsnr-space-3);
-	margin: 0 var(--dsnr-space-5) var(--dsnr-space-4);
-	padding: var(--dsnr-space-4);
+	padding: var(--dsnr-space-5);
 	border: 1px solid var(--dsnr-border);
-	border-radius: var(--dsnr-radius);
-	background: var(--vscode-editorWidget-background);
+	border-radius: var(--dsnr-radius-large);
 }
 
-/* In a Changes dialog, a group is the dialog's own: no box in a box. */
-.dialog .changed {
-	margin: 0;
-	padding: 0;
-	border: none;
-	background: transparent;
+.changed ~ .changed {
+	margin-top: var(--dsnr-space-4);
 }
 
 .changed-header {
@@ -858,6 +850,10 @@
 
 .changed .value-change {
 	padding-right: var(--dsnr-actions-room);
+}
+
+.value-place-line {
+	display: block;
 }
 
 .value-place {
@@ -875,11 +871,6 @@
 /* Across the column, as a dialog's own buttons are, so the room at both ends is the same. */
 .branch-actions .button-row .button {
 	flex: 1;
-}
-
-/* A part in a dialog is set apart from what is above it. */
-.dialog .aside-section {
-	margin-top: var(--dsnr-space-5);
 }
 
 .branch-line {

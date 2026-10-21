@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { plural } from '../../src/shared/plural';
 import { labelOf, readsAs } from '../../src/shared/tokens';
 import { CHANGE_REQUEST } from '../../src/shared/vocabulary';
-import { branchButtons } from './branchButtons';
+import { type Placing, branchButtons } from './branchButtons';
 import { useTokenChanges } from './hooks/tokenChanges';
 import type { BranchControls } from './hooks/useChangeBranch';
 import type { CatalogComponent, TokenEdit } from '../../src/shared/contract';
@@ -23,20 +23,29 @@ import type { Marks } from '../../src/ui/marks';
 export const BranchActions = <C,>({
 	controls,
 	handOver,
-	canSave = true,
+	placing = 'found',
 }: {
 	controls: BranchControls<C>;
 	handOver: HandOverControls;
-	canSave?: boolean;
+	/** Whether DSNR can write the change where it is; a save it was refused is said as that too. */
+	placing?: Placing;
 }) => {
 	const { branch, unsaved, busy, error, save, propose, startOver } = controls;
 	const chromatic = branch?.pullRequest?.chromatic;
 	// While a hand-over's branch is shown, nothing is saved or handed over (the core refuses): the note at the top says so.
 	const showing = useShowing();
 	const agent = useAgentName();
-	const offered = branchButtons({ branch, unsaved, busy, canSave: canSave && handOver.busy === null && showing === null });
+	const offered = branchButtons({
+		branch,
+		unsaved,
+		busy: busy ?? (handOver.busy === null ? null : 'handing'),
+		placing: error !== null && branch === null ? 'cannot' : placing,
+		held: showing !== null,
+		agent,
+	});
 	if (handOver.branch !== null) return <HandOverActions controls={handOver} />;
-	const processable = branch === null && unsaved;
+	const nothing = branch === null && error === null && handOver.error === null && Object.values(offered).every((o) => o === null);
+	if (nothing) return null;
 	return (
 		<div data-branch-actions className="branch-actions">
 			{branch && (
@@ -48,23 +57,19 @@ export const BranchActions = <C,>({
 			{branch?.pullRequest && (
 				<p className="branch-line">
 					<a href={branch.pullRequest.url}>{`Draft ${CHANGE_REQUEST} #${branch.pullRequest.number}`}</a>
-					{chromatic ? (
-						<a href={chromatic}>Chromatic</a>
-					) : (
-						<span className="quiet">Chromatic’s build is linked here once the design system’s CI has made it.</span>
-					)}
+					{chromatic && <a href={chromatic}>Chromatic</a>}
 				</p>
 			)}
-			<Message tone="error">{error ?? handOver.error}</Message>
+			<Message tone="error">{handOver.error ?? error}</Message>
 			<ButtonRow>
 				{offered.save && (
 					<Button disabled={offered.save.disabled} onPress={save}>
 						{offered.save.label}
 					</Button>
 				)}
-				{processable && (
-					<Button variant="secondary" disabled={busy !== null || handOver.busy !== null || showing !== null} onPress={handOver.processChanges}>
-						{handOver.busy === 'handing' ? `Handing to ${agent}…` : 'Process changes'}
+				{offered.process && (
+					<Button disabled={offered.process.disabled} onPress={handOver.processChanges}>
+						{offered.process.label}
 					</Button>
 				)}
 				{offered.propose && (
@@ -86,8 +91,7 @@ export const ChangesGroup = ({
 	label,
 	title,
 	count,
-	onResetAll,
-	empty,
+	onReset,
 	rows,
 	marks,
 	children,
@@ -95,8 +99,7 @@ export const ChangesGroup = ({
 	label: string;
 	title: string;
 	count: number;
-	onResetAll: () => void;
-	empty: string;
+	onReset: () => void;
 	rows: ReactNode;
 	marks: Marks;
 	children?: ReactNode;
@@ -104,24 +107,26 @@ export const ChangesGroup = ({
 	<section aria-label={label} className="changed" {...marks}>
 		<div className="changed-header">
 			<Heading size="set">
-				{title} <span className="section-count">{count}</span>
+				{title}
+				{count > 0 && <span className="section-count"> {count}</span>}
 			</Heading>
-			{count > 0 && <LinkButton onPress={onResetAll}>Reset all</LinkButton>}
+			{count > 0 && <LinkButton onPress={onReset}>Reset</LinkButton>}
 		</div>
-		{count === 0 ? <Message>{empty}</Message> : <ValueList>{rows}</ValueList>}
+		{count > 0 && <ValueList>{rows}</ValueList>}
 		{children}
 	</section>
 );
 
-export const TokenChanges = () => {
+export const TokenChanges = ({ kept = false, children }: { kept?: boolean; children?: ReactNode }) => {
 	const { edits, read, byPath, change, clear } = useTokenChanges();
+	// A branch kept with none changed is still listed, so it can be proposed or left.
+	if (edits.length === 0 && !kept) return null;
 	return (
 		<ChangesGroup
 			label="Token changes"
 			title="Tokens"
 			count={edits.length}
-			onResetAll={clear}
-			empty="Every token is as the design system has it."
+			onReset={clear}
 			marks={{ 'data-changed-tokens': '' }}
 			rows={edits.map((e) => {
 				const was = read.get(e.path);
@@ -148,11 +153,13 @@ export const TokenChanges = () => {
 					/>
 				);
 			})}
-		/>
+		>
+			{children}
+		</ChangesGroup>
 	);
 };
 
-/** A branch kept with nothing changed is still listed, so it can be proposed or left. */
+/** The tokens' card: what is changed, where it is tried, its buttons, and what it affects. */
 export const Changed = ({
 	id,
 	controls,
@@ -165,12 +172,10 @@ export const Changed = ({
 	const { edits } = useTokenChanges();
 	const handOver = useHandOver({ shown: id, file: null, change: { edits }, watch: true });
 	return (
-		<>
-			<TokenChanges />
-			{edits.length > 0 && <Message>Tried in the stories of every component open, and in Primitives.</Message>}
+		<TokenChanges kept={controls.branch !== null || handOver.branch !== null}>
 			<BranchActions controls={controls} handOver={handOver} />
 			<ChangeReach edits={edits} components={components} />
-		</>
+		</TokenChanges>
 	);
 };
 

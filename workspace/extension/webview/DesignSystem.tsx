@@ -20,6 +20,7 @@ import { ComponentsView } from './Components';
 import { TokensView } from './Tokens';
 import { syncDesignSystem, useCatalog } from './useCatalog';
 import { Badge } from '../../src/ui/Badge';
+import { LinkButton } from '../../src/ui/LinkButton';
 import { Dialog } from '../../src/ui/Dialog';
 import { Menu } from '../../src/ui/Menu';
 import { Toggle } from '../../src/ui/Toggle';
@@ -94,7 +95,7 @@ const Ready = ({
 	const [problems, setProblems] = useState(false);
 	const [editing, setEditing] = useState<DesignToken | null>(null);
 	// In a dialog from their count, so nothing opens above the list.
-	const { trials } = useValueTrials();
+	const { trials, change: tryValues } = useValueTrials();
 	const [keptFiles, setKeptFiles] = useState<string[]>([]);
 	// What is kept is asked again whenever what is being tried starts or ends (a branch kept ends a trial), as the count
 	// shows it, and when the dialog opens; not at every value moved.
@@ -112,6 +113,13 @@ const Ready = ({
 	// What the dialog lists, counted: each value tried, and the tokens (`''`) or a component with a branch kept or handed
 	// over and nothing tried, once.
 	const beingTried = (edits.length || (keptFiles.includes('') ? 1 : 0)) + changed.reduce((n, c) => n + Math.max(triedOnIt(c.id).length, 1), 0);
+	// Two or more to undo is one to undo them all: the tokens, and each component with values tried.
+	const resettable = changed.filter((c) => triedOnIt(c.id).length > 0);
+	const resetsAll = (edits.length > 0 ? 1 : 0) + resettable.length >= 2;
+	const resetAll = () => {
+		setEdits([]);
+		for (const c of resettable) tryValues(c.id, catalog.commit, () => []);
+	};
 	const edited = useEditedInCode(catalog.commit);
 	const inCode = editedCount(edited);
 	const count = beingTried + inCode;
@@ -179,7 +187,8 @@ const Ready = ({
 				{editing && <TokenEditor key={editing.path} token={editing} components={catalog.components} onClose={() => setEditing(null)} />}
 				{problems && <Problems problems={catalog.tokens.problems} onClose={() => setProblems(false)} />}
 				{changesDialog.open && (
-					<Dialog title="Changes" onClose={changesDialog.onClose}>
+					<Dialog title="Changes" onClose={changesDialog.onClose} actions={resetsAll && <LinkButton onPress={resetAll}>Reset all</LinkButton>}>
+						{count === 0 && <Message>Nothing is being tried.</Message>}
 						<Changed id={id} controls={branch} components={catalog.components} />
 						{changed.map((c) => (
 							<ComponentChanges

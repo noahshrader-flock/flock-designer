@@ -12,11 +12,9 @@ import { Message } from '../../src/ui/Message';
 const ReviewLine = ({ review }: { review: BranchReview }) => {
 	switch (review.state) {
 		case 'missing':
-			return (
-				<Message>The agent makes this branch, by the name its task gives, and commits its work there. DSNR reads it from git as it does.</Message>
-			);
+			return <Message>Waiting for the agent to make the branch.</Message>;
 		case 'empty':
-			return <Message>The branch is made, and nothing is committed on it yet: the agent commits its work there.</Message>;
+			return <Message>Waiting for the agent to commit its work.</Message>;
 		case 'off-base':
 			return (
 				<p className="warning-text">

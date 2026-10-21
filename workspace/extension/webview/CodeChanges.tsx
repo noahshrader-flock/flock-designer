@@ -5,7 +5,6 @@ import { saidEdit, storyComponent } from '../../src/shared/valueNames';
 import { ValueList } from '../../src/ui/ValueItem';
 import { FileRow } from './FileRow';
 import { LinkButton } from '../../src/ui/LinkButton';
-import { Message } from '../../src/ui/Message';
 import { Heading } from '../../src/ui/Heading';
 import type { Marks } from '../../src/ui/marks';
 import { asks, workspace } from './host';
@@ -61,7 +60,6 @@ export const CodeChanges = ({
 						Edited in your code <span className="section-count">{editedCount(edited)}</span>
 					</Heading>
 				</div>
-				<Message>{`What your checkout has changed since your branch left ${branch}, read from git. Nothing in it is changed here.`}</Message>
 				{edited.components.map(({ file, files }) => {
 					const component = byId.get(file);
 					return (
@@ -83,9 +81,7 @@ export const CodeChanges = ({
 					<Group name={<span>In no component’s folder</span>} files={edited.unowned} marks={{ 'data-edited-unowned': '' }} />
 				)}
 				{edited.outside.length > 0 && (
-					<Group name={<span>Outside the design system</span>} files={edited.outside} marks={{ 'data-edited-outside': '' }}>
-						<Message>These stay in your branch: they are not the design system’s.</Message>
-					</Group>
+					<Group name={<span>Outside the design system</span>} files={edited.outside} marks={{ 'data-edited-outside': '' }} />
 				)}
 				{proposing.proposal !== null ? (
 					<Proposed proposal={proposing.proposal} controls={proposing} />
@@ -96,8 +92,8 @@ export const CodeChanges = ({
 						<Button onPress={() => setPreparing(true)}>Prepare pull requests</Button>
 					</ButtonRow>
 				)}
+				{reach.state !== 'none' && <ReachView reach={reach} components={components} />}
 			</section>
-			{reach.state !== 'none' && <ReachView reach={reach} components={components} />}
 		</>
 	);
 };

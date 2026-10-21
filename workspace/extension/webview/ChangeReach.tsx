@@ -5,6 +5,7 @@ import { saidValue, valueTitle } from '../../src/shared/valueNames';
 import { ChangeRow, ValueItem, ValueList } from '../../src/ui/ValueItem';
 import { LinkButton } from '../../src/ui/LinkButton';
 import { Message } from '../../src/ui/Message';
+import { ListDisclosure } from '../../src/ui/Section';
 import { Heading } from '../../src/ui/Heading';
 import { asks } from './host';
 
@@ -35,9 +36,10 @@ export const Moved = ({ reach, name, here }: { reach: ComponentReach; name: stri
 	</div>
 );
 
-const TITLE = 'Components affected';
-
-/** What a change moves is said in the stories drawn, never a claim about every use; `component` is whose tab it is in, if one. */
+/**
+ * At the bottom of the card of the change it is of: closed until pressed, then each component and what moved in it. What a
+ * change moves is said in the stories drawn, never a claim about every use; `component` is whose tab it is in, if one.
+ */
 export const ReachView = ({
 	reach,
 	component,
@@ -48,37 +50,29 @@ export const ReachView = ({
 	components: CatalogComponent[];
 }) => {
 	const names = new Map(components.map((c) => [c.id, c.name]));
-	// Said only where there is something the list does not: none moved, or some that could not be drawn.
+	// Some that could not be drawn is said, since none affected is then not known; none affected and every one drawn is nothing to say.
 	const note =
-		reach.state === 'ready'
-			? [
-					reach.moved.length === 0 && 'No component is affected, in their stories drawn.',
-					reach.notDrawn.length > 0 && `${plural(reach.notDrawn.length, 'component')} did not draw, so cannot be said.`,
-				]
-					.filter(Boolean)
-					.join(' ')
-			: '';
+		reach.state === 'ready' && reach.notDrawn.length > 0 ? `${plural(reach.notDrawn.length, 'component')} did not draw, so cannot be said.` : null;
+	if (reach.state === 'ready' && reach.moved.length === 0 && note === null) return null;
 	return (
-		<section aria-label={TITLE} className="aside-section">
-			<Heading size="part">
-				{TITLE}
-				{reach.state === 'ready' && reach.moved.length > 0 && <span className="section-count"> {reach.moved.length}</span>}
-			</Heading>
+		<div data-reach>
 			{reach.state === 'building' ? (
 				<Message>Thinking…</Message>
 			) : reach.state === 'failed' ? (
 				<Message size="block" tone="warning" title="What the change moves could not be drawn">
 					{reach.error}
 				</Message>
+			) : reach.moved.length === 0 ? (
+				<Message marks={{ 'data-reach-note': '' }}>{note}</Message>
 			) : (
-				<>
-					{note !== '' && <Message marks={{ 'data-reach-note': '' }}>{note}</Message>}
+				<ListDisclosure label={`${plural(reach.moved.length, 'component')} affected`}>
 					{reach.moved.map((m) => (
 						<Moved key={m.file} reach={m} name={names.get(m.file) ?? m.file} here={m.file === component?.id} />
 					))}
-				</>
+					{note !== null && <Message marks={{ 'data-reach-note': '' }}>{note}</Message>}
+				</ListDisclosure>
 			)}
-		</section>
+		</div>
 	);
 };
 

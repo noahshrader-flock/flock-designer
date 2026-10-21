@@ -112,7 +112,7 @@ describe('a component’s tab', () => {
 		await share('tokenEdits', edits);
 		expect(calls('storyPreview').at(-1)?.args).toEqual([edits]);
 		expect(document.querySelector('iframe')).not.toBeNull();
-		expect(document.querySelector('.stories-building')?.textContent).toBe('Building…');
+		expect(document.querySelector('.stories-building')?.textContent?.trim()).toBe('Building…');
 		await answer('storyPreview', { state: 'ready', base: 'http://127.0.0.1:4321/trial-1/' });
 		expect(document.querySelector('iframe')?.getAttribute('src')).toBe(previewAddress('http://127.0.0.1:4321/trial-1/', BUTTON));
 	});
@@ -857,9 +857,9 @@ describe('a component’s tab', () => {
 	describe('what a token change moves (Phase 3)', () => {
 		it('is not drawn here, even while a token change is tried: it is in the side panel’s Changes, and in the token’s own control', async () => {
 			await analysed();
-			expect(section('Components affected')).toBeNull();
+			expect(document.querySelector('[data-reach]')).toBeNull();
 			await share('tokenEdits', [{ path: 'tone.pineGreen.50', value: '#C80000' }]);
-			expect(section('Components affected')).toBeNull();
+			expect(document.querySelector('[data-reach]')).toBeNull();
 			expect(calls('changeReach')).toHaveLength(0);
 		});
 	});
@@ -892,7 +892,7 @@ describe('a component’s tab', () => {
 			await type(slider('Height'), '30');
 			expect(tried()).toHaveLength(1);
 			expect(column.firstElementChild).toBe(first);
-			expect(column.querySelector('[aria-label="Value changes"], [aria-label="Components affected"]')).toBeNull();
+			expect(column.querySelector('[aria-label="Value changes"], [data-reach]')).toBeNull();
 			expect(count.textContent).toBe('1 change');
 			expect(count.querySelector('button')).not.toBeNull();
 			expect(count.nextElementSibling).toBe(after);
@@ -977,7 +977,7 @@ describe('a component’s tab', () => {
 			expect(tried()).toEqual([tall]);
 		});
 
-		it('puts a value back with Reset, and counts each value tried as a change; Reset all is in the side panel’s Changes', async () => {
+		it('puts a value back with Reset, and counts each value tried as a change; Reset, and Reset all, are in the side panel’s Changes', async () => {
 			const { tried } = await tryingOpen();
 			await press(change('Height · sm'));
 			await type(slider('Height'), '30');
@@ -1036,11 +1036,11 @@ describe('a component’s tab', () => {
 				],
 			});
 			const users = () => [...document.querySelectorAll('[role="dialog"] [data-token-user]')] as HTMLElement[];
-			const summary = () => document.querySelector('[data-token-users-summary]')?.textContent;
+			const summary = () => document.querySelector('[data-token-users-summary]')?.textContent?.trim();
 			const list = () => document.querySelector('[role="dialog"] .token-users details') as HTMLDetailsElement;
-			expect(summary()).toBe('Shared with 2 components');
+			expect(summary()).toBe('2 components shared');
 			expect(list().open).toBe(false);
-			expect(list().querySelector('summary')?.lastElementChild?.classList.contains('collapse-chevron-end')).toBe(true);
+			expect(list().querySelector('summary')?.lastElementChild?.classList.contains('collapse-chevron')).toBe(true);
 			await press(list().querySelector('summary') as HTMLElement);
 			expect(list().open).toBe(true);
 			expect(users().map((u) => u.textContent)).toEqual(['FSButton1 value', 'FSIconButtoninside']);
@@ -1048,7 +1048,7 @@ describe('a component’s tab', () => {
 			expect(lastAsk()).toEqual(['openComponent', [STORY('FSIconButton')]]);
 			await share('tokenEdits', [{ path: 'radius', value: '12px' }]);
 			expect(calls('changeReach').at(-1)?.args).toEqual([[{ path: 'radius', value: '12px' }]]);
-			expect(summary()).toBe('Shared with 2 components · drawing the change to see which move');
+			expect(summary()).toBe('2 components shared · drawing the change to see which move');
 			await answer('changeReach', {
 				state: 'ready',
 				moved: [{ file: STORY('FSIconButton'), changes: [], inside: true }],
@@ -1057,7 +1057,7 @@ describe('a component’s tab', () => {
 			});
 			expect(users().map((u) => u.hasAttribute('data-moved'))).toEqual([false, true]);
 			expect(users()[1]?.textContent).toBe('FSIconButtoninside · moved');
-			expect(summary()).toBe('Shared with 2 components · 1 moved with the change being tried');
+			expect(summary()).toBe('2 components shared · 1 moved with the change being tried');
 			expect(list().open).toBe(true);
 		});
 

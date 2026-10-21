@@ -40,7 +40,7 @@ export const TokenUsers = ({ token, components }: { token: DesignToken; componen
 				<>
 					<ListDisclosure
 						label={[
-							`Shared with ${plural(answer.users.length, 'component')}`,
+							`${plural(answer.users.length, 'component')} shared`,
 							moved && `${answer.users.filter((u) => moved.has(u.file)).length} moved with the change being tried`,
 							reach.state === 'building' && 'drawing the change to see which move',
 							reach.state === 'failed' && 'which move could not be drawn',

@@ -93,7 +93,7 @@ describe('what is open', () => {
 	it('is asked for once the page listens, and looked at until it is said', async () => {
 		await show();
 		expect(panelSaid()).toEqual([{ type: 'ready' }]);
-		expect(body().textContent).toBe('Looking at what is open…');
+		expect(body().textContent?.trim()).toBe('Looking at what is open…');
 	});
 
 	const NONE: Context = {
@@ -522,13 +522,13 @@ describe('dialogs and menus, in the panel', () => {
 			expect(sent.filter((m) => m.name === 'deleteProject').at(-1)?.args).toEqual(['alert-history', 'Alert history']);
 			expect(dialog()).toBeNull();
 			// Its name stays; what it is doing is said under it, and it shimmers, with nothing to press.
-			expect(alertHistory().querySelector('[data-part="meta"]')?.textContent).toBe('Deleting…');
+			expect(alertHistory().querySelector('[data-part="meta"]')?.textContent?.trim()).toBe('Deleting…');
 			expect(alertHistory().querySelector('[data-part="picture"]')?.getAttribute('data-loading')).toBe('true');
 			expect(alertHistory().querySelector('[aria-label="Project actions"]')).toBeNull();
 			await answer('deleteProject', null);
 			expect(sent.filter((m) => m.name === 'listProjects').length).toBe(reads + 1);
 			// Still in the list read until it is gone, it still says so.
-			expect(alertHistory().querySelector('[data-part="meta"]')?.textContent).toBe('Deleting…');
+			expect(alertHistory().querySelector('[data-part="meta"]')?.textContent?.trim()).toBe('Deleting…');
 		});
 
 		it('says why it could not in its dialog, opened again, and the card is as it was', async () => {
@@ -538,7 +538,7 @@ describe('dialogs and menus, in the panel', () => {
 			const call = sent.filter((m) => m.name === 'deleteProject').at(-1);
 			await say({ type: 'answer', id: call!.id, result: { ok: false, error: 'Saving needs write access to flocksafety/flock-designer.' } });
 			expect(dialog()?.textContent).toContain('Saving needs write access to flocksafety/flock-designer.');
-			expect(alertHistory().querySelector('[data-part="meta"]')?.textContent).not.toBe('Deleting…');
+			expect(alertHistory().querySelector('[data-part="meta"]')?.textContent?.trim()).not.toBe('Deleting…');
 			// Said for that try only: opened again from the menu, it starts afresh.
 			await press(closeX());
 			await press(menuFor(0));
@@ -1041,7 +1041,7 @@ describe('the projects as a list or a grid', () => {
 
 		it('keeps its name, says Building… under it, shimmers, with only Delete… in its menu, and opens nothing', async () => {
 			await showOpen(OPEN, [STARTED, ...SAMPLE_PROJECTS]);
-			expect(started().querySelector('[data-part="meta"]')?.textContent).toBe('Building…');
+			expect(started().querySelector('[data-part="meta"]')?.textContent?.trim()).toBe('Building…');
 			expect(started().querySelector('[data-part="picture"]')?.getAttribute('data-loading')).toBe('true');
 			await press(started().querySelector('[aria-label="Project actions"]') as HTMLElement);
 			expect(allByRole('menuitem').map((i) => i.textContent)).toEqual(['Delete…']);
@@ -1575,7 +1575,7 @@ describe('Design System', () => {
 
 	it('says it is reading the design system until the extension says what it read, which every page is told', async () => {
 		await open();
-		expect(body().textContent).toBe('Reading the design system…');
+		expect(body().textContent?.trim()).toBe('Reading the design system…');
 		await shareCatalog(SAMPLE_CATALOG);
 		expect(body().querySelector('.ds-name')?.textContent).toBe('FUI');
 	});
@@ -1612,12 +1612,11 @@ describe('Design System', () => {
 		expect(lastAsk()).toEqual(['syncDesignSystem', []]);
 	});
 
-	it('says, over its tokens, which reader found them and in which files', async () => {
+	it('opens onto its tokens with nothing over them but the search: no line saying which files they were read from', async () => {
 		await read();
 		await press([...parts().querySelectorAll<HTMLElement>('[role="radio"]')][1]!);
-		expect(body().querySelector('[data-tokens-read]')?.textContent).toBe(
-			'Read from its theme files: src/colors/theme/dark.ts, src/colors/theme/light.ts, src/colors/tones.ts and 1 more.',
-		);
+		expect(body().querySelector('[data-token]')).not.toBeNull();
+		expect(body().textContent).not.toMatch(/Read from|theme files/);
 	});
 
 	it('lists its components under their groups, as cards with their pictures, the first view, and no count of what axe found on them', async () => {
@@ -1949,17 +1948,42 @@ describe('every change being tried, in the panel’s Changes: the tokens and eac
 		it('offers Save only once every value is found where it is written, each place opening the library at its line', async () => {
 			await trying();
 			await answer('valueSources', found());
-			expect(group()!.querySelector('[data-value-places]')?.textContent).toBe('Written in src/utils/theme.ts, line 158');
+			expect(group()!.querySelector('[data-value-places]')?.textContent).toBe('src/utils/theme.ts (158)');
 			await press(group()!.querySelector('[data-value-places] button') as HTMLElement);
 			expect(lastAsk()).toEqual(['openLibrarySource', ['src/utils/theme.ts', 158]]);
-			expect(group()!.textContent).toContain('Saving writes 1 value where it is written, and nothing else.');
+			expect(group()!.textContent).not.toMatch(/Saving writes|Saving waits|DSNR cannot write/);
 			expect(button('Save to a branch', group()!).disabled).toBe(false);
-			const affected = changes()!.querySelector('[aria-label="Components affected"]') as HTMLElement;
-			expect(affected.querySelector('h2')?.textContent?.trim()).toBe('Components affected 1');
+			expect(allByRole('button', 'Process changes')).toEqual([]);
+			// In the card of the change it is of, closed: the toggle is the last thing in it.
+			const affected = group()!.querySelector('[data-reach]') as HTMLElement;
+			expect(affected.querySelector('summary')?.textContent).toBe('1 component affected');
+			expect(affected.querySelector('details')?.open).toBe(false);
+			expect(group()!.lastElementChild).toBe(affected);
 			expect(affected.querySelector('[data-reach-note]')).toBeNull();
 		});
 
-		it('says why a value cannot be saved, in words, where it is, and offers no Save', async () => {
+		it('holds Save, and offers no Process changes, while where each value is written is looked for', async () => {
+			await trying();
+			expect(button('Save to a branch', group()!).disabled).toBe(true);
+			expect(allByRole('button', 'Process changes')).toEqual([]);
+			expect(group()!.textContent).not.toMatch(/Saving writes|Saving waits|DSNR cannot write/);
+		});
+
+		it('gives each place its own line, one link of its file and its line, opening the library there', async () => {
+			await trying();
+			const file = 'src/components/FSFab/index.tsx';
+			await answer(
+				'valueSources',
+				found({ values: [{ id: ID, state: 'found', places: [9, 10, 11].map((line) => ({ file, line, written: '8px', writes: '15px' })) }] }),
+			);
+			const lines = [...group()!.querySelectorAll('[data-value-places] .value-place-line')];
+			expect(lines.map((l) => l.textContent)).toEqual([`${file} (9)`, `${file} (10)`, `${file} (11)`]);
+			expect(group()!.querySelector('[data-value-places]')?.textContent).not.toMatch(/Written in|line/);
+			await press(lines[1]!.querySelector('button') as HTMLElement);
+			expect(lastAsk()).toEqual(['openLibrarySource', [file, 10]]);
+		});
+
+		it('says why a value cannot be saved, in words, where it is, and offers Process changes in Save’s place', async () => {
 			await trying();
 			await answer('valueSources', {
 				state: 'ready',
@@ -1969,8 +1993,10 @@ describe('every change being tried, in the panel’s Changes: the tokens and eac
 			expect(group()!.querySelector('[data-value-refused]')?.textContent).toBe(
 				'28px is written in 2 places that each draw it here, so which to change cannot be said.',
 			);
-			expect(button('Save to a branch', group()!).disabled).toBe(true);
-			expect(changes()!.querySelector('[aria-label="Components affected"]')).toBeNull();
+			expect(allByRole('button', 'Save to a branch')).toEqual([]);
+			expect(button('Process changes', group()!).disabled).toBe(false);
+			expect(group()!.textContent).toContain('DSNR cannot write every value where it is written, so the agent writes the change');
+			expect(changes()!.querySelector('[data-reach]')).toBeNull();
 		});
 
 		it('offers the agent where a value cannot be found, asks it once pressed, and says what it wrote and why', async () => {
@@ -1986,6 +2012,8 @@ describe('every change being tried, in the panel’s Changes: the tokens and eac
 			await answer('writeValue', null);
 			await answer('valueSources', { state: 'ready', values: [{ id: ID, state: 'writing' }], reach: { state: 'none' } });
 			expect(group()!.textContent).toContain('The agent is writing it…');
+			expect(button('Save to a branch', group()!).disabled).toBe(true);
+			expect(allByRole('button', 'Process changes')).toEqual([]);
 			const asked = calls('valueSources').length;
 			await act(async () => void (await vi.advanceTimersByTimeAsync(ASK_EVERY_MS)));
 			expect(calls('valueSources').length).toBe(asked + 1);
@@ -2003,9 +2031,9 @@ describe('every change being tried, in the panel’s Changes: the tokens and eac
 					],
 				}),
 			);
-			expect(group()!.querySelector('[data-value-places]')?.textContent).toBe('Written by the agent in src/utils/theme.ts, line 59');
+			expect(group()!.querySelector('[data-value-places]')?.textContent).toBe('By the agent:src/utils/theme.ts (59)');
 			expect(group()!.textContent).toContain('MUI’s default sets it, so the theme’s override does.');
-			expect(group()!.textContent).toContain('Saving writes 1 value where it is written, and nothing else.');
+			expect(group()!.textContent).not.toContain('Saving writes');
 		});
 
 		it('lists a value that follows a token as following it', async () => {
@@ -2042,10 +2070,10 @@ describe('every change being tried, in the panel’s Changes: the tokens and eac
 			expect(group()!.querySelector('[data-value-change] .value-cell')?.textContent).toBe('Radius4px → follows Radius');
 		});
 
-		it('puts every value back with Reset all, and says so', async () => {
+		it('puts every value of a component back with its Reset', async () => {
 			await trying();
 			await answer('valueSources', found());
-			await press(button('Reset all', group()!));
+			await press(button('Reset', group()!));
 			expect(trialsSaid().at(-1)).toEqual([BUTTON, 'abc123', []]);
 			await share('valueTrials', {});
 			expect(group()).toBeNull();
@@ -2074,7 +2102,8 @@ describe('every change being tried, in the panel’s Changes: the tokens and eac
 			notDrawn: [STORY('FSSelect')],
 			...over,
 		});
-		const part = () => changes()?.querySelector('[aria-label="Components affected"]') as HTMLElement | null;
+		const part = () => changes()?.querySelector('[data-reach]') as HTMLElement | null;
+		const card = () => changes()?.querySelector('[data-changed-tokens]') as HTMLElement | null;
 		const tried = async () => {
 			await designOpen();
 			await share('tokenEdits', RED);
@@ -2100,7 +2129,12 @@ describe('every change being tried, in the panel’s Changes: the tokens and eac
 			await press(count());
 			await answer('changeReach', moved());
 			const reach = part()!;
-			expect(reach.querySelector('h2')?.textContent?.trim()).toBe('Components affected 3');
+			// A closed toggle at the bottom of the tokens' own card, which says how many.
+			expect(reach.querySelector('summary')?.textContent).toBe('3 components affected');
+			expect(reach.querySelector('details')?.open).toBe(false);
+			expect(card()!.lastElementChild).toBe(reach);
+			await press(reach.querySelector('summary') as HTMLElement);
+			expect(reach.querySelector('details')?.open).toBe(true);
 			// No line to count what the list says: only what it does not, the one that could not be drawn.
 			expect(reach.querySelector('[data-reach-note]')?.textContent).toBe('1 component did not draw, so cannot be said.');
 			expect(reach.textContent).not.toMatch(/It moves|unchanged/);
@@ -2114,15 +2148,107 @@ describe('every change being tried, in the panel’s Changes: the tokens and eac
 			expect(reach.querySelector(`[data-moved="${STORY('FSTextField')}"]`)?.textContent).toContain('in a part its values do not read');
 		});
 
-		it('says when the change moves nothing, and when it could not be drawn', async () => {
+		it('shows nothing where the change affects none, and says so only where some could not be drawn, or the change could not be', async () => {
 			await tried();
 			await press(count());
 			await answer('changeReach', moved({ moved: [], unchanged: 44, notDrawn: [] }));
-			expect(part()?.querySelector('[data-reach-note]')?.textContent).toBe('No component is affected, in their stories drawn.');
-			expect(part()?.querySelector('h2')?.textContent?.trim()).toBe('Components affected');
+			expect(part()).toBeNull();
+			expect(changes()!.textContent).not.toMatch(/No component is affected|moves no component/);
+			await share('tokenEdits', [{ path: 'tone.pineGreen.50', value: '#111111' }]);
+			await answer('changeReach', moved({ moved: [], unchanged: 40, notDrawn: [STORY('FSSelect')] }));
+			expect(part()?.textContent).toBe('1 component did not draw, so cannot be said.');
+			expect(part()?.querySelector('summary')).toBeNull();
 			await share('tokenEdits', [{ path: 'tone.pineGreen.50', value: '#000000' }]);
 			await answer('changeReach', { state: 'failed', error: 'the change did not build' });
 			expect(part()?.textContent).toContain('the change did not build');
+		});
+	});
+
+	describe('Reset all, in the title, for everything tried', () => {
+		const ICON = 'src/components/FSIconButton/FSIconButton.stories.tsx';
+		const resetAll = () => allByRole('button', 'Reset all', changes()!);
+		const opened = async (edits: boolean, components: string[]) => {
+			await designOpen();
+			if (edits) await share('tokenEdits', [{ path: 'tone.pineGreen.60', value: '#000000' }]);
+			await share('valueTrials', Object.fromEntries(components.map((c) => [c, { commit: 'abc123', values: [SMALL] }])));
+			await press(count());
+		};
+
+		it('is not there for one group, which has its own Reset', async () => {
+			await opened(false, [BUTTON]);
+			expect(resetAll()).toEqual([]);
+			expect(allByRole('button', 'Reset', changes()!).length).toBeGreaterThan(0);
+		});
+
+		it('is at the end of the title, before its close, once two components have values tried, and puts both back', async () => {
+			await opened(false, [BUTTON, ICON]);
+			const head = changes()!.querySelector('.dialog-head') as HTMLElement;
+			expect([...head.children].map((c) => c.textContent || c.getAttribute('aria-label'))).toEqual(['Changes', 'Reset all', 'Close']);
+			await press(resetAll()[0]!);
+			expect(trialsSaid()).toEqual(
+				expect.arrayContaining([
+					[BUTTON, 'abc123', []],
+					[ICON, 'abc123', []],
+				]),
+			);
+		});
+
+		it('includes the tokens: the tokens and one component are two, and both are put back', async () => {
+			await opened(true, [BUTTON]);
+			expect(resetAll()).toHaveLength(1);
+			await press(resetAll()[0]!);
+			expect(calls('setTokenEdits').at(-1)?.args).toEqual([[]]);
+			expect(trialsSaid().at(-1)).toEqual([BUTTON, 'abc123', []]);
+		});
+
+		it('is not there for the tokens alone: that is one group, with its own Reset', async () => {
+			await opened(true, []);
+			expect(resetAll()).toEqual([]);
+		});
+	});
+
+	describe('the cards say what is, not how it works', () => {
+		it('has no line explaining where a change is tried, what is read from git, or what a copy is', async () => {
+			await designOpen();
+			await share('tokenEdits', [{ path: 'tone.pineGreen.60', value: '#000000' }]);
+			await share('valueTrials', { [BUTTON]: { commit: 'abc123', values: [SMALL] } });
+			await press(count());
+			await answerOf('changeScopes', 'values', []);
+			await answerOf('changeBranch', 'values', null);
+			await answer('valueSources', FOUND);
+			const said = changes()!.textContent ?? '';
+			expect(said).not.toMatch(
+				/Tried in the stories|in Primitives|read from git|Nothing in it is changed|each is a copy|Chromatic’s build is linked/,
+			);
+		});
+	});
+
+	describe('what is none is not shown', () => {
+		it('lists no group for a count of none, and says only that nothing is being tried where nothing is', async () => {
+			await show();
+			await share('placed', { context: OPEN, unreadable: null, setup: null });
+			await answer('listProjects', SAMPLE_PROJECTS);
+			await say({ type: 'open-dialog', dialog: { kind: 'changes' } });
+			await share('catalog', { system: { id: SYSTEM, name: 'FUI' }, catalog: SAMPLE_CATALOG, error: null, syncing: false });
+			await answerOf('changeBranch', 'tokens', null);
+			const box = changes()!;
+			expect(box.querySelector('[data-changed-tokens], [data-value-changes], [data-branch-actions]')).toBeNull();
+			expect(box.querySelector('.section-count')).toBeNull();
+			expect(box.textContent).toBe('ChangesNothing is being tried.');
+		});
+
+		it('shows a component with a branch kept and nothing tried by its name alone, with no count and no line that none are tried', async () => {
+			await designOpen();
+			await answerOf('changeScopes', 'values', [BUTTON]);
+			await answerOf('changeScopes', 'handOver', []);
+			await press(count());
+			await answerOf('changeBranch', 'values', { branch: 'dsnr/values-20261016-ab12', saved: [SMALL], saves: 1, pullRequest: null });
+			await share('valueTrials', {});
+			const only = group()!;
+			expect(only.querySelector('.heading-set')?.textContent).toBe('FSButton');
+			expect(only.querySelector('.section-count')).toBeNull();
+			expect(only.textContent).not.toMatch(/Every value is|Reset/);
+			expect(only.querySelector('.branch-line')?.textContent).toContain('dsnr/values-20261016-ab12');
 		});
 	});
 
@@ -2160,6 +2286,13 @@ describe('every change being tried, in the panel’s Changes: the tokens and eac
 			await answerOf('changeScopes', 'values', []);
 			await answerOf('changeScopes', 'handOver', []);
 		};
+		const REFUSED = 'The token is written in a file DSNR does not write.';
+		/** DSNR could not write the change where it is, so the agent is offered in Save’s place. */
+		const tokensRefused = async () => {
+			await tokensChanged();
+			await press(button('Save to a branch'));
+			await say({ type: 'answer', id: callsOf('saveChange', 'tokens').at(-1)!.id, result: { ok: false, error: REFUSED } });
+		};
 		const TIP = 'c'.repeat(40);
 		const READY = {
 			state: 'ready',
@@ -2173,23 +2306,42 @@ describe('every change being tried, in the panel’s Changes: the tokens and eac
 			large: false,
 		};
 
-		it('offers it beside Save, hands over that one group, and shows its branch in Save’s place until Claude Code makes it', async () => {
+		it('offers Save alone for tokens, and the agent in its place once a save is refused, which says why', async () => {
 			await tokensChanged();
-			expect(button('Save to a branch')).toBeDefined();
+			expect(button('Save to a branch').disabled).toBe(false);
+			expect(allByRole('button', 'Process changes')).toEqual([]);
+			await press(button('Save to a branch'));
+			await say({ type: 'answer', id: callsOf('saveChange', 'tokens').at(-1)!.id, result: { ok: false, error: REFUSED } });
+			expect(document.querySelector('[data-branch-actions] [role="alert"]')?.textContent).toBe(REFUSED);
+			expect(allByRole('button', 'Save to a branch')).toEqual([]);
+			expect(button('Process changes').disabled).toBe(false);
+		});
+
+		it('offers Save again, and not the agent, once what is tried changes after a refusal', async () => {
+			await tokensRefused();
+			await share('tokenEdits', [{ path: 'tone.pineGreen.60', value: '#111111' }]);
+			expect(button('Save to a branch').disabled).toBe(false);
+			expect(allByRole('button', 'Process changes')).toEqual([]);
+			expect(document.querySelector('[data-branch-actions] [role="alert"]')).toBeNull();
+		});
+
+		it('hands over that one group, and shows its branch in Save’s place until Claude Code makes it', async () => {
+			await tokensRefused();
 			await press(button('Process changes'));
 			expect(calls('handOverChanges').at(-1)?.args).toEqual([null, { edits: EDITS }]);
 			await answer('handOverChanges', { branch: BRANCH, agent: 'Claude Code', opened: 'typed', command: null });
 			await answerHandOver(null, { branch: BRANCH, lines: ['primary: #000000'], review: { state: 'missing' }, pullRequest: null });
 			expect(handOver()?.querySelector('.branch-line')?.textContent).toBe(BRANCH);
 			expect(handOver()?.textContent).toContain('This hand-over is in Claude Code in this window now');
-			expect(handOver()?.textContent).toContain('The agent makes this branch, by the name its task gives');
+			expect(handOver()?.textContent).toContain('Waiting for the agent to make the branch.');
+			expect(handOver()?.textContent).not.toMatch(/DSNR reads it from git|by the name its task gives/);
 			expect(allByRole('button', 'Save to a branch')).toEqual([]);
 			expect(allByRole('button', 'Process changes')).toEqual([]);
 			expect(allByRole('button', 'Propose')).toEqual([]);
 		});
 
 		it('says why it was not handed over, and opens nothing', async () => {
-			await tokensChanged();
+			await tokensRefused();
 			await press(button('Process changes'));
 			const call = calls('handOverChanges').at(-1);
 			const why = 'The library’s checkout has changes not committed: commit or stash them, then process the changes again.';
@@ -2269,7 +2421,7 @@ describe('every change being tried, in the panel’s Changes: the tokens and eac
 			expect(calls('showLibraryBranch')).toHaveLength(2);
 		});
 
-		it('offers neither Save nor Process changes while another branch is shown', async () => {
+		it('holds Save while another branch is shown, and offers no Process changes where Save is the one offered', async () => {
 			await show();
 			await share('placed', { context: OPEN, unreadable: null, setup: null });
 			await answer('listProjects', SAMPLE_PROJECTS);
@@ -2280,7 +2432,7 @@ describe('every change being tried, in the panel’s Changes: the tokens and eac
 			await press(count());
 			await answerHandOver(null, null);
 			expect(button('Save to a branch')?.disabled).toBe(true);
-			expect(button('Process changes')?.disabled).toBe(true);
+			expect(allByRole('button', 'Process changes')).toEqual([]);
 		});
 
 		it('lists a component handed over with nothing tried, by its own hand-over', async () => {
@@ -2296,7 +2448,7 @@ describe('every change being tried, in the panel’s Changes: the tokens and eac
 				pullRequest: null,
 			});
 			expect(group()?.querySelector('[data-hand-over] .branch-line')?.textContent).toBe(BRANCH);
-			expect(group()?.textContent).toContain('nothing is committed on it yet');
+			expect(group()?.textContent).toContain('Waiting for the agent to commit its work.');
 		});
 	});
 });
@@ -2397,7 +2549,7 @@ describe('trying a change to the tokens, saving it to a branch, and proposing it
 		await press(changed.querySelector('[aria-label="Reset Tones pineGreen 60"]') as HTMLElement);
 		expect(edited()).toEqual([]);
 		await share('tokenEdits', [{ path: 'tone.pineGreen.60', value: '#000000' }]);
-		await press(button('Reset all'));
+		await press(button('Reset', changed));
 		expect(edited()).toEqual([]);
 	});
 
@@ -2425,7 +2577,8 @@ describe('trying a change to the tokens, saving it to a branch, and proposing it
 		await press(button('Start over'));
 		await answerOf('forgetChange', 'tokens', null);
 		expect(edited()).toEqual([]);
-		expect(document.querySelector('[data-changed-tokens]')?.textContent).toContain('Every token is as the design system has it.');
+		expect(document.querySelector('[data-changed-tokens]')).toBeNull();
+		expect(dialog('Changes')?.textContent).toContain('Nothing is being tried.');
 	});
 
 	it('says why a save failed, and keeps the change', async () => {
@@ -2513,8 +2666,9 @@ describe('what the person edited in the design system’s code, read from their 
 		]);
 		// A component the library does not list yet (a story the person added) is named by its story, not linked.
 		expect(groups[1]!.querySelector('button')).toBeNull();
-		expect(groups[3]!.textContent).toContain('These stay in your branch');
-		expect(section()!.textContent).toContain('since your branch left develop');
+		// What the heading says is not said again under it.
+		expect(groups[3]!.querySelector('h3')?.textContent).toContain('Outside the design system');
+		expect(section()!.textContent).not.toMatch(/These stay in your branch|since your branch left|read from git/);
 	});
 
 	it('opens a component edited at its tab', async () => {
@@ -2536,9 +2690,11 @@ describe('what the person edited in the design system’s code, read from their 
 		await act(async () => void (await vi.advanceTimersByTimeAsync(ASK_EVERY_MS)));
 		expect(calls('editedReach')).toHaveLength(2);
 		await answer('editedReach', { state: 'ready', moved: [{ file: BUTTON, changes: [], inside: true }], unchanged: 6, notDrawn: [] });
-		const reach = dialog('Changes')!.querySelector('[aria-label="Components affected"]') as HTMLElement;
-		expect(section()!.contains(reach)).toBe(false);
-		expect(reach.querySelector('h2')?.textContent?.trim()).toBe('Components affected 1');
+		const reach = dialog('Changes')!.querySelector('[data-reach]') as HTMLElement;
+		// In the code edits' own card, at its bottom, closed.
+		expect(section()!.lastElementChild).toBe(reach);
+		expect(reach.querySelector('summary')?.textContent).toBe('1 component affected');
+		await press(reach.querySelector('summary') as HTMLElement);
 		expect(reach.querySelector('[data-moved]')?.textContent).toContain('FSButton');
 	});
 
@@ -2593,7 +2749,7 @@ describe('what the person edited in the design system’s code, read from their 
 			expect(calls('checkSplit')).toHaveLength(1);
 			await answer('checkSplit', null);
 			await answer('splitPreview', { ...READY, check: { state: 'checking', done: 2, doing: 'FSButton, alone' } });
-			expect(split().querySelector('[data-split-checking]')?.textContent).toBe('Checking FSButton, alone… (2 checks done)');
+			expect(split().querySelector('[data-split-checking]')?.textContent?.trim()).toBe('Checking FSButton, alone… (2 checks done)');
 			await press(button('Stop', split())!);
 			expect(calls('stopSplitCheck')).toHaveLength(1);
 		});

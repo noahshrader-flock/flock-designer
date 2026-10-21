@@ -47,7 +47,6 @@ export const Proposed = ({ proposal, controls }: { proposal: SplitProposal; cont
 					);
 				})}
 			</ValueList>
-			<Message>Your branch is not changed: each is a copy of one part of it, made by DSNR.</Message>
 			<Message tone="error">{controls.error}</Message>
 			<ButtonRow>
 				{opened < parts.length && (

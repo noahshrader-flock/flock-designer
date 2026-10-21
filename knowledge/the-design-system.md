@@ -65,9 +65,10 @@ From **Changes**, each group (the tokens, or one component's values) has its own
 
 ## Have the agent write it
 
-Some changes are better made in the component's code than as a value: a new variant, a token used in a new place.
-**Process changes** hands what you are trying to your agent, which makes a branch of the design system, writes the change
-properly in code, and commits it. It does not push.
+Where DSNR cannot write a change where it is (a value written in several places, or in a file DSNR does not write, or a save it
+was refused), **Process changes** is the button in Save's place, with the reason above it: only one of the two is ever shown.
+It hands what you are trying to your agent, which makes a branch of the design system, writes the change properly in code, and
+commits it. It does not push.
 
 When it is done, **Preview this branch** shows the agent's branch in every DSNR page, so you can check its work. While it is
 shown, saving, proposing and processing other changes wait. Go back to the main branch with the button on the note at the
@@ -82,8 +83,8 @@ When you change the design system's code yourself, by hand or with an agent of y
 **Edited in your code**: each component you changed with its files, the files in no component's folder, and the files
 outside the design system, which stay in your branch. A file is a component's when it is in the folder of its stories. It
 is read from git every few seconds while the panel is open, against where your branch left the design system's, so
-others' work on it adds nothing. **Components affected** draws every component with your edits, as a token change is
-drawn. Nothing in your checkout is changed: this only shows.
+others' work on it adds nothing. "N components affected", closed at the bottom of that card, draws every component with
+your edits, as a token change is drawn. Nothing in your checkout is changed: this only shows.
 
 **Prepare pull requests** shows what splitting it would make: one pull request for each component, and one for each
 changed file that is in no component's folder, with their files and lines. Files no one component's reviewer could

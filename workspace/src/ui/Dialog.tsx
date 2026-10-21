@@ -15,11 +15,14 @@ export const Dialog = ({
 	title,
 	onClose,
 	focus = 'field',
+	actions,
 	children,
 }: {
 	title: string;
 	onClose: () => void;
 	focus?: 'field' | 'panel';
+	/** In the title's row, at the end, before the close: what is done to everything the dialog lists. */
+	actions?: ReactNode;
 	children: ReactNode;
 }) => {
 	const box = useRef<HTMLDivElement>(null);
@@ -44,6 +47,7 @@ export const Dialog = ({
 			<div ref={box} role="dialog" aria-modal="true" aria-label={title} tabIndex={-1} className="dialog" onKeyDown={onKeyDown}>
 				<div className="dialog-head">
 					<h2 className="dialog-title">{title}</h2>
+					{actions}
 					<IconButton size="small" icon="close" label="Close" onPress={onClose} className="dialog-close" />
 				</div>
 				<div className="dialog-body">{children}</div>

@@ -19,7 +19,7 @@ const list = (count: number) =>
 	);
 
 describe.skipIf(NO_CHROME)('a long list under one line, in the browser on this machine', () => {
-	it('is closed by default with its chevron at the end of the row, and opens into a list that scrolls in its own height', async () => {
+	it('is closed by default with its chevron right after its words, and opens into a list that scrolls in its own height', async () => {
 		const measured = await inChrome(async (browser) => {
 			const tab = await browser.newPage(OWN_WINDOW);
 			await tab.setViewport({ width: 600, height: 800 });
@@ -28,11 +28,14 @@ describe.skipIf(NO_CHROME)('a long list under one line, in the browser on this m
 				const details = document.querySelector('details')!;
 				const box = (el: Element) => el.getBoundingClientRect();
 				const row = box(details.querySelector('summary')!);
+				const words = document.createRange();
+				words.selectNodeContents(details.querySelector('summary')!.firstChild!);
 				const closed = {
 					open: details.open,
 					height: box(details).height,
-					chevronRight: box(details.querySelector('.collapse-chevron')!).right,
-					rowRight: row.right,
+					apart: box(details.querySelector('.collapse-chevron')!).left - [...words.getClientRects()].at(-1)!.right,
+					fromEnd: row.right - box(details.querySelector('.collapse-chevron')!).right,
+					gap: parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--dsnr-space-2')),
 				};
 				details.open = true;
 				const body = details.querySelector('.list-disclosure > div') as HTMLElement;
@@ -46,7 +49,8 @@ describe.skipIf(NO_CHROME)('a long list under one line, in the browser on this m
 		});
 		expect(measured.closed.open).toBe(false);
 		expect(measured.closed.height).toBeLessThan(40);
-		expect(measured.closed.rowRight - measured.closed.chevronRight).toBeLessThan(2);
+		expect(measured.closed.apart).toBeCloseTo(measured.closed.gap, 0);
+		expect(measured.closed.fromEnd).toBeGreaterThan(100);
 		expect(measured.scrolls).toBe(true);
 		expect(measured.fits).toBe(true);
 	});

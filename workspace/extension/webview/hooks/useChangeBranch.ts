@@ -57,6 +57,10 @@ export const useChangeBranch = <K extends TriedKind>(
 	const [error, setError] = useState<string | null>(null);
 	const nothing = same(change, empty);
 
+	// What was refused is about the change as it was: asked differently, it is asked afresh.
+	const changeNow = JSON.stringify(change);
+	useEffect(() => setError(null), [changeNow]);
+
 	useEffect(() => {
 		setBranch(null);
 		setError(null);

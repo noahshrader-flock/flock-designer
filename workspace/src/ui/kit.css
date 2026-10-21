@@ -883,10 +883,6 @@ a:not(.icon-button) {
 	transition: transform var(--dsnr-motion);
 }
 
-.collapse-chevron-end {
-	margin-left: auto;
-}
-
 .list-disclosure > div {
 	max-height: var(--dsnr-list-height);
 	overflow-y: auto;
@@ -914,6 +910,11 @@ details[open] > summary > .collapse-chevron {
 .section-count {
 	color: var(--dsnr-muted);
 	font-weight: var(--dsnr-weight-regular);
+}
+
+/* A flex row drops the space written between a title and its count, so the count carries its own. */
+.heading-set .section-count {
+	margin-inline-start: var(--dsnr-space-2);
 }
 
 .disclosure-summary {
@@ -1049,6 +1050,7 @@ details[open] > summary > .collapse-chevron {
 }
 
 .dialog-title {
+	flex: 1;
 	margin: 0;
 	font-size: var(--dsnr-text-title);
 	font-weight: var(--dsnr-weight-semibold);

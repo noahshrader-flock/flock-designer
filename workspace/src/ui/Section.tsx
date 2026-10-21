@@ -16,14 +16,14 @@ const Collapsible = ({
 	summaryClassName: string;
 	open: boolean;
 	summary: ReactNode;
-	/** The chevron after the words, at the end of the row, in place of before them. */
+	/** The chevron after the words, in place of before them. */
 	chevronEnd?: boolean;
 	/** On the row that is pressed. */
 	marks?: Marks;
 	children: ReactNode;
 }) => {
 	const body = useId();
-	const chevron = <Icon name="chevron-right" className={chevronEnd ? 'collapse-chevron collapse-chevron-end' : 'collapse-chevron'} />;
+	const chevron = <Icon name="chevron-right" className="collapse-chevron" />;
 	return (
 		<details className={className} open={open}>
 			<summary className={summaryClassName} aria-controls={body} {...marks}>
