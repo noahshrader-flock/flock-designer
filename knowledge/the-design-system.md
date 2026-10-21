@@ -91,7 +91,15 @@ review (a lockfile, `package.json`, the repository's CI) stay in your branch, an
 build** then checks, in the background, that each builds on its own or on the ones it needs, in a copy DSNR makes of the
 design system's branch: never in your checkout. It uses the design system's own TypeScript, so its packages must be
 installed. What it finds is the order to merge them in, and what each stands on; where two need each other, or the whole
-change does not build, it says so and splits nothing. Making the pull requests is a later step.
+change does not build, it says so and splits nothing.
+
+**Propose** then makes a branch of DSNR's for each (its name starts with `dsnr/split-`) and a draft pull request with your
+own GitHub sign-in, each onto the one it stands on, from exactly what was checked: if you edit since, it asks you to check
+again. Your own branch and checkout are never changed, and nothing is pushed by force. Each pull request is a copy of one
+part of your branch, so your branch keeps the whole change; once the pull requests are merged, bringing your branch up to
+date leaves nothing of it behind. If opening stops partway (GitHub not answering), what was opened is kept and
+**Continue** opens the rest; **Start over** forgets it, and what is on GitHub stays. Changes then says, for each, what it
+has that your branch does not: a reviewer's commit on it, or the branch rewritten on GitHub.
 
 ## Voice and tone
 

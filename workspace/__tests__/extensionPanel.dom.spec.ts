@@ -2356,6 +2356,7 @@ describe('what the person edited in the design system’s code, read from their 
 		const READY = {
 			state: 'ready',
 			tip: 'c'.repeat(40),
+			seen: 'e'.repeat(64),
 			units: UNITS,
 			stays: [{ file: { path: 'package-lock.json', edit: 'changed' }, why: 'a lockfile' }],
 			check: { state: 'not-checked' },
@@ -2422,6 +2423,127 @@ describe('what the person edited in the design system’s code, read from their 
 			await prepared({ state: 'unproven', why: 'It has no tsconfig.json.' });
 			expect(split().querySelector('[data-split-unproven]')?.textContent?.trim()).toBe('Not checked: It has no tsconfig.json.');
 			expect(units()).toHaveLength(3);
+		});
+
+		describe('proposed', () => {
+			const PROPOSAL = {
+				seen: 's'.repeat(64),
+				baseBranch: 'develop',
+				opened: 3,
+				parts: [
+					{
+						name: 'theme.ts',
+						branch: 'dsnr/split-20261020-aaaa',
+						on: null,
+						pullRequest: { number: 11, url: 'https://github.com/o/ds/pull/11' },
+						divergence: { state: 'same' },
+					},
+					{
+						name: 'FSTag',
+						branch: 'dsnr/split-20261020-bbbb',
+						on: null,
+						pullRequest: { number: 12, url: 'https://github.com/o/ds/pull/12' },
+						divergence: { state: 'added', commits: 1, by: ['A Reviewer'], files: ['src/components/FSTag/FSTag.tsx'] },
+					},
+					{
+						name: 'FSButton',
+						branch: 'dsnr/split-20261020-cccc',
+						on: 0,
+						pullRequest: { number: 13, url: 'https://github.com/o/ds/pull/13' },
+						divergence: { state: 'rewritten', sameChange: false, files: ['src/components/FSButton/index.tsx'] },
+					},
+				],
+			};
+			const BUILT = {
+				state: 'built',
+				stacks: [
+					{ unit: 0, on: null },
+					{ unit: 2, on: null },
+					{ unit: 1, on: 0 },
+				],
+				seconds: 7,
+				by: 'TypeScript',
+			};
+			const proposed = () => section()!.querySelector('[data-split-proposed]') as HTMLElement;
+
+			it('proposes what was checked once it builds, on purpose where a part is large, and then shows each draft', async () => {
+				await prepared(BUILT);
+				await answer('splitProposal', null);
+				await press(button('Propose anyway', split())!);
+				expect(calls('proposeSplit').at(-1)?.args).toEqual([READY.seen, true]);
+				await answer('proposeSplit', PROPOSAL);
+				await answer('splitProposal', PROPOSAL);
+				expect([...proposed().querySelectorAll('[data-split-part]')].map((p) => p.querySelector('.value-place')?.textContent)).toEqual([
+					'Draft pull request #11 · on develop',
+					'Draft pull request #12 · on develop',
+					'Draft pull request #13 · on theme.ts',
+				]);
+				expect(proposed().querySelector('a')?.getAttribute('href')).toBe('https://github.com/o/ds/pull/11');
+				expect([...proposed().querySelectorAll('button')].map((b) => b.textContent)).toEqual(['Start over']);
+			});
+
+			it('says what each draft has that the person’s branch does not', async () => {
+				await prepared(BUILT);
+				await answer('splitProposal', PROPOSAL);
+				const said = [...proposed().querySelectorAll('[data-split-diverged]')].map((d) => d.textContent?.trim());
+				expect(said).toEqual([
+					'It has 1 commit your branch does not, by A Reviewer: src/components/FSTag/FSTag.tsx.',
+					'Rewritten on GitHub since DSNR opened it, and its change is not yours now: src/components/FSButton/index.tsx.',
+				]);
+			});
+
+			it('offers Continue where it stopped partway, proposing the same split again, and Start over', async () => {
+				await prepared(BUILT);
+				const partway = {
+					...PROPOSAL,
+					opened: 1,
+					parts: PROPOSAL.parts.map((p, i) => (i === 0 ? p : { ...p, pullRequest: null, divergence: null })),
+				};
+				await answer('splitProposal', partway);
+				expect(proposed().querySelectorAll('[data-split-part]')[1]?.querySelector('.value-place')?.textContent).toBe('Not opened yet · on develop');
+				await press(button('Continue', proposed())!);
+				expect(calls('proposeSplit').at(-1)?.args).toEqual([PROPOSAL.seen, false]);
+				await answer('proposeSplit', PROPOSAL);
+				await answer('splitProposal', partway);
+				await press(button('Start over', proposed())!);
+				expect(calls('startSplitOver')).toHaveLength(1);
+			});
+
+			it('says why a proposal was refused', async () => {
+				await prepared(BUILT);
+				await answer('splitProposal', null);
+				await press(button('Propose anyway', split())!);
+				await say({
+					type: 'answer',
+					id: calls('proposeSplit').at(-1)!.id,
+					result: { ok: false, error: 'Your edits have changed since they were checked.' },
+				});
+				expect(split().textContent).toContain('Your edits have changed since they were checked.');
+			});
+		});
+
+		it('proposes without asking twice when it builds and nothing is large, and sends anyway where it is not proven', async () => {
+			const small = { ...READY, units: UNITS.map((u) => ({ ...u, large: false })) };
+			await designOpen();
+			await answer('editedInCode', EDITED);
+			await press(count()!);
+			await answer('splitProposal', null);
+			await press(button('Prepare pull requests', section()!)!);
+			await answer('splitPreview', {
+				...small,
+				check: {
+					state: 'built',
+					stacks: [
+						{ unit: 0, on: null },
+						{ unit: 1, on: null },
+						{ unit: 2, on: null },
+					],
+					seconds: 3,
+					by: 'TypeScript',
+				},
+			});
+			await press(button('Propose 3 pull requests', split())!);
+			expect(calls('proposeSplit').at(-1)?.args).toEqual([READY.seen, false]);
 		});
 
 		it('says a change in too many parts is not split', async () => {

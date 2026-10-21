@@ -7,7 +7,7 @@ import { Button, ButtonRow } from '../../src/ui/Button';
 import { Heading } from '../../src/ui/Heading';
 import { Message } from '../../src/ui/Message';
 import { ValueItem, ValueList } from '../../src/ui/ValueItem';
-import type { SplitControls } from './hooks/useSplitPreview';
+import type { ProposalControls, SplitControls } from './hooks/useSplitPreview';
 import { FileRow } from './FileRow';
 
 type Ready = Extract<SplitPreview, { state: 'ready' }>;
@@ -18,16 +18,30 @@ const ordered = (preview: Ready): { unit: SplitUnit; on?: SplitUnit | null }[] =
 		? preview.check.stacks.map((s) => ({ unit: preview.units[s.unit]!, on: s.on === null ? null : preview.units[s.on]! }))
 		: preview.units.map((unit) => ({ unit }));
 
+/** Sent on purpose where it is not shown to build, or a part is past one sitting's review: the hand-over's flagged pattern. */
+const Propose = ({ preview, proposing, unproven }: { preview: Ready; proposing: ProposalControls; unproven: boolean }) => {
+	const flagged = unproven || preview.units.some((u) => u.large);
+	return (
+		<ButtonRow>
+			<Button disabled={proposing.busy} onPress={() => proposing.propose(preview.seen, flagged)}>
+				{proposing.busy ? 'Opening…' : flagged ? 'Propose anyway' : `Propose ${plural(preview.units.length, CHANGE_REQUEST)}`}
+			</Button>
+		</ButtonRow>
+	);
+};
+
 const Checked = ({
 	check,
 	preview,
 	names,
 	controls,
+	proposing,
 }: {
 	check: SplitCheck;
 	preview: Ready;
 	names: ReadonlyMap<string, string>;
 	controls: SplitControls;
+	proposing: ProposalControls;
 }) => {
 	switch (check.state) {
 		case 'not-checked':
@@ -49,7 +63,10 @@ const Checked = ({
 			);
 		case 'built':
 			return (
-				<Message marks={{ 'data-split-built': '' }}>{`Each builds on what it stands on, checked by ${check.by} in ${check.seconds} s.`}</Message>
+				<>
+					<Message marks={{ 'data-split-built': '' }}>{`Each builds on what it stands on, checked by ${check.by} in ${check.seconds} s.`}</Message>
+					<Propose preview={preview} proposing={proposing} unproven={false} />
+				</>
 			);
 		case 'cycle':
 			return (
@@ -59,9 +76,12 @@ const Checked = ({
 			);
 		case 'unproven':
 			return (
-				<Message tone="warning" marks={{ 'data-split-unproven': '' }}>
-					{`Not checked: ${check.why}`}
-				</Message>
+				<>
+					<Message tone="warning" marks={{ 'data-split-unproven': '' }}>
+						{`Not checked: ${check.why}`}
+					</Message>
+					<Propose preview={preview} proposing={proposing} unproven />
+				</>
 			);
 		default:
 			return (
@@ -80,7 +100,17 @@ const Checked = ({
 };
 
 /** What a split would make, before anything is: nothing here writes to a repository. */
-export const PullRequests = ({ branch, components, controls }: { branch: string; components: CatalogComponent[]; controls: SplitControls }) => {
+export const PullRequests = ({
+	branch,
+	components,
+	controls,
+	proposing,
+}: {
+	branch: string;
+	components: CatalogComponent[];
+	controls: SplitControls;
+	proposing: ProposalControls;
+}) => {
 	const { preview, error } = controls;
 	const names = new Map(components.map((c) => [c.id, c.name]));
 	if (error !== null && preview === null) return <Message tone="error">{error}</Message>;
@@ -127,8 +157,8 @@ export const PullRequests = ({ branch, components, controls }: { branch: string;
 					</ValueList>
 				</>
 			)}
-			<Message tone="error">{error}</Message>
-			<Checked check={preview.check} preview={preview} names={names} controls={controls} />
+			<Message tone="error">{error ?? proposing.error}</Message>
+			<Checked check={preview.check} preview={preview} names={names} controls={controls} proposing={proposing} />
 		</div>
 	);
 };

@@ -11,7 +11,8 @@ import type { Marks } from '../../src/ui/marks';
 import { asks, workspace } from './host';
 import { ReachView } from './ChangeReach';
 import { useTriedAnswer } from './hooks/useTriedAnswer';
-import { useSplitPreview } from './hooks/useSplitPreview';
+import { useSplitPreview, useSplitProposal } from './hooks/useSplitPreview';
+import { Proposed } from './Proposed';
 import { PullRequests } from './PullRequests';
 import { Button, ButtonRow } from '../../src/ui/Button';
 
@@ -51,6 +52,7 @@ export const CodeChanges = ({
 	// Nothing is read for it until asked: what a split would make is the next step, not the first thing shown.
 	const [preparing, setPreparing] = useState(false);
 	const split = useSplitPreview(JSON.stringify(edited), preparing);
+	const proposing = useSplitProposal();
 	return (
 		<>
 			<section aria-label="Edited in your code" className="changed" data-edited-in-code>
@@ -85,8 +87,10 @@ export const CodeChanges = ({
 						<Message>These stay in your branch: they are not the design system’s.</Message>
 					</Group>
 				)}
-				{preparing ? (
-					<PullRequests branch={branch} components={components} controls={split} />
+				{proposing.proposal !== null ? (
+					<Proposed proposal={proposing.proposal} controls={proposing} />
+				) : preparing ? (
+					<PullRequests branch={branch} components={components} controls={split} proposing={proposing} />
 				) : (
 					<ButtonRow>
 						<Button onPress={() => setPreparing(true)}>Prepare pull requests</Button>

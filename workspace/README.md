@@ -382,6 +382,10 @@ laid over it. **Prepare pull requests** previews the split (`split.ts`, `splitUn
 in none, what stays in the branch and why; **Check that they build** (`splitProof.ts`) typechecks each in one copy of the
 tip in DSNR's own folder, its files put in and taken out, "builds" meaning no new error against the tip, and finds the
 stacks from what builds, in the background with progress, Stop and a 30-minute cap. Nothing is written to a repository.
+**Propose** (`splitBranches.ts`) makes a `dsnr/split-…` branch for each in the clone with git's plumbing, each on what it
+stands on, from the files checked (refused for edits changed since), records every one before any is pushed, then pushes
+each (never forced) and opens it as a draft onto what it stands on, recording each; Continue opens what is left. The
+person's branch and checkout are never written; what each draft has that DSNR did not put there is read, never written.
 
 **Sync and share:** whether the person's work is synced is in VS Code's status bar (Synced, Syncing, Not synced);
 pressing it opens a dialog in the panel with what is held back and why, and Sync now. A review tab's title bar opens its page on the published site,

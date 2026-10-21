@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import type { Result, SplitPreview } from '../../../src/shared/contract';
+import type { Result, SplitPreview, SplitProposal } from '../../../src/shared/contract';
 import { workspace } from '../host';
-import { askWhile } from './ask';
+import { askOnce, askWhile } from './ask';
 
 export interface SplitControls {
 	preview: SplitPreview | null;
@@ -35,5 +35,44 @@ export const useSplitPreview = (asked: string, shown: boolean): SplitControls =>
 		error,
 		check: () => void workspace().checkSplit().then(then),
 		stop: () => void workspace().stopSplitCheck().then(then),
+	};
+};
+
+export interface ProposalControls {
+	proposal: SplitProposal | null;
+	busy: boolean;
+	error: string | null;
+	propose: (seen: string, confirmed: boolean) => void;
+	startOver: () => void;
+}
+
+/** Read once shown, and again after each act on it: reading it fetches each draft's branch, so it is not polled. */
+export const useSplitProposal = (): ProposalControls => {
+	const [proposal, setProposal] = useState<SplitProposal | null>(null);
+	const [busy, setBusy] = useState(false);
+	const [error, setError] = useState<string | null>(null);
+	const [turns, setTurns] = useState(0);
+	useEffect(
+		() =>
+			askOnce(
+				() => workspace().splitProposal(),
+				(r) => r.ok && setProposal(r.value),
+			),
+		[turns],
+	);
+	const act = (doing: () => Promise<Result<unknown>>) => {
+		setBusy(true);
+		void doing().then((r) => {
+			setBusy(false);
+			setError(r.ok ? null : r.error);
+			setTurns((n) => n + 1);
+		});
+	};
+	return {
+		proposal,
+		busy,
+		error,
+		propose: (seen, confirmed) => act(() => workspace().proposeSplit(seen, confirmed)),
+		startOver: () => act(() => workspace().startSplitOver()),
 	};
 };
