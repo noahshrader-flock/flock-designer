@@ -87,18 +87,57 @@ export const editedInCode = async (system: ConnectedDesignSystem): Promise<Edite
 };
 
 /** Null where the tip and the person both changed a file and git cannot put the two together, which is never guessed. */
-const mergedOnTip = async (mine: string, base: string | null, now: string | null): Promise<string | null> => {
+const mergedOnTip = async (
+	mine: Buffer,
+	base: { text: string; sha: string } | null,
+	now: { text: string; sha: string } | null,
+): Promise<Buffer | null> => {
 	// New in the person's branch; or there before and gone from the tip since.
 	if (now === null) return base === null ? mine : null;
 	// Added in both.
-	if (base === null) return now === mine ? mine : null;
-	return now === base ? mine : mergeTexts(base, mine, now);
+	if (base === null) return now.text === mine.toString('utf8') ? mine : null;
+	if (now.sha === base.sha) return mine;
+	// Git's own test for a file that is not text: a zero byte. Such a file changed on both sides is not merged.
+	if (mine.includes(0)) return null;
+	const merged = await mergeTexts(base.text, mine.toString('utf8'), now.text);
+	return merged === null ? null : Buffer.from(merged);
 };
 
 /**
- * The person's files merged onto the tip the tab draws, never laid over it, which would undo what the tip gained since.
- * Said in words, with nothing drawn, for a file deleted, moved, not text, or changed on the tip in the same lines.
+ * The person's `files` merged onto the tip (`tip`), never laid over it, which would undo what the tip gained since: each
+ * as it would be there, or null where it is gone (deleted, or moved away). Said in words, with nothing merged, for one the
+ * tip has changed in the same lines.
  */
+export const changesOnTip = async (
+	system: ConnectedDesignSystem,
+	edited: Extract<EditedInCode, { state: 'ready' }>,
+	tip: string,
+	files: EditedFile[],
+): Promise<{ files: Map<string, Buffer | null> } | { not: string }> => {
+	// A file moved to another component is that one's to add: here it is only gone.
+	const movedAway = new Set([...edited.components.flatMap((c) => c.files), ...edited.unowned].filter((f) => f.to !== undefined).map((f) => f.path));
+	const on = new Map<string, Buffer | null>();
+	for (const f of files) {
+		if (f.edit === 'deleted' || f.to !== undefined) {
+			on.set(f.path, null);
+			continue;
+		}
+		const was = f.from ?? f.path;
+		if (f.from !== undefined && !movedAway.has(f.from)) on.set(f.from, null);
+		const [mine, base, now, there] = await Promise.all([
+			readFile(join(system.root, f.path)),
+			fileAt(system.root, edited.base, was),
+			fileAt(system.root, tip, was),
+			f.from === undefined ? null : fileAt(system.root, tip, f.path),
+		]);
+		const merged = there === null ? await mergedOnTip(mine, base, now) : null;
+		if (merged === null) return { not: `${f.path} has changed on ${system.branch} since your branch left it, in the same lines as yours.` };
+		on.set(f.path, merged);
+	}
+	return { files: on };
+};
+
+/** As `changesOnTip`, for drawing: a drawing only changes text files, so one deleted, moved or not text is said, not drawn. */
 export const editedOnTip = async (
 	system: ConnectedDesignSystem,
 	edited: Extract<EditedInCode, { state: 'ready' }>,
@@ -107,18 +146,35 @@ export const editedOnTip = async (
 	const ours = [...edited.components.flatMap((c) => c.files), ...edited.unowned];
 	const gone = ours.find((f) => f.edit === 'deleted' || f.edit === 'moved');
 	if (gone) return { not: `${gone.path} is ${gone.edit === 'deleted' ? 'deleted' : 'moved'}, and the drawing can only change files.` };
+	const on = await changesOnTip(system, edited, tip, ours);
+	if ('not' in on) return on;
 	const files = new Map<string, string>();
-	for (const { path } of ours) {
-		const [bytes, base, now] = await Promise.all([
-			readFile(join(system.root, path)),
-			fileAt(system.root, edited.base, path),
-			fileAt(system.root, tip, path),
-		]);
-		// Git's own test for a file that is not text: a zero byte.
-		if (bytes.includes(0)) return { not: `${path} is not text, and the drawing can only change text files.` };
-		const merged = await mergedOnTip(bytes.toString('utf8'), base?.text ?? null, now?.text ?? null);
-		if (merged === null) return { not: `${path} has changed on ${system.branch} since your branch left it, in the same lines as yours.` };
-		files.set(path, merged);
+	for (const [path, bytes] of on.files) {
+		if (bytes === null || bytes.includes(0)) return { not: `${path} is not text, and the drawing can only change text files.` };
+		files.set(path, bytes.toString('utf8'));
 	}
 	return { files };
+};
+
+/** Lines added and removed in each file, as a pull request counts them; a new file not yet in git, by its own lines. */
+export const editedLines = async (system: ConnectedDesignSystem, edited: Extract<EditedInCode, { state: 'ready' }>): Promise<Map<string, number>> => {
+	const parts = (await git(system.root, ['diff', '-z', '--numstat', '-M', edited.base], { trim: false })).split('\0');
+	const lines = new Map<string, number>();
+	// `added\tremoved\tpath`, or for a move `added\tremoved\t` then its old path and its new.
+	for (let i = 0; i < parts.length - 1; i++) {
+		const [added = '', removed = '', path = ''] = parts[i]!.split('\t');
+		const counted = (Number(added) || 0) + (Number(removed) || 0);
+		if (path !== '') lines.set(path, counted);
+		else {
+			lines.set(parts[i + 2]!, counted);
+			i += 2;
+		}
+	}
+	const all = [...edited.components.flatMap((c) => c.files), ...edited.unowned, ...edited.outside];
+	for (const f of all.filter((e) => e.edit === 'added' && !lines.has(e.path))) {
+		const text = await readFile(join(system.root, f.path)).catch(() => null);
+		const said = text === null || text.includes(0) ? '' : text.toString('utf8');
+		lines.set(f.path, said === '' ? 0 : said.split('\n').length - (said.endsWith('\n') ? 1 : 0));
+	}
+	return lines;
 };
