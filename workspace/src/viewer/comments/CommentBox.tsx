@@ -7,7 +7,7 @@ import type { Comments } from './useComments';
 import { useMoved } from './useMoved';
 
 // From the pin's tip: past the right of its body (14px either side of the tip, `page/pins.ts`) and level with its middle.
-const BOX_OFFSET = { x: 22, y: -19 } as const;
+export const BOX_OFFSET = { x: 22, y: -19 } as const;
 
 /**
  * `origin` is where the page's top left corner is in the window: the pin is placed in the page, the box in the window.

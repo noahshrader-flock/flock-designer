@@ -164,6 +164,11 @@ export const useComments = ({
 		() =>
 			// Stopped on leaving: the handler for a version the person has left must not act on its comment ids.
 			page.onPinEvent((e: PinEvent) => {
+				// Only the new pin's place moves the box; a saved pin's is the page's own business.
+				if (e.kind === 'at') {
+					if (e.id < 0) setPendingAt(e.at);
+					return;
+				}
 				if (e.kind === 'click') {
 					if (e.id < 0) return;
 					setSelected(e.id);

@@ -9,6 +9,7 @@ import { PrototypeServer } from '../src/core/services/prototypes/prototypeServer
 import { readRelayAsk } from '../src/shared/reviewRelay';
 import { buildSite } from '../src/site/buildSite';
 import { tokenApi } from '../src/viewer/browserAdapter';
+import { BOX_OFFSET } from '../src/viewer/comments/CommentBox';
 import { fakeGitHubFetch } from './pageHarness';
 import { inChrome, NO_CHROME, OWN_WINDOW } from './realChrome';
 
@@ -37,6 +38,13 @@ const ask = (headers, more) => fetch(location.ancestorOrigins[0] + '/_dsnr/ask',
 </script></body></html>`;
 const PAGE = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Alert history</title></head>
 <body><main><h1>Alert history</h1><button data-e2e-ref="clear-filter-button">Clear Filter</button></main></body></html>`;
+
+/** Taller than the window, so a pin can be put low on it, and on it scrolled. */
+const LONG = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Long</title></head><body style="margin:0"><main>${Array.from(
+	{ length: 24 },
+	(_, i) =>
+		`<section id="s${i + 1}" style="border-bottom:1px solid #ccc"><h2>Section ${i + 1}</h2><p>${'Words that wrap differently as the page narrows. '.repeat(8)}</p></section>`,
+).join('')}</main></body></html>`;
 
 let root: string;
 let server: PrototypeServer;
@@ -74,6 +82,13 @@ beforeAll(async () => {
 		JSON.stringify([{ projectId: 'hostile', name: 'v1', branch: 'prototype/hostile/v1', commit: null, note: '', createdAt: '2026-10-01T10:00:00Z' }]),
 	);
 	writeFileSync(join(design, 'projects', 'hostile', 'prototypes', 'v1.html'), HOSTILE);
+	mkdirSync(join(design, 'projects', 'long', 'prototypes'), { recursive: true });
+	writeFileSync(join(design, 'projects', 'long', 'brief.md'), '# Long\n');
+	writeFileSync(
+		join(design, 'projects', 'long', 'work.json'),
+		JSON.stringify([{ projectId: 'long', name: 'v1', branch: 'prototype/long/v1', commit: null, note: '', createdAt: '2026-10-01T10:00:00Z' }]),
+	);
+	writeFileSync(join(design, 'projects', 'long', 'prototypes', 'v1.html'), LONG);
 	server = new PrototypeServer();
 	const out = join(root, 'site');
 	buildSite({
@@ -121,6 +136,32 @@ const pressNamed = async (at: Page, label: string) => {
 const press = async (at: Page | Frame, text: string) => {
 	const found = await at.waitForFunction((t) => [...document.querySelectorAll('button')].find((b) => b.textContent?.trim() === t), {}, text);
 	await (found.asElement() as Awaited<ReturnType<Page['$']>>)?.click();
+};
+
+/**
+ * The comment box's corner against the new pin's tip, in the window, once it has come to rest beside it (`BOX_OFFSET`). The
+ * page places its pins on its next frames, after a scroll; only then is the box waited for, which follows by message.
+ */
+const besidePin = async (tab: Page, page: Frame) => {
+	await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
+	const apart = async () => {
+		const tip = await page.evaluate(() => {
+			const last = [...document.querySelectorAll<HTMLElement>('[data-fd-layer="pins"] > div')].at(-1)!;
+			return { x: parseFloat(last.style.left), y: parseFloat(last.style.top) };
+		});
+		return tab.evaluate((at) => {
+			const frame = document.querySelector('iframe')!.getBoundingClientRect();
+			const box = document.querySelector('.comment-box')!.getBoundingClientRect();
+			return { x: Math.round(box.left - (frame.left + at.x)), y: Math.round(box.top - (frame.top + at.y)) };
+		}, tip);
+	};
+	const until = Date.now() + 5_000;
+	let at = await apart();
+	while ((at.x !== BOX_OFFSET.x || at.y !== BOX_OFFSET.y) && Date.now() < until) {
+		await new Promise((r) => setTimeout(r, 50));
+		at = await apart();
+	}
+	return at;
 };
 
 describe.skipIf(NO_CHROME)('a review opened in the browser from DSNR, in the real browser', () => {
@@ -181,25 +222,10 @@ describe.skipIf(NO_CHROME)('a review opened in the browser from DSNR, in the rea
 					const r = document.querySelector('.comment-box')!.getBoundingClientRect();
 					return { left: r.left, top: r.top, width: r.width, height: r.height };
 				});
-			// Where its pin is, in the window: the box opens a fixed distance from it (`BOX_OFFSET`, 22 across and 19 up).
-			const pin = async () => {
-				const h1 = await page.$eval('h1', (e) => {
-					const r = e.getBoundingClientRect();
-					return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
-				});
-				const frame = await tab.$eval('iframe', (e) => ({ left: e.getBoundingClientRect().left, top: e.getBoundingClientRect().top }));
-				return { left: frame.left + h1.x + 22, top: frame.top + h1.y - 19 };
-			};
-			const pinned = (b: { left: number; top: number }, want: { left: number; top: number }) => {
-				expect(Math.abs(b.left - want.left)).toBeLessThan(3);
-				expect(Math.abs(b.top - want.top)).toBeLessThan(3);
-			};
-			// Measured before the click: the panel that opens with the box narrows the page, but the pin was put at the click.
-			const firstPin = await pin();
 			await page.click('h1');
 			await tab.waitForSelector('.comment-box textarea');
+			expect(await besidePin(tab, page)).toEqual(BOX_OFFSET);
 			const opened = await box();
-			pinned(opened, firstPin);
 
 			// One jump, far off the handle: it is the handle's hold on the pointer that carries the box there.
 			const grip = (await (await tab.$('.comment-grip'))!.boundingBox())!;
@@ -226,10 +252,47 @@ describe.skipIf(NO_CHROME)('a review opened in the browser from DSNR, in the rea
 
 			// Cancelled (Escape: the box's own buttons are past the edge now) and clicked again, the next opens where the first did.
 			await tab.keyboard.press('Escape');
-			const nextPin = await pin();
 			await page.click('h1');
 			await tab.waitForSelector('.comment-box textarea');
-			pinned(await box(), nextPin);
+			expect(await besidePin(tab, page)).toEqual(BOX_OFFSET);
+		});
+	}, 120_000);
+
+	it('keeps the comment box beside its pin wherever on the page it is put, and as the page moves under it', async () => {
+		await inChrome(async (browser) => {
+			const tab = await browser.newPage(OWN_WINDOW);
+			await tab.setViewport({ width: 1280, height: 800 });
+			await tab.goto(`${base}long/v1/#dsnr-key-${KEY}`, { waitUntil: 'load' });
+			await tab.waitForFunction(() => [...document.querySelectorAll('button')].some((b) => b.textContent?.trim() === 'Comment'));
+			await press(tab, 'Comment');
+			const page = tab.frames().find((f) => f.url().endsWith('page.html')) as Frame;
+			await page.waitForSelector('style[data-fd="pick"]');
+			const put = async (selector: string) => {
+				await page.click(selector);
+				await tab.waitForSelector('.comment-box textarea');
+				const said = await besidePin(tab, page);
+				await tab.keyboard.press('Escape');
+				await tab.waitForFunction(() => !document.querySelector('.comment-box'));
+				return said;
+			};
+			const tall = await page.evaluate(() => [window.innerHeight, document.documentElement.scrollHeight]);
+			expect(tall[1]).toBeGreaterThan(tall[0]! * 1.5);
+			expect(await put('#s1 h2')).toEqual(BOX_OFFSET);
+			expect(await put('#s5 h2')).toEqual(BOX_OFFSET);
+			await page.evaluate(() => window.scrollTo(0, 900));
+			expect(await put('#s12 h2')).toEqual(BOX_OFFSET);
+
+			// The page moving under an open box (here scrolled; in VS Code it has moved on its own): the box goes with the pin.
+			await page.click('#s14 h2');
+			await tab.waitForSelector('.comment-box textarea');
+			// Up, which a page scrolled this far can always go, and checked: a page that did not move would prove nothing.
+			const moved = await page.evaluate(() => {
+				const was = scrollY;
+				window.scrollBy(0, -150);
+				return was - scrollY;
+			});
+			expect(moved).toBe(150);
+			expect(await besidePin(tab, page)).toEqual(BOX_OFFSET);
 		});
 	}, 120_000);
 

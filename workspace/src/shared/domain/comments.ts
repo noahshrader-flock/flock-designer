@@ -57,7 +57,9 @@ export interface MarkerRequest {
 	movable?: boolean;
 }
 
-export type PinEvent = { kind: 'click'; id: number } | { kind: 'move'; id: number; anchor: CommentAnchor };
+/** `at`: where the new pin is now, in the page's window, as the page moves it. */
+export type PinEvent =
+	{ kind: 'click'; id: number } | { kind: 'move'; id: number; anchor: CommentAnchor } | { kind: 'at'; id: number; at: { x: number; y: number } };
 
 /** `moved` follows the text; `missing` degrades to a page-level comment. */
 export type MarkerState = 'found' | 'moved' | 'missing' | 'elsewhere' | 'otherState';

@@ -333,6 +333,45 @@ describe('placing comments on reopening', () => {
 	});
 });
 
+describe('the new pin, which the box being written follows', () => {
+	// jsdom has no layout: the pin's element is where this says, moved by `to` and a scroll.
+	const setup = (id: number) => {
+		const w = page(CARD);
+		const said: Array<Record<string, unknown>> = [];
+		w.console.debug = (m: string) => {
+			if (m.startsWith('__fd:')) said.push(JSON.parse(m.slice(5)));
+		};
+		let top = 300;
+		const main = w.document.querySelector('main') as HTMLElement;
+		main.getBoundingClientRect = () => new w.DOMRect(10, top, 100, 20);
+		w.eval(resolveScript([req(id, { selector: 'main', offset: { x: 0, y: 0 } })], 'secret'));
+		const to = (next: number) => {
+			top = next;
+			w.dispatchEvent(new w.Event('scroll'));
+		};
+		return { said, to };
+	};
+
+	it('says where it is when drawn, and again each time the page moves it, and not otherwise', () => {
+		const { said, to } = setup(-1);
+		expect(said).toEqual([{ t: 'at', id: -1, x: 10, y: 300, n: 'secret' }]);
+		to(140);
+		to(140);
+		expect(said).toEqual([
+			{ t: 'at', id: -1, x: 10, y: 300, n: 'secret' },
+			{ t: 'at', id: -1, x: 10, y: 140, n: 'secret' },
+		]);
+		// What the app's own reader takes from it.
+		expect(readPinMessage(`__fd:${JSON.stringify(said[1])}`, 'secret')).toEqual({ kind: 'at', id: -1, at: { x: 10, y: 140 } });
+	});
+
+	it('is the only pin that says so: a saved one is placed by the page alone', () => {
+		const { said, to } = setup(5);
+		to(140);
+		expect(said).toEqual([]);
+	});
+});
+
 describe('pins that can be clicked and dragged', () => {
 	const setup = (movable: boolean) => {
 		const w = page(CARD);

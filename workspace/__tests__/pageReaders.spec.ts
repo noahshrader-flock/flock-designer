@@ -13,9 +13,10 @@ const anchor = { route: '/users', selector: '[data-e2e-ref="invite"]', viewport:
 const said = (m: unknown) => `${MESSAGE_PREFIX}${JSON.stringify(m)}`;
 
 describe('a pin’s report', () => {
-	it('counts a click and a move that carry the secret, in exactly their shape', () => {
+	it('counts a click, a move and a place that carry the secret, in exactly their shape', () => {
 		expect(readPinMessage(said({ n: 's', t: 'click', id: 3 }), 's')).toEqual({ kind: 'click', id: 3 });
 		expect(readPinMessage(said({ n: 's', t: 'move', id: 3, anchor }), 's')).toMatchObject({ kind: 'move', id: 3, anchor: { route: '/users' } });
+		expect(readPinMessage(said({ n: 's', t: 'at', id: -1, x: 120.5, y: 80 }), 's')).toEqual({ kind: 'at', id: -1, at: { x: 120.5, y: 80 } });
 	});
 
 	it.each([
@@ -27,6 +28,9 @@ describe('a pin’s report', () => {
 		['a move with no anchor', said({ n: 's', t: 'move', id: 3 })],
 		['a move whose anchor is not on a route', said({ n: 's', t: 'move', id: 3, anchor: { ...anchor, route: 'users' } })],
 		['a move whose anchor has no selector', said({ n: 's', t: 'move', id: 3, anchor: { ...anchor, selector: '' } })],
+		['a place with no y', said({ n: 's', t: 'at', id: -1, x: 3 })],
+		['a place given as text', said({ n: 's', t: 'at', id: -1, x: '3', y: 4 })],
+		['a place past any number', `${MESSAGE_PREFIX}{"n":"s","t":"at","id":-1,"x":1e999,"y":4}`],
 		['text that is not JSON', `${MESSAGE_PREFIX}{not json`],
 		['a message without the prefix', JSON.stringify({ n: 's', t: 'click', id: 3 })],
 	])('refuses %s', (_, message) => {

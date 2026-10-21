@@ -15,6 +15,8 @@ interface Placed {
 	/** Where it was dropped, while the app saves it; null when it sits on its element. */
 	pos: { x: number; y: number } | null;
 	marker?: HTMLElement;
+	/** Where the new pin last said it was, so it says so again only when that changes. */
+	said?: string;
 }
 
 // The picture is drawn only from the host's own address (`isAvatarUrl`), whoever asked, and never sends where the page is.
@@ -140,6 +142,12 @@ export const drawPins = (items: MarkerRequest[], nonce: string): MarkerResult[] 
 			m.style.left = x + 'px';
 			m.style.top = y + 'px';
 			m.style.display = hidden ? 'none' : 'block';
+			// The box being written is beside the new pin, wherever the page moves it: a scroll, a reflow, what loads late.
+			const at = `${x},${y}`;
+			if (p.draft && !hidden && p.said !== at) {
+				p.said = at;
+				say({ t: 'at', id: p.id, x, y });
+			}
 		}
 	};
 

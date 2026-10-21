@@ -46,10 +46,10 @@ export const readMarkers = (raw: unknown, items: MarkerRequest[]): MarkerResult[
 	});
 };
 
-// Counts only if it carries the nonce its pins were drawn with and has exactly the shape of a click or a move.
+// Counts only if it carries the nonce its pins were drawn with and has exactly the shape of a click, a move or a place.
 export const readPinMessage = (message: string, nonce: string): PinEvent | null => {
 	if (!message.startsWith(MESSAGE_PREFIX)) return null;
-	let m: { n?: unknown; t?: unknown; id?: unknown; anchor?: unknown };
+	let m: { n?: unknown; t?: unknown; id?: unknown; anchor?: unknown; x?: unknown; y?: unknown };
 	try {
 		m = JSON.parse(message.slice(MESSAGE_PREFIX.length));
 	} catch {
@@ -60,6 +60,11 @@ export const readPinMessage = (message: string, nonce: string): PinEvent | null 
 	if (m.t === 'move') {
 		const anchor = sanitizeAnchor(m.anchor);
 		return anchor ? { kind: 'move', id: m.id, anchor } : null;
+	}
+	if (m.t === 'at') {
+		const { x, y } = m;
+		const finite = (n: unknown): n is number => typeof n === 'number' && Number.isFinite(n);
+		return finite(x) && finite(y) ? { kind: 'at', id: m.id, at: { x, y } } : null;
 	}
 	return null;
 };

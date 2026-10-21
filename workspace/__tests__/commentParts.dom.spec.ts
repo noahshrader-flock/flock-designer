@@ -179,6 +179,17 @@ describe('the comments experience, through another store and page', () => {
 			expect(at()).toEqual({ left: 43, top: 50 });
 		});
 
+		it('goes with its pin as the page moves it, keeping where it was moved to; a saved pin moving does not move it', async () => {
+			const f = await open();
+			await key('ArrowRight', { on: grip() });
+			f.pin({ kind: 'at', id: -1, at: { x: 100, y: 200 } });
+			await settle();
+			expect(at()).toEqual({ left: 100 + 22 + 16, top: 200 - 19 });
+			f.pin({ kind: 'at', id: 3, at: { x: 500, y: 500 } });
+			await settle();
+			expect(at()).toEqual({ left: 138, top: 181 });
+		});
+
 		it('is not kept where it was moved: the next one opens at its pin, and what was typed stays with the one open', async () => {
 			const f = await open();
 			await type(fieldNamed('Comment'), 'Bigger');
