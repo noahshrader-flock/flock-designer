@@ -99,6 +99,12 @@ The product keeps moving after a prototype is made. When the branch it was model
 says how far behind it is, and **Refresh to latest** rebuilds it on the latest code: see
 [Staying up to date](staying-up-to-date.md).
 
+## An open review keeps up with the page
+
+While a prototype is open for review in VS Code, a page saved for it (by you, by your agent, or arriving from a teammate)
+appears there by itself, within a moment: the review reloads, and its scroll position starts again. If you are in the middle of
+a comment it waits until you have saved or cancelled it, so nothing you typed is lost.
+
 ## Where it all lives
 
 In the design repository, under `projects/` and the project's id:

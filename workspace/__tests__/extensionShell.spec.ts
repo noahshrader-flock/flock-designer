@@ -588,8 +588,16 @@ describe('a review tab’s answers to its page', () => {
 
 describe('the review tabs', () => {
 	const fakeVsCode = () => {
-		const panels: { title: string; html: string; revealed: number; active: boolean; visible: boolean; disposed: () => void; changed: () => void }[] =
-			[];
+		const panels: {
+			title: string;
+			html: string;
+			posted: unknown[];
+			revealed: number;
+			active: boolean;
+			visible: boolean;
+			disposed: () => void;
+			changed: () => void;
+		}[] = [];
 		return {
 			panels,
 			api: {
@@ -599,6 +607,7 @@ describe('the review tabs', () => {
 						const panel = {
 							title,
 							html: '',
+							posted: [] as unknown[],
 							revealed: 0,
 							active: true,
 							visible: true,
@@ -618,7 +627,7 @@ describe('the review tabs', () => {
 									panel.html = h;
 								},
 								onDidReceiveMessage: () => ({ dispose: () => undefined }),
-								postMessage: async () => true,
+								postMessage: async (m: unknown) => (panel.posted.push(m), true),
 							},
 							get active() {
 								return panel.active;
@@ -663,6 +672,85 @@ describe('the review tabs', () => {
 		vs.panels[0]!.disposed();
 		await reviews.open({ records: '/d/projects', projectId: 'demo', name: 'v1', title: 'Demo · Version 1' });
 		expect(vs.panels).toHaveLength(2);
+	});
+
+	describe('kept up to date as a page is saved', () => {
+		const watched = () => {
+			const watches: { dir: string; onPage: (name: string) => void; closed: boolean }[] = [];
+			const built: string[] = [];
+			const vs = fakeVsCode();
+			const reviews = new Reviews({
+				vscode: vs.api as never,
+				build: (records) => void built.push(records),
+				serve: async () => 'http://127.0.0.1:5000/review/',
+				answer: async () => ({ ok: true, value: null }),
+				watch: (dir, onPage) => {
+					const w = { dir, onPage, closed: false };
+					watches.push(w);
+					return { close: () => void (w.closed = true) };
+				},
+			});
+			const demo = { records: '/d/projects', projectId: 'demo', name: 'v1', title: 'Demo · Version 1' };
+			return { vs, reviews, watches, built, demo };
+		};
+
+		it('watches its project’s pages while a tab is open, builds the site again when one is saved, and tells the page', async () => {
+			const { vs, reviews, watches, built, demo } = watched();
+			await reviews.open(demo);
+			expect(watches.map((w) => w.dir)).toEqual(['/d/projects/demo/prototypes']);
+			watches[0]!.onPage('v1');
+			await vi.waitFor(() => expect(vs.panels[0]!.posted).toEqual([{ dsnr: 'page', name: 'v1' }]));
+			// The site first, so the page it is told of is the one it loads.
+			expect(built).toEqual(['/d/projects', '/d/projects']);
+		});
+
+		it('watches once for a tab opened again on the same records, and again for other records', async () => {
+			const { reviews, watches, demo } = watched();
+			await reviews.open(demo);
+			await reviews.open({ ...demo, name: 'v2' });
+			expect(watches).toHaveLength(1);
+			await reviews.open({ ...demo, records: '/e/projects' });
+			expect(watches.map((w) => [w.dir, w.closed])).toEqual([
+				['/d/projects/demo/prototypes', true],
+				['/e/projects/demo/prototypes', false],
+			]);
+		});
+
+		it('stops watching when its tab is closed, by the person or with its project, and a save then builds and tells nothing', async () => {
+			const { vs, reviews, watches, built, demo } = watched();
+			await reviews.open(demo);
+			vs.panels[0]!.disposed();
+			expect(watches[0]!.closed).toBe(true);
+			watches[0]!.onPage('v1');
+			await new Promise((r) => setTimeout(r, 20));
+			expect(built).toEqual(['/d/projects']);
+			expect(vs.panels[0]!.posted).toEqual([]);
+			await reviews.open(demo);
+			reviews.close('demo');
+			expect(watches[1]!.closed).toBe(true);
+		});
+
+		it('says why, in the log, when the site cannot be built again, and does not tell the page', async () => {
+			const vs = fakeVsCode();
+			const logged: string[] = [];
+			let onPage: (name: string) => void = () => undefined;
+			let failing = false;
+			const reviews = new Reviews({
+				vscode: vs.api as never,
+				build: () => {
+					if (failing) throw new Error('disk full');
+				},
+				serve: async () => 'http://127.0.0.1:5000/review/',
+				answer: async () => ({ ok: true, value: null }),
+				watch: (_dir, fn) => ((onPage = fn), { close: () => undefined }),
+				log: { info: (m: string) => void logged.push(m) },
+			});
+			await reviews.open({ records: '/d/projects', projectId: 'demo', name: 'v1', title: 'Demo · Version 1' });
+			failing = true;
+			onPage('v1');
+			await vi.waitFor(() => expect(logged.join('\n')).toContain('could not be brought up to date: disk full'));
+			expect(vs.panels[0]!.posted).toEqual([]);
+		});
 	});
 
 	it('close a deleted project’s tab and its browser keys, leaving another project’s', async () => {

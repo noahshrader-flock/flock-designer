@@ -239,6 +239,12 @@ The bar listens for DSNR only when it is served from this machine and framed, an
 says hello; on the published site it comments with GitHub itself, as the person who signs in there (below). Each project's reviews share
 one tab.
 
+**An open review keeps up with its page.** While a review tab is open, DSNR watches its project's `prototypes` folder in the
+design repository (`extension/src/pageWatch.ts`): a page saved there, by the app, by an agent's `dsnr save-prototype` in
+another process, or by a pull, builds the site again (about 50 ms), and the tab tells the bar (`page`, in `shared/reviewRelay.ts`,
+a version's name and nothing else). The bar reloads its page if it is the version shown, at once, or when a comment being
+written is done (`useReloadOnSaved`): a draft is never lost to it. Nothing is polled, and a hidden tab loads the new site when shown.
+
 **Review isolation: how a review's page and its bar talk.** A review is three windows, one inside the other: DSNR's
 review tab (VS Code's webview), the review bar (`src/viewer`, the site's `index.html` for that prototype), and the
 prototype's own page in the bar's frame (`page.html`), which is a repository's code and is not trusted.

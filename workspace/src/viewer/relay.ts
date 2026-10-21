@@ -20,7 +20,11 @@ export const isServedHere = (location: Pick<Location, 'hostname'>): boolean => i
  * The tab is the VS Code parent that said hello first: from then on only it is asked, and only its well-formed answers
  * (and its word of VS Code's theme) are taken.
  */
-export const listenForDsnr = (win: PageWindow, onRelay: (relay: Relay) => void, onTheme?: (theme: EditorTheme) => void): (() => void) => {
+export const listenForDsnr = (
+	win: PageWindow,
+	onRelay: (relay: Relay) => void,
+	{ onTheme, onPage }: { onTheme?: (theme: EditorTheme) => void; onPage?: (name: string) => void } = {},
+): (() => void) => {
 	if ((win.parent as unknown) === win || !isThisMachine(win.location.hostname)) return () => undefined;
 	let tab: string | null = null;
 	let next = 0;
@@ -43,6 +47,10 @@ export const listenForDsnr = (win: PageWindow, onRelay: (relay: Relay) => void, 
 		}
 		if (tell.dsnr === 'scheme') {
 			if (tab !== null) onTheme?.(tell.theme);
+			return;
+		}
+		if (tell.dsnr === 'page') {
+			if (tab !== null) onPage?.(tell.name);
 			return;
 		}
 		waiting.get(tell.id)?.(tell.result);

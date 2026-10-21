@@ -1,4 +1,5 @@
 import type { InvokeName, Result } from './contract';
+import { isPrototypeName } from './prototypeNames';
 import { hasExactly } from './validate';
 
 /**
@@ -37,8 +38,15 @@ export interface EditorTheme {
 
 export const isDarkTheme = (kind: ThemeKind): boolean => kind === 'vscode-dark' || kind === 'vscode-high-contrast';
 
-/** `hello` tells the page it is framed by DSNR; `scheme` comes then and whenever the theme changes. */
-export type RelayTell = { dsnr: 'hello' } | { dsnr: 'scheme'; theme: EditorTheme } | { dsnr: 'answer'; id: number; result: Result<unknown> };
+/**
+ * `hello` tells the page it is framed by DSNR; `scheme` comes then and whenever the theme changes; `page` that a version's
+ * page was saved, and the site rebuilt with it.
+ */
+export type RelayTell =
+	| { dsnr: 'hello' }
+	| { dsnr: 'scheme'; theme: EditorTheme }
+	| { dsnr: 'page'; name: string }
+	| { dsnr: 'answer'; id: number; result: Result<unknown> };
 
 const CALLS = new Set<string>(RELAY_CALLS);
 const isId = (v: unknown): v is number => typeof v === 'number' && Number.isSafeInteger(v) && v > 0;
@@ -83,6 +91,8 @@ export const readRelayTell = (raw: unknown): RelayTell | null => {
 	const m = raw as Record<string, unknown>;
 	if (m.dsnr === 'hello') return hasExactly(m, ['dsnr']) ? { dsnr: 'hello' } : null;
 	if (m.dsnr === 'scheme') return hasExactly(m, ['dsnr', 'theme']) && isTheme(m.theme) ? { dsnr: 'scheme', theme: m.theme } : null;
+	if (m.dsnr === 'page')
+		return hasExactly(m, ['dsnr', 'name']) && typeof m.name === 'string' && isPrototypeName(m.name) ? { dsnr: 'page', name: m.name } : null;
 	return m.dsnr === 'answer' && hasExactly(m, ['dsnr', 'id', 'result']) && isId(m.id) && isResult(m.result)
 		? { dsnr: 'answer', id: m.id, result: m.result }
 		: null;

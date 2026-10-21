@@ -60,7 +60,7 @@ describe('the tab’s theme', () => {
 	it('is taken from the tab that said hello, as it changes, and from no other', () => {
 		const page = pageAt('127.0.0.1');
 		const theme = vi.fn();
-		listenForDsnr(page.win, () => undefined, theme);
+		listenForDsnr(page.win, () => undefined, { onTheme: theme });
 		const dark = { kind: 'vscode-dark', colors: { '--vscode-foreground': '#cccccc' } };
 		const light = { kind: 'vscode-light', colors: {} };
 		page.say({ dsnr: 'scheme', theme: dark });
@@ -72,6 +72,23 @@ describe('the tab’s theme', () => {
 		page.say({ dsnr: 'scheme', theme: dark });
 		page.say({ dsnr: 'scheme', theme: light });
 		expect(theme.mock.calls).toEqual([[dark], [light]]);
+	});
+});
+
+describe('a page saved, as the tab says it', () => {
+	it('is taken from the tab that said hello, by version, and from no other', () => {
+		const page = pageAt('127.0.0.1');
+		const saved = vi.fn();
+		listenForDsnr(page.win, () => undefined, { onPage: saved });
+		page.say({ dsnr: 'page', name: 'v1' });
+		page.say({ dsnr: 'hello' });
+		page.say({ dsnr: 'page', name: 'v1' }, { origin: 'vscode-webview://other' });
+		page.say({ dsnr: 'page', name: 'v1' }, { source: {} });
+		page.say({ dsnr: 'page', name: '../v1' });
+		expect(saved).not.toHaveBeenCalled();
+		page.say({ dsnr: 'page', name: 'v1' });
+		page.say({ dsnr: 'page', name: 'v2' });
+		expect(saved.mock.calls).toEqual([['v1'], ['v2']]);
 	});
 });
 

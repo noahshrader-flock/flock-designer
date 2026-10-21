@@ -223,7 +223,7 @@ const viewerPage = (
 	);
 };
 
-const PAGE_AGENT = 'page-agent.js';
+export const PAGE_AGENT = 'page-agent.js';
 
 const clearOut = (outDir: string): void => {
 	if (existsSync(outDir) && readdirSync(outDir).length > 0) {

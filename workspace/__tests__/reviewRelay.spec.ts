@@ -45,6 +45,8 @@ describe('what the tab may tell the page', () => {
 		[{ dsnr: 'hello' }],
 		[{ dsnr: 'scheme', theme: { kind: 'vscode-dark', colors: { '--vscode-foreground': '#cccccc' } } }],
 		[{ dsnr: 'scheme', theme: { kind: 'vscode-high-contrast-light', colors: {} } }],
+		[{ dsnr: 'page', name: 'v1' }],
+		[{ dsnr: 'page', name: 'v12' }],
 		[{ dsnr: 'answer', id: 3, result: { ok: true, value: [] } }],
 		[{ dsnr: 'answer', id: 3, result: { ok: false, error: 'No.' } }],
 	])('%o is read', (m) => {
@@ -63,6 +65,12 @@ describe('what the tab may tell the page', () => {
 		[{ dsnr: 'scheme', theme: { kind: 'vscode-dark', colors: { '--vscode-foreground': 'x'.repeat(401) } } }],
 		[{ dsnr: 'scheme', theme: { kind: 'vscode-dark', colors: {}, more: 1 } }],
 		[{ dsnr: 'scheme', theme: { kind: 'vscode-dark', colors: {} }, more: 1 }],
+		// A page is told by the name of a version, and nothing else: no path, no markup, nothing more.
+		[{ dsnr: 'page' }],
+		[{ dsnr: 'page', name: 'codebase' }],
+		[{ dsnr: 'page', name: '../v1' }],
+		[{ dsnr: 'page', name: 'v1', more: 1 }],
+		[{ dsnr: 'page', name: 1 }],
 		[{ dsnr: 'answer', id: 3 }],
 		[{ dsnr: 'answer', id: 3, result: { ok: false } }],
 		[{ dsnr: 'answer', id: -1, result: { ok: true, value: 1 } }],

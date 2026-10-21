@@ -9,7 +9,7 @@ import { escapeHtml } from '../../src/shared/html';
 import REVIEW_TAB from '../../src/page/reviewTab?page';
 import { prototypeKey, sitePath } from '../../src/shared/designPaths';
 import { isPrototypeName } from '../../src/shared/prototypeNames';
-import { toResult, valueOf } from '../../src/shared/result';
+import { errorText, toResult, valueOf } from '../../src/shared/result';
 import { KEY_FRAGMENT, type RelayCall, type RelayTell, readRelayAsk } from '../../src/shared/reviewRelay';
 import { buildSite } from '../../src/site/buildSite';
 import { callRoute } from './bridge';
@@ -110,6 +110,13 @@ const answered = async (answers: ReviewAnswers, review: Review, name: RelayCall,
 	return callRoute(answers.routes(), name, args);
 };
 
+/** An open tab: its panel and what it shows, and the watch on its project's pages while it is open. */
+interface Tab {
+	panel: Panel;
+	review: Review;
+	watching?: { records: string; close: () => void };
+}
+
 type Panel = Pick<VsCode.WebviewPanel, 'title' | 'active' | 'visible' | 'reveal' | 'dispose' | 'onDidChangeViewState' | 'onDidDispose'> & {
 	webview: Pick<VsCode.Webview, 'html' | 'onDidReceiveMessage' | 'postMessage'>;
 };
@@ -119,7 +126,7 @@ type Panel = Pick<VsCode.WebviewPanel, 'title' | 'active' | 'visible' | 'reveal'
  * shows there.
  */
 export class Reviews {
-	private readonly tabs = new Map<string, { panel: Panel; review: Review }>();
+	private readonly tabs = new Map<string, Tab>();
 	/**
 	 * By the key's hash: found without comparing, so how long a wrong one takes says nothing of a right one. Kept until
 	 * VS Code reloads.
@@ -141,6 +148,8 @@ export class Reviews {
 			};
 			build: (records: string) => void | Promise<void>;
 			serve: () => Promise<string>;
+			/** Tells `onPage` when a version's page in `dir` has changed: with none, an open tab stays as it was opened. */
+			watch?: (dir: string, onPage: (name: string) => void) => { close: () => void };
 			answer: (review: Review, name: RelayCall, args: unknown[], seen: Set<number>) => Promise<Result<unknown>>;
 			log?: Pick<VsCode.LogOutputChannel, 'info'>;
 			onShown?: () => void;
@@ -176,8 +185,33 @@ export class Reviews {
 	async open({ records, ...review }: Review & { records: string }): Promise<void> {
 		const src = await this.address({ records, ...review });
 		const open = this.tabs.get(review.projectId);
-		this.shows(open ?? this.make(review), review, src);
+		const tab = open ?? this.make(review);
+		this.shows(tab, review, src);
+		this.watchPages(tab, review.projectId, records);
 		if (open) open.panel.reveal();
+	}
+
+	/** One watch for a tab's project, of the records it was built from; made again if those are another's. */
+	private watchPages(tab: Tab, projectId: string, records: string): void {
+		if (!this.deps.watch || tab.watching?.records === records) return;
+		tab.watching?.close();
+		const watching = this.deps.watch(join(records, projectId, 'prototypes'), (name) => void this.pageSaved(projectId, records, name));
+		tab.watching = { records, close: watching.close };
+	}
+
+	/**
+	 * Built again so it holds the page as it is now, even while the tab is hidden (it is loaded afresh when shown); then the
+	 * page is told, and decides when to reload: it knows whether a comment is being written.
+	 */
+	private async pageSaved(projectId: string, records: string, name: string): Promise<void> {
+		const tab = this.tabs.get(projectId);
+		if (!tab) return;
+		try {
+			await this.deps.build(records);
+			await tab.panel.webview.postMessage({ dsnr: 'page', name } satisfies RelayTell);
+		} catch (err) {
+			this.deps.log?.info(`The review of ${tab.review.title} could not be brought up to date: ${errorText(err)}`);
+		}
 	}
 
 	private shows(tab: { panel: Panel; review: Review }, review: Review, src: string): void {
@@ -205,11 +239,11 @@ export class Reviews {
 		return [...this.tabs].filter(([, t]) => t.panel.visible).map(([id]) => id);
 	}
 
-	private make(review: Review): { panel: Panel; review: Review } {
+	private make(review: Review): Tab {
 		const panel = this.deps.vscode.window.createWebviewPanel('dsnr.review', review.title, this.deps.vscode.ViewColumn.Active, {
 			enableScripts: true,
 		});
-		const shown = { panel, review };
+		const shown: Tab = { panel, review };
 		this.tabs.set(review.projectId, shown);
 		// By thread: the only comments its page may change.
 		const seen = new Set<number>();
@@ -222,6 +256,7 @@ export class Reviews {
 		});
 		panel.onDidChangeViewState(() => this.deps.onShown?.());
 		panel.onDidDispose(() => {
+			shown.watching?.close();
 			this.tabs.delete(review.projectId);
 			this.deps.onShown?.();
 		});

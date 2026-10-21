@@ -25,6 +25,7 @@ import { handedTo } from '../../src/shared/handedTo';
 import { askRoutes } from './asks';
 import { commands } from './commands';
 import { type Given, newPrototype } from './newPrototype';
+import { watchPages } from './pageWatch';
 import { savedOrStop, watchFor } from './watch';
 import { coalesce } from './coalesce';
 import { PanelProvider } from './panel';
@@ -153,6 +154,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 		// Each prototype's page on the pages' address, another origin from the bar's.
 		build: async (records) => buildReview(records, `${await core.prototypeServer.pagesOrigin()}/${REVIEW_KEY}/`),
 		serve: () => core.prototypeServer.serveFolder(REVIEW_KEY, site),
+		watch: watchPages,
 		answer: (review, name, args, seen) =>
 			answerReview(
 				{

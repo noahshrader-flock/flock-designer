@@ -23,7 +23,15 @@ const InPage = ({ config, slots }: { config: ViewerConfig; slots: ViewerSlots })
 	const [relay, setRelay] = useState<Relay | null>(() => (key === null ? null : serverRelay(key)));
 	const [system, setSystem] = useState(() => systemIsDark(window));
 	const [editor, setEditor] = useState<EditorTheme | null>(null);
-	useEffect(() => (key === null ? listenForDsnr(window, setRelay, setEditor) : undefined), []);
+	// Counted, for the version shown only: another's page saved does not change this one.
+	const [saved, setSaved] = useState(0);
+	useEffect(
+		() =>
+			key === null
+				? listenForDsnr(window, setRelay, { onTheme: setEditor, onPage: (name) => name === config.name && setSaved((n) => n + 1) })
+				: undefined,
+		[config.name],
+	);
 	useEffect(() => watchSystemScheme(window, setSystem), []);
 	useEffect(() => {
 		applyScheme(document, editor ? isDarkTheme(editor.kind) : system, editor !== null);
@@ -31,7 +39,15 @@ const InPage = ({ config, slots }: { config: ViewerConfig; slots: ViewerSlots })
 	}, [editor, system]);
 	// `openedHere`: from this machine, not in DSNR's tab, and with no key: opened some other way than Open in browser.
 	return (
-		<Viewer config={config} slots={slots} relay={relay} openedHere={key === null && !framed && isServedHere(location)} signIn={signIn} note={note} />
+		<Viewer
+			config={config}
+			slots={slots}
+			relay={relay}
+			openedHere={key === null && !framed && isServedHere(location)}
+			signIn={signIn}
+			note={note}
+			saved={saved}
+		/>
 	);
 };
 

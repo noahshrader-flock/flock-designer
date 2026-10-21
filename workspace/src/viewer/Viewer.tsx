@@ -28,6 +28,7 @@ import { type Relay, loginIn, relayComments } from './relay';
 import { CommentsPanel } from './comments/CommentsPanel';
 import { BehindLatest } from './BehindLatest';
 import { useOpenOnError } from './comments/useOpenOnError';
+import { useReloadOnSaved } from './comments/useReloadOnSaved';
 
 export interface ViewerConfig {
 	owner: string;
@@ -111,10 +112,13 @@ export const Viewer = ({
 	openedHere = false,
 	signIn = null,
 	note = null,
+	saved = 0,
 }: {
 	config: ViewerConfig;
 	slots: ViewerSlots;
 	relay?: Relay | null;
+	/** How many times this version's page has been saved since this one opened, as DSNR says. */
+	saved?: number;
 	/** None where the site was built without signing in. */
 	signIn?: SignInConfig | null;
 	note?: SignInNote | null;
@@ -162,7 +166,7 @@ export const Viewer = ({
 		setUser(null);
 		if (github) void userOf(github).then(setUser, () => setUser(null));
 	}, [github]);
-	if (relay) return <InDsnr config={config} slots={slots} showing={showing} relay={relay} />;
+	if (relay) return <InDsnr config={config} slots={slots} showing={showing} relay={relay} saved={saved} />;
 	const signOut = () => {
 		saveToken(null);
 		setToken(null);
@@ -206,7 +210,19 @@ export const Viewer = ({
 	);
 };
 
-const InDsnr = ({ config, slots, showing, relay }: { config: ViewerConfig; slots: ViewerSlots; showing: Showing; relay: Relay }) => {
+const InDsnr = ({
+	config,
+	slots,
+	showing,
+	relay,
+	saved,
+}: {
+	config: ViewerConfig;
+	slots: ViewerSlots;
+	showing: Showing;
+	relay: Relay;
+	saved: number;
+}) => {
 	const [login, setLogin] = useState<string | null | undefined>(undefined);
 	const [addressing, setAddressing] = useState<number | null>(null);
 	useEffect(() => {
@@ -247,6 +263,7 @@ const InDsnr = ({ config, slots, showing, relay }: { config: ViewerConfig; slots
 			slots={slots}
 			showing={showing}
 			store={store}
+			saved={saved}
 			before={builtOn}
 			actions={(comment: ReviewComment): MenuItem[] =>
 				comment.resolved
@@ -275,6 +292,7 @@ const Commenting = ({
 	slots,
 	showing,
 	store,
+	saved = 0,
 	before,
 	account,
 	actions,
@@ -283,6 +301,8 @@ const Commenting = ({
 	slots: ViewerSlots;
 	showing: Showing;
 	store: CommentStore;
+	/** How many times this version's page has been saved since this one opened, as DSNR says. */
+	saved?: number;
 	/** In the bar, before the switchers. */
 	before?: ReactNode;
 	account?: ReactNode;
@@ -323,6 +343,7 @@ const Commenting = ({
 	}, [slots.frame, page]);
 
 	const comments = useComments({ store, page, opened, route, setError, onPinClick: () => setListOpen(true) });
+	useReloadOnSaved(saved, comments.composing);
 	useOpenOnError(error, () => setListOpen(true));
 
 	const frameBox = slots.frame.getBoundingClientRect();
