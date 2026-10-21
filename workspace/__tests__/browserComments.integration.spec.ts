@@ -167,6 +167,72 @@ describe.skipIf(NO_CHROME)('a review opened in the browser from DSNR, in the rea
 		});
 	}, 120_000);
 
+	it('moves the comment box by its handle, however fast, and opens the next at its pin', async () => {
+		await inChrome(async (browser) => {
+			const tab = await browser.newPage(OWN_WINDOW);
+			await tab.setViewport({ width: 1280, height: 800 });
+			await tab.goto(`${base}demo/v1/#dsnr-key-${KEY}`, { waitUntil: 'load' });
+			await tab.waitForFunction(() => [...document.querySelectorAll('button')].some((b) => b.textContent?.trim() === 'Comment'));
+			await press(tab, 'Comment');
+			const page = tab.frames().find((f) => f.url().endsWith('page.html')) as Frame;
+			await page.waitForSelector('style[data-fd="pick"]');
+			const box = () =>
+				tab.evaluate(() => {
+					const r = document.querySelector('.comment-box')!.getBoundingClientRect();
+					return { left: r.left, top: r.top, width: r.width, height: r.height };
+				});
+			// Where its pin is, in the window: the box opens a fixed distance from it (`BOX_OFFSET`, 22 across and 19 up).
+			const pin = async () => {
+				const h1 = await page.$eval('h1', (e) => {
+					const r = e.getBoundingClientRect();
+					return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+				});
+				const frame = await tab.$eval('iframe', (e) => ({ left: e.getBoundingClientRect().left, top: e.getBoundingClientRect().top }));
+				return { left: frame.left + h1.x + 22, top: frame.top + h1.y - 19 };
+			};
+			const pinned = (b: { left: number; top: number }, want: { left: number; top: number }) => {
+				expect(Math.abs(b.left - want.left)).toBeLessThan(3);
+				expect(Math.abs(b.top - want.top)).toBeLessThan(3);
+			};
+			// Measured before the click: the panel that opens with the box narrows the page, but the pin was put at the click.
+			const firstPin = await pin();
+			await page.click('h1');
+			await tab.waitForSelector('.comment-box textarea');
+			const opened = await box();
+			pinned(opened, firstPin);
+
+			// One jump, far off the handle: it is the handle's hold on the pointer that carries the box there.
+			const grip = (await (await tab.$('.comment-grip'))!.boundingBox())!;
+			await tab.mouse.move(grip.x + grip.width / 2, grip.y + grip.height / 2);
+			await tab.mouse.down();
+			await tab.mouse.move(grip.x + grip.width / 2 + 120, grip.y + grip.height / 2 + 60);
+			await tab.mouse.up();
+			const moved = await box();
+			expect(Math.round(moved.left - opened.left)).toBe(120);
+			expect(Math.round(moved.top - opened.top)).toBe(60);
+			// It stays a box of the same size, and what is in it is untouched by the move.
+			expect(Math.round(moved.width)).toBe(Math.round(opened.width));
+			expect(await tab.evaluate(() => document.querySelector('.comment-box textarea') !== null)).toBe(true);
+
+			// Out past the window's edge it is stopped, with its handle in reach.
+			await tab.mouse.move(grip.x + grip.width / 2 + 120, grip.y + grip.height / 2 + 60);
+			await tab.mouse.down();
+			await tab.mouse.move(5000, 5000, { steps: 4 });
+			await tab.mouse.up();
+			const edge = await box();
+			const size = await tab.evaluate(() => ({ w: window.innerWidth, h: window.innerHeight }));
+			expect(Math.round(edge.left + edge.width)).toBeLessThanOrEqual(size.w);
+			expect(Math.round(edge.top)).toBeLessThan(size.h);
+
+			// Cancelled (Escape: the box's own buttons are past the edge now) and clicked again, the next opens where the first did.
+			await tab.keyboard.press('Escape');
+			const nextPin = await pin();
+			await page.click('h1');
+			await tab.waitForSelector('.comment-box textarea');
+			pinned(await box(), nextPin);
+		});
+	}, 120_000);
+
 	const hostile = () =>
 		inChrome(async (browser) => {
 			const tab = await browser.newPage(OWN_WINDOW);

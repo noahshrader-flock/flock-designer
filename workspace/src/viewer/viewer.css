@@ -188,6 +188,30 @@ button.comment-body {
 	z-index: var(--dsnr-layer-dialog);
 }
 
+.comment-grip {
+	display: flex;
+	flex: none;
+	align-items: center;
+	justify-content: center;
+	/* Up into the dialog's top padding, and close to what is under it: a handle, not a row of its own. */
+	margin: calc(-1 * var(--dsnr-space-4)) 0 calc(-1 * var(--dsnr-space-3));
+	padding: 0;
+	border: none;
+	background: transparent;
+	color: var(--dsnr-muted);
+	cursor: grab;
+	touch-action: none;
+}
+
+.comment-grip[data-moving] {
+	cursor: grabbing;
+}
+
+/* The icon's dots stand in a column; a handle across the top lies them in a row. */
+.comment-grip .codicon {
+	transform: rotate(90deg);
+}
+
 .comment-box {
 	position: fixed;
 	z-index: var(--dsnr-layer-dialog);

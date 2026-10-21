@@ -474,7 +474,8 @@ Claude Code, so do it on a test project you can delete:
    no folder. Press Enter in Claude Code's panel, where the task is typed in. When it is built, its picture appears in
    the list.
 3. In the review: **Sign in to comment** if it asks, then **Comment**, click something on the page, write a comment, and
-   save it. Check the comment is on the design repository's GitHub issues, and in the app.
+   save it (drag the box by the handle at its top to see what it covers; the next box opens at its pin again). Check the
+   comment is on the design repository's GitHub issues, and in the app.
 4. On the comment's menu: **Resolve**, then **Reopen**.
 5. On the comment's menu: **Address**. The agent's window opens with the task typed in: press Enter there. When it has
    built the change, DSNR saves it; look at the page, then resolve the comment.

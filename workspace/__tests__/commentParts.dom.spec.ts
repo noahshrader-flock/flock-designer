@@ -1,5 +1,5 @@
-import { createElement, useState } from 'react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { act, createElement, useState } from 'react';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { CommentBox } from '../src/viewer/comments/CommentBox';
 import { CommentControl } from '../src/viewer/comments/CommentControl';
 import { CommentList } from '../src/viewer/comments/CommentList';
@@ -118,6 +118,80 @@ describe('the comments experience, through another store and page', () => {
 		expect(made).toEqual([expect.stringContaining('Bigger')]);
 		const saved = (await f.store.read()) as { value: ReviewComment[] };
 		expect(saved.value[0]?.anchor).toMatchObject({ selector: '#cta', page: 'abc123def456' });
+	});
+
+	describe('the box a comment is written in', () => {
+		// Opens at its pin: left 27 and top -14, from the pin at (5, 5) and the box's offset from it.
+		const open = async () => {
+			const f = fakes([]);
+			await mount(f);
+			await press(button('Comment'));
+			await settle();
+			f.click();
+			await settle();
+			return f;
+		};
+		const box = () => document.querySelector('.comment-box') as HTMLElement;
+		const at = () => ({ left: parseFloat(box().style.left), top: parseFloat(box().style.top) });
+		const grip = () => button('Move this box');
+		const pointer = (el: Element, kind: string, x: number, y: number) =>
+			act(async () => void el.dispatchEvent(new MouseEvent(kind, { bubbles: true, cancelable: true, clientX: x, clientY: y })));
+		// jsdom has no layout: the box is where its style puts it, 300 across and 160 high.
+		const measured = HTMLElement.prototype.getBoundingClientRect;
+		beforeEach(() => {
+			HTMLElement.prototype.getBoundingClientRect = function (this: HTMLElement) {
+				if (!this.classList.contains('comment-box')) return new DOMRect(0, 0, 0, 0);
+				return new DOMRect(parseFloat(this.style.left), parseFloat(this.style.top), 300, 160);
+			};
+		});
+		afterEach(() => {
+			HTMLElement.prototype.getBoundingClientRect = measured;
+		});
+
+		it('is moved by as much as the pointer moves on its handle, and stops when the pointer is let go', async () => {
+			await open();
+			expect(at()).toEqual({ left: 27, top: -14 });
+			await pointer(grip(), 'pointerdown', 100, 100);
+			await pointer(grip(), 'pointermove', 160, 140);
+			expect(at()).toEqual({ left: 87, top: 26 });
+			await pointer(grip(), 'pointerup', 160, 140);
+			await pointer(grip(), 'pointermove', 300, 300);
+			expect(at()).toEqual({ left: 87, top: 26 });
+		});
+
+		it('stays in the window, with its handle in reach, however far it is taken', async () => {
+			await open();
+			await pointer(grip(), 'pointerdown', 0, 0);
+			await pointer(grip(), 'pointermove', 5000, 5000);
+			expect(at()).toEqual({ left: window.innerWidth - 300, top: window.innerHeight - 28 });
+			await pointer(grip(), 'pointermove', -5000, -5000);
+			// It opened partly above the window, and is not pulled down to the edge: only kept from going higher.
+			expect(at()).toEqual({ left: 0, top: -14 });
+		});
+
+		it('is moved by the arrow keys on its handle, in larger steps with Shift, for those who do not drag', async () => {
+			await open();
+			await key('ArrowRight', { on: grip() });
+			expect(at()).toEqual({ left: 43, top: -14 });
+			await key('ArrowDown', { on: grip(), shiftKey: true });
+			expect(at()).toEqual({ left: 43, top: 50 });
+			await key('a', { on: grip() });
+			expect(at()).toEqual({ left: 43, top: 50 });
+		});
+
+		it('is not kept where it was moved: the next one opens at its pin, and what was typed stays with the one open', async () => {
+			const f = await open();
+			await type(fieldNamed('Comment'), 'Bigger');
+			await key('ArrowRight', { on: grip(), shiftKey: true });
+			expect(at().left).toBe(91);
+			expect((fieldNamed('Comment') as HTMLTextAreaElement).value).toBe('Bigger');
+			// Cancelling carries on in comment mode: the next click on the page is the next box.
+			await press(button('Cancel'));
+			await settle();
+			f.click();
+			await settle();
+			expect(at()).toEqual({ left: 27, top: -14 });
+		});
 	});
 
 	it('resolves through the store, and takes the pin off the page', async () => {
