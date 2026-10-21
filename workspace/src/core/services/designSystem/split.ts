@@ -1,10 +1,10 @@
 /** The split of what the person has edited: previewed and checked, writing to no repository, then proposed. */
-import type { ConnectedDesignSystem, SplitPreview, SplitProposal } from '../../../shared/contract';
+import type { ConnectedDesignSystem, SplitCheck, SplitPreview, SplitProposal, SplitUnit } from '../../../shared/contract';
 import { saidEdit, unitName } from '../../../shared/valueNames';
 import { libraryCommit } from './designLibrary';
 import { changesOnTip, editedInCode, editedLines } from './editedInCode';
 import { type SplitProof, splitKey } from './splitProof';
-import type { PartToMake, SplitBranches } from './splitBranches';
+import { ALREADY, type PartToMake, type SplitBranches } from './splitBranches';
 import { git } from '../platform/git';
 import { splitUnits } from './splitUnits';
 
@@ -38,6 +38,26 @@ export const checkSplit = async (proof: SplitProof, system: ConnectedDesignSyste
 	proof.start(key, system, tip, files, (i) => unitName(split.units[i]!));
 };
 
+/** What a part's pull request says: what it is, what it is onto and why, its files, and how it was checked. */
+const partText = (
+	unit: SplitUnit,
+	from: string,
+	onto: string,
+	stacked: boolean,
+	check: Extract<SplitCheck, { state: 'built' | 'unproven' }>,
+): string =>
+	[
+		`${unitName(unit)}, split from \`${from}\` by DSNR: this has this one ${unit.file === null ? 'file' : 'component'}’s change, and nothing else of that branch.`,
+		'',
+		stacked ? `Onto ${onto}: it does not build without it, so merge that first.` : `Onto ${onto}.`,
+		'',
+		...unit.files.map((f) => `- \`${f.path}\`: ${saidEdit(f)}`),
+		'',
+		check.state === 'built' ? `Checked: it builds on what it stands on, by ${check.by}, with no new error.` : `Not checked: ${check.why}`,
+		'',
+		'_Opened by DSNR as a draft._',
+	].join('\n');
+
 /**
  * Proposes the split the person checked (`seen`), in the order the check found; one edited since is refused, as is one not
  * checked, and one not shown to build or past one sitting's review unless `confirmed`. Proposing it again goes on opening it.
@@ -49,7 +69,9 @@ export const proposeSplit = async (
 	seen: string,
 	confirmed: boolean,
 ): Promise<SplitProposal> => {
-	if (branches.proposed() === seen) return branches.open();
+	const proposed = branches.proposed();
+	if (proposed === seen) return branches.open();
+	if (proposed !== null) throw new Error(ALREADY);
 	const now = await splitNow(system);
 	if (now === null || 'notSplit' in now.split) throw new Error('There is nothing edited to split.');
 	if (now.key !== seen) throw new Error('Your edits have changed since they were checked: check them again, then propose them.');
@@ -72,19 +94,7 @@ export const proposeSplit = async (
 			on: on === null ? null : at.get(on)!,
 			files: files.files,
 			title: `${name}: from ${from}`,
-			body: [
-				`${name}, split from \`${from}\` by DSNR: this has this one ${u.file === null ? 'file' : 'component'}’s change, and nothing else of that branch.`,
-				'',
-				on === null
-					? `Onto \`${system.branch}\`.`
-					: `Onto ${unitName(units[on]!)}’s pull request: it does not build without it, so merge that first.`,
-				'',
-				...u.files.map((f) => `- \`${f.path}\`: ${saidEdit(f)}`),
-				'',
-				check.state === 'built' ? `Checked: it builds on what it stands on, by ${check.by}, with no new error.` : `Not checked: ${check.why}`,
-				'',
-				'_Opened by DSNR as a draft._',
-			].join('\n'),
+			body: partText(u, from, on === null ? `\`${system.branch}\`` : `${unitName(units[on]!)}’s pull request`, on !== null, check),
 		});
 	}
 	return branches.make(seen, now.tip, parts);

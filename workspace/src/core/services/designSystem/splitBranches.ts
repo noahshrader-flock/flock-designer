@@ -21,6 +21,9 @@ const WORD = 'split';
 const PATTERN = dsnrBranchPattern(WORD);
 const FETCH_TIMEOUT_MS = 30_000;
 
+/** One split at a time for a design system: the one proposed is gone on with, or started over, first. */
+export const ALREADY = 'A split is proposed here already: open the rest of it, or start it over.';
+
 /** A part as kept: `commit` is the one DSNR made, `parent` what it was made on (the tip, or the part it stands on). */
 interface KeptPart {
 	name: string;
@@ -73,7 +76,9 @@ const parse = (raw: unknown): Record<string, KeptSplit> =>
 		Object.entries(asRecord(raw)).flatMap(([key, value]) => {
 			const k = asRecord(value);
 			const parts = asArray(k.parts).map(partOf);
-			const whole = typeof k.seen === 'string' && typeof k.baseBranch === 'string' && parts.length > 0 && parts.every((p) => p !== null);
+			// Each on one before it, as made: a part said to stand on itself or a later one is not a record DSNR made.
+			const ordered = parts.every((p, i) => p !== null && (p.on === null || (Number.isInteger(p.on) && p.on >= 0 && p.on < i)));
+			const whole = typeof k.seen === 'string' && typeof k.baseBranch === 'string' && parts.length > 0 && ordered;
 			return whole ? [[key, { seen: k.seen as string, baseBranch: k.baseBranch as string, parts: parts as KeptPart[] }]] : [];
 		}),
 	);
@@ -114,8 +119,8 @@ export class SplitBranches {
 	 */
 	async make(seen: string, tip: string, parts: PartToMake[]): Promise<SplitProposal> {
 		const system = this.records.system();
-		if (this.records.read('') !== null) throw new Error('A split is proposed here already: open the rest of it, or start it over.');
-		const made: KeptPart[] = [];
+		if (this.records.read('') !== null) throw new Error(ALREADY);
+		const made: { part: PartToMake; parent: string; commit: string }[] = [];
 		for (const part of parts) {
 			const parent = part.on === null ? tip : made[part.on]!.commit;
 			const blobs = new Map<string, string | null>();
@@ -126,12 +131,14 @@ export class SplitBranches {
 			const changed = (await git(system.root, ['diff', '--name-only', '-z', parent, commit], { trim: false })).split('\0').filter(Boolean);
 			const outside = changed.filter((p) => !part.files.has(p));
 			if (outside.length > 0) throw new Error(`${part.name}'s branch would change ${outside.join(', ')}, which is not its own. Nothing was made.`);
-			made.push({ name: part.name, branch: '', on: part.on, parent, commit, pullRequest: null, title: part.title, body: part.body });
+			made.push({ part, parent, commit });
 		}
-		// Named and made only once every commit is: a name never left over from one that failed partway.
-		for (const part of made) {
-			part.branch = await this.newBranch(system, part.commit);
-			this.records.keep(system, '', { seen, baseBranch: system.branch, parts: made.filter((p) => p.branch !== '') });
+		// Named, and each recorded as it is, only once every commit is made: no name is left from one that failed partway.
+		const kept: KeptPart[] = [];
+		for (const { part, parent, commit } of made) {
+			const { name, on, title, body } = part;
+			kept.push({ name, on, title, body, parent, commit, branch: await this.newBranch(system, commit), pullRequest: null });
+			this.records.keep(system, '', { seen, baseBranch: system.branch, parts: kept });
 		}
 		return this.open();
 	}

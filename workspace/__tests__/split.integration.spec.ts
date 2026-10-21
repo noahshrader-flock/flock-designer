@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync, unlinkSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -427,6 +427,29 @@ describe('the split, proposed: a branch and a draft for each, never the personâ€
 		expect(await branches.current()).toBeNull();
 		expect(g(mine, 'for-each-ref', '--format=%(refname:short)', 'refs/heads/dsnr/')).toBe(parts[0]!.branch);
 		expect(g(origin, 'rev-parse', '--verify', '--quiet', parts[0]!.branch)).not.toBe('');
+	});
+
+	it('refuses another split while one is proposed, before making anything, and says what to do', async () => {
+		buttonOnTheme();
+		await checked();
+		failing = 1;
+		await expect(propose()).rejects.toThrow('1 of 3 opened.');
+		write({ 'src/Chip/Chip.ts': 'export const Chip = 4;\n' });
+		await checked();
+		const made = g(mine, 'for-each-ref', '--format=%(refname)', 'refs/heads/dsnr/');
+		await expect(propose()).rejects.toThrow('A split is proposed here already: open the rest of it, or start it over.');
+		expect(g(mine, 'for-each-ref', '--format=%(refname)', 'refs/heads/dsnr/')).toBe(made);
+	});
+
+	it('takes no record for DSNRâ€™s whose part stands on itself or a later one', async () => {
+		buttonOnTheme();
+		await checked();
+		await propose();
+		const file = join(home, 'split-branches.json');
+		const record = JSON.parse(readFileSync(file, 'utf8')) as Record<string, { parts: { on: number | null }[] }>;
+		for (const kept of Object.values(record)) kept.parts[0]!.on = 2;
+		writeFileSync(file, JSON.stringify(record));
+		expect(await branches.current()).toBeNull();
 	});
 
 	it('is forgotten once none of its drafts is open', async () => {
