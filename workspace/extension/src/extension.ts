@@ -232,6 +232,15 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 	};
 
 	const productNow = () => ({ root: found.product, why: found.missing[0] ?? 'No product is open.' });
+	let lastRead = Date.now();
+	// Before anything that watches: a watch begun as the window opens (a repository to set up) tells it what it found.
+	// Once for a burst (a build's save, the review it opens, a comment written): each read of the projects asks GitHub
+	// for every project's files, so several in a moment would spend the hourly limit for nothing.
+	const projectsChanged = coalesce(() => {
+		lastRead = Date.now();
+		panels.post({ type: 'projects-changed' });
+	}, 1500);
+
 	/** Ends with the window: nothing is saved after it is gone. */
 	let watching = true;
 	context.subscriptions.push({ dispose: () => void (watching = false) });
@@ -324,13 +333,6 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 		await vscode.commands.executeCommand('workbench.view.extension.dsnr');
 		panels.show(message);
 	};
-	let lastRead = Date.now();
-	// Once for a burst (a build's save, the review it opens, a comment written): each read of the projects asks GitHub
-	// for every project's files, so several in a moment would spend the hourly limit for nothing.
-	const projectsChanged = coalesce(() => {
-		lastRead = Date.now();
-		panels.post({ type: 'projects-changed' });
-	}, 1500);
 	const tabs = panels.share('tabs', NO_TABS_SHOWN);
 	/** Said where work is handed over; read again whenever the choice, or who is signed in, may have changed. */
 	const agentShown = panels.share('agent', { name: null });

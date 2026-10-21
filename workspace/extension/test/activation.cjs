@@ -33,6 +33,12 @@ exports.run = async () => {
 		);
 		return dsnr.isActive;
 	});
+	// A repository just cloned and not set up: DSNR starts in it, with its setup watched, and that is all this window is for.
+	if (process.env.DSNR_TEST_SCENARIO === 'not-set-up') {
+		await dsnr.activate();
+		console.log('dsnr-test: activated in a repository just cloned and not set up');
+		return;
+	}
 	const commands = await vscode.commands.getCommands(true);
 	const declared = JSON.parse(fs.readFileSync(path.join(dsnr.extensionPath, 'package.json'), 'utf8')).contributes.commands.map((c) => c.command);
 	for (const c of [...declared, 'workbench.view.extension.dsnr']) assert.ok(commands.includes(c), `${c} is a command`);

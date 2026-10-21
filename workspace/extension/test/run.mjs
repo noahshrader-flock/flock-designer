@@ -128,52 +128,65 @@ if (packaged) {
 		JSON.stringify({ name: 'dsnr-test-runner', publisher: 'flocksafety', version: '0.0.0', engines: { vscode: '^1.100.0' } }),
 	);
 }
-const run = spawn(
-	vscodeApp(),
-	[
-		product,
-		`--extensionDevelopmentPath=${runner}`,
-		`--extensionTestsPath=${join(here, 'activation.cjs')}`,
-		`--user-data-dir=${profile.user}`,
-		`--extensions-dir=${profile.extensions}`,
-		'--disable-workspace-trust',
-		'--skip-welcome',
-		'--skip-release-notes',
-		'--new-window',
-	],
-	{
-		// Sealed (`sealed.mjs`), with the stand-in Claude Code first on the PATH.
-		env: vscodeEnv({
-			...sealedEnv({ base: join(base, 'sealed'), path: `${bin}:${process.env.PATH}` }).env,
-			DSNR_TEST_PROFILE: profile.user,
-			...(hasFui ? { DSNR_TEST_DESIGN_SYSTEM: '1' } : {}),
-			...(packaged ? { DSNR_INSTALLED_IN: profile.extensions } : {}),
-		}),
-		stdio: ['ignore', 'pipe', 'pipe'],
-	},
-);
-let said = '';
-run.stdout.on('data', (d) => (said += d));
-run.stderr.on('data', (d) => (said += d));
-let timedOut = false;
-const cap = setTimeout(() => {
-	console.error('dsnr-test: VS Code did not finish within 300 s');
-	timedOut = true;
-	run.kill('SIGKILL');
-}, 300_000);
-run.on('exit', (status) => {
-	clearTimeout(cap);
-	// Retried: VS Code's extension host can still be finishing a write here a moment after its window has gone.
-	rmSync(base, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
-	const line = said.split('\n').find((l) => l.includes('dsnr-test:'));
-	if (status === 0 && line) console.log(`${line.trim()}${packaged ? ' (installed from its package)' : ''}`);
-	else
-		console.error(
-			`dsnr-test: failed (VS Code exited with ${status})\n${said
-				.split('\n')
-				// Stopped from outside, or gone before a step began, nothing said why: the last of what VS Code said, whole.
-				.filter((l, i, all) => /assert|Error|dsnr-test/i.test(l) || ((timedOut || !said.includes('dsnr-test-step')) && i >= all.length - 40))
-				.join('\n')}`,
+// A repository just cloned, with no workspace file: DSNR starts in it with a setup to watch, before anything else is ready.
+const notSetUp = join(world, 'just-cloned');
+repo(notSetUp, { 'README.md': '# Just cloned\n' });
+
+/** One VS Code window on `folder`, sealed, its test told `scenario`; says how it went, and resolves with whether it passed. */
+const launch = (folder, scenario) =>
+	new Promise((resolve) => {
+		const run = spawn(
+			vscodeApp(),
+			[
+				folder,
+				`--extensionDevelopmentPath=${runner}`,
+				`--extensionTestsPath=${join(here, 'activation.cjs')}`,
+				`--user-data-dir=${profile.user}`,
+				`--extensions-dir=${profile.extensions}`,
+				'--disable-workspace-trust',
+				'--skip-welcome',
+				'--skip-release-notes',
+				'--new-window',
+			],
+			{
+				// Sealed (`sealed.mjs`), with the stand-in Claude Code first on the PATH.
+				env: vscodeEnv({
+					...sealedEnv({ base: join(base, 'sealed'), path: `${bin}:${process.env.PATH}` }).env,
+					DSNR_TEST_PROFILE: profile.user,
+					DSNR_TEST_SCENARIO: scenario,
+					...(hasFui ? { DSNR_TEST_DESIGN_SYSTEM: '1' } : {}),
+					...(packaged ? { DSNR_INSTALLED_IN: profile.extensions } : {}),
+				}),
+				stdio: ['ignore', 'pipe', 'pipe'],
+			},
 		);
-	process.exit(status === 0 && line ? 0 : 1);
-});
+		let said = '';
+		run.stdout.on('data', (d) => (said += d));
+		run.stderr.on('data', (d) => (said += d));
+		let timedOut = false;
+		const cap = setTimeout(() => {
+			console.error('dsnr-test: VS Code did not finish within 300 s');
+			timedOut = true;
+			run.kill('SIGKILL');
+		}, 300_000);
+		run.on('exit', (status) => {
+			clearTimeout(cap);
+			const line = said.split('\n').find((l) => l.includes('dsnr-test:'));
+			if (status === 0 && line) console.log(`${line.trim()}${packaged ? ' (installed from its package)' : ''}`);
+			else
+				console.error(
+					`dsnr-test: failed (VS Code exited with ${status})\n${said
+						.split('\n')
+						// Stopped from outside, or gone before a step began, nothing said why: the last of what VS Code said, whole.
+						.filter((l, i, all) => /assert|Error|dsnr-test/i.test(l) || ((timedOut || !said.includes('dsnr-test-step')) && i >= all.length - 40))
+						.join('\n')}`,
+				);
+			resolve(status === 0 && Boolean(line));
+		});
+	});
+
+// The full run only once DSNR starts at all: it is the first thing it needs.
+const passed = (await launch(notSetUp, 'not-set-up')) && (await launch(product, 'product'));
+// Retried: VS Code's extension host can still be finishing a write here a moment after its window has gone.
+rmSync(base, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
+process.exit(passed ? 0 : 1);
