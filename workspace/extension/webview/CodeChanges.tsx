@@ -54,7 +54,7 @@ export const CodeChanges = ({
 	const proposing = useSplitProposal();
 	return (
 		<>
-			<section aria-label="Edited in your code" className="changed" data-edited-in-code>
+			<section aria-label="Edited in your code" className="box changed" data-edited-in-code>
 				<div className="changed-header">
 					<Heading size="set">
 						Edited in your code <span className="section-count">{editedCount(edited)}</span>

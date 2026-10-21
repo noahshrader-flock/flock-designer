@@ -834,8 +834,6 @@
 	flex-direction: column;
 	gap: var(--dsnr-space-3);
 	padding: var(--dsnr-space-5);
-	border: 1px solid var(--dsnr-border);
-	border-radius: var(--dsnr-radius-large);
 }
 
 .changed ~ .changed {

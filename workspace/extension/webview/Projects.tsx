@@ -254,8 +254,8 @@ export const Projects = ({
 			{login === null && <Message inset>These are the projects on this machine. Sign in to see your team's too.</Message>}
 			<Setup setup={setup} signedIn={login !== null} />
 			{!product.open && setup?.state !== 'not-set-up' && (
-				<Message size="block" inset action={{ label: 'Get started', onPress: () => void asks().getStarted() }}>
-					No product is open, so these are everyone’s projects. Open a product to make a prototype, or to build or Address one.
+				<Message size="box" inset icon="folder-opened" action={{ label: 'Get started', onPress: () => void asks().getStarted() }}>
+					<p>No product is open, so these are everyone’s projects. Open a product to make a prototype, or to build or Address one.</p>
 				</Message>
 			)}
 			{projects.length > 0 && (

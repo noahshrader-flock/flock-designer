@@ -202,6 +202,23 @@ describe('a message as a page (an empty state)', () => {
 		expect(content.querySelector('[data-part="title"]')?.textContent).toBe('No design system found');
 		expect([...content.querySelectorAll('.empty-body > *')].map((c) => c.tagName)).toEqual(['P', 'BUTTON']);
 	});
+
+	it('is, as a box, the same icon, words and button in the outline a card has, with its button outlined', async () => {
+		await mount(
+			createElement(Message, {
+				size: 'box',
+				icon: 'diff',
+				inset: true,
+				action: { label: 'Get started', onPress: () => {} },
+				children: createElement('p', null, 'Nothing yet.'),
+			}),
+		);
+		const box = document.querySelector('.empty') as HTMLElement;
+		expect(box.className).toBe('empty empty-box box message-inset');
+		expect([...box.querySelectorAll('.empty-content > *')].map((c) => c.className)).toEqual(['empty-icon', 'empty-body']);
+		expect(box.querySelector('.empty-icon .codicon-diff')).not.toBeNull();
+		expect(box.querySelector('button')?.className).toContain('button-secondary');
+	});
 });
 
 describe('the blank badge', () => {

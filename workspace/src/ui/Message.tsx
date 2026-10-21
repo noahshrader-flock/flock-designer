@@ -18,8 +18,8 @@ export const Message = ({
 	children,
 }: {
 	tone?: 'quiet' | 'warning' | 'error';
-	/** `line` in the flow, its action a link; `block` in a box of its own, its action a button; `page` the whole of an empty view. */
-	size?: 'line' | 'block' | 'page';
+	/** `line` in the flow, its action a link; `block` in a box of its own, its action a button; `page` the whole of an empty view; `box` an empty view that is only a card within one, in the outline cards have. */
+	size?: 'line' | 'block' | 'page' | 'box';
 	title?: string;
 	icon?: string;
 	action?: { label: string; onPress: () => void } | null;
@@ -32,9 +32,17 @@ export const Message = ({
 	if (children === null || children === undefined || children === false || children === '') return null;
 	const said = waiting ? <Waiting>{children}</Waiting> : children;
 	const alert = tone === 'error' ? { role: 'alert' } : {};
-	if (size === 'page')
+	if (size === 'page' || size === 'box') {
+		const boxed = size === 'box';
+		const frame = `empty${boxed ? ' empty-box box' : ''}${boxed && inset ? ' message-inset' : ''}`;
+		// Outlined in a box, so what is done about it does not outshout the page around it.
+		const button = action && (
+			<Button variant={boxed ? 'secondary' : 'primary'} onPress={action.onPress}>
+				{action.label}
+			</Button>
+		);
 		return title || icon ? (
-			<div className="empty" {...marks}>
+			<div className={frame} {...marks}>
 				<div className="empty-content">
 					{icon && (
 						<span className="empty-icon">
@@ -48,18 +56,19 @@ export const Message = ({
 					)}
 					<div className="empty-body">
 						{said}
-						{action && <Button onPress={action.onPress}>{action.label}</Button>}
+						{button}
 					</div>
 				</div>
 			</div>
 		) : (
-			<div className="empty" {...marks}>
+			<div className={frame} {...marks}>
 				<div className="empty-content">
 					<p role={tone === 'error' ? 'alert' : 'status'}>{said}</p>
-					{action && <Button onPress={action.onPress}>{action.label}</Button>}
+					{button}
 				</div>
 			</div>
 		);
+	}
 	if (size === 'block')
 		return (
 			<div className={`message message-${tone} message-block${inset ? ' message-inset' : ''}`} {...alert} {...marks}>

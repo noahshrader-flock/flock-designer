@@ -104,7 +104,7 @@ export const ChangesGroup = ({
 	marks: Marks;
 	children?: ReactNode;
 }) => (
-	<section aria-label={label} className="changed" {...marks}>
+	<section aria-label={label} className="box changed" {...marks}>
 		<div className="changed-header">
 			<Heading size="set">
 				{title}

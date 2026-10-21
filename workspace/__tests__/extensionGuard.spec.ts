@@ -143,7 +143,7 @@ describe('the extension’s sources', () => {
 			'.chip {',
 			'.primitive {',
 			'.color-picker {',
-			'.changed {',
+			'.box {',
 		])
 			expect(rule(selector), selector).toMatch(/border[a-z-]*:\s*1px solid var\(--dsnr-border\)/);
 		// Nothing else names the theme's input or widget border: a line that did would be a second colour for the same thing.

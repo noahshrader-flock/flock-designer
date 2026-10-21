@@ -57,7 +57,7 @@ describe.skipIf(NO_CHROME)('a dialog, in the browser on this machine', () => {
 			const tab = await browser.newPage(OWN_WINDOW);
 			await tab.setViewport({ width: 500, height: 800 });
 			const group =
-				'<section class="changed"><div class="changed-header"><h4 class="heading heading-set">FSFab</h4></div>' +
+				'<section class="box changed"><div class="changed-header"><h4 class="heading heading-set">FSFab</h4></div>' +
 				'<div class="branch-actions"><div class="button-row"><button class="button">Save to a branch</button><button class="button">Process changes</button></div></div>' +
 				'<div data-reach><details class="list-disclosure"><summary class="disclosure-summary">3 components affected</summary><div>x</div></details></div></section>';
 			await tab.setContent(

@@ -48,6 +48,7 @@
 	--dsnr-indent: calc(var(--dsnr-space-4) + 16px + var(--dsnr-space-2));
 	--dsnr-icon-small: 14px;
 	--dsnr-icon-xs: 12px;
+	--dsnr-icon-medium: 32px;
 	--dsnr-icon-large: 40px;
 	--dsnr-card-text-pad: var(--dsnr-space-4);
 	--dsnr-badge: 17px;
@@ -524,6 +525,12 @@ a:not(.icon-button) {
 	object-fit: cover;
 }
 
+/* The outline a card has, in one place: a group of changes, an empty view that is only a card. */
+.box {
+	border: 1px solid var(--dsnr-border);
+	border-radius: var(--dsnr-radius-large);
+}
+
 .empty {
 	display: flex;
 	flex: 1;
@@ -540,6 +547,24 @@ a:not(.icon-button) {
 	align-items: center;
 	width: 100%;
 	max-width: 320px;
+}
+
+/* An empty view that is only a card: dashed, as tall as its words, and nothing below the last of them but its own padding. */
+.empty-box {
+	flex: none;
+	border-style: dashed;
+}
+
+.empty-box .empty-icon .codicon {
+	font-size: var(--dsnr-icon-medium);
+}
+
+.empty-box .empty-icon + .empty-body {
+	margin-top: var(--dsnr-space-5);
+}
+
+.empty-box .empty-body > :last-child {
+	margin-bottom: 0;
 }
 
 .empty-icon .codicon {
