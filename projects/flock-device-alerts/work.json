@@ -1,0 +1,22 @@
+[
+  {
+    "projectId": "flock-device-alerts",
+    "name": "v1",
+    "branch": "prototype/flock-device-alerts/v1",
+    "commit": null,
+    "createdAt": "2026-10-21T01:52:07.026Z",
+    "note": "A Flock Admin page, \"Device alerts\": a heading, a one-line description, an FSAlert saying \"3 devices are offline\", and one primary button \"Review devices\".",
+    "contributors": [
+      {
+        "name": "Noah Shrader",
+        "login": "noahshrader-flock"
+      }
+    ],
+    "basedOn": {
+      "repository": "flock-coke",
+      "branch": "feature/test-dsnr",
+      "commit": "5d6b3cc610b913a56829636acdd989f1fa716833",
+      "product": "flocksafety/flock-coke"
+    }
+  }
+]
