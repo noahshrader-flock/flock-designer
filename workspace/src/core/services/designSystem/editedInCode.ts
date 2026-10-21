@@ -130,7 +130,8 @@ export const changesOnTip = async (
 			fileAt(system.root, tip, was),
 			f.from === undefined ? null : fileAt(system.root, tip, f.path),
 		]);
-		const merged = there === null ? await mergedOnTip(mine, base, now) : null;
+		if (there !== null) return { not: `${f.path} is on ${system.branch} now too, and yours is moved there from ${f.from}.` };
+		const merged = await mergedOnTip(mine, base, now);
 		if (merged === null) return { not: `${f.path} has changed on ${system.branch} since your branch left it, in the same lines as yours.` };
 		on.set(f.path, merged);
 	}

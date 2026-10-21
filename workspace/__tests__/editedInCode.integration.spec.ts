@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { ConnectedDesignSystem, EditedInCode } from '../src/shared/contract';
-import { editedInCode, editedOnTip } from '../src/core/services/designSystem/editedInCode';
+import { changesOnTip, editedInCode, editedOnTip } from '../src/core/services/designSystem/editedInCode';
 import { g, writeFiles } from './fixtures';
 
 /**
@@ -261,6 +261,23 @@ describe('what is edited, as it would be on the design system’s tip the tab dr
 		write('ds/src/Button/Button.tsx', 'export const Button = 2;\n');
 		expect(await onTip(tip)).toEqual({
 			not: 'ds/src/Button/Button.tsx has changed on develop since your branch left it, in the same lines as yours.',
+		});
+	});
+
+	it('says a file moved onto a path the tip now has too, rather than merging onto it', async () => {
+		const tip = moveOn({ 'ds/src/Button/Chip.tsx': 'export const Other = 1;\n' });
+		renameSync(join(mine, 'ds/src/Chip/Chip.tsx'), join(mine, 'ds/src/Button/Chip.tsx'));
+		g(mine, 'add', '-A');
+		const edited = await ready();
+		expect(
+			await changesOnTip(
+				system,
+				edited,
+				tip,
+				edited.components.flatMap((c) => c.files),
+			),
+		).toEqual({
+			not: 'ds/src/Button/Chip.tsx is on develop now too, and yours is moved there from ds/src/Chip/Chip.tsx.',
 		});
 	});
 
