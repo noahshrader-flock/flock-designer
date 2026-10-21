@@ -4,6 +4,7 @@ import type { Work } from '../../../shared/contract';
 import { isPrototypeName } from '../../../shared/prototypeNames';
 import { parseWork, serializeWork } from '../../../shared/workRecords';
 import { assertUsableProjectId } from '../projects/workRecords';
+import { versionFile } from './versionFiles';
 
 /**
  * A version started here and not saved yet: its record, kept on this machine only, beside its built files, in the shape
@@ -12,11 +13,7 @@ import { assertUsableProjectId } from '../projects/workRecords';
 
 const SUFFIX = '.pending.json';
 
-const pendingFile = (prototypesRoot: string, projectId: string, name: string): string => {
-	assertUsableProjectId(projectId);
-	if (!isPrototypeName(name)) throw new Error(`"${name}" is not a prototype.`);
-	return join(prototypesRoot, projectId, `${name}${SUFFIX}`);
-};
+const pendingFile = (prototypesRoot: string, projectId: string, name: string): string => versionFile(prototypesRoot, projectId, name, SUFFIX);
 
 export const keepPending = (prototypesRoot: string, record: Work): void => {
 	const file = pendingFile(prototypesRoot, record.projectId, record.name);

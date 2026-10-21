@@ -28,6 +28,7 @@ import {
 } from './prototype';
 import { dropPending, keepPending, pendingOf } from './pendingPrototypes';
 import { keepRequest } from './requestLog';
+import { markSaved, savedHash } from './savedSource';
 import { designRepositoryMissing } from '../projects/discovery';
 import { bundleCommand, runBundle, shellLine, writeBundleScript, writeCheckScript } from './prototypeBundle';
 import { type CheckConfig, checkedAsSaved } from '../accessibility/buildCheck';
@@ -356,6 +357,21 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		if (!r.ok) throw new Error(`The prototype did not build:\n${r.output.slice(0, 2000)}`);
 	};
 
+	/**
+	 * A saved copy changed since this machine saved it (by someone else, or by an edit made there) is refused, not replaced,
+	 * before anything is built; `replace` says it is meant. A new version has no saved copy, so only `save` needs this.
+	 */
+	const refuseSavedChange = async (projectId: string, name: string, replace: boolean): Promise<void> => {
+		const local = sourceFile(projectId, name);
+		const was = savedHash(prototypesRoot, projectId, name);
+		if (replace || was === null || !existsSync(local)) return;
+		const there = await ctx.readDesignFile(prototypeSourcePath(projectId, name));
+		if (there === null || contentHashOf(there) === was || there === readFileSync(local, 'utf8')) return;
+		throw new Error(
+			`${name}'s source in the design repository (${prototypeSourcePath(projectId, name)}) has been changed since this machine saved it, by someone else or by an edit made there directly. Saving would replace it with the working copy, ${local}, so nothing was saved. Bring what you want to keep into the working copy and save again, or save with --replace to replace it as it is.`,
+		);
+	};
+
 	/** Shared files first, so a page is never there without them. */
 	const writePage = async (projectId: string, name: string, html: string): Promise<void> => {
 		const store = ctx.store();
@@ -365,8 +381,11 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 				await store.write(sharedFilePath(n), readFileSync(local, 'utf8'), `Shared file ${n}`);
 		}
 		const source = sourceFile(projectId, name);
-		if (existsSync(source))
-			await store.write(prototypeSourcePath(projectId, name), readFileSync(source, 'utf8'), `${projectId}: prototype ${name} source`);
+		if (existsSync(source)) {
+			const text = readFileSync(source, 'utf8');
+			await store.write(prototypeSourcePath(projectId, name), text, `${projectId}: prototype ${name} source`);
+			markSaved(prototypesRoot, projectId, name, text);
+		}
 		await store.write(prototypePagePath(projectId, name), html, `${projectId}: prototype ${name}`);
 		const checked = checkedAsSaved({ projectId, name, ...buildCheckFiles(projectId, name) }, html);
 		if (checked) {
@@ -395,7 +414,10 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		}
 		return html;
 	};
-	const save = async (projectId: string, name: string): Promise<void> => keep(projectId, name, await built(projectId, name));
+	const save = async (projectId: string, name: string, replace = false): Promise<void> => {
+		await refuseSavedChange(projectId, name, replace);
+		await keep(projectId, name, await built(projectId, name));
+	};
 	/**
 	 * Saves only a page newer than its source, from a source not saved already: asked as often as a watcher likes, it
 	 * saves each build once.
@@ -426,7 +448,11 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		const source = await sourceText(projectId, name);
 		if (source === null) throw new Error(NO_SOURCE);
 		const local = sourceFile(projectId, name);
-		if (!existsSync(local)) writeFileSync(local, source);
+		if (!existsSync(local)) {
+			writeFileSync(local, source);
+			// It is the saved copy, so the next save is measured against it.
+			markSaved(prototypesRoot, projectId, name, source);
+		}
 		return source;
 	};
 

@@ -74,7 +74,7 @@ export { cliDataFolder, commandLinePrototypes } from '../core/services/platform/
 const USAGE = `Usage:
   dsnr new-prototype --project <id> --note <what to make> [--title <project title>] [--from <branch>] [--product <dir>]
   dsnr change-prototype --project <id> --name <v1> --note <what to change> [--new-version] [--product <dir>]
-  dsnr save-prototype --project <id> --name <v1> [--from-version <v1>] [--product <dir>]
+  dsnr save-prototype --project <id> --name <v1> [--from-version <v1>] [--replace] [--product <dir>]
   dsnr build-site [--out <dir>] [--serve]
   dsnr publish --project <id> --name <v1> [--no-open]
   dsnr unpublish --project <id> --name <v1>
@@ -87,7 +87,8 @@ const USAGE = `Usage:
 new-prototype records the next version (v1 for a new project, then v2, v3) and prints the task: where to write the
 prototype and how to check it builds. change-prototype does the same for a change to one: in that version, in place, or,
 with --new-version only, in a new version from it. save-prototype builds it and saves page and source to the design
-repository; for a new version from another, --from-version says which (the task gives the command whole).
+repository; for a new version from another, --from-version says which (the task gives the command whole). It refuses to
+replace a saved source that was changed since this machine saved it, and --replace says it is meant.
 --note-file <path> may stand in for --note. --title is needed only for a new project.
 build-site writes the site prototypes are published as, from the design repository, and --serve shows it here. publish
 pushes the records, deploys the site and prints the version's link, and says who can open it; the first time a page
@@ -141,6 +142,7 @@ const OPTIONS = {
 	title: { type: 'string' },
 	from: { type: 'string' },
 	'from-version': { type: 'string' },
+	replace: { type: 'boolean' },
 	product: { type: 'string' },
 	out: { type: 'string' },
 	serve: { type: 'boolean' },
@@ -441,7 +443,7 @@ export const main = async (argv: string[], deps: CliDeps): Promise<number> => {
 			if (!name) throw new UsageError('Say which prototype, with --name.');
 			const change = await work.resumeChange(projectId, name, values['from-version'] ?? null);
 			if (change === null) {
-				await work.save(projectId, name);
+				await work.save(projectId, name, values.replace === true);
 			} else {
 				const { version } = await work.finishChange(projectId, change, await meOf(designRoot, deps.github), `A change to ${workLabel(change.from)}`);
 				if (version === null) {

@@ -578,6 +578,89 @@ describe('agent-files', () => {
 	});
 });
 
+describe('a saved source changed since this machine saved it', () => {
+	const local = (name: string) => join(world.prototypes, 'demo', `${name}.tsx`);
+	const saved = () => join(world.design, 'projects', 'demo', 'prototypes', 'v1.tsx');
+	const page = (text: string) => `import { Hello } from 'x';\nexport default () => <><Hello /><p>${text}</p></>;\n`;
+	const made = async () => {
+		await run('new-prototype', '--project', 'demo', '--title', 'Demo', '--note', 'A list');
+		writeFileSync(local('v1'), page('first'));
+		expect(await run('save-prototype', '--project', 'demo', '--name', 'v1')).toBe(0);
+		world.out = [];
+		world.err = [];
+	};
+
+	it('is refused, not replaced: nothing is saved, and the message says what happened and how to go on', async () => {
+		await made();
+		const savedPage = readFileSync(join(world.design, 'projects', 'demo', 'prototypes', 'v1.html'), 'utf8');
+		const builtPage = readFileSync(join(world.prototypes, 'demo', 'v1.html'), 'utf8');
+		// What an agent that found the saved copy first does, or a collaborator whose save came in with a pull.
+		writeFileSync(saved(), page('theirs'));
+		writeFileSync(local('v1'), page('mine'));
+		expect(await run('save-prototype', '--project', 'demo', '--name', 'v1')).toBe(1);
+		const said = world.err.join('\n');
+		expect(said).toContain('projects/demo/prototypes/v1.tsx');
+		expect(said).toContain('has been changed since this machine saved it');
+		expect(said).toContain(local('v1'));
+		expect(said).toContain('--replace');
+		expect(readFileSync(saved(), 'utf8')).toBe(page('theirs'));
+		expect(readFileSync(join(world.design, 'projects', 'demo', 'prototypes', 'v1.html'), 'utf8')).toBe(savedPage);
+		// Refused before it was built: nothing is spent on a page that is not to be saved.
+		expect(readFileSync(join(world.prototypes, 'demo', 'v1.html'), 'utf8')).toBe(builtPage);
+	});
+
+	it('is replaced when that is said to be meant, and saved again without it after', async () => {
+		await made();
+		writeFileSync(saved(), page('theirs'));
+		writeFileSync(local('v1'), page('mine'));
+		expect(await run('save-prototype', '--project', 'demo', '--name', 'v1', '--replace')).toBe(0);
+		expect(readFileSync(saved(), 'utf8')).toBe(page('mine'));
+		writeFileSync(local('v1'), page('mine, again'));
+		expect(await run('save-prototype', '--project', 'demo', '--name', 'v1')).toBe(0);
+		expect(readFileSync(saved(), 'utf8')).toBe(page('mine, again'));
+	});
+
+	it('is no obstacle to saving what is changed here, again and again', async () => {
+		await made();
+		for (const text of ['second', 'third']) {
+			writeFileSync(local('v1'), page(text));
+			expect(await run('save-prototype', '--project', 'demo', '--name', 'v1')).toBe(0);
+		}
+		expect(readFileSync(saved(), 'utf8')).toBe(page('third'));
+	});
+
+	it('is no conflict when the saved copy was changed to what the working copy now is', async () => {
+		await made();
+		writeFileSync(saved(), page('both'));
+		writeFileSync(local('v1'), page('both'));
+		expect(await run('save-prototype', '--project', 'demo', '--name', 'v1')).toBe(0);
+	});
+
+	it('is not guarded for a version saved before this was kept, which nothing can say the saved copy should be', async () => {
+		await made();
+		rmSync(join(world.prototypes, 'demo', 'v1.saved'));
+		writeFileSync(saved(), page('theirs'));
+		writeFileSync(local('v1'), page('mine'));
+		expect(await run('save-prototype', '--project', 'demo', '--name', 'v1')).toBe(0);
+		// And kept from this save on.
+		writeFileSync(saved(), page('theirs again'));
+		writeFileSync(local('v1'), page('mine again'));
+		expect(await run('save-prototype', '--project', 'demo', '--name', 'v1')).toBe(1);
+	});
+
+	it('is measured against the saved copy a working copy was made from, when it is made here from another machine’s', async () => {
+		await made();
+		rmSync(local('v1'));
+		rmSync(join(world.prototypes, 'demo', 'v1.saved'));
+		// A change in place starts from the saved source, writing it here when this machine has none.
+		await run('change-prototype', '--project', 'demo', '--name', 'v1', '--note', 'Bigger');
+		expect(readFileSync(local('v1'), 'utf8')).toBe(page('first'));
+		writeFileSync(saved(), page('theirs'));
+		writeFileSync(local('v1'), page('mine'));
+		expect(await run('save-prototype', '--project', 'demo', '--name', 'v1')).toBe(1);
+	});
+});
+
 describe('processing the comments on a prototype, as its entry skill says', () => {
 	const local = (name: string) => join(world.prototypes, 'demo', `${name}.tsx`);
 	const skill = readFileSync(join(__dirname, '../../skills/start-prototype.md'), 'utf8');

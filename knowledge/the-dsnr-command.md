@@ -22,7 +22,9 @@ first time, install that code's packages: run `npm ci` in the design repository'
 - `dsnr new-prototype`: records the next version of a project (Version 1 of a new one), and prints the task for the agent.
   A new project needs `--title`; `--from` models it on another branch.
 - `dsnr change-prototype`: a change to a version, in place, or in a new version with `--new-version`.
-- `dsnr save-prototype`: builds the version's page and saves its page and source to the design repository.
+- `dsnr save-prototype`: builds the version's page and saves its page and source to the design repository. If the saved source
+  was changed since this machine saved it (by someone else, or by an edit made there directly), it saves nothing and says so;
+  `--replace` says replacing it is meant.
 
 ### Publishing
 
