@@ -121,6 +121,13 @@ export const Grouped = ({ tokens, infoFor, ...actions }: { tokens: DesignToken[]
 	);
 };
 
+/** Which reader found them, and in which files, so a library read from the wrong source is seen to be. */
+const readFrom = (tokens: DesignTokens): string => {
+	const files = [...new Set(tokens.tokens.map((t) => t.source.file))].sort();
+	const shown = files.length > 3 ? [...files.slice(0, 3), `${files.length - 3} more`] : files;
+	return `Read from its ${tokens.source}: ${listed(shown)}.`;
+};
+
 const COLOR_VIEWS = [
 	{ value: 'semantic', label: 'Semantic', icon: 'tag' },
 	{ value: 'palette', label: 'Palette', icon: 'symbol-color' },
@@ -147,6 +154,7 @@ export const TokensView = ({ tokens, ...actions }: { tokens: DesignTokens } & To
 				{categories.some((c) => c.choose) && <Toggle label="Color view" options={COLOR_VIEWS} value={view} onChange={setView} iconOnly />}
 				<SearchBox label="Search tokens" value={search} onChange={setSearch} />
 			</div>
+			<Message marks={{ 'data-tokens-read': '' }}>{readFrom(tokens)}</Message>
 			{found.length === 0 ? (
 				<NoMatches thing="token" search={search} onClear={() => setSearch('')} />
 			) : (

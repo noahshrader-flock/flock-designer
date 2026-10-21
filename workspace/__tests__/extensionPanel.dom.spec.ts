@@ -1610,6 +1610,14 @@ describe('Design System', () => {
 		expect(lastAsk()).toEqual(['syncDesignSystem', []]);
 	});
 
+	it('says, over its tokens, which reader found them and in which files', async () => {
+		await read();
+		await press([...parts().querySelectorAll<HTMLElement>('[role="radio"]')][1]!);
+		expect(body().querySelector('[data-tokens-read]')?.textContent).toBe(
+			'Read from its theme files: src/colors/theme/dark.ts, src/colors/theme/light.ts, src/colors/tones.ts and 1 more.',
+		);
+	});
+
 	it('lists its components under their groups, as cards with their pictures, the first view, and no count of what axe found on them', async () => {
 		const picture = 'http://127.0.0.1:4321/pictures/fsbutton.jpg';
 		await read(SAMPLE_CATALOG, {
