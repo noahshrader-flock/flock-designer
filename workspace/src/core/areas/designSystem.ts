@@ -1,7 +1,9 @@
 import type { CallsDeps } from '../compose';
-import type { ChangeBranchOf, ChangeKind, ChangeKinds, HandedChange, SavedKind, TokenEdit, TriedValue } from '../../shared/contract';
+import type { ChangeBranchOf, ChangeKind, ChangeReach, ChangeKinds, HandedChange, SavedKind, TokenEdit, TriedValue } from '../../shared/contract';
 import { handTask } from '../services/agent/handOver';
 import { type ChangeBranches, scopeOf } from '../services/designSystem/changeBranches';
+import { editedInCode, editedOnTip } from '../services/designSystem/editedInCode';
+import { libraryCommit } from '../services/designSystem/designLibrary';
 import { offBase } from '../services/designSystem/handOverBranches';
 import { readVoice } from '../services/designSystem/voiceAndTone';
 
@@ -39,6 +41,19 @@ export const designSystemArea = (d: CallsDeps) => {
 		componentVariants: (file: string) => componentVariants.of(file),
 		tokenUsers: (path: string) => componentTokens.users(path),
 		changeReach: (edits: TokenEdit[]) => componentTokens.reach(edits),
+		editedInCode: async () => {
+			const system = shownSystem();
+			return system === null ? ({ state: 'none' } as const) : editedInCode(system);
+		},
+		// Read from the checkout again, so what is drawn is what it has now, on the commit the tab draws.
+		editedReach: async (): Promise<ChangeReach> => {
+			const system = shownSystem();
+			const edited = system === null ? null : await editedInCode(system);
+			const tip = system === null ? null : await libraryCommit(system.root, system.branch);
+			if (system === null || edited?.state !== 'ready' || tip === null) return { state: 'none' };
+			const onTip = await editedOnTip(system, edited, tip);
+			return 'not' in onTip ? { state: 'failed', error: onTip.not } : componentTokens.editedReach(onTip.files);
+		},
 		// Each value is written only as the number or colour it reads as, where it was found.
 		valueSources: (file: string, tried: TriedValue[]) => valueSources.of(file, tried),
 		handOverChanges: async (file: string | null, change: HandedChange) => {

@@ -136,6 +136,28 @@ export type ChangeReach =
 	| { state: 'failed'; error: string }
 	| { state: 'ready'; moved: ComponentReach[]; unchanged: number; notDrawn: string[] };
 
+/** A file as the person has it against where their branch left the design system's: `from` or `to` where it moved. */
+export interface EditedFile {
+	path: string;
+	edit: 'added' | 'changed' | 'deleted' | 'moved';
+	from?: string;
+	to?: string;
+}
+
+/** A component (by its story file) and its files the person changed. */
+export interface EditedComponent {
+	file: string;
+	files: EditedFile[];
+}
+
+/**
+ * Read from the person's own checkout of the design system, never written to: what they have committed, staged, changed
+ * or added since their branch left the design system's (`base`). `unowned` is in the design system and in no component's
+ * folder; `outside` is in the repository and not the design system (a product's own code beside it).
+ */
+export type EditedInCode =
+	{ state: 'none' } | { state: 'ready'; base: string; components: EditedComponent[]; unowned: EditedFile[]; outside: EditedFile[] };
+
 /** Tried in the preview alone: nothing is written or kept. `targets` are a cell's. */
 export interface TriedValue {
 	property: ValueProperty;

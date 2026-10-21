@@ -83,7 +83,7 @@ export interface CallsContext {
 	storyPreviewsRoot: string;
 	changeBranchFiles: Record<ChangeKind, string>;
 	/** Given for tests. */
-	componentTokens?: Pick<ComponentTokens, 'of' | 'users' | 'warm' | 'pictures' | 'reach' | 'drawn' | 'asIs' | 'reachWith'>;
+	componentTokens?: Pick<ComponentTokens, 'of' | 'users' | 'warm' | 'pictures' | 'reach' | 'editedReach' | 'drawn' | 'asIs' | 'reachWith'>;
 	componentPicturesRoot: string;
 	/** A fingerprint, so only pictures taken the same way are shown. */
 	componentPictureRecipe: string;

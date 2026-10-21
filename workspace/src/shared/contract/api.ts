@@ -5,6 +5,7 @@ import type {
 	Catalog,
 	ComponentPictures,
 	ChangeReach,
+	EditedInCode,
 	ComponentTokens,
 	TokenUsers,
 	ConnectedDesignSystems,
@@ -65,6 +66,10 @@ export interface WorkspaceApi {
 	tokenUsers(path: string): Promise<Result<TokenUsers>>;
 	/** `building` while it is drawn. */
 	changeReach(edits: TokenEdit[]): Promise<Result<ChangeReach>>;
+	/** Read from the person's checkout each time; nothing in it is written. */
+	editedInCode(): Promise<Result<EditedInCode>>;
+	/** What those edits move, drawn as `changeReach` draws a token change; `building` while it is drawn. */
+	editedReach(): Promise<Result<ChangeReach>>;
 	/** Every case its declared props give; `building` while it is drawn. */
 	componentVariants(file: string): Promise<Result<ComponentVariants>>;
 	valueSources(file: string, tried: TriedValue[]): Promise<Result<ValueSources>>;
@@ -216,6 +221,8 @@ export const INVOKE = [
 	'componentTokens',
 	'tokenUsers',
 	'changeReach',
+	'editedInCode',
+	'editedReach',
 	'componentVariants',
 	'valueSources',
 	'handOverChanges',

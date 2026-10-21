@@ -2,6 +2,7 @@
  * Found by tagging, never by reading the components' source, which every library writes differently: a drawn tag names its
  * token exactly.
  */
+import { createHash } from 'node:crypto';
 import type {
 	AccessibilityResult,
 	ChangeReach,
@@ -162,6 +163,8 @@ interface Building {
 export class ComponentTokens {
 	private index: Building | null = null;
 	private readonly reached = newestAnswer<ChangeReach>((error) => ({ state: 'failed', error }));
+	/** Apart from a token change's, so neither answer is put out by the other. */
+	private readonly editedReached = newestAnswer<ChangeReach>((error) => ({ state: 'failed', error }));
 	private readonly inTurn = inTurns<'reach' | 'written'>();
 	private asIsDrawn: { key: string; drawn: Promise<Map<string, Drawings>> } | null = null;
 
@@ -201,17 +204,33 @@ export class ComponentTokens {
 		return { state: 'ready', users: users.sort((a, b) => b.values - a.values || b.uses - a.uses) };
 	}
 
+	reach(edits: TokenEdit[]): Promise<ChangeReach> {
+		return edits.length === 0
+			? Promise.resolve({ state: 'none' })
+			: this.drawnReach(this.reached, JSON.stringify(edits), (reads) => editedFiles(reads, edits));
+	}
+
+	/** The person's own edits, as they would be on the library's commit (`editedOnTip`): drawn as a token change is. */
+	editedReach(files: Map<string, string>): Promise<ChangeReach> {
+		const asked = createHash('sha256')
+			.update(JSON.stringify([...files].sort(([a], [b]) => a.localeCompare(b))))
+			.digest('hex');
+		return files.size === 0 ? Promise.resolve({ state: 'none' }) : this.drawnReach(this.editedReached, asked, async () => files);
+	}
+
 	/** Only the newest change asked for is drawn, in the background; one that failed is said once, and drawn again next ask. */
-	async reach(edits: TokenEdit[]): Promise<ChangeReach> {
-		if (edits.length === 0) return { state: 'none' };
+	private async drawnReach(
+		answers: typeof this.reached,
+		asked: string,
+		files: (reads: CatalogReads) => Promise<Map<string, string>>,
+	): Promise<ChangeReach> {
 		// Not drawn on a branch handed to an agent, shown as it was committed: it is the library's own branch a change moves.
 		const system = this.deps.system();
 		if (system !== null && (await (this.deps.at ?? baseAt)(system))?.showing) return { state: 'none' };
 		const index = await this.drawn();
 		if (index.state !== 'ready') return index;
-		const key = `${index.key}\u0000${JSON.stringify(edits)}`;
-		const work = async (): Promise<ChangeReach> => (await this.reachWith(index, (reads) => editedFiles(reads, edits))).reach;
-		return this.reached(key, work) ?? { state: 'building' };
+		const work = async (): Promise<ChangeReach> => (await this.reachWith(index, files)).reach;
+		return answers(`${index.key}\u0000${asked}`, work) ?? { state: 'building' };
 	}
 
 	/**
