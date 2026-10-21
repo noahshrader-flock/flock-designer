@@ -189,7 +189,7 @@ const Ready = ({
 				{problems && <Problems problems={catalog.tokens.problems} onClose={() => setProblems(false)} />}
 				{changesDialog.open && (
 					<Dialog title="Changes" onClose={changesDialog.onClose} actions={resetsAll && <LinkButton onPress={resetAll}>Reset all</LinkButton>}>
-						{count === 0 && <Message>Nothing is being tried.</Message>}
+						{count === 0 && <Message>You haven’t made any changes yet.</Message>}
 						<Changed id={id} controls={branch} components={catalog.components} />
 						{changed.map((c) => (
 							<ComponentChanges

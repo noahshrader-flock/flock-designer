@@ -2250,7 +2250,7 @@ describe('every change being tried, in the panel’s Changes: the tokens and eac
 			const box = changes()!;
 			expect(box.querySelector('[data-changed-tokens], [data-value-changes], [data-branch-actions]')).toBeNull();
 			expect(box.querySelector('.section-count')).toBeNull();
-			expect(box.textContent).toBe('ChangesNothing is being tried.');
+			expect(box.textContent).toBe('ChangesYou haven’t made any changes yet.');
 		});
 
 		it('shows a component with a branch kept and nothing tried by its name alone, with no count and no line that none are tried', async () => {
@@ -2602,7 +2602,7 @@ describe('trying a change to the tokens, saving it to a branch, and proposing it
 		await answerOf('forgetChange', 'tokens', null);
 		expect(edited()).toEqual([]);
 		expect(document.querySelector('[data-changed-tokens]')).toBeNull();
-		expect(dialog('Changes')?.textContent).toContain('Nothing is being tried.');
+		expect(dialog('Changes')?.textContent).toContain('You haven’t made any changes yet.');
 	});
 
 	it('says why a save failed, and keeps the change', async () => {
