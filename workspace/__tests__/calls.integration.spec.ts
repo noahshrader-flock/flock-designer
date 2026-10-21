@@ -246,6 +246,7 @@ beforeEach(async () => {
 			changeBranchFiles: appPaths(home).changeBranches,
 			storyPreviewsRoot: join(home, 'story-previews'),
 			splitChecksRoot: join(home, 'split-checks'),
+			splitBranchesFile: join(home, 'split-branches.json'),
 			componentPicturesRoot: join(home, 'component-pictures'),
 			componentTokens: { of: ask, warm, pictures: async () => ({ drawing: false, pictures: {}, issues: {} }) } as never,
 			installer: new Installer(),

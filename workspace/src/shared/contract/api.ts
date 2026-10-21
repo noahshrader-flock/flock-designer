@@ -7,6 +7,7 @@ import type {
 	ChangeReach,
 	EditedInCode,
 	SplitPreview,
+	SplitProposal,
 	ComponentTokens,
 	TokenUsers,
 	ConnectedDesignSystems,
@@ -76,6 +77,15 @@ export interface WorkspaceApi {
 	/** Starts checking, in the background, that each builds on what it stands on, in a copy: never in a repository. */
 	checkSplit(): Promise<Result<null>>;
 	stopSplitCheck(): Promise<Result<null>>;
+	/**
+	 * Makes a branch and a draft for each part of the split checked (`seen`), each on the one it stands on; refused for one
+	 * edited since. `confirmed` sends one not shown to build, or large, on purpose. Asked again, it opens what is left.
+	 */
+	proposeSplit(seen: string, confirmed: boolean): Promise<Result<SplitProposal>>;
+	/** What is proposed, and what each draft has that DSNR did not put there; null once none is open. */
+	splitProposal(): Promise<Result<SplitProposal | null>>;
+	/** Forgotten here, a branch never pushed removed; what is on GitHub stays. */
+	startSplitOver(): Promise<Result<null>>;
 	/** Every case its declared props give; `building` while it is drawn. */
 	componentVariants(file: string): Promise<Result<ComponentVariants>>;
 	valueSources(file: string, tried: TriedValue[]): Promise<Result<ValueSources>>;
@@ -232,6 +242,9 @@ export const INVOKE = [
 	'splitPreview',
 	'checkSplit',
 	'stopSplitCheck',
+	'proposeSplit',
+	'splitProposal',
+	'startSplitOver',
 	'componentVariants',
 	'valueSources',
 	'handOverChanges',

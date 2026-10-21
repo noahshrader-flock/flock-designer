@@ -4,7 +4,10 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { ConnectedDesignSystem, SplitCheck, SplitPreview } from '../src/shared/contract';
-import { checkSplit, splitPreview } from '../src/core/services/designSystem/split';
+import { checkSplit, proposeSplit, splitPreview } from '../src/core/services/designSystem/split';
+import { SplitBranches } from '../src/core/services/designSystem/splitBranches';
+import { pushBranch } from '../src/core/services/platform/git';
+import type { ShareTools } from '../src/core/ports';
 import { SplitProof } from '../src/core/services/designSystem/splitProof';
 import { g, settledAnswer, writeFiles } from './fixtures';
 
@@ -32,6 +35,11 @@ let mine: string;
 let system: ConnectedDesignSystem;
 let proof: SplitProof;
 let folder: string;
+let branches: SplitBranches;
+/** The drafts opened, as GitHub would have them; `failing` makes the opening of that one (counted from 0) fail. */
+let opened: { branch: string; title: string; body: string; base: string | undefined }[];
+let closed: Set<number>;
+let failing: number | null;
 
 const commitAll = (dir: string, message: string) => {
 	g(dir, 'add', '-A');
@@ -55,6 +63,27 @@ beforeEach(() => {
 	system = { id: 'o/ds', name: 'ds', repository: 'o/ds', root: mine, folder: '', branch: 'develop' };
 	folder = join(home, 'split-checks');
 	proof = new SplitProof({ folder });
+	opened = [];
+	closed = new Set();
+	failing = null;
+	// The person's own git pushes, never forced, to the bare origin; only the pull requests are GitHub's, here a list.
+	const tools = (root: string): ShareTools => ({
+		push: (branch) => pushBranch(root, branch),
+		findPr: async (branch) => {
+			const i = opened.findIndex((o) => o.branch === branch);
+			return i < 0 ? null : { number: i + 1, url: `https://github.com/o/ds/pull/${i + 1}` };
+		},
+		createDraftPr: async (branch, title, body, base) => {
+			if (opened.length === failing) throw new Error('GitHub did not answer.');
+			opened.push({ branch, title, body, base });
+			return { number: opened.length, url: `https://github.com/o/ds/pull/${opened.length}` };
+		},
+		isOpen: async (n) => !closed.has(n),
+		checks: async () => [],
+		sleep: async () => undefined,
+		now: () => Date.now(),
+	});
+	branches = new SplitBranches({ system: () => system, file: join(home, 'split-branches.json'), tools });
 });
 
 afterEach(() => {
@@ -239,5 +268,172 @@ describe('the check that each builds, on what it stands on', () => {
 		const before = theirs();
 		expect((await checked()).state).toBe('built');
 		expect(theirs()).toEqual(before);
+	});
+});
+
+describe('the split, proposed: a branch and a draft for each, never the person’s own', () => {
+	const propose = async (confirmed = false) => proposeSplit(proof, branches, system, (await ready()).seen, confirmed);
+	/** What a branch changes on the commit it stands on, from the bare origin GitHub stands in for. */
+	const changes = (branch: string, parent: string) => g(origin, 'diff', '--name-only', parent, branch).split('\n').filter(Boolean);
+
+	it('makes one for each in merge order, each onto what it stands on, with only its own files', async () => {
+		buttonOnTheme();
+		await checked();
+		const proposal = await propose();
+		expect(proposal.opened).toBe(3);
+		expect(proposal.parts.map((p) => [p.name, p.on])).toEqual([
+			['src/theme.ts', null],
+			['Chip', null],
+			['Button', 0],
+		]);
+		const [theme, chip, button] = proposal.parts.map((p) => p.branch) as [string, string, string];
+		expect(opened.map((o) => [o.branch, o.base, o.title])).toEqual([
+			[theme, 'develop', 'src/theme.ts: from feature'],
+			[chip, 'develop', 'Chip: from feature'],
+			[button, theme, 'Button: from feature'],
+		]);
+		expect(changes(theme, 'develop')).toEqual(['src/theme.ts']);
+		expect(changes(chip, 'develop')).toEqual(['src/Chip/Chip.ts']);
+		expect(changes(button, theme)).toEqual(['src/Button/Button.ts']);
+		expect(opened[2]!.body).toContain('Onto src/theme.ts’s pull request: it does not build without it, so merge that first.');
+		expect(opened[2]!.body).toContain('Checked: it builds on what it stands on, by TypeScript, against its tsconfig.json, with no new error.');
+	});
+
+	it('leaves the person’s branch, index and files as they were', async () => {
+		buttonOnTheme();
+		g(mine, 'add', 'src/theme.ts');
+		const theirs = () => ({
+			head: g(mine, 'rev-parse', 'HEAD'),
+			branch: g(mine, 'rev-parse', '--abbrev-ref', 'HEAD'),
+			index: createHash('sha256')
+				.update(readFileSync(join(mine, '.git', 'index')))
+				.digest('hex'),
+			status: g(mine, '--no-optional-locks', 'status', '--porcelain', '--untracked-files=all'),
+		});
+		await checked();
+		const before = theirs();
+		await propose();
+		expect(theirs()).toEqual(before);
+	});
+
+	it('refuses edits changed since they were checked, and one not checked, making nothing', async () => {
+		buttonOnTheme();
+		await expect(propose()).rejects.toThrow('Check that they build first; then they can be proposed.');
+		await checked();
+		const seen = (await ready()).seen;
+		write({ 'src/Chip/Chip.ts': 'export const Chip = 3;\n' });
+		await expect(proposeSplit(proof, branches, system, seen, false)).rejects.toThrow('Your edits have changed since they were checked');
+		expect(opened).toEqual([]);
+		expect(g(mine, 'for-each-ref', '--format=%(refname)', 'refs/heads/dsnr/')).toBe('');
+	});
+
+	it('sends one not shown to build only on purpose, each onto the branch', async () => {
+		unlinkSync(join(mine, 'node_modules'));
+		buttonOnTheme();
+		expect((await checked()).state).toBe('unproven');
+		await expect(propose()).rejects.toThrow('propose them anyway, on purpose');
+		const proposal = await propose(true);
+		expect(proposal.parts.map((p) => p.on)).toEqual([null, null, null]);
+		expect(opened[0]!.body).toContain('Not checked: Its packages are not installed');
+	});
+
+	it('stops partway with every branch made and recorded, and Continue opens the rest, never one twice', async () => {
+		buttonOnTheme();
+		await checked();
+		failing = 1;
+		await expect(propose()).rejects.toThrow('1 of 3 opened. Chip: GitHub did not answer. Continue opens the rest.');
+		const stopped = await branches.current();
+		expect(stopped?.opened).toBe(1);
+		expect(g(mine, 'for-each-ref', '--format=%(refname:short)', 'refs/heads/dsnr/').split('\n')).toHaveLength(3);
+		failing = null;
+		// Edited since: Continue still opens what was checked, from the commits made then.
+		write({ 'src/Chip/Chip.ts': 'export const Chip = 9;\n' });
+		expect((await branches.open()).opened).toBe(3);
+		expect(opened.map((o) => o.title)).toEqual(['src/theme.ts: from feature', 'Chip: from feature', 'Button: from feature']);
+		expect(g(origin, 'show', `${stopped!.parts[1]!.branch}:src/Chip/Chip.ts`)).toBe('export const Chip = 2;');
+	});
+
+	it('is refused, never forced, where someone moved a branch on GitHub before it was opened', async () => {
+		buttonOnTheme();
+		await checked();
+		failing = 0;
+		await expect(propose()).rejects.toThrow('0 of 3 opened.');
+		const theme = (await branches.current())!.parts[0]!.branch;
+		const other = join(home, 'other');
+		g(home, 'clone', '-q', origin, other);
+		g(other, 'checkout', '-q', theme);
+		writeFiles(other, { 'src/theme.ts': 'export const gap = 1;\nexport const size = 2;\n// Reviewed.\n' });
+		commitAll(other, 'a reviewer');
+		const theirs = g(other, 'rev-parse', 'HEAD');
+		g(other, 'push', '-q', 'origin', theme);
+		failing = null;
+		await expect(branches.open()).rejects.toThrow('has changes on the remote that this machine does not have, so it was not pushed');
+		expect(g(origin, 'rev-parse', theme)).toBe(theirs);
+	});
+
+	it('tells a reviewer’s commit on top from a rewrite, and a rewrite of the same change from a different one', async () => {
+		buttonOnTheme();
+		await checked();
+		const proposal = await propose();
+		const [theme, chip, button] = proposal.parts.map((p) => p.branch) as [string, string, string];
+		const other = join(home, 'other');
+		g(home, 'clone', '-q', origin, other);
+		g(other, 'config', 'user.name', 'A Reviewer');
+		g(other, 'checkout', '-q', chip);
+		writeFiles(other, { 'src/Chip/Chip.ts': 'export const Chip = 2;\n// Reviewed.\n' });
+		commitAll(other, 'review');
+		g(other, 'push', '-q', 'origin', chip);
+		g(other, 'checkout', '-q', button);
+		writeFiles(other, { 'src/Button/Button.ts': "import { gap, size } from '../theme';\nexport const Button = gap * size;\n" });
+		g(other, 'commit', '-q', '-a', '--amend', '--no-edit');
+		g(other, 'push', '-q', '-f', 'origin', button);
+		// The same change, its message reworded: rewritten, and the change is the same.
+		g(other, 'checkout', '-q', theme);
+		g(other, 'commit', '-q', '--amend', '-m', 'theme.ts, reworded');
+		g(other, 'push', '-q', '-f', 'origin', theme);
+		const read = await branches.current();
+		expect(read?.parts.map((p) => p.divergence)).toEqual([
+			{ state: 'rewritten', sameChange: true, files: [] },
+			{ state: 'added', commits: 1, by: ['A Reviewer'], files: ['src/Chip/Chip.ts'] },
+			{ state: 'rewritten', sameChange: false, files: ['src/Button/Button.ts'] },
+		]);
+	});
+
+	it('is absorbed by the person’s branch once merged: their change rebases to nothing left, with no conflict', async () => {
+		buttonOnTheme();
+		await checked();
+		const proposal = await propose();
+		// Squash-merged in the order proposed, as a reviewer would.
+		const merger = join(home, 'merger');
+		g(home, 'clone', '-q', origin, merger);
+		for (const part of proposal.parts) {
+			g(merger, 'merge', '-q', '--squash', `origin/${part.branch}`);
+			g(merger, 'commit', '-q', '-m', `${part.name} (#pr)`);
+		}
+		g(merger, 'push', '-q', 'origin', 'develop');
+		commitAll(mine, 'my change');
+		g(mine, 'fetch', '-q');
+		g(mine, 'rebase', '-q', 'origin/develop');
+		expect(g(mine, 'rev-list', '--count', 'origin/develop..HEAD')).toBe('0');
+	});
+
+	it('starts over by forgetting it and removing only branches never pushed; what is on GitHub stays', async () => {
+		buttonOnTheme();
+		await checked();
+		failing = 1;
+		await expect(propose()).rejects.toThrow('1 of 3 opened.');
+		const parts = (await branches.current())!.parts;
+		await branches.startOver();
+		expect(await branches.current()).toBeNull();
+		expect(g(mine, 'for-each-ref', '--format=%(refname:short)', 'refs/heads/dsnr/')).toBe(parts[0]!.branch);
+		expect(g(origin, 'rev-parse', '--verify', '--quiet', parts[0]!.branch)).not.toBe('');
+	});
+
+	it('is forgotten once none of its drafts is open', async () => {
+		buttonOnTheme();
+		await checked();
+		await propose();
+		closed = new Set([1, 2, 3]);
+		expect(await branches.current()).toBeNull();
 	});
 });

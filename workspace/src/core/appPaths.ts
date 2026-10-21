@@ -20,6 +20,7 @@ export const appPaths = (userData: string) => ({
 	prototypes: join(userData, 'prototypes'),
 	storyPreviews: join(userData, 'story-previews'),
 	splitChecks: join(userData, 'split-checks'),
+	splitBranches: join(userData, 'split-branches.json'),
 	componentPictures: join(userData, 'component-pictures'),
 });
 

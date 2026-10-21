@@ -46,6 +46,7 @@ import { siteDeploys } from './services/publishing/siteDeploys';
 import { StoryPreviews } from './services/designSystem/storyPreviews';
 import { windowFolder } from './services/platform/windowFolder';
 import { SplitProof } from './services/designSystem/splitProof';
+import { SplitBranches } from './services/designSystem/splitBranches';
 import { withPageTheme } from './services/browser/pageTheme';
 import { TokenBranches } from './services/designSystem/tokenBranches';
 import { ValueBranches } from './services/designSystem/valueBranches';
@@ -84,6 +85,8 @@ export interface CallsContext {
 	storyPreviewsRoot: string;
 	/** Where a split's checks copy the design system's tip: the app's own, never a repository. */
 	splitChecksRoot: string;
+	/** The split proposed, by design system, so one stopped partway is gone on with after a restart. */
+	splitBranchesFile: string;
 	changeBranchFiles: Record<ChangeKind, string>;
 	/** Given for tests. */
 	componentTokens?: Pick<ComponentTokens, 'of' | 'users' | 'warm' | 'pictures' | 'reach' | 'editedReach' | 'drawn' | 'asIs' | 'reachWith'>;
@@ -114,6 +117,7 @@ export const composeCore = ({
 	designRepoOf,
 	storyPreviewsRoot,
 	splitChecksRoot,
+	splitBranchesFile,
 	changeBranchFiles,
 	componentTokens: injectedComponentTokens,
 	componentPicturesRoot,
@@ -273,6 +277,7 @@ export const composeCore = ({
 		folder: () => shownSystem()?.folder ?? '',
 	});
 	const splitProof = new SplitProof({ folder: windowFolder(splitChecksRoot) });
+	const splitBranches = new SplitBranches({ system: shownSystem, file: splitBranchesFile, tools: ports.shareTools });
 	const valueSources = new ValueSources({ tokens: componentTokens, previews, measure: ports.headless.measure, agent: valueAgent });
 	const valueBranches = new ValueBranches({ ...branchDeps('values'), sources: valueSources });
 	const valuesFound = async (file: string, tried: TriedValue[]) => {
@@ -401,6 +406,7 @@ export const composeCore = ({
 		libraryShown,
 		shownSystem,
 		splitProof,
+		splitBranches,
 		valueAgent,
 		componentVariants,
 		voiceBranches,

@@ -190,7 +190,45 @@ export type SplitCheck =
 export type SplitPreview =
 	| { state: 'none' }
 	| { state: 'not-split'; parts: number }
-	| { state: 'ready'; tip: string; units: SplitUnit[]; stays: { file: EditedFile; why: string }[]; check: SplitCheck };
+	| {
+			state: 'ready';
+			tip: string;
+			/** What the person sees, by which a proposal is made: one of edits changed since is refused. */
+			seen: string;
+			units: SplitUnit[];
+			stays: { file: EditedFile; why: string }[];
+			check: SplitCheck;
+	  };
+
+/**
+ * What a proposal branch has that DSNR did not put there, read from git: commits on top (a reviewer's, an agent's), or the
+ * branch rewritten (force-pushed), its change the same or not. `unread` when it could not be fetched, with why.
+ */
+export type Divergence =
+	| { state: 'same' }
+	| { state: 'added'; commits: number; by: string[]; files: string[] }
+	| { state: 'rewritten'; sameChange: boolean; files: string[] }
+	| { state: 'unread'; why: string };
+
+/** One pull request of a split: its branch, the part it stands on (an index into the parts), its draft once opened. */
+export interface SplitPart {
+	name: string;
+	branch: string;
+	on: number | null;
+	pullRequest: { number: number; url: string } | null;
+	divergence: Divergence | null;
+}
+
+/**
+ * A split made and recorded: `opened` of its parts have a draft; the rest are made here, and opened by Continue, which is
+ * proposing `seen` again.
+ */
+export interface SplitProposal {
+	seen: string;
+	baseBranch: string;
+	parts: SplitPart[];
+	opened: number;
+}
 
 /** Tried in the preview alone: nothing is written or kept. `targets` are a cell's. */
 export interface TriedValue {

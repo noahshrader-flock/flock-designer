@@ -13,7 +13,7 @@ import type {
 import { handTask } from '../services/agent/handOver';
 import { type ChangeBranches, scopeOf } from '../services/designSystem/changeBranches';
 import { editedInCode, editedOnTip } from '../services/designSystem/editedInCode';
-import { checkSplit, splitPreview } from '../services/designSystem/split';
+import { checkSplit, proposeSplit, splitPreview } from '../services/designSystem/split';
 import { libraryCommit } from '../services/designSystem/designLibrary';
 import { offBase } from '../services/designSystem/handOverBranches';
 import { readVoice } from '../services/designSystem/voiceAndTone';
@@ -35,6 +35,7 @@ export const designSystemArea = (d: CallsDeps) => {
 		ports,
 		shownSystem,
 		splitProof,
+		splitBranches,
 		valueSources,
 		warm,
 	} = d;
@@ -79,6 +80,18 @@ export const designSystemArea = (d: CallsDeps) => {
 		},
 		stopSplitCheck: () => {
 			splitProof.stop();
+			return null;
+		},
+		// Never while a hand-over's branch is shown in the library's place, as with every other proposal.
+		proposeSplit: (seen: string, confirmed: boolean) => {
+			libraryShown.refuse(shownSystem(), 'propose');
+			const system = shownSystem();
+			if (system === null) throw new Error('There is no design system connected.');
+			return proposeSplit(splitProof, splitBranches, system, seen, confirmed);
+		},
+		splitProposal: () => splitBranches.current(),
+		startSplitOver: async () => {
+			await splitBranches.startOver();
 			return null;
 		},
 		// Each value is written only as the number or colour it reads as, where it was found.

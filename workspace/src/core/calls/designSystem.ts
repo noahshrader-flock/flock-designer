@@ -29,6 +29,11 @@ const ds = {
 		if (v === 'handOver' || !CHANGE_KINDS.includes(v as ChangeKind)) throw new Error('That is not a kind of change DSNR saves.');
 		return v;
 	}) as Check<SavedKind>,
+	/** The split the person checked, by its key (`splitKey`'s sha-256). */
+	split: ((v) => {
+		if (typeof v !== 'string' || !/^[0-9a-f]{64}$/.test(v)) throw new Error('A split is proposed by the one that was checked.');
+		return v;
+	}) as Check<string>,
 	/** The tip the person looked at, and whether they sent a flagged one on purpose. */
 	seen: ((v) => {
 		const r = asRecord(v);
@@ -51,6 +56,9 @@ export const registerDesignSystem = (area: DesignSystemArea): void => {
 	handle('splitPreview', [], area.splitPreview);
 	handle('checkSplit', [], area.checkSplit);
 	handle('stopSplitCheck', [], area.stopSplitCheck);
+	handle('proposeSplit', [ds.split, arg.flag], area.proposeSplit);
+	handle('splitProposal', [], area.splitProposal);
+	handle('startSplitOver', [], area.startSplitOver);
 	handle('valueSources', [ds.storyFile, ds.tried], area.valueSources);
 	handle('handOverChanges', [arg.optional(ds.storyFile), HAND_OVER.check], area.handOverChanges);
 	handle('changeBranch', [ds.kind, arg.optional(ds.storyFile)], area.changeBranch);
