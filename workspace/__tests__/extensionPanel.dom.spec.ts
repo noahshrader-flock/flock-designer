@@ -1923,6 +1923,208 @@ describe('every change being tried, in the panel’s Changes: the tokens and eac
 		expect(count().getAttribute('aria-label')).toBe('1 change being tried');
 	});
 
+	describe('a component’s values, in the panel’s Changes: where each is written, and what it moves', () => {
+		afterEach(() => void vi.useRealTimers());
+		const found = (over: Record<string, unknown> = {}) => ({
+			state: 'ready',
+			values: [{ id: ID, state: 'found', places: [{ file: 'src/utils/theme.ts', line: 158, written: '28px', writes: '32px' }] }],
+			reach: {
+				state: 'ready',
+				moved: [
+					{ file: BUTTON, changes: [{ mode: 'light', property: 'height', variant: 'sm', from: '28px', to: '32px', instances: 3 }], inside: false },
+				],
+				unchanged: 12,
+				notDrawn: [],
+			},
+			...over,
+		});
+		const trying = async () => {
+			await designOpen();
+			await share('valueTrials', { [BUTTON]: { commit: 'abc123', values: [SMALL] } });
+			await press(count());
+			await answerOf('changeScopes', 'values', []);
+			await answerOf('changeBranch', 'values', null);
+		};
+
+		it('offers Save only once every value is found where it is written, each place opening the library at its line', async () => {
+			await trying();
+			await answer('valueSources', found());
+			expect(group()!.querySelector('[data-value-places]')?.textContent).toBe('Written in src/utils/theme.ts, line 158');
+			await press(group()!.querySelector('[data-value-places] button') as HTMLElement);
+			expect(lastAsk()).toEqual(['openLibrarySource', ['src/utils/theme.ts', 158]]);
+			expect(group()!.textContent).toContain('Saving writes 1 value where it is written, and nothing else.');
+			expect(button('Save to a branch', group()!).disabled).toBe(false);
+			expect(changes()!.querySelector('[aria-label="Moved by these values"] [data-reach-summary]')?.textContent).toBe(
+				'It moves 1 component; 12 unchanged, in their stories drawn.',
+			);
+		});
+
+		it('says why a value cannot be saved, in words, where it is, and offers no Save', async () => {
+			await trying();
+			await answer('valueSources', {
+				state: 'ready',
+				values: [{ id: ID, state: 'refused', why: '28px is written in 2 places that each draw it here, so which to change cannot be said.' }],
+				reach: { state: 'none' },
+			});
+			expect(group()!.querySelector('[data-value-refused]')?.textContent).toBe(
+				'28px is written in 2 places that each draw it here, so which to change cannot be said.',
+			);
+			expect(button('Save to a branch', group()!).disabled).toBe(true);
+			expect(changes()!.querySelector('[aria-label="Moved by these values"]')).toBeNull();
+		});
+
+		it('offers the agent where a value cannot be found, asks it once pressed, and says what it wrote and why', async () => {
+			vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'], shouldAdvanceTime: true });
+			await trying();
+			await answer('valueSources', {
+				state: 'ready',
+				values: [{ id: ID, state: 'refused', why: '28px is not written in the design system’s own files for it.', agent: 'write' }],
+				reach: { state: 'none' },
+			});
+			await press(group()!.querySelector('[data-value-agent]') as HTMLElement);
+			expect(calls('writeValue').at(-1)?.args).toEqual([BUTTON, SMALL]);
+			await answer('writeValue', null);
+			await answer('valueSources', { state: 'ready', values: [{ id: ID, state: 'writing' }], reach: { state: 'none' } });
+			expect(group()!.textContent).toContain('The agent is writing it…');
+			const asked = calls('valueSources').length;
+			await act(async () => void (await vi.advanceTimersByTimeAsync(ASK_EVERY_MS)));
+			expect(calls('valueSources').length).toBe(asked + 1);
+			await answer(
+				'valueSources',
+				found({
+					values: [
+						{
+							id: ID,
+							state: 'found',
+							by: 'agent',
+							said: 'MUI’s default sets it, so the theme’s override does.',
+							places: [{ file: 'src/utils/theme.ts', line: 59, written: '', writes: "height: '32px'," }],
+						},
+					],
+				}),
+			);
+			expect(group()!.querySelector('[data-value-places]')?.textContent).toBe('Written by the agent in src/utils/theme.ts, line 59');
+			expect(group()!.textContent).toContain('MUI’s default sets it, so the theme’s override does.');
+			expect(group()!.textContent).toContain('Saving writes 1 value where it is written, and nothing else.');
+		});
+
+		it('lists a value that follows a token as following it', async () => {
+			await designOpen();
+			await share('valueTrials', {
+				[BUTTON]: { commit: 'abc123', values: [{ property: 'radius', value: '4px', targets: ['radius:0'], follows: 'radius' }] },
+			});
+			await press(count());
+			await answerOf('changeScopes', 'values', []);
+			await answerOf('changeBranch', 'values', null);
+			await answer('componentTokens', {
+				state: 'ready',
+				uses: [],
+				sharedWith: {},
+				notTokens: [],
+				derived: [],
+				accessibility: null,
+				values: {
+					state: 'read',
+					instances: 12,
+					unmarked: 0,
+					rows: {
+						light: [
+							{
+								property: 'radius',
+								by: null,
+								cells: [{ variant: null, value: '4px', kind: 'own', tokens: [], instances: 12, targets: ['radius:0'] }],
+							},
+						],
+						dark: null,
+					},
+				},
+			});
+			expect(group()!.querySelector('[data-value-change] .value-cell')?.textContent).toBe('Radius4px → follows Radius');
+		});
+
+		it('puts every value back with Reset all, and says so', async () => {
+			await trying();
+			await answer('valueSources', found());
+			await press(button('Reset all', group()!));
+			expect(trialsSaid().at(-1)).toEqual([BUTTON, 'abc123', []]);
+			await share('valueTrials', {});
+			expect(group()).toBeNull();
+		});
+	});
+
+	describe('what a token change moves, in the panel’s Changes', () => {
+		const RED = [{ path: 'tone.pineGreen.50', value: '#C80000' }];
+		const STORY = (name: string) => `src/components/${name}/${name}.stories.tsx`;
+		const moved = (over: Record<string, unknown> = {}) => ({
+			state: 'ready',
+			moved: [
+				{
+					file: BUTTON,
+					changes: [{ mode: 'light', property: 'background', variant: 'primary', from: 'rgb(16, 128, 98)', to: 'rgb(200, 0, 0)', instances: 6 }],
+					inside: false,
+				},
+				{
+					file: STORY('FSIconButton'),
+					changes: [{ mode: 'dark', property: 'radius', variant: 'sm', from: '8px', to: '12px', instances: 2 }],
+					inside: false,
+				},
+				{ file: STORY('FSTextField'), changes: [], inside: true },
+			],
+			unchanged: 40,
+			notDrawn: [STORY('FSSelect')],
+			...over,
+		});
+		const part = () => changes()?.querySelector('[aria-label="Moved by the change"]') as HTMLElement | null;
+		const tried = async () => {
+			await designOpen();
+			await share('tokenEdits', RED);
+		};
+
+		it('is not asked for while the dialog is shut or no change is tried: drawing every component is for someone who asked to see it', async () => {
+			await designOpen();
+			expect(calls('changeReach')).toHaveLength(0);
+			await share('tokenEdits', RED);
+			expect(calls('changeReach')).toHaveLength(0);
+		});
+
+		it('is asked for once opened with a change being tried, and says it is drawing every component until it is answered', async () => {
+			await tried();
+			await press(count());
+			expect(calls('changeReach').at(-1)?.args).toEqual([RED]);
+			expect(part()?.textContent).toContain('Drawing every component with the change');
+		});
+
+		it('names each component the change moves, with what changed as the Values say it, and how many it does not move', async () => {
+			await tried();
+			await press(count());
+			await answer('changeReach', moved());
+			const reach = part()!;
+			expect(reach.querySelector('[data-reach-summary]')?.textContent).toBe(
+				'It moves 3 components; 40 unchanged, in their stories drawn. 1 component did not draw, so cannot be said.',
+			);
+			const here = reach.querySelector(`[data-moved="${BUTTON}"]`) as HTMLElement;
+			expect(here.querySelector('h3')?.textContent).toBe('FSButton');
+			expect(here.querySelector('.value-cell')?.textContent).toBe('Background · primary#108062 → #C80000');
+			const icon = reach.querySelector(`[data-moved="${STORY('FSIconButton')}"]`) as HTMLElement;
+			expect(icon.querySelector('.value-cell')?.textContent).toBe('Radius · sm · dark8px → 12px');
+			await press(icon.querySelector('h3 button') as HTMLElement);
+			expect(lastAsk()).toEqual(['openComponent', [STORY('FSIconButton')]]);
+			expect(reach.querySelector(`[data-moved="${STORY('FSTextField')}"]`)?.textContent).toContain('in a part its values do not read');
+		});
+
+		it('says when the change moves nothing, and when it could not be drawn', async () => {
+			await tried();
+			await press(count());
+			await answer('changeReach', moved({ moved: [], unchanged: 44, notDrawn: [] }));
+			expect(part()?.querySelector('[data-reach-summary]')?.textContent).toBe(
+				'It moves no component, in their stories drawn: 44 components unchanged.',
+			);
+			await share('tokenEdits', [{ path: 'tone.pineGreen.50', value: '#000000' }]);
+			await answer('changeReach', { state: 'failed', error: 'the change did not build' });
+			expect(part()?.textContent).toContain('the change did not build');
+		});
+	});
+
 	it('opens when a component’s tab asks for it, on the Design System tab', async () => {
 		await show();
 		await share('placed', { context: OPEN, unreadable: null, setup: null });

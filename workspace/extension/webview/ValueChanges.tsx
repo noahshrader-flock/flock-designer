@@ -1,12 +1,9 @@
-import { type ReactNode, useEffect } from 'react';
 import type { CatalogComponent, TriedValue, ValuePlace, ValueRow, ValueSource, ValueSources as ValueSourcesAnswer } from '../../src/shared/contract';
 import type { BranchControls } from './hooks/useChangeBranch';
 import { cellFor, triedId } from '../../src/shared/contract';
 import { plural } from '../../src/shared/plural';
 import { saidValue, valueTitle } from '../../src/shared/valueNames';
-import { type HandOverControls, useHandOver } from './hooks/useHandOver';
-import { useChangeBranch } from './hooks/useChangeBranch';
-import { useValueSources } from './hooks/useValueSources';
+import type { HandOverControls } from './hooks/useHandOver';
 import { BranchActions, ChangesGroup } from './Changed';
 import { ReachView } from './ChangeReach';
 import type { Trying } from './ComponentValues';
@@ -67,26 +64,6 @@ const Said = ({ source, onWrite }: { source: ValueSource | null | undefined; onW
 	);
 };
 
-/** Found while the tab is open, whether or not the dialog is: what it draws is handed to it (`children`). Save waits until every value is found. */
-export const ValueChanges = ({
-	children,
-	onKept,
-	...shown
-}: Shown & {
-	children: (values: ReactNode) => ReactNode;
-	/** Told whether a branch is kept or handed over, so its Changes button can still be pressed with nothing tried. */
-	onKept: (kept: boolean) => void;
-}) => {
-	const tried = [...shown.trying.tried.values()];
-	const sources = useValueSources(shown.component.id, tried, shown.trying.writes);
-	const controls = useChangeBranch('values', { shown: shown.component.id, scope: shown.component.id, change: tried, setChange: shown.trying.onAll });
-	// Read once, not watched: what is done with a hand-over is in the panel's Changes.
-	const handOver = useHandOver({ shown: shown.component.id, file: shown.component.id, change: { tried }, watch: false });
-	const kept = controls.branch !== null || handOver.branch !== null;
-	useEffect(() => onKept(kept), [kept, onKept]);
-	return children(<ChangedValues {...shown} sources={sources} controls={controls} handOver={handOver} />);
-};
-
 interface Shown {
 	component: CatalogComponent;
 	components: CatalogComponent[];
@@ -94,8 +71,6 @@ interface Shown {
 	rows: ValueRow[] | null;
 	trying: Trying;
 	tokenName: (path: string) => string;
-	/** On a component's tab, opens the panel's Changes, where Save, Propose and Start over are; not given in the panel, which has them here. */
-	onActions?: () => void;
 }
 
 export const ChangedValues = ({
@@ -104,7 +79,6 @@ export const ChangedValues = ({
 	rows,
 	trying,
 	tokenName,
-	onActions,
 	name,
 	sources,
 	controls,
@@ -149,13 +123,7 @@ export const ChangedValues = ({
 					</Message>
 				)}
 				<Message tone="error">{trying.writeError}</Message>
-				{onActions ? (
-					<LinkButton marks={{ 'data-actions-elsewhere': '' }} onPress={onActions}>
-						Save or process changes in the side panel
-					</LinkButton>
-				) : (
-					<BranchActions controls={controls} handOver={handOver} canSave={savable} />
-				)}
+				<BranchActions controls={controls} handOver={handOver} canSave={savable} />
 			</ChangesGroup>
 			{sources.state === 'failed' && (
 				<Message size="block" tone="warning" title="Where its values are written could not be found">

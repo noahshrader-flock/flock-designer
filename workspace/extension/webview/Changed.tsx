@@ -5,10 +5,11 @@ import { CHANGE_REQUEST } from '../../src/shared/vocabulary';
 import { branchButtons } from './branchButtons';
 import { useTokenChanges } from './hooks/tokenChanges';
 import type { BranchControls } from './hooks/useChangeBranch';
-import type { TokenEdit } from '../../src/shared/contract';
+import type { CatalogComponent, TokenEdit } from '../../src/shared/contract';
 import { type HandOverControls, useHandOver } from './hooks/useHandOver';
 import { HandOverActions } from './HandOverActions';
 import { useShowing } from './Showing';
+import { ChangeReach } from './ChangeReach';
 import { useAgentName } from './AgentInUse';
 import { Button, ButtonRow } from '../../src/ui/Button';
 import { Icon } from '../../src/ui/Icon';
@@ -152,7 +153,15 @@ export const TokenChanges = () => {
 };
 
 /** A branch kept with nothing changed is still listed, so it can be proposed or left. */
-export const Changed = ({ id, controls }: { id: string | null; controls: BranchControls<TokenEdit[]> }) => {
+export const Changed = ({
+	id,
+	controls,
+	components,
+}: {
+	id: string | null;
+	controls: BranchControls<TokenEdit[]>;
+	components: CatalogComponent[];
+}) => {
 	const { edits } = useTokenChanges();
 	const handOver = useHandOver({ shown: id, file: null, change: { edits }, watch: true });
 	return (
@@ -160,6 +169,7 @@ export const Changed = ({ id, controls }: { id: string | null; controls: BranchC
 			<TokenChanges />
 			{edits.length > 0 && <Message>Tried in the stories of every component open, and in Primitives.</Message>}
 			<BranchActions controls={controls} handOver={handOver} />
+			<ChangeReach edits={edits} components={components} />
 		</>
 	);
 };

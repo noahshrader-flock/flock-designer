@@ -74,7 +74,7 @@ export const ReachView = ({
 	);
 };
 
-export const ChangeReach = ({ edits, ...shown }: { edits: TokenEdit[]; component: CatalogComponent; components: CatalogComponent[] }) => {
+export const ChangeReach = ({ edits, ...shown }: { edits: TokenEdit[]; components: CatalogComponent[] }) => {
 	const reach = useChangeReach(edits);
 	return reach.state === 'none' ? null : <ReachView reach={reach} title="Moved by the change" {...shown} />;
 };

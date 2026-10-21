@@ -180,7 +180,7 @@ const Ready = ({
 				{problems && <Problems problems={catalog.tokens.problems} onClose={() => setProblems(false)} />}
 				{changesDialog.open && (
 					<Dialog title="Changes" onClose={changesDialog.onClose}>
-						<Changed id={id} controls={branch} />
+						<Changed id={id} controls={branch} components={catalog.components} />
 						{changed.map((c) => (
 							<ComponentChanges
 								// Asked again on another commit shown: its values are read on that commit's drawing.

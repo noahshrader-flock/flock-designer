@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { previewAddress, previewProblem } from '../../src/shared/catalog';
 import type { CatalogComponent, DesignToken, TokenEdit, TriedValue } from '../../src/shared/contract';
-import { plural } from '../../src/shared/plural';
 import { undeclared } from '../../src/shared/wcag';
 import { TokenChangesProvider, useTokenChangesFor } from './hooks/tokenChanges';
 import { useStoryPreview } from './hooks/useStoryPreview';
 import type { ComponentLink } from '../src/messages';
+import { ChangesLink } from './ChangesLink';
 import { ComponentSections } from './ComponentSections';
 import { StoryFrame } from './StoryFrame';
 import { TokenEditor } from './TokenEditor';
@@ -53,9 +53,6 @@ export const ComponentTab = ({ id }: { id: string }) => {
 	const { ready, note } = useTabCatalog();
 	const [edits, setEdits] = useTokenEdits();
 	const [editing, setEditing] = useState<DesignToken | null>(null);
-	const [changesOpen, setChangesOpen] = useState(false);
-	// A kept branch lets Changes open with nothing tried, to propose or leave it.
-	const [kept, setKept] = useState(false);
 	const changes = useTokenChangesFor(ready?.tokens.tokens ?? [], edits, setEdits, ready?.accessibility ?? NOT_READ);
 	// The extension's, so the panel's Changes has them too; on the commit tried on, since another version's instances are drawn anew.
 	const trying = useTrying(useValueTrials(), id, ready?.commit ?? null);
@@ -64,7 +61,6 @@ export const ComponentTab = ({ id }: { id: string }) => {
 	if (note) return <TabNote {...note} />;
 	if (!component) return <Message size="page">The design system shown no longer has this component. Close this tab.</Message>;
 	const actions: TokenActions = { onEdit: setEditing };
-	const count = tried.size + edits.length;
 	const link = (to: ComponentLink) => void asks().componentLink(id, to);
 	return (
 		<TokenChangesProvider value={changes}>
@@ -75,10 +71,7 @@ export const ComponentTab = ({ id }: { id: string }) => {
 						<Message>{component.subtitle ?? component.group}</Message>
 					</div>
 					<ButtonRow>
-						{/* Always there, so nothing moves when the first value is tried; with nothing tried and no branch, it cannot be pressed. */}
-						<Button variant="ghost" disabled={count === 0 && !kept} onPress={() => setChangesOpen(true)}>
-							{count === 0 ? 'No changes' : plural(count, 'change')}
-						</Button>
+						<ChangesLink file={id} count={tried.size + edits.length} trying={trying} />
 						{component.storybookPath !== null && (
 							<Button variant="secondary" external onPress={() => link('storybook')}>
 								Storybook
@@ -102,12 +95,6 @@ export const ComponentTab = ({ id }: { id: string }) => {
 							components={ready.components}
 							actions={actions}
 							trying={trying}
-							changes={{
-								open: changesOpen,
-								onClose: () => setChangesOpen(false),
-								onKept: setKept,
-								onActions: () => void asks().openChanges(),
-							}}
 						/>
 					</aside>
 				</div>
