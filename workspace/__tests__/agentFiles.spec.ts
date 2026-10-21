@@ -2,7 +2,8 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-const agents = join(__dirname, '../../agents');
+const root = join(__dirname, '../..');
+const agents = join(root, 'agents');
 const read = (name: string) => (existsSync(join(agents, name)) ? readFileSync(join(agents, name), 'utf8') : '');
 const headings = (text: string) => [...text.matchAll(/^#{2,3} (.+)$/gm)].map((m) => (m[1] ?? '').trim());
 
@@ -49,8 +50,50 @@ describe('the guide for building UI', () => {
 	});
 });
 
+describe('the @override mark', () => {
+	// Every file an agent is given from this repository, with its lines joined so a rewrap changes nothing.
+	const shared = ['agents', 'skills', 'knowledge', 'standards'].flatMap((dir) =>
+		existsSync(join(root, dir))
+			? readdirSync(join(root, dir))
+					.filter((f) => f.endsWith('.md'))
+					.map((f) => {
+						const raw = readFileSync(join(root, dir, f), 'utf8');
+						return { file: `${dir}/${f}`, raw, text: raw.replace(/\s+/g, ' ') };
+					})
+			: [],
+	);
+	const text = (file: string) => shared.find((s) => s.file === file)?.text ?? '';
+
+	// The wording three agents were tested on (24 of 24 right): a change to it is a change to what was proven.
+	it('is said in the guide as tested: only when no supported prop or size gives it', () => {
+		expect(text('agents/ui-guide.md')).toContain(
+			'Name the source in what you say when you finish, and, only when no prop or size the component supports gives it, mark it in the code with `@override` (see the build skill).',
+		);
+	});
+
+	it('is a row of the build skill’s marks, as tested: a supported prop is no override', () => {
+		const row = shared
+			.find((s) => s.file === 'skills/build-prototype.md')
+			?.raw.split('\n')
+			.find((line) => line.startsWith('| `@override` |'));
+		expect(row).toContain('because no prop or size it supports gives that, and the person asked');
+		expect(row).toContain('Using a supported prop (`size="xl"`) is not an override: no mark');
+		expect(row).toContain('On move: propose it to the design system if it should change everywhere, else keep it here.');
+	});
+
+	it('is a decision on the move into the code, beside each stand-in', () => {
+		expect(text('skills/move-to-code.md')).toMatch(/`@override`[^`]*\*\*Each is a decision\*\*, and goes under \*\*Needs a decision\*\*/);
+		expect(text('skills/move-to-code.md')).toContain('Every `@standin` and `@override`');
+	});
+
+	it('is listed wherever the other marks are, so no shared file can drift from the rest', () => {
+		const lists = shared.filter((s) => s.text.includes('`@standin`') && s.text.includes('`@remove`'));
+		expect(lists.map((s) => s.file)).toContain('skills/build-prototype.md');
+		expect(lists.filter((s) => !s.text.includes('`@override`')).map((s) => s.file)).toEqual([]);
+	});
+});
+
 describe('what the shared files say about one tool', () => {
-	const root = join(__dirname, '../..');
 	const skills = readdirSync(join(root, 'skills'))
 		.filter((f) => f.endsWith('.md'))
 		.map((f) => ({ file: `skills/${f}`, text: readFileSync(join(root, 'skills', f), 'utf8') }));
