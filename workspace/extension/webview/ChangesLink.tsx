@@ -1,4 +1,5 @@
 import { plural } from '../../src/shared/plural';
+import { ChangedMark } from '../../src/ui/ChangedMark';
 import { LinkButton } from '../../src/ui/LinkButton';
 import { useChangeBranch } from './hooks/useChangeBranch';
 import { useHandOver } from './hooks/useHandOver';
@@ -21,7 +22,10 @@ export const ChangesLink = ({ file, count, trying }: { file: string; count: numb
 			{count === 0 && !kept ? (
 				<span className="quiet">No changes</span>
 			) : (
-				<LinkButton onPress={() => void asks().openChanges()}>{plural(Math.max(count, 1), 'change')}</LinkButton>
+				<>
+					<ChangedMark says="Changed" said />
+					<LinkButton onPress={() => void asks().openChanges()}>{plural(Math.max(count, 1), 'change')}</LinkButton>
+				</>
 			)}
 		</span>
 	);

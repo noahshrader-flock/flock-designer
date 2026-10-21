@@ -702,11 +702,15 @@ describe('a component’s tab', () => {
 			expect(callsOf('changeBranch', 'values').at(-1)?.args).toEqual(['values', BUTTON]);
 			expect(changesLink().textContent).toBe('No changes');
 			expect(changesLink().querySelector('button')).toBeNull();
+			expect(changesLink().querySelector('.changed-mark')).toBeNull();
 		});
 
 		it('counts what is tried as a link to the side panel’s Changes, where it is listed and saved, and opens nothing here', async () => {
 			await tryingSmall();
 			expect(changesLink().textContent).toBe('1 change');
+			// A dot before it, which the words already say, so it is not read aloud.
+			expect(changesLink().firstElementChild?.classList.contains('changed-mark')).toBe(true);
+			expect(changesLink().firstElementChild?.getAttribute('aria-hidden')).toBe('true');
 			expect(dialog('Changes')).toBeNull();
 			await press(changesLink().querySelector('button') as HTMLElement);
 			expect(lastAsk()).toEqual(['openChanges', []]);

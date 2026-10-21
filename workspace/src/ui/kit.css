@@ -250,9 +250,17 @@ a:not(.icon-button) {
 
 /* A step below the buttons beside it: said in passing, not something to do. Plain words need more room from a button's edge than buttons do from each other. */
 .passing-link {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--dsnr-space-3);
 	margin-inline-end: var(--dsnr-space-5);
 	font-size: var(--dsnr-text-small);
 	white-space: nowrap;
+}
+
+/* The marker beside such a link is the link's colour, not the raw brand, so the two read as one. */
+.passing-link .changed-mark {
+	background: var(--dsnr-link);
 }
 
 /* Each has a border, transparent where it draws none, so the three are the same size side by side. */

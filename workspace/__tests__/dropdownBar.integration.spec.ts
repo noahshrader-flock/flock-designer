@@ -140,4 +140,32 @@ describe.skipIf(NO_CHROME)('a dropdown in the top bar, in the browser on this ma
 		expect(measured.bar.gap).toBeGreaterThanOrEqual(measured.step);
 		expect(measured.header.wraps).toBe(false);
 	});
+
+	it('marks a link said in passing with a dot before it, the link’s own colour and centred on its line', async () => {
+		const m = await inChrome(async (browser) => {
+			const tab = await browser.newPage(OWN_WINDOW);
+			await tab.setViewport({ width: 600, height: 300 });
+			await tab.setContent(
+				barPage(
+					'<div class="tab-header"><span class="passing-link"><span class="changed-mark" aria-hidden="true"></span><button class="link">1 change</button></span><button class="button">Storybook</button></div>',
+				),
+			);
+			return tab.evaluate(() => {
+				const [dot, link] = ['.changed-mark', '.link'].map((s) => document.querySelector(s)!);
+				const [d, l] = [dot!.getBoundingClientRect(), link!.getBoundingClientRect()];
+				return {
+					dot: getComputedStyle(dot!).backgroundColor,
+					link: getComputedStyle(link!).color,
+					before: d.right <= l.left,
+					apart: l.left - d.right,
+					centred: Math.abs(d.top + d.height / 2 - (l.top + l.height / 2)),
+					brand: getComputedStyle(document.documentElement).getPropertyValue('--dsnr-brand'),
+				};
+			});
+		});
+		expect(m.dot).toBe(m.link);
+		expect(m.before).toBe(true);
+		expect(m.apart).toBeGreaterThan(2);
+		expect(m.centred).toBeLessThan(1.5);
+	});
 });
