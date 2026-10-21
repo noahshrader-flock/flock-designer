@@ -31,7 +31,7 @@ import { type DesignRepositoryClones, designRepositoryMissing, designRepositoryO
 import { isRepository, readCheckout } from './services/platform/git';
 import type { GitHubAccount } from '../codeHost/github';
 import { Installer } from './services/codebase/install';
-import { recordedWork } from './services/projects/workRecords';
+import { codebaseMadeFrom, recordedWork } from './services/projects/workRecords';
 import { readFolderProjects } from './services/projects/localProjects';
 import { startedHere } from './services/prototypes/pendingPrototypes';
 import { workLabel } from '../shared/work';
@@ -215,7 +215,13 @@ export const composeCore = ({
 				return {
 					run: async () => {
 						const done = await publishInOrder(
-							() => syncBranches({ root, descriptor, projects: new Set(readFolderProjects(recordsRoot).map((p) => p.id)) }),
+							() =>
+								syncBranches({
+									root,
+									descriptor,
+									projects: new Set(readFolderProjects(recordsRoot).map((p) => p.id)),
+									madeFrom: (projectId) => codebaseMadeFrom(recordsRoot, projectId),
+								}),
 							async (found) => {
 								// Reviewers find a piece of work through its record, so work built in a terminal (a branch, a folder,
 								// and no record) is recorded here, then published with the rest.

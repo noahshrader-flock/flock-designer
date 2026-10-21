@@ -24,6 +24,7 @@ export const projectWork = (over: Pick<ProjectWork, 'name' | 'branch'> & Partial
 	cover: null,
 	product: null,
 	readyAt: null,
+	begun: null,
 	...over,
 });
 

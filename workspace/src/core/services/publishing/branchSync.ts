@@ -6,8 +6,8 @@ import { errorText } from '../../../shared/result';
 import { HOST } from '../../../shared/vocabulary';
 
 /**
- * Only a `feature/<project>` branch the person has commits on and with a project folder, as a team's tickets use the
- * same names. Pushes are plain: a branch that has moved on GitHub is reported, never overwritten.
+ * Only a `feature/<project>` branch with a project folder, and with commits of the person's that are its own, not those of
+ * the branch it was made from, as a team's tickets use the same names. Pushes are plain: a branch that has moved on GitHub is reported, never overwritten.
  */
 
 const MAX_BRANCHES = 50;
@@ -22,19 +22,21 @@ export interface BranchSyncInput {
 	descriptor: WorkspaceDescriptor;
 	/** Project folders in the design repository: what vouches for a `feature/` branch. */
 	projects: ReadonlySet<string>;
+	/** Where a project's branch was made, as its record says: commits before it are the branch it was made from's, not its own. */
+	madeFrom?: (projectId: string) => string | null;
 }
 
 const problem = (what: string, why: string): Problem => ({ what, why });
 
-export const syncBranches = async ({ root, descriptor, projects }: BranchSyncInput): Promise<BranchSyncResult> => {
+export const syncBranches = async ({ root, descriptor, projects, madeFrom = () => null }: BranchSyncInput): Promise<BranchSyncResult> => {
 	const problems: Problem[] = [];
 	const published: string[] = [];
 
 	const me = await localIdentity(root);
 
 	const mine: string[] = [];
-	for (const { branch } of await codebaseBranches(root, descriptor, projects, MAX_BRANCHES)) {
-		const authors = await branchAuthors(root, branch).catch(() => []);
+	for (const { projectId, branch } of await codebaseBranches(root, descriptor, projects, MAX_BRANCHES)) {
+		const authors = await branchAuthors(root, branch, madeFrom(projectId)).catch(() => []);
 		if (authors.some((a) => isSamePerson(me, a))) mine.push(branch);
 	}
 	if (mine.length === 0) return { published, problems, mine };

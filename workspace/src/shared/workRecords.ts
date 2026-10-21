@@ -55,6 +55,7 @@ const KNOWN = [
 	'basedOn',
 	'cover',
 	'readyAt',
+	'madeFrom',
 	'from',
 ];
 
@@ -81,6 +82,7 @@ const checked = (r: Rec): Work => {
 		...(basedOn ? { basedOn } : {}),
 		...(cover !== null ? { cover } : {}),
 		...(isCommit(r.readyAt) ? { readyAt: r.readyAt } : {}),
+		...(isCommit(r.madeFrom) ? { madeFrom: r.madeFrom } : {}),
 		...(typeof r.from === 'string' && isPrototypeName(r.from) ? { from: r.from } : {}),
 	};
 };
@@ -107,6 +109,7 @@ export const toProjectWork = (r: Work, thread?: { number: number; openComments: 
 	product: r.basedOn?.product ?? null,
 	// As the record says; `listProjects` keeps it only once it is known to be the branch's commit still.
 	readyAt: r.readyAt ?? null,
+	begun: null,
 });
 
 const earliest = (a: unknown, b: unknown): unknown => {

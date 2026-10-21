@@ -3,8 +3,8 @@ import { mergeProjects, unionLocal } from '../../../shared/projectList';
 import { workKind } from '../../../shared/work';
 import { readBranchProjects } from './branchProjects';
 import { readDescriptor } from './descriptor';
-import { branchTip, repositoryOf } from '../platform/git';
-import { codebaseBranchFor } from './workRecords';
+import { branchTip, hasOwnCommits, repositoryOf } from '../platform/git';
+import { codebaseBranchFor, codebaseMadeFrom } from './workRecords';
 import { readFolderProjects, withStartedHere } from './localProjects';
 
 /**
@@ -27,7 +27,12 @@ export const listProjects = async ({
 }): Promise<Project[]> => {
 	let local: Project[] = [];
 	// `repository` fills in codebase work recorded before records named it; null when the checkout has no remote.
-	let here: { root: string; repository: string | null; branchOf: (projectId: string) => string } | null = null;
+	let here: {
+		root: string;
+		repository: string | null;
+		branchOf: (projectId: string) => string;
+		madeFrom: (projectId: string) => string | null;
+	} | null = null;
 	if (root !== null) {
 		const recordsRoot = recordsRootOf(root);
 		// Every project folder, not only those that record a piece of work: the folder is what an agent makes
@@ -35,10 +40,11 @@ export const listProjects = async ({
 		const folders = withStartedHere(recordsRoot ? readFolderProjects(recordsRoot) : [], prototypesRoot);
 		const descriptor = readDescriptor(root);
 		// The branches are the evidence: work made without the app still shows.
-		const branches = await readBranchProjects(root, descriptor, login, new Set(folders.map((p) => p.id))).catch(() => []);
+		const madeFrom = (projectId: string) => (recordsRoot ? codebaseMadeFrom(recordsRoot, projectId) : null);
+		const branches = await readBranchProjects(root, descriptor, login, new Set(folders.map((p) => p.id)), madeFrom).catch(() => []);
 		// A folder with nothing built yet is a notes folder, not work in progress.
 		local = unionLocal(folders, branches).filter((p) => p.work.length > 0);
-		here = { root, repository: await repositoryOf(root), branchOf: (projectId) => codebaseBranchFor(descriptor, projectId) };
+		here = { root, repository: await repositoryOf(root), branchOf: (projectId) => codebaseBranchFor(descriptor, projectId), madeFrom };
 	}
 	let fromGitHub: Project[] = [];
 	try {
@@ -58,8 +64,10 @@ export const listProjects = async ({
 					if (workKind(it) !== 'codebase') return it;
 					const ours = at !== null && it.branch === at.branchOf(p.id);
 					const head = ours && it.readyAt ? await branchTip(at.root, it.branch) : null;
+					const begun = ours ? await hasOwnCommits(at.root, it.branch, at.madeFrom(p.id)).catch(() => null) : null;
 					return {
 						...it,
+						begun: begun ?? it.begun,
 						...(ours && !it.repository && at.repository !== null ? { repository: at.repository } : {}),
 						readyAt: it.readyAt !== null && it.readyAt === head ? it.readyAt : null,
 					};

@@ -101,6 +101,24 @@ describe('createCodebaseWork', () => {
 		expect(JSON.parse(readFileSync(join(records, 'demo/work.json'), 'utf8'))[0].note).toBe('first');
 	});
 
+	it('records the commit its branch was made at, from the branch it was made from, so what it makes is told from that', async () => {
+		g(root, 'checkout', '-q', '-b', 'feature/test-base');
+		writeFileSync(join(root, 'base.txt'), 'mine, not the work’s\n');
+		g(root, 'add', '.');
+		g(root, 'commit', '-q', '-m', 'on the branch it is made from');
+		const at = g(root, 'rev-parse', 'HEAD');
+		const made = await createCodebaseWork(root, records, descriptor, 'demo', 'first', 'feature/test-base');
+		expect(made.madeFrom).toBe(at);
+		expect(readWork(records, 'demo')[0]?.madeFrom).toBe(at);
+	});
+
+	it('records no start for a branch it adopts, which was begun somewhere it cannot know', async () => {
+		g(root, 'checkout', '-q', '-b', 'feature/demo');
+		g(root, 'checkout', '-q', 'develop');
+		const made = await createCodebaseWork(root, records, descriptor, 'demo', 'first', 'develop');
+		expect(made).not.toHaveProperty('madeFrom');
+	});
+
 	it('survives switching branches, which a record on the branch would not', async () => {
 		await createCodebaseWork(root, records, descriptor, 'demo', 'first', 'develop');
 		g(root, 'checkout', '-q', 'develop');

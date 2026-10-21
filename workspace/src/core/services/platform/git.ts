@@ -316,12 +316,31 @@ export interface Author {
 }
 
 /**
+ * Where a branch's own commits begin: the commit it was made from (`madeFrom`, as its record says, when this clone has it),
+ * else the trunk. Made from another branch of someone's, a branch has that branch's commits too, which are not its own.
+ * Null when there is nothing to measure from, or the branch is the trunk.
+ */
+const ownBase = async (root: string, branch: string, madeFrom?: string | null): Promise<string | null> => {
+	if (madeFrom && isObjectId(madeFrom) && (await hasCommit(root, madeFrom))) return madeFrom;
+	const base = await trunk(root);
+	return base === null || base === branch ? null : base;
+};
+
+/** Whether the branch has a commit of its own (see `ownBase`); null when that cannot be said. */
+export const hasOwnCommits = async (root: string, branch: string, madeFrom?: string | null): Promise<boolean | null> => {
+	const base = isSafeBranchName(branch) ? await ownBase(root, branch, madeFrom) : null;
+	if (base === null) return null;
+	const out = await git(root, ['rev-list', '--count', `${base}..${branch}`]).catch(() => null);
+	return out === null ? null : Number(out) > 0;
+};
+
+/**
  * The email is only for telling who is who (`isSamePerson`); what is kept or shown of a person is their name, since a
  * shared repository is no place for anyone's email address.
  */
-export const branchAuthors = async (root: string, branch: string): Promise<Author[]> => {
-	const base = await trunk(root);
-	if (base === null || base === branch) return [];
+export const branchAuthors = async (root: string, branch: string, madeFrom?: string | null): Promise<Author[]> => {
+	const base = await ownBase(root, branch, madeFrom);
+	if (base === null) return [];
 	const out = await git(root, ['log', '--reverse', '--format=%aN%x09%aE', `${base}..${branch}`]);
 	const seen = new Map<string, Author>();
 	for (const line of out.split('\n')) {
@@ -469,12 +488,12 @@ export const pushBranch = async (root: string, branch: string): Promise<{ pushed
 };
 
 /**
- * The date of its first commit beyond the trunk, so work with no record still has an honest start. If the trunk is not
+ * The date of its first commit of its own (`ownBase`), so work with no record still has an honest start. If the base is not
  * known, or the branch has nothing of its own, the newest commit stands in. Null if git cannot say.
  */
-export const branchStartedAt = async (root: string, branch: string): Promise<string | null> => {
-	const base = await trunk(root);
-	const own = base !== null && base !== branch ? await git(root, ['log', '--format=%aI', `${base}..${branch}`]).catch(() => '') : '';
+export const branchStartedAt = async (root: string, branch: string, madeFrom?: string | null): Promise<string | null> => {
+	const base = await ownBase(root, branch, madeFrom);
+	const own = base !== null ? await git(root, ['log', '--format=%aI', `${base}..${branch}`]).catch(() => '') : '';
 	const dates = own.split('\n').filter(Boolean);
 	const oldest = dates[dates.length - 1];
 	if (oldest) return oldest;

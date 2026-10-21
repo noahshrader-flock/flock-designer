@@ -671,6 +671,39 @@ describe('codebase work, in the panel', () => {
 	const inDialog = (name: string) => button(name, dialog()!);
 	const closeX = () => button('Close', dialog()!);
 
+	it('offers Build, not Hand off, for codebase work whose branch has no commit of its own here: started and never built', async () => {
+		const notBegun = SAMPLE_PROJECTS.map((p) =>
+			p.id === 'zone-coverage' ? { ...p, work: [...p.work, codebase('feature/zone-coverage', { begun: false })] } : p,
+		) as typeof SAMPLE_PROJECTS;
+		await showOpen(OPEN, notBegun);
+		await press(menuOf('Zone coverage'));
+		expect(items()).toEqual([
+			'Copy link',
+			'Open published page',
+			'Open locally',
+			'Run locally',
+			'Update this branch…',
+			'Build',
+			'View on GitHub',
+			'Rename…',
+			'Assign folder…',
+			'Delete…',
+		]);
+		await press(item('Build'));
+		expect(dialog()).not.toBeNull();
+	});
+
+	// Begun, or not known here (another machine's), it is the handoff that is next.
+	it.each([true, null])('offers Hand off, not Build, for codebase work whose own commits here are %s', async (begun) => {
+		const known = SAMPLE_PROJECTS.map((p) =>
+			p.id === 'zone-coverage' ? { ...p, work: [...p.work, codebase('feature/zone-coverage', { begun })] } : p,
+		) as typeof SAMPLE_PROJECTS;
+		await showOpen(OPEN, known);
+		await press(menuOf('Zone coverage'));
+		expect(items()).toContain('Hand off');
+		expect(items()).not.toContain('Build');
+	});
+
 	it('offers what a project has, in groups: its link to copy, where it opens, what runs it, with the next stage (build, or handoff, never both), the code on GitHub, and its folder', async () => {
 		await showOpen(OPEN, WITH_CODE);
 		const dividers = () => document.querySelectorAll('[role="separator"]').length;

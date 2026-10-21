@@ -6,7 +6,7 @@ import type { Project } from '../src/shared/contract';
 import { recordsRootFor } from '../src/core/services/projects/discovery';
 import { listProjects } from '../src/core/services/projects/listProjects';
 import { keepPending } from '../src/core/services/prototypes/pendingPrototypes';
-import { makeProduct, projectWork } from './fixtures';
+import { g, makeProduct, projectWork } from './fixtures';
 
 let dir: string;
 let product: string;
@@ -76,6 +76,46 @@ describe('the project list', () => {
 		writeFileSync(join(design, 'projects', 'widgets', 'work.json'), JSON.stringify([record]));
 		const [recorded] = await list();
 		expect(recorded!.work.map((i) => [i.name, i.building])).toEqual([['v1', undefined]]);
+	});
+
+	it('says codebase work has not begun until its branch has a commit of its own, not one of the branch it was made from', async () => {
+		const design = join(dir, 'flock-designer');
+		mkdirSync(join(design, '.git'), { recursive: true });
+		mkdirSync(join(design, 'projects', 'alerts'), { recursive: true });
+		writeFileSync(join(design, 'projects', 'alerts', 'brief.md'), '# Alerts\n');
+		g(product, 'checkout', '-q', '-b', 'feature/test-base');
+		writeFileSync(join(product, 'base.txt'), 'x\n');
+		g(product, 'add', '.');
+		g(product, 'commit', '-q', '-m', 'the branch it is made from');
+		g(product, 'checkout', '-q', '-b', 'feature/alerts');
+		const madeFrom = g(product, 'rev-parse', 'HEAD');
+		const record = {
+			projectId: 'alerts',
+			name: 'codebase',
+			branch: 'feature/alerts',
+			commit: null,
+			createdAt: '2026-10-20T10:00:00.000Z',
+			note: 'n',
+			madeFrom,
+		};
+		writeFileSync(join(design, 'projects', 'alerts', 'work.json'), JSON.stringify([record]));
+		const begun = async () =>
+			(
+				await listProjects({
+					root: product,
+					login: null,
+					recordsRootOf: (r) => recordsRootFor(r),
+					prototypesRoot: join(dir, 'prototypes'),
+					remote: offline,
+				})
+			)
+				.find((p) => p.id === 'alerts')
+				?.work.find((w) => w.name === 'codebase')?.begun;
+		expect(await begun()).toBe(false);
+		writeFileSync(join(product, 'view.tsx'), 'x\n');
+		g(product, 'add', '.');
+		g(product, 'commit', '-q', '-m', 'the work');
+		expect(await begun()).toBe(true);
 	});
 
 	it("still shows this machine's work when GitHub cannot be reached", async () => {

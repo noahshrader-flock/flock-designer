@@ -45,7 +45,8 @@ madeOnce((d) => {
 	g(root, 'push', '-q', '-u', 'origin', 'develop');
 });
 
-const sync = (projects: string[] = []) => syncBranches({ root, descriptor, projects: new Set(projects) });
+const sync = (projects: string[] = [], madeFrom: (projectId: string) => string | null = () => null) =>
+	syncBranches({ root, descriptor, projects: new Set(projects), madeFrom });
 
 describe('publishing my work branches', () => {
 	it('publishes my codebase branch once its project has a folder, and tracks it', async () => {
@@ -55,6 +56,27 @@ describe('publishing my work branches', () => {
 		expect(r).toEqual({ published: ['feature/role-comparison'], problems: [], mine: ['feature/role-comparison'] });
 		expect(remoteBranches()).toEqual(['develop', 'feature/role-comparison']);
 		expect(g(root, 'rev-parse', '--abbrev-ref', 'feature/role-comparison@{u}')).toBe('origin/feature/role-comparison');
+	});
+
+	it('does not publish work made from another branch of mine with nothing of its own yet, and does once it has', async () => {
+		branchFrom(root, 'feature/test-base');
+		commit(root, 'feature/test-base', 'base.tsx');
+		branchFrom(root, 'feature/device-alerts', 'feature/test-base');
+		const madeFrom = g(root, 'rev-parse', 'feature/device-alerts');
+		const from = (projectId: string) => (projectId === 'device-alerts' ? madeFrom : null);
+		// Started and never built: the commits are the branch it was made from's.
+		expect(await sync(['device-alerts'], from)).toEqual({ published: [], problems: [], mine: [] });
+		expect(remoteBranches()).not.toContain('feature/device-alerts');
+		commit(root, 'feature/device-alerts', 'view.tsx');
+		expect(await sync(['device-alerts'], from)).toEqual({ published: ['feature/device-alerts'], problems: [], mine: ['feature/device-alerts'] });
+		expect(remoteSha('feature/device-alerts')).toBe(g(root, 'rev-parse', 'feature/device-alerts'));
+	});
+
+	it('measures from the trunk where the record does not say where the work was made, as before', async () => {
+		branchFrom(root, 'feature/test-base-2');
+		commit(root, 'feature/test-base-2', 'base2.tsx');
+		branchFrom(root, 'feature/old-record', 'feature/test-base-2');
+		expect((await sync(['old-record'])).mine).toEqual(['feature/old-record']);
 	});
 
 	it('does not publish a prototype branch of old, even my own: a prototype is a page, not a branch', async () => {

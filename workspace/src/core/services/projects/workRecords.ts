@@ -80,10 +80,13 @@ export const createCodebaseWork = async (
 	// Either way nothing is recorded unless the checkout succeeds, so the
 	// record cannot claim work that is not there.
 	const shared = await sharedCheckoutNote(productRoot);
+	// Made here, its start is known: what it makes is what comes after it. One adopted was begun by someone, from somewhere.
+	let madeFrom: string | null = null;
 	if (await branchExists(productRoot, branch)) {
 		await checkoutBranch(productRoot, branch, shared);
 	} else {
 		await createBranch(productRoot, branch, from, shared);
+		madeFrom = await headCommit(productRoot);
 	}
 
 	// Where it is on GitHub, so the project links to it for people without the repository.
@@ -96,18 +99,29 @@ export const createCodebaseWork = async (
 		createdAt: new Date().toISOString(),
 		note,
 		...(repository ? { repository } : {}),
+		...(madeFrom ? { madeFrom } : {}),
 	};
 	writeWork(recordsRoot, projectId, [...existing, record]);
 	return record;
+};
+
+/** The commit a project's codebase work was made from, as its record says; null when it does not say. */
+export const codebaseMadeFrom = (recordsRoot: string, projectId: string): string | null => {
+	try {
+		return readWork(recordsRoot, projectId).find((r) => r.name === 'codebase')?.madeFrom ?? null;
+	} catch {
+		// A record that cannot be read says nothing: the trunk stands in.
+		return null;
+	}
 };
 
 /**
  * Authors on the branch, with a GitHub login only where it is not a guess: a noreply address names its account, and the
  * signed-in person's own commits (matched on their git identity) carry their login. Others stay a name until they open work.
  */
-export const peopleOn = async (productRoot: string, branch: string, signedInLogin: string | null): Promise<Person[]> => {
+export const peopleOn = async (productRoot: string, branch: string, signedInLogin: string | null, madeFrom?: string | null): Promise<Person[]> => {
 	const me = await localIdentity(productRoot);
-	return (await branchAuthors(productRoot, branch)).map((a) => {
+	return (await branchAuthors(productRoot, branch, madeFrom)).map((a) => {
 		const mine = signedInLogin !== null && isSamePerson(me, a);
 		return { name: a.name, login: loginFromNoreply(a.email) ?? (mine ? signedInLogin : null) };
 	});
@@ -210,7 +224,7 @@ export const continueWork = async (
 	// Recorded on return, so the record tracks where the branch actually is
 	// rather than where it started.
 	const commit = await headCommit(productRoot);
-	const contributors = await peopleOn(productRoot, record.branch, signedInLogin);
+	const contributors = await peopleOn(productRoot, record.branch, signedInLogin, record.madeFrom);
 	const updated = records.map((i) => (i.name === name ? { ...i, commit, contributors } : i));
 	writeWork(recordsRoot, projectId, updated);
 	return { ...record, commit, contributors };

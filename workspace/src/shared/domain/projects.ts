@@ -16,6 +16,11 @@ export interface Work {
 	 * did. Kept on the record, so a restart or a teammate sees it too.
 	 */
 	readyAt?: string;
+	/**
+	 * Codebase work: the commit its branch was made at, so its own commits are those after it, not those of the branch it
+	 * was made from. Absent for a branch adopted, or made before this was kept: then they are those beyond the trunk.
+	 */
+	madeFrom?: string;
 	/** `owner/repo`, from the checkout it was started in. */
 	repository?: string;
 	/**
@@ -172,6 +177,11 @@ export interface ProjectWork {
 	 * run again.
 	 */
 	readyAt: string | null;
+	/**
+	 * Codebase work: whether its branch has a commit of its own yet, in the checkout open here; null where that cannot be
+	 * said. Started and never built (the agent never sent its task), it is still to build, not to hand off.
+	 */
+	begun: boolean | null;
 	localOnly?: boolean;
 	/** Started here, its first page not saved yet: nothing of it is shared. */
 	building?: boolean;

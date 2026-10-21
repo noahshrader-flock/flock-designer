@@ -65,7 +65,7 @@ that pushes, switches branch or deletes.
 | Let a prototype's agent read the product's code, guidance and installed packages, and build its page from them | Let that agent change anything in the product repository, or run the product |
 | Read and write project records | Become the only place those records exist |
 | Show a prototype's preview in the window and place comments on elements | Let that preview call back into the app, or leave the preview's origin |
-| Push the person's own work branches (`feature/<project>`) and commit and push the design repository's `projects/` folder, by itself | Push anything else, force-push, publish a teammate's branch, or push other unpublished work along with the records |
+| Push the person's own work branches (`feature/<project>`, once it has a commit of its own: one after where the work was made, `madeFrom`, not one of the branch it was made from) and commit and push the design repository's `projects/` folder, by itself | Push anything else, force-push, publish a teammate's branch, a branch with nothing of its own yet, or push other unpublished work along with the records |
 | Push a project's `feature/` branch and open a **draft** pull request, as the designer, through their own `git` and `gh` | Force-push, open a pull request that is ready for review, merge one, or see the designer's GitHub token |
 
 ## How a repository joins
@@ -213,7 +213,8 @@ cannot draw outside its side bar, so a dialog covers the panel, as Claude Code's
 an ellipsis menu (on hover or focus), in groups: **Copy link** and **Open published page** (the page as reviewers see it,
 which asks GitHub when pressed and offers to publish it if it is not there); **Open locally** (the same review page,
 served from this machine, in your browser outside VS Code, where commenting is still VS Code's) with the next stage,
-Build in the codebase… (or **Run locally** and Hand off when there is codebase work); **View on GitHub**; and Assign
+Build in the codebase… (or **Run locally** and Hand off when there is codebase work begun: a branch with no commit of its own
+here, started and never built, still offers Build, which carries on with it); **View on GitHub**; and Assign
 folder…; the right-click items open the same dialogs. The account (the
 title bar's account action: Sign out of DSNR) and the sync (the status bar's item) are dialogs in the panel too. The
 quick pick at the top is kept for the command palette's lists of many: **Open a component…** and **Open a prototype for

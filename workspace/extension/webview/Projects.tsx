@@ -53,7 +53,10 @@ const ProjectItem = ({
 	const cover = useCover(project);
 	const open = openCommentsOf(project.work);
 	const newest = reviewsOf(project)[0];
-	const inCode = workOf(project.work, 'codebase').length > 0;
+	const codebaseWork = workOf(project.work, 'codebase')[0];
+	const inCode = codebaseWork !== undefined;
+	// Started and never built (its branch has no commit of its own here): it is still to build, which carries on with it.
+	const toBuild = !inCode || codebaseWork.begun === false;
 	const badge = open > 0 ? <Badge tone="brand" count={open} label={plural(open, 'open comment')} /> : undefined;
 	const id = project.id;
 	// Sharing code is not an item: once a handoff finds the work ready, the Hand off dialog offers its pull request.
@@ -67,7 +70,7 @@ const ProjectItem = ({
 				{ label: 'Open locally', icon: 'link-external', onSelect: () => void asks().openReviewInBrowser(id) },
 			]
 		: [];
-	const stage: { label: string; dialog: PanelDialog } | null = inCode
+	const stage: { label: string; dialog: PanelDialog } | null = !toBuild
 		? { label: 'Hand off', dialog: { kind: 'hand-off', projectId: id } }
 		: newest
 			? { label: 'Build', dialog: { kind: 'build', projectId: id } }
