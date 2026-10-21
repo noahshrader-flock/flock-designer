@@ -30,9 +30,11 @@ is kept.
   customer data, credentials, license keys or anything copied from production, and no network requests.
 - **Check it builds** with the command the task gives, after every change. Do not finish while it reports
   an error: a prototype that does not build cannot be saved.
-- **If you look at the page yourself** (a screenshot of the built file, say), its icons show as their names
-  ("search", "close"): the design system's fonts are kept beside the page and served by DSNR, not
-  embedded in it. That is expected. Do not change the page for it or spend time on it.
+- **Look at what you built, in the pictures the check gives you.** After each build, the check you run saves a
+  picture of every state at two window widths, with the icons drawn, and prints where they are. Read each one (an
+  image can be read) and fix what is wrong before you finish, as the layout standard's "Looking at what you built"
+  lists. A picture you take yourself shows the icons as their names ("search", "close"): the design system's
+  fonts are kept beside the page and served by DSNR, not embedded in it. That is expected, not a fault in the page.
 
 ## Before you write anything: read, in this order
 
@@ -44,7 +46,7 @@ The task lists what you may read. Read only; never change anything in any of it.
 2. **The design system's guidance and source:** its tokens, and how its components are used.
 3. **The product's code**, on the branch the task names: the nearest real screen to what is asked for,
    and the real components it uses. This is what the page must match.
-4. **Shared standards:** the view states and copy. Accessibility is in the task's **Accessibility** section: the rules, and this product's target, read from its manifest for you.
+4. **Shared standards:** the view states, copy, and layout (`layout-judgment.md`, which ends with what to look for in your own pictures). Accessibility is in the task's **Accessibility** section: the rules, and this product's target, read from its manifest for you.
 
 If the product's guidance is missing, say so first thing in your summary.
 
@@ -116,6 +118,7 @@ when the prototype moves into the code:
 
 Say in a few lines what you made, where in the product it sits, which screen you modeled it on, and every
 `@standin`: what the page shows that the product cannot do today. That is the first thing the person reads.
+Say too that you looked at the check's pictures, and what you changed because of them; if none came, say so.
 
 A prototype has no review pass of its own: people review it in DSNR, and the product's reviewers run when
 codebase work is handed off. Do not run them, or list them as not run.

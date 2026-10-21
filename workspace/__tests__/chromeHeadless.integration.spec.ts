@@ -2,7 +2,8 @@ import { type Server, createServer } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { chromeHeadless, composedPicture, pictureOf } from '../src/core/services/browser/chromeHeadless';
-import { COVER_BUDGET } from '../src/core/services/prototypes/projectCovers';
+import { COVER_BUDGET, isBlank } from '../src/core/services/prototypes/projectCovers';
+import { decodePng } from '../src/core/services/prototypes/png';
 import { readDrawn } from '../src/core/services/designSystem/storyDrawing';
 import { resultOf } from '../src/core/services/accessibility/accessibilityCheck';
 import { countsOf } from '../src/shared/accessibility';
@@ -42,6 +43,14 @@ const PAGES: Record<string, string> = {
 	'/page.html': `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>A page</title></head>
 <body style="margin:0;font:16px sans-serif"><main><h1 style="background:#123;color:#fff;padding:40px">Alert history</h1>
 <p style="padding:40px">Every alert from the last day, by camera.</p><img src="data:image/gif;base64,R0lGODlhAQABAAAAACw="></main></body></html>`,
+	// A page with two states by its address, one wider than the narrow window, as a page for looking at has.
+	'/states.html': `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>States</title></head>
+<body style="margin:0;font:16px sans-serif"><main id="m"></main><script>
+const state = new URLSearchParams(location.search).get('state') || 'default';
+document.getElementById('m').innerHTML = state === 'wide'
+	? '<div style="width:1000px;height:120px;background:#123456;color:#fff;padding:16px">Wide</div>'
+	: '<h1 style="background:#a33;color:#fff;padding:24px">Narrow</h1>';
+</script></body></html>`,
 	// What a state shows once a simulated request is done: nothing wrong at first, a faulty image after 1.2 seconds.
 	'/later.html': `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Later</title></head>
 <body style="margin:0"><main id="m"><h1 style="background:#a33;color:#fff;padding:24px">Loading</h1></main><script>
@@ -227,9 +236,52 @@ describe.skipIf(NO_CHROME)('with the browser on this machine', () => {
 		});
 	}, 60_000);
 
+	it('pictures a page in each of its states at each window, as it is drawn there, so it can be looked at', async () => {
+		const windows = [
+			{ width: 1280, height: 900 },
+			{ width: 800, height: 700 },
+		];
+		const looks = await headless.look(`${base}/states.html`, ['default', 'wide'], windows);
+		expect(looks.map((l) => [l.state, l.width])).toEqual([
+			['default', 1280],
+			['wide', 1280],
+			['default', 800],
+			['wide', 800],
+		]);
+		const pictured = looks.map((l) => ({ asked: l, shot: decodePng(l.png) }));
+		// Each is the window it was asked at, and drawn: not blank, and laid out at that width, not at some other.
+		const pixel = (shot: { width: number; rgba: Uint8Array }, x: number, y: number) => [
+			...shot.rgba.slice((y * shot.width + x) * 4, (y * shot.width + x) * 4 + 3),
+		];
+		for (const { asked, shot } of pictured) {
+			expect([shot.width, shot.height]).toEqual([asked.width, windows.find((w) => w.width === asked.width)?.height]);
+			expect(isBlank(shot.rgba)).toBe(false);
+		}
+		// The heading of the default state fills the window it was laid out in, to its right edge.
+		const [red1280, , red800] = pictured.map((p) => pixel(p.shot, p.shot.width - 4, 40));
+		expect(red1280).toEqual([0xaa, 0x33, 0x33]);
+		expect(red800).toEqual([0xaa, 0x33, 0x33]);
+		expect(Buffer.compare(pictured[0]!.asked.png, pictured[1]!.asked.png)).not.toBe(0);
+		// A page with no states is one picture for each window.
+		expect((await headless.look(`${base}/page.html`, [], windows)).map((l) => [l.state, l.width])).toEqual([
+			['default', 1280],
+			['default', 800],
+		]);
+	}, 60_000);
+
+	it('pictures a state once the request it waits on is done, not while it is still loading', async () => {
+		const [looked] = await headless.look(`${base}/later.html`, [], [{ width: 1280, height: 900 }]);
+		const { rgba, width } = decodePng(looked!.png);
+		expect([...rgba.slice((40 * width + 600) * 4, (40 * width + 600) * 4 + 3)]).toEqual([0x12, 0x34, 0x56]);
+	}, 60_000);
+
 	it('checks a state once the request it waits on is done, not while it is still loading', async () => {
 		const [run] = await headless.scan(`${base}/later.html`, [], ['wcag2a']);
 		expect(run?.violations.map((v) => v.id)).toContain('image-alt');
+	}, 60_000);
+
+	it('gives no pictures at all, rather than some, for a page that cannot be reached', async () => {
+		await expect(headless.look('http://127.0.0.1:9/nothing-here.html', ['default'], [{ width: 1280, height: 900 }])).rejects.toThrow();
 	}, 60_000);
 
 	it('checks a page with axe, finding what is wrong with it, and on which element, with what to change', async () => {

@@ -15,6 +15,7 @@ import { COMPOSITION, painted, placeAround, placeOnWhite } from '../prototypes/p
 import { decodePng } from '../prototypes/png';
 import { COVER_BUDGET, COVER_STEPS, COVER_WINDOW, isBlank } from '../prototypes/projectCovers';
 import { settleScript, timerWatchScript } from './settle';
+import type { Look, LookPage } from '../prototypes/looks';
 import type { DrawCover } from '../../ports';
 import {
 	PICTURE_MOST_ACROSS,
@@ -180,6 +181,7 @@ export const chromeHeadless = ({
 } = {}): Headless & {
 	loads(url: string): Promise<string | null>;
 	probe(url: string, options: ProbeOptions): Promise<ViewProbed>;
+	look: LookPage;
 	close(): Promise<void>;
 } => {
 	let browser: Promise<BrowserLike> | null = null;
@@ -256,6 +258,22 @@ export const chromeHeadless = ({
 			return runs;
 		});
 
+	/** Each state at each window, once it has settled; a page that will not load fails the whole. */
+	const look: LookPage = (url, states, windows) =>
+		onPage(async (page) => {
+			await page.emulateMediaFeatures([CHECKED_IN]);
+			await page.evaluateOnNewDocument(timerWatchScript());
+			const looks: Look[] = [];
+			for (const window of windows) {
+				await page.setViewport({ ...window, deviceScaleFactor: 1 });
+				for (const state of states.length ? states : [null]) {
+					const said = await openState(page, url, state, 'pictured');
+					looks.push({ state: said, width: window.width, png: Buffer.from(await page.screenshot({ type: 'png', clip: { x: 0, y: 0, ...window } })) });
+				}
+			}
+			return looks;
+		});
+
 	/**
 	 * A story that does not draw in time is null, and the rest go on; a page that does not load is null for all of its share.
 	 */
@@ -309,6 +327,7 @@ export const chromeHeadless = ({
 		draw,
 		scan,
 		probe,
+		look,
 		measure,
 		loads,
 		close: async () => {

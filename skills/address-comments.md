@@ -98,7 +98,8 @@ source is and gives the exact command that builds its page. Everything above app
   made (the task includes it): real components, and gaps marked `@standin`, `@mock`, `@remove` or
   `@override`, never hidden.
 - **The check is the build command**, run after every change, exactly as the task gives it. There is no light
-  check and no test suite. Do not finish while it reports an error.
+  check and no test suite. Do not finish while it reports an error. It also saves pictures of the page: look at
+  the states your change touches, as the build skill says.
 - **Nothing is committed.** There is no branch to commit to. The app saves the page when you finish, and that
   saved page is what reviewers see.
 - **Changed means the page was built.** If the build command could not be run, or did not pass, say not changed, and

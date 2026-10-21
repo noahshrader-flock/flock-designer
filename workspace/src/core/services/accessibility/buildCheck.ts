@@ -10,6 +10,7 @@ import type { MeasureRecord } from './accessibilityRecord';
 import { jsonFile, writeAtomic } from '../platform/jsonFile';
 import { type CellResult, cellLines } from './probe/cells';
 import { type MeasureBrowser, measurePrototype, sharedIn } from './prototypeMeasure';
+import { type Looked, lookText, looksDir } from '../prototypes/looks';
 
 export const MOST_ROUNDS = 2;
 
@@ -94,6 +95,14 @@ const checkText = (config: CheckConfig, fix: ReturnType<typeof toFix>, rounds: n
 	].join('\n');
 };
 
+/** Said whatever the accessibility found, and never what stops a build; where no picture could be taken, why. */
+const lookLines = (looks: Looked | null): string[] =>
+	looks === null
+		? []
+		: 'files' in looks
+			? [lookText(looks.files)]
+			: [`Pictures of the page could not be taken (${looks.why}), so look at the page some other way before you finish.`];
+
 /** Exits as a build does: 1 while there is something to fix and rounds are left, else 0. */
 export const checkBuild = async (config: CheckConfig, browser: MeasureBrowser): Promise<{ text: string; code: number }> => {
 	const html = readFileSync(config.page, 'utf8');
@@ -105,6 +114,7 @@ export const checkBuild = async (config: CheckConfig, browser: MeasureBrowser): 
 		sharedText: sharedIn(config.sharedDir),
 		cache: config.cache,
 		browser,
+		looks: looksDir(config.page),
 	});
 	const views = measured.views.map(({ state, results }) => ({ state, results }));
 	const fix = toFix(measured.result, views, config.target);
@@ -114,7 +124,7 @@ export const checkBuild = async (config: CheckConfig, browser: MeasureBrowser): 
 	const left = needs && rounds > MOST_ROUNDS;
 	const record: CheckRecord = { page: hashOf(html), rounds, left, target: config.target, result: measured.result, views };
 	writeAtomic(config.record, JSON.stringify(record));
-	return { text: checkText(config, fix, rounds, left), code: needs && !left ? 1 : 0 };
+	return { text: [checkText(config, fix, rounds, left), ...lookLines(measured.looks)].join('\n\n'), code: needs && !left ? 1 : 0 };
 };
 
 export const LEFT = `the build's own check sent it back ${MOST_ROUNDS} times, and it was still there`;

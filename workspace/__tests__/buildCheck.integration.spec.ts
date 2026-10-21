@@ -1,10 +1,12 @@
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { type CheckConfig, LEFT, MOST_ROUNDS, checkedAsSaved } from '../src/core/services/accessibility/buildCheck';
+import { looksDir } from '../src/core/services/prototypes/looks';
 import { writeCheckScript } from '../src/core/services/prototypes/prototypeBundle';
+import { decodePng } from '../src/core/services/prototypes/png';
 import { axeTagsFor } from '../src/shared/wcag';
 import { NO_CHROME } from './realChrome';
 
@@ -92,6 +94,22 @@ describe.skipIf(NO_CHROME)('a build’s own check, run as the agent runs it', ()
 		expect(code).toBe(0);
 		expect(said).toMatch(/^Accessibility: none found of what this check measures, at WCAG 2\.0 Level A\. Not a pass/);
 		expect(said).toMatch(/1 probe finding above the target were left out: readiness/);
+	}, 120_000);
+
+	it('saves a picture of the page at each window beside it, and tells the agent to look at them', () => {
+		const config = configFor('<p>Cameras</p>');
+		const { code, said } = check();
+		expect(code).toBe(0);
+		const shots = readdirSync(looksDir(config.page)).sort();
+		expect(shots).toEqual(['default-1280.png', 'default-800.png']);
+		for (const [shot, width] of [
+			['default-1280.png', 1280],
+			['default-800.png', 800],
+		] as const) {
+			expect(said).toContain(join(looksDir(config.page), shot));
+			expect(decodePng(readFileSync(join(looksDir(config.page), shot))).width).toBe(width);
+		}
+		expect(said).toMatch(/Look at every one before you finish/);
 	}, 120_000);
 
 	it('leaves words to a person: an image with no text is said, and never sent back to the agent', () => {

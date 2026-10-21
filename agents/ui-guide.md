@@ -27,8 +27,9 @@ Don't skip: most mistakes come from skipping the product's patterns or the desig
    (`voice-and-tone.md`).
 4. **The product's repository docs** (`AGENTS.md`, `CLAUDE.md` and the like) for architecture and conventions. They win on
    stack and tooling questions and never override the hard rules.
-5. **Standards**, in the order `../standards/README.md` gives. Read the product's conventions, Flock's, and accessibility
-   every time; the universal design tier when the job needs judgment the others don't cover.
+5. **Standards**, in the order `../standards/README.md` gives. Read the product's conventions, Flock's, accessibility and
+   layout (`../standards/universal/layout-judgment.md`) every time you build a view; the rest of the universal design
+   tier when the job needs judgment the others don't cover.
 
 **If you cannot read one of these** (a sibling folder that is not open in your editor, a checkout that is missing), say
 so and stop before building, naming which: never guess at what it holds, least of all component APIs or token names.
@@ -105,6 +106,11 @@ piece of work is finished work**: do not add states nobody asked for. If the sco
 it,** whatever the scope.
 
 ## Checking it
+
+**Look at it.** Code that builds and passes its checks can still be badly laid out. Where you can see what you built (a
+prototype's check saves a picture of each state), read the pictures and fix what is wrong before you say you are done;
+`../standards/universal/layout-judgment.md` ("Looking at what you built") lists what to look for. Where you cannot, say
+that the layout was not looked at.
 
 Run the product's checks and report their real output: never claim one passed without running it. They are the commands
 its repository docs and its `.dsnr/workspace.json` name. While you build, run only the tests for what you changed, never

@@ -7,17 +7,29 @@ import type { CheckPage } from '../../ports';
 import { readText } from '../platform/jsonFile';
 import type { ProbeDepth } from './probe/cells';
 import type { ProbeOptions, ViewProbed } from './probe/probe';
+import { type LookPage, type Looked, LOOK_WINDOWS, writeLooks } from '../prototypes/looks';
+import { errorText } from '../../../shared/result';
 import { PrototypeServer } from '../prototypes/prototypeServer';
 
 export interface MeasureBrowser {
 	scan: CheckPage;
 	probe(url: string, options: ProbeOptions): Promise<ViewProbed>;
+	/** Where it is given, the page is pictured too: see `looks`. */
+	look?: LookPage;
 }
 
 export const sharedIn =
 	(dir: string) =>
 	async (hash: string): Promise<string | null> =>
 		readText(join(dir, `${hash}.datauri`));
+
+const pictured = async (look: LookPage, dir: string, url: string, states: string[]): Promise<Looked> => {
+	try {
+		return { files: writeLooks(dir, await look(url, states, LOOK_WINDOWS)) };
+	} catch (err) {
+		return { why: errorText(err, { firstLine: true }) };
+	}
+};
 
 export const measurePrototype = async ({
 	key,
@@ -28,6 +40,7 @@ export const measurePrototype = async ({
 	cache,
 	browser,
 	progress,
+	looks,
 }: {
 	key: string;
 	html: string;
@@ -37,7 +50,9 @@ export const measurePrototype = async ({
 	cache: string;
 	browser: MeasureBrowser;
 	progress?: (line: string) => void;
-}): Promise<{ result: AccessibilityResult; views: (ViewProbed & { state: string })[] }> => {
+	/** The folder to put a picture of every state in, taken while the page is served: a picture that cannot be taken is said, never fatal. */
+	looks?: string;
+}): Promise<{ result: AccessibilityResult; views: (ViewProbed & { state: string })[]; looks: Looked | null }> => {
 	const server = new PrototypeServer();
 	try {
 		const url = await server.servePage(key, html, sharedText);
@@ -51,7 +66,7 @@ export const measurePrototype = async ({
 				...(await browser.probe(withState(url, s), { depth, progress: progress && ((step) => progress(`Probing ${state}: ${step}`)) })),
 			});
 		}
-		return { result, views };
+		return { result, views, looks: looks && browser.look ? await pictured(browser.look, looks, url, states) : null };
 	} finally {
 		server.close();
 	}
