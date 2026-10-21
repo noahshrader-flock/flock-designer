@@ -183,7 +183,7 @@ export const DeleteProjectDialog = ({
 				) : (
 					<>
 						<Message tone="warning">{`${goes}${comments}`}</Message>
-						<Message>{`Its comments stay on GitHub${code}. What it was stays in the design repository’s history.`}</Message>
+						<Message>{`Its review issues on GitHub are closed, with their comments kept there${code}. What it was stays in the design repository’s history.`}</Message>
 					</>
 				)}
 				<Field label={`Type ${project.title} to delete it`}>{(control) => <TextInput control={control} value={typed} onChange={setTyped} />}</Field>

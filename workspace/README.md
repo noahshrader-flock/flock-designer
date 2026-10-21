@@ -340,7 +340,10 @@ again; the project's id, which its folder, links, branches and comments are name
 last, deletes the whole project, every version with it, for everyone (`deleteProject`): its dialog says what goes and
 what stays, and deletes only once the project's name is typed as the list shows it (`namesProject`, which the core checks
 again). Its folder goes as one change (with a clone, the push of the records it waits for; without, one commit over the API), the
-published site is built again without it, and its review tab closes. The dialog closes as it starts, and the card says
+published site is built again without it, and its review tab closes. Its review threads on GitHub are closed as not planned,
+with a note, and taken off the `flock-designer:review` label, so a new project of the same name starts with none
+(`closeDeleted`); their comments stay there. A thread is otherwise open while a comment in it is (`settle`, after each
+change to a comment). The dialog closes as it starts, and the card says
 Deleting… under its name and shimmers, with nothing to press, until the list no longer has it; refused, the dialog opens
 again to say why. Its comments stay on GitHub, its codebase branch and
 pull request stay, and what it was stays in the design repository's history. The app's one

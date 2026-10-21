@@ -493,7 +493,9 @@ describe('dialogs and menus, in the panel', () => {
 			expect(dialog()?.textContent).toContain(
 				'This deletes Alert history and its 3 versions for everyone, with every page, picture and record of it, and takes it off the published site. 2 open comments are on it.',
 			);
-			expect(dialog()?.textContent).toContain('Its comments stay on GitHub. What it was stays in the design repository’s history.');
+			expect(dialog()?.textContent).toContain(
+				'Its review issues on GitHub are closed, with their comments kept there. What it was stays in the design repository’s history.',
+			);
 			expect(submit().textContent).toBe('Delete project');
 			expect(submit().className).toContain('button-danger');
 		});
@@ -556,7 +558,9 @@ describe('dialogs and menus, in the panel', () => {
 				...SAMPLE_PROJECTS.slice(1),
 			]);
 			expect(dialog()?.textContent).toContain('This deletes Alert history for everyone, with every page');
-			expect(dialog()?.textContent).toContain('Its comments stay on GitHub, and its codebase branch feature/alert-history stays.');
+			expect(dialog()?.textContent).toContain(
+				'Its review issues on GitHub are closed, with their comments kept there, and its codebase branch feature/alert-history stays.',
+			);
 		});
 
 		it('says its codebase branch and pull request stay, when it has them', async () => {
@@ -572,7 +576,9 @@ describe('dialogs and menus, in the panel', () => {
 					: p,
 			);
 			await open(inCode);
-			expect(dialog()?.textContent).toContain('Its comments stay on GitHub, and its codebase branch feature/alert-history and pull request stay.');
+			expect(dialog()?.textContent).toContain(
+				'Its review issues on GitHub are closed, with their comments kept there, and its codebase branch feature/alert-history and pull request stay.',
+			);
 		});
 	});
 
@@ -1060,7 +1066,7 @@ describe('the projects as a list or a grid', () => {
 			await press(started().querySelector('[aria-label="Project actions"]') as HTMLElement);
 			await press(menuItem(allByRole('menuitem'), 'Delete…'));
 			expect(dialog()?.textContent).toContain('This deletes Widget explorer. It was started here and not saved yet, so nothing of it was shared.');
-			expect(dialog()?.textContent).not.toContain('Its comments stay on GitHub');
+			expect(dialog()?.textContent).not.toContain('Its review issues on GitHub');
 			await type(fieldNamed<HTMLInputElement>('Type Widget explorer to delete it', dialog()!), 'Widget explorer');
 			await press(dialog()!.querySelector('button[type="submit"]') as HTMLButtonElement);
 			expect(sent.filter((m) => m.name === 'deleteProject').at(-1)?.args).toEqual(['widgets', 'Widget explorer']);

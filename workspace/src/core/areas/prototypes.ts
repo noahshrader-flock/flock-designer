@@ -5,6 +5,8 @@ import { folderName } from '../../shared/brief';
 import type { Handed, CommentRef, HandedComment, OpenedPrototype, PrototypeReadiness } from '../../shared/contract';
 import { coverPath, prototypeKey, prototypePagePath, workPath } from '../../shared/designPaths';
 import { statesOf } from '../../shared/prototypeStates';
+import { errorText } from '../../shared/result';
+import { ISSUE } from '../../shared/vocabulary';
 import { workLabel } from '../../shared/work';
 import { ADDRESS_SKILL, chooseComment } from '../services/prototypes/address';
 import { guidePart, prototypeAddressTask, prototypeBuildTask, refreshRequest } from '../services/agent/agentTasks';
@@ -150,11 +152,20 @@ export const prototypesArea = (d: CallsDeps) => {
 		 */
 		deleteProject: async (projectId: string, typed: string) => {
 			const shared = await store.records().has(workPath(projectId));
+			// Read before it goes: the review threads to close are its work's.
+			const branches = (await work.records(projectId)).map((r) => r.branch);
 			await deleteProject(store.records(), projectId, typed);
 			await publisher.publish(true);
 			dropAllPending(prototypesRoot, projectId);
 			if (shared) deploys.site();
 			emit('onProjectDeleted', projectId);
+			// Its comments' threads are closed once it is gone, so none is left open for work that is not there.
+			await designRepos
+				.now()
+				.threads.closeDeleted(projectId, branches)
+				.catch((err: unknown) => {
+					throw new Error(`${projectId} is deleted, but its review ${ISSUE}s on GitHub could not be closed: ${errorText(err)}`);
+				});
 			return null;
 		},
 		handPrototypeBuild: async (root: string, projectId: string, name: string, request: string): Promise<Handed> => {

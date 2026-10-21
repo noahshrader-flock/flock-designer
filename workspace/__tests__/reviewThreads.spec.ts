@@ -340,3 +340,122 @@ describe('the threads of a branch', () => {
 		});
 	});
 });
+
+describe('a thread’s issue, open while a comment in it is', () => {
+	const ISSUE = '/repos/acme/design/issues/7';
+	/** One thread, its comments as given and its issue open or closed; what is written to the issue is what is checked. */
+	const thread = (bodies: string[], state: 'open' | 'closed') => {
+		const comments = bodies.map((body, i) => ({ id: i + 1, user: { login: 'noah' }, body, created_at: `2026-10-05T10:00:0${i}Z` }));
+		const fake = fakeGitHub({
+			'/repos/acme/design/issues?state=all*': [{ number: 7, comments: comments.length, body: 'branch: `prototype/alpha/v1`' }],
+			[`GET ${ISSUE}/comments*`]: () => comments,
+			[`GET ${ISSUE}`]: { number: 7, state },
+			[`PATCH ${ISSUE}`]: { number: 7 },
+			'GET /repos/acme/design/issues/comments/*': ({ path }) => comments.find((c) => path.endsWith(`/${c.id}`)) ?? null,
+			'PATCH /repos/acme/design/issues/comments/*': ({ path, body }) => {
+				const c = comments.find((x) => path.endsWith(`/${x.id}`))!;
+				c.body = (body as { body: string }).body;
+				return c;
+			},
+			'DELETE /repos/acme/design/issues/comments/*': ({ path }) => {
+				comments.splice(
+					comments.findIndex((c) => path.endsWith(`/${c.id}`)),
+					1,
+				);
+				return null;
+			},
+			[`POST ${ISSUE}/comments`]: ({ body }) => {
+				const c = { id: comments.length + 1, user: { login: 'pm' }, body: (body as { body: string }).body, created_at: '2026-10-05T11:00:00Z' };
+				comments.push(c);
+				return c;
+			},
+		});
+		const issueWrites = () => fake.writes.filter((w) => w.path === ISSUE).map((w) => w.body);
+		return { threads: new ReviewThreads(fake.github, REF), issueWrites };
+	};
+
+	it('is closed, as done, when its last open comment is resolved', async () => {
+		const t = thread(['Bigger', 'Done <!-- resolved -->'], 'open');
+		await t.threads.setResolved({ thread: 7, id: 1 }, true);
+		expect(t.issueWrites()).toEqual([{ state: 'closed', state_reason: 'completed' }]);
+	});
+
+	it('is left open while another comment in it still is', async () => {
+		const t = thread(['Bigger', 'Bluer'], 'open');
+		await t.threads.setResolved({ thread: 7, id: 1 }, true);
+		expect(t.issueWrites()).toEqual([]);
+	});
+
+	it('is opened again when a comment in it is reopened, or a new one is written', async () => {
+		const reopened = thread(['Bigger <!-- resolved -->'], 'closed');
+		await reopened.threads.setResolved({ thread: 7, id: 1 }, false);
+		expect(reopened.issueWrites()).toEqual([{ state: 'open' }]);
+		const written = thread(['Bigger <!-- resolved -->'], 'closed');
+		await written.threads.postComment('alpha', 'prototype/alpha/v1', 'And bluer');
+		expect(written.issueWrites()).toEqual([{ state: 'open' }]);
+	});
+
+	it('is closed when the last open comment is deleted, and left as it is when nothing about it changed', async () => {
+		const t = thread(['Bigger', 'Done <!-- resolved -->'], 'open');
+		await t.threads.deleteComment({ thread: 7, id: 1 });
+		expect(t.issueWrites()).toEqual([{ state: 'closed', state_reason: 'completed' }]);
+		const same = thread(['Done <!-- resolved -->'], 'closed');
+		await same.threads.setResolved({ thread: 7, id: 1 }, true);
+		expect(same.issueWrites()).toEqual([]);
+	});
+
+	it('does not fail the comment’s own change when the issue cannot be set: the next change sets it', async () => {
+		const { github } = fakeGitHub({
+			'GET /repos/acme/design/issues/comments/1': { id: 1, user: { login: 'noah' }, body: 'Bigger', created_at: 'now' },
+			'PATCH /repos/acme/design/issues/comments/1': { id: 1, user: { login: 'noah' }, body: 'Bigger <!-- resolved -->', created_at: 'now' },
+			'GET /repos/acme/design/issues/7/comments*': refusing(503),
+		});
+		expect((await new ReviewThreads(github, REF).setResolved({ thread: 7, id: 1 }, true)).resolved).toBe(true);
+	});
+});
+
+describe('a deleted project’s threads', () => {
+	const listing = [
+		{ number: 7, comments: 2, body: 'branch: `prototype/alpha/v1`' },
+		{ number: 8, comments: 1, body: 'branch: `prototype/alpha/v2`' },
+		{ number: 9, comments: 1, body: 'branch: `feature/alpha`' },
+		{ number: 10, comments: 1, body: 'branch: `prototype/alphabet/v1`' },
+		{ number: 11, comments: 1, body: 'branch: `prototype/beta/v1`' },
+	];
+	const deleting = (labels: (n: number) => unknown = () => []) => {
+		const fake = fakeGitHub({
+			'/repos/acme/design/issues?state=all*': listing,
+			'POST /repos/acme/design/issues/*': { id: 1 },
+			'PATCH /repos/acme/design/issues/*': {},
+			'DELETE /repos/acme/design/issues/*': ({ path }) => labels(Number(/issues\/(\d+)\//.exec(path)?.[1])),
+		});
+		return { threads: new ReviewThreads(fake.github, REF), writes: fake.writes };
+	};
+
+	it('are each closed as not planned, with a note, and taken off the review label: every version’s and the recorded work’s, no other project’s', async () => {
+		const d = deleting();
+		expect(await d.threads.closeDeleted('alpha', ['prototype/alpha/v1', 'feature/alpha'])).toBe(3);
+		const by = (n: number) =>
+			d.writes.filter((w) => w.path.startsWith(`/repos/acme/design/issues/${n}`)).map((w) => [w.method, w.path.split(`/${n}`)[1], w.body]);
+		for (const n of [7, 8, 9])
+			expect(by(n)).toEqual([
+				['POST', '/comments', { body: 'alpha was deleted in DSNR, so this review is closed. Its comments stay here.' }],
+				['PATCH', '', { state: 'closed', state_reason: 'not_planned' }],
+				['DELETE', '/labels/flock-designer%3Areview', undefined],
+			]);
+		// A project whose id only starts the same, and another project, are not this one.
+		expect(by(10)).toEqual([]);
+		expect(by(11)).toEqual([]);
+	});
+
+	it('count a label already taken off as taken off, and stop at any other failure, which is said', async () => {
+		const gone = deleting(() => {
+			throw refusal(404);
+		});
+		expect(await gone.threads.closeDeleted('alpha', [])).toBe(2);
+		const failing = deleting(() => {
+			throw refusal(403);
+		});
+		await expect(failing.threads.closeDeleted('alpha', [])).rejects.toThrow();
+	});
+});

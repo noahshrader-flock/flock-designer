@@ -12,6 +12,7 @@ import {
 	withResolved,
 } from '../shared/anchor';
 import { asRecord } from '../shared/json';
+import { prototypeKey } from '../shared/designPaths';
 import { latestDate } from '../shared/projectList';
 import type { RepoRef } from '../shared/repoRef';
 import type { GitHubApi } from './github';
@@ -124,16 +125,64 @@ export class ReviewThreads {
 		};
 	}
 
+	/** A thread's comments as GitHub has them, every page of them. */
+	private async rawComments(number: number): Promise<Record<string, unknown>[]> {
+		return (await readPages(this.session, `${this.apiPath}/issues/${number}/comments`, { maxPages: 20 })).map(asRecord);
+	}
+
 	async readComments(branch: string): Promise<ReviewComment[]> {
 		const issue = (await this.byBranch()).get(branch);
 		if (!issue) return [];
 		// Each comment with the thread it was read from: never the oldest one's, which would mix up a branch with several.
-		const threads = await Promise.all(
-			issue.numbers.map(async (n) =>
-				(await readPages(this.session, `${this.apiPath}/issues/${n}/comments`, { maxPages: 20 })).map((c) => this.toComment(asRecord(c), n)),
-			),
-		);
+		const threads = await Promise.all(issue.numbers.map(async (n) => (await this.rawComments(n)).map((c) => this.toComment(c, n))));
 		return threads.flat().sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+	}
+
+	/**
+	 * A thread's issue is open while a comment in it is: closed when the last is resolved or deleted, open again when one is
+	 * reopened or written. So the open issues are the work still to do. Asked after each change to a comment, which is done
+	 * by then: a failure here leaves the issue as it was until the next change sets it, and is not the change's failure.
+	 */
+	private async settle(number: number): Promise<void> {
+		const at = `${this.apiPath}/issues/${number}`;
+		try {
+			const open = (await this.rawComments(number)).some((c) => !isResolved(String(c.body ?? '')));
+			const issue = asRecord(await this.session.api(at));
+			if (open === (issue.state === 'open')) return;
+			await this.session.api(at, {
+				method: 'PATCH',
+				body: open ? { state: 'open' } : { state: 'closed', state_reason: 'completed' },
+			});
+		} catch {
+			// As above: the comment's own change is done.
+		}
+	}
+
+	/**
+	 * A deleted project's threads: each closed as not planned, with a note saying why, and its label taken off, so it is no
+	 * longer DSNR's and a new project of the same name starts with none. Its comments stay on GitHub. `branches` are the
+	 * project's work as recorded; any version's thread is the project's too. How many were closed.
+	 */
+	async closeDeleted(projectId: string, branches: string[]): Promise<number> {
+		const versions = prototypeKey(projectId, '');
+		const mine = [...(await this.byBranch())].filter(([branch]) => branches.includes(branch) || branch.startsWith(versions));
+		let closed = 0;
+		for (const [branch, thread] of mine) {
+			for (const number of thread.numbers) {
+				const at = `${this.apiPath}/issues/${number}`;
+				await this.session.api(`${at}/comments`, {
+					method: 'POST',
+					body: { body: `${projectId} was deleted in DSNR, so this review is closed. Its comments stay here.` },
+				});
+				await this.session.api(at, { method: 'PATCH', body: { state: 'closed', state_reason: 'not_planned' } });
+				await this.session.api(`${at}/labels/${encodeURIComponent(REVIEW_LABEL)}`, { method: 'DELETE' }).catch((err: unknown) => {
+					if (hostErrorKind(err) !== 'notFound') throw err;
+				});
+				closed++;
+			}
+			this.known.delete(branch);
+		}
+		return closed;
 	}
 
 	/** GitHub lets a person edit only their own comment, which is exactly the rule wanted for moving pins. */
@@ -163,6 +212,7 @@ export class ReviewThreads {
 		const next = resolved ? withResolved(body, true) : withAddressed(withResolved(body, false), null);
 		if (isResolved(next) === isResolved(body) && addressedAt(next) === addressedAt(body)) return this.toComment(current, comment.thread);
 		const updated = await this.session.api(path, { method: 'PATCH', body: { body: next } });
+		await this.settle(comment.thread);
 		return this.toComment(asRecord(updated), comment.thread);
 	}
 
@@ -171,12 +221,12 @@ export class ReviewThreads {
 		try {
 			await this.session.api(`${this.apiPath}/issues/comments/${comment.id}`, { method: 'DELETE' });
 		} catch (err) {
-			if (hostErrorKind(err) === 'notFound') return;
 			if (hostErrorKind(err) === 'forbidden') {
 				throw new HostError("Only a comment's author, or someone who can write to the design repository, can delete it.", 403);
 			}
-			throw err;
+			if (hostErrorKind(err) !== 'notFound') throw err;
 		}
+		await this.settle(comment.thread);
 	}
 
 	async postComment(
@@ -193,6 +243,7 @@ export class ReviewThreads {
 				body: { body: composeBody(body, anchor, picture) },
 			}),
 		);
+		await this.settle(number);
 		// Read back from what GitHub stored, so what the window shows is what was saved.
 		return this.toComment(created, number);
 	}

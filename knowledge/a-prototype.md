@@ -58,6 +58,8 @@ Anyone who can see the design repository on GitHub can comment, in VS Code or on
 - *To comment on the whole page*, write in the box at the bottom and press **Send**.
 - *Each comment's menu* has **Resolve** (and **Reopen**), and **Delete**. Only its author, or someone who can write to the
   design repository, can delete a comment.
+- *A version's comments are one issue on GitHub*, open while any of them is: resolving or deleting the last open one closes
+  it, and reopening one, or writing a new one, opens it again. The open issues are what still needs doing.
 
 Comments are kept on GitHub, in the design repository, one conversation for each version. A comment remembers what it was
 pinned to, the page's state and theme, and a picture of it, so it can be found again.

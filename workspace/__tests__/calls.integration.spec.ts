@@ -8,13 +8,14 @@ import { CHANNELS, type Handed, invokeChannel } from '../src/shared/contract';
 import type { Ports } from '../src/core/ports';
 import type { Project } from '../src/shared/contract';
 import type { AgentId } from '../src/core/services/agent/agent';
+import { ReviewThreads } from '../src/codeHost/reviewThreads';
 import { type RepoRef, formatRepo } from '../src/shared/repoRef';
 import { chooseDesignSystem } from '../src/core/services/projects/productDesignSystem';
 import { DESIGN_REPO } from '../src/shared/config';
 import { claudeCode } from '../src/core/services/agent/claudeCode';
 import { codex } from '../src/core/services/agent/codex';
 import { copilot } from '../src/core/services/agent/copilot';
-import { type Answer, fakeGitHub } from './fakes/github';
+import { type Answer, fakeGitHub, refusing } from './fakes/github';
 import {
 	addStandards,
 	designSystemBeside,
@@ -70,6 +71,11 @@ const fakePorts = () =>
 let ports: ReturnType<typeof fakePorts>;
 
 const answer = (routes: Record<string, Answer>) => githubApi.mockImplementation(fakeGitHub(routes).api);
+/** The real threads, on the faked GitHub, for what a test checks GitHub is asked. */
+const realThreads = (ref: RepoRef) => {
+	const threads = new ReviewThreads({ api: (...a: unknown[]) => githubApi(...a) } as never, ref);
+	return { closeDeleted: threads.closeDeleted.bind(threads) };
+};
 
 const trustFolder = async (root: string): Promise<{ ok: boolean; error?: string; value?: unknown }> => {
 	try {
@@ -224,7 +230,7 @@ beforeEach(async () => {
 				return {
 					ref,
 					listProjects: vi.fn(async () => designRepoProjects),
-					threads: { deleteComment, readComments },
+					threads: { deleteComment, readComments, closeDeleted: realThreads(ref).closeDeleted },
 					files: { readFile: vi.fn(async () => null), readBytes: (...a: unknown[]) => readBytes(...a) },
 				} as never;
 			},
@@ -942,9 +948,28 @@ describe('prototypes', () => {
 		expect(existsSync(join(design, 'projects', 'demo', 'work.json'))).toBe(true);
 		expect(emit).not.toHaveBeenCalledWith('onProjectDeleted', expect.anything());
 		const before = onPublishStatus.mock.calls.length;
+		// Its review threads on GitHub, and another project's, which is left alone.
+		const repo = `/repos/${formatRepo(DESIGN_REPO)}`;
+		answer({
+			[`${repo}/issues?state=all*`]: [
+				{ number: 21, comments: 2, body: 'branch: `prototype/demo/v1`' },
+				{ number: 22, comments: 1, body: 'branch: `prototype/other/v1`' },
+			],
+			[`POST ${repo}/issues/21/comments`]: { id: 1 },
+			[`PATCH ${repo}/issues/21`]: { number: 21, state: 'closed' },
+			[`DELETE ${repo}/issues/21/labels/*`]: [],
+		});
 		expect((await call(CHANNELS.deleteProject, 'demo', ' Demo ')).ok).toBe(true);
 		expect(existsSync(join(design, 'projects', 'demo'))).toBe(false);
 		expect(emit).toHaveBeenCalledWith('onProjectDeleted', 'demo');
+		const wrote = githubApi.mock.calls
+			.filter(([, init]) => (init as { method?: string } | undefined)?.method)
+			.map(([path, init]) => [(init as { method: string }).method, path, (init as { body?: unknown }).body]);
+		expect(wrote).toEqual([
+			['POST', `${repo}/issues/21/comments`, { body: 'demo was deleted in DSNR, so this review is closed. Its comments stay here.' }],
+			['PATCH', `${repo}/issues/21`, { state: 'closed', state_reason: 'not_planned' }],
+			['DELETE', `${repo}/issues/21/labels/flock-designer%3Areview`, undefined],
+		]);
 		// Answered once its publishing has run, so the list read next is without it.
 		expect(onPublishStatus.mock.calls.length).toBeGreaterThan(before);
 		expect(onPublishStatus.mock.calls.at(-1)?.[0].state).not.toBe('working');
@@ -971,9 +996,21 @@ describe('prototypes', () => {
 			['v1', false],
 		]);
 
+		answer({ [`/repos/${formatRepo(DESIGN_REPO)}/issues?state=all*`]: [] });
 		expect((await call(CHANNELS.deleteProject, 'demo', 'Demo')).ok).toBe(true);
 		expect(existsSync(join(design, 'projects', 'demo'))).toBe(false);
 		expect(await listed()).toBeUndefined();
+	});
+
+	it('are deleted even when their review threads cannot be closed, and say so: that it is gone, and why the threads are not', async () => {
+		await trustFolder(product);
+		await call(CHANNELS.createPrototype, 'demo', 'Demo', 'A list', { root: product, branch: 'develop' });
+		await firstSaved();
+		answer({ [`/repos/${formatRepo(DESIGN_REPO)}/issues?state=all*`]: refusing(503, 'GitHub is down') });
+		const said = await call(CHANNELS.deleteProject, 'demo', 'Demo');
+		expect(said.ok).toBe(false);
+		expect(said.error).toMatch(/^demo is deleted, but its review issues on GitHub could not be closed: GitHub is down/);
+		expect(existsSync(join(design, 'projects', 'demo'))).toBe(false);
 	});
 
 	it('save a start built here and never saved, when the list is read, as opening a page saves it', async () => {
@@ -999,7 +1036,7 @@ describe('prototypes', () => {
 				({
 					ref,
 					listProjects: vi.fn(async () => []),
-					threads: { deleteComment, readComments },
+					threads: { deleteComment, readComments, closeDeleted: realThreads(ref).closeDeleted },
 					files: {
 						readFile: vi.fn(async () => {
 							throw new ReauthRequired();
