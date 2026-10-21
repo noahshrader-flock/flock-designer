@@ -98,6 +98,14 @@ body {
 	padding: var(--dsnr-space-5);
 }
 
+/* Resolved cards are one level down, in the fold, so the list's gap does not reach them. */
+.comments-list .list-disclosure > div {
+	display: flex;
+	flex-direction: column;
+	gap: var(--dsnr-space-5);
+	padding-bottom: var(--dsnr-space-5);
+}
+
 .comment-card {
 	display: flex;
 	flex-direction: column;

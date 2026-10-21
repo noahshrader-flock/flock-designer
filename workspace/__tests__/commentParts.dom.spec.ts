@@ -104,6 +104,25 @@ describe('the comments experience, through another store and page', () => {
 		expect(f.drawn.at(-1)?.map((p) => p.id)).toEqual([1]);
 	});
 
+	it('folds resolved comments under one line at the bottom, closed until pressed', async () => {
+		const f = fakes([
+			comment(1, 'Done', { resolved: true, createdAt: '2026-10-12T00:00:00Z' }),
+			comment(2, 'Open', { createdAt: '2026-10-10T00:00:00Z' }),
+		]);
+		await mount(f);
+		const fold = document.querySelector('details.list-disclosure') as HTMLDetailsElement;
+		expect(fold.querySelector('summary')?.textContent).toBe('1 resolved');
+		expect(fold.open).toBe(false);
+		expect(cards().map((c) => c.textContent)).toEqual([expect.stringContaining('Open'), expect.stringContaining('Done')]);
+		expect(fold.contains(card('Done'))).toBe(true);
+		expect(fold.contains(card('Open'))).toBe(false);
+	});
+
+	it('has no fold when nothing is resolved', async () => {
+		await mount(fakes([comment(1, 'First')]));
+		expect(document.querySelector('details.list-disclosure')).toBeNull();
+	});
+
 	it('leaves a comment where the page was clicked, stamped with what the work is at', async () => {
 		const f = fakes([]);
 		await mount(f);
