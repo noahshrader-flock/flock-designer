@@ -16,6 +16,7 @@ import { useTrying } from './useTrying';
 import { Button, ButtonRow } from '../../src/ui/Button';
 import { asks } from './host';
 import { useMode, useTokenEdits, useValueTrials } from './shared';
+import { Waiting } from '../../src/ui/Spinner';
 import { Message, tryAgain } from '../../src/ui/Message';
 import { Heading } from '../../src/ui/Heading';
 import { TabNote } from './TabNote';
@@ -26,7 +27,7 @@ const Stories = ({ component, commit, edits, tried }: { component: CatalogCompon
 	const { preview, trying, refused, retry } = useStoryPreview(commit, edits);
 	// The panel's chosen mode, as the values use; a frame follows a change of it by loading again.
 	const [mode] = useMode();
-	if (preview.state === 'building') return <Message>Building its previews…</Message>;
+	if (preview.state === 'building') return <Message waiting>Building its previews…</Message>;
 	if (preview.state !== 'ready')
 		return (
 			<Message size="block" tone="warning" title="Its previews could not be built" action={tryAgain(retry)}>
@@ -42,7 +43,11 @@ const Stories = ({ component, commit, edits, tried }: { component: CatalogCompon
 			)}
 			<div className="stories" aria-busy={trying}>
 				<StoryFrame src={previewAddress(preview.base, component.id, mode)} title={component.name} tried={tried} />
-				{trying && <p className="stories-building">Building…</p>}
+				{trying && (
+					<p className="stories-building">
+						<Waiting>Building…</Waiting>
+					</p>
+				)}
 			</div>
 		</>
 	);

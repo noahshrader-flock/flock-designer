@@ -63,17 +63,17 @@ export const BranchActions = <C,>({
 			<Message tone="error">{handOver.error ?? error}</Message>
 			<ButtonRow>
 				{offered.save && (
-					<Button disabled={offered.save.disabled} onPress={save}>
+					<Button disabled={offered.save.disabled} busy={offered.save.busy} onPress={save}>
 						{offered.save.label}
 					</Button>
 				)}
 				{offered.process && (
-					<Button disabled={offered.process.disabled} onPress={handOver.processChanges}>
+					<Button disabled={offered.process.disabled} busy={offered.process.busy} onPress={handOver.processChanges}>
 						{offered.process.label}
 					</Button>
 				)}
 				{offered.propose && (
-					<Button disabled={offered.propose.disabled} onPress={propose}>
+					<Button disabled={offered.propose.disabled} busy={offered.propose.busy} onPress={propose}>
 						{offered.propose.label}
 					</Button>
 				)}

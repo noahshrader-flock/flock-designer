@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { Button, ButtonRow } from './Button';
 import { Icon } from './Icon';
+import { Waiting } from './Spinner';
 import { LinkButton } from './LinkButton';
 import type { Marks } from './marks';
 
@@ -12,6 +13,7 @@ export const Message = ({
 	icon,
 	action,
 	inset = false,
+	waiting = false,
 	marks,
 	children,
 }: {
@@ -22,10 +24,13 @@ export const Message = ({
 	icon?: string;
 	action?: { label: string; onPress: () => void } | null;
 	inset?: boolean;
+	/** Something is being worked out: a spinner before the words, to show it is moving. */
+	waiting?: boolean;
 	marks?: Marks;
 	children: ReactNode;
 }) => {
 	if (children === null || children === undefined || children === false || children === '') return null;
+	const said = waiting ? <Waiting>{children}</Waiting> : children;
 	const alert = tone === 'error' ? { role: 'alert' } : {};
 	if (size === 'page')
 		return title || icon ? (
@@ -42,7 +47,7 @@ export const Message = ({
 						</p>
 					)}
 					<div className="empty-body">
-						{children}
+						{said}
 						{action && <Button onPress={action.onPress}>{action.label}</Button>}
 					</div>
 				</div>
@@ -50,7 +55,7 @@ export const Message = ({
 		) : (
 			<div className="empty" {...marks}>
 				<div className="empty-content">
-					<p role={tone === 'error' ? 'alert' : 'status'}>{children}</p>
+					<p role={tone === 'error' ? 'alert' : 'status'}>{said}</p>
 					{action && <Button onPress={action.onPress}>{action.label}</Button>}
 				</div>
 			</div>
@@ -59,7 +64,7 @@ export const Message = ({
 		return (
 			<div className={`message message-${tone} message-block${inset ? ' message-inset' : ''}`} {...alert} {...marks}>
 				{title && <p className="message-title">{title}</p>}
-				<p>{children}</p>
+				<p>{said}</p>
 				{/* Outlined, as wide as its words: what is done about it should not outshout the page around it. */}
 				{action && (
 					<ButtonRow>
@@ -78,7 +83,7 @@ export const Message = ({
 					<Icon name={lead} />{' '}
 				</>
 			)}
-			{children}
+			{said}
 			{action && (
 				<>
 					{' '}

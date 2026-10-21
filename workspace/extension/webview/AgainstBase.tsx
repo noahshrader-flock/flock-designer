@@ -10,7 +10,7 @@ import { useWorkspace } from './hooks/useWorkspace';
 export const AgainstBase = ({ root, projectId, quiet, onUpdate }: { root: string; projectId: string; quiet: boolean; onUpdate: () => void }) => {
 	const read = useWorkspace(() => workspace().codebaseAgainstBase(root, projectId), [root, projectId]);
 	const against = read.value;
-	if (read.loading) return quiet ? null : <Message>Reading how it stands against the product’s main branch…</Message>;
+	if (read.loading) return quiet ? null : <Message waiting>Reading how it stands against the product’s main branch…</Message>;
 	if (read.error !== null) return quiet ? null : <Message tone="error">{read.error}</Message>;
 	if (against === null) return quiet ? null : <Message>How this branch stands against the product’s main branch cannot be told here.</Message>;
 	if (against.behind === 0) return quiet ? null : <Message>{againstBaseWords(against)}</Message>;

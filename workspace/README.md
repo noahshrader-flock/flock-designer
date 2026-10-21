@@ -400,6 +400,11 @@ scale, radii, weights) are written once, in `src/shared/dsnrTokens.ts`, set on e
 `src/shared/pageTokens.ts` for what DSNR draws on other pages (pins, the picking outline, previews, the site's lists); the
 rest are the kit's `--dsnr-*` in `kit.css`. `__tests__/tokensGuard.spec.ts` fails on a raw value outside them.
 
+**Waiting is one thing.** Wherever DSNR says it is working, the kit's `Spinner` (VS Code's own loading icon, turning;
+still under reduced motion) comes first, with a little room before the words: `Message waiting`, a disclosure's `waiting`,
+a menu item's icon, and `Button busy`, which is not pressed again while it is. `__tests__/spinner.spec.ts` fails on a
+message ending in an ellipsis without it, or a button whose words become one while it is pressed.
+
 **One kit.** Everything DSNR draws is drawn with its own kit (`src/ui`: the components, and `kit.css`, with one spacing
 scale and one focus ring): the panel and its tabs, and the review bar on a prototype's page (`src/viewer`), the page
 reviewers open on the published site and DSNR's review tab shows. The kit reads VS Code's theme. Where VS Code gives none

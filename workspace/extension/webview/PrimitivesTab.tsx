@@ -108,7 +108,7 @@ const Specimens = ({ tokens, byPath, preview }: Drawing) => (
 				<StoryFrame src={specimenAddress(preview.base, typeSpecimens(tokens))} title="Type specimen" />
 			</div>
 		) : preview.state === 'asking' ? (
-			<Message>Drawing the type specimen…</Message>
+			<Message waiting>Drawing the type specimen…</Message>
 		) : (
 			<Message>The specimen is drawn in the design system’s preview, which cannot be built here{notBuilt(preview)}.</Message>
 		)}

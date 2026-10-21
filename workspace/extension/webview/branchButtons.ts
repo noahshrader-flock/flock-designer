@@ -9,6 +9,8 @@ interface KeptBranch {
 interface Offered {
 	label: string;
 	disabled: boolean;
+	/** This is the one being done. */
+	busy: boolean;
 }
 
 /**
@@ -47,12 +49,13 @@ export const branchButtons = ({
 				? {
 						label: busy === 'saving' ? 'Saving…' : branch ? 'Save' : 'Save to a branch',
 						disabled: !idle || placing !== 'found',
+						busy: busy === 'saving',
 					}
 				: null,
-		process: handing ? { label: busy === 'handing' ? `Handing to ${agent}…` : 'Process changes', disabled: !idle } : null,
+		process: handing ? { label: busy === 'handing' ? `Handing to ${agent}…` : 'Process changes', disabled: !idle, busy: busy === 'handing' } : null,
 		propose:
 			branch && !unsaved && !branch.pullRequest
-				? { label: busy === 'proposing' ? `Opening a draft ${CHANGE_REQUEST}…` : 'Propose', disabled: !idle }
+				? { label: busy === 'proposing' ? `Opening a draft ${CHANGE_REQUEST}…` : 'Propose', disabled: !idle, busy: busy === 'proposing' }
 				: null,
 		startOver: branch ? { disabled: !idle } : null,
 	};

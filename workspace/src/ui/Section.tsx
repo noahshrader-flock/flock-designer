@@ -1,5 +1,6 @@
 import { type ReactNode, useId } from 'react';
 import { Icon } from './Icon';
+import { Waiting } from './Spinner';
 import type { Marks } from './marks';
 
 /** The browser's own disclosure, so click, keyboard and its state to assistive technology come with nothing to keep in step. */
@@ -9,6 +10,7 @@ const Collapsible = ({
 	open,
 	summary,
 	chevronEnd = false,
+	waiting = false,
 	marks,
 	children,
 }: {
@@ -18,6 +20,8 @@ const Collapsible = ({
 	summary: ReactNode;
 	/** The chevron after the words, in place of before them. */
 	chevronEnd?: boolean;
+	/** Something it says is being worked out: a spinner before the words, as a Message's. */
+	waiting?: boolean;
 	/** On the row that is pressed. */
 	marks?: Marks;
 	children: ReactNode;
@@ -28,7 +32,7 @@ const Collapsible = ({
 		<details className={className} open={open}>
 			<summary className={summaryClassName} aria-controls={body} {...marks}>
 				{!chevronEnd && chevron}
-				{summary}
+				{waiting ? <Waiting>{summary}</Waiting> : summary}
 				{chevronEnd && chevron}
 			</summary>
 			<div id={body}>{children}</div>
@@ -65,8 +69,16 @@ export const Disclosure = ({ label, children }: { label: string; children: React
 );
 
 /** A long list under one line that says what it is and how many: closed until pressed, then scrolling in its own height. */
-export const ListDisclosure = ({ label, marks, children }: { label: string; marks?: Marks; children: ReactNode }) => (
-	<Collapsible className="list-disclosure" summaryClassName="disclosure-summary" open={false} summary={label} chevronEnd marks={marks}>
+export const ListDisclosure = ({ label, waiting, marks, children }: { label: string; waiting?: boolean; marks?: Marks; children: ReactNode }) => (
+	<Collapsible
+		className="list-disclosure"
+		summaryClassName="disclosure-summary"
+		open={false}
+		summary={label}
+		chevronEnd
+		waiting={waiting}
+		marks={marks}
+	>
 		{children}
 	</Collapsible>
 );

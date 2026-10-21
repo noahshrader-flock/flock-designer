@@ -108,7 +108,9 @@ export const Panel = () => {
 				</div>
 				<section data-tab-body={tab} className="tab-body">
 					{context === null ? (
-						<Message size="page">Looking at what is open…</Message>
+						<Message size="page" waiting>
+							Looking at what is open…
+						</Message>
 					) : tab === 'projects' ? (
 						<Projects
 							read={{ value: projects, error: read.error }}

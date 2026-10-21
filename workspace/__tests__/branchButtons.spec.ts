@@ -7,7 +7,7 @@ const proposed = { ...kept, pullRequest: { number: 7, url: 'https://github.com/a
 describe('branchButtons', () => {
 	it('offers Save to a branch for a change not yet saved, and nothing else', () => {
 		expect(branchButtons({ agent: 'Claude Code', branch: null, unsaved: true, busy: null })).toEqual({
-			save: { label: 'Save to a branch', disabled: false },
+			save: { label: 'Save to a branch', disabled: false, busy: false },
 			process: null,
 			propose: null,
 			startOver: null,
@@ -18,7 +18,7 @@ describe('branchButtons', () => {
 		expect(branchButtons({ agent: 'Claude Code', branch: kept, unsaved: false, busy: null })).toEqual({
 			save: null,
 			process: null,
-			propose: { label: 'Propose', disabled: false },
+			propose: { label: 'Propose', disabled: false, busy: false },
 			startOver: { disabled: false },
 		});
 		expect(branchButtons({ agent: 'Claude Code', branch: proposed, unsaved: false, busy: null }).propose).toBeNull();
@@ -27,12 +27,13 @@ describe('branchButtons', () => {
 
 	it('says what it is doing, and offers nothing else meanwhile', () => {
 		expect(branchButtons({ agent: 'Claude Code', branch: kept, unsaved: true, busy: 'saving' })).toMatchObject({
-			save: { label: 'Saving…', disabled: true },
+			save: { label: 'Saving…', disabled: true, busy: true },
 			startOver: { disabled: true },
 		});
 		expect(branchButtons({ agent: 'Claude Code', branch: kept, unsaved: false, busy: 'proposing' }).propose).toEqual({
 			label: 'Opening a draft pull request…',
 			disabled: true,
+			busy: true,
 		});
 	});
 
@@ -46,11 +47,11 @@ describe('branchButtons', () => {
 		});
 
 		it('offers Process changes alone where a value has no place, in Save’s place', () => {
-			expect(at('cannot')).toMatchObject({ save: null, process: { label: 'Process changes', disabled: false } });
+			expect(at('cannot')).toMatchObject({ save: null, process: { label: 'Process changes', disabled: false, busy: false } });
 		});
 
 		it('says it is handing over, and holds both while it does, and while another branch is shown in the library’s place', () => {
-			expect(at('cannot', { busy: 'handing' }).process).toEqual({ label: 'Handing to Claude Code…', disabled: true });
+			expect(at('cannot', { busy: 'handing' }).process).toEqual({ label: 'Handing to Claude Code…', disabled: true, busy: true });
 			expect(at('cannot', { held: true }).process?.disabled).toBe(true);
 			expect(at('found', { held: true }).save?.disabled).toBe(true);
 		});

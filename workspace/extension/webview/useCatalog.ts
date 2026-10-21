@@ -26,11 +26,12 @@ export const useTabCatalog = (): { ready: Extract<Catalog, { state: 'ready' }>; 
 	if (error !== null) return { ready: null, note: { says: error, onRetry: retry } };
 	if (ready !== null) return { ready, note: null };
 	return catalog === null
-		? { ready: null, note: { says: 'Reading the design system…', onRetry: null } }
+		? { ready: null, note: { says: 'Reading the design system…', onRetry: null, waiting: true } }
 		: { ready: null, note: { says: 'The design system cannot be read here: the DSNR panel says why.', onRetry: retry } };
 };
 
 interface TabNoteOf {
 	says: string;
 	onRetry: (() => void) | null;
+	waiting?: boolean;
 }

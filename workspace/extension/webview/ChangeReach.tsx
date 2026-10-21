@@ -57,7 +57,7 @@ export const ReachView = ({
 	return (
 		<div data-reach>
 			{reach.state === 'building' ? (
-				<Message>Thinking…</Message>
+				<Message waiting>Thinking…</Message>
 			) : reach.state === 'failed' ? (
 				<Message size="block" tone="warning" title="What the change moves could not be drawn">
 					{reach.error}

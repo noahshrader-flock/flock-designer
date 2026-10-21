@@ -31,7 +31,7 @@ export const CommentBox = ({ comments, origin, error }: { comments: Comments; or
 				<Button variant="ghost" onPress={comments.cancelCompose} disabled={comments.posting}>
 					Cancel
 				</Button>
-				<Button onPress={() => void comments.post()} disabled={comments.posting || !comments.draft.trim()}>
+				<Button onPress={() => void comments.post()} disabled={comments.posting || !comments.draft.trim()} busy={comments.posting}>
 					{comments.posting ? 'Saving…' : 'Save'}
 				</Button>
 			</ButtonRow>

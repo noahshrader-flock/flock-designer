@@ -24,7 +24,7 @@ export const CollectionItem = ({
 	picture: { src: string | undefined; loading: boolean };
 	badge?: ReactNode;
 	name: string;
-	meta?: string;
+	meta?: ReactNode;
 	onOpen?: () => void;
 	current?: boolean;
 	context?: Record<string, unknown>;

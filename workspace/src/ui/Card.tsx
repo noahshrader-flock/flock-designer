@@ -14,7 +14,7 @@ export const Card = ({
 }: {
 	picture: ReactNode;
 	name: string;
-	meta?: string;
+	meta?: ReactNode;
 	badge?: ReactNode;
 	onOpen?: () => void;
 	current?: boolean;

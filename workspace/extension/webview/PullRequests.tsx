@@ -23,7 +23,7 @@ const Propose = ({ preview, proposing, unproven }: { preview: Ready; proposing: 
 	const flagged = unproven || preview.units.some((u) => u.large);
 	return (
 		<ButtonRow>
-			<Button disabled={proposing.busy} onPress={() => proposing.propose(preview.seen, flagged)}>
+			<Button busy={proposing.busy} onPress={() => proposing.propose(preview.seen, flagged)}>
 				{proposing.busy ? 'Opening…' : flagged ? 'Propose anyway' : `Propose ${plural(preview.units.length, CHANGE_REQUEST)}`}
 			</Button>
 		</ButtonRow>
@@ -53,7 +53,7 @@ const Checked = ({
 		case 'checking':
 			return (
 				<>
-					<Message marks={{ 'data-split-checking': '' }}>{`Checking ${check.doing}… (${plural(check.done, 'check')} done)`}</Message>
+					<Message waiting marks={{ 'data-split-checking': '' }}>{`Checking ${check.doing}… (${plural(check.done, 'check')} done)`}</Message>
 					<ButtonRow>
 						<Button variant="ghost" onPress={controls.stop}>
 							Stop
@@ -114,7 +114,7 @@ export const PullRequests = ({
 	const { preview, error } = controls;
 	const names = new Map(components.map((c) => [c.id, c.name]));
 	if (error !== null && preview === null) return <Message tone="error">{error}</Message>;
-	if (preview === null) return <Message>Reading what a split would make…</Message>;
+	if (preview === null) return <Message waiting>Reading what a split would make…</Message>;
 	if (preview.state === 'none') return null;
 	if (preview.state === 'not-split')
 		return (

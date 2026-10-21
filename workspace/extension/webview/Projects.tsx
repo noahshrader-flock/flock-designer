@@ -28,6 +28,7 @@ import { NoMatches } from '../../src/ui/NoMatches';
 import { layoutSection } from './layouts';
 import { useShared } from './shared';
 import type { View } from '../../src/ui/Collection';
+import { Waiting } from '../../src/ui/Spinner';
 import { Message } from '../../src/ui/Message';
 import { Collection, CollectionItem } from '../../src/ui/Collection';
 import { asks } from './host';
@@ -96,7 +97,7 @@ const ProjectItem = ({
 	const press = newest ? () => void asks().openReview(id) : inCode ? () => onCodebase('open-code') : undefined;
 	const shared = {
 		name: project.title,
-		meta: doing ?? meta(project, labels),
+		meta: doing === null ? meta(project, labels) : <Waiting>{doing}</Waiting>,
 		current: shown.projects.includes(id),
 		...(deleting
 			? {}
@@ -198,7 +199,12 @@ export const Projects = ({
 				<p>{read.error}</p>
 			</Message>
 		);
-	if (read.value === null) return <Message size="page">Reading the projects…</Message>;
+	if (read.value === null)
+		return (
+			<Message size="page" waiting>
+				Reading the projects…
+			</Message>
+		);
 	const projects = read.value;
 	if (!product.open && projects.length === 0)
 		return (

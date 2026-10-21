@@ -896,6 +896,11 @@ details[open] > summary > .collapse-chevron {
 	.collapse-chevron {
 		transition: none;
 	}
+
+	/* Still, where motion is not wanted: the words beside it say it is working. */
+	.codicon-modifier-spin {
+		animation: none !important;
+	}
 }
 
 .section-title {

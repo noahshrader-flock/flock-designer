@@ -1,11 +1,13 @@
 import type { ReactNode } from 'react';
 import { Icon } from './Icon';
+import { Spinner } from './Spinner';
 
 export const Button = ({
 	onPress,
 	type = 'button',
 	variant = 'primary',
 	disabled = false,
+	busy = false,
 	external = false,
 	icon,
 	label,
@@ -21,6 +23,8 @@ export const Button = ({
 	 */
 	variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
 	disabled?: boolean;
+	/** Being done: a spinner before the words, and not pressed again. */
+	busy?: boolean;
 	external?: boolean;
 	icon?: string;
 	label?: string;
@@ -32,13 +36,15 @@ export const Button = ({
 	return (
 		<button
 			type={type}
-			className={`button button-${pressed === undefined ? variant : pressed ? 'primary' : 'secondary'}${external || icon ? ' button-with-icon' : ''}${icon && !hasWords ? ' button-icon' : ''}`}
-			disabled={disabled}
+			className={`button button-${pressed === undefined ? variant : pressed ? 'primary' : 'secondary'}${external || icon || busy ? ' button-with-icon' : ''}${icon && !hasWords ? ' button-icon' : ''}`}
+			disabled={disabled || busy}
 			{...(onPress ? { onClick: onPress } : {})}
+			{...(busy ? { 'aria-busy': true } : {})}
 			{...(pressed === undefined ? {} : { 'aria-pressed': pressed })}
 			{...(label ? { 'aria-label': label } : {})}
 			{...(title ? { title } : {})}
 		>
+			{busy && <Spinner />}
 			{icon && <Icon name={icon} />}
 			{external ? (
 				<>

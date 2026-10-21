@@ -9,6 +9,7 @@ import { ReachView } from './ChangeReach';
 import type { Trying } from './ComponentValues';
 import { ChangeRow } from '../../src/ui/ValueItem';
 import { LinkButton } from '../../src/ui/LinkButton';
+import { Waiting } from '../../src/ui/Spinner';
 import { Message } from '../../src/ui/Message';
 import { asks } from './host';
 
@@ -27,7 +28,11 @@ const Places = ({ places, by }: { places: ValuePlace[]; by?: 'agent' }) => (
 const Said = ({ source, onWrite }: { source: ValueSource | null | undefined; onWrite: () => void }) => {
 	if (source === undefined) return null;
 	if (source === null || source.state === 'writing')
-		return <span className="value-place quiet">{source === null ? 'Finding where it is written…' : 'The agent is writing it…'}</span>;
+		return (
+			<span className="value-place quiet">
+				<Waiting>{source === null ? 'Finding where it is written…' : 'The agent is writing it…'}</Waiting>
+			</span>
+		);
 	if (source.state === 'refused')
 		return (
 			<>

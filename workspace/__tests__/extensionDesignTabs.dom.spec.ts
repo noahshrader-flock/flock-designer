@@ -7,7 +7,7 @@ import { readTab } from '../extension/webview/tab';
 import { PREVIEW_HEIGHT, PREVIEW_TRY, previewAddress } from '../src/shared/catalog';
 import { SAMPLE_CATALOG } from './extensionSamples';
 import { answer, answerOf, calls, callsOf, lastAsk, mountPage, say, sent, share, shareCatalog, unmount } from './webviewHarness';
-import { button, dialog, key, press, type } from './ui';
+import { button, dialog, key, press, spinning, type } from './ui';
 
 const BUTTON = 'src/components/FSButton/FSButton.stories.tsx';
 const BASE = 'http://127.0.0.1:4321/previews-abc/';
@@ -113,6 +113,7 @@ describe('a component’s tab', () => {
 		expect(calls('storyPreview').at(-1)?.args).toEqual([edits]);
 		expect(document.querySelector('iframe')).not.toBeNull();
 		expect(document.querySelector('.stories-building')?.textContent?.trim()).toBe('Building…');
+		expect(spinning(document.querySelector('.stories-building'))).toBe(true);
 		await answer('storyPreview', { state: 'ready', base: 'http://127.0.0.1:4321/trial-1/' });
 		expect(document.querySelector('iframe')?.getAttribute('src')).toBe(previewAddress('http://127.0.0.1:4321/trial-1/', BUTTON));
 	});
@@ -1049,6 +1050,7 @@ describe('a component’s tab', () => {
 			await share('tokenEdits', [{ path: 'radius', value: '12px' }]);
 			expect(calls('changeReach').at(-1)?.args).toEqual([[{ path: 'radius', value: '12px' }]]);
 			expect(summary()).toBe('2 components shared · drawing the change to see which move');
+			expect(spinning(document.querySelector('[data-token-users-summary]'))).toBe(true);
 			await answer('changeReach', {
 				state: 'ready',
 				moved: [{ file: STORY('FSIconButton'), changes: [], inside: true }],

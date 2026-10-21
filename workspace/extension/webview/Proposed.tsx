@@ -50,7 +50,7 @@ export const Proposed = ({ proposal, controls }: { proposal: SplitProposal; cont
 			<Message tone="error">{controls.error}</Message>
 			<ButtonRow>
 				{opened < parts.length && (
-					<Button disabled={controls.busy} onPress={() => controls.propose(seen, false)}>
+					<Button busy={controls.busy} onPress={() => controls.propose(seen, false)}>
 						{controls.busy ? 'Opening…' : 'Continue'}
 					</Button>
 				)}

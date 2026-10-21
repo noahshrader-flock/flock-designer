@@ -21,7 +21,7 @@ export const AccountDialog = ({ login, onClose }: { login: string; onClose: () =
 			<AgentInUse />
 			<Message tone="error">{error}</Message>
 			<DialogButtons>
-				<Button disabled={busy} onPress={() => void signOut()}>
+				<Button busy={busy} onPress={() => void signOut()}>
 					{busy ? 'Signing out…' : 'Sign out of DSNR'}
 				</Button>
 			</DialogButtons>
@@ -52,7 +52,7 @@ export const SyncDialog = ({ onClose }: { onClose: () => void }) => {
 	return (
 		<Dialog title="Your work’s sync" onClose={onClose}>
 			{status === null ? (
-				error === null && <Message>Reading how your work is synced…</Message>
+				error === null && <Message waiting>Reading how your work is synced…</Message>
 			) : (
 				<>
 					<Message>{syncWords(status)}</Message>

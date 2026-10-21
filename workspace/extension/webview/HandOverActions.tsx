@@ -12,9 +12,9 @@ import { Message } from '../../src/ui/Message';
 const ReviewLine = ({ review }: { review: BranchReview }) => {
 	switch (review.state) {
 		case 'missing':
-			return <Message>Waiting for the agent to make the branch.</Message>;
+			return <Message waiting>Waiting for the agent to make the branch.</Message>;
 		case 'empty':
-			return <Message>Waiting for the agent to commit its work.</Message>;
+			return <Message waiting>Waiting for the agent to commit its work.</Message>;
 		case 'off-base':
 			return (
 				<p className="warning-text">
@@ -94,12 +94,12 @@ export const HandOverActions = ({ controls }: { controls: HandOverControls }) =>
 				<ButtonRow>
 					{/* Not while any branch is shown in the library's place: nothing is proposed then (the note says so). */}
 					{ready && !pullRequest && showing === null && (
-						<Button disabled={busy !== null} onPress={() => (flagged(ready) ? setConfirming(true) : propose(false))}>
+						<Button disabled={busy !== null} busy={busy === 'proposing'} onPress={() => (flagged(ready) ? setConfirming(true) : propose(false))}>
 							{busy === 'proposing' ? `Opening a draft ${CHANGE_REQUEST}…` : 'Propose'}
 						</Button>
 					)}
 					{ready && (
-						<Button variant="secondary" disabled={busy !== null} onPress={() => preview(showing !== branch.branch)}>
+						<Button variant="secondary" disabled={busy !== null} busy={busy === 'showing'} onPress={() => preview(showing !== branch.branch)}>
 							{busy === 'showing' ? 'Switching the previews…' : showing === branch.branch ? 'Stop previewing' : 'Preview this branch'}
 						</Button>
 					)}

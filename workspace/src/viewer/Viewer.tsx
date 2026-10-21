@@ -17,6 +17,7 @@ import { Dialog } from '../ui/Dialog';
 import { Heading } from '../ui/Heading';
 import { IconButton } from '../ui/IconButton';
 import type { MenuItem } from '../ui/Menu';
+import { Spinner } from '../ui/Spinner';
 import { Message } from '../ui/Message';
 import { browserComments, framePage, saveToken, savedToken, tokenApi } from './browserAdapter';
 import { NOTE_WORDS, type SignInConfig, type SignInNote, signedInJustNow, startSignIn } from './signIn';
@@ -235,7 +236,7 @@ const InDsnr = ({ config, slots, showing, relay }: { config: ViewerConfig; slots
 	if (login === null)
 		return (
 			<PageBar config={config} slots={slots} showing={showing} before={builtOn}>
-				<Button variant="secondary" disabled={signingIn} onPress={() => void signIn()}>
+				<Button variant="secondary" busy={signingIn} onPress={() => void signIn()}>
 					{signingIn ? 'Continue in VS Code…' : 'Sign in to comment'}
 				</Button>
 			</PageBar>
@@ -253,7 +254,7 @@ const InDsnr = ({ config, slots, showing, relay }: { config: ViewerConfig; slots
 					: [
 							{
 								label: addressing === comment.id ? 'Opening…' : 'Address',
-								icon: 'sparkle',
+								icon: addressing === comment.id ? <Spinner /> : 'sparkle',
 								disabled: addressing !== null,
 								onSelect: () => void address(commentRef(comment), false),
 							},

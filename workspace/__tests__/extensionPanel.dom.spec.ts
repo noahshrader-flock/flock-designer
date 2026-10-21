@@ -6,7 +6,7 @@ import type { Catalog, ComponentPictures, ProjectWork } from '../src/shared/cont
 import { SAMPLE_CATALOG, SAMPLE_PROJECTS } from './extensionSamples';
 import { projectWork } from './fixtures';
 import { answer, answerOf, calls, callsOf, kept, lastAsk, mountPage, panelSaid, say, sent, share, shareCatalog, unmount } from './webviewHarness';
-import { allByRole, button, dialog, fieldNamed, key, menuItem, press, type } from './ui';
+import { allByRole, button, dialog, fieldNamed, key, menuItem, press, spinning, type } from './ui';
 import { READ_EVERY_MS } from '../extension/webview/hooks/useEditedInCode';
 import { ASK_EVERY_MS } from '../extension/webview/hooks/ask';
 
@@ -94,6 +94,7 @@ describe('what is open', () => {
 		await show();
 		expect(panelSaid()).toEqual([{ type: 'ready' }]);
 		expect(body().textContent?.trim()).toBe('Looking at what is open…');
+		expect(spinning(body())).toBe(true);
 	});
 
 	const NONE: Context = {
@@ -523,12 +524,14 @@ describe('dialogs and menus, in the panel', () => {
 			expect(dialog()).toBeNull();
 			// Its name stays; what it is doing is said under it, and it shimmers, with nothing to press.
 			expect(alertHistory().querySelector('[data-part="meta"]')?.textContent?.trim()).toBe('Deleting…');
+			expect(spinning(alertHistory().querySelector('[data-part="meta"]'))).toBe(true);
 			expect(alertHistory().querySelector('[data-part="picture"]')?.getAttribute('data-loading')).toBe('true');
 			expect(alertHistory().querySelector('[aria-label="Project actions"]')).toBeNull();
 			await answer('deleteProject', null);
 			expect(sent.filter((m) => m.name === 'listProjects').length).toBe(reads + 1);
 			// Still in the list read until it is gone, it still says so.
 			expect(alertHistory().querySelector('[data-part="meta"]')?.textContent?.trim()).toBe('Deleting…');
+			expect(spinning(alertHistory().querySelector('[data-part="meta"]'))).toBe(true);
 		});
 
 		it('says why it could not in its dialog, opened again, and the card is as it was', async () => {
@@ -539,6 +542,7 @@ describe('dialogs and menus, in the panel', () => {
 			await say({ type: 'answer', id: call!.id, result: { ok: false, error: 'Saving needs write access to flocksafety/flock-designer.' } });
 			expect(dialog()?.textContent).toContain('Saving needs write access to flocksafety/flock-designer.');
 			expect(alertHistory().querySelector('[data-part="meta"]')?.textContent?.trim()).not.toBe('Deleting…');
+			expect(spinning(alertHistory().querySelector('[data-part="meta"]'))).toBe(false);
 			// Said for that try only: opened again from the menu, it starts afresh.
 			await press(closeX());
 			await press(menuFor(0));
@@ -1042,6 +1046,7 @@ describe('the projects as a list or a grid', () => {
 		it('keeps its name, says Building… under it, shimmers, with only Delete… in its menu, and opens nothing', async () => {
 			await showOpen(OPEN, [STARTED, ...SAMPLE_PROJECTS]);
 			expect(started().querySelector('[data-part="meta"]')?.textContent?.trim()).toBe('Building…');
+			expect(spinning(started().querySelector('[data-part="meta"]'))).toBe(true);
 			expect(started().querySelector('[data-part="picture"]')?.getAttribute('data-loading')).toBe('true');
 			await press(started().querySelector('[aria-label="Project actions"]') as HTMLElement);
 			expect(allByRole('menuitem').map((i) => i.textContent)).toEqual(['Delete…']);
@@ -1576,6 +1581,7 @@ describe('Design System', () => {
 	it('says it is reading the design system until the extension says what it read, which every page is told', async () => {
 		await open();
 		expect(body().textContent?.trim()).toBe('Reading the design system…');
+		expect(spinning(body())).toBe(true);
 		await shareCatalog(SAMPLE_CATALOG);
 		expect(body().querySelector('.ds-name')?.textContent).toBe('FUI');
 	});
@@ -2334,6 +2340,7 @@ describe('every change being tried, in the panel’s Changes: the tokens and eac
 			expect(handOver()?.querySelector('.branch-line')?.textContent).toBe(BRANCH);
 			expect(handOver()?.textContent).toContain('This hand-over is in Claude Code in this window now');
 			expect(handOver()?.textContent).toContain('Waiting for the agent to make the branch.');
+			expect(spinning(handOver())).toBe(true);
 			expect(handOver()?.textContent).not.toMatch(/DSNR reads it from git|by the name its task gives/);
 			expect(allByRole('button', 'Save to a branch')).toEqual([]);
 			expect(allByRole('button', 'Process changes')).toEqual([]);
@@ -2449,6 +2456,7 @@ describe('every change being tried, in the panel’s Changes: the tokens and eac
 			});
 			expect(group()?.querySelector('[data-hand-over] .branch-line')?.textContent).toBe(BRANCH);
 			expect(group()?.textContent).toContain('Waiting for the agent to commit its work.');
+			expect(spinning(group())).toBe(true);
 		});
 	});
 });
@@ -2750,6 +2758,7 @@ describe('what the person edited in the design system’s code, read from their 
 			await answer('checkSplit', null);
 			await answer('splitPreview', { ...READY, check: { state: 'checking', done: 2, doing: 'FSButton, alone' } });
 			expect(split().querySelector('[data-split-checking]')?.textContent?.trim()).toBe('Checking FSButton, alone… (2 checks done)');
+			expect(spinning(split().querySelector('[data-split-checking]'))).toBe(true);
 			await press(button('Stop', split())!);
 			expect(calls('stopSplitCheck')).toHaveLength(1);
 		});

@@ -42,7 +42,7 @@ export const BehindLatest = ({ relay, branch }: { relay: Relay; branch: string }
 						them, in place; its comments stay, pinned where they were made.
 					</Message>
 					<DialogButtons>
-						<Button disabled={refreshing} onPress={() => void refresh()}>
+						<Button busy={refreshing} onPress={() => void refresh()}>
 							{refreshing ? 'Opening…' : 'Refresh to latest'}
 						</Button>
 					</DialogButtons>

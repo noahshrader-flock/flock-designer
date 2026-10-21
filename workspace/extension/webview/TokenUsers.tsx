@@ -31,7 +31,7 @@ export const TokenUsers = ({ token, components }: { token: DesignToken; componen
 	return (
 		<section aria-label="Components that draw with it" className="token-users">
 			{answer.state === 'none' || answer.state === 'building' ? (
-				<Message>Finding the components that draw with it…</Message>
+				<Message waiting>Finding the components that draw with it…</Message>
 			) : answer.state === 'failed' ? (
 				<Message>Which components draw with it could not be read: {answer.error}</Message>
 			) : answer.users.length === 0 ? (
@@ -47,6 +47,7 @@ export const TokenUsers = ({ token, components }: { token: DesignToken; componen
 						]
 							.filter(Boolean)
 							.join(' · ')}
+						waiting={reach.state === 'building'}
 						marks={{ 'data-token-users-summary': '' }}
 					>
 						<ValueList>{answer.users.map(row)}</ValueList>

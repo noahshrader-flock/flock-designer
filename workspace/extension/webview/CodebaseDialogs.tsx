@@ -178,7 +178,7 @@ export const BuildInCodebaseDialog = ({
 					This moves <strong>{project.title}</strong> into the product as real work, built by {agent} in the repository. It needs the full setup:
 					packages, environment variables, and the app able to run.
 				</Message>
-				{plan === null && planned.error === null && <Message>Reading what it would do…</Message>}
+				{plan === null && planned.error === null && <Message waiting>Reading what it would do…</Message>}
 				<Message tone="warning">{plan && !plan.setup ? noSetupNote(plan.branch) : null}</Message>
 				<Message tone="warning">{plan && uncommitted ? `There are uncommitted changes in ${plan.repository}. ${uncommitted}` : null}</Message>
 				{plan?.basedOn && plan.basedOn.repository !== plan.repository && (
@@ -226,7 +226,7 @@ export const BuildInCodebaseDialog = ({
 				)}
 				<AgentInUse />
 				<DialogButtons>
-					<Button type="submit" disabled={!canStart}>
+					<Button type="submit" disabled={!canStart} busy={busy}>
 						{busy ? 'Opening…' : phrase(continuing ? 'Continue' : 'Build')}
 					</Button>
 				</DialogButtons>

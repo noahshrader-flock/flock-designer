@@ -27,6 +27,7 @@ import { Toggle } from '../../src/ui/Toggle';
 import type { View } from '../../src/ui/Collection';
 import type { Part } from './vscode';
 import { asks, workspace } from './host';
+import { Spinner } from '../../src/ui/Spinner';
 import { Message, tryAgain } from '../../src/ui/Message';
 import { askOnce } from './hooks/ask';
 
@@ -150,7 +151,7 @@ const Ready = ({
 								items: [
 									{
 										label: syncing ? 'Syncing…' : `Sync with ${HOST}`,
-										icon: syncing ? 'sync' : 'refresh',
+										icon: syncing ? <Spinner /> : 'refresh',
 										disabled: syncing,
 										onSelect: syncDesignSystem,
 									},
@@ -256,7 +257,12 @@ export const DesignSystem = ({
 				<p>{error}</p>
 			</Message>
 		);
-	if (catalog === null || catalog.state === 'none') return <Message size="page">Reading the design system…</Message>;
+	if (catalog === null || catalog.state === 'none')
+		return (
+			<Message size="page" waiting>
+				Reading the design system…
+			</Message>
+		);
 	if (catalog.state === 'lost')
 		return (
 			<Message size="page" icon="warning" title={`${catalog.name} is no longer on this computer`} action={action}>

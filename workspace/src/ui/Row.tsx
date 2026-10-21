@@ -14,7 +14,7 @@ export const Row = ({
 }: {
 	start?: ReactNode;
 	name: string;
-	meta?: string;
+	meta?: ReactNode;
 	end?: ReactNode;
 	onOpen?: () => void;
 	current?: boolean;

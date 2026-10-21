@@ -126,3 +126,6 @@ export const fieldNamed = <T extends HTMLElement = HTMLTextAreaElement>(label: s
 	if (!control) throw new Error(`no field labelled ${label}`);
 	return control as T;
 };
+
+/** VS Code's own spinner, turning, in `el`: what is beside it says what is being waited for. */
+export const spinning = (el: Element | null | undefined): boolean => el?.querySelector('.codicon-modifier-spin') != null;
