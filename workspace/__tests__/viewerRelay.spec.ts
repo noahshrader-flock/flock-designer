@@ -44,7 +44,10 @@ describe('listening for DSNR', () => {
 
 		const relay = found.mock.calls[0]![0] as Parameters<Parameters<typeof listenForDsnr>[1]>[0];
 		const asked = relay.ask('signInState', []);
-		expect(page.posted).toEqual([{ message: { dsnr: 'ask', id: 1, name: 'signInState', args: [] }, origin: TAB }]);
+		expect(page.posted).toEqual([
+			{ message: { dsnr: 'listening' }, origin: '*' },
+			{ message: { dsnr: 'ask', id: 1, name: 'signInState', args: [] }, origin: TAB },
+		]);
 		// An answer from anywhere else, or not in its shape, is not taken.
 		page.say({ dsnr: 'answer', id: 1, result: { ok: true, value: 'forged' } }, { origin: 'vscode-webview://other' });
 		page.say({ dsnr: 'answer', id: 1, result: 'forged' });
@@ -53,6 +56,21 @@ describe('listening for DSNR', () => {
 		// A second hello changes nothing.
 		page.say({ dsnr: 'hello' });
 		expect(found).toHaveBeenCalledTimes(1);
+	});
+});
+
+describe('saying it is listening', () => {
+	it('says so to its parent as it starts, carrying nothing, so a tab whose hello came first says it again', () => {
+		const page = pageAt('127.0.0.1');
+		listenForDsnr(page.win, () => undefined);
+		expect(page.posted).toEqual([{ message: { dsnr: 'listening' }, origin: '*' }]);
+	});
+
+	it('says nothing where it does not listen', () => {
+		for (const page of [pageAt('127.0.0.1', false), pageAt('noahshrader-flock.github.io')]) {
+			listenForDsnr(page.win, () => undefined);
+			expect(page.posted).toEqual([]);
+		}
 	});
 });
 

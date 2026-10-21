@@ -1,6 +1,16 @@
 import type { BaseBehind, CommentAnchor, CommentRef, Result, ReviewComment, SignInState } from '../shared/contract';
 import { isObjectId } from '../shared/sha';
-import { ASK_PATH, type EditorTheme, KEY_FRAGMENT, KEY_HEADER, type RelayAsk, type RelayCall, isKey, readRelayTell } from '../shared/reviewRelay';
+import {
+	ASK_PATH,
+	type EditorTheme,
+	KEY_FRAGMENT,
+	KEY_HEADER,
+	LISTENING,
+	type RelayAsk,
+	type RelayCall,
+	isKey,
+	readRelayTell,
+} from '../shared/reviewRelay';
 import type { CommentStore } from './comments/surfaces';
 import { isThisMachine } from '../shared/thisMachine';
 
@@ -57,6 +67,8 @@ export const listenForDsnr = (
 		waiting.delete(tell.id);
 	};
 	win.addEventListener('message', heard);
+	// `LISTENING`: to any origin, as the tab is not known until it says hello, and it carries nothing.
+	win.parent.postMessage(LISTENING, '*');
 	return () => win.removeEventListener('message', heard);
 };
 

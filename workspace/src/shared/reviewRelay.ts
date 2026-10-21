@@ -68,6 +68,17 @@ export const readRelayAsk = (raw: unknown): RelayAsk | null => {
 		: null;
 };
 
+/**
+ * What the bar says to its tab as it starts listening, so it is told hello whenever it starts: the tab says hello as its
+ * frame loads, which a bar reloaded quickly can start listening after. It carries nothing.
+ */
+export const LISTENING = { dsnr: 'listening' } as const;
+export const isListening = (raw: unknown): boolean =>
+	typeof raw === 'object' &&
+	raw !== null &&
+	(raw as { dsnr?: unknown }).dsnr === LISTENING.dsnr &&
+	hasExactly(raw as Record<string, unknown>, ['dsnr']);
+
 /** The tab sends only these. */
 export const isThemeColor = (name: string, value: unknown): value is string =>
 	/^--vscode-[\w-]+$/.test(name) && typeof value === 'string' && value.length <= 400;

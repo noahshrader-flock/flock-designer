@@ -266,7 +266,8 @@ prototype's own page in the bar's frame (`page.html`), which is a repository's c
   storage, which a design system's code uses), forms, pop-ups and alerts, and never the window above.
 - **The review tab passes on only the bar's messages, up, and VS Code's, down** (`reviewPage` in
   `extension/src/review.ts`): nothing the page or any frame it makes posts goes to the extension or reaches the bar as
-  if VS Code had said it. The relay acts only on that review's project, and on comments the tab was shown or made. The
+  if VS Code had said it. It says hello as its frame loads and again when the bar says it is listening (`LISTENING`,
+  which carries nothing and goes no further), so a bar reloaded after the load is still told it is in VS Code. The relay acts only on that review's project, and on comments the tab was shown or made. The
   panel and the Design System tabs likewise hear only VS Code (`extension/webview/host.ts`), not the stories they frame.
 - **The published site frames the page beside its bar, with no origin of its own** (`SANDBOX_BESIDE`: sandboxed without
   `allow-same-origin`), since GitHub Pages has one address. The page cannot read or rewrite the bar, take the sandbox off,
