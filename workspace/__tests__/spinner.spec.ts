@@ -8,11 +8,13 @@ import { Message } from '../src/ui/Message';
 import { ListDisclosure } from '../src/ui/Section';
 
 const SPIN = '<span aria-hidden="true" class="codicon codicon-loading codicon-modifier-spin"></span>';
+/** The spinner and the words, as one: the spinner takes the words' size and first line. */
+const waitingMarkup = (words: string) => `<span class="waiting">${SPIN}<span>${words}</span></span>`;
 
 describe('the spinner, VS Code’s own, where something is being waited for', () => {
-	it('is before the words of a message, with a space between, in every size of it', () => {
+	it('is before the words of a message, in every size of it', () => {
 		for (const size of ['line', 'block', 'page'] as const)
-			expect(renderToStaticMarkup(createElement(Message, { size, waiting: true, children: 'Thinking…' }))).toContain(`${SPIN} Thinking…`);
+			expect(renderToStaticMarkup(createElement(Message, { size, waiting: true, children: 'Thinking…' }))).toContain(waitingMarkup('Thinking…'));
 		expect(renderToStaticMarkup(createElement(Message, { children: 'Thinking…' }))).not.toContain('codicon-modifier-spin');
 	});
 
@@ -30,7 +32,7 @@ describe('the spinner, VS Code’s own, where something is being waited for', ()
 
 	it('is before the words of a disclosure that says something is being worked out', () => {
 		const open = (waiting: boolean) => renderToStaticMarkup(createElement(ListDisclosure, { label: '3 components shared', waiting, children: 'x' }));
-		expect(open(true)).toContain(`${SPIN} 3 components shared`);
+		expect(open(true)).toContain(waitingMarkup('3 components shared'));
 		expect(open(false)).not.toContain('codicon-modifier-spin');
 	});
 });

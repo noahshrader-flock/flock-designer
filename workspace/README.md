@@ -401,7 +401,8 @@ scale, radii, weights) are written once, in `src/shared/dsnrTokens.ts`, set on e
 rest are the kit's `--dsnr-*` in `kit.css`. `__tests__/tokensGuard.spec.ts` fails on a raw value outside them.
 
 **Waiting is one thing.** Wherever DSNR says it is working, the kit's `Spinner` (VS Code's own loading icon, turning;
-still under reduced motion) comes first, with a little room before the words: `Message waiting`, a disclosure's `waiting`,
+still under reduced motion) comes first, with a little room before the words: `Message waiting` and a disclosure's
+`waiting` (`Waiting`: the spinner is the size of the words and level with their first line, so it fits what replaces it),
 a menu item's icon, and `Button busy`, which is not pressed again while it is. `__tests__/spinner.spec.ts` fails on a
 message ending in an ellipsis without it, or a button whose words become one while it is pressed.
 

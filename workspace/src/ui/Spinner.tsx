@@ -7,9 +7,10 @@ import { Icon } from './Icon';
  */
 export const Spinner = () => <Icon name="loading" className="codicon-modifier-spin" />;
 
-/** The spinner, a little room, then what is being waited for. */
+/** The spinner, a little room, then what is being waited for: the spinner is the size of those words, and on their first line. */
 export const Waiting = ({ children }: { children: ReactNode }) => (
-	<>
-		<Spinner /> {children}
-	</>
+	<span className="waiting">
+		<Spinner />
+		<span>{children}</span>
+	</span>
 );

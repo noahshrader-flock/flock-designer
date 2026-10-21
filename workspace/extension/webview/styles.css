@@ -859,6 +859,7 @@
 .value-place {
 	display: block;
 	font-size: var(--dsnr-text-small);
+	line-height: var(--dsnr-leading);
 	overflow-wrap: anywhere;
 }
 

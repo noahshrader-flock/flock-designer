@@ -584,6 +584,22 @@ a:not(.icon-button) {
 	color: var(--vscode-editorWarning-foreground);
 }
 
+/*
+ * Waiting: the spinner takes the size of the words it comes before, and one line of theirs (their line height), so it sits on
+ * the first line, level with them, whatever size they are, and stands in the place of what replaces them. The icon font sets
+ * its own size with the weight of a class and a class: this has one more, so it wins in whatever order the sheets load.
+ */
+.waiting {
+	display: inline-flex;
+	align-items: flex-start;
+	gap: var(--dsnr-space-2);
+}
+
+.waiting > .codicon.codicon-modifier-spin {
+	font-size: 1em;
+	line-height: inherit;
+}
+
 .message-error {
 	margin: var(--dsnr-space-4) 0 0;
 	color: var(--vscode-errorForeground);
