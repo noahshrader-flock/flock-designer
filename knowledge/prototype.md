@@ -10,7 +10,8 @@ Ask your agent, in the product: "Create a prototype of a history of alerts, filt
 the way you would brief a colleague. A Figma link to one screen helps, and you can drag screenshots into the conversation.
 
 You can also ask it after working together in the code: "make a quick prototype of this" is built from what you asked
-and decided in the conversation and from the changes you made, which stay as they are.
+and decided in the conversation and from the changes you made, which stay as they are. [Which way to
+work](which-way-to-work.md) says more.
 
 The agent runs `dsnr new-prototype`, which starts the prototype with your words as its brief and gives the agent its task,
 including which code it is modeled on. To put the prototype in a folder, use **Assign folder…** from its menu in the panel.

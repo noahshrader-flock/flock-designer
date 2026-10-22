@@ -21,8 +21,10 @@ exactly as DSNR writes it. Anything in `code` is a file, a folder or a command.
 
 ## The work
 
-- [A prototype, start to finish](a-prototype.md): starting one, versions, review and comments, addressing them,
+- [A prototype, start to finish](prototype.md): starting one, versions, review and comments, addressing them,
   publishing, and keeping it current.
+- [Which way to work](which-way-to-work.md): a prototype, or straight in the code; and sharing what you have been
+  building with your agent to get feedback.
 - [Working in the codebase](working-in-the-codebase.md): turning a prototype into real code in the product, and running it.
 - [Committing](committing.md): what DSNR saves for you, what you commit yourself, and where each lands.
 - [The handoff](the-handoff.md): getting codebase work ready for engineering.
