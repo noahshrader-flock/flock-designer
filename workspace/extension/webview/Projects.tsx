@@ -134,13 +134,16 @@ const ByFolder = ({ projects, children }: { projects: Project[]; children: (grou
 	);
 };
 
+/** Closed, each, but the open product's: with none open, nothing says which is wanted. */
 const ByProduct = ({
 	groups,
 	nameOf,
+	openProduct,
 	children,
 }: {
 	groups: ProductGroup[];
 	nameOf: (product: string) => string;
+	openProduct: string | null;
 	children: (group: ProductGroup, label: string) => ReactNode;
 }) => {
 	const titleOf = (g: ProductGroup) => (g.product === null ? 'No product' : nameOf(g.product));
@@ -149,7 +152,7 @@ const ByProduct = ({
 	return (
 		<>
 			{groups.map((g) => (
-				<Section key={titleOf(g)} title={titleOf(g)} count={g.projects.length}>
+				<Section key={titleOf(g)} title={titleOf(g)} count={g.projects.length} open={g.product !== null && g.product === openProduct}>
 					{children(g, titleOf(g))}
 				</Section>
 			))}
@@ -299,7 +302,7 @@ export const Projects = ({
 					}
 				</ByFolder>
 			) : (
-				<ByProduct groups={byProduct(here, products, productRepository)} nameOf={nameOf}>
+				<ByProduct groups={byProduct(here, products, productRepository)} nameOf={nameOf} openProduct={productRepository}>
 					{(group, label) =>
 						shown(
 							group.projects.map(({ project: p, alsoIn }) =>

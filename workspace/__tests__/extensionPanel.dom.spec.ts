@@ -1180,6 +1180,28 @@ describe('Projects, focused on the product open', () => {
 		expect(meta('Alerts')).toBe('1 version · Admin');
 	});
 
+	it('starts each product’s group closed but the open product’s, and keeps what is opened or closed by hand', async () => {
+		await showOpen(OPEN, PROJECTS);
+		await choose('All projects');
+		const groups = () => [...body().querySelectorAll<HTMLDetailsElement>('details.section')];
+		expect(groups().map((g) => [g.querySelector('[data-part="title"]')?.textContent, g.open])).toEqual([
+			['flock-coke', true],
+			['flock-pepsi', false],
+			['No product', false],
+		]);
+		await press(groups()[1]!.querySelector('summary') as HTMLElement);
+		await say({ type: 'projects-changed' });
+		await answer('listProjects', PROJECTS);
+		expect(groups()[1]!.open).toBe(true);
+	});
+
+	it('starts every product’s group closed with no product open', async () => {
+		await showOpen({ ...OPEN, product: null, productRepository: null, designSystem: null, source: null }, PROJECTS);
+		const groups = [...body().querySelectorAll<HTMLDetailsElement>('details.section')];
+		expect(groups.length).toBeGreaterThan(1);
+		expect(groups.map((g) => g.open)).toEqual(groups.map(() => false));
+	});
+
 	it('changes nothing of what can be done: a project of another product opens for review as any does', async () => {
 		await showOpen(OPEN, PROJECTS);
 		await choose('All projects');

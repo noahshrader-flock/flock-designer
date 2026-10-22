@@ -40,11 +40,12 @@ const Collapsible = ({
 	);
 };
 
-export const Section = ({ title, count, children }: { title: string; count?: number; children: ReactNode }) => (
+/** `open` is how it starts: the person's own opening and closing is kept until it is given another. */
+export const Section = ({ title, count, open = true, children }: { title: string; count?: number; open?: boolean; children: ReactNode }) => (
 	<Collapsible
 		className="section"
 		summaryClassName="section-header"
-		open
+		open={open}
 		summary={
 			<>
 				<span data-part="title" className="section-title">
