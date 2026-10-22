@@ -21,8 +21,8 @@ export interface RecordStore {
 	/** Without fetching it: shared files run to megabytes. */
 	has(path: string): Promise<boolean>;
 	write(path: string, content: string | Buffer, message: string): Promise<void>;
-	/** A folder and everything in it, as one change. */
-	remove(dir: string, message: string): Promise<void>;
+	/** A file, or a folder and everything in it, as one change. */
+	remove(path: string, message: string): Promise<void>;
 }
 
 export const cloneStore = (designRoot: string, published: () => void): RecordStore => ({
@@ -41,8 +41,8 @@ export const cloneStore = (designRoot: string, published: () => void): RecordSto
 		writeFileSync(file, content);
 		published();
 	},
-	remove: async (dir) => {
-		rmSync(resolveInside(designRoot, dir), { recursive: true, force: true });
+	remove: async (path) => {
+		rmSync(resolveInside(designRoot, path), { recursive: true, force: true });
 		published();
 	},
 });

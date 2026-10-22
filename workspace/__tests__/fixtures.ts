@@ -234,9 +234,9 @@ export const memoryStore = (files: Record<string, string | Buffer> = {}) => {
 			files[p] = c;
 			writes.push(p);
 		},
-		remove: async (dir) => {
-			for (const p of Object.keys(files)) if (p.startsWith(`${dir}/`)) delete files[p];
-			removed.push(dir);
+		remove: async (path) => {
+			for (const p of Object.keys(files)) if (p === path || p.startsWith(`${path}/`)) delete files[p];
+			removed.push(path);
 		},
 	};
 	return { store, files, writes, removed };

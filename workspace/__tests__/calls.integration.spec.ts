@@ -1652,7 +1652,7 @@ describe('the picture of each prototype, on its prototype’s card', () => {
 		});
 	});
 
-	it('is drawn again when the page changes, and the earlier picture is left where it is', async () => {
+	it('is drawn again when the page changes, and the earlier picture, named by no record now, is removed', async () => {
 		await savedPrototype();
 		await call(CHANNELS.ensureCovers);
 		const first = await hashOf('<h1>Demo</h1>');
@@ -1660,7 +1660,8 @@ describe('the picture of each prototype, on its prototype’s card', () => {
 		const second = await hashOf('<h1>Demo, changed</h1>');
 		expect((await call(CHANNELS.ensureCovers)).value).toEqual([{ prototypeId: 'demo', name: 'v1', cover: second }]);
 		expect(recordOf('v1')?.cover).toBe(second);
-		expect(readdirSync(join(design, 'prototypes', 'demo', 'covers')).sort()).toEqual([`v1-${first}.jpg`, `v1-${second}.jpg`].sort());
+		expect(first).not.toBe(second);
+		expect(readdirSync(join(design, 'prototypes', 'demo', 'covers'))).toEqual([`v1-${second}.jpg`]);
 	});
 
 	it('is not drawn for a prototype whose page was not built here, and is nothing when it cannot be drawn', async () => {

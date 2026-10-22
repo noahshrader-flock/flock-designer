@@ -83,19 +83,20 @@ export class RepoFiles {
 	}
 
 	/**
-	 * One commit on the default branch with every file under `dir` gone, not one per file, so no one ever reads half of it.
+	 * One commit on the default branch with `path` gone, a file or every file in a folder, not one per file, so no one ever
+	 * reads half of it.
 	 * Moved on meanwhile (a teammate's save), it is made again on what is there now, once.
 	 */
-	async removeFolder(dir: string, message: string): Promise<void> {
+	async removePath(path: string, message: string): Promise<void> {
 		const remove = async () => {
 			const branch = (await this.defaultBranch()).split('/').map(encodeURIComponent).join('/');
 			const head = String(asRecord(asRecord(await this.session.api(`${this.apiPath}/git/ref/heads/${branch}`)).object).sha);
 			const base = String(asRecord(asRecord(await this.session.api(`${this.apiPath}/git/commits/${head}`)).tree).sha);
 			const tree = asRecord(await this.session.api(`${this.apiPath}/git/trees/${base}?recursive=1`));
-			if (tree.truncated === true) throw new Error(`${HOST} would not list all of ${this.ref.repo}, so ${dir} was not deleted.`);
+			if (tree.truncated === true) throw new Error(`${HOST} would not list all of ${this.ref.repo}, so ${path} was not deleted.`);
 			const gone = asArray(tree.tree)
 				.map(asRecord)
-				.filter((e) => e.type === 'blob' && String(e.path).startsWith(`${dir}/`))
+				.filter((e) => e.type === 'blob' && (String(e.path) === path || String(e.path).startsWith(`${path}/`)))
 				.map((e) => ({ path: String(e.path), mode: String(e.mode), type: 'blob', sha: null }));
 			if (gone.length === 0) return;
 			const made = asRecord(await this.session.api(`${this.apiPath}/git/trees`, { method: 'POST', body: { base_tree: base, tree: gone } }));

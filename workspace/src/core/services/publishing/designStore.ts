@@ -2,7 +2,7 @@ import type { RepoFiles } from '../../../codeHost/repoFiles';
 import { type RecordStore, cloneStore } from '../prototypes/prototype';
 
 /** The design repository's files over the API. */
-type ApiFiles = Pick<RepoFiles, 'readFile' | 'readBytes' | 'hasFile' | 'writeFile' | 'removeFolder'>;
+type ApiFiles = Pick<RepoFiles, 'readFile' | 'readBytes' | 'hasFile' | 'writeFile' | 'removePath'>;
 
 /**
  * The clone when there is one, else GitHub. A file the clone does not have yet (a colleague's work not pulled) is read
@@ -28,7 +28,7 @@ export const designStore = ({
 			readBytes: (path) => api.readBytes(path),
 			has: (path) => api.hasFile(path),
 			write: (path, content, message) => api.writeFile(path, content, message),
-			remove: (dir, message) => api.removeFolder(dir, message),
+			remove: (path, message) => api.removePath(path, message),
 		};
 	};
 	/** Without a clone the store already is GitHub, so it is asked once. */

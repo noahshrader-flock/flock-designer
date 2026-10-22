@@ -49,6 +49,8 @@ describe('ensureCovers', () => {
 		expect(coverOf(mem.files, 'v1')).toBe(HASH);
 		// File first, record second: a record never points at a picture that is not there.
 		expect(mem.writes).toEqual([coverPath('demo', 'v1', HASH), RECORDS]);
+		// A first picture replaces none.
+		expect(mem.removed).toEqual([]);
 	});
 
 	it('is a picture of the page as it is: the page’s hash is the record’s, and the file is named by it', () => {
@@ -69,6 +71,18 @@ describe('ensureCovers', () => {
 		expect(made?.cover).toBe(HASH);
 		const kept = (JSON.parse(String(mem.files[RECORDS])) as Array<Record<string, unknown>>)[0];
 		expect(kept).toMatchObject({ name: 'v1', cover: HASH, previewUrl: 'https://x.test', branch: 'prototype/demo/v1' });
+	});
+
+	it('removes the picture it replaces once the record names the new one', async () => {
+		const earlier = 'aaaaaaaaaaaa';
+		mem.files[coverPath('demo', 'v1', earlier)] = JPEG;
+		mem.files[RECORDS] = records(record('v1', { cover: earlier }));
+		await ensureCovers(deps, built('v1'));
+		expect(mem.files[coverPath('demo', 'v1', earlier)]).toBeUndefined();
+		expect(mem.files[coverPath('demo', 'v1', HASH)]).toEqual(JPEG);
+		// The record names the new picture before the old one goes, so it never names one that is not there.
+		expect(mem.writes).toEqual([coverPath('demo', 'v1', HASH), RECORDS]);
+		expect(mem.removed).toEqual([coverPath('demo', 'v1', earlier)]);
 	});
 
 	it('keeps every prototype’s picture: drawing one never touches another’s', async () => {

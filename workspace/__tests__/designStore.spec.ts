@@ -17,7 +17,7 @@ const github = () => ({
 	readBytes: vi.fn(async () => null),
 	hasFile: vi.fn(async () => false),
 	writeFile: vi.fn(async () => undefined),
-	removeFolder: vi.fn(async () => undefined),
+	removePath: vi.fn(async () => undefined),
 });
 
 describe('the design repository, read and written', () => {
@@ -41,7 +41,7 @@ describe('the design repository, read and written', () => {
 		await designStore({ clone: () => null, files: () => repo, onWrite: () => undefined })
 			.records()
 			.remove('prototypes/p', 'p: deleted');
-		expect(repo.removeFolder).toHaveBeenCalledExactlyOnceWith('prototypes/p', 'p: deleted');
+		expect(repo.removePath).toHaveBeenCalledExactlyOnceWith('prototypes/p', 'p: deleted');
 	});
 
 	it('is the clone alone where there is no GitHub to ask, as for the command line', async () => {

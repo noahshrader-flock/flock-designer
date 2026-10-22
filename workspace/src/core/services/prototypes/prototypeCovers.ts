@@ -82,7 +82,10 @@ export const ensureCovers = async (deps: CoverDeps, built: { prototypeId: string
 			if (picture === null) continue;
 			const path = coverPath(prototypeId, name, cover);
 			if (!(await store.has(path))) await store.write(path, picture, `${prototypeId}: picture of prototype ${name}`);
-			if (await setCover(store, prototypeId, name, cover)) made.push({ prototypeId, name, cover });
+			if (!(await setCover(store, prototypeId, name, cover))) continue;
+			made.push({ prototypeId, name, cover });
+			// The picture it replaces is named by no record now: gone, so a page saved again does not leave one behind.
+			if (record.cover) await store.remove(coverPath(prototypeId, name, record.cover), `${prototypeId}: earlier picture of prototype ${name}`);
 		}
 	}
 	return made;

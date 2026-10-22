@@ -112,7 +112,7 @@ describe('history', () => {
 	});
 });
 
-describe('removeFolder', () => {
+describe('removePath', () => {
 	const TREE = {
 		truncated: false,
 		tree: [
@@ -134,7 +134,7 @@ describe('removeFolder', () => {
 
 	it('is one commit on the default branch with every file under the folder gone, and nothing of a folder beside it', async () => {
 		const { github, writes } = fakeGitHub(routes());
-		await new RepoFiles(github, REF).removeFolder('prototypes/x', 'x: deleted');
+		await new RepoFiles(github, REF).removePath('prototypes/x', 'x: deleted');
 		expect(writes).toEqual([
 			{
 				method: 'POST',
@@ -152,9 +152,21 @@ describe('removeFolder', () => {
 		]);
 	});
 
+	it('removes one file, as one commit, and nothing that only starts with its name', async () => {
+		const tree = { ...TREE, tree: [...TREE.tree, { path: 'prototypes/x/v1.html.old', type: 'blob', mode: '100644' }] };
+		const { github, writes } = fakeGitHub({ ...routes(), 'GET /repos/acme/design/git/trees/tree1?recursive=1': tree });
+		await new RepoFiles(github, REF).removePath('prototypes/x/v1.html', 'x: earlier picture');
+		expect(writes[0]).toEqual({
+			method: 'POST',
+			path: '/repos/acme/design/git/trees',
+			body: { base_tree: 'tree1', tree: [{ path: 'prototypes/x/v1.html', mode: '100644', type: 'blob', sha: null }] },
+		});
+		expect(writes).toHaveLength(3);
+	});
+
 	it('makes nothing when the folder has no files', async () => {
 		const { github, writes } = fakeGitHub(routes());
-		await new RepoFiles(github, REF).removeFolder('prototypes/none', 'm');
+		await new RepoFiles(github, REF).removePath('prototypes/none', 'm');
 		expect(writes).toEqual([]);
 	});
 
@@ -166,19 +178,19 @@ describe('removeFolder', () => {
 				return {};
 			}),
 		);
-		await new RepoFiles(github, REF).removeFolder('prototypes/x', 'm');
+		await new RepoFiles(github, REF).removePath('prototypes/x', 'm');
 		expect(writes.filter((w) => w.method === 'PATCH')).toHaveLength(2);
 		expect(writes.every((w) => (w.body as { force?: boolean }).force !== true)).toBe(true);
 	});
 
 	it('says write access is needed when GitHub refuses it', async () => {
 		const { github } = fakeGitHub(routes(refusing(403)));
-		await expect(new RepoFiles(github, REF).removeFolder('prototypes/x', 'm')).rejects.toThrow('Saving needs write access to acme/design.');
+		await expect(new RepoFiles(github, REF).removePath('prototypes/x', 'm')).rejects.toThrow('Saving needs write access to acme/design.');
 	});
 
 	it('deletes nothing when GitHub cannot list the whole repository', async () => {
 		const { github, writes } = fakeGitHub({ ...routes(), 'GET /repos/acme/design/git/trees/tree1?recursive=1': { ...TREE, truncated: true } });
-		await expect(new RepoFiles(github, REF).removeFolder('prototypes/x', 'm')).rejects.toThrow('so prototypes/x was not deleted');
+		await expect(new RepoFiles(github, REF).removePath('prototypes/x', 'm')).rejects.toThrow('so prototypes/x was not deleted');
 		expect(writes).toEqual([]);
 	});
 });
