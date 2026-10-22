@@ -3,69 +3,14 @@ import { namesProject, projectTitle, sameFolder } from '../../src/shared/brief';
 import type { Project } from '../../src/shared/domain/projects';
 import { plural } from '../../src/shared/plural';
 import { openCommentsOf } from '../../src/shared/projectList';
-import { slugify } from '../../src/shared/validate';
 import { onlyBuilding, savedVersions, workOf } from '../../src/shared/work';
 import { Button } from '../../src/ui/Button';
 import { Dialog, DialogButtons } from '../../src/ui/Dialog';
-import { Field, TextArea, TextInput } from '../../src/ui/Field';
+import { Field, TextInput } from '../../src/ui/Field';
 import { FolderField, type FolderPick, folderOf, isChosen, pickOf } from './FolderField';
 import { workspace } from './host';
 import { Message } from '../../src/ui/Message';
-import { AgentInUse, useAgentPhrase } from './AgentInUse';
 import { useAction } from './hooks/useAction';
-
-interface NewPrototypeAnswers {
-	title: string;
-	task: string;
-	folder: string | null;
-}
-
-export const NewPrototypeDialog = ({
-	folders,
-	onStart,
-	onClose,
-}: {
-	folders: string[];
-	onStart: (answers: NewPrototypeAnswers) => void;
-	onClose: () => void;
-}) => {
-	const [title, setTitle] = useState('');
-	const [task, setTask] = useState('');
-	const [pick, setPick] = useState<FolderPick>({ kind: 'none' });
-	const ready = slugify(title) !== '' && task.trim() !== '' && isChosen(pick);
-	const phrase = useAgentPhrase();
-	const start = (e: FormEvent) => {
-		e.preventDefault();
-		if (!ready) return;
-		onStart({ title: title.trim(), task: task.trim(), folder: folderOf(pick) });
-		onClose();
-	};
-	return (
-		<Dialog title="New prototype" onClose={onClose}>
-			<form onSubmit={start}>
-				<Field label="Name">{(control) => <TextInput control={control} value={title} onChange={setTitle} placeholder="Alert history" />}</Field>
-				<Field label="What should it explore?">
-					{(control) => (
-						<TextArea
-							control={control}
-							value={task}
-							onChange={setTask}
-							placeholder="A history of alerts, filterable by camera and by day. Paste a Figma link to one screen if you have one, and drag screenshots into the conversation before you press Enter."
-							rows={5}
-						/>
-					)}
-				</Field>
-				<FolderField folders={folders} pick={pick} onPick={setPick} />
-				<AgentInUse />
-				<DialogButtons>
-					<Button type="submit" disabled={!ready}>
-						{phrase('Create', 'with', 'Create prototype')}
-					</Button>
-				</DialogButtons>
-			</form>
-		</Dialog>
-	);
-};
 
 export const AssignFolderDialog = ({
 	project,

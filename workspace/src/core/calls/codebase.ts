@@ -4,7 +4,6 @@ import type { CodebaseArea } from '../areas/codebase';
 export const registerCodebase = (area: CodebaseArea): void => {
 	handle('shareWork', [area.checkout, arg.projectId, arg.codebaseName], area.shareWork);
 	handle('buildInCodebasePlan', [area.checkout, arg.projectId, arg.prototypeName], area.buildInCodebasePlan);
-	handle('agentReady', [], area.agentReady);
 	handle('chooseAgent', [], area.chooseAgent);
 	handle('agentShown', [], area.agentShown);
 	handle('handOff', [area.checkout, arg.projectId], area.handOff);

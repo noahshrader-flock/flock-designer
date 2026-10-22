@@ -131,8 +131,6 @@ export type PrototypeReadiness =
 			why: 'not-installed' | 'no-bundler';
 			designSystem: string;
 			repository: string;
-			/** The repository declares how it installs (`install`). */
-			canInstall: boolean;
 	  };
 
 /** Reviewers never clone anything, so a project is assembled from the design repository's contents, not a checkout. */

@@ -38,9 +38,6 @@ export const check = {
 		if (typeof r.name !== 'string' || !isPrototypeName(r.name)) fail('That is not a prototype to open for review.');
 		return { projectId: arg.projectId(r.projectId), name: r.name as string, title: r.title as string };
 	}) as Check<Review>,
-	title: ((v) => (typeof v === 'string' && v.length <= LIMITS.title ? v : fail('That is not a title.'))) as Check<string>,
-	task: ((v) => (typeof v === 'string' && v.length <= LIMITS.task ? v : fail('That is not what a prototype explores.'))) as Check<string>,
-	folder: ((v) => (v === null || (typeof v === 'string' && v.length <= LIMITS.folder) ? v : fail('That is not a folder.'))) as Check<string | null>,
 	edits: tokenEditsOf as Check<TokenEdit[]>,
 	mode: ((v) => (isTheme(v) ? v : fail('That is not a mode.'))) as Check<Theme>,
 	commit: ((v) => (typeof v === 'string' && /^[0-9a-f]{4,64}$/.test(v) ? v : fail('That is not a commit.'))) as Check<string>,
@@ -62,8 +59,6 @@ export const askRoutes = (handlers: AskHandlers): ReadonlyMap<AskName, Route> =>
 	handle('chooseDesignSystem', [], done(handlers.chooseDesignSystem));
 	handle('getStarted', [], done(handlers.getStarted));
 	handle('setUp', [], done(handlers.setUp));
-	handle('askNewPrototype', [], done(handlers.askNewPrototype));
-	handle('newPrototype', [check.title, check.task, check.folder], done(handlers.newPrototype));
 	handle('codebase', [check.action, arg.projectId], done(handlers.codebase));
 	handle('openReview', [arg.projectId], done(handlers.openReview));
 	handle('openReviewInBrowser', [arg.projectId], done(handlers.openReviewInBrowser));

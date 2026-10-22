@@ -11,7 +11,7 @@ import { type CheckoutParts, guidePart, handoffTask, buildInCodebaseTask, update
 import { againstBase } from '../services/codebase/againstBase';
 import { sharedCheckoutNote, unfinishedWork } from '../services/codebase/checkoutClean';
 import { readDescriptor } from '../services/projects/descriptor';
-import { assertReady, handTask } from '../services/agent/handOver';
+import { handTask } from '../services/agent/handOver';
 import { HANDOFF_FILE, HANDOFF_SKILL, commandLine, leftAlone } from '../services/codebase/engineeringHandoff';
 import { branchTip, changedFiles, changedSince, fileAt, git, headCommit, readCheckout, remoteTip } from '../services/platform/git';
 import { continueWork, recordHandoff, recordPath, recordPreview, recordedWork } from '../services/projects/workRecords';
@@ -142,10 +142,6 @@ export const codebaseArea = (d: CallsDeps) => {
 		},
 		chooseAgent: chooseAgentNow,
 		agentShown,
-		agentReady: async (): Promise<null> => {
-			await assertReady(await agent());
-			return null;
-		},
 		handOff: async (workIn: CheckedCheckout, projectId: string): Promise<Handed> => {
 			const { canonical, recordsRoot, descriptor } = workIn;
 			const codebaseRecord = await recordedWork(canonical, recordsRoot, descriptor, projectId, 'codebase');

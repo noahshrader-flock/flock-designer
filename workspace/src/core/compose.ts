@@ -30,7 +30,6 @@ import { type SourceAnswers, usableDesignSystem } from './services/projects/prod
 import { type DesignRepositoryClones, designRepositoryMissing, designRepositoryOf, recordsRootFor } from './services/projects/discovery';
 import { isRepository, readCheckout } from './services/platform/git';
 import type { GitHubAccount } from '../codeHost/github';
-import { Installer } from './services/codebase/install';
 import { codebaseMadeFrom, recordedWork } from './services/projects/workRecords';
 import { readFolderProjects } from './services/projects/localProjects';
 import { startedHere } from './services/prototypes/pendingPrototypes';
@@ -73,7 +72,6 @@ export interface CallsContext {
 	/** The app's own folder, never a repository. */
 	prototypesRoot: string;
 	prototypeServer: PrototypeServer;
-	installer: Installer;
 	designLibrary?: DesignLibrary;
 	designSystems: DesignSystemsMemory;
 	/** The person's answers for a product's design system that could not be confirmed as its source. */
@@ -110,7 +108,6 @@ export const composeCore = ({
 	onPublishStatus,
 	prototypesRoot,
 	prototypeServer,
-	installer,
 	designLibrary,
 	designSystems,
 	sourceAnswers,
@@ -395,7 +392,6 @@ export const composeCore = ({
 				hand: async (prepare) => (await handTask(ports, await agent(), prepare)).handed,
 			}),
 		prototypesRoot,
-		installer,
 		designSystems,
 		designSystemOf,
 		recordsRootOf,

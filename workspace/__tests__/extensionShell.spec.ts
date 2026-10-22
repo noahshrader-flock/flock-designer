@@ -972,10 +972,10 @@ describe('what the extension asks the panel to show', () => {
 		const a = webview();
 		panels.add(a.webview);
 		panels.show({ type: 'open-dialog', dialog: { kind: 'assign', projectId: 'demo' } });
-		panels.show({ type: 'open-dialog', dialog: { kind: 'new' } });
+		panels.show({ type: 'open-dialog', dialog: { kind: 'sync' } });
 		expect(a.posted).toEqual([]);
 		await panels.ready(a.webview);
-		expect(a.posted).toEqual([{ type: 'open-dialog', dialog: { kind: 'new' } }]);
+		expect(a.posted).toEqual([{ type: 'open-dialog', dialog: { kind: 'sync' } }]);
 		await panels.ready(a.webview);
 		expect(a.posted).toHaveLength(1);
 	});
@@ -985,8 +985,8 @@ describe('what the extension asks the panel to show', () => {
 		const a = webview();
 		panels.add(a.webview);
 		await panels.ready(a.webview);
-		panels.show({ type: 'open-dialog', dialog: { kind: 'new' } });
-		expect(a.posted).toEqual([{ type: 'open-dialog', dialog: { kind: 'new' } }]);
+		panels.show({ type: 'open-dialog', dialog: { kind: 'sync' } });
+		expect(a.posted).toEqual([{ type: 'open-dialog', dialog: { kind: 'sync' } }]);
 	});
 
 	const view = (page: ReturnType<typeof webview>) => {
@@ -1015,8 +1015,8 @@ describe('what the extension asks the panel to show', () => {
 		await panels.ready(a.webview);
 		v.hide();
 		v.showAgain();
-		panels.show({ type: 'open-dialog', dialog: { kind: 'new' } });
-		expect(a.posted).toEqual([{ type: 'open-dialog', dialog: { kind: 'new' } }]);
+		panels.show({ type: 'open-dialog', dialog: { kind: 'sync' } });
+		expect(a.posted).toEqual([{ type: 'open-dialog', dialog: { kind: 'sync' } }]);
 		v.hide();
 		panels.show({ type: 'open-dialog', dialog: { kind: 'sync' } });
 		expect(a.posted).toHaveLength(2);
@@ -1036,12 +1036,12 @@ describe('what the extension asks the panel to show', () => {
 		panels.attach(v.view);
 		await panels.ready(a.webview);
 		v.dispose();
-		panels.show({ type: 'open-dialog', dialog: { kind: 'new' } });
+		panels.show({ type: 'open-dialog', dialog: { kind: 'sync' } });
 		expect(a.posted).toEqual([]);
 		const b = webview();
 		panels.attach(view(b).view);
 		await panels.ready(b.webview);
-		expect(b.posted).toEqual([{ type: 'open-dialog', dialog: { kind: 'new' } }]);
+		expect(b.posted).toEqual([{ type: 'open-dialog', dialog: { kind: 'sync' } }]);
 	});
 
 	it('is held again when the page goes (it is reloading), until it says it listens again', async () => {
@@ -1050,10 +1050,10 @@ describe('what the extension asks the panel to show', () => {
 		panels.add(a.webview);
 		await panels.ready(a.webview);
 		panels.unready(a.webview);
-		panels.show({ type: 'open-dialog', dialog: { kind: 'new' } });
+		panels.show({ type: 'open-dialog', dialog: { kind: 'sync' } });
 		expect(a.posted).toEqual([]);
 		await panels.ready(a.webview);
-		expect(a.posted).toEqual([{ type: 'open-dialog', dialog: { kind: 'new' } }]);
+		expect(a.posted).toEqual([{ type: 'open-dialog', dialog: { kind: 'sync' } }]);
 	});
 });
 
@@ -1067,12 +1067,12 @@ describe('the bridge', () => {
 		};
 		const page = { postMessage: async (m: unknown) => void posted.push(m) } as never;
 		await answerCall(page, tables, { type: 'call', id: 3, name: 'listProjects', args: [] }, failed);
-		await answerCall(page, tables, { type: 'call', id: 4, name: 'readCheckout', args: [] }, failed);
+		await answerCall(page, tables, { type: 'call', id: 4, name: 'branchesWithSetup', args: [] }, failed);
 		await answerCall(page, tables, { type: 'call', id: 5, name: 'openPrimitives', args: [] }, failed);
 		await answerCall(page, tables, { type: 'call', id: 6, name: 'openChanges', args: [] }, failed);
 		expect(posted).toEqual([
 			{ type: 'answer', id: 3, result: { ok: true, value: [] } },
-			{ type: 'answer', id: 4, result: { ok: false, error: 'readCheckout is not answered in VS Code.' } },
+			{ type: 'answer', id: 4, result: { ok: false, error: 'branchesWithSetup is not answered in VS Code.' } },
 			{ type: 'answer', id: 5, result: { ok: true, value: null } },
 			{ type: 'answer', id: 6, result: { ok: false, error: 'openChanges is not answered in VS Code.' } },
 		]);
@@ -1089,7 +1089,7 @@ describe('the bridge', () => {
 		const routes = new Map<InvokeName, Route>([['listProjects', async () => ({ ok: true, value: ['p'] })]]);
 		const api = hostApi(() => routes, panels);
 		expect(await api.listProjects()).toEqual({ ok: true, value: ['p'] });
-		expect(await api.readCheckout('/p')).toEqual({ ok: false, error: 'readCheckout is not answered in VS Code.' });
+		expect(await api.branchesWithSetup('/p')).toEqual({ ok: false, error: 'branchesWithSetup is not answered in VS Code.' });
 		const heard: unknown[] = [];
 		const stop = api.onRunLog((l) => void heard.push(l));
 		panels.sink('onRunLog', line('one'));

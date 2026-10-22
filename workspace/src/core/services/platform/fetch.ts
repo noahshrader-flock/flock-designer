@@ -237,8 +237,3 @@ export const fetchBranch = async (root: string, branch: string): Promise<string 
 	const where = await whereIs(root, branch);
 	return where.untracked ? null : fetchOnce(root, branch, where.upstream, 0);
 };
-
-/** Starts the fetch `freshTip` will use, when the branch is picked: never throws, and nothing waits on it. */
-export const warmTip = (root: string, branch: string): void => {
-	void fetchBranch(root, branch).catch(() => undefined);
-};

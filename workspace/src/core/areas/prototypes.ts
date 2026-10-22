@@ -2,7 +2,7 @@ import type { CallsDeps } from '../compose';
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { folderName } from '../../shared/brief';
-import type { Handed, CommentRef, HandedComment, OpenedPrototype, PrototypeReadiness } from '../../shared/contract';
+import type { Handed, CommentRef, HandedComment, OpenedPrototype } from '../../shared/contract';
 import { coverPath, prototypeKey, prototypePagePath, workPath } from '../../shared/designPaths';
 import { statesOf } from '../../shared/prototypeStates';
 import { errorText } from '../../shared/result';
@@ -11,11 +11,7 @@ import { workLabel } from '../../shared/work';
 import { ADDRESS_SKILL, chooseComment } from '../services/prototypes/address';
 import { guidePart, prototypeAddressTask, prototypeBuildTask, refreshRequest } from '../services/agent/agentTasks';
 import { writeCommentsExport } from '../services/prototypes/commentsExport';
-import { readDescriptor } from '../services/projects/descriptor';
 import { handTask } from '../services/agent/handOver';
-import { readCheckout } from '../services/platform/git';
-import { warmTip } from '../services/platform/fetch';
-import { INSTALL_COMMAND } from '../services/codebase/install';
 import { jpegDataUrl } from '../services/prototypes/picture';
 import { type CoverDeps, builtHere, ensureCovers } from '../services/prototypes/projectCovers';
 import {
@@ -32,22 +28,8 @@ import { dropAllPending } from '../services/prototypes/pendingPrototypes';
 import { singleFlight } from '../services/platform/concurrency';
 
 export const prototypesArea = (d: CallsDeps) => {
-	const {
-		agent,
-		designRepos,
-		emit,
-		me,
-		opened,
-		ports,
-		prototypePage,
-		prototypesRoot,
-		publisher,
-		deploys,
-		readSkillText,
-		servePrototype,
-		store,
-		work,
-	} = d;
+	const { agent, designRepos, emit, opened, ports, prototypePage, prototypesRoot, publisher, deploys, readSkillText, servePrototype, store, work } =
+		d;
 	const inFlight = singleFlight<string, unknown>();
 	const once = <T>(key: string, run: () => Promise<T>): Promise<T> => inFlight.run(key, run) as Promise<T>;
 	const coverDeps: CoverDeps = {
@@ -78,23 +60,6 @@ export const prototypesArea = (d: CallsDeps) => {
 	/** What is at a picture's path never changes, so it is read once. */
 	const coversRead = new Map<string, string>();
 	return {
-		prototypeReadiness: (root: string): PrototypeReadiness => {
-			const canonical = opened.require(root);
-			const readiness = work.readiness(canonical);
-			return readiness.ready ? readiness : { ...readiness, canInstall: readDescriptor(canonical).commands.some((c) => c.id === INSTALL_COMMAND) };
-		},
-		createPrototype: async (projectId: string, title: string, note: string, from: { root: string; branch: string } | null, folder: unknown) => {
-			if (!from) throw new Error('A prototype is modeled on a branch of a repository on this machine. Choose one.');
-			// Nothing is made local: a branch only on origin is modeled on from there, as `freshTip` reads it.
-			const root = opened.require(from.root);
-			return work.start(root, { projectId, title, note, branch: from.branch, me: me(), folder: folderName(folder) });
-		},
-		warmPrototypeBase: async (root: string): Promise<null> => {
-			const canonical = opened.require(root);
-			const { branch } = await readCheckout(canonical);
-			if (branch !== null) warmTip(canonical, branch);
-			return null;
-		},
 		prototypeBehind: (projectId: string, name: string) => work.behind(projectId, name),
 		/**
 		 * In place: the base moves first, so the task is built from the latest code, and moves back if nothing is handed
@@ -167,16 +132,6 @@ export const prototypesArea = (d: CallsDeps) => {
 					throw new Error(`${projectId} is deleted, but its review ${ISSUE}s on GitHub could not be closed: ${errorText(err)}`);
 				});
 			return null;
-		},
-		handPrototypeBuild: async (root: string, projectId: string, name: string, request: string): Promise<Handed> => {
-			const canonical = opened.require(root);
-			const { handed } = await handTask(ports, await agent(), async () => ({
-				root: canonical,
-				what: `Build prototype ${workLabel({ name })} of ${projectId}.`,
-				taskFile: join(dirname(work.file(projectId, name)), `${name}-build.md`),
-				task: prototypeBuildTask({ ...(await taskParts(projectId, name)), skill: await readSkillText(BUILD_SKILL), request }),
-			}));
-			return handed;
 		},
 		handPrototypeAddress: async (root: string, projectId: string, name: string, comment: CommentRef, newVersion: boolean): Promise<HandedComment> => {
 			const canonical = opened.require(root);

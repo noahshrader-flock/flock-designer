@@ -3,9 +3,9 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'no
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { freshTip, warmTip } from '../src/core/services/platform/fetch';
+import { freshTip } from '../src/core/services/platform/fetch';
 import { git } from '../src/core/services/platform/git';
-import { eventually, g } from './fixtures';
+import { g } from './fixtures';
 
 let home: string;
 let origin: string;
@@ -184,23 +184,7 @@ describe('when origin cannot be read', () => {
 	});
 });
 
-describe('one fetch for picking a branch and starting work', () => {
-	it('uses the fetch started when the branch was picked, without fetching again', async () => {
-		commitIn(other, 'b.txt', '2');
-		g(other, 'push', '-q');
-		warmTip(mine, 'develop');
-		await eventually(() => expect(g(mine, 'rev-parse', 'origin/develop')).toBe(g(origin, 'rev-parse', 'develop')));
-		// Origin moves again, but the fetch of a moment ago is the one used.
-		commitIn(other, 'c.txt', '3');
-		g(other, 'push', '-q');
-		expect(await freshTip(mine, 'develop')).toMatchObject({ standing: 'behind', behind: 1 });
-	});
-
-	it('never throws from a warm start, whatever the branch', () => {
-		expect(() => warmTip(mine, 'no-such-branch')).not.toThrow();
-		expect(() => warmTip(mine, '--upload-pack=touch /tmp/x')).not.toThrow();
-	});
-
+describe('a branch to start work on', () => {
 	it('refuses a branch name that could be read as an option, and names one that is not there', async () => {
 		await expect(freshTip(mine, '--upload-pack=x')).rejects.toThrow('is not a branch name DSNR can read');
 		await expect(freshTip(mine, 'no-such-branch')).rejects.toThrow('There is no branch called no-such-branch in mine.');

@@ -6,32 +6,26 @@ design repository, so making one changes nothing engineering owns.
 
 ## Start one
 
-1. In the DSNR panel, press **New prototype** (or the + at the top of the panel).
-2. Give it a name, and say what it should explore. Write it the way you would brief a colleague. A Figma link to one
-   screen helps, and you can drag screenshots into the agent's conversation before you start it.
-3. Pick a folder for it if you like, so related projects sit together.
-4. Press the button at the bottom. It names your agent (Create with Claude Code, with Codex or with Copilot), and says **Create prototype** until you have chosen one.
+Ask your agent, in the product: "Create a prototype of a history of alerts, filterable by camera and by day." Write it
+the way you would brief a colleague. A Figma link to one screen helps, and you can drag screenshots into the conversation.
 
-The agent opens with the task typed in. In Claude Code and Copilot, press Enter there to start it. Codex opens with the
-task's file attached and its line on your clipboard: paste it and press Enter. DSNR tells you where it went, and which code
-it is modeled on.
+The agent runs `dsnr new-prototype`, which starts the project with your words as its brief and gives the agent its task,
+including which code it is modeled on. To put the project in a folder, use **Assign folder…** from its menu in the panel.
 
-If the product's packages are not installed on your computer, DSNR says so first and offers **Install packages**.
-
-You can also start one by asking your agent in the product ("prototype a history of alerts"). It runs the same steps
-through `dsnr new-prototype`.
+If the product's packages are not installed on your computer, the agent is told so, with what to run, before anything
+is made.
 
 ## What happens while it builds
 
 - DSNR starts the project, with your words as its brief, and your list shows it under its name as *Building…* while the agent works.
-  Nothing of it is shared yet: it is recorded as *Version 1*, and reaches everyone, once its first page is saved. If you
-  never start the agent, nothing is made for anyone else; delete it from its menu.
+  Nothing of it is shared yet: it is recorded as *Version 1*, and reaches everyone, once its first page is saved. If it
+  is never built, nothing is made for anyone else; delete it from its menu.
 - The prototype is *modeled on* the branch the product is on: DSNR notes exactly which commit, fetching the latest of it
   first. The agent reads the product's code as it was at that moment, so the prototype matches it.
 - The agent writes one React file and builds it into a page. It uses the product's own components and design system, and
   invents only the data.
-- When the page is built, DSNR saves it to the design repository by itself, draws its picture for the project list, and
-  publishes it. You do not press anything.
+- When the page is built, the agent saves it to the design repository, as its task says, and DSNR draws its picture for
+  the project list and publishes it. You do not press anything.
 
 ## Review it
 
@@ -123,8 +117,8 @@ DSNR commits and pushes these to GitHub for you, whenever they change: see [Comm
 
 ## If something goes wrong
 
-- *"A prototype is built from … and its packages are not installed on this machine yet."* Press **Install packages**, or run
-  the product's install yourself.
+- *"Prototypes are built from the real design system, and … is not installed in …"* Run the product's install, as the
+  message says, then ask again.
 - *"No agent is signed in here."* Sign in to Claude Code, Codex or GitHub Copilot, then start again.
 - *"The product is not on a branch."* Check out a branch in the product first.
 - *"The prototype did not build."* The agent sees the error and fixes it. If it stopped, ask it to try again.

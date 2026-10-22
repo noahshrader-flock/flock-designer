@@ -49,6 +49,6 @@ Publishing needs GitHub's own command line, `gh`, signed in (`gh auth login`).
 
 ## Why there is a command at all
 
-The panel is one way in; an agent working in the product is another. Both should do exactly the same thing, so both use the
-same code: a prototype started from the command is recorded, built and saved exactly as one started from the panel, and
-appears in the panel the next time it is open.
+A prototype is started by the agent working in the product, so the command is the way in: the panel shows and reviews
+what it makes. Both use the same code, so a prototype started from the command is recorded, built and saved exactly as
+the panel reads it, and appears there the next time it is open.

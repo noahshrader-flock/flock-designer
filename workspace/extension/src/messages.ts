@@ -18,8 +18,6 @@ export interface PageAsks {
 	/** Hands the open repository that is not set up to the person's agent, to set it up. */
 	setUp(): Promise<Result<null>>;
 	/** Asked of the extension, which knows whether one can be started. */
-	askNewPrototype(): Promise<Result<null>>;
-	newPrototype(title: string, task: string, folder: string | null): Promise<Result<null>>;
 	codebase(action: CodebaseAction, projectId: string): Promise<Result<null>>;
 	/** The four that follow name the project only: its newest version is found as it is when this is asked, not as the list shows it. */
 	openReview(projectId: string): Promise<Result<null>>;
@@ -44,8 +42,6 @@ export const ASKS = [
 	'chooseDesignSystem',
 	'getStarted',
 	'setUp',
-	'askNewPrototype',
-	'newPrototype',
 	'codebase',
 	'openReview',
 	'openReviewInBrowser',
@@ -170,7 +166,6 @@ export type HostMessage =
 	| { type: 'open-dialog'; dialog: PanelDialog };
 
 export type PanelDialog =
-	| { kind: 'new' }
 	| { kind: 'assign'; projectId: string }
 	| { kind: 'rename'; projectId: string }
 	/** `error`: why the last try was refused, when it is opened again to say so. */
@@ -185,7 +180,7 @@ export type PanelDialog =
 const CALLS = new Set<string>([...INVOKE, ...ASKS]);
 
 /** More is not what a person wrote in a box. */
-export const LIMITS = { title: 300, task: 4000, folder: 100 };
+export const LIMITS = { title: 300 };
 
 /** Only the envelope: what each call carries is checked where it is answered. */
 export const readMessage = (raw: unknown): PanelMessage | null => {

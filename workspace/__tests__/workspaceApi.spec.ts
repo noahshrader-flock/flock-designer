@@ -18,8 +18,8 @@ describe('the window’s API', () => {
 
 	it('sends a call by its name, with its arguments as given, and answers with what came back', async () => {
 		const { api, invoke } = make();
-		await expect(api.readCheckout?.('/a', 2)).resolves.toEqual({ ok: true, value: ['readCheckout', ['/a', 2]] });
-		expect(invoke).toHaveBeenCalledWith('readCheckout', ['/a', 2]);
+		await expect(api.branchesWithSetup?.('/a', 2)).resolves.toEqual({ ok: true, value: ['branchesWithSetup', ['/a', 2]] });
+		expect(invoke).toHaveBeenCalledWith('branchesWithSetup', ['/a', 2]);
 	});
 
 	it('listens for an event by its name, and gives back the way to stop', () => {

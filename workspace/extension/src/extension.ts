@@ -24,7 +24,6 @@ import { setupMoved, setupState } from '../../src/core/services/projects/setUp';
 import { handedTo } from '../../src/shared/handedTo';
 import { askRoutes } from './asks';
 import { commands } from './commands';
-import { type Given, newPrototype } from './newPrototype';
 import { watchPages } from './pageWatch';
 import { savedOrStop, watchFor } from './watch';
 import { coalesce } from './coalesce';
@@ -301,8 +300,6 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 		vscodeTell(`${handedTo(handed, `Setting up ${basename(setup.root)}`)} Nothing is committed: review what it writes, here, then commit it.`);
 		watchSetUp();
 	};
-	const startPrototype = (given: Given) =>
-		newPrototype({ ...here, given, product: productNow(), onChanged: projectsChanged, watchBuild: watchPrototype });
 	const localRun = (root: string): LocalRun => {
 		const declared = () => readDescriptor(root).commands;
 		return {
@@ -346,8 +343,6 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 		chooseDesignSystem: () => chooseTheDesignSystem(),
 		getStarted: () => vscode.commands.executeCommand('dsnr.getStarted'),
 		setUp: () => setUpHere(),
-		askNewPrototype: () => vscode.commands.executeCommand('dsnr.newPrototype'),
-		newPrototype: (title, task, folder) => startPrototype({ title, task, folder }),
 		codebase: (action, projectId) => codebaseWork(action, projectId),
 		openReview: (id) => latestReview(api, id).then(openReview),
 		openReviewInBrowser: (id) => latestReview(api, id).then(openReviewInBrowser),
@@ -371,9 +366,6 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 				run: (command) => vscode.commands.executeCommand(command),
 				tell: vscodeTell,
 				inPanel,
-				product: productNow,
-				api,
-				startPrototype,
 				openReview,
 				pickReview: () => pickReview(vscode.window, api, vscodeTell),
 				activeReview: () => reviews.active(),

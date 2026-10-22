@@ -61,7 +61,6 @@ describe('the extension’s manifest', () => {
 		expect(manifest().contributes.commands.map((c) => `${c.category}: ${c.title}`)).toEqual([
 			'DSNR: Open',
 			'DSNR: Get started',
-			'DSNR: New prototype',
 			'DSNR: Open a prototype for review',
 			'DSNR: Open the published page',
 			'DSNR: Copy the published page’s link',
@@ -134,16 +133,15 @@ describe('the extension’s manifest', () => {
 		]);
 	});
 
-	it('has New prototype in VS Code’s own title bar, and signs in at its far right: Sign in, or the account once signed in', () => {
+	it('signs in at the far right of VS Code’s own title bar: Sign in, or the account once signed in, and starts nothing there', () => {
 		const { commands, menus } = manifest().contributes;
 		const icon = (id: string) => commands.find((c) => c.command === id)?.icon;
 		// Ordered in the group by the number after @: the account last, so at the far right.
 		expect(menus['view/title']).toEqual([
-			{ command: 'dsnr.newPrototype', when: 'view == dsnr.panel', group: 'navigation@1' },
 			{ command: 'dsnr.signIn', when: 'view == dsnr.panel && !dsnr.signedIn', group: 'navigation@9' },
 			{ command: 'dsnr.account', when: 'view == dsnr.panel && dsnr.signedIn', group: 'navigation@9' },
 		]);
-		expect([icon('dsnr.newPrototype'), icon('dsnr.signIn'), icon('dsnr.account')]).toEqual(['$(add)', '$(sign-in)', '$(account)']);
+		expect([icon('dsnr.signIn'), icon('dsnr.account')]).toEqual(['$(sign-in)', '$(account)']);
 		expect(menus.commandPalette?.filter((m) => m.command.startsWith('dsnr.signIn') || m.command === 'dsnr.account')).toEqual([
 			{ command: 'dsnr.signIn', when: '!dsnr.signedIn' },
 			{ command: 'dsnr.account', when: 'dsnr.signedIn' },

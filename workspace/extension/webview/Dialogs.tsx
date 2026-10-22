@@ -8,7 +8,7 @@ import { asks } from './host';
 import { AccountDialog, SyncDialog } from './AccountDialogs';
 import { Dialog } from '../../src/ui/Dialog';
 import { BuildInCodebaseDialog, HandoffDialog, UpdateBranchDialog } from './CodebaseDialogs';
-import { AssignFolderDialog, DeleteProjectDialog, NewPrototypeDialog, RenameDialog } from './ProjectDialogs';
+import { AssignFolderDialog, DeleteProjectDialog, RenameDialog } from './ProjectDialogs';
 import { Message } from '../../src/ui/Message';
 
 export const PanelDialogs = ({
@@ -31,10 +31,6 @@ export const PanelDialogs = ({
 }) => {
 	const folders = projects ? foldersOf(projects) : [];
 	if (dialog === null) return null;
-	if (dialog.kind === 'new')
-		return (
-			<NewPrototypeDialog folders={folders} onStart={({ title, task, folder }) => void asks().newPrototype(title, task, folder)} onClose={onClose} />
-		);
 	if (dialog.kind === 'sync') return <SyncDialog onClose={onClose} />;
 	// Drawn by the Design System tab, where every change being tried is.
 	if (dialog.kind === 'changes') return null;

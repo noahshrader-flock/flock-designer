@@ -5,7 +5,7 @@ import { ASKS, type AskName, readMessage, readProjectArg } from '../extension/sr
 describe('a message from a page', () => {
 	it.each([
 		[{ type: 'call', id: 1, name: 'listProjects', args: [] }],
-		[{ type: 'call', id: 7, name: 'readCheckout', args: ['/a', 2] }],
+		[{ type: 'call', id: 7, name: 'branchesWithSetup', args: ['/a', 2] }],
 		[{ type: 'call', id: 8, name: 'openComponent', args: ['x'] }],
 		[{ type: 'ready' }],
 	])('%o is read', (m) => {
@@ -43,13 +43,10 @@ describe('an ask from a page', () => {
 	it.each([
 		['chooseDesignSystem', []],
 		['getStarted', []],
-		['askNewPrototype', []],
 		['codebase', ['hand-off', 'zone-coverage']],
 		['codebase', ['share', 'zone-coverage']],
 		['codebase', ['open-code', 'zone-coverage']],
 		['codebase', ['run-locally', 'zone-coverage']],
-		['newPrototype', ['Alert history', 'A history of alerts.', null]],
-		['newPrototype', ['Alert history', 'A history of alerts.', 'Maps']],
 		['openReview', ['alert-history']],
 		['openReviewInBrowser', ['alert-history']],
 		['copyReviewLink', ['alert-history']],
@@ -81,10 +78,6 @@ describe('an ask from a page', () => {
 		['openReviewInBrowser', [1]],
 		['copyReviewLink', ['../a']],
 		['openReviewPublished', ['a/../../previews-x']],
-		['newPrototype', [1, 'B', null]],
-		['newPrototype', ['A', 'x'.repeat(4001), null]],
-		['newPrototype', ['x'.repeat(301), 'B', null]],
-		['newPrototype', ['A', 'B', 'x'.repeat(101)]],
 		// Not a call the panel makes: no code preview.
 		['codebase', ['preview', 'zone-coverage']],
 		['codebase', ['push', 'zone-coverage']],

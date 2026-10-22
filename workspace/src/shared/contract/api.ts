@@ -1,5 +1,5 @@
 import type { SignInState } from '../domain/account';
-import type { Checkout, PreviewStatus, RunLogLine } from '../domain/checkout';
+import type { PreviewStatus, RunLogLine } from '../domain/checkout';
 import type { CommentAnchor, CommentRef, ReviewComment } from '../domain/comments';
 import type {
 	Catalog,
@@ -27,7 +27,6 @@ import type {
 	BaseBehind,
 	BranchAgainstBase,
 	Handed,
-	StartedPrototype,
 	MadeCover,
 	BuildInCodebasePlan,
 	OpenedPrototype,
@@ -36,7 +35,6 @@ import type {
 	Project,
 	HandedComment,
 	HandoffResult,
-	PrototypeReadiness,
 } from '../domain/projects';
 import type { PublishStatus, ShareStatus } from '../domain/publishing';
 import type { VoiceAndTone } from '../domain/voice';
@@ -50,9 +48,6 @@ import type { VoiceAndTone } from '../domain/voice';
 export type Result<T> = { ok: true; value: T } | { ok: false; error: string };
 
 export interface WorkspaceApi {
-	/** Only a checkout already opened: it never trusts a folder the window names. */
-	readCheckout(root: string): Promise<Result<Checkout>>;
-
 	/** The branches with the DSNR setup, which codebase work can start from. */
 	branchesWithSetup(root: string): Promise<Result<string[]>>;
 	/**
@@ -131,10 +126,6 @@ export interface WorkspaceApi {
 	forgetChange(kind: ChangeKind, scope: string | null): Promise<Result<null>>;
 	/** Read after bringing the library's branch up to date. */
 	voiceAndTone(): Promise<Result<VoiceAndTone>>;
-	/** The install command the repository declares (`install`), and nothing else. */
-	installPackages(root: string): Promise<Result<null>>;
-	cancelInstall(): Promise<Result<null>>;
-	onInstallLine(listener: (line: string) => void): () => void;
 	stopCommand(root: string, commandId: string): Promise<Result<PreviewStatus>>;
 	onRunLog(listener: (line: RunLogLine) => void): () => void;
 	onPreviewStatus(listener: (status: PreviewStatus) => void): () => void;
@@ -148,25 +139,10 @@ export interface WorkspaceApi {
 	shareWork(root: string, projectId: string, name: string): Promise<Result<ShareStatus>>;
 	onShareStatus(listener: (status: ShareStatus) => void): () => void;
 
-	/**
-	 * `from`: a repository on this machine and a branch to model the page on. `folder` applies to a new project only; one
-	 * that has a brief already stays where it is.
-	 */
-	createPrototype(
-		projectId: string,
-		title: string,
-		note: string,
-		from?: { root: string; branch: string },
-		folder?: string | null,
-	): Promise<Result<StartedPrototype>>;
-	/** Starts fetching the branch the checkout is on, for New: nothing waits on it, and it never fails. */
-	warmPrototypeBase(root: string): Promise<Result<null>>;
 	/** How far the version's base is behind the latest of its branch; null when that cannot be told here. */
 	prototypeBehind(projectId: string, name: string): Promise<Result<BaseBehind | null>>;
 	/** Moves the version's base to the latest of its branch and hands its rebuild on it to the agent, in place. */
 	handPrototypeRefresh(root: string, projectId: string, name: string): Promise<Result<Handed>>;
-	/** Nothing is saved or checked here: the prototype is saved when opened. */
-	handPrototypeBuild(root: string, projectId: string, name: string, request: string): Promise<Result<Handed>>;
 	/** Hands one comment to the agent, as a build is handed. Nothing is recorded until its change is built: see `saveBuilt`. */
 	handPrototypeAddress(root: string, projectId: string, name: string, comment: CommentRef, newVersion: boolean): Promise<Result<HandedComment>>;
 	publishedPage(projectId: string, name: string): Promise<Result<PageStatus>>;
@@ -180,11 +156,8 @@ export interface WorkspaceApi {
 	saveBuilt(projectId: string, name: string, from: string | null): Promise<Result<SaveOutcome>>;
 	openPrototype(projectId: string, name: string): Promise<Result<OpenedPrototype>>;
 	buildInCodebasePlan(root: string, projectId: string, name: string): Promise<Result<BuildInCodebasePlan>>;
-	prototypeReadiness(root: string): Promise<Result<PrototypeReadiness>>;
 	/** Makes the project's codebase branch (from `from`) and its record, then hands the building to the agent. */
 	buildInCodebase(root: string, projectId: string, name: string, from?: string): Promise<Result<Handed>>;
-	/** Refused, in the agent's own words, when it is missing or signed out: asked before anything is made for it. */
-	agentReady(): Promise<Result<null>>;
 	/** The person chooses, whatever is kept (Change), and it is kept as they say. */
 	chooseAgent(): Promise<Result<null>>;
 	/** The name of the agent work goes to now, said without asking; null while it is still to be asked. */
@@ -231,7 +204,6 @@ export interface WorkspaceApi {
 
 /** The window's whole reach: the pages build their API from it, and the core registers and sends by it. */
 export const INVOKE = [
-	'readCheckout',
 	'designSystemCatalog',
 	'designSystems',
 	'storyPreview',
@@ -259,11 +231,8 @@ export const INVOKE = [
 	'proposeChange',
 	'forgetChange',
 	'voiceAndTone',
-	'installPackages',
-	'cancelInstall',
 	'branchesWithSetup',
 	'stopCommand',
-	'agentReady',
 	'chooseAgent',
 	'agentShown',
 	'handOff',
@@ -271,21 +240,17 @@ export const INVOKE = [
 	'handCodebaseUpdate',
 	'handoffResult',
 	'runLocally',
-	'createPrototype',
-	'warmPrototypeBase',
 	'prototypeBehind',
 	'handPrototypeRefresh',
 	'assignFolder',
 	'renameProject',
 	'deleteProject',
-	'handPrototypeBuild',
 	'handPrototypeAddress',
 	'publishedPage',
 	'publishPage',
 	'saveBuilt',
 	'openPrototype',
 	'buildInCodebase',
-	'prototypeReadiness',
 	'buildInCodebasePlan',
 	'shareWork',
 	'publishStatus',
@@ -303,7 +268,6 @@ export const INVOKE = [
 ] as const satisfies readonly (keyof WorkspaceApi)[];
 
 export const EVENTS = {
-	onInstallLine: 'installLine',
 	onPublishStatus: 'publishStatus',
 	onShareStatus: 'shareStatus',
 	onRunLog: 'runLog',

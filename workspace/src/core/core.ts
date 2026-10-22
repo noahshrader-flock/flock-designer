@@ -8,7 +8,6 @@ import { DesignSystemsMemory } from './services/designSystem/designSystems';
 import { SourceAnswers } from './services/projects/productDesignSystem';
 import { DesignRepositoryClones } from './services/projects/discovery';
 import type { GitHubAccount } from '../codeHost/github';
-import { Installer } from './services/codebase/install';
 import { PrototypeServer } from './services/prototypes/prototypeServer';
 import { RuntimeManager } from './services/codebase/runtime';
 import { OpenedCheckouts } from './services/projects/session';
@@ -39,7 +38,6 @@ export const createCore = ({ paths, emit, ports, github, pictureRecipe }: Shell)
 	onPublishStatus: (status) => emit('onPublishStatus', status),
 	prototypesRoot: paths.prototypes,
 	prototypeServer: new PrototypeServer(),
-	installer: new Installer(),
 	designSystems: new DesignSystemsMemory(paths.designSystems),
 	sourceAnswers: new SourceAnswers(paths.designSystemSources),
 	designRepositories: new DesignRepositoryClones(paths.designRepositories),

@@ -157,9 +157,8 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 	const readiness = (root: string): PrototypeReadiness => {
 		const designSystem = readDescriptor(root).designSystem.package;
 		const pkg = join(root, 'node_modules', ...designSystem.split('/'));
-		if (!existsSync(join(pkg, 'package.json')))
-			return { ready: false, why: 'not-installed', designSystem, repository: basename(root), canInstall: false };
-		if (ctx.esbuild() === null) return { ready: false, why: 'no-bundler', designSystem, repository: basename(root), canInstall: false };
+		if (!existsSync(join(pkg, 'package.json'))) return { ready: false, why: 'not-installed', designSystem, repository: basename(root) };
+		if (ctx.esbuild() === null) return { ready: false, why: 'no-bundler', designSystem, repository: basename(root) };
 		// Ready even when its package.json gives no version: it is installed.
 		return { ready: true, designSystem, version: installedVersion(join(root, 'node_modules'), designSystem) };
 	};
@@ -570,7 +569,6 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		hasProject,
 		record,
 		sourceText,
-		readiness,
 		start,
 		sources,
 		behind,

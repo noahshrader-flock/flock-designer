@@ -206,7 +206,7 @@ the username beside the mark once signed in. A prototype's review is its page on
 repository and served from this machine, in an editor tab.
 
 With no product open, the panel says so and offers **Get started** (**DSNR: Get started**): VS Code's own Git: Clone,
-which offers to open what it cloned; New prototype then offers the install.
+which offers to open what it cloned.
 
 **Dialogs and menus are in the panel**, in VS Code's own look, rather than boxes at the top of the window: a webview
 cannot draw outside its side bar, so a dialog covers the panel, as Claude Code's popovers are in its own. Each project has
@@ -220,17 +220,12 @@ title bar's account action: Sign out of DSNR) and the sync (the status bar's ite
 quick pick at the top is kept for the command palette's lists of many: **Open a component…** and **Open a prototype for
 review**.
 
-**New prototype** (the **+** in its title bar, **DSNR: New prototype**, or the panel's button) says first, before
-anything is asked, what stands in the way (no product open, Claude Code missing or signed out), then opens a dialog in
-the panel for the name, what it should explore (as many lines as it takes) and its folder, then says if the product's
-packages are not installed (with Install packages when it says how), and hands its build to Claude Code in this window,
-from the branch the product is on, with the task typed in: press Enter there. Until its first page is saved it is this
+**A prototype is started by asking the agent** in the product ("Create a prototype of …"): it runs `dsnr new-prototype`
+(`skills/start-prototype.md`), and the panel has no form or button of its own. Until its first page is saved it is this
 machine's alone: its card keeps its name, says Building… under it and shimmers, with only Delete… in its menu; its record
-waits beside its built files (`pendingPrototypes`), and the records sync holds its folder back. The first save records
-it as it was started and shares it, and its picture appears in the list. The command can also be given its answers
-(`{ title, task, folder }`), as **DSNR: Open a prototype for review** can be given its review, so a keybinding or another
-extension can run them; called that way, a failure is also returned to the caller. The `.vsix` carries esbuild, which
-builds a prototype's page, for the machine it was packaged on.
+waits beside its built files (`pendingPrototypes`), and the records sync holds its folder back. The agent saves it as its
+task says, which records it as it was started and shares it, and its picture appears in the list. The `.vsix` carries
+esbuild, which builds a prototype's page, for the machine it was packaged on.
 
 **Commenting in a review:** the page's own review bar comments through DSNR rather than with a token of its own. The
 page asks DSNR's review tab, and the tab asks the extension (`shared/reviewRelay.ts`): the core's comment calls, only on
@@ -334,7 +329,7 @@ there.
 **Folders:** the panel lists the projects under a section for each folder, those in none last, as a grid of cards, which
 it starts in, or a list of rows (the icons at the right above them, remembered with the tab). **Assign folder…**, from a
 project's menu, its right-click menu or a review tab's menu, opens a dialog in the panel to put it in a folder, a new
-one, or none, with the same folder choice New prototype has. It opens at once with the projects the panel has, and, as
+one, or none. It opens at once with the projects the panel has, and, as
 every project's dialog does, has the list read again behind it, so it acts on the project as it is. **Rename…**, beside
 it, changes the name people see, the first heading of its `brief.md` (`renameProject`), and builds the published site
 again; the project's id, which its folder, links, branches and comments are named by, stays as it was. **Delete…**,
@@ -481,9 +476,8 @@ panel's and the review bar's harnesses only set up the page each runs in.
 Claude Code, so do it on a test project you can delete:
 
 1. Install DSNR (above) and open a product. Sign in.
-2. **New prototype** (the **+** in DSNR's title bar): name it something like "DSNR test", say what it explores, and choose
-   no folder. Press Enter in Claude Code's panel, where the task is typed in. When it is built, its picture appears in
-   the list.
+2. Ask Claude Code, in the product: "Create a prototype called DSNR test of …". When it has built and saved it, as its
+   task says, its picture appears in the list.
 3. In the review: **Sign in to comment** if it asks, then **Comment**, click something on the page, write a comment, and
    save it (drag the box by the handle at its top to see what it covers; the next box opens at its pin again). Check the
    comment is on the design repository's GitHub issues, and in the app.

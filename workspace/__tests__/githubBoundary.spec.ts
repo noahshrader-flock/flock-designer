@@ -46,7 +46,6 @@ const TO_MOVE: Record<string, string> = {
 	'src/core/services/publishing/profileNames.ts': 'a person’s profile, `/users/<login>` (2.3)',
 	'src/cli/wcagEdition.ts': 'the weekly WCAG check opens an issue by its REST path (2.3)',
 	'src/core/services/platform/ghCli.ts': 'the person’s own `gh`; GitLab’s is `glab` (Phase 4)',
-	'src/core/services/codebase/install.ts': 'says how to sign npm in to GitHub Packages when a private package is refused (Phase 6)',
 	'extension/src/github.ts': 'VS Code’s built-in GitHub sign-in; GitLab needs its own account (3.1)',
 };
 

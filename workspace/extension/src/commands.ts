@@ -1,16 +1,11 @@
-import type { WorkspaceApi } from '../../src/shared/contract';
 import { readReview } from './asks';
 import { type HostMessage, type Review, readProjectArg } from './messages';
-import { type Given, readAsked, readyToStart } from './newPrototype';
 
 /** What the commands need of VS Code and of the rest of the extension: a slice, so a test gives its own. */
 export interface CommandDeps {
 	run: (command: string) => PromiseLike<unknown>;
 	tell: (message: string) => void;
 	inPanel: (message: HostMessage) => Promise<void>;
-	product: () => { root: string | null; why: string };
-	api: Pick<WorkspaceApi, 'agentReady' | 'warmPrototypeBase'>;
-	startPrototype: (given: Given) => Promise<void>;
 	openReview: (review: Review) => Promise<void>;
 	pickReview: () => Promise<Review | null | undefined>;
 	activeReview: () => Review | undefined;
@@ -33,20 +28,6 @@ export const commands = (d: CommandDeps): Record<string, (raw?: unknown) => unkn
 		return act(review).catch(d.failed);
 	};
 	return {
-		'dsnr.newPrototype': (raw) => {
-			const asked = readAsked(raw);
-			if (asked === 'ask')
-				return readyToStart({ product: d.product(), api: d.api })
-					.then(() => {
-						// While the person writes what to explore, the branch it is modeled on is fetched.
-						const { root } = d.product();
-						if (root !== null) void d.api.warmPrototypeBase(root);
-						return d.inPanel({ type: 'open-dialog', dialog: { kind: 'new' } });
-					})
-					.catch(d.failed);
-			if (!asked) throw new Error('DSNR: New prototype was given something that is not a name and what it should explore.');
-			return d.startPrototype(asked).catch(d.failedFor(true));
-		},
 		'dsnr.open': () => d.run('workbench.view.extension.dsnr'),
 		'dsnr.getStarted': () => d.run('git.clone'),
 		'dsnr.openReview': async (raw) => {

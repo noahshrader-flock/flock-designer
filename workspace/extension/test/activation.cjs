@@ -48,35 +48,32 @@ exports.run = async () => {
 	await vscode.commands.executeCommand('dsnr.openReview', { projectId: 'fixture', name: 'v1', title: 'Fixture · Version 1' });
 	await until('the review opening', () => tabs().includes('Fixture · Version 1'));
 
-	// This VS Code has no Claude Code, so the person is given its command on the clipboard; the agent is then stood in for.
-	await vscode.commands.executeCommand('dsnr.newPrototype', { title: 'Made here', task: 'Show a heading.', folder: null });
-	let command = '';
-	await until('the build being handed over', async () => /claude/.test((command = await vscode.env.clipboard.readText())), 60000);
-	const task = /(\S+made-here\/v1-build\.md)/.exec(command)?.[1];
-	assert.ok(task && fs.existsSync(task), 'its task is written beside the prototype');
-	const said = fs.readFileSync(task, 'utf8');
+	// Started as an agent starts one, in the product, by DSNR's command line: what it prints is the task, with the build
+	// and the save it names, run here as the agent runs them. The panel has no start of its own.
+	const [folder] = vscode.workspace.workspaceFolders ?? [];
+	assert.ok(folder, 'the product is open');
+	const inProduct = (command) => execSync(command, { cwd: folder.uri.fsPath, env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' }, encoding: 'utf8' });
+	const said = inProduct(
+		`node "${path.join(__dirname, '../../bin/dsnr.mjs')}" new-prototype --project made-here --title "Made here" --note "Show a heading."`,
+	);
 	assert.ok(said.includes('Show a heading.'), 'its task has what it should explore');
-	// As the agent does: the page, then the build the task names, which is what DSNR saves from.
+	const source = /`([^`]*made-here\/v1\.tsx)`/.exec(said)?.[1];
+	assert.ok(source, 'its task says where the page is written');
 	fs.writeFileSync(
-		path.join(path.dirname(task), 'v1.tsx'),
+		source,
 		'export default function Page() { return <main><h1 style={{ background: "#123", color: "#fff", padding: 160 }}>Made here</h1></main>; }\n',
 	);
 	const build = /with exactly: `([^`]+)`/.exec(said)?.[1];
 	assert.ok(build, 'its task says how to build it');
-	execSync(build, { env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' }, stdio: 'ignore' });
-	// Nobody opens it: DSNR must see by itself that the build is done, and save it.
-	const [folder] = vscode.workspace.workspaceFolders ?? [];
-	assert.ok(folder, 'the product is open');
-	const covers = path.join(folder.uri.fsPath, '../flock-designer/projects/made-here/covers');
-	await until(
-		'its picture being drawn, with nobody opening it',
-		() => fs.existsSync(covers) && fs.readdirSync(covers).some((f) => f.endsWith('.jpg')),
-		90000,
-	);
+	inProduct(build);
+	const save = /Save it, with exactly: `([^`]+)`/.exec(said)?.[1];
+	assert.ok(save, 'its task says how to save it');
+	inProduct(save);
 	await vscode.commands.executeCommand('dsnr.openReview', { projectId: 'made-here', name: 'v1', title: 'Made here · Version 1' });
 	await until('the new prototype opening', () => tabs().includes('Made here · Version 1'), 60000);
+	const covers = path.join(folder.uri.fsPath, '../flock-designer/projects/made-here/covers');
+	await until('its picture being drawn', () => fs.existsSync(covers) && fs.readdirSync(covers).some((f) => f.endsWith('.jpg')), 90000);
 	// Only that the dialogs' commands run without failing: this cannot see inside a webview.
-	await vscode.commands.executeCommand('dsnr.newPrototype');
 	await vscode.commands.executeCommand('dsnr.assignFolder', { webviewSection: 'project', projectId: 'made-here' });
 	await vscode.commands.executeCommand('dsnr.sync');
 	await vscode.commands.executeCommand('dsnr.account');
@@ -96,6 +93,6 @@ exports.run = async () => {
 	}
 
 	console.log(
-		`dsnr-test: activated; its commands are there; Fixture · Version 1 opened for review; Made here was started, handed to Claude Code, saved when built, pictured and opened${designSystem}. Took: ${took.join(', ')}`,
+		`dsnr-test: activated; its commands are there; Fixture · Version 1 opened for review; Made here was started, built and saved by the command line as its task says, then pictured and opened${designSystem}. Took: ${took.join(', ')}`,
 	);
 };

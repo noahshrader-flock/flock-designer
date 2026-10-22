@@ -265,98 +265,6 @@ describe('dialogs and menus, in the panel', () => {
 	const items = () => allByRole('menuitem');
 	const item = (label: string) => menuItem(items(), label);
 
-	describe('New prototype', () => {
-		it('opens in the panel, not as a box at the top, when the extension says it can be started (its title bar’s +, or the empty list’s button)', async () => {
-			await showOpen(OPEN, []);
-			await say({ type: 'open-dialog', dialog: { kind: 'new' } });
-			expect(dialog()?.getAttribute('aria-label')).toBe('New prototype');
-			// The way out is the X, not a Cancel beside it.
-			expect([...dialog()!.querySelectorAll('.dialog-buttons button')].map((b) => b.textContent)).toEqual(['Create with Claude Code']);
-			await press(closeX());
-			expect(dialog()).toBeNull();
-		});
-
-		it('names the agent it hands the prototype to on its button, whichever it is, and says Create prototype while it is still to be asked', async () => {
-			await showOpen(OPEN, []);
-			await say({ type: 'open-dialog', dialog: { kind: 'new' } });
-			const label = () => dialog()!.querySelector('button[type="submit"]')?.textContent;
-			for (const name of ['Codex', 'Copilot']) {
-				await share('agent', { name });
-				expect(label()).toBe(`Create with ${name}`);
-			}
-			await share('agent', { name: null });
-			expect(label()).toBe('Create prototype');
-		});
-
-		it('is asked of the extension by the empty list’s button, which says whether it can be started, and opens nothing itself', async () => {
-			await showOpen(OPEN, []);
-			await press(button('New prototype'));
-			expect(lastAsk()).toEqual(['askNewPrototype', []]);
-			expect(dialog()).toBeNull();
-		});
-
-		it('names each field by its label alone', async () => {
-			await showOpen();
-			await say({ type: 'open-dialog', dialog: { kind: 'new' } });
-			expect(field('What should it explore?').labels?.[0]?.textContent).toBe('What should it explore?');
-			expect(field('Name').labels?.[0]?.textContent).toBe('Name');
-		});
-
-		it('asks a name, what it should explore and its folder, and is made only once there is a name and something to explore', async () => {
-			await showOpen();
-			await say({ type: 'open-dialog', dialog: { kind: 'new' } });
-			expect(submit().disabled).toBe(true);
-			await type(field('Name'), '!!!');
-			await type(field('What should it explore?'), 'A history of alerts.');
-			expect(submit().disabled).toBe(true);
-			await type(field('Name'), 'Alert history 2');
-			expect(submit().disabled).toBe(false);
-			await type(field('What should it explore?'), '   ');
-			expect(submit().disabled).toBe(true);
-		});
-
-		it('offers the folders there are, none and a new one, and sends its answers to the extension, closing', async () => {
-			await showOpen();
-			await say({ type: 'open-dialog', dialog: { kind: 'new' } });
-			expect([...field('Folder').querySelectorAll('option')].map((o) => o.textContent)).toEqual(['No folder', 'Admin', 'Maps', 'New folder…']);
-			await type(field('Name'), 'Alert history 2');
-			await type(field('What should it explore?'), 'A history of alerts.');
-			await press(submit());
-			expect(lastAsk()).toEqual(['newPrototype', ['Alert history 2', 'A history of alerts.', null]]);
-			expect(dialog()).toBeNull();
-		});
-
-		it('takes an existing folder, or a new one named in the dialog', async () => {
-			await showOpen();
-			await say({ type: 'open-dialog', dialog: { kind: 'new' } });
-			await type(field('Name'), 'One');
-			await type(field('What should it explore?'), 'Two.');
-			await choose(field('Folder'), 'Maps');
-			await press(submit());
-			expect(lastAsk()).toEqual(['newPrototype', ['One', 'Two.', 'Maps']]);
-			await say({ type: 'open-dialog', dialog: { kind: 'new' } });
-			await type(field('Name'), 'One');
-			await type(field('What should it explore?'), 'Two.');
-			await choose(field('Folder'), 'New folder…');
-			expect(submit().disabled).toBe(true);
-			await type(field('New folder'), ' Zones ');
-			await press(submit());
-			expect(lastAsk()).toEqual(['newPrototype', ['One', 'Two.', 'Zones']]);
-		});
-
-		it('closes on Escape, nothing sent, and gives the focus back to what opened it', async () => {
-			await showOpen(OPEN, []);
-			const opener = button('New prototype');
-			opener.focus();
-			await say({ type: 'open-dialog', dialog: { kind: 'new' } });
-			expect(document.activeElement?.closest('[role="dialog"]')).not.toBeNull();
-			await key('Escape', { on: dialog()! });
-			expect(dialog()).toBeNull();
-			expect(document.activeElement).toBe(opener);
-			expect(panelSaid().some((m) => m.type === 'new-prototype')).toBe(false);
-		});
-	});
-
 	describe('a project’s menu', () => {
 		it('is on each project, a popover of what it offers, closed by Escape or a press elsewhere', async () => {
 			await showOpen();
@@ -1561,11 +1469,14 @@ describe('Projects', () => {
 		expect(body().textContent).toContain('GitHub could not be reached.');
 	});
 
-	it('says when there are none, and offers to start one', async () => {
+	it('says when there are none, and that one is started by asking the agent, which it names: there is no form for it here', async () => {
 		await showOpen(OPEN, []);
 		expect(body().querySelector('.empty [data-part="title"]')?.textContent).toBe('No projects yet');
-		await press(button('New prototype'));
-		expect(lastAsk()).toEqual(['askNewPrototype', []]);
+		await share('agent', { name: null });
+		expect(body().querySelector('.empty')?.textContent).toContain('Ask the agent to create a prototype, for example');
+		await share('agent', { name: 'Claude Code' });
+		expect(body().querySelector('.empty')?.textContent).toContain('Ask Claude Code to create a prototype, for example');
+		expect(body().querySelector('.empty button')).toBeNull();
 	});
 });
 

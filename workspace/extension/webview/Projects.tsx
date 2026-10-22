@@ -32,6 +32,7 @@ import { Waiting } from '../../src/ui/Spinner';
 import { Message } from '../../src/ui/Message';
 import { Collection, CollectionItem } from '../../src/ui/Collection';
 import { asks } from './host';
+import { useAgentName } from './AgentInUse';
 
 const meta = (p: Project, labels: string[]) => {
 	const versions = savedVersions(p.work).length;
@@ -192,6 +193,7 @@ export const Projects = ({
 }) => {
 	const [search, setSearch] = useState('');
 	const [scope, setScope] = useState<Scope>('here');
+	const agent = useAgentName();
 	const productRepository = product.open ? product.repository : null;
 	const offered = scopesOffered({ hasProduct: productRepository !== null, signedIn: login !== null });
 	const shownScope = scopeShown(scope, offered);
@@ -271,14 +273,11 @@ export const Projects = ({
 				</div>
 			)}
 			{projects.length === 0 ? (
-				// Asked of the extension, which knows whether one can be started, and opens the dialog (`open-dialog`) if so.
-				<Message
-					size="page"
-					icon="folder-library"
-					title="No projects yet"
-					action={{ label: 'New prototype', onPress: () => void asks().askNewPrototype() }}
-				>
-					<p>A prototype you start appears here, with its versions and its open comments.</p>
+				// A prototype is started by asking the agent in its own chat, where the brief is written: the panel has no form for it.
+				<Message size="page" icon="folder-library" title="No projects yet">
+					<p>
+						{`Ask ${agent} to create a prototype, for example “Create a prototype of an alert history, filterable by camera and by day.” It appears here, with its versions and its open comments.`}
+					</p>
 				</Message>
 			) : matching.length === 0 || (here.length === 0 && search.trim() !== '') ? (
 				<NoMatches thing="project" search={search} onClear={() => setSearch('')} />

@@ -9,12 +9,6 @@ const given = (more: Partial<CommandDeps> = {}) => {
 		run: vi.fn(async () => undefined),
 		tell: vi.fn(),
 		inPanel: vi.fn(async () => undefined),
-		product: () => ({ root: '/product', why: '' }),
-		api: {
-			agentReady: vi.fn(async () => ({ ok: true as const, value: null })),
-			warmPrototypeBase: vi.fn(async () => ({ ok: true as const, value: null })),
-		},
-		startPrototype: vi.fn(async () => undefined),
 		openReview: vi.fn(async () => undefined),
 		pickReview: vi.fn(async () => review),
 		activeReview: () => undefined,
@@ -35,36 +29,6 @@ const given = (more: Partial<CommandDeps> = {}) => {
 };
 
 describe('DSNR’s commands', () => {
-	it('ask for a new prototype in the panel when run from a menu, and say why not when no product is open', async () => {
-		const open = given();
-		await open.run('dsnr.newPrototype');
-		expect(open.d.inPanel).toHaveBeenCalledWith({ type: 'open-dialog', dialog: { kind: 'new' } });
-		// Fetched while the person writes what to explore, so starting does not wait for the network.
-		expect(open.d.api.warmPrototypeBase).toHaveBeenCalledWith('/product');
-		const none = given({ product: () => ({ root: null, why: 'Open a product first.' }) });
-		await none.run('dsnr.newPrototype');
-		expect(none.d.inPanel).not.toHaveBeenCalled();
-		expect(none.d.failed).toHaveBeenCalledWith(new Error('Open a product first.'));
-		// Before the dialog, so nobody fills it in for an agent that cannot take it.
-		const out = given({
-			api: {
-				agentReady: vi.fn(async () => ({ ok: false as const, error: 'Claude Code is not signed in.' })),
-				warmPrototypeBase: vi.fn(async () => ({ ok: true as const, value: null })),
-			},
-		});
-		await out.run('dsnr.newPrototype');
-		expect(out.d.inPanel).not.toHaveBeenCalled();
-		expect(out.d.api.warmPrototypeBase).not.toHaveBeenCalled();
-		expect(out.d.failed).toHaveBeenCalledWith(new Error('Claude Code is not signed in.'));
-	});
-
-	it('start a prototype they are given, and refuse one that is not a name and a task', async () => {
-		const { d, run } = given();
-		await run('dsnr.newPrototype', { title: 'Made here', task: 'Show a heading.', folder: null });
-		expect(d.startPrototype).toHaveBeenCalledWith({ title: 'Made here', task: 'Show a heading.', folder: null });
-		expect(() => run('dsnr.newPrototype', { title: 42, task: 'x' })).toThrow(/not a name and what it should explore/);
-	});
-
 	it('open the review they are given, or the one picked, and nothing when the pick is cancelled', async () => {
 		const asked = given();
 		await asked.run('dsnr.openReview', review);

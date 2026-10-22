@@ -16,10 +16,10 @@ describe('the panel’s calls to the core', () => {
 	it('send a call by its name with an id, and resolve with the answer that comes back with it', async () => {
 		const { api, sent, deliver } = wire();
 		const a = api.listProjects?.() as Promise<unknown>;
-		const b = api.readCheckout?.('/a') as Promise<unknown>;
+		const b = api.branchesWithSetup?.('/a') as Promise<unknown>;
 		expect(sent).toEqual([
 			{ type: 'call', id: 1, name: 'listProjects', args: [] },
-			{ type: 'call', id: 2, name: 'readCheckout', args: ['/a'] },
+			{ type: 'call', id: 2, name: 'branchesWithSetup', args: ['/a'] },
 		]);
 		deliver({ type: 'answer', id: 2, result: { ok: true, value: 'b' } });
 		deliver({ type: 'answer', id: 1, result: { ok: true, value: 'a' } });
