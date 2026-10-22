@@ -25,6 +25,12 @@ node ../flock-designer/workspace/bin/dsnr.mjs new-prototype --prototype <id> --t
   never a secret, and no customer's or person's details. DSNR takes out secrets, email addresses and phone numbers from
   what it keeps, but it cannot tell a name from any other word.
 - It is modeled on the branch the repository is on; `--from <branch>` names another.
+- **A prototype of what you have been working on together** ("make a quick prototype of this"): a prototype is a new page
+  built from the real components, not a copy of the branch, so what was worked on reaches it only as you carry it.
+  Write `--note` from what the person asked for and decided in the conversation, as a short brief rather than the
+  conversation. Read the uncommitted changes this conversation made (`git status`, `git diff`) and build what they show;
+  other changes in the working tree are not part of it. Leave every change as it is: they are the person's work in
+  progress, not the prototype's, and are neither reverted nor committed for it.
 
 If you were sent here, the path is decided: it is a prototype. Do not ask whether to prototype or build it in the
 codebase.
