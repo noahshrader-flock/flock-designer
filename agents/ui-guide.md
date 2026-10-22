@@ -1,7 +1,7 @@
 # Building UI in a Flock product
 
 **Shared by every product, and for every agent.** How to build UI here, in whatever tool you work in: Claude Code, GitHub
-Copilot or another. It is what `dsnr.md` starts from; DSNR's own workflow (its paths, prototypes, receipts, reviews and
+Copilot or another. It is what `dsnr.md` starts from; DSNR's own workflow (its paths, prototypes, reviews and
 Handoff) is in that file, and none of it is needed to follow this one. **DSNR puts this file at the start of every task
 it gives an agent** (a prototype, a fix, the move into the code, codebase work, Handoff), so following it never depends
 on opening it. Everything true of a product is in its `.dsnr/` folder, in the files listed under **What to read**;

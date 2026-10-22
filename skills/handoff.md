@@ -65,7 +65,7 @@ still gets what it got, with the request it really sends.
 `HANDOFF.md` at the root of the branch, committed with the work: it is the first thing seen on checkout.
 Say in it that it is to be deleted when the work merges.
 
-**The design record stays in the prototype's folder** (brief, context receipt, audit, both reviews). `HANDOFF.md` tells
+**The design record stays in the prototype's folder** (brief, audit, both reviews). `HANDOFF.md` tells
 engineering what they picked up; the prototype folder is why it was built that way. Do not duplicate one into the other.
 
 **It tells them what the diff does not say. Not a summary of the diff, not a case for the work.**

@@ -71,7 +71,7 @@ madeOnce((d) => {
 describe('publishing records', () => {
 	it('publishes a new prototype folder, and the tree is clean afterwards', async () => {
 		write(mine, 'prototypes/new-view/brief.md', '# New view\n');
-		write(mine, 'prototypes/new-view/context-receipt.md', 'receipt');
+		write(mine, 'prototypes/new-view/notes.md', 'notes');
 		write(mine, 'prototypes/new-view/work.json', `${JSON.stringify([record('codebase')], null, 2)}\n`);
 		const r = await syncRecords(mine, nothingStarted);
 		expect(r).toEqual({ published: ['new-view'], problems: [] });
@@ -218,12 +218,12 @@ describe('when someone else has published too', () => {
 describe('a prototype started here and not saved yet', () => {
 	it('is held back whole, its brief and what the agent wrote, while another prototype publishes', async () => {
 		write(mine, 'prototypes/started/brief.md', '# Started\n');
-		write(mine, 'prototypes/started/context-receipt.md', 'receipt');
+		write(mine, 'prototypes/started/notes.md', 'notes');
 		write(mine, 'prototypes/other/brief.md', '# Other\n');
 		const r = await syncRecords(mine, (id) => id === 'started');
 		expect(r).toEqual({ published: ['other'], problems: [] });
 		expect(remoteHas('prototypes/started/brief.md')).toBe(false);
-		expect(remoteHas('prototypes/started/context-receipt.md')).toBe(false);
+		expect(remoteHas('prototypes/started/notes.md')).toBe(false);
 		expect(remoteHas('prototypes/other/brief.md')).toBe(true);
 		expect(existsSync(join(mine, 'prototypes/started/brief.md'))).toBe(true);
 	});
@@ -231,7 +231,7 @@ describe('a prototype started here and not saved yet', () => {
 	it('is published whole, once its first page is saved and recorded', async () => {
 		const started = (id: string) => id === 'started';
 		write(mine, 'prototypes/started/brief.md', '# Started\n');
-		write(mine, 'prototypes/started/context-receipt.md', 'receipt');
+		write(mine, 'prototypes/started/notes.md', 'notes');
 		await syncRecords(mine, started);
 		write(mine, 'prototypes/started/v1.html', '<p>');
 		write(
@@ -240,7 +240,7 @@ describe('a prototype started here and not saved yet', () => {
 			`${JSON.stringify([record('v1', { prototypeId: 'started', branch: 'prototype/started/v1' })], null, 2)}\n`,
 		);
 		expect(await syncRecords(mine, started)).toEqual({ published: ['started'], problems: [] });
-		for (const f of ['brief.md', 'context-receipt.md', 'v1.html', 'work.json']) expect(remoteHas(`prototypes/started/${f}`), f).toBe(true);
+		for (const f of ['brief.md', 'notes.md', 'v1.html', 'work.json']) expect(remoteHas(`prototypes/started/${f}`), f).toBe(true);
 		expect(g(mine, 'status', '--porcelain')).toBe('');
 	});
 

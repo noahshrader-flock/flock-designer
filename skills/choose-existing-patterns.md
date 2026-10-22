@@ -22,7 +22,7 @@ nouns. When you find a match, read it fully: its layout, its view states, where 
 
 **Record where each choice came from.** Every significant layout, pattern, or interaction decision needs a named source:
 a real product view with its path, a `.dsnr` rule, or an explicitly labeled proposal. "It seemed right" is not a source.
-These go into the context receipt and the report.
+These go into your summary.
 
 ## 2. Check the design system
 

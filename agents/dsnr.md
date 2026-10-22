@@ -10,7 +10,7 @@ architecture and readiness.
 
 **Start from `ui-guide.md`, and read it in full before anything else.** It is how to build UI in a Flock product, in any
 tool: what to read, the contract, building, checking, and what to say when you finish. This file is DSNR's workflow on
-top of it: the two paths, prototypes and receipts, the reviews, Handoff. Each rule is in one of the two files, not both.
+top of it: the two paths, the prototype folder, the reviews, Handoff. Each rule is in one of the two files, not both.
 
 ## Which path
 
@@ -60,24 +60,19 @@ is wiring the plumbing, not rebuilding yours.
 
 ## Is this a new prototype, or a later round of one?
 
-**If `prototypes/<prototype-id>/context-receipt.md` already exists, start there.** A later round does not re-derive
-what the previous one recorded and a human corrected. Read the brief, receipt and review, then **re-verify only what can
-have moved**: the installed design system version, the baseline commit if the branch moved, and whatever the new feedback
-touches. Write this round's receipt as a **diff against the last one**: what changed, what you re-checked, what you
-carried forward.
+**If `prototypes/<prototype-id>/` already exists, start there.** A later round does not re-derive what the previous one
+recorded and a person corrected. Read the brief, the requests and the review, then **re-verify only what can have moved**:
+the installed design system version, the baseline commit if the branch moved, and whatever the new feedback touches.
 
 **If there is no prototype folder, this is a new prototype.** Create it, then read everything `ui-guide.md` lists.
 
 ## What DSNR adds to the contract
 
-**`ui-guide.md`'s contract holds here.** In DSNR's workflow it is also always true that you:
-
-- produce a context receipt before building on the codebase path, and for prototype work beyond a single screen;
-- keep records inside the prototype folder.
+**`ui-guide.md`'s contract holds here.** In DSNR's workflow you also keep records inside the prototype folder.
 
 ## How you work
 
-**Frame, open or create the prototype folder, write the context receipt, confirm, build what was asked, review.**
+**Frame, open or create the prototype folder, build what was asked, review.**
 
 ### 0. The prototype folder first
 
@@ -92,24 +87,6 @@ change what you build.
 
 **A brief may start with a `---` block** (`folder: Admin`): that is the prototype's folder, set in the app. Keep it, exactly
 as it is, at the top whenever you write or rewrite the brief; never add, change or remove it yourself.
-
-### 0b. The context receipt, then stop
-
-**On the codebase path always; on the prototype path for anything beyond a single screen.** Write
-`prototypes/<prototype-id>/context-receipt.md`, then **stop and let the designer correct it**, except in a run nobody is there
-to answer (any run DSNR starts): put what you would have asked under Assumptions and carry on.
-
-Keep it to what a designer would correct, roughly a screen:
-
-| | |
-|---|---|
-| **Pinned** | Baseline commit, the installed design system version, where its guidance and the shared standards were read from |
-| **Decisions** | The path, the scope, and anything the request left open that you resolved |
-| **Sources** | The product views and `.dsnr` rules the design leans on: the ones a reviewer would check, not every file opened |
-| **Boundary** | What is in scope to touch |
-| **Assumptions** | What you inferred rather than read, and what you could not verify |
-
-The last row matters most: it is where a wrong assumption is caught before it becomes polished UI.
 
 ### 1. How much to build, by path
 

@@ -48,7 +48,7 @@ export const cloneStore = (designRoot: string, published: () => void): RecordSto
 });
 
 export const GUIDE = 'agents/ui-guide.md';
-/** DSNR's workflow on top of the guide: the prototype folder, brief, context receipt and reviews. */
+/** DSNR's workflow on top of the guide: the prototype folder, brief and reviews. */
 export const WORKFLOW = 'agents/dsnr.md';
 export const BUILD_SKILL = 'skills/build-prototype.md';
 export const MOVE_SKILL = 'skills/move-to-code.md';
