@@ -3,18 +3,18 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import type { ProjectWork } from '../src/shared/contract';
-import type { WorkspaceDescriptor } from '../src/core/services/projects/descriptor';
-import { classify, patternToRegex, readBranchProjects } from '../src/core/services/projects/branchProjects';
-import { continueWork, readWork } from '../src/core/services/projects/workRecords';
-import { unionLocal } from '../src/shared/projectList';
-import { projectWork, recordDefault } from './fixtures';
+import type { PrototypeWork } from '../src/shared/contract';
+import type { WorkspaceDescriptor } from '../src/core/services/products/descriptor';
+import { classify, patternToRegex, readBranchPrototypes } from '../src/core/services/prototypes/branchPrototypes';
+import { continueWork, readWork } from '../src/core/services/prototypes/workRecords';
+import { unionLocal } from '../src/shared/prototypeList';
+import { prototypeWork, recordDefault } from './fixtures';
 
 const descriptor: WorkspaceDescriptor = {
 	version: 1,
 	product: 'Coke',
 	contextDir: '.dsnr',
-	branchPattern: { codebase: 'feature/<project-id>' },
+	branchPattern: { codebase: 'feature/<prototype-id>' },
 	commands: [],
 	designSystem: { package: 'x' },
 };
@@ -22,7 +22,7 @@ const descriptor: WorkspaceDescriptor = {
 describe('reading a branch as work', () => {
 	it("reads codebase work by the repository's own pattern", () => {
 		expect(classify(descriptor, 'feature/unused-roles-signal')).toEqual({
-			projectId: 'unused-roles-signal',
+			prototypeId: 'unused-roles-signal',
 			name: 'codebase',
 			branch: 'feature/unused-roles-signal',
 		});
@@ -32,7 +32,7 @@ describe('reading a branch as work', () => {
 			expect(classify(descriptor, b)).toBeNull();
 	});
 	it('builds a matcher from any pattern', () => {
-		expect(patternToRegex('work/<project-id>').test('work/my-thing')).toBe(true);
+		expect(patternToRegex('work/<prototype-id>').test('work/my-thing')).toBe(true);
 	});
 });
 
@@ -63,33 +63,33 @@ describe('work found in a real repository, with no record written', () => {
 		rmSync(records, { recursive: true, force: true });
 	});
 
-	it('lists it as a project, with its work and who committed', async () => {
-		const [p] = await readBranchProjects(root, descriptor, null, new Set(['real-change']));
+	it('lists it as a prototype, with its work and who committed', async () => {
+		const [p] = await readBranchPrototypes(root, descriptor, null, new Set(['real-change']));
 		expect(p?.id).toBe('real-change');
 		expect(p?.work.map((i) => i.name)).toEqual(['codebase']);
 		expect(p?.people.map((x) => x.name).sort()).toEqual(['Ada Lovelace', 'Grace Hopper']);
 		expect(p?.work[0]?.commit).toMatch(/^[0-9a-f]{40}$/);
 	});
 
-	it("ignores a feature branch no project vouches for, so teammates' tickets stay out", async () => {
-		// `feature/<project-id>` is how the whole product team names ticket branches.
+	it("ignores a feature branch no prototype vouches for, so teammates' tickets stay out", async () => {
+		// `feature/<prototype-id>` is how the whole product team names ticket branches.
 		g('checkout', '-q', '-b', 'feature/dda-1221');
 		commitAs('Someone Else', 'd.txt');
 		g('checkout', '-q', 'develop');
 
 		const known = new Set(['real-change']);
-		const ids = (await readBranchProjects(root, descriptor, null, known)).map((p) => p.id);
+		const ids = (await readBranchPrototypes(root, descriptor, null, known)).map((p) => p.id);
 		expect(ids).not.toContain('dda-1221');
 		expect(ids).toContain('real-change');
 	});
 
-	it('lists nothing that no project vouches for', async () => {
-		expect(await readBranchProjects(root, descriptor, null, new Set())).toEqual([]);
+	it('lists nothing that no prototype vouches for', async () => {
+		expect(await readBranchPrototypes(root, descriptor, null, new Set())).toEqual([]);
 	});
 
 	it('credits the person running the app with their login', async () => {
 		g('config', 'user.name', 'Grace Hopper');
-		const [p] = await readBranchProjects(root, descriptor, 'ghopper', new Set(['real-change']));
+		const [p] = await readBranchPrototypes(root, descriptor, 'ghopper', new Set(['real-change']));
 		expect(p?.people.find((x) => x.name === 'Grace Hopper')?.login).toBe('ghopper');
 	});
 
@@ -106,7 +106,7 @@ describe('work found in a real repository, with no record written', () => {
 });
 
 describe('unionLocal', () => {
-	const it1 = (branch: string, over: Partial<ProjectWork> = {}): ProjectWork => projectWork({ name: 'v1', branch, ...over });
+	const it1 = (branch: string, over: Partial<PrototypeWork> = {}): PrototypeWork => prototypeWork({ name: 'v1', branch, ...over });
 	it('keeps what a record says and adds branches it did not know about', () => {
 		const rec = [
 			{

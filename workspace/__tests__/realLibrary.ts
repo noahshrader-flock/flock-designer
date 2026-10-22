@@ -15,11 +15,11 @@ export interface RealLibrary {
 	measure: Measure;
 }
 
-/** Kept between runs; one test file at a time uses it (the `library` project), so no two builds share it at once. */
+/** Kept between runs; one test file at a time uses it (the `library` prototype), so no two builds share it at once. */
 export const libraryFolder = (system: ConnectedDesignSystem): string => join(tmpdir(), 'dsnr-libraries', system.id.replace(/[^\w.-]+/g, '-'));
 
 /**
- * Drawn once for the whole run: the `library` project keeps one worker's modules from file to file. Its browser is closed
+ * Drawn once for the whole run: the `library` prototype keeps one worker's modules from file to file. Its browser is closed
  * after each block (`describeLibrary`), so none is left running when the run ends; the drawing is kept, in memory.
  */
 const opened = new Map<string, Promise<RealLibrary & { closeBrowser: () => Promise<void> }>>();

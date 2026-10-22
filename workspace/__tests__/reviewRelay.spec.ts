@@ -28,7 +28,7 @@ describe('what the page may ask', () => {
 
 	it.each([
 		[null],
-		[{ dsnr: 'ask', id: 1, name: 'listProjects', args: [] }],
+		[{ dsnr: 'ask', id: 1, name: 'listPrototypes', args: [] }],
 		[{ dsnr: 'ask', id: 0, name: 'readComments', args: [] }],
 		[{ dsnr: 'ask', id: 1.5, name: 'readComments', args: [] }],
 		[{ dsnr: 'ask', id: 1, name: 'readComments', args: 'x' }],

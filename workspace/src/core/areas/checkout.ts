@@ -1,5 +1,5 @@
 import type { CallsDeps, CheckedCheckout } from '../compose';
-import { DESCRIPTOR_PATH } from '../services/projects/descriptor';
+import { DESCRIPTOR_PATH } from '../services/products/descriptor';
 import { branchesWithFile } from '../services/platform/git';
 
 export const checkoutArea = (d: CallsDeps) => {

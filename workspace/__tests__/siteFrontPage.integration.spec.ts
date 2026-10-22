@@ -15,7 +15,7 @@ beforeAll(() => {
 	const dir = join(design, 'prototypes', 'alpha');
 	mkdirSync(dir, { recursive: true });
 	writeFileSync(join(dir, 'brief.md'), '# Alerts\n');
-	writeFileSync(join(dir, 'work.json'), JSON.stringify([{ projectId: 'alpha', name: 'v1', branch: 'prototype/alpha/v1', commit: null, note: '' }]));
+	writeFileSync(join(dir, 'work.json'), JSON.stringify([{ prototypeId: 'alpha', name: 'v1', branch: 'prototype/alpha/v1', commit: null, note: '' }]));
 	writeFileSync(join(dir, 'v1.html'), '<!doctype html><html><body><h1>Alpha</h1></body></html>');
 	buildSite({ designRoot: design, outDir: join(root, 'site') });
 	front = `file://${join(root, 'site', 'index.html')}`;

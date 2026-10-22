@@ -16,9 +16,9 @@ export const RETURNED_COLUMNS = [
 	'In this work',
 ] as const;
 
-export const returnedTemplate = (project: string): string =>
+export const returnedTemplate = (prototype: string): string =>
 	[
-		`# Accessibility findings returned for ${project}`,
+		`# Accessibility findings returned for ${prototype}`,
 		'',
 		'Found by testing by hand: one row each, under the header. `dsnr accessibility` reads them, so nobody retypes them: what a machine could have caught becomes a check, so it is caught next time. The criterion is its number (`2.4.7`).',
 		'',

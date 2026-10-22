@@ -1,11 +1,11 @@
-import type { Context } from '../../src/core/services/projects/findContext';
-import type { SetupState } from '../../src/core/services/projects/setUp';
+import type { Context } from '../../src/core/services/products/findContext';
+import type { SetupState } from '../../src/core/services/products/setUp';
 import { type Catalog, INVOKE, type InvokeName, type Result, sameTried } from '../../src/shared/contract';
 import { sameChange } from '../../src/shared/tokens';
 import type { TokenEdit, TriedValue } from '../../src/shared/domain/designSystem';
-import type { Project } from '../../src/shared/domain/projects';
+import type { Prototype } from '../../src/shared/domain/prototypes';
 import { DEFAULT_THEME, type Theme } from '../../src/shared/prototypeTheme';
-import { PROJECT_ID, hasExactly } from '../../src/shared/validate';
+import { PROTOTYPE_ID, hasExactly } from '../../src/shared/validate';
 import { savedVersions, workLabel } from '../../src/shared/work';
 
 /**
@@ -18,12 +18,12 @@ export interface PageAsks {
 	/** Hands the open repository that is not set up to the person's agent, to set it up. */
 	setUp(): Promise<Result<null>>;
 	/** Asked of the extension, which knows whether one can be started. */
-	codebase(action: CodebaseAction, projectId: string): Promise<Result<null>>;
-	/** The four that follow name the project only: its newest version is found as it is when this is asked, not as the list shows it. */
-	openReview(projectId: string): Promise<Result<null>>;
-	openReviewInBrowser(projectId: string): Promise<Result<null>>;
-	copyReviewLink(projectId: string): Promise<Result<null>>;
-	openReviewPublished(projectId: string): Promise<Result<null>>;
+	codebase(action: CodebaseAction, prototypeId: string): Promise<Result<null>>;
+	/** The four that follow name the prototype only: its newest version is found as it is when this is asked, not as the list shows it. */
+	openReview(prototypeId: string): Promise<Result<null>>;
+	openReviewInBrowser(prototypeId: string): Promise<Result<null>>;
+	copyReviewLink(prototypeId: string): Promise<Result<null>>;
+	openReviewPublished(prototypeId: string): Promise<Result<null>>;
 	openComponent(id: string): Promise<Result<null>>;
 	componentLink(id: string, link: ComponentLink): Promise<Result<null>>;
 	openPrimitives(): Promise<Result<null>>;
@@ -74,19 +74,19 @@ export type ComponentLink = (typeof COMPONENT_LINKS)[number];
 
 export type DesignTab = { kind: 'component'; id: string; name: string } | { kind: 'primitives' };
 
-/** The page names the project only; the extension finds the work, and where it is, itself. */
+/** The page names the prototype only; the extension finds the work, and where it is, itself. */
 export const CODEBASE_ACTIONS = ['hand-off', 'update', 'share', 'open-code', 'run-locally'] as const;
 export type CodebaseAction = (typeof CODEBASE_ACTIONS)[number];
 
 export interface Review {
-	projectId: string;
+	prototypeId: string;
 	name: string;
 	title: string;
 }
 
 /** Newest first: the panel's row opens the first. */
-export const reviewsOf = (project: Pick<Project, 'id' | 'title' | 'work'>): Review[] =>
-	savedVersions(project.work).map((i) => ({ projectId: project.id, name: i.name, title: `${project.title} · ${workLabel(i)}` }));
+export const reviewsOf = (prototype: Pick<Prototype, 'id' | 'title' | 'work'>): Review[] =>
+	savedVersions(prototype.work).map((i) => ({ prototypeId: prototype.id, name: i.name, title: `${prototype.title} · ${workLabel(i)}` }));
 
 /**
  * Kept with the library's commit they were tried on: instances are named by that commit's drawing, so a page on another
@@ -95,14 +95,14 @@ export const reviewsOf = (project: Pick<Project, 'id' | 'title' | 'work'>): Revi
 export type ValueTrials = Record<string, { commit: string; values: TriedValue[] }>;
 
 export interface TabsShown {
-	projects: string[];
+	prototypes: string[];
 	components: string[];
 }
 
-export const NO_TABS_SHOWN: TabsShown = { projects: [], components: [] };
+export const NO_TABS_SHOWN: TabsShown = { prototypes: [], components: [] };
 
 export const sameTabs = (a: TabsShown, b: TabsShown): boolean =>
-	a.projects.join('\n') === b.projects.join('\n') && a.components.join('\n') === b.components.join('\n');
+	a.prototypes.join('\n') === b.prototypes.join('\n') && a.components.join('\n') === b.components.join('\n');
 
 export interface Placed {
 	context: Context | null;
@@ -162,17 +162,17 @@ export type HostMessage =
 	| { type: 'answer'; id: number; result: unknown }
 	| { type: 'event'; name: string; payload: unknown }
 	| { [K in SharedName]: { type: 'shared'; name: K; value: SharedValues[K] } }[SharedName]
-	| { type: 'projects-changed' }
+	| { type: 'prototypes-changed' }
 	| { type: 'open-dialog'; dialog: PanelDialog };
 
 export type PanelDialog =
-	| { kind: 'assign'; projectId: string }
-	| { kind: 'rename'; projectId: string }
+	| { kind: 'assign'; prototypeId: string }
+	| { kind: 'rename'; prototypeId: string }
 	/** `error`: why the last try was refused, when it is opened again to say so. */
-	| { kind: 'delete'; projectId: string; error?: string }
-	| { kind: 'build'; projectId: string }
-	| { kind: 'hand-off'; projectId: string }
-	| { kind: 'update'; projectId: string }
+	| { kind: 'delete'; prototypeId: string; error?: string }
+	| { kind: 'build'; prototypeId: string }
+	| { kind: 'hand-off'; prototypeId: string }
+	| { kind: 'update'; prototypeId: string }
 	| { kind: 'account' }
 	| { kind: 'sync' }
 	| { kind: 'changes' };
@@ -201,7 +201,7 @@ export const readMessage = (raw: unknown): PanelMessage | null => {
 
 export const isAsk = (name: string): name is AskName => (ASKS as readonly string[]).includes(name);
 
-export const readProjectArg = (raw: unknown): string | null => {
-	const id = typeof raw === 'object' && raw !== null ? (raw as { projectId?: unknown }).projectId : undefined;
-	return typeof id === 'string' && PROJECT_ID.test(id) ? id : null;
+export const readPrototypeArg = (raw: unknown): string | null => {
+	const id = typeof raw === 'object' && raw !== null ? (raw as { prototypeId?: unknown }).prototypeId : undefined;
+	return typeof id === 'string' && PROTOTYPE_ID.test(id) ? id : null;
 };

@@ -9,9 +9,9 @@ export interface Checkout {
 
 export type PreviewStatus =
 	| { state: 'stopped' }
-	| { state: 'starting'; commandId: string; projectId: string | null }
-	/** `projectId` is whose preview this is: every prototype shares one port, so the address alone cannot say. */
-	| { state: 'running'; commandId: string; url: string; projectId: string | null }
+	| { state: 'starting'; commandId: string; prototypeId: string | null }
+	/** `prototypeId` is whose preview this is: every prototype shares one port, so the address alone cannot say. */
+	| { state: 'running'; commandId: string; url: string; prototypeId: string | null }
 	| { state: 'failed'; commandId: string; detail: string };
 
 export interface RunLogLine {

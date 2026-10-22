@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 import { type AddressDeps, addressComment } from '../extension/src/address';
-import type { Project } from '../src/shared/contract';
+import type { Prototype } from '../src/shared/contract';
 import { ok } from '../src/shared/result';
 
-const review = { projectId: 'demo', name: 'v1', title: 'Demo · Version 1' };
+const review = { prototypeId: 'demo', name: 'v1', title: 'Demo · Version 1' };
 const comment = { thread: 4, id: 40 };
 const noah = { name: 'Noah', login: 'noah' };
 const version = (name: string) => ({
@@ -19,7 +19,7 @@ const demo = {
 	records: [],
 	work: [version('v1'), version('v3')],
 	people: [],
-} as unknown as Project;
+} as unknown as Prototype;
 
 const world = (
 	/** Null when who has commented cannot be read. */
@@ -28,10 +28,10 @@ const world = (
 ) => {
 	const told: string[] = [];
 	const api = {
-		handPrototypeAddress: vi.fn(async (_root: string, _projectId: string, _name: string, _comment: unknown, newVersion: boolean) =>
+		handPrototypeAddress: vi.fn(async (_root: string, _prototypeId: string, _name: string, _comment: unknown, newVersion: boolean) =>
 			ok({ agent: 'Claude Code', opened: 'typed', command: null, target: newVersion ? 'v4' : 'v1', from: newVersion ? 'v1' : null, number: 2 }),
 		),
-		listProjects: vi.fn(async () => ok([demo])),
+		listPrototypes: vi.fn(async () => ok([demo])),
 		readComments: vi.fn(async () =>
 			commenters === null
 				? { ok: false, error: 'GitHub could not be reached.' }

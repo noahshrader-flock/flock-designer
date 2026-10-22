@@ -11,11 +11,11 @@ start one.
 3. *Clone it* beside your company's products, and run `npm ci` in its `workspace` folder.
 4. *Set up each product* with **Set up**, as [Setting a product up](setting-up.md) describes. When DSNR asks which
    design repository it belongs to, pick your new clone, even if Flock's is offered first. The product's workspace file then names it (as `"designRepository"`), so the
-   product's projects, comments and pages go to your company's repository, never Flock's.
+   product's prototypes, comments and pages go to your company's repository, never Flock's.
 
 ## What is Flock's, to clear
 
-- *The projects*: everything in `prototypes/` except `prototypes/_template.md`, including `prototypes/_shared/`, which holds the
+- *The prototypes*: everything in `prototypes/` except `prototypes/_template.md`, including `prototypes/_shared/`, which holds the
   fonts and images Flock's pages share. These are Flock's work.
 - *Flock's name in the shared guidance.* The shared files are almost entirely general. Where they say "Flock", it should
   say your company (in `agents/ui-guide.md`, `agents/dsnr.md`, `agents/product-parity-reviewer.md`,

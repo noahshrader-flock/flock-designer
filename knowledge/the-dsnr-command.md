@@ -19,8 +19,8 @@ first time, install that code's packages: run `npm ci` in the design repository'
 
 ### Prototypes
 
-- `dsnr new-prototype`: records the next version of a project (Version 1 of a new one), and prints the task for the agent.
-  A new project needs `--title`; `--from` models it on another branch.
+- `dsnr new-prototype`: records the next version of a prototype (Version 1 of a new one), and prints the task for the agent.
+  A new prototype needs `--title`; `--from` models it on another branch.
 - `dsnr change-prototype`: a change to a version, in place, or in a new version with `--new-version`.
 - `dsnr save-prototype`: builds the version's page and saves its page and source to the design repository. If the saved source
   was changed since this machine saved it (by someone else, or by an edit made there directly), it saves nothing and says so;
@@ -28,7 +28,7 @@ first time, install that code's packages: run `npm ci` in the design repository'
 
 ### Publishing
 
-- `dsnr publish`: pushes the project's records, deploys the site, and prints the version's link and who can open it.
+- `dsnr publish`: pushes the prototype's records, deploys the site, and prints the version's link and who can open it.
 - `dsnr unpublish`: takes a version off the site. Its record and comments are kept.
 - `dsnr build-site`: builds the published site on your computer, and with `--serve` shows it there.
 

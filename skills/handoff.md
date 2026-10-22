@@ -22,12 +22,12 @@ it pass.
 **Then measure its accessibility in a real browser,** so the reviews read what was measured, not guessed:
 
 ```bash
-node ../flock-designer/workspace/bin/dsnr.mjs accessibility --project <id>
+node ../flock-designer/workspace/bin/dsnr.mjs accessibility --prototype <id>
 ```
 
 It starts the product's app as the product says (its design mode, on mock data), checks the pages its manifest names
 with axe, probes each (the Tab walk, focus, hover, reflow, zoom, text spacing, forced colors, forms and messages), reads
-the work's own files, writes what it found and the evidence into the project's folder in the design repository, and
+the work's own files, writes what it found and the evidence into the prototype's folder in the design repository, and
 prints it. Fix what it found that is in the work, and run it again. What it says it could not open, or did not run, goes
 into the review record as it said it; a finding above the product's target is readiness, not a fault of this work.
 
@@ -42,7 +42,7 @@ with different evidence. The reviewers are shared, `../agents/product-parity-rev
   still going is lost.
 - If subagents are not available, read each definition and follow it directly, one at a time, and say
   that you did. A review of your own work is weaker than a second reader, and much stronger than none.
-- **Write both into the project's review record** (`prototypes/<id>/review.md` in the design repository).
+- **Write both into the prototype's review record** (`prototypes/<id>/review.md` in the design repository).
   Its **accessibility section is written by `dsnr accessibility`** from what it measured, between its
   `<!-- dsnr:accessibility <what it measured> -->` lines: never edit it, as `dsnr check-accessibility`
   refuses a section that is not the measure's. Put what each review found about accessibility under that
@@ -65,8 +65,8 @@ still gets what it got, with the request it really sends.
 `HANDOFF.md` at the root of the branch, committed with the work: it is the first thing seen on checkout.
 Say in it that it is to be deleted when the work merges.
 
-**The design record stays in the project's folder** (brief, context receipt, audit, both reviews). `HANDOFF.md` tells
-engineering what they picked up; the project folder is why it was built that way. Do not duplicate one into the other.
+**The design record stays in the prototype's folder** (brief, context receipt, audit, both reviews). `HANDOFF.md` tells
+engineering what they picked up; the prototype folder is why it was built that way. Do not duplicate one into the other.
 
 **It tells them what the diff does not say. Not a summary of the diff, not a case for the work.**
 
@@ -92,7 +92,7 @@ engineering what they picked up; the project folder is why it was built that way
 If something is unfinished, say it is unfinished. Do not hedge.
 
 **Commit it, then run the gate a last time: it must pass.** Check the accessibility record too, with
-`node ../flock-designer/workspace/bin/dsnr.mjs check-accessibility --project <id>`: it must pass as well.
+`node ../flock-designer/workspace/bin/dsnr.mjs check-accessibility --prototype <id>`: it must pass as well.
 If either cannot, say why, and that the work is not ready.
 
 ## When you have finished

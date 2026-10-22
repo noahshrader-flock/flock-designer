@@ -58,7 +58,7 @@ const run = (gh: ReturnType<typeof fakeSite>, more: Partial<Parameters<typeof pu
 		github: { api: gh.api },
 		ref: REF,
 		recordsBranch: 'main',
-		projectId: 'demo',
+		prototypeId: 'demo',
 		name: 'v1',
 		pushRecords,
 		fetchAnonymously: anonymous,
@@ -141,9 +141,12 @@ describe('publishing', () => {
 	it('stops before deploying when the records cannot be pushed, and says why', async () => {
 		const gh = fakeSite();
 		const { done } = run(gh, {
-			pushRecords: async () => ({ published: [], problems: [{ what: 'Project records', why: '2 changes outside the project records are waiting' }] }),
+			pushRecords: async () => ({
+				published: [],
+				problems: [{ what: 'Prototype records', why: '2 changes outside the prototype records are waiting' }],
+			}),
 		});
-		await expect(done).rejects.toThrow(/outside the project records/);
+		await expect(done).rejects.toThrow(/outside the prototype records/);
 		expect(gh.calls.some((c) => c.method === 'POST')).toBe(false);
 	});
 
@@ -248,7 +251,7 @@ describe('unpublishing', () => {
 			github: { api: gh.api },
 			ref: REF,
 			recordsBranch: 'main',
-			projectId: 'demo',
+			prototypeId: 'demo',
 			name: 'v1',
 			removePage: async () => void order.push('removed'),
 			pushRecords: async () => (order.push('pushed'), { published: ['demo'], problems: [] }),
@@ -289,7 +292,7 @@ describe('unpublishing', () => {
 	it('says the page is still on the site when the records cannot be pushed', async () => {
 		const gh = fakeSite();
 		const { done } = take(gh, {
-			pushRecords: async () => ({ published: [], problems: [{ what: 'Project records', why: 'Could not reach GitHub.' }] }),
+			pushRecords: async () => ({ published: [], problems: [{ what: 'Prototype records', why: 'Could not reach GitHub.' }] }),
 		});
 		await expect(done).rejects.toThrow(/removed here[\s\S]*site still has it[\s\S]*Could not reach GitHub/);
 		expect(gh.calls.some((c) => c.method === 'POST')).toBe(false);
@@ -314,7 +317,7 @@ describe('what GitHub has that the site does not have yet', () => {
 		}).github;
 
 	it('is found by what changed since the last deploy: one call, whichever page it was', async () => {
-		expect(await siteBehind(github(), REF)).toEqual({ kind: 'page', projectId: 'demo', name: 'v1' });
+		expect(await siteBehind(github(), REF)).toEqual({ kind: 'page', prototypeId: 'demo', name: 'v1' });
 	});
 
 	it('is nothing when only things the site does not show have changed', async () => {
@@ -336,7 +339,7 @@ describe('what GitHub has that the site does not have yet', () => {
 		'workspace/src/viewer/comments/CommentList.tsx',
 		'workspace/src/viewer/ui/button.tsx',
 		'workspace/src/viewer/index.css',
-		'workspace/src/shared/projectList.ts',
+		'workspace/src/shared/prototypeList.ts',
 		'workspace/src/site/buildSite.ts',
 		'workspace/src/codeHost/designRepo.ts',
 		'workspace/src/cli/dsnr.ts',
@@ -353,7 +356,7 @@ describe('what GitHub has that the site does not have yet', () => {
 			{ filename: 'workspace/src/viewer/Viewer.tsx', status: 'modified' },
 			{ filename: 'prototypes/demo/v1.html', status: 'modified' },
 		];
-		expect(await siteBehind(github({ files }), REF)).toEqual({ kind: 'page', projectId: 'demo', name: 'v1' });
+		expect(await siteBehind(github({ files }), REF)).toEqual({ kind: 'page', prototypeId: 'demo', name: 'v1' });
 	});
 
 	it('waits while a deploy is already on its way, and has nothing to compare before the first deploy', async () => {

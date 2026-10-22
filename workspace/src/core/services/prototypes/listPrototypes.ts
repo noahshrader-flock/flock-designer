@@ -1,16 +1,16 @@
-import type { Project } from '../../../shared/contract';
-import { mergeProjects, unionLocal } from '../../../shared/projectList';
+import type { Prototype } from '../../../shared/contract';
+import { mergePrototypes, unionLocal } from '../../../shared/prototypeList';
 import { workKind } from '../../../shared/work';
-import { readBranchProjects } from './branchProjects';
-import { readDescriptor } from './descriptor';
+import { readBranchPrototypes } from './branchPrototypes';
+import { readDescriptor } from '../products/descriptor';
 import { branchTip, hasOwnCommits, repositoryOf } from '../platform/git';
 import { codebaseBranchFor, codebaseMadeFrom } from './workRecords';
-import { readFolderProjects, withStartedHere } from './localProjects';
+import { readFolderPrototypes, withStartedHere } from './localPrototypes';
 
 /**
  * `root` must be one the person opened. GitHub not answering is no failure while there is something local to show.
  */
-export const listProjects = async ({
+export const listPrototypes = async ({
 	root,
 	login,
 	remote,
@@ -19,40 +19,40 @@ export const listProjects = async ({
 }: {
 	root: string | null;
 	login: string | null;
-	remote: () => Promise<Project[]>;
+	remote: () => Promise<Prototype[]>;
 	/** The product's design repository's records, as `recordsRootFor` finds them. */
 	recordsRootOf: (productRoot: string) => string | null;
 	/** Where this machine keeps what it builds, and its starts not saved yet. */
 	prototypesRoot: string;
-}): Promise<Project[]> => {
-	let local: Project[] = [];
+}): Promise<Prototype[]> => {
+	let local: Prototype[] = [];
 	// `repository` fills in codebase work recorded before records named it; null when the checkout has no remote.
 	let here: {
 		root: string;
 		repository: string | null;
-		branchOf: (projectId: string) => string;
-		madeFrom: (projectId: string) => string | null;
+		branchOf: (prototypeId: string) => string;
+		madeFrom: (prototypeId: string) => string | null;
 	} | null = null;
 	if (root !== null) {
 		const recordsRoot = recordsRootOf(root);
-		// Every project folder, not only those that record a piece of work: the folder is what an agent makes
-		// first, and it is what vouches for a `feature/<id>` branch (see readBranchProjects).
-		const folders = withStartedHere(recordsRoot ? readFolderProjects(recordsRoot) : [], prototypesRoot);
+		// Every prototype folder, not only those that record a piece of work: the folder is what an agent makes
+		// first, and it is what vouches for a `feature/<id>` branch (see readBranchPrototypes).
+		const folders = withStartedHere(recordsRoot ? readFolderPrototypes(recordsRoot) : [], prototypesRoot);
 		const descriptor = readDescriptor(root);
 		// The branches are the evidence: work made without the app still shows.
-		const madeFrom = (projectId: string) => (recordsRoot ? codebaseMadeFrom(recordsRoot, projectId) : null);
-		const branches = await readBranchProjects(root, descriptor, login, new Set(folders.map((p) => p.id)), madeFrom).catch(() => []);
+		const madeFrom = (prototypeId: string) => (recordsRoot ? codebaseMadeFrom(recordsRoot, prototypeId) : null);
+		const branches = await readBranchPrototypes(root, descriptor, login, new Set(folders.map((p) => p.id)), madeFrom).catch(() => []);
 		// A folder with nothing built yet is a notes folder, not work in progress.
 		local = unionLocal(folders, branches).filter((p) => p.work.length > 0);
-		here = { root, repository: await repositoryOf(root), branchOf: (projectId) => codebaseBranchFor(descriptor, projectId), madeFrom };
+		here = { root, repository: await repositoryOf(root), branchOf: (prototypeId) => codebaseBranchFor(descriptor, prototypeId), madeFrom };
 	}
-	let fromGitHub: Project[] = [];
+	let fromGitHub: Prototype[] = [];
 	try {
 		fromGitHub = await remote();
 	} catch (err) {
 		if (local.length === 0) throw err;
 	}
-	const merged = mergeProjects(fromGitHub, local);
+	const merged = mergePrototypes(fromGitHub, local);
 	const at = here;
 	// Work on this checkout's codebase branch is in this checkout's repository; and ready for engineering only while its
 	// branch is still at the commit a handoff found it ready at, here. Anywhere else that cannot be known, so it is not said.

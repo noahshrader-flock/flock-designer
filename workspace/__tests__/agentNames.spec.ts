@@ -18,7 +18,7 @@ const HOMES = new Set([
 	'src/core/services/agent/agent.ts',
 	'src/core/services/agent/agents.ts',
 	'extension/src/agentWindows.ts',
-	'src/core/services/projects/entryFiles.ts',
+	'src/core/services/products/entryFiles.ts',
 ]);
 
 const NAMES = /Claude Code|\bClaude\b|\bCodex\b|\bCopilot\b|claude-code|anthropic|openai|\bclaude\b|\bcodex\b|\bcopilot\b/;

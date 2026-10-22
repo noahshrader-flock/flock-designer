@@ -26,9 +26,9 @@ describe('starting a prototype, and recording it once its first page is saved', 
 	const now = new Date('2026-10-06T12:00:00Z');
 	const page = (files: Record<string, string | Buffer>) => async () => void (files['prototypes/users/v1.html'] = '<p>');
 
-	it('starts a new project with its brief and says what its record will be, writing no record', async () => {
+	it('starts a new prototype with its brief and says what its record will be, writing no record', async () => {
 		const { store, files, writes } = memoryStore();
-		const started = await startPrototype(store, { projectId: 'users', title: 'Users — inactivity', note: 'flag inactive users', me, now });
+		const started = await startPrototype(store, { prototypeId: 'users', title: 'Users — inactivity', note: 'flag inactive users', me, now });
 		expect(started).toMatchObject({ name: 'v1', branch: 'prototype/users/v1', contributors: [me], createdAt: now.toISOString() });
 		expect(started.note).toBe('flag inactive users');
 		expect(files['prototypes/users/brief.md']).toBe('# Users — inactivity\n\nflag inactive users\n');
@@ -38,7 +38,7 @@ describe('starting a prototype, and recording it once its first page is saved', 
 	it('keeps no secret, email address or phone number in the brief or the version’s note', async () => {
 		const { store, files } = memoryStore();
 		const said = 'Show jo@flocksafety.com, call 404-555-0123.\nUse ghp_abcdefghijklmnopqrstuvwxyz0123456789.';
-		const started = await startPrototype(store, { projectId: 'users', title: 'Users', note: said, me, now });
+		const started = await startPrototype(store, { prototypeId: 'users', title: 'Users', note: said, me, now });
 		expect(started.note).toBe('Show [removed: an email address], call [removed: a phone number].');
 		expect(files['prototypes/users/brief.md']).toBe(
 			'# Users\n\nShow [removed: an email address], call [removed: a phone number].\nUse [removed: a GitHub token].\n',
@@ -47,7 +47,7 @@ describe('starting a prototype, and recording it once its first page is saved', 
 
 	it('records it as it was started, after its page, so no record names a page that is not there', async () => {
 		const { store, files, writes } = memoryStore();
-		const started = await startPrototype(store, { projectId: 'users', title: 'Users', note: 'n', me, now });
+		const started = await startPrototype(store, { prototypeId: 'users', title: 'Users', note: 'n', me, now });
 		await recordStarted(store, started, page(files));
 		expect(JSON.parse(files['prototypes/users/work.json'] as string)).toEqual([started]);
 		expect(writes).toEqual(['prototypes/users/brief.md', 'prototypes/users/work.json']);
@@ -56,7 +56,7 @@ describe('starting a prototype, and recording it once its first page is saved', 
 
 	it('records it once, when it was recorded already and stopped before its start was cleared', async () => {
 		const { store, files } = memoryStore();
-		const started = await startPrototype(store, { projectId: 'users', title: 'Users', note: 'n', me, now });
+		const started = await startPrototype(store, { prototypeId: 'users', title: 'Users', note: 'n', me, now });
 		await recordStarted(store, started, page(files));
 		await recordStarted(store, started, page(files));
 		expect(JSON.parse(files['prototypes/users/work.json'] as string)).toHaveLength(1);
@@ -64,7 +64,7 @@ describe('starting a prototype, and recording it once its first page is saved', 
 
 	it('never saves over another of its name made meanwhile, and saves no page then', async () => {
 		const { store, files } = memoryStore();
-		const started = await startPrototype(store, { projectId: 'users', title: 'Users', note: 'n', me, now });
+		const started = await startPrototype(store, { prototypeId: 'users', title: 'Users', note: 'n', me, now });
 		files['prototypes/users/work.json'] = JSON.stringify([{ ...started, createdAt: '2026-10-06T13:00:00.000Z' }]);
 		const save = vi.fn(page(files));
 		await expect(recordStarted(store, started, save)).rejects.toThrow(
@@ -73,7 +73,7 @@ describe('starting a prototype, and recording it once its first page is saved', 
 		expect(save).not.toHaveBeenCalled();
 	});
 
-	it("adds to an existing project's versions, counting those started and not saved, and leaves its brief alone", async () => {
+	it("adds to an existing prototype's versions, counting those started and not saved, and leaves its brief alone", async () => {
 		const { store, files } = memoryStore({
 			'prototypes/users/brief.md': '# Users\n\nThe real brief.\n',
 			'prototypes/users/work.json': JSON.stringify([
@@ -81,8 +81,8 @@ describe('starting a prototype, and recording it once its first page is saved', 
 				{ name: 'v2', branch: 'prototype/users/v2' },
 			]),
 		});
-		const started = await startPrototype(store, { projectId: 'users', title: 'Other', note: 'n', me: null, pending: ['v3'], now });
-		// Another prototype on a project is another idea: the next version.
+		const started = await startPrototype(store, { prototypeId: 'users', title: 'Other', note: 'n', me: null, pending: ['v3'], now });
+		// Another prototype on a prototype is another idea: the next version.
 		expect(started.name).toBe('v4');
 		expect(started.contributors).toBeUndefined();
 		expect(files['prototypes/users/brief.md']).toBe('# Users\n\nThe real brief.\n');
@@ -90,7 +90,13 @@ describe('starting a prototype, and recording it once its first page is saved', 
 
 	it('keeps the whole request in the brief, and its first line on the record', async () => {
 		const { store, files } = memoryStore();
-		const started = await startPrototype(store, { projectId: 'users', title: 'Users', note: 'Add a Usage tab.\n\nWho uses it: admins.\n', me, now });
+		const started = await startPrototype(store, {
+			prototypeId: 'users',
+			title: 'Users',
+			note: 'Add a Usage tab.\n\nWho uses it: admins.\n',
+			me,
+			now,
+		});
 		expect(files['prototypes/users/brief.md']).toBe('# Users\n\nAdd a Usage tab.\n\nWho uses it: admins.\n');
 		expect(started.note).toBe('Add a Usage tab.');
 	});
@@ -98,13 +104,13 @@ describe('starting a prototype, and recording it once its first page is saved', 
 	it('keeps what it was modeled on', async () => {
 		const { store } = memoryStore();
 		const basedOn = { repository: 'flock-coke', branch: 'develop', commit: 'abc1234' };
-		expect((await startPrototype(store, { projectId: 'users', title: 't', note: 'n', me, basedOn, now })).basedOn).toEqual(basedOn);
+		expect((await startPrototype(store, { prototypeId: 'users', title: 't', note: 'n', me, basedOn, now })).basedOn).toEqual(basedOn);
 	});
 
 	it('refuses records it cannot read, or that are not a list, and writes nothing', async () => {
 		for (const bad of ['{not json', '{"name":"v1"}']) {
 			const { store, writes } = memoryStore({ 'prototypes/users/work.json': bad });
-			await expect(startPrototype(store, { projectId: 'users', title: 't', note: 'n', me, now })).rejects.toThrow(/not a readable list/);
+			await expect(startPrototype(store, { prototypeId: 'users', title: 't', note: 'n', me, now })).rejects.toThrow(/not a readable list/);
 			expect(writes).toEqual([]);
 		}
 	});
@@ -113,7 +119,7 @@ describe('starting a prototype, and recording it once its first page is saved', 
 describe('setCover', () => {
 	const RECORDS = 'prototypes/users/work.json';
 	const rec = (name: string, more: Record<string, unknown> = {}) => ({
-		projectId: 'users',
+		prototypeId: 'users',
 		name,
 		branch: `prototype/users/${name}`,
 		commit: null,
@@ -428,7 +434,7 @@ describe('PrototypeServer', () => {
 });
 
 describe('the first line of a Build conversation', () => {
-	const at = { label: 'Version 2', projectId: 'alert-history' };
+	const at = { label: 'Version 2', prototypeId: 'alert-history' };
 
 	it('says what to build, for new work', () => {
 		expect(buildInCodebaseLead({ ...at, continuing: null })).toBe('Build Version 2 of the alert-history prototype into this codebase.');

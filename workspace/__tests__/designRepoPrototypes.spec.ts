@@ -5,13 +5,13 @@ import { coverPath, prototypePagePath, prototypeSourcePath, WORK_FILE } from '..
 import { isVersionName } from '../src/shared/versionNames';
 import { parseWork } from '../src/shared/workRecords';
 
-/** Read, never written: a project in an old shape is found here, not by a person whose project has stopped opening. */
+/** Read, never written: a prototype in an old shape is found here, not by a person whose prototype has stopped opening. */
 const design = join(__dirname, '..', '..');
-const projects = readdirSync(join(design, 'prototypes'), { withFileTypes: true })
+const prototypes = readdirSync(join(design, 'prototypes'), { withFileTypes: true })
 	.filter((e) => e.isDirectory() && !e.name.startsWith('_'))
 	.map((e) => e.name);
 
-describe.each(projects)('the project %s, as it is in this repository', (id) => {
+describe.each(prototypes)('the prototype %s, as it is in this repository', (id) => {
 	const at = (path: string) => join(design, path);
 	const records = parseWork(readFileSync(at(`prototypes/${id}/${WORK_FILE}`), 'utf8'));
 

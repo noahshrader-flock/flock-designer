@@ -51,7 +51,7 @@ export const findContext = async ({
 		...(product === null ? [`No product is open: open a product's folder, one with ${DESCRIPTOR_PATH}, to see its prototypes.`] : []),
 		...(designSystem === null ? ['No design system was found in the open folders: open its folder beside the product, or choose one.'] : []),
 		...(product !== null && designRepository === null
-			? [`${designRepositoryMissing(product)} Until then its projects are read from ${HOST} when you are signed in.`]
+			? [`${designRepositoryMissing(product)} Until then its prototypes are read from ${HOST} when you are signed in.`]
 			: []),
 	];
 	const productRepository = product === null ? null : await repositoryOf(product);

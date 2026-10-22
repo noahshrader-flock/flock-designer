@@ -17,7 +17,7 @@ interface PanelState {
 	componentsView?: View;
 }
 
-export type Tab = 'projects' | 'design-system';
+export type Tab = 'prototypes' | 'design-system';
 export type Part = 'components' | 'tokens';
 
 let api: VsCodeApi<PanelState> | undefined;

@@ -11,7 +11,7 @@ committed.
 2. Sign in to GitHub at the top of the DSNR panel. Until you do, the panel says to sign in first.
 3. Press **Set up**. The panel shows it when the open repository has no workspace file. DSNR then asks which design
    repository the product belongs to, starting at Flock's clone when it finds one: pick your company's, if it is not
-   Flock's. Every project, comment and page of the product will go there.
+   Flock's. Every prototype, comment and page of the product will go there.
 4. Choose your agent, if DSNR has not asked before, and let it work. It opens in its own window, with the task
    typed in. In Claude Code and Copilot, press Enter there to start it.
 5. Press **Review** when the agent is done. The panel shows it until the new files are committed. It lists what still has
@@ -78,5 +78,5 @@ You can write the files yourself, in the same order:
   `agents/ui-guide.md`, and needs its GitHub address to know which one it is. Pick the clone itself, not a folder above it.
 - *The setup says to run `npm ci` first.* The `dsnr` command the agent runs is built from the design repository's own
   `workspace` folder, which needs its packages installed once.
-- *A branch pattern is refused.* DSNR fills in only `<project-id>` in a branch name. A part that changes per branch, like
+- *A branch pattern is refused.* DSNR fills in only `<prototype-id>` in a branch name. A part that changes per branch, like
   a ticket number, cannot be in the pattern.

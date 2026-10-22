@@ -1,12 +1,12 @@
-import type { WorkspaceDescriptor } from '../projects/descriptor';
-import { codebaseBranches, prefixOf } from '../projects/branchProjects';
+import type { WorkspaceDescriptor } from '../products/descriptor';
+import { codebaseBranches, prefixOf } from '../prototypes/branchPrototypes';
 import type { Problem, SyncResult } from './designSync';
 import { branchAuthors, branchTip, isSamePerson, localIdentity, pushBranch, git, isAncestor } from '../platform/git';
 import { errorText } from '../../../shared/result';
 import { HOST } from '../../../shared/vocabulary';
 
 /**
- * Only a `feature/<project>` branch with a project folder, and with commits of the person's that are its own, not those of
+ * Only a `feature/<prototype>` branch with a prototype folder, and with commits of the person's that are its own, not those of
  * the branch it was made from, as a team's tickets use the same names. Pushes are plain: a branch that has moved on GitHub is reported, never overwritten.
  */
 
@@ -20,23 +20,23 @@ export interface BranchSyncResult extends SyncResult {
 export interface BranchSyncInput {
 	root: string;
 	descriptor: WorkspaceDescriptor;
-	/** Project folders in the design repository: what vouches for a `feature/` branch. */
-	projects: ReadonlySet<string>;
-	/** Where a project's branch was made, as its record says: commits before it are the branch it was made from's, not its own. */
-	madeFrom?: (projectId: string) => string | null;
+	/** Prototype folders in the design repository: what vouches for a `feature/` branch. */
+	prototypes: ReadonlySet<string>;
+	/** Where a prototype's branch was made, as its record says: commits before it are the branch it was made from's, not its own. */
+	madeFrom?: (prototypeId: string) => string | null;
 }
 
 const problem = (what: string, why: string): Problem => ({ what, why });
 
-export const syncBranches = async ({ root, descriptor, projects, madeFrom = () => null }: BranchSyncInput): Promise<BranchSyncResult> => {
+export const syncBranches = async ({ root, descriptor, prototypes, madeFrom = () => null }: BranchSyncInput): Promise<BranchSyncResult> => {
 	const problems: Problem[] = [];
 	const published: string[] = [];
 
 	const me = await localIdentity(root);
 
 	const mine: string[] = [];
-	for (const { projectId, branch } of await codebaseBranches(root, descriptor, projects, MAX_BRANCHES)) {
-		const authors = await branchAuthors(root, branch, madeFrom(projectId)).catch(() => []);
+	for (const { prototypeId, branch } of await codebaseBranches(root, descriptor, prototypes, MAX_BRANCHES)) {
+		const authors = await branchAuthors(root, branch, madeFrom(prototypeId)).catch(() => []);
 		if (authors.some((a) => isSamePerson(me, a))) mine.push(branch);
 	}
 	if (mine.length === 0) return { published, problems, mine };

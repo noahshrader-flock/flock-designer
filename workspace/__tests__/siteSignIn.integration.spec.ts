@@ -41,7 +41,7 @@ beforeAll(async () => {
 	writeFileSync(join(design, 'prototypes', 'demo', 'brief.md'), '# Demo\n');
 	writeFileSync(
 		join(design, 'prototypes', 'demo', 'work.json'),
-		JSON.stringify([{ projectId: 'demo', name: 'v1', branch: 'prototype/demo/v1', commit: null, note: '', createdAt: '2026-10-01T10:00:00Z' }]),
+		JSON.stringify([{ prototypeId: 'demo', name: 'v1', branch: 'prototype/demo/v1', commit: null, note: '', createdAt: '2026-10-01T10:00:00Z' }]),
 	);
 	writeFileSync(join(design, 'prototypes', 'demo', 'v1.html'), PAGE);
 

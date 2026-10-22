@@ -3,11 +3,11 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { readDescriptor } from '../src/core/services/projects/descriptor';
+import { readDescriptor } from '../src/core/services/products/descriptor';
 import { readCheckout } from '../src/core/services/platform/git';
-import { continueWork, createCodebaseWork, readWork } from '../src/core/services/projects/workRecords';
+import { continueWork, createCodebaseWork, readWork } from '../src/core/services/prototypes/workRecords';
 import { RuntimeManager } from '../src/core/services/codebase/runtime';
-import { OpenedCheckouts } from '../src/core/services/projects/session';
+import { OpenedCheckouts } from '../src/core/services/products/session';
 import type { PreviewStatus, RunLogLine } from '../src/shared/contract';
 import { g } from './fixtures';
 
@@ -33,7 +33,7 @@ beforeEach(() => {
 			product: 'Test Product',
 			contextDir: '.dsnr',
 			prototypeRoot: 'src/prototypes',
-			branchPattern: { codebase: 'feature/<project-id>' },
+			branchPattern: { codebase: 'feature/<prototype-id>' },
 			commands: [
 				{
 					id: 'preview',
@@ -87,7 +87,7 @@ describe('from a request to a running preview', () => {
 			{ spawnProcess: spawn, probe: async () => true, previewTimeoutMs: 3000 },
 		);
 		const preview = await runtime.start(root, descriptor, 'preview');
-		expect(preview).toEqual({ state: 'running', commandId: 'preview', url: 'http://localhost:4998/', projectId: null });
+		expect(preview).toEqual({ state: 'running', commandId: 'preview', url: 'http://localhost:4998/', prototypeId: null });
 
 		await runtime.stop('preview');
 		expect(runtime.status('preview')).toEqual({ state: 'stopped' });

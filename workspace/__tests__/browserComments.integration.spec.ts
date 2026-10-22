@@ -65,7 +65,7 @@ beforeAll(async () => {
 		join(design, 'prototypes', 'demo', 'work.json'),
 		JSON.stringify(
 			['v1'].map((name, i) => ({
-				projectId: 'demo',
+				prototypeId: 'demo',
 				name,
 				branch: `prototype/demo/${name}`,
 				commit: null,
@@ -79,14 +79,16 @@ beforeAll(async () => {
 	writeFileSync(join(design, 'prototypes', 'hostile', 'brief.md'), '# Hostile\n');
 	writeFileSync(
 		join(design, 'prototypes', 'hostile', 'work.json'),
-		JSON.stringify([{ projectId: 'hostile', name: 'v1', branch: 'prototype/hostile/v1', commit: null, note: '', createdAt: '2026-10-01T10:00:00Z' }]),
+		JSON.stringify([
+			{ prototypeId: 'hostile', name: 'v1', branch: 'prototype/hostile/v1', commit: null, note: '', createdAt: '2026-10-01T10:00:00Z' },
+		]),
 	);
 	writeFileSync(join(design, 'prototypes', 'hostile', 'v1.html'), HOSTILE);
 	mkdirSync(join(design, 'prototypes', 'long'), { recursive: true });
 	writeFileSync(join(design, 'prototypes', 'long', 'brief.md'), '# Long\n');
 	writeFileSync(
 		join(design, 'prototypes', 'long', 'work.json'),
-		JSON.stringify([{ projectId: 'long', name: 'v1', branch: 'prototype/long/v1', commit: null, note: '', createdAt: '2026-10-01T10:00:00Z' }]),
+		JSON.stringify([{ prototypeId: 'long', name: 'v1', branch: 'prototype/long/v1', commit: null, note: '', createdAt: '2026-10-01T10:00:00Z' }]),
 	);
 	writeFileSync(join(design, 'prototypes', 'long', 'v1.html'), LONG);
 	server = new PrototypeServer();

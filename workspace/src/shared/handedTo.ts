@@ -1,4 +1,4 @@
-import type { Handed } from './domain/projects';
+import type { Handed } from './domain/prototypes';
 
 /** `what` is what was handed, as a sentence starts it ("Alert history"). */
 export const handedTo = ({ agent, opened }: Pick<Handed, 'agent' | 'opened'>, what: string): string =>

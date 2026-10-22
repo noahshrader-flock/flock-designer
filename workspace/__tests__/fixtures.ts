@@ -5,13 +5,13 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import type { CatalogReads } from '../src/core/services/designSystem/componentCatalog';
 import type { RecordStore } from '../src/core/services/prototypes/prototype';
-import type { CommentAnchor, Project, ProjectWork, ReviewComment, TokenProblem } from '../src/shared/contract';
+import type { CommentAnchor, Prototype, PrototypeWork, ReviewComment, TokenProblem } from '../src/shared/contract';
 import { prototypeKey } from '../src/shared/designPaths';
 
 /** A mocked function of any shape, called as the code calls it: vitest's own `Procedure`, which it does not export. */
 export type Fn = Mock<(...args: any[]) => any>;
 
-export const projectWork = (over: Pick<ProjectWork, 'name' | 'branch'> & Partial<ProjectWork>): ProjectWork => ({
+export const prototypeWork = (over: Pick<PrototypeWork, 'name' | 'branch'> & Partial<PrototypeWork>): PrototypeWork => ({
 	issueNumber: null,
 	openComments: 0,
 	previewUrl: null,
@@ -28,10 +28,10 @@ export const projectWork = (over: Pick<ProjectWork, 'name' | 'branch'> & Partial
 	...over,
 });
 
-export const aVersion = (projectId: string, name: string, over: Partial<ProjectWork> = {}): ProjectWork =>
-	projectWork({ name, branch: prototypeKey(projectId, name), ...over });
+export const aVersion = (prototypeId: string, name: string, over: Partial<PrototypeWork> = {}): PrototypeWork =>
+	prototypeWork({ name, branch: prototypeKey(prototypeId, name), ...over });
 
-export const aProject = (over: Pick<Project, 'id'> & Partial<Project>): Project => ({
+export const aPrototype = (over: Pick<Prototype, 'id'> & Partial<Prototype>): Prototype => ({
 	title: over.id,
 	folder: null,
 	records: [],
@@ -144,7 +144,7 @@ export const makeProductFiles = (dir: string, commands: unknown[] = []) => {
 			product: 'Test Product',
 			contextDir: '.dsnr',
 			prototypeRoot: 'src/prototypes',
-			branchPattern: { codebase: 'feature/<project-id>' },
+			branchPattern: { codebase: 'feature/<prototype-id>' },
 			commands,
 			designSystem: { package: 'x' },
 		}),

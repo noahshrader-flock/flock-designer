@@ -1,11 +1,11 @@
-import type { Project } from '../../src/shared/domain/projects';
-import type { SetupState } from '../../src/core/services/projects/setUp';
+import type { Prototype } from '../../src/shared/domain/prototypes';
+import type { SetupState } from '../../src/core/services/products/setUp';
 import { Setup } from './Setup';
 import { type ReactNode, useEffect, useState } from 'react';
 import { foldersOf, inFolder } from '../../src/shared/brief';
 import { plural } from '../../src/shared/plural';
 import { useCover } from './hooks/useCover';
-import { matchesProject, openCommentsOf } from '../../src/shared/projectList';
+import { matchesPrototype, openCommentsOf } from '../../src/shared/prototypeList';
 import { type CodebaseAction, type PanelDialog, reviewsOf } from '../src/messages';
 import { onlyBuilding, savedVersions, workOf } from '../../src/shared/work';
 import {
@@ -15,10 +15,10 @@ import {
 	inThisProduct,
 	isMine,
 	productNames,
-	productsByProject,
+	productsByPrototype,
 	scopeShown,
 	scopesOffered,
-} from '../../src/shared/projectScope';
+} from '../../src/shared/prototypeScope';
 import { Badge } from '../../src/ui/Badge';
 import { type MenuItem, type MenuSection, Menu } from '../../src/ui/Menu';
 import { ViewOptions } from '../../src/ui/ViewOptions';
@@ -34,92 +34,92 @@ import { Collection, CollectionItem } from '../../src/ui/Collection';
 import { asks } from './host';
 import { useAgentName } from './AgentInUse';
 
-const meta = (p: Project, labels: string[]) => {
+const meta = (p: Prototype, labels: string[]) => {
 	const versions = savedVersions(p.work).length;
 	return [...(versions > 0 ? [plural(versions, 'version')] : []), ...labels].join(' · ');
 };
 
-const ProjectItem = ({
-	project,
+const PrototypeItem = ({
+	prototype,
 	labels,
 	deleting,
 	onDialog,
 }: {
-	project: Project;
+	prototype: Prototype;
 	labels: string[];
 	deleting: boolean;
 	onDialog: (dialog: PanelDialog) => void;
 }) => {
 	const shown = useShared('tabs');
-	const cover = useCover(project);
-	const open = openCommentsOf(project.work);
-	const newest = reviewsOf(project)[0];
-	const codebaseWork = workOf(project.work, 'codebase')[0];
+	const cover = useCover(prototype);
+	const open = openCommentsOf(prototype.work);
+	const newest = reviewsOf(prototype)[0];
+	const codebaseWork = workOf(prototype.work, 'codebase')[0];
 	const inCode = codebaseWork !== undefined;
 	// Started and never built (its branch has no commit of its own here): it is still to build, which carries on with it.
 	const toBuild = !inCode || codebaseWork.begun === false;
 	const badge = open > 0 ? <Badge tone="brand" count={open} label={plural(open, 'open comment')} /> : undefined;
-	const id = project.id;
+	const id = prototype.id;
 	// Sharing code is not an item: once a handoff finds the work ready, the Hand off dialog offers its pull request.
 	const onCodebase = (action: CodebaseAction) => void asks().codebase(action, id);
 	const copy: MenuItem[] = newest ? [{ label: 'Copy link', icon: 'link', onSelect: () => void asks().copyReviewLink(id) }] : [];
 	const pages: MenuItem[] = newest
 		? [
-				// Not known to be there without asking GitHub, which a menu does not do for every project: pressed, it opens the
+				// Not known to be there without asking GitHub, which a menu does not do for every prototype: pressed, it opens the
 				// page, or says why there is none and offers to publish it, as Copy link does.
 				{ label: 'Open published page', icon: 'globe', onSelect: () => void asks().openReviewPublished(id) },
 				{ label: 'Open locally', icon: 'link-external', onSelect: () => void asks().openReviewInBrowser(id) },
 			]
 		: [];
 	const stage: { label: string; dialog: PanelDialog } | null = !toBuild
-		? { label: 'Hand off', dialog: { kind: 'hand-off', projectId: id } }
+		? { label: 'Hand off', dialog: { kind: 'hand-off', prototypeId: id } }
 		: newest
-			? { label: 'Build', dialog: { kind: 'build', projectId: id } }
+			? { label: 'Build', dialog: { kind: 'build', prototypeId: id } }
 			: null;
 	const next: MenuItem[] = stage ? [{ label: stage.label, icon: 'package', onSelect: () => onDialog(stage.dialog) }] : [];
 	const runs: MenuItem[] = [
 		...(inCode
 			? [
 					{ label: 'Run locally', icon: 'gear', onSelect: () => onCodebase('run-locally') },
-					{ label: 'Update this branch…', icon: 'git-merge', onSelect: () => onDialog({ kind: 'update', projectId: id }) },
+					{ label: 'Update this branch…', icon: 'git-merge', onSelect: () => onDialog({ kind: 'update', prototypeId: id }) },
 				]
 			: []),
 		...next,
 	];
 	const code: MenuItem[] = inCode ? [{ label: 'View on GitHub', icon: 'github', onSelect: () => onCodebase('open-code') }] : [];
-	const remove: MenuItem = { label: 'Delete…', icon: 'trash', onSelect: () => onDialog({ kind: 'delete', projectId: id }) };
+	const remove: MenuItem = { label: 'Delete…', icon: 'trash', onSelect: () => onDialog({ kind: 'delete', prototypeId: id }) };
 	const folder: MenuItem[] = [
-		{ label: 'Rename…', icon: 'edit', onSelect: () => onDialog({ kind: 'rename', projectId: id }) },
-		{ label: 'Assign folder…', icon: 'folder', onSelect: () => onDialog({ kind: 'assign', projectId: id }) },
+		{ label: 'Rename…', icon: 'edit', onSelect: () => onDialog({ kind: 'rename', prototypeId: id }) },
+		{ label: 'Assign folder…', icon: 'folder', onSelect: () => onDialog({ kind: 'assign', prototypeId: id }) },
 		remove,
 	];
 	// Started here and not saved yet, or going: it says so under its name and shimmers. One building can only be deleted;
 	// one being deleted, nothing more.
-	const building = onlyBuilding(project);
+	const building = onlyBuilding(prototype);
 	const doing = deleting ? 'Deleting…' : building ? 'Building…' : null;
 	const sections = (building ? [[remove]] : [copy, pages, runs, code, folder]).filter((group) => group.length > 0).map((group) => ({ items: group }));
 	const press = newest ? () => void asks().openReview(id) : inCode ? () => onCodebase('open-code') : undefined;
 	const shared = {
-		name: project.title,
-		meta: doing === null ? meta(project, labels) : <Waiting>{doing}</Waiting>,
-		current: shown.projects.includes(id),
+		name: prototype.title,
+		meta: doing === null ? meta(prototype, labels) : <Waiting>{doing}</Waiting>,
+		current: shown.prototypes.includes(id),
 		...(deleting
 			? {}
 			: {
-					context: { webviewSection: 'project', projectId: id, preventDefaultContextMenuItems: true },
+					context: { webviewSection: 'prototype', prototypeId: id, preventDefaultContextMenuItems: true },
 					...(press ? { onOpen: press } : {}),
-					actions: <Menu label="Project actions" size="small" sections={sections} />,
+					actions: <Menu label="Prototype actions" size="small" sections={sections} />,
 				}),
 	};
 	return <CollectionItem {...shared} picture={{ src: cover.picture, loading: doing !== null || cover.waiting }} badge={badge} />;
 };
 
-const ByFolder = ({ projects, children }: { projects: Project[]; children: (group: Project[], label: string) => ReactNode }) => {
-	const folders = foldersOf(projects);
-	if (folders.length === 0) return <>{children(projects, 'Projects')}</>;
-	const groups: [string, Project[]][] = [
-		...folders.map((f): [string, Project[]] => [f, projects.filter((p) => inFolder(p, { kind: 'folder', name: f }))]),
-		['No folder', projects.filter((p) => inFolder(p, { kind: 'none' }))],
+const ByFolder = ({ prototypes, children }: { prototypes: Prototype[]; children: (group: Prototype[], label: string) => ReactNode }) => {
+	const folders = foldersOf(prototypes);
+	if (folders.length === 0) return <>{children(prototypes, 'Prototypes')}</>;
+	const groups: [string, Prototype[]][] = [
+		...folders.map((f): [string, Prototype[]] => [f, prototypes.filter((p) => inFolder(p, { kind: 'folder', name: f }))]),
+		['No folder', prototypes.filter((p) => inFolder(p, { kind: 'none' }))],
 	];
 	return (
 		<>
@@ -148,11 +148,11 @@ const ByProduct = ({
 }) => {
 	const titleOf = (g: ProductGroup) => (g.product === null ? 'No product' : nameOf(g.product));
 	const only = groups[0];
-	if (groups.length === 1 && only) return <>{children(only, 'Projects')}</>;
+	if (groups.length === 1 && only) return <>{children(only, 'Prototypes')}</>;
 	return (
 		<>
 			{groups.map((g) => (
-				<Section key={titleOf(g)} title={titleOf(g)} count={g.projects.length} open={g.product !== null && g.product === openProduct}>
+				<Section key={titleOf(g)} title={titleOf(g)} count={g.prototypes.length} open={g.product !== null && g.product === openProduct}>
 					{children(g, titleOf(g))}
 				</Section>
 			))}
@@ -162,17 +162,17 @@ const ByProduct = ({
 
 const SCOPES = {
 	here: { label: 'This product', icon: 'repo' },
-	everyone: { label: 'All projects', icon: 'organization' },
+	everyone: { label: 'All prototypes', icon: 'organization' },
 	mine: { label: 'Mine', icon: 'person' },
 } as const satisfies Record<Scope, { label: string; icon: string }>;
 
-interface ProjectsRead {
-	value: Project[] | null;
+interface PrototypesRead {
+	value: Prototype[] | null;
 	error: string | null;
 }
 
-/** The view chooses what is first, not what is allowed: every project can be opened and commented on. */
-export const Projects = ({
+/** The view chooses what is first, not what is allowed: every prototype can be opened and commented on. */
+export const Prototypes = ({
 	read,
 	product,
 	setup,
@@ -182,14 +182,14 @@ export const Projects = ({
 	view,
 	onView,
 }: {
-	read: ProjectsRead;
+	read: PrototypesRead;
 	/** The open product's repository (`owner/repo`; null when it cannot be said), or, with none open, what to do. */
 	product: { open: true; repository: string | null } | { open: false; why: string };
 	/** Where setting the open repository up stands. */
 	setup: SetupState;
 	login: string | null;
 	onDialog: (dialog: PanelDialog) => void;
-	/** The projects being deleted. */
+	/** The prototypes being deleted. */
 	deleting: string[];
 	view: View;
 	onView: (view: View) => void;
@@ -203,28 +203,28 @@ export const Projects = ({
 	useEffect(() => setScope('here'), [productRepository]);
 	if (read.error !== null && read.value === null)
 		return (
-			<Message size="page" icon="warning" title="The projects could not be read">
+			<Message size="page" icon="warning" title="The prototypes could not be read">
 				<p>{read.error}</p>
 			</Message>
 		);
 	if (read.value === null)
 		return (
 			<Message size="page" waiting>
-				Reading the projects…
+				Reading the prototypes…
 			</Message>
 		);
-	const projects = read.value;
-	if (!product.open && projects.length === 0)
+	const prototypes = read.value;
+	if (!product.open && prototypes.length === 0)
 		return (
-			<Message size="page" icon="folder-library" title="No projects yet">
-				<p>Projects anyone on the team makes appear here.</p>
+			<Message size="page" icon="folder-library" title="No prototypes yet">
+				<p>Prototypes anyone on the team makes appear here.</p>
 			</Message>
 		);
-	const products = productsByProject(projects);
-	const productsOfIt = (p: Project) => products.get(p) ?? [];
+	const products = productsByPrototype(prototypes);
+	const productsOfIt = (p: Prototype) => products.get(p) ?? [];
 	const named = productNames([...new Set([...[...products.values()].flat(), ...(productRepository ? [productRepository] : [])])]);
 	const nameOf = (repository: string) => named.get(repository) ?? repository;
-	const matching = projects.filter((p) => matchesProject(p, search));
+	const matching = prototypes.filter((p) => matchesPrototype(p, search));
 	const focused = productRepository !== null && shownScope === 'here';
 	const here =
 		shownScope === 'mine'
@@ -236,19 +236,19 @@ export const Projects = ({
 		...(offered.length > 1
 			? [
 					{
-						heading: 'Projects',
+						heading: 'Prototypes',
 						items: offered.map((value) => ({ ...SCOPES[value], checked: value === shownScope, onSelect: () => setScope(value) })),
 					},
 				]
 			: []),
 		layoutSection(view, onView),
 	];
-	// "No product" says something only once some projects have one: before, it would be on every project.
+	// "No product" says something only once some prototypes have one: before, it would be on every prototype.
 	const anyProduct = [...products.values()].some((ps) => ps.length > 0);
-	const item = (p: Project, labels: string[]) => (
-		<ProjectItem key={p.id} project={p} labels={labels} deleting={deleting.includes(p.id)} onDialog={onDialog} />
+	const item = (p: Prototype, labels: string[]) => (
+		<PrototypeItem key={p.id} prototype={p} labels={labels} deleting={deleting.includes(p.id)} onDialog={onDialog} />
 	);
-	const showAll = { label: 'Show all projects', onPress: () => setScope('everyone') };
+	const showAll = { label: 'Show all prototypes', onPress: () => setScope('everyone') };
 	const shown = (items: ReactNode[], label: string) => (
 		<Collection view={view} label={label}>
 			{items}
@@ -256,7 +256,7 @@ export const Projects = ({
 	);
 	return (
 		<>
-			{login === null && <Message inset>These are the projects on this machine. Sign in to see your team's too.</Message>}
+			{login === null && <Message inset>These are the prototypes on this machine. Sign in to see your team's too.</Message>}
 			<Setup setup={setup} signedIn={login !== null} />
 			{!product.open && setup?.state !== 'not-set-up' && (
 				<Message
@@ -269,31 +269,31 @@ export const Projects = ({
 					<p>Open one to make a prototype.</p>
 				</Message>
 			)}
-			{projects.length > 0 && (
+			{prototypes.length > 0 && (
 				<div className="view-bar">
-					<SearchBox label="Search projects" value={search} onChange={setSearch} />
+					<SearchBox label="Search prototypes" value={search} onChange={setSearch} />
 					<ViewOptions sections={options} />
 				</div>
 			)}
-			{projects.length === 0 ? (
+			{prototypes.length === 0 ? (
 				// A prototype is started by asking the agent in its own chat, where the brief is written: the panel has no form for it.
-				<Message size="page" icon="folder-library" title="No projects yet">
+				<Message size="page" icon="folder-library" title="No prototypes yet">
 					<p>
 						{`Ask ${agent} to create a prototype, for example “Create a prototype of an alert history, filterable by camera and by day.” It appears here, with its versions and its open comments.`}
 					</p>
 				</Message>
 			) : matching.length === 0 || (here.length === 0 && search.trim() !== '') ? (
-				<NoMatches thing="project" search={search} onClear={() => setSearch('')} />
+				<NoMatches thing="prototype" search={search} onClear={() => setSearch('')} />
 			) : here.length === 0 && shownScope === 'mine' ? (
-				<Message size="page" icon="person" title="No projects of yours yet" action={showAll}>
-					<p>None of these projects has your work in it yet. All projects shows what is being made.</p>
+				<Message size="page" icon="person" title="No prototypes of yours yet" action={showAll}>
+					<p>None of these prototypes has your work in it yet. All prototypes shows what is being made.</p>
 				</Message>
 			) : here.length === 0 ? (
-				<Message size="page" icon="repo" title={`No projects in ${nameOf(productRepository ?? '')} yet`} action={showAll}>
-					<p>Prototypes made on it appear here. All projects shows what is being made on other products.</p>
+				<Message size="page" icon="repo" title={`No prototypes in ${nameOf(productRepository ?? '')} yet`} action={showAll}>
+					<p>Prototypes made on it appear here. All prototypes shows what is being made on other products.</p>
 				</Message>
 			) : focused ? (
-				<ByFolder projects={here}>
+				<ByFolder prototypes={here}>
 					{(group, label) =>
 						shown(
 							group.map((p) => item(p, anyProduct && productsOfIt(p).length === 0 ? ['No product'] : [])),
@@ -305,7 +305,7 @@ export const Projects = ({
 				<ByProduct groups={byProduct(here, products, productRepository)} nameOf={nameOf} openProduct={productRepository}>
 					{(group, label) =>
 						shown(
-							group.projects.map(({ project: p, alsoIn }) =>
+							group.prototypes.map(({ prototype: p, alsoIn }) =>
 								item(p, [...(p.folder ? [p.folder] : []), ...(alsoIn.length > 0 ? [`Also in ${alsoIn.map(nameOf).join(', ')}`] : [])]),
 							),
 							label,

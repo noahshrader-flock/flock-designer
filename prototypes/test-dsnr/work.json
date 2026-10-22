@@ -1,6 +1,6 @@
 [
   {
-    "projectId": "test-dsnr",
+    "prototypeId": "test-dsnr",
     "name": "v1",
     "branch": "prototype/test-dsnr/v1",
     "commit": null,
@@ -21,7 +21,7 @@
     "cover": "add06aa63d56"
   },
   {
-    "projectId": "test-dsnr",
+    "prototypeId": "test-dsnr",
     "name": "codebase",
     "branch": "feature/test-dsnr",
     "commit": "5d6b3cc610b913a56829636acdd989f1fa716833",

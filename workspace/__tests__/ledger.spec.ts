@@ -236,7 +236,7 @@ describe('the record of a measure', () => {
 		const { recordFiles } = await import('../src/core/services/accessibility/accessibilityRecord');
 		const { files } = recordFiles(
 			{
-				projectId: 'p',
+				prototypeId: 'p',
 				name: null,
 				of: 'Shop',
 				result: result([]),

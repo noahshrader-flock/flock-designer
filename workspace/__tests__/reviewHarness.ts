@@ -32,7 +32,7 @@ export const fakeApp = (overrides: Impl = {}) => {
 			}),
 		componentTokens: async () => ok({ state: 'building' }),
 		componentPictures: async () => ok({ drawing: false, pictures: {}, issues: {} }),
-		projectCover: async () => ok(null),
+		prototypeCover: async () => ok(null),
 		ensureCovers: async () => ok([]),
 		publishedPage: async () => ok({ state: 'none' }),
 		...overrides,

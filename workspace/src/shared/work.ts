@@ -1,4 +1,4 @@
-import type { BranchAgainstBase, BuildInCodebasePlan, WorkKind, Project, ProjectWork } from './contract';
+import type { BranchAgainstBase, BuildInCodebasePlan, WorkKind, Prototype, PrototypeWork } from './contract';
 import { plural } from './plural';
 import { newestVersionFirst, parseVersion } from './versionNames';
 import { byNewest } from './sort';
@@ -28,34 +28,35 @@ export const codeLink = (it: { branch: string; repository?: string | null; pullR
 	return repo ? treeUrl(repo, it.branch) : null;
 };
 
-export const projectCodeLink = (project: {
+export const prototypeCodeLink = (prototype: {
 	work: { name: string; branch: string; repository?: string | null; pullRequest?: string | null }[];
 }): string | null => {
-	const codebase = project.work.find((it) => workKind(it) === 'codebase');
+	const codebase = prototype.work.find((it) => workKind(it) === 'codebase');
 	return codebase ? codeLink(codebase) : null;
 };
 
 /** The versions with a page, newest first: one still building has none, and nothing of it is shared. */
-export const savedVersions = (work: ProjectWork[]): ProjectWork[] => workOf(work, 'prototype').filter((i) => !i.building);
+export const savedVersions = (work: PrototypeWork[]): PrototypeWork[] => workOf(work, 'prototype').filter((i) => !i.building);
 
 /** Started here and nothing of it saved yet: it has no page to open and nothing of it is shared. */
-export const onlyBuilding = (project: Pick<Project, 'work'>): boolean => project.work.length > 0 && project.work.every((i) => i.building === true);
+export const onlyBuilding = (prototype: Pick<Prototype, 'work'>): boolean =>
+	prototype.work.length > 0 && prototype.work.every((i) => i.building === true);
 
-export const workKind = (i: Pick<ProjectWork, 'name'>): WorkKind => (i.name === 'codebase' ? 'codebase' : 'prototype');
+export const workKind = (i: Pick<PrototypeWork, 'name'>): WorkKind => (i.name === 'codebase' ? 'codebase' : 'prototype');
 
 /** Newest first, so the first is what "View prototype" and "View codebase" open. */
-export const workOf = (work: ProjectWork[], kind: WorkKind): ProjectWork[] =>
+export const workOf = (work: PrototypeWork[], kind: WorkKind): PrototypeWork[] =>
 	work.filter((i) => workKind(i) === kind).sort((a, b) => newestVersionFirst(a.name, b.name));
 
 /**
  * Newest work's first. Work whose record names no product gives none: a clone's folder name is never taken for one, since
  * it differs from machine to machine.
  */
-export const productsOf = (project: Pick<Project, 'work'>): string[] => {
+export const productsOf = (prototype: Pick<Prototype, 'work'>): string[] => {
 	const found: string[] = [];
 	// Across both kinds, so by when each was started: a version and codebase work have no number in common.
-	for (const it of [...project.work].sort(
-		byNewest<ProjectWork>(
+	for (const it of [...prototype.work].sort(
+		byNewest<PrototypeWork>(
 			(w) => w.createdAt || null,
 			(a, b) => newestVersionFirst(a.name, b.name),
 		),
@@ -66,7 +67,7 @@ export const productsOf = (project: Pick<Project, 'work'>): string[] => {
 	return found;
 };
 
-export const workLabel = (i: Pick<ProjectWork, 'name'>): string =>
+export const workLabel = (i: Pick<PrototypeWork, 'name'>): string =>
 	workKind(i) === 'codebase' ? 'Codebase' : `Version ${parseVersion(i.name) ?? i.name}`;
 
 export const noSetupNote = (branch: string): string =>

@@ -27,7 +27,7 @@ beforeEach(() => {
 	signedIn = true;
 	vi.clearAllMocks();
 	vi.useFakeTimers({ toFake: ['Date'], now: T });
-	pages.siteBehind.mockResolvedValue({ kind: 'page', projectId: 'demo', name: 'v1' });
+	pages.siteBehind.mockResolvedValue({ kind: 'page', prototypeId: 'demo', name: 'v1' });
 	pages.publish.mockResolvedValue({});
 	pages.pageStatus.mockResolvedValue({ state: 'unpublished' });
 });

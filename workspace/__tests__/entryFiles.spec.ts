@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { DEFINITIONS, entryFiles, writeEntryFiles } from '../src/core/services/projects/entryFiles';
+import { DEFINITIONS, entryFiles, writeEntryFiles } from '../src/core/services/products/entryFiles';
 
 const dirs: string[] = [];
 afterEach(() => {

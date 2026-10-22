@@ -22,7 +22,7 @@ export const siteDeploys = ({
 	designClone: () => string | null;
 	ref: () => RepoRef;
 	/** As `syncRecords` takes it. */
-	started: (projectId: string) => boolean;
+	started: (prototypeId: string) => boolean;
 }) => {
 	// One deploy of a page at a time, and once more if asked again meanwhile: what changed since may have missed its push.
 	const running = coalescingByKey<string>();
@@ -37,9 +37,9 @@ export const siteDeploys = ({
 				.catch((err: unknown) => void stopped.set(key, errorText(err))),
 		);
 	};
-	const page = (projectId: string, name: string): void =>
-		inBackground(prototypeKey(projectId, name), async () =>
-			publish({ github, ref: ref(), ...(await recordsFrom(designClone(), started)), projectId, name }),
+	const page = (prototypeId: string, name: string): void =>
+		inBackground(prototypeKey(prototypeId, name), async () =>
+			publish({ github, ref: ref(), ...(await recordsFrom(designClone(), started)), prototypeId, name }),
 		);
 	const site = (): void => inBackground('the site', async () => redeploySite({ github, ref: ref(), ...(await recordsFrom(designClone(), started)) }));
 
@@ -54,20 +54,20 @@ export const siteDeploys = ({
 		lastCatchUp = Date.now();
 		try {
 			const behind = await siteBehind(github, ref());
-			if (behind?.kind === 'page') page(behind.projectId, behind.name);
+			if (behind?.kind === 'page') page(behind.prototypeId, behind.name);
 			else if (behind?.kind === 'code') site();
 		} catch {
 			// GitHub would not say: the review screen says so for the page being looked at.
 		}
 	};
 
-	const status = async (projectId: string, name: string): Promise<PageStatus> => {
+	const status = async (prototypeId: string, name: string): Promise<PageStatus> => {
 		if (!signedIn()) return { state: 'none' };
-		const key = prototypeKey(projectId, name);
+		const key = prototypeKey(prototypeId, name);
 		if (running.has(key)) return { state: 'publishing' };
 		let found: PageStatus;
 		try {
-			found = await pageStatus(github, ref(), projectId, name);
+			found = await pageStatus(github, ref(), prototypeId, name);
 		} catch (err) {
 			// Most often the app's GitHub permission: reading the site and its deploys needs Pages and Deployments.
 			return { state: 'unavailable', why: `${HOST} would not say whether this is published: ${errorText(err)}` };

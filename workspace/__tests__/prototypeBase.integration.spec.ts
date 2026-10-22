@@ -6,7 +6,7 @@ import { declaredTarget } from '../src/core/services/accessibility/accessibility
 import { workPath } from '../src/shared/designPaths';
 import { dropPending } from '../src/core/services/prototypes/pendingPrototypes';
 import { recordStarted } from '../src/core/services/prototypes/prototype';
-import { prototypeWork } from '../src/core/services/prototypes/prototypeWork';
+import { versionWork } from '../src/core/services/prototypes/versionWork';
 import { freshTip } from '../src/core/services/platform/fetch';
 import { g, installDesignSystem, makeProduct, memoryStore } from './fixtures';
 
@@ -30,7 +30,7 @@ const commitIn = (dir: string, file: string, text: string) => {
 };
 
 const workIn = (root: string) =>
-	prototypeWork({
+	versionWork({
 		prototypesRoot: join(home, 'prototypes'),
 		productRoot: () => root,
 		store: () => shared.store,
@@ -40,7 +40,7 @@ const workIn = (root: string) =>
 		recordsRootOf: () => join(home, 'design', 'prototypes'),
 	});
 
-const start = (root: string) => workIn(root).start(root, { projectId: 'demo', title: 'Demo', note: 'A list', branch: 'develop', me: null });
+const start = (root: string) => workIn(root).start(root, { prototypeId: 'demo', title: 'Demo', note: 'A list', branch: 'develop', me: null });
 
 beforeEach(() => {
 	home = mkdtempSync(join(tmpdir(), 'fdw-base-'));
@@ -104,7 +104,7 @@ describe('a new prototype is modeled on the latest of its branch', () => {
 		const zone = commitIn(theirs, 'view.tsx', 'zone view');
 		g(theirs, 'push', '-q', 'origin', 'feature/zone');
 		g(mine, 'fetch', '-q', 'origin');
-		const made = await workIn(mine).start(mine, { projectId: 'demo', title: 'Demo', note: 'A list', branch: 'feature/zone', me: null });
+		const made = await workIn(mine).start(mine, { prototypeId: 'demo', title: 'Demo', note: 'A list', branch: 'feature/zone', me: null });
 		expect(made.basedOn?.commit).toBe(zone);
 		expect(made.modeledOn).toBe(`Modeled on feature/zone at ${zone.slice(0, 7)}.`);
 		expect(g(mine, 'branch', '--list', 'feature/zone')).toBe('');
@@ -194,13 +194,13 @@ describe('what a prototype is modeled on is what is read', () => {
 		);
 	});
 
-	it('has a project when it has a records file, even an empty one, or a version started here and not saved', async () => {
+	it('has a prototype when it has a records file, even an empty one, or a version started here and not saved', async () => {
 		const work = workIn(mine);
-		expect(await work.hasProject('demo')).toBe(false);
+		expect(await work.hasPrototype('demo')).toBe(false);
 		shared.files[workPath('shop')] = '[]\n';
-		expect(await work.hasProject('shop')).toBe(true);
+		expect(await work.hasPrototype('shop')).toBe(true);
 		await start(mine);
-		expect(await work.hasProject('demo')).toBe(true);
+		expect(await work.hasPrototype('demo')).toBe(true);
 	});
 
 	it('refuses a record whose commit or branch could be read as something else', async () => {

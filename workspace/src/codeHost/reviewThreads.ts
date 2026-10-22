@@ -13,7 +13,7 @@ import {
 } from '../shared/anchor';
 import { asRecord } from '../shared/json';
 import { prototypeKey } from '../shared/designPaths';
-import { latestDate } from '../shared/projectList';
+import { latestDate } from '../shared/prototypeList';
 import type { RepoRef } from '../shared/repoRef';
 import type { GitHubApi } from './github';
 import { HostError, hostErrorKind } from './hostError';
@@ -56,7 +56,7 @@ export class ReviewThreads {
 
 	/**
 	 * `counting`: how many comments of each thread are not resolved, read from its open issues' comments (a closed issue has
-	 * none open), for the project list's badge. Not otherwise, as every comment written or changed asks for the threads.
+	 * none open), for the prototype list's badge. Not otherwise, as every comment written or changed asks for the threads.
 	 */
 	async byBranch({ counting = false }: { counting?: boolean } = {}): Promise<Map<string, ReviewThread>> {
 		const issues = (
@@ -102,18 +102,18 @@ export class ReviewThreads {
 		return (await this.rawComments(number)).filter((c) => !isResolved(String(c.body ?? ''))).length;
 	}
 
-	async ensureIssue(projectId: string, branch: string): Promise<number> {
+	async ensureIssue(prototypeId: string, branch: string): Promise<number> {
 		const existing = (await this.byBranch()).get(branch);
 		if (existing) return existing.number;
 		const created = asRecord(
 			await this.session.api(`${this.apiPath}/issues`, {
 				method: 'POST',
 				body: {
-					title: `Review — ${projectId} (${branch})`,
+					title: `Review — ${prototypeId} (${branch})`,
 					body: [
-						`Review thread for **${projectId}**, branch: \`${branch}\`.`,
+						`Review thread for **${prototypeId}**, branch: \`${branch}\`.`,
 						'',
-						'Comments here are written by DSNR and exported to the project record.',
+						'Comments here are written by DSNR and exported to the prototype record.',
 						`Do not change the branch line above — the app finds this ${ISSUE} by it.`,
 					].join('\n'),
 					labels: [REVIEW_LABEL],
@@ -179,12 +179,12 @@ export class ReviewThreads {
 	}
 
 	/**
-	 * A deleted project's threads: each closed as not planned, with a note saying why, and its label taken off, so it is no
-	 * longer DSNR's and a new project of the same name starts with none. Its comments stay on GitHub. `branches` are the
-	 * project's work as recorded; any version's thread is the project's too. How many were closed.
+	 * A deleted prototype's threads: each closed as not planned, with a note saying why, and its label taken off, so it is no
+	 * longer DSNR's and a new prototype of the same name starts with none. Its comments stay on GitHub. `branches` are the
+	 * prototype's work as recorded; any version's thread is the prototype's too. How many were closed.
 	 */
-	async closeDeleted(projectId: string, branches: string[]): Promise<number> {
-		const versions = prototypeKey(projectId, '');
+	async closeDeleted(prototypeId: string, branches: string[]): Promise<number> {
+		const versions = prototypeKey(prototypeId, '');
 		const mine = [...(await this.byBranch())].filter(([branch]) => branches.includes(branch) || branch.startsWith(versions));
 		let closed = 0;
 		for (const [branch, thread] of mine) {
@@ -192,7 +192,7 @@ export class ReviewThreads {
 				const at = `${this.apiPath}/issues/${number}`;
 				await this.session.api(`${at}/comments`, {
 					method: 'POST',
-					body: { body: `${projectId} was deleted in DSNR, so this review is closed. Its comments stay here.` },
+					body: { body: `${prototypeId} was deleted in DSNR, so this review is closed. Its comments stay here.` },
 				});
 				await this.session.api(at, { method: 'PATCH', body: { state: 'closed', state_reason: 'not_planned' } });
 				await this.session.api(`${at}/labels/${encodeURIComponent(REVIEW_LABEL)}`, { method: 'DELETE' }).catch((err: unknown) => {
@@ -250,13 +250,13 @@ export class ReviewThreads {
 	}
 
 	async postComment(
-		projectId: string,
+		prototypeId: string,
 		branch: string,
 		body: string,
 		anchor: CommentAnchor | null = null,
 		picture: string | null = null,
 	): Promise<ReviewComment> {
-		const number = await this.ensureIssue(projectId, branch);
+		const number = await this.ensureIssue(prototypeId, branch);
 		const created = asRecord(
 			await this.session.api(`${this.apiPath}/issues/${number}/comments`, {
 				method: 'POST',

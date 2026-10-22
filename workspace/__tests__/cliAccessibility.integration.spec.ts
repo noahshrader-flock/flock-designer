@@ -68,7 +68,7 @@ describe.skipIf(NO_CHROME)('accessibility', () => {
 		mkdirSync(join(world.design, 'prototypes', 'shop'), { recursive: true });
 		writeFileSync(join(world.design, 'prototypes', 'shop', 'work.json'), '[]\n');
 
-		expect(await main(['accessibility', '--project', 'shop'], deps(shop))).toBe(0);
+		expect(await main(['accessibility', '--prototype', 'shop'], deps(shop))).toBe(0);
 		const said = world.out.join('\n');
 		expect(said).toMatch(/^Measured Test Product's app in design mode: (?:No issues found|\d+ issues? to fix)\./);
 		expect(said).toContain('axe-core 4.14.0 checked this against WCAG 2.1 Level AA, in Home, Devices.');
@@ -122,16 +122,16 @@ describe.skipIf(NO_CHROME)('accessibility', () => {
 		expect(handoff).toContain('Cover at least what the product names: VoiceOver with Safari, on macOS.');
 		expect(handoff).toContain('Add each to `flock-designer/prototypes/shop/accessibility/returned.md`');
 		world.out = [];
-		expect(await main(['check-accessibility', '--project', 'shop'], deps(shop))).toBe(0);
+		expect(await main(['check-accessibility', '--prototype', 'shop'], deps(shop))).toBe(0);
 		expect(world.out.join('\n')).toMatch(/every status rests on its evidence, and review\.md and HANDOFF\.md say what the ledger says/);
 		writeFileSync(join(shop, 'HANDOFF.md'), handoff.replace('Cover at least', 'Maybe cover'));
 		world.out = [];
-		expect(await main(['check-accessibility', '--project', 'shop'], deps(shop))).toBe(1);
+		expect(await main(['check-accessibility', '--prototype', 'shop'], deps(shop))).toBe(1);
 		expect(world.out.join('\n')).toMatch(/HANDOFF\.md does not carry the manual list its ledger writes/);
 		writeFileSync(join(shop, 'HANDOFF.md'), handoff);
 		rmSync(join(evidence, 'home', 'cells.json'));
 		world.out = [];
-		expect(await main(['check-accessibility', '--project', 'shop'], deps(shop))).toBe(1);
+		expect(await main(['check-accessibility', '--prototype', 'shop'], deps(shop))).toBe(1);
 		expect(world.out.join('\n')).toMatch(/rests on prototypes\/shop\/accessibility\/app\/home\/cells\.json, which is not there/);
 		writeFileSync(join(world.design, 'prototypes', 'shop', 'review.md'), `# Review\n\n## Product parity\n\nFine.\n\n${review}`);
 		// One a machine missed, one it had found.
@@ -145,7 +145,7 @@ describe.skipIf(NO_CHROME)('accessibility', () => {
 		writeFileSync(join(shop, 'serve.cjs'), readFileSync(join(shop, 'serve.cjs'), 'utf8').replace('<img src=', '<img alt=\\"Camera 4\\" src='));
 		writeFileSync(join(shop, 'package.json'), JSON.stringify({ name: 'plain-shop', devDependencies: { '@biomejs/biome': '1.9.4' } }));
 		world.out = [];
-		expect(await main(['accessibility', '--project', 'shop', '--light'], deps(shop))).toBe(0);
+		expect(await main(['accessibility', '--prototype', 'shop', '--light'], deps(shop))).toBe(0);
 		const second = world.out.join('\n');
 		expect(second).toMatch(/Since the last run \(\d{4}-\d\d-\d\d\): .*criteria changed in all\./);
 		expect(second).toMatch(
@@ -160,16 +160,16 @@ describe.skipIf(NO_CHROME)('accessibility', () => {
 		);
 		expect(readFileSync(join(world.design, 'prototypes', 'shop', 'accessibility', 'guards.md'), 'utf8')).toContain('a11y/useAltText');
 		world.out = [];
-		expect(await main(['read-returned', '--project', 'shop'], deps(shop))).toBe(0);
+		expect(await main(['read-returned', '--prototype', 'shop'], deps(shop))).toBe(0);
 		expect(world.out.join('\n')).not.toMatch(/newly logged/);
 		expect(readFileSync(join(shop, '.dsnr', 'knowledge', 'agent-gaps.md'), 'utf8').match(/found by a tester/g)).toHaveLength(1);
 		expect(readFileSync(join(world.design, 'prototypes', 'shop', 'review.md'), 'utf8')).toContain('## Product parity\n\nFine.');
 		world.out = [];
-		expect(await main(['check-accessibility', '--project', 'shop'], deps(shop))).toBe(0);
+		expect(await main(['check-accessibility', '--prototype', 'shop'], deps(shop))).toBe(0);
 	}, 120_000);
 
 	it('gives the agent its build’s own check, and puts what two rounds of it left on the page’s record when it is saved (A6)', async () => {
-		expect(await run('new-prototype', '--project', 'demo', '--title', 'Demo', '--note', 'A list')).toBe(0);
+		expect(await run('new-prototype', '--prototype', 'demo', '--title', 'Demo', '--note', 'A list')).toBe(0);
 		const task = world.out.join('\n');
 		const checkLine = /check its accessibility with exactly: `([^`]+)`/.exec(task)?.[1] as string;
 		const build = /Check it builds.*with exactly: `([^`]+)`/.exec(task)?.[1] as string;
@@ -185,7 +185,7 @@ describe.skipIf(NO_CHROME)('accessibility', () => {
 		const last = sh(checkLine);
 		expect(last.status).toBe(0);
 		expect(last.stdout).toMatch(/left after 2 rounds/);
-		expect(await run('save-prototype', '--project', 'demo', '--name', 'v1')).toBe(0);
+		expect(await run('save-prototype', '--prototype', 'demo', '--name', 'v1')).toBe(0);
 		const ledger = JSON.parse(readFileSync(join(world.design, 'prototypes', 'demo', 'accessibility', 'v1.ledger.json'), 'utf8')) as {
 			depth: string;
 			rows: { sc: string; status: string; why?: string }[];
@@ -199,11 +199,11 @@ describe.skipIf(NO_CHROME)('accessibility', () => {
 			/4\.1\.2 Name, Role, Value: found \(.*\), left because the build's own check sent it back 2 times/,
 		);
 		world.out = [];
-		expect(await main(['check-accessibility', '--project', 'demo', '--name', 'v1'], deps(world.product))).toBe(0);
+		expect(await main(['check-accessibility', '--prototype', 'demo', '--name', 'v1'], deps(world.product))).toBe(0);
 	}, 300_000);
 
 	it('keeps nothing of a check on a page changed after it, and says a page with no ledger has not been measured', async () => {
-		expect(await run('new-prototype', '--project', 'demo', '--title', 'Demo', '--note', 'A list')).toBe(0);
+		expect(await run('new-prototype', '--prototype', 'demo', '--title', 'Demo', '--note', 'A list')).toBe(0);
 		const task = world.out.join('\n');
 		const checkLine = /check its accessibility with exactly: `([^`]+)`/.exec(task)?.[1] as string;
 		const build = /Check it builds.*with exactly: `([^`]+)`/.exec(task)?.[1] as string;
@@ -217,12 +217,12 @@ describe.skipIf(NO_CHROME)('accessibility', () => {
 		expect(sh(checkLine).status).toBe(1);
 		// Changed after its check: what the check found is not of this page, so none of it is kept.
 		writeFileSync(source, 'export default () => <main><h1>Cameras</h1><button>Add camera</button></main>;\n');
-		expect(await run('save-prototype', '--project', 'demo', '--name', 'v1')).toBe(0);
+		expect(await run('save-prototype', '--prototype', 'demo', '--name', 'v1')).toBe(0);
 		expect(existsSync(join(world.design, 'prototypes', 'demo', 'accessibility', 'v1.ledger.json'))).toBe(false);
 		world.out = [];
-		expect(await main(['check-accessibility', '--project', 'demo', '--name', 'v1'], deps(world.product))).toBe(1);
+		expect(await main(['check-accessibility', '--prototype', 'demo', '--name', 'v1'], deps(world.product))).toBe(1);
 		expect(world.out.at(-1)).toMatch(
-			/v1\.ledger\.json is not there, or is not a ledger this DSNR writes: run dsnr accessibility --project demo --name v1 first\./,
+			/v1\.ledger\.json is not there, or is not a ledger this DSNR writes: run dsnr accessibility --prototype demo --name v1 first\./,
 		);
 	}, 300_000);
 
@@ -230,10 +230,10 @@ describe.skipIf(NO_CHROME)('accessibility', () => {
 		const bare = join(world.home, 'bare');
 		mkdirSync(bare);
 		g(bare, 'init', '-q');
-		expect(await main(['accessibility', '--project', 'demo'], deps(bare))).toBe(1);
+		expect(await main(['accessibility', '--prototype', 'demo'], deps(bare))).toBe(1);
 		expect(world.err.at(-1)).toBe(`dsnr: ${realpathSync(bare)} has no .dsnr/workspace.json, so DSNR cannot open it, and nothing was measured.`);
-		await run('new-prototype', '--project', 'demo', '--title', 'Demo', '--note', 'A list');
-		expect(await run('accessibility', '--project', 'demo')).toBe(1);
+		await run('new-prototype', '--prototype', 'demo', '--title', 'Demo', '--note', 'A list');
+		expect(await run('accessibility', '--prototype', 'demo')).toBe(1);
 		expect(world.err.at(-1)).toBe(
 			`dsnr: Test Product's .dsnr/workspace.json declares no "design-mode" command that serves its app on a port, so DSNR cannot open it, and nothing was measured.`,
 		);
@@ -241,11 +241,11 @@ describe.skipIf(NO_CHROME)('accessibility', () => {
 	});
 
 	it('measures a prototype’s page in a real browser, and keeps it as the app keeps its check', async () => {
-		await run('new-prototype', '--project', 'demo', '--title', 'Demo', '--note', 'A list');
+		await run('new-prototype', '--prototype', 'demo', '--title', 'Demo', '--note', 'A list');
 		writeFileSync(join(world.prototypes, 'demo', 'v1.tsx'), "export default () => <main><h1>Cameras</h1><img src='camera.png' /></main>;\n");
-		expect(await run('save-prototype', '--project', 'demo', '--name', 'v1')).toBe(0);
+		expect(await run('save-prototype', '--prototype', 'demo', '--name', 'v1')).toBe(0);
 		world.out = [];
-		expect(await run('accessibility', '--project', 'demo', '--name', 'v1')).toBe(0);
+		expect(await run('accessibility', '--prototype', 'demo', '--name', 'v1')).toBe(0);
 		const said = world.out.join('\n');
 		expect(said).toMatch(/^Measured demo v1's page: (?:No issues found|\d+ issues? to fix)\./);
 		expect(said).toMatch(/- \*\*image-alt\*\*[^\n]*\n {2}- `img`: /);
@@ -259,12 +259,12 @@ describe.skipIf(NO_CHROME)('accessibility', () => {
 		);
 		// A run leaves none of the last one's evidence.
 		world.out = [];
-		expect(await run('accessibility', '--project', 'demo', '--name', 'v1', '--light')).toBe(0);
+		expect(await run('accessibility', '--prototype', 'demo', '--name', 'v1', '--light')).toBe(0);
 		expect(world.out.join('\n')).toMatch(/Probed at light depth \(8 of the 30 cells\)/);
 		expect(existsSync(join(world.design, 'prototypes', 'demo', 'accessibility', 'v1', 'default', 'reflow-320.jpg'))).toBe(false);
 		const env = { ...process.env, HOME: world.home, XDG_CONFIG_HOME: join(world.home, '.config'), APPDATA: join(world.home, 'AppData') };
 		const launcher = join(__dirname, '..', 'bin', 'dsnr.mjs');
-		const ran = spawnSync(process.execPath, [launcher, 'accessibility', '--project', 'demo', '--name', 'v1'], {
+		const ran = spawnSync(process.execPath, [launcher, 'accessibility', '--prototype', 'demo', '--name', 'v1'], {
 			cwd: world.product,
 			env,
 			encoding: 'utf8',
@@ -279,7 +279,7 @@ describe.skipIf(process.env.DSNR_REAL_AGENT !== '1' || NO_CHROME)('the agent, wi
 	it('fixes a fault the check finds while it does what it was asked', async () => {
 		const { claudeCode } = await import('../src/core/services/agent/claudeCode');
 		const request = 'The prototype already exists. Change its heading to say "Camera list".';
-		expect(await run('new-prototype', '--project', 'demo', '--title', 'Demo', '--note', request)).toBe(0);
+		expect(await run('new-prototype', '--prototype', 'demo', '--title', 'Demo', '--note', request)).toBe(0);
 		const task = world.out.join('\n');
 		const checkLine = /check its accessibility with exactly: `([^`]+)`/.exec(task)?.[1] as string;
 		const source = join(world.prototypes, 'demo', 'v1.tsx');

@@ -33,10 +33,10 @@ export const check = {
 		(CODEBASE_ACTIONS as readonly unknown[]).includes(v) ? v : fail('That is not something codebase work does.')) as Check<CodebaseAction>,
 	review: ((v) => {
 		const r = asRecord(v);
-		if (!hasExactly(r, ['projectId', 'name', 'title']) || typeof r.title !== 'string' || r.title.length > LIMITS.title)
+		if (!hasExactly(r, ['prototypeId', 'name', 'title']) || typeof r.title !== 'string' || r.title.length > LIMITS.title)
 			fail('That is not a prototype to open for review.');
 		if (typeof r.name !== 'string' || !isVersionName(r.name)) fail('That is not a prototype to open for review.');
-		return { projectId: arg.projectId(r.projectId), name: r.name as string, title: r.title as string };
+		return { prototypeId: arg.prototypeId(r.prototypeId), name: r.name as string, title: r.title as string };
 	}) as Check<Review>,
 	edits: tokenEditsOf as Check<TokenEdit[]>,
 	mode: ((v) => (isTheme(v) ? v : fail('That is not a mode.'))) as Check<Theme>,
@@ -59,11 +59,11 @@ export const askRoutes = (handlers: AskHandlers): ReadonlyMap<AskName, Route> =>
 	handle('chooseDesignSystem', [], done(handlers.chooseDesignSystem));
 	handle('getStarted', [], done(handlers.getStarted));
 	handle('setUp', [], done(handlers.setUp));
-	handle('codebase', [check.action, arg.projectId], done(handlers.codebase));
-	handle('openReview', [arg.projectId], done(handlers.openReview));
-	handle('openReviewInBrowser', [arg.projectId], done(handlers.openReviewInBrowser));
-	handle('copyReviewLink', [arg.projectId], done(handlers.copyReviewLink));
-	handle('openReviewPublished', [arg.projectId], done(handlers.openReviewPublished));
+	handle('codebase', [check.action, arg.prototypeId], done(handlers.codebase));
+	handle('openReview', [arg.prototypeId], done(handlers.openReview));
+	handle('openReviewInBrowser', [arg.prototypeId], done(handlers.openReviewInBrowser));
+	handle('copyReviewLink', [arg.prototypeId], done(handlers.copyReviewLink));
+	handle('openReviewPublished', [arg.prototypeId], done(handlers.openReviewPublished));
 	handle('openComponent', [check.path], done(handlers.openComponent));
 	handle('componentLink', [check.path, check.link], done(handlers.componentLink));
 	handle('openPrimitives', [], done(handlers.openPrimitives));

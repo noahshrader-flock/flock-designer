@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { type CommandDeps, commands } from '../extension/src/commands';
 import type { Review } from '../extension/src/messages';
 
-const review: Review = { projectId: 'demo', name: 'v1', title: 'Demo · Version 1' };
+const review: Review = { prototypeId: 'demo', name: 'v1', title: 'Demo · Version 1' };
 
 const given = (more: Partial<CommandDeps> = {}) => {
 	const d = {
@@ -33,7 +33,7 @@ describe('DSNR’s commands', () => {
 		const asked = given();
 		await asked.run('dsnr.openReview', review);
 		expect(asked.d.openReview).toHaveBeenCalledWith(review);
-		await expect(asked.run('dsnr.openReview', { projectId: 'demo' })).rejects.toThrow(/not a review/);
+		await expect(asked.run('dsnr.openReview', { prototypeId: 'demo' })).rejects.toThrow(/not a review/);
 		const picked = given();
 		await picked.run('dsnr.openReview');
 		expect(picked.d.openReview).toHaveBeenCalledWith(review);
@@ -51,16 +51,16 @@ describe('DSNR’s commands', () => {
 		await front.run('dsnr.copyPublishedLink');
 		await front.run('dsnr.buildInCodebase');
 		expect(front.d.copyPublishedLink).toHaveBeenCalledWith(review);
-		expect(front.d.inPanel).toHaveBeenCalledWith({ type: 'open-dialog', dialog: { kind: 'build', projectId: 'demo' } });
+		expect(front.d.inPanel).toHaveBeenCalledWith({ type: 'open-dialog', dialog: { kind: 'build', prototypeId: 'demo' } });
 	});
 
-	it('assign the folder of the project right-clicked, else of the review in front, else say how', async () => {
+	it('assign the folder of the prototype right-clicked, else of the review in front, else say how', async () => {
 		const clicked = given({ activeReview: () => review });
-		await clicked.run('dsnr.assignFolder', { webviewSection: 'project', projectId: 'other' });
-		expect(clicked.d.inPanel).toHaveBeenCalledWith({ type: 'open-dialog', dialog: { kind: 'assign', projectId: 'other' } });
+		await clicked.run('dsnr.assignFolder', { webviewSection: 'prototype', prototypeId: 'other' });
+		expect(clicked.d.inPanel).toHaveBeenCalledWith({ type: 'open-dialog', dialog: { kind: 'assign', prototypeId: 'other' } });
 		const front = given({ activeReview: () => review });
 		await front.run('dsnr.assignFolder');
-		expect(front.d.inPanel).toHaveBeenCalledWith({ type: 'open-dialog', dialog: { kind: 'assign', projectId: 'demo' } });
+		expect(front.d.inPanel).toHaveBeenCalledWith({ type: 'open-dialog', dialog: { kind: 'assign', prototypeId: 'demo' } });
 		const none = given();
 		await none.run('dsnr.assignFolder');
 		expect(none.d.tell).toHaveBeenCalledWith(expect.stringMatching(/to assign its folder/));

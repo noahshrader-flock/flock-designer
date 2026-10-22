@@ -7,8 +7,8 @@ import { useWorkspace } from './hooks/useWorkspace';
  * How codebase work's branch stands against the product's default branch, read when it is shown, with Update this branch
  * when it is behind. `quiet`: nothing at all while it is up to date, or when that cannot be told (the Hand off dialog).
  */
-export const AgainstBase = ({ root, projectId, quiet, onUpdate }: { root: string; projectId: string; quiet: boolean; onUpdate: () => void }) => {
-	const read = useWorkspace(() => workspace().codebaseAgainstBase(root, projectId), [root, projectId]);
+export const AgainstBase = ({ root, prototypeId, quiet, onUpdate }: { root: string; prototypeId: string; quiet: boolean; onUpdate: () => void }) => {
+	const read = useWorkspace(() => workspace().codebaseAgainstBase(root, prototypeId), [root, prototypeId]);
 	const against = read.value;
 	if (read.loading) return quiet ? null : <Message waiting>Reading how it stands against the product’s main branch…</Message>;
 	if (read.error !== null) return quiet ? null : <Message tone="error">{read.error}</Message>;

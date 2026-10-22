@@ -34,7 +34,7 @@ const toldAs = async (told: string[], want: string[]) => {
 };
 
 // Each waits on the system's own word of a change, which a loaded machine can be slow to give: room for it, not a guess.
-describe('watching a project’s pages for a save', { timeout: 20_000 }, () => {
+describe('watching a prototype’s pages for a save', { timeout: 20_000 }, () => {
 	it('says a version’s page changed, once, after its writes have stopped: never of a page half written', async () => {
 		const w = await pages({ 'v1.html': '<p>first</p>' });
 		// Written slowly, in parts each sooner than the settle time after the last and lasting longer than it, as a large

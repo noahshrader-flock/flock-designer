@@ -11,8 +11,15 @@ import { isSafeBranchName } from '../platform/git';
 
 export const DESCRIPTOR_PATH = '.dsnr/workspace.json';
 
-/** Where the project's id goes in a branch pattern, and the only thing filled in. */
-export const PROJECT_ID_SLOT = '<project-id>';
+/** Where the prototype's id goes in a branch pattern or a command, and the only thing filled in. */
+export const PROTOTYPE_ID_SLOT = '<prototype-id>';
+
+/**
+ * What a product's file may still say in its place, written before DSNR called them prototypes. Read as the slot here,
+ * so nothing past this file sees it, and no product's repository has to change.
+ */
+const EARLIER_ID_SLOT = '<project-id>';
+const withSlot = (s: string): string => s.replaceAll(EARLIER_ID_SLOT, PROTOTYPE_ID_SLOT);
 
 const isStringArray = (v: unknown): v is string[] => Array.isArray(v) && v.every((x) => typeof x === 'string');
 
@@ -39,7 +46,7 @@ const parseCommand = (raw: unknown, index: number): WorkspaceCommand => {
 	return {
 		id: c.id,
 		label: c.label,
-		argv: c.argv,
+		argv: c.argv.map(withSlot),
 		...(typeof c.servesPreviewOn === 'number' ? { servesPreviewOn: c.servesPreviewOn } : {}),
 	};
 };
@@ -109,11 +116,12 @@ export const parseDescriptor = (text: string): WorkspaceDescriptor => {
 	if (!branch || typeof branch.codebase !== 'string') {
 		throw new Error(`${DESCRIPTOR_PATH} is missing branchPattern.codebase`);
 	}
-	// Only the project's id is filled in: any other placeholder would be in the branch's name as written.
-	const named = branch.codebase.split(PROJECT_ID_SLOT);
+	const codebase = withSlot(branch.codebase);
+	// Only the prototype's id is filled in: any other placeholder would be in the branch's name as written.
+	const named = codebase.split(PROTOTYPE_ID_SLOT);
 	if (named.length !== 2 || /[<>]/.test(named.join('')) || !isSafeBranchName(named.join('x'))) {
 		throw new Error(
-			`${DESCRIPTOR_PATH} branchPattern.codebase must be a branch name with ${PROJECT_ID_SLOT} once, and nothing else in <>, as feature/${PROJECT_ID_SLOT}`,
+			`${DESCRIPTOR_PATH} branchPattern.codebase must be a branch name with ${PROTOTYPE_ID_SLOT} once, and nothing else in <>, as feature/${PROTOTYPE_ID_SLOT}`,
 		);
 	}
 	if (!Array.isArray(d.commands)) {
@@ -137,7 +145,7 @@ export const parseDescriptor = (text: string): WorkspaceDescriptor => {
 		version: 1,
 		product: d.product as string,
 		contextDir: d.contextDir as string,
-		branchPattern: { codebase: branch.codebase },
+		branchPattern: { codebase },
 		commands,
 		designSystem: { package: ds.package, ...(folder !== undefined ? { folder } : {}) },
 		...(designRepository !== undefined ? { designRepository } : {}),
@@ -178,7 +186,7 @@ export interface WorkspaceDescriptor {
 	product: string;
 	/** Relative to the root. */
 	contextDir: string;
-	/** With a `<project-id>` placeholder: `feature/<project-id>`. */
+	/** With a `<prototype-id>` placeholder: `feature/<prototype-id>`. */
 	branchPattern: { codebase: string };
 	/** Every command Workspace may run. Nothing else is runnable. */
 	commands: WorkspaceCommand[];
@@ -189,7 +197,7 @@ export interface WorkspaceDescriptor {
 	 */
 	designSystem: { package: string; folder?: string };
 	/**
-	 * The company's design repository this product belongs to (`owner/repo`): its projects, comments and shared guidance.
+	 * The company's design repository this product belongs to (`owner/repo`): its prototypes, comments and shared guidance.
 	 * Absent: Flock's, as every product's was before a product could say.
 	 */
 	designRepository?: string;

@@ -2,8 +2,8 @@ import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import type { Work, Person } from '../../../shared/contract';
-import { briefFolder, firstHeading, folderName, fromBrief, namesProject, projectTitle, withFolder, withTitle } from '../../../shared/brief';
-import { projectDir, projectPath, prototypeKey, workPath } from '../../../shared/designPaths';
+import { briefFolder, firstHeading, folderName, fromBrief, namesPrototype, prototypeTitle, withFolder, withTitle } from '../../../shared/brief';
+import { prototypeDir, prototypePath, prototypeKey, workPath } from '../../../shared/designPaths';
 import { isVersionName, nextVersionName } from '../../../shared/versionNames';
 import { scrubbed } from '../../../shared/scrub';
 import { assertCover } from '../../../shared/validate';
@@ -48,7 +48,7 @@ export const cloneStore = (designRoot: string, published: () => void): RecordSto
 });
 
 export const GUIDE = 'agents/ui-guide.md';
-/** DSNR's workflow on top of the guide: the project folder, brief, context receipt and reviews. */
+/** DSNR's workflow on top of the guide: the prototype folder, brief, context receipt and reviews. */
 export const WORKFLOW = 'agents/dsnr.md';
 export const BUILD_SKILL = 'skills/build-prototype.md';
 export const MOVE_SKILL = 'skills/move-to-code.md';
@@ -68,17 +68,17 @@ export interface PrototypeBuild {
 }
 
 /** A file that cannot be read is refused rather than written over, or guessed at. */
-export const readRecords = async (store: Pick<RecordStore, 'read'>, projectId: string): Promise<Work[]> => {
-	const raw = await store.read(workPath(projectId));
+export const readRecords = async (store: Pick<RecordStore, 'read'>, prototypeId: string): Promise<Work[]> => {
+	const raw = await store.read(workPath(prototypeId));
 	if (raw === null) return [];
 	const records = parseWork(raw);
-	if (records === null) throw new Error(unreadableWork(workPath(projectId)));
+	if (records === null) throw new Error(unreadableWork(workPath(prototypeId)));
 	return records;
 };
 
 /** What a version's record says when it is made: the same shape whether it is written now or once its first page is saved. */
 const prototypeRecord = ({
-	projectId,
+	prototypeId,
 	name,
 	note,
 	me,
@@ -86,7 +86,7 @@ const prototypeRecord = ({
 	from,
 	now,
 }: {
-	projectId: string;
+	prototypeId: string;
 	name: string;
 	note: string;
 	me: Person | null;
@@ -94,9 +94,9 @@ const prototypeRecord = ({
 	from?: string;
 	now: Date;
 }): Work => ({
-	projectId,
+	prototypeId,
 	name,
-	branch: prototypeKey(projectId, name),
+	branch: prototypeKey(prototypeId, name),
 	commit: null,
 	createdAt: now.toISOString(),
 	// The record carries the gist; the brief the first request, and `requests-<version>.md` each one, whole.
@@ -107,19 +107,19 @@ const prototypeRecord = ({
 });
 
 const appendRecord = async (store: RecordStore, existing: Work[], record: Work): Promise<Work> => {
-	await store.write(workPath(record.projectId), serializeWork([...existing, record]), `${record.projectId}: record prototype ${record.name}`);
+	await store.write(workPath(record.prototypeId), serializeWork([...existing, record]), `${record.prototypeId}: record prototype ${record.name}`);
 	return record;
 };
 
 /**
- * Starts the project (a brief with its title, in `folder`) when this is its first work, and says what the version's record
+ * Starts the prototype (a brief with its title, in `folder`) when this is its first work, and says what the version's record
  * will be, writing none: it is recorded once its first page is saved (`recordStarted`). `pending`: names already started
- * here and not saved, which the next number counts. A project with a brief stays in its folder.
+ * here and not saved, which the next number counts. A prototype with a brief stays in its folder.
  */
 export const startPrototype = async (
 	store: RecordStore,
 	{
-		projectId,
+		prototypeId,
 		title,
 		note,
 		me,
@@ -128,7 +128,7 @@ export const startPrototype = async (
 		pending = [],
 		now = new Date(),
 	}: {
-		projectId: string;
+		prototypeId: string;
 		title: string;
 		note: string;
 		me: Person | null;
@@ -138,16 +138,16 @@ export const startPrototype = async (
 		now?: Date;
 	},
 ): Promise<Work> => {
-	const existing = await readRecords(store, projectId);
+	const existing = await readRecords(store, prototypeId);
 	const name = nextVersionName([...existing.map((i) => i.name), ...pending]);
-	const brief = projectPath(projectId, 'brief.md');
+	const brief = prototypePath(prototypeId, 'brief.md');
 	const haveBrief = await store.read(brief);
 	if (haveBrief === null || firstHeading(haveBrief) === null) {
 		// A brief with no heading may still have a folder, which is kept.
-		const written = `# ${projectTitle(title) ?? projectId}\n\n${scrubbed(note.trim()).text}\n`;
-		await store.write(brief, withFolder(written, haveBrief === null ? folder : briefFolder(haveBrief)), `${projectId}: start the project`);
+		const written = `# ${prototypeTitle(title) ?? prototypeId}\n\n${scrubbed(note.trim()).text}\n`;
+		await store.write(brief, withFolder(written, haveBrief === null ? folder : briefFolder(haveBrief)), `${prototypeId}: start the prototype`);
 	}
-	return prototypeRecord({ projectId, name, note, me, basedOn, now });
+	return prototypeRecord({ prototypeId, name, note, me, basedOn, now });
 };
 
 /**
@@ -155,51 +155,51 @@ export const startPrototype = async (
  * then stopped before the start was cleared) it is not written twice; another of that name made meanwhile is never saved over.
  */
 export const recordStarted = async (store: RecordStore, started: Work, save: () => Promise<void>): Promise<void> => {
-	const existing = await readRecords(store, started.projectId);
+	const existing = await readRecords(store, started.prototypeId);
 	const there = existing.find((i) => i.name === started.name);
 	if (there && there.createdAt !== started.createdAt)
-		throw new Error(`${started.projectId} ${started.name} was made meanwhile, so this one is not saved over it: start it again.`);
+		throw new Error(`${started.prototypeId} ${started.name} was made meanwhile, so this one is not saved over it: start it again.`);
 	await save();
 	if (!there) await appendRecord(store, existing, started);
 };
 
 /**
- * The brief is where the title is kept, so a project with none is refused rather than given one. Only the name people see
- * changes: the project's id, which its folder, links, branches and comments are named by, stays as it was.
+ * The brief is where the title is kept, so a prototype with none is refused rather than given one. Only the name people see
+ * changes: the prototype's id, which its folder, links, branches and comments are named by, stays as it was.
  */
-export const renameProject = async (store: RecordStore, projectId: string, title: string): Promise<void> => {
-	const path = projectPath(projectId, 'brief.md');
+export const renamePrototype = async (store: RecordStore, prototypeId: string, title: string): Promise<void> => {
+	const path = prototypePath(prototypeId, 'brief.md');
 	const brief = await store.read(path);
-	if (brief === null) throw new Error(`${projectId} has no brief, which is where its name is kept.`);
-	const name = projectTitle(title);
+	if (brief === null) throw new Error(`${prototypeId} has no brief, which is where its name is kept.`);
+	const name = prototypeTitle(title);
 	if (name === null) throw new Error('Give it a name.');
 	if (firstHeading(brief) === name) return;
-	await store.write(path, withTitle(brief, name), `${projectId}: renamed to ${name}`);
+	await store.write(path, withTitle(brief, name), `${prototypeId}: renamed to ${name}`);
 };
 
 /**
  * Every version goes with it, for everyone; what it was stays in the design repository's history. Refused unless `typed` is
- * its name as people see it, so nothing deletes a project its person did not name.
+ * its name as people see it, so nothing deletes a prototype its person did not name.
  */
-export const deleteProject = async (store: RecordStore, projectId: string, typed: string): Promise<void> => {
-	const brief = await store.read(projectPath(projectId, 'brief.md'));
-	if (brief === null && !(await store.has(workPath(projectId)))) throw new Error(`There is no project ${projectId} to delete.`);
-	const { title } = fromBrief(projectId, brief);
-	if (!namesProject(typed, title)) throw new Error(`Type ${title} to delete it.`);
-	await store.remove(projectDir(projectId), `${projectId}: deleted`);
+export const deletePrototype = async (store: RecordStore, prototypeId: string, typed: string): Promise<void> => {
+	const brief = await store.read(prototypePath(prototypeId, 'brief.md'));
+	if (brief === null && !(await store.has(workPath(prototypeId)))) throw new Error(`There is no prototype ${prototypeId} to delete.`);
+	const { title } = fromBrief(prototypeId, brief);
+	if (!namesPrototype(typed, title)) throw new Error(`Type ${title} to delete it.`);
+	await store.remove(prototypeDir(prototypeId), `${prototypeId}: deleted`);
 };
 
-/** The brief is where the folder is kept, so a project with none is refused rather than given one. */
-export const assignFolder = async (store: RecordStore, projectId: string, folder: string | null): Promise<void> => {
-	const path = projectPath(projectId, 'brief.md');
+/** The brief is where the folder is kept, so a prototype with none is refused rather than given one. */
+export const assignFolder = async (store: RecordStore, prototypeId: string, folder: string | null): Promise<void> => {
+	const path = prototypePath(prototypeId, 'brief.md');
 	const brief = await store.read(path);
-	if (brief === null) throw new Error(`${projectId} has no brief, which is where its folder is kept.`);
+	if (brief === null) throw new Error(`${prototypeId} has no brief, which is where its folder is kept.`);
 	const name = folderName(folder);
 	if (briefFolder(brief) === name) return;
 	await store.write(
 		path,
 		withFolder(brief, name),
-		name === null ? `${projectId}: taken out of its folder` : `${projectId}: put in the folder ${name}`,
+		name === null ? `${prototypeId}: taken out of its folder` : `${prototypeId}: put in the folder ${name}`,
 	);
 };
 
@@ -207,39 +207,46 @@ export const assignFolder = async (store: RecordStore, projectId: string, folder
  * Call it after writing the picture itself, so a record never names a picture that is not there. False, writing nothing,
  * when there is no record of the prototype.
  */
-export const setCover = async (store: RecordStore, projectId: string, name: string, cover: string): Promise<boolean> => {
+export const setCover = async (store: RecordStore, prototypeId: string, name: string, cover: string): Promise<boolean> => {
 	assertCover(cover);
-	const existing = await readRecords(store, projectId);
+	const existing = await readRecords(store, prototypeId);
 	if (!existing.some((i) => i.name === name)) return false;
 	const updated = existing.map((i) => (i.name === name ? { ...i, cover } : i));
-	await store.write(workPath(projectId), serializeWork(updated), `${projectId}: picture of prototype ${name}`);
+	await store.write(workPath(prototypeId), serializeWork(updated), `${prototypeId}: picture of prototype ${name}`);
 	return true;
 };
 
 /** A version's base moved to `commit`, as Refresh to latest does: false, writing nothing, when there is no record of it. */
-export const setBaseCommit = async (store: RecordStore, projectId: string, name: string, commit: string): Promise<boolean> => {
-	const existing = await readRecords(store, projectId);
+export const setBaseCommit = async (store: RecordStore, prototypeId: string, name: string, commit: string): Promise<boolean> => {
+	const existing = await readRecords(store, prototypeId);
 	const was = existing.find((i) => i.name === name)?.basedOn;
 	if (!was) return false;
 	const updated = existing.map((i) => (i.name === name ? { ...i, basedOn: { ...was, commit } } : i));
-	await store.write(workPath(projectId), serializeWork(updated), `${projectId}: prototype ${name} modeled on ${commit.slice(0, 7)}`);
+	await store.write(workPath(prototypeId), serializeWork(updated), `${prototypeId}: prototype ${name} modeled on ${commit.slice(0, 7)}`);
 	return true;
 };
 
 /** Named by the caller because its files are already under that name; refused when that name is taken. */
 export const recordVersionFrom = async (
 	store: RecordStore,
-	{ projectId, name, from, note, me, now = new Date() }: { projectId: string; name: string; from: Work; note: string; me: Person | null; now?: Date },
+	{
+		prototypeId,
+		name,
+		from,
+		note,
+		me,
+		now = new Date(),
+	}: { prototypeId: string; name: string; from: Work; note: string; me: Person | null; now?: Date },
 ): Promise<Work> => {
 	assertVersionName(name);
-	const existing = await readRecords(store, projectId);
+	const existing = await readRecords(store, prototypeId);
 	if (existing.some((i) => i.name === name))
-		throw new Error(`${projectId} already has a ${name}. Try again: the change will go in the next version.`);
+		throw new Error(`${prototypeId} already has a ${name}. Try again: the change will go in the next version.`);
 	return appendRecord(
 		store,
 		existing,
 		prototypeRecord({
-			projectId,
+			prototypeId,
 			name,
 			note,
 			me,
@@ -273,7 +280,7 @@ export interface PrototypeSources {
 }
 
 /** `continuing` is the branch, when the work was started before. */
-export const buildInCodebaseLead = ({ label, projectId, continuing }: { label: string; projectId: string; continuing: string | null }): string =>
+export const buildInCodebaseLead = ({ label, prototypeId, continuing }: { label: string; prototypeId: string; continuing: string | null }): string =>
 	continuing
-		? `Continue building ${label} of the ${projectId} prototype into this codebase, on ${continuing}. Some of it may be done already, so look at the branch and the audit first.`
-		: `Build ${label} of the ${projectId} prototype into this codebase.`;
+		? `Continue building ${label} of the ${prototypeId} prototype into this codebase, on ${continuing}. Some of it may be done already, so look at the branch and the audit first.`
+		: `Build ${label} of the ${prototypeId} prototype into this codebase.`;

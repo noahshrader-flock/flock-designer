@@ -1,6 +1,6 @@
 [
   {
-    "projectId": "zone-coverage",
+    "prototypeId": "zone-coverage",
     "name": "v1",
     "branch": "prototype/zone-coverage/v1",
     "commit": null,
@@ -20,7 +20,7 @@
     "cover": "4ebc6edd74a1"
   },
   {
-    "projectId": "zone-coverage",
+    "prototypeId": "zone-coverage",
     "name": "v2",
     "branch": "prototype/zone-coverage/v2",
     "commit": null,
@@ -40,7 +40,7 @@
     "cover": "2b873ab008a1"
   },
   {
-    "projectId": "zone-coverage",
+    "prototypeId": "zone-coverage",
     "name": "v3",
     "branch": "prototype/zone-coverage/v3",
     "commit": null,

@@ -189,7 +189,7 @@ describe('the check that each builds, on what it stands on', () => {
 						version: 1,
 						product: 'ds',
 						contextDir: '.dsnr',
-						branchPattern: { codebase: 'feature/<project-id>' },
+						branchPattern: { codebase: 'feature/<prototype-id>' },
 						designSystem: { package: 'ds' },
 						commands: [{ id: 'typecheck', label: 'Typecheck', argv: ['node', '-e', typecheck] }],
 					}),

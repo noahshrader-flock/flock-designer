@@ -23,7 +23,7 @@ const order = (task: string) =>
 
 describe('every run in a product checkout', () => {
 	const tasks = {
-		Handoff: handoffTask({ skill: '# Hand off', projectId: 'p', branch: 'feature/p', gate: null }, parts),
+		Handoff: handoffTask({ skill: '# Hand off', prototypeId: 'p', branch: 'feature/p', gate: null }, parts),
 		'building a prototype in the codebase': buildInCodebaseTask(
 			{ skill: '# Move', routeSkill: '# Route', pageFile: '/p.html', auditFile: '/a.md', recordFile: '/i.json', name: 'v1' },
 			parts,
@@ -37,7 +37,7 @@ describe('every run in a product checkout', () => {
 	});
 
 	it('leaves out the voice when the design system has none written, and the folders when there are none', () => {
-		const task = handoffTask({ skill: '# Hand off', projectId: 'p', branch: 'feature/p', gate: null }, { ...parts, shared: '', voice: '' });
+		const task = handoffTask({ skill: '# Hand off', prototypeId: 'p', branch: 'feature/p', gate: null }, { ...parts, shared: '', voice: '' });
 		expect(task).not.toContain('## Voice and tone');
 		expect(task).not.toContain('## Also yours to read');
 		expect(task).toContain('## Accessibility');
@@ -48,14 +48,14 @@ describe('Handoff', () => {
 	const bare = { ...parts, shared: '', voice: '' };
 
 	it('says when the product names no light check', () => {
-		expect(handoffTask({ skill: '# Hand off', projectId: 'p', branch: 'feature/p', gate: null }, { ...bare, lightCheck: null })).toMatch(
+		expect(handoffTask({ skill: '# Hand off', prototypeId: 'p', branch: 'feature/p', gate: null }, { ...bare, lightCheck: null })).toMatch(
 			/names no light check/,
 		);
 	});
 
 	it('Handoff: the shared skill, the branch, the gate first and last, the light check, and the verdict line asked for', () => {
 		const task = handoffTask(
-			{ skill: '# Hand work to engineering\n', projectId: 'admin-usage', branch: 'feature/admin-usage', gate: 'npm run handoff -- admin-usage' },
+			{ skill: '# Hand work to engineering\n', prototypeId: 'admin-usage', branch: 'feature/admin-usage', gate: 'npm run handoff -- admin-usage' },
 			bare,
 		);
 		expect(task).toContain('# Hand work to engineering');
@@ -101,7 +101,7 @@ describe('building a prototype in the codebase', () => {
 
 describe('Handoff, on work with no route recorded', () => {
 	const bare = { guide: '', lightCheck: null, shared: '', accessibility: '', voice: '' };
-	const base = { skill: '# Hand off', projectId: 'p', branch: 'feature/p', gate: null };
+	const base = { skill: '# Hand off', prototypeId: 'p', branch: 'feature/p', gate: null };
 
 	it('asks for the route first, with how to choose it, and says nothing of it when there is one', () => {
 		const task = handoffTask({ ...base, missingRoute: { skill: '# Record where the work is', recordFile: '/d/prototypes/p/work.json' } }, bare);
@@ -146,7 +146,7 @@ describe('the builder’s guide, in every task (so no run depends on an agent ch
 			{ skill: '# Move', routeSkill: '# Route', pageFile: '/p.html', auditFile: '/a.md', recordFile: '/i.json', name: 'v1' },
 			parts,
 		),
-		Handoff: handoffTask({ skill: '# Hand off', projectId: 'p', branch: 'feature/p', gate: null }, parts),
+		Handoff: handoffTask({ skill: '# Hand off', prototypeId: 'p', branch: 'feature/p', gate: null }, parts),
 	};
 
 	it.each(Object.entries(tasks))('comes first, before anything else: %s', (_kind, task) => {
@@ -174,7 +174,7 @@ describe('the builder’s guide, in every task (so no run depends on an agent ch
 	it('asks Handoff to write how the branch merges only when DSNR could read it, and an update to merge only, with a way back', () => {
 		expect(tasks.Handoff).not.toContain('under the verdict');
 		const said = handoffTask(
-			{ skill: '# Hand off', projectId: 'p', branch: 'feature/p', gate: null, mergeState: 'feature/p is up to date with develop.' },
+			{ skill: '# Hand off', prototypeId: 'p', branch: 'feature/p', gate: null, mergeState: 'feature/p is up to date with develop.' },
 			parts,
 		);
 		expect(said).toContain(

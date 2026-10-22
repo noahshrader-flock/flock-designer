@@ -2,8 +2,8 @@ import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { DesignRepositoryClones, NO_CLONES } from '../src/core/services/projects/discovery';
-import { designRepositoryForSetup, handSetUp, setUpTask, setupMoved, setupState } from '../src/core/services/projects/setUp';
+import { DesignRepositoryClones, NO_CLONES } from '../src/core/services/products/discovery';
+import { designRepositoryForSetup, handSetUp, setUpTask, setupMoved, setupState } from '../src/core/services/products/setUp';
 import { DESIGN_REPO } from '../src/shared/config';
 import { g, writeFiles } from './fixtures';
 
@@ -73,7 +73,7 @@ describe('the design repository a product is set up with', () => {
 	const choose = vi.fn(async (): Promise<string | null> => null);
 
 	it('is always the person’s pick, offered first at Flock’s clone, beside the product or where the person keeps it', async () => {
-		// The pick decides where every project, comment and page of the product goes, so it is never made for them.
+		// The pick decides where every prototype, comment and page of the product goes, so it is never made for them.
 		const accept = vi.fn(async (startAt: string | null) => startAt);
 		const beside = designRepository(join(home, DESIGN_REPO.repo));
 		expect(await designRepositoryForSetup(product, { clones, choose: accept })).toEqual({

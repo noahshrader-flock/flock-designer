@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { codebaseWork } from '../src/core/services/codebase/codebaseWork';
-import { readDescriptor } from '../src/core/services/projects/descriptor';
+import { readDescriptor } from '../src/core/services/products/descriptor';
 import { g, makeProduct } from './fixtures';
 
 let dir: string;
@@ -18,7 +18,7 @@ afterEach(() => rmSync(dir, { recursive: true, force: true }));
 const here = () => ({ canonical: product, descriptor: readDescriptor(product), recordsRoot: join(dir, 'flock-designer', 'prototypes') });
 const work = () => codebaseWork({ records: async () => [], login: () => null, written: (i) => i });
 
-describe("a project's codebase work", () => {
+describe("a prototype's codebase work", () => {
 	it('is not started while neither its branch nor a record says so', async () => {
 		expect(await work().of(here(), 'demo')).toMatchObject({ branch: 'feature/demo', exists: false, recorded: false, started: false });
 	});

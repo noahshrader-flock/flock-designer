@@ -1,7 +1,7 @@
 export const hasExactly = (raw: object, keys: readonly string[]): boolean =>
 	Object.keys(raw).length === keys.length && keys.every((k) => Object.hasOwn(raw, k));
 
-export const PROJECT_ID = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+export const PROTOTYPE_ID = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
 /** Cut short before the trailing hyphen is stripped, so a long name cannot produce an id the core would reject. */
 export const slugify = (name: string): string =>

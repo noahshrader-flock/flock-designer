@@ -83,7 +83,7 @@ export const setUpTask = ({ root, design, repository, note }: { root: string; de
 	].join('\n');
 };
 
-/** What the task file is called, in the app's own folder: beside the prototypes, never in a project's folder. */
+/** What the task file is called, in the app's own folder: beside the prototypes, never in a prototype's folder. */
 export const setUpTaskFile = (prototypesRoot: string, root: string): string => join(prototypesRoot, '_set-up', `${basename(root)}.md`);
 
 /** The `dsnr` command the task runs is built from the design repository's own workspace, so it must be installed there. */

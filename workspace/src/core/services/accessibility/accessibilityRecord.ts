@@ -5,7 +5,7 @@ import {
 	accessibilityLedgerPath,
 	accessibilityPath,
 	accessibilityViewDirs,
-	projectPath,
+	prototypePath,
 } from '../../../shared/designPaths';
 import type { DeclaredTarget } from '../../../shared/wcag';
 import type { AppPage } from './accessibilityBrief';
@@ -14,7 +14,7 @@ import { type Ledger, type LedgerRun, ledgerOf, withReviewSection } from './ledg
 import type { CellResult } from './probe/cells';
 
 export interface MeasureRecord {
-	projectId: string;
+	prototypeId: string;
 	/** A prototype's name, or null for the product's own app. */
 	name: string | null;
 	of: string;
@@ -36,17 +36,17 @@ export const recordFiles = (
 	m: MeasureRecord,
 	review: string | null,
 ): { files: { path: string; text: string }[]; ledger: Ledger; ledgerFile: string } => {
-	const { projectId, name } = m;
-	const evidence = accessibilityEvidenceDir(projectId, name);
-	const resultFile = accessibilityPath(projectId, name);
+	const { prototypeId, name } = m;
+	const evidence = accessibilityEvidenceDir(prototypeId, name);
+	const resultFile = accessibilityPath(prototypeId, name);
 	const sourceFile = `${evidence}/source.json`;
 	const dirs = accessibilityViewDirs(
-		projectId,
+		prototypeId,
 		name,
 		m.views.map((v) => v.state),
 	);
 	const views = m.views.map((v) => ({ ...v, evidence: dirs.get(v.state) as string }));
-	const ledgerFile = accessibilityLedgerPath(projectId, name);
+	const ledgerFile = accessibilityLedgerPath(prototypeId, name);
 	const ledger = ledgerOf({
 		key: name ?? 'app',
 		of: m.of,
@@ -91,9 +91,9 @@ export const recordFiles = (
 			...views.map((v) => ({ path: `${v.evidence}/cells.json`, text: json(v.results, 1) })),
 			{ path: sourceFile, text: json(m.source, 1) },
 			{ path: ledgerFile, text: json(ledger) },
-			{ path: projectPath(projectId, 'review.md'), text: withReviewSection(review, ledger, ledgerFile) },
+			{ path: prototypePath(prototypeId, 'review.md'), text: withReviewSection(review, ledger, ledgerFile) },
 		],
 	};
 };
 
-export const prototypeMeasureName = (projectId: string, name: string): string => `${projectId} ${name}'s page`;
+export const prototypeMeasureName = (prototypeId: string, name: string): string => `${prototypeId} ${name}'s page`;

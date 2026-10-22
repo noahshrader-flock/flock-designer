@@ -2,24 +2,24 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import type { Project } from '../src/shared/contract';
+import type { Prototype } from '../src/shared/contract';
 import { DesignRepo } from '../src/codeHost/designRepo';
-import { readFolderProjects } from '../src/core/services/projects/localProjects';
-import { assignFolder, deleteProject, renameProject, startPrototype, type RecordStore } from '../src/core/services/prototypes/prototype';
+import { readFolderPrototypes } from '../src/core/services/prototypes/localPrototypes';
+import { assignFolder, deletePrototype, renamePrototype, startPrototype, type RecordStore } from '../src/core/services/prototypes/prototype';
 import {
 	briefFolder,
 	firstHeading,
 	folderName,
 	foldersOf,
 	inFolder,
-	namesProject,
-	projectTitle,
+	namesPrototype,
+	prototypeTitle,
 	sameFolder,
 	withFolder,
 	withTitle,
 } from '../src/shared/brief';
-import { projectDir, projectPath } from '../src/shared/designPaths';
-import { mergeProjects } from '../src/shared/projectList';
+import { prototypeDir, prototypePath } from '../src/shared/designPaths';
+import { mergePrototypes } from '../src/shared/prototypeList';
 import { b64, fakeGitHub } from './fakes/github';
 import { memoryStore } from './fixtures';
 
@@ -86,14 +86,14 @@ describe('putting a brief in a folder', () => {
 	});
 });
 
-describe('a project’s path', () => {
-	it('is built in one place, for the project and for a file in it', () => {
-		expect(projectDir('alpha')).toBe('prototypes/alpha');
-		expect(projectPath('alpha', 'brief.md')).toBe('prototypes/alpha/brief.md');
+describe('a prototype’s path', () => {
+	it('is built in one place, for the prototype and for a file in it', () => {
+		expect(prototypeDir('alpha')).toBe('prototypes/alpha');
+		expect(prototypePath('alpha', 'brief.md')).toBe('prototypes/alpha/brief.md');
 	});
 });
 
-describe('reading a project’s folder', () => {
+describe('reading a prototype’s folder', () => {
 	let root: string;
 	beforeEach(() => {
 		root = mkdtempSync(join(tmpdir(), 'folders-'));
@@ -105,7 +105,7 @@ describe('reading a project’s folder', () => {
 		writeFileSync(join(root, 'alert-history', 'brief.md'), FILED);
 		mkdirSync(join(root, 'loose'));
 		writeFileSync(join(root, 'loose', 'brief.md'), '# Loose\n');
-		const byId = new Map(readFolderProjects(root).map((p) => [p.id, p]));
+		const byId = new Map(readFolderPrototypes(root).map((p) => [p.id, p]));
 		expect(byId.get('alert-history')).toMatchObject({ title: 'Alert history', folder: 'Admin' });
 		expect(byId.get('loose')).toMatchObject({ title: 'Loose', folder: null });
 	});
@@ -122,7 +122,7 @@ describe('reading a project’s folder', () => {
 			'/repos/acme/design/commits*': [],
 			'/repos/acme/design/issues*': [],
 		});
-		const list = await new DesignRepo(github, { owner: 'acme', repo: 'design' }).listProjects();
+		const list = await new DesignRepo(github, { owner: 'acme', repo: 'design' }).listPrototypes();
 		const byId = new Map(list.map((p) => [p.id, p]));
 		expect(byId.get('alpha')).toMatchObject({ title: 'Alert history', folder: 'Admin' });
 		expect(byId.get('beta')).toMatchObject({ title: 'beta', folder: null });
@@ -130,8 +130,8 @@ describe('reading a project’s folder', () => {
 	});
 });
 
-describe('a project’s folder, when this machine and GitHub both know the project', () => {
-	const project = (over: Partial<Project>): Project => ({
+describe('a prototype’s folder, when this machine and GitHub both know the prototype', () => {
+	const prototype = (over: Partial<Prototype>): Prototype => ({
 		id: 'alpha',
 		title: 'Alpha',
 		folder: null,
@@ -142,19 +142,19 @@ describe('a project’s folder, when this machine and GitHub both know the proje
 	});
 
 	it('is this machine’s, which is the one last written here and is synced from GitHub before every write', () => {
-		const [merged] = mergeProjects([project({ folder: 'Admin' })], [project({ folder: 'Roles' })]);
+		const [merged] = mergePrototypes([prototype({ folder: 'Admin' })], [prototype({ folder: 'Roles' })]);
 		expect(merged?.folder).toBe('Roles');
-		const [cleared] = mergeProjects([project({ folder: 'Admin' })], [project({ folder: null })]);
+		const [cleared] = mergePrototypes([prototype({ folder: 'Admin' })], [prototype({ folder: null })]);
 		expect(cleared?.folder).toBeNull();
 	});
 
 	it('is GitHub’s when this machine has no brief for it', () => {
-		const [merged] = mergeProjects([project({ folder: 'Admin' })], [project({ records: [], folder: null })]);
+		const [merged] = mergePrototypes([prototype({ folder: 'Admin' })], [prototype({ records: [], folder: null })]);
 		expect(merged?.folder).toBe('Admin');
 	});
 });
 
-describe('assigning a project a folder', () => {
+describe('assigning a prototype a folder', () => {
 	const said = (files: Record<string, string>) => {
 		const { store, writes } = memoryStore(files);
 		const messages: string[] = [];
@@ -183,34 +183,34 @@ describe('assigning a project a folder', () => {
 		expect(writes).toEqual([]);
 	});
 
-	it('keeps the folder when a prototype is started on a project whose brief has a folder and no heading', async () => {
+	it('keeps the folder when a prototype is started on a prototype whose brief has a folder and no heading', async () => {
 		const { store, files } = said({ 'prototypes/alert-history/brief.md': '---\nfolder: Admin\n---\n' });
-		await startPrototype(store, { projectId: 'alert-history', title: 'Alert history', note: 'Past alerts', me: null });
+		await startPrototype(store, { prototypeId: 'alert-history', title: 'Alert history', note: 'Past alerts', me: null });
 		expect(files['prototypes/alert-history/brief.md']).toBe('---\nfolder: Admin\n---\n# Alert history\n\nPast alerts\n');
 	});
 
-	it('puts a new project in the folder it is started in', async () => {
+	it('puts a new prototype in the folder it is started in', async () => {
 		const { store, files } = said({});
-		await startPrototype(store, { projectId: 'alert-history', title: 'Alert history', note: 'Past alerts', me: null, folder: 'Admin' });
+		await startPrototype(store, { prototypeId: 'alert-history', title: 'Alert history', note: 'Past alerts', me: null, folder: 'Admin' });
 		expect(files['prototypes/alert-history/brief.md']).toBe('---\nfolder: Admin\n---\n# Alert history\n\nPast alerts\n');
 	});
 
-	it('leaves a project that already has a brief where it is, when a new version is started in another folder', async () => {
+	it('leaves a prototype that already has a brief where it is, when a new version is started in another folder', async () => {
 		const { store, files } = said({ 'prototypes/alert-history/brief.md': FILED });
-		await startPrototype(store, { projectId: 'alert-history', title: 'Alert history', note: 'Again', me: null, folder: 'Roles' });
+		await startPrototype(store, { prototypeId: 'alert-history', title: 'Alert history', note: 'Again', me: null, folder: 'Roles' });
 		expect(files['prototypes/alert-history/brief.md']).toBe(FILED);
 	});
 
-	it('refuses a project with no brief, which is where the folder is kept', async () => {
+	it('refuses a prototype with no brief, which is where the folder is kept', async () => {
 		const { store } = said({});
 		await expect(assignFolder(store, 'alert-history', 'Admin')).rejects.toThrow('alert-history has no brief, which is where its folder is kept.');
 	});
 });
 
-describe('a project’s name, the one people see', () => {
+describe('a prototype’s name, the one people see', () => {
 	it('is kept on one line, its spaces single, and is nothing when nothing is left', () => {
-		expect(projectTitle('  Alert   history\n v2 ')).toBe('Alert history v2');
-		expect(projectTitle(' \n ')).toBeNull();
+		expect(prototypeTitle('  Alert   history\n v2 ')).toBe('Alert history v2');
+		expect(prototypeTitle(' \n ')).toBeNull();
 	});
 
 	it('is its brief’s first heading, written in place, with the folder and the rest of the brief kept', () => {
@@ -221,7 +221,7 @@ describe('a project’s name, the one people see', () => {
 	});
 });
 
-describe('renaming a project', () => {
+describe('renaming a prototype', () => {
 	const said = (files: Record<string, string>) => {
 		const { store, writes } = memoryStore(files);
 		const messages: string[] = [];
@@ -231,7 +231,7 @@ describe('renaming a project', () => {
 
 	it('writes the new name into its brief, saying so, and nothing else: its id and folder stay', async () => {
 		const { store, files, writes, messages } = said({ 'prototypes/alert-history/brief.md': FILED });
-		await renameProject(store, 'alert-history', '  Alerts  over time ');
+		await renamePrototype(store, 'alert-history', '  Alerts  over time ');
 		expect(files['prototypes/alert-history/brief.md']).toBe(FILED.replace('# Alert history', '# Alerts over time'));
 		expect(writes).toEqual(['prototypes/alert-history/brief.md']);
 		expect(messages).toEqual(['alert-history: renamed to Alerts over time']);
@@ -239,26 +239,28 @@ describe('renaming a project', () => {
 
 	it('writes nothing when the name is the one it has', async () => {
 		const { store, writes } = said({ 'prototypes/alert-history/brief.md': FILED });
-		await renameProject(store, 'alert-history', ' Alert history ');
+		await renamePrototype(store, 'alert-history', ' Alert history ');
 		expect(writes).toEqual([]);
 	});
 
-	it('refuses no name, and a project with no brief, which is where its name is kept', async () => {
-		await expect(renameProject(said({ 'prototypes/alert-history/brief.md': FILED }).store, 'alert-history', '  ')).rejects.toThrow('Give it a name.');
-		await expect(renameProject(said({}).store, 'alert-history', 'Alerts')).rejects.toThrow(
+	it('refuses no name, and a prototype with no brief, which is where its name is kept', async () => {
+		await expect(renamePrototype(said({ 'prototypes/alert-history/brief.md': FILED }).store, 'alert-history', '  ')).rejects.toThrow(
+			'Give it a name.',
+		);
+		await expect(renamePrototype(said({}).store, 'alert-history', 'Alerts')).rejects.toThrow(
 			'alert-history has no brief, which is where its name is kept.',
 		);
 	});
 });
 
-describe('deleting a project', () => {
+describe('deleting a prototype', () => {
 	const said = (files: Record<string, string>) => {
 		const { store, removed } = memoryStore(files);
 		const messages: string[] = [];
 		const telling: RecordStore = { ...store, remove: async (d, m) => (messages.push(m), store.remove(d, m)) };
 		return { store: telling, files, removed, messages };
 	};
-	const PROJECT = {
+	const PROTOTYPE = {
 		'prototypes/alert-history/brief.md': FILED,
 		'prototypes/alert-history/work.json': '[]',
 		'prototypes/alert-history/v1.html': '<p>',
@@ -266,39 +268,39 @@ describe('deleting a project', () => {
 	};
 
 	it('is asked for by its name as people see it, exactly, spaces at either end aside', () => {
-		expect(namesProject('  Alert history ', 'Alert history')).toBe(true);
-		expect(namesProject('alert history', 'Alert history')).toBe(false);
-		expect(namesProject('Alert  history', 'Alert history')).toBe(false);
-		expect(namesProject('', 'Alert history')).toBe(false);
+		expect(namesPrototype('  Alert history ', 'Alert history')).toBe(true);
+		expect(namesPrototype('alert history', 'Alert history')).toBe(false);
+		expect(namesPrototype('Alert  history', 'Alert history')).toBe(false);
+		expect(namesPrototype('', 'Alert history')).toBe(false);
 	});
 
-	it('removes its whole folder, every version with it, as one change saying so, and nothing of another project', async () => {
-		const { store, files, removed, messages } = said({ ...PROJECT });
-		await deleteProject(store, 'alert-history', 'Alert history');
+	it('removes its whole folder, every version with it, as one change saying so, and nothing of another prototype', async () => {
+		const { store, files, removed, messages } = said({ ...PROTOTYPE });
+		await deletePrototype(store, 'alert-history', 'Alert history');
 		expect(removed).toEqual(['prototypes/alert-history']);
 		expect(messages).toEqual(['alert-history: deleted']);
 		expect(Object.keys(files)).toEqual(['prototypes/alert-history-2/brief.md']);
 	});
 
 	it('refuses any other name, saying the one to type, and removes nothing', async () => {
-		const { store, removed } = said({ ...PROJECT });
-		await expect(deleteProject(store, 'alert-history', 'alert history')).rejects.toThrow('Type Alert history to delete it.');
-		await expect(deleteProject(store, 'alert-history', 'alert-history')).rejects.toThrow('Type Alert history to delete it.');
+		const { store, removed } = said({ ...PROTOTYPE });
+		await expect(deletePrototype(store, 'alert-history', 'alert history')).rejects.toThrow('Type Alert history to delete it.');
+		await expect(deletePrototype(store, 'alert-history', 'alert-history')).rejects.toThrow('Type Alert history to delete it.');
 		expect(removed).toEqual([]);
 	});
 
-	it('takes its id for its name when it has no brief, as the list shows it, and refuses a project that is not there', async () => {
+	it('takes its id for its name when it has no brief, as the list shows it, and refuses a prototype that is not there', async () => {
 		const { store, removed } = said({ 'prototypes/zones/work.json': '[]' });
-		await deleteProject(store, 'zones', 'zones');
+		await deletePrototype(store, 'zones', 'zones');
 		expect(removed).toEqual(['prototypes/zones']);
-		await expect(deleteProject(said({}).store, 'zones', 'zones')).rejects.toThrow('There is no project zones to delete.');
+		await expect(deletePrototype(said({}).store, 'zones', 'zones')).rejects.toThrow('There is no prototype zones to delete.');
 	});
 });
 
 describe('the folders in use', () => {
-	const p = (id: string, folder: string | null): Project => ({ id, title: id, records: [], work: [], people: [], folder });
+	const p = (id: string, folder: string | null): Prototype => ({ id, title: id, records: [], work: [], people: [], folder });
 
-	it('are each folder a project is in, once whatever its case, as the first project in the list spells it, in order', () => {
+	it('are each folder a prototype is in, once whatever its case, as the first prototype in the list spells it, in order', () => {
 		expect(foldersOf([p('a', 'roles'), p('b', 'Admin'), p('c', 'ROLES'), p('d', null), p('e', 'admin')])).toEqual(['Admin', 'roles']);
 	});
 
@@ -307,7 +309,7 @@ describe('the folders in use', () => {
 		expect(sameFolder('Admin', 'Admins')).toBe(false);
 	});
 
-	it('hold a project when it is in that folder, all of them for all folders, and those in none for no folder', () => {
+	it('hold a prototype when it is in that folder, all of them for all folders, and those in none for no folder', () => {
 		expect(inFolder(p('a', 'Admin'), { kind: 'folder', name: 'admin' })).toBe(true);
 		expect(inFolder(p('a', 'Admin'), { kind: 'folder', name: 'Roles' })).toBe(false);
 		expect(inFolder(p('a', 'Admin'), { kind: 'all' })).toBe(true);

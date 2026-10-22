@@ -115,7 +115,7 @@ describe('the comments, through DSNR', () => {
 		const ask = vi.fn(async (name: string) =>
 			name === 'signInState' ? { ok: true as const, value: { state: 'signedIn', user: { login: 'noah' } } } : { ok: true as const, value: null },
 		);
-		const store = relayComments({ ask }, { projectId: 'demo', branch: 'prototype/demo/v1' });
+		const store = relayComments({ ask }, { prototypeId: 'demo', branch: 'prototype/demo/v1' });
 		const ref = { thread: 7, id: 70 };
 		const anchor = { selector: 'h1' } as never;
 		await store.read();

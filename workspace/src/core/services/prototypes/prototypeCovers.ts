@@ -7,7 +7,7 @@ import { join } from 'node:path';
 import type { MadeCover } from '../../../shared/contract';
 import { coverPath } from '../../../shared/designPaths';
 import { isVersionName } from '../../../shared/versionNames';
-import { PROJECT_ID } from '../../../shared/validate';
+import { PROTOTYPE_ID } from '../../../shared/validate';
 import { type RecordStore, contentHashOf, readRecords, setCover } from './prototype';
 import type { DrawCover } from '../../ports';
 
@@ -39,14 +39,14 @@ export const isBlank = (data: Uint8Array): boolean => {
 	return other <= seen / 100;
 };
 
-export const builtHere = (prototypesRoot: string): { projectId: string; name: string }[] => {
+export const builtHere = (prototypesRoot: string): { prototypeId: string; name: string }[] => {
 	if (!existsSync(prototypesRoot)) return [];
 	return readdirSync(prototypesRoot, { withFileTypes: true })
-		.filter((d) => d.isDirectory() && PROJECT_ID.test(d.name))
+		.filter((d) => d.isDirectory() && PROTOTYPE_ID.test(d.name))
 		.flatMap((d) =>
 			readdirSync(join(prototypesRoot, d.name))
 				.filter((f) => f.endsWith('.html') && isVersionName(f.slice(0, -'.html'.length)))
-				.map((f) => ({ projectId: d.name, name: f.slice(0, -'.html'.length) }))
+				.map((f) => ({ prototypeId: d.name, name: f.slice(0, -'.html'.length) }))
 				.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true })),
 		);
 };
@@ -54,35 +54,35 @@ export const builtHere = (prototypesRoot: string): { projectId: string; name: st
 export interface CoverDeps {
 	store: () => RecordStore;
 	/** Null when it was not built here. */
-	page: (projectId: string, name: string) => string | null;
+	page: (prototypeId: string, name: string) => string | null;
 	/** Resolves to the address it is drawn from. */
-	serve: (projectId: string, name: string, html: string) => Promise<string>;
+	serve: (prototypeId: string, name: string, html: string) => Promise<string>;
 	draw: DrawCover;
 	/** So a page that gave no picture is not tried again this session. */
 	tried: Set<string>;
 }
 
-/** A project whose records cannot be read is passed over, and the rest go on. */
-export const ensureCovers = async (deps: CoverDeps, built: { projectId: string; name: string }[]): Promise<MadeCover[]> => {
+/** A prototype whose records cannot be read is passed over, and the rest go on. */
+export const ensureCovers = async (deps: CoverDeps, built: { prototypeId: string; name: string }[]): Promise<MadeCover[]> => {
 	const made: MadeCover[] = [];
-	const projects = [...new Set(built.map((b) => b.projectId))];
-	for (const projectId of projects) {
+	const prototypes = [...new Set(built.map((b) => b.prototypeId))];
+	for (const prototypeId of prototypes) {
 		const store = deps.store();
-		const records = await readRecords(store, projectId).catch(() => null);
+		const records = await readRecords(store, prototypeId).catch(() => null);
 		if (records === null) continue;
-		for (const { name } of built.filter((b) => b.projectId === projectId)) {
+		for (const { name } of built.filter((b) => b.prototypeId === prototypeId)) {
 			const record = records.find((r) => r.name === name);
-			const html = record ? deps.page(projectId, name) : null;
+			const html = record ? deps.page(prototypeId, name) : null;
 			if (!record || html === null) continue;
 			const cover = contentHashOf(html);
-			const key = `${projectId}/${name}/${cover}`;
+			const key = `${prototypeId}/${name}/${cover}`;
 			if (record.cover === cover || deps.tried.has(key)) continue;
 			deps.tried.add(key);
-			const picture = await deps.draw(await deps.serve(projectId, name, html)).catch(() => null);
+			const picture = await deps.draw(await deps.serve(prototypeId, name, html)).catch(() => null);
 			if (picture === null) continue;
-			const path = coverPath(projectId, name, cover);
-			if (!(await store.has(path))) await store.write(path, picture, `${projectId}: picture of prototype ${name}`);
-			if (await setCover(store, projectId, name, cover)) made.push({ projectId, name, cover });
+			const path = coverPath(prototypeId, name, cover);
+			if (!(await store.has(path))) await store.write(path, picture, `${prototypeId}: picture of prototype ${name}`);
+			if (await setCover(store, prototypeId, name, cover)) made.push({ prototypeId, name, cover });
 		}
 	}
 	return made;

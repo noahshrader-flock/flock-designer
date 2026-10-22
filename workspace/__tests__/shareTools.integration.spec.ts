@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { pushBranch } from '../src/core/services/platform/git';
-import { recordPreview, readWork } from '../src/core/services/projects/workRecords';
+import { recordPreview, readWork } from '../src/core/services/prototypes/workRecords';
 import { type ShareStatus } from '../src/shared/contract';
 import { ShareRunner, type ShareRequest } from '../src/core/services/codebase/share';
 import { ghApi, locateGh } from '../src/core/services/platform/ghCli';
@@ -84,7 +84,7 @@ describe('pushBranch', () => {
 describe('sharing through the real tools', () => {
 	const request: ShareRequest = {
 		share: { url: 'https://dev-coke-pr-<pr>.example.test', workflow: 'PR Deployment', kinds: ['codebase'] },
-		projectId: 'demo',
+		prototypeId: 'demo',
 		name: 'codebase',
 		branch: 'feature/demo',
 		title: 'Preview: demo codebase (not for merge)',
@@ -131,7 +131,7 @@ describe('sharing through the real tools', () => {
 		mkdirSync(join(records, 'demo'), { recursive: true });
 		writeFileSync(
 			join(records, 'demo', 'work.json'),
-			JSON.stringify([{ projectId: 'demo', name: 'codebase', branch: 'feature/demo', commit: null, createdAt: 'x', note: '' }]),
+			JSON.stringify([{ prototypeId: 'demo', name: 'codebase', branch: 'feature/demo', commit: null, createdAt: 'x', note: '' }]),
 		);
 
 		const seen: ShareStatus[] = [];

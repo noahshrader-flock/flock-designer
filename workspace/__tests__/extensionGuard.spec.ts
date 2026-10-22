@@ -191,7 +191,7 @@ describe('the extension’s sources', () => {
 		expect(INK.pin).toBe(BRAND);
 	});
 
-	it('pad the text under a card’s picture at its sides and bottom from one name, and sit it under the picture by the card’s own gap, for every card (projects and components alike)', () => {
+	it('pad the text under a card’s picture at its sides and bottom from one name, and sit it under the picture by the card’s own gap, for every card (prototypes and components alike)', () => {
 		const css = panelCss().replace(/\/\*[\s\S]*?\*\//g, '');
 		expect(css).toMatch(/--dsnr-card-text-pad:\s*var\(--dsnr-space-4\)/);
 		const rule = (selector: string) => css.split('}').find((b) => b.trim().startsWith(selector)) ?? '';

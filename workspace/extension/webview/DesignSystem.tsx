@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { baseName } from '../../src/shared/baseName';
-import type { Context } from '../../src/core/services/projects/findContext';
+import type { Context } from '../../src/core/services/products/findContext';
 import type { Catalog, ComponentPictures, DesignToken } from '../../src/shared/contract';
 import { plural } from '../../src/shared/plural';
 import { isDark } from '../../src/shared/tokens';

@@ -8,7 +8,7 @@ import { resultOf } from './accessibilityCheck';
 import type { CheckPage } from '../../ports';
 import type { AppPage } from './accessibilityBrief';
 import { NO_BROWSER } from '../browser/chromeHeadless';
-import { DESCRIPTOR_PATH, type WorkspaceDescriptor } from '../projects/descriptor';
+import { DESCRIPTOR_PATH, type WorkspaceDescriptor } from '../products/descriptor';
 import { installLine } from '../codebase/install';
 import { RuntimeManager, type RuntimeDeps, defaultDeps } from '../codebase/runtime';
 import { buildError, outputLines, packagesHint } from '../codebase/serverOutput';
@@ -75,14 +75,14 @@ export const onDesignMode = async <T>(
 	{
 		root,
 		descriptor,
-		projectId,
+		prototypeId,
 		loads,
 		progress,
 		deps = defaultDeps,
 	}: {
 		root: string;
 		descriptor: WorkspaceDescriptor;
-		projectId: string;
+		prototypeId: string;
 		loads: Opens;
 		progress: (line: string) => void;
 		deps?: RuntimeDeps;
@@ -115,7 +115,7 @@ export const onDesignMode = async <T>(
 	);
 	progress(`Starting ${descriptor.product}'s app (${command.argv.join(' ')}), and waiting for it on port ${port}`);
 	try {
-		const status = await runtime.start(root, descriptor, DESIGN_MODE_COMMAND, projectId);
+		const status = await runtime.start(root, descriptor, DESIGN_MODE_COMMAND, prototypeId);
 		if (status.state !== 'running') {
 			const tail = said.log.slice(-LOG_TAIL).join('\n');
 			const why = withHint(buildError(said.log) ?? said.failed ?? 'it stopped');

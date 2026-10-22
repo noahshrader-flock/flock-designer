@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { originOf } from '../src/core/services/projects/repositories';
+import { originOf } from '../src/core/services/products/repositories';
 
 describe('originOf', () => {
 	it('reads the origin remote from .git/config, and only origin', () => {

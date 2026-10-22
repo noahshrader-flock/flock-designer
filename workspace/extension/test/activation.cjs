@@ -45,7 +45,7 @@ exports.run = async () => {
 
 	// Given the review, as code can: the quick pick that offers it is VS Code's own.
 	const tabs = () => vscode.window.tabGroups.all.flatMap((g) => g.tabs.map((t) => t.label));
-	await vscode.commands.executeCommand('dsnr.openReview', { projectId: 'fixture', name: 'v1', title: 'Fixture · Version 1' });
+	await vscode.commands.executeCommand('dsnr.openReview', { prototypeId: 'fixture', name: 'v1', title: 'Fixture · Version 1' });
 	await until('the review opening', () => tabs().includes('Fixture · Version 1'));
 
 	// Started as an agent starts one, in the product, by DSNR's command line: what it prints is the task, with the build
@@ -54,7 +54,7 @@ exports.run = async () => {
 	assert.ok(folder, 'the product is open');
 	const inProduct = (command) => execSync(command, { cwd: folder.uri.fsPath, env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' }, encoding: 'utf8' });
 	const said = inProduct(
-		`node "${path.join(__dirname, '../../bin/dsnr.mjs')}" new-prototype --project made-here --title "Made here" --note "Show a heading."`,
+		`node "${path.join(__dirname, '../../bin/dsnr.mjs')}" new-prototype --prototype made-here --title "Made here" --note "Show a heading."`,
 	);
 	assert.ok(said.includes('Show a heading.'), 'its task has what it should explore');
 	const source = /`([^`]*made-here\/v1\.tsx)`/.exec(said)?.[1];
@@ -69,12 +69,12 @@ exports.run = async () => {
 	const save = /Save it, with exactly: `([^`]+)`/.exec(said)?.[1];
 	assert.ok(save, 'its task says how to save it');
 	inProduct(save);
-	await vscode.commands.executeCommand('dsnr.openReview', { projectId: 'made-here', name: 'v1', title: 'Made here · Version 1' });
+	await vscode.commands.executeCommand('dsnr.openReview', { prototypeId: 'made-here', name: 'v1', title: 'Made here · Version 1' });
 	await until('the new prototype opening', () => tabs().includes('Made here · Version 1'), 60000);
 	const covers = path.join(folder.uri.fsPath, '../flock-designer/prototypes/made-here/covers');
 	await until('its picture being drawn', () => fs.existsSync(covers) && fs.readdirSync(covers).some((f) => f.endsWith('.jpg')), 90000);
 	// Only that the dialogs' commands run without failing: this cannot see inside a webview.
-	await vscode.commands.executeCommand('dsnr.assignFolder', { webviewSection: 'project', projectId: 'made-here' });
+	await vscode.commands.executeCommand('dsnr.assignFolder', { webviewSection: 'prototype', prototypeId: 'made-here' });
 	await vscode.commands.executeCommand('dsnr.sync');
 	await vscode.commands.executeCommand('dsnr.account');
 

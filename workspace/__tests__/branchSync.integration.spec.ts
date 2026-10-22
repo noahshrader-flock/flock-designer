@@ -4,13 +4,13 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { syncBranches } from '../src/core/services/publishing/branchSync';
 import { g, madeOnce } from './fixtures';
-import type { WorkspaceDescriptor } from '../src/core/services/projects/descriptor';
+import type { WorkspaceDescriptor } from '../src/core/services/products/descriptor';
 
 const descriptor: WorkspaceDescriptor = {
 	version: 1,
 	product: 'Coke',
 	contextDir: '.dsnr',
-	branchPattern: { codebase: 'feature/<project-id>' },
+	branchPattern: { codebase: 'feature/<prototype-id>' },
 	commands: [],
 	designSystem: { package: 'x' },
 };
@@ -45,11 +45,11 @@ madeOnce((d) => {
 	g(root, 'push', '-q', '-u', 'origin', 'develop');
 });
 
-const sync = (projects: string[] = [], madeFrom: (projectId: string) => string | null = () => null) =>
-	syncBranches({ root, descriptor, projects: new Set(projects), madeFrom });
+const sync = (prototypes: string[] = [], madeFrom: (prototypeId: string) => string | null = () => null) =>
+	syncBranches({ root, descriptor, prototypes: new Set(prototypes), madeFrom });
 
 describe('publishing my work branches', () => {
-	it('publishes my codebase branch once its project has a folder, and tracks it', async () => {
+	it('publishes my codebase branch once its prototype has a folder, and tracks it', async () => {
 		branchFrom(root, 'feature/role-comparison');
 		commit(root, 'feature/role-comparison', 'view.tsx');
 		const r = await sync(['role-comparison']);
@@ -63,7 +63,7 @@ describe('publishing my work branches', () => {
 		commit(root, 'feature/test-base', 'base.tsx');
 		branchFrom(root, 'feature/device-alerts', 'feature/test-base');
 		const madeFrom = g(root, 'rev-parse', 'feature/device-alerts');
-		const from = (projectId: string) => (projectId === 'device-alerts' ? madeFrom : null);
+		const from = (prototypeId: string) => (prototypeId === 'device-alerts' ? madeFrom : null);
 		// Started and never built: the commits are the branch it was made from's.
 		expect(await sync(['device-alerts'], from)).toEqual({ published: [], problems: [], mine: [] });
 		expect(remoteBranches()).not.toContain('feature/device-alerts');
@@ -93,13 +93,13 @@ describe('publishing my work branches', () => {
 		expect(remoteBranches()).toEqual(['develop']);
 	});
 
-	it('does not publish a branch with a project folder if I have no commits on it', async () => {
+	it('does not publish a branch with a prototype folder if I have no commits on it', async () => {
 		branchFrom(root, 'feature/role-comparison');
 		commit(root, 'feature/role-comparison', 'view.tsx', 'teammate');
 		expect((await sync(['role-comparison'])).published).toEqual([]);
 	});
 
-	it('does not publish a codebase branch whose project has no folder, even if I wrote it', async () => {
+	it('does not publish a codebase branch whose prototype has no folder, even if I wrote it', async () => {
 		branchFrom(root, 'feature/mine-but-unregistered');
 		commit(root, 'feature/mine-but-unregistered', 'x.ts');
 		expect((await sync()).published).toEqual([]);

@@ -42,9 +42,9 @@ export const publishedLink = async (
 		choose: Offer;
 		tell: Tell;
 	},
-	{ projectId, name, title }: Review,
+	{ prototypeId, name, title }: Review,
 ): Promise<string | null> => {
-	const status = valueOf(await api.publishedPage(projectId, name));
+	const status = valueOf(await api.publishedPage(prototypeId, name));
 	switch (status.state) {
 		case 'published':
 			return status.url;
@@ -53,7 +53,7 @@ export const publishedLink = async (
 			return null;
 		case 'unpublished':
 			if ((await choose(`${title} is not on its page yet${status.why ? `: ${status.why}` : '.'}`, [PUBLISH])) === PUBLISH) {
-				valueOf(await api.publishPage(projectId, name));
+				valueOf(await api.publishPage(prototypeId, name));
 				tell(`Publishing ${title}: its page is ready in a minute or two.`);
 			}
 			return null;

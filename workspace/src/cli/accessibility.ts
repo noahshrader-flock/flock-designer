@@ -14,7 +14,7 @@ import {
 	accessibilityReturnedPath,
 	accessibilityReturnedRecordPath,
 	accessibilityViewDirs,
-	projectPath,
+	prototypePath,
 	prototypeSourcePath,
 } from '../shared/designPaths';
 import { plural } from '../shared/plural';
@@ -34,11 +34,11 @@ import {
 import { prototypeMeasureName, recordFiles } from '../core/services/accessibility/accessibilityRecord';
 import { FIRST_PAGE, type PageNotOpened, checkPages, onDesignMode } from '../core/services/accessibility/accessibilityRun';
 import { chromeHeadless } from '../core/services/browser/chromeHeadless';
-import { findCommand, readDescriptor } from '../core/services/projects/descriptor';
+import { findCommand, readDescriptor } from '../core/services/products/descriptor';
 import { HANDOFF_FILE } from '../core/services/codebase/engineeringHandoff';
 import { git } from '../core/services/platform/git';
 import { guardLines, guardsFor, stacksOf } from '../core/services/accessibility/guards';
-import { assertUsableProjectId } from '../core/services/projects/workRecords';
+import { assertUsablePrototypeId } from '../core/services/prototypes/workRecords';
 import { jsonFile, readText, writeAtomic } from '../core/services/platform/jsonFile';
 import { LEDGER_VERSION, type Ledger, type LedgerRun, ledgerChanges, ledgerFaults } from '../core/services/accessibility/ledger';
 import { manualListFault, withManualSection } from '../core/services/accessibility/manualList';
@@ -47,18 +47,18 @@ import type { ViewProbed } from '../core/services/accessibility/probe/probe';
 import { type SourceFile, scanSources } from '../core/services/accessibility/probe/sourceScan';
 import { assertVersionName } from '../core/services/prototypes/prototype';
 import { measurePrototype } from '../core/services/accessibility/prototypeMeasure';
-import type { prototypeWork } from '../core/services/prototypes/prototypeWork';
+import type { versionWork } from '../core/services/prototypes/versionWork';
 import { type ReturnedKind, agentGapsFile, parseReturned, returnedTemplate, sortReturned, withGaps } from '../core/services/accessibility/returned';
 
 export interface MeasureDeps {
-	projectId: string;
+	prototypeId: string;
 	/** Null for the product's own app. */
 	name: string | null;
 	/** All of it at Handoff, the light subset at a build. */
 	depth: ProbeDepth;
 	root: string;
 	designRoot: string;
-	work: ReturnType<typeof prototypeWork>;
+	work: ReturnType<typeof versionWork>;
 	out: (text: string) => void;
 	/** Progress, so a long run is never silent. */
 	err: (text: string) => void;
@@ -110,43 +110,43 @@ const sourceCells = (depth: ProbeDepth) =>
 
 /** Measured as its build's check measures it (`measurePrototype`). */
 const prototypePage = async (
-	{ projectId, name, work, depth }: MeasureDeps & { name: string },
+	{ prototypeId, name, work, depth }: MeasureDeps & { name: string },
 	browser: Browser,
 	progress: (line: string) => void,
 ): Promise<Measured> => {
 	assertVersionName(name);
-	const html = await work.page(projectId, name);
-	if (html === null) throw new Error(`${projectId} ${name} has no page yet. Save it first (save-prototype), then measure it.`);
-	const what = prototypeMeasureName(projectId, name);
+	const html = await work.page(prototypeId, name);
+	if (html === null) throw new Error(`${prototypeId} ${name} has no page yet. Save it first (save-prototype), then measure it.`);
+	const what = prototypeMeasureName(prototypeId, name);
 	progress(`Checking ${what}`);
-	const target = await work.target(projectId, name);
+	const target = await work.target(prototypeId, name);
 	const { result, views } = await measurePrototype({
-		key: `${projectId}/${name}`,
+		key: `${prototypeId}/${name}`,
 		html,
 		target,
 		depth,
 		sharedText: work.sharedText,
-		cache: work.checkFile(projectId, name),
+		cache: work.checkFile(prototypeId, name),
 		browser,
 		progress,
 	});
-	const text = await work.sourceText(projectId, name);
+	const text = await work.sourceText(prototypeId, name);
 	const source = scanSources(
 		sourceCells(depth),
-		text === null ? null : [{ path: prototypeSourcePath(projectId, name), text }],
+		text === null ? null : [{ path: prototypeSourcePath(prototypeId, name), text }],
 		'the prototype has no source saved',
 	);
 	return { what, target, result, notOpened: [], views, source };
 };
 
-const productApp = async ({ projectId, root, depth }: MeasureDeps, browser: Browser, progress: (line: string) => void): Promise<Measured> => {
+const productApp = async ({ prototypeId, root, depth }: MeasureDeps, browser: Browser, progress: (line: string) => void): Promise<Measured> => {
 	const descriptor = readDescriptor(root);
 	const manifest = readManifest(join(root, descriptor.contextDir));
 	const named = appPages(manifest);
 	const pages = named ?? [FIRST_PAGE];
 	const target = declaredTarget(manifest, descriptor.product);
 	const { result, notOpened, views, served } = await onDesignMode(
-		{ root, descriptor, projectId, loads: browser.loads, progress },
+		{ root, descriptor, prototypeId, loads: browser.loads, progress },
 		async (origin, opens) => {
 			const checked = await checkPages({ origin, pages, target, check: browser.scan, opens, progress });
 			const probed: MeasuredView[] = [];
@@ -205,10 +205,10 @@ const probeLines = ({ views, source, target }: Measured, depth: ProbeDepth): str
 	];
 };
 
-const writeEvidence = (projectId: string, name: string | null, designRoot: string, views: MeasuredView[]): void => {
-	rmSync(join(designRoot, accessibilityEvidenceDir(projectId, name)), { recursive: true, force: true });
+const writeEvidence = (prototypeId: string, name: string | null, designRoot: string, views: MeasuredView[]): void => {
+	rmSync(join(designRoot, accessibilityEvidenceDir(prototypeId, name)), { recursive: true, force: true });
 	const dirs = accessibilityViewDirs(
-		projectId,
+		prototypeId,
 		name,
 		views.map((v) => v.state),
 	);
@@ -218,10 +218,10 @@ const writeEvidence = (projectId: string, name: string | null, designRoot: strin
 const dayOf = (iso: string): string => iso.slice(0, 10);
 
 export const measureAccessibility = async (deps: MeasureDeps): Promise<number> => {
-	const { projectId, name, designRoot, depth, work } = deps;
-	assertUsableProjectId(projectId);
+	const { prototypeId, name, designRoot, depth, work } = deps;
+	assertUsablePrototypeId(prototypeId);
 	// A version started here and not saved yet counts: its first build is measured before it is saved.
-	if (!(await work.hasProject(projectId))) throw new Error(`There is no project ${projectId} in the design repository at ${designRoot}.`);
+	if (!(await work.hasPrototype(prototypeId))) throw new Error(`There is no prototype ${prototypeId} in the design repository at ${designRoot}.`);
 	const progress = (line: string) => deps.err(`${line}…`);
 	const browser = chromeHeadless();
 	let measured: Measured;
@@ -236,12 +236,12 @@ export const measureAccessibility = async (deps: MeasureDeps): Promise<number> =
 		deps.out([`Nothing of ${what} opened, so nothing was measured or written.`, ...unopened].join('\n'));
 		return 1;
 	}
-	writeEvidence(projectId, name, designRoot, views);
-	const ledgerFile = accessibilityLedgerPath(projectId, name);
+	writeEvidence(prototypeId, name, designRoot, views);
+	const ledgerFile = accessibilityLedgerPath(prototypeId, name);
 	const last = readLedger(join(designRoot, ledgerFile));
 	const { files, ledger } = recordFiles(
 		{
-			projectId,
+			prototypeId,
 			name,
 			of: what,
 			result,
@@ -253,17 +253,17 @@ export const measureAccessibility = async (deps: MeasureDeps): Promise<number> =
 			notOpened,
 			run: measured.run,
 		},
-		readText(join(designRoot, projectPath(projectId, 'review.md'))),
+		readText(join(designRoot, prototypePath(prototypeId, 'review.md'))),
 	);
 	for (const f of files) writeAtomic(join(designRoot, f.path), f.text);
 	const handoff = join(deps.root, HANDOFF_FILE);
-	if (name === null) writeAtomic(handoff, withManualSection(readText(handoff), ...manualArgs(ledger, ledgerFile, projectId, designRoot)));
+	if (name === null) writeAtomic(handoff, withManualSection(readText(handoff), ...manualArgs(ledger, ledgerFile, prototypeId, designRoot)));
 	const since = last ? ledgerChanges(last, ledger) : null;
 	const kept =
 		name === null
 			? [
-					...readReturned({ designRoot, root: deps.root, projectId, ledger: last ?? ledger, date: dayOf(ledger.at) }),
-					...keepFixed({ designRoot, root: deps.root, projectId, last, fixed: since?.noLongerFound ?? [], date: dayOf(ledger.at) }),
+					...readReturned({ designRoot, root: deps.root, prototypeId, ledger: last ?? ledger, date: dayOf(ledger.at) }),
+					...keepFixed({ designRoot, root: deps.root, prototypeId, last, fixed: since?.noLongerFound ?? [], date: dayOf(ledger.at) }),
 				]
 			: [];
 	deps.out(
@@ -285,7 +285,7 @@ export const measureAccessibility = async (deps: MeasureDeps): Promise<number> =
 				? `Since the last run (${dayOf(last.at)}): ${since.newlyFound.length ? `newly found ${since.newlyFound.join(', ')}` : 'nothing newly found'}; ${since.noLongerFound.length ? `fixed ${since.noLongerFound.join(', ')}` : 'nothing fixed'}; ${since.changed.length === 1 ? '1 criterion' : `${since.changed.length} criteria`} changed in all.`
 				: 'This is the first run of this measure: there is no ledger to compare with.',
 			...kept,
-			`Written to ${accessibilityPath(projectId, name)} in ${designRoot}, with the evidence in ${accessibilityEvidenceDir(projectId, name)}/, the ledger in ${ledgerFile}, and the accessibility section of ${projectPath(projectId, 'review.md')} written from it.`,
+			`Written to ${accessibilityPath(prototypeId, name)} in ${designRoot}, with the evidence in ${accessibilityEvidenceDir(prototypeId, name)}/, the ledger in ${ledgerFile}, and the accessibility section of ${prototypePath(prototypeId, 'review.md')} written from it.`,
 		].join('\n'),
 	);
 	return 0;
@@ -298,25 +298,25 @@ type Sorted = { id: string; sc: string; where: string; kind: ReturnedKind; again
 const readReturned = ({
 	designRoot,
 	root,
-	projectId,
+	prototypeId,
 	ledger,
 	date,
 }: {
 	designRoot: string;
 	root: string;
-	projectId: string;
+	prototypeId: string;
 	ledger: Ledger;
 	date: string;
 }): string[] => {
-	const file = join(designRoot, accessibilityReturnedPath(projectId));
+	const file = join(designRoot, accessibilityReturnedPath(prototypeId));
 	const returned = readText(file);
 	if (returned === null) {
-		writeAtomic(file, returnedTemplate(projectId));
-		return ['', `Started ${accessibilityReturnedPath(projectId)}, for testers to return what they find by hand.`];
+		writeAtomic(file, returnedTemplate(prototypeId));
+		return ['', `Started ${accessibilityReturnedPath(prototypeId)}, for testers to return what they find by hand.`];
 	}
 	const { findings, unreadable } = parseReturned(returned);
 	// Each finding is sorted once, when it is first read; never again later, when the work may have changed under it.
-	const record = join(designRoot, accessibilityReturnedRecordPath(projectId));
+	const record = join(designRoot, accessibilityReturnedRecordPath(prototypeId));
 	const before = jsonFile<Sorted[]>(record, { parse: (raw) => (raw as { findings: Sorted[] }).findings ?? [], fallback: [] }).read();
 	const known = new Map(before.map((f) => [f.id, f]));
 	const fresh = sortReturned(
@@ -350,14 +350,14 @@ const readReturned = ({
 const keepFixed = ({
 	designRoot,
 	root,
-	projectId,
+	prototypeId,
 	last,
 	fixed,
 	date,
 }: {
 	designRoot: string;
 	root: string;
-	projectId: string;
+	prototypeId: string;
 	last: Ledger | null;
 	fixed: string[];
 	date: string;
@@ -370,22 +370,22 @@ const keepFixed = ({
 		),
 	);
 	if (lines.length === 0) return [];
-	const file = join(designRoot, accessibilityGuardsPath(projectId));
+	const file = join(designRoot, accessibilityGuardsPath(prototypeId));
 	const was =
 		readText(file) ??
 		'# Guards proposed to keep what was fixed fixed\n\nProposed by `dsnr accessibility` when a fault it found is no longer found: each for the product to take, never applied for it.\n';
 	writeAtomic(file, `${was.trimEnd()}\n\n## ${date}\n\n${lines.join('\n')}\n`);
-	return ['', `Fixed since the last run, and kept fixed by (proposed, in ${accessibilityGuardsPath(projectId)}):`, ...lines];
+	return ['', `Fixed since the last run, and kept fixed by (proposed, in ${accessibilityGuardsPath(prototypeId)}):`, ...lines];
 };
 
 /** Paths as the product's checkout sees them. */
-const manualArgs = (ledger: Ledger, ledgerFile: string, projectId: string, designRoot: string): [Ledger, string, string, string] => {
+const manualArgs = (ledger: Ledger, ledgerFile: string, prototypeId: string, designRoot: string): [Ledger, string, string, string] => {
 	const design = basename(designRoot);
 	return [
 		ledger,
 		`${design}/${ledgerFile}`,
-		`${design}/${accessibilityEvidenceDir(projectId, null)}`,
-		`${design}/${accessibilityReturnedPath(projectId)}`,
+		`${design}/${accessibilityEvidenceDir(prototypeId, null)}`,
+		`${design}/${accessibilityReturnedPath(prototypeId)}`,
 	];
 };
 
@@ -403,33 +403,33 @@ const readLedger = (file: string): Ledger | null =>
 export const checkAccessibility = ({
 	designRoot,
 	productRoot,
-	projectId,
+	prototypeId,
 	name,
 	out,
 }: {
 	designRoot: string;
 	/** Null when this is not run in one: HANDOFF.md is then not checked. */
 	productRoot: string | null;
-	projectId: string;
+	prototypeId: string;
 	name: string | null;
 	out: (text: string) => void;
 }): number => {
-	assertUsableProjectId(projectId);
+	assertUsablePrototypeId(prototypeId);
 	if (name !== null) assertVersionName(name);
-	const ledgerFile = accessibilityLedgerPath(projectId, name);
+	const ledgerFile = accessibilityLedgerPath(prototypeId, name);
 	const ledger = readLedger(join(designRoot, ledgerFile));
 	if (ledger === null) {
 		out(
-			`${ledgerFile} is not there, or is not a ledger this DSNR writes: run dsnr accessibility --project ${projectId}${name ? ` --name ${name}` : ''} first.`,
+			`${ledgerFile} is not there, or is not a ledger this DSNR writes: run dsnr accessibility --prototype ${prototypeId}${name ? ` --name ${name}` : ''} first.`,
 		);
 		return 1;
 	}
 	const checksList = name === null && productRoot !== null;
 	const listFault = checksList
-		? manualListFault(readText(join(productRoot, HANDOFF_FILE)), ...manualArgs(ledger, ledgerFile, projectId, designRoot))
+		? manualListFault(readText(join(productRoot, HANDOFF_FILE)), ...manualArgs(ledger, ledgerFile, prototypeId, designRoot))
 		: null;
 	const faults = [
-		...ledgerFaults(ledger, ledgerFile, (p) => existsSync(join(designRoot, p)), readText(join(designRoot, projectPath(projectId, 'review.md')))),
+		...ledgerFaults(ledger, ledgerFile, (p) => existsSync(join(designRoot, p)), readText(join(designRoot, prototypePath(prototypeId, 'review.md')))),
 		...(listFault ? [listFault] : []),
 	];
 	out(
@@ -443,21 +443,21 @@ export const checkAccessibility = ({
 export const readReturnedNow = ({
 	designRoot,
 	root,
-	projectId,
+	prototypeId,
 	out,
 }: {
 	designRoot: string;
 	root: string;
-	projectId: string;
+	prototypeId: string;
 	out: (text: string) => void;
 }): number => {
-	assertUsableProjectId(projectId);
-	const ledger = readLedger(join(designRoot, accessibilityLedgerPath(projectId, null)));
+	assertUsablePrototypeId(prototypeId);
+	const ledger = readLedger(join(designRoot, accessibilityLedgerPath(prototypeId, null)));
 	if (ledger === null) {
-		out(`There is no measure of ${projectId}'s app to read findings against: run dsnr accessibility --project ${projectId} first.`);
+		out(`There is no measure of ${prototypeId}'s app to read findings against: run dsnr accessibility --prototype ${prototypeId} first.`);
 		return 1;
 	}
-	const lines = readReturned({ designRoot, root, projectId, ledger, date: dayOf(new Date().toISOString()) });
+	const lines = readReturned({ designRoot, root, prototypeId, ledger, date: dayOf(new Date().toISOString()) });
 	out(lines.join('\n').trim() || 'Nothing has been returned yet.');
 	return 0;
 };

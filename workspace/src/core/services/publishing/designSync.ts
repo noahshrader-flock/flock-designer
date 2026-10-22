@@ -16,21 +16,21 @@ import { PROTOTYPES_DIR, prototypeIdOf, workPath } from '../../../shared/designP
 export type Problem = PublishProblem;
 
 export interface SyncResult {
-	/** Project ids. */
+	/** Prototype ids. */
 	published: string[];
 	problems: Problem[];
 }
 
-const RECORDS = 'Project records';
+const RECORDS = 'Prototype records';
 const isRecordFile = (f: string): boolean => f === workPath(f.split('/')[1] ?? '');
 const lines = (out: string): string[] => out.split('\n').filter(Boolean);
 const message = (err: unknown): string => errorText(err, { firstLine: true });
 
 /**
- * `started`: whether a project has a version started on this machine and not saved yet. Such a project with no records
+ * `started`: whether a prototype has a version started on this machine and not saved yet. Such a prototype with no records
  * here is held back whole (its brief, what the agent writes), so nothing of it is shared until its first page is.
  */
-export const syncRecords = async (designRoot: string, started: (projectId: string) => boolean): Promise<SyncResult> => {
+export const syncRecords = async (designRoot: string, started: (prototypeId: string) => boolean): Promise<SyncResult> => {
 	const g = (...args: string[]) => git(designRoot, args, { timeoutMs: 120_000 });
 	const held = (why: string, files?: string[]): SyncResult => ({ published: [], problems: [{ what: RECORDS, why, files }] });
 
@@ -60,7 +60,7 @@ export const syncRecords = async (designRoot: string, started: (projectId: strin
 		const outside = lines(await g('diff', '--name-only', `${theirs}...HEAD`)).filter((f) => !f.startsWith(`${PROTOTYPES_DIR}/`));
 		if (outside.length > 0) {
 			return held(
-				`${plural(outside.length, 'change')} outside the project records ${outside.length === 1 ? 'is' : 'are'} waiting to be pushed. Records are held back; push ${outside.length === 1 ? 'it' : 'those'} yourself, and records will flow again.`,
+				`${plural(outside.length, 'change')} outside the prototype records ${outside.length === 1 ? 'is' : 'are'} waiting to be pushed. Records are held back; push ${outside.length === 1 ? 'it' : 'those'} yourself, and records will flow again.`,
 				outside,
 			);
 		}
@@ -92,7 +92,7 @@ export const syncRecords = async (designRoot: string, started: (projectId: strin
 const recordsOnTopOf = async (
 	designRoot: string,
 	theirs: string,
-	started: (projectId: string) => boolean,
+	started: (prototypeId: string) => boolean,
 ): Promise<string | { commit: string | null; ids: string[]; paths: string[]; read: Map<string, string | null> }> => {
 	const g = (args: string[], input?: string) => git(designRoot, args, { input });
 	const blobAt = (rev: string, path: string) => g(['rev-parse', '-q', '--verify', `${rev}:${path}`]).catch(() => null);
@@ -142,7 +142,7 @@ const recordsOnTopOf = async (
 	}
 	if (changes.size === 0) return { commit: null, ids: [], paths, read };
 
-	// A record that does not parse must never be published: every reviewer's project list reads these.
+	// A record that does not parse must never be published: every reviewer's prototype list reads these.
 	for (const [path, blob] of changes) {
 		if (!isRecordFile(path) || blob === null) continue;
 		const text = await git(designRoot, ['cat-file', 'blob', blob], { trim: false });
@@ -156,7 +156,7 @@ const recordsOnTopOf = async (
 		const commit = await commitOnto(designRoot, theirs, theirs, changes, `Update ${ids.join(', ')}`);
 		return commit === null ? { commit: null, ids: [], paths, read } : { commit, ids, paths, read };
 	} catch (err) {
-		return `Could not save the project records: ${message(err)}. Git needs a name and email (git config user.name, user.email).`;
+		return `Could not save the prototype records: ${message(err)}. Git needs a name and email (git config user.name, user.email).`;
 	}
 };
 

@@ -5,7 +5,7 @@ import type { Handed } from '../../src/shared/contract';
 import { handedTo } from '../../src/shared/handedTo';
 import { AgentInUse, useAgentName, useAgentPhrase } from './AgentInUse';
 import { AgainstBase } from './AgainstBase';
-import type { Project } from '../../src/shared/domain/projects';
+import type { Prototype } from '../../src/shared/domain/prototypes';
 import { buildStart, buildSteps, noSetupNote, startBranch } from '../../src/shared/work';
 import { Button } from '../../src/ui/Button';
 import { Dialog, DialogButtons } from '../../src/ui/Dialog';
@@ -18,7 +18,7 @@ import { Message } from '../../src/ui/Message';
  */
 export const HandoffDialog = ({
 	root,
-	project,
+	prototype,
 	branch,
 	readyAt,
 	pullRequest,
@@ -30,7 +30,7 @@ export const HandoffDialog = ({
 }: {
 	/** The product open here; null when none is, and how the branch stands is not read. */
 	root: string | null;
-	project: Project;
+	prototype: Prototype;
 	branch: string;
 	/** The commit a handoff found the work ready at, while its branch is still there; null when it has to be run. */
 	readyAt: string | null;
@@ -56,13 +56,13 @@ export const HandoffDialog = ({
 			<form onSubmit={start}>
 				{readyAt !== null ? (
 					<Message>
-						A handoff found <strong>{project.title}</strong>’s codebase work ready for engineering, and nothing has changed on <code>{branch}</code>{' '}
+						A handoff found <strong>{prototype.title}</strong>’s codebase work ready for engineering, and nothing has changed on <code>{branch}</code>{' '}
 						since. {pullRequest ? 'Its draft pull request is open.' : 'Open a draft pull request for an engineer to take it.'}
 					</Message>
 				) : (
 					<>
 						<Message>
-							This checks <strong>{project.title}</strong>’s codebase work on <code>{branch}</code>, and gets it ready for an engineer.
+							This checks <strong>{prototype.title}</strong>’s codebase work on <code>{branch}</code>, and gets it ready for an engineer.
 						</Message>
 						<p className="field-label">What happens</p>
 						<ol className="dialog-steps">
@@ -72,7 +72,7 @@ export const HandoffDialog = ({
 							<li>What they block on is fixed and committed on {branch}, one fix at a time.</li>
 							<li>A note for the engineer, HANDOFF.md, is written on the branch, and says whether it is ready. Nothing is pushed.</li>
 						</ol>
-						{root !== null && <AgainstBase root={root} projectId={project.id} quiet onUpdate={then(onUpdate)} />}
+						{root !== null && <AgainstBase root={root} prototypeId={prototype.id} quiet onUpdate={then(onUpdate)} />}
 						<AgentInUse />
 					</>
 				)}
@@ -97,22 +97,22 @@ export const HandoffDialog = ({
 	);
 };
 
-/** Update this branch, from a project's menu: how it stands, and the update handed to the agent when it is behind. */
+/** Update this branch, from a prototype's menu: how it stands, and the update handed to the agent when it is behind. */
 export const UpdateBranchDialog = ({
 	root,
-	project,
+	prototype,
 	onUpdate,
 	onClose,
 }: {
 	root: string;
-	project: Project;
+	prototype: Prototype;
 	onUpdate: () => void;
 	onClose: () => void;
 }) => (
 	<Dialog title="Update this branch" onClose={onClose}>
 		<AgainstBase
 			root={root}
-			projectId={project.id}
+			prototypeId={prototype.id}
 			quiet={false}
 			onUpdate={() => {
 				onUpdate();
@@ -125,18 +125,18 @@ export const UpdateBranchDialog = ({
 
 export const BuildInCodebaseDialog = ({
 	root,
-	project,
+	prototype,
 	name,
 	onBuilt,
 	onClose,
 }: {
 	root: string;
-	project: Project;
+	prototype: Prototype;
 	name: string;
 	onBuilt: () => void;
 	onClose: () => void;
 }) => {
-	const planned = useWorkspace(() => workspace().buildInCodebasePlan(root, project.id, name), [root, project.id, name]);
+	const planned = useWorkspace(() => workspace().buildInCodebasePlan(root, prototype.id, name), [root, prototype.id, name]);
 	const setup = useWorkspace(() => workspace().branchesWithSetup(root), [root]);
 	const plan = planned.value;
 	const listed = setup.value;
@@ -154,7 +154,7 @@ export const BuildInCodebaseDialog = ({
 		e.preventDefault();
 		if (!canStart) return;
 		await run(
-			() => workspace().buildInCodebase(root, project.id, name, ...(continuing || from === null ? [] : [from])),
+			() => workspace().buildInCodebase(root, prototype.id, name, ...(continuing || from === null ? [] : [from])),
 			(value) => {
 				setHanded(value);
 				onBuilt();
@@ -175,7 +175,7 @@ export const BuildInCodebaseDialog = ({
 		<Dialog title="Build in the codebase" onClose={onClose}>
 			<form onSubmit={(e) => void start(e)}>
 				<Message>
-					This moves <strong>{project.title}</strong> into the product as real work, built by {agent} in the repository. It needs the full setup:
+					This moves <strong>{prototype.title}</strong> into the product as real work, built by {agent} in the repository. It needs the full setup:
 					packages, environment variables, and the app able to run.
 				</Message>
 				{plan === null && planned.error === null && <Message waiting>Reading what it would do…</Message>}
@@ -192,7 +192,7 @@ export const BuildInCodebaseDialog = ({
 							<span className="field-label">Continues</span>
 							<code>{plan.branch}</code>
 							<span className="field-hint">
-								{plan.branch} already has this project’s codebase work, so {agent} picks it up there.
+								{plan.branch} already has this prototype’s codebase work, so {agent} picks it up there.
 								{plan.current === plan.branch ? '' : ' Your checkout moves to it.'}
 							</span>
 						</div>

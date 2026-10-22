@@ -30,7 +30,7 @@ const configFor = (body: string): CheckConfig => {
 	const page = join(dir, 'v1.html');
 	writeFileSync(page, PAGE(body));
 	const config: CheckConfig = {
-		projectId: 'demo',
+		prototypeId: 'demo',
 		name: 'v1',
 		of: "demo v1's page",
 		page,

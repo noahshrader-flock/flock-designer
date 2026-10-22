@@ -20,7 +20,7 @@ export const guidePart = (guide: string, sharedRoot: string | null): string =>
 		'## How to build UI here: always, before anything else',
 		'',
 		'This is part of every task, so it is never skipped. Follow it in full. Where the skill below says something more specific for this run, the skill below wins.',
-		`Then read \`${sharedRoot === null ? WORKFLOW : `${sharedRoot}/${WORKFLOW}`}\` in full: DSNR's workflow on top of this guide (the project folder, the brief, the context receipt, the reviews). It holds for this task too, and the skill below wins where it is more specific.`,
+		`Then read \`${sharedRoot === null ? WORKFLOW : `${sharedRoot}/${WORKFLOW}`}\` in full: DSNR's workflow on top of this guide (the prototype folder, the brief, the context receipt, the reviews). It holds for this task too, and the skill below wins where it is more specific.`,
 		'If nobody is there to answer a question, do not stop to ask: make the call, and list it under the product questions you had to guess at when you finish.',
 		'',
 		(sharedRoot === null ? guide : guide.replaceAll('`../', `\`${sharedRoot}/`)).trim(),
@@ -61,14 +61,14 @@ const checkoutEnding = ({ lightCheck, shared, accessibility, voice }: CheckoutPa
 export const handoffTask = (
 	{
 		skill,
-		projectId,
+		prototypeId,
 		branch,
 		gate,
 		missingRoute,
 		mergeState,
 	}: {
 		skill: string;
-		projectId: string;
+		prototypeId: string;
 		branch: string;
 		gate: string | null;
 		/** Given only when the work's record has no route. */
@@ -80,7 +80,7 @@ export const handoffTask = (
 ): string =>
 	parts.guide +
 	[
-		`Hand ${projectId} to engineering.`,
+		`Hand ${prototypeId} to engineering.`,
 		'',
 		skill.trim(),
 		'',
@@ -151,7 +151,7 @@ export const buildInCodebaseTask = (
 ): string =>
 	parts.guide +
 	[
-		`Build prototype ${name} of this project into the codebase.`,
+		`Build prototype ${name} of this prototype into the codebase.`,
 		'',
 		skill.trim(),
 		'',

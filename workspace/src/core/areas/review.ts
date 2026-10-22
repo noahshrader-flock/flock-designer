@@ -1,12 +1,12 @@
 import type { CallsDeps } from '../compose';
 import type { CommentRef } from '../../shared/contract';
 import { sanitizeAnchor, sanitizePicture } from '../../shared/anchor';
-import type { Project, ReviewComment } from '../../shared/contract';
-import { classify } from '../services/projects/branchProjects';
-import { projectTitle, writeCommentsExport } from '../services/prototypes/commentsExport';
-import { readDescriptor } from '../services/projects/descriptor';
-import { readWork } from '../services/projects/workRecords';
-import { listProjects } from '../services/projects/listProjects';
+import type { Prototype, ReviewComment } from '../../shared/contract';
+import { classify } from '../services/prototypes/branchPrototypes';
+import { prototypeTitle, writeCommentsExport } from '../services/prototypes/commentsExport';
+import { readDescriptor } from '../services/products/descriptor';
+import { readWork } from '../services/prototypes/workRecords';
+import { listPrototypes } from '../services/prototypes/listPrototypes';
 import { pendingHere } from '../services/prototypes/pendingPrototypes';
 import { ProfileNames } from '../services/publishing/profileNames';
 
@@ -14,16 +14,16 @@ export const reviewArea = (d: CallsDeps) => {
 	const { designRepos, github, opened, prototypesRoot, publisher, recordsRootOf, saveBuilt, signedInLogin, trustedRecords, trustedRoot } = d;
 	const profiles = new ProfileNames((path) => github.api(path));
 	/** Best effort: reading comments never fails because a file could not be written; the Address button, which depends on it, is strict. */
-	const exportComments = (projectId: string, branch: string, comments: ReviewComment[]): void => {
+	const exportComments = (prototypeId: string, branch: string, comments: ReviewComment[]): void => {
 		try {
 			const trusted = trustedRecords();
 			if (trusted === null) return;
 			const { root, recordsRoot } = trusted;
-			const name = readWork(recordsRoot, projectId).find((i) => i.branch === branch)?.name ?? classify(readDescriptor(root), branch)?.name;
+			const name = readWork(recordsRoot, prototypeId).find((i) => i.branch === branch)?.name ?? classify(readDescriptor(root), branch)?.name;
 			if (!name) return;
 			writeCommentsExport(recordsRoot, {
-				projectId,
-				title: projectTitle(recordsRoot, projectId),
+				prototypeId,
+				title: prototypeTitle(recordsRoot, prototypeId),
 				work: { name, branch },
 				comments,
 				generatedAt: new Date(),
@@ -33,30 +33,30 @@ export const reviewArea = (d: CallsDeps) => {
 		}
 	};
 	return {
-		listProjects: async (): Promise<Project[]> => {
+		listPrototypes: async (): Promise<Prototype[]> => {
 			// The gate, not the discovery list: nothing is read or run in a repository this window has not opened, and one
 			// remembered from an earlier window does not count.
 			const remembered = trustedRoot();
 			const root = remembered !== null && opened.has(remembered) ? remembered : null;
 			// A start built here and never saved (its watcher gone with its window) is saved now, as opening a page saves it.
-			if (root !== null) for (const r of pendingHere(prototypesRoot)) await saveBuilt(r.projectId, r.name, null).catch(() => 'waiting');
-			const projects = await listProjects({
+			if (root !== null) for (const r of pendingHere(prototypesRoot)) await saveBuilt(r.prototypeId, r.name, null).catch(() => 'waiting');
+			const prototypes = await listPrototypes({
 				root,
 				login: signedInLogin(),
-				remote: () => designRepos.now().listProjects(),
+				remote: () => designRepos.now().listPrototypes(),
 				recordsRootOf,
 				prototypesRoot,
 			});
 			void publisher.publish();
-			return profiles.nameEveryone(projects);
+			return profiles.nameEveryone(prototypes);
 		},
-		readComments: async (projectId: string, branch: string): Promise<ReviewComment[]> => {
+		readComments: async (prototypeId: string, branch: string): Promise<ReviewComment[]> => {
 			const comments = await designRepos.now().threads.readComments(branch);
-			exportComments(projectId, branch, comments);
+			exportComments(prototypeId, branch, comments);
 			return comments;
 		},
-		postComment: (projectId: string, branch: string, body: string, anchor: unknown, picture: unknown): Promise<ReviewComment> =>
-			designRepos.now().threads.postComment(projectId, branch, body, sanitizeAnchor(anchor), sanitizePicture(picture)),
+		postComment: (prototypeId: string, branch: string, body: string, anchor: unknown, picture: unknown): Promise<ReviewComment> =>
+			designRepos.now().threads.postComment(prototypeId, branch, body, sanitizeAnchor(anchor), sanitizePicture(picture)),
 		moveComment: (comment: CommentRef, anchor: unknown): Promise<ReviewComment> => {
 			const clean = sanitizeAnchor(anchor);
 			if (!clean) throw new Error('That is not a place a pin can be moved to.');

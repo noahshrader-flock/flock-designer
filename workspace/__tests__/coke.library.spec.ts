@@ -1,8 +1,8 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { expect, it } from 'vitest';
-import { findCommand, readDescriptor } from '../src/core/services/projects/descriptor';
-import { recordsRootFor } from '../src/core/services/projects/discovery';
+import { findCommand, readDescriptor } from '../src/core/services/products/descriptor';
+import { recordsRootFor } from '../src/core/services/products/discovery';
 import { REAL_COKE as COKE, cokeMissing, describeWith } from './realCheckouts';
 
 /** Unit tests prove each piece behaves; this proves the pieces agree with an actual product repository. */
@@ -23,10 +23,10 @@ describeWith(cokeMissing, 'against the real Coke checkout', () => {
 		expect(() => findCommand(readDescriptor(COKE), 'publish')).toThrow(/not a command/);
 	});
 
-	it("puts project records where the repository's own handoff gate looks for them", () => {
+	it("puts prototype records where the repository's own handoff gate looks for them", () => {
 		// check-handoff.mjs resolves '../flock-designer/prototypes/<id>'. If these two
 		// ever disagree, Workspace writes records the gate cannot find.
-		expect(recordsRootFor(COKE)).toBe(join(dirname(COKE), 'flock-designer', 'projects'));
+		expect(recordsRootFor(COKE)).toBe(join(dirname(COKE), 'flock-designer', 'prototypes'));
 	});
 });
 

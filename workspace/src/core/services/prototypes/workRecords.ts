@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import type { Work, Person } from '../../../shared/contract';
-import { PROJECT_ID_SLOT, type WorkspaceDescriptor } from './descriptor';
+import { PROTOTYPE_ID_SLOT, type WorkspaceDescriptor } from '../products/descriptor';
 import {
 	branchAuthors,
 	branchExists,
@@ -15,7 +15,7 @@ import {
 } from '../platform/git';
 import { resolveInside } from '../platform/paths';
 import { sharedCheckoutNote } from '../codebase/checkoutClean';
-import { PROJECT_ID } from '../../../shared/validate';
+import { PROTOTYPE_ID } from '../../../shared/validate';
 import { parseWork, serializeWork, unreadableWork } from '../../../shared/workRecords';
 import { writeAtomic } from '../platform/jsonFile';
 import { loginFromNoreply } from '../../../shared/hostUrls';
@@ -23,59 +23,59 @@ import { WORK_FILE, workPath } from '../../../shared/designPaths';
 
 /**
  * Records live in the design repository, never the product checkout: there, picking up work would need its branch first,
- * per-project state would need keeping off `develop`, and the dirty tree would block the next piece of work.
+ * per-prototype state would need keeping off `develop`, and the dirty tree would block the next piece of work.
  */
 
 /**
- * A project id becomes a directory and a branch name, so it is checked here
+ * A prototype id becomes a directory and a branch name, so it is checked here
  * rather than trusted. Anything outside this set could escape either one.
  */
-export const assertUsableProjectId = (projectId: string): void => {
-	if (!PROJECT_ID.test(projectId)) {
-		throw new Error(`"${projectId}" is not a usable project id. Use lower-case words separated by hyphens, like "users-inactivity-signal".`);
+export const assertUsablePrototypeId = (prototypeId: string): void => {
+	if (!PROTOTYPE_ID.test(prototypeId)) {
+		throw new Error(`"${prototypeId}" is not a usable prototype id. Use lower-case words separated by hyphens, like "users-inactivity-signal".`);
 	}
 };
 
-export const recordPath = (recordsRoot: string, projectId: string): string => {
-	assertUsableProjectId(projectId);
-	return resolveInside(recordsRoot, join(projectId, WORK_FILE));
+export const recordPath = (recordsRoot: string, prototypeId: string): string => {
+	assertUsablePrototypeId(prototypeId);
+	return resolveInside(recordsRoot, join(prototypeId, WORK_FILE));
 };
 
-/** The records in a project's folder, as its file has them: none when there is no file, null when it cannot be read. */
+/** The records in a prototype's folder, as its file has them: none when there is no file, null when it cannot be read. */
 export const workInFolder = (dir: string): Work[] | null => {
 	const path = join(dir, WORK_FILE);
 	return existsSync(path) ? parseWork(readFileSync(path, 'utf8')) : [];
 };
 
 /** Throws when its file cannot be read, unlike `workInFolder`. */
-export const readWork = (recordsRoot: string, projectId: string): Work[] => {
-	const records = workInFolder(dirname(recordPath(recordsRoot, projectId)));
-	if (records === null) throw new Error(unreadableWork(workPath(projectId)));
+export const readWork = (recordsRoot: string, prototypeId: string): Work[] => {
+	const records = workInFolder(dirname(recordPath(recordsRoot, prototypeId)));
+	if (records === null) throw new Error(unreadableWork(workPath(prototypeId)));
 	return records;
 };
 
-const writeWork = (recordsRoot: string, projectId: string, records: Work[]): void => {
+const writeWork = (recordsRoot: string, prototypeId: string, records: Work[]): void => {
 	// Whole, so a reader never sees half a list, which it would refuse.
-	writeAtomic(recordPath(recordsRoot, projectId), serializeWork(records));
+	writeAtomic(recordPath(recordsRoot, prototypeId), serializeWork(records));
 };
 
-export const codebaseBranchFor = (descriptor: WorkspaceDescriptor, projectId: string): string =>
-	descriptor.branchPattern.codebase.replace(PROJECT_ID_SLOT, projectId);
+export const codebaseBranchFor = (descriptor: WorkspaceDescriptor, prototypeId: string): string =>
+	descriptor.branchPattern.codebase.replace(PROTOTYPE_ID_SLOT, prototypeId);
 
-/** One branch per project, so one already started by hand is adopted and recorded, not refused. */
+/** One branch per prototype, so one already started by hand is adopted and recorded, not refused. */
 export const createCodebaseWork = async (
 	productRoot: string,
 	recordsRoot: string,
 	descriptor: WorkspaceDescriptor,
-	projectId: string,
+	prototypeId: string,
 	note: string,
 	from: string,
 ): Promise<Work> => {
-	const existing = readWork(recordsRoot, projectId);
+	const existing = readWork(recordsRoot, prototypeId);
 	const name = 'codebase';
-	const branch = codebaseBranchFor(descriptor, projectId);
+	const branch = codebaseBranchFor(descriptor, prototypeId);
 	if (existing.some((i) => i.name === name)) {
-		throw new Error(`${projectId} already has codebase work recorded. Use Continue on it.`);
+		throw new Error(`${prototypeId} already has codebase work recorded. Use Continue on it.`);
 	}
 	// Either way nothing is recorded unless the checkout succeeds, so the
 	// record cannot claim work that is not there.
@@ -89,10 +89,10 @@ export const createCodebaseWork = async (
 		madeFrom = await headCommit(productRoot);
 	}
 
-	// Where it is on GitHub, so the project links to it for people without the repository.
+	// Where it is on GitHub, so the prototype links to it for people without the repository.
 	const repository = await repositoryOf(productRoot);
 	const record: Work = {
-		projectId,
+		prototypeId,
 		name,
 		branch,
 		commit: null,
@@ -101,14 +101,14 @@ export const createCodebaseWork = async (
 		...(repository ? { repository } : {}),
 		...(madeFrom ? { madeFrom } : {}),
 	};
-	writeWork(recordsRoot, projectId, [...existing, record]);
+	writeWork(recordsRoot, prototypeId, [...existing, record]);
 	return record;
 };
 
-/** The commit a project's codebase work was made from, as its record says; null when it does not say. */
-export const codebaseMadeFrom = (recordsRoot: string, projectId: string): string | null => {
+/** The commit a prototype's codebase work was made from, as its record says; null when it does not say. */
+export const codebaseMadeFrom = (recordsRoot: string, prototypeId: string): string | null => {
 	try {
-		return readWork(recordsRoot, projectId).find((r) => r.name === 'codebase')?.madeFrom ?? null;
+		return readWork(recordsRoot, prototypeId).find((r) => r.name === 'codebase')?.madeFrom ?? null;
 	} catch {
 		// A record that cannot be read says nothing: the trunk stands in.
 		return null;
@@ -132,20 +132,20 @@ export const peopleOn = async (productRoot: string, branch: string, signedInLogi
  */
 export const recordPreview = (
 	recordsRoot: string,
-	projectId: string,
+	prototypeId: string,
 	name: string,
 	previewUrl: string,
 	/** The commit that was shared, so a reviewer's comment says what it was made against. */
 	commit?: string,
 	pullRequest?: string,
 ): Work => {
-	const records = readWork(recordsRoot, projectId);
+	const records = readWork(recordsRoot, prototypeId);
 	const found = records.find((i) => i.name === name);
-	if (!found) throw new Error(`${projectId} has no ${name}.`);
+	if (!found) throw new Error(`${prototypeId} has no ${name}.`);
 	const updated = { ...found, previewUrl, ...(commit ? { commit } : {}), ...(pullRequest ? { pullRequest } : {}) };
 	writeWork(
 		recordsRoot,
-		projectId,
+		prototypeId,
 		records.map((i) => (i.name === name ? updated : i)),
 	);
 	return updated;
@@ -154,15 +154,15 @@ export const recordPreview = (
 /**
  * `readyAt` null means found not ready. Written only when it changes; publishing it is the caller's step.
  */
-export const recordHandoff = (recordsRoot: string, projectId: string, readyAt: string | null): void => {
-	const records = readWork(recordsRoot, projectId);
+export const recordHandoff = (recordsRoot: string, prototypeId: string, readyAt: string | null): void => {
+	const records = readWork(recordsRoot, prototypeId);
 	const found = records.find((i) => i.name === 'codebase');
 	if (!found || (found.readyAt ?? null) === readyAt) return;
 	const { readyAt: _was, ...rest } = found;
 	const updated = readyAt === null ? rest : { ...rest, readyAt };
 	writeWork(
 		recordsRoot,
-		projectId,
+		prototypeId,
 		records.map((i) => (i === found ? updated : i)),
 	);
 };
@@ -171,12 +171,12 @@ export const recordHandoff = (recordsRoot: string, projectId: string, readyAt: s
  * Work started outside the app has a branch and no record; the branch is the evidence, so the record is made from it
  * rather than refusing the work. Null only if the branch is not there.
  */
-const adoptUnrecorded = async (productRoot: string, descriptor: WorkspaceDescriptor, projectId: string, name: string): Promise<Work | null> => {
-	const branch = name === 'codebase' ? codebaseBranchFor(descriptor, projectId) : null;
+const adoptUnrecorded = async (productRoot: string, descriptor: WorkspaceDescriptor, prototypeId: string, name: string): Promise<Work | null> => {
+	const branch = name === 'codebase' ? codebaseBranchFor(descriptor, prototypeId) : null;
 	if (!branch || !(await branchExists(productRoot, branch))) return null;
 	// Dated from the work itself, not from the moment the app first needed a record for it.
 	const createdAt = (await branchStartedAt(productRoot, branch)) ?? new Date().toISOString();
-	return { projectId, name, branch, commit: null, createdAt, note: 'Found in the repository; recorded when first opened here.' };
+	return { prototypeId, name, branch, commit: null, createdAt, note: 'Found in the repository; recorded when first opened here.' };
 };
 
 /**
@@ -187,37 +187,37 @@ export const recordedWork = async (
 	productRoot: string,
 	recordsRoot: string,
 	descriptor: WorkspaceDescriptor,
-	projectId: string,
+	prototypeId: string,
 	name: string,
 ): Promise<Work> => {
-	const existing = readWork(recordsRoot, projectId);
+	const existing = readWork(recordsRoot, prototypeId);
 	const found = existing.find((i) => i.name === name);
 	if (found) return found;
-	const adopted = await adoptUnrecorded(productRoot, descriptor, projectId, name);
-	if (!adopted) throw new Error(`${projectId} has no ${name}.`);
-	writeWork(recordsRoot, projectId, [...existing, adopted]);
+	const adopted = await adoptUnrecorded(productRoot, descriptor, prototypeId, name);
+	if (!adopted) throw new Error(`${prototypeId} has no ${name}.`);
+	writeWork(recordsRoot, prototypeId, [...existing, adopted]);
 	return adopted;
 };
 
 export const continueWork = async (
 	productRoot: string,
 	recordsRoot: string,
-	projectId: string,
+	prototypeId: string,
 	name: string,
 	signedInLogin: string | null,
 	descriptor: WorkspaceDescriptor,
 ): Promise<Work> => {
-	let records = readWork(recordsRoot, projectId);
+	let records = readWork(recordsRoot, prototypeId);
 	let record = records.find((i) => i.name === name);
 	if (!record) {
-		const adopted = await adoptUnrecorded(productRoot, descriptor, projectId, name);
+		const adopted = await adoptUnrecorded(productRoot, descriptor, prototypeId, name);
 		if (adopted) {
 			record = adopted;
 			records = [...records, adopted];
 		}
 	}
 	if (!record) {
-		throw new Error(`${projectId} has no ${name}.`);
+		throw new Error(`${prototypeId} has no ${name}.`);
 	}
 	await checkoutBranch(productRoot, record.branch, await sharedCheckoutNote(productRoot));
 
@@ -226,6 +226,6 @@ export const continueWork = async (
 	const commit = await headCommit(productRoot);
 	const contributors = await peopleOn(productRoot, record.branch, signedInLogin, record.madeFrom);
 	const updated = records.map((i) => (i.name === name ? { ...i, commit, contributors } : i));
-	writeWork(recordsRoot, projectId, updated);
+	writeWork(recordsRoot, prototypeId, updated);
 	return { ...record, commit, contributors };
 };

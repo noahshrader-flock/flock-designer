@@ -2,7 +2,7 @@ import { type Answer, type CommentRef, type EventName, type InvokeName, type Pay
 import { asRecord } from '../shared/json';
 import { fail, ok } from '../shared/result';
 import { isSafeBranchName } from './services/platform/git';
-import { assertUsableProjectId } from './services/projects/workRecords';
+import { assertUsablePrototypeId } from './services/prototypes/workRecords';
 import { assertVersionName } from './services/prototypes/prototype';
 
 /** A handler throws a sentence for a person and this is the one place it becomes a Result: a throw crossing IPC arrives shapeless. */
@@ -68,9 +68,9 @@ const text =
 export const arg = {
 	/** A checkout's folder, as the window names it: still to be found among those the person opened. */
 	root: text('a folder', 4096),
-	projectId: ((v) => {
-		if (typeof v !== 'string') throw new Error('That is not a project.');
-		assertUsableProjectId(v);
+	prototypeId: ((v) => {
+		if (typeof v !== 'string') throw new Error('That is not a prototype.');
+		assertUsablePrototypeId(v);
 		return v;
 	}) as Check<string>,
 	/** A prototype's name is its version: `v2`. */

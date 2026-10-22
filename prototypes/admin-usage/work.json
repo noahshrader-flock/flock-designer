@@ -1,6 +1,6 @@
 [
   {
-    "projectId": "admin-usage",
+    "prototypeId": "admin-usage",
     "name": "v1",
     "branch": "prototype/admin-usage/v1",
     "commit": null,
@@ -20,7 +20,7 @@
     "cover": "38abc3d6c0af"
   },
   {
-    "projectId": "admin-usage",
+    "prototypeId": "admin-usage",
     "name": "codebase",
     "branch": "feature/admin-usage",
     "commit": "93ef5f5fa6ec24ee3d6e991d47aba6de51ad57a6",

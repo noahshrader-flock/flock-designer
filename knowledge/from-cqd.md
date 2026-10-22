@@ -1,7 +1,7 @@
 # From CHEQ's .CQD
 
 Paradome, CHEQ's product, has an older agent system of its own in its `.CQD` folder: a designer agent, review checklists,
-standards, step by step workflows, reference maps and project notes. DSNR's agent files do the same job, shared across
+standards, step by step workflows, reference maps and prototype notes. DSNR's agent files do the same job, shared across
 products. This page is for CHEQ, when it moves Paradome onto DSNR: where each part of `.CQD` goes, and where DSNR works
 differently.
 
@@ -18,7 +18,7 @@ Nothing here has been applied to Paradome. It is a map to follow.
 | Composition, layout, shell and dashboard standards, and the reference maps | Paradome's `.dsnr/composition/` and its pattern files, as Coke's are |
 | Its non-negotiables | Split: what holds anywhere is already in `standards/non-negotiables.md`; what is CHEQ's goes in Paradome's `.dsnr/standards/non-negotiables.md` |
 | The general design standards (layout, states, accessibility, copy) | Already shared, in `standards/universal/` |
-| Briefs, checklists and project notes | The design repository's `prototypes/`, one folder per project |
+| Briefs, checklists and prototype notes | The design repository's `prototypes/`, one folder per prototype |
 | Paradome's own `CLAUDE.md` | Its `AGENTS.md`, with `CLAUDE.md` as `@AGENTS.md`, so every agent reads the same instructions |
 | The smoke test and the ready-made briefs | Nothing: DSNR writes each task itself |
 
@@ -48,7 +48,7 @@ authoritative docs in its manifest, and date each pattern file with the commit i
 - *No review of a prototype.* DSNR's reviews are for codebase work, at the handoff.
 - *States are built when asked*, and switched in the review bar, not by a toggle inside the page.
 - *The product's docs win only on stack and tooling*, never over the hard rules.
-- *Project notes live in the design repository*, shared, not in the product.
+- *Prototype notes live in the design repository*, shared, not in the product.
 - *The accessibility target is stated once*, in the product's manifest.
 - *A prototype's text moves into translation files* when it moves into the code, not before.
 

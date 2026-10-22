@@ -14,14 +14,14 @@ files. It works out two things:
 - *Whether it would merge cleanly*, and if not, which files would conflict. It works this out without merging anything: no
   file of yours changes.
 
-You see it in the **Update this branch…** dialog, from the project's menu, and in the handoff dialog when the branch is
+You see it in the **Update this branch…** dialog, from the prototype's menu, and in the handoff dialog when the branch is
 behind. It reads like: "feature/zone-coverage is 4 commits behind develop. It merges into develop cleanly." Or, when it
 would not: "Merging develop into it conflicts in ZoneList.tsx."
 
 ## Bring codebase work up to date
 
 1. Open the work's branch in the product, with nothing uncommitted.
-2. Choose **Update this branch…** from the project's menu. It shows how the branch stands.
+2. Choose **Update this branch…** from the prototype's menu. It shows how the branch stands.
 3. Press **Update this branch**. The agent merges the main branch in, in your window.
 
 What the agent does:

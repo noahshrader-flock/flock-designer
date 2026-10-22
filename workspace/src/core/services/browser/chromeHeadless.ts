@@ -13,7 +13,7 @@ import type { Measure } from '../../ports';
 import { fitJpegBy } from '../prototypes/picture';
 import { COMPOSITION, painted, placeAround, placeOnWhite } from '../prototypes/pictureComposition';
 import { decodePng } from '../prototypes/png';
-import { COVER_BUDGET, COVER_STEPS, COVER_WINDOW, isBlank } from '../prototypes/projectCovers';
+import { COVER_BUDGET, COVER_STEPS, COVER_WINDOW, isBlank } from '../prototypes/prototypeCovers';
 import { settleScript, timerWatchScript } from './settle';
 import type { Look, LookPage } from '../prototypes/looks';
 import type { DrawCover } from '../../ports';

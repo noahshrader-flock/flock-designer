@@ -1,12 +1,12 @@
-import { readDescriptor } from '../../src/core/services/projects/descriptor';
+import { readDescriptor } from '../../src/core/services/products/descriptor';
 import { installLine } from '../../src/core/services/codebase/install';
 import { httpProbe } from '../../src/core/services/codebase/runtime';
 import { basename, join } from 'node:path';
 import * as vscode from 'vscode';
 import { served } from '../../src/core/handle';
-import { designRepositoryOf, isDesignRepository, notADesignRepository } from '../../src/core/services/projects/discovery';
+import { designRepositoryOf, isDesignRepository, notADesignRepository } from '../../src/core/services/products/discovery';
 import { formatRepo } from '../../src/shared/repoRef';
-import { type Context, findContext } from '../../src/core/services/projects/findContext';
+import { type Context, findContext } from '../../src/core/services/products/findContext';
 import type { PublishStatus, SignInState } from '../../src/shared/contract';
 import { addressComment } from './address';
 import { refreshPrototype } from './refresh';
@@ -15,12 +15,12 @@ import { type LocalRun, handOff, openCode, shareCodebase, runLocally, updateBran
 import { startCore } from './core';
 import { moveLocationSetting } from './agentWindows';
 import { showFound, askSource, pickDesignSystem } from './designSystem';
-import { chooseDesignSystem, chosenDesignSystem } from '../../src/core/services/projects/productDesignSystem';
+import { chooseDesignSystem, chosenDesignSystem } from '../../src/core/services/products/productDesignSystem';
 import { designSystemHost } from './designSystemHost';
 import { registerVoice } from './voice';
 import { errorText, valueOf } from '../../src/shared/result';
 import { type CodebaseAction, type HostMessage, NO_TABS_SHOWN, type Placed, type Review, reviewsOf } from './messages';
-import { setupMoved, setupState } from '../../src/core/services/projects/setUp';
+import { setupMoved, setupState } from '../../src/core/services/products/setUp';
 import { handedTo } from '../../src/shared/handedTo';
 import { askRoutes } from './asks';
 import { commands } from './commands';
@@ -30,13 +30,13 @@ import { coalesce } from './coalesce';
 import { PanelProvider } from './panel';
 import { PANEL_VIEW_OPTIONS } from './panelOptions';
 import { publishedLink } from './publishing';
-import { copyProject } from '../../src/core/services/prototypes/projectCopy';
-import { needsProduct } from '../../src/shared/projectScope';
+import { copyPrototype } from '../../src/core/services/prototypes/prototypeCopy';
+import { needsProduct } from '../../src/shared/prototypeScope';
 import { productsOf } from '../../src/shared/work';
 import { REVIEW_KEY, Reviews, answerReview, buildReviewSite, latestReview, pickReview, siteIn } from './review';
 import { RunOutput, SyncStatus, failed, failedFor, vscodeChoose, vscodeCopy, vscodeOffer, vscodeOpen, vscodeProgress, vscodeTell } from './ui';
 
-/** Coming back to VS Code rereads the projects only this long after the last read: each read asks GitHub. */
+/** Coming back to VS Code rereads the prototypes only this long after the last read: each read asks GitHub. */
 const REREAD_MS = 60_000;
 
 /** Here, not in a disposable: VS Code waits for `deactivate`, and not for a disposable. */
@@ -137,14 +137,14 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 	void design.read();
 	const site = siteIn(storage);
 	/**
-	 * A change to a prototype's code is made with the product it was made on: that one, open here. Titled as the project's
+	 * A change to a prototype's code is made with the product it was made on: that one, open here. Titled as the prototype's
 	 * records title it, since a browser's page may have moved to another of its versions.
 	 */
 	const withItsProduct = async (r: Review): Promise<{ root: string; titled: Review }> => {
-		const project = valueOf(await api.listProjects()).find((p) => p.id === r.projectId);
-		const why = needsProduct(project ? productsOf(project) : [], found.product === null ? null : found.productRepository);
+		const prototype = valueOf(await api.listPrototypes()).find((p) => p.id === r.prototypeId);
+		const why = needsProduct(prototype ? productsOf(prototype) : [], found.product === null ? null : found.productRepository);
 		if (why !== null || found.product === null) throw new Error(why ?? productNow().why);
-		return { root: found.product, titled: (project && reviewsOf(project).find((x) => x.name === r.name)) || r };
+		return { root: found.product, titled: (prototype && reviewsOf(prototype).find((x) => x.name === r.name)) || r };
 	};
 	const buildReview = buildReviewSite(site, join(context.extensionUri.fsPath, 'dist', 'viewer'), () => shell.designRepo().ref);
 	const reviews = new Reviews({
@@ -159,13 +159,13 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 				{
 					routes: served,
 					signIn: () => github.signIn(),
-					written: () => projectsChanged(),
+					written: () => prototypesChanged(),
 					// One place says what went wrong, a refusal included, and the caller is told too.
 					address: (r, comment, newVersion) =>
 						withItsProduct(r)
 							.then(({ root, titled }) => addressComment({ ...here, watch: watchPrototype }, root, titled, comment, newVersion))
 							.catch(failedFor(true)),
-					baseBehind: async (r) => valueOf(await api.prototypeBehind(r.projectId, r.name)),
+					baseBehind: async (r) => valueOf(await api.prototypeBehind(r.prototypeId, r.name)),
 					refresh: (r) =>
 						withItsProduct(r)
 							.then(({ root, titled }) => refreshPrototype({ ...here, watch: watchPrototype }, root, titled))
@@ -179,21 +179,21 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 		...(log ? { log } : {}),
 	});
 	/** The copy's storage is shared by every window, so two windows opening reviews at once write the same folders. */
-	const recordsFor = (projectId: string): Promise<string> =>
+	const recordsFor = (prototypeId: string): Promise<string> =>
 		found.designRepository !== null
 			? Promise.resolve(found.designRepository)
-			: copyProject(shell.designRepo().files, projectId, join(storage, 'review-copy'), reviews.inUse());
+			: copyPrototype(shell.designRepo().files, prototypeId, join(storage, 'review-copy'), reviews.inUse());
 	/**
 	 * Saved when it is opened (`openPrototype`), so the review shows what reviewers get; the list is read again for the
 	 * picture a built page now has.
 	 */
 	const openReview = async (review: Review): Promise<void> => {
-		await api.openPrototype(review.projectId, review.name);
-		await reviews.open({ records: await recordsFor(review.projectId), ...review });
-		projectsChanged();
+		await api.openPrototype(review.prototypeId, review.name);
+		await reviews.open({ records: await recordsFor(review.prototypeId), ...review });
+		prototypesChanged();
 	};
 	const openReviewInBrowser = async (review: Review) => {
-		await vscodeOpen(await reviews.inBrowser({ records: await recordsFor(review.projectId), ...review }));
+		await vscodeOpen(await reviews.inBrowser({ records: await recordsFor(review.prototypeId), ...review }));
 	};
 	const withPublishedLink = (act: (url: string) => Promise<void>) => async (review: Review) => {
 		const url = await publishedLink(here, review);
@@ -227,17 +227,17 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 		if (!isDesignRepository(chosen)) throw new Error(notADesignRepository(chosen));
 		core.designRepositories.set(repository, chosen);
 		await refresh();
-		projectsChanged();
+		prototypesChanged();
 	};
 
 	const productNow = () => ({ root: found.product, why: found.missing[0] ?? 'No product is open.' });
 	let lastRead = Date.now();
 	// Before anything that watches: a watch begun as the window opens (a repository to set up) tells it what it found.
-	// Once for a burst (a build's save, the review it opens, a comment written): each read of the projects asks GitHub
-	// for every project's files, so several in a moment would spend the hourly limit for nothing.
-	const projectsChanged = coalesce(() => {
+	// Once for a burst (a build's save, the review it opens, a comment written): each read of the prototypes asks GitHub
+	// for every prototype's files, so several in a moment would spend the hourly limit for nothing.
+	const prototypesChanged = coalesce(() => {
 		lastRead = Date.now();
-		panels.post({ type: 'projects-changed' });
+		panels.post({ type: 'prototypes-changed' });
 	}, 1500);
 
 	/** Ends with the window: nothing is saved after it is gone. */
@@ -250,7 +250,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 	) =>
 		void watchFor({
 			found: isThere,
-			onFound: projectsChanged,
+			onFound: prototypesChanged,
 			onStopped: (why) => failed(new Error(why)),
 			onGaveUp: (err) => failed(new Error(`${couldNot}: ${errorText(err, { firstLine: true }).replace(/\.?$/, '.')}${after}`)),
 			now: Date.now,
@@ -261,8 +261,8 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 			once,
 		});
 	// No notification for each save: accessibility is the build's own check, in the agent's run.
-	const watchPrototype = (projectId: string, name: string, title: string, from: string | null = null) =>
-		watchUntil(async () => savedOrStop(valueOf(await api.saveBuilt(projectId, name, from)), `the build of ${title} (${name})`), {
+	const watchPrototype = (prototypeId: string, name: string, title: string, from: string | null = null) =>
+		watchUntil(async () => savedOrStop(valueOf(await api.saveBuilt(prototypeId, name, from)), `the build of ${title} (${name})`), {
 			couldNot: `DSNR could not save the build of ${title} (${name})`,
 			after: ' Opening it for review saves it.',
 			pollMs: 2000,
@@ -309,8 +309,8 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 			loads: (url) => headless.loads(url),
 		};
 	};
-	/** Handoff and its draft pull request change the project's records, so the list is read again after them. */
-	const codebaseWork = async (action: CodebaseAction, projectId: string) => {
+	/** Handoff and its draft pull request change the prototype's records, so the list is read again after them. */
+	const codebaseWork = async (action: CodebaseAction, prototypeId: string) => {
 		const root = found.product;
 		if (root === null) throw new Error(productNow().why);
 		const run = {
@@ -321,9 +321,9 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 			'run-locally': (deps: Parameters<typeof runLocally>[0], id: string) => runLocally(deps, localRun(root), id),
 		}[action];
 		try {
-			await run({ ...here, root, watch: watchHandoff }, projectId);
+			await run({ ...here, root, watch: watchHandoff }, prototypeId);
 		} finally {
-			if (action === 'hand-off' || action === 'share') projectsChanged();
+			if (action === 'hand-off' || action === 'share') prototypesChanged();
 		}
 	};
 	const inPanel = async (message: HostMessage) => {
@@ -337,13 +337,13 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 	// What is kept is a setting, and shown again when it changes.
 	const chooseAgent = async () => valueOf(await api.chooseAgent());
 	void showAgent().catch(failed);
-	const tabsShown = () => tabs.set({ projects: reviews.shown(), components: design.shownComponents() });
+	const tabsShown = () => tabs.set({ prototypes: reviews.shown(), components: design.shownComponents() });
 	const asks = askRoutes({
 		...design.handlers,
 		chooseDesignSystem: () => chooseTheDesignSystem(),
 		getStarted: () => vscode.commands.executeCommand('dsnr.getStarted'),
 		setUp: () => setUpHere(),
-		codebase: (action, projectId) => codebaseWork(action, projectId),
+		codebase: (action, prototypeId) => codebaseWork(action, prototypeId),
 		openReview: (id) => latestReview(api, id).then(openReview),
 		openReviewInBrowser: (id) => latestReview(api, id).then(openReviewInBrowser),
 		copyReviewLink: (id) => latestReview(api, id).then(copyPublishedLink),
@@ -356,7 +356,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 	context.subscriptions.push(
 		sync,
 		{ dispose: panels.listen('onPublishStatus', (status) => sync.show(status as PublishStatus)) },
-		{ dispose: panels.listen('onProjectDeleted', (projectId) => reviews.close(String(projectId))) },
+		{ dispose: panels.listen('onPrototypeDeleted', (prototypeId) => reviews.close(String(prototypeId))) },
 		runOutput,
 		...voice.disposables,
 		...design.disposables,
@@ -391,7 +391,7 @@ export const activate = async (context: vscode.ExtensionContext): Promise<void> 
 			// Coming back to VS Code is a good moment to publish what was done meanwhile.
 			void shell.publish().catch(failed);
 			// For comments made elsewhere while away, but not more than once in a while.
-			if (Date.now() - lastRead > REREAD_MS) projectsChanged();
+			if (Date.now() - lastRead > REREAD_MS) prototypesChanged();
 		}),
 	);
 };

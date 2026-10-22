@@ -18,7 +18,7 @@ how its app runs.
 	"version": 1,
 	"product": "Acme Admin",
 	"contextDir": ".dsnr",
-	"branchPattern": { "codebase": "feature/<project-id>" },
+	"branchPattern": { "codebase": "feature/<prototype-id>" },
 	"designSystem": { "package": "@acme/ui" },
 	"commands": [
 		{ "id": "install", "label": "Install packages", "argv": ["npm", "ci"] },
@@ -30,8 +30,8 @@ how its app runs.
 
 - **`product`**: the product's name as its team says it.
 - **`branchPattern.codebase`**: how this team names a feature branch, from its recent branches or its docs, with
-  `<project-id>` where the name goes, once. DSNR fills in nothing else, so a part that changes per branch (a ticket
-  number) is left out: `feature/<project-id>` when nothing says.
+  `<prototype-id>` where the name goes, once. DSNR fills in nothing else, so a part that changes per branch (a ticket
+  number) is left out: `feature/<prototype-id>` when nothing says.
 - **`designSystem.package`**: the package its components come from (the one its views import buttons and inputs from).
   When the repository is that package itself, or holds it, give that package's name: DSNR finds it by name. Add
   `"folder"` only when two packages share the name.
@@ -39,7 +39,7 @@ how its app runs.
 - **`commands`**: only what its scripts already do, each as the words split (`["npm", "run", "lint"]`), run through
   `npm`, `npx` or `node`. Use these ids where the product has the thing: `install`, `typecheck`, `lint`, `test`,
   `design-mode` (the real app on mock data, with `"servesPreviewOn"` its port), `check-iteration` (a fast check),
-  `handoff` (its gate for engineering, taking `<project-id>`), `a11y`. **Leave out what it does not have**: never invent
+  `handoff` (its gate for engineering, taking `<prototype-id>`), `a11y`. **Leave out what it does not have**: never invent
   a script, and never point at one `package.json` does not have.
 
 ## 3. Write what every agent reads first

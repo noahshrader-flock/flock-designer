@@ -7,7 +7,7 @@ import { type Check } from '../src/codeHost/changeRequests';
 const share = { url: 'https://dev-coke-pr-<pr>.example.test', workflow: 'PR Deployment', kinds: ['codebase' as const] };
 const request: ShareRequest = {
 	share,
-	projectId: 'demo',
+	prototypeId: 'demo',
 	name: 'codebase',
 	branch: 'feature/demo',
 	title: 'Preview: demo codebase',
@@ -155,10 +155,10 @@ describe('ShareRunner', () => {
 			record: async (url, prUrl) => void recorded.push([url, prUrl]),
 		});
 		await flush();
-		expect(seen[0]).toMatchObject({ state: 'running', projectId: 'demo', name: 'codebase' });
+		expect(seen[0]).toMatchObject({ state: 'running', prototypeId: 'demo', name: 'codebase' });
 		expect(seen.at(-1)).toEqual({
 			state: 'ready',
-			projectId: 'demo',
+			prototypeId: 'demo',
 			name: 'codebase',
 			url: 'https://dev-coke-pr-42.example.test',
 			prUrl: 'https://github.test/o/r/pull/42',

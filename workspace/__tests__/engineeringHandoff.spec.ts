@@ -5,11 +5,11 @@ import { handoffReady, handoffVerdict } from '../src/shared/handoff';
 const commands = [
 	{ id: 'preview', label: 'Run', argv: ['npm', 'start'] },
 	{ id: 'check-iteration', label: 'Light check', argv: ['npm', 'run', 'check:iteration'] },
-	{ id: 'handoff', label: 'Handoff gate', argv: ['npm', 'run', 'handoff', '--', '<project-id>'] },
+	{ id: 'handoff', label: 'Handoff gate', argv: ['npm', 'run', 'handoff', '--', '<prototype-id>'] },
 ];
 
 describe("a product's commands", () => {
-	it('are found by id in its workspace file, for this project, or not at all', () => {
+	it('are found by id in its workspace file, for this prototype, or not at all', () => {
 		expect(commandLine(commands, 'handoff', 'admin-usage')).toBe('npm run handoff -- admin-usage');
 		expect(commandLine(commands, 'check-iteration', 'admin-usage')).toBe('npm run check:iteration');
 		expect(commandLine(commands.slice(0, 1), 'handoff', 'admin-usage')).toBeNull();

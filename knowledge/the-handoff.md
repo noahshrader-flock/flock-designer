@@ -7,7 +7,7 @@ not ready, and why.
 ## Do it
 
 1. Open the work's branch in the product.
-2. In the panel, open the project's menu and choose **Hand off**.
+2. In the panel, open the prototype's menu and choose **Hand off**.
 3. Read what will happen, then press **Start handoff**. The agent opens with the task.
 4. Watch it, and step in when you like. When it commits its verdict, DSNR tells you what it says.
 
@@ -18,7 +18,7 @@ not ready, and why.
 2. *Accessibility is measured* in a real browser, and recorded with its evidence.
 3. *Two independent reviews.* The product parity reviewer asks whether the work feels native to the product. The
    implementation reviewer checks the code: its structure, its imports, that no prototype shortcut remains. Both are
-   written into the project's `review.md`, in the design repository.
+   written into the prototype's `review.md`, in the design repository.
 4. *Fixes, one at a time.* What the reviews block on is fixed and committed on the branch, one fix per commit.
 5. *The verdict.* The agent commits `HANDOFF.md` at the root of the branch. Its first line is either "Ready for
    engineering" or "Not ready", and the rest says why.

@@ -1,4 +1,4 @@
-import type { Work, ProjectWork } from './contract';
+import type { Work, PrototypeWork } from './contract';
 import { asRecord } from './json';
 import { asPeople, mergePeople } from './people';
 import { asCover, asDate, asRoute } from './validate';
@@ -41,7 +41,7 @@ const basedOnOf = (v: unknown): Work['basedOn'] | undefined => {
  * and written back never loses what a newer version wrote.
  */
 const KNOWN = [
-	'projectId',
+	'prototypeId',
 	'name',
 	'branch',
 	'commit',
@@ -68,7 +68,7 @@ const checked = (r: Rec): Work => {
 	const cover = asCover(r.cover);
 	return {
 		...rest,
-		projectId: typeof r.projectId === 'string' ? r.projectId : '',
+		prototypeId: typeof r.prototypeId === 'string' ? r.prototypeId : '',
 		name: r.name as string,
 		branch: r.branch as string,
 		commit: typeof r.commit === 'string' ? r.commit : null,
@@ -93,7 +93,7 @@ export const unreadableWork = (path: string): string => `${path} is not a readab
 
 export const serializeWork = (records: readonly unknown[]): string => `${JSON.stringify(records, null, 2)}\n`;
 
-export const toProjectWork = (r: Work, thread?: { number: number; openComments: number }): ProjectWork => ({
+export const toPrototypeWork = (r: Work, thread?: { number: number; openComments: number }): PrototypeWork => ({
 	name: r.name,
 	branch: r.branch,
 	issueNumber: thread?.number ?? null,
@@ -107,7 +107,7 @@ export const toProjectWork = (r: Work, thread?: { number: number; openComments: 
 	route: r.route ?? null,
 	cover: r.cover ?? null,
 	product: r.basedOn?.product ?? null,
-	// As the record says; `listProjects` keeps it only once it is known to be the branch's commit still.
+	// As the record says; `listPrototypes` keeps it only once it is known to be the branch's commit still.
 	readyAt: r.readyAt ?? null,
 	begun: null,
 });

@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { type AskHandlers, askRoutes, readComponentArg, readReview } from '../extension/src/asks';
-import { ASKS, type AskName, readMessage, readProjectArg } from '../extension/src/messages';
+import { ASKS, type AskName, readMessage, readPrototypeArg } from '../extension/src/messages';
 
 describe('a message from a page', () => {
 	it.each([
-		[{ type: 'call', id: 1, name: 'listProjects', args: [] }],
+		[{ type: 'call', id: 1, name: 'listPrototypes', args: [] }],
 		[{ type: 'call', id: 7, name: 'branchesWithSetup', args: ['/a', 2] }],
 		[{ type: 'call', id: 8, name: 'openComponent', args: ['x'] }],
 		[{ type: 'ready' }],
@@ -17,11 +17,11 @@ describe('a message from a page', () => {
 		['ready'],
 		[{}],
 		[{ type: 'call', id: 1, name: 'runAnything', args: [] }],
-		[{ type: 'call', id: 0, name: 'listProjects', args: [] }],
-		[{ type: 'call', id: 1.5, name: 'listProjects', args: [] }],
-		[{ type: 'call', id: '1', name: 'listProjects', args: [] }],
-		[{ type: 'call', id: 1, name: 'listProjects', args: 'x' }],
-		[{ type: 'call', id: 1, name: 'listProjects', args: [], extra: true }],
+		[{ type: 'call', id: 0, name: 'listPrototypes', args: [] }],
+		[{ type: 'call', id: 1.5, name: 'listPrototypes', args: [] }],
+		[{ type: 'call', id: '1', name: 'listPrototypes', args: [] }],
+		[{ type: 'call', id: 1, name: 'listPrototypes', args: 'x' }],
+		[{ type: 'call', id: 1, name: 'listPrototypes', args: [], extra: true }],
 		[{ type: 'ready', as: 'someone' }],
 		// Signing in is VS Code's own, from the title bar: the page cannot ask for it.
 		[{ type: 'call', id: 1, name: 'signIn', args: [] }],
@@ -72,9 +72,9 @@ describe('an ask from a page', () => {
 	});
 
 	it.each([
-		// A project, by its id alone: the version is found by the extension, and nothing that would be a path to something else.
+		// A prototype, by its id alone: the version is found by the extension, and nothing that would be a path to something else.
 		['openReview', []],
-		['openReview', [{ projectId: 'a', name: 'v1', title: 't' }]],
+		['openReview', [{ prototypeId: 'a', name: 'v1', title: 't' }]],
 		['openReviewInBrowser', [1]],
 		['copyReviewLink', ['../a']],
 		['openReviewPublished', ['a/../../previews-x']],
@@ -116,18 +116,18 @@ describe('a component a command is given', () => {
 
 describe('a review a command is given', () => {
 	it('is read as the panel’s is, in exactly its shape', () => {
-		expect(readReview({ projectId: 'a', name: 'v1', title: 'A · Version 1' })).toEqual({ projectId: 'a', name: 'v1', title: 'A · Version 1' });
-		expect(readReview({ projectId: 'a', name: 'v1' })).toBeNull();
-		expect(readReview({ projectId: 'a', name: 'v1', title: 'x', type: 'call' })).toBeNull();
+		expect(readReview({ prototypeId: 'a', name: 'v1', title: 'A · Version 1' })).toEqual({ prototypeId: 'a', name: 'v1', title: 'A · Version 1' });
+		expect(readReview({ prototypeId: 'a', name: 'v1' })).toBeNull();
+		expect(readReview({ prototypeId: 'a', name: 'v1', title: 'x', type: 'call' })).toBeNull();
 		expect(readReview('a')).toBeNull();
 	});
 });
 
-describe('a project a command is given', () => {
+describe('a prototype a command is given', () => {
 	it('is a row’s context, from its right-click menu, or nothing', () => {
-		expect(readProjectArg({ webviewSection: 'project', projectId: 'demo', preventDefaultContextMenuItems: true })).toBe('demo');
-		expect(readProjectArg(undefined)).toBeNull();
-		expect(readProjectArg({ projectId: 3 })).toBeNull();
-		expect(readProjectArg({ projectId: '../etc' })).toBeNull();
+		expect(readPrototypeArg({ webviewSection: 'prototype', prototypeId: 'demo', preventDefaultContextMenuItems: true })).toBe('demo');
+		expect(readPrototypeArg(undefined)).toBeNull();
+		expect(readPrototypeArg({ prototypeId: 3 })).toBeNull();
+		expect(readPrototypeArg({ prototypeId: '../etc' })).toBeNull();
 	});
 });

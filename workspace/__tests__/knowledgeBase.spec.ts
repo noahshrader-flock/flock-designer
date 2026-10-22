@@ -73,7 +73,7 @@ describe('the knowledge base names only what is real', () => {
 		});
 
 		it(`${page}: every path it names is in the repository, and every page it links to is here`, () => {
-			const paths = each(/`((?:agents|skills|standards|knowledge|projects|workspace)\/[^`\s]*)`/g, text);
+			const paths = each(/`((?:agents|skills|standards|knowledge|prototypes|workspace)\/[^`\s]*)`/g, text);
 			expect(
 				paths.filter((p) => !existsSync(join(REPO, p))),
 				'a path in the repository',

@@ -1,4 +1,4 @@
-import type { HandoffResult, Project, ProjectWork, ShareStatus, ShareStep, WorkspaceApi } from '../../src/shared/contract';
+import type { HandoffResult, Prototype, PrototypeWork, ShareStatus, ShareStep, WorkspaceApi } from '../../src/shared/contract';
 import { buildError, outputLines, packagesHint } from '../../src/core/services/codebase/serverOutput';
 import { handedTo } from '../../src/shared/handedTo';
 import { handoffReady } from '../../src/shared/handoff';
@@ -11,7 +11,7 @@ export interface CodebaseDeps {
 	log: OutputLike;
 	api: Pick<
 		WorkspaceApi,
-		'listProjects' | 'handOff' | 'handoffResult' | 'handCodebaseUpdate' | 'runLocally' | 'shareWork' | 'onShareStatus' | 'stopCommand' | 'onRunLog'
+		'listPrototypes' | 'handOff' | 'handoffResult' | 'handCodebaseUpdate' | 'runLocally' | 'shareWork' | 'onShareStatus' | 'stopCommand' | 'onRunLog'
 	>;
 	root: string;
 	tell: Tell;
@@ -22,19 +22,19 @@ export interface CodebaseDeps {
 	watch: (check: () => Promise<boolean>) => void;
 }
 
-const codebaseOf = async (api: CodebaseDeps['api'], projectId: string): Promise<{ project: Project; work: ProjectWork }> => {
-	const project = valueOf(await api.listProjects()).find((p) => p.id === projectId);
-	if (!project) throw new Error(`There is no project ${projectId} here.`);
-	const work = workOf(project.work, 'codebase')[0];
-	if (!work) throw new Error(`${project.title} has no codebase work yet: build it in the codebase first.`);
-	return { project, work };
+const codebaseOf = async (api: CodebaseDeps['api'], prototypeId: string): Promise<{ prototype: Prototype; work: PrototypeWork }> => {
+	const prototype = valueOf(await api.listPrototypes()).find((p) => p.id === prototypeId);
+	if (!prototype) throw new Error(`There is no prototype ${prototypeId} here.`);
+	const work = workOf(prototype.work, 'codebase')[0];
+	if (!work) throw new Error(`${prototype.title} has no codebase work yet: build it in the codebase first.`);
+	return { prototype, work };
 };
 
 const OPEN_PR = 'Open a draft pull request';
 
 const reportHandoff = async (
 	deps: CodebaseDeps,
-	project: Project,
+	prototype: Prototype,
 	branch: string,
 	result: Extract<HandoffResult, { state: 'done' }>,
 ): Promise<void> => {
@@ -44,36 +44,38 @@ const reportHandoff = async (
 	];
 	if (handoffReady(result)) {
 		const next = await deps.offer([`Ready for engineering: HANDOFF.md is on ${branch}, and nothing was pushed.`, ...flags].join(' '), [OPEN_PR]);
-		if (next === OPEN_PR) await shareCodebase(deps, project.id);
+		if (next === OPEN_PR) await shareCodebase(deps, prototype.id);
 		return;
 	}
 	const said = {
-		ready: `HANDOFF.md says ${project.title} is ready, but it is not recorded as ready.`,
-		'not ready': `${project.title} is not ready for engineering yet: HANDOFF.md says why.`,
+		ready: `HANDOFF.md says ${prototype.title} is ready, but it is not recorded as ready.`,
+		'not ready': `${prototype.title} is not ready for engineering yet: HANDOFF.md says why.`,
 		neither: `HANDOFF.md is committed on ${branch}, but its first line says neither Ready for engineering nor Not ready.`,
 	}[result.verdict ?? 'neither'];
 	deps.tell([said, ...flags].join(' '));
 };
 
 /** Hands the task over; the person runs it in the agent's window, and the verdict is read from HANDOFF.md once committed. */
-export const handOff = async (deps: CodebaseDeps, projectId: string): Promise<void> => {
+export const handOff = async (deps: CodebaseDeps, prototypeId: string): Promise<void> => {
 	const { api, root } = deps;
-	const { project, work } = await codebaseOf(api, projectId);
-	const handed = valueOf(await api.handOff(root, project.id));
+	const { prototype, work } = await codebaseOf(api, prototypeId);
+	const handed = valueOf(await api.handOff(root, prototype.id));
 	deps.watch(async () => {
-		const result = valueOf(await api.handoffResult(root, project.id));
+		const result = valueOf(await api.handoffResult(root, prototype.id));
 		if (result.state === 'waiting') return false;
-		if (result.state === 'done') await reportHandoff(deps, project, work.branch, result);
+		if (result.state === 'done') await reportHandoff(deps, prototype, work.branch, result);
 		return true;
 	});
-	deps.tell(`${handedTo(handed, `The handoff of ${project.title}`)} When HANDOFF.md is committed on ${work.branch}, DSNR says whether it is ready.`);
+	deps.tell(
+		`${handedTo(handed, `The handoff of ${prototype.title}`)} When HANDOFF.md is committed on ${work.branch}, DSNR says whether it is ready.`,
+	);
 };
 
 /** Update this branch: the agent merges the base in, in this window; DSNR only kept where the branch was. */
-export const updateBranch = async (deps: CodebaseDeps, projectId: string): Promise<void> => {
+export const updateBranch = async (deps: CodebaseDeps, prototypeId: string): Promise<void> => {
 	const { api, root } = deps;
-	const { work } = await codebaseOf(api, projectId);
-	const handed = valueOf(await api.handCodebaseUpdate(root, projectId));
+	const { work } = await codebaseOf(api, prototypeId);
+	const handed = valueOf(await api.handCodebaseUpdate(root, prototypeId));
 	deps.tell(
 		`${handedTo(handed, `Bringing ${work.branch} up to date`)} Nothing is merged until it does it there; DSNR kept where the branch was, so the update can be undone.`,
 	);
@@ -90,16 +92,16 @@ export interface LocalRun {
 	loads: (url: string) => Promise<string | null>;
 }
 
-export const runLocally = async (deps: CodebaseDeps, local: LocalRun, projectId: string): Promise<void> => {
+export const runLocally = async (deps: CodebaseDeps, local: LocalRun, prototypeId: string): Promise<void> => {
 	const { api, root } = deps;
-	const { project, work } = await codebaseOf(api, projectId);
-	const couldNot = (why: string) => new Error(`${project.title} couldn’t run locally: ${why}`);
+	const { prototype, work } = await codebaseOf(api, prototypeId);
+	const couldNot = (why: string) => new Error(`${prototype.title} couldn’t run locally: ${why}`);
 	await api.stopCommand(root, DESIGN_MODE_COMMAND);
 	const port = local.port(DESIGN_MODE_COMMAND);
 	if (port === null) throw couldNot(`the product’s .dsnr/workspace.json declares no ${DESIGN_MODE_COMMAND} command with a port.`);
 	if (await local.answers(port)) throw couldNot(`something else is already answering on port ${port}. Stop it, then try again.`);
 	const lines: string[] = [];
-	deps.log.start(`${project.title}, locally`);
+	deps.log.start(`${prototype.title}, locally`);
 	const listening = api.onRunLog((l) => {
 		if (l.commandId !== DESIGN_MODE_COMMAND) return;
 		for (const line of outputLines(l.text)) {
@@ -112,10 +114,10 @@ export const runLocally = async (deps: CodebaseDeps, local: LocalRun, projectId:
 	let stopped = false;
 	try {
 		await deps.progress(
-			`Starting ${project.title} locally`,
+			`Starting ${prototype.title} locally`,
 			async (say) => {
 				say('Opening its branch and starting its dev server…');
-				const ran = await api.runLocally(root, project.id, work.name);
+				const ran = await api.runLocally(root, prototype.id, work.name);
 				if (ran.ok) url = ran.value.url;
 				else failed = ran.error;
 				if (stopped) return;
@@ -147,12 +149,12 @@ export const runLocally = async (deps: CodebaseDeps, local: LocalRun, projectId:
 	} catch (err) {
 		await api.stopCommand(root, DESIGN_MODE_COMMAND);
 		throw new Error(
-			`${project.title} is running locally at ${at}, but it could not be opened in the browser: ${err instanceof Error ? err.message : String(err)}`,
+			`${prototype.title} is running locally at ${at}, but it could not be opened in the browser: ${err instanceof Error ? err.message : String(err)}`,
 		);
 	}
 	// A record with no route opens at the front door: said, so nobody takes it for the page that changed.
 	const where = work.route ? '' : ' Its record names no page for this work, so it opened at the app’s front door.';
-	if ((await deps.offer(`${project.title} is running locally at ${at}.${where}`, [STOP])) === STOP)
+	if ((await deps.offer(`${prototype.title} is running locally at ${at}.${where}`, [STOP])) === STOP)
 		valueOf(await api.stopCommand(root, DESIGN_MODE_COMMAND));
 };
 
@@ -166,24 +168,24 @@ const OPEN_IT = 'Open the pull request';
 const COPY_IT = 'Copy the preview link';
 
 /** It cannot be stopped: a push and a pull request are not taken back halfway. */
-export const shareCodebase = async (deps: CodebaseDeps, projectId: string): Promise<void> => {
+export const shareCodebase = async (deps: CodebaseDeps, prototypeId: string): Promise<void> => {
 	const { api, root } = deps;
-	const { project, work } = await codebaseOf(api, projectId);
+	const { prototype, work } = await codebaseOf(api, prototypeId);
 	let outcome: Shared | null = null;
-	await deps.progress(`Sharing ${project.title} for review`, async (say) => {
+	await deps.progress(`Sharing ${prototype.title} for review`, async (say) => {
 		const show = (status: ShareStatus) => status.state === 'running' && say(SHARE_WORDS[status.step]);
 		// Listened for before it starts, so no step is missed; only this work's.
 		let stop = (): void => undefined;
 		const ended = new Promise<Shared>((resolve) => {
 			stop = api.onShareStatus((status) => {
-				if (status.state === 'idle' || status.projectId !== project.id || status.name !== work.name) return;
+				if (status.state === 'idle' || status.prototypeId !== prototype.id || status.name !== work.name) return;
 				show(status);
 				if (status.state === 'ready' || status.state === 'failed') resolve(status);
 			});
 		});
 		try {
-			const started = await api.shareWork(root, project.id, work.name);
-			if (!started.ok) throw new Error(`${project.title} was not shared: ${started.error}`);
+			const started = await api.shareWork(root, prototype.id, work.name);
+			if (!started.ok) throw new Error(`${prototype.title} was not shared: ${started.error}`);
 			show(started.value);
 			outcome = started.value.state === 'ready' || started.value.state === 'failed' ? started.value : await ended;
 		} finally {
@@ -192,15 +194,15 @@ export const shareCodebase = async (deps: CodebaseDeps, projectId: string): Prom
 	});
 	const shared = outcome as Shared | null;
 	if (shared === null) return;
-	if (shared.state === 'failed') throw new Error(`${project.title} was not shared: ${shared.message}`);
-	const next = await deps.offer(`${project.title} is shared: a draft pull request, with a preview.`, [OPEN_IT, COPY_IT]);
+	if (shared.state === 'failed') throw new Error(`${prototype.title} was not shared: ${shared.message}`);
+	const next = await deps.offer(`${prototype.title} is shared: a draft pull request, with a preview.`, [OPEN_IT, COPY_IT]);
 	if (next === OPEN_IT) await deps.openExternal(shared.prUrl);
 	if (next === COPY_IT) await deps.copy(shared.url);
 };
 
-export const openCode = async (deps: CodebaseDeps, projectId: string): Promise<void> => {
-	const { project, work } = await codebaseOf(deps.api, projectId);
+export const openCode = async (deps: CodebaseDeps, prototypeId: string): Promise<void> => {
+	const { prototype, work } = await codebaseOf(deps.api, prototypeId);
 	const link = codeLink(work);
-	if (link === null) throw new Error(`The record of ${project.title}’s codebase work does not say where it is on GitHub.`);
+	if (link === null) throw new Error(`The record of ${prototype.title}’s codebase work does not say where it is on GitHub.`);
 	await deps.openExternal(link);
 };

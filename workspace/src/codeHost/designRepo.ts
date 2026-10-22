@@ -1,20 +1,20 @@
-import type { Work, Person, Project } from '../shared/contract';
+import type { Work, Person, Prototype } from '../shared/contract';
 import { fromBrief } from '../shared/brief';
-import { PROTOTYPES_DIR, projectDir, projectPath, WORK_FILE, workPath } from '../shared/designPaths';
+import { PROTOTYPES_DIR, prototypeDir, prototypePath, WORK_FILE, workPath } from '../shared/designPaths';
 import { isBot, mergePeople } from '../shared/people';
-import { workOrder, latestDate } from '../shared/projectList';
+import { workOrder, latestDate } from '../shared/prototypeList';
 import { asRecord } from '../shared/json';
-import { parseWork, toProjectWork } from '../shared/workRecords';
+import { parseWork, toPrototypeWork } from '../shared/workRecords';
 import { type RepoRef, formatRepo } from '../shared/repoRef';
 import type { GitHubApi } from './github';
 import { RepoFiles } from './repoFiles';
 import { ReviewThreads } from './reviewThreads';
 
-/** Read through the API so a reviewer sees every project without cloning anything or having git installed. */
+/** Read through the API so a reviewer sees every prototype without cloning anything or having git installed. */
 
 type Activity = { people: Person[]; updatedAt: string | null };
 
-/** Everything `listProjects` shows of a folder but the review threads, which are read every time. */
+/** Everything `listPrototypes` shows of a folder but the review threads, which are read every time. */
 interface FolderReading {
 	records: string[];
 	work: Work[];
@@ -36,14 +36,14 @@ export class DesignRepo {
 		this.threads = new ReviewThreads(session, ref);
 	}
 
-	async listProjects(): Promise<Project[]> {
+	async listPrototypes(): Promise<Prototype[]> {
 		const dirs = (await this.files.list(PROTOTYPES_DIR)).filter((e) => e.type === 'dir' && !e.name.startsWith('_'));
 		const issues = await this.threads.byBranch({ counting: true });
 
 		return Promise.all(
 			dirs.map(async ({ name: id, sha }) => {
 				const { records, brief, activity: folder, ...read } = await this.readFolder(id, sha);
-				const work = read.work.map((it) => toProjectWork(it, issues.get(it.branch))).sort(workOrder);
+				const work = read.work.map((it) => toPrototypeWork(it, issues.get(it.branch))).sort(workOrder);
 				// Alphabetical, so the line does not reshuffle as versions are added.
 				const people = mergePeople(
 					work.flatMap((it) => it.contributors),
@@ -65,7 +65,7 @@ export class DesignRepo {
 	private async readFolder(id: string, sha: string | null): Promise<FolderReading> {
 		const kept = sha === null ? undefined : this.folders.get(id);
 		if (kept && kept.sha === sha) return kept;
-		const records = (await this.files.list(projectDir(id)))
+		const records = (await this.files.list(prototypeDir(id)))
 			.filter((f) => f.type === 'file')
 			.map((f) => f.name)
 			.sort();
@@ -82,11 +82,11 @@ export class DesignRepo {
 		return reading;
 	}
 
-	/** Null on failure: it must not hide the project list. */
+	/** Null on failure: it must not hide the prototype list. */
 	private async folderActivity(id: string): Promise<Activity | null> {
 		try {
 			// Newest first, as GitHub lists them.
-			const commits = await this.files.commits(projectDir(id));
+			const commits = await this.files.commits(prototypeDir(id));
 			const people = [...commits].reverse().flatMap((c): Person[] => {
 				const name = String(asRecord(asRecord(c.commit).author).name ?? '');
 				const account = asRecord(c.author); // the GitHub account, when the email is linked to one
@@ -100,18 +100,18 @@ export class DesignRepo {
 	}
 
 	async readRecord(id: string, name: string): Promise<string> {
-		const text = await this.files.readFile(projectPath(id, name));
+		const text = await this.files.readFile(prototypePath(id, name));
 		if (text === null) throw new Error(`${name} could not be read from the design repository.`);
 		return text;
 	}
 
 	private async readBrief(id: string, records: string[]): Promise<{ title: string; folder: string | null }> {
-		return fromBrief(id, records.includes('brief.md') ? await this.files.readFile(projectPath(id, 'brief.md')) : null);
+		return fromBrief(id, records.includes('brief.md') ? await this.files.readFile(prototypePath(id, 'brief.md')) : null);
 	}
 
 	/**
 	 * From `work.json`, not from branches: those live in the product repository, which this is deliberately unable to see.
-	 * A missing or unreadable record means no work, never an error: a project folder exists before its first record does.
+	 * A missing or unreadable record means no work, never an error: a prototype folder exists before its first record does.
 	 */
 	private async readWork(id: string, records: string[]): Promise<Work[]> {
 		if (!records.includes(WORK_FILE)) return [];

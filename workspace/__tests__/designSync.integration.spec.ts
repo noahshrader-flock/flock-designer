@@ -27,7 +27,7 @@ const write = (root: string, path: string, body: string) => {
 	writeFileSync(join(root, path), body);
 };
 const record = (name: string, extra: Record<string, unknown> = {}) => ({
-	projectId: 'p',
+	prototypeId: 'p',
 	name,
 	branch: `prototype/p/${name}`,
 	commit: null,
@@ -69,7 +69,7 @@ madeOnce((d) => {
 });
 
 describe('publishing records', () => {
-	it('publishes a new project folder, and the tree is clean afterwards', async () => {
+	it('publishes a new prototype folder, and the tree is clean afterwards', async () => {
 		write(mine, 'prototypes/new-view/brief.md', '# New view\n');
 		write(mine, 'prototypes/new-view/context-receipt.md', 'receipt');
 		write(mine, 'prototypes/new-view/work.json', `${JSON.stringify([record('codebase')], null, 2)}\n`);
@@ -150,7 +150,7 @@ describe('when someone else has published too', () => {
 
 	it("fits onto a teammate's work without a merge commit, and keeps both", async () => {
 		write(theirs, 'prototypes/other/brief.md', '# Other\n');
-		commitAll(theirs, 'teammate project');
+		commitAll(theirs, 'teammate prototype');
 		g(theirs, 'push', '-q', 'origin', 'HEAD:main');
 		write(mine, 'prototypes/mine/brief.md', '# Mine\n');
 		const r = await syncRecords(mine, nothingStarted);
@@ -161,7 +161,7 @@ describe('when someone else has published too', () => {
 		expect(existsSync(join(mine, 'prototypes/other/brief.md'))).toBe(true);
 	});
 
-	it('combines two people recording different versions of one project, by meaning, not by lines', async () => {
+	it('combines two people recording different versions of one prototype, by meaning, not by lines', async () => {
 		write(
 			theirs,
 			'prototypes/p/work.json',
@@ -180,11 +180,11 @@ describe('when someone else has published too', () => {
 		expect(existsSync(join(mine, '.git', 'rebase-merge'))).toBe(false);
 	});
 
-	it('combines two people both creating the same new project, rather than failing on add/add', async () => {
-		write(theirs, 'prototypes/shared/work.json', `${JSON.stringify([record('v1', { projectId: 'shared' })], null, 2)}\n`);
+	it('combines two people both creating the same new prototype, rather than failing on add/add', async () => {
+		write(theirs, 'prototypes/shared/work.json', `${JSON.stringify([record('v1', { prototypeId: 'shared' })], null, 2)}\n`);
 		commitAll(theirs, 'teammate shared');
 		g(theirs, 'push', '-q', 'origin', 'HEAD:main');
-		write(mine, 'prototypes/shared/work.json', `${JSON.stringify([record('v2', { projectId: 'shared' })], null, 2)}\n`);
+		write(mine, 'prototypes/shared/work.json', `${JSON.stringify([record('v2', { prototypeId: 'shared' })], null, 2)}\n`);
 		const r = await syncRecords(mine, nothingStarted);
 		expect(r.problems).toEqual([]);
 		expect((JSON.parse(onRemote('prototypes/shared/work.json')) as Array<{ name: string }>).map((x) => x.name)).toEqual(['v1', 'v2']);
@@ -215,8 +215,8 @@ describe('when someone else has published too', () => {
 	});
 });
 
-describe('a project started here and not saved yet', () => {
-	it('is held back whole, its brief and what the agent wrote, while another project publishes', async () => {
+describe('a prototype started here and not saved yet', () => {
+	it('is held back whole, its brief and what the agent wrote, while another prototype publishes', async () => {
 		write(mine, 'prototypes/started/brief.md', '# Started\n');
 		write(mine, 'prototypes/started/context-receipt.md', 'receipt');
 		write(mine, 'prototypes/other/brief.md', '# Other\n');
@@ -237,21 +237,21 @@ describe('a project started here and not saved yet', () => {
 		write(
 			mine,
 			'prototypes/started/work.json',
-			`${JSON.stringify([record('v1', { projectId: 'started', branch: 'prototype/started/v1' })], null, 2)}\n`,
+			`${JSON.stringify([record('v1', { prototypeId: 'started', branch: 'prototype/started/v1' })], null, 2)}\n`,
 		);
 		expect(await syncRecords(mine, started)).toEqual({ published: ['started'], problems: [] });
 		for (const f of ['brief.md', 'context-receipt.md', 'v1.html', 'work.json']) expect(remoteHas(`prototypes/started/${f}`), f).toBe(true);
 		expect(g(mine, 'status', '--porcelain')).toBe('');
 	});
 
-	it('does not hold back a new version started on a project already shared', async () => {
+	it('does not hold back a new version started on a prototype already shared', async () => {
 		write(mine, 'prototypes/p/review.md', 'round 2');
 		expect(await syncRecords(mine, (id) => id === 'p')).toEqual({ published: ['p'], problems: [] });
 		expect(onRemote('prototypes/p/review.md')).toBe('round 2');
 	});
 });
 
-describe('a deleted project', () => {
+describe('a deleted prototype', () => {
 	it('is deleted on GitHub too, and the tree is clean afterwards', async () => {
 		write(mine, 'prototypes/gone/brief.md', '# Gone\n');
 		write(mine, 'prototypes/gone/v1.html', '<p>');
@@ -287,7 +287,7 @@ describe('what it refuses to publish', () => {
 		expect(r.published).toEqual([]);
 		// The files are a list of their own, in full, so a person can read them; the sentence says only how many and what to do.
 		expect(r.problems[0]?.files).toEqual(['workspace/app.ts']);
-		expect(r.problems[0]?.why).toMatch(/1 change outside the project records is waiting to be pushed/);
+		expect(r.problems[0]?.why).toMatch(/1 change outside the prototype records is waiting to be pushed/);
 		expect(r.problems[0]?.why).not.toMatch(/workspace\/app\.ts/);
 		expect(r.problems[0]?.why).toMatch(/Records are held back/);
 		expect(remoteHas('workspace/app.ts')).toBe(false);
@@ -301,7 +301,7 @@ describe('what it refuses to publish', () => {
 		commitAll(mine, 'app change');
 		const own = g(mine, 'rev-parse', 'HEAD');
 		write(theirs, 'prototypes/other/brief.md', '# Other\n');
-		commitAll(theirs, 'teammate project');
+		commitAll(theirs, 'teammate prototype');
 		g(theirs, 'push', '-q', 'origin', 'HEAD:main');
 		write(mine, 'prototypes/p/brief.md', '# P, edited\n');
 		expect((await syncRecords(mine, nothingStarted)).problems[0]?.why).toMatch(/Records are held back/);
@@ -350,7 +350,7 @@ describe('a record that is not valid', () => {
 		expect(JSON.parse(onRemote('prototypes/p/work.json'))[0].name).toBe('v1');
 	});
 
-	it('does not hold up a good project because another one is broken', async () => {
+	it('does not hold up a good prototype because another one is broken', async () => {
 		write(mine, 'prototypes/broken/work.json', 'not json');
 		write(mine, 'prototypes/fine/brief.md', '# Fine\n');
 		const r = await syncRecords(mine, nothingStarted);

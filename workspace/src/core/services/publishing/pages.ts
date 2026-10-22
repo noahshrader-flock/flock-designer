@@ -60,14 +60,14 @@ const deployedSha = async (github: GitHubApi, base: string): Promise<string | nu
 };
 
 /** The link carries the deploy it is from, so a page opened after a new one never shows an old copy. */
-export const pageStatus = async (github: GitHubApi, ref: RepoRef, projectId: string, name: string): Promise<PageStatus> => {
-	const path = sitePath(projectId, name);
+export const pageStatus = async (github: GitHubApi, ref: RepoRef, prototypeId: string, name: string): Promise<PageStatus> => {
+	const path = sitePath(prototypeId, name);
 	if (path === null) return { state: 'none' };
 	const vis = await readVisibility(github, ref);
 	if (!vis.site?.url) return { state: 'none' };
 	const base = repoApiPath(ref);
 	const deployed = await deployedSha(github, base);
-	const [changed] = (await new RepoFiles(github, ref).commits(prototypePagePath(projectId, name), { at: vis.defaultBranch, limit: 1 })) as {
+	const [changed] = (await new RepoFiles(github, ref).commits(prototypePagePath(prototypeId, name), { at: vis.defaultBranch, limit: 1 })) as {
 		sha: string;
 	}[];
 	if (deployed === null || !changed) return { state: 'unpublished' };
@@ -93,7 +93,7 @@ const SITE_SOURCES = [
 
 export const isSiteSource = (file: string): boolean => SITE_SOURCES.some((s) => s.test(file));
 
-export type SiteBehind = { kind: 'page'; projectId: string; name: string } | { kind: 'code' };
+export type SiteBehind = { kind: 'page'; prototypeId: string; name: string } | { kind: 'code' };
 
 /**
  * One changed page is enough to name, as a deploy builds the whole site. Null when it is current, when a deploy is
@@ -126,7 +126,7 @@ export const fetchAnonymously = async (url: string): Promise<{ status: number }>
 /** `started`: as `syncRecords` takes it. */
 export const recordsFrom = async (
 	clone: string | null,
-	started: (projectId: string) => boolean,
+	started: (prototypeId: string) => boolean,
 ): Promise<Pick<PublishInput, 'recordsBranch' | 'pushRecords'>> => {
 	if (clone === null) return { pushRecords: async () => ({ published: [], problems: [] }) };
 	// '' when it is on no branch: refused by publish, after the gate has had its say.
@@ -146,15 +146,15 @@ interface DeployInput {
 }
 
 export interface PublishInput extends DeployInput {
-	projectId: string;
+	prototypeId: string;
 	name: string;
 	fetchAnonymously?: (url: string) => Promise<{ status: number }>;
 }
 
 /** Its record and its comments are kept. */
 export const unpublish = async (input: PublishInput & { removePage: () => Promise<void> }): Promise<{ url: string; gone: boolean }> => {
-	const { projectId, name, fetchAnonymously: anonymous = fetchAnonymously, log = () => undefined } = input;
-	const path = sitePath(projectId, name);
+	const { prototypeId, name, fetchAnonymously: anonymous = fetchAnonymously, log = () => undefined } = input;
+	const path = sitePath(prototypeId, name);
 	if (path === null) throw new Error(`"${name}" is not a prototype, so it has no page to take down.`);
 	const { site } = await deploy(input, 'unpublished', input.removePage);
 	const url = `${site}${path}`;
@@ -180,12 +180,12 @@ export interface Published {
  * Whether the last deploy of the site already had this page, asked of that deploy's commit. Only a clear "no" counts:
  * when GitHub cannot say, it is not the first time, so nothing is made of a guess (a browser tab opened by mistake).
  */
-const isFirstTime = async (github: GitHubApi, ref: RepoRef, projectId: string, name: string): Promise<boolean> => {
+const isFirstTime = async (github: GitHubApi, ref: RepoRef, prototypeId: string, name: string): Promise<boolean> => {
 	const base = repoApiPath(ref);
 	try {
 		const deployed = await deployedSha(github, base);
 		if (deployed === null) return true;
-		return (await new RepoFiles(github, ref).commits(prototypePagePath(projectId, name), { at: deployed, limit: 1 })).length === 0;
+		return (await new RepoFiles(github, ref).commits(prototypePagePath(prototypeId, name), { at: deployed, limit: 1 })).length === 0;
 	} catch {
 		return false;
 	}
@@ -271,11 +271,11 @@ export const redeploySite = async (input: DeployInput): Promise<void> => {
 };
 
 export const publish = async (input: PublishInput): Promise<Published> => {
-	const { ref, projectId, name, fetchAnonymously: anonymous = fetchAnonymously, log = () => undefined } = input;
-	const path = sitePath(projectId, name);
+	const { ref, prototypeId, name, fetchAnonymously: anonymous = fetchAnonymously, log = () => undefined } = input;
+	const path = sitePath(prototypeId, name);
 	if (path === null) throw new Error(`"${name}" is not a prototype, so it has no page to publish.`);
 	// Asked before the deploy: after it, every page that was published is on the site.
-	const first = await isFirstTime(input.github, ref, projectId, name);
+	const first = await isFirstTime(input.github, ref, prototypeId, name);
 	const { visibility, site } = await deploy(input, 'published');
 
 	const url = `${site}${path}`;

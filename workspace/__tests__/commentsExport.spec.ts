@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, 
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { projectTitle, renderComments, writeCommentsExport } from '../src/core/services/prototypes/commentsExport';
+import { prototypeTitle, renderComments, writeCommentsExport } from '../src/core/services/prototypes/commentsExport';
 import { numberComments } from '../src/shared/comments';
 import type { CommentAnchor, ReviewComment } from '../src/shared/contract';
 import { reviewComment } from './fixtures';
@@ -20,8 +20,8 @@ const anchor = (over: Partial<CommentAnchor> = {}): CommentAnchor => ({
 const comment = (id: number, over: Partial<ReviewComment> = {}): ReviewComment =>
 	reviewComment({ id, author: 'alice', createdAt: `2026-10-05T10:0${id}:00Z`, anchor: anchor(), ...over });
 const input = (comments: ReviewComment[]) => ({
-	projectId: 'demo',
-	title: 'Demo project',
+	prototypeId: 'demo',
+	title: 'Demo prototype',
 	work: { name: 'v1', branch: 'prototype/demo/v1' },
 	comments,
 	generatedAt: new Date('2026-10-05T12:00:00Z'),
@@ -178,7 +178,7 @@ describe('writeCommentsExport', () => {
 	});
 	afterEach(() => rmSync(records, { recursive: true, force: true }));
 
-	it('writes comments.md and the pictures into the project folder', () => {
+	it('writes comments.md and the pictures into the prototype folder', () => {
 		const out = writeCommentsExport(records, input([comment(1, { picture: picture('one') }), comment(2)]));
 		// (macOS resolves /var to /private/var, so compare the end of the path.)
 		expect(out.path.endsWith(join('demo', 'comments.md'))).toBe(true);
@@ -204,17 +204,17 @@ describe('writeCommentsExport', () => {
 		expect(readFileSync(join(records, 'demo', 'review.md'), 'utf8')).toBe('the agent wrote this');
 	});
 
-	it('refuses a project that is not on this machine, rather than creating its folder', () => {
-		expect(() => writeCommentsExport(records, { ...input([]), projectId: 'elsewhere' })).toThrow(/no folder for elsewhere/);
+	it('refuses a prototype that is not on this machine, rather than creating its folder', () => {
+		expect(() => writeCommentsExport(records, { ...input([]), prototypeId: 'elsewhere' })).toThrow(/no folder for elsewhere/);
 		expect(existsSync(join(records, 'elsewhere'))).toBe(false);
 	});
 
-	it.each(['../escape', 'a/b', 'Up Per', ''])('refuses a project id that could name somewhere else: %j', (id) => {
-		expect(() => writeCommentsExport(records, { ...input([]), projectId: id })).toThrow();
+	it.each(['../escape', 'a/b', 'Up Per', ''])('refuses a prototype id that could name somewhere else: %j', (id) => {
+		expect(() => writeCommentsExport(records, { ...input([]), prototypeId: id })).toThrow();
 	});
 });
 
-describe('projectTitle', () => {
+describe('prototypeTitle', () => {
 	let records: string;
 	beforeEach(() => {
 		records = mkdtempSync(join(tmpdir(), 'fdw-title-'));
@@ -223,8 +223,8 @@ describe('projectTitle', () => {
 	afterEach(() => rmSync(records, { recursive: true, force: true }));
 
 	it('reads the brief’s heading, and falls back to the id', () => {
-		expect(projectTitle(records, 'demo')).toBe('demo');
+		expect(prototypeTitle(records, 'demo')).toBe('demo');
 		writeFileSync(join(records, 'demo', 'brief.md'), '# Inactive users\n\nbody');
-		expect(projectTitle(records, 'demo')).toBe('Inactive users');
+		expect(prototypeTitle(records, 'demo')).toBe('Inactive users');
 	});
 });

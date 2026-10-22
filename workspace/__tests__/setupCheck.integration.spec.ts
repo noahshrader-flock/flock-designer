@@ -2,9 +2,9 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { writeEntryFiles } from '../src/core/services/projects/entryFiles';
-import { NO_CLONES } from '../src/core/services/projects/discovery';
-import { setupCheck } from '../src/core/services/projects/setupCheck';
+import { writeEntryFiles } from '../src/core/services/products/entryFiles';
+import { NO_CLONES } from '../src/core/services/products/discovery';
+import { setupCheck } from '../src/core/services/products/setupCheck';
 import { g, makeDesignSystem, writeFiles } from './fixtures';
 
 let home: string;

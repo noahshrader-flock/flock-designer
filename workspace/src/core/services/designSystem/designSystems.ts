@@ -9,7 +9,7 @@ import { readTokens } from './designTokens';
 import { folderReads } from './folderReads';
 import { defaultBranch, git } from '../platform/git';
 import { type JsonFile, jsonFile } from '../platform/jsonFile';
-import { repositoryAt } from '../projects/repositories';
+import { repositoryAt } from '../products/repositories';
 import { asRepositoryPath, repoName } from '../../../shared/repoRef';
 
 export const designSystemId = (repository: string, folder: string): string => (folder === '' ? repository : `${repository}:${folder}`);

@@ -67,7 +67,7 @@ Answered from the products' gap logs, not from impression:
 1. Would a designer actually show these prototypes to a stakeholder?
 2. How do the gaps split across the four categories? A pile of *missing context* means keep writing files; a pile of
    *model behavior* means stop, and make the existing ones clearer or shorter.
-3. Did a second person resume work from its project folder alone?
+3. Did a second person resume work from its prototype folder alone?
 4. Did engineering review find production coupling?
 5. Did engineering rewrite the prototype from scratch?
 6. Is local setup genuinely blocking anyone?

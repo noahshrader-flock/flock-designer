@@ -3,17 +3,17 @@ import { basename, dirname, join } from 'node:path';
 import type { BaseBehind, CommentRef, Work, Person, PrototypeReadiness, ReviewComment, StartedPrototype } from '../../../shared/contract';
 import { type DeclaredTarget, undeclared } from '../../../shared/wcag';
 import { fromBrief } from '../../../shared/brief';
-import { projectPath, prototypePagePath, prototypeSourcePath, sharedFilePath, sharedFilesOf, workPath } from '../../../shared/designPaths';
+import { prototypePath, prototypePagePath, prototypeSourcePath, sharedFilePath, sharedFilesOf, workPath } from '../../../shared/designPaths';
 import { commentsFromOthers, nextVersionName, othersHaveCommented } from '../../../shared/versionNames';
 import { MANIFEST_FILE, declaredTarget, productTarget, taskAccessibility } from '../accessibility/accessibilityBrief';
-import { readDescriptor } from '../projects/descriptor';
+import { readDescriptor } from '../products/descriptor';
 import { branchTip, commitsAfter, git, hasCommit, headCommit, isSafeBranchName, readTreeAt, repositoryOf } from '../platform/git';
 import { fetchBranch, freshTip } from '../platform/fetch';
 import { installLine } from '../codebase/install';
 import { installedAgainstBase, installedVersion } from './installedVersion';
 import { isObjectId } from '../../../shared/sha';
 import { errorText } from '../../../shared/result';
-import { assertUsableProjectId } from '../projects/workRecords';
+import { assertUsablePrototypeId } from './workRecords';
 import {
 	MAX_PAGE,
 	type PrototypeBuild,
@@ -29,7 +29,7 @@ import {
 import { dropPending, keepPending, pendingOf } from './pendingPrototypes';
 import { keepRequest } from './requestLog';
 import { SavedSourceChanged, markSaved, savedHash } from './savedSource';
-import { designRepositoryMissing } from '../projects/discovery';
+import { designRepositoryMissing } from '../products/discovery';
 import { bundleCommand, runBundle, shellLine, writeBundleScript, writeCheckScript } from './prototypeBundle';
 import { type CheckConfig, checkedAsSaved } from '../accessibility/buildCheck';
 import { prototypeMeasureName, recordFiles } from '../accessibility/accessibilityRecord';
@@ -37,7 +37,7 @@ import { designSystemFile, taskVoice } from '../designSystem/voiceBrief';
 import { HOST } from '../../../shared/vocabulary';
 
 /** The app and the `dsnr` command both call this, so neither can make a prototype the other would not recognize. */
-export interface PrototypeWorkContext {
+export interface VersionWorkContext {
 	prototypesRoot: string;
 	/** A real path. */
 	productRoot: () => string | null;
@@ -75,8 +75,8 @@ export const whereTheChangeGoes = (change: PrototypeChange): string | null => {
 };
 
 export interface PrototypeStart {
-	projectId: string;
-	/** Used only when the project is new. */
+	prototypeId: string;
+	/** Used only when the prototype is new. */
 	title: string;
 	note: string;
 	/** A branch of the product checkout that exists here. */
@@ -92,36 +92,36 @@ const NO_PRODUCT =
 	'Prototypes are built from the real design system, so they need the product repository, with its packages installed, on this machine.';
 
 /** Makes no folder. */
-export const localPrototypeFile = (prototypesRoot: string, projectId: string, name: string, ext: 'html' | 'tsx'): string => {
-	assertUsableProjectId(projectId);
+export const localPrototypeFile = (prototypesRoot: string, prototypeId: string, name: string, ext: 'html' | 'tsx'): string => {
+	assertUsablePrototypeId(prototypeId);
 	assertVersionName(name);
-	return join(prototypesRoot, projectId, `${name}.${ext}`);
+	return join(prototypesRoot, prototypeId, `${name}.${ext}`);
 };
 
-export const prototypeWork = (ctx: PrototypeWorkContext) => {
+export const versionWork = (ctx: VersionWorkContext) => {
 	const { prototypesRoot } = ctx;
 
-	const localFile = (projectId: string, name: string, ext: 'html' | 'tsx'): string => localPrototypeFile(prototypesRoot, projectId, name, ext);
+	const localFile = (prototypeId: string, name: string, ext: 'html' | 'tsx'): string => localPrototypeFile(prototypesRoot, prototypeId, name, ext);
 	/** Made when asked for, as are `file`'s and `sourceFile`'s. */
-	const dir = (projectId: string): string => {
-		assertUsableProjectId(projectId);
-		const d = join(prototypesRoot, projectId);
+	const dir = (prototypeId: string): string => {
+		assertUsablePrototypeId(prototypeId);
+		const d = join(prototypesRoot, prototypeId);
 		mkdirSync(d, { recursive: true });
 		return d;
 	};
-	const file = (projectId: string, name: string): string => {
-		dir(projectId);
-		return localFile(projectId, name, 'html');
+	const file = (prototypeId: string, name: string): string => {
+		dir(prototypeId);
+		return localFile(prototypeId, name, 'html');
 	};
-	const sourceFile = (projectId: string, name: string): string => {
-		dir(projectId);
-		return localFile(projectId, name, 'tsx');
+	const sourceFile = (prototypeId: string, name: string): string => {
+		dir(prototypeId);
+		return localFile(prototypeId, name, 'tsx');
 	};
-	const checkFile = (projectId: string, name: string): string => {
+	const checkFile = (prototypeId: string, name: string): string => {
 		assertVersionName(name);
-		return join(dir(projectId), `${name}.accessibility.json`);
+		return join(dir(prototypeId), `${name}.accessibility.json`);
 	};
-	/** `_` keeps it off the project list. */
+	/** `_` keeps it off the prototype list. */
 	const sharedDir = join(prototypesRoot, '_shared');
 	const sharedText = async (n: string): Promise<string | null> => {
 		const local = join(sharedDir, `${n}.datauri`);
@@ -137,20 +137,20 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 	};
 
 	/** The shared records and this machine's starts not saved yet, so every reader sees a started version as it will be. */
-	const records = async (projectId: string): Promise<Work[]> => {
-		const shared = await readRecords({ read: ctx.readDesignFile }, projectId);
-		return [...shared, ...pendingOf(prototypesRoot, projectId).filter((p) => !shared.some((i) => i.name === p.name))];
+	const records = async (prototypeId: string): Promise<Work[]> => {
+		const shared = await readRecords({ read: ctx.readDesignFile }, prototypeId);
+		return [...shared, ...pendingOf(prototypesRoot, prototypeId).filter((p) => !shared.some((i) => i.name === p.name))];
 	};
 	/** It has a records file, even an empty one, or a version started here and not saved yet. */
-	const hasProject = async (projectId: string): Promise<boolean> =>
-		(await ctx.readDesignFile(workPath(projectId))) !== null || pendingOf(prototypesRoot, projectId).length > 0;
-	const title = async (projectId: string): Promise<string> =>
-		fromBrief(projectId, await ctx.readDesignFile(projectPath(projectId, 'brief.md'))).title;
-	const record = async (projectId: string, name: string): Promise<Work | undefined> => (await records(projectId)).find((i) => i.name === name);
+	const hasPrototype = async (prototypeId: string): Promise<boolean> =>
+		(await ctx.readDesignFile(workPath(prototypeId))) !== null || pendingOf(prototypesRoot, prototypeId).length > 0;
+	const title = async (prototypeId: string): Promise<string> =>
+		fromBrief(prototypeId, await ctx.readDesignFile(prototypePath(prototypeId, 'brief.md'))).title;
+	const record = async (prototypeId: string, name: string): Promise<Work | undefined> => (await records(prototypeId)).find((i) => i.name === name);
 	/** This machine's newest, else the saved one. Makes no folder. */
-	const sourceText = async (projectId: string, name: string): Promise<string | null> => {
-		const local = localFile(projectId, name, 'tsx');
-		return existsSync(local) ? readFileSync(local, 'utf8') : ctx.readDesignFile(prototypeSourcePath(projectId, name));
+	const sourceText = async (prototypeId: string, name: string): Promise<string | null> => {
+		const local = localFile(prototypeId, name, 'tsx');
+		return existsSync(local) ? readFileSync(local, 'utf8') : ctx.readDesignFile(prototypeSourcePath(prototypeId, name));
 	};
 
 	/** Without the real components there is nothing to build: the person is told what to install, never handed a lesser page. */
@@ -185,8 +185,8 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 	};
 
 	/** A new prototype, or a new version from the brief, modeled on the latest of `branch` (`freshTip`), said in words. */
-	const start = async (root: string, { projectId, title: name, note, branch, me, folder }: PrototypeStart): Promise<StartedPrototype> => {
-		assertUsableProjectId(projectId);
+	const start = async (root: string, { prototypeId, title: name, note, branch, me, folder }: PrototypeStart): Promise<StartedPrototype> => {
+		assertUsablePrototypeId(prototypeId);
 		const why = notReady(root);
 		if (why !== null) throw new Error(why);
 		// The agent saves into the design repository's clone, so without one a start could never be saved.
@@ -199,15 +199,15 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		const product = await repositoryOf(root);
 		const basedOn = { repository: basename(root), branch, commit: tip.commit, ...(product ? { product } : {}) };
 		const made = await startPrototype(ctx.store(), {
-			projectId,
+			prototypeId,
 			title: name.slice(0, 200),
 			note: String(note),
 			me,
 			basedOn,
 			folder,
-			pending: pendingOf(prototypesRoot, projectId).map((p) => p.name),
+			pending: pendingOf(prototypesRoot, prototypeId).map((p) => p.name),
 		});
-		await keepRequest(ctx.store(), { projectId, name: made.name, text: String(note), me });
+		await keepRequest(ctx.store(), { prototypeId, name: made.name, text: String(note), me });
 		keepPending(prototypesRoot, made);
 		return { ...made, modeledOn: [`Modeled on ${branch} at ${tip.commit.slice(0, 7)}.`, ...said].join(' ') };
 	};
@@ -226,10 +226,10 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 
 	/**
 	 * `knownBase`, fetched with its branch when this clone lacks it, and kept by a private ref
-	 * (`refs/dsnr/base/<project>/<version>`, no branch the person uses) so a rebase, an amend or git's cleanup cannot take
+	 * (`refs/dsnr/base/<prototype>/<version>`, no branch the person uses) so a rebase, an amend or git's cleanup cannot take
 	 * it away. Said, never replaced, when it cannot be had.
 	 */
-	const baseCommit = async (root: string, projectId: string, name: string, basedOn: NonNullable<Work['basedOn']>): Promise<string> => {
+	const baseCommit = async (root: string, prototypeId: string, name: string, basedOn: NonNullable<Work['basedOn']>): Promise<string> => {
 		let commit = await knownBase(root, name, basedOn);
 		let failed: string | null = null;
 		if (commit === null) {
@@ -243,7 +243,7 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 			);
 		}
 		// Only a recorded commit: a branch's tip, for an old record, moves, so pinning it would keep the wrong one.
-		if (basedOn.commit !== null) await git(root, ['update-ref', `refs/dsnr/base/${projectId}/${name}`, commit]);
+		if (basedOn.commit !== null) await git(root, ['update-ref', `refs/dsnr/base/${prototypeId}/${name}`, commit]);
 		return commit;
 	};
 
@@ -251,8 +251,8 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 	 * How far the version's base is behind the latest of its branch here; null when that cannot be told: another product
 	 * is open, the record names no commit, or this clone does not have it.
 	 */
-	const behind = async (projectId: string, name: string): Promise<BaseBehind | null> => {
-		const basedOn = (await record(projectId, name))?.basedOn;
+	const behind = async (prototypeId: string, name: string): Promise<BaseBehind | null> => {
+		const basedOn = (await record(prototypeId, name))?.basedOn;
 		const root = ctx.productRoot();
 		if (!basedOn || basedOn.commit === null || root === null || basename(root) !== basedOn.repository) return null;
 		const base = await knownBase(root, name, basedOn).catch(() => null);
@@ -264,15 +264,15 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 	};
 
 	/** The code at the commit the version was modeled on: the checkout itself when it is at that commit, else a read-only copy. */
-	const sources = async (projectId: string, name: string): Promise<PrototypeSources | null> => {
-		const basedOn = (await record(projectId, name))?.basedOn;
+	const sources = async (prototypeId: string, name: string): Promise<PrototypeSources | null> => {
+		const basedOn = (await record(prototypeId, name))?.basedOn;
 		const root = ctx.productRoot();
 		// Only the repository being worked in, and only the one the prototype was based on.
 		if (!basedOn || root === null || basename(root) !== basedOn.repository) return null;
-		const commit = await baseCommit(root, projectId, name, basedOn);
+		const commit = await baseCommit(root, prototypeId, name, basedOn);
 		let code = root;
 		if ((await headCommit(root)) !== commit) {
-			// `_`, as no project id can begin, so the copy never shares a folder with a project's prototypes.
+			// `_`, as no prototype id can begin, so the copy never shares a folder with a prototype's versions.
 			code = join(prototypesRoot, '_source', basename(root));
 			await readTreeAt(root, code, commit);
 		}
@@ -297,23 +297,23 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 	};
 
 	/** A new run starts its rounds again: what an earlier run left is its own. */
-	const buildCheckFiles = (projectId: string, name: string) => ({
-		config: join(dir(projectId), `${name}.build-check.json`),
-		record: join(dir(projectId), `${name}.build-checked.json`),
-		of: prototypeMeasureName(projectId, name),
+	const buildCheckFiles = (prototypeId: string, name: string) => ({
+		config: join(dir(prototypeId), `${name}.build-check.json`),
+		record: join(dir(prototypeId), `${name}.build-checked.json`),
+		of: prototypeMeasureName(prototypeId, name),
 	});
-	const checkCommandFor = async (projectId: string, name: string): Promise<string> => {
-		const { config, record: kept, of } = buildCheckFiles(projectId, name);
+	const checkCommandFor = async (prototypeId: string, name: string): Promise<string> => {
+		const { config, record: kept, of } = buildCheckFiles(prototypeId, name);
 		rmSync(kept, { force: true });
 		const given: CheckConfig = {
-			projectId,
+			prototypeId,
 			name,
 			of,
-			page: file(projectId, name),
-			source: sourceFile(projectId, name),
+			page: file(prototypeId, name),
+			source: sourceFile(prototypeId, name),
 			sharedDir,
-			target: await target(projectId, name),
-			cache: checkFile(projectId, name),
+			target: await target(prototypeId, name),
+			cache: checkFile(prototypeId, name),
 			record: kept,
 		};
 		writeFileSync(config, JSON.stringify(given, null, '\t'));
@@ -321,35 +321,35 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 	};
 
 	const buildPlan = async (
-		projectId: string,
+		prototypeId: string,
 		name: string,
 		found: PrototypeSources | null,
 	): Promise<{ build: PrototypeBuild; sources: PrototypeSources }> => {
 		const why = notReady(ctx.productRoot());
 		if (why !== null || !found?.nodeModules) throw new Error(why ?? NO_PRODUCT);
-		const source = sourceFile(projectId, name);
-		const page = file(projectId, name);
+		const source = sourceFile(prototypeId, name);
+		const page = file(prototypeId, name);
 		return {
 			build: {
 				source,
 				page,
 				buildCommand: bundleCommand(writeBundleScript(prototypesRoot), ctx.esbuild() as string, source, page, found.nodeModules, sharedDir),
-				checkCommand: await checkCommandFor(projectId, name),
+				checkCommand: await checkCommandFor(prototypeId, name),
 			},
 			sources: found,
 		};
 	};
 
 	/** Throws with what the build said, so a page that does not compile says why rather than showing an old one. */
-	const buildPage = async (projectId: string, name: string): Promise<void> => {
+	const buildPage = async (prototypeId: string, name: string): Promise<void> => {
 		const root = ctx.productRoot();
 		const why = notReady(root);
 		if (why !== null || root === null) throw new Error(why ?? NO_PRODUCT);
 		const r = await runBundle(
 			writeBundleScript(prototypesRoot),
 			ctx.esbuild() as string,
-			sourceFile(projectId, name),
-			file(projectId, name),
+			sourceFile(prototypeId, name),
+			file(prototypeId, name),
 			join(root, 'node_modules'),
 			sharedDir,
 		);
@@ -360,50 +360,50 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 	 * A saved copy changed since this machine saved it (by someone else, or by an edit made there) is refused, not replaced,
 	 * before anything is built; `replace` says it is meant. A new version has no saved copy, so only `save` needs this.
 	 */
-	const refuseSavedChange = async (projectId: string, name: string, replace: boolean): Promise<void> => {
-		const local = sourceFile(projectId, name);
-		const was = savedHash(prototypesRoot, projectId, name);
+	const refuseSavedChange = async (prototypeId: string, name: string, replace: boolean): Promise<void> => {
+		const local = sourceFile(prototypeId, name);
+		const was = savedHash(prototypesRoot, prototypeId, name);
 		if (replace || was === null || !existsSync(local)) return;
-		const there = await ctx.readDesignFile(prototypeSourcePath(projectId, name));
+		const there = await ctx.readDesignFile(prototypeSourcePath(prototypeId, name));
 		if (there === null || contentHashOf(there) === was || there === readFileSync(local, 'utf8')) return;
 		throw new SavedSourceChanged(
-			`${name}'s source in the design repository (${prototypeSourcePath(projectId, name)}) has been changed since this machine saved it, by someone else or by an edit made there directly. Saving would replace it with the working copy, ${local}, so nothing was saved. Bring what you want to keep into the working copy and save again, or save with --replace to replace it as it is.`,
+			`${name}'s source in the design repository (${prototypeSourcePath(prototypeId, name)}) has been changed since this machine saved it, by someone else or by an edit made there directly. Saving would replace it with the working copy, ${local}, so nothing was saved. Bring what you want to keep into the working copy and save again, or save with --replace to replace it as it is.`,
 		);
 	};
 
 	/** Shared files first, so a page is never there without them. */
-	const writePage = async (projectId: string, name: string, html: string): Promise<void> => {
+	const writePage = async (prototypeId: string, name: string, html: string): Promise<void> => {
 		const store = ctx.store();
 		for (const n of sharedFilesOf(html)) {
 			const local = join(sharedDir, `${n}.datauri`);
 			if (existsSync(local) && !(await store.has(sharedFilePath(n))))
 				await store.write(sharedFilePath(n), readFileSync(local, 'utf8'), `Shared file ${n}`);
 		}
-		const source = sourceFile(projectId, name);
+		const source = sourceFile(prototypeId, name);
 		if (existsSync(source)) {
 			const text = readFileSync(source, 'utf8');
-			await store.write(prototypeSourcePath(projectId, name), text, `${projectId}: prototype ${name} source`);
-			markSaved(prototypesRoot, projectId, name, text);
+			await store.write(prototypeSourcePath(prototypeId, name), text, `${prototypeId}: prototype ${name} source`);
+			markSaved(prototypesRoot, prototypeId, name, text);
 		}
-		await store.write(prototypePagePath(projectId, name), html, `${projectId}: prototype ${name}`);
-		const checked = checkedAsSaved({ projectId, name, ...buildCheckFiles(projectId, name) }, html);
+		await store.write(prototypePagePath(prototypeId, name), html, `${prototypeId}: prototype ${name}`);
+		const checked = checkedAsSaved({ prototypeId, name, ...buildCheckFiles(prototypeId, name) }, html);
 		if (checked) {
-			const { files } = recordFiles(checked, await ctx.readDesignFile(projectPath(projectId, 'review.md')));
-			for (const f of files) await store.write(f.path, f.text, `${projectId}: accessibility of prototype ${name}`);
+			const { files } = recordFiles(checked, await ctx.readDesignFile(prototypePath(prototypeId, 'review.md')));
+			for (const f of files) await store.write(f.path, f.text, `${prototypeId}: accessibility of prototype ${name}`);
 		}
 	};
 	/** A version started here is recorded with its first page, and its start cleared once it is. */
-	const keep = async (projectId: string, name: string, html: string): Promise<void> => {
-		const started = pendingOf(prototypesRoot, projectId).find((p) => p.name === name);
-		if (!started) return writePage(projectId, name, html);
-		await recordStarted(ctx.store(), started, () => writePage(projectId, name, html));
-		dropPending(prototypesRoot, projectId, name);
+	const keep = async (prototypeId: string, name: string, html: string): Promise<void> => {
+		const started = pendingOf(prototypesRoot, prototypeId).find((p) => p.name === name);
+		if (!started) return writePage(prototypeId, name, html);
+		await recordStarted(ctx.store(), started, () => writePage(prototypeId, name, html));
+		dropPending(prototypesRoot, prototypeId, name);
 	};
 
 	/** Built from its source when there is one, so it is what the source makes. */
-	const built = async (projectId: string, name: string): Promise<string> => {
-		const pageFile = file(projectId, name);
-		if (existsSync(sourceFile(projectId, name))) await buildPage(projectId, name);
+	const built = async (prototypeId: string, name: string): Promise<string> => {
+		const pageFile = file(prototypeId, name);
+		if (existsSync(sourceFile(prototypeId, name))) await buildPage(prototypeId, name);
 		if (!existsSync(pageFile)) throw new Error('The agent finished without writing the page.');
 		const html = readFileSync(pageFile, 'utf8');
 		if (html.length > MAX_PAGE) {
@@ -413,50 +413,50 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		}
 		return html;
 	};
-	const save = async (projectId: string, name: string, replace = false): Promise<void> => {
-		await refuseSavedChange(projectId, name, replace);
-		await keep(projectId, name, await built(projectId, name));
+	const save = async (prototypeId: string, name: string, replace = false): Promise<void> => {
+		await refuseSavedChange(prototypeId, name, replace);
+		await keep(prototypeId, name, await built(prototypeId, name));
 	};
 	/**
 	 * Saves only a page newer than its source, from a source not saved already: asked as often as a watcher likes, it
 	 * saves each build once.
 	 */
 	const saveBuilt = async (
-		projectId: string,
+		prototypeId: string,
 		name: string,
 		fresh: { from: string; me: Person | null; note: string } | null = null,
 	): Promise<'saved' | 'waiting'> => {
-		const source = localFile(projectId, name, 'tsx');
-		const page = file(projectId, name);
+		const source = localFile(prototypeId, name, 'tsx');
+		const page = file(prototypeId, name);
 		if (!existsSync(source) || !existsSync(page) || statSync(page).mtimeMs < statSync(source).mtimeMs) return 'waiting';
-		if (fresh !== null && !(await records(projectId)).some((i) => i.name === name)) {
-			const change = await resumeChange(projectId, name, fresh.from);
+		if (fresh !== null && !(await records(prototypeId)).some((i) => i.name === name)) {
+			const change = await resumeChange(prototypeId, name, fresh.from);
 			// Checked here, as `finishChange` removes an unchanged new version, which the agent may still be working in.
 			if (change === null || contentHashOf(readFileSync(source, 'utf8')) === change.before) return 'waiting';
-			await finishChange(projectId, change, fresh.me, fresh.note);
+			await finishChange(prototypeId, change, fresh.me, fresh.note);
 			return 'saved';
 		}
-		if (readFileSync(source, 'utf8') === (await ctx.readDesignFile(prototypeSourcePath(projectId, name)))) return 'waiting';
-		await save(projectId, name);
+		if (readFileSync(source, 'utf8') === (await ctx.readDesignFile(prototypeSourcePath(prototypeId, name)))) return 'waiting';
+		await save(prototypeId, name);
 		return 'saved';
 	};
 
 	/** `comments` is null when unreadable. Nothing is recorded yet: see `finishChange`. */
 	/** The version's source, here: its saved one, written here when it was built on another machine. Its text. */
-	const sourceHere = async (projectId: string, name: string): Promise<string> => {
-		const source = await sourceText(projectId, name);
+	const sourceHere = async (prototypeId: string, name: string): Promise<string> => {
+		const source = await sourceText(prototypeId, name);
 		if (source === null) throw new Error(NO_SOURCE);
-		const local = sourceFile(projectId, name);
+		const local = sourceFile(prototypeId, name);
 		if (!existsSync(local)) {
 			writeFileSync(local, source);
 			// It is the saved copy, so the next save is measured against it.
-			markSaved(prototypesRoot, projectId, name, source);
+			markSaved(prototypesRoot, prototypeId, name, source);
 		}
 		return source;
 	};
 
 	const startChange = async (
-		projectId: string,
+		prototypeId: string,
 		name: string,
 		{
 			newVersion,
@@ -466,22 +466,22 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		}: { newVersion: boolean; comments: ReviewComment[] | null; acting?: CommentRef; request?: { text: string; me: Person | null } },
 	): Promise<PrototypeChange> => {
 		assertVersionName(name);
-		const all = await records(projectId);
+		const all = await records(prototypeId);
 		const from = all.find((i) => i.name === name);
-		if (!from) throw new Error(`${projectId} has no prototype called ${name}.`);
+		if (!from) throw new Error(`${prototypeId} has no prototype called ${name}.`);
 		const target = newVersion ? nextVersionName(all.map((i) => i.name)) : from.name;
 		let source: string;
 		if (newVersion) {
-			const saved = await sourceText(projectId, from.name);
+			const saved = await sourceText(prototypeId, from.name);
 			if (saved === null) throw new Error(NO_SOURCE);
 			source = saved;
 			// A page left from an earlier run that changed nothing is not this version's.
-			rmSync(file(projectId, target), { force: true });
-			writeFileSync(sourceFile(projectId, target), source);
-		} else source = await sourceHere(projectId, from.name);
+			rmSync(file(prototypeId, target), { force: true });
+			writeFileSync(sourceFile(prototypeId, target), source);
+		} else source = await sourceHere(prototypeId, from.name);
 		const others = comments === null ? null : commentsFromOthers(from.contributors, comments, acting);
 		// The person's own words, kept with the version they changed; a comment's or a refresh's are not theirs to keep here.
-		if (request) await keepRequest(ctx.store(), { projectId, name: target, ...request });
+		if (request) await keepRequest(ctx.store(), { prototypeId, name: target, ...request });
 		return { from, target, fresh: newVersion, before: contentHashOf(source), others };
 	};
 
@@ -489,65 +489,65 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 	 * Null for a change in place (no `fromName`); otherwise `name` must be the next version. A version someone else
 	 * recorded meanwhile under that name is refused rather than saved over.
 	 */
-	const resumeChange = async (projectId: string, name: string, fromName: string | null): Promise<PrototypeChange | null> => {
+	const resumeChange = async (prototypeId: string, name: string, fromName: string | null): Promise<PrototypeChange | null> => {
 		assertVersionName(name);
-		const all = await records(projectId);
+		const all = await records(prototypeId);
 		const names = all.map((i) => i.name);
 		if (names.includes(name)) {
 			if (fromName === null) return null;
-			throw new Error(`${projectId} ${name} was made meanwhile, so this new version is not saved over it: start the change again.`);
+			throw new Error(`${prototypeId} ${name} was made meanwhile, so this new version is not saved over it: start the change again.`);
 		}
-		if (nextVersionName(names) !== name) throw new Error(`${projectId} has no ${name}, and it is not the next version.`);
+		if (nextVersionName(names) !== name) throw new Error(`${prototypeId} has no ${name}, and it is not the next version.`);
 		if (fromName === null) throw new Error(`${name} is a new version: say which it was started from, with --from-version.`);
 		const from = all.find((i) => i.name === fromName);
-		if (!from) throw new Error(`${projectId} has no ${fromName} for ${name} to have been started from.`);
-		const source = await sourceText(projectId, from.name);
+		if (!from) throw new Error(`${prototypeId} has no ${fromName} for ${name} to have been started from.`);
+		const source = await sourceText(prototypeId, from.name);
 		return { from, target: name, fresh: true, before: source === null ? '' : contentHashOf(source) };
 	};
 
 	/** A source that does not build is neither recorded nor saved. `version` is the source's hash, null when unchanged. */
 	const finishChange = async (
-		projectId: string,
+		prototypeId: string,
 		change: PrototypeChange,
 		me: Person | null,
 		note: string,
 	): Promise<{ version: string | null; made: Work | null }> => {
-		const now = await sourceText(projectId, change.target);
+		const now = await sourceText(prototypeId, change.target);
 		const version = now === null ? null : contentHashOf(now);
 		if (version === null || version === change.before) {
-			if (change.fresh) for (const f of [sourceFile(projectId, change.target), file(projectId, change.target)]) rmSync(f, { force: true });
+			if (change.fresh) for (const f of [sourceFile(prototypeId, change.target), file(prototypeId, change.target)]) rmSync(f, { force: true });
 			return { version: null, made: null };
 		}
-		const html = await built(projectId, change.target);
-		const made = change.fresh ? await recordVersionFrom(ctx.store(), { projectId, name: change.target, from: change.from, note, me }) : null;
-		await keep(projectId, change.target, html);
+		const html = await built(prototypeId, change.target);
+		const made = change.fresh ? await recordVersionFrom(ctx.store(), { prototypeId, name: change.target, from: change.from, note, me }) : null;
+		await keep(prototypeId, change.target, html);
 		return { version, made };
 	};
 
 	/** A source changed since its page was last built is built first. */
-	const page = async (projectId: string, name: string): Promise<string | null> => {
-		const local = file(projectId, name);
-		const source = sourceFile(projectId, name);
+	const page = async (prototypeId: string, name: string): Promise<string | null> => {
+		const local = file(prototypeId, name);
+		const source = sourceFile(prototypeId, name);
 		const stale = existsSync(source) && (!existsSync(local) || statSync(source).mtimeMs > statSync(local).mtimeMs);
-		if (stale) await buildPage(projectId, name);
+		if (stale) await buildPage(prototypeId, name);
 		if (existsSync(local)) return readFileSync(local, 'utf8');
-		return ctx.readDesignFile(prototypePagePath(projectId, name));
+		return ctx.readDesignFile(prototypePagePath(prototypeId, name));
 	};
 
 	/** The manifest at the commit the prototype is modeled on, else the checkout's (develop has no DSNR files). */
-	const target = async (projectId: string, name: string): Promise<DeclaredTarget> => {
+	const target = async (prototypeId: string, name: string): Promise<DeclaredTarget> => {
 		const root = ctx.productRoot();
 		if (root === null) return undeclared('No product repository is open');
 		const descriptor = readDescriptor(root);
 		const path = `${descriptor.contextDir}/${MANIFEST_FILE}`;
-		const basedOn = (await record(projectId, name))?.basedOn;
+		const basedOn = (await record(prototypeId, name))?.basedOn;
 		// Read only: the hand-off's `sources` is what fetches a base this clone lacks, and says so when it cannot.
 		const commit = basedOn && basename(root) === basedOn.repository ? await knownBase(root, name, basedOn).catch(() => null) : null;
 		const atBase = commit !== null ? await git(root, ['show', `${commit}:${path}`], { trim: false }).catch(() => null) : null;
 		return atBase !== null ? declaredTarget(atBase, descriptor.product) : productTarget(join(root, descriptor.contextDir), descriptor.product);
 	};
 
-	const accessibility = async (projectId: string, name: string): Promise<string> => taskAccessibility(skill, await target(projectId, name));
+	const accessibility = async (prototypeId: string, name: string): Promise<string> => taskAccessibility(skill, await target(prototypeId, name));
 
 	const voice = async (root: string | null = ctx.productRoot()): Promise<string> => {
 		const designSystem = root === null ? null : await ctx.designSystemOf(root);
@@ -566,7 +566,7 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		voice,
 		title,
 		records,
-		hasProject,
+		hasPrototype,
 		record,
 		sourceText,
 		start,
@@ -583,4 +583,4 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 	};
 };
 
-export type PrototypeWork = ReturnType<typeof prototypeWork>;
+export type PrototypeWork = ReturnType<typeof versionWork>;

@@ -1,5 +1,5 @@
 export interface Work {
-	projectId: string;
+	prototypeId: string;
 	/** `v2`, or `codebase`. */
 	name: string;
 	branch: string;
@@ -133,8 +133,8 @@ export type PrototypeReadiness =
 			repository: string;
 	  };
 
-/** Reviewers never clone anything, so a project is assembled from the design repository's contents, not a checkout. */
-export interface Project {
+/** Reviewers never clone anything, so a prototype is assembled from the design repository's contents, not a checkout. */
+export interface Prototype {
 	/** Its directory's name under `prototypes/`. */
 	id: string;
 	/** First heading of `brief.md`, or the id. */
@@ -142,7 +142,7 @@ export interface Project {
 	folder: string | null;
 	records: string[];
 	/** In `workOrder`. */
-	work: ProjectWork[];
+	work: PrototypeWork[];
 	/** Code on its branch, or its design-repo folder. */
 	people: Person[];
 	/**
@@ -154,7 +154,7 @@ export interface Project {
 	localOnly?: boolean;
 }
 
-export interface ProjectWork {
+export interface PrototypeWork {
 	name: string;
 	branch: string;
 	/** The issue that carries this work's comments. */
@@ -189,7 +189,7 @@ export interface ProjectWork {
 }
 
 export interface MadeCover {
-	projectId: string;
+	prototypeId: string;
 	name: string;
 	cover: string;
 }

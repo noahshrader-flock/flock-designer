@@ -19,11 +19,11 @@ export const tokenApi = (token: string, fetcher: Fetcher = fetch as unknown as F
 		}),
 });
 
-/** `branch` is the version's key, `prototype/<project>/<name>`, which names its thread. */
+/** `branch` is the version's key, `prototype/<prototype>/<name>`, which names its thread. */
 export const browserComments = (
 	github: GitHubApi,
 	ref: RepoRef,
-	{ projectId, branch, page }: { projectId: string; branch: string; page?: string | undefined },
+	{ prototypeId, branch, page }: { prototypeId: string; branch: string; page?: string | undefined },
 ): CommentStore => {
 	const threads = new ReviewThreads(github, ref);
 	const notAllowed = async (err: unknown): Promise<never> => {
@@ -37,7 +37,7 @@ export const browserComments = (
 	return {
 		read: () => toResult(threads.readComments(branch).catch(notAllowed)),
 		// No picture of the spot: a page cannot take one of itself.
-		post: (body, anchor) => toResult(threads.postComment(projectId, branch, body, anchor, null)),
+		post: (body, anchor) => toResult(threads.postComment(prototypeId, branch, body, anchor, null)),
 		resolve: (comment, resolved) => toResult(threads.setResolved(comment, resolved)),
 		remove: (comment) => toResult(threads.deleteComment(comment).then(() => null)),
 		move: (comment, anchor) => toResult(threads.moveComment(comment, anchor)),

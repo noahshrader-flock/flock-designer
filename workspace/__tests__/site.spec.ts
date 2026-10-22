@@ -16,20 +16,20 @@ const HASH = '0123456789abcdef';
 const page = (text: string) =>
 	`<!doctype html><html><head><style>@font-face{src:url(/_shared/${HASH})}</style></head><body><h1>${text}</h1></body></html>`;
 const record = (name: string, more: Record<string, unknown> = {}) => ({
-	projectId: 'x',
+	prototypeId: 'x',
 	name,
 	branch: `prototype/x/${name}`,
 	commit: null,
 	note: '',
 	...more,
 });
-const project = (id: string, brief: string | null, work: Record<string, unknown>[], pages: Record<string, string>) => {
+const prototype = (id: string, brief: string | null, work: Record<string, unknown>[], pages: Record<string, string>) => {
 	const dir = join(design, 'prototypes', id);
 	mkdirSync(dir, { recursive: true });
 	if (brief !== null) writeFileSync(join(dir, 'brief.md'), brief);
 	writeFileSync(
 		join(dir, 'work.json'),
-		JSON.stringify(work.map((i) => ({ ...i, projectId: id, branch: String(i.branch).replace('/x/', `/${id}/`) }))),
+		JSON.stringify(work.map((i) => ({ ...i, prototypeId: id, branch: String(i.branch).replace('/x/', `/${id}/`) }))),
 	);
 	for (const [name, html] of Object.entries(pages)) writeFileSync(join(dir, `${name}.html`), html);
 };
@@ -43,7 +43,7 @@ beforeEach(() => {
 	mkdirSync(join(design, 'prototypes', '_shared'), { recursive: true });
 	writeFileSync(join(design, 'prototypes', '_shared', `${HASH}.datauri`), `data:font/woff2;base64,${FONT.toString('base64')}`);
 	writeFileSync(join(design, 'prototypes', '_template.md'), '# Template');
-	project(
+	prototype(
 		'alpha',
 		'# Alerts <history>\n\nA list.\n',
 		[
@@ -55,18 +55,18 @@ beforeEach(() => {
 		],
 		{ v1: page('Alpha one'), v3: page('Alpha three'), v2: page('Alpha two') },
 	);
-	project('beta', '# Beta\n', [record('v1', { createdAt: '2026-09-30T10:00:00Z' })], { v1: page('Beta') });
+	prototype('beta', '# Beta\n', [record('v1', { createdAt: '2026-09-30T10:00:00Z' })], { v1: page('Beta') });
 	// Recorded, but no page was ever saved: nothing to show.
-	project('gamma', '# Gamma\n', [record('v1')], {});
+	prototype('gamma', '# Gamma\n', [record('v1')], {});
 });
 
 afterEach(() => rmSync(root, { recursive: true, force: true }));
 
 describe('the index', () => {
-	it('lists every project with a page, by its brief title, and none without', () => {
+	it('lists every prototype with a page, by its brief title, and none without', () => {
 		build();
 		const index = read('index.html');
-		// Each goes to its newest version: a project has no page of its own.
+		// Each goes to its newest version: a prototype has no page of its own.
 		expect(index).toContain('href="prototype/alpha/v3/"');
 		expect(index).toContain('href="prototype/beta/v1/"');
 		expect(index).not.toContain('gamma');
@@ -105,15 +105,15 @@ describe('a version', () => {
 		expect(readFileSync(join(out, '_shared', `${HASH}.woff2`)).equals(FONT)).toBe(true);
 	});
 
-	it('is not read from a record in the old shape, a version and its iteration: that project shows nothing', () => {
-		project('delta', '# Delta\n', [record('v1-i1')], { 'v1-i1': page('Delta') });
+	it('is not read from a record in the old shape, a version and its iteration: that prototype shows nothing', () => {
+		prototype('delta', '# Delta\n', [record('v1-i1')], { 'v1-i1': page('Delta') });
 		build();
 		expect(existsSync(join(out, 'prototype', 'delta'))).toBe(false);
 		expect(read('index.html')).not.toContain('delta/');
 	});
 });
 
-describe('a project', () => {
+describe('a prototype', () => {
 	it('has no page of its own: its address, which a link may have, leads to its newest version', () => {
 		build();
 		expect(read('prototype/alpha/index.html')).toContain('url=v3/');
@@ -129,7 +129,7 @@ describe('a project', () => {
 		const config = JSON.parse(
 			/<script type="application\/json" id="dsnr-config">(.*?)<\/script>/s.exec(read('prototype/alpha/v3/index.html'))?.[1] ?? 'null',
 		);
-		expect(config).toMatchObject({ projectHref: '../', prototypesHref: '../../../' });
+		expect(config).toMatchObject({ prototypeHref: '../', prototypesHref: '../../../' });
 	});
 });
 
@@ -185,7 +185,7 @@ describe('building', () => {
 
 	it('says what it built', () => {
 		const built = build();
-		expect(built.projects.map((p) => [p.id, p.pages])).toEqual([
+		expect(built.prototypes.map((p) => [p.id, p.pages])).toEqual([
 			['alpha', 3],
 			['beta', 1],
 		]);
@@ -245,10 +245,10 @@ describe('comments on the page', () => {
 		expect(config).toEqual({
 			owner: 'acme',
 			repo: 'design',
-			projectId: 'alpha',
+			prototypeId: 'alpha',
 			name: 'v3',
 			title: 'Alerts <history>',
-			projectHref: '../',
+			prototypeHref: '../',
 			prototypesHref: '../../../',
 			versions: [
 				{ name: 'v3', href: '../v3/', from: 'v1' },

@@ -204,12 +204,12 @@
 				{
 					"command": "dsnr.assignFolder",
 					"when": "activeWebviewPanelId == 'dsnr.review'",
-					"group": "1_project"
+					"group": "1_prototype"
 				},
 				{
 					"command": "dsnr.buildInCodebase",
 					"when": "activeWebviewPanelId == 'dsnr.review'",
-					"group": "1_project"
+					"group": "1_prototype"
 				},
 				{
 					"command": "dsnr.proposeVoiceAndTone",
@@ -225,7 +225,7 @@
 			"webview/context": [
 				{
 					"command": "dsnr.assignFolder",
-					"when": "webviewId == 'dsnr.panel' && webviewSection == 'project'"
+					"when": "webviewId == 'dsnr.panel' && webviewSection == 'prototype'"
 				}
 			]
 		},

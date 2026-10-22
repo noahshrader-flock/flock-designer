@@ -99,19 +99,19 @@ describe('the extension’s manifest', () => {
 		expect(menus['editor/title']?.find((m) => m.command === 'dsnr.buildInCodebase')).toEqual({
 			command: 'dsnr.buildInCodebase',
 			when: inReview,
-			group: '1_project',
+			group: '1_prototype',
 		});
 		expect(menus.commandPalette?.find((m) => m.command === 'dsnr.buildInCodebase')).toEqual({ command: 'dsnr.buildInCodebase', when: inReview });
 	});
 
-	it('assigns a project’s folder from its row’s right-click menu, and from a review tab’s own menu', () => {
+	it('assigns a prototype’s folder from its row’s right-click menu, and from a review tab’s own menu', () => {
 		const { menus } = manifest().contributes;
 		const inReview = "activeWebviewPanelId == 'dsnr.review'";
-		expect(menus['webview/context']).toEqual([{ command: 'dsnr.assignFolder', when: "webviewId == 'dsnr.panel' && webviewSection == 'project'" }]);
+		expect(menus['webview/context']).toEqual([{ command: 'dsnr.assignFolder', when: "webviewId == 'dsnr.panel' && webviewSection == 'prototype'" }]);
 		expect(menus['editor/title']?.find((m) => m.command === 'dsnr.assignFolder')).toEqual({
 			command: 'dsnr.assignFolder',
 			when: inReview,
-			group: '1_project',
+			group: '1_prototype',
 		});
 		expect(menus.commandPalette?.find((m) => m.command === 'dsnr.assignFolder')).toEqual({ command: 'dsnr.assignFolder', when: inReview });
 	});

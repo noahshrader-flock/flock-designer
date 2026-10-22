@@ -10,11 +10,11 @@ export const publishingArea = (d: CallsDeps) => {
 			await publisher.publish(true);
 			return publisher.status();
 		},
-		publishedPage: (projectId: string, name: string) => deploys.status(projectId, name),
-		publishPage: async (projectId: string, name: string): Promise<PageStatus> => {
+		publishedPage: (prototypeId: string, name: string) => deploys.status(prototypeId, name),
+		publishPage: async (prototypeId: string, name: string): Promise<PageStatus> => {
 			if (github.state().state !== 'signedIn') throw new Error(`Sign in to ${HOST} to publish.`);
-			deploys.page(projectId, name);
-			return deploys.status(projectId, name);
+			deploys.page(prototypeId, name);
+			return deploys.status(prototypeId, name);
 		},
 	};
 };

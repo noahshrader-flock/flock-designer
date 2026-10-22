@@ -1,8 +1,8 @@
 import { existsSync } from 'node:fs';
 import { basename, join, resolve, sep } from 'node:path';
 import type * as VsCode from 'vscode';
-import type { Context, FoundHow } from '../../src/core/services/projects/findContext';
-import type { SourceAnswers } from '../../src/core/services/projects/productDesignSystem';
+import type { Context, FoundHow } from '../../src/core/services/products/findContext';
+import type { SourceAnswers } from '../../src/core/services/products/productDesignSystem';
 import { type DesignSystemsMemory, systemAt } from '../../src/core/services/designSystem/designSystems';
 import type { Catalog, CatalogComponent, ConnectedDesignSystem, ConnectedDesignSystems, TokenEdit } from '../../src/shared/contract';
 import { editsKept } from '../../src/shared/tokens';

@@ -30,8 +30,8 @@ repository (a monorepo); or as the product itself. [The shapes a product can tak
 The company's shared repository for design work (at Flock, `flock-designer`, which this page is in). It holds two
 kinds of things:
 
-- *The projects*, in `prototypes/`: one folder per project, with its brief, its prototypes, its reviews and the record of
-  its work. This is the shared memory: anyone on the team can pick up a project from its folder.
+- *The prototypes*, in `prototypes/`: one folder per prototype, with its brief, its versions, its reviews and the record of
+  its work. This is the shared memory: anyone on the team can pick up a prototype from its folder.
 - *The guidance every agent follows*, the same for every product: `agents/` (how to build UI here), `skills/` (step by
   step instructions for each kind of work), `standards/` (what good work is, everywhere), and `knowledge/` (these pages).
 
@@ -42,7 +42,7 @@ said, it is Flock's.
 
 DSNR's panel in VS Code, with two tabs:
 
-- **Projects**: every project, with its prototypes and its open comments. Pressing one opens its newest prototype for
+- **Prototypes**: every prototype, with its versions and its open comments. Pressing one opens its newest version for
   review.
 - **Design System**: the product's components and tokens, with your changes being tried.
 
@@ -59,7 +59,7 @@ change it with **DSNR: Choose the agent**.
 
 ## Words you will see
 
-- *Repository*: a project's files and their whole history, kept on GitHub. The product, the design system and the design
+- *Repository*: a prototype's files and their whole history, kept on GitHub. The product, the design system and the design
   repository are each one.
 - *Clone*: your copy of a repository, on your computer.
 - *Branch*: a separate line of work in a repository, so changes can be made without touching the main one until they are
@@ -74,7 +74,7 @@ change it with **DSNR: Choose the agent**.
 
 - *The real thing, not a picture of it.* A prototype made from the product's own components can be handed to
   engineering without being redrawn, and what reviewers comment on is what will ship.
-- *Nothing is hidden in the app.* Projects, comments and guidance are files in a repository, readable by anyone, with
+- *Nothing is hidden in the app.* Prototypes, comments and guidance are files in a repository, readable by anyone, with
   their history.
 - *You stay in control.* DSNR does the bookkeeping (recording versions, saving pages, publishing them), and never does
   the things that are yours: it does not commit to the product for you or merge, it pushes code only when you ask it to

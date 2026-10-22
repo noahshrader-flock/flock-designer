@@ -1,8 +1,8 @@
 import { createElement } from 'react';
 import { describe, expect, it } from 'vitest';
 import { Panel } from '../extension/webview/Panel';
-import type { Context } from '../src/core/services/projects/findContext';
-import { SAMPLE_CATALOG, SAMPLE_PROJECTS } from './extensionSamples';
+import type { Context } from '../src/core/services/products/findContext';
+import { SAMPLE_CATALOG, SAMPLE_PROTOTYPES } from './extensionSamples';
 import { panelCss } from './panelStyles';
 import { NO_CHROME, OWN_WINDOW, inChrome } from './realChrome';
 import { press } from './ui';
@@ -27,7 +27,7 @@ const shown = async () => {
 	await mountPage(createElement(Panel));
 	await share('placed', { context: OPEN, unreadable: null, setup: null });
 	await share('agent', { name: 'Claude Code' });
-	await answer('listProjects', SAMPLE_PROJECTS);
+	await answer('listPrototypes', SAMPLE_PROTOTYPES);
 };
 const tab = async (name: string) =>
 	press([...document.querySelectorAll<HTMLElement>('[role="radiogroup"] [role="radio"]')].find((o) => o.textContent === name)!);
@@ -60,7 +60,7 @@ const stickingOut = async (html: string): Promise<string[]> => {
 };
 
 describe.skipIf(NO_CHROME)('the panel in a narrow side bar, in the browser on this machine', () => {
-	it('has no sideways scroll in its projects', async () => {
+	it('has no sideways scroll in its prototypes', async () => {
 		await shown();
 		expect(await stickingOut(document.body.innerHTML)).toEqual([]);
 	}, 60_000);

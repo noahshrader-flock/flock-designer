@@ -15,10 +15,10 @@ const wire = () => {
 describe('the panel’s calls to the core', () => {
 	it('send a call by its name with an id, and resolve with the answer that comes back with it', async () => {
 		const { api, sent, deliver } = wire();
-		const a = api.listProjects?.() as Promise<unknown>;
+		const a = api.listPrototypes?.() as Promise<unknown>;
 		const b = api.branchesWithSetup?.('/a') as Promise<unknown>;
 		expect(sent).toEqual([
-			{ type: 'call', id: 1, name: 'listProjects', args: [] },
+			{ type: 'call', id: 1, name: 'listPrototypes', args: [] },
 			{ type: 'call', id: 2, name: 'branchesWithSetup', args: ['/a'] },
 		]);
 		deliver({ type: 'answer', id: 2, result: { ok: true, value: 'b' } });
@@ -29,7 +29,7 @@ describe('the panel’s calls to the core', () => {
 
 	it('send the extension’s asks the same way, by name, numbered with the core’s calls', async () => {
 		const { api, asks, sent, deliver } = wire();
-		void api.listProjects?.();
+		void api.listPrototypes?.();
 		const opened = asks.openComponent('src/A.stories.tsx');
 		expect(sent.at(-1)).toEqual({ type: 'call', id: 2, name: 'openComponent', args: ['src/A.stories.tsx'] });
 		deliver({ type: 'answer', id: 2, result: { ok: true, value: null } });

@@ -2,7 +2,7 @@
 
 **Shared by every product.** Nothing here names a product's routes or tools.
 
-When you build or change a view in **codebase work** — work on a `feature/<project-id>` branch
+When you build or change a view in **codebase work** — work on a `feature/<prototype-id>` branch
 that runs inside the real product — record where that work is, so DSNR opens on it instead
 of wherever the product happens to start.
 
@@ -11,7 +11,7 @@ the change themselves. That has already put a comment on a page the work never t
 
 ## What to write
 
-In the design repository, `prototypes/<project-id>/work.json`, on the `codebase` entry, add a
+In the design repository, `prototypes/<prototype-id>/work.json`, on the `codebase` entry, add a
 `route`: the path within the running app where the work is reached.
 
 ```json

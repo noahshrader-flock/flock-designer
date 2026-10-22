@@ -6,7 +6,7 @@ These live here.
 how it works and why, every contract, and the change log. If you are picking this up, start with its "Where things
 stand" block. **[`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md)** is what is left to do; each fact is in only one of the two.
 
-**`prototypes/`** — one folder per project. Drop in whatever context you have.
+**`prototypes/`** — one folder per prototype. Drop in whatever context you have.
 
 **`agents/`** — how to build UI in a Flock product, for any agent (`ui-guide.md`); the builder (`dsnr.md`, DSNR's
 workflow on top of that) and its two read-only reviewers, the same in every product. A product carries only a short
@@ -37,22 +37,22 @@ work. These and the rest are defined once, in [the vocabulary](dsnr.md#vocabular
 The app is for **discovery**: a prototype is reviewed in it, by anyone with the app and a GitHub account.
 **Delivery** is engineering's, through their own pull requests and preview links.
 
-## Starting a project
+## Starting a prototype
 
 Make a folder under `prototypes/`. Put whatever you already have into it — a markdown file, a PRD, a
 few screenshots, some links, a paragraph. There is no required format and no minimum.
 
 `prototypes/_template.md` exists in case a blank page is annoying. Ignore it otherwise. Three
-sentences is a legitimate way to start a project, and "here's the Figma, make it work on mobile" is
-a legitimate way to start a project.
+sentences is a legitimate way to start a prototype, and "here's the Figma, make it work on mobile" is
+a legitimate way to start a prototype.
 
-Everything the agent writes for that project lands in the same folder — the brief it wrote from your
-context, what it read before building, the review, and the decisions you confirmed. One project, one
+Everything the agent writes for that prototype lands in the same folder — the brief it wrote from your
+context, what it read before building, the review, and the decisions you confirmed. One prototype, one
 place, so picking up someone else's work means reading one folder.
 
 Each **version** is kept in that folder too, as `v1.tsx` and `v1.html`: one React file and the page
 built from it, so anyone can open it without the product. Large files those pages share are kept once in
-`prototypes/_shared/`, which is not a project.
+`prototypes/_shared/`, which is not a prototype.
 
 ## What a product repository provides
 
@@ -84,13 +84,13 @@ commit, and leaves a file that is the product's own (a `CLAUDE.md` with its own 
 
 **The commands** in `workspace.json`, by id: `preview` (an older prototype branch) and `design-mode` (the real product
 on mock data), each with `servesPreviewOn`; `check-iteration`, the **light check**, fast, run after every step;
-`handoff`, the **gate**, which takes `<project-id>` and refuses until the work is fit for engineering; `typecheck`,
+`handoff`, the **gate**, which takes `<prototype-id>` and refuses until the work is fit for engineering; `typecheck`,
 `lint`, `a11y` and `boundary`, which the reviewers run; and `install` (`npm ci`), run from the New modal when packages
 are missing. Commands run through `npm`, `npx` or `node`.
 
 **The `AGENTS.md` section**, which every agent reads: Claude Code through `CLAUDE.md`, which imports it, and Copilot directly. It
 sends product UI work to `agents/ui-guide.md` first and to the **dsnr** agent (its follow-ups too), and says what to do when the
-design repository cannot be read. Its words are in one place, `agentsSection` in `workspace/src/core/services/projects/entryFiles.ts`,
+design repository cannot be read. Its words are in one place, `agentsSection` in `workspace/src/core/services/products/entryFiles.ts`,
 and `dsnr agent-files --check` shows whether a product's copy is current. A Copilot instructions file would be a second copy, to be
 added only if Copilot is shown not to read `AGENTS.md`.
 

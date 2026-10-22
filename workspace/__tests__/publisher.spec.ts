@@ -42,10 +42,10 @@ describe('running', () => {
 		const { manager } = make(async () =>
 			healthy
 				? { branches: ok, records: ok }
-				: { branches: bad('feature/x', 'It has moved on GitHub.'), records: bad('Project records', 'Could not reach GitHub.') },
+				: { branches: bad('feature/x', 'It has moved on GitHub.'), records: bad('Prototype records', 'Could not reach GitHub.') },
 		);
 		await manager.publish(true);
-		expect(manager.status()).toMatchObject({ state: 'held', problems: [{ what: 'feature/x' }, { what: 'Project records' }] });
+		expect(manager.status()).toMatchObject({ state: 'held', problems: [{ what: 'feature/x' }, { what: 'Prototype records' }] });
 		healthy = true;
 		await manager.publish(true);
 		expect(manager.status()).toMatchObject({ state: 'shared' });

@@ -1,6 +1,6 @@
 [
   {
-    "projectId": "alert-history",
+    "prototypeId": "alert-history",
     "name": "v1",
     "branch": "prototype/alert-history/v1",
     "commit": null,
@@ -20,7 +20,7 @@
     "cover": "e34b718ccb2b"
   },
   {
-    "projectId": "alert-history",
+    "prototypeId": "alert-history",
     "name": "v2",
     "branch": "prototype/alert-history/v2",
     "commit": null,
@@ -40,7 +40,7 @@
     "cover": "472e769b2b81"
   },
   {
-    "projectId": "alert-history",
+    "prototypeId": "alert-history",
     "name": "codebase",
     "branch": "feature/alert-history",
     "commit": null,

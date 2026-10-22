@@ -9,15 +9,15 @@ design repository, so making one changes nothing engineering owns.
 Ask your agent, in the product: "Create a prototype of a history of alerts, filterable by camera and by day." Write it
 the way you would brief a colleague. A Figma link to one screen helps, and you can drag screenshots into the conversation.
 
-The agent runs `dsnr new-prototype`, which starts the project with your words as its brief and gives the agent its task,
-including which code it is modeled on. To put the project in a folder, use **Assign folder…** from its menu in the panel.
+The agent runs `dsnr new-prototype`, which starts the prototype with your words as its brief and gives the agent its task,
+including which code it is modeled on. To put the prototype in a folder, use **Assign folder…** from its menu in the panel.
 
 If the product's packages are not installed on your computer, the agent is told so, with what to run, before anything
 is made.
 
 ## What happens while it builds
 
-- DSNR starts the project, with your words as its brief, and your list shows it under its name as *Building…* while the agent works.
+- DSNR starts the prototype, with your words as its brief, and your list shows it under its name as *Building…* while the agent works.
   Nothing of it is shared yet: it is recorded as *Version 1*, and reaches everyone, once its first page is saved. If it
   is never built, nothing is made for anyone else; delete it from its menu.
 - The prototype is *modeled on* the branch the product is on: DSNR notes exactly which commit, fetching the latest of it
@@ -25,11 +25,11 @@ is made.
 - The agent writes one React file and builds it into a page. It uses the product's own components and design system, and
   invents only the data.
 - When the page is built, the agent saves it to the design repository, as its task says, and DSNR draws its picture for
-  the project list and publishes it. You do not press anything.
+  the prototype list and publishes it. You do not press anything.
 
 ## Review it
 
-Press the project in the panel to open its newest prototype in a tab. It is always the newest as the project is when you
+Press the prototype in the panel to open its newest version in a tab. It is always the newest as the prototype is when you
 press, including a version an agent made in a terminal a moment ago. The bar along the top has:
 
 - the version menu, to switch between versions;
@@ -37,10 +37,10 @@ press, including a version an agent made in a terminal a moment ago. The bar alo
 - **Theme**, to see it in **Light** and **Dark**;
 - **Comment**, to leave comments.
 
-The project's menu in the panel has **Copy link** and **Open published page**, to share it, and **Open locally**, to open
+The prototype's menu in the panel has **Copy link** and **Open published page**, to share it, and **Open locally**, to open
 it in your browser from this computer.
 
-To change its name, choose **Rename…** from the project's menu, type the new name, and press **Save**. Only the name
+To change its name, choose **Rename…** from the prototype's menu, type the new name, and press **Save**. Only the name
 people see changes: its link, its comments and its folder in the design repository keep the name they were made with.
 
 ## Comments
@@ -77,7 +77,7 @@ A prototype's versions are *Version 1*, *Version 2* and so on. A change is made 
 A new version starts as a copy of the one it came from, which stays exactly as it was, with its comments. A new version
 starts with no comments. A change in place keeps its comments, pinned where they were made.
 
-A different idea for the same project is a new prototype in it, with its own brief.
+A different idea for the same prototype is a new prototype in it, with its own brief.
 
 ## Publishing
 
@@ -103,15 +103,15 @@ a comment it waits until you have saved or cancelled it, so nothing you typed is
 
 ## Where it all lives
 
-In the design repository, under `prototypes/` and the project's id:
+In the design repository, under `prototypes/` and the prototype's id:
 
-- `brief.md`: what the project is, from the first request.
+- `brief.md`: what the prototype is, from the first request.
 - `requests-v1.md`, `requests-v2.md`: what you asked for each version, in your words and in order, the first request and every
   change after it. Secrets, email addresses and phone numbers are taken out before anything is saved, here and in the brief
   and the record; a name or a customer's details look like any other words, so leave them out of a request.
 - `work.json`: the record of every version, and what each was modeled on.
 - `v1.tsx`, `v1.html`: each version's source and page.
-- `covers/`: the pictures in the project list.
+- `covers/`: the pictures in the prototype list.
 
 DSNR commits and pushes these to GitHub for you, whenever they change: see [Committing](committing.md).
 

@@ -1,5 +1,5 @@
 /**
- * What is kept of a person's words when they are saved into a project, which is pushed to GitHub: text that is secret in
+ * What is kept of a person's words when they are saved into a prototype, which is pushed to GitHub: text that is secret in
  * its shape, and the details of a person, are taken out first. It knows shapes, not meanings: a name, or what a customer
  * said, looks like any other words, so those belong out of a request before it is made.
  */

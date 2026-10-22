@@ -1,9 +1,9 @@
 /** One at a time: it is a push, a pull request and a build. */
 export type ShareStatus =
 	| { state: 'idle' }
-	| { state: 'running'; projectId: string; name: string; step: ShareStep; detail?: string }
-	| { state: 'ready'; projectId: string; name: string; url: string; prUrl: string }
-	| { state: 'failed'; projectId: string; name: string; message: string };
+	| { state: 'running'; prototypeId: string; name: string; step: ShareStep; detail?: string }
+	| { state: 'ready'; prototypeId: string; name: string; url: string; prUrl: string }
+	| { state: 'failed'; prototypeId: string; name: string; message: string };
 
 export type ShareStep = 'pushing' | 'opening' | 'building';
 

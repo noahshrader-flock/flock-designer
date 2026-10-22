@@ -32,7 +32,7 @@ repo(product, {
 		product: 'Test Product',
 		contextDir: '.dsnr',
 		prototypeRoot: 'src/prototypes',
-		branchPattern: { codebase: 'feature/<project-id>' },
+		branchPattern: { codebase: 'feature/<prototype-id>' },
 		commands: [],
 		designSystem: { package: DS_PACKAGE },
 	}),
@@ -53,7 +53,7 @@ echo '{"type":"result","subtype":"success","result":"Built it."}'
 );
 chmodSync(join(bin, 'claude'), 0o755);
 const record = {
-	projectId: 'fixture',
+	prototypeId: 'fixture',
 	name: 'v1',
 	branch: 'prototype/fixture/v1',
 	commit: null,

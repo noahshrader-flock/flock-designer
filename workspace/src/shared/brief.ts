@@ -1,7 +1,7 @@
-import type { Project } from './contract';
+import type { Prototype } from './contract';
 import { capitalize } from './titleCase';
 
-/** A project's title, the name people see, is its brief's first heading, read and written only here; never its id. */
+/** A prototype's title, the name people see, is its brief's first heading, read and written only here; never its id. */
 const HEADING = /^#\s+(.+?)\s*$/;
 
 export const firstHeading = (markdown: string): string | null => {
@@ -13,7 +13,7 @@ export const firstHeading = (markdown: string): string | null => {
 };
 
 /** As a title is kept: on one line, its spaces single; null when nothing is left. */
-export const projectTitle = (v: string): string | null => {
+export const prototypeTitle = (v: string): string | null => {
 	const title = v.replace(/\s+/g, ' ').trim();
 	return title === '' ? null : title;
 };
@@ -28,7 +28,7 @@ export const withTitle = (markdown: string, title: string): string => {
 	return `${head}# ${title}\n\n${markdown.slice(head.length)}`;
 };
 
-/** A project's folder is kept in its brief's front matter (`folder: Admin`), read and written only here; never in its id. */
+/** A prototype's folder is kept in its brief's front matter (`folder: Admin`), read and written only here; never in its id. */
 const FRONT_MATTER = /^---\r?\n((?:.*\r?\n)*?)---\r?\n/;
 
 const FOLDER_LINE = /^folder:(.*)$/;
@@ -52,10 +52,10 @@ export const briefFolder = (markdown: string): string | null => {
 /** They may differ only by case. */
 export const sameFolder = (a: string, b: string): boolean => a.localeCompare(b, undefined, { sensitivity: 'accent' }) === 0;
 
-/** Each once whatever its case, as the first project in the list spells it. */
-export const foldersOf = (projects: Project[]): string[] => {
+/** Each once whatever its case, as the first prototype in the list spells it. */
+export const foldersOf = (prototypes: Prototype[]): string[] => {
 	const folders: string[] = [];
-	for (const p of projects) if (p.folder && !folders.some((f) => sameFolder(f, p.folder as string))) folders.push(p.folder);
+	for (const p of prototypes) if (p.folder && !folders.some((f) => sameFolder(f, p.folder as string))) folders.push(p.folder);
 	return folders.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
 };
 
@@ -63,14 +63,14 @@ export type FolderChoice = { kind: 'all' } | { kind: 'none' } | { kind: 'folder'
 
 export const ALL_FOLDERS: FolderChoice = { kind: 'all' };
 
-export const inFolder = (project: Project, choice: FolderChoice): boolean =>
-	choice.kind === 'all' ? true : choice.kind === 'none' ? !project.folder : !!project.folder && sameFolder(project.folder, choice.name);
+export const inFolder = (prototype: Prototype, choice: FolderChoice): boolean =>
+	choice.kind === 'all' ? true : choice.kind === 'none' ? !prototype.folder : !!prototype.folder && sameFolder(prototype.folder, choice.name);
 
-export const fromBrief = (projectId: string, brief: string | null): { title: string; folder: string | null } =>
-	brief === null ? { title: projectId, folder: null } : { title: firstHeading(brief) ?? projectId, folder: briefFolder(brief) };
+export const fromBrief = (prototypeId: string, brief: string | null): { title: string; folder: string | null } =>
+	brief === null ? { title: prototypeId, folder: null } : { title: firstHeading(brief) ?? prototypeId, folder: briefFolder(brief) };
 
-/** What deleting a project asks to be typed: its name as people see it (`fromBrief`), exactly, spaces at either end aside. */
-export const namesProject = (typed: string, title: string): boolean => typed.trim() === title;
+/** What deleting a prototype asks to be typed: its name as people see it (`fromBrief`), exactly, spaces at either end aside. */
+export const namesPrototype = (typed: string, title: string): boolean => typed.trim() === title;
 
 export const briefBody = (markdown: string): string => frontMatterOf(markdown).body;
 

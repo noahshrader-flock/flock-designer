@@ -10,7 +10,7 @@ architecture and readiness.
 
 **Start from `ui-guide.md`, and read it in full before anything else.** It is how to build UI in a Flock product, in any
 tool: what to read, the contract, building, checking, and what to say when you finish. This file is DSNR's workflow on
-top of it: the two paths, projects and receipts, the reviews, Handoff. Each rule is in one of the two files, not both.
+top of it: the two paths, prototypes and receipts, the reviews, Handoff. Each rule is in one of the two files, not both.
 
 ## Which path
 
@@ -32,7 +32,7 @@ top of it: the two paths, projects and receipts, the reviews, Handoff. Each rule
 
 **Continuing work is decided by where you are.** On the product's prototype branch (`branchPattern.prototype` in its
 `.dsnr/workspace.json`) it is an older prototype, on the product's own skill for that path. On its codebase branch
-(`branchPattern.codebase`) with a request about that project, it is codebase work. A request that says "prototype" is a
+(`branchPattern.codebase`) with a request about that prototype, it is codebase work. A request that says "prototype" is a
 prototype wherever the repository is checked out: a prototype changes nothing there.
 
 **When the request does not say, ask as a choice, never in prose.** In Claude Code that is the
@@ -41,7 +41,7 @@ options above with their one line each, **neither marked recommended**: only the
 is. **An agent that cannot ask** (a subagent, or a run nobody is there to answer): stop before changing anything and reply
 with one line beginning `NEEDS PATH:` saying the request does not name one; the caller puts the choice to the person.
 
-**Do not ask about anything else you can decide.** The project's id is a short kebab-case name from the request: pick it.
+**Do not ask about anything else you can decide.** The prototype's id is a short kebab-case name from the request: pick it.
 **Check the environment can support the answer first:** without the product's installed packages, neither path can
 resolve the design system, typecheck or bundle, so say so and stop: the problem is setup.
 
@@ -53,36 +53,36 @@ with **only the network stubbed**, in the product's mock layer (its manifest say
 docs win on stack and tooling. Tests are required. The bar is a branch engineering takes over where their remaining work
 is wiring the plumbing, not rebuilding yours.
 
-- **Name the branch `branchPattern.codebase`**, with the project's id. When new work starts from the baseline, create it
-  yourself before writing any file. DSNR finds the work by that name and `flock-designer/prototypes/<project-id>/`.
+- **Name the branch `branchPattern.codebase`**, with the prototype's id. When new work starts from the baseline, create it
+  yourself before writing any file. DSNR finds the work by that name and `flock-designer/prototypes/<prototype-id>/`.
 - **Record where the work is**, as `../skills/record-the-route.md` says, when the view first loads.
 - **Build in the codebase** is watched, in the person's editor: `../skills/move-to-code.md` says what it needs.
 
-## Is this a new project, or a later round of one?
+## Is this a new prototype, or a later round of one?
 
-**If `prototypes/<project-id>/context-receipt.md` already exists, start there.** A later round does not re-derive
+**If `prototypes/<prototype-id>/context-receipt.md` already exists, start there.** A later round does not re-derive
 what the previous one recorded and a human corrected. Read the brief, receipt and review, then **re-verify only what can
 have moved**: the installed design system version, the baseline commit if the branch moved, and whatever the new feedback
 touches. Write this round's receipt as a **diff against the last one**: what changed, what you re-checked, what you
 carried forward.
 
-**If there is no project folder, this is a new project.** Create it, then read everything `ui-guide.md` lists.
+**If there is no prototype folder, this is a new prototype.** Create it, then read everything `ui-guide.md` lists.
 
 ## What DSNR adds to the contract
 
 **`ui-guide.md`'s contract holds here.** In DSNR's workflow it is also always true that you:
 
 - produce a context receipt before building on the codebase path, and for prototype work beyond a single screen;
-- keep records inside the project folder.
+- keep records inside the prototype folder.
 
 ## How you work
 
-**Frame, open or create the project folder, write the context receipt, confirm, build what was asked, review.**
+**Frame, open or create the prototype folder, write the context receipt, confirm, build what was asked, review.**
 
-### 0. The project folder first
+### 0. The prototype folder first
 
-Check `flock-designer/prototypes/` for this project. **It exists:** read it; its history and decisions still apply. **It
-does not:** create `prototypes/<project-id>/`. Then write `prototypes/<project-id>/brief.md` from whatever context arrived, in whatever form, as
+Check `flock-designer/prototypes/` for this prototype. **It exists:** read it; its history and decisions still apply. **It
+does not:** create `prototypes/<prototype-id>/`. Then write `prototypes/<prototype-id>/brief.md` from whatever context arrived, in whatever form, as
 `request-guide.md` beside this file describes. Capture the user and job, the decision to make, the nearest existing
 surface, how much to build, the states and interaction needed, and the **change boundary**: which files, components,
 routes, states and interaction paths are in scope. When it arrived as notes or a transcript, say **who each point comes
@@ -90,13 +90,13 @@ from**: the people who use the product, or internal direction, never the one pas
 **not this round**: a later round leaves it alone unless the person moves it in. Ask only for what is missing and would
 change what you build.
 
-**A brief may start with a `---` block** (`folder: Admin`): that is the project's folder, set in the app. Keep it, exactly
+**A brief may start with a `---` block** (`folder: Admin`): that is the prototype's folder, set in the app. Keep it, exactly
 as it is, at the top whenever you write or rewrite the brief; never add, change or remove it yourself.
 
 ### 0b. The context receipt, then stop
 
 **On the codebase path always; on the prototype path for anything beyond a single screen.** Write
-`prototypes/<project-id>/context-receipt.md`, then **stop and let the designer correct it**, except in a run nobody is there
+`prototypes/<prototype-id>/context-receipt.md`, then **stop and let the designer correct it**, except in a run nobody is there
 to answer (any run DSNR starts): put what you would have asked under Assumptions and carry on.
 
 Keep it to what a designer would correct, roughly a screen:
@@ -134,7 +134,7 @@ The last row matters most: it is where a wrong assumption is caught before it be
 Run them **as subagents** if the environment has them (read-only by design, which is real isolation). If not (a subagent
 usually cannot spawn others) **read each definition and follow it, one at a time**: finish parity, write it down, then
 implementation. **Say which way they ran**, and when you reviewed your own work, say so. Write both into
-`prototypes/<project-id>/review.md`, one section per round, accessibility kept separate.
+`prototypes/<prototype-id>/review.md`, one section per round, accessibility kept separate.
 
 ## Verification
 
@@ -160,5 +160,5 @@ this file.
 | `../skills/choose-existing-patterns.md` | Deciding whether to reuse, adapt, or create: **before building anything** |
 | `../skills/recreate-from-reference.md` | Working from a screenshot, sketch, or Figma reference |
 | `../skills/handoff.md` | Handing work to engineering; then the product's own part, which its README lists |
-| `../skills/address-comments.md` | Addressing a project's open comments; DSNR puts it in the task |
+| `../skills/address-comments.md` | Addressing a prototype's open comments; DSNR puts it in the task |
 | The product's own skills | As its `.dsnr/README.md` lists them |

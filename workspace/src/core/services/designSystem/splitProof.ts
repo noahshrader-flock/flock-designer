@@ -9,7 +9,7 @@ import { readFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import type { ConnectedDesignSystem, SplitCheck, SplitStack, SplitUnit } from '../../../shared/contract';
 import { errorText } from '../../../shared/result';
-import { DESCRIPTOR_PATH, findCommand, readDescriptor } from '../projects/descriptor';
+import { DESCRIPTOR_PATH, findCommand, readDescriptor } from '../products/descriptor';
 import { exportCommit } from '../platform/git';
 import { ProcessFailed, runFile } from '../platform/process';
 import { inLibrary } from './designLibrary';

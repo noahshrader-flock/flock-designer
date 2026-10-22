@@ -16,8 +16,8 @@ import { callRoute } from './bridge';
 import { newNonce } from './html';
 import { type Review, reviewsOf } from './messages';
 
-export const reviewPath = (projectId: string, name: string): string => {
-	const at = sitePath(projectId, name);
+export const reviewPath = (prototypeId: string, name: string): string => {
+	const at = sitePath(prototypeId, name);
 	if (at === null) throw new Error(`${name} is not a prototype, so it has no review page.`);
 	return at;
 };
@@ -58,8 +58,8 @@ const isRef = (v: unknown): v is CommentRef =>
 	typeof v === 'object' && v !== null && Number.isSafeInteger((v as CommentRef).thread) && Number.isSafeInteger((v as CommentRef).id);
 
 /**
- * Only on this review's own comments: read and made only on its project's prototypes, and changed or Addressed only when
- * this tab has been shown or made it (`seen`), so a page gone wrong reaches no other project's.
+ * Only on this review's own comments: read and made only on its prototype's versions, and changed or Addressed only when
+ * this tab has been shown or made it (`seen`), so a page gone wrong reaches no other prototype's.
  */
 export const answerReview = async (
 	answers: ReviewAnswers,
@@ -75,11 +75,11 @@ export const answerReview = async (
 	return result;
 };
 
-/** The review, of the version whose branch is `branch` (already checked to be one of its project's). */
-const versionOf = (review: Review, branch: string): Review => ({ ...review, name: branch.slice(prototypeKey(review.projectId, '').length) });
+/** The review, of the version whose branch is `branch` (already checked to be one of its prototype's). */
+const versionOf = (review: Review, branch: string): Review => ({ ...review, name: branch.slice(prototypeKey(review.prototypeId, '').length) });
 
-const isPrototypeOf = (projectId: string, branch: unknown): boolean => {
-	const prefix = prototypeKey(projectId, '');
+const isPrototypeOf = (prototypeId: string, branch: unknown): boolean => {
+	const prefix = prototypeKey(prototypeId, '');
 	return typeof branch === 'string' && branch.startsWith(prefix) && isVersionName(branch.slice(prefix.length));
 };
 
@@ -92,25 +92,25 @@ const answered = async (answers: ReviewAnswers, review: Review, name: RelayCall,
 	if (name === 'signIn') return toResult(answers.signIn());
 	if (name === 'address' && !(args.length >= 1 && args.length <= 3 && isRef(args[0]) && (args[2] === undefined || typeof args[2] === 'boolean')))
 		return { ok: false, error: 'Address is given one comment, and may say the version it is on and whether to make a new one.' };
-	if (name === 'address' && args.length >= 2 && !isPrototypeOf(review.projectId, args[1]))
-		return { ok: false, error: `This review is of ${review.projectId}, so it comments only on ${review.projectId}’s prototypes.` };
+	if (name === 'address' && args.length >= 2 && !isPrototypeOf(review.prototypeId, args[1]))
+		return { ok: false, error: `This review is of ${review.prototypeId}, so it comments only on ${review.prototypeId}’s prototypes.` };
 	if (ON_A_COMMENT.has(name) && !(isRef(args[0]) && seen.has(args[0].thread)))
 		return { ok: false, error: 'That comment is not one of this review’s.' };
 	if (name === 'address')
 		return toResult(answers.address(args.length >= 2 ? versionOf(review, args[1] as string) : review, args[0] as CommentRef, args[2] === true));
 	if (name === 'baseBehind' || name === 'refresh') {
 		// The page's own version, as Address is given it: in a browser, the page may have moved to another.
-		if (!(args.length === 1 && isPrototypeOf(review.projectId, args[0])))
-			return { ok: false, error: `This review is of ${review.projectId}, so it asks only of one of ${review.projectId}’s prototypes.` };
+		if (!(args.length === 1 && isPrototypeOf(review.prototypeId, args[0])))
+			return { ok: false, error: `This review is of ${review.prototypeId}, so it asks only of one of ${review.prototypeId}’s prototypes.` };
 		const on = versionOf(review, args[0] as string);
 		return toResult(name === 'baseBehind' ? answers.baseBehind(on) : answers.refresh(on));
 	}
-	if ((name === 'readComments' || name === 'postComment') && !(args[0] === review.projectId && isPrototypeOf(review.projectId, args[1])))
-		return { ok: false, error: `This review is of ${review.projectId}, so it comments only on ${review.projectId}’s prototypes.` };
+	if ((name === 'readComments' || name === 'postComment') && !(args[0] === review.prototypeId && isPrototypeOf(review.prototypeId, args[1])))
+		return { ok: false, error: `This review is of ${review.prototypeId}, so it comments only on ${review.prototypeId}’s prototypes.` };
 	return callRoute(answers.routes(), name, args);
 };
 
-/** An open tab: its panel and what it shows, and the watch on its project's pages while it is open. */
+/** An open tab: its panel and what it shows, and the watch on its prototype's pages while it is open. */
 interface Tab {
 	panel: Panel;
 	review: Review;
@@ -122,7 +122,7 @@ type Panel = Pick<VsCode.WebviewPanel, 'title' | 'active' | 'visible' | 'reveal'
 };
 
 /**
- * The site is built afresh each time so it is the records as they are. One tab per project, so another of its prototypes
+ * The site is built afresh each time so it is the records as they are. One tab per prototype, so another of its versions
  * shows there.
  */
 export class Reviews {
@@ -156,8 +156,8 @@ export class Reviews {
 		},
 	) {}
 
-	async address({ records, projectId, name }: Review & { records: string }): Promise<string> {
-		const path = reviewPath(projectId, name);
+	async address({ records, prototypeId, name }: Review & { records: string }): Promise<string> {
+		const path = reviewPath(prototypeId, name);
 		await this.deps.build(records);
 		return `${await this.deps.serve()}${path}`;
 	}
@@ -184,18 +184,18 @@ export class Reviews {
 
 	async open({ records, ...review }: Review & { records: string }): Promise<void> {
 		const src = await this.address({ records, ...review });
-		const open = this.tabs.get(review.projectId);
+		const open = this.tabs.get(review.prototypeId);
 		const tab = open ?? this.make(review);
 		this.shows(tab, review, src);
-		this.watchPages(tab, review.projectId, records);
+		this.watchPages(tab, review.prototypeId, records);
 		if (open) open.panel.reveal();
 	}
 
-	/** One watch for a tab's project, of the records it was built from; made again if those are another's. */
-	private watchPages(tab: Tab, projectId: string, records: string): void {
+	/** One watch for a tab's prototype, of the records it was built from; made again if those are another's. */
+	private watchPages(tab: Tab, prototypeId: string, records: string): void {
 		if (!this.deps.watch || tab.watching?.records === records) return;
 		tab.watching?.close();
-		const watching = this.deps.watch(join(records, projectId), (name) => void this.pageSaved(projectId, records, name));
+		const watching = this.deps.watch(join(records, prototypeId), (name) => void this.pageSaved(prototypeId, records, name));
 		tab.watching = { records, close: watching.close };
 	}
 
@@ -203,8 +203,8 @@ export class Reviews {
 	 * Built again so it holds the page as it is now, even while the tab is hidden (it is loaded afresh when shown); then the
 	 * page is told, and decides when to reload: it knows whether a comment is being written.
 	 */
-	private async pageSaved(projectId: string, records: string, name: string): Promise<void> {
-		const tab = this.tabs.get(projectId);
+	private async pageSaved(prototypeId: string, records: string, name: string): Promise<void> {
+		const tab = this.tabs.get(prototypeId);
 		if (!tab) return;
 		try {
 			await this.deps.build(records);
@@ -220,15 +220,15 @@ export class Reviews {
 		tab.panel.webview.html = reviewPage({ src, title: review.title, nonce: newNonce() });
 	}
 
-	/** Its project is gone: its tab is closed, and a browser's key for it answers nothing more. */
-	close(projectId: string): void {
-		this.tabs.get(projectId)?.panel.dispose();
-		for (const [hash, held] of this.keys) if (held.review.projectId === projectId) this.keys.delete(hash);
+	/** Its prototype is gone: its tab is closed, and a browser's key for it answers nothing more. */
+	close(prototypeId: string): void {
+		this.tabs.get(prototypeId)?.panel.dispose();
+		for (const [hash, held] of this.keys) if (held.review.prototypeId === prototypeId) this.keys.delete(hash);
 	}
 
 	/** In a tab or by a browser's key: what is built for them must stay. */
 	inUse(): string[] {
-		return [...new Set([...this.tabs.keys(), ...[...this.keys.values()].map((k) => k.review.projectId)])];
+		return [...new Set([...this.tabs.keys(), ...[...this.keys.values()].map((k) => k.review.prototypeId)])];
 	}
 
 	active(): Review | undefined {
@@ -244,7 +244,7 @@ export class Reviews {
 			enableScripts: true,
 		});
 		const shown: Tab = { panel, review };
-		this.tabs.set(review.projectId, shown);
+		this.tabs.set(review.prototypeId, shown);
 		// By thread: the only comments its page may change.
 		const seen = new Set<number>();
 		panel.webview.onDidReceiveMessage(async (raw: unknown) => {
@@ -257,7 +257,7 @@ export class Reviews {
 		panel.onDidChangeViewState(() => this.deps.onShown?.());
 		panel.onDidDispose(() => {
 			shown.watching?.close();
-			this.tabs.delete(review.projectId);
+			this.tabs.delete(review.prototypeId);
 			this.deps.onShown?.();
 		});
 		this.deps.onShown?.();
@@ -287,22 +287,22 @@ export const REVIEW_KEY = 'review';
 export const siteIn = (storage: string): string => join(storage, 'review-site');
 
 /**
- * A project's newest version as the project stands now. The panel's list can be older than the project (a version an agent
+ * A prototype's newest version as the prototype stands now. The panel's list can be older than the prototype (a version an agent
  * made in a terminal is not in it until it is read again), so what opens "the latest" asks, as it is pressed.
  */
-export const latestReview = async (api: Pick<WorkspaceApi, 'listProjects'>, projectId: string): Promise<Review> => {
-	const project = valueOf(await api.listProjects()).find((p) => p.id === projectId);
-	const latest = project === undefined ? undefined : reviewsOf(project)[0];
-	if (latest === undefined) throw new Error(`${projectId} has no prototype to open.`);
+export const latestReview = async (api: Pick<WorkspaceApi, 'listPrototypes'>, prototypeId: string): Promise<Review> => {
+	const prototype = valueOf(await api.listPrototypes()).find((p) => p.id === prototypeId);
+	const latest = prototype === undefined ? undefined : reviewsOf(prototype)[0];
+	if (latest === undefined) throw new Error(`${prototypeId} has no prototype to open.`);
 	return latest;
 };
 
 export const pickReview = async (
 	window: Pick<typeof VsCode.window, 'showQuickPick'>,
-	api: Pick<WorkspaceApi, 'listProjects'>,
+	api: Pick<WorkspaceApi, 'listPrototypes'>,
 	tell: (message: string) => void,
 ): Promise<Review | undefined> => {
-	const items = valueOf(await api.listProjects())
+	const items = valueOf(await api.listPrototypes())
 		.flatMap(reviewsOf)
 		.map((review) => ({ label: review.title, review }));
 	if (items.length === 0) return void tell('There is no prototype to review here yet.');

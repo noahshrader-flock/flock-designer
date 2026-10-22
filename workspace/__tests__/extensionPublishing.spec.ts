@@ -15,7 +15,7 @@ describe('the sync, in the status bar', () => {
 });
 
 describe('a review’s published page', () => {
-	const review = { projectId: 'demo', name: 'v1', title: 'Demo · Version 1' };
+	const review = { prototypeId: 'demo', name: 'v1', title: 'Demo · Version 1' };
 	const deps = (status: unknown, choose: string | undefined = undefined) => ({
 		api: {
 			publishedPage: vi.fn(async () => ok(status)),

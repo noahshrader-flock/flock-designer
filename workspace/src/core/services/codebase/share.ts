@@ -1,6 +1,6 @@
 import type { ShareStatus, ShareStep } from '../../../shared/contract';
-import type { ShareDescriptor } from '../projects/descriptor';
-import { projectDir } from '../../../shared/designPaths';
+import type { ShareDescriptor } from '../products/descriptor';
+import { prototypeDir } from '../../../shared/designPaths';
 import { isSafeBranchName } from '../platform/git';
 import { errorText } from '../../../shared/result';
 import { CHANGE_REQUEST } from '../../../shared/vocabulary';
@@ -13,7 +13,7 @@ import type { ShareTools } from '../../ports';
 
 export interface ShareRequest {
 	share: ShareDescriptor;
-	projectId: string;
+	prototypeId: string;
 	name: string;
 	branch: string;
 	title: string;
@@ -34,13 +34,13 @@ export const DEFAULT_TIMINGS: ShareTimings = { pollMs: 10_000, startupMs: 180_00
 
 export const previewUrlFor = (share: ShareDescriptor, pr: number): string => share.url.replace('<pr>', String(pr));
 
-export const pullRequestText = (projectId: string, name: string): { title: string; body: string } => ({
-	title: `Preview: ${projectId} ${name} (not for merge)`,
+export const pullRequestText = (prototypeId: string, name: string): { title: string; body: string } => ({
+	title: `Preview: ${prototypeId} ${name} (not for merge)`,
 	body: [
 		`This is a **draft ${CHANGE_REQUEST} that exists only to build a preview link** for review in DSNR.`,
 		'It is not headed for the trunk and should not be merged or marked ready for review.',
 		'',
-		`The project record, with the brief and the comments, is \`${projectDir(projectId)}\` in the design repository.`,
+		`The prototype record, with the brief and the comments, is \`${prototypeDir(prototypeId)}\` in the design repository.`,
 		'',
 		'_Opened by DSNR._',
 	].join('\n'),
@@ -140,11 +140,11 @@ export class ShareRunner {
 
 	start(job: ShareJob): ShareStatus {
 		if (this.current.state === 'running') {
-			throw new Error(`Already sharing ${this.current.projectId} ${this.current.name}. Wait for it to finish.`);
+			throw new Error(`Already sharing ${this.current.prototypeId} ${this.current.name}. Wait for it to finish.`);
 		}
-		const { projectId, name } = job.request;
+		const { prototypeId, name } = job.request;
 		this.live = true;
-		this.set({ state: 'running', projectId, name, step: 'pushing' });
+		this.set({ state: 'running', prototypeId, name, step: 'pushing' });
 
 		void (async () => {
 			try {
@@ -152,15 +152,15 @@ export class ShareRunner {
 					job.request,
 					job.tools,
 					(step, detail) => {
-						if (this.live) this.set({ state: 'running', projectId, name, step, ...(detail ? { detail } : {}) });
+						if (this.live) this.set({ state: 'running', prototypeId, name, step, ...(detail ? { detail } : {}) });
 					},
 					job.timings,
 					() => this.live,
 				);
 				await job.record(url, prUrl);
-				this.set({ state: 'ready', projectId, name, url, prUrl });
+				this.set({ state: 'ready', prototypeId, name, url, prUrl });
 			} catch (err) {
-				this.set({ state: 'failed', projectId, name, message: errorText(err) });
+				this.set({ state: 'failed', prototypeId, name, message: errorText(err) });
 			} finally {
 				this.live = false;
 			}

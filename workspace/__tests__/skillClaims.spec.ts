@@ -31,7 +31,7 @@ const TASKS: Record<string, (text: string) => string> = {
 			},
 			parts,
 		),
-	'handoff.md': (text) => handoffTask({ skill: text, projectId: 'p', branch: 'feature/p', gate: null }, parts),
+	'handoff.md': (text) => handoffTask({ skill: text, prototypeId: 'p', branch: 'feature/p', gate: null }, parts),
 	'build-prototype.md': (text) =>
 		prototypeBuildTask({ guide: '', skill: text, build: prototypeBuild, sources, accessibility: '', voice: '', request: 'A list' }),
 	'address-comments.md': (text) =>

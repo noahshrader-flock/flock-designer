@@ -1,6 +1,6 @@
 [
   {
-    "projectId": "integration-credentials",
+    "prototypeId": "integration-credentials",
     "name": "v1",
     "branch": "prototype/integration-credentials/v1",
     "commit": null,

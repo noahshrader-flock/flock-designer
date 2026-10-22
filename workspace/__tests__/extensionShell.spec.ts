@@ -13,7 +13,7 @@ import { Panels, answerCall, hostApi } from '../extension/src/bridge';
 import type { Route } from '../src/core/handle';
 import { PrototypeServer } from '../src/core/services/prototypes/prototypeServer';
 import type { InvokeName } from '../src/shared/contract';
-import type { ProjectWork } from '../src/shared/domain/projects';
+import type { PrototypeWork } from '../src/shared/domain/prototypes';
 
 const user = { login: 'noah', name: 'Noah', avatar_url: 'https://avatars.githubusercontent.com/u/1' };
 const fetcher = vi.fn(async (url: string) => ({
@@ -404,9 +404,9 @@ describe('a prototype’s review', () => {
 		expect(() => reviewPath('admin-usage', 'codebase')).toThrow(/not a prototype/);
 	});
 
-	it('is each of a project’s prototypes that has a page, newest first, titled with its project and its label', () => {
-		const record = (name: string, branch: string, createdAt: string) => ({ name, branch, createdAt }) as ProjectWork;
-		const project = {
+	it('is each of a prototype’s prototypes that has a page, newest first, titled with its prototype and its label', () => {
+		const record = (name: string, branch: string, createdAt: string) => ({ name, branch, createdAt }) as PrototypeWork;
+		const prototype = {
 			id: 'alert-history',
 			title: 'Alert history',
 			work: [
@@ -415,9 +415,9 @@ describe('a prototype’s review', () => {
 				record('codebase', 'feature/alert-history', '2026-10-04'),
 			],
 		};
-		expect(reviewsOf(project)).toEqual([
-			{ projectId: 'alert-history', name: 'v2', title: 'Alert history · Version 2' },
-			{ projectId: 'alert-history', name: 'v1', title: 'Alert history · Version 1' },
+		expect(reviewsOf(prototype)).toEqual([
+			{ prototypeId: 'alert-history', name: 'v2', title: 'Alert history · Version 2' },
+			{ prototypeId: 'alert-history', name: 'v1', title: 'Alert history · Version 1' },
 		]);
 	});
 
@@ -432,39 +432,39 @@ describe('a prototype’s review', () => {
 	});
 });
 
-describe('the latest version of a project, as it is when it is asked', () => {
-	const project = (...names: string[]) => ({
+describe('the latest version of a prototype, as it is when it is asked', () => {
+	const prototype = (...names: string[]) => ({
 		id: 'alert-history',
 		title: 'Alert history',
-		work: names.map((name) => ({ name, branch: `prototype/alert-history/${name}`, createdAt: '2026-10-01' }) as ProjectWork),
+		work: names.map((name) => ({ name, branch: `prototype/alert-history/${name}`, createdAt: '2026-10-01' }) as PrototypeWork),
 	});
-	const listing = (...reads: ReturnType<typeof project>[][]) => {
-		const listProjects = vi.fn();
-		for (const read of reads) listProjects.mockResolvedValueOnce({ ok: true, value: read });
-		return { listProjects };
+	const listing = (...reads: ReturnType<typeof prototype>[][]) => {
+		const listPrototypes = vi.fn();
+		for (const read of reads) listPrototypes.mockResolvedValueOnce({ ok: true, value: read });
+		return { listPrototypes };
 	};
 
-	it('is the newest version the project has now, not the one a list shown earlier had', async () => {
-		const api = listing([project('v1', 'v2')], [project('v1', 'v2', 'v3')]);
-		expect(await latestReview(api, 'alert-history')).toEqual({ projectId: 'alert-history', name: 'v2', title: 'Alert history · Version 2' });
+	it('is the newest version the prototype has now, not the one a list shown earlier had', async () => {
+		const api = listing([prototype('v1', 'v2')], [prototype('v1', 'v2', 'v3')]);
+		expect(await latestReview(api, 'alert-history')).toEqual({ prototypeId: 'alert-history', name: 'v2', title: 'Alert history · Version 2' });
 		// A version made in a terminal meanwhile: asked again, it is there.
 		expect((await latestReview(api, 'alert-history')).name).toBe('v3');
-		expect(api.listProjects).toHaveBeenCalledTimes(2);
+		expect(api.listPrototypes).toHaveBeenCalledTimes(2);
 	});
 
 	it('is the highest number, not the last written: Version 10 comes after Version 9', async () => {
-		const api = listing([project('v9', 'v10', 'v2')]);
+		const api = listing([prototype('v9', 'v10', 'v2')]);
 		expect((await latestReview(api, 'alert-history')).name).toBe('v10');
 	});
 
-	it('says so, opening nothing, when the project has no prototype or is not there', async () => {
-		await expect(latestReview(listing([project()]), 'alert-history')).rejects.toThrow('alert-history has no prototype to open.');
-		await expect(latestReview(listing([project('v1')]), 'maps')).rejects.toThrow('maps has no prototype to open.');
+	it('says so, opening nothing, when the prototype has no prototype or is not there', async () => {
+		await expect(latestReview(listing([prototype()]), 'alert-history')).rejects.toThrow('alert-history has no prototype to open.');
+		await expect(latestReview(listing([prototype('v1')]), 'maps')).rejects.toThrow('maps has no prototype to open.');
 	});
 });
 
 describe('a review tab’s answers to its page', () => {
-	const review = { projectId: 'demo', name: 'v1', title: 'Demo · Version 1' };
+	const review = { prototypeId: 'demo', name: 'v1', title: 'Demo · Version 1' };
 	const comment = (thread: number, id: number) => ({ thread, id, body: 'Bigger' });
 	const deps = () => {
 		const routes = new Map<InvokeName, Route>([
@@ -538,7 +538,7 @@ describe('a review tab’s answers to its page', () => {
 		expect(d.address).toHaveBeenCalledTimes(2);
 	});
 
-	it('read and comment only on this review’s project, on any of its prototypes: not another project’s, whatever it is called', async () => {
+	it('read and comment only on this review’s prototype, on any of its versions: not another prototype’s, whatever it is called', async () => {
 		const { ask } = tab();
 		expect(await ask('readComments', ['demo', 'prototype/demo/v2'])).toMatchObject({ ok: true });
 		for (const args of [
@@ -653,7 +653,7 @@ describe('the review tabs', () => {
 		};
 	};
 
-	it('are one for each project: opening another of its prototypes shows it in the same tab, and a closed tab is made again', async () => {
+	it('are one for each prototype: opening another of its versions shows it in the same tab, and a closed tab is made again', async () => {
 		const vs = fakeVsCode();
 		const built: string[] = [];
 		const reviews = new Reviews({
@@ -662,15 +662,15 @@ describe('the review tabs', () => {
 			serve: async () => 'http://127.0.0.1:5000/review/',
 			answer: async () => ({ ok: true, value: null }),
 		});
-		await reviews.open({ records: '/d/prototypes', projectId: 'demo', name: 'v1', title: 'Demo · Version 1' });
-		await reviews.open({ records: '/d/prototypes', projectId: 'demo', name: 'v3', title: 'Demo · Version 3' });
+		await reviews.open({ records: '/d/prototypes', prototypeId: 'demo', name: 'v1', title: 'Demo · Version 1' });
+		await reviews.open({ records: '/d/prototypes', prototypeId: 'demo', name: 'v3', title: 'Demo · Version 3' });
 		expect(vs.panels.map((p) => p.title)).toEqual(['Demo · Version 3']);
 		expect(vs.panels[0]!.html).toContain('http://127.0.0.1:5000/review/prototype/demo/v3/');
 		expect(vs.panels[0]!.revealed).toBe(1);
 		// Built again each time, so it is the records as they are.
 		expect(built).toEqual(['/d/prototypes', '/d/prototypes']);
 		vs.panels[0]!.disposed();
-		await reviews.open({ records: '/d/prototypes', projectId: 'demo', name: 'v1', title: 'Demo · Version 1' });
+		await reviews.open({ records: '/d/prototypes', prototypeId: 'demo', name: 'v1', title: 'Demo · Version 1' });
 		expect(vs.panels).toHaveLength(2);
 	});
 
@@ -690,11 +690,11 @@ describe('the review tabs', () => {
 					return { close: () => void (w.closed = true) };
 				},
 			});
-			const demo = { records: '/d/prototypes', projectId: 'demo', name: 'v1', title: 'Demo · Version 1' };
+			const demo = { records: '/d/prototypes', prototypeId: 'demo', name: 'v1', title: 'Demo · Version 1' };
 			return { vs, reviews, watches, built, demo };
 		};
 
-		it('watches its project’s pages while a tab is open, builds the site again when one is saved, and tells the page', async () => {
+		it('watches its prototype’s pages while a tab is open, builds the site again when one is saved, and tells the page', async () => {
 			const { vs, reviews, watches, built, demo } = watched();
 			await reviews.open(demo);
 			expect(watches.map((w) => w.dir)).toEqual(['/d/prototypes/demo']);
@@ -716,7 +716,7 @@ describe('the review tabs', () => {
 			]);
 		});
 
-		it('stops watching when its tab is closed, by the person or with its project, and a save then builds and tells nothing', async () => {
+		it('stops watching when its tab is closed, by the person or with its prototype, and a save then builds and tells nothing', async () => {
 			const { vs, reviews, watches, built, demo } = watched();
 			await reviews.open(demo);
 			vs.panels[0]!.disposed();
@@ -745,7 +745,7 @@ describe('the review tabs', () => {
 				watch: (_dir, fn) => ((onPage = fn), { close: () => undefined }),
 				log: { info: (m: string) => void logged.push(m) },
 			});
-			await reviews.open({ records: '/d/prototypes', projectId: 'demo', name: 'v1', title: 'Demo · Version 1' });
+			await reviews.open({ records: '/d/prototypes', prototypeId: 'demo', name: 'v1', title: 'Demo · Version 1' });
 			failing = true;
 			onPage('v1');
 			await vi.waitFor(() => expect(logged.join('\n')).toContain('could not be brought up to date: disk full'));
@@ -753,7 +753,7 @@ describe('the review tabs', () => {
 		});
 	});
 
-	it('close a deleted project’s tab and its browser keys, leaving another project’s', async () => {
+	it('close a deleted prototype’s tab and its browser keys, leaving another prototype’s', async () => {
 		const vs = fakeVsCode();
 		const reviews = new Reviews({
 			vscode: vs.api as never,
@@ -761,9 +761,9 @@ describe('the review tabs', () => {
 			serve: async () => 'http://127.0.0.1:5000/review/',
 			answer: async () => ({ ok: true, value: [] }),
 		});
-		await reviews.open({ records: '/d/prototypes', projectId: 'demo', name: 'v1', title: 'Demo · Version 1' });
-		await reviews.open({ records: '/d/prototypes', projectId: 'other', name: 'v1', title: 'Other · Version 1' });
-		const url = await reviews.inBrowser({ records: '/d/prototypes', projectId: 'demo', name: 'v1', title: 'Demo · Version 1' });
+		await reviews.open({ records: '/d/prototypes', prototypeId: 'demo', name: 'v1', title: 'Demo · Version 1' });
+		await reviews.open({ records: '/d/prototypes', prototypeId: 'other', name: 'v1', title: 'Other · Version 1' });
+		const url = await reviews.inBrowser({ records: '/d/prototypes', prototypeId: 'demo', name: 'v1', title: 'Demo · Version 1' });
 		const key = url.split('#dsnr-key-')[1] as string;
 		reviews.close('demo');
 		expect(reviews.inUse()).toEqual(['other']);
@@ -779,7 +779,7 @@ describe('the review tabs', () => {
 			serve: async () => 'http://127.0.0.1:5000/review/',
 			answer: async () => ({ ok: true, value: null }),
 		});
-		expect(await reviews.address({ records: '/d/prototypes', projectId: 'demo', name: 'v2', title: 'Demo · Version 2' })).toBe(
+		expect(await reviews.address({ records: '/d/prototypes', prototypeId: 'demo', name: 'v2', title: 'Demo · Version 2' })).toBe(
 			'http://127.0.0.1:5000/review/prototype/demo/v2/',
 		);
 		expect(built).toEqual(['/d/prototypes']);
@@ -797,7 +797,7 @@ describe('the review tabs', () => {
 				return { ok: true, value: [] };
 			},
 		});
-		const demo = { projectId: 'demo', name: 'v3', title: 'Demo · Version 3' };
+		const demo = { prototypeId: 'demo', name: 'v3', title: 'Demo · Version 3' };
 		const first = await reviews.inBrowser({ records: '/d/prototypes', ...demo });
 		const second = await reviews.inBrowser({ records: '/d/prototypes', ...demo });
 		// The key is in the fragment, which is never sent to a server.
@@ -830,7 +830,7 @@ describe('the review tabs', () => {
 				return { ok: true, value: null };
 			},
 		});
-		const url = await reviews.inBrowser({ records: '/d/prototypes', projectId: 'demo', name: 'v1', title: 'Demo · Version 1' });
+		const url = await reviews.inBrowser({ records: '/d/prototypes', prototypeId: 'demo', name: 'v1', title: 'Demo · Version 1' });
 		const key = url.split('#dsnr-key-')[1] as string;
 		const ask = { dsnr: 'ask', id: 1, name: 'readComments', args: [] };
 		expect(await reviews.answerBrowser('A'.repeat(22), ask)).toBeNull();
@@ -839,7 +839,7 @@ describe('the review tabs', () => {
 		expect(await reviews.answerBrowser(key, { ...ask, extra: true })).toBeNull();
 		expect(await reviews.answerBrowser(key, 'readComments')).toBeNull();
 		expect(answers).toBe(0);
-		expect(await reviews.address({ records: '/d/prototypes', projectId: 'demo', name: 'v1', title: 'Demo · Version 1' })).not.toContain('#');
+		expect(await reviews.address({ records: '/d/prototypes', prototypeId: 'demo', name: 'v1', title: 'Demo · Version 1' })).not.toContain('#');
 	});
 
 	it('answer a browser that asks with its key through this machine’s server, as the review’s tab is answered', async () => {
@@ -850,10 +850,10 @@ describe('the review tabs', () => {
 				vscode: fakeVsCode().api as never,
 				build: () => undefined,
 				serve: async () => `${app}/review/`,
-				answer: async (review, name) => ({ ok: true, value: `${name} on ${review.projectId}` }),
+				answer: async (review, name) => ({ ok: true, value: `${name} on ${review.prototypeId}` }),
 			});
 			server.answerAsks((key, ask) => reviews.answerBrowser(key, ask));
-			const url = await reviews.inBrowser({ records: '/d/prototypes', projectId: 'demo', name: 'v1', title: 'Demo · Version 1' });
+			const url = await reviews.inBrowser({ records: '/d/prototypes', prototypeId: 'demo', name: 'v1', title: 'Demo · Version 1' });
 			const key = url.split('#dsnr-key-')[1] as string;
 			const asked = (k: string) =>
 				fetch(`${app}/_dsnr/ask`, {
@@ -869,7 +869,7 @@ describe('the review tabs', () => {
 		}
 	});
 
-	it('say which projects are in use, by a tab or a browser’s key, so nothing they show is removed under them', async () => {
+	it('say which prototypes are in use, by a tab or a browser’s key, so nothing they show is removed under them', async () => {
 		const vs = fakeVsCode();
 		const reviews = new Reviews({
 			vscode: vs.api as never,
@@ -878,8 +878,8 @@ describe('the review tabs', () => {
 			answer: async () => ({ ok: true, value: null }),
 		});
 		expect(reviews.inUse()).toEqual([]);
-		await reviews.open({ records: '/d/prototypes', projectId: 'demo', name: 'v1', title: 'Demo · Version 1' });
-		await reviews.inBrowser({ records: '/d/prototypes', projectId: 'other', name: 'v1', title: 'Other · Version 1' });
+		await reviews.open({ records: '/d/prototypes', prototypeId: 'demo', name: 'v1', title: 'Demo · Version 1' });
+		await reviews.inBrowser({ records: '/d/prototypes', prototypeId: 'other', name: 'v1', title: 'Other · Version 1' });
 		expect(reviews.inUse().sort()).toEqual(['demo', 'other']);
 		// A tab closed is no longer in use; a browser's key is, until VS Code reloads.
 		vs.panels[0]!.disposed();
@@ -895,15 +895,15 @@ describe('the review tabs', () => {
 			answer: async () => ({ ok: true, value: null }),
 		});
 		expect(reviews.active()).toBeUndefined();
-		await reviews.open({ records: '/d/prototypes', projectId: 'demo', name: 'v3', title: 'Demo · Version 3' });
-		await reviews.open({ records: '/d/prototypes', projectId: 'other', name: 'v1', title: 'Other · Version 1' });
+		await reviews.open({ records: '/d/prototypes', prototypeId: 'demo', name: 'v3', title: 'Demo · Version 3' });
+		await reviews.open({ records: '/d/prototypes', prototypeId: 'other', name: 'v1', title: 'Other · Version 1' });
 		vs.panels[1]!.active = false;
-		expect(reviews.active()).toEqual({ projectId: 'demo', name: 'v3', title: 'Demo · Version 3' });
+		expect(reviews.active()).toEqual({ prototypeId: 'demo', name: 'v3', title: 'Demo · Version 3' });
 	});
 });
 
 describe('the review tabs in front', () => {
-	it('are the projects whose tab is visible, and are said again each time one opens, changes or closes', async () => {
+	it('are the prototypes whose tab is visible, and are said again each time one opens, changes or closes', async () => {
 		const panels = new Map<string, { visible: boolean; changed: () => void; disposed: () => void }>();
 		const told: string[][] = [];
 		const reviews: Reviews = new Reviews({
@@ -932,8 +932,8 @@ describe('the review tabs in front', () => {
 			answer: async () => ({ ok: true, value: null }),
 			onShown: () => told.push(reviews.shown()),
 		});
-		await reviews.open({ records: '/d', projectId: 'demo', name: 'v1', title: 'demo' });
-		await reviews.open({ records: '/d', projectId: 'other', name: 'v1', title: 'other' });
+		await reviews.open({ records: '/d', prototypeId: 'demo', name: 'v1', title: 'demo' });
+		await reviews.open({ records: '/d', prototypeId: 'other', name: 'v1', title: 'other' });
 		expect(told.at(-1)).toEqual(['demo', 'other']);
 		panels.get('demo')!.visible = false;
 		panels.get('demo')!.changed();
@@ -956,10 +956,10 @@ describe('what the extension asks the panel to show', () => {
 		panels.add(a.webview);
 		await panels.ready(a.webview);
 		expect(a.posted).toEqual([{ type: 'shared', name: 'tabs', value: NO_TABS_SHOWN }]);
-		const front = { projects: ['demo'], components: ['src/FSButton.stories.tsx'] };
+		const front = { prototypes: ['demo'], components: ['src/FSButton.stories.tsx'] };
 		tabs.set(front);
 		expect(a.posted.at(-1)).toEqual({ type: 'shared', name: 'tabs', value: front });
-		tabs.set({ projects: ['demo'], components: ['src/FSButton.stories.tsx'] });
+		tabs.set({ prototypes: ['demo'], components: ['src/FSButton.stories.tsx'] });
 		expect(a.posted).toHaveLength(2);
 		const b = webview();
 		panels.add(b.webview);
@@ -971,7 +971,7 @@ describe('what the extension asks the panel to show', () => {
 		const panels = new Panels();
 		const a = webview();
 		panels.add(a.webview);
-		panels.show({ type: 'open-dialog', dialog: { kind: 'assign', projectId: 'demo' } });
+		panels.show({ type: 'open-dialog', dialog: { kind: 'assign', prototypeId: 'demo' } });
 		panels.show({ type: 'open-dialog', dialog: { kind: 'sync' } });
 		expect(a.posted).toEqual([]);
 		await panels.ready(a.webview);
@@ -1062,11 +1062,11 @@ describe('the bridge', () => {
 		const posted: unknown[] = [];
 		const failed = vi.fn();
 		const tables = {
-			core: new Map<InvokeName, Route>([['listProjects', async () => ({ ok: true, value: [] })]]),
+			core: new Map<InvokeName, Route>([['listPrototypes', async () => ({ ok: true, value: [] })]]),
 			asks: new Map([['openPrimitives', async () => ({ ok: true, value: null })]]) as never,
 		};
 		const page = { postMessage: async (m: unknown) => void posted.push(m) } as never;
-		await answerCall(page, tables, { type: 'call', id: 3, name: 'listProjects', args: [] }, failed);
+		await answerCall(page, tables, { type: 'call', id: 3, name: 'listPrototypes', args: [] }, failed);
 		await answerCall(page, tables, { type: 'call', id: 4, name: 'branchesWithSetup', args: [] }, failed);
 		await answerCall(page, tables, { type: 'call', id: 5, name: 'openPrimitives', args: [] }, failed);
 		await answerCall(page, tables, { type: 'call', id: 6, name: 'openChanges', args: [] }, failed);
@@ -1086,9 +1086,9 @@ describe('the bridge', () => {
 		const panels = new Panels();
 		const posted: unknown[] = [];
 		panels.add({ postMessage: async (m: unknown) => void posted.push(m) } as never);
-		const routes = new Map<InvokeName, Route>([['listProjects', async () => ({ ok: true, value: ['p'] })]]);
+		const routes = new Map<InvokeName, Route>([['listPrototypes', async () => ({ ok: true, value: ['p'] })]]);
 		const api = hostApi(() => routes, panels);
-		expect(await api.listProjects()).toEqual({ ok: true, value: ['p'] });
+		expect(await api.listPrototypes()).toEqual({ ok: true, value: ['p'] });
 		expect(await api.branchesWithSetup('/p')).toEqual({ ok: false, error: 'branchesWithSetup is not answered in VS Code.' });
 		const heard: unknown[] = [];
 		const stop = api.onRunLog((l) => void heard.push(l));

@@ -30,7 +30,7 @@ const config = (html = '<!doctype html><title>Cameras</title><h1>Cameras</h1>'):
 	const page = join(dir, 'v1.html');
 	writeFileSync(page, html);
 	return {
-		projectId: 'demo',
+		prototypeId: 'demo',
 		name: 'v1',
 		of: "demo v1's page",
 		page,

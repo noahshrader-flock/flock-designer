@@ -4,11 +4,11 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { contentHashOf } from '../src/core/services/prototypes/prototype';
 import { memoryStore, type Fn } from './fixtures';
-import { type CoverDeps, builtHere, ensureCovers, isBlank } from '../src/core/services/prototypes/projectCovers';
+import { type CoverDeps, builtHere, ensureCovers, isBlank } from '../src/core/services/prototypes/prototypeCovers';
 import { coverPath } from '../src/shared/designPaths';
 
 const record = (name: string, more: Record<string, unknown> = {}) => ({
-	projectId: 'demo',
+	prototypeId: 'demo',
 	name,
 	branch: `prototype/demo/${name}`,
 	commit: null,
@@ -32,18 +32,18 @@ beforeEach(() => {
 	pages = { 'demo/v1': PAGE };
 	deps = {
 		store: () => mem.store,
-		page: (projectId, name) => pages[`${projectId}/${name}`] ?? null,
-		serve: vi.fn(async (projectId: string, name: string) => `http://127.0.0.1:1/${projectId}/${name}/`),
+		page: (prototypeId, name) => pages[`${prototypeId}/${name}`] ?? null,
+		serve: vi.fn(async (prototypeId: string, name: string) => `http://127.0.0.1:1/${prototypeId}/${name}/`),
 		draw: vi.fn(async () => JPEG),
 		tried: new Set(),
 	};
 });
-const built = (...names: string[]) => names.map((name) => ({ projectId: 'demo', name }));
+const built = (...names: string[]) => names.map((name) => ({ prototypeId: 'demo', name }));
 
 describe('ensureCovers', () => {
 	it('draws a prototype built here, writes its picture, then says so on its record', async () => {
 		const made = await ensureCovers(deps, built('v1'));
-		expect(made).toEqual([{ projectId: 'demo', name: 'v1', cover: HASH }]);
+		expect(made).toEqual([{ prototypeId: 'demo', name: 'v1', cover: HASH }]);
 		expect(deps.draw).toHaveBeenCalledWith('http://127.0.0.1:1/demo/v1/');
 		expect(mem.files[coverPath('demo', 'v1', HASH)]).toEqual(JPEG);
 		expect(coverOf(mem.files, 'v1')).toBe(HASH);
@@ -124,10 +124,10 @@ describe('ensureCovers', () => {
 		expect(most).toBe(1);
 	});
 
-	it('skips a project whose records cannot be read, and goes on to the next', async () => {
+	it('skips a prototype whose records cannot be read, and goes on to the next', async () => {
 		mem.files['prototypes/other/work.json'] = '{not json';
-		const made = await ensureCovers(deps, [{ projectId: 'other', name: 'v1' }, ...built('v1')]);
-		expect(made.map((m) => m.projectId)).toEqual(['demo']);
+		const made = await ensureCovers(deps, [{ prototypeId: 'other', name: 'v1' }, ...built('v1')]);
+		expect(made.map((m) => m.prototypeId)).toEqual(['demo']);
 	});
 });
 
@@ -146,8 +146,8 @@ describe('builtHere', () => {
 		writeFileSync(join(root, '_shared', 'v1.html'), 'x');
 		writeFileSync(join(root, 'stray.html'), 'x');
 		expect(builtHere(root)).toEqual([
-			{ projectId: 'demo', name: 'v1' },
-			{ projectId: 'demo', name: 'v2' },
+			{ prototypeId: 'demo', name: 'v1' },
+			{ prototypeId: 'demo', name: 'v2' },
 		]);
 	});
 

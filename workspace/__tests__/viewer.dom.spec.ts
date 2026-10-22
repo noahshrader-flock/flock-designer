@@ -176,7 +176,7 @@ describe('a page from this machine with no key of DSNR’s (BROWSER_COMMENTS_PLA
 });
 
 describe("the page's bar", () => {
-	it("is the app's own: the way back to all prototypes, the project, and a dropdown for the version", async () => {
+	it("is the app's own: the way back to all prototypes, the prototype, and a dropdown for the version", async () => {
 		await open();
 		expect(document.querySelector('a[href="../../"]')).not.toBeNull();
 		expect(document.body.textContent).toContain('Alert history');

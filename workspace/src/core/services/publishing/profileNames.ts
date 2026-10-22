@@ -1,5 +1,5 @@
 import { isBot, mergePeople } from '../../../shared/people';
-import type { Person, Project } from '../../../shared/contract';
+import type { Person, Prototype } from '../../../shared/contract';
 
 /**
  * One name for a person: their GitHub profile name, else their login, else their git name. Git names are whatever each
@@ -33,15 +33,15 @@ export class ProfileNames {
 		return mergePeople(resolved);
 	}
 
-	async nameEveryone(projects: Project[]): Promise<Project[]> {
+	async nameEveryone(prototypes: Prototype[]): Promise<Prototype[]> {
 		// All at once, so a person who is in several places is looked up once for the list, not once each.
 		return Promise.all(
-			projects.map(async (project) => {
+			prototypes.map(async (prototype) => {
 				const [people, work] = await Promise.all([
-					this.named(project.people),
-					Promise.all(project.work.map(async (it) => ({ ...it, contributors: await this.named(it.contributors) }))),
+					this.named(prototype.people),
+					Promise.all(prototype.work.map(async (it) => ({ ...it, contributors: await this.named(it.contributors) }))),
 				]);
-				return { ...project, people, work };
+				return { ...prototype, people, work };
 			}),
 		);
 	}

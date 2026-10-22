@@ -8,9 +8,9 @@ import {
 	designRepositoryOf,
 	isDesignRepository,
 	recordsRootFor,
-} from '../src/core/services/projects/discovery';
-import { readDescriptor } from '../src/core/services/projects/descriptor';
-import { findContext } from '../src/core/services/projects/findContext';
+} from '../src/core/services/products/discovery';
+import { readDescriptor } from '../src/core/services/products/descriptor';
+import { findContext } from '../src/core/services/products/findContext';
 import { DESIGN_REPO } from '../src/shared/config';
 import { makeProductFiles } from './fixtures';
 
@@ -28,7 +28,7 @@ const productNaming = (designRepository?: string) => {
 		writeFileSync(file, JSON.stringify({ ...descriptor, designRepository }));
 	}
 };
-/** A clone of a design repository: a git repository with its agent guide and projects. */
+/** A clone of a design repository: a git repository with its agent guide and prototypes. */
 const designRepository = (dir: string) => {
 	mkdirSync(join(dir, '.git'), { recursive: true });
 	mkdirSync(join(dir, 'agents'), { recursive: true });
@@ -80,7 +80,7 @@ describe('the design repository a product belongs to', () => {
 			'DSNR could not find cheq/cheq-designer, the design repository cheq-console belongs to. Clone it beside cheq-console, or run DSNR: Locate the design repository.';
 		expect(designRepositoryMissing(product)).toBe(said);
 		expect((await findContext({ folders: [product] })).missing).toContain(
-			`${said} Until then its projects are read from GitHub when you are signed in.`,
+			`${said} Until then its prototypes are read from GitHub when you are signed in.`,
 		);
 	});
 
@@ -95,7 +95,7 @@ describe('the design repository a product belongs to', () => {
 		);
 	});
 
-	it('takes a picked folder only when it is a git repository with the agent guide, never a product with a projects folder', () => {
+	it('takes a picked folder only when it is a git repository with the agent guide, never a product with a prototypes folder', () => {
 		expect(isDesignRepository(designRepository(join(base, 'a')))).toBe(true);
 		// An Angular workspace keeps its apps in prototypes/: a product, not a design repository.
 		mkdirSync(join(base, 'b', '.git'), { recursive: true });

@@ -2,7 +2,7 @@ import { type Server, createServer } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { chromeHeadless, composedPicture, pictureOf } from '../src/core/services/browser/chromeHeadless';
-import { COVER_BUDGET, isBlank } from '../src/core/services/prototypes/projectCovers';
+import { COVER_BUDGET, isBlank } from '../src/core/services/prototypes/prototypeCovers';
 import { decodePng } from '../src/core/services/prototypes/png';
 import { readDrawn } from '../src/core/services/designSystem/storyDrawing';
 import { resultOf } from '../src/core/services/accessibility/accessibilityCheck';

@@ -2,32 +2,33 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import type { Project, ProjectWork } from '../src/shared/contract';
+import type { Prototype, PrototypeWork } from '../src/shared/contract';
 import { recordLabel } from '../src/shared/brief';
 import {
 	lastUpdated,
-	matchesProject,
-	mergeProjects,
-	newestProjectFirst,
-	sortProjects,
+	matchesPrototype,
+	mergePrototypes,
+	newestPrototypeFirst,
+	sortPrototypes,
 	startedAt,
 	unionLocal,
 	coverToShow,
-	projectOpening,
+	prototypeOpening,
 	withCovers,
-} from '../src/shared/projectList';
+} from '../src/shared/prototypeList';
 import { isVersionName, commentsFromOthers, nextVersionName, parseVersion, versionName } from '../src/shared/versionNames';
-import { PROJECT_ID, asDate, asRoute, slugify, asCover } from '../src/shared/validate';
+import { PROTOTYPE_ID, asDate, asRoute, slugify, asCover } from '../src/shared/validate';
 import { codeLink, workLabel, workOf } from '../src/shared/work';
-import { readFolderProjects } from '../src/core/services/projects/localProjects';
-import { aProject, projectWork } from './fixtures';
+import { readFolderPrototypes } from '../src/core/services/prototypes/localPrototypes';
+import { aPrototype, prototypeWork } from './fixtures';
 
-const it1 = (over: Partial<ProjectWork> = {}): ProjectWork => projectWork({ name: 'v1', branch: 'prototype/alpha/v1', ...over });
-const project = (id: string, over: Partial<Project> = {}): Project => aProject({ id, work: [it1({ branch: `prototype/${id}/v1` })], ...over });
+const it1 = (over: Partial<PrototypeWork> = {}): PrototypeWork => prototypeWork({ name: 'v1', branch: 'prototype/alpha/v1', ...over });
+const prototype = (id: string, over: Partial<Prototype> = {}): Prototype =>
+	aPrototype({ id, work: [it1({ branch: `prototype/${id}/v1` })], ...over });
 
-describe('mergeProjects', () => {
+describe('mergePrototypes', () => {
 	it('shows work built here that GitHub has never heard of, and says so', () => {
-		const merged = mergeProjects([project('shared')], [project('mine')]);
+		const merged = mergePrototypes([prototype('shared')], [prototype('mine')]);
 		expect(merged.map((p) => [p.id, p.localOnly])).toEqual([
 			['mine', true],
 			['shared', false],
@@ -35,10 +36,10 @@ describe('mergeProjects', () => {
 		expect(merged[0]?.work[0]?.localOnly).toBe(true);
 	});
 
-	it('does not duplicate a project both sides know, and lets GitHub lead', () => {
-		const merged = mergeProjects(
-			[project('alpha', { title: 'Alpha, as shared', work: [it1({ openComments: 3 })] })],
-			[project('alpha', { title: 'Alpha, locally' })],
+	it('does not duplicate a prototype both sides know, and lets GitHub lead', () => {
+		const merged = mergePrototypes(
+			[prototype('alpha', { title: 'Alpha, as shared', work: [it1({ openComments: 3 })] })],
+			[prototype('alpha', { title: 'Alpha, locally' })],
 		);
 		expect(merged).toHaveLength(1);
 		expect(merged[0]).toMatchObject({ title: 'Alpha, as shared', localOnly: false });
@@ -46,66 +47,69 @@ describe('mergeProjects', () => {
 	});
 
 	it('shows the picture this machine has just made before GitHub has it, and GitHub’s when this machine has none', () => {
-		const made = mergeProjects([project('alpha', { work: [it1({ cover: null })] })], [project('alpha', { work: [it1({ cover: 'bbbbbbbbbbbb' })] })]);
+		const made = mergePrototypes(
+			[prototype('alpha', { work: [it1({ cover: null })] })],
+			[prototype('alpha', { work: [it1({ cover: 'bbbbbbbbbbbb' })] })],
+		);
 		expect(made[0]?.work[0]?.cover).toBe('bbbbbbbbbbbb');
-		const shared = mergeProjects(
-			[project('alpha', { work: [it1({ cover: 'aaaaaaaaaaaa' })] })],
-			[project('alpha', { work: [it1({ cover: null })] })],
+		const shared = mergePrototypes(
+			[prototype('alpha', { work: [it1({ cover: 'aaaaaaaaaaaa' })] })],
+			[prototype('alpha', { work: [it1({ cover: null })] })],
 		);
 		expect(shared[0]?.work[0]?.cover).toBe('aaaaaaaaaaaa');
 	});
 
-	it('adds a version made here to a project that is already shared', () => {
-		const remote = project('alpha', { work: [it1({ branch: 'prototype/alpha/v1' })] });
-		const local = project('alpha', { work: [it1({ name: 'v2', branch: 'prototype/alpha/v2' }), it1({ branch: 'prototype/alpha/v1' })] });
-		const [m] = mergeProjects([remote], [local]);
+	it('adds a version made here to a prototype that is already shared', () => {
+		const remote = prototype('alpha', { work: [it1({ branch: 'prototype/alpha/v1' })] });
+		const local = prototype('alpha', { work: [it1({ name: 'v2', branch: 'prototype/alpha/v2' }), it1({ branch: 'prototype/alpha/v1' })] });
+		const [m] = mergePrototypes([remote], [local]);
 		expect(m?.work.map((i) => [i.name, i.localOnly])).toEqual([
 			['v2', true],
 			['v1', false],
 		]);
 	});
 
-	it('uses the local brief to name a project GitHub only knows by its id', () => {
-		const [m] = mergeProjects([project('alpha')], [project('alpha', { title: 'Alpha, with a real name' })]);
+	it('uses the local brief to name a prototype GitHub only knows by its id', () => {
+		const [m] = mergePrototypes([prototype('alpha')], [prototype('alpha', { title: 'Alpha, with a real name' })]);
 		expect(m?.title).toBe('Alpha, with a real name');
 	});
 
 	it('still lists what is local when nothing could be fetched from GitHub', () => {
-		expect(mergeProjects([], [project('mine')]).map((p) => p.id)).toEqual(['mine']);
+		expect(mergePrototypes([], [prototype('mine')]).map((p) => p.id)).toEqual(['mine']);
 	});
 
 	it('combines the people on both sides', () => {
-		const [m] = mergeProjects(
-			[project('alpha', { people: [{ name: 'Ada', login: 'ada' }] })],
-			[project('alpha', { people: [{ name: 'Grace', login: null }] })],
+		const [m] = mergePrototypes(
+			[prototype('alpha', { people: [{ name: 'Ada', login: 'ada' }] })],
+			[prototype('alpha', { people: [{ name: 'Grace', login: null }] })],
 		);
 		expect(m?.people.map((p) => p.name).sort()).toEqual(['Ada', 'Grace']);
 	});
 });
 
-const started = (id: string, ...dates: Array<string | null>): Project =>
-	project(id, { work: dates.map((d, i) => it1({ name: `v${i + 1}`, branch: `prototype/${id}/v${i + 1}`, createdAt: d })) });
+const started = (id: string, ...dates: Array<string | null>): Prototype =>
+	prototype(id, { work: dates.map((d, i) => it1({ name: `v${i + 1}`, branch: `prototype/${id}/v${i + 1}`, createdAt: d })) });
 
-describe('the order of the project list', () => {
-	it('puts the most recently started project first', () => {
-		const merged = mergeProjects(
+describe('the order of the prototype list', () => {
+	it('puts the most recently started prototype first', () => {
+		const merged = mergePrototypes(
 			[started('old', '2026-09-01T10:00:00Z'), started('new', '2026-10-05T10:00:00Z'), started('mid', '2026-09-20T10:00:00Z')],
 			[],
 		);
 		expect(merged.map((p) => p.id)).toEqual(['new', 'mid', 'old']);
 	});
 
-	it('dates a project by its first version, so adding work to an old project does not make it new', () => {
-		const merged = mergeProjects(
+	it('dates a prototype by its first version, so adding work to an old prototype does not make it new', () => {
+		const merged = mergePrototypes(
 			[started('long-running', '2026-09-01T00:00:00Z', '2026-10-05T00:00:00Z', '2026-10-06T00:00:00Z'), started('fresh', '2026-10-01T00:00:00Z')],
 			[],
 		);
 		expect(merged.map((p) => p.id)).toEqual(['fresh', 'long-running']);
-		expect(startedAt(merged[1] as Project)).toBe('2026-09-01T00:00:00Z');
+		expect(startedAt(merged[1] as Prototype)).toBe('2026-09-01T00:00:00Z');
 	});
 
 	it('compares moments, not text, so different offsets and formats order correctly', () => {
-		const merged = mergeProjects(
+		const merged = mergePrototypes(
 			[started('a', '2026-10-05T23:00:00-04:00'), started('b', '2026-10-06T02:00:00Z'), started('c', '2026-10-06T04:00:00Z')],
 			[],
 		);
@@ -113,35 +117,35 @@ describe('the order of the project list', () => {
 		expect(merged.map((p) => p.id)).toEqual(['c', 'a', 'b']);
 	});
 
-	it('puts a project whose start is unknown last, and breaks every tie by title so the list never shuffles', () => {
+	it('puts a prototype whose start is unknown last, and breaks every tie by title so the list never shuffles', () => {
 		const list = [started('zeta', null), started('beta', '2026-10-01T00:00:00Z'), started('alpha', '2026-10-01T00:00:00Z'), started('omega', null)];
-		expect(mergeProjects(list, []).map((p) => p.id)).toEqual(['alpha', 'beta', 'omega', 'zeta']);
-		expect(mergeProjects([...list].reverse(), []).map((p) => p.id)).toEqual(['alpha', 'beta', 'omega', 'zeta']);
+		expect(mergePrototypes(list, []).map((p) => p.id)).toEqual(['alpha', 'beta', 'omega', 'zeta']);
+		expect(mergePrototypes([...list].reverse(), []).map((p) => p.id)).toEqual(['alpha', 'beta', 'omega', 'zeta']);
 	});
 
-	it('orders GitHub and local-only projects together', () => {
-		const merged = mergeProjects([started('shared', '2026-09-01T00:00:00Z')], [started('mine', '2026-10-05T00:00:00Z')]);
+	it('orders GitHub and local-only prototypes together', () => {
+		const merged = mergePrototypes([started('shared', '2026-09-01T00:00:00Z')], [started('mine', '2026-10-05T00:00:00Z')]);
 		expect(merged.map((p) => p.id)).toEqual(['mine', 'shared']);
 	});
 
-	it("takes a date from the local side when GitHub has none, rather than losing the project's place", () => {
-		const merged = mergeProjects([started('alpha', null), started('beta', '2026-09-15T00:00:00Z')], [started('alpha', '2026-10-05T00:00:00Z')]);
+	it("takes a date from the local side when GitHub has none, rather than losing the prototype's place", () => {
+		const merged = mergePrototypes([started('alpha', null), started('beta', '2026-09-15T00:00:00Z')], [started('alpha', '2026-10-05T00:00:00Z')]);
 		expect(merged.map((p) => p.id)).toEqual(['alpha', 'beta']);
 	});
 
 	it('takes a date from a branch when the record has none', () => {
 		const records = [started('alpha', null)];
 		const branches = [started('alpha', '2026-10-05T00:00:00Z')];
-		expect(startedAt(unionLocal(records, branches)[0] as Project)).toBe('2026-10-05T00:00:00Z');
+		expect(startedAt(unionLocal(records, branches)[0] as Prototype)).toBe('2026-10-05T00:00:00Z');
 	});
 
 	it('does not let an unreadable date count as a date', () => {
 		expect(['2026-10-05T10:00:00Z', 'yesterday', '', null, 5, undefined].map(asDate)).toEqual(['2026-10-05T10:00:00Z', null, null, null, null, null]);
-		expect(newestProjectFirst(started('a', null), started('b', null))).toBeLessThan(0);
+		expect(newestPrototypeFirst(started('a', null), started('b', null))).toBeLessThan(0);
 	});
 });
 
-describe('reading projects from their folders', () => {
+describe('reading prototypes from their folders', () => {
 	let root: string;
 	beforeEach(() => {
 		root = mkdtempSync(join(tmpdir(), 'fdw-local-'));
@@ -153,9 +157,9 @@ describe('reading projects from their folders', () => {
 		for (const [name, body] of Object.entries(files)) writeFileSync(join(root, id, name), body);
 	};
 	// The rule the app applies to what it shows: a folder with nothing built yet is a notes folder.
-	const inProgress = (dir: string) => readFolderProjects(dir).filter((p) => p.work.length > 0);
+	const inProgress = (dir: string) => readFolderPrototypes(dir).filter((p) => p.work.length > 0);
 
-	it('finds a project from its folder, with its title and work, with nothing registered', () => {
+	it('finds a prototype from its folder, with its title and work, with nothing registered', () => {
 		write('alpha', {
 			'brief.md': '# Alpha prototype\n\nWhy.',
 			'work.json': JSON.stringify([{ name: 'v1', branch: 'prototype/alpha/v1', commit: 'abc', contributors: [{ name: 'Noah', login: 'noah' }] }]),
@@ -189,7 +193,7 @@ describe('reading projects from their folders', () => {
 		expect(Object.fromEntries(p!.work.map((i) => [i.name, i.cover]))).toEqual({ v1: 'aaaaaaaaaaaa', v5: null, v6: null });
 	});
 
-	it('names a project by its id when it has no brief yet', () => {
+	it('names a prototype by its id when it has no brief yet', () => {
 		write('beta', { 'work.json': JSON.stringify([{ name: 'v1', branch: 'prototype/beta/v1' }]) });
 		expect(inProgress(root)[0]?.title).toBe('beta');
 	});
@@ -204,14 +208,14 @@ describe('reading projects from their folders', () => {
 
 	it('returns nothing, not an error, when the design repository is not there', () => {
 		expect(inProgress(join(root, 'nope'))).toEqual([]);
-		expect(readFolderProjects(join(root, 'nope'))).toEqual([]);
+		expect(readFolderPrototypes(join(root, 'nope'))).toEqual([]);
 	});
 
-	it('knows a project an agent has only just started: a folder with a brief and nothing built', () => {
+	it('knows a prototype an agent has only just started: a folder with a brief and nothing built', () => {
 		write('new-view', { 'brief.md': '# A new view\n\nWhy.' });
 		write('_template', { 'brief.md': '# t' });
-		expect(readFolderProjects(root).map((p) => p.id)).toEqual(['new-view']);
-		expect(readFolderProjects(root)[0]).toMatchObject({ title: 'A new view', records: ['brief.md'], work: [] });
+		expect(readFolderPrototypes(root).map((p) => p.id)).toEqual(['new-view']);
+		expect(readFolderPrototypes(root)[0]).toMatchObject({ title: 'A new view', records: ['brief.md'], work: [] });
 		expect(inProgress(root)).toEqual([]);
 	});
 });
@@ -267,8 +271,8 @@ describe('slugify', () => {
 	it('makes an id the core will accept, however long the name', () => {
 		// Never cut mid-word with a trailing hyphen, which the dialog shows as valid and createCodebaseWork rejects.
 		const long = 'Users list inactivity signal for organization administrator review';
-		expect(PROJECT_ID.test(slugify(long))).toBe(true);
-		expect(PROJECT_ID.test(slugify(`${'a'.repeat(59)} b`))).toBe(true);
+		expect(PROTOTYPE_ID.test(slugify(long))).toBe(true);
+		expect(PROTOTYPE_ID.test(slugify(`${'a'.repeat(59)} b`))).toBe(true);
 	});
 
 	it('turns an ordinary name into the expected id', () => {
@@ -353,8 +357,8 @@ describe("a prototype's name: its version", () => {
 	});
 });
 
-describe('matchesProject', () => {
-	const alerts = project('alert-history', {
+describe('matchesPrototype', () => {
+	const alerts = prototype('alert-history', {
 		title: 'Alert history',
 		people: [
 			{ name: 'Noah Shrader', login: 'noahshrader-flock' },
@@ -363,34 +367,34 @@ describe('matchesProject', () => {
 	});
 
 	it('matches everything for an empty search, and for one of only spaces', () => {
-		expect(matchesProject(alerts, '')).toBe(true);
-		expect(matchesProject(alerts, '   ')).toBe(true);
+		expect(matchesPrototype(alerts, '')).toBe(true);
+		expect(matchesPrototype(alerts, '   ')).toBe(true);
 	});
 
 	it('matches a part of the name, the id, or a person, without regard to case', () => {
-		expect(matchesProject(alerts, 'HISTORY')).toBe(true);
-		expect(matchesProject(alerts, 'alert-hist')).toBe(true);
-		expect(matchesProject(alerts, 'noah')).toBe(true);
-		expect(matchesProject(alerts, 'noahshrader-flock')).toBe(true);
-		expect(matchesProject(alerts, 'reviewer')).toBe(true);
+		expect(matchesPrototype(alerts, 'HISTORY')).toBe(true);
+		expect(matchesPrototype(alerts, 'alert-hist')).toBe(true);
+		expect(matchesPrototype(alerts, 'noah')).toBe(true);
+		expect(matchesPrototype(alerts, 'noahshrader-flock')).toBe(true);
+		expect(matchesPrototype(alerts, 'reviewer')).toBe(true);
 	});
 
 	it('needs every word to match, in any order, so narrowing a search narrows the list', () => {
-		expect(matchesProject(alerts, 'history alert')).toBe(true);
-		expect(matchesProject(alerts, 'alert noah')).toBe(true);
-		expect(matchesProject(alerts, 'alert admin')).toBe(false);
+		expect(matchesPrototype(alerts, 'history alert')).toBe(true);
+		expect(matchesPrototype(alerts, 'alert noah')).toBe(true);
+		expect(matchesPrototype(alerts, 'alert admin')).toBe(false);
 	});
 
 	it('matches nothing it does not have, and reads what is typed as text, not as a pattern', () => {
-		expect(matchesProject(alerts, 'roles')).toBe(false);
-		expect(matchesProject(alerts, '.*')).toBe(false);
-		expect(matchesProject(alerts, '(')).toBe(false);
+		expect(matchesPrototype(alerts, 'roles')).toBe(false);
+		expect(matchesPrototype(alerts, '.*')).toBe(false);
+		expect(matchesPrototype(alerts, '(')).toBe(false);
 	});
 });
 
-describe('when a project was last updated', () => {
+describe('when a prototype was last updated', () => {
 	it('is the latest of the activity GitHub knows of and when any version was made', () => {
-		const p = project('alpha', {
+		const p = prototype('alpha', {
 			updatedAt: '2026-10-05T10:00:00Z',
 			work: [it1({ createdAt: '2026-10-07T09:00:00Z' }), it1({ name: 'v2', createdAt: '2026-10-02T09:00:00Z' })],
 		});
@@ -398,51 +402,56 @@ describe('when a project was last updated', () => {
 		expect(lastUpdated({ ...p, updatedAt: '2026-10-09T00:00:00Z' })).toBe('2026-10-09T00:00:00Z');
 	});
 
-	it('is null for a project with nothing dated, and ignores what is not a date', () => {
-		expect(lastUpdated(project('alpha', { work: [] }))).toBeNull();
-		expect(lastUpdated(project('alpha', { updatedAt: 'someday', work: [it1({ createdAt: null })] }))).toBeNull();
+	it('is null for a prototype with nothing dated, and ignores what is not a date', () => {
+		expect(lastUpdated(prototype('alpha', { work: [] }))).toBeNull();
+		expect(lastUpdated(prototype('alpha', { updatedAt: 'someday', work: [it1({ createdAt: null })] }))).toBeNull();
 	});
 });
 
-describe('sorting the projects', () => {
-	const old = project('b-old', { title: 'Banana', updatedAt: '2026-10-01T00:00:00Z', work: [] });
-	const fresh = project('a-new', { title: 'apple', updatedAt: '2026-10-08T00:00:00Z', work: [] });
-	const never = project('c-none', { title: 'Cherry', work: [] });
+describe('sorting the prototypes', () => {
+	const old = prototype('b-old', { title: 'Banana', updatedAt: '2026-10-01T00:00:00Z', work: [] });
+	const fresh = prototype('a-new', { title: 'apple', updatedAt: '2026-10-08T00:00:00Z', work: [] });
+	const never = prototype('c-none', { title: 'Cherry', work: [] });
 
-	it('puts the project with the most recent activity first, and those with none last', () => {
-		expect(sortProjects([never, old, fresh], 'updated').map((p) => p.id)).toEqual(['a-new', 'b-old', 'c-none']);
+	it('puts the prototype with the most recent activity first, and those with none last', () => {
+		expect(sortPrototypes([never, old, fresh], 'updated').map((p) => p.id)).toEqual(['a-new', 'b-old', 'c-none']);
 	});
 
 	it('falls back to the name when two were updated together, so the order never shuffles', () => {
 		const same = { updatedAt: '2026-10-08T00:00:00Z', work: [] };
-		expect(sortProjects([project('z', { title: 'Zed', ...same }), project('m', { title: 'Mid', ...same })], 'updated').map((p) => p.id)).toEqual([
-			'm',
-			'z',
-		]);
+		expect(
+			sortPrototypes([prototype('z', { title: 'Zed', ...same }), prototype('m', { title: 'Mid', ...same })], 'updated').map((p) => p.id),
+		).toEqual(['m', 'z']);
 	});
 
 	it('sorts by name, without regard to case, with the id as the last word', () => {
-		expect(sortProjects([never, old, fresh], 'alphabetical').map((p) => p.title)).toEqual(['apple', 'Banana', 'Cherry']);
-		expect(sortProjects([project('b', { title: 'Same' }), project('a', { title: 'Same' })], 'alphabetical').map((p) => p.id)).toEqual(['a', 'b']);
+		expect(sortPrototypes([never, old, fresh], 'alphabetical').map((p) => p.title)).toEqual(['apple', 'Banana', 'Cherry']);
+		expect(sortPrototypes([prototype('b', { title: 'Same' }), prototype('a', { title: 'Same' })], 'alphabetical').map((p) => p.id)).toEqual([
+			'a',
+			'b',
+		]);
 	});
 
 	it('does not change the list it was given', () => {
 		const list = [never, old, fresh];
-		sortProjects(list, 'alphabetical');
+		sortPrototypes(list, 'alphabetical');
 		expect(list.map((p) => p.id)).toEqual(['c-none', 'b-old', 'a-new']);
 	});
 });
 
-describe('merging when a project was last updated', () => {
+describe('merging when a prototype was last updated', () => {
 	it('keeps the later of GitHub’s and this machine’s', () => {
-		const [m] = mergeProjects([project('alpha', { updatedAt: '2026-10-05T00:00:00Z' })], [project('alpha', { updatedAt: '2026-10-08T00:00:00Z' })]);
+		const [m] = mergePrototypes(
+			[prototype('alpha', { updatedAt: '2026-10-05T00:00:00Z' })],
+			[prototype('alpha', { updatedAt: '2026-10-08T00:00:00Z' })],
+		);
 		expect(m?.updatedAt).toBe('2026-10-08T00:00:00Z');
-		const [n] = mergeProjects([project('alpha', { updatedAt: '2026-10-09T00:00:00Z' })], [project('alpha')]);
+		const [n] = mergePrototypes([prototype('alpha', { updatedAt: '2026-10-09T00:00:00Z' })], [prototype('alpha')]);
 		expect(n?.updatedAt).toBe('2026-10-09T00:00:00Z');
 	});
 });
 
-describe('how a project’s document is named in a menu', () => {
+describe('how a prototype’s document is named in a menu', () => {
 	it('drops the extension, turns dashes into spaces, and capitalizes the first letter only', () => {
 		expect(recordLabel('brief.md')).toBe('Brief');
 		expect(recordLabel('design-notes.md')).toBe('Design notes');
@@ -452,7 +461,7 @@ describe('how a project’s document is named in a menu', () => {
 });
 
 describe('the link to codebase work on GitHub', () => {
-	const work = (more: Partial<ProjectWork> = {}): ProjectWork => it1({ name: 'codebase', branch: 'feature/alpha', ...more });
+	const work = (more: Partial<PrototypeWork> = {}): PrototypeWork => it1({ name: 'codebase', branch: 'feature/alpha', ...more });
 
 	it('is its pull request when one is recorded', () => {
 		expect(codeLink(work({ repository: 'flocksafety/flock-coke', pullRequest: 'https://github.com/flocksafety/flock-coke/pull/12' }))).toBe(
@@ -476,29 +485,29 @@ describe('the link to codebase work on GitHub', () => {
 	});
 });
 
-describe('the picture on a project’s card', () => {
+describe('the picture on a prototype’s card', () => {
 	const A = 'aaaaaaaaaaaa';
 	const B = 'bbbbbbbbbbbb';
 	const v = (name: string, day: number, cover: string | null) =>
 		it1({ name, branch: `prototype/alpha/${name}`, createdAt: `2026-10-0${day}T00:00:00Z`, cover });
 
-	it('is its newest prototype’s', () => {
-		expect(coverToShow(project('alpha', { work: [v('v1', 1, A), v('v2', 2, B)] }))).toEqual({ name: 'v2', cover: B });
+	it('is its newest version’s', () => {
+		expect(coverToShow(prototype('alpha', { work: [v('v1', 1, A), v('v2', 2, B)] }))).toEqual({ name: 'v2', cover: B });
 	});
 
 	it('is the newest earlier one that has a picture, while the newest has none yet', () => {
-		expect(coverToShow(project('alpha', { work: [v('v1', 1, A), v('v5', 2, null)] }))).toEqual({ name: 'v1', cover: A });
+		expect(coverToShow(prototype('alpha', { work: [v('v1', 1, A), v('v5', 2, null)] }))).toEqual({ name: 'v1', cover: A });
 	});
 
-	it('is none for a project with no picture, or with only codebase work', () => {
-		expect(coverToShow(project('alpha', { work: [v('v1', 1, null)] }))).toBeNull();
-		expect(coverToShow(project('alpha', { work: [it1({ name: 'codebase', branch: 'feature/alpha', cover: A })] }))).toBeNull();
-		expect(coverToShow(project('alpha', { work: [] }))).toBeNull();
+	it('is none for a prototype with no picture, or with only codebase work', () => {
+		expect(coverToShow(prototype('alpha', { work: [v('v1', 1, null)] }))).toBeNull();
+		expect(coverToShow(prototype('alpha', { work: [it1({ name: 'codebase', branch: 'feature/alpha', cover: A })] }))).toBeNull();
+		expect(coverToShow(prototype('alpha', { work: [] }))).toBeNull();
 	});
 
 	it('takes the pictures just made into the list, and leaves everything else as it was', () => {
-		const list = [project('alpha', { work: [v('v1', 1, null), v('v2', 2, null)] }), project('beta')];
-		const after = withCovers(list, [{ projectId: 'alpha', name: 'v2', cover: B }]);
+		const list = [prototype('alpha', { work: [v('v1', 1, null), v('v2', 2, null)] }), prototype('beta')];
+		const after = withCovers(list, [{ prototypeId: 'alpha', name: 'v2', cover: B }]);
 		expect(after[0]?.work.map((i) => i.cover)).toEqual([null, B]);
 		expect(after[1]).toBe(list[1]);
 		expect(withCovers(list, [])).toBe(list);
@@ -510,30 +519,30 @@ describe('the picture on a project’s card', () => {
 	});
 });
 
-describe('what pressing a project does', () => {
+describe('what pressing a prototype does', () => {
 	const v = (name: string, day: number) => it1({ name, branch: `prototype/alpha/${name}`, createdAt: `2026-10-0${day}T00:00:00Z` });
 	const code = it1({ name: 'codebase', branch: 'feature/alpha', repository: 'flocksafety/flock-coke' });
 
-	it('opens its newest prototype in the app', () => {
+	it('opens its newest version in the app', () => {
 		const older = v('v1', 1);
 		const newest = v('v5', 2);
-		expect(projectOpening(project('alpha', { title: 'Alpha', work: [older, newest, code] }))).toEqual({
+		expect(prototypeOpening(prototype('alpha', { title: 'Alpha', work: [older, newest, code] }))).toEqual({
 			kind: 'app',
 			label: 'Open Alpha',
 			work: newest,
 		});
 	});
 
-	it('opens a project with only codebase work on GitHub, in the browser', () => {
-		expect(projectOpening(project('alpha', { title: 'Alpha', work: [code] }))).toEqual({
+	it('opens a prototype with only codebase work on GitHub, in the browser', () => {
+		expect(prototypeOpening(prototype('alpha', { title: 'Alpha', work: [code] }))).toEqual({
 			kind: 'link',
 			label: 'Open Alpha on GitHub',
 			url: 'https://github.com/flocksafety/flock-coke/tree/feature/alpha',
 		});
 	});
 
-	it('is nothing for a project with nothing made, or with codebase work that does not say where it is', () => {
-		expect(projectOpening(project('alpha', { work: [] }))).toBeNull();
-		expect(projectOpening(project('alpha', { work: [{ ...code, repository: null }] }))).toBeNull();
+	it('is nothing for a prototype with nothing made, or with codebase work that does not say where it is', () => {
+		expect(prototypeOpening(prototype('alpha', { work: [] }))).toBeNull();
+		expect(prototypeOpening(prototype('alpha', { work: [{ ...code, repository: null }] }))).toBeNull();
 	});
 });

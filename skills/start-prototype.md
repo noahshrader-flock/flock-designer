@@ -9,17 +9,17 @@ in DSNR like any other.
 From the product repository, run:
 
 ```bash
-node ../flock-designer/workspace/bin/dsnr.mjs new-prototype --project <id> --title "<project title>" --note "<what they asked for>"
+node ../flock-designer/workspace/bin/dsnr.mjs new-prototype --prototype <id> --title "<prototype title>" --note "<what they asked for>"
 ```
 
-- **`<id>`** is the project's folder in `../flock-designer/prototypes/`: the existing one when this continues a
-  project, otherwise a short kebab-case name for it (`admin-usage`) that you choose from the request: do not ask the
-  person about it. `--title` is needed only for a new project.
+- **`<id>`** is the prototype's folder in `../flock-designer/prototypes/`: the existing one when this continues a
+  prototype, otherwise a short kebab-case name for it (`admin-usage`) that you choose from the request: do not ask the
+  person about it. `--title` is needed only for a new prototype.
 - **Each run is a new version from the brief** (`v1`, then `v2`): run it again for "a different idea", once per idea
   asked for, finishing each before starting the next. Another version of one that exists is `--new-version` (below).
 - **"Based on V1"** is not a new run of this: it is `change-prototype --name v1 --new-version` (below), which starts
   the new version from V1's source and records that it did. Without that, a new version starts from the brief.
-- **`--note`** is the idea, in the person's own words: it becomes the project's brief, which reviewers read, and DSNR
+- **`--note`** is the idea, in the person's own words: it becomes the prototype's brief, which reviewers read, and DSNR
   keeps it in the version's `requests-<version>.md`. Leave out instructions about how to make it ("mock data only",
   "a prototype, not codebase work"): the skills already say those. Pass what they asked, not what they pasted in:
   never a secret, and no customer's or person's details. DSNR takes out secrets, email addresses and phone numbers from
@@ -36,7 +36,7 @@ If it says something must be installed first, tell the person what, and stop.
 When asked to change a prototype that exists, run:
 
 ```bash
-node ../flock-designer/workspace/bin/dsnr.mjs change-prototype --project <id> --name <v1> --note "<what they asked to change>"
+node ../flock-designer/workspace/bin/dsnr.mjs change-prototype --prototype <id> --name <v1> --note "<what they asked to change>"
 ```
 
 - **`--name`** is the version to change (`v1`, `v2`); the change is made in it, in place. Your `--note` is kept, in
@@ -49,7 +49,7 @@ node ../flock-designer/workspace/bin/dsnr.mjs change-prototype --project <id> --
 - **"Process" or "address" the comments on a version** is a change to it, with the comments as the request. Run:
 
   ```bash
-  node ../flock-designer/workspace/bin/dsnr.mjs change-prototype --project <id> --name <v1> --note "Address the open comments"
+  node ../flock-designer/workspace/bin/dsnr.mjs change-prototype --prototype <id> --name <v1> --note "Address the open comments"
   ```
 
   It writes the version's open comments to a file and says where, and prints the task: the source to change, the command
@@ -78,5 +78,5 @@ repository is.
 ## Taking a page down
 
 Only when the person asks for a version to come off its page:
-`node ../flock-designer/workspace/bin/dsnr.mjs unpublish --project <id> --name <v2>`. It removes the saved page and
+`node ../flock-designer/workspace/bin/dsnr.mjs unpublish --prototype <id> --name <v2>`. It removes the saved page and
 source, pushes, and deploys the site without it; the record and comments stay. Pass on what it printed.

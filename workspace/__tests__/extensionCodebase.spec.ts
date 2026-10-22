@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { type CodebaseDeps, type LocalRun, handOff, openCode, shareCodebase, runLocally, updateBranch } from '../extension/src/codebase';
-import type { HandoffResult, Project, RunLogLine, ShareStatus } from '../src/shared/contract';
+import type { HandoffResult, Prototype, RunLogLine, ShareStatus } from '../src/shared/contract';
 import { ok } from '../src/shared/result';
 
 const codebase = {
@@ -19,8 +19,8 @@ const zone = {
 	records: [],
 	people: [],
 	work: [{ name: 'v1', branch: 'prototype/zone-coverage/v1', createdAt: '2026-10-01T10:00:00Z' }, codebase],
-} as unknown as Project;
-const prototypeOnly = { ...zone, id: 'alert-history', title: 'Alert history', work: [zone.work[0]] } as unknown as Project;
+} as unknown as Prototype;
+const prototypeOnly = { ...zone, id: 'alert-history', title: 'Alert history', work: [zone.work[0]] } as unknown as Prototype;
 
 const world = (more: Record<string, unknown> = {}) => {
 	const told: string[] = [];
@@ -30,13 +30,13 @@ const world = (more: Record<string, unknown> = {}) => {
 	const watching: (() => Promise<boolean>)[] = [];
 	const api = {
 		agentReadiness: vi.fn(async () => ok({ state: 'ready' })),
-		listProjects: vi.fn(async () => ok([zone, prototypeOnly])),
+		listPrototypes: vi.fn(async () => ok([zone, prototypeOnly])),
 		handOff: vi.fn(async () => ok({ agent: 'Claude Code', opened: 'typed', command: null })),
 		handoffResult: vi.fn(async () => ok({ state: 'waiting' } as HandoffResult)),
 		handCodebaseUpdate: vi.fn(async () => ok({ agent: 'Claude Code', opened: 'typed', command: null })),
 		runLocally: vi.fn(async () => ok({ url: 'http://localhost:5173/zones', uncommitted: false })),
 		stopCommand: vi.fn(async () => ok({ state: 'stopped' })),
-		shareWork: vi.fn(async () => ok({ state: 'running', projectId: zone.id, name: 'codebase', step: 'pushing' })),
+		shareWork: vi.fn(async () => ok({ state: 'running', prototypeId: zone.id, name: 'codebase', step: 'pushing' })),
 		onShareStatus: vi.fn((l: (s: ShareStatus) => void) => {
 			shareListeners.push(l);
 			return () => undefined;
@@ -76,7 +76,7 @@ describe('Update this branch, from VS Code', () => {
 		expect(watching).toEqual([]);
 	});
 
-	it('refuses a project with no codebase work, before asking anything', async () => {
+	it('refuses a prototype with no codebase work, before asking anything', async () => {
 		const { deps, api } = world();
 		await expect(updateBranch(deps, 'alert-history')).rejects.toThrow('Alert history has no codebase work yet');
 		expect(api.handCodebaseUpdate).not.toHaveBeenCalled();
@@ -87,7 +87,7 @@ describe('Handoff, from VS Code', () => {
 	const done = (result: Partial<Extract<HandoffResult, { state: 'done' }>>) =>
 		vi.fn(async () => ok({ state: 'done', verdict: 'ready', pushed: false, outside: [], ...result } as HandoffResult));
 
-	it('hands the project’s codebase work to the agent, says so, and watches for HANDOFF.md', async () => {
+	it('hands the prototype’s codebase work to the agent, says so, and watches for HANDOFF.md', async () => {
 		const { deps, api, told, watching } = world();
 		await handOff(deps, 'zone-coverage');
 		expect(api.handOff).toHaveBeenCalledWith('/p', 'zone-coverage');
@@ -159,17 +159,17 @@ describe('sharing codebase work for review: a draft pull request, with a preview
 		});
 		api.shareWork.mockImplementation(async () => {
 			setTimeout(() => {
-				for (const l of shareListeners) l({ state: 'running', projectId: zone.id, name: 'codebase', step: 'opening' });
+				for (const l of shareListeners) l({ state: 'running', prototypeId: zone.id, name: 'codebase', step: 'opening' });
 				for (const l of shareListeners)
 					l({
 						state: 'ready',
-						projectId: zone.id,
+						prototypeId: zone.id,
 						name: 'codebase',
 						url: 'https://preview.example/pr-7',
 						prUrl: 'https://github.com/flocksafety/flock-coke/pull/7',
 					});
 			}, 0);
-			return ok({ state: 'running', projectId: zone.id, name: 'codebase', step: 'pushing' });
+			return ok({ state: 'running', prototypeId: zone.id, name: 'codebase', step: 'pushing' });
 		});
 		await shareCodebase(deps, 'zone-coverage');
 		expect(api.shareWork).toHaveBeenCalledWith('/p', 'zone-coverage', 'codebase');
@@ -184,9 +184,9 @@ describe('sharing codebase work for review: a draft pull request, with a preview
 		api.shareWork.mockImplementation(async () => {
 			setTimeout(() => {
 				for (const l of shareListeners)
-					l({ state: 'ready', projectId: zone.id, name: 'codebase', url: 'https://preview.example/pr-7', prUrl: 'https://github.com/x/y/pull/7' });
+					l({ state: 'ready', prototypeId: zone.id, name: 'codebase', url: 'https://preview.example/pr-7', prUrl: 'https://github.com/x/y/pull/7' });
 			}, 0);
-			return ok({ state: 'running', projectId: zone.id, name: 'codebase', step: 'pushing' });
+			return ok({ state: 'running', prototypeId: zone.id, name: 'codebase', step: 'pushing' });
 		});
 		await shareCodebase(deps, 'zone-coverage');
 		expect(deps.copy).toHaveBeenCalledWith('https://preview.example/pr-7');
@@ -196,9 +196,9 @@ describe('sharing codebase work for review: a draft pull request, with a preview
 		const { deps, api, shareListeners } = world();
 		api.shareWork.mockImplementation(async () => {
 			setTimeout(() => {
-				for (const l of shareListeners) l({ state: 'failed', projectId: zone.id, name: 'codebase', message: 'The preview did not build.' });
+				for (const l of shareListeners) l({ state: 'failed', prototypeId: zone.id, name: 'codebase', message: 'The preview did not build.' });
 			}, 0);
-			return ok({ state: 'running', projectId: zone.id, name: 'codebase', step: 'pushing' });
+			return ok({ state: 'running', prototypeId: zone.id, name: 'codebase', step: 'pushing' });
 		});
 		await expect(shareCodebase(deps, 'zone-coverage')).rejects.toThrow('Zone coverage was not shared: The preview did not build.');
 	});
@@ -217,7 +217,7 @@ describe('codebase work on GitHub', () => {
 		await openCode(deps, 'zone-coverage');
 		expect(deps.openExternal).toHaveBeenCalledWith('https://github.com/flocksafety/flock-coke/tree/feature/zone-coverage');
 		const withPr = world({
-			listProjects: vi.fn(async () =>
+			listPrototypes: vi.fn(async () =>
 				ok([{ ...zone, work: [zone.work[0], { ...codebase, pullRequest: 'https://github.com/flocksafety/flock-coke/pull/7' }] }]),
 			),
 		});
@@ -227,7 +227,7 @@ describe('codebase work on GitHub', () => {
 
 	it('says when its record says neither', async () => {
 		const { deps } = world({
-			listProjects: vi.fn(async () => ok([{ ...zone, work: [{ ...codebase, repository: null }] }])),
+			listPrototypes: vi.fn(async () => ok([{ ...zone, work: [{ ...codebase, repository: null }] }])),
 		});
 		await expect(openCode(deps, 'zone-coverage')).rejects.toThrow('The record of Zone coverage’s codebase work does not say where it is on GitHub.');
 	});
@@ -268,13 +268,13 @@ describe('Run locally: codebase work run on this machine, in the browser', () =>
 	});
 
 	it('says when the work has no page recorded, so it opened at the app’s front door', async () => {
-		const noRoute = { ...zone, work: [zone.work[0], { ...codebase, route: null }] } as unknown as Project;
+		const noRoute = { ...zone, work: [zone.work[0], { ...codebase, route: null }] } as unknown as Prototype;
 		const {
 			deps,
 			offered,
 			local: l,
 		} = run({
-			listProjects: vi.fn(async () => ok([noRoute])),
+			listPrototypes: vi.fn(async () => ok([noRoute])),
 			runLocally: vi.fn(async () => ok({ url: 'http://localhost:5173/', uncommitted: false })),
 		});
 		await runLocally(deps, l, 'zone-coverage');

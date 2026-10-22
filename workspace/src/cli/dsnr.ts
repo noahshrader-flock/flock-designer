@@ -4,11 +4,11 @@ import { parseArgs } from 'node:util';
 import type { Person } from '../shared/contract';
 import { openComments } from '../shared/comments';
 import { firstHeading } from '../shared/brief';
-import { projectPath, prototypePagePath, prototypeSourcePath, prototypeKey } from '../shared/designPaths';
+import { prototypePath, prototypePagePath, prototypeSourcePath, prototypeKey } from '../shared/designPaths';
 import { commandShown, workLabel } from '../shared/work';
 import { writeCommentsExport } from '../core/services/prototypes/commentsExport';
 import { startedHere } from '../core/services/prototypes/pendingPrototypes';
-import { DESCRIPTOR_PATH } from '../core/services/projects/descriptor';
+import { DESCRIPTOR_PATH } from '../core/services/products/descriptor';
 import type { GitHubApi } from '../codeHost/github';
 import { loginOf } from '../codeHost/github';
 
@@ -18,19 +18,19 @@ import {
 	designRepositoryOf,
 	isDesignRepository,
 	recordsRootFor,
-} from '../core/services/projects/discovery';
-import { assertUsableProjectId } from '../core/services/projects/workRecords';
+} from '../core/services/products/discovery';
+import { assertUsablePrototypeId } from '../core/services/prototypes/workRecords';
 import { claimedRepository, readCheckout, git } from '../core/services/platform/git';
 import { type RepoRef, repoRefOf } from '../shared/repoRef';
 import { guidePart, prototypeBuildTask } from '../core/services/agent/agentTasks';
-import { SourceAnswers, usableDesignSystem } from '../core/services/projects/productDesignSystem';
-import { setupCheck } from '../core/services/projects/setupCheck';
+import { SourceAnswers, usableDesignSystem } from '../core/services/products/productDesignSystem';
+import { setupCheck } from '../core/services/products/setupCheck';
 import { appPaths } from '../core/appPaths';
 import { designStore } from '../core/services/publishing/designStore';
 import { BUILD_SKILL, GUIDE, assertVersionName } from '../core/services/prototypes/prototype';
 import { shellLine } from '../core/services/prototypes/prototypeBundle';
-import { localPrototypeFile, prototypeWork, whereTheChangeGoes } from '../core/services/prototypes/prototypeWork';
-import { writeEntryFiles } from '../core/services/projects/entryFiles';
+import { localPrototypeFile, versionWork, whereTheChangeGoes } from '../core/services/prototypes/versionWork';
+import { writeEntryFiles } from '../core/services/products/entryFiles';
 import { publish, recordsFrom, unpublish } from '../core/services/publishing/pages';
 import { buildSite } from '../site/buildSite';
 import { serveSite } from '../site/serveSite';
@@ -72,24 +72,24 @@ export { ghApi } from '../core/services/platform/ghCli';
 export { cliDataFolder, commandLinePrototypes } from '../core/services/platform/cliFolder';
 
 const USAGE = `Usage:
-  dsnr new-prototype --project <id> --note <what to make> [--title <project title>] [--from <branch>] [--product <dir>]
-  dsnr change-prototype --project <id> --name <v1> --note <what to change> [--new-version] [--product <dir>]
-  dsnr save-prototype --project <id> --name <v1> [--from-version <v1>] [--replace] [--product <dir>]
+  dsnr new-prototype --prototype <id> --note <what to make> [--title <prototype title>] [--from <branch>] [--product <dir>]
+  dsnr change-prototype --prototype <id> --name <v1> --note <what to change> [--new-version] [--product <dir>]
+  dsnr save-prototype --prototype <id> --name <v1> [--from-version <v1>] [--replace] [--product <dir>]
   dsnr build-site [--out <dir>] [--serve]
-  dsnr publish --project <id> --name <v1> [--no-open]
-  dsnr unpublish --project <id> --name <v1>
-  dsnr accessibility --project <id> [--name <v1>] [--light] [--product <dir>]
-  dsnr check-accessibility --project <id> [--name <v1>]
-  dsnr read-returned --project <id> [--product <dir>]
+  dsnr publish --prototype <id> --name <v1> [--no-open]
+  dsnr unpublish --prototype <id> --name <v1>
+  dsnr accessibility --prototype <id> [--name <v1>] [--light] [--product <dir>]
+  dsnr check-accessibility --prototype <id> [--name <v1>]
+  dsnr read-returned --prototype <id> [--product <dir>]
   dsnr agent-files [--check] [--product <dir>]
   dsnr check-setup [--product <dir>]
 
-new-prototype records the next version (v1 for a new project, then v2, v3) and prints the task: where to write the
+new-prototype records the next version (v1 for a new prototype, then v2, v3) and prints the task: where to write the
 prototype and how to check it builds. change-prototype does the same for a change to one: in that version, in place, or,
 with --new-version only, in a new version from it. save-prototype builds it and saves page and source to the design
 repository; for a new version from another, --from-version says which (the task gives the command whole). It refuses to
 replace a saved source that was changed since this machine saved it, and --replace says it is meant.
---note-file <path> may stand in for --note. --title is needed only for a new project.
+--note-file <path> may stand in for --note. --title is needed only for a new prototype.
 build-site writes the site prototypes are published as, from the design repository, and --serve shows it here. publish
 pushes the records, deploys the site and prints the version's link, and says who can open it; the first time a page
 goes up the link is also opened in the browser, unless --no-open. unpublish takes a
@@ -97,10 +97,10 @@ version off the site: its saved page and source are removed, here and in the des
 deployed without it. Its record and comments are kept. accessibility measures the work in a real browser: with --name,
 that prototype's page in each of its states; without, the product's own app, started by its design-mode command, at the
 pages its manifest names. Each view is checked by axe and probed (--light: the accessibility tree and the Tab walk
-alone). It writes what it found, the evidence and its ledger into the project's folder in the design repository, writes
+alone). It writes what it found, the evidence and its ledger into the prototype's folder in the design repository, writes
 review.md's accessibility section from the ledger, and prints it. check-accessibility checks that record, for a gate:
 each status rests on its evidence, each "not run" says why, and review.md says what the ledger says. read-returned reads
-what testers sent back in the project's accessibility/returned.md now, rather than at the next measure: each one a
+what testers sent back in the prototype's accessibility/returned.md now, rather than at the next measure: each one a
 machine missed is logged in the product's agent gap log. agent-files writes what lets every agent find DSNR's guidance
 in the product: its section of AGENTS.md, CLAUDE.md as @AGENTS.md, and a pointer for each agent that finds agents or
 skills by file. It never commits, and leaves a file that is the product's own, saying why. With --check it writes
@@ -135,7 +135,7 @@ const meOf = async (designRoot: string, github: GitHubApi | null): Promise<Perso
 };
 
 const OPTIONS = {
-	project: { type: 'string' },
+	prototype: { type: 'string' },
 	name: { type: 'string' },
 	note: { type: 'string' },
 	'note-file': { type: 'string' },
@@ -217,8 +217,8 @@ const site = async (deps: CliDeps, values: { out?: string; serve?: boolean }): P
 		viewer: viewerDir ? { dir: viewerDir, ref: await designRefOf(deps) } : undefined,
 		signIn: PAGES_SIGN_IN,
 	});
-	const pages = built.projects.reduce((n, p) => n + p.pages, 0);
-	deps.out(`Built ${plural(pages, 'page')} in ${plural(built.projects.length, 'project')} at ${outDir}.${noViewer}`);
+	const pages = built.prototypes.reduce((n, p) => n + p.pages, 0);
+	deps.out(`Built ${plural(pages, 'page')} in ${plural(built.prototypes.length, 'prototype')} at ${outDir}.${noViewer}`);
 	if (values.serve) {
 		const { url } = await serveSite(outDir);
 		deps.out(`Serving it at ${url} on this machine only. Stop with Ctrl-C.`);
@@ -227,19 +227,19 @@ const site = async (deps: CliDeps, values: { out?: string; serve?: boolean }): P
 };
 
 /** The names are checked before any path is made of them. */
-const savedPage = async (deps: CliDeps, values: { project?: string; name?: string }, doing: 'Publishing' | 'Unpublishing') => {
-	const projectId = values.project;
+const savedPage = async (deps: CliDeps, values: { prototype?: string; name?: string }, doing: 'Publishing' | 'Unpublishing') => {
+	const prototypeId = values.prototype;
 	const name = values.name;
-	if (!projectId) throw new UsageError('Say which project, with --project.');
+	if (!prototypeId) throw new UsageError('Say which prototype, with --prototype.');
 	if (!name) throw new UsageError('Say which prototype, with --name.');
-	assertUsableProjectId(projectId);
+	assertUsablePrototypeId(prototypeId);
 	assertVersionName(name);
 	const designRoot = await designOf(deps);
-	if (!existsSync(join(designRoot, prototypePagePath(projectId, name)))) {
+	if (!existsSync(join(designRoot, prototypePagePath(prototypeId, name)))) {
 		throw new Error(
 			doing === 'Publishing'
-				? `${projectId} ${name} has no saved page in the design repository. Save it first (save-prototype), then publish.`
-				: `${projectId} ${name} has no saved page in the design repository, so it is not on the site.`,
+				? `${prototypeId} ${name} has no saved page in the design repository. Save it first (save-prototype), then publish.`
+				: `${prototypeId} ${name} has no saved page in the design repository, so it is not on the site.`,
 		);
 	}
 	if (!deps.github) throw new Error(needsCli(doing));
@@ -247,7 +247,7 @@ const savedPage = async (deps: CliDeps, values: { project?: string; name?: strin
 		github: deps.github,
 		ref: await designRefOf(deps),
 		...(await recordsFrom(designRoot, startedHere(deps.prototypesRoot))),
-		projectId,
+		prototypeId,
 		name,
 		designRoot,
 		fetchAnonymously: deps.fetchAnonymously,
@@ -256,7 +256,7 @@ const savedPage = async (deps: CliDeps, values: { project?: string; name?: strin
 	};
 };
 
-const publishPage = async (deps: CliDeps, values: { project?: string; name?: string; 'no-open'?: boolean }): Promise<number> => {
+const publishPage = async (deps: CliDeps, values: { prototype?: string; name?: string; 'no-open'?: boolean }): Promise<number> => {
 	const published = await publish(await savedPage(deps, values, 'Publishing'));
 	deps.out(published.url);
 	// Once, the first time this page goes up: the person sees what was made, and a later change does not open another tab.
@@ -264,15 +264,16 @@ const publishPage = async (deps: CliDeps, values: { project?: string; name?: str
 	return 0;
 };
 
-const unpublishPage = async (deps: CliDeps, values: { project?: string; name?: string }): Promise<number> => {
+const unpublishPage = async (deps: CliDeps, values: { prototype?: string; name?: string }): Promise<number> => {
 	const page = await savedPage(deps, values, 'Unpublishing');
-	const { projectId, name, designRoot } = page;
+	const { prototypeId, name, designRoot } = page;
 	await unpublish({
 		...page,
 		// This machine's copies too, so the panel draws no picture of a page that is gone.
 		removePage: async () => {
-			for (const path of [prototypePagePath(projectId, name), prototypeSourcePath(projectId, name)]) rmSync(join(designRoot, path), { force: true });
-			for (const ext of ['html', 'tsx'] as const) rmSync(localPrototypeFile(deps.prototypesRoot, projectId, name, ext), { force: true });
+			for (const path of [prototypePagePath(prototypeId, name), prototypeSourcePath(prototypeId, name)])
+				rmSync(join(designRoot, path), { force: true });
+			for (const ext of ['html', 'tsx'] as const) rmSync(localPrototypeFile(deps.prototypesRoot, prototypeId, name, ext), { force: true });
 		},
 	});
 	return 0;
@@ -361,25 +362,25 @@ export const main = async (argv: string[], deps: CliDeps): Promise<number> => {
 			return check && (written.length > 0 || left.length > 0) ? 1 : 0;
 		}
 		if (command === 'read-returned') {
-			if (!values.project) throw new UsageError('Say which project, with --project.');
+			if (!values.prototype) throw new UsageError('Say which prototype, with --prototype.');
 			const root = await productOf(deps.cwd, values.product, 'log what testers found');
-			return readReturnedNow({ designRoot: designBeside(root, clonesOf(deps)), root, projectId: values.project, out: deps.out });
+			return readReturnedNow({ designRoot: designBeside(root, clonesOf(deps)), root, prototypeId: values.prototype, out: deps.out });
 		}
 		if (command === 'check-accessibility') {
-			if (!values.project) throw new UsageError('Say which project, with --project.');
+			if (!values.prototype) throw new UsageError('Say which prototype, with --prototype.');
 			// Run from the product's checkout (its gate), its HANDOFF.md is checked too; from the design repository, it is not.
 			const product = await productOf(deps.cwd, values.product, 'check its HANDOFF.md').catch(() => null);
 			return checkAccessibility({
 				designRoot: await designOf(deps),
 				productRoot: product,
-				projectId: values.project,
+				prototypeId: values.prototype,
 				name: values.name ?? null,
 				out: deps.out,
 			});
 		}
 		if (command === 'unpublish') return await unpublishPage(deps, values);
-		const projectId = values.project;
-		if (!projectId) throw new UsageError('Say which project, with --project.');
+		const prototypeId = values.prototype;
+		if (!prototypeId) throw new UsageError('Say which prototype, with --prototype.');
 
 		const root = await productOf(
 			deps.cwd,
@@ -391,7 +392,7 @@ export const main = async (argv: string[], deps: CliDeps): Promise<number> => {
 		const store = designStore({ clone: () => designRoot, files: () => null, onWrite: () => undefined });
 		// The window's own answers, beside the prototypes it told this command of, so a design system asked about once is not asked again.
 		const answers = new SourceAnswers(appPaths(dirname(deps.prototypesRoot)).designSystemSources);
-		const work = prototypeWork({
+		const work = versionWork({
 			prototypesRoot: deps.prototypesRoot,
 			designSystemOf: (productRoot) => usableDesignSystem(productRoot, answers),
 			recordsRootOf: (productRoot) => recordsRootFor(productRoot, { clones: clonesOf(deps) }),
@@ -402,7 +403,7 @@ export const main = async (argv: string[], deps: CliDeps): Promise<number> => {
 		});
 		if (command === 'accessibility') {
 			return await measureAccessibility({
-				projectId,
+				prototypeId,
 				name: values.name ?? null,
 				depth: values.light ? 'light' : 'full',
 				root,
@@ -416,23 +417,23 @@ export const main = async (argv: string[], deps: CliDeps): Promise<number> => {
 			shellLine([
 				...deps.self,
 				'save-prototype',
-				'--project',
-				projectId,
+				'--prototype',
+				prototypeId,
 				'--name',
 				name,
 				...(from ? ['--from-version', from] : []),
 				'--product',
 				root,
 			]);
-		const publishCommand = (name: string) => shellLine([...deps.self, 'publish', '--project', projectId, '--name', name]);
+		const publishCommand = (name: string) => shellLine([...deps.self, 'publish', '--prototype', prototypeId, '--name', name]);
 		const buildTask = async (skill: string, name: string, modeledOn: string, request: string): Promise<string> => {
-			const { build, sources } = await work.buildPlan(projectId, name, await work.sources(projectId, modeledOn));
+			const { build, sources } = await work.buildPlan(prototypeId, name, await work.sources(prototypeId, modeledOn));
 			return prototypeBuildTask({
 				guide: guidePart(await work.skill(GUIDE), designRoot),
 				skill,
 				build,
 				sources,
-				accessibility: await work.accessibility(projectId, modeledOn),
+				accessibility: await work.accessibility(prototypeId, modeledOn),
 				voice: await work.voice(),
 				request,
 			});
@@ -441,18 +442,23 @@ export const main = async (argv: string[], deps: CliDeps): Promise<number> => {
 		if (command === 'save-prototype') {
 			const name = values.name;
 			if (!name) throw new UsageError('Say which prototype, with --name.');
-			const change = await work.resumeChange(projectId, name, values['from-version'] ?? null);
+			const change = await work.resumeChange(prototypeId, name, values['from-version'] ?? null);
 			if (change === null) {
-				await work.save(projectId, name, values.replace === true);
+				await work.save(prototypeId, name, values.replace === true);
 			} else {
-				const { version } = await work.finishChange(projectId, change, await meOf(designRoot, deps.github), `A change to ${workLabel(change.from)}`);
+				const { version } = await work.finishChange(
+					prototypeId,
+					change,
+					await meOf(designRoot, deps.github),
+					`A change to ${workLabel(change.from)}`,
+				);
 				if (version === null) {
 					deps.out(`Nothing in ${name} changed from ${change.from.name}, so nothing was made or saved.`);
 					return 0;
 				}
 			}
 			deps.out(
-				`Saved ${prototypeSourcePath(projectId, name)} and ${prototypePagePath(projectId, name)} in ${designRoot}. It is in DSNR (press Sync if it is already open in VS Code), which publishes it the next time it is open.`,
+				`Saved ${prototypeSourcePath(prototypeId, name)} and ${prototypePagePath(prototypeId, name)} in ${designRoot}. It is in DSNR (press Sync if it is already open in VS Code), which publishes it the next time it is open.`,
 			);
 			return 0;
 		}
@@ -470,8 +476,8 @@ export const main = async (argv: string[], deps: CliDeps): Promise<number> => {
 			if (!name) throw new UsageError('Say which prototype, with --name.');
 			// Null when GitHub's command line is missing or signed out.
 			const threads = deps.github ? new ReviewThreads(deps.github, await designRefOf(deps)) : null;
-			const comments = threads ? await threads.readComments(prototypeKey(projectId, name)).catch(() => null) : null;
-			const change = await work.startChange(projectId, name, {
+			const comments = threads ? await threads.readComments(prototypeKey(prototypeId, name)).catch(() => null) : null;
+			const change = await work.startChange(prototypeId, name, {
 				newVersion: values['new-version'] === true,
 				comments,
 				request: { text: note, me: await meOf(designRoot, deps.github) },
@@ -484,8 +490,8 @@ export const main = async (argv: string[], deps: CliDeps): Promise<number> => {
 			let said = '';
 			if (open.length > 0) {
 				const written = writeCommentsExport(deps.prototypesRoot, {
-					projectId,
-					title: await work.title(projectId),
+					prototypeId,
+					title: await work.title(prototypeId),
 					work: { name: change.from.name, branch: change.from.branch },
 					comments: comments ?? [],
 					generatedAt: new Date(),
@@ -503,17 +509,17 @@ export const main = async (argv: string[], deps: CliDeps): Promise<number> => {
 			return 0;
 		}
 
-		const brief = await store.readFile(projectPath(projectId, 'brief.md'));
+		const brief = await store.readFile(prototypePath(prototypeId, 'brief.md'));
 		const title = values.title ?? (brief === null ? null : firstHeading(brief));
-		if (!title) throw new UsageError(`${projectId} is a new project, so it needs a title: --title.`);
+		if (!title) throw new UsageError(`${prototypeId} is a new prototype, so it needs a title: --title.`);
 		const branch = values.from ?? (await readCheckout(root)).branch;
 		if (!branch) throw new UsageError('This checkout is not on a branch, so say which branch to model it on, with --from.');
 
-		const made = await work.start(root, { projectId, title, note, branch, me: await meOf(designRoot, deps.github) });
+		const made = await work.start(root, { prototypeId, title, note, branch, me: await meOf(designRoot, deps.github) });
 		const text = await buildTask(skill, made.name, made.name, note);
 		deps.out(
 			taskText(
-				`Started ${projectId} ${made.name}: it is recorded when it is saved. ${made.modeledOn} Your task follows.`,
+				`Started ${prototypeId} ${made.name}: it is recorded when it is saved. ${made.modeledOn} Your task follows.`,
 				text,
 				saveCommand(made.name),
 				publishCommand(made.name),

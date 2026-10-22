@@ -159,12 +159,12 @@ export const behindIn = (answer: Result<unknown>): BaseBehind | null => {
 /** `branch` is the version's key. */
 export const relayComments = (
 	relay: Relay,
-	{ projectId, branch, page }: { projectId: string; branch: string; page?: string | undefined },
+	{ prototypeId, branch, page }: { prototypeId: string; branch: string; page?: string | undefined },
 ): CommentStore => ({
-	read: () => relay.ask('readComments', [projectId, branch]) as Promise<Result<ReviewComment[]>>,
+	read: () => relay.ask('readComments', [prototypeId, branch]) as Promise<Result<ReviewComment[]>>,
 	// No picture of the spot: a page cannot take one of itself.
 	post: (body: string, anchor: CommentAnchor | null) =>
-		relay.ask('postComment', [projectId, branch, body, anchor, null]) as Promise<Result<ReviewComment>>,
+		relay.ask('postComment', [prototypeId, branch, body, anchor, null]) as Promise<Result<ReviewComment>>,
 	resolve: (comment: CommentRef, resolved: boolean) => relay.ask('resolveComment', [comment, resolved]) as Promise<Result<ReviewComment>>,
 	move: (comment: CommentRef, anchor: CommentAnchor) => relay.ask('moveComment', [comment, anchor]) as Promise<Result<ReviewComment>>,
 	remove: (comment: CommentRef) => relay.ask('deleteComment', [comment]) as Promise<Result<null>>,

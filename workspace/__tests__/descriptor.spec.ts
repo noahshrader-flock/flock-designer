@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { designSystemCheckout, findCommand, parseDescriptor } from '../src/core/services/projects/descriptor';
+import { designSystemCheckout, findCommand, parseDescriptor } from '../src/core/services/products/descriptor';
 
 const valid = {
 	version: 1,
 	product: 'Coke',
 	contextDir: '.dsnr',
 	prototypeRoot: 'src/prototypes',
-	branchPattern: { codebase: 'feature/<project-id>' },
+	branchPattern: { codebase: 'feature/<prototype-id>' },
 	commands: [
 		{ id: 'preview', label: 'Run prototype', argv: ['npm', 'run', 'start:prototype'], servesPreviewOn: 3100 },
 		{ id: 'typecheck', label: 'Typecheck', argv: ['npx', 'tsc', '--noEmit'] },
@@ -54,23 +54,33 @@ describe('parseDescriptor', () => {
 	it('refuses a missing branch pattern for codebase work', () => {
 		expect(() => parse({ ...valid, branchPattern: {} })).toThrow(/branchPattern\.codebase/);
 		expect(() => parse({ ...valid, branchPattern: { prototype: 'x' } })).toThrow(/branchPattern\.codebase/);
-		// Only the project's id is filled in: a branch would be named with any other placeholder as written.
+		// Only the prototype's id is filled in: a branch would be named with any other placeholder as written.
 		for (const codebase of [
-			'PAR-<ticket>/<project-id>',
+			'PAR-<ticket>/<prototype-id>',
 			'feature/x',
-			'feature/<project-id>/<project-id>',
-			'feature/<project-id> new',
-			'../<project-id>',
+			'feature/<prototype-id>/<prototype-id>',
+			'feature/<prototype-id> new',
+			'../<prototype-id>',
 		])
 			expect(() => parse({ ...valid, branchPattern: { codebase } }), codebase).toThrow(
-				/must be a branch name with <project-id> once, and nothing else in <>/,
+				/must be a branch name with <prototype-id> once, and nothing else in <>/,
 			);
-		expect(parse({ ...valid, branchPattern: { codebase: 'PAR/<project-id>' } }).branchPattern.codebase).toBe('PAR/<project-id>');
+		expect(parse({ ...valid, branchPattern: { codebase: 'PAR/<prototype-id>' } }).branchPattern.codebase).toBe('PAR/<prototype-id>');
+	});
+
+	it('reads a product written with <project-id>, from before DSNR said prototype, as <prototype-id>: no product has to change', () => {
+		const d = parse({
+			...valid,
+			branchPattern: { codebase: 'feature/<project-id>' },
+			commands: [{ id: 'preview', label: 'Run', argv: ['npm', 'run', 'start', '--', '<project-id>'], servesPreviewOn: 3100 }],
+		});
+		expect(d.branchPattern.codebase).toBe('feature/<prototype-id>');
+		expect(d.commands[0]?.argv).toEqual(['npm', 'run', 'start', '--', '<prototype-id>']);
 	});
 
 	it('is not refused for the prototype pattern of old, and does not read it: prototypes are pages, not branches', () => {
-		const d = parse({ ...valid, branchPattern: { prototype: 'fd/<project-id>/i<n>', codebase: 'feature/<project-id>' } });
-		expect(d.branchPattern).toEqual({ codebase: 'feature/<project-id>' });
+		const d = parse({ ...valid, branchPattern: { prototype: 'fd/<prototype-id>/i<n>', codebase: 'feature/<prototype-id>' } });
+		expect(d.branchPattern).toEqual({ codebase: 'feature/<prototype-id>' });
 	});
 
 	it('refuses a missing designSystem.package', () => {

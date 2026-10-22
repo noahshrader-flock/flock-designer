@@ -10,7 +10,7 @@ they differ, it says so; [On a prototype](#on-a-prototype) gathers the differenc
 
 ## What you are given
 
-A file the app writes, **`comments.md`** (the task names where: in the design repository's project folder for
+A file the app writes, **`comments.md`** (the task names where: in the design repository's prototype folder for
 codebase work, beside the prototype for a prototype), and beside it a folder
 of pictures (`comment-pictures/<number>.jpg`). **Read the file the task names. Do not edit it, and do
 not look for comments anywhere else:** it is generated from the comments on GitHub and rewritten

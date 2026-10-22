@@ -3,8 +3,8 @@ import { tmpdir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { unfinishedWork } from '../src/core/services/codebase/checkoutClean';
-import { readDescriptor } from '../src/core/services/projects/descriptor';
-import { continueWork, createCodebaseWork } from '../src/core/services/projects/workRecords';
+import { readDescriptor } from '../src/core/services/products/descriptor';
+import { continueWork, createCodebaseWork } from '../src/core/services/prototypes/workRecords';
 import { g, makeProductFiles } from './fixtures';
 
 /** Claude Code starts only on a checkout with no unfinished work, so its edits never mix with the person's. */
@@ -83,7 +83,7 @@ describe('a product that holds its own design system: component changes and code
 	};
 	const startCodebase = () => createCodebaseWork(root, records, readDescriptor(root), 'zones', 'x', 'develop');
 	beforeEach(() => {
-		records = join(mkdtempSync(join(tmpdir(), 'dsnr-shared-records-')), 'projects');
+		records = join(mkdtempSync(join(tmpdir(), 'dsnr-shared-records-')), 'prototypes');
 		mkdirSync(records);
 	});
 	afterEach(() => rmSync(dirname(records), { recursive: true, force: true }));

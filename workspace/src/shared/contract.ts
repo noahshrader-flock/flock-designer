@@ -4,6 +4,6 @@ export * from './domain/account';
 export * from './domain/checkout';
 export * from './domain/comments';
 export * from './domain/designSystem';
-export * from './domain/projects';
+export * from './domain/prototypes';
 export * from './domain/publishing';
 export * from './domain/voice';

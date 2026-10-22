@@ -1,7 +1,7 @@
 import type { Work } from '../../../shared/contract';
-import { DESCRIPTOR_PATH, type WorkspaceDescriptor } from '../projects/descriptor';
+import { DESCRIPTOR_PATH, type WorkspaceDescriptor } from '../products/descriptor';
 import { branchExists, ensureLocalBranch, hasFileAt, readCheckout } from '../platform/git';
-import { codebaseBranchFor, continueWork, createCodebaseWork } from '../projects/workRecords';
+import { codebaseBranchFor, continueWork, createCodebaseWork } from '../prototypes/workRecords';
 
 export interface WorkCheckout {
 	readonly canonical: string;
@@ -14,14 +14,14 @@ export const codebaseWork = ({
 	login,
 	written,
 }: {
-	records: (projectId: string) => Promise<Work[]>;
+	records: (prototypeId: string) => Promise<Work[]>;
 	login: () => string | null;
 	written: (work: Work) => Work;
 }) => {
 	/** Started when the branch is here or the work is recorded; Build then continues it rather than starting a second. */
-	const of = async ({ canonical, descriptor }: WorkCheckout, projectId: string) => {
-		const branch = codebaseBranchFor(descriptor, projectId);
-		const known = await records(projectId);
+	const of = async ({ canonical, descriptor }: WorkCheckout, prototypeId: string) => {
+		const branch = codebaseBranchFor(descriptor, prototypeId);
+		const known = await records(prototypeId);
 		const exists = await branchExists(canonical, branch);
 		const recorded = known.some((i) => i.name === 'codebase');
 		// A branch that is here but has no DSNR setup cannot be worked in: moving the checkout to it would leave DSNR
@@ -32,7 +32,7 @@ export const codebaseWork = ({
 
 	const hasSetup = (canonical: string, branch: string): Promise<boolean> => hasFileAt(canonical, `refs/heads/${branch}`, DESCRIPTOR_PATH);
 
-	const start = async (at: WorkCheckout, projectId: string, note: string, from?: string): Promise<Work> => {
+	const start = async (at: WorkCheckout, prototypeId: string, note: string, from?: string): Promise<Work> => {
 		const { canonical } = at;
 		// Only ever a branch that exists here or on GitHub, so the window cannot pass git an option or a revision
 		// expression. One only on GitHub (as most are in a fresh clone) is made local, with nothing checked out.
@@ -44,14 +44,14 @@ export const codebaseWork = ({
 		if (!(await hasSetup(canonical, branch))) {
 			throw new Error(`${branch} has no ${DESCRIPTOR_PATH}, so work cannot start from it. Start from a branch that has the DSNR setup.`);
 		}
-		return written(await createCodebaseWork(canonical, at.recordsRoot, at.descriptor, projectId, note, branch));
+		return written(await createCodebaseWork(canonical, at.recordsRoot, at.descriptor, prototypeId, note, branch));
 	};
 
 	/**
 	 * A checkout already on the branch is left exactly as it is, uncommitted work and all, since that is the work in
 	 * progress; moving from another branch needs a clean one, so nothing is carried or lost.
 	 */
-	const resume = async (at: WorkCheckout, projectId: string, branch: string): Promise<void> => {
+	const resume = async (at: WorkCheckout, prototypeId: string, branch: string): Promise<void> => {
 		const { canonical } = at;
 		await ensureLocalBranch(canonical, branch);
 		if ((await readCheckout(canonical)).branch === branch) return;
@@ -59,7 +59,7 @@ export const codebaseWork = ({
 		if (!(await hasSetup(canonical, branch))) {
 			throw new Error(`${branch} has no ${DESCRIPTOR_PATH}, so DSNR cannot work in it. Merge a branch that has the DSNR setup into it first.`);
 		}
-		await continueWork(canonical, at.recordsRoot, projectId, 'codebase', login(), at.descriptor);
+		await continueWork(canonical, at.recordsRoot, prototypeId, 'codebase', login(), at.descriptor);
 	};
 
 	return { of, start, resume };

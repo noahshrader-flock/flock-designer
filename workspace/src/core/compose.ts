@@ -7,40 +7,40 @@ import { type Check, type EventSink, arg } from './handle';
 import type { Ports } from './ports';
 import { type Agent, type AgentId, runByChosen } from './services/agent/agent';
 import { type Offered, chooseAgent, settled } from './services/agent/choose';
-import { classify } from './services/projects/branchProjects';
+import { classify } from './services/prototypes/branchPrototypes';
 import { syncBranches } from './services/publishing/branchSync';
-import type { CheckoutMemory } from './services/projects/checkoutMemory';
+import type { CheckoutMemory } from './services/products/checkoutMemory';
 import { codebaseWork } from './services/codebase/codebaseWork';
 import { ComponentPictures } from './services/designSystem/componentPictures';
 import { ComponentTokens } from './services/designSystem/componentTokens';
-import { DESCRIPTOR_PATH, readDescriptor, type WorkspaceDescriptor } from './services/projects/descriptor';
+import { DESCRIPTOR_PATH, readDescriptor, type WorkspaceDescriptor } from './services/products/descriptor';
 import { DesignLibrary, libraryCommit, systemReads } from './services/designSystem/designLibrary';
 import { readTokens } from './services/designSystem/designTokens';
 import { HandOverBranches } from './services/designSystem/handOverBranches';
 import { LibraryShown } from './services/designSystem/libraryShown';
 import { DesignRepo, DesignRepos } from '../codeHost/designRepo';
 import { handTask } from './services/agent/handOver';
-import { handSetUp } from './services/projects/setUp';
+import { handSetUp } from './services/products/setUp';
 import { DESIGN_REPO } from '../shared/config';
 import type { RepoRef } from '../shared/repoRef';
 import { designStore } from './services/publishing/designStore';
 import { syncRecords } from './services/publishing/designSync';
 import { DesignSystemsMemory } from './services/designSystem/designSystems';
-import { type SourceAnswers, usableDesignSystem } from './services/projects/productDesignSystem';
-import { type DesignRepositoryClones, designRepositoryMissing, designRepositoryOf, recordsRootFor } from './services/projects/discovery';
+import { type SourceAnswers, usableDesignSystem } from './services/products/productDesignSystem';
+import { type DesignRepositoryClones, designRepositoryMissing, designRepositoryOf, recordsRootFor } from './services/products/discovery';
 import { isRepository, readCheckout } from './services/platform/git';
 import type { GitHubAccount } from '../codeHost/github';
-import { codebaseMadeFrom, recordedWork } from './services/projects/workRecords';
-import { readFolderProjects } from './services/projects/localProjects';
+import { codebaseMadeFrom, recordedWork } from './services/prototypes/workRecords';
+import { readFolderPrototypes } from './services/prototypes/localPrototypes';
 import { startedHere } from './services/prototypes/pendingPrototypes';
 import { workLabel } from '../shared/work';
 import { esbuildEntry } from './services/prototypes/prototypeBundle';
 import { PrototypeServer } from './services/prototypes/prototypeServer';
-import { prototypeWork } from './services/prototypes/prototypeWork';
+import { versionWork } from './services/prototypes/versionWork';
 import { SavedSourceChanged } from './services/prototypes/savedSource';
 import { PublishManager, publishInOrder } from './services/publishing/publisher';
 import { RuntimeManager } from './services/codebase/runtime';
-import { OpenedCheckouts } from './services/projects/session';
+import { OpenedCheckouts } from './services/products/session';
 import { type ShareRunner } from './services/codebase/share';
 import { siteDeploys } from './services/publishing/siteDeploys';
 import { StoryPreviews } from './services/designSystem/storyPreviews';
@@ -216,15 +216,15 @@ export const composeCore = ({
 								syncBranches({
 									root,
 									descriptor,
-									projects: new Set(readFolderProjects(recordsRoot).map((p) => p.id)),
-									madeFrom: (projectId) => codebaseMadeFrom(recordsRoot, projectId),
+									prototypes: new Set(readFolderPrototypes(recordsRoot).map((p) => p.id)),
+									madeFrom: (prototypeId) => codebaseMadeFrom(recordsRoot, prototypeId),
 								}),
 							async (found) => {
 								// Reviewers find a piece of work through its record, so work built in a terminal (a branch, a folder,
 								// and no record) is recorded here, then published with the rest.
 								for (const branch of found.mine) {
 									const work = classify(descriptor, branch);
-									if (work) await recordedWork(root, recordsRoot, descriptor, work.projectId, work.name).catch(() => undefined);
+									if (work) await recordedWork(root, recordsRoot, descriptor, work.prototypeId, work.name).catch(() => undefined);
 								}
 								return syncRecords(dirname(recordsRoot), startedHere(prototypesRoot));
 							},
@@ -313,7 +313,7 @@ export const composeCore = ({
 	const voiceBranches = new VoiceBranches(branchDeps('voice'));
 
 	const codebase = codebaseWork({
-		records: (projectId) => work.records(projectId),
+		records: (prototypeId) => work.records(prototypeId),
 		login: signedInLogin,
 		written,
 	});
@@ -332,7 +332,7 @@ export const composeCore = ({
 	const readSkillText = (path: string): Promise<string> => work.skill(path);
 	/** The product's design system, where it may be read: only once it is shown to be its package's source, or said to be. */
 	const designSystemOf = (productRoot: string): Promise<string | null> => usableDesignSystem(productRoot, sourceAnswers);
-	const work = prototypeWork({
+	const work = versionWork({
 		prototypesRoot,
 		designSystemOf,
 		recordsRootOf,
@@ -344,19 +344,19 @@ export const composeCore = ({
 		readDesignFile: store.readFile,
 		esbuild: esbuildEntry,
 	});
-	const servePrototype = (projectId: string, name: string, html: string): Promise<string> =>
-		prototypeServer.servePage(`${projectId}/${name}`, withPageTheme(html), work.sharedText);
+	const servePrototype = (prototypeId: string, name: string, html: string): Promise<string> =>
+		prototypeServer.servePage(`${prototypeId}/${name}`, withPageTheme(html), work.sharedText);
 	/** This machine's newest build first (built again when its source changed), then the saved one. */
-	const prototypePage = (projectId: string, name: string): Promise<string | null> => work.page(projectId, name);
+	const prototypePage = (prototypeId: string, name: string): Promise<string | null> => work.page(prototypeId, name);
 
 	// Whether a version's page is on the site is worked out here, so the window never hands this an address to open.
 	const deploys = siteDeploys({ github, designClone, ref: () => designRepos.now().ref, started: startedHere(prototypesRoot) });
 	/** A build saved (`from`: the version a new one was started from) is published, as each save is. */
-	const saveBuilt = async (projectId: string, name: string, from: string | null): Promise<SaveOutcome> => {
+	const saveBuilt = async (prototypeId: string, name: string, from: string | null): Promise<SaveOutcome> => {
 		const fresh = from === null ? null : { from, me: me(), note: `For a comment on ${workLabel({ name: from })}` };
 		try {
-			const saved = await work.saveBuilt(projectId, name, fresh);
-			if (saved === 'saved') deploys.page(projectId, name);
+			const saved = await work.saveBuilt(prototypeId, name, fresh);
+			if (saved === 'saved') deploys.page(prototypeId, name);
 			return saved;
 		} catch (err) {
 			if (err instanceof SavedSourceChanged) return { refused: err.message };

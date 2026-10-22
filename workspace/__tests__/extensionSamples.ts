@@ -1,12 +1,12 @@
 import type { Catalog, CatalogComponent, DesignToken } from '../src/shared/domain/designSystem';
 import { undeclared } from '../src/shared/wcag';
-import type { Project, ProjectWork } from '../src/shared/domain/projects';
+import type { Prototype, PrototypeWork } from '../src/shared/domain/prototypes';
 import { aVersion } from './fixtures';
 
-const version = (name: string, openComments = 0, day = 1): ProjectWork =>
+const version = (name: string, openComments = 0, day = 1): PrototypeWork =>
 	aVersion('sample', name, { openComments, createdAt: `2026-10-${String(day).padStart(2, '0')}T10:00:00Z` });
 
-const project = (id: string, title: string, folder: string | null, work: ProjectWork[]): Project => ({
+const prototype = (id: string, title: string, folder: string | null, work: PrototypeWork[]): Prototype => ({
 	id,
 	title,
 	folder,
@@ -15,11 +15,11 @@ const project = (id: string, title: string, folder: string | null, work: Project
 	people: [],
 });
 
-export const SAMPLE_PROJECTS: Project[] = [
-	project('alert-history', 'Alert history', 'Admin', [version('v1', 0, 1), version('v2', 2, 2), version('v3', 0, 3)]),
-	project('admin-usage', 'Admin usage', null, [version('v1'), version('v2', 0, 2)]),
-	project('role-comparison', 'Role comparison', null, [version('v1', 5)]),
-	project('zone-coverage', 'Zone coverage', 'Maps', [version('v1'), version('v2', 0, 2)]),
+export const SAMPLE_PROTOTYPES: Prototype[] = [
+	prototype('alert-history', 'Alert history', 'Admin', [version('v1', 0, 1), version('v2', 2, 2), version('v3', 0, 3)]),
+	prototype('admin-usage', 'Admin usage', null, [version('v1'), version('v2', 0, 2)]),
+	prototype('role-comparison', 'Role comparison', null, [version('v1', 5)]),
+	prototype('zone-coverage', 'Zone coverage', 'Maps', [version('v1'), version('v2', 0, 2)]),
 ];
 
 const component = (group: string, name: string, storybook: string | null = null): CatalogComponent => ({

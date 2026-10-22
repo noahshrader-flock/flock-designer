@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { baseName } from '../../src/shared/baseName';
 import { commandShown } from '../../src/shared/work';
-import type { SetupState } from '../../src/core/services/projects/setUp';
+import type { SetupState } from '../../src/core/services/products/setUp';
 import { Dialog } from '../../src/ui/Dialog';
 import { Message } from '../../src/ui/Message';
 import { Section } from '../../src/ui/Section';

@@ -15,7 +15,7 @@ import { type Looked, lookText, looksDir } from '../prototypes/looks';
 export const MOST_ROUNDS = 2;
 
 export interface CheckConfig {
-	projectId: string;
+	prototypeId: string;
 	name: string;
 	of: string;
 	page: string;
@@ -107,7 +107,7 @@ const lookLines = (looks: Looked | null): string[] =>
 export const checkBuild = async (config: CheckConfig, browser: MeasureBrowser): Promise<{ text: string; code: number }> => {
 	const html = readFileSync(config.page, 'utf8');
 	const measured = await measurePrototype({
-		key: `${config.projectId}/${config.name}`,
+		key: `${config.prototypeId}/${config.name}`,
 		html,
 		target: config.target,
 		depth: 'light',
@@ -130,11 +130,11 @@ export const checkBuild = async (config: CheckConfig, browser: MeasureBrowser): 
 export const LEFT = `the build's own check sent it back ${MOST_ROUNDS} times, and it was still there`;
 
 /** Null when this exact page was not checked (it changed after, or was never checked), so nothing stale goes on the record. */
-export const checkedAsSaved = (config: Pick<CheckConfig, 'projectId' | 'name' | 'of' | 'record'>, html: string): MeasureRecord | null => {
+export const checkedAsSaved = (config: Pick<CheckConfig, 'prototypeId' | 'name' | 'of' | 'record'>, html: string): MeasureRecord | null => {
 	const record = readRecord(config.record);
 	if (!record || record.page !== hashOf(html)) return null;
 	return {
-		projectId: config.projectId,
+		prototypeId: config.prototypeId,
 		name: config.name,
 		of: config.of,
 		result: record.result,

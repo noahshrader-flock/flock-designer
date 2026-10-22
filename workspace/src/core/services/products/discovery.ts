@@ -49,7 +49,7 @@ export class DesignRepositoryClones {
 export const NO_CLONES: Pick<DesignRepositoryClones, 'at'> = { at: () => null };
 
 /**
- * Where a product's design records live: its design repository's `projects`, in the clone the person picked for it, else
+ * Where a product's design records live: its design repository's `prototypes`, in the clone the person picked for it, else
  * the clone beside the product, named as the repository is. Null when neither is there, which DSNR says
  * (`designRepositoryMissing`) rather than making a folder outside any repository.
  */
@@ -82,7 +82,7 @@ export const designRepositoryMissing = (productRoot: string): string => {
 
 /**
  * A folder that is a design repository: a git repository with the agent guide every task begins with (`GUIDE`), which a
- * product does not have. A product's own `projects` folder (an Angular workspace's) is not one.
+ * product does not have. A product's own `prototypes` folder (an Angular workspace's) is not one.
  */
 export const isDesignRepository = (dir: string): boolean => existsSync(join(dir, '.git')) && existsSync(join(dir, GUIDE));
 

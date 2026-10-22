@@ -1,10 +1,10 @@
 import { act, createElement } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Panel } from '../extension/webview/Panel';
-import type { Context } from '../src/core/services/projects/findContext';
-import type { Catalog, ComponentPictures, ProjectWork } from '../src/shared/contract';
-import { SAMPLE_CATALOG, SAMPLE_PROJECTS } from './extensionSamples';
-import { projectWork } from './fixtures';
+import type { Context } from '../src/core/services/products/findContext';
+import type { Catalog, ComponentPictures, PrototypeWork } from '../src/shared/contract';
+import { SAMPLE_CATALOG, SAMPLE_PROTOTYPES } from './extensionSamples';
+import { prototypeWork } from './fixtures';
 import { answer, answerOf, calls, callsOf, kept, lastAsk, mountPage, panelSaid, say, sent, share, shareCatalog, unmount } from './webviewHarness';
 import { allByRole, button, dialog, fieldNamed, key, menuItem, press, spinning, type } from './ui';
 import { READ_EVERY_MS } from '../extension/webview/hooks/useEditedInCode';
@@ -19,11 +19,11 @@ const OPEN: Context = {
 	missing: [],
 };
 const show = () => mountPage(createElement(Panel));
-const showOpen = async (context: Context = OPEN, projects = SAMPLE_PROJECTS) => {
+const showOpen = async (context: Context = OPEN, prototypes = SAMPLE_PROTOTYPES) => {
 	await show();
 	await share('placed', { context, unreadable: null, setup: null });
 	await share('agent', { name: 'Claude Code' });
-	await answer('listProjects', projects);
+	await answer('listPrototypes', prototypes);
 };
 
 const toggle = () => document.querySelector('[role="radiogroup"]') as HTMLElement;
@@ -38,18 +38,18 @@ const viewChoices = async () => {
 };
 const viewChoice = async (label: string) => press((await viewChoices()).find((o) => o.textContent === label)!);
 const checked = async (label: string) => (await viewChoices()).find((o) => o.textContent === label)?.getAttribute('aria-checked');
-const scopeChoices = async () => (await viewChoices()).filter((o) => o.closest('[role="group"]')?.getAttribute('aria-label') === 'Projects');
+const scopeChoices = async () => (await viewChoices()).filter((o) => o.closest('[role="group"]')?.getAttribute('aria-label') === 'Prototypes');
 
 describe('the toggle at the top', () => {
-	it('is first in the panel, Projects and Design System, with Projects chosen', async () => {
+	it('is first in the panel, Prototypes and Design System, with Prototypes chosen', async () => {
 		await show();
 		const bar = document.querySelector('main')?.firstElementChild;
 		expect(bar?.className).toBe('panel-top');
 		expect(bar?.firstElementChild).toBe(toggle());
 		expect(toggle().getAttribute('aria-label')).toBe('View');
-		expect(options().map((o) => o.textContent)).toEqual(['Projects', 'Design System']);
-		expect(chosen()).toBe('Projects');
-		expect(body().dataset.tabBody).toBe('projects');
+		expect(options().map((o) => o.textContent)).toEqual(['Prototypes', 'Design System']);
+		expect(chosen()).toBe('Prototypes');
+		expect(body().dataset.tabBody).toBe('prototypes');
 	});
 
 	it('switches what is under it when the other is pressed', async () => {
@@ -66,11 +66,11 @@ describe('the toggle at the top', () => {
 		expect(chosen()).toBe('Design System');
 		expect(document.activeElement).toBe(options()[1]);
 		await key('ArrowRight', { on: options()[1]! });
-		expect(chosen()).toBe('Projects');
+		expect(chosen()).toBe('Prototypes');
 		await key('End', { on: options()[0]! });
 		expect(chosen()).toBe('Design System');
 		await key('Home', { on: options()[1]! });
-		expect(chosen()).toBe('Projects');
+		expect(chosen()).toBe('Prototypes');
 		expect(options().map((o) => o.tabIndex)).toEqual([0, -1]);
 	});
 
@@ -105,9 +105,9 @@ describe('what is open', () => {
 		missing: ['No product is open: open its folder.'],
 	};
 
-	it('lists everyone’s projects when no product is open, with no switch, and says what a product is for', async () => {
+	it('lists everyone’s prototypes when no product is open, with no switch, and says what a product is for', async () => {
 		await showOpen(NONE);
-		expect(sent.some((m) => m.name === 'listProjects')).toBe(true);
+		expect(sent.some((m) => m.name === 'listPrototypes')).toBe(true);
 		expect([...body().querySelectorAll('[role="listitem"] [data-part="name"]')].map((n) => n.textContent)).toEqual([
 			'Alert history',
 			'Admin usage',
@@ -119,27 +119,27 @@ describe('what is open', () => {
 		expect(body().textContent).toContain('Open one to make a prototype.');
 	});
 
-	it('says there are no projects when no product is open and nobody has made one: no product is needed to see everyone’s', async () => {
+	it('says there are no prototypes when no product is open and nobody has made one: no product is needed to see everyone’s', async () => {
 		await showOpen(NONE, []);
-		expect(body().querySelector('.empty [data-part="title"]')?.textContent).toBe('No projects yet');
+		expect(body().querySelector('.empty [data-part="title"]')?.textContent).toBe('No prototypes yet');
 		expect(body().textContent).not.toContain('No product is open');
 	});
 
 	it('says why Build in the codebase cannot be done with no product open, rather than opening nothing', async () => {
 		await showOpen(NONE);
-		await say({ type: 'open-dialog', dialog: { kind: 'build', projectId: 'alert-history' } });
+		await say({ type: 'open-dialog', dialog: { kind: 'build', prototypeId: 'alert-history' } });
 		expect(dialog()?.textContent).toContain('Open the product');
 		expect(sent.some((m) => m.name === 'buildInCodebasePlan')).toBe(false);
 	});
 
-	it('offers to clone a repository beside everyone’s projects too', async () => {
+	it('offers to clone a repository beside everyone’s prototypes too', async () => {
 		await showOpen(NONE);
 		await press(button('Clone a repository'));
 		expect(lastAsk()).toEqual(['getStarted', []]);
 	});
 });
 
-describe('the account, and reading the projects again', () => {
+describe('the account, and reading the prototypes again', () => {
 	const signedIn = { state: 'signedIn', user: { login: 'noah', name: 'Noah', avatarUrl: 'https://avatars.githubusercontent.com/u/1' } };
 
 	it('is not the page’s: signing in is in VS Code’s own title bar, beside the DSNR mark, so the top bar is the toggle alone', async () => {
@@ -147,28 +147,28 @@ describe('the account, and reading the projects again', () => {
 		expect([...(document.querySelector('.panel-top')?.children ?? [])].map((c) => c.className)).toEqual(['toggle']);
 	});
 
-	it('shows what it has while it reads again, and then what is new: a comment made in a review is a number on its project', async () => {
+	it('shows what it has while it reads again, and then what is new: a comment made in a review is a number on its prototype', async () => {
 		await showOpen();
 		const badge = () => body().querySelector('[data-part="name"]')?.closest('li')?.querySelector('.badge')?.getAttribute('aria-label') ?? null;
 		expect(badge()).toBe('2 open comments');
-		await say({ type: 'projects-changed' });
+		await say({ type: 'prototypes-changed' });
 		expect(body().querySelectorAll('[role="listitem"]')).toHaveLength(4);
 		expect(badge()).toBe('2 open comments');
 		await answer(
-			'listProjects',
-			SAMPLE_PROJECTS.map((p) =>
+			'listPrototypes',
+			SAMPLE_PROTOTYPES.map((p) =>
 				p.id === 'alert-history' ? { ...p, work: p.work.map((i, at) => ({ ...i, openComments: i.openComments + (at === 0 ? 1 : 0) })) } : p,
 			),
 		);
 		expect(badge()).toBe('3 open comments');
 	});
 
-	it('is read from the core when the panel opens, and the projects are read again when it changes', async () => {
+	it('is read from the core when the panel opens, and the prototypes are read again when it changes', async () => {
 		await showOpen();
 		expect(sent.some((m) => m.name === 'signInState')).toBe(true);
-		const reads = sent.filter((m) => m.name === 'listProjects').length;
+		const reads = sent.filter((m) => m.name === 'listPrototypes').length;
 		await say({ type: 'event', name: 'onSignInChanged', payload: signedIn });
-		expect(sent.filter((m) => m.name === 'listProjects').length).toBe(reads + 1);
+		expect(sent.filter((m) => m.name === 'listPrototypes').length).toBe(reads + 1);
 	});
 });
 
@@ -261,12 +261,12 @@ describe('dialogs and menus, in the panel', () => {
 	const selected = (select: HTMLElement) => (select as HTMLSelectElement).selectedOptions[0]?.textContent;
 	const submit = () => dialog()!.querySelector('button[type="submit"]') as HTMLButtonElement;
 	const closeX = () => button('Close', dialog()!);
-	const menuFor = (n: number) => [...body().querySelectorAll<HTMLElement>('[aria-label="Project actions"]')][n] as HTMLElement;
+	const menuFor = (n: number) => [...body().querySelectorAll<HTMLElement>('[aria-label="Prototype actions"]')][n] as HTMLElement;
 	const items = () => allByRole('menuitem');
 	const item = (label: string) => menuItem(items(), label);
 
-	describe('a project’s menu', () => {
-		it('is on each project, a popover of what it offers, closed by Escape or a press elsewhere', async () => {
+	describe('a prototype’s menu', () => {
+		it('is on each prototype, a popover of what it offers, closed by Escape or a press elsewhere', async () => {
 			await showOpen();
 			await press(menuFor(0));
 			expect(items().map((i) => i.textContent)).toEqual([
@@ -309,7 +309,7 @@ describe('dialogs and menus, in the panel', () => {
 			expect(groups.join(',')).toBe('Copy link,|,Open published page,Open locally,|,Build,|,Rename…,Assign folder…,Delete…');
 		});
 
-		it('opens a project’s review in the browser from it: the same review, asked of the extension to open outside VS Code', async () => {
+		it('opens a prototype’s review in the browser from it: the same review, asked of the extension to open outside VS Code', async () => {
 			await showOpen();
 			await press(menuFor(0));
 			await press(item('Open locally'));
@@ -368,44 +368,44 @@ describe('dialogs and menus, in the panel', () => {
 			expect(submit().disabled).toBe(true);
 		});
 
-		it('renames it through the core, by its id, closing, and the projects are read again', async () => {
+		it('renames it through the core, by its id, closing, and the prototypes are read again', async () => {
 			await open();
-			const reads = sent.filter((m) => m.name === 'listProjects').length;
+			const reads = sent.filter((m) => m.name === 'listPrototypes').length;
 			await type(field('Name'), '  Alerts   over time ');
 			await press(submit());
-			expect(sent.filter((m) => m.name === 'renameProject').at(-1)?.args).toEqual(['alert-history', 'Alerts over time']);
-			await answer('renameProject', null);
+			expect(sent.filter((m) => m.name === 'renamePrototype').at(-1)?.args).toEqual(['alert-history', 'Alerts over time']);
+			await answer('renamePrototype', null);
 			expect(dialog()).toBeNull();
-			expect(sent.filter((m) => m.name === 'listProjects').length).toBe(reads + 1);
+			expect(sent.filter((m) => m.name === 'listPrototypes').length).toBe(reads + 1);
 		});
 
 		it('says why it could not, in the dialog, which stays open', async () => {
 			await open();
 			await type(field('Name'), 'Alerts');
 			await press(submit());
-			const call = sent.filter((m) => m.name === 'renameProject').at(-1);
+			const call = sent.filter((m) => m.name === 'renamePrototype').at(-1);
 			await say({ type: 'answer', id: call!.id, result: { ok: false, error: 'alert-history has no brief, which is where its name is kept.' } });
 			expect(dialog()?.textContent).toContain('alert-history has no brief, which is where its name is kept.');
 		});
 	});
 
 	describe('Delete', () => {
-		const open = async (projects = SAMPLE_PROJECTS) => {
-			await showOpen(OPEN, projects);
+		const open = async (prototypes = SAMPLE_PROTOTYPES) => {
+			await showOpen(OPEN, prototypes);
 			await press(menuFor(0));
 			await press(item('Delete…'));
 		};
 
 		it('is last in the menu, under Assign folder, and says what goes, for everyone, and what stays', async () => {
 			await open();
-			expect(dialog()?.getAttribute('aria-label')).toBe('Delete project');
+			expect(dialog()?.getAttribute('aria-label')).toBe('Delete prototype');
 			expect(dialog()?.textContent).toContain(
 				'This deletes Alert history and its 3 versions for everyone, with every page, picture and record of it, and takes it off the published site. 2 open comments are on it.',
 			);
 			expect(dialog()?.textContent).toContain(
 				'Its review issues on GitHub are closed, with their comments kept there. What it was stays in the design repository’s history.',
 			);
-			expect(submit().textContent).toBe('Delete project');
+			expect(submit().textContent).toBe('Delete prototype');
 			expect(submit().className).toContain('button-danger');
 		});
 
@@ -428,18 +428,18 @@ describe('dialogs and menus, in the panel', () => {
 
 		it('deletes it through the core, by its id with the name typed, closing at once, its card saying Deleting… until it is gone', async () => {
 			await open();
-			const reads = sent.filter((m) => m.name === 'listProjects').length;
+			const reads = sent.filter((m) => m.name === 'listPrototypes').length;
 			await type(field('Type Alert history to delete it'), 'Alert history');
 			await press(submit());
-			expect(sent.filter((m) => m.name === 'deleteProject').at(-1)?.args).toEqual(['alert-history', 'Alert history']);
+			expect(sent.filter((m) => m.name === 'deletePrototype').at(-1)?.args).toEqual(['alert-history', 'Alert history']);
 			expect(dialog()).toBeNull();
 			// Its name stays; what it is doing is said under it, and it shimmers, with nothing to press.
 			expect(alertHistory().querySelector('[data-part="meta"]')?.textContent?.trim()).toBe('Deleting…');
 			expect(spinning(alertHistory().querySelector('[data-part="meta"]'))).toBe(true);
 			expect(alertHistory().querySelector('[data-part="picture"]')?.getAttribute('data-loading')).toBe('true');
-			expect(alertHistory().querySelector('[aria-label="Project actions"]')).toBeNull();
-			await answer('deleteProject', null);
-			expect(sent.filter((m) => m.name === 'listProjects').length).toBe(reads + 1);
+			expect(alertHistory().querySelector('[aria-label="Prototype actions"]')).toBeNull();
+			await answer('deletePrototype', null);
+			expect(sent.filter((m) => m.name === 'listPrototypes').length).toBe(reads + 1);
 			// Still in the list read until it is gone, it still says so.
 			expect(alertHistory().querySelector('[data-part="meta"]')?.textContent?.trim()).toBe('Deleting…');
 			expect(spinning(alertHistory().querySelector('[data-part="meta"]'))).toBe(true);
@@ -449,7 +449,7 @@ describe('dialogs and menus, in the panel', () => {
 			await open();
 			await type(field('Type Alert history to delete it'), 'Alert history');
 			await press(submit());
-			const call = sent.filter((m) => m.name === 'deleteProject').at(-1);
+			const call = sent.filter((m) => m.name === 'deletePrototype').at(-1);
 			await say({ type: 'answer', id: call!.id, result: { ok: false, error: 'Saving needs write access to flocksafety/flock-designer.' } });
 			expect(dialog()?.textContent).toContain('Saving needs write access to flocksafety/flock-designer.');
 			expect(alertHistory().querySelector('[data-part="meta"]')?.textContent?.trim()).not.toBe('Deleting…');
@@ -461,10 +461,10 @@ describe('dialogs and menus, in the panel', () => {
 			expect(dialog()?.textContent).not.toContain('Saving needs write access');
 		});
 
-		it('names no versions for a project with only codebase work', async () => {
+		it('names no versions for a prototype with only codebase work', async () => {
 			await open([
-				{ ...SAMPLE_PROJECTS[0]!, work: [projectWork({ name: 'codebase', branch: 'feature/alert-history' })] },
-				...SAMPLE_PROJECTS.slice(1),
+				{ ...SAMPLE_PROTOTYPES[0]!, work: [prototypeWork({ name: 'codebase', branch: 'feature/alert-history' })] },
+				...SAMPLE_PROTOTYPES.slice(1),
 			]);
 			expect(dialog()?.textContent).toContain('This deletes Alert history for everyone, with every page');
 			expect(dialog()?.textContent).toContain(
@@ -473,13 +473,13 @@ describe('dialogs and menus, in the panel', () => {
 		});
 
 		it('says its codebase branch and pull request stay, when it has them', async () => {
-			const inCode = SAMPLE_PROJECTS.map((p, at) =>
+			const inCode = SAMPLE_PROTOTYPES.map((p, at) =>
 				at === 0
 					? {
 							...p,
 							work: [
 								...p.work,
-								projectWork({ name: 'codebase', branch: 'feature/alert-history', pullRequest: 'https://github.com/flocksafety/flock-coke/pull/9' }),
+								prototypeWork({ name: 'codebase', branch: 'feature/alert-history', pullRequest: 'https://github.com/flocksafety/flock-coke/pull/9' }),
 							],
 						}
 					: p,
@@ -501,15 +501,15 @@ describe('dialogs and menus, in the panel', () => {
 		it('has the folder it is in chosen however it was spelled, as the list spells it', async () => {
 			await showOpen(
 				OPEN,
-				SAMPLE_PROJECTS.map((p) => (p.id === 'role-comparison' ? { ...p, folder: 'maps' } : p)),
+				SAMPLE_PROTOTYPES.map((p) => (p.id === 'role-comparison' ? { ...p, folder: 'maps' } : p)),
 			);
-			await say({ type: 'open-dialog', dialog: { kind: 'assign', projectId: 'zone-coverage' } });
+			await say({ type: 'open-dialog', dialog: { kind: 'assign', prototypeId: 'zone-coverage' } });
 			expect([...field('Folder').querySelectorAll('option')].map((o) => o.textContent)).toEqual(['No folder', 'Admin', 'maps', 'New folder…']);
 			expect(selected(field('Folder'))).toBe('maps');
 			expect(submit().disabled).toBe(true);
 		});
 
-		it('is a dialog for the project, with the folder it is in chosen', async () => {
+		it('is a dialog for the prototype, with the folder it is in chosen', async () => {
 			await open();
 			expect(dialog()?.getAttribute('aria-label')).toBe('Assign folder');
 			expect(dialog()!.textContent).toContain('Alert history');
@@ -517,15 +517,15 @@ describe('dialogs and menus, in the panel', () => {
 			expect(submit().disabled).toBe(true);
 		});
 
-		it('puts it in the folder chosen, through the core, closing, and the projects are read again', async () => {
+		it('puts it in the folder chosen, through the core, closing, and the prototypes are read again', async () => {
 			await open();
-			const reads = sent.filter((m) => m.name === 'listProjects').length;
+			const reads = sent.filter((m) => m.name === 'listPrototypes').length;
 			await choose(field('Folder'), 'Maps');
 			await press(submit());
 			expect(sent.filter((m) => m.name === 'assignFolder').at(-1)?.args).toEqual(['alert-history', 'Maps']);
 			await answer('assignFolder', null);
 			expect(dialog()).toBeNull();
-			expect(sent.filter((m) => m.name === 'listProjects').length).toBe(reads + 1);
+			expect(sent.filter((m) => m.name === 'listPrototypes').length).toBe(reads + 1);
 		});
 
 		it('takes it out of its folder, or into a new one', async () => {
@@ -534,7 +534,7 @@ describe('dialogs and menus, in the panel', () => {
 			await press(submit());
 			expect(sent.filter((m) => m.name === 'assignFolder').at(-1)?.args).toEqual(['alert-history', null]);
 			await answer('assignFolder', null);
-			await answer('listProjects', SAMPLE_PROJECTS);
+			await answer('listPrototypes', SAMPLE_PROTOTYPES);
 			await press(menuFor(1));
 			await press(item('Assign folder…'));
 			await choose(field('Folder'), 'New folder…');
@@ -553,27 +553,27 @@ describe('dialogs and menus, in the panel', () => {
 			expect(dialog()).not.toBeNull();
 		});
 
-		it('opens from the extension too (the right-click menu, a review’s menu), for the project it names', async () => {
+		it('opens from the extension too (the right-click menu, a review’s menu), for the prototype it names', async () => {
 			await showOpen();
-			await say({ type: 'open-dialog', dialog: { kind: 'assign', projectId: 'admin-usage' } });
+			await say({ type: 'open-dialog', dialog: { kind: 'assign', prototypeId: 'admin-usage' } });
 			expect(dialog()!.textContent).toContain('Admin usage');
 			await press(closeX());
-			await say({ type: 'open-dialog', dialog: { kind: 'assign', projectId: 'not-here' } });
+			await say({ type: 'open-dialog', dialog: { kind: 'assign', prototypeId: 'not-here' } });
 			expect(dialog()).toBeNull();
 		});
 	});
 });
 
 describe('codebase work, in the panel', () => {
-	const codebase = (branch: string, more: Partial<ProjectWork> = {}): ProjectWork =>
-		projectWork({ name: 'codebase', branch, createdAt: '2026-10-12T10:00:00Z', repository: 'flocksafety/flock-coke', ...more });
+	const codebase = (branch: string, more: Partial<PrototypeWork> = {}): PrototypeWork =>
+		prototypeWork({ name: 'codebase', branch, createdAt: '2026-10-12T10:00:00Z', repository: 'flocksafety/flock-coke', ...more });
 	const WITH_CODE = [
-		...SAMPLE_PROJECTS.map((p) => (p.id === 'zone-coverage' ? { ...p, work: [...p.work, codebase('feature/zone-coverage')] } : p)),
+		...SAMPLE_PROTOTYPES.map((p) => (p.id === 'zone-coverage' ? { ...p, work: [...p.work, codebase('feature/zone-coverage')] } : p)),
 		{ id: 'roles-in-code', title: 'Roles in code', folder: null, records: [], people: [], work: [codebase('feature/roles-in-code')] },
-	] as typeof SAMPLE_PROJECTS;
+	] as typeof SAMPLE_PROTOTYPES;
 	const named = (title: string) =>
 		[...body().querySelectorAll<HTMLElement>('[role="listitem"]')].find((r) => r.querySelector('[data-part="name"]')?.textContent === title)!;
-	const menuOf = (title: string) => named(title).querySelector<HTMLElement>('[aria-label="Project actions"]')!;
+	const menuOf = (title: string) => named(title).querySelector<HTMLElement>('[aria-label="Prototype actions"]')!;
 	const items = () => allByRole('menuitem').map((i) => i.textContent);
 	const item = (label: string) => menuItem(allByRole('menuitem'), label);
 	const elsewhere = async () => act(async () => void document.body.dispatchEvent(new MouseEvent('mousedown', { bubbles: true })));
@@ -581,9 +581,9 @@ describe('codebase work, in the panel', () => {
 	const closeX = () => button('Close', dialog()!);
 
 	it('offers Build, not Hand off, for codebase work whose branch has no commit of its own here: started and never built', async () => {
-		const notBegun = SAMPLE_PROJECTS.map((p) =>
+		const notBegun = SAMPLE_PROTOTYPES.map((p) =>
 			p.id === 'zone-coverage' ? { ...p, work: [...p.work, codebase('feature/zone-coverage', { begun: false })] } : p,
-		) as typeof SAMPLE_PROJECTS;
+		) as typeof SAMPLE_PROTOTYPES;
 		await showOpen(OPEN, notBegun);
 		await press(menuOf('Zone coverage'));
 		expect(items()).toEqual([
@@ -604,16 +604,16 @@ describe('codebase work, in the panel', () => {
 
 	// Begun, or not known here (another machine's), it is the handoff that is next.
 	it.each([true, null])('offers Hand off, not Build, for codebase work whose own commits here are %s', async (begun) => {
-		const known = SAMPLE_PROJECTS.map((p) =>
+		const known = SAMPLE_PROTOTYPES.map((p) =>
 			p.id === 'zone-coverage' ? { ...p, work: [...p.work, codebase('feature/zone-coverage', { begun })] } : p,
-		) as typeof SAMPLE_PROJECTS;
+		) as typeof SAMPLE_PROTOTYPES;
 		await showOpen(OPEN, known);
 		await press(menuOf('Zone coverage'));
 		expect(items()).toContain('Hand off');
 		expect(items()).not.toContain('Build');
 	});
 
-	it('offers what a project has, in groups: its link to copy, where it opens, what runs it, with the next stage (build, or handoff, never both), the code on GitHub, and its folder', async () => {
+	it('offers what a prototype has, in groups: its link to copy, where it opens, what runs it, with the next stage (build, or handoff, never both), the code on GitHub, and its folder', async () => {
 		await showOpen(OPEN, WITH_CODE);
 		const dividers = () => document.querySelectorAll('[role="separator"]').length;
 		await press(menuOf('Zone coverage'));
@@ -638,11 +638,11 @@ describe('codebase work, in the panel', () => {
 		await press(menuOf('Roles in code'));
 		expect(items()).toEqual(['Run locally', 'Update this branch…', 'Hand off', 'View on GitHub', 'Rename…', 'Assign folder…', 'Delete…']);
 		expect(dividers()).toBe(2);
-		// No item opens it in VS Code: pressing the project does, so nothing is offered twice.
+		// No item opens it in VS Code: pressing the prototype does, so nothing is offered twice.
 		expect(items().some((label) => /open for review|preview|comments|share/i.test(label))).toBe(false);
 	});
 
-	it('asks the extension to view the work locally, naming the project only, and offers it only for codebase work', async () => {
+	it('asks the extension to view the work locally, naming the prototype only, and offers it only for codebase work', async () => {
 		await showOpen(OPEN, WITH_CODE);
 		await press(menuOf('Zone coverage'));
 		await press(item('Run locally'));
@@ -651,14 +651,14 @@ describe('codebase work, in the panel', () => {
 		expect(items()).not.toContain('Run locally');
 	});
 
-	it('asks the extension for the work on GitHub, naming the project only', async () => {
+	it('asks the extension for the work on GitHub, naming the prototype only', async () => {
 		await showOpen(OPEN, WITH_CODE);
 		await press(menuOf('Zone coverage'));
 		await press(item('View on GitHub'));
 		expect(lastAsk()).toEqual(['codebase', ['open-code', 'zone-coverage']]);
 	});
 
-	it('opens a project that is only in the code on GitHub when it is pressed, as the app does', async () => {
+	it('opens a prototype that is only in the code on GitHub when it is pressed, as the app does', async () => {
 		await showOpen(OPEN, WITH_CODE);
 		await press(named('Roles in code').querySelector('button') as HTMLElement);
 		expect(lastAsk()).toEqual(['codebase', ['open-code', 'roles-in-code']]);
@@ -711,7 +711,7 @@ describe('codebase work, in the panel', () => {
 			expect(dialog()).toBeNull();
 		});
 
-		it('is in the project’s menu for codebase work, saying how it stands either way', async () => {
+		it('is in the prototype’s menu for codebase work, saying how it stands either way', async () => {
 			await showOpen(OPEN, WITH_CODE);
 			await press(menuOf('Alert history'));
 			expect(items()).not.toContain('Update this branch…');
@@ -751,7 +751,7 @@ describe('codebase work, in the panel', () => {
 			WITH_CODE.map((p) =>
 				p.id === 'zone-coverage' ? { ...p, work: p.work.map((work) => (work.name === 'codebase' ? { ...work, readyAt: READY, ...more } : work)) } : p,
 			);
-		await showOpen(OPEN, ready({}) as typeof SAMPLE_PROJECTS);
+		await showOpen(OPEN, ready({}) as typeof SAMPLE_PROTOTYPES);
 		await press(menuOf('Zone coverage'));
 		await press(item('Hand off'));
 		expect(dialog()!.textContent).toContain('ready for engineering');
@@ -773,7 +773,7 @@ describe('codebase work, in the panel', () => {
 					}
 				: p,
 		);
-		await showOpen(OPEN, ready as typeof SAMPLE_PROJECTS);
+		await showOpen(OPEN, ready as typeof SAMPLE_PROTOTYPES);
 		await press(menuOf('Zone coverage'));
 		await press(item('Hand off'));
 		expect(allByRole('button', 'Open a draft pull request', dialog()!)).toEqual([]);
@@ -786,7 +786,7 @@ describe('codebase work, in the panel', () => {
 			OPEN,
 			WITH_CODE.map((p) =>
 				p.id === 'zone-coverage' ? { ...p, work: p.work.map((work) => (work.name === 'codebase' ? { ...work, readyAt: 'a1b2c3d' } : work)) } : p,
-			) as typeof SAMPLE_PROJECTS,
+			) as typeof SAMPLE_PROTOTYPES,
 		);
 		await press(menuOf('Zone coverage'));
 		await press(item('Hand off'));
@@ -816,18 +816,18 @@ describe('codebase work, in the panel', () => {
 		};
 		const select = () => dialog()!.querySelector('select') as HTMLSelectElement;
 
-		it('acts on the newest version as the project is when the dialog opens, not as the list showed it: the list is read again', async () => {
+		it('acts on the newest version as the prototype is when the dialog opens, not as the list showed it: the list is read again', async () => {
 			await open();
 			expect(sent.filter((m) => m.name === 'buildInCodebasePlan').at(-1)?.args).toEqual(['/work/flock-coke', 'alert-history', 'v3']);
 			// A Version 4 an agent made in a terminal meanwhile: the list read again has it, and the dialog follows.
 			const withV4 = WITH_CODE.map((p) =>
 				p.id === 'alert-history' ? { ...p, work: [...p.work, { ...p.work[0]!, name: 'v4', branch: 'prototype/alert-history/v4' }] } : p,
 			);
-			await answer('listProjects', withV4);
+			await answer('listPrototypes', withV4);
 			expect(sent.filter((m) => m.name === 'buildInCodebasePlan').at(-1)?.args).toEqual(['/work/flock-coke', 'alert-history', 'v4']);
 		});
 
-		it('reads what it would do in the product open here, for the project’s newest prototype', async () => {
+		it('reads what it would do in the product open here, for the prototype’s newest version', async () => {
 			await open();
 			expect(dialog()?.getAttribute('aria-label')).toBe('Build in the codebase');
 			expect(sent.filter((m) => m.name === 'buildInCodebasePlan').at(-1)?.args).toEqual(['/work/flock-coke', 'alert-history', 'v3']);
@@ -843,10 +843,10 @@ describe('codebase work, in the panel', () => {
 			expect(select().value).toBe('develop');
 			await press(inDialog('Build in Claude Code'));
 			expect(sent.filter((m) => m.name === 'buildInCodebase').at(-1)?.args).toEqual(['/work/flock-coke', 'alert-history', 'v3', 'develop']);
-			const reads = sent.filter((m) => m.name === 'listProjects').length;
+			const reads = sent.filter((m) => m.name === 'listPrototypes').length;
 			await answer('buildInCodebase', { agent: 'Claude Code', opened: 'typed', command: null });
 			expect(dialog()!.textContent).toContain('The build, on feature/alert-history, is in Claude Code in this window now');
-			expect(sent.filter((m) => m.name === 'listProjects').length).toBe(reads + 1);
+			expect(sent.filter((m) => m.name === 'listPrototypes').length).toBe(reads + 1);
 			await press(closeX());
 			expect(dialog()).toBeNull();
 		});
@@ -896,8 +896,8 @@ describe('codebase work, in the panel', () => {
 	});
 });
 
-describe('searching the projects', () => {
-	const search = () => document.querySelector('input[aria-label="Search projects"]') as HTMLInputElement;
+describe('searching the prototypes', () => {
+	const search = () => document.querySelector('input[aria-label="Search prototypes"]') as HTMLInputElement;
 	const names = () => [...body().querySelectorAll('[data-part="name"]')].map((n) => n.textContent);
 	const sections = () =>
 		[...body().querySelectorAll('.section')].map((x) => [
@@ -912,10 +912,10 @@ describe('searching the projects', () => {
 			'search',
 			'View options',
 		]);
-		expect(search().placeholder).toBe('Search projects');
+		expect(search().placeholder).toBe('Search prototypes');
 	});
 
-	it('narrows the projects as it is typed in: every word, in any case, in the name, the folder or the id', async () => {
+	it('narrows the prototypes as it is typed in: every word, in any case, in the name, the folder or the id', async () => {
 		await showOpen();
 		await type(search(), 'ZONE');
 		expect(names()).toEqual(['Zone coverage']);
@@ -927,7 +927,7 @@ describe('searching the projects', () => {
 		expect(names()).toHaveLength(4);
 	});
 
-	it('keeps the folders that still have a project, with how many they hold', async () => {
+	it('keeps the folders that still have a prototype, with how many they hold', async () => {
 		await showOpen();
 		await type(search(), 'admin');
 		expect(sections()).toEqual([
@@ -940,7 +940,7 @@ describe('searching the projects', () => {
 		await showOpen();
 		await type(search(), 'zzz');
 		expect(names()).toEqual([]);
-		expect(body().textContent).toContain('No project matches “zzz”.');
+		expect(body().textContent).toContain('No prototype matches “zzz”.');
 		await press(button('Clear search'));
 		expect(search().value).toBe('');
 		expect(names()).toHaveLength(4);
@@ -964,8 +964,8 @@ describe('searching the projects', () => {
 	});
 });
 
-describe('the projects as a list or a grid', () => {
-	it('starts as a grid, Grid and List to choose between in the view options, once there are projects to show', async () => {
+describe('the prototypes as a list or a grid', () => {
+	it('starts as a grid, Grid and List to choose between in the view options, once there are prototypes to show', async () => {
 		await showOpen();
 		expect(await checked('Grid')).toBe('true');
 		expect(await checked('List')).toBe('false');
@@ -984,7 +984,7 @@ describe('the projects as a list or a grid', () => {
 			records: [],
 			people: [],
 			localOnly: true,
-			work: [projectWork({ name: 'v1', branch: 'prototype/widgets/v1', createdAt: '2026-10-20T10:00:00Z', building: true })],
+			work: [prototypeWork({ name: 'v1', branch: 'prototype/widgets/v1', createdAt: '2026-10-20T10:00:00Z', building: true })],
 		};
 		const started = () =>
 			cards()
@@ -992,11 +992,11 @@ describe('the projects as a list or a grid', () => {
 				.closest('li') as HTMLElement;
 
 		it('keeps its name, says Building… under it, shimmers, with only Delete… in its menu, and opens nothing', async () => {
-			await showOpen(OPEN, [STARTED, ...SAMPLE_PROJECTS]);
+			await showOpen(OPEN, [STARTED, ...SAMPLE_PROTOTYPES]);
 			expect(started().querySelector('[data-part="meta"]')?.textContent?.trim()).toBe('Building…');
 			expect(spinning(started().querySelector('[data-part="meta"]'))).toBe(true);
 			expect(started().querySelector('[data-part="picture"]')?.getAttribute('data-loading')).toBe('true');
-			await press(started().querySelector('[aria-label="Project actions"]') as HTMLElement);
+			await press(started().querySelector('[aria-label="Prototype actions"]') as HTMLElement);
 			expect(allByRole('menuitem').map((i) => i.textContent)).toEqual(['Delete…']);
 			await key('Escape');
 			await press(started().querySelector('[data-part="name"]') as HTMLElement);
@@ -1004,19 +1004,19 @@ describe('the projects as a list or a grid', () => {
 		});
 
 		it('is deleted saying nothing of it was shared, once its name is typed', async () => {
-			await showOpen(OPEN, [STARTED, ...SAMPLE_PROJECTS]);
-			await press(started().querySelector('[aria-label="Project actions"]') as HTMLElement);
+			await showOpen(OPEN, [STARTED, ...SAMPLE_PROTOTYPES]);
+			await press(started().querySelector('[aria-label="Prototype actions"]') as HTMLElement);
 			await press(menuItem(allByRole('menuitem'), 'Delete…'));
 			expect(dialog()?.textContent).toContain('This deletes Widget explorer. It was started here and not saved yet, so nothing of it was shared.');
 			expect(dialog()?.textContent).not.toContain('Its review issues on GitHub');
 			await type(fieldNamed<HTMLInputElement>('Type Widget explorer to delete it', dialog()!), 'Widget explorer');
 			await press(dialog()!.querySelector('button[type="submit"]') as HTMLButtonElement);
-			expect(sent.filter((m) => m.name === 'deleteProject').at(-1)?.args).toEqual(['widgets', 'Widget explorer']);
+			expect(sent.filter((m) => m.name === 'deletePrototype').at(-1)?.args).toEqual(['widgets', 'Widget explorer']);
 		});
 
-		it('is not counted, nor opened, beside a version already saved: the project opens at its newest saved one', async () => {
-			const more = SAMPLE_PROJECTS.map((p, at) =>
-				at === 0 ? { ...p, work: [...p.work, projectWork({ name: 'v4', branch: 'prototype/alert-history/v4', building: true })] } : p,
+		it('is not counted, nor opened, beside a version already saved: the prototype opens at its newest saved one', async () => {
+			const more = SAMPLE_PROTOTYPES.map((p, at) =>
+				at === 0 ? { ...p, work: [...p.work, prototypeWork({ name: 'v4', branch: 'prototype/alert-history/v4', building: true })] } : p,
 			);
 			await showOpen(OPEN, more);
 			const card = cards().find((c) => c.querySelector('[data-part="name"]')?.textContent === 'Alert history') as HTMLElement;
@@ -1026,7 +1026,7 @@ describe('the projects as a list or a grid', () => {
 		});
 	});
 
-	it('shows each project as a card in a grid: its picture, its name and what it has, with its comments as a badge', async () => {
+	it('shows each prototype as a card in a grid: its picture, its name and what it has, with its comments as a badge', async () => {
 		await showOpen();
 		expect(cards().map((c) => c.querySelector('[data-part="name"]')?.textContent)).toEqual([
 			'Alert history',
@@ -1061,7 +1061,7 @@ describe('the projects as a list or a grid', () => {
 		expect(body().querySelector('.row .thumb > [data-part="picture"] + .thumb-wash')).not.toBeNull();
 	});
 
-	it('keeps the sections, and the cards do what the rows do: open the newest prototype, and take the right-click menu', async () => {
+	it('keeps the sections, and the cards do what the rows do: open the newest version, and take the right-click menu', async () => {
 		await showOpen();
 		expect([...body().querySelectorAll('.section')].map((x) => x.querySelector('[data-part="title"]')?.textContent)).toEqual([
 			'Admin',
@@ -1071,28 +1071,34 @@ describe('the projects as a list or a grid', () => {
 		await press(cards()[0]!);
 		expect(lastAsk()).toEqual(['openReview', ['alert-history']]);
 		expect(JSON.parse(cards()[0]!.closest('li')!.dataset.vscodeContext ?? '{}')).toMatchObject({
-			webviewSection: 'project',
-			projectId: 'alert-history',
+			webviewSection: 'prototype',
+			prototypeId: 'alert-history',
 		});
 	});
 
 	it('draws the pictures in either', async () => {
 		await showOpen();
 		// A cover name of its own: pictures are cached by name across the tests of this file.
-		await answer('ensureCovers', [{ projectId: 'alert-history', name: 'v3', cover: 'fedcba654321' }]);
-		await answer('projectCover', 'data:image/jpeg;base64,BBBB');
+		await answer('ensureCovers', [{ prototypeId: 'alert-history', name: 'v3', cover: 'fedcba654321' }]);
+		await answer('prototypeCover', 'data:image/jpeg;base64,BBBB');
 		expect(cards()[0]!.querySelector('[data-part="picture"]')?.getAttribute('src')).toBe('data:image/jpeg;base64,BBBB');
 	});
 
 	it('is kept in the panel’s state, so a reload leaves it where it was, as the tab is', async () => {
 		await showOpen();
 		await viewChoice('List');
-		expect(kept.state).toMatchObject({ tab: 'projects', view: 'list' });
+		expect(kept.state).toMatchObject({ tab: 'prototypes', view: 'list' });
 		await unmount();
 		sent.length = 0;
 		await showOpen();
 		expect(await checked('List')).toBe('true');
 		expect(cards()).toHaveLength(0);
+	});
+
+	it('opens on Prototypes when what it kept names a tab there is no longer: one an earlier panel kept', async () => {
+		kept.state = { tab: 'projects', view: 'grid' };
+		await showOpen();
+		expect(body().getAttribute('data-tab-body')).toBe('prototypes');
 	});
 
 	it('does not lose the tab chosen, nor the layout when the tab is', async () => {
@@ -1103,7 +1109,7 @@ describe('the projects as a list or a grid', () => {
 	});
 });
 
-describe('Projects, focused on the product open', () => {
+describe('Prototypes, focused on the product open', () => {
 	const COKE = 'flocksafety/flock-coke';
 	const PEPSI = 'flocksafety/flock-pepsi';
 	const rows = () => [...body().querySelectorAll<HTMLElement>('[role="listitem"]')];
@@ -1121,25 +1127,25 @@ describe('Projects, focused on the product open', () => {
 		records: [],
 		people: [],
 		work: on.map(([product, createdAt], i) => ({
-			...SAMPLE_PROJECTS[0]!.work[0]!,
+			...SAMPLE_PROTOTYPES[0]!.work[0]!,
 			name: `v${i + 1}`,
 			branch: `prototype/${id}/v${i + 1}`,
 			product,
 			createdAt,
 		})),
 	});
-	const PROJECTS = [
+	const PROTOTYPES = [
 		made('alerts', 'Alerts', 'Admin', [COKE, '2026-10-01T10:00:00Z']),
 		made('maps', 'Maps', null, [PEPSI, '2026-10-02T10:00:00Z']),
 		made('both', 'Both', 'Admin', [COKE, '2026-10-01T10:00:00Z'], [PEPSI, '2026-10-05T10:00:00Z']),
 		made('old', 'Old', null, [null, '2026-09-01T10:00:00Z']),
 	];
 
-	it('shows the open product’s projects first, by folder, and those with no product on record, marked', async () => {
-		await showOpen(OPEN, PROJECTS);
+	it('shows the open product’s prototypes first, by folder, and those with no product on record, marked', async () => {
+		await showOpen(OPEN, PROTOTYPES);
 		expect((await scopeChoices()).map((o) => [o.textContent, o.getAttribute('aria-checked')])).toEqual([
 			['This product', 'true'],
-			['All projects', 'false'],
+			['All prototypes', 'false'],
 		]);
 		expect(sections()).toEqual(['Admin', 'No folder']);
 		expect(names()).toEqual(['Alerts', 'Both', 'Old']);
@@ -1147,13 +1153,13 @@ describe('Projects, focused on the product open', () => {
 		expect(meta('Alerts')).toBe('1 version');
 	});
 
-	it('counts a project’s versions, and no version for work in the code', async () => {
+	it('counts a prototype’s versions, and no version for work in the code', async () => {
 		const at = (name: string, createdAt: string) => ({
 			...made('x', 'X', null, [COKE, createdAt]).work[0]!,
 			name,
 			branch: name === 'codebase' ? 'feature/x' : `prototype/x/${name}`,
 		});
-		const project = {
+		const prototype = {
 			...made('x', 'Many', null, [COKE, '2026-10-01T10:00:00Z']),
 			work: [
 				at('v1', '2026-10-01T10:00:00Z'),
@@ -1162,16 +1168,16 @@ describe('Projects, focused on the product open', () => {
 				at('codebase', '2026-10-04T10:00:00Z'),
 			],
 		};
-		const inCode = { ...project, id: 'y', title: 'Only code', work: [at('codebase', '2026-10-04T10:00:00Z')] };
-		await showOpen(OPEN, [project, inCode]);
-		await choose('All projects');
+		const inCode = { ...prototype, id: 'y', title: 'Only code', work: [at('codebase', '2026-10-04T10:00:00Z')] };
+		await showOpen(OPEN, [prototype, inCode]);
+		await choose('All prototypes');
 		expect(meta('Many')).toBe('3 versions');
 		expect(meta('Only code')).toBeUndefined();
 	});
 
-	it('shows everyone’s by product, the open one first and No product last, each project once with its folder and where else it is', async () => {
-		await showOpen(OPEN, PROJECTS);
-		await choose('All projects');
+	it('shows everyone’s by product, the open one first and No product last, each prototype once with its folder and where else it is', async () => {
+		await showOpen(OPEN, PROTOTYPES);
+		await choose('All prototypes');
 		expect(sections()).toEqual(['flock-coke', 'flock-pepsi', 'No product']);
 		expect(names()).toEqual(['Alerts', 'Maps', 'Both', 'Old']);
 		// Both's newest work is Pepsi's, so it is listed under Pepsi.
@@ -1181,8 +1187,8 @@ describe('Projects, focused on the product open', () => {
 	});
 
 	it('starts each product’s group closed but the open product’s, and keeps what is opened or closed by hand', async () => {
-		await showOpen(OPEN, PROJECTS);
-		await choose('All projects');
+		await showOpen(OPEN, PROTOTYPES);
+		await choose('All prototypes');
 		const groups = () => [...body().querySelectorAll<HTMLDetailsElement>('details.section')];
 		expect(groups().map((g) => [g.querySelector('[data-part="title"]')?.textContent, g.open])).toEqual([
 			['flock-coke', true],
@@ -1190,21 +1196,21 @@ describe('Projects, focused on the product open', () => {
 			['No product', false],
 		]);
 		await press(groups()[1]!.querySelector('summary') as HTMLElement);
-		await say({ type: 'projects-changed' });
-		await answer('listProjects', PROJECTS);
+		await say({ type: 'prototypes-changed' });
+		await answer('listPrototypes', PROTOTYPES);
 		expect(groups()[1]!.open).toBe(true);
 	});
 
 	it('starts every product’s group closed with no product open', async () => {
-		await showOpen({ ...OPEN, product: null, productRepository: null, designSystem: null, source: null }, PROJECTS);
+		await showOpen({ ...OPEN, product: null, productRepository: null, designSystem: null, source: null }, PROTOTYPES);
 		const groups = [...body().querySelectorAll<HTMLDetailsElement>('details.section')];
 		expect(groups.length).toBeGreaterThan(1);
 		expect(groups.map((g) => g.open)).toEqual(groups.map(() => false));
 	});
 
-	it('changes nothing of what can be done: a project of another product opens for review as any does', async () => {
-		await showOpen(OPEN, PROJECTS);
-		await choose('All projects');
+	it('changes nothing of what can be done: a prototype of another product opens for review as any does', async () => {
+		await showOpen(OPEN, PROTOTYPES);
+		await choose('All prototypes');
 		await press(
 			rows()
 				.find((r) => r.querySelector('[data-part="name"]')?.textContent === 'Maps')!
@@ -1214,71 +1220,71 @@ describe('Projects, focused on the product open', () => {
 	});
 
 	it('says when the open product has none of its own yet, and how to see everyone’s', async () => {
-		await showOpen(OPEN, [PROJECTS[1]!]);
-		expect(body().textContent).toContain('No projects in flock-coke yet');
-		await press(button('Show all projects'));
+		await showOpen(OPEN, [PROTOTYPES[1]!]);
+		expect(body().textContent).toContain('No prototypes in flock-coke yet');
+		await press(button('Show all prototypes'));
 		expect(names()).toEqual(['Maps']);
 	});
 
-	it('says a search found nothing here, not that the product has no projects, when what it found is another product’s', async () => {
-		await showOpen(OPEN, PROJECTS);
-		await type(document.querySelector('input[aria-label="Search projects"]')!, 'Maps');
-		expect(body().textContent).not.toContain('No projects in flock-coke yet');
-		expect(body().textContent).toContain('No project matches');
+	it('says a search found nothing here, not that the product has no prototypes, when what it found is another product’s', async () => {
+		await showOpen(OPEN, PROTOTYPES);
+		await type(document.querySelector('input[aria-label="Search prototypes"]')!, 'Maps');
+		expect(body().textContent).not.toContain('No prototypes in flock-coke yet');
+		expect(body().textContent).toContain('No prototype matches');
 	});
 
-	it('names a product the same in a section’s title and in another project’s Also in', async () => {
+	it('names a product the same in a section’s title and in another prototype’s Also in', async () => {
 		const ACME = 'acme/flock-coke';
-		await showOpen(OPEN, [...PROJECTS, made('acme', 'Acme', null, [ACME, '2026-10-01T10:00:00Z'], [PEPSI, '2026-10-06T10:00:00Z'])]);
-		await choose('All projects');
+		await showOpen(OPEN, [...PROTOTYPES, made('acme', 'Acme', null, [ACME, '2026-10-01T10:00:00Z'], [PEPSI, '2026-10-06T10:00:00Z'])]);
+		await choose('All prototypes');
 		// Two products called flock-coke: each by its owner too, in titles and labels alike.
 		expect(sections()).toEqual(['flocksafety/flock-coke', 'flock-pepsi', 'No product']);
 		expect(meta('Acme')).toBe('2 versions · Also in acme/flock-coke');
 	});
 
 	it('goes back to the product’s own when another product is opened', async () => {
-		await showOpen(OPEN, PROJECTS);
-		await choose('All projects');
+		await showOpen(OPEN, PROTOTYPES);
+		await choose('All prototypes');
 		await share('placed', { context: { ...OPEN, product: '/work/flock-pepsi', productRepository: PEPSI }, unreadable: null, setup: null });
-		await answer('listProjects', PROJECTS);
+		await answer('listPrototypes', PROTOTYPES);
 		expect((await scopeChoices()).map((o) => o.getAttribute('aria-checked'))).toEqual(['true', 'false']);
 	});
 
-	it('has one button for it all: Projects (whose) above a divider, Layout below, an icon on the left of each and a check on the right of the one chosen', async () => {
-		await showOpen(OPEN, PROJECTS);
+	it('has one button for it all: Prototypes (whose) above a divider, Layout below, an icon on the left of each and a check on the right of the one chosen', async () => {
+		await showOpen(OPEN, PROTOTYPES);
 		await press(viewMenu()!);
 		const menu = document.querySelector('[role="menu"]') as HTMLElement;
 		expect(menu.getAttribute('aria-label')).toBe('View options');
-		expect([...menu.querySelectorAll('.menu-heading')].map((h) => h.textContent)).toEqual(['Projects', 'Layout']);
+		expect([...menu.querySelectorAll('.menu-heading')].map((h) => h.textContent)).toEqual(['Prototypes', 'Layout']);
 		expect(menu.querySelectorAll('[role="separator"]')).toHaveLength(1);
 		const choices = [...menu.querySelectorAll<HTMLElement>('[role="menuitemradio"]')];
-		expect(choices.map((c) => c.textContent)).toEqual(['This product', 'All projects', 'Grid', 'List']);
+		expect(choices.map((c) => c.textContent)).toEqual(['This product', 'All prototypes', 'Grid', 'List']);
 		expect(choices.every((c) => c.firstElementChild?.classList.contains('codicon'))).toBe(true);
 		expect(choices.map((c) => c.lastElementChild?.classList.contains('menu-check'))).toEqual([true, false, true, false]);
 		expect(choices.map((c) => c.getAttribute('aria-checked'))).toEqual(['true', 'false', 'true', 'false']);
 		expect(body().querySelector('[role="radiogroup"]')).toBeNull();
 	});
 
-	it('draws the options button at the default size, the search’s, and a project’s own actions small', async () => {
-		await showOpen(OPEN, PROJECTS);
+	it('draws the options button at the default size, the search’s, and a prototype’s own actions small', async () => {
+		await showOpen(OPEN, PROTOTYPES);
 		expect(viewMenu()!.className).toBe('menu-button menu-button-shown');
-		expect([...body().querySelectorAll('[aria-label="Project actions"]')].every((b) => b.classList.contains('menu-button-small'))).toBe(true);
+		expect([...body().querySelectorAll('[aria-label="Prototype actions"]')].every((b) => b.classList.contains('menu-button-small'))).toBe(true);
 	});
 
 	it('moves the check to what is chosen, and closes', async () => {
-		await showOpen(OPEN, PROJECTS);
-		await choose('All projects');
+		await showOpen(OPEN, PROTOTYPES);
+		await choose('All prototypes');
 		expect(document.querySelector('[role="menu"]')).toBeNull();
-		expect(await checked('All projects')).toBe('true');
+		expect(await checked('All prototypes')).toBe('true');
 		expect(await checked('This product')).toBe('false');
 		expect(await checked('Grid')).toBe('true');
 	});
 
 	describe('mine', () => {
 		const signedIn = { state: 'signedIn', user: { login: 'noah', name: 'Noah', avatarUrl: null } };
-		const become = async (payload: unknown, projects: unknown[]) => {
+		const become = async (payload: unknown, prototypes: unknown[]) => {
 			await say({ type: 'event', name: 'onSignInChanged', payload });
-			await answer('listProjects', projects);
+			await answer('listPrototypes', prototypes);
 		};
 		const mine = [
 			{ ...made('alerts', 'Alerts', 'Admin', [COKE, '2026-10-01T10:00:00Z']), people: [{ name: 'Noah', login: 'Noah' }] },
@@ -1288,13 +1294,13 @@ describe('Projects, focused on the product open', () => {
 
 		it('is offered once signed in, and not before: nothing says whose they would be', async () => {
 			await showOpen(OPEN, mine);
-			expect((await scopeChoices()).map((o) => o.textContent)).toEqual(['This product', 'All projects']);
+			expect((await scopeChoices()).map((o) => o.textContent)).toEqual(['This product', 'All prototypes']);
 			await press(document.body);
 			await become(signedIn, mine);
-			expect((await scopeChoices()).map((o) => o.textContent)).toEqual(['This product', 'All projects', 'Mine']);
+			expect((await scopeChoices()).map((o) => o.textContent)).toEqual(['This product', 'All prototypes', 'Mine']);
 		});
 
-		it('shows the projects I have worked on, whatever product, by product as everyone’s are, and nothing else', async () => {
+		it('shows the prototypes I have worked on, whatever product, by product as everyone’s are, and nothing else', async () => {
 			await showOpen(OPEN, mine);
 			await become(signedIn, mine);
 			await choose('Mine');
@@ -1307,8 +1313,8 @@ describe('Projects, focused on the product open', () => {
 			await showOpen(OPEN, [mine[1]!]);
 			await become(signedIn, [mine[1]!]);
 			await choose('Mine');
-			expect(body().textContent).toContain('None of these projects has your work in it yet');
-			await press(button('Show all projects'));
+			expect(body().textContent).toContain('None of these prototypes has your work in it yet');
+			await press(button('Show all prototypes'));
 			expect(names()).toEqual(['Maps']);
 		});
 
@@ -1324,22 +1330,22 @@ describe('Projects, focused on the product open', () => {
 		it('is offered with no product open too, among everyone’s', async () => {
 			await showOpen({ ...OPEN, product: null, productRepository: null, designRepository: null, missing: ['No product is open.'] }, mine);
 			await become(signedIn, mine);
-			expect((await scopeChoices()).map((o) => o.textContent)).toEqual(['All projects', 'Mine']);
+			expect((await scopeChoices()).map((o) => o.textContent)).toEqual(['All prototypes', 'Mine']);
 		});
 	});
 
 	it('has no switch when the product open has no repository it can say, and shows everyone’s', async () => {
-		await showOpen({ ...OPEN, productRepository: null }, PROJECTS);
+		await showOpen({ ...OPEN, productRepository: null }, PROTOTYPES);
 		expect(await scopeChoices()).toEqual([]);
 		expect(sections()).toEqual(['flock-coke', 'flock-pepsi', 'No product']);
 	});
 });
 
-describe('Projects', () => {
+describe('Prototypes', () => {
 	const rows = () => [...body().querySelectorAll<HTMLElement>('[role="listitem"]')];
 	const part = (row: HTMLElement, name: string) => row.querySelector(`[data-part="${name}"]`)?.textContent ?? null;
 
-	it('lists each project with a picture, its name, what it has, and its open comments as a badge', async () => {
+	it('lists each prototype with a picture, its name, what it has, and its open comments as a badge', async () => {
 		await showOpen();
 		expect([...body().querySelectorAll('[role="list"]')].map((l) => l.getAttribute('aria-label'))).toEqual(['Admin', 'Maps', 'No folder']);
 		expect(rows().map((r) => part(r, 'name'))).toEqual(['Alert history', 'Zone coverage', 'Admin usage', 'Role comparison']);
@@ -1348,16 +1354,16 @@ describe('Projects', () => {
 		expect(part(rows()[3]!, 'meta')).toBe('1 version');
 	});
 
-	it('marks the project whose review is in front in the editor, in a grid and in a list, and no other', async () => {
+	it('marks the prototype whose review is in front in the editor, in a grid and in a list, and no other', async () => {
 		await showOpen();
 		const current = () => [...body().querySelectorAll<HTMLElement>('[data-current]')].map((i) => i.querySelector('[data-part="name"]')?.textContent);
 		expect(current()).toEqual([]);
-		await share('tabs', { projects: ['zone-coverage'], components: [] });
+		await share('tabs', { prototypes: ['zone-coverage'], components: [] });
 		expect(current()).toEqual(['Zone coverage']);
 		expect(body().querySelector('[aria-current="true"] [data-part="name"]')?.textContent).toBe('Zone coverage');
 		await viewChoice('List');
 		expect(current()).toEqual(['Zone coverage']);
-		await share('tabs', { projects: [], components: [] });
+		await share('tabs', { prototypes: [], components: [] });
 		expect(current()).toEqual([]);
 	});
 
@@ -1368,33 +1374,33 @@ describe('Projects', () => {
 		expect(badges[0]?.getAttribute('aria-label')).toBe('2 open comments');
 	});
 
-	it('opens a project’s newest prototype for review when its row is pressed: it names the project, and the extension finds the newest as it is then', async () => {
+	it('opens a prototype’s newest version for review when its row is pressed: it names the prototype, and the extension finds the newest as it is then', async () => {
 		await showOpen();
 		await press(rows()[0]!.querySelector('button') as HTMLElement);
 		expect(lastAsk()).toEqual(['openReview', ['alert-history']]);
 	});
 
-	it('draws each project’s picture: those built here are made once the list is read, then each is read by its name', async () => {
+	it('draws each prototype’s picture: those built here are made once the list is read, then each is read by its name', async () => {
 		await showOpen();
 		expect(rows()[0]!.querySelector('img')).toBeNull();
-		await answer('ensureCovers', [{ projectId: 'alert-history', name: 'v3', cover: 'abc123def456' }]);
-		const asked = sent.filter((m) => m.name === 'projectCover').at(-1);
+		await answer('ensureCovers', [{ prototypeId: 'alert-history', name: 'v3', cover: 'abc123def456' }]);
+		const asked = sent.filter((m) => m.name === 'prototypeCover').at(-1);
 		expect(asked?.args).toEqual(['alert-history', 'v3', 'abc123def456']);
-		await answer('projectCover', 'data:image/jpeg;base64,AAAA');
+		await answer('prototypeCover', 'data:image/jpeg;base64,AAAA');
 		expect(rows()[0]!.querySelector('[data-part="picture"]')?.getAttribute('src')).toBe('data:image/jpeg;base64,AAAA');
 		expect(rows()[1]!.querySelector('[data-part="picture"]')?.tagName).toBe('SPAN');
 	});
 
 	it('shows a picture drawn again, not the one before it', async () => {
 		await showOpen();
-		await answer('ensureCovers', [{ projectId: 'alert-history', name: 'v3', cover: 'aaaaaaaaaaaa' }]);
-		await say({ type: 'projects-changed' });
+		await answer('ensureCovers', [{ prototypeId: 'alert-history', name: 'v3', cover: 'aaaaaaaaaaaa' }]);
+		await say({ type: 'prototypes-changed' });
 		await answer(
-			'listProjects',
-			SAMPLE_PROJECTS.map((p) => ({ ...p })),
+			'listPrototypes',
+			SAMPLE_PROTOTYPES.map((p) => ({ ...p })),
 		);
-		await answer('ensureCovers', [{ projectId: 'alert-history', name: 'v3', cover: 'bbbbbbbbbbbb' }]);
-		expect(sent.filter((m) => m.name === 'projectCover').at(-1)?.args).toEqual(['alert-history', 'v3', 'bbbbbbbbbbbb']);
+		await answer('ensureCovers', [{ prototypeId: 'alert-history', name: 'v3', cover: 'bbbbbbbbbbbb' }]);
+		expect(sent.filter((m) => m.name === 'prototypeCover').at(-1)?.args).toEqual(['alert-history', 'v3', 'bbbbbbbbbbbb']);
 	});
 
 	it('groups them by folder, each a section with how many it holds, those in none last', async () => {
@@ -1407,27 +1413,27 @@ describe('Projects', () => {
 		]);
 	});
 
-	it('is one list when no project is in a folder', async () => {
+	it('is one list when no prototype is in a folder', async () => {
 		await showOpen(
 			OPEN,
-			SAMPLE_PROJECTS.map((p) => ({ ...p, folder: null })),
+			SAMPLE_PROTOTYPES.map((p) => ({ ...p, folder: null })),
 		);
 		expect(body().querySelectorAll('.section')).toHaveLength(0);
 		expect(rows()).toHaveLength(4);
 	});
 
-	it('gives each row VS Code’s context for its right-click menu: the project, and none of a webview’s own items', async () => {
+	it('gives each row VS Code’s context for its right-click menu: the prototype, and none of a webview’s own items', async () => {
 		await showOpen();
 		expect(JSON.parse(rows()[0]!.dataset.vscodeContext ?? '{}')).toEqual({
-			webviewSection: 'project',
-			projectId: 'alert-history',
+			webviewSection: 'prototype',
+			prototypeId: 'alert-history',
 			preventDefaultContextMenuItems: true,
 		});
 	});
 
 	it('says, signed out, that the list is this machine’s', async () => {
 		await showOpen();
-		expect(body().querySelector('.message')?.textContent).toBe("These are the projects on this machine. Sign in to see your team's too.");
+		expect(body().querySelector('.message')?.textContent).toBe("These are the prototypes on this machine. Sign in to see your team's too.");
 	});
 
 	describe('setting the open repository up', () => {
@@ -1437,7 +1443,7 @@ describe('Projects', () => {
 			await show();
 			await share('placed', { context, unreadable: null, setup } as never);
 			if (signIn) await say({ type: 'event', name: 'onSignInChanged', payload: signedIn });
-			await answer('listProjects', SAMPLE_PROJECTS);
+			await answer('listPrototypes', SAMPLE_PROTOTYPES);
 		};
 		const setupMessage = () => [...body().querySelectorAll('.message-block')].find((m) => /set ?up/i.test(m.textContent ?? '')) as HTMLElement;
 
@@ -1485,15 +1491,15 @@ describe('Projects', () => {
 	it('says why it could not read them', async () => {
 		await show();
 		await share('placed', { context: OPEN, unreadable: null, setup: null });
-		const call = sent.find((m) => m.name === 'listProjects');
+		const call = sent.find((m) => m.name === 'listPrototypes');
 		await say({ type: 'answer', id: call?.id, result: { ok: false, error: 'GitHub could not be reached.' } });
-		expect(body().querySelector('.empty [data-part="title"]')?.textContent).toBe('The projects could not be read');
+		expect(body().querySelector('.empty [data-part="title"]')?.textContent).toBe('The prototypes could not be read');
 		expect(body().textContent).toContain('GitHub could not be reached.');
 	});
 
 	it('says when there are none, and that one is started by asking the agent, which it names: there is no form for it here', async () => {
 		await showOpen(OPEN, []);
-		expect(body().querySelector('.empty [data-part="title"]')?.textContent).toBe('No projects yet');
+		expect(body().querySelector('.empty [data-part="title"]')?.textContent).toBe('No prototypes yet');
 		await share('agent', { name: null });
 		expect(body().querySelector('.empty')?.textContent).toContain('Ask the agent to create a prototype, for example');
 		await share('agent', { name: 'Claude Code' });
@@ -1506,7 +1512,7 @@ describe('Design System', () => {
 	const open = async (context: Context = OPEN, unreadable?: string) => {
 		await show();
 		await share('placed', { context, unreadable: unreadable ?? null, setup: null });
-		if (context.product) await answer('listProjects', SAMPLE_PROJECTS);
+		if (context.product) await answer('listPrototypes', SAMPLE_PROTOTYPES);
 		await press(options()[1]!);
 	};
 	const read = async (catalog: Catalog = SAMPLE_CATALOG, pictures: Partial<ComponentPictures> = {}) => {
@@ -1639,7 +1645,7 @@ describe('Design System', () => {
 		expect(body().querySelector('.ds-part ~ .view-bar')).not.toBeNull();
 	});
 
-	it('has the same search and view options as Projects, with the layout and the color mode to choose: the toolbar is one pattern', async () => {
+	it('has the same search and view options as Prototypes, with the layout and the color mode to choose: the toolbar is one pattern', async () => {
 		await read();
 		const bar = body().querySelector('.view-bar') as HTMLElement;
 		expect([...bar.children].map((c) => (c.querySelector('input') ? 'search' : c.querySelector('button')?.getAttribute('aria-label')))).toEqual([
@@ -1658,9 +1664,9 @@ describe('Design System', () => {
 		await read();
 		const current = () => [...body().querySelectorAll<HTMLElement>('[data-current]')].map((i) => i.querySelector('[data-part="name"]')?.textContent);
 		expect(current()).toEqual([]);
-		await share('tabs', { projects: [], components: ['src/components/FSButton/FSButton.stories.tsx'] });
+		await share('tabs', { prototypes: [], components: ['src/components/FSButton/FSButton.stories.tsx'] });
 		expect(current()).toEqual(['FSButton']);
-		await share('tabs', { projects: [], components: [] });
+		await share('tabs', { prototypes: [], components: [] });
 		expect(current()).toEqual([]);
 	});
 
@@ -1844,7 +1850,7 @@ describe('every change being tried, in the panel’s Changes: the tokens and eac
 	const designOpen = async () => {
 		await show();
 		await share('placed', { context: OPEN, unreadable: null, setup: null });
-		await answer('listProjects', SAMPLE_PROJECTS);
+		await answer('listPrototypes', SAMPLE_PROTOTYPES);
 		await press(options()[1]!);
 		await share('catalog', { system: { id: SYSTEM, name: 'FUI' }, catalog: SAMPLE_CATALOG, error: null, syncing: false });
 		await answerOf('changeBranch', 'tokens', null);
@@ -2222,7 +2228,7 @@ describe('every change being tried, in the panel’s Changes: the tokens and eac
 		it('lists no group for a count of none, and says only that nothing is being tried where nothing is', async () => {
 			await show();
 			await share('placed', { context: OPEN, unreadable: null, setup: null });
-			await answer('listProjects', SAMPLE_PROJECTS);
+			await answer('listPrototypes', SAMPLE_PROTOTYPES);
 			await say({ type: 'open-dialog', dialog: { kind: 'changes' } });
 			await share('catalog', { system: { id: SYSTEM, name: 'FUI' }, catalog: SAMPLE_CATALOG, error: null, syncing: false });
 			await answerOf('changeBranch', 'tokens', null);
@@ -2250,8 +2256,8 @@ describe('every change being tried, in the panel’s Changes: the tokens and eac
 	it('opens when a component’s tab asks for it, on the Design System tab', async () => {
 		await show();
 		await share('placed', { context: OPEN, unreadable: null, setup: null });
-		await answer('listProjects', SAMPLE_PROJECTS);
-		expect(chosen()).toBe('Projects');
+		await answer('listPrototypes', SAMPLE_PROTOTYPES);
+		expect(chosen()).toBe('Prototypes');
 		await say({ type: 'open-dialog', dialog: { kind: 'changes' } });
 		expect(chosen()).toBe('Design System');
 		await share('catalog', { system: { id: SYSTEM, name: 'FUI' }, catalog: SAMPLE_CATALOG, error: null, syncing: false });
@@ -2387,7 +2393,7 @@ describe('every change being tried, in the panel’s Changes: the tokens and eac
 		it('is not offered while the group has a branch DSNR saved', async () => {
 			await show();
 			await share('placed', { context: OPEN, unreadable: null, setup: null });
-			await answer('listProjects', SAMPLE_PROJECTS);
+			await answer('listPrototypes', SAMPLE_PROTOTYPES);
 			await press(options()[1]!);
 			await share('catalog', { system: { id: SYSTEM, name: 'FUI' }, catalog: SAMPLE_CATALOG, error: null, syncing: false });
 			await answerOf('changeBranch', 'tokens', { branch: 'dsnr/tokens-1012-abc123', saved: [], saves: 1, pullRequest: null });
@@ -2420,7 +2426,7 @@ describe('every change being tried, in the panel’s Changes: the tokens and eac
 		it('holds Save while another branch is shown, and offers no Process changes where Save is the one offered', async () => {
 			await show();
 			await share('placed', { context: OPEN, unreadable: null, setup: null });
-			await answer('listProjects', SAMPLE_PROJECTS);
+			await answer('listPrototypes', SAMPLE_PROTOTYPES);
 			await press(options()[1]!);
 			await share('catalog', { system: { id: SYSTEM, name: 'FUI' }, catalog: { ...SAMPLE_CATALOG, showing: BRANCH }, error: null, syncing: false });
 			await answerOf('changeBranch', 'tokens', null);
@@ -2455,7 +2461,7 @@ describe('trying a change to the tokens, saving it to a branch, and proposing it
 	const tokensOpen = async () => {
 		await show();
 		await share('placed', { context: OPEN, unreadable: null, setup: null });
-		await answer('listProjects', SAMPLE_PROJECTS);
+		await answer('listPrototypes', SAMPLE_PROTOTYPES);
 		await press(options()[1]!);
 		await share('catalog', { system: { id: ID, name: 'FUI' }, catalog: SAMPLE_CATALOG, error: null, syncing: false });
 		await answerOf('changeBranch', 'tokens', null);
@@ -2598,7 +2604,7 @@ describe('trying a change to the tokens, saving it to a branch, and proposing it
 	it('puts back a change saved before DSNR was last closed, when none is being tried', async () => {
 		await show();
 		await share('placed', { context: OPEN, unreadable: null, setup: null });
-		await answer('listProjects', SAMPLE_PROJECTS);
+		await answer('listPrototypes', SAMPLE_PROTOTYPES);
 		await press(options()[1]!);
 		await share('catalog', { system: { id: ID, name: 'FUI' }, catalog: SAMPLE_CATALOG, error: null, syncing: false });
 		const saved = [{ path: 'radius', value: '8px' }];
@@ -2629,7 +2635,7 @@ describe('what the person edited in the design system’s code, read from their 
 	const designOpen = async () => {
 		await show();
 		await share('placed', { context: OPEN, unreadable: null, setup: null });
-		await answer('listProjects', SAMPLE_PROJECTS);
+		await answer('listPrototypes', SAMPLE_PROTOTYPES);
 		await press(options()[1]!);
 		await share('catalog', { system: { id: SYSTEM, name: 'FUI' }, catalog: SAMPLE_CATALOG, error: null, syncing: false });
 		await answerOf('changeBranch', 'tokens', null);

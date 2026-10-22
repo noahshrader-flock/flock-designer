@@ -3,24 +3,24 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'no
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import type { WorkspaceDescriptor } from '../src/core/services/projects/descriptor';
+import type { WorkspaceDescriptor } from '../src/core/services/products/descriptor';
 import { readCheckout } from '../src/core/services/platform/git';
 import {
-	assertUsableProjectId,
+	assertUsablePrototypeId,
 	codebaseBranchFor,
 	continueWork,
 	createCodebaseWork,
 	readWork,
 	recordPreview,
 	recordedWork,
-} from '../src/core/services/projects/workRecords';
+} from '../src/core/services/prototypes/workRecords';
 import { g } from './fixtures';
 
 const descriptor: WorkspaceDescriptor = {
 	version: 1,
 	product: 'Coke',
 	contextDir: '.dsnr',
-	branchPattern: { codebase: 'feature/<project-id>' },
+	branchPattern: { codebase: 'feature/<prototype-id>' },
 	commands: [],
 	designSystem: { package: '@flocksafety/flock-react-component-lib' },
 };
@@ -47,7 +47,7 @@ const version = (name: string) =>
 		join(records, 'demo', 'work.json'),
 		JSON.stringify([
 			...readWork(records, 'demo'),
-			{ projectId: 'demo', name, branch: `prototype/demo/${name}`, commit: null, createdAt: '', note: '' },
+			{ prototypeId: 'demo', name, branch: `prototype/demo/${name}`, commit: null, createdAt: '', note: '' },
 		]),
 	);
 
@@ -56,22 +56,22 @@ afterEach(() => {
 	rmSync(records, { recursive: true, force: true });
 });
 
-describe('project ids', () => {
+describe('prototype ids', () => {
 	it.each(['users-inactivity-signal', 'orgs', 'a1-b2'])('accepts %s', (id) => {
-		expect(() => assertUsableProjectId(id)).not.toThrow();
+		expect(() => assertUsablePrototypeId(id)).not.toThrow();
 	});
 
 	it.each(['../escape', 'Has Caps', 'trailing-', 'semi;colon', ''])('refuses %s', (id) => {
 		// The id becomes both a directory and a branch name, so anything that could
 		// escape either has to fail here rather than downstream.
-		expect(() => assertUsableProjectId(id)).toThrow(/is not a usable project id/);
+		expect(() => assertUsablePrototypeId(id)).toThrow(/is not a usable prototype id/);
 	});
 });
 
 describe('codebaseBranchFor', () => {
 	it("uses the repository's own pattern rather than a hard-coded one", () => {
 		expect(codebaseBranchFor(descriptor, 'demo')).toBe('feature/demo');
-		expect(codebaseBranchFor({ ...descriptor, branchPattern: { codebase: 'work/<project-id>' } }, 'demo')).toBe('work/demo');
+		expect(codebaseBranchFor({ ...descriptor, branchPattern: { codebase: 'work/<prototype-id>' } }, 'demo')).toBe('work/demo');
 	});
 });
 
@@ -168,7 +168,7 @@ describe('codebase work', () => {
 		expect(readWork(records, 'demo')[0]?.name).toBe('codebase');
 	});
 
-	it('refuses a second codebase record for the same project', async () => {
+	it('refuses a second codebase record for the same prototype', async () => {
 		await createCodebaseWork(root, records, descriptor, 'demo', '', 'develop');
 		g(root, 'checkout', '-q', 'develop');
 		await expect(createCodebaseWork(root, records, descriptor, 'demo', '', 'develop')).rejects.toThrow(/already has codebase work/);
@@ -205,7 +205,7 @@ describe('recordPreview', () => {
 		expect(readWork(records, 'demo')[0]).toMatchObject({ previewUrl: 'https://dev-coke-pr-5.example.test', commit: 'abc123' });
 	});
 
-	it('records the pull request it was built from, which the project page links to', async () => {
+	it('records the pull request it was built from, which the prototype page links to', async () => {
 		await codebase();
 		recordPreview(records, 'demo', 'codebase', 'https://x.example.test', 'abc123', 'https://github.com/o/r/pull/5');
 		expect(readWork(records, 'demo')[0]?.pullRequest).toBe('https://github.com/o/r/pull/5');
@@ -231,7 +231,7 @@ describe('recordedWork: work started outside the app', () => {
 		expect(readWork(records, 'new-view')).toEqual([]);
 
 		const found = await recordedWork(root, records, descriptor, 'new-view', 'codebase');
-		expect(found).toMatchObject({ projectId: 'new-view', name: 'codebase', branch: 'feature/new-view' });
+		expect(found).toMatchObject({ prototypeId: 'new-view', name: 'codebase', branch: 'feature/new-view' });
 		expect(readWork(records, 'new-view')).toHaveLength(1);
 		expect((await readCheckout(root)).branch).toBe('feature/new-view');
 	});

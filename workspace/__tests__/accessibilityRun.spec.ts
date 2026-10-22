@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CheckPage } from '../src/core/ports';
 import { FIRST_PAGE, checkPages, onDesignMode } from '../src/core/services/accessibility/accessibilityRun';
 import { NO_BROWSER } from '../src/core/services/browser/chromeHeadless';
-import type { WorkspaceCommand, WorkspaceDescriptor } from '../src/core/services/projects/descriptor';
+import type { WorkspaceCommand, WorkspaceDescriptor } from '../src/core/services/products/descriptor';
 import type { RuntimeDeps } from '../src/core/services/codebase/runtime';
 import { undeclared } from '../src/shared/wcag';
 
@@ -91,7 +91,7 @@ describe('the app, in design mode', () => {
 		version: 1,
 		product: 'Plain Shop',
 		contextDir: '.dsnr',
-		branchPattern: { codebase: 'feature/<project-id>' },
+		branchPattern: { codebase: 'feature/<prototype-id>' },
 		commands,
 		designSystem: { package: 'x' },
 	});
@@ -112,7 +112,10 @@ describe('the app, in design mode', () => {
 		const work = vi.fn();
 		for (const commands of [[], [{ id: 'design-mode', label: 'Design mode', argv: ['node'] }]]) {
 			await expect(
-				onDesignMode({ root, descriptor: descriptorWith(commands), projectId: 'p', loads, progress: () => undefined, deps: deps(() => true) }, work),
+				onDesignMode(
+					{ root, descriptor: descriptorWith(commands), prototypeId: 'p', loads, progress: () => undefined, deps: deps(() => true) },
+					work,
+				),
 			).rejects.toThrow(
 				`Plain Shop's .dsnr/workspace.json declares no "design-mode" command that serves its app on a port, so DSNR cannot open it, and nothing was measured.`,
 			);
@@ -127,7 +130,7 @@ describe('the app, in design mode', () => {
 			{
 				root,
 				descriptor,
-				projectId: 'p',
+				prototypeId: 'p',
 				loads: async (url) => (url.endsWith('/blank') ? 'the page loaded, but the app drew nothing on it.' : null),
 				progress,
 				deps: deps(() => children.length > 0),
@@ -143,7 +146,9 @@ describe('the app, in design mode', () => {
 	it('refuses a port something else already answers on, as it may not be this checkout’s app, and starts nothing', async () => {
 		const descriptor = descriptorWith([serving(['node', '-e', 'setInterval(() => {}, 1000)'])]);
 		const work = vi.fn();
-		await expect(onDesignMode({ root, descriptor, projectId: 'p', loads, progress: () => undefined, deps: deps(() => true) }, work)).rejects.toThrow(
+		await expect(
+			onDesignMode({ root, descriptor, prototypeId: 'p', loads, progress: () => undefined, deps: deps(() => true) }, work),
+		).rejects.toThrow(
 			"Something else is already answering on port 4987, where Plain Shop's app is served, so it may not be this checkout's, and nothing was measured. Stop it, then try again.",
 		);
 		expect(children).toHaveLength(0);
@@ -159,7 +164,7 @@ describe('the app, in design mode', () => {
 			{
 				root,
 				descriptor,
-				projectId: 'p',
+				prototypeId: 'p',
 				loads: async () => 'the page loaded, but the app drew nothing on it.',
 				progress: () => undefined,
 				deps: deps(() => children.length > 0),
@@ -179,7 +184,7 @@ describe('the app, in design mode', () => {
 		const failing = "console.log('error   Build error:'); console.log(\"  × export 'Card' was not found in 'lib'\"); setInterval(() => {}, 1000)";
 		const descriptor = descriptorWith([serving(['node', '-e', failing])]);
 		const opened = await onDesignMode(
-			{ root, descriptor, projectId: 'p', loads, progress: () => undefined, deps: deps(() => children.length > 0) },
+			{ root, descriptor, prototypeId: 'p', loads, progress: () => undefined, deps: deps(() => children.length > 0) },
 			async (_origin, opens) => {
 				await new Promise((r) => setTimeout(r, 300));
 				return opens('http://localhost:4987/');
@@ -191,7 +196,7 @@ describe('the app, in design mode', () => {
 	it('says why it did not start, with its last output, and runs nothing', async () => {
 		const descriptor = descriptorWith([serving(['node', '-e', 'console.error("port 4987 is taken"); process.exit(2)'])]);
 		const work = vi.fn();
-		const failed = onDesignMode({ root, descriptor, projectId: 'p', loads, progress: () => undefined, deps: deps(() => false) }, work);
+		const failed = onDesignMode({ root, descriptor, prototypeId: 'p', loads, progress: () => undefined, deps: deps(() => false) }, work);
 		await expect(failed).rejects.toThrow(
 			/^Plain Shop's app did not start \(exited with code 2\), so nothing was measured\. Its last output:\nport 4987 is taken$/,
 		);

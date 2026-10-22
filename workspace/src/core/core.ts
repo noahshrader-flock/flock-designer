@@ -3,14 +3,14 @@ import type { EventSink } from './handle';
 import type { CallsContext } from './compose';
 import type { Ports } from './ports';
 import { agentsHere } from './services/agent/agents';
-import { CheckoutMemory } from './services/projects/checkoutMemory';
+import { CheckoutMemory } from './services/products/checkoutMemory';
 import { DesignSystemsMemory } from './services/designSystem/designSystems';
-import { SourceAnswers } from './services/projects/productDesignSystem';
-import { DesignRepositoryClones } from './services/projects/discovery';
+import { SourceAnswers } from './services/products/productDesignSystem';
+import { DesignRepositoryClones } from './services/products/discovery';
 import type { GitHubAccount } from '../codeHost/github';
 import { PrototypeServer } from './services/prototypes/prototypeServer';
 import { RuntimeManager } from './services/codebase/runtime';
-import { OpenedCheckouts } from './services/projects/session';
+import { OpenedCheckouts } from './services/products/session';
 import { ShareRunner } from './services/codebase/share';
 
 export interface Shell {

@@ -9,8 +9,8 @@ import { errorText } from '../../../shared/result';
  */
 
 /**
- * Branches first, then records, always in that order and never together: a project's record must not reach
- * GitHub before the branch it names does, or a reviewer is shown a project they cannot open.
+ * Branches first, then records, always in that order and never together: a prototype's record must not reach
+ * GitHub before the branch it names does, or a reviewer is shown a prototype they cannot open.
  */
 export const publishInOrder = async <B extends SyncResult>(
 	branches: () => Promise<B>,

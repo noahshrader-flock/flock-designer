@@ -443,7 +443,7 @@ describe('a thread’s issue, open while a comment in it is', () => {
 	});
 });
 
-describe('a deleted project’s threads', () => {
+describe('a deleted prototype’s threads', () => {
 	const listing = [
 		{ number: 7, comments: 2, body: 'branch: `prototype/alpha/v1`' },
 		{ number: 8, comments: 1, body: 'branch: `prototype/alpha/v2`' },
@@ -461,7 +461,7 @@ describe('a deleted project’s threads', () => {
 		return { threads: new ReviewThreads(fake.github, REF), writes: fake.writes };
 	};
 
-	it('are each closed as not planned, with a note, and taken off the review label: every version’s and the recorded work’s, no other project’s', async () => {
+	it('are each closed as not planned, with a note, and taken off the review label: every version’s and the recorded work’s, no other prototype’s', async () => {
 		const d = deleting();
 		expect(await d.threads.closeDeleted('alpha', ['prototype/alpha/v1', 'feature/alpha'])).toBe(3);
 		const by = (n: number) =>
@@ -472,7 +472,7 @@ describe('a deleted project’s threads', () => {
 				['PATCH', '', { state: 'closed', state_reason: 'not_planned' }],
 				['DELETE', '/labels/flock-designer%3Areview', undefined],
 			]);
-		// A project whose id only starts the same, and another project, are not this one.
+		// A prototype whose id only starts the same, and another prototype, are not this one.
 		expect(by(10)).toEqual([]);
 		expect(by(11)).toEqual([]);
 	});

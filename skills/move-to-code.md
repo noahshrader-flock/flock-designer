@@ -35,7 +35,7 @@ before it reports (**Before you report**). What follows is only what moving a pr
   - The block comment at the top: where in the product it sits, what it was modeled on, which person
     the navigation shows, its states, and every mark, grouped by kind.
 - **Its built page**, at the path the task gives, to see what reviewers saw.
-- **This repository**, on the project's codebase branch, and the project's records in the design
+- **This repository**, on the prototype's codebase branch, and the prototype's records in the design
   repository (the brief, any comments), as for any other codebase work. **Read this product's Flock
   Designer guidance as you would for any codebase work**: it says where this belongs and which patterns
   to use.
@@ -55,7 +55,7 @@ an engineer to read together, so write it in plain words, not code.
    decision above says otherwise.
 4. **Data.** Every `@mock`: what the data really is, and where it comes from. This branch still uses mock
    data, in the way this repository already mocks things.
-5. **What you will build, and where.** The files you will change or add, inside the project's
+5. **What you will build, and where.** The files you will change or add, inside the prototype's
    change boundary in its brief. **If the brief has none, propose one here**, and count every mock,
    fixture or file other screens also use as outside it (see below).
 6. **What you will not build**, and why.
@@ -96,7 +96,7 @@ So check it once now, with the implementation reviewer, `../agents/implementatio
 covers code and boundary only; **product parity stays at Handoff.**
 
 - **Commit what you have first,** with the light check passing, so the review sees all of it. It reviews
-  this branch's changes against the branch it started from, with the audit and the project's brief
+  this branch's changes against the branch it started from, with the audit and the prototype's brief
   (its change boundary) as what the work is checked against.
 - **Where the agent runs subagents, run it as a subagent, in the foreground,** and wait for it. Never in
   the background: this run ends when you stop, and a review still going is lost.
@@ -107,7 +107,7 @@ covers code and boundary only; **product parity stays at Handoff.**
 - If you fixed anything, check **once more,** the same way, and no more than that. What still blocks after
   the second check is **still open**: say so, and never make a check pass by editing it.
 - A check that could not run is **not run**, with what would make it runnable, never a pass.
-- The check's words are for your report, not for the project's review record: that is Handoff's.
+- The check's words are for your report, not for the prototype's review record: that is Handoff's.
 
 ## When you have finished
 

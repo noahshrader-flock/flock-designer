@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { mergeWorkRecords, parseWork, serializeWork, toProjectWork } from '../src/shared/workRecords';
+import { mergeWorkRecords, parseWork, serializeWork, toPrototypeWork } from '../src/shared/workRecords';
 
 const rec = (name: string, extra: Record<string, unknown> = {}) => ({
-	projectId: 'p',
+	prototypeId: 'p',
 	name,
 	branch: `prototype/p/${name}`,
 	commit: null,
@@ -86,7 +86,7 @@ describe('mergeWorkRecords', () => {
 });
 
 describe('reading work.json', () => {
-	const good = { projectId: 'p', name: 'v1', branch: 'prototype/p/v1', commit: null, createdAt: '2026-10-01T00:00:00Z', note: '' };
+	const good = { prototypeId: 'p', name: 'v1', branch: 'prototype/p/v1', commit: null, createdAt: '2026-10-01T00:00:00Z', note: '' };
 
 	it('reads a list of records, each with a name and a branch, and nothing else', () => {
 		expect(parseWork(JSON.stringify([good]))).toEqual([good]);
@@ -136,7 +136,7 @@ describe('reading work.json', () => {
 	});
 
 	it('is shown with its thread when there is one, and none when there is not', () => {
-		const shown = toProjectWork({ ...good, previewUrl: 'https://p', route: '/users' }, { number: 9, openComments: 2 });
+		const shown = toPrototypeWork({ ...good, previewUrl: 'https://p', route: '/users' }, { number: 9, openComments: 2 });
 		expect(shown).toMatchObject({
 			name: 'v1',
 			branch: 'prototype/p/v1',
@@ -146,7 +146,7 @@ describe('reading work.json', () => {
 			route: '/users',
 			contributors: [],
 		});
-		expect(toProjectWork(good)).toMatchObject({
+		expect(toPrototypeWork(good)).toMatchObject({
 			issueNumber: null,
 			openComments: 0,
 			previewUrl: null,
@@ -158,7 +158,7 @@ describe('reading work.json', () => {
 
 describe('the product a prototype was made on', () => {
 	const read = (basedOn: unknown) =>
-		parseWork(JSON.stringify([{ projectId: 'demo', name: 'v1', branch: 'prototype/demo/v1', createdAt: '2026-10-14T10:00:00Z', basedOn }]))?.[0]
+		parseWork(JSON.stringify([{ prototypeId: 'demo', name: 'v1', branch: 'prototype/demo/v1', createdAt: '2026-10-14T10:00:00Z', basedOn }]))?.[0]
 			?.basedOn;
 
 	it('is kept as a repository on its host, beside the clone’s own name', () => {
@@ -183,15 +183,15 @@ describe('the product a prototype was made on', () => {
 
 describe('the commit a handoff found codebase work ready at', () => {
 	const read = (readyAt: unknown) =>
-		parseWork(JSON.stringify([{ projectId: 'demo', name: 'codebase', branch: 'feature/demo', createdAt: '2026-10-14T10:00:00Z', readyAt }]))?.[0];
+		parseWork(JSON.stringify([{ prototypeId: 'demo', name: 'codebase', branch: 'feature/demo', createdAt: '2026-10-14T10:00:00Z', readyAt }]))?.[0];
 
 	it('is kept when it is a commit, and given to the list as the record says it', () => {
 		expect(read('a1b2c3d')?.readyAt).toBe('a1b2c3d');
-		expect(toProjectWork(read('a1b2c3d')!).readyAt).toBe('a1b2c3d');
+		expect(toPrototypeWork(read('a1b2c3d')!).readyAt).toBe('a1b2c3d');
 	});
 
 	it('is left out when it is not one', () => {
 		for (const readyAt of ['main', 'a1b2', 'A1B2C3D', 42, null]) expect(read(readyAt)?.readyAt, String(readyAt)).toBeUndefined();
-		expect(toProjectWork(read('nope')!).readyAt).toBeNull();
+		expect(toPrototypeWork(read('nope')!).readyAt).toBeNull();
 	});
 });

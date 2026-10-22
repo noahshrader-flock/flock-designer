@@ -1,8 +1,8 @@
 import { type FormEvent, useState } from 'react';
-import { namesProject, projectTitle, sameFolder } from '../../src/shared/brief';
-import type { Project } from '../../src/shared/domain/projects';
+import { namesPrototype, prototypeTitle, sameFolder } from '../../src/shared/brief';
+import type { Prototype } from '../../src/shared/domain/prototypes';
 import { plural } from '../../src/shared/plural';
-import { openCommentsOf } from '../../src/shared/projectList';
+import { openCommentsOf } from '../../src/shared/prototypeList';
 import { onlyBuilding, savedVersions, workOf } from '../../src/shared/work';
 import { Button } from '../../src/ui/Button';
 import { Dialog, DialogButtons } from '../../src/ui/Dialog';
@@ -13,27 +13,27 @@ import { Message } from '../../src/ui/Message';
 import { useAction } from './hooks/useAction';
 
 export const AssignFolderDialog = ({
-	project,
+	prototype,
 	folders,
 	onAssigned,
 	onClose,
 }: {
-	project: Project;
+	prototype: Prototype;
 	folders: string[];
 	onAssigned: () => void;
 	onClose: () => void;
 }) => {
 	// The folder it is in, as the list of folders spells it (they are one folder whatever the case), so it is one of the options.
 	const [pick, setPick] = useState<FolderPick>(
-		pickOf(project.folder === null ? null : (folders.find((f) => sameFolder(f, project.folder as string)) ?? project.folder)),
+		pickOf(prototype.folder === null ? null : (folders.find((f) => sameFolder(f, prototype.folder as string)) ?? prototype.folder)),
 	);
 	const { busy, error, run } = useAction();
-	const same = project.folder === null ? pick.kind === 'none' : pick.kind !== 'none' && sameFolder(folderOf(pick) ?? '', project.folder);
+	const same = prototype.folder === null ? pick.kind === 'none' : pick.kind !== 'none' && sameFolder(folderOf(pick) ?? '', prototype.folder);
 	const assign = async (e: FormEvent) => {
 		e.preventDefault();
 		if (same || !isChosen(pick)) return;
 		await run(
-			() => workspace().assignFolder(project.id, folderOf(pick)),
+			() => workspace().assignFolder(prototype.id, folderOf(pick)),
 			() => {
 				onAssigned();
 				onClose();
@@ -44,7 +44,7 @@ export const AssignFolderDialog = ({
 		<Dialog title="Assign folder" onClose={onClose}>
 			<form onSubmit={(e) => void assign(e)}>
 				<Message>
-					Which folder <strong>{project.title}</strong> is in.
+					Which folder <strong>{prototype.title}</strong> is in.
 				</Message>
 				<FolderField folders={folders} pick={pick} onPick={setPick} />
 				<Message tone="error">{error}</Message>
@@ -58,17 +58,17 @@ export const AssignFolderDialog = ({
 	);
 };
 
-/** Only the name people see: the project's id, which its links, branches and comments are named by, stays as it was. */
-export const RenameDialog = ({ project, onRenamed, onClose }: { project: Project; onRenamed: () => void; onClose: () => void }) => {
-	const [title, setTitle] = useState(project.title);
+/** Only the name people see: the prototype's id, which its links, branches and comments are named by, stays as it was. */
+export const RenameDialog = ({ prototype, onRenamed, onClose }: { prototype: Prototype; onRenamed: () => void; onClose: () => void }) => {
+	const [title, setTitle] = useState(prototype.title);
 	const { busy, error, run } = useAction();
-	const name = projectTitle(title);
-	const ready = name !== null && name !== project.title && !busy;
+	const name = prototypeTitle(title);
+	const ready = name !== null && name !== prototype.title && !busy;
 	const rename = async (e: FormEvent) => {
 		e.preventDefault();
 		if (!ready) return;
 		await run(
-			() => workspace().renameProject(project.id, name),
+			() => workspace().renamePrototype(prototype.id, name),
 			() => {
 				onRenamed();
 				onClose();
@@ -94,24 +94,24 @@ export const RenameDialog = ({ project, onRenamed, onClose }: { project: Project
  * For everyone, with every version, so its name is typed first; the core checks the name again. Closed as it starts, since
  * its card says Deleting… until it is gone; one refused opens this again, with `error`.
  */
-export const DeleteProjectDialog = ({
-	project,
+export const DeletePrototypeDialog = ({
+	prototype,
 	error,
 	onDelete,
 	onClose,
 }: {
-	project: Project;
+	prototype: Prototype;
 	error: string | null;
 	onDelete: (typed: string) => void;
 	onClose: () => void;
 }) => {
 	const [typed, setTyped] = useState('');
-	const ready = namesProject(typed, project.title);
-	const versions = savedVersions(project.work).length;
-	const open = openCommentsOf(project.work);
-	const codebase = workOf(project.work, 'codebase')[0];
-	const building = onlyBuilding(project);
-	const goes = `This deletes ${project.title}${versions > 0 ? ` and its ${plural(versions, 'version')}` : ''} for everyone, with every page, picture and record of it, and takes it off the published site.`;
+	const ready = namesPrototype(typed, prototype.title);
+	const versions = savedVersions(prototype.work).length;
+	const open = openCommentsOf(prototype.work);
+	const codebase = workOf(prototype.work, 'codebase')[0];
+	const building = onlyBuilding(prototype);
+	const goes = `This deletes ${prototype.title}${versions > 0 ? ` and its ${plural(versions, 'version')}` : ''} for everyone, with every page, picture and record of it, and takes it off the published site.`;
 	const comments = open > 0 ? ` ${plural(open, 'open comment')} ${open === 1 ? 'is' : 'are'} on it.` : '';
 	const code = codebase ? `, and its codebase branch ${codebase.branch}${codebase.pullRequest ? ' and pull request stay' : ' stays'}` : '';
 	const remove = (e: FormEvent) => {
@@ -121,21 +121,21 @@ export const DeleteProjectDialog = ({
 		onClose();
 	};
 	return (
-		<Dialog title="Delete project" onClose={onClose}>
+		<Dialog title="Delete prototype" onClose={onClose}>
 			<form onSubmit={remove}>
 				{building ? (
-					<Message tone="warning">{`This deletes ${project.title}. It was started here and not saved yet, so nothing of it was shared.`}</Message>
+					<Message tone="warning">{`This deletes ${prototype.title}. It was started here and not saved yet, so nothing of it was shared.`}</Message>
 				) : (
 					<>
 						<Message tone="warning">{`${goes}${comments}`}</Message>
 						<Message>{`Its review issues on GitHub are closed, with their comments kept there${code}. What it was stays in the design repository’s history.`}</Message>
 					</>
 				)}
-				<Field label={`Type ${project.title} to delete it`}>{(control) => <TextInput control={control} value={typed} onChange={setTyped} />}</Field>
+				<Field label={`Type ${prototype.title} to delete it`}>{(control) => <TextInput control={control} value={typed} onChange={setTyped} />}</Field>
 				<Message tone="error">{error}</Message>
 				<DialogButtons>
 					<Button type="submit" variant="danger" disabled={!ready}>
-						Delete project
+						Delete prototype
 					</Button>
 				</DialogButtons>
 			</form>

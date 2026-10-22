@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { RuntimeManager } from '../src/core/services/codebase/runtime';
-import type { WorkspaceDescriptor } from '../src/core/services/projects/descriptor';
+import type { WorkspaceDescriptor } from '../src/core/services/products/descriptor';
 
 let root: string;
 let left: number | null = null;
@@ -42,7 +42,7 @@ it('leaves no child of a stopped dev server running, though neither it nor its p
 		version: 1,
 		product: 'Test',
 		contextDir: '.dsnr',
-		branchPattern: { codebase: 'feature/<project-id>' },
+		branchPattern: { codebase: 'feature/<prototype-id>' },
 		commands: [{ id: 'dev', label: 'Dev', argv: [process.execPath, join(root, 'parent.js')] }],
 		designSystem: { package: 'x' },
 	};

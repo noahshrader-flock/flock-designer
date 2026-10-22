@@ -13,10 +13,10 @@ export const PAGE_SIGN_IN = {
 export const PAGE_CONFIG = {
 	owner: 'acme',
 	repo: 'design',
-	projectId: 'demo',
+	prototypeId: 'demo',
 	name: 'v1',
 	title: 'Alert history',
-	projectHref: '../',
+	prototypeHref: '../',
 	prototypesHref: '../../',
 	versions: [
 		{ name: 'v3', href: '../v3/' },

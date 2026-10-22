@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import { basename, isAbsolute, join } from 'node:path';
 import { git } from '../platform/git';
-import { holdsItsDesignSystem } from '../projects/productDesignSystem';
+import { holdsItsDesignSystem } from '../products/productDesignSystem';
 import { capitalize } from '../../../shared/titleCase';
 
 const IN_PROGRESS: [string, string][] = [

@@ -1,9 +1,9 @@
 import { type ChildProcess, spawn } from 'node:child_process';
 import { GROUP, endGroup } from '../platform/process';
 import type { PreviewStatus, RunLogLine } from '../../../shared/contract';
-import type { WorkspaceDescriptor } from '../projects/descriptor';
-import { findCommand } from '../projects/descriptor';
-import { assertUsableProjectId } from '../projects/workRecords';
+import type { WorkspaceDescriptor } from '../products/descriptor';
+import { PROTOTYPE_ID_SLOT, findCommand } from '../products/descriptor';
+import { assertUsablePrototypeId } from '../prototypes/workRecords';
 
 /**
  * Runs the commands a repository declares, and nothing else: each is looked up by id in the descriptor, so a page names
@@ -12,15 +12,15 @@ import { assertUsableProjectId } from '../projects/workRecords';
  */
 
 /**
- * A command that serves one project names it with `<project-id>` in its argv.
+ * A command that serves one prototype names it with `<prototype-id>` in its argv.
  * The id becomes a single argument, never part of a string a shell reads, and
- * is checked first, so it cannot carry anything but a project name.
+ * is checked first, so it cannot carry anything but a prototype name.
  */
-export const fillProjectId = (argv: string[], projectId?: string): string[] => {
-	if (!argv.some((a) => a.includes('<project-id>'))) return argv;
-	if (projectId === undefined) throw new Error('This command needs a project, and none was given.');
-	assertUsableProjectId(projectId);
-	return argv.map((a) => a.replaceAll('<project-id>', projectId));
+export const fillPrototypeId = (argv: string[], prototypeId?: string): string[] => {
+	if (!argv.some((a) => a.includes(PROTOTYPE_ID_SLOT))) return argv;
+	if (prototypeId === undefined) throw new Error('This command needs a prototype, and none was given.');
+	assertUsablePrototypeId(prototypeId);
+	return argv.map((a) => a.replaceAll(PROTOTYPE_ID_SLOT, prototypeId));
 };
 
 export interface RuntimeEvents {
@@ -53,7 +53,7 @@ export const defaultDeps: RuntimeDeps = {
 interface Running {
 	child: ChildProcess;
 	status: PreviewStatus;
-	projectId: string | null;
+	prototypeId: string | null;
 }
 
 /**
@@ -87,17 +87,17 @@ export class RuntimeManager {
 		this.events.onStatus(status);
 	}
 
-	async start(root: string, descriptor: WorkspaceDescriptor, commandId: string, projectId?: string): Promise<PreviewStatus> {
+	async start(root: string, descriptor: WorkspaceDescriptor, commandId: string, prototypeId?: string): Promise<PreviewStatus> {
 		const current = this.running.get(commandId);
 		if (current) {
-			if (current.projectId === projectId) return this.status(commandId);
-			// Every prototype is served on the same port, so a different project asking for it means the one running has
+			if (current.prototypeId === prototypeId) return this.status(commandId);
+			// Every prototype is served on the same port, so a different prototype asking for it means the one running has
 			// to go first; reused, it would show whichever prototype had been run before.
 			await this.stop(commandId);
 		}
 		// Throws if the repository does not declare it. This is the allowlist.
 		const command = findCommand(descriptor, commandId);
-		const [file, ...args] = fillProjectId(command.argv, projectId);
+		const [file, ...args] = fillPrototypeId(command.argv, prototypeId);
 		if (file === undefined) {
 			throw new Error(`${commandId} has an empty argv`);
 		}
@@ -110,8 +110,12 @@ export class RuntimeManager {
 			env: command.servesPreviewOn === undefined ? process.env : { ...process.env, ...QUIET_PREVIEW },
 		});
 
-		this.running.set(commandId, { child, projectId: projectId ?? null, status: { state: 'starting', commandId, projectId: projectId ?? null } });
-		this.events.onStatus({ state: 'starting', commandId, projectId: projectId ?? null });
+		this.running.set(commandId, {
+			child,
+			prototypeId: prototypeId ?? null,
+			status: { state: 'starting', commandId, prototypeId: prototypeId ?? null },
+		});
+		this.events.onStatus({ state: 'starting', commandId, prototypeId: prototypeId ?? null });
 
 		child.stdout?.on('data', (d: Buffer) => this.events.onLog({ commandId, stream: 'stdout', text: d.toString() }));
 		child.stderr?.on('data', (d: Buffer) => this.events.onLog({ commandId, stream: 'stderr', text: d.toString() }));
@@ -146,7 +150,7 @@ export class RuntimeManager {
 					state: 'running',
 					commandId,
 					url: `http://localhost:${port}/`,
-					projectId: this.running.get(commandId)?.projectId ?? null,
+					prototypeId: this.running.get(commandId)?.prototypeId ?? null,
 				};
 				this.setStatus(commandId, status);
 				return status;

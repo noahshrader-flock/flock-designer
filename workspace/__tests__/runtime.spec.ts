@@ -4,15 +4,15 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { eventually, type Fn, nothingFollows } from './fixtures';
-import { RuntimeManager, fillProjectId, type RuntimeDeps } from '../src/core/services/codebase/runtime';
+import { RuntimeManager, fillPrototypeId, type RuntimeDeps } from '../src/core/services/codebase/runtime';
 import type { PreviewStatus, RunLogLine } from '../src/shared/contract';
-import type { WorkspaceDescriptor } from '../src/core/services/projects/descriptor';
+import type { WorkspaceDescriptor } from '../src/core/services/products/descriptor';
 
 const descriptor: WorkspaceDescriptor = {
 	version: 1,
 	product: 'Test',
 	contextDir: '.dsnr',
-	branchPattern: { codebase: 'feature/<project-id>' },
+	branchPattern: { codebase: 'feature/<prototype-id>' },
 	commands: [
 		{ id: 'echo', label: 'Echo', argv: ['node', '-e', 'console.log("hello from the command")'] },
 		{ id: 'fail', label: 'Fail', argv: ['node', '-e', 'process.exit(3)'] },
@@ -97,7 +97,7 @@ describe('preview', () => {
 	it('reports running with a URL once the port answers', async () => {
 		manager = make({ probe: async () => true });
 		const status = await manager.start(root, descriptor, 'preview');
-		expect(status).toEqual({ state: 'running', commandId: 'preview', url: 'http://localhost:4999/', projectId: null });
+		expect(status).toEqual({ state: 'running', commandId: 'preview', url: 'http://localhost:4999/', prototypeId: null });
 	});
 
 	it('gives up with a readable reason when the port never answers', async () => {
@@ -129,9 +129,9 @@ describe('preview', () => {
 	});
 });
 
-describe('commands that serve one project', () => {
-	it('puts the project in as its own argument', () => {
-		expect(fillProjectId(['npm', 'run', 'start:prototype', '--', '<project-id>'], 'users-inactivity-signal')).toEqual([
+describe('commands that serve one prototype', () => {
+	it('puts the prototype in as its own argument', () => {
+		expect(fillPrototypeId(['npm', 'run', 'start:prototype', '--', '<prototype-id>'], 'users-inactivity-signal')).toEqual([
 			'npm',
 			'run',
 			'start:prototype',
@@ -140,29 +140,29 @@ describe('commands that serve one project', () => {
 		]);
 	});
 
-	it('leaves a command that names no project alone', () => {
-		expect(fillProjectId(['npm', 'test'])).toEqual(['npm', 'test']);
+	it('leaves a command that names no prototype alone', () => {
+		expect(fillPrototypeId(['npm', 'test'])).toEqual(['npm', 'test']);
 	});
 
-	it('refuses to run one that needs a project without being given one', () => {
-		expect(() => fillProjectId(['npm', 'run', 'x', '<project-id>'])).toThrow(/needs a project/);
+	it('refuses to run one that needs a prototype without being given one', () => {
+		expect(() => fillPrototypeId(['npm', 'run', 'x', '<prototype-id>'])).toThrow(/needs a prototype/);
 	});
 
-	it.each(['a; rm -rf ~', '../../etc', '$(whoami)', 'Has Caps', ''])('refuses %j as a project', (bad) => {
-		expect(() => fillProjectId(['x', '<project-id>'], bad)).toThrow();
+	it.each(['a; rm -rf ~', '../../etc', '$(whoami)', 'Has Caps', ''])('refuses %j as a prototype', (bad) => {
+		expect(() => fillPrototypeId(['x', '<prototype-id>'], bad)).toThrow();
 	});
 });
 
 describe('one port, many prototypes', () => {
 	// Every prototype is served on the same port by the same command, so the only
-	// thing that says whose preview is running is the project it was started for.
+	// thing that says whose preview is running is the prototype it was started for.
 	const proto: WorkspaceDescriptor = {
 		...descriptor,
 		commands: [
 			{
 				id: 'preview',
 				label: 'Preview',
-				argv: ['node', '-e', 'setInterval(() => {}, 1000)', '<project-id>'],
+				argv: ['node', '-e', 'setInterval(() => {}, 1000)', '<prototype-id>'],
 				servesPreviewOn: 4999,
 			},
 		],
@@ -171,10 +171,10 @@ describe('one port, many prototypes', () => {
 	it('says whose preview is running', async () => {
 		manager = make();
 		const s = await manager.start(root, proto, 'preview', 'alert-notification-prefs');
-		expect(s).toMatchObject({ state: 'running', projectId: 'alert-notification-prefs' });
+		expect(s).toMatchObject({ state: 'running', prototypeId: 'alert-notification-prefs' });
 	});
 
-	it('reuses the running preview for the same project, rather than starting a second', async () => {
+	it('reuses the running preview for the same prototype, rather than starting a second', async () => {
 		manager = make();
 		const spawnSpy = vi.fn(spawn);
 		manager = make({ spawnProcess: spawnSpy as unknown as typeof spawn });
@@ -183,7 +183,7 @@ describe('one port, many prototypes', () => {
 		expect(spawnSpy).toHaveBeenCalledTimes(1);
 	});
 
-	it("replaces the running preview when a different project asks, instead of showing the first project's", async () => {
+	it("replaces the running preview when a different prototype asks, instead of showing the first prototype's", async () => {
 		const spawnSpy = vi.fn(spawn);
 		manager = make({ spawnProcess: spawnSpy as unknown as typeof spawn });
 
@@ -191,11 +191,11 @@ describe('one port, many prototypes', () => {
 		const second = await manager.start(root, proto, 'preview', 'alert-notification-prefs');
 
 		expect(spawnSpy).toHaveBeenCalledTimes(2);
-		expect(second).toMatchObject({ state: 'running', projectId: 'alert-notification-prefs' });
-		expect(manager.status('preview')).toMatchObject({ projectId: 'alert-notification-prefs' });
+		expect(second).toMatchObject({ state: 'running', prototypeId: 'alert-notification-prefs' });
+		expect(manager.status('preview')).toMatchObject({ prototypeId: 'alert-notification-prefs' });
 	});
 
-	it('hands the new project to the process it starts', async () => {
+	it('hands the new prototype to the process it starts', async () => {
 		const spawnSpy = vi.fn(spawn);
 		manager = make({ spawnProcess: spawnSpy as unknown as typeof spawn });
 		await manager.start(root, proto, 'preview', 'users-inactivity-signal');

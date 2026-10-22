@@ -60,7 +60,7 @@ let server: PrototypeServer;
 let tabs: Server;
 let tabsAt: string;
 const record = (id: string) => [
-	{ projectId: id, name: 'v1', branch: `prototype/${id}/v1`, commit: null, note: '', createdAt: '2026-10-01T10:00:00Z' },
+	{ prototypeId: id, name: 'v1', branch: `prototype/${id}/v1`, commit: null, note: '', createdAt: '2026-10-01T10:00:00Z' },
 ];
 
 const site = async (separate: boolean): Promise<string> => {

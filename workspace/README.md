@@ -1,7 +1,7 @@
 # DSNR
 
 A local coordination layer over real Flock product repositories. It opens a checkout, shows what was
-grounded before anything is generated, creates and continues a project's `feature/` branch, hands a task to the
+grounded before anything is generated, creates and continues a prototype's `feature/` branch, hands a task to the
 agent you already have installed, and runs the preview commands the repository declares.
 
 **It is not the source of truth for anything.** Standards, product patterns, prototype source and
@@ -35,20 +35,20 @@ integration chromeHeadless`. It needs Docker; on a Mac, `brew install colima doc
 "Versions" step and this command print the same line, so the two are compared.
 
 ## Building a prototype
-**Building on this machine** is part of Projects, not a separate mode. **New** opens one dialog with two
+**Building on this machine** is part of Prototypes, not a separate mode. **New** opens one dialog with two
 kinds, switched at the top, both starting from a repository and a branch in it:
 
 - **Prototype**: one page built from the product's real components, with nothing run and no
   environment setup. It needs the repository with its packages installed here; the dialog says whether
   they are, and will not start without them. The agent writes one React file, the app bundles it against
-  the product's installed packages into one page, and both are kept in the project's folder
+  the product's installed packages into one page, and both are kept in the prototype's folder
   (`prototypes/v1.tsx`, `prototypes/v1.html`, named by the version). Large files the pages embed (the design system's fonts) are kept once,
   in `prototypes/_shared/`, and served beside every page. **Build in the codebase** (in the review menu) moves one into the code: it asks first, shows the branch it will create and what would stop it (uncommitted changes, an existing codebase branch, Claude Code not ready), and starts from the branch the prototype was modeled on.
-- **Codebase work**: real work on the project's `feature/<project>` branch, which needs the full setup.
+- **Codebase work**: real work on the prototype's `feature/<prototype>` branch, which needs the full setup.
 
 Each runs the agent, then shows the result with pins. The product repository is **suggested** on its own
 — found in the usual places by its `.dsnr/workspace.json` — and you accept it once with a click; after that it
-is remembered. A `feature/<project>` branch appears only when a project already has a record for it, because that is also
+is remembered. A `feature/<prototype>` branch appears only when a prototype already has a record for it, because that is also
 how the whole product team names ticket branches. The design repository is expected beside the product one.
 The agent runs unattended: it may edit and run the repository's own scripts and local git, and nothing
 that pushes, switches branch or deletes.
@@ -60,13 +60,13 @@ that pushes, switches branch or deletes.
 | Open a repository the designer picks | Reach any path outside that repository |
 | Read and write issue comments in the design repository | Reach any repository the GitHub App is not installed on |
 | Run commands the repository declares | Run anything else, or a shell of any kind |
-| Create and switch a project's `feature/` branch | Rewrite, discard, or force anything in git |
+| Create and switch a prototype's `feature/` branch | Rewrite, discard, or force anything in git |
 | Invoke a locally installed agent | Hold model credentials, or carry its own prompts |
 | Let a prototype's agent read the product's code, guidance and installed packages, and build its page from them | Let that agent change anything in the product repository, or run the product |
-| Read and write project records | Become the only place those records exist |
+| Read and write prototype records | Become the only place those records exist |
 | Show a prototype's preview in the window and place comments on elements | Let that preview call back into the app, or leave the preview's origin |
-| Push the person's own work branches (`feature/<project>`, once it has a commit of its own: one after where the work was made, `madeFrom`, not one of the branch it was made from) and commit and push the design repository's `prototypes/` folder, by itself | Push anything else, force-push, publish a teammate's branch, a branch with nothing of its own yet, or push other unpublished work along with the records |
-| Push a project's `feature/` branch and open a **draft** pull request, as the designer, through their own `git` and `gh` | Force-push, open a pull request that is ready for review, merge one, or see the designer's GitHub token |
+| Push the person's own work branches (`feature/<prototype>`, once it has a commit of its own: one after where the work was made, `madeFrom`, not one of the branch it was made from) and commit and push the design repository's `prototypes/` folder, by itself | Push anything else, force-push, publish a teammate's branch, a branch with nothing of its own yet, or push other unpublished work along with the records |
+| Push a prototype's `feature/` branch and open a **draft** pull request, as the designer, through their own `git` and `gh` | Force-push, open a pull request that is ready for review, merge one, or see the designer's GitHub token |
 
 ## How a repository joins
 
@@ -78,7 +78,7 @@ this app.
   "version": 1,
   "product": "Coke (Flock Admin)",
   "contextDir": ".dsnr",
-  "branchPattern": { "codebase": "feature/<project-id>" },
+  "branchPattern": { "codebase": "feature/<prototype-id>" },
   "commands": [
     { "id": "design-mode", "label": "Run the real shell on mock data", "argv": ["npm", "run", "start:design"], "servesPreviewOn": 3000 }
   ],
@@ -90,12 +90,12 @@ this app.
 shell string: there is no interpreter to hand a pipe or a semicolon to. A repository with no
 descriptor can be opened, but nothing can be run in it.
 
-**Its design repository.** A company's design repository (its projects, the comments on them, its shared agents, skills and
+**Its design repository.** A company's design repository (its prototypes, the comments on them, its shared agents, skills and
 standards) is named by `"designRepository": "owner/repo"`; without it, a product belongs to Flock's (`flock-designer`), as
 every product did before a product could say. DSNR finds that repository's clone beside the product, under its name, or where
 the person pointed it with **DSNR: Locate the design repository** (kept on this machine, per repository, since clone paths
 are each person's); with neither, it says which repository to clone (`recordsRootFor`, `designRepositoryMissing`). What
-is read and written over the API (the projects listed, the comments, the pages published and the viewer's threads) goes to
+is read and written over the API (the prototypes listed, the comments, the pages published and the viewer's threads) goes to
 the same repository: `DesignRepos.now()` is the open product's, asked each time, so a window never reaches another
 company's. The `dsnr` command does the same from where it is run: the product's named repository, or the design
 repository's own origin.
@@ -111,7 +111,7 @@ nothing in the product is run.
 
 ### Sharing, and what it needs
 
-*Share for review* pushes a project's `feature/` branch to `origin`, opens a **draft** pull
+*Share for review* pushes a prototype's `feature/` branch to `origin`, opens a **draft** pull
 request for it, waits for the repository's deploy workflow, and records the preview address on the
 work's record, so a reviewer who opens the app sees it. A repository opts in with a `share` block:
 
@@ -134,14 +134,14 @@ pull request, and the app never sees the designer's token. Only committed work i
 
 ## Where things live
 
-Project records go to **`flock-designer/prototypes/<project-id>/`**, not into the product checkout.
+Prototype records go to **`flock-designer/prototypes/<prototype-id>/`**, not into the product checkout.
 The plan settled this and gave the reason: a record on the prototype branch means picking up
 someone's work requires knowing which branch to check out, and it needs a standing rule to keep
-per-project state off `develop`. It also dirties the working tree, which then blocks the next
+per-prototype state off `develop`. It also dirties the working tree, which then blocks the next
 round of work on its own bookkeeping — which is how the tests here caught it.
 
 Codebase work's code stays on its branch in the product repository, where it can actually run; a prototype's
-source and page are in its project folder.
+source and page are in its prototype folder.
 
 ## Security posture
 
@@ -158,7 +158,7 @@ source and page are in its project folder.
   offered, and accepting it is what admits it. A remembered choice is restored only if the person made one.
   `__tests__/calls.integration.spec.ts` asserts this at the handler level — the gate was briefly bypassed while every
   service test stayed green, which is why those tests exist.
-- A project id is validated before it reaches a command's argv **and** before it reaches the agent's
+- A prototype id is validated before it reaches a command's argv **and** before it reaches the agent's
   prompt; the agent runs unattended with edit permission, so an unchecked id there is prompt
   injection rather than argv injection.
 - Every path is resolved through `resolveInside`, which follows symlinks — the check string
@@ -200,7 +200,7 @@ is refused and said; one that cannot be confirmed (no tag, no repository named) 
 until the clone or the installed version changes. Only that one design system (`productDesignSystem`), chosen or shown
 to be the source, is read for prototypes' guidance, the voice and tone, and codebase
 work. A prototype is built from the product's installed package, never from a clone. With none of the product's own, another open folder that holds one is shown; the design repository is beside the product, as
-the app finds it. Its panel, in the activity bar, lists the projects (opening one opens its newest prototype for
+the app finds it. Its panel, in the activity bar, lists the prototypes (opening one opens its newest version for
 review) and shows the design system it found. Sign in is at the far right of VS Code's own DSNR title bar, which shows
 the username beside the mark once signed in. A prototype's review is its page on the site, built from the design
 repository and served from this machine, in an editor tab.
@@ -209,7 +209,7 @@ With no product open, the panel says so and offers **Get started** (**DSNR: Get 
 which offers to open what it cloned.
 
 **Dialogs and menus are in the panel**, in VS Code's own look, rather than boxes at the top of the window: a webview
-cannot draw outside its side bar, so a dialog covers the panel, as Claude Code's popovers are in its own. Each project has
+cannot draw outside its side bar, so a dialog covers the panel, as Claude Code's popovers are in its own. Each prototype has
 an ellipsis menu (on hover or focus), in groups: **Copy link** and **Open published page** (the page as reviewers see it,
 which asks GitHub when pressed and offers to publish it if it is not there); **Open locally** (the same review page,
 served from this machine, in your browser outside VS Code, where commenting is still VS Code's) with the next stage,
@@ -229,13 +229,13 @@ esbuild, which builds a prototype's page, for the machine it was packaged on.
 
 **Commenting in a review:** the page's own review bar comments through DSNR rather than with a token of its own. The
 page asks DSNR's review tab, and the tab asks the extension (`shared/reviewRelay.ts`): the core's comment calls, only on
-that review's project's prototypes and only on comments the tab has been shown or made; signing in, which is VS Code's; and **Address**, on an open comment's menu, which hands the comment to the agent's window
+that review's prototype's versions and only on comments the tab has been shown or made; signing in, which is VS Code's; and **Address**, on an open comment's menu, which hands the comment to the agent's window
 as a build is handed, and saves the page when the agent has built it.
 The bar listens for DSNR only when it is served from this machine and framed, and takes only a VS Code webview that
-says hello; on the published site it comments with GitHub itself, as the person who signs in there (below). Each project's reviews share
+says hello; on the published site it comments with GitHub itself, as the person who signs in there (below). Each prototype's reviews share
 one tab.
 
-**An open review keeps up with its page.** While a review tab is open, DSNR watches its project's `prototypes` folder in the
+**An open review keeps up with its page.** While a review tab is open, DSNR watches its prototype's `prototypes` folder in the
 design repository (`extension/src/pageWatch.ts`): a page saved there, by the app, by an agent's `dsnr save-prototype` in
 another process, or by a pull, builds the site again (about 50 ms), and the tab tells the bar (`page`, in `shared/reviewRelay.ts`,
 a version's name and nothing else). The bar reloads its page if it is the version shown, at once, or when a comment being
@@ -263,7 +263,7 @@ prototype's own page in the bar's frame (`page.html`), which is a repository's c
 - **The review tab passes on only the bar's messages, up, and VS Code's, down** (`reviewPage` in
   `extension/src/review.ts`): nothing the page or any frame it makes posts goes to the extension or reaches the bar as
   if VS Code had said it. It says hello as its frame loads and again when the bar says it is listening (`LISTENING`,
-  which carries nothing and goes no further), so a bar reloaded after the load is still told it is in VS Code. The relay acts only on that review's project, and on comments the tab was shown or made. The
+  which carries nothing and goes no further), so a bar reloaded after the load is still told it is in VS Code. The relay acts only on that review's prototype, and on comments the tab was shown or made. The
   panel and the Design System tabs likewise hear only VS Code (`extension/webview/host.ts`), not the stories they frame.
 - **The published site frames the page beside its bar, with no origin of its own** (`SANDBOX_BESIDE`: sandboxed without
   `allow-same-origin`), since GitHub Pages has one address. The page cannot read or rewrite the bar, take the sandbox off,
@@ -284,16 +284,16 @@ prototype's own page in the bar's frame (`page.html`), which is a repository's c
 `__tests__/reviewIsolation.integration.spec.ts` proves this in real Chrome, nested as VS Code nests it, with a hostile
 page; `pageAgent.integration.spec.ts` proves the pins on both kinds of address.
 
-**Projects, by product.** DSNR in VS Code is scoped to what is open, so the Projects tab focuses on the product open:
-**This product** (the default) shows its projects, by folder, and **Everyone's** shows every project, by product, the open one
-first and "No product" last. It is a focus, not a lock: every project can be opened and commented on from either, since who can
-see what is the design repository's permission on GitHub. A project's products are worked out from its work (`productsOf`): a
+**Prototypes, by product.** DSNR in VS Code is scoped to what is open, so the Prototypes tab focuses on the product open:
+**This product** (the default) shows its prototypes, by folder, and **Everyone's** shows every prototype, by product, the open one
+first and "No product" last. It is a focus, not a lock: every prototype can be opened and commented on from either, since who can
+see what is the design repository's permission on GitHub. A prototype's products are worked out from its work (`productsOf`): a
 prototype records the product it was made on as `basedOn.product`, the `owner/repo` its clone's `origin` names (the same on every
 machine; `basedOn.repository` is still the clone's folder name, which this machine compares with the open folder), and codebase
-work its `repository`. A project with none on record (made before products were recorded) is never hidden: it is in This
-product, marked "No product" once any project has one. The rules are `shared/projectScope.ts`. **With no product open**, the
-tab lists everyone's, by product, and a review opens with no checkout: that project alone is read through GitHub into DSNR's
-storage (`copyProject`) and kept only while a review uses it. What changes a prototype's code (Build in the codebase, Address,
+work its `repository`. A prototype with none on record (made before products were recorded) is never hidden: it is in This
+product, marked "No product" once any prototype has one. The rules are `shared/prototypeScope.ts`. **With no product open**, the
+tab lists everyone's, by product, and a review opens with no checkout: that prototype alone is read through GitHub into DSNR's
+storage (`copyPrototype`) and kept only while a review uses it. What changes a prototype's code (Build in the codebase, Address,
 Refresh to latest) says to open the product it was made on (`needsProduct`).
 
 **What a prototype is modeled on.** A new prototype, or a new version from its brief, is modeled on the latest of the branch:
@@ -301,16 +301,16 @@ DSNR fetches it (`freshTip`, which writes only the remote's copy, never the pers
 when the checkout has nothing of its own and the person's when it is ahead or has diverged, and says which in what it tells
 them, including when origin could not be reached. New starts the fetch when it opens. The record keeps that commit
 (`basedOn.commit`), and that commit is what the agent reads (a read-only copy at it, unless the checkout is there), kept by a
-private ref (`refs/dsnr/base/<project>/<version>`). A change or an Address keeps its version's base. In VS Code's review tab, a
+private ref (`refs/dsnr/base/<prototype>/<version>`). A change or an Address keeps its version's base. In VS Code's review tab, a
 version whose branch has moved on says so in the bar, beside its version ("3 behind latest", nothing while it is current; the dialog it opens says the branch); **Refresh to latest**
 moves its base to the latest and hands its rebuild, in place, to the agent.
 
 **Codebase work behind the product's main branch.** DSNR never merges into a checkout. Codebase work's branch is read
 against the latest of the product's default branch (`againstBase`, the branch engineering merges into): how far behind, and
 what merging would conflict in, from `git merge-tree`, which writes no ref, index or file. The Hand off dialog says so when the
-work is behind (nothing while it is up to date), and the project's menu has **Update this branch…** for codebase work.
+work is behind (nothing while it is up to date), and the prototype's menu has **Update this branch…** for codebase work.
 **Update this branch** hands the merge to the agent in the person's window, only on the branch and with nothing unfinished:
-DSNR first keeps the tip it starts from (`refs/dsnr/checkpoint/<project>`), so the update is undone with one command, and the
+DSNR first keeps the tip it starts from (`refs/dsnr/checkpoint/<prototype>`), so the update is undone with one command, and the
 agent merges, never rebases, and resolves conflicts so both sides survive, or stops and says what needs a person. Handoff
 writes the same preview into HANDOFF.md, for the engineer who will merge it.
 
@@ -320,24 +320,24 @@ drawn by the browser already on the machine (Chrome, Edge or Chromium, or `CHROM
 install. The panel's rows show the pictures, made once the list is read, as the app makes them.
 
 **The numbers keep up without reloading VS Code:** a comment made, moved, resolved or deleted in a review,
-reads the projects again at once, and so does coming back to VS Code after a minute away (for comments made in the app
-or on GitHub); the list stays on screen while it is read, and the badge on each project changes when the new count is
+reads the prototypes again at once, and so does coming back to VS Code after a minute away (for comments made in the app
+or on GitHub); the list stays on screen while it is read, and the badge on each prototype changes when the new count is
 there.
 
-**Search:** a box at the left of the grid and list icons narrows the projects as you type, as the app's does (every word, in any case, in the name, id, folder or people); Escape clears it.
+**Search:** a box at the left of the grid and list icons narrows the prototypes as you type, as the app's does (every word, in any case, in the name, id, folder or people); Escape clears it.
 
-**Folders:** the panel lists the projects under a section for each folder, those in none last, as a grid of cards, which
+**Folders:** the panel lists the prototypes under a section for each folder, those in none last, as a grid of cards, which
 it starts in, or a list of rows (the icons at the right above them, remembered with the tab). **Assign folder…**, from a
-project's menu, its right-click menu or a review tab's menu, opens a dialog in the panel to put it in a folder, a new
-one, or none. It opens at once with the projects the panel has, and, as
-every project's dialog does, has the list read again behind it, so it acts on the project as it is. **Rename…**, beside
-it, changes the name people see, the first heading of its `brief.md` (`renameProject`), and builds the published site
-again; the project's id, which its folder, links, branches and comments are named by, stays as it was. **Delete…**,
-last, deletes the whole project, every version with it, for everyone (`deleteProject`): its dialog says what goes and
-what stays, and deletes only once the project's name is typed as the list shows it (`namesProject`, which the core checks
+prototype's menu, its right-click menu or a review tab's menu, opens a dialog in the panel to put it in a folder, a new
+one, or none. It opens at once with the prototypes the panel has, and, as
+every prototype's dialog does, has the list read again behind it, so it acts on the prototype as it is. **Rename…**, beside
+it, changes the name people see, the first heading of its `brief.md` (`renamePrototype`), and builds the published site
+again; the prototype's id, which its folder, links, branches and comments are named by, stays as it was. **Delete…**,
+last, deletes the whole prototype, every version with it, for everyone (`deletePrototype`): its dialog says what goes and
+what stays, and deletes only once the prototype's name is typed as the list shows it (`namesPrototype`, which the core checks
 again). Its folder goes as one change (with a clone, the push of the records it waits for; without, one commit over the API), the
 published site is built again without it, and its review tab closes. Its review threads on GitHub are closed as not planned,
-with a note, and taken off the `flock-designer:review` label, so a new project of the same name starts with none
+with a note, and taken off the `flock-designer:review` label, so a new prototype of the same name starts with none
 (`closeDeleted`); their comments stay there. A thread is otherwise open while a comment in it is (`settle`, after each
 change to a comment). The dialog closes as it starts, and the card says
 Deleting… under its name and shimmers, with nothing to press, until the list no longer has it; refused, the dialog opens
@@ -361,7 +361,7 @@ Codebase work's menu has **Open the preview** (the branch's own dev server, at i
 Stop), **View on GitHub** (its pull request, else its branch), **Comments…** (read only: comments on codebase work go on
 its pull request, and there are no pins on it), **Hand off to engineering…** (the product's gate, both reviews, the
 fixes and HANDOFF.md, handed to the agent's window as a build is; DSNR reads the verdict from HANDOFF.md's first line once it is committed, and says if anything was pushed) and **Share for
-review** (a draft pull request, with a preview, said step by step). A project only in the code opens on GitHub when
+review** (a draft pull request, with a preview, said step by step). A prototype only in the code opens on GitHub when
 pressed. Build in the codebase checks its own work once before it reports: Claude Code asks the implementation reviewer
 (a read-only subagent, where there are subagents) about the branch's changes, fixes what blocks, and checks once more;
 product parity and the full gate stay at Handoff. VS Code is the editor here: work handed to Claude Code opens in this window's Claude Code, in its side panel by
@@ -397,7 +397,7 @@ person's branch and checkout are never written; what each draft has that DSNR di
 pressing it opens a dialog in the panel with what is held back and why, and Sync now. A review tab's title bar opens its page on the published site,
 or copies its link; when it is not there yet, it says why and offers Publish.
 
-Like the app, it publishes the person's work branches and records when the project list is read and when VS Code is
+Like the app, it publishes the person's work branches and records when the prototype list is read and when VS Code is
 focused, so it pushes with their own git credentials.
 
 It is drawn in VS Code's own design language, so it follows every theme, and only with tokens: no raw colour, type size,
@@ -473,7 +473,7 @@ Its commands' behaviour is tested in `check` itself (`extensionCommands.spec.ts`
 panel's and the review bar's harnesses only set up the page each runs in.
 
 **By hand, on purpose (Phase 4.6 of the plan): the comments test.** It publishes to the real design repository and runs
-Claude Code, so do it on a test project you can delete:
+Claude Code, so do it on a test prototype you can delete:
 
 1. Install DSNR (above) and open a product. Sign in.
 2. Ask Claude Code, in the product: "Create a prototype called DSNR test of …". When it has built and saved it, as its
@@ -486,18 +486,18 @@ Claude Code, so do it on a test project you can delete:
    built the change, DSNR saves it; look at the page, then resolve the comment.
 6. The review's title bar: **Open the published page** (once it is published) and **Copy the published page's link**.
    The status bar says whether your work is synced.
-7. In the panel: the project's **⋯** menu (or right-click it) › **Assign folder…**, and check it moves under its folder.
-8. When you are done: DSNR has no Delete, so remove the project's folder (`prototypes/dsnr-test`) from the design
+7. In the panel: the prototype's **⋯** menu (or right-click it) › **Assign folder…**, and check it moves under its folder.
+8. When you are done: DSNR has no Delete, so remove the prototype's folder (`prototypes/dsnr-test`) from the design
    repository and push, and close its review issue on GitHub.
 
 **By hand, on purpose (Phase 5): into the code, and Handoff.** It makes a branch in the product, runs Claude Code
-there, and pushes a draft pull request at the end, so use the same test project, and a product checkout with no
+there, and pushes a draft pull request at the end, so use the same test prototype, and a product checkout with no
 uncommitted changes:
 
-1. The test project's **⋯** menu › **Build in the codebase…**. Check the branch it names and where it starts from, then
+1. The test prototype's **⋯** menu › **Build in the codebase…**. Check the branch it names and where it starts from, then
    **Build in Claude Code**. Claude Code's panel in this window should open with the task typed in, on that branch:
    press Enter there, and let it write the audit, then the code, and commit.
-2. When it has committed, the project's menu has codebase work: **Open the preview** opens the branch's own dev server
+2. When it has committed, the prototype's menu has codebase work: **Open the preview** opens the branch's own dev server
    in your browser (then **Stop it**), and **View on GitHub** opens the branch.
 3. **Hand off to engineering…** › **Start handoff**. The agent's window opens with the task typed in: press Enter there,
    and answer it while it runs the product's gate, both reviews and the fixes, and writes HANDOFF.md. Once HANDOFF.md is
@@ -505,7 +505,7 @@ uncommitted changes:
 4. When it is **Ready for engineering**, **Open a draft pull request** (or the menu's **Share for review**): it pushes the
    branch, opens a draft pull request and builds its preview, then offers both.
 5. **Comments…** lists the comments on the codebase work, read only.
-6. When you are done: close the draft pull request, delete the branch, and remove the project from the design
+6. When you are done: close the draft pull request, delete the branch, and remove the prototype from the design
    repository, as above.
 
 ### Comments in the code

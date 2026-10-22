@@ -1,7 +1,7 @@
 import type { Theme } from '../prototypeTheme';
 import type { DeclaredTarget } from '../wcag';
 import type { AccessibilityCounts, AccessibilityResult } from './accessibility';
-import type { Handed } from './projects';
+import type { Handed } from './prototypes';
 
 /** `folder` is `''` for the whole repository; `branch` is its default. */
 export interface ConnectedDesignSystem {

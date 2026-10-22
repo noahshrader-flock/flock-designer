@@ -1,4 +1,4 @@
-import type { WorkspaceDescriptor } from '../projects/descriptor';
+import type { WorkspaceDescriptor } from '../products/descriptor';
 
 /**
  * Runs only the command the repository declares (`install` in its `.dsnr/workspace.json`), as with every command DSNR runs.

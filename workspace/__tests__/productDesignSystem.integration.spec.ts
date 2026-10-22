@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { findContext } from '../src/core/services/projects/findContext';
+import { findContext } from '../src/core/services/products/findContext';
 import {
 	SourceAnswers,
 	chooseDesignSystem,
@@ -12,7 +12,7 @@ import {
 	packageRepository,
 	productDesignSystem,
 	usableDesignSystem,
-} from '../src/core/services/projects/productDesignSystem';
+} from '../src/core/services/products/productDesignSystem';
 import { g, makeDesignSystem, makeProductFiles } from './fixtures';
 
 let base: string;

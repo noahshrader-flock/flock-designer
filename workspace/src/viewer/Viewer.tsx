@@ -33,11 +33,11 @@ import { useReloadOnSaved } from './comments/useReloadOnSaved';
 export interface ViewerConfig {
 	owner: string;
 	repo: string;
-	projectId: string;
+	prototypeId: string;
 	name: string;
 	title: string;
-	/** The project's folder, relative to this page: a version is `${projectHref}${name}/`. */
-	projectHref: string;
+	/** The prototype's folder, relative to this page: a version is `${prototypeHref}${name}/`. */
+	prototypeHref: string;
 	/** The page of all prototypes, relative to this page; null in VS Code's tab, where the version's dropdown is the way about. */
 	prototypesHref: string | null;
 	/** `href` is relative to this page. */
@@ -81,8 +81,8 @@ const PageBar = ({
 	children: ReactNode;
 }) => {
 	const versions = useMemo(
-		() => config.versions.map((v) => ({ ...v, branch: prototypeKey(config.projectId, v.name) })),
-		[config.versions, config.projectId],
+		() => config.versions.map((v) => ({ ...v, branch: prototypeKey(config.prototypeId, v.name) })),
+		[config.versions, config.prototypeId],
 	);
 	// No background of its own and no line under it, so it does not look like part of the prototype it is over.
 	return createPortal(
@@ -92,7 +92,7 @@ const PageBar = ({
 			<ButtonRow>
 				{before}
 				<VersionSwitcher
-					current={{ name: config.name, branch: prototypeKey(config.projectId, config.name) }}
+					current={{ name: config.name, branch: prototypeKey(config.prototypeId, config.name) }}
 					siblings={versions}
 					onSelect={(next) => void (location.href = next.href)}
 				/>
@@ -142,7 +142,7 @@ export const Viewer = ({
 			slots.frame.src = withState(slots.frame.getAttribute('src') ?? 'page.html', next);
 		},
 	};
-	const branch = prototypeKey(config.projectId, config.name);
+	const branch = prototypeKey(config.prototypeId, config.name);
 	const github = useMemo(
 		() =>
 			token
@@ -159,7 +159,9 @@ export const Viewer = ({
 	);
 	const tokenStore = useMemo(
 		() =>
-			github ? browserComments(github, { owner: config.owner, repo: config.repo }, { projectId: config.projectId, branch, page: config.page }) : null,
+			github
+				? browserComments(github, { owner: config.owner, repo: config.repo }, { prototypeId: config.prototypeId, branch, page: config.page })
+				: null,
 		[github, config, branch],
 	);
 	useEffect(() => {
@@ -229,7 +231,7 @@ const InDsnr = ({
 		void relay.ask('signInState', []).then((r) => setLogin(loginIn(r)));
 	}, [relay]);
 	const store = useMemo(
-		() => relayComments(relay, { projectId: config.projectId, branch: prototypeKey(config.projectId, config.name), page: config.page }),
+		() => relayComments(relay, { prototypeId: config.prototypeId, branch: prototypeKey(config.prototypeId, config.name), page: config.page }),
 		[relay, config],
 	);
 	const [signingIn, setSigningIn] = useState(false);
@@ -242,11 +244,11 @@ const InDsnr = ({
 	const address = async (comment: CommentRef, newVersion: boolean) => {
 		setAddressing(comment.id);
 		// On this page's own version: in the browser, the page may have moved to another since it was opened.
-		await relay.ask('address', [comment, prototypeKey(config.projectId, config.name), newVersion]);
+		await relay.ask('address', [comment, prototypeKey(config.prototypeId, config.name), newVersion]);
 		setAddressing(null);
 	};
 	if (login === undefined) return null;
-	const version = prototypeKey(config.projectId, config.name);
+	const version = prototypeKey(config.prototypeId, config.name);
 	/** How far the version's base is behind the latest of its branch. */
 	const builtOn = <BehindLatest relay={relay} branch={version} />;
 	if (login === null)

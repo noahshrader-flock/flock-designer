@@ -32,10 +32,10 @@ import type {
 	OpenedPrototype,
 	SaveOutcome,
 	PageStatus,
-	Project,
+	Prototype,
 	HandedComment,
 	HandoffResult,
-} from '../domain/projects';
+} from '../domain/prototypes';
 import type { PublishStatus, ShareStatus } from '../domain/publishing';
 import type { VoiceAndTone } from '../domain/voice';
 
@@ -136,63 +136,69 @@ export interface WorkspaceApi {
 	onPublishStatus(listener: (status: PublishStatus) => void): () => void;
 
 	/** Resolves at once; progress arrives through `onShareStatus`, because the build takes minutes. */
-	shareWork(root: string, projectId: string, name: string): Promise<Result<ShareStatus>>;
+	shareWork(root: string, prototypeId: string, name: string): Promise<Result<ShareStatus>>;
 	onShareStatus(listener: (status: ShareStatus) => void): () => void;
 
 	/** How far the version's base is behind the latest of its branch; null when that cannot be told here. */
-	prototypeBehind(projectId: string, name: string): Promise<Result<BaseBehind | null>>;
+	prototypeBehind(prototypeId: string, name: string): Promise<Result<BaseBehind | null>>;
 	/** Moves the version's base to the latest of its branch and hands its rebuild on it to the agent, in place. */
-	handPrototypeRefresh(root: string, projectId: string, name: string): Promise<Result<Handed>>;
+	handPrototypeRefresh(root: string, prototypeId: string, name: string): Promise<Result<Handed>>;
 	/** Hands one comment to the agent, as a build is handed. Nothing is recorded until its change is built: see `saveBuilt`. */
-	handPrototypeAddress(root: string, projectId: string, name: string, comment: CommentRef, newVersion: boolean): Promise<Result<HandedComment>>;
-	publishedPage(projectId: string, name: string): Promise<Result<PageStatus>>;
+	handPrototypeAddress(root: string, prototypeId: string, name: string, comment: CommentRef, newVersion: boolean): Promise<Result<HandedComment>>;
+	publishedPage(prototypeId: string, name: string): Promise<Result<PageStatus>>;
 	/** The same publish that runs by itself when it is saved, for after one stopped or before it would. */
-	publishPage(projectId: string, name: string): Promise<Result<PageStatus>>;
+	publishPage(prototypeId: string, name: string): Promise<Result<PageStatus>>;
 	/**
 	 * Saves only when the page is a build of its source as it is now, and that source is not the one saved already: each
 	 * build once, however often asked. `from` is the version a new one started from, recorded once its source differs from
 	 * that one's. `refused`, and why: a saved source changed since it was saved; nothing is written.
 	 */
-	saveBuilt(projectId: string, name: string, from: string | null): Promise<Result<SaveOutcome>>;
-	openPrototype(projectId: string, name: string): Promise<Result<OpenedPrototype>>;
-	buildInCodebasePlan(root: string, projectId: string, name: string): Promise<Result<BuildInCodebasePlan>>;
-	/** Makes the project's codebase branch (from `from`) and its record, then hands the building to the agent. */
-	buildInCodebase(root: string, projectId: string, name: string, from?: string): Promise<Result<Handed>>;
+	saveBuilt(prototypeId: string, name: string, from: string | null): Promise<Result<SaveOutcome>>;
+	openPrototype(prototypeId: string, name: string): Promise<Result<OpenedPrototype>>;
+	buildInCodebasePlan(root: string, prototypeId: string, name: string): Promise<Result<BuildInCodebasePlan>>;
+	/** Makes the prototype's codebase branch (from `from`) and its record, then hands the building to the agent. */
+	buildInCodebase(root: string, prototypeId: string, name: string, from?: string): Promise<Result<Handed>>;
 	/** The person chooses, whatever is kept (Change), and it is kept as they say. */
 	chooseAgent(): Promise<Result<null>>;
 	/** The name of the agent work goes to now, said without asking; null while it is still to be asked. */
 	agentShown(): Promise<Result<string | null>>;
 	/** Hands the handoff's task to the agent, as a build is handed; refused unless the checkout is on the work's branch. */
-	handOff(root: string, projectId: string): Promise<Result<Handed>>;
+	handOff(root: string, prototypeId: string): Promise<Result<Handed>>;
 	/** How the work's branch stands against the product's default branch, with what merging it would conflict in; null when that cannot be told. */
-	codebaseAgainstBase(root: string, projectId: string): Promise<Result<BranchAgainstBase | null>>;
+	codebaseAgainstBase(root: string, prototypeId: string): Promise<Result<BranchAgainstBase | null>>;
 	/** Hands Update this branch to the agent, which merges the base into the work; refused unless the checkout is on it, with nothing unfinished. */
-	handCodebaseUpdate(root: string, projectId: string): Promise<Result<Handed>>;
+	handCodebaseUpdate(root: string, prototypeId: string): Promise<Result<Handed>>;
 	/** Asked as often as one likes: `done` is said once, and the verdict recorded then. */
-	handoffResult(root: string, projectId: string): Promise<Result<HandoffResult>>;
+	handoffResult(root: string, prototypeId: string): Promise<Result<HandoffResult>>;
 	/** `uncommitted`: the checkout had changes nobody committed, and no agent made them here. */
-	runLocally(root: string, projectId: string, name: string): Promise<Result<{ url: string; uncommitted: boolean }>>;
+	runLocally(root: string, prototypeId: string, name: string): Promise<Result<{ url: string; uncommitted: boolean }>>;
 
 	signInState(): Promise<Result<SignInState>>;
 	signOut(): Promise<Result<null>>;
 	onSignInChanged(listener: (state: SignInState) => void): () => void;
 
 	/** Everything below reads the design repo through the API. */
-	listProjects(): Promise<Result<Project[]>>;
+	listPrototypes(): Promise<Result<Prototype[]>>;
 	/** For every prototype built on this machine, one at a time; nothing while an agent works. */
 	ensureCovers(): Promise<Result<MadeCover[]>>;
 	/** A data URL; null when there is none to read. */
-	projectCover(projectId: string, name: string, cover: string): Promise<Result<string | null>>;
+	prototypeCover(prototypeId: string, name: string, cover: string): Promise<Result<string | null>>;
 	/** `branch`: what the thread is filed under (a prototype's is its key). */
-	readComments(projectId: string, branch: string): Promise<Result<ReviewComment[]>>;
-	assignFolder(projectId: string, folder: string | null): Promise<Result<null>>;
+	readComments(prototypeId: string, branch: string): Promise<Result<ReviewComment[]>>;
+	assignFolder(prototypeId: string, folder: string | null): Promise<Result<null>>;
 	/** The name people see, its brief's heading; never its id. */
-	renameProject(projectId: string, title: string): Promise<Result<null>>;
-	/** The whole project, every version with it; `typed` must be its name (`namesProject`). */
-	deleteProject(projectId: string, typed: string): Promise<Result<null>>;
-	/** So what shows a deleted project (its review tab) can close. */
-	onProjectDeleted(listener: (projectId: string) => void): () => void;
-	postComment(projectId: string, branch: string, body: string, anchor: CommentAnchor | null, picture?: string | null): Promise<Result<ReviewComment>>;
+	renamePrototype(prototypeId: string, title: string): Promise<Result<null>>;
+	/** The whole prototype, every version with it; `typed` must be its name (`namesPrototype`). */
+	deletePrototype(prototypeId: string, typed: string): Promise<Result<null>>;
+	/** So what shows a deleted prototype (its review tab) can close. */
+	onPrototypeDeleted(listener: (prototypeId: string) => void): () => void;
+	postComment(
+		prototypeId: string,
+		branch: string,
+		body: string,
+		anchor: CommentAnchor | null,
+		picture?: string | null,
+	): Promise<Result<ReviewComment>>;
 
 	/** Only the comment's author can. */
 	moveComment(comment: CommentRef, anchor: CommentAnchor): Promise<Result<ReviewComment>>;
@@ -243,8 +249,8 @@ export const INVOKE = [
 	'prototypeBehind',
 	'handPrototypeRefresh',
 	'assignFolder',
-	'renameProject',
-	'deleteProject',
+	'renamePrototype',
+	'deletePrototype',
 	'handPrototypeAddress',
 	'publishedPage',
 	'publishPage',
@@ -257,9 +263,9 @@ export const INVOKE = [
 	'publishNow',
 	'signInState',
 	'signOut',
-	'listProjects',
+	'listPrototypes',
 	'ensureCovers',
-	'projectCover',
+	'prototypeCover',
 	'readComments',
 	'postComment',
 	'moveComment',
@@ -274,7 +280,7 @@ export const EVENTS = {
 	onPreviewStatus: 'previewStatus',
 	onSignInChanged: 'signInChanged',
 	onLibraryShown: 'libraryShown',
-	onProjectDeleted: 'projectDeleted',
+	onPrototypeDeleted: 'prototypeDeleted',
 } as const satisfies Partial<Record<keyof WorkspaceApi, string>>;
 
 export type InvokeName = (typeof INVOKE)[number];

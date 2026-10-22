@@ -1,5 +1,5 @@
 import { readReview } from './asks';
-import { type HostMessage, type Review, readProjectArg } from './messages';
+import { type HostMessage, type Review, readPrototypeArg } from './messages';
 
 /** What the commands need of VS Code and of the rest of the extension: a slice, so a test gives its own. */
 export interface CommandDeps {
@@ -42,11 +42,11 @@ export const commands = (d: CommandDeps): Record<string, (raw?: unknown) => unkn
 		'dsnr.openPublishedPage': () => inFront(d.openPublishedPage),
 		'dsnr.copyPublishedLink': () => inFront(d.copyPublishedLink),
 		'dsnr.assignFolder': (raw) => {
-			const projectId = readProjectArg(raw) ?? d.activeReview()?.projectId;
-			if (!projectId) return d.tell('Right-click a project in DSNR, or open one for review, to assign its folder.');
-			return d.inPanel({ type: 'open-dialog', dialog: { kind: 'assign', projectId } });
+			const prototypeId = readPrototypeArg(raw) ?? d.activeReview()?.prototypeId;
+			if (!prototypeId) return d.tell('Right-click a prototype in DSNR, or open one for review, to assign its folder.');
+			return d.inPanel({ type: 'open-dialog', dialog: { kind: 'assign', prototypeId } });
 		},
-		'dsnr.buildInCodebase': () => inFront((review) => d.inPanel({ type: 'open-dialog', dialog: { kind: 'build', projectId: review.projectId } })),
+		'dsnr.buildInCodebase': () => inFront((review) => d.inPanel({ type: 'open-dialog', dialog: { kind: 'build', prototypeId: review.prototypeId } })),
 		'dsnr.sync': () => d.inPanel({ type: 'open-dialog', dialog: { kind: 'sync' } }),
 		'dsnr.signIn': () => d.signIn().catch(d.failed),
 		'dsnr.account': () => {

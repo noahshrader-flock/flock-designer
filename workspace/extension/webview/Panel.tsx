@@ -2,12 +2,12 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useComponentPictures } from './hooks/useComponentPictures';
 import { useWorkspace } from './hooks/useWorkspace';
 import type { MadeCover, SignInState } from '../../src/shared/contract';
-import { withCovers } from '../../src/shared/projectList';
+import { withCovers } from '../../src/shared/prototypeList';
 import { DesignSystem } from './DesignSystem';
 import { PanelDialogs } from './Dialogs';
 import { onHost, workspace } from './host';
 import { useShared } from './shared';
-import { Projects } from './Projects';
+import { Prototypes } from './Prototypes';
 import type { PanelDialog } from '../src/messages';
 import { Toggle } from '../../src/ui/Toggle';
 import { useCatalog } from './useCatalog';
@@ -18,13 +18,14 @@ import { askOnce } from './hooks/ask';
 import { useDeleting } from './hooks/useDeleting';
 
 const TABS = [
-	{ value: 'projects', label: 'Projects', icon: 'folder-library' },
+	{ value: 'prototypes', label: 'Prototypes', icon: 'folder-library' },
 	{ value: 'design-system', label: 'Design System', icon: 'symbol-color' },
 ] as const satisfies { value: Tab; label: string; icon: string }[];
 
 export const Panel = () => {
 	const kept = vscode().getState();
-	const [tab, setTab] = useState<Tab>(() => kept?.tab ?? 'projects');
+	// Only a tab there is: one kept by an earlier version of the panel may be gone.
+	const [tab, setTab] = useState<Tab>(() => TABS.find((t) => t.value === kept?.tab)?.value ?? 'prototypes');
 	const [view, setView] = useState<View>(() => kept?.view ?? 'grid');
 	const [part, setPart] = useState<Part>(() => kept?.part ?? 'components');
 	const [componentsView, setComponentsView] = useState<View>(() => kept?.componentsView ?? 'grid');
@@ -45,21 +46,21 @@ export const Panel = () => {
 		};
 	}, []);
 	const login = account.state === 'signedIn' ? account.user.login : null;
-	const read = useWorkspace(() => workspace().listProjects(), [context?.product ?? null, login], { enabled: context !== null });
+	const read = useWorkspace(() => workspace().listPrototypes(), [context?.product ?? null, login], { enabled: context !== null });
 	// Keeps what is shown until the new list is there, so a reload never gives way to a line saying it is reading.
 	const { reload } = read;
-	/** A project's dialog acts on the project as it is: the list on screen may be older than a version an agent just made. */
+	/** A prototype's dialog acts on the prototype as it is: the list on screen may be older than a version an agent just made. */
 	const openDialog = useCallback(
 		(next: PanelDialog) => {
 			setDialog(next);
-			if ('projectId' in next) reload();
+			if ('prototypeId' in next) reload();
 		},
 		[reload],
 	);
 	useEffect(
 		() =>
 			onHost((m) => {
-				if (m.type === 'projects-changed') reload();
+				if (m.type === 'prototypes-changed') reload();
 				if (m.type === 'open-dialog') {
 					openDialog(m.dialog);
 					// Every change being tried is the Design System tab's: asked for from a component's tab, it is shown there.
@@ -77,16 +78,16 @@ export const Panel = () => {
 			(r) =>
 				r.ok &&
 				r.value.length > 0 &&
-				setMade((now) => [...r.value, ...now.filter((m) => !r.value.some((n) => n.projectId === m.projectId && n.name === m.name))]),
+				setMade((now) => [...r.value, ...now.filter((m) => !r.value.some((n) => n.prototypeId === m.prototypeId && n.name === m.name))]),
 		);
 	}, [read.value]);
-	const projects = useMemo(() => (read.value === null ? null : withCovers(read.value, made)), [read.value, made]);
+	const prototypes = useMemo(() => (read.value === null ? null : withCovers(read.value, made)), [read.value, made]);
 	// Refused, its dialog opens again to say why.
-	const deletion = useDeleting(projects, reload, (projectId, error) => setDialog({ kind: 'delete', projectId, error }));
-	const about = dialog !== null && 'projectId' in dialog ? dialog.projectId : null;
+	const deletion = useDeleting(prototypes, reload, (prototypeId, error) => setDialog({ kind: 'delete', prototypeId, error }));
+	const about = dialog !== null && 'prototypeId' in dialog ? dialog.prototypeId : null;
 	useEffect(() => {
-		if (about !== null && projects !== null && !projects.some((p) => p.id === about)) setDialog(null);
-	}, [about, projects]);
+		if (about !== null && prototypes !== null && !prototypes.some((p) => p.id === about)) setDialog(null);
+	}, [about, prototypes]);
 	const found = context?.designSystem ?? null;
 	const showsDesign = tab === 'design-system' && found !== null && unreadable === null;
 	const design = useCatalog();
@@ -111,9 +112,9 @@ export const Panel = () => {
 						<Message size="page" waiting>
 							Looking at what is open…
 						</Message>
-					) : tab === 'projects' ? (
-						<Projects
-							read={{ value: projects, error: read.error }}
+					) : tab === 'prototypes' ? (
+						<Prototypes
+							read={{ value: prototypes, error: read.error }}
 							product={
 								context.product !== null
 									? { open: true, repository: context.productRepository }
@@ -155,11 +156,11 @@ export const Panel = () => {
 			</main>
 			<PanelDialogs
 				dialog={dialog}
-				projects={projects}
+				prototypes={prototypes}
 				root={context?.product ?? null}
 				account={account}
 				onChanged={reload}
-				onDelete={(projectId, typed) => void deletion.remove(projectId, typed)}
+				onDelete={(prototypeId, typed) => void deletion.remove(prototypeId, typed)}
 				onClose={() => setDialog(null)}
 			/>
 		</>
