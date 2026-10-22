@@ -1,6 +1,6 @@
 import type { Person } from '../../../shared/contract';
 import { requestsPath } from '../../../shared/designPaths';
-import { assertPrototypeName } from './prototype';
+import { assertVersionName } from './prototype';
 import type { RecordStore } from './prototype';
 import { scrubbed } from '../../../shared/scrub';
 
@@ -22,7 +22,7 @@ export const keepRequest = async (
 	store: RecordStore,
 	{ projectId, name, text, me, now = new Date() }: { projectId: string; name: string; text: string; me: Person | null; now?: Date },
 ): Promise<void> => {
-	assertPrototypeName(name);
+	assertVersionName(name);
 	const { text: kept, removed } = scrubbed(text.trim());
 	if (kept === '') return;
 	const path = requestsPath(projectId, name);

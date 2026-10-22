@@ -1,5 +1,5 @@
 import type { InvokeName, Result } from './contract';
-import { isPrototypeName } from './prototypeNames';
+import { isVersionName } from './versionNames';
 import { hasExactly } from './validate';
 
 /**
@@ -103,7 +103,7 @@ export const readRelayTell = (raw: unknown): RelayTell | null => {
 	if (m.dsnr === 'hello') return hasExactly(m, ['dsnr']) ? { dsnr: 'hello' } : null;
 	if (m.dsnr === 'scheme') return hasExactly(m, ['dsnr', 'theme']) && isTheme(m.theme) ? { dsnr: 'scheme', theme: m.theme } : null;
 	if (m.dsnr === 'page')
-		return hasExactly(m, ['dsnr', 'name']) && typeof m.name === 'string' && isPrototypeName(m.name) ? { dsnr: 'page', name: m.name } : null;
+		return hasExactly(m, ['dsnr', 'name']) && typeof m.name === 'string' && isVersionName(m.name) ? { dsnr: 'page', name: m.name } : null;
 	return m.dsnr === 'answer' && hasExactly(m, ['dsnr', 'id', 'result']) && isId(m.id) && isResult(m.result)
 		? { dsnr: 'answer', id: m.id, result: m.result }
 		: null;

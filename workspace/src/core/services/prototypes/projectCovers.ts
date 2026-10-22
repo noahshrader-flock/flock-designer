@@ -6,7 +6,7 @@ import { existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import type { MadeCover } from '../../../shared/contract';
 import { coverPath } from '../../../shared/designPaths';
-import { isPrototypeName } from '../../../shared/prototypeNames';
+import { isVersionName } from '../../../shared/versionNames';
 import { PROJECT_ID } from '../../../shared/validate';
 import { type RecordStore, contentHashOf, readRecords, setCover } from './prototype';
 import type { DrawCover } from '../../ports';
@@ -45,7 +45,7 @@ export const builtHere = (prototypesRoot: string): { projectId: string; name: st
 		.filter((d) => d.isDirectory() && PROJECT_ID.test(d.name))
 		.flatMap((d) =>
 			readdirSync(join(prototypesRoot, d.name))
-				.filter((f) => f.endsWith('.html') && isPrototypeName(f.slice(0, -'.html'.length)))
+				.filter((f) => f.endsWith('.html') && isVersionName(f.slice(0, -'.html'.length)))
 				.map((f) => ({ projectId: d.name, name: f.slice(0, -'.html'.length) }))
 				.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true })),
 		);

@@ -22,9 +22,9 @@ describe('what the window sends, checked', () => {
 		expect(through(arg.codebaseName, 'codebase')).toBe('codebase');
 		for (const name of ['v1', 'feature/x'])
 			expect(through(arg.codebaseName, name)).toBe(`"${name}" is not codebase work: a version of a prototype is a page, not a branch.`);
-		expect(through(arg.prototypeName, 'v1')).toBe('v1');
-		expect(through(arg.prototypeName, 'codebase')).toBe('"codebase" is not a prototype.');
-		expect(through(arg.prototypeName, 5)).toBe('That is not a prototype.');
+		expect(through(arg.versionName, 'v1')).toBe('v1');
+		expect(through(arg.versionName, 'codebase')).toBe('"codebase" is not a prototype.');
+		expect(through(arg.versionName, 5)).toBe('That is not a prototype.');
 	});
 
 	it('says yes only for true', () => {

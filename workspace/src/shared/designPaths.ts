@@ -1,4 +1,4 @@
-import { isPrototypeName } from './prototypeNames';
+import { isVersionName } from './versionNames';
 import { assertCover } from './validate';
 
 /**
@@ -64,7 +64,7 @@ export const coverPath = (projectId: string, name: string, cover: string): strin
 };
 
 /** From the site's root. */
-export const sitePath = (projectId: string, name: string): string | null => (isPrototypeName(name) ? `${projectId}/${name}/` : null);
+export const sitePath = (projectId: string, name: string): string | null => (isVersionName(name) ? `${projectId}/${name}/` : null);
 
 /** Large files pages share (fonts, mostly), kept once as the data they were embedded as, named by their content's hash. */
 export const SHARED_DIR = 'projects/_shared';

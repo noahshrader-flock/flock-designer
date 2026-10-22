@@ -5,7 +5,7 @@ import { asCover, asDate, asRoute } from './validate';
 import { asRepositoryPath } from './repoRef';
 import { asChangeRequestUrl } from './hostUrls';
 import { isCommit } from './sha';
-import { isPrototypeName } from './prototypeNames';
+import { isVersionName } from './versionNames';
 
 /**
  * git's line merge calls two people recording versions a conflict, so `work.json` records are joined by name and their
@@ -15,7 +15,7 @@ import { isPrototypeName } from './prototypeNames';
 type Rec = Record<string, unknown>;
 
 /** A file with any other name (`v1-i1`) is refused whole. */
-const isWorkName = (v: unknown): boolean => typeof v === 'string' && (v === 'codebase' || isPrototypeName(v));
+const isWorkName = (v: unknown): boolean => typeof v === 'string' && (v === 'codebase' || isVersionName(v));
 
 const rawRecords = (text: string): Rec[] | null => {
 	try {
@@ -83,7 +83,7 @@ const checked = (r: Rec): Work => {
 		...(cover !== null ? { cover } : {}),
 		...(isCommit(r.readyAt) ? { readyAt: r.readyAt } : {}),
 		...(isCommit(r.madeFrom) ? { madeFrom: r.madeFrom } : {}),
-		...(typeof r.from === 'string' && isPrototypeName(r.from) ? { from: r.from } : {}),
+		...(typeof r.from === 'string' && isVersionName(r.from) ? { from: r.from } : {}),
 	};
 };
 

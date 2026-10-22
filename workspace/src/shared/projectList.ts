@@ -3,7 +3,7 @@ import { mergePeople } from './people';
 import { matchesWords } from './search';
 import { asCover, asDate } from './validate';
 import { projectCodeLink, workKind, workOf } from './work';
-import { newestVersionFirst } from './prototypeNames';
+import { newestVersionFirst } from './versionNames';
 import { byNewest } from './sort';
 import { HOST } from './vocabulary';
 

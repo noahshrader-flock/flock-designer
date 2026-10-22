@@ -1,4 +1,4 @@
-import { newestVersionFirst } from '../shared/prototypeNames';
+import { newestVersionFirst } from '../shared/versionNames';
 import { workLabel } from '../shared/work';
 import { stateLabel } from '../shared/prototypeStates';
 import { THEMES, themeLabel } from '../shared/prototypeTheme';

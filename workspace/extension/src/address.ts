@@ -1,7 +1,7 @@
 import type { CommentRef, Project, WorkspaceApi } from '../../src/shared/contract';
 import { prototypeKey } from '../../src/shared/designPaths';
 import { handedTo } from '../../src/shared/handedTo';
-import { commentsFromOthers, nextVersionName, othersHaveCommented } from '../../src/shared/prototypeNames';
+import { commentsFromOthers, nextVersionName, othersHaveCommented } from '../../src/shared/versionNames';
 import { valueOf } from '../../src/shared/result';
 import { workLabel } from '../../src/shared/work';
 import type { Offer, Tell } from './say';

@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync
 import { join } from 'node:path';
 import { SHARED_DIR, projectPath, prototypePagePath, sharedFilePath, sharedFilesOf, WORK_FILE, workPath } from '../../../shared/designPaths';
 import { parseWork } from '../../../shared/workRecords';
-import { isPrototypeName } from '../../../shared/prototypeNames';
+import { isVersionName } from '../../../shared/versionNames';
 import { PROJECT_ID } from '../../../shared/validate';
 import type { RepoFiles } from '../../../codeHost/repoFiles';
 
@@ -18,7 +18,7 @@ export const copyProject = async (files: Pick<RepoFiles, 'readFile'>, id: string
 	if (records === null || records.length === 0) throw new Error(`${id} has no prototypes on GitHub to review.`);
 	const brief = await files.readFile(projectPath(id, 'brief.md'));
 	// Only the versions: codebase work has no page, so nothing is read or written for it.
-	const names = [...new Set(records.map((r) => r.name).filter(isPrototypeName))];
+	const names = [...new Set(records.map((r) => r.name).filter(isVersionName))];
 	const pages = await Promise.all(names.map(async (name) => [name, await files.readFile(prototypePagePath(id, name))] as const));
 	const hashes = [...new Set(pages.flatMap(([, html]) => sharedFilesOf(html ?? '')))];
 	const shared = await Promise.all(hashes.map(async (hash) => [hash, await files.readFile(sharedFilePath(hash))] as const));

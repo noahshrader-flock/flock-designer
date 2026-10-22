@@ -4,7 +4,7 @@ import type { BaseBehind, CommentRef, Work, Person, PrototypeReadiness, ReviewCo
 import { type DeclaredTarget, undeclared } from '../../../shared/wcag';
 import { fromBrief } from '../../../shared/brief';
 import { projectPath, prototypePagePath, prototypeSourcePath, sharedFilePath, sharedFilesOf, workPath } from '../../../shared/designPaths';
-import { commentsFromOthers, nextVersionName, othersHaveCommented } from '../../../shared/prototypeNames';
+import { commentsFromOthers, nextVersionName, othersHaveCommented } from '../../../shared/versionNames';
 import { MANIFEST_FILE, declaredTarget, productTarget, taskAccessibility } from '../accessibility/accessibilityBrief';
 import { readDescriptor } from '../projects/descriptor';
 import { branchTip, commitsAfter, git, hasCommit, headCommit, isSafeBranchName, readTreeAt, repositoryOf } from '../platform/git';
@@ -19,7 +19,7 @@ import {
 	type PrototypeBuild,
 	type PrototypeSources,
 	type RecordStore,
-	assertPrototypeName,
+	assertVersionName,
 	contentHashOf,
 	recordVersionFrom,
 	recordStarted,
@@ -94,7 +94,7 @@ const NO_PRODUCT =
 /** Makes no folder. */
 export const localPrototypeFile = (prototypesRoot: string, projectId: string, name: string, ext: 'html' | 'tsx'): string => {
 	assertUsableProjectId(projectId);
-	assertPrototypeName(name);
+	assertVersionName(name);
 	return join(prototypesRoot, projectId, `${name}.${ext}`);
 };
 
@@ -118,7 +118,7 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 		return localFile(projectId, name, 'tsx');
 	};
 	const checkFile = (projectId: string, name: string): string => {
-		assertPrototypeName(name);
+		assertVersionName(name);
 		return join(dir(projectId), `${name}.accessibility.json`);
 	};
 	/** `_` keeps it off the project list. */
@@ -465,7 +465,7 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 			request,
 		}: { newVersion: boolean; comments: ReviewComment[] | null; acting?: CommentRef; request?: { text: string; me: Person | null } },
 	): Promise<PrototypeChange> => {
-		assertPrototypeName(name);
+		assertVersionName(name);
 		const all = await records(projectId);
 		const from = all.find((i) => i.name === name);
 		if (!from) throw new Error(`${projectId} has no prototype called ${name}.`);
@@ -490,7 +490,7 @@ export const prototypeWork = (ctx: PrototypeWorkContext) => {
 	 * recorded meanwhile under that name is refused rather than saved over.
 	 */
 	const resumeChange = async (projectId: string, name: string, fromName: string | null): Promise<PrototypeChange | null> => {
-		assertPrototypeName(name);
+		assertVersionName(name);
 		const all = await records(projectId);
 		const names = all.map((i) => i.name);
 		if (names.includes(name)) {

@@ -3,7 +3,7 @@ import { tokenEditsOf } from '../../src/core/services/designSystem/tokenEdits';
 import { triedValuesOf } from '../../src/core/services/designSystem/valueSources';
 import type { TokenEdit, TriedValue } from '../../src/shared/contract';
 import { asRecord } from '../../src/shared/json';
-import { isPrototypeName } from '../../src/shared/prototypeNames';
+import { isVersionName } from '../../src/shared/versionNames';
 import { type Theme, isTheme } from '../../src/shared/prototypeTheme';
 import { hasExactly } from '../../src/shared/validate';
 import {
@@ -35,7 +35,7 @@ export const check = {
 		const r = asRecord(v);
 		if (!hasExactly(r, ['projectId', 'name', 'title']) || typeof r.title !== 'string' || r.title.length > LIMITS.title)
 			fail('That is not a prototype to open for review.');
-		if (typeof r.name !== 'string' || !isPrototypeName(r.name)) fail('That is not a prototype to open for review.');
+		if (typeof r.name !== 'string' || !isVersionName(r.name)) fail('That is not a prototype to open for review.');
 		return { projectId: arg.projectId(r.projectId), name: r.name as string, title: r.title as string };
 	}) as Check<Review>,
 	edits: tokenEditsOf as Check<TokenEdit[]>,

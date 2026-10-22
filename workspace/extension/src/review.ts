@@ -8,7 +8,7 @@ import type { RepoRef } from '../../src/shared/repoRef';
 import { escapeHtml } from '../../src/shared/html';
 import REVIEW_TAB from '../../src/page/reviewTab?page';
 import { prototypeKey, sitePath } from '../../src/shared/designPaths';
-import { isPrototypeName } from '../../src/shared/prototypeNames';
+import { isVersionName } from '../../src/shared/versionNames';
 import { errorText, toResult, valueOf } from '../../src/shared/result';
 import { KEY_FRAGMENT, type RelayCall, type RelayTell, readRelayAsk } from '../../src/shared/reviewRelay';
 import { buildSite } from '../../src/site/buildSite';
@@ -80,7 +80,7 @@ const versionOf = (review: Review, branch: string): Review => ({ ...review, name
 
 const isPrototypeOf = (projectId: string, branch: unknown): boolean => {
 	const prefix = prototypeKey(projectId, '');
-	return typeof branch === 'string' && branch.startsWith(prefix) && isPrototypeName(branch.slice(prefix.length));
+	return typeof branch === 'string' && branch.startsWith(prefix) && isVersionName(branch.slice(prefix.length));
 };
 
 const ON_A_COMMENT = new Set<RelayCall>(['moveComment', 'resolveComment', 'deleteComment', 'address']);

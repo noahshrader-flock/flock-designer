@@ -4,7 +4,7 @@ import type { Work } from '../shared/contract';
 import { escapeHtml, firstInHead } from '../shared/html';
 import { fromBrief } from '../shared/brief';
 import { SHARED_DIR, SHARED_REF, sitePath } from '../shared/designPaths';
-import { newestVersionFirst } from '../shared/prototypeNames';
+import { newestVersionFirst } from '../shared/versionNames';
 import { workLabel } from '../shared/work';
 import { statesOf } from '../shared/prototypeStates';
 import { workInFolder } from '../core/services/projects/workRecords';

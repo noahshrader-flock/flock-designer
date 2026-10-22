@@ -27,7 +27,7 @@ import { SourceAnswers, usableDesignSystem } from '../core/services/projects/pro
 import { setupCheck } from '../core/services/projects/setupCheck';
 import { appPaths } from '../core/appPaths';
 import { designStore } from '../core/services/publishing/designStore';
-import { BUILD_SKILL, GUIDE, assertPrototypeName } from '../core/services/prototypes/prototype';
+import { BUILD_SKILL, GUIDE, assertVersionName } from '../core/services/prototypes/prototype';
 import { shellLine } from '../core/services/prototypes/prototypeBundle';
 import { localPrototypeFile, prototypeWork, whereTheChangeGoes } from '../core/services/prototypes/prototypeWork';
 import { writeEntryFiles } from '../core/services/projects/entryFiles';
@@ -233,7 +233,7 @@ const savedPage = async (deps: CliDeps, values: { project?: string; name?: strin
 	if (!projectId) throw new UsageError('Say which project, with --project.');
 	if (!name) throw new UsageError('Say which prototype, with --name.');
 	assertUsableProjectId(projectId);
-	assertPrototypeName(name);
+	assertVersionName(name);
 	const designRoot = await designOf(deps);
 	if (!existsSync(join(designRoot, prototypePagePath(projectId, name)))) {
 		throw new Error(

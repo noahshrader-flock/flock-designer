@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import type { Work } from '../../../shared/contract';
-import { isPrototypeName } from '../../../shared/prototypeNames';
+import { isVersionName } from '../../../shared/versionNames';
 import { parseWork, serializeWork } from '../../../shared/workRecords';
 import { assertUsableProjectId } from '../projects/workRecords';
 import { versionFile } from './versionFiles';
@@ -27,7 +27,7 @@ export const pendingOf = (prototypesRoot: string, projectId: string): Work[] => 
 	const dir = join(prototypesRoot, projectId);
 	if (!existsSync(dir)) return [];
 	return readdirSync(dir)
-		.filter((f) => f.endsWith(SUFFIX) && isPrototypeName(f.slice(0, -SUFFIX.length)))
+		.filter((f) => f.endsWith(SUFFIX) && isVersionName(f.slice(0, -SUFFIX.length)))
 		.flatMap((f) => {
 			const [record] = parseWork(readFileSync(join(dir, f), 'utf8')) ?? [];
 			return record && record.projectId === projectId && `${record.name}${SUFFIX}` === f ? [record] : [];

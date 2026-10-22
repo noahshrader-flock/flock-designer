@@ -3,7 +3,7 @@ import { asRecord } from '../shared/json';
 import { fail, ok } from '../shared/result';
 import { isSafeBranchName } from './services/platform/git';
 import { assertUsableProjectId } from './services/projects/workRecords';
-import { assertPrototypeName } from './services/prototypes/prototype';
+import { assertVersionName } from './services/prototypes/prototype';
 
 /** A handler throws a sentence for a person and this is the one place it becomes a Result: a throw crossing IPC arrives shapeless. */
 
@@ -74,9 +74,9 @@ export const arg = {
 		return v;
 	}) as Check<string>,
 	/** A prototype's name is its version: `v2`. */
-	prototypeName: ((v) => {
+	versionName: ((v) => {
 		if (typeof v !== 'string') throw new Error('That is not a prototype.');
-		assertPrototypeName(v);
+		assertVersionName(v);
 		return v;
 	}) as Check<string>,
 	codebaseName: ((v) => {

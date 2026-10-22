@@ -1,6 +1,6 @@
 import type { BranchAgainstBase, BuildInCodebasePlan, WorkKind, Project, ProjectWork } from './contract';
 import { plural } from './plural';
-import { newestVersionFirst, parseVersion } from './prototypeNames';
+import { newestVersionFirst, parseVersion } from './versionNames';
 import { byNewest } from './sort';
 import { asRepositoryPath } from './repoRef';
 import { asChangeRequestUrl, treeUrl } from './hostUrls';

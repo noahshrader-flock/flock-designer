@@ -16,7 +16,7 @@ import {
 	projectOpening,
 	withCovers,
 } from '../src/shared/projectList';
-import { isPrototypeName, commentsFromOthers, nextVersionName, parseVersion, prototypeName } from '../src/shared/prototypeNames';
+import { isVersionName, commentsFromOthers, nextVersionName, parseVersion, versionName } from '../src/shared/versionNames';
 import { PROJECT_ID, asDate, asRoute, slugify, asCover } from '../src/shared/validate';
 import { codeLink, workLabel, workOf } from '../src/shared/work';
 import { readFolderProjects } from '../src/core/services/projects/localProjects';
@@ -305,7 +305,7 @@ describe("a prototype's name: its version", () => {
 		['v9999', 9999],
 	])('reads %s', (name, version) => {
 		expect(parseVersion(name)).toBe(version);
-		expect(isPrototypeName(name)).toBe(true);
+		expect(isVersionName(name)).toBe(true);
 	});
 
 	// The old shapes (a version and its iteration, a name from before versions, an old branch's) are not read at all.
@@ -313,13 +313,13 @@ describe("a prototype's name: its version", () => {
 		'refuses %s',
 		(name) => {
 			expect(parseVersion(name)).toBeNull();
-			expect(isPrototypeName(name)).toBe(false);
+			expect(isVersionName(name)).toBe(false);
 		},
 	);
 
 	it('writes a version as v and its number', () => {
-		expect(prototypeName(1)).toBe('v1');
-		expect(prototypeName(3)).toBe('v3');
+		expect(versionName(1)).toBe('v1');
+		expect(versionName(3)).toBe('v3');
 	});
 
 	it('names a new version one past the highest, so no number is reused', () => {

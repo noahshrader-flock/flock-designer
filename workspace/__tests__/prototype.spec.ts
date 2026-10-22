@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { isPrototypeKey, prototypeKey, prototypePagePath } from '../src/shared/designPaths';
-import { nextVersionName } from '../src/shared/prototypeNames';
+import { nextVersionName } from '../src/shared/versionNames';
 import { cloneStore, buildInCodebaseLead, recordStarted, setCover, startPrototype } from '../src/core/services/prototypes/prototype';
 import { PrototypeServer } from '../src/core/services/prototypes/prototypeServer';
 import { memoryStore } from './fixtures';

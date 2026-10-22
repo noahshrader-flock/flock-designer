@@ -4,7 +4,7 @@ import { dirname } from 'node:path';
 import type { Work, Person } from '../../../shared/contract';
 import { briefFolder, firstHeading, folderName, fromBrief, namesProject, projectTitle, withFolder, withTitle } from '../../../shared/brief';
 import { projectDir, projectPath, prototypeKey, workPath } from '../../../shared/designPaths';
-import { isPrototypeName, nextVersionName } from '../../../shared/prototypeNames';
+import { isVersionName, nextVersionName } from '../../../shared/versionNames';
 import { scrubbed } from '../../../shared/scrub';
 import { assertCover } from '../../../shared/validate';
 import { resolveInside } from '../platform/paths';
@@ -231,7 +231,7 @@ export const recordVersionFrom = async (
 	store: RecordStore,
 	{ projectId, name, from, note, me, now = new Date() }: { projectId: string; name: string; from: Work; note: string; me: Person | null; now?: Date },
 ): Promise<Work> => {
-	assertPrototypeName(name);
+	assertVersionName(name);
 	const existing = await readRecords(store, projectId);
 	if (existing.some((i) => i.name === name))
 		throw new Error(`${projectId} already has a ${name}. Try again: the change will go in the next version.`);
@@ -250,8 +250,8 @@ export const recordVersionFrom = async (
 	);
 };
 
-export const assertPrototypeName = (name: string): void => {
-	if (!isPrototypeName(name)) throw new Error(`"${name}" is not a prototype.`);
+export const assertVersionName = (name: string): void => {
+	if (!isVersionName(name)) throw new Error(`"${name}" is not a prototype.`);
 };
 
 /** A prototype has no commits, so this stands in for one. */

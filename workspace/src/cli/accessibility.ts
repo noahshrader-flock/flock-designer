@@ -45,7 +45,7 @@ import { manualListFault, withManualSection } from '../core/services/accessibili
 import { CELLS, type CellResult, type ProbeDepth, cellLines, cellsAt } from '../core/services/accessibility/probe/cells';
 import type { ViewProbed } from '../core/services/accessibility/probe/probe';
 import { type SourceFile, scanSources } from '../core/services/accessibility/probe/sourceScan';
-import { assertPrototypeName } from '../core/services/prototypes/prototype';
+import { assertVersionName } from '../core/services/prototypes/prototype';
 import { measurePrototype } from '../core/services/accessibility/prototypeMeasure';
 import type { prototypeWork } from '../core/services/prototypes/prototypeWork';
 import { type ReturnedKind, agentGapsFile, parseReturned, returnedTemplate, sortReturned, withGaps } from '../core/services/accessibility/returned';
@@ -114,7 +114,7 @@ const prototypePage = async (
 	browser: Browser,
 	progress: (line: string) => void,
 ): Promise<Measured> => {
-	assertPrototypeName(name);
+	assertVersionName(name);
 	const html = await work.page(projectId, name);
 	if (html === null) throw new Error(`${projectId} ${name} has no page yet. Save it first (save-prototype), then measure it.`);
 	const what = prototypeMeasureName(projectId, name);
@@ -415,7 +415,7 @@ export const checkAccessibility = ({
 	out: (text: string) => void;
 }): number => {
 	assertUsableProjectId(projectId);
-	if (name !== null) assertPrototypeName(name);
+	if (name !== null) assertVersionName(name);
 	const ledgerFile = accessibilityLedgerPath(projectId, name);
 	const ledger = readLedger(join(designRoot, ledgerFile));
 	if (ledger === null) {

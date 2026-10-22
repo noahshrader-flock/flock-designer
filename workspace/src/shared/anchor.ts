@@ -1,5 +1,5 @@
 import type { CommentAnchor } from './contract';
-import { isPrototypeName } from './prototypeNames';
+import { isVersionName } from './versionNames';
 import { isTheme } from './prototypeTheme';
 import { COMMIT_PATTERN, isCommit } from './sha';
 
@@ -85,7 +85,7 @@ const ADDRESSED = new RegExp(`<!-- fd-addressed: (${COMMIT_PATTERN})(?: in ([\\w
 export const addressedAt = (body: string): string | null => ADDRESSED.exec(body)?.[1] ?? null;
 export const addressedIn = (body: string): string | null => {
 	const name = ADDRESSED.exec(body)?.[2] ?? null;
-	return name !== null && isPrototypeName(name) ? name : null;
+	return name !== null && isVersionName(name) ? name : null;
 };
 
 /** A null `commit` clears the mark. */
@@ -93,7 +93,7 @@ export const withAddressed = (body: string, commit: string | null, version: stri
 	const bare = body.replace(ADDRESSED, '').trimEnd();
 	// Only ever a real commit, and a real version's name: these are read back out and shown on the card.
 	if (!isCommit(commit)) return bare;
-	return `${bare}\n<!-- fd-addressed: ${commit}${version !== null && isPrototypeName(version) ? ` in ${version}` : ''} -->`;
+	return `${bare}\n<!-- fd-addressed: ${commit}${version !== null && isVersionName(version) ? ` in ${version}` : ''} -->`;
 };
 
 export const parseAnchor = (body: string): CommentAnchor | null => {

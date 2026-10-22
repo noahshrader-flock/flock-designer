@@ -2,7 +2,7 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { coverPath, prototypePagePath, prototypeSourcePath, WORK_FILE } from '../src/shared/designPaths';
-import { isPrototypeName } from '../src/shared/prototypeNames';
+import { isVersionName } from '../src/shared/versionNames';
 import { parseWork } from '../src/shared/workRecords';
 
 /** Read, never written: a project in an old shape is found here, not by a person whose project has stopped opening. */
@@ -22,7 +22,7 @@ describe.each(projects)('the project %s, as it is in this repository', (id) => {
 
 	it('has each version, named by one number, keyed by its name, with its page, its source and its picture', () => {
 		for (const r of (records ?? []).filter((x) => x.name !== 'codebase')) {
-			expect(isPrototypeName(r.name)).toBe(true);
+			expect(isVersionName(r.name)).toBe(true);
 			expect(r.branch).toBe(`prototype/${id}/${r.name}`);
 			expect(existsSync(at(prototypePagePath(id, r.name))), r.name).toBe(true);
 			expect(existsSync(at(prototypeSourcePath(id, r.name))), r.name).toBe(true);
