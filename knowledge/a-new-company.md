@@ -15,7 +15,7 @@ start one.
 
 ## What is Flock's, to clear
 
-- *The prototypes*: everything in `prototypes/` except `prototypes/_template.md`, including `prototypes/_shared/`, which holds the
+- *The prototypes*: everything in `prototypes/`, including `prototypes/_shared/`, which holds the
   fonts and images Flock's pages share. These are Flock's work.
 - *Flock's name in the shared guidance.* The shared files are almost entirely general. Where they say "Flock", it should
   say your company (in `agents/ui-guide.md`, `agents/dsnr.md`, `agents/product-parity-reviewer.md`,

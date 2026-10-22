@@ -39,16 +39,14 @@ The app is for **discovery**: a prototype is reviewed in it, by anyone with the 
 
 ## Starting a prototype
 
-Make a folder under `prototypes/`. Put whatever you already have into it — a markdown file, a PRD, a
-few screenshots, some links, a paragraph. There is no required format and no minimum.
-
-`prototypes/_template.md` exists in case a blank page is annoying. Ignore it otherwise. Three
-sentences is a legitimate way to start a prototype, and "here's the Figma, make it work on mobile" is
-a legitimate way to start a prototype.
+Ask your agent, in the product: "Create a prototype of …". Give it whatever you already have — a
+markdown file, a PRD, a few screenshots, some links, a paragraph. There is no required format and no
+minimum: three sentences is a legitimate way to start a prototype, and so is "here's the Figma, make it
+work on mobile".
 
 Everything the agent writes for that prototype lands in the same folder — the brief it wrote from your
-context, what it read before building, the review, and the decisions you confirmed. One prototype, one
-place, so picking up someone else's work means reading one folder.
+context, what you asked for each version, and the review. One prototype, one place, so picking up
+someone else's work means reading one folder.
 
 Each **version** is kept in that folder too, as `v1.tsx` and `v1.html`: one React file and the page
 built from it, so anyone can open it without the product. Large files those pages share are kept once in
